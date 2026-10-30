@@ -133,6 +133,119 @@ function orgClause(actor,alias=''){
   const col=alias?`${alias}.organization_id`:'organization_id';
   return actor.organizationId?{sql:` WHERE ${col}=?`,bind:[actor.organizationId]}:{sql:'',bind:[]};
 }
+const DATE_ONLY=/^\d{4}-\d{2}-\d{2}$/;
+const MONTH_ONLY=/^\d{4}-\d{2}$/;
+const IMPORT_ERROR_LIMIT=50;
+const EXPORT_ROW_LIMIT=5000;
+function normalizeBookedAt(value){
+  const raw=clean(value,40);
+  const m=raw.match(/^(\d{4})[-./년\s]*(\d{1,2})[-./월\s]*(\d{1,2})일?(?:[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(!m)return'';
+  const [y,mo,d,h='0',mi='0',se='0']=m.slice(1).map(v=>v??undefined);
+  const month=Number(mo),day=Number(d),hour=Number(h),minute=Number(mi),second=Number(se);
+  if(month<1||month>12||day<1||day>31||hour>23||minute>59||second>59)return'';
+  const probe=new Date(Date.UTC(Number(y),month-1,day));
+  if(probe.getUTCMonth()!==month-1)return'';
+  const p2=n=>String(n).padStart(2,'0');
+  return`${y}-${p2(month)}-${p2(day)}T${p2(hour)}:${p2(minute)}:${p2(second)}`;
+}
+function transactionFilters(actor,params){
+  const where=[],bind=[];
+  if(actor.organizationId){where.push('t.organization_id=?');bind.push(actor.organizationId);}
+  const from=clean(params.get('from'),10),to=clean(params.get('to'),10);
+  if(from){if(!DATE_ONLY.test(from))throw Object.assign(new Error('INVALID_FROM_DATE'),{status:400});where.push('substr(t.booked_at,1,10)>=?');bind.push(from);}
+  if(to){if(!DATE_ONLY.test(to))throw Object.assign(new Error('INVALID_TO_DATE'),{status:400});where.push('substr(t.booked_at,1,10)<=?');bind.push(to);}
+  const month=clean(params.get('month'),7);
+  if(month){if(!MONTH_ONLY.test(month))throw Object.assign(new Error('INVALID_MONTH'),{status:400});where.push('substr(t.booked_at,1,7)=?');bind.push(month);}
+  const accountId=clean(params.get('accountId'),160);
+  if(accountId){where.push('t.bank_connection_id=?');bind.push(accountId);}
+  const direction=clean(params.get('direction'),8);
+  if(direction){if(!['in','out'].includes(direction))throw Object.assign(new Error('INVALID_DIRECTION'),{status:400});where.push('t.direction=?');bind.push(direction);}
+  const category=clean(params.get('category'),80);
+  if(category==='__none__')where.push("t.category=''");
+  else if(category){where.push('t.category=?');bind.push(category);}
+  const q=clean(params.get('q'),80).replace(/[%_\\]/g,ch=>'\\'+ch);
+  if(q){where.push("(t.description LIKE ? ESCAPE '\\' OR t.counterparty_name LIKE ? ESCAPE '\\')");bind.push(`%${q}%`,`%${q}%`);}
+  return{sql:where.length?` WHERE ${where.join(' AND ')}`:'',bind};
+}
+const TXN_COLUMNS=`t.id,t.bank_connection_id AS bankConnectionId,t.organization_id AS organizationId,t.booked_at AS bookedAt,
+      t.direction,t.amount,t.balance_after AS balanceAfter,t.description,t.counterparty_name AS counterpartyName,t.category,t.source_type AS sourceType`;
+async function listTransactions(env,actor,params){
+  const filter=transactionFilters(actor,params);
+  const limit=Math.min(toPositiveInt(params.get('limit'))||100,500);
+  const offset=Math.max(0,Math.min(Math.trunc(Number(params.get('offset'))||0),100000));
+  const [rows,totals,categories]=await Promise.all([
+    env.DB.prepare(`SELECT ${TXN_COLUMNS} FROM bank_transactions t${filter.sql} ORDER BY t.booked_at DESC,t.id DESC LIMIT ? OFFSET ?`)
+      .bind(...filter.bind,limit,offset).all(),
+    env.DB.prepare(`SELECT COUNT(*) AS count,
+      COALESCE(SUM(CASE WHEN t.direction='in' THEN t.amount ELSE 0 END),0) AS income,
+      COALESCE(SUM(CASE WHEN t.direction='out' THEN t.amount ELSE 0 END),0) AS expense
+      FROM bank_transactions t${filter.sql}`).bind(...filter.bind).first(),
+    env.DB.prepare(`SELECT DISTINCT t.category AS category FROM bank_transactions t${orgClause(actor,'t').sql} ORDER BY t.category LIMIT 200`)
+      .bind(...orgClause(actor,'t').bind).all()
+  ]);
+  const income=Number(totals?.income||0),expense=Number(totals?.expense||0);
+  return{
+    transactions:rows.results||[],
+    totals:{count:Number(totals?.count||0),income,expense,net:income-expense},
+    categories:(categories.results||[]).map(row=>String(row.category||'')).filter(Boolean),
+    page:{limit,offset}
+  };
+}
+async function monthlySummary(env,actor,params){
+  const filter=transactionFilters(actor,params);
+  const rows=await env.DB.prepare(`SELECT substr(t.booked_at,1,7) AS month,COUNT(*) AS count,
+      COALESCE(SUM(CASE WHEN t.direction='in' THEN t.amount ELSE 0 END),0) AS income,
+      COALESCE(SUM(CASE WHEN t.direction='out' THEN t.amount ELSE 0 END),0) AS expense
+      FROM bank_transactions t${filter.sql} GROUP BY substr(t.booked_at,1,7) ORDER BY month DESC LIMIT 36`)
+    .bind(...filter.bind).all();
+  return{months:(rows.results||[]).map(row=>{const income=Number(row.income||0),expense=Number(row.expense||0);
+    return{month:String(row.month||''),count:Number(row.count||0),income,expense,net:income-expense};})};
+}
+function csvCell(value){
+  let text=String(value??'');
+  if(/^[=+\-@\t\r]/.test(text))text=`'${text}`;
+  return /[",\n\r]/.test(text)?`"${text.replace(/"/g,'""')}"`:text;
+}
+async function exportTransactions(env,actor,params){
+  const filter=transactionFilters(actor,params);
+  const rows=await env.DB.prepare(`SELECT ${TXN_COLUMNS},c.institution_name AS institutionName,c.account_alias AS accountAlias,c.account_last4 AS accountLast4
+      FROM bank_transactions t LEFT JOIN bank_connections c ON c.id=t.bank_connection_id AND c.organization_id=t.organization_id${filter.sql}
+      ORDER BY t.booked_at ASC,t.id ASC LIMIT ${EXPORT_ROW_LIMIT}`).bind(...filter.bind).all();
+  const list=rows.results||[];
+  const lines=[['거래일시','계좌','구분','금액','잔액','적요','거래처','분류','거래번호'].join(',')];
+  for(const r of list){
+    const account=`${r.institutionName||''} ${r.accountAlias||''}${r.accountLast4?` ****${r.accountLast4}`:''}`.trim();
+    lines.push([r.bookedAt,account,r.direction==='in'?'입금':'출금',r.amount,r.balanceAfter??'',r.description,r.counterpartyName,r.category,r.id].map(csvCell).join(','));
+  }
+  await audit(env,actor,'bank.transactions.export','organization',actor.organizationId||'platform',`rows=${list.length}`);
+  return{csv:'﻿'+lines.join('\r\n')+'\r\n',rows:list.length,truncated:list.length>=EXPORT_ROW_LIMIT};
+}
+async function updateConnection(env,actor,connectionId,input){
+  if(!actor.canManage)throw Object.assign(new Error('FINANCE_MANAGE_REQUIRED'),{status:403});
+  const current=await env.DB.prepare(`SELECT id,organization_id AS organizationId,workspace_key AS workspace,provider,institution_name AS institutionName,
+      account_alias AS accountAlias,account_last4 AS accountLast4,connection_status AS connectionStatus
+      FROM bank_connections WHERE id=?`).bind(clean(connectionId,160)).first();
+  if(!current||actor.organizationId&&String(current.organizationId)!==actor.organizationId)throw Object.assign(new Error('BANK_CONNECTION_NOT_FOUND'),{status:404});
+  if(!actor.platform&&String(current.provider||'').toUpperCase()!=='MANUAL')throw Object.assign(new Error('PROVIDER_CONNECTION_PLATFORM_MANAGED'),{status:403});
+  const next={institutionName:current.institutionName,accountAlias:current.accountAlias,accountLast4:current.accountLast4,connectionStatus:current.connectionStatus};
+  if(input?.institutionName!==undefined)next.institutionName=clean(input.institutionName,120);
+  if(input?.accountAlias!==undefined){next.accountAlias=clean(input.accountAlias,120);if(!next.accountAlias)throw Object.assign(new Error('ACCOUNT_ALIAS_REQUIRED'),{status:400});}
+  if(input?.accountLast4!==undefined){
+    const digits=String(input.accountLast4??'').replace(/\D/g,'');
+    if(digits&&digits.length!==4)throw Object.assign(new Error('ACCOUNT_LAST4_INVALID'),{status:400});
+    next.accountLast4=digits;
+  }
+  if(input?.active!==undefined)next.connectionStatus=input.active===true?'active':input.active===false?'disconnected':next.connectionStatus;
+  const changed=Object.keys(next).filter(key=>String(next[key]??'')!==String(current[key]??''));
+  if(!changed.length)return{id:current.id,changed:[]};
+  await env.DB.prepare(`UPDATE bank_connections SET institution_name=?,account_alias=?,account_last4=?,connection_status=?,updated_at=? WHERE id=? AND organization_id=?`)
+    .bind(next.institutionName,next.accountAlias,next.accountLast4,next.connectionStatus,nowIso(),current.id,String(current.organizationId)).run();
+  const scoped={...actor,organizationId:String(current.organizationId),workspace:actor.workspace||current.workspace||''};
+  const action=changed.includes('connectionStatus')?(next.connectionStatus==='disconnected'?'bank.connection.deactivate':'bank.connection.reactivate'):'bank.connection.update';
+  await audit(env,scoped,action,'bank_connection',current.id,JSON.stringify({changed,before:Object.fromEntries(changed.map(k=>[k,current[k]])),after:Object.fromEntries(changed.map(k=>[k,next[k]]))}));
+  return{id:current.id,changed,connectionStatus:next.connectionStatus};
+}
 async function bankingOverview(env,actor){
   const scope=orgClause(actor);
   const [accountSummary,accounts,transactions,transfers]=await Promise.all([
@@ -204,16 +317,24 @@ async function createConnection(env,actor,input){
 async function importTransactions(env,actor,input){
   if(!actor.canManage)throw Object.assign(new Error('FINANCE_MANAGE_REQUIRED'),{status:403});
   const connectionId=clean(input?.bankConnectionId,160);
-  const connection=await env.DB.prepare(`SELECT id,organization_id AS organizationId FROM bank_connections WHERE id=?`).bind(connectionId).first();
+  const connection=await env.DB.prepare(`SELECT id,organization_id AS organizationId,connection_status AS connectionStatus FROM bank_connections WHERE id=?`).bind(connectionId).first();
   if(!connection||actor.organizationId&&String(connection.organizationId)!==actor.organizationId)throw Object.assign(new Error('BANK_CONNECTION_NOT_FOUND'),{status:404});
+  if(connection.connectionStatus==='disconnected')throw Object.assign(new Error('BANK_CONNECTION_INACTIVE'),{status:409});
   const rows=Array.isArray(input?.transactions)?input.transactions.slice(0,500):[];
   if(!rows.length)throw Object.assign(new Error('TRANSACTIONS_REQUIRED'),{status:400});
-  let imported=0;const now=nowIso();
-  for(const item of rows){
+  let created=0,duplicates=0;const errors=[];let skipped=0;const now=nowIso();const seen=new Set();
+  const reject=(item,index,reason)=>{skipped++;if(errors.length<IMPORT_ERROR_LIMIT)errors.push({row:toPositiveInt(item?.rowNumber,1000000)||index+2,reason});};
+  for(const [index,item] of rows.entries()){
     const amount=toPositiveInt(item?.amount);
     const direction=item?.direction==='in'?'in':item?.direction==='out'?'out':'';
-    const bookedAt=clean(item?.bookedAt,40);const externalId=clean(item?.externalId,200);
-    if(!amount||!direction||!bookedAt||!externalId)continue;
+    const bookedAt=normalizeBookedAt(item?.bookedAt);const externalId=clean(item?.externalId,200);
+    if(!bookedAt){reject(item,index,'INVALID_DATE');continue;}
+    if(!amount){reject(item,index,'INVALID_AMOUNT');continue;}
+    if(!direction){reject(item,index,'INVALID_DIRECTION');continue;}
+    if(!externalId){reject(item,index,'EXTERNAL_ID_REQUIRED');continue;}
+    if(seen.has(externalId)){duplicates++;continue;}
+    seen.add(externalId);
+    const existing=await env.DB.prepare(`SELECT id FROM bank_transactions WHERE bank_connection_id=? AND external_id=?`).bind(connectionId,externalId).first();
     const id=uid('txn');
     await env.DB.prepare(`INSERT INTO bank_transactions
       (id,bank_connection_id,organization_id,external_id,booked_at,value_date,direction,amount,balance_after,description,counterparty_name,category,source_type,created_at,updated_at)
@@ -223,9 +344,9 @@ async function importTransactions(env,actor,input){
         balance_after=excluded.balance_after,description=excluded.description,counterparty_name=excluded.counterparty_name,
         category=excluded.category,updated_at=excluded.updated_at`)
       .bind(id,connectionId,String(connection.organizationId),externalId,bookedAt,item?.valueDate?clean(item.valueDate,40):null,direction,amount,
-        Number.isFinite(Number(item?.balanceAfter))?Math.trunc(Number(item.balanceAfter)):null,clean(item?.description,300),
+        Number.isFinite(Number(item?.balanceAfter))&&item?.balanceAfter!==null&&item?.balanceAfter!==''?Math.trunc(Number(item.balanceAfter)):null,clean(item?.description,300),
         clean(item?.counterpartyName,160),clean(item?.category,80),'import',now,now).run();
-    imported++;
+    if(existing)duplicates++;else created++;
   }
   const latestBalance=await env.DB.prepare(`SELECT balance_after AS balanceAfter,booked_at AS bookedAt
     FROM bank_transactions WHERE bank_connection_id=? AND balance_after IS NOT NULL ORDER BY booked_at DESC LIMIT 1`)
@@ -235,8 +356,8 @@ async function importTransactions(env,actor,input){
       .bind(Math.trunc(Number(latestBalance.balanceAfter)),clean(latestBalance.bookedAt,40),nowIso(),connectionId).run();
   }
   const scoped={...actor,organizationId:String(connection.organizationId)};
-  await audit(env,scoped,'bank.transactions.import','bank_connection',connectionId,`rows=${imported}`);
-  return imported;
+  await audit(env,scoped,'bank.transactions.import','bank_connection',connectionId,`rows=${rows.length};created=${created};duplicates=${duplicates};skipped=${skipped}`);
+  return{imported:created+duplicates,created,duplicates,skipped,received:rows.length,errors};
 }
 async function syncConnection(env,actor,connectionId){
   if(!actor.canManage)throw Object.assign(new Error('FINANCE_MANAGE_REQUIRED'),{status:403});
@@ -396,10 +517,26 @@ export default{
         const input=await body(request)||{};const id=await createConnection(env,actor,input);return json({ok:true,id},201,origin);
       }
       if(request.method==='GET'&&url.pathname==='/api/finance/banking/transactions'){
-        const data=await bankingOverview(env,actor);return json({transactions:data.transactions,scope:data.scope},200,origin);
+        const data=await listTransactions(env,actor,url.searchParams);
+        return json({...data,scope:{workspace:actor.workspace||null,organizationId:actor.organizationId||null,platform:actor.platform}},200,origin);
       }
       if(request.method==='POST'&&url.pathname==='/api/finance/banking/transactions/import'){
-        const imported=await importTransactions(env,actor,await body(request)||{});return json({ok:true,imported},201,origin);
+        const result=await importTransactions(env,actor,await body(request)||{});return json({ok:true,...result},201,origin);
+      }
+      if(request.method==='GET'&&url.pathname==='/api/finance/banking/transactions/summary')
+        return json({...await monthlySummary(env,actor,url.searchParams),scope:{workspace:actor.workspace||null,organizationId:actor.organizationId||null}},200,origin);
+      if(request.method==='GET'&&url.pathname==='/api/finance/banking/transactions/export'){
+        const result=await exportTransactions(env,actor,url.searchParams);
+        const filename=`ekodi-transactions-${actor.workspace||'platform'}-${nowIso().slice(0,10)}.csv`;
+        const headers=cors(origin);
+        for(const [key,value] of Object.entries({'content-type':'text/csv; charset=utf-8','content-disposition':`attachment; filename="${filename}"`,
+          'cache-control':'no-store','x-ekodi-export-rows':String(result.rows),'x-ekodi-export-truncated':String(result.truncated),
+          'x-content-type-options':'nosniff','referrer-policy':'no-referrer','access-control-expose-headers':'x-ekodi-export-rows, x-ekodi-export-truncated, content-disposition'}))headers.set(key,value);
+        return new Response(result.csv,{status:200,headers});
+      }
+      const accountPatch=url.pathname.match(/^\/api\/finance\/banking\/accounts\/([^/]+)$/);
+      if(accountPatch&&request.method==='PATCH'){
+        const result=await updateConnection(env,actor,decodeURIComponent(accountPatch[1]),await body(request)||{});return json({ok:true,...result},200,origin);
       }
       const sync=url.pathname.match(/^\/api\/finance\/banking\/accounts\/([^/]+)\/sync$/);
       if(sync&&request.method==='POST'){
