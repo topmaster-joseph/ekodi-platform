@@ -52,7 +52,7 @@ export function createEkodiActivityTracker({
       });
       authSubscription=data?.subscription||null;
     }
-    void tick();
+    // First heartbeat is requested on the scheduled cadence, not page load.
     return true;
   }
   function stop(){
