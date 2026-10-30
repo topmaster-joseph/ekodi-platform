@@ -14,8 +14,8 @@ const parse=x=>{try{return JSON.parse(x||'{}')}catch{return {}}};
 
 /**
  * There is no client-assertable "preproductionVerified" or approval override.
- * This writer reads exact Orchestrator proof from the durable task record,
- * checks staged readiness, then uses version CAS and an atomic audit write.
+ * This writer reads the separately authenticated OIDC staging-event ledger,
+ * never mutable command progress evidence, then uses CAS and atomic audit.
  */
 export async function recordEkodiFinalPromotionApproval(db,input={}){
   const taskId=clean(input.taskId,160);
@@ -41,14 +41,6 @@ export async function recordEkodiFinalPromotionApproval(db,input={}){
     return result(false,'task_not_in_authorized_staging');
   }
   if(Number(row.state_version)!==expectedStateVersion)return result(false,'stale_task_state');
-  const stored=parse(row.evidence_json);
-  const proof=stored.preproductionProof;
-  if(!proof||proof.authority!=='ekodi-orchestrator'||proof.taskId!==taskId||
-     proof.branchRef!==branchRef||proof.releaseSha!==releaseSha||
-     proof.artifactDigest!==artifactDigest||!digest.test(clean(proof.archiveDigest,150))||
-     !clean(proof.verifiedAt,80)){
-    return result(false,'authoritative_staging_proof_missing');
-  }
   // A worker-controlled task evidence object is NOT authoritative by itself.
   // Only a matching first-party OIDC-verified preproduction audit event may
   // allow owner approval; staging validation must independently write it.
@@ -67,17 +59,19 @@ export async function recordEkodiFinalPromotionApproval(db,input={}){
      attestation.source!=='github-actions-oidc' ||
      attestation.taskId!==taskId || attestation.branchRef!==branchRef ||
      attestation.releaseSha!==releaseSha || attestation.artifactDigest!==artifactDigest ||
-     attestation.archiveDigest!==proof.archiveDigest ||
-     attestation.verifiedAt!==proof.verifiedAt ||
-     !Number.isSafeInteger(attestation.workflowRunId) || attestation.workflowRunId<1){
+     !digest.test(clean(attestation.archiveDigest,150)) ||
+     !Number.isFinite(Date.parse(attestation.verifiedAt)) ||
+     !Number.isSafeInteger(attestation.workflowRunId) || attestation.workflowRunId<1 ||
+     ![attestation.requiredCiVerified,attestation.stagingVerified,
+       attestation.rollbackReady,attestation.securityReviewVerified].every(x=>x===true)){
     return result(false,'staging_attestation_mismatch');
   }
   const preview=evaluateEkodiContinuousExecution({
     phase:'production-promotion',taskId,branchRef,releaseSha,artifactDigest,
-    requiredCiVerified:proof.requiredCiVerified===true,
-    stagingVerified:proof.stagingVerified===true,
-    rollbackReady:proof.rollbackReady===true,
-    securityReviewVerified:proof.securityReviewVerified===true,
+    requiredCiVerified:attestation.requiredCiVerified===true,
+    stagingVerified:attestation.stagingVerified===true,
+    rollbackReady:attestation.rollbackReady===true,
+    securityReviewVerified:attestation.securityReviewVerified===true,
   });
   if(preview.decision!=='await_final_owner_confirmation')return result(false,'prepromotion_gates_incomplete');
 
