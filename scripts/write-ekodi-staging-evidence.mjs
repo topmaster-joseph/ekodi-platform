@@ -20,7 +20,8 @@ export function makeEkodiStagingEvidence({
   if(!SHA.test(sourceSha||'')||!DIGEST.test(applicationDigest||''))fail('EXACT_APPLICATION_REQUIRED');
   let u;
   try{u=new URL(stagingUrl)}catch{fail('STAGING_ENDPOINT_REQUIRED')}
-  if(u.protocol!=='https:'||!u.hostname.endsWith('.workers.dev')||
+  if(u.protocol!=='https:'||!u.hostname.startsWith('ekodi-ai-control-staging.')||
+     !u.hostname.endsWith('.workers.dev')||
      u.username||u.password||u.port||u.pathname!=='/'||u.search||u.hash)fail('STAGING_ENDPOINT_INVALID');
   if(!Number.isFinite(Date.parse(verifiedAt))||Math.abs(Date.now()-Date.parse(verifiedAt))>15*60*1000){
     fail('STALE_VERIFICATION_TIMESTAMP');
