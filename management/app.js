@@ -2,7 +2,7 @@ const cfg=window.EKODI_MANAGEMENT_CONFIG||{};
 const SESSION_KEY='ekodi-management-session';
 const SELECTION_KEY='ekodi-management-selection-v1';
 const $=id=>document.getElementById(id);
-const state={session:null,catalog:[],selection:null,spaces:[],spacesRequest:0};
+const state={session:null,catalog:[],selection:null,spaces:[],spacesRequest:0,selectedWorkspace:null};
 
 function storedSession(){
   try{
@@ -48,7 +48,9 @@ function renderIdentity(){
 function clearSpaces(){
   state.spacesRequest+=1;
   state.spaces=[];
+  state.selectedWorkspace=null;
   $('verifiedSpacesList').replaceChildren();
+  $('selectedWorkspaceStatus').textContent='현재 작업 공간을 선택하지 않았습니다.';
   $('spacesStatus').textContent='로그인 후 내 운영 공간을 확인할 수 있습니다.';
 }
 function validSpaceUrl(slug){
@@ -101,6 +103,32 @@ async function loadStoreSummary(space,host,button){
     console.error('management store read-only summary',error);
   }finally{if(stillCurrent())button.disabled=false}
 }
+function selectedVerifiedWorkspace(){
+  if(!activeSession()||!state.selectedWorkspace)return null;
+  return state.spaces.find(space=>space.id===state.selectedWorkspace.id
+    &&space.slug===state.selectedWorkspace.slug&&space.status==='active')||null;
+}
+function renderSelectedWorkspace(){
+  const space=selectedVerifiedWorkspace();
+  $('selectedWorkspaceStatus').textContent=space
+    ?`현재 작업 공간: ${space.name} · ${space.role||'member'}`
+    :'현재 작업 공간을 선택하지 않았습니다.';
+  const host=$('verifiedSpacesList');
+  for(const card of host.children){
+    const select=card.children?.find?.(element=>element.className==='space-select');
+    if(!select)continue;
+    const selected=Boolean(space&&select.dataset.workspaceId===space.id&&select.dataset.workspaceSlug===space.slug);
+    select.textContent=selected?'현재 작업 공간':'작업 공간으로 선택';
+    select.setAttribute('aria-pressed',selected?'true':'false');
+  }
+}
+function selectVerifiedWorkspace(space){
+  if(!activeSession()||space.status!=='active')return;
+  const allowed=state.spaces.some(item=>item.id===space.id&&item.slug===space.slug&&item.status==='active');
+  if(!allowed)return;
+  state.selectedWorkspace={id:space.id,slug:space.slug};
+  renderSelectedWorkspace();
+}
 function renderVerifiedSpaces(){
   const host=$('verifiedSpacesList');host.replaceChildren();
   if(!activeSession())return;
@@ -111,7 +139,14 @@ function renderVerifiedSpaces(){
     card.append(name,role);
     const url=validSpaceUrl(space.slug);
     if(url){const link=document.createElement('a');link.href=url;link.textContent='공간 열기';link.className='space-entry';card.append(link)}
-    if(space.kind==='store'&&url){
+    if(space.status==='active'&&url){
+      const select=document.createElement('button');select.type='button';select.className='space-select';
+      select.dataset.workspaceId=space.id;select.dataset.workspaceSlug=space.slug;
+      select.textContent='작업 공간으로 선택';select.setAttribute('aria-pressed','false');
+      select.addEventListener('click',()=>selectVerifiedWorkspace(space));
+      card.append(select);
+    }
+    if(space.kind==='store'&&space.status==='active'&&url){
       const button=document.createElement('button');button.type='button';button.className='store-kpi-button';button.textContent='운영현황 조회';
       const panel=document.createElement('div');panel.className='store-kpi-panel';panel.setAttribute('role','status');panel.setAttribute('aria-live','polite');
       button.addEventListener('click',()=>loadStoreSummary(space,panel,button));
@@ -119,11 +154,14 @@ function renderVerifiedSpaces(){
     }
     host.append(card);
   });
+  renderSelectedWorkspace();
 }
 async function loadVerifiedSpaces(){
   if(!activeSession()){clearSpaces();return}
   const token=state.session.accessToken,userId=state.session.user.id,serial=++state.spacesRequest;
-  state.spaces=[];$('verifiedSpacesList').replaceChildren();$('spacesStatus').textContent='중앙 회원 권한을 확인하고 있습니다.';
+  state.spaces=[];state.selectedWorkspace=null;$('verifiedSpacesList').replaceChildren();
+  $('selectedWorkspaceStatus').textContent='현재 작업 공간을 선택하지 않았습니다.';
+  $('spacesStatus').textContent='중앙 회원 권한을 확인하고 있습니다.';
   try{
     const response=await fetch('/api/spaces',{method:'GET',headers:{authorization:`Bearer ${token}`,accept:'application/json'},cache:'no-store'});
     if(serial!==state.spacesRequest||!activeSession()||state.session.user.id!==userId||state.session.accessToken!==token)return;
@@ -137,7 +175,8 @@ async function loadVerifiedSpaces(){
     $('spacesStatus').textContent=state.spaces.length?`접근 가능한 운영 공간 ${state.spaces.length}곳 · 중앙 권한 확인 완료`:'현재 계정에 연결된 운영 공간이 없습니다.';
   }catch(error){
     if(serial!==state.spacesRequest||!activeSession())return;
-    state.spaces=[];$('verifiedSpacesList').replaceChildren();
+    state.spaces=[];state.selectedWorkspace=null;$('verifiedSpacesList').replaceChildren();
+    $('selectedWorkspaceStatus').textContent='현재 작업 공간을 선택하지 않았습니다.';
     $('spacesStatus').textContent='운영 공간을 불러오지 못했습니다. 계정이나 권한이 변경되지는 않았습니다.';
     console.error('management workspace read-only',error);
   }
