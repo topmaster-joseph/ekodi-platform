@@ -114,21 +114,22 @@ const durableReceipt = {
   approvalId:`final_promotion_${taskId}_v3`,
 };
 const preproductionProof = {
-  authority:'ekodi-orchestrator', taskId, branchRef, releaseSha, artifactDigest,
+  authority:'ekodi-orchestrator', taskId, branchRef, releaseSha, artifactDigest, archiveDigest:'sha256:'+'f'.repeat(64),
   requiredCiVerified:true, stagingVerified:true, rollbackReady:true,
   securityReviewVerified:true, verifiedAt:'2026-10-18T06:29:00Z',
 };
 const taskRow = {
   task_id:taskId, branch_ref:branchRef, state:'staging',
   state_version:3, permission_class:'delegated', deployment_requested:1,
-  evidence_json:JSON.stringify({preproductionProof}),
+  evidence_json:JSON.stringify({items:[{source:'worker'}],commandLedger:{state:'running'}}),
 };
 const stagingEvent = {
   actor:'ekodi-github-actions-oidc-reconciler',
   reason:'verified_preproduction_evidence_recorded',
   evidence_json:JSON.stringify({
     authority:'ekodi-orchestrator',source:'github-actions-oidc',
-    taskId,branchRef,releaseSha,artifactDigest,verifiedAt:preproductionProof.verifiedAt,
+    taskId,branchRef,releaseSha,artifactDigest,archiveDigest:preproductionProof.archiveDigest,verifiedAt:preproductionProof.verifiedAt,
+    requiredCiVerified:true,stagingVerified:true,rollbackReady:true,securityReviewVerified:true,
     workflowRunId:123456,
   }),
 };
@@ -136,13 +137,13 @@ const eventRow = {
   actor:'super-admin:owner-1', reason:'final_promotion_approval_recorded',
   evidence_json:JSON.stringify(durableReceipt),
 };
-function ledger(task=taskRow,event=eventRow) {
+function ledger(task=taskRow,event=eventRow,stage=stagingEvent) {
   return { prepare(sql){
     if(sql.includes('FROM ekodi_orchestrator_tasks')){
       return {bind(id){return {first:async()=>id===taskId?task:null}}};
     }
     if(sql.includes('FROM ekodi_orchestrator_task_events')){
-      const row=sql.includes('verified_preproduction_evidence_recorded')?stagingEvent:event;
+      const row=sql.includes('verified_preproduction_evidence_recorded')?stage:event;
       return {bind(id){return {first:async()=>id===taskId?row:null}}};
     }
     throw Error('Unexpected SQL');
@@ -170,16 +171,17 @@ test('only real scoped EKODI ledger evidence can pass advisory final preflight',
 });
 
 test('stale, mismatched, corrupt or unprivileged DB approvals fail closed',async()=>{
-  for (const [task,event] of [
+  for (const [task,event,stage] of [
     [null,eventRow],
     [{...taskRow,state:'blocked'},eventRow],
     [{...taskRow,branch_ref:'ai/gpt6/'+taskId},eventRow],
     [{...taskRow,state_version:4},eventRow],
     [{...taskRow,permission_class:'unapproved'},eventRow],
     [{...taskRow,state:'assigned'},eventRow],
-    [{...taskRow,evidence_json:JSON.stringify({preproductionProof:{...preproductionProof,releaseSha:'c'.repeat(40)}})},eventRow],
-    [{...taskRow,evidence_json:JSON.stringify({preproductionProof:{...preproductionProof,stagingVerified:false}})},eventRow],
-    [{...taskRow,evidence_json:'{}'},eventRow],
+    [taskRow,eventRow,{...stagingEvent,actor:'worker'}],
+    [taskRow,eventRow,{...stagingEvent,evidence_json:JSON.stringify({...JSON.parse(stagingEvent.evidence_json),requiredCiVerified:false})}],
+    [taskRow,eventRow,{...stagingEvent,evidence_json:JSON.stringify({...JSON.parse(stagingEvent.evidence_json),archiveDigest:'sha256:'+'e'.repeat(64)})}],
+    [taskRow,eventRow,null],
 
     [{...taskRow,deployment_requested:0},eventRow],
     [taskRow,null],
@@ -189,11 +191,18 @@ test('stale, mismatched, corrupt or unprivileged DB approvals fail closed',async
     [taskRow,{...eventRow,evidence_json:JSON.stringify({...durableReceipt,approvedBy:'other'})}],
     [taskRow,{...eventRow,evidence_json:JSON.stringify({...durableReceipt,stateVersion:4})}],
   ]){
-    const result=await evaluateEkodiContinuousExecutionFromLedger(ledger(task,event),ready);
+    const result=await evaluateEkodiContinuousExecutionFromLedger(ledger(task,event,stage===undefined?stagingEvent:stage),ready);
     assert.equal(result.decision,'await_final_owner_confirmation');
   }
   const db={prepare(){throw Error('DB unavailable')}};
   assert.equal((await evaluateEkodiContinuousExecutionFromLedger(db,ready)).decision,'await_final_owner_confirmation');
+});
+
+test('worker-controlled task evidence refresh does not revoke authenticated staging audit',async()=>{
+  for(const evidence_json of ['[]','{}',JSON.stringify({preproductionProof:{approved:false,verifiedAt:'wrong'}})]){
+    const result=await evaluateEkodiContinuousExecutionFromLedger(ledger({...taskRow,evidence_json}),ready);
+    assert.equal(result.decision,'ready_for_guarded_promotion');
+  }
 });
 
 test('unknown stages are not treated as production-ready', () => {
