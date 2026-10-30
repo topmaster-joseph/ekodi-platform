@@ -5,9 +5,10 @@
 // the 12-minute workflow timeout three times and the recovery PR parked.
 //
 // These helpers are pure so the decision is unit-tested: a required check is
-// "stuck" only when it has no successful completion on the head AND every
-// open run of it is either orphaned (its workflow run already completed) or
-// older than the stuck threshold. A healthy in-flight run is never re-run.
+// "stuck" only when there is no successful completion on the exact head and
+// every incomplete check itself exceeds the age threshold. A completed
+// associated suite alone is insufficient: cross-dispatch lookups can refer to
+// another completed run and trigger premature CI re-dispatch.
 
 export const CONVERGE_REQUIRED_WORKFLOWS = Object.freeze({
   test: 'ci.yml',
@@ -26,9 +27,13 @@ const PASSING = new Set(['success', 'neutral', 'skipped']);
 
 export function isStuckCheckRun(run, workflowRun, nowMs, stuckMs = CONVERGE_STUCK_MS) {
   if (!run || run.status === 'completed') return false;
-  if (workflowRun && workflowRun.status === 'completed') return true;
+  // A completed suite is not evidence that this exact check run has stalled:
+  // multiple GitHub check suites / dispatches can overlap on one head SHA.
+  // Never duplicate healthy, short-running CI merely because its lookup
+  // resolved an older completed workflow. Require measured check age first.
   const started = Date.parse(String(run.started_at || ''));
-  return Number.isFinite(started) && nowMs - started > stuckMs;
+  return Number.isFinite(started) && Number.isFinite(nowMs) &&
+    nowMs - started > stuckMs;
 }
 
 export function stuckRequiredChecks(required, checkRuns, workflowRunBySuite, nowMs, stuckMs = CONVERGE_STUCK_MS) {

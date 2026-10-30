@@ -35,6 +35,14 @@ export function planChurchNaverExclusion(rule) {
   if (rule.expression.includes(NAVER_FILE_PATH)) {
     throw new Error('Existing special handling for the Naver path must be inspected manually');
   }
+  // Cloudflare permits `true` as a whole-rule match-all expression, but
+  // rejects `(true) and (...)` when PATCHing this Single Redirect. Replacing
+  // the match-all with the sole negative path check is semantically identical
+  // for every URL except the one owner-issued Naver verification file.
+  const original = rule.expression.trim();
+  if (original === 'true' || original === '(true)') {
+    return { changed: true, expression: EXCLUSION };
+  }
   // Retain the old expression and precedence exactly. Only one equality
   // exception is appended. All other URLs still match as before.
   return { changed: true, expression: '(' + rule.expression + ') and ' + EXCLUSION };
@@ -124,8 +132,11 @@ export async function reconcileChurchNaverRedirect({ token, accountId, mode = 'a
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const mode = process.argv.includes('--inspect') ? 'inspect' : 'apply';
+    if (!process.env.CLOUDFLARE_CHURCH_RULES_API_TOKEN) {
+      throw new Error('Missing CLOUDFLARE_CHURCH_RULES_API_TOKEN: create a zone-scoped token with Zone Read and Single Redirect Edit for ekodichurch.kr; add it as a GitHub Actions secret');
+    }
     const result = await reconcileChurchNaverRedirect({
-      token: process.env.CLOUDFLARE_API_TOKEN,
+      token: process.env.CLOUDFLARE_CHURCH_RULES_API_TOKEN,
       accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
       mode,
     });

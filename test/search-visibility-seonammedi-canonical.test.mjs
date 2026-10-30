@@ -28,6 +28,18 @@ test('Unicode promotional IDN is safely normalized and dangerous alias inputs re
   assert.equal(safeHost('seonammedi.kr'),'seonammedi.kr');
   assert.equal(safeHost('서남권국립의대.kr'),idn);
   assert.equal(safeHost(idn),idn);
+  assert.equal(safeHost('https://seonammedi.kr/'),'seonammedi.kr');
+  assert.equal(safeHost('https://서남권국립의대.kr/'),idn);
+  // A configured host alias cannot silently turn /admin, /path or a
+  // query-bearing URL into an independently verified root property.
+  for(const bad of [
+    'seonammedi.kr/admin','https://seonammedi.kr/private',
+    'https://seonammedi.kr//hidden','https://seonammedi.kr/%2fadmin',
+    'https://seonammedi.kr/?token=secret','https://seonammedi.kr/#ref',
+    'seonammedi.kr\\\\private','seonammedi.kr//',
+  ]){
+    assert.equal(safeHost(bad),'','Must reject path or URL components: '+bad);
+  }
   for(const invalid of ['ekodi.kr','www.seonammedi.kr','localhost','bad.com:443','abc.kr@evil.kr','abc.kr?key=x','abc.kr#top','invalid host','https://abc.kr:443/']){
     assert.equal(safeHost(invalid),'','Alias validation must reject '+invalid);
   }

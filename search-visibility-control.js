@@ -4,6 +4,7 @@
 import authWorker from './auth-worker.js';
 import { buildEkodiPublicRegistry } from './public-discovery-registry.js';
 import { listSitePublicationSettings } from './site-publication-runtime.js';
+import { googleSearchConsoleReadOnly } from './google-search-console-readonly.js';
 
 export const SEARCH_CONTROL_PATH='/api/control/search-visibility';
 export const SEARCH_PROVIDER_CATALOG=Object.freeze([
@@ -66,6 +67,9 @@ const DOMAIN_CANONICAL_FOR_PATH=Object.freeze({
 });
 const REGISTERED_LEGACY_HOSTS=Object.freeze({
   '/seonammedi':['seonammedi.kr','서남권국립의대.kr'],
+  // This original-domain property remains distinct even when it redirects to /ekodibiz.
+  // Hosting the Naver proof file does not establish Search Advisor ownership or indexing.
+  '/ekodibiz':['ekodibiz.kr'],
   '/ekodichurch':['ekodichurch.kr'],
   '/ekodilab':['ekodilab.kr'],
   '/ekodimall':['ekodimall.kr'],
@@ -73,8 +77,8 @@ const REGISTERED_LEGACY_HOSTS=Object.freeze({
 const safeHost=value=>{
   // URL.hostname normalizes Unicode IDNs to ASCII Punycode. Reject URL
   // components/credentials to avoid treating an untrusted URL as ownership.
-  const input=safe(value,255).toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
-  if(!input||/[\\?#@:\s]/.test(input))return '';
+  const input=safe(value,255).toLowerCase().replace(/^https?:\/\//,'').replace(/\/$/,'');
+  if(!input||/[\\\/?#@:\s]/.test(input))return '';
   let h='';
   try{h=new URL('https://'+input).hostname}catch{return ''}
   return h!=='ekodi.kr'&&/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(h)&&!h.startsWith('www.')?h:'';
@@ -155,6 +159,16 @@ export async function handleSearchVisibilityControl(request,env){
   if(!actor)return denied(403,'SUPER_ADMIN_REQUIRED');
   if(!env?.DB?.prepare)return denied(503,'DATABASE_UNAVAILABLE');
   try{
+    // Explicit opt-in read-only Google report: no D1 table creation or audit
+    // writes. Authenticated super-admin and current public-registry match only.
+    if(url.searchParams.has('googleSiteUrl')){
+      if(request.method!=='GET')return denied(405,'METHOD_NOT_ALLOWED');
+      const siteUrl=url.searchParams.get('googleSiteUrl');
+      const allowed=await publicSites(env);
+      const site=allowed.find(x=>x.url===siteUrl);
+      if(!site)return denied(400,'SITE_NOT_PUBLIC');
+      return json({ok:true,google:await googleSearchConsoleReadOnly({env,site})});
+    }
     await ensureSchema(env.DB);
     const sites=await publicSites(env);
     if(request.method==='GET'){

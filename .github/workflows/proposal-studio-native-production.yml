@@ -1,0 +1,76 @@
+name: EKODI Proposal Studio Native Production Acceptance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/verify-proposal-native-production.mjs'
+      - 'scripts/verify-proposal-native-office.mjs'
+      - '.github/workflows/proposal-studio-native-production.yml'
+      - 'proposal/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-native-proposal-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  proposal_native:
+    if: github.repository == 'topmaster-joseph/ekodi-platform'
+    name: EKODI-owned Chromium live proposal, 1440px and 390px
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout current source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check native browser scripts and source
+        run: |
+          node --check scripts/verify-proposal-native-production.mjs
+          node --check scripts/verify-proposal-native-office.mjs
+          node --check scripts/ekodi-background-browser-worker.mjs
+          node --test test/proposal-studio*.test.mjs
+      - name: Install isolated EKODI Chromium harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Check live proposal with EKODI-owned browser worker
+        run: node scripts/verify-proposal-native-production.mjs
+      - name: Check generated Office downloads in isolated Chromium
+        run: node scripts/verify-proposal-native-office.mjs
+      - name: Validate genuine ZIP packages and XML parts without Office executable
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import pathlib,zipfile,xml.etree.ElementTree as ET
+          root=pathlib.Path('artifacts/proposal-native-production/office')
+          expected={
+           '.docx':{'word/document.xml','word/styles.xml'},
+           '.xlsx':{'xl/workbook.xml','xl/worksheets/sheet1.xml'},
+           '.pptx':{'ppt/presentation.xml','ppt/slides/slide1.xml','ppt/slideMasters/slideMaster1.xml'}
+          }
+          for ext,required in expected.items():
+           p=root/('proposal-native'+ext)
+           with zipfile.ZipFile(p) as z:
+            assert z.testzip() is None,(ext,'invalid ZIP CRC')
+            names=set(z.namelist())
+            assert required<=names,(ext,required-names)
+            for name in names:
+             if name.endswith(('.xml','.rels')):ET.fromstring(z.read(name))
+           print('OOXML ZIP, CRC and XML validation PASS:',ext)
+          PY
+      - name: Publish ephemeral, synthetic-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-proposal-native-production-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/proposal-native-production
+          if-no-files-found: warn
+          retention-days: 7

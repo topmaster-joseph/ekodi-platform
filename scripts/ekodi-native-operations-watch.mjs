@@ -5,6 +5,8 @@
  */
 import {writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
+import {collectNativePreparation} from './ekodi-native-workload-preparation.mjs';
+import {AUTOMATION_MIGRATION_PR,projectEkodiNativeMigration,renderEkodiMigrationSummary} from './ekodi-native-migration-status.mjs';
 
 const OWNER='topmaster-joseph';
 const REPO='ekodi-platform';
@@ -101,6 +103,24 @@ async function boundedJson(fetchImpl,url,token){
   }catch{return {ok:false,reason:'read_only_probe_unreachable'}}
   if(response.status===429||response.status===1027)
     return {ok:false,reason:'provider_quota_protection',circuitOpen:true};
+  // GitHub API 403 may mean an exhausted installation quota, a secondary
+  // rate limit, or insufficient permissions. Never treat it as an ordinary
+  // missing resource and keep scanning: that can worsen the rate limit.
+  // Inspect only response headers and the message; never persist the body.
+  if(url.startsWith(BASE+'/')&&response.status===403){
+    const remaining=response.headers?.get('x-ratelimit-remaining');
+    const retryAfter=response.headers?.get('retry-after');
+    let message='';
+    try{
+      const payload=await response.json();
+      message=typeof payload?.message==='string'?payload.message:'';
+    }catch{ /* a 403 is still a stop condition, even with invalid JSON */ }
+    const exhausted=remaining==='0'||!!retryAfter||
+      /(?:rate limit|secondary rate|abuse detection)/i.test(message);
+    return {ok:false,
+      reason:exhausted?'github_api_quota_exhausted':'github_api_permission_denied_or_policy',
+      circuitOpen:true};
+  }
   if(!response.ok)return {ok:false,reason:'http_'+Number(response.status)};
   try{
     const data=await response.json();
@@ -156,6 +176,22 @@ export async function collectEkodiNativeWatch({
         updatedAt:compact(pr.data?.updated_at)}):
       check('board-pr-3794','warning',pr.reason));
   }
+  // Reuse this existing EKODI hourly runner; no extra cron or OpenAI scheduler.
+  // PR state is only a prerequisite: no merge or health check can prove that
+  // actual worship documents, books, live streams or UI E2E were delivered.
+  const snapshots=[];
+  if(!report.circuitOpen){
+    for(const expected of AUTOMATION_MIGRATION_PR){
+      const result=await get(BASE+'/pulls/'+expected.number);
+      snapshots.push({id:expected.id,ok:result.ok,response:result.ok?result.data:null});
+      if(result.circuitOpen){report.circuitOpen=true;break;}
+    }
+  }
+  report.automationMigration=projectEkodiNativeMigration({proposals:snapshots,checks:report.checks});
+  // EKODI native documents/editions: disclose their authoritative inputs and
+  // missing receipts in the same existing scheduled artifact. Never mutate.
+  report.automationPreparation=await collectNativePreparation({now:new Date(nowMs)});
+
   report.result=report.circuitOpen?'deferred':
     report.checks.some(x=>x.status==='alert')?'attention':
     report.checks.some(x=>x.status==='warning')?'partial':'ok';
@@ -176,6 +212,14 @@ export function renderEkodiWatchSummary(report){
     ...report.checks.map(x=>'- '+x.name+': '+x.status+(x.reason?' ('+x.reason+')':'')),
     '- Daily traffic totals: consult the authoritative System Health/Traffic Intelligence collector; unavailable here is not zero.',
     '- Missionary bi-monthly narrative: requires a distinct EKODI-owned source and distribution mapping; not falsely generated.',
+    ...(report.automationMigration?[renderEkodiMigrationSummary(report.automationMigration)]:[]),
+    ...(report.automationPreparation?[
+      '- EKODI Sunday: '+report.automationPreparation.church.status+
+        ' / '+(report.automationPreparation.church.scripture||report.automationPreparation.church.reason||'unavailable'),
+      '- EKODI Human Publishing: '+report.automationPreparation.publishing.status+
+        ', verified publications: '+(report.automationPreparation.publishing.verifiedPublications||0),
+      '- Native document and publication work: no writes; owner-approved output receipts still required.'
+    ]:[]),
   ].join('\n')+'\n';
 }
 

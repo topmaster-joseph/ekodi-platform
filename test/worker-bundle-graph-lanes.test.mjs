@@ -40,6 +40,15 @@ test('a shared legal footer change dispatches every service Worker that bundles 
   assert.ok(business && !business.workflow && /Orphaned/.test(business.excluded));
 });
 
+test('non-bundled church Cloudflare rule script dispatches only its guarded Worker lane', () => {
+  const script='scripts/cloudflare-church-naver-redirect-exception.mjs';
+  const plan=lanesForChangedFiles(root,[script]);
+  assert.deepEqual(plan.dispatches.map(item=>item.workflow),['deploy-church-naver-proof.yml']);
+  assert.deepEqual(plan.affected.find(item=>item.config==='wrangler.church-naver-proof.toml')?.touched,[script]);
+  assert.deepEqual(plan.unowned,[]);
+  assert.equal(lanesForChangedFiles(root,['scripts/unrelated-missing.mjs']).dispatches.length,0);
+});
+
 test('a change outside every Worker bundle dispatches nothing', () => {
   const plan = lanesForChangedFiles(root, ['docs/operations/cloudflare-two-account-boundary.md']);
   assert.deepEqual(plan.dispatches, []);
