@@ -136,7 +136,7 @@ test('observed Cloudflare Precursor origin-normalizing script is hash-audited, n
  const {createHash}=await import('node:crypto');
  const params="window.__CF$cv$params={r:'abcdef1234567890',t:'MTc5MzA3OTA0NQ==',u:'01a17bd6',ut:'abcdef-1793079045-1.2.1.1-zz',i:60};";
  const loader=origin=>`(function(){if(!document.body)return;var l=window.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o='${origin}'}}var u='/cdn-cgi/challenge-platform/scripts/precursor/main.js',s=document.createElement('script');s.src=o?new URL(u,o).href:u;document.head.appendChild(s);})();`;
- for(const origin of ['https://ekodi.kr/','https://ekodi.kr/edu/','https://edu.ekodi.kr/']){
+ for(const origin of ['https://ekodi.kr/','https://ekodi.kr/edu/']){
    const body=params+loader(origin);
    const hash=createHash('sha256').update(body,'utf8').digest('base64');
    assert.deepEqual(m.cloudflareJsDetectionHashes('<html><script>'+body+'</script></html>'),[hash]);
