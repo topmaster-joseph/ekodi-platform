@@ -60,7 +60,7 @@ test('selected site admin menus are hand-off links to the registered child admin
 
 test('ADMIN-RISK-GUARD-001 flags high-risk settings and guards their saves', async () => {
   const risky = ADMIN_MENU_REGISTRY.filter(item => item.risk === 'high').map(item => item.id).sort();
-  assert.deepEqual(risky, ['admins','ai-membership','ai-module-spec','ai-settings','aiops','audit-records','deployments','devices','finance','infra-costs','pos-agent','public-site-controls','security','storage','users-access']);
+  assert.deepEqual(risky, ['admins','ai-membership','ai-module-spec','ai-settings','aiops','audit-records','deployments','devices','finance','infra-costs','points','pos-agent','public-site-controls','security','storage','users-access']);
   assert.equal(isAdminRiskSection('finance'), true);
   assert.equal(isAdminRiskSection('books'), false);
   for (const id of risky) assert.ok(ADMIN_MENUS.some(menu => menu.sections.includes(id)), `${id} must be reachable from a menu`);
