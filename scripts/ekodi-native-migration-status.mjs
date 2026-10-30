@@ -10,14 +10,6 @@ export const AUTOMATION_MIGRATION_PR = Object.freeze([
 ]);
 
 export const LEGACY_MIGRATION_WORKLOADS=Object.freeze([
-  Object.freeze({id:'mission-home-production-e2e',kind:'monitor',trackingIssue:6875,missing:[
-    'first_party_chromium_desktop_1440x900',
-    'first_party_chromium_mobile_390x844',
-    'public_photo_consent_and_media_fallback',
-    'protected_space_release_sha',
-    'production_mobile_readback',
-    'legacy_disable_receipt'
-  ]}),
   Object.freeze({id:'social-accounts-release',kind:'monitor',missing:[
     'native_scheduled_job_artifact','authenticated_social_ui_e2e',
     'released_source_sha','exclusive_writer_lease','legacy_disable_receipt'
@@ -36,6 +28,14 @@ export const LEGACY_MIGRATION_WORKLOADS=Object.freeze([
     'pastor_approved_scripture','real_sermon_google_doc',
     'real_bulletin_google_doc','real_worship_google_slides',
     'owner_approval','exclusive_writer_lease','legacy_disable_receipt'
+  ]}),
+  Object.freeze({id:'mission-home-production-e2e',kind:'monitor',trackingIssue:6875,missing:[
+    'first_party_chromium_desktop_1440x900',
+    'first_party_chromium_mobile_390x844',
+    'public_photo_consent_and_media_fallback',
+    'protected_space_release_sha',
+    'production_mobile_readback',
+    'legacy_disable_receipt'
   ]}),
 ]);
 
