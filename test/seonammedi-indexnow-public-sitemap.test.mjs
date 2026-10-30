@@ -47,8 +47,7 @@ test('production submission code uses live sitemap not a static page list', asyn
   assert.match(code, /canonicalIndexNowUrlsFromSitemap\(await sitemapResponse\.text\(\)\)/);
   assert.match(code, /sitemapUrl = SEONAMMEDI_CANONICAL_ORIGIN \+ '\/sitemap\.xml'/);
   assert.match(code, /AbortSignal\.timeout\(25000\)/);
-  assert.match(code, /https:\/\/searchadvisor\.naver\.com\/indexnow/);
-  assert.match(code, /https:\/\/www\.bing\.com\/indexnow/);
-  assert.match(code, /https:\/\/api\.indexnow\.org\/indexnow/);
+  assert.match(code, /submitIndexNowBatches/);
+  assert.doesNotMatch(code, /playwright|chromium/);
   assert.doesNotMatch(code,/SEONAMMEDI_SITEMAP_PATHS/);
 });
