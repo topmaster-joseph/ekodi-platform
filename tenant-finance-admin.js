@@ -96,7 +96,7 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
       <td>${tag(a.connectionStatus)}</td>
       <td>${a.transferEnabled?'이체 허용':'조회 전용'}</td>
       <td>${caps.manage&&ready.readerConnected?`<button type="button" data-bank-sync="${esc(a.id)}">동기화</button>`:'—'}</td>
-    </tr>`).join(''):`<tr><td colspan="6" class="empty">연결된 은행계좌가 없습니다. 계좌 연결은 최고관리자에서 등록합니다.</td></tr>`;
+    </tr>`).join(''):`<tr><td colspan="6" class="empty">등록된 운영계좌가 없습니다. 아래에서 파일연동 계좌를 먼저 등록하세요.</td></tr>`;
 
     const transactionRows=transactions.length?transactions.map(t=>`<tr>
       <td>${esc(dateText(t.bookedAt))}</td><td>${esc(accountName(t,accountMap))}</td>
@@ -113,6 +113,17 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
       return `<tr><td>${esc(dateText(t.requestedAt))}</td><td><strong>${esc(t.recipientName)}</strong><br><small>${esc(t.recipientBankName||'')} ${t.recipientAccountLast4?`****${esc(t.recipientAccountLast4)}`:''}</small></td>
       <td class="right"><strong>${esc(krw(t.amount))}</strong></td><td>${tag(t.status)}</td><td>${esc(t.requesterEmail||'')}</td><td><div class="actions">${approve}${execute}</div></td></tr>`;
     }).join(''):`<tr><td colspan="6" class="empty">이체 요청이 없습니다.</td></tr>`;
+
+    const accountCreateForm=caps.manage?`<form id="bankManualAccountForm" class="trade-form">
+      <h3>승인 전 파일연동 계좌 등록</h3>
+      <p class="empty">금융결제원 승인 전에도 사이트별 수입·지출 장부를 운영할 수 있습니다. 전체 계좌번호 대신 끝 4자리만 저장하며 조회·이체 권한은 생성되지 않습니다.</p>
+      <div class="trade-grid">
+        <label>금융기관명<input name="institutionName" maxlength="120" placeholder="예: 토스뱅크" required></label>
+        <label>계좌 별칭<input name="accountAlias" maxlength="120" placeholder="예: 운영비 통장" required></label>
+        <label>계좌 끝 4자리<input name="accountLast4" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="1234"></label>
+        <label>현재잔액<input name="currentBalance" type="number" step="1" inputmode="numeric" placeholder="0"></label>
+      </div><div class="actions"><button class="button primary" type="submit">파일연동 계좌 등록</button></div>
+    </form>`:'';
 
     const importForm=caps.manage&&accounts.length?`<form id="bankCsvImportForm" class="trade-form">
       <h3>거래내역 파일 불러오기</h3>
@@ -141,11 +152,22 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
       <p class="empty">조회·요청·승인을 분리합니다. 전체 계좌번호·인터넷뱅킹 비밀번호·인증서는 EKODI 데이터베이스에 저장하지 않습니다.</p><p class="empty">오픈뱅킹은 금융결제원 승인과 조직별 계좌동의 후 조회 전용부터 연결합니다. 승인 전에는 CSV 파일 연동을 사용합니다. <a href="/privacy">개인정보처리방침</a> · <a href="/terms">이용약관</a></p></div>
       <span class="tag ${ready.executorConnected&&ready.transferExecutionEnabled?'live':'warn'}">${ready.executorConnected&&ready.transferExecutionEnabled?'실이체 연결':'실이체 잠금'}</span></div>
       <h3>연결계좌</h3><div class="table-wrap"><table><thead><tr><th>계좌</th><th>표시번호</th><th>잔액</th><th>상태</th><th>권한</th><th>동기화</th></tr></thead><tbody>${accountRows}</tbody></table></div>
+      ${accountCreateForm}
       ${importForm}
       <h3>최근 거래내역</h3><div class="table-wrap"><table><thead><tr><th>일시</th><th>계좌</th><th>내용</th><th>구분</th><th>금액</th><th>잔액</th></tr></thead><tbody>${transactionRows}</tbody></table></div>
       <h3>이체 요청 · 승인</h3><div class="table-wrap"><table><thead><tr><th>요청일</th><th>수취인</th><th>금액</th><th>상태</th><th>요청자</th><th>처리</th></tr></thead><tbody>${transferRows}</tbody></table></div>
       ${transferForm}`;
 
+    root.querySelector('#bankManualAccountForm')?.addEventListener('submit',async event=>{
+      event.preventDefault();const form=event.currentTarget;
+      const payload=Object.fromEntries(new FormData(form));
+      if(payload.currentBalance==='')delete payload.currentBalance;else payload.currentBalance=Number(payload.currentBalance);
+      try{
+        notice('파일연동 계좌 등록 중…');
+        await request('/accounts',{method:'POST',body:JSON.stringify(payload)});
+        form.reset();notice('파일연동 계좌를 등록했습니다. 이제 CSV 거래내역을 불러올 수 있습니다.','good');await render();
+      }catch(error){notice(`계좌 등록 실패: ${error.message}`,'error');}
+    });
     root.querySelectorAll('[data-bank-sync]').forEach(button=>button.onclick=async()=>{
       button.disabled=true;try{notice('계좌 동기화 중…');await request(`/accounts/${encodeURIComponent(button.dataset.bankSync)}/sync`,{method:'POST',body:'{}'});notice('계좌 거래내역을 동기화했습니다.','good');await render();}catch(error){notice(`동기화 실패: ${error.message}`,'error');button.disabled=false;}
     });

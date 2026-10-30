@@ -45,6 +45,13 @@ test('banking API fixes tenant scope server-side and fails closed for real trans
   assert.match(worker,/url\.pathname==='\/api\/finance\/banking\/transactions\/import'/);
   assert.match(worker,/slice\(0,500\)/);
   assert.match(worker,/ON CONFLICT\(bank_connection_id,external_id\)/);
+  assert.match(worker,/const tenantManaged=!actor\.platform/);
+  assert.match(worker,/tenantManaged\?'MANUAL'/);
+  assert.match(worker,/tenantManaged\?'':clean\(input\?\.accountRef/);
+  assert.match(worker,/const transferEnabled=tenantManaged\?0/);
+  assert.match(worker,/const readEnabled=tenantManaged\?0/);
+  assert.match(worker,/organizationId=tenantManaged\?clean\(actor\.organizationId/);
+  assert.match(worker,/SELECT balance_after AS balanceAfter,booked_at AS bookedAt/);
 });
 
 test('tenant and church admin surfaces expose scoped banking without duplicating credentials',()=>{
@@ -71,6 +78,10 @@ test('tenant and church admin surfaces expose scoped banking without duplicating
   assert.match(tenantUi,/금융결제원 승인과 조직별 계좌동의/);
   assert.match(tenantUi,/href=\"\/privacy\"/);
   assert.match(tenantUi,/href=\"\/terms\"/);
+  assert.match(tenantUi,/bankManualAccountForm/);
+  assert.match(tenantUi,/승인 전 파일연동 계좌 등록/);
+  assert.match(tenantUi,/전체 계좌번호 대신 끝 4자리만 저장/);
+  assert.match(tenantUi,/파일연동 계좌 등록/);
 });
 
 test('superadmin and shared-site delivery include banking control and asset publication',()=>{

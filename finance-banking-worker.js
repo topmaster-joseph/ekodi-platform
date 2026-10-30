@@ -172,29 +172,33 @@ async function bankingOverview(env,actor){
   };
 }
 async function createConnection(env,actor,input){
-  if(!actor.platform)throw Object.assign(new Error('PLATFORM_ADMIN_REQUIRED'),{status:403});
-  const organizationId=clean(input?.organizationId||actor.organizationId,80);
+  if(!actor.canManage)throw Object.assign(new Error('FINANCE_MANAGE_REQUIRED'),{status:403});
+  const tenantManaged=!actor.platform;
+  const organizationId=tenantManaged?clean(actor.organizationId,80):clean(input?.organizationId||actor.organizationId,80);
+  const workspace=tenantManaged?workspaceKey(actor.workspace):workspaceKey(input?.workspace||'');
   const alias=clean(input?.accountAlias,120);
   if(!organizationId||!alias)throw Object.assign(new Error('ORGANIZATION_AND_ALIAS_REQUIRED'),{status:400});
   const org=await env.DB.prepare('SELECT id FROM organizations WHERE id=? AND active=1').bind(organizationId).first();
   if(!org)throw Object.assign(new Error('ORGANIZATION_NOT_FOUND'),{status:404});
   const id=uid('bank');
   const last4=clean(input?.accountLast4,4).replace(/\D/g,'').slice(-4);
-  const accountRef=clean(input?.accountRef,240);
-  const provider=clean(input?.provider||'MANUAL',40).toUpperCase();
-  const status=['pending','active','disconnected','error'].includes(input?.connectionStatus)?input.connectionStatus:'pending';
+  const provider=tenantManaged?'MANUAL':clean(input?.provider||'MANUAL',40).toUpperCase();
+  const accountRef=tenantManaged?'':clean(input?.accountRef,240);
+  const status=tenantManaged?'active':(['pending','active','disconnected','error'].includes(input?.connectionStatus)?input.connectionStatus:'pending');
+  const readEnabled=tenantManaged?0:(input?.readEnabled===false?0:1);
+  const transferEnabled=tenantManaged?0:(input?.transferEnabled===true?1:0);
   const now=nowIso();
   await env.DB.prepare(`INSERT INTO bank_connections
     (id,organization_id,workspace_key,provider,institution_code,institution_name,account_alias,account_type,account_ref,account_last4,
      currency,current_balance,available_balance,balance_as_of,connection_status,read_enabled,transfer_enabled,created_at,updated_at)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .bind(id,organizationId,workspaceKey(input?.workspace||''),provider,clean(input?.institutionCode,40),clean(input?.institutionName,120),
+    .bind(id,organizationId,workspace,provider,tenantManaged?'':clean(input?.institutionCode,40),clean(input?.institutionName,120),
       alias,clean(input?.accountType||'checking',40),accountRef,last4,clean(input?.currency||'KRW',8),
       Number.isFinite(Number(input?.currentBalance))?Math.trunc(Number(input.currentBalance)):null,
-      Number.isFinite(Number(input?.availableBalance))?Math.trunc(Number(input.availableBalance)):null,
-      input?.balanceAsOf?clean(input.balanceAsOf,40):null,status,input?.readEnabled===false?0:1,input?.transferEnabled===true?1:0,now,now).run();
-  const scoped={...actor,organizationId};
-  await audit(env,scoped,'bank.connection.create','bank_connection',id,JSON.stringify({provider,alias,last4,status}));
+      tenantManaged?null:(Number.isFinite(Number(input?.availableBalance))?Math.trunc(Number(input.availableBalance)):null),
+      input?.balanceAsOf?clean(input.balanceAsOf,40):null,status,readEnabled,transferEnabled,now,now).run();
+  const scoped={...actor,organizationId,workspace};
+  await audit(env,scoped,'bank.connection.create','bank_connection',id,JSON.stringify({provider,alias,last4,status,tenantManaged}));
   return id;
 }
 async function importTransactions(env,actor,input){
@@ -222,6 +226,13 @@ async function importTransactions(env,actor,input){
         Number.isFinite(Number(item?.balanceAfter))?Math.trunc(Number(item.balanceAfter)):null,clean(item?.description,300),
         clean(item?.counterpartyName,160),clean(item?.category,80),'import',now,now).run();
     imported++;
+  }
+  const latestBalance=await env.DB.prepare(`SELECT balance_after AS balanceAfter,booked_at AS bookedAt
+    FROM bank_transactions WHERE bank_connection_id=? AND balance_after IS NOT NULL ORDER BY booked_at DESC LIMIT 1`)
+    .bind(connectionId).first();
+  if(latestBalance){
+    await env.DB.prepare(`UPDATE bank_connections SET current_balance=?,balance_as_of=?,connection_status='active',updated_at=? WHERE id=?`)
+      .bind(Math.trunc(Number(latestBalance.balanceAfter)),clean(latestBalance.bookedAt,40),nowIso(),connectionId).run();
   }
   const scoped={...actor,organizationId:String(connection.organizationId)};
   await audit(env,scoped,'bank.transactions.import','bank_connection',connectionId,`rows=${imported}`);
