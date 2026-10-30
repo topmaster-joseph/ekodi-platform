@@ -46,10 +46,10 @@ function dbMock(record=row(),options={}){
       const [update,insert]=statements;
       assert.match(update.sql,/state_version=state_version\+1/);
       assert.match(insert.sql,/verified_preproduction_evidence_recorded/);
-      assert.equal(update.args[3],record.state_version);
-      assert.equal(update.args[5],record.evidence_json);
+      assert.equal(update.args[2],record.state_version);
+      assert.equal(update.args[4],record.evidence_json);
       if(options.conflict)return [{meta:{changes:0}},{meta:{changes:0}}];
-      record.evidence_json=update.args[0];
+      assert.doesNotMatch(update.sql,/SET evidence_json=/);
       record.state_version++;
       calls.updates.push(update);
       assert.match(insert.sql,/THEN \? ELSE NULL END/);
@@ -111,9 +111,11 @@ test('one authenticated staged proof commits a versioned task record and audit e
   assert.equal(calls.events[0].workflowRunId,5020);
   assert.equal(calls.events[0].artifactDigest,artifactDigest);
   assert.equal(calls.events[0].archiveDigest,archiveDigest);
-  const taskProof=JSON.parse(task.evidence_json).preproductionProof;
-  assert.equal(taskProof.verifiedAt,proof.verifiedAt);
-  assert.equal(taskProof.rollbackReady,true);
+  assert.equal(calls.events[0].requiredCiVerified,true);
+  assert.equal(calls.events[0].securityReviewVerified,true);
+  assert.equal(task.evidence_json,'[]','command-ledger evidence stays byte-for-byte unchanged');
+  assert.equal(calls.events[0].verifiedAt,proof.verifiedAt);
+  assert.equal(calls.events[0].rollbackReady,true);
   const again=await recordVerifiedEkodiPreproductionEvidence(db,evidence(),oidc);
   assert.equal(again.recorded,true);
   assert.equal(again.idempotent,true);
@@ -129,8 +131,25 @@ test('worker-authored matching task proof without OIDC audit cannot claim idempo
   const {db,calls}=dbMock(existing,{fakeAudit:true});
   const r=await recordVerifiedEkodiPreproductionEvidence(db,proof,oidc);
   assert.equal(r.recorded,false);
-  assert.equal(r.reason,'matching_staging_proof_without_authoritative_audit');
+  assert.equal(r.reason,'conflicting_or_untrusted_stage_attestation');
   assert.equal(calls.batches,0);
+});
+
+test('worker progress evidence never replaces the OIDC staging audit or receives its authority',async()=>{
+  const userProgress={commandLedger:{state:'running',attemptCount:2},items:[{source:'worker',result:'unverified'}]};
+  const rowWithProgress={...row(),evidence_json:JSON.stringify(userProgress)};
+  const {db,calls}=dbMock(rowWithProgress);
+  const first=await recordVerifiedEkodiPreproductionEvidence(db,evidence(),oidc);
+  assert.equal(first.recorded,true);
+  assert.deepEqual(JSON.parse(rowWithProgress.evidence_json),userProgress);
+  assert.equal(calls.events.length,1);
+  assert.equal(calls.events[0].authority,'ekodi-orchestrator');
+  const changedArtifact=await recordVerifiedEkodiPreproductionEvidence(db,{
+    ...evidence(),artifactDigest:'sha256:'+'e'.repeat(64),
+  },oidc);
+  assert.equal(changedArtifact.recorded,false);
+  assert.equal(changedArtifact.reason,'conflicting_or_untrusted_stage_attestation');
+  assert.equal(calls.batches,1);
 });
 
 test('stale concurrent CAS and D1 outage fail closed',async()=>{
