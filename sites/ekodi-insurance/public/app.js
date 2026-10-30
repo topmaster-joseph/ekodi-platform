@@ -39,6 +39,7 @@ function loadState(){
 }
 function normalizeState(value){const base=blankState();const merged={...base,...(value||{})};merged.advisorChat={...base.advisorChat,...(value?.advisorChat||{})};if(!Array.isArray(merged.advisorChat.messages))merged.advisorChat.messages=[];if(!Array.isArray(merged.consultations))merged.consultations=[];return merged;}
 function saveState(){if(localRecordsUnreadable)return;localStorage.setItem(KEY,JSON.stringify(state));renderDashboard();renderPolicies();renderClaimPolicies();renderPrivacy();renderAdvisorChat();}
+function money(v){return new Intl.NumberFormat('ko-KR').format(Number(v||0))+'원';}
 // Keep malformed browser records strictly read-only even if a later view
 // dynamically inserts an enabled control after initial page setup.
 function guardUnreadableRecordInteraction(event){
@@ -52,7 +53,6 @@ function guardUnreadableRecordInteraction(event){
 }
 document.addEventListener('click',guardUnreadableRecordInteraction,true);
 document.addEventListener('submit',guardUnreadableRecordInteraction,true);
-function money(v){return new Intl.NumberFormat('ko-KR').format(Number(v||0))+'원';}
 function uid(){return crypto?.randomUUID?.()||String(Date.now())+Math.random().toString(16).slice(2);}
 function esc(v=''){return String(v).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
 function show(view){const exists=views.some(v=>v.id===view);const target=exists?view:'home';views.forEach(v=>v.classList.toggle('active',v.id===target));history.replaceState(null,'',target==='home'?'#home':'#'+target);window.scrollTo({top:0,behavior:'smooth'});if(target==='advisor')queueMicrotask(()=>document.getElementById('aiChatInput')?.focus());}
