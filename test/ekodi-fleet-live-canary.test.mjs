@@ -106,5 +106,33 @@ test('native existing workflow integrates the canary after genuine admin session
   const pulse = workflow.indexOf('name: Submit and execute read-only orchestration proof');
   assert.ok(session >= 0 && session < canary && canary < pulse);
   assert.match(workflow, /node scripts\/verify-ekodi-fleet-live\.mjs/);
-  assert.match(workflow, /if: steps\.budget\.outputs\.allowed == 'true'/);
+  const expectedCondition = "if: steps.budget.outputs.allowed == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'";
+  const sessionBlock = workflow.slice(session, canary);
+  const fleetBlock = workflow.slice(canary, pulse);
+  assert.ok(sessionBlock.includes(expectedCondition));
+  assert.ok(fleetBlock.includes(expectedCondition));
+  assert.match(fleetBlock, /node scripts\/verify-ekodi-fleet-live\.mjs/);
+  const providerBlock = workflow.slice(pulse, workflow.indexOf('name: Poll authoritative command state to terminal'));
+  assert.match(providerBlock, /if: steps\.budget\.outputs\.allowed == 'true'/);
+  assert.doesNotMatch(providerBlock, /github\.event_name/);
+  assert.match(workflow, /if: always\(\) && env\.E2E_AUTH_DB_ID != '' && env\.E2E_TOKEN_HASH != ''/);
+});
+
+test('scheduled read-only proof remains available when the paid AI proof is already budget-gated', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/verify-ekodi-orchestrator-live-e2e.yml', import.meta.url), 'utf8');
+  const block = (name, next) => workflow.slice(workflow.indexOf('name: ' + name), workflow.indexOf('name: ' + next));
+  const sessionBlock = block('Issue short-lived genuine production admin session', 'Verify authenticated fleet read-model and guest boundary');
+  const fleetBlock = block('Verify authenticated fleet read-model and guest boundary', 'Submit and execute read-only orchestration proof');
+  const paidBlock = block('Submit and execute read-only orchestration proof', 'Poll authoritative command state to terminal');
+  const schedule = { budgetAllowed: false, eventName: 'schedule' };
+  const manual = { budgetAllowed: false, eventName: 'workflow_dispatch' };
+  const push = { budgetAllowed: false, eventName: 'push' };
+  const canRunFleet = input => input.budgetAllowed || input.eventName === 'schedule' || input.eventName === 'workflow_dispatch';
+  for (const input of [schedule, manual]) {
+    assert.equal(canRunFleet(input), true);
+    assert.match(sessionBlock, /github\.event_name == 'schedule'/);
+    assert.match(fleetBlock, /github\.event_name == 'workflow_dispatch'/);
+    assert.match(paidBlock, /if: steps\.budget\.outputs\.allowed == 'true'/);
+  }
+  assert.equal(canRunFleet(push), false, 'quota-gated push cannot mint synthetic sessions in bulk');
 });
