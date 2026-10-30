@@ -52,7 +52,16 @@ Deno.serve(async (req: Request) => {
     if (!personId) return json(req, { error: "person_not_linked" }, 403);
     const requestUrl = new URL(req.url);
     const path = requestUrl.pathname.replace(/^\/points-api(?:-staging)?/, "") || "/";
-    if (path !== "/" && path !== "/me") return json(req, { error: "not_found" }, 404);
+    if (path !== "/" && path !== "/me" && path !== "/sites") return json(req, { error: "not_found" }, 404);
+    if (path === "/sites") {
+      const { data: sites, error: listError } = await db.from("ekodi_point_sites")
+        .select("site_id,display_name").eq("enabled", true)
+        .order("display_name", { ascending: true }).limit(100);
+      if (listError) throw listError;
+      return json(req, { sites: (sites || []).map(row => ({
+        id: row.site_id, name: row.display_name,
+      })) });
+    }
     const site = requestUrl.searchParams.get("site")?.trim() || "";
     if (!sitePattern.test(site)) return json(req, { error: "invalid_site" }, 400);
     const { data: siteInfo, error: siteError } = await db.from("ekodi_point_sites")

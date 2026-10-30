@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko" data-ekodi-global-nav="off" data-ekodi-character="off">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="ekodi-ui-type" content="USER">
+  <meta name="description" content="EKODI 사이트별 활동포인트 잔액 및 내역">
+  <title>내 활동포인트 | My EKODI</title>
+  <link rel="stylesheet" href="/my/points/styles.css">
+</head>
+<body data-ekodi-ui="USER">
+  <header class="top"><a class="brand" href="/my/">My EKODI</a><nav><a href="/my/#activity">내 활동</a><a href="/my/#account">내 정보</a></nav></header>
+  <main>
+    <div class="heading"><p class="kicker">MY EKODI · SITE POINTS</p><h1>내 활동포인트</h1>
+      <p>사이트마다 적립·사용 내역이 따로 보관됩니다. 다른 사이트로의 전환이나 기부는 승인된 정책에 따라 처리됩니다.</p>
+    </div>
+    <section class="panel" aria-labelledby="walletTitle">
+      <div class="toolbar"><h2 id="walletTitle">사이트별 포인트</h2><label for="siteSelect">사이트 선택</label>
+        <select id="siteSelect" disabled><option value="">사이트 확인 중</option></select></div>
+      <p id="notice" role="status" aria-live="polite">로그인 상태를 확인하고 있습니다.</p>
+      <a id="loginLink" class="login" hidden href="#">로그인</a>
+      <div id="balanceView" hidden><div class="balance"><span>사용 가능한 포인트</span><strong><span id="balance">0</span> P</strong></div>
+        <h3>최근 거래</h3><div id="history" class="history" aria-live="polite"></div>
+      </div>
+    </section>
+    <p class="footnote">활동포인트는 현금과 다르며, 기부만으로 기부금영수증이 발급되지 않습니다. 포인트 적립과 전환·기부는 사이트별 운영 정책을 따릅니다.</p>
+  </main>
+  <footer>© EKODI</footer>
+  <script src="/my/config.js"></script><script type="module" src="/my/points/app.js"></script>
+</body></html>

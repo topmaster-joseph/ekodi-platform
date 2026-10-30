@@ -1,0 +1,65 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const config=window.EKODI_MY_CONFIG||{};
+const select=document.getElementById('siteSelect');
+const notice=document.getElementById('notice');
+const login=document.getElementById('loginLink');
+const view=document.getElementById('balanceView');
+const balance=document.getElementById('balance');
+const history=document.getElementById('history');
+const enabled=Boolean(config.dataEnabled&&config.supabaseUrl&&config.supabasePublishableKey);
+const sb=enabled?createClient(config.supabaseUrl,config.supabasePublishableKey,
+  {auth:{detectSessionInUrl:true,persistSession:true}}):null;
+const api=enabled?config.supabaseUrl.replace(/\/$/,'')+'/functions/v1/points-api':'';
+const returnTo=new URL(location.href);returnTo.hash='';
+login.href='/auth/?site=my&return_to='+encodeURIComponent(returnTo.href);
+function showMessage(text){notice.textContent=text;view.hidden=true;}
+async function request(path,token){
+  const res=await fetch(api+path,{headers:{Authorization:'Bearer '+token,apikey:config.supabasePublishableKey},cache:'no-store'});
+  const body=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(body?.error||'points_unavailable');
+  return body;
+}
+function renderRows(rows){
+  history.replaceChildren();
+  if(!Array.isArray(rows)||!rows.length){history.textContent='아직 거래 내역이 없습니다.';return;}
+  const names={earn:'적립',spend:'사용',transfer_in:'전환 받음',transfer_out:'전환 보냄',donation:'포인트 기부'};
+  for(const row of rows){
+    const div=document.createElement('div');div.className='record';
+    const summary=document.createElement('div');const label=document.createElement('strong');
+    label.textContent=names[row.event_kind]||'포인트 거래';const date=document.createElement('small');
+    date.textContent=row.created_at?new Date(row.created_at).toLocaleString('ko-KR'):'';
+    summary.append(label,date);
+    const amount=document.createElement('strong');const value=Number(row.amount)||0;
+    amount.textContent=(value>0?'+':'')+value.toLocaleString('ko-KR')+' P';
+    amount.className=value>=0?'positive':'negative';
+    div.append(summary,amount);history.append(div);
+  }
+}
+async function loadWallet(token,site){
+  if(!/^[a-z0-9_-]{2,64}$/.test(site))return;
+  try{
+    showMessage('포인트 내역을 불러오고 있습니다.');
+    const data=await request('/me?site='+encodeURIComponent(site),token);
+    balance.textContent=Number(data.balance||0).toLocaleString('ko-KR');
+    renderRows(data.history);notice.textContent='';view.hidden=false;
+  }catch(e){showMessage('포인트 내역을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');}
+}
+async function start(){
+  if(!enabled){showMessage('포인트 조회 서비스 준비 중입니다.');return;}
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.access_token){showMessage('로그인하면 사이트별 활동포인트를 확인할 수 있습니다.');login.hidden=false;return;}
+  login.hidden=true;
+  try{
+    const data=await request('/sites',session.access_token);
+    const sites=Array.isArray(data.sites)?data.sites:[];
+    select.replaceChildren();
+    if(!sites.length){select.add(new Option('현재 운영 중인 포인트 사이트가 없습니다.',''));showMessage('사이트별 포인트 운영 준비 중입니다.');return;}
+    sites.forEach(site=>select.add(new Option(site.name,site.id)));
+    const wanted=new URLSearchParams(location.search).get('site');
+    if(wanted&&sites.some(site=>site.id===wanted))select.value=wanted;
+    select.disabled=false;
+    select.addEventListener('change',()=>loadWallet(session.access_token,select.value));
+    await loadWallet(session.access_token,select.value);
+  }catch(e){showMessage('포인트 목록을 확인할 수 없습니다. 연결 상태를 확인해 주세요.');}
+}
+start();
