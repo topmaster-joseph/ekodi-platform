@@ -51,9 +51,12 @@ test('copied JSON context and expired proof cannot authorize reservation',async(
 test('bad key, SHA, resource, units or timestamp rejected before DB',async()=>{
   let n=0;const e=env({prepare(){n++;throw Error('no calls');}});
   for(const change of [{operationKey:'email'},{headSha:'invalid'},{resource:'bad'},{
-    unitCost:6},{unitCost:0},{nowMs:0}]){
+    unitCost:6},{unitCost:0}]){
     assert.equal((await reserveTrustedGitHubApiBudget(e,request(1,change))).reason,'invalid_request');
   }
+  // An impossible clock invalidates the time-bound proof first. It is a
+  // genuine authorization denial, not a reason to bypass authentication.
+  assert.equal((await reserveTrustedGitHubApiBudget(e,request(1,{nowMs:0}))).reason,'not_authorized');
   assert.equal(n,0);
 });
 test('single parameterized insert-select reserves a bounded lease',async()=>{
