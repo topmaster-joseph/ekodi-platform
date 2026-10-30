@@ -8,7 +8,8 @@ async function fixture(){
   const source=new Map();
   for(const n of ['01','02'])for(const ext of ['docx','epub','pdf'])
     source.set('editions/'+n+'/test.'+ext,enc('confidential '+n+' '+ext));
-  for(const ext of ['md','json','txt'])source.set('editorial/report.'+ext,enc('report '+ext));
+  for(const name of ['editorial/notes.md','editorial/quality.json','editorial/footnotes.md'])
+    source.set(name,enc('report '+name));
   const records=[];
   for(const [path,data] of source)records.push({path,bytes:data.byteLength,
     sha256:await sha(data),kind:path.split('.').at(-1)});
