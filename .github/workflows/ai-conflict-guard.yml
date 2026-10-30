@@ -49,6 +49,12 @@ jobs:
                 printf '%s\n' "$output"
                 return 0
               fi
+              # Installation PRIMARY quota is depleted until GitHub reset;
+              # never repeat 403 requests or infer a successful conflict guard.
+              if grep -Eqi 'API rate limit exceeded for installation|primary rate limit exceeded|rate limit exceeded for installation' <<< "$output"; then
+                echo "EKODI GitHub installation primary quota exhausted; stop queries until reset." >&2
+                return "$status"
+              fi
               if [[ "$attempt" -ge 4 ]] || ! grep -Eqi 'rate limit|secondary rate|abuse detection|HTTP 50[234]|Gateway Timeout|temporarily unavailable|connection reset' <<< "$output"; then
                 printf '%s\n' "$output" >&2
                 return "$status"
