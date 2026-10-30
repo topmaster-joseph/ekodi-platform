@@ -25,3 +25,17 @@ test('shared footer shows the 통신판매업 신고번호 next to the business 
   assert.ok(html.includes('<span>통신판매업신고번호 2023-전남무안-0153</span>'));
   assert.ok(html.indexOf('사업자등록번호 213-13-01959') < html.indexOf('통신판매업신고번호'));
 });
+
+
+test('Toss review: merchant contact number is visible and dialable on shared and EKODIBIZ footers', async () => {
+  const html=renderEkodiUserFooter();
+  assert.match(html,/href="tel:\+821035018542">010-3501-8542<\/a>/);
+  const [client,bizPage,bizLocales]=await Promise.all([
+    readFile(new URL('../shell/user-ui-footer.js',import.meta.url),'utf8'),
+    readFile(new URL('../ekodibiz/index.html',import.meta.url),'utf8'),
+    readFile(new URL('../ekodibiz/site.js',import.meta.url),'utf8')
+  ]);
+  assert.match(client,/config\.contact\?\.phone/);
+  assert.match(bizPage,/href="tel:\+821035018542">010-3501-8542<\/a>/);
+  assert.equal((bizLocales.match(/href="tel:\+821035018542"/g)||[]).length,6);
+});
