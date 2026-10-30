@@ -36,4 +36,5 @@
 
 .book-links a.buy-direct{background:var(--navy);border-color:var(--navy);color:var(--white);font-weight:600;min-height:44px;letter-spacing:.03em}
 .book-links a.buy-direct:hover{background:var(--burgundy);border-color:var(--burgundy)}
+.book-links span.buy-direct.is-pending{display:flex;align-items:center;justify-content:center;min-height:44px;border:1px dashed var(--navy);color:var(--navy);font-weight:600;letter-spacing:.03em;cursor:default}
 @media(max-width:640px){.book-links>.buy-direct{grid-column:1/-1}}
