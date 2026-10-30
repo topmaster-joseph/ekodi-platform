@@ -111,6 +111,7 @@ const ADMIN_ASSETS = new Set([
   '/admin-finance.css',
   '/infra-cost-admin.js',
   '/search-visibility-admin.js',
+  '/points-admin.js',
   '/infra-cost-admin.css',
   '/admin-canonical-routes.js',
   '/admin-surface-labels.js',
