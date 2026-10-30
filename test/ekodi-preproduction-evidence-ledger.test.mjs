@@ -46,16 +46,18 @@ function dbMock(record=row(),options={}){
       const [update,insert]=statements;
       assert.match(update.sql,/state_version=state_version\+1/);
       assert.match(insert.sql,/verified_preproduction_evidence_recorded/);
-      assert.equal(update.args[2],record.state_version);
-      assert.equal(update.args[4],record.evidence_json);
+      assert.equal(update.args[2],record.state);
+      assert.equal(update.args[3],record.state_version);
+      assert.equal(update.args[5],record.evidence_json);
       if(options.conflict)return [{meta:{changes:0}},{meta:{changes:0}}];
       assert.doesNotMatch(update.sql,/SET evidence_json=/);
       record.state_version++;
+      record.state='staging';
       calls.updates.push(update);
       assert.match(insert.sql,/THEN \? ELSE NULL END/);
       assert.equal(insert.args[0],taskId);
       assert.equal(insert.args[1],record.state_version);
-      calls.events.push(JSON.parse(insert.args[5]));
+      calls.events.push(JSON.parse(insert.args[6]));
       return [{meta:{changes:1}},{meta:{changes:1}}];
     },
   }};
@@ -121,6 +123,42 @@ test('one authenticated staged proof commits a versioned task record and audit e
   assert.equal(again.idempotent,true);
   assert.equal(calls.batches,1);
 });
+test('OIDC verified staging proof is the sole path from production_verifying into staging',async()=>{
+  const task={...row(),state:'production_verifying',evidence_json:JSON.stringify({commandLedger:{state:'verified'}})};
+  const {db,calls}=dbMock(task);
+  const verified=await recordVerifiedEkodiPreproductionEvidence(db,evidence(),oidc);
+  assert.equal(verified.recorded,true);
+  assert.equal(verified.fromState,'production_verifying');
+  assert.equal(verified.toState,'staging');
+  assert.equal(task.state,'staging');
+  assert.equal(task.state_version,4);
+  assert.equal(calls.events.length,1);
+  assert.deepEqual(JSON.parse(task.evidence_json),{commandLedger:{state:'verified'}});
+  const replay=await recordVerifiedEkodiPreproductionEvidence(db,evidence(),oidc);
+  assert.equal(replay.recorded,true);
+  assert.equal(replay.idempotent,true);
+  assert.equal(calls.batches,1);
+});
+test('unverified stage cannot advance a completed command into owner confirmation',async()=>{
+  const task={...row(),state:'production_verifying'};
+  const {db,calls}=dbMock(task);
+  for(const change of [{stagingVerified:false},{rollbackReady:false},{verified:false},
+    {artifactDigest:'invalid'},{archiveDigest:'invalid'}]){
+    const answer=await recordVerifiedEkodiPreproductionEvidence(db,{...evidence(),...change},oidc);
+    assert.equal(answer.recorded,false);
+    assert.equal(task.state,'production_verifying');
+  }
+  assert.equal(calls.batches,0);
+});
+test('a prior staging audit cannot resurrect an out-of-order production_verifying task',async()=>{
+  const task=row(),{db,calls}=dbMock(task);
+  assert.equal((await recordVerifiedEkodiPreproductionEvidence(db,evidence(),oidc)).recorded,true);
+  task.state='production_verifying';
+  const answer=await recordVerifiedEkodiPreproductionEvidence(db,evidence(),oidc);
+  assert.equal(answer.recorded,false);
+  assert.equal(answer.reason,'prior_staging_attestation_not_releasable');
+  assert.equal(calls.batches,1);
+});
 test('worker-authored matching task proof without OIDC audit cannot claim idempotent success',async()=>{
   const proof=evidence();
   const existing={...row(),evidence_json:JSON.stringify({preproductionProof:{
@@ -175,7 +213,7 @@ test('OIDC receiver and scheduled verifier remain first-party and never deploy',
   assert.match(adapter,/verifyGitHubActionsOidc\(bearer\(request\)/);
   assert.match(adapter,/recordVerifiedEkodiPreproductionEvidence\(db,body.evidence,oidc\)/);
   assert.match(workflow,/collectEkodiPreproductionEvidence/);
-  assert.match(workflow,/candidate.state === 'staging'/);
+  assert.match(workflow,/candidate.state === 'staging' \|\| candidate.state === 'production_verifying'/);
   assert.match(workflow,/action:'attest_staging'/);
   assert.doesNotMatch(workflow,/automatic_final_owner_approval/);
 });
