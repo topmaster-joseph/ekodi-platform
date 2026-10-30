@@ -242,6 +242,10 @@ for (const menuId of menuIds) {
     if (attempt < maxAttemptsPerMenu) console.warn(`[E2E] ${menuId}: retrying only this menu in a brand-new Chromium process`);
   }
 
+  // CF-QUOTA-001: a 429 in any menu aborts the entire suite before another browser request.
+  // The inner-loop break only stops retries for that menu; this exits the outer menu loop.
+  if (fatal) break;
+
   if (!fatal && !passed && menuId === 'tax' && isKnownTaxRendererProtocolRace(lastReport)) {
     console.warn('[E2E] tax: main-frame Tax request passed worker guards but Playwright hit the known cross-origin HTTP/2 commit race; running strict isolated Tax surface verification');
     const outcome = await runTaxSurface();

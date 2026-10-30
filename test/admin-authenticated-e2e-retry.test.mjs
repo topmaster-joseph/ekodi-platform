@@ -23,6 +23,13 @@ test('authenticated Admin E2E isolates every menu in a fresh Chromium process an
   assert.match(source, /runCanonicalAssist\(\)/);
 });
 
+test('CF-QUOTA-001 aborts the entire full-menu suite after the first 429, not just the current menu retry', async () => {
+  const source = await retrySource();
+  assert.match(source, /if \(isAdminEntryQuotaCircuit\(report\)\) \{[\s\S]*?fatal = new Error\(`CF-QUOTA-001[\s\S]*?break;\s*\}/);
+  assert.match(source, /if \(fatal\) break;\s*if \(!fatal && !passed && menuId === 'tax'/);
+  assert.match(source, /for \(const menuId of menuIds\) \{[\s\S]*?if \(fatal\) break;/);
+});
+
 test('isolated worker skips redundant clicks only when the active Admin panel has a visible rendered panel', async () => {
   const source = await workerSource();
   assert.match(source, /let alreadyActive = await page\.evaluate\(section => window\.EKODIAdminPanels\?\.current\?\.\(\) === section, menuId\)/);
