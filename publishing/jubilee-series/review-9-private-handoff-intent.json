@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "EKODI-JUBILEE-THEOLOGY",
+  "sourceRevision": "review-9",
+  "handoffId": "EJT-20261030-REVIEW9-PRIVATE-HANDOFF",
+  "createdAt": "2026-10-30",
+  "artifactPackage": {
+    "name": "EKODI_희년신학_9차_에코디출판_비공개이관패키지.zip",
+    "sha256": "b9e582e4767665a8d72bb312d6a1aee3d4d1738be5558fadab194d75bb770fca",
+    "bytes": 2883756,
+    "manifestSha256": "3304440f16b63ac4533ea13443f162af7c727e674d9a840d9756b0a6ea94caad",
+    "integrity": "local-verified",
+    "privatePublisherStorageReadback": false
+  },
+  "currentWorkflowState": "private-handoff-ready-awaiting-authenticated-ingestion",
+  "editorialStageByReviewId": {
+    "EJT-01-REVIEW": "citation-and-rights-review",
+    "EJT-02-REVIEW": "literary-and-rights-review"
+  },
+  "volumeAssets": [
+    {
+      "reviewId": "EJT-01-REVIEW",
+      "docxSha256": "238d041d75de2f23182046d72e452c33effddb290179bd23710a5dc7f54174c0",
+      "epubSha256": "7c310cf075b8bd78e0412464bff944192263c8ff9ebf67a53b627310d53cdbc1",
+      "pdfSha256": "3bb458c336ce722119321ddac93cda9991a22ae35bd59487e8bf99c6c65a187b",
+      "sourceFootnotesChecked": 55,
+      "sourceOriginalAndPagesVerified": false
+    },
+    {
+      "reviewId": "EJT-02-REVIEW",
+      "docxSha256": "fac674dd4becf7e3a91bf89a24f43898950e1c8988c9bd770ea1d2af7e735c92",
+      "epubSha256": "cebe80d95766c0ece8ca9a0a770646a2820dd8509cda2ae657f6d1b0e6e0343a",
+      "pdfSha256": "8ce10108e9e763ec6805fe66dd735e1f34ae8a3e79c569c098b7920a105e4d33",
+      "finalLiteraryAuthorReview": false
+    }
+  ],
+  "privacy": {
+    "publicGitHubManuscriptBytes": false,
+    "publicDriveUrls": false,
+    "sourcePrivateAssetUrl": null,
+    "internalR2ObjectKeys": null
+  },
+  "release": {
+    "publisherPrivateIngestComplete": false,
+    "authorApproved": false,
+    "publisherApproved": false,
+    "rightsApproved": false,
+    "officialEpubCheckPassed": false,
+    "screenReaderAndDeviceVerified": false,
+    "saleAllowed": false,
+    "publicCatalog": false,
+    "checkoutEnabled": false,
+    "scheduledReleaseAt": null,
+    "isbn": null,
+    "priceKrw": null
+  },
+  "nextVerifiedTransition": {
+    "from": "private-handoff-ready-awaiting-authenticated-ingestion",
+    "to": "private-editorial-ingested",
+    "requirements": [
+      "authenticated EKODI Publishing ingestion authority",
+      "private R2/Drive upload readback SHA256 matches six originals",
+      "immutable source edition mapping and durable audit receipt",
+      "no public listing or price",
+      "review stages preserved"
+    ]
+  },
+  "notice": "Manifest and package SHA prove local handoff integrity only, not private publisher ingestion. Do not activate sales or infer final approval."
+}
