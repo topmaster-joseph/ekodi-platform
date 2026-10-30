@@ -28,24 +28,43 @@ Run node --test test/github-api-budget-admission.test.mjs. Use EKODI protected
 source PR, exact-head CI, staged D1 migration, guarded production and
 production read-only verification. No paid service or independent scheduler.
 
-## Authenticated installation attestation (source-only, default disabled)
+## GitHub App JWT and installed-repository proof (source-only; OFF)
 
-A JSON field saying verifiedInstallationToken=true is not proof of authentication.
-The admission primitive now requires a non-serializable WeakSet-branded
-25-second context minted by the trusted EKODI server after GitHub authenticates
-both the intended App installation (App ID + installation ID) and canonical
-repository access over HTTPS. Only actual rate-limit headers returned from the
-verified repository request are persisted in D1. A copied context, outdated
-proof, absent signed-in token, missing headers or D1 error fails closed.
-No bearer tokens, response bodies, user identities or URLs are persisted.
+A user-provided JSON field verifiedInstallationToken=true is not authentication.
+The admission primitive instead requires a non-serializable WeakSet-branded,
+immutable 25-second proof issued only after the trusted EKODI server calls:
+1. Official GitHub App JWT endpoint GET /app/installations/{installation_id}.
+   GitHub authenticates the App JWT and returns the actual installation ID,
+   App ID and suspension state; these must match owner-controlled environment.
+2. Official POST /app/installations/{installation_id}/access_tokens with
+   repository scope restricted to ekodi-platform. GitHub, not the caller,
+   issues the installation token. It is not saved in D1 or exposed in output.
+3. Official installation-token endpoint GET /installation/repositories,
+   confirming the canonical repository, and storing only GitHub's real
+   x-ratelimit-* core headers in the existing D1 measurement ledger.
 
-fetchImpl is only an internal unit-testing injection. Never accept a transport,
-token, identity or proof from a user request. Token issuance is still a distinct
-owner-provisioned GitHub App integration; this patch does not issue a token,
-publish an HTTP route, change permissions, or trigger GitHub mutations.
+A copied proof, expired context, missing App ID or JWT, wrong repository,
+permission error, missing budget headers or D1 failure all reject admission.
+The fetchImpl parameter is strictly an internal deterministic-test seam:
+never accept a browser/request-provided fetch, token, JWT, proof or identity.
 
-Keep the production enable flag unset. Before activation require owner setup
-of EKODI_GITHUB_APP_ID and installation ID, live token issuer, signed webhook,
-verified response telemetry, all GitHub callers routed through admissions,
-multi-worker concurrency tests and guarded production evidence.
-Run tests for github-api-installation-proof and github-api-budget-admission.
+This implementation does NOT generate the signed App JWT: an owner-provisioned
+EKODI signer is still required. The minted installation access token is used
+only within this bootstrap attestation and is deliberately not exported to
+arbitrary code; issuing a verified token for actual API operations, their
+same-session admission, and safe token refresh are separate pending gates.
+
+Each attestation currently costs GitHub API requests. It must NOT be invoked
+once per operation or per 25-second interval at platform scale. Before
+activation, batch and reuse a trusted server-side issuer session, verify
+measured quota freshness and load-test rate consumption, and connect every
+official GitHub caller to the same authenticated D1 reservation. A new App
+is not a loophole for GitHub primary/secondary rate limits.
+
+Keep EKODI_GITHUB_BUDGET_ADMISSION_ENABLED unset. Before activation require
+sovereign GitHub App/JWT setup, least-privilege installed permissions, GitHub
+webhook HMAC, measured telemetry, multi-worker tests, guarded rollout and
+production evidence. This code has no public route or protected merge API.
+
+Run node --test test/github-api-installation-proof.test.mjs
+test/github-api-budget-admission.test.mjs test/github-api-budget-control.test.mjs.
