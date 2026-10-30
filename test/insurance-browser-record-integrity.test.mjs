@@ -105,7 +105,7 @@ test('unreadable old data disables editing with accessible notice and preserves 
 
 test('read-only recovery gate intercepts future submit and delete controls without blocking navigation', () => {
   const start=source.indexOf('function guardUnreadableRecordInteraction(event){');
-  const end=source.indexOf('\nfunction money(',start);
+  const end=source.indexOf('\nfunction uid(',start);
   assert.ok(start>=0&&end>start,'live source must install capture-phase recovery guard');
   const listeners=new Map();
   const context=vm.createContext({
