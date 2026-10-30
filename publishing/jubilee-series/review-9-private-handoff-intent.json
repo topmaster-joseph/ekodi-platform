@@ -5,12 +5,12 @@
   "handoffId": "EJT-20261030-REVIEW9-PRIVATE-HANDOFF",
   "createdAt": "2026-10-30",
   "artifactPackage": {
-    "name": "EKODI_희년신학_9차_에코디출판_비공개이관패키지.zip",
     "sha256": "b9e582e4767665a8d72bb312d6a1aee3d4d1738be5558fadab194d75bb770fca",
     "bytes": 2883756,
     "manifestSha256": "3304440f16b63ac4533ea13443f162af7c727e674d9a840d9756b0a6ea94caad",
     "integrity": "local-verified",
-    "privatePublisherStorageReadback": false
+    "privatePublisherStorageReadback": false,
+    "filenamePolicy": "Original local ZIP filename is not a publication identifier; match immutable SHA-256 and manifest SHA-256."
   },
   "currentWorkflowState": "private-handoff-ready-awaiting-authenticated-ingestion",
   "editorialStageByReviewId": {
@@ -58,7 +58,7 @@
     "from": "private-handoff-ready-awaiting-authenticated-ingestion",
     "to": "private-editorial-ingested",
     "requirements": [
-      "authenticated EKODI Publishing ingestion authority",
+      "authenticated publisher ingestion authority",
       "private R2/Drive upload readback SHA256 matches six originals",
       "immutable source edition mapping and durable audit receipt",
       "no public listing or price",
