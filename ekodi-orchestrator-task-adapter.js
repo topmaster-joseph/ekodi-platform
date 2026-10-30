@@ -152,6 +152,7 @@ export async function stagingPromotionApprovalIsValid(db,row,evidence){
     ).bind(row.task_id).first();
   }catch{return false}
   if(!stageRow)return row.state!=='staging';
+  if(row.state!=='staging')return false;
   let stage;
   try{stage=JSON.parse(stageRow.evidence_json||'{}')}catch{return false}
   if(stage?.source!=='github-actions-oidc'||!stage.artifactDigest)return false;
