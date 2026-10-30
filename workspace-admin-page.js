@@ -800,7 +800,10 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     const requestId=++mallSourcingRequestId;
     try{
       await exchangeCentralToken();
-      if(!(await accessToken()))return loginPanel('제휴·소싱 설정에는 운영공간 로그인이 필요합니다.');
+      if(requestId!==mallSourcingRequestId)return;
+      const token=await accessToken();
+      if(requestId!==mallSourcingRequestId)return;
+      if(!token)return loginPanel('제휴·소싱 설정에는 운영공간 로그인이 필요합니다.');
       state('판매채널 상태 확인 중');
       const workspaceData=await workspaceAffiliateApi('/workspace/sources');
       if(requestId!==mallSourcingRequestId)return;
@@ -875,6 +878,9 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
           // Recheck the authoritative inherited-default policy immediately
           // before saving; a prior GET cannot safely decide bootstrap mode.
           const latest=await workspaceAffiliateApi('/workspace/sources');
+          // A navigation after Save but before the fresh GET completes must
+          // not submit a now-hidden form or overwrite the new screen.
+          if(requestId!==mallSourcingRequestId)return;
           const freshRoutes=Array.isArray(latest.sources)?latest.sources:[];
           const bootstrap=latest.policy?.inheritedDefaults===true;
           if(bootstrap&&freshRoutes.length>100)throw new Error('초기 설정 대상이 100개를 초과하여 저장을 중단했습니다.');
@@ -882,9 +888,11 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
           if(!selections.length)throw new Error('저장할 판매처가 없습니다.');
           state('판매처 설정 저장 중');
           await workspaceAffiliateApi('/workspace/sources',{method:'PUT',body:JSON.stringify({selections})});
+          if(requestId!==mallSourcingRequestId)return;
           state('판매처 설정 저장됨');
           await affiliateSourcingPanel(selected);
         }catch(error){
+          if(requestId!==mallSourcingRequestId)return;
           state('저장 실패 · 재시도 가능');
           $('pageCopy').textContent=error.message||'판매처 사용 설정을 저장하지 못했습니다.';
           if(saveButton)saveButton.disabled=false;
@@ -893,6 +901,8 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       bindMallSourcingTabs();
       state(showAmazon?(amazonReady?'Amazon 설정':'확인 필요'):showOverview?'판매채널 현황':showUsage?'판매처 사용설정':'판매처 상태');
     }catch(e){
+      // A prior failed navigation must never replace a newer successful one.
+      if(requestId!==mallSourcingRequestId)return;
       if(e.code==='AUTH_REQUIRED'||e.status===401)return loginPanel();
       $('summaryCards').innerHTML=[card('판매채널','확인 필요','상태 조회 실패')].join('');
       $('mainPanel').innerHTML='<h2>판매채널 · 공급망</h2><p class="empty">'+ae(e.message)+'</p><button class="button" type="button" id="mallSourcingRetry">다시 조회</button>';
@@ -1174,11 +1184,12 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     state('Amazon 무료우선 정책 확인 중');
     try{
       const token=await accessToken();
+      if(renderRequestId!==mallSourcingRequestId)return false;
       const headers=token?{authorization:`Bearer ${token}`}:{};
       const r=await fetch('/ekodimall/api/amazon/status',{headers,cache:'no-store'});
       const d=await r.json().catch(()=>({}));
-      if(!r.ok)throw new Error(d.error||`amazon_${r.status}`);
       if(renderRequestId!==mallSourcingRequestId)return false;
+      if(!r.ok)throw new Error(d.error||`amazon_${r.status}`);
       const seller=d.sellerCentral||{},aws=d.aws||{},pay=d.amazonPay||{},connection=d.connection||{},cost=d.cost||{},policy=cost.policy||{},usage=Array.isArray(cost.usage)?cost.usage:[];
       const money=v=>Number(v||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
       const usageRows=usage.length?usage.map(row=>`<tr><td>${ae(row.serviceKey||'-')}</td><td>${ae(row.usageValue??'-')} ${ae(row.usageUnit||'')}</td><td>${row.freeRemainingPercent==null?'-':ae(row.freeRemainingPercent)+'%'}</td><td>${money(row.estimatedCostUsd)}</td></tr>`).join(''):'<tr><td colspan="4">아직 수집된 사용량이 없습니다. 비용 수집기가 연결되면 여기에 표시됩니다.</td></tr>';
@@ -1355,6 +1366,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       state((cost.warnings||[]).length?'비용 주의 필요':seller.configured?'무료우선 운영 준비':'Amazon 설정 필요');
       return true;
     }catch(e){
+      if(renderRequestId!==mallSourcingRequestId)return false;
       $('summaryCards').innerHTML=[card('Amazon','확인 실패','connector status')].join('');
       $('mainPanel').innerHTML=`<h2>Amazon · AWS 무료우선 비용센터</h2><p class="empty">${ae(e.message||'상태를 확인하지 못했습니다.')}</p>`;
       state('확인 필요');
