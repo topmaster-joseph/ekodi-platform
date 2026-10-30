@@ -139,6 +139,7 @@ jobs:
           node --check invest-autopilot-core.js
           node --check my/app.js
           node --check my/points/app.js
+          node --check my/points-active-client.js
           node --check points-active-client.js
           node --check my/public-profile.js
           node --check my/person-digital-card.js
