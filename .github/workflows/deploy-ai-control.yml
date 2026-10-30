@@ -261,6 +261,7 @@ jobs:
           node --check ai-control/app.js
           node --check scripts/ai-account-node.mjs
           node --check scripts/build-ai-control-release.mjs
+          node --check scripts/verify-staged-application-identity.mjs
           node --check scripts/validate-cognitive-control-plane.mjs
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/guarded-worker-release.mjs
@@ -372,6 +373,10 @@ jobs:
         env:
           EXPECTED_AI_ARTIFACT_DIGEST: ${{ needs.validate.outputs.artifact_digest }}
         run: node scripts/build-ai-control-release.mjs --verify
+      - name: Verify immutable application payload digest
+        env:
+          EXPECTED_AI_ARTIFACT_DIGEST: ${{ needs.validate.outputs.artifact_digest }}
+        run: node scripts/verify-staged-application-identity.mjs --verify
       - name: Verify Development boundary
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
