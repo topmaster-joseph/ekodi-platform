@@ -63,10 +63,7 @@ async function managementSpaces(request,env){
   })).filter(space=>space.id&&space.slug&&space.name);
   return json({spaces,scope:'authenticated-member-only',identityKey:'ekodi_id',workspaceKey:'workspace_id'});
 }
-function nonnegativeCount(value){
-  const number=Number(value);
-  return Number.isSafeInteger(number)&&number>=0?number:0;
-}
+function validCount(value){return Number.isSafeInteger(value)&&value>=0}
 async function managementStoreSummary(request,env,url){
   const authorization=String(request.headers.get('authorization')||'');
   if(!authorization.startsWith('Bearer '))return json({error:'unauthorized'},401);
@@ -87,13 +84,15 @@ async function managementStoreSummary(request,env,url){
   try{body=await response.json()}catch{return json({error:'invalid_store_response'},502)}
   const space=body?.workspace;
   if(!space||typeof space!=='object'||space.slug!==slug||space.kind!=='store'||typeof space.workspace_id!=='string'||!space.workspace_id)return json({error:'invalid_store_response'},502);
+  if(!['canonical_menu_count','platform_listing_count','connected_channel_count'].every(key=>validCount(space.summary?.[key]))
+    ||typeof space.store?.order_enabled!=='boolean')return json({error:'invalid_store_metrics'},502);
   return json({
     workspace:{id:space.workspace_id,slug,name:String(space.name||'').slice(0,160),role:String(space.role||'member').slice(0,80),kind:'store'},
     summary:{
-      canonicalMenuCount:nonnegativeCount(space.summary?.canonical_menu_count),
-      platformListingCount:nonnegativeCount(space.summary?.platform_listing_count),
-      connectedChannelCount:nonnegativeCount(space.summary?.connected_channel_count),
-      orderEnabled:space.store?.order_enabled===true
+      canonicalMenuCount:space.summary.canonical_menu_count,
+      platformListingCount:space.summary.platform_listing_count,
+      connectedChannelCount:space.summary.connected_channel_count,
+      orderEnabled:space.store.order_enabled
     },
     dataPolicy:'verified-read-only',
     generatedBy:'official-workspace-api'

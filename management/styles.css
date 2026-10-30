@@ -31,3 +31,9 @@
 .space-select[aria-pressed="true"]{background:#173c67;color:#fff;border-color:#173c67}
 .space-select:focus-visible{outline:3px solid #6b94d4;outline-offset:2px}
 @media(max-width:760px){.space-select{width:100%}}
+
+.store-readiness{margin-top:12px;padding:12px 14px;border-radius:10px;background:#f5f8fc;border:1px solid #e0e8f2;color:#23364d;font-size:.88rem}
+.store-readiness strong{display:block;font-size:.91rem}
+.store-readiness ul{margin:8px 0 6px;padding-left:20px}
+.store-readiness li+li{margin-top:5px}
+.store-readiness .note{margin:8px 0 0;font-size:.79rem}

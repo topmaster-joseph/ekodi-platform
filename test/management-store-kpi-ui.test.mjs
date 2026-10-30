@@ -61,6 +61,9 @@ test('only actual member store may request summary with current bearer token; no
   assert.equal(calls[0].options.headers.authorization,'Bearer member-token');
   const cells=panel.children[0].children;
   assert.deepEqual(cells.map(x=>x.children[1].textContent),['12','31','4','활성']);
+  assert.equal(panel.children[1].className,'store-readiness');
+  assert.match(panel.children[1].children[0].textContent,/경영비서AI · 기초 운영 점검/);
+  assert.match(panel.children[1].children[2].textContent,/규칙 기반 안내/);
   assert.equal(button.disabled,false);
 });
 test('wrong-store or malformed numbers never become visible as operational facts',async()=>{
@@ -93,4 +96,42 @@ test('late private store response cannot repopulate a member page after logout',
   assert.equal(p.get('verifiedSpacesList').children.length,0);
   assert.equal(p.sess.getItem('ekodi-management-session'),null);
   assert.equal(panel.children.length,0);
+});
+
+test('readiness guidance flags actual empty or disabled indicators without sales prediction',async()=>{
+  const p=page({result:{dataPolicy:'verified-read-only',workspace:{id:'store-1',slug:'jadam',kind:'store'},
+    summary:{canonicalMenuCount:0,platformListingCount:0,connectedChannelCount:0,orderEnabled:false}}});
+  await p.flush();
+  const {button,panel}=kpiControl(p);
+  await button.handlers.click();
+  const list=panel.children[1].children[1];
+  assert.equal(list.children.length,3);
+  assert.match(list.children[0].textContent,/메뉴 원본이 0개/);
+  assert.match(list.children[1].textContent,/연결된 판매채널이 0개/);
+  assert.match(list.children[2].textContent,/주문 기능이 비활성/);
+  assert.equal(list.children.some(x=>x.textContent.includes('매출 0원')),false);
+});
+
+test('readiness detects missing channel registrations without changing any data',async()=>{
+  const p=page({result:{dataPolicy:'verified-read-only',workspace:{id:'store-1',slug:'jadam',kind:'store'},
+    summary:{canonicalMenuCount:10,platformListingCount:0,connectedChannelCount:2,orderEnabled:true}}});
+  await p.flush();const {button,panel}=kpiControl(p);
+  await button.handlers.click();
+  const list=panel.children[1].children[1];
+  assert.equal(list.children.length,1);
+  assert.match(list.children[0].textContent,/채널 등록 상태/);
+  assert.equal(p.calls.filter(x=>x.options.method!=='GET'&&x.path.includes('store-summary')).length,0);
+});
+
+test('channel listings with no canonical menu raise a data consistency warning',async()=>{
+  const p=page({result:{dataPolicy:'verified-read-only',workspace:{id:'store-1',slug:'jadam',kind:'store'},
+    summary:{canonicalMenuCount:0,platformListingCount:7,connectedChannelCount:2,orderEnabled:true}}});
+  await p.flush();
+  const {button,panel}=kpiControl(p);
+  await button.handlers.click();
+  const list=panel.children[1].children[1];
+  assert.equal(list.children.length,2);
+  assert.match(list.children[0].textContent,/메뉴 원본이 0개/);
+  assert.match(list.children[1].textContent,/원본 데이터 연결·동기화/);
+  assert.equal(p.calls.filter(x=>x.path.includes('store-summary')).length,1);
 });
