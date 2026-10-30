@@ -18,16 +18,16 @@ const preproductionProof={
 const buildRow=()=>({
   task_id:taskId,branch_ref:branchRef,state:'staging',state_version:3,
   permission_class:'delegated',deployment_requested:1,
-  evidence_json:JSON.stringify({preproductionProof}),
+  evidence_json:JSON.stringify({items:[{source:'worker'}],commandLedger:{state:'running',attemptCount:2}}),
 });
 const request=(overrides={})=>({
   taskId,releaseSha,artifactDigest,expectedStateVersion:3,
   authorizedSuperAdminPersonId:actor,...overrides,
 });
 
-function mockDb(row=buildRow(),{commit=true,failBatch=false,stagingAttestation=true,stagingAttestationValid=true}={}){
+function mockDb(row=buildRow(),{commit=true,failBatch=false,stagingAttestation=true,stagingAttestationValid=true,stagingProofOverride={}}={}){
   const trace={sql:[],events:[],batchCalls:0};
-  const stagingEvent={actor:'ekodi-github-actions-oidc-reconciler',reason:'verified_preproduction_evidence_recorded',evidence_json:JSON.stringify({authority:'ekodi-orchestrator',source:'github-actions-oidc',taskId,branchRef,releaseSha:stagingAttestationValid?releaseSha:'3'.repeat(40),artifactDigest,archiveDigest,verifiedAt:preproductionProof.verifiedAt,workflowRunId:123456})};
+  const stagingEvent={actor:'ekodi-github-actions-oidc-reconciler',reason:'verified_preproduction_evidence_recorded',evidence_json:JSON.stringify({authority:'ekodi-orchestrator',source:'github-actions-oidc',taskId,branchRef,releaseSha:stagingAttestationValid?releaseSha:'3'.repeat(40),artifactDigest,archiveDigest,verifiedAt:preproductionProof.verifiedAt,workflowRunId:123456,requiredCiVerified:true,stagingVerified:true,rollbackReady:true,securityReviewVerified:true,...stagingProofOverride})};
   const db={
     prepare(sql){
       trace.sql.push(sql);
@@ -114,25 +114,34 @@ test('missing DB, forged actor, malformed task, SHA and artifact do not approve'
   }
 });
 
-test('staging, branch and proof errors hold before the write transaction',async()=>{
-  const changes=[
+test('staging or delegated permission errors block owner approval; worker evidence cannot change authority',async()=>{
+  for(const mutation of [
     {state:'assigned'}, {state:'blocked'}, {permission_class:'unapproved'},
     {branch_ref:'ai/claude/'+taskId}, {deployment_requested:0},
-    {evidence_json:'{}'},
-    {evidence_json:JSON.stringify({preproductionProof:{...preproductionProof,requiredCiVerified:false}})},
-    {evidence_json:JSON.stringify({preproductionProof:{...preproductionProof,archiveDigest:'sha256:'+'5'.repeat(64)}})},
-    {evidence_json:JSON.stringify({preproductionProof:{...preproductionProof,artifactDigest:'sha256:'+'3'.repeat(64)}})},
-  ];
-  for(const mutation of changes){
+  ]){
     const {db,trace}=mockDb({...buildRow(),...mutation});
-    const answer=await recordEkodiFinalPromotionApproval(db,request());
-    assert.equal(answer.approved,false);
+    assert.equal((await recordEkodiFinalPromotionApproval(db,request())).approved,false);
     assert.equal(trace.batchCalls,0);
+  }
+  for(const workerEvidence of ['[]','{}',
+    JSON.stringify({preproductionProof:{requiredCiVerified:false,releaseSha:'4'.repeat(40)}})]){
+    const row={...buildRow(),evidence_json:workerEvidence};
+    const {db,trace}=mockDb(row);
+    const result=await recordEkodiFinalPromotionApproval(db,request());
+    assert.equal(result.approved,true,'OIDC audit is independent of worker progress evidence');
+    assert.equal(row.evidence_json,workerEvidence);
+    assert.equal(trace.batchCalls,1);
   }
 });
 
 test('unverified, missing or forged staging attestation cannot create an owner receipt',async()=>{
-  for(const config of [{stagingAttestation:false},{stagingAttestationValid:false}]){
+  for(const config of [
+    {stagingAttestation:false},{stagingAttestationValid:false},
+    {stagingProofOverride:{securityReviewVerified:false}},
+    {stagingProofOverride:{archiveDigest:'sha256:'+'5'.repeat(64)}},
+    {stagingProofOverride:{requiredCiVerified:false}},
+    {stagingProofOverride:{workflowRunId:0}},
+  ]){
     const {db,trace}=mockDb(buildRow(),config);
     const answer=await recordEkodiFinalPromotionApproval(db,request());
     assert.equal(answer.approved,false);
