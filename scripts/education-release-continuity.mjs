@@ -60,6 +60,13 @@ export function latestEducationMergeFromGit({run=execFileSync}={}){
    {encoding:'utf8',timeout:20000})||'').trim();
  return /^[0-9a-f]{40}$/i.test(commit)?commit:'';
 }
+// Strictly owner-authorized recovery of an already merged release. It only wakes
+// existing receipt/CI/snapshot-guarded dispatch; it does not approve deployment.
+export function approvedEducationRecoverySignal(event, owner='topmaster-joseph'){
+ return event?.action==='created' && event?.issue && !event.issue.pull_request &&
+  event?.comment?.user?.login===owner &&
+  String(event?.comment?.body||'').trim()==='EKODI-EDUCATION-RECONCILE';
+}
 export function releaseQuotaBudget(data,minRemaining=24){
  const remaining=Number(data?.resources?.core?.remaining ?? data?.rate?.remaining);
  if(!Number.isFinite(remaining)||remaining<0)return {ok:false,reason:'quota_unknown'};
@@ -83,10 +90,13 @@ async function main(){
  const eventName=process.env.GITHUB_EVENT_NAME||'';
  if(repo!=='topmaster-joseph/ekodi-platform'||!token||!eventPath||!fs.existsSync(eventPath))
    fail('trusted repository, Actions token and event required');
- if(!['workflow_run','schedule'].includes(eventName)||process.env.GITHUB_REF_NAME!=='main')
+ if(!['workflow_run','schedule','issue_comment'].includes(eventName)||process.env.GITHUB_REF_NAME!=='main')
    fail('protected main workflow_run or read-only scheduled recovery required');
  const event=JSON.parse(fs.readFileSync(eventPath,'utf8'));
  const run=event.workflow_run||{};
+ if(eventName==='issue_comment'&&!approvedEducationRecoverySignal(event)){
+   log('unauthorized_reconcile_signal');return;
+ }
  if(eventName==='workflow_run'&&(event.action!=='completed'||run.conclusion!=='success'||!parseOrchestratorReleaseBranch(run.head_branch))){
    log('non_release_run');return;
  }
@@ -121,7 +131,7 @@ async function main(){
    if(!Array.isArray(changed)||changed.length===100)fail('PR files must be exhaustively inspectable');
    files=changed.map(item=>item.filename);
  }else{
-   // Schedule: 1 local git query + 1 exact commit/PR lookup instead of
+   // Schedule / owner-authorized recovery: 1 local git query + 1 exact commit/PR lookup instead of
    // listing 200 PRs and fetching up to 40 file lists every hour.
    const mergedSha=latestEducationMergeFromGit();
    if(!mergedSha){log('no_education_commit_in_bounded_local_history');return;}
