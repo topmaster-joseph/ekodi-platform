@@ -19,3 +19,11 @@
 5. Review owner merge and CI on the **exact head SHA**, deploy through official protected path, smoke-test public page and receipt. No deployment or payments should happen merely because this PR was created.
 
 **Jubilee Theology:** review-8 volumes EJT-01-REVIEW and EJT-02-REVIEW remain *private editorial review*, not enrolled in Books catalogue and not entitled to a public price or sale date.
+
+
+## Generic Books admin public-state bypass guard
+
+- `books-control.js` now invokes `genericAdminPublicMutationAllowed` before both `POST /api/books/admin/publications` and `PUT /api/books/admin/publications/:id`. A newly created book must start **private**, even if an admin POST supplies `isPublic:true`; a private record cannot be promoted by merely setting `isPublic:true`.
+- Currently public Books D1 rows remain maintainable *when the existing edition's immutable commercial metadata is unchanged*. For published records, price/ISBN/cover/title/author/edition/status/stage/format/sales links/distribution cannot be swapped in this generic endpoint without a separate approved publisher release workflow. Unpublishing remains allowed; republishing requires that workflow.
+- Unlike a consumer-side listing gate, this is a **write-protection rule**. It does not retroactively prove all historical `books_publications.is_public=1` records are safe, nor does it replace the protected, versioned publisher publication process. A future authorized publisher-only ingestion service must perform public promotions after verified dual-channel final approval, rather than reusing the generic admin flag.
+- `test/books-publication-transition.test.mjs` covers unauthorized new publish, metadata swap, old public unchanged, malformed JSON, unpublish and forbidden re-publish. Publishing Storefront Release Gate CI executes this test.
