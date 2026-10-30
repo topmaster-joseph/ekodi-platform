@@ -17,6 +17,10 @@ export const EDUCATION_RELEASE_PATHS=Object.freeze(new Set([
  'scripts/education-release-continuity.mjs',
  'scripts/verify-education-release-snapshot.mjs',
  'scripts/verify-education-farm-marketing-native.mjs',
+ 'education-screen-room.js',
+ 'education-screen-share-api.js',
+ 'scripts/verify-education-screen-share-native.mjs',
+ 'test/education-student-screen-share.test.mjs',
  '.github/workflows/education-release-continuity.yml',
 ]));
 export function educationReleaseChanged(files){
