@@ -13,7 +13,7 @@ const rateHeaders=new Headers({
   'x-ratelimit-remaining':'4722',
   'x-ratelimit-reset':String(Math.floor((NOW+3600000)/1000))
 });
-const response=(body,headers=new Headers())=>({ok:true,status:200,
+const response=(body,headers=new Headers(),status=200)=>({ok:true,status,
   headers,json:async()=>body});
 const DB=(writes=[])=>({prepare(sql){return {bind(...values){
   writes.push({sql,values});return {run:async()=>({meta:{changes:1}})};
@@ -22,9 +22,12 @@ function transport({badId=false,badApp=false,badRepo=false,missingRate=false,per
   return async(url,options)=>{
     requests.push({url,method:options.method,redirect:options.redirect});
     if(permission)return {ok:false,status:403};
-    if(url.endsWith('/installation'))
-      return response({id:badId?22:ID,app_id:badApp?88:APP});
-    return response({full_name:badRepo?'wrong/repo':'topmaster-joseph/ekodi-platform'},
+    if(url.includes('/app/installations/')&&!url.endsWith('/access_tokens'))
+      return response({id:badId?22:ID,app_id:badApp?88:APP,suspended_at:null});
+    if(url.endsWith('/access_tokens'))
+      return response({token:'internal-unit-test-issued-installation-token',
+        expires_at:new Date(NOW+3600000).toISOString()},new Headers(),201);
+    return response({repositories:[{full_name:badRepo?'wrong/repo':'topmaster-joseph/ekodi-platform'}]},
       missingRate?new Headers():rateHeaders);
   };
 }
@@ -33,7 +36,7 @@ test('disabled feature avoids any network or database I/O',async()=>{
   let calls=0;const settings=env({prepare(){calls++;throw Error('unexpected');}});
   delete settings.EKODI_GITHUB_BUDGET_ADMISSION_ENABLED;
   const result=await attestGitHubInstallationToken(settings,{
-    installationToken:TOKEN,nowMs:NOW,
+    appJwt:TOKEN,nowMs:NOW,
     fetchImpl:async()=>{calls++;throw Error('unexpected');}
   });
   assert.equal(result.verified,false);assert.equal(result.reason,'not_connected');
@@ -42,14 +45,16 @@ test('disabled feature avoids any network or database I/O',async()=>{
 test('real HTTPS installation and repository evidence creates only brief opaque proof',async()=>{
   const requests=[],writes=[];
   const outcome=await attestGitHubInstallationToken(env(DB(writes)),{
-    installationToken:TOKEN,nowMs:NOW,fetchImpl:transport({requests})
+    appJwt:TOKEN,nowMs:NOW,fetchImpl:transport({requests})
   });
   assert.equal(outcome.verified,true);
   assert.deepEqual(requests.map(x=>x.url),[
-    'https://api.github.com/installation',
-    'https://api.github.com/repos/topmaster-joseph/ekodi-platform'
+    'https://api.github.com/app/installations/'+ID,
+    'https://api.github.com/app/installations/'+ID+'/access_tokens',
+    'https://api.github.com/installation/repositories?per_page=100'
   ]);
-  assert.ok(requests.every(x=>x.method==='GET'&&x.redirect==='error'));
+  assert.deepEqual(requests.map(x=>x.method),['GET','POST','GET']);
+  assert.ok(requests.every(x=>x.redirect==='error'));
   assert.equal(writes.length,1);
   assert.deepEqual(writes[0].values.slice(0,4),[ID,'core',5000,4722]);
   assert.equal(isVerifiedGitHubInstallationProof(outcome.context,{
@@ -68,7 +73,7 @@ test('wrong installation, App, repository, permissions or real quota reject proo
   for(const option of [{badId:true},{badApp:true},{badRepo:true},
     {missingRate:true},{permission:true}]){
     const writes=[];const result=await attestGitHubInstallationToken(env(DB(writes)),{
-      installationToken:TOKEN,nowMs:NOW,fetchImpl:transport(option)
+      appJwt:TOKEN,nowMs:NOW,fetchImpl:transport(option)
     });
     assert.equal(result.verified,false,JSON.stringify(option));
     assert.equal(result.context,null);
@@ -78,14 +83,14 @@ test('wrong installation, App, repository, permissions or real quota reject proo
 test('missing App configuration, missing token and broken D1 reject',async()=>{
   const settings=env(DB());delete settings.EKODI_GITHUB_APP_ID;
   assert.equal((await attestGitHubInstallationToken(settings,{
-    installationToken:TOKEN,nowMs:NOW
+    appJwt:TOKEN,nowMs:NOW
   })).verified,false);
   assert.equal((await attestGitHubInstallationToken(env(DB()),{
     installationToken:'',nowMs:NOW
   })).verified,false);
   const result=await attestGitHubInstallationToken(env({
     prepare(){throw Error('storage offline');}
-  }),{installationToken:TOKEN,nowMs:NOW,fetchImpl:transport()});
+  }),{appJwt:TOKEN,nowMs:NOW,fetchImpl:transport()});
   assert.equal(result.verified,false);
   assert.equal(result.reason,'verification_unavailable');
 });
