@@ -6,6 +6,8 @@ test('activity time comes from server clock, never client supplied seconds or ev
   for(const clause of [
     'clock_timestamp()','extract(epoch from v_now-v_session.last_ping_at)',
     'v_seconds < 12','v_seconds>40','least(v_seconds,30)',
+    'if p_session is null then',
+    'set last_ping_at=v_now,last_active=false',
     'for update','primary key (site_id,user_id)','v_session.kst_day<>v_day',
     'v_person := ekodi_points_private.resolve_person_for_auth(v_auth)',
     "v_rule.min_active_seconds not between 60 and 3600",

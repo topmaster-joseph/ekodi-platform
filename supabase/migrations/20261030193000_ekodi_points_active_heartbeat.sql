@@ -86,6 +86,11 @@ begin
       'awarded',false,'reason','SESSION_REFRESH_REQUIRED');
   end if;
   if p_session is null then
+    -- Re-entering a site after pausing must never inherit an earlier
+    -- foreground interval, even when the old session UUID is reused.
+    update public.ekodi_point_activity_sessions
+      set last_ping_at=v_now,last_active=false
+      where site_id=p_site and user_id=v_person;
     return jsonb_build_object('session_id',v_session.session_id,
       'awarded',false,'reason','INITIALIZED');
   end if;

@@ -64,6 +64,15 @@ begin
     where site_id='qa-clock' and user_id=v_person;
   if v_balance<>5 then raise exception 'Expected 5 points, got %',v_balance;end if;
 
+  -- Simulate tab exit without a final PAUSED ping: a new session handshake
+  -- must reset the server clock and require a fresh active warmup.
+  update public.ekodi_point_activity_sessions
+    set last_ping_at=clock_timestamp()-interval '24 seconds',last_active=true
+    where site_id='qa-clock' and user_id=v_person;
+  v_result:=public.ekodi_points_active_heartbeat('qa-clock',null,true,true);
+  if v_result->>'reason'<>'INITIALIZED' then raise exception 'Re-entry init failed: %',v_result;end if;
+  v_result:=public.ekodi_points_active_heartbeat('qa-clock',v_session,true,true);
+  if v_result->>'reason'<>'WARMUP' then raise exception 'Prior tab gap was credited: %',v_result;end if;
   v_result:=public.ekodi_points_active_heartbeat('qa-clock',v_session,false,false);
   if v_result->>'reason'<>'PAUSED' then raise exception 'Hidden state counted: %',v_result;end if;
   update public.ekodi_point_activity_sessions set last_ping_at=clock_timestamp()-interval '1 hour'
