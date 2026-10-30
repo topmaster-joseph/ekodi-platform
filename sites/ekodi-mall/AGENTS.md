@@ -76,7 +76,7 @@
 
 ## 현재 결제 운영 범위와 계속 차단하는 기능 (2026-10-31 운영 검증)
 
-- 현재 `sites/ekodi-mall/api/wrangler.toml`의 `PAYMENTS_ENABLED="true"`이며 운영 `mall-api.ekodi.kr/health`의 `paymentsEnabled=true`/Toss `liveReady=true`가 확인되었다. **기존 실결제 활성화를 신규 승인이나 다른 판매자에게의 확대 승인으로 해석하지 않는다.**
+- 현재 `sites/ekodi-mall/api/wrangler.toml`의 `PAYMENTS_ENABLED="true"`이며 운영 `Mall 운영 API의 /health`의 `paymentsEnabled=true`/Toss `liveReady=true`가 확인되었다. **기존 실결제 활성화를 신규 승인이나 다른 판매자에게의 확대 승인으로 해석하지 않는다.**
 - 현재 허용된 Mall 토스 직접결제는 **판매주체가 에코디비즈인 직접판매 상품**에 한정한다. 타 판매자의 결제대금 수령·지급대행을 활성화하지 않는다. `pages/payout/` 정책을 기준으로 한다.
 - `payoutExecutionEnabled=false`, `buyerPiiReleaseEnabled=false`, `supplierForwardEnabled=false`, `refundExecutionEnabled=false` 및 `SOURCING_AUTO_ORDER_ENABLED=false`를 유지한다. 자동 환불·공급자 개인정보 전달·자동발주를 허용하지 않는다.
 - 환불·부분환불과 정산 검토는 `PAYMENT_OPERATIONS.md`를 기준으로 수행한다. 결제 승인·서버 검증은 판매자 검증·주문 gate를 우회할 수 없다.
