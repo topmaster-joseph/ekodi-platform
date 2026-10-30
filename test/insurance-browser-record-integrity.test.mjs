@@ -101,3 +101,37 @@ test('unreadable old data disables editing with accessible notice and preserves 
   assert.doesNotMatch(actualLoader, /LEGACY_KEYS\.forEach\(k=>localStorage\.removeItem\(k\)\)/);
   assert.match(source, /confirmDeleteBtn.*addEventListener\('click'/);
 });
+
+
+test('read-only recovery gate intercepts future submit and delete controls without blocking navigation', () => {
+  const start=source.indexOf('function guardUnreadableRecordInteraction(event){');
+  const end=source.indexOf('\nfunction money(',start);
+  assert.ok(start>=0&&end>start,'live source must install capture-phase recovery guard');
+  const listeners=new Map();
+  const context=vm.createContext({
+    localRecordsUnreadable:true,
+    document:{addEventListener(type,handler,capture){listeners.set(type,{handler,capture})}}
+  });
+  vm.runInContext(source.slice(start,end),context);
+  assert.equal(listeners.get('click').capture,true,'click gate must intercept before delegated handlers');
+  assert.equal(listeners.get('submit').capture,true,'submit gate must intercept before form handlers');
+  const fire=(type,kind)=>{
+    const out={prevented:false,stopped:false};
+    const event={
+      type,
+      target:{closest(){return kind==='empty'?null:{matches(){return kind==='navigation'}}}},
+      preventDefault(){out.prevented=true},
+      stopImmediatePropagation(){out.stopped=true}
+    };
+    listeners.get(type).handler(event);
+    return out;
+  };
+  assert.deepEqual(fire('submit','form'),{prevented:true,stopped:true});
+  assert.deepEqual(fire('click','delete'),{prevented:true,stopped:true},
+    'newly inserted active delete buttons must remain inert');
+  assert.deepEqual(fire('click','navigation'),{prevented:false,stopped:false});
+  assert.deepEqual(fire('click','empty'),{prevented:false,stopped:false});
+  context.localRecordsUnreadable=false;
+  assert.deepEqual(fire('submit','form'),{prevented:false,stopped:false});
+  assert.deepEqual(fire('click','delete'),{prevented:false,stopped:false});
+});
