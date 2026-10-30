@@ -13,7 +13,8 @@ const okSnap=(id,number)=>({id,ok:true,response:repo(number)});
 const htmls=AUTOMATION_MIGRATION_PR.map(x=>okSnap(x.id,x.number));
 test('migration is independently classified for two official EKODI protected PRs',()=>{
   const data=projectEkodiNativeMigration({proposals:htmls});
-  assert.deepEqual(data.nativePrs.map(x=>x.pr),[6890,6920]);
+  assert.deepEqual(data.nativePrs.map(x=>x.pr),[7044,6920]);
+  assert.equal(data.legacyPausedReportedCount,5);
   assert.ok(data.nativePrs.every(x=>x.state==='pending'));
   assert.equal(data.owner,'EKODI Orchestrator');
   assert.equal(data.externalActionsTaken,0);
@@ -68,7 +69,7 @@ test('main EKODI hourly watch adds native migration evidence without generating 
     if(url.includes('/release-receipt?'))return new Response(JSON.stringify({ok:true,authorized:true,state:'completed'}),{status:200});
     if(url.includes('/actions/workflows/'))return new Response(JSON.stringify({workflow_runs:[{event:'schedule',status:'completed',conclusion:'success',id:11,created_at:'2026-10-30T01:37:00Z'}]}),{status:200});
     if(url.endsWith('/pulls/3794'))return new Response(JSON.stringify({state:'closed',merged:true}),{status:200});
-    if(url.endsWith('/pulls/6890'))return new Response(JSON.stringify(repo(6890)),{status:200});
+    if(url.endsWith('/pulls/7044'))return new Response(JSON.stringify(repo(7044)),{status:200});
     if(url.endsWith('/pulls/6920'))return new Response(JSON.stringify(repo(6920)),{status:200});
     return new Response('',{status:404});
   };
@@ -79,7 +80,7 @@ test('main EKODI hourly watch adds native migration evidence without generating 
   assert.equal(report.automationMigration.nativePrs[1].state,'pending');
   assert.ok(urls.every(x=>x.opts.method==='GET'&&x.opts.redirect==='error'));
   assert.ok(urls.every(x=>!String(x.url).includes('openai.com')));
-  assert.equal(urls.filter(x=>x.url.includes('/pulls/6890')).length,1);
+  assert.equal(urls.filter(x=>x.url.includes('/pulls/7044')).length,1);
   assert.equal(urls.filter(x=>x.url.includes('/pulls/6920')).length,1);
 });
 test('privacy and fail-closed behavior are preserved, no forged legacy task disable',async()=>{
@@ -90,13 +91,13 @@ test('privacy and fail-closed behavior are preserved, no forged legacy task disa
   assert.match(runner,/AUTOMATION_MIGRATION_PR/);
   assert.match(runner,/projectEkodiNativeMigration/);
   assert.match(runner,/report\.automationMigration/);
-  const d=projectEkodiNativeMigration({proposals:[{...htmls[0],response:{number:6890,base:{ref:'main'},head:{sha:SHA},merged_at:'2026-10-30',merge_commit_sha:SHA,accessToken:'not-to-be-retained'}}]});
+  const d=projectEkodiNativeMigration({proposals:[{...htmls[0],response:{number:7044,base:{ref:'main'},head:{sha:SHA},merged_at:'2026-10-30',merge_commit_sha:SHA,accessToken:'not-to-be-retained'}}]});
   assert.ok(!JSON.stringify(d).includes('not-to-be-retained'));
 });
 
 test('fifth active workload is Church Naver and stale Mission remains inactive historical',()=>{
   const x=projectEkodiNativeMigration({proposals:htmls});
-  const naver=x.tasks.find(t=>t.id==='church-naver-ownership-and-index');
+  const naver=x.tasks.find(t=>t.id==='church-naver-owner');
   assert.ok(naver);
   assert.equal(naver.kind,'monitor');
   assert.equal(naver.deliveryVerified,false);
@@ -108,6 +109,7 @@ test('fifth active workload is Church Naver and stale Mission remains inactive h
   assert.equal(x.tasks.some(t=>t.id==='mission-home-production-e2e'),false);
   assert.ok(x.importedTaskSnapshot.inactivePreviouslyTracked.includes('mission-home-production-e2e'));
   assert.equal(LEGACY_TASK_SNAPSHOT.activeTaskCount,5);
+  assert.equal(LEGACY_TASK_SNAPSHOT.activeTaskCountAfterOwnerPause,0);
   assert.equal(LEGACY_TASK_SNAPSHOT.freshness,'historical_snapshot_not_live');
   assert.equal(LEGACY_TASK_SNAPSHOT.canDisableLegacy,false);
   assert.equal(x.authorizedToChangeLegacy,false);
