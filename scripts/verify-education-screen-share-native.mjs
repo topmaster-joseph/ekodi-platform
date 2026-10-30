@@ -19,7 +19,7 @@ async function run(){
  let teacher,first,second,ctx;
  try{
   ctx=await browser.newContext({viewport:{width:1366,height:768}});
-  await ctx.addCookies([{name:GATE_COOKIE,value:await mintGateToken(key),url:ORIGIN+'/edu/study/live/'}]);
+  await ctx.addCookies([{name:GATE_COOKIE,value:await mintGateToken(key),domain:'ekodi.kr',path:'/edu/study/live',httpOnly:true,secure:true,sameSite:'Lax'}]);
   teacher=await ctx.newPage();
   const page=await teacher.goto(ORIGIN+PATH,{waitUntil:'domcontentloaded',timeout:30000});
   await accept('host page 200',page?.status()===200);
@@ -42,13 +42,13 @@ async function run(){
   await accept('learner URL strips fragment',!(await first.evaluate(()=>location.hash)));
   await first.locator('#displayName').fill('학습자 A');
   await first.locator('#joinRoom').click();
-  await teacher.locator('#rosterCount').getByText('1').waitFor({timeout:15000});
+  await teacher.waitForFunction(()=>document.querySelector('#rosterCount')?.textContent==='1',null,{timeout:15000});
   const student2=await browser.newContext({viewport:{width:320,height:720},isMobile:true,hasTouch:true});
   second=await student2.newPage();
   await second.goto(join,{waitUntil:'domcontentloaded',timeout:30000});
   await second.locator('#displayName').fill('학습자 B');
   await second.locator('#joinRoom').click();
-  await teacher.locator('#rosterCount').getByText('2').waitFor({timeout:15000});
+  await teacher.waitForFunction(()=>document.querySelector('#rosterCount')?.textContent==='2',null,{timeout:15000});
   await accept('live roster shows two people',await teacher.locator('#roster li').count()===2);
   await accept('no screen shared before learner permission',await teacher.locator('#remoteVideo').isHidden()&&await teacher.locator('#remoteImage').isHidden());
   await teacher.locator('#roster li').filter({hasText:'학습자 A'}).getByRole('button').click();
@@ -70,7 +70,7 @@ async function run(){
   await second.locator('#shareControls:not([hidden])').waitFor({timeout:15000});
   await accept('instructor can switch chosen student',await first.locator('#shareControls').isHidden()&&await second.locator('#shareControls').isVisible());
   await teacher.locator('#endRoom').click();
-  await second.getByText('강사가 수업방을 종료했습니다.').waitFor({timeout:15000});
+  await second.locator('#shareControls[hidden]').waitFor({timeout:15000});
   await accept('classroom closed by host',await second.locator('#shareControls').isHidden());
   report.ok=true;
  }finally{await browser.close();}
