@@ -220,3 +220,21 @@ test('a change to a lane workflow file dispatches its own lane', () => {
 test('asset prefix matching is directory-bounded and ignores unrelated files', () => {
   assert.equal(lanesForChangedFiles(root, ['bible-notes.md', 'README.md', 'biblesomething/x.js']).dispatches.length, 0);
 });
+
+test('education dispatch uses the verified protected main merge SHA required by its workflow', () => {
+  const plan=lanesForChangedFiles(root,['config/user-footer.js']);
+  const education=plan.dispatches.find(lane=>lane.workflow==='deploy-education.yml');
+  assert.equal(education?.inputs?.release_sha,'$PROTECTED_MERGE_SHA');
+  const source=fs.readFileSync(path.join(root,'scripts/converge-orchestrated-pr-merge.mjs'),'utf8');
+  assert.match(source,/needsMergeSha=bundleLanes\.dispatches\.some/);
+  assert.match(source,/mergedPr\.data\.merge_commit_sha/);
+  assert.match(source,/mainRef\.data\?\.object\?\.sha/);
+  assert.match(source,/value==='\$PROTECTED_MERGE_SHA'\?protectedMergeSha:value/);
+});
+
+test('a change to EKODIBIZ registered merchant homepage dispatches its own guarded worker', () => {
+  const plan=lanesForChangedFiles(root,['ekodibiz/site.js','ekodibiz/index.html']);
+  assert.ok(plan.dispatches.some(lane=>lane.workflow==='deploy-ekodibiz.yml'));
+  assert.deepEqual(plan.affected.find(item=>item.config==='wrangler.ekodibiz.toml')?.touched,
+    ['ekodibiz/index.html','ekodibiz/site.js']);
+});
