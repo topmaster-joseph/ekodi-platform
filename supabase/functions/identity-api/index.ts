@@ -149,6 +149,24 @@ async function listProviders(req:Request){
   return json(req,{providers},200);
 }
 
+// Operator readiness: which login paths have their keys installed and which are switched on.
+// Booleans only — never key material. Lets the release lane and admins confirm that keys
+// synced from repository secrets actually reached this function before a path is enabled.
+async function providerReadiness(req:Request){
+  const {data,error}=await admin.from("identity_providers")
+    .select("provider,display_name,enabled,sort_order")
+    .order("sort_order",{ascending:true});
+  if(error)throw error;
+  const providers=(data??[]).map((row:any)=>({
+    id:row.provider,
+    name:row.display_name,
+    keysInstalled:adapters.has(row.provider),
+    enabled:row.enabled===true,
+    live:row.enabled===true&&adapters.has(row.provider)
+  }));
+  return json(req,{providers},200);
+}
+
 async function currentUser(req:Request){
   const authorization=req.headers.get("Authorization")||"";
   if(!authorization.startsWith("Bearer "))return null;
@@ -302,16 +320,61 @@ async function exchangeProvider(req:Request,provider:string){
   return json(req,{ok:true,provider,accountSession:session.canonical,tokenHash:session.tokenHash,type:"email",platformAdmin,ekodiId,user:{email:contactEmail,name:profile.displayName}},200);
 }
 
+// EMAIL-ID-001: public signup never opens until an operator has verified the
+// Supabase Auth Confirm Email setting, EKODI Mail custom SMTP and delivery.
+// All flags are independently required. This is NOT the channel OAuth switch.
+function emailPasswordReady(){
+  return Deno.env.get("EKODI_EMAIL_PASSWORD_ENABLED")==="true" &&
+    Deno.env.get("EKODI_AUTH_EMAIL_CONFIRM_VERIFIED")==="true" &&
+    Deno.env.get("EKODI_AUTH_SMTP_VERIFIED")==="true";
+}
+function emailPasswordReadiness(req:Request){
+  return json(req,{enabled:emailPasswordReady(),sender:"EKODI Mail"},200);
+}
+
 async function sessionHandoff(req:Request,user:any){
   const email=String(user?.email||"").trim().toLowerCase();
   if(!email)return json(req,{error:"verified_email_required"},400);
+  const personBeforeHandoff=await personForUser(user.id);
+  // Google logins also use email-backed Supabase magic-link sessions. Only an
+  // UNPROVISIONED password-style email user must pass these additional gates;
+  // never block already-linked Google identities just because app_metadata
+  // reports "email" for their underlying Supabase Auth user.
+  const newEmailPerson=!personBeforeHandoff&&user.app_metadata?.provider==="email";
+  if(newEmailPerson){
+    if(!emailPasswordReady())return json(req,{error:"email_password_unavailable"},503);
+    if(!user.email_confirmed_at)return json(req,{error:"verified_email_required"},403);
+  }
+  // Gate the account *before* minting a one-use session link. Link ownership
+  // must be checked before provisioning the EKODI Person as well.
   const link=await issueSupabaseLink(email);
   if(link.user.id!==user.id){
     console.error("session handoff user mismatch",{source:user.id,target:link.user.id});
     return json(req,{error:"session_identity_mismatch"},409);
   }
-  const personId=await personForUser(user.id);
+  let personId=personBeforeHandoff;
+  // Never infer the person from matching email text.
+  if(newEmailPerson){
+    const {data:created,error:createError}=await admin.rpc("ensure_person_identity",{
+      p_auth_user_id:user.id,
+      p_provider:"email",
+      p_provider_subject:user.id,
+      p_email:email,
+      p_display_name:null
+    });
+    if(createError||!created){
+      console.error("email EKODI person provisioning",createError?.message||"no_person");
+      return json(req,{error:"ekodi_identity_unavailable"},503);
+    }
+    await recordEmailVerification("email",user.id,true);
+    await syncPerson(user.id);
+    personId=await personForUser(user.id);
+    if(personId!==created)return json(req,{error:"ekodi_identity_mismatch"},409);
+  }
+  if(user.app_metadata?.provider==="email"&&!personId)
+    return json(req,{error:"ekodi_identity_required"},409);
   const ekodiId=await ekodiIdForPerson(personId);
+  if(user.app_metadata?.provider==="email"&&!ekodiId)return json(req,{error:"ekodi_id_unavailable"},503);
   const platformAdmin=await platformAdminForUser(user.id);
   return json(req,{ok:true,tokenHash:link.tokenHash,type:"email",platformAdmin,ekodiId,user:{id:user.id,email}},200);
 }
@@ -360,6 +423,19 @@ async function finishLink(req:Request,userId:string,provider:string){
   if(config.requires_verified_email&&!profile.emailVerified)return json(req,{error:"verified_email_required"},400);
   const contactEmail=await contactEmailFor(provider,profile);
   const target=await issueSupabaseLink(await authEmailFor(provider,profile));
+  // A second provider can belong to a second independently registered Person,
+  // with its own paid D1 subscriptions and recurring billing keys. Supabase
+  // cannot atomically reconcile that external ledger. Do not merge Person rows
+  // just because both OAuth proofs passed: manual billing/role/points review
+  // must happen first. Linking a previously unclaimed identity remains allowed.
+  const initiatorPersonId=await personForUser(userId);
+  const targetPersonId=await personForUser(target.user.id);
+  if(targetPersonId&&targetPersonId!==initiatorPersonId){
+    await writeIdentityAudit(initiatorPersonId,userId,"identity.merge_review_required",provider,null,{
+      independentAccount:true
+    });
+    return json(req,{error:"account_merge_review_required"},409);
+  }
   const {data:personId,error:linkError}=await admin.rpc("link_person_identity",{
     p_initiator_user_id:userId,
     p_target_user_id:target.user.id,
@@ -413,7 +489,9 @@ Deno.serve(async(req)=>{
   if(!origin||!AUTH_ORIGINS.has(origin))return json(req,{error:"origin_not_allowed"},403);
   const path=new URL(req.url).pathname.replace(/^\/identity-api/,"")||"/";
   try{
+    if(req.method==="GET"&&path==="/email/readiness")return emailPasswordReadiness(req);
     if(req.method==="GET"&&path==="/providers")return await listProviders(req);
+    if(req.method==="GET"&&path==="/providers/readiness")return await providerReadiness(req);
     if(req.method==="POST"&&path==="/challenge")return await issueChallenge(req,"google","login",null);
     if(req.method==="POST"&&path==="/google/exchange")return await exchangeProvider(req,"google");
 

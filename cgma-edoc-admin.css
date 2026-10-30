@@ -13,7 +13,7 @@
 .cgma-edoc-table-wrap{overflow-x:auto}
 .cgma-edoc-table{width:100%;border-collapse:collapse;font-size:14px}
 .cgma-edoc-table th,.cgma-edoc-table td{padding:9px 8px;border-bottom:1px solid #e3eae8;text-align:left;white-space:nowrap}
-.cgma-edoc-table td:nth-child(2){white-space:normal;min-width:200px}
+.cgma-edoc-table td:nth-child(3){white-space:normal;min-width:220px}
 .cgma-edoc-row{cursor:pointer}
 .cgma-edoc-row:hover,.cgma-edoc-row:focus{background:#f1f7f5;outline:none}
 .cgma-edoc-table .empty{text-align:center;color:#5b6b69;white-space:normal;padding:28px 8px}
@@ -60,3 +60,62 @@
   .cgma-edoc-cert,.cgma-edoc-cert *{visibility:visible!important}
   .cgma-edoc-cert{position:absolute;left:0;top:0;width:100%;border:none}
 }
+.cgma-edoc-serial{text-align:center;color:#5b6b69;width:3.5em}
+.cgma-edoc-badge[data-status="archived"]{background:#e8eef7;color:#2c4a7a}
+.cgma-edoc-signer-section[hidden]{display:none}
+.cgma-edoc-bulk .cgma-edoc-table input,.cgma-edoc-bulk .cgma-edoc-table select{font:inherit;padding:4px 6px;border:1px solid #d6e0de;border-radius:6px;max-width:100%}
+.cgma-edoc-bulk .cgma-edoc-table td:nth-child(3) input{min-width:220px;width:100%}
+.cgma-edoc-bulk-state{white-space:normal;font-size:13px;color:#0f5f5c}
+.cgma-edoc-bulk .cgma-edoc-table td:nth-child(2){white-space:normal;word-break:break-all;min-width:160px;max-width:260px;font-size:13px}
+.cgma-edoc-meta dd a{color:#0f5f5c;word-break:break-all}
+/* ---- 화면 배치 (layout) ---- */
+.cgma-edoc-form{max-width:880px}
+.cgma-edoc-form>.cgma-edoc-btn,.cgma-edoc-form>button{justify-self:start}
+.cgma-edoc-form.cgma-edoc-bulk{max-width:none}
+.cgma-edoc-bulk .cgma-edoc-table{min-width:900px}
+.cgma-edoc-bulk .cgma-edoc-table td:nth-child(3){min-width:240px}
+.cgma-edoc-bulk textarea{font:inherit;padding:8px 10px;border:1px solid #d6e0de;border-radius:8px;max-width:880px}
+.cgma-edoc-kind{flex-wrap:wrap}
+.cgma-edoc-back{min-height:34px;padding:4px 10px;font-size:13px}
+.cgma-edoc-panel{border:1px solid #e3eae8;border-radius:12px;padding:14px 16px;background:#fff;display:grid;gap:10px;align-content:start}
+.cgma-edoc-panel h4{margin:0;font-size:15px;color:#14302f}
+.cgma-edoc-overview .cgma-edoc-hint{border-top:1px solid #eef2f1;padding-top:8px}
+.cgma-edoc-detail-grid{display:grid;grid-template-columns:minmax(300px,440px) minmax(0,1fr);gap:16px;align-items:start}
+.cgma-edoc-draft{display:grid;gap:12px;min-width:0}
+.cgma-edoc-notice{margin:0;padding:10px 12px;border-radius:8px;background:#fbf3df;color:#7a5c12;font-size:14px}
+.cgma-edoc-inline{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.cgma-edoc-inline .cgma-edoc-field{flex:1 1 260px;min-width:0}
+.cgma-edoc-inline input[type="url"],.cgma-edoc-inline input[type="file"]{font:inherit;width:100%;box-sizing:border-box}
+.cgma-edoc-inline input[type="url"]{padding:8px 10px;border:1px solid #d6e0de;border-radius:8px;min-height:40px}
+.cgma-edoc-signers-edit{max-width:640px}
+.cgma-edoc-signers-edit li{display:grid;grid-template-columns:4.5em minmax(0,1fr) minmax(0,1fr) auto auto auto;gap:6px;align-items:center}
+.cgma-edoc-signers-edit li .step{font-size:12px;color:#5b6b69}
+.cgma-edoc-signers-edit li:not(:has(.step)){grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto auto auto}
+.cgma-edoc-signers-edit input{min-width:0;font:inherit;padding:8px 10px;border:1px solid #d6e0de;border-radius:8px;min-height:40px}
+.cgma-edoc-chain li{max-width:320px}
+@media (max-width:960px){
+  .cgma-edoc-detail-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:640px){
+  .cgma-edoc-signers-edit li,.cgma-edoc-signers-edit li:not(:has(.step)){grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .cgma-edoc-signers-edit li .step{grid-column:1/-1}
+  .cgma-edoc-toolbar input[type="search"]{min-width:0}
+  .cgma-edoc-chain li{max-width:none}
+}
+.cgma-edoc-signers-edit input{height:40px;min-height:0;box-sizing:border-box;padding:6px 10px}
+@media (max-width:640px){
+  .cgma-edoc-chain{display:grid;grid-template-columns:minmax(0,1fr);overflow:visible}
+  .cgma-edoc-chain li{min-width:0}
+}
+/* ---- 화면 구조: 상단 요약 상자 대신 목록 상태 막대 ---- */
+.cgma-edoc-intro{margin:0;color:#5b6b69;font-size:14px}
+.cgma-edoc-spacer{flex:1 1 auto}
+.cgma-edoc-statusbar{display:flex;flex-wrap:wrap;gap:6px}
+.cgma-edoc-chip{font:inherit;font-size:14px;display:inline-flex;gap:6px;align-items:center;padding:6px 12px;min-height:36px;border-radius:999px;border:1px solid #d6e0de;background:#fff;color:#3d4f4d;cursor:pointer}
+.cgma-edoc-chip strong{font-weight:700;color:#14302f}
+.cgma-edoc-chip[aria-pressed="true"]{background:#0f5f5c;border-color:#0f5f5c;color:#fff}
+.cgma-edoc-chip[aria-pressed="true"] strong{color:#fff}
+.cgma-edoc-head-actions{margin-left:auto}
+.cgma-edoc-head-actions .cgma-edoc-btn{min-height:36px;padding:6px 12px;font-size:14px}
+@media (max-width:640px){.cgma-edoc-head-actions{margin-left:0;width:100%}.cgma-edoc-spacer{display:none}}
+#summaryCards[hidden],.cards[hidden]{display:none!important}

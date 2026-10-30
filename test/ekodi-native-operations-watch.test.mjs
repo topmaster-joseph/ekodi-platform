@@ -165,3 +165,38 @@ test('native workflow owns schedule and read-only permissions, not ChatGPT API',
   assert.equal(parsed.monitoring.length,5);
   assert.ok(parsed.monitoring.some(x=>x.handoffState.includes('requires-authorized-sources')));
 });
+
+test('GitHub 403 installation quota opens circuit and prevents further GETs',async()=>{
+  const {fetchImpl}=fakeFetch();
+  const requests=[];
+  const limited=async(url,options)=>{
+    requests.push({url,method:options.method});
+    if(url.startsWith('https://api.github.com/repos/')){
+      return new Response(JSON.stringify({message:'API rate limit exceeded for installation.'}),{
+        status:403,headers:{'content-type':'application/json','x-ratelimit-remaining':'0'}
+      });
+    }
+    return fetchImpl(url,options);
+  };
+  const report=await collectEkodiNativeWatch({fetchImpl:limited,nowMs:now,mode:'hourly'});
+  assert.equal(report.result,'deferred');
+  assert.equal(report.circuitOpen,true);
+  assert.ok(report.checks.some(x=>x.reason==='github_api_quota_exhausted'));
+  assert.equal(requests.filter(x=>x.url.startsWith('https://api.github.com/repos/')).length,1);
+  assert.equal(report.mutatesProduction,false);
+  assert.ok(!JSON.stringify(report).includes('API rate limit exceeded for installation.'));
+});
+test('unexplained GitHub 403 stops further requests but is not misclassified as a proven rate limit',async()=>{
+  const {fetchImpl}=fakeFetch();
+  const requests=[];
+  const limited=async(url,options)=>{
+    requests.push(url);
+    if(url.startsWith('https://api.github.com/repos/'))return new Response('',{status:403});
+    return fetchImpl(url,options);
+  };
+  const report=await collectEkodiNativeWatch({fetchImpl:limited,nowMs:now});
+  assert.equal(report.result,'deferred');
+  assert.equal(report.circuitOpen,true);
+  assert.ok(report.checks.some(x=>x.reason==='github_api_permission_denied_or_policy'));
+  assert.equal(requests.filter(url=>url.startsWith('https://api.github.com/repos/')).length,1);
+});

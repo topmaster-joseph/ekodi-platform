@@ -32,3 +32,54 @@ test('backend guards financial records and does not infer bill payment from tele
   assert.match(code,/provider_quota_snapshots/);
   assert.doesNotMatch(code,/service_role.*=|secret.*=\s*['"]/i);
 });
+
+test('infra cost UI expands only visible finance panel and adapts to narrow screens',()=>{
+  const css=read('infra-cost-admin.css');
+  const js=read('infra-cost-admin.js');
+  assert.match(css,/\.app>main:has\(#ekodiInfraCosts:not\(\[hidden\]\):not\(\.hidden-panel\)\)/);
+  assert.match(css,/max-width:none!important/);
+  assert.match(css,/@media\(max-width:640px\)/);
+  assert.match(js,/data-infra-open-invoice/);
+  assert.match(js,/data-infra-jump="infra-billing"/);
+  assert.match(js,/data-infra-invoice-search/);
+  assert.match(js,/data-infra-invoice-filter/);
+  assert.match(js,/matched=all\.filter/);
+  assert.match(js,/if\(current\)renderInvoices\(current\)/);
+  assert.match(js,/사용량 연동 필요/);
+  assert.match(js,/청구서 직접 등록/);
+});
+
+test('infra cost navigation resets inherited workbench scroll and production browser checks real viewport',()=>{
+  const module=read('infra-cost-admin.js'),e2e=read('scripts/verify-admin-production-ui-e2e.mjs');
+  assert.match(module,/active&&!costPanelWasActive/);
+  assert.match(module,/workspace\.scrollTop=0/);
+  assert.match(e2e,/INFRA_COST_VISIBLE_VIEWPORT_E2E/);
+  assert.match(e2e,/INFRA_COST_SEARCH_E2E/);
+  assert.match(e2e,/INFRA_COST_FILTER_RESET_E2E/);
+  assert.match(e2e,/INFRA_COST_INVOICE_EDITOR_E2E/);
+  assert.match(e2e,/INFRA_COST_MOBILE_VISUAL_E2E/);
+  assert.match(e2e,/Synthetic cost UI must not mutate production billing records/);
+});
+
+test('infra cost mobile title has no desktop 500px flex-basis whitespace',()=>{
+  const css=read('infra-cost-admin.css');
+  const desktop=css.match(/#ekodiInfraCosts \.infra-page-heading>div:first-child\{([^}]+)\}/);
+  assert.ok(desktop&&desktop[1].includes('flex:1 1 500px'));
+  const mobile=css.match(/@media\(max-width:900px\)\{([\s\S]*?)@media\(max-width:640px\)/);
+  assert.ok(mobile,'900px reflow rules must exist');
+  assert.match(mobile[1],/#ekodiInfraCosts \.infra-page-heading\{align-items:flex-start;flex-direction:column\}/);
+  assert.match(mobile[1],/#ekodiInfraCosts \.infra-page-heading>div:first-child\{flex:0 0 auto;width:100%;min-height:0\}/);
+});
+
+test('finance mobile E2E rejects offscreen headings and an animating sidebar',()=>{
+  const e2e=read('scripts/verify-admin-production-ui-e2e.mjs');
+  assert.match(e2e,/INFRA_COST_MOBILE_VISUAL_E2E/);
+  assert.match(e2e,/sidebar\.classList\.contains\('open'\)/);
+  assert.match(e2e,/rect\.right<=1/);
+  assert.match(e2e,/mobile\.panelLeft<0\|\|mobile\.panelRight>mobile\.viewport\+2/);
+  assert.match(e2e,/mobile\.sidebarRight>1/);
+  assert.match(e2e,/mobile\.headingBlockHeight>260/);
+  assert.match(e2e,/mobile\.headingToActions>36/);
+  assert.match(e2e,/mobile\.actionsToNav>36/);
+  assert.doesNotMatch(e2e,/page\.locator\('#ekodiInfraCosts'\)\.scrollIntoViewIfNeeded\(\)/);
+});

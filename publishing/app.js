@@ -7,8 +7,6 @@ const form=document.querySelector('#consultationForm');
 const formStatus=document.querySelector('#formStatus');
 
 document.querySelector('#year').textContent=new Date().getFullYear();
-menuButton?.addEventListener('click',()=>{const open=nav.classList.toggle('open');menuButton.setAttribute('aria-expanded',String(open));});
-nav?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{nav.classList.remove('open');menuButton?.setAttribute('aria-expanded','false');}));
 
 const fallbackServices=[
   {code:'digital-start',category:'package',name:'DIGITAL START',description:'전자책 한 권을 가장 작은 비용으로 출간하기 위한 기본 패키지입니다.',pricingModel:'fixed',unitLabel:'1권',priceKrw:290000,comparePriceKrw:340000,included:['EPUB 3 제작','기본 메타데이터','유통채널 1곳','출간 체크리스트'],note:'원고 교정·맞춤표지 제외'},

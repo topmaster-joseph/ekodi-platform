@@ -11,7 +11,7 @@ import { handleVerificationRequest, verificationSchemaReady } from './verificati
 import { handleSupplierPilotRequest, supplierPilotSchemaReady } from './supplier-pilot.js';
 import { handleSupplierDiscoveryRequest, supplierDiscoverySchemaReady } from './supplier-discovery.js';
 import { handleDomemaeRequest, domemaeConnectorReady } from './domemae.js';
-import { probeDomeggookKey, syncSupplyProducts } from './domeggook-import.js';
+import { probeDomeggookKey, syncSupplyProducts, backfillSupplyImages } from './domeggook-import.js';
 import { probeOwnerclan } from './ownerclan.js';
 import { submitProductIndexNow } from './seo-indexnow.js';
 import { placeSupplierOrders, trackSupplierOrders, autoOrderEnabled, probeDomeggookLogin } from './domeggook-order.js';
@@ -189,8 +189,16 @@ export default {
     if (origin && !origins(env).has(origin)) return reply({ error:'허용되지 않은 요청입니다.' },403,origin,env);
     const url = new URL(request.url);
 
-    if (request.method === 'GET' && url.pathname === '/health') {
-      const coreResponse = await core.fetch(request, env);
+    // The apex Mall gateway preserves /api/* paths; reuse the public health
+    // contract there without falling through to seller authentication.
+    if (url.pathname === '/api/public/health' && request.method !== 'GET') {
+      const response = reply({ error:'Method not allowed' },405,origin,env);
+      response.headers.set('allow','GET');
+      return response;
+    }
+    if (request.method === 'GET' && ['/health','/api/public/health'].includes(url.pathname)) {
+      const healthRequest = url.pathname === '/health' ? request : new Request(new URL('/health',url),request);
+      const coreResponse = await core.fetch(healthRequest, env);
       const coreBody = await coreResponse.clone().json().catch(() => ({}));
       const firstTouchReady = Boolean(env.DB) && await attributionSchemaReady(env);
       const sourcingReady = Boolean(env.DB) && await sourcingSchemaReady(env);
@@ -308,6 +316,8 @@ export default {
       return trackSupplierOrders(env);
     }).then(() => probeOwnerclan(env)).then(() => probeDomeggookKey(env)).then(() => syncSupplyProducts(env)).then(summary => {
       if (summary.synced) console.log('mall supply sync', JSON.stringify(summary));
+      return backfillSupplyImages(env).then(r => { if (r.tried) console.log('mall supply images', JSON.stringify(r)); }).catch(e => console.error('mall supply images failed', e));
+    }).then(() => {
       return runSupplyCuration(env);
     }).then(summary => {
       if (summary?.imported || summary?.discovery) console.log('mall supply curation', JSON.stringify(summary));

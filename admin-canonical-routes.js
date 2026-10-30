@@ -4,12 +4,12 @@
 // canonical /admin/{group}/{section} address resolvable; the entry handoff then
 // rewrites it to the v3 canonical path.
 const SECTION_GROUP=Object.freeze({
-  'platform-overview':'home',
+  'platform-overview':'home','growth-os':'ai','search-visibility':'ai',
   'engine-all':'services','engine-core':'services','engine-common':'services','engine-operations':'services','engine-professional':'services','engine-ai':'services','engine-integration':'services','engine-preview':'services',
   'sites-all':'sites','menu-templates':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',
   campus:'sites',clients:'sites','site-chrome':'sites',organization:'sites',workspace:'sites','cheonggye-members':'sites',
   'common-services':'services','service-modules':'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',capabilities:'services',openai:'services',
-  'users-access':'accounts',security:'accounts',admins:'accounts','ai-membership':'ai',
+  'users-access':'accounts',security:'accounts',admins:'accounts','social-accounts':'accounts','ai-membership':'ai',
   work:'services',communication:'sites',community:'sites',books:'services','common-scripture':'services',devotional:'services',social:'services',finance:'finance',tax:'finance',
   health:'ops','site-health':'ops',deployments:'ops',aiops:'ai',devices:'ops','pos-agent':'ops','api-cost':'finance','infra-costs':'finance',architecture:'ops',maturity:'ops','domain-control':'ops',services:'ops',
   'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'ai','audit-records':'accounts',policies:'accounts',
@@ -28,7 +28,7 @@ const V2_SECTION_GROUP=Object.freeze({
   'users-access':'people',security:'security-audit',admins:'people','ai-membership':'people',
   work:'content',communication:'content',community:'content',books:'content','common-scripture':'content',devotional:'content',social:'content',finance:'finance',tax:'content',
   health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices-agent','pos-agent':'devices-agent','api-cost':'finance',architecture:'status',maturity:'status',services:'status',
-  'public-site-controls':'settings-records','language-status':'settings-records','ai-module-spec':'settings-records',storage:'settings-records','ai-settings':'settings-records','audit-records':'security-audit',policies:'settings-records',
+  'search-visibility':'settings','public-site-controls':'settings-records','language-status':'settings-records','ai-module-spec':'settings-records',storage:'settings-records','ai-settings':'settings-records','audit-records':'security-audit',policies:'settings-records',
 });
 const V2_GROUP_DEFAULT=Object.freeze({
   summary:'platform-overview',services:'engine-all',sites:'sites-all',people:'users-access',content:'work',finance:'finance',status:'health',releases:'deployments','devices-agent':'devices','settings-records':'public-site-controls','security-audit':'security',
@@ -91,10 +91,13 @@ function routeFromPath(pathname){
     const detailSegments=normalizeDetailSegments(parts.slice(2));
     return Object.freeze({section:'work',group:'content',detailSegments:Object.freeze(detailSegments)});
   }
+  // Compatible friendly Growth OS alias for specialist Search Visibility.
+  if(parts[0]==='admin'&&parts[1]==='growth'&&parts[2]==='search')return Object.freeze({section:'search-visibility',group:'ai',detailSegments:Object.freeze(normalizeDetailSegments(parts.slice(3)))});
   if(parts[0]!=='admin')return null;
   if(parts.length===1)return Object.freeze({section:COMMAND_HOME,group:'home',detailSegments:Object.freeze([])});
   const group=String(parts[1]||'').toLowerCase();
   if(parts.length===2){
+    if(group==='growth-os')return Object.freeze({section:'growth-os',group:'ai',detailSegments:Object.freeze([])});
     const section=group==='home'?COMMAND_HOME:(GROUP_DEFAULT[group]||V2_GROUP_DEFAULT[group]||LEGACY_GROUP_DEFAULT[group]||'');
     return section?Object.freeze({section,group,detailSegments:Object.freeze([])}):null;
   }

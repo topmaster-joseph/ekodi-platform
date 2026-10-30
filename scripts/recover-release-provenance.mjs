@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { rateLimitDecision, isIntegrationScopeRefusal, staleWorkflowFiles, staleBaseRemedy } from './lib/recovery-github-errors.mjs';
 import {findExactHumanGateApproval} from './release-human-gate-evidence.mjs';
 
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
@@ -70,11 +71,25 @@ async function request(url,options={}){
   let data={};try{data=body?JSON.parse(body):{}}catch{data={raw:body}}
   return {response,data};
 }
-async function github(path,options={}){
+async function githubOnce(path,options={}){
   return request('https://api.github.com'+path,{...options,headers:{
     accept:'application/vnd.github+json','x-github-api-version':'2022-11-28',
     authorization:`Bearer ${ghToken}`,...(options.headers||{})
   }});
+}
+// A quota 403/429 is not a refusal: wait for the reset (bounded by the job
+// timeout) and retry once; otherwise fail with the exact retry time recorded.
+async function github(path,options={}){
+  const first=await githubOnce(path,options);
+  const decision=rateLimitDecision({status:first.response.status,headers:first.response.headers,body:first.data});
+  if(!decision.limited)return first;
+  if(!decision.retry)await fail(`GitHub API ${decision.reason} on ${path.split('?')[0]}; retry after ${new Date(decision.retryAt).toISOString()}`);
+  console.log(`[EKODI][RELEASE-PROVENANCE-RECOVERY] GitHub ${decision.reason}; waiting ${Math.ceil(decision.waitMs/1000)}s before one retry`);
+  await new Promise(resolve=>setTimeout(resolve,decision.waitMs));
+  const second=await githubOnce(path,options);
+  const again=rateLimitDecision({status:second.response.status,headers:second.response.headers,body:second.data});
+  if(again.limited)await fail(`GitHub API ${again.reason} persisted on ${path.split('?')[0]}; retry after ${new Date(again.retryAt).toISOString()}`);
+  return second;
 }
 async function d1(databaseId,sql,params){
   const {response,data}=await request(`https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`,{
@@ -198,6 +213,17 @@ if(existing.response.ok){
   const ref=await github(refPath,{method:'POST','headers':{'content-type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branchRef}`,sha:headSha})});
   if(!ref.response.ok){
     // Accept only a verified exact-SHA concurrent creation, not a generic 403 bypass.
+    if(isIntegrationScopeRefusal(ref.response.status,ref.data)){
+      // Diagnose instead of guessing: a stale source carries old workflow files.
+      const compare=await github(`/repos/${repo}/compare/${headSha}...main`);
+      const files=compare.response.ok?staleWorkflowFiles(compare.data):[];
+      if(files.length){
+        const remedy=staleBaseRemedy({prNumber,headSha,files});
+        await github(`/repos/${repo}/issues/${prNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({body:`EKODI release-provenance recovery could not issue a release branch for \`${headSha}\`.\n\n${remedy}`})});
+        await fail(remedy);
+      }
+    }
     if(ref.response.status!==422)await fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
     const raced=await github(existingRefPath);
     if(!raced.response.ok||text(raced.data?.object?.sha,80)!==headSha){
@@ -251,7 +277,24 @@ const controlApiTouched=sourceFiles.some(file=>[
 // filter for Site Core. Use only source paths owned by the existing Site Core
 // workflow and only its receipt-bound, staged, guarded workflow_dispatch.
 const sharedSiteTouched=sourceFiles.some(file=>
+  // AI Ops source and its shared readable-command stylesheet ship in Site Core.
+  // A token-mediated protected merge does not trigger main push workflows.
+  // Dispatch only the existing receipt-bound Site Core lane for these UI assets.
+  ['ai-ops-admin.js','admin-readable-command.css'].includes(file)||
+  // The guarded Site Core release executes these read-only verification scripts.
+  // Source-pinned immediate recovery must dispatch the release even when a
+  // GITHUB_TOKEN merge does not emit an ordinary main push workflow event.
+  ['scripts/verify-admin-production-ui-e2e.mjs',
+   'scripts/admin-production-ui-coverage.mjs',
+   'scripts/ekodi-background-browser-worker.mjs'].includes(file)||
+  // Public Invest education / member-entry markup lives in the shared Site Core worker.
+  file==='invest-access-ui.js'||
+  // A Site Core manifest canary update must deploy even if recovery merges immediately.
+  // GITHUB_TOKEN merges do not fire ordinary main push workflows.
+  file==='deploy/manifests/shared-site.worker.json'||
   file.startsWith('sites/seonammedi/public/')||
+  // Immediate provenance recovery must not strand lazy Social Hub/account Admin assets.
+  ['social-admin.js','social-admin.css','social-account-admin.js','social-account-admin.css','admin-service-catalog.js'].includes(file)||
   // The exact-approved Seasonal Workforce portal is owned by the shared Worker.
   file.startsWith('seasonal-workforce/')||
   ['site-worker.js','site-shell-worker.js','ekodi-shell-injector.js','seonammedi-admin-control.js',
@@ -260,7 +303,10 @@ const sharedSiteTouched=sourceFiles.some(file=>
    'live-interpretation.js','live-interpretation.css',
    'realtime-tenant-registry.js',
    'scripts/converge-orchestrated-pr-merge.mjs',
-   'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml'].includes(file)
+   'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml',
+   'scripts/site-core-staging-10500-recovery.mjs',
+   '.github/workflows/stage-shared-site-shell.yml',
+   'test/site-core-staging-10500-recovery.test.mjs'].includes(file)
 );
 // First-party Shell is an independent guarded Worker. GitHub-token recovery
 // merges do not produce a regular main push event, so a successful immediate

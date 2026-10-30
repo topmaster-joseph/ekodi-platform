@@ -165,3 +165,39 @@ test('top-right shows one 본인인증 대기 button, a step-up dialog, and keep
  // Owner tools stay hidden until the second factor succeeds.
  assert.match(html,/<section id="owner" hidden>/);
 });
+
+test('every login step on /my/invest is time-boxed so the page never hangs on 확인 중',async()=>{
+ const js=await (await investMyRoute(new Request('https://ekodi.kr/invest/app.js'),{})).text();
+ assert.match(js,/function withTimeout\(/);
+ assert.match(js,/withTimeout\(import\('https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2\/\+esm'\),\d+\)/);
+ assert.match(js,/withTimeout\(sessionClient\.auth\.getSession\(\),\d+\)/);
+ assert.match(js,/withTimeout\(fetch\('\/my\/invest\/access'/);
+ assert.match(js,/withTimeout\(fetch\(autopilotApi\+'\/step-up'/);
+});
+
+// Production bundles with esbuild keepNames, which injects __name(...) calls into the serialized
+// browser client. Without a private helper the script throws on line 1 and /my/invest stays on
+// "본인 인증과 사용 권한을 확인하고 있습니다." forever (observed on 2026-10-28).
+test('/my/invest/app.js survives the esbuild __name rewrite and leaves the 확인 중 state',async()=>{
+ const { Script, createContext }=await import('node:vm');
+ const js=await (await investMyRoute(new Request('https://ekodi.kr/invest/app.js'),{})).text();
+ const prelude='(()=>{const __name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n';
+ assert.ok(js.startsWith(prelude));assert.ok(js.endsWith('();})();'));
+ // Simulate the bundler: put a keepNames call at the top of the client body.
+ const bundled=js.replace("'use strict';","'use strict';const __probe=__name(()=>0,\"probe\");");
+ assert.notEqual(bundled,js);
+ const nodes=new Map();
+ const element=id=>{if(!nodes.has(id))nodes.set(id,{id,hidden:false,disabled:false,value:'',textContent:'',dataset:{},style:{},children:[],
+  addEventListener(){},setAttribute(){},replaceChildren(...c){this.children=c;this.textContent=c.map(x=>x.textContent??String(x)).join('')},append(...c){this.children.push(...c);this.textContent+=c.map(x=>x.textContent??String(x)).join('')},
+  showModal(){},close(){},focus(){},querySelectorAll(){return []}});return nodes.get(id)};
+ element('authMessage').textContent='본인 인증과 사용 권한을 확인하고 있습니다.';
+ const throwing={getItem(){throw new Error('blocked')},setItem(){throw new Error('blocked')},removeItem(){}};
+ const context=createContext({console,setTimeout,clearTimeout,Promise,URL,URLSearchParams,Intl,JSON,Math,Number,String,Object,Array,Date,Error,Map,Set,
+  document:{getElementById:element,createElement:()=>element(Symbol()),createTextNode:t=>({textContent:t}),createElementNS:()=>element(Symbol()),querySelectorAll:()=>[],activeElement:null},
+  location:{hash:'',pathname:'/my/invest',search:'',href:''},history:{replaceState(){}},localStorage:throwing,sessionStorage:throwing,
+  fetch:async()=>{throw new Error('offline')},confirm:()=>false});
+ assert.doesNotThrow(()=>new Script(bundled).runInContext(context));
+ await new Promise(resolve=>setTimeout(resolve,50));
+ assert.doesNotMatch(element('authMessage').textContent,/확인하고 있습니다/);
+ assert.match(element('authMessage').textContent,/로그인/);
+});

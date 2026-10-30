@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="theme-color" content="#ffffff">
   <title>EKODI Control</title>
-  <link rel="stylesheet" href="/control.css?v=20261025-factchat-institution-v1">
+  <link rel="stylesheet" href="/control.css?v=20261028-external-ai-v1">
 </head>
 <body>
   <a class="skip-link" href="#commandInput">명령 입력으로 바로가기</a>
@@ -23,6 +23,7 @@
         <button class="nav-item" type="button" data-view="agents">Agents</button>
         <button class="nav-item" type="button" data-view="workers">Workers</button>
         <button class="nav-item" type="button" data-view="results">결과</button>
+        <button class="nav-item" type="button" data-view="github">GitHub·AI 작업관리</button>
       </nav>
       <section class="recent" aria-label="최근 작업">
         <div class="section-title">최근 작업 <span class="local-history-caption">· 이 브라우저</span></div>
@@ -73,11 +74,11 @@
                 <select id="executionTarget" aria-label="실행 대상">
                   <option value="auto">EKODI 자동선택</option>
                   <option value="multi">여러 AI 병렬</option>
-                  <option value="chatgpt">ChatGPT</option>
-                  <option value="genspark">Genspark</option>
-                  <option value="gemini">Gemini</option>
-                  <option value="claude">Claude</option>
-                  <option value="qwen">Qwen</option>
+                  <option value="chatgpt">ChatGPT · 새 창</option>
+                  <option value="genspark">Genspark · 새 창</option>
+                  <option value="gemini">Gemini · 새 창</option>
+                  <option value="claude">Claude · 새 창</option>
+                  <option value="qwen">Qwen · 새 창</option>
                   <option value="factchat-institution">FactChat · 목포대 기관계정</option>
                 </select>
               </label>
@@ -103,6 +104,15 @@
         <div class="panel-head"><div><h2>Workers</h2><p>Cloud · Browser · Local 실행계층 상태를 표시합니다.</p></div></div>
         <div class="cards" id="workerCards"></div>
       </section>
+      <section class="view" id="viewGithub" data-view-panel="github">
+        <div class="panel-head">
+          <div><h2>GitHub·AI 작업관리</h2><p>EKODI Orchestrator 관측 원장 · 실제 수신 증거만 표시합니다.</p></div>
+          <div class="actions"><button type="button" class="secondary" id="githubProbeRun" disabled title="서버 서명키 및 최고관리자 권한 검증 후에만 실측합니다">GitHub App 실측(읽기 전용)</button><button type="button" class="secondary" id="githubOperationsRefresh">새로고침</button></div>
+        </div>
+        <div id="githubOperationsSummary" role="status" aria-live="polite">조회 전 · 실측 GitHub 한도 연결 여부는 별도로 확인합니다.</div>
+        <div class="cards" id="githubOperationsCards"></div>
+        <p class="composer-note">관측 전용입니다. 이 화면은 병합, 배포, 보호 승인 또는 유료 API 실행을 수행하지 않습니다.</p>
+      </section>
       <section class="view" id="viewResults" data-view-panel="results">
         <div class="panel-head"><div><h2>결과</h2><p>AI별 원본보다 EKODI의 검증된 최종 결과를 우선 표시합니다.</p></div></div>
         <div class="cards" id="resultCards"></div>
@@ -110,6 +120,6 @@
     </main>
   </div>
   <div class="toast" id="toast" hidden></div>
-  <script src="/control.js?v=20261025-factchat-institution-v1" defer></script>
+  <script src="/control.js?v=20261028-external-ai-v1" defer></script>
 </body>
 </html>

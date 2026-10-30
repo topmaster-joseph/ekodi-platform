@@ -5,19 +5,9 @@ const menuButton=document.querySelector('.menu-button');
 const nav=document.querySelector('#site-nav');
 
 document.querySelector('#year').textContent=new Date().getFullYear();
-if(menuButton)menuButton.dataset.menuBound='1';
-menuButton?.addEventListener('click',()=>{const open=nav.classList.toggle('open');menuButton.setAttribute('aria-expanded',String(open));});
-function closeMenu(){if(!nav?.classList.contains('open'))return;nav.classList.remove('open');menuButton?.setAttribute('aria-expanded','false');}
-nav?.addEventListener('click',event=>{if(event.target.closest('a'))closeMenu();});
-document.addEventListener('keydown',event=>{if(event.key==='Escape'){closeMenu();menuButton?.focus();}});
-document.addEventListener('click',event=>{if(!event.target.closest('.masthead'))closeMenu();});
 
 function installPublishingEntry(){
-  if(nav&&!nav.querySelector('a[href="/publishing/"]')){
-    const link=document.createElement('a');link.href='/publishing/';link.textContent='출판';
-    const ekodi=nav.querySelector('a[href^="https://ekodi.kr"]');
-    if(ekodi)nav.insertBefore(link,ekodi);else nav.append(link);
-  }
+  // 출판 바로가기는 공용 머리말의 '출판 생태계' 띠가 맡는다(scripts/site-chrome.mjs).
   if(!document.querySelector('#publishing-service-callout')){
     const method=document.querySelector('#method');
     if(method){
@@ -63,6 +53,10 @@ async function fetchCatalog(){
   return merged;
 }
 
+// BOOKS-SALE-READINESS-001 (client mirror, display only — books-sale-readiness.js on the server decides)
+const SALE_READY_WORKFLOW={manuscript:['complete'],editing:['complete'],epub:['validated'],cover:['complete'],metadata:['ready'],storefront:['live']};
+function bookSaleReady(book){if(!book||book.directSale?.enabled!==true||!String(book.directSale?.fileKey||'').trim()||!String(book.edition||'').trim()||!(Math.trunc(Number(book.listPrice?.amount))>0))return false;const w=book.workflow||{};return Object.entries(SALE_READY_WORKFLOW).every(([k,v])=>v.includes(String(w[k]||'')));}
+// END BOOKS-SALE-READINESS-001
 function renderBook(book){
   const node=template.content.cloneNode(true);const series=seriesLabel(book);const cover=node.querySelector('.publication-cover');
   cover.href=book.detailUrl||'/#catalog';cover.setAttribute('aria-label',`${book.title} 상세 보기`);
@@ -78,7 +72,7 @@ function renderBook(book){
   const detailLink=node.querySelector('.detail-link');detailLink.href=book.detailUrl||'/#catalog';detailLink.classList.add('text-link');
   const editions=book.editions||{};const upaper=editions.upaperKoreanBilingual||{};const dist=node.querySelector('.distribution-list');
   dist.append(distributionRow('Google Play Books',identifier||editions.googleKoreanBilingual?.price||'',book.distribution?.google),distributionRow('Amazon KDP',['English Edition',editions.amazonEnglish?.price].filter(Boolean).join(' · '),book.distribution?.amazon),distributionRow('국내 판매',upaper.provider?[upaper.provider,upaper.price].filter(Boolean).join(' · '):(upaper.price||''),book.distribution?.upaper||book.distribution?.korea));
-  const links=node.querySelector('.book-links');if(book.directSale?.enabled){const buy=document.createElement('a');buy.href=`${catalogBase()}/buy/?book=${encodeURIComponent(book.id)}`;buy.className='buy-direct';buy.textContent='에코디서점에서 구매하기';links.append(buy);}links.append(linkFor('Google Play',book.links?.google,book.distribution?.google),linkFor('Amazon',book.links?.amazon,book.distribution?.amazon),linkFor('유페이퍼 구매',book.links?.upaper||book.links?.korea,book.distribution?.upaper||book.distribution?.korea));
+  const links=node.querySelector('.book-links');if(bookSaleReady(book)){const buy=document.createElement('a');buy.href=`${catalogBase()}/buy/?book=${encodeURIComponent(book.id)}`;buy.className='buy-direct';buy.textContent='에코디서점에서 구매하기';links.append(buy);}else if(book.directSale?.enabled){const pending=document.createElement('span');pending.className='buy-direct is-pending';pending.setAttribute('aria-disabled','true');pending.textContent='에코디서점 · 출간 준비 중';links.append(pending);}links.append(linkFor('Google Play',book.links?.google,book.distribution?.google),linkFor('Amazon',book.links?.amazon,book.distribution?.amazon),linkFor('유페이퍼 구매',book.links?.upaper||book.links?.korea,book.distribution?.upaper||book.distribution?.korea));
   if(book.coverImage){const img=document.createElement('img');img.src=/^\/(?!\/)/.test(book.coverImage)?`${catalogBase()}${book.coverImage}`:book.coverImage;img.alt=`${book.title} 표지`;img.loading='lazy';img.decoding='async';cover.classList.add('has-cover');cover.replaceChildren(img);}
   grid.append(node);
 }

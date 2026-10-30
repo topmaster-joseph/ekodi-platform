@@ -67,6 +67,12 @@ export async function observeNativeDeviceReadiness({token,hostname='user3',now=D
       status,
       verified:item.verified===true && item.fresh===true && status==='succeeded',
       fresh:item.fresh===true,
+      // Read-only, allowlisted diagnosis. API reachability alone is not inference.
+      ...(kind==='localAi'?{diagnosticCode:[
+        'not_checked','api_ready','process_not_running','loopback_port_not_listening',
+        'wrong_bind','port_bound_unresponsive','api_timeout',
+        'version_response_invalid','api_unavailable_unclassified'
+      ].includes(item.diagnosticCode)?item.diagnosticCode:'unclassified'}:{}),
       completedAt:typeof item.completedAt==='string' && Number.isFinite(Date.parse(item.completedAt))
         ? new Date(item.completedAt).toISOString() : null,
     };

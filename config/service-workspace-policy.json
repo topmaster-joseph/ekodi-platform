@@ -309,5 +309,23 @@
     "preLoginPageReturnMandatory": true,
     "everyLoginLinkCarriesCurrentPage": true,
     "siteLocalMyFallback": false
+  },
+  "canonicalAuthenticationEntryPolicy": {
+    "policyId": "CANONICAL-AUTH-ENTRY-001",
+    "status": "enforced",
+    "scope": "all-current-and-future-sites-workspaces-services",
+    "authEntry": "https://ekodi.kr/auth/",
+    "platformAdmin": "https://ekodi.kr/admin/",
+    "forbiddenBrowserAuthSubdomain": true,
+    "forbiddenBrowserAdminSubdomain": true,
+    "siteAdminPattern": "/{site}/admin",
+    "exactInitiatingPageReturnRequired": true,
+    "currentPageReturnToRequired": true,
+    "preserveFunctionalQueryAndAdminChildPath": true,
+    "existingSessionReusedBeforeLoginUi": true,
+    "serverSideRoleCapabilityVerificationRequired": true,
+    "noGenericMyRedirect": true,
+    "noLocalOverride": true,
+    "noUnverifiedCompletionClaim": true
   }
 }

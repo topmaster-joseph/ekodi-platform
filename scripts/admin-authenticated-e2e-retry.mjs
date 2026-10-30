@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { isQuotaCircuitBreak } from './cloudflare-quota-guard-lib.mjs';
+import { resolveAdminE2EMenus, isAdminEntryQuotaCircuit } from './lib/admin-e2e-menu-scope.mjs';
 import path from 'node:path';
 import { adminMenuOrder } from '../admin-menu-registry.js';
 import ecosystemServices from '../config/ecosystem-services.json' with { type: 'json' };
@@ -20,16 +21,19 @@ for (const event of ['uncaughtException', 'unhandledRejection']) {
   });
 }
 
-const maxAttemptsPerMenu = 2;
-const menuTimeoutMs = 30_000;
+const focusedDiagnostic = ['social-accounts','architecture'].includes(String(process.env.E2E_MENU_FOCUS || 'all').trim());
+const maxAttemptsPerMenu = focusedDiagnostic ? 1 : 2;
+const menuTimeoutMs = focusedDiagnostic ? 90_000 : 30_000; // five viewport focused budget, still fail-closed on CF quota
 const taxSurfaceTimeoutMs = 35_000;
 const assistTimeoutMs = 60_000;
 const artifactsDir = path.resolve('artifacts/admin-authenticated-e2e');
-const menuIds = adminMenuOrder();
+const allMenuIds = adminMenuOrder();
+const menuIds = resolveAdminE2EMenus(allMenuIds, process.env.E2E_MENU_FOCUS);
+const focusOnly = menuIds.length !== allMenuIds.length;
 const productionRegistryUrl = 'https://ekodi.kr/admin-menu-registry.js';
 const maturityApiUrl = 'https://ekodi.kr/api/control/platform-maturity';
 const e2eAdminToken = String(process.env.E2E_ADMIN_TOKEN || '').trim();
-const productionConvergenceAttempts = 36;
+const productionConvergenceAttempts = focusOnly ? 1 : 36; // CF-QUOTA-001: focused acceptance never fans out preflight polls
 const productionConvergenceDelayMs = 5_000;
 const quotaConfig = JSON.parse(await fs.readFile(fileURLToPath(new URL('../config/cloudflare-production-quota-guard.json', import.meta.url)), 'utf8'));
 function throwIfQuotaCircuit(status, body, label) {
@@ -113,7 +117,9 @@ async function waitForMaturityApi() {
 }
 
 await waitForProductionMenuRegistry();
-await waitForMaturityApi();
+// A focused social-account acceptance must not generate unrelated maturity API traffic.
+// The default all-menu certification retains the full maturity convergence gate.
+if (!focusOnly) await waitForMaturityApi();
 await fs.rm(artifactsDir, { recursive: true, force: true });
 await fs.mkdir(artifactsDir, { recursive: true });
 
@@ -199,7 +205,7 @@ const aggregate = {
   expectedMenuCount: menuIds.length,
   checkedMenuCount: 0,
   passed: false,
-  mode: 'isolated-menu-renderers+canonical-assist-roundtrip',
+  mode: focusOnly ? (menuIds[0]==='architecture' ? 'focused-architecture' : 'focused-social-inventory') : 'isolated-menu-renderers+canonical-assist-roundtrip',
   taxProtocolFallback: 'strict-isolated-tax-surface-on-known-http2-commit-race',
   results: [],
   assistProbe: null,
@@ -229,10 +235,14 @@ for (const menuId of menuIds) {
     const failure = { menuId, attempt, ...outcome, error: report?.error || outcome.error || 'isolated menu verification failed' };
     aggregate.diagnostics.attemptFailures.push(failure);
     console.warn(`[E2E] ${menuId}: attempt ${attempt} failed; ${failure.error}`);
+    if (isAdminEntryQuotaCircuit(report)) {
+      fatal = new Error(`CF-QUOTA-001 production Admin 429 circuit open; no retry for ${menuId}`);
+      break;
+    }
     if (attempt < maxAttemptsPerMenu) console.warn(`[E2E] ${menuId}: retrying only this menu in a brand-new Chromium process`);
   }
 
-  if (!passed && menuId === 'tax' && isKnownTaxRendererProtocolRace(lastReport)) {
+  if (!fatal && !passed && menuId === 'tax' && isKnownTaxRendererProtocolRace(lastReport)) {
     console.warn('[E2E] tax: main-frame Tax request passed worker guards but Playwright hit the known cross-origin HTTP/2 commit race; running strict isolated Tax surface verification');
     const outcome = await runTaxSurface();
     const taxSurface = await readTaxSurfaceReport();
@@ -256,13 +266,13 @@ for (const menuId of menuIds) {
     }
   }
 
-  if (!passed) {
+  if (!passed && !fatal) {
     fatal = new Error(`${menuId}: failed after ${maxAttemptsPerMenu} isolated renderer attempts${menuId === 'tax' ? ' and strict Tax surface verification' : ''}`);
     break;
   }
 }
 
-if (!fatal) {
+if (!fatal && !focusOnly) {
   console.log('[E2E] canonical Assist: verifying bottom input → lazy runtime → API → rendered reply');
   const outcome = await runCanonicalAssist();
   const assist = await readAssistReport();
@@ -278,8 +288,8 @@ if (!fatal) {
 aggregate.generatedAt = new Date().toISOString();
 aggregate.passed = !fatal
   && aggregate.checkedMenuCount === aggregate.expectedMenuCount
-  && aggregate.assistProbe?.passed === true
-  && aggregate.assistProbe?.visualContractVerified === true;
+  && (focusOnly || (aggregate.assistProbe?.passed === true
+  && aggregate.assistProbe?.visualContractVerified === true));
 aggregate.error = fatal ? fatal.message : null;
 aggregate.diagnostics.consoleErrors = aggregate.diagnostics.consoleErrors.slice(-80);
 await fs.writeFile(path.join(artifactsDir, 'report.json'), JSON.stringify(aggregate, null, 2));
@@ -302,4 +312,4 @@ if (!aggregate.passed) {
   console.error(`[E2E] authenticated Admin verification failed: ${aggregate.error}`);
   process.exit(1);
 }
-console.log(`[E2E] authenticated Admin verification passed: ${aggregate.checkedMenuCount}/${aggregate.expectedMenuCount} menus + canonical Assist command round-trip`);
+console.log(`[E2E] authenticated Admin ${focusOnly ? 'focused read-only diagnostic (not full-suite certification)' : 'all-menu + canonical Assist'} passed: ${aggregate.checkedMenuCount}/${aggregate.expectedMenuCount} menus`);

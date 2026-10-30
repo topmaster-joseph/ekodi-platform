@@ -2,8 +2,8 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const page=document.body.dataset.page||'';
-const labels={'':'처음','/my':'내 프로필','/events':'공개 행사','/groups':'우리 모임','/discover':'동행 찾기','/messages':'메시지','/subscribe':'구독·입금','/admin':'결제관리'};
-const state={client:null,session:null,status:null,member:null,subscription:{active:false}};
+const labels={'':'처음','/my':'내 프로필','/events':'공개 행사','/groups':'우리 모임','/discover':'동행 찾기','/messages':'메시지','/subscribe':'동행 안내·가입','/admin':'결제관리'};
+const state={client:null,session:null,status:null,member:null,subscription:{active:false},pricing:null,paidModel:false,paid:false};
 const loginUrl=()=>{const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','singles');u.searchParams.set('select_account','1');u.searchParams.set('return_to','https://ekodi.kr/singles'+page+location.search);return u.toString()};
 const text=(tag,body,css='')=>{const n=document.createElement(tag);n.textContent=String(body??'');if(css)n.className=css;return n};
 const button=(label,handler,css='outline')=>{const n=document.createElement('button');n.type='button';n.textContent=label;n.className=css;n.addEventListener('click',handler);return n};
@@ -13,7 +13,7 @@ const notice=(h,value)=>h.append(text('p',value,'notice'));
 function showGuest(){
  $('sectionTitle').textContent=labels[page]||'처음';
  $('serviceStage').textContent='소개 공개 · 회원서비스 준비';
- document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.href=loginUrl()});
+ document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.href=loginUrl();link.hidden=false});
  $('contentDescription').textContent=page===''?'서로를 존중하며 천천히 알아가는 동행입니다.':'로그인 후 이용 가능한 기능은 개통 상태에 따라 달라집니다.';
  if(page!==''){
    const h=$('publicPanel');if(!h.querySelector('[data-donghaeng-login]')){const c=button('EKODI Google로 시작',()=>location.assign(loginUrl()),'primary');c.dataset.donghaengLogin='1';h.append(c);}
@@ -36,7 +36,7 @@ async function api(path,options={}){
   ...(options.body?{body:JSON.stringify(options.body)}:{}),cache:'no-store',credentials:'omit'
  });
  const data=await response.json().catch(()=>({}));
- if(!response.ok){const e=new Error(data.error||'server_unavailable');e.status=response.status;throw e}
+ if(!response.ok){const e=new Error(data.error||'server_unavailable');e.status=response.status;if(data.fee_krw)e.fee_krw=data.fee_krw;throw e}
  return data;
 }
 function paywall(h,action){
@@ -45,13 +45,21 @@ function paywall(h,action){
  box.append(button('계좌이체 구독 안내',()=>location.assign('/singles/subscribe'),'primary'));h.append(box);
 }
 function errorText(error){
- if(error?.message==='monthly_pass_required')return '요청을 보내려면 월 이용권(30일 50,000원)이 필요합니다.';
- if(error?.message==='request_credit_required')return '적립금이 부족합니다. 요청은 상대가 수락할 때 1만원이 확정되며, 보낼 때는 1만원이 잠시 보류됩니다.';
- if(error?.message==='response_credit_required')return '수락하려면 적립금 1만원이 필요합니다. 수락하는 순간 양쪽에서 각 1만원이 확정됩니다.';
+ if(error?.message==='paid_membership_required')return '유료회원(구독 중)만 이용할 수 있습니다. 동행 안내·가입에서 기간제 구독권을 구매해 주세요.';
+ if(error?.message==='invoice_not_payable')return '이미 결제됐거나 기한이 지난 청구서입니다.';
+ if(error?.message==='invoice_not_found')return '청구서를 찾을 수 없습니다.';
+ if(error?.message==='bank_payment_not_configured')return '입금 계좌 설정이 아직 완료되지 않았습니다.';
+ if(error?.message==='passes_discontinued')return '기간권은 구독권으로 바뀌었습니다.';
+ if(error?.message==='already_connected')return '이미 메시지를 주고받을 수 있게 연결된 회원입니다.';
+ if(error?.message==='contact_already_shared')return '이미 연락처 교환이 수락된 회원입니다.';
+ if(error?.message==='request_exists')return '같은 종류의 요청이 이미 대기 중입니다.';
+ if(error?.message==='pilot_only')return '지금은 시범 운영 중이라 지정된 계정만 이용할 수 있습니다. 공개 개통 후 이용해 주세요.';
+ if(error?.message==='join_order_already_open')return '이미 발급된 가입비 주문이 있습니다. 아래 입금·확인 내역을 확인해 주세요.';
+ if(error?.message==='already_paid_member')return '이미 유료회원입니다.';
+ if(error?.message==='verified_member_required')return '가입비 결제 전에 성인 본인확인이 필요합니다. 운영자 확인을 요청해 주세요.';
  if(error?.message==='faith_consent_required')return '신앙 항목은 신앙·신념 민감정보 처리에 별도로 동의한 뒤 입력할 수 있습니다.';
  if(error?.message==='invalid_region')return '지역은 목록에서 골라 주세요.';
  if(error?.message==='invalid_profile'||error?.message==='invalid_profile_details')return '별명(2~32자)과 각 항목의 글자 수를 확인해 주세요.';
- if(error?.message==='initial_credit_required')return '추가 충전 전에 기본 적립금 50만원 충전이 먼저 필요합니다.';
  if(error?.status===402)return '행사 참가·메시지 발송·답장 또는 별도 컨설팅 이용에 필요한 구독을 확인해 주세요.';
  if(error?.status===403)return '권한이나 성인확인·상호동의 조건을 확인해 주세요.';
  if(error?.message==='singles_enrollment_not_launched'||error?.message==='singles_social_not_launched')return '동행 회원 서비스는 아직 개통 전이라 저장되지 않습니다. 성인 본인확인 연동과 개인정보 안내 확정 후 열립니다.';
@@ -83,7 +91,7 @@ function profileForm(h){
  const box=text('section','','member-card');box.append(text('h3','나의 동행 프로필'));
  paragraph(box,'항목마다 입력하고, 공개할지 직접 고르세요. 별명은 항상 공개되고, 나머지는 “공개”를 고른 항목만 다른 회원에게 보입니다. 프로필은 성인 본인확인과 별도 공개 동의 후에만 동행 찾기에 나옵니다.');
  const price=text('div','','notice price-notice');
- price.append(text('strong','요금 안내(예정)'),text('p','앞으로 구독료와 요청 요금은 프로필을 얼마나 입력하고 공개했는지에 따라 달라질 수 있습니다. 많이 입력하고 많이 공개할수록 같은 요청의 요금이 낮아지고, 적게 입력·공개할수록 높아집니다. 신앙 정보 같은 민감정보는 요금 산정에 쓰지 않습니다. 구체적인 요금표는 시행 전에 미리 알려 드립니다.'));
+ price.append(text('strong','요금 안내 · 기본 요금 + 입력·공개 할인'),text('p','요청·수락 요금은 종류별 기본 요금에서 프로필 입력·공개 정도에 따라 할인됩니다. 많이 입력하고 공개할수록 할인이 커지며, 입력·공개는 언제나 선택입니다. 신앙 정보 같은 민감정보는 할인 계산에 쓰지 않습니다. 현재 요금표는 동행 안내·가입에서 확인할 수 있습니다.'));
  box.append(price);
  const meter=text('p','','profile-meter');box.append(meter);
  const form=document.createElement('form');form.className='profile-fields';
@@ -109,7 +117,7 @@ function profileForm(h){
   const scored=PROFILE_FIELDS.filter(f=>!f.sensitive&&!f.optional);
   const filled=scored.filter(f=>controls[f.key].value.trim());
   const pub=filled.filter(f=>shows[f.key].checked);
-  meter.textContent='입력 '+filled.length+'/'+scored.length+' · 공개 '+pub.length+'/'+scored.length+' — 많이 입력·공개할수록 예정 요금이 낮아집니다.';
+  meter.textContent='입력 '+filled.length+'/'+scored.length+' · 공개 '+pub.length+'/'+scored.length+' — 입력·공개가 많을수록 할인이 커집니다.';
  }
  form.append(text('p','Google 로그인은 계정 확인 수단입니다. 만 19세 이상 본인확인은 승인된 본인확인기관 연동이 완료된 뒤 별도로 진행합니다.','muted'));
  const discoverLabel=text('label','성인 본인확인 및 민감정보 동의 후 동행 찾기에 공개하고 싶습니다.','field'),discover=document.createElement('input');
@@ -163,6 +171,8 @@ function startConsent(h){
   try{await api('/withdraw',{method:'DELETE'});form.reset();msg.textContent='동의 철회가 처리되었습니다. 프로필은 검색되지 않습니다.'}
   catch(e){msg.textContent=errorText(e)}
  });
+ // 유료회원 모델: 무료회원은 프로필을 입력·공개하지 않는다(서비스 안내만).
+ if(state.paidModel&&!state.paid){showGuide(h);return}
  profileForm(h);
 }
 function appendList(h,items,onItem){
@@ -192,7 +202,7 @@ async function showEvents(h){
  })}catch(e){notice(h,errorText(e))}
 }
 async function showDiscover(h){
- notice(h,'서로 공개를 선택하고 본인확인을 완료한 회원만 표시합니다. 호감 수락·거절은 언제나 무료입니다.');
+ notice(h,state.paidModel?'서로 공개를 선택하고 본인확인을 마친 유료회원(구독 중)만 표시합니다. 요청할 때는 결제하지 않고, 상대가 수락하면 두 분에게 청구서가 발행됩니다.':'서로 공개를 선택하고 본인확인을 완료한 회원만 표시합니다. 호감 수락·거절은 언제나 무료입니다.');
  try{const d=await api('/discover');appendList(h,d.profiles||[],(card,p)=>{
   card.append(text('span',p.broad_region||'지역 비공개','pill'));card.append(text('h3',p.display_name||'동행 회원'));paragraph(card,p.intro||'');
   const shown=PROFILE_FIELDS.filter(f=>f.detail&&typeof p.details?.[f.key]==='string'&&p.details[f.key]);
@@ -201,7 +211,17 @@ async function showDiscover(h){
    const link=text('a','회원이 공유한 명함·프로필 링크 (공식 인증 아님)','outline');
    link.href=p.public_link;link.target='_blank';link.rel='noopener noreferrer';link.referrerPolicy='no-referrer';card.append(link);
   }
-  card.append(button('호감 보내기',async()=>{
+  if(state.paidModel){
+   const q=state.pricing?.quotes||{};
+   for(const [kind,label] of [['message','메시지 교환 요청'],['contact','연락처 교환 요청']]){
+    const fee=q[kind];
+    card.append(button(label+(typeof fee==='number'?' · '+money(fee):''),async()=>{
+     if(!confirm(label+'을 보낼까요? 지금은 결제하지 않고, 상대가 수락하면 '+money(fee||0)+' 청구서가 발행됩니다. 두 분 모두 결제하면 연결됩니다.'))return;
+     try{const r=await api('/interests/'+p.id,{method:'POST',body:{kind}});notice(card,label+'을 보냈습니다. 상대가 수락하면 '+money(r.billing?.fee_krw||0)+' 청구서가 발행됩니다.')}
+     catch(e){notice(card,errorText(e))}
+    },kind==='contact'?'outline':'primary'));
+   }
+  }else card.append(button('호감 보내기',async()=>{
    try{await api('/interests/'+p.id,{method:'POST',body:{}});notice(card,'호감을 전했습니다. 상대가 동의하면 대화를 열 수 있습니다.')}
    catch(e){notice(card,errorText(e))}
   },'outline'));
@@ -217,7 +237,54 @@ async function showDiscover(h){
   }));
  })}catch(e){notice(h,errorText(e))}
 }
+const KIND_LABEL={message:'메시지 교환',contact:'연락처 교환'};
+const REQ_STATUS={pending:'답변 대기',accepted:'수락',awaiting_payment:'수락 · 결제 대기',connected:'연결됨',lapsed:'결제 기한 경과로 취소',declined:'거절',expired:'14일 무응답 만료',withdrawn:'탈퇴로 종료'};
+function messageThread(card,id){
+ return async()=>{try{const d=await api('/messages/'+id);const list=text('div','','member-card');
+  list.append(text('h3','서로 나눈 메시지'));
+  for(const m of (d.messages||[]))list.append(text('p',m.body,'muted'));
+  if(!(d.messages||[]).length)paragraph(list,'아직 주고받은 메시지가 없습니다.');
+  card.append(list);
+ }catch(e){notice(card,errorText(e))}};
+}
+async function showPaidMessages(h){
+ notice(h,'요청을 수락하면 두 분 각자에게 자기 요금(기본 요금 + 입력·공개 할인)의 청구서가 발행됩니다. 두 분 모두 결제하면 연결되며, 7일 안에 결제가 끝나지 않으면 연결이 취소됩니다. 거절은 무료입니다. 연락처 교환이 성사되기 전에는 메시지 속 연락처가 자동으로 가려집니다.');
+ let d;try{d=await api('/requests')}catch(e){notice(h,errorText(e));return}
+ h.append(text('h3','받은·보낸 요청'));
+ appendList(h,d.requests||[],(card,r)=>{
+  card.append(text('span',KIND_LABEL[r.kind]||r.kind,'pill'));card.append(text('h3',r.display_name));
+  paragraph(card,(r.incoming?'받은 요청':'보낸 요청')+' · '+(REQ_STATUS[r.status]||r.status)+(typeof r.my_fee_krw==='number'?' · 내 요금 '+money(r.my_fee_krw):''));
+  if(r.status==='pending'&&r.incoming){
+   card.append(button('수락 (청구서 '+money(r.my_fee_krw||0)+')',async()=>{
+    if(!confirm(KIND_LABEL[r.kind]+' 요청을 수락할까요? 수락하면 '+money(r.my_fee_krw||0)+' 청구서가 발행되고, 두 분 모두 결제하면 연결됩니다.'))return;
+    try{await api('/requests/'+r.id+'/respond',{method:'POST',body:{decision:'accepted'}});notice(card,'수락했습니다. "내 구독·청구서"에서 결제해 주세요.');}
+    catch(e){notice(card,errorText(e))}
+   },'primary'));
+   card.append(button('정중히 거절',async()=>{
+    try{await api('/requests/'+r.id+'/respond',{method:'POST',body:{decision:'declined'}});notice(card,'거절했습니다. 요금은 없습니다.')}
+    catch(e){notice(card,errorText(e))}
+   }));
+  }
+  if(r.status==='pending'&&!r.incoming)paragraph(card,'상대의 답을 기다리는 중입니다. 14일 동안 답이 없으면 자동으로 정리됩니다.');
+  if(r.status==='awaiting_payment'&&r.invoice){
+   paragraph(card,'내 청구서: '+money(r.invoice.amount_krw)+' · '+(INVOICE_STATUS[r.invoice.status]||r.invoice.status)+(r.invoice.status==='unpaid'?' · '+r.invoice.due_at.slice(0,10)+'까지':' · 상대 결제를 기다리는 중'));
+   if(r.invoice.status==='unpaid')card.append(button('결제하기(계좌이체)',()=>payInvoice(card,r.invoice,null),'primary'));
+  }
+ });
+ h.append(text('h3','연결된 회원'));
+ appendList(h,d.connections||[],(card,c)=>{
+  card.append(text('h3',c.display_name));
+  paragraph(card,c.contact_shared?'연락처 교환 성사 · 메시지 속 연락처가 그대로 보입니다.':'연락처 교환 전 · 메시지 속 연락처는 자동으로 가려집니다.');
+  card.append(button('대화 내용 보기',messageThread(card,c.id)));
+  card.append(button('메시지 보내기',async()=>{
+   const body=prompt('상대에게 보낼 메시지 (최대 1000자)');if(!body?.trim())return;
+   try{const x=await api('/messages/'+c.id,{method:'POST',body:{text:body.slice(0,1000)}});notice(card,x.masked?'메시지를 보냈습니다. 연락처로 보이는 부분은 가려졌습니다.':'메시지를 보냈습니다.')}
+   catch(e){notice(card,errorText(e))}
+  },'primary'));
+ });
+}
 async function showMessages(h){
+ if(state.paidModel){await showPaidMessages(h);return}
  notice(h,'관심 수락·거절과 상호 동의 후 메시지 열람은 무료입니다. 새 메시지와 답장을 보내려면 보내는 사람에게 유효한 기본 구독이 필요합니다. 차단·신고는 언제나 무료입니다.');
  try{const d=await api('/requests');appendList(h,d.requests||[],(card,r)=>{
   card.append(text('h3',r.display_name||'새로운 관심'));paragraph(card,r.status==='pending'?'상대의 관심이 도착했습니다.':'연결 상태: '+r.status);
@@ -263,7 +330,7 @@ async function reloadBankOrders(h){
   if(!rows.length){paragraph(panel,'아직 결제 내역이 없습니다.');return}
   for(const row of rows){
    const card=text('article','','mini-card');
-   card.append(text('h4',(row.plan_code==='consulting'?'선택형 컨설팅':'행사 참가 구독')+' · '+money(row.amount_krw)));
+   card.append(text('h4',({sub_1d:'구독권 1일',sub_10d:'구독권 10일',sub_20d:'구독권 20일',sub_30d:'구독권 1달',request_fee:'요청·수락 청구서',consulting:'선택형 컨설팅'}[row.plan_code]||'행사 참가 구독')+' · '+money(row.amount_krw)));
    paragraph(card,'결제고유번호: '+row.reference);
    card.append(button('고유번호 복사',async()=>{
     try{await navigator.clipboard.writeText(row.reference);notice(card,'고유번호를 복사했습니다.');}
@@ -299,7 +366,7 @@ async function showWallet(h){
   if(!w.request_billing_enabled)return;
   const box=text('section','','member-card');box.append(text('h3','내 적립금'));
   paragraph(box,'사용 가능 '+(w.available_krw||0).toLocaleString('ko-KR')+'원 · 수락 대기로 보류 중 '+(w.reserved_krw||0).toLocaleString('ko-KR')+'원');
-  paragraph(box,'요청을 보내면 1만원이 보류되고, 상대가 수락하는 순간 보낸 사람과 수락한 사람에게 각 1만원이 확정됩니다. 거절·14일 무응답·탈퇴 시 보류액은 돌려드립니다.');
+  paragraph(box,'요청 종류와 개인별 할인에 따라 표시된 요금이 보류됩니다. 상대가 수락하면 양측에 각각 표시된 본인 요금이 확정됩니다. 거절·탈퇴 시 보류액이 반환되며, 14일 무응답은 만료 정리 후 반환됩니다.');
   h.append(box);
  }catch(e){}
 }
@@ -341,6 +408,151 @@ async function showSubscription(h){
   h.append(box2);
  }
  const adminLink=text('a','운영자 입금내역 관리 →','outline');adminLink.href='/singles/admin';h.append(adminLink);
+}
+// ── 유료회원 모델(2026-10-28) ──────────────────────────────
+async function loadPricing(){
+ try{state.pricing=await api('/pricing');state.paidModel=state.pricing.paid_model===true;state.paid=state.pricing.paid_member===true}
+ catch{state.pricing=null;state.paidModel=false;state.paid=false}
+}
+function priceTable(box){
+ const rules=state.pricing?.rules||[];if(!rules.length)return;
+ const table=document.createElement('table');table.className='price-table';
+ const head=document.createElement('tr');for(const t of ['요청 종류','기본 요금','입력·공개 할인','최저 요금'])head.append(text('th',t));table.append(head);
+ for(const r of rules.sort((a,b)=>a.standard_krw-b.standard_krw)){
+  const row=document.createElement('tr');
+  const effectiveFloor=Math.max(Number(r.floor_krw)||0,Math.floor(Number(r.standard_krw)*(1-Number(r.max_discount_pct)/100)/1000)*1000);
+  row.append(text('td',r.display_name),text('td',money(r.standard_krw)),text('td',r.max_discount_pct>0?'최대 '+r.max_discount_pct+'%':'없음'),text('td',money(effectiveFloor)));
+  table.append(row);
+ }
+ box.append(table);
+}
+function showGuide(h){
+ const box=text('section','','member-card guide');
+ box.append(text('h3','에코디 동행 이용 안내'));
+ paragraph(box,'에코디 동행은 결혼 전 성인이 서로를 존중하며 알아가는 교제·만남 공동체입니다. 운영자가 상대를 골라 소개하지 않고, 회원이 스스로 찾아 요청하며 상대가 수락할 때만 연결됩니다.');
+ const ul=document.createElement('ul');
+ for(const line of [
+  '무료회원: 서비스 안내만 볼 수 있습니다. 프로필 입력·공개, 요청·수락은 할 수 없습니다.',
+  '유료회원: 가입비 없이 기간제 구독권(1일·10일·20일·1달)을 구매하면 구독 기간 동안 유료회원입니다.',
+  '요청 요금은 "기본 요금 + 입력·공개 할인"입니다. 프로필을 많이 입력·공개할수록 할인이 커집니다. 민감정보(신앙)는 할인 계산에 쓰지 않습니다.',
+  '요청을 보낼 때는 아무것도 결제하지 않습니다. 상대가 수락하면 두 사람 각자에게 자기 요금의 청구서가 발행됩니다.',
+  '두 사람 모두 청구서를 결제(계좌이체)하면 메시지 교환이 연결되거나 연락처가 공개됩니다. 7일 안에 결제가 끝나지 않으면 연결이 취소되고, 먼저 결제한 분은 환불해 드립니다.',
+  '거절은 무료입니다. 연락처 교환이 성사되기 전에는 메시지 속 연락처가 자동으로 가려집니다.'
+ ])ul.append(text('li',line));
+ box.append(ul);
+ priceTable(box);
+ const plans=state.pricing?.subscription_plans||[];
+ if(plans.length)paragraph(box,'기간제 구독권: '+plans.map(x=>x.display_name.replace('동행 구독권 ','')+' '+money(x.amount_krw)).join(' · '));
+ const steps=document.createElement('ol');steps.className='join-steps';
+ for(const t of ['로그인 후 참여 동의','성인 본인인증(휴대폰 본인인증 또는 운영자 확인)','구독권 선택·계좌이체','운영자 입금 확인 → 구독 시작(유료회원)'])steps.append(text('li',t));
+ box.append(text('h4','유료회원 시작 순서'),steps);
+ h.append(box);
+}
+function subscriptionButtons(box,h){
+ for(const plan of state.pricing?.subscription_plans||[]){
+  box.append(button(plan.display_name.replace('동행 구독권 ','')+' · '+money(plan.amount_krw),async()=>{
+   try{const r=await api('/bank/orders',{method:'POST',body:{plan_code:plan.code}});notice(box,'주문번호 '+r.order.reference+'가 발급되었습니다. 아래 계좌로 입금 후 "계좌이체 완료 신고"를 눌러 주세요.');await reloadBankOrders(h)}
+   catch(e){notice(box,errorText(e))}
+  },'primary'));
+ }
+}
+async function showJoin(h){
+ const box=text('section','','paywall');box.append(text('h3','유료회원 시작 · 기간제 구독권 (가입비 없음)'));
+ paragraph(box,'결제수단은 계좌이체입니다. 구독권을 고르면 주문번호가 발급됩니다. 입금하고 "계좌이체 완료 신고"를 누르면 운영자가 은행 내역과 대조해 확인하고, 확인되는 즉시 구독이 시작됩니다.');
+ paragraph(box,'구독을 이용하기 시작한 뒤 중도에 해지해도 남은 기간은 환불되지 않습니다. 결제 후 7일 이내 이용하지 않았다면 청약철회로 전액 환불됩니다.');
+ let member=null;try{member=(await api('/me')).member}catch{}
+ if(!member){paragraph(box,'먼저 "내 정보"에서 참여 동의를 저장해 주세요.');box.append(button('참여 동의하러 가기',()=>location.assign('/singles/my'),'primary'));h.append(box);return}
+ if(!member.adult_verified){
+  if(state.status?.identity_verification){notice(box,'구독 전에 성인 본인인증이 필요합니다. 휴대폰 본인인증으로 1분 안에 끝납니다.');box.append(button('휴대폰 본인인증 하기',()=>location.assign('/singles/verify'),'primary'));}
+  else notice(box,'구독 전에 성인 본인확인이 필요합니다. 운영자(joseph@ekodi.kr)에게 신분증 확인을 요청해 주세요.');
+  h.append(box);await reloadBankOrders(h);return;
+ }
+ subscriptionButtons(box,h);
+ h.append(box);
+ await reloadBankOrders(h);
+}
+const INVOICE_STATUS={unpaid:'결제 대기',paid:'결제 완료',void:'취소(기한 경과)',refund_due:'환불 예정'};
+async function payInvoice(card,inv,h){
+ try{const r=await api('/bank/invoices/'+inv.id+'/order',{method:'POST',body:{}});
+  notice(card,'결제 주문 '+r.order.reference+' · '+[r.order.bank_name,r.order.account_number,r.order.account_holder].filter(Boolean).join(' ')+'로 '+money(r.order.amount_krw)+'을 입금한 뒤 "나의 입금·확인 내역"에서 완료 신고를 눌러 주세요.');
+  if(h)await reloadBankOrders(h);
+ }catch(e){notice(card,errorText(e))}
+}
+async function showPaidWallet(h){
+ const box=text('section','','member-card');box.append(text('h3','내 구독·청구서'));
+ try{
+  const w=await api('/bank/wallet');
+  box.append(text('p',w.subscription_expires_at?'구독 중 · '+w.subscription_expires_at.slice(0,16).replace('T',' ')+'까지':'구독이 끝났습니다. 아래에서 구독권을 구매해 주세요.','wallet-balance'));
+  const q=state.pricing?.quotes||{};
+  paragraph(box,'지금 내 요금(기본 요금 + 입력·공개 할인): 메시지 교환 '+money(q.message)+' · 연락처 교환 '+money(q.contact)+' — 상대가 수락하면 청구됩니다.');
+  priceTable(box);
+  const open=(w.invoices||[]).filter(i=>i.status==='unpaid');
+  box.append(text('h4','청구서'+(open.length?' · 결제 대기 '+open.length+'건':'')));
+  if(!(w.invoices||[]).length)paragraph(box,'아직 청구서가 없습니다.');
+  for(const inv of w.invoices||[]){
+   const card=text('article','','mini-card');
+   card.append(text('p',(inv.role==='requester'?'보낸 요청':'수락한 요청')+' · '+money(inv.amount_krw)+' · '+(INVOICE_STATUS[inv.status]||inv.status)+(inv.status==='unpaid'?' · '+inv.due_at.slice(0,10)+'까지':'')));
+   if(inv.status==='unpaid')card.append(button('결제하기(계좌이체)',()=>payInvoice(card,inv,h),'primary'));
+   box.append(card);
+  }
+ }catch(e){notice(box,errorText(e))}
+ h.append(box);
+ const sub=text('section','','member-card');sub.append(text('h3','구독 연장'));
+ paragraph(sub,'남은 기간 뒤에 이어서 연장됩니다.');subscriptionButtons(sub,h);h.append(sub);
+ await reloadBankOrders(h);
+}
+async function showOwnerProposals(h){
+ const box=text('section','','member-card');box.append(text('h3','운영 개선 제안 · 소유자 결정'));
+ paragraph(box,'시스템이 매일 새벽 운영 지표를 점검해 개선안을 제안합니다. 승인해야만 적용됩니다(가격 제안은 승인 즉시 반영).');
+ try{
+  const d=await api('/bank/admin/proposals');
+  box.append(button('지금 점검 실행',async()=>{try{await api('/bank/admin/ops/review',{method:'POST',body:{}});location.reload()}catch(e){notice(box,errorText(e))}}));
+  const LBL={proposed:'결정 대기',approved:'승인',rejected:'보류',applied:'승인·적용'};
+  if(!(d.proposals||[]).length)paragraph(box,'아직 제안이 없습니다. 이용 기록이 쌓이면 제안이 생깁니다.');
+  for(const pr of d.proposals||[]){
+   const card=text('article','','mini-card');
+   card.append(text('h4',pr.title));paragraph(card,pr.rationale);
+   paragraph(card,'상태: '+(LBL[pr.status]||pr.status)+' · '+pr.created_at.slice(0,10));
+   if(pr.status==='proposed'){
+    for(const [dec,label,css] of [['approved','승인','primary'],['rejected','보류','outline']])
+     card.append(button(label,async()=>{
+      if(!confirm('"'+pr.title+'" 제안을 '+label+'할까요?'))return;
+      try{const r=await api('/bank/admin/proposals/'+pr.id+'/decide',{method:'POST',body:{decision:dec}});notice(card,r.status==='applied'?'승인하고 적용했습니다.':label+' 처리했습니다.')}
+      catch(e){notice(card,errorText(e))}
+     },css));
+   }
+   box.append(card);
+  }
+ }catch(e){notice(box,e.status===403?'소유자(설정 권한 운영자)만 볼 수 있습니다.':errorText(e))}
+ h.append(box);
+}
+async function showMembersAdmin(h){
+ const box=text('section','','member-card');box.append(text('h3','회원·가입 기록 · 운영자 전용'));
+ paragraph(box,'가입 시도(시간·Google 계정)와 회원 상태입니다. 성인 확인은 신분증을 직접(대면·영상) 확인한 경우에만 처리하세요. 본인 계정은 처리할 수 없습니다.');
+ try{
+  const d=await api('/bank/admin/members');
+  for(const m of d.members||[]){
+   const card=text('article','','mini-card');
+   card.append(text('h4',(m.email||m.user_id)+' · '+(m.status==='active'?'참여 중':m.status)));
+   paragraph(card,'성인 확인: '+(m.adult_verified_at?m.adult_verified_at.slice(0,16).replace('T',' '):'미확인')+' · 유료회원: '+(m.paid_member_since?m.paid_member_since.slice(0,10):'아님'));
+   if(!m.adult_verified_at&&m.status==='active'){
+    const sel=document.createElement('select');
+    for(const [v,l] of [['id_document_in_person','신분증 대면 확인'],['id_document_video','신분증 영상 확인'],['certified_provider','인증기관 결과 확인']])sel.append(new Option(l,v));
+    card.append(sel,button('성인 확인 처리',async()=>{
+     const note=prompt('확인 메모(선택, 200자)')||'';
+     try{await api('/bank/admin/members/'+m.user_id+'/adult-verify',{method:'POST',body:{method:sel.value,note:note.slice(0,200)}});notice(card,'성인 확인을 기록했습니다.')}
+     catch(e){notice(card,e.message==='operator_self_verification_forbidden'?'본인 계정은 처리할 수 없습니다.':errorText(e))}
+    },'primary'));
+   }
+   box.append(card);
+  }
+  if(!(d.members||[]).length)paragraph(box,'아직 참여한 회원이 없습니다.');
+  const log=document.createElement('details');log.append(Object.assign(document.createElement('summary'),{textContent:'최근 가입 시도 기록 '+(d.attempts||[]).length+'건'}));
+  const LBL={enroll:'참여 동의 저장',enroll_failed:'참여 동의 실패',join_order:'가입비 주문',withdraw:'탈퇴'};
+  for(const a of d.attempts||[])log.append(text('p',a.created_at.slice(0,19).replace('T',' ')+' · '+(a.email||'-')+' · '+(LBL[a.action]||a.action)+(a.detail?' · '+a.detail:''),'muted'));
+  box.append(log);
+ }catch(e){notice(box,e.status===403?'운영자 권한이 필요합니다.':errorText(e))}
+ h.append(box);
 }
 async function showBankAdmin(h){
  const p=text('section','','member-card');p.append(text('h3','입금 확인 · 운영자 전용'));
@@ -424,7 +636,7 @@ async function showBankAdmin(h){
   for(const row of data.orders){
    const card=text('article','','mini-card');
    card.append(text('h4','결제고유번호 '+row.reference));
-   paragraph(card,'상품: '+(row.plan_code==='consulting'?'컨설팅':'행사 참여')+' / '+money(row.amount_krw));
+   paragraph(card,'상품: '+({sub_1d:'구독권 1일',sub_10d:'구독권 10일',sub_20d:'구독권 20일',sub_30d:'구독권 1달',request_fee:'요청·수락 청구서',consulting:'선택형 컨설팅'}[row.plan_code]||'행사 참여')+' / '+money(row.amount_krw)+(row.email?' · '+row.email:''));
    paragraph(card,'상태: '+(stateLabel[row.status]||row.status));
    paragraph(card,'회원 입금 신고: '+(row.reported_paid_at||'없음'));
    paragraph(card,'관리자 확인: '+(row.verified_at||'미확인')+' / 회원 재확인: '+(row.member_acknowledged_at||'미확인'));
@@ -589,21 +801,40 @@ async function signedIn(status){
   notice(h,'로그인은 정상적으로 완료되었습니다. 동행 회원서비스(회원가입·프로필·행사·메시지·결제)는 운영 개통 전이라 아직 열리지 않았습니다. 개통되면 이 화면에서 바로 이어서 이용할 수 있습니다.');
   return;
  }
- document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=false});
  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=true});
  $('serviceStage').textContent='로그인 완료';
  await readSubscription();
+ if(status.social_enabled)await loadPricing();
+ // 유료회원 모델: 유료회원 전용 메뉴(동행 찾기·메시지·내 프로필)는 유료회원에게만 보인다.
+ const paidOnlyHidden=state.paidModel&&!state.paid;
+ document.querySelectorAll('[data-member-nav]').forEach(link=>{link.hidden=link.hasAttribute('data-paid-nav')&&paidOnlyHidden});
+ const subLink=document.querySelector('a[href="/singles/subscribe"]');
+ if(subLink&&state.paidModel)subLink.textContent=state.paid?'구독·청구서':'동행 안내·가입';
+ if(state.paidModel){
+  $('serviceStage').textContent=state.paid?'유료회원':'무료회원 · 서비스 안내';
+  if(page==='/subscribe')$('sectionTitle').textContent=state.paid?'구독·청구서':'동행 안내·가입';
+  const acct=document.querySelector('a.account[data-member-nav]');if(acct&&!state.paid)acct.textContent='내 정보';
+ }
  const h=holder();accountCard(h);
  if(!status.social_enabled&&page!=='/my')notice(h,'기능 구현을 검증하는 중입니다. 별도 권한 및 안전 검사가 완료되면 열립니다.');
  if(page==='/my')startConsent(h);
  else if(page==='/events')await showEvents(h);
+ else if(paidOnlyHidden&&['/discover','/messages'].includes(page)){notice(h,'유료회원 전용 메뉴입니다.');showGuide(h);await showJoin(h);}
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
+ else if(page==='/subscribe'&&state.paidModel){if(state.paid)await showPaidWallet(h);else{showGuide(h);await showJoin(h);}}
  else if(page==='/subscribe'){await showWallet(h);await showSubscription(h);}
- else if(page==='/admin'){await showBankAdmin(h);await showEventPricing(h);await showReportModeration(h);await showAllPricing(h);await showBrokerageReadiness(h);}
+ else if(page==='/admin'){await showOwnerProposals(h);await showMembersAdmin(h);await showBankAdmin(h);await showEventPricing(h);await showReportModeration(h);await showAllPricing(h);await showBrokerageReadiness(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
+// AUTH-RETURN-CONTINUITY-001 v1.27.5: a signed-in person is never shown a login entry or sent to login again.
+// A stored EKODI session is detected synchronously so no login button flashes before the session check.
+function storedSession(){
+ try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(!/^sb-[a-z0-9]+-auth-token(?:\.\d+)?$/i.test(key))continue;let v=null;try{v=JSON.parse(localStorage.getItem(key)||'null')}catch{continue}const s=v?.currentSession||v?.session||v;if(s?.user?.id&&(s?.refresh_token||Number(s?.expires_at||0)*1000>Date.now()))return true}}catch{}
+ return false;
+}
+function hideLoginEntries(){document.querySelectorAll('[data-guest-nav]').forEach(link=>{if(!link.dataset.signedIn)link.hidden=true});document.querySelectorAll('[data-donghaeng-login]').forEach(b=>b.remove())}
 async function main(){
  // Clear one-time credentials before any async work or feature flag checks.
  // The token remains only in memory for the current authentication attempt.
@@ -611,10 +842,12 @@ async function main(){
  const tokenHash=fragment.get('ekodi_token');
  const tokenType=fragment.get('ekodi_type')||'email';
  if(tokenHash)history.replaceState(null,'',location.pathname+location.search);
- showGuest();
+ const resuming=Boolean(tokenHash)||storedSession();
+ if(resuming){hideLoginEntries();$('serviceStage').textContent='로그인 확인 중';}
+ else showGuest();
  let status;
  try{status=await fetch('/singles/api/status',{cache:'no-store'}).then(r=>r.json())}
- catch{return}
+ catch{if(resuming)$('serviceStage').textContent='연결 점검 중';return}
  state.status=status;
  const prelaunchAdmin=page==='/admin'&&status?.admin_preparation_enabled===true&&status?.onboarding_enabled===false;
  // Public first-party EKODI identity settings are the same as the canonical auth hub.
@@ -638,7 +871,7 @@ async function main(){
  }
  const {data}=await state.client.auth.getSession();
  state.session=data?.session;
- if(!state.session)return;
+ if(!state.session){if(resuming)showGuest();return}
  if(prelaunchAdmin){
   showSignedInAccount();
   $('serviceStage').textContent='로그인 완료 · 운영 준비';

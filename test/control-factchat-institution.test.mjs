@@ -10,7 +10,7 @@ test('Control lists the FactChat institution account as an execution target', as
   const html = await read('control.html');
   const select = html.slice(html.indexOf('id="executionTarget"'), html.indexOf('</select>', html.indexOf('id="executionTarget"')));
   assert.match(select, /<option value="factchat-institution">FactChat · 목포대 기관계정<\/option>/);
-  assert.match(html, /control\.js\?v=20261025-factchat-institution-v1/);
+  assert.match(html, /control\.js\?v=20261028-external-ai-v1/);
 });
 
 test('the institution target uses the guarded super-admin playground and never the release path', async () => {

@@ -25,8 +25,12 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-site-core.yml'
+      - '.github/workflows/stage-shared-site-shell.yml'
+      - 'scripts/site-core-staging-10500-recovery.mjs'
+      - 'test/site-core-staging-10500-recovery.test.mjs'
       - 'scripts/converge-orchestrated-pr-merge.mjs'
       - 'site-worker.js'
+      - 'admin-address-policy.js'
       - 'mall-product-jsonld.js'
       - 'site-shell-worker.js'
       - 'ekodi-shell-injector.js'
@@ -77,6 +81,7 @@ on:
       - 'test/tenant-admin-command-home.test.mjs'
       - 'test/tenant-live-admin.test.mjs'
       - 'test/realtime-live-collaboration.test.mjs'
+      - 'invest-access-ui.js'
       - 'invest-user-page.js'
       - 'invest-subject-ui.js'
       - 'invest-site-system.js'
@@ -131,8 +136,10 @@ on:
       - 'test/canonical-surface-router.test.mjs'
       - 'store-gateway-page.js'
       - 'store-portfolio-admin-page.js'
+      - 'store-portfolio-today.js'
       - 'test/store-public-gateway.test.mjs'
       - 'test/store-portfolio-admin.test.mjs'
+      - 'test/cmpmyi-today-board.test.mjs'
       - 'preview-page.js'
       - 'test/preview-page.test.mjs'
       - 'insurance-public-route.js'
@@ -354,6 +361,7 @@ on:
       - 'scripts/admin-authenticated-e2e-retry.mjs'
       - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
       - 'scripts/verify-admin-production-ui-e2e.mjs'
+      - 'scripts/admin-production-ui-coverage.mjs'
       - 'scripts/ekodi-background-browser-worker.mjs'
       - 'scripts/validate-background-browser-worker.mjs'
       - 'config/background-browser-worker-policy.json'
@@ -531,7 +539,8 @@ jobs:
   deploy:
     needs: [staging_gate, reliability_gate]
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    # 227 registered routes exceeded22m across candidate/production; preserve rollback headroom.
+    timeout-minutes: 45
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -637,7 +646,7 @@ jobs:
       - name: Validate current shared site and admin sources
         run: |
           set -euo pipefail
-          for f in cooperative-registry.js cooperative-core-access.js cooperative-store.js cooperative-page.js cooperative-ui.js cooperative-control.js cooperative-charter.js site-worker.js seonammedi-monitor.js seonammedi-civic-control.js common-board-adapter.js site-board-control.js board-runtime-guard.js replaceable-board-provider.js board-engine-registry.js write-ingress.js scripts/validate-write-ingress-policy.mjs sites/seonammedi/public/app.js tenant-live-page.js tenant-live.js tenant-live-admin-page.js learning-page.js invest-site-system.js invest-personal-control.js invest-admin.js platform-router-entry-worker.js ekodibiz-refund-policy-page.js platform-security-policy.js traffic-governor.js scripts/validate-concurrent-traffic-policy.mjs canonical-surface-router.js store-gateway-page.js store-portfolio-admin-page.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-finance-admin.js organization-admin-page.js tenant-admin-policy.js store-admin-engine.js store-order-model.js store-terminal-bridge.js store-pos-agent-download.js church-pastor-admin-page.js church-member-home-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-contact.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-bootstrap.js auth-site/auth-entry.js auth-site/auth-workspace-target.js auth-site/client-auth.js marketing-ai-admin.js admin-authenticated-shell.js external-account-admin.js admin-assist-bootstrap.js admin-assist-dock.js admin-readable-command.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-management-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js common-services-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js ekodibiz-admin-registry.js admin-design-engine.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/verify-seonammedi-release-live.mjs scripts/guarded-worker-release.mjs scripts/cloudflare-production-budget.mjs scripts/cloudflare-quota-guard-lib.mjs scripts/ensure-church-route-ownership.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-assist-canonical-e2e.mjs scripts/admin-readable-command-postbuild.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/verify-ekodimission-admin-production-e2e.mjs scripts/verify-admin-provider-control-production.mjs scripts/validate-user-ui-dna.mjs scripts/validate-design-engine.mjs admin-language-status.js; do
+          for f in cooperative-registry.js cooperative-core-access.js cooperative-store.js cooperative-page.js cooperative-ui.js cooperative-control.js cooperative-charter.js site-worker.js seonammedi-monitor.js seonammedi-civic-control.js common-board-adapter.js site-board-control.js board-runtime-guard.js replaceable-board-provider.js board-engine-registry.js write-ingress.js scripts/validate-write-ingress-policy.mjs sites/seonammedi/public/app.js tenant-live-page.js tenant-live.js tenant-live-admin-page.js learning-page.js invest-site-system.js invest-personal-control.js invest-admin.js platform-router-entry-worker.js ekodibiz-refund-policy-page.js platform-security-policy.js traffic-governor.js scripts/validate-concurrent-traffic-policy.mjs canonical-surface-router.js store-gateway-page.js store-portfolio-admin-page.js store-portfolio-today.js preview-page.js insurance-public-route.js sites/ekodi-insurance/public/advisor.js sites/ekodi-insurance/public/server-bridge.js marketing-canonical-projection.js workspace-admin-page.js tenant-finance-admin.js organization-admin-page.js tenant-admin-policy.js store-admin-engine.js store-order-model.js store-terminal-bridge.js store-pos-agent-download.js church-pastor-admin-page.js church-member-home-page.js church-reports-admin.js workspace-trade-admin-page.js workspace-trade-portal.js mail-user-page.js mail-contact.js mail-admin-page.js tax-portal-worker.js tax-business-registry.js tax-service-worker.js finance-entry-worker.js script.js homepage-ambient.js mall.js admin-ai-control-plane.js admin-ai-governor.js admin-provider-control.js admin-secret-generator.js ekodi-shell-injector.js site-shell-worker.js auth-site/auth-bootstrap.js auth-site/auth-entry.js auth-site/auth-workspace-target.js auth-site/client-auth.js marketing-ai-admin.js admin-authenticated-shell.js external-account-admin.js admin-assist-bootstrap.js admin-assist-dock.js admin-readable-command.js admin-central-handoff.js finance-monitor.js admin-demand-loader.js admin-public-site-controls.js client-access.js social-admin.js books-admin.js books-finance-admin.js books-distribution-admin.js books-pipeline-admin.js books-pipeline-bridge.js books-royalty-admin.js author-billing-admin.js ai-ops-admin.js devotional-admin.js ai-management-admin.js ai-module-spec-admin.js communication-admin.js openai-workspace-admin.js common-services-admin.js storage-admin.js admin-menu-registry.js admin-menu-layout.js admin-sidebar.js admin-menu-runtime.js ekodibiz-admin-registry.js admin-design-engine.js campus-actions.js discovery-layer.js scripts/discovery-build.mjs scripts/ecosystem-registry.mjs scripts/admin-thin-postbuild.mjs scripts/build.mjs scripts/verify-seonammedi-release-live.mjs scripts/guarded-worker-release.mjs scripts/cloudflare-production-budget.mjs scripts/cloudflare-quota-guard-lib.mjs scripts/ensure-church-route-ownership.mjs scripts/admin-authenticated-e2e.mjs scripts/admin-assist-canonical-e2e.mjs scripts/admin-readable-command-postbuild.mjs scripts/admin-authenticated-e2e-retry.mjs scripts/admin-authenticated-e2e-menu-worker.mjs scripts/verify-ekodimission-admin-production-e2e.mjs scripts/verify-admin-provider-control-production.mjs scripts/validate-user-ui-dna.mjs scripts/validate-design-engine.mjs admin-language-status.js; do
             node --check "$f"
           done
           node --test test/local-region-platform.test.mjs test/local-region-operations.test.mjs test/local-region-enforcement.test.mjs test/local-region-content-ledger.test.mjs
@@ -651,7 +660,7 @@ jobs:
           node --test test/admin-subdomain-redirect-runtime.test.mjs
           node --test test/tapo-admin-asset-boundary.test.mjs test/admin-true-lazy.test.mjs test/mall-production-verifier-contract.test.mjs
           node --test test/admin-assist-dock.test.mjs test/admin-deploy-report.test.mjs test/openai-workspace-release-contract.test.mjs test/shared-site-admin-probe.test.mjs
-          node --test test/admin-communication.test.mjs test/devotional-admin-readiness.test.mjs test/retired-business-invest.test.mjs test/invest-site-system.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/marketing-canonical-projection.test.mjs test/church-pastor-admin.test.mjs test/church-member-home.test.mjs test/church-route-ownership.test.mjs test/organization-subsite.test.mjs
+          node --test test/admin-communication.test.mjs test/devotional-admin-readiness.test.mjs test/retired-business-invest.test.mjs test/invest-site-system.test.mjs test/public-workspace-gateway.test.mjs test/store-public-gateway.test.mjs test/store-portfolio-admin.test.mjs test/cmpmyi-today-board.test.mjs test/marketing-canonical-projection.test.mjs test/church-pastor-admin.test.mjs test/church-member-home.test.mjs test/church-route-ownership.test.mjs test/organization-subsite.test.mjs
           node scripts/validate-admin-source.mjs
           node scripts/validate-user-ui-dna.mjs
           node scripts/validate-platform-security-policy.mjs
@@ -701,7 +710,7 @@ jobs:
           test -f deploy/manifests/shared-site.worker.json
           grep -Fq '/auth-workspace-target.js' canonical-surface-router.js
           grep -Fq '/marketing-ai-admin.js' site-worker.js
-          grep -Fq "const LIVE = 'https://marketing.ekodi.kr/';" marketing-ai-admin.js
+          grep -Fq "const LIVE = 'https://ekodi.kr/ekodibiz/marketing-ai/';" marketing-ai-admin.js
           grep -Fq 'marketing-ai-user-link' marketing-ai-admin.js
           grep -Fq "styles: ['marketing-ai-admin.css']" admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" admin-demand-loader.js
@@ -775,7 +784,7 @@ jobs:
           grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
           grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
           grep -Fq 'dataset.seamlessSso' dist/auth-bootstrap.js
-          grep -Fq "./auth-router.js?v=20261019-seonam-admin-return-405" dist/auth-entry.js
+          grep -Fq "./auth-router.js?v=20261028-singles-choose-account" dist/auth-entry.js
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
           grep -Eq 'admin-design-engine\.js\?v=[a-f0-9]{16}' dist/admin-menu-registry.js
           grep -Eq 'ekodibiz-admin-registry\.js\?v=[a-f0-9]{16}' dist/admin-menu-runtime.js
@@ -1203,9 +1212,12 @@ jobs:
             if curl -fsS -D /tmp/store-gateway.headers -o /tmp/store-gateway.body --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/cmpmyi' \
               && grep -Fq 'THREE STORES · ONE GATE' /tmp/store-gateway.body \
               && grep -Fiq 'x-ekodi-route: store-gateway' /tmp/store-gateway.headers \
-              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/robots.txt' | grep -Fq 'OAI-SearchBot' \
-              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/sitemap.xml' | grep -Fq '<loc>https://ekodi.kr/cmpmyi</loc>' \
-              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/llms.txt' | grep -Fq 'https://ekodi.kr/cmpmyi'; then
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/robots.txt' -o /tmp/store-gateway-robots.txt \
+              && grep -Fq 'OAI-SearchBot' /tmp/store-gateway-robots.txt \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/sitemap.xml' -o /tmp/store-gateway-sitemap.xml \
+              && grep -Fq '<loc>https://ekodi.kr/cmpmyi</loc>' /tmp/store-gateway-sitemap.xml \
+              && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/llms.txt' -o /tmp/store-gateway-llms.txt \
+              && grep -Fq 'https://ekodi.kr/cmpmyi' /tmp/store-gateway-llms.txt; then
               echo 'EKODI Store Gateway and Discovery Layer production endpoints verified.'
               break
             fi
@@ -1301,23 +1313,27 @@ jobs:
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: site-core
-      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/admin/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
       surface_registry: config/board-surface-verification.json
       device_profile: desktop
 
   native_surface_verification_mobile:
     name: EKODI Native Surface Verification · Mobile
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_surface_verification_desktop]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: site-core
-      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/admin/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
       surface_registry: config/board-surface-verification.json
       device_profile: mobile-portrait
 
   native_research_verification_desktop:
     name: EKODI Research Native Verification · Desktop
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_surface_verification_mobile]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: research
@@ -1326,7 +1342,9 @@ jobs:
 
   native_research_verification_mobile:
     name: EKODI Research Native Verification · Mobile
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_research_verification_desktop]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: research
@@ -1335,5 +1353,66 @@ jobs:
 
   authenticated_admin_surface_verification:
     name: EKODI Authenticated Admin Surface Verification
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_research_verification_mobile]
     uses: ./.github/workflows/verify-admin-production-ui-e2e.yml
+
+  post_promotion_browser_verification_receipt:
+    name: EKODI Post-Promotion Browser Verification Receipt
+    # Receipt-only job: no calls to production hosts, even after quota circuit opens.
+    needs: [deploy, native_surface_verification_desktop, native_surface_verification_mobile, native_research_verification_desktop, native_research_verification_mobile, authenticated_admin_surface_verification]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - name: Record exact verifier results and blocked predecessors
+        shell: bash
+        env:
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          NATIVE_DESKTOP_RESULT: ${{ needs.native_surface_verification_desktop.result }}
+          NATIVE_MOBILE_RESULT: ${{ needs.native_surface_verification_mobile.result }}
+          RESEARCH_DESKTOP_RESULT: ${{ needs.native_research_verification_desktop.result }}
+          RESEARCH_MOBILE_RESULT: ${{ needs.native_research_verification_mobile.result }}
+          ADMIN_RESULT: ${{ needs.authenticated_admin_surface_verification.result }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const jobs=[
+            ['deploy',process.env.DEPLOY_RESULT],
+            ['native_surface_verification_desktop',process.env.NATIVE_DESKTOP_RESULT],
+            ['native_surface_verification_mobile',process.env.NATIVE_MOBILE_RESULT],
+            ['native_research_verification_desktop',process.env.RESEARCH_DESKTOP_RESULT],
+            ['native_research_verification_mobile',process.env.RESEARCH_MOBILE_RESULT],
+            ['authenticated_admin_surface_verification',process.env.ADMIN_RESULT],
+          ];
+          const firstFailure=jobs.find(([name,state])=>state!=='success')?.[0]||null;
+          const evidence=jobs.map(([name,state],index)=>({
+            name,
+            result:state,
+            verification:state==='success'?'verified':state==='skipped'?'blocked':'failed',
+            reason:state==='skipped'?'upstream-failure-or-quota-circuit':state==='failure'?'see-failed-job-evidence':null,
+            predecessor:index===0?null:jobs[index-1][0],
+          }));
+          const verified=!firstFailure;
+          const receipt={policyId:'CF-QUOTA-001',schemaVersion:1,
+            releaseSha:process.env.GITHUB_SHA,
+            conclusion:verified?'verified':'blocked',
+            firstFailure,receiptJobProductionRequests:0,
+            evidence};
+          fs.writeFileSync('artifacts/site-core-postdeploy-browser-verification.json',JSON.stringify(receipt,null,2));
+          console.log('[EKODI][CF-QUOTA-001] postdeploy verification receipt:',JSON.stringify(receipt));
+          if(!verified)process.exitCode=1;
+          NODE
+      - name: Upload complete or blocked verification receipt
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-core-postdeploy-browser-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/site-core-postdeploy-browser-verification.json
+          if-no-files-found: error
+          retention-days: 30

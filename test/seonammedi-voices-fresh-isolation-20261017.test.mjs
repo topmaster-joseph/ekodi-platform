@@ -48,7 +48,7 @@ test('fresh board rejects public writes and unauthorized administrator actions',
  const denial={google:async()=>null,admin:async()=>({ok:false,response:new Response('denied',{status:403})}),limit:fakeAuth.limit};
  assert.equal((await handleFreshVoiceApi(jsonRequest('','POST','text'),env, '/api/voices-fresh',denial)).status,401);
  assert.equal((await handleFreshVoiceApi(new Request(base+'/admin'),env,'/api/voices-fresh/admin',denial)).status,403);
- assert.equal((await handleFreshVoiceApi(jsonRequest('/1','DELETE','text'),env,'/api/voices-fresh/1',denial)).status,403);
+ assert.equal((await handleFreshVoiceApi(jsonRequest('/1','DELETE','text'),env,'/api/voices-fresh/1',denial)).status,401);
  assert.equal(env.BOARD_DB.state.posts.length,0);
 });
 

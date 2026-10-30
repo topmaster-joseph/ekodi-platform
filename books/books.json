@@ -82,6 +82,17 @@
         "upaper": "https://ekodi.upaper.kr/content/1223429",
         "korea": "https://ekodi.upaper.kr/content/1223429"
       },
+      "audiobook": {
+        "freeWithEbook": true,
+        "status": "production_pending",
+        "sourceEdition": "Digital First Edition · v1.7",
+        "rightsApproved": false,
+        "authorApproved": false,
+        "publisherApproved": false,
+        "voicePerformanceApproved": false,
+        "accessibilityReviewed": false,
+        "tracks": []
+      },
       "directSale": {
         "enabled": true,
         "fileKey": "BOOK-EKODI-000001/ebook.epub",
@@ -150,6 +161,17 @@
         "google": "",
         "upaper": "",
         "korea": ""
+      },
+      "audiobook": {
+        "freeWithEbook": true,
+        "status": "production_pending",
+        "sourceEdition": "",
+        "rightsApproved": false,
+        "authorApproved": false,
+        "publisherApproved": false,
+        "voicePerformanceApproved": false,
+        "accessibilityReviewed": false,
+        "tracks": []
       },
       "directSale": {
         "enabled": true,

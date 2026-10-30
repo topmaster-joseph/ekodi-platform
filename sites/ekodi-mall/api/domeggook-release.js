@@ -46,17 +46,24 @@ export async function applySupplyGate(env, deps, { releaseBatch = 30 } = {}) {
   const approved = await supplyApproved(env);
   const now = isoNow();
   if (!approved) {
-    const held = await env.DB.prepare(`UPDATE products SET status='draft',published_at=NULL,supply_release='staged',updated_at=?
-      WHERE supply_provider=? AND status='published' AND seller_id IN (${inList}) RETURNING id`).bind(now, PROVIDER, ...sellers).all();
-    const n = (held.results || []).length;
-    if (n) {
+    // 2026-10-31 운영 판단: 도매꾹 구매 API 승인(10/26 메일)은 이미 받았다. 자동발주 OFF·로그인 장애는
+    // '결제'만 막아야 할 사유이지 상품 노출을 지울 사유가 아니다. 그래서 승인 상태가 아니면
+    // 상품은 공개(검색·사이트맵 유지)하되 checkout_ready=0 으로 '구매 준비 중' 표시만 한다(돈을 받지 않음).
+    const paused = await env.DB.prepare(`UPDATE products SET checkout_ready=0,supply_release='catalog',updated_at=?
+      WHERE supply_provider=? AND status='published' AND (checkout_ready=1 OR COALESCE(supply_release,'') IN ('','released')) AND seller_id IN (${inList}) RETURNING id`).bind(now, PROVIDER, ...sellers).all();
+    const shown = await env.DB.prepare(`UPDATE products SET status='published',published_at=COALESCE(published_at,?),checkout_ready=0,supply_release='catalog',updated_at=?
+      WHERE supply_provider=? AND status='draft' AND supply_release='staged' AND COALESCE(stock_quantity,0)>0
+        AND images_json IS NOT NULL AND images_json NOT IN ('','[]','null') AND seller_id IN (${inList}) RETURNING id`).bind(now, now, PROVIDER, ...sellers).all();
+    const n = (paused.results || []).length, m = (shown.results || []).length;
+    if (n || m) {
       await env.DB.prepare('INSERT INTO mall_ops_audit (actor,action,seller_id,store_id,product_id,request_id,metadata_json,created_at) VALUES (?,?,?,?,?,?,?,?)')
-        .bind('mall-auto:supply-gate', 'product.supply.held_until_api_approval', sellers[0], null, null, null, JSON.stringify({ count: n }), now).run().catch(() => {});
-      await raiseAlert(env, { severity: 'info', kind: 'supply.release_held', message: `도매꾹 구매 API 승인 전이라 위탁상품 ${n}개를 비공개 대기로 전환했습니다. 승인되면 자동으로 판매·노출·홍보를 시작합니다.` });
+        .bind('mall-auto:supply-gate', 'product.supply.catalog_only_checkout_paused', sellers[0], null, null, null, JSON.stringify({ checkoutPaused: n, shownCatalogOnly: m }), now).run().catch(() => {});
+      await raiseAlert(env, { severity: 'info', kind: 'supply.release_held', message: `도매꾹 자동발주 꺼짐 또는 로그인 확인 실패 → 위탁상품은 노출하되 결제는 '구매 준비 중'으로 멈췄습니다(결제중지 ${n}, 노출복구 ${m}).` });
     }
-    return { approved: false, held: n };
+    return { approved: false, held: n, catalog: m };
   }
-  const staged = await env.DB.prepare(`SELECT id,seller_id FROM products WHERE supply_provider=? AND status='draft' AND supply_release='staged' AND seller_id IN (${inList})
+  await env.DB.prepare(`UPDATE products SET status='draft',published_at=NULL,supply_release='image_hold' WHERE supply_provider=? AND ((status='draft' AND supply_release='staged') OR (status='published' AND supply_release='catalog')) AND (images_json IS NULL OR images_json IN ('','[]','null'))`).bind(PROVIDER).run().catch(() => {});
+  const staged = await env.DB.prepare(`SELECT id,seller_id FROM products WHERE supply_provider=? AND ((status='draft' AND supply_release='staged') OR (status='published' AND supply_release='catalog')) AND seller_id IN (${inList})
     AND COALESCE(stock_quantity,0)>0 ORDER BY created_at LIMIT ?`).bind(PROVIDER, ...sellers, releaseBatch).all();
   let released = 0, failed = 0;
   for (const p of staged.results || []) {

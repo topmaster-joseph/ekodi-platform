@@ -1,9 +1,18 @@
 # 에코디 동행 — 개통 관문 체크리스트 (현재 상태)
 
-기준일: 2026-10-26 (운영 방향·요청 과금 2026-10-27 갱신) · 근거: 저장소 main, 운영 Supabase(ekodi-platform-prod) 읽기 전용 조회
-판정: **미개통 유지.** 아래 ⛔ 항목이 모두 ✅가 되기 전에는 `config/singles-feature-flags.json`의 회원 대상 스위치를 켜지 않는다.
+기준일: 2026-10-26 (운영 방향·요청 과금 2026-10-27, 유료회원 모델 2026-10-28, 구독·후불 청구 2026-10-31 갱신) · 근거: 저장소 main, 운영 Supabase(ekodi-platform-prod) 읽기 전용 조회
+판정: **2026-10-28 소유자 결정으로 회원 가입·프로필 개통.** 탐색·호감·메시지는 성인 본인확인(A3) 전까지 서버가 차단하고, 유료 기능은 계속 OFF. 아래 ⛔ 항목은 개통 후 보완 과제로 남는다.
+이전 판정: 미개통 유지. 아래 ⛔ 항목이 모두 ✅가 되기 전에는 `config/singles-feature-flags.json`의 회원 대상 스위치를 켜지 않는다.
 
 범례: ✅ 완료 · 🟡 부분 완료 · ⛔ 미완(개통 차단) · 👤 사람 결정·법률 판단 필요
+
+## 2026-10-30 운영 실화면 정합 점검 (EKODI #4617)
+
+- 공개 상태 API는 onboarding/social/paid/bank 스위치 true와 `identity_verification:null`을 동시에 반환했다. Worker 통과가 Edge·DB·성인인증·실결제를 보장하지 않으므로 실제 단계는 **제한적 시범 운영**으로 표시한다.
+- 개인정보 안내는 과거의 일괄 '회원가입 미개통' 표현 대신 시범 운영과 동의문 최종 검토 필요를 명시한다. 최종 약관·책임자·보유/파기 기준은 여전히 Human Gate다.
+- 연락처 교환의 기본 100,000원/최대 할인 50%일 때 산출 가능한 최저는 50,000원이다. UI는 유효 최저를 계산해 표시하고, 시드 DB `floor_krw` 10,000원은 새 보정 마이그레이션으로 50,000원 정합화한다. 실제 과금 공식의 할인 상한 자체는 변경하지 않는다.
+- 14일 미응답 자동 처리·적립금 환불 화면, 운영자 RBAC 및 승인받은 본인확인기관 연동은 **미완료**. 결제·광범위 공개는 최종 검증 이전에 확대하지 않는다.
+- 소유자 지시에 따른 보완 브랜치는 독립 PR과 EKODI 보호 배포 절차를 거쳐야 한다. 라이브 테스트/금융 승인 완료를 주장하지 않는다.
 
 ## A. 법률·동의 (CONSENT-REVIEW 개통 전 필수 1~6)
 
@@ -49,7 +58,8 @@
 
 | 스위치 | 위치 | 현재 값 |
 |---|---|---|
-| `SINGLES_M1_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_PAID_ACTIONS_ENABLED`, `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED` | Worker(`wrangler.site.toml`) | 모두 `"false"` |
+| `SINGLES_M1_ENABLED` (2026-10-27), `SINGLES_SOCIAL_ENABLED` (2026-10-28) | Worker(`wrangler.site.toml`) | `"true"` — 소유자 개통 결정 |
+| `SINGLES_PAID_ACTIONS_ENABLED`, `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED` | Worker(`wrangler.site.toml`) | `"true"` (2026-10-28 실증, Edge 시범 명단 게이트로 범위 제한) |
 | `SINGLES_ONBOARDING_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_BANK_*` | Edge(Supabase 비밀값) | 확인필요 — 저장소에서 볼 수 없음. Worker가 앞단에서 막고 있어 회원 노출은 없음 |
 
 ## F. 요청 과금(A안) 판매 개시 관문
@@ -65,6 +75,43 @@
 | F5 | 14일 미응답 자동 반환 실행 주기(`singles_request_release_for_user(null,'expired')`) 연결 | ⛔ 스케줄러 연결 필요 |
 | F6 | 적립금 환불 처리 절차(운영자 화면·원장 `refund` 기록) | ⛔ 미구현 |
 | F7 | PG(토스페이먼츠 등) 연동 — 현재는 계좌이체 + 운영자 확인만 | 👤 나중 |
+
+## G. 유료회원 모델(2026-10-28 결정) — 구축 → 실증 → 개통
+
+결정: 무료회원은 안내만, 유료회원 가입비 500,000원 = 적립금 500,000원. 요청 요금은 "기본 요금 + 입력·공개 할인"(메시지 교환 10,000원, 연락처 교환 100,000원·최대 50% 할인, 계산상 범위 5만~10만원). 요청자는 보류 후 수락 시 확정, 수락자는 수락 시 자기 요금 차감. 기간제 메시지 이용권(1일 1만·10일 5만·20일 8만·30일 10만원, 2026-10-28 확정). 연락처 교환 수락 전 메시지 속 연락처 자동 가림. 가입 시도(시간·Google 계정) 기록. 운영자 joseph@ekodi.kr. **모두 구축 후 실증하고 개통.**
+
+| # | 항목 | 상태 |
+|---|---|---|
+| G1 | DB(`20261028030000_singles_paid_membership`): 적립금(원)·요금 규칙·기간권·유료 요청·연락처 공개·가입 시도 기록·시범 명단·성인 확인 기록 | ✅ 로컬 시나리오 9종 통과, 운영 반영 후 롤백 검증 |
+| G2 | 서버: 무료/유료 구분, 요청·수락 차감, 연락처 가림, 가입 시도 기록, 시범 명단 제한(`SINGLES_PUBLIC_LAUNCH_ENABLED`가 true가 아니면 명단·운영자만) | ✅ 배포(스위치 OFF) |
+| G3 | 화면: 무료회원 안내·유료 전용 메뉴 숨김, 가입비 결제, 요청 종류·요금, 적립금·기간권, 운영자 회원·성인 확인 화면 | ✅ 배포 |
+| G4 | 운영자 지정: joseph@ekodi.kr(입금 확인·성인 확인·설정) | ✅ |
+| G5 | 실증: 시범 명단(joseph@ekodi.kr 운영자, topmaster.joseph@gmail.com, ekodibiz@gmail.com)으로 가입 → 성인 확인 → 가입비 입금·확인 → 요청·수락·거절·연락처 가림·기간권·탈퇴 반환 확인 | 🟡 실증 진행(스위치·계좌 활성화 2026-10-28) |
+| G6 | 14일 미응답 자동 반환 실행 주기 연결(`singles_paid_request_release(null,'expired')`) | ⛔ |
+| G7 | 적립금 환불 처리 화면 | ⛔ |
+| G8 | 법률 검토(선불금·결혼중개업·입력·공개 할인·수락자 과금), 무안군 회신 | ⛔ |
+| G10 | 본인확인기관 연동(포트원 V2 본인인증, `/singles/verify`): 이름·생년월일·전화번호 미저장, 만 19세 판정·CI 해시로 1인 1계정 | 🟡 코드·DB 배포. 포트원 가입·인증 채널 계약 후 Worker `SINGLES_PORTONE_STORE_ID`·`SINGLES_PORTONE_IDENTITY_CHANNEL_KEY`, Edge `PORTONE_API_SECRET`·`SINGLES_IDENTITY_PROVIDER_ENABLED` 설정 필요 |
+| G9 | 공개 개통: `SINGLES_PUBLIC_LAUNCH_ENABLED=true` | 👤 실증·검토 후 소유자 결정 |
+
+**실증 시 켤 스위치(시범 명단 제한이 유지되는 상태):**
+- Edge(Supabase 비밀값): `SINGLES_ONBOARDING_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED`, `SINGLES_REQUEST_BILLING_ENABLED` = `true` (`SINGLES_PUBLIC_LAUNCH_ENABLED`는 넣지 않음)
+- Worker: `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED` = `"true"` (별도 변경)
+- DB: `singles_bank_settings.active`, 가입비·충전 플랜 `active` = true
+- 운영자는 자기 계정의 성인 확인·입금 확인을 할 수 없으므로, 실증에는 운영자 외 회원 계정 2개 이상이 필요하다.
+
+## H. 요금 구조 개편(2026-10-31 소유자 결정) — 가입비 폐지·구독권·수락 후 청구서·자동 운영
+
+- 가입비·선불 적립금 폐지(선불전자지급수단 쟁점 해소). 유료회원 = 기간제 구독권 보유(1일 15,000·10일 75,000·20일 120,000·1달 150,000원).
+- 모든 요청 건별 청구(후불): 수락 시 양쪽 청구서 발행 → 둘 다 결제되면 연결/연락처 공개, 7일 미결제 시 취소(먼저 결제한 쪽 환불 대상).
+- 요금 1.5배: 메시지 교환 15,000원, 연락처 교환 150,000원(입력·공개 할인 최대 50%, 최저 75,000원).
+- 자동 운영: 매일 04:00 KST `singles_daily_ops`(pg_cron) — 14일 무응답 정리, 7일 미결제 취소, 운영 지표 점검 → 개선안은 **제안**으로만 저장. 소유자(설정 권한 운영자)가 `/singles/admin`에서 승인해야 적용(가격 제안은 승인 즉시 반영).
+
+| # | 항목 | 상태 |
+|---|---|---|
+| H1 | DB `20261031010000_singles_postpaid_subscription` | ✅ 로컬 시나리오 9종, 운영 반영·롤백 검증 |
+| H2 | 서버·화면(구독권 구매, 청구서 결제, 소유자 제안 화면) | ✅ 배포 |
+| H3 | 환불 대상(refund_due) 송금 처리 화면 | ⛔ 미구현(운영자 수동 송금) |
+| H4 | 카드 자동결제(빌링키) — 미결제 취소 감소 | 👤 포트원 결제 채널 계약 후 |
 
 ## 개통까지 권장 순서
 1. 👤 A1·A2·A5 법률 판단 → A6 문안 확정

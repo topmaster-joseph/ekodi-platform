@@ -28,6 +28,25 @@ export const EKODI_FLEET_STATUS = Object.freeze({
 
 const DEFAULT_FRESHNESS_MS = 2 * 60 * 60 * 1000; // 2h
 
+// The canonical registry is the only source of expected live services.
+// Beta/preparing/retired entries are visible elsewhere but must not trigger
+// a false outage in this read-only production fleet view.
+export function projectLiveFleetRegistry(services = []) {
+  const seen = new Set();
+  return (Array.isArray(services) ? services : []).flatMap(service => {
+    const id = typeof service?.id === 'string' ? service.id.trim() : '';
+    if (!id || seen.has(id) || service.productionVerified !== true ||
+      service.status !== 'live') return [];
+    seen.add(id);
+    return [{
+      id,
+      name: typeof service.name === 'string' ? service.name : id,
+      url: typeof service.url === 'string' ? service.url : null,
+      status: 'live',
+    }];
+  });
+}
+
 // Normalize the many status spellings into four operator-facing states.
 const STATUS_ALIASES = Object.freeze({
   online: 'online', ok: 'online', healthy: 'online', up: 'online', live: 'online', pass: 'online', green: 'online',
@@ -51,6 +70,14 @@ function parseTime(value) {
   if (!value) return null;
   const t = Date.parse(value);
   return Number.isFinite(t) ? t : null;
+}
+
+// Health signals without credible timestamps must never prove live health.
+// Allow one minute for benign clock skew, but fail closed on missing,
+// malformed, expired, or implausibly future-dated samples.
+function isStaleObservation(checkedAtMs, now, freshnessMs) {
+  return checkedAtMs == null || checkedAtMs > now + 60_000 ||
+    now - checkedAtMs > freshnessMs;
 }
 
 function asArray(value) {
@@ -77,6 +104,9 @@ export function buildFleetStatus(input = {}) {
   const environmentChecks = asArray(input.environmentChecks);
   const registryServices = asArray(input.registryServices);
   const twin = input.twin && typeof input.twin === 'object' ? input.twin : null;
+  const observationFailures = asArray(input.observationFailures)
+    .filter(source => source === 'service_check_latest' ||
+      source === 'cloudflare_environment_checks');
 
   // service_id -> aggregated service record
   const services = new Map();
@@ -119,7 +149,7 @@ export function buildFleetStatus(input = {}) {
     if (!rec) continue;
     const status = normalizeStatus(row.status);
     const checkedAtMs = parseTime(row.checked_at);
-    const stale = checkedAtMs != null && now - checkedAtMs > freshnessMs;
+    const stale = isStaleObservation(checkedAtMs, now, freshnessMs);
     rec.latest = {
       status,
       httpStatus: toInt(row.http_status),
@@ -138,7 +168,7 @@ export function buildFleetStatus(input = {}) {
     if (!rec) continue;
     const status = normalizeStatus(row.status);
     const checkedAtMs = parseTime(row.checked_at);
-    const stale = checkedAtMs != null && now - checkedAtMs > freshnessMs;
+    const stale = isStaleObservation(checkedAtMs, now, freshnessMs);
     rec.environments.push({
       environment: String(row.environment || 'unknown'),
       host: row.host ? String(row.host) : null,
@@ -191,10 +221,13 @@ export function buildFleetStatus(input = {}) {
   const uncatalogued = rows.filter(r => r.monitored && !r.inRegistry).map(r => r.id);
 
   // Overall health, folding in the twin rollup when present.
-  let overall = 'healthy';
+  // No service observations means "not observed", not a green fleet.
+  let overall = counts.total > 0 ? 'healthy' : 'partial';
   if (counts.offline > 0) overall = 'critical';
   else if (counts.degraded > 0 || counts.stale > 0) overall = 'degraded';
   else if (counts.unknown > 0) overall = 'partial';
+  // Partial read-model failure cannot be represented as a completely green fleet.
+  if (observationFailures.length > 0 && overall === 'healthy') overall = 'partial';
   const twinHealth = twin && typeof twin.health === 'string' ? twin.health : null;
   if (twinHealth === 'drift' && overall === 'healthy') overall = 'degraded';
   if (twinHealth === 'partially_observed' && overall === 'healthy') overall = 'partial';
@@ -234,6 +267,7 @@ export function buildFleetStatus(input = {}) {
       latestChecks: latestChecks.length,
       environmentChecks: environmentChecks.length,
       registryServices: registryServices.length,
+      observationFailures: Object.freeze([...new Set(observationFailures)]),
       twin: Boolean(twin),
     }),
   });
@@ -312,7 +346,7 @@ export function renderFleetStatusHtml(model) {
   footer{margin-top:24px;color:#6b7280;font-size:11px;border-top:1px solid #21262d;padding-top:12px}
 </style></head><body><div class="wrap">
   <h1>EKODI 함대 상태 <span class="small">Fleet Status</span></h1>
-  <div class="sub">읽기 전용 통합 관제 · ${esc(m.generatedAt)}</div>
+  <div class="sub">읽기 전용 통합 관제 · ${esc(m.generatedAt)}${m.sources?.observationFailures?.length ? ' · 관측 자료 일부 조회 실패' : ''}</div>
   <div class="banner"><div class="h">${esc(m.overall.label)}</div>
     <div class="small">전체 ${c.total}개 서비스 · 정상 ${c.online} · 주의 ${c.degraded} · 중단 ${c.offline} · 미관측 ${c.unknown}${c.stale ? ` · 오래됨 ${c.stale}` : ''}</div></div>
   <div class="counts">

@@ -205,7 +205,8 @@ jobs:
           test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
           test -n "$CLOUDFLARE_API_TOKEN"
       - name: Deploy no-route staging Worker
-        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.site-staging.toml
+        # CF-QUOTA-001: never retry quota responses; only one 10500 internal-auth recovery.
+        run: node scripts/site-core-staging-10500-recovery.mjs
       - name: Verify protected shared-site staging
         shell: bash
         run: |
@@ -243,7 +244,7 @@ jobs:
             echo "$auth_path -> $code"
             [[ "$code" == '200' ]]
             grep -Fq '/auth/auth-bootstrap.js?v=20260923-return-continuity-1' /tmp/shared-auth.html
-            grep -Fq '/auth/auth-entry.js?v=20261019-seonam-admin-return-405' /tmp/shared-auth.html
+            grep -Fq '/auth/auth-entry.js?v=20261028-singles-choose-account' /tmp/shared-auth.html
             grep -Fiq "content-security-policy:" /tmp/shared-auth.headers
             if grep -Fi 'content-security-policy:' /tmp/shared-auth.headers | grep -Eiq "script-src[^;]*'unsafe-inline'"; then
               echo 'Auth staging CSP unexpectedly permits inline JavaScript.'
@@ -258,7 +259,7 @@ jobs:
               if [[ "$asset" == 'auth-bootstrap.js' ]]; then
                 grep -Fq 'dataset.seamlessSso' /tmp/shared-auth-asset.js
               else
-                grep -Fq "./auth-router.js?v=20261019-seonam-admin-return-405" /tmp/shared-auth-asset.js
+                grep -Fq "./auth-router.js?v=20261028-singles-choose-account" /tmp/shared-auth-asset.js
               fi
             done
           }

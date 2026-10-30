@@ -177,7 +177,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Issue short-lived genuine production admin session
-        if: steps.budget.outputs.allowed == 'true'
+        if: steps.budget.outputs.allowed == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
@@ -229,6 +229,17 @@ jobs:
           echo "E2E_TOKEN_HASH=$token_hash" >> "$GITHUB_ENV"
           echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
           echo 'Canonical ekodi.kr production session verified.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify authenticated fleet read-model and guest boundary
+        if: steps.budget.outputs.allowed == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Reuse the workflow's audited short-lived super-admin session.
+          # On scheduled/manual runs, keep the read-only fleet check independent
+          # from the paid AI proof budget; no additional AI calls are made.
+          test -n "${E2E_ADMIN_TOKEN:-}"
+          node scripts/verify-ekodi-fleet-live.mjs >> "$GITHUB_STEP_SUMMARY"
 
       - name: Submit and execute read-only orchestration proof
         if: steps.budget.outputs.allowed == 'true'

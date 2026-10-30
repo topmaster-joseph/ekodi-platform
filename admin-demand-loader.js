@@ -40,9 +40,6 @@
     aimembers: {
       label: 'AI 회원운영', icon: '◈',
       styles: ['ai-ops-admin.css'],
-      // The production build appends user-ai-tier-panel.js into ai-ops-admin.js.
-      // Wait for the actual panel, not just the left-nav button, before
-      // signaling the lazy feature as ready.
       scripts: ['ai-ops-admin.js'],
       real: '[data-section="ai-membership"]',
       ready: '#userAiMembershipPanel',
@@ -77,6 +74,7 @@
     books: { label:'출판 · 도서', icon:'B', styles:['books-admin.css'], scripts:['books-admin.js'], secondaryStyles:['books-finance-admin.css'], secondaryScripts:['books-finance-admin.js'], real:'[data-section="books"]', hashes:['#books'] },
     social: { label:'채널·자동게시', icon:'S', styles:['social-admin.css'], scripts:['social-admin.js'], real:'[data-section="social"]', hashes:['#social'] },
     'supply-network': { label:'판매·공급망', icon:'N', styles:['supply-network-admin.css'], scripts:['supply-network-admin.js'], real:'[data-section="supply-network"]', hashes:['#supply-network'] },
+    'growth-os':{styles:['growth-os-admin.css'],scripts:['growth-os-admin.js'],real:'[data-section="growth-os"]',paths:['/admin/ai/growth-os']},
     marketing: {
       label: 'MarketingAI', icon: 'AI',
       styles: ['marketing-ai-admin.css'],

@@ -19,9 +19,11 @@ test('every menu checks its real current group and bounded retries instead of st
   assert.match(admin,/await locator\.evaluate\(node => \{ node\.click\(\); return true; \}\)/);
 });
 
-test('native background browser paces mobile visits and never bypasses rate limits',()=>{
-  assert.match(browser,/minimumGap=task\.deviceProfile\.includes\('mobile'\)\?2200:500/);
-  assert.match(browser,/\[429,502,503,504\]/);
+test('native background browser paces mobile and desktop visits and never bypasses rate limits',()=>{
+  assert.match(browser,/minimumGap=2200;/);
+  assert.match(browser,/const transient=\[502,503,504\]/);
+  assert.match(browser,/CF_QUOTA_CIRCUIT_OPEN/);
+  assert.match(browser,/if\(status===429 \|\| quotaCircuit\)/);
   assert.match(browser,/attempt<3;attempt\+\+/);
   assert.match(browser,/BROWSER_NAVIGATION_THROTTLED/);
   assert.match(browser,/BROWSER_NAVIGATION_HTTP_ERROR/);

@@ -1,6 +1,6 @@
-# EKODI Platform Constitution v1.27.4
+# EKODI Platform Constitution v1.27.5
 
-Effective: 2026-10-27
+Effective: 2026-10-28
 
 This constitution is the highest architecture and operations rule for EKODI Platform. Existing validators remain authoritative implementation guards; this document unifies their intent and governs future changes.
 
@@ -87,6 +87,15 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Webmail browser entry is `/mail`. Email domains with MX/SPF/DKIM/DMARC and ownership verification DNS are not browser hostnames, and must not be destroyed by this migration.
 - Changes are C3 and require owner approval, amendment, staged tests, rollback proof and operational verification. See `docs/DOMAIN-NAMING.md`.
 
+## 2B. Canonical Authentication Entry — Mandatory, Inherited (v1.27.6, 2026-10-28)
+- **All first-party EKODI login entrypoints use `https://ekodi.kr/auth/`; platform administration uses `https://ekodi.kr/admin/`; workspace/service administration uses its registered `/{site}/admin` or `/{site}/{service}/admin` path.** Legacy EKODI authentication/administration subdomain hosts and every other first-party subdomain browser login/admin entrypoint are forbidden, including links, JavaScript navigations, configuration defaults, generated URLs, notices and future sites.
+- This rule is **constitutionally inherited by every current and future EKODI site, Workspace, service, module and AI execution actor**. No operator, local policy, agent or provider may override it. The EKODI Orchestrator owns change coordination; the EKODI Platform Super Administrator retains final C2/C3 authority.
+- Authentication must reuse an existing valid central session, show the verified account, and return to the **exact trusted initiating URL** (path and functional query) via a validated `return_to`. Administrator subpaths are preserved. A generic `/my` landing, cross-site fallback or automatic Google relogin is prohibited.
+- One apex browser origin never grants another Workspace's access. Server-side identity, tenant, Role/Capability, anti-CSRF, strict site-scoped `return_to` allowlists and one-time handoff token hygiene remain compulsory. A broad `ekodi.kr` origin allowlist is **not** a substitute for path-scoped authorization.
+- **Migration exception is not a public URL exception:** verified old OAuth/provider callback registrations or private execution bindings may exist *temporarily* during controlled C3 cutover. They cannot appear in public login buttons or user-facing navigation. Each has a documented per-host inventory, deadline/owner, provider callback evidence, rollback plan and protected release. Removing DNS or replacing callback URLs without that evidence is forbidden; retain customer-owned domains and email MX/SPF/DKIM/DMARC.
+- **Forced execution:** `scripts/zero-subdomain-guard.mjs` blocks newly introduced legacy EKODI hosts; `scripts/validate-constitution.mjs` enforces this constitutional policy's exact route, inheritance, return and security flags against the domain/workspace policy registries. EKODI Orchestrator must route all source changes through required CI, protected PR review/approval, guarded deployment, PC/mobile production canaries and evidence-based completion; an unmerged PR, green unit test or legacy redirect is never a completed migration.
+- Authority: `governance/constitution/constitution.json` → `canonicalAuthenticationEntryPolicy`; binding: `config/domain-canonical-policy.json` → `canonicalAuthEntry`, `config/service-workspace-policy.json` → `canonicalAuthenticationEntryPolicy`. Migration work remains tracked in issue #5798.
+
 ## 2A. Public User Surface Constitution
 - Every canonical public user page is **guest-open by default**. A person must be able to reach and read the safe public projection without signing in.
 - Authentication **enhances rather than replaces** the public experience. After sign-in, membership tier, workspace relationship, role and capability may add, personalize, enable or reorder content and actions, but they must not turn the canonical public page into a login wall.
@@ -134,6 +143,7 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Return targets are allowlisted trusted HTTPS EKODI/customer-owned destinations with credential-bearing URLs rejected. Authentication must preserve query context but never propagate reusable secrets in query parameters. Pre-login capture never weakens the platform `Referrer-Policy: no-referrer`; the explicit `return_to` is the only capture channel.
 - (v1.27.4, 2026-10-27) Google sign-in UI is user-initiated and persistent. Automatic Google One Tap/FedCM prompts (`google.accounts.id.prompt`) are forbidden on user-facing service pages; they are allowed only on registered authentication surfaces where the user has just asked to sign in (explicit admin direct login, the Google origin bridge window, a privileged-action re-authentication overlay), and every such surface must also render a persistent Google button so a browser prompt that disappears never strands the user.
 - (v1.27.4) After authentication the returned page must visibly confirm the signed-in account (name or email) and offer sign-out. Prelaunch, subscription or permission gates must state that login succeeded and name the gate, so a service gate is never mistaken for a login failure. When an existing central session is reused, the authentication page names the reused account while it returns the user.
+- (v1.27.5, 2026-10-28) A signed-in person is never asked to log in again. Every service resolves an existing EKODI session (stored session or one-time handoff) before rendering any login entry, shows a neutral "로그인 확인 중" state meanwhile, and replaces login entries with the signed-in account. The central auth page reuses a valid session without showing Google sign-in UI. Login UI appears only when no valid session exists, or when the person explicitly asks to switch accounts.
 - This rule applies to all current and future login adapters and is enforced by shared authentication routing tests, `validate:constitution` (including a repository-wide scan of `google.accounts.id.prompt` call sites) and production system verification.
 - Machine-readable authority: `governance/constitution/constitution.json` -> `authenticationReturnContinuityPolicy` and `config/service-workspace-policy.json` -> `authenticationReturnPolicy`.
 

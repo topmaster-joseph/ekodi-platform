@@ -59,7 +59,7 @@ test('self-declared payment never creates an entitlement; only trusted server RP
 test('new order uses unguessable unique reference and server plan amount only',async()=>{
  flags.SINGLES_BANK_TRANSFER_ENABLED='true';
  const x=db({configured:true});
- const r=await handleSinglesBank(request('/bank/orders','POST',{plan_code:'community'}),
+ const r=await handleSinglesBank(request('/bank/orders','POST',{plan_code:'consulting'}),
   '/bank/orders',x,uid,reply);
  assert.equal(r.status,201);
  const v=await r.json();assert.match(v.order.reference,/^EDH-[A-F0-9]{32}$/);

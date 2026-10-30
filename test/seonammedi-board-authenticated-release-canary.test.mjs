@@ -21,6 +21,6 @@ test('production signed-in write is verified or transparently skipped',()=>{
  assert.match(canary,/\.queued==true/);
  assert.match(canary,/\.status=="published"/);
  assert.match(canary,/DELETE FROM citizen_voices_fresh WHERE id=\$post_id/);
- assert.match(canary,/Remove old citizen records and referenced photos after cutover/);
- assert.match(canary,/node services\/independent-board\/voices-fresh\/purge-legacy\.mjs --execute/);
+ assert.match(canary,/Verify legacy write retirement and retain historical records/);
+ assert.doesNotMatch(canary,/node services\/independent-board\/voices-fresh\/purge-legacy\.mjs --execute/);
 });

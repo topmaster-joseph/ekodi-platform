@@ -29,6 +29,18 @@ await fs.mkdir(outDir, { recursive: true });
 // ---------- production modules over a real database ----------
 const sqlite = new DatabaseSync(':memory:');
 sqlite.exec(await fs.readFile(new URL('migrations/202610250500_cgma_edocs.sql', ROOT), 'utf8'));
+sqlite.exec(await fs.readFile(new URL('migrations/202610280400_cgma_edocs_archive.sql', ROOT), 'utf8'));
+sqlite.exec(await fs.readFile(new URL('migrations/202610280600_cgma_edocs_source_url.sql', ROOT), 'utf8'));
+// The outside web as seen by the server-side link import: one public Google Doc, one private Google Doc.
+const PUBLIC_DOC = 'https://docs.google.com/document/d/1PublicProofDoc000000000000/edit?usp=sharing';
+const PRIVATE_DOC = 'https://docs.google.com/document/d/1PrivateProofDoc00000000000/edit';
+const linkFetches = [];
+const webFetch = async url => {
+  linkFetches.push(url);
+  if (url.includes('1PublicProofDoc')) return new Response(await fs.readFile(pdfPath), { headers: { 'content-type': 'application/pdf', 'content-disposition': "attachment; filename*=UTF-8''%ED%9A%8C%EC%9D%98%EB%A1%9D.pdf" } });
+  if (url.includes('1PrivateProofDoc')) return new Response('<html>Sign in</html>', { headers: { 'content-type': 'text/html' } });
+  return new Response('nf', { status: 404 });
+};
 const stmt = (sql, params = []) => ({
   bind: (...v) => stmt(sql, v),
   first: async () => sqlite.prepare(sql).get(...params) || null,
@@ -64,7 +76,7 @@ async function answer(route) {
   const body = ['GET', 'HEAD'].includes(req.method()) ? undefined : req.postDataBuffer();
   const request = new Request(url.toString(), { method: req.method(), headers, body });
   let response = null;
-  if (url.pathname.startsWith('/api/cgma/edocs')) response = await handleCgmaEdocs(request, env, { resolveAuthority });
+  if (url.pathname.startsWith('/api/cgma/edocs')) response = await handleCgmaEdocs(request, env, { resolveAuthority, fetch: webFetch });
   else if (url.pathname.startsWith('/cgma/sign')) response = await routeCgmaEdocSign(request, env);
   else if (url.pathname === '/cgma/admin/assets/cgma-edoc-admin.js') response = new Response(await read('cgma-edoc-admin.js'), { headers: { 'content-type': 'text/javascript', 'content-security-policy': ADMIN_CSP } });
   else if (url.pathname === '/cgma/admin/assets/cgma-edoc-admin.css') response = new Response(await read('cgma-edoc-admin.css'), { headers: { 'content-type': 'text/css' } });
@@ -196,7 +208,120 @@ try {
   check('처리 이력: 등록→원본→시작→서명×3→완료', audit.actions.join(',') === 'created,file_uploaded,started,signed,signed,signed,completed' && audit.chain_valid, audit);
   const pdfSha = (await import('node:crypto')).createHash('sha256').update(await fs.readFile(pdfPath)).digest('hex');
   check('문서 지문 = 원본 PDF의 SHA-256', audit.sha === pdfSha, { sha256: pdfSha });
-  check('브라우저 콘솔 · CSP 위반 없음', report.consoleProblems.length === 0, { problems: report.consoleProblems });
+  // 5. 보관 문서: register a records-only document (no signatures) and confirm 연번 in the list.
+  await admin.getByRole('button', { name: '목록으로' }).first().click();
+  await admin.getByRole('button', { name: '+ 새 전자문서' }).click();
+  await admin.locator('input[name="cgmaEdocMode"][value="archive"]').check();
+  check('보관 모드: 서명자 입력란 숨김', await admin.locator('.cgma-edoc-signer-section').isHidden());
+  await admin.locator('.cgma-edoc-form input[type="text"]').first().fill('2026년 청계면 상인회 상반기 결산 (실증)');
+  await admin.locator('select').first().selectOption('회계·정산');
+  await admin.locator('input[type="date"]').fill('2026-06-24');
+  await admin.locator('input[type="file"]').setInputFiles(pdfPath);
+  await admin.getByRole('button', { name: '보관 등록' }).click();
+  await admin.locator('.cgma-edoc-head').waitFor();
+  const archivedBadge = await admin.locator('.cgma-edoc-head .cgma-edoc-badge').textContent();
+  check('보관 등록 → 상태 ‘보관’', archivedBadge === '보관', { badge: archivedBadge });
+  await admin.getByRole('button', { name: '목록으로' }).first().click();
+  await admin.locator('.cgma-edoc-row').first().waitFor();
+  const serials = await admin.locator('.cgma-edoc-serial').allTextContents();
+  const head = await admin.locator('.cgma-edoc-table thead th').first().textContent();
+  check('문서 목록 첫 열 ‘연번’, 최신순 2·1', head === '연번' && JSON.stringify(serials) === JSON.stringify(['2', '1']), { head, serials });
+  await shot(admin, '09-admin-list-serial-archive');
+  // 6. 일괄 등록: several files + manifest in one selection.
+  // (ASCII file names: this sandbox's Playwright drops non-ASCII names in multi-file selection; real browsers do not.)
+  const bulkDir = path.join(outDir, 'bulk'); await fs.mkdir(bulkDir, { recursive: true });
+  const pdfCopy = path.join(bulkDir, '240726_urban-regeneration-direction.pdf'); await fs.copyFile(pdfPath, pdfCopy);
+  const hwp = path.join(bulkDir, 'settlement-2026-h1.hwp'); await fs.writeFile(hwp, Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1, ...new Array(64).fill(0)]));
+  const manifestPath = path.join(bulkDir, 'cgma-edocs-manifest.json');
+  await fs.writeFile(manifestPath, JSON.stringify({ schema: 'cgma-edocs-manifest.v1', documents: [
+    { file: 'settlement-2026-h1.hwp', title: '2026년 상반기 결산 (실증)', category: '회계·정산', doc_date: '2026-06-24', mode: 'archive' }] }));
+  await admin.getByRole('button', { name: '일괄 등록' }).click();
+  await admin.locator('.cgma-edoc-bulk input[type="file"]').setInputFiles([pdfCopy, hwp, manifestPath]);
+  await admin.locator('.cgma-edoc-bulk tbody tr').nth(1).waitFor({ timeout: 8000 });
+  const proposed = await admin.locator('.cgma-edoc-bulk tbody tr').evaluateAll(rows => rows.map(r => [r.cells[1].textContent, r.querySelector('input[type=text]').value, r.querySelector('select').value, r.querySelector('input[type=date]').value]));
+  check('일괄 등록: manifest 반영 + 파일명 날짜 추정', proposed.some(r => r[1] === '2026년 상반기 결산 (실증)' && r[2] === '회계·정산' && r[3] === '2026-06-24') && proposed.some(r => r[3] === '2024-07-26'), { proposed });
+  await admin.getByRole('button', { name: '등록 시작' }).click();
+  await admin.waitForFunction(() => [...document.querySelectorAll('.cgma-edoc-bulk-state')].every(td => /완료|실패/.test(td.textContent)), null, { timeout: 30000 });
+  const states = await admin.locator('.cgma-edoc-bulk-state').allTextContents();
+  check('일괄 등록: 2건 모두 완료(한글 HWP 보관 포함)', states.every(t => t === '완료'), { states });
+  await shot(admin, '10-admin-bulk-registered');
+  await admin.getByRole('button', { name: '목록으로' }).click();
+  await admin.locator('.cgma-edoc-row').nth(3).waitFor();
+  const serialsAfter = await admin.locator('.cgma-edoc-serial').allTextContents();
+  check('일괄 등록 후 연번 4·3·2·1', JSON.stringify(serialsAfter) === JSON.stringify(['4', '3', '2', '1']), { serialsAfter });
+  // 7. 링크로 등록: a Google Docs link becomes a stored PDF copy.
+  await admin.getByRole('button', { name: '+ 새 전자문서' }).click();
+  await admin.locator('input[name="cgmaEdocMode"][value="archive"]').check();
+  await admin.locator('input[name="cgmaEdocKind"][value="link"]').check();
+  await admin.locator('.cgma-edoc-form input[type="text"]').first().fill('10월 정기회의 회의록 (구글 문서 링크)');
+  await admin.locator('.cgma-edoc-form input[type="url"]').fill(PUBLIC_DOC);
+  await admin.getByRole('button', { name: '보관 등록' }).click();
+  await admin.locator('.cgma-edoc-head').waitFor();
+  const linkMeta = await admin.locator('.cgma-edoc-meta').textContent();
+  const linkHref = await admin.locator('.cgma-edoc-meta a').getAttribute('href');
+  check('링크 등록: 구글 문서 → PDF 사본 보관 + 원문 링크 표시', /회의록\.pdf/.test(linkMeta) && linkHref === PUBLIC_DOC
+    && (await admin.locator('.cgma-edoc-head .cgma-edoc-badge').textContent()) === '보관' && linkFetches.some(u => /\/export\?format=pdf$/.test(u)), { linkHref });
+  await shot(admin, '11-admin-link-registered');
+  // 8. 일괄 등록: paste links; a private one is kept as link-only record.
+  await admin.getByRole('button', { name: '목록으로' }).first().click();
+  await admin.getByRole('button', { name: '일괄 등록' }).click();
+  await admin.locator('.cgma-edoc-bulk textarea').fill(`공개 회의록 | ${PUBLIC_DOC.replace('edit?usp=sharing', 'view')}\n${PRIVATE_DOC}\n주소 아님`);
+  await admin.getByRole('button', { name: '링크 추가' }).click();
+  const linkRows = await admin.locator('.cgma-edoc-bulk tbody tr').evaluateAll(rows => rows.map(r => r.querySelector('input[type=text]').value));
+  check('일괄 링크: 제목|링크 형식 + 제목 자동(구글 문서), 잘못된 줄 제외', JSON.stringify(linkRows) === JSON.stringify(['공개 회의록', '구글 문서']), { linkRows });
+  await admin.getByRole('button', { name: '등록 시작' }).click();
+  await admin.waitForFunction(() => [...document.querySelectorAll('.cgma-edoc-bulk-state')].every(td => /완료|실패/.test(td.textContent)), null, { timeout: 30000 });
+  const linkStates = await admin.locator('.cgma-edoc-bulk-state').allTextContents();
+  check('일괄 링크: 공개는 사본, 비공개는 링크만 보관', JSON.stringify(linkStates) === JSON.stringify(['완료', '완료 · 링크만(사본 없음)']), { linkStates });
+  await shot(admin, '12-admin-bulk-links');
+  await admin.getByRole('button', { name: '목록으로' }).click();
+  await admin.locator('.cgma-edoc-row').nth(6).waitFor();
+  const serialsLinks = await admin.locator('.cgma-edoc-serial').allTextContents();
+  check('링크 등록 후 연번 7…1', JSON.stringify(serialsLinks) === JSON.stringify(['7', '6', '5', '4', '3', '2', '1']), { serialsLinks });
+  // 8b. 화면 구조: the shell's top summary boxes are gone; counts sit in the list's status bar (filter chips).
+  await admin.locator('.cgma-edoc-statusbar').waitFor();
+  const top = await admin.evaluate(() => ({ cardsHeight: document.getElementById('summaryCards').getBoundingClientRect().height,
+    chips: [...document.querySelectorAll('.cgma-edoc-chip')].map(c => c.textContent) }));
+  check('상단 요약 상자 제거 · 상태별 개수는 목록 위 상태 막대로', top.cardsHeight === 0 && top.chips[0] === '전체7' && top.chips.length === 6, top);
+  await admin.getByRole('button', { name: /^보관/ }).click();
+  await admin.waitForFunction(() => document.querySelector('.cgma-edoc-chip[aria-pressed="true"]')?.textContent.startsWith('보관'));
+  const archivedOnly = await admin.locator('.cgma-edoc-row .cgma-edoc-badge').allTextContents();
+  check('상태 막대로 보관 문서만 보기', archivedOnly.length > 0 && archivedOnly.every(t => t === '보관'), { archivedOnly });
+  await shot(admin, '12b-admin-list-statusbar');
+  await admin.getByRole('button', { name: /^전체/ }).click();
+  await admin.waitForFunction(() => document.querySelector('.cgma-edoc-chip[aria-pressed="true"]')?.textContent.startsWith('전체'));
+  // 9. 화면 배치: a draft (names to fill in later) lays out facts left / work right on desktop, one column on a phone.
+  await admin.getByRole('button', { name: '+ 새 전자문서' }).click();
+  await admin.locator('.cgma-edoc-form input[type="text"]').first().fill('청계면상인회 홈페이지 제안서 및 견적서 (배치 실증)');
+  await admin.locator('input[type="file"]').setInputFiles(pdfPath);
+  await admin.getByRole('button', { name: '초안으로 저장' }).click();
+  await admin.locator('.cgma-edoc-detail-grid').waitFor();
+  const layout = await admin.evaluate(() => {
+    const [left, right] = [...document.querySelector('.cgma-edoc-detail-grid').children].map(n => n.getBoundingClientRect());
+    const wide = [...document.querySelectorAll('.cgma-edoc-draft .cgma-edoc-btn')].map(b => b.getBoundingClientRect().width);
+    return { sideBySide: right.left >= left.right - 1 && Math.abs(right.top - left.top) < 4, maxButton: Math.round(Math.max(...wide)),
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+  });
+  check('배치(데스크톱): 문서 정보 왼쪽 · 할 일 오른쪽, 버튼이 가로로 늘어나지 않음', layout.sideBySide && layout.maxButton < 260 && layout.overflow <= 1, layout);
+  await shot(admin, '13-admin-draft-layout-desktop');
+  const draftUrl = admin.url();
+  const phoneCtx = await context(true);
+  const phone = await phoneCtx.newPage(); watch(phone, 'admin-phone');
+  await phone.goto('https://ekodi.kr/cgma/admin/edocs');
+  await phone.locator('.cgma-edoc-row').first().click();
+  await phone.locator('.cgma-edoc-detail-grid').waitFor();
+  const phoneLayout = await phone.evaluate(() => {
+    const [left, right] = [...document.querySelector('.cgma-edoc-detail-grid').children].map(n => n.getBoundingClientRect());
+    const chain = [...document.querySelectorAll('.cgma-edoc-signers-edit li')].map(li => li.getBoundingClientRect());
+    return { stacked: right.top >= left.bottom - 1, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      chainVisible: chain.length === 3 && chain.every(r => r.right <= innerWidth + 1 && r.left >= -1) };
+  });
+  check('배치(휴대폰): 한 열로 쌓이고 서명자 3명 모두 화면 안 · 가로 넘침 없음', phoneLayout.stacked && phoneLayout.overflow <= 1 && phoneLayout.chainVisible, phoneLayout);
+  await shot(phone, '14-admin-draft-layout-phone');
+  void draftUrl;
+  // The private link's import answers 422 by design (then link-only is recorded); every other console problem fails.
+  const unexpected = report.consoleProblems.filter(p => !/status of 422/.test(p));
+  check('브라우저 콘솔 · CSP 위반 없음 (비공개 링크의 의도된 422 제외)', unexpected.length === 0 && report.consoleProblems.length <= 1, { problems: report.consoleProblems });
 } finally {
   await browser.close();
   await fs.writeFile(path.join(outDir, 'report.json'), JSON.stringify(report, null, 2));

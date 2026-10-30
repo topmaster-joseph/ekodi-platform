@@ -13,8 +13,14 @@ test('Mission home keeps only introduction + active/upcoming event while retaini
   const sections=[...home.matchAll(/<section\b/g)];
   assert.equal(sections.length,2,'No completed events, long index or history duplicated on home');
   assert.match(home,/class="hero hero-split"/);
-  assert.match(home,/data-mission-home-event data-event-last-day="2026-10-10"/);
-  assert.match(home,/data-mission-home-empty hidden/);
+  assert.doesNotMatch(home,/open-table-meal-260925.jpg/,'Poster JPEG must not masquerade as a real photo');
+  assert.match(home,/data-mission-public-photo/);
+  assert.match(home,/data-mission-photo-fallback/);
+  assert.match(home,/data-mission-public-photo-image/);
+  assert.match(home,/\/ekodimission\/assets\/home-photo.js/);
+  assert.match(home,/\/ekodimission\/assets\/saturday.js/);
+  assert.match(home,/data-mission-saturday/);
+  assert.match(home,/data-mission-saturday-replies/);
   assert.match(home,/\/ekodimission\/history/);
   assert.match(home,/\/ekodimission\/activities/);
   for(const obsolete of ['RECENT ACTIVITY','PAST ACTIVITY','OUR JOURNEY · SINCE 2018','MISSION SERVICES','2026 가을 공동체 여행'])
@@ -23,6 +29,33 @@ test('Mission home keeps only introduction + active/upcoming event while retaini
   assert.match(archive,/2026 에코디 추석 열린식탁/);
   assert.match(js,/timeZone:'Asia\/Seoul'/);
   assert.match(css,/\.mission-home-event\[hidden\]\s*,\s*\.mission-home-empty\[hidden\]\{display:none!important\}/);
+});
+
+test('Home loads only consent-screened first-party direct photos, otherwise shows an accurate fallback',async()=>{
+  const [client,css,worker,landing]=await Promise.all([
+    read('space/ekodimission-home-photo.js'),read('space/ekodimission.css'),
+    read('space-worker.js'),read('space/ekodimission.page')
+  ]);
+  assert.match(client,/querySelectorAll\('img\.activity-result-photo\[src\]'\)/);
+  assert.match(client,/approvedPath\.test\(url\.pathname\)/);
+  assert.match(client,/url\.origin!==location\.origin/);
+  assert.match(client,/new Image\(\)/);
+  assert.match(client,/await probe\.decode\(\)/);
+  assert.match(client,/probe\.naturalWidth<640/);
+  assert.match(client,/fallback\.hidden=true/);
+  assert.match(client,/image\.hidden=false/);
+  assert.match(client,/\/ekodimission\/activities\//);
+  assert.doesNotMatch(client,/drive\.google\.com|images\.unsplash\.com/);
+  assert.match(css,/\.mission-home-photo \[hidden\]\{display:none!important\}/);
+  assert.match(css,/\.mission-home-photo-fallback\{/);
+  assert.match(css,/\.hero-split \.mission-home-photo\{aspect-ratio:auto;width:100%;max-width:100%;min-width:0;min-height:240px/);
+  assert.doesNotMatch(css,/\.hero-split \.mission-home-photo\{[^}]*aspect-ratio:16\/9/);
+  assert.match(worker,/\['\/ekodimission\/assets\/home-photo\.js','\/ekodimission-home-photo\.js'\]/);
+  assert.match(landing,/공개 활동사진·기록 보기/);
+  const response=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/assets/home-photo.js'),{
+    ASSETS:{fetch:async req=>new Response(client,{status:200,headers:{'content-type':'application/javascript; charset=utf-8'}})}
+  });
+  assert.equal(response.status,200);
 });
 
 test('Current-event visibility correctly changes at Korea midnight',async()=>{

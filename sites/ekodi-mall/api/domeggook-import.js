@@ -98,6 +98,7 @@ export function normalizeDomeggookDetail(payload) {
     licenseUsable: truthy(desc.license?.usable),
     licenseMsg: clean(desc.license?.msg, 200),
     thumbUrl: clean(thumb.original || thumb.large || thumb.small, 600),
+    thumbCandidates: [thumb.original, thumb.large, thumb.small].map((u) => clean(u, 600)).filter(Boolean),
     detailImages: detailImageUrls(desc.contents?.item),
     // 주문옵션(JSON 문자열, 도매꾹 문서: '상품 주문옵션 정보 (JSON 포맷)')
     selectOpt: typeof root.selectOpt === 'string' ? root.selectOpt.slice(0, 4000) : (root.selectOpt ? JSON.stringify(root.selectOpt).slice(0, 4000) : '')
@@ -156,28 +157,41 @@ function sniff(bytes) {
   return null;
 }
 
-async function copyImages(env, productId, urls, fetchImpl) {
-  if (!env.MEDIA?.put) return [];
+// 공급사 API 응답에 들어 있는 이미지 주소는 도매꾹 CDN 외 호스트일 수 있다.
+// 공인 호스트명(https)만 허용하고 IP·내부 주소는 막는다.
+function apiImageHostOk(hostname) {
+  const h = String(hostname || '').toLowerCase();
+  if (IMAGE_HOST.test(h)) return true;
+  if (!h.includes('.') || h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal')) return false;
+  if (/^[\d.]+$/.test(h) || h.includes(':')) return false;
+  return true;
+}
+
+async function copyImages(env, productId, urls, fetchImpl, { anyHost = false, reasons = null } = {}) {
+  if (!env.MEDIA?.put) { reasons?.push('no-media'); return []; }
   const images = [];
+  const seen = new Set();
   for (const raw of urls) {
     if (images.length >= MAX_IMAGES) break;
     let url;
-    try { url = new URL(raw.startsWith('//') ? `https:${raw}` : raw); } catch { continue; }
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') continue;
-    if (!IMAGE_HOST.test(url.hostname)) continue;
+    try { url = new URL(raw.startsWith('//') ? `https:${raw}` : raw); } catch { reasons?.push('bad-url'); continue; }
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') { reasons?.push('protocol'); continue; }
+    if (!(anyHost ? apiImageHostOk(url.hostname) : IMAGE_HOST.test(url.hostname))) { reasons?.push(`host:${url.hostname}`.slice(0, 60)); continue; }
     url.protocol = 'https:';
+    if (seen.has(url.toString())) continue;
+    seen.add(url.toString());
     try {
-      const res = await fetchImpl(url.toString());
-      if (!res.ok) continue;
+      const res = await fetchImpl(url.toString(), { redirect: 'follow' });
+      if (!res.ok) { reasons?.push(`http:${res.status}`); continue; }
       const bytes = new Uint8Array(await res.arrayBuffer());
-      if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) continue;
+      if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) { reasons?.push(`size:${bytes.length}`); continue; }
       const type = sniff(bytes);
-      if (!type) continue;
+      if (!type) { reasons?.push('type'); continue; }
       const id = [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, '0')).join('');
       const key = `${MEDIA_PREFIX}${productId}/${id}.${type[1]}`;
       await env.MEDIA.put(key, bytes, { httpMetadata: { contentType: type[0], cacheControl: 'public, max-age=31536000, immutable' } });
       images.push({ id, key, width: null, height: null, source: 'domeggook', createdAt: isoNow() });
-    } catch {}
+    } catch { reasons?.push('fetch'); }
   }
   return images;
 }
@@ -334,4 +348,55 @@ export async function notifySupplyOrder(env, order) {
     message: `발주 필요 · 도매꾹 ${row.supply_item_no} · ${row.name} × ${order.quantity || 1} (예상 공급비 ${((row.supply_cost || 0) * (order.quantity || 1) + (row.supply_shipping || 0)).toLocaleString('ko-KR')}원)`
   });
   return true;
+}
+
+/**
+ * 판매 중인데 사진이 없는 위탁상품에 공급사 허용 사진을 다시 채운다.
+ * - 공급사가 재사용을 허용(desc.license.usable)한 사진만 사용한다(저작권).
+ * - 큰 원본이 4MB 를 넘으면 large/small 썸네일로 대체한다.
+ * - 같은 상품은 12시간에 한 번만 다시 시도하고, 결과를 진단 기록으로 남긴다.
+ * - 허용 사진이 없으면 사진 없는 상품을 계속 노출하지 않도록 판매를 잠시 멈춘다(재시도 시 자동 복귀).
+ */
+export async function backfillSupplyImages(env, fetchImpl = fetch, limit = 8) {
+  if (!env?.DB || !env.DOMEMAE_API_KEY || !env.MEDIA?.put) return { skipped: true };
+  const cutoff = new Date(Date.now() - 12 * 3600 * 1000).toISOString();
+  const rows = await env.DB.prepare(`SELECT p.id,p.seller_id,p.name,p.status,p.supply_release,p.supply_item_no FROM products p
+    WHERE p.supply_provider=? AND (p.status='published' OR (p.status='draft' AND p.supply_release='image_hold')) AND (p.images_json IS NULL OR p.images_json IN ('','[]','null'))
+      AND NOT EXISTS (SELECT 1 FROM supplier_connector_checks c WHERE c.external_ref='image:'||p.id AND c.checked_at>?)
+    LIMIT ?`).bind(PROVIDER, cutoff, limit).all().catch(() => ({ results: [] }));
+  let filled = 0, held = 0;
+  for (const row of rows.results || []) {
+    const reasons = [];
+    const fetched = await fetchDomeggookItem(env, row.supply_item_no, fetchImpl);
+    let images = [];
+    let license = null;
+    if (fetched.error) reasons.push(`lookup:${fetched.code || 'error'}`);
+    else {
+      const item = fetched.item;
+      license = item.licenseUsable;
+      if (!item.licenseUsable) reasons.push('license-denied');
+      else {
+        const urls = [...(item.thumbCandidates || [item.thumbUrl]), ...item.detailImages].filter(Boolean).slice(0, 12);
+        images = await copyImages(env, row.id, urls, fetchImpl, { anyHost: true, reasons });
+      }
+    }
+    const now = isoNow();
+    if (images.length) {
+      await env.DB.prepare(`UPDATE products SET images_json=?,updated_at=? WHERE id=?`).bind(JSON.stringify(images.slice(0, 4)), now, row.id).run();
+      if (row.status === 'draft' && row.supply_release === 'image_hold') {
+        await env.DB.prepare(`UPDATE products SET status='published',published_at=COALESCE(published_at,?),supply_release='released' WHERE id=?`).bind(now, row.id).run();
+      }
+      filled += 1;
+    } else if (license === false && row.status === 'published') {
+      // 공급사가 사진 사용을 허용하지 않으면 사진 없이 판매하지 않는다.
+      await env.DB.prepare(`UPDATE products SET status='draft',supply_release='image_hold',updated_at=? WHERE id=? AND status='published'`).bind(now, row.id).run();
+      held += 1;
+    }
+    try {
+      await env.DB.prepare(`INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES (?,?,?,?,?,?,?)`)
+        .bind(`chk_${crypto.randomUUID().replaceAll('-', '')}`, 'domemae-official', 'item_lookup', `image:${row.id}`, images.length ? 'ok' : 'failed',
+          JSON.stringify({ itemNo: row.supply_item_no, images: images.length, license, reasons: reasons.slice(0, 12) }).slice(0, 1500), now).run();
+    } catch {}
+  }
+  return { filled, held, tried: (rows.results || []).length };
 }

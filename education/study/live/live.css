@@ -665,3 +665,4 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .lv .doc-note{font-size:.8125rem}
 @media print{.lv.doc-view-body .btn-row{display:none}}
 .lv .docs-grid>.panel,.lv .docs-page>.panel{margin:0}
+.lv .ho-instructor{font-size:.8125rem;font-weight:650}

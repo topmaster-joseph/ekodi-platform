@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const API='/api/seonammedi';
-  const WEEK=['월','화','수','목','금','토','일'];
+  const WEEK=['일','월','화','수','목','금','토'];
   const localToday=()=>{
     const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
     const get=type=>parts.find(p=>p.type===type)?.value||'';
@@ -264,7 +264,7 @@
       current.textContent=month.replace('-','년 ')+'월';
       calendar.replaceChildren();
       const [year,n]=month.split('-').map(Number);
-      const offset=(new Date(Date.UTC(year,n-1,1)).getUTCDay()+6)%7;
+      const offset=new Date(Date.UTC(year,n-1,1)).getUTCDay();
       const count=new Date(Date.UTC(year,n,0)).getUTCDate();
       for(let i=0;i<offset;i++){const blank=make('span','seonam-calendar-blank');blank.setAttribute('aria-hidden','true');calendar.append(blank);}
       for(let d=1;d<=count;d++){
@@ -285,7 +285,7 @@
     }
     function renderSelected(){
       const [year,n,d]=selected.split('-').map(Number);
-      const weekday=WEEK[(new Date(Date.UTC(year,n-1,d)).getUTCDay()+6)%7];
+      const weekday=WEEK[new Date(Date.UTC(year,n-1,d)).getUTCDay()];
       const hits=matches(selected);
       dayLabel.textContent=d+'일 ('+weekday+')'+(hits.length?' · '+hits.length+'건':'');
       dayLabel.setAttribute('aria-label',year+'년 '+n+'월 '+d+'일 ('+weekday+') · 일정 '+hits.length+'건');

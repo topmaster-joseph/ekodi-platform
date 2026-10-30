@@ -20,7 +20,13 @@ export const SEARCH_VERIFICATION_CODES = Object.freeze({
   }),
   'seonammedi.kr': Object.freeze({
     google: [],
-    naver: [NAVER_OWNER_CODE_20261021],
+    // Owner-issued to this English domain on 2026-10-30, separate from IDN.
+    naver: ['fda2f0e54ea106c29233baaa602aa5a551c79b88', NAVER_OWNER_CODE_20261021],
+  }),
+  // Owner-issued 2026-10-30 for the Korean IDN specifically.
+  'xn--3e0b8b58jw4co4mnpll3k.kr': Object.freeze({
+    google: [],
+    naver: ['24ca4ba6e96faad3747dd25f3df3b1748384771a'],
   }),
 });
 
@@ -78,6 +84,8 @@ export const SEARCH_VERIFICATION_FILES = Object.freeze({
   '/naverf72bebc155107dcad735d8178146679f.html': 'naver-site-verification: naverf72bebc155107dcad735d8178146679f.html',
   // 2026-10-24: file Naver issues for https://ekodi.kr (the f72… file belongs to another registered site).
   '/naver55dffd2edf849422807852a996ee52e6.html': 'naver-site-verification: naver55dffd2edf849422807852a996ee52e6.html',
+  // 2026-10-28: file Naver issues for https://ekodichurch.kr (served at that domain's root by legacy-redirect.js).
+  '/naver85321326d5553a0caa3a944158fc2969.html': 'naver-site-verification: naver85321326d5553a0caa3a944158fc2969.html',
 });
 
 export function searchVerificationFileResponse(pathname, { head = false } = {}, registry = SEARCH_VERIFICATION_FILES) {

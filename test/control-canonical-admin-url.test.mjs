@@ -52,7 +52,7 @@ test('standalone canonical Control and legacy /control both retain CSP and noind
 
 test('existing approved single-sidebar Admin workbench and task history remain unchanged',()=>{
  const home=read('admin-control-home.js'),nav=read('control.js'),style=read('control.css'),html=read('control.html');
- assert.match(home,/frame\.src='\/control\?embedded=admin'/);
+ assert.match(home,/frame\.src='\/admin\/control\?embedded=admin'/);
  assert.match(nav,/function mountEmbeddedToolbar\(\)/);
  assert.match(nav,/rail\.hidden=true/);
  assert.match(style,/\.control-embedded-toolbar/);
@@ -77,7 +77,7 @@ test('guarded site production manifest tests new Control URL and keeps old URLs'
  assert.ok(entries.some(x=>x.url==='https://ekodi.kr/control.js'));
 });
 
-test('logged-out canonical Control offers Google Admin login returning to the exact page',()=>{
+test('logged-out canonical Control offers neutral login returning to the exact page',()=>{
   const source=read('control.js');
   const start=source.indexOf('  function renderAdminControlLogin(logged){');
   const end=source.indexOf('\n  async function boot()',start);
@@ -95,15 +95,15 @@ test('logged-out canonical Control offers Google Admin login returning to the ex
   };
   const render=vm.runInNewContext(source.slice(start,end)+'\nrenderAdminControlLogin',context);
   render(false);
-  assert.ok(status.link,'signed-out state needs an actionable Google login link');
-  assert.equal(status.link.textContent,'관리자 Google 로그인');
+  assert.ok(status.link,'signed-out state needs an actionable login link');
+  assert.equal(status.link.textContent,'로그인');
   const auth=new URL(status.link.href);
   assert.equal(auth.origin,'https://ekodi.kr');
   assert.equal(auth.pathname,'/auth/');
   assert.equal(auth.searchParams.get('site'),'admin');
   assert.equal(auth.searchParams.get('direct'),'1');
   assert.equal(auth.searchParams.get('return_to'),'https://ekodi.kr/admin/control');
-  assert.equal(status.link.attributes['aria-label'],'최고관리자 Google 로그인 후 EKODI Control로 복귀');
+  assert.equal(status.link.attributes['aria-label'],'로그인 후 최고관리자 권한을 검증하고 EKODI Control로 복귀');
   render(true);
   assert.equal(status.textContent,'최고관리자 세션');
 });

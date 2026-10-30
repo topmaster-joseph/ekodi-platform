@@ -32,6 +32,18 @@
     $('priceNow').textContent = C.won(p?.amount);
     $('priceList').textContent = p && p.amount < p.listPrice ? C.won(p.listPrice) : '';
     $('priceTier').textContent = quote.signedIn ? `${quote.buyerEmail} · ${p?.tierLabel || ''} 가격` : '로그인하면 회원등급 가격이 적용됩니다.';
+    let bonusNote = $('audiobookBonusNote');
+    if (!bonusNote) {
+      bonusNote = document.createElement('p');
+      bonusNote.id = 'audiobookBonusNote'; bonusNote.className = 'buy-msg';
+      $('priceTier').insertAdjacentElement('afterend',bonusNote);
+    }
+    bonusNote.textContent = quote.audiobook?.included
+      ? (quote.audiobook.ready
+        ? '이 전자책에는 승인된 오디오북이 무료 포함됩니다. 구매 후 같은 서재에서 함께 받으세요.'
+        : '오디오북 무료 제공 대상 도서입니다. 오디오북은 음성·권리 검수 중이며, 준비가 완료되면 기존 구매자에게 추가 결제 없이 열립니다.')
+      : '전자책 출판 검수 완료 후 무료 오디오북 제공 여부를 확인합니다.';
+
     renderTiers();
     const list = $('channelList'); list.replaceChildren();
     const channels = [['유페이퍼', b.links?.upaper], ['Google Play Books', b.links?.google], ['Amazon Kindle', b.links?.amazon]].filter(([, url]) => url);
@@ -43,7 +55,13 @@
     $('ownedBox').hidden = true; $('payArea').hidden = false;
     const open = quote.checkout.open;
     $('payBtn').disabled = busy || !open || !quote.signedIn;
+    const notReady = quote.checkout.saleReady === false;
     const preparing = quote.checkout.fileReady === false && !quote.checkout.operator;
+    if (notReady) {
+      $('payBtn').textContent = quote.checkout.saleStatus || '출간 준비 중';
+      $('payNote').textContent = '출판 검수와 판본 확정이 끝나면 이곳에서 구매하실 수 있습니다. 아직 결제·청구되지 않습니다.';
+      return;
+    }
     $('payBtn').textContent = !open ? (preparing ? '전자책 준비 중' : '결제 준비 중') : quote.signedIn ? `${C.won(p?.amount)} 결제하기` : '로그인 후 결제';
     $('payNote').textContent = !open ? (preparing ? '판매용 전자책 파일을 마무리하고 있습니다. 준비되는 대로 이곳에서 바로 구매하실 수 있습니다.' : '에코디서점 결제를 여는 중입니다. 지금은 아래의 다른 판매처를 이용하실 수 있습니다.') : quote.checkout.testOnly ? '운영자 시험 결제 모드입니다(실제 청구 없음).' : quote.checkout.operator && quote.checkout.fileReady === false ? '운영자 확인용 결제입니다. 전자책 파일이 아직 없어 일반 고객에게는 판매가 열리지 않았습니다(실제 청구됩니다).' : '안전한 토스페이먼츠 결제창이 열립니다. 결제 후 바로 내 서재에서 받으실 수 있습니다.';
   }
@@ -87,7 +105,7 @@
   $('payBtn').addEventListener('click', pay);
   $('signOut').addEventListener('click', () => { C.forget(); load(); });
   C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; $('accountStatus').style.color = err ? 'var(--danger)' : ''; }, load);
-  document.querySelectorAll('[data-books-base]').forEach(a => { a.href = C.BASE + a.getAttribute('data-books-base'); });
+  document.querySelectorAll('[data-books-base]').forEach(a => { a.href = C.under(a.getAttribute('data-books-base')); });
   if (!bookId) { $('buyRoot').hidden = true; $('buyError').hidden = false; $('buyErrorText').textContent = '도서를 선택해 주세요.'; }
   else load();
 })();

@@ -47,6 +47,10 @@ test('workspace admin projects root and mall sections from tenant-local capabili
   assert.equal(workspaceAdminCanAccess('marketing_manager','confirmations'),false);
   assert.equal(workspaceAdminCanAccess('manager','members'),false);
   assert.equal(workspaceAdminCanAccess('workspace_admin','members'),true);
+  assert.equal(workspaceAdminCanAccess('workspace_admin','status'),true);
+  assert.equal(workspaceAdminCanAccess('workspace_admin','records'),true);
+  assert.equal(workspaceAdminCanAccess('external_developer','status'),true);
+  assert.equal(workspaceAdminCanAccess('external_developer','records'),false);
   assert.equal(workspaceAdminCanAccess('member','overview'),false);
   const source=await (await workspaceAdminScript()).text();
   assert.match(source,/current_site_activity_contexts/);

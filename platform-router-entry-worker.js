@@ -46,6 +46,7 @@ import { searchVerificationFileResponse } from './search-engine-verification.js'
 import { EKODI_PUBLIC_REGISTRY_PATH, EKODI_DYNAMIC_SITEMAP_PATH, EKODI_DYNAMIC_LLMS_PATH, isPublicDiscoveryPath, ekodiPublicRegistryResponse, ekodiDynamicSitemapResponse, ekodiDynamicLlmsResponse } from './public-discovery-registry.js';
 import { publicDiscoveryContentResponse } from './public-discovery-content.js';
 import { storePortfolioAdminPage, storePortfolioAdminPanelPage, storePortfolioAdminPanelScript, storePortfolioAdminShellScript } from './store-portfolio-admin-page.js';
+import { storePortfolioTodayPage, storePortfolioTodayScript } from './store-portfolio-today.js';
 import { isStorePosAgentDownloadPath, storePosAgentDownload } from './store-pos-agent-download.js';
 import { tenantAdminCommandHomeScript, tenantAdminCommandHomeCss } from './tenant-admin-command-home.js';
 import { isLearningPath, learningPage, learningScript, learningStyles } from './learning-page.js';
@@ -578,6 +579,8 @@ async function routePlatform(request,env,ctx){
         if(['/store-admin.js','/jadam-admin.js','/pizzamaru-admin.js','/yogurt-admin.js'].includes(url.pathname))return storeAdminScript();
         if(url.pathname==='/cmpmyi/admin/panel.js')return storePortfolioAdminPanelScript();
         if(url.pathname==='/cmpmyi/admin/shell.js')return storePortfolioAdminShellScript();
+        if(url.pathname==='/cmpmyi/admin/today.js')return storePortfolioTodayScript();
+        if(url.pathname==='/cmpmyi/admin/panel/today'||url.pathname==='/cmpmyi/admin/panel/today/')return storePortfolioTodayPage();
         const cmpmyiPanel=url.pathname.match(/^\/cmpmyi\/admin\/panel\/([a-z-]+)\/?$/i);
         if(cmpmyiPanel)return storePortfolioAdminPanelPage(cmpmyiPanel[1]);
         if(url.pathname==='/cmpmyi/admin'||url.pathname==='/cmpmyi/admin/')return injectEkodiShell(storePortfolioAdminPage(),'business','admin');

@@ -76,8 +76,8 @@ test('My EKODI is not a cross-service token landing page',()=>{
 test('auth and store releases are cache-busted for return continuity',()=>{
   assert.match(router,/client-auth\.js\?v=20261028-singles-choose-account/);
   assert.match(entry,/auth-router\.js\?v=20261028-singles-choose-account/);
-  assert.match(store,/store-admin\.css\?v=20261026-compact-head-v1/);
-  assert.match(store,/20261026-compact-head-v1/);
+  assert.match(store,/store-admin\.css\?v=20261028-today-board-v1/);
+  assert.match(store,/20261028-today-board-v1/);
 });
 
 test('v1.27.3: login always returns to the exact pre-login page and never falls back to a My page',()=>{
@@ -123,4 +123,15 @@ test('v1.27.4: Google sign-in is user-initiated and the returned page shows the 
   assert.doesNotMatch(singles,/로그인 확인 · 회원서비스 준비 중/);
   assert.match(singles,/button\('로그아웃'/);
   assert.match(client,/계정으로 로그인되어 있습니다\. 원래 보던 화면으로 돌아갑니다/);
+});
+
+test('v1.27.5: a signed-in person is never shown a login entry again',()=>{
+  const policy=registry.authenticationReturnContinuityPolicy;
+  for(const key of ['signedInPersonNeverPromptedToLoginAgain','existingSessionResolvedBeforeLoginEntry','loginUiOnlyWithoutSessionOrExplicitAccountSwitch']) assert.equal(policy[key],true,key);
+  const singles=read('sites/ekodi-singles/public/app.js');
+  assert.match(singles,/function storedSession\(\)/);
+  assert.match(singles,/const resuming=Boolean\(tokenHash\)\|\|storedSession\(\);/);
+  assert.match(singles,/if\(resuming\)\{hideLoginEntries\(\);/);
+  assert.match(singles,/else showGuest\(\);/);
+  assert.match(client,/if\(existing\)\{/,'central auth page reuses an existing session before rendering Google sign-in');
 });

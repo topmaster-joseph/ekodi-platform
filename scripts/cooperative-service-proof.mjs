@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { loadCooperativeProject } from '../cooperative-store.js';
 
-const tabs = ['현황', '조합정보', '구성원·사업자', '설립서류', '총회·신고 일정', '공지', '회의록', '지원사업', '계정·권한'];
-const panelIds = ['overview', 'profile', 'founders', 'documents', 'schedule', 'notices', 'meetings', 'supports', 'accounts'];
+const tabs = ['현황', '출범 진행', '조합정보', '구성원·사업자', '설립서류', '총회·신고 일정', '공지', '회의록', '지원사업', '계정·권한'];
+const panelIds = ['overview', 'progress', 'profile', 'founders', 'documents', 'schedule', 'notices', 'meetings', 'supports', 'accounts'];
 
 export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f, cooperatives, checks, screenshot }) {
   const read = coop => loadCooperativeProject(f.db, coop);
@@ -47,6 +47,12 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, coop.slug + ' ' + label + ' overflow at ' + width);
       }
       proof(coop, 'all-nine-admin-tabs-reflow', { width, tabs: tabs.length });
+      await tab(page,'설립서류');
+      assert.equal(await page.locator('[data-preparation-id]').count(),2);
+      assert.equal(await page.locator('#preparation-09 textarea').getAttribute('maxlength'),'2000');
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+      await screenshot(page,coop.slug+'-preparation-'+width);
+      proof(coop,'private-preparation-drafts-responsive',{width});
     }
 
     await tab(page, '조합정보');
@@ -86,12 +92,63 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     assert.ok(charter.text.includes('제1조(설립과 명칭) 이 조합은 협동조합기본법에 의하여 설립하며, ' + coop.legalName + '이라 한다.'));
     proof(coop, 'document-status-memo-reload-and-charter-download');
 
+    const plan=page.locator('#preparation-09 [name="body"]'),budget=page.locator('#preparation-10 [name="body"]');
+    await tab(page,'출범 진행');await page.locator('[data-progress-key="09"] summary').click();
+    assert.equal(await page.locator('#progress-09 [name="note"]').getAttribute('maxlength'),'2000');
+    await page.locator('#progress-09 [name="note"]').fill('진행 화면에서 작성한 미저장 원본');
+    await tab(page,'조합정보');await submit(page,'profileForm');await tab(page,'설립서류');
+    assert.equal(await plan.inputValue(),'진행 화면에서 작성한 미저장 원본');
+    assert.equal(await page.locator('#progress-09 [name="note"]').inputValue(),'진행 화면에서 작성한 미저장 원본');
+    await page.locator('[data-preparation-template="09"]').click();assert.equal(await plan.inputValue(),'진행 화면에서 작성한 미저장 원본');
+    await page.locator('.preparation-packet summary').click();await page.locator('[data-preparation-export]').click();
+    assert.ok((await page.locator('#status').innerText()).includes('먼저 저장'));
+    await plan.fill('');
+    const beforeDraft=await read(coop);
+    await page.locator('[data-preparation-template="09"]').click();
+    assert.ok((await plan.inputValue()).includes(coop.name+' 사업계획 검토용 초안'));
+    assert.deepEqual(await read(coop),beforeDraft,'loading a worksheet cannot write');
+    const planText=await plan.inputValue()+'\n'+coop.publicSlug+'-private-plan <img src=x onerror="window.__draftExecuted=true">';
+    await plan.fill(planText);
+    await page.locator('[data-preparation-template="09"]').click();assert.equal(await plan.inputValue(),planText);
+    assert.ok((await page.locator('#status').innerText()).includes('이미 작성'));
+    await page.locator('[data-preparation-template="10"]').click();
+    const budgetText=await budget.inputValue()+'\n사업 금액 미정 · 추가 검토';await budget.fill(budgetText);
+    await submit(page,'preparation-09');assert.equal(await budget.inputValue(),budgetText,'other draft must remain');
+    assert.equal((await read(coop)).state.progress.items[8].note,planText);
+    assert.deepEqual((await read(coop)).state.documents,beforeDraft.state.documents);
+    await page.locator('.preparation-packet summary').click();
+    await page.locator('[data-preparation-export]').click();
+    assert.ok((await page.locator('#status').innerText()).includes('먼저 저장'));
+    await submit(page,'preparation-10');await reload(page);await tab(page,'설립서류');
+    assert.equal(await plan.inputValue(),planText);assert.equal(await budget.inputValue(),budgetText);
+    assert.equal(await page.evaluate(()=>window.__draftExecuted===true),false);
+    await page.locator('.preparation-packet summary').click();
+    assert.ok((await page.locator('#preparationPacketText').innerText()).includes(planText));
+    const packet=await download(page,'[data-preparation-export]');
+    assert.equal(packet.filename,coop.publicSlug+'-preparation-drafts.txt');assert.ok(packet.text.includes(coop.name));assert.ok(packet.text.includes(planText));assert.ok(packet.text.includes(budgetText));
+    assert.equal(packet.text.includes('@example.test'),false);assert.equal(packet.text.includes(other.name),false);
+    await tab(page,'출범 진행');await page.locator('[data-progress-key="09"] summary').click();
+    const progressPlan=page.locator('#progress-09');
+    assert.equal(await progressPlan.locator('[name="note"]').inputValue(),planText);
+    await progressPlan.locator('[name="status"]').selectOption('완료');await progressPlan.locator('[name="completedDate"]').fill('2026-10-28');
+    await progressPlan.locator('[name="evidence"]').fill('오프라인 시험 사업계획 근거');await progressPlan.locator('[name="verified"]').check();
+    await submit(page,'progress-09');assert.equal((await read(coop)).state.progress.items[8].verified,true);
+    await tab(page,'설립서류');await plan.fill(planText+'\n추가 검토');
+    assert.equal(await page.locator('#progress-09 [name="note"]').inputValue(),planText+'\n추가 검토');
+    await submit(page,'preparation-09');assert.equal((await read(coop)).state.progress.items[8].verified,false);
+    await page.setViewportSize({width:390,height:844});
+    await page.locator('.preparation-packet summary').click();
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+    await screenshot(page,coop.slug+'-preparation-saved-390');
+    await page.setViewportSize({width:1440,height:950});
+    proof(coop,'private-plan-budget-create-reload-sync-packet-and-review-reset',{maxLength:2000,unsavedTemplateWrites:0});
+
     await tab(page, '총회·신고 일정');
     const dates = { foundingMeetingDate: '2026-11-20', filingDate: '2026-11-23', confirmationDate: '2026-12-01', capitalPaidDate: '2026-12-02', registrationDate: '2026-12-10' };
     for (const [name, value] of Object.entries(dates)) await page.locator('#datesForm [name="' + name + '"]').fill(value);
     await submit(page, 'datesForm'); await reload(page); await tab(page, '총회·신고 일정');
     for (const [name, value] of Object.entries(dates)) assert.equal(await page.locator('#datesForm [name="' + name + '"]').inputValue(), value);
-    assert.deepEqual(await page.locator('.deadline-list b').allTextContents(), ['2026-11-13', '2026-12-13', '2026-12-16']);
+    assert.deepEqual(await page.locator('[data-panel="schedule"] .deadline-list b').allTextContents(), ['2026-11-12', '2026-12-13', '2026-12-16']);
     proof(coop, 'all-five-dates-persist-and-reference-calculations');
 
     const kinds = [

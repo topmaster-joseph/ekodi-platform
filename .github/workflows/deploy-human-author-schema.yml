@@ -1,0 +1,248 @@
+name: Deploy Human Author Private Schema
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261028010000_human_author_membership_writing.sql'
+      - 'supabase/migrations/20261029010000_human_author_revocation_guard.sql'
+      - 'scripts/sql/human-author-revocation-postflight.sql'
+      - 'test/human-author-revocation-guard.test.mjs'
+      - 'scripts/sql/human-author-release-*.sql'
+      - 'test/human-author-schema-release.test.mjs'
+      - '.github/workflows/deploy-human-author-schema.yml'
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Existing EKODI Orchestrator receipt source (ai/.../orch_...)'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Matching EKODI Orchestrator task ID'
+        required: true
+        type: string
+      expected_main_sha:
+        description: 'Exact protected main commit SHA to release'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: human-author-private-schema-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: false
+
+env:
+  PROD_PROJECT: renzehysxirjilvdxacv
+  DEV_PROJECT: lxcxwbdwwojjkgybbqii
+  MIGRATION: supabase/migrations/20261028010000_human_author_membership_writing.sql
+  PREFLIGHT: scripts/sql/human-author-release-preflight.sql
+  POSTFLIGHT: scripts/sql/human-author-release-postflight.sql
+  REVOKE_MIGRATION: supabase/migrations/20261029010000_human_author_revocation_guard.sql
+  REVOKE_PROBE: scripts/sql/human-author-revocation-postflight.sql
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate restricted schema promotion contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test test/human-author-schema-release.test.mjs test/human-publishing-private-author.test.mjs test/human-author-revocation-guard.test.mjs
+          node scripts/validate-supabase-environment-boundary.mjs
+          test -s "$MIGRATION"
+          test "$(git hash-object "$MIGRATION")" = "b3cdf0e9296ac7c4ac402d7fa0d56ced88ab3761"
+          test -s "$PREFLIGHT"
+          test -s "$POSTFLIGHT"
+          test -s "$REVOKE_MIGRATION"
+          test -s "$REVOKE_PROBE"
+          test "$(git hash-object "$REVOKE_MIGRATION")" = "a5139552064e3b134622e313cffade507c90a80d"
+          ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table|drop[[:space:]]+column' "$REVOKE_MIGRATION"
+          ! grep -Eiq 'drop[[:space:]]+table|truncate[[:space:]]+table|drop[[:space:]]+column' "$MIGRATION"
+
+  production:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      RELEASE_BRANCH: ${{ inputs.release_branch_ref }}
+      RELEASE_TASK: ${{ inputs.release_task_id }}
+      EXPECTED_SHA: ${{ inputs.expected_main_sha }}
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify production ref, exact source SHA and signed orchestrator receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/main"
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git merge-base --is-ancestor f9f0a95170090648c620b97dba30a5e0867160df "$EXPECTED_SHA"
+          test "$(git hash-object "$MIGRATION")" = "b3cdf0e9296ac7c4ac402d7fa0d56ced88ab3761"
+          test "$(git hash-object "$REVOKE_MIGRATION")" = "a5139552064e3b134622e313cffade507c90a80d"
+          [[ "$RELEASE_BRANCH" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]]
+          [[ "$RELEASE_TASK" =~ ^orch_[a-zA-Z0-9_-]+$ ]]
+          test "${RELEASE_BRANCH##*/}" = "$RELEASE_TASK"
+          branch_encoded=$(printf '%s' "$RELEASE_BRANCH" | jq -sRr @uri)
+          task_encoded=$(printf '%s' "$RELEASE_TASK" | jq -sRr @uri)
+          curl --fail-with-body -sS --max-time 20 \
+            "https://ekodi.kr/api/orchestrator/release-receipt?taskId=$task_encoded&branchRef=$branch_encoded" \
+            | jq -e --arg task "$RELEASE_TASK" --arg branch "$RELEASE_BRANCH" \
+              '.ok == true and .authorized == true and .authority == "ekodi-orchestrator" and .taskId == $task and .branchRef == $branch' >/dev/null
+          echo 'Exact main SHA and orchestrator receipt verified.'
+
+      - name: Select protected production Management API credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-}"
+          test -n "$token" || token="${TOKEN_B:-}"
+          test -n "$token" || token="${TOKEN_C:-}"
+          test -n "$token" || token="${TOKEN_D:-}"
+          if [ -z "$token" ]; then
+            echo 'Production Supabase token missing. Refusing schema mutation.'
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Verify development schema is secured before promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:true}' "$POSTFLIGHT" > /tmp/human-db-query.json
+          code=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/human-dev-proof.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$DEV_PROJECT/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/human-db-query.json)
+          test "$code" = 201
+          jq -e 'length == 1 and (.[0] | all(.[]; . == true))' /tmp/human-dev-proof.json >/dev/null
+          echo 'Development security baseline passed.'
+
+      - name: Verify development revocation policy before promotion
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:true}' "$REVOKE_PROBE" > /tmp/human-revoke-query.json
+          code=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/human-revoke-dev.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$DEV_PROJECT/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/human-revoke-query.json)
+          test "$code" = 201
+          jq -e 'length == 1 and (.[0] | all(.[]; . == true))' /tmp/human-revoke-dev.json >/dev/null
+          echo 'DEV subscription revocation policy is active.'
+
+      - name: Detect existing production state without touching data
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:true}' "$PREFLIGHT" > /tmp/human-db-query.json
+          code=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/human-prod-preflight.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROD_PROJECT/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/human-db-query.json)
+          test "$code" = 201
+          jq -e 'length == 1 and .[0].author_projects == true and .[0].author_chapters == true and .[0].existing_author_memberships == true and (.[0].fresh == true or .[0].already_installed == true)' /tmp/human-prod-preflight.json >/dev/null
+          if jq -e '.[0].already_installed == true' /tmp/human-prod-preflight.json >/dev/null; then
+            echo 'already_installed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'already_installed=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply the one reviewed, additive Human Author migration
+        if: steps.preflight.outputs.already_installed == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:false}' "$MIGRATION" > /tmp/human-db-migration.json
+          code=$(curl --silent --show-error --max-time 60 \
+            -o /tmp/human-prod-migration-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROD_PROJECT/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/human-db-migration.json)
+          if [ "$code" != 201 ]; then
+            echo 'Human Author protected migration rejected; inspect the protected production job.'
+            exit 1
+          fi
+          echo 'Reviewed private schema applied; paid plan remains unprovisioned.'
+
+      - name: Verify production privacy, RLS, entitlements and owner-only RPC
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:true}' "$POSTFLIGHT" > /tmp/human-db-query.json
+          code=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/human-prod-proof.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROD_PROJECT/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/human-db-query.json)
+          test "$code" = 201
+          jq -e 'length == 1 and (.[0] | all(.[]; . == true))' /tmp/human-prod-proof.json >/dev/null
+          echo 'Production Human Author privacy schema VERIFIED. Paid subscription remains inactive.'
+
+      - name: Read-only production revocation preflight
+        id: revocation
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:true}' "$REVOKE_PROBE" > /tmp/human-revoke-query.json
+          code=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/human-revoke-preflight.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROD_PROJECT/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/human-revoke-query.json)
+          test "$code" = 201
+          jq -e 'length == 1 and .[0].owner_history_readable == true and .[0].append_only == true and .[0].no_self_entitlement == true' /tmp/human-revoke-preflight.json >/dev/null
+          if jq -e '.[0].revocation_guard == true' /tmp/human-revoke-preflight.json >/dev/null; then
+            echo 'installed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'installed=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Apply reviewed author-interview revocation policy
+        if: steps.revocation.outputs.installed == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:false}' "$REVOKE_MIGRATION" > /tmp/human-revoke-migration.json
+          code=$(curl --silent --show-error --max-time 60 \
+            -o /tmp/human-revoke-migration-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROD_PROJECT/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/human-revoke-migration.json)
+          test "$code" = 201
+          echo 'Private author revocation policy applied; no user drafts removed.'
+
+      - name: Verify production revocation and historical read access
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:true}' "$REVOKE_PROBE" > /tmp/human-revoke-query.json
+          code=$(curl --silent --show-error --max-time 30 \
+            -o /tmp/human-revoke-prod.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$PROD_PROJECT/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/human-revoke-query.json)
+          test "$code" = 201
+          jq -e 'length == 1 and (.[0] | all(.[]; . == true))' /tmp/human-revoke-prod.json >/dev/null
+          echo 'Production cancelled/expired/archived author draft appends blocked.'

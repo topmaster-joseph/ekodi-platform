@@ -241,9 +241,8 @@
     });
     root.querySelectorAll?.('.admin-preview-link').forEach(link => {
       link.textContent = IS_PRODUCTION_UI ? '상담관리 →' : '스테이징 상담관리 보기 →';
-      if (IS_PRODUCTION_UI) link.href = 'https://admin.ekodi.kr/';
+      if (IS_PRODUCTION_UI) link.href = 'https://ekodi.kr/admin/services/insurance';
     });
-    renderWithdrawalPanel();
   }
 
   document.addEventListener('submit', event => {
@@ -263,5 +262,5 @@
   });
   observer.observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener('click', event => { if (event.target.closest('[data-view="compare"]')) queueMicrotask(loadReferenceCatalog); });
-  document.addEventListener('DOMContentLoaded', () => { reviseHandoffCopy(); loadReferenceCatalog(); });
+  document.addEventListener('DOMContentLoaded', () => { reviseHandoffCopy(); renderWithdrawalPanel(); loadReferenceCatalog(); });
 })();

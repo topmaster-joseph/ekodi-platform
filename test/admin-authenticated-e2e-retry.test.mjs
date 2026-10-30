@@ -11,8 +11,9 @@ const productionGateSource = () => readFile(new URL('../.github/workflows/produc
 
 test('authenticated Admin E2E isolates every menu in a fresh Chromium process and retries only that menu once', async () => {
   const source = await retrySource();
-  assert.match(source, /const maxAttemptsPerMenu = 2/);
-  assert.match(source, /const menuTimeoutMs = 30_000/);
+  assert.match(source, /const maxAttemptsPerMenu = focusedDiagnostic \? 1 : 2/);
+  assert.match(source, /const menuTimeoutMs = focusedDiagnostic \? 90_000 : 30_000/);
+  assert.match(source, /if \(!fatal && !focusOnly\)/);
   assert.match(source, /adminMenuOrder\(\)/);
   assert.match(source, /spawn\(process\.execPath, \[script\]/);
   assert.match(source, /'scripts\/admin-authenticated-e2e-menu-worker\.mjs'/);
@@ -87,7 +88,8 @@ test('public-site controls E2E proves the live Control API and CGMA form render'
   assert.match(source, /authorization: `Bearer \$\{token\}`/);
   assert.match(source, /access-control-allow-origin/);
   assert.match(source, /page\.evaluate\(\(\) => window\.EKODIPublicSiteControls\.load\(\)\)/);
-  assert.match(source, /form\[data-public-site-id="cgma"\]/);
+  assert.match(source, /data-psc-select="cgma"/);
+  assert.match(source, /data-psc-form/);
   assert.match(source, /message\.includes\('상태를 확인했습니다'\)/);
   assert.match(source, /menuId === 'public-site-controls'/);
 });
@@ -112,4 +114,30 @@ test('Control staging writes and reloads AI collaboration settings only in the i
   assert.match(verifier, /audit\?limit=5/);
   assert.match(verifier, /productionMutation: false/);
   assert.match(verifier, /requireHumanApprovalForDestructiveAction/);
+});
+
+test('architecture focus is isolated, read-only and not mistaken for all-menu acceptance',async()=>{
+  const scope=await readFile(new URL('../scripts/lib/admin-e2e-menu-scope.mjs',import.meta.url),'utf8');
+  const worker=await workerSource();
+  const workflow=await productionWorkflowSource();
+  const retry=await retrySource();
+  assert.match(scope,/['"]social-accounts['"],\s*['"]architecture['"]/);
+  assert.match(scope,/if \(!allMenuIds\.includes\(focus\)\)/);
+  assert.match(workflow,/^\s*-\s*architecture\s*$/m);
+  assert.match(workflow,/inputs\.focus_menu == 'architecture'/);
+  assert.match(workflow,/architecture-focused-production-/);
+  assert.match(workflow,/if: \$\{\{ inputs\.focus_menu == 'all' \}\}/);
+  assert.match(retry,/const focusedDiagnostic = \['social-accounts','architecture'\]/);
+  assert.match(retry,/productionConvergenceAttempts = focusOnly \? 1 : 36/);
+  assert.match(retry,/focused read-only diagnostic \(not full-suite certification\)/);
+  assert.match(worker,/ADMIN-ARCH-ISOLATED-PROOF-20261029/);
+  assert.match(worker,/verifyArchitectureResponsive\(trigger, alreadyActive, started\)/);
+  assert.match(worker,/\[\[1440,3\],\[1366,3\],\[768,2\],\[390,1\],\[320,1\]\]/);
+  assert.match(worker,/ADMIN_ARCHITECTURE_FOCUSED_LIVE_E2E/);
+  assert.ok(worker.includes("'architecture-'+width+'.png'"));
+  assert.match(worker,/const sample = await page\.evaluate/);
+  assert.match(worker,/sample\.overflow>2/);
+  assert.match(worker,/sample\.layerOverflow>2/);
+  assert.match(worker,/page\.setViewportSize\(\{width:1440,height:1100\}\)/);
+  assert.doesNotMatch(worker,/setInterval\(|process\.env\.E2E_ADMIN_TOKEN\s*=/);
 });

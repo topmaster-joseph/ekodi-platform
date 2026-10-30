@@ -21,7 +21,7 @@ for (const host of HOSTS) {
       const body = await res.text();
       assert.match(body, /^User-agent: \*$/m);
       assert.match(body, /^Allow: \/$/m);
-      assert.match(body, /^Sitemap: https:\/\/seonammedi\.kr\/sitemap\.xml$/m);
+      assert.match(body, /^Sitemap: https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr\/sitemap\.xml$/m);
       for (const path of SEONAMMEDI_ROBOTS_DISALLOW) assert.ok(body.includes('Disallow: ' + path));
       assert.doesNotMatch(body, /^Disallow: \/$/m, 'site root must stay crawlable');
     } finally { restore(); }
@@ -36,7 +36,7 @@ for (const host of HOSTS) {
       const xml = await res.text();
       assert.match(xml, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
       const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]);
-      assert.deepEqual(locs, SEONAMMEDI_SITEMAP_PATHS.map(p => 'https://seonammedi.kr' + p));
+      assert.deepEqual(locs, SEONAMMEDI_SITEMAP_PATHS.map(p => 'https://xn--3e0b8b58jw4co4mnpll3k.kr' + p));
       for (const loc of locs) assert.doesNotMatch(loc, /admin|minutes|api|ekodi\.kr/);
     } finally { restore(); }
   });

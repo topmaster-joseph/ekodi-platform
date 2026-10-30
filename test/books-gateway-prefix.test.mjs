@@ -31,3 +31,15 @@ test('commerce API paths resolve under the /books mount exactly once', async () 
     assert.doesNotMatch(text, /\.api\(\s*["'`]\//, `${file}: C.api() paths must be relative (no leading slash)`);
   }
 });
+
+test('cover/link paths get the /books mount exactly once (gateway may already have added it)', async () => {
+  const vm = await import('node:vm');
+  const source = readFileSync(new URL('../books/buy/commerce-client.js', import.meta.url), 'utf8');
+  const load = pathname => { const ctx = { window: {}, location: { pathname }, localStorage: { getItem: () => null }, console }; vm.runInNewContext(source, ctx); return ctx.window.EkodiBooksCommerce; };
+  const mounted = load('/books/buy/');
+  assert.equal(mounted.under('/assets/a.svg'), '/books/assets/a.svg');
+  assert.equal(mounted.under('/books/assets/a.svg'), '/books/assets/a.svg');
+  assert.equal(mounted.under('https://ekodi.kr/x.png'), 'https://ekodi.kr/x.png');
+  const direct = load('/buy/');
+  assert.equal(direct.under('/assets/a.svg'), '/assets/a.svg');
+});

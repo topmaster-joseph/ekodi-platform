@@ -104,7 +104,8 @@ test('synthetic production Admin UI verifier exercises the native Control comman
   assert.match(text,/admin-control-home/);
   assert.match(text,/frameWidth<300/);
   assert.match(text,/command-roundtrip/);
-  assert.match(text,/expectedCount = menus\.length \+ 1/);
+  assert.match(text,/auditAdminProductionUiCoverage\(menuIds, results\)/);
+  assert.match(text,/if \(!coverage\.ok\) throw new Error/);
 });
 
 
@@ -128,4 +129,14 @@ test('synthetic production Admin UI verifier stubs canonical AI runtime read rou
     'https://ekodi.kr/api/control/ai/v8/orchestrator/human-gates?limit=20',
   ]) assert.ok(text.includes(route), route);
   assert.doesNotMatch(text, /\/api\/control\/common-services\/ai\/(status|tasks|nodes)/);
+});
+
+test('Social Hub mobile screenshot requires a closed overlay and visible real heading', async () => {
+  const text = await source();
+  assert.match(text, /await page\.keyboard\.press\('Escape'\)/);
+  assert.match(text, /!document\.body\.classList\.contains\('admin-mobile-drawer-open'\)/);
+  assert.match(text, /sidebarRight>2/);
+  assert.match(text, /!mobile\.headingVisible/);
+  assert.match(text, /point===heading \|\| heading\.contains\(point\)/);
+  assert.match(text, /menu-social-mobile\.png/);
 });
