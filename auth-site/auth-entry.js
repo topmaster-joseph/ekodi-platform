@@ -5,7 +5,7 @@ const returnTo = params.get('return_to') || params.get('returnTo') || '';
 const guardKey = `ekodi-auth-entry:${site}:${returnTo}`;
 const now = Date.now();
 const navigationType = performance.getEntriesByType?.('navigation')?.[0]?.type || '';
-let previous = 0;
+let previous = 0; // check
 
 try {
   previous = Number(sessionStorage.getItem(guardKey) || 0);
