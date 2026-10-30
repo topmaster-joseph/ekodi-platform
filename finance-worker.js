@@ -1,6 +1,7 @@
 import authWorker from './auth-worker.js';
 
 const ALLOWED_ORIGINS = new Set([
+  'https://ekodi.kr',
   'https://admin.ekodi.kr',
   'https://admin.biz.ekodi.kr',
   'https://admin.church.ekodi.kr',
@@ -27,6 +28,12 @@ function json(data, status = 200, baseHeaders = null, origin = '') {
   const cors = corsHeaders(origin);
   for (const [key, value] of cors.entries()) headers.set(key, value);
   return new Response(JSON.stringify(data), { status, headers });
+}
+
+// Legacy global Finance API includes cross-organization accounting and order writes.
+// Tenant-specific permissions are handled by finance-banking-worker separately.
+export function hasGlobalFinanceAccess(session) {
+  return session?.authenticated === true && session?.role === 'super_admin';
 }
 
 async function sessionCheck(request, env) {
@@ -70,23 +77,35 @@ async function tossPayment(env, paymentKey, orderId) {
 }
 
 async function routeForOrder(env, orderId) {
-  const order = await env.DB.prepare(`SELECT organization_id, business_unit_id, project_id, source_domain
+  // Never infer a legal payee from an untrusted orderId or webhook prefix.
+  // A server-owned order is the only authority for organization and amount.
+  if (!orderId || typeof orderId !== 'string' || orderId.length > 160)
+    throw new Error('ORDER_ID_REQUIRED');
+  const order = await env.DB.prepare(`SELECT organization_id, business_unit_id, project_id, source_domain, amount, currency
     FROM payment_orders WHERE order_id = ?`).bind(orderId).first();
-  if (order) return order;
-  if (/^CHURCH_/.test(String(orderId || ''))) {
-    return { organization_id: 'EKODICHURCH', business_unit_id: 'CHURCH', project_id: null, source_domain: 'church.ekodi.kr' };
-  }
-  return {
-    organization_id: 'EKODIBIZ',
-    business_unit_id: 'PAY',
-    project_id: null,
-    source_domain: 'ekodi.kr'
-  };
+  if (!order || !order.organization_id || !order.business_unit_id || !order.source_domain)
+    throw new Error('ORDER_NOT_REGISTERED');
+  const expectedAmount=Number(order.amount);
+  if (!Number.isSafeInteger(expectedAmount) || expectedAmount <= 0)
+    throw new Error('ORDER_AMOUNT_NOT_VERIFIED');
+  if (String(order.currency || 'KRW') !== 'KRW')
+    throw new Error('ORDER_CURRENCY_NOT_SUPPORTED');
+  return order;
 }
 
 async function upsertPayment(env, payment) {
   if (!payment?.paymentKey || !payment?.orderId) throw new Error('INVALID_PAYMENT');
   const route = await routeForOrder(env, payment.orderId);
+  const approvedAmount = Number(payment.totalAmount);
+  if (!Number.isSafeInteger(approvedAmount) || approvedAmount !== Number(route.amount))
+    throw new Error('PG_ORDER_AMOUNT_MISMATCH');
+  if (String(payment.currency || '') !== String(route.currency || 'KRW'))
+    throw new Error('PG_ORDER_CURRENCY_MISMATCH');
+  // In the legacy single-MID lane, reject PG events for another MID if a
+  // merchant MID is explicitly configured. Multi-MID must be keyed by the
+  // trusted order's merchant profile, never the webhook payload.
+  if (env.TOSS_MID && String(payment.mId || '') !== String(env.TOSS_MID))
+    throw new Error('PG_MID_MISMATCH');
   const now = new Date().toISOString();
   const gross = Math.trunc(Number(payment.totalAmount ?? payment.balanceAmount ?? 0) || 0);
   const vat = Number.isFinite(Number(payment.vat)) ? Math.trunc(Number(payment.vat)) : null;
@@ -216,6 +235,12 @@ export default {
       const now = new Date().toISOString();
       try {
         const verified = await tossPayment(env, paymentKey, orderId);
+        // The untrusted callback may supply either identifier, but each
+        // supplied identifier must refer to the payment returned by Toss.
+        if (paymentKey && String(verified.paymentKey || '') !== String(paymentKey))
+          throw new Error('PG_PAYMENT_KEY_MISMATCH');
+        if (orderId && String(verified.orderId || '') !== String(orderId))
+          throw new Error('PG_ORDER_ID_MISMATCH');
         const route = await upsertPayment(env, verified);
         await env.DB.prepare(`INSERT INTO integration_events
           (provider,external_id,event_type,status,received_at,processed_at,detail)
@@ -236,6 +261,8 @@ export default {
 
     const auth = await sessionCheck(request, env);
     if (!auth.session) return auth.response;
+    if (!hasGlobalFinanceAccess(auth.session))
+      return json({ error: '최고관리자 금융 권한이 필요합니다.' }, 403, auth.response.headers, origin);
 
     try {
       if (request.method === 'GET' && url.pathname === '/api/finance/overview') {
@@ -253,19 +280,26 @@ export default {
       }
       if (request.method === 'POST' && url.pathname === '/api/finance/orders') {
         const body = await readJson(request);
-        const amount = Math.trunc(Number(body?.amount));
-        if (!body?.orderId || !body?.organizationId || !body?.businessUnitId || !body?.sourceDomain || !Number.isFinite(amount) || amount < 0) {
-          return json({ error: '주문 분류값을 확인해 주세요.' }, 400, auth.response.headers, origin);
+        const amount = Number(body?.amount);
+        if (!body?.orderId || !body?.organizationId || !body?.businessUnitId || !body?.sourceDomain ||
+            !Number.isSafeInteger(amount) || amount <= 0 || String(body.currency || 'KRW') !== 'KRW') {
+          return json({ error: '주문 분류값과 양의 정수 원화 금액을 확인해 주세요.' }, 400, auth.response.headers, origin);
         }
+        // The legacy admin issuer is create-only. Neither tenant assignment nor
+        // the financial amount of a registered order may be rewritten via POST.
+        // A protected migration/reclassification flow must be built separately.
         const now = new Date().toISOString();
-        await env.DB.prepare(`INSERT INTO payment_orders
+        const result = await env.DB.prepare(`INSERT INTO payment_orders
           (order_id,organization_id,business_unit_id,project_id,source_domain,amount,currency,status,created_at,updated_at)
           VALUES (?,?,?,?,?,?,?,'CREATED',?,?)
-          ON CONFLICT(order_id) DO UPDATE SET organization_id=excluded.organization_id,business_unit_id=excluded.business_unit_id,
-            project_id=excluded.project_id,source_domain=excluded.source_domain,amount=excluded.amount,currency=excluded.currency,updated_at=excluded.updated_at`)
+          ON CONFLICT(order_id) DO NOTHING`)
           .bind(String(body.orderId), String(body.organizationId), String(body.businessUnitId), body.projectId || null,
-            String(body.sourceDomain), amount, String(body.currency || 'KRW'), now, now).run();
-        await audit(env, auth.session, 'finance.order.classify', String(body.orderId), JSON.stringify({ organizationId: body.organizationId, businessUnitId: body.businessUnitId, projectId: body.projectId || null }));
+            String(body.sourceDomain), amount, 'KRW', now, now).run();
+        if (Number(result?.meta?.changes ?? 0) !== 1)
+          return json({ error: '이미 등록된 주문이거나 생성 여부를 확인할 수 없습니다.' }, 409, auth.response.headers, origin);
+        await audit(env, auth.session, 'finance.order.create', String(body.orderId), JSON.stringify({
+          organizationId: body.organizationId, businessUnitId: body.businessUnitId, projectId: body.projectId || null
+        }));
         return json({ ok: true }, 201, auth.response.headers, origin);
       }
       if (request.method === 'POST' && url.pathname === '/api/finance/entries') {
