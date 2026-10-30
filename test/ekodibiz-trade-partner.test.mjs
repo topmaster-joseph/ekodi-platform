@@ -8,7 +8,7 @@ test('EKODIBIZ public site keeps partner login inside business-area detail',asyn
   assert.ok(html.includes('WHAT WE DO'));
   assert.ok(html.includes('data-i18n="partnerLogin"'));
   assert.ok(!html.match(/<header[\s\S]*관계자 로그인[\s\S]*<\/header>/));
-  assert.ok(site.includes("if(type==='trade')return 'https://ekodi.kr/ekodibiz/trade'"));
+  assert.ok(site.includes("if(type==='trade')return scopedLogin('trade','https://ekodi.kr/ekodibiz/trade')"));
   assert.ok(!html.includes('id="goalForm"'));
   assert.ok(!html.includes('무엇을 이루고 싶으세요?'));
 });
