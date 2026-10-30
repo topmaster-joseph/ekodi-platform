@@ -51,6 +51,8 @@ jobs:
           node --test test/jubilee-series-private-r2-ingest.test.mjs
           node --check publishing/jubilee-series/private-ingest-receipt.mjs
           node --test test/jubilee-series-private-ingest-receipt.test.mjs
+          node --check publishing/jubilee-series/publisher-private-ingest-service.mjs
+          node --test test/jubilee-series-publisher-private-ingest-service.test.mjs
           node --check publishing/human/scheduled-release.js
           node --test test/human-publishing-scheduled-release.test.mjs
           node --check publishing/human/private-release-store.js
