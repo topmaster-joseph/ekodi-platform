@@ -180,7 +180,7 @@ test('read-only live Cloudflare CSP diagnostics reveal hashes and structure, nev
  assert.equal(rejected[0].hasCfParams,false);
  const code=read('scripts/diagnose-education-cloudflare-inline.mjs');
  assert.match(code,/route\\.abort\\('blockedbyclient'\\)/);
- assert.doesNotMatch(code,/bypassCSP|ignoreHTTPSErrors:\\s*true|route\\.fulfill\\(/);
+ assert.doesNotMatch(code,/bypassCSP|ignoreHTTPSErrors:\s*true|route\.fulfill\(/);
  const workflow=read('.github/workflows/education-release-continuity.yml');
  assert.match(workflow,/Read-only live Cloudflare inline CSP fingerprint/);
  assert.match(workflow,/continue-on-error: true/);
