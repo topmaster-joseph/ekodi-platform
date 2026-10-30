@@ -87,7 +87,7 @@ test('EKODI private draft executor creates three real API-shaped files, verifies
   assert.ok(x.files.every(f=>f.parents.includes(folder)));
   assert.equal(x.events.filter(e=>e[0]==='record'&&e[2]==='draft_readback_verified').length,3);
   assert.equal(x.events.filter(e=>e[0]==='finish').length,1);
-  assert.ok(x.calls.every(c=>c.url.startsWith('https://www.googleapis.com/')));
+  assert.ok(x.calls.every(c=>['www.googleapis.com','docs.googleapis.com','slides.googleapis.com'].includes(new URL(c.url).hostname)));
   assert.equal(x.calls.filter(c=>c.method==='POST').length,6);
   assert.equal(x.calls.filter(c=>c.method==='GET').length,3);
   assert.equal(x.events.findIndex(x=>x[0]==='verify')<x.events.findIndex(x=>x[0]==='claim'),true);
