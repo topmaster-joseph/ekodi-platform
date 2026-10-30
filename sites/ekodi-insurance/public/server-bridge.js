@@ -27,19 +27,34 @@
       return Array.isArray(state?.advisorChat?.messages) ? state.advisorChat.messages.slice(-20) : [];
     } catch { return []; }
   }
+  function readAccessStrict() {
+    const raw = localStorage.getItem(ACCESS_KEY);
+    if (raw === null) return [];
+    const items = JSON.parse(raw);
+    if (!Array.isArray(items) || items.some(item =>
+      !item || typeof item.id !== 'string' || !item.id ||
+      typeof item.accessToken !== 'string' || !item.accessToken)) {
+      throw new Error('revocation_access_invalid');
+    }
+    return items;
+  }
   function loadAccess() {
-    try {
-      const items = JSON.parse(localStorage.getItem(ACCESS_KEY) || '[]');
-      return Array.isArray(items) ? items.filter(item => item?.id && item?.accessToken) : [];
-    } catch { return []; }
+    try { return readAccessStrict(); }
+    catch { return []; } // display only; writes are guarded separately
   }
   function writeAccess(items) {
     // Never silently evict an older, still-valid consultation revocation token.
     if (!Array.isArray(items)) {
       throw new Error('revocation_access_invalid');
     }
-    // Capacity must only block NEW requests, never a customer attempting
-    // to remove a token from a historical over-capacity browser store.
+    // An unreadable existing store is NOT an empty store. Never overwrite it,
+    // including after an otherwise successful server-side revocation.
+    readAccessStrict();
+    if (items.some(item => !item || typeof item.id !== 'string' || !item.id ||
+        typeof item.accessToken !== 'string' || !item.accessToken)) {
+      throw new Error('revocation_access_invalid');
+    }
+    // Capacity blocks NEW requests only, not historical token deletion.
     const encoded = JSON.stringify(items);
     localStorage.setItem(ACCESS_KEY, encoded);
     if (localStorage.getItem(ACCESS_KEY) !== encoded) throw new Error('revocation_access_verify_failed');
@@ -52,15 +67,8 @@
     // at the protected capacity, or cannot accept an extra token record.
     const probeKey = ACCESS_KEY + '-probe-' + Math.random().toString(36).slice(2);
     try {
-      const raw = localStorage.getItem(ACCESS_KEY);
-      if (raw !== null) {
-        const entries = JSON.parse(raw);
-        if (!Array.isArray(entries) || entries.length >= MAX_ACCESS_ITEMS ||
-            entries.some(item => !item || typeof item.id !== 'string' ||
-              typeof item.accessToken !== 'string' || !item.id || !item.accessToken)) {
-          return false;
-        }
-      }
+      const entries = readAccessStrict();
+      if (entries.length >= MAX_ACCESS_ITEMS) return false;
       const sample = 'x'.repeat(512);
       localStorage.setItem(probeKey, sample);
       return localStorage.getItem(probeKey) === sample;
@@ -231,6 +239,7 @@
   async function revokeConsultation(item, button) {
     if (!item?.id || !item?.accessToken) return;
     if (button) button.disabled = true;
+    let serverRevoked = false;
     try {
       const response = await fetch(`${API}/api/consultations/${encodeURIComponent(item.id)}/revoke`, {
         method: 'POST',
@@ -240,14 +249,24 @@
         cache: 'no-store',
         body: JSON.stringify({ accessToken: item.accessToken })
       });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error || '상담요청 철회 실패');
-      writeAccess(loadAccess().filter(entry => entry.id !== item.id));
+      if (!response.ok) throw new Error('server_revoke_rejected');
+      serverRevoked = true;
+      writeAccess(readAccessStrict().filter(entry => entry.id !== item.id));
       toast('상담요청을 철회하고 서버의 연락처·공유대화 암호문을 제거했습니다.');
-    } catch (error) {
-      console.error('Insurance consultation revoke', error);
-      toast('상담요청 철회에 실패했습니다. 네트워크 연결을 확인해 주세요.');
-      if (button) button.disabled = false;
+    } catch {
+      // A successful server revoke is NOT a network failure. Never send
+      // another bearer request merely because local browser storage failed.
+      if (serverRevoked) {
+        const warning = document.createElement('p');
+        warning.setAttribute('role', 'alert');
+        warning.className = 'notice';
+        warning.textContent = '서버 상담요청 철회는 완료되었습니다. 다만 이 브라우저의 철회 목록을 갱신하지 못했습니다. 브라우저 기록을 초기화하지 마세요.';
+        button?.after(warning);
+        toast('서버 철회는 완료되었지만 브라우저 기록 갱신에 실패했습니다.');
+      } else {
+        toast('상담요청 철회를 확인하지 못했습니다. 네트워크 연결을 확인해 주세요.');
+        if (button) button.disabled = false;
+      }
     }
   }
   function renderWithdrawalPanel() {
