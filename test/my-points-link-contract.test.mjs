@@ -9,3 +9,15 @@ test('My EKODI activity tab links to the personal points page',()=>{
   assert.match(points, /id="loginLink"[^>]*hidden/);
   assert.match(points, /name="robots" content="noindex,nofollow,noarchive"/);
 });
+
+test('site points cannot call unlaunched API without a separately enabled capability',()=>{
+  const worker=fs.readFileSync(new URL('../my-worker.js',import.meta.url),'utf8');
+  const app=fs.readFileSync(new URL('../my/points/app.js',import.meta.url),'utf8');
+  const production=fs.readFileSync(new URL('../wrangler.my.toml',import.meta.url),'utf8');
+  const staging=fs.readFileSync(new URL('../wrangler.my.staging.toml',import.meta.url),'utf8');
+  assert.match(worker,/pointsEnabled:env\.POINTS_ENABLED==='true'&&dataEnabled/);
+  assert.match(app,/config\.pointsEnabled===true/);
+  assert.match(app,/if\(!enabled\)\{showMessage\('포인트 조회 서비스 준비 중입니다\.'\);return;\}/);
+  assert.match(production,/POINTS_ENABLED = "false"/);
+  assert.match(staging,/POINTS_ENABLED = "false"/);
+});

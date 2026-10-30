@@ -6,7 +6,7 @@ const login=document.getElementById('loginLink');
 const view=document.getElementById('balanceView');
 const balance=document.getElementById('balance');
 const history=document.getElementById('history');
-const enabled=Boolean(config.dataEnabled&&config.supabaseUrl&&config.supabasePublishableKey);
+const enabled=Boolean(config.dataEnabled&&config.pointsEnabled===true&&config.supabaseUrl&&config.supabasePublishableKey);
 const sb=enabled?createClient(config.supabaseUrl,config.supabasePublishableKey,
   {auth:{detectSessionInUrl:true,persistSession:true}}):null;
 const api=enabled?config.supabaseUrl.replace(/\/$/,'')+'/functions/v1/points-api':'';
