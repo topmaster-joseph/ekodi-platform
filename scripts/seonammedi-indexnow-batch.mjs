@@ -1,6 +1,8 @@
 // EKODI IndexNow is a plain HTTPS JSON protocol. Do not start an
 // unnecessary third-party browser, install Chromium or use paid API services.
 // Three first-party Node fetch calls replace 3 x N per-URL browser navigations.
+const PUBLIC_PATH = /^\/(?:$|board\/(?:notices|voices)$|board\/notices\/[1-9]\d*$)/;
+
 export const INDEXNOW_ENDPOINTS = Object.freeze([
   ['naver', 'https://searchadvisor.naver.com/indexnow'],
   ['bing', 'https://www.bing.com/indexnow'],
@@ -24,7 +26,7 @@ export function indexNowPayload({ urls, key, canonicalOrigin }) {
   for (const item of urls) {
     let url;
     try { url = new URL(item); } catch { throw new Error('Invalid submission URL'); }
-    if (url.origin !== origin.origin || url.href !== item || url.search || url.hash) {
+    if (url.origin !== origin.origin || url.href !== item || url.search || url.hash || !PUBLIC_PATH.test(url.pathname)) {
       throw new Error('Cross-domain or noncanonical IndexNow URL');
     }
   }
