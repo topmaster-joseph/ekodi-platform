@@ -15,3 +15,6 @@ Date 2026-10-30. Incident #6936.
 ## Authenticated required-check replay after protected-main sync
 - Former official head 06b0ac9e25e5974c2aba35a625dbf950665737f4 passed genuine required source CI. The Orchestrator synchronized source to 05cdaa25c28cf705c172ec55c5d57354d8f92762, producing bot action_required results that are not valid required checks.
 - This owner-authored docs-only checkpoint requests genuine CI on the exact currently synchronized official release head without weakening any security policy, impersonating required checks or issuing production deployment. EKODI orchestrator governs protected merge and release. Do not close #6936 until native production acceptance passes.
+
+## Repeat protected main convergence
+- Owner-authored source head e6f21d0c4e9dc6b46680aaf489285841c1bf901e passed all genuine CI; subsequent automatic main synchronization produced current official head 572544bb693b09addf552b2db8b913dc5a62c9b6 whose bot action_required is not proof. This docs-only owner-authored checkpoint asks authentic required checks again, without direct deployment, forced merge, policy change, bypass or fake legacy status. EKODI Orchestrator should prioritize this already green and scoped Education fix in protected merge order and re-run guarded production acceptance.
