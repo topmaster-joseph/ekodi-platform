@@ -110,6 +110,20 @@ test('missing D1 audit receipt never claims canary success',async()=>{
   assert.equal(result.ok,false);assert.equal(result.reason,'audit_unavailable');
   assert.equal(probes,1);
 });
+test('multirow D1 audit response is not accepted as canary evidence',async()=>{
+  let calls=0;
+  const DB={prepare(sql){return {bind(){return {run:async()=>
+    sql.includes('INSERT OR IGNORE')?{meta:{changes:1}}:{meta:{changes:2}}};}}}};
+  const result=await runGithubAppReadonlyCanary({...control(),DB},{
+    nowMs:NOW,probeImpl:async()=>{
+      calls++;return {ok:true,reason:'verified_readonly_observation',githubApiCalls:2};
+    }
+  });
+  assert.equal(calls,1);
+  assert.equal(result.ok,false);
+  assert.equal(result.reason,'audit_unavailable');
+  assert.equal(result.tokenExposed,false);
+});
 test('missing migration, invalid time and D1 write error fail closed',async()=>{
   let c=0;const malformed={prepare(){throw Error('private D1 details')}};
   const e={...control(),DB:malformed};
