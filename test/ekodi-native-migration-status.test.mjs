@@ -58,6 +58,8 @@ test('social and church public signals are only preliminary infrastructure obser
   assert.ok(d.tasks[3].missingEvidence.includes('real_worship_google_slides'));
   assert.ok(d.tasks[4].missingEvidence.includes('public_naver_proof_http_200'));
   assert.ok(d.tasks[4].missingEvidence.includes('naver_provider_ownership_confirmation'));
+  assert.ok(d.tasks[4].missingEvidence.includes('verified_cloudflare_release_sha'));
+  assert.equal(LEGACY_MIGRATION_WORKLOADS[4].trackingPr,7036);
 });
 test('main EKODI hourly watch adds native migration evidence without generating new scheduled automation',async()=>{
   const urls=[];
