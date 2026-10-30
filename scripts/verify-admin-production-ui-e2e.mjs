@@ -395,7 +395,7 @@ async function verifyAiOpsStageWorkspace() {
       throw new Error('AI Ops infrastructure card staged visibility mismatch: '+stage);
     if(stage==='providers'){
       const summary=await inventoryCard.innerText();
-      if(/\\b0 repositories\\b/.test(summary))throw new Error('GitHub inventory status must not misreport zero repositories');
+      if(summary.includes('0 repositories'))throw new Error('GitHub inventory status must not misreport zero repositories');
     }
     if(stage==='sites'){
       const detail=root.locator('#aiSelectedDetail');
