@@ -11,7 +11,7 @@ function memoryStorage(entries={}) {
   return {getItem:key=>map.get(key)??null,setItem:(key,value)=>map.set(key,String(value)),removeItem:key=>map.delete(key)};
 }
 function element(){
-  return {hidden:false,href:'',value:'person',textContent:'',dataset:{},children:[],addEventListener(){},replaceChildren(...parts){this.children=parts},append(...parts){this.children.push(...parts)}};
+  return {hidden:false,href:'',value:'person',textContent:'',dataset:{},children:[],addEventListener(){},setAttribute(){},replaceChildren(...parts){this.children=parts},append(...parts){this.children.push(...parts)}};
 }
 function page({loggedIn=false,spaces=[],spaceStatus=200,deferred=null}={}){
   const nodes=new Map(),calls=[];
@@ -60,7 +60,8 @@ test('member spaces show only canonical verified links and never inject markup',
   const entries=p.get('verifiedSpacesList').children;
   assert.equal(entries.length,2);
   assert.equal(entries[0].children[0].textContent,'자담 <script>alert(1)</script>');
-  assert.equal(entries[0].children.at(-1).href,'https://ekodi.kr/jadam');
+  assert.equal(entries[0].children.find(x=>x.href)?.href,'https://ekodi.kr/jadam');
+  assert.ok(entries[0].children.some(x=>x.textContent==='운영현황 조회'));
   assert.equal(entries[1].children.filter(x=>x.href).length,0);
   assert.match(p.get('spacesStatus').textContent,/2곳/);
 });
