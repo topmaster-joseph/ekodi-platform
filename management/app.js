@@ -67,6 +67,7 @@ function storeSummaryIsValid(data,space){
 function buildStoreReadinessChecks(summary){
   const checks=[];
   if(summary.canonicalMenuCount===0)checks.push('메뉴 원본이 0개로 조회됩니다. 공식 매장 메뉴의 등록·동기화 상태를 확인하세요.');
+  if(summary.canonicalMenuCount===0&&summary.platformListingCount>0)checks.push('판매채널 등록 항목이 있으나 공식 메뉴 원본이 0개입니다. 원본 데이터 연결·동기화를 확인하세요.');
   if(summary.connectedChannelCount===0)checks.push('연결된 판매채널이 0개로 조회됩니다. 실제 채널 사용 여부와 연결 상태를 확인하세요.');
   if(summary.canonicalMenuCount>0&&summary.platformListingCount===0)checks.push('메뉴 원본은 있으나 판매채널 등록 항목이 0개로 조회됩니다. 채널 등록 상태를 확인하세요.');
   if(!summary.orderEnabled)checks.push('주문 기능이 비활성으로 조회됩니다. 실제 운영 방식에 맞는 설정인지 확인하세요.');
