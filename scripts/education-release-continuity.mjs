@@ -22,6 +22,20 @@ export const EDUCATION_RELEASE_PATHS=Object.freeze(new Set([
 export function educationReleaseChanged(files){
  return Array.isArray(files)&&files.some(x=>typeof x==='string'&&(x.startsWith('education/')||EDUCATION_RELEASE_PATHS.has(x)));
 }
+
+/** The convergence workflow may have started before an official PR's last
+ * protected-main sync. Do NOT trust its old head SHA for release authority:
+ * select only ONE fully merged official PR for the exact branch, then require
+ * the canonical merge-to-PR association, actual merged source required CI and
+ * EKODI receipt in verifyEducationReleaseSnapshot before any dispatch. */
+export function selectMergedEducationPRForConvergence({pulls=[],branch=''}={}){
+ if(!parseOrchestratorReleaseBranch(branch)||!Array.isArray(pulls))return null;
+ const matching=pulls.filter(p=>p?.state==='closed'&&p.merged_at&&
+  p.base?.ref==='main'&&p.head?.ref===branch&&
+  /^[0-9a-f]{40}$/i.test(String(p.head?.sha||''))&&
+  /^[0-9a-f]{40}$/i.test(String(p.merge_commit_sha||'')));
+ return matching.length===1?matching[0]:null;
+}
 export function approvedEducationMerge({event={},pr={},files=[],mainSha=''}={}){
  const run=event.workflow_run||{};
  const branch=String(run.head_branch||'');
@@ -95,8 +109,14 @@ async function main(){
  if(eventName==='workflow_run'){
    const branch=run.head_branch;
    const pulls=await api('/pulls?state=all&base=main&head='+encodeURIComponent(owner+':'+branch)+'&per_page=100');
-   pr=Array.isArray(pulls)?pulls.find(p=>p.head?.sha===run.head_sha&&p.merged_at!=null):null;
-   if(!pr){log('no_exact_verified_merge',{branch,sourceSha:run.head_sha});return;}
+   pr=selectMergedEducationPRForConvergence({pulls,branch});
+   if(!pr){log('no_unique_official_merged_pr_for_convergence',{branch,runSourceSha:run.head_sha});return;}
+   // A successful old convergence-run SHA is merely a wake-up signal;
+   // latest merged PR SHA still has to pass the full receipt, source-CI and
+   // merge-commit association validation below (never use run SHA to deploy).
+   if(pr.head.sha!==run.head_sha)log('convergence_head_advanced_before_protected_merge',{
+     pr:pr.number,branch,runSourceSha:run.head_sha,mergedSourceSha:pr.head.sha
+   });
    const changed=await api('/pulls/'+pr.number+'/files?per_page=100');
    if(!Array.isArray(changed)||changed.length===100)fail('PR files must be exhaustively inspectable');
    files=changed.map(item=>item.filename);
