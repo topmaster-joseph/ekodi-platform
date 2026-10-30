@@ -198,7 +198,8 @@ test('converge resolves bundle lanes before merging and dispatches them with the
   const resolvedAt = source.indexOf('bundleLanes=lanesForChangedFiles(');
   assert.ok(resolvedAt > 0 && resolvedAt < source.indexOf('for(let cycle=0;'), 'lanes resolve before the merge loop');
   assert.match(source, /if\(handDispatchedLanes\.has\(lane\.workflow\)\)continue;/);
-  assert.match(source, /inputs:\{\.\.\.lane\.inputs,release_branch_ref:branch,release_task_id:taskId\}/);
+  assert.match(source, /Object\.fromEntries\(Object\.entries\(lane\.inputs\|\|\{\}\)\.map/);
+  assert.match(source, /release_branch_ref:branch,release_task_id:taskId/);
   const post = source.slice(source.indexOf('async function dispatchPostMergeDeploys(){'));
   assert.match(post, /await dispatchBundleGraphLanes\(\);\n\}/);
 });
