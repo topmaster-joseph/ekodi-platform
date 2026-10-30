@@ -78,7 +78,7 @@ test('protected completion is also enforced on canonical completion route and st
   assert.match(source,/if\(!await stagingPromotionApprovalIsValid\(db,row,evidence\)\)return row/);
   assert.match(source,/AND state_version=\?/);
   assert.match(workflow,/candidate\.state === 'staging' \|\| candidate\.state === 'production_verifying'/);
-  assert.match(workflow,/production_completion_check/);
+  assert.match(workflow,/candidate\.stagingAttested === true/);
   assert.match(workflow,/action: 'complete'/);
 });
 
