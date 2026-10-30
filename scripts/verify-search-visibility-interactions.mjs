@@ -95,23 +95,24 @@ export async function verifySearchVisibilityInteractions(page,artifactsDir,resul
     if(!(await siteSelect.inputValue()))throw new Error('Google Search Console site selection missing');
     await page.route(googleRoute,mockGoogleRead);
     await googleButton.click();
-    await panel.locator('[data-sv-google-status]').getByText(
-      'Google Search Console 읽기 전용 서비스 계정이 아직 서버에 연결되지 않았습니다.'
-    ).waitFor({timeout:7000});
+    await panel.locator('[data-sv-google-status]').filter({
+      hasText:'Google Search Console 읽기 전용 서비스 계정이 아직 서버에 연결되지 않았습니다.'
+    }).waitFor({timeout:7000});
     if((await panel.locator('[data-sv-google-summary]').textContent())?.trim())
       throw new Error('Disconnected Search Console displayed invented metrics');
     googleScenario='connected';
     await googleButton.click();
-    await panel.locator('[data-sv-google-summary]').getByText(
-      /검색 클릭 12회 · 노출 120회 · CTR 10\\.00% · 평균 순위 4\\.5/
-    ).waitFor({timeout:7000});
-    if((await panel.locator('[data-sv-google-summary]').textContent())?.includes('색인 완료'))
-      throw new Error('Synthetic Google metrics are misrepresented as indexing confirmation');
+    await panel.locator('[data-sv-google-summary]').filter({
+      hasText:/검색 클릭 12회 · 노출 120회 · CTR 10\\.00% · 평균 순위 4\\.5/
+    }).waitFor({timeout:7000});
+    if(!(await panel.locator('[data-sv-google-summary]').textContent())?.includes(
+      '전체 페이지 색인 완료나 AI 검색 인용을 의미하지 않습니다'
+    ))throw new Error('Google metrics disclaimer missing or misleading');
     googleScenario='no_rows';
     await googleButton.click();
-    await panel.locator('[data-sv-google-summary]').getByText(
-      '현재 기간에 반환된 검색 성과 행이 없어 실측치를 확정할 수 없습니다.'
-    ).waitFor({timeout:7000});
+    await panel.locator('[data-sv-google-summary]').filter({
+      hasText:'현재 기간에 반환된 검색 성과 행이 없어 실측치를 확정할 수 없습니다.'
+    }).waitFor({timeout:7000});
     if(googleReadRequests.length!==3||googleReadRequests.some(x=>x.method!=='GET'))
       throw new Error('Unexpected Google Search Console metric request count or method');
     results.push({id:'search-visibility-google-readonly',group:'ai',kind:'synthetic-readonly-ui',
