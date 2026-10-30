@@ -28,11 +28,16 @@ test('Search Visibility UI standalone edits always dispatch guarded Site Core',(
 test('Search Visibility Control standalone edits always dispatch guarded Control API',()=>{
   assert.match(converge,/'search-visibility-control.js'/);
   assert.match(read('mission-control-entry-worker.js'),/handleSearchVisibilityControl/);
-  const request=control.worker.requests.find(item=>item.url?.includes('/api/control/search-visibility?'));
+  const request=control.worker.requests.find(item=>item.url?.includes('growth-search=release-canary-001'));
   assert.ok(request,'missing production unauthenticated API denial canary');
   assert.deepEqual(request.statuses,[401,403]);
   assert.equal(request.redirect,'manual');
   assert.equal(request.rollbackVerify,false);
+  const google=control.worker.requests.find(item=>item.url?.includes('googleSiteUrl='));
+  assert.ok(google,'missing read-only Google Search Console anonymous denial probe');
+  assert.deepEqual(google.statuses,[403]);
+  assert.ok(google.expect.includes('SUPER_ADMIN_REQUIRED'));
+  assert.equal(google.rollbackVerify,false);
   assert.match(api,/session\?\.authenticated&&session\?\.role==='super_admin'/);
   assert.match(api,/if\(!actor\)return denied\(403,'SUPER_ADMIN_REQUIRED'\)/);
   assert.match(api,/if\(!sameOrigin\(request\)\)return denied\(403,'ORIGIN_FORBIDDEN'\)/);
