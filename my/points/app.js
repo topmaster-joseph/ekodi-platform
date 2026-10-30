@@ -6,6 +6,7 @@ const login=document.getElementById('loginLink');
 const view=document.getElementById('balanceView');
 const balance=document.getElementById('balance');
 const history=document.getElementById('history');
+let viewRevision=0;
 const enabled=Boolean(config.dataEnabled&&config.pointsEnabled===true&&config.supabaseUrl&&config.supabasePublishableKey);
 const sb=enabled?createClient(config.supabaseUrl,config.supabasePublishableKey,
   {auth:{detectSessionInUrl:true,persistSession:true}}):null;
@@ -32,6 +33,16 @@ async function handoff(){
   }
 }
 function showMessage(text){notice.textContent=text;view.hidden=true;}
+function clearPrivateView(message){
+  ++viewRevision;
+  view.hidden=true;
+  balance.textContent='0';
+  history.replaceChildren();
+  select.disabled=true;
+  select.replaceChildren(new Option('사이트 선택',''));
+  login.hidden=false;
+  showMessage(message);
+}
 async function request(path,token){
   const res=await fetch(api+path,{headers:{Authorization:'Bearer '+token,apikey:config.supabasePublishableKey},cache:'no-store'});
   const body=await res.json().catch(()=>({}));
@@ -54,24 +65,29 @@ function renderRows(rows){
     div.append(summary,amount);history.append(div);
   }
 }
-async function loadWallet(token,site){
+async function loadWallet(token,site,revision){
   if(!/^[a-z0-9_-]{2,64}$/.test(site))return;
   try{
     showMessage('포인트 내역을 불러오고 있습니다.');
     const data=await request('/me?site='+encodeURIComponent(site),token);
+    if(revision!==viewRevision)return;
     balance.textContent=Number(data.balance||0).toLocaleString('ko-KR');
     renderRows(data.history);notice.textContent='';view.hidden=false;
-  }catch(e){showMessage('포인트 내역을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');}
+  }catch(e){if(revision===viewRevision)showMessage('포인트 내역을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');}
 }
 async function start(){
+  const revision=++viewRevision;
   try{await handoff();}
   catch{showMessage('로그인 인계에 실패했습니다. 로그인 후 다시 시도해 주세요.');login.hidden=false;return;}
+  if(revision!==viewRevision)return;
   if(!enabled){showMessage('포인트 조회 서비스 준비 중입니다.');return;}
   const {data:{session}}=await sb.auth.getSession();
+  if(revision!==viewRevision)return;
   if(!session?.access_token){showMessage('로그인하면 사이트별 활동포인트를 확인할 수 있습니다.');login.hidden=false;return;}
   login.hidden=true;
   try{
     const data=await request('/sites',session.access_token);
+    if(revision!==viewRevision)return;
     const sites=Array.isArray(data.sites)?data.sites:[];
     select.replaceChildren();
     if(!sites.length){select.add(new Option('현재 운영 중인 포인트 사이트가 없습니다.',''));showMessage('사이트별 포인트 운영 준비 중입니다.');return;}
@@ -79,8 +95,17 @@ async function start(){
     const wanted=new URLSearchParams(location.search).get('site');
     if(wanted&&sites.some(site=>site.id===wanted))select.value=wanted;
     select.disabled=false;
-    select.addEventListener('change',()=>loadWallet(session.access_token,select.value));
-    await loadWallet(session.access_token,select.value);
-  }catch(e){showMessage('포인트 목록을 확인할 수 없습니다. 연결 상태를 확인해 주세요.');}
+    select.onchange=()=>{const next=++viewRevision;void loadWallet(session.access_token,select.value,next);};
+    await loadWallet(session.access_token,select.value,revision);
+  }catch(e){if(revision===viewRevision)showMessage('포인트 목록을 확인할 수 없습니다. 연결 상태를 확인해 주세요.');}
 }
-start();
+if(sb){
+  sb.auth.onAuthStateChange((event)=>{
+    if(event==='SIGNED_OUT'){
+      clearPrivateView('로그아웃되었습니다. 포인트 내역을 보려면 로그인해 주세요.');
+    } else if(event==='SIGNED_IN'||event==='TOKEN_REFRESHED'){
+      queueMicrotask(()=>{void start();});
+    }
+  });
+}
+void start();

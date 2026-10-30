@@ -31,3 +31,14 @@ test('points sign-in returns to exact initiating URL via canonical /auth and san
   assert.match(app,/try\{await handoff\(\);\}/);
   assert.doesNotMatch(app,/login\.href='\/auth\//);
 });
+
+test('member points clears balance on sign out and ignores stale API responses',()=>{
+  const app=fs.readFileSync(new URL('../my/points/app.js',import.meta.url),'utf8');
+  assert.match(app,/sb\.auth\.onAuthStateChange/);
+  assert.match(app,/event==='SIGNED_OUT'/);
+  assert.match(app,/clearPrivateView\('로그아웃되었습니다/);
+  assert.match(app,/balance\.textContent='0'/);
+  assert.match(app,/history\.replaceChildren\(\)/);
+  assert.match(app,/if\(revision!==viewRevision\)return/);
+  assert.match(app,/select\.onchange=/);
+});
