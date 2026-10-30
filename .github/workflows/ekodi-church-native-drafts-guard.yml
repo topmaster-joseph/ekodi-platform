@@ -5,6 +5,9 @@ on:
     paths:
       - 'scripts/ekodi-native-worship-google-drafts.mjs'
       - 'test/ekodi-native-worship-google-drafts.test.mjs'
+      - 'scripts/ekodi-native-worship-d1-ledger.mjs'
+      - 'test/ekodi-native-worship-d1-ledger.test.mjs'
+      - 'migrations/202610300300_church_native_draft_ledger.sql'
       - '.github/workflows/ekodi-church-native-drafts-guard.yml'
       - 'docs/operations/ekodi-church-native-drafts-integration.md'
   workflow_dispatch:
@@ -30,4 +33,5 @@ jobs:
       - name: Validate approved native Google Docs Slides draft writer
         run: |
           node --check scripts/ekodi-native-worship-google-drafts.mjs
-          node --test test/ekodi-native-worship-google-drafts.test.mjs
+          node --check scripts/ekodi-native-worship-d1-ledger.mjs
+          node --test test/ekodi-native-worship-google-drafts.test.mjs test/ekodi-native-worship-d1-ledger.test.mjs
