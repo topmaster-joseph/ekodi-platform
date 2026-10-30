@@ -17,7 +17,8 @@ test('attendance award requires canonical activity, matching tenant, person and 
 test('attendance proof is private and disabled until a site/tenant mapping is activated',()=>{
   assert.match(source,/enabled boolean not null default false/);
   assert.match(source,/alter table public\.ekodi_point_site_tenants enable row level security/i);
-  assert.match(source,/revoke all on table public\.ekodi_point_site_tenants from public, anon, authenticated/i);
+  assert.match(source,/revoke all on table public\.ekodi_point_site_tenants\s+from public, anon, authenticated, service_role/i);
+    assert.match(source,/grant select on table public\.ekodi_point_site_tenants to service_role/i);
   assert.match(source,/revoke all on function ekodi_points_private\.award_verified_attendance\(text,uuid\)[\s\S]*?from public, anon, authenticated/i);
   assert.match(source,/grant execute on function ekodi_points_private\.award_verified_attendance\(text,uuid\)[\s\S]*?to service_role/i);
 });
