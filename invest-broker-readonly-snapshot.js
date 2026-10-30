@@ -76,7 +76,7 @@ export function compareBrokerReadOnlySnapshots(previous,current){
  if(previous?.accepted!==true||current?.accepted!==true||previous.scheme!=='ekodi.invest.read-only-snapshot.v1'||current.scheme!=='ekodi.invest.read-only-snapshot.v1')return fail('SNAPSHOT_NOT_ACCEPTED');
  // Never trust a caller-supplied object solely because it claims accepted:true.
  // Validate all minor-unit strings before BigInt; reject forged or inconsistent totals.
- const validMinor=x=>typeof x==='string'&&/^(?:0|[1-9]\\d{0,17})$/.test(x);
+ const validMinor=x=>typeof x==='string'&&/^(?:0|[1-9]\d{0,17})$/.test(x);
  for(const snapshot of [previous,current]){
   if(!UUID.test(String(snapshot.accountRef||''))||!UUID.test(String(snapshot.snapshotRef||''))||
      !ALLOWED_CURRENCIES.has(snapshot.currency)||!ISO_UTC.test(String(snapshot.capturedAt||''))||
