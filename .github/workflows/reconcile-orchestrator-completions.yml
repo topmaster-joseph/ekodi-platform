@@ -69,27 +69,35 @@ jobs:
             for (const candidate of candidates) {
               // Staging verification is independent of post-production
               // completion. Missing proof is a safe non-terminal deferral.
-              if (candidate.state === 'staging') {
+              if (candidate.state === 'staging' || candidate.state === 'production_verifying') {
+                // Command completion historically maps to production_verifying.
+                // Only independently verified GitHub staging proof can advance
+                // it to the final-owner-approval staging checkpoint.
                 let proof;
                 try {
                   proof = await collectEkodiPreproductionEvidence({
                     github,taskId:candidate.taskId,branchRef:candidate.branchRef,
                   });
                 } catch (error) {
-                  report.push({ taskId:candidate.taskId,state:'deferred',reason:String(error?.message||error).slice(0,180) });
+                  report.push({ taskId:candidate.taskId,state:'preproduction_deferred',reason:String(error?.message||error).slice(0,180) });
+                  if(candidate.state === 'staging')continue;
+                }
+                if (proof?.verified === true) {
+                  try {
+                    const recorded = await post({action:'attest_staging',evidence:proof});
+                    report.push({taskId:candidate.taskId,state:recorded.recorded?'staging_proof_recorded':'deferred'});
+                  } catch (error) {
+                    report.push({taskId:candidate.taskId,state:'deferred',reason:String(error?.message||error).slice(0,180) });
+                  }
                   continue;
                 }
-                if (proof?.verified !== true) {
-                  report.push({ taskId:candidate.taskId,state:'deferred',reason:proof?.reason||'preproduction_proof_unverified' });
+                if (candidate.state === 'staging') {
+                  report.push({taskId:candidate.taskId,state:'preproduction_deferred',reason:proof?.reason||'preproduction_proof_unverified'});
                   continue;
                 }
-                try {
-                  const recorded = await post({action:'attest_staging',evidence:proof});
-                  report.push({taskId:candidate.taskId,state:recorded.recorded?'staging_proof_recorded':'deferred'});
-                } catch (error) {
-                  report.push({taskId:candidate.taskId,state:'deferred',reason:String(error?.message||error).slice(0,180) });
-                }
-                continue;
+                // Unattested legacy production_verifying tasks still undergo
+                // existing independent post-production completion verification,
+                // never a synthetic staging attestation or owner approval.
               }
               let evidence;
               try {
