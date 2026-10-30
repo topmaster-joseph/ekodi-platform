@@ -16,7 +16,9 @@ export const INSERT_GITHUB_API_RESERVATION=[
   'AND b.remaining_value >= ? + ? + COALESCE((',
   'SELECT SUM(a.unit_cost) FROM github_operations_api_admissions AS a',
   'WHERE a.installation_id=b.installation_id AND a.resource=b.resource',
-  'AND a.admitted_at_ms>=b.observed_at_ms AND a.expires_at_ms>?',
+  // New headers may arrive while older reservations have not yet been sent.
+  // Conservatively count every unexpired lease until explicit completion exists.
+  'AND a.expires_at_ms>?',
   '),0)',
   'AND NOT EXISTS(SELECT 1 FROM github_operations_api_admissions AS q WHERE q.operation_key=?)'
 ].join('\n');
