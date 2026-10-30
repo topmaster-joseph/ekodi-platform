@@ -5,7 +5,7 @@
  * human editorial approval, verified stream or a released social UI.
  */
 export const AUTOMATION_MIGRATION_PR = Object.freeze([
-  Object.freeze({id:'native-scheduler',number:6890}),
+  Object.freeze({id:'native-scheduler',number:7044}),
   Object.freeze({id:'native-cutover-gate',number:6920}),
 ]);
 
@@ -28,6 +28,11 @@ export const LEGACY_MIGRATION_WORKLOADS=Object.freeze([
     'pastor_approved_scripture','real_sermon_google_doc',
     'real_bulletin_google_doc','real_worship_google_slides',
     'owner_approval','exclusive_writer_lease','legacy_disable_receipt'
+  ]}),
+  Object.freeze({id:'church-naver-owner',kind:'monitor',missing:[
+    'native_scheduled_job_artifact','public_naver_proof_http_200',
+    'legacy_home_redirect_301','naver_provider_ownership_confirmation',
+    'legacy_disable_receipt'
   ]}),
 ]);
 
@@ -81,5 +86,5 @@ export function renderEkodiMigrationSummary(report){
     '- Owner: EKODI Orchestrator; status: read-only, no cutover performed',
     ...report.nativePrs.map(pr=>'- PR #'+pr.pr+': '+pr.state+' ('+pr.reason+')'),
     ...report.tasks.map(task=>'- '+task.id+': delivery unverified; missing '+task.missingEvidence.join(', ')),
-    '- Existing ChatGPT tasks must NOT be stopped based on this report alone.'].join('\n');
+    '- User explicitly paused all five ChatGPT tasks on 2026-10-30; registered native observation does not certify publication or document parity.'].join('\n');
 }
