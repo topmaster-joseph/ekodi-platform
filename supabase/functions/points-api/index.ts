@@ -50,44 +50,6 @@ Deno.serve(async (req: Request) => {
   try {
     const requestUrl = new URL(req.url);
     const path = requestUrl.pathname.replace(/^\/points-api(?:-staging)?/, "") || "/";
-    if (path === "/admin/overview") {
-      // Read-only operator dashboard: authority is checked in the database,
-      // never derived from email, browser flags or editable user metadata.
-      const { data: auth, error: authError } = await db.auth.getUser(bearer.slice(7));
-      if (authError || !auth.user) return json(req, { error: "unauthorized" }, 401);
-      const { data: admin, error: adminError } = await db.from("profiles")
-        .select("user_id").eq("user_id", auth.user.id).eq("platform_admin", true)
-        .maybeSingle();
-      if (adminError) throw adminError;
-      if (!admin) return json(req, { error: "admin_forbidden" }, 403);
-      const [
-        { data: sites, error: sitesError },
-        { data: rules, error: rulesError },
-        { data: transfers, error: transfersError },
-        { data: campaigns, error: campaignsError },
-      ] = await Promise.all([
-        db.from("ekodi_point_sites")
-          .select("site_id,display_name,enabled,daily_cap").order("site_id").limit(200),
-        db.from("ekodi_point_rules")
-          .select("site_id,rule_id,points,daily_cap,daily_events,min_active_seconds,enabled")
-          .order("site_id").order("rule_id").limit(1000),
-        db.from("ekodi_point_transfer_policies")
-          .select("from_site,to_site,numerator,denominator,daily_cap,enabled")
-          .order("from_site").order("to_site").limit(300),
-        db.from("ekodi_point_donation_campaigns")
-          .select("campaign_id,site_id,title,recipient_name,enabled,starts_at,ends_at")
-          .order("site_id").limit(300),
-      ]);
-      if (sitesError || rulesError || transfersError || campaignsError) {
-        throw sitesError || rulesError || transfersError || campaignsError;
-      }
-      return json(req, {
-        sites: sites || [], rules: rules || [],
-        transfers: transfers || [], campaigns: campaigns || [],
-        read_only: true,
-        snapshot_at: new Date().toISOString(),
-      });
-    }
     const personId = await resolvePerson(bearer.slice(7));
     if (!personId) return json(req, { error: "person_not_linked" }, 403);
     if (path !== "/" && path !== "/me" && path !== "/sites") return json(req, { error: "not_found" }, 404);
