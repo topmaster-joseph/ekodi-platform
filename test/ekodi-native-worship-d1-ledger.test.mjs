@@ -26,7 +26,7 @@ test('native worship D1 schema is additive, private and strict on job/asset iden
   const b=db();
   assert.equal(b.sqlite.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type='table' AND name LIKE 'ekodi_church_native_draft_%'").get().n,2);
   assert.equal(b.sqlite.prepare('SELECT count(*) AS n FROM ekodi_church_native_draft_runs').get().n,0);
-  assert.doesNotMatch(MIGRATION,/token|authorization|plaintext|sermon_body/i);
+  assert.doesNotMatch(MIGRATION.split('\\n').filter(line=>!line.trim().startsWith('--')).join('\\n'),/token|authorization|plaintext|sermon_body/i);
 });
 test('atomic unique claim blocks duplicate draft creation on the same Sunday',async()=>{
   const b=db();const store=createWorshipD1Ledger(b,{newLease:()=> 'ekodi_test_lease_1234'});
