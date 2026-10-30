@@ -90,6 +90,6 @@ test('responsive menu does not invent marketplace activity or disable auth check
   assert.match(source,/\.mall-sourcing-primary\{display:grid;grid-template-columns:repeat\(7,minmax\(0,1fr\)\)/);
   assert.match(source,/@media\(max-width:650px\)/);
   assert.match(source,/workspaceAffiliateApi\('\/workspace\/sources'\)/);
-  assert.match(source,/if\(!\(await accessToken\(\)\)\)return loginPanel/);
+  assert.match(source,/if\(!token\)return loginPanel/);
   assert.doesNotMatch(source,/Amazon\s+연결됨\s+128\s+상품/);
 });
