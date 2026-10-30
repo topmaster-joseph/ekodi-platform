@@ -209,7 +209,10 @@
               cache: 'no-store',
               body: JSON.stringify({ accessToken: serverReceipt.accessToken })
             });
-            autoRevoked = rollback.ok;
+            const confirmation = await rollback.json().catch(() => null);
+            autoRevoked = rollback.ok &&
+              confirmation?.consultation?.id === serverReceipt.id &&
+              confirmation?.consultation?.status === 'revoked';
           } catch { /* one attempt only; customer is told status is unconfirmed */ }
         }
         let warning = form?.querySelector('#insuranceRevokeSaveFailure');
@@ -249,7 +252,11 @@
         cache: 'no-store',
         body: JSON.stringify({ accessToken: item.accessToken })
       });
-      if (!response.ok) throw new Error('server_revoke_rejected');
+      const confirmation = await response.json().catch(() => null);
+      if (!response.ok || confirmation?.consultation?.id !== item.id ||
+          confirmation?.consultation?.status !== 'revoked') {
+        throw new Error('server_revoke_not_confirmed');
+      }
       serverRevoked = true;
       writeAccess(readAccessStrict().filter(entry => entry.id !== item.id));
       toast('상담요청을 철회하고 서버의 연락처·공유대화 암호문을 제거했습니다.');
