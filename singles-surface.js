@@ -54,6 +54,11 @@ function allowApi(path,method){
  if((path==='/api/identity/start'||path==='/api/identity/complete')&&method==='POST')return [path.slice(4),true];
  if(/^\/api\/passes\/pass_(?:1|10|20|30)d$/.test(path)&&method==='POST')return [path.slice(4),true];
  if(path==='/api/bank/admin/members'&&method==='GET')return ['/bank/admin/members',true];
+ // 2026-10-31 후불 청구서·운영 제안(소유자 승인).
+ if(/^\/api\/bank\/invoices\/[0-9a-f-]{36}\/order$/i.test(path)&&method==='POST')return [path.slice(4),true];
+ if(path==='/api/bank/admin/proposals'&&method==='GET')return ['/bank/admin/proposals',true];
+ if(path==='/api/bank/admin/ops/review'&&method==='POST')return ['/bank/admin/ops/review',true];
+ if(/^\/api\/bank\/admin\/proposals\/[0-9a-f-]{36}\/decide$/i.test(path)&&method==='POST')return [path.slice(4),true];
  if(/^\/api\/bank\/admin\/members\/[0-9a-f-]{36}\/adult-verify$/i.test(path)&&method==='POST')return [path.slice(4),true];
  for(const [endpoint,methods] of [
   ['/api/bank/plans',['GET']],['/api/bank/wallet',['GET']],['/api/bank/orders',['GET','POST']],
