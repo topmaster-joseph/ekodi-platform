@@ -14,7 +14,7 @@ if (!sitemapResponse.ok) throw new Error('Public Korean sitemap unavailable: HTT
 const pageUrls = canonicalIndexNowUrlsFromSitemap(await sitemapResponse.text());
 
 // IndexNow supports one JSON POST for up to 10,000 URLs. Send only three
-// requests to the participating endpoints instead of a full Chromium browser
+// requests to the participating endpoints instead of a headless browser
 // and one navigation for each page/engine.
 const outcome = await submitIndexNowBatches({
   urls: pageUrls,
