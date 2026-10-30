@@ -37,7 +37,7 @@ function loginSite(){
   const service=String(document.documentElement.dataset.ekodiService||document.body?.dataset?.ekodiService||'').trim().toLowerCase();
   const first=location.pathname.split('/').filter(Boolean)[0]?.toLowerCase()||'';
   const aliases={ekodi:'portal',my:'my',ekodichurch:'church',ekodimission:'mission',ekodibiz:'biz',ekodimall:'mall',seonammedi:'seonammedi',cgma:'cgma'};
-  const guess=aliases[service]||aliases[first]||service||first||'portal';
+  const guess=(service==='ekodi'&&first?aliases[first]||'space':aliases[service]||aliases[first]||service||first||'portal');
   // An unregistered workspace must use the space realm; the server still checks the return URL.
   return /^[a-z0-9][a-z0-9-]{0,60}$/.test(guess)?guess:'space';
 }
@@ -85,6 +85,8 @@ function paint(){
     node.removeAttribute('title');
     return;
   }
+  const cached=displayCache.get(id);
+  if(cached&&cached.until<=Date.now())displayCache.delete(id);
   const display=displayCache.get(id)?.name||localName(session);
   const key='member:'+id+':'+display;
   if(node.dataset.ekodiIdentityKey!==key){
@@ -102,9 +104,9 @@ function paint(){
       .then(async response=>response.ok?response.json():null)
       .then(data=>{
         const name=String(data?.profile?.display_name||'').replace(/\\s+/g,' ').trim();
-        if(name)displayCache.set(id,{name,until:Date.now()+CACHE_TTL});
+        displayCache.set(id,{name:name||localName(session),until:Date.now()+(name?CACHE_TTL:60_000)});
       })
-      .catch(()=>{})
+      .catch(()=>{displayCache.set(id,{name:localName(session),until:Date.now()+60_000});})
       .finally(()=>{requestInFlight='';schedule();});
   }
 }
