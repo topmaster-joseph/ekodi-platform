@@ -8,3 +8,8 @@
 - **This owner-authored documentation-only checkpoint triggers genuine protected PR CI on the EKODI-issued branch; it grants no new release authority and changes no runtime, credentials, database, payment, or Cloudflare permissions.**
 - EKODI must confirm correct protected merge, schedule/dispatch authorization, isolated staging and guarded production release, then use native disposable Chromium at 320/390/768/1366/1440px to verify the actual live course, QR deep links 1–7, same-origin JS/CSS, PNG download, template prompts and Study navigation.
 - Completion is prohibited until the public canonical URL serves HTTP 200 and actual PC/mobile interaction passes. Publish evidence to #6936; keep existing rollback/human gates intact.
+
+## Updated protected-main convergence check
+- Official recovery branch synchronized with a newer protected `main`; bot-generated pull_request checks on synchronized SHA can be `action_required`, which does **not** prove CI success.
+- This evidence-only owner-authored commit re-requests **authentic source CI and EKODI Orchestration Gate** on the exact current head. No executable source, deployment permission or safety policy changed.
+- Do not mark #6936 complete without production 200 and full Chromium verification.
