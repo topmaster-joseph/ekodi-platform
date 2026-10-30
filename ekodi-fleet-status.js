@@ -53,6 +53,14 @@ function parseTime(value) {
   return Number.isFinite(t) ? t : null;
 }
 
+// Health signals without credible timestamps must never prove live health.
+// Allow one minute for benign clock skew, but fail closed on missing,
+// malformed, expired, or implausibly future-dated samples.
+function isStaleObservation(checkedAtMs, now, freshnessMs) {
+  return checkedAtMs == null || checkedAtMs > now + 60_000 ||
+    now - checkedAtMs > freshnessMs;
+}
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -119,7 +127,7 @@ export function buildFleetStatus(input = {}) {
     if (!rec) continue;
     const status = normalizeStatus(row.status);
     const checkedAtMs = parseTime(row.checked_at);
-    const stale = checkedAtMs != null && now - checkedAtMs > freshnessMs;
+    const stale = isStaleObservation(checkedAtMs, now, freshnessMs);
     rec.latest = {
       status,
       httpStatus: toInt(row.http_status),
@@ -138,7 +146,7 @@ export function buildFleetStatus(input = {}) {
     if (!rec) continue;
     const status = normalizeStatus(row.status);
     const checkedAtMs = parseTime(row.checked_at);
-    const stale = checkedAtMs != null && now - checkedAtMs > freshnessMs;
+    const stale = isStaleObservation(checkedAtMs, now, freshnessMs);
     rec.environments.push({
       environment: String(row.environment || 'unknown'),
       host: row.host ? String(row.host) : null,
@@ -191,7 +199,8 @@ export function buildFleetStatus(input = {}) {
   const uncatalogued = rows.filter(r => r.monitored && !r.inRegistry).map(r => r.id);
 
   // Overall health, folding in the twin rollup when present.
-  let overall = 'healthy';
+  // No service observations means "not observed", not a green fleet.
+  let overall = counts.total > 0 ? 'healthy' : 'partial';
   if (counts.offline > 0) overall = 'critical';
   else if (counts.degraded > 0 || counts.stale > 0) overall = 'degraded';
   else if (counts.unknown > 0) overall = 'partial';
