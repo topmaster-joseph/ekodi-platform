@@ -9,7 +9,7 @@ const token = 'a'.repeat(64);
 const now = '2026-10-30T12:00:00.000Z';
 const live = projectLiveFleetRegistry(ecosystem.services);
 const model = () => buildFleetStatus({ now, registryServices: live });
-const payload = () => ({ ok: true, fleet: model() });
+const payload = () => ({ ok: true, fleet: structuredClone(model()) });
 const jsonResponse = body => new Response(JSON.stringify(body), {
   status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
 });
