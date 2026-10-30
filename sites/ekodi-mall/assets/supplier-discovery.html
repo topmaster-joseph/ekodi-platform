@@ -3,22 +3,25 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#173f35"><meta name="robots" content="noindex,nofollow">
   <meta name="description" content="EKODI Mall 공급업체 발굴·증거평가·연락준비·파일럿 Preflight 운영 콘솔">
-  <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/platform.css"><link rel="stylesheet" href="/assets/supplier-ops.css">
-  <title>Supplier Discovery | EKODI MALL</title>
+  <link rel="stylesheet" href="/assets/styles.css"><link rel="stylesheet" href="/assets/platform.css"><link rel="stylesheet" href="/assets/supplier-ops.css"><link rel="stylesheet" href="/assets/supplier-discovery-layout.css">
+  <title>공급처 발굴 관리 | EKODI MALL</title>
 </head>
-<body>
-  <div class="notice" id="discoveryStatus">운영자 Google 로그인 후 공급자 후보를 관리할 수 있습니다.</div>
-  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/supplier-ops">SUPPLIER OPS</a><a href="/sourcing">SOURCING</a><a href="/fulfillment">FULFILLMENT</a></nav></header>
-  <main class="ops-main">
-    <section class="ops-hero">
-      <div><p class="eyebrow">SUPPLIER DISCOVERY · EVIDENCE FIRST</p><h1>인기상품을 좇기보다<br>실제로 직배송할 수 있는 공급자를 찾습니다</h1><p>공개 URL은 후보를 발견하는 단서일 뿐입니다. 신원·직배송·상품권리·마진·재고·반품·소량 파일럿 근거를 확인한 뒤에만 Supplier Partner로 전환합니다.</p><div class="cta"><button class="btn primary" id="discoveryLogin" type="button">운영자 Google 로그인</button><button class="smallbtn" id="discoveryLogout" type="button" hidden>로그아웃</button><button class="smallbtn" id="discoveryReload" type="button">새로고침</button></div></div>
-      <div class="ops-gates"><article><small>AUTO OUTREACH</small><strong>OFF</strong></article><article><small>PAYMENT</small><strong>OFF</strong></article><article><small>PII RELEASE</small><strong>OFF</strong></article><article><small>AUTO ORDER</small><strong>OFF</strong></article></div>
-    </section>
-
-    <section class="ops-summary" id="discoverySummary"><article><small>CANDIDATES</small><strong>0</strong></article><article><small>DUE DILIGENCE</small><strong>0</strong></article><article><small>CONVERTED</small><strong>0</strong></article><article><small>PREFLIGHT</small><strong>0</strong></article></section>
-
-    <section class="ops-grid">
-      <article class="ops-panel">
+<body class="discovery-page">
+  <header class="header discovery-header"><a class="brand" href="/ekodimall"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav aria-label="에코디몰 공급망"><a href="/ekodimall/supplier-ops">공급처 운영</a><a href="/ekodimall/sourcing">소싱</a><a href="/ekodimall/fulfillment">배송·발주</a></nav></header>
+  <main class="ops-main discovery-main">
+    <section class="discovery-title"><div><p class="eyebrow">EKODI MALL · SUPPLIER DISCOVERY</p><h1>공급처 발굴 관리</h1><p>후보 등록부터 증거 평가·연락 준비·파일럿 점검까지 단계별로 확인합니다.</p></div><div class="discovery-actions"><button type="button" id="discoveryReload" class="smallbtn">새로고침</button><button type="button" id="discoveryLogin" class="btn primary">운영자 로그인</button><button type="button" id="discoveryLogout" class="smallbtn" hidden>로그아웃</button></div></section>
+    <div class="discovery-status" id="discoveryStatus" role="status" aria-live="polite">운영자 로그인 후 공급자 후보를 관리할 수 있습니다.</div>
+    <section class="discovery-metrics" id="discoverySummary" aria-label="후보 등록 현황"><article><small>등록 후보</small><strong>0</strong></article><article><small>실사 준비</small><strong>0</strong></article><article><small>공급처 전환</small><strong>0</strong></article><article><small>사전 점검</small><strong>0</strong></article></section>
+    <div class="discovery-safety" aria-label="자동 실행 차단 상태"><span>자동 연락 <strong>OFF</strong></span><span>결제 <strong>OFF</strong></span><span>고객정보 <strong>OFF</strong></span><span>자동발주 <strong>OFF</strong></span></div>
+    <div class="discovery-tabs" role="tablist" aria-label="공급처 발굴 업무">
+      <button type="button" role="tab" id="discovery-tab-candidate" aria-controls="discovery-panel-candidate" aria-selected="true" tabindex="0" data-discovery-tab="candidate">1. 후보 등록</button>
+      <button type="button" role="tab" id="discovery-tab-score" aria-controls="discovery-panel-score" aria-selected="false" tabindex="-1" data-discovery-tab="score">2. 증거 평가</button>
+      <button type="button" role="tab" id="discovery-tab-evidence" aria-controls="discovery-panel-evidence" aria-selected="false" tabindex="-1" data-discovery-tab="evidence">3. 근거 검토</button>
+      <button type="button" role="tab" id="discovery-tab-outreach" aria-controls="discovery-panel-outreach" aria-selected="false" tabindex="-1" data-discovery-tab="outreach">4. 연락 준비</button>
+      <button type="button" role="tab" id="discovery-tab-preflight" aria-controls="discovery-panel-preflight" aria-selected="false" tabindex="-1" data-discovery-tab="preflight">5. 사전 점검</button>
+    </div>
+    <section class="ops-grid discovery-panels">
+      <article class="ops-panel" id="discovery-panel-candidate" role="tabpanel" aria-labelledby="discovery-tab-candidate" data-discovery-panel="candidate">
         <div class="ops-panel-head"><div><p class="eyebrow">1 · DISCOVER</p><h2>후보 등록</h2></div></div>
         <form id="candidateCreateForm" class="ops-form">
           <label>Candidate Code<input name="candidateCode" placeholder="muan-onion-supplier" required></label>
@@ -30,7 +33,7 @@
         </form>
       </article>
 
-      <article class="ops-panel">
+      <article class="ops-panel" id="discovery-panel-score" role="tabpanel" aria-labelledby="discovery-tab-score" data-discovery-panel="score" hidden>
         <div class="ops-panel-head"><div><p class="eyebrow">2 · SCORE</p><h2>증거 기반 평가</h2></div><select id="candidateSelect"><option value="">후보 선택</option></select></div>
         <form id="assessmentForm" class="ops-form">
           <label>사업자 신원<select name="businessIdentityStatus"><option value="unknown">확인 전</option><option value="confirmed">확인</option><option value="rejected">불일치</option></select></label>
@@ -48,14 +51,14 @@
         <div class="ops-transition"><select id="candidateTransition"><option value="">다음 상태</option></select><button class="smallbtn" id="transitionCandidate" type="button">상태 전환</button><button class="smallbtn" id="convertCandidate" type="button">Partner 전환</button></div>
       </article>
 
-      <article class="ops-panel">
+      <article class="ops-panel" id="discovery-panel-evidence" role="tabpanel" aria-labelledby="discovery-tab-evidence" data-discovery-panel="evidence" hidden>
         <div class="ops-panel-head"><div><p class="eyebrow">3 · EVIDENCE</p><h2>근거 검토</h2></div></div>
         <form id="evidenceForm" class="ops-form"><label>유형<select name="evidenceType"><option value="business_identity">사업자 신원</option><option value="dropship">직배송</option><option value="rights">상품권리</option><option value="pricing">공급가/마진</option><option value="stock">재고</option><option value="returns">반품</option><option value="cs">CS</option><option value="pii">개인정보</option><option value="api">API</option><option value="contact">연락처</option><option value="other">기타</option></select></label><label>공개 HTTPS 근거 URL<input name="evidenceUrl" type="url" required></label><label>요약<textarea name="summary" rows="3" placeholder="원문 전체 복제 대신 확인내용만 요약"></textarea></label><button class="btn primary" type="submit">근거 추가</button></form>
         <div class="ops-divider">근거 판정</div>
         <form id="evidenceReviewForm" class="ops-form compact"><label>근거<select name="evidenceId" id="evidenceSelect"><option value="">근거 선택</option></select></label><label>판정<select name="decision"><option value="confirmed">확인</option><option value="rejected">부적합</option></select></label><label>신뢰도<input name="confidence" type="number" min="0" max="100" value="80"></label><button class="btn ghost" type="submit">판정 저장</button></form>
       </article>
 
-      <article class="ops-panel">
+      <article class="ops-panel" id="discovery-panel-outreach" role="tabpanel" aria-labelledby="discovery-tab-outreach" data-discovery-panel="outreach" hidden>
         <div class="ops-panel-head"><div><p class="eyebrow">4 · OUTREACH</p><h2>연락 준비</h2></div></div>
         <form id="outreachDraftForm" class="ops-form"><label>채널<select name="channel"><option value="email">Email</option><option value="webform">Web form</option><option value="phone">Phone</option><option value="kakao">Kakao</option><option value="other">Other</option></select></label><label>공개 연락처 참조<input name="publicContactRef"></label><button class="btn primary" type="submit">연락 초안 생성</button></form>
         <p class="ops-hint">자동 발송은 하지 않습니다. 실제 연락 후 아래 상태를 기록해야 후보를 contacted로 넘길 수 있습니다.</p>
@@ -63,7 +66,7 @@
         <pre id="outreachPreview" class="ops-hint">연락 초안이 여기에 표시됩니다.</pre>
       </article>
 
-      <article class="ops-panel ops-wide">
+      <article class="ops-panel ops-wide" id="discovery-panel-preflight" role="tabpanel" aria-labelledby="discovery-tab-preflight" data-discovery-panel="preflight" hidden>
         <div class="ops-panel-head"><div><p class="eyebrow">5 · PILOT PREFLIGHT</p><h2>발주 전 최종 점검</h2></div></div>
         <form id="preflightForm" class="ops-map-form"><label>Partner · SKU · 상품<select name="optionKey" id="preflightOption"><option value="">파일럿 구성 선택</option></select></label><label>판매경로<select name="scenarioSource"><option value="marketplace">Mall 8%</option><option value="direct">판매자 직접 7%</option><option value="ai">AI 9%</option></select></label><label>수량<input name="quantity" type="number" min="1" max="99" value="1"></label><button class="btn primary" type="submit">Preflight 실행</button></form>
         <p class="ops-hint" id="preflightResult">계약·SKU·재고 최신성·상품상태·실제 수수료·최소마진을 검사합니다. 통과해도 실제 거래 스위치는 자동으로 켜지지 않습니다.</p>
@@ -71,7 +74,7 @@
       </article>
     </section>
   </main>
-  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Supplier Discovery</span><span>Evidence opens gates, not guesses</span></div></footer>
+  <footer class="footer compact"><div class="bottom"><span>© 2026 EKODI MALL · Supplier Discovery</span><span>근거 검증 전 자동실행 OFF</span></div></footer>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script><script src="/assets/supplier-discovery.js" defer></script>
 </body>
 </html>

@@ -55,8 +55,11 @@ test('Mall API entry routes Amazon connector and health exposes readiness', asyn
 
 test('Mall admin exposes the canonical Amazon free-first cost center', async () => {
   const admin = await readFile(new URL('../workspace-admin-page.js', import.meta.url),'utf8');
-  assert.match(admin,/\['amazon','Amazon'\]/);
-  assert.match(admin,/if\(section==='amazon'\)return amazonAdmin\(\)/);
+  assert.match(admin,/data-mall-source-channel/);
+  assert.match(admin,/mallSourcingHeader\(sources,active\)/);
+  assert.match(admin,/if\(section==='amazon'\)return affiliateSourcingPanel\('amazon'\)/);
+  assert.match(admin,/amazonReady=await amazonAdmin\(\)/);
+  assert.doesNotMatch(admin,/\['sourcing','판매채널 · 공급망'\],\['amazon','Amazon'\]/);
   assert.match(admin,/\/ekodimall\/api\/amazon\/status/);
   assert.match(admin,/\/ekodimall\/api\/amazon\/cost-policy/);
   assert.match(admin,/Amazon · AWS 무료우선 비용센터/);

@@ -2,7 +2,7 @@
   const ALL_SITES = [
     { type: 'Core', name: 'EKODI Home', domain: 'ekodi.kr', section: 'services', group: 'core' },
     { type: 'Control', name: 'EKODI Admin', domain: 'ekodi.kr/admin', section: 'admins', fallback: 'services', group: 'core' },
-    { type: 'Auth', name: 'EKODI Auth', domain: 'auth.ekodi.kr', section: 'admins', fallback: 'services', group: 'core' },
+    { type: 'Auth', name: 'EKODI Auth', domain: 'ekodi.kr/auth', section: 'admins', fallback: 'services', group: 'core' },
     { type: '교회', name: '에코디교회', domain: 'ekodi.kr/ekodichurch', section: 'services', group: 'community' },
     { type: '비즈', name: '에코디비즈', domain: 'biz.ekodi.kr', section: 'organization', fallback: 'services', group: 'business' },
     { type: 'OS', name: '비즈니스 OS', domain: 'business.ekodi.kr', section: 'services', group: 'business' },
@@ -306,7 +306,8 @@
 
   function registrySite(service, existing = null) {
     const id = String(service?.id || '').trim().toLowerCase();
-    const domain = normalizeDomain(service?.label || service?.domain || service?.url);
+    const legacyDomain = normalizeDomain(service?.label || service?.domain || service?.url);
+    const domain = id === 'auth' || legacyDomain === ['auth','ekodi','kr'].join('.') ? 'ekodi.kr/auth' : legacyDomain;
     const [section, fallback = 'services'] = REGISTRY_SECTION_MAP[id] || ['services', ''];
     const group = REGISTRY_GROUP_MAP[service?.group] || 'other';
     const type = existing?.querySelector('.campus-site-type')?.textContent?.trim()

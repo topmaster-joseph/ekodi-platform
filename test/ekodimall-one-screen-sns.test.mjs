@@ -89,3 +89,21 @@ test('responsive layout and safe protected release dispatch',async()=>{
   for(const file of ['workspace-admin-page.js','mall-social-setup.js'])assert.ok(orchestrator.includes("file==='"+file+"'"));
   assert.match(orchestrator,/deploy-site-core\.yml/);
 });
+
+test('publishing overview has actionable four-step navigation and left site switch', async () => {
+  const html=renderMallSocialSetup({platform:{youtubeConfigured:true}});
+  const summary=html.indexOf('class="mall-social-summary"');
+  const stages=html.indexOf('class="mall-social-steps"');
+  const providers=html.indexOf('id="mallSocialProviders"');
+  assert.ok(summary>=0&&stages>summary&&providers>stages,'status summary precedes publishing steps and channels');
+  for(const id of ['mallSocialProviders','channel-policy','channel-test','channel-jobs']){
+    assert.ok(html.includes('data-channel-panel="'+id+'"'),id+' stage opens an existing panel');
+  }
+  const css=await workspaceAdminCss().text();
+  assert.match(css,/\.admin-scope-switcher\{justify-content:flex-start/);
+  assert.match(css,/\.admin-scope-switcher \.admin-scope-label\{margin-right:0!important/);
+  assert.match(css,/\.mall-social-steps button\{/);
+  assert.match(css,/@media\(max-width:700px\)\{\.admin-scope-switcher\{justify-content:flex-start/);
+  const script=await workspaceAdminScript().text();
+  assert.match(script,/document\.querySelectorAll\('\[data-channel-panel\]'\)/);
+});

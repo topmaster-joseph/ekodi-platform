@@ -117,7 +117,7 @@ export async function runTask(rawTask, options={}){
   page.on('response',res=>{
     const status=res.status();
     if(status>=400) httpErrorResponses.push({url:clean(res.url(),500),status,statusText:clean(res.statusText(),120),resourceType:clean(res.request().resourceType(),80)});
-    if(status===429 && new URL(res.url()).origin===ORIGIN) quotaCircuit={status,path:clean(new URL(res.url()).pathname,200)};
+    if(status===429 && new URL(res.url()).origin===ORIGIN) quotaCircuit={status,path:clean(new URL(res.url()).pathname,200),resourceType:clean(res.request().resourceType(),40)};
   });
 
   await page.route('**/*',async route=>{
@@ -133,20 +133,23 @@ export async function runTask(rawTask, options={}){
 
   const startedAt=now();
   const deadline=Date.now()+task.timeoutMs;
+  // Omit query values, response bodies and credentials from the quota evidence.
+  const quotaDetails=()=>quotaCircuit?' path='+quotaCircuit.path+' resource='+quotaCircuit.resourceType:'';
   const results=[];
   const screenshots=[];
   const recoveredNavigations=[];
   const remaining=()=>Math.max(100,deadline-Date.now());
-  // Pace mobile read-only verification across canonical services. Never bypass
-  // Cloudflare rate limiting or conceal a failure after bounded retries.
+  // Pace both desktop and mobile read-only navigation across canonical sites.
+  // Avoid the previous 500ms desktop burst (12 registered routes) and keep
+  // CF-QUOTA-001 immediate circuit break with no retry on 429 or Error 1027.
   let lastNavigationAt=0;
   const goto=async p=>{
-    if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open before navigation; no retry');
+    if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open before navigation'+quotaDetails()+'; no retry');
     if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
     const canonicalPath=safePath(p);
     const target=ORIGIN+canonicalPath;
     for(let attempt=0;attempt<3;attempt++){
-      const minimumGap=task.deviceProfile.includes('mobile')?2200:500;
+      const minimumGap=2200;
       const pause=Math.max(0,minimumGap-(Date.now()-lastNavigationAt));
       if(pause>0) await page.waitForTimeout(Math.min(pause,remaining()));
       if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
@@ -157,14 +160,14 @@ export async function runTask(rawTask, options={}){
       try {
         response=await page.goto(target,{waitUntil:'domcontentloaded',timeout:Math.min(30000,remaining())});
       } catch(error) {
-        if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open during navigation; no retry');
+        if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open during navigation'+quotaDetails()+'; no retry');
         throw error;
       }
       lastNavigationAt=Date.now();
       if(new URL(page.url()).origin!==ORIGIN) fail('BROWSER_REDIRECT_ORIGIN_FORBIDDEN','Navigation escaped canonical origin');
       const status=response?.status()??null;
       if(status===429 || quotaCircuit)
-        fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open: HTTP 429; no retry or further requests');
+        fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open: HTTP 429'+quotaDetails()+'; no retry or further requests');
       if(status!==null && status>=400) {
         const text=await page.locator('body').innerText({timeout:Math.min(2000,remaining())}).catch(()=>'');
         if(/Error 1027|temporarily rate limited|reached their plan limits/i.test(text.slice(0,2500)))
@@ -172,7 +175,7 @@ export async function runTask(rawTask, options={}){
       }
       // Allow dynamic imports to settle only while the quota circuit remains closed.
       await page.waitForTimeout(Math.min(task.deviceProfile.includes('mobile')?650:250,remaining()));
-      if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open after navigation; no retry');
+      if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open after navigation'+quotaDetails()+'; no retry');
       const transient=[502,503,504];
       const subresourceErrors=httpErrorResponses.slice(startingResponses).filter(item=>
         item.url.startsWith(ORIGIN+'/') && transient.includes(item.status));
@@ -204,7 +207,7 @@ export async function runTask(rawTask, options={}){
   try{
     results.push({type:'initial-goto',...(await goto(task.path))});
     for(let i=0;i<task.actions.length;i++){
-      if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open during browser actions; no further requests');
+      if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open during browser actions'+quotaDetails()+'; no further requests');
       if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
       const action=task.actions[i];
       if(action.type==='goto'){ results.push({type:'goto',...(await goto(action.path))}); continue; }
@@ -268,7 +271,7 @@ export async function runTask(rawTask, options={}){
       }
     }
 
-    if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open before success receipt; no false PASS');
+    if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open before success receipt'+quotaDetails()+'; no false PASS');
     const finalUrl=page.url();
     if(new URL(finalUrl).origin!==ORIGIN) fail('BROWSER_FINAL_ORIGIN_FORBIDDEN','Final browser origin is not canonical');
     const report={

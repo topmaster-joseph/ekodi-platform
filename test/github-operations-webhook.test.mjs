@@ -63,6 +63,21 @@ test('foreign repositories, installations, browser requests and oversized bodies
     {'x-hub-signature-256':'sha256='+'0'.repeat(64)}),env)).status,401);
 });
 
+test('a GitHub App signed ping acknowledges setup without D1, GitHub writes or release authority',async()=>{
+  const res=await acceptGitHubWebhook(await signedRequest({zen:'GitHub App ping'},
+    {'x-github-event':'ping'}),env);
+  assert.equal(res.status,200);
+  const body=await res.json();
+  assert.equal(body.pingVerified,true);
+  assert.equal(body.accepted,false);
+  assert.equal(body.releaseAuthorized,false);
+  assert.equal(body.githubApiCalls,0);
+  const forged=await signedRequest({zen:'GitHub App ping'},{
+    'x-github-event':'ping','x-hub-signature-256':'sha256='+'0'.repeat(64)
+  });
+  assert.equal((await acceptGitHubWebhook(forged,env)).status,401);
+});
+
 test('event key is deterministic across retransmissions; event projection has no user payload',async()=>{
   const key=await eventOperationKey('workflow_run',payload);
   assert.equal(key,await eventOperationKey('workflow_run',payload));

@@ -66,7 +66,7 @@ jobs:
             test "$mode" = 'customer-domain-preserved'
             ! grep -Eiq '^x-robots-tag:.*noindex' /tmp/bot-h
             ! grep -Fiq '<meta name="robots" content="noindex' /tmp/bot-body
-            grep -Fq '<link rel="canonical" href="https://seonammedi.kr/">' /tmp/bot-body
+            grep -Fq '<link rel="canonical" href="https://xn--3e0b8b58jw4co4mnpll3k.kr/">' /tmp/bot-body
             grep -Fq '<meta name="robots" content="index, follow, max-image-preview:large">' /tmp/bot-body
           }
           check_bot 'googlebot' 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'
@@ -78,10 +78,10 @@ jobs:
           grep -Fq '<loc>https://ekodi.kr/seonammedi</loc>' <<< "$sitemap"
           for host in seonammedi.kr xn--3e0b8b58jw4co4mnpll3k.kr; do
             host_robots=$(curl -fsS --connect-timeout 10 --max-time 30 "https://$host/robots.txt")
-            grep -Fq 'Sitemap: https://seonammedi.kr/sitemap.xml' <<< "$host_robots"
+            grep -Fq 'Sitemap: https://xn--3e0b8b58jw4co4mnpll3k.kr/sitemap.xml' <<< "$host_robots"
             ! grep -Eq '^Disallow: /[[:space:]]*$' <<< "$host_robots"
             host_sitemap=$(curl -fsS --connect-timeout 10 --max-time 30 "https://$host/sitemap.xml")
-            grep -Fq '<loc>https://seonammedi.kr/</loc>' <<< "$host_sitemap"
-            grep -Fq '<loc>https://seonammedi.kr/board/notices</loc>' <<< "$host_sitemap"
+            grep -Fq '<loc>https://xn--3e0b8b58jw4co4mnpll3k.kr/</loc>' <<< "$host_sitemap"
+            grep -Fq '<loc>https://xn--3e0b8b58jw4co4mnpll3k.kr/board/notices</loc>' <<< "$host_sitemap"
             echo "$host robots+sitemap ok"
           done

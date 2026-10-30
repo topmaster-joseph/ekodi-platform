@@ -2,9 +2,10 @@
 // NOT a checkout route or authorization source. Production billing remains fail-closed.
 export const HUMAN_AUTHOR_PLANS = Object.freeze({
   free: Object.freeze({
-    id: 'free', label: '무료 간편 집필', monthlyPriceKrw: 0,
+    id: 'free', label: '무료 기초 집필 · 개인소장', monthlyPriceKrw: 0,
     monthlyNewProjects: 1, mode: 'simple', maxActiveProjects: 1,
     saleReadyProduction: false, conversationalEditorial: false,
+    privateArchiveAndExport: true, expertGuidanceAllFields: true,
     maxSimpleDraftCharacters: 5000,
     status: 'proposed',
   }),
@@ -12,6 +13,8 @@ export const HUMAN_AUTHOR_PLANS = Object.freeze({
     id: 'writer1', label: '휴먼 집필 월 1권', monthlyPriceKrw: 100000,
     monthlyNewProjects: 1, mode: 'human', maxActiveProjects: 1,
     saleReadyProduction: true, conversationalEditorial: true,
+    privateArchiveAndExport: true, expertGuidanceAllFields: true,
+    privateArchiveAndExport: true, expertGuidanceAllFields: true,
     status: 'proposed',
   }),
   writer3: Object.freeze({
@@ -30,7 +33,9 @@ export function resolveAuthorCapability(identity, entitlement) {
   if (identity.verifiedChiefAdmin === true && identity.publisherEditorScope === true) {
     return Object.freeze({
       allowed: true, kind: 'publisher_editor', planId: 'internal', monthlyNewProjects: 6,
-      canUseEditorialAutomation: true, canStartSimple: true, canStartHuman: true,
+      canUseEditorialAutomation: true, canStartPlannedWriting: true,
+      canStartSimple: true, canStartHuman: true, canRequestSaleRegistration: true,
+      canKeepPrivateManuscript: true, canUseExpertGuidanceAllFields: true,
       reason: 'server_verified_publisher_operator',
     });
   }
@@ -42,8 +47,10 @@ export function resolveAuthorCapability(identity, entitlement) {
   return Object.freeze({
     allowed: true, kind: 'member_author', planId: plan.id,
     monthlyNewProjects: plan.monthlyNewProjects, maxActiveProjects: plan.maxActiveProjects,
-    canUseEditorialAutomation: false, canStartSimple: true,
-    canStartHuman: plan.conversationalEditorial,
+    canUseEditorialAutomation: false, canStartPlannedWriting: false,
+    canStartSimple: true, canStartHuman: plan.conversationalEditorial,
+    canRequestSaleRegistration: paid, canKeepPrivateManuscript: true,
+    canUseExpertGuidanceAllFields: true,
     saleReadyProduction: plan.saleReadyProduction,
     reason: 'personal_edition_only',
   });
@@ -107,4 +114,63 @@ export function canSubmitToPublisher(project) {
     project?.editorialAccessibilityReviewed === true &&
     project?.completedStages?.includes('approval')
   );
+}
+
+
+// Tier-independent creative mentorship: guidance is available to all authenticated authors.
+// These prompts are writing support, never a claim of professional accreditation,
+// invented author testimony, or a paid AI model invocation.
+export const EXPERT_WRITING_FIELDS = Object.freeze([
+  '문학·시·소설', '에세이·자서전', '신학·종교', '철학·인문',
+  '사회·문화·지역', '역사', '과학·기술·AI', '경영·경제·창업',
+  '교육·교재', '아동·청소년', '예술·디자인', '건강·생활',
+  '실용·취미', '연구·학술', '기타'
+]);
+
+export function expertWritingGuidance({ field = '기타', stage = 'idea', authorIntent = '' } = {}) {
+  const selectedField = EXPERT_WRITING_FIELDS.includes(field) ? field : '기타';
+  const questionByStage = {
+    idea: '지금 가장 오래 마음에 남아 있는 질문이나 실제 경험은 무엇인가요?',
+    outline: '독자가 처음부터 끝까지 따라갈 질문과 변화의 순서는 무엇인가요?',
+    draft: '이 장면 또는 주장을 구체적으로 보여 주는 사례와 근거는 무엇인가요?',
+    critique: '독자가 반대할 지점, 사실 검증이 필요한 부분, 자신의 목소리가 아닌 문장은 무엇인가요?',
+    revise: '독자의 이해와 감동을 더하기 위해 무엇을 덜어내고 무엇을 선명하게 해야 할까요?',
+    finish: '저자가 마지막까지 지키고 싶은 문장과 독자에게 남길 질문은 무엇인가요?'
+  };
+  return Object.freeze({
+    field: selectedField,
+    stage: Object.hasOwn(questionByStage, stage) ? stage : 'idea',
+    prompt: questionByStage[stage] || questionByStage.idea,
+    authorIntent: String(authorIntent).trim().slice(0, 500),
+    principles: Object.freeze(['저자 고유의 목소리 보호', '실제 자료·인용 검증', '반론·다양성 존중', '독자 경험 중심 구성']),
+    availableTo: Object.freeze(['free', 'writer1', 'writer3', 'publisher_editor']),
+  });
+}
+
+/**
+ * Private drafting never confers publication rights. This function only
+ * authorizes asking the publisher for review, not creating a product/listing.
+ * The server must verify identity and subscription, publisher signature,
+ * author-approved immutable edition, and signed commercial agreement.
+ */
+export function assessSaleRegistrationRequest({ identity, entitlement, project, salesContract } = {}) {
+  const capability = resolveAuthorCapability(identity, entitlement);
+  if (!capability.allowed) return { allowed: false, reason: capability.reason };
+  if (!capability.canRequestSaleRegistration) return { allowed: false, reason: 'free_personal_use_only' };
+  if (!project || project.authorId !== identity.personId ||
+      project.copyrightOwnerPersonId !== identity.personId) {
+    return { allowed: false, reason: 'author_ownership_required' };
+  }
+  if (!canSubmitToPublisher(project)) return { allowed: false, reason: 'author_and_editorial_approval_required' };
+  if (project.publisherLicenseAccepted !== true) return { allowed: false, reason: 'limited_distribution_license_required' };
+  if (capability.kind !== 'publisher_editor') {
+    if (salesContract?.verified !== true || salesContract?.signedByAuthorId !== identity.personId ||
+        salesContract?.editionDigest !== project.finalDigest ||
+        salesContract?.royaltyTermsAccepted !== true ||
+        salesContract?.salesCommissionTermsAccepted !== true) {
+      return { allowed: false, reason: 'separate_royalty_and_commission_agreement_required' };
+    }
+  }
+  return { allowed: true, reason: 'publisher_review_required', state: 'review_requested',
+    listingCreated: false, publisherReleaseApproved: false };
 }

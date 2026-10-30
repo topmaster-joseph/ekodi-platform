@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { verifySearchVisibilityInteractions } from './verify-search-visibility-interactions.mjs';
+import { auditAdminProductionUiCoverage } from './admin-production-ui-coverage.mjs';
 import { adminMenuOrder, getAdminMenuForSection, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
 
 const ADMIN_URL = process.env.ADMIN_URL || 'https://ekodi.kr/admin/';
@@ -368,6 +370,56 @@ async function verifyCommandConsoleRoundTrip() {
 
 await verifyCommandConsoleRoundTrip();
 
+async function verifyAiOpsStageWorkspace() {
+  // Real production UI assets; synthetic read-only session. No Provider writes.
+  const root=page.locator('#aiOpsPanel');
+  const stages=['overview','providers','sites','reports','command'];
+  const targets={overview:'#aiOpsStageSummary',providers:'[data-ekodi-ai-provider-center]',sites:'.ai-ops-observe',reports:'.ai-evolution-block',command:'#aiChiefChat'};
+  await root.locator('[data-aiops-stage-tab]').first().waitFor({state:'visible',timeout:12000});
+  if(await root.locator('[data-aiops-stage-tab]').count()!==5)throw new Error('AI Ops primary tab count is not five');
+  for(const stage of stages){
+    await root.locator('[data-aiops-stage-tab="'+stage+'"]').click();
+    await page.waitForFunction(key=>{
+      const panel=document.querySelector('#aiOpsPanel');
+      return panel?.dataset.aiopsStage===key
+        && panel.querySelectorAll('[data-aiops-stage-tab][aria-pressed="true"]').length===1
+        && panel.querySelector('[data-aiops-stage-tab="'+key+'"]')?.getAttribute('aria-pressed')==='true';
+    },stage,{timeout:6000});
+    await root.locator(targets[stage]).first().waitFor({state:'visible',timeout:12000});
+    if(stage==='sites'){
+      const detail=root.locator('#aiSelectedDetail');
+      if(await detail.isVisible())throw new Error('Site detail exposed before selecting a site');
+      await root.locator('#aiFleetRows .ai-fleet-row').first().waitFor({state:'visible',timeout:12000});
+      await root.locator('#aiFleetRows .ai-fleet-row').first().click();
+      await detail.waitFor({state:'visible',timeout:6000});
+      if(await root.locator('#aiFleetRows .ai-fleet-row.selected').count()!==1)throw new Error('Selected site detail not bound to selected row');
+    }
+  }
+  await root.locator('[data-aiops-stage-tab="overview"]').click();
+  await root.locator('[data-aiops-stage-tab="overview"]').focus();
+  await page.keyboard.press('ArrowRight');
+  if(await root.getAttribute('data-aiops-stage')!=='providers')throw new Error('AI Ops keyboard navigation failed');
+  await page.setViewportSize({width:390,height:844});
+  await page.keyboard.press('Escape');
+  const mobile=await root.evaluate(panel=>{
+    const nav=panel.querySelector('#aiOpsStageNav');
+    const tabs=[...nav.querySelectorAll('[data-aiops-stage-tab]')];
+    const box=panel.getBoundingClientRect();
+    return {viewport:innerWidth,left:box.left,right:box.right,
+      count:tabs.length,navWidth:nav.clientWidth,
+      minWidth:Math.min(...tabs.map(tab=>tab.getBoundingClientRect().width)),
+      minHeight:Math.min(...tabs.map(tab=>tab.getBoundingClientRect().height))};
+  });
+  if(mobile.left < -2 || mobile.right > mobile.viewport+2 || mobile.count!==5
+    || mobile.navWidth<200 || mobile.minWidth<80 || mobile.minHeight<40)
+    throw new Error('AI Ops mobile tab layout clipped: '+JSON.stringify(mobile));
+  await root.locator('[data-aiops-stage-tab="overview"]').click();
+  await page.screenshot({path:path.join(artifactsDir,'aiops-mobile-390.png'),fullPage:false});
+  await page.setViewportSize({width:1440,height:1000});
+  await page.screenshot({path:path.join(artifactsDir,'aiops-desktop-1440.png'),fullPage:false});
+  console.log('[PROD-E2E] aiops: five stages, selected detail, keyboard and 390px mobile verified');
+}
+
 let selectedWorkArea = null;
 for (const [id, group] of menus) {
   console.log(`[PROD-E2E] ${id}: begin`);
@@ -586,6 +638,8 @@ for (const [id, group] of menus) {
     throw new Error(`${id} did not render a visible non-empty panel: ${JSON.stringify(visiblePanel)}`);
   }
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
+  if (id === 'aiops') await verifyAiOpsStageWorkspace();
+  if (id === 'search-visibility') await verifySearchVisibilityInteractions(page,artifactsDir,results);
   if (id === 'infra-costs') {
     // PROD-E2E: accepting a DOM-only panel can still screenshot a different
     // section when the Admin workspace retains a previous scroll position.
@@ -978,8 +1032,9 @@ for (const [id, group] of menus) {
   if (recoveredShell) selectedWorkArea = null;
 }
 
-const activeCount = results.filter(result => result.ok).length;
-const expectedCount = menus.length + 1;
+const coverage = auditAdminProductionUiCoverage(menuIds, results);
+const activeCount = coverage.actualCount;
+const expectedCount = coverage.expectedCount;
 console.log(`ADMIN_PRODUCTION_UI_E2E=${activeCount}/${expectedCount}`);
 console.log(`ADMIN_WORK_AREAS=${workAreas.join(',')}`);
 console.log(`ADMIN_FINGERPRINT=${assetVersion}`);
@@ -999,7 +1054,7 @@ if (fatalErrors.length) {
   for (const error of fatalErrors) console.log(`PAGEERROR ${error}`);
   throw new Error('Production Admin emitted page errors during menu E2E');
 }
-if (activeCount !== expectedCount) throw new Error(`Expected ${expectedCount} verified Admin interactions including command-home, received ${activeCount}`);
+if (!coverage.ok) throw new Error(`Admin interaction coverage mismatch (${activeCount}/${expectedCount}): ${coverage.issues.join('; ')}`);
 await page.screenshot({ path:path.join(artifactsDir,'admin-final.png'), fullPage:false });
 
 await browser.close();

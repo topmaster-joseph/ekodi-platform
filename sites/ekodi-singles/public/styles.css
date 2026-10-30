@@ -142,3 +142,11 @@
 .wallet-balance{font-size:1.2em;font-weight:700;color:#8b5048}
 .ledger{list-style:none;padding:0;font-size:.92em;color:#765f57;line-height:1.7}
 .join-steps{line-height:1.9}
+
+/* Inner pages prioritize the task over repeated marketing panels. */
+.romantic-inner .intro{margin-top:16px;padding:20px 5%;min-height:0}
+.romantic-inner .intro .eyebrow{margin-bottom:5px}
+.romantic-inner .intro h1{margin:0;font-size:clamp(22px,2.6vw,32px)}
+.romantic-inner .intro .lead,.romantic-inner .intro .actions,.romantic-inner .pillars{display:none}
+.romantic-inner .content{padding-top:18px}
+@media(max-width:610px){.romantic-inner .intro{padding:15px 18px;margin-top:10px}.romantic-inner .content{padding-top:14px}}

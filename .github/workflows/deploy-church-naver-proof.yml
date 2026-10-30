@@ -1,0 +1,88 @@
+name: Deploy EKODI Church Naver Owner Proof (Path Only)
+# deployment-guardrail: topology-workflow-manual-only
+# This lane owns a single GET/HEAD Naver verification URL and does not mutate
+# DNS, Pages domains, the canonical redirect worker or any other customer zone.
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Authorized EKODI orchestrator release branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Exact authorized EKODI task ID'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-church-naver-owner-proof
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+      EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify church zone only (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          raw=$(curl -fsS --retry 2 "https://api.cloudflare.com/client/v4/zones?name=ekodichurch.kr&account.id=$CLOUDFLARE_ACCOUNT_ID" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          echo "$raw" | jq -e '.success == true and any(.result[]; .name == "ekodichurch.kr" and .status == "active")' >/dev/null
+      - name: Deploy exact Naver proof route, without touching other domains
+        run: npx --yes wrangler@4.119.0 deploy --config wrangler.church-naver-proof.toml
+      - name: Inspect exact existing church Cloudflare Single Redirect
+        # Separate, zone-scoped Single Redirect token; never elevate the
+        # general Cloudflare Worker deploy token to ruleset write.
+        env:
+          CLOUDFLARE_CHURCH_RULES_API_TOKEN: ${{ secrets.CLOUDFLARE_CHURCH_RULES_API_TOKEN }}
+        run: node scripts/cloudflare-church-naver-redirect-exception.mjs --inspect
+      - name: Exclude only Naver proof URL from existing church redirect (one-rule PATCH)
+        env:
+          CLOUDFLARE_CHURCH_RULES_API_TOKEN: ${{ secrets.CLOUDFLARE_CHURCH_RULES_API_TOKEN }}
+        run: node scripts/cloudflare-church-naver-redirect-exception.mjs
+      - name: Verify real Naver owner proof and preserve church homepage
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://ekodichurch.kr/naver85321326d5553a0caa3a944158fc2969.html'
+          expected='naver-site-verification: naver85321326d5553a0caa3a944158fc2969.html'
+          proof_file=$(mktemp)
+          headers=$(mktemp)
+          trap 'rm -f "$proof_file" "$headers"' EXIT
+          ok=0
+          for attempt in $(seq 1 12); do
+            code=$(curl -sS --connect-timeout 10 --max-time 20 -D "$headers" -o "$proof_file" -w '%{http_code}' "$url" || true)
+            if [ "$code" = "200" ] && [ "$(cat "$proof_file")" = "$expected" ]; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          echo "church Naver proof status=$code matched=$ok"
+          test "$ok" = 1
+          home_code=$(curl -sS -o /dev/null -D "$headers" --connect-timeout 10 --max-time 20 -w '%{http_code}' https://ekodichurch.kr/)
+          location=$(sed -n '/^[Ll]ocation:/{s/^[^:]*: *//;s/\r$//;p;q;}' "$headers")
+          echo "church homepage status=$home_code location=$location"
+          test "$home_code" = 301 || test "$home_code" = 302
+          case "$location" in
+            https://ekodi.kr/ekodichurch|https://ekodi.kr/ekodichurch/) ;;
+            *) echo 'Unexpected church homepage redirect' >&2; exit 1 ;;
+          esac

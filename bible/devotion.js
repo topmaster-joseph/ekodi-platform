@@ -106,6 +106,10 @@ function boot(root) {
   const prev = el('a', 'dv-date-link', '‹ 이전');
   const dateLabel = el('strong', 'dv-date', '불러오는 중');
   const next = el('a', 'dv-date-link', '다음 ›');
+  // Never display an actionable future link while the session is unresolved.
+  next.hidden = true;
+  next.setAttribute('aria-disabled','true');
+  next.tabIndex = -1;
   datebar.append(prev, dateLabel, next);
   const status = el('p', 'dv-status');
   status.setAttribute('role', 'status');
@@ -169,6 +173,55 @@ function boot(root) {
   adminView.setAttribute('aria-live', 'polite');
   let adminSelection = '';
   root.append(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminBar, adminPanel, adminView, toastEl);
+  // Mission supplies this control through its own site shell.  Church and
+  // Bible share the same concise account/logout convention alongside admin.
+  const sharedAuthBar = siteKey==='mission' ? null : el('div','dv-shared-auth');
+  if(sharedAuthBar){
+    const controls=el('div','dv-shared-tools');
+    adminBar.before(controls);
+    controls.append(adminBar,sharedAuthBar);
+  }
+  function showSharedAccount(viewer){
+    if(!sharedAuthBar)return;
+    sharedAuthBar.replaceChildren();
+    const signedIn=viewer?.authenticated===true;
+    if(!signedIn){
+      const login=el('a','dv-date-link','로그인');
+      login.href=`${ORIGIN}/auth/?site=${siteKey}&return_to=${encodeURIComponent(location.href)}`;
+      sharedAuthBar.append(login);
+      return;
+    }
+    const account=el('span','dv-shared-account',String(viewer.email||'계정').slice(0,90));
+    account.title=account.textContent;
+    const logout=el('button','dv-date-link','로그아웃');
+    logout.type='button';
+    logout.addEventListener('click',()=>void signOutDevotion(logout));
+    sharedAuthBar.append(account,logout);
+  }
+  async function signOutDevotion(button){
+    const member=memberSessionEntry()?.session?.access_token||'';
+    const consoleToken=adminConsoleToken();
+    button.disabled=true;
+    try{sessionStorage.removeItem(ADMIN_TOKEN_KEY)}catch{}
+    try{localStorage.removeItem(ADMIN_TOKEN_KEY)}catch{}
+    try{
+      for(let i=localStorage.length-1;i>=0;i--){
+        const key=localStorage.key(i)||'';
+        if(/^sb-.*-auth-token$/.test(key))localStorage.removeItem(key);
+      }
+    }catch{}
+    // Clear the privileged navigation before waiting for a network reply.
+    renderAdminBar(null);
+    showSharedAccount(null);
+    window.dispatchEvent(new Event('ekodi:auth-logout'));
+    if(consoleToken)await fetch('/api/logout',{method:'POST',
+      headers:{authorization:'Bearer '+consoleToken},credentials:'same-origin',
+      signal:AbortSignal.timeout(5000)}).catch(()=>null);
+    if(member)await fetch(SUPABASE_URL+'/auth/v1/logout',{method:'POST',
+      headers:{apikey:SUPABASE_KEY,authorization:'Bearer '+member},
+      signal:AbortSignal.timeout(5000)}).catch(()=>null);
+  }
+  showSharedAccount(null);
 
   function toast(message) {
     toastEl.textContent = message;
@@ -363,11 +416,13 @@ function boot(root) {
     let viewer = null;
     try {
       const token = await requestToken();
-      if (!token) return;
-      const response = await fetch(`${API}/me`, { cache: 'no-store', headers: { authorization: `Bearer ${token}` } });
-      if (response.ok) viewer = await response.json();
+      if (token) {
+        const response = await fetch(`${API}/me`, { cache: 'no-store', headers: { authorization: `Bearer ${token}` } });
+        if (response.ok) viewer = await response.json();
+      }
     } catch {}
     renderAdminBar(viewer);
+    showSharedAccount(viewer);
   }
   function renderAdminBar(viewer) {
     adminBar.replaceChildren();
@@ -599,12 +654,80 @@ function boot(root) {
     });
   }
 
+  // All 3 public devotion hosts share these navigation guards.
+  const seoulToday = () => {
+    const parts = new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const value = type => parts.find(part=>part.type===type)?.value||'';
+    return [value('year'),value('month'),value('day')].join('-');
+  };
+  let futurePermissionRevoked = false;
+  let permissionCheck = 0;
+  function updateNextAccess() {
+    const today = seoulToday();
+    const allowed = Boolean(current?.nextDate) &&
+      (current.nextDate <= today || (current.admin?.canEdit && !futurePermissionRevoked));
+    // No href, keyboard target, or click action is left for an inaccessible date.
+    next.hidden = !allowed;
+    next.tabIndex = allowed ? 0 : -1;
+    next.setAttribute('aria-disabled', String(!allowed));
+    if (allowed) next.href = pageUrl(current.nextDate);
+    else next.removeAttribute('href');
+  }
+  function revokeFutureNavigation() {
+    futurePermissionRevoked = true;
+    permissionCheck += 1;
+    if (current) current.admin = null;
+    updateNextAccess();
+    // If an administrator signs out while already viewing tomorrow, remove
+    // previously rendered private content instead of leaving it onscreen.
+    if (current?.date > seoulToday()) location.replace(pageUrl(seoulToday()));
+  }
+  async function verifyFuturePermission(date) {
+    const epoch = ++permissionCheck;
+    const bearer = await requestToken();
+    if (!bearer) return false;
+    if (epoch !== permissionCheck) return null;
+    try {
+      const response = await fetch(`${API}?date=${encodeURIComponent(date)}`,{
+        cache:'no-store',headers:{authorization:`Bearer ${bearer}`}
+      });
+      const data = await response.json().catch(()=>null);
+      if(epoch !== permissionCheck)return null;
+      return response.ok && data?.admin?.canEdit === true;
+    } catch { return false; }
+  }
+  next.addEventListener('click',async event=>{
+    if (!current?.nextDate || next.hidden || !next.hasAttribute('href')) {
+      event.preventDefault();return;
+    }
+    if (current.nextDate <= seoulToday()) return;
+    event.preventDefault();
+    const date=current.nextDate;
+    const authorized=await verifyFuturePermission(date);
+    if(authorized===false){revokeFutureNavigation();return;}
+    if(authorized!==true)return;
+    if (date !== current?.nextDate || next.hidden) return;
+    location.assign(pageUrl(date));
+  });
+  window.addEventListener('ekodi:auth-logout',revokeFutureNavigation);
+  const reevaluate = () => {
+    updateNextAccess();
+    if(current?.date > seoulToday() || (current?.nextDate > seoulToday() && current.admin?.canEdit)){
+      void verifyFuturePermission(current.date > seoulToday()?current.date:current.nextDate)
+        .then(valid=>{if(valid===false)revokeFutureNavigation()});
+    }
+  };
+  window.addEventListener('pageshow',reevaluate);
+  window.addEventListener('focus',reevaluate);
+  window.addEventListener('storage',event=>{
+    if(event.key===null || event.key==='ekodi-auth-token' || /^sb-.*-auth-token$/.test(event.key||''))reevaluate();
+  });
+
   function render(data) {
     current = data;
     dateLabel.textContent = koreanDate(data.date);
     prev.href = pageUrl(data.prevDate);
-    next.href = pageUrl(data.nextDate);
-    next.hidden = !data.admin?.canEdit && data.nextDate > (data.today || data.date);
+    updateNextAccess();
     for (const panel of panels.values()) panel.replaceChildren();
     scriptureBlock.replaceChildren();
     audioRow.replaceChildren();
@@ -762,6 +885,15 @@ function boot(root) {
     selectTab(nextId);
     tabButtons.get(nextId).focus();
   });
+  if(sharedAuthBar){
+    window.addEventListener('focus',()=>void loadViewer());
+    window.addEventListener('storage',event=>{
+      if(event.key===null || event.key===ADMIN_TOKEN_KEY || /^sb-.*-auth-token$/.test(event.key||'')){
+        revokeFutureNavigation();
+        void loadViewer();
+      }
+    });
+  }
   window.addEventListener('hashchange', () => {
     const hash = location.hash.slice(1), legacy = {passage:'poem',action:'questions',mine:'records'}[hash];
     if (current?.found) selectTab(legacy || hash || 'poem', { updateHash: false });
@@ -783,10 +915,33 @@ function boot(root) {
         {cache:'no-store',headers:token?{authorization:`Bearer ${token}`}:{}});
       const data = await response.json();
       if (!response.ok) {
+        const futureNotice = '아직 공개되지 않은 날짜입니다. 오늘 날짜까지만 열람할 수 있습니다.';
         status.textContent = data.error === 'future_unavailable'
-          ? '아직 공개되지 않은 날짜입니다. 오늘 날짜까지만 열람할 수 있습니다.'
+          ? futureNotice
           : data.error === 'invalid_date' ? '날짜를 확인해 주세요.' : '묵상 자료를 불러올 수 없습니다.';
         summary.hidden = scriptureBlock.hidden = notice.hidden = shareRow.hidden = tabbar.hidden = panelWrap.hidden = audioRow.hidden = true;
+        // Mission guests should see the privacy notice, then the current day's
+        // devotion immediately. The API itself still denies future dates (403).
+        // Only use the authoritative Asia/Seoul "today" from that 403 response.
+        // A legitimate admin receives HTTP 200 for an authorized future date.
+        if (siteKey === 'mission' && date && data.error === 'future_unavailable' &&
+            typeof data.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.today) && data.today < date) {
+          const today = data.today;
+          history.replaceState(null, '', `${pageUrl(today)}${location.hash}`);
+          const todayResponse = await fetch(`${API}?date=${today}`,
+            {cache:'no-store',headers:token?{authorization:`Bearer ${token}`}:{}});
+          if (!todayResponse.ok) {
+            status.textContent = futureNotice + ' 오늘의 묵상 자료를 불러올 수 없습니다.';
+            return;
+          }
+          const todayDevotion = await todayResponse.json();
+          render(todayDevotion);
+          if (todayDevotion.found) {
+            const movedNotice = futureNotice + ' 오늘의 묵상으로 이동했습니다.';
+            status.textContent = movedNotice;
+            setTimeout(() => { if (status.textContent === movedNotice) status.textContent = ''; }, 2300);
+          }
+        }
         return;
       }
       if (!date && data.date && dateMode === 'path') history.replaceState(null, '', `${pageUrl(data.date)}${location.hash}`);

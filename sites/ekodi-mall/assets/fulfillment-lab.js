@@ -13,7 +13,9 @@
   const reload = document.querySelector('#reloadFulfillment');
   const gatePii = document.querySelector('#gatePii');
   const gateForward = document.querySelector('#gateForward');
+  const total = document.querySelector('#fulfillmentTotal');
   let session = null;
+  let sessionVersion = 0;
 
   const money = (value) => `${new Intl.NumberFormat('ko-KR').format(Number(value) || 0)}원`;
   const label = (value) => ({
@@ -41,15 +43,15 @@
     if (error) throw error;
     history.replaceState(null, '', location.pathname + location.search);
   }
-  function render(items = []) {
+  function render(items = [], signed = Boolean(session)) {
     list.replaceChildren();
     if (!items.length) {
-      const card = node('article', 'studio-preview-block');
-      card.append(node('small', '', 'EMPTY'), node('h3', '', '아직 Fulfillment 원장이 없습니다.'), node('p', '', '결제 완료 주문이 계약 공급자에게 배정되면 여기에 이행 상태가 표시됩니다.'));
+      const card = node('article', 'fulfillment-empty');
+      card.append(node('small', '', 'EMPTY'), node('h3', '', signed ? '아직 주문 이행 내역이 없습니다.' : '로그인 후 조회'), node('p', '', signed ? '결제 완료 주문이 계약 공급자에게 배정되면 이곳에 표시됩니다.' : '판매자 로그인 후 이행 현황을 확인할 수 있습니다.'));
       list.append(card); return;
     }
     for (const item of items) {
-      const card = node('article', 'studio-preview-block');
+      const card = node('article', 'fulfillment-order');
       card.append(node('small', '', label(item.status).toUpperCase()), node('h3', '', item.productName || item.orderId));
       card.append(node('p', '', `주문 ${item.orderId} · 공급처 ${item.sourceLabel || item.sourceId}`));
       card.append(node('p', '', `공급원가 ${money(item.supplierCostAmount)} + 배송 ${money(item.supplierShippingAmount)} = ${money(item.supplierPayableAmount)}`));
@@ -60,30 +62,70 @@
   }
   async function load() {
     if (!session) return;
+    const version = sessionVersion, identity = session.user?.id;
     const result = await api('/api/fulfillment/orders');
-    const items = result.fulfillments || [];
+    if (!session || version !== sessionVersion || session.user?.id !== identity) return;
+    const items = Array.isArray(result.fulfillments) ? result.fulfillments : [];
     const gates = result.gates || {};
-    if (gatePii) gatePii.textContent = gates.buyerPiiReleaseEnabled ? 'ON' : 'OFF';
-    if (gateForward) gateForward.textContent = gates.supplierForwardEnabled ? 'ON' : 'OFF';
-    if (count) count.textContent = `Fulfillment ${items.length}건 · PII/발주 게이트 ${gates.buyerPiiReleaseEnabled || gates.supplierForwardEnabled ? '부분 활성' : 'OFF'}`;
-    render(items);
+    if (gatePii) { gatePii.textContent = gates.buyerPiiReleaseEnabled ? 'ON' : 'OFF'; gatePii.dataset.state = gates.buyerPiiReleaseEnabled ? 'on' : 'off'; }
+    if (gateForward) { gateForward.textContent = gates.supplierForwardEnabled ? 'ON' : 'OFF'; gateForward.dataset.state = gates.supplierForwardEnabled ? 'on' : 'off'; }
+    if (total) total.textContent = String(items.length);
+    if (count) count.textContent = `주문 이행 ${items.length}건 · 개인정보/발주 ${gates.buyerPiiReleaseEnabled || gates.supplierForwardEnabled ? '일부 승인' : 'OFF'}`;
+    render(items, true);
     setStatus(`연결됨 · 주문 이행 ${items.length}건 · 구매자 개인정보 원문 미노출`);
   }
   function syncSessionUi() {
     const signed = Boolean(session);
-    if (member) member.textContent = signed ? `${session.user.email || 'Google 회원'} · Seller` : '로그인 필요';
+    if (member) member.textContent = signed ? `${session.user.email || 'Google 회원'} · 판매자` : '로그인 필요';
     if (login) login.hidden = signed;
     if (logout) logout.hidden = !signed;
     if (reload) reload.disabled = !signed;
+    if (!signed) {
+      if (total) total.textContent = '—';
+      if (count) count.textContent = '이행 원장을 불러오지 않았습니다.';
+      if (gatePii) { gatePii.textContent = 'OFF'; gatePii.dataset.state = 'off'; }
+      if (gateForward) { gateForward.textContent = 'OFF'; gateForward.dataset.state = 'off'; }
+      render([], false);
+    }
   }
+  const tabs = [...document.querySelectorAll('[data-fulfillment-tab]')];
+  const panels = [...document.querySelectorAll('[data-fulfillment-panel]')];
+  const allowed = new Set(tabs.map(tab => tab.dataset.fulfillmentTab));
+  function openTab(value, writeUrl = false) {
+    const selected = allowed.has(value) ? value : 'orders';
+    for (const tab of tabs) {
+      const active = tab.dataset.fulfillmentTab === selected;
+      tab.setAttribute('aria-selected', String(active)); tab.tabIndex = active ? 0 : -1;
+    }
+    for (const panel of panels) panel.hidden = panel.dataset.fulfillmentPanel !== selected;
+    if (writeUrl) {
+      const url = new URL(location.href);
+      if (selected === 'orders') url.searchParams.delete('tab'); else url.searchParams.set('tab', selected);
+      history.replaceState(null, '', url.pathname + url.search + url.hash);
+    }
+  }
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => openTab(tab.dataset.fulfillmentTab, true));
+    tab.addEventListener('keydown', event => {
+      let next = -1;
+      if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+      else if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length;
+      else if (event.key === 'Home') next = 0;
+      else if (event.key === 'End') next = tabs.length - 1;
+      if (next < 0) return;
+      event.preventDefault(); openTab(tabs[next].dataset.fulfillmentTab, true); tabs[next].focus();
+    });
+  });
+  openTab(new URLSearchParams(location.search).get('tab'));
+  window.addEventListener('popstate', () => openTab(new URLSearchParams(location.search).get('tab')));
   login?.addEventListener('click', () => { location.href = 'https://ekodi.kr/auth/?site=mall-seller&return_to=' + encodeURIComponent(location.href.split('#')[0]); });
-  logout?.addEventListener('click', async () => { await sb.auth.signOut(); session = null; syncSessionUi(); render([]); setStatus('로그아웃했습니다.'); });
+  logout?.addEventListener('click', async () => { sessionVersion++; session = null; syncSessionUi(); try { await sb.auth.signOut(); setStatus('로그아웃했습니다.'); } catch (error) { setStatus(`로그아웃 확인 실패: ${error.message}`, true); session = (await sb.auth.getSession()).data.session; sessionVersion++; syncSessionUi(); } });
   reload?.addEventListener('click', () => load().catch((error) => setStatus(error.message, true)));
 
   exchangeCentralToken().catch((error) => setStatus(`인증 연결 실패: ${error.message}`, true)).finally(async () => {
     session = (await sb.auth.getSession()).data.session;
-    syncSessionUi();
+    sessionVersion++; syncSessionUi();
     if (session) load().catch((error) => setStatus(error.message, true));
   });
-  sb.auth.onAuthStateChange((_event, next) => { session = next; syncSessionUi(); if (session) load().catch(() => {}); });
+  sb.auth.onAuthStateChange((_event, next) => { if (session?.access_token === next?.access_token) return; session = next; sessionVersion++; syncSessionUi(); if (session) load().catch(error => setStatus(error.message, true)); });
 })();

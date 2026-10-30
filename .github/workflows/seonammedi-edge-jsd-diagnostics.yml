@@ -1,0 +1,49 @@
+name: SeonamMedi Cloudflare JS Detection Readonly Diagnostics
+on:
+  pull_request:
+    paths:
+      - 'scripts/inspect-seonammedi-edge-jsd.mjs'
+      - '.github/workflows/seonammedi-edge-jsd-diagnostics.yml'
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+jobs:
+  diagnostic-syntax:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate safe diagnostic syntax
+        run: node --check scripts/inspect-seonammedi-edge-jsd.mjs
+  readonly-public-probe:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.comment.user.login == github.repository_owner &&
+       github.event.issue.pull_request != null &&
+       github.event.issue.state == 'closed' &&
+       github.event.comment.body == 'EKODI-SEONAM-EDGE-DIAG:RUN')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read only public Cloudflare loader structure
+        run: node scripts/inspect-seonammedi-edge-jsd.mjs
+      - name: Attach redacted evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seonammedi-edge-jsd-${{ github.run_id }}
+          path: artifacts/seonammedi-edge-jsd/redacted-report.json
+          retention-days: 14
+          if-no-files-found: warn

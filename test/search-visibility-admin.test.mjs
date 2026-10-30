@@ -80,3 +80,33 @@ test('Site inventory presents a single-line classified register with numbered ro
   assert.match(src,/confirmed_manually/);
   assert.doesNotMatch(src,/미등록 확정/);
 });
+
+test('Production browser exercises Search Visibility filters, Manage and mobile without writes',()=>{
+  const script=read('scripts/verify-admin-production-ui-e2e.mjs');
+  const coverage=read('scripts/verify-search-visibility-interactions.mjs');
+  assert.match(script,/verifySearchVisibilityInteractions\(page,artifactsDir,results\)/);
+  assert.match(coverage,/await filter\.selectOption\(group\)/);
+  assert.match(coverage,/await search\.fill\(firstName\)/);
+  assert.match(coverage,/await first\.locator\('button'\)\.click\(\)/);
+  assert.match(coverage,/await panel\.locator\('\[data-sv-manage-close\]'\)\.click\(\)/);
+  assert.match(coverage,/page\.setViewportSize\(\{width:390,height:844\}\)/);
+  assert.match(coverage,/forbiddenWrites\.length/);
+  assert.match(coverage,/read-only-interaction/);
+});
+
+test('EKODI native Chromium Search Visibility GSC action uses only synthetic read-only fixtures',()=>{
+  const coverage=read('scripts/verify-search-visibility-interactions.mjs');
+  const ui=read('search-visibility-admin.js');
+  assert.match(coverage,/data-sv-google-read/);
+  assert.match(coverage,/page\.route\(googleRoute,mockGoogleRead\)/);
+  assert.match(coverage,/request\.method\(\)!=='GET'/);
+  assert.match(coverage,/googleScenario==='not_configured'/);
+  assert.match(coverage,/googleScenario='connected'/);
+  assert.match(coverage,/googleScenario='no_rows'/);
+  assert.match(coverage,/googleReadRequests\.length!==3/);
+  assert.match(coverage,/page\.unroute\(googleRoute,mockGoogleRead\)/);
+  assert.match(coverage,/synthetic-readonly-ui/);
+  assert.match(ui,/data-sv-google-read/);
+  assert.match(ui,/GOOGLE_SEARCH_SA_KEY_JSON|Google Search Console 읽기 전용 서비스 계정이 아직 서버에 연결되지 않았습니다/);
+  assert.doesNotMatch(coverage,/confirmed_manually|api\.googleapis\.com\/webmasters\/v3\/sites/);
+});

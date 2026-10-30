@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-NATIVE-RESERVATIONS-20261030",
+  "owner": "EKODI Orchestrator",
+  "scheduler": "existing-ekodi-native-operations-watch",
+  "timezone": "Asia/Seoul",
+  "legacyChatgpt": {
+    "pausedCount": 5,
+    "pausedOn": "2026-10-30",
+    "verifiedBy": "authorized ChatGPT Automations update",
+    "autoReenable": false
+  },
+  "permittedExecution": "read_only_observation_and_approved_source_preparation",
+  "forbidden": [
+    "unreviewed_source_mutation",
+    "automatic_merge",
+    "payment",
+    "unapproved_publication",
+    "provider_token_access",
+    "human_gate_bypass"
+  ],
+  "tasks": [
+    {
+      "id": "church-naver-owner",
+      "title": "에코디교회 네이버 운영 실증 복구",
+      "cronProfile": "hourly",
+      "frequency": "hourly",
+      "issue": 6317,
+      "mode": "public_http_proof"
+    },
+    {
+      "id": "social-accounts-release",
+      "title": "에코디 소셜계정 화면 배포 검증",
+      "cronProfile": "hourly",
+      "frequency": "hourly",
+      "issue": 6524,
+      "mode": "read_only_source_and_e2e_readiness"
+    },
+    {
+      "id": "church-live-release",
+      "title": "에코디교회 방송 배포 점검",
+      "cronProfile": "hourly",
+      "frequency": "hourly",
+      "issue": 6051,
+      "mode": "read_only_source_and_e2e_readiness"
+    },
+    {
+      "id": "human-publishing-editorial",
+      "title": "에코디 휴먼출판 월간 제작",
+      "cronProfile": "publishing",
+      "frequency": "monday_0800_kst",
+      "issue": 6331,
+      "mode": "approved_editorial_preparation"
+    },
+    {
+      "id": "church-weekly-worship",
+      "title": "에코디교회 주일예배 자료 준비",
+      "cronProfile": "worship",
+      "frequency": "wednesday_0826_kst",
+      "issue": 6051,
+      "mode": "approved_scripture_preparation"
+    }
+  ]
+}
