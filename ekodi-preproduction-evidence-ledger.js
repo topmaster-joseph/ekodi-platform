@@ -42,7 +42,7 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
       'SELECT task_id,branch_ref,state,state_version,permission_class,deployment_requested,evidence_json FROM ekodi_orchestrator_tasks WHERE task_id=?'
     ).bind(taskId).first();
     if(!row||row.task_id!==taskId||row.branch_ref!==branchRef||
-       row.state!=='staging'||row.permission_class!=='delegated'||
+       !['production_verifying','staging'].includes(row.state)||row.permission_class!=='delegated'||
        Number(row.deployment_requested)!==1||!Number.isSafeInteger(Number(row.state_version))||
        Number(row.state_version)<1)return fail('task_not_in_authorized_staging');
     previous=await db.prepare(
@@ -56,6 +56,8 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
   // A task may receive at most one immutable release identity. Retrying the
   // OIDC job is idempotent only for the same first-party signed audit record.
   if(previous){
+    // An old attestation may not resurrect a task that lost its staging hold.
+    if(row.state!=='staging')return fail('prior_staging_attestation_not_releasable');
     const verified=json(previous.evidence_json);
     if(previous.actor==='ekodi-github-actions-oidc-reconciler'&&
        previous.reason==='verified_preproduction_evidence_recorded'&&
@@ -80,14 +82,15 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
     reviewHeadSha:clean(evidence.sourceHeadSha,80),
   });
   const nextVersion=Number(row.state_version)+1,updatedAt=new Date().toISOString();
+  const fromState=row.state;
   // Never overwrite task.evidence_json. That is owned by the command ledger,
   // which can refresh it on every progress poll. An independent append-only
   // OIDC audit event is the sole authoritative source of staging proof.
   const update=db.prepare(`UPDATE ekodi_orchestrator_tasks
-    SET state_version=state_version+1,updated_at=?
-    WHERE task_id=? AND state='staging' AND state_version=? AND branch_ref=?
+    SET state='staging',state_version=state_version+1,updated_at=?
+    WHERE task_id=? AND state=? AND state_version=? AND branch_ref=?
       AND evidence_json=? AND deployment_requested=1 AND permission_class='delegated'`)
-    .bind(updatedAt,taskId,Number(row.state_version),branchRef,row.evidence_json);
+    .bind(updatedAt,taskId,fromState,Number(row.state_version),branchRef,row.evidence_json);
   // D1 batch is atomic: a failed CAS forces a NOT NULL constraint failure
   // on the audit INSERT. Never commit a bumped version without its evidence.
   const insert=db.prepare(`INSERT INTO ekodi_orchestrator_task_events
@@ -97,15 +100,15 @@ export async function recordVerifiedEkodiPreproductionEvidence(db,evidence,oidc=
         state='staging' AND state_version=? AND evidence_json=?
       ) THEN ? ELSE NULL END,
       COALESCE((SELECT MAX(seq) FROM ekodi_orchestrator_task_events WHERE task_id=?),0)+1,
-      'staging','staging','ekodi-github-actions-oidc-reconciler',
+      ?, 'staging','ekodi-github-actions-oidc-reconciler',
       'verified_preproduction_evidence_recorded',?,?`)
-    .bind(taskId,nextVersion,row.evidence_json,taskId,taskId,JSON.stringify(attestation),updatedAt);
+    .bind(taskId,nextVersion,row.evidence_json,taskId,taskId,fromState,JSON.stringify(attestation),updatedAt);
   try{
     const results=await db.batch([update,insert]);
     if(changes(results?.[0])!==1||changes(results?.[1])!==1)return fail('staging_evidence_transaction_conflict');
   }catch{return fail('staging_evidence_transaction_failed')}
   return Object.freeze({recorded:true,auditOnly:true,
     authority:'ekodi-orchestrator',taskId,branchRef,releaseSha,artifactDigest,
-    stateVersion:nextVersion,proofRecorded:true,approvalGranted:false,
+    stateVersion:nextVersion,fromState,toState:'staging',proofRecorded:true,approvalGranted:false,
     productionDeployed:false});
 }
