@@ -113,7 +113,8 @@ test('a second final confirmation with fresh version and another owner never ren
     authorizedSuperAdminPersonId:'platform-admin:another-owner',
   }));
   assert.equal(replay.approved,false);
-  assert.equal(replay.reason,'final_promotion_approval_transaction_failed');
+  assert.equal(replay.reason,'final_promotion_approval_already_recorded');
+  assert.equal(trace.batchCalls,1,'duplicate request performs no additional D1 transaction');
   assert.equal(row.state_version,4);
   assert.equal(trace.events.length,1);
   assert.equal(JSON.parse(trace.events[0].evidence_json).approvalId,original.approvalId);
