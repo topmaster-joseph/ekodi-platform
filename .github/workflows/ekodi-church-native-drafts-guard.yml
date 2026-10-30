@@ -1,0 +1,37 @@
+name: EKODI Church Native Docs Slides Draft Guard
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ekodi-native-worship-google-drafts.mjs'
+      - 'test/ekodi-native-worship-google-drafts.test.mjs'
+      - 'scripts/ekodi-native-worship-d1-ledger.mjs'
+      - 'test/ekodi-native-worship-d1-ledger.test.mjs'
+      - 'migrations/202610300300_church_native_draft_ledger.sql'
+      - '.github/workflows/ekodi-church-native-drafts-guard.yml'
+      - 'docs/operations/ekodi-church-native-drafts-integration.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-native-worship-draft-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate approved native Google Docs Slides draft writer
+        run: |
+          node --check scripts/ekodi-native-worship-google-drafts.mjs
+          node --check scripts/ekodi-native-worship-d1-ledger.mjs
+          node --test test/ekodi-native-worship-google-drafts.test.mjs test/ekodi-native-worship-d1-ledger.test.mjs
