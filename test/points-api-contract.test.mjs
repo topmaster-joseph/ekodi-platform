@@ -23,3 +23,9 @@ test('API does not return evidence metadata or private contact details', () => {
   assert.match(src, /limit\(limit\)/);
   assert.match(src, /Math\.min\(50, limitRaw\)/);
 });
+
+test('sites discovery only returns enabled point sites to a verified member', () => {
+  assert.match(src, /path === "\/sites"/);
+  assert.match(src, /\.eq\("enabled", true\)/);
+  assert.match(src, /resolvePerson\(bearer\.slice\(7\)\)/);
+});
