@@ -28,10 +28,19 @@ export function cloudflareJsDetectionHashes(html){
 export function trustCloudflareJsDetections(html){for(const h of cloudflareJsDetectionHashes(html))trustedInlineHashes.add(h);}
 // Attach to a Playwright Page or BrowserContext: audits every served document (frames included).
 export function observeCloudflareJsDetections(target){
+  // Cloudflare may inject the narrowly audited detector into a nested iframe,
+  // and that frame's response.text() promise can outlive the page's console
+  // CSP violation. Keep all document audits pending until the strict verdict.
+  const pending=new Set();
   target.on('response',response=>{
     try{if(response.request().resourceType()!=='document')return;}catch{return;}
-    response.text().then(trustCloudflareJsDetections).catch(()=>{});
+    const audit=response.text().then(trustCloudflareJsDetections).catch(()=>{});
+    pending.add(audit);
+    void audit.finally(()=>pending.delete(audit));
   });
+  return async function flushCloudflareJsDetectionAudits(){
+    while(pending.size)await Promise.all([...pending]);
+  };
 }
 const INLINE_SCRIPT_CSP=/^(?:Executing inline script violates the following Content Security Policy directive|Refused to execute inline script because it violates the following Content Security Policy directive:) ["']script-src 'self' https:\/\/cdn\.jsdelivr\.net https:\/\/ekodi\.kr["']\. Either the 'unsafe-inline' keyword, a hash \('sha256-([A-Za-z0-9+\/]{43}=)'\), or a nonce \('nonce-\.\.\.'\) is required to enable inline execution\.(?: The action has been blocked\.)?$/;
 export function blockedInlineScriptHash(message){return INLINE_SCRIPT_CSP.exec(String(message||'').trim())?.[1]||null;}

@@ -66,6 +66,11 @@ test('tenant and church admin surfaces expose scoped banking without duplicating
   assert.match(tenantUi,/\/transactions\/import/);
   assert.match(tenantUi,/csvTransactions/);
   assert.match(tenantUi,/한 번에 최대 500건/);
+  assert.match(tenantUi,/ekodi-bank-transactions-template\.csv/);
+  assert.match(tenantUi,/표준 CSV 양식 다운로드/);
+  assert.match(tenantUi,/금융결제원 승인과 조직별 계좌동의/);
+  assert.match(tenantUi,/href=\"\/privacy\"/);
+  assert.match(tenantUi,/href=\"\/terms\"/);
 });
 
 test('superadmin and shared-site delivery include banking control and asset publication',()=>{

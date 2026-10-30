@@ -354,17 +354,30 @@ export async function handleEkodiV8CommandControl(request, env) {
   // into one operator view (JSON) and a human-readable board (HTML). It never
   // probes, mutates, or deploys; automatic rollback stays with guarded-release.
   if (request.method === 'GET' && (url.pathname === `${PREFIX}/fleet` || url.pathname === `${PREFIX}/fleet/view`)) {
-    const emptyRows = { results: [] };
+    // A failed D1 read is unknown evidence, never an empty successful check.
+    // Isolate each read so one missing table does not conceal valid failures
+    // reported by the other source.
+    const readRows = async (sql) => {
+      try {
+        const result = await env.DB.prepare(sql).all();
+        if (!Array.isArray(result?.results)) throw new Error('invalid_read_model');
+        return { rows: result.results, failed: false };
+      } catch {
+        return { rows: [], failed: true };
+      }
+    };
     const [latestRes, envRes] = await Promise.all([
-      env.DB.prepare('SELECT service_id, status, http_status, response_ms, detail, checked_at FROM service_check_latest')
-        .all().catch(() => emptyRows),
-      env.DB.prepare('SELECT environment, service_id, service_name, host, status, http_status, response_ms, detail, checked_at FROM cloudflare_environment_checks')
-        .all().catch(() => emptyRows),
+      readRows('SELECT service_id, status, http_status, response_ms, detail, checked_at FROM service_check_latest'),
+      readRows('SELECT environment, service_id, service_name, host, status, http_status, response_ms, detail, checked_at FROM cloudflare_environment_checks'),
     ]);
     const model = buildFleetStatus({
       now: new Date().toISOString(),
-      latestChecks: latestRes?.results || [],
-      environmentChecks: envRes?.results || [],
+      latestChecks: latestRes.rows,
+      environmentChecks: envRes.rows,
+      observationFailures: [
+        latestRes.failed && 'service_check_latest',
+        envRes.failed && 'cloudflare_environment_checks',
+      ].filter(Boolean),
     });
     if (url.pathname === `${PREFIX}/fleet/view`) {
       return new Response(renderFleetStatusHtml(model), {

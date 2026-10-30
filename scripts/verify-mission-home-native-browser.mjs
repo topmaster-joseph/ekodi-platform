@@ -64,6 +64,7 @@ try{
     verify(d.name+'-content-readable',
       layout.main.width >= (d.name==='desktop'?950:350) &&
       layout.hero.width>0 && layout.photo.height>=220 &&
+      layout.photo.width <= layout.hero.width+1 &&
       layout.saturday.width>0 && !layout.bodyOverflow,layout);
     verify(d.name+'-approved-photo-or-honest-fallback',
       layout.fallbackVisible!==layout.imgVisible &&

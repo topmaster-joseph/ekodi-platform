@@ -4,7 +4,8 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {
-  educationReleaseChanged,approvedEducationMerge
+  educationReleaseChanged,approvedEducationMerge,releaseQuotaBudget,
+  latestEducationMergeFromGit,EDUCATION_LOCAL_PATHS
 } from '../scripts/education-release-continuity.mjs';
 import {ORIGIN,ROUTE,VIEWPORTS} from '../scripts/verify-education-bootcamp-native.mjs';
 import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
@@ -26,6 +27,43 @@ test('Education-only changed path is explicit and guarded',()=>{
   assert.equal(educationReleaseChanged(['sites/seonammedi/public/app.js']),false);
   assert.equal(educationReleaseChanged(['docs/MNU-AI-BOOTCAMP-EDUCATION.md']),false);
   assert.equal(educationReleaseChanged([]),false);
+});
+
+
+test('Release quota preflight conservatively defers before scanning GitHub',()=>{
+ assert.deepEqual(releaseQuotaBudget({resources:{core:{remaining:25}}}),{ok:true,remaining:25});
+ assert.equal(releaseQuotaBudget({resources:{core:{remaining:0}}}).reason,'github_quota_low');
+ assert.equal(releaseQuotaBudget({resources:{core:{remaining:23}}}).ok,false);
+ assert.equal(releaseQuotaBudget({resources:{core:{remaining:24}}}).ok,true);
+ assert.equal(releaseQuotaBudget({resources:{core:{remaining:null}}}).ok,false);
+ assert.equal(releaseQuotaBudget({resources:{core:{remaining:-1}}}).reason,'quota_unknown');
+ assert.equal(releaseQuotaBudget({resources:{}}).reason,'quota_unknown');
+});
+test('Read only bounded first-parent Education commit, not broad GitHub PR pagination',()=>{
+ const calls=[];
+ const found=latestEducationMergeFromGit({run:(cmd,args,opts)=>{
+   calls.push({cmd,args,opts});return sha('a')+'\n';
+ }});
+ assert.equal(found,sha('a'));
+ assert.equal(calls[0].cmd,'git');
+ assert.deepEqual(calls[0].args.slice(0,5),['log','--first-parent','-1','--format=%H','--']);
+ assert.equal(calls[0].args.includes('education/'),true);
+ assert.equal(calls[0].args.includes('.github/workflows/deploy-education.yml'),true);
+ assert.equal(EDUCATION_LOCAL_PATHS.includes('scripts/education-release-continuity.mjs'),true);
+ assert.equal(latestEducationMergeFromGit({run:()=>'\n'}),'');
+ assert.equal(latestEducationMergeFromGit({run:()=>sha('z')}),'');
+});
+test('Quota-limited continuity retains protected release and defers exhausted API',()=>{
+ const runner=read('scripts/education-release-continuity.mjs');
+ const workflow=read('.github/workflows/education-release-continuity.yml');
+ assert.match(runner,/availableReleaseQuota\(token\)/);
+ assert.match(runner,/GITHUB_QUOTA_DEFERRED/);
+ assert.match(runner,/\/commits\/'\+mergedSha\+'\/pulls/);
+ assert.match(runner,/no_unique_official_education_pr_for_latest_commit/);
+ assert.doesNotMatch(runner,/\/pulls\?state=closed&base=main&sort=updated/);
+ assert.match(workflow,/fetch-depth: 200/);
+ assert.match(runner,/verifyEducationReleaseSnapshot/);
+ assert.match(runner,/release_sha:releaseSha/);
 });
 
 test('Legacy workflow_run decision accepts only its exact source on current main',()=>{

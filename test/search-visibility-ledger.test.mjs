@@ -51,3 +51,17 @@ test('New backend and front end scripts parse cleanly',()=>{
     assert.equal(parsed.status,0,parsed.stderr);
   }
 });
+
+
+test('published Biz and CGMA independent domains are selectable without inherited owner status',()=>{
+  const ledger=read('search-visibility-control.js');
+  const publication=read('site-publication-runtime.js');
+  assert.ok(ledger.includes("'/ekodibiz':['ekodibiz.kr']"));
+  assert.ok(publication.includes("aliases:['cgma.or.kr','www.cgma.or.kr']"));
+  assert.ok(ledger.includes("'/seonammedi':['seonammedi.kr','서남권국립의대.kr']"));
+  assert.match(ledger,/aliases=\[/);
+  assert.match(ledger,/s\.publicStatus==='public'/);
+  assert.match(ledger,/propertyType:'independent-domain'/);
+  assert.match(ledger,/policy:'manual_confirmation_not_provider_api_verification'/);
+  assert.match(ledger,/source:'marketing_indexnow_url_state'|source:'marketing_indexnow_url_state'/);
+});

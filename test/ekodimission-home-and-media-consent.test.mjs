@@ -48,6 +48,8 @@ test('Home loads only consent-screened first-party direct photos, otherwise show
   assert.doesNotMatch(client,/drive\.google\.com|images\.unsplash\.com/);
   assert.match(css,/\.mission-home-photo \[hidden\]\{display:none!important\}/);
   assert.match(css,/\.mission-home-photo-fallback\{/);
+  assert.match(css,/\.hero-split \.mission-home-photo\{aspect-ratio:auto;width:100%;max-width:100%;min-width:0;min-height:240px/);
+  assert.doesNotMatch(css,/\.hero-split \.mission-home-photo\{[^}]*aspect-ratio:16\/9/);
   assert.match(worker,/\['\/ekodimission\/assets\/home-photo\.js','\/ekodimission-home-photo\.js'\]/);
   assert.match(landing,/공개 활동사진·기록 보기/);
   const response=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/assets/home-photo.js'),{
