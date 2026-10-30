@@ -35,7 +35,7 @@ jobs:
           node --check scripts/verify-mission-home-native-browser.mjs
           node --check scripts/ekodi-background-browser-worker.mjs
   home-browser:
-    if: github.event_name != 'pull_request' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch'))
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -57,7 +57,7 @@ jobs:
           else
             npx playwright install --with-deps chromium
           fi
-      - name: Verify production hero, approved photo, layout and Saturday gathering
+      - name: Verify live production hero, approved photo, layout and Saturday gathering
         run: node scripts/verify-mission-home-native-browser.mjs
       - name: Publish evidence summary
         if: always()
