@@ -49,10 +49,10 @@ test('canonical points page and assets route to My, never the public digital-car
       return new Response('points asset:'+path,{headers:{'content-type':'text/plain'}});
     },
   }};
-  for(const path of ['/my/points/','/my/points/app.js','/my/points/styles.css']){
+  for(const path of ['/my/points/','/my/points/app.js','/my/points/styles.css','/my/points-active-client.js']){
     const response=await myWorker.fetch(new Request('https://ekodi.kr'+path),env);
     assert.equal(response.status,200,path);
     assert.match(await response.text(),/points asset:/);
   }
-  assert.deepEqual(requests,['/points/','/points/app.js','/points/styles.css']);
+  assert.deepEqual(requests,['/points/','/points/app.js','/points/styles.css','/points-active-client.js']);
 });
