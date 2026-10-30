@@ -138,7 +138,7 @@ test('unverified, missing or forged staging attestation cannot create an owner r
   for(const config of [
     {stagingAttestation:false},{stagingAttestationValid:false},
     {stagingProofOverride:{securityReviewVerified:false}},
-    {stagingProofOverride:{archiveDigest:'sha256:'+'5'.repeat(64)}},
+    {stagingProofOverride:{archiveDigest:'invalid-archive-digest'}},
     {stagingProofOverride:{requiredCiVerified:false}},
     {stagingProofOverride:{workflowRunId:0}},
   ]){
