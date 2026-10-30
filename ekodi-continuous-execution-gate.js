@@ -114,16 +114,6 @@ export async function evaluateEkodiContinuousExecutionFromLedger(db, input = {})
        !Number.isInteger(Number(task.state_version)) || Number(task.state_version)<1){
       return preview;
     }
-    // Read trusted preproduction evidence from the authoritative task record,
-    // never accept submitted CI/staging/security flags as verification.
-    let proof;
-    try{const recorded=JSON.parse(task.evidence_json||'{}'); proof=recorded.preproductionProof;}catch{return preview}
-    if(!proof || proof.authority!=='ekodi-orchestrator' ||
-       proof.taskId!==taskId || proof.branchRef!==branchRef ||
-       proof.releaseSha!==releaseSha || proof.artifactDigest!==artifactDigest ||
-       proof.requiredCiVerified!==true || proof.stagingVerified!==true ||
-       proof.rollbackReady!==true || proof.securityReviewVerified!==true ||
-       !text(proof.verifiedAt,80))return preview;
     const preproductionStageEvent=await db.prepare(
       "SELECT actor,reason,evidence_json FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='verified_preproduction_evidence_recorded' ORDER BY seq DESC LIMIT 1"
     ).bind(taskId).first();
@@ -133,7 +123,10 @@ export async function evaluateEkodiContinuousExecutionFromLedger(db, input = {})
     if(staged?.authority!=='ekodi-orchestrator'||staged.source!=='github-actions-oidc'||
        staged.taskId!==taskId||staged.branchRef!==branchRef||
        staged.releaseSha!==releaseSha||staged.artifactDigest!==artifactDigest||
-       staged.verifiedAt!==proof.verifiedAt||
+       !/^sha256:[a-f0-9]{64}$/i.test(text(staged.archiveDigest,150))||
+       !Number.isFinite(Date.parse(staged.verifiedAt))||
+       ![staged.requiredCiVerified,staged.stagingVerified,
+         staged.rollbackReady,staged.securityReviewVerified].every(x=>x===true)||
        !Number.isSafeInteger(staged.workflowRunId)||staged.workflowRunId<1)return preview;
     event=await db.prepare(
       "SELECT actor,reason,evidence_json FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='final_promotion_approval_recorded' ORDER BY seq DESC LIMIT 1"
