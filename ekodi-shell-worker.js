@@ -44,6 +44,7 @@ async function bundledShell(request,env,ctx){
   const navUrl=new URL(request.url);navUrl.pathname='/user-global-nav.js';
   const contextUrl=new URL(request.url);contextUrl.pathname='/user-context.js';
   const userHeaderUrl=new URL(request.url);userHeaderUrl.pathname='/user-ui-header.js';
+  const unifiedAuthUrl=new URL(request.url);unifiedAuthUrl.pathname='/unified-user-auth.js';
   const userFooterUrl=new URL(request.url);userFooterUrl.pathname='/user-ui-footer.js';
   const userAiEntryUrl=new URL(request.url);userAiEntryUrl.pathname='/user-ai-entry.js';
   const userLanguageUrl=new URL(request.url);userLanguageUrl.pathname='/user-language.js';
@@ -87,6 +88,8 @@ async function bundledShell(request,env,ctx){
   const globalNav=navResponse.ok?await navResponse.text():'';
   const userContext=contextResponse.ok?await contextResponse.text():'';
   const userHeader=userHeaderResponse.ok?await userHeaderResponse.text():'';
+  const unifiedAuthResponse=await safeAssetFetch(env,unifiedAuthUrl,request);
+  const unifiedAuth=unifiedAuthResponse.ok?await unifiedAuthResponse.text():'';
   const userFooter=userFooterResponse.ok?await userFooterResponse.text():'';
   const userAiEntry=userAiEntryResponse.ok?await userAiEntryResponse.text():'';
   const userLanguage=userLanguageResponse.ok?await userLanguageResponse.text():'';
@@ -107,6 +110,7 @@ async function bundledShell(request,env,ctx){
   headers.set('content-type','application/javascript; charset=utf-8');
   headers.set('cache-control','public, max-age=60, stale-while-revalidate=300');
   headers.set('x-ekodi-user-ui-header',userHeader?'v3':'missing');
+  headers.set('x-ekodi-unified-user-auth',unifiedAuth?'v1':'missing');
   headers.set('x-ekodi-user-ui-footer',userFooter?`v${EKODI_USER_FOOTER.version}`:'missing');
   headers.set('x-ekodi-user-ai-entry',userAiEntry?'retired':'missing');
   headers.set('x-ekodi-user-experience-profiles','v1');
@@ -125,7 +129,7 @@ async function bundledShell(request,env,ctx){
   headers.set('x-ekodi-link-compat',linkCompat?'v1':'missing');
   headers.set('x-ekodi-user-shortcuts','my-only');
   headers.set('x-ekodi-shell-bundle-cache',releaseRefresh?'refresh':'miss');
-  const bundle=canonicalizeBundledServiceUrls(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${USER_EXPERIENCE_PROFILES_BOOTSTRAP}\n${LANGUAGE_REGISTRY_BOOTSTRAP}\n${characterRegistry}\n${characterIdentity}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${mediaMeeting}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${userAiEntry}\n${uiGovernor}\n${publicSurfaceAdmin}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n`);
+  const bundle=canonicalizeBundledServiceUrls(`${USER_SHORTCUT_GUARD}\n${USER_FOOTER_BOOTSTRAP}\n${USER_EXPERIENCE_PROFILES_BOOTSTRAP}\n${LANGUAGE_REGISTRY_BOOTSTRAP}\n${characterRegistry}\n${characterIdentity}\n${shell}\n${globalNav}\n${userContext}\n${userHeader}\n${userFooter}\n${userLanguage}\n${mediaMeeting}\n${userCharacter}\n${ccmMrPlayer}\n${adminShell}\n${fixedHeader}\n${userAiEntry}\n${uiGovernor}\n${publicSurfaceAdmin}\n${messageUI}\n${illustrationSystem}\n${designInheritance}\n${linkCompat}\n${unifiedAuth}\n`);
   const response=withHeaders(new Response(bundle,{status:200,headers}));
   if(bundleCache&&bundleCacheKey&&ctx?.waitUntil){
     const stored=response.clone();
