@@ -20,3 +20,9 @@
 4. Confirm `Deploy EKODI Education` had real staging **and** production jobs on authorized `main`, with deploy receipt, canary and rollback check.
 5. Read actual production `/research/`, `/research/health`, `/research/api/literature` positive/negative cases using EKODI-native PC/mobile Chromium. Reject completion if the menu or API is still stale, including cache and Site Core routing issues.
 6. Close #7084 only after collecting all operational evidence. A merged PR or a successful PR-only staging job is insufficient.
+
+## Authenticated CI renewal after EKODI main synchronization
+- Official Recovery PR #7113 passed its first full source CI, Education native pre-approval contract, security checks and EKODI AI Orchestration Gate at `edfd80f2153291e8fffca385ef9561307ee2d667`.
+- The protected convergence runner then synchronized latest main, creating head `800cd85f4b713c2fa9785a447c3c12add7b9f9ed`. GitHub's bot-triggered checks for that head returned `action_required` without execution; the old head's successes cannot certify the new head.
+- This documentation-only edit requests authentic checks on the synchronized branch. No source script, trigger policy, credentials, owner gate, production runtime or deployment flags change.
+- Do not merge or send a recovery issue command until new required checks are green and the official PR is protected-merged.
