@@ -1,7 +1,77 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { readFileSync, readdirSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import { MallCatalog, feeForFirstTouch, trustedSource } from './entry.js';
+
+function healthTestDatabase() {
+  const db = new DatabaseSync(':memory:');
+  const dir = new URL('./migrations/',import.meta.url);
+  for (const name of readdirSync(dir).filter(name=>name.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(name,dir),'utf8'));
+  return {
+    close:()=>db.close(),
+    prepare(sql) {
+      let args=[];
+      const statement={
+        bind(...values) { args=values; return statement; },
+        all:()=>({results:db.prepare(sql).all(...args)}),
+        first:()=>db.prepare(sql).get(...args) || null,
+        run:()=>db.prepare(sql).run(...args)
+      };
+      return statement;
+    }
+  };
+}
+
+test('canonical public health alias preserves the healthy schema, payment and safety projection', async () => {
+  const {default:worker}=await import('./entry.js');
+  const db=healthTestDatabase();
+  try {
+    const env={DB:db,ENVIRONMENT:'production',PAYMENT_PROVIDER:'toss',PAYMENTS_ENABLED:'true',DOMEMAE_API_KEY:'private-key-marker'};
+    const original=await worker.fetch(new Request('https://ekodi.kr/health'),env);
+    const canonical=await worker.fetch(new Request('https://ekodi.kr/api/public/health'),env);
+    assert.equal(original.status,200);
+    assert.equal(canonical.status,200);
+    const body=await canonical.json();
+    assert.deepEqual(body,await original.json());
+    assert.equal(body.paymentsEnabled,true);
+    assert.equal(body.domeggookAutoOrderReady,false);
+    assert.equal(body.buyerPiiReleaseEnabled,false);
+    assert.equal(body.supplierForwardEnabled,false);
+    assert.equal(canonical.headers.get('cache-control'),'no-store');
+    assert.doesNotMatch(JSON.stringify(body),/private-key-marker/);
+  } finally { db.close(); }
+});
+
+test('canonical public health returns unhealthy 503 without a database instead of a login response', async () => {
+  const {default:worker}=await import('./entry.js');
+  const response=await worker.fetch(new Request('https://ekodi.kr/api/public/health'),{});
+  assert.equal(response.status,503);
+  const body=await response.json();
+  assert.equal(body.service,'ekodi-mall-api');
+  assert.equal(body.ok,false);
+  assert.equal(body.schemaReady,false);
+  assert.equal(response.headers.get('cache-control'),'no-store');
+});
+
+test('canonical public health retains origin enforcement', async () => {
+  const {default:worker}=await import('./entry.js');
+  const response=await worker.fetch(new Request('https://ekodi.kr/api/public/health',{headers:{origin:'https://untrusted.invalid'}}),{});
+  assert.equal(response.status,403);
+  assert.equal(response.headers.get('access-control-allow-origin'),null);
+});
+
+test('canonical public health is GET-only and never delegates writes', async () => {
+  const {default:worker}=await import('./entry.js');
+  const env={DB:{prepare(){throw new Error('health method rejection must not touch D1');}}};
+  for (const method of ['POST','PUT','DELETE','PATCH','HEAD']) {
+    const response=await worker.fetch(new Request('https://ekodi.kr/api/public/health',{method}),env);
+    assert.equal(response.status,405,method);
+    assert.equal(response.headers.get('allow'),'GET');
+    assert.equal(response.headers.get('cache-control'),'no-store');
+  }
+});
 
 test('first-touch fee contract keeps personal 7/8/9 and verified business Store 10', () => {
   assert.equal(feeForFirstTouch({ sellerType:'individual', sourceType:'direct' }),7);
