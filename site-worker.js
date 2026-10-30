@@ -32,6 +32,7 @@ const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
   '/homepage-auth-state.js',
+  '/points-active-client.js',
   '/ekodi-message-ui.js',
   '/tenant-live.css',
   '/tenant-live.js',
