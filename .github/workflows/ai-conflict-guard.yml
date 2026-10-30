@@ -66,8 +66,10 @@ jobs:
           # file evidence remains a hard failure, never a pass.
           gh_retry pr list --repo "$REPOSITORY" --state open --base "$BASE_REF" --limit 500 \
             --json number,headRefName,isDraft,baseRefOid,changedFiles,labels > "$open_pr_snapshot"
+          # Fetch merge and labels once. Expensive comments/reviews are read
+          # only when actual or semantic overlap requires cross-PR review.
           gh_retry pr view "$PR_NUMBER" --repo "$REPOSITORY" \
-            --json number,baseRefOid,changedFiles,labels,comments,reviews,mergeable,mergeStateStatus > "$governance_snapshot"
+            --json number,baseRefOid,changedFiles,files,labels,mergeable,mergeStateStatus > "$governance_snapshot"
 
           current_base_oid=$(jq -r '.baseRefOid // empty' "$governance_snapshot")
           if [[ -z "$current_base_oid" ]]; then
@@ -173,6 +175,13 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
+          # There is verified overlap; only now fetch detailed review proof.
+          # Preserve the same centrally authorized winner and all review checks.
+          review_snapshot=$(mktemp)
+          trap 'rm -f "$current_files" "$open_pr_snapshot" "$exact_conflicts" "$semantic_conflicts" "$review_snapshot"' EXIT
+          gh_retry pr view "$PR_NUMBER" --repo "$REPOSITORY" \
+            --json comments,reviews > "$review_snapshot"
+
           priority_label=$(jq -r '.integrationOrderLabel' config/parallel-change-review-scopes.json)
           review_label=$(jq -r '.reviewCompleteLabel' config/parallel-change-review-scopes.json)
           evidence_marker=$(jq -r '.reviewEvidenceMarker' config/parallel-change-review-scopes.json)
@@ -199,7 +208,7 @@ jobs:
           done <<< "$related_prs"
 
           current_has_review=$(jq -r --arg label "$review_label" '[.labels[]?.name] | index($label) != null' "$governance_snapshot")
-          review_evidence="$(jq -r '(.comments[]?.body // empty), (.reviews[]?.body // empty)' "$governance_snapshot")"
+          review_evidence="$(jq -r '(.comments[]?.body // empty), (.reviews[]?.body // empty)' "$review_snapshot")"
           evidence_ok=true
           if ! grep -Fq "$evidence_marker" <<< "$review_evidence"; then evidence_ok=false; fi
           while IFS= read -r related_pr; do
