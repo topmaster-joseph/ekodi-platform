@@ -5,17 +5,18 @@
  * human editorial approval, verified stream or a released social UI.
  */
 export const AUTOMATION_MIGRATION_PR = Object.freeze([
-  Object.freeze({id:'native-scheduler',number:6890}),
+  Object.freeze({id:'native-scheduler',number:7044}),
   Object.freeze({id:'native-cutover-gate',number:6920}),
 ]);
 
 // This is an imported ChatGPT task snapshot for review, NOT an EKODI-live
 // authenticated API feed. It MUST NOT authorize task retirement or publication.
 export const LEGACY_TASK_SNAPSHOT=Object.freeze({
-  observedAt:'2026-10-30T19:08:00+09:00',
-  source:'operator_verified_chatgpt_automations_listing',
+  observedAt:'2026-10-30',
+  source:'operator_verified_chatgpt_automations_listing_after_pause',
   freshness:'historical_snapshot_not_live',
-  activeTaskCount:5,
+  activeTaskCount:0,
+  previouslyActivePausedCount:5,
   inactivePreviouslyTracked:['mission-home-production-e2e'],
   canDisableLegacy:false
 });
