@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {pendingReviewBlocks} from '../scripts/lib/converge-review-hold.mjs';
+
+const review=(who,state)=>({user:{login:who},state});
+test('change-request persists through COMMENTED and unrelated approvals',()=>{
+  const xs=[review('topmaster-joseph','CHANGES_REQUESTED'),
+    review('topmaster-joseph','COMMENTED'),review('another','APPROVED')];
+  assert.deepEqual(pendingReviewBlocks(xs),['topmaster-joseph']);
+});
+test('genuine same-owner APPROVED or dismissal clears earlier block',()=>{
+  const a=[review('topmaster-joseph','CHANGES_REQUESTED')];
+  assert.deepEqual(pendingReviewBlocks([...a,review('topmaster-joseph','APPROVED')]),[]);
+  assert.deepEqual(pendingReviewBlocks([...a,review('topmaster-joseph','DISMISSED')]),[]);
+});
+test('newer owner re-request blocks after previous approval',()=>{
+  assert.deepEqual(pendingReviewBlocks([review('topmaster-joseph','APPROVED'),
+    review('topmaster-joseph','CHANGES_REQUESTED')]),['topmaster-joseph']);
+  assert.throws(()=>pendingReviewBlocks(null),/REVIEW_EVIDENCE_UNAVAILABLE/);
+});
+test('existing workflow resumes ONLY on the human owners real approval event',()=>{
+  const wf=readFileSync(new URL('../.github/workflows/converge-orchestrated-pr-merge.yml',import.meta.url),'utf8');
+  const code=readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+  assert.match(wf,/pull_request_review:\s*\n    types: \[submitted\]/);
+  assert.match(wf,/github.event.review.state == 'approved'/);
+  assert.match(wf,/github.event.review.user.login == 'topmaster-joseph'/);
+  assert.match(wf,/github.event.pull_request.head.repo.full_name == github.repository/);
+  assert.match(wf,/github.event.pull_request.head.sha \|\| github.sha/);
+  assert.match(wf,/group: ekodi-orchestrated-merge-\$\{\{ github.event.pull_request.head.ref \|\| github.ref_name \}\}/);
+  assert.match(code,/pendingReviewBlocks\(reviews\)/);
+  assert.ok(code.indexOf("if(unresolved.length)") < code.indexOf("const filesLookup="));
+  assert.match(code,/release receipt is not authorized/);
+});

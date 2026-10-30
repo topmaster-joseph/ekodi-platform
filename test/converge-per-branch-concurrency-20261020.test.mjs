@@ -13,7 +13,7 @@ const concurrencyOf = yml => {
 
 test('convergence serializes per branch only, never cancelling in progress', async () => {
   const c = concurrencyOf(await read('.github/workflows/converge-orchestrated-pr-merge.yml'));
-  assert.match(c, /group: ekodi-orchestrated-merge-\$\{\{ github\.ref \}\}/);
+  assert.match(c, /group: ekodi-orchestrated-merge-\$\{\{ github\.event\.pull_request\.head\.ref \|\| github\.ref_name \}\}/);
   assert.match(c, /cancel-in-progress: false/);
 });
 
