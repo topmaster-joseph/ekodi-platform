@@ -22,7 +22,7 @@ test('bundled shared shell serves the user login component on public and workspa
   const source=await read('shell/unified-user-auth.js');
   new Script(source,{filename:'shell/unified-user-auth.js'});
   assert.match(worker,/unifiedAuthUrl\.pathname='\/unified-user-auth\.js'/);
-  assert.match(worker,/\$\{userHeader\}\\n\$\{unifiedAuth\}\\n\$\{userFooter\}/);
+  assert.match(worker,/\$\{linkCompat\}\\n\$\{unifiedAuth\}\\n/);
   assert.match(worker,/x-ekodi-unified-user-auth/);
   assert.match(source,/EKODIUserUIHeader\?\.getState\?\.\(\)\.enabled!==true/);
   assert.match(source,/login\.origin|location\.origin\+location\.pathname\+location\.search/);
@@ -36,7 +36,7 @@ test('bundled shared shell serves the user login component on public and workspa
 test('registration enforces one Person but does not imply tenant, billing, or platform admin entitlement',async()=>{
   const manifest=await read('ekodi-service-manifest.js');
   const boundary=await read('docs/auth/EKODI-ID-LOGIN-CHANNEL-BOUNDARY.md');
-  assert.match(manifest,/identityProvider:'ekodi-person'/);
+  assert.match(manifest,/identityProvider:'google'/);
   assert.match(manifest,/authHub:'https:\/\/ekodi\.kr\/auth\/'/);
   assert.match(boundary,/이메일 문자열 일치만으로 자동 통합하지 않음|이메일.*자동.*병합/);
   assert.match(boundary,/서버가 EKODI ID의 실제 membership/);
