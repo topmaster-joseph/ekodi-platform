@@ -7,7 +7,9 @@ create table if not exists public.ekodi_point_site_tenants (
   created_at timestamptz not null default now()
 );
 alter table public.ekodi_point_site_tenants enable row level security;
-revoke all on table public.ekodi_point_site_tenants from public, anon, authenticated;
+revoke all on table public.ekodi_point_site_tenants
+  from public, anon, authenticated, service_role;
+grant select on table public.ekodi_point_site_tenants to service_role;
 
 -- Server-side canonical proof; a browser cannot submit arbitrary check-in claims.
 create or replace function ekodi_points_private.award_verified_attendance(

@@ -55,7 +55,14 @@ alter table public.ekodi_point_rules enable row level security;
 alter table public.ekodi_point_wallets enable row level security;
 alter table public.ekodi_point_ledger enable row level security;
 alter table public.ekodi_point_transfer_policies enable row level security;
-revoke all on public.ekodi_point_sites,public.ekodi_point_rules,public.ekodi_point_wallets,public.ekodi_point_ledger,public.ekodi_point_transfer_policies from anon,authenticated;
+-- Browser clients cannot mutate points. The trusted API can only read summaries.
+revoke all on table public.ekodi_point_sites,public.ekodi_point_rules,
+  public.ekodi_point_wallets,public.ekodi_point_ledger,
+  public.ekodi_point_transfer_policies
+  from public, anon, authenticated, service_role;
+grant select on table public.ekodi_point_sites,public.ekodi_point_rules,
+  public.ekodi_point_wallets,public.ekodi_point_ledger,
+  public.ekodi_point_transfer_policies to service_role;
 -- Subsequent migrations will add authenticated, audited SECURITY DEFINER
 -- award, spend, transfer and donate RPCs with locked search_path.
 -- Do not allow browser clients to insert ledger entries directly.

@@ -25,8 +25,11 @@ create index if not exists ekodi_point_donations_campaign_idx
   on public.ekodi_point_donations(campaign_id,created_at);
 alter table public.ekodi_point_donation_campaigns enable row level security;
 alter table public.ekodi_point_donations enable row level security;
-revoke all on public.ekodi_point_donation_campaigns,public.ekodi_point_donations
-  from public,anon,authenticated;
+revoke all on table public.ekodi_point_donation_campaigns,
+  public.ekodi_point_donations
+  from public, anon, authenticated, service_role;
+grant select on table public.ekodi_point_donation_campaigns,
+  public.ekodi_point_donations to service_role;
 create or replace function ekodi_points_private.donate_points(
   p_campaign uuid, p_user uuid, p_points integer, p_event_key text
 ) returns jsonb
