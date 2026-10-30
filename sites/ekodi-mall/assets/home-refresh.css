@@ -148,3 +148,24 @@ body{background:var(--mall-surface)}
   width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 28px));
  }
 }
+
+/* Mobile first-fold density: keep shopping and discovery visible without changing transactions. */
+@media(max-width:640px){
+ .notice{display:none}
+ .mall-header-top{height:56px;gap:8px}
+ .mall-premium-hero{padding:18px 16px 14px;margin:7px 10px 0;gap:10px;border-radius:19px}
+ .mall-premium-hero .eyebrow{margin-bottom:7px;font-size:9px;letter-spacing:.12em}
+ .mall-premium-hero h1{font-size:clamp(30px,7.2vw,38px);line-height:1.14;margin-bottom:10px}
+ .mall-premium-hero .context-lead{font-size:12px;line-height:1.5;margin-bottom:11px}
+ .mall-hero-ctas{gap:7px;margin-bottom:11px}
+ .mall-hero-ctas .btn{min-height:39px;padding:8px 12px}
+ .mall-premium-hero .context-form{min-height:44px;margin-bottom:0}
+ .mall-premium-hero .context-form button{min-height:36px;white-space:nowrap}
+ .mall-premium-hero .context-quicks{display:flex;overflow-x:auto;scroll-snap-type:x proximity;gap:7px;margin-top:8px;padding-bottom:4px;scrollbar-width:thin}
+ .mall-premium-hero .context-quicks button{flex:0 0 auto;scroll-snap-align:start;white-space:nowrap;min-height:35px;padding:7px 11px}
+ .mall-premium-hero .context-trust{font-size:9px;line-height:1.45;margin-top:7px}
+ .mall-premium-hero .mall-photo-hero{display:none}
+ .mall-category-shortcuts{margin-top:8px}
+ .buyer-mobile{display:flex;align-items:center;justify-content:space-around}
+ .buyer-mobile>a,.buyer-mobile>button{min-width:0;white-space:nowrap}
+}
