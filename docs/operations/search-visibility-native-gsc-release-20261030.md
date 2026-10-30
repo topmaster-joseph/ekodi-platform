@@ -22,3 +22,9 @@ Date: 2026-10-30 KST. Central issue [#6317](https://github.com/topmaster-joseph/
 ## Continuity
 
 This documentation adds no runtime functionality, permissions, secrets, test bypass, DNS change, D1 mutation, paid provider, or background task. It records the post-main-sync exact-head revalidation requirement. Completion is **not** claimed by this document.
+
+## Latest protected branch synchronization evidence
+
+- The exact release candidate `15a930f3cf7e6b207efc733bef3e78aef13ffaec` passed authentic CI `test=success` (run #41005417151), Orchestration Gate (run #41005417002), and conflict guard. The Orchestration Gate log shows the official convergence dispatch occurred.
+- Official convergence then synchronized other protected `main` changes, producing new recovery SHA `124475694e81341c5fc4cbb15b3cbaf5369b1ca5`. The bot-created workflow runs were `action_required` for that new SHA; earlier CI is not carried forward.
+- This source-document-only follow-up requests fresh authentic CI for the updated merge candidate. It is **not** an authorization to bypass workflows or a Human Gate, and no production deployment is claimed.
