@@ -17,8 +17,9 @@ on:
     workflows: ['Deploy SeonamMedi Domain Gateway (Manual Topology Change)']
     branches: [main]
     types: [completed]
-  # Catch any completed deploy missed before this listener was introduced.
-  # Scheduled runs submit only if a successful deploy is newer than last submission.
+  # Reconcile the live PUBLIC sitemap daily: DB-published notices can appear
+  # without a Worker deploy, so a deploy-only condition misses those URLs.
+  # Only three native HTTPS IndexNow batch requests occur per daily run.
   schedule:
     - cron: '31 0 * * *'
   workflow_dispatch:
@@ -44,27 +45,16 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Submit only when a new guarded deploy is present
+      - name: Admit public sitemap reconciliation for the canonical event
         id: decision
-        env:
-          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          if [ "$GITHUB_EVENT_NAME" != 'schedule' ]; then
-            echo 'submit=true' >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows"
-          auth=(-H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/vnd.github+json')
-          deployed=$(curl -fsS --retry 2 "${auth[@]}" "$api/deploy-seonammedi-domains.yml/runs?status=success&per_page=1" | jq -r '.workflow_runs[0].created_at // empty')
-          submitted=$(curl -fsS --retry 2 "${auth[@]}" "$api/submit-seonammedi-indexnow.yml/runs?status=success&per_page=1" | jq -r '.workflow_runs[0].created_at // empty')
-          if [ -z "$deployed" ] || { [ -n "$submitted" ] && [[ "$submitted" > "$deployed" ]]; }; then
-            echo 'submit=false' >> "$GITHUB_OUTPUT"
-            echo 'No new successful customer-domain deployment since last submission.' >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo 'submit=true' >> "$GITHUB_OUTPUT"
-          fi
+          # An IndexNow day must not depend on a new Cloudflare Worker deploy:
+          # newly published, public notice URLs are backed by live database rows.
+          # The subsequent steps verify site ownership and validate every URL.
+          echo 'submit=true' >> "$GITHUB_OUTPUT"
+          echo 'Reconciling published Korean canonical sitemap through 3 native HTTPS IndexNow batches.' >> "$GITHUB_STEP_SUMMARY"
       - name: Validate native IndexNow HTTP submission code
         if: steps.decision.outputs.submit == 'true'
         run: |
@@ -89,6 +79,6 @@ jobs:
           grep -Fq "Sitemap: https://$idn/sitemap.xml" "$probe_dir/robots"
           grep -Fq "<loc>https://$idn/</loc>" "$probe_dir/sitemap"
           grep -Fq "<link rel=\"canonical\" href=\"https://$idn/\">" "$probe_dir/home"
-      - name: Submit canonical SeonamMedi URL from EKODI isolated browser
+      - name: Submit public SeonamMedi URLs by native EKODI IndexNow HTTP
         if: steps.decision.outputs.submit == 'true'
         run: node scripts/ekodi-search-index-submit.mjs
