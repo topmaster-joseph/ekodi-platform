@@ -259,6 +259,7 @@ const sharedSiteTouched=sourceFiles.some(file=>
   // Source-pinned immediate recovery must dispatch the release even when a
   // GITHUB_TOKEN merge does not emit an ordinary main push workflow event.
   ['scripts/verify-admin-production-ui-e2e.mjs',
+   'scripts/admin-production-ui-coverage.mjs',
    'scripts/ekodi-background-browser-worker.mjs'].includes(file)||
   // Public Invest education / member-entry markup lives in the shared Site Core worker.
   file==='invest-access-ui.js'||

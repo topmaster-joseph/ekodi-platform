@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<meta name="ekodi-ui-type" content="USER">
+<title>수강생 화면 공유 · EKODI Education</title>
+<link rel="stylesheet" href="./screen-share.css">
+<script type="module" src="./screen-share.js"></script>
+</head><body>
+<header class="top"><a href="../">← Premium Studio</a><strong>EKODI Education · 수강생 화면 공유</strong></header>
+<main>
+<section class="intro"><h1>QR로 연결하고, 한 사람의 화면을 스크린으로</h1>
+<p>강사가 수강생을 선택해도 화면은 자동 전송되지 않습니다. 수강생이 직접 공유를 허용해야 시작됩니다.</p></section>
+<section id="teacher" class="layout">
+<div class="card">
+<h2>강사 제어실</h2><p class="hint">에코디 인증 강사만 수업방을 만들 수 있습니다. QR은 수강생 입장용입니다.</p>
+<a id="login" class="btn secondary" href="../unlock/">강사 로그인</a>
+<button id="createRoom" class="btn primary" type="button">새 수업방 만들기 (4시간)</button>
+<p id="teacherStatus" class="status" role="status">대기 중</p>
+<div id="invitePanel" hidden><div id="qr" class="qr"></div>
+<label for="inviteLink">수강생 QR 주소</label><input id="inviteLink" readonly><button type="button" id="copyInvite" class="btn secondary">주소 복사</button>
+<p class="hint">QR을 강의실 화면에 보여 주세요. 최대 30명 입장 가능, 한 번에 한 명 공유.</p></div>
+<h3>접속한 수강생 <span id="rosterCount">0</span>명</h3><ul id="roster" class="roster"></ul>
+<button type="button" id="stopSelection" class="btn secondary" disabled>현재 공유 중단</button>
+<button type="button" id="endRoom" class="btn danger" disabled>수업방 종료</button>
+</div>
+<div class="card stage-card"><div class="stage-head"><strong id="stageLabel">화면을 선택해 주세요</strong><button class="btn secondary" type="button" id="fullScreen">전체 화면</button></div>
+<div id="stage" class="stage"><div class="empty" id="stageEmpty">수강생을 선택하면 이곳에 화면이 나타납니다.</div><video id="remoteVideo" autoplay playsinline muted hidden></video><img id="remoteImage" alt="수강생이 직접 제출한 화면 이미지" hidden></div>
+<p class="hint">공유 화면은 실시간으로만 표시하며, 서버에서 녹화·저장하지 않습니다.</p></div>
+</section>
+<section id="learner" class="card learner" hidden>
+<h2>수강생 입장</h2><label for="displayName">화면에 표시할 이름</label><input id="displayName" maxlength="36" autocomplete="nickname" placeholder="예: 김농부" required>
+<button type="button" class="btn primary" id="joinRoom">수업 참여하기</button>
+<p id="learnerStatus" class="status" role="status">강사의 선택을 기다립니다.</p>
+<div id="shareControls" hidden><p><strong>강사에게 선택되었습니다.</strong> 아래 버튼을 직접 누를 때만 공유가 시작됩니다.</p>
+<button id="startShare" class="btn primary" type="button">휴대전화 화면 공유 시작</button>
+<button id="stopShare" class="btn secondary" type="button">공유 중지</button>
+<p class="hint">일부 휴대전화 브라우저는 전체 화면 공유를 지원하지 않습니다. 기기에서 허용한 화면만 전송됩니다.</p>
+<label for="snapshotFile">전체 화면 공유가 안 된다면 캡처 이미지 보내기</label>
+<input id="snapshotFile" type="file" accept="image/jpeg,image/png,image/webp">
+<button id="sendSnapshot" class="btn secondary" type="button">선택한 이미지 강사에게 보여주기</button>
+</div><p class="hint">참여 사실만 표시됩니다. 강사의 선택만으로 화면이 켜지지 않으며 언제든 직접 공유를 중지할 수 있습니다.</p>
+</section>
+<footer>EKODI · 수강생 동의 우선 · 녹화 없음 · 이 링크를 수업 관계자에게만 공유하세요.</footer>
+</main></body></html>

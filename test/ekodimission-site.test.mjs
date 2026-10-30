@@ -60,7 +60,7 @@ test('standalone Open Table application link is action-first, compact, and write
 });
 
 test('EKODI Mission shared assets and unknown child routes are guarded',async()=>{
-  for(const path of ['/ekodimission/assets/site.css','/ekodimission/assets/site.js','/ekodimission/assets/saturday.js','/ekodimission/assets/shell.css','/ekodimission/assets/shell.js','/ekodimission/assets/share.css','/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg','/ekodimission/assets/open-table-meal-260925.jpg']){const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${path}`),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',path)}
+  for(const path of ['/ekodimission/assets/site.css','/ekodimission/assets/site.js','/ekodimission/assets/saturday.js','/ekodimission/assets/home-photo.js','/ekodimission/assets/shell.css','/ekodimission/assets/shell.js','/ekodimission/assets/share.css','/ekodimission/assets/mission-table-hero.svg','/ekodimission/assets/open-table-hero-260926.svg','/ekodimission/assets/open-table-meal-260925.jpg']){const response=await spaceWorker.fetch(new Request(`https://ekodi.kr${path}`),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('x-ekodi-route'),'ekodimission-asset',path);assert.equal(response.headers.get('x-ekodi-publication-status'),'published',path)}
   const missing=await spaceWorker.fetch(new Request('https://ekodi.kr/ekodimission/not-published'),env);assert.equal(missing.status,404);assert.equal(missing.headers.get('x-ekodi-route'),'ekodimission-not-found');
 });
 
@@ -193,7 +193,7 @@ test('every EKODI Mission page consumes one shared shell with published-only lan
   assert.doesNotMatch(liveHtml,/class="live-header"/);
 });
 
-test('mission landing uses an existing first-party meal photograph while archive SVG assets remain available',async()=>{
+test('mission landing uses consent-published first-party photo or honest fallback while archive SVG assets remain available',async()=>{
   const [home,event,worker,homeSvg,eventSvg,css]=await Promise.all([
     readFile(new URL('../space/ekodimission.page',import.meta.url),'utf8'),
     readFile(new URL('../space/ekodimission-activity.page',import.meta.url),'utf8'),
@@ -202,7 +202,8 @@ test('mission landing uses an existing first-party meal photograph while archive
     readFile(new URL('../space/open-table-hero-260926.svg',import.meta.url),'utf8'),
     readFile(new URL('../space/ekodimission.css',import.meta.url),'utf8')
   ]);
-  assert.match(home,/open-table-meal-260925\.jpg/);assert.match(event,/Chuseok Open Table & Sharing Market/);assert.doesNotMatch(event,/open-table-hero-260926\.svg/);
+  assert.doesNotMatch(home,/open-table-meal-260925\\.jpg/);
+  assert.match(home,/data-mission-public-photo/);assert.match(home,/data-mission-photo-fallback/);assert.match(event,/Chuseok Open Table & Sharing Market/);assert.doesNotMatch(event,/open-table-hero-260926\.svg/);
   assert.match(worker,/mission-table-hero\.svg/);assert.match(worker,/open-table-hero-260926\.svg/);
   assert.match(homeSvg,/<svg[\s\S]*한 식탁이/);assert.match(eventSvg,/<svg[\s\S]*2026 에코디 추석 열린식탁/);
   assert.match(css,/\.event-visual img\{[^}]*object-fit:contain/);assert.match(css,/\.hero-visual img\{[^}]*object-fit:cover/);

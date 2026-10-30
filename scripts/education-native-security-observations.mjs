@@ -14,7 +14,11 @@ const CF_JSD_TAG=/<script>(window\.__CF\$cv\$params=\{r:'[0-9a-f]{16}',t:'[A-Za-
 const CF_NONCE="(?:[a-z]\\.nonce='[A-Za-z0-9+\\/=]{0,128}';)?";
 const CF_LOADER_BODIES=[
   new RegExp("^var a=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','a')+"a\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/jsd\\/main\\.js';document\\.getElementsByTagName\\('head'\\)\\[0\\]\\.appendChild\\(a\\);$"),
-  new RegExp("^\\(function\\(\\)\\{if\\(!document\\.body\\)return;var s=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','s')+"s\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/precursor\\/main\\.js';document\\.head\\.appendChild\\(s\\);\\}\\)\\(\\);$")
+  new RegExp("^\\(function\\(\\)\\{if\\(!document\\.body\\)return;var s=document\\.createElement\\('script'\\);"+CF_NONCE.replace('[a-z]','s')+"s\\.src='\\/cdn-cgi\\/challenge-platform\\/scripts\\/precursor\\/main\\.js';document\\.head\\.appendChild\\(s\\);\\}\\)\\(\\);$"),
+  // Observed 2026-10-30 on real ekodi.kr Chromium: Cloudflare Precursor
+  // normalizes URL origins before loading its own fixed same-origin script.
+  // Only the exact grammar and EKODI-owned fallback origins are accepted.
+  /^\(function\(\)\{if\(!document\.body\)return;var l=window\.location,o;try\{o=new URL\(l\.origin\)\.origin\}catch\(e\)\{try\{o=new URL\(new URL\(l\.href\)\.origin\)\.origin\}catch\(e\)\{o=(['"])(?:https:\/\/ekodi\.kr(?:\/edu)?\/?)?\1\}\}var u=(['"])\/cdn-cgi\/challenge-platform\/scripts\/precursor\/main\.js(?:\?ray=[0-9a-f]{16})?\2,s=document\.createElement\((['"])script\3\);s\.src=o\?new URL\(u,o\)\.href:u;document\.head\.appendChild\(s\);\}\)\(\);$/
 ];
 const trustedInlineHashes=new Set();
 export function cloudflareJsDetectionHashes(html){
@@ -28,10 +32,19 @@ export function cloudflareJsDetectionHashes(html){
 export function trustCloudflareJsDetections(html){for(const h of cloudflareJsDetectionHashes(html))trustedInlineHashes.add(h);}
 // Attach to a Playwright Page or BrowserContext: audits every served document (frames included).
 export function observeCloudflareJsDetections(target){
+  // Cloudflare may inject the narrowly audited detector into a nested iframe,
+  // and that frame's response.text() promise can outlive the page's console
+  // CSP violation. Keep all document audits pending until the strict verdict.
+  const pending=new Set();
   target.on('response',response=>{
     try{if(response.request().resourceType()!=='document')return;}catch{return;}
-    response.text().then(trustCloudflareJsDetections).catch(()=>{});
+    const audit=response.text().then(trustCloudflareJsDetections).catch(()=>{});
+    pending.add(audit);
+    void audit.finally(()=>pending.delete(audit));
   });
+  return async function flushCloudflareJsDetectionAudits(){
+    while(pending.size)await Promise.all([...pending]);
+  };
 }
 const INLINE_SCRIPT_CSP=/^(?:Executing inline script violates the following Content Security Policy directive|Refused to execute inline script because it violates the following Content Security Policy directive:) ["']script-src 'self' https:\/\/cdn\.jsdelivr\.net https:\/\/ekodi\.kr["']\. Either the 'unsafe-inline' keyword, a hash \('sha256-([A-Za-z0-9+\/]{43}=)'\), or a nonce \('nonce-\.\.\.'\) is required to enable inline execution\.(?: The action has been blocked\.)?$/;
 export function blockedInlineScriptHash(message){return INLINE_SCRIPT_CSP.exec(String(message||'').trim())?.[1]||null;}

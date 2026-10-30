@@ -6,5 +6,5 @@ test('SeonamMedi robots.txt carries the Daum webmaster ownership line and keeps 
   assert.equal(robots.split('\n')[0], SEONAMMEDI_DAUM_WEBMASTER_LINE);
   assert.match(SEONAMMEDI_DAUM_WEBMASTER_LINE, /^#DaumWebMasterTool:[a-f0-9]{64}:[A-Za-z0-9+/=]+$/);
   assert.match(robots, /User-agent: \*\nAllow: \//);
-  assert.match(robots, /Sitemap: https:\/\/seonammedi\.kr\/sitemap\.xml/);
+  assert.match(robots, /Sitemap: https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr\/sitemap\.xml/);
 });

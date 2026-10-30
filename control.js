@@ -56,7 +56,7 @@
     const s=ensureSession(text);s.messages=s.messages||[];s.messages.push({role,text:String(text||'').slice(0,12000),at:now(),...extra});s.updatedAt=now();if(extra.status)s.status=extra.status;
     state.sessions=[s,...state.sessions.filter(x=>x.id!==s.id)].slice(0,24);saveHistory();renderRecent();renderMessages({scrollToEnd:true});
   }
-  function setView(view){state.view=view;$$('[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===view));$$('[data-view-panel]').forEach(n=>n.classList.toggle('active',n.dataset.viewPanel===view));if(view!=='chat')renderPanels();closeRail()}
+  function setView(view){state.view=view;$$('[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===view));$$('[data-view-panel]').forEach(n=>n.classList.toggle('active',n.dataset.viewPanel===view));if(view!=='chat')renderPanels();if(view==='github')void refreshGitHubOperations();closeRail()}
   function renderRecent(){const root=$('#recentTasks');const items=state.sessions.slice(0,14);root.innerHTML=items.length?items.map(s=>'<button type="button" class="recent-item" data-session="'+esc(s.id)+'">'+esc(s.title||'새 작업')+'</button>').join(''):'<div class="section-title">아직 작업이 없습니다.</div>';root.querySelectorAll('[data-session]').forEach(b=>b.onclick=()=>{state.activeId=b.dataset.session;setView('chat');renderMessages({scrollToEnd:true})})}
   function renderMessages({scrollToEnd=false}={}){const s=state.sessions.find(x=>x.id===state.activeId);const messages=s?.messages||[];$('#emptyState').hidden=messages.length>0;$('#messages').innerHTML=messages.map(m=>{
     const meta=[m.provider,m.target,m.status&&statusLabel(m.status)].filter(Boolean).join(' · ');
@@ -284,6 +284,100 @@
     $('#workerCards').innerHTML=WORKERS.map(([id,name])=>card(name,'상태는 실행 시 확인',id+' 실행계층')).join('');
     $('#resultCards').innerHTML=state.results.length?state.results.map(r=>card(r.title,statusLabel(r.status),(r.provider||'EKODI')+(r.taskId?' · '+r.taskId:r.actionId?' · Action #'+r.actionId:'')+'\n'+r.summary)).join(''):card('아직 결과가 없습니다','대기','명령 처리 후 검증된 결과가 이곳에 누적됩니다.');
   }
+  // GitHub observations are read-only and require the existing super-admin
+  // authorization; no GitHub token is used by this browser UI.
+  async function refreshGitHubOperations(){
+    const summary=$('#githubOperationsSummary');
+    const root=$('#githubOperationsCards');
+    if(!summary||!root)return;
+    summary.textContent='GitHub 작업 원장을 확인하는 중입니다.';
+    root.replaceChildren();
+    try{
+      const data=await api('/api/control/ai/v8/github?limit=30');
+      if(data?.ok!==true||data?.integration!=='observation_only')
+        throw new Error('관측 데이터 계약을 확인할 수 없습니다.');
+      const probe=data.probe||{};
+      const canary=$('#githubProbeRun');
+      if(canary)canary.disabled=probe.configured!==true||probe.enabled!==true;
+      const jobs=Array.isArray(data.jobs)?data.jobs:[];
+      const counts=Array.isArray(data.counts)?data.counts:[];
+      const total=counts.reduce((sum,item)=>sum+Math.max(0,Number(item.count)||0),0);
+      summary.textContent='관측 작업 '+total+'건 · GitHub API 잔여 한도: '+
+        (Number.isFinite(data.githubApiRemaining)?data.githubApiRemaining:'실측 미연결')+
+        ' · Webhook '+(data.activation?.ready?'활성 준비 확인':'미활성 또는 설정 미완료')+
+        ' · 배포 권한 없음';
+      // Signed event reception is distinct from provisioned secret/installation
+      // settings. Never leak the configured secret, installation token or actor.
+      const activation=data.activation||{};
+      const diagnostics=document.createElement('article');
+      diagnostics.className='card';
+      const heading=document.createElement('strong');
+      heading.textContent='GitHub App 연결 검증';
+      diagnostics.append(heading);
+      for(const [label,ok] of [
+        ['Webhook 서버 활성화',activation.enabled===true],
+        ['서명 비밀키 존재',activation.secretConfigured===true],
+        ['GitHub App 설치 ID 존재',activation.installationConfigured===true],
+        ['실제 서명된 이벤트 수신',activation.receivingVerifiedEvents===true]
+      ]){
+        const line=document.createElement('p');
+        line.textContent=label+' · '+(ok?'확인':'미확인');
+        diagnostics.append(line);
+      }
+      const last=document.createElement('p');
+      last.textContent='마지막 서명 이벤트: '+String(activation.lastSignedEventAt||'수신 기록 없음')+
+        ' · 누적 수신 '+Math.max(0,Number(activation.verifiedEventCount)||0)+'건';
+      diagnostics.append(last);
+      const probeLine=document.createElement('p');
+      const latest=probe.latest||null;
+      probeLine.textContent='읽기 전용 App 실측 · '+(
+        probe.configured?'서버 준비 (실측 여부 별도 확인)':probe.enabled?'비밀키·설치 설정 미확인':'기본 비활성')+
+        ' · 마지막 시도 '+String(latest?.claimedAt||'없음')+
+        ' · 결과 '+String(latest?.state||'실행 기록 없음')+
+        ' · 발행 권한 없음';
+      diagnostics.append(probeLine);
+      root.append(diagnostics);
+      const rate=data.apiQuota||{};
+      const quotaCard=document.createElement('article');
+      quotaCard.className='card';
+      const quotaHeading=document.createElement('strong');
+      quotaHeading.textContent='GitHub REST API 공동 한도 관측';
+      quotaCard.append(quotaHeading);
+      const quotaHelp=document.createElement('p');
+      quotaHelp.textContent='관측 원장: '+String(rate.state||'미연결')+
+        ' · 전체 실행기 공동 차감·명령 실행: 미연결';
+      quotaCard.append(quotaHelp);
+      for(const bucket of Array.isArray(rate.buckets)?rate.buckets:[]){
+        const line=document.createElement('p');
+        line.textContent=String(bucket.resource||'unknown')+' · '+
+          (bucket.measured?'최근 실측 '+bucket.remaining+'/'+bucket.limit:'실측값 만료 · 미확인')+
+          ' · 측정 '+String(bucket.lastObservedAt||'없음');
+        quotaCard.append(line);
+      }
+      root.append(quotaCard);
+      if(!jobs.length){
+        const empty=document.createElement('p');
+        empty.textContent='관측 작업 기록이 없습니다. GitHub App Webhook 서명·설치 설정과 D1 상태를 확인하세요.';
+        root.append(empty);
+        return;
+      }
+      for(const job of jobs){
+        const article=document.createElement('article');
+        article.className='card';
+        const title=document.createElement('strong');
+        title.textContent=(job.state||'상태 미확인')+' · '+(job.kind||'관측');
+        const detail=document.createElement('p');
+        detail.textContent='작업 '+String(job.operation_key||'').slice(0,12)+' · '+String(job.updated_at||'날짜 미확인');
+        article.append(title,detail);
+        root.append(article);
+      }
+    }catch(error){
+      summary.textContent=error?.auth?'최고관리자 로그인이 필요합니다.':
+        'GitHub 관측 상태 조회 실패: '+String(error?.message||'unknown');
+      root.textContent='실제 확인되지 않은 성공 상태나 API 수치는 표시하지 않습니다.';
+    }
+  }
+
   async function refreshOrchestratorTasks(){
     const recent=state.tasks.filter(item=>item.target==='EKODI Orchestrator' && /^orch_[a-z0-9_-]{16,}$/i.test(item.id||'')).slice(0,10);
     let updated=0,unavailable=0;
@@ -352,6 +446,22 @@
     $('#commandInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#commandForm').requestSubmit()}});
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus({preventScroll:true})});
     $$('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
+    $('#githubOperationsRefresh').addEventListener('click',()=>void refreshGitHubOperations());
+    $('#githubProbeRun').addEventListener('click',async()=>{
+      const button=$('#githubProbeRun');
+      if(button.disabled)return;
+      if(!confirm('에코디 GitHub App의 읽기 전용 설치 토큰을 1회 발급하여, GitHub 호출 한도를 실측합니다. 상태 변경·병합·배포는 하지 않습니다. 실행하시겠습니까?'))return;
+      button.disabled=true;
+      try{
+        const result=await api('/api/control/ai/v8/github/readonly-probe',{
+          method:'POST',body:JSON.stringify({confirm:'readonly_quota_probe'})
+        });
+        toast(result?.ok?'GitHub App 읽기 전용 실측을 확인했습니다.':'실측 결과를 확인하지 못했습니다.');
+      }catch(error){
+        toast('GitHub 실측 거부: '+String(error?.message||'확인 실패'));
+      }finally{await refreshGitHubOperations();}
+    });
+
   }
   async function acceptVerifiedAdminControlHandoff(){
     // Google Admin returns to the exact Control deep-link with an ephemeral
@@ -385,8 +495,8 @@
     auth.searchParams.set('return_to','https://ekodi.kr/admin/control');
     const link=document.createElement('a');
     link.href=auth.toString();
-    link.textContent='관리자 Google 로그인';
-    link.setAttribute('aria-label','최고관리자 Google 로그인 후 EKODI Control로 복귀');
+    link.textContent='로그인';
+    link.setAttribute('aria-label','로그인 후 최고관리자 권한을 검증하고 EKODI Control로 복귀');
     status.replaceChildren(link);
   }
   async function boot(){

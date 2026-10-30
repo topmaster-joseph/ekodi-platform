@@ -3,6 +3,7 @@ import { lanesForChangedFiles } from './lib/worker-bundle-graph.mjs';
 import { requiresHumanAuthorSchemaRelease, requiresCreatorAuthorRelease, releaseSpecForHumanAuthorSchema, releaseSpecForCreatorAuthor } from './lib/human-author-release-lane.mjs';
 import { unapprovedReleaseRunIds, staleParkedReleaseRunIds } from './lib/converge-unapproved-runs.mjs';
 import { fileURLToPath } from 'node:url';
+import { safeGitHubHttpDiagnostic } from './github-http-diagnostic.mjs';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
 const branch=String(process.env.GITHUB_REF_NAME||'').trim();
@@ -14,6 +15,7 @@ function fail(m){throw new Error('[EKODI][ORCH-AUTO-MERGE] '+m)}
 async function api(path,init={}){
   const r=await fetch('https://api.github.com/repos/'+repo+path,{...init,headers:{authorization:`Bearer ${token}`,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28','content-type':'application/json',...(init.headers||{})}});
   const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={raw:text}};
+  if(!r.ok && [401,403,429].includes(r.status)) console.error(safeGitHubHttpDiagnostic({status:r.status,headers:r.headers,data}));
   return {r,data};
 }
 async function statusMap(sha){
@@ -223,6 +225,8 @@ const controlApiTouched=changedFiles.some(file=>
   'mission-control-entry-worker.js',
   // Search Visibility evidence D1 API is part of Control API deployment ownership.
   'search-visibility-control.js',
+  // Read-only first-party Search Console reporter is imported by Search Visibility Control API.
+  'google-search-console-readonly.js',
   // Church Live host authority and runtime tenant mapping execute in Control API.
   // A token-mediated merge skips main push; dispatch the guarded API on these edits.
   'realtime-control.js',
@@ -422,6 +426,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   // Public Site publication controls are a Site Core admin bundle asset. This must
   // dispatch the guarded release after token-mediated protected merges (issue #6508).
   file==='admin-public-site-controls.js'||
+  // Admin address aliases run at the shared Site Core edge; token-merged source
+  // changes must dispatch the same guarded production release as other Admin routes.
+  file==='admin-address-policy.js'||
   // Growth OS search specialist is a dynamic Site Core Admin asset.
   // Dispatch guarded Site Core even when only the lazy module changes.
   file==='search-visibility-admin.js'||
@@ -474,6 +481,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   // GITHUB_TOKEN merges cannot rely on main push workflow events.
   // Preserve the existing explicit Admin verifier release contract.
   file==='scripts/verify-admin-production-ui-e2e.mjs'||
+  file==='scripts/admin-production-ui-coverage.mjs'||
   file==='scripts/ekodi-background-browser-worker.mjs'||
   // Hybrid native browser admin page shares the guarded Site Core release boundary.
   file==='hybrid-execution-admin.js'||
@@ -578,11 +586,25 @@ const handDispatchedLanes=new Set([
   [sharedSiteTouched,'deploy-site-core.yml'],
 ].filter(([touched])=>touched).map(([,workflow])=>workflow));
 async function dispatchBundleGraphLanes(){
+  // WORKER-LANE-MERGE-SHA-001: Some guarded workflows (Education) require
+  // the exact protected merge SHA in addition to the orchestrator receipt.
+  // Resolve it from the merged PR and current main; never use a PR head SHA.
+  const needsMergeSha=bundleLanes.dispatches.some(lane=>Object.values(lane.inputs||{}).includes('$PROTECTED_MERGE_SHA'));
+  let protectedMergeSha='';
+  if(needsMergeSha){
+    const mergedPr=await api('/pulls/'+pr.number);
+    if(!mergedPr.r.ok||mergedPr.data?.merged!==true)fail('protected-merge-sha: PR is not merged');
+    protectedMergeSha=String(mergedPr.data.merge_commit_sha||'');
+    if(!/^[a-f0-9]{40}$/i.test(protectedMergeSha))fail('protected-merge-sha: invalid merge commit');
+    const mainRef=await api('/git/ref/heads/main');
+    if(!mainRef.r.ok||String(mainRef.data?.object?.sha||'')!==protectedMergeSha)
+      fail('protected-merge-sha: main advanced before receipt-bound dispatch; retry on current protected release');
+  }
   for(const lane of bundleLanes.dispatches){
     if(handDispatchedLanes.has(lane.workflow))continue;
     const dispatch=await api('/actions/workflows/'+lane.workflow+'/dispatches',{
       method:'POST',
-      body:JSON.stringify({ref:'main',inputs:{...lane.inputs,release_branch_ref:branch,release_task_id:taskId}})
+      body:JSON.stringify({ref:'main',inputs:{...Object.fromEntries(Object.entries(lane.inputs||{}).map(([key,value])=>[key,value==='$PROTECTED_MERGE_SHA'?protectedMergeSha:value])),release_branch_ref:branch,release_task_id:taskId}})
     });
     if(!dispatch.r.ok)fail('bundle-graph deploy dispatch failed for '+lane.workflow+' '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     const workers=bundleLanes.affected.filter(item=>item.workflow===lane.workflow).map(item=>item.name);

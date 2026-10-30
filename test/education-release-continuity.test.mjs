@@ -4,7 +4,8 @@ import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {
-  educationReleaseChanged,approvedEducationMerge
+  educationReleaseChanged,approvedEducationMerge,selectMergedEducationPRForConvergence,releaseQuotaBudget,
+  latestEducationMergeFromGit,EDUCATION_LOCAL_PATHS,approvedEducationRecoverySignal
 } from '../scripts/education-release-continuity.mjs';
 import {ORIGIN,ROUTE,VIEWPORTS} from '../scripts/verify-education-bootcamp-native.mjs';
 import {EKODI_SERVICE_MANIFEST} from '../ekodi-service-manifest.js';
@@ -17,6 +18,26 @@ const event={action:'completed',workflow_run:{conclusion:'success',head_branch:b
 const pr={number:4689,state:'closed',merged_at:'2026-10-14T11:20:01Z',
  head:{ref:branch,sha:source},base:{ref:'main'},merge_commit_sha:merged};
 
+test('owner recovery signal is exact, issue-only and does not bypass protected release',()=>{
+ const genuine={action:'created',issue:{number:7084},comment:{user:{login:'topmaster-joseph'},body:'EKODI-EDUCATION-RECONCILE'}};
+ assert.equal(approvedEducationRecoverySignal(genuine),true);
+ assert.equal(approvedEducationRecoverySignal({...genuine,action:'edited'}),false);
+ assert.equal(approvedEducationRecoverySignal({...genuine,comment:{...genuine.comment,user:{login:'attacker'}}}),false);
+ assert.equal(approvedEducationRecoverySignal({...genuine,comment:{...genuine.comment,body:'EKODI-EDUCATION-RECONCILE:force'}}),false);
+ assert.equal(approvedEducationRecoverySignal({...genuine,issue:{number:7084,pull_request:{url:'https://example.invalid'}}}),false);
+ assert.equal(approvedEducationRecoverySignal(null),false);
+ const workflow=read('.github/workflows/education-release-continuity.yml');
+ const runner=read('scripts/education-release-continuity.mjs');
+ assert.match(workflow,/issue_comment:/);
+ assert.match(workflow,/github\.actor == 'topmaster-joseph'/);
+ assert.match(workflow,/EKODI-EDUCATION-RECONCILE/);
+ assert.match(runner,/approvedEducationRecoverySignal\(event\)/);
+ assert.match(runner,/verifyEducationReleaseSnapshot/);
+ assert.match(runner,/previous_dispatch_exists/);
+ assert.match(runner,/release_attempt_limit_reached/);
+ assert.doesNotMatch(runner,/wrangler\s+(?:deploy|publish)/);
+});
+
 test('Education-only changed path is explicit and guarded',()=>{
   assert.equal(educationReleaseChanged(['education/study/ai-bootcamp/index.html']),true);
   assert.equal(educationReleaseChanged(['education-worker.js']),true);
@@ -28,7 +49,71 @@ test('Education-only changed path is explicit and guarded',()=>{
   assert.equal(educationReleaseChanged([]),false);
 });
 
-test('Only a merged exact source on current main can dispatch',()=>{
+
+test('Release quota preflight conservatively defers before scanning GitHub',()=>{
+ assert.deepEqual(releaseQuotaBudget({resources:{core:{remaining:25}}}),{ok:true,remaining:25});
+ assert.equal(releaseQuotaBudget({resources:{core:{remaining:0}}}).reason,'github_quota_low');
+ assert.equal(releaseQuotaBudget({resources:{core:{remaining:23}}}).ok,false);
+ assert.equal(releaseQuotaBudget({resources:{core:{remaining:24}}}).ok,true);
+ assert.equal(releaseQuotaBudget({resources:{core:{remaining:null}}}).ok,false);
+ assert.equal(releaseQuotaBudget({resources:{core:{remaining:-1}}}).reason,'quota_unknown');
+ assert.equal(releaseQuotaBudget({resources:{}}).reason,'quota_unknown');
+});
+test('Read only bounded first-parent Education commit, not broad GitHub PR pagination',()=>{
+ const calls=[];
+ const found=latestEducationMergeFromGit({run:(cmd,args,opts)=>{
+   calls.push({cmd,args,opts});return sha('a')+'\n';
+ }});
+ assert.equal(found,sha('a'));
+ assert.equal(calls[0].cmd,'git');
+ assert.deepEqual(calls[0].args.slice(0,5),['log','--first-parent','-1','--format=%H','--']);
+ assert.equal(calls[0].args.includes('education/'),true);
+ assert.equal(calls[0].args.includes('.github/workflows/deploy-education.yml'),true);
+ assert.equal(EDUCATION_LOCAL_PATHS.includes('scripts/education-release-continuity.mjs'),true);
+ assert.equal(latestEducationMergeFromGit({run:()=>'\n'}),'');
+ assert.equal(latestEducationMergeFromGit({run:()=>sha('z')}),'');
+});
+test('Quota-limited continuity retains protected release and defers exhausted API',()=>{
+ const runner=read('scripts/education-release-continuity.mjs');
+ const workflow=read('.github/workflows/education-release-continuity.yml');
+ assert.match(runner,/availableReleaseQuota\(token\)/);
+ assert.match(runner,/GITHUB_QUOTA_DEFERRED/);
+ assert.match(runner,/\/commits\/'\+mergedSha\+'\/pulls/);
+ assert.match(runner,/no_unique_official_education_pr_for_latest_commit/);
+ assert.doesNotMatch(runner,/\/pulls\?state=closed&base=main&sort=updated/);
+ assert.match(workflow,/fetch-depth: 200/);
+ assert.match(runner,/verifyEducationReleaseSnapshot/);
+ assert.match(runner,/release_sha:releaseSha/);
+});
+
+test('select only exact official protected merged PR while old convergence SHA is stale',()=>{
+ const branch='ai/chatgpt/orch_recovery_92640ebb79b88060e47ed32e9104581e';
+ const base={number:7017,state:'closed',merged_at:'2026-10-30T05:07:51Z',
+   base:{ref:'main'},head:{ref:branch,sha:sha('b')},merge_commit_sha:sha('c')};
+ assert.deepEqual(selectMergedEducationPRForConvergence({pulls:[base],branch}),base);
+ // A stale successful runner event may be on sha('a'): the actual merged
+ // sha('b') must still pass the later source CI and canonical receipt.
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[base],branch}).head.sha,sha('b'));
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[base,base],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,merged_at:null}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,state:'open'}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,base:{ref:'develop'}}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,head:{...base.head,ref:'ai/chatgpt/other'}}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,head:{...base.head,sha:'bad'}}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[{...base,merge_commit_sha:'bad'}],branch}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:[base],branch:'ai/chatgpt/unsafe'}),null);
+ assert.equal(selectMergedEducationPRForConvergence({pulls:null,branch}),null);
+ const runner=read('scripts/education-release-continuity.mjs');
+ assert.match(runner,/selectMergedEducationPRForConvergence\(\{pulls,branch\}\)/);
+ assert.match(runner,/convergence_head_advanced_before_protected_merge/);
+ assert.doesNotMatch(runner,/pulls\.find\(p=>p\.head\?\.sha===run\.head_sha/);
+ assert.match(runner,/verifyEducationReleaseSnapshot/);
+ assert.match(runner,/receiptVerifier:verifyOrchestratorReleaseReceipt/);
+ assert.match(runner,/required source status not successful/);
+});
+
+test('Legacy workflow_run decision accepts only its exact source on current main',()=>{
   const accepted=approvedEducationMerge({event,pr,files:['education/study/ai-bootcamp/index.html'],mainSha:merged});
   assert.deepEqual(accepted,{ready:true,reason:'verified_source_and_main',branch,
     taskId:'orch_recovery_08f0272aefb8910b6d5c5b2578160cf0',mergeSha:merged,sourceSha:source,pr:4689});
@@ -49,14 +134,16 @@ test('Final approval remains required by the existing canonical Orchestrator rec
   const runner=read('scripts/education-release-continuity.mjs');
   const workflow=read('.github/workflows/education-release-continuity.yml');
   const deploy=read('.github/workflows/deploy-education.yml');
-  assert.match(runner,/verifyOrchestratorReleaseReceipt\(branch/);
+  assert.match(runner,/receiptVerifier:verifyOrchestratorReleaseReceipt/);
   assert.match(runner,/status\.statuses/);
   assert.match(runner,/no_education_changes/);
-  assert.match(runner,/merge_commit_sha/);
+  assert.match(runner,/verifyEducationReleaseSnapshot/);
   assert.match(runner,/event\.workflow_run/);
-  assert.match(runner,/release_sha:decision\.mergeSha/);
+  assert.match(runner,/release_sha:releaseSha/);
   assert.doesNotMatch(runner,/wrangler\s+(deploy|publish)/);
   assert.match(workflow,/workflow_run:/);
+  assert.match(workflow,/schedule:/);
+  assert.match(workflow,/17 \* \* \* \*/);
   assert.match(workflow,/EKODI Orchestrated PR Convergent Merge/);
   assert.match(workflow,/ref: main/);
   assert.match(workflow,/GH_TOKEN: \$\{\{ github\.token \}\}/);
@@ -66,7 +153,7 @@ test('Final approval remains required by the existing canonical Orchestrator rec
   assert.match(deploy,/Confirm final-approved merged release provenance/);
   assert.match(deploy,/scripts\/preflight-merged-release\.mjs/);
   assert.match(deploy,/REQUESTED_SHA.*GITHUB_SHA/);
-  assert.match(deploy,/gh api "repos\/\$GITHUB_REPOSITORY\/commits\/\$GITHUB_SHA\/pulls"/);
+  assert.match(deploy,/node scripts\/verify-education-release-snapshot\.mjs/);
   assert.match(deploy,/EKODI_RELEASE_BRANCH_REF/);
   assert.match(deploy,/Validate AI bootcamp native verification harness/);
   assert.match(deploy,/EKODI AI Orchestration Gate/);

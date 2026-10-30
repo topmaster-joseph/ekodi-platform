@@ -97,13 +97,17 @@ jobs:
           node --check education-instructor-docs.js
           node --check scripts/edu-instructor-gate-verifier.mjs
           node --check scripts/verify-education-live-studio-native.mjs
+          node --check scripts/verify-education-screen-share-native.mjs
           node --check scripts/education-probe-annotate.mjs
           node --check education/research/worker.js
           node --check education/research/planner.js
           node --check education/research/app.js
           node --check education/app.js
+          node --check scripts/verify-education-farm-marketing-native.mjs
+          node --check scripts/verify-education-release-snapshot.mjs
+          node --check education/study/farm-marketing/app.js
           node --check ekodi-service-manifest.js
-          node --test test/education-platform.test.mjs test/my-life-journey.test.mjs test/research-platform.test.mjs
+          node --test test/education-platform.test.mjs test/my-life-journey.test.mjs test/research-platform.test.mjs test/education-farm-marketing.test.mjs test/education-release-snapshot.test.mjs
           for f in education/study/live/*.js education/study/live/*/*.js; do node --check "$f"; done
           node --test test/education-live-studio.test.mjs test/education-instructor-gate.test.mjs test/education-instructor-docs.test.mjs test/education-native-security-observations.test.mjs
           node -e "JSON.parse(require('fs').readFileSync('platform-boundaries.json','utf8'))"
@@ -215,9 +219,10 @@ jobs:
             [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ && "$REQUESTED_SHA" == "$GITHUB_SHA" ]] || { echo 'Exact main merge SHA mismatch; release remains blocked'; exit 1; }
             [[ "$REQUESTED_BRANCH" =~ ^ai/[a-z0-9][a-z0-9._-]{0,31}/orch_[a-z0-9][a-z0-9_-]{15,120}$ ]] || { echo 'Orchestrator-issued branch required'; exit 1; }
             [[ "$REQUESTED_TASK" == "${REQUESTED_BRANCH##*/}" ]] || { echo 'Orchestrator task and branch differ'; exit 1; }
-            associated=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
-              | jq --arg branch "$REQUESTED_BRANCH" '[.[] | select(.merged_at != null and .base.ref == "main" and .head.ref == $branch)] | length')
-            [[ "$associated" =~ ^[0-9]+$ && "$associated" -ge 1 ]] || { echo 'No merged PR for this exact orchestrator branch and SHA'; exit 1; }
+            # Verify the original protected Education PR, its source CI and canonical
+            # Orchestrator receipt against this exact main snapshot. Unrelated later
+            # merges are allowed, but later Education edits always block this authority.
+            node scripts/verify-education-release-snapshot.mjs
             echo "EKODI_RELEASE_BRANCH_REF=$REQUESTED_BRANCH" >> "$GITHUB_ENV"
             echo "EKODI_RELEASE_TASK_ID=$REQUESTED_TASK" >> "$GITHUB_ENV"
             RELEASE_SHA="$REQUESTED_SHA" ORCHESTRATOR_BRANCH="$REQUESTED_BRANCH" GITHUB_TOKEN="$GH_TOKEN" \
@@ -358,12 +363,16 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Verify actual Education classroom on desktop and mobile with EKODI-owned Chromium
         run: node scripts/verify-education-bootcamp-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-native; exit 1; }
+      - name: Verify live farmer AI marketing course at 5 viewport sizes with EKODI Chromium
+        run: node scripts/verify-education-farm-marketing-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-farm-marketing-native; exit 1; }
       - name: Verify actual canonical /edu material studio desktop and mobile
         run: node scripts/verify-education-material-studio-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-studio-native; exit 1; }
       - name: Verify actual bootcamp instructor documents on desktop and mobile
         run: node scripts/verify-education-documents-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-documents-native; exit 1; }
       - name: Verify Premium Studio instructor, presenter and learner flows on desktop and mobile
         run: node scripts/verify-education-live-studio-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-live-native; exit 1; }
+      - name: Verify instructor QR room and learner-approved screen preview in real Education production
+        run: node scripts/verify-education-screen-share-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-screen-share-native; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -373,6 +382,8 @@ jobs:
             artifacts/education-studio-native/
             artifacts/education-documents-native/
             artifacts/education-live-native/
+            artifacts/education-farm-marketing-native/
+            artifacts/education-screen-share-native/
           retention-days: 7
       - name: Publish Education production status
         if: always()

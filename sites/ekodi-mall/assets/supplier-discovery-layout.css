@@ -1,0 +1,39 @@
+/* EKODI Mall supplier discovery: scoped compact operations console */
+.discovery-page{background:#f7f9f7;color:#192a22}
+.discovery-page .discovery-header{max-width:1320px;margin:0 auto}
+.discovery-page .discovery-main{max-width:1320px;padding:22px 22px 65px}
+.discovery-title{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:13px}
+.discovery-title .eyebrow{font-size:10px;letter-spacing:.14em;font-weight:850;color:#a66337;margin:0 0 8px}
+.discovery-title h1{margin:0;font-size:clamp(26px,2.6vw,36px);line-height:1.18;letter-spacing:-.04em}
+.discovery-title p:not(.eyebrow){font-size:13px;line-height:1.5;color:#63766b;margin:7px 0 0}
+.discovery-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.discovery-actions button{min-height:38px}
+.discovery-page [hidden],.discovery-page .discovery-actions #discoveryLogin[hidden],.discovery-page .discovery-actions #discoveryLogout[hidden]{display:none!important}
+.discovery-status{padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.5;background:#eaf2ed;color:#2c5741;border-radius:9px;overflow-wrap:anywhere}
+.discovery-status[data-state=error]{background:#fbece5;color:#91462e}
+.discovery-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 10px}
+.discovery-metrics article{border:1px solid #dfe7e0;border-radius:12px;background:#fff;padding:12px 15px;min-width:0}
+.discovery-metrics small{display:block;font-size:11px;font-weight:700;color:#60776b}
+.discovery-metrics strong{display:block;font-size:18px;font-weight:850;margin-top:5px}
+.discovery-safety{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 15px}
+.discovery-safety span{display:inline-flex;gap:6px;align-items:center;background:#edf2ef;border-radius:9px;padding:7px 12px;color:#5b6d60;font-size:11px}
+.discovery-safety strong{color:#906046;font-size:12px}
+.discovery-tabs{display:flex;align-items:stretch;gap:4px;overflow-x:auto;border-bottom:1px solid #d3ded6;margin-bottom:15px;scrollbar-width:thin}
+.discovery-tabs button{border:0;appearance:none;border-radius:9px 9px 0 0;background:transparent;color:#5e7064;min-height:43px;padding:10px 17px;font-size:13px;font-weight:760;font-family:inherit;flex:none;cursor:pointer;position:relative}
+.discovery-tabs button:hover{background:#e9f0ea}
+.discovery-tabs button[aria-selected=true]{background:#fff;color:#173f35}
+.discovery-tabs button[aria-selected=true]:after{content:"";height:3px;position:absolute;bottom:0;left:0;right:0;background:#173f35}
+.discovery-tabs button:focus-visible{outline:3px solid #b77d40;outline-offset:2px}
+.discovery-page .discovery-panels{display:block}
+.discovery-page .discovery-panels .ops-panel{display:block;max-width:none;margin:0;padding:20px;border-radius:14px;min-height:215px;background:#fff}
+.discovery-page .discovery-panels .ops-panel[hidden]{display:none!important}
+.discovery-page .ops-panel-head{align-items:flex-start}
+.discovery-page .ops-panel-head h2{font-size:19px}
+.discovery-page .ops-form{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.discovery-page .ops-form.compact{grid-template-columns:1.5fr .8fr 1fr auto}
+.discovery-page .ops-map-form{grid-template-columns:1.6fr .9fr .6fr auto}
+.discovery-page .ops-form>button,.discovery-page .ops-map-form>button{min-height:42px}
+.discovery-page .ops-hint{overflow-wrap:anywhere;white-space:pre-wrap}
+.discovery-page .ops-table-wrap{max-width:100%;overflow:auto}
+@media(max-width:900px){.discovery-title{align-items:flex-start;flex-direction:column}.discovery-actions{justify-content:flex-start}.discovery-page .ops-form.compact,.discovery-page .ops-map-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){.discovery-page .discovery-main{padding:15px 12px 55px}.discovery-title{gap:12px}.discovery-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.discovery-metrics article{padding:10px 12px}.discovery-safety{gap:5px}.discovery-safety span{padding:6px 9px}.discovery-tabs button{padding:10px 13px;font-size:12px}.discovery-page .discovery-panels .ops-panel{padding:14px}.discovery-page .ops-form,.discovery-page .ops-form.compact,.discovery-page .ops-map-form{grid-template-columns:minmax(0,1fr)}.discovery-page .ops-panel-head{align-items:stretch}.discovery-page .ops-panel-head select{max-width:none}}

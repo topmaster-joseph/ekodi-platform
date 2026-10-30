@@ -1,6 +1,7 @@
 // EKODI GitHub Operations. Ingress only: never perform GitHub writes or deploy.
+import { githubQuotaReadModel } from './github-api-budget-control.js';
 const CANONICAL_REPO = 'topmaster-joseph/ekodi-platform';
-const ALLOWED = new Set(['push','pull_request','workflow_run','check_run','issues','issue_comment']);
+const ALLOWED = new Set(['push','pull_request','workflow_run','check_run','issues','issue_comment','ping']);
 const MAX_BYTES = 262144;
 const response = (status, data) => new Response(JSON.stringify(data), {status, headers:{
   'content-type':'application/json; charset=utf-8','cache-control':'no-store',
@@ -77,6 +78,11 @@ export async function acceptGitHubWebhook(request,env) {
   let payload;
   try{payload=JSON.parse(new TextDecoder().decode(raw));}
   catch{return response(400,{ok:false,code:'GITHUB_WEBHOOK_JSON_INVALID'});}
+  // GitHub App setup sends signed ping without repository/installation data.
+  // A ping is an acknowledgment only; it never writes D1 or dispatches work.
+  if(event==='ping')return response(200,{
+    ok:true,pingVerified:true,accepted:false,releaseAuthorized:false,githubApiCalls:0
+  });
   const p=projectGitHubEvent(event,payload);
   if(p.repository!==CANONICAL_REPO)
     return response(403,{ok:false,code:'GITHUB_WEBHOOK_REPOSITORY_DENIED'});
@@ -111,15 +117,36 @@ export async function acceptGitHubWebhook(request,env) {
 export async function githubOperationsSnapshot(env,limit=30) {
   if(!env.DB?.prepare)throw Error('GITHUB_OPERATIONS_DB_UNAVAILABLE');
   const max=Math.min(Math.max(Number(limit)||30,1),100);
-  const [events,jobs,summary]=await Promise.all([
+  const [events,jobs,summary,deliveryCount,quota]=await Promise.all([
     env.DB.prepare('SELECT event_type,event_action,head_sha,source_number,priority,created_at '+
       'FROM github_operations_webhook_events ORDER BY created_at DESC LIMIT ?').bind(max).all(),
     env.DB.prepare('SELECT operation_key,kind,priority,state,attempts,created_at,updated_at '+
       'FROM github_operations_jobs ORDER BY created_at DESC LIMIT ?').bind(max).all(),
     env.DB.prepare('SELECT state,COUNT(*) count FROM github_operations_jobs GROUP BY state').all(),
+    env.DB.prepare('SELECT COUNT(*) as count FROM github_operations_webhook_events').all(),
+    githubQuotaReadModel(env),
   ]);
+  // Admin-only, presence-only readiness diagnostics. Never reveal secrets or tokens.
+  const enabled=env.EKODI_GITHUB_WEBHOOK_ENABLED==='true';
+  const secretReady=typeof env.EKODI_GITHUB_WEBHOOK_SECRET==='string' &&
+    env.EKODI_GITHUB_WEBHOOK_SECRET.length>=32;
+  const installationReady=Number.isSafeInteger(Number(env.EKODI_GITHUB_INSTALLATION_ID)) &&
+    Number(env.EKODI_GITHUB_INSTALLATION_ID)>0;
+  const lastVerifiedEvent=(events.results||[])[0]||null;
+  const totalVerifiedEvents=Number(deliveryCount?.results?.[0]?.count||0);
+  const activation={ready:enabled&&secretReady&&installationReady,
+    enabled,secretConfigured:secretReady,installationConfigured:installationReady,
+    receivingVerifiedEvents:totalVerifiedEvents>0,
+    lastSignedEventAt:lastVerifiedEvent?.created_at||null,
+    verifiedEventCount:totalVerifiedEvents,
+    // Signed ping alone never increments this counter.
+    observationCount:totalVerifiedEvents};
   return {schemaVersion:1,authority:'EKODI Orchestrator',integration:'observation_only',
-    releaseAuthorized:false,githubApiRemaining:null,githubApiBudgetSource:'not_connected',
+    activation,
+    releaseAuthorized:false,
+    githubApiRemaining:quota.buckets.find(x=>x.resource==='core'&&x.measured)?.remaining??null,
+    githubApiBudgetSource:quota.state==='verified_observation'?'verified_response':'not_connected',
+    apiQuota:quota,
     tokenExposed:false,events:events.results||[],jobs:jobs.results||[],
     counts:summary.results||[]};
 }

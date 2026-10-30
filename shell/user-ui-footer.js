@@ -188,6 +188,11 @@ function createFooter(config){
   if(config.contact?.address)appendText(address,'span',config.contact.address);
   if(config.contact?.address&&config.contact?.email)appendText(address,'span','·','ekodi-user-ui-footer__separator').setAttribute('aria-hidden','true');
   if(config.contact?.email){const email=appendText(address,'a',config.contact.email);email.href=String(config.contact.emailHref||`mailto:${config.contact.email}`);}
+  if(config.contact?.phone){
+    appendText(address,'span','·','ekodi-user-ui-footer__separator').setAttribute('aria-hidden','true');
+    const phone=appendText(address,'a',config.contact.phone);
+    phone.href=String(config.contact.phoneHref||`tel:${String(config.contact.phone).replace(/[^+\d]/g,'')}`);
+  }
   appendText(copy,'div',config.copyright,'ekodi-user-ui-footer__copyright');
   appendText(copy,'div',config.precedenceNotice,'ekodi-user-ui-footer__scope');
   const nav=appendText(inner,'nav','','ekodi-user-ui-footer__links');

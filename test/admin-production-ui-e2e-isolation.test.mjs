@@ -104,7 +104,8 @@ test('synthetic production Admin UI verifier exercises the native Control comman
   assert.match(text,/admin-control-home/);
   assert.match(text,/frameWidth<300/);
   assert.match(text,/command-roundtrip/);
-  assert.match(text,/expectedCount = menus\.length \+ 1/);
+  assert.match(text,/auditAdminProductionUiCoverage\(menuIds, results\)/);
+  assert.match(text,/if \(!coverage\.ok\) throw new Error/);
 });
 
 

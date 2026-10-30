@@ -18,6 +18,8 @@ const FALLBACK_ATTR='data-ekodi-user-header-fallback';
 const HOME_ATTR='data-ekodi-header-home';
 const OPERATING_SCOPE_ATTR='data-ekodi-operating-space-label';
 const OPERATING_SCOPE_CLASS='ekodi-user-ui-header-scope';
+const STANDARD_CLASS='ekodi-standard-header';
+const STANDARD_ROW_CLASS='ekodi-standard-header__row';
 const HEADER_SELECTORS=[
   'header[data-ekodi-user-header-root]',
   'header[data-ekodi-fixed-header]',
@@ -314,6 +316,30 @@ function findHomeAnchor(header){
   return null;
 }
 function applySiteChromeHeader(header,chrome){const cfg=chrome?.header;if(!header||!cfg||header.dataset.ekodiSiteChrome==='v1')return;const home=findHomeAnchor(header);if(home&&cfg.homeUrl)home.setAttribute('href',isIndividualSite()?serviceHomeUrl().toString():String(cfg.homeUrl));pruneIndividualSiteGlobalLinks(header);const fallback=header.hasAttribute(FALLBACK_ATTR);const siteNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__brand'):header.querySelector('[data-ekodi-header-site-name],[data-ekodi-site-name],.brand-title,.site-title');if(siteNode&&cfg.siteName)siteNode.textContent=String(cfg.siteName);const taglineNode=fallback?header.querySelector('.ekodi-user-ui-header-fallback__context'):header.querySelector('[data-ekodi-header-tagline]');if(taglineNode){const base=String(cfg.tagline||cfg.siteName||serviceLabel());taglineNode.textContent=base;}ensureOperatingSpaceLabel(header,siteNode||operatingSpaceTarget(header));header.dataset.ekodiSiteChrome='v1';window.dispatchEvent(new CustomEvent('ekodi:site-chrome',{detail:{subjectKey:chrome.subjectKey||siteSubject(),header:cfg}}))}
+// One non-Mall header grammar, not one imposed brand or navigation tree.
+// Adopt only an uncomplicated brand + navigation row. Complex site chrome,
+// authenticated workspaces and Mall commerce may retain their native layout.
+function standardHeaderRow(header){
+  if(!header||header.hasAttribute(FALLBACK_ATTR)||!shouldEnable())return null;
+  if(serviceId()==='mall'||location.pathname.toLowerCase()==='/ekodimall'||location.pathname.toLowerCase().startsWith('/ekodimall/'))return null;
+  if(header.dataset.ekodiHeaderStandard==='off'||document.documentElement.dataset.ekodiHeaderStandard==='off')return null;
+  const candidates=[header,...header.children].filter(node=>node instanceof HTMLElement);
+  for(const row of candidates){
+    const children=[...row.children];
+    const brand=children.find(el=>el.matches('a.brand,.brand,.mission-brand,a.logo,.site-brand'));
+    const nav=children.find(el=>el.matches('nav,[role="navigation"]'));
+    if(brand&&nav&&brand!==nav&&!nav.contains(brand))return row;
+  }
+  return null;
+}
+function adoptStandardHeader(header){
+  const row=standardHeaderRow(header);
+  if(!row)return;
+  header.classList.add(STANDARD_CLASS);
+  row.classList.add(STANDARD_ROW_CLASS);
+  header.dataset.ekodiHeaderStandardApplied='v1';
+  // Scope to cosmetic geometry. Never clone controls, move menus, or alter login.
+}
 function bindHomeAnchor(header){
   const anchor=findHomeAnchor(header);if(!anchor)return;
   const localAnchor=serviceHomeAnchor();
@@ -367,8 +393,9 @@ function detach(){
 }
 function attach(header){
   if(!header||!shouldEnable())return;
-  // Existing site chrome is site-owned: preserve its position, typography,
-  // navigation layout and responsive behavior. Shell manages only the fallback.
+  // Existing service headers retain their brand, navigation, login and role checks.
+  // Shared geometry is applied only to a safe native brand/navigation row.
+  adoptStandardHeader(header);
   if(isIndividualSite()&&!header.hasAttribute(FALLBACK_ATTR)){
     if(activeHeader!==header)detach();
     activeHeader=header;

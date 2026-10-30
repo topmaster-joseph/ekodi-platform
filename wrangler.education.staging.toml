@@ -11,7 +11,17 @@ EDU_INSTRUCTOR_GATE_MODE = "open"
 EDU_INSTRUCTOR_GATE = "pbkdf2-sha256$100000$EIuDPHsCJbnpyAo0yx7INg$MXcuZEwBcx8KyAurTvhEYvRe6lOSN4WmwuzAwriyrQk"
 DATA_ENABLED = "false"
 DATA_MODE = "isolated-staging"
-AUTH_URL = "https://auth.ekodi.kr/?site=edu"
+EDU_SCREEN_SHARE_ENABLED = "false"
+AUTH_URL = "https://ekodi.kr/auth/?site=edu"
+
+# One-time classroom QR rooms; SQLite DO is supported on Workers Free.
+[[durable_objects.bindings]]
+name = "EDU_SCREEN_ROOMS"
+class_name = "EducationScreenRoom"
+
+[[migrations]]
+tag = "education-screen-room-v1"
+new_sqlite_classes = ["EducationScreenRoom"]
 
 [assets]
 directory = "./education"

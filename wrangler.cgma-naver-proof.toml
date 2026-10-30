@@ -1,0 +1,11 @@
+name = "ekodi-cgma-naver-proof"
+main = "cgma-naver-proof-worker.js"
+compatibility_date = "2026-10-29"
+workers_dev = false
+preview_urls = false
+
+# Single Naver Search Advisor proof URL. Existing CGMA site/Pages and all
+# first-party canonical paths remain untouched; no custom-domain takeover.
+[[routes]]
+pattern = "cgma.or.kr/navere5d0557aef9688f08735f4bf0152c795.html*"
+zone_name = "cgma.or.kr"

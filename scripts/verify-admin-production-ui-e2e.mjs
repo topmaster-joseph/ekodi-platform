@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { verifySearchVisibilityInteractions } from './verify-search-visibility-interactions.mjs';
+import { auditAdminProductionUiCoverage } from './admin-production-ui-coverage.mjs';
 import { adminMenuOrder, getAdminMenuForSection, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
 
 const ADMIN_URL = process.env.ADMIN_URL || 'https://ekodi.kr/admin/';
@@ -637,6 +639,7 @@ for (const [id, group] of menus) {
   }
   if (id === 'campus' && visiblePanel.id !== 'campusPanel') throw new Error(`Campus rendered unexpected panel: ${visiblePanel.id || '(no id)'}`);
   if (id === 'aiops') await verifyAiOpsStageWorkspace();
+  if (id === 'search-visibility') await verifySearchVisibilityInteractions(page,artifactsDir,results);
   if (id === 'infra-costs') {
     // PROD-E2E: accepting a DOM-only panel can still screenshot a different
     // section when the Admin workspace retains a previous scroll position.
@@ -1029,8 +1032,9 @@ for (const [id, group] of menus) {
   if (recoveredShell) selectedWorkArea = null;
 }
 
-const activeCount = results.filter(result => result.ok).length;
-const expectedCount = menus.length + 1;
+const coverage = auditAdminProductionUiCoverage(menuIds, results);
+const activeCount = coverage.actualCount;
+const expectedCount = coverage.expectedCount;
 console.log(`ADMIN_PRODUCTION_UI_E2E=${activeCount}/${expectedCount}`);
 console.log(`ADMIN_WORK_AREAS=${workAreas.join(',')}`);
 console.log(`ADMIN_FINGERPRINT=${assetVersion}`);
@@ -1050,7 +1054,7 @@ if (fatalErrors.length) {
   for (const error of fatalErrors) console.log(`PAGEERROR ${error}`);
   throw new Error('Production Admin emitted page errors during menu E2E');
 }
-if (activeCount !== expectedCount) throw new Error(`Expected ${expectedCount} verified Admin interactions including command-home, received ${activeCount}`);
+if (!coverage.ok) throw new Error(`Admin interaction coverage mismatch (${activeCount}/${expectedCount}): ${coverage.issues.join('; ')}`);
 await page.screenshot({ path:path.join(artifactsDir,'admin-final.png'), fullPage:false });
 
 await browser.close();

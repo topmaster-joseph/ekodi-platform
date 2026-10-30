@@ -190,7 +190,8 @@ test('Mission landing, login state and image remain first-party and without hard
   read('space/ekodimission.page'),read('space/ekodimission-saturday.js'),
   read('space/ekodimission-shell.js'),read('space/ekodimission-shell.css'),read('space-worker.js')
  ]);
- assert.match(page,/open-table-meal-260925.jpg/);
+ assert.doesNotMatch(page,/open-table-meal-260925.jpg/);
+ assert.match(page,/data-mission-public-photo/);
  assert.doesNotMatch(page,/mission-table-hero\.svg/);
  assert.match(page,/data-mission-saturday/);
  assert.match(page,/publicConsent/);
@@ -198,7 +199,8 @@ test('Mission landing, login state and image remain first-party and without hard
  assert.match(client,/credentials:'same-origin'/);
  assert.match(client,/textContent=String\(reply\.body/);
  assert.match(shell,/\/ekodimission\/board\/api\/me/);
- assert.match(shell,/로그인됨/);
+ assert.doesNotMatch(shell,/로그인됨|비로그인|로그인 확인 중/);
+ assert.match(shell,/verifiedToken=token;paintMissionAuth\('in',data\.account\)/);
  assert.match(shell,/로그아웃/);
  assert.match(shell,/normalizeMissionFooter/);
  assert.match(css,/\.mission-auth-actions/);

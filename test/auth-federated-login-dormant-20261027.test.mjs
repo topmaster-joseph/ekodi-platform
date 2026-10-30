@@ -129,7 +129,7 @@ test('auth page wiring: callback runs first, buttons never on admin, asset shipp
   const router=read('auth-site/auth-router.js');
   assert.ok(router.indexOf('federated.handleCallback()')<router.indexOf("import('./admin-auth.js"));
   assert.match(router,/if\(federatedHandled\)\{/);
-  assert.match(router,/site!=='admin'\)federated\.renderLoginButtons\(\)/);
+  assert.match(router,/site!=='admin'&&params\.get\('ekodi_email_action'\)!=='reset'\)federated\.renderLoginButtons\(\)/);
   assert.match(read('scripts/build.mjs'),/'federated-login\.js'/);
   assert.match(read('canonical-surface-router.js'),/'\/federated-login\.js'/);
   const html=read('auth-site/index.html');

@@ -6,7 +6,7 @@ import {workspaceAdminScript,workspaceAdminCss} from '../workspace-admin-page.js
 import { youtubeDataApiDisabledProject, youtubeDataApiCloudUrl } from '../youtube-data-api-readiness.js';
 
 const script=readFileSync(new URL('../workspace-admin-page.js',import.meta.url),'utf8');
-test('Mall setup is a compact three-step flow; account records do not prove OAuth',()=>{
+test('Mall setup is a compact four-step flow; account records do not prove OAuth',()=>{
   const html=renderMallSocialSetup({
     platform:{youtubeConfigured:true,metaConfigured:false,threadsConfigured:false},
     registeredAccounts:[{provider:'youtube',status:'active'}],
@@ -18,7 +18,7 @@ test('Mall setup is a compact three-step flow; account records do not prove OAut
   assert.match(html,/mallSocialVerifyConnection/);
   assert.match(html,/실제 발행 가능 0개/);
   assert.match(html,/실행 대기/);
-  assert.match(html,/3<\/b> 결과 확인/);
+  assert.match(html,/4<\/b> 결과 확인/);
   assert.match(html,/youtube-pending/);
   assert.match(html,/Google 공식 인증 시작/);
   assert.doesNotMatch(html,/name="password"/);
