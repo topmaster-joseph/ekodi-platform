@@ -92,12 +92,17 @@ jobs:
                   continue;
                 }
                 if (candidate.state === 'staging') {
-                  report.push({taskId:candidate.taskId,state:'preproduction_deferred',reason:proof?.reason||'preproduction_proof_unverified'});
-                  continue;
+                  // Post-production completion is possible *after* owner
+                  // approval and a genuine guarded promotion. The server must
+                  // independently re-check its immutable owner receipt before
+                  // marking this task complete.
+                  report.push({taskId:candidate.taskId,state:'production_completion_check',
+                    reason:proof?.reason||'preproduction_not_reusable_after_promotion'});
                 }
                 // Unattested legacy production_verifying tasks still undergo
-                // existing independent post-production completion verification,
-                // never a synthetic staging attestation or owner approval.
+                // independent post-production completion verification. Neither
+                // state can create a synthetic staging attestation or owner
+                // approval, and the server safeguards staged completion.
               }
               let evidence;
               try {
