@@ -426,6 +426,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   // Public Site publication controls are a Site Core admin bundle asset. This must
   // dispatch the guarded release after token-mediated protected merges (issue #6508).
   file==='admin-public-site-controls.js'||
+  // Admin address aliases run at the shared Site Core edge; token-merged source
+  // changes must dispatch the same guarded production release as other Admin routes.
+  file==='admin-address-policy.js'||
   // Growth OS search specialist is a dynamic Site Core Admin asset.
   // Dispatch guarded Site Core even when only the lazy module changes.
   file==='search-visibility-admin.js'||
