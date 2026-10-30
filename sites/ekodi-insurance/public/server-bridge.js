@@ -38,8 +38,12 @@
     if (!Array.isArray(items) || items.length > MAX_ACCESS_ITEMS) {
       throw new Error('revocation_access_capacity');
     }
-    localStorage.setItem(ACCESS_KEY, JSON.stringify(items));
-    renderWithdrawalPanel();
+    const encoded = JSON.stringify(items);
+    localStorage.setItem(ACCESS_KEY, encoded);
+    if (localStorage.getItem(ACCESS_KEY) !== encoded) throw new Error('revocation_access_verify_failed');
+    // A broken DOM redraw cannot turn a successfully persisted revocation
+    // capability into a reported storage failure.
+    try { renderWithdrawalPanel(); } catch { /* retained in browser storage */ }
   }
   function canPersistRevocationAccess() {
     // Fail closed BEFORE sending contact data if storage is disabled, corrupt,
@@ -148,6 +152,8 @@
     const submit = form?.querySelector('button[type="submit"]');
     if (submit) submit.disabled = true;
     let serverAccepted = false;
+    let autoRevoked = false;
+    let serverReceipt = null;
     try {
       const response = await fetch(`${API}/api/consultations`, {
         method: 'POST',
@@ -157,6 +163,7 @@
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || '상담요청 저장 실패');
       serverAccepted = true;
+      serverReceipt = { id: body.consultation?.id, accessToken: body.accessToken };
       saveAccess(body.consultation, body.accessToken);
       form?.reset();
       form?.classList.add('hidden');
@@ -169,6 +176,19 @@
       // that may create an unrevocable duplicate consultation.
       console.error('Insurance handoff bridge', error?.message === 'revocation_access_missing' ? 'missing revocation credential' : 'request or storage error');
       if (serverAccepted) {
+        // When the server has accepted but the one-time revoke capability
+        // cannot be kept, use that capability exactly once to cancel the
+        // newly created request. Never retry on 429/quota or network errors.
+        if (serverReceipt?.id && serverReceipt?.accessToken) {
+          try {
+            const rollback = await fetch(`${API}/api/consultations/${encodeURIComponent(serverReceipt.id)}/revoke`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ accessToken: serverReceipt.accessToken })
+            });
+            autoRevoked = rollback.ok;
+          } catch { /* one attempt only; customer is told status is unconfirmed */ }
+        }
         let warning = form?.querySelector('#insuranceRevokeSaveFailure');
         if (!warning && form) {
           warning = document.createElement('p');
@@ -177,13 +197,20 @@
           warning.className = 'notice';
           form.append(warning);
         }
-        if (warning) warning.textContent = '상담요청은 서버에 접수되었지만 철회용 인증정보를 이 브라우저에 보관하지 못했습니다. 중복 요청을 보내지 말고 상담 관리자에게 직접 철회를 문의하세요.';
-        toast('서버 상담요청은 접수되었습니다. 철회 권한 보관에 실패했습니다. 중복 등록하지 마세요.');
+        if (autoRevoked) {
+          if (warning) warning.textContent = '서버 상담요청은 접수 직후 자동 철회되었습니다. 연락처와 선택 공유한 대화의 서버 암호문은 철회 처리되었습니다. 브라우저 저장공간을 확인한 후 다시 요청할 수 있습니다.';
+          toast('철회 권한 저장에 실패하여 서버 상담요청을 자동 철회했습니다.');
+        } else {
+          if (warning) warning.textContent = '서버가 상담요청을 접수했으나 철회 권한을 저장하지 못했고 자동 철회도 확인되지 않았습니다. 중복 신청하지 말고 상담 관리자에게 직접 철회를 문의하세요.';
+          toast('서버 접수 후 자동 철회 여부를 확인하지 못했습니다. 중복 등록하지 마세요.');
+        }
       } else {
         toast('상담요청 서버 연결을 확인해 주세요. 브라우저의 보험관리 기록은 그대로 유지됩니다.');
       }
     } finally {
-      if (submit) submit.disabled = false;
+      // An accepted but unconfirmed server request must never be accidentally
+      // submitted a second time by repeated clicks.
+      if (submit) submit.disabled = serverAccepted && !autoRevoked;
     }
   }
   async function revokeConsultation(item, button) {
