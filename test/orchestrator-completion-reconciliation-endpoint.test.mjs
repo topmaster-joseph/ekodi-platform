@@ -139,7 +139,7 @@ test('OIDC workflow can list only nonterminal delegated deployment candidates',a
   assert.equal(body.authority,'ekodi-orchestrator');
   assert.equal(body.selection,'fair-round-robin');
   assert.match(body.checkedAt,/^\d{4}-\d{2}-\d{2}T/);
-  assert.deepEqual(body.candidates,[{taskId,branchRef,state:'assigned',updatedAt:'2026-10-05T00:00:01.000Z'}]);
+  assert.deepEqual(body.candidates,[{taskId,branchRef,state:'assigned',updatedAt:'2026-10-05T00:00:01.000Z',stagingAttested:false,ownerConfirmationRecorded:false}]);
 });
 
 test('verified OIDC evidence plus live health performs idempotent authoritative completion',async()=>{
