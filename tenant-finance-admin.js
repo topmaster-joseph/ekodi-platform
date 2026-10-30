@@ -4,6 +4,7 @@ const krw=value=>`${Math.round(Number(value)||0).toLocaleString('ko-KR')}원`;
 const dateText=value=>{if(!value)return'—';const d=new Date(value);return Number.isNaN(d.getTime())?'—':d.toLocaleString('ko-KR',{dateStyle:'short',timeStyle:'short'})};
 const statusLabel=value=>({pending:'연결대기',active:'연결됨',disconnected:'연결끊김',error:'오류',requested:'승인대기',approved:'승인완료',rejected:'반려',executing:'이체중',completed:'이체완료',failed:'실패',cancelled:'취소'})[value]||value||'—';
 const dirLabel=value=>value==='in'?'입금':'출금';
+const csvTemplateHref='data:text/csv;charset=utf-8,'+encodeURIComponent('\uFEFF거래일시,구분,금액,잔액,적요,거래처,분류,거래번호\n2026-01-02 09:30,입금,100000,350000,후원금,홍길동,후원,example-001\n');
 const tag=value=>`<span class="tag ${['active','completed','approved'].includes(value)?'live':['failed','error','rejected'].includes(value)?'warn':''}">${esc(statusLabel(value))}</span>`;
 
 const parseCsv=value=>{
@@ -119,7 +120,7 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
       <div class="trade-grid">
         <label>대상계좌<select name="bankConnectionId" required>${accounts.map(a=>`<option value="${esc(a.id)}">${esc(accountMap.get(a.id)||a.accountAlias)}</option>`).join('')}</select></label>
         <label>CSV 파일<input name="csvFile" type="file" accept=".csv,text/csv" required></label>
-      </div><div class="actions"><button class="button primary" type="submit">거래내역 불러오기</button></div>
+      </div><div class="actions"><button class="button primary" type="submit">거래내역 불러오기</button><a class="button" href="${esc(csvTemplateHref)}" download="ekodi-bank-transactions-template.csv">표준 CSV 양식 다운로드</a></div>
     </form>`:caps.manage?'<p class="empty">파일을 연결할 계좌가 없습니다. 먼저 최고관리자에서 계좌 연결 메타데이터를 등록해 주세요.</p>':'';
 
     const transferAccounts=accounts.filter(account=>Boolean(account.transferEnabled));
@@ -137,7 +138,7 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
 
     root.innerHTML=`<div data-banking-message class="trade-flash"></div>
       <div class="panel-head"><div><h2>${mode==='church'?'교회 통장 · 이체':'통장 · 이체'}</h2>
-      <p class="empty">조회·요청·승인을 분리합니다. 전체 계좌번호·인터넷뱅킹 비밀번호·인증서는 EKODI 데이터베이스에 저장하지 않습니다.</p></div>
+      <p class="empty">조회·요청·승인을 분리합니다. 전체 계좌번호·인터넷뱅킹 비밀번호·인증서는 EKODI 데이터베이스에 저장하지 않습니다.</p><p class="empty">오픈뱅킹은 금융결제원 승인과 조직별 계좌동의 후 조회 전용부터 연결합니다. 승인 전에는 CSV 파일 연동을 사용합니다. <a href="/privacy">개인정보처리방침</a> · <a href="/terms">이용약관</a></p></div>
       <span class="tag ${ready.executorConnected&&ready.transferExecutionEnabled?'live':'warn'}">${ready.executorConnected&&ready.transferExecutionEnabled?'실이체 연결':'실이체 잠금'}</span></div>
       <h3>연결계좌</h3><div class="table-wrap"><table><thead><tr><th>계좌</th><th>표시번호</th><th>잔액</th><th>상태</th><th>권한</th><th>동기화</th></tr></thead><tbody>${accountRows}</tbody></table></div>
       ${importForm}
