@@ -29,7 +29,8 @@ import {
 } from './ekodi-orchestrator-task-adapter.js';
 import { collectPlatformRuntimeObservations } from './ekodi-platform-observer.js';
 import { runRuntimeAutonomicControlPlane } from './ekodi-autonomic-control-plane.js';
-import { buildFleetStatus, renderFleetStatusHtml } from './ekodi-fleet-status.js';
+import { buildFleetStatus, projectLiveFleetRegistry, renderFleetStatusHtml } from './ekodi-fleet-status.js';
+import ecosystemServices from './config/ecosystem-services.json' with { type: 'json' };
 import { githubOperationsSnapshot } from './github-operations-webhook.js';
 
 const PREFIX = '/api/control/ai/v8';
@@ -374,6 +375,7 @@ export async function handleEkodiV8CommandControl(request, env) {
       now: new Date().toISOString(),
       latestChecks: latestRes.rows,
       environmentChecks: envRes.rows,
+      registryServices: projectLiveFleetRegistry(ecosystemServices.services),
       observationFailures: [
         latestRes.failed && 'service_check_latest',
         envRes.failed && 'cloudflare_environment_checks',
