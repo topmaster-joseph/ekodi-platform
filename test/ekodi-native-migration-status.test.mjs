@@ -20,7 +20,7 @@ test('migration is independently classified for two official EKODI protected PRs
   assert.equal(data.authorizedToChangeLegacy,false);
   assert.equal(data.verifiedLegacyDisabledCount,0);
   assert.equal(data.migrationCompleted,false);
-  assert.equal(data.tasks.length,4);
+  assert.equal(data.tasks.length,5);
   assert.ok(data.tasks.every(x=>x.cutoverAllowed===false));
 });
 test('a merged source is NOT proof that real automation delivery exists',()=>{
@@ -85,11 +85,24 @@ test('main EKODI hourly watch adds native migration evidence without generating 
 test('privacy and fail-closed behavior are preserved, no forged legacy task disable',async()=>{
   const script=await readFile(new URL('../scripts/ekodi-native-migration-status.mjs',import.meta.url),'utf8');
   const runner=await readFile(new URL('../scripts/ekodi-native-operations-watch.mjs',import.meta.url),'utf8');
-  assert.equal(LEGACY_MIGRATION_WORKLOADS.length,4);
+  assert.equal(LEGACY_MIGRATION_WORKLOADS.length,5);
   assert.doesNotMatch(script,/fetch\(|api\.openai\.com|chatgpt\.com|method:'POST'|updateAutomation/);
   assert.match(runner,/AUTOMATION_MIGRATION_PR/);
   assert.match(runner,/projectEkodiNativeMigration/);
   assert.match(runner,/report\.automationMigration/);
   const d=projectEkodiNativeMigration({proposals:[{...htmls[0],response:{number:6890,base:{ref:'main'},head:{sha:SHA},merged_at:'2026-10-30',merge_commit_sha:SHA,accessToken:'not-to-be-retained'}}]});
   assert.ok(!JSON.stringify(d).includes('not-to-be-retained'));
+});
+
+test('Mission home becomes fifth active first-party monitoring workload, never falsely cut over',()=>{
+  const x=projectEkodiNativeMigration({proposals:htmls});
+  const mission=x.tasks.find(t=>t.id==='mission-home-production-e2e');
+  assert.ok(mission);
+  assert.equal(mission.kind,'monitor');
+  assert.equal(mission.deliveryVerified,false);
+  assert.equal(mission.cutoverAllowed,false);
+  assert.ok(mission.missingEvidence.includes('first_party_chromium_mobile_390x844'));
+  assert.ok(mission.missingEvidence.includes('public_photo_consent_and_media_fallback'));
+  assert.ok(mission.missingEvidence.includes('protected_space_release_sha'));
+  assert.equal(LEGACY_MIGRATION_WORKLOADS.find(t=>t.id===mission.id).trackingIssue,6875);
 });
