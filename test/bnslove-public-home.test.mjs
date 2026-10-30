@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { renderBnslovePublicPage } from '../bnslove-public-page.js';
+import { renderBnslovePublicPage, bnslovePublicCss } from '../bnslove-public-page.js';
 
 test('Bnslove public home is guest-readable and retains the canonical workspace root', async () => {
   const response = renderBnslovePublicPage();
@@ -15,6 +15,8 @@ test('Bnslove public home is guest-readable and retains the canonical workspace 
     assert.ok(html.includes(marker), marker);
   }
   assert.match(html, /return_to=https%3A%2F%2Fekodi\.kr%2Fbnslove%2F/);
+  assert.match(html, /href="\/bnslove\/site\.css"/);
+  assert.doesNotMatch(html, /<style| style=/);
   assert.doesNotMatch(html, /tenant_admin|api[_-]?key|service_role|개인별 출석|관리자 이메일/);
   assert.doesNotMatch(html, /<script|onfocus=|onblur=|onclick=/);
 });
@@ -24,16 +26,20 @@ test('Bnslove public route is isolated from other workspace and admin paths', ()
   const guardedRoute = /if\(requested==='bnslove'&&!workspaceRoute\?\.service\)/;
   assert.match(worker, guardedRoute);
   assert.match(worker, /renderBnslovePublicPage\(\)/);
+  assert.match(worker, /url\.pathname==='\/bnslove\/site\.css'/);
   assert.match(worker, /if\(isOrganizationWorkspaceSlug\(requested\)&&!workspaceRoute\?\.service\)/);
   assert.match(worker, /return appShell\(request,env,workspaceRoute\?\.service/);
 });
 
 test('Bnslove mobile and accessibility boundaries are included', async () => {
   const html = await renderBnslovePublicPage().text();
-  assert.match(html, /@media\(max-width:640px\)/);
-  assert.match(html, /@media\(prefers-reduced-motion:reduce\)/);
+  const stylesheet = bnslovePublicCss();
+  const css = await stylesheet.text();
+  assert.equal(stylesheet.headers.get('content-type'), 'text/css; charset=utf-8');
+  assert.match(css, /@media\(max-width:640px\)/);
+  assert.match(css, /@media\(prefers-reduced-motion:reduce\)/);
   assert.match(html, /class="skip-link" href="#main"/);
-  assert.match(html, /:focus-visible/);
+  assert.match(css, /:focus-visible/);
   assert.match(html, /<main id="main">/);
   assert.match(html, /<nav class="nav" aria-label=/);
   assert.match(html, /등록된 공개 활동 자료가 없습니다/);
