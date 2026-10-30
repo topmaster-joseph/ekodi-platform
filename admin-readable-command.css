@@ -406,3 +406,18 @@ body.admin-compact #aiOpsPanel[data-aiops-stage="providers"] .ekodi-ai-center-ta
 @media(max-width:600px){
  body.admin-compact #aiOpsPanel[data-aiops-stage="overview"] .ai-ops-metrics {grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+
+/* AIOPS-PROVIDER-DETAIL-20261030: first screen stays a summary.
+   Shared Cloudflare/GitHub inventory is useful, but only in AI suppliers.
+   The third-party-inserted card is a direct #aiOpsPanel child and must not
+   precede KPI cards on every stage. Never hide Provider actions themselves. */
+#aiOpsPanel[data-aiops-stage] > [data-ekodi-provider-card] {
+  display:none!important;
+  order:4!important;
+}
+#aiOpsPanel[data-aiops-stage="providers"] > [data-ekodi-provider-card] {
+  display:block!important;
+}
+#aiOpsPanel[data-aiops-stage="providers"] > [data-ekodi-ai-provider-center] {
+  order:5!important;
+}

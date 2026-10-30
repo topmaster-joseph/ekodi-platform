@@ -125,11 +125,22 @@
     const cf=providerData?.cloudflare||{};const gh=providerData?.github||{};
     const node=document.createElement('section');node.className='ekodi-control-plane-card';node.dataset.ekodiProviderCard='true';
     const cfWarnings=(cf.warnings||[]).length;
-    const repos=gh.repositories||[];
+    const repos=Array.isArray(gh.repositories)?gh.repositories:[];
+    // A failed or public-only GitHub inventory cannot prove there are zero repositories.
+    // "0 repositories" on the super-admin screen was misleading when the API was
+    // rate-limited or the GitHub token was unavailable (2026-10-30 live Opera proof).
+    const githubKnown=providerData!==null&&!gh.warning&&Array.isArray(gh.repositories);
+    const githubScope=gh.mode==='authenticated'?'인증 조회':gh.mode==='public'?'공개 조회':'접근 범위 미확인';
+    const githubSummary=!githubKnown
+      ? '저장소 목록 미확인 · GitHub API 상태·권한 점검 필요'
+      : repos.length
+        ? '조회된 저장소 '+repos.length+'개'
+        : '조회 결과 없음 · 접근 범위 확인 필요';
+    const githubDot=!githubKnown||!repos.length?'warn':'';
     const stateClass=providerState.status==='ok'?(cfWarnings?'warn':''):(providerState.status==='loading'?'loading':providerState.status==='warn'?'warn':'error');
     node.innerHTML=`<h3>Infrastructure & Development Control Plane</h3><div class="ekodi-provider-grid">
       <div class="ekodi-provider-tile"><strong><span class="ekodi-provider-dot ${stateClass}" aria-hidden="true"></span>Cloudflare · ${esc(cf.account?.name||'연결 확인')}</strong><small>${esc((cf.zones||[]).length)} Zones · ${esc((cf.workers||[]).length)} Workers${cfWarnings?' · 일부 읽기권한 제한':''}</small></div>
-      <div class="ekodi-provider-tile"><strong><span class="ekodi-provider-dot ${gh.warning?'warn':''}" aria-hidden="true"></span>GitHub · ${esc(gh.owner||'EKODI')}</strong><small>${repos.length} repositories · ${esc(gh.mode||'inventory')} · 변경은 GitOps/Actions 가드 사용</small></div>
+      <div class="ekodi-provider-tile"><strong><span class="ekodi-provider-dot ${githubDot}" aria-hidden="true"></span>GitHub · ${esc(gh.owner||'EKODI')}</strong><small>${esc(githubSummary)} · ${esc(githubScope)} · 변경은 GitOps/Actions 가드 사용</small></div>
       ${diagnosticMarkup()}
     </div><div class="ekodi-provider-note" style="margin-top:10px">총괄 AI가 인증 → API → Cloudflare 계정 → Zone → Worker → 권한 순서로 진단하고, 실패 원인을 숨기지 않습니다. DNS·Production Secret·강제 push·삭제 등 고위험 변경은 관리자 승인 없이 실행하지 않습니다.</div>`;
     bindRetry(node);
