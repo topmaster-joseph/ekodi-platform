@@ -245,7 +245,7 @@ test('manual revoke removes only matched token and never follows redirected URL'
 test('malformed existing revoke storage can never be overwritten as empty',async()=>{
   for(const raw of ['{broken','null','{}',JSON.stringify([{id:'con_new',accessToken:null}])]){
     const h=createHarness({initial:{[ACCESS_KEY]:raw}});
-    assert.deepEqual(h.ctx.loadAccess(),[],'display can be empty but storage cannot mutate');
+    assert.equal(h.ctx.loadAccess().length,0,'display can be empty but storage cannot mutate');
     assert.throws(()=>h.ctx.writeAccess([{ id:'con_new',accessToken:'ic_new' }]));
     assert.equal(h.snapshot()[ACCESS_KEY],raw);
     assert.equal(h.calls.renders,0);
