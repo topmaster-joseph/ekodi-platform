@@ -62,6 +62,13 @@ jobs:
           node --check publishing/private-releases/private-releases.js
           test -s publishing/private-releases/index.html
           test -f wrangler.publishing.staging.toml
+      - name: Bundle Publishing RPC only (NO deployment)
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --dry-run \
+            --config wrangler.publishing.staging.toml \
+            --outdir /tmp/ekodi-publishing-rpc-bundle
+          test -d /tmp/ekodi-publishing-rpc-bundle
 
   isolated-staging:
     environment: development
