@@ -1,0 +1,45 @@
+name: EKODI Toss Merchant Review Readiness (Read Only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/toss-merchant-review-preflight.mjs'
+      - 'test/toss-merchant-review-preflight.test.mjs'
+      - '.github/workflows/verify-toss-merchant-review.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ekodi-toss-underwriting-preflight
+  cancel-in-progress: true
+jobs:
+  public-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate fail-closed review classifier
+        run: node --test test/toss-merchant-review-preflight.test.mjs
+      - name: Inspect real public merchant endpoints (GET only)
+        run: |
+          mkdir -p artifacts
+          node scripts/toss-merchant-review-preflight.mjs --output artifacts/toss-review-readiness.json
+      - name: Summarize business-review readiness without implying approval
+        if: always()
+        run: |
+          if test -f artifacts/toss-review-readiness.json; then
+            node -e 'const r=require("./artifacts/toss-review-readiness.json"); console.log("Review outcome:",r.outcome,"; manually verified checkout still required.");'
+          else
+            echo 'Public preflight did not produce a report.'
+          fi
+      - name: Save read-only evidence for owner
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-toss-merchant-review-readiness
+          path: artifacts/toss-review-readiness.json
+          if-no-files-found: warn
+          retention-days: 14
