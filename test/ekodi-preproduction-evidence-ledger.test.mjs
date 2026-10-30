@@ -31,7 +31,7 @@ function dbMock(record=row(),options={}){
             if(sql.includes('FROM ekodi_orchestrator_task_events')){
               if(sql.includes('verified_preproduction_evidence_recorded')){
                 return options.fakeAudit?{actor:'ai:worker',evidence_json:'{}'}:
-                  calls.events.length?{actor:'ekodi-github-actions-oidc-reconciler',evidence_json:JSON.stringify(calls.events.at(-1))}:null;
+                  calls.events.length?{actor:'ekodi-github-actions-oidc-reconciler',reason:'verified_preproduction_evidence_recorded',evidence_json:JSON.stringify(calls.events.at(-1))}:null;
               }
               return options.approved?{reason:'final_promotion_approval_recorded'}:null;
             }
