@@ -118,6 +118,45 @@ test('Cloudflare JS detections blocked by the Education CSP: accepted only for t
   assert.equal(m.verifyKnownSecurityBlocks({consoleBlocks:[{message:msg(hash)},{message:msg(other)}]}).reason,'blocked-inline-script-not-an-audited-cloudflare-js-detection');
   for(const f of ['bootcamp','material-studio','documents','live-studio'])
     assert.match(readFileSync(new URL('../scripts/verify-education-'+f+'-native.mjs',import.meta.url),'utf8'),/observeCloudflareJsDetections\((?:context|ctx)\);/,f);
+  const classroom=read('scripts/verify-education-bootcamp-native.mjs');
+  assert.match(classroom,/trustCloudflareJsDetections\(await response\.text\(\)\)/,
+    'the exact main-document response body is hash-audited before console CSP classification');
+  assert.match(classroom,/trustCloudflareJsDetections\(await page\.content\(\)\)/,
+    'the already-rendered page is hash-audited again after all interactions');
+  assert.ok(classroom.indexOf('trustCloudflareJsDetections(await response.text())')<
+    classroom.indexOf('verifyKnownSecurityBlocks({'),
+    'audit must finish before final strict CSP classification');
+  assert.doesNotMatch(classroom,/bypassCSP:\s*true|ignoreHTTPSErrors:\s*true|unsafe-inline.*script-src|trustedInlineHashes\.add\(hash\)/,
+    'browser CSP and strict hash allowlist remain unchanged');
+});
+
+
+test('native CSP decision awaits Cloudflare detector in every document including iframe',async()=>{
+  const mod=await import('../scripts/education-native-security-observations.mjs');
+  const {createHash}=await import('node:crypto');
+  const body="window.__CF$cv$params={r:'f1e2d3c4b5a69788',t:'MTc5MjgzOTA5Nw==',u:'df91aa2'};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
+  const hash=createHash('sha256').update(body).digest('base64');
+  const msg="Executing inline script violates the following Content Security Policy directive 'script-src 'self' https://cdn.jsdelivr.net https://ekodi.kr'. Either the 'unsafe-inline' keyword, a hash ('sha256-"+hash+"'), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.";
+  let responseListener,release;
+  const pendingBody=new Promise(resolve=>{release=resolve;});
+  const fakeContext={on:(event,listener)=>{if(event==='response')responseListener=listener;}};
+  const flush=mod.observeCloudflareJsDetections(fakeContext);
+  assert.equal(typeof flush,'function');
+  responseListener({request:()=>({resourceType:()=> 'script'}),text:()=>{throw Error('must not read scripts')}});
+  responseListener({request:()=>({resourceType:()=> 'document'}),text:()=>pendingBody.then(()=>'<html><body><script>'+body+'</script></body></html>')});
+  let finished=false;
+  const wait=flush().then(()=>{finished=true;});
+  await Promise.resolve();
+  assert.equal(finished,false,'document audit must finish before strict CSP verdict');
+  release(); await wait;
+  assert.deepEqual(mod.verifyKnownSecurityBlocks({consoleBlocks:[{message:msg}]}),{ok:true,reason:'known-security-blocks-observed-and-enforced'});
+  const unknown=createHash('sha256').update('alert("unexpected")').digest('base64');
+  assert.equal(mod.verifyKnownSecurityBlocks({consoleBlocks:[{message:msg.replace(hash,unknown)}]}).reason,
+    'blocked-inline-script-not-an-audited-cloudflare-js-detection');
+  const runner=read('scripts/verify-education-bootcamp-native.mjs');
+  assert.match(runner,/const flushCloudflareJsDetectionAudits=observeCloudflareJsDetections\(context\)/);
+  assert.match(runner,/await flushCloudflareJsDetectionAudits\(\)/);
+  assert.ok(runner.indexOf('await flushCloudflareJsDetectionAudits()')<runner.indexOf('verifyKnownSecurityBlocks({'));
 });
 
 test('a failing native probe surfaces its reason as bounded, sanitized workflow annotations',async()=>{

@@ -26,6 +26,12 @@
 .store-kpi-cell dd{margin:3px 0 0;font-size:1.03rem;font-weight:800;color:#17233a}
 @media(max-width:760px){.store-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.store-kpi-button{width:100%}}
 
+.selected-workspace-status{margin:12px 0 2px;padding:10px 12px;border:1px solid #dbe4f0;border-radius:10px;background:#f5f8fc;color:#253e60;font-size:.89rem;font-weight:700}
+.space-select{display:inline-flex;align-items:center;justify-content:center;padding:7px 10px;border:1px solid #b8c8dc;border-radius:9px;background:#fff;color:#23446c;font:inherit;font-size:.83rem;font-weight:750;cursor:pointer}
+.space-select[aria-pressed="true"]{background:#173c67;color:#fff;border-color:#173c67}
+.space-select:focus-visible{outline:3px solid #6b94d4;outline-offset:2px}
+@media(max-width:760px){.space-select{width:100%}}
+
 .store-readiness{margin-top:12px;padding:12px 14px;border-radius:10px;background:#f5f8fc;border:1px solid #e0e8f2;color:#23364d;font-size:.88rem}
 .store-readiness strong{display:block;font-size:.91rem}
 .store-readiness ul{margin:8px 0 6px;padding-left:20px}

@@ -52,3 +52,16 @@ test('Deployment probes assert runtime and deny unauthenticated reads without wr
   }
   assert.match(page,/manual_confirmation_not_provider_api_verification|등록 여부 미확인/);
 });
+
+test('Search Visibility first-party Google Search Console read-only UI is a guarded production canary',()=>{
+  const request=site.worker.requests.find(item=>item.url?.includes('/admin/search-visibility-admin.js?growth-search=release-canary-001'));
+  assert.ok(request,'Missing canonical Site Core Search Visibility asset canary');
+  assert.deepEqual(request.statuses,[200]);
+  assert.equal(request.redirect,'manual');
+  assert.equal(request.rollbackVerify,false);
+  assert.equal(request.candidateVerify,false);
+  for(const marker of ['data-sv-google-read','Google 실측 조회','googleSiteUrl=']){
+    assert.ok(request.expect.includes(marker),'Missing production verification marker '+marker);
+    assert.ok(page.includes(marker),'Expected UI source marker absent '+marker);
+  }
+});
