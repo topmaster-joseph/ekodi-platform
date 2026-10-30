@@ -42,7 +42,7 @@ test('existing workflow resumes ONLY on the human owners real approval event',()
   assert.match(wf,/github.event.pull_request.head.repo.full_name == github.repository/);
   assert.match(wf,/github.event.pull_request.head.sha \|\| github.sha/);
   assert.match(wf,/group: ekodi-orchestrated-merge-\$\{\{ github.event.pull_request.head.ref \|\| github.ref_name \}\}/);
-  assert.match(code,/pendingReviewBlocks\(reviews\)/);
+  assert.match(code,/pendingReviewBlocks\(reviews,\{requestedReviewers:pr\.requested_reviewers\}\)/);
   assert.ok(code.indexOf("if(unresolved.length)") < code.indexOf("const filesLookup="));
   assert.match(code,/release receipt is not authorized/);
 });
