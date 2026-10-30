@@ -130,9 +130,17 @@ async function snapshot(){
  const file=$('snapshotFile').files?.[0];if(!file||!/^image\/(png|jpeg|webp)$/.test(file.type)){say('PNG, JPG 또는 WEBP 이미지 파일을 선택하세요.');return;}
  if(file.size>8_000_000){say('8MB 이하 이미지를 선택하세요.');return;}
  try{
-  const bmp=await createImageBitmap(file),scale=Math.min(1,1000/Math.max(bmp.width,bmp.height));
+  let bmp;
+  if(typeof createImageBitmap==='function')bmp=await createImageBitmap(file);
+  else{
+   const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('read_failed'));reader.readAsDataURL(file);});
+   bmp=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(Error('image_decode_failed'));img.src=data;});
+  }
+  const scale=Math.min(1,1000/Math.max(bmp.width,bmp.height));
   const canvas=document.createElement('canvas');canvas.width=Math.round(bmp.width*scale);canvas.height=Math.round(bmp.height*scale);
-  canvas.getContext('2d').drawImage(bmp,0,0,canvas.width,canvas.height);bmp.close();
+  const context=canvas.getContext('2d');if(!context)throw Error('canvas_unavailable');
+  context.drawImage(bmp,0,0,canvas.width,canvas.height);
+  if(typeof bmp.close==='function')bmp.close();
   let quality=.75,src=canvas.toDataURL('image/jpeg',quality);
   while(src.length>300000&&quality>.3){quality-=.15;src=canvas.toDataURL('image/jpeg',quality);}
   if(src.length>300000){say('이미지가 너무 큽니다. 크기를 줄인 후 다시 선택하세요.');return;}
