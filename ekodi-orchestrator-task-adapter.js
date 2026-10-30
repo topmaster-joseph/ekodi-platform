@@ -140,8 +140,32 @@ export async function collectOrchestratorCompletionEvidence({taskId:id,branchRef
   });
 }
 
+// Completion is separate from production approval. Any task with a staged
+// OIDC event must have a *current* exact-artifact super-admin approval before
+// post-production completion is accepted. Legacy tasks without staging audit
+// remain on the existing independent production-verification path.
+async function stagingPromotionApprovalIsValid(db,row,evidence){
+  let stageRow;
+  try{
+    stageRow=await db.prepare(
+      "SELECT evidence_json FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='verified_preproduction_evidence_recorded' ORDER BY seq DESC LIMIT 1"
+    ).bind(row.task_id).first();
+  }catch{return false}
+  if(!stageRow)return row.state!=='staging';
+  let stage;
+  try{stage=JSON.parse(stageRow.evidence_json||'{}')}catch{return false}
+  if(stage?.source!=='github-actions-oidc'||!stage.artifactDigest)return false;
+  if(evidence?.pr?.mergeCommitSha!==stage.releaseSha)return false;
+  const receipt=await verifyEkodiFinalPromotionReceipt(db,{
+    taskId:row.task_id,branchRef:row.branch_ref,
+    releaseSha:stage.releaseSha,artifactDigest:stage.artifactDigest,
+  });
+  return receipt.authorized===true;
+}
+
 async function persistCompletionEvidence(db,row,evidence,{actor='ekodi-orchestrator-reconciler',reason='verified_production_evidence_reconciled'}={}){
   if(!row||TERMINAL_STATES.has(row.state)||Number(row.deployment_requested||0)!==1)return row;
+  if(!await stagingPromotionApprovalIsValid(db,row,evidence))return row;
   const updated=now();
   const existingEvidence=parseJson(row.evidence_json,[]);
   const evidenceList=Array.isArray(existingEvidence)?existingEvidence:[existingEvidence].filter(Boolean);
@@ -150,8 +174,9 @@ async function persistCompletionEvidence(db,row,evidence,{actor='ekodi-orchestra
   const resultJson={...(previousResult&&typeof previousResult==='object'&&!Array.isArray(previousResult)?previousResult:{}),ok:true,completion:'reconciled',mergeCommitSha:evidence.pr.mergeCommitSha,completedBy:'ekodi-orchestrator'};
   const result=await db.prepare(`UPDATE ekodi_orchestrator_tasks SET state='completed',state_version=state_version+1,pr_ref=?,
     result_json=?,evidence_json=?,production_evidence_json=?,updated_at=?,completed_at=?
-    WHERE task_id=? AND requester_id=? AND state NOT IN ('completed','blocked','failed','cancelled') AND branch_ref=?`)
-    .bind(evidence.pr.url,safeJson(resultJson),safeJson([...evidenceList,completionRecord]),safeJson(evidence),updated,updated,row.task_id,row.requester_id,row.branch_ref).run();
+    WHERE task_id=? AND requester_id=? AND state=? AND state_version=?
+      AND branch_ref=?`)
+    .bind(evidence.pr.url,safeJson(resultJson),safeJson([...evidenceList,completionRecord]),safeJson(evidence),updated,updated,row.task_id,row.requester_id,row.state,Number(row.state_version),row.branch_ref).run();
   if(changes(result)<1)return ownedTask(db,row.task_id,row.requester_id);
   await db.prepare(`UPDATE ai_command_tasks SET state='verified',result_json=?,evidence_json=?,updated_at=?,closed_at=?,lease_until=NULL
     WHERE id=? AND state NOT IN ('verified','ignored','failed')`)
@@ -292,6 +317,11 @@ export async function handleOrchestratorCompletionReconciliation(request,env,{fe
     if(row.state==='completed')return new Response(JSON.stringify({ok:true,taskId:id,state:'completed',idempotent:true}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
     if(TERMINAL_STATES.has(row.state))return new Response(JSON.stringify({ok:false,reason:'terminal_state_not_completable',state:row.state}),{status:409,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
     if(!completionEvidenceShapeValid(body.evidence,row))return new Response(JSON.stringify({ok:false,reason:'completion_evidence_invalid'}),{status:400,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    if(!await stagingPromotionApprovalIsValid(db,row,body.evidence)){
+      return new Response(JSON.stringify({ok:false,reason:'exact_artifact_final_owner_receipt_required',state:row.state}),{
+        status:409,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},
+      });
+    }
     const live=await currentLiveHealth(env);
     if(!live)return new Response(JSON.stringify({ok:false,reason:'live_health_failed'}),{status:503,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
     const evidence=Object.freeze({...body.evidence,source:'github-actions-oidc-and-internal-canonical-health',live,receipt:Object.freeze({repository:oidc.repository,ref:oidc.ref,eventName:oidc.eventName,workflowRef:oidc.workflowRef,runId:oidc.runId,runAttempt:oidc.runAttempt})});
