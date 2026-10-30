@@ -15,3 +15,13 @@
 .module-links .note{flex-basis:100%;margin:2px 0 0}
 .module-launch{display:inline-flex;align-items:center;justify-content:center;border-radius:10px;background:#eef3fe;border:1px solid #c5d6f4;color:#183768;text-decoration:none;padding:10px 14px;font-weight:750}
 .module-launch:hover,.module-launch:focus-visible{background:#dbe7ff;outline-offset:3px}
+
+.store-kpi-button{border:1px solid #c4cfde;border-radius:9px;padding:7px 10px;background:#f1f5fb;color:#1a365d;font:inherit;font-size:.85rem;font-weight:700;cursor:pointer}
+.store-kpi-button:disabled{opacity:.6;cursor:wait}
+.store-kpi-panel{flex-basis:100%;min-width:0;font-size:.86rem;color:#586576}
+.store-kpi-panel:empty{display:none}
+.store-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:3px 0 0}
+.store-kpi-cell{padding:9px 10px;border:1px solid #e4e8f0;border-radius:9px;background:#fff}
+.store-kpi-cell dt{color:#667085;font-size:.75rem}
+.store-kpi-cell dd{margin:3px 0 0;font-size:1.03rem;font-weight:800;color:#17233a}
+@media(max-width:760px){.store-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.store-kpi-button{width:100%}}
