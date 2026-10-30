@@ -13,7 +13,7 @@ export async function verifySearchVisibilityInteractions(page,artifactsDir,resul
   // browser never authenticates to Google or contacts the real provider API.
   const googleReadRequests=[];
   let googleScenario='not_configured';
-  const googleRoute=/^https:\\/\\/ekodi\\.kr\\/api\\/control\\/search-visibility\\?googleSiteUrl=/;
+  const googleRoute=/^https:\/\/ekodi\.kr\/api\/control\/search-visibility\?googleSiteUrl=/;
   const mockGoogleRead=async route=>{
     const request=route.request(),url=new URL(request.url());
     if(request.method()!=='GET')throw new Error('Google Search Console metrics UI attempted a mutation');
@@ -28,7 +28,7 @@ export async function verifySearchVisibilityInteractions(page,artifactsDir,resul
           metrics:null,sitemaps:[]}
         : {state:'connected',property:selected,period:{startDate:'2026-09-01',endDate:'2026-09-28'},
           metrics:{clicks:12,impressions:120,ctrPercent:10,avgPosition:4.5},
-          sitemaps:[{path:selected.replace(/\\/$/,'')+'/sitemap.xml'}]};
+          sitemaps:[{path:selected.replace(/\/$/,'')+'/sitemap.xml'}]};
     await route.fulfill({status:200,contentType:'application/json; charset=utf-8',
       body:JSON.stringify({ok:true,google})});
   };
@@ -103,7 +103,7 @@ export async function verifySearchVisibilityInteractions(page,artifactsDir,resul
     googleScenario='connected';
     await googleButton.click();
     await panel.locator('[data-sv-google-summary]').filter({
-      hasText:/검색 클릭 12회 · 노출 120회 · CTR 10\\.00% · 평균 순위 4\\.5/
+      hasText:/검색 클릭 12회 · 노출 120회 · CTR 10\.00% · 평균 순위 4\.5/
     }).waitFor({timeout:7000});
     if(!(await panel.locator('[data-sv-google-summary]').textContent())?.includes(
       '전체 페이지 색인 완료나 AI 검색 인용을 의미하지 않습니다'
