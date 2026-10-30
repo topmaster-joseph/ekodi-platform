@@ -11,3 +11,7 @@ Date 2026-10-30. Incident #6936.
 - Source PR #7016 superseded by EKODI Orchestrator sole official #7017 task orch_recovery_e1d0c64cb32fab479ea64af9e1d1af79.
 - This owner-authored documentation-only commit requests genuine protected required checks on the official exact source, not bot action_required.
 - Final closure is blocked until existing guarded Education deploy succeeds with entire real 320/390/768/1366/1440px classroom+farm+studio+documents native acceptance and PNG saving, on canonical apex /edu route.
+
+## Authenticated required-check replay after protected-main sync
+- Former official head 06b0ac9e25e5974c2aba35a625dbf950665737f4 passed genuine required source CI. The Orchestrator synchronized source to 05cdaa25c28cf705c172ec55c5d57354d8f92762, producing bot action_required results that are not valid required checks.
+- This owner-authored docs-only checkpoint requests genuine CI on the exact currently synchronized official release head without weakening any security policy, impersonating required checks or issuing production deployment. EKODI orchestrator governs protected merge and release. Do not close #6936 until native production acceptance passes.
