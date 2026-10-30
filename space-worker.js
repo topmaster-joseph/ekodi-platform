@@ -7,6 +7,7 @@ import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './resta
 import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
 import { renderBnslovePublicPage, bnslovePublicCss } from './bnslove-public-page.js';
 import { isMnuBizWorkspaceSlug, renderMnuBizPublicPage, mnubizPublicCss } from './mnubiz-public-page.js';
+import { isMnuBizSuncheonPath, renderMnuBizSuncheonPage } from './mnubiz-suncheon-page.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 
 const EKODIMISSION_PREFIX='/ekodimission';
@@ -536,6 +537,19 @@ export default{
     if(url.pathname==='/jadam-storefront.css'||url.pathname==='/_ekodi/space/jadam-storefront.css')return withHeaders(env,jadamStorefrontCss(),'storefront-asset');
     if(url.pathname==='/restaurant-storefront.css'||url.pathname==='/_ekodi/space/restaurant-storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/mnubiz/assets/site.css')return withHeaders(env,mnubizPublicCss(),'mnubiz-asset');
+
+    if(['GET','HEAD'].includes(request.method)&&isMnuBizSuncheonPath(url.pathname)){
+      return injectEkodiShell(withHeaders(env,renderMnuBizSuncheonPage(url.pathname),'mnubiz-suncheon-page'),'community','public',{existingHeader:true});
+    }
+    if(['GET','HEAD'].includes(request.method)&&['/mnubiz/seminars/suncheon-2026/style.css','/mnubiz/seminars/suncheon-2026/client.js'].includes(url.pathname)){
+      if(!env?.ASSETS?.fetch)return new Response('Asset service unavailable',{status:503,headers:{'cache-control':'no-store'}});
+      const asset=await env.ASSETS.fetch(request);
+      const out=withHeaders(env,asset,'mnubiz-suncheon-asset');
+      out.headers.set('x-content-type-options','nosniff');
+      if(url.pathname.endsWith('/client.js'))out.headers.set('cache-control','no-store');
+      return out;
+    }
+
     if(url.pathname==='/bnslove/site.css'&&['GET','HEAD'].includes(request.method))return withHeaders(env,bnslovePublicCss(),'bnslove-asset');
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/?route=workspace&source=space',307);
     if(url.pathname==='/auth/start'){
