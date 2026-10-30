@@ -267,7 +267,7 @@ test('withdrawal panel states recovery needed instead of claiming no consultatio
 });
 
 
-test('HTTP 200 without matching signed revocation receipt is not a confirmed auto-withdrawal',async()=>{
+test('HTTP 200 without matching explicit revocation receipt is not a confirmed auto-withdrawal',async()=>{
   for(const revokeReply of [
     { consultation:{ id:'con_another',status:'revoked' } },
     { consultation:{ id:'con_new',status:'new' } },
