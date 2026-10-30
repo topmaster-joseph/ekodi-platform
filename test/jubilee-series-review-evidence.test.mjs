@@ -7,7 +7,7 @@ const load=path=>JSON.parse(readFileSync(new URL(path,import.meta.url),'utf8'));
 const registry=load('../publishing/jubilee-series/draft-registry.json');
 const evidence=load('../publishing/jubilee-series/review-8-evidence.json');
 const digest=/^[0-9a-f]{64}$/;
-test('8th editorial evidence belongs to the exact two private Jubilee manuscripts',()=>{
+test('8th historical evidence preserves the exact two private Jubilee manuscripts',()=>{
   assert.equal(evidence.schemaVersion,1);
   assert.equal(evidence.seriesId,registry.seriesId);
   assert.equal(evidence.sourceRevision,'review-8');
@@ -19,7 +19,9 @@ test('8th editorial evidence belongs to the exact two private Jubilee manuscript
     assert.equal(e.volumeNumber,record.volumeNumber);
     assert.equal(e.title,record.title);
     assert.equal(e.format,record.genre);
-    assert.equal(record.manuscriptRevision,evidence.sourceRevision);
+    // Revision-8 evidence remains an immutable historical snapshot; latest
+    // private editorial register intentionally advances to review-9.
+    assert.equal(record.manuscriptRevision,'review-9');
     assert.equal(e.manuscriptStatus,'editorial-review');
     assert.ok(e.bodyCharactersWithWhitespace>40000);
     assert.ok(e.pdfPages>=30);
