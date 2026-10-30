@@ -170,9 +170,9 @@ function detailSlug(){
   // "All areas" must override any post-login ?business=... fallback.
   if(location.hash==='#business')return null;
   const match=location.hash.match(/^#business\/([a-z0-9-]+)$/);
-  if(match?.[1]&&BUSINESS[match[1]])return match[1];
+  if(match?.[1]&&Object.hasOwn(BUSINESS,match[1]))return match[1];
   const selected=new URLSearchParams(location.search).get('business');
-  return selected&&BUSINESS[selected]?selected:null;
+  return selected&&Object.hasOwn(BUSINESS,selected)?selected:null;
 }
 function renderDetail(slug){
   const t=text();const meta=BUSINESS[slug];if(!meta)return;
