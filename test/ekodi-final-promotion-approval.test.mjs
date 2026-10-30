@@ -53,12 +53,18 @@ function mockDb(row=buildRow(),{commit=true,failBatch=false,stagingAttestation=t
       assert.match(insert.sql,/final_promotion_approval_recorded/);
       assert.match(insert.sql,/NOT EXISTS/);
       assert.match(insert.sql,/THEN \? ELSE NULL END/);
+      assert.doesNotMatch(insert.sql,/json_extract/);
+      if(trace.events.length){
+        // The official D1 NOT NULL audit check aborts the entire batch,
+        // even when a new owner submits a fresh stateVersion/approvalId.
+        throw Error('DUPLICATE_FINAL_OWNER_APPROVAL');
+      }
       if(!row || row.state_version!==update.args[2] ||
          row.evidence_json!==update.args[4])return [{meta:{changes:0}},{meta:{changes:0}}];
       row.state_version++;
       trace.events.push({
-        actor:insert.args[8],reason:'final_promotion_approval_recorded',
-        evidence_json:insert.args[9],
+        actor:insert.args[7],reason:'final_promotion_approval_recorded',
+        evidence_json:insert.args[8],
       });
       return [{meta:{changes:1}},{meta:{changes:1}}];
     },
@@ -95,6 +101,22 @@ test('a second approval with stale state version cannot record another event',as
   assert.equal((await recordEkodiFinalPromotionApproval(db,request())).approved,true);
   assert.equal((await recordEkodiFinalPromotionApproval(db,request())).reason,'stale_task_state');
   assert.equal(trace.events.length,1);
+});
+
+test('a second final confirmation with fresh version and another owner never renews the original',async()=>{
+  const {db,row,trace}=mockDb();
+  const original=await recordEkodiFinalPromotionApproval(db,request());
+  assert.equal(original.approved,true);
+  assert.equal(row.state_version,4);
+  const replay=await recordEkodiFinalPromotionApproval(db,request({
+    expectedStateVersion:4,
+    authorizedSuperAdminPersonId:'platform-admin:another-owner',
+  }));
+  assert.equal(replay.approved,false);
+  assert.equal(replay.reason,'final_promotion_approval_transaction_failed');
+  assert.equal(row.state_version,4);
+  assert.equal(trace.events.length,1);
+  assert.equal(JSON.parse(trace.events[0].evidence_json).approvalId,original.approvalId);
 });
 
 test('missing DB, forged actor, malformed task, SHA and artifact do not approve',async()=>{
