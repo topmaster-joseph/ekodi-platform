@@ -11,6 +11,7 @@ const extract = (startLabel,endLabel) => {
 };
 const accessFunctions = extract('  function loadAccess() {', '  function handoffForm(');
 const writeFunctions = extract('  function saveAccess(', '  async function revokeConsultation(');
+const customerRevoke = extract('  async function revokeConsultation(', '  function renderWithdrawalPanel(');
 const ACCESS_KEY='ekodi-insurance-consultation-access-v1';
 const largeEntries=Array.from({length:21},(_,i)=>({
   id:'con_test-'+i, accessToken:'ic_synthetic_'+i, status:'new'
@@ -55,6 +56,9 @@ function createHarness({ initial = {}, blocked = false, failAccessWrite = false,
     fetch:async (url,opts)=>{
       calls.fetch++;
       assert.equal(opts.method,'POST');
+      assert.equal(opts.credentials,'omit','never send session cookies to insurance API');
+      assert.equal(opts.redirect,'error','never transmit bearer token to redirected host');
+      assert.equal(opts.cache,'no-store');
       if(String(url).endsWith('/revoke')){
         calls.revokes++;
         assert.match(String(url), /\/api\/consultations\/con_new\/revoke$/);
@@ -181,4 +185,12 @@ test('after token was safely persisted, panel rendering errors do not trigger au
   assert.equal(JSON.parse(h.snapshot()[ACCESS_KEY])[0].id,'con_new');
   assert.equal(h.form.resetCount,1);
   assert.equal(h.warnings.length,0);
+});
+
+
+test('customer-initiated revoke also prevents credential-bearing redirects',()=>{
+  assert.match(customerRevoke, /credentials:\s*'omit'/);
+  assert.match(customerRevoke, /redirect:\s*'error'/);
+  assert.match(customerRevoke, /cache:\s*'no-store'/);
+  assert.doesNotMatch(customerRevoke, /accessToken:\s*item\.accessToken.*(?:location|url)/);
 });
