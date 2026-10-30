@@ -67,6 +67,8 @@ jobs:
         with:
           node-version: '24'
       - name: Collect EKODI-owned read-only operational evidence
+        # Weekly preparation gets its own artifact without repeating hourly GitHub API reads.
+        if: github.event.schedule != '0 23 * * 0' && github.event.schedule != '26 23 * * 2'
         run: |
           node scripts/ekodi-native-operations-watch.mjs \
             --mode="$EKODI_WATCH_MODE" \
