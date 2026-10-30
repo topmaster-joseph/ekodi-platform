@@ -115,7 +115,7 @@ function renderSelectedWorkspace(){
     :'현재 작업 공간을 선택하지 않았습니다.';
   const host=$('verifiedSpacesList');
   for(const card of host.children){
-    const select=card.children?.find?.(element=>element.className==='space-select');
+    const select=Array.from(card.children||[]).find(element=>element.className==='space-select');
     if(!select)continue;
     const selected=Boolean(space&&select.dataset.workspaceId===space.id&&select.dataset.workspaceSlug===space.slug);
     select.textContent=selected?'현재 작업 공간':'작업 공간으로 선택';
