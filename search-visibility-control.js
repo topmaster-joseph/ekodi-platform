@@ -73,8 +73,8 @@ const REGISTERED_LEGACY_HOSTS=Object.freeze({
 const safeHost=value=>{
   // URL.hostname normalizes Unicode IDNs to ASCII Punycode. Reject URL
   // components/credentials to avoid treating an untrusted URL as ownership.
-  const input=safe(value,255).toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
-  if(!input||/[\\?#@:\s]/.test(input))return '';
+  const input=safe(value,255).toLowerCase().replace(/^https?:\/\//,'').replace(/\/$/,'');
+  if(!input||/[\\\/?#@:\s]/.test(input))return '';
   let h='';
   try{h=new URL('https://'+input).hostname}catch{return ''}
   return h!=='ekodi.kr'&&/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(h)&&!h.startsWith('www.')?h:'';
