@@ -58,19 +58,41 @@ async function verifiedEkodiAccount(user:any){
   const account=await ekodiAccount(String(user?.id||""));
   return Boolean(account&&Array.isArray(account.verified_emails)&&account.verified_emails.length);
 }
+// Platform administration requires a server-granted role and a previously verified
+// Google identity on the canonical EKODI Person, not simply the caller's email.
+// A linked Naver/Kakao session may retain that Person's existing grants, but
+// cannot manufacture an administrator by sending a matching email or metadata.
+async function hasVerifiedGoogleAdminIdentity(account:{person_id:string;verified_emails:string[]}){
+  const personId=String(account?.person_id||"").trim();
+  const verified=new Set((Array.isArray(account?.verified_emails)?account.verified_emails:[])
+    .map(value=>String(value||"").trim().toLowerCase()).filter(Boolean));
+  if(!personId||!verified.size)return false;
+  const {data,error}=await admin.from("login_identities")
+    .select("email").eq("person_id",personId).eq("provider","google")
+    .eq("status","active").eq("email_verified",true);
+  if(error)throw error;
+  // The account RPC emits a Google email only when auth.users confirms ownership.
+  return (data||[]).some(row=>verified.has(String(row?.email||"").trim().toLowerCase()));
+}
 async function platformAdmin(userId:string){
   const account=await ekodiAccount(userId);
-  if(!account)return false;
+  if(!account||!await hasVerifiedGoogleAdminIdentity(account))return false;
   const userIds=Array.isArray(account.auth_user_ids)&&account.auth_user_ids.length?account.auth_user_ids:[userId];
   const {data,error}=await admin.from("profiles").select("platform_admin").in("user_id",userIds).eq("platform_admin",true).limit(1);
   if(error)throw error;
   if(data?.length)return true;
+  // Recovery email allowlist is only valid after the verified Google-backed proof.
   return (account.verified_emails||[]).some(email=>BOOTSTRAP_SUPER_ADMIN_EMAILS.has(String(email).toLowerCase()));
 }
 async function tenantReviewerAuthorization(userId:string,tenantId:string|null){
   if(await platformAdmin(userId))return {allowed:true,roles:["platform_admin"],authority:"platform",role:"platform_admin"};
   if(!tenantId)return {allowed:false,roles:[] as string[],authority:"none",role:null};
-  const {data}=await admin.from("tenant_members").select("role,status").eq("tenant_id",tenantId).eq("user_id",userId).eq("status","active");
+  // Every explicitly linked login of the same EKODI Person inherits existing
+  // tenant-scoped memberships, never a role in a different tenant.
+  const linkedIds=await personAuthUserIds(userId);
+  const {data,error}=await admin.from("tenant_members").select("role,status")
+    .eq("tenant_id",tenantId).in("user_id",linkedIds).eq("status","active");
+  if(error)throw error;
   const roles=[...new Set((data??[]).map((row:any)=>clip(row?.role,80)).filter(Boolean))];
   const role=roles.includes("platform_admin")?"platform_admin":roles.includes("tenant_admin")?"tenant_admin":null;
   return {allowed:Boolean(role),roles,authority:role==="platform_admin"?"platform":role==="tenant_admin"?"tenant":"none",role};
