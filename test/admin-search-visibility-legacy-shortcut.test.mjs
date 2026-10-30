@@ -39,3 +39,15 @@ test('other existing admin alias routing remains unaffected',()=>{
   assert.equal(legacyAdminAliasTarget('/admin/ekodimall'),'/ekodimall/admin');
   assert.equal(legacyAdminAliasTarget('/cmpmyi/admin/jadam'),'/jadam/admin');
 });
+
+
+test('admin URL policy changes are owned by the protected Site Core release',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const get=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+  const converge=get('scripts/converge-orchestrated-pr-merge.mjs');
+  const workflow=get('.github/workflows/deploy-site-core.yml');
+  assert.ok(converge.includes("file==='admin-address-policy.js'||"));
+  assert.ok(workflow.includes("      - 'admin-address-policy.js'"));
+  assert.ok(converge.includes("workflow:'deploy-site-core.yml'"));
+  assert.ok(converge.includes("if(sharedSiteTouched)"));
+});
