@@ -35,6 +35,42 @@ test('patch targets only exact church rule and exact owner-issued path', () => {
   assert.equal(planChurchNaverExclusion({ ...originalRule, expression: planned.expression }).changed, false);
 });
 
+test('Cloudflare match-all true is replaced with the exact Naver path exclusion, not invalid (true) and (...)', async () => {
+  for (const expression of ['true', '(true)', ' true ']) {
+    const rule = { ...originalRule, expression };
+    const plan = planChurchNaverExclusion(rule);
+    assert.equal(plan.changed, true);
+    assert.equal(plan.expression, EXCLUSION);
+    assert.equal(planChurchNaverExclusion({ ...rule, expression: plan.expression }).changed, false);
+    assert.deepEqual(patchBody(rule, plan.expression).action_parameters, rule.action_parameters);
+  }
+
+  // Production observed an existing one-rule "true" expression. Ensure the
+  // remote PATCH is surgical and preserves the redirect target and other rules.
+  let current = structuredClone({...ruleset, rules: [{ ...originalRule, expression: 'true' }, otherRule]});
+  let writes = 0;
+  const request = async (_token, endpoint, method = 'GET', payload) => {
+    if (endpoint.startsWith('/zones?')) return [{id:zoneId,name:DOMAIN,status:'active'}];
+    if (endpoint.endsWith('/entrypoint')) return structuredClone(current);
+    if (endpoint.includes('/rules/')) {
+      assert.equal(method, 'PATCH');
+      assert.equal(payload.expression, EXCLUSION);
+      writes++;
+      current = {...current, rules: [{...current.rules[0],...payload},otherRule]};
+      return structuredClone(current);
+    }
+    throw new Error('Unexpected API call ' + endpoint);
+  };
+  const result = await reconcileChurchNaverRedirect({token:'test',accountId,request});
+  assert.equal(result.outcome,'updated');
+  assert.equal(writes,1);
+  assert.deepEqual(current.rules[1],otherRule);
+  assert.deepEqual(current.rules[0].action_parameters,originalRule.action_parameters);
+  const repeat = await reconcileChurchNaverRedirect({token:'test',accountId,request});
+  assert.equal(repeat.outcome,'already_excluded');
+  assert.equal(writes,1);
+});
+
 test('deny ambiguous, disabled, unrelated or previously special-cased redirect', () => {
   assert.throws(() => findChurchRule({...ruleset, rules: [originalRule, originalRule]}), /exactly one/);
   assert.throws(() => findChurchRule({...ruleset, rules: [otherRule]}), /exactly one/);
