@@ -35,7 +35,7 @@ jobs:
           node --check scripts/verify-mission-home-native-browser.mjs
           node --check scripts/ekodi-background-browser-worker.mjs
   home-browser:
-    if: github.event_name != 'pull_request' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch'))
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
