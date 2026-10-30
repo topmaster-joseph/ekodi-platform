@@ -49,6 +49,8 @@ jobs:
           python3 -m unittest discover -s test -p test_jubilee_private_zip.py -v
           node --check publishing/jubilee-series/private-r2-ingest.mjs
           node --test test/jubilee-series-private-r2-ingest.test.mjs
+          node --check publishing/jubilee-series/private-ingest-receipt.mjs
+          node --test test/jubilee-series-private-ingest-receipt.test.mjs
           node --check publishing/human/scheduled-release.js
           node --test test/human-publishing-scheduled-release.test.mjs
           node --check publishing/human/private-release-store.js
