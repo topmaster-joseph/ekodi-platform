@@ -13,7 +13,7 @@ test('points is registered as a canonical super-admin service section',()=>{
   assert.match(registry,/sections: \['points'\]/);
   assert.match(registry,/id: 'points', group: 'services'[^\n]*superAdminOnly: true/);
   assert.match(routes,/points:'services'/);
-  assert.match(loader,/points:\{label:'활동포인트'[^\n]*scripts:\['points-admin\.js'\]/);
+  assert.match(loader,/points:\{scripts:\['points-admin\.js'\],real:'#ekodiPointsAdmin'\}/);
   assert.match(layout,/\['points','points'\]/);
   assert.match(worker,/'\/points-admin\.js'/);
   assert.match(build,/'points-admin\.js'/);

@@ -20,7 +20,7 @@
       insert: 'first',
     },
     'public-site-controls':{scripts:['admin-public-site-controls.js'],real:'[data-section="public-site-controls"]'},
-    points:{label:'활동포인트',icon:'P',scripts:['points-admin.js'],real:'[data-section="points"]',paths:['/admin/services/points'],hashes:['#points']},
+    points:{scripts:['points-admin.js'],real:'#ekodiPointsAdmin'},
     'language-status':{scripts:['admin-language-status.js'],real:'[data-section="language-status"]'},
     aiops: {
       label: 'AI Ops', icon: '✦',
