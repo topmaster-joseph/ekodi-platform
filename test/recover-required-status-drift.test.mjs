@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
-  latestStatusByContext, waitForVerifiedHeadStatus, verifiedHeadPr,
+  latestStatusByContext, waitForVerifiedHeadStatus, verifiedHeadPr, draftPrNoop,
 } from '../scripts/recover-required-status-drift.mjs';
 
 const head = 'a'.repeat(40);
@@ -110,4 +111,19 @@ test('missing head evidence is never retried into a pass',async()=>{
   await assert.rejects(reconcileMergeStatuses({api:f.api,pr:'1',head:HEAD,by:partial,sleep:noSleep}),/required head evidence missing/);
   assert.equal(f.reads(),0);
   assert.equal(isTransientMergeShaError(new Error('PR is no longer eligible for merge status reconciliation')),false);
+});
+
+test('draft PR skips merge-only reconciliation without weakening ready PR validation',()=>{
+  const pr={state:'open',draft:true,base:{ref:'main'},
+    head:{sha:head},merge_commit_sha:null};
+  assert.equal(draftPrNoop(pr,head),true);
+  assert.equal(draftPrNoop({...pr,draft:false},head),false);
+  assert.throws(()=>draftPrNoop({...pr,head:{sha:'f'.repeat(40)}},head),/identity/);
+  assert.throws(()=>draftPrNoop({...pr,base:{ref:'untrusted'}},head),/identity/);
+  assert.throws(()=>draftPrNoop({...pr,state:'closed'},head),/identity/);
+  // This function continues to refuse drafts for actual merge reconciliation.
+  assert.throws(()=>verifiedHeadPr(pr,head),/eligible/);
+  const src=readFileSync(
+    new URL('../scripts/recover-required-status-drift.mjs',import.meta.url),'utf8');
+  assert.ok(src.indexOf('if (draftPrNoop(initialPr, head))') < src.indexOf('const by = await waitForVerifiedHeadStatus'));
 });
