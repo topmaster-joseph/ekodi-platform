@@ -91,6 +91,8 @@ jobs:
           "$(go env GOPATH)/bin/actionlint" -color -shellcheck= -pyflakes= \
             .github/workflows/ci.yml \
             .github/workflows/deploy-control-api.yml \
+            .github/workflows/ai-conflict-guard.yml \
+            .github/workflows/deploy-ai-control.yml \
             .github/workflows/reconcile-orchestrator-completions.yml \
             .github/workflows/deploy-space.yml \
             .github/workflows/deploy-site-core.yml \
