@@ -3,11 +3,19 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {pendingReviewBlocks} from '../scripts/lib/converge-review-hold.mjs';
 
-const review=(who,state)=>({user:{login:who},state});
+const review=(who,state,author_association='OWNER')=>({user:{login:who},state,author_association});
 test('change-request persists through COMMENTED and unrelated approvals',()=>{
   const xs=[review('topmaster-joseph','CHANGES_REQUESTED'),
     review('topmaster-joseph','COMMENTED'),review('another','APPROVED')];
   assert.deepEqual(pendingReviewBlocks(xs),['topmaster-joseph']);
+});
+test('unaffiliated public review cannot suspend a protected EKODI merge',()=>{
+  assert.deepEqual(pendingReviewBlocks([
+    review('external-user','CHANGES_REQUESTED','NONE'),
+    review('first-time','CHANGES_REQUESTED','FIRST_TIME_CONTRIBUTOR'),
+    review('employee','CHANGES_REQUESTED','COLLABORATOR')
+  ]),['employee']);
+  assert.deepEqual(pendingReviewBlocks([review('outsider','CHANGES_REQUESTED','CONTRIBUTOR')]),[]);
 });
 test('genuine same-owner APPROVED or dismissal clears earlier block',()=>{
   const a=[review('topmaster-joseph','CHANGES_REQUESTED')];

@@ -30,7 +30,7 @@ globalThis.fetch = async (input, init = {}) => {
     if (scenario === 'newer-head') return json(200, [{ number: 7, state: 'open', draft: false, head: { sha: '${H2}' } }]);
     return json(200, [{ number: 7, state: 'open', draft: false, head: { sha: head } }]);
   }
-  if (method === 'GET' && p === '/pulls/7/reviews') return json(200, scenario === 'review-hold' ? [{ user: { login: 'topmaster-joseph' }, state: 'CHANGES_REQUESTED' }] : []);
+  if (method === 'GET' && p === '/pulls/7/reviews') return json(200, scenario === 'review-hold' ? [{ user: { login: 'topmaster-joseph' }, author_association: 'OWNER', state: 'CHANGES_REQUESTED' }] : []);
   if (method === 'GET' && p === '/pulls/7/files') return json(200, [{ filename: 'README.md' }]);
   if (method === 'GET' && p === '/pulls/7') return json(200, { number: 7, merged: false, draft: false, head: { sha: head }, merge_commit_sha: '${M}', title: 't' });
   if (method === 'GET' && /\\/commits\\/[a-f0-9]{40}\\/status$/.test(p)) {

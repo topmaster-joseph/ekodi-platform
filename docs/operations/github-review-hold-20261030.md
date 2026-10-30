@@ -8,6 +8,8 @@ This consumed shared hourly REST quota without any merge progress.
 Reuse the existing convergent release workflow:
 - After authoritative release receipt and exact-head PR lookup, use read-only
   GitHub REST reviews before file scan, branch synchronization or writes.
+  Trust only the canonical owner or GitHub-declared OWNER/MEMBER/COLLABORATOR;
+  arbitrary public reviews must never prevent an otherwise protected merge.
 - An unresolved latest CHANGES_REQUESTED review blocks all syncs/merge/status
   writes and exits with honest \`human-review-hold\` evidence. COMMENTED never
   overrides a requested change. Missing or inaccessible reviews fail closed.

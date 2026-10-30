@@ -2,13 +2,18 @@
 // A COMMENTED review never clears a prior CHANGES_REQUESTED by that reviewer.
 // This is a resource-saving early hold, NOT a substitute for GitHub protection.
 const finalStates=new Set(['APPROVED','CHANGES_REQUESTED','DISMISSED']);
+// GitHub review submissions from non-collaborators are advisory and cannot
+// block a protected merge. Never let an unaffiliated public user park release.
+const trustedAssociations=new Set(['OWNER','MEMBER','COLLABORATOR']);
 export function pendingReviewBlocks(reviews) {
   if (!Array.isArray(reviews)) throw Error('REVIEW_EVIDENCE_UNAVAILABLE');
   const latest=new Map();
   for(const item of reviews){
     const login=String(item?.user?.login||'').toLowerCase();
     const state=String(item?.state||'').toUpperCase();
-    if(login && finalStates.has(state)) latest.set(login,state);
+    const association=String(item?.author_association||'').toUpperCase();
+    if(login && (login==='topmaster-joseph'||trustedAssociations.has(association)) &&
+       finalStates.has(state)) latest.set(login,state);
   }
   return [...latest.entries()].filter(([,state])=>state==='CHANGES_REQUESTED')
     .map(([login])=>login).sort();
