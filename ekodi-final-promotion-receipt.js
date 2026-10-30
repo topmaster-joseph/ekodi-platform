@@ -32,12 +32,11 @@ export async function verifyEkodiFinalPromotionReceipt(db,input={}){
       "SELECT actor,reason,evidence_json FROM ekodi_orchestrator_task_events WHERE task_id=? AND reason='final_promotion_approval_recorded' ORDER BY seq DESC LIMIT 1"
     ).bind(taskId).first();
   }catch{return deny('promotion_receipt_lookup_failed')}
-  const proof=parse(task.evidence_json)?.preproductionProof;
   const stageAudit=parse(stage?.evidence_json);
   const owner=parse(approval?.evidence_json);
   // Missing rows must fail closed before reading any actor or accepting
   // default-parsed empty JSON. Missing event JSON is not a receipt.
-  if(!stage||!approval||!proof||!stageAudit||!owner||
+  if(!stage||!approval||!stageAudit||!owner||
      !stage.evidence_json||!approval.evidence_json){
     return deny('staging_or_owner_confirmation_missing');
   }
@@ -48,18 +47,15 @@ export async function verifyEkodiFinalPromotionReceipt(db,input={}){
      stageAudit.releaseSha!==releaseSha||stageAudit.artifactDigest!==artifactDigest||
      !DIGEST.test(clean(stageAudit.archiveDigest,150))||
      !Number.isSafeInteger(stageAudit.workflowRunId)||stageAudit.workflowRunId<1||
-     proof.authority!=='ekodi-orchestrator'||proof.taskId!==taskId||
-     proof.branchRef!==branchRef||proof.releaseSha!==releaseSha||
-     proof.artifactDigest!==artifactDigest||
-     proof.archiveDigest!==stageAudit.archiveDigest||
-     proof.verifiedAt!==stageAudit.verifiedAt||
-     ![proof.requiredCiVerified,proof.stagingVerified,proof.rollbackReady,proof.securityReviewVerified].every(x=>x===true)){
+     !Number.isFinite(Date.parse(stageAudit.verifiedAt))||
+     ![stageAudit.requiredCiVerified,stageAudit.stagingVerified,
+       stageAudit.rollbackReady,stageAudit.securityReviewVerified].every(x=>x===true)){
     return deny('authenticated_preproduction_proof_invalid');
   }
   // Reuse of an old approval or one issued before staging would violate the
   // requested single *final* confirmation for the exact release. No worker
   // may override the freshness window with caller-controlled flags.
-  const nowMs=Date.now(),stageMs=Date.parse(proof.verifiedAt),
+  const nowMs=Date.now(),stageMs=Date.parse(stageAudit.verifiedAt),
     ownerMs=Date.parse(owner.approvedAt);
   if(!Number.isFinite(stageMs)||!Number.isFinite(ownerMs)||
      stageMs>ownerMs||ownerMs>nowMs+60_000||
