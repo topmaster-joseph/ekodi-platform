@@ -6,6 +6,8 @@ on:
     types: [completed]
   schedule:
     - cron: "17 * * * *"
+  issue_comment:
+    types: [created]
   pull_request:
     paths:
       - 'scripts/education-release-continuity.mjs'
@@ -36,6 +38,12 @@ concurrency:
 
 jobs:
   contract:
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.repository == 'topmaster-joseph/ekodi-platform' &&
+       github.actor == 'topmaster-joseph' &&
+       github.event.issue.pull_request == null &&
+       github.event.comment.body == 'EKODI-EDUCATION-RECONCILE')
     runs-on: ubuntu-latest
     timeout-minutes: 13
     steps:
@@ -91,7 +99,11 @@ jobs:
   reconcile:
     if: >-
       (github.event_name == 'schedule' ||
-       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')) &&
+       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+       (github.event_name == 'issue_comment' &&
+        github.actor == 'topmaster-joseph' &&
+        github.event.issue.pull_request == null &&
+        github.event.comment.body == 'EKODI-EDUCATION-RECONCILE')) &&
       github.repository == 'topmaster-joseph/ekodi-platform'
     needs: contract
     runs-on: ubuntu-latest
