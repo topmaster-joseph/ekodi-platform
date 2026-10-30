@@ -93,3 +93,20 @@ test('Production browser exercises Search Visibility filters, Manage and mobile 
   assert.match(coverage,/forbiddenWrites\.length/);
   assert.match(coverage,/read-only-interaction/);
 });
+
+test('EKODI native Chromium Search Visibility GSC action uses only synthetic read-only fixtures',()=>{
+  const coverage=read('scripts/verify-search-visibility-interactions.mjs');
+  const ui=read('search-visibility-admin.js');
+  assert.match(coverage,/data-sv-google-read/);
+  assert.match(coverage,/page\.route\(googleRoute,mockGoogleRead\)/);
+  assert.match(coverage,/request\.method\(\)!=='GET'/);
+  assert.match(coverage,/googleScenario==='not_configured'/);
+  assert.match(coverage,/googleScenario='connected'/);
+  assert.match(coverage,/googleScenario='no_rows'/);
+  assert.match(coverage,/googleReadRequests\.length!==3/);
+  assert.match(coverage,/page\.unroute\(googleRoute,mockGoogleRead\)/);
+  assert.match(coverage,/synthetic-readonly-ui/);
+  assert.match(ui,/data-sv-google-read/);
+  assert.match(ui,/GOOGLE_SEARCH_SA_KEY_JSON|Google Search Console 읽기 전용 서비스 계정이 아직 서버에 연결되지 않았습니다/);
+  assert.doesNotMatch(coverage,/confirmed_manually|api\.googleapis\.com\/webmasters\/v3\/sites/);
+});
