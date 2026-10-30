@@ -12,7 +12,9 @@ function createContext(){
    get:async k=>map.get(k),
    put:async(k,v)=>{map.set(k,v)},
    delete:async k=>{map.delete(k)},
-   list:async({prefix})=>new Map([...map].filter(([k])=>k.startsWith(prefix)))
+   list:async({prefix})=>new Map([...map].filter(([k])=>k.startsWith(prefix))),
+   setAlarm:async at=>{map.set('__alarm__',at)},
+   deleteAll:async()=>{map.clear()}
   },
   getWebSockets:()=>sockets
  };
@@ -31,6 +33,7 @@ test('QR room creates expiring, capability-scoped learner slots and never return
  assert.equal('hostKey' in conf,false);
  assert.equal('joinKey' in conf,false);
  assert.ok(conf.expiresAt-conf.createdAt===ROOM_TTL_MS);
+ assert.equal(ctx.map.get('__alarm__'),conf.expiresAt,'room data must be erased automatically after expiration');
  assert.equal((await room.fetch(post('/init',{id:'a'.repeat(32),hostKey:key('a'),joinKey:key('b'),createdAt:Date.now()}))).status,409);
  assert.equal((await room.fetch(post('/join',{joinKey:key('c'),name:'수강생'}))).status,403);
  assert.equal((await room.fetch(post('/join',{joinKey:key('b'),name:'X'}))).status,400);
