@@ -13,7 +13,7 @@ let scheduled=false;
 let requestInFlight='';
 const displayCache=new Map();
 function shortName(value){
-  const text=String(value||'').replace(/\\s+/g,' ').trim();
+  const text=String(value||'').replace(/\s+/g,' ').trim();
   const chars=Array.from(text);
   return chars.length>12?chars.slice(0,12).join('')+'…':text;
 }
@@ -103,7 +103,7 @@ function paint(){
     fetch(PROFILE,{headers:{apikey:PUBLISHABLE,authorization:'Bearer '+session.access_token},cache:'no-store',credentials:'omit'})
       .then(async response=>response.ok?response.json():null)
       .then(data=>{
-        const name=String(data?.profile?.display_name||'').replace(/\\s+/g,' ').trim();
+        const name=String(data?.profile?.display_name||'').replace(/\s+/g,' ').trim();
         displayCache.set(id,{name:name||localName(session),until:Date.now()+(name?CACHE_TTL:60_000)});
       })
       .catch(()=>{displayCache.set(id,{name:localName(session),until:Date.now()+60_000});})
