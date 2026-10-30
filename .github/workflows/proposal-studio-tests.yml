@@ -7,6 +7,7 @@ on:
       - '_headers'
       - 'test/proposal-csp-live-policy.test.mjs'
       - 'test/proposal-studio.test.mjs'
+      - 'test/proposal-studio-office-inspect.test.mjs'
       - '.github/workflows/proposal-studio-tests.yml'
       - 'site-worker.js'
       - 'scripts/build.mjs'
@@ -36,6 +37,7 @@ jobs:
       - name: Syntax checks
         run: |
           node --check proposal/core.js
+          node --check proposal/import.js
           node --check proposal/client.js
           node --check proposal/analysis.js
           node --check proposal/zip.js
