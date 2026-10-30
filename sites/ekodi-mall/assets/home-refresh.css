@@ -55,14 +55,14 @@ body{background:var(--mall-surface)}
 .mall-editorial-life{background-image:linear-gradient(90deg,rgba(251,246,238,.96),rgba(251,246,238,.57) 64%,transparent),url("https://images.pexels.com/photos/276724/pexels-photo-276724.jpeg?auto=compress&cs=tinysrgb&w=800")}
 .mall-editorial-gift{background-image:linear-gradient(90deg,rgba(252,243,237,.95),rgba(252,240,234,.59) 66%,transparent),url("https://images.pexels.com/photos/1303081/pexels-photo-1303081.jpeg?auto=compress&cs=tinysrgb&w=800")}
 .mall-editorial+.context-recommend{padding-top:54px}
-.mall-editorial~.context-recommend .context-heading h2,.mall-editorial~.shop .heading h2{font-size:clamp(27px,3vw,38px);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;line-height:1.3}
-.mall-editorial~.context-recommend .context-heading h2 br,.mall-editorial~.shop .heading h2 br{display:none}
-.mall-editorial~.context-recommend,.mall-editorial~.shop{max-width:1350px;margin-inline:auto}
-.mall-editorial~.shop{padding-top:55px;padding-bottom:65px}
-.mall-editorial~.filters{top:120px}
-.mall-editorial~.shop .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
-.mall-editorial~.shop .card{box-shadow:0 3px 15px rgba(25,37,48,.035)}
-.mall-editorial~.shop .thumb{border-bottom:1px solid #f2f3f2}
+.mall-editorial~.context-recommend .context-heading h2,.mall-category-shortcuts~.shop .heading h2{font-size:clamp(27px,3vw,38px);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;line-height:1.3}
+.mall-editorial~.context-recommend .context-heading h2 br,.mall-category-shortcuts~.shop .heading h2 br{display:none}
+.mall-editorial~.context-recommend,.mall-category-shortcuts~.shop{max-width:1350px;margin-inline:auto}
+.mall-category-shortcuts~.shop{padding-top:26px;padding-bottom:65px}
+.mall-category-shortcuts~.filters{top:120px}
+.mall-category-shortcuts~.shop .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.mall-category-shortcuts~.shop .card{box-shadow:0 3px 15px rgba(25,37,48,.035)}
+.mall-category-shortcuts~.shop .thumb{border-bottom:1px solid #f2f3f2}
 .mall-editorial~.affiliate-gates{padding-top:65px}
 :where(.mall-global-search button,.mall-category-shortcuts a,.mall-editorial a,.mall-hero-ctas a):focus-visible{outline:3px solid #37699c;outline-offset:3px}
 @media(max-width:1190px){
@@ -103,8 +103,8 @@ body{background:var(--mall-surface)}
  .mall-editorial{margin:12px 12px 0;gap:8px}
  .mall-editorial-card{min-height:170px;padding:15px}
  .mall-editorial-card strong{font-size:16px}.mall-editorial-kicker{font-size:9px}
- .mall-editorial~.filters{top:64px}
- .mall-editorial~.shop .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .mall-category-shortcuts~.filters{top:64px}
+ .mall-category-shortcuts~.shop .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:640px){
  .mall-header .mall-primary-nav{display:none}
@@ -113,12 +113,12 @@ body{background:var(--mall-surface)}
  .mall-premium-hero .context-quicks{grid-template-columns:repeat(2,minmax(0,1fr))}
  .mall-premium-hero .context-quicks button{font-size:10px;padding:7px}
  .mall-premium-hero .context-trust{font-size:10px}
- .mall-editorial~.context-recommend,.mall-editorial~.shop{padding-left:15px;padding-right:15px}
- .mall-editorial~.shop .grid{gap:10px}
- .mall-editorial~.shop .card-body{padding:12px}
- .mall-editorial~.shop .card h3{font-size:14px}
- .mall-editorial~.shop .card p{font-size:11px}
- .mall-editorial~.shop .meta{flex-wrap:wrap}
+ .mall-editorial~.context-recommend,.mall-category-shortcuts~.shop{padding-left:15px;padding-right:15px}
+ .mall-category-shortcuts~.shop .grid{gap:10px}
+ .mall-category-shortcuts~.shop .card-body{padding:12px}
+ .mall-category-shortcuts~.shop .card h3{font-size:14px}
+ .mall-category-shortcuts~.shop .card p{font-size:11px}
+ .mall-category-shortcuts~.shop .meta{flex-wrap:wrap}
 }
 @media(max-width:370px){.mall-header .brand span:last-child{display:none}.mall-global-search input{font-size:11px}.mall-editorial-card strong{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.mall-photo-hero:hover .mall-hero-photo,.mall-category-shortcuts a:hover,.mall-editorial-card:hover{transform:none}.mall-hero-photo,.mall-category-shortcuts a,.mall-editorial-card{transition:none}}
@@ -168,4 +168,21 @@ body{background:var(--mall-surface)}
  .mall-category-shortcuts{margin-top:8px}
  .buyer-mobile{display:flex;align-items:center;justify-content:space-around}
  .buyer-mobile>a,.buyer-mobile>button{min-width:0;white-space:nowrap}
+}
+
+/* Buyer-first fold: avoid duplicate desktop category menus; bring the product grid forward. */
+@media(min-width:641px){
+ .mall-category-shortcuts{display:none}
+ .mall-header .mall-primary-nav{font-size:13px}
+ .mall-global-search input{font-size:14px}
+}
+@media(min-width:761px){
+ .mall-premium-hero{min-height:460px;padding-top:26px;padding-bottom:26px}
+ .mall-premium-hero .mall-photo-hero{margin-top:70px;min-height:326px}
+ .mall-premium-hero .mall-hero-person{top:-64px}
+ .mall-category-shortcuts~.filters{margin-top:12px}
+}
+@media(max-width:640px){
+ .mall-category-shortcuts~.shop{padding-top:25px}
+ .mall-category-shortcuts~.filters{top:56px}
 }
