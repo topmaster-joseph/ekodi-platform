@@ -23,3 +23,9 @@ test('terms draft states the new model, discount framing, invoice after acceptan
   for(const s of ['가입비와 선불 적립금은 받지 않습니다','기본 요금 + 입력·공개 할인','상대 회원이 **수락하면**','7일 안에 두 사람의 결제가 모두 끝나지 않으면','14일','연락처 교환이 성사되기 전','결혼 상담·알선을 하지 않으며','무료회원','15,000원','150,000원'])assert.ok(terms.includes(s),s);
   assert.doesNotMatch(terms,/적게 입력·공개할수록 (?:높|비싸)/);
 });
+test('owner decision 2026-10-31: no refund after use on mid-term cancellation is disclosed before purchase; statutory 7-day withdrawal kept',async()=>{
+  const app=await readFile(new URL('../sites/ekodi-singles/public/app.js',import.meta.url),'utf8');
+  assert.match(terms,/중도에 해지하는 경우 남은 기간은 환불하지 않습니다/);
+  assert.match(terms,/7일 이내에 구독 기능을 전혀 이용하지 않았다면 전액 환불/);
+  assert.match(app,/중도에 해지해도 남은 기간은 환불되지 않습니다/);
+});

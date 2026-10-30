@@ -459,6 +459,7 @@ function subscriptionButtons(box,h){
 async function showJoin(h){
  const box=text('section','','paywall');box.append(text('h3','유료회원 시작 · 기간제 구독권 (가입비 없음)'));
  paragraph(box,'결제수단은 계좌이체입니다. 구독권을 고르면 주문번호가 발급됩니다. 입금하고 "계좌이체 완료 신고"를 누르면 운영자가 은행 내역과 대조해 확인하고, 확인되는 즉시 구독이 시작됩니다.');
+ paragraph(box,'구독을 이용하기 시작한 뒤 중도에 해지해도 남은 기간은 환불되지 않습니다. 결제 후 7일 이내 이용하지 않았다면 청약철회로 전액 환불됩니다.');
  let member=null;try{member=(await api('/me')).member}catch{}
  if(!member){paragraph(box,'먼저 "내 정보"에서 참여 동의를 저장해 주세요.');box.append(button('참여 동의하러 가기',()=>location.assign('/singles/my'),'primary'));h.append(box);return}
  if(!member.adult_verified){
