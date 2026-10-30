@@ -38,8 +38,8 @@
           "sizeBytes": 1559381
         },
         "epub": {
-          "sha256": "4e9f190cc26423ba956450af1f815311b5d3e5bc9a29ac75e3250f5a01969e2c",
-          "sizeBytes": 77110
+          "sha256": "7c310cf075b8bd78e0412464bff944192263c8ff9ebf67a53b627310d53cdbc1",
+          "sizeBytes": 77109
         },
         "pdf": {
           "sha256": "3bb458c336ce722119321ddac93cda9991a22ae35bd59487e8bf99c6c65a187b",
@@ -50,7 +50,8 @@
         "11Q13 separated textual/legal/social-history evidence levels",
         "Luke 4 audience-reception argument revised",
         "3 Sloan footnote title spelling corrections; other 52 footnotes unchanged",
-        "native DOCX and EPUB each preserve 55 references and notes"
+        "native DOCX and EPUB each preserve 55 references and notes",
+        "EPUB title, author and ko-KR metadata recovered using UTF-8 metadata file; structural link count unchanged"
       ],
       "mandatoryOutstanding": [
         "academic-footnotes-source-and-page-by-page",
@@ -86,8 +87,8 @@
           "sizeBytes": 51382
         },
         "epub": {
-          "sha256": "6c02a5d1b575ca17daa52639b7841c29523285bb5937b07f8e77188ca26532c1",
-          "sizeBytes": 68058
+          "sha256": "cebe80d95766c0ece8ca9a0a770646a2820dd8509cda2ae657f6d1b0e6e0343a",
+          "sizeBytes": 68186
         },
         "pdf": {
           "sha256": "8ce10108e9e763ec6805fe66dd735e1f34ae8a3e79c569c098b7920a105e4d33",
@@ -97,7 +98,8 @@
       "revisionNotes": [
         "replaced duplicate chapter-nine key scene with a duty-rotation story",
         "added voluntary refusal and privacy-aware invitation scene in chapter seven",
-        "maintained nine chapters, epilogue, fictional-character disclosure"
+        "maintained nine chapters, epilogue, fictional-character disclosure",
+        "EPUB title, author and ko-KR metadata recovered using UTF-8 metadata file; structural link count unchanged"
       ],
       "mandatoryOutstanding": [
         "author-literary-readthrough",
