@@ -16,6 +16,7 @@ on:
       - 'finance-entry-worker.js'
       - 'finance-banking-worker.js'
       - 'test/finance-banking.test.mjs'
+      - 'test/finance-banking-runtime.test.mjs'
       - 'tax-service-worker.js'
       - 'tax-invoice-free-first-worker.js'
       - 'tax-invoice-worker.js'
@@ -38,6 +39,7 @@ on:
       - 'finance-entry-worker.js'
       - 'finance-banking-worker.js'
       - 'test/finance-banking.test.mjs'
+      - 'test/finance-banking-runtime.test.mjs'
       - 'tax-service-worker.js'
       - 'tax-invoice-free-first-worker.js'
       - 'tax-invoice-worker.js'
@@ -97,7 +99,7 @@ jobs:
           node --check finance-worker.js
           node --check finance-entry-worker.js
           node --check finance-banking-worker.js
-          node --test test/finance-banking.test.mjs
+          node --test test/finance-banking.test.mjs test/finance-banking-runtime.test.mjs
           node --check tax-service-worker.js
           node --check tax-invoice-free-first-worker.js
           node --check tax-invoice-worker.js
