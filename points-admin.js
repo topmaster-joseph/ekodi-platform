@@ -84,9 +84,10 @@
     busy=true;const button=$('[data-point-refresh]');button.disabled=true;
     status('포인트 정책을 조회하고 있습니다.');
     try{
-      const response=await fetch('https://renzehysxirjilvdxacv.supabase.co/functions/v1/points-api/admin/overview',{
+      const response=await fetch('/api/control/points/overview',{
         method:'GET',cache:'no-store',
-        headers:{Authorization:'Bearer '+token,apikey:'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_'},
+        headers:{Authorization:'Bearer '+token},
+        credentials:'same-origin',
       });
       const body=await response.json().catch(()=>({}));
       if(!response.ok){
