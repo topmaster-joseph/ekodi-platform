@@ -91,3 +91,70 @@ test('recovery script is wired to budget guard, not a direct unbounded fetch loo
   assert.match(body,/prior\.target_url === source\.target_url/);
   assert.doesNotMatch(body,/const response = await fetch\('https:\/\/api\.github\.com/);
 });
+
+
+test('conditional authorized ETag reuses validated JSON only on unchanged 304',async()=>{
+  let calls=0;const seen=[];const metrics=[];
+  const client=createGitHubBudgetClient({...args,cacheMs:0,onMetric:m=>metrics.push(m),fetchImpl:async(_url,opts)=>{
+    seen.push(opts.headers);
+    calls++;
+    if(calls===1)return response(200,{statuses:[{context:'test',state:'pending'}]},{
+      etag:'"head-status-v1"','x-ratelimit-remaining':'300'
+    });
+    return response(304,null,{'x-ratelimit-remaining':'300'});
+  }});
+  const one=await client.json('/commits/'+'a'.repeat(40)+'/status');
+  const two=await client.json('/commits/'+'a'.repeat(40)+'/status');
+  assert.deepEqual(two,one);
+  assert.equal(calls,2);
+  assert.equal(seen[0]['if-none-match'],undefined);
+  assert.equal(seen[1]['if-none-match'],'"head-status-v1"');
+  assert.equal(client.snapshot().cacheHits,1);
+  assert.ok(metrics.some(m=>m.type==='not_modified'));
+});
+
+test('a bare 304 is rejected when no prior authorized 200 result exists',async()=>{
+  let calls=0;
+  const client=createGitHubBudgetClient({...args,fetchImpl:async()=>{
+    calls++;return response(304,null);
+  }});
+  await assert.rejects(client.json('/commits/'+'a'.repeat(40)+'/status'),
+    /unexpected 304/);
+  assert.equal(calls,1);
+});
+
+test('ETags never cache POST mutations or cross-contaminate other routes',async()=>{
+  const seen=[];
+  const client=createGitHubBudgetClient({...args,fetchImpl:async(url,opts)=>{
+    seen.push({url,headers:opts.headers,method:opts.method||'GET'});
+    return response(200,{route:url},{etag:'"route-v1"'});
+  }});
+  await client.json('/pulls/1');
+  await client.json('/pulls/2');
+  await client.json('/pulls/1');
+  await client.json('/statuses/'+'a'.repeat(40),{method:'POST',body:'{}'});
+  await client.json('/statuses/'+'a'.repeat(40),{method:'POST',body:'{}'});
+  assert.equal(seen[1].headers['if-none-match'],undefined);
+  assert.equal(seen[2].headers['if-none-match'],'"route-v1"');
+  assert.equal(seen[3].headers['if-none-match'],undefined);
+  assert.equal(seen[4].headers['if-none-match'],undefined);
+  assert.equal(client.snapshot().cacheHits,0);
+});
+
+test('quota exhausted after a cached ETag still fails closed',async()=>{
+  let calls=0;
+  const client=createGitHubBudgetClient({...args,fetchImpl:async()=>{
+    calls++;
+    return calls===1?response(200,{statuses:[]},{etag:'"safe"','x-ratelimit-remaining':'60'}):
+      response(403,{message:'API rate limit exceeded for installation'},{
+        'x-ratelimit-remaining':'0',
+        'x-ratelimit-reset':String(Math.floor((now+120000)/1000))
+      });
+  }});
+  await client.json('/commits/'+'a'.repeat(40)+'/status');
+  await assert.rejects(client.json('/commits/'+'a'.repeat(40)+'/status'),
+    e=>e instanceof GitHubRateDeferredError);
+  await assert.rejects(client.json('/commits/'+'a'.repeat(40)+'/status'),
+    e=>e instanceof GitHubRateDeferredError);
+  assert.equal(calls,2,'no stale success or repeated quota requests');
+});
