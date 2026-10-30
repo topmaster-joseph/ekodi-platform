@@ -98,7 +98,7 @@ test('Education QR sharing pages and gateway respect consent and no-unapproved-h
  assert.match(api,/ekodiInstructor\(token,env\)/);
  assert.match(api,/origin_forbidden/);
  assert.match(api,/#k='/,'QR join secret must remain in a URL fragment, not the network-visible query');
- assert.doesNotMatch(api,/joinUrl:.*+'&k='/,'do not leak join invitation into HTTP request URL');
+ assert.ok(!api.includes("'&k='"),'do not leak join invitation into HTTP request URL');
  assert.match(client,/location\.hash\.slice\(1\)/,'browser consumes private QR fragment');
  assert.match(client,/history\.replaceState/,'private QR fragment removed after reading');
  assert.match(api,/instructor_login_required/);
