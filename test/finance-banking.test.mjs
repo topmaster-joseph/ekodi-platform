@@ -92,3 +92,28 @@ test('superadmin and shared-site delivery include banking control and asset publ
   assert.match(build,/tenant-finance-admin\.js/);
   assert.match(site,/tenant-finance-admin\.js/);
 });
+
+test('pre-approval ledger: filters, monthly summary, export, import report and reversible account status',()=>{
+  assert.match(worker,/function transactionFilters\(actor,params\)/);
+  assert.match(worker,/where\.push\('t\.organization_id=\?'\)/);
+  assert.match(worker,/url\.pathname==='\/api\/finance\/banking\/transactions\/summary'/);
+  assert.match(worker,/url\.pathname==='\/api\/finance\/banking\/transactions\/export'/);
+  assert.match(worker,/bank\.transactions\.export/);
+  assert.match(worker,/if\(\/\^\[=\+\\-@\\t\\r\]\/\.test\(text\)\)/);
+  assert.match(worker,/BANK_CONNECTION_INACTIVE/);
+  assert.match(worker,/PROVIDER_CONNECTION_PLATFORM_MANAGED/);
+  assert.match(worker,/bank\.connection\.deactivate/);
+  assert.match(worker,/return\{imported:created\+duplicates,created,duplicates,skipped,received:rows\.length,errors\}/);
+  assert.doesNotMatch(worker,/DELETE FROM bank_connections|DELETE FROM bank_transactions/);
+  assert.match(tenantUi,/bankTxnFilterForm/);
+  assert.match(tenantUi,/월별 수입 · 지출/);
+  assert.match(tenantUi,/CSV 내보내기/);
+  assert.match(tenantUi,/response\.blob\(\)/);
+  assert.match(tenantUi,/bankAccountEditForm/);
+  assert.match(tenantUi,/사용 중지/);
+  assert.match(tenantUi,/파일연동 운영/);
+  assert.match(tenantUi,/조회 전용 연결/);
+  assert.match(tenantUi,/이미 있던 거래/);
+  assert.match(workspace,/tenant-finance-admin\.js\?v=20261031-ledger2/);
+  assert.match(church,/tenant-finance-admin\.js\?v=20261031-ledger2/);
+});
