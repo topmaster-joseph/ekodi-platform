@@ -3,8 +3,10 @@
 // self-authorize an unscheduled, unapproved, cancelled or embargoed edition.
 // Only a trusted publisher service-binding may verify the release, at request time.
 export const EXISTING_BOOKSTORE_EDITION_IDENTITIES=Object.freeze({
-  'BOOK-EKODI-000001':Object.freeze({title:'에코디언을 찾아서',author:'정찬균'}),
-  'BOOK-EKODI-000002':Object.freeze({title:'AI 시대의 진보와 빈곤',author:'정찬균'}),
+  'BOOK-EKODI-000001':Object.freeze({title:'에코디언을 찾아서',author:'정찬균',
+    catalogNo:'EB-MONO-001',fileKey:'BOOK-EKODI-000001/ebook.epub'}),
+  'BOOK-EKODI-000002':Object.freeze({title:'AI 시대의 진보와 빈곤',author:'정찬균',
+    catalogNo:'EB-MONO-002',fileKey:'BOOK-EKODI-000002/ebook.epub'}),
 });
 const SHA=/^sha256:[0-9a-f]{64}$/;
 const ID=/^[A-Za-z0-9][A-Za-z0-9._-]{2,159}$/;
@@ -12,7 +14,9 @@ const CHANNELS=new Set(['books','ekodimall']);
 
 export function existingEditionAllowed(book){
   const approved=EXISTING_BOOKSTORE_EDITION_IDENTITIES[book?.id];
-  return Boolean(approved&&book.title===approved.title&&book.author===approved.author);
+  return Boolean(approved&&book.title===approved.title&&book.author===approved.author &&
+    book.catalogNo===approved.catalogNo && !book.publisherRelease &&
+    (!book.directSale?.enabled || book.directSale.fileKey===approved.fileKey));
 }
 export function newEditionPointer(book) {
   const p=book?.publisherRelease;
