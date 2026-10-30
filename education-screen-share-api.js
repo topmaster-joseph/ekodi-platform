@@ -27,7 +27,7 @@ export async function educationScreenApi(request,env,{url=new URL(request.url)}=
   if(!initialized.ok)return response({ok:false,code:'room_create_failed'},503);
   const {expiresAt}=await initialized.json();
   return response({ok:true,id,hostKey,joinKey,expiresAt,
-   joinUrl:'https://ekodi.kr/edu/study/live/screen-share/?r='+id+'&k='+joinKey});
+   joinUrl:'https://ekodi.kr/edu/study/live/screen-share/?r='+id+'#k='+joinKey});
  }
  const m=new RegExp('^'+BASE+'rooms/([a-f0-9]{32})/(join|ws)$').exec(url.pathname);
  if(!m)return response({ok:false,code:'not_found'},404);
