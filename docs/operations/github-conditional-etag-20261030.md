@@ -24,3 +24,9 @@ Authentication, measured budget headers, rate-limit stop timing, permission reje
 References:
 - https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api
 - https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api
+
+## Same-job quota circuit for legacy required statuses
+
+A second scoped safety measure in `scripts/github-status-transient.sh` prevents unnecessary repeated GitHub REST status calls after **this exact GitHub Actions job** has already observed a verified primary/secondary quota error. The on-runner `RUNNER_TEMP` marker is keyed by run ID + attempt + job name, and contains no credentials or response body. On any subsequent call in that job the helper exits with code 22, leaving required checks blocked. Every job/attempt continues to require its own genuine GitHub response and authenticated required statuses; no fabricated success or release authorization is possible.
+
+The circuit only activates on HTTP 429, or HTTP 403 with measured `x-ratelimit-remaining: 0` or an explicit rate-limit response message. Permission-only 403, authentication 401, invalid 422 and transient 5xx retain their existing behavior. In particular, this does not refresh the budget or retry after its reset, and must not be used as an excuse to skip status publishing. Synthetic tests cover same-job repeated 403/429 and distinguish unrelated permission denials. The official GitHub App signed webhook / D1 shared admission / protected release are separate work items.
