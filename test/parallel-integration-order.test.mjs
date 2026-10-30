@@ -89,3 +89,14 @@ test('parallel conflict guard retries only explicit GitHub rate-limit responses 
   assert.match(workflow,/gh_retry pr list/);
   assert.match(workflow,/gh_retry pr view/);
 });
+
+test('primary installation quota exhaustion stops the conflict guard immediately, without bypassing it',()=>{
+  assert.match(workflow,/API rate limit exceeded for installation/);
+  assert.match(workflow,/installation primary quota exhausted; stop queries until reset/);
+  assert.match(workflow,/return "\$status"/);
+  const hardStop=workflow.indexOf('API rate limit exceeded for installation');
+  const retries=workflow.indexOf('if [[ "\$attempt" -ge 4 ]]');
+  assert.ok(hardStop>=0&&retries>hardStop);
+  assert.match(workflow,/secondary rate\|abuse detection/);
+  assert.doesNotMatch(workflow,/exit 0.*quota exhausted/);
+});
