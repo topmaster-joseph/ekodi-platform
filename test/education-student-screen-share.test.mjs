@@ -140,3 +140,33 @@ test('canonical /edu service binding preserves native websocket handshake withou
  const canonical=await read('canonical-surface-router.js');
  assert.match(canonical,/if\(response\.status===101&&response\.webSocket\)return response/);
 });
+
+
+test('real QR screenshot fallback fixture has valid PNG CRCs and decodable IDAT',async()=>{
+ const {inflateSync}=await import('node:zlib');
+ const source=await read('scripts/verify-education-screen-share-native.mjs');
+ const raw=source.match(/const png=Buffer\.from\('([A-Za-z0-9+/=]+)','base64'\)/)?.[1];
+ assert.ok(raw,'native 1x1 learner PNG fixture must exist');
+ const bytes=Buffer.from(raw,'base64');
+ assert.equal(bytes.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
+ let offset=8,hasImage=false,hasEnd=false;
+ function crc32(chunk){
+  let c=0xffffffff;
+  for(const n of chunk){
+   c^=n;
+   for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0);
+  }
+  return (c^0xffffffff)>>>0;
+ }
+ while(offset<bytes.length){
+  assert.ok(offset+12<=bytes.length,'PNG chunk header is complete');
+  const len=bytes.readUInt32BE(offset),type=bytes.toString('ascii',offset+4,offset+8);
+  const end=offset+12+len;
+  assert.ok(end<=bytes.length,'PNG chunk not truncated');
+  assert.equal(bytes.readUInt32BE(offset+8+len),crc32(bytes.subarray(offset+4,offset+8+len)),type+' checksum');
+  if(type==='IDAT'){hasImage=true;assert.ok(inflateSync(bytes.subarray(offset+8,offset+8+len)).length>0);}
+  if(type==='IEND')hasEnd=true;
+  offset=end;
+ }
+ assert.ok(hasImage&&hasEnd,'PNG has decodable IDAT and IEND chunks');
+});

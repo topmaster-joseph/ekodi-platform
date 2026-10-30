@@ -183,3 +183,16 @@ test('EKODI-native Chromium acceptance targets registered service with no persis
     execFileSync(process.execPath,['--check',fileURLToPath(new URL('../'+p,import.meta.url))],{stdio:'pipe'});
   }
 });
+
+
+test('consent QR room, signaling API and native classroom probe are release-critical',()=>{
+ const paths=['education-screen-room.js','education-screen-share-api.js',
+  'scripts/verify-education-screen-share-native.mjs','test/education-student-screen-share.test.mjs'];
+ const workflow=read('.github/workflows/deploy-education.yml');
+ for(const path of paths){
+  assert.equal(educationReleaseChanged([path]),true,path);
+  assert.equal(workflow.split("'"+path+"'").length-1,2,
+   'Education PR and main push protected triggers both include '+path);
+ }
+ assert.equal(educationReleaseChanged(['docs/unrelated-team.md']),false);
+});
