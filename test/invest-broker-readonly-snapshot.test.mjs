@@ -53,6 +53,8 @@ test('stale, future, invalid and mismatched broker environment snapshots are blo
  assert.equal(run(base({capturedAt:'2026-10-30T00:54:00.000Z'})).error,'STALE_OR_FUTURE_SNAPSHOT');
  assert.equal(run(base({capturedAt:'2026-10-30T01:01:00.000Z'})).error,'STALE_OR_FUTURE_SNAPSHOT');
  assert.equal(run(base({capturedAt:'not-a-time'})).error,'INVALID_CAPTURE_TIME');
+ assert.equal(run(base({capturedAt:'2026-02-30T00:59:00.000Z'})).error,'INVALID_CAPTURE_TIME');
+ assert.equal(normalizeBrokerReadOnlySnapshot(base({capturedAt:'2026-10-29T00:59:00.000Z'}),{now:NOW,maxAgeMs:86400000}).error,'STALE_OR_FUTURE_SNAPSHOT');
  assert.equal(run(base({brokerId:'ibkr'})).error,'BROKER_ENVIRONMENT_NOT_ALLOWED');
  assert.equal(run(base({brokerId:'toss',environment:'paper'})).error,'BROKER_ENVIRONMENT_NOT_ALLOWED');
  assert.equal(run(base({environment:'test'})).error,'BROKER_ENVIRONMENT_NOT_ALLOWED');
@@ -87,6 +89,7 @@ test('comparison is limited to the same account, currency, environment, and incr
   assert.equal(compareBrokerReadOnlySnapshots(original,swapped).error,'CROSS_ACCOUNT_OR_ENVIRONMENT');
  }
  assert.equal(compareBrokerReadOnlySnapshots(original,original).error,'DUPLICATE_SNAPSHOT');
+ assert.equal(compareBrokerReadOnlySnapshots({...original,scheme:'forged'},changed).error,'SNAPSHOT_NOT_ACCEPTED');
  const earlier=run(base({snapshotRef:Y,capturedAt:'2026-10-30T00:58:00.000Z'}));
  assert.equal(compareBrokerReadOnlySnapshots(original,earlier).error,'NON_MONOTONIC_SNAPSHOT');
 });
