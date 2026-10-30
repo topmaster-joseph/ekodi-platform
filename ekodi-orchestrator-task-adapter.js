@@ -304,7 +304,14 @@ export async function handleOrchestratorCompletionReconciliation(request,env,{fe
   const action=text(body.action,40).toLowerCase();
 
   if(action==='candidates'){
-    const result=await db.prepare(`SELECT task_id,branch_ref,state,updated_at,reconciliation_checked_at FROM ekodi_orchestrator_tasks
+    const result=await db.prepare(`SELECT task_id,branch_ref,state,updated_at,reconciliation_checked_at,
+        EXISTS(SELECT 1 FROM ekodi_orchestrator_task_events e
+          WHERE e.task_id=ekodi_orchestrator_tasks.task_id
+            AND e.reason='verified_preproduction_evidence_recorded') AS staging_attested,
+        EXISTS(SELECT 1 FROM ekodi_orchestrator_task_events e
+          WHERE e.task_id=ekodi_orchestrator_tasks.task_id
+            AND e.reason='final_promotion_approval_recorded') AS owner_confirmation_recorded
+        FROM ekodi_orchestrator_tasks
       WHERE deployment_requested=1 AND permission_class='delegated'
       AND state NOT IN ('completed','blocked','failed','cancelled')
       AND branch_ref IS NOT NULL
@@ -316,7 +323,9 @@ export async function handleOrchestratorCompletionReconciliation(request,env,{fe
     if(rows.length)await db.batch(rows.map(row=>db.prepare(
       'UPDATE ekodi_orchestrator_tasks SET reconciliation_checked_at=? WHERE task_id=? AND state NOT IN (\'completed\',\'blocked\',\'failed\',\'cancelled\')'
     ).bind(checkedAt,row.task_id)));
-    return new Response(JSON.stringify({ok:true,authority:'ekodi-orchestrator',selection:'fair-round-robin',checkedAt,candidates:rows.map(row=>({taskId:row.task_id,branchRef:row.branch_ref,state:row.state,updatedAt:row.updated_at}))}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    return new Response(JSON.stringify({ok:true,authority:'ekodi-orchestrator',selection:'fair-round-robin',checkedAt,candidates:rows.map(row=>({taskId:row.task_id,branchRef:row.branch_ref,state:row.state,updatedAt:row.updated_at,
+      stagingAttested:Number(row.staging_attested)===1,
+      ownerConfirmationRecorded:Number(row.owner_confirmation_recorded)===1}))}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
   }
 
   if(action==='attest_staging'){
