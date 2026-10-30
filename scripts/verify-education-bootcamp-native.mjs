@@ -53,7 +53,7 @@ async function checkProfile(browser,profile){
     isMobile:profile.mobile,hasTouch:profile.mobile,acceptDownloads:true,
     locale:'ko-KR',colorScheme:'dark'
   });
-  observeCloudflareJsDetections(context);
+  const flushCloudflareJsDetectionAudits=observeCloudflareJsDetections(context);
   const page=await context.newPage();
   page.on('console',message=>{
     if(message.type()!=='error')return;
@@ -146,6 +146,10 @@ async function checkProfile(browser,profile){
     // are not present in an earlier transport observer snapshot. Hash-audit only
     // the exact recognized Cloudflare JSD snippet shape before final verdict.
     trustCloudflareJsDetections(await page.content());
+    // Some Cloudflare JSD reports originate in same-origin child frames.
+    // Do not decide whether a blocked inline hash is trusted until every
+    // captured document response audit resolves; unknown hashes still fail.
+    await flushCloudflareJsDetectionAudits();
     const known=report.observedSecurityBlocks.filter(x=>x.profile===profile.name);
     const securityResult=verifyKnownSecurityBlocks({
       consoleBlocks:known.filter(x=>x.type==='console').map(x=>({message:x.message})),
