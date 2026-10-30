@@ -35,7 +35,8 @@ const fail=(reason,other={})=>({status:'blocked',reason,...other});
  * Approval of this registry is NOT pastoral approval of a sermon or slides.
  */
 export function worshipPreparation(date,registry){
-  if(typeof date!=='string'||!ISO_DATE.test(date)||Number.isNaN(Date.parse(date+'T00:00:00Z')))
+  if(typeof date!=='string'||!ISO_DATE.test(date)||Number.isNaN(Date.parse(date+'T00:00:00Z'))||
+      new Date(date+'T00:00:00Z').toISOString().slice(0,10)!==date)
     return fail('invalid_worship_date');
   const month=date.slice(0,7),day=Number(date.slice(8));
   if(registry?.status!=='approved'||registry?.month!==month||!Array.isArray(registry?.readings)||
