@@ -79,6 +79,22 @@ test('worker literature route is public GET only with no-store and bounded input
  assert.equal(noPrivate.status,503);
 });
 
+test('worker forwards successful Crossref metadata without requiring identity or exposing secrets',async()=>{
+ const oldFetch=globalThis.fetch;
+ globalThis.fetch=mocked({message:{items:[record]}});
+ try{
+  const response=await worker.fetch(new Request('https://ekodi.kr/research/api/literature?q=technology%20acceptance%20model'),{});
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('cache-control'),'no-store');
+  const body=await response.json();
+  assert.equal(body.ok,true);
+  assert.equal(body.source,'Crossref');
+  assert.equal(body.records.length,1);
+  assert.equal(body.records[0].doi,'10.1000/abc-2026');
+  assert.equal('aiGenerated' in body,false);
+ }finally{globalThis.fetch=oldFetch;}
+});
+
 test('public search is safely rendered and distinctly labelled as metadata only',async()=>{
  const html=await readFile(new URL('../education/research/index.html',import.meta.url),'utf8');
  const app=await readFile(new URL('../education/research/app.js',import.meta.url),'utf8');
