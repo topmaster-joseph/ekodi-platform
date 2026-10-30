@@ -8,6 +8,7 @@
 // • 결제 승인 후 내 서재 권한(books_entitlements)을 부여하고, 매출을 출판 재무 원장
 //   (books_finance_transactions · ekodi-direct 채널)에 기록한다.
 import * as ekodipay from './ekodipay-core.js';
+import { saleReadiness } from './books-sale-readiness.js';
 import { complimentaryAudiobookPolicy, availableAudiobook, audioChapterFor, validateAudioChapter, MAX_AUDIO_CHAPTER_BYTES, audioSha256 } from './books-audiobook.js';
 
 export const ORDER_PREFIX = 'EKB';
@@ -147,13 +148,16 @@ export async function quote(env, request, bookId) {
   const operator = Boolean(buyer && operatorEmails(env).has(buyer.email));
   const hasFile = await fileReady(env, book);
   const audiobook = await availableAudiobook(env, book);
+  const readiness = saleReadiness(book);
   return {
     status: 200,
     data: {
       book: { id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', format: book.format || [], edition: book.edition || '', links: { upaper: book.links?.upaper || '', google: book.links?.google || '', amazon: book.links?.amazon || '' } },
       signedIn: Boolean(buyer), buyerEmail: buyer?.email || '', tier: tierId, owned, price, audiobook,
       tiers: (policy.tiers || []).map(t => ({ id: t.id, label: t.label, discountRate: t.discountRate || 0, description: t.description || '', price: priceFor(book, policy, t.id)?.amount ?? null })),
-      checkout: { open: pay.ready && ((pay.mode === 'live' && hasFile) || operator), mode: pay.mode, testOnly: pay.ready && pay.mode !== 'live', fileReady: hasFile, operator },
+      // BOOKS-SALE-READINESS-001: 출판 공정이 끝나지 않은 도서는 운영자라도 결제창을 열지 않는다.
+      saleReadiness: readiness,
+      checkout: { open: readiness.ready && pay.ready && ((pay.mode === 'live' && hasFile) || operator), mode: pay.mode, testOnly: pay.ready && pay.mode !== 'live', fileReady: hasFile, operator, saleReady: readiness.ready, saleStatus: readiness.label },
     },
   };
 }
@@ -170,6 +174,8 @@ export async function createOrder(env, request, body, now = new Date()) {
   if (await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL').bind(buyer.userId, book.id).first()) {
     return { status: 409, data: { error: '이미 내 서재에 있는 도서입니다.', code: 'ALREADY_OWNED' } };
   }
+  const readiness = saleReadiness(book);
+  if (!readiness.ready) return { status: 409, data: { error: `${readiness.label} 도서입니다. 판매가 열리면 바로 구매하실 수 있습니다.`, code: 'BOOK_NOT_SALE_READY', saleStatus: readiness.label } };
   if (!operatorEmails(env).has(buyer.email) && !(await fileReady(env, book))) {
     return { status: 409, data: { error: '전자책 파일을 준비하고 있습니다. 준비되면 바로 구매하실 수 있습니다.', code: 'FILE_PREPARING' } };
   }
@@ -211,6 +217,11 @@ export async function confirm(env, { paymentKey, orderId, amount }, now = new Da
   }
   if (order.expires_at < now.toISOString()) return { status: 410, data: { error: '결제 시간이 지났습니다. 다시 구매해 주세요.' } };
   if (!(await payments(env)).ready) return { status: 503, data: { error: '결제 승인 서비스가 준비되지 않았습니다.' } };
+  // 주문 이후 판매 준비 상태가 철회될 수 있으므로 청구 전에 다시 확인한다(결제 승인 호출 없음).
+  if (!saleReadiness((await loadCatalog(env))?.books?.find(b => b.id === order.book_id)).ready) {
+    await audit(env, orderId, 'books-sale-readiness', 'payment.blocked_not_sale_ready', {});
+    return { status: 409, data: { error: '판매 준비가 끝나지 않은 도서라 결제를 승인하지 않았습니다. 청구되지 않습니다.', code: 'BOOK_NOT_SALE_READY' } };
+  }
   let payment;
   try {
     payment = await toss(env, profileId, '/v1/payments/confirm', { method: 'POST', body: { paymentKey, orderId, amount: Math.trunc(Number(order.amount)) }, idempotencyKey: `ekb-confirm-${orderId}` });
