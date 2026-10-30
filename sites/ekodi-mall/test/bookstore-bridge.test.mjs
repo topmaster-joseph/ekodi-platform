@@ -23,8 +23,8 @@ test('every bookstore title is mirrored into the 책·배움 corner', async () =
 
 test('a sale link opens a purchase button; no link never pretends to sell', () => {
   const [onSale, pending] = bookstoreProducts({ books: [
-    { id: 'BOOK-EKODI-000001', catalogNo: 'EB-1', title: '에코디언을 찾아서', author: '정찬균', listPrice: { amount: 9900 }, links: { upaper: 'https://ekodi.upaper.kr/content/1' } },
-    { id: 'BOOK-EKODI-000002', catalogNo: 'EB-2', title: 'AI 시대의 진보와 빈곤', author: '정찬균', listPrice: { amount: 9900 }, links: {}, detailUrl: '/#catalog' }
+    { id: 'BOOK-EKODI-000001', catalogNo: 'EB-MONO-001', title: '에코디언을 찾아서', author: '정찬균', listPrice: { amount: 9900 }, links: { upaper: 'https://ekodi.upaper.kr/content/1' } },
+    { id: 'BOOK-EKODI-000002', catalogNo: 'EB-MONO-002', title: 'AI 시대의 진보와 빈곤', author: '정찬균', listPrice: { amount: 9900 }, links: {}, detailUrl: '/#catalog' }
   ] });
   assert.equal(onSale.action.type, 'external');
   assert.equal(onSale.status, '판매 중');
@@ -34,7 +34,7 @@ test('a sale link opens a purchase button; no link never pretends to sell', () =
 });
 
 test('direct-sale titles send mall buyers to the bookstore checkout', () => {
-  const [direct] = bookstoreProducts({ books: [{ id: 'BOOK-EKODI-000001', catalogNo: 'EB-1', title: '에코디언을 찾아서', author: '정찬균', listPrice: { amount: 9900 }, links: { upaper: 'https://ekodi.upaper.kr/content/1' }, directSale: { enabled: true } }] });
+  const [direct] = bookstoreProducts({ books: [{ id: 'BOOK-EKODI-000001', catalogNo: 'EB-MONO-001', title: '에코디언을 찾아서', author: '정찬균', listPrice: { amount: 9900 }, links: { upaper: 'https://ekodi.upaper.kr/content/1' }, directSale: { enabled: true, fileKey: 'BOOK-EKODI-000001/ebook.epub' } }] });
   assert.equal(direct.action.url, 'https://ekodi.kr/books/buy/?book=BOOK-EKODI-000001&from=mall');
   assert.equal(direct.action.label, '에코디서점에서 구매하기');
 });
