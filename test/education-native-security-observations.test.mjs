@@ -159,7 +159,32 @@ test('native CSP decision awaits Cloudflare detector in every document including
   assert.ok(runner.indexOf('await flushCloudflareJsDetectionAudits()')<runner.indexOf('verifyKnownSecurityBlocks({'));
 });
 
-test('a failing native probe surfaces its reason as bounded, sanitized workflow annotations',async()=>{
+test('read-only live Cloudflare CSP diagnostics reveal hashes and structure, never script bodies',async()=>{
+ const {summarizeInlineScriptHashes}=await import('../scripts/diagnose-education-cloudflare-inline.mjs');
+ const {createHash}=await import('node:crypto');
+ const body="window.__CF$cv$params={r:'b1c2d3e4f5a6b7c8',t:'MTc5MjgzOTA5Nw==',u:'1'};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
+ const hash=createHash('sha256').update(body).digest('base64');
+ const evidence=summarizeInlineScriptHashes('<main>public</main><script>'+body+'</script>',[hash]);
+ assert.equal(evidence.length,1);
+ assert.equal(evidence[0].sha256,hash);
+ assert.equal(evidence[0].blocked,true);
+ assert.equal(evidence[0].currentStrictShape,true);
+ assert.equal(evidence[0].hasCfParams,true);
+ assert.equal(evidence[0].hasSameOriginJsdLoader,true);
+ assert.equal(evidence[0].hasIframeWrapper,false);
+ assert.equal('body' in evidence[0],false,'no inline executable payload in logs');
+ assert.equal('token' in evidence[0],false,'no raw Cloudflare response tokens in logs');
+ const unknown="alert('unexpected')";
+ const rejected=summarizeInlineScriptHashes('<script>'+unknown+'</script>');
+ assert.equal(rejected[0].currentStrictShape,false);
+ assert.equal(rejected[0].hasCfParams,false);
+ const code=read('scripts/diagnose-education-cloudflare-inline.mjs');
+ assert.match(code,/route\\.abort\\('blockedbyclient'\\)/);
+ assert.doesNotMatch(code,/bypassCSP|ignoreHTTPSErrors:\\s*true|route\\.fulfill\\(/);
+ const workflow=read('.github/workflows/education-release-continuity.yml');
+ assert.match(workflow,/Read-only live Cloudflare inline CSP fingerprint/);
+ assert.match(workflow,/continue-on-error: true/);
+});\n\ntest('a failing native probe surfaces its reason as bounded, sanitized workflow annotations',async()=>{
   const {annotationsFrom}=await import('../scripts/education-probe-annotate.mjs');
   const lines=annotationsFrom({error:'boom\nnext',httpErrors:Array.from({length:6},(_,i)=>({profile:'mobile',status:404,url:'https://ekodi.kr/x'+i}))},'education-native');
   assert.equal(lines[0],'::error title=education-native failed::boom%0Anext');
