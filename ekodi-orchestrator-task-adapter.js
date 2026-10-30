@@ -144,7 +144,7 @@ export async function collectOrchestratorCompletionEvidence({taskId:id,branchRef
 // OIDC event must have a *current* exact-artifact super-admin approval before
 // post-production completion is accepted. Legacy tasks without staging audit
 // remain on the existing independent production-verification path.
-async function stagingPromotionApprovalIsValid(db,row,evidence){
+export async function stagingPromotionApprovalIsValid(db,row,evidence){
   let stageRow;
   try{
     stageRow=await db.prepare(
