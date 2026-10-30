@@ -26,3 +26,8 @@
 - The protected convergence runner then synchronized latest main, creating head `800cd85f4b713c2fa9785a447c3c12add7b9f9ed`. GitHub's bot-triggered checks for that head returned `action_required` without execution; the old head's successes cannot certify the new head.
 - This documentation-only edit requests authentic checks on the synchronized branch. No source script, trigger policy, credentials, owner gate, production runtime or deployment flags change.
 - Do not merge or send a recovery issue command until new required checks are green and the official PR is protected-merged.
+
+## Second bounded protected-main synchronization verification
+- After the first recovery CI renewal, the EKODI convergence branch synchronized a subsequent protected main change at `33f421a89ca37dafeabad9503a899ca3d9f9293f`.
+- Bot-created pull_request check runs remained action_required. This file-only change re-triggers genuine CI on the latest synchronized candidate; it changes no execution, authorization, protected release, rollback or data collection behavior.
+- If source check status remains blocked, preserve the operational incident rather than claiming production success.
