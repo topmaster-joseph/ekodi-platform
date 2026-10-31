@@ -18,4 +18,10 @@ directory = "./publishing"
 binding = "ASSETS"
 run_worker_first = true
 
-# 예약 준비 크론은 PUBLISH_DB 바인딩이 생긴 뒤 EKODI Orchestrator 승인 스케줄러로 연결한다(바인딩 없이 15분마다 빈 호출을 만들지 않음).
+# PUBLISH-PIPELINE-001: 출판 전용 원고·승인 원장(서점·결제 DB와 분리). 2026-10-31 사용자 승인으로 생성.
+[[d1_databases]]
+binding = "PUBLISH_DB"
+database_name = "ekodi-publishing"
+database_id = "658ba024-d5fa-4568-8679-07bf3f3b90ac"
+
+# 예약 준비는 크론을 새로 만들지 않고 EKODI Orchestrator 승인 스케줄러가 맡는다(§13 중복 스케줄러 금지).
