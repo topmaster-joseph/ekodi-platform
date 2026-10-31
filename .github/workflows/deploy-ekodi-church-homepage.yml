@@ -473,7 +473,8 @@ jobs:
                   const live=await page.evaluate(()=>({
                     hiddenHero:getComputedStyle(document.querySelector('.hero')).display==='none',
                     cards:document.querySelectorAll('#online .online-triad--broadcast .ministry-card').length,
-                    liveLink:!!document.querySelector('#online a[href="/live/church/"]'),
+                    // ekodi-church#123 plays shared EKODI Live inline, with a /live/church/ viewer fallback link.
+                    liveLink:!!document.querySelector('#online a[href="/live/church/"]')||(!!document.querySelector('#online #churchInlineLiveFrame')&&!!document.querySelector('#online a[href="/live/church/?mode=viewer"]')),
                     oldVideo:!!document.querySelector('a[href*="meet.jit.si"]')
                   }));
                   assert.equal(live.hiddenHero,true);
