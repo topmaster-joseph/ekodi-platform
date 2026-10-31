@@ -13,6 +13,7 @@ const DEFAULT_TARGETS=['en','zh','ja','vi','mn'];
 const el=(tag,attrs={},children=[])=>{const node=document.createElement(tag);for(const [k,v] of Object.entries(attrs)){if(v==null||v===false)continue;if(k==='text')node.textContent=v;else if(k.startsWith('on'))node.addEventListener(k.slice(2),v);else node.setAttribute(k,v===true?'':String(v))}for(const child of [].concat(children))if(child!=null)node.append(child);return node};
 function token(){try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return ''}}
 async function api(path,{method='GET',payload}={}){
+  try{await window.EKODI_LIVE_AUTH?.()}catch{}
   const headers={accept:'application/json'};
   if(token())headers.authorization=`Bearer ${token()}`;
   if(payload!==undefined)headers['content-type']='application/json';
@@ -22,7 +23,7 @@ async function api(path,{method='GET',payload}={}){
   return data;
 }
 const q=`tenant=${encodeURIComponent(tenant)}`;
-const ERR={authentication_required:'진행자 로그인이 필요합니다.',tenant_host_permission_required:'이 사이트의 방송 관리자 권한이 필요합니다.',stream_not_configured:'동시송출 엔진(Cloudflare Stream)이 아직 켜지지 않았습니다.',invalid_stream_key:'스트림 키를 다시 확인해 주세요.',ingest_host_not_allowed_for_platform:'선택한 플랫폼의 송출 주소가 아닙니다.',ingest_url_must_be_rtmp:'송출 주소는 rtmp:// 또는 rtmps:// 로 시작해야 합니다.',ingest_url_must_be_rtmps:'이 채널은 rtmps:// 주소만 사용할 수 있습니다.',target_language_required:'통역할 언어를 하나 이상 고르세요.',caption_session_ended:'통역 자막이 종료되었습니다.',stream_input_not_created:'먼저 송출 주소를 만드세요.',simulcast_destination_limit:'동시송출 채널은 최대 10개입니다.',relay_device_not_bound:'먼저 송출 PC를 지정하세요.',relay_binding_super_admin_required:'송출 PC 지정은 에코디 최고관리자만 할 수 있습니다.',relay_device_not_found:'송출 PC를 찾을 수 없습니다.'};
+const ERR={authentication_required:'로그인 세션이 만료됐습니다. 다시 로그인해 주세요.',tenant_host_permission_required:'이 사이트의 방송 관리자 권한이 필요합니다.',stream_not_configured:'동시송출 엔진(Cloudflare Stream)이 아직 켜지지 않았습니다.',invalid_stream_key:'스트림 키를 다시 확인해 주세요.',ingest_host_not_allowed_for_platform:'선택한 플랫폼의 송출 주소가 아닙니다.',ingest_url_must_be_rtmp:'송출 주소는 rtmp:// 또는 rtmps:// 로 시작해야 합니다.',ingest_url_must_be_rtmps:'이 채널은 rtmps:// 주소만 사용할 수 있습니다.',target_language_required:'통역할 언어를 하나 이상 고르세요.',caption_session_ended:'통역 자막이 종료되었습니다.',stream_input_not_created:'먼저 송출 주소를 만드세요.',simulcast_destination_limit:'동시송출 채널은 최대 10개입니다.',relay_device_not_bound:'먼저 송출 PC를 지정하세요.',relay_binding_super_admin_required:'송출 PC 지정은 에코디 최고관리자만 할 수 있습니다.',relay_device_not_found:'송출 PC를 찾을 수 없습니다.'};
 const say=error=>ERR[error?.message]||ERR[error?.data?.error]||'처리하지 못했습니다. 잠시 뒤 다시 시도하세요.';
 
 /* ---------------- viewer captions ---------------- */
@@ -105,7 +106,13 @@ function setupConsole(){
   const host=document.querySelector('[data-live-interpretation-console]');if(!host)return;
   const st={session:null,recog:null,listening:false,queue:Promise.resolve()};
   const sourceSelect=el('select',{'aria-label':'원어'},Object.entries(LANGS).map(([code,[label]])=>el('option',{value:code,text:label,selected:code==='ko'})));
-  const targets=el('div',{class:'live-lang-picks'},Object.entries(LANGS).map(([code,[label]])=>el('label',{},[el('input',{type:'checkbox',value:code,checked:DEFAULT_TARGETS.includes(code)}),el('span',{text:label})])));
+  const targetSummary=el('summary',{class:'live-lang-summary','aria-label':'변환어 선택'});
+  const targetList=el('div',{class:'live-lang-picks live-lang-menu',role:'group','aria-label':'변환어'},Object.entries(LANGS).map(([code,[label]])=>el('label',{},[el('input',{type:'checkbox',value:code,checked:DEFAULT_TARGETS.includes(code)}),el('span',{text:label})])));
+  const targets=el('details',{class:'live-lang-dropdown'},[targetSummary,targetList]);
+  const syncTargets=()=>{const picked=[...targetList.querySelectorAll('input')].filter(x=>x.checked&&!x.disabled);const names=picked.map(x=>LANGS[x.value][0]);targetSummary.textContent=names.length?(names.length>2?`${names.slice(0,2).join(', ')} 외 ${names.length-2}개`:names.join(', ')):'변환어를 선택하세요'};
+  const syncSourceLock=()=>{for(const box of targetList.querySelectorAll('input')){const same=box.value===sourceSelect.value;box.closest('label').classList.toggle('is-source',same);if(same)box.checked=false}syncTargets()};
+  targetList.addEventListener('change',syncTargets);targetSummary.addEventListener('click',e=>{if(targets.classList.contains('is-locked'))e.preventDefault()});sourceSelect.addEventListener('change',syncSourceLock);
+  document.addEventListener('click',e=>{if(targets.open&&!targets.contains(e.target))targets.open=false});
   const state=el('span',{class:'live-addon-state',text:'대기'});
   const preview=el('p',{class:'live-caption-preview',text:'통역 자막을 시작하면 여기 원문과 번역이 보입니다.'});
   const startBtn=el('button',{type:'button',class:'primary',text:'통역 자막 시작'});
@@ -113,9 +120,10 @@ function setupConsole(){
   const input=el('input',{maxlength:'400',autocomplete:'off',placeholder:'직접 입력 후 Enter',disabled:true});
   const form=el('form',{class:'chat-form'},[input,el('button',{type:'submit',text:'보내기',disabled:true})]);
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  syncSourceLock();
   const note=el('small',{class:'live-addon-note',text:SR?'설교 음성이 들리는 기기에서 자동 인식을 켜세요. 통역자가 직접 입력해도 됩니다.':'이 브라우저는 음성 인식을 지원하지 않습니다. Chrome·Edge를 쓰거나 직접 입력하세요.'});
-  host.replaceChildren(el('div',{class:'source-head'},[el('strong',{text:'통역 상태'}),state]),el('label',{class:'live-inline'},[el('span',{text:'원어'}),sourceSelect]),targets,el('div',{class:'live-console-actions'},[startBtn,micBtn]),form,preview,note);
-  const setRunning=on=>{startBtn.textContent=on?'통역 자막 종료':'통역 자막 시작';micBtn.disabled=!on||!SR;input.disabled=!on;form.querySelector('button').disabled=!on;sourceSelect.disabled=on;for(const box of targets.querySelectorAll('input'))box.disabled=on};
+  host.replaceChildren(el('div',{class:'source-head'},[el('strong',{text:'통역 상태'}),state]),el('div',{class:'live-lang-row'},[el('label',{class:'live-inline'},[el('span',{text:'원어'}),sourceSelect]),el('div',{class:'live-inline'},[el('span',{text:'변환어'}),targets])]),el('div',{class:'live-console-actions'},[startBtn,micBtn]),form,preview,note);
+  const setRunning=on=>{startBtn.textContent=on?'통역 자막 종료':'통역 자막 시작';micBtn.disabled=!on||!SR;input.disabled=!on;form.querySelector('button').disabled=!on;sourceSelect.disabled=on;targets.classList.toggle('is-locked',on);if(on)targets.open=false;for(const box of targetList.querySelectorAll('input'))box.disabled=on};
   const send=text=>{const clean=String(text||'').trim();if(!clean||!st.session)return;st.queue=st.queue.then(async()=>{try{const data=await api(`/captions/sessions/${encodeURIComponent(st.session.id)}/segments`,{method:'POST',payload:{text:clean}});const t=data.translations.map(x=>`${x.lang.toUpperCase()}${x.status==='failed'?'(원문)':''}: ${x.text}`).join('\n');preview.textContent=`${data.source.text}\n${t}`;state.textContent=`송출 중 · #${data.seq} · ${data.latencyMs}ms`}catch(error){state.textContent=say(error);if(error.message==='caption_session_ended'){st.session=null;stopMic();setRunning(false)}}})};
   function stopMic(){st.listening=false;try{st.recog?.stop()}catch{}micBtn.setAttribute('aria-pressed','false');micBtn.textContent='음성 자동 인식'}
   function startMic(){
@@ -134,7 +142,7 @@ function setupConsole(){
     try{
       if(st.session){stopMic();await api(`/captions/sessions/${encodeURIComponent(st.session.id)}/end`,{method:'POST',payload:{}}).catch(()=>{});st.session=null;setRunning(false);state.textContent='종료'}
       else{
-        const picked=[...targets.querySelectorAll('input:checked')].map(x=>x.value);
+        const picked=[...targetList.querySelectorAll('input:checked')].map(x=>x.value).filter(x=>x!==sourceSelect.value);if(!picked.length){state.textContent=ERR.target_language_required;targets.open=true;return}
         const data=await api('/captions/sessions',{method:'POST',payload:{tenant,sourceLang:sourceSelect.value,targetLangs:picked}});
         st.session=data.session;setRunning(true);
         state.textContent=`시작 · ${data.session.targetLangs.map(x=>x.toUpperCase()).join(' ')}${data.trimmedByPlan?` (요금제 한도로 ${data.trimmedByPlan}개 제외)`:''}`;
@@ -152,13 +160,14 @@ function setupSimulcast(){
   const content=el('div',{class:'live-simulcast-body'});
   const refresh=el('button',{type:'button',text:'확인',onclick:()=>load()});
   host.replaceChildren(el('div',{class:'external-head'},[el('strong',{text:'유튜브·페이스북 동시송출'}),refresh]),status,content);
+  const fail=error=>{status.textContent=say(error);const url=error?.data?.loginUrl;if(error?.status===401||url){const link=el('a',{class:'studio-host-login',rel:'nofollow',text:'다시 로그인 · 진행자 권한 확인',href:url||`/auth/?site=${encodeURIComponent(body.dataset.authSite||tenant)}&select_account=1&return_to=${encodeURIComponent(location.href)}`});content.replaceChildren(link)}else content.replaceChildren()};
   const copyBtn=value=>el('button',{type:'button',text:'복사',onclick:async e=>{try{await navigator.clipboard.writeText(value);e.target.textContent='복사됨'}catch{}}});
 
   // EKODI-owned relay (EKODI-SIMULCAST-RELAY-001): OBS on the broadcast PC →
   // EKODI Device Agent → YouTube / Facebook / Instagram / other RTMP at once.
   async function renderRelay(){
     let r;
-    try{r=await api(`/relay?${q}`)}catch(error){status.textContent=say(error);content.replaceChildren();return}
+    try{r=await api(`/relay?${q}`)}catch(error){fail(error);return}
     const nodes=[el('p',{class:'live-addon-note',text:'에코디 송출 PC가 방송 하나를 받아 여러 채널로 동시에 내보냅니다. 추가 비용이 없습니다.'})];
     if(!r.binding){
       status.textContent='송출 PC 지정 필요';
@@ -200,7 +209,7 @@ function setupSimulcast(){
   async function load(){
     status.textContent='확인 중';
     let data;
-    try{data=await api(`/simulcast?${q}`)}catch(error){status.textContent=say(error);content.replaceChildren();return}
+    try{data=await api(`/simulcast?${q}`)}catch(error){fail(error);return}
     if(!data.configured){await renderRelay();return}
     const nodes=[];
     if(!data.input){
