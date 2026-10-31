@@ -208,4 +208,53 @@ export async function getSponsoredAiAllowance(env = {}, options = {}) {
   });
 }
 
+// AI-COST-002 prepaid credit envelope. A provider whose console balance is prepaid
+// with auto-recharge OFF cannot bill beyond that balance; EKODI additionally stops
+// itself at (credit - reserve) using its own conservative meter, so the provider's
+// hard stop is never reached in normal operation. Not configured -> 0 remaining.
+const PREPAID_ENV = Object.freeze({
+  anthropic: Object.freeze({ credit:'ANTHROPIC_PREPAID_CREDIT_USD', reserve:'ANTHROPIC_PREPAID_RESERVE_USD', since:'ANTHROPIC_PREPAID_SINCE', daily:'ANTHROPIC_PREPAID_DAILY_MAX_USD' }),
+});
+
+export function prepaidCreditPolicy(env = {}, provider = 'anthropic') {
+  const keys = PREPAID_ENV[safeText(provider, 40).toLowerCase()];
+  if (!keys) return Object.freeze({ configured:false, creditUsd:0, reserveUsd:0, dailyMaxUsd:0, since:'' });
+  const creditUsd = envNumber(env, [keys.credit], 0);
+  const reserveUsd = envNumber(env, [keys.reserve], 10);
+  const dailyMaxUsd = envNumber(env, [keys.daily], 0);
+  const sinceRaw = safeText(env[keys.since], 40);
+  const sinceMs = Date.parse(sinceRaw);
+  const since = Number.isFinite(sinceMs) ? new Date(sinceMs).toISOString() : '';
+  return Object.freeze({ configured: creditUsd > 0 && Boolean(since), creditUsd, reserveUsd, dailyMaxUsd, since });
+}
+
+export async function getPrepaidCreditAllowance(env = {}, provider = 'anthropic', options = {}) {
+  const policy = prepaidCreditPolicy(env, provider);
+  const base = { provider, policy };
+  if (!policy.configured) return Object.freeze({ ...base, allowed:false, status:'not_configured', remainingUsd:0, spentUsd:0 });
+  if (!env.DB?.prepare) return Object.freeze({ ...base, allowed:false, status:'meter_unavailable', remainingUsd:0, spentUsd:0 });
+  await ensureApiUsageSchema(env.DB);
+  const now = options.now instanceof Date ? options.now : new Date();
+  const name = safeText(provider, 40).toLowerCase();
+  const [total, today] = await Promise.all([
+    env.DB.prepare(`SELECT COALESCE(SUM(estimated_cost_microusd),0) cost FROM api_usage_events
+      WHERE (provider=? OR provider LIKE ?) AND created_at>=?`).bind(name, `${name}%`, policy.since).first(),
+    env.DB.prepare(`SELECT COALESCE(SUM(estimated_cost_microusd),0) cost FROM api_usage_events
+      WHERE (provider=? OR provider LIKE ?) AND created_at>=?`).bind(name, `${name}%`, dayStartIso(now) > policy.since ? dayStartIso(now) : policy.since).first(),
+  ]);
+  const spentUsd = integer(total?.cost) / 1_000_000;
+  const todayUsd = integer(today?.cost) / 1_000_000;
+  const remainingUsd = Math.max(0, Math.round((policy.creditUsd - policy.reserveUsd - spentUsd) * 1_000_000) / 1_000_000);
+  const dailyBlocked = policy.dailyMaxUsd > 0 && todayUsd >= policy.dailyMaxUsd;
+  const allowed = remainingUsd > 0 && !dailyBlocked;
+  return Object.freeze({
+    ...base,
+    allowed,
+    status: allowed ? 'available' : dailyBlocked ? 'daily_limit' : 'envelope_exhausted',
+    remainingUsd: dailyBlocked ? 0 : remainingUsd,
+    spentUsd,
+    todayUsd,
+  });
+}
+
 export const API_USAGE_METER_DEFAULTS = DEFAULT_POLICY;
