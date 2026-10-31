@@ -219,6 +219,9 @@ export function evaluateAutopilotOrder(intent={},ctx={}){
  if(!String(intent.idempotencyKey||'').match(/^[A-Za-z0-9:_\-]{8,120}$/))reasons.push('idempotency_key_required');
  else if((ctx.seenOrderKeys||[]).includes(intent.idempotencyKey))reasons.push('duplicate_order');
  if(policy.markets&&!policy.markets.includes(intent.market))reasons.push('market_not_allowed');
+ // Budgets and limits are KRW. No verified FX rate is connected, so a USD limit price must never be
+ // compared with KRW limits: US orders stay blocked until an FX source is wired in.
+ if(intent.market==='US')reasons.push('fx_conversion_unavailable');
  if(policy.assetTypes&&!policy.assetTypes.includes(intent.assetType))reasons.push('asset_type_not_allowed');
  if(ctx.brokerHealthy===false)reasons.push('broker_unavailable');
  if(ctx.ledgerReconciled===false)reasons.push('ledger_mismatch');
@@ -305,7 +308,8 @@ export function createPaperBroker({cash=0,feeRate=0.00015,slippageBps=10,positio
   const side=order.side,price=Number(quote.price);
   const marketable=side==='BUY'?price<=order.limitPrice:price>=order.limitPrice;
   const fillQty=marketable?Math.min(order.qty,liquidityQty):0;
-  const execPrice=side==='BUY'?price*(1+slippageBps/10000):price*(1-slippageBps/10000);
+  // A limit order never fills beyond its limit: slippage is capped at the limit price.
+  const execPrice=side==='BUY'?Math.min(price*(1+slippageBps/10000),order.limitPrice):Math.max(price*(1-slippageBps/10000),order.limitPrice);
   const record={key:order.idempotencyKey,symbol:order.symbol,side,qty:order.qty,limitPrice:order.limitPrice,filledQty:0,avgPrice:0,fee:0,status:'OPEN'};
   if(fillQty>0){
    const gross=fillQty*execPrice,fee=gross*feeRate;
