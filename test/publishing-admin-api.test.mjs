@@ -65,3 +65,33 @@ test('authors cannot read publishing admin data; staff see summary and audit; on
   assert.ok(roles.roles.every(x=>!/editorE|adminZ/.test(x.user)),'role holders are masked');
   assert.equal((await handlePublishingWorkflow(request('admin/summary',{method:'POST',actor:'adminZ'}),env(db))).status,404,'no admin writes');
 });
+
+// PUBLISHING-ROLES-001: 출판 관리자만 초대·회수하며, 권한은 인증된 같은 이메일로 로그인했을 때만 생긴다.
+test('admin invites by email; the verified account claims it; self, last-admin and non-admin changes are refused',async()=>{
+  const db=memory();
+  db.sql.prepare("INSERT INTO publishing_workflow_roles (user_id,role,granted_by,granted_at) VALUES (?,?,?,?)").run('adminZ','admin','seed','2026-10-31');
+  const post=(actor,body)=>handlePublishingWorkflow(request('admin/roles',{method:'POST',actor,body}),env(db));
+  assert.equal((await post('authorA',{action:'invite',email:'editorN@example.com',role:'editor'})).status,403,'authors cannot invite');
+  assert.equal((await post('adminZ',{action:'invite',email:'not-an-email',role:'editor'})).status,400);
+  assert.equal((await post('adminZ',{action:'invite',email:'x@example.com',role:'owner'})).status,400,'unknown role refused');
+  assert.equal((await post('adminZ',{action:'invite',email:'adminZ@example.com',role:'editor'})).status,409,'cannot change self');
+  const inv=await post('adminZ',{action:'invite',email:'EditorN@Example.com',role:'editor'});
+  assert.equal(inv.status,200);
+  const listed=await inv.json();
+  assert.equal(listed.invites.length,1);assert.ok(!JSON.stringify(listed).includes('editorN@example.com'),'invite email masked');
+  // 다른 계정은 초대를 가져갈 수 없다.
+  assert.equal((await handlePublishingWorkflow(request('admin/summary',{actor:'authorA'}),env(db))).status,403);
+  // 초대받은 계정(인증된 같은 이메일)이 로그인하면 권한이 생긴다.
+  assert.equal((await handlePublishingWorkflow(request('admin/summary',{actor:'editorN'}),env(db))).status,200);
+  assert.equal(db.sql.prepare("SELECT role FROM publishing_workflow_roles WHERE user_id='editorN'").get().role,'editor');
+  assert.ok(db.sql.prepare("SELECT claimed_at FROM publishing_workflow_role_invites").get().claimed_at);
+  const roles=await (await handlePublishingWorkflow(request('admin/roles',{actor:'adminZ'}),env(db))).json();
+  assert.ok(roles.roles.every(x=>!/editorN|adminZ/.test(JSON.stringify(x))),'no raw ids in role list');
+  const self=roles.roles.find(x=>x.role==='admin'),ed=roles.roles.find(x=>x.role==='editor');
+  assert.equal((await post('adminZ',{action:'revoke',ref:self.ref})).status,409,'cannot revoke self / last admin');
+  assert.equal((await post('editorN',{action:'revoke',ref:self.ref})).status,403,'editors cannot revoke');
+  assert.equal((await post('adminZ',{action:'revoke',ref:ed.ref})).status,200);
+  assert.equal((await handlePublishingWorkflow(request('admin/summary',{actor:'editorN'}),env(db))).status,403,'revoked; a claimed invite is not reused');
+  const actions=db.sql.prepare("SELECT action FROM publishing_workflow_audit WHERE project_id='roles' ORDER BY created_at").all().map(x=>x.action);
+  for(const a of ['role_invited','role_invite_claimed','role_revoked'])assert.ok(actions.includes(a),a+' audited');
+});

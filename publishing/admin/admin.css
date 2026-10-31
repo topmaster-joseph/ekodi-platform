@@ -21,3 +21,6 @@
 .padmin .button.primary{background:var(--navy);color:#fffdf8}
 .padmin-foot{margin-top:30px;font-size:.84rem;color:var(--muted)}
 .padmin .kicker{margin:0;font:700 .66rem Arial,sans-serif;letter-spacing:.16em;color:var(--burgundy)}
+.padmin-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+.padmin-form input{flex:1 1 220px;min-height:40px;padding:0 10px;border:1px solid #ccd;border-radius:8px;font:inherit}
+.padmin-form select{min-height:40px;padding:0 8px;border:1px solid #ccd;border-radius:8px;font:inherit}

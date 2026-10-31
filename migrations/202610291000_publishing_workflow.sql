@@ -79,3 +79,12 @@ CREATE TABLE IF NOT EXISTS publishing_workflow_audio_release_qa (
 );
 -- Important: neither table has a public write API; an auditor's statement must
 -- be reconciled against actual signed contracts/audio assets before sale launch.
+-- PUBLISHING-ROLES-001 (§3·§12): 출판 관리자가 이메일로 편집·발행 권한을 초대한다.
+-- 권한은 초대받은 사람이 같은 이메일로 인증(이메일 확인 완료)된 에코디 계정으로
+-- 로그인했을 때 서버가 인증 서버의 이메일과 대조해 부여한다. 화면 문자열로는 생기지 않는다.
+CREATE TABLE IF NOT EXISTS publishing_workflow_role_invites (
+ email TEXT PRIMARY KEY CHECK(email = lower(email) AND instr(email,'@') > 1),
+ role TEXT NOT NULL CHECK(role IN ('editor','publisher','admin')),
+ invited_by TEXT NOT NULL, invited_at TEXT NOT NULL,
+ claimed_by TEXT, claimed_at TEXT
+);

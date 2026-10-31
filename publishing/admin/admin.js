@@ -23,12 +23,14 @@
     }
     return '';
   }
-  async function api(rel) {
+  async function api(rel, body) {
     const t = token();
     if (!t) throw Object.assign(new Error('LOGIN_REQUIRED'), { status: 401 });
     const c = new AbortController(); const timer = setTimeout(() => c.abort(), 9000);
     try {
-      const r = await fetch(`${API}/${rel}`, { headers: { authorization: `Bearer ${t}` }, cache: 'no-store', signal: c.signal });
+      const init = { headers: { authorization: `Bearer ${t}` }, cache: 'no-store', signal: c.signal };
+      if (body) Object.assign(init, { method: 'POST', body: JSON.stringify(body), headers: { ...init.headers, 'content-type': 'application/json' } });
+      const r = await fetch(`${API}/${rel}`, init);
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw Object.assign(new Error(d.code || `HTTP_${r.status}`), { status: r.status, code: d.code });
       return d;
@@ -88,12 +90,35 @@
       return [el('p', { className: 'muted', textContent: '모든 단계 변경은 수정 번호와 함께 기록됩니다. 작업자 식별자는 일부만 표시합니다.' }),
         table(['시각', '도서', '변경', '수정', '작업자'], d.events.map(a => [String(a.at).slice(0, 16).replace('T', ' '), a.title, `${L(a.from || '-')} → ${L(a.to || '-')} (${a.action})`, String(a.revision), a.actor]))];
     },
-    async roles() {
-      const d = await api('admin/roles');
-      return [table(['계정', '권한', '부여일'], d.roles.map(x => [x.user, L(x.role), String(x.grantedAt).slice(0, 10)])),
-        el('p', { className: 'muted', textContent: '권한 부여·회수는 출판 관리자 권한과 감사 기록이 있는 서버 경로에서만 합니다. 이메일 문자열이나 화면 상태만으로는 권한이 생기지 않습니다.' })];
-    },
+    async roles() { return rolesView(await api('admin/roles')); },
   };
+  const ERR = { CANNOT_CHANGE_SELF: '자기 자신의 권한은 바꿀 수 없습니다.', LAST_ADMIN: '마지막 출판 관리자는 회수할 수 없습니다.', INVALID_INVITE: '이메일과 권한을 확인해 주세요.' };
+  function rolesView(d) {
+    const msg = el('p', { className: 'muted', role: 'status' });
+    const act = async (body, ask) => {
+      if (ask && !confirm(ask)) return;
+      msg.textContent = '처리 중…';
+      try { const r = await api('admin/roles', body); view.replaceChildren(...rolesView(r)); }
+      catch (e) { if (e.status === 401 || e.status === 403) view.replaceChildren(gate(e)); else msg.textContent = ERR[e.code] || '처리하지 못했습니다. 다시 시도해 주세요.'; }
+    };
+    const form = el('form', { className: 'padmin-form' });
+    const email = el('input', { type: 'email', required: true, placeholder: '초대할 에코디 계정 이메일', autocomplete: 'off' });
+    const pick = el('select', {}, ...['editor', 'publisher', 'admin'].map(v => el('option', { value: v, textContent: L(v) })));
+    form.append(email, pick, el('button', { type: 'submit', className: 'button primary', textContent: '권한 초대' }));
+    form.addEventListener('submit', e => { e.preventDefault(); act({ action: 'invite', email: email.value, role: pick.value }); });
+    const roleRows = el('tbody');
+    for (const x of d.roles) {
+      const b = el('button', { type: 'button', className: 'button', textContent: '회수' });
+      b.addEventListener('click', () => act({ action: 'revoke', ref: x.ref }, `${x.user} 계정의 ${L(x.role)} 권한을 회수할까요?`));
+      roleRows.append(el('tr', {}, el('td', { textContent: x.user }), el('td', { textContent: L(x.role) }), el('td', { textContent: String(x.grantedAt).slice(0, 10) }), el('td', {}, b)));
+    }
+    if (!d.roles.length) roleRows.append(el('tr', {}, el('td', { colSpan: 4, className: 'muted', textContent: '기록 없음' })));
+    const roleTable = el('div', { className: 'padmin-table' }, el('table', {}, el('thead', {}, el('tr', {}, ...['계정', '권한', '부여일', ''].map(h => el('th', { scope: 'col', textContent: h })))), roleRows));
+    const invites = table(['초대 이메일', '권한', '초대일', '상태'], (d.invites || []).map(x => [x.email, L(x.role), String(x.invitedAt).slice(0, 10), x.claimedAt ? '수락' : '대기']));
+    return [el('h2', { textContent: '권한 초대' }), form, msg,
+      el('p', { className: 'muted', textContent: '초대받은 사람이 같은 이메일로 인증된 에코디 계정에 로그인하면 서버가 이메일을 확인한 뒤 권한을 부여합니다. 모든 초대·수락·회수는 감사 기록에 남습니다.' }),
+      el('h2', { textContent: '현재 권한자' }), roleTable, el('h2', { textContent: '초대 내역' }), invites];
+  }
   async function show(id) {
     for (const a of document.querySelectorAll('.padmin-nav a')) a.toggleAttribute('aria-current', a.dataset.section === id);
     view.replaceChildren(el('p', { className: 'muted', textContent: '불러오는 중…' }));
