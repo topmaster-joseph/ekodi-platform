@@ -140,3 +140,16 @@ test('canonical /edu service binding preserves native websocket handshake withou
  const canonical=await read('canonical-surface-router.js');
  assert.match(canonical,/if\(response\.status===101&&response\.webSocket\)return response/);
 });
+
+// 2026-10-31: `wrangler versions upload` cannot apply Durable Object migrations, so every guarded
+// production release failed after EducationScreenRoom was added. A pending additive migration is
+// applied once with deploy; non-additive migrations are refused for an explicit operator release.
+test('production release applies a pending additive DO migration once, then stays guarded',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const wf=await readFile(new URL('../.github/workflows/deploy-education.yml',import.meta.url),'utf8');
+  const step=wf.slice(wf.indexOf('- name: Bootstrap or guarded release'));
+  assert.match(step,/migration_tag/);
+  assert.match(step,/if \[ -n "\$wanted_tag" \] && \[ "\$live_tag" != "\$wanted_tag" \]/);
+  assert.match(step,/renamed_classes\|deleted_classes\|transferred_classes/);
+  assert.match(step,/node scripts\/guarded-worker-release\.mjs --manifest deploy\/manifests\/education\.worker\.json/);
+});
