@@ -791,7 +791,7 @@ export async function handleRealtimeControl(request,env){
     if(!input)return json(request,env,{ok:false,error:'invalid_json'},400);
   }
   // Interpretation captions + external simulcast (shared by every tenant).
-  const liveAddon=await handleLiveInterpretation(request,env,url,input,{json,tenantAdminAccess,subjectOf:canonicalAiSubject,realtimeTenant,evaluate:evaluateRealtimeRequest});
+  const liveAddon=await handleLiveInterpretation(request,env,url,input,{json,tenantAdminAccess,subjectOf:canonicalAiSubject,realtimeTenant,evaluate:evaluateRealtimeRequest,isPlatformOwner:identity=>Boolean(identity?.email&&platformOwnerEmails(env).has(String(identity.email).toLowerCase()))});
   if(liveAddon)return liveAddon;
   if(url.pathname===`${PREFIX}/rooms`&&request.method==='POST'){
     const config=realtimeTenant(input?.tenant||'ekodichurch');

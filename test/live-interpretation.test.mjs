@@ -262,8 +262,8 @@ test('every tenant live page mounts the interpretation console, simulcast panel 
     const html=await tenantLivePage({...tenant,dedicated:false}).text();
     assert.match(html,/data-live-interpretation-console/);
     assert.match(html,/data-live-simulcast/);
-    assert.match(html,/<script src="\/live-interpretation\.js" defer><\/script>/);
-    assert.match(html,/href="\/live-interpretation\.css"/);
+    assert.match(html,/<script src="\/live-interpretation\.js(?:\?v=[\w-]+)?" defer><\/script>/);
+    assert.match(html,/href="\/live-interpretation\.css(?:\?v=[\w-]+)?"/);
     assert.match(html,/id="viewerListenLanguage"/);
   }
   const build=fs.readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');
