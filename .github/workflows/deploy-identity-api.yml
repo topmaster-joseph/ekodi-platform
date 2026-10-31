@@ -110,7 +110,7 @@ jobs:
           fi
           echo "::add-mask::$token"
           echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
-      - name: Sync dormant Naver/Kakao login keys (only when provided)
+      - name: Sync dormant Naver/Kakao/Apple login keys (only when provided)
         # Keys only register the adapters. Login stays off until public.identity_providers.enabled
         # is switched on for that provider, so syncing keys never exposes a new login path by itself.
         shell: bash
@@ -119,6 +119,10 @@ jobs:
           NAVER_LOGIN_CLIENT_SECRET: ${{ secrets.NAVER_LOGIN_CLIENT_SECRET }}
           KAKAO_LOGIN_REST_API_KEY: ${{ secrets.KAKAO_LOGIN_REST_API_KEY }}
           KAKAO_LOGIN_CLIENT_SECRET: ${{ secrets.KAKAO_LOGIN_CLIENT_SECRET }}
+          APPLE_LOGIN_SERVICES_ID: ${{ secrets.APPLE_LOGIN_SERVICES_ID }}
+          APPLE_LOGIN_TEAM_ID: ${{ secrets.APPLE_LOGIN_TEAM_ID }}
+          APPLE_LOGIN_KEY_ID: ${{ secrets.APPLE_LOGIN_KEY_ID }}
+          APPLE_LOGIN_PRIVATE_KEY: ${{ secrets.APPLE_LOGIN_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           umask 077
@@ -131,11 +135,16 @@ jobs:
             printf 'KAKAO_REST_API_KEY=%s\n' "$KAKAO_LOGIN_REST_API_KEY" >> "$env_file"
             if [ -n "${KAKAO_LOGIN_CLIENT_SECRET:-}" ]; then printf 'KAKAO_CLIENT_SECRET=%s\n' "$KAKAO_LOGIN_CLIENT_SECRET" >> "$env_file"; fi
           fi
+          if [ -n "${APPLE_LOGIN_SERVICES_ID:-}" ] && [ -n "${APPLE_LOGIN_TEAM_ID:-}" ] && [ -n "${APPLE_LOGIN_KEY_ID:-}" ] && [ -n "${APPLE_LOGIN_PRIVATE_KEY:-}" ]; then
+            # The .p8 key is multi-line; store it on one line with literal \n (the adapter restores newlines).
+            apple_key="$(printf '%s' "$APPLE_LOGIN_PRIVATE_KEY" | awk 'BEGIN{ORS="\\n"}{print}')"
+            printf 'APPLE_SERVICES_ID=%s\nAPPLE_TEAM_ID=%s\nAPPLE_KEY_ID=%s\nAPPLE_PRIVATE_KEY=%s\n' "$APPLE_LOGIN_SERVICES_ID" "$APPLE_LOGIN_TEAM_ID" "$APPLE_LOGIN_KEY_ID" "$apple_key" >> "$env_file"
+          fi
           if [ -s "$env_file" ]; then
             npx --yes supabase@2.116.0 secrets set --project-ref "$PROJECT_REF" --env-file "$env_file" >/dev/null
             echo "Federated login keys synced: $(cut -d= -f1 "$env_file" | tr '\n' ' ')"
           else
-            echo 'No federated login keys provided; Naver/Kakao stay unregistered.'
+            echo 'No federated login keys provided; Naver/Kakao/Apple stay unregistered.'
           fi
       - name: Deploy identity API
         run: npx --yes supabase@2.116.0 functions deploy identity-api --project-ref "$PROJECT_REF" --no-verify-jwt
