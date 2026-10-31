@@ -370,7 +370,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  if(p==='/requests'&&method==='GET'&&paidModel()){
   const reqs=await many(admin.from('singles_paid_requests').select('id,requester_id,responder_id,kind,status,requester_fee_krw,responder_fee_krw,created_at')
    .or('requester_id.eq.'+userId+',responder_id.eq.'+userId).order('created_at',{ascending:false}).limit(50));
-  const invoices=await many(admin.from('singles_request_invoices').select('id,request_id,amount_krw,status,order_reference,due_at').eq('user_id',userId).limit(100));
+  const invoices=await many(admin.from('singles_request_invoices').select('id,request_id,amount_krw,status,order_reference,due_at,refund_due_at,refunded_at').eq('user_id',userId).limit(100));
   const invByReq=new Map<string,any>(invoices.map((i:any)=>[i.request_id,i]));
   const conns=await many(admin.from('singles_interests').select('id,from_user_id,to_user_id,status')
    .or('from_user_id.eq.'+userId+',to_user_id.eq.'+userId).eq('status','accepted').limit(50));
@@ -385,7 +385,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
    requests:reqs.map((r:any)=>{const incoming=r.responder_id===userId,other=incoming?r.requester_id:r.responder_id;const inv=invByReq.get(r.id);
     return {id:r.id,kind:r.kind,status:r.status,incoming,display_name:byId.get(other)||'동행 회원',
      my_fee_krw:inv?inv.amount_krw:(incoming?quotes[r.kind]:r.requester_fee_krw),
-     invoice:inv?{id:inv.id,amount_krw:inv.amount_krw,status:inv.status,order_reference:inv.order_reference||null,due_at:inv.due_at}:null}}),
+     invoice:inv?{id:inv.id,amount_krw:inv.amount_krw,status:inv.status,order_reference:inv.order_reference||null,due_at:inv.due_at,refund_due_at:inv.refund_due_at||null,refunded_at:inv.refunded_at||null}:null}}),
    connections:conns.map((c:any)=>{const other=c.from_user_id===userId?c.to_user_id:c.from_user_id;
     return {id:c.id,display_name:byId.get(other)||'동행 회원',contact_shared:shared.has(other)}})});
  }
