@@ -31,7 +31,7 @@ create table if not exists public.organization_budget_lines(
 comment on table public.organization_budget_lines is 'Tenant-private budget plan per fiscal year. Never projected by organization_public_snapshot.';
 
 alter table public.organization_budget_lines enable row level security;
-revoke all on public.organization_budget_lines from public, anon, authenticated;
+revoke all on public.organization_budget_lines from public, anon, authenticated, service_role;
 
 create or replace function public.organization_budget_snapshot(p_slug text, p_year integer)
 returns jsonb language plpgsql stable security definer set search_path = public, auth as $$
