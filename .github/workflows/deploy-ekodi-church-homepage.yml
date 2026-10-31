@@ -1,6 +1,6 @@
 name: Deploy EKODI Church Homepage
 # Release reconciliation marker: church-operating-space-20260924
-# Reconcile Church public Pages to source commit 736928a47c27aa07b3d6bc41710a6d1f5883af36 (2026-10-31: 매일묵상 카카오톡 공유 카드, ekodi-church#130).
+# Reconcile Church public Pages to source commit 680e8ec718b3f6f733dc07d2b64d3e95396eade7 (2026-10-31: 함께하기 링크·인라인 라이브 문구 9개 언어 번역, ekodi-church#131).
 
 on:
   workflow_dispatch:
@@ -219,6 +219,32 @@ jobs:
             sleep 10
           done
           echo "Church devotion verification failed: page=$page renderer=$renderer api=$api"
+          exit 1
+
+      - name: Verify production church together (partnership) page
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="$CHURCH_SOURCE_SHA"
+          if [[ ! -f church/together/index.html ]]; then
+            echo 'Church source has no together page; skipping.'
+            exit 0
+          fi
+          for attempt in $(seq 1 30); do
+            page=$(curl -L -sS -o /tmp/church-together.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/together/?release=${release}" || true)
+            js=$(curl -L -sS -o /tmp/church-together.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/together/together.js?release=${release}" || true)
+            css=$(curl -L -sS -o /tmp/church-together.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/together/together.css?release=${release}" || true)
+            if [[ "$page" == 200 && "$js" == 200 && "$css" == 200 ]] \
+              && grep -Fq 'data-ekodi-church-together' /tmp/church-together.html \
+              && grep -Fq '기부금영수증 발급 가능' /tmp/church-together.html \
+              && grep -Fq '261028-together-partners' /tmp/church-together.js \
+              && grep -Fq '.together-hero' /tmp/church-together.css; then
+              echo 'Church together page verified.'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Church together verification failed: page=$page js=$js css=$css"
           exit 1
 
       - name: Verify production life hub assets and exact release
