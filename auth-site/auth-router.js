@@ -51,7 +51,7 @@ async function manifestService(id){
   }catch{return null}
 }
 async function loadMarketingAuth(){
-  try{return await import('./marketing-auth-hotfix.js?v=20260824-return-origin-1')}
+  try{return await import('./marketing-auth-hotfix.js?v=20261031-apex-return-1')}
   catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
 }
 async function loadClientAuth(){

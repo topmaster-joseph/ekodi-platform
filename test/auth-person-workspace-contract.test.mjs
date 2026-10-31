@@ -125,7 +125,7 @@ test('Marketing workspace labels are separated and current routed assets are for
   assert.match(authHtml,/auth-workspaces\.css\?v=20260817-workspace-label-1/);
   assert.match(authHtml,/auth-entry\.js\?v=20261028-singles-choose-account/);
   assert.match(authEntry,/\.\/auth-router\.js\?v=20261028-singles-choose-account/);
-  assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20260824-return-origin-1/);
+  assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20261031-apex-return-1/);
   assert.match(authRouter,/marketing-onboarding\.js\?v=20260817-workspace-label-1/);
   assert.match(marketingOnboarding,/parts\.slice\(0,2\)/);
   assert.match(marketingOnboarding,/workspace-name/);
