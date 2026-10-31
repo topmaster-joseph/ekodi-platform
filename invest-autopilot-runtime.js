@@ -13,6 +13,7 @@ import { stepUpStatus, verifyStepUp, revokeStepUp, stepUpSession } from './inves
 import { BROKER_ADAPTERS, INVEST_PERMISSION, evaluateBrokerReadiness } from './invest-market-core.js';
 import { verifiedOwnerAal2 } from './invest-owner-mfa.js';
 import { buildBrokerReadOnlyView } from './invest-broker-readonly-adapter.js';
+import { buildStrategyLab } from './invest-strategy-lab.js';
 
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
 const nowIso=()=>new Date().toISOString();
@@ -135,6 +136,16 @@ async function ownerBrokerSnapshot(request,env,ctx){
  const result=await buildBrokerReadOnlyView({brokerId,env,db:env.DB,strongMfaVerified,subjectKey:ctx.subject.type+':'+ctx.subject.key});
  await auditPrincipal(env,ctx.principal,'invest:owner-broker-readonly:'+result.dataMode+':'+result.connection);
  return json(request,env,{...result,brokerName:BROKER_ADAPTERS[brokerId].name});
+}
+
+// Research only: synthetic-data strategy comparison. It never records strategy acceptance for
+// live gates (that requires verified market history) and never places or proposes orders.
+async function ownerStrategyLab(request,env,ctx){
+ const account=await loadAccount(env,ctx);
+ const validation=await paperValidation(env,ctx,account);
+ const lab=buildStrategyLab({policy:account.policy,paperDays:validation.days,paperLimitViolations:validation.failures.includes('paper_limit_violations')?1:0});
+ await auditPrincipal(env,ctx.principal,'invest:owner-strategy-lab');
+ return json(request,env,{...lab,liveGateEffect:'none'});
 }
 
 async function ownerLiveReadiness(request,env,ctx){
@@ -434,6 +445,7 @@ export async function handleInvestAutopilotApi(request,env){
   return json(request,env,{error:'LIVE_OWNER_ONLY'},403);
  if(path==='/v1/invest/autopilot/live/readiness'&&request.method==='GET')return ownerLiveReadiness(request,env,ctx);
  if(path==='/v1/invest/autopilot/broker/snapshot'&&request.method==='GET')return ownerBrokerSnapshot(request,env,ctx);
+ if(path==='/v1/invest/autopilot/research/strategy-lab'&&request.method==='GET')return ownerStrategyLab(request,env,ctx);
  if(path==='/v1/invest/autopilot/live/orders'&&request.method==='POST')
   return json(request,env,{error:'LIVE_EXECUTION_LOCKED',executionPerformed:false,reason:'BROKER_AND_POLICY_GATES_NOT_VERIFIED'},423);
  if(path==='/v1/invest/autopilot/status'&&request.method==='GET')return status(request,env,ctx);
