@@ -62,6 +62,19 @@
       })();
     });
   }
+  // Every login path (Google, Kakao, Naver …) is one EKODI account: offer the central sign-in,
+  // which returns to this exact page; the central session is read by stored() above.
+  function centralLoginLink() {
+    const a = document.createElement('a');
+    const target = new URL('https://ekodi.kr/auth/');
+    target.searchParams.set('site', 'books');
+    target.searchParams.set('return_to', location.href);
+    a.href = target.toString();
+    a.className = 'central-login-link';
+    a.textContent = '카카오 등 다른 방법으로 로그인';
+    a.style.cssText = 'display:block;margin-top:10px;font-size:14px;text-align:center';
+    return a;
+  }
   async function mountGoogle(host, onStatus, onSignedIn) {
     onStatus('구글 로그인을 준비하고 있습니다.');
     try {
@@ -82,6 +95,7 @@
       } });
       host.replaceChildren();
       window.google.accounts.id.renderButton(host, { type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', shape: 'rectangular', width: Math.min(340, Math.max(220, host.clientWidth || 300)) });
+      host.append(centralLoginLink());
       onStatus('');
     } catch { onStatus('구글 로그인을 준비하지 못했습니다. 새로고침 후 다시 시도해 주세요.', true); }
   }
