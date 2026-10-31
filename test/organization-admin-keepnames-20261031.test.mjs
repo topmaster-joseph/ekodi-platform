@@ -21,3 +21,11 @@ test('organization admin browser script survives esbuild keepNames bundling', as
   const ctx = { location: new URL('https://ekodi.kr/mokpo-presbytery/mission/admin'), document: { getElementById: el, querySelectorAll: () => [] }, URL, console, setTimeout, window: { supabase }, supabase, fetch: async () => ({ ok: false, json: async () => ({}) }) };
   assert.doesNotThrow(() => vm.runInNewContext(js, ctx));
 });
+
+test('organization admin mobile layout cannot be widened by the nowrap section nav', async () => {
+  const { organizationAdminCss } = await import('../organization-admin-page.js');
+  const css = await (await organizationAdminCss()).text();
+  const mobile = css.slice(css.indexOf('@media(max-width:820px)'));
+  assert.match(mobile, /\.oa-layout\{grid-template-columns:minmax\(0,1fr\)\}/);
+  assert.match(mobile, /\.oa-side\{min-width:0;/);
+});
