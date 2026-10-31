@@ -722,7 +722,7 @@ async function refreshNoticeSession(){
     return true;
   }catch{return false}
 }
-function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/?compose=notice#notices');return u.href}
+function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',siteMountBase()+'?compose=notice#notices');return u.href}
 function noticePermalink(id){return siteMountBase()+'notices/'+encodeURIComponent(id)}
 function noticeDate(item){const raw=item.publishedAt||item.updatedAt||'';return raw?new Date(raw).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''}
 // SEONAMMEDI-EVENTS-VIEW-001 (2026-10-20, owner approved): this view holds the calendar's 행사·일정.
