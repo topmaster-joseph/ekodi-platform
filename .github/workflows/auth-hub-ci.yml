@@ -55,7 +55,7 @@ jobs:
           grep -Fq 'isRegistryUserService' auth-site/auth-router.js
           grep -Fq "site==='portal'||isRegistryUserService" auth-site/auth-router.js
           grep -Fq "business-auth.js?v=20260826-free-fallback-1" auth-site/auth-router.js
-          grep -Fq "client-auth.js?v=20261028-singles-choose-account" auth-site/auth-router.js
+          grep -Fq "client-auth.js?v=20261031-admin-tools-account-1" auth-site/auth-router.js
           grep -Fq 'targetableWorkspaceSites' auth-site/auth-router.js
           grep -Fq 'privateClientSites' auth-site/auth-router.js
 

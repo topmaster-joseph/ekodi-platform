@@ -55,7 +55,7 @@ async function loadMarketingAuth(){
   catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
 }
 async function loadClientAuth(){
-  try{return await import('./client-auth.js?v=20261028-singles-choose-account')}
+  try{return await import('./client-auth.js?v=20261031-admin-tools-account-1')}
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 

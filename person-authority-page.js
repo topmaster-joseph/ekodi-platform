@@ -69,9 +69,18 @@ export function personAuthorityScript(){
   const show=m=>{status.textContent=m;};
   const auth=new URL('/auth/',location.origin);
   auth.searchParams.set('site','portal');
+  auth.searchParams.set('select_account','1');
   auth.searchParams.set('return_to',location.origin+location.pathname+location.search);
   $('loginLink').href=auth.href;
   let token='';
+  // Which login the current session came from, for a clear "wrong account" message.
+  const signedInAs=()=>{try{const p=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    const email=String(p.email||'');const m=email.match(/^identity\+(kakao|naver)\./);
+    return m?{provider:m[1]==='kakao'?'카카오':'네이버',email:''}:{provider:'',email};}catch{return {provider:'',email:''}}};
+  const notAdminMessage=()=>{const w=signedInAs();
+    return (w.provider?'현재 '+w.provider+' 로그인으로 접속되어 있으며, 이 계정은 최고관리자 Google 계정과 연결되어 있지 않습니다.'
+      :(w.email?w.email+' 계정에는 최고관리자 권한이 없습니다.':'현재 로그인한 계정에는 최고관리자 권한이 없습니다.'))
+      +' 위 버튼을 눌러 최고관리자 Google 계정을 선택해 다시 인증하세요.';};
   const PROVIDER={google:'Google',kakao:'카카오',naver:'네이버',email:'이메일'};
   const STATUS={active:'사용 중',revoked:'해제됨',merged:'병합됨',disabled:'비활성',pending:'대기',pre_registered:'사전등록'};
   const fmt=v=>{if(!v)return '-';const d=new Date(v);return Number.isNaN(d.valueOf())?String(v):d.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'});};
@@ -121,15 +130,16 @@ export function personAuthorityScript(){
       const data=await r.json().catch(()=>({}));
       if(!r.ok||!data.access_token)throw new Error('Google 인증 세션 확인 실패');
       token=data.access_token;try{sessionStorage.setItem(KEY,token)}catch{}
-    }else{try{token=sessionStorage.getItem(KEY)||''}catch{}}
-    if(!token){
-      // Same-origin central EKODI session (written by ekodi.kr/auth) when no handoff fragment arrived.
+    }else{
+      // The current central EKODI session wins over an older token kept in this tab,
+      // so signing in again with another account takes effect immediately.
       try{const s=JSON.parse(localStorage.getItem('sb-renzehysxirjilvdxacv-auth-token')||'null');
         if(s?.access_token&&Number(s.expires_at||0)*1000>Date.now()+30000)token=s.access_token;}catch{}
+      if(!token){try{token=sessionStorage.getItem(KEY)||''}catch{}}
     }
     if(!token){show('조회하려면 먼저 Google 계정으로 인증하세요.');return}
     const authority=await call('/platform-authority');
-    if(authority.platformAdmin!==true){show('Google 인증은 되었지만 최고관리자 권한이 없는 계정입니다.');return}
+    if(authority.platformAdmin!==true){show(notAdminMessage());try{sessionStorage.removeItem(KEY)}catch{}return}
     $('signIn').hidden=true;form.hidden=false;button.disabled=false;
     show('최고관리자 확인 완료. 조회할 이메일, EKODI ID 또는 내부 ID를 입력하세요.');
     const q=new URL(location.href).searchParams.get('q');
