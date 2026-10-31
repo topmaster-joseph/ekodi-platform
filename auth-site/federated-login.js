@@ -186,6 +186,40 @@ export async function handleCallback() {
   } catch (error) {
     console.error('federated callback', error);
     fail(errorMessage(error.message, name), pending.search);
+    if (error.message === 'account_merge_review_required' && error.data?.mergeRequest) renderMergeReport(error.data.mergeRequest, name);
   }
   return true;
+}
+
+/**
+ * Owner-decided merge, phase 1: show what the second account holds. Nothing moves yet;
+ * the owner reads the report and decides. All values go through textContent.
+ */
+export function mergeReportLines(mergeRequest, name) {
+  const inv = mergeRequest?.inventory || {};
+  const items = Array.isArray(inv.items) ? inv.items : [];
+  const financial = items.filter(item => item.financial);
+  const lines = [
+    `${name} 계정에 있는 기록 ${Number(inv.absorbedRows || 0)}건을 확인했습니다.`,
+    inv.verdict === 'mergeable'
+      ? '결제·구독·포인트 기록이 없어 하나의 EKODI 통합 ID로 합칠 수 있는 상태입니다.'
+      : `결제·구독·포인트 관련 기록이 ${financial.length}종 있어, 합치기 전에 정리가 필요합니다.`,
+  ];
+  for (const item of financial.slice(0, 8)) lines.push(`· ${item.table}: ${item.absorbedRows}건`);
+  lines.push('외부 정기결제(카드 자동결제) 확인은 병합 단계에서 함께 진행됩니다.');
+  lines.push('병합 실행은 본인이 결정하며, 실행 전까지 어떤 데이터도 옮겨지지 않습니다.');
+  return lines;
+}
+function renderMergeReport(mergeRequest, name) {
+  const host = $('authStatus');
+  if (!host) return;
+  const box = document.createElement('div');
+  box.className = 'notice';
+  box.setAttribute('role', 'status');
+  for (const line of mergeReportLines(mergeRequest, name)) {
+    const p = document.createElement('p');
+    p.textContent = line;
+    box.append(p);
+  }
+  host.after(box);
 }
