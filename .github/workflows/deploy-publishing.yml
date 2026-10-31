@@ -17,6 +17,8 @@ on:
     paths:
       - 'publishing/**'
       - 'publishing-worker.js'
+      - 'publishing-workflow-api.js'
+      - 'migrations/202610291000_publishing_workflow.sql'
       - 'wrangler.publishing.toml'
       - 'deploy/manifests/publishing.worker.json'
       - 'scripts/guarded-worker-release.mjs'
@@ -53,6 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check publishing-worker.js
+          node --check publishing-workflow-api.js
           node --check publishing/app.js
           node --check publishing/studio/app.js
           node --check publishing/upaper/app.js
@@ -62,6 +65,11 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN" || (echo 'Missing CLOUDFLARE_API_TOKEN' && exit 1)
           test -n "$CLOUDFLARE_ACCOUNT_ID" || (echo 'Missing CLOUDFLARE_ACCOUNT_ID' && exit 1)
+      - name: Apply additive publishing workflow schema (CREATE ... IF NOT EXISTS only)
+        run: |
+          set -euo pipefail
+          ! grep -Eiq '^\s*(DROP|DELETE|UPDATE|ALTER)\b' migrations/202610291000_publishing_workflow.sql
+          npx --yes wrangler@$WRANGLER_VERSION d1 execute ekodi-publishing --remote --config wrangler.publishing.toml --file migrations/202610291000_publishing_workflow.sql
       - name: Bootstrap unavailable production or use guarded release when stable
         shell: bash
         run: |
