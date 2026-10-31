@@ -96,7 +96,7 @@ test('gateway wiring: live eligibility, free credential probe, credit errors ope
 });
 
 test('production config declares the envelope; staging does not spend it', () => {
-  for (const f of ['wrangler.ai.toml', 'wrangler.ai.release.toml']) {
+  for (const f of ['wrangler.ai.toml', 'wrangler.ai.release.toml', 'wrangler.api.toml']) {
     const t = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
     assert.match(t, /ANTHROPIC_PREPAID_CREDIT_USD = "120"/);
     assert.match(t, /ANTHROPIC_PREPAID_RESERVE_USD = "10"/);
