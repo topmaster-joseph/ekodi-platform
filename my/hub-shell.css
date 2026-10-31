@@ -226,3 +226,6 @@ html[data-ekodi-character="off"] body .ekodi-main-ekodian{
 }
 body[data-ekodi-ui="USER"] .my-custom-footer .my-footer-inner{width:var(--my-content-width)}
 body[data-ekodi-ui="USER"] .my-custom-footer .my-footer-credo{padding-left:var(--my-content-gutter);padding-right:var(--my-content-gutter)}
+/* My EKODI is personal: nothing is shown before the session is known, and a
+   signed-out visitor is sent to central login (app.js) without a guest flash. */
+body[data-auth-state="guest"]>*,body[data-auth-state="redirect"]>*{visibility:hidden!important}
