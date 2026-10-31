@@ -504,6 +504,22 @@ if(merge.response.ok&&adminContinuityTouched){
   out('admin_e2e_dispatch','accepted');
 }
 
+// RECOVERY-POST-MERGE-LANES-001 (2026-10-31): an immediate merge above dispatches only
+// the Board, Shell, Site Core, Control API and CGMA lanes. Every other guarded lane
+// (Access API, Identity API, Church, Singles, My, Books, ...) is chosen by the convergent
+// merger, which never runs for an immediately merged PR, so those changes reached main
+// without reaching production (observed: #7154 access-api, 2026-10-31). Hand the merged
+// PR to the converger in post-merge reconcile mode; it re-verifies the receipt and the
+// merged PR and skips the lanes dispatched here.
+if(merge.response.ok&&merge.data?.merged===true){
+  const reconcile=await github(`/repos/${repo}/actions/workflows/converge-orchestrated-pr-merge.yml/dispatches`,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({ref:'main',inputs:{post_merge_reconcile_branch:branchRef}})
+  });
+  out('post_merge_reconcile_dispatch',reconcile.response.status===204?'accepted':`http_${reconcile.response.status}`);
+  if(reconcile.response.status!==204)console.error('[EKODI][RELEASE-PROVENANCE-RECOVERY] post-merge reconcile dispatch failed: HTTP '+reconcile.response.status);
+}
+
 if(!merge.response.ok){
   await github(`/repos/${repo}/issues/${recoveryNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({body:'EKODI recovery branch issued successfully. Merge remains guarded by required checks; production deployment will continue after the repository gate allows merge.'})});
 }
