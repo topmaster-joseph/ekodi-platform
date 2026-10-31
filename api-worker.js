@@ -430,7 +430,7 @@ async function publicPreviewSnapshot(env) {
 }
 
 const PUBLIC_PREVIEW_PATH = '/api/public/preview/map';
-const PUBLIC_PREVIEW_ORIGINS = new Set(['https://ekodi.kr', 'https://www.ekodi.kr']);
+const PUBLIC_PREVIEW_ORIGINS = new Set(['https://ekodi.kr']);
 
 function publicPreviewHeaders(request) {
   const headers = new Headers({

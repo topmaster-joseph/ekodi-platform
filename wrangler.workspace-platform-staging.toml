@@ -7,7 +7,7 @@ preview_urls = false
 [vars]
 ENVIRONMENT = "staging"
 ALLOW_MUTATIONS = "false"
-ALLOWED_ORIGINS = "https://ekodi.kr,https://messenger.ekodi.kr"
+ALLOWED_ORIGINS = "https://ekodi.kr"
 
 [[d1_databases]]
 binding = "DB"

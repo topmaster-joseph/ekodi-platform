@@ -11,7 +11,7 @@ custom_domain = true
 [vars]
 ENVIRONMENT = "production"
 ALLOW_MUTATIONS = "true"
-ALLOWED_ORIGINS = "https://ekodi.kr,https://messenger.ekodi.kr"
+ALLOWED_ORIGINS = "https://ekodi.kr"
 
 [observability.logs]
 enabled = true

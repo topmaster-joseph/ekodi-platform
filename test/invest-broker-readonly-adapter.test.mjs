@@ -70,6 +70,9 @@ test('KIS configuration requires the switch, vault secrets and a well-formed acc
   assert.equal(kisReadOnlyConfig({ INVEST_BROKER_READONLY_KIS: 'live' }).reason, 'KIS_VAULT_CREDENTIAL_MISSING');
   assert.equal(kisReadOnlyConfig({ ...ENV, KIS_ACCOUNT_NO: '1234' }).reason, 'KIS_ACCOUNT_REFERENCE_INVALID');
   assert.equal(kisReadOnlyConfig({ ...ENV, INVEST_BROKER_READONLY_KIS: 'orders' }).reason, 'KIS_READONLY_SWITCH_OFF');
+  const { INVEST_BROKER_READONLY_KIS: _switch, ...vaultOnly } = ENV;
+  assert.equal(kisReadOnlyConfig(vaultOnly).environment, 'paper', 'vault secrets alone default to the paper server, never live');
+  assert.equal(kisReadOnlyConfig({ KIS_APP_KEY: 'k', KIS_APP_SECRET: 's' }).reason, 'KIS_READONLY_SWITCH_OFF');
   const ok = kisReadOnlyConfig(ENV);
   assert.equal(ok.enabled, true); assert.equal(ok.cano, '50000000'); assert.equal(ok.productCode, '01');
 });
