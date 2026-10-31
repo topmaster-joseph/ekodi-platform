@@ -204,7 +204,12 @@ jobs:
                 # Surface a query-free summary as an annotation (logs may be unreadable to agents).
                 loc="$(printf '%s' "${result#* }" | sed 's/[?#].*//')"
                 tokens="$(grep -Eoi 'redirect_uri_mismatch|invalid_request|invalid_client|unauthorized_client|access_denied|등록되지 않은[^<\"]{0,24}|Callback URL[^<\"]{0,24}|서비스 URL[^<\"]{0,24}|검수[^<\"]{0,24}|권한[^<\"]{0,24}' /tmp/authorize-naver.html | sort -u | head -6 | tr '\n' ';' || true)"
-                echo "::notice title=Naver authorize probe::status=${result%% *} location=${loc:-none} markers=${tokens:-none}"
+                page_title="$(grep -Eoi '<title>[^<]{0,80}' /tmp/authorize-naver.html | head -1 | sed 's/<title>//I' || true)"
+                login_form="$(grep -Eoi 'frmNIDLogin|nidlogin\.login|id="id"|id="pw"|oauth2\.0/authorize' /tmp/authorize-naver.html | sort -u | tr '\n' ';' || true)"
+                # Up to three short contexts around the generic error words, with long tokens redacted.
+                around="$(grep -Eoi '.{0,40}(invalid|error|오류).{0,40}' /tmp/authorize-naver.html | head -3 | sed -E 's/[A-Za-z0-9_-]{16,}/[redacted]/g; s/[%:,]/ /g' | tr '\n' '|' || true)"
+                echo "::notice title=Naver authorize probe::status=${result%% *} location=${loc:-none} markers=${tokens:-none} title=${page_title:-none} login=${login_form:-none} bytes=$(wc -c < /tmp/authorize-naver.html)"
+                echo "::notice title=Naver authorize page context::${around:-none}"
                 if grep -Eiq 'invalid|error|오류' /tmp/authorize-naver.html && [[ "$result" != 302* ]]; then echo "::error title=Naver refused the authorize request::status=${result%% *} location=${loc:-none} markers=${tokens:-none}"; exit 1; fi
                 ;;
             esac
