@@ -29,3 +29,20 @@ test('studio refreshes the EKODI auth token instead of failing external/simulcas
   assert.match(interp,/window\.EKODI_LIVE_AUTH\?\.\(\)/);
   assert.match(interp,/다시 로그인 · 진행자 권한 확인/);
 });
+
+const clientAuth=readFileSync(new URL('../auth-site/client-auth.js',import.meta.url),'utf8');
+const ctl=readFileSync(new URL('../live-interpretation-control.js',import.meta.url),'utf8');
+test('church login may return to the canonical /live/church/ studio (QR camera, host login)',()=>{
+  assert.match(clientAuth,/const churchLive=config\.kind==='church'&&target\.origin==='https:\/\/ekodi\.kr'&&\(target\.pathname==='\/live\/church'\|\|target\.pathname\.startsWith\('\/live\/church\/'\)\)/);
+  for(const f of ['../auth-site/auth.js','../auth-site/auth-workspace-target.js'])assert.match(readFileSync(new URL(f,import.meta.url),'utf8'),/startsWith\('\/live\/church\/'\)/);
+});
+test('overlay resize is free-aspect by default; host token is kept alive during broadcast',()=>{
+  assert.match(live,/keepRatio:false/);
+  assert.match(live,/setInterval\(\(\)=>\{if\(token\(\)\)void ensureFreshToken\(\)\},4\*60\*1000\)/);
+});
+test('simulcast channels can be added from the studio; platform owner may bind the relay PC',()=>{
+  assert.match(interp,/＋ 동시송출 채널 추가/);
+  assert.match(interp,/① 송출 PC 지정/);
+  assert.match(ctl,/canBindRelay\(host\.access\.identity\)/);
+  assert.doesNotMatch(ctl,/platformAdminRole!=='super_admin'\)return json\(request,env,\{ok:false,error:'relay_binding_super_admin_required'/);
+});

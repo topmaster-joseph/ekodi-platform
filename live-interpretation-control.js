@@ -355,7 +355,7 @@ export async function handleLiveInterpretation(request,env,url,input,deps){
     }catch(error){return json(request,env,{ok:false,error:error.code||'stream_provider_error',message:error.message},error.status||502)}
   }
   // ---------- EKODI-SIMULCAST-RELAY-001 (EKODI-owned simulcast, no paid service) ----------
-  if(path.startsWith('/api/realtime/relay'))return relayRoute({request,env,url,input,json,requireHost,tenantOf});
+  if(path.startsWith('/api/realtime/relay'))return relayRoute({request,env,url,input,json,requireHost,tenantOf,isPlatformOwner:deps.isPlatformOwner});
   return json(request,env,{ok:false,error:'live_addon_endpoint_not_found'},404);
 }
 
@@ -372,12 +372,14 @@ function relayDeviceView(row){
   const seen=Date.parse(String(row.last_seen_at||''));
   return {id:row.id,label:row.label,hostname:row.hostname,agentVersion:row.agent_version,online:Number.isFinite(seen)&&Date.now()-seen<RELAY_ONLINE_MS,lastSeenAt:row.last_seen_at||null,relayCapable:caps?.[SIMULCAST_RELAY_CAPABILITY]===true,revoked:Boolean(row.revoked_at)};
 }
-async function relayRoute({request,env,url,input,json,requireHost,tenantOf}){
+async function relayRoute({request,env,url,input,json,requireHost,tenantOf,isPlatformOwner}){
   const path=url.pathname,method=request.method;
+  // Binding the relay PC is a platform-owner action: EKODI super admin session or the configured platform owner Google account.
+  const canBindRelay=identity=>identity?.platformAdminRole==='super_admin'||Boolean(typeof isPlatformOwner==='function'&&isPlatformOwner(identity));
   const tenantValue=method==='GET'?url.searchParams.get('tenant'):input?.tenant;
   if(path==='/api/realtime/relay/devices'&&method==='GET'){
     const host=await requireHost(tenantValue);if(host.response)return host.response;
-    if(host.access.identity?.platformAdminRole!=='super_admin')return json(request,env,{ok:false,error:'relay_binding_super_admin_required'},403);
+    if(!canBindRelay(host.access.identity))return json(request,env,{ok:false,error:'relay_binding_super_admin_required'},403);
     const rows=await env.DB.prepare(`SELECT id,label,hostname,agent_version,capabilities_json,last_seen_at,revoked_at FROM device_registry WHERE revoked_at IS NULL ORDER BY last_seen_at DESC LIMIT 50`).all().catch(()=>({results:[]}));
     return json(request,env,{ok:true,devices:(rows.results||[]).map(relayDeviceView)});
   }
@@ -396,7 +398,7 @@ async function relayRoute({request,env,url,input,json,requireHost,tenantOf}){
     }
     return json(request,env,{ok:true,policy:SIMULCAST_RELAY_POLICY_ID,engine:'ekodi-device-relay',tenant,
       binding:binding?{deviceId:binding.device_id,armed:Boolean(binding.armed),boundAt:binding.bound_at,device:relayDeviceView(device)}:null,
-      canBind:host.access.identity?.platformAdminRole==='super_admin',
+      canBind:canBindRelay(host.access.identity),
       ingest:{server:SIMULCAST_RELAY_INGEST.url,streamKey:SIMULCAST_RELAY_INGEST.streamKey,full:SIMULCAST_RELAY_INGEST.full,note:'방송 PC의 OBS 설정 → 방송 → 서비스: 사용자 지정, 서버와 스트림 키를 입력합니다.'},
       ffmpeg:{version:SIMULCAST_RELAY_FFMPEG.version},
       destinations:(dests.results||[]).map(d=>({id:d.id,label:d.label,preset:d.preset,ingestHost:d.ingest_host,keyHint:d.key_hint,enabled:Boolean(d.enabled),createdAt:d.created_at})),
@@ -404,7 +406,7 @@ async function relayRoute({request,env,url,input,json,requireHost,tenantOf}){
       lastResult:last,pendingCommands:pending});
   }
   if(path==='/api/realtime/relay/bind'&&method==='POST'){
-    if(host.access.identity?.platformAdminRole!=='super_admin')return json(request,env,{ok:false,error:'relay_binding_super_admin_required'},403);
+    if(!canBindRelay(host.access.identity))return json(request,env,{ok:false,error:'relay_binding_super_admin_required'},403);
     const deviceId=clean(input?.deviceId,80);
     const row=await env.DB.prepare('SELECT id,revoked_at FROM device_registry WHERE id=?').bind(deviceId).first().catch(()=>null);
     if(!row||row.revoked_at)return json(request,env,{ok:false,error:'relay_device_not_found'},404);
