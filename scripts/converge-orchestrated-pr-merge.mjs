@@ -165,7 +165,8 @@ for(let i=0;i<20&&!pr;i++){
   pr=(Array.isArray(q.data)?q.data:[])[0]||null;
   if(!pr)await sleep(3000);
 }
-if(!pr)fail(postMergeReconcile?'merged PR not found':'open PR not found');
+if(!pr&&postMergeReconcile)fail('merged PR not found');
+if(!pr)fail('open PR not found');
 // Draft PRs remain unpublished and must not be merged or deployed.
 if(pr.draft===true){console.log('[EKODI][ORCH-AUTO-MERGE] draft PR; unpublished hold, no merge');process.exit(0)}
 const filesLookup=await api('/pulls/'+pr.number+'/files?per_page=100');
