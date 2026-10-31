@@ -12,11 +12,12 @@ const expectedHosts = [
 // 2026-10-24: ten of these hosts no longer have DNS (zero-subdomain retirement), so a
 // production check against them can only fail ("fetch failed") and blocked every
 // release and rollback. Routes stay; the manifest verifies every host that still resolves.
+// 2026-11-01: management and marketing-api lose DNS with the public subdomain wave 2 retirement.
 test('broken production admin hosts are covered by the independent route gateway', () => {
   const config = fs.readFileSync('wrangler.service-admin-entry.toml', 'utf8');
   const manifest = JSON.parse(fs.readFileSync('deploy/manifests/service-admin-entry.worker.json', 'utf8'));
   const dnsRetiredHosts = manifest.worker.dnsRetiredHosts;
-  assert.equal(dnsRetiredHosts.length, 10);
+  assert.equal(dnsRetiredHosts.length, 12);
   for (const host of dnsRetiredHosts) assert.ok(expectedHosts.includes(host), `${host} is a gateway host`);
   for (const host of expectedHosts) {
     assert.match(config, new RegExp(`pattern = "${host.replaceAll('.', '\\.')}/admin\\*"`));

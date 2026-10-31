@@ -6,7 +6,7 @@ window.__EKODI_USER_UI_FOOTER_BOOTED=true;
 const VERSION=7;
 const STYLE_ID='ekodi-user-ui-footer-style';
 const CONFIG_URL='https://ekodi.kr/shell/user-footer.json';
-const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
+const SITE_CHROME_URL='https://ekodi.kr/workspace-api/v1/site-chrome/public';
 // Education has no customer-site chrome configuration; keep the shared fallback.
 const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education']);
 const USER_SURFACES=new Set(['public','workspace']);

@@ -1,7 +1,7 @@
 export const DEVELOPER_PORTAL_META=Object.freeze({
   serviceId:'developer-portal',
   publicName:'EKODI Developer',
-  canonicalOrigin:'https://dev.ekodi.kr',
+  canonicalOrigin:'https://ekodi.kr/developer',
   standardName:'EKODI Integration Standard',
   standardVersion:'0.1-foundation',
   conformanceLevel:'public-preflight',
