@@ -295,3 +295,26 @@ test('sign-out revokes future dates before any network sign-out can delay the UI
  assert.ok(missionSignout.indexOf("window.dispatchEvent(new Event('ekodi:auth-logout'))") < missionSignout.indexOf("await fetch("));
  assert.match(shared,/next\.removeAttribute\('href'\)/);
 });
+
+test('share cards: every rendered month has a 1200x630 JPEG per day and pages advertise them', async () => {
+  const { commonScriptureSnapshot } = await import('../common-scripture-registry.js');
+  const manifest = JSON.parse(fs.readFileSync(new URL('og/manifest.json', bibleDir), 'utf8'));
+  assert.equal(manifest.size, '1200x630');
+  assert.ok(fs.existsSync(new URL(`og/${manifest.generic}`, bibleDir)));
+  for (const month of manifest.months) {
+    for (const reading of commonScriptureSnapshot(month).readings) {
+      const file = new URL(`og/${reading.date}.jpg`, bibleDir);
+      assert.ok(fs.existsSync(file), reading.date);
+      const head = fs.readFileSync(file).subarray(0, 3);
+      assert.deepEqual([...head], [0xff, 0xd8, 0xff], `${reading.date} is JPEG`);
+    }
+  }
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+  const past = manifest.months.includes(today.slice(0, 7)) ? today : '2026-10-26';
+  const page = await (await worker.fetch(new Request(`https://ekodi.kr/bible/devotion/${past}`), assetEnv())).text();
+  assert.match(page, new RegExp(`og:image" content="https://ekodi\\.kr/bible/og/${past}\\.jpg"`));
+  assert.match(page, /twitter:card" content="summary_large_image"/);
+  const future = await (await worker.fetch(new Request('https://ekodi.kr/bible/devotion/2099-01-01'), assetEnv())).text();
+  assert.match(future, /og:image" content="https:\/\/ekodi\.kr\/bible\/og\/devotion\.jpg"/);
+  assert.match(fs.readFileSync(new URL('../space/ekodimission-devotion.page', import.meta.url), 'utf8'), /og:image" content="https:\/\/ekodi\.kr\/bible\/og\/devotion\.jpg"/);
+});
