@@ -490,11 +490,23 @@ async function payInvoice(card,inv,h){
   if(h)await reloadBankOrders(h);
  }catch(e){notice(card,errorText(e))}
 }
+// 회원증 형태의 구독 상태 카드(장식은 CSS, 내용은 텍스트로 읽힘).
+function membershipCard(expires){
+ const c=text('div','','membership-card');c.setAttribute('role','group');c.setAttribute('aria-label','동행 구독 상태');
+ const brand=text('p','','membership-brand');brand.append(text('strong','EKODI'),text('span','동행'));
+ const active=Boolean(expires&&Date.parse(expires)>Date.now());
+ const left=active?Math.max(0,Math.ceil((Date.parse(expires)-Date.now())/86400000)):0;
+ c.append(brand,text('p','MEMBERSHIP','membership-kicker'),
+  text('p',active?'구독 중':'구독 기간이 끝났습니다','membership-state'),
+  text('p',active?expires.slice(0,16).replace('T',' ')+'까지 · 남은 '+left+'일':'아래에서 구독권을 구매하면 바로 이어서 이용할 수 있습니다.','membership-until'));
+ return c;
+}
+function statTiles(items){const g=text('div','','stat-tiles');for(const [k,v] of items){const t=text('div','','stat-tile');t.append(text('span',k),text('strong',v));g.append(t)}return g}
 async function showPaidWallet(h){
  const box=text('section','','member-card');box.append(text('h3','내 구독·청구서'));
  try{
   const w=await api('/bank/wallet');
-  box.append(text('p',w.subscription_expires_at?'구독 중 · '+w.subscription_expires_at.slice(0,16).replace('T',' ')+'까지':'구독이 끝났습니다. 아래에서 구독권을 구매해 주세요.','wallet-balance'));
+  box.append(membershipCard(w.subscription_expires_at));
   const q=state.pricing?.quotes||{};
   paragraph(box,'지금 내 요금(기본 요금 + 입력·공개 할인): 메시지 교환 '+money(q.message)+' · 연락처 교환 '+money(q.contact)+' — 상대가 수락하면 청구됩니다.');
   priceTable(box);
@@ -575,7 +587,9 @@ async function showRefundsAdmin(h){
  paragraph(box,'① 상대가 7일 안에 결제하지 않아 연결이 취소된 청구서, ② 회원이 7일 안에 신청한 구독권 청약철회에 대해 돌려드릴 금액입니다. 돈은 자동으로 나가지 않습니다. 은행 앱에서 원래 입금한 계좌로 직접 송금한 뒤, 송금 거래번호를 입력해 "환불 완료"로 기록하세요.');
  try{
   const d=await api('/bank/admin/refunds');
-  box.append(text('p',d.pending?'환불할 건 '+d.pending+'건 · 합계 '+money(d.pending_krw):'환불할 건이 없습니다.','wallet-balance'));
+  const done=(d.refunds||[]).filter(r=>r.status==='refunded').length;
+  box.append(statTiles([['환불할 건',d.pending+'건'],['환불 합계',money(d.pending_krw||0)],['처리 완료',done+'건']]));
+  if(!d.pending)paragraph(box,'지금은 환불할 건이 없습니다.');
   for(const r of d.refunds||[]){
    const card=text('article','','mini-card');
    card.append(text('p',(r.kind==='subscription_withdrawal'?'[구독권 청약철회] ':'[청구서] ')+(r.email||'회원')+' · '+money(r.amount_krw)+' · '+(INVOICE_STATUS[r.status]||r.status)));
