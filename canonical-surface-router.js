@@ -332,7 +332,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     return routed;
   }
   // Privileged tenant-recovery page owns its canonical path before admin shell fallback.
-  if(path==='/admin/site-admins'||path==='/admin/site-admins/'||path==='/site-admin-bootstrap.js'){
+  if(path==='/admin/site-admins'||path==='/admin/site-admins/'||path==='/site-admin-bootstrap.js'||path==='/admin/people'||path==='/admin/people/'||path==='/admin/people/script'){
     if(!['GET','HEAD'].includes(request.method))return new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});
     if(typeof legacyFetch!=='function')return serviceUnavailable('site-admin-bootstrap');
     const response=await legacyFetch(request);
