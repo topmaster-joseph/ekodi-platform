@@ -20,6 +20,10 @@ if (/supabase\.(co|com|net)|pooler\.supabase|renzehysxirjilvdxacv|lxcxwbdwwojjkg
   console.error('REFUSED: points SQL smokes run only on a throwaway local database.'); process.exit(2);
 }
 const root = new URL('..', import.meta.url).pathname;
+// In GitHub Actions, surface failures as annotations (readable via the API
+// even when raw job logs are not retrievable).
+const annotate = (title, text) => { if (process.env.GITHUB_ACTIONS) console.log(`::error title=${title}::${String(text).replace(/[\r\n%]+/g, ' ').slice(0, 900)}`); };
+process.on('uncaughtException', e => { annotate('points smoke runner', e.stderr || e.message); console.error(e.stderr || e.message); process.exit(1); });
 const psql = (args, input) => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-q', '-At', ...args],
   {input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe']});
 
@@ -28,7 +32,7 @@ const already = psql(['-c', "select to_regclass('public.ekodi_point_ledger') is 
 const read = f => readFileSync(join(root, f), 'utf8');
 let fixtures = '';
 if (existing) {
-  if (already !== 't') { console.error('point migrations are not applied on the target'); process.exit(2); }
+  if (already !== 't') { annotate('points smoke runner','point migrations are not applied on the target'); console.error('point migrations are not applied on the target'); process.exit(2); }
   if (psql(['-c', 'select count(*) from public.ekodi_point_ledger']).trim() !== '0') {
     console.error('REFUSED: target holds point ledger rows; use an ephemeral database.'); process.exit(2);
   }
@@ -65,10 +69,10 @@ for (const [file, marker, prelude = '', scope] of smokes) {
   try {
     const out = psql([], sql);
     const ok = out.includes('SMOKE_COMPLETED') && (!marker || out.includes(marker));
-    console.log(`${ok ? 'PASS' : 'FAIL'} ${file}`); if (!ok) failed++;
-  } catch (e) { failed++; console.log(`FAIL ${file}\n${String(e.stderr || e.message).trim()}`); }
+    console.log(`${ok ? 'PASS' : 'FAIL'} ${file}`); if (!ok) { failed++; annotate('points smoke '+file, out.slice(-900)); }
+  } catch (e) { failed++; console.log(`FAIL ${file}\n${String(e.stderr || e.message).trim()}`); annotate('points smoke '+file, e.stderr || e.message); }
 }
 const after = psql(['-c', countSql]).trim();
-if (after !== before) { failed++; console.log(`FAIL rollback residue rows before=${before} after=${after}`); }
+if (after !== before) { failed++; console.log(`FAIL rollback residue rows before=${before} after=${after}`); annotate('points smoke residue', `before=${before} after=${after}`); }
 else console.log('PASS rollback left no residue');
 process.exit(failed ? 1 : 0);
