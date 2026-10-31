@@ -48,5 +48,5 @@ test('both admin tools are routed, bypass static assets, and can return from cen
   assert.match(auth,/site==='portal'&&\['\/admin\/site-admins','\/admin\/site-admins\/','\/admin\/people','\/admin\/people\/'\]\.includes\(target\.pathname\)/);
   for(const f of ['person-authority-page.js','site-admin-bootstrap-page.js'])
     assert.match(await read(f),/localStorage\.getItem\('sb-renzehysxirjilvdxacv-auth-token'\)/,f);
-  assert.match(await read('auth-site/auth-router.js'),/auth\.js\?v=20261101-merge-report-1/);
+  assert.match(await read('auth-site/auth-router.js'),/auth\.js\?v=20261101-live-church-return-1/);
 });
