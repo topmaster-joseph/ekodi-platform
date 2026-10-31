@@ -184,3 +184,21 @@ main[data-mission-devotion] .mission-devotion-tools .mission-auth-button{
   main[data-mission-devotion] .mission-devotion-tools > .mission-auth-actions{margin-left:auto}
   main[data-mission-devotion] .mission-devotion-tools .mission-auth-state{font-size:.7rem}
 }
+
+/* Mobile mission navigation: one scrollable row, never a second wrapped menu line. */
+.mission-language[hidden]{display:none!important}
+@media(max-width:850px){
+  .mission-site-header nav{
+    flex:1 0 100%;min-width:0;width:100%;max-width:100%;
+    flex-wrap:nowrap!important;justify-content:flex-start;
+    gap:.85rem;overflow-x:auto;overflow-y:hidden;
+    scrollbar-width:thin;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch
+  }
+  .mission-site-header nav a,.mission-site-header nav .mission-language{flex:0 0 auto}
+}
+@media(max-width:520px){
+  .mission-site-header{padding:.65rem 1rem .5rem;gap:.45rem .65rem}
+  .mission-site-header nav{padding:0 0 .12rem;gap:.75rem}
+  .mission-site-header nav a{font-size:.79rem;line-height:1.4;padding:.3rem 0}
+  .mission-site-header .mission-brand-mark{width:2.1rem;height:2.1rem}
+}
