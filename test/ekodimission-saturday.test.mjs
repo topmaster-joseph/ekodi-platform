@@ -145,6 +145,36 @@ test('verified members create or revise one public answer per date; contact deta
 });
 
 
+test('reply is optional for attendance registration and may be added or cleared later',async()=>{
+  const db=fakeDb(),e=env(db);
+  const initial=await (await handleSiteBoardRequest(request(),e)).json();
+  const base={meetingDate:initial.meeting.date,displayName:'참여자',attendance:'join',publicConsent:true};
+  const blank=await handleSiteBoardRequest(request('POST',{...base,body:''},true),e);
+  assert.equal(blank.status,200);
+  let state=await blank.json();
+  assert.equal(state.replies.length,1);
+  assert.equal(state.replies[0].body,'');
+  assert.equal(state.replies[0].attendance,'join');
+  const withReply=await handleSiteBoardRequest(request('POST',{...base,body:'함께하겠습니다.'},true),e);
+  assert.equal(withReply.status,200);
+  state=await withReply.json();
+  assert.equal(state.replies[0].body,'함께하겠습니다.');
+  const cleared=await handleSiteBoardRequest(request('POST',{...base,attendance:'question',body:'   '},true),e);
+  assert.equal(cleared.status,200);
+  state=await cleared.json();
+  assert.equal(state.replies[0].body,'');
+  assert.equal(state.replies[0].attendance,'question');
+  assert.equal(db.replies.size,1,'One person has one editable registration per meeting');
+  const omitted=await handleSiteBoardRequest(request('POST',{...base,attendance:'cancel'},true),e);
+  assert.equal(omitted.status,200);
+  state=await omitted.json();
+  assert.equal(state.replies[0].body,'');
+  assert.equal(state.replies[0].attendance,'cancel');
+  assert.equal((await handleSiteBoardRequest(request('POST',{...base,publicConsent:false},true),e)).status,400);
+  assert.equal((await handleSiteBoardRequest(request('POST',{...base,displayName:'가'},true),e)).status,400);
+  assert.equal((await handleSiteBoardRequest(request('POST',{...base,attendance:'invalid'},true),e)).status,400);
+});
+
 test('registration history includes the first 2024-02-03 Saturday and remains paginated',async()=>{
   const db=fakeDb(),e=env(db);
   const api='https://ekodi.kr/ekodimission/board/api/saturday/history';
@@ -195,6 +225,9 @@ test('Mission landing, login state and image remain first-party and without hard
  assert.doesNotMatch(page,/mission-table-hero\.svg/);
  assert.match(page,/data-mission-saturday/);
  assert.match(page,/publicConsent/);
+ assert.match(page,/<label>답글 \(선택\)<textarea[^>]+name="body"[^>]*><\/textarea><\/label>/);
+ assert.doesNotMatch(page,/<textarea[^>]*name="body"[^>]*required/);
+ assert.match(client,/filter\(item=>String\(item\.body\|\|''\)\.trim\(\)\)/);
  assert.match(client,/\bPOST\b|method:'POST'/);
  assert.match(client,/credentials:'same-origin'/);
  assert.match(client,/textContent=String\(reply\.body/);
