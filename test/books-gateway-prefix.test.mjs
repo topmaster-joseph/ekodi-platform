@@ -43,3 +43,14 @@ test('cover/link paths get the /books mount exactly once (gateway may already ha
   const direct = load('/buy/');
   assert.equal(direct.under('/assets/a.svg'), '/assets/a.svg');
 });
+
+// 2026-10-31: book purchase sign-in offers the central EKODI login (any login path),
+// returning to the exact purchase page; the central session is already accepted.
+test('books sign-in offers the central EKODI login and returns to the same page', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const src = await readFile(new URL('../books/buy/commerce-client.js', import.meta.url), 'utf8');
+  if (!/new URL\('https:\/\/ekodi\.kr\/auth\/'\)/.test(src)) throw new Error('central auth entry missing');
+  if (!/searchParams\.set\('return_to', location\.href\)/.test(src)) throw new Error('exact return missing');
+  if (!/host\.append\(centralLoginLink\(\)\)/.test(src)) throw new Error('link not mounted');
+  if (!/CENTRAL_KEY = 'sb-renzehysxirjilvdxacv-auth-token'/.test(src)) throw new Error('central session not read');
+});

@@ -140,3 +140,26 @@ test('canonical /edu service binding preserves native websocket handshake withou
  const canonical=await read('canonical-surface-router.js');
  assert.match(canonical,/if\(response\.status===101&&response\.webSocket\)return response/);
 });
+
+// 2026-10-31: `wrangler versions upload` cannot apply Durable Object migrations, so every guarded
+// production release failed after EducationScreenRoom was added. A pending additive migration is
+// applied once with deploy; non-additive migrations are refused for an explicit operator release.
+test('production release applies a pending additive DO migration once, then stays guarded',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const wf=await readFile(new URL('../.github/workflows/deploy-education.yml',import.meta.url),'utf8');
+  const step=wf.slice(wf.indexOf('- name: Bootstrap or guarded release'));
+  assert.match(step,/migration_tag/);
+  assert.match(step,/if \[ -n "\$wanted_tag" \] && \[ "\$live_tag" != "\$wanted_tag" \]/);
+  assert.match(step,/renamed_classes\|deleted_classes\|transferred_classes/);
+  assert.match(step,/node scripts\/guarded-worker-release\.mjs --manifest deploy\/manifests\/education\.worker\.json/);
+});
+
+// 2026-10-31: the shared EKODI sign-in chip joins the studio app bar through its collapsible menu, so the
+// phone-width studio bar stays one row (production native check: ≤72px; it measured 92px with the chip inline).
+test('studio app bar offers the sign-in chip a place inside the collapsible controls',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const html=await readFile(new URL('../education/study/live/index.html',import.meta.url),'utf8');
+  assert.match(html,/<div class="top-controls" id="topControls" data-ekodi-header-actions>/);
+  const auth=await readFile(new URL('../shell/unified-user-auth.js',import.meta.url),'utf8');
+  assert.match(auth,/header\.querySelector\('\[data-ekodi-header-actions\]/);
+});
