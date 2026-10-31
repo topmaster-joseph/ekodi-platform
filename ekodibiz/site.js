@@ -1,5 +1,17 @@
 // TOSS-MERCHANT-REVIEW-001: The registered public EKODIBIZ homepage must expose
 // the verified customer telephone in every localized legal footer before re-review.
+// EKODIBIZ is a public same-origin landing page. The central identity service
+// persists its own session; this page never consumes the extra one-use proof.
+// Remove that proof from the address before public rendering, without disturbing
+// ordinary #business/<area> links or the selected ?business= return route.
+function discardUnusedAuthProof(){
+  try{
+    const fragment=new URLSearchParams(location.hash.replace(/^#/,'')); 
+    if(fragment.has('ekodi_token'))history.replaceState(null,document.title,location.pathname+location.search);
+  }catch{}
+}
+discardUnusedAuthProof();
+
 const TEXT={
   'ko-KR':{
     title:'에코디비즈 | EKODIBIZ',description:'에코디비즈는 프로그램 개발, 태양광, 쇼핑몰, 컨설팅, 무역, 도서출판, AI·디지털 운영을 연결하는 비즈니스 파트너입니다.',
