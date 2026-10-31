@@ -55,3 +55,17 @@ Login Identity (Google / Kakao / Naver / email / ...)
 - `supabase/migrations/20261030010000_current_ekodi_billing_identity.sql`
 - `test/ekodi-cross-provider-paid-membership-20261030.test.mjs`
 - `docs/auth/EKODI-ID-LOGIN-CHANNEL-BOUNDARY.md`
+
+## 2026-10-30 보호 브리지 추가 (운영 기본 OFF)
+
+- **개발 완료 범위**: `admin-google-auth.js`의 `/api/ekodi/admin/config`·`challenge`·`login` 및 통합 로그인 화면의 **다른 로그인 방식**. `EKODI_ADMIN_FEDERATED_LOGIN_ENABLED=true`일 때만 사용 가능. 기본값은 false/미설정.
+- 관리자용 다른 로그인 흐름: `/auth/?site=admin` → 명시적 사용자 선택 → `/auth/?site=portal`(Google/Kakao/Naver/email 중 승인된 수단) → 엄격하게 검증한 `/auth/?site=admin&via=ekodi&return_to=/admin/*` 복귀 → `auth/v1/user`·`current_ekodi_billing_identity()`·D1 관리자 허용목록 조회 → 최고관리자는 추가로 `access-api/platform-authority` → 5분 1회 nonce 삭제 → 기존 D1 관리자 세션 발급.
+- 보안: 같은 이메일의 임의 소셜계정만으로 자동 연결·관리자 승격 불가. 이미 EKODI Person에 **명시적으로 연결된 검증된 이메일**만 조회하며, `required_hd`가 지정된 Google Workspace 계정의 대체 로그인은 허용하지 않는다. `super_admin`은 Supabase 플랫폼 권한과 D1 승인이 동시에 필요하다. 고위험 상승은 여전히 기존 Google 재인증 요구.
+- 고위험 서비스 경계 및 사이트별 이메일·비밀번호 운영자 권한은 변경 없음. 특수 사이트 비밀번호가 최고관리자 세션으로 교환되는 기능은 만들지 않음.
+- 실제 운영 스위치 활성화 전 필수: SQL RPC 운영 적용 확인, Supabase Auth 사용자 로그인 연결 증명, 카카오/네이버 provider 키·정책 검증, D1 관리자 목록/roles 교차점검, 허용 Origin 테스트, nonce 1회성·만료·권한 취소·로그아웃·시스템간 handoff E2E, 교회/모바일 regression, 사용자 승인.
+- **유료 정기결제 보호 추가**: D1 `membership_person_aliases`에 검증된 인증수단 별칭을 원자적으로 투영한다. 동일 Person+서비스에서 활성 또는 연체 유료 구독이 복수면 정기 청구를 모두 보류하고 `membership_billing_collision_audit`에 기록한다. 실제 구독을 이전/해지/환불하지 않는다. 기존 로그인 기록이 한번도 투영되지 않은 과거 행은 별칭 정보가 없어 중복 판별이 불가할 수 있으므로 이전 데이터 검토와 스케줄 검증이 출시 필수 조건이다.
+
+## 공식 이관 기록
+- 2026-10-30 추가 PR: #6898 (`ai/gpt6/ekodi-auth-billing-reconciliation-20261030`).
+- #6880은 EKODI Orchestrator가 #6894로 소스 복구 이관했지만, 회복 PR 역시 필수 체크 미완료로 보호 종료됨. 이 PR의 신규 변경은 #6894 출처를 중복 배포하는 것이 아니라, 그 이후 보호 기능까지 포함해 정확한 SHA에서 재검증한다.
+- 본 PR의 승인/병합/배포는 오케스트레이터의 공식 영수증·보호 CI·권한자 확인에만 따른다. 어떠한 CI 실패도 필요 체크를 삭제하거나 검사 코드를 우회하여 해결하지 않는다.
