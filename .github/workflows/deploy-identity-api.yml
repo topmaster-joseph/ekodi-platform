@@ -210,7 +210,13 @@ jobs:
                 around="$(grep -Eoi '.{0,40}(invalid|error|오류).{0,40}' /tmp/authorize-naver.html | head -3 | sed -E 's/[A-Za-z0-9_-]{16,}/[redacted]/g; s/[%:,]/ /g' | tr '\n' '|' || true)"
                 echo "::notice title=Naver authorize probe::status=${result%% *} location=${loc:-none} markers=${tokens:-none} title=${page_title:-none} login=${login_form:-none} bytes=$(wc -c < /tmp/authorize-naver.html)"
                 echo "::notice title=Naver authorize page context::${around:-none}"
-                if grep -Eiq 'invalid|error|오류' /tmp/authorize-naver.html && [[ "$result" != 302* ]]; then echo "::error title=Naver refused the authorize request::status=${result%% *} location=${loc:-none} markers=${tokens:-none}"; exit 1; fi
+                # Accepted: a redirect, or Naver's own login form (frmNIDLogin). Naver's login page
+                # always embeds hidden UI strings such as passkey error templates, so a generic
+                # error word alone is not a refusal; known OAuth error markers or a missing form are.
+                if [[ "$result" == 30[12]* ]]; then :
+                elif [ -n "$tokens" ] || ! grep -q 'frmNIDLogin' /tmp/authorize-naver.html; then
+                  echo "::error title=Naver refused the authorize request::status=${result%% *} location=${loc:-none} markers=${tokens:-none} login=${login_form:-none}"; exit 1
+                fi
                 ;;
             esac
           done
