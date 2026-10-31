@@ -19,7 +19,7 @@ test('storefront cover src and JSON-LD image are mounted exactly once', async ()
   for (const pathname of ['/books/', '/']) {
     const ctx = { location: { pathname }, URL };
     vm.runInNewContext(lines.join('\n') + ';this.u=underBase;this.a=absoluteUrl;', ctx);
-    for (const b of catalog.books) {
+    for (const b of catalog.books.filter(x => x.coverImage)) {
       const src = ctx.u(b.coverImage);
       assert.doesNotMatch(src, /\/books\/books\//, `${b.id} ${pathname}`);
       assert.match(ctx.a(b.coverImage), /^https:\/\/ekodi\.kr\/books\/assets\/[^/]+$/);
@@ -30,7 +30,9 @@ test('storefront cover src and JSON-LD image are mounted exactly once', async ()
 
 test('both catalogue covers are real raster files', () => {
   const catalog = JSON.parse(readFileSync(new URL('../books/books.json', import.meta.url), 'utf8'));
-  for (const b of catalog.books) {
+  // 표지가 아직 없는 도서(예: 영문판)는 다른 판의 표지를 빌려 쓰지 않는다.
+  assert.equal(catalog.books.find(b => b.id === 'BOOK-EKODI-000003').coverImage, undefined);
+  for (const b of catalog.books.filter(x => x.coverImage)) {
     assert.match(b.coverImage, /\.jpg$/);
     assert.ok(existsSync(new URL(`../books${b.coverImage}`, import.meta.url)), b.coverImage);
   }
