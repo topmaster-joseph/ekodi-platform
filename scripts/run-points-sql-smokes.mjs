@@ -32,7 +32,9 @@ if (existing) {
   if (psql(['-c', 'select count(*) from public.ekodi_point_ledger']).trim() !== '0') {
     console.error('REFUSED: target holds point ledger rows; use an ephemeral database.'); process.exit(2);
   }
-  fixtures = read('test/fixtures/points-attendance-isolated-core.sql') + '\n' + read('test/fixtures/points-ci-supabase-fixtures.sql');
+  // Real activity tables and authorization already exist here; the activity
+  // stub smokes run in stub mode (a separate template0 database) instead.
+  fixtures = read('test/fixtures/points-ci-supabase-fixtures.sql');
   console.log('using already-migrated ephemeral Supabase schema');
 } else {
   if (already === 't') { console.error('REFUSED: target already contains point tables; use an empty DB.'); process.exit(2); }
@@ -48,8 +50,8 @@ const before = psql(['-c', countSql]).trim();
 
 const smokes = [
   ['points-behavioral-smoke.sql', null],
-  ['points-attendance-isolated-smoke.sql', 'ATTENDANCE_ISOLATED_SMOKE_PASS', existing ? '' : 'insert into public.tenants default values;'],
-  ['points-operator-isolated-smoke.sql', 'POINT_OPERATOR_ISOLATED_SMOKE_PASS'],
+  ['points-attendance-isolated-smoke.sql', 'ATTENDANCE_ISOLATED_SMOKE_PASS', 'insert into public.tenants default values;', 'stub-only'],
+  ['points-operator-isolated-smoke.sql', 'POINT_OPERATOR_ISOLATED_SMOKE_PASS', '', 'stub-only'],
   ['points-active-heartbeat-isolated-smoke.sql', 'POINT_CLOCK_ISOLATED_SMOKE_PASS'],
   ['points-verified-referrals-isolated-smoke.sql', 'REFERRAL_ISOLATED_NEGATIVE_SMOKE_PASS'],
   ['points-verified-referrals-positive-smoke.sql', 'REFERRAL_POSITIVE_SMOKE_PASS'],
@@ -57,7 +59,8 @@ const smokes = [
   ['points-admin-governance-isolated-smoke.sql', 'POINT_ADMIN_GOVERNANCE_SMOKE_PASS'],
 ];
 let failed = 0;
-for (const [file, marker, prelude = ''] of smokes) {
+for (const [file, marker, prelude = '', scope] of smokes) {
+  if (existing && scope === 'stub-only') { console.log(`SKIP ${file} (needs isolated activity stubs; runs in stub mode)`); continue; }
   const sql = `BEGIN;\n${fixtures}\n${prelude}\n${readFileSync(join(root, 'test', file), 'utf8')}\nselect 'SMOKE_COMPLETED';\nROLLBACK;\n`;
   try {
     const out = psql([], sql);
