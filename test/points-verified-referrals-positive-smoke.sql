@@ -36,6 +36,17 @@ BEGIN
     VALUES(v_referred,v_auth,'referral-qa',gen_random_uuid()::text,
       'confirmed-referral@example.invalid','active');
   PERFORM set_config('request.jwt.claim.sub',v_auth::text,true);
+  -- P0: a pre-existing confirmed auth account relinked to a brand-new Person
+  -- must NOT count as a new member (people.created_at alone is insufficient).
+  UPDATE auth.users SET created_at=clock_timestamp()-interval '30 days' WHERE id=v_auth;
+  BEGIN
+    PERFORM public.ekodi_points_confirm_shared_signup(v_code);
+    RAISE EXCEPTION 'Legacy auth account credited as new member';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM<>'REFERRAL_NOT_NEW_MEMBER' THEN RAISE; END IF;
+  END;
+  -- Simulate a genuine signup after the invite (rolled back with the txn).
+  UPDATE auth.users SET created_at=now() WHERE id=v_auth;
   v_result:=public.ekodi_points_confirm_shared_signup(v_code);
   IF v_result->>'confirmed'<>'true' THEN
     RAISE EXCEPTION 'Confirmed signup failed: %',v_result;
