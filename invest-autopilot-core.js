@@ -383,14 +383,17 @@ export function runBacktest({prices,strategy,initialCash=10_000_000,feeRate=0.00
  const equity=[];let costs=0,turnover=0,trades=0;
  for(let t=start;t<last;t++){
   const value=()=>cash+symbols.reduce((a,s)=>a+qty[s]*prices[s][t],0);
-  if((t-start)%rebalanceEvery===0&&t>start){
+  // Allocate on the first day of the window, then every rebalanceEvery days (no idle cash period).
+  if((t-start)%rebalanceEvery===0){
    const target=strategyWeights(strategy,prices,t);
    const total=value();
    for(const s of symbols){
     const want=total*(target[s]||0)/prices[s][t];
-    const delta=want-qty[s];
+    let delta=want-qty[s];
     if(Math.abs(delta*prices[s][t])<total*0.001)continue;
     const px=prices[s][t]*(1+Math.sign(delta)*slippageBps/10000);
+    // Cash account: a buy can never take cash below zero (no implicit margin).
+    if(delta>0){const affordable=Math.max(0,cash)/(px*(1+feeRate));if(delta>affordable)delta=affordable;if(delta*px<total*0.001)continue}
     const gross=Math.abs(delta)*px,fee=gross*feeRate;
     cash-=delta*px+fee;qty[s]+=delta;costs+=fee+Math.abs(delta)*prices[s][t]*slippageBps/10000;turnover+=gross;trades++;
    }
@@ -404,12 +407,13 @@ export function performanceMetrics(equity,initial=equity[0]){
  if(!equity.length)return null;
  const rets=[];for(let i=1;i<equity.length;i++)rets.push(equity[i]/equity[i-1]-1);
  let peak=equity[0],mdd=0;for(const v of equity){peak=Math.max(peak,v);mdd=Math.max(mdd,(peak-v)/peak)}
- const years=Math.max(equity.length/252,1/252);
+ const years=equity.length/252;
  const total=equity[equity.length-1]/initial-1;
  const vol=stdev(rets)*Math.sqrt(252);
  const mean=rets.length?rets.reduce((a,b)=>a+b,0)/rets.length*252:0;
  const gains=rets.filter(r=>r>0).reduce((a,b)=>a+b,0),losses=-rets.filter(r=>r<0).reduce((a,b)=>a+b,0);
- return {totalReturn:total,cagr:Math.sign(1+total)*Math.abs(1+total)**(1/years)-1,annualVol:vol,maxDrawdown:mdd,sharpe:vol>0?mean/vol:0,profitFactor:losses>0?gains/losses:(gains>0?Infinity:0),days:equity.length};
+ // Annualizing less than a year of data overstates results, so CAGR is reported only from one year on.
+ return {totalReturn:total,cagr:years>=1?Math.sign(1+total)*Math.abs(1+total)**(1/years)-1:null,annualVol:vol,maxDrawdown:mdd,sharpe:vol>0?mean/vol:0,profitFactor:losses>0?gains/losses:(gains>0?Infinity:0),days:equity.length};
 }
 
 // Walk-forward: parameters are fixed beforehand; only the out-of-sample segment counts toward acceptance.

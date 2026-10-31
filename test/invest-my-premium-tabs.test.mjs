@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { investMyRoute } from '../invest-my-workspace.js';
 
-test('my invest shows a Korean KPI strip and six button tabs with the live lock always visible', async () => {
+test('my invest shows a Korean KPI strip and seven button tabs with the live lock always visible', async () => {
   const html = await (await investMyRoute(new Request('https://ekodi.kr/invest'), {})).text();
   for (const id of ['kpiAuth', 'kpiBroker', 'kpiPaper', 'kpiLive', 'kpiUpdated']) assert.match(html, new RegExp(`id="${id}"`));
   assert.match(html, /<strong id="kpiLive">잠금<\/strong>/);
   const tabs = [...html.matchAll(/role="tab" data-tab="([a-z]+)"/g)].map(m => m[1]);
-  assert.deepEqual(tabs, ['summary', 'broker', 'autopilot', 'analysis', 'live', 'report']);
+  assert.deepEqual(tabs, ['summary', 'broker', 'autopilot', 'analysis', 'research', 'live', 'report']);
   assert.match(html, /role="tablist" aria-label="마이투자 기능"/);
   // Korean-first: decorative English headings replaced
   assert.doesNotMatch(html, /PRIVATE INVESTMENT STUDIO|EKODI AI PRIVATE WEALTH|>LOCAL</);
