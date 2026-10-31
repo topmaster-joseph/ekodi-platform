@@ -6,6 +6,8 @@ preview_urls = false
 
 [vars]
 DATA_ENABLED = "false"
+# Isolated staging does not expose personal point data by default.
+POINTS_ENABLED = "false"
 DATA_MODE = "isolated-staging"
 AUTH_URL = "https://ekodi.kr/auth/?site=my"
 

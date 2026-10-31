@@ -481,7 +481,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
           +'<td><select data-field="status">'+activityStatusOptions(p.status)+'</select><small class="activity-status-note">'+ae(p.checked_in_at?'체크인 완료':'미체크인')+'</small><select data-payment-status aria-label="참가비 납부상태">'+paymentStatusOptions(pay.payment_status||'unpaid')+'</select></td>'
           +'<td><input data-field="partySize" type="number" min="1" max="20" value="'+ae(p.party_size||1)+'"></td>'
           +'<td class="activity-manage"><details><summary>상세 관리</summary><div class="activity-detail-grid"><input data-field="role" value="'+ae(p.participant_role||'participant')+'" maxlength="80" placeholder="역할"><input data-field="companions" value="'+ae(companions)+'" placeholder="동반자"><select data-field="followUp">'+followUpOptions(p.follow_up_status||'none')+'</select><input data-field="followUpNote" value="'+ae(p.follow_up_note||'')+'" placeholder="후속 메모" maxlength="2000"><input data-field="supportNotes" value="'+ae(p.support_notes||'')+'" placeholder="지원 · 비고" maxlength="2000"><input data-payment-fee type="number" min="0" step="1000" value="'+ae(pay.fee_amount||0)+'" placeholder="참가비"><input data-payment-paid type="number" min="0" step="1000" value="'+ae(pay.paid_amount||0)+'" placeholder="납부액"><input data-payment-method value="'+ae(pay.payment_method||'')+'" maxlength="80" placeholder="납부수단"><input data-payment-note value="'+ae(pay.payment_note||'')+'" maxlength="1000" placeholder="납부 메모"><div class="activity-detail-meta">'+ae(relationships)+(p.source_channel?' · '+ae(p.source_channel):'')+(p.ekodi_id?' · '+ae(p.ekodi_id):'')+'</div></div></details></td>'
-          +'<td><div class="actions"><button class="button primary" type="button" data-activity-save>저장</button><button class="button" type="button" data-activity-checkin>체크인</button></div></td>'
+          +'<td><div class="actions"><button class="button primary" type="button" data-activity-save>저장</button><button class="button" type="button" data-activity-checkin>체크인</button><button class="button" type="button" data-activity-points>출석 포인트</button></div></td>'
           +'</tr>';
       }).join('');
       const activityHeading=workspace==='ekodimission'?'행사 · 신청자':'활동 · 참가자';const publicActivityUrl=workspace==='ekodimission'?missionActivityPublicUrl(selected,requested):workspacePublicUrl();const sharePolicy=shareInfo?.field_policy||{};const shareExpiry=shareInfo?.expires_at?new Date(shareInfo.expires_at).toLocaleString('ko-KR'):'-';
@@ -533,6 +533,24 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
 
       document.querySelectorAll('[data-activity-save]').forEach(btn=>btn.onclick=async()=>{const row=btn.closest('[data-activity-row]');if(!row)return;try{state('참가자 저장 중');const get=n=>row.querySelector('[data-field="'+n+'"]')?.value??'';await activityRpc('activity_admin_update_participation',{p_participation_id:row.dataset.participationId,p_status:get('status'),p_participant_role:get('role'),p_party_size:Number(get('partySize')||1),p_companions:companionsFromInput(get('companions')),p_support_notes:get('supportNotes'),p_follow_up_status:get('followUp'),p_follow_up_note:get('followUpNote'),p_media_consent:null});await activityRpc('activity_admin_update_payment',{p_participation_id:row.dataset.participationId,p_payment_status:String(row.querySelector('[data-payment-status]')?.value||'unpaid'),p_fee_amount:Number(row.querySelector('[data-payment-fee]')?.value||0),p_paid_amount:Number(row.querySelector('[data-payment-paid]')?.value||0),p_payment_method:String(row.querySelector('[data-payment-method]')?.value||''),p_payment_note:String(row.querySelector('[data-payment-note]')?.value||'')});await activityAdmin(requested)}catch(e){state('저장 확인 필요');$('pageCopy').textContent=e.message}});
       document.querySelectorAll('[data-activity-checkin]').forEach(btn=>btn.onclick=async()=>{const row=btn.closest('[data-activity-row]');if(!row)return;try{state('체크인 중');await activityRpc('activity_admin_update_participation',{p_participation_id:row.dataset.participationId,p_status:'attended'});await activityAdmin(requested)}catch(e){state('체크인 확인 필요');$('pageCopy').textContent=e.message}});
+      document.querySelectorAll('[data-activity-points]').forEach(btn=>btn.onclick=async()=>{
+        const row=btn.closest('[data-activity-row]');if(!row)return;
+        const participationId=row.dataset.participationId;
+        const status=row.querySelector('[data-field="status"]')?.value;
+        if(status!=='attended'){state('출석 확정 후 포인트를 적립할 수 있습니다.');return;}
+        btn.disabled=true;
+        try{
+          state('출석 증빙 및 권한 확인 중');
+          const award=await activityRpc('ekodi_points_operator_award_attendance',
+            {p_site:workspace,p_participation_id:participationId});
+          if(award?.awarded===true)state('출석 포인트 적립 완료');
+          else if(award?.reason==='DUPLICATE')state('이미 포인트가 적립된 출석입니다.');
+          else state('포인트 적립 한도 또는 운영 정책을 확인해 주세요.');
+        }catch(error){
+          state('포인트 적립 확인 필요');
+          $('pageCopy').textContent=String(error?.message||'포인트 정책 및 출석 증빙을 확인해 주세요.');
+        }finally{btn.disabled=false;}
+      });
       const add=$('activityAddForm');if(add)add.onsubmit=async e=>{e.preventDefault();const status=$('activityAddStatus');try{const fd=new FormData(add);if(fd.get('privacyConsent')!=='on')throw new Error('개인정보 수집·이용 동의 확인이 필요합니다.');state('참가자 추가 중');await activityRpc('activity_admin_add_participant',{p_workspace_slug:workspace,p_activity_key:requested,p_name:String(fd.get('name')||'').trim(),p_phone:String(fd.get('phone')||'').trim(),p_email:String(fd.get('email')||'').trim(),p_party_size:Number(fd.get('partySize')||1),p_status:String(fd.get('status')||'applied'),p_participant_role:String(fd.get('role')||'participant'),p_language:String(fd.get('language')||'ko'),p_companions:companionsFromInput(fd.get('companions')),p_support_notes:String(fd.get('supportNotes')||''),p_follow_up_status:String(fd.get('followUpStatus')||'none'),p_follow_up_note:String(fd.get('followUpNote')||''),p_source_channel:String(fd.get('sourceChannel')||'admin'),p_privacy_consent:true});if(status)status.textContent='참가자를 추가했습니다.';await activityAdmin(requested)}catch(err){if(status)status.textContent=err.message;state('추가 확인 필요')}};
       startActivityLiveSync(requested,snap);
       state(workspace==='ekodimission'?'신청자 관리 · 자동 반영':'참가자 관리 · 자동 반영');

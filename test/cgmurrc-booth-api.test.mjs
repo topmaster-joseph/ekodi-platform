@@ -166,7 +166,9 @@ test('adding members validates names',async()=>{
 test('the Control API entry routes the booth API',async()=>{
   const {env}=await seed();
   const res=await customerEntryWorker.fetch(new Request(ME),env,{waitUntil(){}});
-  assert.equal(res.status,401);
+  // The entry worker uses the real clock: personal links expire at
+  // LINKS_VALID_UNTIL (410). Routing must hold before and after the event.
+  assert.equal(res.status,Date.now()>=LINKS_VALID_UNTIL?410:401);
   assert.equal(res.headers.get('x-ekodi-route'),'cgmurrc-booth');
 });
 

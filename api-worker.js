@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { handlePointsControl } from './points-control.js';
 import { handleMailControl } from './mail-control.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { handleLanguageAutomationPublic, handleLanguageTenantAdmin, languageStatusForAdmin, runLanguageAutomation, setLanguagePublication } from './language-automation.js';
@@ -527,6 +528,9 @@ async function handleControl(request, env) {
 
   const url = new URL(request.url);
   const path = url.pathname;
+
+  const pointsOverview = await handlePointsControl(request, env, auth.session, auth.response.headers);
+  if(pointsOverview)return pointsOverview;
 
   if (path === `${CONTROL_PREFIX}/confirmations` || path.startsWith(`${CONTROL_PREFIX}/confirmations/`)) {
     const response = await handleAdminConfirmations(request, env, auth.session);
