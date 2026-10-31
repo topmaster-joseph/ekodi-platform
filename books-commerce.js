@@ -8,6 +8,7 @@
 // • 결제 승인 후 내 서재 권한(books_entitlements)을 부여하고, 매출을 출판 재무 원장
 //   (books_finance_transactions · ekodi-direct 채널)에 기록한다.
 import * as ekodipay from './ekodipay-core.js';
+import { publisherAuthorizedForChannel } from './publishing/human/storefront-release-guard.js';
 import { saleReadiness } from './books-sale-readiness.js';
 import { complimentaryAudiobookPolicy, availableAudiobook, audioChapterFor, validateAudioChapter, MAX_AUDIO_CHAPTER_BYTES, audioSha256 } from './books-audiobook.js';
 
@@ -49,6 +50,14 @@ export function directSaleBook(catalog, bookId) {
   if (!BOOK_ID.test(id)) return null;
   const book = (catalog?.books || []).find(b => b.id === id);
   return book && book.directSale?.enabled === true ? book : null;
+}
+
+/** Customer-visible sale or download requires live publisher authority for new editions.
+ * Admin staging and approved EPUB upload retain directSaleBook without public access. */
+export async function authorizedPublicSaleBook(env,catalog,bookId){
+  const book=directSaleBook(catalog,bookId);
+  if(!book)return null;
+  return await publisherAuthorizedForChannel(env?.PUBLISHING_RELEASE_GATE,book,'books')?book:null;
 }
 
 export function paymentState(env) {
@@ -138,7 +147,7 @@ export async function fileReady(env, book) {
 
 export async function quote(env, request, bookId) {
   const [catalog, policy] = await Promise.all([loadCatalog(env), loadPolicy(env)]);
-  const book = directSaleBook(catalog, bookId);
+  const book = await authorizedPublicSaleBook(env,catalog,bookId);
   if (!book) return { status: 404, data: { error: '에코디서점 직접 판매 도서가 아닙니다.' } };
   const buyer = await buyerIdentity(request);
   const tierId = await tierFor(env, buyer);
@@ -169,7 +178,7 @@ export async function createOrder(env, request, body, now = new Date()) {
   if (!buyer) return { status: 401, data: { error: '구글 로그인 후 구매할 수 있습니다.', code: 'login_required' } };
   if (pay.mode !== 'live' && !operatorEmails(env).has(buyer.email)) return { status: 503, data: { error: '에코디서점 결제 준비 중입니다.', code: 'PAYMENTS_TEST_ONLY' } };
   const [catalog, policy] = await Promise.all([loadCatalog(env), loadPolicy(env)]);
-  const book = directSaleBook(catalog, body?.bookId);
+  const book = await authorizedPublicSaleBook(env,catalog,body?.bookId);
   if (!book) return { status: 404, data: { error: '에코디서점 직접 판매 도서가 아닙니다.' } };
   if (await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL').bind(buyer.userId, book.id).first()) {
     return { status: 409, data: { error: '이미 내 서재에 있는 도서입니다.', code: 'ALREADY_OWNED' } };
@@ -216,6 +225,9 @@ export async function confirm(env, { paymentKey, orderId, amount }, now = new Da
     return { status: 409, data: { error: '결제 금액이 주문과 일치하지 않습니다.' } };
   }
   if (order.expires_at < now.toISOString()) return { status: 410, data: { error: '결제 시간이 지났습니다. 다시 구매해 주세요.' } };
+  // An edition can be revoked after quote/order creation; recheck BEFORE charging.
+  if(!(await authorizedPublicSaleBook(env,await loadCatalog(env),order.book_id)))
+    return {status:409,data:{error:'출판 공개 승인이 취소되었거나 아직 공개되지 않은 도서입니다.',code:'BOOK_NOT_RELEASED'}};
   if (!(await payments(env)).ready) return { status: 503, data: { error: '결제 승인 서비스가 준비되지 않았습니다.' } };
   // 주문 이후 판매 준비 상태가 철회될 수 있으므로 청구 전에 다시 확인한다(결제 승인 호출 없음).
   if (!saleReadiness((await loadCatalog(env))?.books?.find(b => b.id === order.book_id)).ready) {
@@ -275,7 +287,7 @@ export async function library(env, request) {
 export async function download(env, request, bookId) {
   const buyer = await buyerIdentity(request);
   if (!buyer) return new Response(JSON.stringify({ error: '로그인이 필요합니다.' }), { status: 401, headers: { 'content-type': 'application/json; charset=utf-8' } });
-  const book = directSaleBook(await loadCatalog(env), bookId);
+  const book = await authorizedPublicSaleBook(env,await loadCatalog(env),bookId);
   const owned = book && await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL').bind(buyer.userId, book.id).first();
   if (!owned) return new Response(JSON.stringify({ error: '내 서재에 없는 도서입니다.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
   const object = env.BOOK_FILES && book.directSale?.fileKey ? await env.BOOK_FILES.get(book.directSale.fileKey) : null;
@@ -294,7 +306,7 @@ export async function downloadAudiobook(env, request, bookId, trackNo) {
   const buyer = await buyerIdentity(request);
   const headers = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' };
   if (!buyer) return new Response(JSON.stringify({ error: '로그인이 필요합니다.' }), { status: 401, headers });
-  const book = directSaleBook(await loadCatalog(env), bookId);
+  const book = await authorizedPublicSaleBook(env,await loadCatalog(env),bookId);
   const owned = book && await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL')
     .bind(buyer.userId, book.id).first();
   if (!owned) return new Response(JSON.stringify({ error: '내 서재에서 이용할 수 없는 도서입니다.' }), { status: 403, headers });
