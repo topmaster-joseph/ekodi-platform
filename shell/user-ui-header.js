@@ -4,7 +4,7 @@ if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
 const VERSION=7;
-const SITE_CHROME_URL='https://workspace-api.ekodi.kr/v1/site-chrome/public';
+const SITE_CHROME_URL='https://ekodi.kr/workspace-api/v1/site-chrome/public';
 // Education has no customer-site chrome configuration; keep the shared fallback.
 const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education']);
 const STYLE_ID='ekodi-user-ui-header-style';

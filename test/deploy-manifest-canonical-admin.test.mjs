@@ -14,13 +14,17 @@ const cases = [
   { manifest: 'deploy/manifests/publishing.worker.json', worker: 'publishing-worker.js', location: 'https://ekodi.kr/publishing/admin/', rollback: 'publishing', status: 308, suffixRollback: false },
 ];
 
+// 2026-11-01: the public service subdomains are retired, so the admin check runs on the
+// apex path ekodi.kr/<site>/admin, which the apex router forwards to the Worker as /admin.
 const adminCheck = manifestPath => JSON.parse(fs.readFileSync(manifestPath, 'utf8')).worker.requests
-  .find(request => new URL(request.url).pathname === '/admin');
+  .find(request => /^\/[a-z0-9-]+\/admin$/.test(new URL(request.url).pathname));
+const workerAdminRequest = url => { const target = new URL(url); target.pathname = '/admin'; return new Request(target); };
 
 for (const item of cases) {
   test(`${item.manifest} expects the canonical admin redirect and a version-neutral rollback`, () => {
     const admin = adminCheck(item.manifest);
     assert.ok(admin, 'admin check present');
+    assert.equal(new URL(admin.url).hostname, 'ekodi.kr');
     assert.deepEqual(admin.headerExpect, [`location: ${item.location}`]);
     assert.deepEqual(admin.rollbackHeaderExpect, [item.rollback]);
     // The previous version redirects to the same /<site>#<site> fragment on the retired
@@ -31,7 +35,7 @@ for (const item of cases) {
 
   test(`${item.worker} actually redirects /admin where its manifest expects`, async () => {
     const worker = (await import(pathToFileURL(path.resolve(item.worker)).href)).default;
-    const response = await worker.fetch(new Request(adminCheck(item.manifest).url), {}, { waitUntil() {} });
+    const response = await worker.fetch(workerAdminRequest(adminCheck(item.manifest).url), {}, { waitUntil() {} });
     assert.equal(response.status, item.status);
     assert.equal(response.headers.get('location'), item.location);
   });

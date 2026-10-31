@@ -110,9 +110,8 @@ function safeReturn(raw){
     const internalEkodi=adminReturn||adminToolReturn||(config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath));
     const trustedLegacy=target.origin!=='https://ekodi.kr'&&allowedOrigins.has(target.origin);
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
-    const churchLive=config.kind==='church'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/live/church'||target.pathname.startsWith('/live/church/'));
-    const churchPath=config.kind!=='church'||churchLive||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));
-    if(target.protocol!=='https:'||target.username||target.password||(!trustedLegacy&&!internalEkodi&&!churchLive)||!missionPath||!churchPath)return fallback.href;
+    const churchPath=config.kind!=='church'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));
+    if(target.protocol!=='https:'||target.username||target.password||(!trustedLegacy&&!internalEkodi)||!missionPath||!churchPath)return fallback.href;
     target.hash='';
     return target.href;
   }catch{return fallback.href}

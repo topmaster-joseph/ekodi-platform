@@ -64,7 +64,7 @@ test('Google origin bridge keeps strict origin and account-selection safety', ()
 
 test('single-handoff keeps the existing no-store auth asset contract', () => {
   assert.match(authRouter, /admin-auth\.js\?v=20260918-canonical-origin-2/);
-  assert.match(authHtml, /auth-entry\.js\?v=20261101-live-church-return-1/);
-  assert.match(authEntry, /\.\/auth-router\.js\?v=20261101-live-church-return-1/);
+  assert.match(authHtml, /auth-entry\.js\?v=20261028-singles-choose-account/);
+  assert.match(authEntry, /\.\/auth-router\.js\?v=20261028-singles-choose-account/);
   assert.match(bridgeHtml, /google-origin-bridge\.js/);
 });

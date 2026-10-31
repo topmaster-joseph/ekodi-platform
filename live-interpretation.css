@@ -46,7 +46,3 @@
 .live-lang-menu label:hover{background:#f1f6f2}
 .live-lang-menu label.is-source{opacity:.45;pointer-events:none}
 @media(max-width:460px){.live-lang-row{grid-template-columns:1fr}.live-lang-menu{left:0;right:auto;width:100%}}
-.live-simulcast-add{display:grid;gap:6px;margin-top:10px;padding:10px;border:1px dashed #b9cbbf;border-radius:10px;background:#fbfdfb}
-.live-simulcast-add-title{display:block;font-size:12px;color:#173730;margin:2px 0}
-.live-simulcast-add button[disabled]{opacity:.55;cursor:not-allowed}
-.live-simulcast-obs{margin-top:8px;font-size:12px}.live-simulcast-obs>summary{cursor:pointer;color:#53665a;font-weight:700}

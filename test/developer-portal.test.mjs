@@ -48,8 +48,8 @@ test('public preflight provides actionable remediation without changing authorit
   assert.match(js,/suggested/);
 });
 
-test('developer portal is public, read-only and canonical at dev.ekodi.kr',async()=>{
-  assert.equal(DEVELOPER_PORTAL_META.canonicalOrigin,'https://dev.ekodi.kr');
+test('developer portal is public, read-only and canonical at ekodi.kr/developer',async()=>{
+  assert.equal(DEVELOPER_PORTAL_META.canonicalOrigin,'https://ekodi.kr/developer');
   const health=await worker.fetch(new Request('https://dev.ekodi.kr/health'),{});
   assert.equal(health.status,200);
   const healthJson=await health.json();
@@ -65,8 +65,9 @@ test('developer portal is public, read-only and canonical at dev.ekodi.kr',async
 test('developer browser preflight never submits manifest data',()=>{
   const html=read('experience/developer.html');
   const js=read('experience/developer.js');
-  assert.match(html,/https:\/\/dev\.ekodi\.kr\//);
-  assert.match(html,/https:\/\/exp\.ekodi\.kr\//);
+  assert.match(html,/https:\/\/ekodi\.kr\/developer\//);
+  assert.match(html,/https:\/\/ekodi\.kr\/experience\//);
+  assert.doesNotMatch(html,/https:\/\/(?:dev|exp|try)\.ekodi\.kr/);
   assert.match(html,/CONFORMANCE PREFLIGHT/);
   assert.match(js,/fetch\('\/api\/contract'/);
   assert.doesNotMatch(js,/method\s*:\s*['"]POST['"]/i);
@@ -79,9 +80,9 @@ test('developer browser preflight never submits manifest data',()=>{
 
 test('Experience links directly to the canonical Developer portal',()=>{
   const html=read('experience/index.html');
-  assert.match(html,/href="https:\/\/dev\.ekodi\.kr\/"/);
+  assert.match(html,/href="https:\/\/ekodi\.kr\/developer\/"/);
   assert.match(html,/개발자 포털 ↗/);
-  assert.match(html,/실제 규격 검사는 dev\.ekodi\.kr에서 이어집니다/);
+  assert.match(html,/실제 규격 검사는 ekodi\.kr\/developer에서 이어집니다/);
 });
 
 test('legacy try.ekodi.kr permanently redirects to canonical exp.ekodi.kr',async()=>{

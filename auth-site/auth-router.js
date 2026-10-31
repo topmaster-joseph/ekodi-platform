@@ -55,7 +55,7 @@ async function loadMarketingAuth(){
   catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
 }
 async function loadClientAuth(){
-  try{return await import('./client-auth.js?v=20261101-live-church-return-1')}
+  try{return await import('./client-auth.js?v=20261031-admin-tools-account-1')}
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 
@@ -88,8 +88,8 @@ else{
   const trustedEkodiReturn=hasTrustedEkodiReturn();
   if(!targetedWorkspace&&site!=='marketing'&&(site==='portal'||isRegistryUserService||firstPartyClientSites.has(site)||trustedEkodiReturn))await loadClientAuth();
   else{
-    await import('./auth.js?v=20261101-live-church-return-1');
-    if(targetedWorkspace)await import('./auth-workspace-target.js?v=20261101-live-church-return-1');
+    await import('./auth.js?v=20261101-merge-report-1');
+    if(targetedWorkspace)await import('./auth-workspace-target.js?v=20260817-all-sites-1');
     if(site==='marketing')await import('./marketing-onboarding.js?v=20260817-workspace-label-1');
     await import('./membership-ui.js');
   }
