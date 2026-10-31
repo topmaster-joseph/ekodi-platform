@@ -538,15 +538,47 @@ async function showOwnerProposals(h){
  }catch(e){notice(box,e.status===403?'소유자(설정 권한 운영자)만 볼 수 있습니다.':errorText(e))}
  h.append(box);
 }
+const WITHDRAW_REASON={already_used:'이 구독 기간에 요청·수락·거절·메시지·행사 신청을 이용해 청약철회 대상이 아닙니다.',
+ withdrawal_period_over:'입금 확인일로부터 7일이 지나 청약철회 기간이 끝났습니다.',newer_subscription_exists:'이어서 구매한 구독권이 있어, 가장 최근 구독권부터 철회할 수 있습니다.',
+ subscription_period_ended:'구독 기간이 이미 끝났습니다.',already_requested:'이미 청약철회를 신청했습니다.',not_paid:'입금 확인 전 주문입니다.'};
+async function showWithdrawals(h){
+ let w;try{w=await api('/bank/wallet')}catch{return}
+ const list=w.withdrawals||[],done=w.order_refunds||[];
+ if(!list.length&&!done.length)return;
+ const box=text('section','','member-card');box.dataset.withdrawal='1';box.append(text('h3','구독권 청약철회'));
+ paragraph(box,'입금 확인일로부터 7일 안에, 그 구독 기간에 요청·수락·거절·메시지·행사 신청을 한 번도 하지 않았다면 전액 환불받을 수 있습니다(전자상거래법상 청약철회). 신청하면 그 구독 기간은 바로 회수됩니다.');
+ for(const o of list){
+  if(done.some(d=>d.reference===o.reference))continue;
+  const card=text('article','','mini-card');
+  card.append(text('p',o.plan_code.replace('sub_','').replace('d','일')+' 구독권 · '+money(o.amount_krw)+' · 입금 확인 '+String(o.verified_at||'').slice(0,10)));
+  if(o.eligible){
+   paragraph(card,String(o.deadline||'').slice(0,10)+'까지 청약철회할 수 있습니다.');
+   const msg=text('p','','status-text');
+   card.append(button('청약철회 신청(전액 환불)',async()=>{
+    if(!confirm(money(o.amount_krw)+' 구독권을 청약철회합니까? 구독 기간이 바로 회수되고, 3영업일 안에 입금하신 계좌로 돌려드립니다.'))return;
+    try{const r=await api('/bank/orders/'+o.reference+'/withdraw',{method:'POST',body:{confirm:true}});
+     msg.textContent='청약철회를 접수했습니다. '+money(r.amount_krw)+'을 '+refundDeadline(new Date().toISOString())+'까지 입금하신 계좌로 돌려드립니다.';
+    }catch(e){msg.textContent=e.message==='withdrawal_not_allowed'?'지금은 청약철회할 수 없습니다. 화면을 새로고침해 사유를 확인해 주세요.':errorText(e)}
+   },'primary'),msg);
+  }else paragraph(card,WITHDRAW_REASON[o.reason]||'청약철회 대상이 아닙니다.');
+  box.append(card);
+ }
+ for(const d of done){
+  const card=text('article','','mini-card');
+  card.append(text('p','청약철회 · '+money(d.amount_krw)+' · '+(d.status==='refunded'?'환불 완료 · '+String(d.refunded_at||'').slice(0,10)+' 송금':'환불 예정 · '+refundDeadline(d.refund_due_at)+'까지 입금하신 계좌로 돌려드립니다')));
+  box.append(card);
+ }
+ h.append(box);
+}
 async function showRefundsAdmin(h){
  const box=text('section','','member-card');box.dataset.refundAdmin='1';box.append(text('h3','환불 송금 처리 · 운영자 전용'));
- paragraph(box,'상대가 7일 안에 결제하지 않아 연결이 취소된 경우, 먼저 결제한 회원에게 돌려드릴 금액입니다. 돈은 자동으로 나가지 않습니다. 은행 앱에서 원래 입금한 계좌로 직접 송금한 뒤, 송금 거래번호를 입력해 "환불 완료"로 기록하세요.');
+ paragraph(box,'① 상대가 7일 안에 결제하지 않아 연결이 취소된 청구서, ② 회원이 7일 안에 신청한 구독권 청약철회에 대해 돌려드릴 금액입니다. 돈은 자동으로 나가지 않습니다. 은행 앱에서 원래 입금한 계좌로 직접 송금한 뒤, 송금 거래번호를 입력해 "환불 완료"로 기록하세요.');
  try{
   const d=await api('/bank/admin/refunds');
   box.append(text('p',d.pending?'환불할 건 '+d.pending+'건 · 합계 '+money(d.pending_krw):'환불할 건이 없습니다.','wallet-balance'));
   for(const r of d.refunds||[]){
    const card=text('article','','mini-card');
-   card.append(text('p',(r.email||'회원')+' · '+money(r.amount_krw)+' · '+(INVOICE_STATUS[r.status]||r.status)));
+   card.append(text('p',(r.kind==='subscription_withdrawal'?'[구독권 청약철회] ':'[청구서] ')+(r.email||'회원')+' · '+money(r.amount_krw)+' · '+(INVOICE_STATUS[r.status]||r.status)));
    paragraph(card,'원 결제 주문 '+(r.order_reference||'-')+' · 입금 거래번호 '+(r.paid_trace||'-')+(r.paid_at?' · 입금 '+r.paid_at.slice(0,10):''));
    if(r.status==='refunded'){paragraph(card,'송금 거래번호 '+r.refund_trace+' · '+(r.refunded_at||'').slice(0,16).replace('T',' ')+' 완료');box.append(card);continue}
    paragraph(card,'지급 기한: '+refundDeadline(r.refund_due_at)+'까지(3영업일)');
@@ -558,7 +590,7 @@ async function showRefundsAdmin(h){
     const trace=input.value.trim();
     if(trace.length<4){msg.textContent=errorText({message:'refund_trace_required'});return}
     if(!confirm(money(r.amount_krw)+'을 '+(r.email||'회원')+'님 입금 계좌로 송금하셨습니까? 기록 후에는 되돌릴 수 없습니다.'))return;
-    try{await api('/bank/admin/refunds/'+r.id+'/complete',{method:'POST',body:{refund_trace:trace}});msg.textContent='환불 완료로 기록했습니다.';input.disabled=true}
+    try{await api('/bank/admin/refunds/'+(r.kind==='subscription_withdrawal'?'order/':'')+r.id+'/complete',{method:'POST',body:{refund_trace:trace}});msg.textContent='환불 완료로 기록했습니다.';input.disabled=true}
     catch(e){msg.textContent=errorText(e)}
    },'primary'),msg);
    box.append(card);
@@ -829,7 +861,7 @@ async function signedIn(status){
  else if(paidOnlyHidden&&['/discover','/messages'].includes(page)){notice(h,'유료회원 전용 메뉴입니다.');showGuide(h);await showJoin(h);}
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
- else if(page==='/subscribe'&&state.paidModel){if(state.paid)await showPaidWallet(h);else{showGuide(h);await showJoin(h);}}
+ else if(page==='/subscribe'&&state.paidModel){if(state.paid)await showPaidWallet(h);else{showGuide(h);await showJoin(h);}await showWithdrawals(h);}
  else if(page==='/subscribe'){await showWallet(h);await showSubscription(h);}
  else if(page==='/admin'){await showOwnerProposals(h);await showRefundsAdmin(h);await showMembersAdmin(h);await showBankAdmin(h);await showEventPricing(h);await showReportModeration(h);await showAllPricing(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');

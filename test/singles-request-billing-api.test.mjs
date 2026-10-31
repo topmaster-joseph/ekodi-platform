@@ -26,6 +26,6 @@ test('terms draft states the new model, discount framing, invoice after acceptan
 test('owner decision 2026-10-31: no refund after use on mid-term cancellation is disclosed before purchase; statutory 7-day withdrawal kept',async()=>{
   const app=await readFile(new URL('../sites/ekodi-singles/public/app.js',import.meta.url),'utf8');
   assert.match(terms,/중도에 해지하는 경우 남은 기간은 환불하지 않습니다/);
-  assert.match(terms,/7일 이내에 구독 기능을 전혀 이용하지 않았다면 전액 환불/);
+  assert.match(terms,/7일 이내이고 그 구독 기간에 구독 기능\(요청 보내기·수락·거절·메시지·행사 신청\)을 한 번도 이용하지 않았다면/);
   assert.match(app,/중도에 해지해도 남은 기간은 환불되지 않습니다/);
 });
