@@ -27,15 +27,15 @@ test('worker serves admin sections (deep links and refresh) with noindex, and re
   const seen = [];
   const env = { ASSETS: { fetch: async r => { seen.push(new URL(r.url).pathname); return new Response('<html><head></head><body>PUBLISHING ADMIN</body></html>', { headers: { 'content-type': 'text/html' } }); } } };
   globalThis.HTMLRewriter ??= class { on() { return this; } onDocument() { return this; } transform(r) { return r; } };
-  const redirect = await worker.fetch(new Request('https://publishing.ekodi.kr/admin'), env);
+  const redirect = await worker.fetch(new Request('https://publishing.internal/admin'), env);
   assert.equal(redirect.status, 308);
   assert.equal(redirect.headers.get('location'), 'https://ekodi.kr/publishing/admin/');
   for (const p of ['/admin/', '/admin/review', '/admin/roles']) {
-    const r = await worker.fetch(new Request(`https://publishing.ekodi.kr${p}`), env);
+    const r = await worker.fetch(new Request(`https://publishing.internal${p}`), env);
     assert.equal(r.status, 200);
     assert.match(r.headers.get('x-robots-tag') || '', /noindex/);
   }
   assert.ok(seen.every(p => p === '/admin/'), 'section URLs serve the single admin page');
-  await worker.fetch(new Request('https://publishing.ekodi.kr/admin/admin.js'), env);
+  await worker.fetch(new Request('https://publishing.internal/admin/admin.js'), env);
   assert.equal(seen.at(-1), '/admin/admin.js', 'assets pass through');
 });
