@@ -19,6 +19,7 @@ on:
       - 'books-commerce.js'
       - 'books-audiobook.js'
       - 'books-sale-readiness.js'
+      - 'books-language-editions.js'
       - 'ekodipay-core.js'
       - 'migrations/202610271400_books_direct_commerce.sql'
       - 'scripts/validate-books.mjs'
