@@ -112,7 +112,15 @@ function kisExpiry(data, now) {
   return Number.isFinite(seconds) && seconds > 0 ? now + seconds * 1000 : now + 12 * 3600_000;
 }
 
-class BrokerError extends Error { constructor(code) { super(code); this.code = code; } }
+class BrokerError extends Error { constructor(code, provider = null) { super(code); this.code = code; this.provider = provider; } }
+// The provider's own reason code and message are safe to show the owner (no keys, no account number):
+// long digit runs are masked and the text is bounded, so a misconfigured account can be diagnosed.
+export function kisProviderReason(data) {
+  const code = String(data?.msg_cd ?? '').trim();
+  const message = String(data?.msg1 ?? '').replace(/\d{6,}/g, '******').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 120);
+  if (!/^[A-Z0-9_]{3,12}$/.test(code) && !message) return null;
+  return { code: /^[A-Z0-9_]{3,12}$/.test(code) ? code : null, message: message || null };
+}
 
 async function kisAccessToken({ db, cfg, fetchImpl, now, force = false }) {
   const cached = force ? { token: null, issuedAt: 0 } : await readCachedToken(db, cfg, now);
@@ -125,7 +133,7 @@ async function kisAccessToken({ db, cfg, fetchImpl, now, force = false }) {
     body: JSON.stringify({ grant_type: 'client_credentials', appkey: cfg.appKey, appsecret: cfg.appSecret }),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok || typeof data?.access_token !== 'string' || data.access_token.length < 20) throw new BrokerError('KIS_TOKEN_REFUSED');
+  if (!response.ok || typeof data?.access_token !== 'string' || data.access_token.length < 20) throw new BrokerError('KIS_TOKEN_REFUSED', kisProviderReason({ msg_cd: data?.error_code, msg1: data?.error_description }));
   await storeToken(db, cfg, data.access_token, new Date(kisExpiry(data, now)).toISOString(), new Date(now).toISOString());
   return data.access_token;
 }
@@ -157,7 +165,7 @@ async function kisBalancePages({ cfg, token, fetchImpl }) {
     });
     const data = await response.json().catch(() => ({}));
     if (response.status === 401 || data?.msg_cd === 'EGW00121' || data?.msg_cd === 'EGW00123') throw new BrokerError('KIS_TOKEN_EXPIRED');
-    if (!response.ok || String(data?.rt_cd) !== '0') throw new BrokerError('KIS_BALANCE_REFUSED');
+    if (!response.ok || String(data?.rt_cd) !== '0') throw new BrokerError('KIS_BALANCE_REFUSED', kisProviderReason(data));
     for (const row of Array.isArray(data.output1) ? data.output1 : []) rows.push(row);
     if (Array.isArray(data.output2) && data.output2[0]) summary = data.output2[0];
     const more = String(response.headers.get('tr_cont') || '').trim();
@@ -245,12 +253,12 @@ const LABEL = {
   'kis-live': '연결됨 · 조회 전용 (KIS 실전 서버)',
 };
 
-function view({ brokerId, dataMode, connection, normalized, names, notice, blockers = [], error = null, change = null }) {
+function view({ brokerId, dataMode, connection, normalized, names, notice, blockers = [], error = null, providerReason = null, change = null }) {
   const accepted = normalized?.accepted === true;
   return {
     schema: BROKER_VIEW_SCHEMA, brokerId, dataMode, connection,
     label: LABEL[dataMode] || '미연결',
-    notice, blockers, error,
+    notice, blockers, error, providerReason,
     snapshot: accepted ? {
       capturedAt: normalized.capturedAt, currency: normalized.currency, environment: normalized.environment,
       accountRef: normalized.accountRef, cashMinor: normalized.cashMinor, holdingsMinor: normalized.holdingsMinor,
@@ -294,7 +302,7 @@ export async function buildBrokerReadOnlyView({ brokerId, env = {}, db, fetchImp
       change: await history(dataMode, normalized),
       notice: '증권사 공식 API에서 조회만 했습니다. 주문·이체 기능은 없습니다.' });
   } catch (e) {
-    return view({ brokerId, dataMode, connection: 'error', normalized: null, names: null, error: String(e?.code || 'KIS_READONLY_UNAVAILABLE'),
+    return view({ brokerId, dataMode, connection: 'error', normalized: null, names: null, error: String(e?.code || 'KIS_READONLY_UNAVAILABLE'), providerReason: e?.provider || null,
       notice: '증권사 조회에 실패했습니다. 실제 잔고를 대신해 모의 데이터를 보여주지 않습니다.' });
   }
 }
