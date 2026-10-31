@@ -132,7 +132,7 @@ async function ownerBrokerSnapshot(request,env,ctx){
  const brokerId=clean(new URL(request.url).searchParams.get('broker')||'kis',30);
  if(!Object.hasOwn(BROKER_ADAPTERS,brokerId))return json(request,env,{error:'BROKER_NOT_REGISTERED'},400);
  const strongMfaVerified=verifiedOwnerAal2(request,ctx.identity.id);
- const result=await buildBrokerReadOnlyView({brokerId,env,db:env.DB,strongMfaVerified});
+ const result=await buildBrokerReadOnlyView({brokerId,env,db:env.DB,strongMfaVerified,subjectKey:ctx.subject.type+':'+ctx.subject.key});
  await auditPrincipal(env,ctx.principal,'invest:owner-broker-readonly:'+result.dataMode+':'+result.connection);
  return json(request,env,{...result,brokerName:BROKER_ADAPTERS[brokerId].name});
 }
@@ -269,8 +269,23 @@ async function paperOrder(request,env,ctx){
  const broker=createPaperBroker({cash:view.cash,positions:view.positions,realizedPnl:view.realizedPnl,feeRate:0.00015,slippageBps:10});
  const order=broker.submit(intent,{price:quote.price});
  const snap=broker.snapshot();
- await env.DB.prepare(insert).bind(...base,order.status,order.filledQty||0,order.avgPrice||0,order.fee||0,1,'[]',...meta).run();
- await saveAccount(env,ctx,{paper_ledger_json:JSON.stringify({...account.ledger,cash:snap.cash,positions:snap.positions,realizedPnl:snap.realizedPnl,dayKey:view.dayKey,dayStartEquity:view.dayStartEquity})});
+ // Claim the idempotency key first: a concurrent duplicate gets changes=0 and must not touch the ledger.
+ const claimed=await env.DB.prepare(insert).bind(...base,order.status,order.filledQty||0,order.avgPrice||0,order.fee||0,1,'[]',...meta).run();
+ if(Number(claimed?.meta?.changes)!==1){
+  const dup=await env.DB.prepare(`SELECT idempotency_key,status,filled_qty,avg_price FROM investment_autopilot_orders WHERE subject_type=? AND subject_key=? AND idempotency_key=?`).bind(ctx.subject.type,ctx.subject.key,intent.idempotencyKey).first();
+  return json(request,env,{ok:true,duplicate:true,order:dup},200);
+ }
+ // Compare-and-swap on the exact ledger this order was evaluated against, so two concurrent orders
+ // cannot both pass the budget check and overwrite each other.
+ const nextLedger=JSON.stringify({...account.ledger,cash:snap.cash,positions:snap.positions,realizedPnl:snap.realizedPnl,dayKey:view.dayKey,dayStartEquity:view.dayStartEquity});
+ const swapped=await env.DB.prepare(`UPDATE investment_autopilot_accounts SET paper_ledger_json=?,updated_by=?,updated_at=? WHERE subject_type=? AND subject_key=? AND paper_ledger_json=?`)
+  .bind(nextLedger,ctx.identity.email,nowIso(),ctx.subject.type,ctx.subject.key,String(account.row?.paper_ledger_json??'{}')).run();
+ if(Number(swapped?.meta?.changes)!==1){
+  await env.DB.prepare(`UPDATE investment_autopilot_orders SET status='RISK_BLOCKED',filled_qty=0,avg_price=0,fee=0,risk_allowed=0,risk_reasons_json=? WHERE subject_type=? AND subject_key=? AND idempotency_key=?`)
+   .bind(JSON.stringify(['ledger_conflict_retry']),ctx.subject.type,ctx.subject.key,intent.idempotencyKey).run();
+  await recordEvent(env,ctx,'paper:ledger-conflict','warning',{symbol:intent.symbol});
+  return json(request,env,{ok:false,allowed:false,reasons:['ledger_conflict_retry'],executionPerformed:false},409);
+ }
  await recordEvent(env,ctx,'paper:order','info',{symbol:intent.symbol,side:intent.side,status:order.status});
  await auditPrincipal(env,ctx.principal,'invest:autopilot-paper-order');
  return json(request,env,{ok:true,allowed:true,mode:'paper',order,ledger:ledgerView({...account.ledger,...snap,dayKey:view.dayKey,dayStartEquity:view.dayStartEquity},now),dataBasis:'paper_owner_supplied_quote',executionPerformed:false},201);
