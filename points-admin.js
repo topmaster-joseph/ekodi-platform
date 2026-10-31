@@ -45,7 +45,7 @@
   <section class="point-box"><h3>활동별 적립 규칙</h3><div class="point-scroll"><table data-point-table="rules"></table></div></section>
   <section class="point-box"><h3>사이트 간 전환 정책</h3><div class="point-scroll"><table data-point-table="transfers"></table></div></section>
   <section class="point-box"><h3>포인트 기부 캠페인</h3><div class="point-scroll"><table data-point-table="campaigns"></table></div></section>
-  <p class="point-help">조회 전용 화면입니다. 사이트·적립 규칙은 기본적으로 비활성화되며 운영 정책과 보안·회계 검증 후에만 활성화합니다. 포인트 기부는 현금 기부나 세제상 기부금과 다릅니다.</p>`;
+  <p class="point-help">위 정책 표는 조회 전용이며, 변경은 아래 요청·승인 절차로만 반영됩니다. 사이트·적립 규칙은 기본적으로 비활성화되며 운영 정책과 보안·회계 검증 후에만 활성화합니다. 포인트 기부는 현금 기부나 세제상 기부금과 다릅니다.</p>`;
   host.append(root);
   const $=selector=>root.querySelector(selector);
   const status=(message,error=false)=>{const el=$('[data-point-status]');el.textContent=message;el.dataset.error=String(error);};
@@ -111,4 +111,10 @@
   }
   $('[data-point-refresh]').addEventListener('click',refresh);
   clear();void refresh();
+  // Governance (requests/approvals/audit) loads only after this read-only
+  // view mounts, keeping the admin first-path JS budget unchanged.
+  const current=document.currentScript;
+  const gv=document.createElement('script');
+  gv.src=new URL('points-governance-admin.js'+(current?new URL(current.src).search:''),current?.src||location.href).toString();
+  gv.defer=true;document.head.append(gv);
 })();

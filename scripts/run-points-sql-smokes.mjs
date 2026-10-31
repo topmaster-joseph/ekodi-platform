@@ -54,6 +54,7 @@ const smokes = [
   ['points-verified-referrals-isolated-smoke.sql', 'REFERRAL_ISOLATED_NEGATIVE_SMOKE_PASS'],
   ['points-verified-referrals-positive-smoke.sql', 'REFERRAL_POSITIVE_SMOKE_PASS'],
   ['points-referral-hardening-isolated-smoke.sql', 'REFERRAL_HARDENING_ISOLATED_SMOKE_PASS'],
+  ['points-admin-governance-isolated-smoke.sql', 'POINT_ADMIN_GOVERNANCE_SMOKE_PASS'],
 ];
 let failed = 0;
 for (const [file, marker, prelude = ''] of smokes) {
