@@ -14,10 +14,13 @@ test('admin page lists seven sections with canonical, independent URLs', () => {
   assert.match(html, /noindex/);
 });
 
-test('admin script reads only, uses central login with exact return and no root literals', () => {
+test('admin script writes only role changes, uses central login with exact return and no root literals', () => {
   const js = read('publishing/admin/admin.js');
   assert.doesNotMatch(js, /(["'`])\/(?!\/)/);
-  assert.doesNotMatch(js, /method:\s*'(POST|PUT|PATCH|DELETE)'/);
+  // PUBLISHING-ROLES-001: the only write is the server-checked role endpoint.
+  assert.equal((js.match(/method: 'POST'/g) || []).length, 1);
+  assert.equal((js.match(/api\('admin\/roles', body\)/g) || []).length, 1);
+  assert.doesNotMatch(js, /method:\s*'(PUT|PATCH|DELETE)'/);
   assert.match(js, /searchParams\.set\('return_to', location\.href\)/);
   assert.doesNotMatch(js, /@ekodi|topmaster|OPERATOR_EMAILS/, 'no email-string authorization');
 });

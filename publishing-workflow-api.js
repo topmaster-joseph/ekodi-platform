@@ -27,6 +27,66 @@ async function role(db,id){
   const r=await db.prepare('SELECT role FROM publishing_workflow_roles WHERE user_id=?').bind(id).first();
   return r?.role||'author';
 }
+// PUBLISHING-ROLES-001: 인증 서버가 확인한 이메일과 초대가 일치할 때만 한 번 권한을 받는다.
+async function claimInvite(db,u){
+  if(!u.email)return null;
+  const inv=await db.prepare('SELECT role FROM publishing_workflow_role_invites WHERE email=? AND claimed_at IS NULL').bind(u.email).first();
+  if(!inv)return null;
+  const time=now();
+  await db.batch([
+    db.prepare('INSERT OR IGNORE INTO publishing_workflow_roles (user_id,role,granted_by,granted_at) VALUES (?,?,?,?)').bind(u.userId,inv.role,'invite:'+u.email,time),
+    db.prepare('UPDATE publishing_workflow_role_invites SET claimed_by=?,claimed_at=? WHERE email=? AND claimed_at IS NULL').bind(u.userId,time,u.email),
+    roleAudit(db,u.userId,'role_invite_claimed',null,inv.role,{email:maskEmail(u.email)})
+  ]);
+  return role(db,u.userId);
+}
+const ROLES=['editor','publisher','admin'];
+const EMAIL=/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
+const maskEmail=e=>{const [a,d]=String(e||'').split('@');return d?(a.slice(0,2)+'***@'+d):'…';};
+function roleAudit(db,actor,action,from,to,detail={}){
+  return db.prepare("INSERT INTO publishing_workflow_audit (id,project_id,actor_user_id,action,from_stage,to_stage,revision,details_json,created_at) VALUES (?,'roles',?,?,?,?,0,?,?)")
+    .bind(crypto.randomUUID(),actor,action,from,to,JSON.stringify(detail).slice(0,500),now());
+}
+const roleRef=async id=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode('publishing-role:'+id)))].slice(0,12).map(b=>b.toString(16).padStart(2,'0')).join('');
+async function adminRoles(db){
+  const rows=(await db.prepare('SELECT user_id,role,granted_at FROM publishing_workflow_roles ORDER BY granted_at DESC LIMIT 200').all()).results||[];
+  const invites=(await db.prepare('SELECT email,role,invited_at,claimed_at FROM publishing_workflow_role_invites ORDER BY invited_at DESC LIMIT 200').all()).results||[];
+  return {roles:await Promise.all(rows.map(async x=>({user:maskId(x.user_id),ref:await roleRef(x.user_id),role:x.role,grantedAt:x.granted_at}))),
+    invites:invites.map(x=>({email:maskEmail(x.email),role:x.role,invitedAt:x.invited_at,claimedAt:x.claimed_at}))};
+}
+// 출판 관리자만: 초대(이메일+권한), 초대 취소, 권한 회수. 자기 자신과 마지막 관리자는 바꿀 수 없다.
+async function changeRoles(db,req,u){
+  const body=await input(req);if(!body||typeof body!=='object')return error(400,'INVALID_INPUT');
+  const action=String(body.action||'');
+  if(action==='invite'){
+    const email=String(body.email||'').trim().toLowerCase(),r=String(body.role||'');
+    if(!EMAIL.test(email)||!ROLES.includes(r))return error(400,'INVALID_INVITE');
+    if(email===u.email)return error(409,'CANNOT_CHANGE_SELF');
+    await db.batch([
+      db.prepare('INSERT INTO publishing_workflow_role_invites (email,role,invited_by,invited_at) VALUES (?,?,?,?) ON CONFLICT(email) DO UPDATE SET role=excluded.role,invited_by=excluded.invited_by,invited_at=excluded.invited_at,claimed_by=NULL,claimed_at=NULL WHERE claimed_at IS NULL').bind(email,r,u.userId,now()),
+      roleAudit(db,u.userId,'role_invited',null,r,{email:maskEmail(email)})
+    ]);
+    return result(200,{ok:true,...await adminRoles(db)});
+  }
+  if(action==='cancel_invite'){
+    const email=String(body.email||'').trim().toLowerCase();if(!EMAIL.test(email))return error(400,'INVALID_INVITE');
+    await db.batch([db.prepare('DELETE FROM publishing_workflow_role_invites WHERE email=? AND claimed_at IS NULL').bind(email),
+      roleAudit(db,u.userId,'role_invite_cancelled',null,null,{email:maskEmail(email)})]);
+    return result(200,{ok:true,...await adminRoles(db)});
+  }
+  if(action==='revoke'){
+    const want=String(body.ref||'');if(!/^[a-f0-9]{24}$/.test(want))return error(400,'INVALID_TARGET');
+    const all=(await db.prepare('SELECT user_id,role FROM publishing_workflow_roles').all()).results||[];
+    let t=null;for(const x of all)if(await roleRef(x.user_id)===want){t=x;break;}
+    if(!t)return error(404,'NOT_FOUND');
+    const ref=t.user_id;if(ref===u.userId)return error(409,'CANNOT_CHANGE_SELF');
+    if(t.role==='admin'){const n=await db.prepare("SELECT COUNT(*) AS n FROM publishing_workflow_roles WHERE role='admin'").first();if(Number(n?.n)<=1)return error(409,'LAST_ADMIN');}
+    await db.batch([db.prepare('DELETE FROM publishing_workflow_roles WHERE user_id=?').bind(ref),
+      roleAudit(db,u.userId,'role_revoked',t.role,null,{user:maskId(ref)})]);
+    return result(200,{ok:true,...await adminRoles(db)});
+  }
+  return error(400,'UNKNOWN_ACTION');
+}
 function project(row){
   if(!row)return null;
   return {id:row.id,publicationId:row.id,editionId:row.edition_id,authorUserId:row.author_user_id,
@@ -157,7 +217,8 @@ export async function handlePublishingWorkflow(req,env){
   if(!env?.PUBLISH_DB)return error(503,'PUBLISH_DB_NOT_CONFIGURED');
   try {
     const u=await identity(req,env);if(!u)return error(401,'LOGIN_REQUIRED');
-    const db=env.PUBLISH_DB,r=await role(db,u.userId);
+    const db=env.PUBLISH_DB;let r=await role(db,u.userId);
+    if(r==='author')r=(await claimInvite(db,u))||r;
     if(path==='/api/workflow/projects'){
       if(req.method==='POST')return create(db,req,u);
       if(req.method==='GET')return list(db,u,r);
@@ -175,10 +236,13 @@ export async function handlePublishingWorkflow(req,env){
       if(path==='/api/workflow/admin/audit')return result(200,{ok:true,role:r,events:await recentAudit(db,100)});
       if(path==='/api/workflow/admin/roles'){
         if(r!=='admin')return error(403,'PUBLISHING_ADMIN_ONLY');
-        const rows=(await db.prepare('SELECT user_id,role,granted_at FROM publishing_workflow_roles ORDER BY granted_at DESC LIMIT 200').all()).results||[];
-        return result(200,{ok:true,role:r,roles:rows.map(x=>({user:maskId(x.user_id),role:x.role,grantedAt:x.granted_at}))});
+        return result(200,{ok:true,role:r,...await adminRoles(db)});
       }
       return error(404,'NOT_FOUND');
+    }
+    if(path==='/api/workflow/admin/roles'&&req.method==='POST'){
+      if(r!=='admin')return error(403,'PUBLISHING_ADMIN_ONLY');
+      return changeRoles(db,req,u);
     }
     const match=/^\/api\/workflow\/projects\/([0-9a-f-]{36})(?:\/(.*))?$/.exec(path);
     if(!match)return error(404,'NOT_FOUND');
