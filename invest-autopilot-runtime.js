@@ -12,6 +12,7 @@ import { buildChannelEnvelope, dispatchChannelEnvelope } from './messenger-chann
 import { stepUpStatus, verifyStepUp, revokeStepUp, stepUpSession } from './invest-step-up.js';
 import { BROKER_ADAPTERS, INVEST_PERMISSION, evaluateBrokerReadiness } from './invest-market-core.js';
 import { verifiedOwnerAal2 } from './invest-owner-mfa.js';
+import { buildBrokerReadOnlyView } from './invest-broker-readonly-adapter.js';
 
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
 const nowIso=()=>new Date().toISOString();
@@ -124,6 +125,17 @@ async function status(request,env,ctx){
  });
 }
 
+
+// Read-only broker balance: mock by default; real KIS inquiry only with server vault secrets,
+// the operator switch and Supabase TOTP AAL2 on this exact session. Never places orders.
+async function ownerBrokerSnapshot(request,env,ctx){
+ const brokerId=clean(new URL(request.url).searchParams.get('broker')||'kis',30);
+ if(!Object.hasOwn(BROKER_ADAPTERS,brokerId))return json(request,env,{error:'BROKER_NOT_REGISTERED'},400);
+ const strongMfaVerified=verifiedOwnerAal2(request,ctx.identity.id);
+ const result=await buildBrokerReadOnlyView({brokerId,env,db:env.DB,strongMfaVerified});
+ await auditPrincipal(env,ctx.principal,'invest:owner-broker-readonly:'+result.dataMode+':'+result.connection);
+ return json(request,env,{...result,brokerName:BROKER_ADAPTERS[brokerId].name});
+}
 
 async function ownerLiveReadiness(request,env,ctx){
  const brokerId=clean(new URL(request.url).searchParams.get('broker')||'toss',30);
@@ -406,6 +418,7 @@ export async function handleInvestAutopilotApi(request,env){
  if(path.startsWith('/v1/invest/autopilot/live/')&&String(ctx.identity.email||'').trim().toLowerCase()!==INVEST_DEFAULT_OWNER)
   return json(request,env,{error:'LIVE_OWNER_ONLY'},403);
  if(path==='/v1/invest/autopilot/live/readiness'&&request.method==='GET')return ownerLiveReadiness(request,env,ctx);
+ if(path==='/v1/invest/autopilot/broker/snapshot'&&request.method==='GET')return ownerBrokerSnapshot(request,env,ctx);
  if(path==='/v1/invest/autopilot/live/orders'&&request.method==='POST')
   return json(request,env,{error:'LIVE_EXECUTION_LOCKED',executionPerformed:false,reason:'BROKER_AND_POLICY_GATES_NOT_VERIFIED'},423);
  if(path==='/v1/invest/autopilot/status'&&request.method==='GET')return status(request,env,ctx);
