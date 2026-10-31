@@ -65,20 +65,20 @@ async function run(){
   await accept('unselected learner never receives share controls',await second.locator('#shareControls').isHidden());
   // A synthetic 1-pixel input is selected by the test, exactly like a learner
   // voluntarily choosing a picture. No phone display is recorded.
-  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a9kAAAAASUVORK5CYII=','base64');
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mOQi1kKAAG7ASA/Ci3kAAAAAElFTkSuQmCC','base64');
   await first.locator('#snapshotFile').setInputFiles({name:'sample.png',mimeType:'image/png',buffer:png});
   await first.locator('#sendSnapshot').click();
   await teacher.locator('#remoteImage:not([hidden])').waitFor({timeout:15000});
   await accept('instructor sees learner-approved still', (await teacher.locator('#remoteImage').getAttribute('src')||'').startsWith('data:image/jpeg;base64,'));
   await teacher.locator('#stopSelection').click();
-  await teacher.locator('#remoteImage[hidden]').waitFor({timeout:15000});
-  await first.locator('#shareControls[hidden]').waitFor({timeout:15000});
+  await teacher.locator('#remoteImage').waitFor({state:'hidden',timeout:15000});
+  await first.locator('#shareControls').waitFor({state:'hidden',timeout:15000});
   await accept('instructor can stop and revoke share',await first.locator('#shareControls').isHidden());
   await teacher.locator('#roster li').filter({hasText:'학습자 B'}).getByRole('button').click();
   await second.locator('#shareControls:not([hidden])').waitFor({timeout:15000});
   await accept('instructor can switch chosen student',await first.locator('#shareControls').isHidden()&&await second.locator('#shareControls').isVisible());
   await teacher.locator('#endRoom').click();
-  await second.locator('#shareControls[hidden]').waitFor({timeout:15000});
+  await second.locator('#shareControls').waitFor({state:'hidden',timeout:15000});
   await accept('classroom closed by host',await second.locator('#shareControls').isHidden());
   report.ok=true;
  }finally{await browser.close();}
