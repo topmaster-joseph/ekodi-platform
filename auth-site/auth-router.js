@@ -88,7 +88,7 @@ else{
   const trustedEkodiReturn=hasTrustedEkodiReturn();
   if(!targetedWorkspace&&site!=='marketing'&&(site==='portal'||isRegistryUserService||firstPartyClientSites.has(site)||trustedEkodiReturn))await loadClientAuth();
   else{
-    await import('./auth.js?v=20260824-return-origin-1');
+    await import('./auth.js?v=20261031-admin-tools-return-1');
     if(targetedWorkspace)await import('./auth-workspace-target.js?v=20260817-all-sites-1');
     if(site==='marketing')await import('./marketing-onboarding.js?v=20260817-workspace-label-1');
     await import('./membership-ui.js');
