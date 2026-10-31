@@ -153,3 +153,13 @@ test('production release applies a pending additive DO migration once, then stay
   assert.match(step,/renamed_classes\|deleted_classes\|transferred_classes/);
   assert.match(step,/node scripts\/guarded-worker-release\.mjs --manifest deploy\/manifests\/education\.worker\.json/);
 });
+
+// 2026-10-31: the shared EKODI sign-in chip joins the studio app bar through its collapsible menu, so the
+// phone-width studio bar stays one row (production native check: ≤72px; it measured 92px with the chip inline).
+test('studio app bar offers the sign-in chip a place inside the collapsible controls',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const html=await readFile(new URL('../education/study/live/index.html',import.meta.url),'utf8');
+  assert.match(html,/<div class="top-controls" id="topControls" data-ekodi-header-actions>/);
+  const auth=await readFile(new URL('../shell/unified-user-auth.js',import.meta.url),'utf8');
+  assert.match(auth,/header\.querySelector\('\[data-ekodi-header-actions\]/);
+});
