@@ -43,6 +43,8 @@ function cloneRequest(request,url){
     method:request.method,
     headers:request.headers,
     body:['GET','HEAD'].includes(request.method)?undefined:request.body,
+    // Node and Fetch require duplex when relaying a streamed mutation body.
+    ...(['GET','HEAD'].includes(request.method)?{}:{duplex:'half'}),
     redirect:request.redirect,
   });
 }

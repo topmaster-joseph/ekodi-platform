@@ -1,5 +1,7 @@
 import { handlePublishingWorkflow, prepareScheduledPublishing } from './publishing-workflow-api.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { handlePrivateReleaseAdmin } from './publishing/human/private-release-api.js';
+import { runConfiguredPublishingReleaseTick } from './publishing/human/private-release-scheduler.js';
 
 const SECURITY_HEADERS={
   'x-content-type-options':'nosniff',
@@ -10,14 +12,13 @@ function json(data,status=200){return new Response(JSON.stringify(data),{status,
 function withHeaders(response){const headers=new Headers(response.headers);for(const [key,value] of Object.entries(SECURITY_HEADERS))headers.set(key,value);return new Response(response.body,{status:response.status,statusText:response.statusText,headers})}
 
 export default {
-  async scheduled(event,env,ctx){
-    // Due approved work moves into a protected outbox, never directly to public sale.
-    if(!env?.PUBLISH_DB)return;
-    await prepareScheduledPublishing(env);
-  },
   async fetch(request,env){
     const url=new URL(request.url);
     if (url.pathname.startsWith('/publishing/api/workflow/') || url.pathname.startsWith('/api/workflow/')) return handlePublishingWorkflow(request,env);
+    if(url.pathname==='/api/private-releases'||url.pathname.startsWith('/api/private-releases/')){
+      const reply=await handlePrivateReleaseAdmin(request,env);
+      if(reply)return reply;
+    }
     if(url.pathname==='/health')return json({
       ok:true,
       service:'ekodi-publishing',
@@ -49,5 +50,19 @@ export default {
     if(url.pathname.startsWith('/publishing/studio'))return Response.redirect('https://ekodi.kr/publishing/studio/',308);
     if(url.pathname.startsWith('/publishing/upaper'))return Response.redirect('https://ekodi.kr/publishing/upaper/',308);
     return injectEkodiShell(withHeaders(await env.ASSETS.fetch(request)),'publishing');
+  },
+  // Intentionally inert until an owner-reviewed separate Worker binding and
+  // cron configuration explicitly enable the private publishing release lane.
+  // One scheduled entry point (no cron is configured here; the EKODI Orchestrator's
+  // approved scheduler owns timing). Each lane stays independently guarded.
+  async scheduled(controller,env,ctx){
+    // Due approved work moves into a protected outbox, never directly to public sale.
+    if(env?.PUBLISH_DB)await prepareScheduledPublishing(env);
+    if(env?.PUBLISHING_PRIVATE_RELEASE_ENABLED!=='true')return;
+    const scheduledTime=controller?.scheduledTime;
+    const nowIso=new Date(Number.isFinite(scheduledTime)?scheduledTime:Date.now()).toISOString();
+    const task=runConfiguredPublishingReleaseTick(env,nowIso);
+    if(ctx?.waitUntil)ctx.waitUntil(task);
+    else await task;
   }
 };

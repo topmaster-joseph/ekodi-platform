@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>비공개 도서·예약 공개 | 출판</title>
+<link rel="stylesheet" href="/base.css"><link rel="stylesheet" href="/pages.css"><link rel="stylesheet" href="/publishing.css">
+<style>
+:root{color-scheme:light}body{background:#f7f6f2;color:#222}
+.release-shell{max-width:1100px;margin:0 auto;padding:28px 20px 70px}
+.release-head{display:flex;align-items:end;justify-content:space-between;gap:12px;border-bottom:2px solid #252420;padding-bottom:14px}
+.release-head h1{font-size:1.5rem;letter-spacing:-.03em;margin:5px 0}
+.release-head p{color:#615e56;margin:0}
+.release-cta{background:#1b2520;color:#fff;border:1px solid #1b2520;padding:9px 13px;cursor:pointer}
+.release-cta[disabled]{opacity:.45;cursor:not-allowed}
+.release-panel{background:#fff;border:1px solid #d8d5ce;padding:18px;margin-top:16px}
+.release-panel h2{font-size:1.05rem;margin:0 0 12px}
+.release-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
+.release-controls label{display:flex;flex-direction:column;gap:4px;min-width:175px;flex:1;font-size:.85rem}
+.release-controls input,.release-controls select{padding:9px;border:1px solid #aaa;background:#fff;font:inherit;width:100%}
+.release-table{width:100%;border-collapse:collapse;font-size:.88rem}
+.release-table th,.release-table td{border-bottom:1px solid #e1ded6;padding:10px 6px;text-align:left}
+.release-table th{color:#6a675f;font-size:.78rem}
+.release-table td:nth-child(1){width:30px;font-variant-numeric:tabular-nums}
+.release-table td:last-child{text-align:right}
+.release-table button{border:1px solid #b2aea5;padding:6px 10px;background:#fff;cursor:pointer}
+.release-table button[aria-pressed=true]{border-color:#17291e;background:#edf4ee}
+.release-detail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px}
+.release-detail dt{font-size:.76rem;color:#6a675f}
+.release-detail dd{margin:0 0 5px;overflow-wrap:anywhere}
+.release-message{margin-top:14px;min-height:22px;color:#575449;font-size:.9rem}
+.release-message[data-error=true]{color:#923527}
+.release-help{font-size:.8rem;color:#625f58}
+@media(max-width:690px){.release-head{align-items:start;flex-direction:column}.release-table th:nth-child(4),.release-table td:nth-child(4){display:none}.release-detail{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로 바로가기</a>
+<header class="release-shell" style="padding-bottom:0">
+  <a href="https://ekodi.kr/publishing/">출판</a> <span aria-hidden="true">/</span> <strong>비공개 출판 관리</strong>
+</header>
+<main id="main" class="release-shell">
+  <div class="release-head">
+    <div><p>Publishing · Protected Release</p><h1>비공개 도서와 공개 일정</h1><p>승인된 정본만 예약하며, 서점과 몰 양쪽이 준비되기 전에는 공개하지 않습니다.</p></div>
+    <button class="release-cta" type="button" id="reload">현황 새로고침</button>
+  </div>
+  <p class="release-message" id="status" role="status" aria-live="polite">출판 관리자 권한을 확인하는 중입니다.</p>
+  <section class="release-panel" aria-labelledby="regTitle">
+    <h2 id="regTitle">완성 판본 비공개 등록</h2>
+    <form id="registerForm" class="release-controls">
+      <label>출판 정본 식별자 <input id="editionId" name="editionId" autocomplete="off" required maxlength="160" placeholder="출판사가 승인한 edition ID"></label>
+      <button class="release-cta" type="submit">정본 검증 후 비공개 등록</button>
+    </form>
+    <p class="release-help">원고·EPUB 파일의 실제 존재와 해시가 출판 서버에서 검증되어야 등록됩니다. 입력창의 임의 제목·가격·승인 표시는 사용하지 않습니다.</p>
+  </section>
+  <section class="release-panel" aria-labelledby="queueTitle">
+    <h2 id="queueTitle">비공개 등록 목록</h2>
+    <div style="overflow-x:auto"><table class="release-table"><thead><tr><th>No.</th><th>도서명</th><th>상태</th><th>공개 예정 (KST)</th><th>관리</th></tr></thead><tbody id="rows"><tr><td colspan="5">목록 조회 전</td></tr></tbody></table></div>
+  </section>
+  <section class="release-panel" aria-labelledby="detailTitle" id="detailSection" hidden>
+    <h2 id="detailTitle">선택 도서</h2>
+    <dl class="release-detail" id="detail"></dl>
+    <form id="scheduleForm" class="release-controls">
+      <label>공개 예정일시 (한국시간) <input type="datetime-local" id="releaseTime" name="releaseTime" required></label>
+      <button class="release-cta" id="scheduleBtn" type="submit">승인 확인 후 예약</button>
+      <button class="release-cta" id="cancelBtn" type="button">공개 예약 취소</button>
+    </form>
+    <p class="release-help">재예약은 판본·저자·출판사 승인 재검증 후 반영됩니다. 이미 공개된 도서는 별도의 판매 중지·환불 절차가 필요합니다.</p>
+  </section>
+  <p class="release-help">이 화면은 관리자용입니다. 서버 승인을 받지 않은 등록·예약은 저장되지 않으며, 공개일이 비어 있는 도서는 계속 비공개입니다.</p>
+</main>
+<script type="module" src="/private-releases/private-releases.js"></script>
+</body>
+</html>
