@@ -446,6 +446,8 @@ async function finishLink(req:Request,userId:string,provider:string){
   });
   if(linkError){
     console.error("link_person_identity",linkError.message);
+    if(/account_merge_review_required/i.test(linkError.message||""))
+      return json(req,{error:"account_merge_review_required"},409);
     const conflict=/already_linked|target_account|identity_already|requires_relink/i.test(linkError.message||"");
     return json(req,{error:conflict?"identity_already_linked":"identity_link_failed"},conflict?409:500);
   }

@@ -7,6 +7,7 @@
     "public.singles_identity_complete(uuid,text,boolean,text)",
     "public.singles_identity_start(uuid,text)",
     "public.singles_invoice_open_order(uuid,uuid)",
+    "public.singles_invoice_refund_complete(uuid,uuid,text)",
     "public.singles_is_paid_member(uuid)",
     "public.singles_operator_verify_adult(uuid,uuid,text,text)",
     "public.singles_ops_decide(uuid,uuid,text)",

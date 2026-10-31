@@ -20,7 +20,7 @@ test('migration: subscription prices x1.5, request prices x1.5, credit sales sto
   assert.match(migration,/owner_decision_required/,'proposals apply only after the owner decides');
 });
 test('terms draft states the new model, discount framing, invoice after acceptance and refunds',()=>{
-  for(const s of ['가입비와 선불 적립금은 받지 않습니다','기본 요금 + 입력·공개 할인','상대 회원이 **수락하면**','7일 안에 두 사람의 결제가 모두 끝나지 않으면','14일','연락처 교환이 성사되기 전','결혼 상담·알선을 하지 않으며','무료회원','15,000원','150,000원'])assert.ok(terms.includes(s),s);
+  for(const s of ['가입비와 선불 적립금은 받지 않습니다','기본 요금 + 입력·공개 할인','상대 회원이 **수락하면**','7일 안에 두 사람의 결제가 모두 끝나지 않으면','14일','연락처 교환이 성사되기 전','결혼 상대를 소개·알선·중개하는 서비스가 아닙니다','소개·알선의 대가가 아니라','무료회원','15,000원','150,000원'])assert.ok(terms.includes(s),s);
   assert.doesNotMatch(terms,/적게 입력·공개할수록 (?:높|비싸)/);
 });
 test('owner decision 2026-10-31: no refund after use on mid-term cancellation is disclosed before purchase; statutory 7-day withdrawal kept',async()=>{

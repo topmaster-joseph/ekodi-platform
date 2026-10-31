@@ -65,7 +65,7 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
  if(path==='/bank/wallet'&&method==='GET'){
   // 구독 상태와 내 청구서(후불). 선불 적립금은 2026-10-31 폐지.
   const grant=await one(admin.from('singles_bank_grants').select('expires_at').eq('user_id',userId).eq('plan_code','subscription'));
-  const invoices=await many(admin.from('singles_request_invoices').select('id,request_id,role,amount_krw,status,order_reference,due_at,paid_at,created_at')
+  const invoices=await many(admin.from('singles_request_invoices').select('id,request_id,role,amount_krw,status,order_reference,due_at,paid_at,created_at,refund_due_at,refunded_at')
    .eq('user_id',userId).order('created_at',{ascending:false}).limit(30));
   const active=Boolean(grant?.expires_at&&Date.parse(grant.expires_at)>Date.now());
   return reply(req,{paid_model:Deno.env.get('SINGLES_REQUEST_BILLING_ENABLED')==='true',paid_member:active,
@@ -281,6 +281,44 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
     .order('created_at',{ascending:false}).limit(100));
   const emails=await emailsFor(admin,[...new Set<string>(members.map((m:any)=>m.user_id))]);
   return reply(req,{members:members.map((m:any)=>({...m,email:emails.get(m.user_id)||null})),attempts});
+ }
+ // H3(2026-10-31): 환불 대상 청구서 송금 처리. 돈은 운영자가 은행에서 직접 보내고, 여기서는 송금 거래번호만 기록한다.
+ if(path==='/bank/admin/refunds'&&method==='GET'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_verify!==true)return reply(req,{error:'verification_capability_required'},403);
+  const rows=await many(admin.from('singles_request_invoices')
+    .select('id,request_id,user_id,role,amount_krw,status,order_reference,paid_at,refund_due_at,refunded_at,refund_trace')
+    .in('status',['refund_due','refunded']).order('refund_due_at',{ascending:true}).limit(100));
+  const refs=[...new Set<string>(rows.map((r:any)=>r.order_reference).filter(Boolean))];
+  const orders=refs.length?await many(admin.from('singles_bank_orders').select('reference,bank_trace,verified_at').in('reference',refs)):[];
+  const byRef=new Map<string,any>(orders.map((o:any)=>[o.reference,o]));
+  const emails=await emailsFor(admin,[...new Set<string>(rows.map((r:any)=>r.user_id))]);
+  const refunds=rows.map((r:any)=>({id:r.id,amount_krw:r.amount_krw,status:r.status,role:r.role,email:emails.get(r.user_id)||null,
+    self:r.user_id===userId,order_reference:r.order_reference,paid_trace:byRef.get(r.order_reference)?.bank_trace||null,
+    paid_at:r.paid_at,refund_due_at:r.refund_due_at,refunded_at:r.refunded_at,refund_trace:r.refund_trace}));
+  return reply(req,{refunds,pending:refunds.filter((r:any)=>r.status==='refund_due').length,
+    pending_krw:refunds.filter((r:any)=>r.status==='refund_due').reduce((n:number,r:any)=>n+r.amount_krw,0)});
+ }
+ const refundId=path.match(/^\/bank\/admin\/refunds\/([0-9a-f-]{36})\/complete$/i)?.[1];
+ if(refundId&&method==='POST'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_verify!==true)return reply(req,{error:'verification_capability_required'},403);
+  const v=await payload(req);
+  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>k!=='refund_trace')||typeof v.refund_trace!=='string')
+   return reply(req,{error:'refund_trace_required'},400);
+  const trace=v.refund_trace.trim();
+  if(trace.length<4||trace.length>100)return reply(req,{error:'refund_trace_required'},400);
+  const {data,error}=await admin.rpc('singles_invoice_refund_complete',{p_operator:userId,p_invoice:refundId,p_trace:trace});
+  if(error){const msg=String(error.message||'');
+   if(msg.includes('operator_self_refund_forbidden'))return reply(req,{error:'operator_self_refund_forbidden'},403);
+   if(msg.includes('invoice_not_found'))return reply(req,{error:'invoice_not_found'},404);
+   if(msg.includes('invoice_not_refundable'))return reply(req,{error:'invoice_not_refundable'},409);
+   if(msg.includes('invoice_already_refunded'))return reply(req,{error:'invoice_already_refunded'},409);
+   if(msg.includes('refund_trace_duplicate'))return reply(req,{error:'refund_trace_duplicate'},409);
+   if(msg.includes('verification_capability_required'))return reply(req,{error:'verification_capability_required'},403);
+   throw error;
+  }
+  return reply(req,data);
  }
  const verifyAdultId=path.match(/^\/bank\/admin\/members\/([0-9a-f-]{36})\/adult-verify$/i)?.[1];
  if(verifyAdultId&&method==='POST'){
