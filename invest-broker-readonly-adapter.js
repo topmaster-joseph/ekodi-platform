@@ -9,7 +9,7 @@
 // The only non-GET call is the fixed KIS OAuth token endpoint; no order endpoint exists here.
 // The account number never leaves this module: callers see an opaque UUID account reference.
 import { checkBrokerReadOnlyRequest, READONLY_BROKER_TARGETS } from './invest-broker-readonly-contract.js';
-import { normalizeBrokerReadOnlySnapshot } from './invest-broker-readonly-snapshot.js';
+import { normalizeBrokerReadOnlySnapshot, compareBrokerReadOnlySnapshots } from './invest-broker-readonly-snapshot.js';
 
 export const BROKER_VIEW_SCHEMA = 'ekodi.invest.broker-readonly-view.v1';
 const KIS_TR_ID = Object.freeze({ paper: 'VTTC8434R', live: 'TTTC8434R' });
@@ -202,13 +202,46 @@ export function validationSummary(normalized) {
 }
 
 // --- public entry -------------------------------------------------------------------
+// --- balance history (Phase 5) ------------------------------------------------------
+// Keeps accepted snapshots per owner/data mode/account so the view can show how the
+// BALANCE changed since an earlier inquiry. A balance change includes deposits,
+// withdrawals and fees: it is never presented as investment return.
+const HISTORY_MIN_INTERVAL_MS = 10 * 60_000;
+const HISTORY_KEEP = 60;
+export async function recordBalanceHistory({ db, subjectKey, dataMode, normalized, now = Date.now() }) {
+  if (!db || !subjectKey || normalized?.accepted !== true) return null;
+  const key = [String(subjectKey).slice(0, 120), dataMode, normalized.accountRef];
+  const rows = (await db.prepare(`SELECT snapshot_json,captured_at FROM investment_broker_snapshots
+    WHERE subject_key=? AND data_mode=? AND account_ref=? ORDER BY captured_at DESC LIMIT 1`).bind(...key).all()).results || [];
+  let change = null;
+  const previous = rows[0] ? (() => { try { return JSON.parse(rows[0].snapshot_json); } catch { return null; } })() : null;
+  if (previous) {
+    const compared = compareBrokerReadOnlySnapshots(previous, normalized);
+    if (compared.compared === true) change = {
+      previousCapturedAt: previous.capturedAt, totalChangeMinor: compared.totalChangeMinor,
+      cashChangeMinor: compared.cashChangeMinor, holdingsChangeMinor: compared.holdingsChangeMinor,
+      meaning: 'balance_change_not_investment_return',
+    };
+    else change = { comparable: false, reason: compared.error };
+  }
+  const latest = Date.parse(rows[0]?.captured_at || '') || 0;
+  if (!latest || now - latest >= HISTORY_MIN_INTERVAL_MS) {
+    await db.prepare(`INSERT INTO investment_broker_snapshots(subject_key,data_mode,account_ref,snapshot_json,captured_at,created_at) VALUES(?,?,?,?,?,?)`)
+      .bind(...key, JSON.stringify(normalized), normalized.capturedAt, new Date(now).toISOString()).run();
+    await db.prepare(`DELETE FROM investment_broker_snapshots WHERE subject_key=? AND data_mode=? AND account_ref=? AND id NOT IN
+      (SELECT id FROM investment_broker_snapshots WHERE subject_key=? AND data_mode=? AND account_ref=? ORDER BY captured_at DESC LIMIT ?)`)
+      .bind(...key, ...key, HISTORY_KEEP).run();
+  }
+  return change;
+}
+
 const LABEL = {
   mock: '미연결 · 모의 데이터',
   'kis-paper': '연결됨 · 조회 전용 (KIS 모의투자 서버)',
   'kis-live': '연결됨 · 조회 전용 (KIS 실전 서버)',
 };
 
-function view({ brokerId, dataMode, connection, normalized, names, notice, blockers = [], error = null }) {
+function view({ brokerId, dataMode, connection, normalized, names, notice, blockers = [], error = null, change = null }) {
   const accepted = normalized?.accepted === true;
   return {
     schema: BROKER_VIEW_SCHEMA, brokerId, dataMode, connection,
@@ -221,11 +254,13 @@ function view({ brokerId, dataMode, connection, normalized, names, notice, block
       positions: normalized.positions.map(p => ({ ...p, name: names?.[p.symbol] || '' })),
     } : null,
     validation: normalized ? validationSummary(normalized) : null,
+    change,
     readOnly: true, liveOrdersEnabled: false, orderExecutionPerformed: false, credentialsIncluded: false,
   };
 }
 
-export async function buildBrokerReadOnlyView({ brokerId, env = {}, db, fetchImpl = fetch, now = Date.now(), strongMfaVerified = false }) {
+export async function buildBrokerReadOnlyView({ brokerId, env = {}, db, fetchImpl = fetch, now = Date.now(), strongMfaVerified = false, subjectKey = '' }) {
+  const history = async (dataMode, normalized) => { try { return await recordBalanceHistory({ db, subjectKey, dataMode, normalized, now }); } catch { return null; } };
   const mock = () => {
     const m = mockBrokerSnapshot({ brokerId, now });
     return { normalized: normalizeBrokerReadOnlySnapshot(m.raw, { now }), names: m.names };
@@ -234,7 +269,7 @@ export async function buildBrokerReadOnlyView({ brokerId, env = {}, db, fetchImp
   if (!cfg.enabled || !strongMfaVerified || !db) {
     const blockers = [cfg.enabled ? null : cfg.reason, strongMfaVerified ? null : 'STRONG_MFA_AAL2_REQUIRED', db ? null : 'DATABASE_UNAVAILABLE'].filter(Boolean);
     const m = mock();
-    return view({ brokerId, dataMode: 'mock', connection: 'disconnected', ...m, blockers,
+    return view({ brokerId, dataMode: 'mock', connection: 'disconnected', ...m, blockers, change: await history('mock:' + brokerId, m.normalized),
       notice: '실제 계좌가 아닌 모의 데이터입니다. 증권사 조회 연결이 승인·검증되기 전까지 실제 잔고를 표시하지 않습니다.' });
   }
   const dataMode = 'kis-' + cfg.environment;
@@ -252,6 +287,7 @@ export async function buildBrokerReadOnlyView({ brokerId, env = {}, db, fetchImp
     const built = kisRowsToRawSnapshot({ ...pages, environment: cfg.environment, accountRef, snapshotRef: crypto.randomUUID(), now });
     const normalized = normalizeBrokerReadOnlySnapshot(built.raw, { now });
     return view({ brokerId, dataMode, connection: normalized.accepted ? 'connected-readonly' : 'error', normalized, names: built.names,
+      change: await history(dataMode, normalized),
       notice: '증권사 공식 API에서 조회만 했습니다. 주문·이체 기능은 없습니다.' });
   } catch (e) {
     return view({ brokerId, dataMode, connection: 'error', normalized: null, names: null, error: String(e?.code || 'KIS_READONLY_UNAVAILABLE'),
