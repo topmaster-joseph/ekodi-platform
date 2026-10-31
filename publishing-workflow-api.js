@@ -125,6 +125,30 @@ async function jobs(db,p){
     .bind(p.id).all();
   return result(200,{ok:true,jobs:data.results||[]});
 }
+const maskId=id=>{const v=String(id||'');return v.length>8?v.slice(0,4)+'…'+v.slice(-4):'…';};
+async function recentAudit(db,limit){
+  const rows=(await db.prepare(`SELECT a.action,a.from_stage,a.to_stage,a.revision,a.created_at,a.actor_user_id,p.title
+    FROM publishing_workflow_audit a LEFT JOIN publishing_workflow_projects p ON p.id=a.project_id
+    ORDER BY a.created_at DESC LIMIT ?`).bind(limit).all()).results||[];
+  return rows.map(x=>({action:x.action,from:x.from_stage,to:x.to_stage,revision:x.revision,at:x.created_at,actor:maskId(x.actor_user_id),title:x.title||''}));
+}
+async function adminSummary(db,r){
+  const count=async sql=>(((await db.prepare(sql).all()).results)||[]);
+  const [stages,contracts,audio,roles]=await Promise.all([
+    count('SELECT stage AS k, COUNT(*) AS n FROM publishing_workflow_projects GROUP BY stage'),
+    count('SELECT status AS k, COUNT(*) AS n FROM publishing_workflow_release_contracts GROUP BY status'),
+    count('SELECT stage AS k, COUNT(*) AS n FROM publishing_workflow_audio_release_qa GROUP BY stage'),
+    count('SELECT role AS k, COUNT(*) AS n FROM publishing_workflow_roles GROUP BY role'),
+  ]);
+  const map=rows=>Object.fromEntries(rows.map(x=>[x.k,Number(x.n)||0]));
+  const review=(await db.prepare(`SELECT id,title,stage,updated_at FROM publishing_workflow_projects
+    WHERE stage IN ('in_review','ready_for_author','author_approved','publisher_approved','scheduled','handoff_ready')
+    ORDER BY updated_at DESC LIMIT 50`).all()).results||[];
+  return {ok:true,role:r,stages:map(stages),contracts:map(contracts),audioQa:map(audio),roles:map(roles),
+    review:review.map(x=>({id:x.id,title:x.title,stage:x.stage,updatedAt:x.updated_at})),
+    recent:await recentAudit(db,20),saleActivationEnabled:false};
+}
+
 export async function handlePublishingWorkflow(req,env){
   const path=new URL(req.url).pathname.replace(/^\/publishing(?=\/)/,'');
   if(path==='/api/workflow/health')return result(200,{ok:true,
@@ -142,6 +166,19 @@ export async function handlePublishingWorkflow(req,env){
       if(!['publisher','admin'].includes(r))return error(403,'PUBLISHER_ONLY');
       const data=await db.prepare("SELECT id,title,edition_id,scheduled_at FROM publishing_workflow_projects WHERE stage='scheduled' AND scheduled_at<=? ORDER BY scheduled_at LIMIT 100").bind(now()).all();
       return result(200,{ok:true,due:data.results||[],note:'인계 후보이며 자동 판매가 아님'});
+    }
+    // PUBLISHING-ADMIN-001 (§12): 출판 관리자 화면용 읽기 전용 요약. 권한은 출판 원장 역할로만 판단한다.
+    if(path.startsWith('/api/workflow/admin/')&&req.method==='GET'){
+      const staff=['editor','publisher','admin'].includes(r);
+      if(!staff)return error(403,'PUBLISHING_STAFF_ONLY');
+      if(path==='/api/workflow/admin/summary')return result(200,await adminSummary(db,r));
+      if(path==='/api/workflow/admin/audit')return result(200,{ok:true,role:r,events:await recentAudit(db,100)});
+      if(path==='/api/workflow/admin/roles'){
+        if(r!=='admin')return error(403,'PUBLISHING_ADMIN_ONLY');
+        const rows=(await db.prepare('SELECT user_id,role,granted_at FROM publishing_workflow_roles ORDER BY granted_at DESC LIMIT 200').all()).results||[];
+        return result(200,{ok:true,role:r,roles:rows.map(x=>({user:maskId(x.user_id),role:x.role,grantedAt:x.granted_at}))});
+      }
+      return error(404,'NOT_FOUND');
     }
     const match=/^\/api\/workflow\/projects\/([0-9a-f-]{36})(?:\/(.*))?$/.exec(path);
     if(!match)return error(404,'NOT_FOUND');

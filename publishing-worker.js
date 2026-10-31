@@ -36,7 +36,16 @@ export default {
       privateCrossServiceDataAccess:false,
       externalSubmissionExecution:false
     });
-    if(url.pathname==='/admin'||url.pathname==='/admin/'||url.pathname==='/admin.html')return Response.redirect('https://ekodi.kr/admin/publishing#publishing',307);
+    // PUBLISHING-ADMIN-001 (§12): 출판 고유 관리자 화면. 인증은 공통 EKODI 계정, 권한은 출판 원장 역할(서버)로 판단한다.
+    if(url.pathname==='/admin'||url.pathname==='/admin.html')return Response.redirect('https://ekodi.kr/publishing/admin/',308);
+    if(url.pathname.startsWith('/admin/')){
+      const asset=/\.[a-z0-9]+$/i.test(url.pathname);
+      const target=new URL(request.url);if(!asset)target.pathname='/admin/';
+      const res=withHeaders(await env.ASSETS.fetch(new Request(target,request)));
+      const out=new Response(res.body,res);
+      out.headers.set('x-robots-tag','noindex, nofollow, noarchive');out.headers.set('cache-control','no-store');
+      return asset?out:injectEkodiShell(out,'publishing','admin');
+    }
     if(url.pathname==='/books.json'){
       // Use a private Service Binding: public apex-to-apex fetch can recurse or fail on Workers.
       if(!env?.BOOKS?.fetch)return json({ok:false,error:'PUBLIC_BOOK_CATALOG_UNAVAILABLE'},503);

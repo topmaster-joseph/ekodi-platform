@@ -8,8 +8,10 @@ import path from 'node:path';
 // manifests still expected /admin to redirect to the retired admin host, while
 // the Workers correctly redirect to the canonical ekodi.kr/admin/<site> route.
 const cases = [
-  { manifest: 'deploy/manifests/books.worker.json', worker: 'books-worker.js', location: 'https://ekodi.kr/admin/books#books', rollback: 'books#books' },
-  { manifest: 'deploy/manifests/publishing.worker.json', worker: 'publishing-worker.js', location: 'https://ekodi.kr/admin/publishing#publishing', rollback: 'publishing#publishing' },
+  { manifest: 'deploy/manifests/books.worker.json', worker: 'books-worker.js', location: 'https://ekodi.kr/admin/books#books', rollback: 'books#books', status: 307, suffixRollback: true },
+  // 2026-10-31 PUBLISHING-ADMIN-001 (§12): Publishing owns its admin at ekodi.kr/publishing/admin/.
+  // The previous version redirected to ekodi.kr/admin/publishing#publishing; both contain 'publishing'.
+  { manifest: 'deploy/manifests/publishing.worker.json', worker: 'publishing-worker.js', location: 'https://ekodi.kr/publishing/admin/', rollback: 'publishing', status: 308, suffixRollback: false },
 ];
 
 const adminCheck = manifestPath => JSON.parse(fs.readFileSync(manifestPath, 'utf8')).worker.requests
@@ -23,19 +25,20 @@ for (const item of cases) {
     assert.deepEqual(admin.rollbackHeaderExpect, [item.rollback]);
     // The previous version redirects to the same /<site>#<site> fragment on the retired
     // host, so the rollback marker is the shared suffix of both locations.
-    assert.ok(item.location.endsWith(`/${item.rollback}`));
+    if (item.suffixRollback) assert.ok(item.location.endsWith(`/${item.rollback}`));
+    else assert.ok(item.location.includes(item.rollback) && 'https://ekodi.kr/admin/publishing#publishing'.includes(item.rollback));
   });
 
   test(`${item.worker} actually redirects /admin where its manifest expects`, async () => {
     const worker = (await import(pathToFileURL(path.resolve(item.worker)).href)).default;
     const response = await worker.fetch(new Request(adminCheck(item.manifest).url), {}, { waitUntil() {} });
-    assert.equal(response.status, 307);
+    assert.equal(response.status, item.status);
     assert.equal(response.headers.get('location'), item.location);
   });
 }
 
 test('deploy workflows verify the same canonical admin location as their manifests', () => {
   assert.match(fs.readFileSync('.github/workflows/deploy-books.yml', 'utf8'), /location: https:\/\/ekodi\.kr\/admin\/books#books/);
-  assert.match(fs.readFileSync('.github/workflows/deploy-publishing.yml', 'utf8'), /location: https:\/\/ekodi\.kr\/admin\/publishing#publishing/);
+  assert.match(fs.readFileSync('.github/workflows/deploy-publishing.yml', 'utf8'), /location: https:\/\/ekodi\.kr\/publishing\/admin\//);
   assert.match(fs.readFileSync('.github/workflows/deploy-service-admin-entry.yml', 'utf8'), /startsWith\('https:\/\/ekodi\.kr\/admin\/'\)/);
 });
