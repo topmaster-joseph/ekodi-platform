@@ -183,3 +183,17 @@ test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   assert.ok(tradeAdmin.includes('거래회사 데이터 비공개'));
   assert.ok(tradeAdmin.includes('관계자 화면 보기'));
 });
+test('private trade portal uses apex identity and clears proof before asynchronous session exchange',async()=>{
+  const source=await read('workspace-trade-portal.js');
+  assert.ok(source.includes("new URL('https://ekodi.kr/auth/')"));
+  assert.ok(source.includes("url.searchParams.set('site','trade')"));
+  assert.ok(source.includes("url.searchParams.set('return_to',original.href)"));
+  const readProof=source.indexOf("const pendingProof=handoffParams.get('ekodi_token')");
+  const clean=source.indexOf("if(pendingProof)history.replaceState(");
+  const sdk=source.indexOf("await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js");
+  assert.ok(readProof>-1&&clean>readProof&&sdk>clean,'one-use proof must be removed before external SDK loading');
+  assert.ok(source.includes("token_hash:pendingProof,type:pendingProofType"));
+  assert.ok(source.includes("const startupWatchdog=setTimeout("));
+  assert.ok(source.includes("state('연결 확인 지연')"));
+  assert.ok(source.includes("clearTimeout(startupWatchdog)"));
+});
