@@ -205,7 +205,7 @@ async function loadBrokerSnapshot(){
   badge.dataset.mode=r.connection==='connected-readonly'?'connected':(r.connection==='error'?'error':'mock');
   badge.textContent=r.connection==='error'?'조회 실패 · 실제 잔고 미표시':r.label;
   kpi('kpiBroker',r.connection==='connected-readonly'?'연결됨':r.connection==='error'?'조회 실패':'미연결',r.connection==='connected-readonly'?'ok':'warn');kpi('kpiBrokerNote',r.dataMode==='mock'?'모의 데이터 표시 중':(r.brokerName||'')+' · 조회 전용');touchUpdated();
-  setText('brokerNotice',r.error?(BROKER_ERROR[r.error]||'조회 실패: '+r.error):r.notice);
+  setText('brokerNotice',r.error?((BROKER_ERROR[r.error]||'조회 실패: '+r.error)+(r.providerReason?' · 증권사 응답: '+[r.providerReason.code,r.providerReason.message].filter(Boolean).join(' '):'')):r.notice);
   const snap=r.snapshot;
   setText('brokerCash',snap?won(snap.cashMinor):'—');setText('brokerHoldings',snap?won(snap.holdingsMinor):'—');setText('brokerTotal',snap?won(snap.totalMinor):'—');
   setText('brokerCaptured',snap?kstTime(snap.capturedAt):'—');

@@ -199,3 +199,11 @@ test('my invest page shows the read-only broker section with mock label and vali
   assert.match(js, /r\.readOnly!==true\|\|r\.liveOrdersEnabled!==false/);
   assert.doesNotMatch(js, /innerHTML|localStorage\.setItem|sessionStorage\.setItem/);
 });
+
+test('KIS refusal carries a sanitized provider reason without account digits', async () => {
+  const { kisProviderReason } = await import('../invest-broker-readonly-adapter.js');
+  assert.deepEqual(kisProviderReason({ msg_cd: 'OPSQ2000', msg1: 'ERROR : INPUT INVALID_CHECK_ACNO 50012345' }), { code: 'OPSQ2000', message: 'ERROR : INPUT INVALID_CHECK_ACNO ******' });
+  assert.equal(kisProviderReason({}), null);
+  assert.equal(kisProviderReason({ msg_cd: '<script>', msg1: '' }), null);
+  assert.equal(kisProviderReason({ msg1: 'x'.repeat(500) }).message.length, 120);
+});
