@@ -43,7 +43,7 @@ function errorText(error){
 }
 function loginLink(){
   const a=document.createElement('a');
-  a.href='/auth/?return_to='+encodeURIComponent(location.href);
+  const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('return_to',location.href);a.href=u.href;
   a.textContent='에코디 계정 로그인';
   return a;
 }
