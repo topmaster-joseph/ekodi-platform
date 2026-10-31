@@ -63,6 +63,7 @@ function allowApi(path,method){
  // H3 환불 송금 처리(운영자 can_verify).
  if(path==='/api/bank/admin/refunds'&&method==='GET')return ['/bank/admin/refunds',true];
  if(/^\/api\/bank\/admin\/refunds\/[0-9a-f-]{36}\/complete$/i.test(path)&&method==='POST')return [path.slice(4),true];
+ if(/^\/api\/bank\/admin\/refunds\/order\/EDH-[A-F0-9]{32}\/complete$/.test(path)&&method==='POST')return [path.slice(4),true];
  for(const [endpoint,methods] of [
   ['/api/bank/plans',['GET']],['/api/bank/wallet',['GET']],['/api/bank/orders',['GET','POST']],
   ['/api/bank/admin/orders',['GET']],['/api/bank/admin/config',['GET','PUT']],['/api/bank/admin/catalog',['GET']],['/api/bank/admin/brokerage-readiness',['GET','PUT']],['/api/bank/consulting/requests',['GET','POST']]]){
@@ -71,7 +72,7 @@ function allowApi(path,method){
  if(/^\/api\/bank\/admin\/catalog\/[a-z][a-z0-9_]{2,49}$/.test(path)&&method==='PUT')return [path.slice(4),true];
  const exactReceipt=path.match(/^\/api\/bank\/(?:admin\/)?orders\/(EDH-[A-F0-9]{32})$/);
  if(exactReceipt&&method==='GET')return [path.slice(4),true];
- const memberCheck=path.match(/^\/api\/bank\/orders\/(EDH-[A-F0-9]{32})\/(report|acknowledge)$/);
+ const memberCheck=path.match(/^\/api\/bank\/orders\/(EDH-[A-F0-9]{32})\/(report|acknowledge|withdraw)$/);
  if(memberCheck&&method==='POST')return [path.slice(4),true];
  const adminCheck=path.match(/^\/api\/bank\/admin\/orders\/(EDH-[A-F0-9]{32})\/review$/);
  if(adminCheck&&method==='POST')return [path.slice(4),true];
@@ -181,7 +182,7 @@ function singlesTermsPage(){
    '구독권과 청구서는 회사 지정 계좌로 계좌이체하며, 회사가 입금을 확인한 뒤 반영됩니다.',
    '입금 확인과 환불 송금은 권한을 가진 담당자가 하며, 담당자는 자신의 주문·청구서를 직접 처리할 수 없습니다.'])],
   ['제6조 (청약철회와 환불)',ol([
-   '구독권: 결제일로부터 7일 이내에 구독 기능을 전혀 이용하지 않았다면 전액 환불합니다(전자상거래법상 청약철회).',
+   '구독권 청약철회: 입금 확인일로부터 7일 이내이고, 그 구독 기간에 구독 기능(요청 보내기·수락·거절·메시지·행사 신청)을 한 번도 이용하지 않았다면 “내 구독·청구서” 화면에서 직접 청약철회를 신청해 전액 환불받을 수 있습니다(전자상거래법상 청약철회). 신청하면 그 구독 기간은 바로 회수되며, 이어서 산 구독권이 있으면 가장 최근 것부터 철회할 수 있습니다.',
    '구독권 중도 해지: 구독 기능을 이용하기 시작한 뒤 중도에 해지하는 경우 남은 기간은 환불하지 않습니다. 이 내용은 결제 화면에도 미리 안내합니다.',
    '청구서: 연결이 성사된 청구서는 환불하지 않습니다. 상대의 미결제로 연결이 취소된 경우 먼저 결제한 금액을 전액 환불합니다.',
    '회사가 서비스를 종료하거나 오래 중단하면 남은 구독 기간과 성사되지 않은 청구서 금액을 환불합니다.',

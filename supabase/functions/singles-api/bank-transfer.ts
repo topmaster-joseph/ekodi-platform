@@ -68,8 +68,31 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const invoices=await many(admin.from('singles_request_invoices').select('id,request_id,role,amount_krw,status,order_reference,due_at,paid_at,created_at,refund_due_at,refunded_at')
    .eq('user_id',userId).order('created_at',{ascending:false}).limit(30));
   const active=Boolean(grant?.expires_at&&Date.parse(grant.expires_at)>Date.now());
+  // 청약철회(H6): 최근 7일 안에 입금 확인된 구독권과 각 철회 가능 여부, 내 철회 환불 진행 상태.
+  const since=new Date(Date.now()-7*86400000).toISOString();
+  const recent=await many(admin.from('singles_bank_orders').select('reference,plan_code,amount_krw,duration_days,verified_at')
+   .eq('user_id',userId).eq('status','verified').in('plan_code',CODES.filter(c=>c.startsWith('sub_'))).gte('verified_at',since).order('verified_at',{ascending:false}).limit(10));
+  const withdrawals=[];
+  for(const o of recent){const {data,error}=await admin.rpc('singles_subscription_withdrawal_eval',{p_user:userId,p_reference:o.reference});
+   if(error)throw error;withdrawals.push({...o,eligible:data?.eligible===true,reason:data?.reason||null,deadline:data?.deadline||null});}
+  const order_refunds=await many(admin.from('singles_order_refunds').select('reference,amount_krw,status,revoked_days,requested_at,refund_due_at,refunded_at')
+   .eq('user_id',userId).order('requested_at',{ascending:false}).limit(20));
   return reply(req,{paid_model:Deno.env.get('SINGLES_REQUEST_BILLING_ENABLED')==='true',paid_member:active,
-   subscription_expires_at:active?grant.expires_at:null,invoices});
+   subscription_expires_at:active?grant.expires_at:null,invoices,withdrawals,order_refunds});
+ }
+ const withdrawRef=path.match(/^\/bank\/orders\/(EDH-[A-F0-9]{32})\/withdraw$/)?.[1];
+ if(withdrawRef&&method==='POST'){
+  const v=await payload(req);
+  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>k!=='confirm')||v.confirm!==true)
+   return reply(req,{error:'withdrawal_confirmation_required'},400);
+  const {data,error}=await admin.rpc('singles_subscription_withdraw',{p_user:userId,p_reference:withdrawRef});
+  if(error){const msg=String(error.message||'');
+   if(msg.includes('order_not_found'))return reply(req,{error:'order_not_found'},404);
+   const why=msg.match(/withdrawal_not_allowed:([a-z_]+)/)?.[1];
+   if(why)return reply(req,{error:'withdrawal_not_allowed',reason:why},409);
+   throw error;
+  }
+  return reply(req,data);
  }
  const invoiceId=path.match(/^\/bank\/invoices\/([0-9a-f-]{36})\/order$/i)?.[1];
  if(invoiceId&&method==='POST'){
@@ -293,11 +316,40 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const orders=refs.length?await many(admin.from('singles_bank_orders').select('reference,bank_trace,verified_at').in('reference',refs)):[];
   const byRef=new Map<string,any>(orders.map((o:any)=>[o.reference,o]));
   const emails=await emailsFor(admin,[...new Set<string>(rows.map((r:any)=>r.user_id))]);
-  const refunds=rows.map((r:any)=>({id:r.id,amount_krw:r.amount_krw,status:r.status,role:r.role,email:emails.get(r.user_id)||null,
+  const refunds:any[]=rows.map((r:any)=>({id:r.id,kind:'invoice',amount_krw:r.amount_krw,status:r.status,role:r.role,email:emails.get(r.user_id)||null,
     self:r.user_id===userId,order_reference:r.order_reference,paid_trace:byRef.get(r.order_reference)?.bank_trace||null,
     paid_at:r.paid_at,refund_due_at:r.refund_due_at,refunded_at:r.refunded_at,refund_trace:r.refund_trace}));
-  return reply(req,{refunds,pending:refunds.filter((r:any)=>r.status==='refund_due').length,
-    pending_krw:refunds.filter((r:any)=>r.status==='refund_due').reduce((n:number,r:any)=>n+r.amount_krw,0)});
+  const orows=await many(admin.from('singles_order_refunds').select('reference,user_id,amount_krw,status,revoked_days,requested_at,refund_due_at,refunded_at,refund_trace')
+    .order('refund_due_at',{ascending:true}).limit(100));
+  const oorders=orows.length?await many(admin.from('singles_bank_orders').select('reference,plan_code,bank_trace,verified_at').in('reference',orows.map((r:any)=>r.reference))):[];
+  const oby=new Map<string,any>(oorders.map((o:any)=>[o.reference,o]));
+  const oemails=await emailsFor(admin,[...new Set<string>(orows.map((r:any)=>r.user_id))]);
+  for(const r of orows)refunds.push({id:r.reference,kind:'subscription_withdrawal',amount_krw:r.amount_krw,status:r.status,role:null,
+    email:oemails.get(r.user_id)||null,self:r.user_id===userId,order_reference:r.reference,plan_code:oby.get(r.reference)?.plan_code||null,
+    paid_trace:oby.get(r.reference)?.bank_trace||null,paid_at:oby.get(r.reference)?.verified_at||null,
+    refund_due_at:r.refund_due_at,refunded_at:r.refunded_at,refund_trace:r.refund_trace});
+  const due=refunds.filter((r:any)=>r.status==='refund_due');
+  return reply(req,{refunds,pending:due.length,pending_krw:due.reduce((n:number,r:any)=>n+r.amount_krw,0)});
+ }
+ const orderRefundRef=path.match(/^\/bank\/admin\/refunds\/order\/(EDH-[A-F0-9]{32})\/complete$/)?.[1];
+ if(orderRefundRef&&method==='POST'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_verify!==true)return reply(req,{error:'verification_capability_required'},403);
+  const v=await payload(req);
+  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>k!=='refund_trace')||typeof v.refund_trace!=='string')
+   return reply(req,{error:'refund_trace_required'},400);
+  const trace=v.refund_trace.trim();
+  if(trace.length<4||trace.length>100)return reply(req,{error:'refund_trace_required'},400);
+  const {data,error}=await admin.rpc('singles_order_refund_complete',{p_operator:userId,p_reference:orderRefundRef,p_trace:trace});
+  if(error){const msg=String(error.message||'');
+   if(msg.includes('operator_self_refund_forbidden'))return reply(req,{error:'operator_self_refund_forbidden'},403);
+   if(msg.includes('refund_not_found'))return reply(req,{error:'invoice_not_found'},404);
+   if(msg.includes('invoice_already_refunded'))return reply(req,{error:'invoice_already_refunded'},409);
+   if(msg.includes('refund_trace_duplicate'))return reply(req,{error:'refund_trace_duplicate'},409);
+   if(msg.includes('verification_capability_required'))return reply(req,{error:'verification_capability_required'},403);
+   throw error;
+  }
+  return reply(req,data);
  }
  const refundId=path.match(/^\/bank\/admin\/refunds\/([0-9a-f-]{36})\/complete$/i)?.[1];
  if(refundId&&method==='POST'){

@@ -10,6 +10,7 @@
 import * as ekodipay from './ekodipay-core.js';
 import { publisherAuthorizedForChannel } from './publishing/human/storefront-release-guard.js';
 import { saleReadiness } from './books-sale-readiness.js';
+import { ownedOtherLanguageEdition, applyLanguageEditionDiscount, otherLanguageEditions, languageEditionRate } from './books-language-editions.js';
 import { complimentaryAudiobookPolicy, availableAudiobook, audioChapterFor, validateAudioChapter, MAX_AUDIO_CHAPTER_BYTES, audioSha256 } from './books-audiobook.js';
 
 export const ORDER_PREFIX = 'EKB';
@@ -151,7 +152,10 @@ export async function quote(env, request, bookId) {
   if (!book) return { status: 404, data: { error: '에코디서점 직접 판매 도서가 아닙니다.' } };
   const buyer = await buyerIdentity(request);
   const tierId = await tierFor(env, buyer);
-  const price = priceFor(book, policy, tierId === 'guest' ? 'member' : tierId);
+  // BOOKS-LANGUAGE-EDITION-DISCOUNT-001: 같은 책의 다른 언어판을 보유하면 50% 할인(서버 계산)
+  const ownedSibling = await ownedOtherLanguageEdition(env, buyer, catalog, book);
+  const price = applyLanguageEditionDiscount(priceFor(book, policy, tierId === 'guest' ? 'member' : tierId), policy, ownedSibling);
+  const siblings = otherLanguageEditions(catalog, book);
   const pay = await payments(env);
   const owned = buyer ? Boolean(await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL').bind(buyer.userId, book.id).first()) : false;
   const operator = Boolean(buyer && operatorEmails(env).has(buyer.email));
@@ -166,6 +170,7 @@ export async function quote(env, request, bookId) {
       tiers: (policy.tiers || []).map(t => ({ id: t.id, label: t.label, discountRate: t.discountRate || 0, description: t.description || '', price: priceFor(book, policy, t.id)?.amount ?? null })),
       // BOOKS-SALE-READINESS-001: 출판 공정이 끝나지 않은 도서는 운영자라도 결제창을 열지 않는다.
       saleReadiness: readiness,
+      languageEdition: { available: siblings.length > 0, rate: languageEditionRate(policy), applied: Boolean(price?.languageEdition), sourceBookId: price?.languageEdition?.sourceBookId || '', editions: siblings.map(b => ({ id: b.id, title: b.title, language: b.language })) },
       checkout: { open: readiness.ready && pay.ready && ((pay.mode === 'live' && hasFile) || operator), mode: pay.mode, testOnly: pay.ready && pay.mode !== 'live', fileReady: hasFile, operator, saleReady: readiness.ready, saleStatus: readiness.label },
     },
   };
@@ -190,7 +195,8 @@ export async function createOrder(env, request, body, now = new Date()) {
   }
   if (body?.consent !== true) return { status: 400, data: { error: '전자책 구매·환불 안내에 동의해 주세요.' } };
   const tierId = await tierFor(env, buyer, now);
-  const price = priceFor(book, policy, tierId);
+  const ownedSibling = await ownedOtherLanguageEdition(env, buyer, catalog, book);
+  const price = applyLanguageEditionDiscount(priceFor(book, policy, tierId), policy, ownedSibling);
   if (!price) return { status: 409, data: { error: '판매 가격이 확정되지 않은 도서입니다.' } };
   const orderId = ekodipay.tagOrderId(newOrderId(now), pay.profile);
   const createdAt = now.toISOString();
@@ -199,7 +205,7 @@ export async function createOrder(env, request, body, now = new Date()) {
   await env.DB.prepare(`INSERT INTO books_orders (id, book_id, book_title, buyer_user_id, buyer_email, buyer_name, tier_id, list_price, amount, status, source, expires_at, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'payment_pending', ?, ?, ?, ?)`)
     .bind(orderId, book.id, book.title, buyer.userId, buyer.email, name, price.tierId, price.listPrice, price.amount, clean(body?.source, 30) || 'bookstore', expiresAt, createdAt, createdAt).run();
-  await audit(env, orderId, buyer.email, 'order.created', { amount: price.amount, tier: price.tierId, mode: pay.mode });
+  await audit(env, orderId, buyer.email, 'order.created', { amount: price.amount, tier: price.tierId, mode: pay.mode, languageEditionSource: price.languageEdition?.sourceBookId || undefined });
   const base = String(env.PUBLIC_BASE_URL || 'https://ekodi.kr/books').replace(/\/$/, '');
   return {
     status: 201,

@@ -44,6 +44,12 @@
         : '오디오북 무료 제공 대상 도서입니다. 오디오북은 음성·권리 검수 중이며, 준비가 완료되면 기존 구매자에게 추가 결제 없이 열립니다.')
       : '전자책 출판 검수 완료 후 무료 오디오북 제공 여부를 확인합니다.';
 
+    let langNote = $('languageEditionNote');
+    if (!langNote) { langNote = document.createElement('p'); langNote.id = 'languageEditionNote'; langNote.className = 'buy-msg'; bonusNote.insertAdjacentElement('afterend', langNote); }
+    const le = quote.languageEdition || {};
+    langNote.textContent = le.applied ? `다른 언어판을 보유하셔서 ${Math.round((le.rate || 0.5) * 100)}% 할인된 금액이 적용되었습니다.`
+      : le.available ? `같은 책의 다른 언어판(${(le.editions || []).map(e => e.title).join(' · ')})을 보유하시면 ${Math.round((le.rate || 0.5) * 100)}% 할인된 금액으로 구입하실 수 있습니다.` : '';
+    langNote.hidden = !langNote.textContent;
     renderTiers();
     const list = $('channelList'); list.replaceChildren();
     const channels = [['유페이퍼', b.links?.upaper], ['Google Play Books', b.links?.google], ['Amazon Kindle', b.links?.amazon]].filter(([, url]) => url);
