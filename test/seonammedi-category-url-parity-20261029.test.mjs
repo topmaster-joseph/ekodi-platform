@@ -60,5 +60,5 @@ test('real filter handlers record canonical history while existing router restor
     "window.addEventListener('popstate',syncViewFromLocation)",
     "window.addEventListener('hashchange',syncViewFromLocation)",
   ]) assert.ok(app.includes(snippet),snippet);
-  assert.match(html,/app\.js\?v=20261029-filter-url-parity-1/);
+  assert.match(html,/app\.js\?v=20261031-notice-return-mount-1/);
 });
