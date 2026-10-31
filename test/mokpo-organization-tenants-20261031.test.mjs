@@ -61,3 +61,14 @@ test('static presbytery pages link to tenant admin and keep the roster locked', 
   assert.match(mission, /href="\/mokpo-presbytery\/mission\/admin"/);
   assert.doesNotMatch(home, /href="[^"]*member/i);
 });
+
+test('admin overview and login headings name the current tenant, not Hammu', async () => {
+  const { organizationAdminScript, organizationAdminCss } = await import('../organization-admin-page.js');
+  const js = await (await organizationAdminScript()).text();
+  assert.doesNotMatch(js, /<h2>함무시찰회 운영상태<\/h2>/);
+  assert.doesNotMatch(js, /<h2>함무시찰회 운영자 로그인<\/h2>/);
+  const css = await (await organizationAdminCss()).text();
+  // keep text legible even when the shared admin shell applies a dark theme
+  assert.match(css, /html\[data-ekodi-organization-admin\][^{]*\.oa-main\{background:#f5f7fb!important;color:#172033!important/);
+  assert.match(css, /:is\(h1,h2,h3,b,strong\)\{color:#172033!important\}/);
+});
