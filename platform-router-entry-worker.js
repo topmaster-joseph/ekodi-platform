@@ -29,6 +29,7 @@ import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { siteAdminBootstrapPage, siteAdminBootstrapScript } from './site-admin-bootstrap-page.js';
+import { personAuthorityPage, personAuthorityScript } from './person-authority-page.js';
 import { churchMemberHomePage, isChurchMemberHomePath } from './church-member-home-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
@@ -610,6 +611,8 @@ async function routePlatform(request,env,ctx){
         if(/^\/cheonggye\/admin\/publishing\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(url.pathname==='/site-admin-bootstrap.js')return siteAdminBootstrapScript();
+        if(url.pathname==='/admin/people/script')return personAuthorityScript();
+        if(url.pathname==='/admin/people'||url.pathname==='/admin/people/')return personAuthorityPage();
         if(url.pathname==='/admin/site-admins'||url.pathname==='/admin/site-admins/')return siteAdminBootstrapPage();
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
         const directCommerceProgram=regionalCommerceProgramFromPath(url.pathname);

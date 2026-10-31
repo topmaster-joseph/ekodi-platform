@@ -82,6 +82,11 @@ export function siteAdminBootstrapScript(){
       token=data.access_token;
       try{sessionStorage.setItem(KEY,token)}catch{}
     }else{try{token=sessionStorage.getItem(KEY)||''}catch{}}
+    if(!token){
+      // Same-origin central EKODI session (written by ekodi.kr/auth) when no handoff fragment arrived.
+      try{const s=JSON.parse(localStorage.getItem('sb-renzehysxirjilvdxacv-auth-token')||'null');
+        if(s?.access_token&&Number(s.expires_at||0)*1000>Date.now()+30000)token=s.access_token;}catch{}
+    }
     if(!token){show('등록하려면 먼저 Google 계정으로 인증하세요.');return}
     const authority=await call('/platform-authority');
     if(authority.platformAdmin!==true){show('Google 인증은 가능하지만 최고관리자 권한이 없는 계정입니다.');return}
