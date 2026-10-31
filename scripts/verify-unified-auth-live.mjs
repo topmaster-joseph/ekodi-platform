@@ -92,4 +92,30 @@ if (gha) {
   for (let i = 0; i < lines.length; i += 12) console.log(`::notice title=Unified auth rows ${i + 1}-${Math.min(i + 12, lines.length)}::${esc(lines.slice(i, i + 12).join('\n'))}`);
   for (const f of failing.slice(0, 8)) console.log(`::error title=Unified auth gap: ${f.id}::${esc(`${f.url} http=${f.status} shell=${f.shell} public=${f.publicView}`)}`);
 }
+// Legacy auth entry: tenant sites built in other repositories still link to the
+// retired auth host. Read that host from the platform's own retired-host manifest
+// (never restated here) and check that a login link through it still reaches the
+// central hub with site and return_to intact. Report-only.
+const legacyRows = [];
+try {
+  const manifest = JSON.parse(await readFile(fileURLToPath(new URL('../deploy/manifests/service-admin-entry.worker.json', import.meta.url)), 'utf8'));
+  const retiredAuthHosts = (manifest?.worker?.dnsRetiredHosts || []).filter(h => /^auth\./.test(String(h)));
+  const returnTo = 'https://ekodi.kr/cgma/';
+  for (const host of retiredAuthHosts) {
+    const url = `https://${host}/?site=cgma&direct=1&return_to=${encodeURIComponent(returnTo)}`;
+    const r = await probe(url);
+    let final = null;
+    try { final = new URL(r.finalUrl); } catch {}
+    const reachedHub = Boolean(final && final.origin === 'https://ekodi.kr' && (final.pathname === '/auth' || final.pathname.startsWith('/auth/')));
+    const keptSite = final?.searchParams.get('site') === 'cgma';
+    const keptReturn = final?.searchParams.get('return_to') === returnTo;
+    legacyRows.push(`${reachedHub && keptSite && keptReturn ? 'OK ' : 'GAP'} legacy-auth-entry ${host} http=${r.status} -> ${final ? final.origin + final.pathname : 'unreachable'} site=${keptSite} return_to=${keptReturn}${r.error ? ' err=' + r.error : ''}`);
+    await sleep(delayMs);
+  }
+} catch (error) {
+  legacyRows.push(`GAP legacy-auth-entry manifest-unreadable ${String(error?.message || error)}`);
+}
+for (const line of legacyRows) console.log(line);
+if (gha && legacyRows.length) console.log(`::notice title=Legacy auth entry::${esc(legacyRows.join('\n'))}`);
+
 if (String(process.env.EKODI_UNIFIED_AUTH_ENFORCE || '') === '1' && (failing.length || bundleAuth === 'missing')) process.exit(1);
