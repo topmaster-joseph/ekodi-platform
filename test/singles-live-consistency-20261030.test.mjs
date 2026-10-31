@@ -56,6 +56,6 @@ test('inner pages prioritize their own page content and keep free public landing
 test('refund/expiry messaging distinguishes automatic cleanup from refund completion (postpaid, 2026-10-31)',()=>{
  assert.match(app,/14일 동안 답이 없으면 자동으로 정리됩니다/);
  assert.match(app,/7일 안에 결제가 끝나지 않으면 연결이 취소되고, 먼저 결제한 분은 환불해 드립니다/);
- assert.match(terms,/환불 대상 표시 후 실제 송금은 운영자가 처리합니다/);
+ assert.match(terms,/환불 대상의 실제 송금은 운영자가 은행에서 직접 하고/);
  assert.doesNotMatch(app,/가입비 500,000원을 계좌이체/);
 });
