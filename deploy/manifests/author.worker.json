@@ -5,14 +5,14 @@
     "config": "wrangler.author.toml",
     "requests": [
       {
-        "url": "https://author.ekodi.kr/",
+        "url": "https://ekodi.kr/author/",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["Creator AI", "Creator AI가 세상과 연결될 형태로 만듭니다", "CREATOR APPROVED", "https://ekodi.kr/shell/shell.js"],
         "headerExpect": ["x-ekodi-service: author-ai", "x-ekodi-product: creator-ai", "x-content-type-options: nosniff", "x-ekodi-shell: v2"]
       },
       {
-        "url": "https://author.ekodi.kr/health",
+        "url": "https://ekodi.kr/author/health",
         "statuses": [200],
         "redirect": "manual",
         "expect": ["ekodi-author-ai", "ekodi-creator-ai", "author-events-v1", "myEkodiPortfolio", "booksHandoff"],

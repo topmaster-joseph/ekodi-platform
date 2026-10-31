@@ -11,7 +11,8 @@ test('My EKODI exposes a private personal finance control surface',async()=>{
   assert.match(html,/id="money"/);
   assert.match(loader,/personal-finance\.js/);
   assert.match(html,/personal-finance\.css/);
-  assert.match(worker,/https:\/\/personal-finance-api\.ekodi\.kr/);
+  assert.match(worker,/https:\/\/ekodi\.kr\/personal-finance-api/);
+  assert.doesNotMatch(worker,/personal-finance-api\.ekodi\.kr/);
   assert.match(worker,/personalFinanceControl:true/);
   assert.match(app,/EKODI_MY_AUTH\?\.getAccessToken/);
   assert.match(app,/\/import\/preview/);
