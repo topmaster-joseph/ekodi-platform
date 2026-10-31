@@ -709,3 +709,40 @@ test('bounded isolated session execution verifies expected hash without returnin
   assert.equal(hashMismatch.ok,false);
   assert.match(hashMismatch.error,/semantic round-trip and cleanup contract/);
 });
+
+
+test('hourly native observation cannot be cancelled by unrelated PR or deployment events', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const workflow = await readFile(new URL('../.github/workflows/device-agent-production-verification.yml', import.meta.url), 'utf8');
+  const observer = await readFile(new URL('../scripts/observe-native-device-readiness.mjs', import.meta.url), 'utf8');
+  const group = workflow.match(/^  group: device-agent-production-verification-\$\{\{ github\.ref \}\}-\$\{\{\s*(.*?)\s*\}\}$/m);
+  const cancellation = workflow.match(/^  cancel-in-progress: \$\{\{\s*(.*?)\s*\}\}$/m);
+  assert.ok(group && cancellation, 'official concurrency expressions must remain explicit and testable');
+
+  // GitHub expression operators used by this workflow are ordinary JS logical operators.
+  const lane = new Function('github', 'inputs', 'return (' + group[1] + ')');
+  const cancel = new Function('github', 'inputs', 'return (' + cancellation[1] + ')');
+  const selected = (event_name, mode = '') => lane({ event_name, ref: 'refs/heads/main' }, { execution_mode: mode });
+  const cancellable = event_name => cancel({ event_name }, { execution_mode: '' });
+  assert.equal(selected('schedule'), 'scheduled-observe');
+  assert.equal(selected('workflow_run'), 'passive');
+  assert.equal(selected('pull_request'), 'passive');
+  assert.equal(selected('push'), 'passive');
+  assert.equal(selected('workflow_dispatch', 'verify'), 'verify');
+  assert.notEqual(selected('schedule'), selected('workflow_run'));
+  assert.equal(cancellable('schedule'), false);
+  assert.equal(cancellable('workflow_run'), true);
+  assert.equal(cancellable('pull_request'), true);
+  assert.equal(cancellable('workflow_dispatch'), false);
+
+  assert.match(workflow, /- cron: '17 \* \* \* \*'/);
+  assert.match(workflow, /real-device:\s*\n\s*needs: contract\s*\n\s*if: >-\s*\n\s*github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow, /environment: production/);
+  assert.match(workflow, /Issue short-lived genuine super-admin session/);
+  assert.match(workflow, /Observe production native PC Agent heartbeat without issuing commands/);
+  assert.match(workflow, /run: node scripts\/observe-native-device-readiness\.mjs/);
+  assert.match(workflow, /Revoke short-lived verification session/);
+  assert.match(observer, /mode:'observe-only'/);
+  assert.match(observer, /method:'GET',redirect:'error'/);
+  assert.doesNotMatch(observer, /method:'POST'/);
+});

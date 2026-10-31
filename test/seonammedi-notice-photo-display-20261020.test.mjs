@@ -25,21 +25,21 @@ test('notice detail page renders photos server-side with link-preview image', as
   assert.equal(r.status, 200);
   const html = await r.text();
   assert.match(html, /<img src="\/board\/api\/files\/seonammedi%2Fnotices%2F22%2Fphoto\.jpg" alt="공지 첨부사진">/);
-  assert.equal(meta(html, 'property', 'og:image'), 'https://seonammedi.kr/board/api/files/seonammedi%2Fnotices%2F22%2Fphoto.jpg');
+  assert.equal(meta(html, 'property', 'og:image'), 'https://xn--3e0b8b58jw4co4mnpll3k.kr/board/api/files/seonammedi%2Fnotices%2F22%2Fphoto.jpg');
   assert.equal(meta(html, 'name', 'twitter:card'), 'summary_large_image');
   assert.equal(meta(html, 'property', 'og:title'), 'Test &lt;공지&gt;', 'titles are escaped in meta');
   assert.ok(!html.includes('<공지>'), 'raw title must not be injected');
 });
 
-test('detail page keeps the /seonammedi mount on ekodi.kr and canonical previews on seonammedi.kr', async () => {
+test('detail page keeps the /seonammedi mount on ekodi.kr and canonical previews on the Korean IDN', async () => {
   const html = await (await get('https://ekodi.kr/seonammedi/board/notices/22')).text();
   assert.match(html, /src="\/seonammedi\/board\/api\/files\//);
-  assert.equal(meta(html, 'property', 'og:url'), 'https://seonammedi.kr/board/notices/22');
+  assert.equal(meta(html, 'property', 'og:url'), 'https://xn--3e0b8b58jw4co4mnpll3k.kr/board/notices/22');
 });
 
 test('legacy ?id= share links get the same preview; photo-less notices fall back to a summary card', async () => {
   const shared = await (await get('https://seonammedi.kr/board/notices?id=22')).text();
-  assert.equal(meta(shared, 'property', 'og:image'), 'https://seonammedi.kr/board/api/files/seonammedi%2Fnotices%2F22%2Fphoto.jpg');
+  assert.equal(meta(shared, 'property', 'og:image'), 'https://xn--3e0b8b58jw4co4mnpll3k.kr/board/api/files/seonammedi%2Fnotices%2F22%2Fphoto.jpg');
   const plain = await (await get('https://seonammedi.kr/board/notices/19')).text();
   assert.equal(meta(plain, 'property', 'og:image'), null);
   assert.equal(meta(plain, 'name', 'twitter:card'), 'summary');
@@ -77,6 +77,6 @@ test('home feed shows notice thumbnails and keeps board notice links', async () 
 
 test('Site Core notice page adds og:image and hands off unknown ids to the board detail', async () => {
   const src = await read('public-discovery-content.js');
-  assert.match(src, /property="og:image" content="https:\/\/seonammedi\.kr\/api\/seonammedi\/notices\/\$\{Number\(row\.id\)\}\/image\/0"/);
+  assert.match(src, /property="og:image" content="https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr\/api\/seonammedi\/notices\/\$\{Number\(row\.id\)\}\/image\/0"/);
   assert.match(src, /location:`\/seonammedi\/board\/notices\/\$\{Number\(match\[1\]\)\}`/);
 });

@@ -9,7 +9,9 @@
   const partnerSelect = $('#partnerSelect'); const sellerSelect = $('#sellerSelect'); const existingSourceSelect = $('#existingSourceSelect');
   const partnerSourceSelect = $('#partnerSourceSelect'); const skuSourceSelect = $('#skuSourceSelect'); const skuSelect = $('#skuSelect'); const productSelect = $('#productSelect');
   const mappingRows = $('#mappingRows'); const summary = $('#opsSummary'); const gates = $('#opsGates'); const partnerReadiness = $('#partnerReadiness');
-  let session = null; let context = { partners: [], sellers: [], sources: [], products: [], skus: [], mappings: [], gates: {} }; let selectedPartnerId = '';
+  let session = null; let operationsAuthorized = false; let authRevision = 0;
+  const blankContext = () => ({ partners: [], sellers: [], sources: [], products: [], skus: [], mappings: [], gates: {} });
+  let context = blankContext(); let selectedPartnerId = '';
   const transitions = {
     candidate: ['due_diligence','rejected'], due_diligence: ['contracted','rejected','suspended'], contracted: ['pilot_ready','suspended'],
     pilot_ready: ['pilot_active','suspended'], pilot_active: ['active','suspended'], active: ['suspended'],
@@ -41,12 +43,12 @@
   function partnerSkus() { return context.skus.filter((s) => s.partnerId === selectedPartnerId); }
   function setForm(form, values) { if (!form) return; for (const [key, value] of Object.entries(values)) if (form.elements[key]) form.elements[key].value = value ?? ''; }
   function renderGates() {
-    const g = context.gates || {}; const items = [['PAYMENT',g.paymentsEnabled],['PII RELEASE',g.buyerPiiReleaseEnabled],['FORWARD',g.supplierForwardEnabled],['AUTO ORDER',g.autoOrderEnabled]];
-    gates.replaceChildren(...items.map(([name,on]) => { const a=document.createElement('article'); const s=document.createElement('small'); const b=document.createElement('strong'); s.textContent=name; b.textContent=on?'ON':'OFF'; a.append(s,b); return a; }));
+    const g = context.gates || {}; const items = [['결제',g.paymentsEnabled],['고객정보',g.buyerPiiReleaseEnabled],['공급처 전달',g.supplierForwardEnabled],['자동발주',g.autoOrderEnabled]];
+    gates.replaceChildren(...items.map(([name,on]) => { const a=document.createElement('article'); const s=document.createElement('small'); const b=document.createElement('strong'); s.textContent=name; b.textContent=on?'ON':'OFF';b.dataset.state=on?'on':'off';a.append(s,b); return a; }));
   }
   function renderSummary() {
     const partners=context.partners.length, verified=context.sources.filter((s)=>['contract_verified','pilot','active'].includes(s.partnerMappingStatus)).length;
-    const skus=context.skus.length, maps=context.mappings.length; const vals=[['PARTNERS',partners],['VERIFIED SOURCES',verified],['SKU',skus],['PRODUCT MAP',maps]];
+    const skus=context.skus.length, maps=context.mappings.length; const vals=[['공급처',partners],['검증 경로',verified],['SKU',skus],['상품 연결',maps]];
     summary.replaceChildren(...vals.map(([k,v])=>{const a=document.createElement('article');const s=document.createElement('small');const b=document.createElement('strong');s.textContent=k;b.textContent=v;a.append(s,b);return a;}));
   }
   function renderPartners() {
@@ -86,7 +88,26 @@
       mappingRows.append(tr); }
   }
   async function loadContext() {
-    if (!session) return; const result=await api('/api/internal/supplier-pilot/context'); context=result.context || context; renderGates(); renderSummary(); renderPartners(); setStatus(`${result.actor || 'Mall Ops'} · Partner ${context.partners.length} · Auto Order OFF`);
+    if (!session) { operationsAuthorized = false; syncUi(); return; }
+    // The server allowlist is authoritative; a valid Google session alone grants no operations.
+    const revision = ++authRevision;
+    const actor = session.user?.id;
+    operationsAuthorized = false;
+    syncUi();
+    try {
+      const result = await api('/api/internal/supplier-pilot/context');
+      if (!session || revision !== authRevision || session.user?.id !== actor) return;
+      operationsAuthorized = true;
+      context = result.context || blankContext();
+      renderGates(); renderSummary(); renderPartners(); syncUi();
+      setStatus(`공급처 ${context.partners.length}개 · 검증된 공급경로 ${context.sources.filter((s)=>['contract_verified','pilot','active'].includes(s.partnerMappingStatus)).length}개 · 자동발주 OFF`);
+    } catch (error) {
+      if (revision !== authRevision) return;
+      operationsAuthorized = false;
+      syncUi();
+      setStatus(error.message, true);
+      throw error;
+    }
   }
   async function post(path, body) { return api(path,{method:'POST',body:JSON.stringify(body)}); }
   $('#partnerCreateForm')?.addEventListener('submit', async (e)=>{e.preventDefault();const f=e.currentTarget.elements;try{const r=await post('/api/internal/supplier-partners',{partnerCode:f.partnerCode.value,displayName:f.displayName.value,legalName:f.legalName.value,providerType:f.providerType.value,statusNote:f.statusNote.value});selectedPartnerId=r.partner.id;e.currentTarget.reset();await loadContext();setStatus('Supplier Partner를 등록했습니다.');}catch(err){setStatus(err.message,true);}});
@@ -98,9 +119,63 @@
   $('#skuForm')?.addEventListener('submit', async (e)=>{e.preventDefault();if(!selectedPartnerId)return setStatus('Partner를 선택해 주세요.',true);const f=e.currentTarget.elements;try{await post(`/api/internal/supplier-partners/${selectedPartnerId}/skus`,{sourceId:f.sourceId.value,skuCode:f.skuCode.value,displayName:f.displayName.value,costAmount:f.costAmount.value,shippingAmount:f.shippingAmount.value,stockState:f.stockState.value});e.currentTarget.reset();if(e.currentTarget.elements.shippingAmount)e.currentTarget.elements.shippingAmount.value='0';await loadContext();setStatus('Supplier SKU를 등록하고 source 원가를 동기화했습니다.');}catch(err){setStatus(err.message,true);}});
   $('#mappingForm')?.addEventListener('submit', async (e)=>{e.preventDefault();const f=e.currentTarget.elements;if(!f.skuId.value||!f.productId.value)return setStatus('SKU와 동일 판매자 상품을 선택해 주세요.',true);try{await post(`/api/internal/supplier-skus/${f.skuId.value}/products`,{productId:f.productId.value,priority:f.priority.value,minMarginAmount:f.minMarginAmount.value,minMarginPercent:f.minMarginPercent.value});await loadContext();setStatus('SKU→상품 Pilot 매핑을 저장했습니다.');}catch(err){setStatus(err.message,true);}});
   partnerSelect?.addEventListener('change',()=>{selectedPartnerId=partnerSelect.value;renderPartnerDetail();}); skuSelect?.addEventListener('change',renderProductsForSku);
+  // Keep operations in one visible step. URL changes never grant API permissions.
+  const stepTabs=[...document.querySelectorAll('[data-ops-tab]')];
+  const stepPanels=[...document.querySelectorAll('[data-ops-step]')];
+  const stepNames=new Set(stepTabs.map((tab)=>tab.dataset.opsTab));
+  function activateStep(step,writeUrl=false){
+    const current=stepNames.has(step)?step:'partner';
+    for(const tab of stepTabs){
+      const active=tab.dataset.opsTab===current;
+      tab.setAttribute('aria-selected',String(active));
+      tab.tabIndex=active?0:-1;
+    }
+    for(const panel of stepPanels)panel.hidden=panel.dataset.opsStep!==current;
+    if(writeUrl){
+      const url=new URL(location.href);
+      if(current==='partner')url.searchParams.delete('step');
+      else url.searchParams.set('step',current);
+      history.replaceState(null,'',url.pathname+url.search+url.hash);
+    }
+  }
+  for(const [index,tab] of stepTabs.entries()){
+    tab.addEventListener('click',()=>activateStep(tab.dataset.opsTab,true));
+    tab.addEventListener('keydown',(event)=>{
+      let to=-1;
+      if(event.key==='ArrowRight')to=(index+1)%stepTabs.length;
+      else if(event.key==='ArrowLeft')to=(index+stepTabs.length-1)%stepTabs.length;
+      else if(event.key==='Home')to=0;
+      else if(event.key==='End')to=stepTabs.length-1;
+      if(to<0)return;
+      event.preventDefault();
+      activateStep(stepTabs[to].dataset.opsTab,true);
+      stepTabs[to].focus();
+    });
+  }
+  activateStep(new URLSearchParams(location.search).get('step'));
+  window.addEventListener('popstate',()=>activateStep(new URLSearchParams(location.search).get('step')));
   login?.addEventListener('click',()=>{location.href='https://ekodi.kr/auth/?site=mall-seller&return_to='+encodeURIComponent(location.href.split('#')[0]);});
-  logout?.addEventListener('click',async()=>{await sb.auth.signOut();session=null;syncUi();setStatus('로그아웃했습니다.');}); reload?.addEventListener('click',()=>loadContext().catch((e)=>setStatus(e.message,true)));
-  function syncUi(){const signed=Boolean(session);if(login)login.hidden=signed;if(logout)logout.hidden=!signed;document.querySelectorAll('.ops-panel input,.ops-panel select,.ops-panel textarea,.ops-panel button').forEach((el)=>{el.disabled=!signed;});if(reload)reload.disabled=!signed;}
-  exchangeCentralToken().catch((e)=>setStatus(`인증 연결 실패: ${e.message}`,true)).finally(async()=>{session=(await sb.auth.getSession()).data.session;syncUi();if(session)loadContext().catch((e)=>setStatus(e.message,true));});
-  sb.auth.onAuthStateChange((_e,next)=>{session=next;syncUi();if(session)loadContext().catch(()=>{});});
+  logout?.addEventListener('click',async()=>{
+    ++authRevision; operationsAuthorized=false; session=null; syncUi();
+    try { await sb.auth.signOut(); setStatus('로그아웃했습니다.'); }
+    catch(error) { setStatus(`로그아웃 확인 실패: ${error.message}`,true); session=(await sb.auth.getSession()).data.session; if(session)loadContext().catch(e=>setStatus(e.message,true)); }
+  });
+  reload?.addEventListener('click',()=>loadContext().catch((e)=>setStatus(e.message,true)));
+  function syncUi(){
+    const signed=Boolean(session), canOperate=signed&&operationsAuthorized;
+    if(login)login.hidden=signed;
+    if(logout)logout.hidden=!signed;
+    document.querySelectorAll('.ops-panel input,.ops-panel select,.ops-panel textarea,.ops-panel button').forEach((el)=>{el.disabled=!canOperate;});
+    if(reload)reload.disabled=!signed;
+    if(!canOperate){
+      context=blankContext(); selectedPartnerId='';
+      renderGates();renderSummary();renderPartners();
+    }
+  }
+  exchangeCentralToken().catch((e)=>setStatus(`인증 연결 실패: ${e.message}`,true)).finally(async()=>{session=(await sb.auth.getSession()).data.session;operationsAuthorized=false;syncUi();if(session)loadContext().catch((e)=>setStatus(e.message,true));});
+  sb.auth.onAuthStateChange((_e,next)=>{
+    if(session?.access_token===next?.access_token)return;
+    ++authRevision; session=next; operationsAuthorized=false; syncUi();
+    if(session)loadContext().catch(e=>setStatus(e.message,true));
+  });
 })();

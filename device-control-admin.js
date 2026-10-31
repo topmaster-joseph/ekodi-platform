@@ -70,6 +70,8 @@
     'computer.auth_session.start': '선택한 PC에 FactChat 공식 로그인 창을 EKODI 전용 임시 브라우저로 엽니다.\n\n• PC 화면에 동의창이 먼저 뜨며, PC 앞의 본인이 [예]를 눌러야 열립니다.\n• 비밀번호·인증번호는 열린 창의 FactChat 공식 페이지에만 직접 입력하세요. EKODI·AI·채팅으로 보내지 마세요.\n• 기존 Opera/Chrome/Edge 프로필은 사용하지 않으며 30분 후 자동 종료·삭제됩니다.\n\n진행할까요?',
     'computer.auth_session.verify': '로그인된 FactChat 화면에서 메뉴 표시와 크레딧·사용량 문구만 읽기 전용으로 점검합니다.\n파일 업로드·생성·크레딧 소모 작업은 실행하지 않습니다. 진행할까요?',
     'autologon.open': '자동로그인 암호는 클라우드에서 받지 않습니다. 이 PC에서 Microsoft Autologon 창을 열까요?',
+    'power.normal': '현재 Windows 전원 시간을 일반 업무 모드로 변경합니다. 기존 전원 계획을 백업하고, 같은 기기의 원상복구 기능으로 되돌릴 수 있습니다. PC 사용자 동의를 확인했나요?',
+    'power.restore': '해당 PC에 보관된 EKODI 전원 계획 백업으로 원상복구합니다. 실행할까요?',
     'maintenance.temp_cleanup': '7일 이상 지난 사용자/Windows 임시 파일만 정리합니다. 진행할까요?',
     'printing.image_preview.repair': '이미지 우클릭 인쇄가 바로 출력되지 않고 Windows 미리보기/레이아웃을 먼저 열도록 복구하고, 이후 변경도 자동 재복구할까요?',
     'printing.image_preview.restore': 'EKODI 인쇄 미리보기 강제 규칙을 해제하고 최초 변경 전 사용자 설정으로 복원할까요?',
@@ -92,7 +94,11 @@
   let currentEnrollmentInstaller = '';
   let deviceCatalog = Object.values(TYPE_FALLBACK);
   let currentDevices = [];
-  let activeType = 'all';
+  const WINDOWS_PERFORMANCE_URL = '/admin/ops/devices/windows-performance';
+  function windowsPerformanceRoute() {
+    return window.location.pathname.replace(/\/$/, '') === WINDOWS_PERFORMANCE_URL;
+  }
+  let activeType = windowsPerformanceRoute() ? 'pc' : 'all';
   let rosterStatus = 'all';
   let rosterSearch = '';
   let showRetiredGroups = false;
@@ -135,7 +141,7 @@
       document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.remove('active'));
       document.querySelector('[data-device-control-nav]')?.classList.add('active');
       setPageTitle('로컬컴퓨터·기기');
-      if (location.hash !== '#devices') history.replaceState(null, '', '#devices');
+      if (location.hash !== '#devices' && !windowsPerformanceRoute()) history.replaceState(null, '', '#devices');
     }
     document.querySelector('.sidebar')?.classList.remove('open');
     loadDevices();
@@ -622,9 +628,154 @@
       const p = document.createElement('p'); p.className = 'device-command-empty'; p.textContent = '“목록 새로 확인”을 누르면 명령문을 노출하지 않고 항목 이름과 안전 ID만 가져옵니다.'; box.append(p); return box;
     }
     const list = document.createElement('div'); list.className = 'device-startup-list';
-    items.forEach(item => { const row = document.createElement('div'); const text = document.createElement('span'); text.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)}</small>`; row.append(text, makeActionButton(device, 'startup.disable', '사용 안 함', 'ghost', { itemId: item.id })); list.append(row); });
-    disabled.forEach(item => { const row = document.createElement('div'); row.dataset.disabled = 'true'; const text = document.createElement('span'); text.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)} · 비활성</small>`; row.append(text, makeActionButton(device, 'startup.restore', '복원', 'secondary', { itemId: item.id })); list.append(row); });
+    items.forEach(item => { const row = document.createElement('div'); const text = document.createElement('span'); text.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)}</small>`; row.append(text, makeActionButton(device, 'startup.disable', '사용 안 함', 'ghost', { itemId: item.id }, device.status !== 'online' || !capability(device, 'startupManagement') || device.management?.remoteCommandLevel !== 'managed')); list.append(row); });
+    disabled.forEach(item => { const row = document.createElement('div'); row.dataset.disabled = 'true'; const text = document.createElement('span'); text.innerHTML = `<strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.scope)} · 비활성</small>`; row.append(text, makeActionButton(device, 'startup.restore', '복원', 'secondary', { itemId: item.id }, device.status !== 'online' || !capability(device, 'startupManagement') || device.management?.remoteCommandLevel !== 'managed')); list.append(row); });
     box.append(list); return box;
+  }
+
+
+  // EKODI-WINDOWS-PERFORMANCE-001: online Windows optimization uses only
+  // the audited Device Control allowlist. This panel never calls the OS.
+  function windowsPerformancePanel(device) {
+    if (device.management?.type !== 'pc' || isInventory(device) || device.capabilities?.posAgent === true) return null;
+
+    const panel = document.createElement('section');
+    panel.className = 'device-windows-performance';
+    panel.dataset.windowsPerformance = 'v1';
+    const connected = device.status === 'online';
+    const snapshot = device.settings?.health?.system || device.diagnostics?.system || {};
+    const storage = device.settings?.health?.storage || device.diagnostics?.storage || {};
+    const startup = device.diagnostics?.startup || {};
+    const updates = device.diagnostics?.updates || {};
+    // diagnosticsAt advances on ANY successful command in Device Control.
+    // A genuine post-cleanup diagnosis must be backed by its own succeeded receipt.
+    const telemetryAt = device.settings?.health?.generatedAt || null;
+    const reportAge = telemetryAt ? Date.now() - new Date(telemetryAt).getTime() : Infinity;
+    const reportFresh = connected && Number.isFinite(reportAge) && reportAge >= 0 && reportAge < 30 * 60 * 1000;
+    const commands = Array.isArray(device.recentCommands) ? device.recentCommands : [];
+    const lastDiagnostic = commands.find(row => row.type === 'diagnostics.collect' && row.status === 'succeeded') || null;
+    const cleanup = commands.find(row => row.type === 'maintenance.temp_cleanup') || null;
+    const cleanupPending = cleanup && ['queued', 'assigned', 'claimed'].includes(cleanup.status);
+    const cleanupFinished = cleanup?.status === 'succeeded' && cleanup.completedAt;
+    const postCleanupDiagnostic = Boolean(cleanupFinished && lastDiagnostic?.completedAt &&
+      new Date(lastDiagnostic.completedAt).getTime() > new Date(cleanup.completedAt).getTime());
+
+    const title = document.createElement('div');
+    title.className = 'device-performance-heading';
+    const heading = document.createElement('div');
+    const eyebrow = document.createElement('small');
+    eyebrow.textContent = 'WINDOWS PERFORMANCE · EKODI DEVICE AGENT';
+    const h3 = document.createElement('h3');
+    h3.textContent = 'Windows 성능 관리';
+    const scope = document.createElement('p');
+    scope.textContent = '실제 Agent가 보고한 수치입니다. 점수는 벤치마크가 아니며, 원격 실행은 기존 승인·감사 정책을 따릅니다.';
+    heading.append(eyebrow, h3, scope);
+    const freshness = document.createElement('strong');
+    freshness.className = 'device-performance-freshness';
+    freshness.textContent = !connected ? '오프라인 · 실측 중단' : reportFresh ? '최근 30분 이내 Agent 갱신' : '이전 상태 · 재확인 필요';
+    title.append(heading, freshness);
+
+    const stats = document.createElement('div');
+    stats.className = 'device-performance-stats';
+    function metric(label, raw, suffix, decimals = 0) {
+      const cell = document.createElement('div');
+      const small = document.createElement('small');
+      small.textContent = label;
+      const strong = document.createElement('strong');
+      const n = raw === null || raw === undefined || raw === '' ? NaN : Number(raw);
+      strong.textContent = Number.isFinite(n) && n >= 0 ? n.toFixed(decimals) + suffix : '—';
+      cell.append(small, strong);
+      stats.append(cell);
+    }
+    const freePct = Array.isArray(storage.volumes)
+      ? storage.volumes.map(v => v?.freePct == null || v.freePct === '' ? NaN : Number(v.freePct))
+        .filter(v => Number.isFinite(v) && v >= 0 && v <= 100)
+      : [];
+    const minFree = freePct.length ? Math.min(...freePct) : null;
+    metric('CPU 점유율', snapshot.cpuLoadPct, '%');
+    metric('메모리 사용률', snapshot.memoryUsedPct, '%');
+    metric('디스크 최소 여유', minFree, '%');
+    metric('부팅 후 경과', snapshot.uptimeHours, '시간');
+    metric('시작프로그램', startup.count, '개');
+    metric('대기 업데이트', updates.pendingCount, '개');
+
+    const assessment = document.createElement('p');
+    assessment.className = 'device-performance-assessment';
+    const recommendations = [];
+    if (!telemetryAt) recommendations.push('먼저 성능 진단을 실행하세요.');
+    if (Number(snapshot.cpuLoadPct) >= 85) recommendations.push('CPU 사용률이 높게 관찰되었습니다. 프로세스를 점검하세요.');
+    if (Number(snapshot.memoryUsedPct) >= 85) recommendations.push('메모리 사용량이 높습니다. 불필요한 앱을 확인하세요.');
+    if (minFree !== null && minFree < 15) recommendations.push('디스크 여유가 15% 미만입니다. 사용자 확인 후 안전 정리를 검토하세요.');
+    if (Number(startup.count) > 15) recommendations.push('시작프로그램을 검토하고 개별 승인으로 해제하세요.');
+    if (!recommendations.length) recommendations.push('현재 수치만으로 자동 조정이 필요한 상태로 판단하지 않습니다.');
+    assessment.textContent = recommendations.join(' ');
+
+    const actions = document.createElement('div');
+    actions.className = 'device-ops-grid device-performance-actions';
+    actions.append(
+      makeActionButton(device, 'diagnostics.collect', '성능 다시 진단', 'primary', {}, !capability(device, 'diagnostics')),
+      makeActionButton(device, 'startup.scan', '시작프로그램 조회', 'ghost', {}, !capability(device, 'startupManagement')),
+      makeActionButton(device, 'updates.scan', '업데이트 상태', 'ghost', {}, !capability(device, 'windowsUpdate')),
+      makeActionButton(device, 'maintenance.temp_cleanup', '안전한 임시파일 정리', 'secondary', {}, !reportFresh || device.management?.remoteCommandLevel !== 'managed' || !capability(device, 'storageMaintenance') || cleanupPending),
+    );
+
+    const proof = document.createElement('p');
+    proof.className = 'device-performance-proof';
+    const diagnosis = (telemetryAt ? 'Agent 상태 갱신 ' + timeLabel(telemetryAt) : 'Agent 상태 기록 없음') +
+      ' · ' + (lastDiagnostic?.completedAt ? '진단 영수증 ' + timeLabel(lastDiagnostic.completedAt) : '최근 정밀 진단 영수증 없음');
+    let action = '아직 안전 정리 실행 기록이 없습니다.';
+    if (cleanupPending) action = '임시파일 정리 ' + commandStatus(cleanup.status) + ' · 실제 완료 영수증 대기';
+    else if (cleanup?.status === 'failed') action = '임시파일 정리 실패 · 재시도 전 오류 확인 필요';
+    else if (cleanupFinished) {
+      const freed = cleanup.result?.freedMB == null ? NaN : Number(cleanup.result.freedMB);
+      const files = cleanup.result?.removedFiles == null ? NaN : Number(cleanup.result.removedFiles);
+      action = '임시파일 정리 완료 ' + timeLabel(cleanup.completedAt)
+        + (Number.isFinite(freed) && freed >= 0 ? ' · ' + freed.toFixed(1) + ' MB 확보' : '')
+        + (Number.isFinite(files) && files >= 0 ? ' · ' + files + '개 파일' : '');
+      action += postCleanupDiagnostic ? ' · 이후 재진단 기록 확인' : ' · 효과 확인을 위해 다시 진단 필요';
+    }
+    proof.textContent = diagnosis + ' | ' + action;
+
+    const settings = document.createElement('details');
+    settings.className = 'device-performance-settings';
+    settings.open = windowsPerformanceRoute();
+    const settingsTitle = document.createElement('summary');
+    settingsTitle.textContent = '안전 최적화 설정 · 개별 적용 및 복원';
+    const settingsIntro = document.createElement('p');
+    settingsIntro.textContent = '자동 변경은 하지 않습니다. PC 사용자의 동의를 확인한 뒤 각 항목을 개별 적용하세요. 백업 없는 복원·오프라인 수정은 차단합니다.';
+    const power = document.createElement('section');
+    power.className = 'device-performance-power';
+    const powerTitle = document.createElement('h4');
+    powerTitle.textContent = '전원 계획';
+    const powerNote = document.createElement('p');
+    powerNote.textContent = device.settings?.powerBackupAvailable === true
+      ? '이 PC에 기존 전원 계획 백업이 있습니다. 복원을 선택할 수 있습니다.'
+      : '기존 전원 계획 백업이 확인되지 않았습니다. 첫 변경 시 Agent가 백업을 시도하며, 검증된 백업 없이는 복원할 수 없습니다.';
+    const powerPending = commands.some(row => ['power.normal', 'power.restore'].includes(row.type) &&
+      ['queued', 'assigned', 'claimed'].includes(row.status));
+    const mayChange = connected && reportFresh && device.management?.remoteCommandLevel === 'managed' && !powerPending;
+    const powerActions = document.createElement('div');
+    powerActions.className = 'device-ops-grid device-performance-actions';
+    powerActions.append(
+      makeActionButton(device, 'power.normal', '일반 업무 전원 모드', 'secondary', {}, !mayChange),
+      makeActionButton(device, 'power.restore', '원래 전원 계획으로 복원', 'ghost', {}, !mayChange || device.settings?.powerBackupAvailable !== true),
+    );
+    const powerReceipt = commands.find(row => ['power.normal', 'power.restore'].includes(row.type));
+    const powerProof = document.createElement('p');
+    powerProof.className = 'device-performance-proof';
+    powerProof.textContent = powerReceipt
+      ? commandLabel(powerReceipt.type) + ' · ' + commandStatus(powerReceipt.status) + ' · ' +
+        timeLabel(powerReceipt.completedAt || powerReceipt.claimedAt || powerReceipt.issuedAt)
+      : '전원 설정 실행 영수증 없음 · 현재 적용 상태를 추정하지 않습니다.';
+    power.append(powerTitle, powerNote, powerActions, powerProof);
+    settings.append(settingsTitle, settingsIntro, power);
+    if (windowsPerformanceRoute()) settings.append(startupPanel(device));
+    const policyNote = document.createElement('p');
+    policyNote.className = 'device-performance-proof';
+    policyNote.textContent = '시작프로그램은 개별 항목만 해제·복원합니다. Defender·방화벽·레지스트리 임의 변경, 강제 재부팅, 임의 PowerShell 실행은 제공하지 않습니다.';
+    settings.append(policyNote);
+    panel.append(title, stats, assessment, actions, proof, settings);
+    return panel;
   }
 
   function managementPanel(device) {
@@ -665,6 +816,7 @@
     values[3].textContent = ({managed:'관리 작업',observe:'관찰 작업',none:'없음'})[device.management?.remoteCommandLevel] || '없음';
 
     const health = document.createElement('div'); health.innerHTML = healthMarkup(device);
+    const performance = windowsPerformancePanel(device);
     const mainActions = document.createElement('div'); mainActions.className = 'device-ops-grid device-primary-actions';
     mainActions.append(
       makeActionButton(device, 'diagnostics.collect', '전체 진단', 'primary', {}, !capability(device, 'diagnostics')),
@@ -733,7 +885,11 @@
     if (posStatus) {
       values[3].textContent = '상태 보고 전용';
       card.append(head, meta, posAgentSummary(device, posStatus), foot);
-    } else card.append(head, meta, health.firstElementChild, recommendationPanel(device), mainActions, ...(device.management?.type === 'pc' && !isInventory(device) && device.status !== 'revoked' ? [externalAuthPanel(device)] : []), advanced, foot);
+    } else if (windowsPerformanceRoute() && performance) {
+      // Keep the dedicated screen focused on diagnosis and proof. Full controls
+      // are one click away in the existing device-management screen.
+      card.append(head, meta, performance, foot);
+    } else card.append(head, meta, health.firstElementChild, recommendationPanel(device), ...(performance ? [performance] : []), mainActions, ...(device.management?.type === 'pc' && !isInventory(device) && device.status !== 'revoked' ? [externalAuthPanel(device)] : []), advanced, foot);
     const proofCommand = latestCommandByType(device, 'software.localai.verify');
     const proof = proofCommand?.result?.localAiProof || device.diagnostics?.localAiProof;
     if (proof) {
@@ -829,7 +985,7 @@
     wrapper.className = 'device-roster-group';
     wrapper.dataset.rosterKey = group.key;
     wrapper.dataset.status = primary.status;
-    wrapper.open = openRosterGroups.has(group.key);
+    wrapper.open = windowsPerformanceRoute() || openRosterGroups.has(group.key);
     const heading = document.createElement('summary');
     heading.className = 'device-roster-summary';
     const name = document.createElement('span'); name.className = 'device-roster-name';
@@ -891,6 +1047,10 @@
   function renderTypeFilters(devices) {
     const host = document.querySelector('#deviceTypeFilters');
     if (!host) return;
+    if (windowsPerformanceRoute()) {
+      host.replaceChildren();
+      return;
+    }
     const groups = groupRosterDevices(devices).filter(group => showRetiredGroups || !group.retired);
     const counts = groups.reduce((map, group) => {
       const type = group.primary.management?.type || 'pc';
@@ -945,8 +1105,11 @@
     const list = document.querySelector('#ekodiDeviceList');
     if (!list) return;
     const grouped = groupRosterDevices(currentDevices);
-    const current = grouped.filter(group => !group.retired);
-    const counted = showRetiredGroups ? grouped : current;
+    // A Windows-only deep link must not show POS/Kiosk or count them in its summary.
+    const performanceMode = windowsPerformanceRoute();
+    const current = grouped.filter(group => !group.retired && (!performanceMode
+      || (group.primary.management?.type === 'pc' && !isInventory(group.primary) && group.primary.capabilities?.posAgent !== true)));
+    const counted = performanceMode ? current : showRetiredGroups ? grouped : current;
     const onlineGroups = current.filter(group => group.primary.status === 'online');
     const attentionGroups = current.filter(group => rosterNeedsAttention(group.primary));
     const scored = onlineGroups.filter(group => hasRosterHealthScore(group.primary));
@@ -968,6 +1131,7 @@
     const query = rosterSearch.trim().toLocaleLowerCase();
     const visible = counted.filter(group => {
       const device = group.primary;
+      if (windowsPerformanceRoute() && (device.management?.type !== 'pc' || isInventory(device) || device.capabilities?.posAgent === true)) return false;
       if (activeType !== 'all' && (device.management?.type || 'pc') !== activeType) return false;
       if (rosterStatus === 'online' && device.status !== 'online') return false;
       if (rosterStatus === 'attention' && !rosterNeedsAttention(device)) return false;
@@ -1040,8 +1204,12 @@
     const panel = document.createElement('section'); panel.id = 'deviceControlPanel'; panel.className = 'section ekodi-device-panel hidden-panel'; panel.dataset.panel = 'devices';
     panel.innerHTML = `
       <div class="device-panel-head">
-        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>로컬컴퓨터·기기</h2><p>현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.</p></div>
+        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>${windowsPerformanceRoute() ? 'Windows 성능 관리' : '로컬컴퓨터·기기'}</h2><p>${windowsPerformanceRoute() ? '등록된 PC만 표시합니다. 실제 Agent 실측값과 허용된 진단·시작프로그램·업데이트·안전 정리의 실행 영수증을 확인합니다.' : '현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.'}</p></div>
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
+      </div>
+      <div class="device-performance-entry" aria-label="Windows 성능 관리 전용 링크">
+        <div><strong>Windows 성능 관리 전용</strong><p>안전한 진단과 실행 영수증을 기존 EKODI Device Agent로 통합합니다. 설치 없는 브라우저 직접 제어는 허용하지 않습니다.</p></div>
+        <a class="button secondary" href="${windowsPerformanceRoute() ? '/admin/ops/devices' : WINDOWS_PERFORMANCE_URL}">${windowsPerformanceRoute() ? '전체 기기로 돌아가기' : 'Windows 성능 전용 화면'}</a>
       </div>
       <details class="device-status-tools" open>
         <summary><strong>연결된 기기 · 상태 보기</strong><span id="deviceStatusSummary">상태 확인 중</span></summary>
@@ -1109,6 +1277,11 @@
     const quickSetup = panel.querySelector('.device-setup-tools');
     const statusTools = panel.querySelector('.device-status-tools');
     if (quickSetup && statusTools) statusTools.before(quickSetup);
+    if (windowsPerformanceRoute()) {
+      panel.dataset.windowsPerformanceMode = 'true';
+      if (quickSetup) quickSetup.open = false;
+      if (statusTools) statusTools.open = true;
+    }
         content.append(panel);
     const demandLoader=globalThis.EKODIAdminDemand;
     const loadTapoScript=demandLoader?.loadScript||demandLoader?.loadJs;
@@ -1130,7 +1303,7 @@
       catch { event.currentTarget.textContent = '코드를 직접 선택해 복사하세요'; }
     });
 
-    if (location.hash === '#devices') showDevices();
+    if (location.hash === '#devices' || windowsPerformanceRoute()) showDevices();
     window.addEventListener('hashchange', () => { if (location.hash === '#devices') showDevices(); });
     timer = window.setInterval(() => { if (!panel.classList.contains('hidden-panel')) loadDevices(); }, 10000);
   }

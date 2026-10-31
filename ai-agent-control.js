@@ -6,7 +6,9 @@ import { AI_MISSION_RUNTIME, evaluateMissionAction, getRuntimeAgentPolicy } from
 import { evaluateAutonomousOperation, getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 import { buildEkodianOperationSnapshot, getEkodian8GSummary } from './ekodian-8g-runtime.js';
 import {
+  ADMIN_ASSIST_FEEDBACK,
   ADMIN_ASSIST_RETENTION,
+  buildAssistRecall,
   ensureAdminAssistColumns,
   listOwnConversations,
   redactOwnConversation,
@@ -280,6 +282,19 @@ async function handleAdminAssist(request, env, session) {
   if (!message) return json({ error: 'AI Assist 요청 내용이 필요합니다.', code: 'ASSIST_MESSAGE_REQUIRED' }, 400, request, env);
   const page = normalizeAssistPage(body.context || body.page || {});
   const history = normalizeAssistHistory(body.history);
+  // Feedback: a few summaries of this administrator's own completed, non-gated
+  // conversations. Built before the audit row is inserted, so the in-flight turn
+  // cannot feed itself, and never allowed to fail the request — an assistant
+  // that breaks when it cannot remember is worse than one that forgets.
+  const recallOwner = String(session.email || '').trim();
+  const recall = recallOwner
+    ? await buildAssistRecall(env.DB, { email: recallOwner })
+      .catch(error => {
+        console.error('Admin assist feedback recall failed', String(error?.message || error));
+        return null;
+      })
+    : null;
+  const recallItems = recall?.items || [];
 
   const auditAction = normalizeAction({
     agentId: 'chief',
@@ -292,6 +307,9 @@ async function handleAdminAssist(request, env, session) {
       source: 'admin-assist-dock',
       context: page,
       historyItems: history.length,
+      // The ledger records what the model was reminded of, and on what terms.
+      recallItems: recallItems.length,
+      recallMode: ADMIN_ASSIST_FEEDBACK.summariesOnly ? 'summaries_read_only' : 'verbatim',
     },
     reversible: true,
     delegated: true,
@@ -313,6 +331,7 @@ async function handleAdminAssist(request, env, session) {
       message,
       page,
       history,
+      recall: recallItems,
       requestedBy: String(session.email || 'unknown'),
     },
     fallback: () => ({

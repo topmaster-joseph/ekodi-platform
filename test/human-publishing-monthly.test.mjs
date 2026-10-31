@@ -7,7 +7,16 @@ function release(overrides = {}) {
     publicationId: 'HP-001', editionId: 'HP-001-EPUB-1', title: '완성된 독립 작품',
     authorId: 'AUTHOR-1', fieldId: 'literature', format: 'epub', priceKrw: 9900,
     releaseDigest: 'sha256:approved-content', readerProfiles: ['general'], collectionId: 'human',
-    rights: { licenseChecked: true, authorContractApproved: true },
+    rights: { licenseChecked: true, authorContractApproved: true,
+      copyrightOwnerId: 'AUTHOR-1', distributionLicenseApproved: true },
+    authorMembership: { planId: 'writer1', serverVerified: true, authorId: 'AUTHOR-1' },
+    salesContract: { verified: true, signedByAuthorId: 'AUTHOR-1',
+      editionDigest: 'sha256:approved-content', royaltyTermsAccepted: true,
+      salesCommissionTermsAccepted: true },
+    audiobook: { highQualityApproved: true, humanListeningQaPassed: true,
+      dialogueNarrationReviewed: true, masterAssetDigest: 'sha256:premium-audio',
+      pairedEditionDigest: 'sha256:approved-content', additionalBuyerPriceKrw: 0,
+      buyerBundleEntitlementVerified: true, refundRevocationVerified: true },
     originality: { provenanceReviewed: true, verifiedNoUnauthorizedImitation: true },
     craft: { realHumanExperienceReviewed: true, characterAndMotivationReviewed: true,
       logicAndContinuityReviewed: true, readerFeedbackReviewed: true, editorialRevisionComplete: true },
@@ -69,6 +78,9 @@ test('only verified, approved, version-bound releases create dual-channel handof
   assert.deepEqual(handoff.channels, ['books', 'ekodimall']);
   assert.equal(handoff.editionId, book.editionId);
   assert.equal(handoff.deliveryState, 'not_dispatched');
+  assert.equal(handoff.copyrightOwnerId, book.authorId);
+  assert.equal(handoff.audiobook.bundlePriceKrw, 0);
+  assert.equal(handoff.audiobook.access, 'verified_purchase_only');
   assert.equal(approvedDualChannelHandoff(book).idempotencyKey, handoff.idempotencyKey);
 });
 
@@ -101,4 +113,41 @@ test('print editions also require verified proof, supplier and fulfillment', () 
 test('no nonsensical reader profile can bypass the accessibility gates', () => {
   assert.equal(evaluateReleaseReadiness(release({ readerProfiles: { includes: () => true } })).ready, false);
   assert.ok(evaluateReleaseReadiness(release({ readerProfiles: [] })).blockers.includes('readerProfiles'));
+});
+
+test('free tier may archive manuscript but cannot become a sale listing', () => {
+  const candidate = release({ authorMembership: { planId: 'free', authorId: 'AUTHOR-1', serverVerified: true } });
+  assert.ok(evaluateReleaseReadiness(candidate).blockers.includes('authorMembership.verifiedSaleEligible'));
+  assert.throws(() => approvedDualChannelHandoff(candidate), /blocked/);
+});
+
+test('book copyright remains with author; publisher gets only approved distribution license', () => {
+  assert.ok(evaluateReleaseReadiness(release({ rights: { licenseChecked: true, authorContractApproved: true, copyrightOwnerId: 'publisher', distributionLicenseApproved: true } })).blockers.includes('rights.authorCopyrightRetained'));
+  assert.ok(evaluateReleaseReadiness(release({ rights: { licenseChecked: true, authorContractApproved: true, copyrightOwnerId: 'AUTHOR-1' } })).blockers.includes('rights.distributionLicenseApproved'));
+});
+
+test('paid royalties and sale commissions require a separate edition-specific agreement', () => {
+  const absent = evaluateReleaseReadiness(release({ salesContract: null }));
+  assert.ok(absent.blockers.includes('salesContract.royaltyAndCommissionSignedForEdition'));
+  const publisherBook = release({
+    authorMembership: { planId: 'publisher_editor', serverVerified: true, authorId: 'AUTHOR-1',
+      verifiedChiefAdmin: true, publisherEditorScope: true }, salesContract: null
+  });
+  assert.equal(evaluateReleaseReadiness(publisherBook).ready, true);
+  const unscoped = release({ authorMembership: { ...publisherBook.authorMembership, publisherEditorScope: false } });
+  assert.ok(evaluateReleaseReadiness(unscoped).blockers.includes('authorMembership.verifiedPlanningScope'));
+});
+
+test('premium voice quality, paired edition and free purchaser grant are hard sales gates', () => {
+  const missing = evaluateReleaseReadiness(release({ audiobook: null }));
+  assert.ok(missing.blockers.includes('audiobook.qualityAndVersionApproved'));
+  assert.ok(missing.blockers.includes('audiobook.freeBuyerBundleVerified'));
+  const paidAudio = release({ audiobook: { ...release().audiobook, additionalBuyerPriceKrw: 1000 } });
+  assert.ok(evaluateReleaseReadiness(paidAudio).blockers.includes('audiobook.freeBuyerBundleVerified'));
+  const outdated = release({ audiobook: { ...release().audiobook, pairedEditionDigest: 'sha256:outdated' } });
+  assert.ok(evaluateReleaseReadiness(outdated).blockers.includes('audiobook.qualityAndVersionApproved'));
+});
+
+test('broad non-monthly disciplines can be submitted without taking monthly six-field planning slots', () => {
+  assert.equal(evaluateReleaseReadiness(release({ fieldId: 'theology' })).ready, true);
 });

@@ -61,15 +61,16 @@ export function renderMallSocialSetup({ platform = {}, connections = [], registe
     <div class="mall-social-heading"><div><h2 id="mallSocialHeading">에코디몰 SNS 자동발행 · 통합 설정</h2>
       <p>계정 인증 → 정책 → 시험 게시 → 결과 검증을 이 페이지에서 관리합니다.</p></div>
       <span class="mall-social-pill ${publishReady ? 'ready' : ''}">실제 발행 가능 ${publishReady}개</span></div>
-    <div class="mall-social-steps" aria-label="설정 순서"><span><b>1</b> SNS 계정 연결</span><span><b>2</b> 발행 정책</span><span><b>3</b> 결과 확인</span></div>
-    <div class="mall-social-providers">${cards}</div>
+    <div class="mall-social-summary"><span><b>저장된 정책</b> ${esc(mode)}${publishReady ? '' : ' · 실행 대기'}</span>
+      <span><b>OAuth 연결</b> ${active.length}개</span><span><b>게시 성공 기록</b> ${published}건</span>
+      <span><b>처리 대기</b> ${queued}건</span><span><b>유료 광고</b> 자동 집행 OFF</span></div>
+    <nav class="mall-social-steps" aria-label="SNS 자동발행 작업 바로가기"><button type="button" data-channel-panel="mallSocialProviders"><b>1</b> 계정 연결</button><button type="button" data-channel-panel="channel-policy"><b>2</b> 발행 정책</button><button type="button" data-channel-panel="channel-test"><b>3</b> 시험 게시</button><button type="button" data-channel-panel="channel-jobs"><b>4</b> 결과 확인</button></nav>
+    <div id="mallSocialProviders" class="mall-social-providers">${cards}</div>
     <div class="mall-social-next ${publishReady ? 'ready' : ''}" role="status"><strong>${publishReady ? '발행 준비' : '연결 준비 중'}</strong> ${esc(next)}</div>
     ${youtubeStart}
     ${noticeLine}
     ${failedAccountLine}
-    <div class="mall-social-summary"><span><b>저장된 정책</b> ${esc(mode)}${publishReady ? '' : ' · 실행 대기'}</span>
-      <span><b>OAuth 연결</b> ${active.length}개</span><span><b>게시 성공 기록</b> ${published}건</span>
-      <span><b>처리 대기</b> ${queued}건</span><span><b>유료 광고</b> 자동 집행 OFF</span></div>
+
     <p class="mall-social-security">플랫폼 설정과 OAuth 연결은 다릅니다. 저장된 자율 정책은 실제 채널 인증·발행 허용 여부를 대신하지 않습니다. 제휴 게시물은 광고·제휴 고지와 이미지 사용 권한을 확인해야 합니다.</p>
   </section>`;
 }

@@ -529,6 +529,13 @@ jobs:
           else
             echo '::warning title=Domeggook auto-order::DOMEMAE_USER_ID or DOMEMAE_PASSWORD secret missing; auto-order stays off'
           fi
+          # Check only the existence of the independently confirmed Private API member binding.
+          # Never print the secret list or member ID; configured does NOT mean IDs match.
+          if grep -Fq 'DOMEMAE_APPROVED_MEMBER_ID' /tmp/mall-prod-secret-list.txt; then
+            echo '::notice title=Domeggook approved member::Approved-member secret is present; exact login/approval match must be verified by the protected readiness endpoint'
+          else
+            echo '::warning title=Domeggook approved member::DOMEMAE_APPROVED_MEMBER_ID is missing; both supplier login probes and paid orders remain blocked'
+          fi
           if grep -Fq 'OWNERCLAN_USER_ID' /tmp/mall-prod-secret-list.txt && grep -Fq 'OWNERCLAN_PASSWORD' /tmp/mall-prod-secret-list.txt; then
             echo '::notice title=OwnerClan::OWNERCLAN_USER_ID and OWNERCLAN_PASSWORD secrets are configured'
           else
@@ -638,7 +645,8 @@ jobs:
               && grep -Fq 'api/public/attribution/visit' /tmp/mall-public-js \
               && grep -Fq 'api/public/checkout/quote' /tmp/mall-public-js \
               && grep -Fq 'api/public/products?limit=24' /tmp/mall-live-js \
-              && grep -Fq '/share-links' /tmp/mall-seller-js; then
+              && grep -Fq '/share-links' /tmp/mall-seller-js \
+              && node -e 'const s=require("fs").readFileSync("/tmp/mall-root.html","utf8");const tags=[`class="mall-category-shortcuts"`,`class="shop" id="shop"`,`class="mall-editorial`,`class="context-recommend`];const p=tags.map(t=>s.indexOf(t));if(p.some((v,i)=>v<0||(i>0&&v<=p[i-1])))process.exit(1);' ; then
               echo "EKODI Mall production smoke test passed."
               exit 0
             fi

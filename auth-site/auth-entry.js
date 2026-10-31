@@ -1,21 +1,28 @@
 const params = new URLSearchParams(location.search);
-const interactive = params.get('manage') === '1' || params.get('review') === '1' || params.get('purpose') === 'seonammedi-board-admin' || (params.get('site') === 'seonammedi' && params.get('select_account') === '1') || (params.get('site') === 'singles' && params.get('select_account') === '1');
+const interactive = params.get('ekodi_email_action') === 'reset' || params.get('manage') === '1' || params.get('review') === '1' || params.get('purpose') === 'seonammedi-board-admin' || (params.get('site') === 'seonammedi' && params.get('select_account') === '1') || (params.get('site') === 'singles' && params.get('select_account') === '1');
 const site = params.get('site') || 'portal';
 const returnTo = params.get('return_to') || params.get('returnTo') || '';
 const guardKey = `ekodi-auth-entry:${site}:${returnTo}`;
 const now = Date.now();
 const navigationType = performance.getEntriesByType?.('navigation')?.[0]?.type || '';
-let previous = 0;
-
+// A second deliberate login is not a redirect loop. Count only rapid hops.
+const LOOP_WINDOW_MS = 15000;
+const LOOP_VISITS = 3;
+let recentVisits = [];
 try {
-  previous = Number(sessionStorage.getItem(guardKey) || 0);
+  const stored = JSON.parse(sessionStorage.getItem(guardKey) || '[]');
+  if (Array.isArray(stored)) {
+    recentVisits = stored.filter(value => Number.isFinite(value) && value <= now && now - value < LOOP_WINDOW_MS);
+  }
 } catch {}
 
-const repeated = !interactive && navigationType !== 'reload' && previous > 0 && now - previous < 120000;
+// Reload deliberately resets the guard, allowing a user to recover.
+if (navigationType === 'reload') recentVisits = [];
+const repeated = !interactive && navigationType !== 'reload' && recentVisits.length >= LOOP_VISITS - 1;
 
 if (!interactive) {
   try {
-    sessionStorage.setItem(guardKey, String(now));
+    sessionStorage.setItem(guardKey, JSON.stringify([...recentVisits, now].slice(-LOOP_VISITS)));
   } catch {}
 }
 

@@ -682,3 +682,60 @@ body.ekodi-public-admin-drawer-open{overflow:hidden!important}
   html[data-ekodi-user-ui] .ekodi-public-admin-inline{min-height:32px;padding:6px 9px;font-size:11px}
   .ekodi-public-admin-drawer{inset:0;width:100vw;height:100dvh;border:0;border-radius:0}
 }
+
+
+/* EKODI COMMON HEADER GRAMMAR v1 — progressive adoption outside Mall.
+ * Shares geometry, not operating identity, auth controls or navigation data.
+ * Existing site-owned positioning, color, typography and menu behavior win.
+ */
+html[data-ekodi-user-ui]{
+  --ekodi-common-header-min-height:60px;
+  --ekodi-common-header-inline-gap:clamp(10px,1.6vw,24px);
+  --ekodi-common-header-nav-gap:clamp(8px,1.15vw,18px);
+}
+html[data-ekodi-user-ui] .ekodi-standard-header{
+  box-sizing:border-box;
+  min-height:var(--ekodi-common-header-min-height);
+}
+html[data-ekodi-user-ui] .ekodi-standard-header__row{
+  box-sizing:border-box;
+  min-height:var(--ekodi-common-header-min-height);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:var(--ekodi-common-header-inline-gap);
+}
+html[data-ekodi-user-ui] .ekodi-standard-header__row > :is(a.brand,.brand,.mission-brand,a.logo,.site-brand){
+  min-width:0;
+  flex:0 1 auto;
+  margin-right:auto;
+}
+html[data-ekodi-user-ui] .ekodi-standard-header__row > :is(nav,[role="navigation"]){
+  min-width:0;
+  margin-inline-start:auto;
+  justify-content:flex-end;
+  gap:var(--ekodi-common-header-nav-gap);
+}
+html[data-ekodi-user-ui] .ekodi-standard-header__row :is(a,button):focus-visible{
+  outline:2px solid var(--ekodi-shell-focus,#315d48);
+  outline-offset:3px;
+}
+@media(max-width:720px){
+  html[data-ekodi-user-ui] .ekodi-standard-header__row{
+    min-height:54px;
+    flex-wrap:wrap;
+    row-gap:8px;
+  }
+  html[data-ekodi-user-ui] .ekodi-standard-header__row > :is(nav,[role="navigation"]):not([hidden]){
+    max-width:100%;
+    flex:1 1 100%;
+    margin-inline-start:0;
+    justify-content:flex-start;
+    scrollbar-width:thin;
+  }
+  /* Only simple single-level navs scroll. Preserve menus/dropdowns owned by the service. */
+  html[data-ekodi-user-ui] .ekodi-standard-header__row > :is(nav,[role="navigation"]):not(:has([aria-haspopup],.nav-group,.nav-submenu)):not([hidden]){
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+  }
+}

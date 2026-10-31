@@ -41,17 +41,19 @@ jobs:
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+          source scripts/admin-e2e-cloudflare-request.sh
+          ekodi_cf_initialize
 
           cf_query() {
             local db="$1" sql="$2"
-            curl -fsS --retry 2 --retry-delay 1 \
+            ekodi_cf_request \
               -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$db/query" \
               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               -H 'Content-Type: application/json' \
               --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')"
           }
 
-          databases=$(curl -fsS --retry 2 --retry-delay 1 \
+          databases=$(ekodi_cf_request \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           echo "$databases" | jq -e '.success == true' >/dev/null
@@ -61,10 +63,12 @@ jobs:
           while IFS= read -r db; do
             [ -n "$db" ] || continue
             schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('admins','sessions')" || true)
+            ekodi_cf_assert_clean
             if ! echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("admins") != null and index("sessions") != null)' >/dev/null 2>&1; then
               continue
             fi
             candidate=$(cf_query "$db" "SELECT id FROM admins WHERE role='super_admin' ORDER BY id LIMIT 1" || true)
+            ekodi_cf_assert_clean
             id=$(echo "$candidate" | jq -r '.result[]?.results[0]?.id // empty' | head -1)
             if [[ "$id" =~ ^[0-9]+$ ]]; then
               auth_db="$db"
@@ -89,12 +93,13 @@ jobs:
           result=$(cf_query "$auth_db" "$insert")
           echo "$result" | jq -e '.success == true and ([.result[]?.success] | all)' >/dev/null
 
-          session=$(curl -fsS 'https://ekodi.kr/api/session' -H "Authorization: Bearer $token")
+          # Export cleanup identity as soon as D1 inserts the session, even when /api/session fails.
+          echo "E2E_TOKEN_HASH=$token_hash" >> "$GITHUB_ENV"
+          echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
+          session=$(ekodi_cf_request 'https://ekodi.kr/api/session' -H "Authorization: Bearer $token")
           echo "$session" | jq -e '.role == "super_admin"' >/dev/null
 
           echo "E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
-          echo "E2E_TOKEN_HASH=$token_hash" >> "$GITHUB_ENV"
-          echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
           echo 'Short-lived production-authenticated E2E session issued and validated.'
 
       - name: Install Chromium browser harness
@@ -160,6 +165,36 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # SOCIAL-READONLY-PROOF-ARTIFACT-001: preserve already-measured,
+      # panel-cropped and per-record-masked social evidence in full mode even
+      # when an unrelated later module or Assist step fails. This does not
+      # turn a failed full run into PASS or certify focus_menu=social-accounts.
+      - name: Preserve sanitized social-account proof from full Admin verification
+        if: ${{ always() && inputs.focus_menu == 'all' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-social-accounts-proof-${{ github.run_id }}
+          path: |
+            artifacts/admin-authenticated-e2e/menu-social-accounts.json
+            artifacts/admin-authenticated-e2e/social-accounts-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
+      # ADMIN-ARCH-PROOF-ARTIFACT-001: all-menu run can fail later on unrelated
+      # Assist, but an already-passed architecture probe keeps its cropped,
+      # identity-free viewport images and numeric result for honest diagnosis.
+      # This does not change the conclusion of the full-menu job.
+      - name: Preserve completed architecture proof from full Admin verification
+        if: ${{ always() && inputs.focus_menu == 'all' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-architecture-proof-${{ github.run_id }}
+          path: |
+            artifacts/admin-authenticated-e2e/architecture-geometry.json
+            artifacts/admin-authenticated-e2e/architecture-*.png
+          if-no-files-found: warn
+          retention-days: 7
+
       # A separate proof lane cannot be held hostage by unrelated Social tabs,
       # and must never be mistaken for all-menu certification.
       - name: Upload focused architecture responsive E2E evidence
@@ -179,8 +214,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          source scripts/admin-e2e-cloudflare-request.sh
+          ekodi_cf_initialize
           sql="DELETE FROM sessions WHERE token_hash = '$E2E_TOKEN_HASH'"
-          curl -fsS --retry 2 --retry-delay 1 \
+          ekodi_cf_request \
             -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_AUTH_DB_ID/query" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             -H 'Content-Type: application/json' \

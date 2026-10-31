@@ -1,3 +1,4 @@
+import { handlePublishingWorkflow, prepareScheduledPublishing } from './publishing-workflow-api.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { handlePrivateReleaseAdmin } from './publishing/human/private-release-api.js';
 import { runConfiguredPublishingReleaseTick } from './publishing/human/private-release-scheduler.js';
@@ -13,6 +14,7 @@ function withHeaders(response){const headers=new Headers(response.headers);for(c
 export default {
   async fetch(request,env){
     const url=new URL(request.url);
+    if (url.pathname.startsWith('/publishing/api/workflow/') || url.pathname.startsWith('/api/workflow/')) return handlePublishingWorkflow(request,env);
     if(url.pathname==='/api/private-releases'||url.pathname.startsWith('/api/private-releases/')){
       const reply=await handlePrivateReleaseAdmin(request,env);
       if(reply)return reply;
@@ -51,7 +53,11 @@ export default {
   },
   // Intentionally inert until an owner-reviewed separate Worker binding and
   // cron configuration explicitly enable the private publishing release lane.
+  // One scheduled entry point (no cron is configured here; the EKODI Orchestrator's
+  // approved scheduler owns timing). Each lane stays independently guarded.
   async scheduled(controller,env,ctx){
+    // Due approved work moves into a protected outbox, never directly to public sale.
+    if(env?.PUBLISH_DB)await prepareScheduledPublishing(env);
     if(env?.PUBLISHING_PRIVATE_RELEASE_ENABLED!=='true')return;
     const scheduledTime=controller?.scheduledTime;
     const nowIso=new Date(Number.isFinite(scheduledTime)?scheduledTime:Date.now()).toISOString();

@@ -29,9 +29,19 @@ test('#5625 replay: an orphaned in-progress test job whose run completed is stuc
   assert.deepEqual(workflowsToRedispatch(stuck), ['ci.yml']);
 });
 
-test('an orphaned job is stuck immediately, even before the age threshold', () => {
+test('completed suite alone never triggers a duplicate healthy CI dispatch', () => {
   const run = { name: 'test', status: 'in_progress', started_at: new Date(NOW - 60_000).toISOString() };
-  assert.equal(isStuckCheckRun(run, { status: 'completed' }, NOW), true);
+  assert.equal(isStuckCheckRun(run, { status: 'completed' }, NOW), false);
+  assert.equal(isStuckCheckRun(run, { status: 'in_progress' }, NOW), false);
+});
+
+test('old orphaned check heals after measured stuck threshold, not before', () => {
+  const before = { name: 'test', status: 'in_progress',
+    started_at: new Date(NOW - CONVERGE_STUCK_MS + 1000).toISOString() };
+  const after = { ...before, started_at: new Date(NOW - CONVERGE_STUCK_MS - 1000).toISOString() };
+  assert.equal(isStuckCheckRun(before, { status: 'completed' }, NOW), false);
+  assert.equal(isStuckCheckRun(after, { status: 'completed' }, NOW), true);
+  assert.equal(isStuckCheckRun({ name: 'test', status: 'in_progress' }, { status: 'completed' }, NOW), false);
 });
 
 test('a healthy in-flight required check is never re-run', () => {

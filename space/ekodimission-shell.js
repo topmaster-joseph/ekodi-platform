@@ -17,6 +17,7 @@
     links:Object.freeze([
       Object.freeze({href:'/ekodimission/devotion',label:'매일묵상'}),
       Object.freeze({href:'/ekodimission/activities',label:'활동'}),
+      Object.freeze({href:'/ekodimission#saturday',label:'토요모임'}),
       Object.freeze({href:'/ekodimission/history',label:'연혁'}),
       Object.freeze({href:'/ekodimission/live',label:'라이브'}),
       Object.freeze({href:'/ekodimission/participate',label:'함께하기'}),
@@ -104,6 +105,19 @@
     nav.replaceChildren(...links,language);
     return {nav,select};
   }
+  // Keep the canonical Korean page and its accessible DOM free of English eyebrow text.
+  // Create a label only for a published non-Korean locale before catalog translation.
+  function syncDevotionEyebrow(locale){
+    const heading=document.querySelector('main[data-mission-devotion] .dv-page-title');
+    if(!heading)return;
+    const old=heading.querySelector('[data-mission-devotion-eyebrow]');
+    if(String(locale||'').toLowerCase().startsWith('ko')){old?.remove();return;}
+    if(old)return;
+    const eyebrow=document.createElement('small');
+    eyebrow.dataset.missionDevotionEyebrow='';
+    eyebrow.textContent='EKODI MISSION · DAILY DEVOTION';
+    heading.insertBefore(eyebrow,heading.querySelector('h1'));
+  }
   async function initLanguage(select){
     if(!select)return;
     try{
@@ -145,6 +159,7 @@
       }
       select.value=active;
       document.documentElement.lang=active;
+      syncDevotionEyebrow(active);
       if(active!==sourceLocale){
         const catalogResponse=await fetch(languageCatalogUrl(active),{headers:{accept:'application/json'},cache:'no-store'});
         if(catalogResponse.ok){
@@ -165,8 +180,156 @@
       select.replaceChildren(Object.assign(document.createElement('option'),{value:sourceLocale,textContent:'한국어'}));
       select.value=sourceLocale;
       document.documentElement.lang=sourceLocale;
+      syncDevotionEyebrow(sourceLocale);
     }
   }
+
+  const MISSION_LOGIN='/auth/?site=mission&return_to='+encodeURIComponent(location.origin==='https://ekodi.kr'&&location.pathname.startsWith('/ekodimission')?location.href:'https://ekodi.kr/ekodimission');
+  const CENTRAL_AUTH_KEY='sb-renzehysxirjilvdxacv-auth-token';
+  const SUPABASE_ORIGIN='https://renzehysxirjilvdxacv.supabase.co';
+  const SUPABASE_PUBLIC_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+  let verifiedToken='',authGeneration=0;
+  const safeRead=(storage,key)=>{try{return storage.getItem(key)||''}catch{return''}};
+  const centralSession=()=>{
+    for(const store of [localStorage,sessionStorage]){
+      try{
+        const value=JSON.parse(safeRead(store,CENTRAL_AUTH_KEY)||'null');
+        if(value?.access_token)return value;
+      }catch{}
+    }
+    return null;
+  };
+  const candidateTokens=()=>[safeRead(sessionStorage,'ekodi-auth-token'),centralSession()?.access_token||'',window.EKODI_MY_AUTH?.getAccessToken?.()||''].filter((value,index,all)=>value&&all.indexOf(value)===index);
+  function normalizeMissionFooter(){
+    let footer=document.querySelector('.site-footer');
+    if(!footer){
+      // Dynamic photo/archive pages also inherit the same public footer.
+      footer=document.createElement('footer');
+      footer.className='site-footer';
+      const content=document.createElement('div'),name=document.createElement('strong');
+      const description=document.createElement('p'),meta=document.createElement('p');
+      meta.className='footnote';
+      content.append(name,description);
+      footer.append(content,meta);
+      document.body.append(footer);
+    }
+    const brand=footer.querySelector('strong');
+    const description=footer.querySelector('div > p');
+    const meta=footer.querySelector('.footnote');
+    if(brand)brand.textContent='에코디선교회';
+    if(description)description.textContent='말씀으로 만나고, 식탁으로 연결하며, 이웃과 함께하는 선교.';
+    if(meta)meta.textContent='EKODI MISSION · ekodi.kr/ekodimission';
+  }
+  function mountDevotionAuthNextToAdmin(authRow, devotion){
+    const renderer=devotion.querySelector('[data-ekodi-devotion]');
+    if(!renderer)return;
+    const mount=()=>{
+      const adminBar=renderer.querySelector('.dv-adminbar');
+      if(!adminBar)return false;
+      let tools=renderer.querySelector('[data-mission-devotion-tools]');
+      if(!tools){
+        tools=document.createElement('div');
+        tools.className='mission-devotion-tools';
+        tools.dataset.missionDevotionTools='';
+        // The existing admin controls keep their event handlers and their detail
+        // views remain immediately beneath this common row.
+        adminBar.before(tools);
+      }
+      tools.append(adminBar,authRow);
+      return true;
+    };
+    // The shared devotional renderer is a module and usually mounts after this
+    // deferred shell. Observe only until its own lower admin row appears.
+    if(mount())return;
+    const observer=new MutationObserver(()=>{
+      if(mount())observer.disconnect();
+    });
+    observer.observe(renderer,{childList:true});
+  }
+  function mountMissionAuth(){
+    const devotion=document.querySelector('main[data-mission-devotion]');
+    const target=devotion||document.querySelector('.mission-site-header');
+    if(!target)return null;
+    const row=document.createElement('div');
+    row.className='mission-auth-actions';
+    row.dataset.autoI18nIgnore='';
+    row.setAttribute('aria-label','로그인 상태');
+    const state=document.createElement('span');
+    state.className='mission-auth-state';state.dataset.missionAuthState='';
+    state.setAttribute('role','status');state.setAttribute('aria-live','polite');
+    state.textContent='';
+    state.hidden=true;
+    const login=document.createElement('a');login.href=MISSION_LOGIN;
+    login.className='mission-auth-button';login.textContent='로그인';
+    const logout=document.createElement('button');logout.type='button';
+    logout.className='mission-auth-button';logout.hidden=true;logout.textContent='로그아웃';
+    row.append(state,login,logout);
+    target.append(row);
+    if(devotion)mountDevotionAuthNextToAdmin(row,devotion);
+    return {state,login,logout};
+  }
+  const missionAuthUi=mountMissionAuth();
+  function paintMissionAuth(status,account=''){
+    if(!missionAuthUi)return;
+    const authenticated=status==='in';
+    missionAuthUi.state.textContent=authenticated?(String(account||'계정').slice(0,90)):'';
+    missionAuthUi.state.hidden=!authenticated;
+    missionAuthUi.login.hidden=authenticated;
+    missionAuthUi.logout.hidden=!authenticated;
+  }
+  async function refreshMissionAuth(){
+    const epoch=++authGeneration;
+    paintMissionAuth('checking');
+    let unavailable=false;
+    for(const token of candidateTokens()){
+      try{
+        const response=await fetch('/ekodimission/board/api/me',{headers:{authorization:'Bearer '+token,accept:'application/json'},cache:'no-store',credentials:'same-origin',signal:AbortSignal.timeout(6500)});
+        if(!response.ok){if(response.status>=500)unavailable=true;continue}
+        const data=await response.json();
+        if(data.authenticated===true){
+          if(epoch!==authGeneration)return '';
+          verifiedToken=token;paintMissionAuth('in',data.account);
+          window.dispatchEvent(new Event('ekodi:mission-auth-changed'));
+          return verifiedToken;
+        }
+      }catch{unavailable=true}
+    }
+    if(epoch!==authGeneration)return '';
+    verifiedToken='';paintMissionAuth(unavailable?'unavailable':'out');
+    window.dispatchEvent(new Event('ekodi:mission-auth-changed'));
+    return '';
+  }
+  async function missionLogout(){
+    const platform=safeRead(sessionStorage,'ekodi-auth-token');
+    const supabase=centralSession();
+    // Revoke local capability and navigation immediately, before remote sign-out.
+    verifiedToken='';++authGeneration;
+    for(const store of [sessionStorage,localStorage]){
+      try{store.removeItem(CENTRAL_AUTH_KEY)}catch{}
+      try{store.removeItem('ekodi-auth-token')}catch{}
+    }
+    paintMissionAuth('out');
+    if(missionAuthUi)missionAuthUi.logout.disabled=true;
+    window.dispatchEvent(new Event('ekodi:auth-logout'));
+    window.dispatchEvent(new Event('ekodi:mission-auth-changed'));
+    try{
+      if(platform)await fetch('/api/logout',{method:'POST',
+        headers:{authorization:'Bearer '+platform},credentials:'same-origin',
+        signal:AbortSignal.timeout(5000)}).catch(()=>null);
+      if(supabase?.access_token)await fetch(SUPABASE_ORIGIN+'/auth/v1/logout',{method:'POST',
+        headers:{apikey:SUPABASE_PUBLIC_KEY,authorization:'Bearer '+supabase.access_token},
+        signal:AbortSignal.timeout(5000)}).catch(()=>null);
+    }finally{if(missionAuthUi)missionAuthUi.logout.disabled=false}
+  }
+  missionAuthUi?.logout.addEventListener('click',()=>{void missionLogout()});
+  window.EKODIMissionAuth=Object.freeze({loginUrl:MISSION_LOGIN,getToken:()=>verifiedToken,refresh:refreshMissionAuth,logout:missionLogout});
+  normalizeMissionFooter();
+  void refreshMissionAuth();
+  window.addEventListener('ekodi:auth-success',()=>{void refreshMissionAuth()});
+  window.addEventListener('focus',()=>{void refreshMissionAuth()});
+  window.addEventListener('pageshow',()=>{void refreshMissionAuth()});
+  window.addEventListener('storage',event=>{if(event.key===CENTRAL_AUTH_KEY)void refreshMissionAuth()});
+
   const mounted=mountNavigation();
   void initLanguage(mounted?.select);
   // Private staff link: the platform API determines authority, never local UI state.

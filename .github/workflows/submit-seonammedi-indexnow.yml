@@ -11,6 +11,17 @@ on:
       - 'discovery-layer.js'
       - 'seonammedi-domain-gateway.js'
       - 'platform-indexnow.js'
+  # Bot-generated protected merges use GITHUB_TOKEN and do not create push runs.
+  # Listen for the official, receipt-verified customer-domain gateway deployment.
+  workflow_run:
+    workflows: ['Deploy SeonamMedi Domain Gateway (Manual Topology Change)']
+    branches: [main]
+    types: [completed]
+  # Reconcile the live PUBLIC sitemap daily: DB-published notices can appear
+  # without a Worker deploy, so a deploy-only condition misses those URLs.
+  # Only three native HTTPS IndexNow batch requests occur per daily run.
+  schedule:
+    - cron: '31 0 * * *'
   workflow_dispatch:
 
 permissions:
@@ -22,6 +33,11 @@ concurrency:
 
 jobs:
   submit:
+    if: >-
+      ${{ github.event_name != 'workflow_run' ||
+          (github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.head_branch == 'main' &&
+           github.event.workflow_run.event == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -29,16 +45,40 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Install isolated Chromium harness
+      - name: Admit public sitemap reconciliation for the canonical event
+        id: decision
+        shell: bash
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
-          npx playwright install --with-deps chromium
-      - name: Verify public IndexNow key
+          set -euo pipefail
+          # An IndexNow day must not depend on a new Cloudflare Worker deploy:
+          # newly published, public notice URLs are backed by live database rows.
+          # The subsequent steps verify site ownership and validate every URL.
+          echo 'submit=true' >> "$GITHUB_OUTPUT"
+          echo 'Reconciling published Korean canonical sitemap through 3 native HTTPS IndexNow batches.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Validate native IndexNow HTTP submission code
+        if: steps.decision.outputs.submit == 'true'
+        run: |
+          node --check scripts/ekodi-search-index-submit.mjs
+          node --test test/seonammedi-indexnow-batch.test.mjs
+      - name: Verify public IndexNow key and Korean domain search metadata
+        if: steps.decision.outputs.submit == 'true'
         run: |
           set -euo pipefail
           key=$(node --input-type=module -e "import('./platform-indexnow.js').then(m=>process.stdout.write(m.EKODI_INDEXNOW_KEY))")
           test -n "$key"
-          body=$(curl -fsS --retry 3 --retry-delay 2 "https://seonammedi.kr/$key.txt")
+          idn='xn--3e0b8b58jw4co4mnpll3k.kr'
+          body=$(curl -fsS --retry 3 --retry-delay 2 "https://$idn/$key.txt")
           test "$body" = "$key"
-      - name: Submit canonical SeonamMedi URL from EKODI isolated browser
+          # Do not use curl | grep -q with pipefail: grep quits on a match
+          # and curl may fail with EPIPE / exit 23 despite valid SEO metadata.
+          probe_dir=$(mktemp -d)
+          trap 'rm -rf "$probe_dir"' EXIT
+          curl -fsS --retry 3 --retry-delay 2 -o "$probe_dir/robots" "https://$idn/robots.txt"
+          curl -fsS --retry 3 --retry-delay 2 -o "$probe_dir/sitemap" "https://$idn/sitemap.xml"
+          curl -fsS --retry 3 --retry-delay 2 -o "$probe_dir/home" "https://$idn/"
+          grep -Fq "Sitemap: https://$idn/sitemap.xml" "$probe_dir/robots"
+          grep -Fq "<loc>https://$idn/</loc>" "$probe_dir/sitemap"
+          grep -Fq "<link rel=\"canonical\" href=\"https://$idn/\">" "$probe_dir/home"
+      - name: Submit public SeonamMedi URLs by native EKODI IndexNow HTTP
+        if: steps.decision.outputs.submit == 'true'
         run: node scripts/ekodi-search-index-submit.mjs

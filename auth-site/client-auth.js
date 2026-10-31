@@ -95,7 +95,14 @@ function safeReturn(raw){
     // Never silently accept /my or another EKODI workspace as a SeonamMedi return target.
     const prefix=fallback.pathname.replace(/\/$/,'');
     const sameCanonicalPath=target.origin==='https://ekodi.kr'&&fallback.origin==='https://ekodi.kr'&&(prefix?(target.pathname===prefix||target.pathname.startsWith(prefix+'/')):(config.kind==='space'||(config.kind==='portal'&&target.pathname==='/')));
-    const internalEkodi=config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath);
+    // Provider-independent admin handoff is a single fixed, same-origin
+    // callback, never an arbitrary external admin redirect.
+    const adminReturn=config.kind==='portal'&&target.origin==='https://ekodi.kr'
+      &&target.pathname==='/auth/'&&target.searchParams.get('site')==='admin'
+      &&target.searchParams.get('via')==='ekodi'
+      &&target.searchParams.get('return_to')?.startsWith('https://ekodi.kr/admin/')
+      &&![...target.searchParams.keys()].some(key=>!['site','via','return_to'].includes(key));
+    const internalEkodi=adminReturn||(config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath));
     const trustedLegacy=target.origin!=='https://ekodi.kr'&&allowedOrigins.has(target.origin);
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
     const churchPath=config.kind!=='church'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));

@@ -1,0 +1,74 @@
+name: Deploy CGMA Naver Owner Proof (Path Only)
+# deployment-guardrail: topology-workflow-manual-only
+# Only one read-only Naver proof URL. Do not edit DNS, Pages or existing CGMA routes.
+on:
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: Authorized EKODI orchestrator branch
+        required: true
+        type: string
+      release_task_id:
+        description: Exact authorized EKODI task ID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-cgma-naver-ownership
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+      EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify CGMA zone exists under authorized Cloudflare account (read only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          zone_file=$(mktemp)
+          trap 'rm -f "$zone_file"' EXIT
+          curl -fsS --retry 2 \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/zones?name=cgma.or.kr&account.id=$CLOUDFLARE_ACCOUNT_ID" \
+            -o "$zone_file"
+          jq -e '.success == true and any(.result[]; .name == "cgma.or.kr" and .status == "active")' "$zone_file" > /dev/null
+      - name: Deploy exact CGMA Naver proof route
+        run: npx --yes wrangler@4.119.0 deploy --config wrangler.cgma-naver-proof.toml
+      - name: Verify real CGMA proof and unchanged CGMA public homepage
+        shell: bash
+        run: |
+          set -euo pipefail
+          url='https://cgma.or.kr/navere5d0557aef9688f08735f4bf0152c795.html'
+          expected='naver-site-verification: navere5d0557aef9688f08735f4bf0152c795.html'
+          proof_file=$(mktemp)
+          homepage=$(mktemp)
+          trap 'rm -f "$proof_file" "$homepage"' EXIT
+          ok=0
+          for attempt in $(seq 1 12); do
+            code=$(curl -sS --connect-timeout 10 --max-time 20 -o "$proof_file" -w '%{http_code}' "$url" || true)
+            if [ "$code" = "200" ] && [ "$(cat "$proof_file")" = "$expected" ]; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          echo "CGMA Naver owner proof HTTP=$code matched=$ok"
+          test "$ok" = 1
+          curl -fsS --retry 2 --max-time 20 -o "$homepage" https://cgma.or.kr/
+          grep -Fq '청계' "$homepage"

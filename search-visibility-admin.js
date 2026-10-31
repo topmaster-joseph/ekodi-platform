@@ -14,18 +14,39 @@
   root.hidden = true;
   root.innerHTML = `
     <style>
-    .search-visibility{color:#172033}.search-visibility .sv-intro{max-width:820px;color:#526176;line-height:1.7}
+    .search-visibility{color:#172033;width:100%;max-width:none;min-width:0;box-sizing:border-box}.search-visibility .sv-intro{max-width:820px;color:#526176;line-height:1.7}
     .search-visibility .sv-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
     .search-visibility .sv-cards article{background:#f5f8fc;border:1px solid #dbe4ef;border-radius:12px;padding:14px}
-    .search-visibility .sv-cards strong{font-size:22px;display:block;color:#123d6b}.search-visibility .sv-cards small{color:#63728a}
+    .search-visibility .sv-cards strong{font-size:20px;display:block;color:#123d6b}.search-visibility .sv-cards small{color:#63728a}
     .search-visibility .sv-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:20px 0 12px}
     .search-visibility button,.search-visibility select{min-height:38px}.search-visibility button{cursor:pointer}
     .search-visibility .sv-status{color:#485b72;font-size:13px;line-height:1.6;min-height:22px}
     .search-visibility .sv-status[data-error="true"]{color:#a82424}
     .search-visibility .sv-table{width:100%;border-collapse:collapse;font-size:13px}
-    .search-visibility .sv-table th,.search-visibility .sv-table td{padding:10px;border-bottom:1px solid #e4eaf0;text-align:left;vertical-align:middle}
+    .search-visibility .sv-table th,.search-visibility .sv-table td{padding:9px 10px;border-bottom:1px solid #e4eaf0;text-align:left;vertical-align:middle;white-space:nowrap}
     .search-visibility .sv-table th{background:#f6f8fb;font-weight:750}
-    .search-visibility .sv-table a{word-break:break-all}
+    .search-visibility .sv-table a{word-break:normal}
+    .search-visibility .sv-table .sv-site-name{max-width:190px;overflow:hidden;text-overflow:ellipsis;font-weight:650}
+    .search-visibility .sv-table .sv-site-url{max-width:230px;overflow:hidden;text-overflow:ellipsis}
+    .search-visibility .sv-table .sv-num{width:38px;color:#60738b}
+    .search-visibility .sv-table .sv-category{color:#475569}
+    .search-visibility .sv-table button{min-height:30px;padding:4px 12px;white-space:nowrap}
+    .search-visibility .sv-count{color:#64748b;font-size:12px;white-space:nowrap}
+    .search-visibility .sv-manage{margin-top:20px;border:1px solid #dbe4ef;border-radius:12px;padding:18px;background:#fff}
+    .search-visibility .sv-manage[hidden]{display:none!important}
+    .search-visibility .sv-manage-head{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+    .search-visibility .sv-manage-head h3{margin:2px 0 4px}
+    .search-visibility .sv-manage-head p{margin:0;color:#64748b;font-size:12px;overflow-wrap:anywhere}
+    .search-visibility .sv-manage-head small{color:#64748b}
+    .search-visibility .sv-manage-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+    .search-visibility .sv-manage-summary div{background:#f6f8fb;border-radius:8px;padding:10px;min-width:0}
+    .search-visibility .sv-manage-summary small{display:block;color:#64748b}
+    .search-visibility .sv-manage-summary strong{display:block;margin-top:4px;font-size:13px;overflow-wrap:anywhere}
+    .search-visibility .sv-channel-details{margin:16px 0}
+    .search-visibility .sv-channel-details summary{cursor:pointer;font-weight:650}
+    .search-visibility .sv-channel-details[open] summary{margin-bottom:12px}
+    .search-visibility #sv-category-filter{max-width:175px}
+    @media(max-width:760px){.search-visibility .sv-manage-summary{grid-template-columns:1fr}}
     .search-visibility .sv-scroll{overflow-x:auto}
     .search-visibility .sv-chip{display:inline-block;border-radius:6px;background:#edf2f8;color:#41556d;padding:3px 7px}
     .search-visibility .sv-channels{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
@@ -37,32 +58,48 @@
     </style>
     <header class="section-head"><div><p class="kicker">EKODI GROWTH OS · SEARCH DISCOVERY</p>
       <h2>통합 검색노출·홍보 관리</h2>
-      <p class="sv-intro">SEO(검색) · AEO(답변) · GEO(생성형 AI 발견)를 공개된 사이트별로 관리합니다. 자동 점검은 검색 노출·등록 확정이 아닌 기술적 준비 상태만 보여줍니다.</p></div></header>
+      <p class="sv-intro">사이트별 검색 준비도와 등록 확인 현황을 관리합니다. 기술 점검 결과는 실제 검색 노출을 뜻하지 않습니다.</p></div></header>
     <div class="sv-cards" aria-label="공개 사이트 현황">
       <article><small>공개 사이트</small><strong data-sv-sites>—</strong></article>
       <article><small>공개 URL</small><strong data-sv-pages>—</strong></article>
       <article><small>이번 화면에서 점검됨</small><strong data-sv-audited>0</strong></article>
       <article><small>발견 인프라 상태</small><strong data-sv-infra>확인 전</strong></article>
     </div>
-    <h3>운영 사이트별 통합 점검</h3>
+    <h3>운영 사이트 목록</h3>
     <div class="sv-toolbar">
       <button class="secondary" type="button" data-sv-reload>공개 사이트 목록 갱신</button>
       <button class="secondary" type="button" data-sv-audit-all>전체 사이트 기술점검</button>
-      <label for="sv-search">사이트 검색</label><input id="sv-search" type="search" placeholder="사이트명 또는 주소">
+      <label for="sv-category-filter">분류</label><select id="sv-category-filter" aria-label="사이트 분류 필터"><option value="">전체 분류</option></select>
+      <label for="sv-search">검색</label><input id="sv-search" type="search" placeholder="사이트명 또는 주소">
+      <span class="sv-count" data-sv-count aria-live="polite"></span>
     </div>
     <div class="sv-status" data-sv-status role="status" aria-live="polite">관리자 인증 후 공개 사이트 목록을 불러옵니다.</div>
     <div class="sv-scroll"><table class="sv-table"><thead><tr>
-      <th>운영 사이트</th><th>주소</th><th>SEO 기본</th><th>AEO·GEO 준비</th><th>검색 서비스 등록</th><th>점검</th>
-    </tr></thead><tbody data-sv-rows><tr><td colspan="6">목록 조회 전</td></tr></tbody></table></div>
-    <h3>검색엔진 등록 · 인증 · 제출</h3>
-    <p class="sv-intro">외부 업체의 소유권 승인 결과는 실제 공급자 API 연결로만 확정합니다. 현재 화면의 \"연동 확인 필요\"는 미등록을 뜻하지 않습니다.</p>
-    <div class="sv-channels" data-sv-channels></div>
+      <th scope="col">번호</th><th scope="col">분류</th><th scope="col">사이트</th><th scope="col">주소</th><th scope="col">SEO</th><th scope="col">AEO·GEO</th><th scope="col">검색등록</th><th scope="col">관리</th>
+    </tr></thead><tbody data-sv-rows><tr><td colspan="8">목록 조회 전</td></tr></tbody></table></div>
+    <section class="sv-manage" data-sv-manage-panel hidden aria-label="선택한 사이트의 상세 관리">
+      <div class="sv-manage-head"><div><small>사이트 상세 관리</small><h3 data-sv-manage-name>사이트를 선택하세요</h3><p data-sv-manage-path></p></div>
+        <button type="button" class="secondary" data-sv-manage-close>닫기</button></div>
+      <div class="sv-manage-summary">
+        <div><small>SEO 기술 준비</small><strong data-sv-manage-basic>미점검</strong></div>
+        <div><small>AEO·GEO 기술 준비</small><strong data-sv-manage-ai>미점검</strong></div>
+        <div><small>개선 사항</small><strong data-sv-manage-improve>점검 후 표시</strong></div>
+      </div>
+      <div class="sv-toolbar"><button type="button" class="secondary" data-sv-manage-audit>이 사이트 기술점검</button>
+        <a data-sv-manage-open target="_blank" rel="noopener noreferrer">사이트 열기</a></div>
+      <details class="sv-channel-details"><summary>검색엔진 공식 관리도구</summary>
+        <p class="sv-intro">외부 등록·소유권·색인 결과는 실제 공급자 근거로만 확정합니다.</p>
+        <div class="sv-channels" data-sv-channels></div>
+      </details>
     <h3>사이트별 검색엔진·IndexNow·AI 검색 검토</h3>
     <p class="sv-intro">공개 사이트별 검색 공급자 상태를 확인합니다. 실제 공급자 계정·보고서 증거가 없는 상태는 미등록이나 등록완료가 아닌 '미확인'으로 표시합니다.</p>
     <div class="sv-toolbar"><label for="sv-provider-site">검토할 사이트</label><select id="sv-provider-site" aria-label="검색 서비스 검토 사이트"><option value="">목록 조회 전</option></select>
       <a href="/robots.txt" target="_blank" rel="noopener noreferrer">robots.txt</a><a href="/sitemap.xml" target="_blank" rel="noopener noreferrer">사이트맵</a>
+      <button type="button" class="secondary" data-sv-google-read>Google 실측 조회</button>
     </div>
     <div class="sv-status" data-sv-provider-note role="status">공개 사이트 목록을 먼저 불러오세요.</div>
+    <div class="sv-status" data-sv-google-status role="status">Google Search Console은 읽기 전용으로 선택한 사이트의 실제 계정 권한과 데이터만 조회합니다. 미연결 상태는 미확인으로 유지합니다.</div>
+    <div class="sv-status" data-sv-google-summary role="status"></div>
     <div class="sv-scroll"><table class="sv-table"><thead><tr><th>구분</th><th>서비스</th><th>등록/연동</th><th>소유권·접근</th><th>제출·인용</th><th>확인</th></tr></thead>
     <tbody data-sv-provider-rows><tr><td colspan="6">사이트를 선택하세요.</td></tr></tbody></table></div>
     <div class="sv-status" data-sv-ledger-status role="status">외부 서비스 확인 원장을 조회하기 전입니다.</div>
@@ -92,12 +129,13 @@
         </div>
       </form>
     </div>
-    <h3>최적화 운영 원칙</h3>
+    <details class="sv-channel-details"><summary>검색 최적화 운영 원칙</summary>
     <div class="sv-guide">① 공개 상태와 canonical·robots·사이트맵을 검증합니다. ② 제목·설명·구조화 데이터와 질문에 대한 직접 답변을 강화합니다.
       ③ 기관·사업자·저자·출처 표기와 최신성, 인용 가능한 근거를 정비합니다. ④ 변경된 공개 URL만 기존 IndexNow 자동 제출에 연계합니다.
       ⑤ Search Console·서치어드바이저·Bing 등 공식 근거로 실제 수집·색인·노출·유입을 확인합니다.
       <p><strong>중요:</strong> 광고 구매·유료 API 사용·검색엔진 계정 생성 및 소유권 인증은 자동 실행하지 않습니다. 비공개·회원·관리자 페이지는 검색 등록에서 제외합니다.</p>
-    </div>`;
+    </div></details>
+    </section>`;
   content.append(root);
   const $ = selector => root.querySelector(selector);
   const status = (message, error = false) => {
@@ -158,7 +196,7 @@
           }
         }
         state.sites=[...own.values()];
-        renderProviderChoices();render();
+        renderProviderChoices();renderCategories();render();
       }
       ledgerStatus('확인 근거 '+data.evidence.length+'건 · 최근 변경이력 '+data.audit.length+
         '건 · IndexNow: '+(data.indexNow?.status==='naver_submission_only'?'네이버 제출 이력 조회':'원장 확인 필요')+
@@ -169,6 +207,52 @@
         '. 수동 상태를 저장하거나 확인 완료로 표기할 수 없습니다.');
       renderProviderMatrix();
     }
+  }
+  // Operator-initiated only. Google data is neither auto-saved as provider
+  // ownership evidence nor treated as proof that every public URL is indexed.
+  const googleStatus=message=>{$('[data-sv-google-status]').textContent=message;};
+  async function loadGoogleSearch(){
+    const button=$('[data-sv-google-read]');
+    const siteUrl=state.selectedSite;
+    if(!siteUrl)return googleStatus('먼저 조회할 사이트를 선택하세요.');
+    if(!token())return googleStatus('최고관리자 로그인 후 조회할 수 있습니다.');
+    button.disabled=true;
+    $('[data-sv-google-summary]').textContent='';
+    googleStatus('Google 공식 Search Console의 계정 접근 권한과 실측 데이터를 확인 중입니다.');
+    try{
+      const response=await fetch('/api/control/search-visibility?googleSiteUrl='+encodeURIComponent(siteUrl),{
+        method:'GET',headers:{authorization:'Bearer '+token()},cache:'no-store',credentials:'same-origin'});
+      if(!response.ok)throw new Error('권한 또는 서버 응답 HTTP '+response.status);
+      const data=await response.json();
+      if(!data.ok||!data.google)throw new Error('조회 결과 형식 확인 필요');
+      const report=data.google;
+      const labels={
+        not_configured:'Google Search Console 읽기 전용 서비스 계정이 아직 서버에 연결되지 않았습니다.',
+        invalid_configuration:'Google 서비스 계정 설정이 올바르지 않습니다.',
+        not_connected:'현재 계정에 이 사이트의 Search Console 속성 접근 권한이 없습니다.',
+        not_verified:'Google Search Console에서 해당 속성이 검증되지 않았습니다.',
+        site_not_supported:'지원하지 않는 사이트 속성입니다.',
+        quota_limited:'Google 공식 API 요청 한도에 도달했습니다. 자동 재시도하지 않습니다.',
+        google_access_denied:'Google에서 해당 속성 접근을 거부했습니다.',
+        google_unavailable:'Google 공식 API 데이터를 조회하지 못했습니다.',
+        google_response_too_large:'Google 응답 크기 제한으로 조회하지 못했습니다.',
+        google_bad_response:'Google 응답 형식을 확인할 수 없습니다.'
+      };
+      if(report.state!=='connected'){
+        googleStatus(labels[report.state]||'연결 상태 미확인');
+        return;
+      }
+      if(state.selectedSite!==siteUrl){googleStatus('사이트 선택이 변경되어 조회 결과를 폐기했습니다.');return;}
+      googleStatus('Google 공식 실측 · '+report.property+' · '+report.period.startDate+' ~ '+report.period.endDate);
+      const metrics=report.metrics;
+      const metricText=metrics
+        ? '검색 클릭 '+metrics.clicks.toLocaleString()+'회 · 노출 '+metrics.impressions.toLocaleString()+
+          '회 · CTR '+metrics.ctrPercent.toFixed(2)+'% · 평균 순위 '+metrics.avgPosition.toFixed(1)
+        : '현재 기간에 반환된 검색 성과 행이 없어 실측치를 확정할 수 없습니다.';
+      $('[data-sv-google-summary]').textContent=metricText+' · Google 제출 사이트맵 '+
+        report.sitemaps.length+'건. 이 수치는 전체 페이지 색인 완료나 AI 검색 인용을 의미하지 않습니다.';
+    }catch(error){googleStatus('실측 조회 실패: '+error.message);}
+    finally{button.disabled=false;}
   }
   function fillEvidenceForm(){
     const providerId=$('#sv-evidence-provider').value,check=$('#sv-evidence-check').value;
@@ -249,6 +333,60 @@
     select.value=state.selectedSite;renderProviderMatrix();fillEvidenceForm();
   }
 
+  // A display-only categorization of canonical public routes; not an authority, membership or ownership grant.
+  const CATEGORY_RULES = [
+    ['교회·선교', /^(ekodichurch|ekodimission|mission|church|bible|jubilee|qtin|qt|prayer)$/],
+    ['지역·단체', /^(cgma|cgmmrc|cheonggye|seonammedi|cooperative|open|local|region|hammoo)$/],
+    ['교육·연구', /^(edu|education|research|ekodilab|pyeonggongmok|study|academy)$/],
+    ['출판·콘텐츠', /^(books|publishing|journal|media|content|video)$/],
+    ['사업·상거래', /^(ekodibiz|ekodimall|mall|cafe|trade|ekodipay|insurance|marketing|invest|shop|store|yogurt|pizza|jadam)$/],
+  ];
+  function siteCategory(site) {
+    if (site.propertyType === 'independent-domain' || site.type === 'domain-alias') return '독립 도메인';
+    const path = new URL(site.url).pathname.replace(/^\/+|\/+$/g, '').split('/')[0].toLowerCase();
+    if (!path || path === 'ekodi') return '플랫폼';
+    const known = CATEGORY_RULES.find(([,pattern]) => pattern.test(path));
+    if (known) return known[0];
+    const name = String(site.name || '');
+    if (/교회|선교|성경|성서|묵상|예배|신학/.test(name)) return '교회·선교';
+    if (/상인회|협동조합|주민|청계|의대|노회|시찰/.test(name)) return '지역·단체';
+    if (/교육|연구|학교|독서|공부/.test(name)) return '교육·연구';
+    if (/서점|출판|책|영상|저널/.test(name)) return '출판·콘텐츠';
+    if (/몰|매장|사업|보험|투자|카페|유통|마케팅/.test(name)) return '사업·상거래';
+    return '기타';
+  }
+  function renderCategories() {
+    const select=$('#sv-category-filter'), current=select.value;
+    const categories=[...new Set(state.sites.map(siteCategory))].sort((a,b)=>a.localeCompare(b,'ko'));
+    select.replaceChildren();
+    const all=document.createElement('option');all.value='';all.textContent='전체 분류';select.append(all);
+    for(const category of categories){const option=document.createElement('option');option.value=category;option.textContent=category;select.append(option);}
+    select.value=categories.includes(current)?current:'';
+  }
+  function refreshManage() {
+    const panel=$('[data-sv-manage-panel]');
+    if(panel.hidden)return;
+    const site=state.sites.find(item=>item.url===state.selectedSite);
+    if(!site){panel.hidden=true;return;}
+    const crossOrigin=new URL(site.url).origin!==location.origin;
+    const result=siteResult(site);
+    $('[data-sv-manage-name]').textContent=(site.name||site.path||'사이트')+' · '+siteCategory(site);
+    $('[data-sv-manage-path]').textContent=site.url;
+    $('[data-sv-manage-basic]').textContent=crossOrigin?'별도 호스트':result?.basic||'미점검';
+    $('[data-sv-manage-ai]').textContent=crossOrigin?'별도 호스트':result?.ai||'미점검';
+    $('[data-sv-manage-improve]').textContent=result?.improvements?.join(' · ')||'점검 후 표시';
+    const audit=$('[data-sv-manage-audit]');audit.disabled=state.busy||crossOrigin;
+    audit.title=crossOrigin?'별도 호스트의 브라우저 점검은 지원하지 않습니다.':'';
+    const open=$('[data-sv-manage-open]');open.href=site.url;
+  }
+  function openManage(site) {
+    state.selectedSite=site.url;
+    $('#sv-provider-site').value=site.url;
+    const panel=$('[data-sv-manage-panel]');panel.hidden=false;
+    renderProviderMatrix();fillEvidenceForm();refreshManage();
+    panel.scrollIntoView({block:'start',behavior:'smooth'});
+  }
+
   const normalize = item => {
     try {
       const u = new URL(item.url);
@@ -283,42 +421,43 @@
   };
   const siteResult = site => state.audited.get(site.url);
   function render() {
-    $('[data-sv-sites]').textContent = String(state.sites.length);
-    $('[data-sv-pages]').textContent = String(state.resources.length);
-    $('[data-sv-audited]').textContent = String(state.audited.size);
-    const target = $('[data-sv-rows]'); target.replaceChildren();
-    const q = $('#sv-search').value.trim().toLowerCase();
-    const sites = state.sites.filter(s => (s.name+' '+s.url).toLowerCase().includes(q));
-    for(const site of sites){
-      const row = document.createElement('tr');
-      const name = document.createElement('td'); name.textContent = site.name || site.path || '사이트';
-      const link = document.createElement('a');link.href=site.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=site.url;
-      const locationCell = document.createElement('td');locationCell.append(link);
-      const result=siteResult(site);
-      const basic = document.createElement('td');basic.textContent=result ? result.basic : '미점검';
-      const ai = document.createElement('td');ai.textContent=result ? result.ai : '미점검';
+    $('[data-sv-sites]').textContent=String(state.sites.length);
+    $('[data-sv-pages]').textContent=String(state.resources.length);
+    $('[data-sv-audited]').textContent=String(state.audited.size);
+    const target=$('[data-sv-rows]');target.replaceChildren();
+    const q=$('#sv-search').value.trim().toLowerCase(), group=$('#sv-category-filter').value;
+    const sites=state.sites.filter(site=>(!group||siteCategory(site)===group)&&
+      ((site.name+' '+site.url).toLowerCase().includes(q)));
+    $('[data-sv-count]').textContent=sites.length+' / '+state.sites.length+'개 표시';
+    for(const [index,site] of sites.entries()){
+      const row=document.createElement('tr');
+      const num=document.createElement('td');num.textContent=String(index+1);num.className='sv-num';
+      const category=document.createElement('td');category.textContent=siteCategory(site);category.className='sv-category';
+      const name=document.createElement('td');name.textContent=site.name||site.path||'사이트';
+      name.className='sv-site-name';name.title=name.textContent;
+      const locationCell=document.createElement('td');locationCell.className='sv-site-url';
+      const link=document.createElement('a');link.href=site.url;link.target='_blank';link.rel='noopener noreferrer';
+      link.textContent=new URL(site.url).host+new URL(site.url).pathname;
+      link.title=site.url;locationCell.append(link);
+      const result=siteResult(site), crossOrigin=new URL(site.url).origin!==location.origin;
+      const basic=document.createElement('td');basic.textContent=crossOrigin?'별도 호스트':result?.basic?.split(' · ')[0]||'미점검';
+      const ai=document.createElement('td');ai.textContent=crossOrigin?'별도 호스트':result?.ai?.split(' · ')[0]||'미점검';
       if(result?.improvements?.length){basic.title='우선 개선: '+result.improvements.join(' / ');ai.title=basic.title;}
       const providerCell=document.createElement('td');
-      const primaryIds=['naver','google','daum','bing'];
-      const manuallyConfirmed=primaryIds.filter(providerId=>state.ledger?.evidence?.some(x=>
+      const confirmed=['naver','google','daum','bing'].filter(providerId=>state.ledger?.evidence?.some(x=>
         x.site_url===site.url&&x.provider_id===providerId&&x.check_type==='registration'
         &&x.state==='confirmed_manually')).length;
-      providerCell.textContent=state.ledger
-        ? manuallyConfirmed+'/4 주요 검색엔진 수동 확인 · 나머지는 미확인'
-        : '확인 원장 미연결';
-      const action = document.createElement('td');
-      const crossOrigin=new URL(site.url).origin!==location.origin;
-      const button=document.createElement('button');button.type='button';button.className='secondary';
-      button.textContent=crossOrigin?'도메인 기술점검 별도':'기술 점검';button.disabled=state.busy||crossOrigin;
-      if(crossOrigin){basic.textContent='미측정 (별도 호스트)';ai.textContent='미측정 (별도 호스트)';}
-      button.addEventListener('click',()=>auditOne(site));
-      const review=document.createElement('button');review.type='button';review.className='secondary';
-      review.textContent='서비스 검토';review.addEventListener('click',()=>{
-        state.selectedSite=site.url;$('#sv-provider-site').value=site.url;renderProviderMatrix();$('#sv-provider-site').scrollIntoView({block:'nearest'});
-      });
-      action.append(button,review);row.append(name,locationCell,basic,ai,providerCell,action);target.append(row);
+      providerCell.textContent=state.ledger?confirmed+'/4 수동 확인':'미확인';
+      providerCell.title='공급자 API의 실제 등록·색인 확정 수치가 아니라 관리자가 저장한 수동 확인 근거입니다.';
+      const action=document.createElement('td'),button=document.createElement('button');
+      button.type='button';button.className='secondary';button.textContent='관리';
+      button.setAttribute('aria-label',(site.name||site.path||'사이트')+' 상세 관리');
+      button.addEventListener('click',()=>openManage(site));action.append(button);
+      row.append(num,category,name,locationCell,basic,ai,providerCell,action);target.append(row);
     }
-    if(!sites.length){const row=document.createElement('tr');const cell=document.createElement('td');cell.colSpan=6;cell.textContent='검색 결과가 없습니다.';row.append(cell);target.append(row);}
+    if(!sites.length){const row=document.createElement('tr');const cell=document.createElement('td');
+      cell.colSpan=8;cell.textContent='조건에 맞는 공개 사이트가 없습니다.';row.append(cell);target.append(row);}
+    refreshManage();
   }
   async function load() {
     if(!token())return status('최고관리자 로그인이 필요합니다.',true);
@@ -333,7 +472,7 @@
       // A route-only installation still deserves visibility in the inventory.
       if(!byUrl.size)for(const resource of state.resources.filter(x=>x.type==='page'&&/^\/[^/]+\/?$/.test(x.path||'')))byUrl.set(resource.url,resource);
       state.sites=[...byUrl.values()];
-      renderProviderChoices();
+      renderProviderChoices();renderCategories();
       const [robots,sitemap]=await Promise.allSettled([fetchBounded('/robots.txt'),fetchBounded('/sitemap.xml')]);
       const ok=robots.status==='fulfilled' && sitemap.status==='fulfilled' && sitemap.value.includes('<urlset');
       $('[data-sv-infra]').textContent=ok?'기술파일 응답':'확인 필요';
@@ -380,10 +519,17 @@
     }catch(error){status('점검 중단: '+error.message,true);}
     finally{state.busy=false;$('[data-sv-audit-all]').disabled=false;render();}
   }
+  $('[data-sv-google-read]').addEventListener('click',loadGoogleSearch);
   $('[data-sv-reload]').addEventListener('click',load);
   $('[data-sv-audit-all]').addEventListener('click',auditAll);
   $('#sv-search').addEventListener('input',render);
-  $('#sv-provider-site').addEventListener('change',event=>{state.selectedSite=event.target.value;renderProviderMatrix();fillEvidenceForm();});
+  $('#sv-category-filter').addEventListener('change',render);
+  $('[data-sv-manage-close]').addEventListener('click',()=>{$('[data-sv-manage-panel]').hidden=true;});
+  $('[data-sv-manage-audit]').addEventListener('click',()=>{const site=state.sites.find(s=>s.url===state.selectedSite);if(site&&new URL(site.url).origin===location.origin)auditOne(site);});
+  $('#sv-provider-site').addEventListener('change',event=>{state.selectedSite=event.target.value;
+    googleStatus('선택한 사이트의 Google 실측을 확인하려면 조회 버튼을 누르세요.');
+    $('[data-sv-google-summary]').textContent='';
+    renderProviderMatrix();fillEvidenceForm();refreshManage();});
   setupEvidenceForm();
   window.addEventListener('ekodi-admin-section-changed',event=>{
     if(event.detail?.section===SECTION&&!state.discovery)load();

@@ -1,11 +1,16 @@
 import { isAllowedOrigin } from './auth-worker.js';
 import { adminAuthorityForRole, authorizeEkodiAction } from './ekodi-authorization.js';
+import { loadBillingIdentity } from './membership-identity.js';
 
 const encoder = new TextEncoder();
 const GOOGLE_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
 const ADMIN_ROLES = new Set(['super_admin', 'operator', 'viewer']);
 const CHALLENGE_MINUTES = 10;
 const SESSION_HOURS = 8;
+// Disabled until Supabase Person RPC + admin capability checks have passed staging.
+const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+const ekodiAdminBridgeEnabled = env => String(env.EKODI_ADMIN_FEDERATED_LOGIN_ENABLED || '') === 'true';
 const PRIVILEGED_MINUTES = 15;
 const JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 let jwksCache = { keys: [], expiresAt: 0 };
@@ -152,6 +157,9 @@ async function ensureSchema(db, env) {
       nonce_hash TEXT PRIMARY KEY,
       expires_at TEXT NOT NULL,
       created_at TEXT NOT NULL
+    )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS ekodi_admin_login_challenges (
+      nonce_hash TEXT PRIMARY KEY, expires_at TEXT NOT NULL, created_at TEXT NOT NULL
     )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS admin_privileged_sessions (
       token_hash TEXT PRIMARY KEY,
@@ -556,6 +564,76 @@ async function removeAccount(request, env, id) {
   return json({ ok: true, removed: { id: target.id, email: target.email } }, 200, request, env);
 }
 
+// Alternate EKODI provider credentials are verified against Supabase Auth,
+// then resolved to one signed-in Person. Nothing from the browser determines
+// an administrator role or a payment/member plan.
+async function handleEkodiAdminLogin(request, env) {
+  const body = await readJson(request);
+  const nonce = String(body?.nonce || '');
+  if (!/^[a-f0-9]{48}$/i.test(nonce)) return json({error:'로그인 확인 요청이 올바르지 않습니다.'},400,request,env);
+  const bearer = String(request.headers.get('authorization') || '');
+  const token = bearer.startsWith('Bearer ') ? bearer.slice(7).trim() : '';
+  if (!token || token.length > 8192) return json({error:'EKODI 인증 세션이 필요합니다.'},401,request,env);
+
+  // Atomic single-use challenge, not a reusable cookie or provider email.
+  const hash = await sha256(nonce);
+  const consumed = await env.DB.prepare(`DELETE FROM ekodi_admin_login_challenges
+    WHERE nonce_hash=? AND expires_at>? RETURNING nonce_hash`)
+    .bind(hash,new Date().toISOString()).first();
+  if (!consumed) return json({error:'로그인 인증 요청이 만료되었거나 이미 사용되었습니다.'},409,request,env);
+
+  const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`,{
+    headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:`Bearer ${token}`},
+    cache:'no-store',
+  });
+  if (!userResponse.ok) return json({error:'EKODI 인증 세션을 확인할 수 없습니다.'},401,request,env);
+  const user = await userResponse.json();
+  if (!user?.id || !user?.email_confirmed_at || user?.is_anonymous===true)
+    return json({error:'확인된 EKODI 계정으로 다시 로그인해 주세요.'},403,request,env);
+
+  const identity = await loadBillingIdentity({
+    accessToken:token, authUser:user, supabaseUrl:SUPABASE_URL,
+    publishableKey:SUPABASE_PUBLISHABLE_KEY,
+  });
+  if (!identity?.personId || !identity?.ekodiId || !identity.verifiedEmails?.length)
+    return json({error:'유효한 EKODI 회원 신원을 확인할 수 없습니다.'},403,request,env);
+
+  let account=null;
+  for (const email of identity.verifiedEmails) {
+    const row = await env.DB.prepare(`SELECT * FROM admin_google_accounts
+      WHERE email=? AND status='active'`).bind(email).first();
+    // Workspace domain-locked accounts still require the original Google
+    // Workspace proof. Alternate providers never bypass this restriction.
+    if (row && !row.required_hd) { account=row; break; }
+  }
+  if (!account) return json({
+    error:'이 EKODI 계정에는 승인된 관리자 권한이 없습니다.',code:'EKODI_ADMIN_GRANT_REQUIRED'
+  },403,request,env);
+
+  if (account.role === 'super_admin') {
+    // For platform super-admin, independent Supabase authority is mandatory
+    // in addition to D1 explicit allowlist. Never trust email alone.
+    const authorityResponse = await fetch(`${SUPABASE_URL}/functions/v1/access-api/platform-authority`,{
+      headers:{apikey:SUPABASE_PUBLISHABLE_KEY,authorization:`Bearer ${token}`},
+      cache:'no-store',
+    });
+    const authority = authorityResponse.ok ? await authorityResponse.json().catch(()=>null) : null;
+    if (authority?.platformAdmin !== true) return json({
+      error:'서버의 최고관리자 권한 확인이 필요합니다.',code:'PLATFORM_AUTHORITY_REQUIRED'
+    },403,request,env);
+  }
+  // Preserve D1's role/session authority and high-risk fresh Google step-up.
+  // The alternative login never creates privileged (elevated) sessions.
+  const admin = await ensureAdminRow(env.DB,account);
+  const session = await issueSession(env.DB,admin.id);
+  await writeAudit(env.DB,admin.id,'session.ekodi_login','platform',
+    `ekodi_person:${identity.personId};admin:${account.id}`);
+  return json({
+    ok:true, email:account.email,role:account.role,provider:'ekodi',
+    authority:adminAuthorityForRole(account.role),...session
+  },200,request,env);
+}
+
 export async function handleAdminGoogleAuth(request, env) {
   const origin = request.headers.get('origin');
   if (!isAllowedOrigin(origin, env)) return json({ error: '허용되지 않은 요청입니다.' }, 403, request, env);
@@ -563,12 +641,19 @@ export async function handleAdminGoogleAuth(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
   const identityOrigin = configuredIdentityOrigin(env);
-  const identitySensitive = path.startsWith('/api/google/') || (path === '/api/admin-access/elevation' && request.method === 'POST');
+  const ekodiSensitive = path.startsWith('/api/ekodi/admin/') && path !== '/api/ekodi/admin/config';
+  const identitySensitive = path.startsWith('/api/google/') || ekodiSensitive || (path === '/api/admin-access/elevation' && request.method === 'POST');
+  if (ekodiSensitive && (!origin || !identityOrigin || origin !== identityOrigin)) {
+    return json({error:'공식 EKODI 인증 화면에서만 관리자 인증을 진행할 수 있습니다.',code:'IDENTITY_ORIGIN_REQUIRED'},403,request,env);
+  }
   if (identitySensitive && origin && identityOrigin && origin !== identityOrigin) {
     return json({ error: '현재 인증 환경에서 허용되지 않은 Google 로그인 Origin입니다.', code: 'IDENTITY_ORIGIN_MISMATCH' }, 403, request, env);
   }
 
   // This route is environment-backed. It must not consume D1 reads just to render the Google sign-in entry.
+  if (request.method === 'GET' && path === '/api/ekodi/admin/config') {
+    return json({enabled:ekodiAdminBridgeEnabled(env) && Boolean(identityOrigin),identityOrigin},200,request,env);
+  }
   if (request.method === 'GET' && path === '/api/google/config') {
     const clientId = configuredGoogleClientId(env);
     return json({ enabled: Boolean(clientId), clientId, identityOrigin, mode: clientId ? 'google_allowlist' : 'password_fallback' }, 200, request, env);
@@ -577,6 +662,19 @@ export async function handleAdminGoogleAuth(request, env) {
 
   try {
     await ensureSchemaOnce(env.DB, env);
+    if (request.method === 'POST' && path === '/api/ekodi/admin/challenge') {
+      if (!ekodiAdminBridgeEnabled(env)) return json({error:'통합 관리자 인증은 아직 활성화되지 않았습니다.'},503,request,env);
+      const nonce=bytesToHex(crypto.getRandomValues(new Uint8Array(24)));
+      const now=new Date();
+      await env.DB.prepare('DELETE FROM ekodi_admin_login_challenges WHERE expires_at<=?').bind(now.toISOString()).run();
+      await env.DB.prepare('INSERT INTO ekodi_admin_login_challenges(nonce_hash,expires_at,created_at) VALUES (?,?,?)')
+        .bind(await sha256(nonce),new Date(now.getTime()+5*60*1000).toISOString(),now.toISOString()).run();
+      return json({nonce},201,request,env);
+    }
+    if (request.method === 'POST' && path === '/api/ekodi/admin/login') {
+      if (!ekodiAdminBridgeEnabled(env)) return json({error:'통합 관리자 인증은 아직 활성화되지 않았습니다.'},503,request,env);
+      return handleEkodiAdminLogin(request,env);
+    }
     if (request.method === 'POST' && path === '/api/google/challenge') {
     if (!configuredGoogleClientId(env)) return json({ error: 'Google 관리자 로그인이 아직 연결되지 않았습니다.' }, 503, request, env);
     const nonce = bytesToHex(crypto.getRandomValues(new Uint8Array(24)));

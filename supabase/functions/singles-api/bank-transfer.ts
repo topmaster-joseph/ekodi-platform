@@ -6,8 +6,8 @@ type Reply=(req:Request,body:unknown,status?:number)=>Response;
 const bankOn=()=>Deno.env.get('SINGLES_BANK_TRANSFER_ENABLED')==='true';
 const verifyOn=()=>Deno.env.get('SINGLES_BANK_VERIFICATION_ENABLED')==='true';
 const REF=/^EDH-[A-F0-9]{32}$/;
-// 유료회원 모델(2026-10-28): 가입비(credit_initial, 적립금 50만원 생성)와 추가 충전(credit_topup)만 판매. 이전 월 이용권은 판매 종료.
-const CODES=['consulting','credit_initial','credit_topup'];
+// 2026-10-31: 가입비·적립금 폐지. 기간제 구독권(1·10·20·30일)만 판매하고, 요청·수락 요금은 청구서로 결제한다.
+const CODES=['consulting','sub_1d','sub_10d','sub_20d','sub_30d'];
 async function one(q:any){const {data,error}=await q.maybeSingle();if(error)throw error;return data}
 async function many(q:any){const {data,error}=await q;if(error)throw error;return data||[]}
 async function payload(req:Request){
@@ -63,12 +63,53 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   return reply(req,{available:settings?.active===true,plans:settings?.active===true?plans:[],payment_method:'bank_transfer'});
  }
  if(path==='/bank/wallet'&&method==='GET'){
-  // 원 단위 적립금(유료회원 가입비 50만원 = 적립금 50만원).
-  const a=await one(admin.from('singles_credit_accounts').select('balance_krw,reserved_krw,joined_at').eq('user_id',userId));
-  const ledger=await many(admin.from('singles_credit_ledger').select('delta_krw,reserved_delta_krw,reason,ref,created_at').eq('user_id',userId).order('created_at',{ascending:false}).limit(30));
-  const member=await one(admin.from('singles_memberships').select('paid_member_since,status').eq('user_id',userId));
-  return reply(req,{paid_model:Deno.env.get('SINGLES_REQUEST_BILLING_ENABLED')==='true',paid_member:Boolean(member?.paid_member_since)&&member?.status==='active',
-   balance_krw:a?.balance_krw||0,reserved_krw:a?.reserved_krw||0,joined_at:a?.joined_at||null,ledger});
+  // 구독 상태와 내 청구서(후불). 선불 적립금은 2026-10-31 폐지.
+  const grant=await one(admin.from('singles_bank_grants').select('expires_at').eq('user_id',userId).eq('plan_code','subscription'));
+  const invoices=await many(admin.from('singles_request_invoices').select('id,request_id,role,amount_krw,status,order_reference,due_at,paid_at,created_at,refund_due_at,refunded_at')
+   .eq('user_id',userId).order('created_at',{ascending:false}).limit(30));
+  const active=Boolean(grant?.expires_at&&Date.parse(grant.expires_at)>Date.now());
+  return reply(req,{paid_model:Deno.env.get('SINGLES_REQUEST_BILLING_ENABLED')==='true',paid_member:active,
+   subscription_expires_at:active?grant.expires_at:null,invoices});
+ }
+ const invoiceId=path.match(/^\/bank\/invoices\/([0-9a-f-]{36})\/order$/i)?.[1];
+ if(invoiceId&&method==='POST'){
+  if(!bankOn())return reply(req,{error:'bank_collection_not_launched'},503);
+  const {data:ref,error}=await admin.rpc('singles_invoice_open_order',{p_user:userId,p_invoice:invoiceId});
+  if(error){
+   const msg=String(error.message||'');
+   if(msg.includes('invoice_not_found'))return reply(req,{error:'invoice_not_found'},404);
+   if(msg.includes('invoice_not_payable'))return reply(req,{error:'invoice_not_payable'},409);
+   if(msg.includes('bank_payment_not_configured'))return reply(req,{error:'bank_payment_not_configured'},503);
+   throw error;
+  }
+  const row=await one(admin.from('singles_bank_orders').select(columns).eq('reference',ref).eq('user_id',userId));
+  return reply(req,{order:publicOrder(row)},201);
+ }
+ if(path==='/bank/admin/proposals'&&method==='GET'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_configure!==true)return reply(req,{error:'owner_capability_required'},403);
+  const proposals=await many(admin.from('singles_ops_proposals').select('id,rule,kind,title,rationale,metrics,proposed_change,status,decided_at,created_at')
+   .order('created_at',{ascending:false}).limit(30));
+  return reply(req,{proposals});
+ }
+ if(path==='/bank/admin/ops/review'&&method==='POST'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_configure!==true)return reply(req,{error:'owner_capability_required'},403);
+  const {data,error}=await admin.rpc('singles_ops_review');if(error)throw error;
+  return reply(req,{ok:true,metrics:data});
+ }
+ const proposalId=path.match(/^\/bank\/admin\/proposals\/([0-9a-f-]{36})\/decide$/i)?.[1];
+ if(proposalId&&method==='POST'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_configure!==true)return reply(req,{error:'owner_capability_required'},403);
+  const v=await payload(req);
+  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>k!=='decision')||!['approved','rejected'].includes(v.decision))
+   return reply(req,{error:'invalid_decision'},400);
+  const {data,error}=await admin.rpc('singles_ops_decide',{p_operator:userId,p_id:proposalId,p_decision:v.decision});
+  if(error){const msg=String(error.message||'');
+   if(msg.includes('proposal_already_decided'))return reply(req,{error:'proposal_already_decided'},409);
+   if(msg.includes('proposal_not_found'))return reply(req,{error:'not_found'},404);throw error}
+  return reply(req,{ok:true,status:data});
  }
  if(path==='/bank/orders'&&method==='GET'){
   const list=await many(admin.from('singles_bank_orders').select(columns).eq('user_id',userId).order('created_at',{ascending:false}).limit(30));
@@ -88,14 +129,6 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const v=await payload(req);
   if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>k!=='plan_code')||!CODES.includes(v.plan_code))
     return reply(req,{error:'invalid_plan'},400);
-  if(v.plan_code==='credit_initial'||v.plan_code==='credit_topup'){
-   // 가입비는 1회(진행 중 포함), 추가 충전은 유료회원만.
-   const initial=await many(admin.from('singles_bank_orders').select('status').eq('user_id',userId).eq('plan_code','credit_initial')
-     .in('status',['awaiting_transfer','reported_paid','verified']));
-   const paid=Boolean((await one(admin.from('singles_memberships').select('paid_member_since').eq('user_id',userId)))?.paid_member_since);
-   if(v.plan_code==='credit_initial'&&(initial.length||paid))return reply(req,{error:paid?'already_paid_member':'join_order_already_open'},409);
-   if(v.plan_code==='credit_topup'&&!paid)return reply(req,{error:'paid_membership_required',join_fee_krw:500000},409);
-  }
   const plan=await one(admin.from('singles_bank_plans')
     .select('code,amount_krw,duration_days,active').eq('code',v.plan_code));
   const settings=await one(admin.from('singles_bank_settings')
@@ -112,8 +145,8 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const {error:auditError}=await admin.from('singles_bank_audit')
     .insert({reference,actor_id:userId,action:'opened'});
   if(auditError)throw auditError;
-  if(plan.code==='credit_initial'){
-   const {error:logError}=await admin.from('singles_signup_attempts').insert({user_id:userId,email,action:'join_order',detail:reference});
+  if(plan.code.startsWith('sub_')){
+   const {error:logError}=await admin.from('singles_signup_attempts').insert({user_id:userId,email,action:'subscribe_order',detail:reference});
    if(logError)throw logError;
   }
   return reply(req,{order:publicOrder({...row,created_at:new Date().toISOString()})},201);
@@ -248,6 +281,44 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
     .order('created_at',{ascending:false}).limit(100));
   const emails=await emailsFor(admin,[...new Set<string>(members.map((m:any)=>m.user_id))]);
   return reply(req,{members:members.map((m:any)=>({...m,email:emails.get(m.user_id)||null})),attempts});
+ }
+ // H3(2026-10-31): 환불 대상 청구서 송금 처리. 돈은 운영자가 은행에서 직접 보내고, 여기서는 송금 거래번호만 기록한다.
+ if(path==='/bank/admin/refunds'&&method==='GET'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_verify!==true)return reply(req,{error:'verification_capability_required'},403);
+  const rows=await many(admin.from('singles_request_invoices')
+    .select('id,request_id,user_id,role,amount_krw,status,order_reference,paid_at,refund_due_at,refunded_at,refund_trace')
+    .in('status',['refund_due','refunded']).order('refund_due_at',{ascending:true}).limit(100));
+  const refs=[...new Set<string>(rows.map((r:any)=>r.order_reference).filter(Boolean))];
+  const orders=refs.length?await many(admin.from('singles_bank_orders').select('reference,bank_trace,verified_at').in('reference',refs)):[];
+  const byRef=new Map<string,any>(orders.map((o:any)=>[o.reference,o]));
+  const emails=await emailsFor(admin,[...new Set<string>(rows.map((r:any)=>r.user_id))]);
+  const refunds=rows.map((r:any)=>({id:r.id,amount_krw:r.amount_krw,status:r.status,role:r.role,email:emails.get(r.user_id)||null,
+    self:r.user_id===userId,order_reference:r.order_reference,paid_trace:byRef.get(r.order_reference)?.bank_trace||null,
+    paid_at:r.paid_at,refund_due_at:r.refund_due_at,refunded_at:r.refunded_at,refund_trace:r.refund_trace}));
+  return reply(req,{refunds,pending:refunds.filter((r:any)=>r.status==='refund_due').length,
+    pending_krw:refunds.filter((r:any)=>r.status==='refund_due').reduce((n:number,r:any)=>n+r.amount_krw,0)});
+ }
+ const refundId=path.match(/^\/bank\/admin\/refunds\/([0-9a-f-]{36})\/complete$/i)?.[1];
+ if(refundId&&method==='POST'){
+  const role=await operator(admin,userId);
+  if(!role||role.can_verify!==true)return reply(req,{error:'verification_capability_required'},403);
+  const v=await payload(req);
+  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>k!=='refund_trace')||typeof v.refund_trace!=='string')
+   return reply(req,{error:'refund_trace_required'},400);
+  const trace=v.refund_trace.trim();
+  if(trace.length<4||trace.length>100)return reply(req,{error:'refund_trace_required'},400);
+  const {data,error}=await admin.rpc('singles_invoice_refund_complete',{p_operator:userId,p_invoice:refundId,p_trace:trace});
+  if(error){const msg=String(error.message||'');
+   if(msg.includes('operator_self_refund_forbidden'))return reply(req,{error:'operator_self_refund_forbidden'},403);
+   if(msg.includes('invoice_not_found'))return reply(req,{error:'invoice_not_found'},404);
+   if(msg.includes('invoice_not_refundable'))return reply(req,{error:'invoice_not_refundable'},409);
+   if(msg.includes('invoice_already_refunded'))return reply(req,{error:'invoice_already_refunded'},409);
+   if(msg.includes('refund_trace_duplicate'))return reply(req,{error:'refund_trace_duplicate'},409);
+   if(msg.includes('verification_capability_required'))return reply(req,{error:'verification_capability_required'},403);
+   throw error;
+  }
+  return reply(req,data);
  }
  const verifyAdultId=path.match(/^\/bank\/admin\/members\/([0-9a-f-]{36})\/adult-verify$/i)?.[1];
  if(verifyAdultId&&method==='POST'){

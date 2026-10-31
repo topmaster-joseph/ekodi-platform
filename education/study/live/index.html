@@ -18,7 +18,7 @@
   <span class="pill lecture-pill"><span class="dot" id="lectureDot" aria-hidden="true"></span><span class="lv-clock" id="lectureClock" aria-label="강의 진행 시간">00:00</span></span>
   <span class="timer-pill" id="topTimer" role="timer" hidden></span>
   <span class="grow"></span>
-  <div class="top-controls" id="topControls">
+  <div class="top-controls" id="topControls" data-ekodi-header-actions>
     <label class="sr-only" for="sessionPicker">회차 선택</label>
     <select id="sessionPicker" aria-label="회차 선택"></select>
     <span class="pill hide-sm" id="lectureState"><span>준비</span></span>
@@ -41,6 +41,7 @@
     <button type="button" class="nav-item" data-view="materials"><span>자료·내보내기</span></button>
     <button type="button" class="nav-item" data-view="results"><span>실습 성과·피드백</span></button>
     <button type="button" class="nav-item" data-view="editor"><span>강의안 편집</span></button>
+    <a class="nav-item" href="./screen-share/">수강생 QR 화면 공유</a>
   </nav>
   <main class="studio-main" id="studioMain" tabindex="-1">
     <div id="view" aria-live="polite"><p>강의 데이터를 불러오는 중입니다.</p></div>

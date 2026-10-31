@@ -88,10 +88,11 @@ permissions:
   contents: read
 
 concurrency:
-  # Passive post-deploy observation must never cancel an owner-authorized USER4
-  # update or real-device acceptance dispatched by the EKODI Orchestrator.
-  group: device-agent-production-verification-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.execution_mode || 'passive' }}
-  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+  # The hourly read-only PC observation must not be cancelled by frequent
+  # PR/deployment workflow_run events in the shared passive lane.
+  # Owner-authorized dispatches remain independent and non-cancelling.
+  group: device-agent-production-verification-${{ github.ref }}-${{ github.event_name == 'schedule' && 'scheduled-observe' || github.event_name == 'workflow_dispatch' && inputs.execution_mode || 'passive' }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' && github.event_name != 'schedule' }}
 
 jobs:
   contract:

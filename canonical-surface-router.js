@@ -35,8 +35,8 @@ const AUTH_CSP=[
   "form-action 'self' https://renzehysxirjilvdxacv.supabase.co https://*.tosspayments.com https://seonammedi.kr https://www.seonammedi.kr https://xn--3e0b8b58jw4co4mnpll3k.kr https://www.xn--3e0b8b58jw4co4mnpll3k.kr",
   "object-src 'none'",
 ].join('; ');
-const AUTH_ASSETS=new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js','/federated-login.js']);
-const AUTH_CRITICAL_ASSETS=new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js','/federated-login.js']);
+const AUTH_ASSETS=new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth.css','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js','/federated-login.js','/email-password.js']);
+const AUTH_CRITICAL_ASSETS=new Set(['/auth.js','/auth-bootstrap.js','/auth-entry.js','/auth-router.js','/oauth-consent.js','/marketing-auth-hotfix.js','/auth-workspace-target.js','/admin-auth.js','/google-origin-bridge.js','/client-auth.js','/author-auth.js','/business-auth.js','/marketing-onboarding.js','/membership-ui.js','/federated-login.js','/email-password.js']);
 
 function cloneRequest(request,url){
   return new Request(url.toString(),{
@@ -249,6 +249,10 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     upstreamUrl.hostname=spec.host;upstreamUrl.pathname=stripPrefix(upstreamUrl.pathname,spec.prefix);
     response=await externalFetch(cloneRequest(request,upstreamUrl));
   }else return serviceUnavailable(spec.id);
+  // A WebSocket handshake must preserve Cloudflare's native 101 response and
+  // attached WebSocket. Wrapping it in new Response(body,{status:101}) throws
+  // and breaks first-party /edu QR screen sharing. No 101 is synthesized.
+  if(response.status===101&&response.webSocket)return response;
   const type=String(response.headers.get('content-type')||'').toLowerCase();
   const headers=new Headers(response.headers);let body=response.body;
   if(type.includes('text/html')||type.includes('javascript')||type.includes('text/css')||type.includes('application/json')||type.includes('text/plain')){
