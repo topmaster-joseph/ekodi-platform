@@ -62,7 +62,7 @@
     section.innerHTML = `
       <div class="section-head books-head">
         <div><p class="kicker">에코디서점 · 출판 운영</p><h2>에코디서점 관리</h2><p>출판물, 상담, 출판대행 서비스, 요금과 기능 노출을 한곳에서 관리합니다.</p></div>
-        <div class="books-head-actions"><a class="secondary books-public-link" href="https://books.ekodi.kr/publishing/" target="_blank" rel="noopener">출판 ↗</a><button class="secondary" id="refreshBooksAdmin" type="button">↻ Refresh</button></div>
+        <div class="books-head-actions"><a class="secondary books-public-link" href="https://ekodi.kr/books/publishing/" target="_blank" rel="noopener">출판 ↗</a><button class="secondary" id="refreshBooksAdmin" type="button">↻ Refresh</button></div>
       </div>
       <p class="books-flash" id="booksFlash" role="status"></p>
       <div class="books-tabs" role="tablist">
@@ -203,7 +203,7 @@
     row.append(main, el('span', 'books-stage', book.stage || 'MANUSCRIPT'), el('span', 'books-status-chip', book.isPublic ? 'PUBLIC' : 'PRIVATE'));
     const actions = el('div', 'books-row-actions');
     const open = el('a', 'books-compact-button', 'Public ↗');
-    open.href = `https://books.ekodi.kr${book.detailUrl || '/#catalog'}`;
+    open.href = `https://ekodi.kr/books${book.detailUrl || '/#catalog'}`;
     open.target = '_blank'; open.rel = 'noopener';
     actions.append(open);
     if (editable) {

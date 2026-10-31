@@ -3,7 +3,7 @@ export const JOURNAL_META = Object.freeze({
   name: 'EKODI Journal',
   nameKo: '에코디 저널',
   description: 'EKODI의 정신, 실천, 기술, 공동체의 배움을 공개적으로 기록하는 저널',
-  canonicalOrigin: 'https://journal.ekodi.kr',
+  canonicalOrigin: 'https://ekodi.kr/journal',
   startedAt: '2026-09-02',
 });
 
@@ -104,7 +104,7 @@ export const JOURNAL_POSTS = Object.freeze([
       { type: 'heading', text: '공간은 경로로, 경계는 서브도메인으로' },
       { type: 'p', text: '서브도메인은 편의를 위해 늘리지 않습니다. 인증, 관리자, API, 그리고 독립적으로 운영되어야 하는 공통서비스처럼 보안이나 운영 경계가 분명할 때 사용합니다.' },
       { type: 'quote', text: 'URL은 사용자의 공간을 가리키고, 권한은 불변의 내부 ID를 따른다.' },
-      { type: 'p', text: 'journal.ekodi.kr 역시 특정 개인이나 기관의 블로그가 아니라 여러 공간에서 사용할 수 있는 공통 기록·발행 서비스의 공개 경계로 설계합니다.' },
+      { type: 'p', text: 'ekodi.kr/journal 역시 특정 개인이나 기관의 블로그가 아니라 여러 공간에서 사용할 수 있는 공통 기록·발행 서비스의 공개 경계로 설계합니다.' },
     ],
     bodyEn: [
       { type: 'lead', text: 'A URL may look like a label, but it can reveal who owns a space and what belongs to shared infrastructure.' },

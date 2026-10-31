@@ -14,7 +14,9 @@
       "trade.ekodi.kr",
       "trade.biz.ekodi.kr",
       "invest.ekodi.kr",
-      "messenger.ekodi.kr"
+      "messenger.ekodi.kr",
+      "management.ekodi.kr",
+      "marketing-api.ekodi.kr"
     ],
     "requests": [
       {
@@ -33,20 +35,6 @@
       },
       {
         "url": "https://mail.church.ekodi.kr/admin",
-        "statuses": [307],
-        "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/admin/?source=", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
-        "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
-      },
-      {
-        "url": "https://management.ekodi.kr/admin",
-        "statuses": [307],
-        "redirect": "manual",
-        "headerExpect": ["location: https://ekodi.kr/admin/?source=", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
-        "rollbackHeaderExpect": ["cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"]
-      },
-      {
-        "url": "https://marketing-api.ekodi.kr/admin",
         "statuses": [307],
         "redirect": "manual",
         "headerExpect": ["location: https://ekodi.kr/admin/?source=", "cache-control: no-store", "x-ekodi-admin-entry: central-handoff-v1"],
