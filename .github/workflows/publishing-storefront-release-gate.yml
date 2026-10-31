@@ -1,0 +1,41 @@
+name: Publishing Storefront Release Gate
+on:
+  pull_request:
+    paths:
+      - 'publishing/human/storefront-release-guard.js'
+      - 'books-commerce.js'
+      - 'books/books.json'
+      - 'sites/ekodi-mall/scripts/bookstore-products.mjs'
+      - 'sites/ekodi-mall/test/bookstore-bridge.test.mjs'
+      - 'test/books-direct-commerce.test.mjs'
+      - 'test/publishing-storefront-release-guard.test.mjs'
+      - 'books-control.js'
+      - 'publishing/human/books-publication-transition.js'
+      - 'test/books-publication-transition.test.mjs'
+      - '.github/workflows/publishing-storefront-release-gate.yml'
+permissions:
+  contents: read
+concurrency:
+  group: publishing-storefront-release-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  approval-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Ensure new editions cannot bypass publisher release
+        run: |
+          set -euo pipefail
+          node --check publishing/human/storefront-release-guard.js
+          node --check books-commerce.js
+          node --check sites/ekodi-mall/scripts/bookstore-products.mjs
+          node --test test/publishing-storefront-release-guard.test.mjs
+          node --check publishing/human/books-publication-transition.js
+          node --check books-control.js
+          node --test test/books-publication-transition.test.mjs
+          node --test test/books-direct-commerce.test.mjs
+          node --test sites/ekodi-mall/test/bookstore-bridge.test.mjs
