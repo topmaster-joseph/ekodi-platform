@@ -68,3 +68,26 @@ test('public business cards stay accessible without login and preserve handoff c
   assert.ok(site.includes('detailSlug()'));
   assert.ok(clientAuth.includes("target.hash=''"), 'auth handoff must remain one-use-token compatible');
 });
+
+test('public business landing clears an unused one-time proof before rendering', async () => {
+  const source = await read('ekodibiz/site.js');
+  const start = source.indexOf('function discardUnusedAuthProof()');
+  const end = source.indexOf('const TEXT={', start);
+  assert.ok(start > -1 && end > start, 'one-time proof cleanup must run before localized rendering');
+  const cleanup = source.slice(start, end);
+  const execute = (hash, search = '?business=software') => {
+    const replacements = [];
+    runInNewContext(cleanup, {
+      URLSearchParams,
+      location: { hash, pathname: '/ekodibiz/', search },
+      document: { title: 'EKODIBIZ' },
+      history: { replaceState: (_state, _title, target) => replacements.push(target) }
+    });
+    return replacements;
+  };
+  assert.deepEqual(execute('#ekodi_token=synthetic-once&ekodi_type=email'), ['/ekodibiz/?business=software']);
+  assert.deepEqual(execute('#business/software'), []);
+  assert.deepEqual(execute('#business'), []);
+  assert.deepEqual(execute(''), []);
+  assert.deepEqual(execute('#ekodi_token=synthetic-once', '?business=unknown'), ['/ekodibiz/?business=unknown']);
+});
