@@ -188,6 +188,7 @@ test('private trade portal uses apex identity and clears proof before asynchrono
   assert.ok(source.includes("new URL('https://ekodi.kr/auth/')"));
   assert.ok(source.includes("url.searchParams.set('site','trade')"));
   assert.ok(source.includes("url.searchParams.set('return_to',original.href)"));
+  assert.ok(source.includes("const original=new URL(location.href);original.hash=''"), 'return path and query are preserved without transferring fragments');
   const readProof=source.indexOf("const pendingProof=handoffParams.get('ekodi_token')");
   const clean=source.indexOf("if(pendingProof)history.replaceState(");
   const sdk=source.indexOf("await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js");
