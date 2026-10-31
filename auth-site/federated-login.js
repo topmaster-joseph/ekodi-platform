@@ -61,11 +61,19 @@ export function redirectProviders() {
   return providersPromise;
 }
 
+// Daum IDs were folded into Kakao accounts and Daum offers no separate third-party
+// login, so the Kakao path is labelled for both. The recorded provider stays 'kakao'.
+export const BUTTON_LABELS = { kakao: '카카오·다음' };
+export function buttonText(provider, purpose) {
+  const name = BUTTON_LABELS[provider?.id] || provider?.name || PROVIDER_LABELS[provider?.id] || '';
+  return purpose === 'link' ? `${name} 계정 추가` : `${name} 계정으로 계속하기`;
+}
+
 function button(provider, purpose, statusId) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = `federated-btn federated-${provider.id}`;
-  b.textContent = purpose === 'link' ? `${provider.name} 계정 추가` : `${provider.name}로 계속하기`;
+  b.textContent = buttonText(provider, purpose);
   b.addEventListener('click', () => start(provider, purpose, b, statusId));
   return b;
 }
