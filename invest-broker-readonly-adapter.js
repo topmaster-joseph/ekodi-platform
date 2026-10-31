@@ -45,11 +45,15 @@ export function mockBrokerSnapshot({ brokerId, now = Date.now(), snapshotRef = c
 
 // --- configuration ------------------------------------------------------------
 export function kisReadOnlyConfig(env = {}) {
-  const environment = String(env.INVEST_BROKER_READONLY_KIS || '').trim();
-  if (!['paper', 'live'].includes(environment)) return { enabled: false, reason: 'KIS_READONLY_SWITCH_OFF' };
   const appKey = String(env.KIS_APP_KEY || '').trim();
   const appSecret = String(env.KIS_APP_SECRET || '').trim();
   const account = String(env.KIS_ACCOUNT_NO || '').replace(/\s+/g, '');
+  // An unset switch with all three vault secrets present means the paper (모의투자) server:
+  // a dashboard text variable is dropped by the next source deploy, the secrets are not.
+  // Live inquiry always requires the explicit 'live' switch.
+  const raw = String(env.INVEST_BROKER_READONLY_KIS ?? '').trim();
+  const environment = raw || (appKey && appSecret && account ? 'paper' : '');
+  if (!['paper', 'live'].includes(environment)) return { enabled: false, reason: 'KIS_READONLY_SWITCH_OFF' };
   if (!appKey || !appSecret) return { enabled: false, reason: 'KIS_VAULT_CREDENTIAL_MISSING', environment };
   const m = account.match(/^(\d{8})-?(\d{2})$/);
   if (!m) return { enabled: false, reason: 'KIS_ACCOUNT_REFERENCE_INVALID', environment };
