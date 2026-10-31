@@ -52,6 +52,9 @@ const CHOOSE_ACCOUNT=site==='seonammedi'&&params.get('select_account')==='1';
 const CHURCH_CHOOSE_ACCOUNT=site==='church'&&params.get('select_account')==='1';
 // 동행: 저장된 로그인으로 자동 진행하지 않고 매번 Google 계정을 고르게 한다(2026-10-28).
 const SINGLES_CHOOSE_ACCOUNT=site==='singles'&&params.get('select_account')==='1';
+// Platform admin tools (/admin/site-admins, /admin/people) let the operator pick the
+// Google account explicitly instead of reusing whatever provider session is stored.
+const ADMIN_TOOL_CHOOSE_ACCOUNT=site==='portal'&&params.get('select_account')==='1';
 const PREOPENED_BRIDGE=DIRECT_LOGIN&&!CHOOSE_ACCOUNT&&params.get('bridge')==='preopened';
 const GOOGLE_BRIDGE_ORIGIN=location.origin;
 if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='1';
@@ -102,7 +105,9 @@ function safeReturn(raw){
       &&target.searchParams.get('via')==='ekodi'
       &&target.searchParams.get('return_to')?.startsWith('https://ekodi.kr/admin/')
       &&![...target.searchParams.keys()].some(key=>!['site','via','return_to'].includes(key));
-    const internalEkodi=adminReturn||(config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath));
+    const adminToolReturn=config.kind==='portal'&&target.origin==='https://ekodi.kr'
+      &&['/admin/site-admins','/admin/site-admins/','/admin/people','/admin/people/'].includes(target.pathname);
+    const internalEkodi=adminReturn||adminToolReturn||(config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath));
     const trustedLegacy=target.origin!=='https://ekodi.kr'&&allowedOrigins.has(target.origin);
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
     const churchPath=config.kind!=='church'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));
@@ -353,16 +358,18 @@ async function renderGoogle(){
     if(CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     if(CHURCH_CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     if(SINGLES_CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
+    if(ADMIN_TOOL_CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     window.google.accounts.id.renderButton(host,googleButtonOptions);
     if(CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(CHURCH_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(SINGLES_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
+    if(ADMIN_TOOL_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(DIRECT_LOGIN){
       notice('Google 계정 선택창을 여는 중입니다.');
       window.google.accounts.id.prompt(notification=>{
         if(notification?.isNotDisplayed?.()||notification?.isSkippedMoment?.())notice('Google 계정 선택창을 바로 열 수 없습니다. 아래 Google 버튼으로 계속해 주세요.');
       });
-    }else notice((CHOOSE_ACCOUNT||CHURCH_CHOOSE_ACCOUNT||SINGLES_CHOOSE_ACCOUNT)?'아래 Google 버튼을 눌러 사용할 계정을 선택해 주세요. 자동 로그인은 진행하지 않습니다.':'처음 한 번만 Google 계정으로 본인을 확인합니다.');
+    }else notice((CHOOSE_ACCOUNT||CHURCH_CHOOSE_ACCOUNT||SINGLES_CHOOSE_ACCOUNT||ADMIN_TOOL_CHOOSE_ACCOUNT)?'아래 Google 버튼을 눌러 사용할 계정을 선택해 주세요. 자동 로그인은 진행하지 않습니다.':'처음 한 번만 Google 계정으로 본인을 확인합니다.');
   }catch(error){
     console.error('prepare central identity',error);
     if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='fallback';
@@ -378,6 +385,7 @@ async function prepare(){
   if(CHOOSE_ACCOUNT){await renderGoogle();return}
   if(CHURCH_CHOOSE_ACCOUNT){await renderGoogle();return}
   if(SINGLES_CHOOSE_ACCOUNT){await renderGoogle();return}
+  if(ADMIN_TOOL_CHOOSE_ACCOUNT){await renderGoogle();return}
   if(existing){
     if(FORCE_ACCOUNT&&String(existing.user?.email||'').trim().toLowerCase()!==EXPECTED_ACCOUNT){await clearStaleSession();await renderGoogle();return}
     if(await handoffExistingSession(existing))return;
