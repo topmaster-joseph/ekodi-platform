@@ -7,7 +7,7 @@ const MODULES=Object.freeze([
   '/my/life-communication.js?v=20260824-life-ai-1',
 ]);
 const CLASSIC=Object.freeze([
-  '/my/church-marketing-ai.js?v=20260827-church-marketing-1',
+  '/my/church-marketing-ai.js?v=20261101-church-channel-center',
   '/my/channel-automation.js?v=20260903-channel-automation-1',
 ]);
 let startPromise=null;
