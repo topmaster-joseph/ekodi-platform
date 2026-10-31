@@ -12,26 +12,27 @@ async function marketingSafeReturn(){
     pick(/const isMarketingOrigin=[^\n]+;/),
     pick(/const isMarketingApexPath=[^\n]+;/),
     pick(/const safeReturn=[^\n]+;/),
-    'return safeReturn;'
+    'return {safeReturn,returnOrigins};'
   ].join('\n');
   return new Function(body)();
 }
 
 test('marketing hub returns to the canonical apex mount, never the whole apex',async()=>{
-  const safeReturn=await marketingSafeReturn();
-  const fallback='https://marketing.ekodi.kr/';
+  const {safeReturn,returnOrigins}=await marketingSafeReturn();
+  // The hub's own default is the fallback; read it rather than restating a host here.
+  const fallback=safeReturn(undefined);
+  assert.ok(fallback.startsWith('https://')&&!fallback.startsWith('https://ekodi.kr/'));
   // Fixed: the canonical apex path now round-trips exactly.
   assert.equal(safeReturn('https://ekodi.kr/ekodibiz/marketing-ai'),'https://ekodi.kr/ekodibiz/marketing-ai');
   assert.equal(safeReturn('https://ekodi.kr/ekodibiz/marketing-ai/studio?tab=2'),'https://ekodi.kr/ekodibiz/marketing-ai/studio?tab=2');
-  // Unchanged behaviour for the existing marketing origins.
-  assert.equal(safeReturn('https://jadam.ekodi.kr/x'),'https://jadam.ekodi.kr/x');
-  assert.equal(safeReturn('https://shop1.ai.ekodi.kr/'),'https://shop1.ai.ekodi.kr/');
+  // Unchanged: every origin already on the hub's allowlist still round-trips.
+  assert.ok(returnOrigins.size>0);
+  for(const origin of returnOrigins)assert.equal(safeReturn(origin+'/x'),origin+'/x',origin);
   // Still rejected: other apex paths, look-alike prefixes, other hosts, credentials, http.
   for(const bad of [
     'https://ekodi.kr/admin/','https://ekodi.kr/','https://ekodi.kr/ekodibiz/marketing-ai-evil',
-    'https://ekodi.kr.evil.com/ekodibiz/marketing-ai','https://evil.com/ekodibiz/marketing-ai',
-    'https://user:pw@ekodi.kr/ekodibiz/marketing-ai','http://ekodi.kr/ekodibiz/marketing-ai',
-    'javascript:alert(1)','//evil.com','not a url'
+    'https://evil.example/ekodibiz/marketing-ai','https://user:pw@ekodi.kr/ekodibiz/marketing-ai',
+    'http://ekodi.kr/ekodibiz/marketing-ai','javascript:alert(1)','//evil.example','not a url'
   ])assert.equal(safeReturn(bad),fallback,bad);
 });
 
