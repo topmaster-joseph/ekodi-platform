@@ -189,9 +189,9 @@ jobs:
               kakao) expect='https://kauth.kakao.com/oauth/authorize?';;
               naver) expect='https://nid.naver.com/oauth2.0/authorize?';;
             esac
-            [[ "$url" == "$expect"* ]] || { echo "$provider authorize URL has an unexpected host"; exit 1; }
-            [[ "$url" == *'redirect_uri=https%3A%2F%2Fekodi.kr%2Fauth%2F'* ]] || { echo "$provider redirect URI mismatch"; exit 1; }
-            result=$(curl -sS -o /tmp/authorize-$provider.html -w '%{http_code} %{redirect_url}' "$url")
+            [[ "$url" == "$expect"* ]] || { echo "::error title=$provider authorize URL::unexpected host"; exit 1; }
+            [[ "$url" == *'redirect_uri=https%3A%2F%2Fekodi.kr%2Fauth%2F'* ]] || { echo "::error title=$provider authorize URL::redirect URI mismatch"; exit 1; }
+            result=$(curl -sS -o /tmp/authorize-$provider.html -w '%{http_code} %{redirect_url}' "$url") || { echo "::error title=$provider authorize request::curl could not reach the provider"; exit 1; }
             echo "$provider authorize -> $result"
             case "$provider" in
               kakao)
@@ -201,7 +201,11 @@ jobs:
                 fi
                 ;;
               naver)
-                if grep -Eiq 'invalid|error|오류' /tmp/authorize-naver.html && [[ "$result" != 302* ]]; then echo 'Naver refused the authorize request'; exit 1; fi
+                # Surface a query-free summary as an annotation (logs may be unreadable to agents).
+                loc="$(printf '%s' "${result#* }" | sed 's/[?#].*//')"
+                tokens="$(grep -Eoi 'redirect_uri_mismatch|invalid_request|invalid_client|unauthorized_client|access_denied|등록되지 않은[^<\"]{0,24}|Callback URL[^<\"]{0,24}|서비스 URL[^<\"]{0,24}|검수[^<\"]{0,24}|권한[^<\"]{0,24}' /tmp/authorize-naver.html | sort -u | head -6 | tr '\n' ';' || true)"
+                echo "::notice title=Naver authorize probe::status=${result%% *} location=${loc:-none} markers=${tokens:-none}"
+                if grep -Eiq 'invalid|error|오류' /tmp/authorize-naver.html && [[ "$result" != 302* ]]; then echo "::error title=Naver refused the authorize request::status=${result%% *} location=${loc:-none} markers=${tokens:-none}"; exit 1; fi
                 ;;
             esac
           done
