@@ -1,4 +1,4 @@
-import { getSponsoredAiAllowance, recordProviderUsage } from './api-usage-meter.js';
+import { getPrepaidCreditAllowance, getSponsoredAiAllowance, recordProviderUsage } from './api-usage-meter.js';
 import { projectForExternalAi } from './secure-projection.js';
 import { fetchAnthropicMessages } from './anthropic-workspace.js';
 
@@ -25,6 +25,9 @@ async function budgetGuard(env) {
   }
   const allowance = await getSponsoredAiAllowance(env);
   if (!allowance.allowed) throw new Error('EKODI_AI_BUDGET_LIMIT');
+  // AI-COST-002: Claude runs only on prepaid credit; stop at (credit - reserve).
+  const credit = await getPrepaidCreditAllowance(env, 'anthropic');
+  if (!credit.allowed) throw new Error('EKODI_ANTHROPIC_PREPAID_CREDIT_LIMIT');
 }
 
 function buildInput(taskName, context) {
@@ -86,7 +89,11 @@ export function createAnthropicProvider(env = {}, options = {}) {
       }, fetchImpl);
       let data = null;
       try { data = await response.json(); } catch {}
-      if (!response.ok) throw new Error(`ANTHROPIC_HTTP_${response.status}`);
+      if (!response.ok) {
+        const message = String(data?.error?.message || '').toLowerCase();
+        if (response.status === 400 && message.includes('credit balance')) throw new Error('ANTHROPIC_CREDIT_BALANCE_LOW');
+        throw new Error(`ANTHROPIC_HTTP_${response.status}`);
+      }
       const output = extractText(data);
       if (!output) throw new Error('ANTHROPIC_EMPTY_RESPONSE');
       const usage = normalizeUsage(data?.usage || {});
@@ -95,7 +102,7 @@ export function createAnthropicProvider(env = {}, options = {}) {
           provider: 'anthropic',
           model: String(data?.model || model),
           surface: 'orchestrator',
-          funding: 'ekodi-sponsored',
+          funding: 'prepaid-credit',
           requestId: String(data?.id || ''),
           usage,
         }).catch(() => {});
