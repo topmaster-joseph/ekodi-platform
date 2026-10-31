@@ -532,7 +532,8 @@ async function updateAccount(request, env, id) {
     .bind(role, status, now, id).run();
   const linkedAdmin = await env.DB.prepare('SELECT id FROM admins WHERE email = ?').bind(target.email).first();
   if (linkedAdmin) {
-    await env.DB.prepare('UPDATE admins SET role = ? WHERE id = ?').bind(role, linkedAdmin.id).run();
+    // A disabled allowlist row must not leave a privileged legacy admins.role behind.
+    await env.DB.prepare('UPDATE admins SET role = ? WHERE id = ?').bind(status === 'active' ? role : 'viewer', linkedAdmin.id).run();
     if (status === 'disabled') {
       await env.DB.prepare('DELETE FROM admin_privileged_sessions WHERE admin_id = ?').bind(linkedAdmin.id).run();
       await env.DB.prepare('DELETE FROM sessions WHERE admin_id = ?').bind(linkedAdmin.id).run();
@@ -558,6 +559,8 @@ async function removeAccount(request, env, id) {
   if (linkedAdmin) {
     await env.DB.prepare('DELETE FROM admin_privileged_sessions WHERE admin_id = ?').bind(linkedAdmin.id).run();
     await env.DB.prepare('DELETE FROM sessions WHERE admin_id = ?').bind(linkedAdmin.id).run();
+    // Removal revokes the legacy role as well, so no email-keyed path keeps platform scope.
+    await env.DB.prepare("UPDATE admins SET role = 'viewer' WHERE id = ?").bind(linkedAdmin.id).run();
   }
   await env.DB.prepare('DELETE FROM admin_google_accounts WHERE id = ?').bind(id).run();
   await writeAudit(env.DB, gate.admin.id, 'admin_google.remove', 'admin-access', target.email + ':' + target.role + ':' + target.status);
