@@ -23,6 +23,8 @@ on:
       - 'education-instructor-docs.js'
       - 'scripts/edu-instructor-gate-verifier.mjs'
       - 'scripts/verify-education-live-studio-native.mjs'
+      - 'scripts/verify-education-screen-share-native.mjs'
+      - 'test/education-screen-share-probe-fixture.test.mjs'
       - 'scripts/education-probe-annotate.mjs'
       - 'test/education-native-security-observations.test.mjs'
       - 'research/migrations/**'
@@ -50,6 +52,8 @@ on:
       - 'education-instructor-docs.js'
       - 'scripts/edu-instructor-gate-verifier.mjs'
       - 'scripts/verify-education-live-studio-native.mjs'
+      - 'scripts/verify-education-screen-share-native.mjs'
+      - 'test/education-screen-share-probe-fixture.test.mjs'
       - 'scripts/education-probe-annotate.mjs'
       - 'test/education-native-security-observations.test.mjs'
       - 'research/migrations/**'
@@ -267,8 +271,25 @@ jobs:
         run: |
           set -euo pipefail
           if npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.education.toml --json > /tmp/edu-deployments.log 2>&1; then
-            echo 'Stable Education Worker exists; using guarded release.'
-            node scripts/guarded-worker-release.mjs --manifest deploy/manifests/education.worker.json
+            # Cloudflare only applies Durable Object migrations through `wrangler deploy`;
+            # `versions upload` (the guarded path) rejects a release whose config carries a
+            # migration the live Worker has not applied yet. The EducationScreenRoom migration
+            # is additive (new SQLite class, no rename/delete), so a pending tag is applied once
+            # with deploy and every later release returns to the guarded path. The post-release
+            # verification steps below still gate this run.
+            wanted_tag="$(sed -n 's/^tag *= *"\(.*\)"/\1/p' wrangler.education.toml | tail -1)"
+            live_tag="$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s).result||[];const w=r.find(x=>x.id==="ekodi-education");process.stdout.write(String(w?.migration_tag||""))})')"
+            echo "Durable Object migration: live='${live_tag:-none}' wanted='${wanted_tag:-none}'"
+            if [ -n "$wanted_tag" ] && [ "$live_tag" != "$wanted_tag" ]; then
+              if grep -Eq '^(renamed_classes|deleted_classes|transferred_classes)' wrangler.education.toml; then
+                echo '::error title=Education DO migration::Non-additive Durable Object migration requires an explicit operator release.'; exit 1
+              fi
+              echo 'Applying pending additive Durable Object migration with a one-time deploy.'
+              npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.education.toml
+            else
+              echo 'Stable Education Worker exists; using guarded release.'
+              node scripts/guarded-worker-release.mjs --manifest deploy/manifests/education.worker.json
+            fi
           elif grep -Eq 'This Worker does not exist|has no deployments|code: 10007' /tmp/edu-deployments.log; then
             echo 'No Education production Worker exists; bootstrapping verified source.'
             npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.education.toml

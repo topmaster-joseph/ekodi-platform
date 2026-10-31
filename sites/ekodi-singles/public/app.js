@@ -45,6 +45,11 @@ function paywall(h,action){
  box.append(button('계좌이체 구독 안내',()=>location.assign('/singles/subscribe'),'primary'));h.append(box);
 }
 function errorText(error){
+ if(error?.message==='refund_trace_required')return '은행 앱에서 송금한 뒤 송금 거래번호(4~100자)를 입력해 주세요.';
+ if(error?.message==='refund_trace_duplicate')return '이미 다른 환불에 쓰인 송금 거래번호입니다.';
+ if(error?.message==='invoice_not_refundable')return '환불 대상이 아닌 청구서입니다.';
+ if(error?.message==='invoice_already_refunded')return '이미 다른 거래번호로 환불 완료된 청구서입니다.';
+ if(error?.message==='operator_self_refund_forbidden')return '자신의 청구서는 직접 환불 처리할 수 없습니다. 다른 운영자가 처리해야 합니다.';
  if(error?.message==='paid_membership_required')return '유료회원(구독 중)만 이용할 수 있습니다. 동행 안내·가입에서 기간제 구독권을 구매해 주세요.';
  if(error?.message==='invoice_not_payable')return '이미 결제됐거나 기한이 지난 청구서입니다.';
  if(error?.message==='invoice_not_found')return '청구서를 찾을 수 없습니다.';
@@ -270,6 +275,7 @@ async function showPaidMessages(h){
    paragraph(card,'내 청구서: '+money(r.invoice.amount_krw)+' · '+(INVOICE_STATUS[r.invoice.status]||r.invoice.status)+(r.invoice.status==='unpaid'?' · '+r.invoice.due_at.slice(0,10)+'까지':' · 상대 결제를 기다리는 중'));
    if(r.invoice.status==='unpaid')card.append(button('결제하기(계좌이체)',()=>payInvoice(card,r.invoice,null),'primary'));
   }
+  if(r.status==='lapsed')paragraph(card,'7일 안에 두 사람의 결제가 끝나지 않아 연결이 취소됐습니다.'+(r.invoice?' 내 청구서: '+(INVOICE_STATUS[r.invoice.status]||r.invoice.status)+invoiceTail(r.invoice):''));
  });
  h.append(text('h3','연결된 회원'));
  appendList(h,d.connections||[],(card,c)=>{
@@ -426,6 +432,7 @@ function priceTable(box){
  }
  box.append(table);
 }
+function termsLink(box){const p=text('p','','muted');const a=text('a','동행 이용약관');a.href='/singles/terms';a.target='_blank';a.rel='noopener noreferrer';p.append('요금·환불과 서비스 성격(결혼 상대 소개·알선 없음)은 ',a,'에서 확인할 수 있습니다.');box.append(p)}
 function showGuide(h){
  const box=text('section','','member-card guide');
  box.append(text('h3','에코디 동행 이용 안내'));
@@ -446,6 +453,7 @@ function showGuide(h){
  const steps=document.createElement('ol');steps.className='join-steps';
  for(const t of ['로그인 후 참여 동의','성인 본인인증(휴대폰 본인인증 또는 운영자 확인)','구독권 선택·계좌이체','운영자 입금 확인 → 구독 시작(유료회원)'])steps.append(text('li',t));
  box.append(text('h4','유료회원 시작 순서'),steps);
+ termsLink(box);
  h.append(box);
 }
 function subscriptionButtons(box,h){
@@ -460,6 +468,7 @@ async function showJoin(h){
  const box=text('section','','paywall');box.append(text('h3','유료회원 시작 · 기간제 구독권 (가입비 없음)'));
  paragraph(box,'결제수단은 계좌이체입니다. 구독권을 고르면 주문번호가 발급됩니다. 입금하고 "계좌이체 완료 신고"를 누르면 운영자가 은행 내역과 대조해 확인하고, 확인되는 즉시 구독이 시작됩니다.');
  paragraph(box,'구독을 이용하기 시작한 뒤 중도에 해지해도 남은 기간은 환불되지 않습니다. 결제 후 7일 이내 이용하지 않았다면 청약철회로 전액 환불됩니다.');
+ termsLink(box);
  let member=null;try{member=(await api('/me')).member}catch{}
  if(!member){paragraph(box,'먼저 "내 정보"에서 참여 동의를 저장해 주세요.');box.append(button('참여 동의하러 가기',()=>location.assign('/singles/my'),'primary'));h.append(box);return}
  if(!member.adult_verified){
@@ -471,7 +480,10 @@ async function showJoin(h){
  h.append(box);
  await reloadBankOrders(h);
 }
-const INVOICE_STATUS={unpaid:'결제 대기',paid:'결제 완료',void:'취소(기한 경과)',refund_due:'환불 예정'};
+const INVOICE_STATUS={unpaid:'결제 대기',paid:'결제 완료',void:'취소(기한 경과)',refund_due:'환불 예정',refunded:'환불 완료'};
+// 환불 지급 기한: 환불 대상 확정일로부터 3영업일(주말 제외, 공휴일 미반영).
+function refundDeadline(iso){const d=new Date(iso||Date.now());let n=0;while(n<3){d.setDate(d.getDate()+1);const w=d.getDay();if(w!==0&&w!==6)n++}return d.toISOString().slice(0,10)}
+function invoiceTail(inv){if(inv.status==='unpaid')return ' · '+inv.due_at.slice(0,10)+'까지';if(inv.status==='refund_due')return ' · '+refundDeadline(inv.refund_due_at)+'까지 입금하신 계좌로 돌려드립니다';if(inv.status==='refunded'&&inv.refunded_at)return ' · '+inv.refunded_at.slice(0,10)+' 송금';return ''}
 async function payInvoice(card,inv,h){
  try{const r=await api('/bank/invoices/'+inv.id+'/order',{method:'POST',body:{}});
   notice(card,'결제 주문 '+r.order.reference+' · '+[r.order.bank_name,r.order.account_number,r.order.account_holder].filter(Boolean).join(' ')+'로 '+money(r.order.amount_krw)+'을 입금한 뒤 "나의 입금·확인 내역"에서 완료 신고를 눌러 주세요.');
@@ -491,7 +503,7 @@ async function showPaidWallet(h){
   if(!(w.invoices||[]).length)paragraph(box,'아직 청구서가 없습니다.');
   for(const inv of w.invoices||[]){
    const card=text('article','','mini-card');
-   card.append(text('p',(inv.role==='requester'?'보낸 요청':'수락한 요청')+' · '+money(inv.amount_krw)+' · '+(INVOICE_STATUS[inv.status]||inv.status)+(inv.status==='unpaid'?' · '+inv.due_at.slice(0,10)+'까지':'')));
+   card.append(text('p',(inv.role==='requester'?'보낸 요청':'수락한 요청')+' · '+money(inv.amount_krw)+' · '+(INVOICE_STATUS[inv.status]||inv.status)+invoiceTail(inv)));
    if(inv.status==='unpaid')card.append(button('결제하기(계좌이체)',()=>payInvoice(card,inv,h),'primary'));
    box.append(card);
   }
@@ -524,6 +536,34 @@ async function showOwnerProposals(h){
    box.append(card);
   }
  }catch(e){notice(box,e.status===403?'소유자(설정 권한 운영자)만 볼 수 있습니다.':errorText(e))}
+ h.append(box);
+}
+async function showRefundsAdmin(h){
+ const box=text('section','','member-card');box.dataset.refundAdmin='1';box.append(text('h3','환불 송금 처리 · 운영자 전용'));
+ paragraph(box,'상대가 7일 안에 결제하지 않아 연결이 취소된 경우, 먼저 결제한 회원에게 돌려드릴 금액입니다. 돈은 자동으로 나가지 않습니다. 은행 앱에서 원래 입금한 계좌로 직접 송금한 뒤, 송금 거래번호를 입력해 "환불 완료"로 기록하세요.');
+ try{
+  const d=await api('/bank/admin/refunds');
+  box.append(text('p',d.pending?'환불할 건 '+d.pending+'건 · 합계 '+money(d.pending_krw):'환불할 건이 없습니다.','wallet-balance'));
+  for(const r of d.refunds||[]){
+   const card=text('article','','mini-card');
+   card.append(text('p',(r.email||'회원')+' · '+money(r.amount_krw)+' · '+(INVOICE_STATUS[r.status]||r.status)));
+   paragraph(card,'원 결제 주문 '+(r.order_reference||'-')+' · 입금 거래번호 '+(r.paid_trace||'-')+(r.paid_at?' · 입금 '+r.paid_at.slice(0,10):''));
+   if(r.status==='refunded'){paragraph(card,'송금 거래번호 '+r.refund_trace+' · '+(r.refunded_at||'').slice(0,16).replace('T',' ')+' 완료');box.append(card);continue}
+   paragraph(card,'지급 기한: '+refundDeadline(r.refund_due_at)+'까지(3영업일)');
+   if(r.self){paragraph(card,'본인 청구서는 다른 운영자가 처리해야 합니다.');box.append(card);continue}
+   const field=text('label','송금 거래번호','field'),input=document.createElement('input');
+   input.type='text';input.maxLength=100;input.placeholder='은행 앱의 이체 거래번호 또는 메모(계좌번호 입력 금지)';field.append(input);card.append(field);
+   const msg=text('p','','status-text');
+   card.append(button('송금 완료로 기록',async()=>{
+    const trace=input.value.trim();
+    if(trace.length<4){msg.textContent=errorText({message:'refund_trace_required'});return}
+    if(!confirm(money(r.amount_krw)+'을 '+(r.email||'회원')+'님 입금 계좌로 송금하셨습니까? 기록 후에는 되돌릴 수 없습니다.'))return;
+    try{await api('/bank/admin/refunds/'+r.id+'/complete',{method:'POST',body:{refund_trace:trace}});msg.textContent='환불 완료로 기록했습니다.';input.disabled=true}
+    catch(e){msg.textContent=errorText(e)}
+   },'primary'),msg);
+   box.append(card);
+  }
+ }catch(e){if(e?.status===403)notice(box,'입금 확인 권한이 있는 운영자만 볼 수 있습니다.');else notice(box,errorText(e))}
  h.append(box);
 }
 async function showMembersAdmin(h){
@@ -746,39 +786,6 @@ async function showAllPricing(h){
   h.append(box);
  }catch(e){if(e?.status===403)notice(h,'가격관리 역할이 발급되지 않았습니다.');else notice(h,'가격관리 설정을 불러오지 못했습니다.')}
 }
-async function showBrokerageReadiness(h){
- try{
-  const data=await api('/bank/admin/brokerage-readiness');
-  const panel=text('section','','member-card');
-  panel.append(text('h3','국내·국제결혼중개업 신고·등록 준비'));
-  paragraph(panel,'현재 결혼중개 영업은 비활성입니다. 진행 상태 저장은 행정기관 신고 수리 또는 등록을 의미하지 않습니다.');
-  const official=text('a','정부24 공식 민원 안내 · 국내 신고 / 국제 등록 ↗','outline');
-  official.href='https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13510000012';
-  official.target='_blank';official.rel='noopener noreferrer';panel.append(official);
-  for(const regime of ['domestic','international']){
-   const group=text('section','','member-card');
-   group.append(text('h4',regime==='domestic'?'국내결혼중개업 신고':'국제결혼중개업 등록'));
-   for(const item of data.items||[]){
-    if(item.regime!==regime)continue;
-    const field=text('div','','field');field.append(text('label',item.requirement));
-    const progress=document.createElement('select');
-    for(const [value,label] of [['not_started','준비 전'],['collecting','자료 수집'],['ready_for_review','검토 준비'],['submitted','관할기관 제출']]){
-     const opt=document.createElement('option');opt.value=value;opt.textContent=label;progress.append(opt);
-    }
-    progress.value=item.progress;
-    const evidence=document.createElement('input');evidence.type='text';evidence.maxLength=240;
-    evidence.placeholder='내부 증빙 문서번호(주민등록번호 입력 금지)';evidence.value=item.evidence_ref||'';
-    const feedback=text('p','','status-text');
-    field.append(progress,evidence,button('진행상태 저장',async()=>{
-     try{await api('/bank/admin/brokerage-readiness',{method:'PUT',body:{regime,code:item.code,progress:progress.value,evidence_ref:evidence.value.trim()}});feedback.textContent='저장됨 · 인허가 완료를 의미하지 않음'}
-     catch(e){feedback.textContent=errorText(e)}
-    }),feedback);group.append(field);
-   }
-   panel.append(group);
-  }
-  h.append(panel);
- }catch(e){if(e?.status===403)notice(h,'인허가 관리 권한이 없습니다. 검증된 EKODI 계정에 운영자 역할이 필요합니다.');else notice(h,'인허가 준비자료를 조회하지 못했습니다.')}
-}
 // AUTH-RETURN-CONTINUITY-001 v1.27.4: after login the page must visibly confirm who is signed in,
 // and a prelaunch gate must never read like a login failure.
 function accountLabel(){const u=state.session?.user||{};const name=u.user_metadata?.full_name||u.user_metadata?.name;return String((typeof name==='string'&&name.trim())?name.trim():(u.email||'EKODI 회원')).slice(0,60)}
@@ -824,7 +831,7 @@ async function signedIn(status){
  else if(page==='/messages')await showMessages(h);
  else if(page==='/subscribe'&&state.paidModel){if(state.paid)await showPaidWallet(h);else{showGuide(h);await showJoin(h);}}
  else if(page==='/subscribe'){await showWallet(h);await showSubscription(h);}
- else if(page==='/admin'){await showOwnerProposals(h);await showMembersAdmin(h);await showBankAdmin(h);await showEventPricing(h);await showReportModeration(h);await showAllPricing(h);await showBrokerageReadiness(h);}
+ else if(page==='/admin'){await showOwnerProposals(h);await showRefundsAdmin(h);await showMembersAdmin(h);await showBankAdmin(h);await showEventPricing(h);await showReportModeration(h);await showAllPricing(h);}
  else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
@@ -876,8 +883,7 @@ async function main(){
   showSignedInAccount();
   $('serviceStage').textContent='로그인 완료 · 운영 준비';
   const h=holder();accountCard(h);
-  notice(h,'회원가입·메시지·결제는 아직 중단돼 있습니다. 별도 권한이 확인된 관리자만 가격 및 인허가 준비 상태를 수정할 수 있습니다.');
-  await showBrokerageReadiness(h);
+  notice(h,'회원가입·메시지·결제는 아직 중단돼 있습니다. 별도 권한이 확인된 관리자만 가격을 수정할 수 있습니다.');
   await showAllPricing(h);
   return;
  }
