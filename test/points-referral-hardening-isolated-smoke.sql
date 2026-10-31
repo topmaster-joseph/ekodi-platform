@@ -68,15 +68,21 @@ BEGIN
     RAISE EXCEPTION 'Inviter self-account not refused: %',v_denied;
   END IF;
 
-  -- Case 3: fresh email, but the Person also carries an older (revoked)
-  -- identity linked before the invite -> legacy account relink, denied.
+  -- Case 3: fresh email, but the Person also carries a (revoked) identity
+  -- whose auth account predates the invite -> legacy account, denied.
+  -- (Identities are attached by INSERT: reparenting via UPDATE is blocked
+  -- by public.block_unreviewed_person_reparent where that guard exists.)
   UPDATE public.login_identities SET email='fresh@example.invalid' WHERE auth_user_id=v_new_auth;
-  UPDATE public.login_identities SET person_id=v_new_person,status='revoked' WHERE auth_user_id=v_old_auth;
+  INSERT INTO auth.users(id,created_at,email_confirmed_at)
+    VALUES(gen_random_uuid(),now()-interval '45 days',now()-interval '45 days')
+    RETURNING id INTO v_old_auth;
+  INSERT INTO public.login_identities(person_id,auth_user_id,provider,provider_subject,email,status)
+    VALUES(v_new_person,v_old_auth,'qa3',gen_random_uuid()::text,'legacy-alt@example.invalid','revoked');
   v_denied:=NULL;
   BEGIN PERFORM public.ekodi_points_confirm_shared_signup(v_code);
   EXCEPTION WHEN raise_exception THEN v_denied:=SQLERRM;END;
   IF v_denied IS DISTINCT FROM 'REFERRAL_NOT_NEW_MEMBER' THEN
-    RAISE EXCEPTION 'Relinked legacy identity not refused: %',v_denied;
+    RAISE EXCEPTION 'Person with legacy auth identity not refused: %',v_denied;
   END IF;
 
   -- Case 4: remove the legacy link -> genuine new member is credited once.
