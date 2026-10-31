@@ -6,13 +6,13 @@ do $r$ begin
   if not exists(select 1 from pg_roles where rolname='service_role') then create role service_role nologin bypassrls; end if;
 end $r$;
 create schema auth;
-create table auth.users(id uuid primary key default gen_random_uuid(), email text,
+create table auth.users(id uuid primary key default gen_random_uuid(), email text, aud text, role text, updated_at timestamptz,
   created_at timestamptz not null default now(), confirmed_at timestamptz,
   email_confirmed_at timestamptz, phone_confirmed_at timestamptz);
 create function auth.uid() returns uuid language sql stable as
  $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
 create function auth.role() returns text language sql stable as $$ select 'authenticated' $$;
-create table public.tenants(id uuid primary key default gen_random_uuid());
+create table public.tenants(id uuid primary key default gen_random_uuid(), slug text not null unique default ('t-'||gen_random_uuid()::text), name text not null default 'tenant');
 create table public.people(id uuid primary key default gen_random_uuid(), ekodi_id text unique,
   display_name text, status text not null default 'active', created_at timestamptz not null default now(),
   updated_at timestamptz not null default now());

@@ -6,6 +6,9 @@
 //   POINTS_SMOKE_DATABASE_URL=postgres://postgres@localhost:5432/points_smoke \
 //     node scripts/run-points-sql-smokes.mjs
 //
+// --existing-schema: the target is an ephemeral Supabase (CI) where all
+// migrations are already applied; fixtures are loaded inside each rollback.
+//
 // Refuses Supabase hosts so it can never touch development or production data.
 import {execFileSync} from 'node:child_process';
 import {readdirSync, readFileSync} from 'node:fs';
@@ -20,19 +23,32 @@ const root = new URL('..', import.meta.url).pathname;
 const psql = (args, input) => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-q', '-At', ...args],
   {input, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe']});
 
+const existing = process.argv.includes('--existing-schema');
 const already = psql(['-c', "select to_regclass('public.ekodi_point_ledger') is not null"]).trim();
-if (already === 't') { console.error('REFUSED: target already contains point tables; use an empty DB.'); process.exit(2); }
-
-psql(['-f', join(root, 'test/fixtures/points-supabase-core-stub.sql')]);
-psql(['-f', join(root, 'test/fixtures/points-attendance-isolated-core.sql')]);
-const migrations = readdirSync(join(root, 'supabase/migrations'))
-  .filter(f => /_ekodi_(site_activity_points|points)_.*\.sql$/.test(f)).sort();
-for (const f of migrations) psql(['-f', join(root, 'supabase/migrations', f)]);
-console.log(`applied ${migrations.length} point migrations`);
+const read = f => readFileSync(join(root, f), 'utf8');
+let fixtures = '';
+if (existing) {
+  if (already !== 't') { console.error('point migrations are not applied on the target'); process.exit(2); }
+  if (psql(['-c', 'select count(*) from public.ekodi_point_ledger']).trim() !== '0') {
+    console.error('REFUSED: target holds point ledger rows; use an ephemeral database.'); process.exit(2);
+  }
+  fixtures = read('test/fixtures/points-attendance-isolated-core.sql') + '\n' + read('test/fixtures/points-ci-supabase-fixtures.sql');
+  console.log('using already-migrated ephemeral Supabase schema');
+} else {
+  if (already === 't') { console.error('REFUSED: target already contains point tables; use an empty DB.'); process.exit(2); }
+  psql(['-f', join(root, 'test/fixtures/points-supabase-core-stub.sql')]);
+  psql(['-f', join(root, 'test/fixtures/points-attendance-isolated-core.sql')]);
+  const migrations = readdirSync(join(root, 'supabase/migrations'))
+    .filter(f => /_ekodi_(site_activity_points|points)_.*\.sql$/.test(f)).sort();
+  for (const f of migrations) psql(['-f', join(root, 'supabase/migrations', f)]);
+  console.log(`applied ${migrations.length} point migrations`);
+}
+const countSql = 'select (select count(*) from public.ekodi_point_ledger)+(select count(*) from public.ekodi_point_wallets)+(select count(*) from public.ekodi_point_referral_rewards)+(select count(*) from public.people)+(select count(*) from auth.users)';
+const before = psql(['-c', countSql]).trim();
 
 const smokes = [
   ['points-behavioral-smoke.sql', null],
-  ['points-attendance-isolated-smoke.sql', 'ATTENDANCE_ISOLATED_SMOKE_PASS', 'insert into public.tenants default values;'],
+  ['points-attendance-isolated-smoke.sql', 'ATTENDANCE_ISOLATED_SMOKE_PASS', existing ? '' : 'insert into public.tenants default values;'],
   ['points-operator-isolated-smoke.sql', 'POINT_OPERATOR_ISOLATED_SMOKE_PASS'],
   ['points-active-heartbeat-isolated-smoke.sql', 'POINT_CLOCK_ISOLATED_SMOKE_PASS'],
   ['points-verified-referrals-isolated-smoke.sql', 'REFERRAL_ISOLATED_NEGATIVE_SMOKE_PASS'],
@@ -41,14 +57,14 @@ const smokes = [
 ];
 let failed = 0;
 for (const [file, marker, prelude = ''] of smokes) {
-  const sql = `BEGIN;\n${prelude}\n${readFileSync(join(root, 'test', file), 'utf8')}\nselect 'SMOKE_COMPLETED';\nROLLBACK;\n`;
+  const sql = `BEGIN;\n${fixtures}\n${prelude}\n${readFileSync(join(root, 'test', file), 'utf8')}\nselect 'SMOKE_COMPLETED';\nROLLBACK;\n`;
   try {
     const out = psql([], sql);
     const ok = out.includes('SMOKE_COMPLETED') && (!marker || out.includes(marker));
     console.log(`${ok ? 'PASS' : 'FAIL'} ${file}`); if (!ok) failed++;
   } catch (e) { failed++; console.log(`FAIL ${file}\n${String(e.stderr || e.message).trim()}`); }
 }
-const residue = psql(['-c', 'select (select count(*) from public.ekodi_point_ledger)+(select count(*) from public.ekodi_point_wallets)+(select count(*) from public.ekodi_point_referral_rewards)+(select count(*) from public.people)']).trim();
-if (residue !== '0') { failed++; console.log(`FAIL rollback residue rows=${residue}`); }
+const after = psql(['-c', countSql]).trim();
+if (after !== before) { failed++; console.log(`FAIL rollback residue rows before=${before} after=${after}`); }
 else console.log('PASS rollback left no residue');
 process.exit(failed ? 1 : 0);

@@ -139,6 +139,12 @@ jobs:
           drop table public.__ekodi_grant_probe;
           SQL
 
+      - name: Execute activity point SQL smokes (rollback-only)
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
+        env:
+          POINTS_SMOKE_DATABASE_URL: ${{ env.TEST_DB_URL }}
+        run: node scripts/run-points-sql-smokes.mjs --existing-schema
+
       - name: Lint Postgres functions
         if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         run: >-
