@@ -13,21 +13,21 @@
   <figcaption data-mission-public-photo-caption hidden></figcaption>
 </figure></section>
 <section class="activities mission-home-current" id="saturday" aria-labelledby="mission-next-event">
-<div class="section-heading"><p class="eyebrow">EKODI MISSION · EVERY SATURDAY</p><h2 id="mission-next-event">이번 주 토요모임</h2><p>2024년 2월 3일부터 이어온 정기모임입니다. 매주 토요일 오전 11시, 말씀을 나누고 함께 식사합니다. 관심 있는 누구나 참여 답글을 남길 수 있습니다.</p></div>
+<div class="section-heading"><p class="eyebrow">EKODI MISSION · EVERY SATURDAY</p><h2 id="mission-next-event">이번 주 토요모임</h2><p>2024년 2월 3일부터 이어온 정기모임입니다. 매주 토요일 오전 11시, 말씀을 나누고 함께 식사합니다. 누구나 참여할 수 있으며, 답글은 선택 사항입니다.</p></div>
 <article class="activity-card mission-saturday-card" data-mission-saturday>
   <div class="activity-date mission-saturday-date"><span class="mission-weekly-label">매주 토요일</span><strong data-mission-saturday-date>토요일</strong><span>오전 11:00</span></div>
   <div class="activity-copy"><p class="tag">정기모임 · 성경토론 · 공동식사</p><h3>토요 성경토론과 함께하는 식사</h3>
   <p>매주 토요일 오전 11시, 에코디교회에서 성경을 읽고 토론하며 함께 식사합니다. 처음 오시는 분도 환영합니다.</p>
   <dl class="facts"><div><dt>일정</dt><dd>매주 토요일 오전 11시</dd></div><div><dt>장소</dt><dd>에코디교회</dd></div><div><dt>내용</dt><dd>성경토론 · 식사 · 교제</dd></div></dl>
   <div class="mission-saturday-feedback"><div class="mission-saturday-feedback-head"><h4>이번 주 참여 신청·답글</h4><span data-mission-saturday-count>참여 신청 확인 중</span></div>
-    <p class="mission-saturday-hint">답글을 남기려면 에코디 로그인이 필요합니다. 답글에 전화번호 등 개인정보를 적지 마세요.</p>
+    <p class="mission-saturday-hint">참여 신청은 에코디 로그인 후 가능하며, 답글은 남기지 않아도 됩니다. 답글에 전화번호 등 개인정보를 적지 마세요.</p>
     <ul class="mission-saturday-replies" data-mission-saturday-replies aria-live="polite"><li>이번 주 답글을 불러오고 있습니다.</li></ul>
     <form class="mission-saturday-form" data-mission-saturday-form>
       <div class="mission-saturday-form-fields"><label>표시 이름<input name="displayName" autocomplete="nickname" minlength="2" maxlength="30" required placeholder="닉네임"></label>
       <label>참여 의사<select name="attendance"><option value="join">참여하겠습니다</option><option value="question">문의합니다</option><option value="cancel">참여를 취소합니다</option></select></label></div>
-      <label>답글<textarea name="body" maxlength="500" rows="2" placeholder="예: 이번 주 모임에 참여하겠습니다." required></textarea></label>
-      <label class="mission-saturday-consent"><input name="publicConsent" type="checkbox" required> 표시 이름과 답글이 이 모임 페이지에 공개되는 것에 동의합니다.</label>
-      <div class="mission-saturday-form-actions"><button type="submit" class="button primary">참여 답글 등록·수정</button><a href="/auth/?site=mission&amp;return_to=https%3A%2F%2Fekodi.kr%2Fekodimission%23saturday" class="text-link" data-mission-saturday-login hidden>에코디 로그인</a></div>
+      <label>답글 (선택)<textarea name="body" maxlength="500" rows="2" placeholder="남기고 싶은 말이 있을 때만 입력하세요."></textarea></label>
+      <label class="mission-saturday-consent"><input name="publicConsent" type="checkbox" required> 표시 이름·참여 의사 및 입력한 답글(있는 경우)이 이 모임 페이지에 공개되는 것에 동의합니다.</label>
+      <div class="mission-saturday-form-actions"><button type="submit" class="button primary">참여 신청 등록·수정</button><a href="/auth/?site=mission&amp;return_to=https%3A%2F%2Fekodi.kr%2Fekodimission%23saturday" class="text-link" data-mission-saturday-login hidden>에코디 로그인</a></div>
       <p class="mission-saturday-status" data-mission-saturday-status role="status" aria-live="polite"></p>
     </form>
   </div></div>
