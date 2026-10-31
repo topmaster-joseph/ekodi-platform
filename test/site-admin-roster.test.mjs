@@ -18,7 +18,7 @@ function fakeDb() {
     bind: (...values) => statement(sql, values),
     async first() {
       if (/FROM customer_tenants WHERE slug = \?/.test(sql)) return args[0] === TENANT.slug ? TENANT : null;
-      if (/FROM admins WHERE lower\(trim\(email\)\) = \? AND role = 'super_admin'/.test(sql)) return SUPER_ADMINS.has(args[0]) ? { role: 'super_admin' } : null;
+      if (/FROM admins a JOIN admin_google_accounts g .*WHERE lower\(trim\(a\.email\)\)=\? AND a\.role='super_admin' AND g\.role='super_admin' AND g\.status='active'/.test(sql)) return SUPER_ADMINS.has(args[0]) ? { role: 'super_admin' } : null;
       if (/FROM customer_access_grants WHERE tenant_id = \? AND lower\(trim\(email\)\) = \?/.test(sql) || /FROM customer_access_grants\s+WHERE tenant_id = \? AND lower\(trim\(email\)\) = \?/.test(sql)) {
         return GRANTS.find(row => row.tenant_id === args[0] && row.email === args[1]) || null;
       }
