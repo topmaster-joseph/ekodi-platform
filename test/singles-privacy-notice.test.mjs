@@ -12,7 +12,7 @@ test('service-specific privacy document is reachable to guests and unindexed unt
  assert.match(response.headers.get('content-type'),/text\/html/);
  assert.match(response.headers.get('x-robots-tag'),/noindex/);
  const html=await response.text();
- for(const phrase of ['개통 전 검토용','신앙·신념 정보','만 19세 이상 자기확인','프로필은 기본 비공개','동행으로 돌아가기'])assert.ok(html.includes(phrase),phrase);
+ for(const phrase of ['제한적 시범 운영','신앙·신념 정보','만 19세 이상 자기확인','프로필은 기본 비공개','동행으로 돌아가기'])assert.ok(html.includes(phrase),phrase);
  assert.ok(html.includes('href="/privacy"'));
  assert.doesNotMatch(html,/\b(?:신분증\s*업로드|이미\s*성인인증|회원가입\s*개통\s*완료)\b/);
 });
@@ -31,4 +31,14 @@ test('main and consent shell link to privacy review but launch gates remain clos
  const source=await readFile(new URL('../singles-surface.js',import.meta.url),'utf8');
  assert.match(source,/SINGLES_M1_ENABLED==='true'/);
  assert.match(source,/paid_brokerage_enabled:false/);
+});
+
+test('privacy does not falsely claim member enrollment is globally closed',async()=>{
+ const response=await routeSinglesSurface(req('/singles/privacy'),env);
+ const html=await response.text();
+ assert.match(html,/개인정보 안내 최종 검토 중/);
+ assert.doesNotMatch(html,/동행 회원가입은 아직 개통되지 않았습니다/);
+ assert.match(html,/계정·본인확인·운영 승인/);
+ const member=(await routeSinglesSurface(req('/singles/my'),env)).text();
+ assert.match(await member,/제출 전 처리 목적·항목·철회 방법/);
 });

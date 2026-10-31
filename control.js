@@ -296,6 +296,9 @@
       const data=await api('/api/control/ai/v8/github?limit=30');
       if(data?.ok!==true||data?.integration!=='observation_only')
         throw new Error('관측 데이터 계약을 확인할 수 없습니다.');
+      const probe=data.probe||{};
+      const canary=$('#githubProbeRun');
+      if(canary)canary.disabled=probe.configured!==true||probe.enabled!==true;
       const jobs=Array.isArray(data.jobs)?data.jobs:[];
       const counts=Array.isArray(data.counts)?data.counts:[];
       const total=counts.reduce((sum,item)=>sum+Math.max(0,Number(item.count)||0),0);
@@ -303,8 +306,59 @@
         (Number.isFinite(data.githubApiRemaining)?data.githubApiRemaining:'실측 미연결')+
         ' · Webhook '+(data.activation?.ready?'활성 준비 확인':'미활성 또는 설정 미완료')+
         ' · 배포 권한 없음';
+      // Signed event reception is distinct from provisioned secret/installation
+      // settings. Never leak the configured secret, installation token or actor.
+      const activation=data.activation||{};
+      const diagnostics=document.createElement('article');
+      diagnostics.className='card';
+      const heading=document.createElement('strong');
+      heading.textContent='GitHub App 연결 검증';
+      diagnostics.append(heading);
+      for(const [label,ok] of [
+        ['Webhook 서버 활성화',activation.enabled===true],
+        ['서명 비밀키 존재',activation.secretConfigured===true],
+        ['GitHub App 설치 ID 존재',activation.installationConfigured===true],
+        ['실제 서명된 이벤트 수신',activation.receivingVerifiedEvents===true]
+      ]){
+        const line=document.createElement('p');
+        line.textContent=label+' · '+(ok?'확인':'미확인');
+        diagnostics.append(line);
+      }
+      const last=document.createElement('p');
+      last.textContent='마지막 서명 이벤트: '+String(activation.lastSignedEventAt||'수신 기록 없음')+
+        ' · 누적 수신 '+Math.max(0,Number(activation.verifiedEventCount)||0)+'건';
+      diagnostics.append(last);
+      const probeLine=document.createElement('p');
+      const latest=probe.latest||null;
+      probeLine.textContent='읽기 전용 App 실측 · '+(
+        probe.configured?'서버 준비 (실측 여부 별도 확인)':probe.enabled?'비밀키·설치 설정 미확인':'기본 비활성')+
+        ' · 마지막 시도 '+String(latest?.claimedAt||'없음')+
+        ' · 결과 '+String(latest?.state||'실행 기록 없음')+
+        ' · 발행 권한 없음';
+      diagnostics.append(probeLine);
+      root.append(diagnostics);
+      const rate=data.apiQuota||{};
+      const quotaCard=document.createElement('article');
+      quotaCard.className='card';
+      const quotaHeading=document.createElement('strong');
+      quotaHeading.textContent='GitHub REST API 공동 한도 관측';
+      quotaCard.append(quotaHeading);
+      const quotaHelp=document.createElement('p');
+      quotaHelp.textContent='관측 원장: '+String(rate.state||'미연결')+
+        ' · 전체 실행기 공동 차감·명령 실행: 미연결';
+      quotaCard.append(quotaHelp);
+      for(const bucket of Array.isArray(rate.buckets)?rate.buckets:[]){
+        const line=document.createElement('p');
+        line.textContent=String(bucket.resource||'unknown')+' · '+
+          (bucket.measured?'최근 실측 '+bucket.remaining+'/'+bucket.limit:'실측값 만료 · 미확인')+
+          ' · 측정 '+String(bucket.lastObservedAt||'없음');
+        quotaCard.append(line);
+      }
+      root.append(quotaCard);
       if(!jobs.length){
-        root.textContent='관측 기록이 없습니다. GitHub Webhook과 D1 마이그레이션 상태를 확인하세요.';
+        const empty=document.createElement('p');
+        empty.textContent='관측 작업 기록이 없습니다. GitHub App Webhook 서명·설치 설정과 D1 상태를 확인하세요.';
+        root.append(empty);
         return;
       }
       for(const job of jobs){
@@ -393,6 +447,21 @@
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus({preventScroll:true})});
     $$('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
     $('#githubOperationsRefresh').addEventListener('click',()=>void refreshGitHubOperations());
+    $('#githubProbeRun').addEventListener('click',async()=>{
+      const button=$('#githubProbeRun');
+      if(button.disabled)return;
+      if(!confirm('에코디 GitHub App의 읽기 전용 설치 토큰을 1회 발급하여, GitHub 호출 한도를 실측합니다. 상태 변경·병합·배포는 하지 않습니다. 실행하시겠습니까?'))return;
+      button.disabled=true;
+      try{
+        const result=await api('/api/control/ai/v8/github/readonly-probe',{
+          method:'POST',body:JSON.stringify({confirm:'readonly_quota_probe'})
+        });
+        toast(result?.ok?'GitHub App 읽기 전용 실측을 확인했습니다.':'실측 결과를 확인하지 못했습니다.');
+      }catch(error){
+        toast('GitHub 실측 거부: '+String(error?.message||'확인 실패'));
+      }finally{await refreshGitHubOperations();}
+    });
+
   }
   async function acceptVerifiedAdminControlHandoff(){
     // Google Admin returns to the exact Control deep-link with an ephemeral

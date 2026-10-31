@@ -247,6 +247,10 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     upstreamUrl.hostname=spec.host;upstreamUrl.pathname=stripPrefix(upstreamUrl.pathname,spec.prefix);
     response=await externalFetch(cloneRequest(request,upstreamUrl));
   }else return serviceUnavailable(spec.id);
+  // A WebSocket handshake must preserve Cloudflare's native 101 response and
+  // attached WebSocket. Wrapping it in new Response(body,{status:101}) throws
+  // and breaks first-party /edu QR screen sharing. No 101 is synthesized.
+  if(response.status===101&&response.webSocket)return response;
   const type=String(response.headers.get('content-type')||'').toLowerCase();
   const headers=new Headers(response.headers);let body=response.body;
   if(type.includes('text/html')||type.includes('javascript')||type.includes('text/css')||type.includes('application/json')||type.includes('text/plain')){

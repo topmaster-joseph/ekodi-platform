@@ -139,7 +139,12 @@ export async function mountEmailPassword({resetOnly=false}={}){
     const address=String(email.value||'').trim().toLowerCase();
     const secret=password.value;
     if(!validEmail(address)){message('올바른 이메일 주소를 입력해 주세요.');return;}
-    if(mode!=='verify'&&secret.length<12){message('비밀번호는 12자 이상으로 설정해 주세요.');return;}
+    if((mode==='signup'||mode==='reset')&&secret.length<12){
+      message('새 비밀번호는 12자 이상으로 설정해 주세요.');return;
+    }
+    if(mode==='login'&&!secret){
+      message('비밀번호를 입력해 주세요.');return;
+    }
     if((mode==='verify'||mode==='reset')&&!/^\d{6,8}$/.test(otp.value.trim())){
       message('메일의 숫자 인증코드를 입력해 주세요.');return;
     }
@@ -158,14 +163,19 @@ export async function mountEmailPassword({resetOnly=false}={}){
         setMode('verify');
         message('인증메일을 보냈습니다. 메일에 적힌 코드를 입력해 주세요.');
       }else if(mode==='verify'){
-        const {error}=await supabase.auth.verifyOtp({email:address,token:otp.value.trim(),type:'signup'});
+        const {data,error}=await supabase.auth.verifyOtp({email:address,token:otp.value.trim(),type:'signup'});
         if(error)throw error;
+        // A verification response without an actual confirmed Auth session is
+        // never enough to release the anti-loop marker or enter EKODI handoff.
+        if(!data?.session||!data?.user?.email_confirmed_at)
+          throw new Error('confirmed_email_session_required');
         password.value='';otp.value='';
         resumeAfterVerifiedEmailSession();
       }else if(mode==='login'){
         const {data,error}=await supabase.auth.signInWithPassword({email:address,password:secret});
         if(error)throw error;
-        if(!data?.user?.email_confirmed_at)throw new Error('email_not_confirmed');
+        if(!data?.session||!data?.user?.email_confirmed_at)
+          throw new Error('confirmed_email_session_required');
         password.value='';
         resumeAfterVerifiedEmailSession();
       }else{

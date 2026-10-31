@@ -37,5 +37,15 @@ test('known gates use the canonical EKODI account registry (any linked login pat
   assert.doesNotMatch(pastor,/provider:'eq\.google'/);
   const access=readFileSync(new URL('supabase/functions/access-api/index.ts',root),'utf8');
   assert.match(access,/rpc\("ekodi_account_for_auth_user"/);
-  assert.doesNotMatch(access,/\.eq\("provider","google"\)/);
+  // Tenant/site gates stay provider-agnostic: any explicitly linked login of the
+  // same EKODI Person keeps that Person's tenant role.
+  const tenantGate=access.slice(access.indexOf('async function tenantReviewerAuthorization'));
+  assert.doesNotMatch(tenantGate.slice(0,tenantGate.indexOf('\n}\n')+3),/\.eq\("provider","google"\)/);
+  // Platform root admin is the single deliberate exception (policy 2026-10-31):
+  // it additionally requires a verified Google identity on the same Person, read
+  // from the EKODI login_identities registry, never from Supabase provider metadata.
+  const googleFilters=access.match(/\.eq\("provider","google"\)/g)||[];
+  assert.equal(googleFilters.length,1,'provider=google filter allowed only in verifiedGoogleAdminEmails');
+  const helper=access.match(/async function verifiedGoogleAdminEmails\([^\n]+\)\{[\s\S]*?\n\}/)?.[0]||'';
+  assert.match(helper,/from\("login_identities"\)[\s\S]*\.eq\("provider","google"\)/);
 });

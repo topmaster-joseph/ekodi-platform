@@ -61,10 +61,18 @@ await Promise.all([
 ]);
 await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursive: true });
 await cp(`${root}sites/ekodi-singles/public`, `${output}singles`, { recursive: true });
+// EKODI Proposal Studio: local-only static draft editor, no server persistence.
+await cp(`${root}proposal`, `${output}proposal`, { recursive: true });
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
 await cp(`${root}sites/seonammedi/public`, `${output}seonammedi`, { recursive: true });
 await finalizeSeonamMediRelease(output);
 await cp(`${root}sites/pyeonggongmok/public`, `${output}pyeonggongmok`, { recursive: true });
+// Mokpo Presbytery internal workspace menu (no member data shipped).
+await mkdir(`${output}mokpo-presbytery/`, { recursive: true });
+await cp(`${root}sites/mokpo-presbytery/index.html`, `${output}mokpo-presbytery/index.html`);
+// Mokpo Presbytery mission pilot: isolated public static site.
+await mkdir(`${output}mokpo-presbytery/mission/`, { recursive: true });
+await cp(`${root}sites/mokpo-presbytery/mission/index.html`, `${output}mokpo-presbytery/mission/index.html`);
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 await cp(`${root}config/capability-foundry.json`, `${output}capability-foundry.json`);
 

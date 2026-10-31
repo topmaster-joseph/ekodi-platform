@@ -81,6 +81,35 @@ jobs:
           done
           exit "$failed"
 
+      - name: Verify canonical XML and legacy search discovery after deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp)"
+          trap 'rm -f "$tmp"' EXIT
+          code="$(curl -sS --connect-timeout 10 --max-time 30 -o "$tmp" -w '%{http_code}' https://ekodi.kr/sitemap.xml)"
+          test "$code" = 200
+          grep -q '<urlset' "$tmp"
+          grep -q '<loc>https://ekodi.kr/' "$tmp"
+          for host in ekodibiz.kr www.ekodibiz.kr; do
+            ok=0
+            for attempt in $(seq 1 15); do
+              headers="$(curl -sS -I --connect-timeout 10 --max-time 20 "https://$host/sitemap.xml" || true)"
+              headers="$(printf '%s\n' "$headers" | tr -d '\r')"
+              status="$(printf '%s\n' "$headers" | awk 'toupper($1) ~ /^HTTP\// {s=$2} END {print s}')"
+              location="$(printf '%s\n' "$headers" | awk 'tolower($1)=="location:" {print $2; exit}')"
+              if [ "$status" = 301 ] && [ "$location" = 'https://ekodi.kr/sitemap.xml' ]; then
+                ok=1
+                break
+              fi
+              sleep 4
+            done
+            echo "$host sitemap canonical redirect verified=$ok"
+            test "$ok" = 1
+            robots="$(curl -fsS --connect-timeout 10 --max-time 20 "https://$host/robots.txt")"
+            printf '%s\n' "$robots" | grep -Fq 'Sitemap: https://ekodi.kr/sitemap.xml'
+          done
+
       - name: Verify Naver owner file on ekodibiz.kr before claiming release success
         shell: bash
         run: |
