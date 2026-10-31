@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { authorizeUrl, federatedAuthEmail, verifyKakaoCode, verifyNaverCode, type VerifiedIdentity } from "./federated-providers.ts";
+import { authorizeUrl, federatedAuthEmail, verifyAppleCode, verifyKakaoCode, verifyNaverCode, type VerifiedIdentity } from "./federated-providers.ts";
 
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -84,7 +84,7 @@ async function verifyGoogle(token:string,nonce:string):Promise<VerifiedIdentity>
   };
 }
 
-// ── Redirect (authorization-code) providers: Naver, Kakao ──────────────────
+// ── Redirect (authorization-code) providers: Naver, Kakao, Apple ──────────────────
 // Dormant by default. A provider can sign anyone in only when BOTH gates open:
 //   1) its secrets are present in this function's environment (adapter is registered), and
 //   2) public.identity_providers.enabled = true for it (operator switch).
@@ -108,6 +108,14 @@ const adapters=new Map<string,ProviderAdapter>([
     id:"kakao",clientId:kakaoId,redirect:true,
     authorizeUrl:(nonce)=>authorizeUrl("https://kauth.kakao.com/oauth/authorize",{response_type:"code",client_id:kakaoId,redirect_uri:FEDERATED_REDIRECT_URI,state:nonce}),
     verify:(code,nonce)=>verifyKakaoCode(code,nonce,{clientId:kakaoId,clientSecret:kakaoSecret,redirectUri:FEDERATED_REDIRECT_URI})
+  });
+  // Apple needs a paid Apple Developer Program membership; it stays unregistered until
+  // all four values are synced, and off until identity_providers.enabled is switched on.
+  const apple={servicesId:envValue("APPLE_SERVICES_ID"),teamId:envValue("APPLE_TEAM_ID"),keyId:envValue("APPLE_KEY_ID"),privateKey:envValue("APPLE_PRIVATE_KEY")};
+  if(apple.servicesId&&apple.teamId&&apple.keyId&&apple.privateKey)adapters.set("apple",{
+    id:"apple",clientId:apple.servicesId,redirect:true,
+    authorizeUrl:(nonce)=>authorizeUrl("https://appleid.apple.com/auth/authorize",{response_type:"code",response_mode:"query",client_id:apple.servicesId,redirect_uri:FEDERATED_REDIRECT_URI,state:nonce}),
+    verify:(code,nonce)=>verifyAppleCode(code,nonce,{...apple,redirectUri:FEDERATED_REDIRECT_URI})
   });
 }
 
