@@ -24,7 +24,11 @@ expect(costSource.includes("blockedBy:'paid_or_unclassified_cost_requires_explic
 expect(costSource.includes("blockedBy:'free_quota_exhausted'"),'free quota exhaustion gate missing');
 
 const providerSource=read('ai-provider-control.js');
-expect(providerSource.includes("providerCostEligibility(id,{})"),'public/provider automatic route must use zero-cost gate');
+expect(providerSource.includes("providerCostEligibility(id,{})")||providerSource.includes("providerCostEligibilityLive(env,id,{})"),'public/provider automatic route must use zero-cost gate');
+// AI-COST-002: the only automatic paid exception is already-prepaid credit, metered and capped below the balance.
+expect(providerSource.includes("PREPAID_CREDIT_PROVIDERS=new Set(['anthropic'])"),'AI-COST-002 prepaid provider list must stay explicit');
+expect(providerSource.includes("prepaidCredit:true,prepaidCreditRemainingUsd:credit?.allowed?credit.remainingUsd:0},{})"),'AI-COST-002 prepaid gate must evaluate with no delegated budget');
+expect(costSource.includes("blockedBy:'prepaid_credit_envelope_exhausted'"),'AI-COST-002 exhausted prepaid envelope must block');
 expect(providerSource.includes("status:'cost-blocked'"),'scheduled paid provider health must be cost-blocked');
 expect(providerSource.includes("governance={}"),'trusted internal paid route must require explicit governance context');
 const controlSource=read('ai-control-core.js');
