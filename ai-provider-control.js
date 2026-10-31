@@ -30,7 +30,7 @@ const DEFAULTS=Object.freeze({
   'deepseek-free-credit':{name:'DeepSeek · 무료 지급 크레딧',model:'deepseek-flash',binding:'DEEPSEEK_API_KEY',costClass:'free-preferred'},
   'huggingface-free-credit':{name:'Hugging Face · 월 무료 크레딧',model:'openai/gpt-oss-120b:cheapest',binding:'HF_TOKEN',costClass:'free-preferred'},
   openai:{name:'OpenAI · 유료 승인',model:'gpt-5.6-terra',binding:'OPENAI_API_KEY',costClass:'paid-opt-in'},
-  anthropic:{name:'Claude · 유료 승인',model:'claude-sonnet-5',binding:'ANTHROPIC_API_KEY',costClass:'paid-opt-in'},
+  anthropic:{name:'Claude · 선불 크레딧',model:'claude-sonnet-5',binding:'ANTHROPIC_API_KEY',costClass:'paid-opt-in',funding:'prepaid-credit'},
   'factchat-ekodi':{name:'FactChat · 에코디 계정',model:'gpt-5.6-luna',binding:'BAZE_API_KEY',costClass:'paid-opt-in',funding:'ekodi-sponsored',accountClass:'ekodi',optIn:true},
   'factchat-institution':{name:'FactChat · 국립목포대 기관계정',model:'gpt-5.6-luna',binding:'FACTCHAT_MOKPO_API_KEY',costClass:'account-managed',funding:'institution-sponsored',accountClass:'institution',optIn:true,freeGuardBinding:'EKODI_FACTCHAT_INSTITUTION_USE_APPROVED',freeGuardLabel:'최고관리자 기관계정 사용 승인 (국립목포대 교육·연구 목적 범위)',freeGuardHint:'기관 크레딧은 학교 정책이 허용하는 업무에만 사용 · 승인 해제 시 즉시 라우팅 차단',guardError:'institution_account_approval_required'},
 });

@@ -102,7 +102,7 @@ export function createAnthropicProvider(env = {}, options = {}) {
           provider: 'anthropic',
           model: String(data?.model || model),
           surface: 'orchestrator',
-          funding: 'ekodi-sponsored',
+          funding: 'prepaid-credit',
           requestId: String(data?.id || ''),
           usage,
         }).catch(() => {});

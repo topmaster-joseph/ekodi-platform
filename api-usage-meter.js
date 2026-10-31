@@ -213,19 +213,20 @@ export async function getSponsoredAiAllowance(env = {}, options = {}) {
 // itself at (credit - reserve) using its own conservative meter, so the provider's
 // hard stop is never reached in normal operation. Not configured -> 0 remaining.
 const PREPAID_ENV = Object.freeze({
-  anthropic: Object.freeze({ credit:'ANTHROPIC_PREPAID_CREDIT_USD', reserve:'ANTHROPIC_PREPAID_RESERVE_USD', since:'ANTHROPIC_PREPAID_SINCE', daily:'ANTHROPIC_PREPAID_DAILY_MAX_USD' }),
+  anthropic: Object.freeze({ credit:'ANTHROPIC_PREPAID_CREDIT_USD', reserve:'ANTHROPIC_PREPAID_RESERVE_USD', since:'ANTHROPIC_PREPAID_SINCE', daily:'ANTHROPIC_PREPAID_DAILY_MAX_USD', monthly:'ANTHROPIC_PREPAID_MONTHLY_MAX_USD' }),
 });
 
 export function prepaidCreditPolicy(env = {}, provider = 'anthropic') {
   const keys = PREPAID_ENV[safeText(provider, 40).toLowerCase()];
-  if (!keys) return Object.freeze({ configured:false, creditUsd:0, reserveUsd:0, dailyMaxUsd:0, since:'' });
+  if (!keys) return Object.freeze({ configured:false, creditUsd:0, reserveUsd:0, dailyMaxUsd:0, monthlyMaxUsd:0, since:'' });
   const creditUsd = envNumber(env, [keys.credit], 0);
   const reserveUsd = envNumber(env, [keys.reserve], 10);
   const dailyMaxUsd = envNumber(env, [keys.daily], 0);
+  const monthlyMaxUsd = envNumber(env, [keys.monthly], 0);
   const sinceRaw = safeText(env[keys.since], 40);
   const sinceMs = Date.parse(sinceRaw);
   const since = Number.isFinite(sinceMs) ? new Date(sinceMs).toISOString() : '';
-  return Object.freeze({ configured: creditUsd > 0 && Boolean(since), creditUsd, reserveUsd, dailyMaxUsd, since });
+  return Object.freeze({ configured: creditUsd > 0 && Boolean(since), creditUsd, reserveUsd, dailyMaxUsd, monthlyMaxUsd, since });
 }
 
 export async function getPrepaidCreditAllowance(env = {}, provider = 'anthropic', options = {}) {
@@ -236,24 +237,30 @@ export async function getPrepaidCreditAllowance(env = {}, provider = 'anthropic'
   await ensureApiUsageSchema(env.DB);
   const now = options.now instanceof Date ? options.now : new Date();
   const name = safeText(provider, 40).toLowerCase();
-  const [total, today] = await Promise.all([
+  const sumSince = from => env.DB.prepare(`SELECT COALESCE(SUM(estimated_cost_microusd),0) cost FROM api_usage_events
+      WHERE (provider=? OR provider LIKE ?) AND created_at>=?`).bind(name, `${name}%`, from > policy.since ? from : policy.since).first();
+  const [total, today, month] = await Promise.all([
     env.DB.prepare(`SELECT COALESCE(SUM(estimated_cost_microusd),0) cost FROM api_usage_events
       WHERE (provider=? OR provider LIKE ?) AND created_at>=?`).bind(name, `${name}%`, policy.since).first(),
     env.DB.prepare(`SELECT COALESCE(SUM(estimated_cost_microusd),0) cost FROM api_usage_events
       WHERE (provider=? OR provider LIKE ?) AND created_at>=?`).bind(name, `${name}%`, dayStartIso(now) > policy.since ? dayStartIso(now) : policy.since).first(),
+    sumSince(monthStartIso(now)),
   ]);
   const spentUsd = integer(total?.cost) / 1_000_000;
   const todayUsd = integer(today?.cost) / 1_000_000;
   const remainingUsd = Math.max(0, Math.round((policy.creditUsd - policy.reserveUsd - spentUsd) * 1_000_000) / 1_000_000);
+  const monthUsd = integer(month?.cost) / 1_000_000;
   const dailyBlocked = policy.dailyMaxUsd > 0 && todayUsd >= policy.dailyMaxUsd;
-  const allowed = remainingUsd > 0 && !dailyBlocked;
+  const monthlyBlocked = policy.monthlyMaxUsd > 0 && monthUsd >= policy.monthlyMaxUsd;
+  const allowed = remainingUsd > 0 && !dailyBlocked && !monthlyBlocked;
   return Object.freeze({
     ...base,
     allowed,
-    status: allowed ? 'available' : dailyBlocked ? 'daily_limit' : 'envelope_exhausted',
-    remainingUsd: dailyBlocked ? 0 : remainingUsd,
+    status: allowed ? 'available' : monthlyBlocked ? 'monthly_limit' : dailyBlocked ? 'daily_limit' : 'envelope_exhausted',
+    remainingUsd: dailyBlocked || monthlyBlocked ? 0 : remainingUsd,
     spentUsd,
     todayUsd,
+    monthUsd,
   });
 }
 

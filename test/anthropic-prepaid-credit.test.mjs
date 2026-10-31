@@ -5,13 +5,13 @@ import { evaluateAiCostEligibility } from '../ai-cost-policy.js';
 import { getPrepaidCreditAllowance, prepaidCreditPolicy } from '../api-usage-meter.js';
 
 // Minimal D1 stand-in: schema statements succeed, SUM queries return the configured cost.
-function fakeDb({ totalMicro = 0, todayMicro = 0 } = {}) {
+function fakeDb({ totalMicro = 0, todayMicro = 0, monthMicro = 0 } = {}) {
   let sumCalls = 0;
   const stmt = sql => ({
     bind() { return this; },
     async run() { return { meta: { changes: 0 } }; },
     async first() {
-      if (/SUM\(estimated_cost_microusd\)/.test(sql)) return { cost: sumCalls++ === 0 ? totalMicro : todayMicro };
+      if (/SUM\(estimated_cost_microusd\)/.test(sql)) return { cost: [totalMicro, todayMicro, monthMicro][sumCalls++] ?? 0 };
       return null;
     },
   });
@@ -21,7 +21,7 @@ function fakeDb({ totalMicro = 0, todayMicro = 0 } = {}) {
 const ENV = {
   ANTHROPIC_PREPAID_CREDIT_USD: '120',
   ANTHROPIC_PREPAID_RESERVE_USD: '10',
-  ANTHROPIC_PREPAID_DAILY_MAX_USD: '5',
+  ANTHROPIC_PREPAID_MONTHLY_MAX_USD: '100',
   ANTHROPIC_PREPAID_SINCE: '2026-10-31T10:00:00Z',
 };
 
@@ -69,11 +69,20 @@ test('allowance: stops at reserve, before the console balance runs out', async (
   assert.equal(a.status, 'envelope_exhausted');
 });
 
-test('allowance: daily cap blocks for the rest of the day', async () => {
-  const a = await getPrepaidCreditAllowance({ ...ENV, DB: fakeDb({ totalMicro: 6_000_000, todayMicro: 5_000_000 }) });
+test('allowance: US$100 monthly cap blocks for the rest of the month', async () => {
+  const a = await getPrepaidCreditAllowance({ ...ENV, DB: fakeDb({ totalMicro: 100_000_000, monthMicro: 100_000_000 }) });
   assert.equal(a.allowed, false);
-  assert.equal(a.status, 'daily_limit');
+  assert.equal(a.status, 'monthly_limit');
   assert.equal(a.remainingUsd, 0);
+  const under = await getPrepaidCreditAllowance({ ...ENV, DB: fakeDb({ totalMicro: 99_000_000, monthMicro: 99_000_000 }) });
+  assert.equal(under.allowed, true);
+});
+
+test('Claude spend is metered as prepaid-credit, not the shared sponsored budget', () => {
+  const src = readFileSync(new URL('../ai-provider-control.js', import.meta.url), 'utf8');
+  assert.match(src, /binding:'ANTHROPIC_API_KEY',costClass:'paid-opt-in',funding:'prepaid-credit'/);
+  const adapter = readFileSync(new URL('../anthropic-provider-adapter.js', import.meta.url), 'utf8');
+  assert.match(adapter, /funding: 'prepaid-credit'/);
 });
 
 test('gateway wiring: live eligibility, free credential probe, credit errors open circuit', () => {
@@ -91,6 +100,7 @@ test('production config declares the envelope; staging does not spend it', () =>
     const t = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
     assert.match(t, /ANTHROPIC_PREPAID_CREDIT_USD = "120"/);
     assert.match(t, /ANTHROPIC_PREPAID_RESERVE_USD = "10"/);
+    assert.match(t, /ANTHROPIC_PREPAID_MONTHLY_MAX_USD = "100"/);
   }
   const staging = readFileSync(new URL('../wrangler.ai.staging.toml', import.meta.url), 'utf8');
   assert.doesNotMatch(staging, /ANTHROPIC_PREPAID_CREDIT_USD/);
