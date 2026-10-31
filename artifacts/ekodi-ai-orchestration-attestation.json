@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
   "policyId": "AI-ORCHESTRATE-001",
-  "orchestrationId": "ekoai-63347e4a21f9a4131c26",
+  "orchestrationId": "ekoai-f7d844098748b05da7db",
   "controlPlane": "EKODI AI",
   "orchestrator": "ekodi-ai-orchestrator",
   "source": "static-policy-validation",
   "actor": "local",
   "branch": "main",
-  "sha": "3d7da02c95148ac0343b755c5161029cc355d614",
+  "sha": "156036c55cab908ec5c07c93b5e74f83dc720f4a",
   "taskClasses": [
-    "release",
+    "topology",
     "experience"
   ],
   "roles": [
@@ -37,7 +37,7 @@
     "preserveOrchestrationGate": true,
     "ambiguousSideEffectStopsFanout": true
   },
-  "humanGateRecommended": false,
+  "humanGateRecommended": true,
   "directMutationAllowed": false,
   "constitutionalControls": [],
   "releaseReceipt": {
@@ -46,5 +46,5 @@
   },
   "releaseMode": false,
   "releaseModeRequested": false,
-  "timestamp": "2026-10-28T07:50:16.629Z"
+  "timestamp": "2026-10-31T00:02:06.524Z"
 }
