@@ -181,3 +181,81 @@ export async function redactOwnConversation(db, options = {}) {
     ).run();
   return freeze({ redacted: true, id, redactedAt, auditRowRetained: true });
 }
+
+/**
+ * Feedback (되먹임): what the model is allowed to be reminded of.
+ *
+ * Recall and feedback are not the same thing. `listOwnConversations` serves the
+ * administrator, who may read their own words back. This serves the *model*, and
+ * a past conversation placed into a model's context stops being a record and
+ * starts reading like an instruction. The danger is specific: a request that was
+ * refused, gated, or still awaiting a human could return through memory and be
+ * treated as settled. Memory must not become a route around approval.
+ *
+ * So four limits, each narrowing a different way it could go wrong:
+ *
+ * 1. Summaries only. `rationale`/`reply_text` are never selected here — only
+ *    `rationale_summary`/`reply_summary`. A summary has lost the grammar of an
+ *    instruction: "자동발행을 켜달라고 요청함" is a record, not a command.
+ * 2. An allow-list of completed, non-gated conversations. `decision_tier` must
+ *    be one EKODI already treats as read-only or advisory, and `status` must be
+ *    `verified`. An allow-list, not a deny-list, so a tier invented later is
+ *    excluded until someone decides it belongs — and so a conversation that
+ *    ended at `human_gate`, `blocked`, `awaiting_human` or `failed` never
+ *    returns. Today no assist conversation reaches the gate (the area is
+ *    observe-only); this is the filter that keeps that true if it ever does.
+ * 3. Redacted conversations are excluded. The administrator's delete has to mean
+ *    the words stop coming back — including coming back to the model.
+ * 4. A hard cap on items and characters. Context on every call costs tokens
+ *    linearly, and a free-tier platform cannot pay for a growing transcript.
+ *
+ * The in-flight conversation excludes itself without special-casing: its row is
+ * inserted before the provider runs, so it is not yet `verified`.
+ */
+export const ADMIN_ASSIST_FEEDBACK = freeze({
+  version: '1.0.0',
+  maxItems: 3,
+  maxChars: 600,
+  perFieldChars: 200,
+  allowedTiers: freeze(['observe', 'assist']),
+  requiredStatus: 'verified',
+  summariesOnly: true,
+  readOnly: true,
+});
+
+export async function buildAssistRecall(db, options = {}) {
+  const email = String(options.email ?? '').trim();
+  if (!db || !email) return freeze({ items: freeze([]), reason: 'owner_required' });
+  const requested = Math.trunc(Number(options.limit) || ADMIN_ASSIST_FEEDBACK.maxItems);
+  const limit = Math.max(1, Math.min(ADMIN_ASSIST_FEEDBACK.maxItems, requested));
+  await ensureAdminAssistColumns(db);
+  const tiers = ADMIN_ASSIST_FEEDBACK.allowedTiers;
+  const rows = await db.prepare(`SELECT created_at, rationale_summary, reply_summary
+    FROM ai_agent_actions
+    WHERE action_type = 'admin.assist_chat' AND requested_by = ?
+      AND redacted_at IS NULL
+      AND status = ?
+      AND decision_tier IN (${tiers.map(() => '?').join(', ')})
+    ORDER BY id DESC LIMIT ?`)
+    .bind(email, ADMIN_ASSIST_FEEDBACK.requiredStatus, ...tiers, limit)
+    .all();
+
+  const cut = value => String(value ?? '').trim().slice(0, ADMIN_ASSIST_FEEDBACK.perFieldChars);
+  const items = [];
+  let chars = 0;
+  // Oldest first: the model reads it as a sequence rather than a stack.
+  for (const row of (rows?.results || []).slice().reverse()) {
+    const asked = cut(row.rationale_summary);
+    const answered = cut(row.reply_summary);
+    if (!asked && !answered) continue;
+    if (chars + asked.length + answered.length > ADMIN_ASSIST_FEEDBACK.maxChars) break;
+    chars += asked.length + answered.length;
+    items.push(freeze({ at: String(row.created_at || '').slice(0, 10), asked, answered }));
+  }
+  return freeze({
+    items: freeze(items),
+    readOnly: true,
+    summariesOnly: true,
+    chars,
+  });
+}
