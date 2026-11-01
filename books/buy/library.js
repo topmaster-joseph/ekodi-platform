@@ -70,6 +70,14 @@
         }
         info.append(audioArea);
         const actions = document.createElement('div'); actions.className = 'library-actions';
+        if (item.audiobook?.ready && item.audiobook.tracks?.length && window.EkodiAudioPlayer) {
+          const listen = document.createElement('button'); listen.type = 'button'; listen.className = 'read-btn'; listen.textContent = '오디오북 듣기';
+          listen.addEventListener('click', async () => {
+            try { await window.EkodiAudioPlayer.open({ item, fetchTrack: async n => new Blob([await fetchBook(`download/audio/${encodeURIComponent(item.id)}/${n}`)], { type: 'audio/mpeg' }) }); }
+            catch (e) { alert(e.message); }
+          });
+          actions.append(listen);
+        }
         if (item.downloadReady) { const readBtn = document.createElement('button'); readBtn.type = 'button'; readBtn.className = 'read-btn'; readBtn.textContent = '펼쳐 읽기'; readBtn.addEventListener('click', () => read(item, readBtn)); actions.append(readBtn); }
         actions.append(btn);
         row.append(C.cover(item), info, actions); list.append(row);
@@ -107,6 +115,7 @@
       badge.className = `op-badge ${ready.ready ? 'on' : 'off'}`;
       badge.textContent = ready.ready ? (ready.source === 'approval' ? '판매 중 · 확정' : '판매 중') : (ready.label || '준비 중');
       const actions = document.createElement('span'); actions.className = 'op-actions';
+      const audioLink = document.createElement('a'); audioLink.className = 'op-btn ghost'; audioLink.href = `${C.BASE}/audio-review/?book=${encodeURIComponent(book.id)}`; audioLink.textContent = '오디오북'; actions.append(audioLink);
       if (file) { const review = document.createElement('a'); review.className = 'op-btn ghost'; review.href = `${C.BASE}/review/?book=${encodeURIComponent(book.id)}`; review.textContent = ready.ready ? '검토' : '검토·확정'; actions.append(review); }
       const label = document.createElement('label'); label.className = 'op-btn'; label.textContent = file ? '새 판본' : 'EPUB 올리기';
       const input = document.createElement('input'); input.type = 'file'; input.accept = '.epub,application/epub+zip';
