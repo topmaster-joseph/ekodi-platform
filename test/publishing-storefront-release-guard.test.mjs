@@ -66,3 +66,12 @@ test('malformed pointers and custom approval flags never authorize release',asyn
   assert.equal(await publisherAuthorizedForChannel(live('books'),newBook,'unknown'),false);
   assert.equal(await publisherAuthorizedForChannel(null,newBook,'books'),false);
 });
+
+test('owner-approved English edition passes the publisher gate only with its exact identity',async()=>{
+  const en={id:'BOOK-EKODI-000003',title:'In Search of the EKODIan',author:'Jeong Chan Gyun',catalogNo:'EB-MONO-001-EN',
+    directSale:{enabled:true,fileKey:'BOOK-EKODI-000003/ebook.epub'}};
+  assert.equal(existingEditionAllowed(en),true);
+  assert.equal(existingEditionAllowed({...en,title:'Something Else'}),false);
+  assert.equal(existingEditionAllowed({...en,directSale:{enabled:true,fileKey:'BOOK-EKODI-000001/ebook.epub'}}),false);
+  assert.equal(existingEditionAllowed({...en,publisherRelease:newBook.publisherRelease}),false);
+});
