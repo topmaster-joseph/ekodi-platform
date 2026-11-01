@@ -119,3 +119,7 @@
 .op-btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)}
 .audio-bonus-operator{margin:0 0 8px 48px;font-size:.8rem;color:#7a7f8a}.audio-bonus-operator summary{cursor:pointer}
 @media(max-width:640px){.op-row{grid-template-columns:28px minmax(0,1fr) auto;row-gap:6px}.op-row.op-head{display:none}.op-meta{grid-column:2}.op-badge{grid-column:3;grid-row:1}.op-actions{grid-column:1/-1}}
+.voice-studio{margin-top:24px;padding:18px;border:1px solid #e3dccd;border-radius:12px;background:#fffdf8}
+.voice-script{line-height:1.8;padding-left:22px;margin:10px 0 14px;font-family:"Noto Serif KR",serif}
+.voice-script li{margin:6px 0}
+.voice-consent,.voice-file{display:block;margin:8px 0;font-size:14px}
