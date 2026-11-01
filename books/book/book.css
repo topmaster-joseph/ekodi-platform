@@ -1,0 +1,7 @@
+/* BOOKS-DETAIL-001 */
+.book-toc{columns:2 320px;column-gap:40px;margin:18px 0 0;padding-left:1.4em;line-height:1.9}
+.book-toc li{break-inside:avoid}
+.book-toc li.part{list-style:none;margin:12px 0 2px -1.4em;font-weight:700;color:var(--navy,#14305f)}
+.book-toc-source,.book-language-note{font-size:.85rem;color:#6b6257;margin-top:14px}
+.detail-cover img{width:100%;height:auto;display:block;box-shadow:0 18px 40px rgba(20,48,95,.18)}
+.detail-cover .cover-text{aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;background:linear-gradient(180deg,#14305f,#0d1d3b);color:#f4efe4;font-size:1.5rem;white-space:pre-line}
