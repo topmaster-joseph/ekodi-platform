@@ -66,18 +66,20 @@ jobs:
           sql(){ jq -nc --arg q "$1" '{query:$q}' | curl -fsS --retry 2 -X POST \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' \
             --data @- "https://api.supabase.com/v1/projects/$DEV_REF/database/query"; }
+          # Fail before any fixture mutation if the isolated development key is absent.
+          keys="$(curl -fsS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$DEV_REF/api-keys?reveal=true")"
+          key="$(printf '%s' "$keys" | jq -r '[.[]|select(.type=="secret" and .name=="ekodi_points_control_staging")][0].api_key // empty')"
+          case "$key" in sb_secret_*) ;; *) echo '::error::development secret key ekodi_points_control_staging not found'; exit 1;; esac
+          echo "::add-mask::$key"
           echo "FIXTURES_CREATED=1" >> "$GITHUB_ENV"
           sql "insert into public.ekodi_point_sites(site_id,display_name,enabled,daily_cap) values('$POINTS_E2E_SITE','E2E 검증 사이트',true,100);
                insert into public.ekodi_point_rules(site_id,rule_id,points,daily_cap,daily_events,enabled) values('$POINTS_E2E_SITE','content',5,25,5,true);
                insert into public.ekodi_point_evidence_adapters(site_id,rule_id,adapter,trust,member_claimable,enabled) values('$POINTS_E2E_SITE','content','content_approval','verified',true,true);" >/dev/null
 
-          # Existing owner-created development secret key, used transiently and masked.
-          keys="$(curl -fsS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$DEV_REF/api-keys?reveal=true")"
-          key="$(printf '%s' "$keys" | jq -r '[.[]|select(.type=="secret" and .name=="ekodi_points_control_staging")][0].api_key // empty')"
-          case "$key" in sb_secret_*) ;; *) echo '::error::development secret key ekodi_points_control_staging not found'; exit 1;; esac
-          echo "::add-mask::$key"
+          # Existing development key was checked before any fixture mutation.
           auth="https://$DEV_REF.supabase.co/auth/v1/admin"
           email="points-e2e-${POINTS_E2E_RUN}@example.com"
+          echo "E2E_MEMBER_EMAIL=$email" >> "$GITHUB_ENV"
           user="$(jq -nc --arg e "$email" '{email:$e,email_confirm:true}' | curl -fsS -X POST -H "apikey: $key" -H 'Content-Type: application/json' --data @- "$auth/users")"
           uid="$(printf '%s' "$user" | jq -r '.id')"
           [[ "$uid" =~ ^[0-9a-f-]{36}$ ]]
@@ -100,15 +102,18 @@ jobs:
           d1(){ jq -nc --arg s "$1" '{sql:$s}' | cf -X POST --data @- "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$db/query"; }
           now="$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')"; expires="$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%S.000Z')"
           admin_email="points-e2e-${POINTS_E2E_RUN}@example.com"
+          # Register cleanup identifiers BEFORE any D1 inserts so failures in the
+          # middle of setup still revoke the temporary super_admin.
+          echo "E2E_D1=$db" >> "$GITHUB_ENV"
+          echo "E2E_ADMIN_EMAIL=$admin_email" >> "$GITHUB_ENV"
           # Ephemeral admin with unusable credentials (password login is disabled; values are not hashes).
           d1 "INSERT INTO admins (email,password_hash,password_salt,birth_hash,birth_salt,role,created_at) VALUES ('$admin_email','disabled','disabled','disabled','disabled','super_admin','$now')" >/dev/null
-          echo "E2E_D1=$db" >> "$GITHUB_ENV"; echo "E2E_ADMIN_EMAIL=$admin_email" >> "$GITHUB_ENV"
           admin_id="$(d1 "SELECT id FROM admins WHERE email='$admin_email'" | jq -r '.result[0].results[0].id')"
           [[ "$admin_id" =~ ^[0-9]+$ ]]
           token="$(openssl rand -hex 32)"; token_hash="$(printf '%s' "$token" | sha256sum | awk '{print $1}')"
           echo "::add-mask::$token"
-          d1 "INSERT INTO sessions (token_hash,admin_id,expires_at,created_at) VALUES ('$token_hash',$admin_id,'$expires','$now')" >/dev/null
           echo "E2E_TOKEN_HASH=$token_hash" >> "$GITHUB_ENV"
+          d1 "INSERT INTO sessions (token_hash,admin_id,expires_at,created_at) VALUES ('$token_hash',$admin_id,'$expires','$now')" >/dev/null
           session="$(curl -fsS -H "cf-access-client-id: $CF_ACCESS_CLIENT_ID" -H "cf-access-client-secret: $CF_ACCESS_CLIENT_SECRET" -H "Authorization: Bearer $token" "$ADMIN_STAGING/api/session")"
           printf '%s' "$session" | jq -e '.role=="super_admin"' >/dev/null
           echo "POINTS_E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
@@ -163,7 +168,16 @@ jobs:
                delete from public.people where ekodi_id='EKD-E2E-$POINTS_E2E_RUN';"
             jq -nc --arg q "$q" '{query:$q}' | curl -fsS -X POST -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' --data @- "https://api.supabase.com/v1/projects/$DEV_REF/database/query" >/dev/null
           fi
-          if [ -n "${E2E_MEMBER_ID:-}" ]; then
+          # If Auth created the account but its POST response failed before
+          # E2E_MEMBER_ID was recorded, recover ONLY the run-scoped email.
+          if [ -z "${E2E_MEMBER_ID:-}" ] && [ -n "${E2E_MEMBER_EMAIL:-}" ]; then
+            q="select id::text from auth.users where email='$E2E_MEMBER_EMAIL' limit 1"
+            E2E_MEMBER_ID="$(jq -nc --arg q "$q" '{query:$q}' | curl -fsS -X POST \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' --data @- \
+              "https://api.supabase.com/v1/projects/$DEV_REF/database/query" | jq -r '.[0].id // empty')"
+          fi
+          if [[ "${E2E_MEMBER_ID:-}" =~ ^[0-9a-f-]{36}$ ]]; then
             keys="$(curl -fsS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$DEV_REF/api-keys?reveal=true")"
             key="$(printf '%s' "$keys" | jq -r '[.[]|select(.type=="secret" and .name=="ekodi_points_control_staging")][0].api_key // empty')"
             echo "::add-mask::$key"
