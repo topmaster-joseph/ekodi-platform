@@ -68,7 +68,7 @@ test('ending a broadcast returns host to a ready preview and releases viewers fr
   assert.match(live,/await resetHostAfterEnd\(\)\}catch/);
   assert.match(live,/const ok=await prepareStudio\(\)/);
   assert.match(live,/function startViewerEndWatch\(id\)/);
-  assert.match(live,/if\(d\.room&&d\.room\.status!=='live'\)return void viewerBroadcastEnded\(\)/);
+  assert.match(live,/if\(!await stillLive\(\)\)return void viewerBroadcastEnded\(\)/);
   assert.match(live,/startViewerEndWatch\(id\);return\}/);
   assert.match(live,/function waitNextBroadcast\(\)/);
 });
