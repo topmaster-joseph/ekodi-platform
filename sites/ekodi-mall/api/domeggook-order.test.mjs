@@ -378,3 +378,18 @@ test('login follows an https redirect inside domeggook.com with the same POST bo
   await assert.rejects(login(env, async () => new Response('', { status: 302, headers: { location: 'https://evil.example/x' } })),
     (e) => /redirect blocked 302 to https:\/\/evil\.example/.test(e.supplierMessage));
 });
+
+test('supervised pilot: with auto-order OFF only the allow-listed order is placed', async () => {
+  const off = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false' });
+  assert.equal((await placeSupplierOrders(off.env, supplier({}, []))).skipped, 'disabled');
+  const other = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_PILOT_ORDER_IDS: 'mall_someotherorder1' });
+  const log0 = [];
+  assert.equal((await placeSupplierOrders(other.env, supplier({}, log0))).placed, 0);
+  assert.equal(log0.filter((c) => c.mode === 'setOrder').length, 0);
+  const { db, env } = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_PILOT_ORDER_IDS: 'mall_pilot_000001' });
+  db.prepare("UPDATE orders SET id='mall_pilot_000001' WHERE id='ord_1'").run();
+  db.prepare("UPDATE order_buyers SET order_id='mall_pilot_000001'").run();
+  const log = [];
+  assert.equal((await placeSupplierOrders(env, supplier({}, log))).placed, 1);
+  assert.equal(log.filter((c) => c.mode === 'setOrder').length, 1);
+});
