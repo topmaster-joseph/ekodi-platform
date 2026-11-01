@@ -53,12 +53,17 @@
     const local = email.includes('@') ? email.split('@')[0] : '';
     return local ? (local.length > 20 ? local.slice(0, 19) + '…' : local) + '님' : '회원님';
   }
+  let libraryAccount = '';
   async function load() {
     try {
       const data = await C.api('library');
       $('libLogin').hidden = true;
       const items = Array.isArray(data.items) ? data.items : [];
-      $('libStatus').textContent = `${friendlyAccount(data)} · 보유 도서 ${items.length}권`;
+      libraryAccount = friendlyAccount(data);
+      const who = document.createElement('span'); who.className = 'lib-account'; who.textContent = libraryAccount;
+      const out = document.createElement('button'); out.type = 'button'; out.className = 'lib-switch'; out.textContent = '로그아웃';
+      out.addEventListener('click', async () => { out.disabled = true; await C.signOut(); location.reload(); });
+      $('libStatus').replaceChildren(who, ` · 보유 도서 ${items.length}권 `, out);
       const list = $('libraryList'); list.replaceChildren();
       if (!items.length) {
         const empty = document.createElement('section'); empty.className = 'library-empty';
@@ -123,7 +128,16 @@
     let no = 0;
     for (const book of books) {
       let state;
-      try { state = await C.api(`admin/approvals/${encodeURIComponent(book.id)}`); } catch (e) { if (e.status === 403 || e.status === 401) return; continue; }
+      try { state = await C.api(`admin/approvals/${encodeURIComponent(book.id)}`); }
+      catch (e) {
+        if (e.status === 403 || e.status === 401) {
+          // 운영자 화면이 왜 안 보이는지 알 수 있게: 지금 로그인한 계정이 운영자 계정이 아니라는 안내만 보인다(권한은 서버가 판단).
+          const note = $('operatorNote');
+          if (note && libraryAccount) { note.hidden = false; note.textContent = `출판 도서 관리·낭독 음성 녹음은 운영자 구글 계정(topmaster.joseph@gmail.com 등)으로 로그인해야 보입니다. 지금 로그인: ${libraryAccount}`; }
+          return;
+        }
+        continue;
+      }
       $('operatorPanel').hidden = false;
       const file = state.file, ready = state.readiness || {};
       const row = document.createElement('div'); row.className = 'op-row';

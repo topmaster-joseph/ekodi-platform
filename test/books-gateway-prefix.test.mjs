@@ -54,3 +54,17 @@ test('books sign-in offers the central EKODI login and returns to the same page'
   if (!/host\.append\(centralLoginLink\(\)\)/.test(src)) throw new Error('link not mounted');
   if (!/CENTRAL_KEY = 'sb-renzehysxirjilvdxacv-auth-token'/.test(src)) throw new Error('central session not read');
 });
+
+// 2026-11-02: 내 서재 — 휴대폰에서 계정은 짧게, 로그아웃 버튼, 운영자 화면이 안 보이는 이유 안내.
+test('library shows a short account, a sign-out button and why operator tools are hidden', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const lib = await readFile(new URL('../books/buy/library.js', import.meta.url), 'utf8');
+  const client = await readFile(new URL('../books/buy/commerce-client.js', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../books/library/index.html', import.meta.url), 'utf8');
+  assert.match(lib, /who\.title = email/);
+  assert.match(lib, /await C\.signOut\(\); location\.reload\(\);/);
+  assert.match(lib, /운영자 계정으로 로그인해야 보입니다/);
+  assert.match(client, /auth\/v1\/logout\?scope=local/);
+  assert.match(client, /localStorage\.removeItem\(CENTRAL_KEY\)/);
+  assert.match(html, /id="operatorNote" hidden/);
+});
