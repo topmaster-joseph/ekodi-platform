@@ -146,7 +146,11 @@
   .inner{height:100%;column-fill:auto;column-gap:80px;font-family:"Noto Serif KR",serif;line-height:1.85;word-break:keep-all;transition:none;will-change:transform}
   .inner img{max-width:100%;max-height:calc(var(--page-h) - 20px);height:auto;object-fit:contain;break-inside:avoid}
   .inner h1,.inner h2,.inner h3{break-after:avoid}
-  .folio{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:11px;color:#9a8f7c;letter-spacing:.08em}
+  .folio{position:absolute;bottom:13px;display:flex;gap:10px;align-items:baseline;font-size:11px;color:#9a8f7c;letter-spacing:.06em;max-width:44%;white-space:nowrap}
+  .folio span{overflow:hidden;text-overflow:ellipsis}.folio b{font-weight:600;color:#7d725f;font-variant-numeric:oldstyle-nums}
+  .folio.l{left:46px}.folio.r{right:40px;flex-direction:row-reverse}
+  .sheet:not(.spread) .folio.l{display:none}.sheet:not(.spread) .folio.r{max-width:80%}
+  @media(max-width:640px){.folio.l{left:26px}.folio.r{right:22px}}
   .leaf{position:absolute;inset:0;z-index:3;pointer-events:none;backface-visibility:hidden;transform-style:preserve-3d}
   .leaf.fwd{transform-origin:left center;animation:fwd .62s cubic-bezier(.45,.05,.25,1) forwards}
   .leaf.back{transform-origin:right center;animation:back .62s cubic-bezier(.45,.05,.25,1) forwards}
@@ -177,7 +181,7 @@
       <div class="bar"><div class="row"><button class="close" aria-label="닫기">✕ 닫기</button><span class="t"></span><select class="toc" aria-label="목차"></select>
       <button class="smaller" aria-label="글자 작게">가−</button><button class="larger" aria-label="글자 크게">가+</button></div></div>
       ${options.notice ? `<div class="noticewrap"><div class="notice"></div></div>` : ''}
-      <div class="stage"><div class="book"><div class="cover" aria-hidden="true"></div><div class="stack" aria-hidden="true"></div><div class="sheet" title="왼쪽을 누르면 앞 쪽, 오른쪽을 누르면 다음 쪽"><div class="view" tabindex="0"><div class="inner"></div></div><div class="folio"></div></div></div></div>
+      <div class="stage"><div class="book"><div class="cover" aria-hidden="true"></div><div class="stack" aria-hidden="true"></div><div class="sheet" title="왼쪽을 누르면 앞 쪽, 오른쪽을 누르면 다음 쪽"><div class="view" tabindex="0"><div class="inner"></div></div><div class="folio l" aria-hidden="true"><b></b><span></span></div><div class="folio r" aria-hidden="true"><b></b><span></span></div></div></div></div>
       <div class="foot"><div class="row"><button class="prev">← 이전</button><span class="pos" aria-live="polite"></span><button class="next">다음 →</button></div></div>`;
     const $ = s => root.querySelector(s);
     const stage = $('.stage'), bookEl = $('.book'), sheet = $('.sheet'), view = $('.view'), inner = $('.inner');
@@ -207,7 +211,11 @@
       const last = state.i === book.chapters.length - 1 && state.p === pages - 1;
       $('.prev').disabled = state.i === 0 && state.p === 0; $('.next').disabled = last;
       $('.pos').textContent = `${state.i + 1} / ${book.chapters.length}장 · ${state.p + 1} / ${pages}쪽`;
-      $('.folio').textContent = book.chapters[state.i].label || '';
+      // 실제 책처럼 쪽마다 바깥 아래 모서리에 쪽 번호, 왼쪽 쪽엔 책 제목, 오른쪽 쪽엔 장 제목을 단다.
+      const chapter = book.chapters[state.i].label || '', bookTitle = book.title || options.title || '';
+      const n = spread ? state.p * 2 + 1 : state.p + 1;
+      $('.folio.l b').textContent = String(n); $('.folio.l span').textContent = bookTitle;
+      $('.folio.r b').textContent = String(spread ? n + 1 : n); $('.folio.r span').textContent = chapter;
       $('.toc').value = String(state.i);
       save();
     }
