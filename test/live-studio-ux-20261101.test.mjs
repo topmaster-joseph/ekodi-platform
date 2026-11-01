@@ -75,3 +75,9 @@ test('ending a broadcast returns host to a ready preview and releases viewers fr
 test('camera-busy error explains which app holds the camera',()=>{
   assert.match(live,/NotReadableError/);
 });
+
+test('viewer end detection survives expired login and frozen frames',()=>{
+  assert.match(live,/api\(`\/live\?tenant=\$\{encodeURIComponent\(cfg\.tenant\)\}`\);if\(live&&typeof live\.live==='boolean'\)/);
+  assert.match(live,/return failures<3/);
+  assert.match(live,/state\.viewerFreezeTimer=setInterval/);
+});
