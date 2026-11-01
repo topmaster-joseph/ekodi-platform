@@ -74,7 +74,7 @@ must('ai', 'store:false');
 must('ai', 'https://api.openai.com/v1/responses');
 must('ai', 'Creator AI');
 must('ai', 'creator_mode');
-mustNot('production', 'author.ekodi.kr');
+must('production', 'author.ekodi.kr');
 mustNot('staging', 'author.ekodi.kr');
 must('manifest', 'author-events-v1');
 
