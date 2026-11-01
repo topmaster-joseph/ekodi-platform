@@ -70,3 +70,18 @@ test('no alternate account is accepted as a direct privileged session',()=>{
   assert.match(admin,/const SESSION_HOURS = 8/);
   assert.doesNotMatch(admin,/raw_user_meta_data.*platform_admin/);
 });
+
+test('owner decision 2026-11-01: linked logins for operator screens, central admin console stays Google-only',async()=>{
+  const {ekodiBridgeTargetsAdminConsole}=await import('../admin-google-auth.js');
+  for(const target of ['https://ekodi.kr/admin/','https://ekodi.kr/admin','https://legacy.example/x','','javascript:alert(1)','https://evil.example/edu/'])
+    assert.equal(ekodiBridgeTargetsAdminConsole(target),true,target);
+  for(const target of ['https://ekodi.kr/edu/study/live/','https://ekodi.kr/cooperative/','https://ekodi.kr/administration-notes'])
+    assert.equal(ekodiBridgeTargetsAdminConsole(target),false,target);
+  assert.match(admin,/code:'ADMIN_CONSOLE_GOOGLE_ONLY'/);
+  assert.match(surface,/if\(centralAdminConsoleTarget\(safeReturn\)\)return;/);
+  assert.match(surface,/returnTo:safeReturn/);
+  assert.match(read('wrangler.api.toml'),/EKODI_ADMIN_FEDERATED_LOGIN_ENABLED = "true"/);
+  const app=read('my/app.js');
+  assert.match(app,/kakao:'카카오·다음',naver:'네이버'/);
+  assert.match(read('my/index.html'),/로그인 수단 관리 · 카카오·네이버·구글 추가/);
+});

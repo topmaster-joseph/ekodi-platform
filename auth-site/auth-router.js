@@ -62,7 +62,7 @@ async function loadClientAuth(){
 // Naver/Kakao callbacks return here without site/return_to; the federated module restores them.
 // Dormant providers never issue a callback, so this is a no-op until an operator enables one.
 let federated=null;
-try{federated=await import('./federated-login.js?v=20261101-daum-entry-1')}catch(error){console.warn('federated login module unavailable',error)}
+try{federated=await import('./federated-login.js?v=20261102-linked-methods-1')}catch(error){console.warn('federated login module unavailable',error)}
 const federatedHandled=federated?await federated.handleCallback():false;
 
 if(federatedHandled){/* the federated module owns this page load */}
@@ -76,7 +76,7 @@ else if(site!=='admin'&&params.get('ekodi_email_action')==='reset'){
     if(back){back.classList.remove('hide');back.addEventListener('click',()=>location.replace('/auth/'));}
   }
 }
-else if(site==='admin')await import('./admin-auth.js?v=20260918-canonical-origin-2');
+else if(site==='admin')await import('./admin-auth.js?v=20261101-operator-linked-login-1');
 else if(site==='author')await import('./author-auth.js?v=20260816-author-ai-1');
 else if(site==='business')await import('./business-auth.js?v=20260826-free-fallback-1');
 else if(site==='mission')await loadClientAuth();
@@ -89,7 +89,7 @@ else{
   // Login-identity management (Kakao/Naver/Google 계정 추가, 계정 병합) lives in auth.js only.
   if(!targetedWorkspace&&!manageMode&&site!=='marketing'&&(site==='portal'||isRegistryUserService||firstPartyClientSites.has(site)||trustedEkodiReturn))await loadClientAuth();
   else{
-    await import('./auth.js?v=20261101-daum-entry-1');
+    await import('./auth.js?v=20261102-linked-methods-1');
     if(targetedWorkspace)await import('./auth-workspace-target.js?v=20261101-live-church-return-1');
     if(site==='marketing')await import('./marketing-onboarding.js?v=20260817-workspace-label-1');
     await import('./membership-ui.js');

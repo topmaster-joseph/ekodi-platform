@@ -15,3 +15,4 @@
 .ekodi-email-hint,.ekodi-email-status{font-size:12px;line-height:1.5;margin:0;overflow-wrap:anywhere}
 .ekodi-email-status{color:#36543c;min-height:1.2em}
 @media(max-width:460px){.ekodi-email-password{gap:8px}.ekodi-email-field input{font-size:16px}}
+#linkedAccounts{display:grid;gap:8px;margin:10px 0}.linked-account{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid rgba(0,0,0,.08);border-radius:10px;background:#fff}.linked-account>div{display:grid;gap:2px;min-width:0}.linked-account strong{overflow-wrap:anywhere;font-size:15px}.linked-account small{font-size:12px;color:#6b7480}.linked-account .provider-badge{flex:0 0 auto;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;background:#eef3ff;color:#2a4a8a}.federated-secondary{background:#fff;color:#334;border:1px solid #cfd6e0;min-height:42px;font-weight:700}
