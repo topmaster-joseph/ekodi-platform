@@ -13,11 +13,12 @@ function jobBlock(workflow,name,nextName){
   return workflow.slice(start,end);
 }
 
-test('Workspace production verification retries strict canonical and apex health without weakening gates',async()=>{
+test('Workspace production verification retries strict apex health without weakening gates',async()=>{
   const workflow=await read();
   const block=jobBlock(workflow,'production-workspace','production-control');
   assert.match(block,/for attempt in \$\(seq 1 18\)/);
-  assert.match(block,/https:\/\/workspace-api\.ekodi\.kr\/health/);
+  // Subdomain wave 2 (2026-11-01): the retired Workspace API host must not be probed; apex only.
+  assert.doesNotMatch(block,/https:\/\/workspace-api\.ekodi\.kr/);
   assert.match(block,/https:\/\/ekodi\.kr\/workspace-api\/health/);
   for(const marker of [
     '"schemaReady":true',
@@ -32,7 +33,6 @@ test('Workspace production verification retries strict canonical and apex health
     '"investAutomation":"v1"',
     '"investAutomationSchemaReady":true'
   ]) assert.ok(block.includes(marker),`missing strict health marker ${marker}`);
-  assert.match(block,/canonical_body=\$\(cat \/tmp\/live-health\.json/);
   assert.match(block,/apex_body=\$\(cat \/tmp\/apex-health\.json/);
   assert.match(block,/exit 1/);
 });

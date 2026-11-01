@@ -39,7 +39,8 @@ test('Education is an isolated Worker with Shell and admin handoff',async()=>{
   assert.match(worker,/Response\.redirect\('https:\/\/ekodi\.kr\/admin\/',307\)/);
   assert.match(boundaries,/"education"/);
   assert.match(boundaries,/education_\*/);
-  assert.match(production,/pattern = "edu\.ekodi\.kr"/);
+  // Subdomain wave 2 (2026-11-01): Education is served only on the apex path.
+  assert.doesNotMatch(production,/pattern = "edu\.ekodi\.kr"/);
   assert.match(production,/DATA_MODE = "production"/);
   assert.match(staging,/DATA_ENABLED = "false"/);
   assert.match(staging,/DATA_MODE = "isolated-staging"/);
