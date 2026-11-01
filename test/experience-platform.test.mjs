@@ -68,8 +68,9 @@ test('experience deploy files use isolated staging and guarded production releas
   const prod=read('wrangler.experience.toml');
   const staging=read('wrangler.experience.staging.toml');
   const workflow=read('.github/workflows/deploy-experience.yml');
-  assert.match(prod,/try\.ekodi\.kr/);
-  assert.match(prod,/custom_domain = true/);
+  // Subdomain wave 2 (2026-11-01): Experience/Developer are served only on apex paths.
+  for(const host of ['exp','try','dev'])assert.doesNotMatch(prod,new RegExp(`pattern = "${host}\\.ekodi\\.kr"`));
+  assert.doesNotMatch(prod,/custom_domain = true/);
   assert.match(staging,/ekodi-experience-staging/);
   assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/experience\.worker\.json/);
   assert.match(workflow,/wrangler@\$\{WRANGLER_VERSION\} triggers deploy --config wrangler\.experience\.toml/);
