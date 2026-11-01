@@ -45,7 +45,9 @@ test('zero-book library has a short meaningful empty state', async () => {
   };
   vm.runInNewContext(js, context, {filename:'books/buy/library.js'});
   await new Promise(resolve => setImmediate(resolve));
-  assert.equal(elements.get('libStatus').textContent,'카카오 계정 · 보유 도서 0권');
+  // 계정 표시 + 로그아웃 버튼(2026-11-02)
+  const status = elements.get('libStatus').children.map(c => typeof c === 'string' ? c : c.textContent).join('');
+  assert.equal(status,'카카오 계정 · 보유 도서 0권 로그아웃');
   const list=elements.get('libraryList');
   assert.equal(list.children.length,1);
   assert.equal(list.children[0].className,'library-empty');
