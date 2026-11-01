@@ -61,11 +61,19 @@ export function redirectProviders() {
   return providersPromise;
 }
 
+// Daum IDs were folded into Kakao accounts and Daum offers no separate third-party
+// login, so the Kakao path is labelled for both. The recorded provider stays 'kakao'.
+export const BUTTON_LABELS = { kakao: '카카오·다음' };
+export function buttonText(provider, purpose) {
+  const name = BUTTON_LABELS[provider?.id] || provider?.name || PROVIDER_LABELS[provider?.id] || '';
+  return purpose === 'link' ? `${name} 계정 추가` : `${name} 계정으로 계속하기`;
+}
+
 function button(provider, purpose, statusId) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = `federated-btn federated-${provider.id}`;
-  b.textContent = purpose === 'link' ? `${provider.name} 계정 추가` : `${provider.name}로 계속하기`;
+  b.textContent = buttonText(provider, purpose);
   b.addEventListener('click', () => start(provider, purpose, b, statusId));
   return b;
 }
@@ -115,6 +123,7 @@ async function start(provider, purpose, el, statusId) {
 
 export function errorMessage(code, name) {
   if (code === 'challenge_expired_or_used') return `${name} 인증 시간이 만료되었습니다. 다시 시도해 주세요.`;
+  if (code === 'account_merge_review_required') return `${name}으로 이미 별도의 EKODI 계정을 사용하고 있습니다. 기존 유료구독·포인트·권한을 확인한 뒤 연결할 수 있습니다.`;
   if (code === 'identity_conflict' || code === 'identity_already_linked') return `이 ${name} 계정은 다른 EKODI 계정에 이미 연결되어 있습니다. 관리자 확인이 필요합니다.`;
   if (code === 'provider_unavailable') return `${name} 로그인은 현재 사용하지 않습니다.`;
   if (code === 'access_denied') return `${name} 인증이 취소되었습니다.`;
@@ -177,6 +186,40 @@ export async function handleCallback() {
   } catch (error) {
     console.error('federated callback', error);
     fail(errorMessage(error.message, name), pending.search);
+    if (error.message === 'account_merge_review_required' && error.data?.mergeRequest) renderMergeReport(error.data.mergeRequest, name);
   }
   return true;
+}
+
+/**
+ * Owner-decided merge, phase 1: show what the second account holds. Nothing moves yet;
+ * the owner reads the report and decides. All values go through textContent.
+ */
+export function mergeReportLines(mergeRequest, name) {
+  const inv = mergeRequest?.inventory || {};
+  const items = Array.isArray(inv.items) ? inv.items : [];
+  const financial = items.filter(item => item.financial);
+  const lines = [
+    `${name} 계정에 있는 기록 ${Number(inv.absorbedRows || 0)}건을 확인했습니다.`,
+    inv.verdict === 'mergeable'
+      ? '결제·구독·포인트 기록이 없어 하나의 EKODI 통합 ID로 합칠 수 있는 상태입니다.'
+      : `결제·구독·포인트 관련 기록이 ${financial.length}종 있어, 합치기 전에 정리가 필요합니다.`,
+  ];
+  for (const item of financial.slice(0, 8)) lines.push(`· ${item.table}: ${item.absorbedRows}건`);
+  lines.push('외부 정기결제(카드 자동결제) 확인은 병합 단계에서 함께 진행됩니다.');
+  lines.push('병합 실행은 본인이 결정하며, 실행 전까지 어떤 데이터도 옮겨지지 않습니다.');
+  return lines;
+}
+function renderMergeReport(mergeRequest, name) {
+  const host = $('authStatus');
+  if (!host) return;
+  const box = document.createElement('div');
+  box.className = 'notice';
+  box.setAttribute('role', 'status');
+  for (const line of mergeReportLines(mergeRequest, name)) {
+    const p = document.createElement('p');
+    p.textContent = line;
+    box.append(p);
+  }
+  host.after(box);
 }

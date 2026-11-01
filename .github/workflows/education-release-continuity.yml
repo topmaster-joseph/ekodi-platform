@@ -4,9 +4,15 @@ on:
   workflow_run:
     workflows: ["EKODI Orchestrated PR Convergent Merge"]
     types: [completed]
+  schedule:
+    - cron: "17 * * * *"
+  issue_comment:
+    types: [created]
   pull_request:
     paths:
       - 'scripts/education-release-continuity.mjs'
+      - 'scripts/verify-education-release-snapshot.mjs'
+      - 'test/education-release-snapshot.test.mjs'
       - 'test/education-release-continuity.test.mjs'
       - '.github/workflows/education-release-continuity.yml'
       - 'education/study/ai-bootcamp/studio/**'
@@ -17,6 +23,7 @@ on:
       - 'scripts/education-native-security-observations.mjs'
       - 'education/study/ai-bootcamp/material-source.js'
       - 'scripts/verify-education-material-studio-native.mjs'
+      - 'scripts/verify-education-farm-marketing-native.mjs'
       - 'test/education-material-studio.test.mjs'
 
 permissions:
@@ -31,6 +38,12 @@ concurrency:
 
 jobs:
   contract:
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.repository == 'topmaster-joseph/ekodi-platform' &&
+       github.actor == 'topmaster-joseph' &&
+       github.event.issue.pull_request == null &&
+       github.event.comment.body == 'EKODI-EDUCATION-RECONCILE')
     runs-on: ubuntu-latest
     timeout-minutes: 13
     steps:
@@ -41,9 +54,10 @@ jobs:
       - name: Validate read-only release continuity
         run: |
           node --check scripts/education-release-continuity.mjs
+          node --check scripts/verify-education-release-snapshot.mjs
           node --check scripts/education-native-security-observations.mjs
           node --check scripts/verify-education-documents-native.mjs
-          node --test test/education-release-continuity.test.mjs test/education-native-security-observations.test.mjs
+          node --test test/education-release-continuity.test.mjs test/education-release-snapshot.test.mjs test/education-native-security-observations.test.mjs
       - name: Install EKODI-native disposable Chromium for pre-approval preview
         if: github.event_name == 'pull_request'
         run: |
@@ -66,6 +80,11 @@ jobs:
           node scripts/verify-education-bootcamp-native.mjs
           node scripts/verify-education-material-studio-native.mjs
           node scripts/verify-education-documents-native.mjs
+          node scripts/verify-education-farm-marketing-native.mjs
+      - name: Read-only live Cloudflare inline CSP fingerprint (no tokens or script content)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: node scripts/diagnose-education-cloudflare-inline.mjs
       - uses: actions/upload-artifact@v4
         if: always() && github.event_name == 'pull_request'
         with:
@@ -74,12 +93,17 @@ jobs:
             artifacts/education-native/
             artifacts/education-studio-native/
             artifacts/education-documents-native/
+            artifacts/education-farm-marketing-native/
           retention-days: 7
 
   reconcile:
     if: >-
-      github.event_name == 'workflow_run' &&
-      github.event.workflow_run.conclusion == 'success' &&
+      (github.event_name == 'schedule' ||
+       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+       (github.event_name == 'issue_comment' &&
+        github.actor == 'topmaster-joseph' &&
+        github.event.issue.pull_request == null &&
+        github.event.comment.body == 'EKODI-EDUCATION-RECONCILE')) &&
       github.repository == 'topmaster-joseph/ekodi-platform'
     needs: contract
     runs-on: ubuntu-latest
@@ -89,6 +113,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: main
+          fetch-depth: 200
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:

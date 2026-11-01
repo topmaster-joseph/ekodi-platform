@@ -105,6 +105,24 @@ Task: `invest-autonomous-wealth-p0p3` · Branch: `ai/claude/invest-autonomous-we
 - 실제 주문을 허용하려면 증권사 공식 API·본인 명의·고정 출구 IP 또는 허용 인프라·실시간 시세 라이선스·계좌/주문 조회·중복주문 차단·리스크 감시·긴급정지·최소 60일 모의 검증·별도 명시적 승인·정식 보안심사와 가드레일 배포를 각각 증명해야 합니다.
 - 테스트: 타인과 미인증자 403/401, 최고관리자 추가 인증 후 준비도 조회, 미등록 증권사 400, 실주문 423, 주문/체결 DB 비변경, 비밀키·계좌번호 응답 금지, owner 섹션 초기 숨김.
 
+## 최고관리자 TOTP 강한 인증 준비 (2026-10-30)
+
+- 최고관리자 개인공간 `/my/invest`의 기존 이메일+휴대폰/주소 일부 확인은 **OTP MFA를 대신하지 않습니다**.
+- 본인 추가인증 뒤 **OTP 인증기 등록** 버튼을 누른 경우에만 Supabase Auth `mfa.enroll({factorType:'totp'})`을 시작합니다. QR과 비밀키는 등록 중에만 브라우저 개인 화면에 나타나고 성공 후 지웁니다. EKODI D1, 프런트 localStorage, 서버 로그에는 넣지 않습니다.
+- **OTP 확인**은 Supabase Auth 공식 `mfa.challenge` → `mfa.verify`를 호출하고, 신규 AAL2 세션 토큰을 받아 기존 본인 권한을 그대로 재확인합니다.
+- 서버는 **먼저 같은 Bearer JWT를 Supabase `/auth/v1/user`로 검증**하고, 검증된 subject id와 JWT `iss/sub/aal/session_id/iat/exp`가 모두 일치할 때만 `strongMfa.verified=true`로 표시합니다. JWT 디코딩 함수는 독립적인 암호학적 서명 검증기가 아니므로 반드시 이 선행 검증 뒤에서만 사용합니다.
+- 준비도 응답의 `strongMfa.requiredForLive=true`. AAL2 검증은 **필수 조건 중 하나일 뿐**, 별도 증권사 인증·공식 권한·정확한 시세·위험 통제·투자한도·명시적 주문 승인 없이는 실거래 주문이 HTTP 423으로 차단됩니다.
+- 기존 연결된 계정의 MFA 설정 여부를 임의로 변경하지 않습니다. 등록은 사용자 클릭 시에만 실행합니다.
+- 이 단계는 Supabase TOTP 본인인증 등록 UI와 서버 준비도 판정까지이며, 브로커 계좌 및 자금이 이동하는 실거래 활성화는 아직 아닙니다.
+
+## 증권사 API 공식 준비도 (2026-10-30)
+
+- `/my/invest` 본인 전용 영역의 증권사 선택에 **토스증권, 한국투자증권(KIS Developers), Interactive Brokers**를 제공한다. 모든 항목은 `liveTradingEnabled:false`이며 보안정보 저장·계좌조회·주문 호출을 하지 않는 **카탈로그/준비도** 단계다.
+- 공식 증권사 안내만 표시한다: 토스증권 `https://developers.tossinvest.com/docs`, 한국투자증권 `https://apiportal.koreainvestment.com/about-howto`, Interactive Brokers `https://www.interactivebrokers.com/docs/web-api/`. 링크는 애플리케이션 허용 목록과 서버 응답이 일치할 때에만 표시한다.
+- KIS는 개인이 본인 계좌로 Open API를 신청할 수 있고 별도 모의 API 환경을 제공하지만, 본인 명의 계좌/앱키/약관의 실제 등록 여부는 **미검증** 상태다. 제3자 자산 관리 또는 타인에게 실시간 시세 제공은 해당 증권사 허용 조건을 별도로 검토한다.
+- 서버 준비도는 `broker.connectionStatus:'disconnected'`, `broker.readOnlyConnectionVerified:false`, `liveExecutionEnabled:false`, `liveOrdersAccepted:false`를 반환한다. `strongMfa.verified!==true`이면 `activation.blockers`에 반드시 `strongMfaAal2`를 추가한다. **MFA 통과만으로 주문을 허용하지 않는다.**
+- 실계좌나 API Secret을 채팅/공개화면에 입력하지 않는다. 본인 계좌 공식 키 발급, 서버 Vault 등록, read-only 조회, 시세 라이선스, 장부 대조, 위험 엔진, 실제 주문 재승인은 모두 분리해 검증해야 한다. 실주문은 여전히 423 잠금이다.
+
 ## 다음 단계
 
 - P1: 토스 조회 전용 어댑터(`/api/v1/holdings`, `/accounts`), 서버 측 토큰 캐시(24h, 단일 토큰), `X-RateLimit-*` 준수. 고정 IP 중계 승인 후(보류 중).

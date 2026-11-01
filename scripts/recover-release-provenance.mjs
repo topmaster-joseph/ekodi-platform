@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { rateLimitDecision, isIntegrationScopeRefusal, staleWorkflowFiles, staleBaseRemedy } from './lib/recovery-github-errors.mjs';
 import {findExactHumanGateApproval} from './release-human-gate-evidence.mjs';
 
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
@@ -70,11 +71,25 @@ async function request(url,options={}){
   let data={};try{data=body?JSON.parse(body):{}}catch{data={raw:body}}
   return {response,data};
 }
-async function github(path,options={}){
+async function githubOnce(path,options={}){
   return request('https://api.github.com'+path,{...options,headers:{
     accept:'application/vnd.github+json','x-github-api-version':'2022-11-28',
     authorization:`Bearer ${ghToken}`,...(options.headers||{})
   }});
+}
+// A quota 403/429 is not a refusal: wait for the reset (bounded by the job
+// timeout) and retry once; otherwise fail with the exact retry time recorded.
+async function github(path,options={}){
+  const first=await githubOnce(path,options);
+  const decision=rateLimitDecision({status:first.response.status,headers:first.response.headers,body:first.data});
+  if(!decision.limited)return first;
+  if(!decision.retry)await fail(`GitHub API ${decision.reason} on ${path.split('?')[0]}; retry after ${new Date(decision.retryAt).toISOString()}`);
+  console.log(`[EKODI][RELEASE-PROVENANCE-RECOVERY] GitHub ${decision.reason}; waiting ${Math.ceil(decision.waitMs/1000)}s before one retry`);
+  await new Promise(resolve=>setTimeout(resolve,decision.waitMs));
+  const second=await githubOnce(path,options);
+  const again=rateLimitDecision({status:second.response.status,headers:second.response.headers,body:second.data});
+  if(again.limited)await fail(`GitHub API ${again.reason} persisted on ${path.split('?')[0]}; retry after ${new Date(again.retryAt).toISOString()}`);
+  return second;
 }
 async function d1(databaseId,sql,params){
   const {response,data}=await request(`https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`,{
@@ -198,6 +213,17 @@ if(existing.response.ok){
   const ref=await github(refPath,{method:'POST','headers':{'content-type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branchRef}`,sha:headSha})});
   if(!ref.response.ok){
     // Accept only a verified exact-SHA concurrent creation, not a generic 403 bypass.
+    if(isIntegrationScopeRefusal(ref.response.status,ref.data)){
+      // Diagnose instead of guessing: a stale source carries old workflow files.
+      const compare=await github(`/repos/${repo}/compare/${headSha}...main`);
+      const files=compare.response.ok?staleWorkflowFiles(compare.data):[];
+      if(files.length){
+        const remedy=staleBaseRemedy({prNumber,headSha,files});
+        await github(`/repos/${repo}/issues/${prNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},
+          body:JSON.stringify({body:`EKODI release-provenance recovery could not issue a release branch for \`${headSha}\`.\n\n${remedy}`})});
+        await fail(remedy);
+      }
+    }
     if(ref.response.status!==422)await fail(`failed to create recovery branch: HTTP ${ref.response.status} ${JSON.stringify(ref.data)}`);
     const raced=await github(existingRefPath);
     if(!raced.response.ok||text(raced.data?.object?.sha,80)!==headSha){
@@ -259,6 +285,7 @@ const sharedSiteTouched=sourceFiles.some(file=>
   // Source-pinned immediate recovery must dispatch the release even when a
   // GITHUB_TOKEN merge does not emit an ordinary main push workflow event.
   ['scripts/verify-admin-production-ui-e2e.mjs',
+   'scripts/admin-production-ui-coverage.mjs',
    'scripts/ekodi-background-browser-worker.mjs'].includes(file)||
   // Public Invest education / member-entry markup lives in the shared Site Core worker.
   file==='invest-access-ui.js'||
@@ -475,6 +502,22 @@ if(merge.response.ok&&adminContinuityTouched){
     await fail('authenticated Admin E2E dispatch failed: HTTP '+result.response.status);
   }
   out('admin_e2e_dispatch','accepted');
+}
+
+// RECOVERY-POST-MERGE-LANES-001 (2026-10-31): an immediate merge above dispatches only
+// the Board, Shell, Site Core, Control API and CGMA lanes. Every other guarded lane
+// (Access API, Identity API, Church, Singles, My, Books, ...) is chosen by the convergent
+// merger, which never runs for an immediately merged PR, so those changes reached main
+// without reaching production (observed: #7154 access-api, 2026-10-31). Hand the merged
+// PR to the converger in post-merge reconcile mode; it re-verifies the receipt and the
+// merged PR and skips the lanes dispatched here.
+if(merge.response.ok&&merge.data?.merged===true){
+  const reconcile=await github(`/repos/${repo}/actions/workflows/converge-orchestrated-pr-merge.yml/dispatches`,{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({ref:'main',inputs:{post_merge_reconcile_branch:branchRef}})
+  });
+  out('post_merge_reconcile_dispatch',reconcile.response.status===204?'accepted':`http_${reconcile.response.status}`);
+  if(reconcile.response.status!==204)console.error('[EKODI][RELEASE-PROVENANCE-RECOVERY] post-merge reconcile dispatch failed: HTTP '+reconcile.response.status);
 }
 
 if(!merge.response.ok){

@@ -37,6 +37,7 @@ const report = {
   passed: false,
   apiStatus: null,
   apiRequestVerified: false,
+  probeOriginDeclared: false,
   replyLength: 0,
   provider: null,
   mode: null,
@@ -165,6 +166,23 @@ try {
     throw new Error(`Canonical campus route mismatch: ${page.url()}`);
   }
 
+  // Declare this run as a probe, not as conversation.
+  //
+  // The probe deliberately drives the real bottom dock, so the server cannot
+  // distinguish it from the pastor typing, and every run used to be recorded as
+  // a conversation — which filled the assistant's feedback with health checks.
+  // The declaration is added to this run's own request in flight rather than by
+  // teaching the dock a test flag: production code stays free of a hook that
+  // exists only for this script, and the UI path under test is unchanged, since
+  // only an extra field is added and `message` is left exactly as submitted.
+  await page.route(assistApiUrl, async route => {
+    const request = route.request();
+    if (request.method() !== 'POST') return route.continue();
+    let body = {};
+    try { body = request.postDataJSON() || {}; } catch { body = {}; }
+    return route.continue({ postData: JSON.stringify({ ...body, origin: 'automated_probe' }) });
+  });
+
   const input = page.locator('#ekodiAssistBootstrap input');
   await input.waitFor({ state: 'visible', timeout: 15_000 });
   await input.fill(prompt);
@@ -183,6 +201,12 @@ try {
     throw new Error('Assist API request did not contain the submitted bottom-dock command');
   }
   report.apiRequestVerified = true;
+  // If the declaration is ever dropped, this run silently goes back to being
+  // recorded as conversation, so fail loudly instead.
+  if (String(requestBody.origin || '') !== 'automated_probe') {
+    throw new Error('Assist API request did not carry the automated_probe origin declaration');
+  }
+  report.probeOriginDeclared = true;
 
   const payload = await response.json().catch(() => ({}));
   const reply = String(payload.reply || '').trim();

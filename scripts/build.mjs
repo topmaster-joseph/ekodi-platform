@@ -61,10 +61,18 @@ await Promise.all([
 ]);
 await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursive: true });
 await cp(`${root}sites/ekodi-singles/public`, `${output}singles`, { recursive: true });
+// EKODI Proposal Studio: local-only static draft editor, no server persistence.
+await cp(`${root}proposal`, `${output}proposal`, { recursive: true });
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
 await cp(`${root}sites/seonammedi/public`, `${output}seonammedi`, { recursive: true });
 await finalizeSeonamMediRelease(output);
 await cp(`${root}sites/pyeonggongmok/public`, `${output}pyeonggongmok`, { recursive: true });
+// Mokpo Presbytery internal workspace menu (no member data shipped).
+await mkdir(`${output}mokpo-presbytery/`, { recursive: true });
+await cp(`${root}sites/mokpo-presbytery/index.html`, `${output}mokpo-presbytery/index.html`);
+// Mokpo Presbytery mission pilot: isolated public static site.
+await mkdir(`${output}mokpo-presbytery/mission/`, { recursive: true });
+await cp(`${root}sites/mokpo-presbytery/mission/index.html`, `${output}mokpo-presbytery/mission/index.html`);
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 await cp(`${root}config/capability-foundry.json`, `${output}capability-foundry.json`);
 
@@ -134,7 +142,7 @@ await Promise.all([
 await cp(`${root}auth-site/index.html`, `${output}auth-center.html`);
 await cp(`${root}auth-site/oauth-consent.html`, `${output}oauth-consent.html`);
 await cp(`${root}auth-site/google-origin-bridge.html`, `${output}google-origin-bridge.html`);
-for (const asset of ['auth.css', 'auth.js', 'auth-bootstrap.js', 'auth-entry.js', 'auth-router.js', 'oauth-consent.js', 'marketing-auth-hotfix.js', 'auth-workspace-target.js', 'admin-auth.js', 'client-auth.js', 'author-auth.js', 'business-auth.js', 'marketing-onboarding.js', 'membership-ui.js', 'federated-login.js', 'google-origin-bridge.js']) await cp(`${root}auth-site/${asset}`, `${output}${asset}`);
+for (const asset of ['auth.css', 'auth.js', 'auth-bootstrap.js', 'auth-entry.js', 'auth-router.js', 'oauth-consent.js', 'marketing-auth-hotfix.js', 'auth-workspace-target.js', 'admin-auth.js', 'client-auth.js', 'author-auth.js', 'business-auth.js', 'marketing-onboarding.js', 'membership-ui.js', 'federated-login.js', 'email-password.js', 'google-origin-bridge.js']) await cp(`${root}auth-site/${asset}`, `${output}${asset}`);
 
 const [homepageServices, homepageStatusCounts] = await Promise.all([loadHomepageServices(), loadHomepageStatusCounts()]);
 const homepageCards = renderServiceCards(homepageServices);

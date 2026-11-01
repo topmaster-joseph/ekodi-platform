@@ -56,9 +56,18 @@ export function siteAdminBootstrapScript(){
   }
   const auth=new URL('/auth/',location.origin);
   auth.searchParams.set('site','portal');
+  auth.searchParams.set('select_account','1');
   auth.searchParams.set('return_to',location.origin+location.pathname+location.search);
   document.getElementById('loginLink').href=auth.href;
   let token='';
+  // Which login the current session came from, for a clear "wrong account" message.
+  const signedInAs=()=>{try{const p=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    const email=String(p.email||'');const m=email.match(/^identity\+(kakao|naver)\./);
+    return m?{provider:m[1]==='kakao'?'카카오':'네이버',email:''}:{provider:'',email};}catch{return {provider:'',email:''}}};
+  const notAdminMessage=()=>{const w=signedInAs();
+    return (w.provider?'현재 '+w.provider+' 로그인으로 접속되어 있으며, 이 계정은 최고관리자 Google 계정과 연결되어 있지 않습니다.'
+      :(w.email?w.email+' 계정에는 최고관리자 권한이 없습니다.':'현재 로그인한 계정에는 최고관리자 권한이 없습니다.'))
+      +' 위 버튼을 눌러 최고관리자 Google 계정을 선택해 다시 인증하세요.';};
   const show=message=>{status.textContent=message;};
   async function call(path,method='GET',body=null){
     const res=await fetch(API+path,{method,headers:{
@@ -81,10 +90,16 @@ export function siteAdminBootstrapScript(){
       if(!r.ok||!data.access_token)throw new Error('Google 인증 세션 확인 실패');
       token=data.access_token;
       try{sessionStorage.setItem(KEY,token)}catch{}
-    }else{try{token=sessionStorage.getItem(KEY)||''}catch{}}
+    }else{
+      // The current central EKODI session wins over an older token kept in this tab,
+      // so signing in again with another account takes effect immediately.
+      try{const s=JSON.parse(localStorage.getItem('sb-renzehysxirjilvdxacv-auth-token')||'null');
+        if(s?.access_token&&Number(s.expires_at||0)*1000>Date.now()+30000)token=s.access_token;}catch{}
+      if(!token){try{token=sessionStorage.getItem(KEY)||''}catch{}}
+    }
     if(!token){show('등록하려면 먼저 Google 계정으로 인증하세요.');return}
     const authority=await call('/platform-authority');
-    if(authority.platformAdmin!==true){show('Google 인증은 가능하지만 최고관리자 권한이 없는 계정입니다.');return}
+    if(authority.platformAdmin!==true){show(notAdminMessage());try{sessionStorage.removeItem(KEY)}catch{}return}
     submit.disabled=false;login.hidden=true;
     show('최고관리자 확인 완료. 관리자가 없는 사이트에 한하여 등록할 수 있습니다.');
   }

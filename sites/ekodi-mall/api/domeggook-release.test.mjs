@@ -21,17 +21,18 @@ function setup() {
     db.prepare(`INSERT INTO products (id,seller_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,one_line,price,stock_quantity,fulfillment,contact,status,published_at,created_at,updated_at,supply_provider,supply_item_no)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'published','t','t','t','domeggook',?)`).run(`prd_${i}`, 'u-1', `SC${i}`, 'u', '에코디몰', 'individual', 'direct', 'living', `상품${i}`, '소개', 9900, 10, '배송', 'joseph@ekodi.kr', `${1000 + i}`);
   }
-  db.prepare(`UPDATE products SET images_json='[{"id":"i","key":"ekodimall/products/p/i.jpg"}]'`).run();
-  const env = { DB: d1(db), MALL_EKODIAN_EMAILS: 'joseph@ekodi.kr', DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', DOMEMAE_API_KEY: 'K', DOMEMAE_USER_ID: 'u', DOMEMAE_PASSWORD: 'p', MALL_BASE_URL: 'https://ekodi.kr/ekodimall' };
+  db.prepare(`UPDATE products SET checkout_ready=1,images_json='[{"id":"i","key":"ekodimall/products/p/i.jpg"}]'`).run();
+  const env = { DB: d1(db), MALL_EKODIAN_EMAILS: 'joseph@ekodi.kr', DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', DOMEMAE_API_KEY: 'K', DOMEMAE_USER_ID: 'u', DOMEMAE_APPROVED_MEMBER_ID: 'u', DOMEMAE_PASSWORD: 'p', MALL_BASE_URL: 'https://ekodi.kr/ekodimall' };
   return { db, env };
 }
 
-test('EKODIan supply products wait (unlisted) until Domeggook purchase API approval, then go live with checkout', async () => {
+test('EKODIan supply products stay visible but checkout waits until Domeggook purchase API approval, then go live with checkout', async () => {
   const { db, env } = setup();
   const held = await runSupplyGate(env);
   assert.equal(held.gate.approved, false);
-  assert.equal(held.gate.held, 3);
-  assert.equal(db.prepare("SELECT COUNT(*) n FROM products WHERE status='published'").get().n, 0);
+  // 승인 전/자동발주 OFF: 노출은 유지하고 결제만 멈춘다.
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM products WHERE status='published'").get().n, 3);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM products WHERE checkout_ready=1").get().n, 0);
   assert.ok(db.prepare("SELECT 1 FROM mall_ops_alerts WHERE kind='supply.release_held'").get());
   db.prepare("INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES ('c1','domemae-official','order_readiness','probe:login','ok','{}',?)").run(new Date().toISOString());
   const live = await runSupplyGate(env);
@@ -74,4 +75,15 @@ test('staged supply products without photos are never released (image_hold)', as
   assert.equal(live.gate.released, 2);
   const p3 = db.prepare("SELECT status,supply_release FROM products WHERE id='prd_3'").get();
   assert.equal(p3.status, 'draft'); assert.equal(p3.supply_release, 'image_hold');
+});
+
+test('supply products remain held when the approved member secret is missing or different', async () => {
+  for (const approvedId of ['', 'not-the-supplier-account']) {
+    const { db, env } = setup();
+    env.DOMEMAE_APPROVED_MEMBER_ID = approvedId;
+    db.prepare("INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES ('c1','domemae-official','order_readiness','probe:login','ok','{}',?)").run(new Date().toISOString());
+    const result = await runSupplyGate(env);
+    assert.equal(result.gate.approved, false);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM products WHERE checkout_ready=1").get().n, 0);
+  }
 });

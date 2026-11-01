@@ -30,6 +30,7 @@ on:
       - 'test/site-core-staging-10500-recovery.test.mjs'
       - 'scripts/converge-orchestrated-pr-merge.mjs'
       - 'site-worker.js'
+      - 'admin-address-policy.js'
       - 'mall-product-jsonld.js'
       - 'site-shell-worker.js'
       - 'ekodi-shell-injector.js'
@@ -360,6 +361,7 @@ on:
       - 'scripts/admin-authenticated-e2e-retry.mjs'
       - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
       - 'scripts/verify-admin-production-ui-e2e.mjs'
+      - 'scripts/admin-production-ui-coverage.mjs'
       - 'scripts/ekodi-background-browser-worker.mjs'
       - 'scripts/validate-background-browser-worker.mjs'
       - 'config/background-browser-worker-policy.json'
@@ -782,7 +784,7 @@ jobs:
           grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
           grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
           grep -Fq 'dataset.seamlessSso' dist/auth-bootstrap.js
-          grep -Fq "./auth-router.js?v=20261028-singles-choose-account" dist/auth-entry.js
+          grep -Fq "./auth-router.js?v=20261101-live-church-return-1" dist/auth-entry.js
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
           grep -Eq 'admin-design-engine\.js\?v=[a-f0-9]{16}' dist/admin-menu-registry.js
           grep -Eq 'ekodibiz-admin-registry\.js\?v=[a-f0-9]{16}' dist/admin-menu-runtime.js

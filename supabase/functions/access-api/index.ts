@@ -58,19 +58,45 @@ async function verifiedEkodiAccount(user:any){
   const account=await ekodiAccount(String(user?.id||""));
   return Boolean(account&&Array.isArray(account.verified_emails)&&account.verified_emails.length);
 }
+// Platform administration requires a server-granted role and a previously verified
+// Google identity on the canonical EKODI Person, not simply the caller's email.
+// A linked Naver/Kakao session may retain that Person's existing grants, but
+// cannot manufacture an administrator by sending a matching email or metadata.
+async function verifiedGoogleAdminEmails(account:{person_id:string;verified_emails:string[]}){
+  const personId=String(account?.person_id||"").trim();
+  const verified=new Set((Array.isArray(account?.verified_emails)?account.verified_emails:[])
+    .map(value=>String(value||"").trim().toLowerCase()).filter(Boolean));
+  if(!personId||!verified.size)return [];
+  const {data,error}=await admin.from("login_identities")
+    .select("email").eq("person_id",personId).eq("provider","google")
+    .eq("status","active").eq("email_verified",true);
+  if(error)throw error;
+  // The account RPC emits Google emails only when auth.users confirms ownership.
+  return [...new Set((data||[]).map(row=>String(row?.email||"").trim().toLowerCase())
+    .filter(email=>verified.has(email)))];
+}
 async function platformAdmin(userId:string){
   const account=await ekodiAccount(userId);
   if(!account)return false;
+  const googleEmails=await verifiedGoogleAdminEmails(account);
+  if(!googleEmails.length)return false;
   const userIds=Array.isArray(account.auth_user_ids)&&account.auth_user_ids.length?account.auth_user_ids:[userId];
   const {data,error}=await admin.from("profiles").select("platform_admin").in("user_id",userIds).eq("platform_admin",true).limit(1);
   if(error)throw error;
   if(data?.length)return true;
-  return (account.verified_emails||[]).some(email=>BOOTSTRAP_SUPER_ADMIN_EMAILS.has(String(email).toLowerCase()));
+  // Recovery allowlist is matched against a verified *Google* email, never
+  // another provider's verified email on the same Person.
+  return googleEmails.some(email=>BOOTSTRAP_SUPER_ADMIN_EMAILS.has(email));
 }
 async function tenantReviewerAuthorization(userId:string,tenantId:string|null){
   if(await platformAdmin(userId))return {allowed:true,roles:["platform_admin"],authority:"platform",role:"platform_admin"};
   if(!tenantId)return {allowed:false,roles:[] as string[],authority:"none",role:null};
-  const {data}=await admin.from("tenant_members").select("role,status").eq("tenant_id",tenantId).eq("user_id",userId).eq("status","active");
+  // Every explicitly linked login of the same EKODI Person inherits existing
+  // tenant-scoped memberships, never a role in a different tenant.
+  const linkedIds=await personAuthUserIds(userId);
+  const {data,error}=await admin.from("tenant_members").select("role,status")
+    .eq("tenant_id",tenantId).in("user_id",linkedIds).eq("status","active");
+  if(error)throw error;
   const roles=[...new Set((data??[]).map((row:any)=>clip(row?.role,80)).filter(Boolean))];
   const role=roles.includes("platform_admin")?"platform_admin":roles.includes("tenant_admin")?"tenant_admin":null;
   return {allowed:Boolean(role),roles,authority:role==="platform_admin"?"platform":role==="tenant_admin"?"tenant":"none",role};
@@ -88,6 +114,74 @@ async function personAuthUserIds(userId:string){
   if(membersError)throw membersError;
   const ids=(data??[]).map((item:any)=>item.auth_user_id).filter(Boolean);
   return ids.length?[...new Set(ids)]:[userId];
+}
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function lookupKind(query:string){
+  return UUID_RE.test(query)?"person_id":EMAIL_RE.test(query)?"email":"ekodi_id";
+}
+// Exact-match resolution only; never a LIKE/prefix search.
+async function lookupPersonIds(query:string):Promise<string[]>{
+  const kind=lookupKind(query);
+  if(kind==="person_id"){
+    const {data,error}=await admin.from("people").select("id").eq("id",query.toLowerCase()).limit(1);
+    if(error)throw error;
+    return (data??[]).map((row:any)=>row.id);
+  }
+  if(kind==="ekodi_id"){
+    if(!/^[A-Za-z0-9_.-]{3,64}$/.test(query))return [];
+    const {data,error}=await admin.from("people").select("id").eq("ekodi_id",query).limit(1);
+    if(error)throw error;
+    return (data??[]).map((row:any)=>row.id);
+  }
+  const {data,error}=await admin.from("login_identities").select("person_id")
+    .eq("email",query.toLowerCase()).limit(10);
+  if(error)throw error;
+  return [...new Set((data??[]).map((row:any)=>row.person_id).filter(Boolean))];
+}
+const subjectHint=(value:unknown)=>{const s=String(value??"");return s.length>4?"…"+s.slice(-4):"****";};
+async function personAuthoritySummary(personId:string){
+  const [{data:person,error:personError},{data:identities,error:identityError}]=await Promise.all([
+    admin.from("people").select("id,ekodi_id,display_name,status,created_at").eq("id",personId).maybeSingle(),
+    admin.from("login_identities")
+      .select("auth_user_id,provider,provider_subject,email,email_verified,status,is_primary,linked_at,last_seen_at")
+      .eq("person_id",personId).order("linked_at",{ascending:true})
+  ]);
+  if(personError)throw personError;
+  if(identityError)throw identityError;
+  const rows=identities??[];
+  const userIds=[...new Set(rows.filter((r:any)=>r.status==="active").map((r:any)=>r.auth_user_id).filter(Boolean))];
+  const verifiedEmails=[...new Set(rows.filter((r:any)=>r.status==="active"&&r.email_verified)
+    .map((r:any)=>String(r.email||"").toLowerCase()).filter(Boolean))];
+  const empty={data:[] as any[],error:null};
+  const [profiles,memberships,grants,audit]=await Promise.all([
+    userIds.length?admin.from("profiles").select("platform_admin").in("user_id",userIds):Promise.resolve(empty),
+    userIds.length?admin.from("tenant_members").select("role,status,tenants(slug,name)").in("user_id",userIds):Promise.resolve(empty),
+    verifiedEmails.length?admin.from("site_access_registry").select("email,site_key,role,status,source,plan,tenants(slug,name)").in("email",verifiedEmails):Promise.resolve(empty),
+    admin.from("identity_audit_logs").select("action,provider,created_at").eq("person_id",personId)
+      .order("created_at",{ascending:false}).limit(20)
+  ]);
+  for(const result of [profiles,memberships,grants,audit])if(result.error)throw result.error;
+  const hasGoogle=rows.some((r:any)=>r.provider==="google"&&r.status==="active"&&r.email_verified);
+  return {
+    person:{id:person?.id??personId,ekodiId:person?.ekodi_id??null,displayName:clip(person?.display_name,80)||null,
+      status:person?.status??"unknown",createdAt:person?.created_at??null},
+    identities:rows.map((r:any)=>({provider:r.provider,email:r.email,emailVerified:Boolean(r.email_verified),
+      status:r.status,isPrimary:Boolean(r.is_primary),linkedAt:r.linked_at,lastSeenAt:r.last_seen_at,
+      subject:subjectHint(r.provider_subject)})),
+    authority:{
+      platformAdminRole:(profiles.data??[]).some((p:any)=>p.platform_admin===true),
+      verifiedGoogle:hasGoogle,
+      // Same rule as platformAdmin(): a server role alone is not root authority without verified Google.
+      platformAdminEffective:hasGoogle&&((profiles.data??[]).some((p:any)=>p.platform_admin===true)||
+        verifiedEmails.some(email=>BOOTSTRAP_SUPER_ADMIN_EMAILS.has(email)&&
+          rows.some((r:any)=>r.provider==="google"&&r.status==="active"&&r.email_verified&&String(r.email).toLowerCase()===email)))
+    },
+    tenantRoles:(memberships.data??[]).map((m:any)=>({tenant:m.tenants?{slug:m.tenants.slug,name:m.tenants.name}:null,role:m.role,status:m.status})),
+    siteGrants:(grants.data??[]).map((g:any)=>({siteKey:g.site_key,tenant:g.tenants?{slug:g.tenants.slug,name:g.tenants.name}:null,
+      role:g.role,status:g.status,source:g.source,plan:g.plan,email:g.email})),
+    recentAudit:(audit.data??[]).map((a:any)=>({action:a.action,provider:a.provider,at:a.created_at}))
+  };
 }
 async function shadowPolicy(){
   const {data,error}=await admin.from("trust_policy_versions")
@@ -281,6 +375,24 @@ Deno.serve(async(req)=>{
       const {data,error}=await auth.db.rpc("current_site_access",{p_site_key:site});
       if(error)throw error;
       return json(req,{...data,user:{id:auth.user.id,email:auth.user.email??null,name:auth.user.user_metadata?.full_name??auth.user.user_metadata?.name??null}});
+    }
+
+    if(req.method==="GET"&&path==="/admin/person"){
+      // Read-only Person authority lookup for platform administrators. Exact match
+      // only (email, EKODI ID or internal Person ID) so it cannot enumerate members;
+      // every lookup is itself written to identity_audit_logs.
+      if(!await platformAdmin(auth.user.id))return json(req,{error:"platform_admin_required"},403);
+      const query=clip(requestUrl.searchParams.get("q"),254);
+      if(query.length<3)return json(req,{error:"query_too_short"},400);
+      const personIds=await lookupPersonIds(query);
+      const people=[];
+      for(const personId of personIds.slice(0,5))people.push(await personAuthoritySummary(personId));
+      const {error:auditError}=await admin.from("identity_audit_logs").insert({
+        person_id:people.length===1?people[0].person.id:null,auth_user_id:auth.user.id,
+        action:"admin.person_lookup",metadata:{matched:people.length,kind:lookupKind(query)}
+      });
+      if(auditError)console.error("person lookup audit failed",auditError.message);
+      return json(req,{ok:true,matched:people.length,people});
     }
 
     if(req.method==="GET"&&path==="/platform-authority"){

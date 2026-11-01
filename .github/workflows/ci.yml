@@ -168,6 +168,7 @@ jobs:
           STATUS_STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
         run: |
           set -euo pipefail
+          source scripts/github-status-transient.sh
           merge_sha="$STATUS_MERGE_SHA"
           if [[ -n "$STATUS_PR_NUMBER" ]]; then
             live_merge_sha=$(curl --fail-with-body -sS \
@@ -206,6 +207,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          source scripts/github-status-transient.sh
           merge_sha=$(curl --fail-with-body -sS \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H 'Accept: application/vnd.github+json' \

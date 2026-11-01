@@ -44,6 +44,12 @@
         : '오디오북 무료 제공 대상 도서입니다. 오디오북은 음성·권리 검수 중이며, 준비가 완료되면 기존 구매자에게 추가 결제 없이 열립니다.')
       : '전자책 출판 검수 완료 후 무료 오디오북 제공 여부를 확인합니다.';
 
+    let langNote = $('languageEditionNote');
+    if (!langNote) { langNote = document.createElement('p'); langNote.id = 'languageEditionNote'; langNote.className = 'buy-msg'; bonusNote.insertAdjacentElement('afterend', langNote); }
+    const le = quote.languageEdition || {};
+    langNote.textContent = le.applied ? `다른 언어판을 보유하셔서 ${Math.round((le.rate || 0.5) * 100)}% 할인된 금액이 적용되었습니다.`
+      : le.available ? `같은 책의 다른 언어판(${(le.editions || []).map(e => e.title).join(' · ')})을 보유하시면 ${Math.round((le.rate || 0.5) * 100)}% 할인된 금액으로 구입하실 수 있습니다.` : '';
+    langNote.hidden = !langNote.textContent;
     renderTiers();
     const list = $('channelList'); list.replaceChildren();
     const channels = [['유페이퍼', b.links?.upaper], ['Google Play Books', b.links?.google], ['Amazon Kindle', b.links?.amazon]].filter(([, url]) => url);
@@ -55,7 +61,13 @@
     $('ownedBox').hidden = true; $('payArea').hidden = false;
     const open = quote.checkout.open;
     $('payBtn').disabled = busy || !open || !quote.signedIn;
+    const notReady = quote.checkout.saleReady === false;
     const preparing = quote.checkout.fileReady === false && !quote.checkout.operator;
+    if (notReady) {
+      $('payBtn').textContent = quote.checkout.saleStatus || '출간 준비 중';
+      $('payNote').textContent = '출판 검수와 판본 확정이 끝나면 이곳에서 구매하실 수 있습니다. 아직 결제·청구되지 않습니다.';
+      return;
+    }
     $('payBtn').textContent = !open ? (preparing ? '전자책 준비 중' : '결제 준비 중') : quote.signedIn ? `${C.won(p?.amount)} 결제하기` : '로그인 후 결제';
     $('payNote').textContent = !open ? (preparing ? '판매용 전자책 파일을 마무리하고 있습니다. 준비되는 대로 이곳에서 바로 구매하실 수 있습니다.' : '에코디서점 결제를 여는 중입니다. 지금은 아래의 다른 판매처를 이용하실 수 있습니다.') : quote.checkout.testOnly ? '운영자 시험 결제 모드입니다(실제 청구 없음).' : quote.checkout.operator && quote.checkout.fileReady === false ? '운영자 확인용 결제입니다. 전자책 파일이 아직 없어 일반 고객에게는 판매가 열리지 않았습니다(실제 청구됩니다).' : '안전한 토스페이먼츠 결제창이 열립니다. 결제 후 바로 내 서재에서 받으실 수 있습니다.';
   }

@@ -54,7 +54,7 @@ export const ADMIN_MENUS = Object.freeze([
   { id: 'integrations', group: 'settings', labels: { ko: '연동·저장소', en: 'Integrations & Storage' }, sections: ['ai-module-spec', 'storage'] },
   { id: 'identity', group: 'accounts', labels: { ko: '계정·권한', en: 'Accounts & Access' }, sections: ['users-access', 'admins'] },
   { id: 'security', group: 'accounts', labels: { ko: '보안·감사', en: 'Security & Audit' }, sections: ['security', 'audit-records'] },
-  { id: 'social-accounts', group: 'accounts', labels: { ko: '소셜계정 연결 현황', en: 'Social Accounts' }, sections: ['social-accounts'] },
+  { id: 'social-accounts', group: 'accounts', labels: { ko: '외부 채널 계정', en: 'External Channel Accounts' }, sections: ['social-accounts'] },
 ]);
 
 export const ADMIN_MENU_REGISTRY = Object.freeze([

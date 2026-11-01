@@ -395,7 +395,7 @@ async function missionSaturdayBoard(request,env,instance,who,method){
     if(body?.publicConsent!==true)return boardJson(instance,{error:'public_consent_required'},400);
     const displayName=clean(body?.displayName,30),reply=clean(body?.body,500);
     const attendance=lower(body?.attendance);
-    if(displayName.length<2||reply.length<2||!['join','question','cancel'].includes(attendance))return boardJson(instance,{error:'invalid_reply'},400);
+    if(displayName.length<2||!['join','question','cancel'].includes(attendance))return boardJson(instance,{error:'invalid_reply'},400);
     if(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/.test(reply)||/(?:01[016789])[\s-]?\d{3,4}[\s-]?\d{4}/.test(reply))return boardJson(instance,{error:'private_information_in_public_reply'},400);
     await env.DB.prepare(`INSERT INTO ekodi_mission_saturday_replies
       (board_id,meeting_date,author_person_id,display_name,body,attendance,created_at,updated_at)
@@ -434,7 +434,12 @@ export async function handleSiteBoardRequest(request,env){
     return missionSaturdayBoard(request,env,instance,who,method);
   }
   if(method==='GET'&&sub==='/api/me'){
-    return boardJson(instance,{authenticated:who.authenticated,role:who.role});
+    const response=boardJson(instance,{
+      authenticated:who.authenticated,role:who.role,
+      account:who.authenticated?who.email:''
+    });
+    response.headers.set('cache-control','private, no-store');
+    return response;
   }
 
   if(method==='POST'&&sub==='/api/memberships/bootstrap'){

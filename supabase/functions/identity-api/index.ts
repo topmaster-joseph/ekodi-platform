@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { authorizeUrl, federatedAuthEmail, verifyKakaoCode, verifyNaverCode, type VerifiedIdentity } from "./federated-providers.ts";
+import { authorizeUrl, federatedAuthEmail, verifyAppleCode, verifyKakaoCode, verifyNaverCode, type VerifiedIdentity } from "./federated-providers.ts";
 
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -84,7 +84,7 @@ async function verifyGoogle(token:string,nonce:string):Promise<VerifiedIdentity>
   };
 }
 
-// ── Redirect (authorization-code) providers: Naver, Kakao ──────────────────
+// ── Redirect (authorization-code) providers: Naver, Kakao, Apple ──────────────────
 // Dormant by default. A provider can sign anyone in only when BOTH gates open:
 //   1) its secrets are present in this function's environment (adapter is registered), and
 //   2) public.identity_providers.enabled = true for it (operator switch).
@@ -108,6 +108,14 @@ const adapters=new Map<string,ProviderAdapter>([
     id:"kakao",clientId:kakaoId,redirect:true,
     authorizeUrl:(nonce)=>authorizeUrl("https://kauth.kakao.com/oauth/authorize",{response_type:"code",client_id:kakaoId,redirect_uri:FEDERATED_REDIRECT_URI,state:nonce}),
     verify:(code,nonce)=>verifyKakaoCode(code,nonce,{clientId:kakaoId,clientSecret:kakaoSecret,redirectUri:FEDERATED_REDIRECT_URI})
+  });
+  // Apple needs a paid Apple Developer Program membership; it stays unregistered until
+  // all four values are synced, and off until identity_providers.enabled is switched on.
+  const apple={servicesId:envValue("APPLE_SERVICES_ID"),teamId:envValue("APPLE_TEAM_ID"),keyId:envValue("APPLE_KEY_ID"),privateKey:envValue("APPLE_PRIVATE_KEY")};
+  if(apple.servicesId&&apple.teamId&&apple.keyId&&apple.privateKey)adapters.set("apple",{
+    id:"apple",clientId:apple.servicesId,redirect:true,
+    authorizeUrl:(nonce)=>authorizeUrl("https://appleid.apple.com/auth/authorize",{response_type:"code",response_mode:"query",client_id:apple.servicesId,redirect_uri:FEDERATED_REDIRECT_URI,state:nonce}),
+    verify:(code,nonce)=>verifyAppleCode(code,nonce,{...apple,redirectUri:FEDERATED_REDIRECT_URI})
   });
 }
 
@@ -320,16 +328,61 @@ async function exchangeProvider(req:Request,provider:string){
   return json(req,{ok:true,provider,accountSession:session.canonical,tokenHash:session.tokenHash,type:"email",platformAdmin,ekodiId,user:{email:contactEmail,name:profile.displayName}},200);
 }
 
+// EMAIL-ID-001: public signup never opens until an operator has verified the
+// Supabase Auth Confirm Email setting, EKODI Mail custom SMTP and delivery.
+// All flags are independently required. This is NOT the channel OAuth switch.
+function emailPasswordReady(){
+  return Deno.env.get("EKODI_EMAIL_PASSWORD_ENABLED")==="true" &&
+    Deno.env.get("EKODI_AUTH_EMAIL_CONFIRM_VERIFIED")==="true" &&
+    Deno.env.get("EKODI_AUTH_SMTP_VERIFIED")==="true";
+}
+function emailPasswordReadiness(req:Request){
+  return json(req,{enabled:emailPasswordReady(),sender:"EKODI Mail"},200);
+}
+
 async function sessionHandoff(req:Request,user:any){
   const email=String(user?.email||"").trim().toLowerCase();
   if(!email)return json(req,{error:"verified_email_required"},400);
+  const personBeforeHandoff=await personForUser(user.id);
+  // Google logins also use email-backed Supabase magic-link sessions. Only an
+  // UNPROVISIONED password-style email user must pass these additional gates;
+  // never block already-linked Google identities just because app_metadata
+  // reports "email" for their underlying Supabase Auth user.
+  const newEmailPerson=!personBeforeHandoff&&user.app_metadata?.provider==="email";
+  if(newEmailPerson){
+    if(!emailPasswordReady())return json(req,{error:"email_password_unavailable"},503);
+    if(!user.email_confirmed_at)return json(req,{error:"verified_email_required"},403);
+  }
+  // Gate the account *before* minting a one-use session link. Link ownership
+  // must be checked before provisioning the EKODI Person as well.
   const link=await issueSupabaseLink(email);
   if(link.user.id!==user.id){
     console.error("session handoff user mismatch",{source:user.id,target:link.user.id});
     return json(req,{error:"session_identity_mismatch"},409);
   }
-  const personId=await personForUser(user.id);
+  let personId=personBeforeHandoff;
+  // Never infer the person from matching email text.
+  if(newEmailPerson){
+    const {data:created,error:createError}=await admin.rpc("ensure_person_identity",{
+      p_auth_user_id:user.id,
+      p_provider:"email",
+      p_provider_subject:user.id,
+      p_email:email,
+      p_display_name:null
+    });
+    if(createError||!created){
+      console.error("email EKODI person provisioning",createError?.message||"no_person");
+      return json(req,{error:"ekodi_identity_unavailable"},503);
+    }
+    await recordEmailVerification("email",user.id,true);
+    await syncPerson(user.id);
+    personId=await personForUser(user.id);
+    if(personId!==created)return json(req,{error:"ekodi_identity_mismatch"},409);
+  }
+  if(user.app_metadata?.provider==="email"&&!personId)
+    return json(req,{error:"ekodi_identity_required"},409);
   const ekodiId=await ekodiIdForPerson(personId);
+  if(user.app_metadata?.provider==="email"&&!ekodiId)return json(req,{error:"ekodi_id_unavailable"},503);
   const platformAdmin=await platformAdminForUser(user.id);
   return json(req,{ok:true,tokenHash:link.tokenHash,type:"email",platformAdmin,ekodiId,user:{id:user.id,email}},200);
 }
@@ -378,6 +431,22 @@ async function finishLink(req:Request,userId:string,provider:string){
   if(config.requires_verified_email&&!profile.emailVerified)return json(req,{error:"verified_email_required"},400);
   const contactEmail=await contactEmailFor(provider,profile);
   const target=await issueSupabaseLink(await authEmailFor(provider,profile));
+  // A second provider can belong to a second independently registered Person,
+  // with its own paid D1 subscriptions and recurring billing keys. Supabase
+  // cannot atomically reconcile that external ledger. Do not merge Person rows
+  // just because both OAuth proofs passed: manual billing/role/points review
+  // must happen first. Linking a previously unclaimed identity remains allowed.
+  const initiatorPersonId=await personForUser(userId);
+  const targetPersonId=await personForUser(target.user.id);
+  if(targetPersonId&&targetPersonId!==initiatorPersonId){
+    await writeIdentityAudit(initiatorPersonId,userId,"identity.merge_review_required",provider,null,{
+      independentAccount:true
+    });
+    // Both logins are now proven by the same person. Record an owner-decided merge
+    // request with a read-only inventory; nothing is moved until the owner approves.
+    const mergeRequest=initiatorPersonId?await openMergeRequest(initiatorPersonId,targetPersonId,userId,target.user.id,provider):null;
+    return json(req,{error:"account_merge_review_required",mergeRequest},409);
+  }
   const {data:personId,error:linkError}=await admin.rpc("link_person_identity",{
     p_initiator_user_id:userId,
     p_target_user_id:target.user.id,
@@ -388,6 +457,8 @@ async function finishLink(req:Request,userId:string,provider:string){
   });
   if(linkError){
     console.error("link_person_identity",linkError.message);
+    if(/account_merge_review_required/i.test(linkError.message||""))
+      return json(req,{error:"account_merge_review_required"},409);
     const conflict=/already_linked|target_account|identity_already|requires_relink/i.test(linkError.message||"");
     return json(req,{error:conflict?"identity_already_linked":"identity_link_failed"},conflict?409:500);
   }
@@ -420,6 +491,73 @@ async function disconnectIdentity(req:Request,userId:string,identityId:string){
   return json(req,{ok:true,ekodiId},200);
 }
 
+
+// ---- Owner-decided Person merge, phase 1 (request + inventory, no data movement) ----
+function publicMergeRequest(row:any){
+  if(!row)return null;
+  return {id:row.id,status:row.status,provider:row.proven_provider,createdAt:row.created_at,
+    expiresAt:row.expires_at,inventory:row.inventory??{}};
+}
+async function openMergeRequest(survivorPersonId:string,absorbedPersonId:string,initiatorUserId:string,provenUserId:string,provider:string){
+  try{
+    const {data:existing,error:existingError}=await admin.from("person_merge_requests").select("*")
+      .eq("survivor_person_id",survivorPersonId).eq("absorbed_person_id",absorbedPersonId)
+      .in("status",["pending","approved"]).maybeSingle();
+    if(existingError)throw existingError;
+    const {data:inventory,error:inventoryError}=await admin.rpc("person_merge_inventory",
+      {p_survivor:survivorPersonId,p_absorbed:absorbedPersonId});
+    if(inventoryError)throw inventoryError;
+    const expiresAt=new Date(Date.now()+30*60*1000).toISOString();
+    let row:any;
+    if(existing){
+      const {data,error}=await admin.from("person_merge_requests").update({inventory,expires_at:expiresAt,
+        initiator_user_id:initiatorUserId,proven_user_id:provenUserId,proven_provider:provider})
+        .eq("id",existing.id).select("*").single();
+      if(error)throw error;row=data;
+    }else{
+      const {data,error}=await admin.from("person_merge_requests").insert({survivor_person_id:survivorPersonId,
+        absorbed_person_id:absorbedPersonId,initiator_user_id:initiatorUserId,proven_user_id:provenUserId,
+        proven_provider:provider,inventory,expires_at:expiresAt}).select("*").single();
+      if(error)throw error;row=data;
+    }
+    await writeIdentityAudit(survivorPersonId,initiatorUserId,"identity.merge_requested",provider,null,{
+      mergeRequestId:row.id,verdict:inventory?.verdict??null,absorbedRows:inventory?.absorbedRows??null
+    });
+    return publicMergeRequest(row);
+  }catch(error){
+    // The link stays refused either way; a missing request only means no report yet.
+    console.error("merge request",(error as Error)?.message||error);
+    return null;
+  }
+}
+async function ownMergeRequest(userId:string,id:string){
+  const personId=await personForUser(userId);
+  if(!personId)return null;
+  const {data,error}=await admin.from("person_merge_requests").select("*").eq("id",id).maybeSingle();
+  if(error)throw error;
+  // Only the surviving Person (the account that started the link) may see or act on it.
+  return data&&data.survivor_person_id===personId?data:null;
+}
+async function getMergeRequest(req:Request,userId:string,id:string){
+  const row=await ownMergeRequest(userId,id);
+  if(!row)return json(req,{error:"not_found"},404);
+  if(row.status==="pending"&&new Date(row.expires_at).getTime()<Date.now()){
+    await admin.from("person_merge_requests").update({status:"expired"}).eq("id",row.id).eq("status","pending");
+    row.status="expired";
+  }
+  return json(req,{ok:true,mergeRequest:publicMergeRequest(row)});
+}
+async function cancelMergeRequest(req:Request,userId:string,id:string){
+  const row=await ownMergeRequest(userId,id);
+  if(!row)return json(req,{error:"not_found"},404);
+  if(row.status!=="pending")return json(req,{error:"merge_request_not_pending"},409);
+  const {error}=await admin.from("person_merge_requests").update({status:"cancelled",decided_at:new Date().toISOString()})
+    .eq("id",row.id).eq("status","pending");
+  if(error)throw error;
+  await writeIdentityAudit(row.survivor_person_id,userId,"identity.merge_cancelled",row.proven_provider,null,{mergeRequestId:row.id});
+  return json(req,{ok:true,status:"cancelled"});
+}
+
 function providerFrom(path:string,suffix:string){
   const match=path.match(new RegExp(`^/providers/([a-z0-9_-]+)${suffix.replaceAll("/","\\/")}$`));
   return match?.[1]??null;
@@ -431,6 +569,7 @@ Deno.serve(async(req)=>{
   if(!origin||!AUTH_ORIGINS.has(origin))return json(req,{error:"origin_not_allowed"},403);
   const path=new URL(req.url).pathname.replace(/^\/identity-api/,"")||"/";
   try{
+    if(req.method==="GET"&&path==="/email/readiness")return emailPasswordReadiness(req);
     if(req.method==="GET"&&path==="/providers")return await listProviders(req);
     if(req.method==="GET"&&path==="/providers/readiness")return await providerReadiness(req);
     if(req.method==="POST"&&path==="/challenge")return await issueChallenge(req,"google","login",null);
@@ -454,6 +593,9 @@ Deno.serve(async(req)=>{
     const linkExchangeProvider=providerFrom(path,"/link/exchange");
     if(req.method==="POST"&&linkExchangeProvider)return await finishLink(req,user.id,linkExchangeProvider);
 
+    const mergeMatch=path.match(/^\/merge-requests\/([0-9a-f-]{36})(\/cancel)?$/i);
+    if(mergeMatch&&req.method==="GET"&&!mergeMatch[2])return await getMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
+    if(mergeMatch&&req.method==="POST"&&mergeMatch[2])return await cancelMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
     const identityMatch=path.match(/^\/identities\/([0-9a-f-]{36})$/i);
     if(req.method==="DELETE"&&identityMatch)return await disconnectIdentity(req,user.id,identityMatch[1]);
     return json(req,{error:"not_found"},404);

@@ -73,3 +73,41 @@ test('readiness exposes only safe allowlisted authentication diagnostic fields',
   for (const secret of ['SECRET_API','SECRET_PASSWORD','SECRET_MALL_OPS']) assert.ok(!responseText.includes(secret));
   assert.ok(!responseText.includes('rawResponse'));
 });
+
+test('manual auth check is protected and returns no raw supplier content', async () => {
+  const { handleDomemaeRequest } = await import('./domemae.js');
+  const env={DB:{},MALL_OPERATIONS_TOKEN:'OPS_SECRET'};
+  let called=false;
+  const url='https://example.com/api/internal/connectors/domemae/auth-probe';
+  const noAuth=await handleDomemaeRequest(new Request(url,{method:'POST'}),env,{runAuthProbe:async()=>{called=true;return {ok:true};}});
+  assert.equal(noAuth.status,401);assert.equal(called,false);
+  const yesAuth=await handleDomemaeRequest(new Request(url,{method:'POST',headers:{'x-ekodi-mall-ops-token':'OPS_SECRET'}}),env,
+    {runAuthProbe:async(_env,_fetch,opts)=>{assert.equal(opts.operatorRetry,true);return {ok:false,login:'failed',asset:'not-checked',errorCode:'PASSWORD_REJECTED',rawResponse:'SENSITIVE_TOKEN'};}});
+  assert.equal(yesAuth.status,200);
+  assert.equal(yesAuth.body.probe.errorCode,'PASSWORD_REJECTED');
+  assert.equal(yesAuth.body.probe.ok,false);
+  assert.ok(!JSON.stringify(yesAuth.body).includes('SENSITIVE_TOKEN'));
+});
+
+test('readiness strips any vendor raw response from safe login evidence', async () => {
+  const { handleDomemaeRequest } = await import('./domemae.js');
+  const secret='RAW_SUPPLIER_RESPONSE_SHOULD_NOT_LEAK';
+  const env = {
+    MALL_OPERATIONS_TOKEN:'OPS_TEST', DB: { prepare(sql) { return {
+      bind(){return this;},
+      async first(){return sql.includes('FROM supplier_connector_checks')
+        ? { result_status:'failed',checked_at:'2026-10-29T11:00:00Z',
+          metadata_json: JSON.stringify({ errorCode:'LOGIN_REJECTED',
+            diagnostic: { httpStatus:200,jsonParsed:true,supplierResult:'false',clientIpMode:'loopback-fallback',raw:secret } }) }
+        : null;},
+      async run(){return {};}
+    };}}
+  };
+  const request = new Request('https://example.com/api/internal/connectors/domemae/readiness',
+    { headers: {'x-ekodi-mall-ops-token':'OPS_TEST'} });
+  const r=await handleDomemaeRequest(request,env);
+  assert.equal(r.status,200);
+  assert.equal(r.body.readiness.readOnlyAuthProbe.diagnostic.supplierResult,'false');
+  assert.equal(r.body.readiness.readOnlyAuthProbe.diagnostic.clientIpMode,'loopback-fallback');
+  assert.ok(!JSON.stringify(r.body).includes(secret));
+});

@@ -145,6 +145,28 @@ test('future content is not exposed to unauthenticated clients or link crawlers'
   assert.doesNotMatch(html,/2099-01-01.*오바댜/);
   assert.match(html,/오늘의 매일묵상/);
 });
+test('Mission guest future 403 explains the restriction and immediately restores today without exposing future content',()=>{
+  const js=fs.readFileSync(new URL('devotion.js',bibleDir),'utf8');
+  const fallback=js.slice(js.indexOf("const futureNotice = '아직 공개되지"),js.indexOf("if (!date && data.date && dateMode === 'path')"));
+  assert.ok(fallback.length>400 && fallback.length<3800);
+  assert.ok(fallback.includes("if (siteKey === 'mission' && date && data.error === 'future_unavailable'"));
+  assert.ok(fallback.includes("typeof data.today === 'string'"));
+  assert.ok(fallback.includes("data.today < date"));
+  assert.ok(fallback.includes("history.replaceState(null, '', `${pageUrl(today)}${location.hash}`)"));
+  assert.ok(fallback.includes("fetch(`${API}?date=${today}`"));
+  assert.ok(fallback.includes("render(todayDevotion)"));
+  assert.ok(fallback.includes("아직 공개되지 않은 날짜입니다. 오늘 날짜까지만 열람할 수 있습니다."));
+  assert.ok(fallback.includes("오늘의 묵상으로 이동했습니다."));
+  assert.ok(fallback.includes("setTimeout("));
+  assert.ok(!fallback.includes("location.assign("));
+  assert.ok(!fallback.includes("window.location.href ="));
+  assert.ok(js.includes("if (!date && data.date && dateMode === 'path')"));
+  // The shared Bible and Church clients preserve their existing denied-future behavior.
+  assert.ok(fallback.includes("siteKey === 'mission'"));
+  assert.ok(js.includes("if (!response.ok)"));
+  assert.ok(js.includes("render(data);"));
+});
+
 test('attribution and October original score are present',()=>{
   assert.equal(activities.notice,'묵상 적용(시·노래·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.');
   const song=activities.days.find(d=>d.day===26)?.song;
@@ -221,4 +243,78 @@ test('phone layout keeps scripture side gutters minimal', () => {
   assert.match(tail, /\.ekodi-devotion\{padding-left:max\(6px,env\(safe-area-inset-left,0px\)\);padding-right:max\(6px,env\(safe-area-inset-right,0px\)\)\}/);
   assert.match(tail, /\.ekodi-devotion \.dv-panel\{padding-left:12px;padding-right:12px\}/);
   assert.match(tail, /\.ekodi-devotion \.dv-scripture-section\{padding:16px 12px;/);
+});
+
+test('church, mission, and Bible share a fail-closed tomorrow navigation control',()=>{
+ const client=fs.readFileSync(new URL('../bible/devotion.js',import.meta.url),'utf8');
+ assert.ok(client.includes('const siteKey = root.dataset.siteKey'), 'shared renderer identifies the host');
+ assert.match(client,/base\.startsWith\('\/ekodichurch'\)/);
+ assert.match(client,/base\.startsWith\('\/ekodimission'\)/);
+ const bible=fs.readFileSync(new URL('../bible/devotion.html',import.meta.url),'utf8');
+ const mission=fs.readFileSync(new URL('../space/ekodimission-devotion.page',import.meta.url),'utf8');
+ const verify=fs.readFileSync(new URL('../scripts/verify-devotion-native-sandbox.mjs',import.meta.url),'utf8');
+ assert.match(bible,/data-base="\/bible\/devotion"/);
+ assert.match(mission,/data-base="\/ekodimission\/devotion"/);
+ assert.match(verify,/\/ekodichurch\/devotion\/\?date=/);
+ assert.match(client,/next\.hidden = true;/);
+ assert.match(client,/next\.removeAttribute\('href'\)/);
+ assert.match(client,/next\.setAttribute\('aria-disabled', String\(!allowed\)\)/);
+ assert.match(client,/current\.nextDate <= today \|\| \(current\.admin\?\.canEdit && !futurePermissionRevoked\)/);
+ assert.match(client,/window\.addEventListener\('ekodi:auth-logout',revokeFutureNavigation\)/);
+ assert.match(client,/window\.addEventListener\('storage',event=>/);
+ assert.match(client,/location\.replace\(pageUrl\(seoulToday\(\)\)\)/);
+ assert.match(client,/next\.addEventListener\('click',async event=>/);
+ assert.match(client,/const authorized=await verifyFuturePermission\(date\)/);
+ assert.match(client,/if\(authorized===false\)\{revokeFutureNavigation\(\);return;\}/);
+ assert.match(client,/timeZone:'Asia\/Seoul'/);
+});
+
+test('Bible and Church show only Login for guest, verified account plus Logout after authentication',()=>{
+ const client=fs.readFileSync(new URL('../bible/devotion.js',import.meta.url),'utf8');
+ const css=fs.readFileSync(new URL('../bible/devotion.css',import.meta.url),'utf8');
+ assert.match(client,/siteKey==='mission' \? null : el\('div','dv-shared-auth'\)/);
+ assert.match(client,/if\(!signedIn\)\{/);
+ assert.match(client,/el\('a','dv-date-link','로그인'\)/);
+ assert.match(client,/el\('span','dv-shared-account',String\(viewer\.email\|\|'계정'\)/);
+ assert.match(client,/el\('button','dv-date-link','로그아웃'\)/);
+ assert.match(client,/showSharedAccount\(viewer\)/);
+ assert.match(client,/const response = await fetch\(\x60\$\{API\}\/me\x60/);
+ assert.match(client,/window\.dispatchEvent\(new Event\('ekodi:auth-logout'\)\)/);
+ assert.match(css,/\.dv-shared-tools > \.dv-adminbar\[hidden\]\{display:none!important\}/);
+ assert.match(css,/\.dv-shared-account\{max-width:210px/);
+});
+
+test('sign-out revokes future dates before any network sign-out can delay the UI',()=>{
+ const shared=fs.readFileSync(new URL('../bible/devotion.js',import.meta.url),'utf8');
+ const mission=fs.readFileSync(new URL('../space/ekodimission-shell.js',import.meta.url),'utf8');
+ const sharedSignout=shared.slice(shared.indexOf('async function signOutDevotion(button){'),shared.indexOf('  showSharedAccount(null);\n\n  function toast'));
+ const missionSignout=mission.slice(mission.indexOf('async function missionLogout(){'),mission.indexOf("missionAuthUi?.logout.addEventListener"));
+ assert.ok(sharedSignout.includes("window.dispatchEvent(new Event('ekodi:auth-logout'))"));
+ assert.ok(sharedSignout.indexOf("window.dispatchEvent(new Event('ekodi:auth-logout'))") < sharedSignout.indexOf("await fetch("));
+ assert.ok(missionSignout.includes("window.dispatchEvent(new Event('ekodi:auth-logout'))"));
+ assert.ok(missionSignout.indexOf("window.dispatchEvent(new Event('ekodi:auth-logout'))") < missionSignout.indexOf("await fetch("));
+ assert.match(shared,/next\.removeAttribute\('href'\)/);
+});
+
+test('share cards: every rendered month has a 1200x630 JPEG per day and pages advertise them', async () => {
+  const { commonScriptureSnapshot } = await import('../common-scripture-registry.js');
+  const manifest = JSON.parse(fs.readFileSync(new URL('og/manifest.json', bibleDir), 'utf8'));
+  assert.equal(manifest.size, '1200x630');
+  assert.ok(fs.existsSync(new URL(`og/${manifest.generic}`, bibleDir)));
+  for (const month of manifest.months) {
+    for (const reading of commonScriptureSnapshot(month).readings) {
+      const file = new URL(`og/${reading.date}.jpg`, bibleDir);
+      assert.ok(fs.existsSync(file), reading.date);
+      const head = fs.readFileSync(file).subarray(0, 3);
+      assert.deepEqual([...head], [0xff, 0xd8, 0xff], `${reading.date} is JPEG`);
+    }
+  }
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+  const past = manifest.months.includes(today.slice(0, 7)) ? today : '2026-10-26';
+  const page = await (await worker.fetch(new Request(`https://ekodi.kr/bible/devotion/${past}`), assetEnv())).text();
+  assert.match(page, new RegExp(`og:image" content="https://ekodi\\.kr/bible/og/${past}\\.jpg"`));
+  assert.match(page, /twitter:card" content="summary_large_image"/);
+  const future = await (await worker.fetch(new Request('https://ekodi.kr/bible/devotion/2099-01-01'), assetEnv())).text();
+  assert.match(future, /og:image" content="https:\/\/ekodi\.kr\/bible\/og\/devotion\.jpg"/);
+  assert.match(fs.readFileSync(new URL('../space/ekodimission-devotion.page', import.meta.url), 'utf8'), /og:image" content="https:\/\/ekodi\.kr\/bible\/og\/devotion\.jpg"/);
 });

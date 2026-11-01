@@ -11,7 +11,7 @@ window.addEventListener('ekodi:user-character-ready',enforceMyVisualIsolation);
 
 const MODES={writer:'Writer',video:'Video',podcast:'Podcast',lecture:'Educator',research:'Research',visual:'Visual',mission:'Mission',ai:'AI Creator'};
 const SERVICES=[
- ['church','에코디교회','https://ekodi.kr/ekodichurch'],['biz','에코디비즈','https://ekodi.kr/ekodibiz'],['books','출판','https://books.ekodi.kr'],['author','Creator AI','https://author.ekodi.kr'],['lab','에코디연구소','https://ekodi.kr/ekodilab'],['community','커뮤니티','https://ekodi.kr/community'],['work','에코디워크 · 구인구직','https://ekodi.kr/work'],['social','EKODI Social','https://social.ekodi.kr'],['energy','Energy AI','https://energy.ekodi.kr'],['business','Business OS','https://ekodi.kr/business'],['mall','에코디몰','https://ekodi.kr/ekodimall'],['marketing','Marketing AI','https://ekodi.kr/ekodibiz/marketing-ai']
+ ['church','에코디교회','https://ekodi.kr/ekodichurch'],['biz','에코디비즈','https://ekodi.kr/ekodibiz'],['books','출판','https://ekodi.kr/books'],['author','Creator AI','https://ekodi.kr/author'],['lab','에코디연구소','https://ekodi.kr/ekodilab'],['community','커뮤니티','https://ekodi.kr/community'],['work','에코디워크 · 구인구직','https://ekodi.kr/work'],['social','EKODI Social','https://social.ekodi.kr'],['energy','Energy AI','https://energy.ekodi.kr'],['business','Business OS','https://ekodi.kr/business'],['mall','에코디몰','https://ekodi.kr/ekodimall'],['marketing','Marketing AI','https://ekodi.kr/ekodibiz/marketing-ai']
 ];
 const OPEN_SSO_SITES=new Set(['social','energy']);
 // Registered customer-owned entry points are eligible for credential handoff recovery,
@@ -21,6 +21,16 @@ const SSO_SITES=new Set(['church','biz','books','author','lab','community','work
 const TARGETABLE_WORKSPACE_SITES=new Set(['church','biz','books','lab','mall','marketing','social','energy']);
 const WORKSPACE_ENTRY_PRIORITY=['biz','marketing','mall','church','books','lab','business','community','work','author','social','energy'];
 const authUrl=cfg.authUrl||'https://ekodi.kr/auth/?site=my';
+function signedOutLoginUrl(){
+ const target=new URL(authUrl,location.origin);
+ if(!target.searchParams.has('site'))target.searchParams.set('site','my');
+ target.searchParams.set('return_to',location.origin+location.pathname+location.search+location.hash);
+ return target.href;
+}
+function redirectSignedOutToLogin(){
+ document.body.dataset.authState='redirect';
+ location.replace(signedOutLoginUrl());
+}
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
 const PROFILE_API=enabled?`${cfg.supabaseUrl}/functions/v1/profile-api`:'';
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
@@ -540,13 +550,19 @@ if(MISROUTED_SERVICE_RETURN){
  location.replace(MISROUTED_SERVICE_RETURN.href);
 }else if(!enabled){authUi();await loadAll()}else{
  try{await handoff()}catch(e){console.error('auth handoff',e)}
- const {data}=await sb.auth.getSession();session=data.session;authUi();announceSession();
- try{await loadAll()}catch(e){console.error('My EKODI load',e)}
- sb.auth.onAuthStateChange(async(event,next)=>{
-  if(event==='SIGNED_OUT'||(session?.user?.id&&next?.user?.id&&session.user.id!==next.user.id)){
+ const {data}=await sb.auth.getSession();session=data.session;
+ // My EKODI is a personal space: a signed-out visitor never sees it and goes
+ // straight to central login, returning here afterwards.
+ if(!session){redirectSignedOutToLogin()}else{
+  authUi();announceSession();
+  try{await loadAll()}catch(e){console.error('My EKODI load',e)}
+  sb.auth.onAuthStateChange(async(event,next)=>{
+   // Stop consent-based activity measurement on sign-out or account switch.
+   if(event==='SIGNED_OUT'||!next||(session?.user?.id&&next?.user?.id&&session.user.id!==next.user.id)){
     myPointsTracker?.stop();
     const toggle=$('#activityPointsOptIn');if(toggle)toggle.checked=false;
-  }
-  session=next;authUi();announceSession();await loadAll();
- });
+   }
+   session=next;if(!session){redirectSignedOutToLogin();return}authUi();announceSession();await loadAll();
+  });
+ }
 }

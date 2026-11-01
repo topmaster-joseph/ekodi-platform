@@ -8,7 +8,8 @@
 import { fetchDomeggookItem, PROVIDER } from './domeggook-import.js';
 import { raiseAlert } from './ops-alerts.js';
 
-const ENDPOINT = 'https://www.domeggook.com/ssl/api/';
+// 10/29 www 호스트로 바꾼 뒤 redirect:'error' 와 겹쳐 모든 로그인이 실패했다. 상품조회와 같은 공식 호스트를 쓴다.
+const ENDPOINT = 'https://domeggook.com/ssl/api/';
 const DEFAULT_ITEM_TEMPLATE = '{market}||P||{opt}|{qty}||{sellerMemo}||{deliMemo}';
 
 /**
@@ -32,9 +33,18 @@ const TRACK_INTERVAL_MS = 60 * 60 * 1000;
 const isoNow = () => new Date().toISOString();
 const pipeSafe = (v, max = 120) => String(v ?? '').replace(/[|\r\n]/g, ' ').trim().slice(0, max);
 
+/** The supplier confirms Private API is approved for one member only.
+ * Compare the separately provisioned approved account secret; never disclose identifiers. */
+export function approvedMemberBindingReady(env) {
+  const configured = String(env?.DOMEMAE_USER_ID || '').trim();
+  const approved = String(env?.DOMEMAE_APPROVED_MEMBER_ID || '').trim();
+  return Boolean(configured && approved && configured === approved);
+}
+
 export function autoOrderEnabled(env) {
   return String(env?.DOMEGGOOK_AUTO_ORDER_ENABLED || '').toLowerCase() === 'true'
-    && Boolean(env.DOMEMAE_API_KEY && env.DOMEMAE_USER_ID && env.DOMEMAE_PASSWORD);
+    && Boolean(env?.DOMEMAE_API_KEY && env?.DOMEMAE_USER_ID && env?.DOMEMAE_PASSWORD)
+    && approvedMemberBindingReady(env);
 }
 
 function redact(text, env) {
@@ -46,13 +56,35 @@ function redact(text, env) {
 async function call(env, params, fetchImpl, method = 'POST') {
   const body = new URLSearchParams({ aid: env.DOMEMAE_API_KEY, om: 'json', ...params });
   // Never silently follow a redirect for a paid order: some redirects convert POST into GET.
-  const res = method === 'GET'
-    ? await fetchImpl(`${ENDPOINT}?${body}`, { headers: { accept: 'application/json' }, redirect: 'error' })
-    : await fetchImpl(ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body, redirect: 'error' });
+  // 도매꾹은 공식 주소 사이에서 리다이렉트를 보낸다(11/1 진단: redirect blocked).
+  // 자동 추종은 끄고(manual), https 이면서 도매꾹 소유 호스트로 가는 경우에만 같은 메서드·본문으로 최대 2번 다시 보낸다.
+  // 리다이렉트 응답은 원 서버가 요청을 처리하지 않았다는 뜻이므로 재전송해도 이중 처리되지 않는다.
+  let url = method === 'GET' ? `${ENDPOINT}?${body}` : ENDPOINT;
+  let res;
+  try {
+    for (let hop = 0; hop <= 2; hop += 1) {
+      res = method === 'GET'
+        ? await fetchImpl(url, { headers: { accept: 'application/json' }, redirect: 'manual' })
+        : await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body, redirect: 'manual' });
+      if (!(res.status >= 300 && res.status < 400)) break;
+      const location = res.headers?.get?.('location');
+      let next;
+      try { next = new URL(location, url); } catch { next = null; }
+      if (!next || next.protocol !== 'https:' || !/(^|\.)domeggook\.com$/i.test(next.hostname) || hop === 2) {
+        const target = next ? `${next.protocol}//${next.hostname}${next.pathname}`.slice(0, 80) : 'no location';
+        return { ok: false, status: res.status, root: {}, parsedJson: false, transport: `redirect blocked ${res.status} to ${target}` };
+      }
+      url = method === 'GET' ? `${next.origin}${next.pathname}?${body}` : `${next.origin}${next.pathname}`;
+    }
+  } catch (error) {
+    const transport = /redirect/i.test(String(error?.message || '')) ? 'redirect blocked' : 'network failure';
+    return { ok: false, status: 0, root: {}, parsedJson: false, transport };
+  }
   const text = await res.text();
   let payload = null; try { payload = JSON.parse(text); } catch {}
   const root = payload?.domeggook && typeof payload.domeggook === 'object' ? payload.domeggook : payload;
-  return { ok: res.ok && Boolean(root), status: res.status, root: root || {} };
+  return { ok: res.ok && Boolean(root), status: res.status, root: root || {},
+    parsedJson: Boolean(payload && typeof payload === 'object') };
 }
 
 function apiError(r, env) {
@@ -65,13 +97,48 @@ function apiError(r, env) {
   return '';
 }
 
+/** Supplier's human-readable failure reason with every identifier/secret removed.
+ * Keeps only Korean/English words and spaces (no digits, '@', ids, keys, sessions). */
+export function scrubSupplierMessage(text, env = {}) {
+  let out = String(text || '');
+  for (const v of [env.DOMEMAE_API_KEY, env.DOMEMAE_PASSWORD, env.DOMEMAE_USER_ID, env.DOMEMAE_APPROVED_MEMBER_ID])
+    if (v) out = out.split(String(v)).join(' ');
+  out = out.replace(/\S*[@:/\\]\S*/g, ' ').replace(/[^가-힣a-zA-Z\s.,!?()]/g, ' ')
+    .replace(/\b[a-zA-Z]*\d[\w]*\b/g, ' ').replace(/\b[a-zA-Z]{20,}\b/g, ' ').replace(/\s+/g, ' ').trim();
+  return out.slice(0, 120);
+}
+
+/** Fixed-value, secret-free diagnostic facts for failed setLogin only.
+ * No API response body, user ID, credentials, session or e-money amount is stored. */
+export function safeDomeggookLoginDiagnostic(env, response) {
+  const rawResult = String(response?.root?.result ?? '').trim().toLowerCase();
+  const supplierResult = rawResult === 'true' || rawResult === '1' || rawResult === 'success'
+    ? 'success' : rawResult === 'false' ? 'false' : rawResult ? 'other' : 'missing';
+  const configuredIp = String(env?.DOMEGGOOK_CLIENT_IP ?? '').trim();
+  const clientIpMode = !configuredIp ? 'loopback-fallback'
+    : /^(127\.|::1$|0:0:0:0:0:0:0:0$)/.test(configuredIp) ? 'loopback-configured' : 'configured';
+  return {
+    httpStatus: Number.isInteger(response?.status) && response.status >= 100 && response.status <= 599 ? response.status : null,
+    jsonParsed: response?.parsedJson === true,
+    supplierResult,
+    clientIpMode
+  };
+}
+
 export async function login(env, fetchImpl = fetch) {
   const r = await call(env, { ver: '4.1', mode: 'setLogin', id: env.DOMEMAE_USER_ID, pw: env.DOMEMAE_PASSWORD, loginKeep: 'off', ip: env.DOMEGGOOK_CLIENT_IP || '127.0.0.1', device: 'Third Party' }, fetchImpl);
   const sId = r.root?.sId;
-  if (!r.ok || apiError(r, env) || !sId || !String(r.root?.id || '').trim())
-    throw new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '인증 결과/회원 ID/세션 불명'}`);
-  // 로그인 응답의 회원 ID를 이후 호출에 쓴다(SNS 연동 계정은 입력 ID와 실제 회원 ID(sns@…)가 다를 수 있음 → '회원오류').
-  return { id: String(r.root?.id || env.DOMEMAE_USER_ID), sId: String(sId) };
+  if (!r.ok || apiError(r, env) || !sId || !String(r.root?.id || '').trim()) {
+    const error = new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '인증 결과/회원 ID/세션 불명'}`);
+    error.safeDiagnostic = safeDomeggookLoginDiagnostic(env, r);
+    error.supplierMessage = r.transport || scrubSupplierMessage(apiError(r, env) || (r.parsedJson ? '' : 'non json response'), env);
+    throw error;
+  }
+  // Deny any session bound to another member even when the supplier returned success.
+  // The vendor-approved account ID is set only in a Cloudflare secret.
+  if (!approvedMemberBindingReady(env) || String(r.root.id).trim() !== String(env.DOMEMAE_APPROVED_MEMBER_ID).trim())
+    throw new Error('도매꾹 Private API 승인 회원과 로그인 회원이 일치하지 않습니다');
+  return { id: String(r.root.id), sId: String(sId) };
 }
 
 export async function emoneyBalance(env, session, fetchImpl = fetch) {
@@ -257,16 +324,34 @@ export async function trackSupplierOrders(env, fetchImpl = fetch, limit = 10) {
 /** Read-only authentication probe independent of the paid setOrder switch.
  * This never invokes setOrder, setOrdDeny or customer/PII endpoints. */
 export function readonlyAuthProbeEnabled(env) {
-  return Boolean(env?.DB && env.DOMEMAE_API_KEY && env.DOMEMAE_USER_ID && env.DOMEMAE_PASSWORD)
+  return Boolean(env?.DB && env?.DOMEMAE_API_KEY && env?.DOMEMAE_USER_ID && env?.DOMEMAE_PASSWORD)
+    && approvedMemberBindingReady(env)
     && (autoOrderEnabled(env) || String(env.DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED || '').toLowerCase() === 'true');
+}
+
+/** An allowlist of error codes, never a persisted supplier response or credential. */
+export function classifySupplierAuthError(message, stage = 'login') {
+  const value = String(message || '').slice(0, 500);
+  if (/ACCOUNT_BINDING_MISMATCH|승인 회원과 로그인 회원이 일치하지 않습니다/i.test(value)) return 'ACCOUNT_BINDING_MISMATCH';
+  if (/(SNS|소셜|카카오|네이버|애플)/i.test(value) && /(비밀번호|인증|로그인|오류)/i.test(value)) return 'SNS_PASSWORD_REQUIRED';
+  if (/(비밀번호|패스워드|password|wrong pw|invalid pw|비번)/i.test(value)) return 'PASSWORD_REJECTED';
+  if (/(회원\s*오류|member\s*error|invalid member)/i.test(value)) return 'MEMBER_ERROR';
+  if (/(권한|승인|not authorized|unauthorized|permission denied)/i.test(value)) return 'PRIVATE_API_PERMISSION';
+  if (/(ip\s*(?:오류|제한)|아이피|접속\s*IP)/i.test(value)) return 'CLIENT_IP_REJECTED';
+  if (stage !== 'login') return 'ASSET_PROBE_FAILED';
+  if (/(false|error|실패|invalid|bad response)/i.test(value)) return 'LOGIN_REJECTED';
+  return 'LOGIN_FAILED';
 }
 
 /** Login and getMyAsset ONLY, max once per 6h. No account identifiers, sessions, secrets,
  * raw supplier errors, balance amounts or buyer PII are retained in the probe evidence. */
-export async function probeDomeggookLogin(env, fetchImpl = fetch) {
+export async function probeDomeggookLogin(env, fetchImpl = fetch, { operatorRetry = false } = {}) {
   if (!readonlyAuthProbeEnabled(env)) return { skipped: 'disabled-or-no-credentials' };
   const last = await env.DB.prepare("SELECT checked_at FROM supplier_connector_checks WHERE external_ref='probe:login' ORDER BY checked_at DESC LIMIT 1").first().catch(() => null);
-  if (last && Date.now() - Date.parse(last.checked_at) < 6 * 60 * 60 * 1000) return { skipped: 'recent' };
+  const cooldown = operatorRetry ? 15 * 60 * 1000 : 6 * 60 * 60 * 1000;
+  const lastTime = last?.checked_at ? Date.parse(last.checked_at) : NaN;
+  if (Number.isFinite(lastTime) && Date.now() - lastTime < cooldown)
+    return { skipped: 'recent', nextEligibleAt: new Date(lastTime + cooldown).toISOString() };
   let ok = false, stage = 'login', meta = {};
   try {
     const session = await login(env, fetchImpl);
@@ -282,9 +367,19 @@ export async function probeDomeggookLogin(env, fetchImpl = fetch) {
     }
   } catch (error) {
     // Vendor error text can contain identifiers/credentials: persist only a bounded category.
-    const memberError = /회원\s*오류|member\s*error/i.test(String(error?.message || ''));
+    // Only persist a bounded category. Never store the supplier's error body.
     meta = { login: stage === 'login' ? 'failed' : 'ok', asset: stage === 'asset' ? 'failed' : 'not-checked',
-      errorCode: memberError ? 'MEMBER_ERROR' : stage === 'login' ? 'LOGIN_FAILED' : 'ASSET_PROBE_FAILED' };
+      errorCode: classifySupplierAuthError(error?.message, stage) };
+    if (error?.supplierMessage) meta.supplierMessage = error.supplierMessage;
+    if (stage === 'login' && error?.safeDiagnostic) {
+      // Safe facts only; never persist raw result or API parameters.
+      meta.diagnostic = safeDomeggookLoginDiagnostic(env, {
+        status: error.safeDiagnostic.httpStatus, parsedJson: error.safeDiagnostic.jsonParsed,
+        root: { result: error.safeDiagnostic.supplierResult === 'success' ? 'true'
+          : error.safeDiagnostic.supplierResult === 'false' ? 'false'
+          : error.safeDiagnostic.supplierResult === 'other' ? 'other' : '' }
+      });
+    }
     await raiseAlert(env, { severity: 'error', kind: 'supply.login_failed', message: `도매꾹 읽기 전용 인증 점검 실패: ${meta.errorCode}` });
   }
   await env.DB.prepare('INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES (?,?,?,?,?,?,?)')

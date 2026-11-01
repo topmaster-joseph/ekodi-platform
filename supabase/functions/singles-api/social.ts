@@ -15,9 +15,9 @@ const active=(m:any)=>m?.status==='active'&&m.base_consent===true&&m.age_19_conf
 const verified=(m:any)=>active(m)&&Boolean(m.adult_verified_at);
 // 유료회원 모델(2026-10-28): SINGLES_REQUEST_BILLING_ENABLED=true이면 가입비를 낸 유료회원만 회원 기능을 쓴다.
 const paidModel=()=>requestBilling();
+export const SUBSCRIPTION_CODES=['sub_1d','sub_10d','sub_20d','sub_30d'];
 async function isPaid(admin:Admin,userId:string){const {data,error}=await admin.rpc('singles_is_paid_member',{p_user:userId});if(error)throw error;return data===true}
 async function subscribed(admin:Admin,userId:string){return paidModel()?isPaid(admin,userId):hasBankPlan(admin,userId,'community')}
-const feeFrom=(e:any)=>Number(rpcMsg(e).match(/insufficient_credit:(\d+)/)?.[1]||0);
 // 연락처 가림: 연락처 교환이 수락되지 않은 사이에서는 전화번호·이메일·메신저 아이디·링크를 서버가 가린다.
 const CONTACT_PATTERNS=[
  /(?:\+?82[\s.-]?)?0?1[016789][\s.-]*\d{3,4}[\s.-]*\d{4}/g,
@@ -193,27 +193,17 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   return reply(req,{ok:true,id:reportReview,status:data});
  }
  if(p==='/pricing'&&method==='GET'){
+  // 2026-10-31: 가입비 없음. 유료회원=구독권 보유, 요청·수락은 수락 후 청구서(후불).
   const rules=await many(admin.from('singles_price_rules').select('kind,display_name,standard_krw,floor_krw,max_discount_pct'));
-  const passes=await many(admin.from('singles_pass_plans').select('code,display_name,days,price_krw').eq('active',true).order('days'));
+  const plans=await many(admin.from('singles_bank_plans').select('code,display_name,amount_krw,duration_days').eq('active',true).in('code',SUBSCRIPTION_CODES).order('duration_days'));
   const paid=paidModel()?await isPaid(admin,userId):false;
   const quotes:Record<string,number>={};
   if(paid)for(const k of ['message','contact']){const {data,error}=await admin.rpc('singles_price_quote',{p_user:userId,p_kind:k});if(error)throw error;quotes[k]=data}
-  const grant=await one(admin.from('singles_pass_grants').select('expires_at').eq('user_id',userId));
-  return reply(req,{paid_model:paidModel(),paid_member:paid,join_fee_krw:500000,rules,passes,quotes,
-   pass_expires_at:grant?.expires_at&&Date.parse(grant.expires_at)>Date.now()?grant.expires_at:null});
+  const grant=await one(admin.from('singles_bank_grants').select('expires_at').eq('user_id',userId).eq('plan_code','subscription'));
+  return reply(req,{paid_model:paidModel(),paid_member:paid,billing:'postpaid_invoice',rules,subscription_plans:plans,quotes,
+   subscription_expires_at:grant?.expires_at&&Date.parse(grant.expires_at)>Date.now()?grant.expires_at:null});
  }
- const passCode=match(p,/^\/passes\/(pass_(?:1|10|20|30)d)$/);
- if(passCode&&method==='POST'){
-  if(!paidModel())return reply(req,{error:'paid_model_not_launched'},503);
-  const {data,error}=await admin.rpc('singles_pass_purchase',{p_user:userId,p_code:passCode});
-  if(error){
-   if(rpcMsg(error).includes('insufficient_credit'))return reply(req,{error:'credit_required',fee_krw:feeFrom(error)},402);
-   if(rpcMsg(error).includes('paid_membership_required'))return reply(req,{error:'paid_membership_required'},402);
-   if(rpcMsg(error).includes('pass_not_available'))return reply(req,{error:'pass_not_available'},404);
-   throw error;
-  }
-  return reply(req,{ok:true,pass_expires_at:data});
- }
+ if(/^\/passes\//.test(p))return reply(req,{error:'passes_discontinued'},410);
  if(p==='/profile'&&method==='GET'){
   const record=await one(admin.from('singles_profiles').select('display_name,broad_region,intro,public_link,details,visibility').eq('user_id',userId));
   const vis=Object.fromEntries(VISIBILITY_KEYS.map(k=>[k,isVisible(record?.visibility,k)]));
@@ -354,22 +344,22 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const recipient=await membership(admin,interestUser);
   if(!verified(recipient)||recipient.discoverable!==true)return reply(req,{error:'connection_unavailable'},404);
   if(paidModel()){
-   // 요청 종류: message(메시지 교환) | contact(연락처 교환). 요청자 요금은 보류되고 상대 수락 시 확정된다.
+   // 요청 종류: message(메시지 교환) | contact(연락처 교환).
    let kind='message';
    if(Number(req.headers.get('content-length')||0)>0){const v=await body(req);if(v&&typeof v==='object'&&'kind' in v)kind=v.kind}
    if(!['message','contact'].includes(kind))return reply(req,{error:'invalid_request_kind'},400);
    if(!await isPaid(admin,userId))return reply(req,{error:'paid_membership_required'},402);
    {const retry=await rateLimited(admin,userId,'interest');if(retry)return tooMany(req,reply,'interest',retry);}
-   const {data,error}=await admin.rpc('singles_paid_request_create',{p_requester:userId,p_responder:interestUser,p_kind:kind});
+   const {data,error}=await admin.rpc('singles_postpaid_request_create',{p_requester:userId,p_responder:interestUser,p_kind:kind});
    if(error){
     const msg=rpcMsg(error);
-    if(msg.includes('insufficient_credit'))return reply(req,{error:'credit_required',fee_krw:feeFrom(error)},402);
     if(msg.includes('paid_membership_required'))return reply(req,{error:'paid_membership_required'},402);
     if(msg.includes('responder_unavailable'))return reply(req,{error:'connection_unavailable'},404);
     for(const code of ['request_exists','already_connected','contact_already_shared'])if(msg.includes(code))return reply(req,{error:code},409);
     throw error;
    }
-   return reply(req,{ok:true,status:'pending',request_id:data.request_id,kind,billing:{reserved_krw:data.fee_krw,charged_on:'acceptance'}});
+   // 요청할 때는 아무것도 결제·보류하지 않는다. 상대가 수락하면 양쪽에 청구서가 발행된다.
+   return reply(req,{ok:true,status:'pending',request_id:data.request_id,kind,billing:{fee_krw:data.fee_krw,charged_on:'acceptance_invoice'}});
   }
   const existing=await one(admin.from('singles_interests').select('id,status').eq('from_user_id',userId).eq('to_user_id',interestUser));
   if(existing)return reply(req,{ok:true,status:existing.status,interest_id:existing.id});
@@ -380,6 +370,8 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  if(p==='/requests'&&method==='GET'&&paidModel()){
   const reqs=await many(admin.from('singles_paid_requests').select('id,requester_id,responder_id,kind,status,requester_fee_krw,responder_fee_krw,created_at')
    .or('requester_id.eq.'+userId+',responder_id.eq.'+userId).order('created_at',{ascending:false}).limit(50));
+  const invoices=await many(admin.from('singles_request_invoices').select('id,request_id,amount_krw,status,order_reference,due_at,refund_due_at,refunded_at').eq('user_id',userId).limit(100));
+  const invByReq=new Map<string,any>(invoices.map((i:any)=>[i.request_id,i]));
   const conns=await many(admin.from('singles_interests').select('id,from_user_id,to_user_id,status')
    .or('from_user_id.eq.'+userId+',to_user_id.eq.'+userId).eq('status','accepted').limit(50));
   const others=[...new Set([...reqs.map((r:any)=>r.requester_id===userId?r.responder_id:r.requester_id),...conns.map((c:any)=>c.from_user_id===userId?c.to_user_id:c.from_user_id)])];
@@ -389,10 +381,11 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   for(const k of ['message','contact']){const {data,error}=await admin.rpc('singles_price_quote',{p_user:userId,p_kind:k});if(error)throw error;quotes[k]=data}
   const unlocks=await many(admin.from('singles_contact_unlocks').select('user_low,user_high').or('user_low.eq.'+userId+',user_high.eq.'+userId));
   const shared=new Set(unlocks.map((u:any)=>u.user_low===userId?u.user_high:u.user_low));
-  return reply(req,{paid_model:true,
-   requests:reqs.map((r:any)=>{const incoming=r.responder_id===userId,other=incoming?r.requester_id:r.responder_id;
+  return reply(req,{paid_model:true,billing:'postpaid_invoice',
+   requests:reqs.map((r:any)=>{const incoming=r.responder_id===userId,other=incoming?r.requester_id:r.responder_id;const inv=invByReq.get(r.id);
     return {id:r.id,kind:r.kind,status:r.status,incoming,display_name:byId.get(other)||'동행 회원',
-     my_fee_krw:incoming?(r.status==='accepted'?r.responder_fee_krw:quotes[r.kind]):r.requester_fee_krw}}),
+     my_fee_krw:inv?inv.amount_krw:(incoming?quotes[r.kind]:r.requester_fee_krw),
+     invoice:inv?{id:inv.id,amount_krw:inv.amount_krw,status:inv.status,order_reference:inv.order_reference||null,due_at:inv.due_at,refund_due_at:inv.refund_due_at||null,refunded_at:inv.refunded_at||null}:null}}),
    connections:conns.map((c:any)=>{const other=c.from_user_id===userId?c.to_user_id:c.from_user_id;
     return {id:c.id,display_name:byId.get(other)||'동행 회원',contact_shared:shared.has(other)}})});
  }
@@ -416,15 +409,15 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
    const q=await one(admin.from('singles_paid_requests').select('requester_id,status').eq('id',decisionId).eq('responder_id',userId));
    if(!q||q.status!=='pending')return reply(req,{error:'connection_not_pending'},409);
    if(await blocked(admin,userId,q.requester_id))return reply(req,{error:'blocked'},403);
-   const {data,error}=await admin.rpc('singles_paid_request_decide',{p_responder:userId,p_request:decisionId,p_decision:decision});
+   const {data,error}=await admin.rpc('singles_postpaid_request_decide',{p_responder:userId,p_request:decisionId,p_decision:decision});
    if(error){
     const msg=rpcMsg(error);
-    if(msg.includes('responder_insufficient_credit'))return reply(req,{error:'credit_required',fee_krw:feeFrom(error)},402);
     if(msg.includes('paid_membership_required'))return reply(req,{error:'paid_membership_required'},402);
     if(msg.includes('request_not_pending'))return reply(req,{error:'request_state_changed'},409);
     throw error;
    }
-   return reply(req,{ok:true,status:data.status,kind:data.kind,interest_id:data.interest_id,billing:{charged_krw:data.fee_krw}});
+   // 수락하면 양쪽에 청구서가 발행되고, 둘 다 결제되면 연결된다.
+   return reply(req,{ok:true,status:data.status,kind:data.kind,billing:{invoice_id:data.invoice_id||null,fee_krw:data.fee_krw,due_days:7}});
   }
   const interest=await one(admin.from('singles_interests').select('from_user_id,to_user_id,status')
    .eq('id',decisionId).eq('to_user_id',userId));

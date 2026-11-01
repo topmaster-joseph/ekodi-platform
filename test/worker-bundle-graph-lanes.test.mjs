@@ -40,6 +40,15 @@ test('a shared legal footer change dispatches every service Worker that bundles 
   assert.ok(business && !business.workflow && /Orphaned/.test(business.excluded));
 });
 
+test('non-bundled church Cloudflare rule script dispatches only its guarded Worker lane', () => {
+  const script='scripts/cloudflare-church-naver-redirect-exception.mjs';
+  const plan=lanesForChangedFiles(root,[script]);
+  assert.deepEqual(plan.dispatches.map(item=>item.workflow),['deploy-church-naver-proof.yml']);
+  assert.deepEqual(plan.affected.find(item=>item.config==='wrangler.church-naver-proof.toml')?.touched,[script]);
+  assert.deepEqual(plan.unowned,[]);
+  assert.equal(lanesForChangedFiles(root,['scripts/unrelated-missing.mjs']).dispatches.length,0);
+});
+
 test('a change outside every Worker bundle dispatches nothing', () => {
   const plan = lanesForChangedFiles(root, ['docs/operations/cloudflare-two-account-boundary.md']);
   assert.deepEqual(plan.dispatches, []);
@@ -189,7 +198,8 @@ test('converge resolves bundle lanes before merging and dispatches them with the
   const resolvedAt = source.indexOf('bundleLanes=lanesForChangedFiles(');
   assert.ok(resolvedAt > 0 && resolvedAt < source.indexOf('for(let cycle=0;'), 'lanes resolve before the merge loop');
   assert.match(source, /if\(handDispatchedLanes\.has\(lane\.workflow\)\)continue;/);
-  assert.match(source, /inputs:\{\.\.\.lane\.inputs,release_branch_ref:branch,release_task_id:taskId\}/);
+  assert.match(source, /Object\.fromEntries\(Object\.entries\(lane\.inputs\|\|\{\}\)\.map/);
+  assert.match(source, /release_branch_ref:branch,release_task_id:taskId/);
   const post = source.slice(source.indexOf('async function dispatchPostMergeDeploys(){'));
   assert.match(post, /await dispatchBundleGraphLanes\(\);\n\}/);
 });
@@ -210,4 +220,22 @@ test('a change to a lane workflow file dispatches its own lane', () => {
 
 test('asset prefix matching is directory-bounded and ignores unrelated files', () => {
   assert.equal(lanesForChangedFiles(root, ['bible-notes.md', 'README.md', 'biblesomething/x.js']).dispatches.length, 0);
+});
+
+test('education dispatch uses the verified protected main merge SHA required by its workflow', () => {
+  const plan=lanesForChangedFiles(root,['config/user-footer.js']);
+  const education=plan.dispatches.find(lane=>lane.workflow==='deploy-education.yml');
+  assert.equal(education?.inputs?.release_sha,'$PROTECTED_MERGE_SHA');
+  const source=fs.readFileSync(path.join(root,'scripts/converge-orchestrated-pr-merge.mjs'),'utf8');
+  assert.match(source,/needsMergeSha=bundleLanes\.dispatches\.some/);
+  assert.match(source,/mergedPr\.data\.merge_commit_sha/);
+  assert.match(source,/mainRef\.data\?\.object\?\.sha/);
+  assert.match(source,/value==='\$PROTECTED_MERGE_SHA'\?protectedMergeSha:value/);
+});
+
+test('a change to EKODIBIZ registered merchant homepage dispatches its own guarded worker', () => {
+  const plan=lanesForChangedFiles(root,['ekodibiz/site.js','ekodibiz/index.html']);
+  assert.ok(plan.dispatches.some(lane=>lane.workflow==='deploy-ekodibiz.yml'));
+  assert.deepEqual(plan.affected.find(item=>item.config==='wrangler.ekodibiz.toml')?.touched,
+    ['ekodibiz/index.html','ekodibiz/site.js']);
 });

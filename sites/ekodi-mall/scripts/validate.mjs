@@ -77,6 +77,15 @@ if (site?.commerce?.inquiryBasketEnabled) {
 if (!['inquiry-only', 'order-ready', 'live'].includes(site?.commerce?.orderMode)) errors.push('site.commerce.orderMode must be inquiry-only, order-ready, or live');
 if (!site?.commerce?.paymentsEnabled && site?.commerce?.orderMode === 'live') errors.push('site.commerce.orderMode cannot be live while paymentsEnabled=false');
 if (Boolean(site?.commerce?.paymentsEnabled) !== apiPaymentsEnabled) errors.push('site.commerce.paymentsEnabled must match api/wrangler.toml PAYMENTS_ENABLED');
+if (apiPaymentsEnabled) {
+  const publicCopy = [site.notice, site.commerce?.betaMessage].join(' ');
+  if (/직접판매 온라인 결제는 활성화하지 않았습니다|온라인 결제 (미지원|비활성)|결제 기능은 비활성/.test(publicCopy)) {
+    errors.push('Mall public copy claims payments disabled even though the verified direct-sale Toss gate is active');
+  }
+  if (!site.notice.includes('에코디비즈 직접판매') || !site.commerce?.betaMessage?.includes('다른 판매자의 대금')) {
+    errors.push('Mall public copy must disclose direct-sale-only payments and no third-party payout');
+  }
+}
 required(site?.commerce?.orchestrationMode, 'site.commerce.orchestrationMode');
 if (site?.commerce?.orchestrationMode !== 'commerce-os-v1') errors.push('site.commerce.orchestrationMode must be commerce-os-v1');
 if (site?.commerce?.paymentProviderAuthority !== 'server-capability-registry') errors.push('site.commerce.paymentProviderAuthority must be server-capability-registry');

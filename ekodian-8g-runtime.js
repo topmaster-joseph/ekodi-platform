@@ -7,6 +7,10 @@ const clean = value => String(value ?? '').trim();
 
 const ACTION_CAPABILITY_MAP = freeze({
   'admin.assist_chat': 'core.navigator',
+  // The monitoring probe exercises the same navigator path; it is recorded under
+  // its own action type so it is not mistaken for conversation, not because it
+  // does something else.
+  'admin.assist_probe': 'core.navigator',
   'service.health_check': 'core.analytics',
 });
 

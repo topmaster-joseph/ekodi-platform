@@ -43,3 +43,22 @@ test('native browser checks Notice after in-page menus and audits citizen read-f
   assert.ok(audit.includes("readOnly:true"));
   assert.ok(audit.includes("guest_write_did_not_open_canonical_login"));
 });
+
+test('native audit proves non-default category click, reload, history and deep-link parity on both mounts',async()=>{
+  const audit=await read('scripts/verify-seonammedi-nav-guest-native.mjs');
+  for(const marker of [
+    "record.filterClickReloadHistoryParity ||= []",
+    "prefix:'committee-activity',id:'committeeActivityFilters'",
+    "prefix:'timeline',id:'timelineFilters'",
+    "await nonDefault.click({timeout:7000})",
+    "await page.reload({waitUntil:'domcontentloaded',timeout:25000})",
+    "await page.goBack({timeout:15000,waitUntil:'domcontentloaded'})",
+    "await page.goForward({timeout:15000,waitUntil:'domcontentloaded'})",
+    "await page.goto('about:blank',{waitUntil:'domcontentloaded'})",
+    "await page.goto(target+selectedHash,{waitUntil:'domcontentloaded',timeout:25000})",
+    "selected?.getAttribute(attribute)===category",
+    "document.getElementById('central-category-panel')?.hidden===true"
+  ])assert.ok(audit.includes(marker),'missing native category verification: '+marker);
+  assert.ok(audit.includes("if(!['GET','HEAD','OPTIONS'].includes(method))"),'read-only browser network guard must remain');
+});
+

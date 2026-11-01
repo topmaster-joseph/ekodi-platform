@@ -1,0 +1,38 @@
+name: EKODI Unified Auth Live Probe
+
+# Read-only production probe: each registered user service must serve the shared
+# Shell (with unified user auth) on its public page without forcing login.
+# Report-only by default; set enforce=1 to fail on gaps.
+on:
+  workflow_dispatch:
+    inputs:
+      enforce:
+        description: 'Fail the run when any registered service has a gap (1 = yes)'
+        required: false
+        default: '0'
+        type: string
+  pull_request:
+    paths:
+      - 'scripts/verify-unified-auth-live.mjs'
+      - '.github/workflows/verify-unified-auth-live.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-unified-auth-live
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Probe live user services (read-only)
+        env:
+          EKODI_UNIFIED_AUTH_ENFORCE: ${{ github.event.inputs.enforce || '0' }}
+        run: node scripts/verify-unified-auth-live.mjs

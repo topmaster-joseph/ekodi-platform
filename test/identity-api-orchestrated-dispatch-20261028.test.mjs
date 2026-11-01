@@ -31,13 +31,13 @@ test('Identity API production recovers orchestrator provenance before the releas
 
 test('Naver/Kakao keys sync from dedicated GitHub secrets without enabling login',async()=>{
   const wf=await read('.github/workflows/deploy-identity-api.yml');
-  const sync=wf.slice(wf.indexOf('Sync dormant Naver/Kakao login keys'),wf.indexOf('- name: Deploy identity API'));
+  const sync=wf.slice(wf.indexOf('Sync dormant Naver/Kakao/Apple login keys'),wf.indexOf('- name: Deploy identity API'));
   assert.match(sync,/secrets\.NAVER_LOGIN_CLIENT_ID/);
   assert.match(sync,/secrets\.KAKAO_LOGIN_REST_API_KEY/);
   assert.match(sync,/secrets set --project-ref "\$PROJECT_REF" --env-file "\$env_file"/,'keys never appear on a command line');
   assert.match(sync,/umask 077/);
   assert.doesNotMatch(sync,/\bupdate\s+public\.identity_providers\b|set\s+enabled\s*=\s*true/i,'syncing keys must not switch any login on');
-  assert.ok(wf.indexOf('Sync dormant Naver/Kakao login keys')>wf.indexOf('EKODI AI Orchestration Gate'));
+  assert.ok(wf.indexOf('Sync dormant Naver/Kakao/Apple login keys')>wf.indexOf('EKODI AI Orchestration Gate'));
 });
 
 test('login path readiness exposes booleans only and is verified after deploy',async()=>{

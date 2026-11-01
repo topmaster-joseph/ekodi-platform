@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import platformRouter from '../platform-router-entry-worker.js';
 const root=new URL('../sites/seonammedi/public/',import.meta.url);
-test('seonammedi notice login uses central EKODI auth and preserves customer-domain return',async()=>{const [app,auth,policy]=await Promise.all([readFile(new URL('app.js',root),'utf8'),readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),readFile(new URL('../config/site-execution-enforcement.json',import.meta.url),'utf8')]);assert.match(app,/new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);assert.doesNotMatch(app,/new URL\('\/auth\/',location\.origin\)/);assert.match(app,/return_to',location\.origin\+'\/\?compose=notice#notices'/);assert.match(auth,/https:\/\/seonammedi\.kr/);assert.match(auth,/서남권국립의대\.kr/);const parsed=JSON.parse(policy);assert.equal(parsed.authenticationEntry?.status,'enforced');assert.equal(parsed.authenticationEntry?.siteLocalAuthPathForbidden,true);assert.equal(parsed.authenticationEntry?.perSiteOptOutAllowed,false);});
+test('seonammedi notice login uses central EKODI auth and preserves customer-domain return',async()=>{const [app,auth,policy]=await Promise.all([readFile(new URL('app.js',root),'utf8'),readFile(new URL('../auth-site/auth.js',import.meta.url),'utf8'),readFile(new URL('../config/site-execution-enforcement.json',import.meta.url),'utf8')]);assert.match(app,/new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);assert.doesNotMatch(app,/new URL\('\/auth\/',location\.origin\)/);assert.match(app,/return_to',siteMountBase\(\)\+'\?compose=notice#notices'/);assert.match(app,/function siteMountBase\(\)\{return location\.origin\+/);assert.match(auth,/https:\/\/seonammedi\.kr/);assert.match(auth,/서남권국립의대\.kr/);const parsed=JSON.parse(policy);assert.equal(parsed.authenticationEntry?.status,'enforced');assert.equal(parsed.authenticationEntry?.siteLocalAuthPathForbidden,true);assert.equal(parsed.authenticationEntry?.perSiteOptOutAllowed,false);});
 
 
 test('seonammedi notice auth handoff returns to the notice composer instead of activity history',async()=>{
@@ -905,8 +905,8 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
 
 test('seonammedi customer domain cache-busts public and admin static assets',async()=>{
   const [html,adminHtml]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('admin/index.html',root),'utf8')]);
-  const cssVersion=html.match(/\/seonammedi\/app\.css\?v=(20261013-[a-z0-9-]+)/)?.[1];
-  const jsVersion=html.match(/\/seonammedi\/app\.js\?v=(20261013-[a-z0-9-]+)/)?.[1];
+  const cssVersion=html.match(/\/seonammedi\/app\.css\?v=(20[0-9]{6}-[a-z0-9-]+)/)?.[1];
+  const jsVersion=html.match(/\/seonammedi\/app\.js\?v=(20[0-9]{6}-[a-z0-9-]+)/)?.[1];
   assert.ok(cssVersion,'public stylesheet must carry an explicit release cache-buster');
   assert.equal(jsVersion,cssVersion,'public script and stylesheet must share one cache-buster');
   assert.ok(adminHtml.includes('<a class="brand" href="./">'));

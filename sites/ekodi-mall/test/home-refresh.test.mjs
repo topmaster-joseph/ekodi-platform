@@ -7,6 +7,7 @@ const template = readFileSync(new URL('../src/index.template.html', import.meta.
 const css = readFileSync(new URL('../assets/home-refresh.css', import.meta.url), 'utf8');
 const js = readFileSync(new URL('../assets/home-refresh.js', import.meta.url), 'utf8');
 const mallHeader = renderMallHeader({ home: true });
+const site = JSON.parse(readFileSync(new URL('../content/site.json', import.meta.url), 'utf8'));
 
 test('premium home renders navigation and retains core commerce entrypoints', () => {
   for (const id of ['mallGlobalSearch','contextForm','contextInput','contextResults','filters','shop','grid','wishBtn','wishDialog','localRegionSelect']) {
@@ -17,7 +18,18 @@ test('premium home renders navigation and retains core commerce entrypoints', ()
   }
   assert.ok(template.indexOf('mall-category-shortcuts') < template.indexOf('context-recommend'));
   assert.ok(template.indexOf('class="shop"') < template.indexOf('affiliate-gates'));
-  assert.ok(template.indexOf('class="shop"') > template.indexOf('context-recommend'));
+  assert.ok(template.indexOf('class="shop"') > template.indexOf('mall-category-shortcuts'));
+  assert.ok(template.indexOf('class="shop"') < template.indexOf('mall-editorial'));
+  assert.ok(template.indexOf('class="shop"') < template.indexOf('context-recommend'));
+  assert.ok(css.includes('@media(min-width:641px)'));
+  assert.ok(css.includes('.mall-category-shortcuts{display:none}'));
+});
+
+test('buyer-facing payment copy matches the approved direct-sale-only production scope', () => {
+  assert.equal(site.commerce.paymentsEnabled, true);
+  assert.match(site.notice, /에코디비즈 직접판매/);
+  assert.match(site.commerce.betaMessage, /다른 판매자의 대금/);
+  assert.doesNotMatch(site.notice + site.commerce.betaMessage, /직접판매 온라인 결제는 활성화하지 않았습니다/);
 });
 
 test('category shortcuts map only to existing filters and destinations', () => {

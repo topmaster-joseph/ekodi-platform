@@ -3,17 +3,33 @@ import { lanesForChangedFiles } from './lib/worker-bundle-graph.mjs';
 import { requiresHumanAuthorSchemaRelease, requiresCreatorAuthorRelease, releaseSpecForHumanAuthorSchema, releaseSpecForCreatorAuthor } from './lib/human-author-release-lane.mjs';
 import { unapprovedReleaseRunIds, staleParkedReleaseRunIds } from './lib/converge-unapproved-runs.mjs';
 import { fileURLToPath } from 'node:url';
+import { safeGitHubHttpDiagnostic } from './github-http-diagnostic.mjs';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
-const branch=String(process.env.GITHUB_REF_NAME||'').trim();
+// Post-merge reconcile (RECOVERY-POST-MERGE-LANES-001): dispatched on main by the release
+// provenance recovery after an immediate merge, naming the merged orchestrator branch.
+const reconcileBranch=String(process.env.POST_MERGE_RECONCILE_BRANCH||'').trim();
+const postMergeReconcile=Boolean(reconcileBranch)&&String(process.env.GITHUB_REF_NAME||'').trim()==='main';
+const branch=postMergeReconcile?reconcileBranch:String(process.env.GITHUB_REF_NAME||'').trim();
+const RECONCILE_WINDOW_MS=30*60*1000;
+// Lanes the recovery's immediate-merge path already dispatched itself.
+const RECOVERY_DISPATCHED_WORKFLOWS=new Set(['deploy-independent-board.yml','deploy-ekodi-shell.yml','deploy-site-core.yml','deploy-control-api.yml','deploy-cgma-apex-edge.yml','verify-admin-authenticated-production-e2e.yml']);
 const headSha=String(process.env.GITHUB_SHA||'').trim();
 const required=['test','EKODI AI Orchestration Gate'];
 // User-authored reconciliation touch: retrigger protected PR checks after GitHub update-branch.
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function fail(m){throw new Error('[EKODI][ORCH-AUTO-MERGE] '+m)}
 async function api(path,init={}){
+  if(postMergeReconcile&&String(init.method||'').toUpperCase()==='POST'){
+    const m=String(path).match(/^\/actions\/workflows\/([^/]+)\/dispatches$/);
+    if(m&&RECOVERY_DISPATCHED_WORKFLOWS.has(m[1])){
+      console.log(JSON.stringify({ok:true,action:'reconcile-skip-already-dispatched',workflow:m[1],branch}));
+      return {r:{ok:true,status:204,headers:new Headers()},data:{}};
+    }
+  }
   const r=await fetch('https://api.github.com/repos/'+repo+path,{...init,headers:{authorization:`Bearer ${token}`,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28','content-type':'application/json',...(init.headers||{})}});
   const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={raw:text}};
+  if(!r.ok && [401,403,429].includes(r.status)) console.error(safeGitHubHttpDiagnostic({status:r.status,headers:r.headers,data}));
   return {r,data};
 }
 async function statusMap(sha){
@@ -119,7 +135,14 @@ const taskId=match[2];
   const q=await api('/pulls?state=all&base=main&head='+encodeURIComponent(repo.split('/')[0]+':'+branch));
   const all=q.r.ok&&Array.isArray(q.data)?q.data:[];
   const open=all.find(item=>item?.state==='open');
-  if(!open&&all.length){
+  if(postMergeReconcile){
+    const merged=all.find(item=>item?.merged_at);
+    if(!merged||Date.now()-Date.parse(merged.merged_at)>RECONCILE_WINDOW_MS){
+      console.log(JSON.stringify({ok:true,action:'noop-reconcile',reason:merged?'merge-too-old':'pr-not-merged',branch}));
+      process.exit(0);
+    }
+    globalThis.__ekodiReconcilePr=merged;
+  }else if(!open&&all.length){
     const last=all[0];
     console.log(JSON.stringify({ok:true,action:'noop-stale-dispatch',reason:last?.merged_at?'pr-already-merged':'pr-closed',pr:last?.number,branch,workflowSha:headSha}));
     process.exit(0);
@@ -135,13 +158,14 @@ const receipt=await fetch(receiptUrl,{headers:{accept:'application/json','user-a
 if(!receipt.r.ok||receipt.data?.authorized!==true)fail('release receipt is not authorized');
 
 const owner=repo.split('/')[0];
-let pr=null;
+let pr=postMergeReconcile?(globalThis.__ekodiReconcilePr||null):null;
 for(let i=0;i<20&&!pr;i++){
   const q=await api('/pulls?state=open&base=main&head='+encodeURIComponent(owner+':'+branch));
   if(!q.r.ok)fail('PR lookup failed '+q.r.status);
   pr=(Array.isArray(q.data)?q.data:[])[0]||null;
   if(!pr)await sleep(3000);
 }
+if(!pr&&postMergeReconcile)fail('merged PR not found');
 if(!pr)fail('open PR not found');
 // Draft PRs remain unpublished and must not be merged or deployed.
 if(pr.draft===true){console.log('[EKODI][ORCH-AUTO-MERGE] draft PR; unpublished hold, no merge');process.exit(0)}
@@ -223,6 +247,8 @@ const controlApiTouched=changedFiles.some(file=>
   'mission-control-entry-worker.js',
   // Search Visibility evidence D1 API is part of Control API deployment ownership.
   'search-visibility-control.js',
+  // Read-only first-party Search Console reporter is imported by Search Visibility Control API.
+  'google-search-console-readonly.js',
   // Church Live host authority and runtime tenant mapping execute in Control API.
   // A token-mediated merge skips main push; dispatch the guarded API on these edits.
   'realtime-control.js',
@@ -334,6 +360,8 @@ const booksTouched=changedFiles.some(file=>
   file==='books-worker.js'||
   file==='books-commerce.js'||
   file==='books-audiobook.js'||
+  file==='books-sale-readiness.js'||
+  file==='books-language-editions.js'||
   file==='migrations/202610271400_books_direct_commerce.sql'||
   file==='wrangler.books.toml'||
   file==='deploy/manifests/books.worker.json'||
@@ -422,6 +450,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   // Public Site publication controls are a Site Core admin bundle asset. This must
   // dispatch the guarded release after token-mediated protected merges (issue #6508).
   file==='admin-public-site-controls.js'||
+  // Admin address aliases run at the shared Site Core edge; token-merged source
+  // changes must dispatch the same guarded production release as other Admin routes.
+  file==='admin-address-policy.js'||
   // Growth OS search specialist is a dynamic Site Core Admin asset.
   // Dispatch guarded Site Core even when only the lazy module changes.
   file==='search-visibility-admin.js'||
@@ -474,6 +505,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   // GITHUB_TOKEN merges cannot rely on main push workflow events.
   // Preserve the existing explicit Admin verifier release contract.
   file==='scripts/verify-admin-production-ui-e2e.mjs'||
+  file==='scripts/admin-production-ui-coverage.mjs'||
   file==='scripts/ekodi-background-browser-worker.mjs'||
   // Hybrid native browser admin page shares the guarded Site Core release boundary.
   file==='hybrid-execution-admin.js'||
@@ -578,11 +610,25 @@ const handDispatchedLanes=new Set([
   [sharedSiteTouched,'deploy-site-core.yml'],
 ].filter(([touched])=>touched).map(([,workflow])=>workflow));
 async function dispatchBundleGraphLanes(){
+  // WORKER-LANE-MERGE-SHA-001: Some guarded workflows (Education) require
+  // the exact protected merge SHA in addition to the orchestrator receipt.
+  // Resolve it from the merged PR and current main; never use a PR head SHA.
+  const needsMergeSha=bundleLanes.dispatches.some(lane=>Object.values(lane.inputs||{}).includes('$PROTECTED_MERGE_SHA'));
+  let protectedMergeSha='';
+  if(needsMergeSha){
+    const mergedPr=await api('/pulls/'+pr.number);
+    if(!mergedPr.r.ok||mergedPr.data?.merged!==true)fail('protected-merge-sha: PR is not merged');
+    protectedMergeSha=String(mergedPr.data.merge_commit_sha||'');
+    if(!/^[a-f0-9]{40}$/i.test(protectedMergeSha))fail('protected-merge-sha: invalid merge commit');
+    const mainRef=await api('/git/ref/heads/main');
+    if(!mainRef.r.ok||String(mainRef.data?.object?.sha||'')!==protectedMergeSha)
+      fail('protected-merge-sha: main advanced before receipt-bound dispatch; retry on current protected release');
+  }
   for(const lane of bundleLanes.dispatches){
     if(handDispatchedLanes.has(lane.workflow))continue;
     const dispatch=await api('/actions/workflows/'+lane.workflow+'/dispatches',{
       method:'POST',
-      body:JSON.stringify({ref:'main',inputs:{...lane.inputs,release_branch_ref:branch,release_task_id:taskId}})
+      body:JSON.stringify({ref:'main',inputs:{...Object.fromEntries(Object.entries(lane.inputs||{}).map(([key,value])=>[key,value==='$PROTECTED_MERGE_SHA'?protectedMergeSha:value])),release_branch_ref:branch,release_task_id:taskId}})
     });
     if(!dispatch.r.ok)fail('bundle-graph deploy dispatch failed for '+lane.workflow+' '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     const workers=bundleLanes.affected.filter(item=>item.workflow===lane.workflow).map(item=>item.name);
@@ -961,6 +1007,13 @@ async function requestAuthoredSync(base){
   if(!already){
     await api('/issues/'+pr.number+'/comments',{method:'POST',body:JSON.stringify({body:WORKFLOW_SYNC_MARKER+'\nEKODI convergence cannot update this branch: `main` contains `.github/workflows` changes and the Actions token cannot write workflow files. An authored sync (merge `main` into `'+branch+'` and push) is required; that push restarts checks and convergence automatically. Head `'+base.slice(0,12)+'`.'})});
   }
+}
+if(postMergeReconcile){
+  const p=(await api('/pulls/'+pr.number)).data;
+  if(p?.merged!==true)fail('reconcile: PR is not merged');
+  await dispatchPostMergeDeploys();
+  console.log(JSON.stringify({ok:true,action:'post-merge-reconciled',pr:pr.number,branch,authority:'ekodi-orchestrator'}));
+  process.exit(0);
 }
 for(let cycle=0;cycle<180;cycle++){
   const p=(await api('/pulls/'+pr.number)).data;

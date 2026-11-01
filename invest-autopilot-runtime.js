@@ -11,6 +11,9 @@ import {
 import { buildChannelEnvelope, dispatchChannelEnvelope } from './messenger-channel-adapters.js';
 import { stepUpStatus, verifyStepUp, revokeStepUp, stepUpSession } from './invest-step-up.js';
 import { BROKER_ADAPTERS, INVEST_PERMISSION, evaluateBrokerReadiness } from './invest-market-core.js';
+import { verifiedOwnerAal2 } from './invest-owner-mfa.js';
+import { buildBrokerReadOnlyView } from './invest-broker-readonly-adapter.js';
+import { buildStrategyLab } from './invest-strategy-lab.js';
 
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
 const nowIso=()=>new Date().toISOString();
@@ -124,6 +127,27 @@ async function status(request,env,ctx){
 }
 
 
+// Read-only broker balance: mock by default; real KIS inquiry only with server vault secrets,
+// the operator switch and Supabase TOTP AAL2 on this exact session. Never places orders.
+async function ownerBrokerSnapshot(request,env,ctx){
+ const brokerId=clean(new URL(request.url).searchParams.get('broker')||'kis',30);
+ if(!Object.hasOwn(BROKER_ADAPTERS,brokerId))return json(request,env,{error:'BROKER_NOT_REGISTERED'},400);
+ const strongMfaVerified=verifiedOwnerAal2(request,ctx.identity.id);
+ const result=await buildBrokerReadOnlyView({brokerId,env,db:env.DB,strongMfaVerified,subjectKey:ctx.subject.type+':'+ctx.subject.key});
+ await auditPrincipal(env,ctx.principal,'invest:owner-broker-readonly:'+result.dataMode+':'+result.connection);
+ return json(request,env,{...result,brokerName:BROKER_ADAPTERS[brokerId].name});
+}
+
+// Research only: synthetic-data strategy comparison. It never records strategy acceptance for
+// live gates (that requires verified market history) and never places or proposes orders.
+async function ownerStrategyLab(request,env,ctx){
+ const account=await loadAccount(env,ctx);
+ const validation=await paperValidation(env,ctx,account);
+ const lab=buildStrategyLab({policy:account.policy,paperDays:validation.days,paperLimitViolations:validation.failures.includes('paper_limit_violations')?1:0});
+ await auditPrincipal(env,ctx.principal,'invest:owner-strategy-lab');
+ return json(request,env,{...lab,liveGateEffect:'none'});
+}
+
 async function ownerLiveReadiness(request,env,ctx){
  const brokerId=clean(new URL(request.url).searchParams.get('broker')||'toss',30);
  if(!Object.hasOwn(BROKER_ADAPTERS,brokerId))return json(request,env,{error:'BROKER_NOT_REGISTERED'},400);
@@ -139,18 +163,24 @@ async function ownerLiveReadiness(request,env,ctx){
   globalLiveTradingEnabled:false,brokerLiveTradingEnabled:false
  });
  const activation=evaluateLiveActivation(liveGates(account,validation));
+ // The preceding ownerContext has already validated this exact bearer with Supabase Auth.
+ const strongMfaVerified=verifiedOwnerAal2(request,ctx.identity.id);
  await auditPrincipal(env,ctx.principal,'invest:owner-live-readiness');
  return json(request,env,{
   schema:'ekodi.invest.owner-live-readiness.v1',scope:'owner_self_funds_only',
   workspaceVisible:true,ownerVerified:true,secondFactorVerified:true,
+  strongMfa:{requiredForLive:true,provider:'supabase-totp',verified:strongMfaVerified,level:strongMfaVerified?'aal2':'not_aal2'},
   liveExecutionEnabled:false,liveOrdersAccepted:false,
   state:account.state,
   broker:{id:broker.brokerId,name:broker.brokerName,permission:broker.permission,
+   docsUrl:BROKER_ADAPTERS[brokerId].docsUrl,
+   connectionStatus:'disconnected',readOnlyConnectionVerified:false,
    limitedLivePrerequisitesReady:broker.limitedLivePrerequisitesReady,
    liveEligible:broker.liveEligible,blockers:broker.liveBlockers,
    checks:broker.checks,credentialsIncluded:false},
-  activation:{eligible:activation.eligible,blockers:activation.blockers},
-  requirements:['본인 명의 증권사 계정과 공식 API 권한','검증된 최신 시세·주문 조회 및 장부 대사',
+  // Knowledge-based step-up alone never qualifies for live execution. This is a readiness view only.
+  activation:{eligible:strongMfaVerified&&activation.eligible,blockers:strongMfaVerified?activation.blockers:[...new Set([...activation.blockers,'strongMfaAal2'])]},
+  requirements:['Supabase OTP 2차 인증 AAL2 완료','본인 명의 증권사 계정과 공식 API 권한','검증된 최신 시세·주문 조회 및 장부 대사',
    '투자금·1회 주문·손실 한도 설정','최소 60일 모의투자와 검증된 전략 평가',
    '비용·위험 고지와 별도 명시적 실거래 승인','별도 승인된 플랫폼·증권사 실거래 잠금 해제'],
   message:'최고관리자 전용 실거래 준비 화면입니다. 실제 주문 전송은 필수 증빙과 별도 보호 배포가 완료될 때까지 차단됩니다.'
@@ -250,8 +280,23 @@ async function paperOrder(request,env,ctx){
  const broker=createPaperBroker({cash:view.cash,positions:view.positions,realizedPnl:view.realizedPnl,feeRate:0.00015,slippageBps:10});
  const order=broker.submit(intent,{price:quote.price});
  const snap=broker.snapshot();
- await env.DB.prepare(insert).bind(...base,order.status,order.filledQty||0,order.avgPrice||0,order.fee||0,1,'[]',...meta).run();
- await saveAccount(env,ctx,{paper_ledger_json:JSON.stringify({...account.ledger,cash:snap.cash,positions:snap.positions,realizedPnl:snap.realizedPnl,dayKey:view.dayKey,dayStartEquity:view.dayStartEquity})});
+ // Claim the idempotency key first: a concurrent duplicate gets changes=0 and must not touch the ledger.
+ const claimed=await env.DB.prepare(insert).bind(...base,order.status,order.filledQty||0,order.avgPrice||0,order.fee||0,1,'[]',...meta).run();
+ if(Number(claimed?.meta?.changes)!==1){
+  const dup=await env.DB.prepare(`SELECT idempotency_key,status,filled_qty,avg_price FROM investment_autopilot_orders WHERE subject_type=? AND subject_key=? AND idempotency_key=?`).bind(ctx.subject.type,ctx.subject.key,intent.idempotencyKey).first();
+  return json(request,env,{ok:true,duplicate:true,order:dup},200);
+ }
+ // Compare-and-swap on the exact ledger this order was evaluated against, so two concurrent orders
+ // cannot both pass the budget check and overwrite each other.
+ const nextLedger=JSON.stringify({...account.ledger,cash:snap.cash,positions:snap.positions,realizedPnl:snap.realizedPnl,dayKey:view.dayKey,dayStartEquity:view.dayStartEquity});
+ const swapped=await env.DB.prepare(`UPDATE investment_autopilot_accounts SET paper_ledger_json=?,updated_by=?,updated_at=? WHERE subject_type=? AND subject_key=? AND paper_ledger_json=?`)
+  .bind(nextLedger,ctx.identity.email,nowIso(),ctx.subject.type,ctx.subject.key,String(account.row?.paper_ledger_json??'{}')).run();
+ if(Number(swapped?.meta?.changes)!==1){
+  await env.DB.prepare(`UPDATE investment_autopilot_orders SET status='RISK_BLOCKED',filled_qty=0,avg_price=0,fee=0,risk_allowed=0,risk_reasons_json=? WHERE subject_type=? AND subject_key=? AND idempotency_key=?`)
+   .bind(JSON.stringify(['ledger_conflict_retry']),ctx.subject.type,ctx.subject.key,intent.idempotencyKey).run();
+  await recordEvent(env,ctx,'paper:ledger-conflict','warning',{symbol:intent.symbol});
+  return json(request,env,{ok:false,allowed:false,reasons:['ledger_conflict_retry'],executionPerformed:false},409);
+ }
  await recordEvent(env,ctx,'paper:order','info',{symbol:intent.symbol,side:intent.side,status:order.status});
  await auditPrincipal(env,ctx.principal,'invest:autopilot-paper-order');
  return json(request,env,{ok:true,allowed:true,mode:'paper',order,ledger:ledgerView({...account.ledger,...snap,dayKey:view.dayKey,dayStartEquity:view.dayStartEquity},now),dataBasis:'paper_owner_supplied_quote',executionPerformed:false},201);
@@ -399,6 +444,8 @@ export async function handleInvestAutopilotApi(request,env){
  if(path.startsWith('/v1/invest/autopilot/live/')&&String(ctx.identity.email||'').trim().toLowerCase()!==INVEST_DEFAULT_OWNER)
   return json(request,env,{error:'LIVE_OWNER_ONLY'},403);
  if(path==='/v1/invest/autopilot/live/readiness'&&request.method==='GET')return ownerLiveReadiness(request,env,ctx);
+ if(path==='/v1/invest/autopilot/broker/snapshot'&&request.method==='GET')return ownerBrokerSnapshot(request,env,ctx);
+ if(path==='/v1/invest/autopilot/research/strategy-lab'&&request.method==='GET')return ownerStrategyLab(request,env,ctx);
  if(path==='/v1/invest/autopilot/live/orders'&&request.method==='POST')
   return json(request,env,{error:'LIVE_EXECUTION_LOCKED',executionPerformed:false,reason:'BROKER_AND_POLICY_GATES_NOT_VERIFIED'},423);
  if(path==='/v1/invest/autopilot/status'&&request.method==='GET')return status(request,env,ctx);

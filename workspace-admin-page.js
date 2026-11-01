@@ -6,7 +6,7 @@ import { ekodiBizAdminScopeSnapshot } from './ekodibiz-admin-registry.js';
 import { channelTargetOptions } from './channel-publishing-catalog.js';
 
 const WORKSPACE_SECTION_CAPABILITY=Object.freeze({
-  root:Object.freeze({chrome:TENANT_ADMIN_CAPABILITIES.site,design:TENANT_ADMIN_CAPABILITIES.site,languages:TENANT_ADMIN_CAPABILITIES.language,overview:TENANT_ADMIN_CAPABILITIES.dashboard,'business-center':TENANT_ADMIN_CAPABILITIES.operations,activities:TENANT_ADMIN_CAPABILITIES.activities,saturday:TENANT_ADMIN_CAPABILITIES.activities,mall:TENANT_ADMIN_CAPABILITIES.dashboard,mail:TENANT_ADMIN_CAPABILITIES.connections,publishing:TENANT_ADMIN_CAPABILITIES.marketing,marketing:TENANT_ADMIN_CAPABILITIES.marketing,work:TENANT_ADMIN_CAPABILITIES.operations,finance:TENANT_ADMIN_CAPABILITIES.finance,tax:TENANT_ADMIN_CAPABILITIES.finance,confirmations:TENANT_ADMIN_CAPABILITIES.confirmations,members:TENANT_ADMIN_CAPABILITIES.access,member:TENANT_ADMIN_CAPABILITIES.memberRoster,festival:TENANT_ADMIN_CAPABILITIES.access,edocs:TENANT_ADMIN_CAPABILITIES.access}),
+  root:Object.freeze({chrome:TENANT_ADMIN_CAPABILITIES.site,design:TENANT_ADMIN_CAPABILITIES.site,languages:TENANT_ADMIN_CAPABILITIES.language,overview:TENANT_ADMIN_CAPABILITIES.dashboard,'business-center':TENANT_ADMIN_CAPABILITIES.operations,activities:TENANT_ADMIN_CAPABILITIES.activities,saturday:TENANT_ADMIN_CAPABILITIES.activities,mall:TENANT_ADMIN_CAPABILITIES.dashboard,mail:TENANT_ADMIN_CAPABILITIES.connections,publishing:TENANT_ADMIN_CAPABILITIES.marketing,marketing:TENANT_ADMIN_CAPABILITIES.marketing,work:TENANT_ADMIN_CAPABILITIES.operations,finance:TENANT_ADMIN_CAPABILITIES.finance,tax:TENANT_ADMIN_CAPABILITIES.finance,confirmations:TENANT_ADMIN_CAPABILITIES.confirmations,members:TENANT_ADMIN_CAPABILITIES.access,member:TENANT_ADMIN_CAPABILITIES.memberRoster,festival:TENANT_ADMIN_CAPABILITIES.access,edocs:TENANT_ADMIN_CAPABILITIES.access,status:TENANT_ADMIN_CAPABILITIES.logs,records:TENANT_ADMIN_CAPABILITIES.reports}),
   mall:Object.freeze({design:TENANT_ADMIN_CAPABILITIES.site,languages:TENANT_ADMIN_CAPABILITIES.language,overview:TENANT_ADMIN_CAPABILITIES.dashboard,sales:TENANT_ADMIN_CAPABILITIES.sales,products:TENANT_ADMIN_CAPABILITIES.catalog,sourcing:TENANT_ADMIN_CAPABILITIES.supplyNetwork,marketing:TENANT_ADMIN_CAPABILITIES.marketing,channels:TENANT_ADMIN_CAPABILITIES.marketing,automation:TENANT_ADMIN_CAPABILITIES.marketing,growth:TENANT_ADMIN_CAPABILITIES.marketing,analytics:TENANT_ADMIN_CAPABILITIES.sales,confirmations:TENANT_ADMIN_CAPABILITIES.confirmations}),
 });
 export function workspaceAdminCanAccess(role,section,service='root'){const key=service==='mall'?'mall':'root';const capability=WORKSPACE_SECTION_CAPABILITY[key][String(section||'overview').toLowerCase()];if(!capability)return false;const policy=tenantAdminPolicySnapshot();const allowed=policy.roleCapabilities[String(role||'').trim().toLowerCase()]||[];return allowed.includes('*')||allowed.includes(capability);}
@@ -47,6 +47,20 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const workspace=(standaloneMall?'ekodibiz':genericService?.[1]||root?.[1]||'ekodibiz').toLowerCase();
   const service=mall?'mall':(genericService?.[2]?.toLowerCase()||null);
   const MISSION_DEFAULT_ACTIVITY='260926-chuseok-open-table';
+  const MISSION_ACTIVITY_PUBLIC_PATHS=Object.freeze({
+    '260926-chuseok-open-table':'/ekodimission/apply/260926-open-table',
+    '261003-autumn-community-trip':'/ekodimission/apply/261003-autumn-trip'
+  });
+  function missionActivityPublicUrl(activity,activityKey){
+    const candidate=[activity?.public_url,activity?.application_url,activity?.public_path].find(value=>typeof value==='string'&&value.trim());
+    if(candidate){
+      try{
+        const url=new URL(candidate,location.origin);
+        if(url.origin===location.origin&&url.pathname.startsWith('/ekodimission/'))return url.pathname+url.search+url.hash;
+      }catch{}
+    }
+    return MISSION_ACTIVITY_PUBLIC_PATHS[activityKey]||'/ekodimission/activities';
+  }
   const defaultSection='overview';
   const rawSection=standaloneMall?.[1]||(genericService?.[3]||root?.[2]||((workspace==='ekodibiz'||workspace==='ekodi-biz')&&!service?'business-center':defaultSection));
   const section=(rawSection==='channel-settings'?'channels':rawSection).toLowerCase();
@@ -470,7 +484,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
           +'<td><div class="actions"><button class="button primary" type="button" data-activity-save>저장</button><button class="button" type="button" data-activity-checkin>체크인</button><button class="button" type="button" data-activity-points>출석 포인트</button></div></td>'
           +'</tr>';
       }).join('');
-      const activityHeading=workspace==='ekodimission'?'행사 · 신청자':'활동 · 참가자';const publicActivityUrl=workspace==='ekodimission'&&requested===MISSION_DEFAULT_ACTIVITY?'/ekodimission/apply/260926-open-table':workspacePublicUrl();const sharePolicy=shareInfo?.field_policy||{};const shareExpiry=shareInfo?.expires_at?new Date(shareInfo.expires_at).toLocaleString('ko-KR'):'-';
+      const activityHeading=workspace==='ekodimission'?'행사 · 신청자':'활동 · 참가자';const publicActivityUrl=workspace==='ekodimission'?missionActivityPublicUrl(selected,requested):workspacePublicUrl();const sharePolicy=shareInfo?.field_policy||{};const shareExpiry=shareInfo?.expires_at?new Date(shareInfo.expires_at).toLocaleString('ko-KR'):'-';
       $('mainPanel').innerHTML='<div class="activity-toolbar"><div class="activity-context"><strong>'+activityHeading+'</strong><span class="tag '+(selected?.registration_open?'live':'warn')+'">'+(selected?.registration_open?'신청 가능':'신청 마감')+'</span><select id="activityPicker">'+activityOptions+'</select></div><input id="activitySearch" type="search" placeholder="이름 · 연락처 · 역할 검색"><select id="activityStatusFilter"><option value="">전체 상태</option>'+Object.entries(ACTIVITY_STATUS_LABEL).map(([v,l])=>'<option value="'+v+'">'+l+'</option>').join('')+'</select><select id="activityCheckinFilter"><option value="">체크인 전체</option><option value="1">체크인 완료</option><option value="0">미체크인</option></select><a class="button activity-public-link" href="'+ae(publicActivityUrl)+'" target="_blank" rel="noopener">공개 행사 보기</a><button class="button primary" id="activityMessageButton" type="button">단체 메시지</button><button class="button activity-share-button" id="activityShareButton" type="button">외부 공유</button></div>'
         +'<div class="activity-payment-summary"><span>납부완료 <strong>'+fmt(paymentSummary.paid||0)+'</strong></span><span>미납 <strong>'+fmt(paymentSummary.unpaid||0)+'</strong></span><span>납부액 <strong>'+fmt(paymentSummary.paid_amount||0)+'원</strong></span></div>'
         +(rows?'<div class="table-wrap activity-table-wrap"><table class="activity-table"><thead><tr><th class="activity-seq-head" scope="col">연번</th><th scope="col"><label><input id="activitySelectAll" type="checkbox"> 신청자</label></th><th scope="col">상태 · 참가비</th><th scope="col">인원</th><th scope="col">관리</th><th scope="col">조치</th></tr></thead><tbody>'+rows+'</tbody></table></div>':'<p class="empty">이 활동의 참가자가 없습니다.</p>')
@@ -688,12 +702,58 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function workspaceSourceState(item){if(item.effectiveEnabled)return '운영';if(item.selected)return '선택됨 · 연결대기';if(item.recommendationReady)return '사용 가능';return '준비 중'}
   function workspaceSourceRow(item){const route=ae(item.routeKey||'');const network=item.networkName||item.affiliateMode||'direct';const detail=`${item.marketCountry||'-'} · ${network} · 제휴 ${item.affiliateStatus||'-'} · 추적 ${item.trackingStatus||'-'} · 상품 ${item.catalogStatus||'-'}`;return `<label class="service-row"><div><strong>${ae(item.merchantName||item.merchantKey)}</strong><p>${ae(detail)}</p>${item.notes?`<p>${ae(item.notes)}</p>`:''}${item.programUrl?`<a href="${ae(item.programUrl)}" target="_blank" rel="noopener">공식 연결/관리 ↗</a>`:''}</div><span><span class="tag ${item.effectiveEnabled?'live':item.selected?'warn':''}">${ae(workspaceSourceState(item))}</span> <input type="checkbox" name="route:${route}" ${item.selected?'checked':''}></span></label>`}
 
+  // The backend PUT accepts a partial route list and audits only submitted keys.
+  // Never rewrite other merchants from a stale workspace GET snapshot.
+  const mallSourcingSelectionPatch=(visibleRoutes,formData,allRoutes=[],initialDefaults=false)=>{
+    const selected=visibleRoutes.filter(item=>Boolean(item.routeKey))
+      .map(item=>({routeKey:item.routeKey,enabled:formData.has('route:'+item.routeKey)}));
+    if(!initialDefaults)return selected;
+    // The backend treats the first explicit workspace selection as disabling
+    // inheritance for *all* other routes. Materialize fresh defaults once.
+    const overrides=new Map(selected.map(item=>[item.routeKey,item]));
+    return allRoutes.filter(item=>Boolean(item.routeKey))
+      .map(item=>overrides.get(item.routeKey)||{routeKey:item.routeKey,enabled:Boolean(item.selected)});
+  };
+
   // Every sales/affiliate route uses a tenant-scoped selector; Amazon keeps its
   // existing credential and paid-feature gates inside the same selection view.
   const mallSourcingIsAmazon=item=>/amazon|아마존/i.test([item.merchantName,item.merchantKey,item.routeKey].join(' '));
   const mallSourcingTabKey=item=>mallSourcingIsAmazon(item)?'amazon':'route:'+String(item.routeKey||'');
   let mallSourcingCurrent=new URLSearchParams(location.search).get('channel')||(section==='amazon'?'amazon':'overview');
   let mallSourcingRequestId=0;
+
+  const mallSourcingViews=[
+    ['overview','개요'],['usage','에코디 사용설정'],['channels','판매채널'],
+    ['connection','연동·인증'],['inventory','주문·재고'],['cost','비용정책'],['supply','공급망']
+  ];
+  const mallSourcingDetails=[
+    ['status','연결 개요'],['account','Seller Central · SP-API'],
+    ['readonly','상품 · 재고 · 주문'],['cost','비용정책'],['extras','기타 연동'],['usage','사용 설정']
+  ];
+  let mallSourcingView=new URLSearchParams(location.search).get('view')||'channels';
+  let mallSourcingDetail=new URLSearchParams(location.search).get('detail')||'status';
+  const mallSourcingDefaultDetail=view=>({connection:'account',inventory:'readonly',cost:'cost',usage:'usage',supply:'official'})[view]||'status';
+  function mallSourcingRestoreFromLocation(){
+    const params=new URLSearchParams(location.search);
+    const requestedView=params.get('view')||'channels';
+    mallSourcingView=mallSourcingViews.some(([key])=>key===requestedView)?requestedView:'channels';
+    mallSourcingCurrent=params.get('channel')||(location.pathname===adminBase+'/amazon'?'amazon':'overview');
+    const requestedDetail=params.get('detail');
+    const allowed=mallSourcingCurrent==='amazon'
+      ?mallSourcingDetails.map(([key])=>key)
+      :['status','usage','official'];
+    const fallback=mallSourcingDefaultDetail(mallSourcingView);
+    mallSourcingDetail=allowed.includes(requestedDetail)?requestedDetail:allowed.includes(fallback)?fallback:'status';
+    return mallSourcingCurrent;
+  }
+  // Only Mall sourcing state is owned by this handler; other admin routes
+  // retain their native history behavior and navigation permissions.
+  if(typeof window!=='undefined'&&service==='mall'&&['sourcing','amazon'].includes(section)){
+    window.addEventListener('popstate',()=>{
+      if(![adminBase+'/sourcing',adminBase+'/amazon'].includes(location.pathname))return;
+      affiliateSourcingPanel(mallSourcingRestoreFromLocation());
+    });
+  }
   function mallSourcingHeader(sources,active){
     const entries=[{key:'overview',label:'전체'}],known=new Set(['overview']);
     for(const item of sources){
@@ -703,29 +763,65 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       entries.push({key,label:mallSourcingIsAmazon(item)?'Amazon':String(item.merchantName||item.merchantKey||item.routeKey),item});
     }
     if(!known.has('amazon'))entries.push({key:'amazon',label:'Amazon'});
-    const tabs=entries.map(entry=>{
+    const first=mallSourcingViews.map(([key,label])=>
+      '<button type="button" class="mall-source-tab mall-source-level-one'+(mallSourcingView===key?' is-active':'')+'" data-mall-source-view="'+key+'" aria-pressed="'+(mallSourcingView===key)+'">'+ae(label)+'</button>'
+    ).join('');
+    const second=entries.map(entry=>{
       const pressed=entry.key===active;
       const stateClass=entry.item?.effectiveEnabled?' mall-source-tab-live':entry.item?.selected?' mall-source-tab-pending':'';
-      return `<button type="button" class="mall-source-tab${stateClass}${pressed?' is-active':''}" data-mall-source-channel="${ae(entry.key)}" aria-pressed="${pressed}">${ae(entry.label)}</button>`;
+      return '<button type="button" class="mall-source-tab'+stateClass+(pressed?' is-active':'')+'" data-mall-source-channel="'+ae(entry.key)+'" aria-pressed="'+pressed+'">'+ae(entry.label)+'</button>';
     }).join('');
-    return `<div class="mall-sourcing-head"><div class="mall-sourcing-heading"><h2>에코디몰 판매채널 · 공급망 설정</h2><p class="empty">플랫폼 공통 판매·공급망 엔진에 등록된 Provider 중 판매처를 선택하면 연결 상태와 사용 여부를 관리할 수 있습니다. Amazon도 같은 목록에서 선택합니다.</p></div><div class="mall-sourcing-tabs" role="group" aria-label="판매채널 선택">${tabs}</div></div>`;
+    const amazon=active==='amazon';
+    const details=amazon?mallSourcingDetails:[['status','연결 현황'],['usage','사용 설정'],['official','공식 연결']];
+    const showDetail=active!=='overview'&&!['overview','usage','supply'].includes(mallSourcingView);
+    const third=details.map(([key,label])=>
+      '<button type="button" class="mall-source-tab mall-source-level-three'+(mallSourcingDetail===key?' is-active':'')+'" data-mall-source-detail="'+key+'" aria-pressed="'+(mallSourcingDetail===key)+'">'+ae(label)+'</button>'
+    ).join('');
+    return '<div class="mall-sourcing-head"><div class="mall-sourcing-heading"><h2>에코디몰 판매채널 · 공급망 설정</h2><p class="empty">플랫폼 공통 판매·공급망 엔진에 등록된 Provider 중 기능과 판매처를 선택하세요.</p></div></div>'+
+      '<nav class="mall-sourcing-level mall-sourcing-primary" aria-label="1단계 기능 메뉴">'+first+'</nav>'+
+      (mallSourcingView==='overview'?'':'<nav class="mall-sourcing-level mall-sourcing-tabs" aria-label="판매채널 선택" data-menu-level="2">'+second+'</nav>')+
+      (showDetail?'<nav class="mall-sourcing-level mall-sourcing-detail-tabs" aria-label="3단계 작업 메뉴">'+third+'</nav>':'');
   }
   function bindMallSourcingTabs(){
-    document.querySelectorAll('[data-mall-source-channel]').forEach(button=>button.addEventListener('click',()=>{
-      const selected=button.getAttribute('data-mall-source-channel')||'overview';
-      mallSourcingCurrent=selected;
+    const select=(kind,value)=>{
+      if(kind==='view'){
+        mallSourcingView=mallSourcingViews.some(([key])=>key===value)?value:'channels';
+        mallSourcingDetail=mallSourcingDefaultDetail(mallSourcingView);
+      }
+      if(kind==='channel'){
+        mallSourcingCurrent=value;
+        mallSourcingDetail=mallSourcingDefaultDetail(mallSourcingView);
+        if(mallSourcingCurrent!=='amazon'&&['account','readonly','cost','extras'].includes(mallSourcingDetail))mallSourcingDetail='status';
+      }
+      if(kind==='detail')mallSourcingDetail=value;
       const nextUrl=new URL(location.href);
-      if(selected==='overview')nextUrl.searchParams.delete('channel');else nextUrl.searchParams.set('channel',selected);
+      nextUrl.searchParams.set('view',mallSourcingView);
+      if(mallSourcingCurrent==='overview')nextUrl.searchParams.delete('channel');
+      else nextUrl.searchParams.set('channel',mallSourcingCurrent);
+      if(mallSourcingDetail==='status')nextUrl.searchParams.delete('detail');
+      else nextUrl.searchParams.set('detail',mallSourcingDetail);
       const canonicalPath=section==='amazon'?adminBase+'/sourcing':nextUrl.pathname;
-      history.replaceState(history.state,'',canonicalPath+nextUrl.search+nextUrl.hash);
-      affiliateSourcingPanel(selected);
-    }));
+      const nextPath=canonicalPath+nextUrl.search+nextUrl.hash;
+      // A selected tab is already rendered; avoid redundant tenant API reads
+      // (important when the shared Cloudflare quota circuit is near its limit).
+      if(nextPath===location.pathname+location.search+location.hash)return;
+      history.pushState(history.state,'',nextPath);
+      affiliateSourcingPanel(mallSourcingCurrent);
+    };
+    const pairs=[['data-mall-source-view','view'],['data-mall-source-channel','channel'],['data-mall-source-detail','detail']];
+    for(const [attr,kind] of pairs){
+      document.querySelectorAll('['+attr+']').forEach(button=>button.addEventListener('click',()=>select(kind,button.getAttribute(attr)||'overview')));
+    }
   }
+
   async function affiliateSourcingPanel(requestedChannel=mallSourcingCurrent){
     const requestId=++mallSourcingRequestId;
     try{
       await exchangeCentralToken();
-      if(!(await accessToken()))return loginPanel('제휴·소싱 설정에는 운영공간 로그인이 필요합니다.');
+      if(requestId!==mallSourcingRequestId)return;
+      const token=await accessToken();
+      if(requestId!==mallSourcingRequestId)return;
+      if(!token)return loginPanel('제휴·소싱 설정에는 운영공간 로그인이 필요합니다.');
       state('판매채널 상태 확인 중');
       const workspaceData=await workspaceAffiliateApi('/workspace/sources');
       if(requestId!==mallSourcingRequestId)return;
@@ -733,53 +829,101 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       const valid=new Set(['overview','amazon',...sources.map(mallSourcingTabKey)]);
       const selected=valid.has(requestedChannel)?requestedChannel:'overview';
       mallSourcingCurrent=selected;
+      if(!mallSourcingViews.some(([key])=>key===mallSourcingView))mallSourcingView='channels';
+      const amazonDetailKeys=mallSourcingDetails.map(([key])=>key);
+      if(selected==='amazon'&&!amazonDetailKeys.includes(mallSourcingDetail))mallSourcingDetail=mallSourcingDefaultDetail(mallSourcingView);
+      if(selected!=='amazon'&&!['status','usage','official'].includes(mallSourcingDetail))mallSourcingDetail='status';
       const header=mallSourcingHeader(sources,selected);
       const chosen=sources.filter(item=>mallSourcingTabKey(item)===selected);
-      const sourceForm=chosen.length?`<form id="affiliateWorkspaceSourcesForm"><div class="service-list">${chosen.map(workspaceSourceRow).join('')}</div><div class="actions"><button class="button primary" type="submit">에코디몰 사용 설정 저장</button><a class="button" href="/admin/services/supply-network" target="_blank" rel="noopener">플랫폼 공급망 엔진 ↗</a></div></form>`:'';
+      const sourceForm=chosen.length?'<form id="affiliateWorkspaceSourcesForm"><div class="service-list">'+chosen.map(workspaceSourceRow).join('')+'</div><div class="actions"><button class="button primary" type="submit">에코디몰 사용 설정 저장</button><a class="button" href="/admin/services/supply-network" target="_blank" rel="noopener">플랫폼 공급망 엔진 ↗</a></div></form>':'';
       const explanation='<p class="empty mall-source-policy">여기의 ON/OFF는 플랫폼 연동 자체가 아니라 에코디몰 사용 여부입니다. 승인·추적링크·상품/가격 공급이 검증된 경로만 고객 노출과 자동영업에 사용됩니다. 플랫폼 관리자는 Provider·Adapter·Secret을 공통 엔진에서 관리하고, 에코디몰 관리자는 사용 여부만 관리합니다. Secret/API Key는 이 화면에 표시하지 않습니다. 자동게시 채널·일일 한도는 자동운영에서 관리합니다.</p>';
+      const showOverview=selected==='overview'||mallSourcingView==='overview';
+      const showUsage=mallSourcingView==='usage'||mallSourcingDetail==='usage';
+      const showSupply=mallSourcingView==='supply';
+      const showAmazon=selected==='amazon'&&!showOverview&&!showUsage&&!showSupply;
       let amazonReady=true;
-      if(selected==='amazon'){
+      if(showAmazon){
         amazonReady=await amazonAdmin();
         if(requestId!==mallSourcingRequestId)return;
-        $('mainPanel').insertAdjacentHTML('afterbegin',header+(sourceForm?`<section class="mall-source-detail"><h3>에코디몰 사용 설정</h3>${sourceForm}${explanation}</section>`:'<p class="empty">Amazon 판매처 사용 여부는 공통 공급망 엔진 등록 후 관리할 수 있습니다.</p>'));
+        const workbench=$('mainPanel').querySelector('.amazon-workbench');
+        if(workbench){
+          const visible={
+            status:['.amazon-head','.amazon-step-grid','.actions'],
+            account:['#amazonAccountSettings'],
+            readonly:['#amazonReadonlySection'],
+            cost:['#amazonCostSettings'],
+            extras:['#amazonOptionalServices']
+          }[mallSourcingDetail]||['.amazon-head','.amazon-step-grid','.actions'];
+          for(const child of [...workbench.children])child.hidden=!visible.some(rule=>child.matches(rule));
+          const panel=workbench.querySelector(visible.find(rule=>rule.startsWith('#'))||'.amazon-head');
+          if(panel?.tagName==='DETAILS')panel.open=true;
+        }
+        $('mainPanel').insertAdjacentHTML('afterbegin',header);
       }else{
-        $('summaryCards').innerHTML=[card('연결 후보',String(summary.total??sources.length),'공통 엔진 등록 판매처'),card('몰 사용',String(summary.selected||0),'에코디몰 선택'),card('실사용 가능',String(summary.effective||0),'승인·연동·상품공급 확인'),card('조치 필요',String(summary.pending||0),'연결 검토 대상')].join('');
-        if(selected==='overview'){
+        $('summaryCards').innerHTML=[
+          card('연결 후보',String(summary.total??sources.length),'공통 엔진 등록 판매처'),
+          card('몰 사용',String(summary.selected||0),'에코디몰 선택'),
+          card('실사용 가능',String(summary.effective||0),'승인·연동·상품공급 확인'),
+          card('조치 필요',String(summary.pending||0),'연결 검토 대상')
+        ].join('');
+        if(showOverview){
           let affiliate=null;
           if(platformAdminToken()){try{affiliate=await affiliateAdminSnapshot()}catch(e){if(e.status!==401)throw e}}
           if(requestId!==mallSourcingRequestId)return;
-          $('mainPanel').innerHTML=header+`<section class="mall-source-detail"><h3>판매채널 현황</h3><p class="empty">오른쪽 상단에서 판매처를 선택하면 해당 채널의 설정만 아래에 표시됩니다.</p><details class="mall-source-advanced"><summary>공통 제휴 프로그램 · Provider 상세관리</summary>${affiliate?affiliateAdminConsole(affiliate):affiliateAdminLocked()}</details><div class="actions"><a class="button" href="/admin/services/supply-network" target="_blank" rel="noopener">플랫폼 공급망 엔진 ↗</a></div></section>`;
+          $('mainPanel').innerHTML=header+'<section class="mall-source-detail"><h3>판매채널 현황</h3><p class="empty">상단 메뉴에서 기능을 선택하면 아래에 판매처 메뉴가 나타납니다. 판매처를 선택하면 해당 작업만 표시됩니다.</p><details class="mall-source-advanced"><summary>공통 제휴 프로그램 · Provider 상세관리</summary>'+(affiliate?affiliateAdminConsole(affiliate):affiliateAdminLocked())+'</details><div class="actions"><a class="button" href="/admin/services/supply-network" target="_blank" rel="noopener">플랫폼 공급망 엔진 ↗</a></div></section>';
           if(affiliate)bindAffiliateAdmin('sourcing');
+        }else if(showUsage){
+          $('mainPanel').innerHTML=header+'<section class="mall-source-detail"><h3>'+ae(chosen[0]?.merchantName||chosen[0]?.merchantKey||'판매처')+' · 에코디 사용 설정</h3>'+(sourceForm||'<p class="empty">해당 판매처가 공급망 엔진에 등록되면 사용 여부를 설정할 수 있습니다.</p>')+explanation+'</section>';
         }else{
-          $('mainPanel').innerHTML=header+`<section class="mall-source-detail"><h3>${ae(chosen[0]?.merchantName||chosen[0]?.merchantKey||'판매처')} 연결 · 사용 설정</h3>${sourceForm}${explanation}</section>`;
+          const rows=chosen.map(item=>{
+            const detail=[item.marketCountry||'-',item.networkName||item.affiliateMode||'direct','제휴 '+(item.affiliateStatus||'-'),'추적 '+(item.trackingStatus||'-'),'상품 '+(item.catalogStatus||'-')].join(' · ');
+            return '<div class="service-row"><div><strong>'+ae(item.merchantName||item.merchantKey)+'</strong><p>'+ae(detail)+'</p></div><span class="tag '+(item.effectiveEnabled?'live':item.selected?'warn':'')+'">'+ae(workspaceSourceState(item))+'</span></div>';
+          }).join('');
+          const official=chosen.filter(item=>item.programUrl).map(item=>'<a class="button" href="'+ae(item.programUrl)+'" target="_blank" rel="noopener">공식 연결·관리 · '+ae(item.merchantName||item.merchantKey)+'</a>').join('');
+          const message=mallSourcingView==='cost'?'개별 판매처의 유료정책·정산정보는 검증된 공통 공급망 또는 공식 관리 화면에서 확인합니다.':mallSourcingView==='inventory'?'상품·재고·주문 데이터는 검증된 제휴 연동 경로로만 조회합니다.':'해당 판매처의 연결 정보를 확인하고 공급망 엔진에서 설정을 관리합니다.';
+          $('mainPanel').innerHTML=header+'<section class="mall-source-detail"><h3>'+ae(chosen[0]?.merchantName||chosen[0]?.merchantKey||'판매처')+' · '+(showSupply?'공급망 관리':mallSourcingView==='cost'?'비용정책':mallSourcingView==='inventory'?'상품·주문 조회':'연결 현황')+'</h3><p class="empty">'+ae(message)+'</p><div class="service-list">'+(rows||'<p class="empty">선택한 판매처의 연동 정보가 없습니다.</p>')+'</div><div class="actions">'+official+'<a class="button" href="/admin/services/supply-network" target="_blank" rel="noopener">플랫폼 공급망 엔진 ↗</a></div></section>';
         }
       }
-      // The API accepts a full selection snapshot. Preserve untouched routes
-      // when only the currently visible channel is submitted.
+      // A single route form must not clear other routes in the snapshot PUT API.
       const form=$('affiliateWorkspaceSourcesForm');
       if(form)form.onsubmit=async event=>{
         event.preventDefault();
-        const fd=new FormData(form),visible=new Set(chosen.map(item=>item.routeKey));
-        const selections=sources.map(item=>({routeKey:item.routeKey,enabled:visible.has(item.routeKey)?fd.has('route:'+item.routeKey):Boolean(item.selected)}));
+        const formData=new FormData(form);
         const saveButton=form.querySelector('button[type="submit"]');
         if(saveButton)saveButton.disabled=true;
-        state('판매처 설정 저장 중');
+        state('판매처 설정 확인 중');
         try{
+          // Recheck the authoritative inherited-default policy immediately
+          // before saving; a prior GET cannot safely decide bootstrap mode.
+          const latest=await workspaceAffiliateApi('/workspace/sources');
+          // A navigation after Save but before the fresh GET completes must
+          // not submit a now-hidden form or overwrite the new screen.
+          if(requestId!==mallSourcingRequestId)return;
+          const freshRoutes=Array.isArray(latest.sources)?latest.sources:[];
+          const bootstrap=latest.policy?.inheritedDefaults===true;
+          if(bootstrap&&freshRoutes.length>100)throw new Error('초기 설정 대상이 100개를 초과하여 저장을 중단했습니다.');
+          const selections=mallSourcingSelectionPatch(chosen,formData,freshRoutes,bootstrap);
+          if(!selections.length)throw new Error('저장할 판매처가 없습니다.');
+          state('판매처 설정 저장 중');
           await workspaceAffiliateApi('/workspace/sources',{method:'PUT',body:JSON.stringify({selections})});
+          if(requestId!==mallSourcingRequestId)return;
           state('판매처 설정 저장됨');
           await affiliateSourcingPanel(selected);
         }catch(error){
+          if(requestId!==mallSourcingRequestId)return;
           state('저장 실패 · 재시도 가능');
           $('pageCopy').textContent=error.message||'판매처 사용 설정을 저장하지 못했습니다.';
           if(saveButton)saveButton.disabled=false;
         }
       };
       bindMallSourcingTabs();
-      state(selected==='amazon'?(amazonReady?'Amazon 설정':'확인 필요'):selected==='overview'?'판매채널 현황':'판매처 설정');
+      state(showAmazon?(amazonReady?'Amazon 설정':'확인 필요'):showOverview?'판매채널 현황':showUsage?'판매처 사용설정':'판매처 상태');
     }catch(e){
+      // A prior failed navigation must never replace a newer successful one.
+      if(requestId!==mallSourcingRequestId)return;
       if(e.code==='AUTH_REQUIRED'||e.status===401)return loginPanel();
       $('summaryCards').innerHTML=[card('판매채널','확인 필요','상태 조회 실패')].join('');
-      $('mainPanel').innerHTML=`<h2>판매채널 · 공급망</h2><p class="empty">${ae(e.message)}</p><button class="button" type="button" id="mallSourcingRetry">다시 조회</button>`;
+      $('mainPanel').innerHTML='<h2>판매채널 · 공급망</h2><p class="empty">'+ae(e.message)+'</p><button class="button" type="button" id="mallSourcingRetry">다시 조회</button>';
       $('mallSourcingRetry')?.addEventListener('click',()=>affiliateSourcingPanel(requestedChannel));
       state('확인 필요');
     }
@@ -1047,19 +1191,22 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     }catch(e){if(e.status===401)return loginPanel('사용자·권한 관리에는 운영공간 로그인이 필요합니다.');$('summaryCards').innerHTML=[card('사용자·권한','확인 필요','실패를 성공으로 표시하지 않음')].join('');$('mainPanel').innerHTML='<h2>사용자 · 관리자 · 권한</h2><p class="empty">'+ae(e.message)+'</p>';state('확인 필요')}
   }
 
-  async function financeAdmin(){const moduleUrl=new URL('/tenant-finance-admin.js?v=20260928-banking1',location.origin).href;const module=await import(moduleUrl);return module.mountTenantBankingAdmin({root:$('mainPanel'),summaryRoot:$('summaryCards'),getToken:accessToken,workspace,state,mode:'workspace'});}
+  async function financeAdmin(){const moduleUrl=new URL('/tenant-finance-admin.js?v=20261031-ledger2',location.origin).href;const module=await import(moduleUrl);return module.mountTenantBankingAdmin({root:$('mainPanel'),summaryRoot:$('summaryCards'),getToken:accessToken,workspace,state,mode:'workspace'});}
   async function cgmaEdocAdmin(){const moduleUrl=new URL('/cgma/admin/assets/cgma-edoc-admin.js?v=edocs-54dbcd1689',location.origin).href;const module=await import(moduleUrl);return module.mountCgmaEdocAdmin({root:$('mainPanel'),summaryRoot:$('summaryCards'),getToken:accessToken,state})}
   async function cgmaFestivalAdmin(){const moduleUrl=new URL('/cgma/admin/assets/cgma-motor-festival-admin.js?v=20261019-festival-1',location.origin).href;const module=await import(moduleUrl);return module.mountCgmaMotorFestivalAdmin({root:$('mainPanel'),summaryRoot:$('summaryCards'),getToken:accessToken,state})}
   async function cgmaMemberAdmin(){const moduleUrl=new URL('/cgma/admin/assets/cgma-member-admin.js?v=20260908-workspace-owner-2',location.origin).href;const module=await import(moduleUrl);return module.mountCgmaMemberAdmin({root:$('mainPanel'),summaryRoot:$('summaryCards'),getToken:accessToken,state,workspaceRole})}
   function statusAdmin(){const name=workspaceLabel();$('summaryCards').innerHTML=[card('운영공간',name,'tenant scoped'),card('인증','연결됨','운영공간 권한 확인 완료'),card('공개주소',workspacePublicUrl().replace('https://ekodi.kr',''),'사용자 화면'),card('내 권한',workspaceRole||'-','Capability 기준')].join('');$('mainPanel').innerHTML=`<div class="panel-head"><div><h2>운영 상태</h2><p class="empty">사이트 운영 상태와 접근 경계를 확인합니다. 실제 플랫폼 배포 이력과 장애·로그는 공통 최고관리자에서 분리 관리합니다.</p></div><span class="tag live">관리자 연결 정상</span></div><div class="service-list"><div class="service-row"><div><strong>공개 사용자 화면</strong><p>${ae(workspacePublicUrl())}</p></div><a href="${ae(workspacePublicUrl())}" target="_blank" rel="noopener">열기</a></div><div class="service-row"><div><strong>운영공간 관리자</strong><p>${ae(adminBase)}</p></div><a href="${ae(adminBase)}">새로 확인</a></div><div class="service-row"><div><strong>플랫폼 상태 · 배포</strong><p>공통 배포·검증·오류 상태는 플랫폼 최고관리자 범위입니다.</p></div><a href="/admin/">최고관리자</a></div></div>`;state('운영 상태 확인됨')}
   function recordsAdmin(){$('summaryCards').innerHTML=[card('권한 경계','운영공간','tenant-local'),card('변경 처리','권한 기반','Capability 검증'),card('개인정보','분리 관리','공개 화면과 분리'),card('감사 기준','원본 유지','관리 작업 추적')].join('');const links=[];if(canSection('members'))links.push(`<div class="service-row"><div><strong>사용자 · 관리자 권한</strong><p>누가 어떤 범위에서 관리할 수 있는지 확인합니다.</p></div><a href="${sectionHref('members')}">관리</a></div>`);if(canSection('confirmations'))links.push(`<div class="service-row"><div><strong>지급 · 수령 기록</strong><p>확인서와 거래 연결 기록을 관리합니다.</p></div><a href="${sectionHref('confirmations')}">관리</a></div>`);$('mainPanel').innerHTML=`<h2>설정 · 기록</h2><p class="empty">운영 데이터 원본과 권한 경계를 유지하면서 변경·확인 기록을 관련 관리화면에서 추적합니다.</p><div class="service-list">${links.join('')||'<p class="empty">현재 역할에서 열 수 있는 기록 관리 화면이 없습니다.</p>'}</div>`;state('기록 관리')}
   async function amazonAdmin(){
+    const renderRequestId=mallSourcingRequestId;
     state('Amazon 무료우선 정책 확인 중');
     try{
       const token=await accessToken();
+      if(renderRequestId!==mallSourcingRequestId)return false;
       const headers=token?{authorization:`Bearer ${token}`}:{};
       const r=await fetch('/ekodimall/api/amazon/status',{headers,cache:'no-store'});
       const d=await r.json().catch(()=>({}));
+      if(renderRequestId!==mallSourcingRequestId)return false;
       if(!r.ok)throw new Error(d.error||`amazon_${r.status}`);
       const seller=d.sellerCentral||{},aws=d.aws||{},pay=d.amazonPay||{},connection=d.connection||{},cost=d.cost||{},policy=cost.policy||{},usage=Array.isArray(cost.usage)?cost.usage:[];
       const money=v=>Number(v||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
@@ -1237,6 +1384,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       state((cost.warnings||[]).length?'비용 주의 필요':seller.configured?'무료우선 운영 준비':'Amazon 설정 필요');
       return true;
     }catch(e){
+      if(renderRequestId!==mallSourcingRequestId)return false;
       $('summaryCards').innerHTML=[card('Amazon','확인 실패','connector status')].join('');
       $('mainPanel').innerHTML=`<h2>Amazon · AWS 무료우선 비용센터</h2><p class="empty">${ae(e.message||'상태를 확인하지 못했습니다.')}</p>`;
       state('확인 필요');
@@ -1256,13 +1404,68 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
 
 
 
-const MALL_SOURCING_TABS_CSS=`.mall-sourcing-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}.mall-sourcing-heading{flex:1 1 260px;min-width:210px}.mall-sourcing-heading h2{margin:0 0 5px}.mall-sourcing-heading p{margin:0}.mall-sourcing-tabs{flex:2 1 460px;display:flex;justify-content:flex-end;align-content:flex-start;align-items:center;flex-wrap:wrap;gap:5px;max-width:75%}.mall-source-tab{appearance:none;border:1px solid #d6dfeb;background:#fff;color:#1f3146;padding:5px 10px;border-radius:8px;white-space:nowrap;line-height:1.45;min-height:32px;cursor:pointer;font:inherit;font-size:12px}.mall-source-tab:hover,.mall-source-tab:focus-visible{border-color:#3565c2;outline-offset:2px}.mall-source-tab.is-active{background:#173b7a;color:#fff;border-color:#173b7a;font-weight:700}.mall-source-tab-live:not(.is-active){border-color:#9ccfb1}.mall-source-tab-pending:not(.is-active){border-style:dashed}.mall-source-detail{border-top:1px solid #e3e8f0;padding-top:12px}.mall-source-detail h3{margin:0 0 10px}.mall-source-detail .service-list{margin-bottom:12px}.mall-source-policy{margin-top:12px}.mall-source-advanced{margin:12px 0;border:1px solid #e3e8f0;border-radius:8px;padding:10px}.mall-source-advanced summary{cursor:pointer;font-weight:600}@media(max-width:900px){.mall-sourcing-head{display:block}.mall-sourcing-tabs{justify-content:flex-start;max-width:100%;margin-top:12px}}@media(max-width:580px){.mall-source-tab{font-size:12px;min-height:36px}.mall-sourcing-tabs{gap:5px}}`;
+const MALL_SOURCING_TABS_CSS=`
+.mall-sourcing-head{display:block;margin:0 0 10px}
+.mall-sourcing-heading{min-width:0}
+.mall-sourcing-heading h2{font-size:18px;margin:0 0 4px}
+.mall-sourcing-heading p{font-size:12px;margin:0}
+.mall-sourcing-level{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:6px;padding:10px;border:1px solid #e1e7ef;border-radius:10px;background:#f9fbff;margin:0 0 10px;max-width:100%;min-width:0}
+.mall-sourcing-primary{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.mall-sourcing-tabs,.mall-sourcing-detail-tabs{display:flex;flex-wrap:wrap;align-content:flex-start;max-width:100%;justify-content:flex-start}
+.mall-sourcing-detail-tabs{background:#fff}
+.mall-source-tab{appearance:none;border:1px solid #d6dfeb;background:#fff;color:#1f3146;padding:8px 11px;border-radius:8px;white-space:normal;overflow-wrap:anywhere;text-align:center;line-height:1.35;min-height:36px;cursor:pointer;font:inherit;font-size:12px}
+.mall-source-level-one{font-weight:600}
+.mall-source-level-three{font-weight:500}
+.mall-source-tab:hover,.mall-source-tab:focus-visible{border-color:#3565c2;outline-offset:2px}
+.mall-source-tab.is-active{background:#173b7a;color:#fff;border-color:#173b7a;font-weight:700}
+.mall-source-tab-live:not(.is-active){border-color:#9ccfb1}
+.mall-source-tab-pending:not(.is-active){border-style:dashed}
+.mall-source-detail{border-top:1px solid #e3e8f0;padding-top:12px;min-width:0}
+.mall-source-detail h3{margin:0 0 10px}
+.mall-source-detail .service-list{margin-bottom:12px}
+.mall-source-policy{margin-top:12px}
+.mall-source-advanced{margin:12px 0;border:1px solid #e3e8f0;border-radius:8px;padding:10px}
+.mall-source-advanced summary{cursor:pointer;font-weight:600}
+.amazon-workbench>[hidden]{display:none!important}
+@media(max-width:1100px){.mall-sourcing-primary{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:650px){.mall-sourcing-primary{grid-template-columns:repeat(2,minmax(0,1fr))}.mall-sourcing-level{gap:5px;padding:7px}.mall-source-tab{font-size:12px;min-height:38px;padding:7px 9px}.mall-sourcing-tabs .mall-source-tab{flex:0 1 auto}}
+@media(max-width:400px){.mall-sourcing-primary{grid-template-columns:repeat(2,minmax(0,1fr))}.mall-sourcing-detail-tabs .mall-source-tab{flex:1 1 calc(50% - 5px)}}
+`;
 const MALL_SOCIAL_CSS=`.mall-social-start{grid-template-columns:max-content minmax(140px,1fr) max-content max-content}@media(max-width:700px){.mall-social-start{grid-template-columns:1fr}}.mall-social-provider.youtube-pending .mall-social-provider-actions{display:none}.mall-simple-grid{grid-template-columns:minmax(0,1fr)!important}.mall-simple-grid .channel-main-column{min-width:0}.mall-social-open-policy>summary{cursor:pointer;font-weight:700}.mall-social-test>summary{cursor:pointer;font-weight:700;padding:8px}.mall-social-start .button{white-space:nowrap}.mall-social-setup{display:grid;gap:12px;padding:16px;border:1px solid #d5dbe3;border-radius:12px;background:#fff;color:#171717}.mall-social-heading{display:flex;align-items:start;justify-content:space-between;gap:12px}.mall-social-heading h2{font-size:18px;margin:0 0 4px;color:#111}.mall-social-heading p{font-size:12px;color:#555;margin:0}.mall-social-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.mall-social-steps span{display:flex;gap:7px;align-items:center;background:#f6f6f6;border:1px solid #e5e5e5;border-radius:7px;font-size:12px;padding:9px}.mall-social-steps b{background:#222;color:#fff;border-radius:50%;width:22px;height:22px;text-align:center;line-height:22px;flex:0 0 22px}.mall-social-providers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.mall-social-provider{min-width:0;display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid #e2e2e2;border-radius:9px;background:#fff}.mall-social-provider-head{display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}.mall-social-provider-head strong{font-size:14px}.mall-social-pill{font-size:11px;color:#555;padding:4px 7px;background:#f3f3f3;border:1px solid #ddd;border-radius:20px;white-space:nowrap}.mall-social-pill.ready{color:#11452a;background:#eaf6ee;border-color:#bbdfc6}.mall-social-provider p{font-size:11px;margin:0;color:#555;line-height:1.45;min-height:33px}.mall-social-provider-meta{font-size:11px;font-weight:600;color:#333}.mall-social-provider-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}.mall-social-provider-actions .button{font-size:11px;padding:7px 8px}.mall-social-provider-actions button:disabled{opacity:.55;cursor:not-allowed}.mall-social-blocker{display:block;color:#865019;font-size:10px;line-height:1.45}.mall-social-summary{display:flex;flex-wrap:wrap;gap:12px;border-top:1px solid #eaeaea;padding-top:11px;font-size:12px}.mall-social-summary b{font-weight:700;margin-right:4px}.mall-social-security{margin:0;font-size:11px;color:#666;line-height:1.5}.mall-social-test{border:1px solid #ddd;border-radius:10px;padding:14px;background:#fff}.mall-social-test h2{font-size:15px;margin:0 0 5px}.mall-social-test p{font-size:12px;color:#555;margin:0 0 10px}.mall-social-test form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mall-social-test label{display:grid;gap:5px;font-size:12px;font-weight:600}.mall-social-test label.wide{grid-column:1/-1}.mall-social-test input,.mall-social-test select,.mall-social-test textarea{min-width:0;width:100%;font:inherit;font-size:13px;padding:9px;border:1px solid #ccc;border-radius:7px;background:#fff;color:#111}.mall-social-test textarea{resize:vertical;min-height:72px}.mall-social-test button{justify-self:start}.mall-social-test-output{grid-column:1/-1;font-size:12px;min-height:18px}.mall-social-blocked{padding:10px;border:1px dashed #ddd;border-radius:8px;font-size:12px;color:#555}.mall-social-open-policy{background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px}.mall-social-open-policy>.trade-form{margin:0;padding:0;border:0}.mall-social-next{padding:9px 11px;background:#f9f8f4;border:1px solid #dfd7c9;border-radius:8px;font-size:12px;color:#64421f;line-height:1.5}.mall-social-next.ready{color:#165537;background:#f2fbf5;border-color:#bedccb}.mall-social-next strong{margin-right:7px}.mall-social-start{display:grid;grid-template-columns:max-content minmax(190px,1fr) max-content;align-items:center;gap:9px;border:1px solid #e2e2e2;border-radius:9px;background:#fff;padding:10px}.mall-social-start label{font-size:12px;font-weight:700}.mall-social-start input{min-height:38px;width:100%;padding:8px;border:1px solid #bbb;border-radius:6px;color:#111;font-size:13px}.mall-social-start small{grid-column:1/-1;font-size:11px;color:#666}.mall-social-start #mallSocialYoutubeMessage{grid-column:1/-1;font-size:12px;color:#2a456b}.mall-social-start .button{font-size:12px;padding:8px 12px}@media(max-width:700px){.mall-social-start{grid-template-columns:1fr}.mall-social-start small,.mall-social-start #mallSocialYoutubeMessage{grid-column:1}}@media(max-width:1200px){.mall-social-providers{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.mall-social-setup{padding:12px;gap:10px}.mall-social-heading h2{font-size:16px}.mall-social-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.mall-social-providers{grid-template-columns:1fr}.mall-social-provider p{min-height:0}.mall-social-test form{grid-template-columns:1fr}.mall-social-heading{flex-wrap:wrap}.mall-social-summary{gap:8px}.mall-social-test{padding:12px}}`;
 const MALL_CHANNEL_CSS=`.panel.channel-shell-panel{padding:0;border:0;background:transparent}.channel-workbench{display:grid;gap:14px}.channel-quickbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid #d9e5f6;border-radius:12px;background:#f3f7ff}.channel-quick-copy{display:flex;align-items:center;gap:11px;min-width:0}.channel-quick-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:10px;background:#e3ecff;color:#1f57b7;font-size:18px;font-weight:900}.channel-quick-copy strong{display:block;font-size:14px;color:#172033}.channel-quick-copy p{margin:3px 0 0;color:#667085;font-size:12px;line-height:1.55}.channel-quick-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.channel-main-grid{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:14px;align-items:start}.channel-main-column{display:grid;gap:12px;min-width:0}.channel-primary-card,.channel-detail-section,.channel-help{background:#fff;border:1px solid #e6eaf1;border-radius:12px}.channel-primary-card,.channel-detail-section{padding:14px}.channel-primary-card h2,.channel-detail-section h2,.channel-help h2{margin:0 0 5px;font-size:16px}.channel-primary-card>p,.channel-detail-section>p{margin:0 0 12px;color:#6b7280;font-size:12px}.channel-table-wrap{overflow:auto;border:1px solid #edf0f5;border-radius:10px}.channel-table{width:100%;border-collapse:collapse;min-width:720px}.channel-table th{padding:9px 10px;background:#fafbfc;color:#667085;font-size:11px;font-weight:800}.channel-table td{padding:10px;border-top:1px solid #edf0f5;font-size:12px;vertical-align:middle}.channel-platform{display:flex;align-items:center;gap:9px;min-width:150px}.channel-platform-mark{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:9px;background:#eef3ff;color:#1f3c88;font-size:10px;font-weight:900}.channel-platform strong{display:block;font-size:13px}.channel-platform small{display:block;margin-top:2px;color:#8a94a6;font-size:10px}.channel-auto-state{display:inline-flex;align-items:center;gap:6px;color:#596579}.channel-auto-dot{width:8px;height:8px;border-radius:999px;background:#cbd5e1}.channel-auto-state.on{color:#287347}.channel-auto-state.on .channel-auto-dot{background:#2f9e5b}.channel-action{display:flex;justify-content:flex-end;gap:6px}.channel-action .button{margin:0}.channel-detail-section{scroll-margin-top:18px}.channel-detail-section>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;font-weight:800;color:#263244}.channel-detail-section>summary::-webkit-details-marker{display:none}.channel-detail-section>summary::after{content:'펼치기';font-size:11px;font-weight:700;color:#667085}.channel-detail-section[open]>summary::after{content:'접기'}.channel-detail-section[open]>summary{padding-bottom:12px;border-bottom:1px solid #edf0f5;margin-bottom:12px}.channel-help{position:sticky;top:16px;padding:14px}.channel-help-step{display:grid;grid-template-columns:28px 1fr;gap:9px;padding:10px 0;border-top:1px solid #edf0f5}.channel-help-step:first-of-type{border-top:0}.channel-help-step b{display:grid;place-items:center;width:26px;height:26px;border-radius:999px;background:#eaf1ff;color:#1f57b7;font-size:11px}.channel-help-step strong{display:block;font-size:12px}.channel-help-step p{margin:3px 0 0;color:#7d8796;font-size:11px;line-height:1.55}.channel-help-links{display:grid;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid #edf0f5}.channel-help-links button{width:100%;text-align:left}.channel-account-list{display:grid;gap:8px;margin-top:12px}.channel-empty{padding:12px;border:1px dashed #dce3ee;border-radius:9px;background:#fafbfc;color:#7d8796;font-size:12px}@media(max-width:980px){.channel-main-grid{grid-template-columns:1fr}.channel-help{position:static}.channel-quickbar{align-items:flex-start;flex-direction:column}.channel-quick-actions{justify-content:flex-start;width:100%}}@media(max-width:620px){.channel-quick-actions{display:grid;grid-template-columns:1fr;width:100%}.channel-quick-actions .button{justify-content:center;min-height:42px}.channel-primary-card,.channel-detail-section,.channel-help{padding:12px}.channel-table{min-width:660px}}`;
 
 export function workspaceAdminPage(){return new Response(`<!doctype html><html lang="ko" data-ekodi-workspace-admin-runtime="20261002-common-engine-ui-v1" data-ekodi-admin-common-engine="workspace" data-ekodi-admin-menu-model="common-plus-site" data-ekodi-authority-scope="tenant" data-ekodi-admin-layout="direct-left" data-ekodi-admin-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>EKODI Workspace Admin</title><link rel="stylesheet" href="/workspace-admin.css?v=20261009-common-engine-ui-v1"></head><body><header class="topbar" data-ekodi-admin-topbar><a class="brand" href="/">EKODI</a><div class="context"><strong id="workspaceName">운영공간</strong><span id="serviceName">관리</span></div></header><div class="layout"><aside class="sidebar" data-ekodi-admin-sidebar><div class="scope"><span>고객 운영공간</span><strong id="scopeLabel">운영공간 확인 중</strong></div><nav id="adminNav" data-ekodi-admin-nav data-ekodi-admin-nav-mode="direct"></nav><p class="boundary">플랫폼 공통 관리는 <a href="https://ekodi.kr/admin/">ekodi.kr/admin</a>에서 수행합니다.</p><div class="sidebar-footer" data-ekodi-admin-sidebar-footer><a class="public-link" id="publicLink" href="/">사용자 화면</a><button id="workspaceLogout" data-ekodi-logout type="button">로그아웃</button></div></aside><main data-ekodi-admin-main><nav id="adminScopeSwitcher" class="admin-scope-switcher" data-ekodibiz-site-switch aria-label="관리 사이트 전환" hidden></nav><nav id="sectionNav" class="admin-subnav" data-ekodi-admin-subnav aria-label="세부 메뉴" hidden></nav><section class="heading"><div><p class="eyebrow" id="breadcrumb">WORKSPACE ADMIN</p><h1 id="pageTitle">대시보드</h1><p id="pageCopy">이 운영공간에 속한 서비스와 데이터를 관리합니다.</p></div><span class="state" id="pageState">확인 중</span></section><section class="cards" id="summaryCards"></section><section class="panel" id="mainPanel"><div class="loading-shell" aria-live="polite"><p class="loading">관리자 인증과 운영공간 권한을 확인하고 있습니다.</p><div class="loading-bar mid"></div><div class="loading-bar"></div><div class="loading-bar short"></div></div></section></main></div><script src="/workspace-admin.js?v=20261002-common-engine-ui-v1" defer></script><script src="/workspace-trade-admin.js?v=20260909-admin-ui-v8" defer></script></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','content-security-policy':"default-src 'self'; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",'x-ekodi-route':'workspace-admin','x-ekodi-authority-scope':'tenant'}})}
 
 const AMAZON_ADMIN_CSS=`.admin-nav-nested{padding-left:18px!important;margin-left:10px!important;width:calc(100% - 10px)!important;border-left:2px solid #cad5e5!important;font-size:11.5px!important;border-radius:0 7px 7px 0!important}.amazon-workbench{display:grid;gap:12px;min-width:0}.amazon-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.amazon-head h2{font-size:21px;margin:0 0 5px}.amazon-head .empty{margin:0}.amazon-eyebrow{color:#64748b;font-size:11px;font-weight:800;margin:0 0 4px}.amazon-head>.tag{white-space:nowrap}.amazon-step-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.amazon-step-grid>div{display:grid;grid-template-columns:28px 1fr;gap:2px 8px;align-items:center;border:1px solid #e1e7ef;background:#f8fafc;border-radius:9px;padding:11px}.amazon-step-grid b{grid-row:span 2;display:grid;place-items:center;background:#e2e8f0;border-radius:50%;width:26px;height:26px;font-size:11px}.amazon-step-grid span{font-size:11px;color:#64748b}.amazon-step-grid strong{font-size:12px}.amazon-detail{border:1px solid #e1e7ef;border-radius:11px;background:#fff;overflow:hidden}.amazon-detail>summary{padding:13px 15px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}.amazon-detail>summary::-webkit-details-marker{display:none}.amazon-detail>summary strong{font-size:13px}.amazon-detail>summary span{font-size:11px;color:#64748b}.amazon-detail[open]>summary{border-bottom:1px solid #e1e7ef}.amazon-detail-body{padding:14px}.amazon-detail-body h3{font-size:15px;margin:0 0 9px}.amazon-credential-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.amazon-credential-grid label,.amazon-refresh{display:grid;gap:5px;font-size:12px;color:#475569;min-width:0}.amazon-credential-grid input,.amazon-refresh input{min-width:0;width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;font:inherit;font-size:12px}.amazon-refresh{margin-top:10px}.amazon-readonly{border:1px solid #dbe3ee;background:#fff;border-radius:11px;padding:14px}.amazon-readonly-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.amazon-readonly-head h3{font-size:15px;margin:0}.amazon-readonly-results{font-size:12px;background:#f8fafc;padding:10px;border-radius:8px;line-height:1.5}.amazon-workbench button:disabled{cursor:not-allowed;opacity:.5}@media(max-width:860px){.amazon-step-grid{grid-template-columns:1fr}}@media(max-width:620px){.amazon-head{flex-direction:column}.amazon-credential-grid{grid-template-columns:1fr}.amazon-detail>summary{flex-direction:column;align-items:flex-start}.amazon-detail-body{padding:10px}}`;
-export function workspaceAdminCss(){return new Response(CSS+MALL_DASH_CSS+MALL_SOURCING_TABS_CSS+MALL_SOCIAL_CSS+MALL_CHANNEL_CSS+AMAZON_ADMIN_CSS+`html[data-ekodi-shell-surface="admin"] .sidebar #adminNav{align-content:start!important;grid-auto-rows:max-content!important;gap:3px!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion{align-content:start!important;grid-template-rows:max-content max-content!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion-toggle{min-height:36px!important;height:auto!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion-panel{align-content:start!important;grid-auto-rows:max-content!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar{background:#fff!important;color:#172033!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button){color:#273244!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button)[aria-current="page"],html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button).active{color:#111827!important;background:#eceff3!important;font-weight:800!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar #adminNav{align-content:start!important;grid-auto-rows:max-content!important;gap:3px!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion{align-content:start!important;grid-template-rows:max-content max-content!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion-toggle{min-height:36px!important;height:auto!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion-panel{align-content:start!important;grid-auto-rows:max-content!important}`+`:root[data-ekodi-shell-surface="admin"][data-ekodi-admin-theme="light"]{color-scheme:light!important;background:#f5f7fb!important;--ekodi-ui-bg:#f5f7fb;--ekodi-ui-surface:#fff;--ekodi-ui-surface-raised:#fff;--ekodi-ui-border:#e6eaf1;--ekodi-ui-text:#172033;--ekodi-ui-muted:#6b7280;--ekodi-ui-accent:#315d9a}:root[data-ekodi-shell-surface="admin"][data-ekodi-admin-theme="light"] body{background:#f5f7fb!important;color:#172033!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{top:0!important;height:100dvh!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="direct"]{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-gutter:stable!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar:has([data-ekodi-admin-nav-mode="direct"]){overflow:hidden!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{background:#f5f7fb!important;color:#172033!important}@media(max-width:860px){:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="direct"]{flex:0 0 auto!important;min-height:auto!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-gutter:auto!important}}`,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
+
+const MALL_SOCIAL_LAYOUT_CSS=`
+/* Site switch is always the first action on the left of the current workspace. */
+.admin-scope-switcher{justify-content:flex-start;margin:-2px 0 10px;gap:10px}
+.admin-scope-switcher .admin-scope-label{margin-right:0!important;font-size:12px;color:#475569}
+.admin-scope-switcher .admin-scope-select{width:auto;min-width:210px;max-width:min(340px,70vw)}
+/* Compact overview, then actionable steps, then provider management. */
+.mall-social-setup{gap:10px;padding:14px}
+.mall-social-heading{align-items:center}
+.mall-social-heading h2{font-size:19px}
+.mall-social-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;border-top:0;padding-top:0}
+.mall-social-summary span{min-width:0;padding:8px 10px;background:#f8fafc;border:1px solid #e3e9f0;border-radius:8px;font-size:12px;line-height:1.35}
+.mall-social-summary b{display:block;margin:0 0 3px;color:#64748b;font-size:11px}
+.mall-social-steps{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.mall-social-steps button{display:flex;align-items:center;gap:8px;min-width:0;min-height:40px;padding:8px 10px;border:1px solid #dbe3ee;border-radius:8px;background:#fff;color:#273449;font:inherit;font-size:13px;font-weight:700;text-align:left;cursor:pointer}
+.mall-social-steps button:hover{border-color:#9db5db;background:#f4f7fc}
+.mall-social-steps button:focus-visible{outline:2px solid #315d9a;outline-offset:2px}
+.mall-social-steps button b{display:grid;place-items:center;width:22px;height:22px;flex:0 0 22px;border-radius:50%;background:#315d9a;color:#fff;font-size:12px}
+.mall-social-providers{scroll-margin-top:14px}
+.mall-social-provider{gap:6px;padding:12px}
+.mall-social-provider p{min-height:0;font-size:12px;line-height:1.45}
+.mall-social-provider-meta{font-size:12px}
+.mall-social-provider-actions .button{font-size:12px}
+.mall-social-security{font-size:12px}
+.channel-workbench{gap:10px}
+@media(max-width:1100px){.mall-social-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.admin-scope-switcher{justify-content:flex-start;margin:0 -12px 10px;padding:8px 12px}.admin-scope-switcher .admin-scope-select{min-width:0;max-width:65vw}.mall-social-heading{align-items:flex-start}.mall-social-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.mall-social-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.mall-social-steps button{min-height:44px}.mall-social-setup{padding:12px}}
+@media(max-width:390px){.admin-scope-switcher{flex-wrap:wrap}.admin-scope-switcher .admin-scope-select{max-width:100%;flex:1 1 190px}.mall-social-summary{grid-template-columns:1fr 1fr}}
+`;
+export function workspaceAdminCss(){return new Response(CSS+MALL_DASH_CSS+MALL_SOURCING_TABS_CSS+MALL_SOCIAL_CSS+MALL_CHANNEL_CSS+AMAZON_ADMIN_CSS+MALL_SOCIAL_LAYOUT_CSS+`html[data-ekodi-shell-surface="admin"] .sidebar #adminNav{align-content:start!important;grid-auto-rows:max-content!important;gap:3px!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion{align-content:start!important;grid-template-rows:max-content max-content!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion-toggle{min-height:36px!important;height:auto!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion-panel{align-content:start!important;grid-auto-rows:max-content!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar{background:#fff!important;color:#172033!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button){color:#273244!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button)[aria-current="page"],html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button).active{color:#111827!important;background:#eceff3!important;font-weight:800!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar #adminNav{align-content:start!important;grid-auto-rows:max-content!important;gap:3px!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion{align-content:start!important;grid-template-rows:max-content max-content!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion-toggle{min-height:36px!important;height:auto!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion-panel{align-content:start!important;grid-auto-rows:max-content!important}`+`:root[data-ekodi-shell-surface="admin"][data-ekodi-admin-theme="light"]{color-scheme:light!important;background:#f5f7fb!important;--ekodi-ui-bg:#f5f7fb;--ekodi-ui-surface:#fff;--ekodi-ui-surface-raised:#fff;--ekodi-ui-border:#e6eaf1;--ekodi-ui-text:#172033;--ekodi-ui-muted:#6b7280;--ekodi-ui-accent:#315d9a}:root[data-ekodi-shell-surface="admin"][data-ekodi-admin-theme="light"] body{background:#f5f7fb!important;color:#172033!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{top:0!important;height:100dvh!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="direct"]{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-gutter:stable!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar:has([data-ekodi-admin-nav-mode="direct"]){overflow:hidden!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{background:#f5f7fb!important;color:#172033!important}@media(max-width:860px){:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="direct"]{flex:0 0 auto!important;min-height:auto!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-gutter:auto!important}}`,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
 export function workspaceAdminScript(){const payload=tenantAdminPolicySnapshot();return new Response(`window.__EKODI_WORKSPACE_ADMIN_RUNTIME__='20261002-common-engine-ui-v1';\n((__name)=>{\nconst youtubeDataApiDisabledProject=${youtubeDataApiDisabledProject.toString()};\nconst youtubeDataApiCloudUrl=${youtubeDataApiCloudUrl.toString()};\nconst renderMallSocialSetup=${renderMallSocialSetup.toString()};\n(${clientMain.toString()})(${JSON.stringify(payload)},${JSON.stringify(ekodiBizAdminScopeSnapshot())},${JSON.stringify(channelTargetOptions())});\n})((target)=>target);`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
 export function isWorkspaceAdminPath(pathname){return isWorkspaceAdminPathShape(pathname)}

@@ -1,7 +1,8 @@
 import { handleMembershipBilling as handleLegacyMembershipBilling, runMembershipBillingSchedule } from './membership-billing.js';
 import { isAllowedOrigin } from './auth-worker.js';
 import { USER_SERVICES, USER_SERVICE_IDS } from './generated/user-services.js';
-import { canonicalAiSubject, legacyAiSubject, resolveCanonicalEkodiIdentity } from './personal-ai-bridge.js';
+import { canonicalAiSubject, legacyAiSubject } from './personal-ai-bridge.js';
+import { loadBillingIdentity, personalSubscriptionLookupKeys, choosePersonalSubscription, saveVerifiedBillingAliases } from './membership-identity.js';
 import { AI_ENTITLEMENT_POLICY, buildAiEntitlementSnapshot } from './ai-entitlement-engine.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
@@ -60,7 +61,7 @@ function oauthClientToken(token) {
   } catch { return false; }
 }
 
-async function userIdentity(request) {
+async function userIdentity(request, env) {
   const token = bearerToken(request);
   if (!token || token.length > 8192 || oauthClientToken(token)) return null;
   const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
@@ -70,7 +71,11 @@ async function userIdentity(request) {
   const user = await response.json();
   const email = String(user?.email || '').trim().toLowerCase();
   if (!user?.id || !email || !user?.email_confirmed_at) return null;
-  return resolveCanonicalEkodiIdentity({ token, authUser:{ id:String(user.id), email } });
+  const identity = await loadBillingIdentity({ accessToken:token,
+    authUser:{id:String(user.id),email}, supabaseUrl:SUPABASE_URL,
+    publishableKey:SUPABASE_PUBLISHABLE_KEY });
+  if (identity) await saveVerifiedBillingAliases(env.DB, identity);
+  return identity ? {...identity, canonical:true} : null;
 }
 
 async function ensureFreeSchema(db) {
@@ -125,7 +130,10 @@ function freeSubscription(row = null) {
 }
 
 function subscriptionSubjects(identity) {
-  return [...new Set([canonicalAiSubject(identity), identity.personId, legacyAiSubject(identity)].filter(Boolean).map(String))];
+  return personalSubscriptionLookupKeys({
+    subjectKey:canonicalAiSubject(identity),
+    legacySubjectKeys:[identity.personId, ...(identity.legacySubjectKeys || []), legacyAiSubject(identity)],
+  });
 }
 
 function planManagerRole(role) {
@@ -186,11 +194,17 @@ async function subscriptionMapForSubject(env, identity, subject) {
   const bySite = new Map();
   if (!subject) return bySite;
   if (subject.storageType === 'person') {
+    const rowsBySite = new Map();
     for (const key of subscriptionSubjects(identity)) {
       const rows = await env.DB.prepare(`SELECT site,plan_id,status,monthly_fee,current_period_end,next_billing_at,cancel_at_period_end
         FROM service_subscriptions WHERE subject_type='person' AND subject_key=?`).bind(key).all();
-      for (const row of rows.results || []) if (!bySite.has(String(row.site))) bySite.set(String(row.site), row);
+      for (const row of rows.results || []) {
+        const site = String(row.site);
+        if (!rowsBySite.has(site)) rowsBySite.set(site, []);
+        rowsBySite.get(site).push(row);
+      }
     }
+    for (const [site, rows] of rowsBySite) bySite.set(site, choosePersonalSubscription(rows));
     return bySite;
   }
   const rows = await env.DB.prepare(`SELECT site,plan_id,status,monthly_fee,current_period_end,next_billing_at,cancel_at_period_end
@@ -220,7 +234,7 @@ export async function aiEntitlementSnapshotForIdentity(request, env, identity) {
 }
 
 async function entitlementSnapshot(request, env) {
-  const identity = await userIdentity(request);
+  const identity = await userIdentity(request, env);
   if (!identity) return json({ error:'EKODI 로그인 세션을 확인해 주세요.' }, 401, request, env);
   return aiEntitlementSnapshotForIdentity(request, env, identity);
 }
@@ -239,12 +253,7 @@ async function materializeFree(db, identity, site) {
 
 async function portfolioForIdentity(request, env, identity) {
   await ensureFreeSchema(env.DB);
-  const bySite = new Map();
-  for (const subject of subscriptionSubjects(identity)) {
-    const rows = await env.DB.prepare(`SELECT site,plan_id,status,monthly_fee,current_period_end,next_billing_at,cancel_at_period_end
-      FROM service_subscriptions WHERE subject_type='person' AND subject_key=?`).bind(subject).all();
-    for (const row of rows.results || []) if (!bySite.has(String(row.site))) bySite.set(String(row.site), row);
-  }
+  const bySite = await subscriptionMapForSubject(env, identity, { storageType:'person' });
   return json({
     account: { email: identity.email, ekodiId:identity.ekodiId || null, defaultTier: 'free' },
     policy: 'one-account-free-everywhere-pay-where-needed',
@@ -261,7 +270,7 @@ export async function membershipPortfolioForIdentity(request, env, identity) {
 }
 
 async function portfolio(request, env) {
-  const identity = await userIdentity(request);
+  const identity = await userIdentity(request, env);
   if (!identity) return json({ error: 'EKODI 로그인 세션을 확인해 주세요.' }, 401, request, env);
   return portfolioForIdentity(request, env, identity);
 }
@@ -278,7 +287,7 @@ async function genericCatalog(request, env, site) {
 }
 
 async function genericMe(request, env, site) {
-  const identity = await userIdentity(request);
+  const identity = await userIdentity(request, env);
   if (!identity) return json({ error: 'EKODI 로그인 세션을 확인해 주세요.' }, 401, request, env);
   await ensureFreeSchema(env.DB);
   const row = await materializeFree(env.DB, identity, site);
@@ -299,7 +308,7 @@ async function genericMe(request, env, site) {
 }
 
 async function genericSelect(request, env) {
-  const identity = await userIdentity(request);
+  const identity = await userIdentity(request, env);
   let body = null;
   try { body = await request.json(); } catch {}
   const site = normalizeRegistrySite(body?.site);
