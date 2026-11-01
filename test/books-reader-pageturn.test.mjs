@@ -32,3 +32,9 @@ test('reader survives the /books gateway rewrite unchanged', async () => {
   const res = await routeCanonicalSurface(new Request('https://ekodi.kr/books/reader/epub-reader.js'), env, { legacyFetch: async () => new Response('legacy', { status: 599 }) });
   assert.equal(await res.text(), src);
 });
+
+test('running heads sit on each page: page numbers at the outer corners, book title left, chapter title right', () => {
+  assert.match(src, /<div class="folio l"[^>]*><b><\/b><span><\/span><\/div><div class="folio r"/);
+  assert.match(src, /\.folio\.l\{left:46px\}\.folio\.r\{right:40px;flex-direction:row-reverse\}/);
+  assert.match(src, /const n = spread \? state\.p \* 2 \+ 1 : state\.p \+ 1;/);
+});
