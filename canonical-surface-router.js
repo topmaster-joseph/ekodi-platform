@@ -228,6 +228,17 @@ async function serveCanonicalAuth(request,env){
 async function proxyAdminRuntime(request,legacyFetch){
   return proxyLegacySurface(request,legacyFetch,SURFACE_PREFIXES.admin,'admin.ekodi.kr','admin');
 }
+// 영상서재 is served from an external origin under the apex, so it gets a
+// strict policy: no third-party connections, no framing, no plugins.
+const VIDEO_CSP=["default-src 'none'","script-src 'unsafe-inline'","style-src 'unsafe-inline' https://fonts.googleapis.com","font-src https://fonts.gstatic.com","img-src 'self' data: blob:","media-src 'self' blob: https:","connect-src 'none'","frame-ancestors 'none'","base-uri 'none'","form-action 'none'","object-src 'none'"].join('; ');
+function withVideoSecurityHeaders(response){
+  const headers=new Headers(response.headers);
+  if(String(headers.get('content-type')||'').includes('text/html'))headers.set('content-security-policy',VIDEO_CSP);
+  headers.set('x-content-type-options','nosniff');headers.set('referrer-policy','same-origin');
+  headers.set('permissions-policy','camera=(), microphone=(), geolocation=(), payment=()');
+  headers.set('x-ekodi-route','video-library-link');
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+}
 async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch){
   const upstreamUrl=new URL(request.url);
   let response;
@@ -297,6 +308,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     // existing UI chrome at this canonical boundary without decorating assets
     // or repeating chrome already provided upstream.
     if(executionSurface.id==='cloud'&&typeof HTMLRewriter==='function'&&response.headers.get('x-ekodi-shell')!=='v2')return injectEkodiShell(response,'cloud');
+    if(executionSurface.id==='video')return withVideoSecurityHeaders(response);
     return executionSurface.id==='lab'?injectEkodiTenantReadability(response):response;
   }
   // Reserved Research paths must never fall through to an authenticated workspace
