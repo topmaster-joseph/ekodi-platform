@@ -8,12 +8,20 @@ export const EXISTING_BOOKSTORE_EDITION_IDENTITIES=Object.freeze({
   'BOOK-EKODI-000002':Object.freeze({title:'AI 시대의 진보와 빈곤',author:'정찬균',
     catalogNo:'EB-MONO-002',fileKey:'BOOK-EKODI-000002/ebook.epub'}),
 });
+// Human Gate record (not self-authorizing JSON): the author/publisher explicitly approved this
+// edition in the EKODI operator conversation on 2026-11-01. Sale still requires the bookstore
+// readiness gate (validated EPUB, live storefront) and the uploaded file.
+export const HUMAN_APPROVED_BOOKSTORE_EDITIONS=Object.freeze({
+  'BOOK-EKODI-000003':Object.freeze({title:'In Search of the EKODIan',author:'Jeong Chan Gyun',
+    catalogNo:'EB-MONO-001-EN',fileKey:'BOOK-EKODI-000003/ebook.epub',
+    approvedBy:'정찬균 (저자·발행인)',approvedAt:'2026-11-01'}),
+});
 const SHA=/^sha256:[0-9a-f]{64}$/;
 const ID=/^[A-Za-z0-9][A-Za-z0-9._-]{2,159}$/;
 const CHANNELS=new Set(['books','ekodimall']);
 
 export function existingEditionAllowed(book){
-  const approved=EXISTING_BOOKSTORE_EDITION_IDENTITIES[book?.id];
+  const approved=EXISTING_BOOKSTORE_EDITION_IDENTITIES[book?.id]||HUMAN_APPROVED_BOOKSTORE_EDITIONS[book?.id];
   return Boolean(approved&&book.title===approved.title&&book.author===approved.author &&
     book.catalogNo===approved.catalogNo && !book.publisherRelease &&
     (!book.directSale?.enabled || book.directSale.fileKey===approved.fileKey));
