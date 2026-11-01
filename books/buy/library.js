@@ -88,59 +88,70 @@
     try { catalog = await (await fetch(`${C.BASE}/books.json`, { cache: 'no-store' })).json(); } catch { return; }
     const books = (catalog.books || []).filter(b => b.directSale?.enabled);
     const host = document.createDocumentFragment();
+    // LIBRARY-OPERATOR-COMPACT-001: 책마다 연번·한 줄(제목 · 파일 · 판매상태 · 검토·확정 · 새 판본)로 표시
+    const head = document.createElement('div'); head.className = 'op-row op-head';
+    for (const t of ['No.', '도서', '판매 파일', '판매 상태', '']) { const c = document.createElement('span'); c.textContent = t; head.append(c); }
+    host.append(head);
+    let no = 0;
     for (const book of books) {
       let state;
-      try { state = await C.api(`admin/files/${encodeURIComponent(book.id)}`); } catch (e) { if (e.status === 403 || e.status === 401) return; continue; }
+      try { state = await C.api(`admin/approvals/${encodeURIComponent(book.id)}`); } catch (e) { if (e.status === 403 || e.status === 401) return; continue; }
       $('operatorPanel').hidden = false;
+      const file = state.file, ready = state.readiness || {};
       const row = document.createElement('div'); row.className = 'op-row';
-      const info = document.createElement('div'); const b = document.createElement('b'); b.textContent = book.title; const sm = document.createElement('small');
-      sm.textContent = state.present ? `판매 파일 있음 · ${(state.size / 1024 / 1024).toFixed(2)}MB · ${new Date(state.uploaded).toLocaleString('ko-KR')}` : '판매 파일 없음 — EPUB를 올려 주세요';
-      info.append(b, sm);
-      const label = document.createElement('label'); label.textContent = state.present ? '새 판본 올리기' : 'EPUB 올리기';
+      const num = document.createElement('span'); num.className = 'op-no'; num.textContent = String(++no).padStart(2, '0');
+      const title = document.createElement('b'); title.className = 'op-title'; title.textContent = book.title; title.title = `${book.title} · ${book.id}`;
+      const meta = document.createElement('span'); meta.className = 'op-meta';
+      meta.textContent = file ? `${(file.size / 1024 / 1024).toFixed(2)}MB · ${new Date(file.uploaded).toLocaleDateString('ko-KR')}` : '파일 없음';
+      const badge = document.createElement('span');
+      badge.className = `op-badge ${ready.ready ? 'on' : 'off'}`;
+      badge.textContent = ready.ready ? (ready.source === 'approval' ? '판매 중 · 확정' : '판매 중') : (ready.label || '준비 중');
+      const actions = document.createElement('span'); actions.className = 'op-actions';
+      if (file) { const review = document.createElement('a'); review.className = 'op-btn ghost'; review.href = `${C.BASE}/review/?book=${encodeURIComponent(book.id)}`; review.textContent = ready.ready ? '검토' : '검토·확정'; actions.append(review); }
+      const label = document.createElement('label'); label.className = 'op-btn'; label.textContent = file ? '새 판본' : 'EPUB 올리기';
       const input = document.createElement('input'); input.type = 'file'; input.accept = '.epub,application/epub+zip';
       input.addEventListener('change', async () => {
-        const file = input.files?.[0]; if (!file) return;
+        const f = input.files?.[0]; if (!f) return;
+        if (ready.source === 'approval' && !confirm('새 파일을 올리면 출판 확정이 해제되어 다시 검토·확정할 때까지 판매가 멈춥니다. 계속할까요?')) { input.value = ''; return; }
         label.firstChild.textContent = '올리는 중…';
         try {
           const s = await C.session();
-          const r = await fetch(`${C.BASE}/api/commerce/admin/files/${encodeURIComponent(book.id)}`, { method: 'PUT', headers: { authorization: 'Bearer ' + (s?.accessToken || ''), 'content-type': 'application/epub+zip' }, body: file });
+          const r = await fetch(`${C.BASE}/api/commerce/admin/files/${encodeURIComponent(book.id)}`, { method: 'PUT', headers: { authorization: 'Bearer ' + (s?.accessToken || ''), 'content-type': 'application/epub+zip' }, body: f });
           const d = await r.json().catch(() => ({}));
           if (!r.ok) throw new Error(d.error || '올리지 못했습니다.');
           alert(`${book.title} 판매 파일을 올렸습니다.`); operatorPanel(); load();
         } catch (e) { alert(e.message); label.firstChild.textContent = '다시 올리기'; }
       });
-      label.append(input); row.append(info, label);
-      const review = document.createElement('a'); review.className = 'op-review'; review.href = `${C.BASE}/review/?book=${encodeURIComponent(book.id)}`;
-      review.textContent = state.present ? '내용 검토·출판 확정 →' : '';
-      if (state.present) row.append(review);
-      const bonus = document.createElement('div'); bonus.className='audio-bonus-operator';
-      const status = document.createElement('small');
-      status.textContent = book.audiobook?.tracks?.length
-        ? '오디오북 장별 제작본 업로드 · 출판 및 음성 검수 승인 전에는 구매자에게 공개되지 않습니다.'
-        : '무료 오디오북 제작 준비 · 출판 승인·권리·음성 검수 후 장별 트랙을 등록합니다.';
-      bonus.append(status);
-      for (const track of book.audiobook?.tracks || []) {
-        const audioLabel = document.createElement('label');
-        audioLabel.textContent = `오디오북 ${track.number}장 ${track.title} MP3 업로드`;
-        const upload = document.createElement('input'); upload.type='file'; upload.accept='.mp3,audio/mpeg';
-        upload.addEventListener('change', async()=>{
-          const file=upload.files?.[0]; if(!file) return;
-          if(file.size>32*1024*1024){alert('장별 파일은 32MB 이하로 나누어 주세요.');return;}
-          audioLabel.firstChild.textContent='업로드 중…';
-          try {
-            const current=await C.session();
-            const response=await fetch(`${C.BASE}/api/commerce/admin/audiobooks/${encodeURIComponent(book.id)}/${track.number}`,{
-              method:'PUT',headers:{authorization:'Bearer '+(current?.accessToken||''),'content-type':'audio/mpeg'},body:file,
-            });
-            const data=await response.json().catch(()=>({}));
-            if(!response.ok) throw new Error(data.error||'업로드 실패');
-            alert(data.approvedForDelivery?'승인된 보너스 오디오북 파일이 등록됐습니다.':'검수 대기 오디오를 등록했습니다. 출판사 승인 전에는 공개되지 않습니다.');
-            operatorPanel();load();
-          }catch(e){alert(e.message);audioLabel.firstChild.textContent='다시 업로드';}
-        });
-        audioLabel.append(upload);bonus.append(audioLabel);
+      label.append(input); actions.append(label);
+      row.append(num, title, meta, badge, actions);
+      host.append(row);
+      // 오디오북: 트랙이 있는 도서만 접힌 영역으로 표시(기존 업로드 기능 유지)
+      if (book.audiobook?.tracks?.length) {
+        const bonus = document.createElement('details'); bonus.className = 'audio-bonus-operator';
+        const sum = document.createElement('summary'); sum.textContent = `${book.title} · 오디오북 장별 업로드 (${book.audiobook.tracks.length}장)`; bonus.append(sum);
+        for (const track of book.audiobook.tracks) {
+          const audioLabel = document.createElement('label');
+          audioLabel.textContent = `오디오북 ${track.number}장 ${track.title} MP3 업로드`;
+          const upload = document.createElement('input'); upload.type='file'; upload.accept='.mp3,audio/mpeg';
+          upload.addEventListener('change', async()=>{
+            const af=upload.files?.[0]; if(!af) return;
+            if(af.size>32*1024*1024){alert('장별 파일은 32MB 이하로 나누어 주세요.');return;}
+            audioLabel.firstChild.textContent='업로드 중…';
+            try {
+              const current=await C.session();
+              const response=await fetch(`${C.BASE}/api/commerce/admin/audiobooks/${encodeURIComponent(book.id)}/${track.number}`,{
+                method:'PUT',headers:{authorization:'Bearer '+(current?.accessToken||''),'content-type':'audio/mpeg'},body:af,
+              });
+              const data=await response.json().catch(()=>({}));
+              if(!response.ok) throw new Error(data.error||'업로드 실패');
+              alert(data.approvedForDelivery?'승인된 보너스 오디오북 파일이 등록됐습니다.':'검수 대기 오디오를 등록했습니다. 출판사 승인 전에는 공개되지 않습니다.');
+              operatorPanel();load();
+            }catch(e){alert(e.message);audioLabel.firstChild.textContent='다시 업로드';}
+          });
+          audioLabel.append(upload);bonus.append(audioLabel);
+        }
+        host.append(bonus);
       }
-      row.append(bonus);host.append(row);
     }
     if (run === operatorRun) $('operatorBooks').replaceChildren(host);
   }
