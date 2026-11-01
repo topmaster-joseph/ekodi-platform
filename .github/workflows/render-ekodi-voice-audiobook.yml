@@ -83,6 +83,7 @@ jobs:
           python -m pip install -q "av>=12" git+https://github.com/myshell-ai/MeloTTS.git
           python -m pip install -q --no-deps git+https://github.com/myshell-ai/OpenVoice.git
           python -m pip install -q whisper-timestamped faster-whisper python-dotenv
+          python -m pip install -q --no-deps "wavmark==0.0.3"
           python -m unidic download >/dev/null
           # 공식 체크포인트(MIT): Hugging Face myshell-ai/OpenVoiceV2 (converter + base speaker embeddings)
           python -c "from huggingface_hub import snapshot_download; snapshot_download('myshell-ai/OpenVoiceV2', local_dir='checkpoints_v2', allow_patterns=['converter/*','base_speakers/ses/*'])"
