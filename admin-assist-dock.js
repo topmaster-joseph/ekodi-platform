@@ -223,6 +223,7 @@
         const bubble=el('div','ekodi-assist-bubble',message.text);
         if(message.role==='assistant'){const who=el('div','ekodi-assist-who');who.append(el('span','ekodi-assist-avatar',message.mode==='factchat-institution'?'F':'E'),el('strong','',message.kind==='status'?'EKODI 작업':message.mode==='factchat-institution'?FACTCHAT_INSTITUTION_LABEL:'에코디 AI'));row.append(who)}
         row.append(bubble);
+        if(message.role==='user'&&message.advisory?.label){row.append(el('small','ekodi-assist-turn-meta ekodi-assist-advisory',`판정: ${message.advisory.label} · ${message.advisory.reason}`))}
         if(message.provider||message.status){const meta=el('small','ekodi-assist-turn-meta',[message.provider,message.status&&statusLabel(message.status)].filter(Boolean).join(' · '));row.append(meta)}
         thread.append(row);
       }
@@ -435,9 +436,27 @@
   async function threadAction(id,action){try{await api(`/api/control/messenger/threads/${id}/${action}`,{method:'POST',body:'{}'});if(action==='close'){activeThread=null;await refreshSummary();renderInbox()}else await openThread(id)}catch(error){showStatus(error.message,true)}}
   function highRiskArea(text){return HIGH_RISK.find(item=>item.re.test(text))?.area||''}
 
+  /*AI-ROUTE-FAMILY-001:start*/
+  // Advisory verdict only (mirrors ai-router-score.js recommendModelFamily); never dispatches a provider.
+  function familyVerdict(input){
+    const text=String(input||'').toLowerCase();
+    const code=/\b(code|coding|git|github|branch|deploy|repository|repo|debug|refactor|test|migration)\b/.test(text)||/코드|코딩|깃|브랜치|배포|저장소|디버그|리팩터|테스트|마이그레이션/.test(text);
+    const research=!code&&(/\b(research|analyse|analyze|compare|evidence|literature|study)\b/.test(text)||/연구|분석|비교|근거|문헌|조사/.test(text));
+    const writing=!code&&!research&&(/\b(write|draft|rewrite|translate|email|document|copy)\b/.test(text)||/작성|초안|번역|이메일|문서|문구|글쓰기/.test(text));
+    const image=/\b(image|picture|illustration|logo|poster|thumbnail|dall-?e)\b/.test(text)||/이미지|그림|사진 ?생성|일러스트|로고|포스터|썸네일/.test(text);
+    const brainstorm=!code&&(/\b(brainstorm|ideas?|naming|slogan)\b/.test(text)||/브레인스토밍|아이디어|이름 ?짓|네이밍|슬로건/.test(text));
+    if(image)return{family:'chatgpt',label:'GPT 적합',reason:'이미지 생성'};
+    if(brainstorm)return{family:'chatgpt',label:'GPT 적합',reason:'자유 브레인스토밍'};
+    if(code)return{family:'claude',label:'Claude 적합',reason:'코드·저장소 작업'};
+    if(research)return{family:'claude',label:'Claude 적합',reason:'근거 기반 분석'};
+    if(writing)return{family:'claude',label:'Claude 적합',reason:'문서 작성'};
+    return{family:'claude',label:'Claude 적합',reason:'파일·판단 작업'};
+  }
+  /*AI-ROUTE-FAMILY-001:end*/
+
   function beginConversationTurn(text){
     const value=String(text||'').trim();if(!value)return null;
-    ensureSession(value);const history=aiHistory.slice(-8);rememberAi('user',value);addSessionMessage('user',value,{kind:'message',status:'active'});renderAi();scrollChat();return history;
+    ensureSession(value);const history=aiHistory.slice(-8);rememberAi('user',value);addSessionMessage('user',value,{kind:'message',status:'active',advisory:familyVerdict(value)});renderAi();scrollChat();return history;
   }
 
   async function submitAi(text){
