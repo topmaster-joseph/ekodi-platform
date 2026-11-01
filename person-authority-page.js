@@ -112,10 +112,31 @@ export function personAuthorityScript(){
       person.siteGrants.map(g=>[g.siteKey,g.tenant?g.tenant.slug:'-',g.role,STATUS[g.status]||g.status,(g.source||'-')+(g.plan?' · '+g.plan:'')]))));
     card.append(block('최근 인증 기록',table(['일시','동작','공급자'],
       person.recentAudit.map(x=>[fmt(x.at),x.action,x.provider||'-']))));
+    const merges=Array.isArray(person.merges)?person.merges:[];
+    if(merges.length){
+      const list=el('div');
+      merges.forEach(m=>{
+        const row=el('p','',(m.role==='survivor'?'이 ID로 합쳐진 ':'다른 ID로 합쳐진 ')+(PROVIDER[m.provider]||m.provider)+' 계정 · '
+          +(m.status==='executed'?'병합 '+fmt(m.executedAt):'되돌림 '+fmt(m.revertedAt)));
+        if(m.status==='executed'){
+          const undo=el('button','','되돌리기');undo.type='button';undo.style.marginLeft='10px';
+          undo.addEventListener('click',async()=>{
+            if(!confirm('이 계정 병합을 되돌릴까요? 합쳐졌던 로그인이 원래 계정으로 돌아갑니다.'))return;
+            undo.disabled=true;
+            try{const r=await call('/admin/merges/'+encodeURIComponent(m.id)+'/revert','POST');
+              row.textContent='되돌렸습니다 (로그인 '+r.restored+'개 복원). 다시 조회하면 최신 상태가 보입니다.';}
+            catch(error){undo.disabled=false;show('되돌리기 실패: '+error.message);}
+          });
+          row.append(undo);
+        }
+        list.append(row);
+      });
+      card.append(block('계정 병합 이력',list));
+    }
     return card;
   }
-  async function call(path){
-    const res=await fetch(API+path,{headers:{apikey:ANON,authorization:'Bearer '+token},cache:'no-store'});
+  async function call(path,method='GET'){
+    const res=await fetch(API+path,{method,headers:{apikey:ANON,authorization:'Bearer '+token},cache:'no-store'});
     const data=await res.json().catch(()=>({}));
     if(!res.ok)throw new Error(data.code||data.error||'HTTP '+res.status);
     return data;
