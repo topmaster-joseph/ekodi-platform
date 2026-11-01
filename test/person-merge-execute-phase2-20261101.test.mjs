@@ -59,5 +59,5 @@ test('screens: owner decides in the auth hub, admin reverts from /admin/people, 
   const js=await personAuthorityScript().text();
   assert.match(js,/'\/admin\/merges\/'\+encodeURIComponent\(m\.id\)\+'\/revert','POST'/);
   assert.doesNotMatch(js,/innerHTML/);
-  assert.match(await read('auth-site/auth-router.js'),/federated-login\.js\?v=20261101-merge-execute-1/);
+  assert.match(await read('auth-site/auth-router.js'),/federated-login\.js\?v=20261101-daum-entry-1/);
 });

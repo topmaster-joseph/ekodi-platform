@@ -62,7 +62,7 @@ async function loadClientAuth(){
 // Naver/Kakao callbacks return here without site/return_to; the federated module restores them.
 // Dormant providers never issue a callback, so this is a no-op until an operator enables one.
 let federated=null;
-try{federated=await import('./federated-login.js?v=20261101-merge-execute-1')}catch(error){console.warn('federated login module unavailable',error)}
+try{federated=await import('./federated-login.js?v=20261101-daum-entry-1')}catch(error){console.warn('federated login module unavailable',error)}
 const federatedHandled=federated?await federated.handleCallback():false;
 
 if(federatedHandled){/* the federated module owns this page load */}
@@ -89,7 +89,7 @@ else{
   // Login-identity management (Kakao/Naver/Google 계정 추가, 계정 병합) lives in auth.js only.
   if(!targetedWorkspace&&!manageMode&&site!=='marketing'&&(site==='portal'||isRegistryUserService||firstPartyClientSites.has(site)||trustedEkodiReturn))await loadClientAuth();
   else{
-    await import('./auth.js?v=20261101-merge-execute-1');
+    await import('./auth.js?v=20261101-daum-entry-1');
     if(targetedWorkspace)await import('./auth-workspace-target.js?v=20261101-live-church-return-1');
     if(site==='marketing')await import('./marketing-onboarding.js?v=20260817-workspace-label-1');
     await import('./membership-ui.js');

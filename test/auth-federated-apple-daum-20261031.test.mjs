@@ -54,11 +54,16 @@ test('Apple stays dormant: registered only with all four keys, behind the operat
   for(const k of ['APPLE_LOGIN_SERVICES_ID','APPLE_LOGIN_TEAM_ID','APPLE_LOGIN_KEY_ID','APPLE_LOGIN_PRIVATE_KEY'])assert.match(wf,new RegExp(`secrets\\.${k}`));
 });
 
-test('Kakao button is labelled for Daum users too, provider id stays kakao',async()=>{
+test('Daum users get their own entry that runs the Kakao flow; provider id stays kakao',async()=>{
   const src=read('auth-site/federated-login.js').replace(/^import \{ createClient \}[^\n]*\n/m,'const createClient=()=>{throw new Error("not in tests")};\n');
   const dir=mkdtempSync(join(tmpdir(),'ekodi-fed-'));const file=join(dir,'m.mjs');writeFileSync(file,src);
   const login=await import(pathToFileURL(file).href);
-  assert.equal(login.buttonText({id:'kakao',name:'카카오'},'login'),'카카오·다음 계정으로 계속하기');
+  assert.equal(login.buttonText({id:'kakao',name:'카카오'},'login'),'카카오 계정으로 계속하기');
+  assert.equal(login.buttonText({id:'kakao',name:'카카오',variant:'daum'},'login'),'다음(Daum) 계정으로 계속하기');
+  const entries=login.loginEntries([{id:'naver'},{id:'kakao',name:'카카오'}]);
+  assert.deepEqual(entries.map(e=>e.variant||e.id),['naver','kakao','daum']);
+  assert.equal(entries[2].id,'kakao','Daum entry starts the Kakao flow and is recorded as kakao');
+  assert.match(login.DAUM_HINT,/카카오계정/);
   assert.equal(login.buttonText({id:'naver',name:'네이버'},'login'),'네이버 계정으로 계속하기');
   assert.equal(login.buttonText({id:'apple',name:'Apple'},'link'),'Apple 계정 추가');
   assert.match(read('auth-site/auth.css'),/\.federated-apple\{background:#000;color:#fff\}/);
