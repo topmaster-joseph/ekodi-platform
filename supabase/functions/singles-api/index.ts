@@ -81,7 +81,16 @@ Deno.serve(async req => {
       if (pilotError) throw pilotError;
       const { data: op, error: opError } = await admin.from("singles_bank_operators").select("enabled").eq("user_id", userId).maybeSingle();
       if (opError) throw opError;
-      if (!pilot && op?.enabled !== true) return reply(req, { error: "pilot_only" }, 403);
+      if (!pilot && op?.enabled !== true) {
+        // 소유자가 초대할 수 있도록 "이용을 시도한 계정"을 하루 한 번만 남긴다(실패해도 응답은 같다).
+        try {
+          const since = new Date(Date.now() - 86400000).toISOString();
+          const { data: recent } = await admin.from("singles_signup_attempts").select("id").eq("user_id", userId)
+            .eq("action", "pilot_denied").gte("created_at", since).limit(1);
+          if (!recent?.length) await admin.from("singles_signup_attempts").insert({ user_id: userId, email, action: "pilot_denied", detail: null });
+        } catch (_) { /* 기록 실패가 차단 응답을 바꾸지 않는다 */ }
+        return reply(req, { error: "pilot_only" }, 403);
+      }
     }
     // 가입 시도 기록(시간·Google 계정). 기록하지 못하면 가입을 진행하지 않는다.
     const logAttempt = async (action: string, detail: string | null = null) => {

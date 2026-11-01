@@ -240,27 +240,85 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   return reply(req,{saved:true,discoverable:allowDiscover,adult_verified:verified(m)});
  }
  // Logged-in users can browse published events even before signing up for singles.
+ // 2026-11-01: 행사(event, 날짜 한 번)와 모임(group, 정기 소그룹)을 함께 내려주고 화면에서 나눈다. 정원·신청 수·내 신청 상태 포함.
  if(p==='/events'&&method==='GET'){
-  const events=await many(admin.from('singles_events').select('id,title,summary,region,starts_at,fee_krw')
-   .eq('state','published').gte('starts_at',new Date().toISOString()).order('starts_at').limit(40));
+  const now=new Date().toISOString();
+  const rows=await many(admin.from('singles_events').select('id,kind,title,summary,region,starts_at,schedule_note,capacity,fee_krw')
+   .eq('state','published').or('kind.eq.group,starts_at.gte.'+now).order('starts_at').limit(60));
+  const ids=rows.map((e:any)=>e.id);
+  const rsvps=ids.length?await many(admin.from('singles_event_rsvps').select('event_id,user_id,status').in('event_id',ids).in('status',['requested','approved'])):[];
+  const taken=new Map<string,number>();const mine=new Map<string,string>();
+  for(const r of rsvps){taken.set(r.event_id,(taken.get(r.event_id)||0)+1);if(r.user_id===userId)mine.set(r.event_id,r.status)}
+  const events=rows.map((e:any)=>({...e,taken:taken.get(e.id)||0,my_status:mine.get(e.id)||null}));
   return reply(req,{events});
  }
  const eventId=match(p,/^\/events\/([0-9a-f-]{36})$/i);
  if(eventId&&method==='GET'){
-  const event=await one(admin.from('singles_events').select('id,title,summary,description,region,starts_at,capacity,fee_krw')
+  const event=await one(admin.from('singles_events').select('id,kind,title,summary,description,region,starts_at,schedule_note,capacity,fee_krw')
     .eq('id',eventId).eq('state','published'));
   return event?reply(req,{event}):reply(req,{error:'not_found'},404);
  }
  const rsvpId=match(p,/^\/events\/([0-9a-f-]{36})\/rsvp$/i);
  if(rsvpId&&method==='POST'){
   if(!verified(m))return reply(req,{error:'adult_verification_required'},403);
-  if(!await subscribed(admin,userId))return reply(req,{error:'community_subscription_required'},402);
-  const event=await one(admin.from('singles_events').select('id,starts_at,fee_krw').eq('id',rsvpId).eq('state','published'));
-  if(!event||Date.parse(event.starts_at)<=Date.now())return reply(req,{error:'event_not_available'},409);
-  // Event-specific paid fees require a distinct verified receipt; subscriptions cannot silently waive them.
-  if(event.fee_krw>0)return reply(req,{error:'event_fee_verification_not_configured'},503);
-  const {error}=await admin.from('singles_event_rsvps').upsert({event_id:rsvpId,user_id:userId,status:'requested'}, {onConflict:'event_id,user_id'});
-  if(error)throw error;return reply(req,{ok:true,status:'requested'});
+  if(!await subscribed(admin,userId))return reply(req,{error:paidModel()?'paid_membership_required':'community_subscription_required'},402);
+  const {data,error}=await admin.rpc('singles_event_rsvp',{p_user:userId,p_event:rsvpId});
+  if(error){const msg=String(error.message||'');
+   if(msg.includes('event_full'))return reply(req,{error:'event_full'},409);
+   if(msg.includes('event_fee_verification_not_configured'))return reply(req,{error:'event_fee_verification_not_configured'},503);
+   if(msg.includes('event_not_available'))return reply(req,{error:'event_not_available'},409);
+   throw error;}
+  return reply(req,{ok:true,...data});
+ }
+ if(rsvpId&&method==='DELETE'){
+  const {data,error}=await admin.rpc('singles_event_rsvp_cancel',{p_user:userId,p_event:rsvpId});
+  if(error){if(String(error.message||'').includes('rsvp_not_found'))return reply(req,{error:'rsvp_not_found'},404);throw error}
+  return reply(req,{ok:true,...data});
+ }
+ // 운영자(설정 권한): 행사·모임 만들기·고치기·공개·취소와 신청자 보기.
+ if(p==='/admin/program'||p.startsWith('/admin/program/')){
+  const role=await one(admin.from('singles_bank_operators').select('enabled,can_configure').eq('user_id',userId));
+  if(role?.enabled!==true||role?.can_configure!==true)return reply(req,{error:'owner_capability_required'},403);
+  if(p==='/admin/program'&&method==='GET'){
+   const rows=await many(admin.from('singles_events').select('id,kind,title,summary,description,region,starts_at,schedule_note,capacity,fee_krw,state')
+    .order('starts_at',{ascending:false}).limit(80));
+   const ids=rows.map((e:any)=>e.id);
+   const rsvps=ids.length?await many(admin.from('singles_event_rsvps').select('event_id').in('event_id',ids).in('status',['requested','approved'])):[];
+   const taken=new Map<string,number>();for(const r of rsvps)taken.set(r.event_id,(taken.get(r.event_id)||0)+1);
+   return reply(req,{events:rows.map((e:any)=>({...e,taken:taken.get(e.id)||0})),regions:REGIONS});
+  }
+  const programId=match(p,/^\/admin\/program\/([0-9a-f-]{36})$/i);
+  if((p==='/admin/program'&&method==='POST')||(programId&&method==='PUT')){
+   const v=await body(req,20480);
+   const keys=['kind','title','summary','description','region','starts_at','schedule_note','capacity','state'];
+   if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!keys.includes(k)))return reply(req,{error:'invalid_program'},400);
+   const row:Record<string,unknown>={};
+   const str=(k:string,max:number,min=0)=>{if(v[k]===undefined)return true;if(typeof v[k]!=='string')return false;const t=v[k].trim();if(t.length<min||t.length>max)return false;row[k]=t;return true};
+   if(!str('title',120,3)||!str('summary',350)||!str('description',5000)||!str('schedule_note',80))return reply(req,{error:'invalid_program'},400);
+   if(v.kind!==undefined){if(!['event','group'].includes(v.kind))return reply(req,{error:'invalid_program'},400);row.kind=v.kind}
+   if(v.region!==undefined){if(typeof v.region!=='string'||(v.region&&!REGIONS.includes(v.region)))return reply(req,{error:'invalid_region'},400);row.region=v.region}
+   if(v.starts_at!==undefined){const t=Date.parse(v.starts_at);if(typeof v.starts_at!=='string'||!Number.isFinite(t))return reply(req,{error:'invalid_program'},400);row.starts_at=new Date(t).toISOString()}
+   if(v.capacity!==undefined){if(v.capacity!==null&&(!Number.isInteger(v.capacity)||v.capacity<1||v.capacity>500))return reply(req,{error:'invalid_program'},400);row.capacity=v.capacity}
+   if(v.state!==undefined){if(!['draft','published','cancelled'].includes(v.state))return reply(req,{error:'invalid_program'},400);row.state=v.state}
+   if(programId){
+    row.updated_at=new Date().toISOString();
+    const {data,error}=await admin.from('singles_events').update(row).eq('id',programId).select('id,state').maybeSingle();
+    if(error)throw error;if(!data)return reply(req,{error:'not_found'},404);
+    return reply(req,{ok:true,event:data});
+   }
+   if(!row.title||!row.starts_at)return reply(req,{error:'invalid_program'},400);
+   const {data,error}=await admin.from('singles_events').insert({...row,host_user_id:userId,state:row.state||'draft'}).select('id,state').single();
+   if(error)throw error;return reply(req,{ok:true,event:data},201);
+  }
+  const rsvpList=match(p,/^\/admin\/program\/([0-9a-f-]{36})\/rsvps$/i);
+  if(rsvpList&&method==='GET'){
+   const rows=await many(admin.from('singles_event_rsvps').select('user_id,status,created_at').eq('event_id',rsvpList).order('created_at').limit(500));
+   const ids=[...new Set<string>(rows.map((r:any)=>r.user_id))];
+   const names=ids.length?await many(admin.from('singles_profiles').select('user_id,display_name').in('user_id',ids)):[];
+   const byId=new Map(names.map((x:any)=>[x.user_id,x.display_name]));
+   return reply(req,{rsvps:rows.map((r:any)=>({display_name:byId.get(r.user_id)||'동행 회원',status:r.status,created_at:r.created_at}))});
+  }
+  return reply(req,{error:'not_found'},404);
  }
  const earlyBlock=match(p,/^\/blocks\/([0-9a-f-]{36})$/i);
  if(earlyBlock&&method==='POST'){

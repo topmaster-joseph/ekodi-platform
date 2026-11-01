@@ -224,3 +224,42 @@
  .singles-terms .inquiry-table th{width:auto}
 }
 @media(prefers-reduced-motion:reduce){.romantic-inner .primary{transition:none}.romantic-inner .primary:hover{transform:none}}
+
+/* 2026-11-01 행사·모임·초대 화면과 긴 계정 주소 줄바꿈 */
+.romantic-inner main,.romantic-inner #memberContent{max-width:100%;min-width:0}
+.romantic-inner .member-card,.romantic-inner .mini-card{min-width:0}
+.romantic-inner .member-card p,.romantic-inner .mini-card p,.romantic-inner .invite-row span{overflow-wrap:anywhere}
+.program-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:14px;margin-top:6px}
+.program-card{display:flex;gap:16px;background:#fffaf7;border:1px solid #f0e2da;border-radius:20px;padding:18px;min-width:0}
+.date-badge{flex:none;width:64px;height:76px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#a86b5d,#c99382);color:#fffaf6;box-shadow:0 8px 18px rgba(130,76,62,.22)}
+.date-badge span{font-size:12px;opacity:.9}.date-badge strong{font-size:26px;line-height:1.05;letter-spacing:-.04em}.date-badge small{font-size:10px;opacity:.85}
+.program-body{flex:1;min-width:0}
+.program-body h4{margin:6px 0 2px;font-size:17px;color:#5a3a31;letter-spacing:-.02em;word-break:keep-all}
+.program-meta{display:flex;flex-wrap:wrap;gap:6px;margin:0!important}
+.romantic-inner .pill{display:inline-block;border-radius:100px;padding:2px 10px;font-size:12px;background:#f6e6df;color:#8a5548;border:0}
+.romantic-inner .pill-on{background:#e7f3ec;color:#3f6b52}
+.romantic-inner .program-when{color:#7a5145;font-weight:650;margin:2px 0 6px}
+.romantic-inner .program-summary{margin:0 0 6px}
+.romantic-inner .program-seats{font-size:13px;margin:0 0 6px}
+.seat-bar{height:6px;border-radius:6px;background:#f3e4dd;overflow:hidden;margin:0 0 12px}
+.seat-bar span{display:block;height:100%;background:linear-gradient(90deg,#d6a294,#b9796c);border-radius:6px}
+.program-card .action-row{display:flex;flex-wrap:wrap;gap:8px}
+.program-card .action-row .primary{min-height:38px;padding:7px 16px;font-size:13px}
+.program-detail{margin-top:10px;padding:12px 14px;border-radius:14px;background:#fff;border:1px dashed #ead6cd}
+.program-empty{margin-top:8px;padding:28px 20px;border-radius:20px;text-align:center;background:linear-gradient(135deg,#fff6ef,#f8e7df);border:1px solid #f1dfd6}
+.program-empty strong{display:block;font-size:18px;color:#6c4336;margin-bottom:6px}
+.romantic-inner .program-empty p{margin:0}
+.pilot-card{background:linear-gradient(135deg,#fffaf6,#f9ece6)!important}
+.pilot-points{margin:12px 0;padding-left:1.2em;line-height:1.85;color:#7b5d54}
+.invite-form,.program-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:4px 14px;align-items:end;margin:10px 0}
+.invite-form .primary,.program-form .primary{justify-self:start}
+.program-form .field:has(textarea){grid-column:1/-1}
+.romantic-inner input[type=datetime-local]{width:100%;background:#fff;border:1px solid #e6d3cb;border-radius:14px;padding:11px 12px}
+.invite-list{display:grid;gap:8px;margin-top:6px}
+.invite-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 14px;border-radius:14px;background:#fffaf7;border:1px solid #f2e6df}
+.invite-row span{font-weight:650;color:#5e3d34;min-width:0;flex:1 1 100%}
+.invite-row small{color:#9a7b71;flex:1 1 auto}
+.invite-row button{margin-left:auto;min-height:36px;padding:6px 14px;font-size:13px}
+.program-new{margin:8px 0 14px;border:1px solid #efe1d9;border-radius:16px;padding:10px 14px;background:#fffaf7}
+.program-new summary{cursor:pointer;font-weight:700;color:#94594d}
+@media(max-width:610px){.program-card{padding:14px;gap:12px}.date-badge{width:54px;height:66px}.date-badge strong{font-size:22px}}
