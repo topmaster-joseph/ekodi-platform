@@ -94,6 +94,38 @@
   },
   "siteAdminMenuContract": [
     {
+      "id": "cgma",
+      "ko": "청계면상인회 전용 관리",
+      "scope": "workspace:cgma",
+      "audience": "site-admin",
+      "menus": [
+        {
+          "id": "applications",
+          "ko": "정회원 신청 승인"
+        },
+        {
+          "id": "booths",
+          "ko": "축제 참여부스 선정"
+        },
+        {
+          "id": "market-oversight",
+          "ko": "상권 운영 현황"
+        },
+        {
+          "id": "petitions",
+          "ko": "민원·동의 접수"
+        },
+        {
+          "id": "ip-archive",
+          "ko": "지식재산권 자료실"
+        },
+        {
+          "id": "education-survey",
+          "ko": "AI 교육 신청현황"
+        }
+      ]
+    },
+    {
       "id": "home",
       "ko": "홈",
       "menus": [
