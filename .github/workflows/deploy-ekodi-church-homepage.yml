@@ -1,6 +1,6 @@
 name: Deploy EKODI Church Homepage
 # Release reconciliation marker: church-operating-space-20260924
-# Reconcile Church public Pages to source commit 5ddef8c419fae73ea68c2fdb0358a9d8605d9311 (2026-11-08: 주일모임 초안 각자 받은 은사대로·고린도전서 7:1–9, 검토 게이트 뒤 준비, ekodi-church#140).
+# Reconcile Church public Pages to source commit 520d4f2daf7e5e4dc53bf928c9df626b5f896600 (나의 예배 화면 방송 종료 안내·다음 방송 자동 연결, ekodi-church#141).
 
 on:
   workflow_dispatch:

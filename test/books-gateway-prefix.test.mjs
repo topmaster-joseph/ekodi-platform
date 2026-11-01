@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { routeCanonicalSurface } from '../canonical-surface-router.js';
 
-const FILES = ['books/buy/commerce-client.js', 'books/buy/buy.js', 'books/buy/library.js', 'books/buy/result.js', 'books/reader/epub-reader.js', 'books/review/review.js', 'books/reader/audio-player.js', 'books/audio-review/audio-review.js'];
+const FILES = ['books/buy/commerce-client.js', 'books/buy/buy.js', 'books/buy/library.js', 'books/buy/result.js', 'books/reader/epub-reader.js', 'books/review/review.js', 'books/reader/audio-player.js', 'books/audio-review/audio-review.js', 'books/orders/orders.js'];
 
 async function throughGateway(path, body, type = 'application/javascript; charset=utf-8') {
   const env = { BOOKS: { fetch: async () => new Response(body, { headers: { 'content-type': type } }) } };
