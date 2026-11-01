@@ -96,6 +96,6 @@ test('storefront client mirror agrees with server rule and gates the buy button'
   const ok = byId('BOOK-EKODI-000001');
   const cases = [...catalog.books, null, { ...ok, edition: '' }, { ...ok, workflow: { ...ok.workflow, epub: 'draft' } }, { ...ok, directSale: { enabled: false, fileKey: 'x' } }];
   for (const c of cases) assert.equal(ctx.f(c), saleReadiness(c).ready);
-  assert.match(src, /if\(bookSaleReady\(book\)\)\{const buy=/);
+  assert.match(src, /if\(bookSaleReady\(book\)\|\|book\._approved\)\{const buy=/);
   assert.doesNotMatch(src, /if\(book\.directSale\?\.enabled\)\{const buy=/);
 });

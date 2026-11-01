@@ -10,6 +10,7 @@
 import * as ekodipay from './ekodipay-core.js';
 import { publisherAuthorizedForChannel } from './publishing/human/storefront-release-guard.js';
 import { saleReadiness } from './books-sale-readiness.js';
+import { effectiveSaleReadiness, approvalRoute, publicApprovals } from './books-edition-approval.js';
 import { ownedOtherLanguageEdition, applyLanguageEditionDiscount, otherLanguageEditions, languageEditionRate } from './books-language-editions.js';
 import { complimentaryAudiobookPolicy, availableAudiobook, audioChapterFor, validateAudioChapter, MAX_AUDIO_CHAPTER_BYTES, audioSha256 } from './books-audiobook.js';
 
@@ -161,7 +162,7 @@ export async function quote(env, request, bookId) {
   const operator = Boolean(buyer && operatorEmails(env).has(buyer.email));
   const hasFile = await fileReady(env, book);
   const audiobook = await availableAudiobook(env, book);
-  const readiness = saleReadiness(book);
+  const readiness = await effectiveSaleReadiness(env, book);
   return {
     status: 200,
     data: {
@@ -188,7 +189,7 @@ export async function createOrder(env, request, body, now = new Date()) {
   if (await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL').bind(buyer.userId, book.id).first()) {
     return { status: 409, data: { error: '이미 내 서재에 있는 도서입니다.', code: 'ALREADY_OWNED' } };
   }
-  const readiness = saleReadiness(book);
+  const readiness = await effectiveSaleReadiness(env, book);
   if (!readiness.ready) return { status: 409, data: { error: `${readiness.label} 도서입니다. 판매가 열리면 바로 구매하실 수 있습니다.`, code: 'BOOK_NOT_SALE_READY', saleStatus: readiness.label } };
   if (!operatorEmails(env).has(buyer.email) && !(await fileReady(env, book))) {
     return { status: 409, data: { error: '전자책 파일을 준비하고 있습니다. 준비되면 바로 구매하실 수 있습니다.', code: 'FILE_PREPARING' } };
@@ -236,7 +237,7 @@ export async function confirm(env, { paymentKey, orderId, amount }, now = new Da
     return {status:409,data:{error:'출판 공개 승인이 취소되었거나 아직 공개되지 않은 도서입니다.',code:'BOOK_NOT_RELEASED'}};
   if (!(await payments(env)).ready) return { status: 503, data: { error: '결제 승인 서비스가 준비되지 않았습니다.' } };
   // 주문 이후 판매 준비 상태가 철회될 수 있으므로 청구 전에 다시 확인한다(결제 승인 호출 없음).
-  if (!saleReadiness((await loadCatalog(env))?.books?.find(b => b.id === order.book_id)).ready) {
+  if (!(await effectiveSaleReadiness(env, (await loadCatalog(env))?.books?.find(b => b.id === order.book_id))).ready) {
     await audit(env, orderId, 'books-sale-readiness', 'payment.blocked_not_sale_ready', {});
     return { status: 409, data: { error: '판매 준비가 끝나지 않은 도서라 결제를 승인하지 않았습니다. 청구되지 않습니다.', code: 'BOOK_NOT_SALE_READY' } };
   }
@@ -355,6 +356,21 @@ export async function adminRoute(env, request, path, url, now = new Date()) {
     const sum = await env.DB.prepare(`SELECT COUNT(*) AS paid, COALESCE(SUM(amount),0) AS revenue FROM books_orders WHERE status='paid'`).first();
     return { status: 200, data: { orders: rows.results || [], paid: Number(sum?.paid || 0), revenue: Number(sum?.revenue || 0), payments: await payments(env) } };
   }
+  // BOOKS-EDITION-APPROVAL-001: 출판 확정 전 운영자 검토용 원본 열람 + 판권·판본 확정
+  const contentMatch = /^\/admin\/files\/([A-Z0-9-]{3,40})\/content$/.exec(path);
+  if (contentMatch && request.method === 'GET') {
+    const book = directSaleBook(await loadCatalog(env), contentMatch[1]);
+    const object = book && env.BOOK_FILES ? await env.BOOK_FILES.get(book.directSale.fileKey) : null;
+    if (!object) return { status: 404, data: { error: '보관함에 판매 파일이 없습니다.' } };
+    return { status: 200, raw: new Response(object.body, { headers: { 'content-type': 'application/epub+zip', 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff', etag: object.httpEtag || '' } }) };
+  }
+  const approvalMatch = /^\/admin\/approvals\/([A-Z0-9-]{3,40})$/.exec(path);
+  if (approvalMatch) {
+    const book = directSaleBook(await loadCatalog(env), approvalMatch[1]);
+    if (!book) return { status: 404, data: { error: '직접 판매 도서가 아닙니다.' } };
+    const body = request.method === 'POST' ? await readJson(request) : null;
+    return approvalRoute(env, request, book, buyer.email, body);
+  }
   const fileMatch = /^\/admin\/files\/([A-Z0-9-]{3,40})$/.exec(path);
   if (fileMatch && request.method === 'GET') {
     const book = directSaleBook(await loadCatalog(env), fileMatch[1]);
@@ -452,7 +468,8 @@ export async function handleCommerce(request, env) {
     if (request.method === 'GET' && audioDl) return downloadAudiobook(env, request, audioDl[1], audioDl[2]);
     const dl = /^\/download\/([A-Z0-9-]{3,40})$/.exec(path);
     if (request.method === 'GET' && dl) return download(env, request, dl[1]);
-    if (path.startsWith('/admin/')) return jsonResponse(await adminRoute(env, request, path, url));
+    if (request.method === 'GET' && path === '/public/approvals') return jsonResponse({ status: 200, data: { approvals: await publicApprovals(env, await loadCatalog(env)) } });
+    if (path.startsWith('/admin/')) { const r = await adminRoute(env, request, path, url); return r.raw || jsonResponse(r); }
     if (request.method === 'POST' && path === '/orders') {
       const body = await readJson(request);
       if (!body) return jsonResponse({ status: 400, data: { error: '요청 형식이 올바르지 않습니다.' } });

@@ -22,6 +22,8 @@ on:
       - 'books-language-editions.js'
       - 'ekodipay-core.js'
       - 'migrations/202610271400_books_direct_commerce.sql'
+      - 'migrations/202611011800_books_edition_approvals.sql'
+      - 'books-edition-approval.js'
       - 'scripts/validate-books.mjs'
       - 'wrangler.books.toml'
       - 'scripts/guarded-worker-release.mjs'
@@ -83,6 +85,7 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@4.119.0 d1 execute ekodi-auth --remote --config wrangler.books.toml --file migrations/202610271400_books_direct_commerce.sql
+          npx --yes wrangler@4.119.0 d1 execute ekodi-auth --remote --config wrangler.books.toml --file migrations/202611011800_books_edition_approvals.sql
           npx --yes wrangler@4.119.0 r2 bucket list | grep -q 'ekodi-book-files' || npx --yes wrangler@4.119.0 r2 bucket create ekodi-book-files
       - name: Candidate at 0%, verify, promote and auto-rollback on failure
         run: |
