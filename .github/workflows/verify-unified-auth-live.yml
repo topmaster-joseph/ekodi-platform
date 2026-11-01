@@ -14,6 +14,7 @@ on:
   pull_request:
     paths:
       - 'scripts/verify-unified-auth-live.mjs'
+      - 'scripts/verify-subdomain-wave2-readiness.mjs'
       - '.github/workflows/verify-unified-auth-live.yml'
 
 permissions:
@@ -36,3 +37,5 @@ jobs:
         env:
           EKODI_UNIFIED_AUTH_ENFORCE: ${{ github.event.inputs.enforce || '0' }}
         run: node scripts/verify-unified-auth-live.mjs
+      - name: Probe subdomain wave 2 apex readiness (read-only)
+        run: node scripts/verify-subdomain-wave2-readiness.mjs
