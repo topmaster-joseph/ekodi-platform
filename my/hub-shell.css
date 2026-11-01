@@ -229,3 +229,12 @@ body[data-ekodi-ui="USER"] .my-custom-footer .my-footer-credo{padding-left:var(-
 /* My EKODI is personal: nothing is shown before the session is known, and a
    signed-out visitor is sent to central login (app.js) without a guest flash. */
 body[data-auth-state="guest"]>*,body[data-auth-state="redirect"]>*{visibility:hidden!important}
+/* One-glance tabs (2026-11-02): the sub-menu cards are the tab row, the chosen section
+   opens right below it, and the footer carries its own EKODI copyright. */
+.section-wayfinder-grid button.is-active,.section-wayfinder-grid button[aria-pressed="true"]{border-color:#2f6b4b!important;background:#f2f8f3!important;box-shadow:0 0 0 2px rgba(47,107,75,.18),0 10px 24px rgba(35,73,52,.08)!important}
+.section-wayfinder-grid button.is-active>span,.section-wayfinder-grid button[aria-pressed="true"]>span{background:#2f6b4b!important;color:#fff!important}
+body[data-active-tab="account"] #account,body[data-active-tab="account"] #personal-ai{padding-bottom:12px!important}
+body[data-active-tab="account"] #personal-ai{margin-top:0!important;padding-top:8px!important}
+.my-footer-credo{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px}
+.my-footer-copyright{margin-left:auto;font-size:11px;color:#7b877f}
+@media(max-width:640px){.my-footer-copyright{margin-left:0;width:100%}}
