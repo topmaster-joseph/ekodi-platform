@@ -114,6 +114,17 @@ test('pre-approval ledger: filters, monthly summary, export, import report and r
   assert.match(tenantUi,/파일연동 운영/);
   assert.match(tenantUi,/조회 전용 연결/);
   assert.match(tenantUi,/이미 있던 거래/);
-  assert.match(workspace,/tenant-finance-admin\.js\?v=20261031-ledger2/);
-  assert.match(church,/tenant-finance-admin\.js\?v=20261031-ledger2/);
+  assert.match(workspace,/tenant-finance-admin\.js\?v=20261102-tabs1/);
+  assert.match(church,/tenant-finance-admin\.js\?v=20261102-tabs1/);
+});
+
+test('finance admin is tabbed, keeps policy copy in a collapsible help and degrades gracefully before API promotion',()=>{
+  assert.match(tenantUi,/FINANCE_TABS=\[\['overview','개요'\],\['ledger','거래내역'\],\['accounts','계좌'\],\['import','파일 불러오기'\],\['transfers','이체'\]\]/);
+  assert.match(tenantUi,/role="tablist"/);
+  assert.match(tenantUi,/data-bank-panel/);
+  assert.match(tenantUi,/<details class="bank-help"/);
+  assert.match(tenantUi,/searchParams\.set\('tab',key\)/);
+  assert.match(tenantUi,/isLegacyApi/);
+  assert.match(tenantUi,/최근 50건 기준/);
+  assert.match(tenantUi,/data-bank-kpi="month"|data-bank-kpi="\$\{key\}"/);
 });
