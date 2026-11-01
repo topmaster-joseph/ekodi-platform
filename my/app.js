@@ -149,6 +149,8 @@ function syncSurfaceState({scroll=false}={}){
  document.body.dataset.activeTab=tab;
  syncMyActivityTracker();
  document.querySelectorAll('[data-my-tab-section]').forEach(section=>{section.hidden=signedIn?section.dataset.myTabSection!==tab:section.dataset.myTabSection!=='home'});
+ if(signedIn&&tab==='account')syncAccountTabs();
+ if(signedIn&&tab==='services')syncServiceTabs();
  document.querySelectorAll('[data-member-only]').forEach(section=>{section.hidden=!signedIn||tab!=='home'});
  syncHomePanels();
  document.querySelectorAll('[data-focus-surface]').forEach(section=>{section.hidden=!signedIn||section.dataset.focusSurface!==key});
@@ -167,42 +169,52 @@ function syncSurfaceState({scroll=false}={}){
   });
  }
 }
-let activeAccountTab='menu';
+// One-glance layout (2026-11-02): sub-sections are a single row of tab buttons with
+// the chosen content right below; the old card menu step is no longer shown.
+const ACCOUNT_TABS=['basic','public','character','security','ai'];
+let activeAccountTab='basic';
 function syncAccountTabs(){
- const isMenu=activeAccountTab==='menu';
- document.querySelectorAll('[data-account-menu]').forEach(node=>{node.hidden=!isMenu});
- document.querySelectorAll('[data-account-nav]').forEach(node=>{node.hidden=isMenu});
+ if(!ACCOUNT_TABS.includes(activeAccountTab))activeAccountTab='basic';
+ const isMenu=false;
+ // Owner request 2026-11-02: the card menu stays in place as the tab row; the chosen
+ // section opens directly below it. The separate sub-tab strip is not used.
+ document.querySelectorAll('[data-account-menu]').forEach(node=>{node.hidden=false});
+ document.querySelectorAll('[data-account-nav]').forEach(node=>{node.hidden=true});
+ document.querySelectorAll('[data-account-open]').forEach(button=>{const on=button.dataset.accountOpen===activeAccountTab;button.setAttribute('aria-pressed',String(on));button.classList.toggle('is-active',on)});
  document.querySelectorAll('[data-account-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.accountTab===activeAccountTab)));
  document.querySelectorAll('[data-account-panel]').forEach(panel=>{panel.hidden=isMenu||panel.dataset.accountPanel!==activeAccountTab});
 }
 function setAccountTab(tab){
- if(!['menu','basic','public','character','security','ai'].includes(tab))tab='menu';
+ if(!ACCOUNT_TABS.includes(tab))tab=activeAccountTab||'basic';
  activeAccountTab=tab;syncAccountTabs();
  try{sessionStorage.setItem('ekodi_my_account_tab',tab)}catch{}
 }
 function initAccountTabs(){
- activeAccountTab='menu';
+ try{const saved=sessionStorage.getItem('ekodi_my_account_tab');activeAccountTab=ACCOUNT_TABS.includes(saved)?saved:'basic'}catch{activeAccountTab='basic'}
  document.querySelectorAll('[data-account-tab]').forEach(button=>button.addEventListener('click',()=>setAccountTab(button.dataset.accountTab||'basic')));
  document.querySelectorAll('[data-account-open]').forEach(button=>button.addEventListener('click',()=>setAccountTab(button.dataset.accountOpen||'basic')));
  document.querySelectorAll('[data-account-back]').forEach(button=>button.addEventListener('click',()=>setAccountTab('menu')));
  syncAccountTabs();
 }
 
-let activeServicesTab='menu';
+const SERVICES_TABS=['services','spaces','status'];
+let activeServicesTab='services';
 function syncServiceTabs(){
- const isMenu=activeServicesTab==='menu';
- document.querySelectorAll('[data-services-menu]').forEach(node=>{node.hidden=!isMenu});
- document.querySelectorAll('[data-services-nav]').forEach(node=>{node.hidden=isMenu});
+ if(!SERVICES_TABS.includes(activeServicesTab))activeServicesTab='services';
+ const isMenu=false;
+ document.querySelectorAll('[data-services-menu]').forEach(node=>{node.hidden=false});
+ document.querySelectorAll('[data-services-nav]').forEach(node=>{node.hidden=true});
+ document.querySelectorAll('[data-services-open]').forEach(button=>{const on=button.dataset.servicesOpen===activeServicesTab;button.setAttribute('aria-pressed',String(on));button.classList.toggle('is-active',on)});
  document.querySelectorAll('[data-services-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.servicesTab===activeServicesTab)));
  document.querySelectorAll('[data-services-panel]').forEach(panel=>{panel.hidden=isMenu||panel.dataset.servicesPanel!==activeServicesTab});
 }
 function setServicesTab(tab){
- if(!['menu','services','spaces','status'].includes(tab))tab='menu';
+ if(!SERVICES_TABS.includes(tab))tab=activeServicesTab||'services';
  activeServicesTab=tab;syncServiceTabs();
  try{sessionStorage.setItem('ekodi_my_services_tab',tab)}catch{}
 }
 function initServiceTabs(){
- activeServicesTab=location.hash==='#workspaces'?'spaces':'menu';
+ activeServicesTab=location.hash==='#workspaces'?'spaces':'services';
  document.querySelectorAll('[data-services-tab]').forEach(button=>button.addEventListener('click',()=>setServicesTab(button.dataset.servicesTab||'services')));
  document.querySelectorAll('[data-services-open]').forEach(button=>button.addEventListener('click',()=>setServicesTab(button.dataset.servicesOpen||'services')));
  document.querySelectorAll('[data-services-back]').forEach(button=>button.addEventListener('click',()=>setServicesTab('menu')));
