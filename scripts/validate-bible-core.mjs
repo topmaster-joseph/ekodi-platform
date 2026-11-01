@@ -61,8 +61,7 @@ const boundaries = JSON.parse(fs.readFileSync(path.join(root, 'platform-boundari
 const constitution = JSON.parse(fs.readFileSync(path.join(root, 'governance/constitution/constitution.json'), 'utf8'));
 const serviceManifest = fs.readFileSync(path.join(root, 'ekodi-service-manifest.js'), 'utf8');
 if (constitution.legacyDomainTargets?.['bible.ekodi.kr'] !== 'https://ekodi.kr/bible') fail('constitutional Bible legacy target drift');
-// Subdomain wave 2 (2026-11-01): the legacy compatibility host is retired; the Bible Worker owns no public route.
-if (wrangler.includes('pattern = "ekodi.kr/bible*"') || wrangler.includes(`pattern = "${['bible', 'ekodi', 'kr'].join('.')}"`)) fail('Bible Worker must not own a public route: /bible is served only through the apex gateway');
+if (wrangler.includes('pattern = "ekodi.kr/bible*"') || !wrangler.includes(`pattern = "${['bible', 'ekodi', 'kr'].join('.')}"`)) fail('Bible Worker must own only the legacy compatibility host');
 if (!siteWrangler.includes('binding = "BIBLE"') || !siteWrangler.includes('service = "ekodi-bible-conversation"') || !siteWrangler.includes('"/bible*"')) fail('apex gateway must own /bible through the Bible service binding');
 if (!routeRegistry.includes("id:'bible',prefix:'/bible',binding:'BIBLE',basePathAware:true")) fail('platform route registry must bind /bible without double-prefix rewriting');
 if (!canonicalRouter.includes('PLATFORM_EXECUTION_SURFACES') || !canonicalRouter.includes('platformExecutionSurfaceForPath')) fail('canonical surface router must consume the shared route registry');
