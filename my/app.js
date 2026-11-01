@@ -378,7 +378,10 @@ function profileUi(){
  if(!session){input.value='';input.disabled=true;save.disabled=true;status.className='profile-status';status.textContent='로그인하면 내 기본정보를 확인하고 수정할 수 있습니다.';host.innerHTML='<span class="identity-row muted-row">로그인 후 연결 계정을 확인합니다.</span>';return}
  if(profileError){input.value='';input.disabled=true;save.disabled=true;status.className='profile-status error';status.textContent=profileError;host.innerHTML='<span class="identity-row muted-row">연결 계정을 불러오지 못했습니다.</span>';return}
  input.disabled=false;save.disabled=false;input.value=profile?.display_name||'';status.className='profile-status';status.textContent='이 이름은 개인 정체성에 사용되며 사업장·단체 이름과 분리됩니다.';
- host.innerHTML=linkedIdentities.length?linkedIdentities.map(identity=>`<span class="identity-row"><span>${esc(identity.email||'Google 계정')}</span>${identity.is_primary?'<b>기본 계정</b>':'<b>연결 계정</b>'}</span>`).join(''):'<span class="identity-row muted-row">연결된 Google 계정이 없습니다.</span>';
+ const providerName={google:'구글',kakao:'카카오·다음',naver:'네이버',apple:'Apple',microsoft:'Microsoft',passkey:'패스키'};
+ // Redirect providers sign in with an internal alias address; show the provider, never the alias.
+ const visibleEmail=email=>/^identity\+[a-z]+\.[a-f0-9]{32}@ekodi\.kr$/i.test(String(email||''))?'':String(email||'');
+ host.innerHTML=linkedIdentities.length?linkedIdentities.map(identity=>{const name=providerName[identity.provider]||identity.provider||'로그인';const email=visibleEmail(identity.email);return `<span class="identity-row"><span><strong>${esc(name)}</strong>${email?` · ${esc(email)}`:''}</span>${identity.is_primary?'<b>기본</b>':'<b>연결됨</b>'}</span>`}).join(''):'<span class="identity-row muted-row">연결된 로그인 수단이 없습니다.</span>';
 }
 function summaryUi(){
  const connectedCount=session?SERVICES.filter(([id])=>connected(id)).length:0;
