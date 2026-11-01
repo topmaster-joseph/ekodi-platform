@@ -71,3 +71,16 @@ test('provider profile overrides can tune task fit without code changes',()=>{
   }});
   assert.equal(ranked[0].providerId,'worker:specialist');
 });
+
+test('family advisory routes image and brainstorming to the ChatGPT lane, plan-included first',async()=>{
+  const {recommendModelFamily}=await import('../ai-router-score.js');
+  const img=recommendModelFamily(normalizeTaskInput({prompt:'청계면상인회 포스터 이미지 생성해줘',mode:'single'}));
+  assert.equal(img.family,'chatgpt');
+  assert.equal(img.preferredLanes[0],'node:codex');
+  assert.equal(img.advisoryOnly,true);
+  assert.equal(recommendModelFamily(normalizeTaskInput({prompt:'행사 슬로건 아이디어 브레인스토밍',mode:'single'})).family,'chatgpt');
+  const code=recommendModelFamily(normalizeTaskInput({prompt:'저장소 코드 디버그하고 테스트',mode:'single'}));
+  assert.equal(code.family,'claude');
+  assert.equal(code.category,'code');
+  assert.equal(recommendModelFamily({}).family,'claude');
+});
