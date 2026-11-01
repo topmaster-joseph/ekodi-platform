@@ -35,7 +35,6 @@ class Engine:
         import torch
         from melo.api import TTS
         from openvoice.api import ToneColorConverter
-        from openvoice import se_extractor
         self.torch = torch
         self.tts = TTS(language='KR' if lang == 'ko' else 'EN', device='cpu')
         spk = self.tts.hps.data.spk2id
@@ -44,7 +43,12 @@ class Engine:
         self.speed = speed
         self.conv = ToneColorConverter(f'{checkpoints}/converter/config.json', device='cpu')
         self.conv.load_ckpt(f'{checkpoints}/converter/checkpoint.pth')
-        self.target_se, _ = se_extractor.get_se(reference, self.conv, vad=True)
+        # 기준 음성은 이미 잡음·침묵을 정리했으므로 VAD(외부 모델 다운로드) 없이 10초 조각들로 음색을 추출한다.
+        seg_dir = os.path.join(os.path.dirname(reference), 'ref_segments'); os.makedirs(seg_dir, exist_ok=True)
+        sh('ffmpeg', '-y', '-i', reference, '-f', 'segment', '-segment_time', '10', '-ar', '22050', '-ac', '1', f'{seg_dir}/s%03d.wav')
+        segs = sorted(os.path.join(seg_dir, f) for f in os.listdir(seg_dir))
+        segs = [f for f in segs if os.path.getsize(f) > 22050 * 2 * 2] or segs  # 2초 미만 끝 조각 제외
+        self.target_se = self.conv.extract_se(segs)
         name = self.speaker_key.lower().replace('_', '-')
         self.source_se = torch.load(f'{checkpoints}/base_speakers/ses/{name}.pth', map_location='cpu')
 
