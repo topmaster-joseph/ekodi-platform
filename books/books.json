@@ -115,7 +115,7 @@
       "series": "EKODI ORIGINAL",
       "seriesNumber": 1,
       "publicationType": "MONOGRAPH · PUBLIC THEOLOGY · ENGLISH EDITION",
-      "status": "출간 준비 중 · 영문판",
+      "status": "판매 준비 중 · 영문판 (전자책 파일 등록 대기)",
       "coverTitle": "In Search of\nthe EKODIan",
       "detailUrl": "/ekodian/",
       "storeUrl": "/ekodian/",
@@ -131,13 +131,13 @@
         "EPUB 3",
         "Reflowable Digital Edition"
       ],
-      "edition": "",
+      "edition": "English Digital First Edition",
       "listPrice": {
         "currency": "KRW",
-        "amount": 0,
-        "label": "가격 확정 전"
+        "amount": 9900,
+        "label": "9,900원"
       },
-      "abstract": "The English edition of 『에코디언을 찾아서』. Reading the church not as a building or an institution but as the life of God’s called-out people, it traces four ancient words — Ekklesia, Koinonia, Diaspora and Jubilee — and asks how Sunday’s confession becomes Monday’s choice. 한국어판을 보유한 독자는 영문판을 50% 할인된 금액으로 구입할 수 있습니다.",
+      "abstract": "In Search of the EKODIan follows the Bible’s larger story to recover four ancient words for contemporary Christian life: Ecclesia, Koinonia, Diaspora, and Jubilee. Together they describe a people called and gathered, a community that shares burdens, a dispersed people who become bridges in unfamiliar places, and a way of life that makes room for restoration and new beginnings. 한국어판 『에코디언을 찾아서』를 보유한 독자는 영문판을 50% 할인된 금액으로 구입할 수 있습니다.",
       "citation": "Jeong, Chan Gyun. In Search of the EKODIan: The Hidden Biblical Portrait of God’s People. EKODI Books.",
       "identifiers": {
         "googleBooks": "",
@@ -145,11 +145,11 @@
         "amazonAsin": ""
       },
       "workflow": {
-        "manuscript": "needs_verification",
-        "editing": "needs_verification",
-        "epub": "needs_verification",
-        "cover": "needs_verification",
-        "metadata": "needs_verification",
+        "manuscript": "complete",
+        "editing": "complete",
+        "epub": "pending_upload",
+        "cover": "complete",
+        "metadata": "ready",
         "distribution": "needs_verification",
         "storefront": "catalog_listed"
       },
@@ -191,6 +191,13 @@
         "voicePerformanceApproved": false,
         "accessibilityReviewed": false,
         "tracks": []
+      },
+      "coverImage": "/assets/ekodian-en-cover.jpg",
+      "editionApproval": {
+        "approvedBy": "정찬균 (저자·발행인)",
+        "approvedAt": "2026-11-01",
+        "scope": "판본 확정·에코디서점 판매가 9,900원",
+        "sourceEdition": "KDP RC1"
       }
     },
     {

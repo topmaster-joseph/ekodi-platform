@@ -30,8 +30,8 @@ test('storefront cover src and JSON-LD image are mounted exactly once', async ()
 
 test('both catalogue covers are real raster files', () => {
   const catalog = JSON.parse(readFileSync(new URL('../books/books.json', import.meta.url), 'utf8'));
-  // 표지가 아직 없는 도서(예: 영문판)는 다른 판의 표지를 빌려 쓰지 않는다.
-  assert.equal(catalog.books.find(b => b.id === 'BOOK-EKODI-000003').coverImage, undefined);
+  // 영문판은 한국어판 표지를 빌려 쓰지 않고 자체 표지를 갖는다.
+  assert.equal(catalog.books.find(b => b.id === 'BOOK-EKODI-000003').coverImage, '/assets/ekodian-en-cover.jpg');
   for (const b of catalog.books.filter(x => x.coverImage)) {
     assert.match(b.coverImage, /\.jpg$/);
     assert.ok(existsSync(new URL(`../books${b.coverImage}`, import.meta.url)), b.coverImage);
