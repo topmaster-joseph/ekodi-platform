@@ -126,3 +126,18 @@ test('topic opt-out before delivery stops push without changing other subscripti
   assert.equal(sent,0);
   assert.equal(db.raw.prepare('SELECT count(*) AS n FROM notification_deliveries').get().n,0);
 });
+
+test('expired push endpoint can be re-registered without reviving obsolete token',async()=>{
+  const db=database(),k=await keys(),env=environment(db,k);
+  const endpoint='https://fcm.googleapis.com/fcm/send/expired-123';
+  const oldToken=b64(crypto.getRandomValues(new Uint8Array(32)));
+  const payload={deviceToken:oldToken,topics:['church'],consentVersion:consent,marketingConsent:false,
+    subscription:{endpoint,keys:{p256dh:k.p256dh,auth:k.auth}}};
+  assert.equal((await handleNotificationApi(request('/api/notifications/subscription','POST',payload,{origin:'https://ekodi.kr'}),env)).status,201);
+  db.raw.prepare('UPDATE notification_devices SET disabled_at=?').run(new Date().toISOString());
+  const nextToken=b64(crypto.getRandomValues(new Uint8Array(32)));
+  assert.equal((await handleNotificationApi(request('/api/notifications/subscription','POST',{...payload,deviceToken:nextToken},{origin:'https://ekodi.kr'}),env)).status,201);
+  assert.equal(db.raw.prepare('SELECT count(*) AS n FROM notification_devices').get().n,1);
+  assert.equal((await handleNotificationApi(request('/api/notifications/preferences','GET',null,{authorization:'Bearer '+oldToken}),env)).status,401);
+  assert.equal((await handleNotificationApi(request('/api/notifications/preferences','GET',null,{authorization:'Bearer '+nextToken}),env)).status,200);
+});

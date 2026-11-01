@@ -58,6 +58,7 @@ subscribe.addEventListener('click',async()=>{
     if(Notification.permission==='denied')throw Error('브라우저 설정에서 알림 권한을 다시 허용해 주세요.');
     if(await Notification.requestPermission()!=='granted')throw Error('알림 권한이 허용되지 않았습니다.');
     let push=await registration.pushManager.getSubscription();
+    if(push&&!state.registered){await push.unsubscribe();push=null}
     if(!push)push=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:publicKey(state.vapid)});
     const deviceToken=token()||generateToken();
     await api('/subscription',{method:'POST',body:{deviceToken,subscription:push.toJSON(),topics:selected(),consentVersion:state.version,marketingConsent:false}});
@@ -72,7 +73,7 @@ unsubscribe.addEventListener('click',async()=>{
     await api('/subscription',{method:'DELETE',deviceToken:token()});
     const worker=await navigator.serviceWorker.getRegistration('/notifications/');
     const push=await worker?.pushManager?.getSubscription();
-    if(push)await push.unsubscribe();
+    if(push)await push.unsubscribe().catch(()=>false);
     localStorage.removeItem(storageKey);state.registered=false;consent.checked=false;
     say('구독을 해지하고 서버의 기기 구독 정보를 삭제했습니다.');inbox.replaceChildren();
   }catch{say('구독을 해지하지 못했습니다. 다시 시도해 주세요.')}

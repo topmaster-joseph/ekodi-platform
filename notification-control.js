@@ -125,6 +125,8 @@ export async function handleNotificationApi(request,env) {
       return error('valid_explicit_consent_required',400);
     const tokenHash=await sha(body.deviceToken), time=NOW(), sub=body.subscription;
     const id=crypto.randomUUID();
+    // Expired endpoints may be re-registered from a fresh browser token.
+    await env.DB.prepare('DELETE FROM notification_devices WHERE endpoint=? AND disabled_at IS NOT NULL').bind(sub.endpoint).run();
     try {
       await env.DB.prepare(
         'INSERT INTO notification_devices (id,token_hash,endpoint,p256dh,auth_secret,topics_json,consent_version,consent_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?) '+
