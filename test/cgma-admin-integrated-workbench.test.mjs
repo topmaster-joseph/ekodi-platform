@@ -9,7 +9,7 @@ const policy=JSON.parse(readFileSync(new URL('../config/admin-menu-audience-poli
 const six=['applications','booths','market-oversight','petitions','ip-archive','education-survey'];
 
 test('CGMA dedicated admin sections are classified as site-admin in the shared registry',()=>{
-  const group=policy.siteAdminMenuContract.find(x=>x.id==='cgma');
+  const group=policy.workspaceScopedSiteAdminMenus.cgma;
   assert.equal(group.audience,'site-admin');
   assert.equal(group.scope,'workspace:cgma');
   assert.deepEqual(group.menus.map(x=>x.id),six);
