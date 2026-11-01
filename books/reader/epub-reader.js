@@ -165,7 +165,13 @@
   .foot .row{justify-content:space-between;font-size:12px;color:#6b6257}
   .foot button{font:inherit;font-size:14px;border:1px solid #14305f;color:#14305f;background:#fff;border-radius:10px;padding:9px 16px;cursor:pointer}
   .foot button:disabled{opacity:.35;cursor:default}
-  .pos{text-align:center}`;
+  .pos{text-align:center}
+  .audio{display:flex;align-items:center;gap:8px;flex:1 1 auto;justify-content:center;min-width:0}
+  .audio button{padding:7px 12px;font-size:13px;white-space:nowrap}
+  .audio .at{font-size:11px;color:#7d725f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+  .audio input[type=range]{width:min(220px,30vw);accent-color:#14305f}
+  .audio label{font-size:11px;white-space:nowrap}
+  @media(max-width:640px){.foot .row{flex-wrap:wrap}.audio{order:3;flex-basis:100%}}`;
 
   /** Open a full-screen reader. options: { title, storageKey, notice } */
   async function open(buffer, options = {}) {
@@ -182,7 +188,7 @@
       <button class="smaller" aria-label="글자 작게">가−</button><button class="larger" aria-label="글자 크게">가+</button></div></div>
       ${options.notice ? `<div class="noticewrap"><div class="notice"></div></div>` : ''}
       <div class="stage"><div class="book"><div class="cover" aria-hidden="true"></div><div class="stack" aria-hidden="true"></div><div class="sheet" title="왼쪽을 누르면 앞 쪽, 오른쪽을 누르면 다음 쪽"><div class="view" tabindex="0"><div class="inner"></div></div><div class="folio l" aria-hidden="true"><b></b><span></span></div><div class="folio r" aria-hidden="true"><b></b><span></span></div></div></div></div>
-      <div class="foot"><div class="row"><button class="prev">← 이전</button><span class="pos" aria-live="polite"></span><button class="next">다음 →</button></div></div>`;
+      <div class="foot"><div class="row"><button class="prev">← 이전</button><span class="pos" aria-live="polite"></span>${options.audio?.tracks?.length ? `<div class="audio"><button class="play" type="button" aria-label="오디오북 듣기">▶ 듣기</button><input class="seek" type="range" min="0" max="1000" value="0" aria-label="재생 위치"><span class="at"></span><label><input class="follow" type="checkbox" checked> 책장 따라 넘기기</label></div>` : ''}<button class="next">다음 →</button></div></div>`;
     const $ = s => root.querySelector(s);
     const stage = $('.stage'), bookEl = $('.book'), sheet = $('.sheet'), view = $('.view'), inner = $('.inner');
     $('.t').textContent = options.title || book.title;
@@ -204,6 +210,24 @@
       inner.style.columnCount = 'auto';
       inner.style.transform = 'translateX(0)';
       pages = Math.max(1, Math.round((inner.scrollWidth + 80) / (vw + 80)));
+      weights = null;
+    }
+    // 오디오와 책장을 맞추기 위해 쪽마다 글자 수 비율을 잰다(읽는 시간은 글자 수에 비례한다고 본다).
+    let weights = null;
+    function pageForFraction(f) {
+      if (!weights) {
+        const step = view.clientWidth + 80, base = inner.getBoundingClientRect().left, count = new Array(pages).fill(0);
+        const walk = document.createTreeWalker(inner, NodeFilter.SHOW_TEXT); const range = document.createRange();
+        for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+          const len = n.nodeValue.replace(/\s+/g, '').length; if (!len) continue;
+          range.selectNodeContents(n); const r = range.getClientRects()[0]; if (!r) continue;
+          count[Math.max(0, Math.min(pages - 1, Math.floor((r.left - base + 1) / step)))] += len;
+        }
+        const total = count.reduce((a, b) => a + b, 0) || 1; let acc = 0;
+        weights = count.map(c => (acc += c) / total);
+      }
+      const i = weights.findIndex(w => w >= f - 1e-6);
+      return i < 0 ? pages - 1 : i;
     }
     function place() {
       state.p = Math.max(0, Math.min(pages - 1, state.p));
@@ -226,6 +250,7 @@
       inner.style.fontSize = `${state.size}%`;
       layout();
       state.p = at === 'end' ? pages - 1 : at;
+      if (audio && !audio.paused && trackFor(state.i) !== playing) playChapter(state.i).catch(() => {});
       if (hash) { const t = node.querySelector(`[id="${CSS.escape(hash)}"]`); if (t) state.p = Math.floor((t.getBoundingClientRect().left - inner.getBoundingClientRect().left) / (view.clientWidth + 80)); }
       place();
     }
@@ -271,10 +296,39 @@
     let sx = null, sy = 0;
     stage.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
     stage.addEventListener('touchend', e => { if (sx === null) return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null; if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) (dx < 0 ? next : prev)(); }, { passive: true });
+    // BOOKS-READER-003: 오디오북과 연결. 장마다 해당 트랙을 재생하고, 재생 위치에 맞춰 책장이 넘어간다.
+    const audio = options.audio?.tracks?.length ? new Audio() : null;
+    const trackFor = i => { if (!audio) return null; const label = (book.chapters[i].label || '').replace(/\s+/g, '');
+      return options.audio.tracks.find(t => t.chapter === book.chapters[i].href) || options.audio.tracks.find(t => t.title && label.includes(String(t.title).replace(/\s+/g, ''))) || null; };
+    let playing = null;
+    const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+    async function playChapter(i) {
+      const t = trackFor(i); if (!t) { audio.pause(); $('.at').textContent = '이 장은 오디오가 없습니다'; return false; }
+      if (playing !== t) { $('.at').textContent = '불러오는 중…'; const blob = await options.audio.fetchTrack(t); if (audio.src) URL.revokeObjectURL(audio.src); audio.src = URL.createObjectURL(blob); playing = t; }
+      await audio.play(); return true;
+    }
+    if (audio) {
+      const play = $('.play'), seek = $('.seek');
+      play.onclick = async () => { try { if (!audio.paused) { audio.pause(); return; } if (!(await playChapter(state.i))) return; } catch (e) { $('.at').textContent = '재생하지 못했습니다'; } };
+      audio.onplay = () => { play.textContent = '❚❚ 멈춤'; }; audio.onpause = () => { play.textContent = '▶ 듣기'; };
+      audio.ontimeupdate = () => {
+        const d = audio.duration || 0; if (!d) return;
+        seek.value = String(Math.round(audio.currentTime / d * 1000));
+        $('.at').textContent = `${playing?.title || ''} ${fmt(audio.currentTime)} / ${fmt(d)}`;
+        if (!$('.follow').checked || busy || trackFor(state.i) !== playing) return;
+        const target = pageForFraction(audio.currentTime / d);
+        if (target !== state.p) turn(target > state.p ? 1 : -1, async () => { state.p = target; place(); });
+      };
+      seek.oninput = () => { if (audio.duration) audio.currentTime = Number(seek.value) / 1000 * audio.duration; };
+      audio.onended = async () => {
+        while (busy) await new Promise(r => setTimeout(r, 50)); // 넘기는 중이면 끝난 뒤 다음 장으로
+        for (let j = state.i + 1; j < book.chapters.length; j++) if (trackFor(j)) { await turn(1, () => load(j, 0)); try { await playChapter(j); } catch {} return; }
+      };
+    }
     let rt = 0;
     const onResize = () => { clearTimeout(rt); rt = setTimeout(() => { const ratio = pages > 1 ? state.p / (pages - 1) : 0; layout(); state.p = Math.round(ratio * (pages - 1)); place(); }, 120); };
     addEventListener('resize', onResize);
-    const close = () => { document.removeEventListener('keydown', onKey); removeEventListener('resize', onResize); host.remove(); document.body.style.overflow = ''; };
+    const close = () => { if (audio) { audio.pause(); if (audio.src) URL.revokeObjectURL(audio.src); } document.removeEventListener('keydown', onKey); removeEventListener('resize', onResize); host.remove(); document.body.style.overflow = ''; };
     const onKey = e => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); next(); } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); } };
     $('.close').onclick = close;
     document.addEventListener('keydown', onKey);
