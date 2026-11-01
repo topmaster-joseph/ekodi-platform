@@ -51,11 +51,15 @@
       else $('libStatus').textContent = e.message;
     }
   }
+  // LIBRARY-OPERATOR-RENDER-001: page load, sign-in callback and post-upload refresh can overlap.
+  // Each run builds off-screen and only the newest run replaces the list, so rows never duplicate.
+  let operatorRun = 0;
   async function operatorPanel() {
+    const run = ++operatorRun;
     let catalog;
     try { catalog = await (await fetch(`${C.BASE}/books.json`, { cache: 'no-store' })).json(); } catch { return; }
     const books = (catalog.books || []).filter(b => b.directSale?.enabled);
-    const host = $('operatorBooks'); host.replaceChildren();
+    const host = document.createDocumentFragment();
     for (const book of books) {
       let state;
       try { state = await C.api(`admin/files/${encodeURIComponent(book.id)}`); } catch (e) { if (e.status === 403 || e.status === 401) return; continue; }
@@ -107,6 +111,7 @@
       }
       row.append(bonus);host.append(row);
     }
+    if (run === operatorRun) $('operatorBooks').replaceChildren(host);
   }
   load().then(operatorPanel);
 })();
