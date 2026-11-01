@@ -6,6 +6,8 @@ export const JOURNAL_META = Object.freeze({
   nameKo: '에코디 저널',
   description: 'EKODI의 정신, 실천, 기술, 공동체의 배움을 공개적으로 기록하는 저널',
   canonicalOrigin: 'https://ekodi.kr/journal',
+  // Still-attached compatibility host, published like the Bible worker's legacyAlias until wave 2 detaches it.
+  legacyAlias: LEGACY_JOURNAL_HOST,
   startedAt: '2026-09-02',
 });
 
