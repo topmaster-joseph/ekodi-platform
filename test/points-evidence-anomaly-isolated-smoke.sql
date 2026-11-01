@@ -120,6 +120,21 @@ BEGIN
   IF ekodi_points_private.admin_audit_verify() IS NOT NULL THEN RAISE EXCEPTION 'audit chain broken'; END IF;
   IF EXISTS(SELECT 1 FROM ekodi_points_private.wallet_reconciliation()) THEN RAISE EXCEPTION 'ledger drift remains'; END IF;
 
+  -- Member read RPCs: only claimable adapters, only the caller's own claims.
+  PERFORM set_config('request.jwt.claim.sub',v_auth2::text,true);
+  v := public.ekodi_points_claimable_adapters('qa-p2');
+  IF EXISTS(SELECT 1 FROM jsonb_array_elements(v) e WHERE e->>'adapter'='operator_confirmed')
+     OR NOT EXISTS(SELECT 1 FROM jsonb_array_elements(v) e WHERE e->>'adapter'='content_approval')
+  THEN RAISE EXCEPTION 'claimable adapter list wrong: %',v; END IF;
+  v := public.ekodi_points_my_claims('qa-p2');
+  IF jsonb_array_length(v)<>1 OR v->0->>'source_ref'<>'post/1001' OR v->0 ? 'decided_by' OR v->0 ? 'decision_note'
+  THEN RAISE EXCEPTION 'my claims leaked or wrong: %',v; END IF;
+  PERFORM set_config('request.jwt.claim.sub','',true);
+  v_err := NULL;
+  BEGIN PERFORM public.ekodi_points_my_claims('qa-p2');
+  EXCEPTION WHEN raise_exception THEN v_err := SQLERRM; END;
+  IF v_err IS DISTINCT FROM 'POINTS_AUTH_REQUIRED' THEN RAISE EXCEPTION 'anonymous my_claims: %',v_err; END IF;
+
   -- Grants.
   IF has_function_privilege('anon','public.ekodi_points_submit_evidence_claim(text,text,text,text,text)','EXECUTE')
      OR NOT has_function_privilege('authenticated','public.ekodi_points_submit_evidence_claim(text,text,text,text,text)','EXECUTE')
@@ -129,6 +144,8 @@ BEGIN
      OR has_function_privilege('service_role','ekodi_points_private.admin_decide_core(text,uuid,boolean,text)','EXECUTE')
      OR NOT has_function_privilege('service_role','public.ekodi_points_admin_decide(text,uuid,boolean,text)','EXECUTE')
      OR has_table_privilege('authenticated','public.ekodi_point_evidence_claims','SELECT')
+     OR has_function_privilege('anon','public.ekodi_points_my_claims(text)','EXECUTE')
+     OR NOT has_function_privilege('authenticated','public.ekodi_points_claimable_adapters(text)','EXECUTE')
   THEN RAISE EXCEPTION 'P2 grants unsafe'; END IF;
 END $p2$;
 SELECT 'POINT_EVIDENCE_ANOMALY_SMOKE_PASS' AS result;

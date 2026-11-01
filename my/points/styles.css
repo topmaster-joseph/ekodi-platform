@@ -6,3 +6,11 @@
 .invite-panel button[disabled]{cursor:default;opacity:.6}
 .invite-panel input[readonly]{flex:1;min-width:150px;border:1px solid #cbdad0;border-radius:9px;padding:10px;background:#fff;color:#345341}
 .invite-panel[hidden],.invite-panel [hidden]{display:none!important}
+
+.claim-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end}
+.claim-form label{display:grid;gap:5px;font-size:13px;color:#52665a;min-width:0}
+.claim-form select,.claim-form input,.claim-form textarea{border:1px solid #cbdad0;border-radius:9px;padding:10px;font:inherit;background:#fff;min-width:0;width:100%}
+.claim-form .claim-note{grid-column:1/-1}
+@media(max-width:640px){.claim-form{grid-template-columns:minmax(0,1fr)}}
+.record>div{min-width:0}.record>div strong{white-space:normal;overflow-wrap:anywhere}
+.login[hidden],#claimSection[hidden],#balanceView[hidden]{display:none!important}

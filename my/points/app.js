@@ -12,6 +12,15 @@ const referralConfirmSection=document.getElementById('referralConfirmSection');
 const referralLink=document.getElementById('referralLink');
 const referralStatus=document.getElementById('referralStatus');
 const referralConfirmStatus=document.getElementById('referralConfirmStatus');
+const claimSection=document.getElementById('claimSection');
+const claimAdapter=document.getElementById('claimAdapter');
+const claimStatus=document.getElementById('claimStatus');
+const claimList=document.getElementById('claimList');
+const ADAPTER_NAMES={content_approval:'콘텐츠 작성(승인 필요)',meeting_participation:'모임 참여',
+  lecture_completion:'강의 완료',devotion_self_report:'말씀 묵상 기록',operator_confirmed:'운영자 확인 활동',attendance_checkin:'출석'};
+const CLAIM_STATUS={pending:'확인 대기',approved:'승인·적립',rejected:'반려',duplicate:'이미 적립됨'};
+const CLAIM_ERRORS={EVIDENCE_CLAIM_DAILY_LIMIT:'오늘 신청 가능한 횟수(10건)를 모두 사용했습니다.',
+  EVIDENCE_CLAIM_NOT_AVAILABLE:'지금은 이 증빙을 신청할 수 없습니다.',INVALID_EVIDENCE_REF:'증빙 참조 형식을 확인해 주세요(영문·숫자·/·:·-, 3~120자).'};
 const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const inviteCode=new URLSearchParams(location.search).get('invite')||'';
 
@@ -120,8 +129,63 @@ function clearPrivateView(message){
   referralConfirmSection.hidden=true;
   referralLink.value='';referralLink.hidden=true;
   document.getElementById('copyReferralInvite').hidden=true;
+  claimSection.hidden=true;claimAdapter.replaceChildren();claimList.replaceChildren();claimStatus.textContent='';
+  document.getElementById('claimForm').reset();
   showMessage(message);
 }
+function renderClaims(rows){
+  claimList.replaceChildren();
+  if(!Array.isArray(rows)||!rows.length){claimList.textContent='아직 신청한 증빙이 없습니다.';return;}
+  for(const row of rows){
+    const div=document.createElement('div');div.className='record';
+    const summary=document.createElement('div');const label=document.createElement('strong');
+    label.textContent=(ADAPTER_NAMES[row.adapter]||'활동 증빙')+' · '+String(row.source_ref||'');
+    const date=document.createElement('small');date.textContent=row.submitted_at?new Date(row.submitted_at).toLocaleString('ko-KR'):'';
+    summary.append(label,date);
+    const state=document.createElement('strong');state.textContent=CLAIM_STATUS[row.status]||'처리 중';
+    state.className=row.status==='approved'?'positive':row.status==='rejected'?'negative':'';
+    div.append(summary,state);claimList.append(div);
+  }
+}
+async function loadClaims(site,revision){
+  claimSection.hidden=true;
+  if(!sb||!/^[a-z0-9_-]{2,64}$/.test(site))return;
+  try{
+    const [{data:options,error:optionError},{data:mine,error:mineError}]=await Promise.all([
+      sb.rpc('ekodi_points_claimable_adapters',{p_site:site}),sb.rpc('ekodi_points_my_claims',{p_site:site})]);
+    if(revision!==viewRevision)return;
+    if(optionError||mineError)return;
+    const list=Array.isArray(options)?options:[];
+    if(!list.length&&!(Array.isArray(mine)&&mine.length))return;
+    claimAdapter.replaceChildren();
+    for(const item of list){
+      const option=new Option((ADAPTER_NAMES[item.adapter]||item.adapter)+' · '+Number(item.points||0)+'P'+(item.trust==='low_trust'?' (자기신고)':''),item.rule_id+'|'+item.adapter);
+      claimAdapter.add(option);
+    }
+    document.getElementById('claimSubmit').disabled=!list.length;
+    renderClaims(mine);claimSection.hidden=false;
+  }catch{/* claim panel stays hidden; wallet view is unaffected */}
+}
+async function submitClaim(event){
+  event.preventDefault();
+  const site=select.value,revision=viewRevision;
+  const [rule,adapter]=String(claimAdapter.value||'').split('|');
+  const ref=document.getElementById('claimRef').value.trim();
+  if(!sb||!rule||!adapter)return;
+  if(!/^[A-Za-z0-9:._/-]{3,120}$/.test(ref)){claimStatus.textContent=CLAIM_ERRORS.INVALID_EVIDENCE_REF;return;}
+  const button=document.getElementById('claimSubmit');button.disabled=true;
+  claimStatus.textContent='증빙을 신청하고 있습니다.';
+  try{
+    const {data,error}=await sb.rpc('ekodi_points_submit_evidence_claim',{p_site:site,p_rule:rule,p_adapter:adapter,
+      p_source_ref:ref,p_note:document.getElementById('claimNote').value.trim()});
+    if(revision!==viewRevision)return;
+    if(error){const code=String(error.message||'');claimStatus.textContent=CLAIM_ERRORS[code]||'신청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';return;}
+    claimStatus.textContent=data?.submitted?'신청했습니다. 운영자 확인 후 적립 여부가 표시됩니다.':'이미 신청한 증빙입니다.';
+    document.getElementById('claimForm').reset();
+    await loadClaims(site,revision);
+  }finally{button.disabled=false;}
+}
+document.getElementById('claimForm').addEventListener('submit',submitClaim);
 async function request(path,token){
   const res=await fetch(api+path,{headers:{Authorization:'Bearer '+token,apikey:config.supabasePublishableKey},cache:'no-store'});
   const body=await res.json().catch(()=>({}));
@@ -131,7 +195,7 @@ async function request(path,token){
 function renderRows(rows){
   historyList.replaceChildren();
   if(!Array.isArray(rows)||!rows.length){historyList.textContent='아직 거래 내역이 없습니다.';return;}
-  const names={earn:'적립',spend:'사용',transfer_in:'전환 받음',transfer_out:'전환 보냄',donation:'포인트 기부'};
+  const names={earn:'적립',spend:'사용',transfer_in:'전환 받음',transfer_out:'전환 보냄',donation:'포인트 기부',admin_adjustment:'운영 조정',reversal:'적립 취소'};
   for(const row of rows){
     const div=document.createElement('div');div.className='record';
     const summary=document.createElement('div');const label=document.createElement('strong');
@@ -174,8 +238,9 @@ async function start(){
     const wanted=new URLSearchParams(location.search).get('site');
     if(wanted&&sites.some(site=>site.id===wanted))select.value=wanted;
     select.disabled=false;
-    select.onchange=()=>{const next=++viewRevision;showReferralControls(select.value,true);void loadWallet(session.access_token,select.value,next);};
+    select.onchange=()=>{const next=++viewRevision;showReferralControls(select.value,true);void loadWallet(session.access_token,select.value,next);void loadClaims(select.value,next);};
     showReferralControls(select.value,true);
+    void loadClaims(select.value,revision);
     await loadWallet(session.access_token,select.value,revision);
   }catch(e){if(revision===viewRevision)showMessage('포인트 목록을 확인할 수 없습니다. 연결 상태를 확인해 주세요.');}
 }

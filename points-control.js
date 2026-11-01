@@ -51,8 +51,16 @@ function resolveSource(request,env){
   // No production-to-development fallback. Both environment and known project
   // reference must be configured and intentionally enabled together.
   if(!expected||!origin||!key||!['production','development'].includes(source))return {error:'points_source_unavailable'};
-  if(new URL(request.url).hostname==='ekodi.kr'&&source!=='production')return {error:'points_environment_mismatch'};
+  const host=new URL(request.url).hostname;
+  if((host==='ekodi.kr'||host.endsWith('.ekodi.kr'))&&source!=='production')return {error:'points_environment_mismatch'};
   return {origin,key};
+}
+// Legacy service_role keys are JWTs and may also travel as a Bearer token.
+// New sb_secret_ keys are opaque and must be sent on the apikey header only.
+function sourceHeaders(key,extra={}){
+  const headers={apikey:key,Accept:'application/json',...extra};
+  if(/^eyJ[\w-]+\.[\w-]+\.[\w-]+$/.test(key))headers.Authorization='Bearer '+key;
+  return headers;
 }
 function actorOf(session){
   const email=String(session?.email||'').trim().toLowerCase();
@@ -62,7 +70,7 @@ function actorOf(session){
 async function rpc(src,name,args,requestFetch){
   const response=await requestFetch(src.origin+'/rest/v1/rpc/'+name,{
     method:'POST',
-    headers:{apikey:src.key,Authorization:'Bearer '+src.key,Accept:'application/json','Content-Type':'application/json'},
+    headers:sourceHeaders(src.key,{'Content-Type':'application/json'}),
     body:JSON.stringify(args),redirect:'error',signal:AbortSignal.timeout(8000),
   });
   const body=await response.json().catch(()=>null);
@@ -86,7 +94,7 @@ async function readOverview(src,headers,requestFetch){
       endpoint.searchParams.set('select',fields);
       endpoint.searchParams.set('limit',String(limit));
       const response=await requestFetch(endpoint.toString(),{
-        method:'GET',headers:{apikey:src.key,Authorization:'Bearer '+src.key,Accept:'application/json'},
+        method:'GET',headers:sourceHeaders(src.key),
         redirect:'error',signal:AbortSignal.timeout(6000),
       });
       if(!response.ok)throw Error('points_table_query_failed:'+response.status);

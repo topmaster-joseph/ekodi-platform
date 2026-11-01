@@ -18,6 +18,13 @@ export default{
       });
     }
 
+    // Points governance API (#6739): forward only this prefix, unchanged, to the
+    // isolated staging Control API over a service binding. The staging Control
+    // API reads the development database; production is never reachable here.
+    if((incoming.pathname==='/api/control/points'||incoming.pathname.startsWith('/api/control/points/'))&&env.CONTROL_API){
+      return withStagingHeaders(await env.CONTROL_API.fetch(new Request(request)));
+    }
+
     // Reuse the exact production admin routing/security contract while keeping the
     // deployment on a workers.dev staging hostname with no production custom domains.
     const adminUrl=new URL(request.url);

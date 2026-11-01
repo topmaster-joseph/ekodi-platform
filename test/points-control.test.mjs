@@ -30,7 +30,8 @@ test('points projection reads only explicit fields from approved server-side sou
     const u=new URL(url);paths.push(u.pathname);
     assert.equal(u.origin,'https://renzehysxirjilvdxacv.supabase.co');
     assert.equal(opts.method,'GET');assert.equal(opts.headers.apikey,key);
-    assert.equal(opts.headers.Authorization,'Bearer '+key);
+    // Opaque sb_secret_-style keys go on apikey only (never as a Bearer JWT).
+    assert.equal(opts.headers.Authorization,undefined);
     assert.equal(opts.redirect,'error');
     assert.ok(u.searchParams.get('select'));assert.ok(Number(u.searchParams.get('limit'))<=1000);
     return new Response('[]',{status:200});
@@ -54,4 +55,19 @@ test('admin user only sends EKODI session to same-origin, not directly to Supaba
   assert.match(source,/credentials:'same-origin'/);
   assert.doesNotMatch(source,/sb_publishable_|renzehysxirjilvdxacv|supabase\.co/);
   assert.match(worker,/handlePointsControl\(request, env, auth\.session, auth\.response\.headers\)/);
+});
+
+test('legacy JWT service keys are also sent as Bearer; any *.ekodi.kr host refuses development data',async()=>{
+  const jwt='eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.c2lnbmF0dXJl';
+  let seen;
+  await handlePointsControl(req(),{...env,POINTS_SERVICE_ROLE_KEY:jwt},{role:'super_admin'},new Headers(),async(u,opts)=>{seen=opts.headers;return new Response('[]',{status:200});});
+  assert.equal(seen.Authorization,'Bearer '+jwt);assert.equal(seen.apikey,jwt);
+  const dev={...env,POINTS_SOURCE_ENV:'development',POINTS_SUPABASE_URL:'https://lxcxwbdwwojjkgybbqii.supabase.co/'};
+  const never=()=>{throw Error('must not fetch');};
+  const adminHost=new Request('https://admin.ekodi.kr/api/control/points/overview');
+  assert.equal((await handlePointsControl(adminHost,dev,{role:'super_admin'},new Headers(),never)).status,503);
+  const staging=new Request('https://ekodi-admin-staging.ekodi-development.workers.dev/api/control/points/overview');
+  let hit=0;
+  assert.equal((await handlePointsControl(staging,dev,{role:'super_admin'},new Headers(),async()=>{hit++;return new Response('[]',{status:200});})).status,200);
+  assert.equal(hit,4);
 });

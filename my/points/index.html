@@ -38,6 +38,18 @@
       <button type="button" id="confirmReferralInvite">가입 후 초대 확인</button>
       <p id="referralConfirmStatus" role="status" aria-live="polite">로그인 후 직접 확인해 주세요.</p>
     </section>
+    <section class="panel invite-panel" id="claimSection" hidden aria-labelledby="claimTitle">
+      <h2 id="claimTitle">활동 증빙 신청</h2>
+      <p>운영자가 확인할 수 있는 활동만 신청할 수 있습니다. 신청만으로는 적립되지 않으며, 확인 후 원장에 기록됩니다. 페이지 방문이나 공유는 증빙이 아닙니다.</p>
+      <form id="claimForm" class="claim-form">
+        <label>증빙 종류<select id="claimAdapter" required></select></label>
+        <label>증빙 참조<input id="claimRef" required maxlength="120" pattern="[A-Za-z0-9:._/\-]{3,120}" placeholder="예: post/1024, meet/2026-11-01" autocomplete="off"></label>
+        <label class="claim-note">설명 (선택)<textarea id="claimNote" maxlength="500" rows="2" placeholder="운영자가 확인할 수 있도록 간단히 적어 주세요."></textarea></label>
+        <button type="submit" id="claimSubmit">증빙 신청</button>
+      </form>
+      <p id="claimStatus" role="status" aria-live="polite"></p>
+      <h3>내 신청 현황</h3><div id="claimList" class="history" aria-live="polite"></div>
+    </section>
     <p class="footnote">활동포인트는 현금과 다르며, 기부만으로 기부금영수증이 발급되지 않습니다. 포인트 적립과 전환·기부는 사이트별 운영 정책을 따릅니다.</p>
   </main>
   <footer>© EKODI</footer>
