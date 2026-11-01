@@ -46,3 +46,9 @@ test('simulcast channels can be added from the studio; platform owner may bind t
   assert.match(ctl,/canBindRelay\(host\.access\.identity\)/);
   assert.doesNotMatch(ctl,/platformAdminRole!=='super_admin'\)return json\(request,env,\{ok:false,error:'relay_binding_super_admin_required'/);
 });
+
+test('studio settings render as one-at-a-time tabs that fit one screen',()=>{
+  assert.match(live,/studio-tabs/);
+  for(const name of ['화면','소스','참여','채팅','통역','송출'])assert.ok(live.includes(`'${name}'`),name);
+  assert.match(css,/\.compact-panel\.studio-tabbed\{display:flex;flex-direction:column;max-height:calc\(100dvh - 100px\);overflow:hidden\}/);
+});

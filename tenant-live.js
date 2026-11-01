@@ -287,3 +287,21 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
   },45000);
 }else refreshLive()})}
 })();
+/* Studio settings as tabs (2026-11-01): one section at a time so the whole panel fits one screen. */
+(()=>{
+  const panel=document.querySelector('#studioView .compact-panel');if(!panel||panel.dataset.tabs)return;
+  const sections=[...panel.querySelectorAll(':scope>details')];if(!sections.length)return;
+  const names=[['compact-settings','화면'],['source-manager','소스'],['participant-manager','참여'],['live-chat-box','채팅'],['live-interpretation-section','통역'],['delivery-settings','송출']];
+  const label=d=>(names.find(([cls])=>d.classList.contains(cls))||[0,d.querySelector('summary')?.textContent?.trim()||'설정'])[1];
+  panel.dataset.tabs='true';panel.classList.add('studio-tabbed');
+  const bar=document.createElement('div');bar.className='studio-tabs';bar.setAttribute('role','tablist');bar.setAttribute('aria-label','스튜디오 설정');
+  const body=document.createElement('div');body.className='studio-tab-body';
+  sections[0].before(bar);bar.after(body);
+  let saved='';try{saved=localStorage.getItem('ekodi-live-studio-tab')||''}catch{}
+  const buttons=sections.map((d,i)=>{const name=label(d),id=`studioTab${i}`;d.id||(d.id=`studioPane${i}`);d.setAttribute('role','tabpanel');d.setAttribute('aria-labelledby',id);body.append(d);const b=document.createElement('button');b.type='button';b.id=id;b.className='studio-tab';b.setAttribute('role','tab');b.setAttribute('aria-controls',d.id);b.textContent=name;b.dataset.tab=name;b.addEventListener('click',()=>select(i));bar.append(b);return b});
+  function select(index,focus=false){sections.forEach((d,i)=>{const on=i===index;d.classList.toggle('studio-pane-active',on);if(on&&!d.open)d.open=true;buttons[i].classList.toggle('active',on);buttons[i].setAttribute('aria-selected',String(on));buttons[i].tabIndex=on?0:-1});body.scrollTop=0;if(focus)buttons[index].focus();try{localStorage.setItem('ekodi-live-studio-tab',buttons[index].dataset.tab)}catch{}}
+  bar.addEventListener('keydown',e=>{const cur=buttons.indexOf(document.activeElement);if(cur<0)return;if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();select((cur+(e.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length,true)}});
+  for(const d of sections)d.querySelector(':scope>summary')?.addEventListener('click',e=>e.preventDefault());
+  const start=Math.max(0,buttons.findIndex(b=>b.dataset.tab===saved));
+  select(start>=0?start:0);
+})();
