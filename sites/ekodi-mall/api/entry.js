@@ -70,7 +70,7 @@ export function trustedSource(sourceType = '') { return sourceType === 'direct' 
 
 const PUBLIC_SELECT = `SELECT p.id,p.share_code,p.public_url,p.seller_type,p.seller_display_name,p.sale_type,p.category,p.name,p.audience,p.one_line,p.price,
   p.benefits_json,p.specs_json,p.story,p.fulfillment,p.contact,p.affiliate_url,p.checkout_ready,p.published_at,p.store_id,
-  p.primary_region_id,p.region_ids_json,p.region_label,p.local_relationship,p.region_verified,
+  p.primary_region_id,p.region_ids_json,p.region_label,p.local_relationship,p.region_verified,p.images_json,
   s.name AS store_name,s.slug AS store_slug,s.verification_status AS store_verification_status
   FROM products p LEFT JOIN stores s ON s.id=p.store_id`;
 
@@ -87,6 +87,8 @@ function publicProduct(row) {
       benefits: parseJson(row.benefits_json), specs: parseJson(row.specs_json), story: row.story || '', fulfillment: row.fulfillment || '',
       contact: row.contact || '', affiliateUrl: row.sale_type === 'affiliate' ? row.affiliate_url || '' : ''
     }),
+    // MALL-LIST-IMAGE-001: 판매자가 올린 첫 사진을 목록 대표이미지로 쓴다(없으면 빈 값 — 이미지를 만들어내지 않음).
+    image: (row.images_json ? publicImages(row.images_json, null)[0]?.url : '') || '',
     businessStoreVerified: verifiedBusinessStore,
     checkoutReady: Boolean(row.checkout_ready) && (row.seller_type !== 'business' || verifiedBusinessStore),
     paymentsEnabled: false,
