@@ -16,7 +16,7 @@ export const COMMERCE_CSP = [
   "form-action 'self' https://*.tosspayments.com",
   "object-src 'none'",
 ].join('; ');
-export const isCommercePage = (pathname) => /^\/(?:buy|library)(?:\/|$)/.test(pathname);
+export const isCommercePage = (pathname) => /^\/(?:buy|library|review)(?:\/|$)/.test(pathname);
 function withCommerceCsp(response) {
   const type = String(response.headers.get('content-type') || '').toLowerCase();
   if (!type.includes('text/html')) return response;

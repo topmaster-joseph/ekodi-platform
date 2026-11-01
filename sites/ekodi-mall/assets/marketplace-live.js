@@ -28,13 +28,18 @@
     article.dataset.search = `${text(p.name)} ${text(p.oneLine)} ${text(p.audience)} ${text(seller.displayName)} ${text(store?.name)} ${text(region?.label)} 개인상품`.toLowerCase();
 
     const thumb = node('div', `thumb ${category(p.category)}`);
+    // MALL-LIST-IMAGE-001: 대표사진 + 썸네일 클릭 시 상세
+    const thumbLink = node('a', 'thumb-link'); thumbLink.href = href; thumbLink.setAttribute('aria-label', `${article.dataset.name} 자세히 보기`);
+    if (/^https:\/\//.test(text(item.image))) { const img = node('img'); img.src = item.image; img.alt = article.dataset.name; img.loading = 'lazy'; img.decoding = 'async'; thumbLink.append(img); thumb.classList.add('has-image'); }
+    thumb.append(thumbLink);
     thumb.append(node('span', 'badge', store ? 'STORE PRODUCT' : 'PERSONAL PRODUCT'));
     const heart = node('button', 'heart', '♡'); heart.type = 'button'; heart.dataset.wish = id; heart.setAttribute('aria-label', `${article.dataset.name} 관심상품`); heart.setAttribute('aria-pressed', 'false'); thumb.append(heart);
 
     const body = node('div', 'card-body');
     body.append(node('p', 'store-kicker', store ? `${store.name} · ${seller.displayName}` : `개인상품 · ${seller.displayName || '판매자'}`));
     const h3 = node('h3'); const title = node('a', '', article.dataset.name); title.href = href; h3.append(title); body.append(h3);
-    body.append(node('p', '', text(p.oneLine) || text(p.audience) || '판매자가 등록한 공개 상품입니다.'));
+    const summary = text(p.oneLine) || text(p.audience) || '판매자가 등록한 공개 상품입니다.';
+    body.append(node('p', 'card-summary', summary.length > 46 ? `${summary.slice(0, 45).trimEnd()}…` : summary));
     if (region?.label) body.append(node('p', 'region-chip', `지역 · ${text(region.label)}${region.verified ? ' · 확인됨' : ''}`));
     const meta = node('div', 'meta'); meta.append(node('span', 'status', `${price(p.price)} · Mall 8%`));
     const detail = node('a', 'smallbtn', '자세히'); detail.href = href; meta.append(detail); body.append(meta);

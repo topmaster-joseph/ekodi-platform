@@ -15,6 +15,21 @@
     } catch (e) { alert(e.message); }
     finally { button.disabled = false; button.textContent = label; }
   }
+  // BOOKS-READER-001: 구매한 책은 받지 않고도 바로 펼쳐 읽을 수 있다(같은 소유권 검증 다운로드 API 사용).
+  async function fetchBook(route) {
+    const s = await C.session();
+    const r = await fetch(`${C.BASE}/api/commerce/${route}`, { headers: { authorization: 'Bearer ' + (s?.accessToken || '') }, cache: 'no-store' });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || '책을 열지 못했습니다.'); }
+    return r.arrayBuffer();
+  }
+  async function read(item, button) {
+    if (!window.EkodiEpubReader) { alert('리더를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.'); return; }
+    button.disabled = true; const label = button.textContent; button.textContent = '여는 중…';
+    try { await window.EkodiEpubReader.open(await fetchBook(`download/${encodeURIComponent(item.id)}`), { title: item.title, storageKey: item.id }); }
+    catch (e) { alert(e.message); }
+    finally { button.disabled = false; button.textContent = label; }
+  }
+  window.EkodiLibraryFetchBook = fetchBook;
   async function load() {
     try {
       const data = await C.api('library');
@@ -44,18 +59,25 @@
           }
         }
         info.append(audioArea);
-        row.append(C.cover(item), info, btn); list.append(row);
+        const actions = document.createElement('div'); actions.className = 'library-actions';
+        if (item.downloadReady) { const readBtn = document.createElement('button'); readBtn.type = 'button'; readBtn.className = 'read-btn'; readBtn.textContent = '펼쳐 읽기'; readBtn.addEventListener('click', () => read(item, readBtn)); actions.append(readBtn); }
+        actions.append(btn);
+        row.append(C.cover(item), info, actions); list.append(row);
       }
     } catch (e) {
       if (e.status === 401) { $('libStatus').textContent = '로그인이 필요합니다.'; $('libLogin').hidden = false; C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; }, () => load().then(operatorPanel)); }
       else $('libStatus').textContent = e.message;
     }
   }
+  // LIBRARY-OPERATOR-RENDER-001: page load, sign-in callback and post-upload refresh can overlap.
+  // Each run builds off-screen and only the newest run replaces the list, so rows never duplicate.
+  let operatorRun = 0;
   async function operatorPanel() {
+    const run = ++operatorRun;
     let catalog;
     try { catalog = await (await fetch(`${C.BASE}/books.json`, { cache: 'no-store' })).json(); } catch { return; }
     const books = (catalog.books || []).filter(b => b.directSale?.enabled);
-    const host = $('operatorBooks'); host.replaceChildren();
+    const host = document.createDocumentFragment();
     for (const book of books) {
       let state;
       try { state = await C.api(`admin/files/${encodeURIComponent(book.id)}`); } catch (e) { if (e.status === 403 || e.status === 401) return; continue; }
@@ -78,6 +100,9 @@
         } catch (e) { alert(e.message); label.firstChild.textContent = '다시 올리기'; }
       });
       label.append(input); row.append(info, label);
+      const review = document.createElement('a'); review.className = 'op-review'; review.href = `${C.BASE}/review/?book=${encodeURIComponent(book.id)}`;
+      review.textContent = state.present ? '내용 검토·출판 확정 →' : '';
+      if (state.present) row.append(review);
       const bonus = document.createElement('div'); bonus.className='audio-bonus-operator';
       const status = document.createElement('small');
       status.textContent = book.audiobook?.tracks?.length
@@ -107,6 +132,7 @@
       }
       row.append(bonus);host.append(row);
     }
+    if (run === operatorRun) $('operatorBooks').replaceChildren(host);
   }
   load().then(operatorPanel);
 })();

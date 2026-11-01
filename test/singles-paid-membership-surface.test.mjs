@@ -49,6 +49,6 @@ test('postpaid invoices and owner proposals are reachable only through authentic
   }
   const bank=await read('supabase/functions/singles-api/bank-transfer.ts');
   for(const route of ['/bank/admin/proposals','/bank/admin/ops/review'])assert.ok(bank.includes(route));
-  assert.equal((bank.match(/owner_capability_required/g)||[]).length,3,'every owner route checks can_configure');
+  assert.equal((bank.match(/owner_capability_required/g)||[]).length,4,'every owner route (proposals, review, decide, invites) checks can_configure');
   assert.match(app,/운영 개선 제안 · 소유자 결정/);
 });

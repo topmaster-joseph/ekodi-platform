@@ -47,10 +47,12 @@ function mergeCatalog(staticData,apiData){
 }
 async function fetchJson(url){const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status} ${url}`);return response.json();}
 async function fetchCatalog(){
-  const [staticResult,apiResult]=await Promise.allSettled([fetchJson(`${catalogBase()}/books.json`),fetchJson(`${API}/api/books/public/publications`)]);
+  const [staticResult,apiResult,approvalResult]=await Promise.allSettled([fetchJson(`${catalogBase()}/books.json`),fetchJson(`${API}/api/books/public/publications`),fetchJson(`${catalogBase()}/api/commerce/public/approvals`)]);
   if(staticResult.status==='rejected')console.warn('에코디서점 static catalog unavailable',staticResult.reason);
   if(apiResult.status==='rejected')console.warn('에코디서점 API catalog unavailable',apiResult.reason);
   const merged=mergeCatalog(staticResult.value,apiResult.value);
+  // BOOKS-EDITION-APPROVAL-001: 운영자 출판 확정이 살아 있는 도서는 표시상 판매 가능(결제 시 서버가 다시 확인)
+  const approved=new Set((approvalResult.value?.approvals||[]).map(a=>a.bookId));merged.books.forEach(b=>{if(approved.has(b.id))b._approved=true;});
   if(!merged.books.length)throw new Error('에코디서점 catalog unavailable');
   return merged;
 }
@@ -77,7 +79,7 @@ function renderBook(book){
   const detailLink=node.querySelector('.detail-link');detailLink.href=book.detailUrl||'/#catalog';detailLink.classList.add('text-link');
   const editions=book.editions||{};const upaper=editions.upaperKoreanBilingual||{};const dist=node.querySelector('.distribution-list');
   dist.append(distributionRow('Google Play Books',identifier||editions.googleKoreanBilingual?.price||'',book.distribution?.google),distributionRow('Amazon KDP',['English Edition',editions.amazonEnglish?.price].filter(Boolean).join(' · '),book.distribution?.amazon),distributionRow('국내 판매',upaper.provider?[upaper.provider,upaper.price].filter(Boolean).join(' · '):(upaper.price||''),book.distribution?.upaper||book.distribution?.korea));
-  const links=node.querySelector('.book-links');if(bookSaleReady(book)){const buy=document.createElement('a');buy.href=`${catalogBase()}/buy/?book=${encodeURIComponent(book.id)}`;buy.className='buy-direct';buy.textContent='에코디서점에서 구매하기';links.append(buy);}else if(book.directSale?.enabled){const pending=document.createElement('span');pending.className='buy-direct is-pending';pending.setAttribute('aria-disabled','true');pending.textContent='에코디서점 · 출간 준비 중';links.append(pending);}links.append(linkFor('Google Play',book.links?.google,book.distribution?.google),linkFor('Amazon',book.links?.amazon,book.distribution?.amazon),linkFor('유페이퍼 구매',book.links?.upaper||book.links?.korea,book.distribution?.upaper||book.distribution?.korea));
+  const links=node.querySelector('.book-links');if(bookSaleReady(book)||book._approved){const buy=document.createElement('a');buy.href=`${catalogBase()}/buy/?book=${encodeURIComponent(book.id)}`;buy.className='buy-direct';buy.textContent='에코디서점에서 구매하기';links.append(buy);}else if(book.directSale?.enabled){const pending=document.createElement('span');pending.className='buy-direct is-pending';pending.setAttribute('aria-disabled','true');pending.textContent='에코디서점 · 출간 준비 중';links.append(pending);}links.append(linkFor('Google Play',book.links?.google,book.distribution?.google),linkFor('Amazon',book.links?.amazon,book.distribution?.amazon),linkFor('유페이퍼 구매',book.links?.upaper||book.links?.korea,book.distribution?.upaper||book.distribution?.korea));
   const siblings=otherLanguageEditions(book);if(siblings.length){const note=document.createElement('p');note.className='language-edition-note';note.textContent=`다른 언어판(${siblings.map(b=>b.title).join(' · ')})을 보유하신 분은 이 판을 50% 할인된 금액으로 구입하실 수 있습니다.`;links.before(note);}
   if(book.coverImage){const img=document.createElement('img');img.src=underBase(book.coverImage);img.width=720;img.height=1080;img.alt=`${book.title} 표지`;img.loading='lazy';img.decoding='async';cover.classList.add('has-cover');cover.replaceChildren(img);}
   grid.append(node);

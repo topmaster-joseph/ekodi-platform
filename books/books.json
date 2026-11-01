@@ -26,7 +26,7 @@
         "EPUB 3",
         "Reflowable Digital Edition"
       ],
-      "edition": "Digital First Edition · v1.7",
+      "edition": "Digital First Edition · v2.0 (한국어판)",
       "listPrice": {
         "currency": "KRW",
         "amount": 9900,
@@ -63,7 +63,8 @@
           "price": "KRW 9,900",
           "status": "판매 중",
           "language": "ko",
-          "label": "한국어판"
+          "label": "한국어판",
+          "note": "유페이퍼 등록 파일은 v1.7(한·영 병기본) — 한국어판 v2.0 교체 예정"
         },
         "amazonEnglish": {
           "title": "In Search of the EKODIan",
@@ -102,11 +103,41 @@
       "directSale": {
         "enabled": true,
         "fileKey": "BOOK-EKODI-000001/ebook.epub",
-        "format": "EPUB 3"
+        "format": "EPUB 3",
+        "edition": "v2.0 한국어판 (2026-11-01 업로드)"
       },
       "buyUrl": "/buy/?book=BOOK-EKODI-000001",
       "socialImage": "/assets/ekodian-cover.jpg",
-      "workId": "WORK-EKODIAN"
+      "workId": "WORK-EKODIAN",
+      "toc": [
+        "서문 목회자가 교회를 다시 배우다",
+        "프롤로그",
+        "1부 잃어버린 언어를 찾아서",
+        "1장. “교회가 뭐예요?” 한 아이의 질문",
+        "2장. 성경 속 숨겨진 보물지도",
+        "3장. 예수님이 꿈꾸신 진짜 이야기",
+        "2부 에클레시아 부름받은 사람들의 비밀",
+        "4장. 일요일만 존재하는 사람들",
+        "5장. 우리가 다르긴 뭐가 달라 구별됨의 진짜 의미",
+        "6장. 모였다 흩어졌다 교회의 심장박동",
+        "3부 코이노니아 나누고 연결되는 마법",
+        "7장. 진짜 나눔은 아픈 것이다",
+        "8장. 다르지만 하나인 사람들",
+        "9장. 상처받은 공동체가 다시 서는 법",
+        "4부 디아스포라, 이방인으로 살아가는 예술",
+        "10장. 집 잃은 사람들의 숨겨진 힘",
+        "11장. 경계선에서 피어나는 창조성",
+        "12장. 우리는 모두 이방인이다",
+        "5부 희년, 새로운 시작의 선물",
+        "13장. 50년을 기다린 사람들",
+        "14장. 용서가 만드는 경제학",
+        "15장. 내일의 희년을 오늘 살기",
+        "에필로그 에코디언으로 살아가기",
+        "집필후기",
+        "부록 에코디언 실천 가이드",
+        "참고문헌"
+      ],
+      "tocSource": "한국어판 v2.0 EPUB 목차"
     },
     {
       "id": "BOOK-EKODI-000003",
@@ -115,10 +146,10 @@
       "series": "EKODI ORIGINAL",
       "seriesNumber": 1,
       "publicationType": "MONOGRAPH · PUBLIC THEOLOGY · ENGLISH EDITION",
-      "status": "판매 준비 중 · 영문판 (전자책 파일 등록 대기)",
+      "status": "판매 중 · 영문판 2026",
       "coverTitle": "In Search of\nthe EKODIan",
-      "detailUrl": "/ekodian/",
-      "storeUrl": "/ekodian/",
+      "detailUrl": "/book/?id=BOOK-EKODI-000003",
+      "storeUrl": "/book/?id=BOOK-EKODI-000003",
       "publishingUrl": "/publishing/workspace/?book=BOOK-EKODI-000003",
       "adminUrl": "https://ekodi.kr/admin/books#BOOK-EKODI-000003",
       "title": "In Search of the EKODIan",
@@ -147,11 +178,11 @@
       "workflow": {
         "manuscript": "complete",
         "editing": "complete",
-        "epub": "pending_upload",
+        "epub": "validated",
         "cover": "complete",
         "metadata": "ready",
         "distribution": "needs_verification",
-        "storefront": "catalog_listed"
+        "storefront": "live"
       },
       "editions": {
         "amazonEnglish": {
@@ -179,7 +210,8 @@
       "directSale": {
         "enabled": true,
         "fileKey": "BOOK-EKODI-000003/ebook.epub",
-        "format": "EPUB 3"
+        "format": "EPUB 3",
+        "edition": "English Digital First Edition (2026-11-01 업로드)"
       },
       "audiobook": {
         "freeWithEbook": true,
@@ -198,7 +230,36 @@
         "approvedAt": "2026-11-01",
         "scope": "판본 확정·에코디서점 판매가 9,900원",
         "sourceEdition": "KDP RC1"
-      }
+      },
+      "toc": [
+        "Preface: A Pastor Learns the Church Again",
+        "Prologue",
+        "Part 1: Finding the Lost Language",
+        "Chapter 1: “What Is Church?” One Child’s Question",
+        "Chapter 2: A Hidden Treasure Map in Scripture",
+        "Chapter 3: The Real Story Jesus Dreamed of",
+        "Part 2: Ecclesia The Secret of the Called",
+        "Chapter 4: People Who Exist Only on Sundays",
+        "Chapter 5: What’s So Different About Us The True Meaning of Being Set Apart",
+        "Chapter 6: Gather and Scatter The Church’s Heartbeat",
+        "Part 3: Koinonia The Magic of Sharing and Belonging",
+        "Chapter 7: Real Sharing Can Hurt",
+        "Chapter 8: Different Yet One",
+        "Chapter 9: How a Wounded Community Stands Again",
+        "Part 4: Diaspora, The Art of Living as Strangers",
+        "Chapter 10: The Hidden Strength of the Displaced",
+        "Chapter 11: Creativity That Blooms on the Border",
+        "Chapter 12: We Are All Strangers",
+        "Part 5: Jubilee, The Gift of a New Beginning",
+        "Chapter 13: People Who Waited Fifty Years",
+        "Chapter 14: The Economics of Forgiveness",
+        "Chapter 15: Living Tomorrow’s Jubilee Today",
+        "Epilogue: Living as an EKODIan",
+        "Afterword",
+        "Appendix: The EKODIan Practice Guide",
+        "References"
+      ],
+      "tocSource": "English Edition EPUB contents"
     },
     {
       "id": "BOOK-EKODI-000002",
@@ -208,8 +269,8 @@
       "publicationType": "MONOGRAPH",
       "status": "판매처 등록 준비 중 · 2026",
       "coverTitle": "AI 시대의\n진보와 빈곤",
-      "detailUrl": "/#catalog",
-      "storeUrl": "/#catalog",
+      "detailUrl": "/book/?id=BOOK-EKODI-000002",
+      "storeUrl": "/book/?id=BOOK-EKODI-000002",
       "publishingUrl": "/publishing/workspace/?book=BOOK-EKODI-000002",
       "adminUrl": "https://ekodi.kr/admin/books#BOOK-EKODI-000002",
       "title": "AI 시대의 진보와 빈곤",

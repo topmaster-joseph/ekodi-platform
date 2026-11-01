@@ -166,7 +166,7 @@ function apiEnv() {
     .run(crypto.createHash('sha256').update(STEP).digest('hex'), 'owner@example.com', '2099-01-01T00:00:00.000Z', '2026-10-01T00:00:00.000Z');
   const statement = (sql, params = []) => ({ bind(...v) { return statement(sql, v); }, async first() { return sqlite.prepare(sql).get(...params) || null; },
     async all() { return { results: sqlite.prepare(sql).all(...params) }; }, async run() { const r = sqlite.prepare(sql).run(...params); return { meta: { changes: Number(r.changes) } }; } });
-  return { DB: { prepare: sql => statement(sql) }, ALLOW_MUTATIONS: 'true', ALLOWED_ORIGINS: 'https://ekodi.kr', INVEST_OWNER_EMAIL: 'owner@example.com' };
+  return { DB: { prepare: sql => statement(sql) }, ALLOW_MUTATIONS: 'true', ALLOWED_ORIGINS: 'https://ekodi.kr', INVEST_OWNER_EMAIL: 'owner@example.com', INVEST_STEP_UP_REQUIRED: 'true' };
 }
 async function call(env, path, step) {
   const original = globalThis.fetch;

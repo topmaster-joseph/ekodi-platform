@@ -202,3 +202,12 @@ main[data-mission-devotion] .mission-devotion-tools .mission-auth-button{
   .mission-site-header nav a{font-size:.79rem;line-height:1.4;padding:.3rem 0}
   .mission-site-header .mission-brand-mark{width:2.1rem;height:2.1rem}
 }
+
+/* Auth display is a short public label, never a full social-provider alias email. */
+.mission-site-header .mission-auth-actions{min-width:0;max-width:100%}
+.mission-auth-state{display:block;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:520px){
+  .mission-site-header .mission-auth-actions{gap:.35rem}
+  .mission-site-header .mission-auth-state{max-width:104px;font-size:.72rem}
+  .mission-site-header .mission-auth-button{flex:0 0 auto}
+}

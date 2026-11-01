@@ -18,7 +18,7 @@
     { domain:'marketing.ekodi.kr', name:'마케팅 AI', group:'Business & Commerce', role:'마케팅·자동화·Workspace', manage:'services' },
     { domain:'trade.ekodi.kr', name:'에코디 트레이딩', group:'Business & Commerce', role:'무역·견적·계약·거래', manage:'organization' },
     { domain:'ekodi.kr/ekodipay', name:'에코디 페이', group:'Business & Commerce', role:'결제·정산·귀속', manage:'finance', critical:true },
-    { domain:'books.ekodi.kr', name:'에코디서점', group:'Knowledge & Content', role:'출판·배포·인세·콘텐츠', manage:'books' },
+    { domain:'books.ekodi.kr', url:'https://ekodi.kr/books', name:'에코디서점', group:'Knowledge & Content', role:'출판·배포·인세·콘텐츠', manage:'books' },
     { domain:'lab.ekodi.kr', name:'에코디연구소', group:'Knowledge & Content', role:'연구·교육·프로젝트', manage:'services' },
     { domain:'mail.ekodi.kr', name:'에코디 메일', group:'Communication & Cloud', role:'메일 허브·조직 연결', manage:'communication' },
     { domain:'live.ekodi.kr', name:'에코디 라이브', group:'Communication & Cloud', role:'라이브·방송·송출', manage:'communication' },
@@ -52,7 +52,7 @@
   let lastReviewAt = null;
   let selectedDomain = '';
   const displayAddress = domain => window.EKODIAdminSurfaceLabels?.label?.(domain) || domain;
-  const publicAddress = domain => window.EKODIAdminSurfaceLabels?.url?.(domain) || `https://${domain}`;
+  const publicAddress = (domain, explicit = '') => window.EKODIAdminSurfaceLabels?.url?.(domain, explicit) || explicit || `https://${domain}`;
   let fleetQuery = '';
   let fleetFilter = 'all';
 
@@ -509,7 +509,7 @@
   }
 
   function detailActions(agent) {
-    return `<div class="ai-detail-actions"><button class="secondary" type="button" id="aiSelectedManage">Manage</button><a class="primary" href="${esc(publicAddress(agent.domain))}" target="_blank" rel="noopener">Open ↗</a></div>`;
+    return `<div class="ai-detail-actions"><button class="secondary" type="button" id="aiSelectedManage">Manage</button><a class="primary" href="${esc(publicAddress(agent.domain, agent.url || ''))}" target="_blank" rel="noopener">Open ↗</a></div>`;
   }
 
   function aiActionText(agent, state) {
