@@ -275,7 +275,7 @@ test('Bible and Church show only Login for guest, verified account plus Logout a
  assert.match(client,/siteKey==='mission' \? null : el\('div','dv-shared-auth'\)/);
  assert.match(client,/if\(!signedIn\)\{/);
  assert.match(client,/el\('a','dv-date-link','로그인'\)/);
- assert.match(client,/el\('span','dv-shared-account',String\(viewer\.email\|\|'계정'\)/);
+ assert.match(client,/el\('span','dv-shared-account',devotionAccountLabel\(/);
  assert.match(client,/el\('button','dv-date-link','로그아웃'\)/);
  assert.match(client,/showSharedAccount\(viewer\)/);
  assert.match(client,/const response = await fetch\(\x60\$\{API\}\/me\x60/);
