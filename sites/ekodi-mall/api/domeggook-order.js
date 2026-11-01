@@ -56,13 +56,27 @@ function redact(text, env) {
 async function call(env, params, fetchImpl, method = 'POST') {
   const body = new URLSearchParams({ aid: env.DOMEMAE_API_KEY, om: 'json', ...params });
   // Never silently follow a redirect for a paid order: some redirects convert POST into GET.
+  // 도매꾹은 공식 주소 사이에서 리다이렉트를 보낸다(11/1 진단: redirect blocked).
+  // 자동 추종은 끄고(manual), https 이면서 도매꾹 소유 호스트로 가는 경우에만 같은 메서드·본문으로 최대 2번 다시 보낸다.
+  // 리다이렉트 응답은 원 서버가 요청을 처리하지 않았다는 뜻이므로 재전송해도 이중 처리되지 않는다.
+  let url = method === 'GET' ? `${ENDPOINT}?${body}` : ENDPOINT;
   let res;
   try {
-    res = method === 'GET'
-      ? await fetchImpl(`${ENDPOINT}?${body}`, { headers: { accept: 'application/json' }, redirect: 'error' })
-      : await fetchImpl(ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body, redirect: 'error' });
+    for (let hop = 0; hop <= 2; hop += 1) {
+      res = method === 'GET'
+        ? await fetchImpl(url, { headers: { accept: 'application/json' }, redirect: 'manual' })
+        : await fetchImpl(url, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body, redirect: 'manual' });
+      if (!(res.status >= 300 && res.status < 400)) break;
+      const location = res.headers?.get?.('location');
+      let next;
+      try { next = new URL(location, url); } catch { next = null; }
+      if (!next || next.protocol !== 'https:' || !/(^|\.)domeggook\.com$/i.test(next.hostname) || hop === 2) {
+        const target = next ? `${next.protocol}//${next.hostname}${next.pathname}`.slice(0, 80) : 'no location';
+        return { ok: false, status: res.status, root: {}, parsedJson: false, transport: `redirect blocked ${res.status} to ${target}` };
+      }
+      url = method === 'GET' ? `${next.origin}${next.pathname}?${body}` : `${next.origin}${next.pathname}`;
+    }
   } catch (error) {
-    // 네트워크·리다이렉트 차단은 공급사 거절과 구분해 기록한다.
     const transport = /redirect/i.test(String(error?.message || '')) ? 'redirect blocked' : 'network failure';
     return { ok: false, status: 0, root: {}, parsedJson: false, transport };
   }

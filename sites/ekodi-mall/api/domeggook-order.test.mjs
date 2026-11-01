@@ -186,7 +186,7 @@ test('private order calls use canonical HTTPS and prohibit automatic redirects',
     const mode = init?.body ? new URLSearchParams(String(init.body)).get('mode') : new URL(String(url)).searchParams.get('mode');
     if (mode !== 'getItemView') {
       urls.push(String(url));
-      assert.equal(init?.redirect, 'error');
+      assert.equal(init?.redirect, 'manual');
     }
     return base(url, init);
   };
@@ -360,6 +360,21 @@ test('setLogin goes to the official host and a blocked redirect is reported as t
   const { login } = await import('./domeggook-order.js');
   const env = { DOMEMAE_API_KEY: 'K', DOMEMAE_USER_ID: 'u', DOMEMAE_PASSWORD: 'p', DOMEMAE_APPROVED_MEMBER_ID: 'sns@1' };
   const seen = [];
-  await assert.rejects(login(env, async (url) => { seen.push(String(url)); throw new TypeError('fetch failed: redirect mode is set to error'); }), (e) => e.supplierMessage === 'redirect blocked');
+  await assert.rejects(login(env, async (url) => { seen.push(String(url)); throw new TypeError('fetch failed: redirect mode is set to error'); }), (e) => /^redirect blocked/.test(e.supplierMessage));
   assert.equal(seen[0], 'https://domeggook.com/ssl/api/');
+});
+
+test('login follows an https redirect inside domeggook.com with the same POST body, and blocks foreign redirects', async () => {
+  const { login } = await import('./domeggook-order.js');
+  const env = { DOMEMAE_API_KEY: 'K', DOMEMAE_USER_ID: 'sns@1', DOMEMAE_PASSWORD: 'p', DOMEMAE_APPROVED_MEMBER_ID: 'sns@1' };
+  const seen = [];
+  const ok = await login(env, async (url, init) => {
+    seen.push([String(url), init.method, String(init.body).includes('mode=setLogin')]);
+    if (String(url) === 'https://domeggook.com/ssl/api/') return new Response('', { status: 301, headers: { location: 'https://www.domeggook.com/ssl/api/' } });
+    return new Response(JSON.stringify({ domeggook: { id: 'sns@1', sId: 'S' } }), { status: 200 });
+  });
+  assert.equal(ok.id, 'sns@1');
+  assert.deepEqual(seen[1], ['https://www.domeggook.com/ssl/api/', 'POST', true]);
+  await assert.rejects(login(env, async () => new Response('', { status: 302, headers: { location: 'https://evil.example/x' } })),
+    (e) => /redirect blocked 302 to https:\/\/evil\.example/.test(e.supplierMessage));
 });
