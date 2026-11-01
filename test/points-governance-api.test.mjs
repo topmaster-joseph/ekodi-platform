@@ -88,3 +88,24 @@ test('governance UI only talks to same-origin admin API and renders data as text
   assert.match(worker,/'\/points-governance-admin\.js'/);
   assert.match(build,/'points-governance-admin\.js'/);
 });
+
+test('P2 routes: scan is read-gated, claim/anomaly decisions are write-gated and validated',async()=>{
+  const id='3f2b8c1e-4a5d-4e6f-9a0b-1c2d3e4f5a6b';
+  assert.equal((await handlePointsControl(new Request(base+'/scan'),{...env,POINTS_POLICY_READ_ENABLED:'false'},admin,new Headers(),never)).status,503);
+  assert.equal((await handlePointsControl(post('/claims/'+id+'/decision',{approve:true}),{...env,POINTS_POLICY_WRITE_ENABLED:'false'},admin,new Headers(),never)).status,503);
+  assert.equal((await handlePointsControl(post('/claims/bad/decision',{approve:true}),env,admin,new Headers(),never)).status,400);
+  assert.equal((await handlePointsControl(post('/anomalies/0/resolve',{status:'resolved'}),env,admin,new Headers(),never)).status,400);
+  assert.equal((await handlePointsControl(post('/anomalies/12/resolve',{status:'deleted'}),env,admin,new Headers(),never)).status,400);
+  assert.equal((await handlePointsControl(post('/anomalies/12/resolve',{status:'resolved'},{origin:'https://evil.example'}),env,admin,new Headers(),never)).status,403);
+  const calls=[];
+  const fetcher=async(url,opts)=>{calls.push([new URL(url).pathname,JSON.parse(opts.body)]);return new Response('{"ok":true}',{status:200});};
+  await handlePointsControl(new Request(base+'/scan'),env,admin,new Headers(),fetcher);
+  await handlePointsControl(post('/claims/'+id+'/decision',{approve:false,note:'not verified'}),env,admin,new Headers(),fetcher);
+  await handlePointsControl(post('/anomalies/12/resolve',{status:'acknowledged'}),env,admin,new Headers(),fetcher);
+  await handlePointsControl(post('/requests',{kind:'adapter',target:{site_id:'my',rule_id:'content',adapter:'content_approval'},
+    proposed:{trust:'verified',member_claimable:true,enabled:false},reason:'register adapter',request_key:'ui-adapter-0001'}),env,admin,new Headers(),fetcher);
+  assert.deepEqual(calls.map(c=>c[0]),['/rest/v1/rpc/ekodi_points_admin_scan','/rest/v1/rpc/ekodi_points_admin_decide_claim',
+    '/rest/v1/rpc/ekodi_points_admin_resolve_anomaly','/rest/v1/rpc/ekodi_points_admin_propose_adapter']);
+  for(const [,args] of calls)assert.equal(args.p_actor,'ekodi-admin:owner@ekodi.kr');
+  assert.equal(calls[2][1].p_anomaly,12);
+});

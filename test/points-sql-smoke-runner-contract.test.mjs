@@ -12,7 +12,7 @@ test('points SQL smokes execute for real in the ephemeral Supabase CI job',()=>{
   for(const smoke of ['points-behavioral-smoke.sql','points-attendance-isolated-smoke.sql',
     'points-operator-isolated-smoke.sql','points-active-heartbeat-isolated-smoke.sql',
     'points-verified-referrals-isolated-smoke.sql','points-verified-referrals-positive-smoke.sql',
-    'points-referral-hardening-isolated-smoke.sql','points-admin-governance-isolated-smoke.sql'])assert.ok(runner.includes(smoke),smoke);
+    'points-referral-hardening-isolated-smoke.sql','points-admin-governance-isolated-smoke.sql','points-evidence-anomaly-isolated-smoke.sql'])assert.ok(runner.includes(smoke),smoke);
 });
 test('runner never targets hosted Supabase and always rolls back',()=>{
   assert.match(runner,/renzehysxirjilvdxacv\|lxcxwbdwwojjkgybbqii/);

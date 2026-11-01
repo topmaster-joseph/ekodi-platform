@@ -6,6 +6,10 @@
 // - POST /api/control/points/requests          propose a policy change/adjustment
 // - POST /api/control/points/requests/:id/decision   approve or reject
 // - POST /api/control/points/requests/:id/cancel     requester withdraws
+// - GET  /api/control/points/scan              run anomaly detectors; open
+//                                              findings, pending evidence claims, adapters
+// - POST /api/control/points/claims/:id/decision     approve/reject a member claim
+// - POST /api/control/points/anomalies/:id/resolve   acknowledge/resolve a finding
 // Writes never edit wallets directly: the database applies them as audited,
 // concurrency-checked requests (economic ones need a second super-admin).
 // Dedicated credentials are bound in Worker secrets, never passed to browsers.
@@ -21,12 +25,12 @@ const QUERIES=Object.freeze({
   transfers:['ekodi_point_transfer_policies','from_site,to_site,numerator,denominator,daily_cap,enabled',300],
   campaigns:['ekodi_point_donation_campaigns','campaign_id,site_id,title,recipient_name,enabled,starts_at,ends_at',300],
 });
-const KINDS=new Set(['site','rule','transfer','campaign','adjustment','reversal']);
+const KINDS=new Set(['site','rule','transfer','campaign','adjustment','reversal','adapter']);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SITE=/^[a-z0-9_-]{2,64}$/;
 const REQUEST_KEY=/^[A-Za-z0-9:_-]{8,120}$/;
 // Database errors that are safe and useful to show to an operator.
-const KNOWN_ERRORS=/^(ADMIN_[A-Z_]+|INVALID_ADMIN_[A-Z_]+(:[a-z_]+)?|UNKNOWN_ADMIN_FIELD|LOW_TRUST_RULE_LIMIT|SECOND_APPROVER_REQUIRED|ONLY_REQUESTER_MAY_CANCEL|POINT_[A-Z_]+|ALREADY_REVERSED|REVERSAL_[A-Z_]+|ADJUSTMENT_EXCEEDS_BALANCE)$/;
+const KNOWN_ERRORS=/^(ADMIN_[A-Z_]+|INVALID_ADMIN_[A-Z_]+(:[a-z_]+)?|UNKNOWN_ADMIN_FIELD|LOW_TRUST_RULE_LIMIT|SECOND_APPROVER_REQUIRED|ONLY_REQUESTER_MAY_CANCEL|POINT_[A-Z_]+|ALREADY_REVERSED|REVERSAL_[A-Z_]+|ADJUSTMENT_EXCEEDS_BALANCE|EVIDENCE_[A-Z_]+|INVALID_EVIDENCE_[A-Z_]+|ANOMALY_NOT_FOUND)$/;
 
 function reply(data,status=200,sourceHeaders=new Headers()){
   const headers=new Headers({'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'});
@@ -109,9 +113,12 @@ export async function handlePointsControl(request,env,session,headers=new Header
   const path=url.pathname;
   if(path!==PREFIX&&!path.startsWith(PREFIX+'/'))return null;
   const decision=path.match(/^\/api\/control\/points\/requests\/([^/]+)\/(decision|cancel)$/);
-  const known=path===PATH||path===PREFIX+'/governance'||path===PREFIX+'/member-ledger'||path===PREFIX+'/requests'||decision;
+  const claimDecision=path.match(/^\/api\/control\/points\/claims\/([^/]+)\/decision$/);
+  const anomalyResolve=path.match(/^\/api\/control\/points\/anomalies\/([^/]+)\/resolve$/);
+  const known=path===PATH||path===PREFIX+'/governance'||path===PREFIX+'/member-ledger'||path===PREFIX+'/scan'
+    ||path===PREFIX+'/requests'||decision||claimDecision||anomalyResolve;
   if(!known)return reply({error:'not_found'},404,headers);
-  const isWrite=path===PREFIX+'/requests'||Boolean(decision);
+  const isWrite=path===PREFIX+'/requests'||Boolean(decision||claimDecision||anomalyResolve);
   if(request.method!==(isWrite?'POST':'GET'))return reply({error:'method_not_allowed'},405,headers);
   if(session?.role!=='super_admin')return reply({error:'super_admin_required'},403,headers);
   if(env?.POINTS_POLICY_READ_ENABLED!=='true')return reply({error:'points_governance_not_active'},503,headers);
@@ -140,6 +147,9 @@ export async function handlePointsControl(request,env,session,headers=new Header
     if(path===PREFIX+'/governance'){
       return reply({governance:await rpc(src,'ekodi_points_admin_overview',{p_actor:actor},requestFetch),snapshot_at:new Date().toISOString()},200,headers);
     }
+    if(path===PREFIX+'/scan'){
+      return reply({scan:await rpc(src,'ekodi_points_admin_scan',{p_actor:actor},requestFetch),snapshot_at:new Date().toISOString()},200,headers);
+    }
     if(path===PREFIX+'/member-ledger'){
       const site=url.searchParams.get('site')||'';
       const person=url.searchParams.get('person')||'';
@@ -157,10 +167,26 @@ export async function handlePointsControl(request,env,session,headers=new Header
         ||typeof requestKey!=='string'||!REQUEST_KEY.test(requestKey)){
         return reply({error:'invalid_points_request'},400,headers);
       }
-      const result=await rpc(src,'ekodi_points_admin_propose',{
-        p_actor:actor,p_kind:kind,p_target:target,p_proposed:proposed,p_reason:reason.trim(),p_request_key:requestKey,
-      },requestFetch);
+      const result=kind==='adapter'
+        ?await rpc(src,'ekodi_points_admin_propose_adapter',{
+          p_actor:actor,p_target:target,p_proposed:proposed,p_reason:reason.trim(),p_request_key:requestKey,
+        },requestFetch)
+        :await rpc(src,'ekodi_points_admin_propose',{
+          p_actor:actor,p_kind:kind,p_target:target,p_proposed:proposed,p_reason:reason.trim(),p_request_key:requestKey,
+        },requestFetch);
       return reply(result,result?.replayed?200:201,headers);
+    }
+    const note=body.note??null;
+    if(note!==null&&(typeof note!=='string'||note.length>500))return reply({error:'invalid_decision'},400,headers);
+    if(claimDecision){
+      if(!UUID.test(claimDecision[1])||typeof body.approve!=='boolean')return reply({error:'invalid_decision'},400,headers);
+      return reply(await rpc(src,'ekodi_points_admin_decide_claim',{p_actor:actor,p_claim:claimDecision[1],p_approve:body.approve,p_note:note},requestFetch),200,headers);
+    }
+    if(anomalyResolve){
+      if(!/^[1-9][0-9]{0,17}$/.test(anomalyResolve[1])||!['acknowledged','resolved'].includes(body.status)){
+        return reply({error:'invalid_decision'},400,headers);
+      }
+      return reply(await rpc(src,'ekodi_points_admin_resolve_anomaly',{p_actor:actor,p_anomaly:Number(anomalyResolve[1]),p_status:body.status,p_note:note},requestFetch),200,headers);
     }
     const requestId=decision[1];
     if(!UUID.test(requestId))return reply({error:'invalid_request_id'},400,headers);

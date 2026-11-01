@@ -7,6 +7,12 @@
   const host=document.getElementById('ekodiPointsAdmin');
   if(!host||document.getElementById('ekodiPointsGovernance'))return;
   const API='/api/control/points';
+  const ADAPTERS=[['attendance_checkin','출석 체크인(시스템)'],['lecture_completion','강의 완료(강사 확인)'],
+    ['content_approval','콘텐츠 승인'],['meeting_participation','모임 참여 확인'],
+    ['devotion_self_report','말씀 묵상 자기신고(저신뢰)'],['operator_confirmed','운영자 확인']];
+  const ANOMALY={burst:'1시간 내 적립 급증',cap_streak:'3일 연속 일일 상한',referral_cluster:'초대 보상 집중',
+    shared_evidence:'같은 증빙 다중 사용',claim_rejections:'증빙 반복 반려',ledger_drift:'원장·지갑 불일치',audit_chain:'감사 체인 손상'};
+  const SEVERITY={info:'참고',warning:'주의',critical:'긴급'};
   const KINDS={
     site:{label:'사이트 운영·상한',target:[['site_id','사이트 ID']],
       proposed:[['display_name','명칭','text'],['daily_cap','일일 상한(P)','int'],['enabled','운영','bool']]},
@@ -19,6 +25,8 @@
     adjustment:{label:'수동 조정(보정 거래)',target:[['site_id','사이트 ID'],['person_id','회원 EKODI Person ID']],
       proposed:[['amount','조정 P(차감은 음수)','int']]},
     reversal:{label:'적립 취소(역거래)',target:[['ledger_id','원장 거래 번호']],proposed:[]},
+    adapter:{label:'활동 증빙 어댑터',target:[['site_id','사이트 ID'],['rule_id','조건 ID'],['adapter','어댑터','choice',ADAPTERS]],
+      proposed:[['trust','신뢰 수준','choice',[['verified','검증됨(운영자·시스템 확인)'],['low_trust','저신뢰(자기신고·브라우저)']]],['member_claimable','회원 신청 허용','bool'],['enabled','운영','bool']]},
   };
   const STATUS={pending:'대기',applied:'적용',rejected:'반려',cancelled:'철회',stale:'변경 충돌'};
   const ACTION={propose:'요청',apply:'적용',reject:'반려',cancel:'철회',stale:'충돌 감지',view_member_ledger:'회원 원장 조회'};
@@ -52,7 +60,7 @@
     <article><strong data-gv-kpi="earned_today">—</strong><small>오늘 적립 P</small></article>
     <article><strong data-gv-kpi="earners_today">—</strong><small>오늘 적립 회원</small></article>
     <article><strong data-gv-kpi="outstanding">—</strong><small>미사용 잔액 P</small></article>
-    <article><strong data-gv-kpi="pending_requests">—</strong><small>승인 대기</small></article>
+    <article><strong data-gv-kpi="pending_requests">—</strong><small>승인·확인 대기</small></article>
     <article><strong data-gv-kpi="integrity">—</strong><small>원장·감사 무결성</small></article></div>
   <p role="status" aria-live="polite" data-point-status data-gv-status>운영 거버넌스를 확인합니다.</p>
   <div class="gv-grid"><div>
@@ -64,7 +72,10 @@
         <button type="submit">변경 요청 제출</button>
       </form></section>
     <section class="point-box"><h3>승인 대기·처리 이력</h3><div class="point-scroll"><table data-gv-requests></table></div></section>
-    <section class="point-box"><h3>이상 징후</h3><div data-gv-anomalies class="point-help">—</div></section>
+    <section class="point-box"><h3>이상 징후 (자동 탐지)</h3><div data-gv-anomalies class="point-help">—</div>
+      <div class="point-scroll"><table data-gv-anomaly-table></table></div></section>
+    <section class="point-box"><h3>활동 증빙 확인 대기</h3><div class="point-scroll"><table data-gv-claims></table></div></section>
+    <section class="point-box"><h3>사이트별 활동 증빙 어댑터</h3><div class="point-scroll"><table data-gv-adapters></table></div></section>
     <section class="point-box"><h3>회원 거래 감사 조회</h3>
       <form data-gv-member><label>사이트 ID<input name="site" required pattern="[a-z0-9_\\-]{2,64}"></label>
       <label>회원 Person ID<input name="person" required></label><button type="submit">조회(기록됨)</button></form>
@@ -76,6 +87,9 @@
     <li>요청 후 대상 정책이 바뀌면 덮어쓰지 않고 <b>변경 충돌</b>로 처리합니다. 새로 요청해 주세요.</li>
     <li>잘못된 적립은 원장을 지우지 않고 <b>역거래</b>로 정정합니다.</li>
     <li>회원 원장 조회도 감사 기록에 남습니다. 꼭 필요한 경우에만 조회해 주세요.</li>
+    <li>페이지 방문·공유 클릭은 증빙이 아닙니다. 적립은 등록된 증빙 어댑터로만 이루어집니다.</li>
+    <li>자기신고·브라우저 신호는 저신뢰로 1회 5P·하루 50P를 넘을 수 없습니다.</li>
+    <li>이상 징후는 잔액을 바꾸지 않습니다. 확인 후 필요하면 역거래를 요청해 주세요.</li>
     <li>포인트 기부는 현금 기부나 세법상 기부금이 아닙니다.</li></ul></aside></div>`;
   host.querySelector('.point-help')?.before(root);
   const $=s=>root.querySelector(s);
@@ -108,10 +122,12 @@
   for(const [k,v] of Object.entries(KINDS)){const o=document.createElement('option');o.value=k;o.textContent=v.label;kindSel.append(o);}
   function renderFields(){
     const spec=KINDS[kindSel.value],box=$('[data-gv-fields]');box.replaceChildren();
-    for(const [name,label] of spec.target){const l=document.createElement('label');l.textContent=label;const i=document.createElement('input');i.dataset.target=name;l.append(i);box.append(l);}
-    for(const [name,label,type] of spec.proposed){
+    const choice=(opts)=>{const sel=document.createElement('select');for(const [v,t] of opts){const o=document.createElement('option');o.value=v;o.textContent=t;sel.append(o);}return sel;};
+    for(const [name,label,type,opts] of spec.target){const l=document.createElement('label');l.textContent=label;const i=type==='choice'?choice(opts):document.createElement('input');i.dataset.target=name;l.append(i);box.append(l);}
+    for(const [name,label,type,opts] of spec.proposed){
       const l=document.createElement('label');l.textContent=label;let i;
-      if(type==='bool'){i=document.createElement('select');for(const [v,t] of [['','변경 안 함'],['true','활성'],['false','비활성']]){const o=document.createElement('option');o.value=v;o.textContent=t;i.append(o);}}
+      if(type==='choice')i=choice(opts);
+      else if(type==='bool'){i=document.createElement('select');for(const [v,t] of [['','변경 안 함'],['true','활성'],['false','비활성']]){const o=document.createElement('option');o.value=v;o.textContent=t;i.append(o);}}
       else{i=document.createElement('input');if(type==='int'){i.type='number';i.step='1';}}
       i.dataset.proposed=name;i.dataset.type=type;l.append(i);box.append(l);
     }
@@ -144,6 +160,20 @@
       await refresh();
     }catch(e){status(e.shown?e.message:'처리하지 못했습니다.',true);}
   }
+  async function act(path,payload,okText){
+    try{await call(path,{method:'POST',body:JSON.stringify(payload)});status(okText);await refresh();}
+    catch(e){status(e.shown?e.message:'처리하지 못했습니다.',true);}
+  }
+  function claimAction(id,approve){
+    const note=prompt(approve?'승인 메모(선택)':'반려 사유');if(note===null)return;
+    void act('/claims/'+id+'/decision',{approve,note:note||null},approve?'증빙을 승인했습니다. 적립 결과는 원장에 기록됩니다.':'증빙을 반려했습니다.');
+  }
+  function anomalyAction(id,statusValue){
+    const note=statusValue==='resolved'?prompt('종결 사유 (5자 이상, 감사 기록에 남습니다)'):'';
+    if(note===null)return;
+    void act('/anomalies/'+id+'/resolve',{status:statusValue,note:note||null},statusValue==='resolved'?'이상 징후를 종결했습니다.':'확인 처리했습니다.');
+  }
+  const buttons=(td,list)=>{for(const [label,fn] of list){const b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',fn);td.append(b,' ');}};
   $('[data-gv-member]').addEventListener('submit',async event=>{
     event.preventDefault();const f=new FormData(event.target);
     try{
@@ -157,7 +187,8 @@
   async function refresh(){
     if(busy)return;busy=true;
     try{
-      const g=(await call('/governance')).governance||{};
+      const [gov,scanBody]=await Promise.all([call('/governance'),call('/scan').catch(()=>({scan:null}))]);
+      const g=gov.governance||{},scan=scanBody.scan;
       const k=g.kpis||{};
       for(const key of ['earned_today','earners_today','outstanding','pending_requests'])$('[data-gv-kpi="'+key+'"]').textContent=fmt(k[key]??0);
       const ok=Number(g.reconciliation_drift)===0&&g.audit_chain_broken_at==null;
@@ -168,7 +199,25 @@
       for(const x of a.site_cap_hits_today||[])parts.push(x.site_id+': 일일 상한 도달 회원 '+x.members+'명');
       for(const x of a.burst_last_hour||[])parts.push(x.site_id+': 1시간 내 '+x.events+'회 적립(회원 '+String(x.user_id).slice(0,8)+'…)');
       for(const x of a.referral_heavy_inviters_today||[])parts.push(x.site_id+': 오늘 초대 보상 '+x.rewards+'건(초대자 '+String(x.inviter_person_id).slice(0,8)+'…)');
-      $('[data-gv-anomalies]').textContent=parts.length?parts.join(' · '):'감지된 이상 징후가 없습니다.';
+      $('[data-gv-anomalies]').textContent=parts.length?parts.join(' · '):'요약 지표에서 감지된 이상 징후가 없습니다.';
+      if(scan){
+        table($('[data-gv-anomaly-table]'),[['detected_at','감지',(td,r)=>td.textContent=when(r.detected_at)],
+          ['severity','심각도',(td,r)=>td.textContent=SEVERITY[r.severity]||r.severity],['kind','유형',(td,r)=>td.textContent=ANOMALY[r.kind]||r.kind],
+          ['site_id','사이트'],['person_id','회원',(td,r)=>td.textContent=r.person_id?String(r.person_id).slice(0,8)+'…':'—'],
+          ['detail','내용',(td,r)=>{const c=document.createElement('code');c.textContent=fmt(r.detail);td.append(c);}],
+          ['status','상태',(td,r)=>td.textContent=r.status==='open'?'미확인':'확인됨'],
+          ['anomaly_id','처리',(td,r)=>buttons(td,[...(r.status==='open'?[['확인',()=>anomalyAction(r.anomaly_id,'acknowledged')]]:[]),['종결',()=>anomalyAction(r.anomaly_id,'resolved')]])]],
+          Array.isArray(scan.anomalies)?scan.anomalies:[],'열린 이상 징후가 없습니다.');
+        table($('[data-gv-claims]'),[['submitted_at','신청',(td,r)=>td.textContent=when(r.submitted_at)],['site_id','사이트'],['rule_id','조건'],
+          ['adapter','증빙',(td,r)=>td.textContent=(ADAPTERS.find(a=>a[0]===r.adapter)||[,r.adapter])[1]],['source_ref','증빙 참조'],['note','설명'],
+          ['claim_id','처리',(td,r)=>buttons(td,[['승인',()=>claimAction(r.claim_id,true)],['반려',()=>claimAction(r.claim_id,false)]])]],
+          Array.isArray(scan.claims)?scan.claims:[],'확인 대기 중인 증빙이 없습니다.');
+        table($('[data-gv-adapters]'),[['site_id','사이트'],['rule_id','조건'],['adapter','어댑터',(td,r)=>td.textContent=(ADAPTERS.find(a=>a[0]===r.adapter)||[,r.adapter])[1]],
+          ['trust','신뢰',(td,r)=>td.textContent=r.trust==='verified'?'검증됨':'저신뢰'],['member_claimable','회원 신청',(td,r)=>td.textContent=r.member_claimable?'허용':'—'],
+          ['enabled','운영',(td,r)=>{td.textContent=r.enabled?'활성':'비활성';td.className=r.enabled?'point-on':'point-off';}]],
+          Array.isArray(scan.adapters)?scan.adapters:[],'등록된 증빙 어댑터가 없습니다.');
+        $('[data-gv-kpi="pending_requests"]').textContent=fmt((k.pending_requests||0)+(scan.claims||[]).length);
+      }
       const body=table($('[data-gv-requests]'),[
         ['requested_at','요청',(td,r)=>td.textContent=when(r.requested_at)],
         ['kind','종류',(td,r)=>td.textContent=KINDS[r.kind]?.label||r.kind],
