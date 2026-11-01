@@ -118,3 +118,29 @@
   .studio>.stage{position:sticky;top:76px;align-self:start;max-height:calc(100dvh - 92px)}
 }
 @media(max-width:900px){.studio>.stage{position:relative;top:auto}}
+/* 2026-11-01: slightly smaller program monitor on desktop + resizable/movable overlay sources. */
+@media(min-width:901px){
+  .studio{grid-template-columns:minmax(0,860px) 410px}
+  .studio>.stage:not(.portrait){max-height:min(62vh,calc(100dvh - 120px))}
+}
+.program-drag-handle:focus-visible{outline:3px solid #8fd1a8;outline-offset:2px}
+.program-drag-handle.resizing{border-style:solid;cursor:nwse-resize}
+.overlay-resize{position:absolute;right:-7px;bottom:-7px;width:18px;height:18px;border-radius:5px;background:#fff;border:2px solid #315b45;box-shadow:0 2px 6px #0006;cursor:nwse-resize;touch-action:none;pointer-events:auto}
+.overlay-resize::after{content:"";position:absolute;right:3px;bottom:3px;width:6px;height:6px;border-right:2px solid #315b45;border-bottom:2px solid #315b45}
+/* Studio tabs (2026-11-01): fixed-height panel, one settings section visible at a time. */
+.studio-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:3px;margin:8px 0 6px;padding:3px;background:#eef3ef;border-radius:10px}
+.studio-tab{min-height:32px;padding:5px 2px;border:0;border-radius:8px;background:transparent;color:#4f6357;font-size:12px;font-weight:800}
+.studio-tab:hover{background:#fff8}.studio-tab.active{background:#fff;color:#173730;box-shadow:0 1px 4px #1831231f}
+.studio-tab:focus-visible{outline:2px solid #315b45;outline-offset:1px}
+.studio-tabbed .studio-tab-body>details{display:none;margin:0;border:0;background:transparent}
+.studio-tabbed .studio-tab-body>details.studio-pane-active{display:block}
+.studio-tabbed .studio-tab-body>details>summary{display:none}
+.studio-tabbed .studio-tab-body>details>*:not(summary){margin-left:0;margin-right:0}
+.studio-tabbed .studio-tab-body{border:1px solid #dce5de;border-radius:11px;background:#fbfcfb;padding:9px}
+@media(min-width:901px){
+  .compact-panel.studio-tabbed{display:flex;flex-direction:column;max-height:calc(100dvh - 100px);overflow:hidden}
+  .compact-panel.studio-tabbed>*{flex:none}
+  .compact-panel.studio-tabbed .studio-tab-body{flex:1 1 auto;min-height:120px;overflow-y:auto;overscroll-behavior:contain}
+  .compact-panel.studio-tabbed .broadcast-actions{margin:8px 0 0}
+  .compact-panel.studio-tabbed .status{margin:6px 0 0;font-size:12px}
+}

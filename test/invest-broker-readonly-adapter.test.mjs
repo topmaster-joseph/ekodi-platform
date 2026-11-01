@@ -70,6 +70,9 @@ test('KIS configuration requires the switch, vault secrets and a well-formed acc
   assert.equal(kisReadOnlyConfig({ INVEST_BROKER_READONLY_KIS: 'live' }).reason, 'KIS_VAULT_CREDENTIAL_MISSING');
   assert.equal(kisReadOnlyConfig({ ...ENV, KIS_ACCOUNT_NO: '1234' }).reason, 'KIS_ACCOUNT_REFERENCE_INVALID');
   assert.equal(kisReadOnlyConfig({ ...ENV, INVEST_BROKER_READONLY_KIS: 'orders' }).reason, 'KIS_READONLY_SWITCH_OFF');
+  const { INVEST_BROKER_READONLY_KIS: _switch, ...vaultOnly } = ENV;
+  assert.equal(kisReadOnlyConfig(vaultOnly).environment, 'paper', 'vault secrets alone default to the paper server, never live');
+  assert.equal(kisReadOnlyConfig({ KIS_APP_KEY: 'k', KIS_APP_SECRET: 's' }).reason, 'KIS_READONLY_SWITCH_OFF');
   const ok = kisReadOnlyConfig(ENV);
   assert.equal(ok.enabled, true); assert.equal(ok.cano, '50000000'); assert.equal(ok.productCode, '01');
 });
@@ -163,7 +166,7 @@ function apiEnv() {
     .run(crypto.createHash('sha256').update(STEP).digest('hex'), 'owner@example.com', '2099-01-01T00:00:00.000Z', '2026-10-01T00:00:00.000Z');
   const statement = (sql, params = []) => ({ bind(...v) { return statement(sql, v); }, async first() { return sqlite.prepare(sql).get(...params) || null; },
     async all() { return { results: sqlite.prepare(sql).all(...params) }; }, async run() { const r = sqlite.prepare(sql).run(...params); return { meta: { changes: Number(r.changes) } }; } });
-  return { DB: { prepare: sql => statement(sql) }, ALLOW_MUTATIONS: 'true', ALLOWED_ORIGINS: 'https://ekodi.kr', INVEST_OWNER_EMAIL: 'owner@example.com' };
+  return { DB: { prepare: sql => statement(sql) }, ALLOW_MUTATIONS: 'true', ALLOWED_ORIGINS: 'https://ekodi.kr', INVEST_OWNER_EMAIL: 'owner@example.com', INVEST_STEP_UP_REQUIRED: 'true' };
 }
 async function call(env, path, step) {
   const original = globalThis.fetch;
@@ -195,4 +198,12 @@ test('my invest page shows the read-only broker section with mock label and vali
   assert.match(js, /\/broker\/snapshot\?broker=/); assert.match(js, /loadBrokerSnapshot\(\)/);
   assert.match(js, /r\.readOnly!==true\|\|r\.liveOrdersEnabled!==false/);
   assert.doesNotMatch(js, /innerHTML|localStorage\.setItem|sessionStorage\.setItem/);
+});
+
+test('KIS refusal carries a sanitized provider reason without account digits', async () => {
+  const { kisProviderReason } = await import('../invest-broker-readonly-adapter.js');
+  assert.deepEqual(kisProviderReason({ msg_cd: 'OPSQ2000', msg1: 'ERROR : INPUT INVALID_CHECK_ACNO 50012345' }), { code: 'OPSQ2000', message: 'ERROR : INPUT INVALID_CHECK_ACNO ******' });
+  assert.equal(kisProviderReason({}), null);
+  assert.equal(kisProviderReason({ msg_cd: '<script>', msg1: '' }), null);
+  assert.equal(kisProviderReason({ msg1: 'x'.repeat(500) }).message.length, 120);
 });

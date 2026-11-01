@@ -181,6 +181,17 @@ function boot(root) {
     adminBar.before(controls);
     controls.append(adminBar,sharedAuthBar);
   }
+  function devotionAccountLabel(value){
+    const raw=String(value||'').trim();
+    const alias=/^identity\+([a-z0-9_-]+)\.[^@\s]+@ekodi\.kr$/i.exec(raw);
+    if(alias){
+      const labels={kakao:'카카오 계정',naver:'네이버 계정',google:'Google 계정',apple:'Apple 계정',daum:'다음 계정'};
+      return labels[alias[1].toLowerCase()]||'연결 계정';
+    }
+    const local=raw.includes('@')?raw.split('@')[0]:raw;
+    const name=local||'내 계정';
+    return name.length>16?name.slice(0,15)+'…':name;
+  }
   function showSharedAccount(viewer){
     if(!sharedAuthBar)return;
     sharedAuthBar.replaceChildren();
@@ -191,7 +202,7 @@ function boot(root) {
       sharedAuthBar.append(login);
       return;
     }
-    const account=el('span','dv-shared-account',String(viewer.email||'계정').slice(0,90));
+    const account=el('span','dv-shared-account',devotionAccountLabel(viewer?.displayName||viewer?.name||viewer?.email));
     account.title=account.textContent;
     const logout=el('button','dv-date-link','로그아웃');
     logout.type='button';
@@ -587,7 +598,7 @@ function boot(root) {
       form.addEventListener('submit', event => { event.preventDefault(); storageSet(localKey, JSON.stringify({ reflection: reflection.value, prayer: prayer.value })); toast('이 기기에 저장했습니다.'); });
       return;
     }
-    note.textContent = `${session.user?.email || '내 계정'} 계정에 저장됩니다. 나만 볼 수 있고, 공유는 직접 누를 때만 이루어집니다.`;
+    note.textContent = `${devotionAccountLabel(session.user?.user_metadata?.display_name||session.user?.email)}에 저장됩니다. 나만 볼 수 있고, 공유는 직접 누를 때만 이루어집니다.`;
     let records = [];
     let existing = null;
     const paint = () => {
@@ -827,8 +838,8 @@ function boot(root) {
     const [, m, day] = d.date.split('-').map(Number);
     const head = `[${siteLabel} 오늘의 매일묵상 ${m}/${day}] ${d.passage}`;
     switch (kind) {
-      case 'poem': return { title: a.poem.title, text: `${head}\n\n〈${a.poem.title}〉\n${a.poem.lines.join('\n')}`, hash: 'poem' };
-      case 'song': return { title: a.song.title, text: `${head}\n\n♪ ${a.song.title}\n${a.song.verse.join('\n')}\n(후렴) ${a.song.refrain.join(' / ')}`, hash: 'song' };
+      case 'poem': return { title: a.poem.title, text: `${head}\n\n${a.poem.lines.join('\n')}`, hash: 'poem' };
+      case 'song': return { title: a.song.title, text: `${head}\n\n${a.song.verse.join('\n')}\n(후렴) ${a.song.refrain.join(' / ')}`, hash: 'song' };
       case 'questions': return { title: '질문 / 실천', text: `${head}\n\n${a.questions.map((q, i) => `${i + 1}. [${q.kind}] ${q.text}`).join('\n')}\n오늘의 실천: ${a.action}`, hash: 'questions' };
       case 'image': return { title: '묵상 그림', text: `${head}\n\n묵상 그림 · ${a.theme}`, hash: 'image' };
       case 'family': return { title: '가정·어린이 질문', text: `${head}\n\n👨‍👩‍👧 ${a.family}`, hash: 'family' };
@@ -839,7 +850,7 @@ function boot(root) {
         if (!mine) return null;
         return { title: '나의 한줄기도', text: `${head}\n\n${mine}`, hash: 'records' };
       }
-      default: return { title: `${siteLabel} 오늘의 매일묵상 · ${d.passage}`, text: `${head}\n${a.keyLine}`, hash: '' };
+      default: return { title: `${siteLabel} 오늘의 매일묵상 · ${d.passage}`, text: a.keyLine, hash: '' };
     }
   }
 

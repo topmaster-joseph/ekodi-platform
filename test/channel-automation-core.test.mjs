@@ -71,7 +71,7 @@ test('My EKODI and workspace admin expose separate channel automation entry poin
   assert.match(myHtml, /secondary-feature-loader\.js/);
   assert.match(myLoader, /channel-automation\.js\?v=20260903-channel-automation-1/);
   assert.match(myApp, /window\.EKODI_MY_AUTH/);
-  const myWorker=await read('my-worker.js'); assert.match(myWorker, /marketing-publish-api\.ekodi\.kr/);
+  const myWorker=await read('my-worker.js'); assert.doesNotMatch(myWorker, /marketing-publish-api\.ekodi\.kr/); assert.match(myChannel, /const API='https:\/\/ekodi\.kr\/marketing-publish-api'/);
   assert.match(myChannel, /subject_type=person/);
   assert.match(workspace, /\['publishing','채널·자동게시'\]/);
   assert.match(workspace, /subject_type=tenant/);
@@ -92,4 +92,9 @@ test('deployment gates include the channel core migration and production health 
   assert.match(manifest, /channelAutomationCore/);
   assert.match(boundaries, /channel-credential-vault\.js/);
   assert.match(boundaries, /channel-youtube-adapter\.js/);
+});
+test('YouTube OAuth callback defaults to the canonical apex path', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const src = await readFile(new URL('../channel-youtube-adapter.js', import.meta.url), 'utf8');
+  assert.match(src, /env\.CHANNEL_GOOGLE_REDIRECT_URI \|\| 'https:\/\/ekodi\.kr\/marketing-publish-api\/oauth\/youtube\/callback'/);
 });

@@ -40,6 +40,8 @@ DOMEGGOOK_MARGIN_PCT = "25"
 MALL_CURATION_SELLER_EMAIL = "joseph@ekodi.kr"
 # EKODI-MALL-DOMEGGOOK-AUTOORDER-001: provider paid API must remain OFF until account binding, contractual/PII permissions, and supervised pilot are verified.
 DOMEGGOOK_AUTO_ORDER_ENABLED = "false"
+# 2026-11-01 운영자 승인: 자동발주 OFF 상태에서 감독 하의 실발주 1건(테스트 주문)만 허용. 성공 확인 후 비운다.
+DOMEGGOOK_PILOT_ORDER_IDS = "mall_mvqml8z9_mdJ9sVYfrQpDS3"
 # Login/getMyAsset only. Independent from paid order permission. Rate limited to once per 6 hours.
 DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED = "true"
 

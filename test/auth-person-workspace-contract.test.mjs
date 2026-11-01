@@ -60,8 +60,8 @@ test('legacy Mall seller login is normalized back to Seller Studio through the c
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
   assert.match(authRouter,/https:\/\/ekodi\.kr\/ekodimall\/seller\//);
-  assert.match(authHtml,/auth-entry\.js\?v=20261028-singles-choose-account/);
-  assert.match(authEntry,/\.\/auth-router\.js\?v=20261028-singles-choose-account/);
+  assert.match(authHtml,/auth-entry\.js\?v=20261101-live-church-return-1/);
+  assert.match(authEntry,/\.\/auth-router\.js\?v=20261101-live-church-return-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
@@ -123,8 +123,8 @@ test('auth center is workspace-first and hides linked login identities outside a
 
 test('Marketing workspace labels are separated and current routed assets are force-refreshed',()=>{
   assert.match(authHtml,/auth-workspaces\.css\?v=20260817-workspace-label-1/);
-  assert.match(authHtml,/auth-entry\.js\?v=20261028-singles-choose-account/);
-  assert.match(authEntry,/\.\/auth-router\.js\?v=20261028-singles-choose-account/);
+  assert.match(authHtml,/auth-entry\.js\?v=20261101-live-church-return-1/);
+  assert.match(authEntry,/\.\/auth-router\.js\?v=20261101-live-church-return-1/);
   assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20261031-apex-return-1/);
   assert.match(authRouter,/marketing-onboarding\.js\?v=20260817-workspace-label-1/);
   assert.match(marketingOnboarding,/parts\.slice\(0,2\)/);
@@ -170,7 +170,7 @@ test('direct login mode opens the Google prompt without a second intermediate cl
 test('targeted workspace routing is available across shared and person-scoped EKODI services',()=>{
   for(const site of ['marketing','biz','books','church','lab','mall','social','energy'])assert.match(authTarget,new RegExp(`${site}:`));
   assert.match(authRouter,/targetableWorkspaceSites/);
-  assert.match(authRouter,/auth-workspace-target\.js\?v=20260817-all-sites-1/);
+  assert.match(authRouter,/auth-workspace-target\.js\?v=20261101-live-church-return-1/);
   assert.match(authTarget,/PERSON_WORKSPACE/);
   assert.match(authTarget,/PERSON_SCOPED_SITES/);
   assert.match(authTarget,/workspace_key:requested/);

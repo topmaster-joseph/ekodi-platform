@@ -206,6 +206,12 @@ const independentBoardTouched=changedFiles.some(file=>
   file==='sites/seonammedi/public/app.js'||
   file==='.github/workflows/deploy-independent-board.yml'
 );
+// Admin isolated staging (development account, workers.dev only). Its workflow
+// excludes pull_request runs, so token merges must dispatch it explicitly (#6739).
+const adminStagingTouched=changedFiles.some(file=>[
+  'admin-staging-worker.js','wrangler.admin.staging.toml','.github/workflows/deploy-admin-staging.yml',
+  'points-admin.js','points-governance-admin.js',
+].includes(file));
 const myTouched=changedFiles.some(file=>
   file.startsWith('my/')||
   file==='my-worker.js'||
@@ -362,6 +368,8 @@ const booksTouched=changedFiles.some(file=>
   file==='books-audiobook.js'||
   file==='books-sale-readiness.js'||
   file==='books-language-editions.js'||
+  file==='books-edition-approval.js'||
+  file==='migrations/202611011800_books_edition_approvals.sql'||
   file==='migrations/202610271400_books_direct_commerce.sql'||
   file==='wrangler.books.toml'||
   file==='deploy/manifests/books.worker.json'||
@@ -870,6 +878,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('Marketing Growth deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-marketing-growth.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(adminStagingTouched){
+    const dispatch=await api('/actions/workflows/deploy-admin-staging.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Admin staging deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-admin-staging.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   if(myTouched){
     const dispatch=await api('/actions/workflows/deploy-my.yml/dispatches',{

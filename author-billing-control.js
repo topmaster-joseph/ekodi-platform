@@ -4,6 +4,8 @@ const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const TOSS_API = 'https://api.tosspayments.com/v1';
 const AUTHOR_ORIGIN = 'https://author.ekodi.kr';
+const AUTHOR_APEX_ORIGIN = 'https://ekodi.kr';
+const AUTHOR_MEMBERSHIP = 'https://ekodi.kr/author/#membership';
 const PAID_PLANS = new Set(['author', 'pro']);
 const enc = new TextEncoder();
 
@@ -94,12 +96,16 @@ function addMonth(value) {
 }
 
 function validReturnTo(raw) {
+  // Canonical return is the apex path; the retired host is still accepted so in-flight
+  // card registrations started there can come back, but it is never the default.
   try {
-    const target = new URL(String(raw || `${AUTHOR_ORIGIN}/#membership`));
-    if (target.protocol !== 'https:' || target.origin !== AUTHOR_ORIGIN) return `${AUTHOR_ORIGIN}/#membership`;
+    const target = new URL(String(raw || AUTHOR_MEMBERSHIP));
+    if (target.protocol !== 'https:') return AUTHOR_MEMBERSHIP;
+    const apex = target.origin === AUTHOR_APEX_ORIGIN && (target.pathname === '/author' || target.pathname.startsWith('/author/'));
+    if (!apex && target.origin !== AUTHOR_ORIGIN) return AUTHOR_MEMBERSHIP;
     return target.href;
   } catch {
-    return `${AUTHOR_ORIGIN}/#membership`;
+    return AUTHOR_MEMBERSHIP;
   }
 }
 

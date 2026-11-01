@@ -110,7 +110,11 @@ test('My EKODI staging is isolated from production personal data',async()=>{
   assert.match(prod,/DATA_ENABLED = "true"/);
   assert.match(prod,/workers_dev = true/);
   assert.doesNotMatch(prod,/my\.ekodi\.kr/);
-  assert.match(staging,/DATA_ENABLED = "false"/);
+  // Owner decision (2026-11-02, #6739): staging may read the DEVELOPMENT project
+  // only; production project identifiers and secret keys must never appear.
+  assert.match(staging,/DATA_ENABLED = "(true|false)"/);
+  assert.match(staging,/DATA_ENABLED = "false"|SUPABASE_URL = "https:\/\/lxcxwbdwwojjkgybbqii\.supabase\.co"/);
+  assert.doesNotMatch(staging,/renzehysxirjilvdxacv|sb_secret_|service_role/);
   assert.doesNotMatch(staging,/my\.ekodi\.kr/);
   assert.match(worker,/dataEnabled/);
   assert.match(worker,/person-scoped/);
@@ -231,7 +235,7 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
 
 test('My guarded release manifest follows the lazy startup contract',async()=>{
   const manifest=await read('deploy/manifests/my.worker.json');
-  assert.match(manifest,/app\.js\?v=20261009-hash-routing-v2/);
+  assert.match(manifest,/app\.js\?v=20261102-one-glance-v1/);
   assert.match(manifest,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
   assert.doesNotMatch(manifest,/church-marketing-ai\.js\?v=20260827-church-marketing-1/);
   assert.doesNotMatch(manifest,/channel-automation\.js\?v=20260903-channel-automation-1/);
@@ -315,7 +319,7 @@ test('My EKODI provides explicit privacy-first personal character selection',asy
 
 test('My versioned assets use immutable browser caching while runtime data remains uncached',async()=>{
   const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
-  assert.match(html,/app\.js\?v=20261009-hash-routing-v2/);
+  assert.match(html,/app\.js\?v=20261102-one-glance-v1/);
   assert.match(worker,/searchParams\.has\('v'\)/);
   assert.match(worker,/public, max-age=31536000, immutable/);
   assert.match(worker,/manifest-fallback'[\s\S]{0,220}withVersionedAssetCache\(request/);

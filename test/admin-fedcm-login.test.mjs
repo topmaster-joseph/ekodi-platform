@@ -46,5 +46,5 @@ test('admin auth preserves allowlist and expired-challenge recovery', () => {
   assert.match(adminAuth, /setTimeout\(prepare,350\)/);
   assert.match(adminAuth, /event\.origin!==GOOGLE_BRIDGE_ORIGIN/);
   assert.match(adminAuth, /event\.source!==popup/);
-  assert.match(authRouter, /admin-auth\.js\?v=20260918-canonical-origin-2/);
+  assert.match(authRouter, /admin-auth\.js\?v=20261101-operator-linked-login-1/);
 });

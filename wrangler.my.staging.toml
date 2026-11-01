@@ -5,7 +5,13 @@ workers_dev = true
 preview_urls = false
 
 [vars]
-DATA_ENABLED = "false"
+# Isolated staging reads the DEVELOPMENT Supabase project only (#6739).
+# The publishable key is public by design; data access is enforced by RLS and
+# authenticated RPCs. Production project values never appear in this file.
+DATA_ENABLED = "true"
+POINTS_ENABLED = "true"
+SUPABASE_URL = "https://lxcxwbdwwojjkgybbqii.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_SyaM4rBxa1JdE9arZrhULg_z1BIQRXL"
 DATA_MODE = "isolated-staging"
 AUTH_URL = "https://ekodi.kr/auth/?site=my"
 

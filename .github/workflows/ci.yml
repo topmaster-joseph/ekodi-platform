@@ -6,6 +6,9 @@ on:
     paths-ignore:
       - 'monitor-status.json'
   pull_request:
+    # When a draft becomes ready, re-run all required checks and verify the
+    # current merge commit before protected merge. Drafts skip merge repair.
+    types: [opened, synchronize, reopened, ready_for_review]
   merge_group:
     types: [checks_requested]
   # Convergence re-runs required checks after an Actions-token update-branch,

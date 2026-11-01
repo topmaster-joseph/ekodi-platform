@@ -5,7 +5,7 @@
     "config": "wrangler.journal.toml",
     "requests": [
       {
-        "url": "https://journal.ekodi.kr/",
+        "url": "https://ekodi.kr/journal/",
         "statuses": [
           200
         ],
@@ -19,7 +19,7 @@
         ]
       },
       {
-        "url": "https://journal.ekodi.kr/health",
+        "url": "https://ekodi.kr/journal/health",
         "statuses": [
           200
         ],
@@ -30,7 +30,7 @@
         ]
       },
       {
-        "url": "https://journal.ekodi.kr/feed.xml",
+        "url": "https://ekodi.kr/journal/feed.xml",
         "statuses": [
           200
         ],
@@ -41,7 +41,7 @@
         ]
       },
       {
-        "url": "https://journal.ekodi.kr/admin",
+        "url": "https://ekodi.kr/journal/admin",
         "statuses": [
           301,
           302,
@@ -50,7 +50,7 @@
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://admin.ekodi.kr/journal"
+          "location: https://ekodi.kr/admin/journal"
         ]
       }
     ],

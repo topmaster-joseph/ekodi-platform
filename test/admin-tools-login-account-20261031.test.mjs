@@ -14,7 +14,7 @@ test('portal login returns to the two admin tools only, and can force a Google a
   assert.match(src,/if\(ADMIN_TOOL_CHOOSE_ACCOUNT\)\{await renderGoogle\(\);return\}/);
   assert.match(src,/const adminToolReturn=config\.kind==='portal'&&target\.origin==='https:\/\/ekodi\.kr'\s*&&\['\/admin\/site-admins','\/admin\/site-admins\/','\/admin\/people','\/admin\/people\/'\]\.includes\(target\.pathname\);/);
   assert.match(src,/const internalEkodi=adminReturn\|\|adminToolReturn\|\|/);
-  assert.match(await read('auth-site/auth-router.js'),/client-auth\.js\?v=20261031-admin-tools-account-1/);
+  assert.match(await read('auth-site/auth-router.js'),/client-auth\.js\?v=20261101-live-church-return-1/);
 });
 
 for(const [name,factory] of [['person authority',personAuthorityScript],['site admin bootstrap',siteAdminBootstrapScript]]){

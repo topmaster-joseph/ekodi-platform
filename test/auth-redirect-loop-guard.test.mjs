@@ -25,7 +25,7 @@ test('central auth loop guard does not block interactive management or reload re
 
 test('auth router starts only after the loop decision and retry opens a fresh flow',()=>{
   assert.doesNotMatch(html,/<script type="module" src="\/auth-router\.js/);
-  assert.match(html,/<script type="module" src="\/auth-entry\.js\?v=20261028-singles-choose-account"><\/script>/);
-  assert.match(entry,/return import\('\.\/auth-router\.js\?v=20261028-singles-choose-account'\)/);
+  assert.match(html,/<script type="module" src="\/auth-entry\.js\?v=20261101-live-church-return-1"><\/script>/);
+  assert.match(entry,/return import\('\.\/auth-router\.js\?v=20261101-live-church-return-1'\)/);
   assert.match(entry,/retry\?\.addEventListener\('click'/);
 });

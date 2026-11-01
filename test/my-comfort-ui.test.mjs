@@ -85,7 +85,7 @@ test('My EKODI hash routing keeps hidden sections authoritative and suppresses d
   assert.match(hubCss,/body\[data-auth-state="member"\] \.my-tab-section\[hidden\]/);
   assert.match(hubCss,/html\[data-ekodi-character="off"\] body \.ekodi-main-ekodian/);
   assert.match(html,/hub-shell\.css\?v=[0-9]{8}-[a-z0-9-]+/);
-  assert.match(html,/app\.js\?v=20261009-hash-routing-v2/);
+  assert.match(html,/app\.js\?v=20261102-one-glance-v1/);
 });
 
 test('My EKODI separates customized footer guidance from the shared legal footer',()=>{

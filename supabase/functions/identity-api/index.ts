@@ -442,7 +442,10 @@ async function finishLink(req:Request,userId:string,provider:string){
     await writeIdentityAudit(initiatorPersonId,userId,"identity.merge_review_required",provider,null,{
       independentAccount:true
     });
-    return json(req,{error:"account_merge_review_required"},409);
+    // Both logins are now proven by the same person. Record an owner-decided merge
+    // request with a read-only inventory; nothing is moved until the owner approves.
+    const mergeRequest=initiatorPersonId?await openMergeRequest(initiatorPersonId,targetPersonId,userId,target.user.id,provider):null;
+    return json(req,{error:"account_merge_review_required",mergeRequest},409);
   }
   const {data:personId,error:linkError}=await admin.rpc("link_person_identity",{
     p_initiator_user_id:userId,
@@ -488,6 +491,87 @@ async function disconnectIdentity(req:Request,userId:string,identityId:string){
   return json(req,{ok:true,ekodiId},200);
 }
 
+
+// ---- Owner-decided Person merge, phase 1 (request + inventory, no data movement) ----
+function publicMergeRequest(row:any){
+  if(!row)return null;
+  return {id:row.id,status:row.status,provider:row.proven_provider,createdAt:row.created_at,
+    expiresAt:row.expires_at,inventory:row.inventory??{}};
+}
+async function openMergeRequest(survivorPersonId:string,absorbedPersonId:string,initiatorUserId:string,provenUserId:string,provider:string){
+  try{
+    const {data:existing,error:existingError}=await admin.from("person_merge_requests").select("*")
+      .eq("survivor_person_id",survivorPersonId).eq("absorbed_person_id",absorbedPersonId)
+      .in("status",["pending","approved"]).maybeSingle();
+    if(existingError)throw existingError;
+    const {data:inventory,error:inventoryError}=await admin.rpc("person_merge_inventory",
+      {p_survivor:survivorPersonId,p_absorbed:absorbedPersonId});
+    if(inventoryError)throw inventoryError;
+    const expiresAt=new Date(Date.now()+30*60*1000).toISOString();
+    let row:any;
+    if(existing){
+      const {data,error}=await admin.from("person_merge_requests").update({inventory,expires_at:expiresAt,
+        initiator_user_id:initiatorUserId,proven_user_id:provenUserId,proven_provider:provider})
+        .eq("id",existing.id).select("*").single();
+      if(error)throw error;row=data;
+    }else{
+      const {data,error}=await admin.from("person_merge_requests").insert({survivor_person_id:survivorPersonId,
+        absorbed_person_id:absorbedPersonId,initiator_user_id:initiatorUserId,proven_user_id:provenUserId,
+        proven_provider:provider,inventory,expires_at:expiresAt}).select("*").single();
+      if(error)throw error;row=data;
+    }
+    await writeIdentityAudit(survivorPersonId,initiatorUserId,"identity.merge_requested",provider,null,{
+      mergeRequestId:row.id,verdict:inventory?.verdict??null,absorbedRows:inventory?.absorbedRows??null
+    });
+    return publicMergeRequest(row);
+  }catch(error){
+    // The link stays refused either way; a missing request only means no report yet.
+    console.error("merge request",(error as Error)?.message||error);
+    return null;
+  }
+}
+async function ownMergeRequest(userId:string,id:string){
+  const personId=await personForUser(userId);
+  if(!personId)return null;
+  const {data,error}=await admin.from("person_merge_requests").select("*").eq("id",id).maybeSingle();
+  if(error)throw error;
+  // Only the surviving Person (the account that started the link) may see or act on it.
+  return data&&data.survivor_person_id===personId?data:null;
+}
+async function getMergeRequest(req:Request,userId:string,id:string){
+  const row=await ownMergeRequest(userId,id);
+  if(!row)return json(req,{error:"not_found"},404);
+  if(row.status==="pending"&&new Date(row.expires_at).getTime()<Date.now()){
+    await admin.from("person_merge_requests").update({status:"expired"}).eq("id",row.id).eq("status","pending");
+    row.status="expired";
+  }
+  return json(req,{ok:true,mergeRequest:publicMergeRequest(row)});
+}
+async function cancelMergeRequest(req:Request,userId:string,id:string){
+  const row=await ownMergeRequest(userId,id);
+  if(!row)return json(req,{error:"not_found"},404);
+  if(row.status!=="pending")return json(req,{error:"merge_request_not_pending"},409);
+  const {error}=await admin.from("person_merge_requests").update({status:"cancelled",decided_at:new Date().toISOString()})
+    .eq("id",row.id).eq("status","pending");
+  if(error)throw error;
+  await writeIdentityAudit(row.survivor_person_id,userId,"identity.merge_cancelled",row.proven_provider,null,{mergeRequestId:row.id});
+  return json(req,{ok:true,status:"cancelled"});
+}
+
+// Owner executes the merge. The DB function re-checks ownership, expiry and the
+// inventory at decision time and refuses anything with payment or service data.
+async function executeMergeRequest(req:Request,userId:string,id:string){
+  const row=await ownMergeRequest(userId,id);
+  if(!row)return json(req,{error:"not_found"},404);
+  const {data,error}=await admin.rpc("person_merge_execute",{p_request:row.id,p_actor:userId});
+  if(error)throw error;
+  if(data?.ok!==true){
+    const code=String(data?.error||"merge_failed");
+    const status=code==="merge_request_expired"?410:code==="merge_owner_required"?403:409;
+    return json(req,{error:code,inventory:data?.inventory??null,blocking:data?.blocking??null},status);
+  }
+  return json(req,{ok:true,moved:data.moved});
+}
 function providerFrom(path:string,suffix:string){
   const match=path.match(new RegExp(`^/providers/([a-z0-9_-]+)${suffix.replaceAll("/","\\/")}$`));
   return match?.[1]??null;
@@ -523,6 +607,10 @@ Deno.serve(async(req)=>{
     const linkExchangeProvider=providerFrom(path,"/link/exchange");
     if(req.method==="POST"&&linkExchangeProvider)return await finishLink(req,user.id,linkExchangeProvider);
 
+    const mergeMatch=path.match(/^\/merge-requests\/([0-9a-f-]{36})(\/cancel|\/execute)?$/i);
+    if(mergeMatch&&req.method==="GET"&&!mergeMatch[2])return await getMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
+    if(mergeMatch&&req.method==="POST"&&mergeMatch[2]==="/cancel")return await cancelMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
+    if(mergeMatch&&req.method==="POST"&&mergeMatch[2]==="/execute")return await executeMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
     const identityMatch=path.match(/^\/identities\/([0-9a-f-]{36})$/i);
     if(req.method==="DELETE"&&identityMatch)return await disconnectIdentity(req,user.id,identityMatch[1]);
     return json(req,{error:"not_found"},404);

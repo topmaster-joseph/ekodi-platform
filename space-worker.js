@@ -26,7 +26,7 @@ const MISSION_TRIP_COLLAB_PATH='/ekodimission/edit/261003-autumn-trip';
 const MISSION_COLLAB_API='/ekodimission/api/collab';
 const MISSION_ADMIN_ACTIVITY_RPC_API='/ekodimission/api/admin/activity-rpc';
 const MISSION_ADMIN_ME_API='/ekodimission/api/admin/me';
-const MISSION_ADMIN_ACTIVITY_RPCS=new Set(['activity_admin_snapshot','activity_admin_update_participation','activity_admin_add_participant','activity_admin_share_status','activity_admin_create_share','activity_admin_revoke_share','activity_admin_upsert_media_link','activity_admin_hide_media_link','activity_admin_payment_snapshot','activity_admin_update_payment','activity_admin_message_recipients','activity_admin_record_message','activity_admin_message_history']);
+const MISSION_ADMIN_ACTIVITY_RPCS=new Set(['activity_admin_snapshot','activity_admin_update_participation','activity_admin_add_participant','activity_admin_share_status','activity_admin_create_share','activity_admin_revoke_share','activity_admin_upsert_media_link','activity_admin_hide_media_link','activity_admin_payment_snapshot','activity_admin_update_payment','activity_admin_message_recipients','activity_admin_record_message','activity_admin_message_history','ekodi_points_operator_award_attendance']);
 const MISSION_SHARE_PATH_RE=/^\/ekodimission\/share\/([A-Za-z0-9_-]{32,200})$/;
 const MISSION_ACTIVITY_ARCHIVE_RE=/^\/ekodimission\/activities\/([a-z0-9-]+)\/archive$/;
 const MISSION_ACTIVITY_MEDIA_RE=/^\/ekodimission\/api\/activities\/([a-z0-9-]+)\/media$/;
@@ -456,7 +456,7 @@ async function submitMissionEventApplication(request,env,eventKey=MISSION_EVENT_
   }catch{return json(env,{ok:false,error:'application_unavailable',message:'신청을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.'},503)}
 }
 async function publicSiteChrome(slug){
-  try{const r=await fetch(`https://workspace-api.ekodi.kr/v1/site-chrome/public?subject_key=${encodeURIComponent(slug)}`,{headers:{accept:'application/json'},signal:AbortSignal.timeout(5000)});if(!r.ok)return null;const data=await r.json().catch(()=>null);return data&&typeof data==='object'?data:null}catch{return null}
+  try{const r=await fetch(`https://ekodi.kr/workspace-api/v1/site-chrome/public?subject_key=${encodeURIComponent(slug)}`,{headers:{accept:'application/json'},signal:AbortSignal.timeout(5000)});if(!r.ok)return null;const data=await r.json().catch(()=>null);return data&&typeof data==='object'?data:null}catch{return null}
 }
 async function publicStorefront(slug,env){
   if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return null;

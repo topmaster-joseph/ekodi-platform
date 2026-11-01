@@ -1,5 +1,6 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { applyPreferenceAction, buildPersonalizedServiceView, normalizePreference, normalizeSignal } from './progressive-personalization.js';
+import { createEkodiActivityTracker } from './points-active-client.js';
 
 const cfg=window.EKODI_MY_CONFIG||{};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -10,7 +11,7 @@ window.addEventListener('ekodi:user-character-ready',enforceMyVisualIsolation);
 
 const MODES={writer:'Writer',video:'Video',podcast:'Podcast',lecture:'Educator',research:'Research',visual:'Visual',mission:'Mission',ai:'AI Creator'};
 const SERVICES=[
- ['church','에코디교회','https://ekodi.kr/ekodichurch'],['biz','에코디비즈','https://ekodi.kr/ekodibiz'],['books','출판','https://books.ekodi.kr'],['author','Creator AI','https://author.ekodi.kr'],['lab','에코디연구소','https://ekodi.kr/ekodilab'],['community','커뮤니티','https://ekodi.kr/community'],['work','에코디워크 · 구인구직','https://ekodi.kr/work'],['social','EKODI Social','https://social.ekodi.kr'],['energy','Energy AI','https://energy.ekodi.kr'],['business','Business OS','https://ekodi.kr/business'],['mall','에코디몰','https://ekodi.kr/ekodimall'],['marketing','Marketing AI','https://ekodi.kr/ekodibiz/marketing-ai']
+ ['church','에코디교회','https://ekodi.kr/ekodichurch'],['biz','에코디비즈','https://ekodi.kr/ekodibiz'],['books','출판','https://ekodi.kr/books'],['author','Creator AI','https://ekodi.kr/author'],['lab','에코디연구소','https://ekodi.kr/ekodilab'],['community','커뮤니티','https://ekodi.kr/community'],['work','에코디워크 · 구인구직','https://ekodi.kr/work'],['social','EKODI Social','https://social.ekodi.kr'],['energy','Energy AI','https://energy.ekodi.kr'],['business','Business OS','https://ekodi.kr/business'],['mall','에코디몰','https://ekodi.kr/ekodimall'],['marketing','Marketing AI','https://ekodi.kr/ekodibiz/marketing-ai']
 ];
 const OPEN_SSO_SITES=new Set(['social','energy']);
 // Registered customer-owned entry points are eligible for credential handoff recovery,
@@ -20,12 +21,51 @@ const SSO_SITES=new Set(['church','biz','books','author','lab','community','work
 const TARGETABLE_WORKSPACE_SITES=new Set(['church','biz','books','lab','mall','marketing','social','energy']);
 const WORKSPACE_ENTRY_PRIORITY=['biz','marketing','mall','church','books','lab','business','community','work','author','social','energy'];
 const authUrl=cfg.authUrl||'https://ekodi.kr/auth/?site=my';
+function signedOutLoginUrl(){
+ const target=new URL(authUrl,location.origin);
+ if(!target.searchParams.has('site'))target.searchParams.set('site','my');
+ target.searchParams.set('return_to',location.origin+location.pathname+location.search+location.hash);
+ return target.href;
+}
+function redirectSignedOutToLogin(){
+ document.body.dataset.authState='redirect';
+ location.replace(signedOutLoginUrl());
+}
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
 const PROFILE_API=enabled?`${cfg.supabaseUrl}/functions/v1/profile-api`:'';
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
 let session=null,items=[],access=new Map(),workspaces=new Map(),filter='all',activeWorkspaceKey='',profile=null,linkedIdentities=[],profileError='';
 let personalizationPreferences=new Map(),personalizationSignals=[],ephemeralSignals=[],discoveryOpen=false;
 window.EKODI_MY_AUTH=Object.freeze({getAccessToken:()=>String(session?.access_token||''),getUserId:()=>String(session?.user?.id||''),isSignedIn:()=>Boolean(session?.access_token)});
+// Browser signals are not proof of reading or attending. A user must opt in
+// during this page session; both platform DATA_ENABLED and POINTS_ENABLED
+// must be explicitly active before the module can contact the point RPC.
+const myPointsTracker = cfg.pointsEnabled===true && enabled
+  ? createEkodiActivityTracker({supabase:sb,siteId:'my',enabled:true,
+      onAward:()=>{const status=$('#activityPointsStatus');if(status)status.textContent='활동포인트 적립 여부는 내 포인트에서 확인할 수 있습니다.';}})
+  : null;
+function syncMyActivityTracker(){
+  const toggle=$('#activityPointsOptIn'),box=$('#activityPointsControls'),status=$('#activityPointsStatus');
+  if(!toggle||!box)return;
+  const eligible=Boolean(myPointsTracker&&session?.access_token);
+  box.hidden=!eligible;
+  if(!eligible){myPointsTracker?.stop();toggle.checked=false;return;}
+  const active=toggle.checked&&location.hash==='#activity'
+    &&document.visibilityState==='visible';
+  if(active){
+    myPointsTracker.start();
+    if(status)status.textContent='활동시간 측정 중 · 실제 적립은 사이트별 서버 정책과 일일 상한에 따릅니다.';
+  }else{
+    myPointsTracker.stop();
+    if(status)status.textContent=toggle.checked
+      ? '활동 화면을 벗어나 측정을 중지했습니다.'
+      : '기본적으로 측정하지 않습니다. 동의하면 내 활동 탭에서만 측정합니다.';
+  }
+}
+$('#activityPointsOptIn')?.addEventListener('change',syncMyActivityTracker);
+document.addEventListener('visibilitychange',syncMyActivityTracker);
+window.addEventListener('pagehide',()=>myPointsTracker?.stop());
+
 
 const ACCESS_CONTEXT_RUNTIME='batched-snapshot-no-fanout-v3';
 const ACCESS_SNAPSHOT_TTL_MS=5*60*1000;
@@ -107,7 +147,10 @@ function syncSurfaceState({scroll=false}={}){
  document.body.dataset.authState=signedIn?'member':'guest';
  document.body.dataset.homeMode=signedIn&&key?'focus':'home';
  document.body.dataset.activeTab=tab;
+ syncMyActivityTracker();
  document.querySelectorAll('[data-my-tab-section]').forEach(section=>{section.hidden=signedIn?section.dataset.myTabSection!==tab:section.dataset.myTabSection!=='home'});
+ if(signedIn&&tab==='account')syncAccountTabs();
+ if(signedIn&&tab==='services')syncServiceTabs();
  document.querySelectorAll('[data-member-only]').forEach(section=>{section.hidden=!signedIn||tab!=='home'});
  syncHomePanels();
  document.querySelectorAll('[data-focus-surface]').forEach(section=>{section.hidden=!signedIn||section.dataset.focusSurface!==key});
@@ -126,42 +169,52 @@ function syncSurfaceState({scroll=false}={}){
   });
  }
 }
-let activeAccountTab='menu';
+// One-glance layout (2026-11-02): sub-sections are a single row of tab buttons with
+// the chosen content right below; the old card menu step is no longer shown.
+const ACCOUNT_TABS=['basic','public','character','security','ai'];
+let activeAccountTab='basic';
 function syncAccountTabs(){
- const isMenu=activeAccountTab==='menu';
- document.querySelectorAll('[data-account-menu]').forEach(node=>{node.hidden=!isMenu});
- document.querySelectorAll('[data-account-nav]').forEach(node=>{node.hidden=isMenu});
+ if(!ACCOUNT_TABS.includes(activeAccountTab))activeAccountTab='basic';
+ const isMenu=false;
+ // Owner request 2026-11-02: the card menu stays in place as the tab row; the chosen
+ // section opens directly below it. The separate sub-tab strip is not used.
+ document.querySelectorAll('[data-account-menu]').forEach(node=>{node.hidden=false});
+ document.querySelectorAll('[data-account-nav]').forEach(node=>{node.hidden=true});
+ document.querySelectorAll('[data-account-open]').forEach(button=>{const on=button.dataset.accountOpen===activeAccountTab;button.setAttribute('aria-pressed',String(on));button.classList.toggle('is-active',on)});
  document.querySelectorAll('[data-account-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.accountTab===activeAccountTab)));
  document.querySelectorAll('[data-account-panel]').forEach(panel=>{panel.hidden=isMenu||panel.dataset.accountPanel!==activeAccountTab});
 }
 function setAccountTab(tab){
- if(!['menu','basic','public','character','security','ai'].includes(tab))tab='menu';
+ if(!ACCOUNT_TABS.includes(tab))tab=activeAccountTab||'basic';
  activeAccountTab=tab;syncAccountTabs();
  try{sessionStorage.setItem('ekodi_my_account_tab',tab)}catch{}
 }
 function initAccountTabs(){
- activeAccountTab='menu';
+ try{const saved=sessionStorage.getItem('ekodi_my_account_tab');activeAccountTab=ACCOUNT_TABS.includes(saved)?saved:'basic'}catch{activeAccountTab='basic'}
  document.querySelectorAll('[data-account-tab]').forEach(button=>button.addEventListener('click',()=>setAccountTab(button.dataset.accountTab||'basic')));
  document.querySelectorAll('[data-account-open]').forEach(button=>button.addEventListener('click',()=>setAccountTab(button.dataset.accountOpen||'basic')));
  document.querySelectorAll('[data-account-back]').forEach(button=>button.addEventListener('click',()=>setAccountTab('menu')));
  syncAccountTabs();
 }
 
-let activeServicesTab='menu';
+const SERVICES_TABS=['services','spaces','status'];
+let activeServicesTab='services';
 function syncServiceTabs(){
- const isMenu=activeServicesTab==='menu';
- document.querySelectorAll('[data-services-menu]').forEach(node=>{node.hidden=!isMenu});
- document.querySelectorAll('[data-services-nav]').forEach(node=>{node.hidden=isMenu});
+ if(!SERVICES_TABS.includes(activeServicesTab))activeServicesTab='services';
+ const isMenu=false;
+ document.querySelectorAll('[data-services-menu]').forEach(node=>{node.hidden=false});
+ document.querySelectorAll('[data-services-nav]').forEach(node=>{node.hidden=true});
+ document.querySelectorAll('[data-services-open]').forEach(button=>{const on=button.dataset.servicesOpen===activeServicesTab;button.setAttribute('aria-pressed',String(on));button.classList.toggle('is-active',on)});
  document.querySelectorAll('[data-services-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.servicesTab===activeServicesTab)));
  document.querySelectorAll('[data-services-panel]').forEach(panel=>{panel.hidden=isMenu||panel.dataset.servicesPanel!==activeServicesTab});
 }
 function setServicesTab(tab){
- if(!['menu','services','spaces','status'].includes(tab))tab='menu';
+ if(!SERVICES_TABS.includes(tab))tab=activeServicesTab||'services';
  activeServicesTab=tab;syncServiceTabs();
  try{sessionStorage.setItem('ekodi_my_services_tab',tab)}catch{}
 }
 function initServiceTabs(){
- activeServicesTab=location.hash==='#workspaces'?'spaces':'menu';
+ activeServicesTab=location.hash==='#workspaces'?'spaces':'services';
  document.querySelectorAll('[data-services-tab]').forEach(button=>button.addEventListener('click',()=>setServicesTab(button.dataset.servicesTab||'services')));
  document.querySelectorAll('[data-services-open]').forEach(button=>button.addEventListener('click',()=>setServicesTab(button.dataset.servicesOpen||'services')));
  document.querySelectorAll('[data-services-back]').forEach(button=>button.addEventListener('click',()=>setServicesTab('menu')));
@@ -171,7 +224,8 @@ let activeHomePanel='intent';
 function syncHomePanels(){
  const signedIn=Boolean(session?.access_token),tab=signedIn?activeTabKey():'home';
  document.body.dataset.homePanel=activeHomePanel;
- document.querySelectorAll('[data-home-panel]').forEach(panel=>{
+ // body carries data-home-panel as a state marker; it must never be treated as a panel.
+ document.querySelectorAll('[data-home-panel]:not(body)').forEach(panel=>{
   if(!signedIn){panel.hidden=panel.id==='memberHome';return}
   panel.hidden=tab!=='home'||panel.dataset.homePanel!==activeHomePanel;
  });
@@ -337,7 +391,10 @@ function profileUi(){
  if(!session){input.value='';input.disabled=true;save.disabled=true;status.className='profile-status';status.textContent='로그인하면 내 기본정보를 확인하고 수정할 수 있습니다.';host.innerHTML='<span class="identity-row muted-row">로그인 후 연결 계정을 확인합니다.</span>';return}
  if(profileError){input.value='';input.disabled=true;save.disabled=true;status.className='profile-status error';status.textContent=profileError;host.innerHTML='<span class="identity-row muted-row">연결 계정을 불러오지 못했습니다.</span>';return}
  input.disabled=false;save.disabled=false;input.value=profile?.display_name||'';status.className='profile-status';status.textContent='이 이름은 개인 정체성에 사용되며 사업장·단체 이름과 분리됩니다.';
- host.innerHTML=linkedIdentities.length?linkedIdentities.map(identity=>`<span class="identity-row"><span>${esc(identity.email||'Google 계정')}</span>${identity.is_primary?'<b>기본 계정</b>':'<b>연결 계정</b>'}</span>`).join(''):'<span class="identity-row muted-row">연결된 Google 계정이 없습니다.</span>';
+ const providerName={google:'구글',kakao:'카카오·다음',naver:'네이버',apple:'Apple',microsoft:'Microsoft',passkey:'패스키'};
+ // Redirect providers sign in with an internal alias address; show the provider, never the alias.
+ const visibleEmail=email=>/^identity\+[a-z]+\.[a-f0-9]{32}@ekodi\.kr$/i.test(String(email||''))?'':String(email||'');
+ host.innerHTML=linkedIdentities.length?linkedIdentities.map(identity=>{const name=providerName[identity.provider]||identity.provider||'로그인';const email=visibleEmail(identity.email);return `<span class="identity-row"><span><strong>${esc(name)}</strong>${email?` · ${esc(email)}`:''}</span>${identity.is_primary?'<b>기본</b>':'<b>연결됨</b>'}</span>`}).join(''):'<span class="identity-row muted-row">연결된 로그인 수단이 없습니다.</span>';
 }
 function summaryUi(){
  const connectedCount=session?SERVICES.filter(([id])=>connected(id)).length:0;
@@ -509,7 +566,19 @@ if(MISROUTED_SERVICE_RETURN){
  location.replace(MISROUTED_SERVICE_RETURN.href);
 }else if(!enabled){authUi();await loadAll()}else{
  try{await handoff()}catch(e){console.error('auth handoff',e)}
- const {data}=await sb.auth.getSession();session=data.session;authUi();announceSession();
- try{await loadAll()}catch(e){console.error('My EKODI load',e)}
- sb.auth.onAuthStateChange(async(_e,next)=>{session=next;authUi();announceSession();await loadAll()});
+ const {data}=await sb.auth.getSession();session=data.session;
+ // My EKODI is a personal space: a signed-out visitor never sees it and goes
+ // straight to central login, returning here afterwards.
+ if(!session){redirectSignedOutToLogin()}else{
+  authUi();announceSession();
+  try{await loadAll()}catch(e){console.error('My EKODI load',e)}
+  sb.auth.onAuthStateChange(async(event,next)=>{
+   // Stop consent-based activity measurement on sign-out or account switch.
+   if(event==='SIGNED_OUT'||!next||(session?.user?.id&&next?.user?.id&&session.user.id!==next.user.id)){
+    myPointsTracker?.stop();
+    const toggle=$('#activityPointsOptIn');if(toggle)toggle.checked=false;
+   }
+   session=next;if(!session){redirectSignedOutToLogin();return}authUi();announceSession();await loadAll();
+  });
+ }
 }

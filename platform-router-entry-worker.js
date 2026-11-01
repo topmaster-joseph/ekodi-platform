@@ -676,12 +676,9 @@ async function routePlatform(request,env,ctx){
       if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return injectEkodiShell(mailUserPage(),'mail');
     }
 
-    if(host===MESSENGER_HOST&&request.method==='GET'){
-      if(url.pathname==='/'||url.pathname===''){
-        const response=await withReleaseMarker(messengerUserPage());
-        return injectEkodiShell(response,'messenger');
-      }
-      if(url.pathname==='/messenger-ui.js')return messengerUiScript();
+    if(host===MESSENGER_HOST&&['GET','HEAD'].includes(request.method)){
+      // Apex-path-only policy: the retired subdomain never serves the app; it points to ekodi.kr/messenger.
+      return new Response(null,{status:308,headers:{location:'https://ekodi.kr/messenger','cache-control':'no-store','x-ekodi-messenger-route':'canonical-apex'}});
     }
 
     if(host===INVEST_HOST&&['GET','HEAD'].includes(request.method)){

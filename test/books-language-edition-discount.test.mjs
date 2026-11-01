@@ -21,14 +21,17 @@ function d1() {
 }
 const grant = (db, userId, bookId, revoked = null) => db.raw.prepare('INSERT INTO books_entitlements (buyer_user_id, book_id, order_id, buyer_email, granted_at, revoked_at) VALUES (?,?,?,?,?,?)').run(userId, bookId, 'EKB-x-' + bookId, 'r@example.com', '2026-10-31', revoked);
 
-test('English edition is catalogued as a separate edition of the same work, not yet for sale', () => {
+test('English edition is catalogued as a separate edition of the same work and is sale-ready', () => {
   assert.equal(en.workId, ko.workId);
   assert.equal(en.language, 'en');
   assert.equal(ko.language, 'ko');
   assert.equal(en.links.amazon, '', 'no invented Amazon link');
   assert.equal(en.identifiers.amazonAsin, '', 'no invented ASIN');
-  assert.equal(en.listPrice.amount, 0, 'price is a human decision, not invented');
-  assert.equal(saleReadiness(en).ready, false);
+  assert.equal(en.listPrice.amount, 9900, 'owner approved: same as Korean edition (2026-11-01)');
+  assert.equal(en.editionApproval.approvedAt, '2026-11-01');
+  // 2026-11-01: owner uploaded the validated English EPUB (EPUBCheck 0 errors) — sale opened.
+  assert.equal(saleReadiness(en).ready, true);
+  assert.equal(en.workflow.epub, 'validated');
   assert.deepEqual(otherLanguageEditions(catalog, ko).map(b => b.id), ['BOOK-EKODI-000003']);
   assert.deepEqual(otherLanguageEditions(catalog, en).map(b => b.id), ['BOOK-EKODI-000001']);
   assert.deepEqual(otherLanguageEditions(catalog, byId('BOOK-EKODI-000002')), [], 'different work never qualifies');
@@ -85,8 +88,27 @@ test('server quote and order apply the discount for an owner of the other editio
     assert.equal(o.status, 201);
     assert.equal(o.data.amount, 5000);
     assert.equal(db.raw.prepare('SELECT tier_id, amount, list_price FROM books_orders').get().tier_id, 'language-edition');
-    // English edition is not purchasable yet (no publisher release, no price, no file approval).
-    const blocked = await createOrder(env, req(), { bookId: en.id, consent: true });
-    assert.notEqual(blocked.status, 201);
+    // Owning the English edition already, buying it again is refused.
+    const again = await createOrder(env, req(), { bookId: en.id, consent: true });
+    assert.equal(again.data.code, 'ALREADY_OWNED');
+  } finally { globalThis.fetch = real; }
+});
+
+test('Korean owner buys the English edition at 50% through the server', async () => {
+  const user = { id: 'u-ko', email: 'reader@example.com', email_confirmed_at: '2026-01-01', user_metadata: {} };
+  const real = globalThis.fetch;
+  globalThis.fetch = async url => String(url).includes('/auth/v1/user') ? new Response(JSON.stringify(user)) : real(url);
+  try {
+    const db = d1();
+    grant(db, 'u-ko', ko.id);
+    const env = { DB: db, ASSETS: { fetch: async r => new Response(JSON.stringify(new URL(r.url).pathname === '/books.json' ? catalog : policy)) }, BOOK_FILES: { head: async () => ({ size: 1 }) }, PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_a', TOSS_SECRET_KEY: 'live_sk_a', PUBLIC_BASE_URL: 'https://ekodi.kr/books' };
+    const req = () => new Request('https://ekodi.kr/books/api/commerce/orders', { method: 'POST', headers: { authorization: 'Bearer t' } });
+    const q = await quote(env, req(), en.id);
+    assert.equal(q.status, 200);
+    assert.equal(q.data.price.amount, 5000);
+    assert.equal(q.data.checkout.saleReady, true);
+    const o = await createOrder(env, req(), { bookId: en.id, consent: true });
+    assert.equal(o.status, 201);
+    assert.equal(o.data.amount, 5000);
   } finally { globalThis.fetch = real; }
 });

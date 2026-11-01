@@ -20,6 +20,7 @@
       insert: 'first',
     },
     'public-site-controls':{scripts:['admin-public-site-controls.js'],real:'[data-section="public-site-controls"]'},
+    points:{scripts:['points-admin.js'],real:'#ekodiPointsAdmin'},
     'language-status':{scripts:['admin-language-status.js'],real:'[data-section="language-status"]'},
     aiops: {
       label: 'AI Ops', icon: '✦',

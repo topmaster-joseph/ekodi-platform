@@ -11,6 +11,15 @@ const SESSION_HOURS = 8;
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const ekodiAdminBridgeEnabled = env => String(env.EKODI_ADMIN_FEDERATED_LOGIN_ENABLED || '') === 'true';
+export function ekodiBridgeTargetsAdminConsole(returnTo) {
+  try {
+    const u = new URL(String(returnTo || ''));
+    // EKODI serves every surface from the apex (zero-subdomain policy); any other
+    // host, or the /admin console path, is treated as the Google-only console.
+    if (u.protocol !== 'https:' || u.hostname.toLowerCase() !== 'ekodi.kr') return true;
+    return u.pathname === '/admin' || u.pathname.startsWith('/admin/');
+  } catch { return true; }
+}
 const PRIVILEGED_MINUTES = 15;
 const JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
 let jwksCache = { keys: [], expiresAt: 0 };
@@ -574,6 +583,11 @@ async function handleEkodiAdminLogin(request, env) {
   const body = await readJson(request);
   const nonce = String(body?.nonce || '');
   if (!/^[a-f0-9]{48}$/i.test(nonce)) return json({error:'로그인 확인 요청이 올바르지 않습니다.'},400,request,env);
+  // Owner decision 2026-11-01: the central EKODI admin console stays Google-only.
+  // Linked logins are accepted only for operator screens that borrow the admin realm.
+  if (ekodiBridgeTargetsAdminConsole(body?.returnTo)) return json({
+    error:'EKODI 통합 관리자 화면은 등록된 Google 계정으로만 로그인할 수 있습니다.',code:'ADMIN_CONSOLE_GOOGLE_ONLY'
+  },403,request,env);
   const bearer = String(request.headers.get('authorization') || '');
   const token = bearer.startsWith('Bearer ') ? bearer.slice(7).trim() : '';
   if (!token || token.length > 8192) return json({error:'EKODI 인증 세션이 필요합니다.'},401,request,env);

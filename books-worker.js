@@ -11,12 +11,13 @@ export const COMMERCE_CSP = [
   "frame-src https://accounts.google.com/gsi/ https://accounts.google.com/ https://*.tosspayments.com",
   "img-src 'self' data: https:",
   "font-src 'self' data: https:",
+  "media-src 'self' blob:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self' https://*.tosspayments.com",
   "object-src 'none'",
 ].join('; ');
-export const isCommercePage = (pathname) => /^\/(?:buy|library)(?:\/|$)/.test(pathname);
+export const isCommercePage = (pathname) => /^\/(?:buy|library|review)(?:\/|$)/.test(pathname);
 function withCommerceCsp(response) {
   const type = String(response.headers.get('content-type') || '').toLowerCase();
   if (!type.includes('text/html')) return response;

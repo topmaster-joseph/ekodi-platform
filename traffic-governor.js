@@ -123,8 +123,36 @@ function noncriticalPath(pathname){
   const path=String(pathname||'').toLowerCase();
   return NONCRITICAL_PREFIXES.some(prefix=>path===prefix||path.startsWith(prefix+'/'));
 }
-function retryResponse(status,code,tier,retryAfter){
-  return new Response(JSON.stringify({ok:false,error:code,tier}),{
+/**
+ * A shed has to say why it shed.
+ *
+ * On 2026-10-31 production returned 429 at the Admin entry and the platform's own
+ * verification lane died there. Afterwards nothing could say whether the tier had
+ * risen from request rate (1000/10s on a site-wide key) or from latency and error
+ * pressure (p95 2200ms, 5% errors), because the governor keeps its state in
+ * isolate memory, the tier holds for ten minutes, and the shed recorded neither.
+ * The answer was simply gone — the same shape of blindness that left the
+ * free-tier dashboard dark for seventeen days with only `HTTP_500` to show.
+ *
+ * So the coarse reason travels with the shed, in the body and in a header. Only
+ * the labels — rps, latency_or_error, recovery_hysteresis, limiter_degraded — never
+ * the measured p95, error percentage or sample count: those go to console.error for
+ * a live tail. The disclosure is small, and `tier` in this body already told any
+ * caller that the site is under pressure; what is added is which kind, which is
+ * what makes the next occurrence diagnosable instead of unanswerable.
+ */
+function retryResponse(status,code,tier,retryAfter,assessment={}){
+  const reasons=Array.isArray(assessment.reasons)?assessment.reasons.slice(0,4).join(','):'';
+  const observed=assessment.observed||{};
+  // Numbers stay server-side.
+  console.error('EKODI traffic shed',JSON.stringify({
+    code,status,tier,reasons,
+    limiterTier:assessment.limiterTier||'',
+    p95Ms:observed.p95Ms??null,
+    errorPercent:observed.errorPercent??null,
+    samples:observed.count??null,
+  }));
+  return new Response(JSON.stringify({ok:false,error:code,tier,reasons}),{
     status,
     headers:{
       'content-type':'application/json; charset=utf-8',
@@ -132,6 +160,7 @@ function retryResponse(status,code,tier,retryAfter){
       'retry-after':String(retryAfter),
       'x-content-type-options':'nosniff',
       'x-ekodi-traffic-tier':tier,
+      'x-ekodi-traffic-reasons':reasons,
       'x-ekodi-traffic-policy':POLICY
     }
   });
@@ -142,8 +171,8 @@ export function trafficRequestGuard(request,assessment){
   const method=String(request.method||'GET').toUpperCase();
   const path=new URL(request.url).pathname;
   if(CORE_PROBES.has(path))return null;
-  if(tier==='PROTECT'&&noncriticalPath(path))return retryResponse(503,'TRAFFIC_PROTECT_NONCRITICAL_SHED',tier,30);
-  if(['GET','HEAD'].includes(method)&&(tier==='L3'||tier==='PROTECT')&&isCrawler(request))return retryResponse(429,'TRAFFIC_CRAWLER_SHED',tier,60);
+  if(tier==='PROTECT'&&noncriticalPath(path))return retryResponse(503,'TRAFFIC_PROTECT_NONCRITICAL_SHED',tier,30,assessment);
+  if(['GET','HEAD'].includes(method)&&(tier==='L3'||tier==='PROTECT')&&isCrawler(request))return retryResponse(429,'TRAFFIC_CRAWLER_SHED',tier,60,assessment);
   return null;
 }
 
