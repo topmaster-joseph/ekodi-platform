@@ -215,7 +215,8 @@ async function completeEkodiAdminLogin(){
 // path linked to the same EKODI account. The server enforces the same split.
 function centralAdminConsoleTarget(href){
   try{const u=new URL(href);const host=u.hostname.toLowerCase();
-    return host==='admin.ekodi.kr'||((host==='ekodi.kr'||u.origin===CANONICAL_AUTH_ORIGIN)&&(u.pathname==='/admin'||u.pathname.startsWith('/admin/')));
+    if(host!=='ekodi.kr'&&u.origin!==CANONICAL_AUTH_ORIGIN)return true;
+    return u.pathname==='/admin'||u.pathname.startsWith('/admin/');
   }catch{return true}
 }
 async function showEkodiAlternative(){

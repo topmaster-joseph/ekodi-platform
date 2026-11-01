@@ -14,9 +14,9 @@ const ekodiAdminBridgeEnabled = env => String(env.EKODI_ADMIN_FEDERATED_LOGIN_EN
 export function ekodiBridgeTargetsAdminConsole(returnTo) {
   try {
     const u = new URL(String(returnTo || ''));
-    const host = u.hostname.toLowerCase();
-    if (u.protocol !== 'https:' || host === 'admin.ekodi.kr') return true;
-    if (host !== 'ekodi.kr' && !host.endsWith('.ekodi.kr')) return true;
+    // EKODI serves every surface from the apex (zero-subdomain policy); any other
+    // host, or the /admin console path, is treated as the Google-only console.
+    if (u.protocol !== 'https:' || u.hostname.toLowerCase() !== 'ekodi.kr') return true;
     return u.pathname === '/admin' || u.pathname.startsWith('/admin/');
   } catch { return true; }
 }

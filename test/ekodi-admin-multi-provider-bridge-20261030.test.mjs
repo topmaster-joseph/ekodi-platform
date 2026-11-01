@@ -73,7 +73,7 @@ test('no alternate account is accepted as a direct privileged session',()=>{
 
 test('owner decision 2026-11-01: linked logins for operator screens, central admin console stays Google-only',async()=>{
   const {ekodiBridgeTargetsAdminConsole}=await import('../admin-google-auth.js');
-  for(const target of ['https://ekodi.kr/admin/','https://ekodi.kr/admin','https://admin.ekodi.kr/x','','javascript:alert(1)','https://evil.example/edu/'])
+  for(const target of ['https://ekodi.kr/admin/','https://ekodi.kr/admin','https://legacy.example/x','','javascript:alert(1)','https://evil.example/edu/'])
     assert.equal(ekodiBridgeTargetsAdminConsole(target),true,target);
   for(const target of ['https://ekodi.kr/edu/study/live/','https://ekodi.kr/cooperative/','https://ekodi.kr/administration-notes'])
     assert.equal(ekodiBridgeTargetsAdminConsole(target),false,target);
