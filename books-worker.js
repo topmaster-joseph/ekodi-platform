@@ -11,6 +11,7 @@ export const COMMERCE_CSP = [
   "frame-src https://accounts.google.com/gsi/ https://accounts.google.com/ https://*.tosspayments.com",
   "img-src 'self' data: https:",
   "font-src 'self' data: https:",
+  "media-src 'self' blob:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self' https://*.tosspayments.com",

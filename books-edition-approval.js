@@ -47,7 +47,7 @@ export async function approvalRoute(env, request, book, actorEmail, body) {
   if (request.method === 'GET') {
     const approval = await activeApproval(env, book);
     const file = await fileIdentity(env, book);
-    return { status: 200, data: { bookId: book.id, file, approval, readiness: await effectiveSaleReadiness(env, book), catalog: { edition: book.edition || '', listPrice: book.listPrice?.amount || 0, workflow: book.workflow || {} } } };
+    return { status: 200, data: { bookId: book.id, file, approval, readiness: await effectiveSaleReadiness(env, book), catalog: { title: book.title || book.id, author: book.author || '', edition: book.edition || '', listPrice: book.listPrice?.amount || 0, workflow: book.workflow || {} } } };
   }
   if (request.method === 'DELETE') {
     const at = new Date().toISOString();
@@ -62,8 +62,9 @@ export async function approvalRoute(env, request, book, actorEmail, body) {
   if (!edition) return { status: 400, data: { error: '판본 이름을 입력해 주세요.', code: 'EDITION_REQUIRED' } };
   if (!(price > 0) || price !== Math.trunc(Number(book.listPrice?.amount))) return { status: 409, data: { error: `판매가가 서점 등록 가격(${book.listPrice?.amount || 0}원)과 다릅니다. 가격 변경은 별도로 요청해 주세요.`, code: 'PRICE_MISMATCH' } };
   const file = await fileIdentity(env, book);
-  if (!file || !file.etag) return { status: 409, data: { error: '보관함에 판매 파일이 없습니다. 먼저 EPUB을 올려 주세요.', code: 'FILE_MISSING' } };
-  if (body?.fileEtag && body.fileEtag !== file.etag) return { status: 409, data: { error: '검토한 뒤 판매 파일이 바뀌었습니다. 새로고침 후 다시 검토해 주세요.', code: 'FILE_CHANGED' } };
+  if (!file || !file.etag || !(file.size > 0)) return { status: 409, data: { error: '검토 가능한 판매 파일이 없습니다. 유효한 EPUB을 먼저 올려 주세요.', code: 'FILE_MISSING' } };
+  // The reviewed file identity is mandatory: a caller may not omit it to bypass the comparison.
+  if (typeof body?.fileEtag !== 'string' || !body.fileEtag || body.fileEtag !== file.etag) return { status: 409, data: { error: '검토한 판매 파일이 확인되지 않거나 변경되었습니다. 새로고침 후 다시 검토해 주세요.', code: 'FILE_CHANGED' } };
   const at = new Date().toISOString();
   await env.DB.prepare(`INSERT INTO books_edition_approvals (book_id, edition, list_price, file_key, file_etag, file_size, rights_confirmed, content_reviewed, note, approved_by, approved_at, revoked_at, revoked_by)
     VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?, NULL, NULL)

@@ -25,7 +25,17 @@
   async function read(item, button) {
     if (!window.EkodiEpubReader) { alert('리더를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.'); return; }
     button.disabled = true; const label = button.textContent; button.textContent = '여는 중…';
-    try { await window.EkodiEpubReader.open(await fetchBook(`download/${encodeURIComponent(item.id)}`), { title: item.title, storageKey: item.id }); }
+    // BOOKS-READER-003: 무료 오디오북이 승인·공개된 책이면 리더에서 바로 듣고, 재생에 맞춰 책장이 넘어간다.
+    const audio = item.audiobook?.included && item.audiobook?.ready && item.audiobook.tracks?.length ? {
+      tracks: item.audiobook.tracks,
+      async fetchTrack(track) {
+        const s = await C.session();
+        const r = await fetch(`${C.BASE}/api/commerce/download/audio/${encodeURIComponent(item.id)}/${encodeURIComponent(track.number)}`, { headers: { authorization: 'Bearer ' + (s?.accessToken || '') }, cache: 'no-store' });
+        if (!r.ok) throw new Error('오디오를 불러오지 못했습니다.');
+        return r.blob();
+      },
+    } : null;
+    try { await window.EkodiEpubReader.open(await fetchBook(`download/${encodeURIComponent(item.id)}`), { title: item.title, storageKey: item.id, audio }); }
     catch (e) { alert(e.message); }
     finally { button.disabled = false; button.textContent = label; }
   }
