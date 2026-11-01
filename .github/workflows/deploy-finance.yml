@@ -8,6 +8,16 @@ on:
         required: false
         default: false
         type: boolean
+      release_branch_ref:
+        description: 'Orchestrator-issued receipt branch for protected promotion'
+        required: false
+        default: ''
+        type: string
+      release_task_id:
+        description: 'Matching verified orchestrator task ID'
+        required: false
+        default: ''
+        type: string
   issues:
     types: [labeled]
   pull_request:
@@ -65,6 +75,8 @@ concurrency:
 
 env:
   WRANGLER_VERSION: '4.127.1'
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
 jobs:
   validate:
