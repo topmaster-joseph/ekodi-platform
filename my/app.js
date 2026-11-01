@@ -212,7 +212,8 @@ let activeHomePanel='intent';
 function syncHomePanels(){
  const signedIn=Boolean(session?.access_token),tab=signedIn?activeTabKey():'home';
  document.body.dataset.homePanel=activeHomePanel;
- document.querySelectorAll('[data-home-panel]').forEach(panel=>{
+ // body carries data-home-panel as a state marker; it must never be treated as a panel.
+ document.querySelectorAll('[data-home-panel]:not(body)').forEach(panel=>{
   if(!signedIn){panel.hidden=panel.id==='memberHome';return}
   panel.hidden=tab!=='home'||panel.dataset.homePanel!==activeHomePanel;
  });
