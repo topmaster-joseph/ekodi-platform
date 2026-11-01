@@ -391,6 +391,45 @@ export async function adminRoute(env, request, path, url, now = new Date()) {
     await audit(env, '', buyer.email, 'book.file_uploaded', { bookId: book.id, size: bytes.length });
     return { status: 200, data: { ok: true, bookId: book.id, size: bytes.length } };
   }
+  // EKODI-VOICE-001: 에코디 낭독 음성. 운영자 본인이 동의 문장과 함께 녹음한 샘플을 비공개 보관함에만 둔다.
+  // 이 샘플은 오디오북 렌더링(EKODI Voice 워크플로) 외에는 쓰지 않고, 공개 다운로드 경로가 없다.
+  if (path === '/admin/voice/sample' && (request.method === 'GET' || request.method === 'PUT')) {
+    if (!env.BOOK_FILES) return { status: 503, data: { error: '비공개 보관함이 연결되지 않았습니다.' } };
+    const LATEST = '_voice/ekodi-narrator/latest.json';
+    if (request.method === 'GET') {
+      const o = await env.BOOK_FILES.get(LATEST).catch(() => null);
+      return { status: 200, data: o ? { present: true, ...(await o.json().catch(() => ({}))) } : { present: false } };
+    }
+    if (request.headers.get('x-ekodi-voice-consent') !== 'self-recorded-for-ekodi-audiobooks') return { status: 400, data: { error: '본인 녹음·사용 동의가 필요합니다.' } };
+    if (Number(request.headers.get('content-length') || 0) > 40 * 1024 * 1024) return { status: 413, data: { error: '샘플은 최대 40MB입니다.' } };
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    const kind = bytes.length < 16 ? '' : bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3 ? 'webm'
+      : String.fromCharCode(...bytes.subarray(0, 4)) === 'RIFF' ? 'wav' : String.fromCharCode(...bytes.subarray(4, 8)) === 'ftyp' ? 'm4a'
+      : (String.fromCharCode(...bytes.subarray(0, 3)) === 'ID3' || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0)) ? 'mp3' : '';
+    if (!kind || bytes.length < 64 * 1024) return { status: 400, data: { error: '녹음 파일(webm·wav·m4a·mp3, 1분 이상)을 올려 주세요.' } };
+    const sha256 = await audioSha256(bytes), at = now.toISOString();
+    const key = `_voice/ekodi-narrator/sample-${at.replace(/[:.]/g, '-')}.${kind}`;
+    await env.BOOK_FILES.put(key, bytes, { httpMetadata: { contentType: 'application/octet-stream' }, customMetadata: { kind: 'voice-sample', consent: 'self-recorded-for-ekodi-audiobooks', sha256 } });
+    await env.BOOK_FILES.put(LATEST, JSON.stringify({ key, sha256, size: bytes.length, format: kind, recordedAt: at, consent: 'self-recorded-for-ekodi-audiobooks' }), { httpMetadata: { contentType: 'application/json' } });
+    await audit(env, '', buyer.email, 'voice.sample_uploaded', { size: bytes.length, format: kind });
+    return { status: 200, data: { ok: true, size: bytes.length, format: kind, recordedAt: at } };
+  }
+  // 렌더링된 장별 초안은 승인 전까지 배포 불가(approved=false). 카탈로그 승인 후 해시가 같을 때만 배포 가능으로 전환한다.
+  const promoteMatch = /^\/admin\/audiobooks\/([A-Z0-9-]{3,40})\/(\d{1,3})\/promote$/.exec(path);
+  if (promoteMatch && request.method === 'POST') {
+    const book = directSaleBook(await loadCatalog(env), promoteMatch[1]);
+    const policy = complimentaryAudiobookPolicy(book);
+    const track = policy.tracks.find(t => t.number === Number(promoteMatch[2]));
+    if (!policy.approved || !track || !env.BOOK_FILES) return { status: 409, data: { error: '권리·음성 검수 승인이 카탈로그에 반영된 뒤에 공개할 수 있습니다.' } };
+    const object = await env.BOOK_FILES.get(track.key);
+    if (!object) return { status: 404, data: { error: '렌더링된 파일이 없습니다.' } };
+    const bytes = new Uint8Array(await object.arrayBuffer());
+    if (await audioSha256(bytes) !== track.sha256) return { status: 409, data: { error: '승인한 파일과 해시가 다릅니다.' } };
+    await env.BOOK_FILES.put(track.key, bytes, { httpMetadata: { contentType: 'audio/mpeg' },
+      customMetadata: { bookId: book.id, edition: book.edition, kind: 'audiobook-chapter', approved: 'true', sha256: track.sha256, uploadedBy: buyer.email } });
+    await audit(env, '', buyer.email, 'audiobook.track_promoted', { bookId: book.id, track: track.number });
+    return { status: 200, data: { ok: true, bookId: book.id, track: track.number, approvedForDelivery: true } };
+  }
   const audioFileMatch = /^\/admin\/audiobooks\/([A-Z0-9-]{3,40})\/(\d{1,3})$/.exec(path);
   if (audioFileMatch && (request.method === 'GET' || request.method === 'PUT')) {
     const book = directSaleBook(await loadCatalog(env), audioFileMatch[1]);

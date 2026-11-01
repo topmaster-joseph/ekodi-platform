@@ -156,3 +156,43 @@ test('MP3 upload validates frame header and size; operator upload draft never si
   assert.equal(bucket.objects.get(book.audiobook.tracks[0].key).customMetadata.approved,'false');
 
 });
+
+// EKODI-VOICE-001: 운영자 본인 동의 음성 샘플은 비공개 저장만, 렌더링 초안은 승인·해시 일치 후에만 배포 가능으로 전환.
+function richBucket(){
+  const objects=new Map();
+  const wrap=(o)=>o&&{...o,arrayBuffer:async()=>o.body.buffer.slice(o.body.byteOffset,o.body.byteOffset+o.body.byteLength),json:async()=>JSON.parse(new TextDecoder().decode(o.body))};
+  return{objects,head:async k=>objects.get(k)||null,get:async k=>wrap(objects.get(k)),
+    put:async(k,body,opts={})=>{const b=typeof body==='string'?new TextEncoder().encode(body):body;objects.set(k,{body:b,size:b.length,customMetadata:opts.customMetadata||{}})}};
+}
+test('voice sample: operator-only, explicit self-recording consent, real audio, private key only',async()=>{
+  const book=fixtureBook(),db=d1(),bucket=richBucket(),env=envFor(book,db,bucket);
+  const path='/admin/voice/sample';
+  const webm=new Uint8Array(70*1024);webm.set([0x1a,0x45,0xdf,0xa3]);
+  const req=(headers,body=webm)=>new Request('https://ekodi.kr/books/api/commerce'+path,{method:'PUT',headers:{authorization:'Bearer token',...headers},body});
+  assert.equal((await adminRoute(env,req({'x-ekodi-voice-consent':'self-recorded-for-ekodi-audiobooks'}),path,new URL('https://ekodi.kr'))).status,403,'buyers cannot upload');
+  globalThis.fetch=async()=>new Response(JSON.stringify(operator));
+  assert.equal((await adminRoute(env,req({}),path,new URL('https://ekodi.kr'))).status,400,'consent header required');
+  assert.equal((await adminRoute(env,req({'x-ekodi-voice-consent':'self-recorded-for-ekodi-audiobooks'},new TextEncoder().encode('x'.repeat(70000))),path,new URL('https://ekodi.kr'))).status,400,'non-audio refused');
+  const ok=await adminRoute(env,req({'x-ekodi-voice-consent':'self-recorded-for-ekodi-audiobooks'}),path,new URL('https://ekodi.kr'));
+  assert.equal(ok.status,200);assert.equal(ok.data.format,'webm');
+  const keys=[...bucket.objects.keys()];
+  assert.ok(keys.every(k=>k.startsWith('_voice/ekodi-narrator/')),'stored only under the private voice prefix');
+  const state=await adminRoute(env,new Request('https://ekodi.kr/x',{headers:{authorization:'Bearer token'}}),path,new URL('https://ekodi.kr'));
+  assert.equal(state.data.present,true);assert.equal(state.data.consent,'self-recorded-for-ekodi-audiobooks');
+});
+test('rendered drafts become deliverable only after catalog approval and an exact hash match',async()=>{
+  const book=fixtureBook(),db=d1(),bucket=richBucket(),env=envFor(book,db,bucket);
+  const bytes=new Uint8Array(180);bytes.set([0x49,0x44,0x33]);
+  await bucket.put(book.audiobook.tracks[0].key,bytes); // workflow upload: no approval metadata
+  globalThis.fetch=async()=>new Response(JSON.stringify(operator));
+  const path='/admin/audiobooks/'+book.id+'/1/promote';
+  const post=()=>adminRoute(env,new Request('https://ekodi.kr/x',{method:'POST',headers:{authorization:'Bearer token'}}),path,new URL('https://ekodi.kr'));
+  book.audiobook.status='production_pending';
+  assert.equal((await post()).status,409,'not approved yet');
+  book.audiobook.status='approved';
+  const ok=await post();
+  assert.equal(ok.status,200);
+  assert.equal(bucket.objects.get(book.audiobook.tracks[0].key).customMetadata.approved,'true');
+  bytes[100]=7;await bucket.put(book.audiobook.tracks[0].key,bytes);
+  assert.equal((await post()).status,409,'changed bytes are refused');
+});
