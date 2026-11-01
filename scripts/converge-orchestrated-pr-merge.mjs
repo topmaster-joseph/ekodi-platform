@@ -369,6 +369,8 @@ const booksTouched=changedFiles.some(file=>
   file==='books-sale-readiness.js'||
   file==='books-language-editions.js'||
   file==='books-edition-approval.js'||
+  file==='books-audiobook-review.js'||
+  file==='migrations/202611020300_books_audiobook_approvals.sql'||
   file==='migrations/202611011800_books_edition_approvals.sql'||
   file==='migrations/202610271400_books_direct_commerce.sql'||
   file==='wrangler.books.toml'||
