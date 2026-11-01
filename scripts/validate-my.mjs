@@ -53,8 +53,11 @@ must('html','EKODI USER AI');
 must('html','MY SPACES');
 must('html','MY PLATFORMS');
 must('html','CREATOR PORTFOLIO');
-must('html','내 선택이 우선');
-must('html','공간별 데이터');
+must('html','account-privacy-note');
+must('html','개인정보처리방침');
+must('html','로그인 수단 관리');
+mustNot('html','data-account-open="security"');
+mustNot('app','accountLoginText');
 must('html','/config.js');
 must('html','/user-ui.css');
 must('html','/user-ai-ui.js');
@@ -209,7 +212,10 @@ must('prod','workers_dev = true');
 must('manifest','https://ekodi-my.topmaster-joseph.workers.dev/');
 mustNot('manifest','https://my.ekodi.kr');
 must('prod','DATA_ENABLED = "true"');
-must('staging','DATA_ENABLED = "false"');
+must('staging','DATA_ENABLED = "true"');
+must('staging','DATA_MODE = "isolated-staging"');
+const supabaseUrl=config=>config.match(/^SUPABASE_URL\s*=\s*"([^"]+)"/m)?.[1];
+if(!supabaseUrl(content.staging)||supabaseUrl(content.staging)===supabaseUrl(content.prod))throw new Error('My EKODI staging must use a distinct, configured Supabase project');
 mustNot('staging','my.ekodi.kr');
 must('auth',"'my':{name:'My EKODI'");
 must('auth',"returnTo:'https://ekodi.kr/my/'");
@@ -243,7 +249,7 @@ for(const required of ['my-desktop-tabs','my-bottom-tabs','workspaceCompact','da
   if(!content.html.includes(required))throw new Error(`My EKODI validation failed: tab shell marker missing: ${required}`);
 }
 
-for(const required of ['account-subtabs','data-account-tab="basic"','data-account-tab="public"','data-account-tab="character"','data-account-tab="security"']){
+for(const required of ['account-subtabs','data-account-tab="basic"','data-account-tab="public"','data-account-tab="character"','data-account-tab="ai"']){
   if(!content.html.includes(required))throw new Error(`My EKODI validation failed: account subtab marker missing: ${required}`);
 }
 
