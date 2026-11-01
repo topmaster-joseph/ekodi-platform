@@ -19,7 +19,9 @@ test('site points cannot call unlaunched API without a separately enabled capabi
   assert.match(app,/config\.pointsEnabled===true/);
   assert.match(app,/if\(!enabled\)\{showMessage\('포인트 조회 서비스 준비 중입니다\.'\);return;\}/);
   assert.match(production,/POINTS_ENABLED = "false"/);
-  assert.match(staging,/POINTS_ENABLED = "false"/);
+  // Staging points may be enabled only against the development project (#6739).
+  assert.match(staging,/POINTS_ENABLED = "false"|SUPABASE_URL = "https:\/\/lxcxwbdwwojjkgybbqii\.supabase\.co"/);
+  assert.doesNotMatch(staging,/renzehysxirjilvdxacv/);
 });
 
 test('points sign-in returns to exact initiating URL via canonical /auth and sanitizes token handoff',()=>{
