@@ -14,3 +14,12 @@
 @media(max-width:640px){.claim-form{grid-template-columns:minmax(0,1fr)}}
 .record>div{min-width:0}.record>div strong{white-space:normal;overflow-wrap:anywhere}
 .login[hidden],#claimSection[hidden],#balanceView[hidden]{display:none!important}
+/* My EKODI subpages keep the personal light theme even though they are served on the
+   workspace surface (the shell would otherwise apply the dark workspace palette). */
+html:has(body.my-subpage),html:has(body.my-subpage) body.my-subpage[data-ekodi-ui="USER"]{background:#f7f8f3!important;color:#183127!important;color-scheme:light}
+body.my-subpage .heading h1{color:#183127!important}
+body.my-subpage .heading p,body.my-subpage .footnote{color:#63726b!important}
+body.my-subpage main{max-width:1180px}
+body.my-subpage select,body.my-subpage input,body.my-subpage textarea{background:#fff!important;color:#183127!important;border:1px solid #cbdad0!important}
+body.my-subpage .my-footer-brand{text-align:left}
+body.my-subpage .my-desktop-tabs a[aria-current="page"]{background:#eaf2ee;color:#1f5c3d;border-radius:999px}
