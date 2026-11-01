@@ -109,6 +109,6 @@ test('management public Worker and both configurations refuse to publish old aut
   assert.ok(management.includes("authHub:'https://ekodi.kr/auth/'"));
   assert.equal(policy.platform.canonicalUrl,'https://ekodi.kr/management/');
   for(const cfg of [prod,staging])assert.ok(cfg.includes('AUTH_URL = "https://ekodi.kr/auth/?site=management"'));
-  // Subdomain wave 2 (2026-11-01): the legacy custom-domain binding is retired; apex /management only.
-  assert.ok(!prod.includes('pattern = "'+['management','ekodi','kr'].join('.')+'"'));
+  // Keep legacy Worker custom-domain binding for C3 retirement, never a user login target.
+  assert.ok(prod.includes('pattern = "'+['management','ekodi','kr'].join('.')+'"'));
 });

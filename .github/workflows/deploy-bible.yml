@@ -279,8 +279,9 @@ jobs:
             config=$(curl -sS -o /tmp/bible-config.js -w '%{http_code}' --max-time 15 'https://ekodi.kr/bible/config.js' || true)
             assist=$(curl -sS -o /tmp/bible-assist.json -w '%{http_code}' --max-time 15 -H 'content-type: application/json' -d '{"message":"앞으로가 불안해요","topic":"믿음"}' 'https://ekodi.kr/bible/api/assist' || true)
             admin=$(curl -sS -o /dev/null -D /tmp/bible-admin-h -w '%{http_code}' --max-time 15 'https://ekodi.kr/bible/admin' || true)
+            legacy=$(curl -sS -o /dev/null -D /tmp/bible-legacy-h -w '%{http_code}' --max-time 15 'https://bible.ekodi.kr/reader?provider=KRV1961' || true)
             case "$admin" in 301|302|303|307|308) admin_redirect=true;; *) admin_redirect=false;; esac
-            if [[ "$root" == '200' && "$today" == '200' && "$reader" == '200' && "$providers" == '200' && "$passage" == '200' && "$protected" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$devotion" == '200' && "$devotion_api" == '200' && "$renderer" == '200' && "${card%%|*}" == '200' && "${card#*|}" == image/jpeg* && "$health" == '200' && "$config" == '200' && "$assist" == '401' && "$admin_redirect" == 'true' ]] \
+            if [[ "$root" == '200' && "$today" == '200' && "$reader" == '200' && "$providers" == '200' && "$passage" == '200' && "$protected" == '200' && "$conversation" == '200' && "$journey" == '200' && "$together" == '200' && "$devotion" == '200' && "$devotion_api" == '200' && "$renderer" == '200' && "${card%%|*}" == '200' && "${card#*|}" == image/jpeg* && "$health" == '200' && "$config" == '200' && "$assist" == '401' && "$admin_redirect" == 'true' && "$legacy" == '308' ]] \
               && grep -Fq '에코디 말씀대화' /tmp/bible.html \
               && grep -Fq 'og:title" content="에코디 매일묵상 · 오바댜 1:17-21"' /tmp/bible-devotion.html \
               && grep -Fq '"activitySource":"curated"' /tmp/bible-devotion.json \
@@ -306,7 +307,8 @@ jobs:
               && grep -Fq '"dataEnabled":true' /tmp/bible-config.js \
               && grep -Fq '"error":"authentication_required"' /tmp/bible-assist.json \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/bible-h \
-              && grep -Eiq '^location: https://ekodi\.kr/admin/system/aiops' /tmp/bible-admin-h; then
+              && grep -Eiq '^location: https://ekodi\.kr/admin/system/aiops' /tmp/bible-admin-h \
+              && grep -Eiq '^location: https://ekodi\.kr/bible/reader\?provider=KRV1961' /tmp/bible-legacy-h; then
               echo 'EKODI Bible production verified.'
               exit 0
             fi

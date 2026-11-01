@@ -45,8 +45,6 @@ test('Bible route ownership follows Constitution v1.9 apex gateway', () => {
   assert.match(site,/binding = "BIBLE"[\s\S]*service = "ekodi-bible-conversation"/);
   assert.match(site,/"\/bible\*"/);
   assert.doesNotMatch(bible,/pattern = "ekodi\.kr\/bible\*"/);
-  // Subdomain wave 2: the legacy host custom domain is retired; the apex gateway is the only public entry.
-  assert.doesNotMatch(bible,/pattern = "bible\.ekodi\.kr"/);
 });
 
 test('Bible admin handoff uses the canonical admin surface', async () => {

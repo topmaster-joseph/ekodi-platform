@@ -70,8 +70,7 @@ jobs:
           npm run validate:boundaries
           npm run validate:shell
           npm run validate:mission
-          # Subdomain wave 2 (2026-11-01): Management is served only on the apex /management path.
-          ! grep -Fq 'pattern = "management.ekodi.kr"' wrangler.management.toml
+          grep -Fq 'pattern = "management.ekodi.kr"' wrangler.management.toml
           grep -Fq 'INTEGRATIONS_ENABLED = "true"' wrangler.management.toml
           grep -Fq 'INTEGRATIONS_ENABLED = "false"' wrangler.management.staging.toml
           grep -Fq '"guestMode": "guide-only"' config/management-platform.json

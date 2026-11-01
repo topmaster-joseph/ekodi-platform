@@ -47,5 +47,8 @@ zone_name = "ekodi.kr"
 pattern = "messenger.ekodi.kr/admin*"
 zone_name = "ekodi.kr"
 [[routes]]
+pattern = "management.ekodi.kr/admin*"
+zone_name = "ekodi.kr"
+[[routes]]
 pattern = "marketing-api.ekodi.kr/admin*"
 zone_name = "ekodi.kr"

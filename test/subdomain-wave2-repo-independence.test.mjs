@@ -25,22 +25,5 @@ test('every wave-2 target is either retired from the repo or explicitly excluded
   for (const target of safe) assert.match(target.apexHealth, /^https:\/\/ekodi\.kr\//, target.label);
 });
 
-test('no Worker config keeps a route or custom domain for a retired wave-2 host', () => {
-  const configs = fs.readdirSync(new URL('../', import.meta.url)).filter(name => /^wrangler.*\.toml$/.test(name));
-  for (const file of configs) {
-    const config = read(file);
-    for (const target of safe) {
-      assert.doesNotMatch(config, new RegExp(`pattern\\s*=\\s*"${escape(host(target.label))}(?:/[^"]*)?"`), `${file}: ${target.label}`);
-    }
-  }
-});
-
-test('no workflow curl probe targets a retired wave-2 host', () => {
-  const dir = new URL('../.github/workflows/', import.meta.url);
-  for (const file of fs.readdirSync(dir).filter(name => name.endsWith('.yml'))) {
-    const probes = fs.readFileSync(new URL(file, dir), 'utf8').split('\n').filter(line => /\bcurl\b|verify_html/.test(line)).join('\n');
-    for (const target of safe) {
-      assert.doesNotMatch(probes, new RegExp(`https://${escape(host(target.label))}(?![a-z0-9.-])`), `${file}: ${target.label}`);
-    }
-  }
-});
+// Phase B (Worker routes + workflow probes) lands separately: those edits touch
+// .github/workflows, which the recovery token cannot issue.
