@@ -30,10 +30,10 @@ test('My EKODI root uses the calm custom landing without duplicate navigation',(
 test('My EKODI keeps signed-in home compact and groups account settings into subtabs',()=>{
   assert.match(hubCss,/body\[data-auth-state="member"\]\[data-active-tab="home"\] \.comfort-hero/);
   assert.match(html,/class="account-subtabs"/);
-  for(const tab of ['basic','public','character','security'])assert.match(html,new RegExp(`data-account-tab="${tab}"`));
+  for(const tab of ['basic','public','character','ai'])assert.match(html,new RegExp(`data-account-tab="${tab}"`));
   assert.match(html,/data-account-panel="public"/);
   assert.match(html,/data-account-panel="character"/);
-  assert.match(html,/data-account-panel="security"/);
+  assert.doesNotMatch(html,/data-account-panel="security"/);
 });
 
 test('My EKODI compacts services with subtabs and renders activity from real context',()=>{
@@ -85,7 +85,7 @@ test('My EKODI hash routing keeps hidden sections authoritative and suppresses d
   assert.match(hubCss,/body\[data-auth-state="member"\] \.my-tab-section\[hidden\]/);
   assert.match(hubCss,/html\[data-ekodi-character="off"\] body \.ekodi-main-ekodian/);
   assert.match(html,/hub-shell\.css\?v=[0-9]{8}-[a-z0-9-]+/);
-  assert.match(html,/app\.js\?v=20261102-one-glance-v1/);
+  assert.match(html,/app\.js\?v=20261102-account-compact-v2/);
 });
 
 test('My EKODI separates customized footer guidance from the shared legal footer',()=>{

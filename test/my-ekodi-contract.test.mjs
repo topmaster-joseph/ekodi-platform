@@ -9,8 +9,8 @@ test('My EKODI is a unified private-first USER UI hub, not a second source of tr
   assert.match(html,/EKODI USER AI/);
   assert.match(html,/MY PLATFORMS/);
   assert.match(html,/MY SPACES/);
-  assert.match(html,/내 선택이 우선/);
-  assert.match(html,/공간별 데이터/);
+  assert.match(html,/class="account-privacy-note"/);
+  assert.doesNotMatch(html,/data-account-(?:open|tab|panel)="security"/);
   assert.match(app,/my_dashboard_access_context/);
   assert.match(app,/ACCESS_SNAPSHOT_TTL_MS=5\*60\*1000/);
   assert.match(app,/safe defaults without per-service fan-out/);
@@ -319,7 +319,7 @@ test('My EKODI provides explicit privacy-first personal character selection',asy
 
 test('My versioned assets use immutable browser caching while runtime data remains uncached',async()=>{
   const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
-  assert.match(html,/app\.js\?v=20261102-one-glance-v1/);
+  assert.match(html,/app\.js\?v=20261102-account-compact-v2/);
   assert.match(worker,/searchParams\.has\('v'\)/);
   assert.match(worker,/public, max-age=31536000, immutable/);
   assert.match(worker,/manifest-fallback'[\s\S]{0,220}withVersionedAssetCache\(request/);
@@ -357,4 +357,19 @@ test('My EKODI defers secondary feature bundles until after the critical startup
   assert.match(loader,/data-finance-open/);
   assert.match(loader,/a\[href="#account"\]/);
   assert.match(loader,/Promise\.allSettled/);
+});
+
+
+test('My EKODI account merges security overview into basic information and preserves authentication',async()=>{
+  const [html,app,css]=await Promise.all([read('my/index.html'),read('my/app.js'),read('my/hub-shell.css')]);
+  assert.match(html,/data-account-open="basic"/);
+  assert.match(html,/로그인 수단 관리/);
+  assert.match(html,/개인정보처리방침/);
+  assert.doesNotMatch(html,/data-account-open="security"/);
+  assert.doesNotMatch(html,/id="accountAuthButton"/);
+  assert.match(app,/if\(tab==='security'\)tab='basic'/);
+  assert.doesNotMatch(app,/accountAuthButton|accountLoginText/);
+  assert.match(app,/\$\('#authButton'\)\.addEventListener\('click',authAction\)/);
+  assert.match(css,/account-basic-profile/);
+  assert.match(css,/details\.personal-ai-policy\{display:block/);
 });

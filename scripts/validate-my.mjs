@@ -53,8 +53,11 @@ must('html','EKODI USER AI');
 must('html','MY SPACES');
 must('html','MY PLATFORMS');
 must('html','CREATOR PORTFOLIO');
-must('html','내 선택이 우선');
-must('html','공간별 데이터');
+must('html','account-privacy-note');
+must('html','개인정보처리방침');
+must('html','로그인 수단 관리');
+mustNot('html','data-account-open="security"');
+mustNot('app','accountLoginText');
 must('html','/config.js');
 must('html','/user-ui.css');
 must('html','/user-ai-ui.js');
@@ -213,6 +216,7 @@ must('prod','DATA_ENABLED = "true"');
 // production identifiers and secret keys must never appear in staging config.
 if(!content.staging.includes('DATA_ENABLED = "false"'))must('staging','SUPABASE_URL = "https://lxcxwbdwwojjkgybbqii.supabase.co"');
 for(const banned of ['renzehysxirjilvdxacv','sb_secret_','service_role'])if(content.staging.includes(banned))throw new Error(`My EKODI validation failed: staging contains ${banned}`);
+must('staging','DATA_MODE = "isolated-staging"');
 mustNot('staging','my.ekodi.kr');
 must('auth',"'my':{name:'My EKODI'");
 must('auth',"returnTo:'https://ekodi.kr/my/'");
@@ -246,7 +250,7 @@ for(const required of ['my-desktop-tabs','my-bottom-tabs','workspaceCompact','da
   if(!content.html.includes(required))throw new Error(`My EKODI validation failed: tab shell marker missing: ${required}`);
 }
 
-for(const required of ['account-subtabs','data-account-tab="basic"','data-account-tab="public"','data-account-tab="character"','data-account-tab="security"']){
+for(const required of ['account-subtabs','data-account-tab="basic"','data-account-tab="public"','data-account-tab="character"','data-account-tab="ai"']){
   if(!content.html.includes(required))throw new Error(`My EKODI validation failed: account subtab marker missing: ${required}`);
 }
 
