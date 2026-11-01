@@ -560,9 +560,19 @@ async function cancelMergeRequest(req:Request,userId:string,id:string){
 
 // Owner executes the merge. The DB function re-checks ownership, expiry and the
 // inventory at decision time and refuses anything with payment or service data.
+// Merge policy v1 (owner decision 2026-11-02): merging and detaching never move money.
+// Permissions are combined; activity keeps the login it came from; nothing is refunded
+// or split. The owner must acknowledge this exact policy before either action runs.
+const MERGE_POLICY_VERSION="merge-policy-v1";
+async function policyAcknowledged(req:Request){
+  const body=await req.json().catch(()=>({}));
+  return body?.policy===MERGE_POLICY_VERSION;
+}
 async function executeMergeRequest(req:Request,userId:string,id:string){
   const row=await ownMergeRequest(userId,id);
   if(!row)return json(req,{error:"not_found"},404);
+  if(!await policyAcknowledged(req))return json(req,{error:"policy_acknowledgement_required",policy:MERGE_POLICY_VERSION},428);
+  await writeIdentityAudit(row.survivor_person_id,userId,"identity.merge_policy_acknowledged",row.proven_provider,null,{mergeRequestId:row.id,policy:MERGE_POLICY_VERSION});
   const {data,error}=await admin.rpc("person_merge_execute",{p_request:row.id,p_actor:userId});
   if(error)throw error;
   if(data?.ok!==true){
@@ -571,6 +581,38 @@ async function executeMergeRequest(req:Request,userId:string,id:string){
     return json(req,{error:code,inventory:data?.inventory??null,blocking:data?.blocking??null},status);
   }
   return json(req,{ok:true,moved:data.moved});
+}
+// Owner detaches one login into a new, separate EKODI account (policy v1). The DB
+// function refuses the current/primary/last login and any login holding payment,
+// subscription or point records — those stay with the unified ID.
+async function ownIdentity(userId:string,identityId:string){
+  const personId=await personForUser(userId);
+  if(!personId)return null;
+  const {data,error}=await admin.from("login_identities").select("id,person_id,auth_user_id,provider,is_primary,status")
+    .eq("id",identityId).eq("status","active").maybeSingle();
+  if(error)throw error;
+  return data&&data.person_id===personId?data:null;
+}
+async function detachPreview(req:Request,userId:string,identityId:string){
+  const row=await ownIdentity(userId,identityId);
+  if(!row)return json(req,{error:"identity_not_found"},404);
+  const {data,error}=await admin.rpc("person_identity_detach_preview",{p_identity:identityId});
+  if(error)throw error;
+  const blocked=row.auth_user_id===userId?"detach_current_login":row.is_primary?"detach_primary_login":
+    (data?.financialTables??0)>0?"detach_financial_records":null;
+  return json(req,{ok:true,policy:MERGE_POLICY_VERSION,provider:row.provider,blocked,preview:data});
+}
+async function detachIdentity(req:Request,userId:string,identityId:string){
+  const row=await ownIdentity(userId,identityId);
+  if(!row)return json(req,{error:"identity_not_found"},404);
+  if(!await policyAcknowledged(req))return json(req,{error:"policy_acknowledgement_required",policy:MERGE_POLICY_VERSION},428);
+  const {data,error}=await admin.rpc("person_identity_detach",{p_identity:identityId,p_actor:userId,p_policy:MERGE_POLICY_VERSION});
+  if(error)throw error;
+  if(data?.ok!==true){
+    const code=String(data?.error||"detach_failed");
+    return json(req,{error:code,preview:data?.preview??null},code==="detach_owner_required"?403:409);
+  }
+  return json(req,{ok:true,newEkodiId:await ekodiIdForPerson(data.newPersonId)});
 }
 function providerFrom(path:string,suffix:string){
   const match=path.match(new RegExp(`^/providers/([a-z0-9_-]+)${suffix.replaceAll("/","\\/")}$`));
@@ -611,6 +653,9 @@ Deno.serve(async(req)=>{
     if(mergeMatch&&req.method==="GET"&&!mergeMatch[2])return await getMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
     if(mergeMatch&&req.method==="POST"&&mergeMatch[2]==="/cancel")return await cancelMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
     if(mergeMatch&&req.method==="POST"&&mergeMatch[2]==="/execute")return await executeMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
+    const detachMatch=path.match(/^\/identities\/([0-9a-f-]{36})\/(detach-preview|detach)$/i);
+    if(detachMatch&&req.method==="GET"&&detachMatch[2]==="detach-preview")return await detachPreview(req,user.id,detachMatch[1].toLowerCase());
+    if(detachMatch&&req.method==="POST"&&detachMatch[2]==="detach")return await detachIdentity(req,user.id,detachMatch[1].toLowerCase());
     const identityMatch=path.match(/^\/identities\/([0-9a-f-]{36})$/i);
     if(req.method==="DELETE"&&identityMatch)return await disconnectIdentity(req,user.id,identityMatch[1]);
     return json(req,{error:"not_found"},404);

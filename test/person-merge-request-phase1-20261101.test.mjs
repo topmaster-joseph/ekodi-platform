@@ -46,5 +46,5 @@ test('callback shows the inventory as text only and states nothing moves before 
     assert.match(blocked[1],/정리가 필요/);
     assert.ok(blocked.some(l=>l.includes('singles_bank_orders: 2건')));
   }
-  assert.match(await read('auth-site/auth-router.js'),/federated-login\.js\?v=20261102-linked-methods-1/);
+  assert.match(await read('auth-site/auth-router.js'),/federated-login\.js\?v=20261102-merge-policy-1/);
 });
