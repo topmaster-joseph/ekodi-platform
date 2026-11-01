@@ -3,7 +3,7 @@
  * Fresh citizen page: intentionally independent of legacy boardPage and
  * queue/publish polling. Existing EKODI shell/header is reused, not the old UI.
  */
-const content = '<style>body.board-voices .board-head{display:flex;flex-direction:column;align-items:flex-start;gap:6px}body.board-voices .board-head .note{margin:0;font-size:13px}body.board-voices .board-head .board-actions{display:flex;width:100%;justify-content:flex-start;align-items:center;margin:4px 0 0;gap:8px}body.board-voices details.notice-record>summary.row-head{display:flex;flex-wrap:nowrap;align-items:center;gap:10px}body.board-voices details.notice-record>summary.row-head>.row-no{flex:0 0 3ch;text-align:center;font-size:12px;color:#64748b;font-variant-numeric:tabular-nums}body.board-voices details.notice-record>summary.row-head>strong{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}body.board-voices details.notice-record[open]>summary.row-head>strong{white-space:normal}body.board-voices details.notice-record>summary.row-head>.row-date{flex:0 0 auto;white-space:nowrap;font-size:12px;color:#64748b}@media(max-width:600px){body.board-voices details.notice-record>summary.row-head{gap:6px}body.board-voices details.notice-record>summary.row-head>.row-no{flex-basis:2ch}body.board-voices details.notice-record>summary.row-head>.row-date{font-size:11px}}body.board-voices .notice-search{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}body.board-voices .notice-search label{font-weight:600;font-size:13px}body.board-voices .notice-search input{flex:1 1 220px;max-width:420px;min-height:36px;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;box-sizing:border-box}body.board-voices #freshStatus{font-size:13px;margin:8px 0}body.board-voices #freshStatus:empty{display:none}body.board-voices #freshForm{margin:12px 0;padding:14px;border:1px solid #d7dfe8;border-radius:8px}body.board-voices #freshForm[hidden]{display:none}body.board-voices #freshMessage{display:block;box-sizing:border-box;width:100%;min-height:140px;margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:6px}body.board-voices #freshTitle{display:block;box-sizing:border-box;width:100%;min-height:40px;margin:6px 0 10px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-weight:600}body.board-voices .voice-share{margin-top:8px}body.board-voices details.is-shared>summary{outline:2px solid #2b6cb0;outline-offset:2px;border-radius:6px}</style>'+
+const content = '<style>body.board-voices .board-head{display:flex;flex-direction:column;align-items:flex-start;gap:6px}body.board-voices .board-head .note{margin:0;font-size:13px}body.board-voices .board-head .board-actions{display:flex;width:100%;justify-content:flex-start;align-items:center;margin:4px 0 0;gap:8px}body.board-voices details.notice-record>summary.row-head{display:flex;flex-wrap:nowrap;align-items:center;gap:10px}body.board-voices details.notice-record>summary.row-head>.row-no{flex:0 0 3ch;text-align:center;font-size:12px;color:#64748b;font-variant-numeric:tabular-nums}body.board-voices details.notice-record>summary.row-head>strong{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}body.board-voices details.notice-record[open]>summary.row-head>strong{white-space:normal}body.board-voices details.notice-record>summary.row-head>.row-date{flex:0 0 auto;white-space:nowrap;font-size:12px;color:#64748b}@media(max-width:600px){body.board-voices details.notice-record>summary.row-head{gap:6px}body.board-voices details.notice-record>summary.row-head>.row-no{flex-basis:2ch}body.board-voices details.notice-record>summary.row-head>.row-date{font-size:11px}}body.board-voices .notice-search{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0}body.board-voices .notice-search label{font-weight:600;font-size:13px}body.board-voices .notice-search input{flex:1 1 220px;max-width:420px;min-height:36px;border:1px solid #cbd5e1;border-radius:6px;padding:7px 10px;box-sizing:border-box}body.board-voices #freshStatus{font-size:13px;margin:8px 0}body.board-voices #freshStatus:empty{display:none}body.board-voices #freshForm{margin:12px 0;padding:14px;border:1px solid #d7dfe8;border-radius:8px}body.board-voices #freshForm[hidden]{display:none}body.board-voices #freshMessage{display:block;box-sizing:border-box;width:100%;min-height:140px;margin:8px 0;padding:10px;border:1px solid #cbd5e1;border-radius:6px}body.board-voices #freshTitle{display:block;box-sizing:border-box;width:100%;min-height:40px;margin:6px 0 10px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-weight:600}body.board-voices .voice-share{margin-top:8px}body.board-voices details.is-shared>summary{outline:2px solid #2b6cb0;outline-offset:2px;border-radius:6px}body.board-voices .voice-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}body.board-voices .voice-actions button{margin:0}body.board-voices .row-body a,body.board-voices .fresh-reply a{color:#1d4ed8;text-decoration:underline;overflow-wrap:anywhere;word-break:break-all}</style>'+
   '<style>body.board-voices .fresh-replies{border-top:1px solid #d9e2ec;margin-top:12px;padding-top:10px}body.board-voices .fresh-replies h3{margin:0 0 8px;font-size:14px}body.board-voices .fresh-reply{border-top:1px solid #e5edf5;padding:9px 0}body.board-voices .fresh-reply small{display:block;color:#64748b;font-size:12px}body.board-voices .fresh-reply p{margin:5px 0 8px;white-space:pre-wrap;overflow-wrap:anywhere}body.board-voices .fresh-reply-actions,body.board-voices .fresh-reply-tools{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}body.board-voices .fresh-reply-form{margin-top:10px;display:grid;gap:7px}body.board-voices .fresh-reply-form[hidden]{display:none}body.board-voices .fresh-reply-form textarea,body.board-voices .fresh-reply-form input{box-sizing:border-box;width:100%;border:1px solid #bac8d7;border-radius:6px;padding:8px;font:inherit}body.board-voices .fresh-reply-form textarea{min-height:82px}body.board-voices .fresh-replies button{min-height:38px;padding:6px 10px}body.board-voices .fresh-reply-status{font-size:12px;color:#375473}</style>'+
   '<div class="notice-search"><label for="freshSearch">의견 검색</label><input id="freshSearch" type="search" placeholder="제목·내용 검색"></div>'+
   '<p id="freshStatus" role="status" aria-live="polite"></p>'+
@@ -110,7 +110,7 @@ export const freshVoiceClient = String.raw`
       const row=document.createElement('article');row.className='fresh-reply';
       const by=document.createElement('small');
       by.textContent=(response.role==='admin'?'관리자 · ':'')+(response.displayName||'회원')+' · '+String(response.createdAt||'').slice(0,16).replace('T',' ');
-      const body=document.createElement('p');body.textContent=String(response.message||'');row.append(by,body);
+      const body=document.createElement('p');body.style.whiteSpace='pre-wrap';appendLinkedText(body,String(response.message||''));row.append(by,body);
       if(adminAllowed||response.mine){
         const tools=document.createElement('div');tools.className='fresh-reply-tools';
         const edit=document.createElement('button');edit.type='button';edit.textContent='답글 수정';edit.className='secondary';
@@ -176,21 +176,34 @@ export const freshVoiceClient = String.raw`
       const title=document.createElement('strong');title.textContent=heading;
       const date=document.createElement('small');date.className='row-date';date.textContent='작성일 '+(String(item.createdAt||'').slice(0,16).replace('T',' ')||'-');
       summary.append(number,title,date);details.append(summary);
-      const body=document.createElement('p');body.className='row-body';body.style.whiteSpace='pre-wrap';body.textContent=item.message;details.append(body);
+      const body=document.createElement('p');body.className='row-body';body.style.whiteSpace='pre-wrap';appendLinkedText(body,String(item.message||''));details.append(body);
       const share=document.createElement('button');share.type='button';share.className='secondary voice-share';share.textContent='공유';
-      share.onclick=()=>shareVoice(item);details.append(share);
+      share.onclick=()=>shareVoice(item);
+      // 공유 · 수정 · 삭제 share one row (owner request 2026-10-27).
+      const actions=document.createElement('div');actions.className='voice-actions';actions.append(share);details.append(actions);
       if(adminAllowed||item.mine){
-        const actions=document.createElement('div');actions.className='admin-actions';
         const edit=document.createElement('button');edit.type='button';edit.textContent='수정';
         edit.onclick=async()=>{const nextTitle=prompt('수정할 제목',item.title||'');if(nextTitle===null)return;const next=prompt('수정할 의견',item.message);if(next===null||!next.trim())return;try{await adminEdit(item.id,next,nextTitle);message('수정되었습니다.')}catch(e){message(e.message)}};
         const remove=document.createElement('button');remove.type='button';remove.className='secondary';remove.textContent='삭제';
         remove.onclick=async()=>{if(!confirm('이 의견을 삭제하시겠습니까?'))return;try{await adminDelete(item.id);message('삭제되었습니다.')}catch(e){message(e.message)}};
-        actions.append(edit,remove);details.append(actions);
+        actions.append(edit,remove);
       }
       renderReplyArea(details,item);
       list.append(details);
     }
     openSharedVoice();
+  }
+  // Citizen text stays text: only http(s) URLs become anchors, built via DOM (no innerHTML).
+  function appendLinkedText(node,text){
+    const re=/https?:\/\/[^\s<>"']+/g;let last=0,m;
+    while((m=re.exec(text))){
+      let url=m[0];while(/[.,;:!?)\]}]$/.test(url))url=url.slice(0,-1);
+      if(m.index>last)node.append(text.slice(last,m.index));
+      let safe=null;try{const u=new URL(url);if(u.protocol==='http:'||u.protocol==='https:')safe=u.href}catch{}
+      if(safe){const a=document.createElement('a');a.href=safe;a.target='_blank';a.rel='noopener noreferrer nofollow ugc';a.textContent=url;node.append(a)}else node.append(url);
+      last=m.index+url.length;re.lastIndex=last;
+    }
+    if(last<text.length)node.append(text.slice(last));
   }
   function voiceTitle(item){const t=String(item.title||'').trim();if(t)return t;const first=String(item.message||'').split('\n')[0].trim();return first.slice(0,75)+(first.length>75?'…':'')}
   function voiceUrl(id){const u=new URL(location.href);u.hash='';u.search='';u.searchParams.set('id',String(id));return u.href}
