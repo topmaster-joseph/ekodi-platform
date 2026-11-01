@@ -19,7 +19,7 @@ function d1() {
   const stmt = (sql, args = []) => ({ bind: (...a) => stmt(sql, a), first: async () => db.prepare(sql).get(...args) ?? null, all: async () => ({ results: db.prepare(sql).all(...args) }), run: async () => { db.prepare(sql).run(...args); return {}; } });
   return { raw: db, prepare: sql => stmt(sql), batch: async l => { for (const s of l) await s.run(); } };
 }
-const files = etag => ({ head: async () => (etag ? { httpEtag: etag, size: 62223, uploaded: new Date('2026-11-01') } : null), get: async () => null });
+const files = (etag, size = 62223) => ({ head: async () => (etag ? { httpEtag: etag, size, uploaded: new Date('2026-11-01') } : null), get: async () => null });
 const req = method => new Request('https://ekodi.kr/books/api/commerce/admin/approvals/BOOK-EKODI-000002', { method });
 const good = { edition: '전자책 초판 v1.0', listPrice: 9900, rightsConfirmed: true, contentReviewed: true, fileEtag: '"e1"' };
 
@@ -29,7 +29,13 @@ test('unapproved AI book stays blocked; checklist, edition, price and file are a
   for (const bad of [{ ...good, rightsConfirmed: false }, { ...good, contentReviewed: false }, { ...good, edition: '' }]) assert.equal((await approvalRoute(env, req('POST'), ai, 'op@ekodi.kr', bad)).status, 400);
   assert.equal((await approvalRoute(env, req('POST'), ai, 'op@ekodi.kr', { ...good, listPrice: 5000 })).data.code, 'PRICE_MISMATCH');
   assert.equal((await approvalRoute(env, req('POST'), ai, 'op@ekodi.kr', { ...good, fileEtag: '"other"' })).data.code, 'FILE_CHANGED');
+  assert.equal((await approvalRoute(env, req('POST'), ai, 'op@ekodi.kr', { ...good, fileEtag: undefined })).data.code, 'FILE_CHANGED');
+  assert.equal((await approvalRoute(env, req('POST'), ai, 'op@ekodi.kr', { ...good, fileEtag: '' })).data.code, 'FILE_CHANGED');
+  assert.equal((await approvalRoute({ DB: env.DB, BOOK_FILES: files('"e1"', 0) }, req('POST'), ai, 'op@ekodi.kr', good)).data.code, 'FILE_MISSING');
   assert.equal((await approvalRoute({ DB: env.DB, BOOK_FILES: files(null) }, req('POST'), ai, 'op@ekodi.kr', good)).data.code, 'FILE_MISSING');
+  const review = await approvalRoute(env, req('GET'), ai, 'op@ekodi.kr');
+  assert.equal(review.data.catalog.title, 'AI 시대의 진보와 빈곤');
+  assert.equal(review.data.catalog.author, '정찬균');
 });
 
 test('owner approval opens sale for exactly the reviewed file; a new upload or revoke closes it', async () => {
@@ -79,6 +85,8 @@ test('reader unzips a real EPUB with the browser DecompressionStream (no externa
 test('library offers in-browser reading and operators get a review link; review page is commerce-CSP', async () => {
   const lib = fs.readFileSync(new URL('../books/buy/library.js', import.meta.url), 'utf8');
   assert.match(fs.readFileSync(new URL('../books/review/review.js', import.meta.url), 'utf8'), /'전자책 초판 v1\.0'/);
+  assert.match(fs.readFileSync(new URL('../books/review/review.js', import.meta.url), 'utf8'), /reviewBookMeta/);
+  assert.match(fs.readFileSync(new URL('../books/review/index.html', import.meta.url), 'utf8'), /review-readiness/);
   assert.match(lib, /펼쳐 읽기/); assert.match(lib, /\/review\/\?book=/);
   assert.match(fs.readFileSync(new URL('../books/library/index.html', import.meta.url), 'utf8'), /\/reader\/epub-reader\.js/);
   const { isCommercePage } = await import('../books-worker.js');
