@@ -1,5 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { identityLabel, renderLinkButtons } from './federated-login.js?v=20261101-merge-report-1';
+import { identityLabel, renderLinkButtons } from './federated-login.js?v=20261101-merge-execute-1';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';

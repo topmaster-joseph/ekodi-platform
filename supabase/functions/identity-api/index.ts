@@ -558,6 +558,20 @@ async function cancelMergeRequest(req:Request,userId:string,id:string){
   return json(req,{ok:true,status:"cancelled"});
 }
 
+// Owner executes the merge. The DB function re-checks ownership, expiry and the
+// inventory at decision time and refuses anything with payment or service data.
+async function executeMergeRequest(req:Request,userId:string,id:string){
+  const row=await ownMergeRequest(userId,id);
+  if(!row)return json(req,{error:"not_found"},404);
+  const {data,error}=await admin.rpc("person_merge_execute",{p_request:row.id,p_actor:userId});
+  if(error)throw error;
+  if(data?.ok!==true){
+    const code=String(data?.error||"merge_failed");
+    const status=code==="merge_request_expired"?410:code==="merge_owner_required"?403:409;
+    return json(req,{error:code,inventory:data?.inventory??null,blocking:data?.blocking??null},status);
+  }
+  return json(req,{ok:true,moved:data.moved});
+}
 function providerFrom(path:string,suffix:string){
   const match=path.match(new RegExp(`^/providers/([a-z0-9_-]+)${suffix.replaceAll("/","\\/")}$`));
   return match?.[1]??null;
@@ -593,9 +607,10 @@ Deno.serve(async(req)=>{
     const linkExchangeProvider=providerFrom(path,"/link/exchange");
     if(req.method==="POST"&&linkExchangeProvider)return await finishLink(req,user.id,linkExchangeProvider);
 
-    const mergeMatch=path.match(/^\/merge-requests\/([0-9a-f-]{36})(\/cancel)?$/i);
+    const mergeMatch=path.match(/^\/merge-requests\/([0-9a-f-]{36})(\/cancel|\/execute)?$/i);
     if(mergeMatch&&req.method==="GET"&&!mergeMatch[2])return await getMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
-    if(mergeMatch&&req.method==="POST"&&mergeMatch[2])return await cancelMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
+    if(mergeMatch&&req.method==="POST"&&mergeMatch[2]==="/cancel")return await cancelMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
+    if(mergeMatch&&req.method==="POST"&&mergeMatch[2]==="/execute")return await executeMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
     const identityMatch=path.match(/^\/identities\/([0-9a-f-]{36})$/i);
     if(req.method==="DELETE"&&identityMatch)return await disconnectIdentity(req,user.id,identityMatch[1]);
     return json(req,{error:"not_found"},404);

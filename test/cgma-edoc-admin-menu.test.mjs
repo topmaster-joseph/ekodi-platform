@@ -66,3 +66,17 @@ test('admin stylesheet URL carries the stylesheet content hash', async () => {
   assert.match(module, new RegExp(`const STYLE='/cgma/admin/assets/cgma-edoc-admin\\.css\\?v=css-${hash}'`),
     `cgma-edoc-admin.css changed: set STYLE in cgma-edoc-admin.js to ?v=css-${hash}`);
 });
+
+test('CGMA left menu: 전용 메뉴 (전자문서 · 정회원 · 모터페스티벌) comes first for every admin profile; other sites keep their order', async () => {
+  const s = await (await workspaceAdminScript()).text();
+  const cut = (from, to) => { const i = s.indexOf(from), j = s.indexOf(to, i); assert.ok(i >= 0 && j > i, `missing ${from}`); return s.slice(i, j); };
+  const block = cut('const isBizWorkspace=', 'const adminHubScopes=') + cut('function groupsForRole(', 'function renderSecondaryNav(') + cut('function dedicatedSections(', 'function renderNav(');
+  const navFor = (workspace, profile) => new Function('workspace', 'service', 'workspaceRole', 'navigationProfile', 'canSection', 'mallLocalGroups', `${block}; return navBucketsForRole;`)(
+    workspace, '', 'manager', () => profile, () => true, [])('manager').map(b => [b.label, b.items.map(([key]) => key)]);
+  for (const profile of ['delegated-manager', 'local']) {
+    const nav = navFor('cgma', profile);
+    assert.equal(nav[0][0], '전용 메뉴', profile);
+    assert.deepEqual(nav[0][1], ['edocs', 'member', 'festival'], profile);
+  }
+  assert.equal(navFor('ekodimission', 'delegated-manager')[0][0], '공통 메뉴');
+});

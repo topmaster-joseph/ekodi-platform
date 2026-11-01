@@ -26,10 +26,8 @@ test('identity-api turns a proven cross-Person link into an owner-scoped merge r
   const api=await read('supabase/functions/identity-api/index.ts');
   assert.match(api,/const mergeRequest=initiatorPersonId\?await openMergeRequest\(initiatorPersonId,targetPersonId,userId,target\.user\.id,provider\):null;/);
   assert.match(api,/return json\(req,\{error:"account_merge_review_required",mergeRequest\},409\)/);
-  // Only the surviving Person can read or cancel; no execution endpoint exists yet.
+  // Only the surviving Person can read, cancel or (phase 2) execute.
   assert.match(api,/data&&data\.survivor_person_id===personId\?data:null/);
-  assert.match(api,/merge-requests\\\/\(\[0-9a-f-\]\{36\}\)\(\\\/cancel\)\?\$/);
-  assert.doesNotMatch(api,/merge-requests[^\n]*\/(execute|approve)/);
   assert.match(api,/action:?\s*"identity\.merge_requested"|"identity\.merge_requested"/);
 });
 
@@ -48,5 +46,5 @@ test('callback shows the inventory as text only and states nothing moves before 
     assert.match(blocked[1],/정리가 필요/);
     assert.ok(blocked.some(l=>l.includes('singles_bank_orders: 2건')));
   }
-  assert.match(await read('auth-site/auth-router.js'),/federated-login\.js\?v=20261101-merge-report-1/);
+  assert.match(await read('auth-site/auth-router.js'),/federated-login\.js\?v=20261101-merge-execute-1/);
 });
