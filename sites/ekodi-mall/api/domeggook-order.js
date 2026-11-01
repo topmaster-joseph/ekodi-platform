@@ -8,7 +8,8 @@
 import { fetchDomeggookItem, PROVIDER } from './domeggook-import.js';
 import { raiseAlert } from './ops-alerts.js';
 
-const ENDPOINT = 'https://www.domeggook.com/ssl/api/';
+// 10/29 www 호스트로 바꾼 뒤 redirect:'error' 와 겹쳐 모든 로그인이 실패했다. 상품조회와 같은 공식 호스트를 쓴다.
+const ENDPOINT = 'https://domeggook.com/ssl/api/';
 const DEFAULT_ITEM_TEMPLATE = '{market}||P||{opt}|{qty}||{sellerMemo}||{deliMemo}';
 
 /**
@@ -55,9 +56,16 @@ function redact(text, env) {
 async function call(env, params, fetchImpl, method = 'POST') {
   const body = new URLSearchParams({ aid: env.DOMEMAE_API_KEY, om: 'json', ...params });
   // Never silently follow a redirect for a paid order: some redirects convert POST into GET.
-  const res = method === 'GET'
-    ? await fetchImpl(`${ENDPOINT}?${body}`, { headers: { accept: 'application/json' }, redirect: 'error' })
-    : await fetchImpl(ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body, redirect: 'error' });
+  let res;
+  try {
+    res = method === 'GET'
+      ? await fetchImpl(`${ENDPOINT}?${body}`, { headers: { accept: 'application/json' }, redirect: 'error' })
+      : await fetchImpl(ENDPOINT, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body, redirect: 'error' });
+  } catch (error) {
+    // 네트워크·리다이렉트 차단은 공급사 거절과 구분해 기록한다.
+    const transport = /redirect/i.test(String(error?.message || '')) ? 'redirect blocked' : 'network failure';
+    return { ok: false, status: 0, root: {}, parsedJson: false, transport };
+  }
   const text = await res.text();
   let payload = null; try { payload = JSON.parse(text); } catch {}
   const root = payload?.domeggook && typeof payload.domeggook === 'object' ? payload.domeggook : payload;
@@ -109,7 +117,7 @@ export async function login(env, fetchImpl = fetch) {
   if (!r.ok || apiError(r, env) || !sId || !String(r.root?.id || '').trim()) {
     const error = new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '인증 결과/회원 ID/세션 불명'}`);
     error.safeDiagnostic = safeDomeggookLoginDiagnostic(env, r);
-    error.supplierMessage = scrubSupplierMessage(apiError(r, env) || (r.parsedJson ? '' : 'non json response'), env);
+    error.supplierMessage = r.transport || scrubSupplierMessage(apiError(r, env) || (r.parsedJson ? '' : 'non json response'), env);
     throw error;
   }
   // Deny any session bound to another member even when the supplier returned success.

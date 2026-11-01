@@ -192,7 +192,7 @@ test('private order calls use canonical HTTPS and prohibit automatic redirects',
   };
   const r = await placeSupplierOrders(env, fetchImpl);
   assert.equal(r.placed, 1);
-  assert.ok(urls.every((url) => url.startsWith('https://www.domeggook.com/ssl/api/')));
+  assert.ok(urls.every((url) => url.startsWith('https://domeggook.com/ssl/api/')));
 });
 
 
@@ -354,4 +354,12 @@ test('supplier login reason is kept only after scrubbing ids, secrets and number
   const out = scrubSupplierMessage('아이디(myid77) 또는 비밀번호(pw!123) 불일치 sns@952821 abcdef0123456789abcdef 010-1234', env);
   for (const bad of ['myid77', 'pw!123', '952821', 'abcdef', '1234']) assert.ok(!out.includes(bad), bad);
   assert.ok(out.includes('비밀번호'));
+});
+
+test('setLogin goes to the official host and a blocked redirect is reported as transport, not supplier rejection', async () => {
+  const { login } = await import('./domeggook-order.js');
+  const env = { DOMEMAE_API_KEY: 'K', DOMEMAE_USER_ID: 'u', DOMEMAE_PASSWORD: 'p', DOMEMAE_APPROVED_MEMBER_ID: 'sns@1' };
+  const seen = [];
+  await assert.rejects(login(env, async (url) => { seen.push(String(url)); throw new TypeError('fetch failed: redirect mode is set to error'); }), (e) => e.supplierMessage === 'redirect blocked');
+  assert.equal(seen[0], 'https://domeggook.com/ssl/api/');
 });
