@@ -364,16 +364,47 @@ export function validateEpub(bytes) {
   return { ok: true };
 }
 
+/** BOOKS-REFUND-SYNC-001: 토스에서 전액 취소가 확인된 결제만 환불로 반영한다(금액·주문번호 대조, 멱등). */
+export async function refundSync(env, orderId, actor, now = new Date(), toss = tossVia(env)) {
+  const order = await env.DB.prepare('SELECT * FROM books_orders WHERE id=?').bind(orderId).first();
+  if (!order) return { status: 404, data: { error: '주문을 찾을 수 없습니다.' } };
+  if (order.status === 'refunded') return { status: 200, data: { ok: true, orderId, status: 'refunded', idempotent: true } };
+  if (order.status !== 'paid' || !order.payment_key) return { status: 409, data: { error: '결제 완료된 주문만 환불을 반영할 수 있습니다.', code: 'NOT_PAID' } };
+  let payment;
+  try { payment = await toss(env, ekodipay.profileFromOrderId(orderId), `/v1/payments/${encodeURIComponent(order.payment_key)}`, {}); }
+  catch (error) { return { status: 502, data: { error: '토스페이먼츠에서 결제 상태를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.', code: error.code || 'GATEWAY_ERROR' } }; }
+  const amount = Math.trunc(Number(order.amount));
+  const canceled = (Array.isArray(payment?.cancels) ? payment.cancels : []).reduce((sum, c) => sum + Math.trunc(Number(c?.cancelAmount) || 0), 0);
+  if (payment?.orderId !== orderId || Math.trunc(Number(payment?.totalAmount)) !== amount) {
+    await audit(env, orderId, actor, 'refund.mismatch', { orderId: payment?.orderId, totalAmount: payment?.totalAmount });
+    return { status: 409, data: { error: '토스 결제 정보가 주문과 일치하지 않습니다. 확인이 필요합니다.', code: 'PAYMENT_MISMATCH' } };
+  }
+  if (payment.status !== 'CANCELED' || canceled !== amount) {
+    return { status: 409, data: { error: payment.status === 'PARTIAL_CANCELED' ? '부분 취소된 결제입니다. 전액 취소 후 다시 반영해 주세요.' : '아직 토스페이먼츠에서 결제가 취소되지 않았습니다. 상점관리자에서 먼저 결제를 취소해 주세요.', code: 'NOT_CANCELED', paymentStatus: payment.status || '' } };
+  }
+  const at = now.toISOString();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE books_orders SET status='refunded', updated_at=? WHERE id=? AND status='paid'").bind(at, orderId),
+    env.DB.prepare('UPDATE books_entitlements SET revoked_at=? WHERE order_id=? AND revoked_at IS NULL').bind(at, orderId),
+  ]);
+  await audit(env, orderId, actor, 'order.refunded', { amount, paymentStatus: payment.status });
+  return { status: 200, data: { ok: true, orderId, status: 'refunded', amount } };
+}
+
 /** 운영자 전용: 주문 조회 · 회원등급 부여(구독 결제가 열리기 전까지 수동 운영). */
 export async function adminRoute(env, request, path, url, now = new Date()) {
   const buyer = await buyerIdentity(request);
   if (!buyer || !operatorEmails(env).has(buyer.email)) return { status: 403, data: { error: '운영자만 사용할 수 있습니다.' } };
   if (request.method === 'GET' && path === '/admin/orders') {
-    const rows = await env.DB.prepare(`SELECT id, book_id, book_title, buyer_email, tier_id, amount, status, payment_method, approved_at, created_at FROM books_orders ORDER BY created_at DESC LIMIT ?`)
+    const rows = await env.DB.prepare(`SELECT id, book_id, book_title, buyer_email, tier_id, amount, status, payment_method, receipt_url, approved_at, created_at, updated_at FROM books_orders ORDER BY created_at DESC LIMIT ?`)
       .bind(Math.min(200, Math.max(1, Number(url.searchParams.get('limit')) || 50))).all();
     const sum = await env.DB.prepare(`SELECT COUNT(*) AS paid, COALESCE(SUM(amount),0) AS revenue FROM books_orders WHERE status='paid'`).first();
     return { status: 200, data: { orders: rows.results || [], paid: Number(sum?.paid || 0), revenue: Number(sum?.revenue || 0), payments: await payments(env) } };
   }
+  // BOOKS-REFUND-SYNC-001: 환불(결제 취소)은 사람이 토스페이먼츠 상점관리자에서 직접 실행한다.
+  // 서점은 토스에 그 결제가 실제로 전액 취소됐는지 조회로 확인한 뒤에만 주문을 '환불'로 바꾸고 서재 권한을 회수한다.
+  const refundMatch = /^\/admin\/orders\/([A-Za-z0-9_-]{6,64})\/refund-sync$/.exec(path);
+  if (refundMatch && request.method === 'POST') return refundSync(env, refundMatch[1], buyer.email, now);
   // BOOKS-EDITION-APPROVAL-001: 출판 확정 전 운영자 검토용 원본 열람 + 판권·판본 확정
   const contentMatch = /^\/admin\/files\/([A-Z0-9-]{3,40})\/content$/.exec(path);
   if (contentMatch && request.method === 'GET') {
