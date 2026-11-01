@@ -106,5 +106,11 @@
     if (book?.coverImage) { const img = document.createElement('img'); img.src = under(book.coverImage); img.alt = alt || `${book.title} 표지`; img.decoding = 'async'; return img; }
     const div = document.createElement('div'); div.className = 'cover-fallback'; div.textContent = book?.title || ''; return div;
   }
-  window.EkodiBooksCommerce = { BASE, under, api, session, forget, mountGoogle, won, cover };
+  // 로그아웃: 서버에서 세션(리프레시 토큰)을 폐기하고, 이 브라우저의 서점·중앙 로그인 정보를 지운다.
+  async function signOut() {
+    const v = stored();
+    if (v?.accessToken) { try { await bounded(`${SUPABASE_URL}/auth/v1/logout?scope=local`, { method: 'POST', headers: { apikey: SUPABASE_KEY, authorization: 'Bearer ' + v.accessToken } }); } catch {} }
+    forget(); try { localStorage.removeItem(CENTRAL_KEY); } catch {}
+  }
+  window.EkodiBooksCommerce = { BASE, under, api, session, forget, signOut, mountGoogle, won, cover };
 })();

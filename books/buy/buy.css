@@ -163,3 +163,6 @@
   .library-empty h2{font-size:1.07rem}
   .library-related-links{margin-top:16px}
 }
+.buy-author .lib-account{display:inline-block;max-width:58vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.buy-author .lib-switch{margin-left:6px;font:inherit;font-size:.78rem;white-space:nowrap;border:1px solid #cfc6b4;background:#fff;border-radius:999px;padding:3px 10px;cursor:pointer}
+.lib-operator-note{font-size:.84rem;word-break:break-all}
