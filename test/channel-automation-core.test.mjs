@@ -93,3 +93,8 @@ test('deployment gates include the channel core migration and production health 
   assert.match(boundaries, /channel-credential-vault\.js/);
   assert.match(boundaries, /channel-youtube-adapter\.js/);
 });
+test('YouTube OAuth callback defaults to the canonical apex path', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const src = await readFile(new URL('../channel-youtube-adapter.js', import.meta.url), 'utf8');
+  assert.match(src, /env\.CHANNEL_GOOGLE_REDIRECT_URI \|\| 'https:\/\/ekodi\.kr\/marketing-publish-api\/oauth\/youtube\/callback'/);
+});
