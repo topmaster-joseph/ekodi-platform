@@ -1,0 +1,125 @@
+name: Render EKODI Voice Audiobook
+# EKODI-VOICE-001: 운영자 본인 동의 녹음 음색으로 장별 무료 오디오북 "초안"을 만든다.
+# - 비공개 R2에서 판매 EPUB·음성 샘플을 읽고, 결과 MP3를 승인 메타데이터 없이 같은 비공개 R2에 둔다.
+# - 초안은 사람이 듣고 권리·음성·접근성 검수를 승인하기 전에는 구매자에게 전달되지 않는다(books-audiobook 정책).
+# - 원고 본문·음성 파일은 로그나 아티팩트에 남기지 않는다. 유료 음성 API를 호출하지 않는다(MIT 오픈 모델, CPU).
+
+on:
+  workflow_dispatch:
+    inputs:
+      book_id:
+        description: '도서 ID (예: BOOK-EKODI-000001). SELFTEST는 비공개 자료 없이 엔진만 점검'
+        required: true
+        type: string
+      speed:
+        description: '낭독 속도 (0.8~1.1)'
+        required: false
+        default: '0.95'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-voice-${{ inputs.book_id }}
+  cancel-in-progress: false
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  BOOK_BUCKET: ekodi-book-files
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      BOOK_ID: ${{ inputs.book_id }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - name: Resolve book and refuse to touch approved audio
+        id: book
+        if: inputs.book_id != 'SELFTEST'
+        run: |
+          set -euo pipefail
+          [[ "$BOOK_ID" =~ ^BOOK-[A-Z0-9-]{3,40}$ ]] || { echo 'invalid book id'; exit 1; }
+          python3 -I - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+          book = next(b for b in json.load(open('books/books.json'))['books'] if b['id'] == os.environ['BOOK_ID'])
+          assert book.get('directSale', {}).get('enabled'), 'not a direct-sale book'
+          assert (book.get('audiobook') or {}).get('status') != 'approved', 'approved audio is never overwritten'
+          print('file_key=' + book['directSale']['fileKey'])
+          print('lang=' + ('en' if book.get('language') == 'en' else 'ko'))
+          print('title=' + book['title'].replace('\n', ' '))
+          PY
+      - name: Fetch private EPUB and consented voice sample
+        if: inputs.book_id != 'SELFTEST'
+        run: |
+          set -euo pipefail
+          mkdir -p private && chmod 700 private
+          npx --yes wrangler@${WRANGLER_VERSION} r2 object get "${BOOK_BUCKET}/${{ steps.book.outputs.file_key }}" --remote --file private/book.epub >/dev/null
+          npx --yes wrangler@${WRANGLER_VERSION} r2 object get "${BOOK_BUCKET}/_voice/ekodi-narrator/latest.json" --remote --file private/voice.json >/dev/null
+          KEY=$(node -e "const v=require('./private/voice.json');if(v.consent!=='self-recorded-for-ekodi-audiobooks'||!/^_voice\/ekodi-narrator\/sample-[\w-]+\.(webm|wav|m4a|mp3)$/.test(v.key))process.exit(1);process.stdout.write(v.key)")
+          npx --yes wrangler@${WRANGLER_VERSION} r2 object get "${BOOK_BUCKET}/${KEY}" --remote --file private/sample.bin >/dev/null
+      - name: Install EKODI Voice engine (MeloTTS + OpenVoice V2, MIT)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
+          python -m pip install -q --upgrade pip
+          python -m pip install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          # OpenVoice의 고정 의존성(av 10 소스 빌드)은 최신 러너에서 깨지므로, 엔진은 --no-deps로 받고
+          # 실제로 쓰는 의존성만 바이너리 휠로 설치한다(VAD 기반 음색 추출 + 워터마크).
+          python -m pip install -q "av>=12" git+https://github.com/myshell-ai/MeloTTS.git
+          python -m pip install -q --no-deps git+https://github.com/myshell-ai/OpenVoice.git
+          python -m pip install -q whisper-timestamped faster-whisper python-dotenv
+          python -m pip install -q --no-deps "wavmark==0.0.3"
+          python -m unidic download >/dev/null
+          # 공식 체크포인트(MIT): Hugging Face myshell-ai/OpenVoiceV2 (converter + base speaker embeddings)
+          python -c "from huggingface_hub import snapshot_download; snapshot_download('myshell-ai/OpenVoiceV2', local_dir='checkpoints_v2', allow_patterns=['converter/*','base_speakers/ses/*'])"
+          test -f checkpoints_v2/converter/checkpoint.pth && ls checkpoints_v2/base_speakers/ses
+      - name: Self-test inputs (no private data; engine smoke test)
+        if: inputs.book_id == 'SELFTEST'
+        run: |
+          set -euo pipefail
+          mkdir -p private
+          python scripts/ekodi-voice/selftest_inputs.py private
+      - name: Render chapter drafts (shard ${{ matrix.shard }})
+        run: |
+          set -euo pipefail
+          BOOK_ID=$([ "$BOOK_ID" = SELFTEST ] && echo BOOK-SELFTEST-000 || echo "$BOOK_ID")
+          python scripts/ekodi-voice/render.py --book-id "$BOOK_ID" --epub private/book.epub --sample private/sample.bin \
+            --lang "${{ steps.book.outputs.lang || 'ko' }}" --title "${{ steps.book.outputs.title || 'SELFTEST' }}" --checkpoints checkpoints_v2 \
+            --shard ${{ matrix.shard }} --shards 4 --speed "${{ inputs.speed }}" --out out
+      - name: Self-test result (durations only)
+        if: inputs.book_id == 'SELFTEST'
+        run: cat out/manifest-${{ matrix.shard }}.json | python3 -c "import json,sys;d=json.load(sys.stdin);print([(t['number'],t['durationSec'],t['bytes']) for t in d['tracks']])"
+      - name: Store drafts privately (not deliverable until approved)
+        if: inputs.book_id != 'SELFTEST'
+        run: |
+          set -euo pipefail
+          for f in $(find out -name '*.mp3' | sort); do
+            key="${f#out/}"
+            [[ "$key" =~ ^${BOOK_ID}/audiobook/[0-9]{2}\.mp3$ ]] || { echo "unexpected key"; exit 1; }
+            npx --yes wrangler@${WRANGLER_VERSION} r2 object put "${BOOK_BUCKET}/${key}" --remote --file "$f" --content-type audio/mpeg >/dev/null
+          done
+          npx --yes wrangler@${WRANGLER_VERSION} r2 object put "${BOOK_BUCKET}/_voice/renders/${BOOK_ID}/manifest-${{ matrix.shard }}.json" --remote --file out/manifest-${{ matrix.shard }}.json --content-type application/json >/dev/null
+          mkdir -p manifest && cp out/manifest-${{ matrix.shard }}.json manifest/
+          rm -rf private out
+      - name: Publish track manifest (titles, hashes, durations only)
+        if: inputs.book_id != 'SELFTEST'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ekodi-voice-manifest-${{ inputs.book_id }}-${{ matrix.shard }}
+          path: manifest/
+          retention-days: 30

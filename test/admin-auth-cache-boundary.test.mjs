@@ -52,7 +52,7 @@ test('guarded production release verifies current auth entry, bridge and workspa
   assert.ok(root.expect.includes('/auth/auth-entry.js?v=20261101-live-church-return-1'));
   assert.ok(bootstrap.expect.includes('dataset.seamlessSso'));
   assert.ok(entry.expect.includes("./auth-router.js?v=20261101-live-church-return-1"));
-  assert.ok(router.expect.includes('admin-auth.js?v=20260918-canonical-origin-2'));
+  assert.ok(router.expect.includes('admin-auth.js?v=20261101-operator-linked-login-1'));
   assert.ok(router.expect.includes('business-auth.js?v=20260826-free-fallback-1'));
   assert.ok(router.expect.includes('client-auth.js?v=20261101-live-church-return-1'));
   assert.ok(client.expect.includes('/session/handoff'));

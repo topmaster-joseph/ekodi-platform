@@ -1,5 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { identityLabel, renderLinkButtons } from './federated-login.js?v=20261101-merge-execute-1';
+import { identityLabel, renderLinkButtons } from './federated-login.js?v=20261102-linked-methods-1';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -210,7 +210,7 @@ function renderIdentityList(items){
     const left=document.createElement('div');
     const {label,display}=identityLabel(item);
     const email=document.createElement('strong');email.textContent=display;
-    const meta=document.createElement('span');meta.textContent=item.is_primary?'기본 로그인':'연결된 로그인';
+    const meta=document.createElement('small');meta.textContent=item.is_primary?'기본 로그인':'연결된 로그인';
     left.append(email,meta);
     const badge=document.createElement('span');badge.className='provider-badge';badge.textContent=label;badge.dataset.provider=item.provider||'google';
     row.append(left,badge);host.append(row);
@@ -223,7 +223,7 @@ async function loadLinkedIdentities(){
     const data=await identity('/identities',{method:'GET',authenticated:true});
     renderIdentityList(data.identities||[]);
     $('addGoogleAccount').disabled=Boolean(data.reloginRequired);
-    if(!data.reloginRequired)renderLinkButtons();
+    if(!data.reloginRequired)renderLinkButtons(data.identities||[]);
     if(data.reloginRequired)notice('identityLinkStatus','현재 세션은 새 통합 프로필에 아직 연결되지 않았습니다. 다른 계정으로 다시 로그인하면 자동으로 전환됩니다.','warn');
     else show('identityLinkStatus',false);
   }catch(e){

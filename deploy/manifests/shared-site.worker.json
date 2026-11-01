@@ -1595,7 +1595,7 @@
         ],
         "redirect": "manual",
         "expect": [
-          "admin-auth.js?v=20260918-canonical-origin-2",
+          "admin-auth.js?v=20261101-operator-linked-login-1",
           "business-auth.js?v=20260826-free-fallback-1",
           "client-auth.js?v=20261101-live-church-return-1",
           "isRegistryUserService",

@@ -28,3 +28,23 @@ test('shared login chip stays out of headers that already have their own login',
   assert.match(src,/header\.querySelector\('\[data-ekodi-home-login\],\[data-ekodi-page-login\]'\)/);
   assert.match(read('index.html'),/data-ekodi-home-login/);
 });
+
+test('switching My EKODI tabs never hides the page body (body carries data-home-panel)',()=>{
+  const app=read('my/app.js');
+  assert.match(app,/document\.body\.dataset\.homePanel=activeHomePanel/);
+  assert.match(app,/querySelectorAll\('\[data-home-panel\]:not\(body\)'\)/);
+  assert.doesNotMatch(app,/querySelectorAll\('\[data-home-panel\]'\)/);
+});
+
+test('one-glance tabs: sub-menu cards stay and the chosen section opens below; footer owns the copyright',()=>{
+  const app=read('my/app.js');
+  assert.match(app,/\[data-account-menu\]'\)\.forEach\(node=>\{node\.hidden=false\}\)/);
+  assert.match(app,/\[data-account-nav\]'\)\.forEach\(node=>\{node\.hidden=true\}\)/);
+  assert.match(app,/\[data-services-menu\]'\)\.forEach\(node=>\{node\.hidden=false\}\)/);
+  assert.match(app,/if\(signedIn&&tab==='account'\)syncAccountTabs\(\);/);
+  assert.match(read('my/index.html'),/class="my-footer-copyright">© EKODI \(에코디\)/);
+  const points=read('my/points/index.html');
+  assert.match(points,/class="topbar my-comfort-header"/);
+  assert.match(points,/class="my-custom-footer"/);
+  assert.match(points,/body data-ekodi-ui="USER"[^>]*class="my-subpage"/);
+});

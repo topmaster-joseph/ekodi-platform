@@ -428,7 +428,14 @@ export async function handleInvestAutopilotApi(request,env){
  if(!env?.DB)return json(request,env,{error:'DATABASE_UNAVAILABLE'},503);
  const write=!['GET','HEAD'].includes(request.method);
  const ctx=await ownerContext(request,env,write);if(ctx.error)return json(request,env,{error:ctx.error},ctx.status);
- // Second factor ("본인인증"): Google login alone never unlocks the workspace.
+ // Second factor ("본인인증", phone/address fragment) is an owner opt-in: INVEST_STEP_UP_REQUIRED='true'.
+ // Without it the verified owner Google session plus the owner-email gate unlock the workspace;
+ // broker inquiry and live controls still require OTP AAL2 independently.
+ const stepUpRequired=String(env?.INVEST_STEP_UP_REQUIRED||'').trim().toLowerCase()==='true';
+ if(path==='/v1/invest/autopilot/step-up'&&!stepUpRequired){
+  if(request.method==='GET')return json(request,env,{verified:true,required:false},200);
+  return json(request,env,{error:'STEP_UP_DISABLED'},409);
+ }
  if(path==='/v1/invest/autopilot/step-up'){
   const audit=(type,severity,payload)=>recordEvent(env,ctx,type,severity,payload).catch(()=>{});
   let result;
@@ -438,8 +445,7 @@ export async function handleInvestAutopilotApi(request,env){
   else return json(request,env,{error:'METHOD_NOT_ALLOWED'},405);
   return json(request,env,result.body,result.status);
  }
- const stepUp=await stepUpSession(request,env,ctx);
- if(!stepUp.verified)return json(request,env,{error:'STEP_UP_REQUIRED'},403);
+ if(stepUpRequired){const stepUp=await stepUpSession(request,env,ctx);if(!stepUp.verified)return json(request,env,{error:'STEP_UP_REQUIRED'},403)}
  // Live control is pinned to the named highest administrator, regardless of env override.
  if(path.startsWith('/v1/invest/autopilot/live/')&&String(ctx.identity.email||'').trim().toLowerCase()!==INVEST_DEFAULT_OWNER)
   return json(request,env,{error:'LIVE_OWNER_ONLY'},403);

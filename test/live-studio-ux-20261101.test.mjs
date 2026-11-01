@@ -52,3 +52,26 @@ test('studio settings render as one-at-a-time tabs that fit one screen',()=>{
   for(const name of ['화면','소스','참여','채팅','통역','송출'])assert.ok(live.includes(`'${name}'`),name);
   assert.match(css,/\.compact-panel\.studio-tabbed\{display:flex;flex-direction:column;max-height:calc\(100dvh - 100px\);overflow:hidden\}/);
 });
+
+test('QR management camera: connected pair closes dialog, opens 참여 tab and auto-shows the feed',()=>{
+  assert.match(live,/function onManagementCameraConnected/);
+  assert.match(live,/dialog\.close\(\);selectStudioTab\('참여'\)/);
+  assert.match(live,/kind==='management_camera'&&state\.managementAutoShow&&!item\.autoShown/);
+});
+test('simulcast panel retries after login handoff instead of sticking on expired-session',()=>{
+  assert.match(interp,/ekodi-live-auth-ready/);
+  assert.match(live,/new CustomEvent\('ekodi-live-auth-ready'\)/);
+  assert.match(interp,/return load\(true\)/);
+});
+
+test('ending a broadcast returns host to a ready preview and releases viewers from a frozen frame',()=>{
+  assert.match(live,/await resetHostAfterEnd\(\)\}catch/);
+  assert.match(live,/const ok=await prepareStudio\(\)/);
+  assert.match(live,/function startViewerEndWatch\(id\)/);
+  assert.match(live,/if\(d\.room&&d\.room\.status!=='live'\)return void viewerBroadcastEnded\(\)/);
+  assert.match(live,/startViewerEndWatch\(id\);return\}/);
+  assert.match(live,/function waitNextBroadcast\(\)/);
+});
+test('camera-busy error explains which app holds the camera',()=>{
+  assert.match(live,/NotReadableError/);
+});

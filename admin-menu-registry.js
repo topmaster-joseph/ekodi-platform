@@ -41,6 +41,7 @@ export const ADMIN_MENUS = Object.freeze([
   { id: 'automation-policy', group: 'ai', labels: { ko: 'AI 정책·사용 등급', en: 'AI Policies & Usage Tiers' }, sections: ['ai-settings', 'ai-membership'] },
   { id: 'engines', group: 'services', labels: { ko: '서비스 엔진', en: 'Service Engines' }, sections: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'] },
   { id: 'platform-content', group: 'services', labels: { ko: '플랫폼 콘텐츠 서비스', en: 'Platform Content Services' }, sections: ['books', 'common-scripture', 'devotional', 'social', 'work'] },
+  { id: 'activity-points', group: 'services', labels: { ko: '활동포인트 운영', en: 'Activity Points' }, sections: ['points'] },
   { id: 'revenue', group: 'finance', labels: { ko: '결제·정산', en: 'Payments & Settlement' }, sections: ['finance'] },
   { id: 'usage', group: 'finance', labels: { ko: '사용량·비용', en: 'Usage & Cost' }, sections: ['api-cost'] },
   { id: 'infrastructure-costs', group: 'finance', labels: { ko: '비용·인프라 관리', en: 'Infrastructure & Billing' }, sections: ['infra-costs'] },
@@ -93,6 +94,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'social-accounts', group: 'accounts', icon: '↗', labels: { ko: '소셜계정 연결 현황', en: 'Social Account Connections' }, superAdminOnly: true },
   { id: 'growth-os', group: 'ai', icon: '↗', labels: { ko: 'EKODI Growth OS', en: 'EKODI Growth OS' }, superAdminOnly: true },
   { id: 'search-visibility', group: 'ai', icon: '◎', labels: { ko: '검색노출·홍보 관리', en: 'Search Visibility & Promotion' }, superAdminOnly: true },
+  { id: 'points', group: 'services', icon: 'P', labels: { ko: '사이트별 활동포인트', en: 'Site Activity Points' }, superAdminOnly: true, risk: 'high' },
   { id: 'ai-membership', group: 'ai', icon: '◈', labels: { ko: '사용자 AI 등급·한도', en: 'User AI Tiers & Limits' }, risk: 'high' },
 
   { id: 'work', group: 'services', icon: 'W', labels: { ko: '구인구직·채용', en: 'Jobs & Recruiting' }, href: 'https://ekodi.kr/work/admin', adminHandoff: true },

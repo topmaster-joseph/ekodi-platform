@@ -23,7 +23,7 @@ async function api(path,{method='GET',payload}={}){
   return data;
 }
 const q=`tenant=${encodeURIComponent(tenant)}`;
-const ERR={authentication_required:'로그인 세션이 만료됐습니다. 다시 로그인해 주세요.',tenant_host_permission_required:'이 사이트의 방송 관리자 권한이 필요합니다.',stream_not_configured:'동시송출 엔진(Cloudflare Stream)이 아직 켜지지 않았습니다.',invalid_stream_key:'스트림 키를 다시 확인해 주세요.',ingest_host_not_allowed_for_platform:'선택한 플랫폼의 송출 주소가 아닙니다.',ingest_url_must_be_rtmp:'송출 주소는 rtmp:// 또는 rtmps:// 로 시작해야 합니다.',ingest_url_must_be_rtmps:'이 채널은 rtmps:// 주소만 사용할 수 있습니다.',target_language_required:'통역할 언어를 하나 이상 고르세요.',caption_session_ended:'통역 자막이 종료되었습니다.',stream_input_not_created:'먼저 송출 주소를 만드세요.',simulcast_destination_limit:'동시송출 채널은 최대 10개입니다.',relay_device_not_bound:'먼저 송출 PC를 지정하세요.',relay_binding_super_admin_required:'송출 PC 지정은 에코디 플랫폼 소유자 계정만 할 수 있습니다.',relay_device_not_found:'송출 PC를 찾을 수 없습니다.'};
+const ERR={authentication_required:'로그인 세션이 만료됐습니다. 다시 로그인해 주세요.',tenant_host_permission_required:'이 사이트의 방송 관리자 권한이 필요합니다.',stream_not_configured:'동시송출 엔진(Cloudflare Stream)이 아직 켜지지 않았습니다.',invalid_stream_key:'스트림 키를 다시 확인해 주세요.',ingest_host_not_allowed_for_platform:'선택한 플랫폼의 송출 주소가 아닙니다.',ingest_url_must_be_rtmp:'송출 주소는 rtmp:// 또는 rtmps:// 로 시작해야 합니다.',ingest_url_must_be_rtmps:'이 채널은 rtmps:// 주소만 사용할 수 있습니다.',target_language_required:'통역할 언어를 하나 이상 고르세요.',caption_session_ended:'통역 자막이 종료되었습니다.',speech_recognition_unavailable:'서버 음성 인식을 쓸 수 없습니다. 직접 입력하세요.',caption_audio_invalid:'음성 조각이 너무 깁니다. 잠시 뒤 다시 시도하세요.',stream_input_not_created:'먼저 송출 주소를 만드세요.',simulcast_destination_limit:'동시송출 채널은 최대 10개입니다.',relay_device_not_bound:'먼저 송출 PC를 지정하세요.',relay_binding_super_admin_required:'송출 PC 지정은 에코디 플랫폼 소유자 계정만 할 수 있습니다.',relay_device_not_found:'송출 PC를 찾을 수 없습니다.'};
 const say=error=>ERR[error?.message]||ERR[error?.data?.error]||'처리하지 못했습니다. 잠시 뒤 다시 시도하세요.';
 
 /* ---------------- viewer captions ---------------- */
@@ -121,21 +121,45 @@ function setupConsole(){
   const form=el('form',{class:'chat-form'},[input,el('button',{type:'submit',text:'보내기',disabled:true})]);
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   syncSourceLock();
-  const note=el('small',{class:'live-addon-note',text:SR?'설교 음성이 들리는 기기에서 자동 인식을 켜세요. 통역자가 직접 입력해도 됩니다.':'이 브라우저는 음성 인식을 지원하지 않습니다. Chrome·Edge를 쓰거나 직접 입력하세요.'});
+  const note=el('small',{class:'live-addon-note',text:'방송 마이크 소리를 짧게 끊어 서버에서 인식합니다(휴대폰 방송 중에도 동작). 통역자가 직접 입력해도 됩니다.'});
   host.replaceChildren(el('div',{class:'source-head'},[el('strong',{text:'통역 상태'}),state]),el('div',{class:'live-lang-row'},[el('label',{class:'live-inline'},[el('span',{text:'원어'}),sourceSelect]),el('div',{class:'live-inline'},[el('span',{text:'변환어'}),targets])]),el('div',{class:'live-console-actions'},[startBtn,micBtn]),form,preview,note);
-  const setRunning=on=>{startBtn.textContent=on?'통역 자막 종료':'통역 자막 시작';micBtn.disabled=!on||!SR;input.disabled=!on;form.querySelector('button').disabled=!on;sourceSelect.disabled=on;targets.classList.toggle('is-locked',on);if(on)targets.open=false;for(const box of targetList.querySelectorAll('input'))box.disabled=on};
+  const setRunning=on=>{startBtn.textContent=on?'통역 자막 종료':'통역 자막 시작';micBtn.disabled=!on;input.disabled=!on;form.querySelector('button').disabled=!on;sourceSelect.disabled=on;targets.classList.toggle('is-locked',on);if(on)targets.open=false;for(const box of targetList.querySelectorAll('input'))box.disabled=on};
   const send=text=>{const clean=String(text||'').trim();if(!clean||!st.session)return;st.queue=st.queue.then(async()=>{try{const data=await api(`/captions/sessions/${encodeURIComponent(st.session.id)}/segments`,{method:'POST',payload:{text:clean}});const t=data.translations.map(x=>`${x.lang.toUpperCase()}${x.status==='failed'?'(원문)':''}: ${x.text}`).join('\n');preview.textContent=`${data.source.text}\n${t}`;state.textContent=`송출 중 · #${data.seq} · ${data.latencyMs}ms`}catch(error){state.textContent=say(error);if(error.message==='caption_session_ended'){st.session=null;stopMic();setRunning(false)}}})};
-  function stopMic(){st.listening=false;try{st.recog?.stop()}catch{}micBtn.setAttribute('aria-pressed','false');micBtn.textContent='음성 자동 인식'}
-  function startMic(){
-    if(!SR||!st.session)return;
+  const showResult=(data,clean)=>{if(!data||data.empty)return;const t=(data.translations||[]).map(x=>`${x.lang.toUpperCase()}${x.status==='failed'?'(원문)':''}: ${x.text}`).join('\n');preview.textContent=`${data.source?.text||clean||''}\n${t}`;state.textContent=`송출 중 · #${data.seq} · ${data.latencyMs}ms`};
+  const sendAudio=b64=>{if(!st.session)return;st.queue=st.queue.then(async()=>{try{showResult(await api(`/captions/sessions/${encodeURIComponent(st.session.id)}/audio`,{method:'POST',payload:{audio:b64}}))}catch(error){state.textContent=error.message==='speech_recognition_failed'?'음성 인식이 잠시 지연됩니다 · 계속 듣는 중':say(error);if(error.message==='caption_session_ended'){st.session=null;stopMic();setRunning(false)}}})};
+  // Server speech recognition: capture the same microphone as the broadcast
+  // (a phone cannot run its own speech recognizer while the broadcast holds
+  // the mic), cut it at pauses into 16 kHz mono WAV chunks and send them.
+  const wav=(samples,rate)=>{const out=new DataView(new ArrayBuffer(44+samples.length*2));const w=(o,t)=>{for(let i=0;i<t.length;i++)out.setUint8(o+i,t.charCodeAt(i))};w(0,'RIFF');out.setUint32(4,36+samples.length*2,true);w(8,'WAVE');w(12,'fmt ');out.setUint32(16,16,true);out.setUint16(20,1,true);out.setUint16(22,1,true);out.setUint32(24,rate,true);out.setUint32(28,rate*2,true);out.setUint16(32,2,true);out.setUint16(34,16,true);w(36,'data');out.setUint32(40,samples.length*2,true);for(let i=0;i<samples.length;i++){const v=Math.max(-1,Math.min(1,samples[i]));out.setInt16(44+i*2,v<0?v*0x8000:v*0x7fff,true)}return new Uint8Array(out.buffer)};
+  const b64=bytes=>{let s='';for(let i=0;i<bytes.length;i+=0x8000)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(s)};
+  const resample=(data,from,to)=>{if(from===to)return data;const ratio=from/to,out=new Float32Array(Math.floor(data.length/ratio));for(let i=0;i<out.length;i++){const a=Math.floor(i*ratio),b=Math.min(data.length,Math.floor((i+1)*ratio));let sum=0;for(let j=a;j<b;j++)sum+=data[j];out[i]=sum/Math.max(1,b-a)}return out};
+  async function startServerMic(){
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!Ctx||!navigator.mediaDevices?.getUserMedia)return false;
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,channelCount:1}});
+    let ctx;try{ctx=new Ctx({sampleRate:16000})}catch{ctx=new Ctx()}
+    await ctx.resume?.().catch(()=>{});
+    const source=ctx.createMediaStreamSource(stream),proc=ctx.createScriptProcessor(4096,1,1),rate=ctx.sampleRate;
+    let chunks=[],length=0,silentMs=0,voiced=false;
+    const flush=()=>{const merged=new Float32Array(length);let o=0;for(const c of chunks){merged.set(c,o);o+=c.length}const had=voiced;chunks=[];length=0;silentMs=0;voiced=false;if(had)sendAudio(b64(wav(resample(merged,rate,16000),16000)))};
+    proc.onaudioprocess=event=>{const data=event.inputBuffer.getChannelData(0);let sum=0;for(let i=0;i<data.length;i++)sum+=data[i]*data[i];const rms=Math.sqrt(sum/data.length),ms=data.length/rate*1000;chunks.push(new Float32Array(data));length+=data.length;if(rms>0.012){voiced=true;silentMs=0}else silentMs+=ms;const sec=length/rate;if((voiced&&sec>=1.5&&silentMs>=700)||sec>=9)flush();else if(!voiced&&sec>=3){chunks=[];length=0;silentMs=0}if(rms>0.012&&st.listening)micBtn.textContent='듣는 중 · 끄기'};
+    source.connect(proc);proc.connect(ctx.destination);
+    st.capture={stream,ctx,source,proc,flush};
+    return true;
+  }
+  function stopMic(){st.listening=false;try{st.recog?.stop()}catch{}st.recog=null;const c=st.capture;st.capture=null;if(c){try{c.flush()}catch{}try{c.source.disconnect();c.proc.disconnect()}catch{}c.stream.getTracks().forEach(t=>t.stop());c.ctx.close?.().catch(()=>{})}micBtn.setAttribute('aria-pressed','false');micBtn.textContent='음성 자동 인식'}
+  async function startMic(){
+    if(!st.session||st.listening)return;
+    st.listening=true;micBtn.setAttribute('aria-pressed','true');micBtn.textContent='자동 인식 끄기';
+    try{if(await startServerMic()){state.textContent='음성 인식 중 · 말씀이 끝나면 자막이 나갑니다';return}}catch(error){state.textContent=error?.name==='NotAllowedError'?'마이크 권한을 허용해 주세요.':'마이크를 열 수 없습니다. 직접 입력하세요.';stopMic();return}
+    if(!SR){stopMic();state.textContent='이 브라우저는 음성 인식을 지원하지 않습니다. 직접 입력하세요.';return}
     const recog=new SR();recog.lang=(LANGS[sourceSelect.value]||LANGS.ko)[1];recog.continuous=true;recog.interimResults=true;
     recog.onresult=event=>{let interim='';for(let i=event.resultIndex;i<event.results.length;i++){const r=event.results[i];if(r.isFinal)send(r[0].transcript);else interim+=r[0].transcript}if(interim)preview.textContent=`… ${interim}`};
-    recog.onerror=event=>{if(['not-allowed','service-not-allowed'].includes(event.error)){stopMic();state.textContent='마이크 권한을 허용해 주세요.'}};
+    recog.onerror=event=>{if(['not-allowed','service-not-allowed','audio-capture'].includes(event.error)){stopMic();state.textContent=event.error==='audio-capture'?'다른 앱이 마이크를 쓰고 있어 음성 인식을 못 합니다. 직접 입력하세요.':'마이크 권한을 허용해 주세요.'}};
     recog.onend=()=>{if(st.listening)setTimeout(()=>{try{recog.start()}catch{}},250)};
-    st.recog=recog;st.listening=true;try{recog.start()}catch{}
-    micBtn.setAttribute('aria-pressed','true');micBtn.textContent='자동 인식 끄기';
+    st.recog=recog;try{recog.start()}catch{}
   }
-  micBtn.addEventListener('click',()=>st.listening?stopMic():startMic());
+  micBtn.addEventListener('click',()=>st.listening?stopMic():void startMic());
   form.addEventListener('submit',e=>{e.preventDefault();send(input.value);input.value=''});
   startBtn.addEventListener('click',async()=>{
     startBtn.disabled=true;
@@ -146,7 +170,7 @@ function setupConsole(){
         const data=await api('/captions/sessions',{method:'POST',payload:{tenant,sourceLang:sourceSelect.value,targetLangs:picked}});
         st.session=data.session;setRunning(true);
         state.textContent=`시작 · ${data.session.targetLangs.map(x=>x.toUpperCase()).join(' ')}${data.trimmedByPlan?` (요금제 한도로 ${data.trimmedByPlan}개 제외)`:''}`;
-        if(SR)startMic();
+        void startMic();
       }
     }catch(error){state.textContent=say(error)}
     finally{startBtn.disabled=false}
@@ -160,7 +184,9 @@ function setupSimulcast(){
   const content=el('div',{class:'live-simulcast-body'});
   const refresh=el('button',{type:'button',text:'확인',onclick:()=>load()});
   host.replaceChildren(el('div',{class:'external-head'},[el('strong',{text:'유튜브·페이스북 동시송출'}),refresh]),status,content);
-  const fail=error=>{status.textContent=say(error);const url=error?.data?.loginUrl;if(error?.status===401||url){const link=el('a',{class:'studio-host-login',rel:'nofollow',text:'다시 로그인 · 진행자 권한 확인',href:url||`/auth/?site=${encodeURIComponent(body.dataset.authSite||tenant)}&select_account=1&return_to=${encodeURIComponent(location.href)}`});content.replaceChildren(link)}else content.replaceChildren()};
+  let authFailed=false;
+  window.addEventListener('ekodi-live-auth-ready',()=>{if(authFailed){authFailed=false;load()}});
+  const fail=error=>{if(error?.status===401||error?.status===403)authFailed=true;status.textContent=say(error);const url=error?.data?.loginUrl;if(error?.status===401||url){const link=el('a',{class:'studio-host-login',rel:'nofollow',text:'다시 로그인 · 진행자 권한 확인',href:url||`/auth/?site=${encodeURIComponent(body.dataset.authSite||tenant)}&select_account=1&return_to=${encodeURIComponent(location.href)}`});content.replaceChildren(link)}else content.replaceChildren()};
   const copyBtn=value=>el('button',{type:'button',text:'복사',onclick:async e=>{try{await navigator.clipboard.writeText(value);e.target.textContent='복사됨'}catch{}}});
 
   // EKODI-owned relay (EKODI-SIMULCAST-RELAY-001): OBS on the broadcast PC →
@@ -218,10 +244,13 @@ function setupSimulcast(){
     nodes.push(list,channelForm(r.platforms||[],addRelay,true),el('div',{class:'live-console-actions'},[armed?act('동시송출 끄기','/relay/disarm'):act('동시송출 켜기','/relay/arm','primary'),act('상태 확인','/relay/status')]),obs);
     content.replaceChildren(...nodes);
   }
-  async function load(){
+  async function load(retried=false){
     status.textContent='확인 중';
     let data;
-    try{data=await api(`/simulcast?${q}`)}catch(error){fail(error);return}
+    try{data=await api(`/simulcast?${q}`)}catch(error){
+      // The panel can open before the login handoff finishes; refresh once and retry before showing re-login.
+      if(!retried&&error?.status===401){await new Promise(r=>setTimeout(r,1200));try{await window.EKODI_LIVE_AUTH?.()}catch{}return load(true)}
+      fail(error);return}
     if(!data.configured){await renderRelay();return}
     const nodes=[];
     if(!data.input){

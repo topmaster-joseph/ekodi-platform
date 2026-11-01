@@ -51,7 +51,9 @@ for (const [from,to] of [['ASSET_VERSION','AV'],['separator','sep'],['existing',
 }
 const selfInitializingIdentifier = demandLoaderSource.match(/\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*\1\s*\(/);
 if (selfInitializingIdentifier) throw new Error(`Demand loader compaction created a TDZ self-call: ${selfInitializingIdentifier[0]}`);
-await writeFile(demandLoaderPath, demandLoaderSource.replace(/\r\n/g, '\n').split('\n').map(line => line.trimStart()).filter(Boolean).join('\n') + '\n');
+// JS statements already end with semicolons; collapsing only these line breaks
+// preserves execution semantics and keeps the first-path payload below the strict cap.
+await writeFile(demandLoaderPath, demandLoaderSource.replace(/\r\n/g, '\n').split('\n').map(line => line.trimStart()).filter(Boolean).join('\n').replace(/;\n/g,';') + '\n');
 
 // Login/return parses only the base visual CSS and the small central-auth handoff.
 html = html
