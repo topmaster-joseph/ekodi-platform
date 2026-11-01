@@ -86,7 +86,8 @@ else{
   const registryService=await manifestService(site);
   const isRegistryUserService=Boolean(registryService?.id&&registryService?.url);
   const trustedEkodiReturn=hasTrustedEkodiReturn();
-  if(!targetedWorkspace&&site!=='marketing'&&(site==='portal'||isRegistryUserService||firstPartyClientSites.has(site)||trustedEkodiReturn))await loadClientAuth();
+  // Login-identity management (Kakao/Naver/Google 계정 추가, 계정 병합) lives in auth.js only.
+  if(!targetedWorkspace&&!manageMode&&site!=='marketing'&&(site==='portal'||isRegistryUserService||firstPartyClientSites.has(site)||trustedEkodiReturn))await loadClientAuth();
   else{
     await import('./auth.js?v=20261101-merge-execute-1');
     if(targetedWorkspace)await import('./auth-workspace-target.js?v=20261101-live-church-return-1');
