@@ -138,7 +138,8 @@ jobs:
           node --test test/space-auth-apex-constitution.test.mjs test/workspace-routing-10g.test.mjs test/store-discovery.test.mjs test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs test/storefront-public.test.mjs test/pizzamaru-full-menu-social.test.mjs test/jadam-storefront-brand.test.mjs test/ekodimission-site.test.mjs test/ekodimission-home-and-media-consent.test.mjs test/organization-subsite.test.mjs test/mnubiz-workspace.test.mjs test/mnubiz-suncheon.test.mjs
           node scripts/validate-ekodimission-shell-contract.mjs
           node --test test/ekodimission-shell-contract.test.mjs test/ekodimission-photo-upload.test.mjs
-          grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
+          # Subdomain wave 2 (2026-11-01): Space is served only through the apex gateway.
+          ! grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
           grep -Fq 'binding = "STORAGE"' wrangler.space.toml
           grep -Fq 'service = "ekodi-storage-control"' wrangler.space.toml
           grep -Fq 'MISSION_ACTIVITY_MEDIA_UPLOAD_RE' space-worker.js
@@ -375,12 +376,11 @@ jobs:
           else
             if ! grep -Eq 'has no deployments|does not exist|code: 10007' /tmp/space-prod-deployments.json; then cat /tmp/space-prod-deployments.json; exit 1; fi
             npx wrangler@${WRANGLER_VERSION} deploy --config wrangler.space.toml
+            # Apex-only (subdomain wave 2): the legacy-host root 308 check has no apex equivalent.
             for attempt in $(seq 1 18); do
-              root=$(curl -sS -o /tmp/space-live.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/' || true)
-              health=$(curl -sS -o /tmp/space-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/health' || true)
-              route=$(curl -sS -D /tmp/space-live-route.headers -o /tmp/space-live-route.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/deployment-probe' || true)
-              root_location=$(curl -sSI --connect-timeout 5 --max-time 15 'https://space.ekodi.kr/' | awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); print}' | tail -1)
-              if [[ "$root" == '308' && "$root_location" == 'https://ekodi.kr/my/' && "$health" == '200' && "$route" == '200' ]] && grep -Fq '"service":"ekodi-space"' /tmp/space-live-health.json && grep -Eiq '^x-ekodi-route:[[:space:]]*space-workspace' /tmp/space-live-route.headers; then
+              health=$(curl -sS -o /tmp/space-live-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/space/health' || true)
+              route=$(curl -sS -D /tmp/space-live-route.headers -o /tmp/space-live-route.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/space/deployment-probe' || true)
+              if [[ "$health" == '200' && "$route" == '200' ]] && grep -Fq '"service":"ekodi-space"' /tmp/space-live-health.json && grep -Eiq '^x-ekodi-route:[[:space:]]*space-workspace' /tmp/space-live-route.headers; then
                 echo 'Operating Space production bootstrap verified.'
                 exit 0
               fi
