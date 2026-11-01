@@ -40,14 +40,34 @@
     finally { button.disabled = false; button.textContent = label; }
   }
   window.EkodiLibraryFetchBook = fetchBook;
+  // 외부 로그인 공급자의 내부 alias(email)는 인증용으로만 사용하고 독자 화면에 노출하지 않는다.
+  function friendlyAccount(data) {
+    const name = String(data?.displayName || data?.name || '').trim();
+    if (name && !name.includes('@') && name.length <= 30) return name;
+    const email = String(data?.email || '').trim();
+    const internal = /^identity\+([a-z][a-z0-9_-]*)\.[a-z0-9]+@ekodi\.kr$/i.exec(email);
+    if (internal) {
+      const names = { kakao: '카카오', naver: '네이버', google: '구글', apple: 'Apple', daum: '다음' };
+      return (names[internal[1].toLowerCase()] || '연결') + ' 계정';
+    }
+    const local = email.includes('@') ? email.split('@')[0] : '';
+    return local ? (local.length > 20 ? local.slice(0, 19) + '…' : local) + '님' : '회원님';
+  }
   async function load() {
     try {
       const data = await C.api('library');
       $('libLogin').hidden = true;
-      $('libStatus').textContent = `${data.email} · ${data.items.length}권`;
+      const items = Array.isArray(data.items) ? data.items : [];
+      $('libStatus').textContent = `${friendlyAccount(data)} · 보유 도서 ${items.length}권`;
       const list = $('libraryList'); list.replaceChildren();
-      if (!data.items.length) { const p = document.createElement('p'); p.innerHTML = '아직 구매한 책이 없습니다. '; const a = document.createElement('a'); a.href = `${C.BASE}/#catalog`; a.textContent = '출판 목록 보기 →'; p.append(a); list.append(p); return; }
-      for (const item of data.items) {
+      if (!items.length) {
+        const empty = document.createElement('section'); empty.className = 'library-empty';
+        const title = document.createElement('h2'); title.textContent = '첫 책을 만나 보세요';
+        const note = document.createElement('p'); note.textContent = '아직 구매한 책이 없습니다. 마음에 드는 책을 찾아 서재에 담아 보세요.';
+        const link = document.createElement('a'); link.href = `${C.BASE}/#catalog`; link.textContent = '도서 목록 살펴보기';
+        empty.append(title, note, link); list.append(empty); return;
+      }
+      for (const item of items) {
         const row = document.createElement('article'); row.className = 'library-item';
         const info = document.createElement('div'); const h = document.createElement('h3'); h.textContent = item.title; const p = document.createElement('p');
         p.textContent = `${item.author} · ${new Date(item.grantedAt).toLocaleDateString('ko-KR')} 구매`; info.append(h, p);
