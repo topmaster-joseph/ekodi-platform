@@ -68,10 +68,16 @@ test('ending a broadcast returns host to a ready preview and releases viewers fr
   assert.match(live,/await resetHostAfterEnd\(\)\}catch/);
   assert.match(live,/const ok=await prepareStudio\(\)/);
   assert.match(live,/function startViewerEndWatch\(id\)/);
-  assert.match(live,/if\(d\.room&&d\.room\.status!=='live'\)return void viewerBroadcastEnded\(\)/);
+  assert.match(live,/if\(!await stillLive\(\)\)return void viewerBroadcastEnded\(\)/);
   assert.match(live,/startViewerEndWatch\(id\);return\}/);
   assert.match(live,/function waitNextBroadcast\(\)/);
 });
 test('camera-busy error explains which app holds the camera',()=>{
   assert.match(live,/NotReadableError/);
+});
+
+test('viewer end detection survives expired login and frozen frames',()=>{
+  assert.match(live,/api\(`\/live\?tenant=\$\{encodeURIComponent\(cfg\.tenant\)\}`\);if\(live&&typeof live\.live==='boolean'\)/);
+  assert.match(live,/return failures<3/);
+  assert.match(live,/state\.viewerFreezeTimer=setInterval/);
 });
