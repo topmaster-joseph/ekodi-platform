@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>오디오북 검토·승인 | 에코디서점</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/responsive.css" />
+  <link rel="stylesheet" href="/buy/buy.css" />
+  <link rel="stylesheet" href="/site-chrome.css">
+</head>
+<body>
+  <a class="skip" href="#main">본문으로 바로가기</a>
+  <header class="ekc-header" data-ekodi-chrome="books"><div class="ekc-network"><div class="ekc-shell"><span class="ekc-network-label">EKODI 출판 생태계</span><nav class="ekc-network-links" aria-label="출판 생태계"><a href="https://ekodi.kr/publishing/"><b>출판</b><span>책을 만들다</span></a><a href="https://ekodi.kr/books/" aria-current="true"><b>에코디서점</b><span>책을 만나다</span></a><a href="https://ekodi.kr/ekodimall/?category=book"><b>에코디몰 책·배움</b><span>함께 나누다</span></a></nav></div></div><div class="ekc-shell ekc-masthead"><a class="ekc-brand" href="https://ekodi.kr/books/" aria-label="에코디서점 홈"><span class="ekc-mark" aria-hidden="true">ES</span><span class="ekc-brand-copy"><b>에코디서점</b><small>Faith · Scholarship · Community</small></span></a><div class="ekc-actions"><a class="ekc-cta" href="https://ekodi.kr/books/library/">내 서재</a><button class="menu-button ekc-menu" type="button" aria-expanded="false" aria-controls="site-nav">MENU</button></div><nav id="site-nav" class="ekc-nav" aria-label="에코디서점 메뉴"><a href="https://ekodi.kr/books/#catalog">도서</a><a href="https://ekodi.kr/books/series/">시리즈</a><a href="https://ekodi.kr/books/research/">리서치</a><a href="https://ekodi.kr/books/notes/">노트</a><a href="https://ekodi.kr/books/#about">소개</a><a class="ekc-nav-cta" href="https://ekodi.kr/books/library/">내 서재</a></nav></div></header>
+  <main id="main" class="buy-page"><section class="buy-hero"><div class="shell">
+    <p class="kicker">AUDIOBOOK · REVIEW</p>
+    <h1 id="arTitle">오디오북 검토·승인</h1>
+    <p class="lead">장별 MP3를 직접 들어 본 뒤 권리·저자·음성·접근성을 확인하면, 이 전자책을 구매한 독자에게 오디오북이 추가 결제 없이 열립니다. 파일을 하나라도 바꾸면 승인은 자동으로 해제됩니다.</p>
+    <p id="arStatus" class="buy-msg"></p>
+    <div id="arLogin" hidden><div id="googleButton"></div><p id="accountStatus"></p></div>
+    <div class="review-grid" id="arRoot" hidden>
+      <section class="review-card"><h2>1. 장별 오디오</h2>
+        <p class="warn" id="arEmpty" hidden>아직 오디오 파일이 없습니다. 음성이 준비되면 아래에서 장별 MP3를 올리거나, 에코디 음성 엔진 초안이 자동으로 이곳에 나타납니다.</p>
+        <ol class="ar-tracks" id="arTracks"></ol>
+        <div class="review-actions"><label class="op-btn" id="arAddLabel">장 추가(MP3 올리기)<input type="file" id="arAdd" accept=".mp3,audio/mpeg" hidden /></label></div>
+        <p class="warn" id="arListenNote">승인하려면 모든 장을 한 번 이상 재생해 주세요.</p></section>
+      <section class="review-card"><h2>2. 검수·승인</h2>
+        <label><input type="checkbox" class="ar-check" id="arRights" /> 낭독·음원 권리(목소리·배경음 포함)를 확인했습니다.</label>
+        <label><input type="checkbox" class="ar-check" id="arAuthor" /> 저자가 이 낭독본을 승인했습니다.</label>
+        <label><input type="checkbox" class="ar-check" id="arVoice" /> 발음·누락·오독·음질을 들어서 확인했습니다.</label>
+        <label><input type="checkbox" class="ar-check" id="arAccess" /> 장 구분·제목 안내 등 듣기 접근성을 확인했습니다.</label>
+        <label>메모(선택)<input type="text" id="arNote" maxlength="400" /></label>
+        <div class="review-actions"><button type="button" class="primary" id="arApprove" disabled>승인하고 구매자에게 열기</button><button type="button" id="arRevoke" hidden>승인 취소</button></div>
+        <p id="arState"></p></section>
+    </div>
+  </div></section></main>
+  <footer class="ekc-footer" data-ekodi-chrome="books"><div class="ekc-shell"><div class="ekc-foot-grid"><section class="ekc-foot-brand"><p class="ekc-foot-name"><span class="ekc-mark" aria-hidden="true">ES</span><b>에코디서점</b></p><p>현장을 기록하고, 다시 인용될 수 있는 지식으로. 에코디서점은 신앙·학문·공동체의 언어를 독자에게 정직하게 전하는 서점입니다.</p><div class="ekc-social" data-ekodi-social-links data-org="books" data-variant="plain"></div></section><section><h2>에코디서점</h2><ul><li><a href="https://ekodi.kr/books/#catalog">도서 목록</a></li><li><a href="https://ekodi.kr/books/series/">시리즈</a></li><li><a href="https://ekodi.kr/books/research/">리서치</a></li><li><a href="https://ekodi.kr/books/notes/">노트</a></li><li><a href="https://ekodi.kr/books/library/">내 서재</a></li></ul></section><section><h2>출판 생태계</h2><ul><li><a href="https://ekodi.kr/publishing/">출판</a></li><li><a href="https://ekodi.kr/books/">에코디서점</a></li><li><a href="https://ekodi.kr/ekodimall/?category=book">에코디몰 책·배움</a></li><li><a href="https://ekodi.kr/">EKODI</a></li></ul></section><section><h2>판매자 정보</h2><ul class="ekc-info"><li>상호 에코디비즈 · 대표 정찬균</li><li>사업자등록번호 213-13-01959</li><li>통신판매업 2023-전남무안-0153</li><li>전남 무안군 청계면 백련동1길 17-4</li><li>문의 ekodibiz@gmail.com</li></ul></section></div><div class="ekc-foot-base"><p>© <span id="year">2026</span> 에코디서점 · EKODI</p><p><a href="https://ekodi.kr/privacy">개인정보처리방침</a><a href="https://ekodi.kr/terms">이용약관</a></p></div></div></footer>
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <script src="/buy/commerce-client.js" defer></script>
+    <script src="/audio-review/audio-review.js" defer></script>
+  <script src="/menu.js" defer></script>
+</body>
+</html>

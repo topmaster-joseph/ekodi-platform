@@ -107,7 +107,7 @@
 @media(max-width:600px){.review-page .review-card{padding:14px}.review-page .review-card dl{grid-template-columns:72px minmax(0,1fr)}.review-page .review-actions button{width:100%}}
 
 /* LIBRARY-OPERATOR-COMPACT-001 */
-.op-row{display:grid;grid-template-columns:36px minmax(0,1fr) 150px 112px 190px;gap:12px;align-items:center;padding:10px 0;border-top:1px solid #eee6d6}
+.op-row{display:grid;grid-template-columns:36px minmax(0,1fr) 150px 112px 270px;gap:12px;align-items:center;padding:10px 0;border-top:1px solid #eee6d6}
 .op-row.op-head{padding:6px 0;border-top:0;font-size:.72rem;letter-spacing:.06em;color:#8a8f99}
 .op-no{font-family:Arial,sans-serif;font-size:.8rem;color:#8a8f99;text-align:center}
 .op-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--navy)}
@@ -123,3 +123,9 @@
 .voice-script{line-height:1.8;padding-left:22px;margin:10px 0 14px;font-family:"Noto Serif KR",serif}
 .voice-script li{margin:6px 0}
 .voice-consent,.voice-file{display:block;margin:8px 0;font-size:14px}
+
+/* BOOKS-AUDIOBOOK-REVIEW-001 */
+.ar-tracks{list-style:none;padding:0;margin:10px 0}.ar-track{border-top:1px solid #eee6d6;padding:10px 0}
+.ar-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:10px;align-items:center}.ar-row small{color:#7a7f8a;white-space:nowrap}
+.ar-track audio{width:100%;margin-top:8px}
+@media(max-width:640px){.ar-row{grid-template-columns:1fr auto auto}.ar-row small{grid-column:1/-1;grid-row:2}}
