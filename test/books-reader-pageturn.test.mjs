@@ -12,6 +12,8 @@ test('reader paginates chapters into pages and turns them with a folding leaf', 
   assert.match(src, /@keyframes back/);
   assert.match(src, /prefers-reduced-motion:reduce/, 'motion can be turned off');
   assert.match(src, /touchstart/, 'swipe to turn on phones');
+  assert.match(src, /e.clientX - r.left < r.width \/ 2 \? prev : next/, 'clicking anywhere on the page turns it');
+  assert.match(src, /feTurbulence/, 'paper grain texture');
   assert.match(src, /load\(state\.i - 1, 'end'\)/, 'going back from a chapter start lands on the previous chapter\'s last page');
 });
 

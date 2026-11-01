@@ -131,15 +131,22 @@
   .noticewrap{background:#fff8e6;border-bottom:1px solid #f0e2b8}
   .stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px 12px;perspective:2200px;overflow:hidden;touch-action:pan-y}
   .book{position:relative;width:100%;max-width:var(--book-w);height:100%;max-height:1100px}
-  .sheet{position:absolute;inset:0;background:#fffdf8;border-radius:4px 10px 10px 4px;box-shadow:0 1px 2px rgba(0,0,0,.08),0 14px 40px rgba(60,40,10,.22),inset 18px 0 22px -18px rgba(90,70,30,.35);overflow:hidden}
-  .sheet.spread{border-radius:6px;background:linear-gradient(90deg,#fffdf8 0,#fffdf8 calc(50% - 14px),#efe6d3 50%,#fffdf8 calc(50% + 14px),#fffdf8 100%)}
+  .cover{position:absolute;inset:-9px -12px -12px -10px;border-radius:6px 12px 12px 6px;background:linear-gradient(90deg,#3b1f12 0,#5a3020 3%,#6b3a26 50%,#5a3020 97%,#3b1f12 100%);box-shadow:0 24px 50px rgba(40,20,5,.45),inset 0 0 0 2px rgba(255,220,170,.08)}
+  .cover.spread{border-radius:8px}
+  .stack{position:absolute;inset:0;border-radius:3px 8px 8px 3px;background:#efe5cf;box-shadow:1px 1px 0 #e2d6bb,2px 2px 0 #f3ead6,3px 3px 0 #ddd0b2,4px 4px 0 #f1e7d1,5px 5px 0 #d8caa9,6px 6px 2px rgba(0,0,0,.18)}
+  .stack.spread{box-shadow:1px 1px 0 #e2d6bb,-1px 1px 0 #e2d6bb,2px 2px 0 #f3ead6,-2px 2px 0 #f3ead6,3px 3px 0 #ddd0b2,-3px 3px 0 #ddd0b2,4px 4px 0 #f1e7d1,-4px 4px 0 #f1e7d1,5px 5px 2px rgba(0,0,0,.2),-5px 5px 2px rgba(0,0,0,.2)}
+  .sheet{position:absolute;inset:0;border-radius:2px 7px 7px 2px;overflow:hidden;cursor:pointer;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'%2F%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .36 0 0 0 0 .22 0 0 0 .09 0'%2F%3E%3C%2Ffilter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'%2F%3E%3C%2Fsvg%3E"),linear-gradient(90deg,rgba(120,90,40,.28) 0,rgba(120,90,40,.08) 3.5%,rgba(0,0,0,0) 9%,rgba(0,0,0,0) 92%,rgba(120,90,40,.07) 100%),radial-gradient(ellipse at 60% 45%,#fdf9ef 0,#f8f0de 70%,#efe3c8 100%);
+    box-shadow:inset 0 0 40px rgba(150,115,60,.12)}
+  .sheet.spread{border-radius:2px;
+    background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'%2F%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .36 0 0 0 0 .22 0 0 0 .09 0'%2F%3E%3C%2Ffilter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'%2F%3E%3C%2Fsvg%3E"),linear-gradient(90deg,rgba(120,90,40,.10) 0,rgba(0,0,0,0) 6%,rgba(0,0,0,0) 40%,rgba(110,80,35,.12) 46%,rgba(70,50,20,.38) 50%,rgba(110,80,35,.12) 54%,rgba(0,0,0,0) 60%,rgba(0,0,0,0) 94%,rgba(120,90,40,.10) 100%),radial-gradient(ellipse at 50% 45%,#fdf9ef 0,#f8f0de 70%,#efe3c8 100%)}
+  .sheet::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(0,0,0,0) 30%,rgba(0,0,0,0) 85%,rgba(120,90,40,.08))}
+  .inner{color:#2a241b}
   .view{position:absolute;inset:34px 40px 40px 46px;overflow:hidden;outline:none}
   .inner{height:100%;column-fill:auto;column-gap:80px;font-family:"Noto Serif KR",serif;line-height:1.85;word-break:keep-all;transition:none;will-change:transform}
   .inner img{max-width:100%;max-height:calc(var(--page-h) - 20px);height:auto;object-fit:contain;break-inside:avoid}
   .inner h1,.inner h2,.inner h3{break-after:avoid}
   .folio{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:11px;color:#9a8f7c;letter-spacing:.08em}
-  .edge{position:absolute;top:0;bottom:0;width:12%;z-index:2;cursor:pointer;background:none;border:0}
-  .edge.l{left:0}.edge.r{right:0}
   .leaf{position:absolute;inset:0;z-index:3;pointer-events:none;backface-visibility:hidden;transform-style:preserve-3d}
   .leaf.fwd{transform-origin:left center;animation:fwd .62s cubic-bezier(.45,.05,.25,1) forwards}
   .leaf.back{transform-origin:right center;animation:back .62s cubic-bezier(.45,.05,.25,1) forwards}
@@ -170,8 +177,7 @@
       <div class="bar"><div class="row"><button class="close" aria-label="닫기">✕ 닫기</button><span class="t"></span><select class="toc" aria-label="목차"></select>
       <button class="smaller" aria-label="글자 작게">가−</button><button class="larger" aria-label="글자 크게">가+</button></div></div>
       ${options.notice ? `<div class="noticewrap"><div class="notice"></div></div>` : ''}
-      <div class="stage"><div class="book"><div class="sheet"><div class="view" tabindex="0"><div class="inner"></div></div><div class="folio"></div></div>
-      <button class="edge l" aria-label="앞 쪽으로"></button><button class="edge r" aria-label="다음 쪽으로"></button></div></div>
+      <div class="stage"><div class="book"><div class="cover" aria-hidden="true"></div><div class="stack" aria-hidden="true"></div><div class="sheet" title="왼쪽을 누르면 앞 쪽, 오른쪽을 누르면 다음 쪽"><div class="view" tabindex="0"><div class="inner"></div></div><div class="folio"></div></div></div></div>
       <div class="foot"><div class="row"><button class="prev">← 이전</button><span class="pos" aria-live="polite"></span><button class="next">다음 →</button></div></div>`;
     const $ = s => root.querySelector(s);
     const stage = $('.stage'), bookEl = $('.book'), sheet = $('.sheet'), view = $('.view'), inner = $('.inner');
@@ -187,7 +193,7 @@
       spread = stage.clientWidth >= 1100;
       const w = spread ? Math.min(1240, stage.clientWidth - 24) : Math.min(760, stage.clientWidth - 16);
       host.style.setProperty('--book-w', `${w}px`);
-      sheet.classList.toggle('spread', spread);
+      for (const n of [sheet, $('.cover'), $('.stack')]) n.classList.toggle('spread', spread);
       const vw = view.clientWidth, vh = view.clientHeight;
       host.style.setProperty('--page-h', `${vh}px`);
       inner.style.columnWidth = spread ? `${(vw - 80) / 2}px` : `${vw}px`;
@@ -200,7 +206,6 @@
       inner.style.transform = `translateX(${-(view.clientWidth + 80) * state.p}px)`;
       const last = state.i === book.chapters.length - 1 && state.p === pages - 1;
       $('.prev').disabled = state.i === 0 && state.p === 0; $('.next').disabled = last;
-      $('.edge.l').disabled = $('.prev').disabled; $('.edge.r').disabled = last;
       $('.pos').textContent = `${state.i + 1} / ${book.chapters.length}장 · ${state.p + 1} / ${pages}쪽`;
       $('.folio').textContent = book.chapters[state.i].label || '';
       $('.toc').value = String(state.i);
@@ -244,7 +249,12 @@
       if (target >= 0) go(target, hash);
     });
     $('.prev').onclick = prev; $('.next').onclick = next;
-    $('.edge.l').onclick = prev; $('.edge.r').onclick = next;
+    // 책장 어디든 누르면 넘긴다: 왼쪽 절반은 앞 쪽, 오른쪽 절반은 다음 쪽. 링크·글자 선택은 그대로 둔다.
+    sheet.addEventListener('click', e => {
+      if (e.target.closest('a[href]') || String(root.getSelection?.() || getSelection()).trim()) return;
+      const r = sheet.getBoundingClientRect();
+      (e.clientX - r.left < r.width / 2 ? prev : next)();
+    });
     $('.toc').onchange = e => go(Number(e.target.value));
     const resize = (d) => { state.size = Math.max(80, Math.min(180, state.size + d)); const ratio = pages > 1 ? state.p / (pages - 1) : 0; inner.style.fontSize = `${state.size}%`; layout(); state.p = Math.round(ratio * (pages - 1)); place(); };
     $('.smaller').onclick = () => resize(-10);
