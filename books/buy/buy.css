@@ -105,3 +105,17 @@
 .review-actions button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:850px){.review-page .review-grid{grid-template-columns:1fr}.review-page .buy-hero{padding-top:12px}}
 @media(max-width:600px){.review-page .review-card{padding:14px}.review-page .review-card dl{grid-template-columns:72px minmax(0,1fr)}.review-page .review-actions button{width:100%}}
+
+/* LIBRARY-OPERATOR-COMPACT-001 */
+.op-row{display:grid;grid-template-columns:36px minmax(0,1fr) 150px 112px 190px;gap:12px;align-items:center;padding:10px 0;border-top:1px solid #eee6d6}
+.op-row.op-head{padding:6px 0;border-top:0;font-size:.72rem;letter-spacing:.06em;color:#8a8f99}
+.op-no{font-family:Arial,sans-serif;font-size:.8rem;color:#8a8f99;text-align:center}
+.op-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--navy)}
+.op-meta{font-size:.8rem;color:#7a7f8a;white-space:nowrap}
+.op-badge{justify-self:start;font-size:.74rem;padding:4px 8px;border-radius:999px;white-space:nowrap;font-family:Arial,sans-serif}
+.op-badge.on{background:#e3f2e8;color:#1f6b3a}.op-badge.off{background:#f6ecd9;color:#8a5a12}
+.op-actions{display:flex;gap:6px;justify-content:flex-end}
+.op-row label.op-btn,.op-btn{min-height:34px;display:inline-flex;align-items:center;padding:0 12px;background:var(--navy);color:#fff;font-family:Arial,sans-serif;font-size:.78rem;cursor:pointer;text-decoration:none;white-space:nowrap}
+.op-btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+.audio-bonus-operator{margin:0 0 8px 48px;font-size:.8rem;color:#7a7f8a}.audio-bonus-operator summary{cursor:pointer}
+@media(max-width:640px){.op-row{grid-template-columns:28px minmax(0,1fr) auto;row-gap:6px}.op-row.op-head{display:none}.op-meta{grid-column:2}.op-badge{grid-column:3;grid-row:1}.op-actions{grid-column:1/-1}}

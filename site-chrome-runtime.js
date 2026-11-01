@@ -1,8 +1,11 @@
 ﻿import { siteChromeDefaults } from './config/site-chrome-defaults.js';
+import { tenantAdminCan, TENANT_ADMIN_CAPABILITIES } from './tenant-admin-policy.js';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const MANAGE_ROLES=new Set(['store_owner','hq_manager','client_admin','manager','owner','tenant_admin','workspace_admin','senior_pastor']);
+// 사이트 관리 권한은 플랫폼 공통 정책(tenant-admin-policy: tenant.site.manage)을 따릅니다. 예: 'admin' 역할은 전체 권한.
+export function roleCanManageSite(role){const key=String(role||'').trim().toLowerCase();return MANAGE_ROLES.has(key)||tenantAdminCan(key,TENANT_ADMIN_CAPABILITIES.site);}
 const SUBJECT_ALIASES=Object.freeze({
   ekodibiz:'ekodi-biz',
   ekodichurch:'ekodi-church',
@@ -144,12 +147,12 @@ async function identity(request){
 }
 async function canManageViaD1(env,who,tenant){
   const grant=await env.DB.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND email=?').bind(tenant.id,who.email).first();
-  return Boolean(grant&&Number(grant.enabled)===1&&MANAGE_ROLES.has(String(grant.role||'').toLowerCase()));
+  return Boolean(grant&&Number(grant.enabled)===1&&roleCanManageSite(grant.role));
 }
 async function canManageViaContexts(who,tenant){
   const response=await fetch(`${SUPABASE_URL}/rest/v1/rpc/current_site_activity_contexts`,{method:'POST',headers:{apikey:SUPABASE_KEY,authorization:`Bearer ${who.token}`,'content-type':'application/json'},body:'{}',signal:AbortSignal.timeout(10000)}).catch(()=>null);
   if(!response?.ok)return false;const rows=await response.json().catch(()=>[]);const key=canonicalSiteSubject(tenant.slug);
-  return (Array.isArray(rows)?rows:[]).some(row=>canonicalSiteSubject(row?.tenant)===key&&MANAGE_ROLES.has(String(row?.authorization_role||'').toLowerCase()));
+  return (Array.isArray(rows)?rows:[]).some(row=>canonicalSiteSubject(row?.tenant)===key&&roleCanManageSite(row?.authorization_role));
 }
 async function canManageStoreViaSupabase(who,tenant){
   const key=canonicalSiteSubject(tenant.slug);if(!['jadam','pizzamaru','yogurt'].includes(key))return false;
@@ -160,6 +163,12 @@ async function canManageStoreViaSupabase(who,tenant){
   return false;
 }
 async function canManage(env,who,tenant){return await canManageViaD1(env,who,tenant)||await canManageViaContexts(who,tenant)||await canManageStoreViaSupabase(who,tenant)}
+// 디자인 프로필 등 다른 사이트 설정 API가 같은 판정을 쓰도록 공개합니다(who: {email, token}).
+export async function canManageSiteSubject(env,who,subjectKey){
+  const tenant=await tenantForSubject(env,subjectKey);
+  if(!tenant||tenant.status!=='active')return false;
+  return canManage(env,who,tenant);
+}
 
 export async function handleSiteChromeApi(request,env){
   const url=new URL(request.url);const path=url.pathname.replace(/\/+$/,'');if(!path.startsWith('/v1/site-chrome'))return null;
