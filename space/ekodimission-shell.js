@@ -271,7 +271,7 @@
   const missionAuthUi=mountMissionAuth();
   function missionAccountLabel(value){
     const raw=String(value||'').trim();
-    const alias=/^identity\\+([a-z0-9_-]+)\\.[^@\\s]+@ekodi\\.kr$/i.exec(raw);
+    const alias=/^identity\+([a-z0-9_-]+)\.[^@\s]+@ekodi\.kr$/i.exec(raw);
     if(alias){
       const labels={kakao:'카카오 계정',naver:'네이버 계정',google:'Google 계정',apple:'Apple 계정',daum:'다음 계정'};
       return labels[alias[1].toLowerCase()]||'연결 계정';
