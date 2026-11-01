@@ -30,6 +30,10 @@ async function jsonFetch(url,{token='',method='GET',body,headers={}}={}){
     const error=new Error(`HTTP_${response.status}`);
     error.status=response.status;
     error.payload=data;
+    // Which call failed, so a provider outage is diagnosable without raw logs.
+    // Host and path only: a query string can carry a page cursor or a token, and
+    // this value ends up in a public run annotation.
+    try{const target=new URL(url);error.endpoint=`${target.host}${target.pathname}`}catch{error.endpoint=''}
     throw error;
   }
   return data;
@@ -276,7 +280,13 @@ ON CONFLICT(provider,metric,period_start) DO UPDATE SET observed_value=excluded.
 export function describeCollectorError(error){
   const status=Number(error?.status)||0;
   const message=String(error?.message??error??'unknown').slice(0,200);
-  return status?`${message} (HTTP ${status})`:message;
+  const endpoint=String(error?.endpoint??'').slice(0,160);
+  const detail=status?`${message} (HTTP ${status})`:message;
+  // `github telemetry unavailable: HTTP_500` named the provider but not the call.
+  // GitHub's three endpoints fail for different reasons — one of them paginates
+  // through every artifact in the repository — so the endpoint is the difference
+  // between knowing and guessing.
+  return endpoint?`${detail} at ${endpoint}`:detail;
 }
 
 /**
