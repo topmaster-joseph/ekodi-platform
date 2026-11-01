@@ -160,7 +160,9 @@ function setupSimulcast(){
   const content=el('div',{class:'live-simulcast-body'});
   const refresh=el('button',{type:'button',text:'확인',onclick:()=>load()});
   host.replaceChildren(el('div',{class:'external-head'},[el('strong',{text:'유튜브·페이스북 동시송출'}),refresh]),status,content);
-  const fail=error=>{status.textContent=say(error);const url=error?.data?.loginUrl;if(error?.status===401||url){const link=el('a',{class:'studio-host-login',rel:'nofollow',text:'다시 로그인 · 진행자 권한 확인',href:url||`/auth/?site=${encodeURIComponent(body.dataset.authSite||tenant)}&select_account=1&return_to=${encodeURIComponent(location.href)}`});content.replaceChildren(link)}else content.replaceChildren()};
+  let authFailed=false;
+  window.addEventListener('ekodi-live-auth-ready',()=>{if(authFailed){authFailed=false;load()}});
+  const fail=error=>{if(error?.status===401||error?.status===403)authFailed=true;status.textContent=say(error);const url=error?.data?.loginUrl;if(error?.status===401||url){const link=el('a',{class:'studio-host-login',rel:'nofollow',text:'다시 로그인 · 진행자 권한 확인',href:url||`/auth/?site=${encodeURIComponent(body.dataset.authSite||tenant)}&select_account=1&return_to=${encodeURIComponent(location.href)}`});content.replaceChildren(link)}else content.replaceChildren()};
   const copyBtn=value=>el('button',{type:'button',text:'복사',onclick:async e=>{try{await navigator.clipboard.writeText(value);e.target.textContent='복사됨'}catch{}}});
 
   // EKODI-owned relay (EKODI-SIMULCAST-RELAY-001): OBS on the broadcast PC →
@@ -218,10 +220,13 @@ function setupSimulcast(){
     nodes.push(list,channelForm(r.platforms||[],addRelay,true),el('div',{class:'live-console-actions'},[armed?act('동시송출 끄기','/relay/disarm'):act('동시송출 켜기','/relay/arm','primary'),act('상태 확인','/relay/status')]),obs);
     content.replaceChildren(...nodes);
   }
-  async function load(){
+  async function load(retried=false){
     status.textContent='확인 중';
     let data;
-    try{data=await api(`/simulcast?${q}`)}catch(error){fail(error);return}
+    try{data=await api(`/simulcast?${q}`)}catch(error){
+      // The panel can open before the login handoff finishes; refresh once and retry before showing re-login.
+      if(!retried&&error?.status===401){await new Promise(r=>setTimeout(r,1200));try{await window.EKODI_LIVE_AUTH?.()}catch{}return load(true)}
+      fail(error);return}
     if(!data.configured){await renderRelay();return}
     const nodes=[];
     if(!data.input){
