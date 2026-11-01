@@ -63,3 +63,15 @@ test('simulcast panel retries after login handoff instead of sticking on expired
   assert.match(live,/new CustomEvent\('ekodi-live-auth-ready'\)/);
   assert.match(interp,/return load\(true\)/);
 });
+
+test('ending a broadcast returns host to a ready preview and releases viewers from a frozen frame',()=>{
+  assert.match(live,/await resetHostAfterEnd\(\)\}catch/);
+  assert.match(live,/const ok=await prepareStudio\(\)/);
+  assert.match(live,/function startViewerEndWatch\(id\)/);
+  assert.match(live,/if\(d\.room&&d\.room\.status!=='live'\)return void viewerBroadcastEnded\(\)/);
+  assert.match(live,/startViewerEndWatch\(id\);return\}/);
+  assert.match(live,/function waitNextBroadcast\(\)/);
+});
+test('camera-busy error explains which app holds the camera',()=>{
+  assert.match(live,/NotReadableError/);
+});
