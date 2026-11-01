@@ -24,7 +24,7 @@
     const root = host.attachShadow({ mode: 'open' });
     root.innerHTML = `<style>${CSS}</style><div class="sheet"><div class="head"><b></b><button class="close">✕ 닫기</button></div><ol></ol>
       <div class="ctl"><div class="now"></div><audio controls preload="none"></audio>
-      <div class="row"><button class="prev">⏮ 이전 장</button><button class="next">다음 장 ⏭</button><select class="rate" aria-label="재생 속도"><option value="0.8">0.8×</option><option value="1" selected>1.0×</option><option value="1.2">1.2×</option><option value="1.5">1.5×</option></select><span class="msg"></span></div></div></div>`;
+      <div class="row"><button class="prev">⏮ 이전 장</button><button class="next">다음 장 ⏭</button><select class="voice" aria-label="낭독 목소리" hidden></select><select class="rate" aria-label="재생 속도"><option value="0.75">0.75×</option><option value="0.9">0.9×</option><option value="1" selected>1.0×</option><option value="1.15">1.15×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2.0×</option></select><span class="msg"></span></div></div></div>`;
     const $ = s => root.querySelector(s);
     const audio = $('audio');
     const key = `ekodi-audiobook:${item.id}`;
@@ -42,8 +42,9 @@
       loading = true; $('.row .msg').textContent = '불러오는 중…';
       try {
         const t = tracks[i];
-        if (!cache.has(t.number)) cache.set(t.number, URL.createObjectURL(await fetchTrack(t.number)));
-        current = i; audio.src = cache.get(t.number); audio.playbackRate = Number(pos.rate) || 1;
+        const ck = `${pos.voice || ''}:${t.number}`;
+        if (!cache.has(ck)) cache.set(ck, URL.createObjectURL(await fetchTrack(t.number, pos.voice || '')));
+        current = i; audio.src = cache.get(ck); audio.playbackRate = Number(pos.rate) || 1;
         audio.addEventListener('loadedmetadata', () => { if (at > 0 && at < audio.duration - 2) audio.currentTime = at; }, { once: true });
         await audio.play().catch(() => {});
         $('.now').textContent = `${String(t.number).padStart(2, '0')} · ${t.title}`;
@@ -58,6 +59,15 @@
     audio.addEventListener('ended', () => { if (current < tracks.length - 1) play(current + 1, 0); else { pos.t = 0; save(); } });
     $('.prev').onclick = () => play(current - 1, 0);
     $('.next').onclick = () => play(current + 1, 0);
+    // EKODI-VOICE-002: 남·여 × 어린이·청소년·중장년·노년 목소리 선택(바꿔도 같은 장·위치에서 이어 듣기)
+    const voices = Array.isArray(item.audiobook?.voices) ? item.audiobook.voices : [];
+    if (voices.length) {
+      const sel = $('.voice'); sel.hidden = false;
+      for (const v of voices) { const o = document.createElement('option'); o.value = v.id; o.textContent = v.label; sel.append(o); }
+      if (!voices.some(v => v.id === pos.voice)) pos.voice = voices.find(v => v.id.endsWith('-adult'))?.id || voices[0].id;
+      sel.value = pos.voice;
+      sel.onchange = () => { pos.voice = sel.value; save(); if (current >= 0) play(current, Math.floor(audio.currentTime || 0)); };
+    }
     $('.rate').value = String(pos.rate || 1);
     $('.rate').onchange = e => { pos.rate = Number(e.target.value); audio.playbackRate = pos.rate; save(); };
     const close = () => { audio.pause(); pos.t = Math.floor(audio.currentTime || pos.t); save(); cache.forEach(u => URL.revokeObjectURL(u)); host.remove(); document.body.style.overflow = ''; };

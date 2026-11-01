@@ -18,6 +18,24 @@ def enhance_sample(src, dst):
        'highpass=f=70,lowpass=f=12000,afftdn=nf=-28,silenceremove=stop_periods=-1:stop_duration=0.6:stop_threshold=-45dB,loudnorm=I=-18:TP=-2:LRA=9',
        '-ar', '24000', dst)
 
+# EKODI-VOICE-002: 연령대 목소리. 원 녹음(성인)의 음높이·성도(포먼트)·속도를 함께 옮겨 나이 인상을 바꾼다.
+# 값은 시작점이며 사람이 들어 보고 조정한다(확인필요). adult는 원 녹음 그대로.
+AGE_FX = {
+    'm': {'child': 'rubberband=pitch=1.45:formant=shifted,highpass=f=140',
+          'teen': 'rubberband=pitch=1.17:formant=shifted,highpass=f=90',
+          'senior': 'rubberband=pitch=0.94:tempo=0.92:formant=shifted,vibrato=f=5.5:d=0.06,aformat=sample_fmts=s16,lowpass=f=7000'},
+    'f': {'child': 'rubberband=pitch=1.22:formant=shifted,highpass=f=160',
+          'teen': 'rubberband=pitch=1.08:formant=shifted,highpass=f=120',
+          'senior': 'rubberband=pitch=0.92:tempo=0.92:formant=shifted,vibrato=f=5.5:d=0.06,aformat=sample_fmts=s16,lowpass=f=7500'},
+}
+
+def age_variant(src_mp3, dst_mp3, gender, age, title, book_title):
+    fx = AGE_FX[gender].get(age)
+    chain = (fx + ',' if fx else '') + 'loudnorm=I=-18:TP=-3:LRA=7,aformat=sample_fmts=s16p'  # LAME에 NaN·범위 밖 표본이 가지 않게
+    sh('ffmpeg', '-y', '-i', src_mp3, '-ac', '1', '-ar', '44100', '-af', chain, '-c:a', 'libmp3lame', '-b:a', '96k',
+       '-metadata', f'title={title}', '-metadata', f'album={book_title}', '-metadata', f'artist=EKODI Voice ({gender}-{age})',
+       '-metadata', 'comment=EKODI AI narration draft (human review required)', dst_mp3)
+
 def split_text(paras, limit=260):
     for p in paras:
         sentences = re.split(r'(?<=[.!?。…”"])\s+', p)
@@ -81,6 +99,7 @@ def main():
     a.add_argument('--lang', default='ko'); a.add_argument('--title', default=''); a.add_argument('--checkpoints', default='checkpoints_v2')
     a.add_argument('--out', default='out'); a.add_argument('--shard', type=int, default=0); a.add_argument('--shards', type=int, default=1)
     a.add_argument('--speed', type=float, default=0.95)
+    a.add_argument('--gender', choices=['m', 'f'], default='m'); a.add_argument('--primary-gender', choices=['m', 'f'], default='m')
     args = a.parse_args()
     if not re.fullmatch(r'BOOK-[A-Z0-9-]{3,40}', args.book_id):
         sys.exit('bad book id')
@@ -91,18 +110,30 @@ def main():
         ref = f'{work}/ref.wav'; enhance_sample(args.sample, ref)
         engine = Engine(args.lang, args.checkpoints, ref, args.speed)
         manifest = []
-        for c in mine:
-            key = f'{args.book_id}/audiobook/{c["number"]:02d}.mp3'
-            path = f'{args.out}/{key}'
-            cw = f'{work}/ch{c["number"]}'; os.makedirs(cw)
-            render_chapter(engine, c, cw, path, args.title)
+        def info(path, key):
             data = open(path, 'rb').read()
             dur = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path], capture_output=True, text=True).stdout or 0)
-            manifest.append({'number': c['number'], 'title': c['title'], 'key': key, 'format': 'mp3',
-                             'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data), 'durationSec': round(dur, 1)})
-            print(f'chapter {c["number"]}/{len(chs)} rendered ({round(dur)}s)', flush=True)
-    with open(f'{args.out}/manifest-{args.shard}.json', 'w') as fh:
-        json.dump({'bookId': args.book_id, 'chapters': len(chs), 'tracks': manifest}, fh, ensure_ascii=False, indent=1)
+            return {'key': key, 'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data), 'durationSec': round(dur, 1)}
+        for c in mine:
+            n = f'{c["number"]:02d}'
+            cw = f'{work}/ch{c["number"]}'; os.makedirs(cw)
+            base = f'{cw}/base.mp3'
+            render_chapter(engine, c, cw, base, args.title)
+            voices = {}
+            for age in ('child', 'teen', 'adult', 'senior'):
+                vid = f'{args.gender}-{age}'; key = f'{args.book_id}/audiobook/voices/{vid}/{n}.mp3'
+                os.makedirs(os.path.dirname(f'{args.out}/{key}'), exist_ok=True)
+                age_variant(base, f'{args.out}/{key}', args.gender, age, c['title'], args.title)
+                voices[vid] = info(f'{args.out}/{key}', key)
+            entry = {'number': c['number'], 'title': c['title'], 'format': 'mp3', 'voices': voices}
+            if args.gender == args.primary_gender:  # 기본 낭독(승인 대상) = 기본 성별의 중장년 목소리
+                key = f'{args.book_id}/audiobook/{n}.mp3'
+                with open(f'{args.out}/{key}', 'wb') as fh: fh.write(open(f'{args.out}/{voices[args.gender + "-adult"]["key"]}', 'rb').read())
+                entry.update(info(f'{args.out}/{key}', key))
+            manifest.append(entry)
+            print(f'chapter {c["number"]}/{len(chs)} rendered ({round(voices[args.gender + "-adult"]["durationSec"])}s x4 voices)', flush=True)
+    with open(f'{args.out}/manifest-{args.gender}-{args.shard}.json', 'w') as fh:
+        json.dump({'bookId': args.book_id, 'gender': args.gender, 'chapters': len(chs), 'tracks': manifest}, fh, ensure_ascii=False, indent=1)
 
 if __name__ == '__main__':
     main()

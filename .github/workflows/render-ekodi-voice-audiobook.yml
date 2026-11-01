@@ -11,6 +11,18 @@ on:
         description: '도서 ID (예: BOOK-EKODI-000001). SELFTEST는 비공개 자료 없이 엔진만 점검'
         required: true
         type: string
+      gender:
+        description: '원 녹음 성별 (m=남, f=여). 연령대 4종(어린이·청소년·중장년·노년) 목소리를 함께 만든다'
+        required: false
+        default: 'm'
+        type: choice
+        options: ['m', 'f']
+      primary_gender:
+        description: '기본 낭독(승인 대상 NN.mp3)으로 쓸 성별'
+        required: false
+        default: 'm'
+        type: choice
+        options: ['m', 'f']
       speed:
         description: '낭독 속도 (0.8~1.1)'
         required: false
@@ -21,7 +33,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ekodi-voice-${{ inputs.book_id }}
+  group: ekodi-voice-${{ inputs.book_id }}-${{ inputs.gender }}
   cancel-in-progress: false
 
 env:
@@ -69,8 +81,10 @@ jobs:
           set -euo pipefail
           mkdir -p private && chmod 700 private
           npx --yes wrangler@${WRANGLER_VERSION} r2 object get "${BOOK_BUCKET}/${{ steps.book.outputs.file_key }}" --remote --file private/book.epub >/dev/null
-          npx --yes wrangler@${WRANGLER_VERSION} r2 object get "${BOOK_BUCKET}/_voice/ekodi-narrator/latest.json" --remote --file private/voice.json >/dev/null
-          KEY=$(node -e "const v=require('./private/voice.json');if(v.consent!=='self-recorded-for-ekodi-audiobooks'||!/^_voice\/ekodi-narrator\/sample-[\w-]+\.(webm|wav|m4a|mp3)$/.test(v.key))process.exit(1);process.stdout.write(v.key)")
+          G="${{ inputs.gender || 'm' }}"
+          npx --yes wrangler@${WRANGLER_VERSION} r2 object get "${BOOK_BUCKET}/_voice/ekodi-narrator/latest-${G}.json" --remote --file private/voice.json >/dev/null \
+            || { [ "$G" = m ] && npx --yes wrangler@${WRANGLER_VERSION} r2 object get "${BOOK_BUCKET}/_voice/ekodi-narrator/latest.json" --remote --file private/voice.json >/dev/null; }
+          KEY=$(node -e "const v=require('./private/voice.json');if(v.consent!=='self-recorded-for-ekodi-audiobooks'||!/^_voice\/ekodi-narrator\/(?:[mf]\/)?sample-[\w-]+\.(webm|wav|m4a|mp3)$/.test(v.key))process.exit(1);process.stdout.write(v.key)")
           npx --yes wrangler@${WRANGLER_VERSION} r2 object get "${BOOK_BUCKET}/${KEY}" --remote --file private/sample.bin >/dev/null
       - name: Install EKODI Voice engine (MeloTTS + OpenVoice V2, MIT)
         run: |
@@ -100,26 +114,27 @@ jobs:
           BOOK_ID=$([ "$BOOK_ID" = SELFTEST ] && echo BOOK-SELFTEST-000 || echo "$BOOK_ID")
           python scripts/ekodi-voice/render.py --book-id "$BOOK_ID" --epub private/book.epub --sample private/sample.bin \
             --lang "${{ steps.book.outputs.lang || 'ko' }}" --title "${{ steps.book.outputs.title || 'SELFTEST' }}" --checkpoints checkpoints_v2 \
-            --shard ${{ matrix.shard }} --shards 4 --speed "${{ inputs.speed }}" --out out
+            --shard ${{ matrix.shard }} --shards 4 --speed "${{ inputs.speed }}" --out out \
+            --gender "${{ inputs.gender || 'm' }}" --primary-gender "${{ inputs.primary_gender || 'm' }}"
       - name: Self-test result (durations only)
         if: inputs.book_id == 'SELFTEST'
-        run: cat out/manifest-${{ matrix.shard }}.json | python3 -c "import json,sys;d=json.load(sys.stdin);print([(t['number'],t['durationSec'],t['bytes']) for t in d['tracks']])"
+        run: cat out/manifest-${{ inputs.gender || 'm' }}-${{ matrix.shard }}.json | python3 -c "import json,sys;d=json.load(sys.stdin);print([(t['number'],{k:v['durationSec'] for k,v in t['voices'].items()}) for t in d['tracks']])"
       - name: Store drafts privately (not deliverable until approved)
         if: inputs.book_id != 'SELFTEST'
         run: |
           set -euo pipefail
           for f in $(find out -name '*.mp3' | sort); do
             key="${f#out/}"
-            [[ "$key" =~ ^${BOOK_ID}/audiobook/[0-9]{2}\.mp3$ ]] || { echo "unexpected key"; exit 1; }
+            [[ "$key" =~ ^${BOOK_ID}/audiobook/([0-9]{2}|voices/[mf]-(child|teen|adult|senior)/[0-9]{2})\.mp3$ ]] || { echo "unexpected key"; exit 1; }
             npx --yes wrangler@${WRANGLER_VERSION} r2 object put "${BOOK_BUCKET}/${key}" --remote --file "$f" --content-type audio/mpeg >/dev/null
           done
-          npx --yes wrangler@${WRANGLER_VERSION} r2 object put "${BOOK_BUCKET}/_voice/renders/${BOOK_ID}/manifest-${{ matrix.shard }}.json" --remote --file out/manifest-${{ matrix.shard }}.json --content-type application/json >/dev/null
-          mkdir -p manifest && cp out/manifest-${{ matrix.shard }}.json manifest/
+          npx --yes wrangler@${WRANGLER_VERSION} r2 object put "${BOOK_BUCKET}/_voice/renders/${BOOK_ID}/manifest-${{ inputs.gender || 'm' }}-${{ matrix.shard }}.json" --remote --file out/manifest-${{ inputs.gender || 'm' }}-${{ matrix.shard }}.json --content-type application/json >/dev/null
+          mkdir -p manifest && cp out/manifest-${{ inputs.gender || 'm' }}-${{ matrix.shard }}.json manifest/
           rm -rf private out
       - name: Publish track manifest (titles, hashes, durations only)
         if: inputs.book_id != 'SELFTEST'
         uses: actions/upload-artifact@v7
         with:
-          name: ekodi-voice-manifest-${{ inputs.book_id }}-${{ matrix.shard }}
+          name: ekodi-voice-manifest-${{ inputs.book_id }}-${{ inputs.gender || 'm' }}-${{ matrix.shard }}
           path: manifest/
           retention-days: 30
