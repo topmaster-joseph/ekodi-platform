@@ -347,3 +347,11 @@ test('supplier login evidence tracks HTTP and JSON shape but never raw response 
     status: 200, parsedJson: true, root: { result: 'unexpected-PII' }
   }).supplierResult, 'other');
 });
+
+test('supplier login reason is kept only after scrubbing ids, secrets and numbers', async () => {
+  const { scrubSupplierMessage } = await import('./domeggook-order.js');
+  const env = { DOMEMAE_USER_ID: 'myid77', DOMEMAE_PASSWORD: 'pw!123', DOMEMAE_API_KEY: 'abcdef0123456789abcdef', DOMEMAE_APPROVED_MEMBER_ID: 'sns@952821' };
+  const out = scrubSupplierMessage('아이디(myid77) 또는 비밀번호(pw!123) 불일치 sns@952821 abcdef0123456789abcdef 010-1234', env);
+  for (const bad of ['myid77', 'pw!123', '952821', 'abcdef', '1234']) assert.ok(!out.includes(bad), bad);
+  assert.ok(out.includes('비밀번호'));
+});

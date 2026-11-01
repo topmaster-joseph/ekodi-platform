@@ -75,6 +75,17 @@ function apiError(r, env) {
   return '';
 }
 
+/** Supplier's human-readable failure reason with every identifier/secret removed.
+ * Keeps only Korean/English words and spaces (no digits, '@', ids, keys, sessions). */
+export function scrubSupplierMessage(text, env = {}) {
+  let out = String(text || '');
+  for (const v of [env.DOMEMAE_API_KEY, env.DOMEMAE_PASSWORD, env.DOMEMAE_USER_ID, env.DOMEMAE_APPROVED_MEMBER_ID])
+    if (v) out = out.split(String(v)).join(' ');
+  out = out.replace(/\S*[@:/\\]\S*/g, ' ').replace(/[^가-힣a-zA-Z\s.,!?()]/g, ' ')
+    .replace(/\b[a-zA-Z]*\d[\w]*\b/g, ' ').replace(/\b[a-zA-Z]{20,}\b/g, ' ').replace(/\s+/g, ' ').trim();
+  return out.slice(0, 120);
+}
+
 /** Fixed-value, secret-free diagnostic facts for failed setLogin only.
  * No API response body, user ID, credentials, session or e-money amount is stored. */
 export function safeDomeggookLoginDiagnostic(env, response) {
@@ -98,6 +109,7 @@ export async function login(env, fetchImpl = fetch) {
   if (!r.ok || apiError(r, env) || !sId || !String(r.root?.id || '').trim()) {
     const error = new Error(`도매꾹 로그인 실패: ${apiError(r, env) || '인증 결과/회원 ID/세션 불명'}`);
     error.safeDiagnostic = safeDomeggookLoginDiagnostic(env, r);
+    error.supplierMessage = scrubSupplierMessage(apiError(r, env) || (r.parsedJson ? '' : 'non json response'), env);
     throw error;
   }
   // Deny any session bound to another member even when the supplier returned success.
@@ -336,6 +348,7 @@ export async function probeDomeggookLogin(env, fetchImpl = fetch, { operatorRetr
     // Only persist a bounded category. Never store the supplier's error body.
     meta = { login: stage === 'login' ? 'failed' : 'ok', asset: stage === 'asset' ? 'failed' : 'not-checked',
       errorCode: classifySupplierAuthError(error?.message, stage) };
+    if (error?.supplierMessage) meta.supplierMessage = error.supplierMessage;
     if (stage === 'login' && error?.safeDiagnostic) {
       // Safe facts only; never persist raw result or API parameters.
       meta.diagnostic = safeDomeggookLoginDiagnostic(env, {
