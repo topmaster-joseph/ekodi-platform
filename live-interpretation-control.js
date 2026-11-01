@@ -13,6 +13,13 @@
 import { SIMULCAST_RELAY_CAPABILITY, SIMULCAST_RELAY_COMMANDS, SIMULCAST_RELAY_FFMPEG, SIMULCAST_RELAY_INGEST, SIMULCAST_RELAY_MAX_DESTINATIONS, SIMULCAST_RELAY_POLICY_ID, sanitizeSimulcastRelayPayload, summarizeSimulcastRelayResult } from './simulcast-relay-policy.js';
 
 export const LIVE_TRANSLATION_MODEL = '@cf/meta/m2m100-1.2b';
+// Server-side speech recognition for the studio. Phone browsers cannot run
+// their built-in speech recognition while the broadcast already holds the
+// microphone, so the studio sends short 16 kHz mono WAV chunks of the same
+// microphone and the Worker transcribes them.
+export const LIVE_STT_MODEL = '@cf/openai/whisper-large-v3-turbo';
+export const LIVE_STT_MAX_BASE64 = 700000; // ~16 s of 16 kHz mono 16-bit WAV
+const STT_TIMEOUT_MS = 15000;
 export const LIVE_CAPTION_MAX_CHARS = 400;
 export const LIVE_CAPTION_PAGE = 60;
 const STREAM_API = 'https://api.cloudflare.com/client/v4/accounts';
@@ -117,6 +124,18 @@ async function streamCall(env,path,{method='GET',payload}={}){
     throw Object.assign(new Error(message),{status:502,code:'stream_provider_error',providerStatus:response.status});
   }
   return data?.result??null;
+}
+
+// Whisper often returns stock phrases for silence or room noise; drop them.
+const STT_NOISE=/^(\s|[.…,!?~\-]|감사합니다|시청해 ?주셔서 감사합니다|구독과 좋아요|MBC 뉴스|thank you\.?|thanks for watching\.?|you)*$/i;
+export async function transcribeChunk(env,audio,sourceLang){
+  let timer;
+  const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('stt_timeout')),STT_TIMEOUT_MS)});
+  try{
+    const result=await Promise.race([env.AI.run(LIVE_STT_MODEL,{audio,task:'transcribe',language:sourceLang,vad_filter:true,condition_on_previous_text:false}),timeout]);
+    const text=normalizeCaptionText(result?.text??result?.transcription??'');
+    return STT_NOISE.test(text)?'':text;
+  }finally{clearTimeout(timer)}
 }
 
 // Translate one segment into every target language. Fail-open: a failed or
@@ -231,7 +250,7 @@ export async function handleLiveInterpretation(request,env,url,input,deps){
     await audit(env,tenant,host.actor,'captions.session.start','allowed',{sessionId:id,sourceLang,targets,trimmed:requested.length-targets.length});
     return json(request,env,{ok:true,session:safeSession(await env.DB.prepare('SELECT * FROM live_caption_sessions WHERE id=?').bind(id).first()),trimmedByPlan:requested.length-targets.length},201);
   }
-  const segMatch=path.match(/^\/api\/realtime\/captions\/sessions\/([^/]+)\/(segments|end)$/);
+  const segMatch=path.match(/^\/api\/realtime\/captions\/sessions\/([^/]+)\/(segments|audio|end)$/);
   if(segMatch&&request.method==='POST'){
     const session=await env.DB.prepare('SELECT * FROM live_caption_sessions WHERE id=?').bind(decodeURIComponent(segMatch[1])).first();
     if(!session)return json(request,env,{ok:false,error:'caption_session_not_found'},404);
@@ -243,9 +262,18 @@ export async function handleLiveInterpretation(request,env,url,input,deps){
       await audit(env,session.tenant_id,host.actor,'captions.session.end','allowed',{sessionId:session.id});
       return json(request,env,{ok:true,session:safeSession(await env.DB.prepare('SELECT * FROM live_caption_sessions WHERE id=?').bind(session.id).first())});
     }
-    const text=normalizeCaptionText(input?.text);
-    if(!text)return json(request,env,{ok:false,error:'caption_text_required'},400);
     const view=safeSession(session);
+    let text='';
+    if(segMatch[2]==='audio'){
+      const audio=typeof input?.audio==='string'?input.audio:'';
+      if(!audio||audio.length>LIVE_STT_MAX_BASE64||!/^[A-Za-z0-9+/=]+$/.test(audio))return json(request,env,{ok:false,error:'caption_audio_invalid'},400);
+      if(!env?.AI?.run)return json(request,env,{ok:false,error:'speech_recognition_unavailable'},503);
+      try{text=await transcribeChunk(env,audio,view.sourceLang)}catch{return json(request,env,{ok:false,error:'speech_recognition_failed'},502)}
+      if(!text)return json(request,env,{ok:true,empty:true,seq:Number(session.segment_count||0)});
+    }else{
+      text=normalizeCaptionText(input?.text);
+      if(!text)return json(request,env,{ok:false,error:'caption_text_required'},400);
+    }
     const bumped=await env.DB.prepare(`UPDATE live_caption_sessions SET segment_count=segment_count+1,updated_at=? WHERE id=? AND status='active' RETURNING segment_count`).bind(stamp,session.id).first();
     const seq=Number(bumped?.segment_count||0);
     if(!seq)return json(request,env,{ok:false,error:'caption_session_ended'},409);

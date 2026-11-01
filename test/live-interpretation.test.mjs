@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import {
   handleLiveInterpretation, validateSimulcastDestination, normalizeTargetLanguages,
-  normalizeCaptionText, streamIframeUrl, translateSegment, maskKey, LIVE_CAPTION_MAX_CHARS, LIVE_TRANSLATION_MODEL,
+  normalizeCaptionText, streamIframeUrl, translateSegment, maskKey, LIVE_CAPTION_MAX_CHARS, LIVE_TRANSLATION_MODEL, LIVE_STT_MODEL, LIVE_STT_MAX_BASE64,
 } from '../live-interpretation-control.js';
 import { realtimeTenant } from '../realtime-tenant-registry.js';
 import { evaluateRealtimeRequest } from '../src/realtime/entitlement.mjs';
@@ -287,4 +287,33 @@ test('multichannel presets: Instagram Live is RTMPS-only on Meta hosts and store
   assert.equal(out.status,201);assert.equal(out.data.output.label,'선교회 Instagram');assert.equal(out.data.output.platform,'custom');
   const status=await h.call('GET','/api/realtime/simulcast?tenant=ekodimission');
   assert.ok(status.data.platforms.some(p=>p.id==='instagram'));
+});
+
+test('studio audio chunks are transcribed on the server, translated and stored (phone mic contention fix)',async()=>{
+  const heard=[];
+  const ai={run:async(model,input)=>{if(model===LIVE_STT_MODEL){heard.push(input);return {text:input.audio==='U0lMRU5U'?'시청해 주셔서 감사합니다.':'주님은 나의 목자시니'}}return {translated_text:`[${input.target_lang}] ${input.text}`}}};
+  const h=harness({ai});
+  const start=await h.call('POST','/api/realtime/captions/sessions',{tenant:'church',sourceLang:'ko',targetLangs:['zh']});
+  const id=start.data.session.id;
+  const seg=await h.call('POST',`/api/realtime/captions/sessions/${id}/audio`,{audio:'UklGRgAAAABXQVZF'});
+  assert.equal(seg.status,201);assert.equal(seg.data.source.text,'주님은 나의 목자시니');assert.equal(seg.data.translations[0].lang,'zh');
+  assert.equal(heard[0].language,'ko');assert.equal(heard[0].vad_filter,true);
+  const zh=await h.call('GET','/api/realtime/captions?tenant=ekodichurch&lang=zh&after=0');
+  assert.equal(zh.data.segments.length,1);
+  const silent=await h.call('POST',`/api/realtime/captions/sessions/${id}/audio`,{audio:'U0lMRU5U'});
+  assert.equal(silent.status,200);assert.equal(silent.data.empty,true,'stock silence phrases are dropped');
+  assert.equal((await h.call('POST',`/api/realtime/captions/sessions/${id}/audio`,{audio:'not base64!'})).status,400);
+  assert.equal((await h.call('POST',`/api/realtime/captions/sessions/${id}/audio`,{audio:'A'.repeat(LIVE_STT_MAX_BASE64+4)})).status,400);
+  const anon=harness({authenticated:false,ai});
+  assert.equal((await anon.call('POST',`/api/realtime/captions/sessions/${id}/audio`,{audio:'UklGRg=='})).status,404,'session ids are per-database; unknown elsewhere');
+});
+
+test('studio keeps the program alive in the background and captures speech server-side',()=>{
+  const studio=fs.readFileSync(new URL('../tenant-live.js',import.meta.url),'utf8');
+  assert.match(studio,/function scheduleDraw\(\)\{[^}]*document\.hidden[^}]*setTimeout\(drawProgram/);
+  assert.match(studio,/navigator\.wakeLock\.request\('screen'\)/);
+  assert.match(studio,/state\.isLive=true;void keepAwake\(true\)/);
+  const console=fs.readFileSync(new URL('../live-interpretation.js',import.meta.url),'utf8');
+  assert.match(console,/\/captions\/sessions\/\$\{encodeURIComponent\(st\.session\.id\)\}\/audio/);
+  assert.match(console,/createScriptProcessor/);assert.match(console,/'audio-capture'/);
 });
