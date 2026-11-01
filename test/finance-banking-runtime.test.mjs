@@ -17,7 +17,14 @@ function d1(sqlite) {
     all: async () => ({ results: sqlite.prepare(sql).all(...values) }),
     run: async () => { const r = sqlite.prepare(sql).run(...values); return { meta: { changes: r.changes } }; }
   });
-  return { prepare: sql => statement(sql) };
+  return {
+    prepare: sql => statement(sql),
+    batch: async statements => {
+      const results = [];
+      for (const item of statements) results.push(await item.run());
+      return results;
+    }
+  };
 }
 
 function freshDb() {
