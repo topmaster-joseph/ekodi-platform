@@ -171,6 +171,7 @@
   .audio .at{font-size:11px;color:#7d725f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
   .audio input[type=range]{width:min(220px,30vw);accent-color:#14305f}
   .audio label{font-size:11px;white-space:nowrap}
+  .audio select{font:inherit;font-size:12px;border:1px solid #cfc6b4;background:#fff;border-radius:8px;padding:5px 6px}
   @media(max-width:640px){.foot .row{flex-wrap:wrap}.audio{order:3;flex-basis:100%}}`;
 
   /** Open a full-screen reader. options: { title, storageKey, notice } */
@@ -188,7 +189,7 @@
       <button class="smaller" aria-label="글자 작게">가−</button><button class="larger" aria-label="글자 크게">가+</button></div></div>
       ${options.notice ? `<div class="noticewrap"><div class="notice"></div></div>` : ''}
       <div class="stage"><div class="book"><div class="cover" aria-hidden="true"></div><div class="stack" aria-hidden="true"></div><div class="sheet" title="왼쪽을 누르면 앞 쪽, 오른쪽을 누르면 다음 쪽"><div class="view" tabindex="0"><div class="inner"></div></div><div class="folio l" aria-hidden="true"><b></b><span></span></div><div class="folio r" aria-hidden="true"><b></b><span></span></div></div></div></div>
-      <div class="foot"><div class="row"><button class="prev">← 이전</button><span class="pos" aria-live="polite"></span>${options.audio?.tracks?.length ? `<div class="audio"><button class="play" type="button" aria-label="오디오북 듣기">▶ 듣기</button><input class="seek" type="range" min="0" max="1000" value="0" aria-label="재생 위치"><span class="at"></span><label><input class="follow" type="checkbox" checked> 책장 따라 넘기기</label></div>` : ''}<button class="next">다음 →</button></div></div>`;
+      <div class="foot"><div class="row"><button class="prev">← 이전</button><span class="pos" aria-live="polite"></span>${options.audio?.tracks?.length ? `<div class="audio"><button class="play" type="button" aria-label="오디오북 듣기">▶ 듣기</button><input class="seek" type="range" min="0" max="1000" value="0" aria-label="재생 위치"><span class="at"></span>${options.audio.voices?.length ? `<select class="voice" aria-label="낭독 목소리"></select>` : ''}<select class="rate" aria-label="재생 속도"></select><label><input class="follow" type="checkbox" checked> 책장 따라 넘기기</label></div>` : ''}<button class="next">다음 →</button></div></div>`;
     const $ = s => root.querySelector(s);
     const stage = $('.stage'), bookEl = $('.book'), sheet = $('.sheet'), view = $('.view'), inner = $('.inner');
     $('.t').textContent = options.title || book.title;
@@ -300,15 +301,39 @@
     const audio = options.audio?.tracks?.length ? new Audio() : null;
     const trackFor = i => { if (!audio) return null; const label = (book.chapters[i].label || '').replace(/\s+/g, '');
       return options.audio.tracks.find(t => t.chapter === book.chapters[i].href) || options.audio.tracks.find(t => t.title && label.includes(String(t.title).replace(/\s+/g, ''))) || null; };
-    let playing = null;
+    let playing = null, playingVoice = null;
     const fmt = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
     async function playChapter(i) {
       const t = trackFor(i); if (!t) { audio.pause(); $('.at').textContent = '이 장은 오디오가 없습니다'; return false; }
-      if (playing !== t) { $('.at').textContent = '불러오는 중…'; const blob = await options.audio.fetchTrack(t); if (audio.src) URL.revokeObjectURL(audio.src); audio.src = URL.createObjectURL(blob); playing = t; }
+      if (playing !== t || playingVoice !== state.voice) {
+        $('.at').textContent = '불러오는 중…';
+        const blob = await options.audio.fetchTrack(t, state.voice || '');
+        if (audio.src) URL.revokeObjectURL(audio.src);
+        audio.src = URL.createObjectURL(blob); playing = t; playingVoice = state.voice;
+        audio.playbackRate = state.rate || 1; audio.preservesPitch = true;
+      }
       await audio.play(); return true;
     }
     if (audio) {
       const play = $('.play'), seek = $('.seek');
+      // EKODI-VOICE-002: 목소리(남·여 × 연령대)와 속도를 고른다. 바꿔도 같은 위치에서 이어 듣는다.
+      const RATES = [0.75, 0.9, 1, 1.15, 1.25, 1.5, 1.75, 2];
+      const rateSel = $('.rate');
+      for (const r of RATES) rateSel.append(Object.assign(document.createElement('option'), { value: String(r), textContent: `${r}배` }));
+      state.rate = RATES.includes(state.rate) ? state.rate : 1; rateSel.value = String(state.rate);
+      rateSel.onchange = () => { state.rate = Number(rateSel.value); audio.playbackRate = state.rate; save(); };
+      const voiceSel = $('.voice');
+      if (voiceSel) {
+        for (const v of options.audio.voices) voiceSel.append(Object.assign(document.createElement('option'), { value: v.id, textContent: v.label }));
+        if (!options.audio.voices.some(v => v.id === state.voice)) state.voice = options.audio.voices.find(v => v.id.endsWith('-adult'))?.id || options.audio.voices[0].id;
+        voiceSel.value = state.voice;
+        voiceSel.onchange = async () => {
+          state.voice = voiceSel.value; save();
+          if (!playing) return;
+          const wasPlaying = !audio.paused, ratio = audio.duration ? audio.currentTime / audio.duration : 0;
+          try { await playChapter(state.i); audio.addEventListener('loadedmetadata', () => { audio.currentTime = ratio * audio.duration; }, { once: true }); if (!wasPlaying) audio.pause(); } catch { $('.at').textContent = '목소리를 바꾸지 못했습니다'; }
+        };
+      }
       play.onclick = async () => { try { if (!audio.paused) { audio.pause(); return; } if (!(await playChapter(state.i))) return; } catch (e) { $('.at').textContent = '재생하지 못했습니다'; } };
       audio.onplay = () => { play.textContent = '❚❚ 멈춤'; }; audio.onpause = () => { play.textContent = '▶ 듣기'; };
       audio.ontimeupdate = () => {
