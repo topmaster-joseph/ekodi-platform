@@ -40,11 +40,19 @@
     finally { button.disabled = false; button.textContent = label; }
   }
   window.EkodiLibraryFetchBook = fetchBook;
+  let libraryEmail = '';
   async function load() {
     try {
       const data = await C.api('library');
       $('libLogin').hidden = true;
-      $('libStatus').textContent = `${data.email} · ${data.items.length}권`;
+      // 휴대폰에서도 한 줄에 들어가도록 계정은 짧게(앞부분…@도메인), 전체 주소는 길게 누르면/마우스를 올리면 보인다.
+      const email = String(data.email || ''), [id, host] = email.split('@');
+      const short = host ? `${id.length > 12 ? id.slice(0, 10) + '…' : id}@${host.length > 14 ? host.slice(0, 12) + '…' : host}` : email;
+      const who = document.createElement('span'); who.className = 'lib-account'; who.textContent = short; who.title = email;
+      const out = document.createElement('button'); out.type = 'button'; out.className = 'lib-switch'; out.textContent = '로그아웃';
+      out.addEventListener('click', async () => { out.disabled = true; await C.signOut(); location.reload(); });
+      $('libStatus').replaceChildren(who, ` · ${data.items.length}권 `, out);
+      libraryEmail = email;
       const list = $('libraryList'); list.replaceChildren();
       if (!data.items.length) { const p = document.createElement('p'); p.innerHTML = '아직 구매한 책이 없습니다. '; const a = document.createElement('a'); a.href = `${C.BASE}/#catalog`; a.textContent = '출판 목록 보기 →'; p.append(a); list.append(p); return; }
       for (const item of data.items) {
@@ -103,7 +111,16 @@
     let no = 0;
     for (const book of books) {
       let state;
-      try { state = await C.api(`admin/approvals/${encodeURIComponent(book.id)}`); } catch (e) { if (e.status === 403 || e.status === 401) return; continue; }
+      try { state = await C.api(`admin/approvals/${encodeURIComponent(book.id)}`); }
+      catch (e) {
+        if (e.status === 403 || e.status === 401) {
+          // 운영자 화면이 왜 안 보이는지 알 수 있게: 지금 로그인한 계정이 운영자 계정이 아니라는 안내만 보인다(권한은 서버가 판단).
+          const note = $('operatorNote');
+          if (note && libraryEmail) { note.hidden = false; note.textContent = `출판 도서 관리·낭독 음성 녹음은 운영자 계정으로 로그인해야 보입니다. 지금 계정: ${libraryEmail}`; }
+          return;
+        }
+        continue;
+      }
       $('operatorPanel').hidden = false;
       const file = state.file, ready = state.readiness || {};
       const row = document.createElement('div'); row.className = 'op-row';
