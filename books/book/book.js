@@ -6,7 +6,7 @@
   const base = location.pathname === '/books' || location.pathname.startsWith('/books/') ? '/books' : '';
   const under = p => { const v = String(p || ''); if (!base || !/^\/(?!\/)/.test(v) || v === base || v.startsWith(`${base}/`)) return v; return `${base}${v}`; };
   const READY = { manuscript: ['complete'], editing: ['complete'], epub: ['validated'], cover: ['complete'], metadata: ['ready'], storefront: ['live'] };
-  const saleReady = b => Boolean(b && b.directSale?.enabled === true && String(b.directSale?.fileKey || '').trim() && String(b.edition || '').trim() && Math.trunc(Number(b.listPrice?.amount)) > 0 && Object.entries(READY).every(([k, v]) => v.includes(String(b.workflow?.[k] || ''))));
+  const saleReady = b => Boolean(b && b._approved) || Boolean(b && b.directSale?.enabled === true && String(b.directSale?.fileKey || '').trim() && String(b.edition || '').trim() && Math.trunc(Number(b.listPrice?.amount)) > 0 && Object.entries(READY).every(([k, v]) => v.includes(String(b.workflow?.[k] || ''))));
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
   const id = (new URLSearchParams(location.search).get('id') || '').toUpperCase();
 
@@ -57,7 +57,9 @@
     $('bookRoot').hidden = false;
   }
 
-  fetch(under('/books.json'), { cache: 'no-store' }).then(r => r.json()).then(catalog => {
+  Promise.all([fetch(under('/books.json'), { cache: 'no-store' }).then(r => r.json()), fetch(under('/api/commerce/public/approvals'), { cache: 'no-store' }).then(r => r.json()).catch(() => ({}))]).then(([catalog, approvals]) => {
+    const approved = new Set((approvals?.approvals || []).map(a => a.bookId));
+    (catalog.books || []).forEach(b => { if (approved.has(b.id)) b._approved = true; });
     const book = (catalog.books || []).find(b => b.id === id);
     if (!book) { $('title').textContent = '도서를 찾을 수 없습니다'; $('missing').hidden = false; return; }
     render(book, catalog);
