@@ -84,8 +84,9 @@ jobs:
           python -m pip install -q --no-deps git+https://github.com/myshell-ai/OpenVoice.git
           python -m pip install -q whisper-timestamped faster-whisper python-dotenv
           python -m unidic download >/dev/null
-          curl -fsSL -o ckpt.zip https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip
-          unzip -q ckpt.zip
+          # 공식 체크포인트(MIT): Hugging Face myshell-ai/OpenVoiceV2 (converter + base speaker embeddings)
+          python -c "from huggingface_hub import snapshot_download; snapshot_download('myshell-ai/OpenVoiceV2', local_dir='checkpoints_v2', allow_patterns=['converter/*','base_speakers/ses/*'])"
+          test -f checkpoints_v2/converter/checkpoint.pth && ls checkpoints_v2/base_speakers/ses
       - name: Self-test inputs (no private data; engine smoke test)
         if: inputs.book_id == 'SELFTEST'
         run: |
