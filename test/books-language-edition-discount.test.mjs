@@ -27,8 +27,10 @@ test('English edition is catalogued as a separate edition of the same work, not 
   assert.equal(ko.language, 'ko');
   assert.equal(en.links.amazon, '', 'no invented Amazon link');
   assert.equal(en.identifiers.amazonAsin, '', 'no invented ASIN');
-  assert.equal(en.listPrice.amount, 0, 'price is a human decision, not invented');
-  assert.equal(saleReadiness(en).ready, false);
+  assert.equal(en.listPrice.amount, 9900, 'owner approved: same as Korean edition (2026-11-01)');
+  assert.equal(en.editionApproval.approvedAt, '2026-11-01');
+  assert.equal(saleReadiness(en).ready, false, 'still blocked until the EPUB is uploaded and validated');
+  assert.ok(saleReadiness(en).reasons.includes('WORKFLOW_EPUB_INCOMPLETE'));
   assert.deepEqual(otherLanguageEditions(catalog, ko).map(b => b.id), ['BOOK-EKODI-000003']);
   assert.deepEqual(otherLanguageEditions(catalog, en).map(b => b.id), ['BOOK-EKODI-000001']);
   assert.deepEqual(otherLanguageEditions(catalog, byId('BOOK-EKODI-000002')), [], 'different work never qualifies');
