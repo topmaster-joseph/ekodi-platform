@@ -77,6 +77,12 @@ function allowApi(path,method){
  const adminCheck=path.match(/^\/api\/bank\/admin\/orders\/(EDH-[A-F0-9]{32})\/review$/);
  if(adminCheck&&method==='POST')return [path.slice(4),true];
  if(path==='/api/events'&&method==='GET')return ['/events',true];
+ // 2026-11-01 행사·모임 운영(설정 권한)과 초대 명단(소유자).
+ if(path==='/api/admin/program'&&['GET','POST'].includes(method))return ['/admin/program',true];
+ if(/^\/api\/admin\/program\/[0-9a-f-]{36}$/i.test(path)&&method==='PUT')return [path.slice(4),true];
+ if(/^\/api\/admin\/program\/[0-9a-f-]{36}\/rsvps$/i.test(path)&&method==='GET')return [path.slice(4),true];
+ if(path==='/api/bank/admin/invites'&&['GET','POST'].includes(method))return ['/bank/admin/invites',true];
+ if(/^\/api\/bank\/admin\/invites\/[0-9a-f-]{36}$/i.test(path)&&method==='DELETE')return [path.slice(4),true];
  if(path==='/api/admin/events'&&method==='GET')return ['/admin/events',true];
  if(/^\/api\/admin\/events\/[0-9a-f-]{36}\/fee$/i.test(path)&&method==='PUT')return [path.slice(4),true];
  if(/^\/api\/admin\/reports\/(?:open|under_review|resolved|dismissed)$/.test(path)&&method==='GET')return [path.slice(4),true];
@@ -84,7 +90,7 @@ function allowApi(path,method){
  if(path==='/api/requests'&&method==='GET')return ['/requests',true];
  const patterns=[
   [/^\/api\/events\/([0-9a-f-]{36})$/i,['GET'],'/events/'],
-  [/^\/api\/events\/([0-9a-f-]{36})\/rsvp$/i,['POST'],'/events/', '/rsvp'],
+  [/^\/api\/events\/([0-9a-f-]{36})\/rsvp$/i,['POST','DELETE'],'/events/', '/rsvp'],
   [/^\/api\/interests\/([0-9a-f-]{36})$/i,['POST'],'/interests/'],
   [/^\/api\/requests\/([0-9a-f-]{36})\/respond$/i,['POST'],'/requests/','/respond'],
   [/^\/api\/messages\/([0-9a-f-]{36})$/i,['GET','POST'],'/messages/'],
@@ -122,7 +128,7 @@ async function api(req,env,sub){
   if(req.headers.get('origin')!==new URL(req.url).origin)return json({error:'invalid_origin'},403);
   if(req.method==='PUT'||req.method==='POST'){
    if(!/^application\/json(?:\s*;|$)/i.test(req.headers.get('content-type')||''))return json({error:'invalid_content_type'},415);
-   if(Number(req.headers.get('content-length')||0)>(sub==='/api/profile'?12288:4096))return json({error:'payload_too_large'},413);
+   if(Number(req.headers.get('content-length')||0)>(sub==='/api/profile'?12288:sub.startsWith('/api/admin/program')?20480:4096))return json({error:'payload_too_large'},413);
   }
  }
  const url=new URL(env.SINGLES_API_URL);url.pathname=url.pathname.replace(/\/+$/,'')+targetPath;url.search='';

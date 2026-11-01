@@ -108,6 +108,42 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const row=await one(admin.from('singles_bank_orders').select(columns).eq('reference',ref).eq('user_id',userId));
   return reply(req,{order:publicOrder(row)},201);
  }
+ // 초대 명단(C7 2단계): 소유자만. 누구를 초대할지는 소유자가 정하고, 상한은 DB가 지킨다.
+ if(path==='/bank/admin/invites'||path.startsWith('/bank/admin/invites/')){
+  const role=await operator(admin,userId);
+  if(!role||role.can_configure!==true)return reply(req,{error:'owner_capability_required'},403);
+  if(path==='/bank/admin/invites'&&method==='GET'){
+   const stage=await one(admin.from('singles_launch_stage').select('stage,invite_cap').eq('id',1));
+   const list=await many(admin.from('singles_pilot_users').select('user_id,email,note,kind,added_at').order('added_at'));
+   const pilots=new Set<string>(list.map((x:any)=>x.user_id));
+   const tried=await many(admin.from('singles_signup_attempts').select('user_id,email,created_at').eq('action','pilot_denied')
+    .order('created_at',{ascending:false}).limit(100));
+   const seen=new Set<string>();const waiting=[];
+   for(const t of tried){if(seen.has(t.user_id)||pilots.has(t.user_id)||!t.email)continue;seen.add(t.user_id);waiting.push({email:t.email,last_tried_at:t.created_at});if(waiting.length>=20)break}
+   return reply(req,{stage:stage?.stage||null,invite_cap:stage?.invite_cap||0,invited:list.filter((x:any)=>x.kind==='invite').length,members:list,waiting});
+  }
+  if(path==='/bank/admin/invites'&&method==='POST'){
+   const v=await payload(req);
+   if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['email','note'].includes(k))||typeof v.email!=='string'||(v.note!==undefined&&typeof v.note!=='string'))
+    return reply(req,{error:'invalid_email'},400);
+   const {data,error}=await admin.rpc('singles_invite_add',{p_owner:userId,p_email:v.email,p_note:v.note||''});
+   if(error){const msg=String(error.message||'');
+    for(const [k,st] of [['account_not_found',404],['invite_cap_reached',409],['invalid_email',400],['note_too_long',400]] as const)
+     if(msg.includes(k))return reply(req,{error:k},st);
+    throw error;}
+   return reply(req,data,data?.status==='invited'?201:200);
+  }
+  const inviteUser=path.match(/^\/bank\/admin\/invites\/([0-9a-f-]{36})$/i)?.[1];
+  if(inviteUser&&method==='DELETE'){
+   const {data,error}=await admin.rpc('singles_invite_remove',{p_owner:userId,p_user:inviteUser});
+   if(error){const msg=String(error.message||'');
+    if(msg.includes('pilot_account_locked'))return reply(req,{error:'pilot_account_locked'},409);
+    if(msg.includes('invite_not_found'))return reply(req,{error:'invite_not_found'},404);
+    throw error;}
+   return reply(req,data);
+  }
+  return reply(req,{error:'not_found'},404);
+ }
  if(path==='/bank/admin/proposals'&&method==='GET'){
   const role=await operator(admin,userId);
   if(!role||role.can_configure!==true)return reply(req,{error:'owner_capability_required'},403);

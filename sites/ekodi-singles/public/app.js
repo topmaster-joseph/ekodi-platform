@@ -45,6 +45,10 @@ function paywall(h,action){
  box.append(button('계좌이체 구독 안내',()=>location.assign('/singles/subscribe'),'primary'));h.append(box);
 }
 function errorText(error){
+ if(error?.message==='event_full')return '정원이 찼습니다.';
+ if(error?.message==='event_not_available')return '지금은 신청할 수 없는 행사입니다.';
+ if(error?.message==='rsvp_not_found')return '취소할 신청이 없습니다.';
+ if(error?.message==='owner_capability_required')return '소유자(설정 권한) 계정만 할 수 있습니다.';
  if(error?.message==='refund_trace_required')return '은행 앱에서 송금한 뒤 송금 거래번호(4~100자)를 입력해 주세요.';
  if(error?.message==='refund_trace_duplicate')return '이미 다른 환불에 쓰인 송금 거래번호입니다.';
  if(error?.message==='invoice_not_refundable')return '환불 대상이 아닌 청구서입니다.';
@@ -184,27 +188,47 @@ function appendList(h,items,onItem){
  if(!items.length){h.append(text('p','아직 해당 목록에 등록된 내용이 없습니다.','empty'));return}
  const grid=text('div','','card-grid');for(const item of items){const card=text('article','','mini-card');onItem(card,item);grid.append(card)}h.append(grid);
 }
-async function showEvents(h){
- notice(h,'행사 내용은 로그인 후 무료로 볼 수 있습니다. 참가 신청에는 유효한 구독이 필요합니다.');
- try{const d=await api('/events');appendList(h,d.events||[],(card,event)=>{
-  card.append(text('h3',event.title));card.append(text('p',event.summary||'', 'muted'));
-  card.append(text('small',[event.starts_at?.slice(0,16),event.region].filter(Boolean).join(' · ')));
-  card.append(text('p',event.fee_krw>0?'참가비 '+money(event.fee_krw)+' · 별도 입금 검증 후 신청 가능':'참가비 무료','muted'));
-  const row=text('div','','action-row');
-  row.append(button('행사 상세',async()=>{
-   try{const detail=await api('/events/'+encodeURIComponent(event.id));
-    const box=text('div','','member-card');box.append(text('h3',detail.event?.title||'행사 안내'));paragraph(box,detail.event?.description||'');paragraph(box,detail.event?.region||'');
-    row.after(box);
-   }catch(e){notice(card,errorText(e))}
+// 행사(한 번의 만남)·모임(정기 소그룹). 보기는 로그인한 누구나, 참가 신청은 성인 확인된 유료회원.
+const RSVP_STATUS={requested:'신청 완료',approved:'참가 확정'};
+function dateBadge(iso){const d=new Date(iso);const b=text('div','','date-badge');b.setAttribute('aria-hidden','true');
+ b.append(text('span',(d.getMonth()+1)+'월'),text('strong',String(d.getDate())),text('small',['일','월','화','수','목','금','토'][d.getDay()]+'요일'));return b}
+function whenText(e){const d=new Date(e.starts_at);const t=d.toLocaleString('ko-KR',{month:'long',day:'numeric',weekday:'short',hour:'numeric',minute:'2-digit'});return e.kind==='group'?(e.schedule_note||'정기 모임')+(Date.parse(e.starts_at)>Date.now()?' · 첫 모임 '+t:''):t}
+async function showEvents(h,kind='event'){
+ const box=text('section','','member-card program');box.append(text('h3',kind==='group'?'우리 모임':'공개 행사'));
+ paragraph(box,kind==='group'?'말씀과 일상을 나누는 정기 소그룹입니다. 서로 천천히 알아가는 자리로, 특정 상대를 소개하거나 짝지어 주지 않습니다.':'함께 걷고 배우고 나누는 열린 만남입니다. 참가는 각자의 선택이며, 특정 상대를 소개하거나 짝지어 주지 않습니다.');
+ box.append(text('p','행사·모임 안내는 로그인 후 무료로 볼 수 있습니다. 참가 신청은 성인 확인을 마친 유료회원이 할 수 있습니다.','muted'));
+ h.append(box);
+ let d;try{d=await api('/events')}catch(e){notice(box,errorText(e));return}
+ const items=(d.events||[]).filter(e=>(e.kind||'event')===kind);
+ if(!items.length){const empty=text('div','','program-empty');empty.append(text('strong',kind==='group'?'곧 첫 모임을 엽니다':'곧 새 행사를 엽니다'),text('p','열리면 이 화면에 가장 먼저 보입니다. 내 정보에서 참여 동의를 해 두시면 바로 신청할 수 있습니다.'));box.append(empty);return}
+ const grid=text('div','','program-grid');
+ for(const e of items){
+  const card=text('article','','program-card');card.append(dateBadge(e.starts_at));
+  const body=text('div','','program-body');
+  const meta=text('p','','program-meta');meta.append(text('span',e.region||'지역 미정','pill'));if(e.my_status)meta.append(text('span',RSVP_STATUS[e.my_status]||e.my_status,'pill pill-on'));
+  body.append(meta,text('h4',e.title),text('p',whenText(e),'program-when'));
+  if(e.summary)body.append(text('p',e.summary,'program-summary'));
+  const seats=e.capacity?e.taken+' / '+e.capacity+'명':'신청 '+e.taken+'명';
+  body.append(text('p',(e.fee_krw>0?'참가비 '+money(e.fee_krw)+' · 입금 확인 절차 준비 후 신청':'참가비 없음')+' · '+seats,'program-seats'));
+  if(e.capacity){const bar=text('div','','seat-bar');const fill=text('span','');fill.style.width=Math.min(100,Math.round(e.taken/e.capacity*100))+'%';bar.append(fill);bar.setAttribute('aria-hidden','true');body.append(bar)}
+  const row=text('div','','action-row');const msg=text('p','','status-text');
+  row.append(button('자세히',async()=>{
+   try{const dd=await api('/events/'+encodeURIComponent(e.id));const more=text('div','','program-detail');more.append(text('p',dd.event?.description||'자세한 안내는 곧 올라옵니다.'));row.after(more)}catch(err){msg.textContent=errorText(err)}
   }));
-  row.append(button('참가 신청',async()=>{
-   if(event.fee_krw>0){notice(card,'유료 행사는 별도 입금 확인 절차 준비 후 신청할 수 있습니다.');return}
-   if(!state.subscription.active){paywall(card,'행사 참가 신청');return}
-   if(!confirm('이 행사에 참가 신청하시겠습니까?'))return;
-   try{await api('/events/'+event.id+'/rsvp',{method:'POST',body:{}});notice(card,'참가 신청을 접수했습니다.')}
-   catch(e){notice(card,errorText(e))}
-  },'primary'));card.append(row);
- })}catch(e){notice(h,errorText(e))}
+  if(e.my_status){
+   row.append(button('신청 취소',async()=>{if(!confirm('참가 신청을 취소할까요?'))return;
+    try{await api('/events/'+e.id+'/rsvp',{method:'DELETE'});msg.textContent='신청을 취소했습니다.'}catch(err){msg.textContent=errorText(err)}}));
+  }else if(!(e.fee_krw>0)&&!(e.capacity&&e.taken>=e.capacity)){
+   row.append(button(kind==='group'?'모임 참여 신청':'참가 신청',async()=>{
+    if(state.paidModel&&!state.paid){msg.textContent='참가 신청은 유료회원(구독 중)만 할 수 있습니다. "동행 안내·가입"에서 구독권을 확인해 주세요.';return}
+    if(!state.paidModel&&!state.subscription.active){paywall(card,'행사 참가 신청');return}
+    if(!confirm('"'+e.title+'"에 참가 신청할까요?'))return;
+    try{await api('/events/'+e.id+'/rsvp',{method:'POST',body:{}});msg.textContent='참가 신청을 접수했습니다. 자세한 안내는 운영자가 따로 드립니다.'}catch(err){msg.textContent=errorText(err)}
+   },'primary'));
+  }else if(e.capacity&&e.taken>=e.capacity)row.append(text('span','정원이 찼습니다','pill'));
+  body.append(row,msg);card.append(body);grid.append(card);
+ }
+ box.append(grid);
 }
 async function showDiscover(h){
  notice(h,state.paidModel?'서로 공개를 선택하고 본인확인을 마친 유료회원(구독 중)만 표시합니다. 요청할 때는 결제하지 않고, 상대가 수락하면 두 분에게 청구서가 발행됩니다.':'서로 공개를 선택하고 본인확인을 완료한 회원만 표시합니다. 호감 수락·거절은 언제나 무료입니다.');
@@ -418,7 +442,7 @@ async function showSubscription(h){
 // ── 유료회원 모델(2026-10-28) ──────────────────────────────
 async function loadPricing(){
  try{state.pricing=await api('/pricing');state.paidModel=state.pricing.paid_model===true;state.paid=state.pricing.paid_member===true}
- catch{state.pricing=null;state.paidModel=false;state.paid=false}
+ catch(e){state.pricing=null;state.paidModel=false;state.paid=false;if(e?.message==='pilot_only')state.pilotOnly=true}
 }
 function priceTable(box){
  const rules=state.pricing?.rules||[];if(!rules.length)return;
@@ -579,6 +603,78 @@ async function showWithdrawals(h){
   const card=text('article','','mini-card');
   card.append(text('p','청약철회 · '+money(d.amount_krw)+' · '+(d.status==='refunded'?'환불 완료 · '+String(d.refunded_at||'').slice(0,10)+' 송금':'환불 예정 · '+refundDeadline(d.refund_due_at)+'까지 입금하신 계좌로 돌려드립니다')));
   box.append(card);
+ }
+ h.append(box);
+}
+function showPilotOnly(h){
+ $('serviceStage').textContent='초대 회원 시범 운영';
+ const box=text('section','','member-card pilot-card');box.append(text('h3','지금은 초대받은 분과 함께 천천히 시작하고 있어요'));
+ paragraph(box,'에코디 동행은 공개 개통 전, 초대받은 분들과 먼저 시범 운영을 하고 있습니다. 이 계정으로 이용을 원하신다는 기록이 남았고, 초대가 열리면 이 계정으로 다시 로그인하는 것만으로 바로 이어서 이용할 수 있습니다.');
+ const ul=document.createElement('ul');ul.className='pilot-points';
+ for(const t of ['결혼 상대를 소개하거나 짝지어 주지 않는, 서로 존중하며 알아가는 교제·만남 공동체입니다.','가입비 없이 기간제 구독권으로 이용하며, 요청은 상대가 수락했을 때만 두 분에게 청구됩니다.','운영자 계정이시라면 운영자로 등록된 계정으로 다시 로그인해 주세요.'])ul.append(text('li',t));
+ box.append(ul);termsLink(box);h.append(box);
+}
+async function operatorGate(h){
+ try{await api('/bank/admin/orders');return true}
+ catch(e){
+  const box=text('section','','member-card pilot-card');box.append(text('h3','운영자 전용 화면입니다'));
+  paragraph(box,e?.status===403||e?.message==='pilot_only'?'이 계정에는 운영 권한이 없습니다. 운영자로 등록된 계정으로 로그인하면 결제·환불·초대·행사 관리를 한 화면에서 할 수 있습니다.':errorText(e));
+  const a=text('a','다른 계정으로 로그인','outline');a.href=loginUrl();box.append(a);h.append(box);return false;
+ }
+}
+async function showInvitesAdmin(h){
+ let d;try{d=await api('/bank/admin/invites')}catch(e){if(e?.status===403)return;notice(h,errorText(e));return}
+ const box=text('section','','member-card');box.append(text('h3','초대 명단 · 시범 운영 '+(d.stage||2)+'단계'));
+ paragraph(box,'공개 개통 전에는 이 명단에 있는 분만 동행을 이용합니다. 초대할 분은 박사님(소유자)이 정하며, 그분이 ekodi.kr에 한 번 로그인한 뒤에 초대할 수 있습니다.');
+ box.append(statTiles([['초대',d.invited+'명'],['상한',d.invite_cap+'명'],['남은 자리',Math.max(0,d.invite_cap-d.invited)+'명']]));
+ const form=text('div','','invite-form');const f1=text('label','초대할 계정 이메일','field'),email=document.createElement('input');email.type='text';email.maxLength=320;email.placeholder='예: name@gmail.com';f1.append(email);
+ const f2=text('label','메모(선택, 60자)','field'),note=document.createElement('input');note.type='text';note.maxLength=60;note.placeholder='예: 교회 청년부';f2.append(note);
+ const msg=text('p','','status-text');
+ const add=async(value)=>{try{const r=await api('/bank/admin/invites',{method:'POST',body:{email:value,note:note.value.trim()}});msg.textContent=r.status==='already_invited'?'이미 명단에 있습니다.':'초대했습니다. 그분이 다시 로그인하면 바로 이용할 수 있습니다.';email.value='';note.value=''}catch(e){msg.textContent=INVITE_ERR[e.message]||errorText(e)}};
+ form.append(f1,f2,button('초대하기',()=>{if(email.value.trim())add(email.value.trim())},'primary'),msg);box.append(form);
+ const list=text('div','','invite-list');
+ for(const m of d.members||[]){const row=text('div','','invite-row');row.append(text('span',accountTag(m.email)),text('small',(m.kind==='pilot'?'시범 계정':'초대')+(m.note?' · '+m.note:'')));
+  if(m.kind==='invite')row.append(button('명단에서 빼기',async()=>{if(!confirm(accountTag(m.email)+'을 초대 명단에서 뺄까요? 다음 요청부터 이용이 멈춥니다.'))return;try{await api('/bank/admin/invites/'+m.user_id,{method:'DELETE'});row.remove()}catch(e){msg.textContent=errorText(e)}}));
+  list.append(row)}
+ box.append(text('h4','지금 명단'),list);
+ if((d.waiting||[]).length){const w=text('div','','invite-list');for(const t of d.waiting){const row=text('div','','invite-row');row.append(text('span',accountTag(t.email)),text('small','이용 시도 '+String(t.last_tried_at).slice(0,10)),button('초대',()=>add(t.email),'primary'));w.append(row)}
+  box.append(text('h4','이용을 시도한 계정'),w)}
+ h.append(box);
+}
+const INVITE_ERR={account_not_found:'아직 ekodi.kr에 로그인한 적 없는 계정입니다. 그분이 한 번 로그인한 뒤 다시 초대해 주세요.',invite_cap_reached:'이번 단계의 초대 상한에 도달했습니다. 다음 단계로 넘어가려면 상한을 늘리는 결정이 필요합니다.',invalid_email:'이메일 형식을 확인해 주세요.',note_too_long:'메모는 60자까지입니다.'};
+async function showProgramAdmin(h){
+ let d;try{d=await api('/admin/program')}catch(e){if(e?.status===403)return;notice(h,errorText(e));return}
+ const box=text('section','','member-card');box.append(text('h3','행사·모임 관리'));
+ paragraph(box,'만든 뒤 "공개"를 눌러야 회원에게 보입니다. 참가비가 있는 행사는 입금 확인 절차가 준비될 때까지 신청을 받지 않으니, 지금은 무료로 여세요.');
+ const form=text('div','','program-form');
+ const field=(label,el)=>{const w=text('label',label,'field');w.append(el);form.append(w);return el};
+ const kind=document.createElement('select');for(const [v,l] of [['event','행사(한 번의 만남)'],['group','모임(정기 소그룹)']]){const o=document.createElement('option');o.value=v;o.textContent=l;kind.append(o)}field('종류',kind);
+ const title=document.createElement('input');title.type='text';title.maxLength=120;field('제목',title);
+ const when=document.createElement('input');when.type='datetime-local';field('날짜와 시간(모임은 첫 모임)',when);
+ const note=document.createElement('input');note.type='text';note.maxLength=80;note.placeholder='예: 매주 토요일 오후 3시';field('정기 일정(모임만)',note);
+ const region=document.createElement('select');for(const r of ['',...(d.regions||[])]){const o=document.createElement('option');o.value=r;o.textContent=r||'지역 선택';region.append(o)}field('지역',region);
+ const cap=document.createElement('input');cap.type='number';cap.min='1';cap.max='500';cap.placeholder='비우면 제한 없음';field('정원',cap);
+ const summary=document.createElement('input');summary.type='text';summary.maxLength=350;field('한 줄 소개',summary);
+ const desc=document.createElement('textarea');desc.maxLength=5000;desc.rows=4;field('자세한 안내',desc);
+ const msg=text('p','','status-text');
+ form.append(button('초안으로 저장',async()=>{
+  if(title.value.trim().length<3||!when.value){msg.textContent='제목(3자 이상)과 날짜를 입력해 주세요.';return}
+  const body={kind:kind.value,title:title.value.trim(),starts_at:new Date(when.value).toISOString(),schedule_note:note.value.trim(),region:region.value,summary:summary.value.trim(),description:desc.value.trim(),capacity:cap.value?Number(cap.value):null};
+  try{await api('/admin/program',{method:'POST',body});msg.textContent='초안으로 저장했습니다. 아래 목록에서 "공개"를 누르면 회원에게 보입니다.'}catch(e){msg.textContent=errorText(e)}
+ },'primary'),msg);
+ const det=document.createElement('details');det.className='program-new';det.append(text('summary','새 행사·모임 만들기'),form);box.append(det);
+ const STATE={draft:'초안',published:'공개 중',cancelled:'취소됨'};
+ for(const e of d.events||[]){
+  const card=text('article','','mini-card');
+  card.append(text('p',(e.kind==='group'?'[모임] ':'[행사] ')+e.title+' · '+STATE[e.state]+' · 신청 '+e.taken+(e.capacity?'/'+e.capacity:'')+'명'));
+  paragraph(card,whenText(e)+(e.region?' · '+e.region:''));
+  const row=text('div','','action-row');const m2=text('p','','status-text');
+  const setState=(st,label,ask)=>button(label,async()=>{if(ask&&!confirm(ask))return;try{await api('/admin/program/'+e.id,{method:'PUT',body:{state:st}});m2.textContent=label+' 완료'}catch(err){m2.textContent=errorText(err)}},st==='published'?'primary':'outline');
+  if(e.state!=='published')row.append(setState('published','공개'));
+  if(e.state==='published')row.append(setState('draft','비공개로 돌리기'));
+  if(e.state!=='cancelled')row.append(setState('cancelled','취소',e.taken?'신청한 '+e.taken+'명에게는 따로 알려 주셔야 합니다. 취소할까요?':'취소할까요?'));
+  row.append(button('신청자 보기',async()=>{try{const r=await api('/admin/program/'+e.id+'/rsvps');m2.textContent=(r.rsvps||[]).filter(x=>x.status!=='cancelled').map(x=>x.display_name).join(', ')||'아직 신청자가 없습니다.'}catch(err){m2.textContent=errorText(err)}}));
+  card.append(row,m2);box.append(card);
  }
  h.append(box);
 }
@@ -834,7 +930,11 @@ async function showAllPricing(h){
 }
 // AUTH-RETURN-CONTINUITY-001 v1.27.4: after login the page must visibly confirm who is signed in,
 // and a prelaunch gate must never read like a login failure.
-function accountLabel(){const u=state.session?.user||{};const name=u.user_metadata?.full_name||u.user_metadata?.name;return String((typeof name==='string'&&name.trim())?name.trim():(u.email||'EKODI 회원')).slice(0,60)}
+// 카카오·네이버 등으로 로그인한 계정의 내부 주소(identity+kakao.…@ekodi.kr)는 읽기 좋은 이름으로 보여 준다.
+function friendlyEmail(email){const m=String(email||'').match(/^identity\+([a-z]+)\./i);if(!m)return email||'';const n={kakao:'카카오',naver:'네이버',daum:'다음',apple:'Apple',google:'Google'}[m[1].toLowerCase()]||m[1];return n+' 로그인 계정'}
+// 운영 화면용: 카카오 등 내부 주소는 구분할 수 있게 짧은 식별 꼬리를 붙인다.
+function accountTag(email){const m=String(email||'').match(/^identity\+[a-z]+\.([0-9a-f]{6})/i);return friendlyEmail(email)+(m?' · '+m[1]:'')}
+function accountLabel(){const u=state.session?.user||{};const name=u.user_metadata?.full_name||u.user_metadata?.name;return String((typeof name==='string'&&name.trim())?name.trim():(friendlyEmail(u.email)||'EKODI 회원')).slice(0,60)}
 function showSignedInAccount(){
  document.querySelectorAll('[data-guest-nav]').forEach(link=>{link.hidden=false;link.textContent=accountLabel()+' 님';link.href='/singles/my';link.dataset.signedIn='1';link.setAttribute('aria-label','로그인됨 · '+accountLabel())});
 }
@@ -842,7 +942,7 @@ function accountCard(h){
  const box=text('section','','member-card');box.dataset.signedInAccount='1';
  box.append(text('h3','로그인 완료'));
  const email=state.session?.user?.email;
- paragraph(box,accountLabel()+(email&&email!==accountLabel()?' ('+email+')':'')+' 계정으로 로그인되어 있습니다.');
+ const shown=friendlyEmail(email);paragraph(box,accountLabel()+(shown&&shown!==accountLabel()?' ('+shown+')':'')+' 계정으로 로그인되어 있습니다.');
  box.append(button('로그아웃',async()=>{try{await state.client?.auth?.signOut({scope:'local'})}catch{}location.replace(location.pathname+location.search)},'outline'));
  h.append(box);
 }
@@ -869,16 +969,17 @@ async function signedIn(status){
   const acct=document.querySelector('a.account[data-member-nav]');if(acct&&!state.paid)acct.textContent='내 정보';
  }
  const h=holder();accountCard(h);
+ if(state.pilotOnly){showPilotOnly(h);return}
  if(!status.social_enabled&&page!=='/my')notice(h,'기능 구현을 검증하는 중입니다. 별도 권한 및 안전 검사가 완료되면 열립니다.');
  if(page==='/my')startConsent(h);
- else if(page==='/events')await showEvents(h);
+ else if(page==='/events')await showEvents(h,'event');
+ else if(page==='/groups')await showEvents(h,'group');
  else if(paidOnlyHidden&&['/discover','/messages'].includes(page)){notice(h,'유료회원 전용 메뉴입니다.');showGuide(h);await showJoin(h);}
  else if(page==='/discover')await showDiscover(h);
  else if(page==='/messages')await showMessages(h);
  else if(page==='/subscribe'&&state.paidModel){if(state.paid)await showPaidWallet(h);else{showGuide(h);await showJoin(h);}await showWithdrawals(h);}
  else if(page==='/subscribe'){await showWallet(h);await showSubscription(h);}
- else if(page==='/admin'){await showOwnerProposals(h);await showRefundsAdmin(h);await showMembersAdmin(h);await showBankAdmin(h);await showEventPricing(h);await showReportModeration(h);await showAllPricing(h);}
- else if(page==='/groups')paragraph(h,'지역 공동체·소그룹 기능을 준비하고 있습니다. 행사 목록을 먼저 확인해 주세요.');
+ else if(page==='/admin'){if(!await operatorGate(h))return;await showInvitesAdmin(h);await showProgramAdmin(h);await showOwnerProposals(h);await showRefundsAdmin(h);await showMembersAdmin(h);await showBankAdmin(h);await showEventPricing(h);await showReportModeration(h);await showAllPricing(h);}
  else {paragraph(h,'반갑습니다. 나의 프로필, 공개 행사, 동행 찾기를 살펴보세요.');const row=text('div','','actions');for(const [name,href] of [['프로필 등록','/singles/my'],['공개 행사','/singles/events'],['동행 찾기','/singles/discover']]){const a=text('a',name,'outline');a.href=href;row.append(a)}h.append(row)}
 }
 // AUTH-RETURN-CONTINUITY-001 v1.27.5: a signed-in person is never shown a login entry or sent to login again.
