@@ -181,12 +181,23 @@ async function setRow(env, id, fields) {
 }
 
 /** 결제 완료된 위탁 주문을 발주한다. 한 번의 cron 에서 최대 limit 건. */
+/** Operator-approved supervised pilot: only these order ids may be placed while paid auto-order is OFF. */
+export function pilotOrderIds(env) {
+  return String(env?.DOMEGGOOK_PILOT_ORDER_IDS || '').split(',').map((v) => v.trim()).filter((v) => /^mall_[A-Za-z0-9_]{6,60}$/.test(v)).slice(0, 3);
+}
+function pilotReady(env) {
+  return pilotOrderIds(env).length > 0 && Boolean(env?.DOMEMAE_API_KEY && env?.DOMEMAE_USER_ID && env?.DOMEMAE_PASSWORD) && approvedMemberBindingReady(env);
+}
+
 export async function placeSupplierOrders(env, fetchImpl = fetch, limit = 3) {
-  if (!autoOrderEnabled(env) || !env.DB) return { skipped: 'disabled' };
+  const full = autoOrderEnabled(env);
+  if ((!full && !pilotReady(env)) || !env.DB) return { skipped: 'disabled' };
+  const pilot = full ? [] : pilotOrderIds(env);
   const due = await env.DB.prepare(`SELECT o.id,o.product_id,o.quantity,o.seller_settlement_amount,p.supply_item_no,p.supply_market,p.name,s.id AS so_id,s.last_error
     FROM orders o JOIN products p ON p.id=o.product_id LEFT JOIN supplier_orders s ON s.order_id=o.id
     WHERE o.status='paid' AND p.supply_provider=? AND (s.id IS NULL OR (s.status='failed' AND s.last_error LIKE 'EMONEY_SHORT%'))
-    ORDER BY o.paid_at LIMIT ?`).bind(PROVIDER, limit).all();
+    ${pilot.length ? `AND o.id IN (${pilot.map(() => '?').join(',')})` : ''}
+    ORDER BY o.paid_at LIMIT ?`).bind(PROVIDER, ...pilot, limit).all();
   const rows = due.results || [];
   if (!rows.length) return { placed: 0 };
   let session;
@@ -283,7 +294,7 @@ const CANCELLED = new Set(['DENYCONFIRM', 'DENYBUY', 'DENYSELL', 'WAITDENY']);
 
 /** 송장·배송상태 추적 + 고객 환불 시 공급처 구매취소. */
 export async function trackSupplierOrders(env, fetchImpl = fetch, limit = 10) {
-  if (!autoOrderEnabled(env) || !env.DB) return { skipped: 'disabled' };
+  if ((!autoOrderEnabled(env) && !pilotReady(env)) || !env.DB) return { skipped: 'disabled' };
   const cutoff = new Date(Date.now() - TRACK_INTERVAL_MS).toISOString();
   const rows = (await env.DB.prepare(`SELECT s.*,o.status AS order_status FROM supplier_orders s JOIN orders o ON o.id=s.order_id
     WHERE s.status IN ('placed','shipping','cancel_requested') AND s.supplier_order_no IS NOT NULL
