@@ -45,7 +45,7 @@
     const name = String(data?.displayName || data?.name || '').trim();
     if (name && !name.includes('@') && name.length <= 30) return name;
     const email = String(data?.email || '').trim();
-    const internal = /^identity\\+([a-z][a-z0-9_-]*)\\.[a-z0-9]+@ekodi\\.kr$/i.exec(email);
+    const internal = /^identity\+([a-z][a-z0-9_-]*)\.[a-z0-9]+@ekodi\.kr$/i.exec(email);
     if (internal) {
       const names = { kakao: '카카오', naver: '네이버', google: '구글', apple: 'Apple', daum: '다음' };
       return (names[internal[1].toLowerCase()] || '연결') + ' 계정';
