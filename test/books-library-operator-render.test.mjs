@@ -23,6 +23,8 @@ test('concurrent operator panel runs render each direct-sale book exactly once',
   vm.runInNewContext(src, ctx);
   await new Promise(r => setTimeout(r, 400));
   const expected = catalog.books.filter(b => b.directSale?.enabled).length;
-  assert.equal(els.operatorBooks.children.length, expected);
+  // header row + one row per direct-sale book (no audiobook tracks in the catalogue yet)
+  assert.equal(els.operatorBooks.children.length, expected + 1);
+  assert.equal(els.operatorBooks.children.filter(c => c.className === 'op-row').length, expected);
   assert.match(original, /if \(run === operatorRun\) \$\('operatorBooks'\)\.replaceChildren\(host\)/);
 });
