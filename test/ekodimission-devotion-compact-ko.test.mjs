@@ -104,7 +104,7 @@ test('Mission login is only a guest button or verified account with logout',asyn
  ]);
  assert.doesNotMatch(shell,/로그인됨|비로그인|로그인 확인 중|로그인 확인 불가/);
  assert.match(shell,/state\.textContent='';\s*state\.hidden=true;/);
- assert.match(shell,/missionAuthUi\.state\.textContent=authenticated\?\(String\(account\|\|'계정'\)\.slice\(0,90\)\):''/);
+ assert.match(shell,/missionAuthUi\.state\.textContent=authenticated\?missionAccountLabel\(account\):''/);
  assert.match(shell,/missionAuthUi\.state\.hidden=!authenticated/);
  assert.match(shell,/verifiedToken=token;paintMissionAuth\('in',data\.account\)/);
  assert.match(shell,/missionAuthUi\.login\.hidden=authenticated/);
