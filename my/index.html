@@ -245,6 +245,13 @@
 
     <section id="activity" class="section activity-overview my-tab-section" data-my-tab-section="activity" aria-label="최근 활동">
       <div class="section-head"><div><p class="eyebrow">RECENT · CONTEXT</p><h2>최근 활동</h2></div><p>실제 최근 작업·사용 신호·현재 공간을 기준으로 다시 이어갈 곳을 보여줍니다.</p></div>
+      <p class="activity-points-link"><a class="secondary" href="/my/points/">내 활동포인트 보기</a></p>
+      <div id="activityPointsControls" class="activity-points-consent" hidden>
+        <label for="activityPointsOptIn"><input id="activityPointsOptIn" type="checkbox">
+          이 페이지에서 활동시간 포인트 측정에 동의합니다.</label>
+        <p id="activityPointsStatus" role="status" aria-live="polite">기본적으로 측정하지 않습니다. 동의한 경우 이 탭에서만 측정합니다.</p>
+        <small>이용 시간은 서버 기준으로 계산하지만 실제 사람의 관심·집중을 증명하지 않습니다. 측정은 언제든 끌 수 있으며, 포인트는 별도 정책에 따릅니다.</small>
+      </div>
       <div id="activityTimeline" class="activity-timeline" aria-live="polite"><div class="empty"><strong>최근 활동을 확인하고 있습니다.</strong></div></div>
     </section>
 

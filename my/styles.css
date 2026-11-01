@@ -29,3 +29,12 @@
 .digital-card-context-messengers>strong{width:100%;font-size:11px;color:#516359}
 .digital-card-context-messenger-empty{font-size:11px;color:var(--muted)}
 @media(max-width:540px){.digital-card-messenger-top{grid-template-columns:1fr}.digital-card-row-controls{justify-content:flex-end}.digital-card-context-messengers{display:grid;grid-template-columns:1fr 1fr}.digital-card-context-messengers>strong,.digital-card-context-messenger-empty{grid-column:1/-1}}
+
+/* User-owned activity points consent; never appears before dual capability gates. */
+.activity-points-consent{margin:12px 0 18px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--white)}
+.activity-points-consent label{display:flex;gap:10px;align-items:flex-start;font-weight:650;line-height:1.5;color:var(--ink);cursor:pointer}
+.activity-points-consent input[type=checkbox]{flex:none;width:18px;height:18px;margin:2px 0 0;accent-color:var(--green)}
+.activity-points-consent p{margin:9px 0 5px;font-size:13px;color:var(--green2)}
+.activity-points-consent small{display:block;line-height:1.6;color:var(--muted)}
+.activity-points-consent[hidden]{display:none!important}
+@media(max-width:600px){.activity-points-consent{margin:10px 0 15px;padding:12px}}
