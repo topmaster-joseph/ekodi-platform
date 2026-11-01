@@ -44,11 +44,14 @@
     };
   }
 
+  // The /books gateway prefixes JS string literals that start with a slash, so the path separator
+  // must never appear as a bare string literal in this file.
+  const SEP = String.fromCharCode(47);
   const resolve = (base, href) => {
-    const parts = (base.includes('/') ? base.slice(0, base.lastIndexOf('/') + 1) : '').concat(href.split('#')[0]).split('/');
+    const parts = (base.includes(SEP) ? base.slice(0, base.lastIndexOf(SEP) + 1) : '').concat(href.split('#')[0]).split(SEP);
     const out = [];
     for (const s of parts) { if (s === '..') out.pop(); else if (s && s !== '.') out.push(s); }
-    return decodeURIComponent(out.join('/'));
+    return decodeURIComponent(out.join(SEP));
   };
   const mimeOf = name => ({ jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' })[name.split('.').pop().toLowerCase()] || 'application/octet-stream';
   const toDataUrl = (bytes, mime) => { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return `data:${mime};base64,${btoa(s)}`; };
