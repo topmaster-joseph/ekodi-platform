@@ -5,6 +5,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { existingEditionAllowed, publisherAuthorizedForChannel } from '../../../publishing/human/storefront-release-guard.js';
+import { saleReadiness } from '../../../books-sale-readiness.js';
 
 export const BOOKSTORE_STORE_ID = 'store-ekodi-books';
 export const BOOKSTORE_CATEGORY = 'book';
@@ -22,7 +23,9 @@ const absolute = (url) => {
 function projectProducts(books) {
   return books.map((book) => {
     // BOOKS-DIRECT-COMMERCE-001: 에코디서점 자체 판매가 켜진 도서는 서점 결제 페이지로 보낸다.
-    const directUrl = book.directSale?.enabled ? `${BOOKSTORE_BASE}/buy/?book=${encodeURIComponent(book.id)}&from=mall` : '';
+    // BOOKS-SALE-READINESS-001: 출판 공정이 끝나지 않은 도서는 몰에서도 구매 버튼·'판매 중'을 내지 않는다.
+    const readiness = saleReadiness(book);
+    const directUrl = book.directSale?.enabled && readiness.ready ? `${BOOKSTORE_BASE}/buy/?book=${encodeURIComponent(book.id)}&from=mall` : '';
     const saleUrl = directUrl || absolute(book.links?.upaper || book.links?.korea || book.links?.google || book.links?.amazon);
     const price = Number(book.listPrice?.amount);
     const detailUrl = absolute(book.detailUrl) || `${BOOKSTORE_BASE}/#catalog`;
@@ -34,7 +37,7 @@ function projectProducts(books) {
       category: BOOKSTORE_CATEGORY,
       badge: '에코디서점',
       description: String(book.abstract || book.subtitle || `${book.author} 저 · 에코디서점 발행`).slice(0, 400),
-      status: saleUrl ? '판매 중' : '판매처 등록 준비 중',
+      status: saleUrl ? '판매 중' : (book.directSale?.enabled ? readiness.label || '판매처 등록 준비 중' : '판매처 등록 준비 중'),
       saleType: 'publisher',
       published: true,
       featured: Boolean(saleUrl),
