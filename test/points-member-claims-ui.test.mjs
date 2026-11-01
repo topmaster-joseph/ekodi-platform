@@ -19,8 +19,9 @@ test('member read RPCs are authenticated, self-scoped and hide reviewer data',()
   assert.match(sql,/where site_id=p_site and person_id=v_person/);
   assert.doesNotMatch(sql,/'decided_by'|'decision_note'/);
 });
-test('admin staging forwards only the points prefix to the isolated staging Control API',()=>{
-  assert.match(staging,/incoming\.pathname==='\/api\/control\/points'\|\|incoming\.pathname\.startsWith\('\/api\/control\/points\/'\)/);
+test('admin staging forwards /api to the isolated staging Control API (never production)',()=>{
+  assert.match(staging,/incoming\.pathname==='\/api'\|\|incoming\.pathname\.startsWith\('\/api\/'\)/);
+  assert.match(staging,/staging_control_api_unbound/);
   assert.match(stagingToml,/binding = "CONTROL_API"\nservice = "ekodi-auth-api-staging"/);
   assert.doesNotMatch(stagingToml,/service = "ekodi-auth-api"\n/);
   assert.match(wf,/POINTS_SOURCE_ENV = "development"\n\s+POINTS_SUPABASE_URL = "https:\/\/lxcxwbdwwojjkgybbqii\.supabase\.co\/"/);
