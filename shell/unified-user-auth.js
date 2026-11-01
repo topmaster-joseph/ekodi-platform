@@ -75,6 +75,13 @@ function paint(){
   const session=canonicalSession();
   const id=String(session?.user?.id||'');
   if(!session){
+    // A page that already shows its own login entry (e.g. the homepage's login
+    // button) must not get a second "로그인" next to it.
+    if(header.querySelector('[data-ekodi-home-login],[data-ekodi-page-login]')){
+      if(node.dataset.ekodiIdentityKey!=='page-owned'){node.replaceChildren();node.dataset.ekodiIdentityKey='page-owned';node.hidden=true;}
+      return;
+    }
+    node.hidden=false;
     if(node.dataset.ekodiIdentityKey==='guest')return;
     const link=document.createElement('a');
     link.textContent='로그인';link.className='ekodi-unified-auth__link';
@@ -85,6 +92,7 @@ function paint(){
     node.removeAttribute('title');
     return;
   }
+  node.hidden=false;
   const cached=displayCache.get(id);
   if(cached&&cached.until<=Date.now())displayCache.delete(id);
   const display=displayCache.get(id)?.name||localName(session);

@@ -20,6 +20,16 @@ const SSO_SITES=new Set(['church','biz','books','author','lab','community','work
 const TARGETABLE_WORKSPACE_SITES=new Set(['church','biz','books','lab','mall','marketing','social','energy']);
 const WORKSPACE_ENTRY_PRIORITY=['biz','marketing','mall','church','books','lab','business','community','work','author','social','energy'];
 const authUrl=cfg.authUrl||'https://ekodi.kr/auth/?site=my';
+function signedOutLoginUrl(){
+ const target=new URL(authUrl,location.origin);
+ if(!target.searchParams.has('site'))target.searchParams.set('site','my');
+ target.searchParams.set('return_to',location.origin+location.pathname+location.search+location.hash);
+ return target.href;
+}
+function redirectSignedOutToLogin(){
+ document.body.dataset.authState='redirect';
+ location.replace(signedOutLoginUrl());
+}
 const enabled=Boolean(cfg.dataEnabled&&cfg.supabaseUrl&&cfg.supabasePublishableKey);
 const PROFILE_API=enabled?`${cfg.supabaseUrl}/functions/v1/profile-api`:'';
 const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{detectSessionInUrl:true,persistSession:true}}):null;
@@ -509,7 +519,12 @@ if(MISROUTED_SERVICE_RETURN){
  location.replace(MISROUTED_SERVICE_RETURN.href);
 }else if(!enabled){authUi();await loadAll()}else{
  try{await handoff()}catch(e){console.error('auth handoff',e)}
- const {data}=await sb.auth.getSession();session=data.session;authUi();announceSession();
- try{await loadAll()}catch(e){console.error('My EKODI load',e)}
- sb.auth.onAuthStateChange(async(_e,next)=>{session=next;authUi();announceSession();await loadAll()});
+ const {data}=await sb.auth.getSession();session=data.session;
+ // My EKODI is a personal space: a signed-out visitor never sees it and goes
+ // straight to central login, returning here afterwards.
+ if(!session){redirectSignedOutToLogin()}else{
+  authUi();announceSession();
+  try{await loadAll()}catch(e){console.error('My EKODI load',e)}
+  sb.auth.onAuthStateChange(async(_e,next)=>{session=next;if(!session){redirectSignedOutToLogin();return}authUi();announceSession();await loadAll()});
+ }
 }
