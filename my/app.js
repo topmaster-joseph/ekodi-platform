@@ -171,7 +171,7 @@ function syncSurfaceState({scroll=false}={}){
 }
 // One-glance layout (2026-11-02): sub-sections are a single row of tab buttons with
 // the chosen content right below; the old card menu step is no longer shown.
-const ACCOUNT_TABS=['basic','public','character','security','ai'];
+const ACCOUNT_TABS=['basic','public','character','ai'];
 let activeAccountTab='basic';
 function syncAccountTabs(){
  if(!ACCOUNT_TABS.includes(activeAccountTab))activeAccountTab='basic';
@@ -185,6 +185,7 @@ function syncAccountTabs(){
  document.querySelectorAll('[data-account-panel]').forEach(panel=>{panel.hidden=isMenu||panel.dataset.accountPanel!==activeAccountTab});
 }
 function setAccountTab(tab){
+ if(tab==='security')tab='basic'; // Old stored selection opens account basics.
  if(!ACCOUNT_TABS.includes(tab))tab=activeAccountTab||'basic';
  activeAccountTab=tab;syncAccountTabs();
  try{sessionStorage.setItem('ekodi_my_account_tab',tab)}catch{}
@@ -273,7 +274,7 @@ function recentActivityUi(){
 
 function authUi(){
  const label=session?'로그아웃':'Google로 시작';
- for(const b of [$('#authButton'),$('#accountAuthButton')])if(b){b.disabled=!enabled;b.textContent=enabled?label:'격리 스테이징'}
+ for(const b of [$('#authButton')])if(b){b.disabled=!enabled;b.textContent=enabled?label:'격리 스테이징'}
  syncSurfaceState();
 }
 function uniqueWorkspaces(){
@@ -353,7 +354,6 @@ function identityUi(){
  $('#workspaceSummary').textContent=current?`${current.workspace_name||'내 Workspace'} · ${plan(current.plan)} · ${current.role||'member'}`:'로그인하면 마지막으로 사용한 공간을 기억하고 다른 공간으로 즉시 전환할 수 있습니다.';
  const paidCount=[...access.values()].filter(a=>paid(a.plan)).length;
  $('#accountPlan').textContent=session?(paidCount?`${paidCount} Paid Plan${paidCount>1?'s':''}`:'Free Member'):'Guest';
- $('#accountLoginText').textContent=email?`${email}로 EKODI 통합 로그인에 연결되어 있습니다. 다른 서비스에서는 이 로그인 상태를 재사용합니다.`:'로그인 전입니다.';
  const heroLead=$('#heroLead'),contextLine=$('#memberContextLine');
  if(heroLead)heroLead.textContent=session?(current?`${current.workspace_name||'내 공간'}의 맥락을 기준으로 필요한 것만 보여드립니다.`:'내 활동을 기준으로 필요한 것만 보여드립니다.'):'로그인하면 내 공간과 필요한 기능만 연결해 보여드립니다.';
  if(contextLine){contextLine.hidden=!session;contextLine.textContent=current?`현재 · ${current.workspace_name||'내 공간'} · ${plan(current.plan)}`:'현재 · 개인 맥락'}
@@ -542,7 +542,7 @@ async function saveProfile(event){
 function announceSession(){window.dispatchEvent(new CustomEvent('ekodi:my-session',{detail:{signedIn:Boolean(session?.access_token),userId:String(session?.user?.id||'')}}))}
 async function authAction(){if(!enabled)return;if(!session){const target=new URL(authUrl);target.searchParams.set('return_to',location.href.split('#')[0]);location.assign(target.href);return}await sb.auth.signOut();session=null;await loadAll();authUi();announceSession()}
 
-$('#authButton').addEventListener('click',authAction);$('#accountAuthButton').addEventListener('click',authAction);$('#profileForm').addEventListener('submit',saveProfile);
+$('#authButton').addEventListener('click',authAction);$('#profileForm').addEventListener('submit',saveProfile);
 $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter||'all';$$('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));portfolioUi()}));
 
 const discoveryButton=$('#discoverServicesButton');
