@@ -60,6 +60,7 @@ const smokes = [
   ['points-verified-referrals-isolated-smoke.sql', 'REFERRAL_ISOLATED_NEGATIVE_SMOKE_PASS'],
   ['points-verified-referrals-positive-smoke.sql', 'REFERRAL_POSITIVE_SMOKE_PASS'],
   ['points-referral-hardening-isolated-smoke.sql', 'REFERRAL_HARDENING_ISOLATED_SMOKE_PASS'],
+  ['points-referral-shared-email-isolated-smoke.sql', 'REFERRAL_SHARED_EMAIL_SMOKE_PASS'],
   ['points-admin-governance-isolated-smoke.sql', 'POINT_ADMIN_GOVERNANCE_SMOKE_PASS'],
   ['points-evidence-anomaly-isolated-smoke.sql', 'POINT_EVIDENCE_ANOMALY_SMOKE_PASS'],
 ];
