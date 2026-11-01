@@ -1,31 +1,199 @@
-/* SOCIAL-ID-001: administrator inventory; responsive by content, no forced word splitting. */
-.ekodi-social-accounts{display:grid;gap:16px;width:100%;max-width:1580px;min-width:0;margin:auto;padding:clamp(12px,2vw,26px);box-sizing:border-box}
+/* SOCIAL-ID-UI-002: full-width read-only registry, isolated from the global single-column list mode. */
+html body.admin-compact.ekodi-admin-design-engine .content:has(> #ekodiSocialAccountRegistry:not([hidden])){
+  width:100%!important;
+  max-width:none!important;
+}
+html body.admin-compact.ekodi-admin-design-engine .content > #ekodiSocialAccountRegistry,
+.ekodi-social-accounts{
+  box-sizing:border-box;
+  display:grid;
+  align-content:start;
+  gap:20px;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0;
+  margin:0!important;
+  padding:clamp(14px,2vw,28px)!important;
+  text-align:left;
+}
 .ekodi-social-accounts *{box-sizing:border-box}
-.ekodi-social-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
-.ekodi-social-head h2{margin:2px 0 7px;font-size:clamp(21px,2.1vw,28px)}
-.ekodi-social-head p{margin:0;color:var(--admin-secondary,#5a6877);line-height:1.65}
-.ekodi-social-head button{min-height:42px;padding:8px 14px;border-radius:9px;border:1px solid #c9d5e2;background:#fff;cursor:pointer}
-.ekodi-social-caption{font-size:12px;font-weight:750;letter-spacing:.04em}
-.ekodi-social-state{padding:12px 14px;border-radius:10px;background:#f3f6f9;border:1px solid #dbe2eb;line-height:1.65;color:#344357}
-.ekodi-social-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.ekodi-social-metrics article,.ekodi-social-card,.ekodi-social-list{min-width:0;background:var(--ekodi-ui-surface,#fff);border:1px solid #dce4ed;border-radius:12px;padding:14px}
-.ekodi-social-metrics small{display:block;color:#5b6a79}
-.ekodi-social-metrics strong{display:block;margin-top:6px;font-size:24px;font-variant-numeric:tabular-nums}
-.ekodi-social-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.ekodi-social-card{display:grid;gap:5px}
-.ekodi-social-card strong{font-size:16px}
-.ekodi-social-card small,.ekodi-social-card p{color:#5b6a79;margin:0;line-height:1.5}
-.ekodi-social-badge{justify-self:start;font-size:12px;font-weight:750;border-radius:100px;padding:4px 9px;background:#f0f2f5;color:#45576a}
-.ekodi-social-list h3{font-size:18px;margin:0 0 8px}
-.ekodi-social-list>p{color:#5b6a79;margin:0 0 12px;line-height:1.6}
-.ekodi-social-records{display:grid;gap:8px}
-.ekodi-social-record{display:flex;justify-content:space-between;align-items:flex-start;gap:9px 18px;flex-wrap:wrap;border-bottom:1px solid #e4eaf0;padding:10px 0;min-width:0}
-.ekodi-social-record:last-child{border-bottom:none}
+.ekodi-social-accounts :where(h2,h3,p){margin:0}
+.ekodi-social-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.ekodi-social-heading{min-width:0;flex:1 1 400px}
+.ekodi-social-caption{font-size:11px;font-weight:750;letter-spacing:.08em;color:#64748b}
+.ekodi-social-head h2{margin:6px 0 8px!important;font-size:clamp(23px,2vw,30px)!important;letter-spacing:-.035em}
+.ekodi-social-head p:not(.ekodi-social-caption){max-width:880px;font-size:14px;line-height:1.6;color:#64748b}
+.ekodi-social-head .ekodi-social-refresh{
+  flex:0 0 auto;
+  min-height:42px;
+  padding:9px 16px;
+  border:1px solid #cbd5e1;
+  border-radius:11px;
+  background:#fff;
+  color:#27364b;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+}
+.ekodi-social-head .ekodi-social-refresh:hover{background:#f4f7fa}
+.ekodi-social-head .ekodi-social-refresh:disabled{cursor:wait;opacity:.6}
+.ekodi-social-state{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:15px 18px;
+  border:1px solid #dce4ec;
+  border-radius:12px;
+  background:#f5f7fa;
+  color:#344357;
+}
+.ekodi-social-lock-mark{flex:0 0 auto;font-size:13px;color:#66758a;line-height:23px}
+.ekodi-social-state strong{font-size:15px;font-weight:800}
+.ekodi-social-state p{margin:4px 0!important;font-size:13px;color:#475569}
+.ekodi-social-state small{font-size:12px;color:#627186}
+.ekodi-social-metrics{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:12px!important;
+  margin:0!important;
+}
+.ekodi-social-metrics article{
+  min-width:0;
+  padding:18px;
+  border:1px solid #dce4ec;
+  border-radius:14px;
+  background:#fff;
+}
+.ekodi-social-metrics small{display:block;font-size:13px;color:#68768a}
+.ekodi-social-metrics strong{display:block;margin:9px 0 2px;font-size:clamp(24px,2vw,30px);font-weight:800;font-variant-numeric:tabular-nums;color:#0f172a}
+.ekodi-social-directory,.ekodi-social-list{
+  min-width:0;
+  padding:22px;
+  border:1px solid #dce4ec;
+  border-radius:16px;
+  background:#fff;
+}
+.ekodi-social-section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.ekodi-social-section-head h3,.ekodi-social-list h3{margin:0 0 6px;font-size:19px!important;font-weight:800}
+.ekodi-social-section-head p,.ekodi-social-list>p{margin:0!important;color:#64748b;font-size:13px;line-height:1.55}
+.ekodi-social-result-count{flex:0 0 auto;color:#475569;font-size:12px;font-weight:700}
+.ekodi-social-toolbar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:0 0 16px}
+.ekodi-social-toolbar label{display:grid;gap:6px;min-width:180px;font-size:12px;color:#46566b;font-weight:700}
+.ekodi-social-search-wrap{flex:1 1 340px}
+.ekodi-social-filter-wrap{flex:0 1 240px}
+.ekodi-social-toolbar :is(input,select){
+  display:block;
+  width:100%;
+  min-height:44px;
+  border:1px solid #cbd5e1;
+  border-radius:10px;
+  padding:10px 13px;
+  background:#fff;
+  color:#1e293b;
+  font-size:14px;
+}
+.ekodi-social-toolbar :is(input,select):focus-visible,.ekodi-social-refresh:focus-visible{
+  outline:3px solid #a7c8ed;
+  outline-offset:2px;
+}
+.ekodi-social-grid{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:12px!important;
+  min-width:0;
+}
+.ekodi-social-accounts .ekodi-social-card{
+  display:grid;
+  align-content:start;
+  gap:12px;
+  min-width:0;
+  min-height:145px;
+  margin:0!important;
+  padding:16px!important;
+  border:1px solid #dce4ec;
+  border-radius:13px!important;
+  background:#fff;
+}
+.ekodi-social-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ekodi-social-provider-mark{
+  display:grid;
+  place-items:center;
+  width:38px;
+  height:38px;
+  flex:0 0 38px;
+  border:1px solid #e2e8f0;
+  border-radius:11px;
+  background:#f1f5f9;
+  color:#334155;
+  font-size:13px;
+  font-weight:850;
+}
+.ekodi-social-card strong{display:block;font-size:16px;font-weight:800;color:#172033}
+.ekodi-social-badge{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  padding:4px 9px;
+  border-radius:99px;
+  background:#f1f3f6;
+  color:#44546b;
+  font-size:11px;
+  font-weight:750;
+  white-space:nowrap;
+}
+.ekodi-social-card-counts{display:flex;gap:8px 14px;flex-wrap:wrap}
+.ekodi-social-card-counts small{font-size:12px;color:#68768a}
+.ekodi-social-empty{margin-top:14px!important;padding:16px;border:1px dashed #cbd5e1;border-radius:10px;color:#5d6d83}
+.ekodi-social-lower{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start;min-width:0}
+.ekodi-social-account-toolbar{display:grid;grid-template-columns:minmax(240px,2fr) minmax(130px,1fr) minmax(150px,1fr);gap:12px;align-items:end}
+.ekodi-social-account-toolbar label{display:grid;gap:6px;min-width:0;font-size:12px;font-weight:700;color:#46566b}
+.ekodi-social-account-toolbar :is(input,select){width:100%;min-height:44px;padding:10px 13px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#1e293b;font-size:14px}
+.ekodi-social-account-toolbar :is(input,select):focus-visible{outline:3px solid #a7c8ed;outline-offset:2px}
+.ekodi-social-account-count{margin:0!important;font-size:12px;color:#64748b;font-weight:650}
+.ekodi-social-account-empty{margin:0!important;padding:16px;border:1px dashed #cbd5e1;border-radius:10px;color:#5d6d83}
+.ekodi-social-accounts [data-social-provider-card][hidden],
+.ekodi-social-accounts [data-social-record][hidden]{display:none!important}
+.ekodi-social-records{display:grid;gap:8px;margin-top:16px}
+.ekodi-social-record{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px;border:1px solid #e3e9f0;border-radius:10px}
 .ekodi-social-record div{min-width:0}
-.ekodi-social-record strong,.ekodi-social-record small{display:block;overflow-wrap:break-word}
-.ekodi-social-record small{color:#5b6a79;line-height:1.6;margin-top:3px}
-.ekodi-social-record span{color:#41556b;font-size:12px}
-.ekodi-social-error{color:#b42318}
-@media(max-width:1050px){.ekodi-social-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:760px){.ekodi-social-grid{grid-template-columns:1fr}.ekodi-social-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:390px){.ekodi-social-metrics{grid-template-columns:1fr 1fr}.ekodi-social-metrics strong{font-size:20px}.ekodi-social-head button{width:100%}}
+.ekodi-social-record strong,.ekodi-social-record small{display:block;overflow-wrap:anywhere}
+.ekodi-social-record strong{font-size:13px}
+.ekodi-social-record small{margin-top:4px;color:#68768a;font-size:12px;line-height:1.5}
+.ekodi-social-record>span{padding:4px 8px;background:#f1f5f9;border-radius:6px;font-size:11px;color:#41556b}
+.ekodi-social-records>p{margin:0!important;padding:18px;border:1px dashed #d1dae5;border-radius:10px;color:#637286;background:#f8fafc}
+.ekodi-social-message{margin:0!important;font-size:12px;color:#66768a}
+.ekodi-social-error{color:#b42318!important}
+@media(max-width:1280px){
+  .ekodi-social-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:990px){
+  .ekodi-social-account-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ekodi-social-account-toolbar label:first-child{grid-column:1/-1}
+  .ekodi-social-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .ekodi-social-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .ekodi-social-lower{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:760px){
+  .ekodi-social-account-toolbar{grid-template-columns:minmax(0,1fr)}
+  .ekodi-social-account-toolbar label:first-child{grid-column:auto}
+  html body.admin-compact.ekodi-admin-design-engine .content > #ekodiSocialAccountRegistry,
+  .ekodi-social-accounts{padding:12px!important;gap:12px}
+  .ekodi-social-head{align-items:stretch}
+  .ekodi-social-head .ekodi-social-refresh{width:100%}
+  .ekodi-social-directory,.ekodi-social-list{padding:14px;border-radius:12px}
+  .ekodi-social-toolbar{display:grid;grid-template-columns:minmax(0,1fr)}
+  .ekodi-social-search-wrap,.ekodi-social-filter-wrap{min-width:0}
+  .ekodi-social-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .ekodi-social-accounts .ekodi-social-card{padding:12px!important;min-height:138px}
+  .ekodi-social-card-counts{display:grid;gap:4px}
+}
+@media(max-width:460px){
+  .ekodi-social-metrics{gap:8px!important}
+  .ekodi-social-metrics article{padding:12px}
+  .ekodi-social-metrics strong{font-size:23px}
+  .ekodi-social-grid{grid-template-columns:minmax(0,1fr)!important}
+  .ekodi-social-accounts .ekodi-social-card{min-height:0}
+}
+@media(prefers-reduced-motion:reduce){
+  .ekodi-social-accounts *, .ekodi-social-accounts *::before, .ekodi-social-accounts *::after{transition:none!important}
+}

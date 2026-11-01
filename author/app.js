@@ -1,9 +1,10 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { openHumanAuthorJournal } from './human-writer.js';
+import { openWritingMentor } from './writing-mentor-ui.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
-const LOGIN_URL = 'https://auth.ekodi.kr/?site=author&return_to=https%3A%2F%2Fauthor.ekodi.kr%2F';
+const LOGIN_URL = 'https://ekodi.kr/auth/?site=author&return_to=https%3A%2F%2Fekodi.kr%2Fauthor%2F';
 const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`;
 const MY_EKODI_URL = 'https://ekodi.kr/my/';
 const sb = createClient(SUPABASE_URL, PUBLISHABLE_KEY, { auth: { detectSessionInUrl: true, persistSession: true } });
@@ -317,12 +318,13 @@ async function openProject(id) {
   const canApprove = project.status === 'review';
   const canShare = project.status === 'author_approved' || project.status === 'publish_ready';
   const aiLabel = membership.paid_ai_active ? `${String(membership.display_name || membership.plan).toUpperCase()} · AI ${Number(membership.remaining_ai_units || 0)} units` : 'FREE · AI provider calls 0';
-  overlay.innerHTML = `<section class="dialog" role="dialog" aria-modal="true"><button class="ghost close" type="button">닫기</button><p class="eyebrow">${esc(info.label)} · ${esc(STATUS_LABELS[project.status] || project.status)}</p><h2>${esc(project.working_title || project.title)}</h2><p class="notice">Creator AI · Research AI · Editor AI · Chief AI가 사람의 자료와 프로젝트 기억을 기준으로 협업합니다. <strong>${esc(aiLabel)}</strong>. 공개·배포는 사람의 승인 뒤에만 가능합니다.</p><div class="chapter-list">${(units || []).map(unit => `<button class="chapter-row" type="button" data-chapter="${esc(unit.id)}"><span>${String(unit.chapter_order).padStart(2, '0')}</span><strong>${esc(unit.title)}</strong><span>${esc(unit.status)}</span></button>`).join('')}</div><div class="dialog-actions">${info.destination === 'EKODI BOOKS' ? '<button class="secondary" type="button" data-human>휴먼 집필 인터뷰</button>' : ''}<button class="secondary" type="button" data-stage="writing">제작 단계</button><button class="secondary" type="button" data-stage="review">검토 요청</button><button class="primary" type="button" data-approve ${canApprove ? '' : 'disabled'}>최종 창작물 승인</button><button class="primary" type="button" data-my-ekodi ${canShare ? '' : 'disabled'}>My EKODI에 등록</button>${info.destination === 'EKODI BOOKS' ? '<button class="secondary" type="button" data-books>EKODI BOOKS 열기</button>' : ''}</div></section>`;
+  overlay.innerHTML = `<section class="dialog" role="dialog" aria-modal="true"><button class="ghost close" type="button">닫기</button><p class="eyebrow">${esc(info.label)} · ${esc(STATUS_LABELS[project.status] || project.status)}</p><h2>${esc(project.working_title || project.title)}</h2><p class="notice">Creator AI · Research AI · Editor AI · Chief AI가 사람의 자료와 프로젝트 기억을 기준으로 협업합니다. <strong>${esc(aiLabel)}</strong>. 공개·배포는 사람의 승인 뒤에만 가능합니다.</p><div class="chapter-list">${(units || []).map(unit => `<button class="chapter-row" type="button" data-chapter="${esc(unit.id)}"><span>${String(unit.chapter_order).padStart(2, '0')}</span><strong>${esc(unit.title)}</strong><span>${esc(unit.status)}</span></button>`).join('')}</div><div class="dialog-actions">${info.destination === 'EKODI BOOKS' ? '<button class="secondary" type="button" data-mentor>무료 분야별 집필 멘토</button><button class="secondary" type="button" data-human>휴먼 집필 인터뷰</button>' : ''}<button class="secondary" type="button" data-stage="writing">제작 단계</button><button class="secondary" type="button" data-stage="review">검토 요청</button><button class="primary" type="button" data-approve ${canApprove ? '' : 'disabled'}>최종 창작물 승인</button><button class="primary" type="button" data-my-ekodi ${canShare ? '' : 'disabled'}>My EKODI에 등록</button>${info.destination === 'EKODI BOOKS' ? '<button class="secondary" type="button" data-books>에코디서점 둘러보기</button>' : ''}</div></section>`;
   document.body.append(overlay);
   overlay.querySelector('.close').addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', event => { if (event.target === overlay) overlay.remove(); });
   overlay.querySelectorAll('[data-chapter]').forEach(button => button.addEventListener('click', () => openUnit(project, units.find(item => item.id === button.dataset.chapter), overlay)));
   overlay.querySelector('[data-human]')?.addEventListener('click', () => { overlay.remove(); void openHumanAuthorJournal({ sb, session, project }); });
+  overlay.querySelector('[data-mentor]')?.addEventListener('click', () => { overlay.remove(); openWritingMentor({ session, project: { ...project, creator_mode: creatorMode(project) } }); });
   overlay.querySelectorAll('[data-stage]').forEach(button => button.addEventListener('click', async () => { await setProjectStatus(project.id, button.dataset.stage); overlay.remove(); await loadProjects(); openProject(project.id); }));
   overlay.querySelector('[data-approve]').addEventListener('click', async () => {
     if (!canApprove) return;
@@ -332,7 +334,7 @@ async function openProject(id) {
   });
   overlay.querySelector('[data-my-ekodi]').addEventListener('click', async () => { if (canShare) await publishToMyEkodi(project, overlay); });
   const books = overlay.querySelector('[data-books]');
-  if (books) books.addEventListener('click', () => { recordEvent(project.id, 'books', 'books.handoff.requested', { target: 'EKODI BOOKS' }); location.assign('https://books.ekodi.kr/'); });
+  if (books) books.addEventListener('click', () => { location.assign('https://ekodi.kr/books/'); });
 }
 async function publishToMyEkodi(project, overlay) {
   const button = overlay.querySelector('[data-my-ekodi]');

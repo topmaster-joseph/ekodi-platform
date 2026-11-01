@@ -1,18 +1,61 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildFleetStatus, renderFleetStatusHtml, EKODI_FLEET_STATUS } from '../ekodi-fleet-status.js';
+import { buildFleetStatus, projectLiveFleetRegistry, renderFleetStatusHtml, EKODI_FLEET_STATUS } from '../ekodi-fleet-status.js';
+import ecosystemServices from '../config/ecosystem-services.json' with { type: 'json' };
+import { readFile } from 'node:fs/promises';
 
 const NOW = '2026-10-21T00:00:00.000Z';
 const fresh = '2026-10-21T00:00:00.000Z';
 const old = '2026-10-20T00:00:00.000Z'; // 24h old → stale under 2h threshold
 
-test('empty input yields a frozen, mutation-free, healthy model', () => {
+test('empty input remains frozen but cannot report a healthy fleet without evidence', () => {
   const m = buildFleetStatus({ now: NOW });
   assert.equal(m.mutation, false);
-  assert.equal(m.overall.health, 'healthy');
+  assert.equal(m.overall.health, 'partial');
   assert.equal(m.overall.counts.total, 0);
+  assert.equal(m.overall.label, '부분 관측');
   assert.equal(Object.isFrozen(m), true);
   assert.equal(Object.isFrozen(m.services), true);
+});
+
+test('canonical registry projects only distinct production-verified live services', () => {
+  const visible = projectLiveFleetRegistry([
+    { id: 'church', name: 'Church', url: 'https://ekodi.kr/ekodichurch', status: 'live', productionVerified: true },
+    { id: 'church', name: 'Duplicate', status: 'live', productionVerified: true },
+    { id: 'preparing', status: 'preparing', productionVerified: true },
+    { id: 'beta', status: 'beta', productionVerified: true },
+    { id: 'unverified', status: 'live', productionVerified: false },
+    { id: '', status: 'live', productionVerified: true },
+  ]);
+  assert.deepEqual(visible, [{
+    id: 'church', name: 'Church', url: 'https://ekodi.kr/ekodichurch', status: 'live',
+  }]);
+});
+
+test('registered live service without monitoring appears as a blind spot', () => {
+  const visible = projectLiveFleetRegistry([
+    { id: 'church', name: 'Church', status: 'live', productionVerified: true },
+    { id: 'mall', name: 'Mall', status: 'live', productionVerified: true },
+    { id: 'planned', status: 'preparing', productionVerified: false },
+  ]);
+  const model = buildFleetStatus({
+    now: NOW, registryServices: visible,
+    latestChecks: [{ service_id: 'church', status: 'online', checked_at: fresh }],
+  });
+  assert.deepEqual(model.blindSpots.unmonitored, ['mall']);
+  assert.equal(model.overall.health, 'partial');
+  assert.equal(model.overall.counts.total, 2);
+  assert.equal(model.services.some(x => x.id === 'planned'), false);
+});
+
+test('protected fleet route uses actual canonical service registry', async () => {
+  const source = await readFile(new URL('../ai-command-control.js', import.meta.url), 'utf8');
+  assert.match(source, /import ecosystemServices from '\.\/config\/ecosystem-services\.json' with/);
+  assert.match(source, /registryServices: projectLiveFleetRegistry\(ecosystemServices\.services\)/);
+  const live = projectLiveFleetRegistry(ecosystemServices.services);
+  assert.ok(live.some(x => x.id === 'church'));
+  assert.ok(live.every(x => x.status === 'live'));
+  assert.ok(live.every(x => x.id && x.name));
 });
 
 test('online latest checks roll up to healthy', () => {
@@ -61,6 +104,63 @@ test('stale checks are flagged and degrade the fleet', () => {
   assert.equal(m.services[0].stale, true);
   assert.equal(m.overall.counts.stale, 1);
   assert.equal(m.overall.health, 'degraded');
+});
+
+test('missing, malformed and implausibly future-dated timestamps cannot prove green health', () => {
+  for (const checked_at of [undefined, '', 'not-a-date', '2026-10-22T00:00:00Z']) {
+    const m = buildFleetStatus({
+      now: NOW,
+      latestChecks: [{ service_id: 'church', status: 'online', checked_at }],
+    });
+    assert.equal(m.services[0].stale, true, String(checked_at));
+    assert.equal(m.overall.health, 'degraded', String(checked_at));
+    assert.equal(m.overall.counts.stale, 1, String(checked_at));
+  }
+});
+
+test('partial or failed D1 source reads never claim whole fleet green', () => {
+  const oneReadFailed = buildFleetStatus({
+    now: NOW,
+    latestChecks: [{ service_id: 'church', status: 'online', checked_at: fresh }],
+    observationFailures: ['cloudflare_environment_checks'],
+  });
+  assert.equal(oneReadFailed.overall.health, 'partial');
+  assert.deepEqual(oneReadFailed.sources.observationFailures, ['cloudflare_environment_checks']);
+  assert.match(renderFleetStatusHtml(oneReadFailed), /관측 자료 일부 조회 실패/);
+
+  const bothReadsFailed = buildFleetStatus({
+    now: NOW,
+    observationFailures: ['service_check_latest', 'cloudflare_environment_checks'],
+  });
+  assert.equal(bothReadsFailed.overall.health, 'partial');
+  assert.equal(bothReadsFailed.overall.counts.total, 0);
+
+  const failureStillWins = buildFleetStatus({
+    now: NOW,
+    latestChecks: [{ service_id: 'pay', status: 'down', checked_at: fresh }],
+    observationFailures: ['cloudflare_environment_checks'],
+  });
+  assert.equal(failureStillWins.overall.health, 'critical');
+});
+
+test('small future clock skew remains fresh and existing failure signals stay critical', () => {
+  const withinSkew = buildFleetStatus({
+    now: NOW,
+    latestChecks: [{ service_id: 'church', status: 'online', checked_at: '2026-10-21T00:00:30Z' }],
+  });
+  assert.equal(withinSkew.overall.health, 'healthy');
+  const failure = buildFleetStatus({
+    now: NOW,
+    latestChecks: [{ service_id: 'church', status: 'offline' }],
+  });
+  assert.equal(failure.overall.health, 'critical');
+  assert.equal(failure.services[0].stale, true);
+});
+
+test('empty fleet HTML must not display a healthy summary', () => {
+  const html = renderFleetStatusHtml(buildFleetStatus({ now: NOW }));
+  assert.match(html, /부분 관측/);
+  assert.doesNotMatch(html, /<div class="h">정상<\/div>/);
 });
 
 test('registry service with no health signal is an unmonitored blind spot', () => {

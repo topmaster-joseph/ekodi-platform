@@ -26,12 +26,12 @@ const SERVICE_CATALOG = [
   { id: 'mall', name: '에코디몰', domain: 'ekodi.kr/ekodimall', url: 'https://ekodi.kr/ekodimall', group: 'business', defaultState: 'active', defaultMonitor: true },
   { id: 'pay', name: '에코디결제', domain: 'ekodi.kr/ekodipay', url: 'https://ekodi.kr/ekodipay', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'insurance', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', group: 'business', defaultState: 'planned', defaultMonitor: false },
-  { id: 'books', name: '에코디북스', domain: 'books.ekodi.kr', url: 'https://books.ekodi.kr', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
+  { id: 'books', name: '에코디북스', domain: 'books.ekodi.kr', url: 'https://ekodi.kr/books', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
   { id: 'lab', name: '에코디연구소', domain: 'lab.ekodi.kr', url: 'https://lab.ekodi.kr', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
-  { id: 'edu', name: 'EKODI Education', domain: 'edu.ekodi.kr', url: 'https://edu.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
+  { id: 'edu', name: 'EKODI Education', domain: 'edu.ekodi.kr', url: 'https://ekodi.kr/education', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
   { id: 'learn', name: 'EKODI Learning Fabric', domain: 'ekodi.kr/learn', url: 'https://ekodi.kr/learn', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
   { id: 'media', name: '에코디미디어', domain: 'media.ekodi.kr', url: 'https://media.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
-  { id: 'church', name: '에코디교회', domain: 'church.ekodi.kr', url: 'https://church.ekodi.kr', group: 'ministry', defaultState: 'active', defaultMonitor: true },
+  { id: 'church', name: '에코디교회', domain: 'ekodi.kr/ekodichurch', url: 'https://ekodi.kr/ekodichurch', group: 'ministry', defaultState: 'active', defaultMonitor: true },
   { id: 'community', name: '커뮤니티', domain: 'ekodi.kr/community', url: 'https://ekodi.kr/community', group: 'ministry', defaultState: 'active', defaultMonitor: true },
   { id: 'social', name: 'EKODI Social', domain: 'ekodi.kr/social', url: 'https://ekodi.kr/social', group: 'platform', defaultState: 'active', defaultMonitor: true }
 ];
@@ -430,7 +430,7 @@ async function publicPreviewSnapshot(env) {
 }
 
 const PUBLIC_PREVIEW_PATH = '/api/public/preview/map';
-const PUBLIC_PREVIEW_ORIGINS = new Set(['https://ekodi.kr', 'https://www.ekodi.kr']);
+const PUBLIC_PREVIEW_ORIGINS = new Set(['https://ekodi.kr']);
 
 function publicPreviewHeaders(request) {
   const headers = new Headers({

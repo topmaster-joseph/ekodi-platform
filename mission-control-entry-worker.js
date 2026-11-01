@@ -2,6 +2,7 @@ import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleEkodiV8CommandControl } from './ai-command-control.js';
+import { acceptGitHubWebhook, drainGitHubObservations } from './github-operations-webhook.js';
 import { runEkodiPulseSchedule } from './ekodi-pulse-runtime.js';
 import { handleUserAiControl } from './user-ai-control.js';
 import { applyUserAiPlanOverrides, handleUserAiAdminControl } from './user-ai-admin-control.js';
@@ -23,6 +24,7 @@ import { handleMarketingLedgerControl } from './marketing-ledger-control.js';
 import { handleMarketingOrderConnectors } from './marketing-order-connectors.js';
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
+import { handleSearchVisibilityControl } from './search-visibility-control.js';
 import { handleTrafficIntelligence } from './traffic-intelligence-control.js';
 import { handleApiCostControl } from './api-cost-control.js';
 import { handleInfraCostControl } from './infra-cost-control.js';
@@ -184,6 +186,10 @@ export default {
       catch (error) { console.error('EKODI MCP gateway error', error); return errorResponse('EKODI MCP 처리 중 오류가 발생했습니다.', 'MCP_GATEWAY_ERROR'); }
     }
 
+    if (path === '/api/orchestrator/github/webhook') {
+      return applyApiSecurityHeaders(await acceptGitHubWebhook(request, env));
+    }
+
     if (path === '/api/orchestrator/release-receipt') {
       try { return applyApiSecurityHeaders(await handleOrchestratorReleaseReceipt(request, env)); }
       catch (error) { console.error('EKODI Orchestrator release receipt error', error); return errorResponse('EKODI Orchestrator 릴리스 영수증 확인 중 오류가 발생했습니다.', 'ORCHESTRATOR_RELEASE_RECEIPT_ERROR'); }
@@ -298,6 +304,11 @@ export default {
       catch (error) { console.error('Traffic Intelligence control error', error); return errorResponse('Traffic Intelligence 처리 중 오류가 발생했습니다.', 'TRAFFIC_INTELLIGENCE_CONTROL_ERROR'); }
     }
 
+    if (path === '/api/control/search-visibility') {
+      try { const response = await handleSearchVisibilityControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Search Visibility control error', error); return errorResponse('검색노출 통합관리 처리 중 오류가 발생했습니다.', 'SEARCH_VISIBILITY_CONTROL_ERROR'); }
+    }
+
     if (path.startsWith('/api/control/system-health')) {
       try { const response = await handleSystemHealthControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('System Health control error', error); return errorResponse('System Health 처리 중 오류가 발생했습니다.', 'SYSTEM_HEALTH_CONTROL_ERROR'); }
@@ -396,6 +407,10 @@ export default {
   },
 
   async scheduled(controller, env, ctx) {
+    // Never dispatch GitHub commands from the webhook observation queue.
+    try { await drainGitHubObservations(env, { limit: 10 }); }
+    catch (error) { console.error('EKODI GitHub observations unavailable', error?.message); }
+
     const customerSchedule = typeof customerEntryWorker.scheduled === 'function'
       ? await customerEntryWorker.scheduled(controller, env, ctx)
       : null;

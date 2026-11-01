@@ -19,9 +19,11 @@ test('a parked recovery PR explicitly dispatches convergence on its orchestrator
   // `fail()` is awaited since it records the refusal to D1 before exiting; the
   // assertion is unchanged — a failed hand-off still refuses rather than parking.
   assert.match(parked, /status!==204\)await fail\(/, 'a failed hand-off must be loud, not a silent park');
-  // Immediate-merge path is unchanged and never dispatches convergence.
+  // Immediate-merge path never runs the merging converger on the branch; since
+  // RECOVERY-POST-MERGE-LANES-001 it only hands the merged PR to post-merge reconcile on main.
   const merged = source.slice(parkedEnd);
-  assert.doesNotMatch(merged, /converge-orchestrated-pr-merge\.yml\/dispatches/);
+  assert.doesNotMatch(merged, /converge-orchestrated-pr-merge\.yml\/dispatches[\s\S]{0,200}ref:branchRef/);
+  assert.match(merged, /body:JSON\.stringify\(\{ref:'main',inputs:\{post_merge_reconcile_branch:branchRef\}\}\)/);
 });
 
 test('recovery workflow may dispatch and convergence accepts workflow_dispatch', async () => {

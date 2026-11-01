@@ -5,7 +5,9 @@ import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
 import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
+import { renderBnslovePublicPage, bnslovePublicCss } from './bnslove-public-page.js';
 import { isMnuBizWorkspaceSlug, renderMnuBizPublicPage, mnubizPublicCss } from './mnubiz-public-page.js';
+import { isMnuBizSuncheonPath, renderMnuBizSuncheonPage } from './mnubiz-suncheon-page.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 
 const EKODIMISSION_PREFIX='/ekodimission';
@@ -35,7 +37,7 @@ const MISSION_ACTIVITY_REGISTRATION_RE=/^\/ekodimission\/api\/activities\/([a-z0
 const MISSION_ACTIVITY_APPLICATION_RE=/^\/ekodimission\/api\/activities\/([0-9]{6}-[a-z0-9][a-z0-9-]{2,79})\/applications$/;
 const MISSION_PUBLIC_ADMIN_PATHS=new Set(['/ekodimission/activities',MISSION_EVENT_PATH,MISSION_TRIP_PATH,MISSION_NAJU_PATH]);
 const EKODIMISSION_PAGES=new Map([['/ekodimission/presence','/ekodimission-presence.page'],['/ekodimission','/ekodimission.page'],['/ekodimission/vision','/ekodimission-vision.page'],['/ekodimission/history','/ekodimission-history.page'],['/ekodimission/activities','/ekodimission-activities.page'],['/ekodimission/activities/261010-naju-yeongsan','/ekodimission-naju-festival.page'],[MISSION_EVENT_PATH,'/ekodimission-open-table-apply.page'],['/ekodimission/apply/261003-autumn-trip','/ekodimission-autumn-trip-apply.page'],['/ekodimission/prayer','/ekodimission-prayer.page'],['/ekodimission/participate','/ekodimission-participate.page'],['/ekodimission/partners','/ekodimission-partners.page'],['/ekodimission/stories','/ekodimission-stories.page'],['/ekodimission/give','/ekodimission-give.page'],['/ekodimission/transparency','/ekodimission-transparency.page'],['/ekodimission/contact','/ekodimission-contact.page'],['/ekodimission/devotion','/ekodimission-devotion.page']]);
-const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/presence.js','/ekodimission-presence.js'],['/ekodimission/assets/presence.css','/ekodimission-presence.css'],['/ekodimission/assets/presence-operator.js','/ekodimission-presence-operator.js'],['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js'],['/ekodimission/assets/shell.css','/ekodimission-shell.css'],['/ekodimission/assets/shell.js','/ekodimission-shell.js'],['/ekodimission/assets/mission-table-hero.svg','/mission-table-hero.svg'],['/ekodimission/assets/open-table-hero-260926.svg','/open-table-hero-260926.svg'],['/ekodimission/assets/open-table-meal-260925.jpg','/open-table-meal-260925.jpg'],['/ekodimission/assets/share.css','/ekodimission-share.css'],['/ekodimission/assets/collab.css','/ekodimission-collab.css'],['/ekodimission/assets/collab.js','/ekodimission-collab.js'],['/ekodimission/assets/archive.js','/ekodimission-archive.js']]);
+const EKODIMISSION_ASSETS=new Map([['/ekodimission/assets/presence.js','/ekodimission-presence.js'],['/ekodimission/assets/presence.css','/ekodimission-presence.css'],['/ekodimission/assets/presence-operator.js','/ekodimission-presence-operator.js'],['/ekodimission/assets/site.css','/ekodimission.css'],['/ekodimission/assets/site.js','/ekodimission.js'],['/ekodimission/assets/saturday.js','/ekodimission-saturday.js'],['/ekodimission/assets/home-photo.js','/ekodimission-home-photo.js'],['/ekodimission/assets/saturday-history.js','/ekodimission-saturday-history.js'],['/ekodimission/assets/shell.css','/ekodimission-shell.css'],['/ekodimission/assets/shell.js','/ekodimission-shell.js'],['/ekodimission/assets/mission-table-hero.svg','/mission-table-hero.svg'],['/ekodimission/assets/open-table-hero-260926.svg','/open-table-hero-260926.svg'],['/ekodimission/assets/open-table-meal-260925.jpg','/open-table-meal-260925.jpg'],['/ekodimission/assets/share.css','/ekodimission-share.css'],['/ekodimission/assets/collab.css','/ekodimission-collab.css'],['/ekodimission/assets/collab.js','/ekodimission-collab.js'],['/ekodimission/assets/archive.js','/ekodimission-archive.js']]);
 function normalizedMissionPath(pathname){const clean=String(pathname||'').replace(/\/+$/,'');return clean||'/'}
 function publishMissionHtml(html){
   // Mission owns its public UI. Keep the shared admin-capability shell, but suppress
@@ -391,7 +393,7 @@ function securityHeaders(env={}){
   const connect=["'self'",'https://cdn.jsdelivr.net'];
   if(env.SUPABASE_URL){try{connect.push(new URL(env.SUPABASE_URL).origin)}catch{}}
   return {
-    'content-security-policy':`default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: https:; connect-src ${connect.join(' ')}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://auth.ekodi.kr; object-src 'none'; upgrade-insecure-requests`,
+    'content-security-policy':`default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data: https:; connect-src ${connect.join(' ')}; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://ekodi.kr; object-src 'none'; upgrade-insecure-requests`,
     'referrer-policy':'no-referrer',
     'x-content-type-options':'nosniff',
     'x-frame-options':'DENY',
@@ -454,7 +456,7 @@ async function submitMissionEventApplication(request,env,eventKey=MISSION_EVENT_
   }catch{return json(env,{ok:false,error:'application_unavailable',message:'신청을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.'},503)}
 }
 async function publicSiteChrome(slug){
-  try{const r=await fetch(`https://workspace-api.ekodi.kr/v1/site-chrome/public?subject_key=${encodeURIComponent(slug)}`,{headers:{accept:'application/json'},signal:AbortSignal.timeout(5000)});if(!r.ok)return null;const data=await r.json().catch(()=>null);return data&&typeof data==='object'?data:null}catch{return null}
+  try{const r=await fetch(`https://ekodi.kr/workspace-api/v1/site-chrome/public?subject_key=${encodeURIComponent(slug)}`,{headers:{accept:'application/json'},signal:AbortSignal.timeout(5000)});if(!r.ok)return null;const data=await r.json().catch(()=>null);return data&&typeof data==='object'?data:null}catch{return null}
 }
 async function publicStorefront(slug,env){
   if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return null;
@@ -467,13 +469,20 @@ async function publicStorefront(slug,env){
 }
 function runtimeConfig(env){
   const dataEnabled=env.DATA_ENABLED==='true'&&Boolean(env.SUPABASE_URL&&env.SUPABASE_PUBLISHABLE_KEY);
-  return {dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',workspaceApi:dataEnabled?`${env.SUPABASE_URL}/functions/v1/workspace-api`:'',authUrl:env.AUTH_URL||'https://auth.ekodi.kr/?site=space',canonicalOrigin:'https://ekodi.kr',routeModel:['/{slug}','/{slug}/{service}'],memberNamespaceRequired:false,identityModel:'path -> slug(locator) -> workspace_id -> relationship/policy -> role -> capability'};
+  return {dataEnabled,dataMode:env.DATA_MODE||'isolated-staging',supabaseUrl:dataEnabled?env.SUPABASE_URL:'',supabasePublishableKey:dataEnabled?env.SUPABASE_PUBLISHABLE_KEY:'',workspaceApi:dataEnabled?`${env.SUPABASE_URL}/functions/v1/workspace-api`:'',authUrl:'https://ekodi.kr/auth/?site=space',canonicalOrigin:'https://ekodi.kr',routeModel:['/{slug}','/{slug}/{service}'],memberNamespaceRequired:false,identityModel:'path -> slug(locator) -> workspace_id -> relationship/policy -> role -> capability'};
 }
 function authRedirect(request,env){
-  const current=new URL(request.url);current.hash='';
-  const canonical=new URL(current.pathname+current.search,'https://ekodi.kr');
-  const target=new URL(env.AUTH_URL||'https://auth.ekodi.kr/?site=space');
-  target.searchParams.set('site','space');target.searchParams.set('return_to',canonical.href);
+  const current=new URL(request.url);
+  const target=new URL('https://ekodi.kr/auth/?site=space');
+  const requested=current.searchParams.get('return_to');
+  let trusted='https://ekodi.kr/space/';
+  try{
+    const candidate=new URL(requested||'');
+    if(candidate.protocol==='https:'&&candidate.hostname==='ekodi.kr'&&!candidate.username&&!candidate.password&&!/^\/(?:admin|auth|api|mcp|webhooks)(?:\/|$)/i.test(candidate.pathname)){
+      candidate.hash='';trusted=candidate.href;
+    }
+  }catch{}
+  target.searchParams.set('return_to',trusted);
   return withHeaders(env,Response.redirect(target.href,302),'auth-start');
 }
 async function appShell(request,env,route='space-home',profile=DEFAULT_PAGE_PROFILE){
@@ -528,7 +537,21 @@ export default{
     if(url.pathname==='/jadam-storefront.css'||url.pathname==='/_ekodi/space/jadam-storefront.css')return withHeaders(env,jadamStorefrontCss(),'storefront-asset');
     if(url.pathname==='/restaurant-storefront.css'||url.pathname==='/_ekodi/space/restaurant-storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/mnubiz/assets/site.css')return withHeaders(env,mnubizPublicCss(),'mnubiz-asset');
-    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://admin.ekodi.kr/?route=workspace&source=space.ekodi.kr',307);
+
+    if(['GET','HEAD'].includes(request.method)&&isMnuBizSuncheonPath(url.pathname)){
+      return injectEkodiShell(withHeaders(env,renderMnuBizSuncheonPage(url.pathname),'mnubiz-suncheon-page'),'community','public',{existingHeader:true});
+    }
+    if(['GET','HEAD'].includes(request.method)&&['/mnubiz/seminars/suncheon-2026/style.css','/mnubiz/seminars/suncheon-2026/client.js'].includes(url.pathname)){
+      if(!env?.ASSETS?.fetch)return new Response('Asset service unavailable',{status:503,headers:{'cache-control':'no-store'}});
+      const asset=await env.ASSETS.fetch(request);
+      const out=withHeaders(env,asset,'mnubiz-suncheon-asset');
+      out.headers.set('x-content-type-options','nosniff');
+      if(url.pathname.endsWith('/client.js'))out.headers.set('cache-control','no-store');
+      return out;
+    }
+
+    if(url.pathname==='/bnslove/site.css'&&['GET','HEAD'].includes(request.method))return withHeaders(env,bnslovePublicCss(),'bnslove-asset');
+    if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/?route=workspace&source=space',307);
     if(url.pathname==='/auth/start'){
       if(!['GET','HEAD'].includes(request.method))return json(env,{error:'method_not_allowed'},405);
       return authRedirect(request,env);
@@ -552,6 +575,9 @@ export default{
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':`${requested}->${resolved.canonicalSlug}`}});
       }
       if(resolved.status==='paused')return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>사용자 사이트 일시중지 · EKODI</title><body><main><h1>사용자 사이트가 일시중지되었습니다.</h1><p>운영공간 관리자 설정에서 다시 활성화할 수 있습니다.</p></main></body></html>',{status:404,headers:{'content-type':'text/html; charset=utf-8'}}),'space-paused');
+      if(requested==='bnslove'&&!workspaceRoute?.service){
+        return withHeaders(env,renderBnslovePublicPage(),'space-organization');
+      }
       if(isMnuBizWorkspaceSlug(requested)&&workspaceRoute?.service==='community'){
         const target=new URL('/community/', 'https://ekodi.kr');target.searchParams.set('workspace','mnubiz');
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-service':'mnubiz/community'}});

@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "EKODI-JUBILEE-THEOLOGY",
+  "sourceRevision": "review-9",
+  "observedAt": "2026-10-30",
+  "evidenceKind": "artifact-structure-only",
+  "authorApprovalEvidence": false,
+  "publisherApprovalEvidence": false,
+  "publisherPrivateStorageVerified": false,
+  "publicCatalogVisible": false,
+  "scheduledReleaseAt": null,
+  "commercialReleaseAllowed": false,
+  "notice": "Local conversation artifacts only. Metadata/ZIP/links/footnote counts are not proof of publisher R2 or D1 storage, copyright, page-by-page citation verification, EPUBCheck, screen-reader testing, author/publisher approval, or permission to sell.",
+  "volumes": [
+    {
+      "reviewId": "EJT-01-REVIEW",
+      "volumeNumber": 1,
+      "manuscriptStatus": "editorial-review",
+      "title": "희년과 하나님 나라의 회복",
+      "format": "academic-theology",
+      "bodyCharactersWithWhitespace": 53595,
+      "chapters": 8,
+      "pdfPages": 41,
+      "wordFootnoteReferences": 55,
+      "wordFootnoteItems": 55,
+      "epubPackage": {
+        "zipIntegrity": "passed",
+        "internalLinks": 211,
+        "missingInternalLinks": 0,
+        "footnoteRefs": 55,
+        "footnoteItems": 55,
+        "titleLanguage": "ko-KR",
+        "author": "정찬균"
+      },
+      "files": {
+        "docx": {
+          "sha256": "238d041d75de2f23182046d72e452c33effddb290179bd23710a5dc7f54174c0",
+          "sizeBytes": 1559381
+        },
+        "epub": {
+          "sha256": "7c310cf075b8bd78e0412464bff944192263c8ff9ebf67a53b627310d53cdbc1",
+          "sizeBytes": 77109
+        },
+        "pdf": {
+          "sha256": "3bb458c336ce722119321ddac93cda9991a22ae35bd59487e8bf99c6c65a187b",
+          "sizeBytes": 1165840
+        }
+      },
+      "revisionNotes": [
+        "11Q13 separated textual/legal/social-history evidence levels",
+        "Luke 4 audience-reception argument revised",
+        "3 Sloan footnote title spelling corrections; other 52 footnotes unchanged",
+        "native DOCX and EPUB each preserve 55 references and notes",
+        "EPUB title, author and ko-KR metadata recovered using UTF-8 metadata file; structural link count unchanged"
+      ],
+      "mandatoryOutstanding": [
+        "academic-footnotes-source-and-page-by-page",
+        "11Q13-original-language-and-primary-edition",
+        "bible-translation-and-third-party-rights",
+        "official-epubcheck",
+        "daisy-ace-and-screenreader-and-device-readthrough",
+        "author-final-approval",
+        "publisher-final-approval"
+      ]
+    },
+    {
+      "reviewId": "EJT-02-REVIEW",
+      "volumeNumber": 2,
+      "manuscriptStatus": "editorial-review",
+      "title": "우리는 다시 돌아갈 수 있는가",
+      "format": "general-theology",
+      "bodyCharactersWithWhitespace": 45998,
+      "chapters": 9,
+      "pdfPages": 37,
+      "epubPackage": {
+        "zipIntegrity": "passed",
+        "internalLinks": 108,
+        "missingInternalLinks": 0,
+        "footnoteRefs": 0,
+        "footnoteItems": 0,
+        "titleLanguage": "ko-KR",
+        "author": "정찬균"
+      },
+      "files": {
+        "docx": {
+          "sha256": "fac674dd4becf7e3a91bf89a24f43898950e1c8988c9bd770ea1d2af7e735c92",
+          "sizeBytes": 51382
+        },
+        "epub": {
+          "sha256": "cebe80d95766c0ece8ca9a0a770646a2820dd8509cda2ae657f6d1b0e6e0343a",
+          "sizeBytes": 68186
+        },
+        "pdf": {
+          "sha256": "8ce10108e9e763ec6805fe66dd735e1f34ae8a3e79c569c098b7920a105e4d33",
+          "sizeBytes": 708549
+        }
+      },
+      "revisionNotes": [
+        "replaced duplicate chapter-nine key scene with a duty-rotation story",
+        "added voluntary refusal and privacy-aware invitation scene in chapter seven",
+        "maintained nine chapters, epilogue, fictional-character disclosure",
+        "EPUB title, author and ko-KR metadata recovered using UTF-8 metadata file; structural link count unchanged"
+      ],
+      "mandatoryOutstanding": [
+        "author-literary-readthrough",
+        "fictional-character-review",
+        "bible-translation-and-third-party-rights",
+        "official-epubcheck",
+        "daisy-ace-and-screenreader-and-device-readthrough",
+        "author-final-approval",
+        "publisher-final-approval"
+      ]
+    }
+  ]
+}

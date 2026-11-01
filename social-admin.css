@@ -15,3 +15,92 @@
 .social-publishing-site-add select{width:100%;padding:8px 9px;border:1px solid var(--line,#d9dee8);border-radius:9px;background:transparent;color:inherit}
 @media(max-width:900px){.social-publishing-binding{grid-template-columns:1fr 1fr}.social-publishing-binding-copy{grid-column:1/-1}.social-publishing-site-add{grid-template-columns:1fr 1fr}.social-publishing-site-add select{grid-column:1/-1}}
 @media(max-width:600px){.social-publishing-binding,.social-publishing-site-add{grid-template-columns:1fr}.social-publishing-channel-head{align-items:flex-start}}
+
+/* SOCIAL-WORKSPACE-IA-20261028: information-first layout; no admin shell overrides. */
+body.admin-compact #socialAdmin{min-width:0;width:100%;max-width:1320px;margin-inline:auto}
+body.admin-compact #socialAdmin [hidden]{display:none!important}
+body.admin-compact #socialAdmin .social-admin-head{display:flex;align-items:center!important;justify-content:space-between;gap:16px;min-width:0;margin:0 0 16px}
+body.admin-compact #socialAdmin .social-admin-head>div:first-child{min-width:0;flex:1}
+body.admin-compact #socialAdmin .social-admin-head h2{font-size:clamp(21px,2vw,25px)!important;line-height:1.3;margin:4px 0 6px}
+body.admin-compact #socialAdmin .social-admin-head .operations-copy{font-size:13px;line-height:1.55;color:#536478;max-width:860px;white-space:normal;margin:0}
+body.admin-compact #socialAdmin .social-admin-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;flex:0 0 auto}
+body.admin-compact #socialAdmin .social-admin-actions>*{min-height:38px;white-space:nowrap}
+body.admin-compact #socialAdmin .social-overview-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+body.admin-compact #socialAdmin .social-overview-metric{padding:13px 16px;background:#fff;border:1px solid #dce5ee;border-radius:12px;display:flex;flex-direction:column;gap:4px;box-shadow:none}
+body.admin-compact #socialAdmin .social-overview-metric small{font-size:12px;color:#586b80;line-height:1.45}
+body.admin-compact #socialAdmin .social-overview-metric strong{font-size:24px;line-height:1.25;font-weight:700;color:#142740;font-variant-numeric:tabular-nums}
+body.admin-compact #socialAdmin .social-workspace-tabs{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:thin;border-bottom:1px solid #dce5ee;margin:0 0 16px;padding:0 0 8px}
+body.admin-compact #socialAdmin .social-workspace-tab{appearance:none;white-space:nowrap;cursor:pointer;border:1px solid transparent;background:transparent;color:#536579;font:inherit;font-size:14px;font-weight:650;padding:10px 14px;border-radius:9px;min-height:42px;transition:background-color .15s ease,color .15s ease}
+body.admin-compact #socialAdmin .social-workspace-tab:hover{background:#edf3fa;color:#15395e}
+body.admin-compact #socialAdmin .social-workspace-tab.active{background:#eaf1f9;border-color:#cbdaeb;color:#12365c}
+body.admin-compact #socialAdmin .social-workspace-tab:focus-visible{outline:2px solid #3563a8;outline-offset:2px}
+body.admin-compact #socialAdmin .social-site-directory,
+body.admin-compact #socialAdmin .social-connections,
+body.admin-compact #socialAdmin .social-publishing-registry,
+body.admin-compact #socialAdmin .social-policy-panel{min-width:0;background:#fff!important;color:#182b42!important;border:1px solid #dce5ee!important;border-radius:14px!important;padding:18px!important;box-shadow:none!important}
+body.admin-compact #socialAdmin .social-channel-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px 12px;margin-bottom:12px}
+body.admin-compact #socialAdmin .social-channel-head h3{font-size:17px;color:#142b44;margin:0}
+body.admin-compact #socialAdmin .social-channel-head span{font-size:12px;color:#64748b}
+body.admin-compact #socialAdmin .social-directory-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+body.admin-compact #socialAdmin .social-directory-toolbar input{width:min(100%,360px);min-height:40px;border:1px solid #cbd6e3;border-radius:9px;background:#fff;color:#172b42;padding:8px 12px;font-size:13px}
+body.admin-compact #socialAdmin .social-site-directory-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+body.admin-compact #socialAdmin .social-site-directory-card{min-width:0;display:flex;flex-direction:column;gap:10px;justify-content:space-between;background:#f8fafc;border:1px solid #e0e7ef;border-radius:10px;padding:12px}
+body.admin-compact #socialAdmin .social-site-directory-copy{min-width:0;display:flex;flex-direction:column;gap:4px}
+body.admin-compact #socialAdmin .social-site-directory-copy small{font-size:11px;color:#64748b}
+body.admin-compact #socialAdmin .social-site-directory-copy strong{font-size:14px;color:#172f4b}
+body.admin-compact #socialAdmin .social-site-directory-copy span{font-size:12px;color:#64748b;overflow-wrap:anywhere}
+body.admin-compact #socialAdmin .social-site-directory-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+body.admin-compact #socialAdmin .social-site-directory-actions>*{font-size:12px;line-height:1.25;min-height:36px;white-space:normal}
+body.admin-compact #socialAdmin .social-policy-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin:12px 0}
+body.admin-compact #socialAdmin .social-policy-actions>*{min-height:40px}
+body.admin-compact #socialAdmin .social-admin-status{font-size:12px;line-height:1.5;padding:10px 12px;margin:8px 0 12px}
+body.admin-compact #socialAdmin .social-scope-bar{display:flex;align-items:end;flex-wrap:wrap;gap:10px!important;margin-bottom:12px}
+body.admin-compact #socialAdmin .social-scope-bar .social-field.wide{flex:1 1 260px}
+body.admin-compact #socialAdmin .social-connection-actions{display:flex;flex-wrap:wrap;gap:8px}
+body.admin-compact #socialAdmin .social-connection-actions>*{min-height:38px}
+body.admin-compact #socialAdmin .social-org-list{min-width:0}
+@media(max-width:1100px){
+  body.admin-compact #socialAdmin .social-overview-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  body.admin-compact #socialAdmin .social-site-directory-list{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:760px){
+  body.admin-compact #socialAdmin .social-admin-head{flex-direction:column;align-items:stretch!important;gap:12px}
+  body.admin-compact #socialAdmin .social-admin-actions{justify-content:flex-start;width:100%}
+  /* Use a real 2x2 task grid instead of visually clipped 4-in-one mobile tabs. */
+  body.admin-compact #socialAdmin .social-workspace-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;overflow:visible;margin-bottom:12px}
+  body.admin-compact #socialAdmin .social-workspace-tab{width:100%;min-width:0;max-width:100%;white-space:normal;overflow-wrap:break-word;text-align:center;line-height:1.35}
+  body.admin-compact #socialAdmin .social-site-directory,
+  body.admin-compact #socialAdmin .social-connections,
+  body.admin-compact #socialAdmin .social-publishing-registry,
+  body.admin-compact #socialAdmin .social-policy-panel{padding:12px!important}
+  body.admin-compact #socialAdmin .social-workspace-tab{min-height:44px;padding:10px 12px}
+  body.admin-compact #socialAdmin .social-overview-metric{padding:10px 12px}
+  body.admin-compact #socialAdmin .social-overview-metric strong{font-size:21px}
+  body.admin-compact #socialAdmin .social-directory-toolbar input{width:100%}
+  body.admin-compact #socialAdmin .social-site-directory-actions>*{min-height:44px}
+}
+@media(prefers-reduced-motion:reduce){body.admin-compact #socialAdmin .social-workspace-tab{transition:none}}
+
+/* SOCIAL-MOBILE-TABS-UNCLIPPED-20261028: 2x2 tab buttons must fit their grid cells. */
+@media(max-width:760px){
+  body.admin-compact #socialAdmin .social-workspace-tabs{
+    min-width:0;
+    width:100%;
+    box-sizing:border-box!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  body.admin-compact #socialAdmin .social-workspace-tabs > .social-workspace-tab{
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    min-height:46px!important;
+    padding:9px 8px!important;
+    font-size:13px!important;
+    line-height:1.35!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:keep-all!important;
+    text-overflow:clip!important;
+  }
+}

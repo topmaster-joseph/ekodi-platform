@@ -25,8 +25,12 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/deploy-site-core.yml'
+      - '.github/workflows/stage-shared-site-shell.yml'
+      - 'scripts/site-core-staging-10500-recovery.mjs'
+      - 'test/site-core-staging-10500-recovery.test.mjs'
       - 'scripts/converge-orchestrated-pr-merge.mjs'
       - 'site-worker.js'
+      - 'admin-address-policy.js'
       - 'mall-product-jsonld.js'
       - 'site-shell-worker.js'
       - 'ekodi-shell-injector.js'
@@ -77,6 +81,7 @@ on:
       - 'test/tenant-admin-command-home.test.mjs'
       - 'test/tenant-live-admin.test.mjs'
       - 'test/realtime-live-collaboration.test.mjs'
+      - 'invest-access-ui.js'
       - 'invest-user-page.js'
       - 'invest-subject-ui.js'
       - 'invest-site-system.js'
@@ -356,6 +361,7 @@ on:
       - 'scripts/admin-authenticated-e2e-retry.mjs'
       - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
       - 'scripts/verify-admin-production-ui-e2e.mjs'
+      - 'scripts/admin-production-ui-coverage.mjs'
       - 'scripts/ekodi-background-browser-worker.mjs'
       - 'scripts/validate-background-browser-worker.mjs'
       - 'config/background-browser-worker-policy.json'
@@ -533,7 +539,8 @@ jobs:
   deploy:
     needs: [staging_gate, reliability_gate]
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    # 227 registered routes exceeded22m across candidate/production; preserve rollback headroom.
+    timeout-minutes: 45
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -703,7 +710,7 @@ jobs:
           test -f deploy/manifests/shared-site.worker.json
           grep -Fq '/auth-workspace-target.js' canonical-surface-router.js
           grep -Fq '/marketing-ai-admin.js' site-worker.js
-          grep -Fq "const LIVE = 'https://marketing.ekodi.kr/';" marketing-ai-admin.js
+          grep -Fq "const LIVE = 'https://ekodi.kr/ekodibiz/marketing-ai/';" marketing-ai-admin.js
           grep -Fq 'marketing-ai-user-link' marketing-ai-admin.js
           grep -Fq "styles: ['marketing-ai-admin.css']" admin-demand-loader.js
           grep -Fq "scripts: ['marketing-ai-admin.js']" admin-demand-loader.js
@@ -777,7 +784,7 @@ jobs:
           grep -Fq 'Canonical site: https://ekodi.kr/' dist/llms.txt
           grep -Fq 'data-ekodi-discovery="v2"' dist/index.html
           grep -Fq 'dataset.seamlessSso' dist/auth-bootstrap.js
-          grep -Fq "./auth-router.js?v=20261028-singles-choose-account" dist/auth-entry.js
+          grep -Fq "./auth-router.js?v=20261101-live-church-return-1" dist/auth-entry.js
           grep -Fq 'workspace_key:requested' dist/auth-workspace-target.js
           grep -Eq 'admin-design-engine\.js\?v=[a-f0-9]{16}' dist/admin-menu-registry.js
           grep -Eq 'ekodibiz-admin-registry\.js\?v=[a-f0-9]{16}' dist/admin-menu-runtime.js
@@ -1306,23 +1313,27 @@ jobs:
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: site-core
-      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/admin/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
       surface_registry: config/board-surface-verification.json
       device_profile: desktop
 
   native_surface_verification_mobile:
     name: EKODI Native Surface Verification · Mobile
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_surface_verification_desktop]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: site-core
-      surface_paths: /,/my/,/admin/,/ekodimall/admin,/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
+      surface_paths: /,/my/,/admin/,/ekodimall/admin,/admin/control,/ekodibiz/seasonal-workers/,/ekodibiz/seasonal-workers/demand,/ekodibiz/seasonal-workers/mou,/ekodibiz/seasonal-workers/office
       surface_registry: config/board-surface-verification.json
       device_profile: mobile-portrait
 
   native_research_verification_desktop:
     name: EKODI Research Native Verification · Desktop
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_surface_verification_mobile]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: research
@@ -1331,7 +1342,9 @@ jobs:
 
   native_research_verification_mobile:
     name: EKODI Research Native Verification · Mobile
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_research_verification_desktop]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
       verification_lane: research
@@ -1340,5 +1353,66 @@ jobs:
 
   authenticated_admin_surface_verification:
     name: EKODI Authenticated Admin Surface Verification
-    needs: deploy
+    # CF-QUOTA-001: default success() gates subsequent browser requests; stop on
+    # first failed predecessor (including HTTP 429/1027) without any retry/fan-out.
+    needs: [deploy, native_research_verification_mobile]
     uses: ./.github/workflows/verify-admin-production-ui-e2e.yml
+
+  post_promotion_browser_verification_receipt:
+    name: EKODI Post-Promotion Browser Verification Receipt
+    # Receipt-only job: no calls to production hosts, even after quota circuit opens.
+    needs: [deploy, native_surface_verification_desktop, native_surface_verification_mobile, native_research_verification_desktop, native_research_verification_mobile, authenticated_admin_surface_verification]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - name: Record exact verifier results and blocked predecessors
+        shell: bash
+        env:
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          NATIVE_DESKTOP_RESULT: ${{ needs.native_surface_verification_desktop.result }}
+          NATIVE_MOBILE_RESULT: ${{ needs.native_surface_verification_mobile.result }}
+          RESEARCH_DESKTOP_RESULT: ${{ needs.native_research_verification_desktop.result }}
+          RESEARCH_MOBILE_RESULT: ${{ needs.native_research_verification_mobile.result }}
+          ADMIN_RESULT: ${{ needs.authenticated_admin_surface_verification.result }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const jobs=[
+            ['deploy',process.env.DEPLOY_RESULT],
+            ['native_surface_verification_desktop',process.env.NATIVE_DESKTOP_RESULT],
+            ['native_surface_verification_mobile',process.env.NATIVE_MOBILE_RESULT],
+            ['native_research_verification_desktop',process.env.RESEARCH_DESKTOP_RESULT],
+            ['native_research_verification_mobile',process.env.RESEARCH_MOBILE_RESULT],
+            ['authenticated_admin_surface_verification',process.env.ADMIN_RESULT],
+          ];
+          const firstFailure=jobs.find(([name,state])=>state!=='success')?.[0]||null;
+          const evidence=jobs.map(([name,state],index)=>({
+            name,
+            result:state,
+            verification:state==='success'?'verified':state==='skipped'?'blocked':'failed',
+            reason:state==='skipped'?'upstream-failure-or-quota-circuit':state==='failure'?'see-failed-job-evidence':null,
+            predecessor:index===0?null:jobs[index-1][0],
+          }));
+          const verified=!firstFailure;
+          const receipt={policyId:'CF-QUOTA-001',schemaVersion:1,
+            releaseSha:process.env.GITHUB_SHA,
+            conclusion:verified?'verified':'blocked',
+            firstFailure,receiptJobProductionRequests:0,
+            evidence};
+          fs.writeFileSync('artifacts/site-core-postdeploy-browser-verification.json',JSON.stringify(receipt,null,2));
+          console.log('[EKODI][CF-QUOTA-001] postdeploy verification receipt:',JSON.stringify(receipt));
+          if(!verified)process.exitCode=1;
+          NODE
+      - name: Upload complete or blocked verification receipt
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-core-postdeploy-browser-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/site-core-postdeploy-browser-verification.json
+          if-no-files-found: error
+          retention-days: 30

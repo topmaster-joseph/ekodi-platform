@@ -10,6 +10,7 @@ on:
       - 'platform-boundaries.json'
       - 'docs/operations/bookstore-publishing-boundary.md'
       - 'test/bookstore-publishing-boundary.test.mjs'
+      - 'test/jubilee-series-review-gate.test.mjs'
       - '.github/workflows/publishing-boundary-ci.yml'
 
 permissions:
@@ -38,8 +39,40 @@ jobs:
           node --check publishing-worker.js
           node --check ekodi-service-manifest.js
           node --test test/bookstore-publishing-boundary.test.mjs
+          node --check publishing/jubilee-series/review-gate.js
+          node --test test/jubilee-series-review-gate.test.mjs
+          node --test test/jubilee-series-review-evidence.test.mjs
+          node --test test/jubilee-series-review-9-evidence.test.mjs
+          node --test test/jubilee-series-review-9-private-handoff.test.mjs
+          node --check publishing/jubilee-series/verify-private-handoff.mjs
+          node --test test/jubilee-series-private-handoff.test.mjs
+          python3 -m unittest discover -s test -p test_jubilee_private_zip.py -v
+          node --check publishing/jubilee-series/private-r2-ingest.mjs
+          node --test test/jubilee-series-private-r2-ingest.test.mjs
+          node --check publishing/jubilee-series/private-ingest-receipt.mjs
+          node --test test/jubilee-series-private-ingest-receipt.test.mjs
+          node --check publishing/jubilee-series/publisher-private-ingest-service.mjs
+          node --test test/jubilee-series-publisher-private-ingest-service.test.mjs
+          node --check publishing/human/scheduled-release.js
+          node --test test/human-publishing-scheduled-release.test.mjs
+          node --check publishing/human/private-release-store.js
+          node --check publishing/human/scheduled-release-runner.js
+          node --test test/human-publishing-private-release-store.test.mjs
+          node --check publishing/human/private-release-atomic-ledger.js
+          node --test test/human-publishing-private-atomic-ledger.test.mjs
+          node --check publishing/human/private-release-api.js
+          node --check publishing-worker.js
+          node --test test/human-publishing-private-release-api.test.mjs
+          node --check publishing/human/private-release-scheduler.js
+          node --test test/human-publishing-private-release-scheduler.test.mjs
+          node --check publishing/human/private-publisher-release-authority.js
+          node --test test/private-publisher-release-authority.test.mjs
+          node --check publishing/human/publisher-release-rpc-service.js
+          node --test test/publisher-release-rpc-service.test.mjs
+          node --test test/human-publishing-canonical-release-route.test.mjs
+          node --check publishing/private-releases/private-releases.js
+          test -s publishing/private-releases/index.html
           test -f wrangler.publishing.staging.toml
-
   isolated-staging:
     environment: development
     needs: contract
@@ -63,6 +96,13 @@ jobs:
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+      - name: Compile Publishing named RPC after Orchestrator release gate
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --dry-run \
+            --config wrangler.publishing.staging.toml \
+            --outdir /tmp/ekodi-publishing-rpc-bundle
+          test -d /tmp/ekodi-publishing-rpc-bundle
       - name: Deploy isolated Publishing staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.publishing.staging.toml
       - name: Verify independent Publishing staging

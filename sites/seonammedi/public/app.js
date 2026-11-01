@@ -215,7 +215,7 @@ function renderTimelineFilters(){
   host.innerHTML=TIMELINE_FILTERS.map(cat=>'<button data-cat="'+escapeHtml(cat)+'" class="'+(cat===activeTimelineCategory?'active':'')+'">'+escapeHtml(cat)+'</button>').join('');
   if(host.dataset.bound!=='1'){
     host.dataset.bound='1';
-    host.addEventListener('click',event=>{const button=event.target.closest('button[data-cat]');if(!button)return;activeTimelineCategory=button.dataset.cat;renderTimelineFilters();renderPublicTimeline();});
+    host.addEventListener('click',event=>{const button=event.target.closest('button[data-cat]');if(!button)return;const category=button.dataset.cat;if(!TIMELINE_FILTERS.includes(category))return;activeTimelineCategory=category;setCategoryRoute('timeline',category);renderTimelineFilters();renderPublicTimeline();});
   }
 }
 const relatedNewsFilterMatches=(item,selected)=>{
@@ -599,6 +599,15 @@ function categoryFromMenuHash(prefix,allowed){
     return allowed.includes(value)?value:'전체';
   }catch{return '전체'}
 }
+// Keep a public category selection in the canonical URL for reload, sharing
+// and browser back/forward. pushState does not fire hashchange; click handlers
+// update the visible filter immediately, popstate restores it on navigation.
+function setCategoryRoute(prefix,category){
+  const allowed=prefix==='timeline'?TIMELINE_FILTERS:prefix==='committee-activity'?COMMITTEE_FILTERS:null;
+  if(!allowed||!allowed.includes(category))return;
+  const next='#'+prefix+(category==='전체'?'':'/'+encodeURIComponent(category));
+  if(location.hash!==next)history.pushState({view:viewAliases[prefix],category},'',next);
+}
 function showView(view,{updateHash=false}={}){
   if(view==='finance'){location.assign('https://ekodi.kr/seonammedi/admin/?panel=finance');return}
   const key=viewAliases[view]||'';
@@ -713,7 +722,7 @@ async function refreshNoticeSession(){
     return true;
   }catch{return false}
 }
-function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.origin+'/?compose=notice#notices');return u.href}
+function noticeLoginUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',siteMountBase()+'?compose=notice#notices');return u.href}
 function noticePermalink(id){return siteMountBase()+'notices/'+encodeURIComponent(id)}
 function noticeDate(item){const raw=item.publishedAt||item.updatedAt||'';return raw?new Date(raw).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'}):''}
 // SEONAMMEDI-EVENTS-VIEW-001 (2026-10-20, owner approved): this view holds the calendar's 행사·일정.
@@ -1473,7 +1482,8 @@ function renderCommitteeActivity(){
     filters.innerHTML=COMMITTEE_FILTERS.map(kind=>'<button type="button" data-committee-filter="'+escapeHtml(kind)+'" class="'+(kind===selectedCommitteeFilter?'active':'')+'">'+escapeHtml(kind)+'</button>').join('');
     if(filters.dataset.bound!=='1'){filters.dataset.bound='1';filters.addEventListener('click',event=>{
       const control=event.target.closest('[data-committee-filter]');if(!control)return;
-      selectedCommitteeFilter=control.dataset.committeeFilter;renderCommitteeActivity();
+      const category=control.dataset.committeeFilter;if(!COMMITTEE_FILTERS.includes(category))return;
+      selectedCommitteeFilter=category;setCategoryRoute('committee-activity',category);renderCommitteeActivity();
     })}
   }
   const search=el('committeeActivitySearch');

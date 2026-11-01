@@ -22,6 +22,8 @@ test('admin UI verifier changes retrigger guarded site deployment',()=>{
   assert.ok(start>=0&&stop>start);
   const site=release.slice(start,stop);
   assert.ok(site.includes('scripts/verify-admin-provider-control-production.mjs'));
+  assert.ok(site.includes("file==='admin-public-site-controls.js'"), 'public site controls must dispatch Site Core');
+  assert.ok(read('scripts/build.mjs').includes("'admin-public-site-controls.js'"), 'public site controls must be copied into Site Core');
   assert.ok(release.includes('if(sharedSiteTouched)'));
   assert.ok(release.includes('release_branch_ref:branch,release_task_id:taskId'));
 });

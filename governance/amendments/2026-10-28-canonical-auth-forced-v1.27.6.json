@@ -1,0 +1,47 @@
+{
+  "amendmentId": "CANONICAL-AUTH-ENTRY-FORCED-20261028",
+  "constitutionVersion": "1.27.6",
+  "approvedAt": "2026-10-28",
+  "approvedBy": "topmaster-joseph",
+  "status": "approved",
+  "changeClass": "C2",
+  "relatedDomainTopologyClass": "C3",
+  "taskId": "canonical-apex-auth-inheritance-20261028",
+  "summary": "Require every current and future first-party EKODI human login and administrator entry to use ekodi.kr/auth and ekodi.kr/admin (or site-owned /{site}/admin), with exact pre-login return and session reuse, as constitutionally inherited forced execution policy.",
+  "approvalBasis": "The EKODI Platform owner instructed in this conversation on 2026-10-28: '좋아 에코디랑 협의해서 헌법 및 강제실행규칙으로 설정해', after the all-site search found legacy auth/admin subdomains. Approval authorizes constitutional enforcement and protected source checks, not unverified provider callback or production DNS cutover.",
+  "forcedExecution": [
+    "EKODI Orchestrator is the only change/release coordinator; all agents and sites inherit the policy",
+    "only https://ekodi.kr/auth/ is a first-party login browser entry; admin is https://ekodi.kr/admin/ or canonical site-owned path",
+    "capture and validate exact trusted initiating page in return_to, preserving functional query and admin child path",
+    "reuse valid central sessions without re-login; never use /my as generic post-login fallback",
+    "site-scoped server RBAC and CSRF; apex origin alone cannot grant tenant authority",
+    "existing zero-subdomain diff guard forbids newly introduced legacy hosts; constitution validator rejects config/policy drift",
+    "code review, required CI, protected PR, guarded deployment and independent production canaries before completion"
+  ],
+  "migrationLimitations": [
+    "Historical login links and AUTH_URL config still require separate remediations and real canaries; declaring policy enforced does not mean they are all migrated.",
+    "Legacy OAuth, payment, webhook, CORS/CSP and external provider callbacks may be temporary registered dependencies only, never canonical user entrypoints.",
+    "Every host retirement needs per-host C3 evidence, provider callback update, reversible rollback, and separate approval for production DNS/bindings.",
+    "Customer-owned domains and mail MX/SPF/DKIM/DMARC must be preserved."
+  ],
+  "preserves": [
+    "C3 zero-subdomain approval and safeguards from v1.27.2",
+    "v1.27.3–v1.27.5 authentication return, session reuse, identity and no-relogin rules",
+    "EKODI sovereign authority, site-specific authorization and C3 owner gates",
+    "independent service/deployment boundaries under one public origin"
+  ],
+  "rollout": [
+    "commit constitutional policy+forced guards via official EKODI PR",
+    "required constitution/zero-subdomain/orchestrator/security CI",
+    "protected merge and guarded deployment",
+    "migrate remaining user-facing auth links and runtime defaults in service-scoped waves",
+    "verify Google login and exact return on real mobile/desktop; isolate legacy callbacks and safely retire verified web hosts"
+  ],
+  "rollback": "Through approved protected PR, revert only v1.27.6 policy/validator additions while preserving v1.27.2–v1.27.5 security and login continuity. Runtime migrations remain independently reversible; do not blindly restore old public subdomains.",
+  "approvalEvidence": {
+    "ownerInstructionRecorded": true,
+    "ownerInstructionDate": "2026-10-28",
+    "requiredPullRequestLabel": "constitution-approved"
+  },
+  "relatedIssue": 5798
+}

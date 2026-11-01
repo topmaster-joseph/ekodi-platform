@@ -1,6 +1,7 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { bibleCorePolicy, bibleProviderCatalog, readBiblePassage, readBibleReference, searchBible } from './bible-core.js';
 import { resolveDevotion, devotionShareText, isDevotionDate, seoulToday } from './devotional-activities.js';
+import DEVOTION_CARDS from './bible/og/manifest.json' with { type: 'json' };
 import { devotionAdminSession, devotionOverride, devotionViewer, saveDevotionOverride } from './devotional-admin-api.js';
 
 const MAX_MESSAGE = 4000;
@@ -278,6 +279,14 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
 }
 
+// Share card (1200x630): a dated card for months rendered by scripts/render-devotion-cards.mjs,
+// otherwise the generic card. Cards hold only the public scripture list (date, title, passage).
+export function devotionCardUrl(devotion) {
+  const month = devotion?.found ? String(devotion.date || '').slice(0, 7) : '';
+  const dated = month && Array.isArray(DEVOTION_CARDS.months) && DEVOTION_CARDS.months.includes(month);
+  return `https://ekodi.kr/bible/og/${dated ? `${devotion.date}.jpg` : DEVOTION_CARDS.generic || 'devotion.jpg'}`;
+}
+
 export function devotionMetaTags(devotion) {
   const title = devotion.found ? `에코디 매일묵상 · ${devotion.passage}` : '에코디 매일묵상';
   const description = devotion.found ? devotionShareText(devotion).split('\n').slice(1).join(' ') + ' · 시·노래·적용질문·기도' : '에코디 공통본문으로 시·노래·적용질문·기도까지 함께하는 매일묵상';
@@ -290,7 +299,13 @@ export function devotionMetaTags(devotion) {
     `<meta property="og:description" content="${escapeHtml(description)}">`,
     `<meta property="og:url" content="${escapeHtml(url)}">`,
     '<meta property="og:locale" content="ko_KR">',
-    '<meta name="twitter:card" content="summary">',
+    `<meta property="og:image" content="${escapeHtml(devotionCardUrl(devotion))}">`,
+    '<meta property="og:image:type" content="image/jpeg">',
+    '<meta property="og:image:width" content="1200">',
+    '<meta property="og:image:height" content="630">',
+    `<meta property="og:image:alt" content="${escapeHtml(devotion.found ? `오늘의 매일묵상 ${devotion.passage}` : '오늘의 매일묵상')}">`,
+    '<meta name="twitter:card" content="summary_large_image">',
+    `<meta name="twitter:image" content="${escapeHtml(devotionCardUrl(devotion))}">`,
     `<meta name="twitter:title" content="${escapeHtml(title)}">`,
     `<meta name="twitter:description" content="${escapeHtml(description)}">`,
   ].join('\n  ');

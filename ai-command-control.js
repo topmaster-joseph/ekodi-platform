@@ -29,7 +29,10 @@ import {
 } from './ekodi-orchestrator-task-adapter.js';
 import { collectPlatformRuntimeObservations } from './ekodi-platform-observer.js';
 import { runRuntimeAutonomicControlPlane } from './ekodi-autonomic-control-plane.js';
-import { buildFleetStatus, renderFleetStatusHtml } from './ekodi-fleet-status.js';
+import { buildFleetStatus, projectLiveFleetRegistry, renderFleetStatusHtml } from './ekodi-fleet-status.js';
+import ecosystemServices from './config/ecosystem-services.json' with { type: 'json' };
+import { githubOperationsSnapshot } from './github-operations-webhook.js';
+import {githubProbeReadModel,runGithubAppReadonlyCanary} from './github-app-probe-control.js';
 
 const PREFIX = '/api/control/ai/v8';
 const COLLABORATION_PATH = `${PREFIX}/collaboration-settings`;
@@ -162,6 +165,39 @@ export async function handleEkodiV8CommandControl(request, env) {
     if (!sessionCapabilityGranted(auth.session, requiredCapability)) return json(request, env, { error:'capability_required', capability:requiredCapability }, 403);
     return null;
   };
+
+  // Super-admin only: the explicit probe is a bounded READ-ONLY GitHub API
+  // measurement, not a GitHub write, dispatch or release. Browser cannot
+  // select repository, installation, scope, secret, operation or arbitrary URL.
+  if (url.pathname === PREFIX + '/github/readonly-probe') {
+    const denied = requirePlatformSuperAdmin('ai:operate'); if (denied) return denied;
+    if (request.method !== 'POST')
+      return json(request, env, {ok:false,code:'GITHUB_PROBE_POST_ONLY'},405);
+    if (!isSameOriginAdminMutation(request))
+      return json(request, env, {ok:false,code:'GITHUB_PROBE_SAME_ORIGIN_REQUIRED'},403);
+    if (!(request.headers.get('content-type')||'').toLowerCase().startsWith('application/json'))
+      return json(request, env, {ok:false,code:'GITHUB_PROBE_JSON_REQUIRED'},415);
+    const input=await readJson(request);
+    if (!input || Object.keys(input).length!==1 || input.confirm!=='readonly_quota_probe')
+      return json(request, env, {ok:false,code:'GITHUB_PROBE_CONFIRMATION_REQUIRED'},400);
+    const result=await runGithubAppReadonlyCanary(env);
+    return json(request,env,result,result.ok?200:503);
+  }
+
+  // Read-only GitHub operational evidence under existing platform super-admin authorization.
+  if (url.pathname === PREFIX + '/github') {
+    const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
+    if (request.method !== 'GET') return json(request, env, {ok:false,code:'GITHUB_CONTROL_READ_ONLY'},405);
+    try {
+      const [snapshot,probe]=await Promise.all([
+        githubOperationsSnapshot(env,url.searchParams.get('limit')||30),
+        githubProbeReadModel(env),
+      ]);
+      return json(request, env, {ok:true,...snapshot,probe});
+    } catch {
+      return json(request, env, {ok:false,code:'GITHUB_OPERATIONS_STORAGE_UNAVAILABLE'},503);
+    }
+  }
 
   // Read-only decision preview; never runs AI, issues tokens, or grants execution rights.
   if (request.method === 'POST' && url.pathname === `${PREFIX}/sovereignty/preview`) {
@@ -341,17 +377,31 @@ export async function handleEkodiV8CommandControl(request, env) {
   // into one operator view (JSON) and a human-readable board (HTML). It never
   // probes, mutates, or deploys; automatic rollback stays with guarded-release.
   if (request.method === 'GET' && (url.pathname === `${PREFIX}/fleet` || url.pathname === `${PREFIX}/fleet/view`)) {
-    const emptyRows = { results: [] };
+    // A failed D1 read is unknown evidence, never an empty successful check.
+    // Isolate each read so one missing table does not conceal valid failures
+    // reported by the other source.
+    const readRows = async (sql) => {
+      try {
+        const result = await env.DB.prepare(sql).all();
+        if (!Array.isArray(result?.results)) throw new Error('invalid_read_model');
+        return { rows: result.results, failed: false };
+      } catch {
+        return { rows: [], failed: true };
+      }
+    };
     const [latestRes, envRes] = await Promise.all([
-      env.DB.prepare('SELECT service_id, status, http_status, response_ms, detail, checked_at FROM service_check_latest')
-        .all().catch(() => emptyRows),
-      env.DB.prepare('SELECT environment, service_id, service_name, host, status, http_status, response_ms, detail, checked_at FROM cloudflare_environment_checks')
-        .all().catch(() => emptyRows),
+      readRows('SELECT service_id, status, http_status, response_ms, detail, checked_at FROM service_check_latest'),
+      readRows('SELECT environment, service_id, service_name, host, status, http_status, response_ms, detail, checked_at FROM cloudflare_environment_checks'),
     ]);
     const model = buildFleetStatus({
       now: new Date().toISOString(),
-      latestChecks: latestRes?.results || [],
-      environmentChecks: envRes?.results || [],
+      latestChecks: latestRes.rows,
+      environmentChecks: envRes.rows,
+      registryServices: projectLiveFleetRegistry(ecosystemServices.services),
+      observationFailures: [
+        latestRes.failed && 'service_check_latest',
+        envRes.failed && 'cloudflare_environment_checks',
+      ].filter(Boolean),
     });
     if (url.pathname === `${PREFIX}/fleet/view`) {
       return new Response(renderFleetStatusHtml(model), {

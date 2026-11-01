@@ -7,6 +7,12 @@ function client(){
   const KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const API=`${SUPABASE_URL}/functions/v1/workspace-api`;
   const WORKSPACE='ekoditrade';
+  // Retain the one-use proof only in memory while its SDK loads. Never leave
+  // handoff credentials in an address while a third-party script is pending.
+  const handoffParams=new URLSearchParams(location.hash.slice(1));
+  const pendingProof=handoffParams.get('ekodi_token');
+  const pendingProofType=handoffParams.get('ekodi_type')||'email';
+  if(pendingProof)history.replaceState(null,document.title,location.pathname+location.search);
   const $=id=>document.getElementById(id);
   const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const roleLabel=r=>({workspace_admin:'에코디비즈 전체관리자',trade_admin:'무역 전체관리자',trade_manager:'거래 운영관리자',trade_viewer:'조회 관리자',counterparty_admin:'상대회사 관리자',counterparty_member:'상대회사 관계자'}[r]||r||'-');
@@ -15,11 +21,17 @@ function client(){
   async function session(){const {data,error}=await sb.auth.getSession();if(error)throw error;return data.session;}
   async function api(path,options={}){const s=await session();if(!s?.access_token)throw Object.assign(new Error('login_required'),{status:401});const headers={apikey:KEY,Authorization:`Bearer ${s.access_token}`,...(options.body?{'content-type':'application/json'}:{})};const response=await fetch(`${API}${path}`,{method:options.method||'GET',headers,body:options.body?JSON.stringify(options.body):undefined,cache:'no-store'});const data=await response.json().catch(()=>({}));if(!response.ok)throw Object.assign(new Error(data.error||`api_${response.status}`),{status:response.status});return data;}
   async function consume(){
-    const params=new URLSearchParams(location.hash.slice(1));const token=params.get('ekodi_token');if(!token)return;
-    const {error}=await sb.auth.verifyOtp({token_hash:token,type:params.get('ekodi_type')||'email'});if(error)throw error;
-    history.replaceState({},document.title,location.pathname+location.search);
+    if(!pendingProof)return;
+    const {error}=await sb.auth.verifyOtp({token_hash:pendingProof,type:pendingProofType});
+    if(error)throw error;
   }
-  function login(){const url=new URL('https://auth.ekodi.kr/');url.searchParams.set('site','trade');url.searchParams.set('return_to',location.origin+location.pathname);location.assign(url.href);}
+  function login(){
+    const url=new URL('https://ekodi.kr/auth/');
+    const original=new URL(location.href);original.hash='';
+    url.searchParams.set('site','trade');
+    url.searchParams.set('return_to',original.href);
+    location.assign(url.href);
+  }
   function signedOut(){
     $('accountEmail').textContent='관계자 전용';$('logout').classList.add('hidden');$('companyPanel').classList.add('hidden');$('workPanel').classList.add('hidden');$('introPanel').classList.remove('hidden');
     $('introPanel').innerHTML='<h2>거래 관계자 로그인</h2><p class="empty">에코디비즈 관계자와 사전에 등록된 상대회사 관계자만 이용할 수 있습니다. 처음에는 Google 로그인으로 EKODI ID를 연결합니다.</p><div class="actions"><button class="button primary" id="loginButton" type="button">Google로 로그인</button></div>';
@@ -102,7 +114,15 @@ function client(){
       if(companies.length)await selectCompany(companies[0].id);else state('회사 연결 대기');
     }catch(error){$('introPanel').classList.remove('hidden');$('introPanel').innerHTML=`<h2>접근할 수 없습니다.</h2><p class="empty">에코디비즈 관계자 또는 승인된 무역 상대회사 관계자 계정이 필요합니다.</p><p class="flash">${escape(error.message)}</p>`;state('권한 없음');}
   }
-  boot().catch(error=>{console.error('trade partner portal',error);signedOut();});
+  // Unavailable SDK/API calls must not leave the page stuck at "checking".
+  const startupWatchdog=setTimeout(()=>{
+    if($('pageState').textContent!=='확인 중')return;
+    state('연결 확인 지연');
+    $('introPanel').innerHTML='<h2>연결 확인이 지연되고 있습니다.</h2><p class="empty">계정이나 회사 권한이 확인되지 않았습니다. 안전하게 다시 시도해 주세요.</p><button class="button" id="tradeRetry" type="button">다시 확인</button>';
+    $('tradeRetry').onclick=()=>location.reload();
+  },12000);
+  boot().catch(error=>{console.error('trade partner portal',error);signedOut();})
+    .finally(()=>clearTimeout(startupWatchdog));
 }
 
 export function tradePartnerPage(){return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow,noarchive"><title>거래업무 · 에코디비즈</title><link rel="stylesheet" href="/workspace-trade-portal.css"></head><body><header class="top"><a class="brand" href="https://ekodi.kr/ekodibiz">EKODIBIZ</a><span class="context">SUPPLIER PRODUCT WORKSPACE</span><div class="account"><span id="accountEmail">확인 중</span><button id="logout" class="quiet hidden" type="button">로그아웃</button></div></header><main class="shell"><section class="hero"><div><span class="eyebrow">PRIVATE TRADE WORKSPACE · SUPPLIER PRODUCT</span><h1>제품을 함께 준비하고,<br>진행과 결정을 공유합니다.</h1><p>제품 공급자는 자기 회사에 연결된 제품·사업만 확인하고, 에코디비즈와 진행상황·문서·요청사항·공식기록을 안전하게 공유합니다.</p></div><span class="state" id="pageState">확인 중</span></section><section id="introPanel" class="panel"><p class="empty">계정과 회사 연결을 확인하고 있습니다.</p></section><section id="companyPanel" class="panel hidden"><h2>내 공급회사</h2><div id="companyTabs" class="company-tabs"></div></section><section id="workPanel" class="hidden"><section class="panel"><div class="row-head"><div><h2 id="companyTitle">공급회사</h2><p id="companyMeta" class="empty"></p></div></div><div class="summary" id="summary"></div></section><section class="grid"><section class="panel"><h2>제품 · 업무 진행</h2><div id="engagementList"></div><div id="engagementEditor"></div></section><section class="panel"><h2>업무 공유 · 공식 기록</h2><div id="recordList"></div><div id="recordEditor"></div></section></section><section id="memberPanel" class="panel hidden"></section></section></main><script src="/workspace-trade-portal.js" defer></script></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer','content-security-policy':"default-src 'self'; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://cdn.jsdelivr.net; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",'x-ekodi-route':'trade-partner-workspace'}})}

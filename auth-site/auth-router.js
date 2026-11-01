@@ -3,7 +3,7 @@ const params=url.searchParams;
 const legacySiteAliases=Object.freeze({'mall-seller':'mall'});
 const targetableWorkspaceSites=new Set(['cgma','marketing','biz','trade','mall','pay','books','church','lab','mission','community','edu','media','social','energy','messenger','invest']);
 const privateClientSites=new Set(['cgma-client','jadam-client','pizzamaru-client','yogurt-client']);
-const firstPartyClientSites=new Set(['ai','seonammedi','singles']);
+const firstPartyClientSites=new Set(['ai','seonammedi','singles','management']);
 
 let changed=false;
 const requestedSite=params.get('site');
@@ -51,21 +51,31 @@ async function manifestService(id){
   }catch{return null}
 }
 async function loadMarketingAuth(){
-  try{return await import('./marketing-auth-hotfix.js?v=20260824-return-origin-1')}
+  try{return await import('./marketing-auth-hotfix.js?v=20261031-apex-return-1')}
   catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
 }
 async function loadClientAuth(){
-  try{return await import('./client-auth.js?v=20261028-singles-choose-account')}
+  try{return await import('./client-auth.js?v=20261101-live-church-return-1')}
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 
 // Naver/Kakao callbacks return here without site/return_to; the federated module restores them.
 // Dormant providers never issue a callback, so this is a no-op until an operator enables one.
 let federated=null;
-try{federated=await import('./federated-login.js?v=20261027-federated-1')}catch(error){console.warn('federated login module unavailable',error)}
+try{federated=await import('./federated-login.js?v=20261101-merge-execute-1')}catch(error){console.warn('federated login module unavailable',error)}
 const federatedHandled=federated?await federated.handleCallback():false;
 
 if(federatedHandled){/* the federated module owns this page load */}
+else if(site!=='admin'&&params.get('ekodi_email_action')==='reset'){
+  // A recovery OTP screen must run before regular session handoff/Google auto-login.
+  const mounted=await import('./email-password.js').then(m=>m.mountEmailPassword({resetOnly:true})).catch(()=>false);
+  if(!mounted){
+    const status=document.getElementById('authStatus');
+    if(status)status.textContent='이메일 비밀번호 재설정은 현재 준비 중입니다. 기존 로그인 방식을 사용해 주세요.';
+    const back=document.getElementById('cancelSignedOut');
+    if(back){back.classList.remove('hide');back.addEventListener('click',()=>location.replace('/auth/'));}
+  }
+}
 else if(site==='admin')await import('./admin-auth.js?v=20260918-canonical-origin-2');
 else if(site==='author')await import('./author-auth.js?v=20260816-author-ai-1');
 else if(site==='business')await import('./business-auth.js?v=20260826-free-fallback-1');
@@ -78,12 +88,18 @@ else{
   const trustedEkodiReturn=hasTrustedEkodiReturn();
   if(!targetedWorkspace&&site!=='marketing'&&(site==='portal'||isRegistryUserService||firstPartyClientSites.has(site)||trustedEkodiReturn))await loadClientAuth();
   else{
-    await import('./auth.js?v=20260824-return-origin-1');
-    if(targetedWorkspace)await import('./auth-workspace-target.js?v=20260817-all-sites-1');
+    await import('./auth.js?v=20261101-merge-execute-1');
+    if(targetedWorkspace)await import('./auth-workspace-target.js?v=20261101-live-church-return-1');
     if(site==='marketing')await import('./marketing-onboarding.js?v=20260817-workspace-label-1');
     await import('./membership-ui.js');
   }
 }
 
 // Additional sign-in paths for EKODI accounts (shown only when enabled; never on the admin console).
-if(!federatedHandled&&federated&&site!=='admin')federated.renderLoginButtons().catch(error=>console.warn('federated buttons',error));
+if(!federatedHandled&&federated&&site!=='admin'&&params.get('ekodi_email_action')!=='reset')federated.renderLoginButtons().catch(error=>console.warn('federated buttons',error));
+
+// Optional EKODI Mail/password entry stays hidden until the identity backend
+// confirms BOTH email ownership enforcement and EKODI Mail sender readiness.
+if(!federatedHandled&&site!=='admin'&&params.get('ekodi_email_action')!=='reset'){
+  import('./email-password.js').then(m=>m.mountEmailPassword()).catch(error=>console.warn('email auth module unavailable',error));
+}

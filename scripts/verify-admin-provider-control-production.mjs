@@ -36,6 +36,46 @@ if(bundle){
   }
 }
 
+
+/* Security Admin workspace production contract.
+ * Only public, static Admin assets and the unauthenticated shell are inspected.
+ * Never request credentials or invoke Secret registration APIs.
+ */
+const securityShell=await get('/admin/accounts/security');
+if(securityShell){
+  if(securityShell.status!==200) failures.push(`/admin/accounts/security: expected 200, got ${securityShell.status}`);
+  if(securityShell.status===200){
+    const route=securityShell.headers.get('x-ekodi-route');
+    if(route!=='admin-shell') failures.push(`/admin/accounts/security: x-ekodi-route=${route||'(missing)'}, expected admin-shell`);
+    const cache=securityShell.headers.get('cache-control')||'';
+    if(!/no-store/i.test(cache)) failures.push('/admin/accounts/security: admin shell must remain no-store');
+  }
+}
+
+for(const check of [
+  {path:'/admin/admin-secret-generator.css',markers:[
+    'Security workspace v2',
+    '.admin-secret-auto-card:has(>.ekodi-provider-context)',
+    '.ekodi-provider-context>div:has([data-ekodi-cf-worker])'
+  ]},
+  {path:'/admin/admin-secret-generator.js',markers:[
+    'admin-secret-setup',
+    "field.addEventListener('change', resetReplaceMode)",
+    'EKODIAdminAIControlPlane'
+  ]}
+]){
+  const response=await get(check.path);
+  if(!response)continue;
+  if(response.status!==200){
+    failures.push(`${check.path}: expected 200, got ${response.status}`);
+    continue;
+  }
+  const source=await response.text();
+  for(const marker of check.markers){
+    if(!source.includes(marker))failures.push(`${check.path}: expected security UI marker missing: ${marker}`);
+  }
+}
+
 const raw=await get('/admin-provider-control.js');
 if(raw && raw.status!==404){
   failures.push(`/admin-provider-control.js: expected non-public source boundary 404, got ${raw.status}`);
@@ -47,4 +87,4 @@ if(failures.length){
   process.exit(1);
 }
 
-console.log('EKODI Provider Control production verified: canonical /admin/status/aiops shell + bundled /ai-ops-admin.js markers; raw source remains non-public.');
+console.log('EKODI Provider Control + Security Admin workspace production verified: canonical routes, bundled assets, target-change guard and non-public source boundary.');

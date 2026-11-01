@@ -227,7 +227,18 @@
     if(current)renderInvoices(current);
     $('[data-infra-invoice-search]').focus();
   });
-  const observer=new MutationObserver(()=>{if(!root.hidden&&!root.classList.contains('hidden-panel'))load()});
+  // Visibility is not enough: the shared Admin workspace may preserve a deep
+  // scroll offset from another panel. Reset only when this panel becomes active.
+  let costPanelWasActive=false;
+  const observer=new MutationObserver(()=>{
+    const active=!root.hidden&&!root.classList.contains('hidden-panel');
+    if(active&&!costPanelWasActive){
+      const workspace=content.closest('main');
+      if(workspace)workspace.scrollTop=0;
+      load();
+    }
+    costPanelWasActive=active;
+  });
   observer.observe(root,{attributes:true,attributeFilter:['hidden','class']});
   if(location.pathname.endsWith('/'+SECTION)||location.hash==='#'+SECTION)queueMicrotask(()=>load());
   window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:SECTION}}));

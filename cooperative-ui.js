@@ -1,4 +1,6 @@
+import { COOP_LAUNCH_TASKS, COOP_LAUNCH_STAGES, cooperativeProgressSummary, cooperativeLaunchGuidance } from './cooperative-progress.js';
 import { COOP_DOCUMENTS } from './cooperative-registry.js';
+import { cooperativePreparation } from './cooperative-preparation.js';
 
 export function cooperativeCss() {
   return `
@@ -6,11 +8,14 @@ export function cooperativeCss() {
 @media(max-width:950px){.wrap{width:calc(100% - 40px)}.brand{font-size:17px}.header-inner{min-height:88px;gap:18px}nav{gap:14px;font-size:11px}.hero{min-height:490px;gap:15px}.hero-description{font-size:14px}.about-grid{gap:45px}.business-copy{padding:22px}.footer-links{gap:12px}}
 @media(max-width:680px){.wrap{width:calc(100% - 32px)}.header-inner{align-items:stretch;flex-direction:column;gap:12px;padding-block:17px;min-height:0}.brand{font-size:19px}.brand-mark{width:36px;height:36px;font-size:22px}nav{gap:14px;flex-wrap:wrap;justify-content:space-between;font-size:11px}.nav-action{padding:6px 9px}.hero{grid-template-columns:1fr;gap:0;min-height:0;padding-top:37px;padding-bottom:28px}.hero h1{font-size:42px;line-height:1.3;margin-bottom:20px}.hero-description{max-width:100%;font-size:14px;line-height:1.8}.hero-visual{margin-top:16px}.art-caption{font-size:10px}.hero-note{margin-top:15px}.principles{padding-block:17px;gap:10px}.principles div,.principles div:first-child{padding-left:10px}.principles div:first-child{padding-left:0}.principles strong{font-size:12px}.principles span{font-size:10px;line-height:1.6}.section{padding-block:39px}.section-heading{margin-bottom:22px}.section-heading h2{font-size:27px}.about-grid{grid-template-columns:1fr;gap:24px}.large-copy{font-size:18px}.about-detail>p{font-size:12px;padding-block:10px}.row-heading{display:block}.row-heading>p{margin-top:12px}.business-grid{grid-template-columns:1fr;gap:13px}.business-card{min-height:0}.business-copy{padding:22px}.business-card h3{margin-top:10px;font-size:19px}.business-card p{font-size:12px}.card-index{font-size:19px}.card-tag{margin-top:8px}.journey{grid-template-columns:1fr 1fr;gap:22px}.journey h3{font-size:14px;margin-top:10px}.journey p{font-size:11px}.notice-list article{padding:19px}.join-banner{display:block;padding:26px;margin-bottom:40px}.join-banner h2{font-size:21px}.join-banner .button{margin-top:20px}.footer-inner{grid-template-columns:1fr;gap:15px}.footer-links{gap:15px;font-size:10px}.stats{grid-template-columns:1fr 1fr;gap:10px}.stat{padding:15px}.stat b{font-size:21px}.workspace-heading h1{font-size:26px}.workspace-heading>.badge{white-space:nowrap}.workspace-heading p:not(.eyebrow){font-size:12px}.private-main{padding-top:26px}.form-grid{grid-template-columns:1fr}.card{padding:19px}.member-grid,.check-grid{grid-template-columns:1fr}.tabs{gap:5px}.tabs button{font-size:11px;padding:7px 10px}.table td{padding:10px 7px}.table{font-size:11px}.form-help{font-size:10px!important}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+ .progress-task{border:1px solid var(--line);border-radius:12px;margin:12px 0;min-width:0}.progress-task summary{cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:16px;word-break:keep-all}.progress-task summary span{font-size:12px;color:var(--muted);white-space:normal}.progress-body{padding:0 16px 16px}.progress-body p,.progress-body label,.progress-phases strong{word-break:keep-all;overflow-wrap:normal}.progress-filter{display:block;max-width:300px;margin-top:20px}.progress-phases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.progress-phases div{display:flex;flex-direction:column;gap:6px;background:var(--accent-light);padding:12px;border-radius:10px;min-width:0}.progress-phases span{font-size:12px}.progress-body .full{grid-column:1/-1}@media(max-width:760px){.progress-phases{grid-template-columns:1fr 1fr}.progress-task summary{grid-template-columns:1fr;gap:6px}}@media(max-width:420px){.progress-phases{grid-template-columns:1fr}}
+ .launch-guidance{margin-block:18px;word-break:keep-all}.launch-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.launch-action{min-width:0;border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--paper)}.launch-action h3{margin:12px 0 8px}.launch-action p{white-space:pre-wrap;overflow-wrap:anywhere}.launch-action .actions{align-items:stretch}.launch-action .button{gap:8px;min-height:44px}.launch-uncertainties{margin-block:18px;border:1px solid var(--line);border-radius:10px;padding:14px}.launch-uncertainties summary{cursor:pointer;min-height:40px}.launch-uncertainties li{margin-block:12px}.launch-guidance .quiet{min-height:40px}.launch-guidance .notice-small p{margin-block:8px}@media(max-width:1100px){.launch-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:680px){.launch-actions{grid-template-columns:1fr}}
+ .preparation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.preparation-grid form{padding:18px;border:1px solid var(--line);border-radius:12px;min-width:0}.preparation-grid h3{margin:0}.preparation-grid textarea{min-height:340px;line-height:1.7}.preparation-grid .button{min-height:44px;gap:8px}.preparation-packet{margin-block:20px;padding:16px;border:1px solid var(--line);border-radius:12px;min-width:0}.preparation-packet summary{cursor:pointer;min-height:40px;word-break:keep-all}.preparation-packet pre{font:inherit;font-size:13px;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}.preparation-drafts p,.preparation-drafts label{word-break:keep-all}@media(max-width:850px){.preparation-grid{grid-template-columns:1fr}}
 @media print{nav,.tabs,.form-actions,button,.gate,.site-footer{display:none!important}.wrap{width:100%}.site-header{position:static}.card{break-inside:avoid;border-color:#aaa}body{background:#fff;color:#111}.table-wrap{overflow:visible}.table input{min-width:0}.private-main{min-height:0}}
 `;
 }
 
-function clientMain(documents) {
+function clientMain(documents, launchTasks, launchStages, progressSummary, launchGuidance, preparation) {
   'use strict';
   const root = document.documentElement;
   const slug = root.dataset.coopSlug;
@@ -36,12 +41,20 @@ function clientMain(documents) {
     COOP_SERVICE_UNAVAILABLE: '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',
     COOP_INVALID_NUMBER: '출자좌수와 금액을 올바른 숫자로 입력해 주세요.',
     COOP_INVALID_DATE: '날짜를 확인해 주세요.',
+    COOP_PROGRESS_INVALID: '체크리스트 입력 형식을 확인해 주세요.',
+    COOP_PROGRESS_NOTE_TOO_LONG: '작성 내용은 2,000자 이내로 입력해 주세요. 초과한 내용은 저장하거나 자르지 않았습니다.',
+    COOP_PROGRESS_ID: '이 조합의 체크항목인지 확인해 주세요.',
+    COOP_PROGRESS_EXCLUSION: '필수 항목은 제외할 수 없습니다. 조건부 항목은 제외 사유를 입력해 주세요.',
+    COOP_PROGRESS_STATUS: '진행 상태를 확인해 주세요.',
+    COOP_PROGRESS_VERSION: '체크리스트 형식이 변경되었습니다. 입력 내용을 보관하고 다시 불러와 주세요.',
     COOP_ACCOUNT_NOT_LINKED: '관리자가 이 대표자 명부와 로그인 계정을 연결해야 합니다.',
   };
   let token = '';
   let project = null;
-  let currentTab = 'overview';
+  let currentTab = location.hash === '#progress' ? 'progress' : 'overview';
+  let progressFilter = 'all';
   let saving = false;
+  let lastSavedProgressKey = '';
   const dirtyForms = new Set();
   const editingRecords = new Map();
   const recordForms = { notices: 'noticeForm', meetings: 'meetingForm', supports: 'supportForm' };
@@ -62,6 +75,11 @@ function clientMain(documents) {
     for (const [kind] of editingRecords) {
       const button = document.getElementById(recordForms[kind])?.querySelector('button[type="submit"]');
       if (button) button.textContent = '수정 저장';
+    }
+    for(const key of ['09','10']){
+      const editor=document.getElementById('preparation-'+key),progress=document.getElementById('progress-'+key);
+      if(drafts['preparation-'+key])syncPreparationNote(key,editor.elements.body.value,editor);
+      else if(drafts['progress-'+key])syncPreparationNote(key,progress.elements.note.value,progress);
     }
   }
 
@@ -130,8 +148,8 @@ function clientMain(documents) {
     setStatus($('#gateMessage').textContent, true);
     return true;
   }
-  function field(label, name, value, { type = 'text', full = false, area = false } = {}) {
-    return `<label${full ? ' class="full"' : ''}>${esc(label)}${area ? `<textarea name="${name}" maxlength="4000">${esc(value)}</textarea>` : `<input name="${name}" type="${type}" value="${esc(value)}"${type === 'number' ? ' min="0" step="1"' : ''}>`}</label>`;
+  function field(label, name, value, { type = 'text', full = false, area = false, maxLength = 4000 } = {}) {
+    return `<label${full ? ' class="full"' : ''}>${esc(label)}${area ? `<textarea name="${name}" maxlength="${maxLength}">${esc(value)}</textarea>` : `<input name="${name}" type="${type}" value="${esc(value)}"${type === 'number' ? ' min="0" step="1"' : ''}>`}</label>`;
   }
   function records(rows, kind) {
     return rows.length ? `<div class="record-list">${rows.map(row => `<article class="record"><div class="row"><h3>${esc(row.title)}</h3>${surface === 'admin' ? `<div class="actions"><button class="quiet" type="button" data-edit="${kind}" data-record="${esc(row.id)}">수정</button><button class="quiet" type="button" data-remove="${kind}" data-record="${esc(row.id)}">삭제</button></div>` : ''}</div><span class="status-tag">${esc({ draft: '초안', published: '게시됨' }[row.status] || row.status)}${row.visibility ? ' · ' + (row.visibility === 'public' ? '공개' : '조합원') : ''}</span><p>${esc(row.body || row.memo || '')}</p><small class="muted">${esc(row.date || row.deadline || '')} ${esc(row.agency || '')}</small></article>`).join('')}</div>` : '<p class="empty">등록된 내용이 없습니다.</p>';
@@ -151,24 +169,77 @@ function clientMain(documents) {
     const date = new Date(value + 'T00:00:00Z'); date.setUTCDate(date.getUTCDate() + days);
     return date.toISOString().slice(0, 10);
   }
+  function guidance(state) {
+    const today = new Intl.DateTimeFormat('sv-SE', {timeZone:'Asia/Seoul'}).format(new Date());
+    const summary = progressSummary(state.progress, launchTasks, today);
+    return {summary, ...launchGuidance(state, launchTasks, summary)};
+  }
+  function renderGuidance(state, context) {
+    const next=guidance(state);
+    const cards=next.actions.map(item=>`<article class="launch-action"><span class="badge">${item.needsReview?'증빙 확인 우선':item.awaitingDate?'준비·대기':'다음 행동'}</span><h3>${esc(item.title)}</h3><p>${esc(item.action)}</p>${item.nextAction?`<p class="notice-small">저장한 다음 할 일: ${esc(item.nextAction)}</p>`:''}<p class="form-help">담당자: ${esc(item.owner||'미지정')} · 목표일: ${esc(item.targetDate||'미정')}</p><div class="actions"><button class="button primary" type="button" data-progress-open="${item.key}">해당 항목 열기</button>${item.tab?`<button class="button secondary" type="button" data-guide-tab="${item.tab}">관련 입력 화면</button>`:''}</div></article>`).join('');
+    return `<div class="launch-guidance" data-launch-guidance="${context}"><h2>지금 할 일과 다음 준비</h2><p>이 조합에 저장된 기록을 기준으로 선행 준비부터 안내합니다. 실제 확인이 끝나면 해당 항목에 근거를 기록하세요.</p>${cards?`<div class="launch-actions">${cards}</div>`:`<p class="notice-small">${next.allReviewed?'체크리스트상 남은 항목이 없습니다. 관련 명부·서류·실제 처리 결과를 최종 대조하세요.':'선행 필수 항목은 확인되었습니다. 남은 조건부 항목과 병행 준비를 확인하세요.'} 법적 설립 여부는 별도 증빙으로 확인합니다.</p>`}${next.signals.length?`<details class="launch-uncertainties"><summary>미확정 정보·기록 대조 ${next.signals.length}건</summary><ul>${next.signals.map(item=>`<li>${item.reconcile?'<strong>기록 대조 필요:</strong> ':''}${esc(item.text)} <button class="quiet" type="button" data-guide-tab="${item.tab}">입력값 확인</button></li>`).join('')}</ul></details>`:''}<div class="notice-small"><strong>첫 준비회의에서 함께 결정하세요.</strong><p>참여자·자격, 첫 사업, 사무소, 출자 약정·설립비, 임원 후보 검토, 정관·사업계획·예산 담당자와 작성일을 안건으로 제안합니다.</p><button class="button secondary" type="button" data-guide-agenda="true">준비회의 안건 초안 불러오기</button><p class="form-help">회의록 입력창에만 불러옵니다. 실제 회의 결과로 고친 뒤 별도로 저장하세요. 창립총회 개최·의결로 기록하지 않습니다.</p></div>${next.parallel.length?`<p class="form-help">병행 준비: ${esc(launchTasks.find(t=>t.key===next.parallel[0].key).title)} <button class="quiet" type="button" data-progress-open="${next.parallel[0].key}">병행 항목 열기</button></p>`:''}</div>`;
+  }
+  function renderSavedProgress(state) {
+    if(!lastSavedProgressKey)return '';
+    const next=guidance(state),row=next.summary.rows.find(r=>r.key===lastSavedProgressKey);
+    const missing=row.status==='완료'&&!row.done?'완료일·증빙 보관 위치·직접 확인 표시가 갖춰져야 완료로 집계합니다.':'실제 수행 결과와 근거를 확인하며 진행하세요.';
+    const action=next.actions[0]||next.parallel[0];
+    return `<div id="progressSaveNext" class="notice-small" role="status"><strong>기록을 저장했습니다.</strong><p>${row.done?'이 항목은 증빙 확인 완료로 집계했습니다.':missing}</p>${action?`<p>다음 행동: ${esc(action.title)}</p><button class="button primary" type="button" data-progress-open="${action.key}">다음 할 일 열기</button>`:'<p>남은 조건부 항목과 실제 처리 결과를 최종 대조하세요.</p>'}</div>`;
+  }
+  function preparationNote(key) {return project.state.progress.items.find(row=>row.id.endsWith(':launch:'+key));}
+  function renderPreparation(state) {
+    const data=preparation(state);
+    return `<div class="preparation-drafts" data-preparation-drafts><h3>사업계획·예산 초안 작성</h3><p>관리자 전용으로 작성·저장합니다. 출범 진행의 해당 작성 항목과 함께 보관하며, 아래의 서류 준비상태와 완료 확인은 별도로 관리합니다.</p><div class="preparation-grid">${[['09','사업계획'],['10','수입·지출 예산']].map(([key,label])=>{const row=state.progress.items.find(r=>r.id.endsWith(':launch:'+key));return `<form id="preparation-${key}" data-preparation-id="${esc(row.id)}" data-preparation-key="${key}" class="form-grid"><h3 class="full">${label} 검토용 초안</h3><label class="full">초안 내용 · 최대 2,000자<textarea name="body" maxlength="2000" rows="18">${esc(row.note)}</textarea></label><p class="form-help full">양식은 입력창에만 불러옵니다. 기존 내용을 덮어쓰지 않습니다. 저장으로 서류가 검토 완료되거나 사업·납입·설립 사실이 확정되지 않습니다. 확인을 마친 초안을 수정하면 해당 항목의 확인 표시가 해제됩니다.</p><div class="actions full"><button class="button secondary" type="button" data-preparation-template="${key}">작성 양식 불러오기</button><button class="button primary" type="submit">${label} 초안 저장</button><button class="quiet" type="button" data-progress-open="${key}">담당자·진행 확인</button></div></form>`;}).join('')}</div><details class="preparation-packet"><summary>저장된 준비회의 자료 보기</summary><p class="form-help">마지막 저장본으로 구성합니다. 입력 중인 내용은 먼저 저장하세요. 민감정보·계정정보를 초안에 적지 마세요.</p><pre id="preparationPacketText">${esc(data.packet)}</pre><button class="button secondary" type="button" data-preparation-export="true">저장된 준비자료 받기</button></details><p class="form-help">이 양식은 내부 검토용입니다. <a href="https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=10510000003" target="_blank" rel="noopener noreferrer">정부24 설립신고 안내</a>에서 최신 제출서식과 관할기관 안내를 대조하세요.</p></div>`;
+  }
+  function syncPreparationNote(key,value,source) {
+    const editor=document.getElementById('preparation-'+key),progress=document.getElementById('progress-'+key);
+    if(editor&&editor!==source)editor.elements.body.value=value;
+    if(progress){if(progress!==source)progress.elements.note.value=value;if(value.trim()!==preparationNote(key).note)progress.elements.verified.checked=false;}
+  }
+  function openProgressItem(key) {
+    const card=document.querySelector(`[data-progress-key="${key}"]`);
+    if(!card)return;
+    progressFilter='all';$('#progressFilter').value='all';filterProgress();showTab('progress');
+    card.open=true;card.querySelector('summary').focus();card.scrollIntoView({block:'start',behavior:'auto'});
+  }
+  function renderProgress(state) {
+    const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
+    const summary = progressSummary(state.progress, launchTasks, today);
+    return `<section class="card" data-panel="progress"><h2>조합 출범 진행관리</h2><p>담당자·일정·증빙·다음 할 일을 이 조합의 서버에 저장합니다. 관리자 전용이며 공개 홈페이지나 조합원 화면에는 세부 기록을 공유하지 않습니다.</p>
+    ${renderSavedProgress(state)}${renderGuidance(state,'progress')}
+    <div class="stats" id="progressSummary"><div class="stat"><b>${summary.completed}/${summary.total}</b><span>증빙 확인 완료</span></div><div class="stat"><b>${summary.percent}%</b><span>체크항목 확인율</span></div><div class="stat"><b>${summary.overdue}건</b><span>기한 초과</span></div><div class="stat"><b>${summary.unplanned}건</b><span>목표일 미정</span></div></div>
+    <p class="form-help">완료율은 기록의 확인 비율입니다. 법인 설립·임원 선출·출자 납입을 자동으로 확정하지 않습니다. 기존 설립서류·일정과 연결된 항목은 관련 증빙을 대조하여 직접 갱신하세요.</p>
+    <ul class="deadline-list"><li><span>공고 후 총회 개최 최소 기준일</span><b>${esc(summary.earliestMeeting || '공고 완료 확인 후 계산')}</b></li><li><span>납입 완료 후 등기신청 기한</span><b>${esc(summary.registrationDeadline || '납입 완료 확인 후 계산')}</b></li></ul><p class="form-help">공고일과 총회일 사이 최소 7일 확보, 납입완료일 다음부터 14일을 참고 계산합니다. 휴무일·접수방법·최신 서식은 관할기관에 확인하세요.</p>
+    <div class="progress-phases">${summary.phases.map(p=>`<div><strong>${p.phase}. ${esc(launchStages[p.phase-1])}</strong><span>${p.completed}/${p.total} · ${p.parallel ? '준비와 병행' : p.ready ? '선행 필수 확인됨' : '선행 필수 미확인'}</span></div>`).join('')}</div>
+    <label class="progress-filter">항목 보기<select id="progressFilter">${[['all','전체 33개'],['pending','미완료'],['overdue','기한 초과'],['review','증빙 확인 필요'],['done','완료']].map(([value,label])=>`<option value="${value}"${progressFilter===value?' selected':''}>${label}</option>`).join('')}</select></label><p id="progressFilterResult" class="form-help" role="status"></p>
+    <div class="progress-list">${launchTasks.map(t=>{const row=summary.rows.find(r=>r.key===t.key);return `<details class="progress-task" data-progress-key="${t.key}" data-progress-done="${row.done}" data-progress-excluded="${row.excluded}" data-progress-overdue="${row.overdue}" data-progress-review="${row.effectiveStatus==='증빙확인필요'}"><summary><strong>${t.phase}. ${esc(t.title)}</strong><span>${esc(row.effectiveStatus)}${row.overdue?' · 기한 초과':''}</span></summary><div class="progress-body"><p>${esc(t.guide)}</p><p class="form-help">${t.required?'필수 항목':'조건부 항목 · 해당없음 선택 시 사유 필요'}</p><form id="progress-${t.key}" data-progress-id="${esc(row.id)}" class="form-grid">${field('담당자', 'owner', row.owner)}<label>진행 상태<select name="status">${['확인필요','대기','진행중','검토중','완료','보류','해당없음'].filter(v=>!t.required||v!=='해당없음').map(v=>`<option${row.status===v?' selected':''}>${v}</option>`).join('')}</select></label>${field('목표일', 'targetDate', row.targetDate, {type:'date'})}${field('완료일', 'completedDate', row.completedDate, {type:'date'})}${field('증빙 이름 또는 보관 위치', 'evidence', row.evidence, {full:true})}${field('다음 할 일', 'nextAction', row.nextAction, {full:true,area:true})}${field(['09','10'].includes(t.key)?'작성 초안 · 검토 메모':'확인 메모 · 제외 사유', 'note', row.note, {full:true,area:true,maxLength:2000})}<label class="checkbox full"><input type="checkbox" name="verified"${row.verified?' checked':''}>완료일과 증빙 내용을 직접 확인했습니다</label><p class="form-help full">완료 상태·완료일·증빙 위치·확인이 모두 있어야 집계합니다. 이미 확인한 증빙이나 완료일을 바꾸면 저장 후 다시 확인해야 합니다. 주민번호·신분증·인감·인증정보를 입력하지 마세요. 증빙 파일 업로드나 외부 링크 열람은 수행하지 않습니다.</p><button class="button primary" type="submit">이 항목 저장</button></form></div></details>`;}).join('')}</div>
+    <p class="form-help">법적 절차 참고: <a href="https://www.law.go.kr/lsInfoP.do?joNo=002200&amp;lsId=011528" target="_blank" rel="noopener noreferrer">협동조합 기본법</a> · <a href="https://www.easylaw.go.kr/CSP/OnhunqueansInfoRetrieve.laf?onhunqnaAstSeq=83&amp;onhunqueSeq=3303" target="_blank" rel="noopener noreferrer">설립 절차 안내</a>. 이 체크리스트는 신고나 등기를 대신 제출하지 않습니다.</p></section>`;
+  }
+  function filterProgress() {
+    const rows=[...document.querySelectorAll('[data-progress-key]')];
+    for(const row of rows) row.hidden=!(progressFilter==='all'||progressFilter==='done'&&row.dataset.progressDone==='true'||progressFilter==='pending'&&row.dataset.progressDone!=='true'&&row.dataset.progressExcluded!=='true'||progressFilter==='overdue'&&row.dataset.progressOverdue==='true'||progressFilter==='review'&&row.dataset.progressReview==='true');
+    const result=$('#progressFilterResult');if(result)result.textContent=`${rows.filter(r=>!r.hidden).length}개 항목 표시`;
+  }
   function renderAdmin(drafts = {}) {
     const state = project.state;
     const p = state.profile;
     const capital = state.founders.reduce((sum, f) => sum + (f.shares || 0) * p.shareUnit, 0);
     const complete = Object.values(state.documents).filter(d => d.status === 'reviewed').length;
-    const tabs = [['overview', '현황'], ['profile', '조합정보'], ['founders', '구성원·사업자'], ['documents', '설립서류'], ['schedule', '총회·신고 일정'], ['notices', '공지'], ['meetings', '회의록'], ['supports', '지원사업'], ['accounts', '계정·권한']];
+    const tabs = [['overview', '현황'], ['progress', '출범 진행'], ['profile', '조합정보'], ['founders', '구성원·사업자'], ['documents', '설립서류'], ['schedule', '총회·신고 일정'], ['notices', '공지'], ['meetings', '회의록'], ['supports', '지원사업'], ['accounts', '계정·권한']];
     $('#workspace').innerHTML = `<div class="toolbar"><p>${esc(p.name)} · 서버 저장 · 수정본 ${project.revision}</p><div class="actions"><button class="quiet" id="reload" type="button">새로 불러오기</button><button class="quiet" id="export" type="button">현재 조합 내보내기</button><button class="quiet" id="print" type="button">인쇄</button></div></div><div class="stats"><div class="stat"><b>${state.founders.length}명</b><span>구성원 대표자 · 자격 확인 별도</span></div><div class="stat"><b>${state.founders.filter(f => f.business).length}/${state.founders.length}</b><span>사업자명 입력</span></div><div class="stat"><b>${won(capital)}</b><span>예정 출자 · 납입 확정 아님</span></div><div class="stat"><b>${complete}/8</b><span>설립서류 검토 완료</span></div></div><div class="tabs" role="tablist" aria-label="관리 분류">${tabs.map(([id, label]) => `<button type="button" role="tab" data-tab="${id}" aria-selected="${id === currentTab}">${label}</button>`).join('')}</div>
-    <section class="card" data-panel="overview"><h2>지금 확인할 일</h2><div class="notice-small">설립 준비중입니다. 대표자 명단은 참여 예정 정보이며, 법인 설립·임원 선출·출자 납입·가입 동의를 완료한 것으로 간주하지 않습니다.</div><ul><li>각 대표자의 사업자명·업종·조합원 자격 확인</li><li>주사무소·사업구역·관할 확정</li><li>조합원별 출자좌수와 초기 운영예산 합의</li><li>이사 3~5명(이사장 포함)·감사 1~2명 후보와 창립총회 준비</li><li>조합장 예정: ${esc(p.chair)} · 정관상 임원 임기 4년</li></ul><p class="form-help">지원사업 자격과 접수기간은 해당 공고를 기준으로 확인합니다. 설립만으로 지원이 확정되지 않습니다.</p></section>
+    <section class="card" data-panel="overview">${renderGuidance(state,'overview')}<p><button class="button secondary" type="button" id="openProgress">출범 체크리스트 전체 보기</button></p><p class="form-help">설립 준비 기록입니다. 법인 설립·임원 선출·출자 납입은 실제 증빙으로 각각 확인합니다. 지원사업은 해당 공고 기준으로 별도 검토합니다.</p></section>
+    ${renderProgress(state)}
     <section class="card" data-panel="profile"><h2>조합 기본정보</h2><form id="profileForm" class="form-grid">${field('표시 조합명', 'name', p.name)}${field('설립용 법인명(안)', 'legalName', p.legalName)}${field('조합장 예정', 'chair', p.chair)}${field('주사무소 소재지', 'office', p.office)}${field('사업구역', 'businessArea', p.businessArea)}${field('신고 관할 시·도', 'jurisdiction', p.jurisdiction)}${field('출자 1좌 금액(원)', 'shareUnit', p.shareUnit, { type: 'number' })}${field('첫해 운영예산(원) · 미정은 공란', 'firstYearBudget', p.firstYearBudget, { type: 'number' })}${field('목적', 'purpose', p.purpose, { full: true, area: true })}${field('조합원 자격·업종', 'industries', p.industries, { full: true, area: true })}${field('공동사업', 'businesses', p.businesses, { full: true, area: true })}<label>명칭 검토 상태<select name="legalNameStatus">${['draft', 'checking', 'confirmed'].map((v, i) => `<option value="${v}"${p.legalNameStatus === v ? ' selected' : ''}>${['정관 초안', '중복·사용 가능성 확인중', '명칭 확정'][i]}</option>`).join('')}</select></label><label class="checkbox"><input type="checkbox" name="officeConfirmed"${p.officeConfirmed ? ' checked' : ''}>주사무소 소재지 확정</label><button class="button primary" type="submit">조합정보 저장</button></form><p class="form-help">광주광역시는 첨부 정관의 참고값이며 현재 두 신규 조합의 확정 소재지가 아닙니다.</p></section>
     <section class="card" data-panel="founders"><h2>구성원 대표자·사업자 등록</h2><p class="form-help">사업자명은 공란으로 저장할 수 있습니다. 이남현1·2·3은 서로 다른 명부 항목입니다.</p><form id="foundersForm"><div class="table-wrap"><table class="table"><thead><tr><th>대표자</th><th>사업자명</th><th>업종</th><th>예정 출자좌수</th><th>설립동의</th></tr></thead><tbody>${state.founders.map(f => `<tr data-founder-id="${esc(f.id)}"><td><input data-key="representative" aria-label="대표자명" value="${esc(f.representative)}"><small>${f.position === 'chair-designate' ? '조합장 예정' : '구성원 대표자'}</small></td><td><input data-key="business" aria-label="${esc(f.representative)} 사업자명" placeholder="추후 등록" value="${esc(f.business)}"></td><td><input data-key="industry" aria-label="업종" placeholder="확인 전" value="${esc(f.industry)}"></td><td><input data-key="shares" aria-label="예정 출자좌수" type="number" min="1" step="1" placeholder="미정" value="${esc(f.shares)}"></td><td><select data-key="consent" aria-label="설립동의 상태"><option value="pending"${f.consent === 'pending' ? ' selected' : ''}>확인 전</option><option value="confirmed"${f.consent === 'confirmed' ? ' selected' : ''}>동의 확인</option></select></td></tr>`).join('')}</tbody></table></div><div class="form-actions"><button class="button primary" type="submit">구성원 정보 저장</button></div></form><p class="form-help">1좌 1만 원 · 1인 1좌 이상 · 한 조합원의 출자좌수는 전체의 30% 이하. 입력한 출자액은 예정 금액입니다.</p></section>
-    <section class="card" data-panel="documents"><h2>설립신고 첨부서류 8종</h2><form id="documentsForm"><div class="check-grid">${documents.map(([id, label]) => `<div class="check-item"><label for="doc-${id}">${esc(label)}</label><select id="doc-${id}" name="${id}">${['pending', 'draft', 'prepared', 'reviewed'].map((s, i) => `<option value="${s}"${state.documents[id].status === s ? ' selected' : ''}>${['준비 전', '초안 작성', '서류 준비', '검토 완료'][i]}</option>`).join('')}</select><input name="${id}-note" aria-label="${esc(label)} 메모" placeholder="진행 메모" value="${esc(state.documents[id].note)}"></div>`).join('')}</div><div class="form-actions"><button class="button primary" type="submit">준비상태 저장</button><button class="button secondary" id="charter" type="button">이 조합 정관 초안 받기</button></div></form><p class="form-help">정관은 첨부 자료를 바탕으로 명칭·발기인·사업 범위를 반영한 검토용 초안입니다. 소재지·사업구역·임원과 최종 조문은 창립총회 전에 확인해야 합니다.</p></section>
-    <section class="card" data-panel="schedule"><h2>총회·신고 일정</h2><form id="datesForm" class="form-grid">${Object.entries({ foundingMeetingDate: '창립총회 예정/개최일', filingDate: '설립신고 접수일', confirmationDate: '신고확인증 수령일', capitalPaidDate: '출자금 납입 완료일', registrationDate: '법인등기 완료일' }).map(([k, label]) => field(label, k, state.dates[k], { type: 'date' })).join('')}<button class="button primary" type="submit">일정 저장</button></form><ul class="deadline-list"><li><span>창립총회 공고 기준일</span><b>${datePlus(state.dates.foundingMeetingDate, -7)}</b></li><li><span>설립신고 법정 통지기간 참고</span><b>${datePlus(state.dates.filingDate, 20)}</b></li><li><span>납입 완료 후 설립등기 기한</span><b>${datePlus(state.dates.capitalPaidDate, 14)}</b></li></ul><p class="form-help">창립총회: 설립동의자 과반수 출석과 출석자 3분의 2 이상 찬성. 신고 보완·기간 연장 여부는 관할기관 안내에 따라 확인합니다.</p></section>
+    <section class="card" data-panel="documents"><h2>설립신고 첨부서류 8종</h2>${renderPreparation(state)}<form id="documentsForm"><div class="check-grid">${documents.map(([id, label]) => `<div class="check-item"><label for="doc-${id}">${esc(label)}</label><select id="doc-${id}" name="${id}">${['pending', 'draft', 'prepared', 'reviewed'].map((s, i) => `<option value="${s}"${state.documents[id].status === s ? ' selected' : ''}>${['준비 전', '초안 작성', '서류 준비', '검토 완료'][i]}</option>`).join('')}</select><input name="${id}-note" aria-label="${esc(label)} 메모" placeholder="진행 메모" value="${esc(state.documents[id].note)}"></div>`).join('')}</div><div class="form-actions"><button class="button primary" type="submit">준비상태 저장</button><button class="button secondary" id="charter" type="button">이 조합 정관 초안 받기</button></div></form><p class="form-help">정관은 첨부 자료를 바탕으로 명칭·발기인·사업 범위를 반영한 검토용 초안입니다. 소재지·사업구역·임원과 최종 조문은 창립총회 전에 확인해야 합니다.</p></section>
+    <section class="card" data-panel="schedule"><h2>총회·신고 일정</h2><form id="datesForm" class="form-grid">${Object.entries({ foundingMeetingDate: '창립총회 예정/개최일', filingDate: '설립신고 접수일', confirmationDate: '신고확인증 수령일', capitalPaidDate: '출자금 납입 완료일', registrationDate: '법인등기 완료일' }).map(([k, label]) => field(label, k, state.dates[k], { type: 'date' })).join('')}<button class="button primary" type="submit">일정 저장</button></form><ul class="deadline-list"><li><span>창립총회 공고 마감 참고일</span><b>${datePlus(state.dates.foundingMeetingDate, -8)}</b></li><li><span>설립신고 법정 통지기간 참고</span><b>${datePlus(state.dates.filingDate, 20)}</b></li><li><span>납입 완료 후 설립등기 기한</span><b>${datePlus(state.dates.capitalPaidDate, 14)}</b></li></ul><p class="form-help">창립총회: 설립동의자 과반수 출석과 출석자 3분의 2 이상 찬성. 신고 보완·기간 연장 여부는 관할기관 안내에 따라 확인합니다.</p></section>
     <section class="card" data-panel="notices"><h2>공지 작성</h2><form id="noticeForm" class="form-grid">${field('제목', 'title', '', { full: true })}${field('내용', 'body', '', { full: true, area: true })}<label>공개 범위<select name="visibility"><option value="members">조합원 전용</option><option value="public">공개 홈페이지</option></select></label><label>게시 상태<select name="status"><option value="draft">초안</option><option value="published">게시</option></select></label><button class="button primary" type="submit">공지 저장</button></form>${records(state.notices, 'notices')}</section>
     <section class="card" data-panel="meetings"><h2>회의록·의결 기록</h2><form id="meetingForm" class="form-grid">${field('회의명', 'title', '')}${field('회의일', 'date', '', { type: 'date' })}${field('안건·논의·의결 내용', 'body', '', { full: true, area: true })}<label>조합원 공유<select name="status"><option value="draft">검토중</option><option value="published">조합원 공유</option></select></label><button class="button primary" type="submit">회의록 저장</button></form>${records(state.meetings, 'meetings')}</section>
     <section class="card" data-panel="supports"><h2>지원사업 준비</h2><form id="supportForm" class="form-grid">${field('사업명', 'title', '')}${field('주관기관', 'agency', '')}${field('신청 마감일', 'deadline', '', { type: 'date' })}<label>진행 상태<select name="status">${['관심', '검토중', '준비중', '신청', '선정', '종료'].map(v => `<option>${v}</option>`).join('')}</select></label>${field('자격·서류·담당·자부담 검토 메모', 'memo', '', { full: true, area: true })}<button class="button primary" type="submit">지원사업 저장</button></form>${records(state.supports, 'supports')}</section>
     <section class="card" data-panel="accounts"><h2>명부와 로그인 계정 연결</h2><p class="form-help">먼저 기존 EKODI 사용자·권한 관리에서 해당 이메일의 이 조합 접근권한을 등록하세요. 여기에서 이메일을 연결해도 계정 권한은 새로 생성되지 않습니다.</p><form id="accountsForm"><div class="table-wrap"><table class="table"><thead><tr><th>대표자</th><th>등록된 Google 계정 이메일</th><th>연결 상태</th></tr></thead><tbody>${state.founders.map(f => `<tr data-founder-id="${esc(f.id)}"><td>${esc(f.representative)}</td><td><input data-key="accountEmail" type="email" aria-label="${esc(f.representative)} 계정 이메일" value="${esc(f.accountEmail)}" placeholder="확인 후 연결"></td><td>${f.accountEmail ? '연결됨' : '확인 전'}</td></tr>`).join('')}</tbody></table></div><div class="form-actions"><button class="button primary" type="submit">명부 계정 연결 저장</button>${platform ? '<a class="button secondary" href="/admin/users/customers">사용자·권한 관리</a>' : ''}</div></form><h3>참여 의사 접수</h3>${project.applications?.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>대표자</th><th>사업자명</th><th>계정</th><th>참여 내용</th></tr></thead><tbody>${project.applications.map(a => `<tr><td>${esc(a.representative)}</td><td>${esc(a.business || '추후 등록')}</td><td>${esc(a.email)}</td><td>${esc(a.message)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">접수된 참여 의사가 없습니다.</p>'}</section>`;
     showTab(currentTab);
     restoreDrafts(drafts);
+    filterProgress();
   }
   function showTab(tab) {
     currentTab = tab;
@@ -189,16 +260,19 @@ function clientMain(documents) {
     try {
       const saved = await request('/project', { method: 'PUT', body: JSON.stringify({ revision: project.revision, state }) });
       project = { ...project, ...saved };
+      lastSavedProgressKey = submittedForm.startsWith('progress-') ? submittedForm.slice('progress-'.length) : '';
       dirtyForms.delete(submittedForm);
       for (const [kind, id] of Object.entries(recordForms)) if (id === submittedForm) editingRecords.delete(kind);
       renderAdmin(drafts);
-      setStatus(`저장되었습니다. 수정본 ${project.revision} · 다른 기기에서도 같은 내용을 확인합니다.`);
+      const action = surface==='admin' ? guidance(project.state).actions[0] : null;
+      setStatus(`저장되었습니다. 수정본 ${project.revision} · 다른 기기에서도 같은 내용을 확인합니다.${action?' 다음 행동: '+action.title:''}`);
+      if(lastSavedProgressKey){const feedback=$('#progressSaveNext');feedback.tabIndex=-1;feedback.focus({preventScroll:true});feedback.scrollIntoView({block:'center',behavior:'auto'});}
     } catch (error) { if (!authenticationFailure(error)) setStatus(error.message, true); }
     finally { saving = false; $('#workspace').querySelectorAll('button,input,textarea,select').forEach(el => { el.disabled = false; }); }
   }
   async function load() {
     project = await request(hub ? '/overview' : surface === 'admin' ? '/project' : '/me');
-    dirtyForms.clear(); editingRecords.clear();
+    dirtyForms.clear(); editingRecords.clear(); lastSavedProgressKey='';
     $('#gate').hidden = true; if ($('#application')) $('#application').hidden = true; $('#workspace').hidden = false;
     if (hub) {
       const rows = project.cooperatives;
@@ -213,13 +287,41 @@ function clientMain(documents) {
   }
   function bind() {
     for (const name of ['input', 'change']) $('#workspace').addEventListener(name, event => {
+      if (event.target.id === 'progressFilter') { progressFilter=event.target.value; filterProgress(); return; }
       const form = event.target.closest('form'); if (form?.id) dirtyForms.add(form.id);
+      if (form?.dataset.progressId && ['evidence','completedDate'].includes(event.target.name)) form.elements.verified.checked=false;
+      const preparationKey=form?.dataset.preparationKey||(['progress-09','progress-10'].includes(form?.id)?form.id.slice(-2):'');
+      if(preparationKey&&['body','note'].includes(event.target.name))syncPreparationNote(preparationKey,event.target.value,form);
     });
     window.addEventListener('beforeunload', event => { if (dirtyForms.size) { event.preventDefault(); event.returnValue = ''; } });
     $('#workspace').addEventListener('click', async event => {
       const target = event.target.closest('button');
       if (!target || saving) return;
       try {
+        if (target.id === 'openProgress') return showTab('progress');
+        if (target.dataset.preparationTemplate) {
+          const key=target.dataset.preparationTemplate,form=document.getElementById('preparation-'+key);
+          if(form.elements.body.value.trim()||document.getElementById('progress-'+key).elements.note.value.trim()){setStatus('이미 작성된 내용이 있습니다. 현재 초안을 보관하거나 내용을 정리한 뒤 작성 양식을 불러오세요.',true);return;}
+          const data=preparation(project.state),value=key==='09'?data.planTemplate:data.budgetTemplate;
+          form.elements.body.value=value;syncPreparationNote(key,value,form);dirtyForms.add(form.id);form.elements.body.focus();
+          setStatus('작성 양식을 입력창에 불러왔습니다. 실제 결정한 내용으로 고친 뒤 초안 저장을 눌러 주세요. 아직 저장하지 않았습니다.');return;
+        }
+        if (target.dataset.preparationExport) {
+          if(['09','10'].some(key=>[document.getElementById('preparation-'+key).elements.body.value,document.getElementById('progress-'+key).elements.note.value].some(value=>value.trim()!==preparationNote(key).note))){setStatus('작성 중인 사업계획·예산 초안을 먼저 저장해 주세요. 준비자료는 마지막 저장본으로 만듭니다.',true);return;}
+          const url=URL.createObjectURL(new Blob(['\uFEFF',preparation(project.state).packet],{type:'text/plain;charset=utf-8'}));
+          const a=document.createElement('a');a.href=url;a.download=slug+'-preparation-drafts.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return;
+        }
+        if (target.dataset.progressOpen) return openProgressItem(target.dataset.progressOpen);
+        if (target.dataset.guideTab) {showTab(target.dataset.guideTab);document.querySelector(`[data-panel="${target.dataset.guideTab}"] h2`)?.scrollIntoView({block:'start',behavior:'auto'});return;}
+        if (target.dataset.guideAgenda) {
+          showTab('meetings');
+          const form=$('#meetingForm');
+          if(dirtyForms.has(form.id)||editingRecords.has('meetings')) {setStatus('회의록에 입력 중인 내용이 있습니다. 현재 내용을 저장하거나 정리한 뒤 안건 초안을 불러오세요.',true);return;}
+          const next=guidance(project.state);
+          form.elements.title.value=next.agendaTitle;form.elements.body.value=next.agendaBody;form.elements.date.value='';form.elements.status.value='draft';
+          dirtyForms.add(form.id);form.elements.title.focus();form.scrollIntoView({block:'start',behavior:'auto'});
+          setStatus('준비회의 안건 초안을 입력창에 불러왔습니다. 아직 저장하지 않았습니다. 실제 회의 결과로 수정한 뒤 검토중으로 저장하세요.');return;
+        }
         if (target.dataset.tab) return showTab(target.dataset.tab);
         if (target.id === 'reload') { if (!dirtyForms.size || confirm('저장되지 않은 입력을 버리고 다시 불러올까요?')) return await load(); return; }
         if (target.id === 'print') return window.print();
@@ -245,6 +347,8 @@ function clientMain(documents) {
       const form = event.target;
       const values = Object.fromEntries(new FormData(form));
       try {
+        if(form.dataset.preparationId)return await save({progress:{version:1,items:[{id:form.dataset.preparationId,note:values.body}]}},form.id);
+        if (form.dataset.progressId) return await save({progress:{version:1,items:[{id:form.dataset.progressId,...values,verified:form.elements.verified.checked}]}},form.id);
         if (form.id === 'myBusinessForm') {
           project = await request('/my-business', { method: 'PUT', body: JSON.stringify({ ...values, revision: project.revision }) });
           dirtyForms.delete(form.id); renderMember(); setStatus('나의 사업정보가 저장되었습니다.'); return;
@@ -315,5 +419,5 @@ function clientMain(documents) {
 export function cooperativeScript() {
   // Wrangler preserves function names with a lexical __name helper. Serialized
   // client functions need the same helper inside their browser-only scope.
-  return `(()=>{const __name=(target,value)=>Object.defineProperty(target,'name',{value,configurable:true});\n(${clientMain.toString()})(${JSON.stringify(COOP_DOCUMENTS)});})();`;
+  return `(()=>{const __name=(target,value)=>Object.defineProperty(target,'name',{value,configurable:true});\n(${clientMain.toString()})(${JSON.stringify(COOP_DOCUMENTS)},${JSON.stringify(COOP_LAUNCH_TASKS)},${JSON.stringify(COOP_LAUNCH_STAGES)},(${cooperativeProgressSummary.toString()}),(${cooperativeLaunchGuidance.toString()}),(${cooperativePreparation.toString()}));})();`;
 }

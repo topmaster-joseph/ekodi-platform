@@ -61,11 +61,19 @@ export function redirectProviders() {
   return providersPromise;
 }
 
+// Daum IDs were folded into Kakao accounts and Daum offers no separate third-party
+// login, so the Kakao path is labelled for both. The recorded provider stays 'kakao'.
+export const BUTTON_LABELS = { kakao: '카카오·다음' };
+export function buttonText(provider, purpose) {
+  const name = BUTTON_LABELS[provider?.id] || provider?.name || PROVIDER_LABELS[provider?.id] || '';
+  return purpose === 'link' ? `${name} 계정 추가` : `${name} 계정으로 계속하기`;
+}
+
 function button(provider, purpose, statusId) {
   const b = document.createElement('button');
   b.type = 'button';
   b.className = `federated-btn federated-${provider.id}`;
-  b.textContent = purpose === 'link' ? `${provider.name} 계정 추가` : `${provider.name}로 계속하기`;
+  b.textContent = buttonText(provider, purpose);
   b.addEventListener('click', () => start(provider, purpose, b, statusId));
   return b;
 }
@@ -115,6 +123,7 @@ async function start(provider, purpose, el, statusId) {
 
 export function errorMessage(code, name) {
   if (code === 'challenge_expired_or_used') return `${name} 인증 시간이 만료되었습니다. 다시 시도해 주세요.`;
+  if (code === 'account_merge_review_required') return `${name}으로 이미 별도의 EKODI 계정을 사용하고 있습니다. 기존 유료구독·포인트·권한을 확인한 뒤 연결할 수 있습니다.`;
   if (code === 'identity_conflict' || code === 'identity_already_linked') return `이 ${name} 계정은 다른 EKODI 계정에 이미 연결되어 있습니다. 관리자 확인이 필요합니다.`;
   if (code === 'provider_unavailable') return `${name} 로그인은 현재 사용하지 않습니다.`;
   if (code === 'access_denied') return `${name} 인증이 취소되었습니다.`;
@@ -177,6 +186,75 @@ export async function handleCallback() {
   } catch (error) {
     console.error('federated callback', error);
     fail(errorMessage(error.message, name), pending.search);
+    if (error.message === 'account_merge_review_required' && error.data?.mergeRequest) renderMergeReport(error.data.mergeRequest, name);
   }
   return true;
+}
+
+/**
+ * Owner-decided merge, phase 1: show what the second account holds. Nothing moves yet;
+ * the owner reads the report and decides. All values go through textContent.
+ */
+export function mergeReportLines(mergeRequest, name) {
+  const inv = mergeRequest?.inventory || {};
+  const items = Array.isArray(inv.items) ? inv.items : [];
+  const financial = items.filter(item => item.financial);
+  const lines = [
+    `${name} 계정에 있는 기록 ${Number(inv.absorbedRows || 0)}건을 확인했습니다.`,
+    inv.verdict === 'mergeable'
+      ? '결제·구독·포인트 기록이 없어 하나의 EKODI 통합 ID로 합칠 수 있는 상태입니다.'
+      : `결제·구독·포인트 관련 기록이 ${financial.length}종 있어, 합치기 전에 정리가 필요합니다.`,
+  ];
+  for (const item of financial.slice(0, 8)) lines.push(`· ${item.table}: ${item.absorbedRows}건`);
+  if (inv.verdict === 'mergeable') {
+    lines.push(`합치면 ${name}로 로그인해도 같은 EKODI 통합 ID의 권한·포인트를 사용합니다. 각 로그인의 접속·활동 기록은 출처와 함께 그대로 남습니다.`);
+    lines.push('합칠지 여부는 본인이 결정합니다. 잘못 합친 경우 플랫폼 관리자가 되돌릴 수 있습니다.');
+  } else {
+    lines.push('정리가 필요한 기록이 있어 지금은 자동으로 합칠 수 없습니다. 실행 전까지 어떤 데이터도 옮겨지지 않습니다.');
+  }
+  return lines;
+}
+function renderMergeReport(mergeRequest, name) {
+  const host = $('authStatus');
+  if (!host) return;
+  const box = document.createElement('div');
+  box.className = 'notice';
+  box.setAttribute('role', 'status');
+  for (const line of mergeReportLines(mergeRequest, name)) {
+    const p = document.createElement('p');
+    p.textContent = line;
+    box.append(p);
+  }
+  if (mergeRequest?.id && mergeRequest?.inventory?.verdict === 'mergeable') {
+    const actions = document.createElement('div');
+    actions.className = 'merge-actions';
+    const merge = document.createElement('button');
+    merge.type = 'button'; merge.className = 'primary'; merge.textContent = '하나의 EKODI 통합 ID로 합치기';
+    const keep = document.createElement('button');
+    keep.type = 'button'; keep.className = 'secondary'; keep.textContent = '합치지 않기';
+    const result = document.createElement('p');
+    result.setAttribute('role', 'status');
+    const done = text => { merge.disabled = true; keep.disabled = true; result.textContent = text; };
+    merge.addEventListener('click', async () => {
+      if (!confirm(`${name} 계정을 지금 로그인한 EKODI 통합 ID로 합칠까요?`)) return;
+      merge.disabled = true; keep.disabled = true; result.textContent = '합치는 중입니다…';
+      try {
+        await identity(`/merge-requests/${encodeURIComponent(mergeRequest.id)}/execute`, { method: 'POST', authenticated: true });
+        done(`완료되었습니다. 이제 ${name}로 로그인해도 같은 EKODI 통합 ID로 이용합니다.`);
+      } catch (error) {
+        const code = error.message;
+        if (code === 'merge_request_expired') done('확인 시간이 지났습니다. 계정 추가를 다시 진행해 주세요.');
+        else if (code === 'merge_needs_resolution') done('그 사이 정리가 필요한 기록이 생겨 합치지 않았습니다. 데이터는 그대로입니다.');
+        else { merge.disabled = false; keep.disabled = false; result.textContent = '합치지 못했습니다. 잠시 후 다시 시도해 주세요.'; }
+      }
+    });
+    keep.addEventListener('click', async () => {
+      keep.disabled = true; merge.disabled = true;
+      try { await identity(`/merge-requests/${encodeURIComponent(mergeRequest.id)}/cancel`, { method: 'POST', authenticated: true }); } catch {}
+      done('합치지 않았습니다. 두 계정은 지금처럼 따로 유지됩니다.');
+    });
+    actions.append(merge, keep);
+    box.append(actions, result);
+  }
+  host.after(box);
 }

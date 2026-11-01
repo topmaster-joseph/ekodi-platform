@@ -142,3 +142,85 @@
 .wallet-balance{font-size:1.2em;font-weight:700;color:#8b5048}
 .ledger{list-style:none;padding:0;font-size:.92em;color:#765f57;line-height:1.7}
 .join-steps{line-height:1.9}
+
+/* Inner pages prioritize the task over repeated marketing panels. */
+.romantic-inner .intro{margin-top:16px;padding:20px 5%;min-height:0}
+.romantic-inner .intro .eyebrow{margin-bottom:5px}
+.romantic-inner .intro h1{margin:0;font-size:clamp(22px,2.6vw,32px)}
+.romantic-inner .intro .lead,.romantic-inner .intro .actions,.romantic-inner .pillars{display:none}
+.romantic-inner .content{padding-top:18px}
+@media(max-width:610px){.romantic-inner .intro{padding:15px 18px;margin-top:10px}.romantic-inner .content{padding-top:14px}}
+
+/* 2026-10-31 회원·운영 화면 고급화: 첫 화면의 따뜻한 로즈골드 톤을 안쪽 화면까지 잇는다(동작·문구는 그대로). */
+.romantic-inner{--rose:#b9796c;--rose-deep:#94594d;--rose-soft:#f7e9e3;--ivory:#fffdfb;--sand:#f4e8e1;--cocoa:#4f3a34;--taupe:#8a7068;background:#fbf7f3;color:var(--cocoa)}
+.romantic-inner .mast{background:rgba(255,251,247,.96);border-bottom:1px solid #f0e1d9;backdrop-filter:saturate(1.2) blur(6px)}
+.romantic-inner .logo strong{color:var(--rose)}
+.romantic-inner .logo span{color:#714b3f}
+.romantic-inner .mast nav a[aria-current=page]{background:var(--rose-soft);color:var(--rose-deep)}
+.romantic-inner .account{background:var(--rose)}
+.romantic-inner .intro{background:linear-gradient(115deg,#fff6ef,#f8e7df 60%,#f4ddd2);border:1px solid #f1dfd6;border-radius:26px}
+.romantic-inner .intro .eyebrow{color:#b88378;letter-spacing:.22em}
+.romantic-inner .intro h1{color:#6c4336;letter-spacing:-.04em}
+.romantic-inner .section-heading .eyebrow{color:#b88378}
+.romantic-inner .section-heading h2{color:#5e3d34;letter-spacing:-.03em}
+.romantic-inner .stage{background:var(--rose-soft);color:var(--rose-deep);border-color:#efd3c9}
+.romantic-inner .panel{background:var(--ivory);border-color:#f1e4dc}
+.romantic-inner #memberContent{display:grid;gap:18px}
+.romantic-inner .member-card,.romantic-inner .paywall{background:var(--ivory);border:1px solid #efe1d9;border-radius:24px;padding:clamp(18px,2.6vw,28px);box-shadow:0 14px 36px rgba(118,72,56,.06)}
+.romantic-inner .member-card h3,.romantic-inner .paywall h3{position:relative;margin:0 0 12px;padding-bottom:11px;font-size:clamp(17px,1.7vw,20px);font-weight:760;letter-spacing:-.025em;color:#5a3a31}
+.romantic-inner .member-card h3:after,.romantic-inner .paywall h3:after{content:"";position:absolute;left:0;bottom:0;width:34px;height:2px;border-radius:2px;background:linear-gradient(90deg,#d6a294,#ecd3c8)}
+.romantic-inner .member-card h4{margin:20px 0 8px;font-size:15px;color:#6f4c42;letter-spacing:-.01em}
+.romantic-inner .member-card p,.romantic-inner .paywall p{color:var(--taupe);line-height:1.75;word-break:keep-all}
+.romantic-inner .mini-card{background:#fffaf7;border:1px solid #f2e6df;border-radius:18px;padding:16px 18px;margin-top:10px;box-shadow:none}
+.romantic-inner .mini-card p{color:#7b625a}
+.romantic-inner .primary{background:linear-gradient(135deg,#c98b7e,#ad6c60);color:#fff;border:0;box-shadow:0 8px 20px rgba(160,96,82,.22);transition:transform .15s ease,box-shadow .15s ease}
+.romantic-inner .primary:hover{background:linear-gradient(135deg,#ba7b6e,#985a4f);transform:translateY(-1px);box-shadow:0 10px 24px rgba(160,96,82,.28)}
+.romantic-inner .outline,.romantic-inner .action-row button{background:#fffaf7;color:var(--rose-deep);border:1px solid #dfbcb2}
+.romantic-inner .outline:hover,.romantic-inner .action-row button:hover{background:var(--rose-soft)}
+.romantic-inner input[type=text],.romantic-inner input[type=number],.romantic-inner textarea,.romantic-inner select{background:#fff;border:1px solid #e6d3cb;border-radius:14px}
+.romantic-inner input:focus-visible,.romantic-inner textarea:focus-visible,.romantic-inner select:focus-visible{outline:3px solid #d9a99c;outline-offset:2px;border-color:#c98b7e}
+.romantic-inner input[type=checkbox]{accent-color:var(--rose)}
+.romantic-inner .field{color:#6a4a40}
+.romantic-inner .notice{background:#fff7ef;border:1px solid #f3dcc7;color:#7a5440;border-radius:16px}
+.romantic-inner .status-text{color:#8a6255}
+.romantic-inner .muted{color:var(--taupe)}
+.romantic-inner .muted a{color:var(--rose-deep);text-decoration:underline;text-underline-offset:3px}
+.romantic-inner .price-table{border-collapse:separate;border-spacing:0;border:1px solid #efdfd7;border-radius:16px;overflow:hidden;font-size:14px}
+.romantic-inner .price-table th,.romantic-inner .price-table td{border:0;border-bottom:1px solid #f3e7e1;padding:11px 13px;word-break:keep-all}
+.romantic-inner .price-table tr:last-child td{border-bottom:0}
+.romantic-inner .price-table th{background:#f8ebe5;color:#6d473d;font-weight:720}
+.romantic-inner .price-table td{background:#fffdfb;color:#6b5048}
+.romantic-inner .safety{background:linear-gradient(110deg,#fff1e8,#fcf2ef);border-color:#f2e0d7}
+.romantic-inner footer a{color:#94594d}
+/* 회원증 카드 */
+.membership-card{position:relative;overflow:hidden;margin:4px 0 16px;padding:22px 24px 24px;border-radius:22px;color:#fffaf6;background:radial-gradient(120% 140% at 100% 0%,#e9b9a8 0%,rgba(233,185,168,0) 55%),linear-gradient(135deg,#7c4c41 0%,#a86b5d 55%,#c99382 100%);box-shadow:0 18px 40px rgba(110,62,50,.28);isolation:isolate}
+.membership-card:after{content:"";position:absolute;z-index:-1;right:-40px;bottom:-60px;width:200px;height:200px;border-radius:50%;border:1px solid rgba(255,240,232,.28)}
+.membership-card p,.romantic-inner .member-card .membership-card p{margin:0;color:#fffaf6;line-height:1.5}
+.membership-card .membership-brand,.romantic-inner .member-card .membership-card .membership-brand{display:flex;gap:6px;align-items:baseline;font-size:15px}
+.membership-brand strong{letter-spacing:.06em}
+.membership-brand span{opacity:.92}
+.membership-card .membership-kicker,.romantic-inner .member-card .membership-card .membership-kicker{margin-top:16px!important;font-size:11px;letter-spacing:.32em;opacity:.8}
+.membership-card .membership-state,.romantic-inner .member-card .membership-card .membership-state{font-size:clamp(22px,2.6vw,27px);font-weight:760;letter-spacing:-.03em;margin-top:2px!important}
+.membership-card .membership-until,.romantic-inner .member-card .membership-card .membership-until{font-size:14px;opacity:.92;margin-top:4px!important}
+/* 운영 요약 타일 */
+.stat-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:6px 0 12px}
+.stat-tile{background:#fff8f4;border:1px solid #f1e1d9;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stat-tile span{font-size:12px;color:#9a7b71}
+.stat-tile strong{font-size:clamp(17px,2vw,21px);color:#6a4235;letter-spacing:-.02em}
+/* 이용약관·개인정보 안내 목록 */
+.singles-terms ol{margin:4px 0 0;padding-left:1.25em;line-height:1.85;color:#765f57;word-break:keep-all}
+.singles-terms ol li{margin:4px 0}
+.singles-terms .inquiry-table{margin:12px 0;border-collapse:separate;border-spacing:0;border:1px solid #efdfd7;border-radius:14px;overflow:hidden}
+.singles-terms .inquiry-table th,.singles-terms .inquiry-table td{border:0;border-bottom:1px solid #f3e7e1;padding:10px 13px}
+.singles-terms .inquiry-table tr:last-child th,.singles-terms .inquiry-table tr:last-child td{border-bottom:0}
+.singles-terms .inquiry-table th{background:#f8ebe5;color:#6d473d;width:11em}
+@media(max-width:610px){
+ .romantic-inner .intro{border-radius:20px}
+ .romantic-inner .member-card,.romantic-inner .paywall{border-radius:20px}
+ .stat-tiles{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .stat-tiles .stat-tile:last-child{grid-column:1/-1}
+ .romantic-inner .price-table{font-size:13px}
+ .romantic-inner .price-table th,.romantic-inner .price-table td{padding:9px 8px}
+ .singles-terms .inquiry-table th{width:auto}
+}
+@media(prefers-reduced-motion:reduce){.romantic-inner .primary{transition:none}.romantic-inner .primary:hover{transform:none}}

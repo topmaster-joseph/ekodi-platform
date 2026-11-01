@@ -110,6 +110,42 @@ jobs:
           fi
           echo "::add-mask::$token"
           echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Sync dormant Naver/Kakao/Apple login keys (only when provided)
+        # Keys only register the adapters. Login stays off until public.identity_providers.enabled
+        # is switched on for that provider, so syncing keys never exposes a new login path by itself.
+        shell: bash
+        env:
+          NAVER_LOGIN_CLIENT_ID: ${{ secrets.NAVER_LOGIN_CLIENT_ID }}
+          NAVER_LOGIN_CLIENT_SECRET: ${{ secrets.NAVER_LOGIN_CLIENT_SECRET }}
+          KAKAO_LOGIN_REST_API_KEY: ${{ secrets.KAKAO_LOGIN_REST_API_KEY }}
+          KAKAO_LOGIN_CLIENT_SECRET: ${{ secrets.KAKAO_LOGIN_CLIENT_SECRET }}
+          APPLE_LOGIN_SERVICES_ID: ${{ secrets.APPLE_LOGIN_SERVICES_ID }}
+          APPLE_LOGIN_TEAM_ID: ${{ secrets.APPLE_LOGIN_TEAM_ID }}
+          APPLE_LOGIN_KEY_ID: ${{ secrets.APPLE_LOGIN_KEY_ID }}
+          APPLE_LOGIN_PRIVATE_KEY: ${{ secrets.APPLE_LOGIN_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          env_file="$(mktemp)"
+          trap 'rm -f "$env_file"' EXIT
+          if [ -n "${NAVER_LOGIN_CLIENT_ID:-}" ] && [ -n "${NAVER_LOGIN_CLIENT_SECRET:-}" ]; then
+            printf 'NAVER_CLIENT_ID=%s\nNAVER_CLIENT_SECRET=%s\n' "$NAVER_LOGIN_CLIENT_ID" "$NAVER_LOGIN_CLIENT_SECRET" >> "$env_file"
+          fi
+          if [ -n "${KAKAO_LOGIN_REST_API_KEY:-}" ]; then
+            printf 'KAKAO_REST_API_KEY=%s\n' "$KAKAO_LOGIN_REST_API_KEY" >> "$env_file"
+            if [ -n "${KAKAO_LOGIN_CLIENT_SECRET:-}" ]; then printf 'KAKAO_CLIENT_SECRET=%s\n' "$KAKAO_LOGIN_CLIENT_SECRET" >> "$env_file"; fi
+          fi
+          if [ -n "${APPLE_LOGIN_SERVICES_ID:-}" ] && [ -n "${APPLE_LOGIN_TEAM_ID:-}" ] && [ -n "${APPLE_LOGIN_KEY_ID:-}" ] && [ -n "${APPLE_LOGIN_PRIVATE_KEY:-}" ]; then
+            # The .p8 key is multi-line; store it on one line with literal \n (the adapter restores newlines).
+            apple_key="$(printf '%s' "$APPLE_LOGIN_PRIVATE_KEY" | awk 'BEGIN{ORS="\\n"}{print}')"
+            printf 'APPLE_SERVICES_ID=%s\nAPPLE_TEAM_ID=%s\nAPPLE_KEY_ID=%s\nAPPLE_PRIVATE_KEY=%s\n' "$APPLE_LOGIN_SERVICES_ID" "$APPLE_LOGIN_TEAM_ID" "$APPLE_LOGIN_KEY_ID" "$apple_key" >> "$env_file"
+          fi
+          if [ -s "$env_file" ]; then
+            npx --yes supabase@2.116.0 secrets set --project-ref "$PROJECT_REF" --env-file "$env_file" >/dev/null
+            echo "Federated login keys synced: $(cut -d= -f1 "$env_file" | tr '\n' ' ')"
+          else
+            echo 'No federated login keys provided; Naver/Kakao/Apple stay unregistered.'
+          fi
       - name: Deploy identity API
         run: npx --yes supabase@2.116.0 functions deploy identity-api --project-ref "$PROJECT_REF" --no-verify-jwt
       - name: Verify canonical auth origin and reject legacy origin
@@ -128,3 +164,59 @@ jobs:
           bad=$(curl -sS -o /tmp/identity-bad.json -w '%{http_code}' -X POST "$endpoint" -H "Origin: $bad_origin" -H "apikey: $key")
           test "$bad" = '403'
           grep -Fq 'origin_not_allowed' /tmp/identity-bad.json
+          ready=$(curl -sS -o /tmp/identity-ready.json -w '%{http_code}' "https://$PROJECT_REF.supabase.co/functions/v1/identity-api/providers/readiness" -H "Origin: $origin" -H "apikey: $key")
+          test "$ready" = '200'
+          grep -Eq '"id":"google","name":"[^"]*","keysInstalled":true,"enabled":true' /tmp/identity-ready.json
+          echo "Login path readiness: $(tr -d '\n' < /tmp/identity-ready.json)"
+      - name: Prove live Naver/Kakao login paths reach the provider sign-in page
+        # For every path that is switched on and has keys installed, issue a real login
+        # challenge and follow its authorize URL once. A wrong key, an unregistered redirect
+        # URI or a disabled provider login lands on the provider's error page and fails here.
+        shell: bash
+        run: |
+          set -euo pipefail
+          key='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_'
+          origin='https://ekodi.kr'
+          base="https://$PROJECT_REF.supabase.co/functions/v1/identity-api"
+          for provider in kakao naver; do
+            if ! grep -Eq "\"id\":\"$provider\",\"name\":\"[^\"]*\",\"keysInstalled\":true,\"enabled\":true" /tmp/identity-ready.json; then
+              echo "$provider: not live (keys or switch off) — skipped"; continue
+            fi
+            code=$(curl -sS -o /tmp/challenge-$provider.json -w '%{http_code}' -X POST "$base/providers/$provider/challenge" -H "Origin: $origin" -H "apikey: $key")
+            test "$code" = '201'
+            url=$(node -e 'const d=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"));process.stdout.write(String(d.authorizeUrl||""))' /tmp/challenge-$provider.json)
+            case "$provider" in
+              kakao) expect='https://kauth.kakao.com/oauth/authorize?';;
+              naver) expect='https://nid.naver.com/oauth2.0/authorize?';;
+            esac
+            [[ "$url" == "$expect"* ]] || { echo "::error title=$provider authorize URL::unexpected host"; exit 1; }
+            [[ "$url" == *'redirect_uri=https%3A%2F%2Fekodi.kr%2Fauth%2F'* ]] || { echo "::error title=$provider authorize URL::redirect URI mismatch"; exit 1; }
+            result=$(curl -sS -o /tmp/authorize-$provider.html -w '%{http_code} %{redirect_url}' "$url") || { echo "::error title=$provider authorize request::curl could not reach the provider"; exit 1; }
+            echo "$provider authorize -> $result"
+            case "$provider" in
+              kakao)
+                koe=$(grep -Eo 'KOE[0-9]+' /tmp/authorize-kakao.html | head -1 || true)
+                if [[ "$result" != 30[12]* ]] || [[ "$result" == *error* ]] || [ -n "$koe" ]; then
+                  echo "Kakao refused the authorize request ${koe:-} (check REST API key, redirect URI and Kakao Login activation)"; exit 1
+                fi
+                ;;
+              naver)
+                # Surface a query-free summary as an annotation (logs may be unreadable to agents).
+                loc="$(printf '%s' "${result#* }" | sed 's/[?#].*//')"
+                tokens="$(grep -Eoi 'redirect_uri_mismatch|invalid_request|invalid_client|unauthorized_client|access_denied|등록되지 않은[^<\"]{0,24}|Callback URL[^<\"]{0,24}|서비스 URL[^<\"]{0,24}|검수[^<\"]{0,24}|권한[^<\"]{0,24}' /tmp/authorize-naver.html | sort -u | head -6 | tr '\n' ';' || true)"
+                page_title="$(grep -Eoi '<title>[^<]{0,80}' /tmp/authorize-naver.html | head -1 | sed 's/<title>//I' || true)"
+                login_form="$(grep -Eoi 'frmNIDLogin|nidlogin\.login|id="id"|id="pw"|oauth2\.0/authorize' /tmp/authorize-naver.html | sort -u | tr '\n' ';' || true)"
+                # Up to three short contexts around the generic error words, with long tokens redacted.
+                around="$(grep -Eoi '.{0,40}(invalid|error|오류).{0,40}' /tmp/authorize-naver.html | head -3 | sed -E 's/[A-Za-z0-9_-]{16,}/[redacted]/g; s/[%:,]/ /g' | tr '\n' '|' || true)"
+                echo "::notice title=Naver authorize probe::status=${result%% *} location=${loc:-none} markers=${tokens:-none} title=${page_title:-none} login=${login_form:-none} bytes=$(wc -c < /tmp/authorize-naver.html)"
+                echo "::notice title=Naver authorize page context::${around:-none}"
+                # Accepted: a redirect, or Naver's own login form (frmNIDLogin). Naver's login page
+                # always embeds hidden UI strings such as passkey error templates, so a generic
+                # error word alone is not a refusal; known OAuth error markers or a missing form are.
+                if [[ "$result" == 30[12]* ]]; then :
+                elif [ -n "$tokens" ] || ! grep -q 'frmNIDLogin' /tmp/authorize-naver.html; then
+                  echo "::error title=Naver refused the authorize request::status=${result%% *} location=${loc:-none} markers=${tokens:-none} login=${login_form:-none}"; exit 1
+                fi
+                ;;
+            esac
+          done

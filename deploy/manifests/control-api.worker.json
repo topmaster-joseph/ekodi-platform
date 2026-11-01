@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 13,
   "evidence": {
     "generation": 10,
     "ledger": "ai_production_evidence",
@@ -10,6 +10,26 @@
     "name": "ekodi-auth-api",
     "config": "wrangler.api.toml",
     "requests": [
+      {
+        "url": "https://ekodi.kr/api/control/search-visibility?googleSiteUrl=https%3A%2F%2Fekodi.kr%2Fseonammedi",
+        "statuses": [
+          403
+        ],
+        "redirect": "manual",
+        "expect": [
+          "SUPER_ADMIN_REQUIRED"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/api/control/search-visibility?growth-search=release-canary-001",
+        "statuses": [
+          401,
+          403
+        ],
+        "redirect": "manual",
+        "rollbackVerify": false
+      },
       {
         "url": "https://ekodi.kr/api/public/preview/map?scope=ekodi&mode=platform",
         "statuses": [

@@ -154,7 +154,7 @@ test('storage worker handles CORS preflight before app auth and mirrors credenti
   assert.match(worker, /access-control-allow-credentials','true/);
   assert.match(worker, /access-control-allow-origin',origin/);
   assert.match(worker, /function withCors\(/);
-  assert.match(config, /ALLOWED_ORIGINS = "https:\/\/admin\.ekodi\.kr,https:\/\/ekodi\.kr,https:\/\/my\.ekodi\.kr"/);
+  assert.match(config, /ALLOWED_ORIGINS = "https:\/\/ekodi\.kr"/);
 });
 
 test('R2 binding is source-controlled so redeployments cannot drop it', () => {

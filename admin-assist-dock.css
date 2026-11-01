@@ -303,3 +303,9 @@ html body.admin-compact .ekodi-assist :is(button,input,textarea,select):focus-vi
     transition:none!important;
   }
 }
+/* ADMIN-HOME-NO-FLASH-001: on the super-admin home the assist surfaces stay transparent
+   until native Control takes over or the session is known not to be a super admin.
+   Opacity cannot be re-enabled by descendants; the animation releases it after 8s. */
+body.admin-command-home:not(.admin-control-home):not(.admin-control-home-released) :is(.ekodi-assist,.ekodi-assist-bootstrap){opacity:0;pointer-events:none;animation:ekodiHomeHoldRelease 0s 8s forwards}
+@keyframes ekodiHomeHoldRelease{to{opacity:1;pointer-events:auto}}
+html body.admin-control-home[class] :is(.ekodi-assist,.ekodi-assist-bootstrap){display:none!important}

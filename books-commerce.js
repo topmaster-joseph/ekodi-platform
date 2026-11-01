@@ -8,6 +8,10 @@
 // • 결제 승인 후 내 서재 권한(books_entitlements)을 부여하고, 매출을 출판 재무 원장
 //   (books_finance_transactions · ekodi-direct 채널)에 기록한다.
 import * as ekodipay from './ekodipay-core.js';
+import { publisherAuthorizedForChannel } from './publishing/human/storefront-release-guard.js';
+import { saleReadiness } from './books-sale-readiness.js';
+import { ownedOtherLanguageEdition, applyLanguageEditionDiscount, otherLanguageEditions, languageEditionRate } from './books-language-editions.js';
+import { complimentaryAudiobookPolicy, availableAudiobook, audioChapterFor, validateAudioChapter, MAX_AUDIO_CHAPTER_BYTES, audioSha256 } from './books-audiobook.js';
 
 export const ORDER_PREFIX = 'EKB';
 export const PENDING_TTL_MS = 30 * 60 * 1000;
@@ -47,6 +51,14 @@ export function directSaleBook(catalog, bookId) {
   if (!BOOK_ID.test(id)) return null;
   const book = (catalog?.books || []).find(b => b.id === id);
   return book && book.directSale?.enabled === true ? book : null;
+}
+
+/** Customer-visible sale or download requires live publisher authority for new editions.
+ * Admin staging and approved EPUB upload retain directSaleBook without public access. */
+export async function authorizedPublicSaleBook(env,catalog,bookId){
+  const book=directSaleBook(catalog,bookId);
+  if(!book)return null;
+  return await publisherAuthorizedForChannel(env?.PUBLISHING_RELEASE_GATE,book,'books')?book:null;
 }
 
 export function paymentState(env) {
@@ -136,22 +148,30 @@ export async function fileReady(env, book) {
 
 export async function quote(env, request, bookId) {
   const [catalog, policy] = await Promise.all([loadCatalog(env), loadPolicy(env)]);
-  const book = directSaleBook(catalog, bookId);
+  const book = await authorizedPublicSaleBook(env,catalog,bookId);
   if (!book) return { status: 404, data: { error: '에코디서점 직접 판매 도서가 아닙니다.' } };
   const buyer = await buyerIdentity(request);
   const tierId = await tierFor(env, buyer);
-  const price = priceFor(book, policy, tierId === 'guest' ? 'member' : tierId);
+  // BOOKS-LANGUAGE-EDITION-DISCOUNT-001: 같은 책의 다른 언어판을 보유하면 50% 할인(서버 계산)
+  const ownedSibling = await ownedOtherLanguageEdition(env, buyer, catalog, book);
+  const price = applyLanguageEditionDiscount(priceFor(book, policy, tierId === 'guest' ? 'member' : tierId), policy, ownedSibling);
+  const siblings = otherLanguageEditions(catalog, book);
   const pay = await payments(env);
   const owned = buyer ? Boolean(await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL').bind(buyer.userId, book.id).first()) : false;
   const operator = Boolean(buyer && operatorEmails(env).has(buyer.email));
   const hasFile = await fileReady(env, book);
+  const audiobook = await availableAudiobook(env, book);
+  const readiness = saleReadiness(book);
   return {
     status: 200,
     data: {
       book: { id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', format: book.format || [], edition: book.edition || '', links: { upaper: book.links?.upaper || '', google: book.links?.google || '', amazon: book.links?.amazon || '' } },
-      signedIn: Boolean(buyer), buyerEmail: buyer?.email || '', tier: tierId, owned, price,
+      signedIn: Boolean(buyer), buyerEmail: buyer?.email || '', tier: tierId, owned, price, audiobook,
       tiers: (policy.tiers || []).map(t => ({ id: t.id, label: t.label, discountRate: t.discountRate || 0, description: t.description || '', price: priceFor(book, policy, t.id)?.amount ?? null })),
-      checkout: { open: pay.ready && ((pay.mode === 'live' && hasFile) || operator), mode: pay.mode, testOnly: pay.ready && pay.mode !== 'live', fileReady: hasFile, operator },
+      // BOOKS-SALE-READINESS-001: 출판 공정이 끝나지 않은 도서는 운영자라도 결제창을 열지 않는다.
+      saleReadiness: readiness,
+      languageEdition: { available: siblings.length > 0, rate: languageEditionRate(policy), applied: Boolean(price?.languageEdition), sourceBookId: price?.languageEdition?.sourceBookId || '', editions: siblings.map(b => ({ id: b.id, title: b.title, language: b.language })) },
+      checkout: { open: readiness.ready && pay.ready && ((pay.mode === 'live' && hasFile) || operator), mode: pay.mode, testOnly: pay.ready && pay.mode !== 'live', fileReady: hasFile, operator, saleReady: readiness.ready, saleStatus: readiness.label },
     },
   };
 }
@@ -163,17 +183,20 @@ export async function createOrder(env, request, body, now = new Date()) {
   if (!buyer) return { status: 401, data: { error: '구글 로그인 후 구매할 수 있습니다.', code: 'login_required' } };
   if (pay.mode !== 'live' && !operatorEmails(env).has(buyer.email)) return { status: 503, data: { error: '에코디서점 결제 준비 중입니다.', code: 'PAYMENTS_TEST_ONLY' } };
   const [catalog, policy] = await Promise.all([loadCatalog(env), loadPolicy(env)]);
-  const book = directSaleBook(catalog, body?.bookId);
+  const book = await authorizedPublicSaleBook(env,catalog,body?.bookId);
   if (!book) return { status: 404, data: { error: '에코디서점 직접 판매 도서가 아닙니다.' } };
   if (await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL').bind(buyer.userId, book.id).first()) {
     return { status: 409, data: { error: '이미 내 서재에 있는 도서입니다.', code: 'ALREADY_OWNED' } };
   }
+  const readiness = saleReadiness(book);
+  if (!readiness.ready) return { status: 409, data: { error: `${readiness.label} 도서입니다. 판매가 열리면 바로 구매하실 수 있습니다.`, code: 'BOOK_NOT_SALE_READY', saleStatus: readiness.label } };
   if (!operatorEmails(env).has(buyer.email) && !(await fileReady(env, book))) {
     return { status: 409, data: { error: '전자책 파일을 준비하고 있습니다. 준비되면 바로 구매하실 수 있습니다.', code: 'FILE_PREPARING' } };
   }
   if (body?.consent !== true) return { status: 400, data: { error: '전자책 구매·환불 안내에 동의해 주세요.' } };
   const tierId = await tierFor(env, buyer, now);
-  const price = priceFor(book, policy, tierId);
+  const ownedSibling = await ownedOtherLanguageEdition(env, buyer, catalog, book);
+  const price = applyLanguageEditionDiscount(priceFor(book, policy, tierId), policy, ownedSibling);
   if (!price) return { status: 409, data: { error: '판매 가격이 확정되지 않은 도서입니다.' } };
   const orderId = ekodipay.tagOrderId(newOrderId(now), pay.profile);
   const createdAt = now.toISOString();
@@ -182,7 +205,7 @@ export async function createOrder(env, request, body, now = new Date()) {
   await env.DB.prepare(`INSERT INTO books_orders (id, book_id, book_title, buyer_user_id, buyer_email, buyer_name, tier_id, list_price, amount, status, source, expires_at, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'payment_pending', ?, ?, ?, ?)`)
     .bind(orderId, book.id, book.title, buyer.userId, buyer.email, name, price.tierId, price.listPrice, price.amount, clean(body?.source, 30) || 'bookstore', expiresAt, createdAt, createdAt).run();
-  await audit(env, orderId, buyer.email, 'order.created', { amount: price.amount, tier: price.tierId, mode: pay.mode });
+  await audit(env, orderId, buyer.email, 'order.created', { amount: price.amount, tier: price.tierId, mode: pay.mode, languageEditionSource: price.languageEdition?.sourceBookId || undefined });
   const base = String(env.PUBLIC_BASE_URL || 'https://ekodi.kr/books').replace(/\/$/, '');
   return {
     status: 201,
@@ -208,7 +231,15 @@ export async function confirm(env, { paymentKey, orderId, amount }, now = new Da
     return { status: 409, data: { error: '결제 금액이 주문과 일치하지 않습니다.' } };
   }
   if (order.expires_at < now.toISOString()) return { status: 410, data: { error: '결제 시간이 지났습니다. 다시 구매해 주세요.' } };
+  // An edition can be revoked after quote/order creation; recheck BEFORE charging.
+  if(!(await authorizedPublicSaleBook(env,await loadCatalog(env),order.book_id)))
+    return {status:409,data:{error:'출판 공개 승인이 취소되었거나 아직 공개되지 않은 도서입니다.',code:'BOOK_NOT_RELEASED'}};
   if (!(await payments(env)).ready) return { status: 503, data: { error: '결제 승인 서비스가 준비되지 않았습니다.' } };
+  // 주문 이후 판매 준비 상태가 철회될 수 있으므로 청구 전에 다시 확인한다(결제 승인 호출 없음).
+  if (!saleReadiness((await loadCatalog(env))?.books?.find(b => b.id === order.book_id)).ready) {
+    await audit(env, orderId, 'books-sale-readiness', 'payment.blocked_not_sale_ready', {});
+    return { status: 409, data: { error: '판매 준비가 끝나지 않은 도서라 결제를 승인하지 않았습니다. 청구되지 않습니다.', code: 'BOOK_NOT_SALE_READY' } };
+  }
   let payment;
   try {
     payment = await toss(env, profileId, '/v1/payments/confirm', { method: 'POST', body: { paymentKey, orderId, amount: Math.trunc(Number(order.amount)) }, idempotencyKey: `ekb-confirm-${orderId}` });
@@ -253,7 +284,8 @@ export async function library(env, request) {
     const book = byId.get(row.book_id) || { id: row.book_id, title: row.book_id };
     const key = book.directSale?.fileKey || '';
     const ready = Boolean(key && env.BOOK_FILES && await env.BOOK_FILES.head(key).catch(() => null));
-    items.push({ id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', grantedAt: row.granted_at, amount: row.amount, receiptUrl: row.receipt_url || '', downloadReady: ready });
+    const audiobook = await availableAudiobook(env, book);
+    items.push({ id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', grantedAt: row.granted_at, amount: row.amount, receiptUrl: row.receipt_url || '', downloadReady: ready, audiobook });
   }
   return { status: 200, data: { email: buyer.email, tier: await tierFor(env, buyer), items } };
 }
@@ -261,7 +293,7 @@ export async function library(env, request) {
 export async function download(env, request, bookId) {
   const buyer = await buyerIdentity(request);
   if (!buyer) return new Response(JSON.stringify({ error: '로그인이 필요합니다.' }), { status: 401, headers: { 'content-type': 'application/json; charset=utf-8' } });
-  const book = directSaleBook(await loadCatalog(env), bookId);
+  const book = await authorizedPublicSaleBook(env,await loadCatalog(env),bookId);
   const owned = book && await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL').bind(buyer.userId, book.id).first();
   if (!owned) return new Response(JSON.stringify({ error: '내 서재에 없는 도서입니다.' }), { status: 403, headers: { 'content-type': 'application/json; charset=utf-8' } });
   const object = env.BOOK_FILES && book.directSale?.fileKey ? await env.BOOK_FILES.get(book.directSale.fileKey) : null;
@@ -271,6 +303,33 @@ export async function download(env, request, bookId) {
   return new Response(object.body, { headers: {
     'content-type': 'application/epub+zip', 'cache-control': 'private, no-store',
     'content-disposition': `attachment; filename="ekodi-book.epub"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    'x-content-type-options': 'nosniff',
+  } });
+}
+
+/** Complimentary to the same non-revoked ebook purchase; no new payment. */
+export async function downloadAudiobook(env, request, bookId, trackNo) {
+  const buyer = await buyerIdentity(request);
+  const headers = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff' };
+  if (!buyer) return new Response(JSON.stringify({ error: '로그인이 필요합니다.' }), { status: 401, headers });
+  const book = await authorizedPublicSaleBook(env,await loadCatalog(env),bookId);
+  const owned = book && await env.DB.prepare('SELECT 1 FROM books_entitlements WHERE buyer_user_id=? AND book_id=? AND revoked_at IS NULL')
+    .bind(buyer.userId, book.id).first();
+  if (!owned) return new Response(JSON.stringify({ error: '내 서재에서 이용할 수 없는 도서입니다.' }), { status: 403, headers });
+  const track = audioChapterFor(book, Number(trackNo));
+  if (!track || !(await availableAudiobook(env, book)).ready) {
+    return new Response(JSON.stringify({ error: '보너스 오디오북을 제작·권리 검수 중입니다. 승인된 파일이 준비되면 추가 결제 없이 제공됩니다.', code: 'AUDIOBOOK_PREPARING' }), { status: 409, headers });
+  }
+  const object = env.BOOK_FILES ? await env.BOOK_FILES.get(track.key) : null;
+  const meta = object?.customMetadata || {};
+  if (!object || meta.bookId !== book.id || meta.kind !== 'audiobook-chapter' || meta.edition !== book.edition || meta.approved !== 'true' || meta.sha256 !== track.sha256) {
+    return new Response(JSON.stringify({ error: '오디오북 파일을 준비하고 있습니다.', code: 'AUDIOBOOK_PREPARING' }), { status: 409, headers });
+  }
+  await audit(env, '', buyer.email, 'audiobook.bonus_download', { bookId: book.id, track: track.number });
+  const filename = book.title + ' - ' + String(track.number).padStart(2, '0') + '장.mp3';
+  return new Response(object.body, { headers: {
+    'content-type': 'audio/mpeg', 'cache-control': 'private, no-store',
+    'content-disposition': 'attachment; filename="ekodi-bonus-audiobook.mp3"; filename*=UTF-8\u0027\u0027' + encodeURIComponent(filename),
     'x-content-type-options': 'nosniff',
   } });
 }
@@ -316,6 +375,36 @@ export async function adminRoute(env, request, path, url, now = new Date()) {
     await audit(env, '', buyer.email, 'book.file_uploaded', { bookId: book.id, size: bytes.length });
     return { status: 200, data: { ok: true, bookId: book.id, size: bytes.length } };
   }
+  const audioFileMatch = /^\/admin\/audiobooks\/([A-Z0-9-]{3,40})\/(\d{1,3})$/.exec(path);
+  if (audioFileMatch && (request.method === 'GET' || request.method === 'PUT')) {
+    const book = directSaleBook(await loadCatalog(env), audioFileMatch[1]);
+    const index = Number(audioFileMatch[2]);
+    // A planned draft can be uploaded, but only the reviewed catalog + a
+    // post-approval upload can mark the R2 copy distributable.
+    const tracks = Array.isArray(book?.audiobook?.tracks) ? book.audiobook.tracks : [];
+    const track = tracks.find(t => t.number === index && t.format === 'mp3' &&
+      typeof t.key === 'string' && /^BOOK-[A-Z0-9-]+\/audiobook\/[A-Za-z0-9._-]+\.mp3$/.test(t.key) &&
+      t.key.startsWith(book.id + '/audiobook/'));
+    if (!track || !env.BOOK_FILES) return { status: 409, data: { error: '오디오 제작 트랙 명세 또는 비공개 저장소가 준비되지 않았습니다.' } };
+    const approved = complimentaryAudiobookPolicy(book).approved;
+    if (request.method === 'GET') {
+      const head = await env.BOOK_FILES.head(track.key).catch(() => null);
+      return { status: 200, data: { bookId: book.id, track: index, present: Boolean(head), size: head?.size || 0, approvedForDelivery: approved && head?.customMetadata?.approved === 'true', priceKrw: 0 } };
+    }
+    const length = Number(request.headers.get('content-length') || 0);
+    if (length > MAX_AUDIO_CHAPTER_BYTES) return { status: 413, data: { error: '장별 오디오 파일은 최대 32MB입니다.' } };
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    const result = validateAudioChapter(bytes);
+    if (!result.ok) return { status: 400, data: { error: result.error } };
+    const sha256 = await audioSha256(bytes);
+    if (approved && sha256 !== track.sha256) return { status: 409, data: { error: '권리·음질 검수로 승인한 MP3와 파일 해시가 다릅니다.' } };
+    await env.BOOK_FILES.put(track.key, bytes, {
+      httpMetadata: { contentType: 'audio/mpeg' },
+      customMetadata: { bookId: book.id, edition: book.edition, kind: 'audiobook-chapter', approved: approved ? 'true' : 'false', sha256, uploadedBy: buyer.email },
+    });
+    await audit(env, '', buyer.email, 'audiobook.track_uploaded', { bookId: book.id, track: index, approved });
+    return { status: 200, data: { ok: true, bookId: book.id, track: index, size: bytes.length, approvedForDelivery: approved, priceKrw: 0 } };
+  }
   if (request.method === 'GET' && path === '/admin/tiers') {
     const rows = await env.DB.prepare('SELECT buyer_email, tier_id, source, expires_at, updated_at FROM books_member_tiers ORDER BY updated_at DESC LIMIT 500').all();
     return { status: 200, data: { tiers: rows.results || [] } };
@@ -359,6 +448,8 @@ export async function handleCommerce(request, env) {
     }
     if (request.method === 'GET' && path === '/quote') return jsonResponse(await quote(env, request, url.searchParams.get('book')));
     if (request.method === 'GET' && path === '/library') return jsonResponse(await library(env, request));
+    const audioDl = /^\/download\/audio\/([A-Z0-9-]{3,40})\/(\d{1,3})$/.exec(path);
+    if (request.method === 'GET' && audioDl) return downloadAudiobook(env, request, audioDl[1], audioDl[2]);
     const dl = /^\/download\/([A-Z0-9-]{3,40})$/.exec(path);
     if (request.method === 'GET' && dl) return download(env, request, dl[1]);
     if (path.startsWith('/admin/')) return jsonResponse(await adminRoute(env, request, path, url));

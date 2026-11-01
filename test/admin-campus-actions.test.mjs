@@ -123,3 +123,15 @@ test('Campus action assets are shipped but fetched only after the administrator 
   assert.match(css, /\.campus-row-actions/);
   assert.match(css, /\.campus-row-action/);
 });
+
+
+test('Admin service catalogs never present a retired hostname as a live platform Admin address', async () => {
+  const ai = await readFile(new URL('../ai-ops-admin.js', import.meta.url), 'utf8');
+  const old = ['admin','ekodi','kr'].join('.');
+  assert.match(js, /name: 'EKODI Admin', domain: 'ekodi\.kr\/admin'/);
+  assert.match(js, /if \(host === 'ekodi\.kr\/admin'\) return 'https:\/\/ekodi\.kr\/admin'/);
+  assert.match(ai, /domain:'ekodi\.kr\/admin', name:'Control Center'/);
+  assert.ok(!js.includes("name: 'EKODI Admin', domain: '" + old + "'"));
+  assert.ok(!ai.includes("domain:'" + old + "', name:'Control Center'"));
+  assert.match(ai, /agent\.domain === 'ekodi\.kr\/admin'/);
+});

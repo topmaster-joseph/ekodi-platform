@@ -64,3 +64,15 @@ test('Admin conversation-first skin preserves mobile drawer and readable light s
   assert.match(css, /\.ekodi-assist-bootstrap-plus::after\{[\s\S]*content:'AI'/);
   assert.match(css, /admin-command-active \.ekodi-assist-bootstrap\{display:none!important/);
 });
+
+test('closed mobile admin drawer is invisible and non-interactive while opening retains native behavior', async()=>{
+  const css=await readFile(new URL('../admin-conversation-workbench.css',import.meta.url),'utf8');
+  const e2e=await readFile(new URL('../scripts/verify-admin-production-ui-e2e.mjs',import.meta.url),'utf8');
+  assert.match(css,/ADMIN-MOBILE-DRAWER-VISUAL-004/);
+  assert.match(css,/\.sidebar:not\(\.open\)\{[\s\S]*visibility:hidden!important;[\s\S]*pointer-events:none!important/);
+  assert.match(css,/\.sidebar\.open\{[\s\S]*visibility:visible!important;[\s\S]*pointer-events:auto!important/);
+  assert.match(e2e,/drawerRect\.right <= 2/);
+  assert.match(e2e,/mobile\.drawerVisibility !== 'hidden'/);
+  assert.match(e2e,/!mobile\.cardUnobscured/);
+  assert.match(e2e,/document\.elementFromPoint\(x,y\)/);
+});

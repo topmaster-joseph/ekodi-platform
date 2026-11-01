@@ -11,7 +11,7 @@
       "publicationType": "MONOGRAPH · PUBLIC THEOLOGY",
       "status": "On Sale · 2026",
       "coverTitle": "에코디언을\n찾아서",
-      "coverImage": "/assets/ekodian-cover.svg",
+      "coverImage": "/assets/ekodian-cover.jpg",
       "detailUrl": "/ekodian/",
       "storeUrl": "/ekodian/",
       "publishingUrl": "/publishing/workspace/?book=BOOK-EKODI-000001",
@@ -20,8 +20,8 @@
       "subtitle": "성경 속 숨겨진 하나님 백성의 진짜 모습",
       "author": "정찬균",
       "discipline": "Ecclesiology · Public Theology · Community Studies",
-      "language": "ko-en",
-      "languageLabel": "한국어 · 영어 병기 / Amazon 영어 단독판 별도",
+      "language": "ko",
+      "languageLabel": "한국어판 · 영어판은 Amazon 별도 판본(In Search of the EKODIan)",
       "format": [
         "EPUB 3",
         "Reflowable Digital Edition"
@@ -32,7 +32,7 @@
         "amount": 9900,
         "label": "9,900원"
       },
-      "abstract": "교회를 건물과 제도의 언어에 가두지 않고, 성경의 큰 이야기 안에서 부름받은 백성의 삶으로 다시 읽는다. 에클레시아, 코이노니아, 디아스포라, 희년이라는 네 개의 오래된 언어를 오늘의 공동체와 일상으로 연결하며, 주일의 고백이 월요일의 선택으로 이어지는 신앙의 구조를 탐구한다.",
+      "abstract": "교회는 건물일까, 사람일까? 『에코디언을 찾아서』는 성경의 큰 이야기를 따라 교회를 제도가 아닌 ‘부름받은 하나님 백성의 삶’으로 다시 읽는 한국어 단행본입니다. 에클레시아(부름받은 사람들), 코이노니아(나눔과 연결), 디아스포라(흩어져 살아가는 이방인), 희년(새로운 시작)이라는 네 개의 오래된 언어를 하나의 흐름으로 엮어, 주일의 고백이 월요일의 선택으로 이어지는 신앙의 구조를 탐구합니다. 각 장의 실천 가이드는 개인과 소그룹이 함께 읽고 나누기에 알맞습니다. 영어 독자를 위한 영문판은 Amazon에서 별도 판본으로 준비하고 있습니다.",
       "citation": "정찬균. 『에코디언을 찾아서: 성경 속 숨겨진 하나님 백성의 진짜 모습』. 에코디서점, 2026.",
       "identifiers": {
         "googleBooks": "GGKEY:CK7J1TCXGFC",
@@ -53,13 +53,17 @@
           "title": "에코디언을 찾아서",
           "version": "v1.3",
           "price": "KRW 9,900",
-          "status": "등록 진행 중"
+          "status": "등록 진행 중",
+          "language": "ko",
+          "label": "한국어판"
         },
         "upaperKoreanBilingual": {
           "provider": "Upaper",
           "version": "v1.7",
           "price": "KRW 9,900",
-          "status": "판매 중"
+          "status": "판매 중",
+          "language": "ko",
+          "label": "한국어판"
         },
         "amazonEnglish": {
           "title": "In Search of the EKODIan",
@@ -67,7 +71,9 @@
           "author": "Jeong Chan Gyun",
           "version": "RC1",
           "price": "USD 5.99",
-          "status": "영문판 준비 중"
+          "status": "영문판 준비 중",
+          "language": "en",
+          "label": "영문판 (별도 판본)"
         }
       },
       "distribution": {
@@ -82,13 +88,117 @@
         "upaper": "https://ekodi.upaper.kr/content/1223429",
         "korea": "https://ekodi.upaper.kr/content/1223429"
       },
+      "audiobook": {
+        "freeWithEbook": true,
+        "status": "production_pending",
+        "sourceEdition": "Digital First Edition · v1.7",
+        "rightsApproved": false,
+        "authorApproved": false,
+        "publisherApproved": false,
+        "voicePerformanceApproved": false,
+        "accessibilityReviewed": false,
+        "tracks": []
+      },
       "directSale": {
         "enabled": true,
         "fileKey": "BOOK-EKODI-000001/ebook.epub",
         "format": "EPUB 3"
       },
       "buyUrl": "/buy/?book=BOOK-EKODI-000001",
-      "socialImage": "/assets/ekodian-cover.jpg"
+      "socialImage": "/assets/ekodian-cover.jpg",
+      "workId": "WORK-EKODIAN"
+    },
+    {
+      "id": "BOOK-EKODI-000003",
+      "workId": "WORK-EKODIAN",
+      "catalogNo": "EB-MONO-001-EN",
+      "series": "EKODI ORIGINAL",
+      "seriesNumber": 1,
+      "publicationType": "MONOGRAPH · PUBLIC THEOLOGY · ENGLISH EDITION",
+      "status": "판매 준비 중 · 영문판 (전자책 파일 등록 대기)",
+      "coverTitle": "In Search of\nthe EKODIan",
+      "detailUrl": "/ekodian/",
+      "storeUrl": "/ekodian/",
+      "publishingUrl": "/publishing/workspace/?book=BOOK-EKODI-000003",
+      "adminUrl": "https://ekodi.kr/admin/books#BOOK-EKODI-000003",
+      "title": "In Search of the EKODIan",
+      "subtitle": "The Hidden Biblical Portrait of God’s People",
+      "author": "Jeong Chan Gyun",
+      "discipline": "Ecclesiology · Public Theology · Community Studies",
+      "language": "en",
+      "languageLabel": "English · 영문판 (『에코디언을 찾아서』의 영어 판본)",
+      "format": [
+        "EPUB 3",
+        "Reflowable Digital Edition"
+      ],
+      "edition": "English Digital First Edition",
+      "listPrice": {
+        "currency": "KRW",
+        "amount": 9900,
+        "label": "9,900원"
+      },
+      "abstract": "In Search of the EKODIan follows the Bible’s larger story to recover four ancient words for contemporary Christian life: Ecclesia, Koinonia, Diaspora, and Jubilee. Together they describe a people called and gathered, a community that shares burdens, a dispersed people who become bridges in unfamiliar places, and a way of life that makes room for restoration and new beginnings. 한국어판 『에코디언을 찾아서』를 보유한 독자는 영문판을 50% 할인된 금액으로 구입할 수 있습니다.",
+      "citation": "Jeong, Chan Gyun. In Search of the EKODIan: The Hidden Biblical Portrait of God’s People. EKODI Books.",
+      "identifiers": {
+        "googleBooks": "",
+        "isbnEbook": "",
+        "amazonAsin": ""
+      },
+      "workflow": {
+        "manuscript": "complete",
+        "editing": "complete",
+        "epub": "pending_upload",
+        "cover": "complete",
+        "metadata": "ready",
+        "distribution": "needs_verification",
+        "storefront": "catalog_listed"
+      },
+      "editions": {
+        "amazonEnglish": {
+          "title": "In Search of the EKODIan",
+          "subtitle": "The Hidden Biblical Portrait of God’s People",
+          "author": "Jeong Chan Gyun",
+          "version": "RC1",
+          "price": "USD 5.99",
+          "status": "영문판 준비 중",
+          "language": "en",
+          "label": "영문판 (별도 판본)"
+        }
+      },
+      "distribution": {
+        "google": "준비 중",
+        "upaper": "해당 없음",
+        "amazon": "영문판 준비 중"
+      },
+      "links": {
+        "amazon": "",
+        "google": "",
+        "upaper": "",
+        "korea": ""
+      },
+      "directSale": {
+        "enabled": true,
+        "fileKey": "BOOK-EKODI-000003/ebook.epub",
+        "format": "EPUB 3"
+      },
+      "audiobook": {
+        "freeWithEbook": true,
+        "status": "production_pending",
+        "sourceEdition": "",
+        "rightsApproved": false,
+        "authorApproved": false,
+        "publisherApproved": false,
+        "voicePerformanceApproved": false,
+        "accessibilityReviewed": false,
+        "tracks": []
+      },
+      "coverImage": "/assets/ekodian-en-cover.jpg",
+      "editionApproval": {
+        "approvedBy": "정찬균 (저자·발행인)",
+        "approvedAt": "2026-11-01",
+        "scope": "판본 확정·에코디서점 판매가 9,900원",
+        "sourceEdition": "KDP RC1"
+      }
     },
     {
       "id": "BOOK-EKODI-000002",
@@ -151,14 +261,26 @@
         "upaper": "",
         "korea": ""
       },
+      "audiobook": {
+        "freeWithEbook": true,
+        "status": "production_pending",
+        "sourceEdition": "",
+        "rightsApproved": false,
+        "authorApproved": false,
+        "publisherApproved": false,
+        "voicePerformanceApproved": false,
+        "accessibilityReviewed": false,
+        "tracks": []
+      },
       "directSale": {
         "enabled": true,
         "fileKey": "BOOK-EKODI-000002/ebook.epub",
         "format": "EPUB 3"
       },
       "buyUrl": "/buy/?book=BOOK-EKODI-000002",
-      "coverImage": "/assets/ai-progress-poverty-cover.svg",
-      "socialImage": "/assets/ai-progress-poverty-cover.jpg"
+      "coverImage": "/assets/ai-progress-poverty-cover.jpg",
+      "socialImage": "/assets/ai-progress-poverty-cover.jpg",
+      "workId": "WORK-AI-PROGRESS-POVERTY"
     }
   ]
 }

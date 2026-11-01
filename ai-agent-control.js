@@ -6,7 +6,9 @@ import { AI_MISSION_RUNTIME, evaluateMissionAction, getRuntimeAgentPolicy } from
 import { evaluateAutonomousOperation, getSovereignAutonomySummary } from './sovereign-autonomy-runtime.js';
 import { buildEkodianOperationSnapshot, getEkodian8GSummary } from './ekodian-8g-runtime.js';
 import {
+  ADMIN_ASSIST_FEEDBACK,
   ADMIN_ASSIST_RETENTION,
+  buildAssistRecall,
   ensureAdminAssistColumns,
   listOwnConversations,
   redactOwnConversation,
@@ -21,6 +23,43 @@ const MAX_ASSIST_HISTORY_ITEMS = 8;
 const DEFAULT_ADMIN_ASSIST_TOTAL_TIMEOUT_MS = 15_000;
 const MAX_ADMIN_ASSIST_TOTAL_TIMEOUT_MS = 20_000;
 const SAFE_EXECUTORS = new Set(['service.health_check']);
+
+/**
+ * Where an assist request came from, as a closed vocabulary.
+ *
+ * The monitoring probe signs in as a real administrator and drives the real
+ * bottom dock — which is the point, since that is what proves the human path
+ * works. The consequence is that nothing on the server can tell it apart from
+ * the administrator typing, so every probe run was recorded as conversation.
+ * Feedback then fed the model three health checks instead of the pastor's
+ * actual work, and the conversation list filled with "정상".
+ *
+ * So the caller declares its origin and the server validates it against this
+ * list. An unrecognized value becomes 'dock' rather than being trusted or
+ * refused, so no caller can invent a category, and a request that says nothing
+ * behaves exactly as before.
+ *
+ * What the assertion can and cannot do, deliberately: a probe row keeps every
+ * audit field — who asked, when, the decision tier, the reply, the retention
+ * clock — and `pruneAdminAssistConversations` still redacts it on schedule.
+ * Only the category differs, and the payload records that the category was
+ * claimed by the caller rather than observed. So the worst an administrator can
+ * do by claiming it is keep their own conversation out of their own recall;
+ * accountability is unaffected. A forgery-proof version would have to give the
+ * probe its own identity in the auth layer, which is a larger change than this
+ * problem is worth.
+ */
+const ASSIST_ORIGINS = new Set(['dock', 'automated_probe']);
+export const ASSIST_ACTION_TYPES = Object.freeze({
+  dock: 'admin.assist_chat',
+  automated_probe: 'admin.assist_probe',
+});
+
+// Exported so its tests exercise this function rather than a copy of the rule.
+export function normalizeAssistOrigin(value) {
+  const candidate = String(value ?? '').trim().toLowerCase();
+  return ASSIST_ORIGINS.has(candidate) ? candidate : 'dock';
+}
 
 
 function json(data, status = 200, request = null, env = {}) {
@@ -280,18 +319,42 @@ async function handleAdminAssist(request, env, session) {
   if (!message) return json({ error: 'AI Assist 요청 내용이 필요합니다.', code: 'ASSIST_MESSAGE_REQUIRED' }, 400, request, env);
   const page = normalizeAssistPage(body.context || body.page || {});
   const history = normalizeAssistHistory(body.history);
+  const origin = normalizeAssistOrigin(body.origin);
+  const isProbe = origin === 'automated_probe';
+  // Feedback: a few summaries of this administrator's own completed, non-gated
+  // conversations. Built before the audit row is inserted, so the in-flight turn
+  // cannot feed itself, and never allowed to fail the request — an assistant
+  // that breaks when it cannot remember is worse than one that forgets.
+  // A probe gets none: it is checking that the path answers, and continuity
+  // means nothing to it.
+  const recallOwner = isProbe ? '' : String(session.email || '').trim();
+  const recall = recallOwner
+    ? await buildAssistRecall(env.DB, { email: recallOwner })
+      .catch(error => {
+        console.error('Admin assist feedback recall failed', String(error?.message || error));
+        return null;
+      })
+    : null;
+  const recallItems = recall?.items || [];
 
   const auditAction = normalizeAction({
     agentId: 'chief',
-    actionType: 'admin.assist_chat',
+    actionType: ASSIST_ACTION_TYPES[origin],
     area: 'read_only_audits',
     capabilityId: 'core.navigator',
     target: page.section || 'admin',
     rationale: message,
     payload: {
-      source: 'admin-assist-dock',
+      source: isProbe ? 'admin-assist-probe' : 'admin-assist-dock',
+      // Recorded as claimed, not as verified: the ledger should show that this
+      // category rests on the caller's word.
+      origin,
+      originAsserted: true,
       context: page,
       historyItems: history.length,
+      // The ledger records what the model was reminded of, and on what terms.
+      recallItems: recallItems.length,
+      recallMode: ADMIN_ASSIST_FEEDBACK.summariesOnly ? 'summaries_read_only' : 'verbatim',
     },
     reversible: true,
     delegated: true,
@@ -313,6 +376,7 @@ async function handleAdminAssist(request, env, session) {
       message,
       page,
       history,
+      recall: recallItems,
       requestedBy: String(session.email || 'unknown'),
     },
     fallback: () => ({

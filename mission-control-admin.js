@@ -6,6 +6,7 @@
   const START_KEY = 'ekodi-governance-cockpit-started-v1';
   const OVERVIEW_TTL_MS = 5 * 60 * 1000;
   const CORE_SERVICE_IDS = new Set(['admin','auth','api','pay']);
+  const CORE_CANONICAL_DOMAINS = new Set(['ekodi.kr/admin','ekodi.kr/auth','ekodi.kr/ekodipay']);
   const CORE_DOMAINS = new Set(['admin.ekodi.kr','auth.ekodi.kr','ekodi.kr/ekodipay']);
   const PRIMARY_ROUTES = [
     { key:'overview', label:'Overview', icon:'◈', focus:'overview' },
@@ -64,7 +65,7 @@
   function isCoreService(service) {
     const id=String(service?.id||'').toLowerCase();
     const domain=String(service?.domain||'').toLowerCase();
-    return CORE_SERVICE_IDS.has(id)||CORE_DOMAINS.has(domain);
+    return CORE_SERVICE_IDS.has(id)||CORE_CANONICAL_DOMAINS.has(domain)||CORE_DOMAINS.has(domain);
   }
   function issueItems() {
     return services().map(service => ({ service, status:serviceStatus(service) }))

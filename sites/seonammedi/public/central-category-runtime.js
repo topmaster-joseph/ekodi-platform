@@ -1,5 +1,19 @@
 /* EKODI central category controls: external script for strict CSP. */
-(function(){const categories={"활동이력":[{"href":"#committee-activity","label":"비대위 활동"},{"href":"#committee-activity/%EC%84%B1%EB%AA%85%C2%B7%EC%9E%85%EC%9E%A5%20%EB%B0%9C%ED%91%9C","label":"공식 성명·추진 경과"}],"관련소식":[{"href":"#timeline","label":"전체 소식"},{"href":"#timeline/%EC%8B%A0%EB%AC%B8","label":"신문·인터넷 언론"},{"href":"#timeline/%EB%B0%A9%EC%86%A1","label":"방송"}],"소통채널":[{"href":"#channels/facebook","label":"페이스북"},{"href":"#channels/instagram","label":"인스타그램"},{"href":"#channels/youtube","label":"유튜브"}]};const panel=document.getElementById('central-category-panel'),title=document.getElementById('central-category-title'),buttons=document.getElementById('central-category-buttons'),triggers=[...document.querySelectorAll('.ekodi-six-nav > a')].filter(t=>categories[t.textContent.trim()]).map(t=>{t.dataset.categoryMenu=t.textContent.trim();t.setAttribute('aria-controls','central-category-panel');t.setAttribute('aria-expanded','false');return t});
+(function(){
+  // The SeonamMedi homepage already owns all six menu routes in app.js.
+  // Do not attach the legacy category overlay to those same links: it makes
+  // click-navigation differ from direct #hash loads and reloads, and may hide
+  // the native activity/news filters or entire channel content via CSS.
+  // Preserve this enhancer only for historical minimal/non-native shells.
+  if(document.getElementById('committeeActivityFilters')
+    &&document.getElementById('timelineFilters')
+    &&document.getElementById('publicChannelTabs')){
+    const legacyPanel=document.getElementById('central-category-panel');
+    if(legacyPanel)legacyPanel.hidden=true;
+    document.body.dataset.seonammediCentralTopic='';
+    return;
+  }
+  const categories={"활동이력":[{"href":"#committee-activity","label":"비대위 활동"},{"href":"#committee-activity/%EC%84%B1%EB%AA%85%C2%B7%EC%9E%85%EC%9E%A5%20%EB%B0%9C%ED%91%9C","label":"공식 성명·추진 경과"}],"관련소식":[{"href":"#timeline","label":"전체 소식"},{"href":"#timeline/%EC%8B%A0%EB%AC%B8","label":"신문·인터넷 언론"},{"href":"#timeline/%EB%B0%A9%EC%86%A1","label":"방송"}],"소통채널":[{"href":"#channels/facebook","label":"페이스북"},{"href":"#channels/instagram","label":"인스타그램"},{"href":"#channels/youtube","label":"유튜브"}]};const panel=document.getElementById('central-category-panel'),title=document.getElementById('central-category-title'),buttons=document.getElementById('central-category-buttons'),triggers=[...document.querySelectorAll('.ekodi-six-nav > a')].filter(t=>categories[t.textContent.trim()]).map(t=>{t.dataset.categoryMenu=t.textContent.trim();t.setAttribute('aria-controls','central-category-panel');t.setAttribute('aria-expanded','false');return t});
 // SECTION-TITLE-ADD-001 (owner request 2026-10-20): full display titles; logic keeps the menu name in data-topic.
 let currentTopic='';
 const TOPIC_TITLES={'활동이력':'비상대책위원회 활동이력','관련소식':'서남권 국립의대 관련소식'};

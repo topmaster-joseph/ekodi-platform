@@ -31,6 +31,7 @@ const realms={
   invest:{name:'EKODI Investment',returnTo:'https://ekodi.kr/invest/',open:true,kind:'invest'},
   support:{name:'EKODI Support AI',returnTo:'https://ekodi.kr/support/',open:true,kind:'support'},
   publishing:{name:'Publishing',returnTo:'https://ekodi.kr/publishing/',open:true,kind:'publishing'},
+  management:{name:'EKODI 경영플랫폼',returnTo:'https://ekodi.kr/management/',origins:['https://ekodi.kr'],open:true,kind:'management'},
   money:{name:'EKODI Money',returnTo:'https://ekodi.kr/money/',origins:['https://ekodi.kr'],open:true,kind:'money'},
   mail:{name:'EKODI Mail',returnTo:'https://ekodi.kr/mail',open:true,kind:'mail'},
   live:{name:'EKODI Live',returnTo:'https://ekodi.kr/live',open:true,kind:'live'},
@@ -51,6 +52,9 @@ const CHOOSE_ACCOUNT=site==='seonammedi'&&params.get('select_account')==='1';
 const CHURCH_CHOOSE_ACCOUNT=site==='church'&&params.get('select_account')==='1';
 // 동행: 저장된 로그인으로 자동 진행하지 않고 매번 Google 계정을 고르게 한다(2026-10-28).
 const SINGLES_CHOOSE_ACCOUNT=site==='singles'&&params.get('select_account')==='1';
+// Platform admin tools (/admin/site-admins, /admin/people) let the operator pick the
+// Google account explicitly instead of reusing whatever provider session is stored.
+const ADMIN_TOOL_CHOOSE_ACCOUNT=site==='portal'&&params.get('select_account')==='1';
 const PREOPENED_BRIDGE=DIRECT_LOGIN&&!CHOOSE_ACCOUNT&&params.get('bridge')==='preopened';
 const GOOGLE_BRIDGE_ORIGIN=location.origin;
 if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='1';
@@ -94,11 +98,21 @@ function safeReturn(raw){
     // Never silently accept /my or another EKODI workspace as a SeonamMedi return target.
     const prefix=fallback.pathname.replace(/\/$/,'');
     const sameCanonicalPath=target.origin==='https://ekodi.kr'&&fallback.origin==='https://ekodi.kr'&&(prefix?(target.pathname===prefix||target.pathname.startsWith(prefix+'/')):(config.kind==='space'||(config.kind==='portal'&&target.pathname==='/')));
-    const internalEkodi=config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath);
+    // Provider-independent admin handoff is a single fixed, same-origin
+    // callback, never an arbitrary external admin redirect.
+    const adminReturn=config.kind==='portal'&&target.origin==='https://ekodi.kr'
+      &&target.pathname==='/auth/'&&target.searchParams.get('site')==='admin'
+      &&target.searchParams.get('via')==='ekodi'
+      &&target.searchParams.get('return_to')?.startsWith('https://ekodi.kr/admin/')
+      &&![...target.searchParams.keys()].some(key=>!['site','via','return_to'].includes(key));
+    const adminToolReturn=config.kind==='portal'&&target.origin==='https://ekodi.kr'
+      &&['/admin/site-admins','/admin/site-admins/','/admin/people','/admin/people/'].includes(target.pathname);
+    const internalEkodi=adminReturn||adminToolReturn||(config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath));
     const trustedLegacy=target.origin!=='https://ekodi.kr'&&allowedOrigins.has(target.origin);
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
-    const churchPath=config.kind!=='church'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));
-    if(target.protocol!=='https:'||target.username||target.password||(!trustedLegacy&&!internalEkodi)||!missionPath||!churchPath)return fallback.href;
+    const churchLive=config.kind==='church'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/live/church'||target.pathname.startsWith('/live/church/'));
+    const churchPath=config.kind!=='church'||churchLive||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')));
+    if(target.protocol!=='https:'||target.username||target.password||(!trustedLegacy&&!internalEkodi&&!churchLive)||!missionPath||!churchPath)return fallback.href;
     target.hash='';
     return target.href;
   }catch{return fallback.href}
@@ -345,16 +359,18 @@ async function renderGoogle(){
     if(CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     if(CHURCH_CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     if(SINGLES_CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
+    if(ADMIN_TOOL_CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     window.google.accounts.id.renderButton(host,googleButtonOptions);
     if(CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(CHURCH_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(SINGLES_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
+    if(ADMIN_TOOL_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(DIRECT_LOGIN){
       notice('Google 계정 선택창을 여는 중입니다.');
       window.google.accounts.id.prompt(notification=>{
         if(notification?.isNotDisplayed?.()||notification?.isSkippedMoment?.())notice('Google 계정 선택창을 바로 열 수 없습니다. 아래 Google 버튼으로 계속해 주세요.');
       });
-    }else notice((CHOOSE_ACCOUNT||CHURCH_CHOOSE_ACCOUNT||SINGLES_CHOOSE_ACCOUNT)?'아래 Google 버튼을 눌러 사용할 계정을 선택해 주세요. 자동 로그인은 진행하지 않습니다.':'처음 한 번만 Google 계정으로 본인을 확인합니다.');
+    }else notice((CHOOSE_ACCOUNT||CHURCH_CHOOSE_ACCOUNT||SINGLES_CHOOSE_ACCOUNT||ADMIN_TOOL_CHOOSE_ACCOUNT)?'아래 Google 버튼을 눌러 사용할 계정을 선택해 주세요. 자동 로그인은 진행하지 않습니다.':'처음 한 번만 Google 계정으로 본인을 확인합니다.');
   }catch(error){
     console.error('prepare central identity',error);
     if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='fallback';
@@ -370,6 +386,7 @@ async function prepare(){
   if(CHOOSE_ACCOUNT){await renderGoogle();return}
   if(CHURCH_CHOOSE_ACCOUNT){await renderGoogle();return}
   if(SINGLES_CHOOSE_ACCOUNT){await renderGoogle();return}
+  if(ADMIN_TOOL_CHOOSE_ACCOUNT){await renderGoogle();return}
   if(existing){
     if(FORCE_ACCOUNT&&String(existing.user?.email||'').trim().toLowerCase()!==EXPECTED_ACCOUNT){await clearStaleSession();await renderGoogle();return}
     if(await handoffExistingSession(existing))return;

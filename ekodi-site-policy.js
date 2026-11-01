@@ -9,7 +9,7 @@ const OWNED_CUSTOMER_SITE_DEFINITIONS = [
     id: 'church',
     slug: 'ekodi-church',
     name: '에코디교회',
-    domain: 'church.ekodi.kr',
+    domain: 'ekodi.kr/ekodichurch',
     workspaceKind: 'church',
     defaultActivityRole: 'pastor',
     defaultActivityRoleLabel: '목사',

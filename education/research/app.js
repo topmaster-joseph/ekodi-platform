@@ -92,6 +92,42 @@ async function deleteProject(id){
 }
 $('#menuToggle').addEventListener('click',()=>{const nav=$('#siteNav');const open=nav.classList.toggle('open');$('#menuToggle').setAttribute('aria-expanded',String(open))});
 document.querySelectorAll('#siteNav a').forEach(a=>a.addEventListener('click',()=>{$('#siteNav').classList.remove('open');$('#menuToggle').setAttribute('aria-expanded','false')}));
+$('#literatureForm').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const q=String(new FormData(event.currentTarget).get('q')||'').trim();
+ const host=$('#literatureResults');host.replaceChildren();
+ if(q.length<3||q.length>160){message('#literatureStatus','검색어는 3~160자로 입력하세요.');return;}
+ message('#literatureStatus','Crossref 공개 서지정보를 조회하고 있습니다.');
+ try{
+  const response=await fetch('./api/literature?q='+encodeURIComponent(q),{cache:'no-store'});
+  const payload=await response.json().catch(()=>({}));
+  if(!response.ok){
+   const messages={
+    literature_provider_rate_limited:'학술정보 제공처의 호출 한도에 도달했습니다. 잠시 후 다시 검색하세요.',
+    literature_provider_unavailable:'외부 학술정보 서비스에 연결할 수 없습니다.',
+    literature_query_invalid:'검색어를 다시 확인하세요.',
+    literature_doi_invalid:'DOI 형식이 올바르지 않습니다.'
+   };
+   throw Error(messages[payload.error]||'학술문헌을 조회하지 못했습니다.');
+  }
+  if(!Array.isArray(payload.records))throw Error('검색 결과 형식이 올바르지 않습니다.');
+  message('#literatureStatus',payload.records.length+'건의 Crossref 서지정보를 확인했습니다. 학술적 품질은 별도 검토가 필요합니다.');
+  if(payload.records.length===0){
+   const empty=document.createElement('p');empty.className='empty';empty.textContent='일치하는 DOI 등록 정보를 찾지 못했습니다. 다른 키워드나 DOI를 확인하세요.';host.append(empty);return;
+  }
+  for(const item of payload.records){
+   if(typeof item.doiUrl!=='string'||!item.doiUrl.startsWith('https://doi.org/'))continue;
+   const article=document.createElement('article');
+   const title=document.createElement('h3');
+   const link=document.createElement('a');link.href=item.doiUrl;link.target='_blank';link.rel='noopener noreferrer';
+   link.textContent=item.title||'제목 정보 없음';title.append(link);
+   const meta=document.createElement('p');meta.className='metadata';
+   meta.textContent=[item.authors?.join(', '),item.year,item.journal].filter(Boolean).join(' · ')||'출판 정보 미상';
+   const doi=document.createElement('p');doi.className='doi';doi.textContent='DOI: '+item.doi;
+   article.append(title,meta,doi);host.append(article);
+  }
+ }catch(error){message('#literatureStatus',error.message||'학술문헌 조회에 실패했습니다.');}
+});
 $('#diagnosisForm').addEventListener('submit',async event=>{
  event.preventDefault();message('#diagnosisStatus','진단 중입니다.');
  const input=cleanResearchInput(Object.fromEntries(new FormData(event.currentTarget)));

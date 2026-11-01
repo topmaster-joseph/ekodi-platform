@@ -29,6 +29,7 @@ import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { isStoreAdminPathShape, resolveStoreAdminRoute, storeAdminPage, storeAdminCss, storeAdminScript } from './store-admin-engine.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { siteAdminBootstrapPage, siteAdminBootstrapScript } from './site-admin-bootstrap-page.js';
+import { personAuthorityPage, personAuthorityScript } from './person-authority-page.js';
 import { churchMemberHomePage, isChurchMemberHomePath } from './church-member-home-page.js';
 import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
@@ -610,6 +611,8 @@ async function routePlatform(request,env,ctx){
         if(/^\/cheonggye\/admin\/publishing\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(url.pathname==='/site-admin-bootstrap.js')return siteAdminBootstrapScript();
+        if(url.pathname==='/admin/people/script')return personAuthorityScript();
+        if(url.pathname==='/admin/people'||url.pathname==='/admin/people/')return personAuthorityPage();
         if(url.pathname==='/admin/site-admins'||url.pathname==='/admin/site-admins/')return siteAdminBootstrapPage();
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
         const directCommerceProgram=regionalCommerceProgramFromPath(url.pathname);
@@ -655,6 +658,7 @@ async function routePlatform(request,env,ctx){
       if(url.pathname.startsWith(EKODIBIZ_API_PREFIX))return routeEkodiBizApi(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(EKODIBIZ_ASSET_PREFIX))return routeEkodiBizAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname===DEPLOYMENT_PROBE_PATH)return routeDeploymentProbe(request,env);
+      if(['GET','HEAD'].includes(request.method)&&/^\/mokpo-presbytery(?:\/|$)/.test(url.pathname)){const path=url.pathname;if(!/^\/mokpo-presbytery\/(?:mission\/?)?$/.test(path)&&path!=='/mokpo-presbytery')return new Response('Not Found',{status:404,headers:{'cache-control':'no-store'}});if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});const target=new URL(request.url);target.pathname=path.startsWith('/mokpo-presbytery/mission')?'/mokpo-presbytery/mission/':'/mokpo-presbytery/';const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(upstream.body,upstream);out.headers.set('cache-control','no-store');out.headers.set('x-robots-tag','noindex, nofollow, noarchive');out.headers.set('x-ekodi-route','mokpo-presbytery-static-pilot');return out;}
       if(['GET','HEAD'].includes(request.method)&&isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname)){const response=await routePublicWorkspace(request,env);return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;}
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(WORKSPACE_ASSET_PREFIX))return routeWorkspaceAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){
@@ -672,12 +676,9 @@ async function routePlatform(request,env,ctx){
       if(request.method==='GET'&&(url.pathname==='/'||url.pathname===''))return injectEkodiShell(mailUserPage(),'mail');
     }
 
-    if(host===MESSENGER_HOST&&request.method==='GET'){
-      if(url.pathname==='/'||url.pathname===''){
-        const response=await withReleaseMarker(messengerUserPage());
-        return injectEkodiShell(response,'messenger');
-      }
-      if(url.pathname==='/messenger-ui.js')return messengerUiScript();
+    if(host===MESSENGER_HOST&&['GET','HEAD'].includes(request.method)){
+      // Apex-path-only policy: the retired subdomain never serves the app; it points to ekodi.kr/messenger.
+      return new Response(null,{status:308,headers:{location:'https://ekodi.kr/messenger','cache-control':'no-store','x-ekodi-messenger-route':'canonical-apex'}});
     }
 
     if(host===INVEST_HOST&&['GET','HEAD'].includes(request.method)){

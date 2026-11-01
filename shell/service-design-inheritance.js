@@ -2,7 +2,7 @@
   'use strict';
 
   const VERSION=4;
-  const PROFILE_API='https://workspace-api.ekodi.kr/v1/design-profiles/public';
+  const PROFILE_API='https://ekodi.kr/workspace-api/v1/design-profiles/public';
   const PROFILE_CHOICES={tones:new Set(['inherit','warm','calm','vivid','mono','night']),characters:new Set(['auto','off','welcome','guide','read','idea']),seasons:new Set(['auto','off','spring','summer','autumn','winter']),motions:new Set(['inherit','still','gentle'])};
   const SEASON_PRESETS={spring:{warm:'#e0b95f',leaf:'#78a982'},summer:{warm:'#e8c75a',leaf:'#5f9b78'},autumn:{warm:'#c88745',leaf:'#8a7b55'},winter:{warm:'#b9c6d5',leaf:'#6e8790'}};
   const TONE_PRESETS={warm:{accent:'#7f6548',accent2:'#c99b66',warm:'#e2b96f',paper:'#fff9ef',ink:'#332b24'},calm:{accent:'#47685b',accent2:'#8ca9b7',warm:'#c6ae7d',paper:'#f7faf8',ink:'#24322c'},vivid:{accent:'#6953c6',accent2:'#e06d54',warm:'#f0bd55',paper:'#fff8fb',ink:'#30263b'},mono:{accent:'#4b5563',accent2:'#94a3b8',warm:'#9ca3af',paper:'#fafafa',ink:'#242424'},night:{accent:'#78a7d7',accent2:'#a997e8',warm:'#ddb969',paper:'#111827',ink:'#f5f7fb'}};

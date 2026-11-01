@@ -247,3 +247,42 @@ body.admin-compact #deviceControlPanel .device-enrollment-result code{
   body.admin-compact #deviceControlPanel .device-quick-connect{grid-template-columns:1fr!important}
 }
 .ekodi-pos-agent-summary{display:grid;gap:4px;padding:11px 12px;border:1px solid rgba(125,211,252,.2);border-radius:12px;background:rgba(2,6,23,.18)}.ekodi-pos-agent-summary strong{font-size:12px}.ekodi-pos-agent-summary span{font-size:11px;opacity:.78;overflow-wrap:anywhere}.ekodi-pos-agent-summary small{font-size:10px;opacity:.58}
+
+
+/* EKODI-WINDOWS-PERFORMANCE-001: existing authenticated Device Control card. */
+.device-windows-performance{display:grid;gap:12px;padding:16px;border:1px solid var(--line,rgba(148,163,184,.26));border-radius:16px;background:rgba(125,211,252,.045);min-width:0}
+.device-performance-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.device-performance-heading h3{margin:3px 0 6px;font-size:1.02rem}
+.device-performance-heading small{font-size:.67rem;letter-spacing:.05em;opacity:.64}
+.device-performance-heading p{margin:0;font-size:.8rem;line-height:1.55;opacity:.72}
+.device-performance-freshness{font-size:.72rem;white-space:nowrap;font-weight:650}
+.device-performance-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.device-performance-stats>div{display:grid;gap:3px;padding:12px;border:1px solid var(--line,rgba(148,163,184,.23));border-radius:11px;min-width:0}
+.device-performance-stats small{font-size:.72rem;opacity:.7}
+.device-performance-stats strong{font-size:1.05rem;font-variant-numeric:tabular-nums}
+.device-performance-assessment,.device-performance-proof{margin:0;line-height:1.55;font-size:.81rem}
+.device-performance-proof{opacity:.68;overflow-wrap:anywhere}
+.device-performance-actions{margin-top:3px}
+@media(max-width:700px){.device-performance-heading{flex-direction:column}.device-performance-freshness{white-space:normal}.device-performance-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.device-performance-stats{grid-template-columns:1fr 1fr}.device-performance-actions{display:grid;grid-template-columns:1fr}.device-performance-actions button{width:100%}}
+
+/* EKODI-WINDOWS-PERFORMANCE-LINK-001: in-context canonical deep link, not a second admin service. */
+.device-performance-entry{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 12px;padding:14px 16px;border:1px solid var(--line,rgba(148,163,184,.3));border-radius:14px;min-width:0}
+.device-performance-entry>div{min-width:0}
+.device-performance-entry strong{font-size:.94rem}
+.device-performance-entry p{font-size:.79rem;line-height:1.55;margin:4px 0 0;opacity:.75}
+.device-performance-entry a{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;text-decoration:none;flex-shrink:0}
+@media(max-width:640px){.device-performance-entry{flex-direction:column;align-items:stretch}.device-performance-entry a{width:100%}}
+
+#deviceControlPanel[data-windows-performance-mode="true"] .device-roster-retired-label{display:none}
+#deviceControlPanel[data-windows-performance-mode="true"] .device-setup-tools:not([open]){margin-top:10px}
+
+/* EKODI-WINDOWS-SETTINGS-001: reversible, consent-gated PC settings. */
+.device-performance-settings{border-top:1px solid var(--line,rgba(148,163,184,.26));padding-top:12px;min-width:0}
+.device-performance-settings>summary{cursor:pointer;font-weight:700;font-size:.92rem;padding:4px 0}
+.device-performance-settings>p{font-size:.79rem;line-height:1.55;margin:10px 0;color:var(--muted,#64748b)}
+.device-performance-power{display:grid;gap:10px;padding:13px;border:1px solid var(--line,rgba(148,163,184,.26));border-radius:12px;min-width:0}
+.device-performance-power>h4{font-size:.93rem;margin:0}
+.device-performance-power>p{margin:0;font-size:.8rem;line-height:1.55}
+.device-performance-settings .device-details{min-width:0;margin-top:10px}
+@media(max-width:640px){.device-performance-power{padding:11px}.device-performance-settings .device-ops-grid{grid-template-columns:1fr}.device-performance-settings button{max-width:100%}}

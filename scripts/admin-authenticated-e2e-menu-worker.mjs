@@ -351,15 +351,18 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
 
   stage('public-site-controls-render');
   await page.evaluate(() => window.EKODIPublicSiteControls.load());
-  const form = page.locator('form[data-public-site-id="cgma"]');
+  const siteChoice = page.locator('#publicSiteControlsPanel [data-psc-select="cgma"]');
+  await siteChoice.waitFor({ state: 'visible', timeout: 8_000 });
+  await siteChoice.click();
+  const form = page.locator('#publicSiteControlsPanel form[data-psc-form][data-public-site-id="cgma"]');
   await form.waitFor({ state: 'visible', timeout: 8_000 });
   const state = await visiblePanelState();
-  const domainText = String(await form.locator('.muted').first().textContent() || '');
+  const domainText = String(await form.locator('.psc-subtext').first().textContent() || '');
   const publicStatus = await form.locator('select[name="publicStatus"]').inputValue();
   const maintenanceDisplayType = await form.locator('select[name="maintenanceDisplayType"]').inputValue();
   const redirectMode = await form.locator('select[name="redirectMode"]').inputValue();
-  const badge = String(await form.locator('[data-public-site-status-badge]').textContent() || '').trim();
-  const message = String(await page.locator('#publicSiteControlsPanel [data-public-site-message]').textContent() || '').replace(/\s+/g, ' ').trim();
+  const badge = String(await form.locator('[data-psc-badge]').textContent() || '').trim();
+  const message = String(await page.locator('#publicSiteControlsPanel [data-psc-message]').textContent() || '').replace(/\s+/g, ' ').trim();
   if (!state.panelFound || !state.selected || state.busy) throw new Error(`public-site-controls panel invalid: ${JSON.stringify(state)}`);
   if (!domainText.includes('ekodi.kr/cgma')) throw new Error(`public-site-controls: CGMA canonical path missing: ${domainText}`);
   if (!['public', 'maintenance'].includes(publicStatus)) throw new Error(`public-site-controls: invalid publicStatus ${publicStatus}`);
@@ -595,6 +598,80 @@ async function verifyNormal(tab, alreadyActive, started) {
 }
 
 
+// ADMIN-ARCH-ISOLATED-PROOF-20261029 — independent actual authenticated
+// production viewport measurement, no Social Hub dependency and no mutation.
+// Screenshots crop the read-only architecture layers, not account/identity UI.
+async function verifyArchitectureResponsive(tab, alreadyActive, started) {
+  await verifyNormal(tab, alreadyActive, started);
+  stage('architecture-viewport-proof');
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('.content > .architecture[data-panel~="architecture"]');
+    return Boolean(panel && !panel.hidden && !panel.classList.contains('hidden-panel')
+      && getComputedStyle(panel).display!=='none'
+      && panel.querySelectorAll('#structureLayers > article').length>=9);
+  }, null, {timeout:15000});
+
+  const expected = [[1440,3],[1366,3],[768,2],[390,1],[320,1]];
+  const measurements=[];
+  try {
+    for (const [width, columns] of expected) {
+      await page.setViewportSize({width,height:width<=390?844:1000});
+      const sample = await page.evaluate(() => {
+        const panel=document.querySelector('.content > .architecture[data-panel~="architecture"]');
+        const layers=panel?.querySelector('#structureLayers');
+        const registry=panel?.querySelector('#structureServiceRegistry .structure-service-grid');
+        const platforms=panel?.querySelector('#ekodiArchitectureMap .system-map-platform-grid');
+        const flow=panel?.querySelector('#structureFlow');
+        const colCount=node => node?getComputedStyle(node).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length:null;
+        const arrows=flow?[...flow.children].filter(x=>x.tagName==='B'):[];
+        return {
+          width:innerWidth,
+          panelVisible:Boolean(panel&&!panel.hidden&&!panel.classList.contains('hidden-panel')&&getComputedStyle(panel).display!=='none'),
+          layers:colCount(layers),registry:colCount(registry),platforms:colCount(platforms),
+          cards:layers?.querySelectorAll(':scope > article').length||0,
+          flowCards:flow?.querySelectorAll(':scope > div').length||0,
+          arrowsVisible:arrows.filter(x=>getComputedStyle(x).display!=='none').length,
+          arrowWidths:arrows.map(x=>Math.round(x.getBoundingClientRect().width)),
+          overflow:Math.max(0,document.documentElement.scrollWidth-innerWidth),
+          layerOverflow:layers?Math.max(0,layers.scrollWidth-layers.clientWidth):0,
+        };
+      });
+      if (!sample.panelVisible || sample.width!==width || sample.layers!==columns
+          || (sample.registry!==null&&sample.registry!==columns)
+          || (sample.platforms!==null&&sample.platforms!==columns)
+          || sample.cards<9 || sample.flowCards!==4
+          || sample.overflow>2 || sample.layerOverflow>2
+          || (width>=1366&&(sample.arrowsVisible!==3||sample.arrowWidths.some(w=>w>30)))
+          || (width<=390&&sample.arrowsVisible!==0)) {
+        throw new Error('ADMIN_ARCHITECTURE_FOCUSED_LIVE_E2E: '+JSON.stringify({expectedColumns:columns,...sample}));
+      }
+      measurements.push({width,columns:sample.layers,overflow:sample.overflow});
+      if ([768,390,320].includes(width)) {
+        await page.locator('#structureLayers').screenshot({
+          path:path.join(artifactsDir,'architecture-'+width+'.png'),
+          timeout:12000,
+        });
+      }
+    }
+  } finally {
+    await page.setViewportSize({width:1440,height:1100});
+  }
+  // ADMIN-ARCH-PROOF-ARTIFACT-001: persist only anonymized grid geometry before
+  // unrelated later menu/Assist checks. Cropped screenshots contain structure
+  // cards only, never the identity, account or admin header/sidebar.
+  await fs.writeFile(path.join(artifactsDir,'architecture-geometry.json'),JSON.stringify({
+    schemaVersion:1,
+    check:'authenticated-architecture-responsive',
+    passed:true,
+    measurements,
+    screenshotCount:3,
+  },null,2));
+  const record=results.find(x=>x.id===menuId);
+  if(record)Object.assign(record,{readOnly:true,isolatedArchitecture:true,measurements,screenshotCount:3});
+  console.log('[E2E:architecture] authenticated independent five-width geometry PASS '+JSON.stringify(measurements));
+}
+
+
 async function verifySocialInventory(tab, alreadyActive, started) {
   // SOCIAL-ID-001: read-only live verification. Never create test social identities.
   await verifyNormal(tab, alreadyActive, started);
@@ -614,8 +691,13 @@ async function verifySocialInventory(tab, alreadyActive, started) {
     // Only aggregate/safe policy evidence; never log account rows, user IDs or credentials.
     return {
       authenticatedStatus:response.status,guestStatus:guest.status,
+      noStoreCache: /(?:^|,)\s*no-store(?:,|$)/i.test(response.headers.get('cache-control')||'') &&
+        /(?:^|,)\s*no-store(?:,|$)/i.test(guest.headers.get('cache-control')||''),
       scope:data.ownerScope || '',storageReady:data.storageReady === true,
       providerCount:Array.isArray(data.providers) ? data.providers.length : 0,
+      identityCount:Array.isArray(data.accounts) ? data.accounts.length : 0,
+      existingCount:Array.isArray(data.existingServiceConnections) ? data.existingServiceConnections.length : 0,
+      recordsTruncated:data.recordsTruncated === true,
       uiProviderCount:panel?.querySelectorAll('.ekodi-social-card').length || 0,
       registrationEnabled:data.policy?.registrationEnabled,
       oauthLinkingEnabled:data.policy?.oauthLinkingEnabled,
@@ -626,6 +708,7 @@ async function verifySocialInventory(tab, alreadyActive, started) {
     };
   });
   if(evidence.authenticatedStatus!==200 || evidence.guestStatus!==401 ||
+     evidence.noStoreCache!==true ||
      evidence.scope!=='platform'||!evidence.storageReady||
      evidence.providerCount!==13||evidence.uiProviderCount!==13||
      !evidence.uiSuccess||evidence.uiError||
@@ -633,9 +716,169 @@ async function verifySocialInventory(tab, alreadyActive, started) {
      evidence.socialLoginEnabled!==false || evidence.autoPublishingEnabled!==false){
     throw new Error('Social account live inventory or dormant policy failed: '+JSON.stringify(evidence));
   }
+  // Exercise only the live, already-rendered DOM. Never write a social record,
+  // create an identity, send a search query to a server, or log actual IDs.
+  stage('social-search-filter-counts');
+  const ui=await page.evaluate(expected => {
+    const panel=document.querySelector('#ekodiSocialAccountRegistry');
+    if(!panel)return {ok:false,failures:['missing panel']};
+    const cards=[...panel.querySelectorAll('[data-social-provider-card]')];
+    const rows=[...panel.querySelectorAll('[data-social-record]')];
+    const failures=[];
+    let checks=0;
+    const assert=(name,passed)=>{checks++;if(!passed)failures.push(name)};
+    const control=(selector,value,eventName)=>{
+      const input=panel.querySelector(selector);
+      if(!input){failures.push('control missing: '+selector);return false}
+      input.value=value;
+      input.dispatchEvent(new Event(eventName,{bubbles:true}));
+      return true;
+    };
+    const visible=nodes=>nodes.filter(node=>!node.hidden).length;
+    const countLabel=(selector,count)=>String(panel.querySelector(selector)?.textContent||'').includes('표시 '+count+' /');
+    const metricValue=label=>{
+      const entry=[...panel.querySelectorAll('[data-social-metrics] article')].find(node=>node.querySelector('small')?.textContent===label);
+      return Number(entry?.querySelector('strong')?.textContent);
+    };
+    assert('providers metric equals API count',metricValue('연결 대상 서비스')===expected.providers);
+    assert('EKODI identity metric equals API count',metricValue('조회된 신규 등록 기록')===expected.identities);
+    assert('existing connections metric equals API count',metricValue('조회된 기존 서비스 기록')===expected.existing);
+    assert('provider DOM equals API count',cards.length===expected.providers);
+    assert('account DOM equals API rows',rows.length===expected.identities+expected.existing);
+    assert('bounded preview disclosure',!expected.truncated||String(panel.querySelector('[data-social-account-count]')?.textContent||'').includes('최근 '));
+
+    const providerSearch='[data-social-search]',providerFilter='[data-social-filter]';
+    for(const filter of ['all','existing','registered','unregistered']){
+      if(!control(providerFilter,filter,'change'))break;
+      const expectedCount=cards.filter(card=>{
+        const registered=Number(card.dataset.registered)>0;
+        const existing=Number(card.dataset.existing)>0;
+        return filter==='all'||(filter==='existing'&&existing)||(filter==='registered'&&registered)||(filter==='unregistered'&&!registered&&!existing);
+      }).length;
+      assert('provider filter '+filter,visible(cards)===expectedCount&&countLabel('[data-social-result-count]',expectedCount));
+    }
+    control(providerFilter,'all','change');
+    if(cards.length){
+      // Name is used only inside the browser; never copy provider or identity
+      // names into the persisted evidence payload.
+      const term=String(cards[0].dataset.searchText||'').trim();
+      control(providerSearch,term,'input');
+      const expectedCount=cards.filter(card=>String(card.dataset.searchText||'').includes(term)).length;
+      assert('live provider name search',term.length>0&&visible(cards)===expectedCount&&countLabel('[data-social-result-count]',expectedCount));
+    }
+    control(providerSearch,'__ekodi_no_matching_provider_e2e__','input');
+    assert('no-match provider empty state',visible(cards)===0&&panel.querySelector('[data-social-empty]')?.hidden===false);
+    control(providerSearch,'','input');
+
+    const accountSearch='[data-social-account-search]',accountSource='[data-social-account-source]',accountFilter='[data-social-account-filter]';
+    const rowMatches=(source,status,query)=>rows.filter(row=>
+      (source==='all'||row.dataset.socialRecord===source)&&
+      (status==='all'||row.dataset.status===status)&&
+      String(row.dataset.searchText||'').includes(query)
+    ).length;
+    for(const source of ['all','identity','existing']){
+      if(!control(accountSource,source,'change'))break;
+      const matching=rowMatches(source,'all','');
+      assert('account source '+source,visible(rows)===matching&&countLabel('[data-social-account-count]',matching));
+    }
+    control(accountSource,'all','change');
+    const select=panel.querySelector(accountFilter);
+    for(const status of [...(select?.options||[])].map(option=>option.value)){
+      if(!control(accountFilter,status,'change'))break;
+      const matching=rowMatches('all',status,'');
+      assert('account status '+status,visible(rows)===matching&&countLabel('[data-social-account-count]',matching));
+    }
+    control(accountFilter,'all','change');
+    let liveIdMatch=false;
+    const firstIdentity=rows.find(row=>row.dataset.socialRecord==='identity');
+    if(firstIdentity){
+      const id=String(firstIdentity.querySelector('small')?.textContent||'').replace(/^EKODI ID:\s*/,'').trim();
+      if(id&&id!=='확인 필요'){
+        control(accountSearch,id,'input');
+        const matching=rowMatches('all','all',id.toLocaleLowerCase());
+        assert('existing EKODI ID live lookup',matching>0&&visible(rows)===matching&&countLabel('[data-social-account-count]',matching));
+        liveIdMatch=true;
+      }
+    }
+    control(accountSearch,'__ekodi_no_matching_account_e2e__','input');
+    assert('no-match account search',visible(rows)===0&&countLabel('[data-social-account-count]',0));
+    assert('account empty state is honest',panel.querySelector('[data-social-account-empty]')?.hidden===(rows.length===0));
+    control(accountSearch,'','input');
+    assert('account filters reset',visible(rows)===rows.length&&countLabel('[data-social-account-count]',rows.length));
+    assert('provider filters reset',visible(cards)===cards.length&&countLabel('[data-social-result-count]',cards.length));
+    return {ok:failures.length===0,failures,checks,providerCards:cards.length,accountRows:rows.length,liveIdMatch,
+      statusFilterOptions:select?.options.length||0,sourceFilterOptions:panel.querySelector(accountSource)?.options.length||0};
+  }, {providers:evidence.providerCount,identities:evidence.identityCount,existing:evidence.existingCount,truncated:evidence.recordsTruncated});
+  if(!ui.ok)throw new Error('Social account live DOM search/filter/count assertion failed: '+JSON.stringify(ui));
+
+  // A screenshot is a private CI artifact and must never expose names, EKODI
+  // IDs or provider account IDs from registered records. Retain only 7 days.
+  stage('social-five-responsive-viewports');
+  const viewports=[];
+  const widths=[320,390,768,1366,1440];
+  for(const width of widths){
+    await page.setViewportSize({width,height:980});
+    if(width<=390){
+      // Mobile navigation must not obscure the account workspace. Close it
+      // through the real keyboard handler rather than mutating DOM classes.
+      await page.keyboard.press('Escape');
+      await page.waitForFunction(()=>{
+        const sidebar=document.querySelector('.sidebar');
+        const rect=sidebar?.getBoundingClientRect();
+        return Boolean(sidebar&&!sidebar.classList.contains('open')&&
+          !document.body.classList.contains('admin-mobile-drawer-open')&&rect&&rect.right<=2);
+      },null,{timeout:5000});
+    }
+    // A tall panel screenshot at 320/390 can leave the document scrolled when
+    // the viewport grows to 768. Restore a real user-visible heading position
+    // before measuring hit-testing; never bypass an actual overlay.
+    await page.locator('#ekodiSocialAccountRegistry .ekodi-social-heading h2').evaluate(
+      heading=>heading.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'})
+    );
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(resolve)));
+    const state=await page.evaluate(()=>{
+      const panel=document.querySelector('#ekodiSocialAccountRegistry');
+      const rect=panel?.getBoundingClientRect();
+      const style=panel?getComputedStyle(panel):null;
+      const architectureVisible=[...document.querySelectorAll('.content [data-panel]')].some(node=>{
+        const ids=String(node.dataset.panel||'').split(/\s+/);
+        const computed=getComputedStyle(node);
+        return ids.includes('architecture')&&!node.hidden&&!node.classList.contains('hidden-panel')&&computed.display!=='none'&&computed.visibility!=='hidden';
+      });
+      const heading=panel?.querySelector('.ekodi-social-heading h2');
+      const headingRect=heading?.getBoundingClientRect();
+      const point=headingRect?document.elementFromPoint(
+        Math.min(innerWidth-4,Math.max(4,headingRect.left+12)),
+        Math.min(innerHeight-4,Math.max(4,headingRect.top+12))):null;
+      const headingAccessible=Boolean(headingRect&&headingRect.width>0&&headingRect.height>0&&
+        headingRect.left>=0&&headingRect.top>=0&&headingRect.top<innerHeight&&
+        point&&(point===heading||heading.contains(point)));
+      return {width:innerWidth,headingAccessible,panelVisible:Boolean(rect&&rect.width>0&&rect.height>0&&style?.display!=='none'&&style?.visibility!=='hidden'),
+        panelFitsViewport:Boolean(rect&&rect.left>=-2&&rect.right<=innerWidth+2),
+        documentScrollWidth:document.documentElement.scrollWidth,
+        horizontalOverflow:document.documentElement.scrollWidth>innerWidth+2,
+        architectureHidden:!architectureVisible,
+        selected:window.EKODIAdminPanels?.current?.()==='social-accounts'};
+    });
+    if(state.width!==width||!state.headingAccessible||!state.panelVisible||!state.panelFitsViewport||state.horizontalOverflow||!state.architectureHidden||!state.selected)
+      throw new Error('Social account viewport verification failed: '+JSON.stringify(state));
+    // Crop to the account workspace itself: a full-page screenshot can expose
+    // the signed-in account identifier in the Admin sidebar outside the record mask.
+    // Keep the per-record mask as a second, independent privacy boundary.
+    await page.locator('#ekodiSocialAccountRegistry').screenshot({
+      path:path.join(artifactsDir,'social-accounts-'+width+'.png'),
+      mask:[page.locator('#ekodiSocialAccountRegistry [data-social-record]')],maskColor:'#d1d5db'
+    });
+    viewports.push(state);
+  }
   const outcome=results.find(x=>x.id===menuId);
-  if(outcome)Object.assign(outcome,{inventoryVerified:true,policyDisabled:true,authenticatedRead:true,anonymousDenied:true,providerCount:13});
-  console.log('[PROD-E2E] social-accounts: authorized inventory=200, guest=401, 13 providers, policy disabled');
+  if(outcome)Object.assign(outcome,{
+    inventoryVerified:true,policyDisabled:true,authenticatedRead:true,anonymousDenied:true,providerCount:13,
+    identityCount:evidence.identityCount,existingCount:evidence.existingCount,recordsTruncated:evidence.recordsTruncated,
+    liveSearchFiltersVerified:true,uiChecks:ui.checks,accountIdLiveMatchExercised:ui.liveIdMatch,
+    responsiveViewports:viewports.map(item=>item.width),redactedScreenshots:viewports.length
+  });
+  console.log('[PROD-E2E] social-accounts: API 200/guest 401, 13 providers, safe policy, '+ui.checks+' live UI checks, 5 responsive viewports, redacted screenshots PASS');
 }
 
 try {
@@ -662,7 +905,20 @@ try {
     status: entryResponse?.status() ?? null,
     contentType: String(entryHeaders['content-type'] || '').split(';')[0].slice(0, 80),
     cfCacheStatus: String(entryHeaders['cf-cache-status'] || '').slice(0, 40),
+    // The traffic governor's own labels for why it shed. Bounded metadata like the
+    // rest of this object — never the URL, query, token or body. Without them a 429
+    // here is unanswerable after the fact, because the governor's tier lives in
+    // isolate memory and is gone by the time anyone reads the run.
+    trafficTier: String(entryHeaders['x-ekodi-traffic-tier'] || '').slice(0, 20),
+    trafficReasons: String(entryHeaders['x-ekodi-traffic-reasons'] || '').slice(0, 80),
   };
+  if (adminEntryTransport.status === 429) {
+    const shed = [
+      adminEntryTransport.trafficTier && `tier=${adminEntryTransport.trafficTier}`,
+      adminEntryTransport.trafficReasons && `reasons=${adminEntryTransport.trafficReasons}`,
+    ].filter(Boolean).join(' ');
+    throw new Error(`CF-QUOTA-001 circuit open: HTTP 429 at canonical Admin entry; no retry${shed ? ` (${shed})` : ''}`);
+  }
   if ([401, 403].includes(adminEntryTransport.status)) {
     throw new Error('Admin entry rejected by production authentication boundary');
   }
@@ -704,6 +960,7 @@ try {
       else if (menuId === 'ai-settings') await verifyAiSettings(trigger, alreadyActive, started);
       else if (menuId === 'personal-finance') await verifyPersonalFinance(trigger, alreadyActive, started);
       else if (menuId === 'social-accounts') await verifySocialInventory(trigger, alreadyActive, started);
+      else if (menuId === 'architecture') await verifyArchitectureResponsive(trigger, alreadyActive, started);
       else await verifyNormal(trigger, alreadyActive, started);
     }
   }

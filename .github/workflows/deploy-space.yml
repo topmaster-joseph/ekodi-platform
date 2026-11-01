@@ -16,6 +16,8 @@ on:
       - 'space/**'
       - 'space-worker.js'
       - 'mnubiz-public-page.js'
+      - 'mnubiz-suncheon-page.js'
+      - 'test/mnubiz-suncheon.test.mjs'
       - 'realtime-tenant-registry.js'
       - 'tenant-live-page.js'
       - 'storefront-page.js'
@@ -34,12 +36,15 @@ on:
       - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
       - 'supabase/migrations/20260906006000_store_admin_routing.sql'
       - 'supabase/migrations/20260914095000_organization_subsite_operations.sql'
+      - 'supabase/migrations/20261031123000_mokpo_presbytery_organization_tenants.sql'
+      - 'supabase/migrations/20261031210000_organization_budget_lines.sql'
       - 'supabase/migrations/20260909001000_public_storefront.sql'
       - 'supabase/migrations/20260913013000_ekodimall_canonical_path.sql'
       - 'supabase/tests/store_operating_spaces.test.sql'
       - 'supabase/tests/store_user_site_provisioning.test.sql'
       - 'test/store-operating-space.test.mjs'
       - 'test/store-user-site-admin.test.mjs'
+      - 'test/space-auth-apex-constitution.test.mjs'
       - 'test/storefront-public.test.mjs'
       - 'test/pizzamaru-full-menu-social.test.mjs'
       - 'test/jadam-storefront-brand.test.mjs'
@@ -54,6 +59,8 @@ on:
       - 'space/**'
       - 'space-worker.js'
       - 'mnubiz-public-page.js'
+      - 'mnubiz-suncheon-page.js'
+      - 'test/mnubiz-suncheon.test.mjs'
       - 'realtime-tenant-registry.js'
       - 'tenant-live-page.js'
       - 'storefront-page.js'
@@ -72,12 +79,15 @@ on:
       - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
       - 'supabase/migrations/20260906006000_store_admin_routing.sql'
       - 'supabase/migrations/20260914095000_organization_subsite_operations.sql'
+      - 'supabase/migrations/20261031123000_mokpo_presbytery_organization_tenants.sql'
+      - 'supabase/migrations/20261031210000_organization_budget_lines.sql'
       - 'supabase/migrations/20260909001000_public_storefront.sql'
       - 'supabase/migrations/20260913013000_ekodimall_canonical_path.sql'
       - 'supabase/tests/store_operating_spaces.test.sql'
       - 'supabase/tests/store_user_site_provisioning.test.sql'
       - 'test/store-operating-space.test.mjs'
       - 'test/store-user-site-admin.test.mjs'
+      - 'test/space-auth-apex-constitution.test.mjs'
       - 'test/storefront-public.test.mjs'
       - 'test/pizzamaru-full-menu-social.test.mjs'
       - 'test/jadam-storefront-brand.test.mjs'
@@ -102,6 +112,8 @@ env:
   SUPABASE_PROJECT_REF: renzehysxirjilvdxacv
   STORE_ROUTE_MIGRATION: supabase/migrations/20260906006000_store_admin_routing.sql
   ORGANIZATION_MIGRATION: supabase/migrations/20260914095000_organization_subsite_operations.sql
+  MOKPO_ORGANIZATION_MIGRATION: supabase/migrations/20261031123000_mokpo_presbytery_organization_tenants.sql
+  ORGANIZATION_BUDGET_MIGRATION: supabase/migrations/20261031210000_organization_budget_lines.sql
 
 jobs:
   validate:
@@ -123,7 +135,7 @@ jobs:
           node --check pizzamaru-catalog.js
           node --check jadam-storefront.js
           node --check space/app.js
-          node --test test/workspace-routing-10g.test.mjs test/store-discovery.test.mjs test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs test/storefront-public.test.mjs test/pizzamaru-full-menu-social.test.mjs test/jadam-storefront-brand.test.mjs test/ekodimission-site.test.mjs test/ekodimission-home-and-media-consent.test.mjs test/organization-subsite.test.mjs test/mnubiz-workspace.test.mjs
+          node --test test/space-auth-apex-constitution.test.mjs test/workspace-routing-10g.test.mjs test/store-discovery.test.mjs test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs test/storefront-public.test.mjs test/pizzamaru-full-menu-social.test.mjs test/jadam-storefront-brand.test.mjs test/ekodimission-site.test.mjs test/ekodimission-home-and-media-consent.test.mjs test/organization-subsite.test.mjs test/mnubiz-workspace.test.mjs test/mnubiz-suncheon.test.mjs
           node scripts/validate-ekodimission-shell-contract.mjs
           node --test test/ekodimission-shell-contract.test.mjs test/ekodimission-photo-upload.test.mjs
           grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
@@ -291,7 +303,9 @@ jobs:
             to_regprocedure('public.organization_public_snapshot(text)') is not null as organization_public,
             to_regprocedure('public.store_public_storefront(text)') is not null as storefront_public,
             to_regprocedure('public.store_user_site_public_profile(text)') is not null as user_site_profile,
-            to_regprocedure('public.store_user_site_public_snapshot(text)') is not null as user_site_snapshot;"
+            to_regprocedure('public.store_user_site_public_snapshot(text)') is not null as user_site_snapshot,
+            exists(select 1 from public.tenants where slug='mokpo-mission' and settings->>'organization_engine'='v1') and exists(select 1 from public.tenants where slug='mokpo-presbytery' and settings->>'organization_engine'='v1') as mokpo_organizations,
+            to_regprocedure('public.organization_budget_command(text,text,jsonb)') is not null as organization_budget;"
 
           query_sql "$proof_sql" /tmp/space-schema-before.json
 
@@ -301,9 +315,15 @@ jobs:
           if ! grep -Fq '"organization_public":true' /tmp/space-schema-before.json; then
             apply_migration "$ORGANIZATION_MIGRATION"
           fi
+          if ! grep -Fq '"mokpo_organizations":true' /tmp/space-schema-before.json; then
+            apply_migration "$MOKPO_ORGANIZATION_MIGRATION"
+          fi
+          if ! grep -Fq '"organization_budget":true' /tmp/space-schema-before.json; then
+            apply_migration "$ORGANIZATION_BUDGET_MIGRATION"
+          fi
 
           query_sql "$proof_sql" /tmp/space-schema-after.json
-          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true'; do
+          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"mokpo_organizations":true' '"organization_budget":true'; do
             grep -Fq "$marker" /tmp/space-schema-after.json || { echo "Missing required Space Supabase contract: $marker"; cat /tmp/space-schema-after.json; exit 1; }
           done
 

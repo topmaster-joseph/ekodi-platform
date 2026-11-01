@@ -60,8 +60,8 @@ test('legacy Mall seller login is normalized back to Seller Studio through the c
   assert.match(authRouter,/'mall-seller':'mall'/);
   assert.match(authRouter,/requestedSite==='mall-seller'/);
   assert.match(authRouter,/https:\/\/ekodi\.kr\/ekodimall\/seller\//);
-  assert.match(authHtml,/auth-entry\.js\?v=20261028-singles-choose-account/);
-  assert.match(authEntry,/\.\/auth-router\.js\?v=20261028-singles-choose-account/);
+  assert.match(authHtml,/auth-entry\.js\?v=20261101-live-church-return-1/);
+  assert.match(authEntry,/\.\/auth-router\.js\?v=20261101-live-church-return-1/);
 });
 
 test('stable Google subject cannot be silently replaced by a recycled email account',()=>{
@@ -123,9 +123,9 @@ test('auth center is workspace-first and hides linked login identities outside a
 
 test('Marketing workspace labels are separated and current routed assets are force-refreshed',()=>{
   assert.match(authHtml,/auth-workspaces\.css\?v=20260817-workspace-label-1/);
-  assert.match(authHtml,/auth-entry\.js\?v=20261028-singles-choose-account/);
-  assert.match(authEntry,/\.\/auth-router\.js\?v=20261028-singles-choose-account/);
-  assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20260824-return-origin-1/);
+  assert.match(authHtml,/auth-entry\.js\?v=20261101-live-church-return-1/);
+  assert.match(authEntry,/\.\/auth-router\.js\?v=20261101-live-church-return-1/);
+  assert.match(authRouter,/marketing-auth-hotfix\.js\?v=20261031-apex-return-1/);
   assert.match(authRouter,/marketing-onboarding\.js\?v=20260817-workspace-label-1/);
   assert.match(marketingOnboarding,/parts\.slice\(0,2\)/);
   assert.match(marketingOnboarding,/workspace-name/);
@@ -146,7 +146,9 @@ test('AI and registered independent-domain sites are canonical first-party clien
   assert.match(clientAuth,/ai:\{name:'EKODI AI',returnTo:'https:\/\/ekodi\.kr\/ai\/'/);
   assert.match(clientAuth,/seonammedi:\{name:'서남권 국립의대 소통센터'/);
   assert.match(clientAuth,/singles:\{name:'EKODI 동행',returnTo:'https:\/\/ekodi\.kr\/singles\/'/);
-  assert.match(authRouter,/firstPartyClientSites=new Set\(\['ai','seonammedi','singles'\]\)/);
+  const clientSites=authRouter.match(/firstPartyClientSites=new Set\(\[([^\]]+)\]\)/)?.[1]||'';
+  for (const site of ['ai','seonammedi','singles','management']) assert.ok(clientSites.includes("'"+site+"'"),site+' must remain a first-party client realm');
+  assert.match(clientAuth,/management:\{name:'EKODI 경영플랫폼',returnTo:'https:\/\/ekodi\.kr\/management\/'/);
   assert.match(authRouter,/firstPartyClientSites\.has\(site\)/);
 });
 
@@ -168,7 +170,7 @@ test('direct login mode opens the Google prompt without a second intermediate cl
 test('targeted workspace routing is available across shared and person-scoped EKODI services',()=>{
   for(const site of ['marketing','biz','books','church','lab','mall','social','energy'])assert.match(authTarget,new RegExp(`${site}:`));
   assert.match(authRouter,/targetableWorkspaceSites/);
-  assert.match(authRouter,/auth-workspace-target\.js\?v=20260817-all-sites-1/);
+  assert.match(authRouter,/auth-workspace-target\.js\?v=20261101-live-church-return-1/);
   assert.match(authTarget,/PERSON_WORKSPACE/);
   assert.match(authTarget,/PERSON_SCOPED_SITES/);
   assert.match(authTarget,/workspace_key:requested/);
