@@ -103,7 +103,11 @@
       if (bytes) img.setAttribute(attr, toDataUrl(bytes, mimeOf(path))); else img.removeAttribute(attr);
     }
     for (const a of body.querySelectorAll('a[href]')) {
-      const href = a.getAttribute('href');
+      // 원고 변환 과정에서 생긴 'https\\://' 같은 이스케이프를 바로잡는다(내용은 바꾸지 않고 주소 표기만).
+      const fixed = a.getAttribute('href').replace(/^(https?|mailto)\\+:/i, '$1:');
+      a.setAttribute('href', fixed);
+      for (const t of a.childNodes) if (t.nodeType === 3) t.nodeValue = t.nodeValue.replace(/^(\s*https?)\\+:/i, '$1:');
+      const href = fixed;
       if (/^https?:|^mailto:/i.test(href)) { a.target = '_blank'; a.rel = 'noopener noreferrer'; }
       else a.dataset.internal = resolve(ch.href, href);
     }
@@ -113,19 +117,44 @@
     return wrap;
   }
 
-  const UI_CSS = `:host{all:initial;position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;background:#faf7f0;color:#222;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
-  .bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #e3dccd;background:#fff}
+  // BOOKS-READER-002: 책장을 넘기는 리더. 장(chapter)을 쪽 단위로 나누고(CSS 다단), 넘길 때 종이가 접히듯 돌아간다.
+  // 상단·하단 막대는 본문 폭에 맞춰 가운데 정렬한다.
+  const UI_CSS = `:host{all:initial;position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;background:radial-gradient(ellipse at center,#efe7d6 0%,#ddd2bc 100%);color:#222;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
+  .bar,.foot{background:rgba(255,255,255,.92);backdrop-filter:blur(6px)}
+  .bar{border-bottom:1px solid #e3dccd}.foot{border-top:1px solid #e3dccd}
+  .row{box-sizing:border-box;width:100%;max-width:var(--book-w);margin:0 auto;display:flex;align-items:center;gap:8px;padding:10px 14px}
   .bar .t{flex:1 1 30%;min-width:64px;font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bar button,.bar select{font:inherit;font-size:13px;border:1px solid #cfc6b4;background:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}
   .bar select{flex:0 1 auto;min-width:0;max-width:38vw}
-  @media(max-width:480px){.bar{flex-wrap:wrap}.bar .t{flex-basis:100%;order:-1}.bar select{flex:1 1 40%;max-width:none}}
-  .page{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
-  .page .inner{max-width:680px;margin:0 auto;padding:28px 22px 80px;font-family:"Noto Serif KR",serif;line-height:1.85;word-break:keep-all}
-  .page img{max-width:100%;height:auto}
-  .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid #e3dccd;background:#fff;font-size:12px;color:#6b6257}
+  @media(max-width:480px){.bar .row{flex-wrap:wrap}.bar .t{flex-basis:100%;order:-1}.bar select{flex:1 1 40%;max-width:none}}
+  .notice{box-sizing:border-box;width:100%;max-width:var(--book-w);margin:0 auto;padding:6px 14px;font-size:12px;color:#7a5a12}
+  .noticewrap{background:#fff8e6;border-bottom:1px solid #f0e2b8}
+  .stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px 12px;perspective:2200px;overflow:hidden;touch-action:pan-y}
+  .book{position:relative;width:100%;max-width:var(--book-w);height:100%;max-height:1100px}
+  .sheet{position:absolute;inset:0;background:#fffdf8;border-radius:4px 10px 10px 4px;box-shadow:0 1px 2px rgba(0,0,0,.08),0 14px 40px rgba(60,40,10,.22),inset 18px 0 22px -18px rgba(90,70,30,.35);overflow:hidden}
+  .sheet.spread{border-radius:6px;background:linear-gradient(90deg,#fffdf8 0,#fffdf8 calc(50% - 14px),#efe6d3 50%,#fffdf8 calc(50% + 14px),#fffdf8 100%)}
+  .view{position:absolute;inset:34px 40px 40px 46px;overflow:hidden;outline:none}
+  .inner{height:100%;column-fill:auto;column-gap:80px;font-family:"Noto Serif KR",serif;line-height:1.85;word-break:keep-all;transition:none;will-change:transform}
+  .inner img{max-width:100%;max-height:calc(var(--page-h) - 20px);height:auto;object-fit:contain;break-inside:avoid}
+  .inner h1,.inner h2,.inner h3{break-after:avoid}
+  .folio{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:11px;color:#9a8f7c;letter-spacing:.08em}
+  .edge{position:absolute;top:0;bottom:0;width:12%;z-index:2;cursor:pointer;background:none;border:0}
+  .edge.l{left:0}.edge.r{right:0}
+  .leaf{position:absolute;inset:0;z-index:3;pointer-events:none;backface-visibility:hidden;transform-style:preserve-3d}
+  .leaf.fwd{transform-origin:left center;animation:fwd .62s cubic-bezier(.45,.05,.25,1) forwards}
+  .leaf.back{transform-origin:right center;animation:back .62s cubic-bezier(.45,.05,.25,1) forwards}
+  .leaf::after{content:"";position:absolute;inset:0;pointer-events:none;animation:shade .62s ease forwards}
+  .leaf.fwd::after{background:linear-gradient(90deg,rgba(0,0,0,0),rgba(0,0,0,.28))}
+  .leaf.back::after{background:linear-gradient(270deg,rgba(0,0,0,0),rgba(0,0,0,.28))}
+  @keyframes fwd{to{transform:rotateY(-104deg);box-shadow:-30px 0 40px rgba(0,0,0,.18)}}
+  @keyframes back{to{transform:rotateY(104deg);box-shadow:30px 0 40px rgba(0,0,0,.18)}}
+  @keyframes shade{from{opacity:0}to{opacity:1}}
+  @media(prefers-reduced-motion:reduce){.leaf{display:none}}
+  @media(max-width:640px){.stage{padding:10px 8px}.view{inset:24px 22px 34px 26px}}
+  .foot .row{justify-content:space-between;font-size:12px;color:#6b6257}
   .foot button{font:inherit;font-size:14px;border:1px solid #14305f;color:#14305f;background:#fff;border-radius:10px;padding:9px 16px;cursor:pointer}
   .foot button:disabled{opacity:.35;cursor:default}
-  .notice{padding:6px 14px;background:#fff8e6;border-bottom:1px solid #f0e2b8;font-size:12px;color:#7a5a12}`;
+  .pos{text-align:center}`;
 
   /** Open a full-screen reader. options: { title, storageKey, notice } */
   async function open(buffer, options = {}) {
@@ -135,52 +164,108 @@
     host.setAttribute('role', 'dialog'); host.setAttribute('aria-modal', 'true'); host.setAttribute('aria-label', `${options.title || book.title} 읽기`);
     const root = host.attachShadow({ mode: 'open' });
     const key = options.storageKey ? `ekodi-reader:${options.storageKey}` : '';
-    let state = { i: 0, size: 100 };
+    let state = { i: 0, size: 100, p: 0 };
     try { if (key) state = { ...state, ...JSON.parse(localStorage.getItem(key) || '{}') }; } catch {}
-    root.innerHTML = `<style>${UI_CSS}</style><style class="book">${book.css}</style>
-      <div class="bar"><button class="close" aria-label="닫기">✕ 닫기</button><span class="t"></span><select class="toc" aria-label="목차"></select>
-      <button class="smaller" aria-label="글자 작게">가−</button><button class="larger" aria-label="글자 크게">가+</button></div>
-      ${options.notice ? `<div class="notice"></div>` : ''}
-      <div class="page" tabindex="0"><div class="inner"></div></div>
-      <div class="foot"><button class="prev">← 이전</button><span class="pos"></span><button class="next">다음 →</button></div>`;
+    root.innerHTML = `<style>${UI_CSS}</style><style class="bookcss">${book.css}</style>
+      <div class="bar"><div class="row"><button class="close" aria-label="닫기">✕ 닫기</button><span class="t"></span><select class="toc" aria-label="목차"></select>
+      <button class="smaller" aria-label="글자 작게">가−</button><button class="larger" aria-label="글자 크게">가+</button></div></div>
+      ${options.notice ? `<div class="noticewrap"><div class="notice"></div></div>` : ''}
+      <div class="stage"><div class="book"><div class="sheet"><div class="view" tabindex="0"><div class="inner"></div></div><div class="folio"></div></div>
+      <button class="edge l" aria-label="앞 쪽으로"></button><button class="edge r" aria-label="다음 쪽으로"></button></div></div>
+      <div class="foot"><div class="row"><button class="prev">← 이전</button><span class="pos" aria-live="polite"></span><button class="next">다음 →</button></div></div>`;
     const $ = s => root.querySelector(s);
+    const stage = $('.stage'), bookEl = $('.book'), sheet = $('.sheet'), view = $('.view'), inner = $('.inner');
     $('.t').textContent = options.title || book.title;
     if (options.notice) $('.notice').textContent = options.notice;
     book.chapters.forEach((c, i) => { const o = document.createElement('option'); o.value = i; o.textContent = c.label || `${i + 1}`; $('.toc').append(o); });
     const save = () => { try { if (key) localStorage.setItem(key, JSON.stringify(state)); } catch {} };
-    async function go(i, hash) {
-      state.i = Math.max(0, Math.min(book.chapters.length - 1, i));
-      const node = await chapterNode(book, book.chapters[state.i]);
-      $('.inner').replaceChildren(node);
-      $('.inner').style.fontSize = `${state.size}%`;
+    const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let pages = 1, spread = false, busy = false;
+
+    // 화면 크기에 맞춰 책 크기와 쪽 나누기를 다시 계산한다. 넓은 화면은 두 쪽 펼침.
+    function layout() {
+      spread = stage.clientWidth >= 1100;
+      const w = spread ? Math.min(1240, stage.clientWidth - 24) : Math.min(760, stage.clientWidth - 16);
+      host.style.setProperty('--book-w', `${w}px`);
+      sheet.classList.toggle('spread', spread);
+      const vw = view.clientWidth, vh = view.clientHeight;
+      host.style.setProperty('--page-h', `${vh}px`);
+      inner.style.columnWidth = spread ? `${(vw - 80) / 2}px` : `${vw}px`;
+      inner.style.columnCount = 'auto';
+      inner.style.transform = 'translateX(0)';
+      pages = Math.max(1, Math.round((inner.scrollWidth + 80) / (vw + 80)));
+    }
+    function place() {
+      state.p = Math.max(0, Math.min(pages - 1, state.p));
+      inner.style.transform = `translateX(${-(view.clientWidth + 80) * state.p}px)`;
+      const last = state.i === book.chapters.length - 1 && state.p === pages - 1;
+      $('.prev').disabled = state.i === 0 && state.p === 0; $('.next').disabled = last;
+      $('.edge.l').disabled = $('.prev').disabled; $('.edge.r').disabled = last;
+      $('.pos').textContent = `${state.i + 1} / ${book.chapters.length}장 · ${state.p + 1} / ${pages}쪽`;
+      $('.folio').textContent = book.chapters[state.i].label || '';
       $('.toc').value = String(state.i);
-      $('.pos').textContent = `${state.i + 1} / ${book.chapters.length}`;
-      $('.prev').disabled = state.i === 0; $('.next').disabled = state.i === book.chapters.length - 1;
-      $('.page').scrollTop = 0;
-      if (hash) node.querySelector(`[id="${CSS.escape(hash)}"]`)?.scrollIntoView();
       save();
     }
-    $('.inner').addEventListener('click', e => {
+    async function load(i, at = 0, hash) {
+      state.i = Math.max(0, Math.min(book.chapters.length - 1, i));
+      const node = await chapterNode(book, book.chapters[state.i]);
+      inner.replaceChildren(node);
+      inner.style.fontSize = `${state.size}%`;
+      layout();
+      state.p = at === 'end' ? pages - 1 : at;
+      if (hash) { const t = node.querySelector(`[id="${CSS.escape(hash)}"]`); if (t) state.p = Math.floor((t.getBoundingClientRect().left - inner.getBoundingClientRect().left) / (view.clientWidth + 80)); }
+      place();
+    }
+    // 넘기는 동안 현재 쪽의 사본이 종이처럼 접히며 돌아가고, 그 아래에 새 쪽이 드러난다.
+    async function turn(dir, change) {
+      if (busy) return; busy = true;
+      try {
+        let leaf = null;
+        if (!reduce()) { leaf = sheet.cloneNode(true); leaf.classList.add('leaf', dir > 0 ? 'fwd' : 'back'); bookEl.append(leaf); }
+        await change();
+        if (leaf) await new Promise(r => { leaf.addEventListener('animationend', r, { once: true }); setTimeout(r, 900); });
+        leaf?.remove();
+      } finally { busy = false; }
+    }
+    const next = () => {
+      if (state.p < pages - 1) return turn(1, async () => { state.p++; place(); });
+      if (state.i < book.chapters.length - 1) return turn(1, () => load(state.i + 1, 0));
+    };
+    const prev = () => {
+      if (state.p > 0) return turn(-1, async () => { state.p--; place(); });
+      if (state.i > 0) return turn(-1, () => load(state.i - 1, 'end'));
+    };
+    const go = (i, hash) => turn(i >= state.i ? 1 : -1, () => load(i, 0, hash));
+    inner.addEventListener('click', e => {
       const a = e.target.closest('a[data-internal]'); if (!a) return;
       e.preventDefault();
-      const [path, hash] = a.getAttribute('href').split('#');
+      const hash = a.getAttribute('href').split('#')[1];
       const target = book.chapters.findIndex(c => c.href === a.dataset.internal);
       if (target >= 0) go(target, hash);
     });
-    $('.prev').onclick = () => go(state.i - 1);
-    $('.next').onclick = () => go(state.i + 1);
+    $('.prev').onclick = prev; $('.next').onclick = next;
+    $('.edge.l').onclick = prev; $('.edge.r').onclick = next;
     $('.toc').onchange = e => go(Number(e.target.value));
-    $('.smaller').onclick = () => { state.size = Math.max(80, state.size - 10); $('.inner').style.fontSize = `${state.size}%`; save(); };
-    $('.larger').onclick = () => { state.size = Math.min(180, state.size + 10); $('.inner').style.fontSize = `${state.size}%`; save(); };
-    const close = () => { document.removeEventListener('keydown', onKey); host.remove(); document.body.style.overflow = ''; };
-    const onKey = e => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowRight') go(state.i + 1); else if (e.key === 'ArrowLeft') go(state.i - 1); };
+    const resize = (d) => { state.size = Math.max(80, Math.min(180, state.size + d)); const ratio = pages > 1 ? state.p / (pages - 1) : 0; inner.style.fontSize = `${state.size}%`; layout(); state.p = Math.round(ratio * (pages - 1)); place(); };
+    $('.smaller').onclick = () => resize(-10);
+    $('.larger').onclick = () => resize(10);
+    // 손가락으로 밀어서 넘기기
+    let sx = null, sy = 0;
+    stage.addEventListener('touchstart', e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+    stage.addEventListener('touchend', e => { if (sx === null) return; const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; sx = null; if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) (dx < 0 ? next : prev)(); }, { passive: true });
+    let rt = 0;
+    const onResize = () => { clearTimeout(rt); rt = setTimeout(() => { const ratio = pages > 1 ? state.p / (pages - 1) : 0; layout(); state.p = Math.round(ratio * (pages - 1)); place(); }, 120); };
+    addEventListener('resize', onResize);
+    const close = () => { document.removeEventListener('keydown', onKey); removeEventListener('resize', onResize); host.remove(); document.body.style.overflow = ''; };
+    const onKey = e => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); next(); } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); } };
     $('.close').onclick = close;
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
+    host.style.setProperty('--book-w', '760px');
     document.body.append(host);
-    await go(state.i);
-    $('.page').focus();
-    return { close, book };
+    await load(state.i, state.p || 0);
+    view.focus();
+    return { close, book, next, prev, go, get position() { return { chapter: state.i, page: state.p, pages }; } };
   }
 
   window.EkodiEpubReader = { open, openBook, unzip };
