@@ -209,7 +209,10 @@ must('prod','workers_dev = true');
 must('manifest','https://ekodi-my.topmaster-joseph.workers.dev/');
 mustNot('manifest','https://my.ekodi.kr');
 must('prod','DATA_ENABLED = "true"');
-must('staging','DATA_ENABLED = "false"');
+// Staging may read data only from the DEVELOPMENT project (owner decision, #6739);
+// production identifiers and secret keys must never appear in staging config.
+if(!content.staging.includes('DATA_ENABLED = "false"'))must('staging','SUPABASE_URL = "https://lxcxwbdwwojjkgybbqii.supabase.co"');
+for(const banned of ['renzehysxirjilvdxacv','sb_secret_','service_role'])if(content.staging.includes(banned))throw new Error(`My EKODI validation failed: staging contains ${banned}`);
 mustNot('staging','my.ekodi.kr');
 must('auth',"'my':{name:'My EKODI'");
 must('auth',"returnTo:'https://ekodi.kr/my/'");
