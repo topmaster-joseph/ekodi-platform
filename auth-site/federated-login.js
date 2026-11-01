@@ -63,17 +63,30 @@ export function redirectProviders() {
 
 // Daum IDs were folded into Kakao accounts and Daum offers no separate third-party
 // login, so the Kakao path is labelled for both. The recorded provider stays 'kakao'.
-export const BUTTON_LABELS = { kakao: '카카오·다음' };
+// Daum users get their own clearly named entry that starts the same Kakao flow.
+export const BUTTON_LABELS = { kakao: '카카오', daum: '다음(Daum)' };
+export const DAUM_HINT = '다음 아이디는 카카오계정으로 로그인됩니다. 아직 통합하지 않았다면 카카오계정 통합 후 이용해 주세요.';
 export function buttonText(provider, purpose) {
-  const name = BUTTON_LABELS[provider?.id] || provider?.name || PROVIDER_LABELS[provider?.id] || '';
+  const key = provider?.variant || provider?.id;
+  const name = BUTTON_LABELS[key] || provider?.name || PROVIDER_LABELS[provider?.id] || '';
   return purpose === 'link' ? `${name} 계정 추가` : `${name} 계정으로 계속하기`;
+}
+/** Login list with a Daum entry right after Kakao; it reuses the Kakao provider id. */
+export function loginEntries(list) {
+  const out = [];
+  for (const provider of list) {
+    out.push(provider);
+    if (provider?.id === 'kakao') out.push({ ...provider, variant: 'daum' });
+  }
+  return out;
 }
 
 function button(provider, purpose, statusId) {
   const b = document.createElement('button');
   b.type = 'button';
-  b.className = `federated-btn federated-${provider.id}`;
+  b.className = `federated-btn federated-${provider.variant || provider.id}`;
   b.textContent = buttonText(provider, purpose);
+  if (provider.variant === 'daum') b.title = DAUM_HINT;
   b.addEventListener('click', () => start(provider, purpose, b, statusId));
   return b;
 }
@@ -82,7 +95,16 @@ async function renderInto(hostId, purpose, statusId) {
   const host = $(hostId); if (!host) return 0;
   host.replaceChildren(); show(hostId, false);
   const list = (await redirectProviders()).filter(p => (purpose === 'link' ? p.supportsLink : p.supportsLogin));
-  for (const provider of list) host.append(button(provider, purpose, statusId));
+  const entries = purpose === 'login' ? loginEntries(list) : list;
+  for (const provider of entries) {
+    host.append(button(provider, purpose, statusId));
+    if (provider.variant === 'daum') {
+      const hint = document.createElement('p');
+      hint.className = 'federated-hint';
+      hint.textContent = DAUM_HINT;
+      host.append(hint);
+    }
+  }
   show(hostId, list.length > 0);
   return list.length;
 }

@@ -4,6 +4,12 @@ compatibility_date = "2026-08-17"
 workers_dev = true
 preview_urls = false
 
+# Points governance staging (#6739): /api/control/points/* only, forwarded by
+# admin-staging-worker.js to the isolated staging Control API (development DB).
+[[services]]
+binding = "CONTROL_API"
+service = "ekodi-auth-api-staging"
+
 [assets]
 directory = "./dist"
 binding = "ASSETS"

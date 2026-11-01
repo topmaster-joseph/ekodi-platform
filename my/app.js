@@ -1,5 +1,6 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { applyPreferenceAction, buildPersonalizedServiceView, normalizePreference, normalizeSignal } from './progressive-personalization.js';
+import { createEkodiActivityTracker } from './points-active-client.js';
 
 const cfg=window.EKODI_MY_CONFIG||{};
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -36,6 +37,35 @@ const sb=enabled?createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{
 let session=null,items=[],access=new Map(),workspaces=new Map(),filter='all',activeWorkspaceKey='',profile=null,linkedIdentities=[],profileError='';
 let personalizationPreferences=new Map(),personalizationSignals=[],ephemeralSignals=[],discoveryOpen=false;
 window.EKODI_MY_AUTH=Object.freeze({getAccessToken:()=>String(session?.access_token||''),getUserId:()=>String(session?.user?.id||''),isSignedIn:()=>Boolean(session?.access_token)});
+// Browser signals are not proof of reading or attending. A user must opt in
+// during this page session; both platform DATA_ENABLED and POINTS_ENABLED
+// must be explicitly active before the module can contact the point RPC.
+const myPointsTracker = cfg.pointsEnabled===true && enabled
+  ? createEkodiActivityTracker({supabase:sb,siteId:'my',enabled:true,
+      onAward:()=>{const status=$('#activityPointsStatus');if(status)status.textContent='활동포인트 적립 여부는 내 포인트에서 확인할 수 있습니다.';}})
+  : null;
+function syncMyActivityTracker(){
+  const toggle=$('#activityPointsOptIn'),box=$('#activityPointsControls'),status=$('#activityPointsStatus');
+  if(!toggle||!box)return;
+  const eligible=Boolean(myPointsTracker&&session?.access_token);
+  box.hidden=!eligible;
+  if(!eligible){myPointsTracker?.stop();toggle.checked=false;return;}
+  const active=toggle.checked&&location.hash==='#activity'
+    &&document.visibilityState==='visible';
+  if(active){
+    myPointsTracker.start();
+    if(status)status.textContent='활동시간 측정 중 · 실제 적립은 사이트별 서버 정책과 일일 상한에 따릅니다.';
+  }else{
+    myPointsTracker.stop();
+    if(status)status.textContent=toggle.checked
+      ? '활동 화면을 벗어나 측정을 중지했습니다.'
+      : '기본적으로 측정하지 않습니다. 동의하면 내 활동 탭에서만 측정합니다.';
+  }
+}
+$('#activityPointsOptIn')?.addEventListener('change',syncMyActivityTracker);
+document.addEventListener('visibilitychange',syncMyActivityTracker);
+window.addEventListener('pagehide',()=>myPointsTracker?.stop());
+
 
 const ACCESS_CONTEXT_RUNTIME='batched-snapshot-no-fanout-v3';
 const ACCESS_SNAPSHOT_TTL_MS=5*60*1000;
@@ -117,6 +147,7 @@ function syncSurfaceState({scroll=false}={}){
  document.body.dataset.authState=signedIn?'member':'guest';
  document.body.dataset.homeMode=signedIn&&key?'focus':'home';
  document.body.dataset.activeTab=tab;
+ syncMyActivityTracker();
  document.querySelectorAll('[data-my-tab-section]').forEach(section=>{section.hidden=signedIn?section.dataset.myTabSection!==tab:section.dataset.myTabSection!=='home'});
  document.querySelectorAll('[data-member-only]').forEach(section=>{section.hidden=!signedIn||tab!=='home'});
  syncHomePanels();
@@ -525,6 +556,13 @@ if(MISROUTED_SERVICE_RETURN){
  if(!session){redirectSignedOutToLogin()}else{
   authUi();announceSession();
   try{await loadAll()}catch(e){console.error('My EKODI load',e)}
-  sb.auth.onAuthStateChange(async(_e,next)=>{session=next;if(!session){redirectSignedOutToLogin();return}authUi();announceSession();await loadAll()});
+  sb.auth.onAuthStateChange(async(event,next)=>{
+   // Stop consent-based activity measurement on sign-out or account switch.
+   if(event==='SIGNED_OUT'||!next||(session?.user?.id&&next?.user?.id&&session.user.id!==next.user.id)){
+    myPointsTracker?.stop();
+    const toggle=$('#activityPointsOptIn');if(toggle)toggle.checked=false;
+   }
+   session=next;if(!session){redirectSignedOutToLogin();return}authUi();announceSession();await loadAll();
+  });
  }
 }

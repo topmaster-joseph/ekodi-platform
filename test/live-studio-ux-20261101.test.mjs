@@ -52,3 +52,14 @@ test('studio settings render as one-at-a-time tabs that fit one screen',()=>{
   for(const name of ['화면','소스','참여','채팅','통역','송출'])assert.ok(live.includes(`'${name}'`),name);
   assert.match(css,/\.compact-panel\.studio-tabbed\{display:flex;flex-direction:column;max-height:calc\(100dvh - 100px\);overflow:hidden\}/);
 });
+
+test('QR management camera: connected pair closes dialog, opens 참여 tab and auto-shows the feed',()=>{
+  assert.match(live,/function onManagementCameraConnected/);
+  assert.match(live,/dialog\.close\(\);selectStudioTab\('참여'\)/);
+  assert.match(live,/kind==='management_camera'&&state\.managementAutoShow&&!item\.autoShown/);
+});
+test('simulcast panel retries after login handoff instead of sticking on expired-session',()=>{
+  assert.match(interp,/ekodi-live-auth-ready/);
+  assert.match(live,/new CustomEvent\('ekodi-live-auth-ready'\)/);
+  assert.match(interp,/return load\(true\)/);
+});
