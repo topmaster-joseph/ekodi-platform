@@ -153,7 +153,10 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   if(isBizWorkspace)serviceSections.push(['tax','세금 · 증빙'],['mall','에코디몰']);
   const peopleSections=workspace==='cgma'?[['member','정회원'],['festival','모터페스티벌 신청'],['members','관리자 · 권한']]:[['members','사용자 · 권한']];
   const contentSections=[...(workspace==='ekodimission'?[['saturday','토요모임'],['activities','행사 · 신청자']]:[]),['publishing','채널·자동게시'],['marketing','마케팅 AI']];
+  // 청계면상인회 전용 업무(전자문서·정회원·모터페스티벌)는 모든 관리자 역할의 메뉴에 같은 순서로 나타납니다.
+  const cgmaSiteGroups=workspace==='cgma'?[{id:'cgma',label:'상인회',sections:[['edocs','전자문서 · 서명'],['member','정회원'],['festival','모터페스티벌 신청']]}]:[];
   const standardRootGroups=[
+    ...cgmaSiteGroups,
     {id:'home',label:'운영',sections:[['overview','운영 홈'],...(isBizWorkspace&&!service?[['business-center','비즈 통합업무센터']]:[])]},
     {id:'work',label:'고객 · 업무',sections:[['work','업무'],['confirmations','지급 · 수령 확인']]},
     {id:'marketing',label:'마케팅',sections:[...(workspace==='ekodimission'?[['saturday','토요모임'],['activities','행사 · 신청자']]:[]),['marketing','마케팅 AI'],['publishing','채널 · 자동게시']]},
@@ -162,6 +165,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     {id:'site-access',label:'사이트 관리',sections:[['chrome','헤더 · 푸터'],['design','사이트 디자인'],...peopleSections,['status','운영 상태'],['records','변경 · 감사 기록']]}
   ];
   const localRootGroups=[
+    ...cgmaSiteGroups,
     {id:'today',label:'오늘 할 일',sections:[['overview','운영 홈'],...(workspace==='ekodimission'?[['saturday','토요모임'],['activities','행사 · 신청자']]:[])]},
     {id:'communication',label:'소통 · 콘텐츠',sections:[['publishing','채널 · 자동게시'],['marketing','마케팅 AI'],['mail','메일']]},
     {id:'work',label:'업무 처리',sections:[['work','업무'],['confirmations','지급 · 수령 확인'],['finance','재무']]}
@@ -220,7 +224,9 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function navBucketsForRole(role=workspaceRole){
     const groups=groupsForRole(role),dedicated=dedicatedSections(),seen=new Set(),common=[],site=[];
     for(const group of groups){for(const item of group.sections){const [key,label]=item;if(seen.has(key))continue;if(role?!canSection(key,role):!(workspace==='ekodimission'||key==='overview'))continue;seen.add(key);(dedicated.has(key)?site:common).push([key,label]);}}
-    return [{id:'common',label:'공통 메뉴',items:common},{id:'site',label:'전용 메뉴',items:site}].filter(bucket=>bucket.items.length);
+    const buckets=[{id:'common',label:'공통 메뉴',items:common},{id:'site',label:'전용 메뉴',items:site}].filter(bucket=>bucket.items.length);
+    // 상인회 관리자 화면은 자주 쓰는 전용 메뉴를 맨 위에 두고, 다른 메뉴가 선택되지 않았을 때 기본으로 펼칩니다.
+    return workspace==='cgma'?buckets.reverse():buckets;
   }
   function renderNav(role=workspaceRole){
     const h=$('adminNav');h.replaceChildren();document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile(role);
