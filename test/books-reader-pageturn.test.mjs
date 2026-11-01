@@ -38,3 +38,16 @@ test('running heads sit on each page: page numbers at the outer corners, book ti
   assert.match(src, /\.folio\.l\{left:46px\}\.folio\.r\{right:40px;flex-direction:row-reverse\}/);
   assert.match(src, /const n = spread \? state\.p \* 2 \+ 1 : state\.p \+ 1;/);
 });
+
+// BOOKS-READER-003: 무료 오디오북을 재생하면 해당 장이 열리고, 재생 위치(글자 수 비율)에 맞춰 책장이 넘어간다.
+test('reader plays the chapter track and turns pages with playback; library only offers approved audio', () => {
+  assert.match(src, /pageForFraction\(audio\.currentTime \/ d\)/);
+  assert.match(src, /audio\.onended = async \(\) => \{\s*while \(busy\)/, 'advances to the next chapter only after a turn finishes');
+  assert.match(src, /책장 따라 넘기기/);
+  assert.match(src, /URL\.revokeObjectURL\(audio\.src\)/);
+  const lib = readFileSync(new URL('../books/buy/library.js', import.meta.url), 'utf8');
+  assert.match(lib, /item\.audiobook\?\.included && item\.audiobook\?\.ready && item\.audiobook\.tracks\?\.length/);
+  assert.match(lib, /download\/audio\/\$\{encodeURIComponent\(item\.id\)\}/);
+  const worker = readFileSync(new URL('../books-worker.js', import.meta.url), 'utf8');
+  assert.match(worker, /"media-src 'self' blob:"/);
+});
