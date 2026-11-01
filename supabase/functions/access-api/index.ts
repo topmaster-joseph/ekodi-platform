@@ -162,6 +162,11 @@ async function personAuthoritySummary(personId:string){
       .order("created_at",{ascending:false}).limit(20)
   ]);
   for(const result of [profiles,memberships,grants,audit])if(result.error)throw result.error;
+  const {data:merges,error:mergeError}=await admin.from("person_merge_requests")
+    .select("id,status,survivor_person_id,absorbed_person_id,proven_provider,created_at,executed_at,reverted_at")
+    .or(`survivor_person_id.eq.${personId},absorbed_person_id.eq.${personId}`)
+    .in("status",["executed","reverted"]).order("created_at",{ascending:false}).limit(10);
+  if(mergeError)throw mergeError;
   const hasGoogle=rows.some((r:any)=>r.provider==="google"&&r.status==="active"&&r.email_verified);
   return {
     person:{id:person?.id??personId,ekodiId:person?.ekodi_id??null,displayName:clip(person?.display_name,80)||null,
@@ -180,7 +185,9 @@ async function personAuthoritySummary(personId:string){
     tenantRoles:(memberships.data??[]).map((m:any)=>({tenant:m.tenants?{slug:m.tenants.slug,name:m.tenants.name}:null,role:m.role,status:m.status})),
     siteGrants:(grants.data??[]).map((g:any)=>({siteKey:g.site_key,tenant:g.tenants?{slug:g.tenants.slug,name:g.tenants.name}:null,
       role:g.role,status:g.status,source:g.source,plan:g.plan,email:g.email})),
-    recentAudit:(audit.data??[]).map((a:any)=>({action:a.action,provider:a.provider,at:a.created_at}))
+    recentAudit:(audit.data??[]).map((a:any)=>({action:a.action,provider:a.provider,at:a.created_at})),
+    merges:(merges??[]).map((m:any)=>({id:m.id,status:m.status,role:m.survivor_person_id===personId?"survivor":"absorbed",
+      provider:m.proven_provider,executedAt:m.executed_at,revertedAt:m.reverted_at}))
   };
 }
 async function shadowPolicy(){
@@ -393,6 +400,17 @@ Deno.serve(async(req)=>{
       });
       if(auditError)console.error("person lookup audit failed",auditError.message);
       return json(req,{ok:true,matched:people.length,people});
+    }
+
+    const revertMatch=path.match(/^\/admin\/merges\/([0-9a-f-]{36})\/revert$/i);
+    if(req.method==="POST"&&revertMatch){
+      // Platform administrators can undo an owner-executed account merge. The DB function
+      // restores exactly the identities recorded at execution and audits both Persons.
+      if(!await platformAdmin(auth.user.id))return json(req,{error:"platform_admin_required"},403);
+      const {data,error}=await admin.rpc("person_merge_revert",{p_request:revertMatch[1].toLowerCase(),p_actor:auth.user.id});
+      if(error)throw error;
+      if(data?.ok!==true)return json(req,{error:String(data?.error||"merge_revert_failed")},409);
+      return json(req,{ok:true,restored:data.restored});
     }
 
     if(req.method==="GET"&&path==="/platform-authority"){
