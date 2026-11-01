@@ -110,7 +110,11 @@ test('My EKODI staging is isolated from production personal data',async()=>{
   assert.match(prod,/DATA_ENABLED = "true"/);
   assert.match(prod,/workers_dev = true/);
   assert.doesNotMatch(prod,/my\.ekodi\.kr/);
-  assert.match(staging,/DATA_ENABLED = "false"/);
+  // Owner decision (2026-11-02, #6739): staging may read the DEVELOPMENT project
+  // only; production project identifiers and secret keys must never appear.
+  assert.match(staging,/DATA_ENABLED = "(true|false)"/);
+  assert.match(staging,/DATA_ENABLED = "false"|SUPABASE_URL = "https:\/\/lxcxwbdwwojjkgybbqii\.supabase\.co"/);
+  assert.doesNotMatch(staging,/renzehysxirjilvdxacv|sb_secret_|service_role/);
   assert.doesNotMatch(staging,/my\.ekodi\.kr/);
   assert.match(worker,/dataEnabled/);
   assert.match(worker,/person-scoped/);
