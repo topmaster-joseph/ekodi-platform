@@ -78,7 +78,7 @@ test('admin root is a command-only workspace while Campus remains a child route'
   assert.match(dock,/공통 대화 이력/);
   assert.match(dock,/전체 대화 검색/);
   assert.match(dock,/function beginConversationTurn\(text\)/);
-  assert.match(dock,/addSessionMessage\('user',value,\{kind:'message',status:'active'\}\);renderAi\(\);scrollChat\(\);return history/);
+  assert.match(dock,/addSessionMessage\('user',value,\{kind:'message',status:'active',advisory:familyVerdict\(value\)\}\);renderAi\(\);scrollChat\(\);return history/);
   const optimisticTurn=dock.indexOf('const history=beginConversationTurn(value)');
   const remoteAssist=dock.indexOf("await api('/api/control/ai/assist'");
   assert.ok(optimisticTurn>=0&&remoteAssist>optimisticTurn,'submitted text must render in the main conversation before the remote AI call');
