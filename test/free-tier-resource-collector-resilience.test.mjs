@@ -8,6 +8,7 @@
 // and what status, so the next one is diagnosable from a single line.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { collectAll, describeCollectorError, snapshotsToSql } from '../scripts/collect-free-tier-resource-usage.mjs';
 
 const CLOUDFLARE_OK = Object.freeze({
@@ -134,4 +135,47 @@ test('collectAll is settled per provider rather than all-or-nothing', async () =
   // The regression was Promise.all over raw provider promises; every element here
   // is already caught, so the combinator can no longer reject the collection.
   assert.doesNotMatch(body, /Promise\.all\(\[\s*supabasePromise/, 'raw provider promises must not be combined again');
+});
+
+test('a provider outage names the call, not just the provider', async () => {
+  // The first real failure after the resilience fix reported:
+  //   github telemetry unavailable :: HTTP_500 (HTTP 500)
+  // which named the provider but left three candidate endpoints — one of them
+  // paginating through every artifact in the repository. The endpoint is the
+  // difference between knowing and guessing.
+  const failed = new Error('HTTP_500');
+  failed.status = 500;
+  failed.endpoint = 'api.github.com/repos/owner/repo/actions/artifacts';
+  assert.equal(
+    describeCollectorError(failed),
+    'HTTP_500 (HTTP 500) at api.github.com/repos/owner/repo/actions/artifacts',
+  );
+
+  const env = { GITHUB_REPOSITORY: 'owner/repo', GITHUB_TOKEN: 'token' };
+  const result = await collectAll(env, {
+    loadCloudflare: async () => CLOUDFLARE_OK,
+    fetchJson: async url => {
+      if (url.includes('/actions/artifacts')) {
+        const error = new Error('HTTP_500');
+        error.status = 500;
+        error.endpoint = new URL(url).host + new URL(url).pathname;
+        throw error;
+      }
+      return githubFetch(url);
+    },
+  });
+  assert.match(result.failedProviders[0].error, /actions\/artifacts/, 'the failing call must reach the annotation');
+  assert.ok(result.snapshots.some(row => row.provider === 'cloudflare'), 'and the rest still survives');
+});
+
+test('the endpoint carries no query string, because it reaches a public annotation', () => {
+  // A query can hold a page cursor or a token; the annotation is world-readable.
+  const source = fs.readFileSync(new URL('../scripts/collect-free-tier-resource-usage.mjs', import.meta.url), 'utf8');
+  assert.match(source, /error\.endpoint=`\$\{target\.host\}\$\{target\.pathname\}`/);
+  assert.doesNotMatch(source, /error\.endpoint=.*target\.search/);
+
+  const withQuery = new Error('HTTP_500');
+  withQuery.status = 500;
+  withQuery.endpoint = 'api.github.com/repos/owner/repo/actions/artifacts';
+  assert.ok(!describeCollectorError(withQuery).includes('?'), 'no query may appear in the described error');
 });
