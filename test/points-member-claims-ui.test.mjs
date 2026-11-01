@@ -26,3 +26,15 @@ test('admin staging forwards only the points prefix to the isolated staging Cont
   assert.match(wf,/POINTS_SOURCE_ENV = "development"\n\s+POINTS_SUPABASE_URL = "https:\/\/lxcxwbdwwojjkgybbqii\.supabase\.co\/"/);
   assert.doesNotMatch(wf,/POINTS_SUPABASE_URL = "https:\/\/renzehysxirjilvdxacv/);
 });
+
+test('admin staging lane is dispatchable by the orchestrator after token merges (#6739)',()=>{
+  const lane=read('.github/workflows/deploy-admin-staging.yml');
+  const converge=read('scripts/converge-orchestrated-pr-merge.mjs');
+  assert.match(lane,/on:\n  # Orchestrator post-merge dispatch[\s\S]*?workflow_dispatch:\n    inputs:\n      release_branch_ref:/);
+  assert.match(lane,/if: github\.event_name != 'pull_request'/);
+  assert.match(lane,/EKODI_RELEASE_BRANCH_REF: \$\{\{ github\.event\.inputs\.release_branch_ref \|\| '' \}\}/);
+  assert.match(lane,/CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f/);
+  assert.match(converge,/const adminStagingTouched=changedFiles\.some/);
+  assert.match(converge,/'points-governance-admin\.js'/);
+  assert.match(converge,/if\(adminStagingTouched\)\{\n    const dispatch=await api\('\/actions\/workflows\/deploy-admin-staging\.yml\/dispatches'/);
+});
