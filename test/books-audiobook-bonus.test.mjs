@@ -173,12 +173,17 @@ test('voice sample: operator-only, explicit self-recording consent, real audio, 
   globalThis.fetch=async()=>new Response(JSON.stringify(operator));
   assert.equal((await adminRoute(env,req({}),path,new URL('https://ekodi.kr'))).status,400,'consent header required');
   assert.equal((await adminRoute(env,req({'x-ekodi-voice-consent':'self-recorded-for-ekodi-audiobooks'},new TextEncoder().encode('x'.repeat(70000))),path,new URL('https://ekodi.kr'))).status,400,'non-audio refused');
-  const ok=await adminRoute(env,req({'x-ekodi-voice-consent':'self-recorded-for-ekodi-audiobooks'}),path,new URL('https://ekodi.kr'));
-  assert.equal(ok.status,200);assert.equal(ok.data.format,'webm');
+  assert.equal((await adminRoute(env,req({'x-ekodi-voice-consent':'self-recorded-for-ekodi-audiobooks'}),path,new URL('https://ekodi.kr'))).status,400,'speaker name required');
+  const ok=await adminRoute(env,req({'x-ekodi-voice-consent':'self-recorded-for-ekodi-audiobooks','x-ekodi-voice-speaker':encodeURIComponent('정찬균')}),path,new URL('https://ekodi.kr'));
+  assert.equal(ok.status,200);assert.equal(ok.data.format,'webm');assert.equal(ok.data.gender,'m');
+  const fem=await adminRoute(env,req({'x-ekodi-voice-consent':'self-recorded-for-ekodi-audiobooks','x-ekodi-voice-speaker':encodeURIComponent('여성 낭독자')}),path,new URL('https://ekodi.kr/x?gender=f'));
+  assert.equal(fem.data.gender,'f');
   const keys=[...bucket.objects.keys()];
   assert.ok(keys.every(k=>k.startsWith('_voice/ekodi-narrator/')),'stored only under the private voice prefix');
   const state=await adminRoute(env,new Request('https://ekodi.kr/x',{headers:{authorization:'Bearer token'}}),path,new URL('https://ekodi.kr'));
-  assert.equal(state.data.present,true);assert.equal(state.data.consent,'self-recorded-for-ekodi-audiobooks');
+  assert.equal(state.data.present,true);assert.equal(state.data.m.consent,'self-recorded-for-ekodi-audiobooks');
+  assert.equal(state.data.m.speaker,'정찬균');assert.equal(state.data.f.speaker,'여성 낭독자');
+  assert.ok(keys.some(k=>k.startsWith('_voice/ekodi-narrator/m/'))&&[...bucket.objects.keys()].some(k=>k.startsWith('_voice/ekodi-narrator/f/')));
 });
 test('rendered drafts become deliverable only after catalog approval and an exact hash match',async()=>{
   const book=fixtureBook(),db=d1(),bucket=richBucket(),env=envFor(book,db,bucket);

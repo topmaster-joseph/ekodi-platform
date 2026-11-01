@@ -217,6 +217,29 @@ export async function handleCallback() {
   return true;
 }
 
+/** Merge policy v1 (owner decision 2026-11-02). Shown and acknowledged before any merge or detach. */
+export const MERGE_POLICY_VERSION = 'merge-policy-v1';
+export const MERGE_POLICY_LINES = Object.freeze([
+  '권한: 두 계정의 권한을 합칩니다. 같은 서비스는 더 높은 권한을 사용합니다.',
+  '포인트·활동기록: 하나의 통합 ID에서 함께 사용하되, 어느 로그인에서 생긴 기록인지는 그대로 남습니다.',
+  '구독·결제: 합치거나 나누어도 자동 해지·환불·분할하지 않습니다. 결제·구독·포인트 기록이 있는 계정은 정리 전까지 합치거나 분리할 수 없습니다.',
+  '분리: 로그인 수단 하나를 떼어내면 그 로그인은 새 EKODI 계정으로 시작합니다. 통합 ID의 권한·구독·포인트는 통합 ID에 남고 되돌리거나 나누지 않습니다.',
+  '되돌리기: 잘못 합친 경우에만 플랫폼 관리자가 로그인 수단을 원래대로 되돌립니다.',
+]);
+export function policyBox(confirmLabel) {
+  const wrap = document.createElement('div');
+  wrap.className = 'merge-policy';
+  const title = document.createElement('strong');
+  title.textContent = 'EKODI 통합 ID 운영 기준';
+  const list = document.createElement('ul');
+  for (const line of MERGE_POLICY_LINES) { const li = document.createElement('li'); li.textContent = line; list.append(li); }
+  const label = document.createElement('label');
+  const check = document.createElement('input');
+  check.type = 'checkbox';
+  label.append(check, document.createTextNode(` ${confirmLabel}`));
+  wrap.append(title, list, label);
+  return { wrap, check };
+}
 /**
  * Owner-decided merge, phase 1: show what the second account holds. Nothing moves yet;
  * the owner reads the report and decides. All values go through textContent.
@@ -234,7 +257,7 @@ export function mergeReportLines(mergeRequest, name) {
   for (const item of financial.slice(0, 8)) lines.push(`· ${item.table}: ${item.absorbedRows}건`);
   if (inv.verdict === 'mergeable') {
     lines.push(`합치면 ${name}로 로그인해도 같은 EKODI 통합 ID의 권한·포인트를 사용합니다. 각 로그인의 접속·활동 기록은 출처와 함께 그대로 남습니다.`);
-    lines.push('합칠지 여부는 본인이 결정합니다. 잘못 합친 경우 플랫폼 관리자가 되돌릴 수 있습니다.');
+    lines.push('합칠지 여부는 본인이 결정합니다. 아래 운영 기준을 확인한 뒤 진행해 주세요.');
   } else {
     lines.push('정리가 필요한 기록이 있어 지금은 자동으로 합칠 수 없습니다. 실행 전까지 어떤 데이터도 옮겨지지 않습니다.');
   }
@@ -260,6 +283,9 @@ function renderMergeReport(mergeRequest, name) {
     keep.type = 'button'; keep.className = 'secondary'; keep.textContent = '합치지 않기';
     const result = document.createElement('p');
     result.setAttribute('role', 'status');
+    const policy = policyBox('위 기준을 확인했고, 이 기준대로 합치는 데 동의합니다.');
+    merge.disabled = true;
+    policy.check.addEventListener('change', () => { merge.disabled = !policy.check.checked; });
     const done = (text, settled = false) => {
       merge.disabled = true; keep.disabled = true; result.textContent = text;
       if (!settled) return;
@@ -273,13 +299,13 @@ function renderMergeReport(mergeRequest, name) {
       if (!confirm(`${name} 계정을 지금 로그인한 EKODI 통합 ID로 합칠까요?`)) return;
       merge.disabled = true; keep.disabled = true; result.textContent = '합치는 중입니다…';
       try {
-        await identity(`/merge-requests/${encodeURIComponent(mergeRequest.id)}/execute`, { method: 'POST', authenticated: true });
+        await identity(`/merge-requests/${encodeURIComponent(mergeRequest.id)}/execute`, { method: 'POST', authenticated: true, body: JSON.stringify({ policy: MERGE_POLICY_VERSION }) });
         done(`완료되었습니다. 이제 ${name}로 로그인해도 같은 EKODI 통합 ID로 이용합니다. 로그인 수단 목록으로 돌아갑니다.`, true);
       } catch (error) {
         const code = error.message;
         if (code === 'merge_request_expired') done('확인 시간이 지났습니다. 계정 추가를 다시 진행해 주세요.');
         else if (code === 'merge_needs_resolution') done('그 사이 정리가 필요한 기록이 생겨 합치지 않았습니다. 데이터는 그대로입니다.');
-        else { merge.disabled = false; keep.disabled = false; result.textContent = '합치지 못했습니다. 잠시 후 다시 시도해 주세요.'; }
+        else { merge.disabled = !policy.check.checked; keep.disabled = false; result.textContent = '합치지 못했습니다. 잠시 후 다시 시도해 주세요.'; }
       }
     });
     keep.addEventListener('click', async () => {
@@ -288,7 +314,7 @@ function renderMergeReport(mergeRequest, name) {
       done('합치지 않았습니다. 두 계정은 지금처럼 따로 유지됩니다.', true);
     });
     actions.append(merge, keep);
-    box.append(actions, result);
+    box.append(policy.wrap, actions, result);
   }
   host.after(box);
 }

@@ -28,9 +28,11 @@
     // BOOKS-READER-003: 무료 오디오북이 승인·공개된 책이면 리더에서 바로 듣고, 재생에 맞춰 책장이 넘어간다.
     const audio = item.audiobook?.included && item.audiobook?.ready && item.audiobook.tracks?.length ? {
       tracks: item.audiobook.tracks,
-      async fetchTrack(track) {
+      voices: Array.isArray(item.audiobook.voices) ? item.audiobook.voices : [],
+      async fetchTrack(track, voice = '') {
         const s = await C.session();
-        const r = await fetch(`${C.BASE}/api/commerce/download/audio/${encodeURIComponent(item.id)}/${encodeURIComponent(track.number)}`, { headers: { authorization: 'Bearer ' + (s?.accessToken || '') }, cache: 'no-store' });
+        const q = voice ? `?voice=${encodeURIComponent(voice)}` : '';
+        const r = await fetch(`${C.BASE}/api/commerce/download/audio/${encodeURIComponent(item.id)}/${encodeURIComponent(track.number)}${q}`, { headers: { authorization: 'Bearer ' + (s?.accessToken || '') }, cache: 'no-store' });
         if (!r.ok) throw new Error('오디오를 불러오지 못했습니다.');
         return r.blob();
       },
@@ -40,14 +42,39 @@
     finally { button.disabled = false; button.textContent = label; }
   }
   window.EkodiLibraryFetchBook = fetchBook;
+  // 외부 로그인 공급자의 내부 alias(email)는 인증용으로만 사용하고 독자 화면에 노출하지 않는다.
+  function friendlyAccount(data) {
+    const name = String(data?.displayName || data?.name || '').trim();
+    if (name && !name.includes('@') && name.length <= 30) return name;
+    const email = String(data?.email || '').trim();
+    const internal = /^identity\+([a-z][a-z0-9_-]*)\.[a-z0-9]+@ekodi\.kr$/i.exec(email);
+    if (internal) {
+      const names = { kakao: '카카오', naver: '네이버', google: '구글', apple: 'Apple', daum: '다음' };
+      return (names[internal[1].toLowerCase()] || '연결') + ' 계정';
+    }
+    const local = email.includes('@') ? email.split('@')[0] : '';
+    return local ? (local.length > 20 ? local.slice(0, 19) + '…' : local) + '님' : '회원님';
+  }
+  let libraryAccount = '';
   async function load() {
     try {
       const data = await C.api('library');
       $('libLogin').hidden = true;
-      $('libStatus').textContent = `${data.email} · ${data.items.length}권`;
+      const items = Array.isArray(data.items) ? data.items : [];
+      libraryAccount = friendlyAccount(data);
+      const who = document.createElement('span'); who.className = 'lib-account'; who.textContent = libraryAccount;
+      const out = document.createElement('button'); out.type = 'button'; out.className = 'lib-switch'; out.textContent = '로그아웃';
+      out.addEventListener('click', async () => { out.disabled = true; await C.signOut(); location.reload(); });
+      $('libStatus').replaceChildren(who, ` · 보유 도서 ${items.length}권 `, out);
       const list = $('libraryList'); list.replaceChildren();
-      if (!data.items.length) { const p = document.createElement('p'); p.innerHTML = '아직 구매한 책이 없습니다. '; const a = document.createElement('a'); a.href = `${C.BASE}/#catalog`; a.textContent = '출판 목록 보기 →'; p.append(a); list.append(p); return; }
-      for (const item of data.items) {
+      if (!items.length) {
+        const empty = document.createElement('section'); empty.className = 'library-empty';
+        const title = document.createElement('h2'); title.textContent = '첫 책을 만나 보세요';
+        const note = document.createElement('p'); note.textContent = '아직 구매한 책이 없습니다. 마음에 드는 책을 찾아 서재에 담아 보세요.';
+        const link = document.createElement('a'); link.href = `${C.BASE}/#catalog`; link.textContent = '도서 목록 살펴보기';
+        empty.append(title, note, link); list.append(empty); return;
+      }
+      for (const item of items) {
         const row = document.createElement('article'); row.className = 'library-item';
         const info = document.createElement('div'); const h = document.createElement('h3'); h.textContent = item.title; const p = document.createElement('p');
         p.textContent = `${item.author} · ${new Date(item.grantedAt).toLocaleDateString('ko-KR')} 구매`; info.append(h, p);
@@ -73,7 +100,7 @@
         if (item.audiobook?.ready && item.audiobook.tracks?.length && window.EkodiAudioPlayer) {
           const listen = document.createElement('button'); listen.type = 'button'; listen.className = 'read-btn'; listen.textContent = '오디오북 듣기';
           listen.addEventListener('click', async () => {
-            try { await window.EkodiAudioPlayer.open({ item, fetchTrack: async n => new Blob([await fetchBook(`download/audio/${encodeURIComponent(item.id)}/${n}`)], { type: 'audio/mpeg' }) }); }
+            try { await window.EkodiAudioPlayer.open({ item, fetchTrack: async (n, voice = '') => new Blob([await fetchBook(`download/audio/${encodeURIComponent(item.id)}/${n}${voice ? `?voice=${encodeURIComponent(voice)}` : ''}`)], { type: 'audio/mpeg' }) }); }
             catch (e) { alert(e.message); }
           });
           actions.append(listen);
@@ -103,7 +130,16 @@
     let no = 0;
     for (const book of books) {
       let state;
-      try { state = await C.api(`admin/approvals/${encodeURIComponent(book.id)}`); } catch (e) { if (e.status === 403 || e.status === 401) return; continue; }
+      try { state = await C.api(`admin/approvals/${encodeURIComponent(book.id)}`); }
+      catch (e) {
+        if (e.status === 403 || e.status === 401) {
+          // 운영자 화면이 왜 안 보이는지 알 수 있게: 지금 로그인한 계정이 운영자 계정이 아니라는 안내만 보인다(권한은 서버가 판단).
+          const note = $('operatorNote');
+          if (note && libraryAccount) { note.hidden = false; note.textContent = `출판 도서 관리·낭독 음성 녹음은 운영자 구글 계정(topmaster.joseph@gmail.com 등)으로 로그인해야 보입니다. 지금 로그인: ${libraryAccount}`; }
+          return;
+        }
+        continue;
+      }
       $('operatorPanel').hidden = false;
       const file = state.file, ready = state.readiness || {};
       const row = document.createElement('div'); row.className = 'op-row';

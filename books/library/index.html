@@ -20,15 +20,19 @@
   <link rel="stylesheet" href="/buy/buy.css" />
 <link rel="stylesheet" href="/site-chrome.css">
 </head>
-<body>
+<body class="books-library-page">
   <a class="skip" href="#main">본문으로 바로가기</a>
   <header class="ekc-header" data-ekodi-chrome="books"><div class="ekc-network"><div class="ekc-shell"><span class="ekc-network-label">EKODI 출판 생태계</span><nav class="ekc-network-links" aria-label="출판 생태계"><a href="https://ekodi.kr/publishing/"><b>출판</b><span>책을 만들다</span></a><a href="https://ekodi.kr/books/" aria-current="true"><b>에코디서점</b><span>책을 만나다</span></a><a href="https://ekodi.kr/ekodimall/?category=book"><b>에코디몰 책·배움</b><span>함께 나누다</span></a></nav></div></div><div class="ekc-shell ekc-masthead"><a class="ekc-brand" href="https://ekodi.kr/books/" aria-label="에코디서점 홈"><span class="ekc-mark" aria-hidden="true">ES</span><span class="ekc-brand-copy"><b>에코디서점</b><small>Faith · Scholarship · Community</small></span></a><div class="ekc-actions"><a class="ekc-cta" href="https://ekodi.kr/books/library/">내 서재</a><button class="menu-button ekc-menu" type="button" aria-expanded="false" aria-controls="site-nav">MENU</button></div><nav id="site-nav" class="ekc-nav" aria-label="에코디서점 메뉴"><a href="https://ekodi.kr/books/#catalog">도서</a><a href="https://ekodi.kr/books/series/">시리즈</a><a href="https://ekodi.kr/books/research/">리서치</a><a href="https://ekodi.kr/books/notes/">노트</a><a href="https://ekodi.kr/books/#about">소개</a><a class="ekc-nav-cta" href="https://ekodi.kr/books/library/">내 서재</a></nav></div></header>
-  <main id="main" class="buy-page"><section class="buy-hero"><div class="shell">
-    <p class="buy-kicker">MY LIBRARY</p>
-    <h1 class="buy-title">내 서재</h1>
-    <p class="buy-author" id="libStatus">불러오는 중입니다.</p>
-    <div class="account-box" id="libLogin" hidden><p>구매한 책을 보려면 EKODI 계정(구글)으로 로그인해 주세요.</p><div id="googleButton"></div><p id="accountStatus" class="buy-msg" role="status"></p></div>
-    <div class="library-list" id="libraryList"></div>
+  <main id="main" class="buy-page library-page"><section class="buy-hero"><div class="shell">
+    <nav class="library-breadcrumb" aria-label="현재 위치"><a href="https://ekodi.kr/books/">에코디서점</a><span aria-hidden="true">/</span><span>내 서재</span></nav>
+    <div class="library-heading"><div class="library-heading-copy">
+      <h1 class="buy-title">내 서재</h1>
+      <p class="buy-author" id="libStatus" role="status" aria-live="polite">불러오는 중입니다.</p>
+    </div><a class="library-catalog-link" href="https://ekodi.kr/books/#catalog">도서 둘러보기</a></div>
+    <div class="account-box" id="libLogin" hidden><p>보유 도서를 확인하려면 EKODI 통합 계정으로 로그인해 주세요.</p><div id="googleButton"></div><p id="accountStatus" class="buy-msg" role="status"></p></div>
+    <div class="library-list" id="libraryList" aria-live="polite"></div>
+    <p class="buy-msg lib-operator-note" id="operatorNote" hidden></p>
+    <nav class="library-related-links" aria-label="출판 생태계"><a href="https://ekodi.kr/publishing/">출판</a><a href="https://ekodi.kr/ekodimall/?category=book">에코디몰 책·배움</a></nav>
     <section class="operator-panel" id="operatorPanel" hidden aria-label="운영자 전자책 파일">
       <h2>운영자 · 판매용 전자책 파일</h2>
       <p>도서별 판매 EPUB과 출판 확정을 관리합니다. 무료 오디오북은 출판 승인·권리·음성 검수 전에는 공개되지 않습니다.</p>
