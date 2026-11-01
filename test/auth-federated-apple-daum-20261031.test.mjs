@@ -66,5 +66,9 @@ test('Daum users get their own entry that runs the Kakao flow; provider id stays
   assert.match(login.DAUM_HINT,/카카오계정/);
   assert.equal(login.buttonText({id:'naver',name:'네이버'},'login'),'네이버 계정으로 계속하기');
   assert.equal(login.buttonText({id:'apple',name:'Apple'},'link'),'Apple 계정 추가');
+  assert.equal(login.buttonText({id:'kakao',name:'카카오'},'link',true),'다른 카카오 계정 추가','a linked channel can add another account of that channel');
+  assert.match(read('auth-site/federated-login.js'),/setTimeout\(\(\) => location\.replace\(location\.href\), 1500\)/,'merge result returns to the login-method list');
+  assert.match(read('auth-site/auth.js'),/renderLinkButtons\(data\.identities\|\|\[\]\)/);
+  assert.match(read('auth-site/auth.css'),/\.linked-account\{display:flex/);
   assert.match(read('auth-site/auth.css'),/\.federated-apple\{background:#000;color:#fff\}/);
 });
