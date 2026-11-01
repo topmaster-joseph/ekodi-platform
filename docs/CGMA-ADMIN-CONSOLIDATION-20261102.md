@@ -16,7 +16,7 @@ Public website: https://cgma.or.kr (keep)
 | Merchant operations and control tower | Legacy Pages D1 cheonggye_market_notices | /api/merchants, /api/admin-store-health, /api/admin-market-interventions | cgmaAdmin(request) checks Supabase membership-api reviewer | Dashboard metrics, 7-day interventions, explicit human decisions |
 | Parking petition/consent | Legacy Pages D1 cgma_parking_petition | /api/parking-petition?include_entries=1 | cgmaAdmin, private entry list | Read 500 max, private no-store, PII restrictions |
 | Intellectual property archive | Legacy Pages private document definitions and share state | /api/ip-archive, /api/ip-share, /api/ip-shares | cgmaAdmin; tenant:cheonggye scoped, no public links | Admin retrieval, share expiry, revocation |
-| Language publishing | Central EKODI i18n service | https://api.ekodi.kr/api/i18n/v1/admin?service=cgma | Bearer, service=cgma, editorial review gating | Published/hidden gating, source invalidation |
+| Language publishing | Central EKODI i18n service | EKODI central i18n administrator API (canonical apex path; no external subdomain) | Bearer, service=cgma, editorial review gating | Published/hidden gating, source invalidation |
 | AI education surveys | Legacy Pages D1 cheonggye_market_notices | /api/ai-education-stats, /api/ai-education-share | Contacts require extra admin entitlement, anonymous exports | Counts, contact separation, max 6-month retention |
 | Merchant directory + resource management | Legacy Pages D1 cgma_merchants / cgma_resources | /api/merchants, /api/resources | cgmaAdmin, public/hidden separation | CRUD parity, rollback, no duplicate data copies |
 
