@@ -200,7 +200,7 @@ async function completeEkodiAdminLogin(){
   const result=await request('/api/ekodi/admin/login',{
     method:'POST',
     headers:{authorization:`Bearer ${data.session.access_token}`},
-    body:JSON.stringify({nonce:challenge.nonce})
+    body:JSON.stringify({nonce:challenge.nonce,returnTo:safeReturn})
   });
   if(!result.token)throw new Error('ekodi_admin_session_missing');
   const verified=await request('/api/session',{
@@ -210,14 +210,23 @@ async function completeEkodiAdminLogin(){
   try{sessionStorage.setItem('ekodi-auth-token',result.token)}catch{}
   navigateToAdmin(result);
 }
+// The central EKODI admin console stays Google-only; operator screens that borrow the
+// admin realm (education instructor, cooperative, tax, live …) also accept every login
+// path linked to the same EKODI account. The server enforces the same split.
+function centralAdminConsoleTarget(href){
+  try{const u=new URL(href);const host=u.hostname.toLowerCase();
+    return host==='admin.ekodi.kr'||((host==='ekodi.kr'||u.origin===CANONICAL_AUTH_ORIGIN)&&(u.pathname==='/admin'||u.pathname.startsWith('/admin/')));
+  }catch{return true}
+}
 async function showEkodiAlternative(){
+  if(centralAdminConsoleTarget(safeReturn))return;
   let config=null;
   try{config=await request('/api/ekodi/admin/config')}catch{}
   if(!config?.enabled||config.identityOrigin!==CANONICAL_AUTH_ORIGIN)return;
   const host=$('googleButtonHost');
   const button=document.createElement('button');
   button.type='button';button.className='google-btn';
-  button.textContent='다른 로그인 방식';
+  button.textContent='카카오·네이버 등 연결된 EKODI 계정으로 로그인';
   button.id='ekodiAlternateLogin';
   button.addEventListener('click',async()=>{
     button.disabled=true;

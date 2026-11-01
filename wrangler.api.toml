@@ -26,6 +26,8 @@ INSURANCE_ADMIN_ENABLED = "false"
 INSURANCE_API_BASE = "https://insurance-api.ekodi.kr"
 ADMIN_EMAIL = "topmaster.joseph@gmail.com"
 ADMIN_GOOGLE_BOOTSTRAP_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr"
+# Owner decision 2026-11-01: operator screens accept linked EKODI logins; the central admin console stays Google-only (enforced in admin-google-auth.js).
+EKODI_ADMIN_FEDERATED_LOGIN_ENABLED = "true"
 ADMIN_WORKSPACE_DOMAIN = "ekodi.kr"
 GOOGLE_CLIENT_ID = "483044030492-ej1ie2boa4e01lglm75e9q1r6m25pkp2.apps.googleusercontent.com"
 GOOGLE_IDENTITY_ORIGIN = "https://ekodi.kr"
