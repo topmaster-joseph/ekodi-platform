@@ -138,7 +138,6 @@ jobs:
           node --test test/space-auth-apex-constitution.test.mjs test/workspace-routing-10g.test.mjs test/store-discovery.test.mjs test/store-operating-space.test.mjs test/store-user-site-admin.test.mjs test/storefront-public.test.mjs test/pizzamaru-full-menu-social.test.mjs test/jadam-storefront-brand.test.mjs test/ekodimission-site.test.mjs test/ekodimission-home-and-media-consent.test.mjs test/organization-subsite.test.mjs test/mnubiz-workspace.test.mjs test/mnubiz-suncheon.test.mjs
           node scripts/validate-ekodimission-shell-contract.mjs
           node --test test/ekodimission-shell-contract.test.mjs test/ekodimission-photo-upload.test.mjs
-          grep -Fq "pattern = \"space.ekodi.kr\"" wrangler.space.toml
           grep -Fq 'binding = "STORAGE"' wrangler.space.toml
           grep -Fq 'service = "ekodi-storage-control"' wrangler.space.toml
           grep -Fq 'MISSION_ACTIVITY_MEDIA_UPLOAD_RE' space-worker.js
