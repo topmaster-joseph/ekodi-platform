@@ -129,7 +129,6 @@ function renderStatus(host, status) {
     <div class="personal-ai-grid">${webProviders.map(webProviderCard).join('')}</div>`;
 
   host.innerHTML = `
-    ${connectionGuide(status)}
     <article class="personal-ai-console">
       <div class="personal-ai-console-copy"><small>EKODI User AI · ${esc(connectedText)}</small><h3>AI 연결 상태</h3><p>${hasConnected ? '연결된 개인 AI를 기본으로 사용하고 EKODI가 적절한 경로를 자동 선택합니다.' : '개인 AI가 없어도 EKODI Core는 계속 작동합니다. 필요할 때 아래에서 연결할 수 있습니다.'}</p></div>
     </article>
@@ -141,7 +140,7 @@ function renderStatus(host, status) {
         <button class="secondary" type="submit">설정 저장</button>
       </form>
     </article>
-    <details class="personal-ai-policy"><summary>${hasConnected ? 'AI 연결 변경' : 'AI 연결하기'}</summary>${setupContent}</details>
+    <details class="personal-ai-policy"><summary>${hasConnected ? 'AI 연결 변경' : 'AI 연결하기'}</summary>${connectionGuide(status)}${setupContent}</details>
     <div class="personal-ai-privacy"><strong>개인정보 보호</strong><span>API 키는 브라우저에 보관하지 않고 서버에서 암호화합니다. 민감정보는 개인 무료 AI로 자동 전송하지 않으며, AI가 없어도 EKODI Core는 계속 작동합니다.</span></div>`;
 
   const askForm = host.querySelector('#personalAiAskForm');
