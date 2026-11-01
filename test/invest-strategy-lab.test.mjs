@@ -46,7 +46,7 @@ function env() {
     .run(crypto.createHash('sha256').update(STEP).digest('hex'), OWNER, '2099-01-01T00:00:00.000Z', '2026-10-01T00:00:00.000Z');
   const st = (sql, p = []) => ({ bind(...v) { return st(sql, v); }, async first() { return sqlite.prepare(sql).get(...p) || null; },
     async all() { return { results: sqlite.prepare(sql).all(...p) }; }, async run() { const r = sqlite.prepare(sql).run(...p); return { meta: { changes: Number(r.changes) } }; } });
-  return { DB: { prepare: sql => st(sql) }, ALLOW_MUTATIONS: 'true', ALLOWED_ORIGINS: 'https://ekodi.kr', INVEST_OWNER_EMAIL: OWNER };
+  return { DB: { prepare: sql => st(sql) }, ALLOW_MUTATIONS: 'true', ALLOWED_ORIGINS: 'https://ekodi.kr', INVEST_OWNER_EMAIL: OWNER, INVEST_STEP_UP_REQUIRED: 'true' };
 }
 async function call(e, path, step) {
   const original = globalThis.fetch;
