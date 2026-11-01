@@ -10,8 +10,8 @@ const accessLabel=account=>account.transferEnabled?'이체 허용':(!isManual(ac
 const signedKrw=value=>`${Number(value)<0?'-':Number(value)>0?'+':''}${krw(Math.abs(Number(value)||0))}`;
 const IMPORT_REASON={INVALID_DATE:'거래일 형식 오류',INVALID_AMOUNT:'금액 없음',INVALID_DIRECTION:'입출금 구분 오류',EXTERNAL_ID_REQUIRED:'거래번호 없음',MISSING_DATE_OR_AMOUNT:'거래일 또는 금액 없음'};
 const TXN_PAGE=100;
-const FINANCE_TABS=[['overview','개요'],['ledger','거래내역'],['accounts','계좌'],['import','파일 불러오기'],['transfers','이체']];
-const initialTab=()=>{try{const t=new URL(location.href).searchParams.get('tab');return FINANCE_TABS.some(([key])=>key===t)?t:'overview';}catch{return'overview';}};
+const FINANCE_TABS=[['accounts','계좌'],['ledger','거래내역'],['transfers','이체']];
+const initialTab=()=>{try{const t=new URL(location.href).searchParams.get('tab');const key=({overview:'accounts',import:'ledger'})[t]||t;return FINANCE_TABS.some(([id])=>id===key)?key:'accounts';}catch{return 'accounts';}};
 const isLegacyApi=error=>Number(error?.status)===404||String(error?.message||'').includes('BANKING_ENDPOINT_NOT_FOUND');
 const monthKey=value=>String(value||'').slice(0,7);
 const localMonths=list=>{const map=new Map();for(const t of list){const k=monthKey(t.bookedAt);if(!k)continue;const m=map.get(k)||{month:k,count:0,income:0,expense:0};m.count++;if(t.direction==='in')m.income+=Number(t.amount)||0;else m.expense+=Number(t.amount)||0;map.set(k,m);}return[...map.values()].sort((a,b)=>b.month.localeCompare(a.month)).map(m=>({...m,net:m.income-m.expense}));};
@@ -114,13 +114,14 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
     const transactions=Array.isArray(data.transactions)?data.transactions:[];
     const caps=data.capabilities||{},ready=data.readiness||{};
     const accountMap=new Map(accounts.map(a=>[a.id,`${a.institutionName||a.provider||'금융기관'} · ${a.accountAlias}${a.accountLast4?` ****${a.accountLast4}`:''}`]));
-    summaryRoot.innerHTML=[
+    const accountSummary=[
       ['연결계좌',String(data.summary?.accounts||0),`활성 ${data.summary?.activeAccounts||0}`],
       ['현재잔액',krw(data.summary?.currentBalance||0),'연결계좌 합계'],
       ['이번 달 순증감','…','수입 · 지출 집계 중','month'],
       ['이체',ready.executorConnected&&ready.transferExecutionEnabled?'사용 가능':'안전 잠금',`승인 대기 ${data.summary?.pendingTransfers||0}건`]
-    ].map(([label,value,small,key])=>`<article class="card"${key?` data-bank-kpi="${key}"`:''}><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(small)}</small></article>`).join('');
+    ].slice(0,2).map(([label,value,small,key])=>`<article class="card"${key?` data-bank-kpi="${key}"`:''}><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(small)}</small></article>`).join('');
 
+    summaryRoot.replaceChildren();
     const accountRows=accounts.length?accounts.map(a=>`<tr>
       <td><strong>${esc(a.accountAlias)}</strong><br><small>${esc(a.institutionName||a.provider||'')}</small></td>
       <td>${a.accountLast4?`****${esc(a.accountLast4)}`:'참조값만 저장'}</td>
@@ -209,22 +210,21 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
     const tabCount={accounts:accounts.length,transfers:transfers.filter(t=>['requested','approved','executing'].includes(t.status)).length};
     const tabNav=`<div role="tablist" aria-label="재무 세부 메뉴" data-bank-tabs style="display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 14px">${FINANCE_TABS.map(([key,label])=>`<button type="button" role="tab" class="button" data-bank-tab="${key}" aria-selected="false">${esc(label)}${tabCount[key]?` (${esc(tabCount[key])})`:''}</button>`).join('')}</div>`;
     const panel=(key,body)=>`<section role="tabpanel" data-bank-panel="${key}" hidden>${body}</section>`;
-    const overviewPanel=`<div class="actions" style="margin-bottom:12px">${caps.manage?`<button class="button primary" type="button" data-bank-go="${activeAccounts.length?'import':'accounts'}">${activeAccounts.length?'거래 파일 불러오기':'파일연동 계좌 등록'}</button>`:''}<button class="button" type="button" data-bank-go="ledger">거래내역 조회</button></div>
+    const overviewPanel=`<div class="actions" style="margin-bottom:12px">${caps.manage?`<button class="button primary" type="button" data-bank-go="${activeAccounts.length?'ledger':'accounts'}">${activeAccounts.length?'거래 파일 불러오기':'파일연동 계좌 등록'}</button>`:''}<button class="button" type="button" data-bank-go="ledger">거래내역 조회</button></div>
       <h3>월별 수입 · 지출</h3>
       <div class="table-wrap"><table><thead><tr><th>월</th><th>건수</th><th>수입</th><th>지출</th><th>순증감</th></tr></thead><tbody data-bank-months><tr><td colspan="5" class="empty">불러오는 중…</td></tr></tbody></table></div>
       <h3>최근 거래</h3>
       <div class="table-wrap"><table><thead><tr><th>일시</th><th>계좌</th><th>내용</th><th>구분</th><th>금액</th><th>잔액</th></tr></thead><tbody data-bank-recent><tr><td colspan="6" class="empty">불러오는 중…</td></tr></tbody></table></div>`;
-    const accountsPanel=`<div class="table-wrap"><table><thead><tr><th>계좌</th><th>표시번호</th><th>잔액</th><th>상태</th><th>권한</th><th>관리</th></tr></thead><tbody>${accountRows}</tbody></table></div>${editForm}${accountCreateForm}`;
+    const accountsPanel=`<div class="cards" data-bank-account-summary style="grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))">${accountSummary}</div><div class="table-wrap"><table><thead><tr><th>계좌</th><th>표시번호</th><th>잔액</th><th>상태</th><th>권한</th><th>관리</th></tr></thead><tbody>${accountRows}</tbody></table></div>${editForm}${accountCreateForm}`;
+    const ledgerPanel=`${importForm||''}${overviewPanel}${ledgerSection}`;
     const transfersPanel=`<h3>이체 요청 · 승인</h3><div class="table-wrap"><table><thead><tr><th>요청일</th><th>수취인</th><th>금액</th><th>상태</th><th>요청자</th><th>처리</th></tr></thead><tbody>${transferRows}</tbody></table></div>
       ${transferForm}`;
     root.innerHTML=`<div data-banking-message class="trade-flash"></div>
       <div class="panel-head"><h2>${mode==='church'?'교회 통장 · 장부':'통장 · 장부'}</h2>
         <div class="actions"><span class="tag ${fileMode?'':'live'}">${fileMode?'파일연동 운영':'조회 전용 연결'}</span><span class="tag ${live?'live':'warn'}">${live?'실이체 연결':'실이체 잠금'}</span></div></div>
       ${tabNav}
-      ${panel('overview',overviewPanel)}
-      ${panel('ledger',ledgerSection)}
+      ${panel('ledger',ledgerPanel)}
       ${panel('accounts',accountsPanel)}
-      ${panel('import',importForm||'<p class="empty">파일을 불러올 권한이 없습니다.</p>')}
       ${panel('transfers',transfersPanel)}
       <details class="bank-help" style="margin-top:18px"><summary>안내 · 보안 원칙</summary>
         <p class="empty">조회·요청·승인을 분리합니다. 전체 계좌번호·인터넷뱅킹 비밀번호·인증서는 EKODI 데이터베이스에 저장하지 않습니다.</p>
@@ -345,11 +345,11 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
       catch(error){notice(`처리 실패: ${isLegacyApi(error)?'금융 API 업데이트 반영 후 사용할 수 있습니다.':error.message}`,'error');button.disabled=false;}
     });
     const showTab=(key,push=true)=>{
-      if(!FINANCE_TABS.some(([k])=>k===key))key='overview';
+      if(!FINANCE_TABS.some(([k])=>k===key))key='accounts';
       activeTab=key;
       root.querySelectorAll('[data-bank-tab]').forEach(b=>{const on=b.dataset.bankTab===key;b.setAttribute('aria-selected',String(on));b.classList.toggle('primary',on);});
       root.querySelectorAll('[data-bank-panel]').forEach(p=>{p.hidden=p.dataset.bankPanel!==key;});
-      if(push){try{const url=new URL(location.href);if(key==='overview')url.searchParams.delete('tab');else url.searchParams.set('tab',key);history.replaceState(history.state,'',url);}catch{}}
+      if(push){try{const url=new URL(location.href);if(key==='accounts')url.searchParams.delete('tab');else url.searchParams.set('tab',key);history.replaceState(history.state,'',url);}catch{}}
       if(key==='ledger'&&!ledger.loaded){ledger.loaded=true;loadLedger().catch(ledgerError);}
     };
     root.querySelectorAll('[data-bank-tab]').forEach(b=>b.onclick=()=>showTab(b.dataset.bankTab));

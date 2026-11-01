@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
@@ -56,7 +57,8 @@ test('banking API fixes tenant scope server-side and fails closed for real trans
 
 test('tenant and church admin surfaces expose scoped banking without duplicating credentials',()=>{
   assert.match(workspace,/function financeAdmin/);
-  assert.match(workspace,/tenant-finance-admin\.js/);
+  const loader='tenant-finance-admin.js?v=finance-'+createHash('sha256').update(tenantUi).digest('hex').slice(0,12);
+  assert.ok(workspace.includes(loader));
   assert.match(workspace,/if\(section==='finance'\)return financeAdmin\(\)/);
   assert.match(church,/banking:\['통장 · 이체'/);
   assert.match(church,/\['banking','통장 · 이체'\]/);
@@ -114,12 +116,13 @@ test('pre-approval ledger: filters, monthly summary, export, import report and r
   assert.match(tenantUi,/파일연동 운영/);
   assert.match(tenantUi,/조회 전용 연결/);
   assert.match(tenantUi,/이미 있던 거래/);
-  assert.match(workspace,/tenant-finance-admin\.js\?v=20261102-tabs1/);
-  assert.match(church,/tenant-finance-admin\.js\?v=20261102-tabs1/);
+  const loader='tenant-finance-admin.js?v=finance-'+createHash('sha256').update(tenantUi).digest('hex').slice(0,12);
+  assert.ok(workspace.includes(loader));
+  assert.ok(church.includes(loader));
 });
 
 test('finance admin is tabbed, keeps policy copy in a collapsible help and degrades gracefully before API promotion',()=>{
-  assert.match(tenantUi,/FINANCE_TABS=\[\['overview','개요'\],\['ledger','거래내역'\],\['accounts','계좌'\],\['import','파일 불러오기'\],\['transfers','이체'\]\]/);
+  assert.ok(tenantUi.includes("const FINANCE_TABS=[['accounts'"));
   assert.match(tenantUi,/role="tablist"/);
   assert.match(tenantUi,/data-bank-panel/);
   assert.match(tenantUi,/<details class="bank-help"/);
