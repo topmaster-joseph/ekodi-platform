@@ -19,7 +19,8 @@
     row(dl, '파일', file ? `${(file.size / 1024).toFixed(0)}KB · ${file.uploaded ? new Date(file.uploaded).toLocaleString('ko-KR') : ''} 업로드` : '보관함에 파일 없음');
     row(dl, '현재 상태', readiness.ready ? `판매 가능 (${readiness.source === 'approval' ? '출판 확정' : '카탈로그 기록'})` : readiness.label || '판매 준비 중');
     $('price').textContent = `${Number(catalog.listPrice || 0).toLocaleString('ko-KR')}원 (서점 등록 가격)`;
-    if (!$('edition').value) $('edition').value = approval?.edition || catalog.edition || '';
+    // 판본 이름은 기본값을 미리 채운다(필요할 때만 수정). 판권 확인 체크는 사람이 직접 한다.
+    if (!$('edition').value) $('edition').value = approval?.edition || catalog.edition || '전자책 초판 v1.0';
     $('openReader').disabled = !file;
     $('approvalState').className = approval?.fileMatches ? 'ok' : 'warn';
     $('approvalState').textContent = approval

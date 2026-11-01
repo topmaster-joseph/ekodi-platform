@@ -78,6 +78,7 @@ test('reader unzips a real EPUB with the browser DecompressionStream (no externa
 
 test('library offers in-browser reading and operators get a review link; review page is commerce-CSP', async () => {
   const lib = fs.readFileSync(new URL('../books/buy/library.js', import.meta.url), 'utf8');
+  assert.match(fs.readFileSync(new URL('../books/review/review.js', import.meta.url), 'utf8'), /'전자책 초판 v1\.0'/);
   assert.match(lib, /펼쳐 읽기/); assert.match(lib, /\/review\/\?book=/);
   assert.match(fs.readFileSync(new URL('../books/library/index.html', import.meta.url), 'utf8'), /\/reader\/epub-reader\.js/);
   const { isCommercePage } = await import('../books-worker.js');
