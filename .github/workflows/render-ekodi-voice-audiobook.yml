@@ -78,7 +78,11 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
           python -m pip install -q --upgrade pip
           python -m pip install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu
-          python -m pip install -q git+https://github.com/myshell-ai/MeloTTS.git git+https://github.com/myshell-ai/OpenVoice.git
+          # OpenVoice의 고정 의존성(av 10 소스 빌드)은 최신 러너에서 깨지므로, 엔진은 --no-deps로 받고
+          # 실제로 쓰는 의존성만 바이너리 휠로 설치한다(VAD 기반 음색 추출 + 워터마크).
+          python -m pip install -q "av>=12" git+https://github.com/myshell-ai/MeloTTS.git
+          python -m pip install -q --no-deps git+https://github.com/myshell-ai/OpenVoice.git
+          python -m pip install -q whisper-timestamped faster-whisper python-dotenv
           python -m unidic download >/dev/null
           curl -fsSL -o ckpt.zip https://myshell-public-repo-host.s3.amazonaws.com/openvoice/checkpoints_v2_0417.zip
           unzip -q ckpt.zip
