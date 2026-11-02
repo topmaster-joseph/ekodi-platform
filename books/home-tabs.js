@@ -3,15 +3,16 @@
   'use strict';
   const main = document.querySelector('main#main');
   if (!main || !document.querySelector('.hero') || !document.querySelector('#catalog')) return;
+  // 첫 화면 소개는 탭이 아니라 항상 보이는 표지다. 선택 탭은 세부 콘텐츠만 담당한다.
+  const intro = [main.querySelector('.hero'), main.querySelector('.press-ribbon')].filter(Boolean);
   const sections = {
-    featured: [main.querySelector('.hero'), main.querySelector('.press-ribbon')],
     catalog: [main.querySelector('#catalog')],
     series: [],
     fields: [main.querySelector('#fields')],
     about: [main.querySelector('#method'), main.querySelector('#publishing-service-callout'), main.querySelector('#about')],
   };
   const tabs = [
-    ['featured', '추천·첫 화면'], ['catalog', '출판목록'], ['series', '시리즈'],
+    ['catalog', '출판목록'], ['series', '시리즈'],
     ['fields', '연구영역'], ['about', '소개·출판'],
   ];
   const bar = document.createElement('nav');
@@ -55,17 +56,18 @@
   }
   series.append(kicker, title, copy, links);
   panels.series.append(series);
-  main.prepend(bar);
+  main.prepend(...intro, bar);
   for (const [key] of tabs) main.append(panels[key]);
 
   const keys = tabs.map(([key]) => key);
   const fromHash = () => {
-    const hash = decodeURIComponent(location.hash.slice(1));
+    let hash = '';
+    try { hash = decodeURIComponent(location.hash.slice(1)); } catch { return 'catalog'; }
     if (['catalog'].includes(hash)) return 'catalog';
     if (['fields'].includes(hash)) return 'fields';
     if (['about','method','publishing-service-callout'].includes(hash)) return 'about';
     if (['series','series-tab'].includes(hash)) return 'series';
-    return 'featured';
+    return 'catalog';
   };
   function select(key, updateHash = false, focus = false) {
     if (!panels[key]) return;
@@ -75,7 +77,7 @@
       buttons[name].tabIndex = selected ? 0 : -1;
       panels[name].hidden = !selected;
     }
-    if (updateHash) history.replaceState(null, '', key === 'featured' ? '#featured' : key === 'about' ? '#about' : key === 'fields' ? '#fields' : key === 'series' ? '#series-tab' : '#catalog');
+    if (updateHash) history.replaceState(null, '', key === 'about' ? '#about' : key === 'fields' ? '#fields' : key === 'series' ? '#series-tab' : '#catalog');
     if (focus) buttons[key].focus();
   }
   for (const [key] of tabs) {
