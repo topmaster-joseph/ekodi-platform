@@ -275,21 +275,11 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   }
   function navBucketsForRole(role=workspaceRole){
     const groups=groupsForRole(role),dedicated=dedicatedSections(),seen=new Set(),common=[],site=[];
-    for(const group of groups){
-      for(const item of group.sections){
-        const [key,label]=item;
-        // Service Settings is a permanent, site-scoped entry directly below the site selector.
-        if(key==='services'||seen.has(key))continue;
-        if(role?!canSection(key,role):!(workspace==='ekodimission'||key==='overview'))continue;
-        if(!serviceMenuVisible(key))continue;
-        seen.add(key);
-        (dedicated.has(key)?site:common).push([key,label]);
-      }
-    }
-    return [
-      {id:'common',label:'공통메뉴',items:common},
-      {id:'site',label:'전용메뉴',items:site}
-    ].filter(bucket=>bucket.items.length);
+    for(const group of groups){for(const item of group.sections){const [key,label]=item;if(seen.has(key))continue;if(role?!canSection(key,role):!(workspace==='ekodimission'||key==='overview'))continue;if(typeof serviceMenuVisible==='function'&&!serviceMenuVisible(key))continue;seen.add(key);(dedicated.has(key)?site:common).push([key,label]);}}
+    // Service configuration is a common site-local operation, never a third sidebar bucket.
+    if(role&&canSection('services',role)&&!seen.has('services'))common.push(['services','서비스 구성·사용 설정']);
+    const buckets=[{id:'common',label:'공통 메뉴',items:common},{id:'site',label:'전용 메뉴',items:site}].filter(bucket=>bucket.items.length);
+    return buckets;
   }
   function renderNav(role=workspaceRole){
     const h=$('adminNav');h.replaceChildren();document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile(role);
