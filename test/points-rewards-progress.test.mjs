@@ -5,10 +5,10 @@ import { buildPointProgress, kstDate } from '../supabase/functions/points-api/pr
 
 const adapter = (rule_id, adapter, trust = 'verified') =>
   ({ rule_id, adapter, trust, member_claimable: true, enabled: true });
-const claim = (status, submitted_at, rule_id = 'learn', adapter = 'lecture_completion') =>
+const claim = (status, submitted_at, rule_id = 'learn', adapter = 'content_approval') =>
   ({ rule_id, adapter, status, submitted_at });
 const rules = [{ rule_id: 'learn', points: 20, enabled: true }];
-const adapters = [adapter('learn', 'lecture_completion')];
+const adapters = [adapter('learn', 'content_approval')];
 const now = '2026-11-03T00:30:00+09:00';
 
 test('KST day boundary is independent of UTC day', () => {
@@ -76,7 +76,7 @@ test('yesterday retains streak, future and rejected claims do not create a strea
 test('disabled and non-claimable adapters never become user missions', () => {
   const result = buildPointProgress({
     now,
-    adapters: [{ ...adapter('learn', 'lecture_completion'), member_claimable: false },
+    adapters: [{ ...adapter('learn', 'content_approval'), member_claimable: false },
       { ...adapter('other', 'meeting_participation'), enabled: false }],
     rules: [...rules, { rule_id: 'other', points: 15, enabled: true }],
     claims: [claim('approved', '2026-11-02T16:00:00Z')],
