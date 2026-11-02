@@ -67,16 +67,21 @@ test('admin stylesheet URL carries the stylesheet content hash', async () => {
     `cgma-edoc-admin.css changed: set STYLE in cgma-edoc-admin.js to ?v=css-${hash}`);
 });
 
-test('CGMA left menu: 통합 전용 업무 comes first for every admin profile; other sites keep their order', async () => {
+test('CGMA left menu: service settings precedes common and site-specific menus consistently', async () => {
   const s = await (await workspaceAdminScript()).text();
   const cut = (from, to) => { const i = s.indexOf(from), j = s.indexOf(to, i); assert.ok(i >= 0 && j > i, `missing ${from}`); return s.slice(i, j); };
   const block = cut('const isBizWorkspace=', 'const adminHubScopes=') + cut('function groupsForRole(', 'function renderSecondaryNav(') + cut('function dedicatedSections(', 'function renderNav(');
-  const navFor = (workspace, profile) => new Function('workspace', 'service', 'workspaceRole', 'navigationProfile', 'canSection', 'mallLocalGroups', `${block}; return navBucketsForRole;`)(
-    workspace, '', 'manager', () => profile, () => true, [])('manager').map(b => [b.label, b.items.map(([key]) => key)]);
+  const navFor = (workspace, profile, menuVisible=()=>true) => new Function('workspace', 'service', 'workspaceRole', 'navigationProfile', 'canSection', 'mallLocalGroups', 'serviceMenuVisible', `${block}; return navBucketsForRole;`)(
+    workspace, '', 'manager', () => profile, () => true, [], menuVisible)('manager').map(b => [b.label, b.items.map(([key]) => key)]);
+  assert.match(s, /settings\.textContent='서비스설정'/);
+  assert.match(s, /h\.append\(settings\)/);
   for (const profile of ['delegated-manager', 'local']) {
     const nav = navFor('cgma', profile);
-    assert.equal(nav[0][0], '전용 메뉴', profile);
-    assert.deepEqual(nav[0][1], ['edocs','member','applications','booths','festival','market-oversight','petitions','ip-archive','education-survey'], profile);
+    assert.equal(nav[0][0], '공통메뉴', profile);
+    assert.equal(nav[1][0], '전용메뉴', profile);
+    assert.deepEqual(nav[1][1], ['edocs','member','applications','booths','festival','market-oversight','petitions','ip-archive','education-survey'], profile);
   }
-  assert.equal(navFor('ekodimission', 'delegated-manager')[0][0], '공통 메뉴');
+  assert.equal(navFor('ekodimission', 'delegated-manager')[0][0], '공통메뉴');
+  const hidden=navFor('cgma','local',key=>key!=='edocs');
+  assert.ok(!hidden.flatMap(bucket=>bucket[1]).includes('edocs'), 'per-tenant visibility must filter site-specific menus');
 });
