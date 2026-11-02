@@ -654,6 +654,10 @@ jobs:
           done
           exit 1
 
+      - name: Retain legacy Mall read-only production checks after central release
+        shell: bash
+        run: node "$GITHUB_WORKSPACE/scripts/verify-mall-retained-production-smoke.mjs"
+
       - name: Cleanup production config
         if: always()
         run: rm -f api/wrangler.runtime.toml
