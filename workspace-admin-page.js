@@ -170,7 +170,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     {id:'marketing',label:'마케팅',sections:[...(workspace==='ekodimission'?[['saturday','토요모임'],['activities','행사 · 신청자']]:[]),['marketing','마케팅 AI'],['publishing','채널 · 자동게시']]},
     {id:'management',label:'경영',sections:[['finance','재무']]},
     {id:'tools',label:'운영도구',sections:[['mail','메일'],['languages','다국어 번역 · 게시']]},
-    {id:'site-access',label:'사이트 관리',sections:[['chrome','헤더 · 푸터'],['design','사이트 디자인'],...peopleSections,['status','운영 상태'],['records','변경 · 감사 기록']]}
+    {id:'site-access',label:'사이트 관리',sections:[['chrome','헤더 · 푸터'],['design','사이트 디자인'],...(workspace==='cgma'?peopleSections.filter(([key])=>key==='members'):peopleSections),['status','운영 상태'],['records','변경 · 감사 기록']]}
   ];
   const localRootGroups=[
     ...cgmaSiteGroups,
