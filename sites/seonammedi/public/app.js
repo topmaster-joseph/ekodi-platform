@@ -687,7 +687,7 @@ syncViewFromLocation();
 
 const NOTICE_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token';
 let publicNotices=[];
-function noticeToken(){try{const platform=sessionStorage.getItem('ekodi-auth-token')||'';if(platform)return platform;const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(!raw)return'';const parsed=JSON.parse(raw);const session=parsed?.currentSession||parsed?.session||parsed;const access=String(session?.access_token||'');const expires=Number(session?.expires_at||0);return access&&(!expires||expires>Math.floor(Date.now()/1000)+30)?access:''}catch{return''}}
+function noticeToken(){try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(raw){const parsed=JSON.parse(raw);const session=parsed?.currentSession||parsed?.session||parsed;const access=String(session?.access_token||'');const expires=Number(session?.expires_at||0);if(access)return expires&&expires<=Math.floor(Date.now()/1000)+30?'':access}}catch{}try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}}
 function noticeSession(){try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';if(!raw)return null;const parsed=JSON.parse(raw);return parsed?.currentSession||parsed?.session||parsed||null}catch{return null}}
 function noticeCurrentEmail(){return String(noticeSession()?.user?.email||'').trim().toLowerCase()}
 function noticeOwnedByCurrentUser(item){return Boolean(noticeToken()&&item?.canManage)}
@@ -1144,11 +1144,11 @@ const PUBLIC_ADMIN_PLATFORM_TOKEN_KEY='ekodi-auth-token';
 let publicAdminMe=null;
 let publicAdminController=null;
 function publicAdminToken(){
-  try{
-    const platform=sessionStorage.getItem(PUBLIC_ADMIN_PLATFORM_TOKEN_KEY)||'';
-    if(platform)return platform;
-  }catch{}
-  return typeof noticeToken==='function'?noticeToken():'';
+  const current=typeof noticeToken==='function'?noticeToken():'';
+  if(current)return current;
+  // An expired current central identity is not permission to reuse a different old admin.
+  try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';const parsed=raw&&JSON.parse(raw);const s=parsed?.currentSession||parsed?.session||parsed;if(s?.access_token)return''}catch{}
+  try{return sessionStorage.getItem(PUBLIC_ADMIN_PLATFORM_TOKEN_KEY)||''}catch{return''}
 }
 function sharedPublicAdmin(){
   if(publicAdminController)return publicAdminController;

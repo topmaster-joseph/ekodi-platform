@@ -10,24 +10,25 @@ let items=[];
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
 function sessionToken(){
+  // Fresh EKODI login wins over old per-site sessions and admin tabs.
+  try{
+    const raw=localStorage.getItem(CENTRAL_SESSION_KEY)||'';
+    if(raw){
+      const parsed=JSON.parse(raw);
+      const session=parsed?.currentSession||parsed?.session||parsed;
+      const access=String(session?.access_token||'');
+      const expires=Number(session?.expires_at||0);
+      if(access)return expires&&expires<=Math.floor(Date.now()/1000)+30?'':access;
+    }
+  }catch{}
   const platform=sessionStorage.getItem(PLATFORM_TOKEN_KEY)||'';
   if(platform)return platform;
   try{
     const raw=sessionStorage.getItem(SESSION_KEY);
     const s=raw&&JSON.parse(raw);
-    if(s?.accessToken)return String(s.accessToken);
+    if(s?.accessToken&&(!s.expiresAt||s.expiresAt>Math.floor(Date.now()/1000)+30))return String(s.accessToken);
   }catch{}
-  try{
-    const raw=localStorage.getItem(CENTRAL_SESSION_KEY)||'';
-    if(!raw)return'';
-    const parsed=JSON.parse(raw);
-    const session=parsed?.currentSession||parsed?.session||parsed;
-    const access=String(session?.access_token||'');
-    const expires=Number(session?.expires_at||0);
-    if(!access)return'';
-    if(expires&&expires<=Math.floor(Date.now()/1000)+30)return'';
-    return access;
-  }catch{return''}
+  return '';
 }
 const authHeaders=()=>{const h={'content-type':'application/json'};const access=sessionToken();if(access)h.authorization='Bearer '+access;return h};
 async function api(url,options={}){
