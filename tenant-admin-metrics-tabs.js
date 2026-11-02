@@ -1,10 +1,12 @@
 // ADMIN-TAB-VIEW-20261102: Shared, presentation-only tenant admin view.
 // Authentication, permissions and the existing section router remain authoritative.
-export const tenantAdminMetricsTabsMarkup =
-  '<nav class="admin-view-tabs" data-ekodi-admin-view-tabs role="tablist" aria-label="관리자 화면 보기">' +
-  '<button type="button" id="adminWorkTab" role="tab" data-admin-view="work" aria-controls="mainPanel" aria-selected="true">업무</button>' +
-  '<button type="button" id="adminMetricsTab" role="tab" data-admin-view="metrics" aria-controls="summaryCards" aria-selected="false" tabindex="-1">운영 지표</button>' +
-  '</nav>';
+export function tenantAdminMetricsTabsMarkupFor(metricsId = 'summaryCards', workId = 'mainPanel') {
+  return '<nav class="admin-view-tabs" data-ekodi-admin-view-tabs role="tablist" aria-label="관리자 화면 보기">' +
+    '<button type="button" id="adminWorkTab" role="tab" data-admin-view="work" aria-controls="' + workId + '" aria-selected="true">업무</button>' +
+    '<button type="button" id="adminMetricsTab" role="tab" data-admin-view="metrics" aria-controls="' + metricsId + '" aria-selected="false" tabindex="-1">운영 지표</button>' +
+    '</nav>';
+}
+export const tenantAdminMetricsTabsMarkup = tenantAdminMetricsTabsMarkupFor();
 
 export const tenantAdminMetricsTabsCss = `
 .admin-view-tabs{display:flex;align-items:center;gap:6px;min-height:42px;margin:0 0 10px;padding:0 0 8px;border-bottom:1px solid #dfe5ec;overflow-x:auto;max-width:100%;scrollbar-width:thin}
@@ -21,10 +23,10 @@ export const tenantAdminMetricsTabsCss = `
 @media(max-width:360px){.layout main > #summaryCards{grid-template-columns:1fr}}
 `;
 
-export function mountTenantAdminMetricsTabs() {
+export function mountTenantAdminMetricsTabs(metricsId = 'summaryCards', workId = 'mainPanel') {
   const nav = document.querySelector('[data-ekodi-admin-view-tabs]');
-  const metrics = document.getElementById('summaryCards');
-  const work = document.getElementById('mainPanel');
+  const metrics = document.getElementById(metricsId);
+  const work = document.getElementById(workId);
   if (!nav || !metrics || !work || nav.dataset.boundMetricsTabs === 'true') return;
   nav.dataset.boundMetricsTabs = 'true';
   const tabs = [...nav.querySelectorAll('[data-admin-view]')];
