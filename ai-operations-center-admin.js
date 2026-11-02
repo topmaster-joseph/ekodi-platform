@@ -191,7 +191,7 @@
   }
 
   function renderWorkflowDirectory(){
-   return `<section class="aic-section"><div class="aic-section-head"><h4>서비스별 업무 흐름</h4><span class="aic-note">기존 서비스 재사용 · 공통 자동실행은 검증 전 대기</span></div><div class="aic-tool-list">${WORKFLOW_ENTRIES.map(w=>`<article class="aic-tool-row"><div class="aic-name"><strong>${esc(w.name)}</strong><small>${esc(w.steps)}</small><small>${esc(w.note)}</small></div><span class="aic-status">기존 서비스 진입</span><div class="aic-actions"><a class="aic-btn primary" href="${esc(w.path)}">업무 시작</a><button class="aic-btn" type="button" data-aic-tool-tab="routing">AI 라우팅</button></div></article>`).join('')}</div></section>`;
+   return `<section class="aic-section"><div class="aic-section-head"><h4>서비스별 업무 흐름</h4><span class="aic-note">기존 서비스 재사용 · 통합 자동실행은 검증 전 대기</span></div><div class="aic-tool-list">${WORKFLOW_ENTRIES.map(w=>`<article class="aic-tool-row"><div class="aic-name"><strong>${esc(w.name)}</strong><small>${esc(w.steps)}</small><small>${esc(w.note)}</small></div><span class="aic-status">기존 서비스 진입</span><div class="aic-actions"><a class="aic-btn primary" href="${esc(w.path)}">업무 시작</a><button class="aic-btn" type="button" data-aic-tool-tab="routing">AI 라우팅</button></div></article>`).join('')}</div></section>`;
   }
 
   function renderSiteAiSettings(){
