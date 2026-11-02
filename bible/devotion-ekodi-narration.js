@@ -14,6 +14,20 @@ export function approvedNarration(manifest, date) {
       manifest?.review?.textIntegrity !== true ||
       manifest?.review?.voicePerformance !== true ||
       manifest?.review?.accessibility !== true) return null;
+  // Licensed stock voices are distinguishable from private consented samples.
+  // A claimed stock source cannot substitute arbitrary voice files or a
+  // misleading model license in the published review manifest.
+  const source = manifest?.source;
+  if (source) {
+    if (source.kind === 'licensed-stock-preset') {
+      if (source.synthetic !== true || source.model !== 'supertonic-3' ||
+          source.modelRevision !== '724fb5abbf5502583fb520898d45929e62f02c0b' ||
+          source.modelLicense !== 'OpenRAIL-M' ||
+          source.voices?.male !== 'M4' || source.voices?.female !== 'F5') return null;
+    } else if (source.kind !== 'consented-speakers' || source.synthetic !== true) {
+      return null;
+    }
+  }
   const files = {};
   for (const gender of ['male','female']) {
     const track = manifest?.tracks?.[gender];
