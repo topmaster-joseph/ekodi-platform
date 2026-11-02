@@ -39,6 +39,7 @@ import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gatew
 import { handleOrchestratorReleaseReceipt, handleOrchestratorCompletionReconciliation } from './ekodi-orchestrator-task-adapter.js';
 import { handleDevotionalControl } from './devotional-control.js';
 import { handleNotificationApi, runNotificationSchedule } from './notification-control.js';
+import { handleNotificationAdminSummary } from './notification-admin-summary.js';
 import { handleCommonScriptureControl } from './common-scripture-control.js';
 import { handlePublicChurchWorship } from './church-public-worship-control.js';
 import { handlePublicCommonScripture } from './common-scripture-registry.js';
@@ -161,7 +162,11 @@ export default {
 
     const path = incoming.pathname;
     if (path.startsWith('/api/notifications')) {
-      try { return applyApiSecurityHeaders(await handleNotificationApi(request,env)); }
+      try {
+        const adminSummary=await handleNotificationAdminSummary(request,env);
+        if(adminSummary)return applyApiSecurityHeaders(adminSummary);
+        return applyApiSecurityHeaders(await handleNotificationApi(request,env));
+      }
       catch (error) { console.error('Notifications API error',error); return errorResponse('알림 서비스를 처리할 수 없습니다.','NOTIFICATIONS_API_ERROR'); }
     }
     const scriptureResponse=handlePublicCommonScripture(request);
