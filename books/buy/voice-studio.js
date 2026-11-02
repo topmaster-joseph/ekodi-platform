@@ -17,7 +17,7 @@
     'In Search of the EKODIan. Faith, scholarship, and community — read slowly, together.',
   ];
   const el = (t, p = {}, ...k) => { const n = document.createElement(t); Object.assign(n, p); n.append(...k); return n; };
-  let gender = 'm', speakerName = () => '';
+  let gender = 'm', speakerName = () => '', devotionConsent = () => false;
   async function api(method, body, headers = {}) {
     const s = await C.session();
     const r = await fetch(`${C.BASE}/api/commerce/admin/voice/sample?gender=${gender}`, { method, body, headers: { authorization: 'Bearer ' + (s?.accessToken || ''), ...headers }, cache: 'no-store' });
@@ -28,8 +28,8 @@
   async function upload(blob, msg) {
     msg.textContent = '올리는 중…';
     try {
-      const d = await api('PUT', blob, { 'content-type': blob.type || 'application/octet-stream', 'x-ekodi-voice-consent': 'self-recorded-for-ekodi-audiobooks', 'x-ekodi-voice-speaker': encodeURIComponent(speakerName()) });
-      msg.textContent = `저장했습니다 (${Math.round(d.size / 1024)}KB · ${d.format}). 이 음성으로 오디오북 초안을 만들 수 있습니다.`;
+      const d = await api('PUT', blob, { 'content-type': blob.type || 'application/octet-stream', 'x-ekodi-voice-consent': 'self-recorded-for-ekodi-audiobooks', ...(devotionConsent() ? { 'x-ekodi-voice-devotion-consent': 'self-recorded-for-ekodi-public-devotion' } : {}), 'x-ekodi-voice-speaker': encodeURIComponent(speakerName()) });
+      msg.textContent = `저장했습니다 (${Math.round(d.size / 1024)}KB · ${d.format}). 오디오북 제작 ${d.devotionConsented ? '및 매일묵상 공개 음성 제작' : '전용'}으로 등록했습니다.`;
     } catch (e) { msg.textContent = e.message; }
   }
   async function render() {
@@ -50,7 +50,7 @@
     const operatorPanel = host.closest('.operator-panel');
     if (operatorPanel) operatorPanel.hidden = false;
     window.EkodiLibraryTabs?.showOperator();
-    const saved = g => state[g]?.present ? `${g === 'm' ? '남성' : '여성'} 녹음: ${state[g].speaker || ''} ${String(state[g].recordedAt).slice(0, 16).replace('T', ' ')}` : `${g === 'm' ? '남성' : '여성'} 녹음: 아직 없음`;
+    const saved = g => state[g]?.present ? `${g === 'm' ? '남성' : '여성'} 녹음: ${state[g].speaker || ''} ${String(state[g].recordedAt).slice(0, 16).replace('T', ' ')} · ${state[g].devotionConsent === 'self-recorded-for-ekodi-public-devotion' ? '매일묵상 사용 동의됨' : '매일묵상 공개 낭독 동의 미확인'}` : `${g === 'm' ? '남성' : '여성'} 녹음: 아직 없음`;
     const msg = el('p', { className: 'buy-msg', role: 'status', textContent: `${saved('m')} · ${saved('f')}` });
     // 남·여 원 녹음 두 개면 어린이·청소년·중장년·노년 목소리로 변환해 장별로 저장한다.
     const pickM = el('input', { type: 'radio', name: 'voiceGender', value: 'm', checked: true }), pickF = el('input', { type: 'radio', name: 'voiceGender', value: 'f' });
@@ -58,6 +58,8 @@
     const nameInput = el('input', { type: 'text', maxLength: 40, placeholder: '읽는 사람 이름 (예: 정찬균)', className: 'voice-name' });
     speakerName = () => nameInput.value.trim();
     const consent = el('input', { type: 'checkbox', id: 'voiceConsent' });
+    const publicDevotionConsent = el('input', { type: 'checkbox', id: 'voicePublicDevotionConsent' });
+    devotionConsent = () => publicDevotionConsent.checked;
     const rec = el('button', { type: 'button', className: 'primary', textContent: '● 녹음 시작' });
     const file = el('input', { type: 'file', accept: 'audio/*,.wav,.m4a,.mp3,.webm' });
     const player = el('audio', { controls: true, hidden: true });
@@ -174,6 +176,8 @@
       el('div', { className: 'voice-gender' }, el('label', {}, pickM, ' 남성 목소리 녹음'), el('label', {}, pickF, ' 여성 목소리 녹음')), nameInput,
       el('ol', { className: 'voice-script' }, ...SCRIPT.map(t => el('li', { textContent: t }))),
       el('label', { className: 'voice-consent' }, consent, ' 이 녹음은 위에 적은 사람 본인의 목소리이며, 본인이 에코디 오디오북 제작에 쓰는 것에 동의합니다.'),
+      el('label', { className: 'voice-consent' }, publicDevotionConsent, ' [선택] 저의 목소리를 에코디교회·에코디선교회·말씀대화의 공개 매일묵상 AI 낭독음성 제작과 배포에 사용하는 데 별도로 동의합니다.'),
+      el('p', { className: 'buy-msg', textContent: '매일묵상 공개 낭독에는 화자 본인의 동의가 필요합니다. 과거 오디오북 전용 녹음은 소급 동의되지 않으므로 화자 본인이 이 항목을 선택해 다시 등록해야 합니다.' }),
       el('div', { className: 'review-actions' }, rec, el('label', { className: 'voice-file' }, '또는 녹음 파일 올리기 ', file)),
       player, msg, micHelp,
     );

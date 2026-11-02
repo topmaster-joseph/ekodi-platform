@@ -464,6 +464,12 @@ export async function adminRoute(env, request, path, url, now = new Date()) {
     try { speaker = decodeURIComponent(request.headers.get('x-ekodi-voice-speaker') || '').replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 40); } catch {}
     if (!speaker) return { status: 400, data: { error: '읽는 사람 이름을 적어 주세요.' } };
     if (request.headers.get('x-ekodi-voice-consent') !== 'self-recorded-for-ekodi-audiobooks') return { status: 400, data: { error: '본인 녹음·사용 동의가 필요합니다.' } };
+    // Public daily devotion is a separate scope. Owner's organizational
+    // approval never substitutes for a particular speaker's consent.
+    const devotionScope = request.headers.get('x-ekodi-voice-devotion-consent') || '';
+    if (devotionScope && devotionScope !== 'self-recorded-for-ekodi-public-devotion')
+      return { status: 400, data: { error: '매일묵상 공개 낭독 사용에는 화자 본인의 별도 동의가 필요합니다.' } };
+    const devotionConsented = devotionScope === 'self-recorded-for-ekodi-public-devotion';
     if (Number(request.headers.get('content-length') || 0) > 40 * 1024 * 1024) return { status: 413, data: { error: '샘플은 최대 40MB입니다.' } };
     const bytes = new Uint8Array(await request.arrayBuffer());
     const kind = bytes.length < 16 ? '' : bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3 ? 'webm'
@@ -472,10 +478,10 @@ export async function adminRoute(env, request, path, url, now = new Date()) {
     if (!kind || bytes.length < 64 * 1024) return { status: 400, data: { error: '녹음 파일(webm·wav·m4a·mp3, 1분 이상)을 올려 주세요.' } };
     const sha256 = await audioSha256(bytes), at = now.toISOString();
     const key = `_voice/ekodi-narrator/${gender}/sample-${at.replace(/[:.]/g, '-')}.${kind}`;
-    await env.BOOK_FILES.put(key, bytes, { httpMetadata: { contentType: 'application/octet-stream' }, customMetadata: { kind: 'voice-sample', consent: 'self-recorded-for-ekodi-audiobooks', sha256, gender } });
-    await env.BOOK_FILES.put(LATEST, JSON.stringify({ key, sha256, size: bytes.length, format: kind, recordedAt: at, gender, speaker, consent: 'self-recorded-for-ekodi-audiobooks' }), { httpMetadata: { contentType: 'application/json' } });
+    await env.BOOK_FILES.put(key, bytes, { httpMetadata: { contentType: 'application/octet-stream' }, customMetadata: { kind: 'voice-sample', consent: 'self-recorded-for-ekodi-audiobooks', devotionConsent: devotionConsented ? devotionScope : 'none', sha256, gender } });
+    await env.BOOK_FILES.put(LATEST, JSON.stringify({ key, sha256, size: bytes.length, format: kind, recordedAt: at, gender, speaker, consent: 'self-recorded-for-ekodi-audiobooks', devotionConsent: devotionConsented ? devotionScope : 'none', devotionConsentAt: devotionConsented ? at : null }), { httpMetadata: { contentType: 'application/json' } });
     await audit(env, '', buyer.email, 'voice.sample_uploaded', { size: bytes.length, format: kind, gender });
-    return { status: 200, data: { ok: true, size: bytes.length, format: kind, recordedAt: at, gender } };
+    return { status: 200, data: { ok: true, size: bytes.length, format: kind, recordedAt: at, gender, devotionConsented } };
   }
   // 렌더링된 장별 초안은 승인 전까지 배포 불가(approved=false). 카탈로그 승인 후 해시가 같을 때만 배포 가능으로 전환한다.
   const promoteMatch = /^\/admin\/audiobooks\/([A-Z0-9-]{3,40})\/(\d{1,3})\/promote$/.exec(path);
