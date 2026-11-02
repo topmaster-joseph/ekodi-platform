@@ -55,3 +55,17 @@ test('logistics cockpit is tabbed, read-only, and resets seller data on logout',
   assert.match(js,/authenticated-seller/);
   assert.doesNotMatch(html,/배송예약 실행|공급자 지급 실행/);
 });
+
+test('seller triage stays inside existing logistics tab and does not enable order mutations',()=>{
+  assert.match(html,/id="logisticsAttentionList"/);
+  assert.match(html,/id="logisticsQueueCount"/);
+  assert.match(html,/role="list" aria-live="polite"/);
+  assert.match(js,/triageList\.replaceChildren\(\)/);
+  assert.match(js,/renderLogistics\(null\)/);
+  assert.match(js,/document\.getElementById\('logisticsAttentionList'\)/);
+  assert.match(js,/item\.nextAction/);
+  assert.match(css,/\.fulfillment-logistics-triage/);
+  assert.match(css,/@media\(max-width:390px\)/);
+  assert.doesNotMatch(js, /triageList\.innerHTML\s*=/);
+  assert.doesNotMatch(html, /data-triage-execute|id="submitPayout"|id="executeRefund"/);
+});
