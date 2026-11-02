@@ -2,7 +2,7 @@ import { isReservedPlatformRoot, platformRouteRegistrySnapshot } from './platfor
 import { isForbiddenAdminAggregationPath } from './admin-address-policy.js';
 
 const WORKSPACE_SLUG=/^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/;
-const SITE_OWNED_ADMIN_ROOTS=new Set(['ekodimall','ekodimission']);
+const SITE_OWNED_ADMIN_ROOTS=new Set(['ekodimall','ekodimission','cheonggye','ekodilab']);
 export const RESERVED_WORKSPACE_SLUGS=new Set(platformRouteRegistrySnapshot().reserved);
 
 export const PUBLIC_USER_ACCESS_CONTRACT=Object.freeze({
