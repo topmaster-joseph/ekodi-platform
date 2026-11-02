@@ -276,10 +276,10 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   function navBucketsForRole(role=workspaceRole){
     const groups=groupsForRole(role),dedicated=dedicatedSections(),seen=new Set(),common=[],site=[];
     for(const group of groups){for(const item of group.sections){const [key,label]=item;if(seen.has(key))continue;if(role?!canSection(key,role):!(workspace==='ekodimission'||key==='overview'))continue;if(typeof serviceMenuVisible==='function'&&!serviceMenuVisible(key))continue;seen.add(key);(dedicated.has(key)?site:common).push([key,label]);}}
+    // Service configuration is a common site-local operation, never a third sidebar bucket.
+    if(role&&canSection('services',role)&&!seen.has('services'))common.push(['services','서비스 구성·사용 설정']);
     const buckets=[{id:'common',label:'공통 메뉴',items:common},{id:'site',label:'전용 메뉴',items:site}].filter(bucket=>bucket.items.length);
-    // 상인회 관리자 화면은 자주 쓰는 전용 메뉴를 맨 위에 두고, 다른 메뉴가 선택되지 않았을 때 기본으로 펼칩니다.
-    if(role&&canSection('services',role))buckets.push({id:'service-config',label:'서비스 구성',items:[['services','서비스 구성·사용 설정']]});
-    return workspace==='cgma'?[...buckets.filter(x=>x.id!=='service-config').reverse(),...buckets.filter(x=>x.id==='service-config')]:buckets;
+    return buckets;
   }
   function renderNav(role=workspaceRole){
     const h=$('adminNav');h.replaceChildren();document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile(role);
