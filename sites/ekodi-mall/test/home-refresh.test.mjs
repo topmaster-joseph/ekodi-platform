@@ -26,15 +26,17 @@ test('premium home renders navigation and retains core commerce entrypoints', ()
 });
 
 test('category tabs show products without the home hero and persist on reload', () => {
-  assert.match(js, /body\\.dataset\\.mallView = mode/);
-  assert.match(js, /categoryFromUrl/);
-  assert.match(js, /window\\.history\\.pushState/);
-  assert.match(js, /window\\.addEventListener\\('popstate', syncView\\)/);
-  assert.match(js, /window\\.addEventListener\\('hashchange', syncView\\)/);
-  assert.match(css, /body\\[data-mall-view="catalog"\\] main#main > :not\\(#filters\\):not\\(#shop\\)/);
-  assert.match(css, /body\\[data-mall-view="recommend"\\] main#main > :not\\(#recommend\\)/);
-  assert.doesNotMatch(js, /mallNavProductsGrid|cloneNode\\(true\\)/);
-  assert.match(template, /id="mallRecommendSearchForm"/);
+  for (const marker of [
+    'document.body.dataset.mallView = mode',
+    'categoryFromUrl',
+    'window.history.pushState',
+    "window.addEventListener('popstate', syncView)",
+    "window.addEventListener('hashchange', syncView)",
+  ]) assert.ok(js.includes(marker), 'missing navigation contract ' + marker);
+  assert.ok(css.includes('body[data-mall-view="catalog"] main#main > :not(#filters):not(#shop)'));
+  assert.ok(css.includes('body[data-mall-view="recommend"] main#main > :not(#recommend)'));
+  assert.doesNotMatch(js, /mallNavProductsGrid|cloneNode/);
+  assert.ok(template.includes('id="mallRecommendSearchForm"'));
   assert.ok(template.includes('<a href="#top">홈</a>'));
 });
 
@@ -56,7 +58,8 @@ test('category shortcuts map only to existing filters and destinations', () => {
     assert.ok((template + mallHeader).includes('href="' + href + '"'), 'missing target ' + href);
   }
   assert.match(js, /dispatchEvent\(new Event\('input'/);
-  assert.match(js, /button\?\.click\(\)/);
+  assert.ok(js.includes('button.click()'));
+
 });
 
 test('responsive storefront does not change payments or disclose false sales claims', () => {
