@@ -205,7 +205,7 @@
       const section = document.createElement('section');
       section.className = 'studio-shell';
       section.id = 'serverProducts';
-      section.innerHTML = '<div class="studio-intro"><div><p class="eyebrow">MY SERVER PRODUCTS</p><h2>공급처별 상품 현황</h2><p>내 계정의 등록 상품을 공급처별로 분류합니다. 고객 화면에는 공급처 구분을 표시하지 않습니다.</p></div><div class="readiness-card"><small>서버 상태</small><strong data-server-api-status>확인 중</strong><p data-server-finance-status>주문·정산 현황 확인 중</p></div></div><div class="seller-provider-tabs" data-server-provider-tabs role="tablist" aria-label="공급처별 상품 목록"></div><p class="seller-provider-summary" data-server-provider-summary aria-live="polite"></p><div class="module-grid" data-server-products role="tabpanel" aria-label="선택한 공급처 상품"><article><span>SERVER</span><h3>로그인 후 확인</h3><p>Google 판매자 세션을 확인합니다.</p></article></div>';
+      section.innerHTML = '<div class="studio-intro"><div><p class="eyebrow">MY SERVER PRODUCTS</p><h2>공급처별 상품 현황</h2><p>내 상품과 최고관리자 조회권한이 있는 공급처 상품을 분류합니다. 고객 화면에는 공급처를 표시하지 않습니다.</p></div><div class="readiness-card"><small>서버 상태</small><strong data-server-api-status>확인 중</strong><p data-server-finance-status>주문·정산 현황 확인 중</p></div></div><div class="seller-provider-tabs" data-server-provider-tabs role="tablist" aria-label="공급처별 상품 목록"></div><p class="seller-provider-summary" data-server-provider-summary aria-live="polite"></p><div class="module-grid" data-server-products role="tabpanel" aria-label="선택한 공급처 상품"><article><span>SERVER</span><h3>로그인 후 확인</h3><p>Google 판매자 세션을 확인합니다.</p></article></div>';
       studio.insertAdjacentElement('afterend', section);
     }
   }
@@ -248,7 +248,7 @@
       tab.setAttribute('aria-selected', id === selectedProvider ? 'true' : 'false');
       tab.tabIndex = id === selectedProvider ? 0 : -1;
       tab.textContent = `${label} ${counts.get(id)}`;
-      tab.addEventListener('click', () => { selectedProvider = id; visibleLimit = 40; renderProviderProducts(); });
+      tab.addEventListener('click', () => { selectedProvider = id; visibleLimit = 40; renderProviderProducts(); tabs.querySelector('[aria-selected="true"]')?.focus(); });
       tabs.append(tab);
     }
     const visible = selectedProvider === 'all' ? sellerProducts : sellerProducts.filter(p => supplierGroup(p) === selectedProvider);
@@ -260,7 +260,7 @@
     if (!visible.length) {
       const empty = document.createElement('article');
       const title = document.createElement('h3'); title.textContent = '해당 공급처에 등록된 상품이 없습니다.';
-      const desc = document.createElement('p'); desc.textContent = '이 화면은 현재 로그인한 판매자 계정의 상품을 보여줍니다. 외부 제휴 전체 카탈로그는 별도 관리자에서 관리합니다.';
+      const desc = document.createElement('p'); desc.textContent = operatorScope ? '현재 이 공급처의 등록 상품이 없습니다. 외부 플랫폼의 연결 상태는 공급망 관리자에서 확인합니다.' : '이 화면은 로그인한 판매자 계정의 상품을 보여줍니다. 전체 상품은 운영자 전용입니다.';
       empty.append(title, desc); container.append(empty);
     } else {
       visible.slice(0, visibleLimit).forEach(product => container.append(productCard(product)));
