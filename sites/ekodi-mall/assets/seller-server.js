@@ -212,7 +212,7 @@
 
   const PROVIDERS = [
     ['all', '전체'], ['domeggook', '도매꾹·도매매'], ['ownerclan', '오너클랜'],
-    ['coupang', '쿠팡파트너스'], ['amazon', '아마존'], ['external', '기타 제휴'],
+    ['coupang', '쿠팡파트너스'], ['bookstore', '에코디서점'], ['amazon', '아마존'], ['external', '기타 제휴'],
     ['own', '에코디 직접판매'], ['merchant', '상인 위탁'], ['inquiry', '상담형']
   ];
   let selectedProvider = 'all';
@@ -220,7 +220,10 @@
   let dashboardRevision = 0;
   let operatorScope = false;
   let visibleLimit = 40;
+  let externalFeedState = {};
   function supplierGroup(product) {
+    if (product.externalChannel === 'bookstore' || product.source?.kind === 'ekodi-bookstore') return 'bookstore';
+    if (product.source?.kind === 'coupang_partners') return 'coupang';
     const provider = String(product.supply?.provider || '').toLowerCase();
     if (provider === 'domeggook' || provider === 'domemae') return 'domeggook';
     if (provider === 'ownerclan') return 'ownerclan';
@@ -248,14 +251,16 @@
       tab.type = 'button'; tab.className = 'seller-provider-tab'; tab.setAttribute('role', 'tab');
       tab.setAttribute('aria-selected', id === selectedProvider ? 'true' : 'false');
       tab.tabIndex = id === selectedProvider ? 0 : -1;
-      tab.textContent = `${label} ${counts.get(id)}`;
+      tab.textContent = externalFeedState[id] === 'error' && operatorScope ? `${label} 조회 실패` : `${label} ${counts.get(id)}`;
       tab.addEventListener('click', () => { selectedProvider = id; visibleLimit = 40; renderProviderProducts(); tabs.querySelector('[aria-selected="true"]')?.focus(); });
       tabs.append(tab);
     }
     const visible = selectedProvider === 'all' ? sellerProducts : sellerProducts.filter(p => supplierGroup(p) === selectedProvider);
-    const preparing = visible.filter(p => p.status !== 'published' || (p.product?.saleType === 'direct' && !p.checkoutReady)).length;
-    const selling = visible.filter(p => p.status === 'published' && (p.product?.saleType !== 'direct' || p.checkoutReady)).length;
-    if (summary) summary.textContent = `전체 ${visible.length}건 · 상품 준비중 ${preparing}건 · 판매 가능 ${selling}건 · 현재 ${Math.min(visible.length,visibleLimit)}건 표시 (${operatorScope ? '운영자 전체 공급상품 · 조회 전용' : '이 계정에 등록한 상품'})`;
+    const preparing = visible.filter(p => p.externalChannel ? !p.externalReady : p.status !== 'published' || (p.product?.saleType === 'direct' && !p.checkoutReady)).length;
+    const externalLinked = visible.filter(p => p.externalChannel && p.externalReady).length;
+    const selling = visible.filter(p => !p.externalChannel && p.status === 'published' && (p.product?.saleType !== 'direct' || p.checkoutReady)).length;
+    const failed = Object.entries(externalFeedState).filter(([,state]) => state === 'error').map(([key]) => key === 'coupang' ? '쿠팡파트너스' : '에코디서점');
+    if (summary) summary.textContent = `전체 ${visible.length}건 · 상품 준비중 ${preparing}건 · 몰 판매 가능 ${selling}건 · 외부 구매 연결 ${externalLinked}건 · 현재 ${Math.min(visible.length,visibleLimit)}건 표시 (${operatorScope ? '운영자 통합 공급상품 · 조회 전용' : '이 계정에 등록한 상품'})${failed.length ? ' · 카탈로그 조회 실패: ' + failed.join(', ') + '(0건이 아님)' : ''}`;
     document.querySelector('[data-provider-more]')?.remove();
     container.replaceChildren();
     if (!visible.length) {
@@ -277,16 +282,28 @@
   function productCard(product) {
     const article = document.createElement('article');
     article.innerHTML = '<span></span><h3></h3><p></p><div class="studio-buttons"><button class="smallbtn" type="button">불러오기</button></div>';
-    article.querySelector('span').textContent = product.status !== 'published' || (product.product?.saleType === 'direct' && !product.checkoutReady) ? '상품 준비중' : '판매 가능';
+    article.querySelector('span').textContent = product.externalChannel
+      ? (product.externalReady ? '외부 구매 연결' : '출간·판매 준비중')
+      : product.status !== 'published' || (product.product?.saleType === 'direct' && !product.checkoutReady) ? '상품 준비중' : '판매 가능';
     article.querySelector('h3').textContent = product.product?.name || '상품';
-    const origin = product.supply?.provider ? `출처 ${({ domeggook: '도매꾹', ownerclan: '오너클랜' })[product.supply.provider] || product.supply.provider} #${product.supply.itemNo}`
+    const origin = product.externalChannel === 'bookstore' ? '에코디서점 도서 카탈로그 · 별도 서점 관리'
+      : product.externalChannel === 'affiliate' ? '공통 제휴상품 카탈로그 · 외부 판매처 결제'
+      : product.supply?.provider ? `출처 ${({ domeggook: '도매꾹', ownerclan: '오너클랜' })[product.supply.provider] || product.supply.provider} #${product.supply.itemNo}`
       : product.source?.kind === 'consigned_merchant' ? `출처 상인 ${product.source.name}${product.source.contact ? ` (${product.source.contact})` : ''}`
       : product.source?.kind === 'ekodibiz_own' ? '출처 에코디비즈 자체상품' : '';
-    article.querySelector('p').textContent = [`${product.seller?.displayName || '판매자'} · ${product.store?.name || '개인상품'} · ${product.shareCode}`, origin].filter(Boolean).join(' · ');
+    article.querySelector('p').textContent = [`${product.seller?.displayName || '판매자'}${product.externalChannel ? '' : ' · ' + (product.store?.name || '개인상품') + ' · ' + product.shareCode}`, origin].filter(Boolean).join(' · ');
     const edit = article.querySelector('button');
     if (product.readOnly) { edit.textContent = '운영 조회 전용'; edit.disabled = true; }
     else edit.addEventListener('click', () => fillForm(product));
-    if (product.publicShareLinkActive) {
+    if (product.externalChannel && product.externalUrl) {
+      const link = document.createElement('a');
+      link.className = 'smallbtn';
+      link.href = product.externalUrl; link.target = '_blank';
+      link.rel = product.externalChannel === 'affiliate' ? 'noopener noreferrer sponsored' : 'noopener noreferrer';
+      link.textContent = product.externalChannel === 'bookstore' ? '서점 상품 보기' : '제휴 판매처 연결';
+      article.querySelector('.studio-buttons').append(link);
+    }
+    if (product.publicShareLinkActive && !product.externalChannel) {
       const link = document.createElement('a');
       link.className = 'smallbtn'; link.href = product.publicUrl; link.target = '_blank'; link.rel = 'noopener'; link.textContent = '일반링크 · 8%';
       article.querySelector('.studio-buttons').append(link);
@@ -319,6 +336,12 @@
       const operatorRows = operatorScope && Array.isArray(operatorResult.products) ? operatorResult.products : [];
       const byId = new Map(owned.map(product => [product.id,product]));
       for (const product of operatorRows) if (!byId.has(product.id)) byId.set(product.id,product);
+      if (operatorScope && window.ekodiMallProviderCatalog) {
+        const feeds = await window.ekodiMallProviderCatalog.readCatalogs();
+        if (revision !== dashboardRevision) return;
+        externalFeedState = feeds.status;
+        for (const product of feeds.rows) if (!byId.has(product.id)) byId.set(product.id, product);
+      } else externalFeedState = {};
       sellerProducts = [...byId.values()];
       renderProviderProducts();
       if (apiStatus) apiStatus.textContent = `연결됨 · ${operatorScope ? '전체 공급상품 포함' : '내 상품'} ${sellerProducts.length}개`;
@@ -342,6 +365,7 @@
     dashboardRevision += 1;
     sellerProducts = [];
     operatorScope = false;
+    externalFeedState = {};
     selectedProvider = 'all';
     visibleLimit = 40;
     renderProviderProducts();
