@@ -186,3 +186,30 @@ body{background:var(--mall-surface)}
  .mall-category-shortcuts~.shop{padding-top:25px}
  .mall-category-shortcuts~.filters{top:56px}
 }
+
+/* Section tabs: landing storytelling belongs to home ONLY, never below selected categories. */
+body[data-mall-view="catalog"] main#main > :not(#filters):not(#shop),
+body[data-mall-view="recommend"] main#main > :not(#recommend) { display:none!important; }
+body[data-mall-view="catalog"] main#main > #shop,
+body[data-mall-view="recommend"] main#main > #recommend {
+  width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 40px));
+  max-width:100%;margin:0 auto;padding:24px 0 65px;min-height:50vh;
+}
+body[data-mall-view="catalog"] main#main > #filters {
+  position:static;top:auto;width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 40px));
+  margin:0 auto;padding:16px 0;border-bottom:1px solid var(--mall-border);
+}
+body[data-mall-view="catalog"] .shop .heading {margin-bottom:22px}
+.mall-primary-nav a[aria-current="page"]{border-bottom:3px solid var(--mall-orange);color:var(--mall-navy);font-weight:900}
+.mall-recommend-inline-form {display:none;margin:0 0 28px;max-width:760px}
+body[data-mall-view="recommend"] .mall-recommend-inline-form{display:block}
+.mall-recommend-inline-form label {display:block;font-size:13px;font-weight:800;margin-bottom:10px}
+.mall-recommend-inline-form > div {display:flex;gap:10px}
+.mall-recommend-inline-form input {min-width:0;flex:1;border:1px solid #d6dee1;border-radius:12px;background:#fff;padding:12px 14px;font:inherit}
+.mall-recommend-inline-form button {border:0;border-radius:12px;background:var(--mall-navy);color:#fff;font-weight:800;padding:12px 20px;cursor:pointer}
+@media(max-width:720px){
+ body[data-mall-view="catalog"] main#main > #shop,body[data-mall-view="recommend"] main#main > #recommend,
+ body[data-mall-view="catalog"] main#main > #filters{width:calc(100% - 28px)}
+ body[data-mall-view="catalog"] main#main > #shop,body[data-mall-view="recommend"] main#main > #recommend{padding-top:18px}
+ .mall-recommend-inline-form > div{flex-direction:column}
+}
