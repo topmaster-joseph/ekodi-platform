@@ -1,4 +1,6 @@
 import { renderDevotionScore } from './devotion-score.js';
+import { devotionShareExcerpt, formatDevotionShareMessage } from './devotion-share-audio.js';
+import { createDevotionSpeechUI } from './devotion-speech-ui.js';
 // EKODI 오늘의 매일묵상 — shared renderer for /bible, /ekodichurch and /ekodimission.
 // Each host page provides its own header/footer and a mount:
 //   <div data-ekodi-devotion data-base="/ekodichurch/devotion/" data-date-mode="query" data-site-label="에코디교회"></div>
@@ -130,6 +132,7 @@ function boot(root) {
   const scriptureBlock = el('section', 'dv-panel dv-scripture-section');
   scriptureBlock.setAttribute('aria-label','개역한글 성경 본문');
   const audioRow = el('section','dv-audio-row');
+  const speechUI = createDevotionSpeechUI();
   const adminPanel = el('section','dv-admin');
   adminPanel.id = 'devotion-editor';
   adminPanel.hidden = true;
@@ -173,6 +176,7 @@ function boot(root) {
   adminView.setAttribute('aria-live', 'polite');
   let adminSelection = '';
   root.append(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminBar, adminPanel, adminView, toastEl);
+  scriptureBlock.after(speechUI.element);
   // Mission supplies this control through its own site shell.  Church and
   // Bible share the same concise account/logout convention alongside admin.
   const sharedAuthBar = siteKey==='mission' ? null : el('div','dv-shared-auth');
@@ -735,6 +739,7 @@ function boot(root) {
   });
 
   function render(data) {
+    speechUI.setData(data);
     current = data;
     dateLabel.textContent = koreanDate(data.date);
     prev.href = pageUrl(data.prevDate);
@@ -873,11 +878,20 @@ function boot(root) {
     if (!body) { toast('먼저 나의 한줄기도를 적어 주세요.'); selectTab('records'); panels.get('records').querySelector('textarea[name="prayer"]')?.focus(); return; }
     const url = shareUrl(current.date, body.hash);
     if (copyOnly) { toast(await copy(url) ? '링크를 복사했습니다. 카카오톡 대화방에 붙여 넣어 주세요.' : url); return; }
+    const privatePrayer = kind === 'mine' ? panels.get('records').querySelector('textarea[name="prayer"]')?.value.trim() || '' : '';
+    const title = kind === 'page' ? body.title : `${siteLabel} 오늘의 매일묵상 · ${body.title}`;
+    const message = formatDevotionShareMessage({
+      date: current.date, title,
+      excerpt: devotionShareExcerpt(current, kind, privatePrayer),
+      url,
+    });
+    // KakaoTalk, SMS and clipboard receive one complete four-line text.
+    // Supplying a separate title or url to the native share sheet can duplicate lines.
     if (navigator.share) {
-      try { await navigator.share({ title: body.title, text: body.text, url }); return; }
+      try { await navigator.share({ text: message }); return; }
       catch (error) { if (error?.name === 'AbortError') return; }
     }
-    toast(await copy(`${body.text}\n\n${url}`) ? '내용과 링크를 복사했습니다. 카카오톡에 붙여 넣어 주세요.' : url);
+    toast(await copy(message) ? '날짜·제목·본문·링크를 복사했습니다. 카카오톡에 붙여 넣어 주세요.' : url);
   }
 
   root.addEventListener('click', event => {
