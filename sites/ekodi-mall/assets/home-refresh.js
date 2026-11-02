@@ -11,7 +11,7 @@
     if (query) query.value = incomingQuery;
     search.dispatchEvent(new Event('input', { bubbles:true }));
     // The entire catalog, including affiliate offers, is searched by the curator.
-    window.EkodiContextCurator?.recommend(incomingQuery, true);
+    window.EkodiContextCurator?.recommend(incomingQuery, false);
   }
   if (params.has('wishlist')) window.addEventListener('load', () => document.getElementById('wishBtn')?.click(), {once:true});
 
@@ -20,90 +20,105 @@
     if (!search || !shop) return;
     event.preventDefault();
     const term = (query?.value || '').trim().slice(0, 120);
-    search.value = term;
-    search.dispatchEvent(new Event('input', { bubbles: true }));
+    navigate('#shop', 'all');
+    const target = new URL(window.location.href);
+    if (term) target.searchParams.set('q', term);
+    window.history.replaceState(null, '', target.pathname + target.search + target.hash);
+    syncView();
     if (term && window.EkodiContextCurator?.recommend) {
       const contextInput = document.getElementById('contextInput');
       if (contextInput) contextInput.value = term;
-      window.EkodiContextCurator.recommend(term, true);
+      window.EkodiContextCurator.recommend(term, false);
     } else {
       shop.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
       search.focus({ preventScroll: true });
     }
   });
 
-  document.querySelectorAll('a[data-filter-target]').forEach((link) => {
-    link.addEventListener('click', () => {
-      const type = link.getAttribute('data-filter-target');
-      const button = [...document.querySelectorAll('#filters button[data-filter]')]
-        .find((item) => item.dataset.filter === type);
-      button?.click();
+  // The Mall is one page with two explicit detail views: catalog and AI recommendations.
+  // A single canonical #grid is retained: no cloned cards, duplicate hearts or overlay panels.
+  const nav = document.querySelector('.mall-primary-nav');
+  const allTypes = new Set(['all','general','living','book','gift','local']);
+  const filterButtons = [...document.querySelectorAll('#filters button[data-filter]')];
+  const aiForm = document.getElementById('mallRecommendSearchForm');
+  const aiInput = document.getElementById('mallRecommendSearchInput');
+  const viewFromUrl = () => {
+    const current = new URL(window.location.href);
+    if (current.hash === '#recommend') return 'recommend';
+    if (current.hash === '#shop' || current.searchParams.has('category') || current.searchParams.has('q')) return 'catalog';
+    return 'home';
+  };
+  const categoryFromUrl = () => {
+    const value = new URLSearchParams(window.location.search).get('category') || 'all';
+    return allTypes.has(value) ? value : 'all';
+  };
+  function syncView() {
+    const mode = viewFromUrl();
+    document.body.dataset.mallView = mode;
+    const category = categoryFromUrl();
+    nav?.querySelectorAll('a[aria-current]').forEach(anchor => anchor.removeAttribute('aria-current'));
+    if (mode === 'catalog') {
+      const button = filterButtons.find(item => item.dataset.filter === category);
+      if (button && !button.classList.contains('active')) button.click();
+      nav?.querySelector(`a[data-filter-target="${category}"]`)?.setAttribute('aria-current', 'page');
+    } else if (mode === 'recommend') {
+      nav?.querySelector('a[href="#recommend"]')?.setAttribute('aria-current', 'page');
+    }
+    const urlSearch = new URLSearchParams(window.location.search).get('q') || '';
+    if (query) query.value = urlSearch;
+    if (search && search.value !== urlSearch) {
+      search.value = urlSearch;
+      search.dispatchEvent(new Event('input', { bubbles:true }));
+    }
+  }
+  function navigate(hash, category, { keepSearch = false } = {}) {
+    const next = new URL(window.location.href);
+    next.hash = hash;
+    next.searchParams.delete('category');
+    if (!keepSearch) next.searchParams.delete('q');
+    if (hash === '#shop' && category && category !== 'all' && allTypes.has(category)) next.searchParams.set('category', category);
+    window.history.pushState(null, '', next.pathname + next.search + next.hash);
+    syncView();
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+  // Category tabs and mobile shortcuts show ONLY their actual products, directly under the header.
+  document.querySelectorAll('a[data-filter-target]').forEach(link => {
+    link.addEventListener('click', event => {
+      const category = link.getAttribute('data-filter-target');
+      if (!allTypes.has(category)) return;
+      event.preventDefault();
+      navigate('#shop', category);
     });
   });
-  // In-place catalog panel: the canonical #grid remains the source of product truth.
-  const header = document.querySelector('.mall-header');
-  const nav = header?.querySelector('.mall-primary-nav');
-  const catalog = document.querySelector('#grid');
-  if (header && nav && catalog) {
-    const panel = document.createElement('section');
-    panel.id = 'mallNavProducts';
-    panel.setAttribute('aria-label', '선택한 카테고리 상품');
-    panel.hidden = true;
-    panel.innerHTML = '<div class="mall-nav-panel-inner"><div class="mall-nav-panel-heading"><h2 id="mallNavProductsTitle"></h2><button type="button" id="mallNavClose" aria-label="상품 목록 닫기">닫기 ×</button></div><div id="mallNavProductsGrid" class="grid" aria-live="polite"></div><p id="mallNavProductsEmpty" hidden>표시할 상품이 없습니다.</p><a id="mallNavMore" href="#shop">전체 목록 보기 →</a></div>';
-    header.insertAdjacentElement('afterend', panel);
-    const results = panel.querySelector('#mallNavProductsGrid');
-    const empty = panel.querySelector('#mallNavProductsEmpty');
-    const more = panel.querySelector('#mallNavMore');
-    const title = panel.querySelector('#mallNavProductsTitle');
-    const close = () => { panel.hidden = true; nav.querySelectorAll('[aria-current]').forEach(a => a.removeAttribute('aria-current')); };
-    panel.querySelector('#mallNavClose').addEventListener('click', close);
-    const sheet = document.createElement('style');
-    sheet.textContent = '#mallNavProducts{background:#fff;border-bottom:1px solid #e3e9ef;padding:20px max(16px,calc((100vw - 1240px)/2));}#mallNavProducts[hidden]{display:none} .mall-nav-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.mall-nav-panel-heading h2{margin:0;font-size:22px}.mall-nav-panel-heading button{border:1px solid #d9e1e8;border-radius:20px;background:#fff;padding:7px 14px;cursor:pointer}#mallNavProductsGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:14px}#mallNavProductsGrid [data-wish]{pointer-events:none}#mallNavMore{display:inline-block;margin-top:14px;font-weight:700} .mall-primary-nav a[aria-current="true"]{border-bottom:3px solid #e65b36}';
-    document.head.append(sheet);
-    const map = {'전체상품':'all','로컬·특산물':'local','식품·건강':'general','생활·가전':'living','책·배움':'book','선물·기념품':'gift'};
-    const redraw = (type) => {
-      results.replaceChildren();
-      const region = window.EkodiLocal?.getSelectedRegionId?.() || '';
-      const matched = [...catalog.querySelectorAll('[data-product]')].filter(card => {
-        if (type === 'all') return true;
-        if (type === 'local') {
-          const ids = (card.dataset.regionIds || '').split(',').map(s=>s.trim()).filter(Boolean);
-          return ids.length && (!region || ids.includes(region));
-        }
-        return card.dataset.category === type;
-      });
-      matched.slice(0,12).forEach(card => {
-        const copy = card.cloneNode(true);
-        copy.hidden = false;
-        copy.querySelectorAll('[id]').forEach(node=>node.removeAttribute('id'));
-        copy.querySelectorAll('[data-wish]').forEach(button=>button.remove());
-        results.append(copy);
-      });
-      empty.hidden = matched.length > 0;
-    };
-    nav.querySelectorAll('a').forEach(anchor => {
-      const type = map[anchor.textContent.trim()];
-      if (!type) return;
-      anchor.addEventListener('click', event => {
-        event.preventDefault();
-        const same = !panel.hidden && anchor.getAttribute('aria-current') === 'true';
-        close();
-        if (same) return;
-        anchor.setAttribute('aria-current','true');
-        title.textContent = anchor.textContent.trim() + ' 상품';
-        more.href = '#shop';
-        panel.hidden = false;
-        redraw(type);
-        const filter = [...document.querySelectorAll('#filters [data-filter]')].find(btn=>btn.dataset.filter===type);
-        filter?.click();
-        history.replaceState(null,'',location.pathname+location.search+'#shop');
-        panel.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
-      });
-    });
-    window.addEventListener('ekodi:marketplace-products-loaded',()=> {
-      const current = nav.querySelector('a[aria-current="true"]');
-      if (current && !panel.hidden) redraw(map[current.textContent.trim()]);
-    });
-  }
-
+  // Home, product and AI links (including back/forward/direct URLs) share one route contract.
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a[href]');
+    if (!link || link.hasAttribute('data-filter-target')) return;
+    const hash = link.getAttribute('href');
+    if (!['#shop', '#recommend', '#top'].includes(hash)) return;
+    event.preventDefault();
+    navigate(hash, 'all', { keepSearch: hash === '#recommend' });
+  });
+  // Keep the selected filter deep-linkable, including /?category=book from the bookstore.
+  filterButtons.forEach(button => button.addEventListener('click', () => {
+    if (document.body.dataset.mallView !== 'catalog') return;
+    const next = new URL(window.location.href);
+    next.searchParams.delete('category');
+    if (button.dataset.filter !== 'all') next.searchParams.set('category', button.dataset.filter);
+    next.hash = '#shop';
+    window.history.replaceState(null, '', next.pathname + next.search + next.hash);
+    nav?.querySelectorAll('a[aria-current]').forEach(anchor => anchor.removeAttribute('aria-current'));
+    nav?.querySelector(`a[data-filter-target="${button.dataset.filter}"]`)?.setAttribute('aria-current','page');
+  }));
+  aiForm?.addEventListener('submit', event => {
+    event.preventDefault();
+    const term = (aiInput?.value || '').trim().slice(0,180);
+    if (!term) { aiInput?.focus(); return; }
+    const contextInput = document.getElementById('contextInput');
+    if (contextInput) contextInput.value = term;
+    window.EkodiContextCurator?.recommend(term, true);
+  });
+  window.addEventListener('popstate', syncView);
+  window.addEventListener('hashchange', syncView);
+  syncView();
 })();

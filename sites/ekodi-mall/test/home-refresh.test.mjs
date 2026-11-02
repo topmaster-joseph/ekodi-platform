@@ -25,6 +25,21 @@ test('premium home renders navigation and retains core commerce entrypoints', ()
   assert.ok(css.includes('.mall-category-shortcuts{display:none}'));
 });
 
+test('category tabs show products without the home hero and persist on reload', () => {
+  for (const marker of [
+    'document.body.dataset.mallView = mode',
+    'categoryFromUrl',
+    'window.history.pushState',
+    "window.addEventListener('popstate', syncView)",
+    "window.addEventListener('hashchange', syncView)",
+  ]) assert.ok(js.includes(marker), 'missing navigation contract ' + marker);
+  assert.ok(css.includes('body[data-mall-view="catalog"] main#main > :not(#filters):not(#shop)'));
+  assert.ok(css.includes('body[data-mall-view="recommend"] main#main > :not(#recommend)'));
+  assert.doesNotMatch(js, /mallNavProductsGrid|cloneNode/);
+  assert.ok(template.includes('id="mallRecommendSearchForm"'));
+  assert.ok(template.includes('<a href="#top">홈</a>'));
+});
+
 test('buyer-facing payment copy matches the approved direct-sale-only production scope', () => {
   assert.equal(site.commerce.paymentsEnabled, true);
   assert.equal(site.notice, '', 'obsolete global banner must stay hidden');
@@ -43,7 +58,8 @@ test('category shortcuts map only to existing filters and destinations', () => {
     assert.ok((template + mallHeader).includes('href="' + href + '"'), 'missing target ' + href);
   }
   assert.match(js, /dispatchEvent\(new Event\('input'/);
-  assert.match(js, /button\?\.click\(\)/);
+  assert.ok(js.includes('button.click()'));
+
 });
 
 test('responsive storefront does not change payments or disclose false sales claims', () => {
@@ -74,8 +90,8 @@ test('home and affiliate travel page use the same generated buyer header', () =>
 });
 
 test('global search searches marketplace and live affiliate curator instead of a dead local-only filter', () => {
-  assert.match(js, /EkodiContextCurator\.recommend\(term, true\)/);
-  assert.match(js, /EkodiContextCurator\?\.recommend\(incomingQuery, true\)/);
+  assert.match(js, /EkodiContextCurator\.recommend\(term, false\)/);
+  assert.match(js, /EkodiContextCurator\?\.recommend\(incomingQuery, false\)/);
   assert.match(js, /if \(!search \|\| !shop\) return;\s*event\.preventDefault\(\)/);
   assert.match(mallHeader, /role="search"/);
   assert.match(mallHeader, /method="get"/);
