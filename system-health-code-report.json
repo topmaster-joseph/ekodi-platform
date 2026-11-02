@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-01T06:25:53.479Z",
-  "startedAt": "2026-11-01T06:24:46.549Z",
+  "generatedAt": "2026-11-02T05:50:46.855Z",
+  "startedAt": "2026-11-02T05:49:36.211Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "9ae31b92fa2cb99553b58085e7ff6c6fbbd27d3e",
+  "head": "98f9cbda21e020fdd2a0c7ae322ad9f6cd13fb79",
   "overallScore": 83.8,
   "status": "watch",
   "thresholds": {
@@ -18,13 +18,13 @@
       "weight": 25,
       "score": 25,
       "status": "ok",
-      "detail": "1377개 테스트 파일 · 전체 테스트 통과"
+      "detail": "1433개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
       "score": 1.5,
       "status": "error",
-      "detail": "교차 파일 중복 군집 30개 · 겹침 창 152개 정규화"
+      "detail": "교차 파일 중복 군집 30개 · 겹침 창 173개 정규화"
     },
     "complexity": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "292개 Workflow · 배포 가드 검증 통과"
+      "detail": "294개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,15 +58,15 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 1345,
-    "runtimeLines": 232823,
-    "testFiles": 1377,
-    "workflows": 292,
+    "runtimeFiles": 1376,
+    "runtimeLines": 237560,
+    "testFiles": 1433,
+    "workflows": 294,
     "largeFiles": 4,
     "veryLargeFiles": 0,
     "todoMarkers": 39,
     "duplicateGroups": 30,
-    "duplicateWindows": 152
+    "duplicateWindows": 173
   },
   "technicalDebt": [
     {
@@ -116,24 +116,12 @@
       "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "admin-google-auth.js:118",
-        "auth-worker-core.js:86"
-      ]
-    },
-    {
-      "id": "duplicate-4",
-      "severity": "medium",
-      "category": "duplication",
-      "title": "교차 파일 중복 로직 후보",
-      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
-      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
-      "evidence": [
         "affiliate-control.js:94",
         "device-control.js:358"
       ]
     },
     {
-      "id": "duplicate-5",
+      "id": "duplicate-4",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -145,7 +133,7 @@
       ]
     },
     {
-      "id": "duplicate-6",
+      "id": "duplicate-5",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -157,7 +145,7 @@
       ]
     },
     {
-      "id": "duplicate-7",
+      "id": "duplicate-6",
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
@@ -166,6 +154,18 @@
       "evidence": [
         "books-control.js:11",
         "books-pipeline-control.js:11"
+      ]
+    },
+    {
+      "id": "duplicate-7",
+      "severity": "medium",
+      "category": "duplication",
+      "title": "교차 파일 중복 로직 후보",
+      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
+      "evidence": [
+        "books-control.js:55",
+        "books-distribution-control.js:67"
       ]
     },
     {
@@ -181,8 +181,8 @@
         "auth-site/email-password.js:201",
         "cooperative-progress.js:336",
         "cooperative-progress.js:337",
-        "device-control-admin.js:213",
-        "device-control-admin.js:1175",
+        "device-control-admin.js:217",
+        "device-control-admin.js:1219",
         "education/study/live/lab.js:100"
       ]
     }
@@ -192,7 +192,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "✔ fresh citizen opinions keep independent queue-first storage and never direct-write from public handler (5.07146ms)\n✔ explicit Brand Account OAuth requires an authenticated single YouTube channel and registry identity (1.608119ms)\n✔ Brand Account opt-in is scoped and never disables signed OAuth, code exchange or email-based standard mode (8.056956ms)\n✔ account linked banner uses registry ID or explicit connection IDs, never coincident email (4.666562ms)\nℹ tests 7149\nℹ suites 0\nℹ pass 7147\nℹ fail 0\nℹ cancelled 0\nℹ skipped 2\nℹ todo 0\nℹ duration_ms 65167.749866"
+      "summary": "✔ fresh citizen opinions keep independent queue-first storage and never direct-write from public handler (5.890786ms)\n✔ explicit Brand Account OAuth requires an authenticated single YouTube channel and registry identity (1.324678ms)\n✔ Brand Account opt-in is scoped and never disables signed OAuth, code exchange or email-based standard mode (7.078176ms)\n✔ account linked banner uses registry ID or explicit connection IDs, never coincident email (3.564395ms)\nℹ tests 7363\nℹ suites 0\nℹ pass 7361\nℹ fail 0\nℹ cancelled 0\nℹ skipped 2\nℹ todo 0\nℹ duration_ms 68638.774496"
     },
     "security": {
       "ok": true,
