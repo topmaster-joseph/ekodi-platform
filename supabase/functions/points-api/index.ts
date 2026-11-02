@@ -70,6 +70,7 @@ Deno.serve(async (req: Request) => {
     if (siteError) throw siteError;
     if (!siteInfo) return json(req, { error: "site_not_available" }, 404);
     if (path === "/progress") {
+      const observedAt = new Date();
       // An active site and canonical Person are mandatory before any read.
       // This is a non-monetary projection. Only server-verified, claimable
       // adapters are eligible; the endpoint never writes to the points ledger.
@@ -86,7 +87,7 @@ Deno.serve(async (req: Request) => {
       let claims: Array<{ rule_id: string; adapter: string; status: string; submitted_at: string }> = [];
       let truncated = false;
       if (active.length) {
-        const since = new Date(Date.now() - 92 * 24 * 60 * 60 * 1000).toISOString();
+        const since = new Date(observedAt.getTime() - 92 * 24 * 60 * 60 * 1000).toISOString();
         const { data, error } = await db.from("ekodi_point_evidence_claims")
           .select("rule_id,adapter,status,submitted_at")
           .eq("site_id", site).eq("person_id", personId)
@@ -97,7 +98,7 @@ Deno.serve(async (req: Request) => {
       }
       return json(req, {
         site: { id: siteInfo.site_id, name: siteInfo.display_name },
-        ...buildPointProgress({ now: new Date(), adapters: active, rules: rules || [], claims, truncated }),
+        ...buildPointProgress({ now: observedAt, adapters: active, rules: rules || [], claims, truncated }),
       });
     }
     const limitRaw = Number(requestUrl.searchParams.get("limit") || "25");
