@@ -30,6 +30,64 @@
     card.append(copy, link);
     return card;
   }
+  function installNotificationTabs(section, grid) {
+    const nav=el('nav','','communication-tabs');
+    nav.setAttribute('role','tablist');
+    nav.setAttribute('aria-label','소통 서비스');
+    const output=el('section','','communication-notification-panel');
+    output.hidden=true;
+    const title=el('h3','통합 알림 운영');
+    const hint=el('p','개인별 기기 정보는 표시하지 않으며 최고관리자만 집계 현황을 볼 수 있습니다.');
+    const status=el('p','현황을 선택하면 최신 정보를 불러옵니다.','communication-note');
+    status.setAttribute('role','status');
+    const list=el('div','','communication-notification-list');
+    const refresh=el('button','새로고침','communication-refresh');
+    refresh.type='button';
+    const link=el('a','사용자 구독 화면','primary communication-link');
+    link.href='/notifications/';link.target='_blank';link.rel='noopener';
+    output.append(title,hint,refresh,link,status,list);
+    async function reload() {
+      const api=window.EKODIAdminCore?.request;
+      list.replaceChildren();
+      if(typeof api!=='function'){status.textContent='관리자 세션을 확인할 수 없습니다.';return;}
+      status.textContent='알림 집계 현황을 조회하고 있습니다.';
+      refresh.disabled=true;
+      try {
+        const data=await api('/api/notifications/admin/summary');
+        const top=el('p','웹푸시 발송: '+(data.webPushEnabled?'활성화':'비활성화')+' · 기기 정보 비공개','communication-note');
+        list.append(top);
+        for(const item of data.topics||[]){
+          const line=el('article','','communication-notification-row');
+          line.append(el('strong',item.label),
+            el('span','구독 기기 '+item.subscriberDevices+' · 이벤트 '+item.events+
+              ' · 전달 처리 '+item.delivered+' · 대기 '+item.pending+' · 실패 '+item.failed));
+          list.append(line);
+        }
+        status.textContent='알림 현황을 갱신했습니다.';
+      } catch(error) {
+        status.textContent='조회 권한이나 운영 데이터 연결을 확인할 수 없습니다. '+String(error?.message||'');
+      } finally {refresh.disabled=false;}
+    }
+    refresh.addEventListener('click',reload);
+    const tabs=[['mail','메일'],['live','라이브'],['notification','알림']];
+    for(const [id,label] of tabs){
+      const button=el('button',label,'communication-tab');
+      button.type='button';button.setAttribute('role','tab');button.dataset.communicationTab=id;
+      button.setAttribute('aria-selected',String(id==='mail'));
+      button.addEventListener('click',()=>{
+        for(const tab of nav.querySelectorAll('button'))tab.setAttribute('aria-selected',String(tab===button));
+        for(const card of grid.children){
+          card.hidden=id==='notification'||(id==='live'?card.dataset.communicationService!=='live':card.dataset.communicationService==='live');
+        }
+        grid.hidden=id==='notification';output.hidden=id!=='notification';
+        if(id==='notification')void reload();
+      });
+      nav.append(button);
+    }
+    section.insertBefore(nav,grid);
+    section.insertBefore(output,grid.nextSibling);
+    for(const card of grid.children)card.hidden=card.dataset.communicationService==='live';
+  }
   function ensureStyle() {
     if (document.querySelector(`link[data-communication-style="${CSS}"]`)) return;
     const link = document.createElement('link');
@@ -53,7 +111,9 @@
       </header>
       <div class="communication-grid" id="communicationGrid"></div>
       <p class="communication-note">서비스 상태를 임의로 추정하지 않습니다. 각 독립 운영 공간의 실제 상태와 권한을 그대로 사용합니다.</p>`;
-    section.querySelector('#communicationGrid')?.append(...services.map(serviceCard));
+    const grid=section.querySelector('#communicationGrid');
+    grid?.append(...services.map(serviceCard));
+    if(grid)installNotificationTabs(section,grid);
     content.prepend(section);
     window.dispatchEvent(new CustomEvent('ekodi-feature-installed', { detail:{ section:SECTION } }));
   }
