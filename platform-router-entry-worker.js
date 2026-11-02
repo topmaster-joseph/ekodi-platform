@@ -536,6 +536,14 @@ async function routePlatform(request,env,ctx){
       if(!['GET','HEAD'].includes(request.method))return new Response(null,{status:410,headers:{'cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive'}});
       return new Response(null,{status:308,headers:{location:new URL('/ekodibiz',request.url).toString(),'cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive'}});
     }
+    // SITE-AI-TOOLS-ADMIN-ROUTE-001: Only these two site-owned settings pages
+    // need the shared authenticated tenant-admin shell. The region/lab public
+    // roots and all other dedicated admin pages keep their canonical owners.
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&
+      (url.pathname==='/cheonggye/admin/services'||url.pathname==='/cheonggye/admin/services/'||
+       url.pathname==='/ekodilab/admin/services'||url.pathname==='/ekodilab/admin/services/')){
+      return injectEkodiShell(workspaceAdminPage(),'space','admin');
+    }
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&(['/control','/control/','/control.css','/control.js'].includes(url.pathname))){
