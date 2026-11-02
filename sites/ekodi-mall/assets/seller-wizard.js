@@ -155,6 +155,7 @@
     nav.classList.remove('wz-hide');
     err.classList.remove('wz-hide');
     const step = steps[current];
+    bar.querySelector('[data-wz-inventory]')?.removeAttribute('aria-current');
     // The authentication stage is a gate, not a task after sign-in.
     // Keep its internal index for compatibility, but present a four-step flow.
     const authenticated = signedIn();
