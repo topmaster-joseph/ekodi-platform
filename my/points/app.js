@@ -1,6 +1,35 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const config=window.EKODI_MY_CONFIG||{};
 const select=document.getElementById('siteSelect');
+const pointTabButtons=[...document.querySelectorAll('.points-tabs [role="tab"]')];
+function refreshPointTabState(){
+ const current=document.body.dataset.pointsTab;
+ const claim=document.getElementById('claimSection');
+ const invite=document.getElementById('referralSection');
+ const confirm=document.getElementById('referralConfirmSection');
+ document.getElementById('pointsTabEmpty').hidden=current==='wallet'||(current==='claims'?!claim.hidden:!invite.hidden||!confirm.hidden);
+}
+function selectPointTab(name,focus=false){
+ document.body.dataset.pointsTab=name;
+ pointTabButtons.forEach(tab=>{
+  const active=tab.dataset.pointsTab===name;
+  tab.setAttribute('aria-selected',String(active));
+  tab.tabIndex=active?0:-1;
+  if(active&&focus)tab.focus();
+ });
+ refreshPointTabState();
+}
+pointTabButtons.forEach((tab,index)=>{
+ tab.addEventListener('click',()=>selectPointTab(tab.dataset.pointsTab));
+ tab.addEventListener('keydown',event=>{
+  const shift=event.key==='ArrowRight'?1:event.key==='ArrowLeft'?-1:0;
+  if(!shift&&event.key!=='Home'&&event.key!=='End')return;
+  event.preventDefault();
+  const next=event.key==='Home'?0:event.key==='End'?pointTabButtons.length-1:(index+shift+pointTabButtons.length)%pointTabButtons.length;
+  selectPointTab(pointTabButtons[next].dataset.pointsTab,true);
+ });
+});
+
 const notice=document.getElementById('notice');
 const login=document.getElementById('loginLink');
 const view=document.getElementById('balanceView');
@@ -54,6 +83,7 @@ function showReferralControls(site,authorized){
   const active=enabled&&authorized===true&&site==='my';
   referralSection.hidden=!active;
   referralConfirmSection.hidden=!active||!uuidPattern.test(inviteCode);
+  refreshPointTabState();
 }
 function removeConfirmedInviteFromUrl(){
   const url=new URL(location.href);
@@ -129,7 +159,7 @@ function clearPrivateView(message){
   referralConfirmSection.hidden=true;
   referralLink.value='';referralLink.hidden=true;
   document.getElementById('copyReferralInvite').hidden=true;
-  claimSection.hidden=true;claimAdapter.replaceChildren();claimList.replaceChildren();claimStatus.textContent='';
+  claimSection.hidden=true;refreshPointTabState();claimAdapter.replaceChildren();claimList.replaceChildren();claimStatus.textContent='';
   document.getElementById('claimForm').reset();
   showMessage(message);
 }
@@ -163,7 +193,7 @@ async function loadClaims(site,revision){
       claimAdapter.add(option);
     }
     document.getElementById('claimSubmit').disabled=!list.length;
-    renderClaims(mine);claimSection.hidden=false;
+    renderClaims(mine);claimSection.hidden=false;refreshPointTabState();
   }catch{/* claim panel stays hidden; wallet view is unaffected */}
 }
 async function submitClaim(event){
