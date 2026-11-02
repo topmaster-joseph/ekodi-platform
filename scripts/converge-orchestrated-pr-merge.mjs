@@ -387,6 +387,7 @@ const booksTouched=changedFiles.some(file=>
 // TENANT-SERVICE-SCHEMA-RELEASE-001: protected promotion is separate from Site Core.
 const tenantSiteSchemaTouched=changedFiles.some(file=>
   file==='supabase/migrations/20261102162000_tenant_site_service_catalog.sql'||
+  file==='supabase/migrations/20261103004500_tenant_ai_tool_selection.sql'||
   file==='.github/workflows/deploy-tenant-site-service-schema.yml'
 );
 const humanAuthorSchemaTouched=requiresHumanAuthorSchemaRelease(changedFiles);
