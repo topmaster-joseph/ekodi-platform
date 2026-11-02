@@ -221,8 +221,14 @@ for (const product of products) {
     : product.saleType === 'direct'
       ? '직접판매 상품은 판매자 확인과 결제·주문·정산 시스템 검증 후 에코디몰 결제를 활성화합니다. 현재 판매 준비 상태를 확인해 주세요.'
       : '에코디몰은 상품과 스토어의 관계, 판매 준비 상태를 분리 표시합니다. 가격과 판매 조건이 확정되지 않은 상품은 결제 가능한 상품처럼 표시하지 않습니다.';
+  // Preserve the full indexed title while keeping the visible book heading readable.
+  const hasBookSubtitle = product.category === 'book' && product.name.includes(' — ');
+  const [productHeading, ...subtitleParts] = hasBookSubtitle ? product.name.split(' — ') : [product.name];
+  const productSubtitle = subtitleParts.join(' — ');
   const html = fill(productTemplate, {
     PRODUCT_NAME: esc(product.name),
+    PRODUCT_HEADING: esc(productHeading),
+    PRODUCT_SUBTITLE: productSubtitle ? `<p class="detail-subtitle">${esc(productSubtitle)}</p>` : '',
     PRODUCT_DESCRIPTION: esc(product.description),
     PRODUCT_URL: esc(productUrl),
     PRODUCT_CATEGORY: esc(product.category),

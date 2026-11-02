@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { bookstoreProducts, approvedBookstoreProducts, loadBookstoreProducts, mergeBookstoreProducts } from '../scripts/bookstore-products.mjs';
 
@@ -75,4 +76,24 @@ test('verified publishing service can safely include NEW editions in runtime mal
   const mismatched={verifyPublicRelease:async request=>({authorized:true,state:'released',
     visibility:'public',checkoutEnabled:true,...request,channel:'books'})};
   assert.deepEqual(await approvedBookstoreProducts({books:[book]},mismatched),[]);
+});
+
+test('every mall static template omits the obsolete commerce V2 notice strip', () => {
+  for (const name of ['affiliate-hub', 'checkout', 'index', 'page', 'product', 'seller', 'store']) {
+    const html = readFileSync(path.join(root, 'src', name + '.template.html'), 'utf8');
+    assert.doesNotMatch(html, /class="notice"[^>]*>\{\{NOTICE\}\}/);
+  }
+  const site = JSON.parse(readFileSync(path.join(root, 'content/site.json'), 'utf8'));
+  assert.equal(site.notice, '');
+});
+test('book details use compact headings and an explicit responsive artwork layout', () => {
+  const template = readFileSync(path.join(root, 'src/product.template.html'), 'utf8');
+  const builder = readFileSync(path.join(root, 'scripts/build.mjs'), 'utf8');
+  const css = readFileSync(path.join(root, 'assets/product-detail.css'), 'utf8');
+  assert.match(template, /\{\{PRODUCT_HEADING\}\}/);
+  assert.match(template, /\{\{PRODUCT_SUBTITLE\}\}/);
+  assert.match(builder, /product\.category === 'book'/);
+  assert.match(css, /\.product-detail-v2 \.detail-copy h1/);
+  assert.match(css, /align-items:start/);
+  assert.match(css, /@media\(max-width:760px\)/);
 });
