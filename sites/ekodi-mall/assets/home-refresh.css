@@ -216,3 +216,7 @@ body[data-mall-view="recommend"] .mall-recommend-inline-form{display:block}
 
 /* Desktop category navigation is already present in the header; keep one tab row. */
 @media(min-width:641px){body[data-mall-view="catalog"] main#main > #filters{display:none}}
+
+/* Selected navigation is explicit on every Mall route. */
+.mall-primary-nav a[aria-current="page"]{color:var(--mall-orange);border-bottom:3px solid var(--mall-orange);font-weight:900}
+.mall-primary-nav a[aria-current="page"]:focus-visible{outline:2px solid currentColor;outline-offset:2px}
