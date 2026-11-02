@@ -37,6 +37,16 @@ test('QTIN logout stays local until explicit sign in, without deleting central l
  assert.equal(f.stored().accessToken,'explicit-new');
  assert.equal(f.localStorage.getItem('ekodi-qtin-signed-out'),null);
 });
+test('QTIN fresh Google sign-in replaces stale central principal rather than preserving prior profile',()=>{
+ const previous=JSON.stringify({currentSession:{access_token:'old-person',expires_at:expiry(),user:{email:'prior@example.test'}}});
+ const f=qtinFixture({main:previous,oldBuyer:{accessToken:'other-old'}});
+ f.saveCentralSession({accessToken:'new-google',refreshToken:'new-refresh',expiresAt:expiry()},
+   {access_token:'new-google',refresh_token:'new-refresh',user:{email:'new@example.test'}});
+ const latest=JSON.parse(f.localStorage.getItem(KEY));
+ assert.equal(latest.user.email,'new@example.test');
+ assert.equal(latest.currentSession,undefined,'new login must replace old principal wrapper');
+ assert.equal(f.localStorage.getItem('ekodi-qtin-buyer-session'),null);
+});
 test('QTIN expired central session does not regress to previous user',async()=>{
  const f=qtinFixture({main:central('expired',1),oldBuyer:{accessToken:'old-buyer',expiresAt:expiry()}});
  assert.equal(await f.validSession(),null);
