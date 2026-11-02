@@ -1,0 +1,22 @@
+{
+  "contract": "ekodi.church-monorepo-import.v1",
+  "status": "staged-source-only",
+  "canonicalSourceRepository": "topmaster-joseph/ekodi-platform",
+  "canonicalSourceDirectory": "sites/ekodi-church",
+  "originalRepository": "topmaster-joseph/ekodi-church",
+  "originalMainSha": "520d4f2daf7e5e4dc53bf928c9df626b5f896600",
+  "originalTreeSha": "30f2d5396b416aec9aca9773c84710052f4f8c35",
+  "importGitMethod": "subtree-add-without-squash",
+  "importCommit": "612239948452b55510560807ddcb8a58fd39e46b",
+  "originalTrackedFileCount": 216,
+  "releaseCutoverApproved": false,
+  "existingPagesProject": "ekodi-church",
+  "existingCanonicalUrl": "https://ekodi.kr/ekodichurch/",
+  "existingProductionReleaseSource": "topmaster-joseph/ekodi-church",
+  "existingProductionSourceSha": "520d4f2daf7e5e4dc53bf928c9df626b5f896600",
+  "deploymentWorkflowWillChangeInSeparatePR": true,
+  "protectedProductionReleaseUnchanged": true,
+  "databaseAndRolesUnchanged": true,
+  "rollbackRetainsLegacySourceUntilVerified": true,
+  "legacyRepositoryDeletionAllowed": false
+}
