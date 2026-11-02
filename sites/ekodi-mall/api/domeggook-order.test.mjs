@@ -26,7 +26,7 @@ function setup(extra = {}) {
   db.prepare(`INSERT INTO orders (${names.join(',')}) VALUES (${names.map(() => '?').join(',')})`).run(...v);
   db.prepare("UPDATE orders SET status='paid', quantity=2, seller_settlement_amount=27900, paid_at='2026-10-25T00:00:00Z' WHERE id='ord_1'").run();
   db.prepare(`INSERT INTO order_buyers (order_id,name,phone,email,postcode,address1,address2,memo,privacy_consent_at,created_at) VALUES ('ord_1','김철수','010-1111-2222','a@b.kr','07328','서울 영등포구 국제금융로6길 30','5층|A','문앞','t','t')`).run();
-  const env = { DB: d1(db), DOMEMAE_API_KEY: 'AK', DOMEMAE_USER_ID: 'test-approved-member', DOMEMAE_APPROVED_MEMBER_ID: 'test-approved-member', DOMEMAE_PASSWORD: 'PW!', DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', ...extra };
+  const env = { DB: d1(db), DOMEMAE_API_KEY: 'AK', DOMEMAE_USER_ID: 'test-approved-member', DOMEMAE_APPROVED_MEMBER_ID: 'test-approved-member', DOMEMAE_PASSWORD: 'PW!', DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', BUYER_PII_RELEASE_ENABLED: 'true', SUPPLIER_FORWARD_ENABLED: 'true', ...extra };
   return { db, env };
 }
 function supplier({ emoney = 100000, qty = 2, cost = 8000, setOrderOk = true, viewMode = 'WAITCHK', delivery = {} } = {}, log = []) {
@@ -47,6 +47,22 @@ function supplier({ emoney = 100000, qty = 2, cost = 8000, setOrderOk = true, vi
 test('format helpers strip pipes and follow documented order', () => {
   assert.equal(buildDeliInfo({ name: '김|철수', email: 'a@b', postcode: '07328', address1: '주소', address2: '5층', phone: '010' }), '김 철수|a@b|07328|주소|5층|010|010|');
   assert.equal(buildItemValue({}, { market: 'supply', qty: 2, deliMemo: '문앞|부탁' }), 'supply||P||00|2||에코디몰 위탁주문||문앞 부탁');
+});
+
+test('paid supplier orders fail closed when either buyer-PII or supplier-forwarding gate is off', async () => {
+  for (const blocked of ['BUYER_PII_RELEASE_ENABLED', 'SUPPLIER_FORWARD_ENABLED']) {
+    for (const mode of ['full', 'pilot']) {
+      const { env } = setup({
+        [blocked]: 'false',
+        DOMEGGOOK_AUTO_ORDER_ENABLED: mode === 'full' ? 'true' : 'false',
+        DOMEGGOOK_PILOT_ORDER_IDS: mode === 'pilot' ? 'mall_pilot_000001' : ''
+      });
+      const calls = [];
+      assert.equal(autoOrderEnabled(env), false, blocked);
+      assert.equal((await placeSupplierOrders(env, supplier({}, calls))).skipped, 'disabled');
+      assert.equal(calls.length, 0, 'no login, lookup, buyer disclosure or paid order before policy clearance');
+    }
+  }
 });
 
 test('paid supply order is placed once, verified, then tracked to shipping', async () => {

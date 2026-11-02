@@ -22,7 +22,7 @@ function setup() {
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'published','t','t','t','domeggook',?)`).run(`prd_${i}`, 'u-1', `SC${i}`, 'u', '에코디몰', 'individual', 'direct', 'living', `상품${i}`, '소개', 9900, 10, '배송', 'joseph@ekodi.kr', `${1000 + i}`);
   }
   db.prepare(`UPDATE products SET checkout_ready=1,images_json='[{"id":"i","key":"ekodimall/products/p/i.jpg"}]'`).run();
-  const env = { DB: d1(db), MALL_EKODIAN_EMAILS: 'joseph@ekodi.kr', DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', DOMEMAE_API_KEY: 'K', DOMEMAE_USER_ID: 'u', DOMEMAE_APPROVED_MEMBER_ID: 'u', DOMEMAE_PASSWORD: 'p', MALL_BASE_URL: 'https://ekodi.kr/ekodimall' };
+  const env = { DB: d1(db), MALL_EKODIAN_EMAILS: 'joseph@ekodi.kr', DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', BUYER_PII_RELEASE_ENABLED: 'true', SUPPLIER_FORWARD_ENABLED: 'true', DOMEMAE_API_KEY: 'K', DOMEMAE_USER_ID: 'u', DOMEMAE_APPROVED_MEMBER_ID: 'u', DOMEMAE_PASSWORD: 'p', MALL_BASE_URL: 'https://ekodi.kr/ekodimall' };
   return { db, env };
 }
 
@@ -40,6 +40,17 @@ test('EKODIan supply products stay visible but checkout waits until Domeggook pu
   const rows = db.prepare('SELECT status,checkout_ready,supply_release FROM products').all();
   assert.ok(rows.every((r) => r.status === 'published' && r.checkout_ready === 1 && r.supply_release === 'released'));
   assert.equal(db.prepare("SELECT COUNT(*) n FROM mall_ops_alerts WHERE kind='supply.release_held' AND status='open'").get().n, 0);
+});
+
+test('recent supplier login never unlocks checkout when PII or forwarding gate is disabled', async () => {
+  for (const blocked of ['BUYER_PII_RELEASE_ENABLED', 'SUPPLIER_FORWARD_ENABLED']) {
+    const { db, env } = setup();
+    env[blocked] = 'false';
+    db.prepare("INSERT INTO supplier_connector_checks (id,provider_id,check_type,external_ref,result_status,metadata_json,checked_at) VALUES ('c1','domemae-official','order_readiness','probe:login','ok','{}',?)").run(new Date().toISOString());
+    const result = await runSupplyGate(env);
+    assert.equal(result.gate.approved, false);
+    assert.equal(db.prepare("SELECT COUNT(*) n FROM products WHERE checkout_ready=1").get().n, 0);
+  }
 });
 
 test('non-supply products are never touched by the gate', async () => {
