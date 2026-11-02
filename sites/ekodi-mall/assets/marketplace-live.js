@@ -47,20 +47,65 @@
     return article;
   }
 
-  async function load() {
+  // Server-side category filtering and bounded pagination keep large curated catalogs usable on mobile.
+  const pageSize = 48;
+  let currentCategory = 'all';
+  let offset = 0;
+  let loading = false;
+  let complete = false;
+  let generation = 0;
+  const footer = node('div', 'mall-load-more');
+  const more = node('button', 'smallbtn', '상품 더 보기');
+  more.type = 'button';
+  footer.append(more);
+  grid.after(footer);
+  function selectedCategory() {
+    const value = document.querySelector('#filters [data-filter].active')?.dataset.filter || 'all';
+    return ['general','living','book','gift'].includes(value) ? value : 'all';
+  }
+  function updateMore() {
+    more.hidden = complete;
+    more.disabled = loading;
+    more.textContent = loading ? '상품 불러오는 중' : '상품 더 보기';
+  }
+  async function loadPage() {
+    if (loading || complete) return;
+    loading = true;
+    const requestGeneration = generation;
+    const start = offset;
+    updateMore();
     try {
-      const response = await fetch(`${API}/api/public/products?limit=240`, { headers: { accept: 'application/json' } });
+      const args = new URLSearchParams({ limit: String(pageSize), offset: String(start) });
+      if (currentCategory !== 'all') args.set('category', currentCategory);
+      const response = await fetch(`${API}/api/public/products?${args}`, { headers: { accept: 'application/json' }, cache: 'no-store' });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+      if (requestGeneration !== generation) return;
       const items = Array.isArray(body.products) ? body.products : [];
       for (const item of items) {
         if (!item?.shareCode || grid.querySelector(`[data-server-product="${CSS.escape(item.shareCode)}"]`)) continue;
         grid.append(productCard(item));
       }
-      window.dispatchEvent(new CustomEvent('ekodi:marketplace-products-loaded', { detail: { count: items.length } }));
+      offset += items.length;
+      complete = items.length < pageSize || offset >= 2000;
+      window.dispatchEvent(new CustomEvent('ekodi:marketplace-products-loaded', { detail: { count: items.length, category: currentCategory } }));
     } catch {
-      window.dispatchEvent(new CustomEvent('ekodi:marketplace-products-loaded', { detail: { count: 0, degraded: true } }));
+      if (requestGeneration === generation) window.dispatchEvent(new CustomEvent('ekodi:marketplace-products-loaded', { detail: { count: 0, degraded: true } }));
+    } finally {
+      if (requestGeneration === generation) { loading = false; updateMore(); }
     }
   }
-  load();
+  function chooseCategory(value) {
+    const next = ['general','living','book','gift'].includes(value) ? value : 'all';
+    if (next === currentCategory) return;
+    currentCategory = next;
+    offset = 0; complete = false; generation += 1; loading = false;
+    grid.querySelectorAll('[data-server-product]').forEach(item => item.remove());
+    loadPage();
+  }
+  more.addEventListener('click', loadPage);
+  document.querySelectorAll('#filters [data-filter]').forEach(button => button.addEventListener('click', () => chooseCategory(selectedCategory())));
+  window.addEventListener('popstate', () => chooseCategory(selectedCategory()));
+  currentCategory = selectedCategory();
+  loadPage();
 })();
