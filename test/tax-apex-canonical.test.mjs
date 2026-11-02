@@ -10,9 +10,9 @@ test('Tax canonical surface is served from ekodi.kr/tax', async () => {
   const html=await response.text();
   assert.match(html,/EKODI Tax/);
   assert.match(html,/\/tax\/tax-portal\.js/);
-  assert.match(html,/id="ekodibizSiteSwitcher"/);
-  assert.match(html,/사이트 전환/);
-  assert.match(html,/세금·증빙/);
+  assert.doesNotMatch(html,/id="ekodibizSiteSwitcher"/);
+  assert.match(html,/href="\/ekodibiz\/admin\/finance"/);
+  assert.match(html,/세금 · 증빙/);
 });
 
 test('Tax assets stay namespaced under the apex path', async () => {

@@ -36,7 +36,7 @@ test('tenant admin runtimes open real management screens instead of command home
   assert.match(workspace,/MISSION_DEFAULT_ACTIVITY='260926-chuseok-open-table'/);
   assert.match(workspace,/const defaultSection='overview'/);
   assert.match(store,/if\(!canSection\(section,role\)\)return permissionPanel\(\)/);
-  assert.match(trade,/await loadContext\(\);renderAdminScopeSwitcher\(\);await loadCompanies\(\)/);
+  assert.match(trade,/await loadContext\(\);await loadAuthorizedAdminScopes\(\);renderAdminScopeSwitcher\(\);await loadCompanies\(\)/);
 });
 
 test('mail and portfolio roots are direct dashboards',async()=>{

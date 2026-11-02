@@ -1,74 +1,76 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { EKODIBIZ_ADMIN_SCOPES, ekodiBizAdminScopeForPath } from '../ekodibiz-admin-registry.js';
-import { workspaceAdminPage, workspaceAdminScript } from '../workspace-admin-page.js';
-import { workspaceTradeAdminScript } from '../workspace-trade-admin-page.js';
 import { readFile } from 'node:fs/promises';
+import {
+  EKODIBIZ_ADMIN_SCOPES,
+  EKODIBIZ_TAX_MENU,
+  ekodiBizAdminScopeForPath,
+  ekodiBizAdminScopeSnapshot,
+} from '../ekodibiz-admin-registry.js';
+import { workspaceAdminPage, workspaceAdminScript, workspaceAdminCss } from '../workspace-admin-page.js';
+import { workspaceTradeAdminScript } from '../workspace-trade-admin-page.js';
 
-test('EKODIBIZ admin hub registers common and independent service management scopes',()=>{
-  assert.deepEqual(EKODIBIZ_ADMIN_SCOPES.map(item=>item.id),['common','mall','trade','tax','books','lab']);
-  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/admin'),'common');
-  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='mall')?.adminHref,'/ekodimall/admin');
-  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='mall')?.publicHref,'/ekodimall');
-  assert.equal(ekodiBizAdminScopeForPath('/ekodimall/admin/channel-settings'),'mall');
-  assert.equal(ekodiBizAdminScopeForPath('/admin/ekodimall/channel-settings'),'');
-  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/mall/admin/channels'),'');
-  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/trade/admin/access'),'trade');
-  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/invest/admin/ir'),'');
-  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='invest'),undefined);
-  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='tax')?.adminHref,'/tax');
-  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='books')?.label,'에코디북스');
-  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item=>item.id==='books')?.adminHref,'/admin/?route=books&source=ekodibiz');
-  assert.equal(ekodiBizAdminScopeForPath('/books/admin/catalog'),'books');
-  assert.equal(ekodiBizAdminScopeForPath('/tax'),'tax');
-  assert.equal(ekodiBizAdminScopeForPath('/tax/invoices'),'tax');
-  assert.equal(ekodiBizAdminScopeForPath('/ekodi-lab/admin'),'lab');
+test('EKODIBIZ site registry contains sites, not Finance Core tools', () => {
+  assert.deepEqual(EKODIBIZ_ADMIN_SCOPES.map(item => item.id), ['common', 'mall', 'trade', 'books', 'lab']);
+  assert.ok(EKODIBIZ_ADMIN_SCOPES.every(item => item.tenantSlugs?.length));
+  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/admin'), 'common');
+  assert.equal(ekodiBizAdminScopeForPath('/ekodimall/admin/channel-settings'), 'mall');
+  assert.equal(ekodiBizAdminScopeForPath('/ekodibiz/trade/admin/access'), 'trade');
+  assert.equal(ekodiBizAdminScopeForPath('/books/admin/catalog'), 'books');
+  assert.equal(ekodiBizAdminScopeForPath('/ekodi-lab/admin'), 'lab');
+  assert.equal(ekodiBizAdminScopeForPath('/tax'), 'common');
+  assert.equal(ekodiBizAdminScopeForPath('/tax/invoices'), 'common');
+  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item => item.id === 'tax'), undefined);
+  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item => item.id === 'invest'), undefined);
+  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item => item.id === 'mall')?.adminHref, '/ekodimall/admin');
+  assert.equal(EKODIBIZ_ADMIN_SCOPES.find(item => item.id === 'books')?.adminHref, '/admin/?route=books&source=ekodibiz');
 });
 
-test('Tax and Books preserve the single EKODIBIZ site-switch pattern',async()=>{
-  const tax=await readFile(new URL('../tax-portal-worker.js',import.meta.url),'utf8');
-  const registry=await readFile(new URL('../ekodibiz-admin-registry.js',import.meta.url),'utf8');
-  assert.match(tax,/EKODIBIZ_ADMIN_SCOPES/);
-  assert.match(tax,/id="ekodibizSiteSwitcher"/);
-  assert.match(tax,/사이트 전환/);
-  assert.match(tax,/scope\.id==='tax'/);
-  assert.match(registry,/\/admin\/\?route=books&source=ekodibiz/);
+test('tax submenus come from the single business registry', () => {
+  assert.deepEqual(EKODIBIZ_TAX_MENU.map(item => item.id), ['invoices', 'suppliers', 'customers', 'ledger']);
+  for (const item of EKODIBIZ_TAX_MENU) assert.equal(item.href, '/tax?tab=' + item.id);
+  assert.deepEqual(ekodiBizAdminScopeSnapshot().taxMenu.map(item => item.id), EKODIBIZ_TAX_MENU.map(item => item.id));
 });
 
-test('workspace and trade admins expose scope handoff only through full authority',async()=>{
-  const html=await workspaceAdminPage().text();
-  const rootScript=await workspaceAdminScript().text();
-  const tradeScript=await (await workspaceTradeAdminScript()).text();
-  assert.match(html,/id="adminScopeSwitcher"/);
-  assert.match(rootScript,/hasFullWorkspaceAdminScope/);
-  assert.match(rootScript,/관리 사이트 전환/);
-  assert.match(rootScript,/admin-scope-select/);
-  assert.match(rootScript,/label:'경영'/);
-  assert.match(rootScript,/label:'사이트 관리'/);
-  assert.doesNotMatch(rootScript,/label:'운영 · 재무'/);
-  assert.match(rootScript,/\['tax','세금 · 증빙'\]/);
-  assert.match(rootScript,/isBizWorkspace&&section==='tax'/);
-  assert.match(rootScript,/roleCapabilities\(role\)\.includes\('\*'\)/);
-  assert.match(tradeScript,/access\?\.role!=='workspace_admin'/);
-  assert.match(tradeScript,/사이트 전환/);
-  assert.match(tradeScript,/admin-scope-select/);
-  assert.match(tradeScript,/option\.selected=scope\.id==='trade'/);
-  assert.match(html,/data-ekodibiz-site-switch/);
-  assert.match(rootScript,/dataset\.adminScopeCurrent=current/);
-  assert.match(tradeScript,/dataset\.adminScopeCurrent='trade'/);
-});
-
-test('all EKODIBIZ admin surfaces share one site-switch contract',async()=>{
-  const [tax,runtime]=await Promise.all([
-    readFile(new URL('../tax-portal-worker.js',import.meta.url),'utf8'),
-    readFile(new URL('../admin-menu-runtime.js',import.meta.url),'utf8'),
+test('site switching is at the very top of the tenant sidebar, not the main body', async () => {
+  const [html, script, css] = await Promise.all([
+    workspaceAdminPage().text(),
+    workspaceAdminScript().text(),
+    workspaceAdminCss().text(),
   ]);
-  for(const source of [tax,runtime]){
-    assert.match(source,/admin-scope-switcher/);
-    assert.match(source,/admin-scope-select/);
-    assert.match(source,/admin-scope-label/);
-    assert.match(source,/관리 사이트 전환/);
-  }
-  assert.match(tax,/data-admin-scope-current="tax"/);
-  assert.match(runtime,/dataset\.adminScopeCurrent='books'/);
+  assert.match(html, /<aside class="sidebar" data-ekodi-admin-sidebar><div id="adminScopeSwitcher"/);
+  assert.doesNotMatch(html, /<main data-ekodi-admin-main><nav id="adminScopeSwitcher"/);
+  assert.match(script, /adminHubScopes\.filter\(scope=>permitted\.has\(scope\.id\)\)/);
+  assert.match(script, /authorizedAdminScopeIds/);
+  assert.match(script, /current_site_activity_contexts/);
+  assert.match(script, /hasFullWorkspaceAdminScope\(row\?\.authorization_role\)/);
+  assert.match(script, /!==\s*'platform_admin'/);
+  assert.match(css, /\.sidebar \.admin-scope-switcher/);
+  assert.match(css, /\.sidebar \.admin-scope-select\{width:100%/);
+});
+
+test('site Finance sidebar links directly to four tax operations under finance only for business site', async () => {
+  const script = await (await workspaceAdminScript()).text();
+  assert.match(script, /if\(key==='finance'&&isBizWorkspace&&!service&&canSection\('tax',role\)/);
+  assert.match(script, /const taxMenu=Array\.isArray\(ADMIN_HUB\?\.taxMenu\)/);
+  assert.match(script, /link\.href=item\.href/);
+  assert.match((await workspaceAdminPage().text()), /data-ekodi-admin-menu-model="common-plus-site"/);
+  assert.doesNotMatch(script, /\['tax','세금 · 증빙'\]/);
+  assert.match(script, /isBizWorkspace&&section==='tax'/); // legacy workspace deep link kept
+});
+
+test('trade is independently role-and-membership filtered and tax portal keeps FREE-FIRST deep links', async () => {
+  const trade = await (await workspaceTradeAdminScript()).text();
+  const tax = await readFile(new URL('../tax-portal-worker.js', import.meta.url), 'utf8');
+  assert.match(trade, /access\?\.role!=='workspace_admin'/);
+  assert.match(trade, /current_site_activity_contexts/);
+  assert.match(trade, /authorizedAdminScopes\.has\(item\.id\)/);
+  assert.match(trade, /hasSiteAdminRole/);
+  assert.match(tax, /href="\/ekodibiz\/admin\/finance"/);
+  assert.doesNotMatch(tax, /id="ekodibizSiteSwitcher"/);
+  assert.doesNotMatch(tax, /data-admin-scope-current="tax"/);
+  assert.match(tax, /new URLSearchParams\(location\.search\)\.get\('tab'\)/);
+  assert.match(tax, /encodeURIComponent\(location\.origin\+location\.pathname\+location\.search\)/);
+  assert.match(tax, /FREE-FIRST/);
+  assert.match(tax, /automationEnabled\?'ON':'OFF'/);
 });
