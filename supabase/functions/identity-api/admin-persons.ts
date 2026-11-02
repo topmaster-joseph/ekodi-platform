@@ -11,7 +11,9 @@ export function createIdentityAdminHandler(deps:{
 }){
   const {db,json,verifyGoogle,sha256,googleClientId}=deps;
   const bootstrap=new Set(["topmaster.joseph@gmail.com","joseph@ekodi.kr"]);
-  const roles=new Set(["tenant_admin","site_admin","admin","owner"]);
+  // Production app_role enum: platform_admin, tenant_admin, store_owner, store_staff, member, customer.
+  // Site-level read access is delegated only to a registered tenant_admin, never to ordinary members.
+  const roles=new Set(["tenant_admin"]);
   const normalized=(v:unknown)=>String(v||"").trim().toLowerCase();
   const noError=(r:any)=>{if(r.error)throw r.error;return r.data;};
   const unique=(values:any[])=>[...new Set(values.filter(Boolean))];
