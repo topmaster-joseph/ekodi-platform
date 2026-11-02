@@ -217,6 +217,8 @@
   ];
   let selectedProvider = 'all';
   let sellerProducts = [];
+  let operatorScope = false;
+  let visibleLimit = 40;
   function supplierGroup(product) {
     const provider = String(product.supply?.provider || '').toLowerCase();
     if (provider === 'domeggook' || provider === 'domemae') return 'domeggook';
@@ -246,20 +248,29 @@
       tab.setAttribute('aria-selected', id === selectedProvider ? 'true' : 'false');
       tab.tabIndex = id === selectedProvider ? 0 : -1;
       tab.textContent = `${label} ${counts.get(id)}`;
-      tab.addEventListener('click', () => { selectedProvider = id; renderProviderProducts(); });
+      tab.addEventListener('click', () => { selectedProvider = id; visibleLimit = 40; renderProviderProducts(); });
       tabs.append(tab);
     }
     const visible = selectedProvider === 'all' ? sellerProducts : sellerProducts.filter(p => supplierGroup(p) === selectedProvider);
     const preparing = visible.filter(p => p.status !== 'published' || (p.product?.saleType === 'direct' && !p.checkoutReady)).length;
     const selling = visible.filter(p => p.status === 'published' && (p.product?.saleType !== 'direct' || p.checkoutReady)).length;
-    if (summary) summary.textContent = `표시 ${visible.length}건 · 상품 준비중 ${preparing}건 · 판매 가능 ${selling}건 (이 계정에 등록한 상품 기준)`;
+    if (summary) summary.textContent = `전체 ${visible.length}건 · 상품 준비중 ${preparing}건 · 판매 가능 ${selling}건 · 현재 ${Math.min(visible.length,visibleLimit)}건 표시 (${operatorScope ? '운영자 전체 공급상품 · 조회 전용' : '이 계정에 등록한 상품'})`;
+    document.querySelector('[data-provider-more]')?.remove();
     container.replaceChildren();
     if (!visible.length) {
       const empty = document.createElement('article');
       const title = document.createElement('h3'); title.textContent = '해당 공급처에 등록된 상품이 없습니다.';
       const desc = document.createElement('p'); desc.textContent = '이 화면은 현재 로그인한 판매자 계정의 상품을 보여줍니다. 외부 제휴 전체 카탈로그는 별도 관리자에서 관리합니다.';
       empty.append(title, desc); container.append(empty);
-    } else visible.forEach(product => container.append(productCard(product)));
+    } else {
+      visible.slice(0, visibleLimit).forEach(product => container.append(productCard(product)));
+      if (visible.length > visibleLimit) {
+        const more = document.createElement('button'); more.type = 'button'; more.className = 'smallbtn';
+        more.textContent = `상품 더 보기 (${visible.length - visibleLimit}건 남음)`;
+        more.addEventListener('click', () => { visibleLimit += 40; renderProviderProducts(); });
+        container.after(more); more.dataset.providerMore = '';
+      }
+    }
   }
 
   function productCard(product) {
@@ -271,7 +282,9 @@
       : product.source?.kind === 'consigned_merchant' ? `출처 상인 ${product.source.name}${product.source.contact ? ` (${product.source.contact})` : ''}`
       : product.source?.kind === 'ekodibiz_own' ? '출처 에코디비즈 자체상품' : '';
     article.querySelector('p').textContent = [`${product.seller?.displayName || '판매자'} · ${product.store?.name || '개인상품'} · ${product.shareCode}`, origin].filter(Boolean).join(' · ');
-    article.querySelector('button').addEventListener('click', () => fillForm(product));
+    const edit = article.querySelector('button');
+    if (product.readOnly) { edit.textContent = '운영 조회 전용'; edit.disabled = true; }
+    else edit.addEventListener('click', () => fillForm(product));
     if (product.publicShareLinkActive) {
       const link = document.createElement('a');
       link.className = 'smallbtn'; link.href = product.publicUrl; link.target = '_blank'; link.rel = 'noopener'; link.textContent = '일반링크 · 8%';
@@ -292,14 +305,20 @@
     const apiStatus = document.querySelector('[data-server-api-status]');
     if (!container) return;
     try {
-      const [productsResult, ordersResult, settlementsResult] = await Promise.all([
+      const [productsResult, ordersResult, settlementsResult, operatorResult] = await Promise.all([
         api('/api/products'),
         api('/api/orders?limit=20'),
-        api('/api/settlements')
+        api('/api/settlements'),
+        api('/api/internal/products/by-provider').catch(() => null)
       ]);
-      sellerProducts = Array.isArray(productsResult.products) ? productsResult.products : [];
+      const owned = Array.isArray(productsResult.products) ? productsResult.products : [];
+      operatorScope = operatorResult?.scope === 'operator-read-only';
+      const operatorRows = operatorScope && Array.isArray(operatorResult.products) ? operatorResult.products : [];
+      const byId = new Map(owned.map(product => [product.id,product]));
+      for (const product of operatorRows) if (!byId.has(product.id)) byId.set(product.id,product);
+      sellerProducts = [...byId.values()];
       renderProviderProducts();
-      if (apiStatus) apiStatus.textContent = `연결됨 · 상품 ${productsResult.products?.length || 0}개`;
+      if (apiStatus) apiStatus.textContent = `연결됨 · ${operatorScope ? '전체 공급상품 포함' : '내 상품'} ${sellerProducts.length}개`;
       dashboardSummary(ordersResult.orders || [], settlementsResult.settlement || {});
       const currentId = text(form.elements.productId?.value);
       if (isServerId(currentId)) {
