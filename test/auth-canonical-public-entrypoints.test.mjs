@@ -6,6 +6,7 @@ const entrypoints = [
   'social/auth-state.js',
   'energy/auth-state.js',
   'books/publishing/studio/app.js',
+  'publishing/studio/app.js',
   'bible/app.js',
   'education/app.js',
   'author/billing.js',
