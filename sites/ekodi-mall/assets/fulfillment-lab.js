@@ -60,6 +60,30 @@
       list.append(card);
     }
   }
+  // Authenticated seller-only, read-only logistics cockpit.
+  function renderLogistics(overview) {
+    const valid = overview?.scope === 'authenticated-seller';
+    const data = valid ? overview : {};
+    const metrics = [
+      ['logisticsOrderCount', valid ? data.sampledOrderCount : '—'],
+      ['logisticsActive', valid ? data.counts?.active : '—'],
+      ['logisticsShipped', valid ? data.counts?.shipped : '—'],
+      ['logisticsAttention', valid ? data.counts?.attention : '—'],
+      ['logisticsPlanned', valid ? money(data.supplierPayablePlannedAmount) : '—']
+    ];
+    for (const [id, value] of metrics) {
+      const element = document.getElementById(id);
+      if (element) element.textContent = String(value ?? '—');
+    }
+    const limit = document.getElementById('logisticsLimitNote');
+    if (limit) limit.textContent = valid
+      ? (data.latest100Only ? '최근 100건의 주문만 집계합니다. 전체 실적이 아닙니다.' : '로그인한 판매자의 조회된 주문만 집계합니다.')
+      : '로그인한 판매자의 주문 이행 내역만 집계합니다.';
+    const readiness = document.getElementById('logisticsReadiness');
+    if (readiness) readiness.textContent = valid
+      ? `배송정보 승인 ${data.execution?.buyerPiiReleaseEnabled ? 'ON' : 'OFF'} · 공급처 발주 ${data.execution?.supplierForwardEnabled ? 'ON' : 'OFF'} · 정산·환불 실행 OFF. 이 관제 화면은 조회 전용입니다.`
+      : '승인 상태를 확인하지 않았습니다. 실제 발주와 정산은 이 화면에서 실행하지 않습니다.';
+  }
   async function load() {
     if (!session) return;
     const version = sessionVersion, identity = session.user?.id;
@@ -67,6 +91,7 @@
     if (!session || version !== sessionVersion || session.user?.id !== identity) return;
     const items = Array.isArray(result.fulfillments) ? result.fulfillments : [];
     const gates = result.gates || {};
+    renderLogistics(result.logisticsOverview);
     if (gatePii) { gatePii.textContent = gates.buyerPiiReleaseEnabled ? 'ON' : 'OFF'; gatePii.dataset.state = gates.buyerPiiReleaseEnabled ? 'on' : 'off'; }
     if (gateForward) { gateForward.textContent = gates.supplierForwardEnabled ? 'ON' : 'OFF'; gateForward.dataset.state = gates.supplierForwardEnabled ? 'on' : 'off'; }
     if (total) total.textContent = String(items.length);
@@ -86,6 +111,7 @@
       if (gatePii) { gatePii.textContent = 'OFF'; gatePii.dataset.state = 'off'; }
       if (gateForward) { gateForward.textContent = 'OFF'; gateForward.dataset.state = 'off'; }
       render([], false);
+      renderLogistics(null);
     }
   }
   const tabs = [...document.querySelectorAll('[data-fulfillment-tab]')];
