@@ -58,7 +58,7 @@
           "data-public-tab=\"identity\"",
           "data-public-tab=\"sharing\"",
           "data-public-tab=\"inbox\"",
-          "secondary-feature-loader.js?v=20261008-startup-defer-v1"
+          "secondary-feature-loader.js?v=20261103-read-guard-v1"
         ]
       },
       {

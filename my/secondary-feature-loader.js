@@ -1,6 +1,6 @@
 const MODULES=Object.freeze([
-  '/my/public-profile.js?v=20260923-public-person-v1',
-  '/my/digital-card-admin.js?v=20261008-messenger-share-1',
+  '/my/public-profile.js?v=20261103-read-guard-v1',
+  '/my/digital-card-admin.js?v=20261103-read-guard-v1',
   '/my/character-identity.js?v=20260906-ekodian-personal-v1',
   '/my/approval-brief.js?v=20260904-approval-hub-1',
   '/my/personal-finance.js?v=20260905-personal-finance-1',
