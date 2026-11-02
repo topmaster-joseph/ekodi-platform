@@ -14,6 +14,7 @@ test('CGMA dedicated admin sections are classified as site-admin in the shared r
   assert.equal(group.scope,'workspace:cgma');
   assert.deepEqual(group.menus.map(x=>x.id),six);
   assert.ok(file.includes("workspace==='cgma'?[{id:'cgma-review'"));
+  assert.ok(file.includes("workspace==='cgma'?peopleSections.filter(([key])=>key==='members'):peopleSections"), 'CGMA member and festival links must not repeat under generic site administration');
   assert.ok(file.includes("if(workspace==='cgma'&&CGMA_EMBEDDED_PANELS[section])return cgmaEmbeddedAdmin(section)"));
 });
 
