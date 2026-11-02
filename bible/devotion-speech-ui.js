@@ -1,4 +1,5 @@
 import { devotionSpeechSegments } from './devotion-share-audio.js';
+import { createEkodiNarrationPlayer } from './devotion-ekodi-narration.js';
 import { chooseKoreanVoice, koreanVoices, knownKoreanVoiceGender } from './devotion-voice-catalog.js';
 
 // Device voice quality varies. Prefer explicitly named natural Korean voices,
@@ -70,11 +71,23 @@ export function createDevotionSpeechUI(win = window, doc = document) {
   status.setAttribute('aria-live', 'polite');
 
   // Preserve the existing base control ordering for older screen-reader/test clients.
-  row.append(play, pause, repeat, stopButton, speedLabel, status, genderLabel, voiceLabel);
+  const engineLabel = doc.createElement('label');
+  engineLabel.className = 'dv-speech-engine';
+  engineLabel.textContent = '낭독 방식 ';
+  const engine = doc.createElement('select');
+  engine.setAttribute('aria-label', '에코디 낭독음성 또는 기기 음성');
+  const ekodiOption = createOption('ekodi', '에코디 낭독 · 준비 중');
+  ekodiOption.disabled = true;
+  engine.append(ekodiOption, createOption('device', '기기 음성'));
+  engine.value = 'device';
+  engineLabel.append(engine);
+  row.append(play, pause, repeat, stopButton, speedLabel, status, genderLabel, voiceLabel, engineLabel);
 
   const synth = win.speechSynthesis;
   const Utterance = win.SpeechSynthesisUtterance;
   const supported = Boolean(synth && Utterance && typeof synth.speak === 'function');
+  const ekodi = createEkodiNarrationPlayer(win);
+  let engineChoiceMade = false;
   let data = null;
   let generation = 0;
   let segments = [];
@@ -106,9 +119,9 @@ export function createDevotionSpeechUI(win = window, doc = document) {
   }
   function display(message) {
     status.textContent = message;
-    play.disabled = !supported || !data?.found || playing;
+    play.disabled = (!supported && !ekodi.ready) || !data?.found || playing;
     pause.disabled = !playing;
-    repeat.disabled = !supported || !data?.found;
+    repeat.disabled = (!supported && !ekodi.ready) || !data?.found;
     stopButton.disabled = !playing;
     pause.textContent = paused ? '계속 듣기' : '일시정지';
   }
@@ -151,6 +164,7 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     index = 0;
     if (nextTimer != null) { win.clearTimeout?.(nextTimer); nextTimer = null; }
     if (supported) synth.cancel();
+    ekodi.stop();
     display(data?.found ? '듣기 준비' : '');
   }
   function speakNext(run, selectedVoice) {
@@ -193,6 +207,16 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     if (!supported || !data?.found) return;
     stop();
     refreshVoices();
+    if (engine.value === 'ekodi') {
+      if (!ekodi.ready) { display('에코디 낭독음원 준비 중 · 기기 음성을 선택해 주세요.'); return; }
+      const selectedGender = gender.value === 'female' ? 'female' : 'male';
+      playing = true; paused = false;
+      display('에코디 ' + (selectedGender === 'male' ? '남성' : '여성') + ' 낭독 시작 중');
+      void ekodi.play(selectedGender, Number(speed.value) || 1).then(ok=>{
+        if (!ok) {playing=false;display(ekodi.status);}
+      });
+      return;
+    }
     const choices = koreanVoices(getVoices());
     // A gender is never approximated by changing pitch of an unknown voice.
     if (choices.length && gender.value !== 'auto' && !voice.value &&
@@ -226,14 +250,23 @@ export function createDevotionSpeechUI(win = window, doc = document) {
   play.addEventListener('click', start);
   repeat.addEventListener('click', start);
   pause.addEventListener('click', () => {
-    if (!supported || !playing) return;
+    if (!playing) return;
+    if (engine.value === 'ekodi') {
+      if (paused) {void ekodi.resume(); paused = false;}
+      else {ekodi.pause(); paused = true;}
+      display(paused ? '에코디 낭독 일시정지' : '에코디 낭독 재생 중');
+      return;
+    }
+    if (!supported) return;
     if (paused) { synth.resume(); paused = false; }
     else { synth.pause(); paused = true; }
     display(paused ? '일시정지됨' : `본문 듣는 중 · ${index + 1}/${segments.length}`);
   });
   stopButton.addEventListener('click', stop);
   gender.addEventListener('change', () => {
-    stop(); voice.value = ''; preferredVoice = ''; savePreference(); display(describeChoice());
+    stop(); voice.value = ''; preferredVoice = ''; savePreference();
+    if (engine.value === 'ekodi') display('에코디 '+(gender.value==='female'?'여성':'남성')+' 낭독 선택');
+    else display(describeChoice());
   });
   voice.addEventListener('change', () => {
     stop();
@@ -245,8 +278,41 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     display(describeChoice());
   });
   speed.addEventListener('change', () => {
+    ekodi.setSpeed(Number(speed.value));
     savePreference();
     if (!playing) display(describeChoice());
+  });
+  engine.addEventListener('change',()=>{
+    engineChoiceMade = true;
+    stop();
+    if (engine.value === 'ekodi') {
+      voiceLabel.hidden = true;
+      if (gender.value === 'auto') gender.value = 'male';
+      display(ekodi.ready ? '에코디 낭독음성 선택 완료' : '에코디 음원 준비 중');
+    } else {
+      voiceLabel.hidden = false;
+      // The device may have no gender-identifiable Korean voice. Do not let
+      // switching from EKODI's true female/male audio block fallback playback.
+      if (!chooseKoreanVoice(getVoices(),gender.value)) gender.value = 'auto';
+      display(describeChoice());
+    }
+  });
+  ekodi.onStatus((message, ready) => {
+    ekodiOption.disabled = !ready;
+    ekodiOption.textContent = ready ? '에코디 낭독 · 남성/여성' : '에코디 낭독 · 준비 중';
+    if (ready && !engineChoiceMade && data?.found) {
+      engine.value = 'ekodi';
+      voiceLabel.hidden = true;
+      gender.value = 'male';
+    }
+    if (engine.value === 'ekodi') {
+      if (/끝났습니다|재생할 수 없습니다|차단됐습니다/.test(message)) {
+        playing = false; paused = false;
+      }
+      if (data?.found) display(message);
+    } else if (data?.found && !playing) {
+      display(ready ? '에코디 낭독음원이 준비되었습니다. 낭독 방식에서 에코디를 선택하세요.' : message);
+    }
   });
   win.addEventListener('pagehide', stop);
   display('');
@@ -256,8 +322,17 @@ export function createDevotionSpeechUI(win = window, doc = document) {
       stop();
       data = next?.found ? next : null;
       row.hidden = !data;
-      if (!supported && data) display('이 기기에서는 본문 듣기를 지원하지 않습니다.');
-      else if (data) { refreshVoices(); display(describeChoice()); }
+      if (!data) void ekodi.load('');
+      if (data) {
+        refreshVoices();
+        // The approved-mp3 state is checked for the currently published date.
+        // A pending date never exposes another day's audio or private voice files.
+        void ekodi.load(data.date).then(ready => {
+          if (!ready && !supported) display('이 기기는 음성합성을 지원하지 않고, 에코디 낭독음원도 준비되지 않았습니다.');
+        });
+        if (!supported) display('에코디 낭독음원을 확인하고 있습니다.');
+        else display(describeChoice());
+      }
     },
     stop,
   };
