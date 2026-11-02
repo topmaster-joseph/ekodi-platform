@@ -40,7 +40,7 @@ function normalizeSession(data,current={}){return{accessToken:data.access_token|
 async function exchangeHandoff(){
   const params=new URLSearchParams(location.hash.slice(1));const tokenHash=params.get('ekodi_token');if(!tokenHash)return storedSession();
   const data=await supabaseAuth('/auth/v1/verify',{token_hash:tokenHash,type:params.get('ekodi_type')||'email'});
-  const session=normalizeSession(data);if(!session.accessToken)throw new Error('login_handoff_failed');saveSession(session);history.replaceState(null,'',location.pathname+location.search);return session;
+  const session=normalizeSession(data);if(!session.accessToken)throw new Error('login_handoff_failed');saveSession(session);if(location.hostname==='ekodi.kr'){try{localStorage.setItem(CENTRAL_SESSION_KEY,JSON.stringify({...data,expires_at:session.expiresAt}))}catch{}}history.replaceState(null,'',location.pathname+location.search);return session;
 }
 async function userToken(){
   let session=await exchangeHandoff();if(!session?.accessToken)return'';
@@ -62,9 +62,18 @@ function centralSessionToken(){
   }catch{return''}
 }
 async function token(){
+  // A new one-time auth handoff is more recent than cached sessions.
+  if(location.hash.includes('ekodi_token=')){
+    try{const handoff=await userToken();if(handoff)return handoff}
+    catch(error){if(Number(error?.status||0)<500)throw error}
+  }
+  // The central EKODI login is authoritative for the canonical ekodi.kr host.
+  const central=centralSessionToken();if(central)return central;
+  // An expired central identity must not silently become another legacy administrator.
+  try{const raw=localStorage.getItem(CENTRAL_SESSION_KEY);if(raw){const v=JSON.parse(raw);if((v?.currentSession||v?.session||v)?.access_token)return''}}catch{}
   const platform=sessionStorage.getItem(PLATFORM_TOKEN_KEY)||'';if(platform)return platform;
   try{const handoff=await userToken();if(handoff)return handoff}catch(error){if(Number(error?.status||0)<500)throw error}
-  return centralSessionToken();
+  return '';
 }
 async function api(path,options={}){
   const bearer=await token();

@@ -72,13 +72,19 @@
   };
   function authToken(){
     try{
+      const raw=JSON.parse(localStorage.getItem('sb-renzehysxirjilvdxacv-auth-token')||'null');
+      const session=raw?.currentSession||raw?.session||raw;
+      // Never let cached site credentials hide the current central EKODI identity.
+      if(session?.access_token){
+        if(session.expires_at&&session.expires_at<=Math.floor(Date.now()/1000)+30)return '';
+        return session.access_token;
+      }
+    }catch{}
+    try{
       const platform=sessionStorage.getItem('ekodi-auth-token');
       if(platform)return platform;
       const admin=JSON.parse(sessionStorage.getItem('ekodi-seonam-admin-session')||'null');
       if(admin?.accessToken&&(!admin.expiresAt||admin.expiresAt>Math.floor(Date.now()/1000)+30))return admin.accessToken;
-      const raw=JSON.parse(localStorage.getItem('sb-renzehysxirjilvdxacv-auth-token')||'null');
-      const session=raw?.currentSession||raw?.session||raw;
-      if(session?.access_token&&(!session.expires_at||session.expires_at>Math.floor(Date.now()/1000)+30))return session.access_token;
     }catch{}
     return '';
   }
