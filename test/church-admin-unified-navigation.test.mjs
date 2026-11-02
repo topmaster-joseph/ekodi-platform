@@ -75,6 +75,8 @@ test('both existing admin runtimes project the same registry without changing ow
   assert.match(churchJs,/mountChurchAdminNavigation/);
   assert.match(workspaceJs,/mountChurchAdminNavigation/);
   assert.match(workspaceJs,/workspace==='ekodichurch'&&!service/);
+  assert.match(workspaceJs,/!seen.has\('services'\)/);
+  assert.doesNotMatch(workspaceJs,/id:'service-config'/);
   assert.match(workspaceJs,/heading\.after\(tabs\)/);
   assert.match(workspaceCss,/church-admin-detail-tabs/);
   assert.ok(CHURCH_ADMIN_NAV_CSS.includes('word-break:keep-all'));
