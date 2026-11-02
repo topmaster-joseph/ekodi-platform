@@ -7,21 +7,33 @@ const LOGIN='https://ekodi.kr/auth/?site=mission&direct=1&return_to='+encodeURIC
 const $=s=>document.querySelector(s);
 $('#login').href=LOGIN;
 
+const CENTRAL_AUTH_KEY='sb-renzehysxirjilvdxacv-auth-token';
 function sessionFromStorage(){
   try{
-    for(const key of ['ekodimission-member-session-v1','ekodimission-pastor-session']){
-      const v=JSON.parse(localStorage.getItem(key)||sessionStorage.getItem(key)||'null');
-      if(v?.accessToken)return v;
-    }
-    for(let i=0;i<localStorage.length;i++){
-      const key=localStorage.key(i)||'';
-      if(!/^sb-.*-auth-token$/.test(key))continue;
-      const raw=JSON.parse(localStorage.getItem(key)||'null');
-      const s=raw?.currentSession||raw?.session||raw;
-      if(s?.access_token)return s;
-    }
+    const raw=JSON.parse(localStorage.getItem(CENTRAL_AUTH_KEY)||'null');
+    const central=raw?.currentSession||raw?.session||raw;
+    if(central?.access_token)return {...central,source:'central'};
   }catch{}
+  // Legacy Mission sessions are a compatibility fallback, never a substitute for current EKODI identity.
+  for(const key of ['ekodimission-member-session-v1','ekodimission-pastor-session']){
+    try{
+      const v=JSON.parse(localStorage.getItem(key)||sessionStorage.getItem(key)||'null');
+      if(v?.accessToken)return {...v,source:'legacy'};
+    }catch{}
+  }
   return null;
+}
+function saveCentralSession(v,newlyVerified=null){
+  try{
+    const raw=JSON.parse(localStorage.getItem(CENTRAL_AUTH_KEY)||'null')||{};
+    const value={access_token:v.access_token,refresh_token:v.refresh_token,expires_at:v.expires_at};
+    if(newlyVerified)localStorage.setItem(CENTRAL_AUTH_KEY,JSON.stringify({...newlyVerified,...value}));
+    else if(raw.currentSession)localStorage.setItem(CENTRAL_AUTH_KEY,JSON.stringify({...raw,currentSession:{...raw.currentSession,...value}}));
+    else if(raw.session)localStorage.setItem(CENTRAL_AUTH_KEY,JSON.stringify({...raw,session:{...raw.session,...value}}));
+    else localStorage.setItem(CENTRAL_AUTH_KEY,JSON.stringify({...raw,...value}));
+    localStorage.removeItem('ekodimission-member-session-v1');
+    localStorage.removeItem('ekodimission-pastor-session');
+  }catch{}
 }
 function tokenValue(s){return String(s?.access_token||s?.accessToken||'');}
 function expiry(s){return Number(s?.expires_at||s?.expiresAt||0);}
@@ -35,7 +47,8 @@ async function currentToken(){
     });
     if(!response.ok)return '';
     const next=await response.json();
-    localStorage.setItem('ekodimission-member-session-v1',JSON.stringify({accessToken:next.access_token,refreshToken:next.refresh_token,expiresAt:next.expires_at,user:next.user}));
+    if(s.source==='central')saveCentralSession(next);
+    else localStorage.setItem('ekodimission-member-session-v1',JSON.stringify({accessToken:next.access_token,refreshToken:next.refresh_token,expiresAt:next.expires_at,user:next.user}));
     return String(next.access_token||'');
   }
   return tokenValue(s);
@@ -53,9 +66,8 @@ async function consumeHandoff(){
   if(!response.ok)throw new Error('인증 연결에 실패했습니다.');
   const s=await response.json();
   if(!s.access_token)throw new Error('유효한 로그인 세션이 없습니다.');
-  localStorage.setItem('ekodimission-member-session-v1',JSON.stringify({
-    accessToken:s.access_token,refreshToken:s.refresh_token,expiresAt:s.expires_at,user:s.user
-  }));
+  // Fresh EKODI login replaces the entire previous principal, not just the legacy mission token.
+  saveCentralSession(s,s);
 }
 async function connect(){
   const target=$('#operator'),access=$('#access'),login=$('#login');
