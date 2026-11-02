@@ -450,3 +450,16 @@ test('shared-site release probes honor canonical slash parity',async()=>{
     }
   }
 });
+
+test('Publishing Studio execution proxy keeps canonical API calls outside the service subpath',async()=>{
+  const source=fs.readFileSync(new URL('../publishing/studio/app.js',import.meta.url),'utf8');
+  const publishing=binding(source,'application/javascript');
+  const response=await routeCanonicalSurface(new Request('https://ekodi.kr/publishing/studio/app.js'),{PUBLISHING:publishing});
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('x-ekodi-canonical-surface'),'publishing');
+  const transformed=await response.text();
+  assert.match(transformed,/const API=new URL\('https:\/\/ekodi\.kr\/api\/'\)/);
+  assert.match(transformed,/api\('books\/me'\)/);
+  assert.doesNotMatch(transformed,/\/publishing\/api\/books\/me/);
+  assert.equal(new URL('books/me','https://ekodi.kr/api/').pathname,'/api/books/me');
+});
