@@ -59,7 +59,7 @@ test('config fails closed without a server key, unrelated routes delegate',async
   const env={DB:database()};
   assert.equal(await handleNotificationApi(request('/api/other'),env),null);
   assert.equal((await json(await handleNotificationApi(request('/api/notifications/config'),env))).enabled,false);
-  assert.equal((await handleNotificationApi(request('/api/notifications/subscription','POST',{}, {origin:'https://ekodi.kr'}),env)).status,503);
+  assert.equal((await handleNotificationApi(request('/api/notifications/subscription','POST',{}, {origin:'https://ekodi.kr'}),env)).status,400);
 });
 test('explicit opt-in, namespace isolation, dedup, delivery and unsubscribe',async()=>{
   const db=database(),vapid=await keys(),env=environment(db,vapid);
@@ -140,4 +140,47 @@ test('expired push endpoint can be re-registered without reviving obsolete token
   assert.equal(db.raw.prepare('SELECT count(*) AS n FROM notification_devices').get().n,1);
   assert.equal((await handleNotificationApi(request('/api/notifications/preferences','GET',null,{authorization:'Bearer '+oldToken}),env)).status,401);
   assert.equal((await handleNotificationApi(request('/api/notifications/preferences','GET',null,{authorization:'Bearer '+nextToken}),env)).status,200);
+});
+
+test('in-app inbox works with push disabled and keeps explicit opt-in',async()=>{
+  const db=database(),vapid=await keys();
+  const env={DB:db,NOTIFICATION_EVENT_SECRET:'test_internal_event_secret_12345678901234567890'};
+  const deviceToken=b64(crypto.getRandomValues(new Uint8Array(32)));
+  const headers={origin:'https://ekodi.kr'};
+  const body={deviceToken,channel:'inbox',topics:['mission'],consentVersion:consent,marketingConsent:false};
+  assert.equal((await handleNotificationApi(request('/api/notifications/subscription','POST',body,headers),env)).status,201);
+  assert.equal((await handleNotificationApi(request('/api/notifications/subscription','POST',{...body,marketingConsent:true},headers),env)).status,400);
+  assert.equal((await handleNotificationApi(request('/api/notifications/subscription','POST',{...body,channel:'email'},headers),env)).status,400);
+  assert.equal(db.raw.prepare('SELECT count(*) AS n FROM notification_devices').get().n,1);
+  const stored=db.raw.prepare('SELECT endpoint,p256dh,auth_secret FROM notification_devices').get();
+  assert.match(stored.endpoint,/^inbox:[a-f0-9]{64}$/);
+  assert.equal(stored.p256dh,'');
+  assert.equal(stored.auth_secret,'');
+  const sessionHeaders={authorization:'Bearer '+deviceToken};
+  const pref=await json(await handleNotificationApi(request('/api/notifications/preferences','GET',null,sessionHeaders),env));
+  assert.deepEqual(pref.topics,['mission']);assert.equal(pref.channel,'inbox');
+  const event={idempotencyKey:'mission:inbox:20261102',serviceId:'mission',topic:'mission',
+    title:'오늘의 말씀',body:'새 묵상이 등록되었습니다.',targetPath:'/ekodimission/'};
+  assert.equal((await handleNotificationApi(request('/api/notifications/events','POST',event,{'x-ekodi-notification-secret':env.NOTIFICATION_EVENT_SECRET}),env)).status,202);
+  let sendCount=0;
+  const schedule=await runNotificationSchedule(env,{transport:async()=>{sendCount++;throw Error('must_not_push');}});
+  assert.equal(schedule.enabled,false);assert.equal(schedule.inbox,true);assert.equal(sendCount,0);
+  assert.equal(db.raw.prepare('SELECT status FROM notification_events').get().status,'done');
+  assert.equal(db.raw.prepare('SELECT status FROM notification_deliveries').get().status,'delivered');
+  const feed=await json(await handleNotificationApi(request('/api/notifications/inbox','GET',null,sessionHeaders),env));
+  assert.equal(feed.items.length,1);assert.equal(feed.items[0].title,'오늘의 말씀');
+  assert.equal(feed.items[0].target_path,'/ekodimission/');
+  // Upgrade the same device without creating a duplicate consent record.
+  const enabledEnv=environment(db,vapid);
+  const upgrade={...body,channel:undefined,subscription:{
+    endpoint:'https://fcm.googleapis.com/fcm/send/upgraded-1',keys:{p256dh:vapid.p256dh,auth:vapid.auth}
+  }};
+  assert.equal((await handleNotificationApi(request('/api/notifications/subscription','POST',upgrade,headers),enabledEnv)).status,201);
+  assert.equal(db.raw.prepare('SELECT count(*) AS n FROM notification_devices').get().n,1);
+  assert.equal((await json(await handleNotificationApi(request('/api/notifications/preferences','GET',null,sessionHeaders),enabledEnv))).channel,'webPush');
+  // Switching back to inbox must not request browser push.
+  assert.equal((await handleNotificationApi(request('/api/notifications/subscription','POST',body,headers),enabledEnv)).status,201);
+  assert.equal((await json(await handleNotificationApi(request('/api/notifications/preferences','GET',null,sessionHeaders),enabledEnv))).channel,'inbox');
+  assert.equal((await handleNotificationApi(request('/api/notifications/subscription','DELETE',null,{...sessionHeaders,...headers}),env)).status,200);
+  assert.equal(db.raw.prepare('SELECT count(*) AS n FROM notification_devices').get().n,0);
 });

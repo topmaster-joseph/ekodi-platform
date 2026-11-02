@@ -1,0 +1,15 @@
+{
+  "name": "ekodi-church-homepage",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler pages dev . --port 8788",
+    "test": "node --test test/*.test.mjs",
+    "deploy": "wrangler pages deploy . --project-name ekodi-church",
+    "test:live:synthetic": "playwright test test/church-live-browser-synthetic.spec.mjs --reporter=line"
+  },
+  "devDependencies": {
+    "wrangler": "^4.26.0",
+    "@playwright/test": "^1.55.0"
+  }
+}

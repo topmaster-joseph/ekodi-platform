@@ -6,6 +6,44 @@
   const bookId = (params.get('book') || '').toUpperCase();
   const source = params.get('from') || 'bookstore';
   let quote = null, busy = false;
+  let activeBookTab = 'intro';
+  const tabLabels = { intro: '책소개', toc: '목차', benefit: '구매혜택' };
+  function renderBookTab() {
+    if (!quote) return;
+    const book = quote.book || {};
+    const panel = $('bookTabPanel');
+    panel.replaceChildren();
+    const text = document.createElement('p');
+    if (activeBookTab === 'toc') {
+      const items = Array.isArray(book.toc) ? book.toc : Array.isArray(book.tableOfContents) ? book.tableOfContents : [];
+      if (items.length) {
+        const list = document.createElement('ol');
+        items.forEach(item => { const li = document.createElement('li'); li.textContent = typeof item === 'string' ? item : (item.title || item.label || ''); list.append(li); });
+        panel.append(list);
+      } else { text.textContent = '공개된 목차를 준비하고 있습니다.'; panel.append(text); }
+    } else if (activeBookTab === 'benefit') {
+      text.textContent = '회원등급별 가격이 자동 적용됩니다. 구매한 도서는 내 서재에서 다시 열람할 수 있습니다.';
+      panel.append(text);
+    } else {
+      text.textContent = book.abstract || book.description || book.summary || book.subtitle || '도서 소개를 준비하고 있습니다.';
+      panel.append(text);
+    }
+    document.querySelectorAll('[data-book-tab]').forEach(tab => {
+      const selected = tab.dataset.bookTab === activeBookTab;
+      tab.setAttribute('aria-selected', String(selected)); tab.tabIndex = selected ? 0 : -1;
+      if (selected) panel.setAttribute('aria-labelledby', tab.id);
+    });
+  }
+  function selectBookTab(tab, focus = false) {
+    if (!Object.hasOwn(tabLabels, tab)) return;
+    activeBookTab = tab; renderBookTab();
+    if (focus) document.querySelector('[data-book-tab="' + tab + '"]')?.focus();
+  }
+  document.querySelectorAll('[data-book-tab]').forEach((tab, index, tabs) => {
+    tab.addEventListener('click', () => selectBookTab(tab.dataset.bookTab));
+    tab.addEventListener('keydown', e => { if (!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return; e.preventDefault(); const next = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (index + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length; selectBookTab(tabs[next].dataset.bookTab, true); });
+  });
+  $('bookCoverButton').addEventListener('click', () => { selectBookTab(activeBookTab === 'toc' ? 'intro' : 'toc', true); });
   const msg = (text, ok = false) => { const n = $('buyMsg'); n.textContent = text || ''; n.classList.toggle('ok', ok); };
 
   function renderTiers() {
@@ -28,6 +66,7 @@
     $('bookSubtitle').hidden = !b.subtitle;
     $('bookAuthor').textContent = `${b.author} 지음 · ${(b.format || []).join(' · ') || 'EPUB 3'}${b.edition ? ' · ' + b.edition : ''}`;
     $('bookCover').replaceChildren(C.cover(b));
+    renderBookTab();
     const p = quote.price;
     $('priceNow').textContent = C.won(p?.amount);
     $('priceList').textContent = p && p.amount < p.listPrice ? C.won(p.listPrice) : '';
@@ -39,16 +78,15 @@
       $('priceTier').insertAdjacentElement('afterend',bonusNote);
     }
     bonusNote.textContent = quote.audiobook?.included
-      ? (quote.audiobook.ready
-        ? '이 전자책에는 승인된 오디오북이 무료 포함됩니다. 구매 후 같은 서재에서 함께 받으세요.'
-        : '오디오북 무료 제공 대상 도서입니다. 오디오북은 음성·권리 검수 중이며, 준비가 완료되면 기존 구매자에게 추가 결제 없이 열립니다.')
-      : '전자책 출판 검수 완료 후 무료 오디오북 제공 여부를 확인합니다.';
+      ? (quote.audiobook.ready ? '오디오북 무료 포함' : '오디오북 무료 제공 예정 · 검수 중')
+      : '';
+    bonusNote.hidden = !bonusNote.textContent;
 
     let langNote = $('languageEditionNote');
     if (!langNote) { langNote = document.createElement('p'); langNote.id = 'languageEditionNote'; langNote.className = 'buy-msg'; bonusNote.insertAdjacentElement('afterend', langNote); }
     const le = quote.languageEdition || {};
-    langNote.textContent = le.applied ? `다른 언어판을 보유하셔서 ${Math.round((le.rate || 0.5) * 100)}% 할인된 금액이 적용되었습니다.`
-      : le.available ? `같은 책의 다른 언어판(${(le.editions || []).map(e => e.title).join(' · ')})을 보유하시면 ${Math.round((le.rate || 0.5) * 100)}% 할인된 금액으로 구입하실 수 있습니다.` : '';
+    langNote.textContent = le.applied ? `다른 언어판 보유 할인 ${Math.round((le.rate || 0.5) * 100)}% 적용`
+      : le.available ? `다른 언어판 보유 시 ${Math.round((le.rate || 0.5) * 100)}% 할인` : '';
     langNote.hidden = !langNote.textContent;
     renderTiers();
     const list = $('channelList'); list.replaceChildren();

@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ko-KR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f6f1e8">
+  <meta name="robots" content="index,follow">
+  <title>에코디교회 실시간 | EKODI CHURCH</title>
+  <meta name="description" content="에코디교회 예배와 모임을 실시간으로 방송하고 참여하는 공간입니다.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./live.css">
+  <link rel="stylesheet" href="./worship-materials.css">
+</head>
+<body>
+<header class="church-shell-header" id="top">
+  <a class="church-shell-brand" id="churchHomeLink" href="https://ekodi.kr/ekodichurch/" aria-label="에코디교회 홈">
+    <span class="church-shell-mark" aria-hidden="true">E</span>
+    <span><strong>에코디교회</strong><small>EKODI CHURCH</small></span>
+  </a>
+  <nav class="church-shell-nav" aria-label="에코디교회 주요 메뉴">
+    <a href="https://ekodi.kr/ekodichurch/#life-hub">오늘의 삶</a>
+    <a href="https://ekodi.kr/ekodichurch/#community">공동체</a>
+    <a class="active" href="https://ekodi.kr/ekodichurch/live/" aria-current="page"><span class="nav-live-dot" aria-hidden="true"></span>온라인</a>
+    <a href="https://ekodi.kr/ekodichurch/#location">오시는 길</a>
+    <a href="https://ekodi.kr/my/">My EKODI</a>
+  </nav>
+  <div class="church-shell-actions">
+    <span class="live-state" id="liveState">방송 확인 중</span>
+    <a href="https://ekodi.kr/ekodichurch/" data-leave-studio>교회 홈</a>
+  </div>
+</header>
+
+<section class="live-page-banner" aria-labelledby="livePageTitle">
+  <div class="live-page-banner-copy">
+    <span class="live-page-kicker"><i aria-hidden="true"></i> LIVE · EKODI CHURCH</span>
+    <h1 id="livePageTitle">에코디교회 실시간 예배</h1>
+    <p>예배의 흐름을 방해하지 않도록 필요한 기능만 한곳에 모았습니다. 방송과 참여가 교회 홈페이지 안에서 자연스럽게 이어집니다.</p>
+  </div>
+  <a class="live-page-home" href="https://ekodi.kr/ekodichurch/" data-leave-studio>교회 홈페이지로</a>
+</section>
+
+<main class="live-shell">
+  <section class="live-intro" id="entryView">
+    <p class="eyebrow">WORSHIP · FELLOWSHIP · LIVE</p>
+    <h1>예배를 방송하고,<br><em>어디서든 함께 참여합니다.</em></h1>
+    <p class="intro-copy">별도 앱 설치 없이 브라우저에서 방송을 시작하거나 현재 예배에 참여할 수 있습니다.</p>
+    <div class="entry-actions">
+      <button class="primary" id="hostButton" type="button">방송하기</button>
+      <button class="secondary" id="joinButton" type="button">참여하기</button>
+    </div>
+    <div class="entry-note" id="entryNote" role="status" aria-live="polite">공개 방송은 로그인 없이 시청할 수 있습니다.</div>
+  </section>
+
+  <section class="studio hidden" id="studioView" aria-label="에코디교회 라이브 스튜디오">
+    <div class="program-stage" id="programStage">
+      <div class="program-screen" id="programScreen">
+        <video id="mainVideo" autoplay playsinline muted></video>
+        <video id="cameraSource" class="source-video" autoplay playsinline muted aria-hidden="true"></video>
+        <video id="screenSource" class="source-video" autoplay playsinline muted aria-hidden="true"></video>
+        <div class="presenter-drag-handle hidden" id="presenterDragHandle" role="button" aria-label="발표자 화면 위치 이동"><span>발표자</span><button class="overlay-remove" id="presenterRemoveButton" type="button" aria-label="발표자 화면에서 제거">×</button><button class="overlay-resize-grip" id="presenterResizeGrip" type="button" aria-label="발표자 크기 조절"></button></div>
+        <div class="program-overlay-layer" id="programOverlayLayer" aria-label="방송 화면 추가 소스"></div>
+        <div class="program-placeholder" id="programPlaceholder">
+          <strong>EKODI CHURCH LIVE</strong>
+          <span>카메라 또는 화면공유를 시작해 주세요.</span>
+        </div>
+        <div class="program-badge" id="programBadge">대기</div>
+        <button class="stage-fullscreen" id="fullscreenButton" type="button" aria-label="방송 화면 전체화면">전체화면</button>
+      </div>
+      <div class="program-status-bar" aria-label="방송 상태">
+        <span id="liveTimer">00:00:00</span>
+        <span id="interpretationStatus">통역 음성 준비 상태</span>
+        <span id="recordingStatus">녹화 준비</span>
+      </div>
+      <div class="thumbnail-rail hidden" id="thumbnailRail" aria-label="방송 소스 미리보기"></div>
+    </div>
+
+    <aside class="studio-panel">
+      <div class="panel-head">
+        <div><small>LIVE STUDIO</small><strong id="roomTitle">에코디교회 실시간 예배</strong></div>
+        <span id="connectionState">대기</span>
+      </div>
+
+      <ol class="phase-flow" id="phaseFlow" aria-label="방송 진행 단계">
+        <li data-phase="idle" class="active">대기</li>
+        <li data-phase="ready">준비 완료</li>
+        <li data-phase="live">방송 중</li>
+        <li data-phase="ended">종료</li>
+      </ol>
+
+      <div class="camera-choice" aria-label="방송자 카메라 설정">
+        <label>보여줄 카메라 <select id="primaryCameraSelect" aria-label="방송자 기본 카메라"><option value="">자동 선택</option></select></label>
+        <label>촬영 방향 <select id="cameraFacingSelect" aria-label="자기 모습 또는 주변 화면"><option value="user">본인 · 전면</option><option value="environment">주변 · 후면</option></select></label>
+        <button id="applyPrimaryCameraButton" type="button">카메라 변경 적용 · 미리보기</button>
+        <small id="cameraChoiceStatus" role="status">방송을 시작하기 전에 카메라를 선택하세요. 방송 중 카메라 변경은 제한합니다.</small>
+      </div>
+      <div class="control-grid" aria-label="방송 제어">
+        <button id="cameraButton" type="button" aria-pressed="true">카메라</button>
+        <button id="micButton" type="button" aria-pressed="true">마이크</button>
+        <button id="screenButton" type="button" aria-pressed="false">화면공유</button>
+        <button id="recordingButton" type="button" disabled>녹화 자동</button>
+      </div>
+
+      <section class="share-panel" aria-label="자료 및 화면 공유">
+        <div class="section-heading"><strong>자료 · 화면 공유</strong><small>파일 형식 제한 없이 선택</small></div>
+        <div class="share-mode-options" role="group" aria-label="화면공유 방식">
+          <button type="button" data-share-mode="screen" class="active" aria-pressed="true">전체 화면</button>
+          <button type="button" data-share-mode="window" aria-pressed="false">앱 창</button>
+          <button type="button" data-share-mode="tab" aria-pressed="false">브라우저 탭</button>
+        </div>
+        <div class="file-share-row"><input id="presentationFileInput" type="file" aria-label="공유할 자료 선택"><button id="presentationFileButton" type="button">자료 선택</button></div>
+        <small class="share-help">PPT·PPTX·PDF·한글·Word·Excel·이미지·영상·음성·기타 파일을 모두 선택할 수 있습니다. 브라우저가 직접 표시하지 못하는 형식은 해당 앱에서 연 뒤 ‘앱 창’ 공유를 사용합니다.</small>
+      </section>
+      <section class="layout-panel hidden" id="layoutPanel" aria-label="화면 구도 선택">
+        <div class="section-heading"><strong>화면 구도</strong><small>PIP 발표자는 화면에서 마우스로 이동할 수 있습니다.</small></div>
+        <div class="layout-options" id="layoutOptions">
+          <button type="button" data-layout="pip" class="active" aria-pressed="true"><span class="layout-preview layout-pip"></span><b>발표자+공유(PIP)</b></button>
+          <button type="button" data-layout="side"><span class="layout-preview layout-side"></span><b>70 : 30</b></button>
+          <button type="button" data-layout="equal"><span class="layout-preview layout-equal"></span><b>1 : 1</b></button>
+          <button type="button" data-layout="screen"><span class="layout-preview layout-screen"></span><b>공유화면만</b></button>
+        </div>
+      </section>
+
+      <section class="source-manager" aria-label="방송 소스">
+        <div class="section-heading"><strong>방송 소스</strong><small>공유화면·참여자 카메라를 선택해 표시</small></div>
+        <div class="source-actions">
+          <button id="chatOverlaySource" class="source-card" type="button" draggable="true" data-overlay-source="chat"><b>실시간 채팅</b><span>화면에 추가</span></button>
+        </div>
+        <div class="camera-connect">
+          <select id="extraCameraSelect" aria-label="추가 카메라"><option value="">추가 카메라 선택</option></select>
+          <button id="connectExtraCameraButton" type="button">카메라 연결</button>
+        </div>
+        <small class="camera-limit-note">방송자 추가 카메라는 최대 2대까지 연결할 수 있습니다.</small>
+        <div class="source-list" id="extraCameraSources" aria-label="추가 카메라 목록"></div>
+ <div class="participant-source-head"><strong>방송진행자 QR 촬영 카메라</strong><span id="managementCameraState" role="status">대기</span></div>
+ <button id="openManagementCameraButton" class="management-camera-open" type="button">QR로 추가 휴대전화 카메라 연결</button>
+ <small class="camera-limit-note">진행자가 QR을 표시한 뒤 추가 촬영용 휴대전화로 스캔합니다. 진행자 승인 후 연결되며, 일반 참여자 요청과 분리됩니다.</small>
+ <div class="source-list" id="managementCameraSources" aria-label="진행자 전용 추가 카메라"></div>
+        <div class="participant-source-head"><strong>참여자 관리</strong><button id="refreshParticipantSourcesButton" type="button">새로고침</button></div><small class="participant-policy-note">요청 즉시 비공개 대기영역에 연결되며, 공개 방송에는 방송자가 선택한 참여자만 표시됩니다.</small>
+        <div class="participant-requests" id="participantRequests" aria-label="카메라 참여 요청"></div>
+        <div class="source-list" id="participantSources" aria-label="참여자 카메라 목록"></div>
+      </section>
+
+      <section class="live-chat-box" aria-label="실시간 채팅">
+        <div class="section-heading"><strong>실시간 채팅</strong><span id="studioChatState">대기</span></div>
+        <div class="chat-messages" id="studioChatMessages"></div>
+        <form class="chat-form" id="studioChatForm">
+          <input id="studioChatInput" maxlength="500" autocomplete="off" placeholder="메시지 입력">
+          <button type="submit">전송</button>
+        </form>
+      </section>
+
+      <details class="broadcast-settings" open>
+        <summary>송출 · 저장 설정 <span>내부 저장 기본</span></summary>
+        <section class="delivery-settings" aria-label="송출 및 저장 설정">
+          <div class="delivery-fixed">
+            <span class="delivery-check" aria-hidden="true">✓</span>
+            <div><strong>EKODI 내부 방송 · 자동 저장</strong><small>방송 시작과 동시에 내부 녹화가 기본으로 실행됩니다.</small></div>
+            <span class="delivery-default">기본</span>
+          </div>
+          <div class="external-head">
+            <div><strong>외부 동시방송</strong><small>연결된 채널 중 준비된 채널만 선택합니다.</small></div>
+            <button id="refreshDestinationsButton" type="button">채널 확인</button>
+          </div>
+          <div id="externalDestinations" class="destination-options"><small>로그인 후 외부 방송 채널을 불러옵니다.</small></div>
+          <p class="delivery-note">외부 채널에 문제가 생겨도 EKODI 내부 방송과 녹화는 계속됩니다.</p>
+        </section>
+      </details>
+
+      <section class="worship-host-control" id="worshipHostControl" aria-label="예배 PPT 송출자 조작">
+        <div class="section-heading"><strong>예배 PPT 진행</strong><small>현재 슬라이드를 참여자와 동기화</small></div>
+        <div id="worshipHostCurrentSlide" class="worship-host-current">오늘의 예배자료 확인 중</div>
+        <div class="worship-host-nav"><button type="button" id="worshipHostPrev">← 이전 장</button><span id="worshipHostSlideCount">1 / 16</span><button type="button" id="worshipHostNext">다음 장 →</button></div>
+        <div id="worshipHostSyncStatus" class="worship-host-sync" role="status">방송방이 연결되면 동기화할 수 있습니다.</div>
+      </section>
+      <section class="interpretation-box" aria-label="자동동시통역">
+        <strong class="interpretation-title">통역 음성 준비 상태</strong>
+        <div class="language-chips" id="languageChips" aria-label="가능 언어"></div>
+      </section>
+
+      <div class="broadcast-actions">
+        <button class="primary" id="goLiveButton" type="button" disabled>방송 시작</button>
+        <button class="danger" id="endLiveButton" type="button" disabled>방송 종료</button>
+      </div>
+      <div class="status-log" id="statusLog" role="status" aria-live="polite">방송 준비 상태입니다.</div>
+      <div class="room-links hidden" id="roomLinks">
+        <label>참여 링크<input id="shareLink" readonly></label>
+        <button id="copyLinkButton" type="button">링크 복사</button>
+      </div>
+      <div class="recording-link hidden" id="recordingLinkBox" aria-live="polite">
+        <label>녹화본 링크<input id="recordingLink" readonly></label>
+        <div class="recording-link-actions">
+          <a id="openRecordingLink" target="_blank" rel="noopener">녹화본 열기</a>
+          <button id="copyRecordingLinkButton" type="button">링크 복사</button>
+        </div>
+      </div>
+    </aside>
+  </section>
+
+  <section class="viewer hidden" id="viewerView" aria-label="에코디교회 실시간 참여">
+    <div class="viewer-content" id="viewerContent">
+      <section class="viewer-material-toolbar" aria-label="나의 예배 화면 선택">
+        <div><strong>나의 예배 화면</strong><small>영상·PPT·주보를 각각 또는 함께 선택합니다.</small></div>
+        <div class="viewer-layout-options" role="group" aria-label="보여줄 자료 선택">
+          <button type="button" data-viewer-material-mode="video" aria-pressed="true">영상</button>
+          <button type="button" data-viewer-material-mode="video-ppt" aria-pressed="false">영상 + PPT</button>
+          <button type="button" data-viewer-material-mode="video-bulletin" aria-pressed="false">영상 + 주보</button>
+          <button type="button" data-viewer-material-mode="all" aria-pressed="false">모두 보기</button>
+          <button type="button" data-viewer-material-mode="ppt" aria-pressed="false">PPT만</button>
+          <button type="button" data-viewer-material-mode="bulletin" aria-pressed="false">주보만</button>
+          <button type="button" data-viewer-material-mode="ppt-bulletin" aria-pressed="false">PPT + 주보</button>
+        </div>
+        <div class="viewer-material-status" id="viewerMaterialStatus" role="status" aria-live="polite">예배자료 확인 중</div>
+      </section>
+      <div class="viewer-content-layout" id="viewerContentLayout" data-material-layout="video">
+    <div class="viewer-stage" id="viewerVideoStage">
+      <video id="viewerVideo" autoplay playsinline controls></video>
+      <div class="viewer-empty" id="viewerEmpty"><strong>방송 연결 중</strong><span>현재 방송 상태를 확인하고 있습니다.</span></div>
+    </div>
+        <section class="viewer-worship-slides hidden" id="viewerWorshipSlides" aria-labelledby="viewerSlideHeading">
+          <header><strong id="viewerSlideHeading">예배 PPT</strong><span id="viewerSlideCount">1 / 16</span></header>
+          <div class="viewer-worship-slide" id="viewerWorshipSlide" aria-live="polite">
+            <small id="viewerSlideKicker"></small><h3 id="viewerSlideTitle"></h3><div id="viewerSlideLines"></div>
+          </div>
+          <nav aria-label="나의 PPT 이동"><button type="button" id="viewerSlidePrev">← 이전</button><button type="button" id="viewerSlideNext">다음 →</button><button type="button" id="viewerFollowPresenter" aria-pressed="false">진행자 따라가기</button></nav>
+          <p id="viewerSlideSyncStatus" class="viewer-slide-sync" role="status">내가 직접 넘기는 PPT · 영상에는 영향 없음</p>
+        </section>
+        <section class="viewer-worship-bulletin hidden" id="viewerWorshipBulletin" aria-labelledby="viewerBulletinHeading">
+          <header><strong id="viewerBulletinHeading">예배 주보</strong><a id="viewerBulletinLink" href="/ekodichurch/worship/2026-11-08/" target="_blank" rel="noopener">주보 전체 보기 ↗</a></header>
+          <div class="viewer-bulletin-body" id="viewerBulletinBody"></div>
+        </section>
+      </div>
+    </div>
+    <aside class="viewer-panel">
+      <small>LIVE PARTICIPATION</small>
+      <h2 id="viewerTitle">에코디교회 실시간</h2>
+      <section class="viewer-interpretation">
+        <strong>통역 음성 준비 상태</strong>
+        <div class="language-chips" id="viewerLanguageChips" aria-label="가능 언어"></div>
+      </section>
+      <section class="viewer-camera-box resizable-panel">
+        <div class="section-heading"><strong>카메라 참여</strong><span id="participantCameraState">대기</span></div>
+        <select id="participantCameraSelect" aria-label="참여 카메라"><option value="">카메라 선택</option></select>
+        <button id="requestSpeakButton" type="button">카메라 참여 요청</button>
+        <video id="participantCameraPreview" class="participant-camera-preview hidden" autoplay playsinline muted></video>
+      </section>
+      <section class="live-chat-box viewer-chat resizable-panel" aria-label="실시간 채팅">
+        <div class="section-heading"><strong>실시간 채팅</strong><span id="viewerChatState">대기</span></div>
+        <div class="chat-messages" id="viewerChatMessages"></div>
+        <form class="chat-form" id="viewerChatForm">
+          <input id="viewerChatInput" maxlength="500" autocomplete="off" placeholder="메시지 입력">
+          <button type="submit">전송</button>
+        </form>
+      </section>
+      <div class="status-log" id="viewerStatus" role="status" aria-live="polite"></div>
+    </aside>
+  </section>
+</main>
+
+<dialog id="managementCameraDialog" class="management-camera-dialog" aria-label="방송진행자 QR 촬영 카메라 연결">
+ <form method="dialog" class="management-camera-close"><button type="submit">닫기 ×</button></form>
+ <p class="eyebrow">EKODI CHURCH · DIRECTOR CAMERA</p><h2>QR 카메라 연결</h2>
+ <p>추가 촬영할 휴대전화로 QR을 스캔 → 카메라 허용 → 방송 진행자가 승인하세요. 연결된 카메라는 비공개 소스에서 대기하며 진행자가 화면에 올려야만 송출됩니다.</p>
+ <canvas id="managementCameraQr" width="230" height="230" role="img" aria-label="추가 카메라 QR 코드"></canvas>
+ <label class="management-camera-url-label">연결 주소<input id="managementCameraUrl" readonly aria-label="QR 연결 주소"></label>
+ <div class="management-camera-actions"><button id="copyManagementCameraUrlButton" type="button">링크 복사</button><button id="newManagementCameraPairButton" type="button">새 QR 생성</button></div>
+ <div id="managementCameraPairs" class="management-camera-pairs" aria-label="QR 승인 대기 및 연결 해제"></div>
+ <p class="management-camera-security">QR은 30분 유효하며 추가 카메라는 방송 운영 권한을 갖지 않습니다.</p>
+</dialog>
+<footer class="church-shell-footer">
+  <a href="https://ekodi.kr/ekodichurch/" aria-label="에코디교회 홈"><strong>에코디교회</strong><small>EKODI CHURCH</small></a>
+  <p>말씀으로 삶을 읽고, 함께 살아내고 증언하는 공동체</p>
+  <nav aria-label="하단 메뉴">
+    <a href="https://ekodi.kr/privacy">개인정보처리방침</a>
+    <a href="https://ekodi.kr/terms">이용약관</a>
+    <a href="https://ekodi.kr/ekodichurch/#location">오시는 길</a>
+  </nav>
+</footer>
+<script src="./host-intent.js" defer></script>
+<script src="./worship-materials.js" defer></script>
+<script src="./management-camera-qr.js" defer></script>
+<script src="./live.js" defer></script>
+</body>
+</html>
