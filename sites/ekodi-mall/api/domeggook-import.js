@@ -7,6 +7,7 @@
 // 응답 경로 근거: 도매꾹 Open API 문서 getItemView 4.6 (basis/price/qty/deli/thumb/desc).
 import { MEDIA_PREFIX, MAX_IMAGES, MAX_IMAGE_BYTES } from './product-media.js';
 import { raiseAlert } from './ops-alerts.js';
+import { autoOrderEnabled } from './domeggook-gates.js';
 import { maskSupplierText } from './supplier-mask.js';
 
 export const PROVIDER = 'domeggook';
@@ -342,7 +343,7 @@ export async function notifySupplyOrder(env, order) {
   const row = await env.DB.prepare('SELECT name,supply_provider,supply_item_no,supply_cost,supply_shipping FROM products WHERE id=?').bind(order.product_id).first();
   if (!row || row.supply_provider !== PROVIDER) return false;
   // 자동발주가 켜져 있으면 cron 이 발주하고, 실패할 때만 알림을 남긴다.
-  if (String(env.DOMEGGOOK_AUTO_ORDER_ENABLED || '').toLowerCase() === 'true' && env.DOMEMAE_USER_ID && env.DOMEMAE_PASSWORD) return true;
+  if (autoOrderEnabled(env)) return true;
   await raiseAlert(env, {
     severity: 'warn', kind: 'supply.order_needed', orderId: order.id, productId: order.product_id,
     message: `발주 필요 · 도매꾹 ${row.supply_item_no} · ${row.name} × ${order.quantity || 1} (예상 공급비 ${((row.supply_cost || 0) * (order.quantity || 1) + (row.supply_shipping || 0)).toLocaleString('ko-KR')}원)`
