@@ -79,8 +79,10 @@ test('mission language guard accepts a complete compact nav without dropping any
     'more.append(summary,popup)',
     'nav.replaceChildren(...primary,more,language)',
   ].join(';');
-  const compact=legacy.replace('nav.replaceChildren(...links,language)',replacement);
-  assert.notEqual(compact,legacy,'the historical nav anchor must exist in main fixture');
+  const compact=legacy.includes('nav.replaceChildren(...primary,more,language)')
+    ? legacy
+    : legacy.replace('nav.replaceChildren(...links,language)',replacement);
+  assert.match(compact,/nav\.replaceChildren\(\.\.\.primary,more,language\)/,'either supported fixture must produce the compact layout');
   assert.doesNotThrow(()=>validateMissionShellSource(compact));
   assert.throws(()=>validateMissionShellSource(compact.replace('popup.append(...secondary)','popup.append()')),/missing valid flat or compact navigation projection/);
 });
