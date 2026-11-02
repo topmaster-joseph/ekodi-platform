@@ -205,15 +205,67 @@
       const section = document.createElement('section');
       section.className = 'studio-shell';
       section.id = 'serverProducts';
-      section.innerHTML = '<div class="studio-intro"><div><p class="eyebrow">MY SERVER PRODUCTS</p><h2>내 서버 저장 상품</h2><p>게시상품은 일반 Mall 링크와 판매자 직접공유 추적링크를 분리합니다. 주문·수수료·정산예정액도 Mall 서버가 기록합니다.</p></div><div class="readiness-card"><small>서버 상태</small><strong data-server-api-status>확인 중</strong><p data-server-finance-status>결제와 지급실행은 아직 비활성입니다.</p></div></div><div class="module-grid" data-server-products><article><span>SERVER</span><h3>로그인 후 확인</h3><p>Google 판매자 세션을 확인합니다.</p></article></div>';
+      section.innerHTML = '<div class="studio-intro"><div><p class="eyebrow">MY SERVER PRODUCTS</p><h2>공급처별 상품 현황</h2><p>내 계정의 등록 상품을 공급처별로 분류합니다. 고객 화면에는 공급처 구분을 표시하지 않습니다.</p></div><div class="readiness-card"><small>서버 상태</small><strong data-server-api-status>확인 중</strong><p data-server-finance-status>주문·정산 현황 확인 중</p></div></div><div class="seller-provider-tabs" data-server-provider-tabs role="tablist" aria-label="공급처별 상품 목록"></div><p class="seller-provider-summary" data-server-provider-summary aria-live="polite"></p><div class="module-grid" data-server-products role="tabpanel" aria-label="선택한 공급처 상품"><article><span>SERVER</span><h3>로그인 후 확인</h3><p>Google 판매자 세션을 확인합니다.</p></article></div>';
       studio.insertAdjacentElement('afterend', section);
     }
+  }
+
+  const PROVIDERS = [
+    ['all', '전체'], ['domeggook', '도매꾹·도매매'], ['ownerclan', '오너클랜'],
+    ['coupang', '쿠팡파트너스'], ['amazon', '아마존'], ['external', '기타 제휴'],
+    ['own', '에코디 직접판매'], ['merchant', '상인 위탁'], ['inquiry', '상담형']
+  ];
+  let selectedProvider = 'all';
+  let sellerProducts = [];
+  function supplierGroup(product) {
+    const provider = String(product.supply?.provider || '').toLowerCase();
+    if (provider === 'domeggook' || provider === 'domemae') return 'domeggook';
+    if (provider === 'ownerclan') return 'ownerclan';
+    if (provider) return 'external';
+    if (product.source?.kind === 'consigned_merchant') return 'merchant';
+    if (product.product?.saleType === 'inquiry') return 'inquiry';
+    if (product.product?.saleType === 'affiliate') {
+      let host = '';
+      try { host = new URL(product.product.affiliateUrl || '').hostname.toLowerCase(); } catch {}
+      if (host === 'coupang.com' || host.endsWith('.coupang.com') || host === 'coupa.ng') return 'coupang';
+      if (host === 'amazon.com' || host.endsWith('.amazon.com') || host === 'amazon.co.jp' || host.endsWith('.amazon.co.jp') || host === 'amzn.to') return 'amazon';
+      return 'external';
+    }
+    return 'own';
+  }
+  function renderProviderProducts() {
+    const container = document.querySelector('[data-server-products]');
+    const tabs = document.querySelector('[data-server-provider-tabs]');
+    const summary = document.querySelector('[data-server-provider-summary]');
+    if (!container || !tabs) return;
+    tabs.replaceChildren();
+    const counts = new Map(PROVIDERS.map(([id]) => [id, id === 'all' ? sellerProducts.length : sellerProducts.filter(p => supplierGroup(p) === id).length]));
+    for (const [id, label] of PROVIDERS) {
+      const tab = document.createElement('button');
+      tab.type = 'button'; tab.className = 'seller-provider-tab'; tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', id === selectedProvider ? 'true' : 'false');
+      tab.tabIndex = id === selectedProvider ? 0 : -1;
+      tab.textContent = `${label} ${counts.get(id)}`;
+      tab.addEventListener('click', () => { selectedProvider = id; renderProviderProducts(); });
+      tabs.append(tab);
+    }
+    const visible = selectedProvider === 'all' ? sellerProducts : sellerProducts.filter(p => supplierGroup(p) === selectedProvider);
+    const preparing = visible.filter(p => p.status !== 'published' || (p.product?.saleType === 'direct' && !p.checkoutReady)).length;
+    const selling = visible.filter(p => p.status === 'published' && (p.product?.saleType !== 'direct' || p.checkoutReady)).length;
+    if (summary) summary.textContent = `표시 ${visible.length}건 · 상품 준비중 ${preparing}건 · 판매 가능 ${selling}건 (이 계정에 등록한 상품 기준)`;
+    container.replaceChildren();
+    if (!visible.length) {
+      const empty = document.createElement('article');
+      const title = document.createElement('h3'); title.textContent = '해당 공급처에 등록된 상품이 없습니다.';
+      const desc = document.createElement('p'); desc.textContent = '이 화면은 현재 로그인한 판매자 계정의 상품을 보여줍니다. 외부 제휴 전체 카탈로그는 별도 관리자에서 관리합니다.';
+      empty.append(title, desc); container.append(empty);
+    } else visible.forEach(product => container.append(productCard(product)));
   }
 
   function productCard(product) {
     const article = document.createElement('article');
     article.innerHTML = '<span></span><h3></h3><p></p><div class="studio-buttons"><button class="smallbtn" type="button">불러오기</button></div>';
-    article.querySelector('span').textContent = product.status === 'published' ? 'PUBLISHED' : 'DRAFT';
+    article.querySelector('span').textContent = product.status !== 'published' || (product.product?.saleType === 'direct' && !product.checkoutReady) ? '상품 준비중' : '판매 가능';
     article.querySelector('h3').textContent = product.product?.name || '상품';
     const origin = product.supply?.provider ? `출처 ${({ domeggook: '도매꾹', ownerclan: '오너클랜' })[product.supply.provider] || product.supply.provider} #${product.supply.itemNo}`
       : product.source?.kind === 'consigned_merchant' ? `출처 상인 ${product.source.name}${product.source.contact ? ` (${product.source.contact})` : ''}`
@@ -245,12 +297,8 @@
         api('/api/orders?limit=20'),
         api('/api/settlements')
       ]);
-      container.replaceChildren();
-      if (!productsResult.products?.length) {
-        const empty = document.createElement('article');
-        empty.innerHTML = '<span>EMPTY</span><h3>아직 서버 저장 상품이 없습니다.</h3><p>상품을 작성한 뒤 ‘서버에 저장’을 누르세요.</p>';
-        container.append(empty);
-      } else productsResult.products.forEach((product) => container.append(productCard(product)));
+      sellerProducts = Array.isArray(productsResult.products) ? productsResult.products : [];
+      renderProviderProducts();
       if (apiStatus) apiStatus.textContent = `연결됨 · 상품 ${productsResult.products?.length || 0}개`;
       dashboardSummary(ordersResult.orders || [], settlementsResult.settlement || {});
       const currentId = text(form.elements.productId?.value);
