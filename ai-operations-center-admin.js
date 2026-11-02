@@ -11,8 +11,15 @@
     ['providers', '공급자·모델'],
     ['routing', '협업·라우팅'],
     ['audit', '승인·감사'],
+    ['tools', 'AI 도구'],
+    ['workflows', '업무 흐름'],
+    ['site-settings', '사이트별 사용'],
   ];
   const state = { governance: null, provider: null, actions: [], active: 'overview', error: '', loading: false };
+  // Registry is a curated discovery projection, NOT a runtime provider-registration bypass.
+  const TOOL_DIRECTORY = Object.freeze([{"id":"chatgpt","name":"ChatGPT / OpenAI","category":"글쓰기·분석","providerId":"openai","url":"https://chatgpt.com/","mode":"existing-provider"},{"id":"claude","name":"Claude","category":"글쓰기·코딩","providerId":"anthropic","url":"https://claude.ai/","mode":"existing-provider"},{"id":"gemini","name":"Gemini","category":"멀티모달·분석","providerId":"gemini","url":"https://gemini.google.com/","mode":"existing-provider"},{"id":"dify","name":"Dify","category":"에이전트·자동화","url":"https://dify.ai/","mode":"external-reference"},{"id":"n8n","name":"n8n","category":"업무 자동화","url":"https://n8n.io/","mode":"external-reference"},{"id":"consensus","name":"Consensus","category":"논문·연구","url":"https://consensus.app/","mode":"external-reference"},{"id":"notebooklm","name":"NotebookLM","category":"문헌·교육","url":"https://notebooklm.google.com/","mode":"external-reference"},{"id":"elevenlabs","name":"ElevenLabs","category":"낭독·오디오북","url":"https://elevenlabs.io/","mode":"external-reference"},{"id":"recraft","name":"Recraft","category":"삽화·디자인","url":"https://www.recraft.ai/","mode":"external-reference"},{"id":"runway","name":"Runway","category":"영상 제작","url":"https://app.runwayml.com/","mode":"external-reference"},{"id":"gamma","name":"Gamma","category":"교육·프레젠테이션","url":"https://gamma.app/","mode":"external-reference"},{"id":"canva","name":"Canva","category":"홍보·디자인","url":"https://www.canva.com/","mode":"external-reference"}].map(Object.freeze));
+  const WORKFLOW_ENTRIES = Object.freeze([{"id":"marketing","name":"AI 상품 홍보","steps":"상품정보 → 문구 검토 → 이미지·영상 제작 → 게시 승인","path":"/ekodibiz/marketing-ai","note":"기존 마케팅 AI로 이동합니다. 통합 자동 게시 실행은 별도 연동·승인이 필요합니다."},{"id":"publishing","name":"AI 출판·오디오북","steps":"원고 → 교정 → 삽화 → 낭독 → 출판 승인","path":"/publishing","note":"기존 출판 관리 화면으로 이동합니다. 외부 음성·삽화 API는 연결 검증 전까지 미실행입니다."},{"id":"devotion","name":"매일묵상·음성","steps":"본문 → 해설 검수 → 낭독 → 게시 승인","path":"/ekodimission","note":"기존 선교회 화면으로 이동합니다. 묵상 게시 권한은 기존 승인 체계를 유지합니다."},{"id":"research","name":"연구·강의 자료","steps":"문헌 검색 → 서지 검증 → 분석 → 강의자료 작성","path":"/ekodilab","note":"연구 서비스에서 시작합니다. AI 생성 인용은 원문 검증 전까지 확정되지 않습니다."}].map(Object.freeze));
+  const SITE_AI_SETTINGS = Object.freeze([{"slug":"cgma","name":"청계면상인회","path":"/cgma/admin/services"},{"slug":"ekodimall","name":"에코디몰","path":"/ekodimall/admin/services"},{"slug":"ekodichurch","name":"에코디교회","path":"/ekodichurch/admin/services"},{"slug":"ekodibiz","name":"에코디비즈","path":"/ekodibiz/admin/services"}].map(Object.freeze));
 
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
   const token = () => { try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } };
@@ -49,6 +56,8 @@
       .aic-body{padding:16px 18px 20px}.aic-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.aic-card{border:1px solid rgba(119,151,181,.2);border-radius:14px;background:rgba(8,28,45,.7);padding:14px}.aic-card small{display:block;color:#7898b1;margin-bottom:5px}.aic-card strong{display:block;color:#f2f7fa;font-size:16px}.aic-card span{display:block;color:#9db2c2;font-size:12px;margin-top:5px;line-height:1.45}
       .aic-section{margin-top:14px}.aic-section:first-child{margin-top:0}.aic-section-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:9px}.aic-section-head h4{margin:0;font-size:15px}.aic-note{font-size:12px;color:#8ea7ba}.aic-list{display:grid;gap:8px}.aic-row{display:grid;grid-template-columns:minmax(150px,1.15fr) minmax(130px,.9fr) minmax(110px,.7fr) minmax(180px,1.3fr) auto;gap:9px;align-items:center;border:1px solid rgba(119,151,181,.18);border-radius:12px;padding:10px;background:rgba(5,20,33,.52)}
       .aic-row.provider{grid-template-columns:minmax(150px,1.2fr) 90px 90px minmax(180px,1.5fr) minmax(120px,.8fr) auto}.aic-row.route{grid-template-columns:minmax(120px,.8fr) minmax(150px,1fr) minmax(180px,1.4fr) minmax(180px,1.3fr) auto}.aic-row.audit{grid-template-columns:105px minmax(140px,1fr) minmax(160px,1.2fr) minmax(130px,.9fr) auto}.aic-row input,.aic-row select{width:100%;box-sizing:border-box;border:1px solid rgba(129,158,186,.28);border-radius:8px;background:#0b263d;color:#edf6fb;padding:8px 9px;font:inherit}.aic-row input[type=checkbox]{width:auto}.aic-row.provider .aic-guard{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;border-top:1px dashed rgba(129,158,186,.28);padding-top:8px}.aic-row.provider .aic-guard small{overflow-wrap:break-word;word-break:keep-all}.aic-name strong{font-size:14px}.aic-name small{margin:3px 0 0}.aic-status{font-size:12px;padding:5px 8px;border-radius:999px;background:rgba(123,154,178,.15);display:inline-block;color:#bdd0de}.aic-status.healthy{background:rgba(75,163,128,.15);color:#a8e5c9}.aic-status.error,.aic-status.awaiting_human{background:rgba(194,102,102,.18);color:#ffd0d0}.aic-status.unconfigured{background:rgba(196,151,72,.16);color:#f4d9a5}.aic-inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.aic-secret{display:grid;grid-template-columns:minmax(160px,1fr) auto;gap:6px;margin-top:8px}.aic-secret input{min-width:0}.aic-message{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:rgba(116,157,189,.12);color:#bcd0de;font-size:13px}.aic-message.error{background:rgba(185,85,85,.14);color:#ffd0d0}.aic-empty{padding:22px;text-align:center;color:#91a8ba;border:1px dashed rgba(120,151,181,.22);border-radius:12px}.aic-policy{display:flex;gap:7px;flex-wrap:wrap}.aic-pill{border:1px solid rgba(120,154,184,.24);background:rgba(14,44,66,.62);border-radius:999px;padding:6px 9px;font-size:12px;color:#bad0df}.aic-split{display:grid;grid-template-columns:1fr 1fr;gap:12px}.aic-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+      .aic-tool-list{display:grid;gap:8px}.aic-tool-row{display:grid;grid-template-columns:minmax(150px,1fr) minmax(140px,.5fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid rgba(119,151,181,.2);border-radius:12px;min-width:0}.aic-tool-row .aic-name{min-width:0}.aic-tool-row .aic-name small{display:block;line-height:1.5;word-break:keep-all;overflow-wrap:anywhere}.aic-tool-row .aic-actions{align-items:center}.aic-tool-row a.aic-btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.aic-tool-row .aic-status{word-break:keep-all}
+      @media(max-width:900px){.aic-tool-row{grid-template-columns:1fr}.aic-tool-row .aic-actions{justify-content:flex-start;flex-wrap:wrap}} 
       @media(max-width:1050px){.aic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.aic-row,.aic-row.provider,.aic-row.route,.aic-row.audit{grid-template-columns:1fr 1fr}.aic-row>*:last-child{grid-column:1/-1}.aic-split{grid-template-columns:1fr}}
       @media(max-width:680px){.aic-head{display:block}.aic-head-actions{justify-content:flex-start;margin-top:12px}.aic-grid{grid-template-columns:1fr}.aic-row,.aic-row.provider,.aic-row.route,.aic-row.audit{grid-template-columns:1fr}.aic-body{padding:13px}.aic-row>*:last-child{grid-column:auto}}
     `;
@@ -169,12 +178,32 @@
       </article>`).join('')}</div></section>`;
   }
 
+  function renderToolDirectory(){
+   const providers=state.provider?.providers||[];
+   const rows=TOOL_DIRECTORY.map(tool=>{
+    const linked=tool.mode==='existing-provider';
+    const provider=linked?providers.find(item=>item.id===tool.providerId):null;
+    const status=linked?(provider?(provider.configured?(provider.health==='healthy'?'연결 상태 정상':'키 등록됨 · 상태 확인 필요'):'키 미연결'):'공급자 원장 미등록'):'외부 참고 · API 미검증';
+    const action=linked?'<button class="aic-btn" type="button" data-aic-tool-tab="providers">공급자 연결 관리</button>':'<span class="aic-status">별도 연동 심사 필요</span>';
+    return `<article class="aic-tool-row"><div class="aic-name"><strong>${esc(tool.name)}</strong><small>${esc(tool.category)} · ${esc(tool.id)}</small></div><span class="aic-status ${linked&&provider?.configured?'healthy':''}">${esc(status)}</span><div class="aic-actions">${action}<a class="aic-btn" href="${esc(tool.url)}" target="_blank" rel="noopener noreferrer">공식 사이트</a></div></article>`;
+   }).join('');
+   return `<section class="aic-section"><div class="aic-section-head"><h4>공통 AI 도구 등록표</h4><span class="aic-note">실제 연결은 서버 공급자 원장 기준 · 외부 참고 도구는 자동 실행되지 않음</span></div><p class="aic-message">GPT PARK 분류를 참고하여 엄선한 도구입니다. API 등록·비용 승인·사용권 검증 전 외부 서비스는 목록/이동만 제공합니다.</p><div class="aic-tool-list">${rows}</div></section>`;
+  }
+
+  function renderWorkflowDirectory(){
+   return `<section class="aic-section"><div class="aic-section-head"><h4>서비스별 업무 흐름</h4><span class="aic-note">기존 서비스 재사용 · 통합 자동실행은 검증 전 대기</span></div><div class="aic-tool-list">${WORKFLOW_ENTRIES.map(w=>`<article class="aic-tool-row"><div class="aic-name"><strong>${esc(w.name)}</strong><small>${esc(w.steps)}</small><small>${esc(w.note)}</small></div><span class="aic-status">기존 서비스 진입</span><div class="aic-actions"><a class="aic-btn primary" href="${esc(w.path)}">업무 시작</a><button class="aic-btn" type="button" data-aic-tool-tab="routing">AI 라우팅</button></div></article>`).join('')}</div></section>`;
+  }
+
+  function renderSiteAiSettings(){
+   return `<section class="aic-section"><div class="aic-section-head"><h4>사이트별 AI 사용설정</h4><span class="aic-note">기존 사이트 서비스 원장 사용 · 사이트별 권한 분리</span></div><p class="aic-message">각 사이트의 '서비스설정'에서 AI·콘텐츠 메뉴 표시를 변경할 수 있습니다. 메뉴 표시 여부는 API 사용권·외부 계정 연결·결제·자동 실행 권한을 부여하지 않습니다. 해당 사이트 관리자 권한으로 접속해야 합니다.</p><div class="aic-tool-list">${SITE_AI_SETTINGS.map(site=>`<article class="aic-tool-row"><div class="aic-name"><strong>${esc(site.name)}</strong><small>${esc(site.path)} · 접근·작동 여부는 사이트별 확인 필요</small></div><span class="aic-status">사이트 독립 설정</span><div class="aic-actions"><a class="aic-btn primary" href="${esc(site.path)}">서비스설정 열기</a></div></article>`).join('')}</div></section>`;
+  }
+
   function renderBody() {
     const root = document.querySelector(`#${ROOT_ID}`);
     const body = root?.querySelector('.aic-body');
     if (!body) return;
     const message = state.error ? `<p class="aic-message error">${esc(state.error)}</p>` : state.loading ? '<p class="aic-message">운영 상태를 동기화하는 중입니다.</p>' : '';
-    const renderers = { overview: renderOverview, agents: renderAgents, providers: renderProviders, routing: renderRouting, audit: renderAudit };
+    const renderers = { overview: renderOverview, agents: renderAgents, providers: renderProviders, routing: renderRouting, audit: renderAudit, tools: renderToolDirectory, workflows: renderWorkflowDirectory, 'site-settings': renderSiteAiSettings };
     body.innerHTML = message + (renderers[state.active]?.() || renderOverview());
   }
 
@@ -266,6 +295,8 @@
     root.addEventListener('click', async event => {
       const tab = event.target.closest('[data-aic-tab]');
       if (tab) { setActive(tab.dataset.aicTab); return; }
+      const toolTab = event.target.closest('[data-aic-tool-tab]');
+      if (toolTab) { setActive(toolTab.dataset.aicToolTab); return; }
       const jump = event.target.closest('[data-aic-jump]');
       if (jump) { navigate(jump.dataset.aicJump); return; }
       if (event.target.closest('[data-aic-refresh]')) { await refresh(); return; }
