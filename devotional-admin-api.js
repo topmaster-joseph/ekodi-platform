@@ -1,6 +1,7 @@
 // Shared devotional editor: immutable canonical Scripture; privileged activity overrides only.
 // Security boundary is the existing EKODI D1 admin session, NOT client-provided roles.
 import { isDevotionDate } from './devotional-activities.js';
+import { publishDevotionalNotifications, seoulNotificationDate } from './notification-devotion-publisher.js';
 
 const string=(value,max=2000)=>typeof value==='string'?value.trim().slice(0,max):'';
 const safeMedia=value=>{const v=string(value,400);return /^\/bible\/media\/[a-z0-9/_-]+\.(?:mp3|ogg|m4a|webm|png|jpg|jpeg|webp|svg)$/i.test(v)?v:'';};
@@ -95,7 +96,7 @@ export function validateDevotionActivities(raw){
   if(activities.song&&(!activities.song.title||!activities.song.verse.length))return null;
   return activities;
 }
-export async function saveDevotionOverride(request,env,admin,resolveDevotion){
+export async function saveDevotionOverride(request,env,admin,resolveDevotion,ctx=null){
   if(!admin)return Response.json({ok:false,error:'admin_required'},{status:403,headers:{'cache-control':'no-store'}});
   if(!env.DB)return Response.json({ok:false,error:'storage_unavailable'},{status:503});
   let payload;
@@ -120,5 +121,12 @@ export async function saveDevotionOverride(request,env,admin,resolveDevotion){
       (date,activities_json,status,revision,updated_by,updated_at) VALUES (?,?,?,1,?,?)`).bind(date,data,status,admin.email,now).run();
   }catch{return Response.json({ok:false,error:'storage_unavailable'},{status:503})}
   if((result?.meta?.changes||0)!==1)return Response.json({ok:false,error:'revision_conflict'},{status:409});
+  // Notify only on the first verified publication transition. The adapter
+  // independently rejects drafts, future dates and unconfigured publishers.
+  // A notification failure must never roll back a successfully saved devotion.
+  if(status==='published'&&existing?.status!=='published'&&date===seoulNotificationDate()&&ctx?.waitUntil){
+    ctx.waitUntil(publishDevotionalNotifications(env,{date,passage:base.passage})
+      .catch(error=>console.error('Devotional notification dispatch failed',String(error?.name||'error'))));
+  }
   return Response.json({ok:true,date,status,revision:expected+1,updatedAt:now},{headers:{'cache-control':'no-store'}});
 }

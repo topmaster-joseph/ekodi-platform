@@ -1,0 +1,43 @@
+name: Audit EKODI Devotion Voice Inventory
+# Read-only private voice metadata verification. No publication or sample artifacts.
+# Invoke only from the protected main workflow; never run on untrusted PR code.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-devotion-narrator-inventory
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout reviewed inventory code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify private resource access without disclosing voice data
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN}" || { echo "No authenticated Cloudflare inventory access"; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID}" || { echo "No Cloudflare account context"; exit 1; }
+          umask 077
+          node scripts/ekodi-voice/audit-r2-devotion-speakers.mjs
+      - name: State the consent boundary
+        if: always()
+        run: |
+          echo "Private voice inventory only. This workflow cannot create, clone, publish or approve audio."
+          echo "The organization-approved voice-use request does not supply a missing speaker-specific authorization."

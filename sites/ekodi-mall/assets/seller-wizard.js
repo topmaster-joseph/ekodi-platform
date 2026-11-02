@@ -55,9 +55,27 @@
   .wz-on .wz-hide{display:none!important}
   .wz-bar{position:relative;background:#fffdf8;border-bottom:1px solid #e6dfd2;padding:12px 16px}
   .wz-bar ol{display:flex;gap:6px;list-style:none;margin:0 auto;padding:0;max-width:960px;overflow-x:auto}
-  .wz-bar li button{border:1px solid #d9d2c4;background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap;cursor:pointer;color:#344}
+  .wz-bar li button,.wz-bar li a{border:1px solid #d9d2c4;background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap;cursor:pointer;color:#344;text-decoration:none;display:inline-flex;align-items:center}
   .wz-bar li button[aria-current="step"]{background:#173a2e;color:#fff;border-color:#173a2e}
   .wz-bar li button.wz-done{border-color:#7aa48f;color:#1f5b43}
+  .wz-bar li[hidden]{display:none!important}
+  .wz-on .wz-bar{padding:8px 12px}
+  .wz-on .wz-bar ol{justify-content:center;flex-wrap:wrap;max-width:1140px}
+  .wz-on .wz-head{max-width:1140px;margin:8px auto 6px}
+  .wz-on .wz-head h2{font-size:19px}
+  .wz-on .wz-head p{font-size:13px}
+  .wz-on #studio{margin-top:0!important;padding-top:0!important}
+  .wz-on #studio .studio-grid{margin-top:8px!important;gap:16px!important}
+  .wz-on #studio .studio-preview{max-height:360px;overflow:auto}
+  .wz-on .wz-nav{margin:8px auto 14px;max-width:1140px}
+  @media(min-width:900px){
+    .wz-on #studio .studio-grid{align-items:start}
+    .wz-on #studio .studio-preview-wrap{position:sticky;top:12px;max-height:calc(100vh - 160px);overflow:auto}
+  }
+  @media(max-width:899px){
+    .wz-on .wz-bar ol{justify-content:flex-start;flex-wrap:nowrap}
+    .wz-on #studio .studio-preview-wrap{position:static;max-height:none}
+  }
   .wz-head{max-width:960px;margin:14px auto 0;padding:0 16px}
   .wz-head h2{margin:0;font-size:22px}.wz-head p{margin:4px 0 0;color:#4d5a55}
   .wz-nav{display:flex;justify-content:space-between;gap:8px;max-width:960px;margin:16px auto 28px;padding:0 16px}
@@ -92,7 +110,7 @@
   const bar = document.createElement('nav');
   bar.className = 'wz-bar';
   bar.setAttribute('aria-label', '상품 등록 단계');
-  bar.innerHTML = `<ol>${steps.map((s, i) => `<li><button type="button" data-wz="${i}">${i + 1}. ${s.title}</button></li>`).join('')}<li><button type="button" class="wz-full" data-wz-full>전체 화면 보기</button></li></ol>`;
+  bar.innerHTML = `<ol><li><button type="button" data-wz-inventory>내 상품 목록</button></li>${steps.map((s, i) => `<li><button type="button" data-wz="${i}">${i + 1}. ${s.title}</button></li>`).join('')}<li><button type="button" class="wz-full" data-wz-full>전체 화면 보기</button></li></ol>`;
   const head = document.createElement('div');
   head.className = 'wz-head';
   head.innerHTML = '<h2 data-wz-title></h2><p data-wz-hint></p>';
@@ -114,9 +132,40 @@
     return [studio];
   }
 
+  function showInventory() {
+    if (!signedIn()) { document.documentElement.classList.remove('wz-inventory'); current = 0; apply(); return; }
+    document.documentElement.classList.add('wz-on', 'wz-inventory');
+    const inventory = document.querySelector('#serverProducts');
+    [...main.children].forEach(el => {
+      if (el === bar || el === head || el === err || el === nav) return;
+      el.classList.toggle('wz-hide', el !== inventory);
+    });
+    head.querySelector('[data-wz-title]').textContent = '내 상품 목록';
+    head.querySelector('[data-wz-hint]').textContent = '등록 상품 · 공급처별 필터 · 준비 상태를 한 화면에서 관리합니다.';
+    bar.querySelectorAll('[data-wz]').forEach(b => b.removeAttribute('aria-current'));
+    bar.querySelector('[data-wz-inventory]')?.setAttribute('aria-current', 'step');
+    nav.classList.add('wz-hide');
+    err.classList.add('wz-hide');
+    bar.querySelector('[data-wz-full]').textContent = '전체 화면 보기';
+  }
+
   function apply() {
+    if (document.documentElement.classList.contains('wz-inventory')) { showInventory(); return; }
     document.documentElement.classList.add('wz-on');
+    nav.classList.remove('wz-hide');
+    err.classList.remove('wz-hide');
     const step = steps[current];
+    bar.querySelector('[data-wz-inventory]')?.removeAttribute('aria-current');
+    // The authentication stage is a gate, not a task after sign-in.
+    // Keep its internal index for compatibility, but present a four-step flow.
+    const authenticated = signedIn();
+    bar.querySelectorAll('[data-wz]').forEach((button) => {
+      const index = Number(button.dataset.wz);
+      button.closest('li').hidden = authenticated && index === 0;
+      button.textContent = authenticated && index > 0
+        ? `${index}. ${steps[index].title}`
+        : `${index + 1}. ${steps[index].title}`;
+    });
     const keep = new Set(visibleFor(step));
     [...main.children].forEach((el) => {
       if (el === bar || el === head || el === err || el === nav) return;
@@ -131,7 +180,7 @@
     draftStatus?.classList.toggle('wz-hide', !step.buttons);
     const last = [...keep].pop();
     (last || main).after(nav);
-    head.querySelector('[data-wz-title]').textContent = `${current + 1}단계 · ${step.title}`;
+    head.querySelector('[data-wz-title]').textContent = `${authenticated ? current : current + 1}단계 · ${step.title}`;
     head.querySelector('[data-wz-hint]').textContent = step.hint;
     bar.querySelectorAll('[data-wz]').forEach((b) => {
       const i = Number(b.dataset.wz);
@@ -168,13 +217,22 @@
       }
     }
     current = target;
+    document.documentElement.classList.remove('wz-inventory');
     apply();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function revealSupplierInventory() {
+    if (location.hash !== '#serverProducts' || !signedIn()) return;
+    showInventory();
+    document.querySelector('#serverProducts')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+  window.addEventListener('hashchange', revealSupplierInventory);
   bar.addEventListener('click', (e) => {
+    if (e.target.closest('[data-wz-inventory]')) { showInventory(); history.replaceState(null, '', '#serverProducts'); return; }
     const full = e.target.closest('[data-wz-full]');
     if (full) {
+      document.documentElement.classList.remove('wz-inventory');
       const on = document.documentElement.classList.toggle('wz-on');
       if (!on) document.querySelectorAll('.wz-hide').forEach((el) => el.classList.remove('wz-hide'));
       else apply();
@@ -224,10 +282,12 @@
   const publishBtn = () => form.querySelector('[data-server-publish]');
   new MutationObserver(() => { const b = publishBtn(); if (b && b.textContent !== '게시하기') b.textContent = '게시하기'; }).observe(form, { childList: true, subtree: true });
 
-  const start = () => { current = signedIn() ? Math.max(1, store.get()) : 0; apply(); };
+  window.ekodiSellerWizardOpenEditor = () => { go(1); document.querySelector('#studio')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); };
+  const start = () => { current = signedIn() ? Math.max(1, store.get()) : 0; apply(); if (signedIn() && location.hash !== '#studio') showInventory(); };
   start();
+  if (location.hash === '#serverProducts') revealSupplierInventory();
   // Auth state resolves asynchronously after the central-login handoff.
   const loginBtn = document.querySelector('#sellerLogin');
-  if (loginBtn) new MutationObserver(() => { if (signedIn() && current === 0) go(1); })
+  if (loginBtn) new MutationObserver(() => { if (signedIn() && current === 0) { if (location.hash === '#studio') go(1); else showInventory(); } else if (!signedIn() && current !== 0) go(0); else if (location.hash === '#serverProducts') revealSupplierInventory(); else apply(); })
     .observe(loginBtn, { attributes: true, attributeFilter: ['hidden'] });
 })();

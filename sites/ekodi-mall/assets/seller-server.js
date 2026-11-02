@@ -205,27 +205,149 @@
       const section = document.createElement('section');
       section.className = 'studio-shell';
       section.id = 'serverProducts';
-      section.innerHTML = '<div class="studio-intro"><div><p class="eyebrow">MY SERVER PRODUCTS</p><h2>내 서버 저장 상품</h2><p>게시상품은 일반 Mall 링크와 판매자 직접공유 추적링크를 분리합니다. 주문·수수료·정산예정액도 Mall 서버가 기록합니다.</p></div><div class="readiness-card"><small>서버 상태</small><strong data-server-api-status>확인 중</strong><p data-server-finance-status>결제와 지급실행은 아직 비활성입니다.</p></div></div><div class="module-grid" data-server-products><article><span>SERVER</span><h3>로그인 후 확인</h3><p>Google 판매자 세션을 확인합니다.</p></article></div>';
+      section.innerHTML = '<div class="studio-intro"><div><p class="eyebrow">MY PRODUCTS</p><h2>내 등록 상품</h2><p>본인이 등록한 상품만 관리합니다. 전체 공급처 현황은 에코디몰 관리자에서 확인합니다.</p></div><div class="readiness-card"><small>상품 현황</small><strong data-server-api-status>확인 중</strong><p data-server-finance-status>주문·정산 확인 중</p></div></div><div class="seller-provider-tabs" data-server-provider-tabs></div><p class="seller-provider-summary" data-server-provider-summary aria-live="polite"></p><div class="seller-inventory-scroll" data-server-products aria-label="내 등록 상품 목록"></div>';
       studio.insertAdjacentElement('afterend', section);
     }
   }
 
-  function productCard(product) {
-    const article = document.createElement('article');
-    article.innerHTML = '<span></span><h3></h3><p></p><div class="studio-buttons"><button class="smallbtn" type="button">불러오기</button></div>';
-    article.querySelector('span').textContent = product.status === 'published' ? 'PUBLISHED' : 'DRAFT';
-    article.querySelector('h3').textContent = product.product?.name || '상품';
-    const origin = product.supply?.provider ? `출처 ${({ domeggook: '도매꾹', ownerclan: '오너클랜' })[product.supply.provider] || product.supply.provider} #${product.supply.itemNo}`
-      : product.source?.kind === 'consigned_merchant' ? `출처 상인 ${product.source.name}${product.source.contact ? ` (${product.source.contact})` : ''}`
-      : product.source?.kind === 'ekodibiz_own' ? '출처 에코디비즈 자체상품' : '';
-    article.querySelector('p').textContent = [`${product.seller?.displayName || '판매자'} · ${product.store?.name || '개인상품'} · ${product.shareCode}`, origin].filter(Boolean).join(' · ');
-    article.querySelector('button').addEventListener('click', () => fillForm(product));
-    if (product.publicShareLinkActive) {
-      const link = document.createElement('a');
-      link.className = 'smallbtn'; link.href = product.publicUrl; link.target = '_blank'; link.rel = 'noopener'; link.textContent = '일반링크 · 8%';
-      article.querySelector('.studio-buttons').append(link);
+  // Only products owned by the logged-in seller belong in Seller Studio.
+  // Cross-seller and platform affiliate/bookstore inventory lives in Mall Admin.
+  let providerOptions = [['all', '모든 공급처'], ['own','에코디 직접판매'],['domeggook','도매꾹·도매매'],['coupang','쿠팡파트너스'],['bookstore','에코디서점'],['agoda','아고다'],['tripcom','트립닷컴'],['external','기타 제휴']];
+  let selectedProvider = 'all';
+  let selectedStatus = 'all';
+  let sellerProducts = [];
+  let dashboardRevision = 0;
+  let visibleLimit = 40;
+  let catalogSearch = '';
+  function supplierGroup(product) {
+    const provider = String(product.supply?.provider || '').toLowerCase();
+    if (provider === 'domeggook' || provider === 'domemae') return 'domeggook';
+    if (provider === 'ownerclan') return 'ownerclan';
+    if (provider) return 'external';
+    if (product.source?.kind === 'consigned_merchant') return 'merchant';
+    if (product.source?.kind === 'ekodi-bookstore') return 'bookstore';
+    if (product.product?.saleType === 'inquiry') return 'inquiry';
+    if (product.product?.saleType === 'affiliate') {
+      let host = '';
+      try { host = new URL(product.product.affiliateUrl || '').hostname.toLowerCase(); } catch {}
+      if (host === 'coupang.com' || host.endsWith('.coupang.com') || host === 'coupa.ng') return 'coupang';
+      if (host === 'amazon.com' || host.endsWith('.amazon.com') || host === 'amazon.co.jp' || host.endsWith('.amazon.co.jp') || host === 'amzn.to') return 'amazon';
+      if (host === 'agoda.com' || host.endsWith('.agoda.com')) return 'agoda';
+      if (host === 'trip.com' || host.endsWith('.trip.com')) return 'tripcom';
+      return 'external';
     }
-    return article;
+    return 'own';
+  }
+  function readiness(product) {
+    if (product.status !== 'published') return '상품 준비중';
+    if (product.product?.saleType === 'direct') return product.checkoutReady ? '판매 가능' : '상품 준비중';
+    if (product.product?.saleType === 'affiliate') return '외부 구매 연결';
+    return '상담 가능';
+  }
+  function renderProviderProducts() {
+    const container = document.querySelector('[data-server-products]');
+    const filters = document.querySelector('[data-server-provider-tabs]');
+    const summary = document.querySelector('[data-server-provider-summary]');
+    if (!container || !filters || !summary) return;
+    const providerLabel = new Map(providerOptions);
+    filters.replaceChildren();
+    const supplier = document.createElement('select');
+    supplier.setAttribute('aria-label','내 상품 공급처 필터');
+    for (const [id, label] of providerOptions) {
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = label + ' · ' + sellerProducts.filter(p => id === 'all' || supplierGroup(p) === id).length + '건';
+      option.selected = id === selectedProvider;
+      supplier.append(option);
+    }
+    supplier.addEventListener('change', () => { selectedProvider = supplier.value; visibleLimit = 40; renderProviderProducts(); });
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.placeholder = '내 상품 검색';
+    search.setAttribute('aria-label','내 상품 검색');
+    search.value = catalogSearch;
+    search.addEventListener('input', () => { catalogSearch = search.value; visibleLimit = 40; drawRows(); });
+    const tabs = document.createElement('div');
+    tabs.className = 'seller-status-tabs';
+    for (const [id,label] of [['all','전체'],['preparing','상품 준비중'],['ready','판매·구매 연결']]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'seller-provider-tab';
+      button.textContent = label;
+      button.setAttribute('aria-pressed', String(id === selectedStatus));
+      button.addEventListener('click', () => { selectedStatus = id; visibleLimit = 40; renderProviderProducts(); });
+      tabs.append(button);
+    }
+    filters.append(supplier, search, tabs);
+    const table = document.createElement('table');
+    table.className = 'seller-inventory-table';
+    const head = document.createElement('thead');
+    const tr = document.createElement('tr');
+    for (const title of ['상품명','공급처','분류','상태','가격','관리']) {
+      const th = document.createElement('th');
+      th.scope = 'col'; th.textContent = title; tr.append(th);
+    }
+    head.append(tr); table.append(head);
+    const tbody = document.createElement('tbody');
+    table.append(tbody);
+    document.querySelector('[data-provider-more]')?.remove();
+    container.replaceChildren(table);
+    const more = document.createElement('button');
+    more.type = 'button'; more.className = 'smallbtn'; more.dataset.providerMore = '';
+    more.textContent = '상품 더 보기';
+    more.addEventListener('click', () => { visibleLimit += 40; drawRows(); });
+    container.after(more);
+    function drawRows() {
+      const query = catalogSearch.trim().toLocaleLowerCase('ko-KR');
+      const visible = sellerProducts.filter(p => (selectedProvider === 'all' || supplierGroup(p) === selectedProvider)
+        && (selectedStatus === 'all' || (selectedStatus === 'preparing' ? readiness(p) === '상품 준비중' : readiness(p) !== '상품 준비중'))
+        && (!query || String(p.product?.name || '').toLocaleLowerCase('ko-KR').includes(query)));
+      const preparing = sellerProducts.filter(p => readiness(p) === '상품 준비중').length;
+      summary.textContent = `내 등록 상품 ${sellerProducts.length}건 · 상품 준비중 ${preparing}건 · 현재 ${visible.length}건 조회 · ${Math.min(visible.length,visibleLimit)}건 표시`;
+      tbody.replaceChildren();
+      for (const p of visible.slice(0,visibleLimit)) {
+        const row = document.createElement('tr');
+        const cell = value => { const td = document.createElement('td'); td.textContent = String(value ?? ''); row.append(td); return td; };
+        const name = cell(p.product?.name || '상품');
+        name.className = 'seller-product-name';
+        cell(providerLabel.get(supplierGroup(p)) || '기타 공급처');
+        cell(({book:'책·배움',living:'생활',gift:'선물',general:'일반'})[p.product?.category] || p.product?.category || '일반');
+        cell(readiness(p));
+        cell(p.product?.price == null ? '미정' : money(p.product.price));
+        const actions = document.createElement('td');
+        if (!p.readOnly) {
+          const edit = document.createElement('button');
+          edit.type = 'button'; edit.className = 'smallbtn'; edit.textContent = '수정';
+          edit.addEventListener('click', () => { fillForm(p); window.location.hash = 'studio'; window.ekodiSellerWizardOpenEditor?.(); });
+          actions.append(edit);
+        } else actions.textContent = '조회 전용';
+        if (p.publicShareLinkActive && p.publicUrl) {
+          const link = document.createElement('a');
+          link.className = 'smallbtn'; link.href = p.publicUrl; link.target = '_blank';
+          link.rel = 'noopener'; link.textContent = '보기';
+          actions.append(link);
+        }
+        row.append(actions); tbody.append(row);
+      }
+      if (!visible.length) {
+        const row = document.createElement('tr');
+        const td = document.createElement('td'); td.colSpan = 6;
+        td.textContent = '해당 조건의 등록 상품이 없습니다. 새 상품은 상품등록 탭에서 시작하세요.';
+        row.append(td); tbody.append(row);
+      }
+      more.hidden = visible.length <= visibleLimit;
+    }
+    drawRows();
+  }
+  async function loadProviderRegistry() {
+    try {
+      const response = await fetch('/ekodimall/assets/provider-registry.json',{cache:'no-store'});
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!Array.isArray(data.providers)) return;
+      providerOptions = [['all','모든 공급처'],...data.providers.filter(p => /^[a-z0-9-]+$/.test(p.id)).map(p => [p.id,p.label])];
+      renderProviderProducts();
+    } catch { /* fallback to built-in choices */ }
   }
 
   function dashboardSummary(orders, settlement) {
@@ -236,22 +358,18 @@
   }
 
   async function loadDashboard() {
+    const revision = ++dashboardRevision;
     const container = document.querySelector('[data-server-products]');
     const apiStatus = document.querySelector('[data-server-api-status]');
     if (!container) return;
     try {
       const [productsResult, ordersResult, settlementsResult] = await Promise.all([
-        api('/api/products'),
-        api('/api/orders?limit=20'),
-        api('/api/settlements')
+        api('/api/products'), api('/api/orders?limit=20'), api('/api/settlements')
       ]);
-      container.replaceChildren();
-      if (!productsResult.products?.length) {
-        const empty = document.createElement('article');
-        empty.innerHTML = '<span>EMPTY</span><h3>아직 서버 저장 상품이 없습니다.</h3><p>상품을 작성한 뒤 ‘서버에 저장’을 누르세요.</p>';
-        container.append(empty);
-      } else productsResult.products.forEach((product) => container.append(productCard(product)));
-      if (apiStatus) apiStatus.textContent = `연결됨 · 상품 ${productsResult.products?.length || 0}개`;
+      if (revision !== dashboardRevision) return;
+      sellerProducts = Array.isArray(productsResult.products) ? productsResult.products : [];
+      renderProviderProducts();
+      if (apiStatus) apiStatus.textContent = `내 등록 상품 ${sellerProducts.length}건`;
       dashboardSummary(ordersResult.orders || [], settlementsResult.settlement || {});
       const currentId = text(form.elements.productId?.value);
       if (isServerId(currentId)) {
@@ -259,6 +377,7 @@
         if (current) renderLink(current);
       }
     } catch (error) {
+      if (revision !== dashboardRevision) return;
       if (apiStatus) apiStatus.textContent = '로그인 또는 API 확인 필요';
       if (!String(error.message).includes('로그인')) setStatus(error.message, true);
     }
@@ -266,6 +385,21 @@
 
   window.ekodiSellerServer = { api, fillForm, loadDashboard, setStatus };
   ensureUi();
-  sb.auth.onAuthStateChange((_event, session) => { if (session) loadDashboard(); });
+  loadProviderRegistry();
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session) { loadDashboard(); return; }
+    dashboardRevision += 1;
+    sellerProducts = [];
+    selectedProvider = 'all';
+    selectedStatus = 'all';
+    catalogSearch = '';
+    visibleLimit = 40;
+    renderProviderProducts();
+    renderLink(null);
+    const apiStatus = document.querySelector('[data-server-api-status]');
+    if (apiStatus) apiStatus.textContent = '로그인 후 확인';
+    const finance = document.querySelector('[data-server-finance-status]');
+    if (finance) finance.textContent = '로그인 후 주문·정산 확인';
+  });
   window.setTimeout(loadDashboard, 600);
 })();

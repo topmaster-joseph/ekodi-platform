@@ -215,9 +215,9 @@ async function handleAssist(request, env) {
   });
 }
 
-async function handleBibleApi(request, env, url) {
+async function handleBibleApi(request, env, url, ctx) {
   if (url.pathname === '/api/bible/devotion' && request.method === 'PUT') {
-    return saveDevotionOverride(request, env, await devotionAdminSession(request, env), resolveDevotion);
+    return saveDevotionOverride(request, env, await devotionAdminSession(request, env), resolveDevotion, ctx);
   }
   if (request.method !== 'GET') return json({ ok:false, error:'method_not_allowed' }, 405);
   if (url.pathname === '/api/bible/devotion/me') {
@@ -383,7 +383,7 @@ export async function publicDevotionNarration(request,env,internalPath) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const legacyRedirect = legacyCanonicalRedirect(url);
     if (legacyRedirect) return legacyRedirect;
@@ -413,7 +413,7 @@ export default {
       });
     }
     if (internalUrl.pathname.startsWith('/narration/')) return publicDevotionNarration(request, env, internalUrl.pathname);
-    if (internalUrl.pathname.startsWith('/api/bible/')) return handleBibleApi(request, env, internalUrl);
+    if (internalUrl.pathname.startsWith('/api/bible/')) return handleBibleApi(request, env, internalUrl, ctx);
     if (internalUrl.pathname === '/api/assist' && request.method === 'POST') return handleAssist(request, env);
     if (internalUrl.pathname === '/admin' || internalUrl.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/system/aiops', 307);
 

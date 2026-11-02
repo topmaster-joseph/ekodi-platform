@@ -225,7 +225,7 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL){
   function setAuthChrome(signedIn){const footer=document.querySelector('[data-ekodi-admin-sidebar-footer]');const logout=$('logout');const role=$('roleStatus');if(footer)footer.dataset.authState=signedIn?'signed-in':'signed-out';if(logout)logout.hidden=!signedIn;if(role&&!signedIn)role.textContent='로그인 전'}
   function applyRole(role){state.role=String(role||'').trim().toLowerCase();setAuthChrome(Boolean(state.role));const el=$('roleStatus');if(el)el.textContent='\uAD8C\uD55C \u00B7 '+(state.role||'\uD655\uC778 \uC911');renderNav();publishTenantContext()}
   function setup(){$('pageTitle').textContent=page[0];$('pageCopy').textContent=page[1];document.title=page[0]+' \u00B7 '+STORE_NAME;setAuthChrome(false);publishTenantContext('')}
-  function permissionPanel(){const label=state.role||'\uAD8C\uD55C \uC5C6\uC74C';$('summaryCards').innerHTML=[card('\uC6B4\uC601\uACF5\uAC04',STORE_NAME,'tenant scoped'),card('\uB0B4 \uAD8C\uD55C',label,'\uD5C8\uC6A9 \uC601\uC5ED\uB9CC \uD45C\uC2DC')].join('');$('mainPanel').innerHTML=`<div class="empty"><strong>\uD604\uC7AC \uAD8C\uD55C\uC73C\uB85C \uC774 \uC601\uC5ED\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.</strong>${esc(page[0])} \uC601\uC5ED\uC740 \uBD80\uC5EC\uB41C \uC5ED\uD560\uC758 Capability \uBC94\uC704 \uBC16\uC785\uB2C8\uB2E4.<div class="actions"><a class="button primary" href="${esc(embedHref(ADMIN_BASE+'/overview'))}">\uD5C8\uC6A9\uB41C \uC6B4\uC601 \uD648\uC73C\uB85C</a></div></div>`;setState('\uAD8C\uD55C \uC81C\uD55C','warn')}
+  function permissionPanel(){$('summaryCards').replaceChildren();$('mainPanel').innerHTML=`<div class="empty"><strong>\uD604\uC7AC \uAD8C\uD55C\uC73C\uB85C \uC774 \uC601\uC5ED\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.</strong>${esc(page[0])} \uC601\uC5ED\uC740 \uBD80\uC5EC\uB41C \uC5ED\uD560\uC758 Capability \uBC94\uC704 \uBC16\uC785\uB2C8\uB2E4.<div class="actions"><a class="button primary" href="${esc(embedHref(ADMIN_BASE+'/overview'))}">\uD5C8\uC6A9\uB41C \uC6B4\uC601 \uD648\uC73C\uB85C</a></div></div>`;setState('\uAD8C\uD55C \uC81C\uD55C','warn')}
   function storedSession(){
     try{
       let raw=localStorage.getItem(SESSION_KEY)||sessionStorage.getItem(SESSION_KEY);
@@ -248,7 +248,7 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL){
   async function optionalWorkspace(path,options={}){try{return await workspace(path,options)}catch(e){if([404,502,503].includes(Number(e.status)))return null;throw e}}
   function loginPanel(message=STORE_NAME+' 운영 권한으로 로그인해야 합니다.'){
     state.role='';setAuthChrome(false);renderNav();publishTenantContext('');
-    $('summaryCards').innerHTML=[card('운영공간',STORE_NAME,'store-scoped'),card('현재 상태','로그인 전','운영 데이터 비공개'),card('관리 영역',FIRST_STORE_SLUGS.has(SLUG)?'브랜드 전용':'7개',FIRST_STORE_SLUGS.has(SLUG)?'판매 · 고객 · 마케팅 · 운영 · 정산 · 권한':'홈 · 사이트 · 판매 · 고객 · 마케팅 · 운영 · 경영'),card('데이터 경계','점포 전용','다른 매장과 분리')].join('');
+    $('summaryCards').replaceChildren();
     $('mainPanel').innerHTML=`<div class="empty"><strong>운영공간 로그인</strong>${esc(message)}<div class="actions"><a class="button primary" href="${esc(authUrl())}"${IS_CMPMYI_EMBED?' target="_top"':''}>Google 계정으로 계속</a></div></div>`;setState('로그인 필요','warn');
   }
   function connectorStatus(provider){

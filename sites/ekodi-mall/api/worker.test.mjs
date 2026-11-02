@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateOrderAmounts, makeAttributedUrl, makePublicUrl, normalizeProductInput, resolveFeeRate } from './worker.js';
+import { canReadMallProviderInventory, calculateOrderAmounts, makeAttributedUrl, makePublicUrl, normalizeProductInput, resolveFeeRate } from './worker.js';
 
 test('individual fee policy stays 7/8/9 and business verified store is 10', () => {
   assert.equal(resolveFeeRate({ sellerType: 'individual', attributionType: 'direct' }), 7);
@@ -56,4 +56,14 @@ test('local geography is separate from category and seller verification cannot b
   assert.equal(normalized.value.product.category, 'general');
   assert.equal(normalized.value.product.region.primaryRegionId, 'kr-46-muan-cheonggye');
   assert.equal(normalized.value.product.region.verified, false);
+});
+
+test('provider-wide inventory is only available to an email-verified EKODI operator', () => {
+  const env = { MALL_EKODIAN_EMAILS:'topmaster.joseph@gmail.com,joseph@ekodi.kr',
+    MALL_OPERATIONS_EMAILS:'topmaster.joseph@gmail.com,joseph@ekodi.kr' };
+  const verified = { email:'topmaster.joseph@gmail.com',email_confirmed_at:'2026-11-02T00:00:00Z' };
+  assert.equal(canReadMallProviderInventory(verified,env),true);
+  assert.equal(canReadMallProviderInventory({...verified,email_confirmed_at:''},env),false);
+  assert.equal(canReadMallProviderInventory({...verified,email:'outsider@example.com'},env),false);
+  assert.equal(canReadMallProviderInventory(verified,{...env,MALL_OPERATIONS_EMAILS:'joseph@ekodi.kr'}),false);
 });

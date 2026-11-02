@@ -1,0 +1,29 @@
+{
+  "schema": "ekodi.voice.reuse.policy.v1",
+  "authorization": {
+    "actor": "EKODI platform owner",
+    "confirmedDate": "2026-11-02",
+    "source": "owner conversation instruction",
+    "decision": "Approved reuse of voice assets lawfully owned or licensed by EKODI across all EKODI products and sites. No repeated operator approvals needed for the same authorized asset."
+  },
+  "scope": {
+    "services": "all-ekodi-services",
+    "actions": [
+      "voice-generation",
+      "voice-transformation",
+      "narration",
+      "audiobooks",
+      "public-delivery"
+    ],
+    "permissionModel": "single documented grant per eligible speaker/recording, reusable across tenant sites without further owner confirmation"
+  },
+  "rightsGuardrails": {
+    "speakerSpecificPermissionRequired": true,
+    "legacyAudiobookOnlyNotRetroactivelyUpgraded": true,
+    "publicReleaseRequiresHumanAudioReview": true,
+    "requireRecordingHashIntegrity": true,
+    "noApprovalForUnknownThirdParty": true
+  },
+  "ownerApprovalOnly": true,
+  "releaseRule": "Owner approval controls EKODI operational use; it does not impersonate an unrelated speaker or bypass protected content and model-license checks."
+}

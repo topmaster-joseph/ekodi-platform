@@ -152,7 +152,7 @@ export async function runCuration(env, deps, { fetchImpl = fetch, perRun = 3 } =
       summary.rejected += 1;
       continue;
     }
-    const result = await importDomeggookProduct(env, seller, { itemNo: pick.item_no }, { ...deps, fetchImpl, requireLicense: true, maxImages: 4 });
+    const result = await importDomeggookProduct(env, seller, { itemNo: pick.item_no, keyword: pick.keyword }, { ...deps, fetchImpl, requireLicense: true, maxImages: 4 });
     if (result.status >= 300) {
       await env.DB.prepare("UPDATE supply_candidates SET status='rejected',reason=?,updated_at=? WHERE item_no=?").bind(String(result.body?.error || result.status).slice(0, 200), now, pick.item_no).run();
       summary.rejected += 1;

@@ -43,7 +43,8 @@ test('existing first stores are compatibility profiles on one Store Admin Engine
   const css=await storeAdminCss().text();assert.match(css,/word-break:keep-all/);assert.match(css,/\.section-nav\{display:none!important\}/);assert.match(css,/\.portfolio-entry\{/);assert.match(css,/grid-template-columns:260px minmax\(0,1fr\)/);assert.match(css,/overflow-y:auto!important/);assert.match(css,/box-shadow:inset 4px 0 var\(--store-accent\)/);assert.match(css,/data-ekodi-store-brand="pizzamaru"/);assert.match(css,/data-ekodi-store-brand="yogurt"/);assert.match(css,/\.scope strong\{[\s\S]*color:#172018!important/);assert.match(css,/\.heading h1\{[\s\S]*font-size:30px!important[\s\S]*line-height:1\.25!important[\s\S]*min-height:35px!important/);assert.match(css,/\.heading:before\{[\s\S]*background:var\(--store-accent\)/);assert.match(css,/--store-accent:#a61d32/);assert.match(css,/--store-accent:#6e4aa3/);
   const script=await storeAdminScript().text();
   assert.match(script,/business_os_store_admin_snapshot/);assert.match(script,/store_operating_space_snapshot/);
-  assert.match(script,/운영 데이터 비공개/);assert.match(script,/관리 영역/);
+  assert.match(script,/운영공간 로그인/);assert.match(script,/Google 계정으로 계속/);
+  assert.doesNotMatch(script,/card\('현재 상태','로그인 전'/);assert.doesNotMatch(script,/card\('관리 영역'/);
   assert.match(script,/noRoleSpecificAdminPages/);assert.match(script,/tenant\.marketing\.manage/);
   assert.match(script,/const DELEGATED_GROUPS=/);assert.match(script,/const LOCAL_GROUPS=/);assert.match(script,/const VIEWER_GROUPS=/);assert.match(script,/groupsForRole/);assert.match(script,/roleNavigationProfiles/);assert.match(script,/오늘 주문/);assert.match(script,/메뉴 · 품절/);
   assert.doesNotMatch(script,/\['store_owner','tenant_admin','platform_admin'\]/);

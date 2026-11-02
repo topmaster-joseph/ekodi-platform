@@ -13,10 +13,12 @@ const fields={
   website:$('#publicWebsite'),
   visibility:$('#publicProfileVisibility'),
   save:$('#savePublicProfile'),
+  retry:$('#publicProfileRetry'),
   status:$('#publicProfileStatus'),
   link:$('#publicProfileLink'),
 };
 
+let profileLoaded=false;
 function auth(){return window.EKODI_MY_AUTH||null}
 function token(){return String(auth()?.getAccessToken?.()||'')}
 function signedIn(){return Boolean(auth()?.isSignedIn?.()&&token())}
@@ -79,6 +81,8 @@ function apply(profile={}){
   showPublicLink(profile);
 }
 async function refresh(){
+  profileLoaded=false;
+  if(fields.retry)fields.retry.hidden=true;
   if(!signedIn()){
     apply({});
     setDisabled(true);
@@ -90,15 +94,17 @@ async function refresh(){
   try{
     const profile=await rpc('get_my_public_profile');
     apply(profile);
+    profileLoaded=true;
     status(profile?.handle?'My EKODI에서 수정한 내용만 공개됩니다.':'아이디를 정하고 공개 여부를 선택해 시작할 수 있습니다.');
   }catch(error){
     apply({});
+    if(fields.retry)fields.retry.hidden=false;
     status(error?.message||'공개 개인페이지 정보를 불러오지 못했습니다.','error');
-  }finally{setDisabled(false)}
+  }finally{setDisabled(!profileLoaded)}
 }
 async function save(event){
   event.preventDefault();
-  if(!signedIn())return;
+  if(!signedIn()||!profileLoaded)return;
   let payload;
   try{payload=profileFromForm()}catch(error){status(error.message,'error');return}
   const label=fields.save?.textContent||'저장';
@@ -115,6 +121,7 @@ async function save(event){
 }
 
 form.addEventListener('submit',save);
+fields.retry?.addEventListener('click',()=>void refresh());
 window.addEventListener('ekodi:my-session',()=>void refresh());
 void refresh();
 })();

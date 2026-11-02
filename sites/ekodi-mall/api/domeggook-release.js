@@ -16,7 +16,6 @@ export const RATCHET_MAX = 0.9;
 
 export async function supplyApproved(env) {
   if (!env?.DB || !autoOrderEnabled(env)) return false;
-  if (String(env.DOMEGGOOK_RELEASE_WITHOUT_APPROVAL || '').toLowerCase() === 'true') return true;
   const row = await env.DB.prepare("SELECT result_status,checked_at FROM supplier_connector_checks WHERE external_ref='probe:login' ORDER BY checked_at DESC LIMIT 1").first().catch(() => null);
   return Boolean(row && row.result_status === 'ok' && Date.now() - Date.parse(row.checked_at) < APPROVAL_FRESH_MS);
 }

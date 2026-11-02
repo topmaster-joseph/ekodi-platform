@@ -7,6 +7,8 @@
 //          DOMEGGOOK_ORDER_ITEM_TEMPLATE 변수로 바꿀 수 있게 했다. 발주 직후 실제 주문을 조회해 수량을 대조한다.
 import { fetchDomeggookItem, PROVIDER } from './domeggook-import.js';
 import { raiseAlert } from './ops-alerts.js';
+import { approvedMemberBindingReady, autoOrderEnabled, pilotOrderIds, pilotReady } from './domeggook-gates.js';
+export { approvedMemberBindingReady, autoOrderEnabled, pilotOrderIds } from './domeggook-gates.js';
 
 // 10/29 www 호스트로 바꾼 뒤 redirect:'error' 와 겹쳐 모든 로그인이 실패했다. 상품조회와 같은 공식 호스트를 쓴다.
 const ENDPOINT = 'https://domeggook.com/ssl/api/';
@@ -32,20 +34,6 @@ export function chooseOptionCode(selectOpt) {
 const TRACK_INTERVAL_MS = 60 * 60 * 1000;
 const isoNow = () => new Date().toISOString();
 const pipeSafe = (v, max = 120) => String(v ?? '').replace(/[|\r\n]/g, ' ').trim().slice(0, max);
-
-/** The supplier confirms Private API is approved for one member only.
- * Compare the separately provisioned approved account secret; never disclose identifiers. */
-export function approvedMemberBindingReady(env) {
-  const configured = String(env?.DOMEMAE_USER_ID || '').trim();
-  const approved = String(env?.DOMEMAE_APPROVED_MEMBER_ID || '').trim();
-  return Boolean(configured && approved && configured === approved);
-}
-
-export function autoOrderEnabled(env) {
-  return String(env?.DOMEGGOOK_AUTO_ORDER_ENABLED || '').toLowerCase() === 'true'
-    && Boolean(env?.DOMEMAE_API_KEY && env?.DOMEMAE_USER_ID && env?.DOMEMAE_PASSWORD)
-    && approvedMemberBindingReady(env);
-}
 
 function redact(text, env) {
   let out = String(text || '');
@@ -181,15 +169,8 @@ async function setRow(env, id, fields) {
 }
 
 /** 결제 완료된 위탁 주문을 발주한다. 한 번의 cron 에서 최대 limit 건. */
-/** Operator-approved supervised pilot: only these order ids may be placed while paid auto-order is OFF. */
-export function pilotOrderIds(env) {
-  return String(env?.DOMEGGOOK_PILOT_ORDER_IDS || '').split(',').map((v) => v.trim()).filter((v) => /^mall_[A-Za-z0-9_]{6,60}$/.test(v)).slice(0, 3);
-}
-function pilotReady(env) {
-  return pilotOrderIds(env).length > 0 && Boolean(env?.DOMEMAE_API_KEY && env?.DOMEMAE_USER_ID && env?.DOMEMAE_PASSWORD) && approvedMemberBindingReady(env);
-}
-
 export async function placeSupplierOrders(env, fetchImpl = fetch, limit = 3) {
+  // Both full automation and supervised pilots must pass the same PII/forwarding gates.
   const full = autoOrderEnabled(env);
   if ((!full && !pilotReady(env)) || !env.DB) return { skipped: 'disabled' };
   const pilot = full ? [] : pilotOrderIds(env);

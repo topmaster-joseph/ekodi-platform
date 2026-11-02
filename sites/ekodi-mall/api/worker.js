@@ -278,6 +278,30 @@ export function isEkodian(user, env) {
   const verified = Boolean(user?.email_confirmed_at || user?.confirmed_at);
   return Boolean(email) && verified && ekodianEmails(env).has(email);
 }
+// Read-only, verified-operator inventory view. Other sellers' mutable product APIs
+// remain scoped to the signed-in seller ID; no buyer, contact or payment PII leaves D1.
+export function canReadMallProviderInventory(user, env) {
+  if (!isEkodian(user, env)) return false;
+  const allowed = new Set(cleanText(env?.MALL_OPERATIONS_EMAILS || '', 1000).split(',').map(x => x.trim().toLowerCase()).filter(Boolean));
+  return allowed.has(cleanText(user?.email, 240).toLowerCase());
+}
+async function listOperatorProviderProducts(env) {
+  const rows = await env.DB.prepare(`SELECT id,share_code,public_url,seller_display_name,seller_type,sale_type,
+    category,name,price,stock_quantity,status,checkout_ready,supply_provider,supply_item_no,source_kind,source_name,affiliate_url
+    FROM products WHERE COALESCE(supply_provider,'')<>'' OR sale_type='affiliate'
+      OR source_kind IN ('ekodibiz_own','consigned_merchant')
+    ORDER BY updated_at DESC,id DESC LIMIT 2000`).all();
+  return (rows.results || []).map(row => ({
+    id:row.id,shareCode:row.share_code,publicUrl:row.public_url,status:row.status,
+    checkoutReady:Boolean(row.checkout_ready),publicShareLinkActive:row.status==='published',
+    readOnly:true,seller:{type:row.seller_type,displayName:row.seller_display_name},
+    product:{saleType:row.sale_type,category:row.category,name:row.name,price:row.price,stockQuantity:row.stock_quantity,
+      affiliateUrl:row.affiliate_url || ''},
+    supply:row.supply_provider ? {provider:row.supply_provider,itemNo:row.supply_item_no || ''} : null,
+    source:{kind:row.source_kind || '',name:row.source_kind==='consigned_merchant'?row.source_name || '':''}
+  }));
+}
+
 async function opsAudit(env, actor, action, sellerId, productId, metadata) {
   try {
     await env.DB.prepare('INSERT INTO mall_ops_audit (actor,action,seller_id,store_id,product_id,request_id,metadata_json,created_at) VALUES (?,?,?,?,?,?,?,?)')
@@ -921,6 +945,10 @@ export default {
       const profile = await env.DB.prepare(`SELECT user_id AS userId,email,display_name AS displayName,seller_type AS sellerType,verification_status AS verificationStatus,direct_sale_status AS directSaleStatus FROM seller_profiles WHERE user_id=?`).bind(user.id).first();
       const membership = await env.DB.prepare('SELECT plan_id AS planId,status,valid_from AS validFrom,valid_to AS validTo FROM memberships WHERE seller_id=?').bind(user.id).first();
       return json({ user: { id: user.id, email: user.email, displayName: displayNameFromUser(user), official: isEkodian(user, env) }, profile, membership }, 200, origin, env);
+    }
+    if (request.method === 'GET' && url.pathname === '/api/internal/products/by-provider') {
+      if (!canReadMallProviderInventory(user, env)) return json({ error: '최고관리자 공급처 조회 권한이 없습니다.' }, 403, origin, env);
+      return json({ products:await listOperatorProviderProducts(env), scope:'operator-read-only', limit:2000 }, 200, origin, env);
     }
     if (request.method === 'GET' && url.pathname === '/api/products') return json({ products: await listOwnerProducts(env, user.id) }, 200, origin, env);
     if (request.method === 'GET' && url.pathname === '/api/orders') {

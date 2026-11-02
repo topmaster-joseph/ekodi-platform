@@ -1,6 +1,8 @@
 // Browser UI for EKODI publishing workflow. Server remains the authorization authority.
 const $=id=>document.getElementById(id);
-const BASE='/publishing/api/workflow';
+const ORIGIN='https://ekodi.kr';
+// Compose complete URLs so the apex router cannot prefix individual API suffixes.
+const BASE=`${ORIGIN}/publishing/api/workflow`;
 const STAGES=[
   ['planning','기획'],['drafting','집필'],['in_review','검수'],
   ['ready_for_author','저자 승인'],['publisher_approved','발행 승인'],['scheduled','예약'],
@@ -26,7 +28,7 @@ async function api(path,options={}){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),15000);
   try {
-    const response=await fetch(BASE+path,{...options,
+    const response=await fetch(`${BASE}/${path}`,{...options,
       headers:{authorization:'Bearer '+token,'content-type':'application/json',...(options.headers||{})},
       cache:'no-store',signal:controller.signal});
     const data=await response.json().catch(()=>({}));
@@ -54,9 +56,9 @@ function enableForms(enabled){
 async function load(){
   $('connection').textContent='출판 업무 원장 연결 확인 중…';
   try{
-    const health=await fetch(BASE+'/health',{cache:'no-store'}).then(x=>x.json());
+    const health=await fetch(`${BASE}/health`,{cache:'no-store'}).then(x=>x.json());
     if(!health.dbConfigured){enableForms(false);throw Object.assign(new Error('PUBLISH_DB_NOT_CONFIGURED'),{status:503});}
-    const data=await api('/projects');
+    const data=await api('projects');
     projects=data.projects||[];userRole=data.role||'author';enableForms(true);
     $('connection').textContent='출판 업무 원장 연결 · 권한: '+userRole+' · 예약 후에도 자동 판매되지 않습니다.';
     showList();
@@ -96,7 +98,7 @@ function button(text,fn){
 }
 async function transition(action,extra={}){
   if(!active) return;
-  return api('/projects/'+active.id+'/transition',{method:'POST',body:JSON.stringify({
+  return api(`projects/${active.id}/transition`,{method:'POST',body:JSON.stringify({
     action,revision:active.revision,...extra})});
 }
 function askDigest(label,current){
@@ -125,7 +127,7 @@ function renderDetail(){
   });
   $('actions').replaceChildren();tell('');
   button('판매 준비조건 확인',async()=>{
-    const info=await api('/projects/'+p.id+'/readiness');
+    const info=await api(`projects/${p.id}/readiness`);
     tell(info.saleReadyForPublisherReview
       ? '비공개 자격·계약·오디오 검수 기록 확인됨. 실제 서점·몰 판매 및 구매자 제공은 별도 배포 승인 전입니다.'
       : '판매 불가: '+(info.blocker||'준비 조건 확인 필요')+' · 개인 원고 보관 및 집필은 계속 가능합니다.');
@@ -167,14 +169,14 @@ async function loadJobs(){
   if(!active)return;
   const id=active.id,holder=$('aiJobs');holder.textContent='';
   try{
-    const data=await api('/projects/'+id+'/ai');
+    const data=await api(`projects/${id}/ai`);
     holder.textContent=(data.jobs||[]).slice(0,12).map(j=>j.kind+' · '+j.status+' · '+j.created_at).join('\n')||'요청된 AI 작업이 없습니다.';
   }catch(e){holder.textContent=errorText(e);}
 }
 $('createForm').addEventListener('submit',async(e)=>{
   e.preventDefault();if(!connected)return;
   try {
-    await api('/projects',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});
+    await api('projects',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.currentTarget)))});
     e.currentTarget.reset();await load();
   }catch(error){$('connection').textContent=errorText(error);}
 });
@@ -182,7 +184,7 @@ $('aiForm').addEventListener('submit',async(e)=>{
   e.preventDefault();if(!active)return;
   const data=new FormData(e.currentTarget);
   try{
-    await api('/projects/'+active.id+'/ai',{method:'POST',
+    await api(`projects/${active.id}/ai`,{method:'POST',
       body:JSON.stringify({kind:data.get('kind'),provider:'core',spendKrw:0,ownerConsent:data.get('consent')==='on'})});
     tell('AI 집필 요청을 대기열에 등록했습니다. 실행·완료를 뜻하지 않습니다.');
     await loadJobs();
@@ -194,10 +196,11 @@ $('saveEvidence').addEventListener('click',async()=>{
     const releaseCandidate=JSON.parse($('releaseEvidence').value);
     const digest=askDigest('검증을 마친 EPUB·출간파일 SHA-256', $('releaseDigest').value);
     if(!digest)return;
-    await api('/projects/'+active.id+'/evidence',{method:'POST',body:JSON.stringify({
+    await api(`projects/${active.id}/evidence`,{method:'POST',body:JSON.stringify({
       revision:active.revision,releaseDigest:digest,manuscriptDigest:active.manuscriptDigest,releaseCandidate})});
     tell('검수 증빙 저장 완료');await load();
   }catch(err){tell(errorText(err));}
 });
 $('refresh').addEventListener('click',load);
 enableForms(false);load();
+

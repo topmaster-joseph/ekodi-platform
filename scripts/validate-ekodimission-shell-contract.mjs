@@ -69,8 +69,21 @@ export function validateMissionShellSource(source){
     "release:'language-visibility-v1'",
     "language.hidden=true",
     "languageControl.hidden=available.length<=1",
-    "nav.replaceChildren(...links,language)",
   ])if(!source.includes(marker))errors.push(`missing ${marker}`);
+  // Allow both the legacy flat menu and the bounded compact disclosure,
+  // provided all navigation targets remain projected exactly once.
+  const flatNav=source.includes('nav.replaceChildren(...links,language)');
+  const compactNav=[
+    'const primaryIndices=new Set([0,1,2,5])',
+    'const primary=links.filter((a,index)=>primaryIndices.has(index))',
+    'const secondary=links.filter((a,index)=>!primaryIndices.has(index))',
+    "more.className='mission-nav-more'",
+    "summary.setAttribute('aria-label','추가 메뉴 열기')",
+    'popup.append(...secondary)',
+    'more.append(summary,popup)',
+    'nav.replaceChildren(...primary,more,language)',
+  ].every(marker=>source.includes(marker));
+  if(!flatNav&&!compactNav)errors.push('missing valid flat or compact navigation projection');
   for(const href of REQUIRED_MISSION_LINKS)if(!source.includes(href))errors.push(`missing navigation target ${href}`);
   if(/준비\s*중/.test(source))errors.push('shell must never render preparing language text');
   if(/option\.disabled\s*=\s*!?published/.test(source))errors.push('unpublished locales must be omitted, not disabled');

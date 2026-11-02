@@ -202,7 +202,14 @@ body[data-auth-state="member"] .my-desktop-tabs a[aria-selected="true"]{backgrou
   .services-subtabs,.account-subtabs{gap:4px}
   .section-menu-back{flex:0 0 100%;text-align:left}
 }
-@media(max-width:460px){.account-wayfinder-grid{grid-template-columns:1fr}}
+@media(max-width:460px){
+  /* Keep the four top-level account choices visible above the detail tabs. */
+  #account .account-wayfinder-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #account .account-wayfinder-grid button{grid-template-columns:28px minmax(0,1fr);column-gap:7px;min-height:64px;padding:9px 8px}
+  #account .account-wayfinder-grid button>span{width:28px;height:28px;border-radius:10px;font-size:14px}
+  #account .account-wayfinder-grid button>strong{font-size:12px;line-height:1.35;word-break:keep-all;overflow-wrap:normal}
+  #account .account-wayfinder-grid button>small{display:none}
+}
 
 
 /* 2026-10-09 Hash routing authority: hidden state always beats member display rules. */

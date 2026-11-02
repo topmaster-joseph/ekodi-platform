@@ -239,7 +239,7 @@ test('My guarded release manifest follows the lazy startup contract',async()=>{
   assert.ok(canonical,'canonical My EKODI production request must exist');
   assert.ok(canonical.expect.includes('app.js?v='),'versioned My JS asset must load');
   for(const tab of ['profile','identity','sharing','inbox'])assert.ok(canonical.expect.includes('data-public-tab="'+tab+'"'),'missing public detail tab: '+tab);
-  assert.match(manifest,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
+  assert.match(manifest,/secondary-feature-loader\.js\?v=20261103-read-guard-v1/);
   assert.doesNotMatch(manifest,/church-marketing-ai\.js\?v=20260827-church-marketing-1/);
   assert.doesNotMatch(manifest,/channel-automation\.js\?v=20260903-channel-automation-1/);
 });
@@ -347,7 +347,7 @@ test('Convergent merge dispatches My EKODI production release with the orchestra
 
 test('My EKODI defers secondary feature bundles until after the critical startup path',async()=>{
   const [html,loader]=await Promise.all([read('my/index.html'),read('my/secondary-feature-loader.js')]);
-  assert.match(html,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
+  assert.match(html,/secondary-feature-loader\.js\?v=20261103-read-guard-v1/);
   for(const asset of [
     'public-profile.js','digital-card-admin.js','character-identity.js','approval-brief.js',
     'personal-finance.js','life-communication.js','church-marketing-ai.js','channel-automation.js'
