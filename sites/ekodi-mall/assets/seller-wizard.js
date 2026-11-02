@@ -58,6 +58,24 @@
   .wz-bar li button{border:1px solid #d9d2c4;background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap;cursor:pointer;color:#344}
   .wz-bar li button[aria-current="step"]{background:#173a2e;color:#fff;border-color:#173a2e}
   .wz-bar li button.wz-done{border-color:#7aa48f;color:#1f5b43}
+  .wz-bar li[hidden]{display:none!important}
+  .wz-on .wz-bar{padding:8px 12px}
+  .wz-on .wz-bar ol{justify-content:center;flex-wrap:wrap;max-width:1140px}
+  .wz-on .wz-head{max-width:1140px;margin:8px auto 6px}
+  .wz-on .wz-head h2{font-size:19px}
+  .wz-on .wz-head p{font-size:13px}
+  .wz-on #studio{margin-top:0!important;padding-top:0!important}
+  .wz-on #studio .studio-grid{margin-top:8px!important;gap:16px!important}
+  .wz-on #studio .studio-preview{max-height:360px;overflow:auto}
+  .wz-on .wz-nav{margin:8px auto 14px;max-width:1140px}
+  @media(min-width:900px){
+    .wz-on #studio .studio-grid{align-items:start}
+    .wz-on #studio .studio-preview-wrap{position:sticky;top:12px;max-height:calc(100vh - 160px);overflow:auto}
+  }
+  @media(max-width:899px){
+    .wz-on .wz-bar ol{justify-content:flex-start;flex-wrap:nowrap}
+    .wz-on #studio .studio-preview-wrap{position:static;max-height:none}
+  }
   .wz-head{max-width:960px;margin:14px auto 0;padding:0 16px}
   .wz-head h2{margin:0;font-size:22px}.wz-head p{margin:4px 0 0;color:#4d5a55}
   .wz-nav{display:flex;justify-content:space-between;gap:8px;max-width:960px;margin:16px auto 28px;padding:0 16px}
@@ -117,6 +135,16 @@
   function apply() {
     document.documentElement.classList.add('wz-on');
     const step = steps[current];
+    // The authentication stage is a gate, not a task after sign-in.
+    // Keep its internal index for compatibility, but present a four-step flow.
+    const authenticated = signedIn();
+    bar.querySelectorAll('[data-wz]').forEach((button) => {
+      const index = Number(button.dataset.wz);
+      button.closest('li').hidden = authenticated && index === 0;
+      button.textContent = authenticated && index > 0
+        ? `${index}. ${steps[index].title}`
+        : `${index + 1}. ${steps[index].title}`;
+    });
     const keep = new Set(visibleFor(step));
     [...main.children].forEach((el) => {
       if (el === bar || el === head || el === err || el === nav) return;
@@ -131,7 +159,7 @@
     draftStatus?.classList.toggle('wz-hide', !step.buttons);
     const last = [...keep].pop();
     (last || main).after(nav);
-    head.querySelector('[data-wz-title]').textContent = `${current + 1}단계 · ${step.title}`;
+    head.querySelector('[data-wz-title]').textContent = `${authenticated ? current : current + 1}단계 · ${step.title}`;
     head.querySelector('[data-wz-hint]').textContent = step.hint;
     bar.querySelectorAll('[data-wz]').forEach((b) => {
       const i = Number(b.dataset.wz);
@@ -228,6 +256,6 @@
   start();
   // Auth state resolves asynchronously after the central-login handoff.
   const loginBtn = document.querySelector('#sellerLogin');
-  if (loginBtn) new MutationObserver(() => { if (signedIn() && current === 0) go(1); })
+  if (loginBtn) new MutationObserver(() => { if (signedIn() && current === 0) go(1); else if (!signedIn() && current !== 0) go(0); else apply(); })
     .observe(loginBtn, { attributes: true, attributeFilter: ['hidden'] });
 })();
