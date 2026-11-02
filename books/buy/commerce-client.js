@@ -124,7 +124,7 @@
           const s = normalize(verified);
           if (!s.accessToken) throw new Error('session_not_created');
           // 구글 인증도 EKODI 통합 원장으로 기록한다. 구형 서점 세션은 폐기.
-          try { localStorage.setItem(CENTRAL_KEY, JSON.stringify(verified)); forget(); }
+          try { localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...verified, expires_at: s.expiresAt })); forget(); }
           catch { save(s); }
           onStatus(''); onSignedIn();
         } catch (e) {
