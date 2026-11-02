@@ -17,6 +17,7 @@ const fields={
   addMessenger:$('#digitalCardAddMessenger'),
   addContext:$('#digitalCardAddContext'),
   save:$('#digitalCardSave'),
+  retry:$('#digitalCardRetry'),
   status:$('#digitalCardStatus'),
   link:$('#digitalCardLink'),
   qrLink:$('#digitalCardQrLink'),
@@ -24,6 +25,7 @@ const fields={
   inboxStatus:$('#contactExchangeInboxStatus'),
 };
 let rowSequence=0;
+let configurationLoaded=false;
 const MESSENGER_SERVICES=Object.freeze([
   ['wechat','WeChat'],
   ['whatsapp','WhatsApp'],
@@ -244,6 +246,10 @@ function setDisabled(value){
   for(const el of form.querySelectorAll('input,textarea,select,button'))el.disabled=value;
 }
 async function loadPublicProfile(){try{return await rpc('get_my_public_profile')}catch{return{}}}
+async function loadContactExchanges(){
+  try{return await rpc('get_my_contact_exchanges',{p_limit:50})}
+  catch{return{items:[],loadFailed:true}}
+}
 function showCardLinks(profile={}){
   const handle=String(profile.handle||''),visible=profile.visibility==='public'&&handle;
   for(const el of [fields.link,fields.qrLink])if(el)el.hidden=!visible;
@@ -275,6 +281,8 @@ function renderInbox(items=[]){
   }
 }
 async function refresh(){
+  configurationLoaded=false;
+  if(fields.retry)fields.retry.hidden=true;
   if(!signedIn()){
     setDisabled(true);renderRoles([]);renderMessengers([]);renderContexts([]);renderInbox([]);showCardLinks({});
     setStatus('로그인하면 개인 공유 설정을 관리할 수 있습니다.');
@@ -283,19 +291,20 @@ async function refresh(){
   setDisabled(true);setStatus('개인 공유 설정을 확인하고 있습니다.');
   try{
     const [card,profile,inbox]=await Promise.all([
-      rpc('get_my_identity_share_config'),loadPublicProfile(),rpc('get_my_contact_exchanges',{p_limit:50}),
+      rpc('get_my_identity_share_config'),loadPublicProfile(),loadContactExchanges(),
     ]);
     fields.phone.value=String(card.phone||'');fields.email.value=String(card.email||'');
     fields.exchangeEnabled.checked=Boolean(card.exchange_enabled);
     renderRoles(card.roles);renderMessengers(card.messengers);renderContexts(card.contexts);refreshRoleOptions();refreshMessengerOptions();
     showCardLinks(profile);renderInbox(Array.isArray(inbox.items)?inbox.items:[]);
-    fields.inboxStatus.textContent='공유모드가 자동 태그되어 어떤 관계로 연결됐는지 함께 표시됩니다.';
+    configurationLoaded=true;
+    fields.inboxStatus.textContent=inbox?.loadFailed?'받은 연락처를 불러오지 못했습니다. 다시 새로고침해 주세요.':'공유모드가 자동 태그되어 어떤 관계로 연결됐는지 함께 표시됩니다.';
     setStatus(profile?.visibility==='public'&&profile?.handle?'기본정보·역할·공유모드를 관리할 수 있습니다.':'먼저 공개 개인페이지의 아이디와 공개 상태를 설정해 주세요.');
-  }catch(error){renderRoles([]);renderMessengers([]);renderContexts([]);renderInbox([]);setStatus(error.message||'개인 공유 설정을 불러오지 못했습니다.','error')}
-  finally{setDisabled(false)}
+  }catch(error){fields.phone.value='';fields.email.value='';fields.exchangeEnabled.checked=false;renderRoles([]);renderMessengers([]);renderContexts([]);renderInbox([]);if(fields.retry)fields.retry.hidden=false;setStatus(error.message||'개인 공유 설정을 불러오지 못했습니다.','error')}
+  finally{setDisabled(!configurationLoaded)}
 }
 async function save(event){
-  event.preventDefault();if(!signedIn())return;
+  event.preventDefault();if(!signedIn()||!configurationLoaded)return;
   const roles=collectRoles(),messengers=collectMessengers(),contexts=collectContexts();
   if(roles.length>20||messengers.length>20||contexts.length>20){setStatus('역할·메신저·공유모드는 각각 최대 20개까지 등록할 수 있습니다.','error');return}
   if(new Set(messengers.map(item=>item.key)).size!==messengers.length){setStatus('메신저 내부 ID가 중복되었습니다. 항목을 삭제 후 다시 추가해 주세요.','error');return}
@@ -316,6 +325,7 @@ fields.addRole.addEventListener('click',()=>{if(fields.roles.children.length>=20
 fields.addMessenger.addEventListener('click',()=>{if(fields.messengers.children.length>=20)return setStatus('메신저는 최대 20개까지 등록할 수 있습니다.','error');fields.messengers.append(messengerRow({service:'wechat',enabled:true}));refreshMessengerOptions()});
 fields.addContext.addEventListener('click',()=>{if(fields.contexts.children.length>=20)return setStatus('공유모드는 최대 20개까지 등록할 수 있습니다.','error');fields.contexts.append(contextRow({show_profile_intro:true,show_profile_links:true,exchange_enabled:true,visibility:'private'}))});
 form.addEventListener('submit',save);
+fields.retry?.addEventListener('click',()=>void refresh());
 window.addEventListener('ekodi:my-session',()=>void refresh());
 window.addEventListener('ekodi:public-profile-updated',event=>showCardLinks(event.detail||{}));
 void refresh();
