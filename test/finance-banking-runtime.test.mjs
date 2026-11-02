@@ -167,8 +167,9 @@ test('CSV export is scoped, BOM-prefixed and neutralises spreadsheet formulas', 
   assert.equal(exported.headers.get('x-ekodi-export-rows'), '3');
   assert.ok(exported.data.startsWith('﻿거래일시,계좌,구분,금액'));
   assert.match(exported.data, /"'=HYPERLINK\(""x""\)"/);
-  assert.doesNotMatch(exported.data, /777/);
-  assert.doesNotMatch(exported.data, /9876/);
+  // Check the foreign tenant's exact CSV amount/account fields, not random transaction UUID fragments.
+  assert.doesNotMatch(exported.data, /(?:^|,)777(?:,|\r?\n)/m);
+  assert.doesNotMatch(exported.data, /\*{4}9876\b/);
   const audit = sqlite.prepare("SELECT organization_id,detail FROM finance_bank_audit_log WHERE action='bank.transactions.export'").get();
   assert.deepEqual({ ...audit }, { organization_id: 'EKODIBIZ', detail: 'rows=3' });
 });
