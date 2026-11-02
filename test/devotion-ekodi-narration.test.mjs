@@ -19,6 +19,13 @@ test('public manifest refuses unapproved, future-day impersonation, altered and 
  const ready=approvedNarration(good,date);
  assert.deepEqual(Object.keys(ready),['male','female']);
  assert.equal(ready.male,'/bible/narration/2026-11-02/male.mp3');
+ const stock = {...good,source:{kind:'licensed-stock-preset',model:'supertonic-3',
+  modelRevision:'724fb5abbf5502583fb520898d45929e62f02c0b',
+  modelLicense:'OpenRAIL-M',synthetic:true,voices:{male:'M4',female:'F5'}}};
+ assert.ok(approvedNarration(stock,date));
+ assert.equal(approvedNarration({...stock,source:{...stock.source,modelLicense:'unknown'}},date),null);
+ assert.equal(approvedNarration({...stock,source:{...stock.source,synthetic:false}},date),null);
+ assert.equal(approvedNarration({...stock,source:{...stock.source,voices:{male:'M4',female:'F4'}}},date),null);
  for(const bad of [
   {...good,status:'draft'},
   {...good,date:'2026-11-01'},
