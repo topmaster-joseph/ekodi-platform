@@ -168,3 +168,55 @@
 .lib-operator-note{font-size:.84rem;word-break:break-all}
 .voice-gender{display:flex;gap:16px;margin:10px 0 6px;font-size:14px}
 .voice-name{width:100%;max-width:320px;min-height:40px;padding:0 10px;border:1px solid #cfc6b4;border-radius:8px;font:inherit;margin-bottom:6px}
+
+
+/* BOOKS-LIBRARY-TABS-20261102 — reader-first layout, separate operator workspace */
+.books-library-page .library-page{min-height:0}
+.books-library-page .library-page .buy-hero{padding:18px 0 28px}
+.books-library-page .library-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 18px}
+.books-library-page .library-heading .buy-title{font-size:clamp(1.7rem,3.2vw,2.45rem);line-height:1.25}
+.books-library-page .library-heading .buy-author{display:flex;align-items:center;flex-wrap:wrap;gap:8px;line-height:1.5;margin:7px 0 0}
+.books-library-page .lib-account{color:var(--navy);font-weight:700}
+.books-library-page .lib-switch{min-height:38px;border:1px solid var(--line);border-radius:4px;padding:6px 13px;background:var(--white);color:var(--navy);font:600 .78rem Arial,sans-serif;cursor:pointer}
+.books-library-page .library-tabs{display:flex;gap:6px;align-items:center;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;margin:18px 0 12px;padding:0 0 8px;border-bottom:1px solid var(--line)}
+.books-library-page .library-tab{min-height:44px;flex:0 0 auto;white-space:nowrap;padding:8px 16px;background:transparent;color:#536177;border:1px solid transparent;border-radius:4px;font:600 .85rem Arial,"Malgun Gothic",sans-serif;cursor:pointer}
+.books-library-page .library-tab[aria-selected="true"]{background:var(--navy);border-color:var(--navy);color:#fff}
+.books-library-page .library-tab:hover:not([aria-selected="true"]){background:#e9e3d6;color:var(--navy)}
+.books-library-page .library-tab:focus-visible,.books-library-page .lib-switch:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.books-library-page .library-tab[hidden],.books-library-page .library-tab-panel[hidden]{display:none!important}
+.books-library-page .library-tab-panel{padding:5px 0 16px;min-height:150px}
+.books-library-page .library-list{margin:10px 0 12px}
+.books-library-page .library-item{border-radius:8px;box-shadow:0 3px 14px rgba(16,38,79,.04)}
+.books-library-page .library-empty{border-radius:9px}
+.books-library-page .library-audio-list,.books-library-page .library-orders-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
+.books-library-page .library-compact-card,.books-library-page .library-account-view,.books-library-page .library-info-view{padding:22px;border:1px solid var(--line);border-radius:9px;background:var(--white);box-shadow:0 3px 14px rgba(16,38,79,.04)}
+.books-library-page .library-compact-card h3,.books-library-page .library-account-view h2,.books-library-page .library-info-view h2{margin:0 0 8px;color:var(--navy);font-size:1.08rem}
+.books-library-page .library-compact-card p,.books-library-page .library-account-view p,.books-library-page .library-info-view p{margin:8px 0;color:var(--muted);font-size:.88rem;line-height:1.65}
+.books-library-page .library-compact-card a,.books-library-page .library-account-view a{color:var(--navy);font:600 .85rem Arial,sans-serif;text-underline-offset:4px}
+.books-library-page .library-compact-card .audio-bonus{margin:10px 0;padding:0}
+.books-library-page .library-compact-card button{min-height:42px;padding:9px 12px;margin:6px 8px 6px 0;border:1px solid var(--navy);background:var(--navy);color:#fff;font:600 .8rem Arial,sans-serif;cursor:pointer}
+.books-library-page .library-panel-empty{padding:30px 20px;border:1px solid var(--line);border-radius:9px;background:var(--white);color:var(--muted)}
+.books-library-page .library-related-links{margin:15px 0 2px}
+.books-library-page .operator-panel{margin:2px 0 12px;border-style:solid;border-radius:9px}
+.books-library-page .lib-operator-note{display:none!important}
+.books-library-page .voice-studio{margin-top:18px;background:#fffdf8;min-width:0}
+.books-library-page .voice-script{font-size:.95rem;line-height:1.95;margin:12px 0 18px;padding:0 0 0 25px}
+.books-library-page .voice-script li{margin:9px 0}
+.books-library-page .voice-mic-help{font-size:.82rem;line-height:1.6;color:#85461b;border-left:3px solid #ca9647;padding:8px 12px}
+.books-library-page .voice-mic-help[hidden]{display:none}
+.books-library-page .voice-studio .review-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.books-library-page .voice-studio .review-actions button{min-height:44px}
+.books-library-page .voice-studio audio{max-width:100%;width:100%;margin:14px 0}
+@media(max-width:700px){
+ .books-library-page .library-page .buy-hero{padding:13px 0 24px}
+ .books-library-page .library-heading{align-items:start}
+ .books-library-page .library-heading .buy-title{font-size:1.75rem}
+ .books-library-page .library-heading .buy-author{font-size:.79rem}
+ .books-library-page .library-tabs{margin:12px 0 10px;gap:4px}
+ .books-library-page .library-tab{font-size:.8rem;padding:6px 12px;min-height:42px}
+ .books-library-page .library-compact-card,.books-library-page .library-account-view,.books-library-page .library-info-view{padding:16px}
+ .books-library-page .library-compact-card h3{font-size:1rem}
+ .books-library-page .library-compact-card .audio-bonus button{max-width:100%;white-space:normal}
+ .books-library-page .voice-script{font-size:.91rem;line-height:1.85}
+ .books-library-page .voice-studio .review-actions button{min-width:0}
+}
