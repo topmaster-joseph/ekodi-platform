@@ -29,7 +29,7 @@ def produce(script_file, samples, checkpoints, output, speed):
                 clips.append(fn)
                 if i<len(segments)-1:
                     pause=os.path.join(work,f"sil{i:03d}.wav")
-                    run("ffmpeg","-y","-f","lavfi","-i","anullsrc=r=24000:cl=mono",
+                    run("ffmpeg","-y","-f","lavfi","-i","anullsrc=r=22050:cl=mono",
                         "-t","0.55" if chunk.endswith("기도.") else "0.22",pause)
                     clips.append(pause)
             concat=os.path.join(work,"concat.txt")
