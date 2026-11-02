@@ -1,0 +1,9 @@
+/* Supplier-only inventory view. Never linked from the public catalog. */
+.seller-provider-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 10px}
+.seller-provider-tab{border:1px solid #c9d8d0;background:#fff;color:#243e32;border-radius:999px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;max-width:100%;overflow-wrap:normal}
+.seller-provider-tab[aria-selected="true"]{border-color:#174f37;background:#174f37;color:#fff}
+.seller-provider-tab:focus-visible{outline:3px solid #9bc6aa;outline-offset:3px}
+.seller-provider-summary{color:#466257;font-size:.9rem;line-height:1.55;margin:0 0 14px}
+.mall-load-more{display:flex;justify-content:center;margin:24px 0}
+.mall-load-more button{min-height:44px;padding:10px 24px}
+@media(max-width:390px){.seller-provider-tabs{gap:6px}.seller-provider-tab{font-size:.85rem;padding:8px 10px}}

@@ -115,9 +115,12 @@ export async function listProductIndex(env, limitValue) {
   return (rows.results || []).map((r) => ({ shareCode: r.share_code, product: maskPublicProductFields({ name: r.name, oneLine: r.one_line || '' }), publishedAt: r.published_at, updatedAt: r.updated_at }));
 }
 
-async function listPublicProducts(env, limitValue) {
-  const limit = Math.max(1, Math.min(48, Math.trunc(Number(limitValue) || 24)));
-  const result = await env.DB.prepare(`${PUBLIC_SELECT} WHERE p.status='published' ORDER BY p.published_at DESC LIMIT ?`).bind(limit).all();
+async function listPublicProducts(env, limitValue, offsetValue = 0, categoryValue = '') {
+  const limit = Math.max(1, Math.min(60, Math.trunc(Number(limitValue) || 24)));
+  const offset = Math.max(0, Math.min(2000, Math.trunc(Number(offsetValue) || 0)));
+  const requested = String(categoryValue || '').trim();
+  const category = ['general','living','book','gift'].includes(requested) ? requested : '';
+  const result = await env.DB.prepare(`${PUBLIC_SELECT} WHERE p.status='published' AND (?='' OR p.category=?) ORDER BY p.published_at DESC,p.id DESC LIMIT ? OFFSET ?`).bind(category, category, limit, offset).all();
   return (result.results || []).map(publicProduct);
 }
 
@@ -243,7 +246,7 @@ export default {
     }
     if (request.method === 'GET' && url.pathname === '/api/public/products') {
       if (!env.DB) return reply({ error:'Mall 전용 데이터베이스 연결이 없습니다.' },503,origin,env);
-      return reply({ products:await listPublicProducts(env,url.searchParams.get('limit')) },200,origin,env);
+      return reply({ products:await listPublicProducts(env,url.searchParams.get('limit'),url.searchParams.get('offset'),url.searchParams.get('category')) },200,origin,env);
     }
     if (request.method === 'GET' && url.pathname === '/api/public/fees') return reply({ individual:FEE_RATES,businessStore:10,pgIncluded:true,vatIncluded:true,proAiSubscriptionSeparate:true,attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,serverAuthoritative:true },200,origin,env);
     if (request.method === 'POST' && url.pathname === '/api/public/attribution/visit') {

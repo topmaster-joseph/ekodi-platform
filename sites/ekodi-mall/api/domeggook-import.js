@@ -9,6 +9,7 @@ import { MEDIA_PREFIX, MAX_IMAGES, MAX_IMAGE_BYTES } from './product-media.js';
 import { raiseAlert } from './ops-alerts.js';
 import { autoOrderEnabled } from './domeggook-gates.js';
 import { maskSupplierText } from './supplier-mask.js';
+import { curatedMallCategory } from './catalog-category.js';
 
 export const PROVIDER = 'domeggook';
 const ENDPOINT = 'https://domeggook.com/ssl/api/';
@@ -197,7 +198,7 @@ async function copyImages(env, productId, urls, fetchImpl, { anyHost = false, re
   return images;
 }
 
-export function productBodyFromItem(rawItem, salePrice) {
+export function productBodyFromItem(rawItem, salePrice, keyword = '') {
   // 공개 문구에는 공급처 주소·상품번호를 남기지 않는다(에코디몰 고유 상품으로 노출).
   const item = { ...rawItem, title: maskSupplierText(rawItem.title) || '에코디몰 엄선 상품' };
   const stock = item.inventory === null ? 10 : Math.min(MAX_STOCK, Math.max(0, Math.trunc(item.inventory)));
@@ -206,13 +207,13 @@ export function productBodyFromItem(rawItem, salePrice) {
     seller: { type: 'individual', displayName: '에코디몰' },
     store: null,
     product: {
-      saleType: 'direct', category: 'living', region: null, name: item.title,
+      saleType: 'direct', category: curatedMallCategory(item.title, keyword), region: null, name: item.title,
       audience: '', oneLine: `${item.title} · 무료배송`,
       price: salePrice, stockQuantity: stock,
-      benefits: ['무료배송', '에코디몰 안전결제', '교환·환불 안내 제공'],
+      benefits: ['배송비 포함', '판매 시작 후 안전결제', '교환·환불 안내 제공'],
       specs: [],
-      story: `${item.title}을(를) 에코디몰이 엄선해 소개합니다.\n주문하시면 공급처에서 바로 출고되는 위탁배송 상품입니다.`,
-      fulfillment: `결제 확인 후 공급처에서 직접 발송합니다(보통 1~3영업일). 배송비는 상품가에 포함되어 있습니다.${jeju}`,
+      story: `${item.title}을(를) 에코디몰이 엄선해 소개합니다.\n판매 시작 후 주문하시면 상품을 배송해 드립니다.`,
+      fulfillment: `판매 개시 후 결제가 확인되면 배송을 진행합니다. 배송비는 상품가에 포함되어 있습니다.${jeju}`,
       contact: '', affiliateUrl: '', action: { url: '' }
     },
     content: { headline: `${item.title} · 무료배송` }
@@ -243,7 +244,7 @@ export async function importDomeggookProduct(env, user, input, { saveProduct, ge
     await env.DB.prepare('UPDATE products SET price=?,stock_quantity=COALESCE(?,stock_quantity),updated_at=? WHERE id=? AND seller_id=?')
       .bind(salePrice, stock, now, productId, user.id).run();
   } else {
-    const saved = await saveProduct(env, user, productBodyFromItem(item, salePrice), '');
+    const saved = await saveProduct(env, user, productBodyFromItem(item, salePrice, input?.keyword), '');
     if (saved.errors) return { status: 400, body: { error: saved.errors.join(' ') } };
     productId = saved.product.id;
   }
