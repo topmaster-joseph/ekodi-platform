@@ -40,11 +40,12 @@
         <p class="scripture" id="todayScripture"></p>
         <button id="startToday" class="primary" type="button">이 질문으로 이야기하기</button>
       </article>
-      <article class="today-card devotion-entry">
-        <small>오늘의 매일묵상</small>
-        <h3>오늘의 공통본문으로 시·노래·적용질문까지</h3>
-        <p>본문·묵상 시·묵상 노래·적용 질문·기도를 탭으로 하나씩 열어 보고, 카카오톡으로 공유할 수 있습니다.</p>
-        <a class="primary" href="/bible/devotion">오늘의 매일묵상 열기</a>
+      <article class="today-card devotion-entry" data-ekodi-today-devotion="bible">
+        <small data-devotion-title>오늘의 매일묵상</small>
+        <time data-devotion-date></time>
+        <h3 data-devotion-passage>에코디 오늘의 공통본문</h3>
+        <p data-devotion-keyline>같은 본문으로 말씀·묵상·질문·기도를 나눕니다.</p>
+        <a class="primary" data-devotion-link href="/bible/devotion">오늘의 매일묵상 열기</a>
       </article>
       <div class="principles">
         <strong>이 공간의 약속</strong>
@@ -134,5 +135,6 @@
   <footer><a href="https://ekodi.kr/ekodichurch">에코디교회</a><span>·</span><a href="/bible/admin">관리자</a><span>·</span><a href="https://ekodi.kr/">EKODI</a></footer>
   <script src="/bible/config.js"></script>
   <script type="module" src="/bible/app.js"></script>
+  <script type="module" src="/bible/devotion-today-card.js"></script>
 </body>
 </html>

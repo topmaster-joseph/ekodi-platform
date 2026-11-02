@@ -252,3 +252,21 @@ body:has(.hero-split) .mission-site-header nav a{font-size:clamp(.81rem,.9vw,.89
   .mission-home .hero .actions .button{width:100%;min-height:38px;padding:.5rem .55rem;font-size:.81rem;white-space:nowrap}
   .mission-home .mission-home-photo{height:185px}
 }
+
+/* Homepage density: start the story immediately below navigation, never center it in an empty viewport. */
+.mission-home>.hero.hero-split{min-height:0!important;height:auto!important;justify-content:start!important;align-items:start!important;padding:clamp(.8rem,2.5vw,1.6rem) 0 1.35rem!important;gap:clamp(.85rem,2vw,1.5rem)}
+.mission-home>.hero .hero-copy{align-self:start}
+.mission-home .mission-home-devotion{align-items:flex-start}
+.mission-home .mission-devotion-heading{display:flex;align-items:baseline;flex-wrap:wrap;gap:.35rem .75rem}
+.mission-home .mission-devotion-heading time{font-size:.73rem;font-weight:700;color:var(--muted);white-space:nowrap}
+.mission-home .mission-devotion-passage{display:block;margin:.22rem 0 0;font-size:.81rem;line-height:1.45;color:var(--accent)}
+.mission-home .mission-home-devotion [data-devotion-keyline]{word-break:keep-all;overflow-wrap:break-word}
+@media(max-width:760px){
+ .mission-home>.hero.hero-split{grid-template-columns:minmax(0,1fr)!important;grid-auto-rows:max-content;min-height:0!important;padding:.7rem 0 1rem!important;gap:.75rem!important}
+ .mission-home>.hero .hero-copy{min-height:0!important;align-self:start!important}
+}
+@media(max-width:520px){
+ .mission-home>.hero.hero-split{padding:.62rem 0 .9rem!important}
+ .mission-home .mission-home-devotion{grid-template-columns:minmax(0,1fr);gap:.35rem}
+ .mission-home .mission-home-devotion a{white-space:normal;min-height:40px;display:inline-flex;align-items:center}
+}
