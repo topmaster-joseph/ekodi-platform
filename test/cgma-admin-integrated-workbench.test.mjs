@@ -33,6 +33,7 @@ test('iframe only accepts exact same-origin, exact frame and authorized existing
   assert.ok(file.includes("postMessage({type:'ekodi:cgma-admin:session',accessToken:token},location.origin)"));
   assert.ok(!file.includes('accessToken='+encodeURIComponent));
   assert.ok(file.includes("summary.replaceChildren();host.replaceChildren()"));
+  assert.ok(file.includes("height:70vh;min-height:360px"), 'embedded panel should fit first viewport instead of reserving 1100px');
   assert.ok(file.includes("window.addEventListener('pagehide'"));
 });
 
