@@ -12,8 +12,8 @@ test('personal points has accessible wallet, activity and invite tabs',()=>{
   }
   assert.match(html,/role="tablist"/);
   assert.match(html,/id="pointsWalletPanel" role="tabpanel"/);
-  assert.match(html,/id="claimSection" role="tabpanel"/);
-  assert.match(html,/id="referralSection" role="tabpanel"/);
+  assert.match(html,/id="claimSection" hidden role="tabpanel"/);
+  assert.match(html,/id="referralSection" hidden role="tabpanel"/);
   assert.match(js,/pointTabButtons\.forEach/);
   assert.match(js,/event\.key==='ArrowRight'/);
   assert.match(js,/event\.key==='Home'/);
