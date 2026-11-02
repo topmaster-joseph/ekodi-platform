@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { auditSourceDeploymentBoundaries } from './audit-site-source-release-boundaries.mjs';
 import { auditFleetSourceReleaseTopology } from './audit-fleet-source-release-topology.mjs';
 import { inspectSatelliteRepositoryRetirement } from './inspect-satellite-repository-retirement.mjs';
+import { planFleetReleaseImpact } from './plan-fleet-release-impact.mjs';
 const readJson=async path=>JSON.parse((await readFile(new URL(`../${path}`,import.meta.url),'utf8')).replace(/^\uFEFF/,''));
 const [registry,platformTruth,boundaries,ecosystem,lifecycle,retirementPolicy]=await Promise.all([
   readJson('config/repository-source-of-truth.json'),
@@ -36,6 +37,8 @@ const fleetAudit=auditFleetSourceReleaseTopology({ecosystem,lifecycle,boundaries
 for(const error of fleetAudit.errors) fail('fleet source/release inventory: '+error);
 const retirementAudit=inspectSatelliteRepositoryRetirement(retirementPolicy,registry);
 for(const error of retirementAudit.errors) fail('retirement guard: '+error);
+const fleetImpactContract=planFleetReleaseImpact(boundaries,[]);
+for(const error of fleetImpactContract.errors) fail('all-site release impact contract: '+error);
 if(failures.length){
   console.error(`Repository source-of-truth validation failed (${failures.length})`);
   failures.forEach(item=>console.error(`- ${item}`));
@@ -48,3 +51,5 @@ console.log('Source/release inventory: '+releaseAudit.registeredReleaseBoundarie
 console.log('Fleet static inventory: services='+fleetAudit.totals.registeredServices+', workspaces='+fleetAudit.totals.registeredWorkspaceSites+', declared release units='+fleetAudit.totals.registeredReleaseBoundaries+', satellites='+fleetAudit.totals.registeredSatelliteRepositories+'. Dynamic workspaces/cloud runtime not audited.');
 
 console.log('Legacy repository retirement guard: '+retirementAudit.registeredSatelliteRepositories+' satellites retained; automatic deletion disabled.');
+
+console.log('Site release impact planning contract: '+fleetImpactContract.registeredReleaseUnits+' declared units guarded; no deploy authorized.');
