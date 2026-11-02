@@ -78,8 +78,12 @@ async function throttle(request,env) {
   const result=await env.AUTH_RATE_LIMITER.limit({key:'notifications:'+ip});
   return result?.success!==false;
 }
-async function authorizedEvent(request,env) {
-  const secret=String(env.NOTIFICATION_EVENT_SECRET||'');
+async function authorizedEvent(request,env,topic) {
+  // Once a topic-specific credential exists, the global legacy credential
+  // must not grant publishing authority to that topic.
+  const topicSecret=Object.hasOwn(NOTIFICATION_TOPICS,topic)
+    ? String(env['NOTIFICATION_EVENT_SECRET_'+topic.toUpperCase()]||'') : '';
+  const secret=topicSecret ? topicSecret : String(env.NOTIFICATION_EVENT_SECRET||'');
   const submitted=String(request.headers.get('x-ekodi-notification-secret')||'');
   if (secret.length<32 || submitted.length!==secret.length || request.headers.get('origin')) return false;
   const a=await sha(secret), b=await sha(submitted);
@@ -96,10 +100,11 @@ export async function handleNotificationApi(request,env) {
       channels:{inbox:true,webPush:enabled(env),email:false,sms:false}});
   }
   if (path==='/api/notifications/events' && request.method==='POST') {
-    if (!await authorizedEvent(request,env)) return error('event_auth_required',403);
+    if (request.headers.get('origin')) return error('event_auth_required',403);
     let body;
     try { body=await readBody(request); } catch { return error('invalid_json',400); }
     const topic=body?.topic, service=body?.serviceId;
+    if (!await authorizedEvent(request,env,topic)) return error('event_auth_required',403);
     if (!Object.hasOwn(NOTIFICATION_TOPICS,topic) || service!==topic) return error('service_topic_mismatch',400);
     if (typeof body.idempotencyKey!=='string'|| !/^[A-Za-z0-9:_-]{12,120}$/.test(body.idempotencyKey)) return error('idempotency_required',400);
     if (typeof body.title!=='string'||!body.title.trim()||body.title.length>100||
