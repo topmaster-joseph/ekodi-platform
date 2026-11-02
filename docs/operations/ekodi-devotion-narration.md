@@ -35,3 +35,13 @@ The EKODI platform operator explicitly authorized the use of **EKODI-owned/licen
 - Audition the finished voices on a real Android handset with human review; a mock voice test is not a substitute.
 
 **As of task creation there is no confirmed, approved two-speaker MP3 pair in this repository.** This code is a safe playback/production pipeline, not a claim that human-quality male and female recordings already exist.
+
+## Unified platform-wide owner voice authorization (2026-11-02)
+
+The EKODI platform operator has expressly authorized the reuse of audio and voice assets **which EKODI actually owns or has the right to license**, for public and private use across all EKODI sites and products. This is a one-time **organizational** grant; do not interrupt the owner to repeat approval for each Church, Mission, Bible, Publishing, educational, or future EKODI service. The canonical scope is recorded in `config/ekodi-voice-reuse-policy.json`.
+
+The same global grant does **not** create rights over a separate natural person's identifiable recorded voice. A genuine voice provider can now opt in **once per recording** to `self-recorded-for-ekodi-all-services` through the authenticated private voice studio. This stores `allServicesConsent` and a timestamp and also marks the existing public devotion consent for compatibility with the fail-closed Bible narrator pipeline. Once consented and source integrity verified, that recording may be reused across EKODI services according to that one grant, without site-level re-approval. Existing narrow/public-devotion grants remain valid within their original scope. Legacy `audiobook_only` sample records remain unchanged.
+
+The November 2 protected R2 audit found male and female samples classified `audiobook_only`. This fact should not be overwritten or backdated merely because the platform owner said 'no more asking.' The approved scope and actual speaker/source rights must be independently matched before voice cloning/rendering or release.
+
+No change here authorizes unreviewed generated audio, private sample download to a public URL, the release of payment-protected audiobook tracks, or the unconsented re-creation of a third-party identifiable voice.
