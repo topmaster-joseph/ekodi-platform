@@ -6,12 +6,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
-import { verifyDevotionVoiceRecord, verifyDevotionPair } from './verify-devotion-voice-consent.mjs';
+import { verifyDevotionVoiceRecord, verifyDevotionPair, hasDevotionalSpeakerRights } from './verify-devotion-voice-consent.mjs';
 
 export function describeVoice(record, gender, sample) {
   if (!record) return 'not_found_or_inaccessible';
   if (record?.consent !== 'self-recorded-for-ekodi-audiobooks') return 'not_authorized';
-  if (record?.devotionConsent !== 'self-recorded-for-ekodi-public-devotion' || !record.devotionConsentAt)
+  if (!hasDevotionalSpeakerRights(record))
     return 'audiobook_only';
   if (!record.key || record.gender !== gender || !record.speaker ||
     !/^([a-f0-9]{64})$/i.test(record.sha256 || '')) return 'invalid_metadata';

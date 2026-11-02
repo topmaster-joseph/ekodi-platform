@@ -29,10 +29,10 @@ test('voice studio persists separate opt-in and never silently upgrades old audi
  const server=readFileSync(new URL('../books-commerce.js',import.meta.url),'utf8');
  const studio=readFileSync(new URL('../books/buy/voice-studio.js',import.meta.url),'utf8');
  assert.match(server,/x-ekodi-voice-devotion-consent/);
- assert.match(server,/devotionConsent: devotionConsented \? devotionScope : 'none'/);
+ assert.match(server,/devotionConsent: devotionConsented \? 'self-recorded-for-ekodi-public-devotion' : 'none'/);
  assert.match(studio,/id: 'voicePublicDevotionConsent'/);
  assert.match(studio,/매일묵상 공개 낭독 동의 미확인/);
- assert.match(studio,/과거 오디오북 전용 녹음은 소급 동의되지 않으므로/);
+ assert.match(studio,/기존 오디오북 전용 녹음은 자동으로 소급 승인되지 않습니다/);
  const entry=readFileSync(new URL('../scripts/ekodi-voice/render-consented-devotion.mjs',import.meta.url),'utf8');
  assert.match(entry,/verifyDevotionPair/);
  assert.match(entry,/process\.exit\(1\)/);
