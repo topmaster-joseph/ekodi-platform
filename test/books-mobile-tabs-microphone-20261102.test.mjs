@@ -66,7 +66,7 @@ test('reader panels separate operator, audiobook and purchase records without wi
   assert.match(libraryTabs,/new URL\(book\.receiptUrl\)/);
   assert.match(libraryTabs,/url\.protocol === 'https:'/);
   assert.match(libraryTabs,/audio-bonus/);
-  assert.match(libraryScript,/window\.EkodiLibraryTabs\?\.render\(items,libraryAccount\)/);
+  assert.match(libraryScript,/window\.EkodiLibraryTabs\?\.render\(items,libraryAccount,data\.operator === true\)/);
   assert.match(libraryScript,/window\.EkodiLibraryTabs\?\.showOperator\(\)/);
   assert.doesNotMatch(libraryScript,/operatorNote'\)\.textContent =/);
   assert.match(buyCss,/BOOKS-LIBRARY-TABS-20261102/);

@@ -34,7 +34,18 @@
   }
   async function render() {
     let state;
-    try { state = await api('GET'); } catch { return; } // 운영자가 아니면 표시하지 않는다
+    try { state = await api('GET'); }
+    catch (error) {
+      if (error.status === 401 || error.status === 403) return;
+      // 권한이 확인된 운영자에게 인프라 오류를 '권한 없음'처럼 숨기지 않는다.
+      host.hidden = false;
+      const diagnostic = el('p', { className: 'buy-msg', role: 'status',
+        textContent: '녹음실 서버를 확인하지 못했습니다. ' + (error.status === 503 ? '비공개 보관함 연결을 점검해 주세요.' : '잠시 후 다시 시도해 주세요.') });
+      const retry = el('button', { type: 'button', textContent: '녹음실 다시 확인' });
+      retry.addEventListener('click', () => { host.replaceChildren(); render(); });
+      host.replaceChildren(diagnostic, retry);
+      return;
+    }
     host.hidden = false;
     const operatorPanel = host.closest('.operator-panel');
     if (operatorPanel) operatorPanel.hidden = false;
