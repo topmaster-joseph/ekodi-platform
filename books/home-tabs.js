@@ -61,7 +61,8 @@
 
   const keys = tabs.map(([key]) => key);
   const fromHash = () => {
-    let hash = '';\n    try { hash = decodeURIComponent(location.hash.slice(1)); } catch { return 'catalog'; }
+    let hash = '';
+    try { hash = decodeURIComponent(location.hash.slice(1)); } catch { return 'catalog'; }
     if (['catalog'].includes(hash)) return 'catalog';
     if (['fields'].includes(hash)) return 'fields';
     if (['about','method','publishing-service-callout'].includes(hash)) return 'about';
