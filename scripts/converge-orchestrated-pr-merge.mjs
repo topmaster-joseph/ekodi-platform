@@ -251,6 +251,10 @@ const controlApiTouched=changedFiles.some(file=>
   'tenant-access-authority.js',
   'access-governance.js',
   'mission-control-entry-worker.js',
+  // Notification API and Web Push implementation are bundled into Mission Control.
+  // An API-only notification update must not silently ship just the static page.
+  'notification-control.js',
+  'notification-webpush.js',
   // Search Visibility evidence D1 API is part of Control API deployment ownership.
   'search-visibility-control.js',
   // Read-only first-party Search Console reporter is imported by Search Visibility Control API.
@@ -432,6 +436,9 @@ const shellRuntimeTouched=changedFiles.some(file=>
    'scripts/converge-orchestrated-pr-merge.mjs'].includes(file)
 );
 const sharedSiteTouched=changedFiles.some(file=>
+  // /notifications/ is included in Shared Site dist. A static-only change must
+  // trigger its receipt-bound release even if the Control API was already deployed.
+  file.startsWith('notifications/')||
   // AI Ops source and its shared readable-command stylesheet ship in Site Core.
   // A token-mediated protected merge does not trigger main push workflows.
   // Dispatch only the existing receipt-bound Site Core lane for these UI assets.
