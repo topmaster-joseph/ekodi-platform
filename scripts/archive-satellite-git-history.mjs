@@ -16,8 +16,9 @@ const refMap=async gitDir=>{
   const raw=await run('git',['-C',gitDir,'for-each-ref','--format=%(refname) %(objectname)']);
   return raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).sort();
 };
+const isSafeRepoId=repository=>typeof repository==='string' && /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(repository) && !repository.split('/').some(part=>part.includes('..'));
 export const validateArchiveSource=(repository,registry)=>{
-  if(!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository||''))throw Error('Repository argument must be owner/repo');
+  if(!isSafeRepoId(repository))throw Error('Repository argument must be owner/repo');
   if(repository===registry?.canonicalPlatformRepository)throw Error('Canonical repository is not a satellite retirement candidate');
   if(!(registry?.repositories||[]).some(x=>x.name===repository && x.role!=='canonical-platform'))throw Error('Unregistered satellite rejected');
   return repository;
@@ -38,7 +39,7 @@ export async function createRestorableGitArchive({repository,source,destination}
   if(source){
     await run('git',['clone','--mirror',source,mirror]);
   }else{
-    if(!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository||''))throw Error('Invalid repository');
+    if(!isSafeRepoId(repository))throw Error('Invalid repository');
     await run('gh',['repo','clone',repository,mirror,'--','--mirror']);
   }
   await run('git',['-C',mirror,'fsck','--full','--no-reflogs']);
