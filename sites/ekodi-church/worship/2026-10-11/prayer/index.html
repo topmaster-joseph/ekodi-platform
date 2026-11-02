@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#183c33">
+<title>다국어 주기도문 발음 연습 | 에코디교회</title>
+<meta name="description" content="한국어·영어·중국어·일본어·베트남어 주기도문을 문장별로 듣고 천천히 따라 읽습니다.">
+<link rel="canonical" href="https://ekodi.kr/ekodichurch/worship/2026-10-11/prayer/">
+<link rel="stylesheet" href="./prayer.css">
+<script src="./prayer.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <a href="/ekodichurch/worship/2026-10-11/" class="brand">← 에코디교회 주일모임</a>
+  <span>2026.10.11 · 주기도문</span>
+</header>
+<main>
+  <div class="heading"><p class="eyebrow">THE LORD’S PRAYER · LISTEN & REPEAT</p><h1>듣고, 따라 읽는 주기도문</h1><p>원하는 언어와 문장을 선택하면 발음을 들을 수 있습니다. 각 문장의 음성이 재생되는 동안 본문이 강조됩니다.</p></div>
+  <nav id="language-tabs" class="language-tabs" role="tablist" aria-label="주기도문 언어 선택"></nav>
+  <section class="player" aria-label="음성 재생 설정">
+    <div class="player-actions">
+      <button id="play-all" class="primary" type="button">▶ 전체 듣기</button>
+      <button id="pause" type="button" disabled>⏸ 일시정지</button>
+      <button id="stop" type="button" disabled>■ 정지</button>
+    </div>
+    <div class="player-options">
+      <label for="rate">재생 속도 <strong id="rate-label">0.85×</strong></label>
+      <input id="rate" type="range" min="0.65" max="1.15" step="0.05" value="0.85">
+      <label class="repeat"><input id="repeat" type="checkbox" checked>문장마다 두 번 읽기</label>
+    </div>
+    <p id="voice-status" class="voice-status" role="status" aria-live="polite">언어별 음성을 확인합니다.</p>
+    <p id="playback-status" class="playback-status" role="status" aria-live="polite">원하는 문장을 눌러 발음 연습을 시작하세요.</p>
+  </section>
+  <section class="prayer" aria-labelledby="prayer-heading">
+    <h2 id="prayer-heading">주기도문</h2>
+    <ol id="prayer-lines" class="prayer-lines"></ol>
+  </section>
+  <div class="help">
+    <p><strong>사용법:</strong> 전체 듣기 또는 각 문장의 ▶ 버튼을 누르세요. 재생 중에도 일시정지·재개·정지가 가능합니다. 반복을 켜면 각 문장을 두 번 들려줍니다.</p>
+    <p>재생은 브라우저 또는 운영체제의 음성 합성 기능을 사용하며, 별도의 녹음 파일을 저장하지 않습니다. 일부 브라우저 음성은 온라인 음성 서비스를 사용할 수 있습니다. 예배 방송 전에 언어별 음성팩·발음 품질·소리 공유를 확인하세요.</p>
+  </div>
+</main>
+</body>
+</html>
