@@ -34,8 +34,8 @@ test('workspace admin keeps service settings above both independently expandable
   const script = await response.text();
   assert.match(script, /label:'공통메뉴'/);
   assert.match(script, /label:'전용메뉴'/);
-  assert.match(script, /common\.push\(\['services','서비스설정'\]\)/);
-  assert.doesNotMatch(script, /h\.append\(settings\)/);
+  assert.match(script, /h\.append\(settings\)/);
+  assert.match(script, /h\.append\(settings\)/);
   assert.match(script, /button\.setAttribute\('aria-expanded','true'\)/);
   assert.match(script, /panel\.hidden=!opening/);
   assert.doesNotMatch(script, /otherButton\?\.setAttribute\('aria-expanded',isCurrent/);

@@ -224,7 +224,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   }
   async function siteServiceSettings(){
     $('summaryCards').replaceChildren();
-    renderTenantServiceAdmin($('mainPanel'),{items:siteServiceSnapshot?.items||[],error:siteServiceError,
+    renderTenantServiceAdmin($('mainPanel'),{items:(siteServiceSnapshot?.items||[]).map(item=>({...item,menuGroup:dedicatedSections().has(item.key)?'site':'common'})),error:siteServiceError,
       onToggle:async(item,next)=>{try{
         siteServiceSnapshot=await siteServiceApi('tenant_site_service_preference_set',{
           p_tenant_id:workspaceContext.tenantId,p_service_key:item.key,p_menu_visible:next});
@@ -247,7 +247,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     const label=document.createElement('span');label.className='admin-scope-label';label.textContent='관리 사이트';host.append(label);
     const select=document.createElement('select');select.className='admin-scope-select';select.setAttribute('aria-label','관리 사이트 전환');
     for(const scope of visible){const option=document.createElement('option');option.value=scope.adminHref;option.textContent=scope.label;option.dataset.adminScope=scope.id;option.title=scope.description||scope.label;option.selected=scope.id===current;select.append(option)}
-    select.onchange=()=>{if(select.value&&select.value!==location.pathname+location.search)location.assign(select.value)};
+    select.onchange=()=>{if(select.value){const target=select.value.replace(/\/$/,'')+'/services';if(target!==location.pathname)location.assign(target)}};
     host.append(select);
   }
   const canSection=(key,role=workspaceRole)=>{if(CGMA_ONLY_SECTIONS.has(key)&&workspace!=='cgma')return false;if(key==='tax'&&!isBizWorkspace)return false;if(key==='business-center'&&!(isBizWorkspace&&!service&&hasFullWorkspaceAdminScope(role)))return false;const capability=SECTION_CAPABILITY[key];const allowed=roleCapabilities(role);return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)));};
@@ -277,13 +277,22 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     const groups=groupsForRole(role),dedicated=dedicatedSections(),seen=new Set(),common=[],site=[];
     for(const group of groups){for(const item of group.sections){const [key,label]=item;if(seen.has(key))continue;if(role?!canSection(key,role):!(workspace==='ekodimission'||key==='overview'))continue;if(typeof serviceMenuVisible==='function'&&!serviceMenuVisible(key))continue;seen.add(key);(dedicated.has(key)?site:common).push([key,label]);}}
     // Service configuration is a common site-local operation, never a third sidebar bucket.
-    if(role&&canSection('services',role)&&!seen.has('services'))common.push(['services','서비스설정']);
-    const buckets=[{id:'common',label:'공통메뉴',items:common},{id:'site',label:'전용메뉴',items:site}].filter(bucket=>bucket.items.length);
+    // Service settings is a standalone top-level entry, not a common-menu child.
+    const buckets=[{id:'common',label:'공통메뉴',items:common.filter(([key])=>key!=='services')},{id:'site',label:'전용메뉴',items:site.filter(([key])=>key!=='services')}].filter(bucket=>bucket.items.length);
     // Every tenant presents common operations first, then site-dedicated operations.
     return buckets;
   }
   function renderNav(role=workspaceRole){
     const h=$('adminNav');h.replaceChildren();document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile(role);
+    if(role&&canSection('services',role)){
+      const settings=document.createElement('a');
+      settings.href=sectionHref('services');
+      settings.textContent='서비스설정';
+      settings.dataset.adminSection='services';
+      settings.className='admin-nav-service-settings'+(section==='services'?' active':'');
+      if(section==='services')settings.setAttribute('aria-current','page');
+      h.append(settings);
+    }
     if(workspace==='ekodichurch'&&!service){
       document.documentElement.dataset.ekodiChurchUnifiedAdmin='true';
       const tabs=$('sectionNav');
