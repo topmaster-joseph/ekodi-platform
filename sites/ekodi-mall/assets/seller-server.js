@@ -217,6 +217,7 @@
   ];
   let selectedProvider = 'all';
   let sellerProducts = [];
+  let dashboardRevision = 0;
   let operatorScope = false;
   let visibleLimit = 40;
   function supplierGroup(product) {
@@ -301,6 +302,7 @@
   }
 
   async function loadDashboard() {
+    const revision = ++dashboardRevision;
     const container = document.querySelector('[data-server-products]');
     const apiStatus = document.querySelector('[data-server-api-status]');
     if (!container) return;
@@ -311,6 +313,7 @@
         api('/api/settlements'),
         api('/api/internal/products/by-provider').catch(() => null)
       ]);
+      if (revision !== dashboardRevision) return; // prior-account responses must never reappear
       const owned = Array.isArray(productsResult.products) ? productsResult.products : [];
       operatorScope = operatorResult?.scope === 'operator-read-only';
       const operatorRows = operatorScope && Array.isArray(operatorResult.products) ? operatorResult.products : [];
@@ -326,6 +329,7 @@
         if (current) renderLink(current);
       }
     } catch (error) {
+      if (revision !== dashboardRevision) return;
       if (apiStatus) apiStatus.textContent = '로그인 또는 API 확인 필요';
       if (!String(error.message).includes('로그인')) setStatus(error.message, true);
     }
@@ -333,6 +337,19 @@
 
   window.ekodiSellerServer = { api, fillForm, loadDashboard, setStatus };
   ensureUi();
-  sb.auth.onAuthStateChange((_event, session) => { if (session) loadDashboard(); });
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session) { loadDashboard(); return; }
+    dashboardRevision += 1;
+    sellerProducts = [];
+    operatorScope = false;
+    selectedProvider = 'all';
+    visibleLimit = 40;
+    renderProviderProducts();
+    renderLink(null);
+    const apiStatus = document.querySelector('[data-server-api-status]');
+    if (apiStatus) apiStatus.textContent = '로그인 후 확인';
+    const finance = document.querySelector('[data-server-finance-status]');
+    if (finance) finance.textContent = '로그인 후 주문·정산 확인';
+  });
   window.setTimeout(loadDashboard, 600);
 })();
