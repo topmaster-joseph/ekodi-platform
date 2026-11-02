@@ -1,4 +1,5 @@
-import { fileURLToPath } from 'node:url';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
 
 const ORIGIN='https://ekodi.kr';
 const REQUIRED_MALL=['EKODI MALL','ALL MARKET','LOCAL COMMONS','SELLER STUDIO'];
@@ -53,7 +54,7 @@ export async function verifyMallRetainedProductionSmokeWithRetry({request=fetch,
   throw error;
 }
 
-if(process.argv[1] && import.meta.url===new URL('file://'+process.argv[1].replaceAll('\\','/')).href){
+if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
   verifyMallRetainedProductionSmokeWithRetry().then(result=>{
     console.log(JSON.stringify(result));
   }).catch(error=>{
