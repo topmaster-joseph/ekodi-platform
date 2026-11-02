@@ -26,7 +26,13 @@ export function buildPointProgress({ now = new Date(), adapters = [], rules = []
     !EXCLUDED.has(a.adapter) && activeRules.has(a.rule_id)
   );
   const keySet = new Set(eligible.map(a => KEY(a.rule_id, a.adapter)));
-  const recent = claims.filter(c => keySet.has(KEY(c.rule_id, c.adapter)) && kstDate(c.submitted_at));
+  const todayMs = Date.parse(today + "T00:00:00Z");
+  const dateToMs = d => Date.parse(d + "T00:00:00Z");
+  const recent = claims.filter(c => {
+    const day = kstDate(c.submitted_at);
+    return keySet.has(KEY(c.rule_id, c.adapter)) && day &&
+      dateToMs(day) <= todayMs && dateToMs(day) > todayMs - 90 * DAY_MS;
+  });
   const approved = recent.filter(c => c.status === "approved");
   const states = new Map();
   for (const c of recent) {
@@ -36,8 +42,6 @@ export function buildPointProgress({ now = new Date(), adapters = [], rules = []
     if (c.status === "approved") states.set(k, "completed");
     else if (c.status === "pending" && current !== "completed") states.set(k, "pending");
   }
-  const dateToMs = d => Date.parse(d + "T00:00:00Z");
-  const todayMs = dateToMs(today);
   const approvedDays = new Set(approved.map(c => kstDate(c.submitted_at)).filter(
     day => day && dateToMs(day) <= todayMs && dateToMs(day) > todayMs - 90 * DAY_MS
   ));
