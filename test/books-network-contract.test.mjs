@@ -38,8 +38,12 @@ test('network schema is additive and portable SQL', () => {
 
 
 test('apex publishing studio calls the canonical Control API and retains login return path', () => {
-  assert.match(liveStudio, /const API='https:\/\/ekodi\.kr'/);
-  assert.match(liveStudio, /\/api\/books\/me/);
+  assert.match(liveStudio, /const API=new URL\('https:\/\/ekodi\.kr\/api\/'\)/);
+  assert.match(liveStudio, /fetch\(new URL\(path,API\)/);
+  assert.match(liveStudio, /api\('books\/me'\)/);
+  assert.match(liveStudio, /api\('books\/me\/stores'/);
+  assert.match(liveStudio, /api\('books\/me\/titles'/);
+  assert.doesNotMatch(liveStudio, /api\('\/api\/books\//);
   assert.match(liveStudio, /credentials:'include'/);
   assert.match(liveStudio, /https:\/\/ekodi\.kr\/auth\/\?return_to=/);
   assert.match(liveStudio, /다시 시도/);
