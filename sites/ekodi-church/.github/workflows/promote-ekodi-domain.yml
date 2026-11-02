@@ -1,0 +1,38 @@
+name: Promote EKODI Canonical Domain
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/promote-ekodi-domain.yml
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set ekodi.kr/ekodichurch canonical URL
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          line = '  <link rel="canonical" href="https://ekodi.kr/ekodichurch/">\n'
+          if 'rel="canonical"' not in s:
+              s = s.replace('  <title>EKODI교회 | 에클레시아 · 코이노니아 · 디아스포라</title>\n', '  <title>EKODI교회 | 에클레시아 · 코이노니아 · 디아스포라</title>\n' + line)
+          else:
+              import re
+              s = re.sub(r'\s*<link rel="canonical" href="[^"]+">\s*', '\n' + line, s, count=1)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit canonical URL
+        run: |
+          git config user.name "EKODI Automation"
+          git config user.email "automation@ekodi.kr"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Use ekodi.kr/ekodichurch as canonical URL"
+          git push
