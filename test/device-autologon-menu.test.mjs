@@ -14,33 +14,31 @@ const [routesSource, admin, agent, server, css] = await Promise.all([
   readFile(new URL('../device-control-admin.css', import.meta.url), 'utf8'),
 ]);
 
-test('PC auto sign-in is an explicit platform-only Execution Infrastructure detail', () => {
+test('PC auto sign-in reuses the orchestrator-classified Device Control menu and does not add an unclassified role', () => {
   const infra = ADMIN_MENUS.find(menu => menu.id === 'infra');
-  assert.deepEqual(infra.sections, ['devices', 'device-autologon', 'pos-agent']);
-  assert.equal(getAdminMenuForSection('device-autologon').id, 'infra');
-  assert.deepEqual(adminMenuTabs('device-autologon'), infra.sections);
-  const item = getAdminMenuItem('device-autologon');
-  assert.equal(item.labels.ko, 'PC 자동 로그인');
-  assert.equal(item.delegateSection, 'devices');
-  assert.equal(item.superAdminOnly, true);
-  assert.equal(item.risk, 'high');
+  assert.deepEqual(infra.sections, ['devices', 'pos-agent']);
+  assert.equal(getAdminMenuForSection('devices').id, 'infra');
+  assert.deepEqual(adminMenuTabs('devices'), infra.sections);
+  const item = getAdminMenuItem('devices');
   assert.equal(item.governance.globalPolicyMutation, 'super_admin');
+  assert.equal(item.risk, 'high');
+  assert.equal(getAdminMenuItem('device-autologon'), null);
 });
 
 test('canonical URL is bookmarkable and keeps its section across navigation', () => {
-  const url = new URL('https://ekodi.kr/admin/ops/device-autologon');
+  const url = new URL('https://ekodi.kr/admin/ops/devices/autologon');
   const context = { window: { location:url, matchMedia:()=>({matches:false}) }, URL, URLSearchParams };
   runInNewContext(routesSource, context);
   const routes = context.window.EKODIAdminRoutes;
-  assert.equal(routes.sectionFromLocation(url), 'device-autologon');
-  assert.equal(routes.pathFor('device-autologon'), url.pathname);
-  assert.equal(routes.navigationTarget('device-autologon', url), url.pathname);
+  assert.equal(routes.sectionFromLocation(url), 'devices');
+  assert.equal(routes.pathFor('devices', ['autologon']), url.pathname);
+  assert.equal(routes.navigationTarget('devices', url), url.pathname);
 });
 
 test('focused PC page integrates into the existing authenticated device panel', () => {
-  assert.match(admin, /AUTOLOGON_URL = '\/admin\/ops\/device-autologon'/);
-  assert.match(admin, /panel\.dataset\.panel = 'devices device-autologon'/);
-  assert.match(admin, /panels\.activate\(autologonRoute\(\) \? 'device-autologon' : 'devices'\)/);
+  assert.match(admin, /AUTOLOGON_URL = '\/admin\/ops\/devices\/autologon'/);
+  assert.match(admin, /panel\.dataset\.panel = 'devices'/);
+  assert.match(admin, /panels\.activate\('devices'\)/);
   assert.match(admin, /const focusedPcMode = performanceMode \|\| autologonRoute\(\)/);
   assert.match(admin, /focusedPcMode && \(device\.management\?\.type !== 'pc'/);
   assert.match(admin, /wrapper\.open = windowsPerformanceRoute\(\) \|\| autologonRoute\(\)/);
