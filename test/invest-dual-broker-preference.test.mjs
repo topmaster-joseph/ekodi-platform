@@ -42,6 +42,10 @@ test('named owner sees KIS as default and Toss alternative, no live order permis
  assert.equal(data.defaultBrokerId,'kis');
  assert.equal(data.preferredBrokerId,'kis');
  assert.deepEqual(data.availableBrokers.map(b=>b.id),['kis','toss']);
+ assert.deepEqual(data.availableBrokers.find(b=>b.id==='kis').environments,['paper','live']);
+ assert.deepEqual(data.availableBrokers.find(b=>b.id==='toss').environments,['live']);
+ assert.ok(data.availableBrokers.every(b=>b.accountConnection==='not_connected'&&b.orderPermission==='blocked'));
+ assert.equal(data.selectionOnly,true);
  assert.equal(data.connected,false);
  assert.equal(data.brokerAuthorizationGranted,false);
  assert.equal(data.liveOrdersEnabled,false);
