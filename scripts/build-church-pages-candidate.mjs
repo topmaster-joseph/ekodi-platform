@@ -75,7 +75,15 @@ export async function buildChurchPagesCandidate({sourceDir,outputDir,platformSha
     if(real!==sourceReal && !real.startsWith(sourceReal+sep))throw new Error('Asset escapes Church source directory');
     const info=await stat(full);
     if(!info.isFile())throw new Error('Not a regular source file');
-    const bytes=await readFile(full);
+    const worktreeBytes=await readFile(full);
+    // Windows core.autocrlf may expand Git LF blobs to CRLF on checkout.
+    // Accept only a reversible line-ending normalization whose bytes match
+    // the independently recorded *exact* Git blob; emit those Git bytes.
+    let bytes=worktreeBytes;
+    if(blobSha(bytes)!==asset.expectedBlobSha && worktreeBytes.includes(13)){
+      const restored=Buffer.from(worktreeBytes.toString('utf8').replace(/\r\n/g,'\n'),'utf8');
+      if(blobSha(restored)===asset.expectedBlobSha)bytes=restored;
+    }
     if(blobSha(bytes)!==asset.expectedBlobSha)throw new Error('Git blob SHA mismatch: '+asset.path);
     inMemory.push({path:asset.path,bytes,sha256:sha256(bytes)});
   }
