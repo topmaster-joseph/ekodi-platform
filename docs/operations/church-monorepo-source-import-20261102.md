@@ -17,6 +17,8 @@ Task: `church-source-monorepo-import-20261102` · EKODI Orchestrator authority. 
 - After preserving the exact 216-file original Git tree and unsquashed ancestry, the **8 nested legacy `.github/workflows` copies were excluded** from the active canonical candidate. These outdated workflows are preserved in Git history, not enabled as a new deploy lane.
 - Legacy API/community/social subdomain references in candidate `_headers`, `script.js` and the corresponding test were normalized to first-party `https://ekodi.kr/<path>`; Church `church-online-status.js` now initiates auth at `https://ekodi.kr/auth/`. These changes are only in the candidate, not in the still-live Church source. The canonical snapshot no longer has byte-identical current working-tree assets, but the original tree is unchanged at the import commit.
 - Source's `npm test` ran 190/190 pass in the isolated canonical repo clone; new import-gate tests 2/2 pass; central repository SOT guard passed.
+- The central build's canonical prefix-free naming rule also required changing legacy Church presentation labels `에코디커뮤니티` / `EKODI Community` to `커뮤니티` / `Community` in seven source-and-test files. The candidate-only normalization passed `node scripts/normalize-platform-ai-names.mjs` and the Church 190-test suite. Historical Git subtree import preserves the original labels unchanged in ancestry.
+- Central CI initially rejected legacy subdomains and a site-local login URL; those were corrected without weakening policy. A later central build gate detected the prefixed display names, corrected above. These changes are not a production promotion.
 
 ## Non-goals and protected dependencies
 
