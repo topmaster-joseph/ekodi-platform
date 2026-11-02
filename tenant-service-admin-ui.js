@@ -40,10 +40,10 @@ export function renderTenantServiceAdmin(root,{items=[],error='',onToggle}={}){
     overview.append(chip);
   }
   wrap.append(overview);
-  const categories=[...new Set(items.map(item=>String(item.category||'other')))];
+  const categories=[...new Set(items.map(item=>item.menuGroup==='site'?'site':'common'))];
   const tabs=elt('nav','tenant-service-tabs');
   tabs.setAttribute('role','tablist');
-  tabs.setAttribute('aria-label','서비스 분류');
+  tabs.setAttribute('aria-label','관리자 메뉴 유형');
   const panel=elt('section','tenant-service-panel');
   panel.id='tenant-service-category-panel';
   panel.setAttribute('role','tabpanel');
@@ -52,7 +52,7 @@ export function renderTenantServiceAdmin(root,{items=[],error='',onToggle}={}){
   const readiness={ready:'메뉴 설정 가능',setup_required:'연동·승인 필요',planned:'준비 중'};
   function renderCategory(category){
     root.dataset.tenantServiceCategory=category;
-    const entries=items.filter(item=>String(item.category||'other')===category);
+    const entries=items.filter(item=>(item.menuGroup==='site'?'site':'common')===category);
     const selectedTab=tabNodes.get(category);
     panel.setAttribute('aria-labelledby',selectedTab.id);
     for(const [key,tab] of tabNodes){
@@ -60,7 +60,7 @@ export function renderTenantServiceAdmin(root,{items=[],error='',onToggle}={}){
       tab.tabIndex=key===category?0:-1;
     }
     const title=elt('header');
-    title.append(elt('h3','',entries[0]?.categoryLabel||'서비스'),elt('small','',entries.length+'개 서비스'));
+    title.append(elt('h3','',category==='site'?'전용메뉴':'공통메뉴'),elt('small','',entries.length+'개 서비스'));
     const list=elt('div','tenant-service-list');
     for(const item of entries){
       const row=elt('div','tenant-service-row');
@@ -87,13 +87,12 @@ export function renderTenantServiceAdmin(root,{items=[],error='',onToggle}={}){
     panel.replaceChildren(title,list);
   }
   for(const category of categories){
-    const entry=items.find(item=>String(item.category||'other')===category);
-    const tab=elt('button','',entry.categoryLabel||'기타');
+    const tab=elt('button','',category==='site'?'전용메뉴':'공통메뉴');
     tab.type='button';
     tab.id='tenant-service-tab-'+tabNodes.size;
     tab.setAttribute('role','tab');
     tab.setAttribute('aria-controls',panel.id);
-    tab.append(elt('small','',String(items.filter(item=>String(item.category||'other')===category).length)));
+    tab.append(elt('small','',String(items.filter(item=>(item.menuGroup==='site'?'site':'common')===category).length)));
     tab.addEventListener('click',()=>renderCategory(category));
     tab.addEventListener('keydown',event=>{
       if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
