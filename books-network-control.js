@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { principalFromCustomerSession, principalFromSupabaseRequest } from './ekodi-principal.js';
 
 const PUBLIC_PREFIX = '/api/books/public/stores';
 const ME_PREFIX = '/api/books/me';
@@ -77,19 +78,33 @@ async function ensureSchema(db) {
 }
 
 async function session(request, env) {
+  // Browser credentials are verified by their issuing backends; never trust a client-supplied email or role.
+  const authorization = request.headers.get('authorization') || '';
+  if (!authorization.startsWith('Bearer ')) return {
+    response: json({ error:'EKODI 계정 로그인이 필요합니다.', code:'LOGIN_REQUIRED' },401,request,env)
+  };
   const url = new URL(request.url);
   url.pathname = '/api/session';
   url.search = '';
-  const response = await authWorker.fetch(new Request(url.toString(), { method: 'GET', headers: request.headers }), env);
-  if (!response.ok) return { response };
-  const data = await response.clone().json().catch(() => null);
-  const email = clean(data?.email, 160).toLowerCase();
-  if (!email) return { response: json({ error: 'EKODI 계정 로그인이 필요합니다.', code: 'LOGIN_REQUIRED' }, 401, request, env) };
-  return { data, email };
+  // Central admin identity stays separate; member identity cannot acquire admin permissions by matching an email.
+  const response = await authWorker.fetch(new Request(url.toString(), { method:'GET', headers:request.headers }),env);
+  if (response.ok) {
+    const data = await response.json().catch(() => null);
+    const email = clean(data?.email,160).toLowerCase();
+    if (data?.authenticated && email) return { data, email, kind:'admin', personId:null };
+  }
+  const principal = await principalFromCustomerSession(request,env)
+    || await principalFromSupabaseRequest(request);
+  if (principal?.email) return {
+    data:{authenticated:true},email:clean(principal.email,160).toLowerCase(),
+    kind:'member',personId:principal.subject.type==='person'?principal.subject.key:null
+  };
+  return { response:json({error:'EKODI 계정 로그인이 필요합니다.',code:'LOGIN_REQUIRED'},401,request,env) };
 }
 
-async function isAdmin(env, email) {
-  const row = await env.DB.prepare('SELECT id FROM admins WHERE lower(email) = ?').bind(email).first();
+async function isAdmin(env, auth) {
+  if (auth.kind !== 'admin') return false;
+  const row = await env.DB.prepare('SELECT id FROM admins WHERE lower(email) = ?').bind(auth.email).first();
   return Boolean(row?.id);
 }
 
@@ -205,7 +220,7 @@ async function updateTitle(request, env, auth, id) {
 }
 
 async function adminSnapshot(request, env, auth) {
-  if (!(await isAdmin(env, auth.email))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
+  if (!(await isAdmin(env, auth))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
   const [stores, titles] = await Promise.all([
     env.DB.prepare('SELECT * FROM books_creator_stores ORDER BY updated_at DESC LIMIT 200').all(),
     env.DB.prepare('SELECT * FROM books_creator_titles ORDER BY updated_at DESC LIMIT 500').all(),
@@ -214,7 +229,7 @@ async function adminSnapshot(request, env, auth) {
 }
 
 async function moderateTitle(request, env, auth, id) {
-  if (!(await isAdmin(env, auth.email))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
+  if (!(await isAdmin(env, auth))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
   const current = await env.DB.prepare('SELECT * FROM books_creator_titles WHERE id=?').bind(id).first();
   if (!current) return json({ error: '책을 찾을 수 없습니다.' }, 404, request, env);
   const input = await body(request) || {};
