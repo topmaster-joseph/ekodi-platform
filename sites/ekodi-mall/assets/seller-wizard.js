@@ -133,7 +133,7 @@
   }
 
   function showInventory() {
-    if (!signedIn()) { current = 0; apply(); return; }
+    if (!signedIn()) { document.documentElement.classList.remove('wz-inventory'); current = 0; apply(); return; }
     document.documentElement.classList.add('wz-on', 'wz-inventory');
     const inventory = document.querySelector('#serverProducts');
     [...main.children].forEach(el => {
