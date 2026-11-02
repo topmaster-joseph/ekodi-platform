@@ -1,0 +1,64 @@
+name: Audit EKODI Stock Devotion Narrator Draft
+# Independent read-only private R2 check; never promote or publish.
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date of already published devotional'
+        required: true
+        type: string
+      source_run_id:
+        description: 'Stock draft generator GitHub Actions run ID'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-stock-voice-readback-${{ inputs.date }}-${{ inputs.source_run_id }}
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DAY: ${{ inputs.date }}
+      SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+      BOOK_BUCKET: ekodi-book-files
+      WRANGLER_VERSION: '4.119.0'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate inputs and public source hash
+        run: |
+          set -euo pipefail
+          [[ "$DAY" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || exit 1
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]{6,20}$ ]] || exit 1
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID"
+          mkdir -p private/draft && chmod 700 private private/draft
+          node scripts/ekodi-voice/export-devotion-script.mjs "$DAY" private/public-source.json > /dev/null
+      - name: Retrieve only private generated draft audio and metadata
+        run: |
+          set -euo pipefail
+          PREFIX="${BOOK_BUCKET}/_voice/devotion-drafts/${DAY}/stock/${SOURCE_RUN_ID}"
+          for part in male.mp3 female.mp3 draft-manifest.json; do
+            npx --yes wrangler@${WRANGLER_VERSION} r2 object get "${PREFIX}/${part}" --remote --file "private/draft/${part}" >/dev/null
+          done
+      - name: Independently verify private files, source, gender and SHA
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg >/dev/null
+          node scripts/ekodi-voice/audit-stock-devotion-draft.mjs "$DAY" private/draft private/public-source.json
+          echo "Verified private male/female tracks. No public release and no human audio QA has been approved."
+      - name: Destroy private downloaded audio
+        if: always()
+        run: rm -rf private

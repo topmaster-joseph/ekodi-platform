@@ -4,11 +4,17 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 const ALLOWED = 'self-recorded-for-ekodi-public-devotion';
+const EKODI_ALL = 'self-recorded-for-ekodi-all-services';
+export function hasDevotionalSpeakerRights(record) {
+  if (!record || record.consent !== 'self-recorded-for-ekodi-audiobooks') return false;
+  const devotion = record.devotionConsent === ALLOWED && Boolean(record.devotionConsentAt);
+  const all = record.allServicesConsent === EKODI_ALL && Boolean(record.allServicesConsentAt);
+  return (devotion || all) && (devotion ? Number.isFinite(Date.parse(record.devotionConsentAt)) : true)
+    && (all ? Number.isFinite(Date.parse(record.allServicesConsentAt)) : true);
+}
 export function verifyDevotionVoiceRecord(record, bytes, gender) {
   if (!['m','f'].includes(gender) || !record || record.gender !== gender) return false;
-  if (record.consent !== 'self-recorded-for-ekodi-audiobooks' ||
-      record.devotionConsent !== ALLOWED ||
-      !record.devotionConsentAt || !Number.isFinite(Date.parse(record.devotionConsentAt)) ||
+  if (!hasDevotionalSpeakerRights(record) ||
       !record.speaker || typeof record.speaker !== 'string' ||
       !/^[a-f0-9]{64}$/i.test(String(record.sha256||'')) ||
       !new RegExp('^_voice/ekodi-narrator/'+gender+'/sample-[\\w-]+\\.(?:webm|wav|m4a|mp3)$').test(record.key||'')) return false;

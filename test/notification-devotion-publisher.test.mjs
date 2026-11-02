@@ -94,7 +94,7 @@ test('editor queues only after successful draft-to-published transition',async()
   assert.equal((await saved('published',2)).status,200);
   assert.equal(notifications,1);
   assert.equal((await saved('draft',3)).status,200);
-  assert.equal((await saved('published',4,'2026-11-03')).status,200);
+  assert.equal((await saved('published',4,new Date(Date.now()+3*86400000).toISOString().slice(0,10))).status,200);
   // Future-dated publication cannot even schedule a notification attempt.
   assert.equal(notifications,1);
   assert.equal(fetches,0);
