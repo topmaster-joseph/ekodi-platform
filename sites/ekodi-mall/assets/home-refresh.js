@@ -11,7 +11,7 @@
     if (query) query.value = incomingQuery;
     search.dispatchEvent(new Event('input', { bubbles:true }));
     // The entire catalog, including affiliate offers, is searched by the curator.
-    window.EkodiContextCurator?.recommend(incomingQuery, true);
+    window.EkodiContextCurator?.recommend(incomingQuery, false);
   }
   if (params.has('wishlist')) window.addEventListener('load', () => document.getElementById('wishBtn')?.click(), {once:true});
 
@@ -20,15 +20,15 @@
     if (!search || !shop) return;
     event.preventDefault();
     const term = (query?.value || '').trim().slice(0, 120);
-    search.value = term;
-    search.dispatchEvent(new Event('input', { bubbles: true }));
-    navigate('#shop', 'all', { keepSearch: false });
-    search.value = term;
-    search.dispatchEvent(new Event('input', { bubbles: true }));
+    navigate('#shop', 'all');
+    const target = new URL(window.location.href);
+    if (term) target.searchParams.set('q', term);
+    window.history.replaceState(null, '', target.pathname + target.search + target.hash);
+    syncView();
     if (term && window.EkodiContextCurator?.recommend) {
       const contextInput = document.getElementById('contextInput');
       if (contextInput) contextInput.value = term;
-      window.EkodiContextCurator.recommend(term, true);
+      window.EkodiContextCurator.recommend(term, false);
     } else {
       shop.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
       search.focus({ preventScroll: true });
@@ -42,7 +42,6 @@
   const filterButtons = [...document.querySelectorAll('#filters button[data-filter]')];
   const aiForm = document.getElementById('mallRecommendSearchForm');
   const aiInput = document.getElementById('mallRecommendSearchInput');
-  const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const viewFromUrl = () => {
     const current = new URL(window.location.href);
     if (current.hash === '#recommend') return 'recommend';
@@ -80,7 +79,7 @@
     if (hash === '#shop' && category && category !== 'all' && allTypes.has(category)) next.searchParams.set('category', category);
     window.history.pushState(null, '', next.pathname + next.search + next.hash);
     syncView();
-    window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'instant' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
   // Category tabs and mobile shortcuts show ONLY their actual products, directly under the header.
   document.querySelectorAll('a[data-filter-target]').forEach(link => {
