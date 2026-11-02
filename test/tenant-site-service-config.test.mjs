@@ -25,7 +25,7 @@ test('all 12 catalog categories are registered and non-ready options cannot be s
   assert.match(migration,/tenant_site_service_audit/);
   assert.match(migration,/current_site_activity_contexts\(\)/);
   assert.match(migration,/authorization_role'[\s\S]*'tenant_admin'/);
-  assert.match(migration,/revoke all on public\.tenant_site_service_catalog,public\.tenant_site_service_preferences,public\.tenant_site_service_audit from anon,authenticated/);
+  assert.match(migration,/revoke all on public\.tenant_site_service_catalog,public\.tenant_site_service_preferences,public\.tenant_site_service_audit from anon,authenticated,service_role/);
   assert.match(migration,/grant execute on function public\.tenant_site_service_preference_set\(uuid,text,boolean\) to authenticated/);
 });
 

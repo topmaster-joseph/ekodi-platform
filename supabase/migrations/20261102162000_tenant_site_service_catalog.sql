@@ -33,8 +33,8 @@ create index if not exists tenant_site_service_audit_tenant_time
 alter table public.tenant_site_service_catalog enable row level security;
 alter table public.tenant_site_service_preferences enable row level security;
 alter table public.tenant_site_service_audit enable row level security;
-revoke all on public.tenant_site_service_catalog,public.tenant_site_service_preferences,public.tenant_site_service_audit from anon,authenticated;
-revoke all on sequence public.tenant_site_service_audit_id_seq from anon,authenticated;
+revoke all on public.tenant_site_service_catalog,public.tenant_site_service_preferences,public.tenant_site_service_audit from anon,authenticated,service_role;
+revoke all on sequence public.tenant_site_service_audit_id_seq from anon,authenticated,service_role;
 
 insert into public.tenant_site_service_catalog
 (service_key,category_key,category_label,label,description,readiness,nav_section,sort_order,risk_level)
