@@ -120,7 +120,7 @@ async function listPublicProducts(env, limitValue, offsetValue = 0, categoryValu
   const offset = Math.max(0, Math.min(2000, Math.trunc(Number(offsetValue) || 0)));
   const requested = String(categoryValue || '').trim();
   const category = ['general','living','book','gift'].includes(requested) ? requested : '';
-  const result = await env.DB.prepare(`${PUBLIC_SELECT} WHERE p.status='published' AND (?='' OR p.category=?) ORDER BY p.published_at DESC LIMIT ? OFFSET ?`).bind(category, category, limit, offset).all();
+  const result = await env.DB.prepare(`${PUBLIC_SELECT} WHERE p.status='published' AND (?='' OR p.category=?) ORDER BY p.published_at DESC,p.id DESC LIMIT ? OFFSET ?`).bind(category, category, limit, offset).all();
   return (result.results || []).map(publicProduct);
 }
 
