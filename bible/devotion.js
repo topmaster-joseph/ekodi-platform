@@ -18,6 +18,7 @@ const TABS = Object.freeze([
 ]);
 const ATTRIBUTION = '묵상 적용(시·노래·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.';
 const ADMIN_TOKEN_KEY = 'ekodi-auth-token';
+const CENTRAL_AUTH_KEY = 'sb-renzehysxirjilvdxacv-auth-token';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const RECORD_TOPIC = '매일묵상';
@@ -25,6 +26,13 @@ const RECORD_TOPIC = '매일묵상';
 // EKODI member session written by the shared login (supabase-js format in localStorage).
 function memberSessionEntry() {
   try {
+    // A current unified account, including a broken/expired entry, must not
+    // silently become another previously signed-in person through legacy fallback.
+    const primary = localStorage.getItem(CENTRAL_AUTH_KEY);
+    if (primary) {
+      const parsed = JSON.parse(primary), session = parsed?.currentSession || parsed?.session || parsed;
+      return session?.access_token && session?.user ? { key:CENTRAL_AUTH_KEY, parsed, session } : null;
+    }
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i) || '';
       if (!/^sb-.*-auth-token$/.test(key)) continue;
@@ -60,8 +68,14 @@ async function memberSession() {
   return refreshing;
 }
 function adminConsoleToken() { try { return sessionStorage.getItem(ADMIN_TOKEN_KEY) || ''; } catch { return ''; } }
-// Admin-console token first (existing super-admin editor), otherwise the member's own token.
-async function requestToken() { return adminConsoleToken() || (await memberSession())?.access_token || ''; }
+// Current EKODI identity wins; a stale privileged console token is fallback
+// only when the browser has no unified session (e.g. on an independent domain).
+async function requestToken() {
+  try {
+    if (localStorage.getItem(CENTRAL_AUTH_KEY)) return (await memberSession())?.access_token || '';
+  } catch { return ''; }
+  return adminConsoleToken() || (await memberSession())?.access_token || '';
+}
 async function memberRest(path, init = {}) {
   const session = await memberSession();
   if (!session) throw Error('login_required');
