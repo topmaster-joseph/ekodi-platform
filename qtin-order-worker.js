@@ -617,13 +617,18 @@ function orderClient() {
     const s = storedValue?.currentSession || storedValue?.session || storedValue;
     return s?.access_token ? normalize(s) : null;
   }
-  function saveCentralSession(v) {
+  function saveCentralSession(v, newlyVerified = null) {
     try {
       const value = read(localStorage, CENTRAL_KEY) || {};
-      const session = { access_token: v.accessToken, refresh_token: v.refreshToken, expires_at: v.expiresAt };
-      if (value?.currentSession) localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...value, currentSession: { ...value.currentSession, ...session } }));
-      else if (value?.session) localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...value, session: { ...value.session, ...session } }));
-      else localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...value, ...session }));
+      const token = { access_token: v.accessToken, refresh_token: v.refreshToken, expires_at: v.expiresAt };
+      if (newlyVerified) {
+        // Fresh Google login replaces the entire previous principal; never keep a former user's profile.
+        localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...newlyVerified, ...token }));
+      } else if (value?.currentSession) {
+        localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...value, currentSession: { ...value.currentSession, ...token } }));
+      } else if (value?.session) {
+        localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...value, session: { ...value.session, ...token } }));
+      } else localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...value, ...token }));
       localStorage.removeItem(BUYER_KEY);
       clearSignedOut();
     } catch {}
@@ -717,7 +722,7 @@ function orderClient() {
       const verified = await post(SUPABASE_URL + '/auth/v1/verify', { token_hash: proof.tokenHash, type: 'email' });
       session = normalize(verified);
       if (!session.accessToken) throw new Error('session_not_created');
-      saveCentralSession(session);
+      saveCentralSession(session, verified);
       setStatus('');
       await onSignedIn(true);
     } catch (e) {
