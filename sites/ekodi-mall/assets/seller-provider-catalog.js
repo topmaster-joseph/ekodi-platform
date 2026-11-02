@@ -61,7 +61,7 @@
         const response = await fetchImpl(url, { headers: { accept: 'application/json' }, cache: 'no-store', credentials: 'omit' });
         if (!response.ok) throw new Error('HTTP ' + response.status);
         const payload = await response.json();
-        return { key, rows: adapt(key === 'bookstore' ? payload.products : payload.products), status: 'ok' };
+        return { key, rows: adapt(payload.products), status: 'ok' };
       } catch { return { key, rows: [], status: 'error' }; }
     }));
     return { rows: settled.flatMap(result => result.rows), status: Object.fromEntries(settled.map(result => [result.key, result.status])) };
