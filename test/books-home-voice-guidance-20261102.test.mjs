@@ -24,7 +24,7 @@ test('voice access explanation is discoverable but never relaxes server administ
   assert.match(libraryTabs,/voiceGuide\.append\(guideTitle, guideText, guideLink\)/);
   assert.match(libraryTabs,/panels\.account\.append\(voiceGuide\)/);
   assert.match(libraryTabs,/return_to', 'https:\/\/ekodi\.kr\/books\/library\/#lib-operator'/);
-  assert.match(libraryTabs,/buttons\.operator\.hidden = true/);
+  assert.match(libraryTabs,/if \(key === 'operator'\) button\.hidden = true/);
   assert.match(libraryTabs,/buttons\.operator\.hidden = false/);
   assert.match(libraryTabs,/guideLink\.hidden = true/);
   assert.match(store,/if \(!buyer \|\| !operatorEmails\(env\)\.has\(buyer\.email\)\) return \{ status: 403/);
