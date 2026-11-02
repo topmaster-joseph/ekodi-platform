@@ -638,6 +638,42 @@
   }
 
 
+  // EKODI-PC-AUTOLOGON-MENU-001: only a local Windows dialog is opened.
+  // The web UI never requests, sends, stores or verifies the Windows password.
+  function autologonPanel(device) {
+    if (device.management?.type !== 'pc' || isInventory(device) || device.capabilities?.posAgent === true) return null;
+    const panel = document.createElement('section');
+    panel.className = 'device-autologon-panel';
+    panel.dataset.autologonPanel = 'v1';
+    const title = document.createElement('h3');
+    title.textContent = 'Windows 부팅·재부팅 자동 로그인';
+    const explanation = document.createElement('p');
+    explanation.textContent = '선택한 PC에서 Microsoft Sysinternals Autologon 설정 창만 엽니다. 자동 로그인 활성화·해제는 PC 앞의 사용자가 직접 선택합니다. EKODI는 Windows 암호를 수집하거나 설정 상태를 추정하지 않습니다.';
+    const actions = document.createElement('div');
+    actions.className = 'device-ops-grid';
+    const available = device.status === 'online' && device.management?.remoteCommandLevel === 'managed';
+    const launch = makeActionButton(device, 'autologon.open', '이 PC에서 Autologon 열기', 'primary', {}, !available);
+    if (!available) launch.title = '온라인 상태의 관리형 Windows PC에서만 열 수 있습니다. 오프라인 요청은 예약하지 않습니다.';
+    const official = document.createElement('a');
+    official.className = 'button secondary';
+    official.href = 'https://learn.microsoft.com/sysinternals/downloads/autologon';
+    official.target = '_blank';
+    official.rel = 'noopener noreferrer';
+    official.textContent = 'Microsoft 공식 사용 안내';
+    actions.append(launch, official);
+    const recent = latestCommandByType(device, 'autologon.open');
+    const proof = document.createElement('p');
+    proof.className = 'device-performance-proof';
+    proof.textContent = recent
+      ? '최근 창 열기 명령: ' + commandStatus(recent.status) + ' · ' + timeLabel(recent.completedAt || recent.claimedAt || recent.issuedAt) + ' · 자동 로그인 설정 완료 여부와는 별개입니다.'
+      : '창 열기 실행 기록이 없습니다. 현재 Windows 자동 로그인 설정은 별도로 확인해야 합니다.';
+    const warning = document.createElement('p');
+    warning.className = 'device-performance-proof';
+    warning.textContent = '물리적으로 보호된 운영 PC에만 사용하세요. 잠금 화면 보호를 해제할 수 있으므로 공유·휴대용 PC에는 권장하지 않습니다.';
+    panel.append(title, explanation, actions, proof, warning);
+    return panel;
+  }
+
   // EKODI-WINDOWS-PERFORMANCE-001: online Windows optimization uses only
   // the audited Device Control allowlist. This panel never calls the OS.
   function windowsPerformancePanel(device) {
@@ -779,42 +815,6 @@
     policyNote.textContent = '시작프로그램은 개별 항목만 해제·복원합니다. Defender·방화벽·레지스트리 임의 변경, 강제 재부팅, 임의 PowerShell 실행은 제공하지 않습니다.';
     settings.append(policyNote);
     panel.append(title, stats, assessment, actions, proof, settings);
-    return panel;
-  }
-
-  // EKODI-PC-AUTOLOGON-MENU-001: only a local Windows dialog is opened.
-  // The web UI never requests, sends, stores or verifies the Windows password.
-  function autologonPanel(device) {
-    if (device.management?.type !== 'pc' || isInventory(device) || device.capabilities?.posAgent === true) return null;
-    const panel = document.createElement('section');
-    panel.className = 'device-autologon-panel';
-    panel.dataset.autologonPanel = 'v1';
-    const title = document.createElement('h3');
-    title.textContent = 'Windows 부팅·재부팅 자동 로그인';
-    const explanation = document.createElement('p');
-    explanation.textContent = '선택한 PC에서 Microsoft Sysinternals Autologon 설정 창만 엽니다. 자동 로그인 활성화·해제는 PC 앞의 사용자가 직접 선택합니다. EKODI는 Windows 암호를 수집하거나 설정 상태를 추정하지 않습니다.';
-    const actions = document.createElement('div');
-    actions.className = 'device-ops-grid';
-    const available = device.status === 'online' && device.management?.remoteCommandLevel === 'managed';
-    const launch = makeActionButton(device, 'autologon.open', '이 PC에서 Autologon 열기', 'primary', {}, !available);
-    if (!available) launch.title = '온라인 상태의 관리형 Windows PC에서만 열 수 있습니다. 오프라인 요청은 예약하지 않습니다.';
-    const official = document.createElement('a');
-    official.className = 'button secondary';
-    official.href = 'https://learn.microsoft.com/sysinternals/downloads/autologon';
-    official.target = '_blank';
-    official.rel = 'noopener noreferrer';
-    official.textContent = 'Microsoft 공식 사용 안내';
-    actions.append(launch, official);
-    const recent = latestCommandByType(device, 'autologon.open');
-    const proof = document.createElement('p');
-    proof.className = 'device-performance-proof';
-    proof.textContent = recent
-      ? '최근 창 열기 명령: ' + commandStatus(recent.status) + ' · ' + timeLabel(recent.completedAt || recent.claimedAt || recent.issuedAt) + ' · 자동 로그인 설정 완료 여부와는 별개입니다.'
-      : '창 열기 실행 기록이 없습니다. 현재 Windows 자동 로그인 설정은 별도로 확인해야 합니다.';
-    const warning = document.createElement('p');
-    warning.className = 'device-performance-proof';
-    warning.textContent = '물리적으로 보호된 운영 PC에만 사용하세요. 잠금 화면 보호를 해제할 수 있으므로 공유·휴대용 PC에는 권장하지 않습니다.';
-    panel.append(title, explanation, actions, proof, warning);
     return panel;
   }
 
