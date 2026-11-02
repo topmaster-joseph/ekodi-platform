@@ -1146,6 +1146,8 @@ let publicAdminController=null;
 function publicAdminToken(){
   const current=typeof noticeToken==='function'?noticeToken():'';
   if(current)return current;
+  // An expired current central identity is not permission to reuse a different old admin.
+  try{const raw=localStorage.getItem(NOTICE_SESSION_KEY)||'';const parsed=raw&&JSON.parse(raw);const s=parsed?.currentSession||parsed?.session||parsed;if(s?.access_token)return''}catch{}
   try{return sessionStorage.getItem(PUBLIC_ADMIN_PLATFORM_TOKEN_KEY)||''}catch{return''}
 }
 function sharedPublicAdmin(){
