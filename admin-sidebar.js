@@ -452,7 +452,8 @@ export function renderAdminWorkStrip(items = [], { owner = 'menu', key = '', act
     caption.textContent = label;
     nodes.push(caption);
   }
-  for (const item of list) {
+  const selectedIndex = list.findIndex(item => item.id === active);
+  for (const [index, item] of list.entries()) {
     const button = doc.createElement('button');
     button.type = 'button';
     button.className = `${STRIP_ITEM_CLASS}${item.className ? ` ${item.className}` : ''}`;
@@ -484,6 +485,7 @@ export function renderAdminWorkStrip(items = [], { owner = 'menu', key = '', act
     const selected = item.id === active;
     button.classList.toggle('active', selected);
     button.setAttribute('aria-selected', selected ? 'true' : 'false');
+    button.tabIndex = selected || (selectedIndex < 0 && index === 0) ? 0 : -1;
     if (selected) button.setAttribute('aria-current', 'page');
     if (item.stateLabel) button.setAttribute('aria-label', `${item.label || item.id} · ${item.stateLabel}`);
     nodes.push(button);
@@ -495,6 +497,17 @@ export function renderAdminWorkStrip(items = [], { owner = 'menu', key = '', act
     if (!button || !strip.contains(button)) return;
     event.preventDefault();
     onSelect?.(button.dataset.adminStripItem, button);
+  };
+  strip.onkeydown = event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const buttons = [...strip.querySelectorAll(`.${STRIP_ITEM_CLASS}`)];
+    const current = buttons.indexOf(doc.activeElement);
+    if (current < 0 || !buttons.length) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
+      : (current + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+    buttons[next].focus();
+    buttons[next].click();
   };
   return strip;
 }
