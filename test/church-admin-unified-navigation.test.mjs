@@ -41,7 +41,8 @@ test('church top tabs link to original owner paths and keep the active page visi
     mountChurchAdminNavigation({root,tabsRoot,groups:CHURCH_ADMIN_MENU,
       activeKey:'care',activeOwner:'church',canView:()=>true});
     const headings=root.children.filter(item=>item.className==='church-admin-nav-heading');
-    assert.deepEqual(headings.map(item=>item.textContent),['공통메뉴','전용메뉴']);
+    assert.equal(headings.length,0,'site administrator sees one task menu without scope headings');
+    assert.equal(root.children[0].dataset.adminNavGroup,'services','service settings must lead the menu');
     const links=root.children.filter(item=>item.href);
     assert.equal(links.find(item=>item.dataset.adminNavGroup==='people').href,'/ekodichurch/admin/care');
     assert.equal(links.filter(item=>item.dataset.adminNavGroup==='people').length,1);
