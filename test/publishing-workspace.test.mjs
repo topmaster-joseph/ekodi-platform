@@ -27,3 +27,13 @@ test('manuscript manager login link is not rewritten by the /publishing gateway'
   assert.doesNotMatch(js, /href='\/auth\//);
   assert.match(js, /new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);
 });
+
+test('publishing home offers direct links to private manuscript and publication status tabs', () => {
+  const html = read('publishing/index.html');
+  assert.match(html, /href="https:\/\/ekodi\.kr\/publishing\/#ws-mine">내 원고·프로젝트/);
+  assert.match(html, /href="https:\/\/ekodi\.kr\/publishing\/#ws-progress">출간 준비 현황/);
+  assert.match(html, /href="#ws-mine">내 원고 확인/);
+  assert.match(html, /href="#ws-progress">출간 준비 현황/);
+  assert.match(html, /href="\/human\/manage\/">원고 상세관리/);
+  assert.match(html, /role="tablist"/, 'existing authenticated project workflow remains the source');
+});
