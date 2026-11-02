@@ -290,6 +290,7 @@
     head.append(tr); table.append(head);
     const tbody = document.createElement('tbody');
     table.append(tbody);
+    document.querySelector('[data-provider-more]')?.remove();
     container.replaceChildren(table);
     const more = document.createElement('button');
     more.type = 'button'; more.className = 'smallbtn'; more.dataset.providerMore = '';
