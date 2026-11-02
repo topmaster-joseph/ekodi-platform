@@ -1,0 +1,39 @@
+name: Worship Materials Auto Merge
+# 예배자료 브랜치(PR)가 모든 검사를 통과하면 자동 병합합니다.
+# 공개는 별도: 마이페이지의 "최종 검토 완료 · 공개"를 눌러야 일반에 보입니다.
+# 예배자료(worship/ 등) 외 파일이 바뀐 PR은 자동 병합하지 않습니다.
+on:
+  workflow_run:
+    workflows: ['Church CI', 'Validate EKODI Church Release', 'Validate EKODI Church Community Identity']
+    types: [completed]
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+concurrency:
+  group: worship-auto-merge
+  cancel-in-progress: false
+jobs:
+  merge:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const run = context.payload.workflow_run;
+            const branch = run.head_branch || '';
+            if (!/^(ai\/claude\/(worship|sunday)-|ekodi-orchestrator\/worship-)/.test(branch)) return core.info('skip: not a worship branch');
+            const {data: prs} = await github.rest.pulls.list({owner, repo, state: 'open', head: `${owner}:${branch}`});
+            const pr = prs[0];
+            if (!pr || pr.draft || pr.head.repo.full_name !== `${owner}/${repo}` || pr.head.sha !== run.head_sha) return core.info('skip: no eligible PR');
+            const files = await github.paginate(github.rest.pulls.listFiles, {owner, repo, pull_number: pr.number, per_page: 100});
+            const ok = p => /^worship\//.test(p) || /^test\/church-(worship|live-worship-materials)[\w-]*\.test\.mjs$/.test(p) || p === 'index.html' || p === 'live/index.html';
+            const outside = files.map(f => f.filename).filter(p => !ok(p));
+            if (outside.length) return core.info('skip: non-worship files ' + outside.join(', '));
+            const checks = (await github.paginate(github.rest.checks.listForRef, {owner, repo, ref: pr.head.sha, per_page: 100})).filter(c => c.name !== 'merge');
+            if (!checks.length || checks.some(c => c.status !== 'completed' || !['success', 'skipped', 'neutral'].includes(c.conclusion))) return core.info('skip: checks not all green');
+            await github.rest.pulls.merge({owner, repo, pull_number: pr.number, merge_method: 'squash', sha: pr.head.sha});
+            core.info(`merged #${pr.number}`);
