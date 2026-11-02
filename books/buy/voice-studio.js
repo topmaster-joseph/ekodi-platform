@@ -36,6 +36,9 @@
     let state;
     try { state = await api('GET'); } catch { return; } // 운영자가 아니면 표시하지 않는다
     host.hidden = false;
+    const operatorPanel = host.closest('.operator-panel');
+    if (operatorPanel) operatorPanel.hidden = false;
+    window.EkodiLibraryTabs?.showOperator();
     const saved = g => state[g]?.present ? `${g === 'm' ? '남성' : '여성'} 녹음: ${state[g].speaker || ''} ${String(state[g].recordedAt).slice(0, 16).replace('T', ' ')}` : `${g === 'm' ? '남성' : '여성'} 녹음: 아직 없음`;
     const msg = el('p', { className: 'buy-msg', role: 'status', textContent: `${saved('m')} · ${saved('f')}` });
     // 남·여 원 녹음 두 개면 어린이·청소년·중장년·노년 목소리로 변환해 장별로 저장한다.
