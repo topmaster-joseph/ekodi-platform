@@ -12,7 +12,7 @@ const migrations=[
  '../migrations/202610251300_invest_autopilot.sql',
  '../migrations/202610280100_invest_step_up.sql'
 ];
-function fixture(email=OWNER) {
+function fixture(email=OWNER,configuredOwner=OWNER) {
  const sqlite=new DatabaseSync(':memory:');
  for(const migration of migrations)sqlite.exec(fs.readFileSync(new URL(migration,import.meta.url),'utf8'));
  sqlite.prepare('INSERT INTO investment_step_up_sessions(token_hash,subject_email,expires_at,created_at) VALUES (?,?,?,?)')
@@ -20,7 +20,7 @@ function fixture(email=OWNER) {
  const statement=(sql,params=[])=>({bind(...values){return statement(sql,values)},async first(){return sqlite.prepare(sql).get(...params)||null},
   async all(){return{results:sqlite.prepare(sql).all(...params)}},
   async run(){const r=sqlite.prepare(sql).run(...params);return{meta:{changes:Number(r.changes),last_row_id:Number(r.lastInsertRowid)}}}});
- const env={DB:{prepare:sql=>statement(sql)},ALLOW_MUTATIONS:'true',ALLOWED_ORIGINS:'https://ekodi.kr',INVEST_OWNER_EMAIL:OWNER,INVEST_STEP_UP_REQUIRED:'true'};
+ const env={DB:{prepare:sql=>statement(sql)},ALLOW_MUTATIONS:'true',ALLOWED_ORIGINS:'https://ekodi.kr',INVEST_OWNER_EMAIL:configuredOwner,INVEST_STEP_UP_REQUIRED:'true'};
  const call=async(method='GET',payload=null)=>{
   const original=globalThis.fetch;
   globalThis.fetch=async()=>new Response(JSON.stringify({id:'owner-uuid',email,email_confirmed_at:'2026-11-01T00:00:00Z'}),{status:200});
@@ -82,4 +82,18 @@ test('non-owner cannot read or change broker preference; anonymous cannot access
  assert.equal((await other.call('PUT',{brokerId:'toss'})).status,403);
  const anon=await handleInvestAutopilotApi(new Request('https://ekodi.kr/v1/invest/autopilot/broker/selection'),other.env);
  assert.equal(anon.status,401);
+});
+
+test('broker preference respects only a verified configured owner without widening live-order authority',async()=>{
+ const configured='joseph@ekodi.kr';
+ const owner=fixture(configured,configured);
+ const initial=await owner.call('GET');
+ assert.equal(initial.status,200);
+ assert.equal(initial.data.preferredBrokerId,'kis');
+ assert.equal((await owner.call('PUT',{brokerId:'toss'})).status,200);
+ assert.equal((await owner.call('GET')).data.preferredBrokerId,'toss');
+ assert.equal((await owner.call('PUT',{brokerId:'kis'})).data.liveOrdersEnabled,false);
+ const wrong=fixture('other@example.com',configured);
+ assert.equal((await wrong.call('GET')).status,403);
+ assert.equal((await wrong.call('PUT',{brokerId:'toss'})).status,403);
 });
