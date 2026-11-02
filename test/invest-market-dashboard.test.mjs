@@ -38,7 +38,7 @@ test('search/sort/export source uses authorized broker snapshot, never market pr
  assert.match(source,/marketFilter==='quantity'/);
  assert.match(source,/row\.map\(csvCell\)/);
  assert.doesNotMatch(source,/fetch\(.*k-stock-master/);
- assert.match(source,//broker/snapshot\?broker=/);
+ assert.match(source,/\/broker\/snapshot\?broker=/);
  assert.match(source,/el\('marketExport'\)\.disabled=!rows\.length/);
 });
 test('responsive layout confines table scrolling without altering shared shell',async()=>{
