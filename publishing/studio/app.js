@@ -1,4 +1,4 @@
-const API='https://ekodi.kr'; // Canonical apex Control API; the retired api.ekodi.kr hostname is not routable.
+const API='https://ekodi.kr'; // Canonical same-origin Control API; avoid deprecated API subdomains.
 const state=document.querySelector('#sessionState');
 const workspace=document.querySelector('#workspace');
 const storeForm=document.querySelector('#storeForm');
