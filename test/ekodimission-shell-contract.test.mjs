@@ -66,3 +66,21 @@ test('autumn trip static page matches the published 50k 15-person content',async
   assert.equal(page.includes('data-trip-fee>100,000원</span>'),false);
   assert.equal(page.includes('예배'),false);
 });
+
+test('mission language guard accepts a complete compact nav without dropping any route',async()=>{
+  const legacy=await readFile(new URL('../space/ekodimission-shell.js',import.meta.url),'utf8');
+  const replacement=[
+    'const primaryIndices=new Set([0,1,2,5])',
+    'const primary=links.filter((a,index)=>primaryIndices.has(index))',
+    'const secondary=links.filter((a,index)=>!primaryIndices.has(index))',
+    "more.className='mission-nav-more'",
+    "summary.setAttribute('aria-label','추가 메뉴 열기')",
+    'popup.append(...secondary)',
+    'more.append(summary,popup)',
+    'nav.replaceChildren(...primary,more,language)',
+  ].join(';');
+  const compact=legacy.replace('nav.replaceChildren(...links,language)',replacement);
+  assert.notEqual(compact,legacy,'the historical nav anchor must exist in main fixture');
+  assert.doesNotThrow(()=>validateMissionShellSource(compact));
+  assert.throws(()=>validateMissionShellSource(compact.replace('popup.append(...secondary)','popup.append()')),/missing valid flat or compact navigation projection/);
+});
