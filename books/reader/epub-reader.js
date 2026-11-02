@@ -130,7 +130,7 @@
   .notice{box-sizing:border-box;width:100%;max-width:var(--book-w);margin:0 auto;padding:6px 14px;font-size:12px;color:#7a5a12}
   .noticewrap{background:#fff8e6;border-bottom:1px solid #f0e2b8}
   .stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:18px 12px;perspective:2200px;overflow:hidden;touch-action:pan-y}
-  .book{position:relative;width:100%;max-width:var(--book-w);height:100%;max-height:1100px}
+  .book{position:relative;flex:none;width:var(--book-w);height:var(--book-h);max-width:100%;max-height:100%}
   .cover{position:absolute;inset:-9px -12px -12px -10px;border-radius:6px 12px 12px 6px;background:linear-gradient(90deg,#3b1f12 0,#5a3020 3%,#6b3a26 50%,#5a3020 97%,#3b1f12 100%);box-shadow:0 24px 50px rgba(40,20,5,.45),inset 0 0 0 2px rgba(255,220,170,.08)}
   .cover.spread{border-radius:8px}
   .stack{position:absolute;inset:0;border-radius:3px 8px 8px 3px;background:#efe5cf;box-shadow:1px 1px 0 #e2d6bb,2px 2px 0 #f3ead6,3px 3px 0 #ddd0b2,4px 4px 0 #f1e7d1,5px 5px 0 #d8caa9,6px 6px 2px rgba(0,0,0,.18)}
@@ -141,10 +141,13 @@
   .sheet.spread{border-radius:2px;
     background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'%2F%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .36 0 0 0 0 .22 0 0 0 .09 0'%2F%3E%3C%2Ffilter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'%2F%3E%3C%2Fsvg%3E"),linear-gradient(90deg,rgba(120,90,40,.10) 0,rgba(0,0,0,0) 6%,rgba(0,0,0,0) 40%,rgba(110,80,35,.12) 46%,rgba(70,50,20,.38) 50%,rgba(110,80,35,.12) 54%,rgba(0,0,0,0) 60%,rgba(0,0,0,0) 94%,rgba(120,90,40,.10) 100%),radial-gradient(ellipse at 50% 45%,#fdf9ef 0,#f8f0de 70%,#efe3c8 100%)}
   .sheet::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(0,0,0,0) 30%,rgba(0,0,0,0) 85%,rgba(120,90,40,.08))}
+  .sheet.spread::before{content:"";position:absolute;top:0;bottom:0;left:calc(50% - 22px);width:44px;pointer-events:none;z-index:1;background:linear-gradient(90deg,rgba(75,50,25,.025),rgba(75,50,25,.24) 50%,rgba(75,50,25,.025))}
   .inner{color:#2a241b}
   .view{position:absolute;inset:34px 40px 40px 46px;overflow:hidden;outline:none}
-  .inner{height:100%;column-fill:auto;column-gap:80px;font-family:"Noto Serif KR",serif;line-height:1.85;word-break:keep-all;transition:none;will-change:transform}
+  .inner{height:100%;column-fill:auto;column-gap:var(--page-gap,80px);font-family:"Noto Serif KR",serif;line-height:1.85;word-break:keep-all;transition:none;will-change:transform}
   .inner img{max-width:100%;max-height:calc(var(--page-h) - 20px);height:auto;object-fit:contain;break-inside:avoid}
+  .inner,.inner *{box-sizing:border-box;overflow-wrap:anywhere}
+  .inner .epub-chapter{max-width:var(--column-w,100%);min-width:0}
   .inner h1,.inner h2,.inner h3{break-after:avoid}
   .folio{position:absolute;bottom:13px;display:flex;gap:10px;align-items:baseline;font-size:11px;color:#9a8f7c;letter-spacing:.06em;max-width:44%;white-space:nowrap}
   .folio span{overflow:hidden;text-overflow:ellipsis}.folio b{font-weight:600;color:#7d725f;font-variant-numeric:oldstyle-nums}
@@ -184,7 +187,7 @@
     const key = options.storageKey ? `ekodi-reader:${options.storageKey}` : '';
     let state = { i: 0, size: 100, p: 0 };
     try { if (key) state = { ...state, ...JSON.parse(localStorage.getItem(key) || '{}') }; } catch {}
-    root.innerHTML = `<style>${UI_CSS}</style><style class="bookcss">${book.css}</style>
+    root.innerHTML = `<style>${UI_CSS}</style><style class="bookcss">${book.css}</style><style class="reader-overflow-guard">.inner :is(p,h1,h2,h3,h4,figure,blockquote,table,pre,ul,ol){max-width:var(--column-w,100%)!important;min-width:0!important;overflow-wrap:anywhere!important}.inner table{width:100%!important;table-layout:fixed!important}.inner pre{white-space:pre-wrap!important}.inner img,.inner svg{max-width:var(--column-w,100%)!important;height:auto!important}</style>
       <div class="bar"><div class="row"><button class="close" aria-label="닫기">✕ 닫기</button><span class="t"></span><select class="toc" aria-label="목차"></select>
       <button class="smaller" aria-label="글자 작게">가−</button><button class="larger" aria-label="글자 크게">가+</button></div></div>
       ${options.notice ? `<div class="noticewrap"><div class="notice"></div></div>` : ''}
@@ -200,24 +203,37 @@
     let pages = 1, spread = false, busy = false;
 
     // 화면 크기에 맞춰 책 크기와 쪽 나누기를 다시 계산한다. 넓은 화면은 두 쪽 펼침.
+    // Preserve printed-book proportions: each single page is portrait (0.73 W/H), a spread is twice as wide.
+    let pageGap = 80;
+    const pageStep = () => view.clientWidth + pageGap;
     function layout() {
-      spread = stage.clientWidth >= 1100;
-      const w = spread ? Math.min(1240, stage.clientWidth - 24) : Math.min(760, stage.clientWidth - 16);
+      const roomW = Math.max(200, stage.clientWidth - 32);
+      const roomH = Math.max(280, stage.clientHeight - 36);
+      spread = roomW >= 900 && roomH >= 440;
+      const ratio = spread ? 1.46 : 0.73;
+      const w = Math.max(180, Math.min(spread ? 1240 : 720, roomW, roomH * ratio));
       host.style.setProperty('--book-w', `${w}px`);
+      host.style.setProperty('--book-h', `${w / ratio}px`);
       for (const n of [sheet, $('.cover'), $('.stack')]) n.classList.toggle('spread', spread);
       const vw = view.clientWidth, vh = view.clientHeight;
+      pageGap = spread ? Math.max(64, Math.min(96, Math.round(vw * .11))) : 56;
+      const columnW = spread ? (vw - pageGap) / 2 : vw;
       host.style.setProperty('--page-h', `${vh}px`);
-      inner.style.columnWidth = spread ? `${(vw - 80) / 2}px` : `${vw}px`;
+      host.style.setProperty('--page-gap', `${pageGap}px`);
+      host.style.setProperty('--column-w', `${columnW}px`);
+      inner.style.width = `${vw}px`;
+      inner.style.columnGap = `${pageGap}px`;
+      inner.style.columnWidth = `${columnW}px`;
       inner.style.columnCount = 'auto';
       inner.style.transform = 'translateX(0)';
-      pages = Math.max(1, Math.round((inner.scrollWidth + 80) / (vw + 80)));
+      pages = Math.max(1, Math.ceil((inner.scrollWidth + pageGap - 1) / pageStep()));
       weights = null;
     }
     // 오디오와 책장을 맞추기 위해 쪽마다 글자 수 비율을 잰다(읽는 시간은 글자 수에 비례한다고 본다).
     let weights = null;
     function pageForFraction(f) {
       if (!weights) {
-        const step = view.clientWidth + 80, base = inner.getBoundingClientRect().left, count = new Array(pages).fill(0);
+        const step = pageStep(), base = inner.getBoundingClientRect().left, count = new Array(pages).fill(0);
         const walk = document.createTreeWalker(inner, NodeFilter.SHOW_TEXT); const range = document.createRange();
         for (let n = walk.nextNode(); n; n = walk.nextNode()) {
           const len = n.nodeValue.replace(/\s+/g, '').length; if (!len) continue;
@@ -232,7 +248,7 @@
     }
     function place() {
       state.p = Math.max(0, Math.min(pages - 1, state.p));
-      inner.style.transform = `translateX(${-(view.clientWidth + 80) * state.p}px)`;
+      inner.style.transform = `translateX(${-pageStep() * state.p}px)`;
       const last = state.i === book.chapters.length - 1 && state.p === pages - 1;
       $('.prev').disabled = state.i === 0 && state.p === 0; $('.next').disabled = last;
       $('.pos').textContent = `${state.i + 1} / ${book.chapters.length}장 · ${state.p + 1} / ${pages}쪽`;
@@ -252,7 +268,7 @@
       layout();
       state.p = at === 'end' ? pages - 1 : at;
       if (audio && !audio.paused && trackFor(state.i) !== playing) playChapter(state.i).catch(() => {});
-      if (hash) { const t = node.querySelector(`[id="${CSS.escape(hash)}"]`); if (t) state.p = Math.floor((t.getBoundingClientRect().left - inner.getBoundingClientRect().left) / (view.clientWidth + 80)); }
+      if (hash) { const t = node.querySelector(`[id="${CSS.escape(hash)}"]`); if (t) state.p = Math.floor((t.getBoundingClientRect().left - inner.getBoundingClientRect().left) / pageStep()); }
       place();
     }
     // 넘기는 동안 현재 쪽의 사본이 종이처럼 접히며 돌아가고, 그 아래에 새 쪽이 드러난다.

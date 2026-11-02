@@ -51,3 +51,21 @@ test('reader plays the chapter track and turns pages with playback; library only
   const worker = readFileSync(new URL('../books-worker.js', import.meta.url), 'utf8');
   assert.match(worker, /"media-src 'self' blob:"/);
 });
+
+test('book leaf ratio, page gap and visible page advances use the same measurements', () => {
+  assert.match(src, /const ratio = spread \? 1\.46 : 0\.73/);
+  assert.match(src, /--book-h/);
+  assert.match(src, /const pageStep = \(\) => view\.clientWidth \+ pageGap/);
+  assert.match(src, /inner\.style\.columnGap =/);
+  assert.match(src, /inner\.style\.columnWidth =/);
+  assert.match(src, /max-width:var\(--column-w,100%\)!important/);
+  assert.match(src, /sheet\.spread::before/);
+  assert.doesNotMatch(src, /view\.clientWidth \+ 80/);
+});
+
+test('library exposes owned EPUB through reader only, not an EPUB-save button', () => {
+  const lib = readFileSync(new URL('../books/buy/library.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(lib, /EPUB 받기|\.epub`/);
+  assert.match(lib, /펼쳐 읽기/);
+  assert.match(lib, /downloadAudio/);
+});
