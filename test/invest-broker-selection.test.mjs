@@ -24,7 +24,7 @@ function db(){
  return {sqlite,prepare:q=>st(q)};
 }
 function harness(email=OWNER){
- const database=db(),env={DB:database,INVEST_OWNER_EMAIL:email,INVEST_STEP_UP_REQUIRED:'true',ALLOWED_ORIGINS:'https://ekodi.kr'};
+ const database=db(),env={DB:database,ALLOW_MUTATIONS:'true',INVEST_OWNER_EMAIL:email,INVEST_STEP_UP_REQUIRED:'true',ALLOWED_ORIGINS:'https://ekodi.kr'};
  const call=async(method,path,data)=>{
   const old=globalThis.fetch;globalThis.fetch=async()=>new Response(JSON.stringify({id:'verified-owner-uuid',email,email_confirmed_at:'2026-10-01T00:00:00Z'}),{status:200});
   try{
@@ -94,8 +94,8 @@ test('owner can change default broker but real-money orders remain HTTP 423',asy
 });
 test('KIS is the first option in both owner selectors; browser synchronizes broker status',async()=>{
  const html=await (await investMyRoute(new Request('https://ekodi.kr/invest'),{})).text();
- assert.match(html,/id="brokerSelect"[^>]*><option value="kis" selected>/);
- assert.match(html,/id="liveBroker"[^>]*><option value="kis" selected>/);
+ assert.match(html,/id="brokerSelect"[^>]*><option value="kis">한국투자증권/);
+ assert.match(html,/id="liveBroker"[^>]*><option value="kis">한국투자증권/);
  assert.match(html,/value="toss">토스증권/);
  assert.match(html,/id="preferredBrokerStatus"/);
  assert.match(html,/<section id="owner" hidden>/);
