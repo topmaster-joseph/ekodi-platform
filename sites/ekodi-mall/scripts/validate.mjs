@@ -82,8 +82,14 @@ if (apiPaymentsEnabled) {
   if (/직접판매 온라인 결제는 활성화하지 않았습니다|온라인 결제 (미지원|비활성)|결제 기능은 비활성/.test(publicCopy)) {
     errors.push('Mall public copy claims payments disabled even though the verified direct-sale Toss gate is active');
   }
-  if (!site.notice.includes('에코디비즈 직접판매') || !site.commerce?.betaMessage?.includes('다른 판매자의 대금')) {
-    errors.push('Mall public copy must disclose direct-sale-only payments and no third-party payout');
+  // The site-wide promotional banner was removed by design. Keep the verified
+  // commerce disclosure at the actual checkout/safety point instead.
+  const checkoutTemplate = await readFile(path.join(root, 'src/checkout.template.html'), 'utf8');
+  if (!site.commerce?.betaMessage?.includes('직접판매') ||
+      !site.commerce?.betaMessage?.includes('에코디비즈') ||
+      !site.commerce?.betaMessage?.includes('다른 판매자의 대금') ||
+      !checkoutTemplate.includes('{{BETA_MESSAGE}}')) {
+    errors.push('Mall checkout must publicly disclose direct-sale-only payments and no third-party payout');
   }
 }
 required(site?.commerce?.orchestrationMode, 'site.commerce.orchestrationMode');
