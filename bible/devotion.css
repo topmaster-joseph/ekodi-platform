@@ -157,3 +157,26 @@ body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-i
 .ekodi-devotion .dv-speech-status{flex:1 1 100%;font-size:.84rem;color:var(--dv-muted);line-height:1.4}
 .ekodi-devotion .dv-speech-tools button:focus-visible,.ekodi-devotion .dv-speech-speed select:focus-visible{outline:2px solid var(--dv-accent);outline-offset:2px}
 @media(max-width:520px){.ekodi-devotion .dv-speech-tools{gap:7px;padding:10px}.ekodi-devotion .dv-speech-btn{flex:1 1 calc(50% - 8px);padding:8px 5px;font-size:.9rem}.ekodi-devotion .dv-speech-speed{flex:1 1 100%;justify-content:flex-end}}
+
+/* Human-friendly Korean narration: verified voice choice + patient reading. */
+.ekodi-devotion .dv-speech-gender,.ekodi-devotion .dv-speech-voice{
+  display:flex;align-items:center;gap:6px;flex:1 1 185px;min-width:0;
+  font-size:.87rem;color:var(--dv-ink);white-space:nowrap
+}
+.ekodi-devotion .dv-speech-gender select,.ekodi-devotion .dv-speech-voice select{
+  flex:1 1 100px;min-width:0;max-width:100%;
+  border:1px solid #cfd9d1;background:#fff;color:var(--dv-ink);
+  border-radius:10px;min-height:44px;padding:7px 8px;font:inherit
+}
+.ekodi-devotion .dv-speech-gender select:focus-visible,
+.ekodi-devotion .dv-speech-voice select:focus-visible{
+  outline:2px solid var(--dv-accent);outline-offset:2px
+}
+.ekodi-devotion .dv-speech-voice select:disabled{opacity:.65}
+.ekodi-devotion .dv-speech-tools .dv-speech-status{
+  order:20;flex:1 1 100%;font-size:.85rem;line-height:1.55;word-break:keep-all
+}
+@media(max-width:520px){
+  .ekodi-devotion .dv-speech-gender,.ekodi-devotion .dv-speech-voice{flex:1 1 100%;justify-content:space-between}
+  .ekodi-devotion .dv-speech-gender select,.ekodi-devotion .dv-speech-voice select{flex:0 1 70%;font-size:.87rem}
+}
