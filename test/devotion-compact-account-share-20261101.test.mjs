@@ -53,5 +53,7 @@ test('native devotion sharing has no repeated title/date/passage in the message'
   assert.ok(!poem.text.includes('〈물 주는 손〉'));
   const song=shareBody('song');
   assert.ok(!song.text.includes('♪ 조용히 물을 주겠습니다'));
-  assert.ok(js.includes('navigator.share({ title: body.title, text: body.text, url })'));
+  assert.ok(js.includes('navigator.share({ text: message })'));
+  assert.ok(js.includes('formatDevotionShareMessage({'));
+  assert.ok(js.includes('devotionShareExcerpt(current, kind, privatePrayer)'));
 });
