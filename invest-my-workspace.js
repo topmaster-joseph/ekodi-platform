@@ -272,12 +272,66 @@ async function loadBrokerSnapshot(){
  }catch{if(requestId===marketRequestId){clearMarketRows('조회 실패 · 실제 잔고는 표시하지 않습니다.');badge.dataset.mode='error';badge.textContent='조회 실패';setText('brokerNotice','잔고 조회에 실패했습니다. 실제 잔고를 표시하지 않습니다.')}}
  finally{if(requestId===marketRequestId)el('brokerRefresh').disabled=false}
 }
+
+const BROKER_PREF_NAMES={kis:'한국투자증권',toss:'토스증권'};
+let preferredBrokerId='kis',brokerSelectionVersion=0,liveReadinessVersion=0;
+function syncBrokerSelectors(id){
+ const broker=Object.hasOwn(BROKER_PREF_NAMES,id)?id:'kis';
+ el('brokerSelect').value=broker;el('liveBroker').value=broker;
+ return broker;
+}
+async function loadBrokerSelection(){
+ const version=++brokerSelectionVersion;
+ setText('preferredBrokerStatus','기본 증권사 설정을 확인하고 있습니다. 실제 주문은 잠금 상태입니다.');
+ try{
+  const r=await apiCall('GET','/broker/selection');
+  if(version!==brokerSelectionVersion||el('owner').hidden)return;
+  if(!r.ok||r.data.schema!=='ekodi.invest.owner-broker-selection.v1'||
+     r.data.liveOrdersEnabled!==false||r.data.connected!==false||
+     !Object.hasOwn(BROKER_PREF_NAMES,r.data.preferredBrokerId))throw Error('BROKER_SELECTION_NOT_VERIFIED');
+  preferredBrokerId=syncBrokerSelectors(r.data.preferredBrokerId);
+  setText('preferredBrokerStatus','기본 증권사: '+BROKER_PREF_NAMES[preferredBrokerId]+' · 개인 설정 저장됨 · 계좌 미연결 · 실제 주문 차단');
+ }catch{
+  if(version!==brokerSelectionVersion||el('owner').hidden)return;
+  preferredBrokerId=syncBrokerSelectors('kis');
+  setText('preferredBrokerStatus','한국투자증권을 기본값으로 표시합니다. 서버 설정 확인 실패 · 계좌 미연결 · 실제 주문 차단');
+ }finally{
+  if(version===brokerSelectionVersion&&!el('owner').hidden){loadBrokerSnapshot();loadLiveReadiness()}
+ }
+}
+async function saveBrokerSelection(id){
+ if(!Object.hasOwn(BROKER_PREF_NAMES,id)||el('owner').hidden)return;
+ const version=++brokerSelectionVersion,previous=preferredBrokerId;
+ syncBrokerSelectors(id);
+ for(const key of ['brokerSelect','liveBroker'])el(key).disabled=true;
+ setText('preferredBrokerStatus','선택한 '+BROKER_PREF_NAMES[id]+' 설정을 서버에 저장하고 있습니다.');
+ try{
+  const r=await apiCall('PUT','/broker/selection',{brokerId:id});
+  if(version!==brokerSelectionVersion||el('owner').hidden)return;
+  if(!r.ok||r.data.schema!=='ekodi.invest.owner-broker-selection.v1'||
+     r.data.preferredBrokerId!==id||r.data.liveOrdersEnabled!==false||
+     r.data.connected!==false)throw Error('BROKER_SELECTION_SAVE_NOT_VERIFIED');
+  preferredBrokerId=id;
+  setText('preferredBrokerStatus','기본 증권사: '+BROKER_PREF_NAMES[id]+' · 설정 저장 완료 · 실제 주문 차단');
+ }catch{
+  if(version!==brokerSelectionVersion||el('owner').hidden)return;
+  syncBrokerSelectors(previous);
+  setText('preferredBrokerStatus','설정 저장에 실패했습니다. 기존 '+BROKER_PREF_NAMES[previous]+' 설정을 유지합니다. 실제 주문 차단');
+ }finally{
+  if(version===brokerSelectionVersion){
+   for(const key of ['brokerSelect','liveBroker'])el(key).disabled=el('owner').hidden;
+   if(!el('owner').hidden){loadBrokerSnapshot();loadLiveReadiness()}
+  }
+ }
+}
+
 async function loadLiveReadiness(){
- const broker=el('liveBroker').value;
+ const broker=el('liveBroker').value,version=++liveReadinessVersion;
  setText('liveMessage','증권사별 실거래 준비도를 확인하고 있습니다.');
  el('liveRefresh').disabled=true;
  try{
   const result=await apiCall('GET','/live/readiness?broker='+encodeURIComponent(broker));
+  if(version!==liveReadinessVersion||el('owner').hidden||broker!==el('liveBroker').value)return;
   if(!result.ok){setText('liveExecution','실거래 주문 잠금');setText('liveMessage','준비도 확인 실패: '+(result.data.error||result.status));return}
   const r=result.data;
   if(r.ownerVerified!==true||r.secondFactorVerified!==true||r.liveOrdersAccepted!==false||r.liveExecutionEnabled!==false||r.scope!=='owner_self_funds_only')throw Error('READINESS_CONTRACT_MISMATCH');
@@ -291,9 +345,10 @@ async function loadLiveReadiness(){
   const blocked=document.createElement('li');blocked.textContent='현재 차단 사유: '+[...(r.broker.blockers||[]),...(r.activation.blockers||[])].filter((v,i,a)=>a.indexOf(v)===i).join(', ');
   el('liveRequirements').replaceChildren(...missing,blocked);
  }catch{
+  if(version!==liveReadinessVersion||el('owner').hidden)return;
   setText('liveExecution','실거래 주문 잠금');
   setText('liveMessage','준비도 확인에 실패했습니다. 모든 실거래 주문은 차단 상태입니다.');
- }finally{el('liveRefresh').disabled=false}
+ }finally{if(version===liveReadinessVersion)el('liveRefresh').disabled=false}
 }
 function fillPolicy(policy){
  for(const key of POLICY_KEYS){const input=el('pf_'+key);if(input&&document.activeElement!==input)input.value=policy[key]==null?'':String(policy[key])}
@@ -415,8 +470,11 @@ function routeHash(){const id=location.hash.slice(1);const target=id&&el(id);if(
  const holder=target.closest('#owner > section, #owner > div, .layout > section')||target;showTab(tabFor(holder));requestAnimationFrame(()=>target.scrollIntoView({block:'start'}))}
 function kpi(id,text,state){const node=el(id);if(!node)return;node.textContent=text;if(state)node.parentElement.dataset.state=state}
 function touchUpdated(){kpi('kpiUpdated',new Date().toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}))}
-function unlockOwner(){kpi('kpiAuth','완료','ok');routeHash();el('owner').hidden=false;el('authMessage').hidden=true;setStepUp('done');render();loadAutopilot();loadLiveReadiness();loadBrokerSnapshot();refreshLiveMfa()}
+function unlockOwner(){kpi('kpiAuth','완료','ok');routeHash();el('owner').hidden=false;el('authMessage').hidden=true;setStepUp('done');render();loadAutopilot();loadBrokerSelection();refreshLiveMfa()}
 function lockOwner(message){
+ ++marketRequestId;++brokerSelectionVersion;++liveReadinessVersion;
+ preferredBrokerId=syncBrokerSelectors('kis');
+ setText('preferredBrokerStatus','기본 증권사: 한국투자증권 · 본인인증 후 설정 가능');
  ++marketRequestId;clearMarketRows('본인인증 후 조회할 수 있습니다.');
  kpi('kpiAuth','대기','warn');
  stepUpToken='';
@@ -629,7 +687,7 @@ function init(){
  el('demo').addEventListener('click',demo);el('clear').addEventListener('click',()=>{holdings=[];isDemo=false;render()});el('download').addEventListener('click',download);
  for(const b of document.querySelectorAll('#marketFilters button[data-market-filter]'))b.addEventListener('click',()=>{marketFilter=b.dataset.marketFilter;for(const item of document.querySelectorAll('#marketFilters button'))item.setAttribute('aria-pressed',String(item===b));renderMarketRows()});
  el('marketSearch').addEventListener('input',renderMarketRows);el('marketExport').addEventListener('click',exportMarketCsv);
- el('liveRefresh').addEventListener('click',loadLiveReadiness);el('brokerRefresh').addEventListener('click',loadBrokerSnapshot);el('labRefresh').addEventListener('click',loadStrategyLab);el('brokerSelect').addEventListener('change',loadBrokerSnapshot);
+ el('liveRefresh').addEventListener('click',loadLiveReadiness);el('brokerRefresh').addEventListener('click',loadBrokerSnapshot);el('labRefresh').addEventListener('click',loadStrategyLab);el('brokerSelect').addEventListener('change',()=>saveBrokerSelection(el('brokerSelect').value));el('liveBroker').addEventListener('change',()=>saveBrokerSelection(el('liveBroker').value));
  el('liveMfaEnroll').addEventListener('click',enrollLiveMfa);
  el('liveMfaVerify').addEventListener('click',verifyLiveMfa);
  el('policySave').addEventListener('click',savePolicy);el('apStart').addEventListener('click',()=>changeState('PAPER_TRADING'));el('apPause').addEventListener('click',()=>changeState('PAUSED'));
