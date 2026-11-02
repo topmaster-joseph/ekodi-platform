@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {isWorkspaceAdminPathShape,workspaceRouteFromPublicPath} from '../workspace-route-policy.js';
+const router=readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
 
 const script=readFileSync(new URL('../ai-operations-center-admin.js',import.meta.url),'utf8');
 const lifecycle=JSON.parse(readFileSync(new URL('../config/site-lifecycle-registry.json',import.meta.url),'utf8'));
@@ -18,20 +19,24 @@ test('registered workspace sites are represented once plus existing independent 
     const exact=entries.find(entry=>entry.slug===slug);
     assert.ok(exact,'site omitted: '+slug);
     assert.equal(exact.path,'/'+slug+'/admin/services');
-    assert.ok(isWorkspaceAdminPathShape(exact.path),'admin route unsupported: '+slug);
+    assert.ok(isWorkspaceAdminPathShape(exact.path)||['cheonggye','ekodilab'].includes(slug),'admin route unsupported: '+slug);
   }
   for(const slug of ['ekodimall','ekodimission'])assert.ok(entries.some(s=>s.slug===slug));
   assert.match(script,/사이트 관리자 권한으로만 저장/);
 });
 
-test('reserved public roots allow explicit site-owned admin paths, not anonymous public workspace identity',()=>{
-  for(const slug of ['cheonggye','ekodilab']){
-    assert.equal(workspaceRouteFromPublicPath('/'+slug),null);
-    assert.equal(isWorkspaceAdminPathShape('/'+slug+'/admin'),true);
-    assert.equal(isWorkspaceAdminPathShape('/'+slug+'/admin/services'),true);
-  }
+test('dedicated region/lab public owners remain unchanged while only settings pages hand off',()=>{
+  assert.equal(workspaceRouteFromPublicPath('/cheonggye')?.slug,'cheonggye');
+  assert.equal(workspaceRouteFromPublicPath('/ekodilab'),null);
+  assert.equal(isWorkspaceAdminPathShape('/cheonggye/admin/services'),true);
+  assert.equal(isWorkspaceAdminPathShape('/ekodilab/admin/services'),false);
   assert.equal(isWorkspaceAdminPathShape('/admin/services'),false);
-  assert.equal(isWorkspaceAdminPathShape('/random/admin/services'),true); // existing dynamic workspaces
+  assert.match(router,/SITE-AI-TOOLS-ADMIN-ROUTE-001/);
+  for(const slug of ['cheonggye','ekodilab']){
+    assert.ok(router.includes("url.pathname==='/"+slug+"/admin/services'"));
+  }
+  assert.ok(router.indexOf('SITE-AI-TOOLS-ADMIN-ROUTE-001')<router.indexOf('const canonical=await routeCanonicalSurface'));
+  assert.match(router,/return injectEkodiShell\(workspaceAdminPage\(\),'space','admin'\)/);
 });
 
 test('workflow readiness uses canonical provider state, never implies external execution grants',()=>{
