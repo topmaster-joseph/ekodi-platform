@@ -317,7 +317,7 @@
         if (!p.readOnly) {
           const edit = document.createElement('button');
           edit.type = 'button'; edit.className = 'smallbtn'; edit.textContent = '수정';
-          edit.addEventListener('click', () => { fillForm(p); window.location.hash = 'studio'; document.querySelector('[data-wz-full]')?.click(); });
+          edit.addEventListener('click', () => { fillForm(p); window.location.hash = 'studio'; window.ekodiSellerWizardOpenEditor?.(); });
           actions.append(edit);
         } else actions.textContent = '조회 전용';
         if (p.publicShareLinkActive && p.publicUrl) {
