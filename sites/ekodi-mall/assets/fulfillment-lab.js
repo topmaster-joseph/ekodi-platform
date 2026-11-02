@@ -83,6 +83,29 @@
     if (readiness) readiness.textContent = valid
       ? `배송정보 승인 ${data.execution?.buyerPiiReleaseEnabled ? 'ON' : 'OFF'} · 공급처 발주 ${data.execution?.supplierForwardEnabled ? 'ON' : 'OFF'} · 정산·환불 실행 OFF. 이 관제 화면은 조회 전용입니다.`
       : '승인 상태를 확인하지 않았습니다. 실제 발주와 정산은 이 화면에서 실행하지 않습니다.';
+    const triageList = document.getElementById('logisticsAttentionList');
+    const triageCount = document.getElementById('logisticsQueueCount');
+    if (triageList) {
+      triageList.replaceChildren();
+      const reviewItems = valid && Array.isArray(data.attentionQueue) ? data.attentionQueue : [];
+      if (triageCount) triageCount.textContent = valid
+        ? `확인 필요 ${Number(data.counts?.attention || 0)}건${data.attentionQueueTruncated ? ' · 상위 20건 표시' : ''}`
+        : '로그인 후 확인';
+      if (!reviewItems.length) {
+        triageList.append(node('p', 'fulfillment-triage-empty', valid
+          ? '현재 조회 범위에서 별도 확인이 필요한 주문은 없습니다.'
+          : '로그인 후 처리 필요 목록을 확인할 수 있습니다.'));
+      } else {
+        for (const item of reviewItems) {
+          const entry = node('article', 'fulfillment-triage-item');
+          entry.setAttribute('role', 'listitem');
+          const heading = node('div', 'fulfillment-triage-item-head');
+          heading.append(node('strong', '', item.label || '상태 확인'), node('span', '', item.orderId ? `주문 ${item.orderId}` : '이행 상태'));
+          entry.append(heading, node('p', '', item.nextAction || '관련 주문 상태를 확인합니다.'));
+          triageList.append(entry);
+        }
+      }
+    }
   }
   async function load() {
     if (!session) return;
