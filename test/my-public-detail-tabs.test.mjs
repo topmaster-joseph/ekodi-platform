@@ -99,3 +99,7 @@ test('account choices stay two-column and readable below 460px',()=>{
  assert.match(smallScreen,/#account \.account-wayfinder-grid button>small\{display:none\}/);
  assert.match(css,/@media\(max-width:720px\)[\s\S]*?\.public-detail-tabs\{width:calc\(100% - 24px\)/);
 });
+
+test('mobile account stylesheet cache key changes with compact layout',()=>{
+ assert.match(html,/hub-shell\.css\?v=20261102-mobile-compact-v1/);
+});
