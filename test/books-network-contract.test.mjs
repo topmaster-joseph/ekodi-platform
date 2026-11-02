@@ -11,7 +11,8 @@ test('creator writes are identity scoped and publication is admin moderated', ()
   assert.match(api, /owner_email=\?/);
   assert.match(api, /본인의 서점만/);
   assert.match(api, /본인의 책만/);
-  assert.match(api, /isAdmin\(env, auth\.email\)/);
+  assert.match(api, /isAdmin\(env, auth\)/);
+  assert.match(api, /auth\.kind !== 'admin'/);
   assert.match(api, /PUBLISHED/);
   assert.match(api, /REJECTED/);
 });
@@ -41,11 +42,12 @@ test('apex publishing studio calls the canonical Control API and retains login r
   assert.match(liveStudio, /const API=new URL\('https:\/\/ekodi\.kr\/api\/'\)/);
   assert.match(liveStudio, /fetch\(new URL\(path,API\)/);
   assert.match(liveStudio, /api\('books\/me'\)/);
-  assert.match(liveStudio, /api\('books\/me\/stores'/);
-  assert.match(liveStudio, /api\('books\/me\/titles'/);
+  assert.match(liveStudio, /books\/me\/stores/);
+  assert.match(liveStudio, /books\/me\/titles/);
   assert.doesNotMatch(liveStudio, /api\('\/api\/books\//);
   assert.match(liveStudio, /credentials:'include'/);
-  assert.match(liveStudio, /https:\/\/ekodi\.kr\/auth\/\?return_to=/);
+  assert.match(liveStudio, /new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);
+  assert.match(liveStudio, /searchParams\.set\('return_to',location\.href\)/);
   assert.match(liveStudio, /다시 시도/);
   assert.doesNotMatch(liveStudio, /https?:\/\/api\.ekodi\.kr|https?:\/\/auth\.ekodi\.kr/);
 });
