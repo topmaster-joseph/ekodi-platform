@@ -45,3 +45,13 @@ The same global grant does **not** create rights over a separate natural person'
 The November 2 protected R2 audit found male and female samples classified `audiobook_only`. This fact should not be overwritten or backdated merely because the platform owner said 'no more asking.' The approved scope and actual speaker/source rights must be independently matched before voice cloning/rendering or release.
 
 No change here authorizes unreviewed generated audio, private sample download to a public URL, the release of payment-protected audiobook tracks, or the unconsented re-creation of a third-party identifiable voice.
+
+## Built-in licensed Korean male/female voices — independent of source recordings (2026-11-02)
+
+For a safer path that does not touch any of the pre-existing R2 audiobook-only male/female recordings, an isolated draft runner uses **Supertone Supertonic 3** built-in preset voices M1 (male) and F1 (female), with Korean language mode. No voice conversion, source speaker sample, user recording, paid provider or on-request public inference is used. Upstream code is MIT and the model weights are governed by **OpenRAIL-M**, whose use restrictions and attribution/AI-origin disclosure must be honored. The model may be unsupported by its original developer in future; pin the model revision when choosing a production-grade model after QA.
+
+Workflow: `.github/workflows/render-ekodi-stock-devotion-draft.yml` on protected main, manual input for **already published** date, verifies the canonical public devotional text SHA, installs `supertonic==1.2.2`, renders independent M1/F1 Korean AI recordings and normalizes output to MP3. Stores both tracks and an explicit **unapproved** draft manifest only under private R2 prefix `_voice/devotion-drafts/<date>/stock/<workflow-run-id>/`. Does not write to any public `/bible/narration/` path, upload source text or audio as a public artifact, or falsely mark human review complete.
+
+Before any release: record reviewed exact source text hash, generated MP3 hashes, model and **weight revision** provenance, license/attribution compliance, genuine distinguishable male/female acoustic profile, Korean Scripture pronunciation and appropriate pastoral tone, accessibility, chapter/verse completeness and 320/390/768/1366/1440px playback. Put `에코디 AI 생성 낭독음성` in the final user-facing provenance. Only then use the pre-existing guarded manifest release route and the EKODI Orchestrator protected deployment and human authorization gate.
+
+This stock-model path can be pursued independently of third-party voice consent. Never relabel prior audiobook-only recordings as consented; a user grant for organizational rights does not create speaker rights in unrelated personal recordings.
