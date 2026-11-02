@@ -18,7 +18,7 @@ test('Platform Admin shows every menu on the left without area captions, details
     "sections: ['aiops']",
     "sections: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview']",
     "sections: ['site-health']",
-    "sections: ['devices', 'device-autologon', 'pos-agent']",
+    "sections: ['devices', 'pos-agent']",
     "sections: ['public-site-controls', 'language-status']",
     "sections: ['security', 'audit-records']",
   ]) assert.ok(registry.includes(marker), marker);
