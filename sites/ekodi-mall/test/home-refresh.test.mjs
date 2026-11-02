@@ -25,6 +25,19 @@ test('premium home renders navigation and retains core commerce entrypoints', ()
   assert.ok(css.includes('.mall-category-shortcuts{display:none}'));
 });
 
+test('category tabs show products without the home hero and persist on reload', () => {
+  assert.match(js, /body\\.dataset\\.mallView = mode/);
+  assert.match(js, /categoryFromUrl/);
+  assert.match(js, /window\\.history\\.pushState/);
+  assert.match(js, /window\\.addEventListener\\('popstate', syncView\\)/);
+  assert.match(js, /window\\.addEventListener\\('hashchange', syncView\\)/);
+  assert.match(css, /body\\[data-mall-view="catalog"\\] main#main > :not\\(#filters\\):not\\(#shop\\)/);
+  assert.match(css, /body\\[data-mall-view="recommend"\\] main#main > :not\\(#recommend\\)/);
+  assert.doesNotMatch(js, /mallNavProductsGrid|cloneNode\\(true\\)/);
+  assert.match(template, /id="mallRecommendSearchForm"/);
+  assert.match(template, /<a href="#top">홈<\\/a>/);
+});
+
 test('buyer-facing payment copy matches the approved direct-sale-only production scope', () => {
   assert.equal(site.commerce.paymentsEnabled, true);
   assert.equal(site.notice, '', 'obsolete global banner must stay hidden');
