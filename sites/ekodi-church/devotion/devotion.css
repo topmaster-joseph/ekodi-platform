@@ -1,0 +1,9 @@
+/* 에코디교회 오늘의 매일묵상: the homepage header floats over a dark hero; give it its own band here. */
+/* Header content (brand + menu) spans exactly the centre column of the devotion page (840px incl. 16px gutters). */
+.church-devotion-header{--dv-column:840px;position:sticky;top:0;background:var(--deep,#12312b);color:#fff;padding-inline:max(16px,calc((100% - var(--dv-column))/2 + 16px))}
+.church-devotion-header nav{gap:clamp(14px,2.2vw,24px)}
+.church-devotion-header nav a[aria-current="page"]{opacity:1;border-bottom:1px solid #d8bd81}
+.church-devotion-main{background:var(--paper,#fbfaf6);padding:12px 0 24px;min-height:60vh}
+.church-devotion-main .dv-page-title h1{font-family:var(--serif,'Gowun Batang',serif);font-weight:400;color:var(--ink,#173730)}
+.church-devotion-main .ekodi-devotion{--dv-accent:#2f6455;--dv-accent-dark:#12312b;--dv-soft:#eef2ec;--dv-warm:#f4f0e5}
+@media (max-width:800px){.church-devotion-header{padding-inline:16px}.church-devotion-header nav{left:0;right:0}}

@@ -1,0 +1,19 @@
+/* EKODI Responsive Typography Standard v1 */
+:where(html,body){max-width:100%;overflow-x:hidden}
+:where(body){word-break:keep-all;overflow-wrap:break-word;line-break:auto}
+:where(h1,h2,h3,h4,h5,h6,p,li,dt,dd,figcaption,blockquote,label,button,a,strong,small,span){word-break:keep-all;overflow-wrap:break-word}
+:where(h1,h2,h3,h4,h5,h6){text-wrap:balance}
+:where(p,li,dd,figcaption,blockquote){text-wrap:pretty}
+:where(code,kbd,samp,.url,.domain,.email){overflow-wrap:anywhere;word-break:normal}
+:where(pre){max-width:100%;overflow-x:auto;word-break:normal}
+:where(main,section,article,aside,header,footer,nav,div,li,td,th){min-width:0}
+:where(img,video,canvas,iframe){max-width:100%;height:auto}
+:where(svg){max-width:100%}
+:where(button,[role="button"]){white-space:normal}
+.ekodi-nowrap{white-space:nowrap!important;word-break:normal!important}
+.ekodi-break-anywhere{overflow-wrap:anywhere!important;word-break:normal!important}
+@media(max-width:768px){
+  :where(input,select,textarea,button){max-width:100%}
+  :where(h1,h2,h3,h4,h5,h6,p,li,dt,dd,blockquote){max-width:100%}
+  .overview-grid,.values,.community-cards,.online-actions,.accounts{min-width:0}
+}

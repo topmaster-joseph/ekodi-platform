@@ -1,0 +1,157 @@
+/* EKODI Church refresh · Jubilee / Worship / Meditation / Live */
+:root{--jubilee:#d5b46f;--mist:#edf0e9;--olive:#74856f;--clay:#9b7f61}
+
+.hero{background:linear-gradient(112deg,#0b2b25 0%,#164339 49%,#6f8a73 100%)}
+.hero:before{background:radial-gradient(circle at 79% 35%,#efe1b841 0 10%,transparent 31%),radial-gradient(circle at 92% 90%,#ffffff12 0 16%,transparent 38%),linear-gradient(90deg,#082722b8,transparent)}
+.hero-jubilee{display:inline-block;margin-top:4px;color:#ecd49c;font-weight:400;letter-spacing:.01em}
+.overview-grid a{background:#ffffff0a;border-color:#ffffff2b}
+.overview-grid a:hover{background:#f4f0e5;color:var(--deep);box-shadow:0 12px 35px #061b171f}
+
+.intro{position:relative;overflow:hidden}
+.intro:after{content:"";position:absolute;width:420px;height:420px;border:1px solid #17373012;border-radius:50%;right:-210px;bottom:100px;box-shadow:0 0 0 72px #17373008,0 0 0 144px #17373005;pointer-events:none}
+.values-four{grid-template-columns:repeat(4,1fr);position:relative;z-index:1}
+.values-four .value-card{padding-right:2.5vw;min-height:290px}
+.values-four .value-card+article{padding-left:2.5vw}
+.values-four .value-card h3{margin-bottom:10px}
+.jubilee-card{background:linear-gradient(180deg,#f7f1e3 0%,#fbfaf6 100%);padding-inline:2.5vw!important}
+.jubilee-card .jubilee-icon{width:58px;height:58px;border:1px solid #c8a66b77;border-radius:50%;display:grid;place-items:center;font-size:31px;margin-top:19px}
+.jubilee-card small{display:block;margin-top:20px;color:#9a8060;font-size:10px;letter-spacing:.08em}
+
+.message{background:linear-gradient(180deg,#fbfaf6 0%,#f7f4ec 100%)}
+.sermon{box-shadow:0 22px 55px #17373012}
+.community-cards article{transition:transform .28s ease,box-shadow .28s ease}
+.community-cards article:hover{transform:translateY(-6px);box-shadow:0 22px 45px #1c33281f}
+
+.online{background:linear-gradient(180deg,#f8f7f2 0%,#eef1eb 100%);position:relative;overflow:hidden}
+.online:before{content:"";position:absolute;left:-180px;top:200px;width:460px;height:460px;border:1px solid #17373012;border-radius:50%;box-shadow:0 0 0 90px #17373006,0 0 0 180px #17373004;pointer-events:none}
+.online-head{position:relative;z-index:1}
+.online-head em{color:var(--gold)}
+.online-triad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:58px;position:relative;z-index:1;align-items:stretch}
+.ministry-card{min-height:520px;padding:30px;background:#fff;border:1px solid #d8ded8;display:flex;flex-direction:column;position:relative;overflow:hidden;box-shadow:0 18px 45px #1a392e0b}
+.ministry-card:before{content:"";position:absolute;width:220px;height:220px;border:1px solid #17373012;border-radius:50%;right:-105px;top:-105px}
+.ministry-kicker{display:flex;align-items:center;gap:10px;color:#7b8c85}
+.ministry-kicker span{width:31px;height:31px;border:1px solid #cfd7d1;border-radius:50%;display:grid;place-items:center;font-family:var(--serif);font-size:13px}
+.ministry-kicker small{font-size:9px;letter-spacing:.2em;font-weight:700}
+.ministry-card h3{font-family:var(--serif);font-size:30px;font-weight:400;margin:24px 0 9px;color:var(--ink)}
+.ministry-card>p{font-size:13px;line-height:1.75;color:#6f817a;margin:0 0 25px}
+.media-card{background:var(--deep);color:#fff;border-color:transparent}
+.media-card:before{border-color:#ffffff1f}
+.media-card .ministry-kicker{color:#b9c7c1}.media-card .ministry-kicker span{border-color:#ffffff44}.media-card h3{color:#fff}.media-card>p{color:#ffffffb0}
+.compact-video{margin-top:auto;aspect-ratio:16/9;border:1px solid #ffffff18}
+.media-card .channel-links{justify-content:flex-start;gap:14px;flex-wrap:wrap;padding-top:14px;color:#fff;font-size:11px;line-height:1.5}
+.media-card .channel-links a{opacity:.78}.media-card .channel-links a:hover{opacity:1}
+.devotion-card{background:#f5efe3}
+.devotion-pulse{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:24px 0 20px;padding:18px 0;border-top:1px solid #d9cfbd;border-bottom:1px solid #d9cfbd}
+.devotion-pulse strong{font-family:var(--serif);font-size:18px;font-weight:400}.devotion-pulse i{width:22px;height:1px;background:#b79c72;display:block}
+.devotion-card blockquote{margin:0 0 28px;padding:0;font-family:var(--serif);font-size:19px;line-height:1.7;color:#4e625a}
+.devotion-card .button{margin-top:auto;background:var(--deep);color:#fff}
+.live-card{background:linear-gradient(145deg,#ffffff 0%,#e8ede6 100%)}
+.live-orbit{width:170px;height:170px;border:1px solid #aab9af;border-radius:50%;position:relative;margin:6px auto 28px;display:grid;place-items:center}
+.live-orbit:before,.live-orbit:after{content:"";position:absolute;border:1px solid #17373018;border-radius:50%;inset:18px}.live-orbit:after{inset:42px;background:#17373008}
+.live-orbit span{position:absolute;width:12px;height:12px;background:var(--gold);border-radius:50%;z-index:2}.live-orbit span:nth-child(1){top:9px;left:78px}.live-orbit span:nth-child(2){right:14px;bottom:42px}.live-orbit span:nth-child(3){left:20px;bottom:30px}.live-orbit b{position:relative;z-index:3;font-size:11px;letter-spacing:.16em;color:var(--deep)}
+.live-card .button{margin-top:auto;background:var(--deep);color:#fff}.live-card>small{display:block;text-align:center;margin-top:12px;color:#7c8b85;font-size:10px}
+
+.giving-strip{margin-top:18px;padding:28px 30px;background:#fff;border:1px solid #d8ded8;display:grid;grid-template-columns:.8fr 1.8fr auto;gap:28px;align-items:center;position:relative;z-index:1}
+.giving-strip h3{font-family:var(--serif);font-size:25px;margin:6px 0}.giving-strip>div:first-child>p:last-child{font-size:12px;color:#788780;margin:0}.compact-accounts{grid-template-columns:1fr 1fr;margin:0}.compact-accounts>div{padding:13px 15px}.giving-strip>small{font-size:10px;color:#83918b;white-space:nowrap}
+
+.closing-visit{position:relative;display:grid!important;grid-template-columns:1.08fr .92fr!important;gap:8vw!important;align-items:center;background:linear-gradient(120deg,#e9e4d7 0%,#f7f4ec 58%,#dce4da 100%);padding:105px 8vw!important;overflow:hidden}
+.closing-visit:after{content:"";position:absolute;width:560px;height:560px;border:1px solid #17373015;border-radius:50%;right:-170px;bottom:-260px;box-shadow:0 0 0 90px #17373008,0 0 0 180px #17373004;pointer-events:none}
+.visit-copy{position:relative;z-index:1}.visit-copy .section-label{margin-bottom:34px}.visit-copy h2{font-size:clamp(39px,4.5vw,64px);line-height:1.28}.visit-copy>p:last-child{font-size:15px;line-height:1.9;color:#66776f;margin-top:26px}
+.visit-panel{position:relative;z-index:1;background:#12312b;color:#fff;padding:45px 42px;min-height:420px;box-shadow:0 25px 65px #102f2822;overflow:hidden}
+.visit-panel:after{content:"";position:absolute;width:260px;height:260px;border:1px solid #ffffff1a;border-radius:50%;right:-90px;bottom:-110px;box-shadow:0 0 0 55px #ffffff08}
+.visit-number{position:absolute;right:28px;top:22px;font-family:var(--serif);font-size:70px;color:#ffffff0f;line-height:1}.visit-panel h3{font-family:var(--serif);font-size:34px;font-weight:400;line-height:1.35;margin:0 0 30px;position:relative;z-index:1}.visit-panel dl{display:grid;grid-template-columns:60px 1fr;gap:14px;margin:0 0 30px;font-size:13px;position:relative;z-index:1}.visit-panel dt{color:#aebeb8}.visit-panel dd{margin:0;line-height:1.7}.visit-panel .button{background:#f4f0e5;color:#173730;position:relative;z-index:1}.visit-note{position:relative;z-index:1;font-family:var(--serif);font-size:12px;color:#ffffff8c;margin:26px 0 0}
+
+footer{padding-top:54px;background:#0b2722}footer>p{max-width:820px;line-height:1.8}
+
+@media(max-width:1050px){.values-four{grid-template-columns:repeat(2,1fr)}.values-four .value-card:nth-child(2){border-right:0}.values-four .value-card:nth-child(3),.values-four .value-card:nth-child(4){border-top:1px solid #d7ddd7}.online-triad{grid-template-columns:1fr 1fr}.live-card{grid-column:1/-1;min-height:400px}.live-orbit{margin-top:0}.giving-strip{grid-template-columns:1fr}.giving-strip>small{white-space:normal}.compact-accounts{grid-template-columns:1fr 1fr}}
+
+@media(max-width:800px){.hero-copy br{display:none}.hero-jubilee{margin-top:8px}.values-four{grid-template-columns:1fr}.values-four .value-card,.values-four .value-card+article{padding:30px 0!important;border-right:0;border-bottom:1px solid #d7ddd7;border-top:0}.jubilee-card{background:transparent}.online-triad{grid-template-columns:1fr;margin-top:42px}.ministry-card,.live-card{min-height:auto;padding:26px}.media-card{min-height:470px}.compact-video{margin-top:15px}.devotion-card blockquote{font-size:18px}.live-orbit{width:150px;height:150px}.giving-strip{padding:24px}.compact-accounts{grid-template-columns:1fr}.closing-visit{grid-template-columns:1fr!important;gap:38px!important;padding:80px 24px!important}.visit-panel{min-height:auto;padding:36px 28px}.visit-copy h2{font-size:39px}}
+
+@media(max-width:480px){.ministry-card h3{font-size:26px}.devotion-pulse{gap:6px}.devotion-pulse strong{font-size:16px}.devotion-pulse i{width:14px}.visit-panel h3{font-size:29px}.visit-panel dl{grid-template-columns:52px 1fr}.footer-meta{gap:20px;align-items:flex-end}}
+
+/* Progressive disclosure · simple first view
+   Keep every church capability in the document, but reveal details only after
+   the visitor chooses a destination. This is intentionally CSS-only so the
+   homepage remains usable even when optional service scripts fail. */
+.hero{
+  min-height:calc(100svh - 72px)!important;
+  display:grid;
+  align-items:center;
+}
+.hero-content{
+  width:min(920px,100%);
+  margin-inline:auto;
+  text-align:center;
+  padding-top:clamp(72px,10vh,128px);
+  padding-bottom:clamp(52px,8vh,96px);
+}
+.hero .hero-focus,.hero .hero-copy,.hero .scroll-cue{display:none!important}
+.hero .eyebrow{opacity:.72;margin-bottom:18px}
+.hero h1{font-size:clamp(38px,6vw,74px);line-height:1.16;margin-inline:auto;max-width:850px}
+.hero h1 .hero-continuity{display:block!important;font-size:.24em;letter-spacing:.16em;font-family:var(--sans);font-weight:600;opacity:.66;margin-bottom:1.2em}
+.hero h1 br{display:none}
+.hero h1 em{display:block;margin-top:.14em}
+.hero .overview-grid{
+  width:min(720px,100%);
+  margin:clamp(34px,5vh,58px) auto 0;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.hero .overview-grid a{
+  min-height:72px;
+  padding:16px 12px!important;
+  border:1px solid #ffffff2e;
+  border-radius:18px;
+  display:grid!important;
+  place-items:center;
+  background:#ffffff0a;
+  backdrop-filter:blur(5px);
+}
+.hero .overview-grid a span,.hero .overview-grid a small{display:none!important}
+.hero .overview-grid a strong{display:block;width:100%;font-size:18px;font-weight:600;line-height:1.35;letter-spacing:-.01em;text-align:center;overflow-wrap:anywhere}
+.hero .overview-grid a:hover,.hero .overview-grid a:focus-visible{transform:translateY(-2px);background:#f4f0e5;color:var(--deep);outline:none}
+
+/* The live entry duplicates the Online destination on the first screen. It is
+   still available inside #online, so keep the initial surface quiet. */
+.church-live-entry{display:none!important}
+
+/* Detailed sections are retained but not shown until requested. Direct section
+   hashes and nested anchors (such as #giving or #youtube) both open the parent. */
+#about,#worship,#message,#life-hub,#community,#partner-news,#online,#location{display:none!important}
+#about:target,#worship:target,#message:target,#life-hub:target,#community:target,#partner-news:target,#online:target,#location:target,
+#about:has(:target),#worship:has(:target),#message:has(:target),#life-hub:has(:target),#community:has(:target),#partner-news:has(:target),#online:has(:target),#location:has(:target){display:block!important}
+#location:target,#location:has(:target){display:grid!important}
+
+/* Once a destination is chosen, the hero becomes a quiet compact masthead so
+   the selected content is immediately visible without losing orientation. */
+.hero:has(~ #about:target),.hero:has(~ #worship:target),.hero:has(~ #message:target),.hero:has(~ #life-hub:target),.hero:has(~ #community:target),.hero:has(~ #partner-news:target),.hero:has(~ #online:target),.hero:has(~ #location:target),
+.hero:has(~ #about :target),.hero:has(~ #worship :target),.hero:has(~ #message :target),.hero:has(~ #life-hub :target),.hero:has(~ #community :target),.hero:has(~ #partner-news :target),.hero:has(~ #online :target),.hero:has(~ #location :target){
+  min-height:38svh!important;
+}
+.hero:has(~ #about:target) .hero-content,.hero:has(~ #worship:target) .hero-content,.hero:has(~ #message:target) .hero-content,.hero:has(~ #life-hub:target) .hero-content,.hero:has(~ #community:target) .hero-content,.hero:has(~ #online:target) .hero-content,.hero:has(~ #location:target) .hero-content,
+.hero:has(~ #about :target) .hero-content,.hero:has(~ #worship :target) .hero-content,.hero:has(~ #message :target) .hero-content,.hero:has(~ #life-hub :target) .hero-content,.hero:has(~ #community :target) .hero-content,.hero:has(~ #online :target) .hero-content,.hero:has(~ #location :target) .hero-content{
+  padding-top:82px;
+  padding-bottom:36px;
+}
+.hero:has(~ #about:target) .overview-grid,.hero:has(~ #worship:target) .overview-grid,.hero:has(~ #message:target) .overview-grid,.hero:has(~ #life-hub:target) .overview-grid,.hero:has(~ #community:target) .overview-grid,.hero:has(~ #online:target) .overview-grid,.hero:has(~ #location:target) .overview-grid,
+.hero:has(~ #about :target) .overview-grid,.hero:has(~ #worship :target) .overview-grid,.hero:has(~ #message :target) .overview-grid,.hero:has(~ #life-hub :target) .overview-grid,.hero:has(~ #community :target) .overview-grid,.hero:has(~ #online :target) .overview-grid,.hero:has(~ #location :target) .overview-grid{margin-top:22px}
+
+@media(max-width:800px){
+  .hero{min-height:calc(100svh - 64px)!important}
+  .hero-content{padding:76px 20px 46px}
+  .hero .eyebrow{font-size:10px;margin-bottom:14px}
+  .hero h1{font-size:clamp(34px,10vw,48px);line-height:1.2}
+  .hero .overview-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:30px}
+  .hero .overview-grid a{min-height:60px;border-radius:15px;padding:13px 8px!important}
+  .hero .overview-grid a strong{font-size:17px}
+  .hero:has(~ #about:target),.hero:has(~ #worship:target),.hero:has(~ #message:target),.hero:has(~ #life-hub:target),.hero:has(~ #community:target),.hero:has(~ #partner-news:target),.hero:has(~ #online:target),.hero:has(~ #location:target),
+  .hero:has(~ #about :target),.hero:has(~ #worship :target),.hero:has(~ #message :target),.hero:has(~ #life-hub :target),.hero:has(~ #community :target),.hero:has(~ #partner-news :target),.hero:has(~ #online :target),.hero:has(~ #location :target){min-height:31svh!important}
+  .hero:has(~ #about:target) h1,.hero:has(~ #worship:target) h1,.hero:has(~ #message:target) h1,.hero:has(~ #life-hub:target) h1,.hero:has(~ #community:target) h1,.hero:has(~ #online:target) h1,.hero:has(~ #location:target) h1{font-size:30px}
+}
+
+@media(max-width:480px){
+  .hero .overview-grid{grid-template-columns:1fr 1fr}
+  .hero .overview-grid a{min-height:56px}
+  .hero .overview-grid a strong{font-size:16px}
+}

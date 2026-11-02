@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>에코디교회 예배 운영 콘솔</title>
+  <link rel="stylesheet" href="styles.css?v=20261101h">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <strong>에코디교회</strong>
+      <span>예배 운영 콘솔</span>
+    </div>
+    <a href="../">교회 홈페이지</a>
+  </header>
+
+  <main class="wrap">
+    <div class="console-head"><h1>예배 운영 콘솔</h1><span>최근 2주 예배자료를 검토·공개하고, 필요한 편집은 아래 버튼을 눌러 엽니다.</span></div>
+
+    <section class="card review-card" id="reviewCard" hidden>
+      <div class="preview-head"><h2>최종 검토 · 공개 <small>최근 2주</small></h2><span>공개 전까지 운영자에게만 보입니다</span></div>
+      <div id="reviewList"><p>예배자료 목록을 불러오는 중입니다.</p></div>
+    </section>
+
+    <nav class="panel-tabs" aria-label="편집 화면">
+      <button type="button" data-panel="panelBulletin" aria-expanded="false">주보 편집 · 사진</button>
+      <button type="button" data-panel="panelService" aria-expanded="false">모임 정보 입력</button>
+      <button type="button" data-panel="panelOutputs" aria-expanded="false">자료 만들기 · 미리보기</button>
+    </nav>
+
+    <div class="panel" id="panelBulletin" hidden>
+    <section class="card bulletin-editor" id="bulletinEditor" hidden>
+      <div class="preview-head"><h2>주보 편집 · 사진과 내용</h2><span id="bulletinEditDate"></span></div>
+      <p class="hint">한 줄에 하나씩 적습니다. 표는 칸을 <b>|</b> 로 나눕니다. 저장하면 예배 페이지 주보에 바로 반영됩니다(공개 전에는 운영자에게만 보임).</p>
+      <details class="group" open><summary>사진</summary><div class="editor-grid">
+        <fieldset class="photo-mode"><legend>사진 자리</legend>
+          <label><input type="radio" name="bePhotoMode" value="photo" checked> 사진</label>
+          <label><input type="radio" name="bePhotoMode" value="blank"> 빈 공간</label>
+          <label><input type="radio" name="bePhotoMode" value="text"> 문구</label>
+        </fieldset>
+        <label>사진 설명<input id="bePhotoCaption" placeholder="예: 2026년 10월 03일, 고창 핑크뮬리에서"></label>
+        <label>내 컴퓨터에서 사진 올리기<input id="bePhoto" type="file" accept="image/*"><small class="hint">큰 사진도 그대로 고르세요. 저장할 때 주보에 맞는 크기로 자동으로 줄여 올립니다.</small></label>
+        <label>또는 구글 드라이브 사진 링크<input id="beDriveLink" placeholder="드라이브에서 [공유 → 링크 복사] 후 붙여넣기"><small class="hint">드라이브 파일은 '링크가 있는 모든 사용자'로 공유되어 있어야 보입니다. <a href="https://drive.google.com/drive/search?q=type:image" target="_blank" rel="noopener">드라이브 사진 찾기 ↗</a></small></label>
+        <label>사진 대신 넣을 문구<textarea id="bePhotoText" rows="2" placeholder="예: 함께해 주셔서 감사합니다"></textarea></label>
+        <div class="photo-edit" id="bePhotoEdit" hidden>
+          <canvas id="beCanvas" aria-label="사진 편집 미리보기"></canvas>
+          <div class="photo-tools">
+            <button type="button" data-rot="-90">↺ 왼쪽으로</button>
+            <button type="button" data-rot="90">↻ 오른쪽으로</button>
+            <label>모양<select id="beRatio"><option value="0">원본 그대로</option><option value="1.3333" selected>가로 4:3</option><option value="1.7778">와이드 16:9</option><option value="1">정사각형</option><option value="0.75">세로 3:4</option></select></label>
+            <label>확대<input id="beZoom" type="range" min="1" max="3" step="0.05" value="1"></label>
+            <label>좌우 위치<input id="beX" type="range" min="0" max="100" value="50"></label>
+            <label>위아래 위치<input id="beY" type="range" min="0" max="100" value="50"></label>
+            <label>밝기<input id="beBright" type="range" min="70" max="140" value="100"></label>
+            <button type="button" id="beReset">처음대로</button>
+          </div>
+          <small class="hint" id="beEditInfo"></small>
+        </div>
+        <div class="photo-preview" id="bePhotoPreview" hidden><img alt="현재 주보 사진"></div>
+      </div></details>
+      <details class="group"><summary>매일묵상 · 교회소식</summary><div class="editor-grid">
+        <label>이번 주 매일묵상 (요일 날짜 | 본문)<textarea id="beWeek" rows="7"></textarea></label>
+        <label>교회소식 (한 줄에 하나)<textarea id="beAnnounce" rows="7"></textarea></label>
+      </div></details>
+      <details class="group"><summary>섬기는 이 · 통계 · 예배위원</summary><div class="editor-grid">
+        <label>섬기는 이 (구분 | 이름)<textarea id="beServe" rows="4"></textarea></label>
+        <label>최근 통계 (구분 | 장소 | 시간 | 인원)<textarea id="beStats" rows="4"></textarea></label>
+        <label>예배위원 (첫 줄은 제목줄)<textarea id="beCommittee" rows="6"></textarea></label>
+      </div></details>
+      <details class="group"><summary>협력기관 · 적용 질문</summary><div class="editor-grid">
+        <label>협력기관 (한 줄에 하나)<textarea id="beSponsors" rows="6"></textarea></label>
+        <label>적용 질문 (한 줄에 하나)<textarea id="beQuestions" rows="4"></textarea></label>
+      </div></details>
+      <div class="actions"><button id="beSave" class="primary" type="button">주보 저장</button><a id="beOpen" class="button-link" href="#">주보 화면 열기</a></div>
+      <small id="beStatus" role="status"></small>
+    </section>
+    <p class="hint panel-empty" id="bulletinLocked">로그인한 운영자에게 주일모임 주보 편집이 열립니다.</p>
+    </div>
+
+    <div class="panel" id="panelService" hidden>
+    <section class="grid two">
+      <article class="card">
+        <h2>모임 선택</h2>
+        <div class="service-tabs" role="tablist">
+          <button class="service-tab active" data-service="sunday" type="button">주일모임</button>
+          <button class="service-tab" data-service="saturday" type="button">토요모임</button>
+        </div>
+        <label>날짜<input id="serviceDate" type="date"></label>
+        <label>본문<input id="scripture" placeholder="예: 신명기 28:1-14"></label>
+        <label>제목<input id="title" placeholder="설교/말씀 제목"></label>
+        <label>설교자<input id="preacher" value="정찬균 목사"></label>
+        <label>찬양<textarea id="songs" rows="3" placeholder="한 줄에 한 곡"></textarea></label>
+        <label>대표기도<input id="prayer" placeholder="담당자"></label>
+        <label>공지<textarea id="notice" rows="4" placeholder="이번 모임 공지"></textarea></label>
+        <label>식사준비<input id="meal" placeholder="담당자 또는 팀"></label>
+      </article>
+
+      <article class="card status-card">
+        <h2>자동 준비 현황</h2>
+        <div class="status-row"><span id="bulletinStatusLabel">주보</span><strong id="bulletinStatus">대기</strong></div>
+        <div class="status-row"><span>PPT</span><strong id="pptStatus">대기</strong></div>
+        <div class="status-row"><span>홈페이지</span><strong id="webStatus">대기</strong></div>
+        <div class="status-row"><span>라이브방송</span><strong id="liveStatus">대기</strong></div>
+        <div class="actions">
+          <button id="prepareAll" class="primary" type="button">모두 준비하기</button>
+          <button id="saveDraft" type="button">임시저장</button>
+        </div>
+        <small>현재 정적 교회 저장소에서 안전하게 생성 가능한 산출물은 즉시 만들고, 운영 반영이 필요한 단계는 EKODI 라이브 스튜디오/배포 흐름으로 넘깁니다.</small>
+      </article>
+    </section>
+
+    </div>
+
+    <div class="panel" id="panelOutputs" hidden>
+    <section class="grid four outputs">
+      <article class="card output-card">
+        <span>01</span><h3 id="bulletinCardTitle">주보</h3><p>예배 순서와 담당, 본문과 공지를 인쇄용 문서로 생성합니다.</p><button id="openBulletin" type="button">주보 미리보기</button>
+      </article>
+      <article class="card output-card">
+        <span>02</span><h3>PPT</h3><p>표지·본문·찬양·말씀·공지 순서의 발표 자료를 만듭니다.</p><button id="downloadPpt" type="button">PPT 다운로드</button>
+      </article>
+      <article class="card output-card">
+        <span>03</span><h3>홈페이지</h3><p>다음 모임 정보를 홈페이지 게시용 데이터로 준비합니다.</p><button id="prepareWeb" type="button">게시정보 준비</button>
+      </article>
+      <article class="card output-card">
+        <span>04</span><h3>라이브방송</h3><p>모임명·날짜·제목·본문을 라이브 스튜디오에 넘깁니다.</p><button id="openLive" type="button">라이브 스튜디오 열기</button>
+      </article>
+    </section>
+
+    <section class="card preview">
+      <div class="preview-head"><h2>이번 모임 자료</h2><span id="serviceLabel">주일모임</span></div>
+      <div id="summary"></div>
+    </section>
+    </div>
+  </main>
+
+  <script src="app.js?v=20261101i"></script>
+</body>
+</html>
