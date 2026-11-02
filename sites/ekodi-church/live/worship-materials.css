@@ -1,0 +1,54 @@
+/* EKODI own Live · independent public worship materials */
+.camera-choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;border:1px solid var(--line);border-radius:14px;background:#f9fcf9;padding:12px;margin:12px 0}
+.camera-choice label{display:grid;gap:6px;min-width:0;font-size:12px;font-weight:750;color:var(--green)}
+.camera-choice select{min-width:0;width:100%;background:#fff;color:var(--ink);padding:10px;border:1px solid #c9d7cd;border-radius:9px;font-size:12px}
+.camera-choice small{grid-column:1/-1;color:#687c71;font-size:11px;line-height:1.5}
+.viewer-content{min-width:0;display:grid;gap:14px}
+.viewer-material-toolbar{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:12px}
+.viewer-material-toolbar>div:first-child{display:grid;gap:3px}
+.viewer-material-toolbar strong{font-size:17px}
+.viewer-material-toolbar small{font-size:12px;color:#6b7b70}
+.viewer-layout-options{display:flex;flex-wrap:wrap;gap:6px}
+.viewer-layout-options button{padding:9px 11px;border-radius:9px;border:1px solid #cbd8cf;font-size:12px;min-height:37px;white-space:nowrap}
+.viewer-layout-options button[aria-pressed=true]{color:#fff;background:var(--green);border-color:var(--green)}
+.viewer-material-status{font-size:11px;color:#67786d}
+.viewer-content-layout{min-width:0;display:grid;gap:12px;align-items:start;grid-template-columns:minmax(0,1fr)}
+.viewer-content-layout .viewer-stage{min-height:420px;aspect-ratio:16/9;border-radius:16px;width:100%}
+.viewer-content-layout[data-material-layout="all"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+.viewer-content-layout[data-material-layout="all"] .viewer-stage{grid-column:1/-1;min-height:340px}
+.viewer-content-layout[data-material-layout="video-ppt"],
+.viewer-content-layout[data-material-layout="video-bulletin"],
+.viewer-content-layout[data-material-layout="ppt-bulletin"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+.viewer-content-layout[data-material-layout="video-ppt"] .viewer-stage,
+.viewer-content-layout[data-material-layout="video-bulletin"] .viewer-stage{min-height:340px}
+.viewer-worship-slides,.viewer-worship-bulletin{min-width:0;background:#fff;border:1px solid #d7e3da;border-radius:16px;overflow:hidden;color:#19382c}
+.viewer-worship-slides header,.viewer-worship-bulletin header{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 15px;border-bottom:1px solid #dce6df}
+.viewer-worship-slides header strong,.viewer-worship-bulletin header strong{font-size:14px}
+.viewer-worship-slides header span,.viewer-worship-bulletin header a{font-size:11px;color:#6c8073}
+.viewer-worship-slide{min-height:300px;aspect-ratio:16/9;padding:8%;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(136deg,#fff,#eaf3eb)}
+.viewer-worship-slide small{color:#927a48;font-size:11px;letter-spacing:.07em;font-weight:800}
+.viewer-worship-slide h3{font-size:clamp(19px,2.2vw,38px);line-height:1.3;letter-spacing:-.045em;white-space:pre-line;word-break:keep-all;margin:18px 0}
+.viewer-worship-slide p{font-size:clamp(12px,1.05vw,17px);line-height:1.55;margin:6px 0;white-space:pre-line;word-break:keep-all}
+.viewer-worship-slides nav{display:flex;justify-content:space-between;padding:10px 15px;background:#fff}
+.viewer-worship-slides nav button{font-size:12px;padding:8px 12px}
+.viewer-bulletin-body{max-height:520px;overflow:auto;padding:15px 19px}
+.viewer-bulletin-body h3{font-size:16px;margin:6px 0 10px}
+.viewer-bulletin-body h3:not(:first-child){margin-top:24px}
+.viewer-bulletin-body p{font-size:13px;line-height:1.65}
+.viewer-bulletin-order{list-style:none;padding:0;margin:12px 0}
+.viewer-bulletin-order li{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #e5ebe6;padding:8px 0;line-height:1.45;font-size:12px}
+.viewer-bulletin-order li small{color:#788a7d;white-space:nowrap}
+.viewer-bulletin-devotions{list-style:none;margin:0;padding:0;font-size:12px;line-height:1.9}
+.viewer-bulletin-devotions li{border-bottom:1px dashed #dce6df}
+@media(max-width:1100px){.viewer-content-layout[data-material-layout="all"],.viewer-content-layout[data-material-layout="video-ppt"],.viewer-content-layout[data-material-layout="video-bulletin"],.viewer-content-layout[data-material-layout="ppt-bulletin"]{grid-template-columns:1fr}.viewer-content-layout[data-material-layout="all"] .viewer-stage{grid-column:auto}.viewer-content-layout .viewer-stage{min-height:270px}.viewer-worship-slide{min-height:220px}.viewer-material-toolbar{padding:11px}}
+@media(max-width:580px){.camera-choice{grid-template-columns:1fr}.viewer-layout-options button{flex:1 1 auto;font-size:11px}.viewer-worship-slide h3{font-size:clamp(19px,5vw,28px)}.viewer-worship-slide p{font-size:clamp(12px,3vw,16px)}}
+
+.worship-host-control{margin:14px 0;padding:14px;background:#f7fbf7;border:1px solid var(--line);border-radius:16px}
+.worship-host-current{font-size:16px;line-height:1.55;font-weight:800;color:var(--green);padding:11px 0;min-height:54px;word-break:keep-all}
+.worship-host-nav{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.worship-host-nav button{font-size:12px;padding:9px 12px;border-radius:10px}
+.worship-host-nav span{white-space:nowrap;font-size:12px;font-weight:800}
+.worship-host-sync,.viewer-slide-sync{font-size:11px;line-height:1.65;color:#64776b;margin:10px 0 0}
+.viewer-worship-slides nav{flex-wrap:wrap;gap:8px}
+.viewer-worship-slides nav button[aria-pressed=true]{background:var(--green);color:#fff}
+.viewer-slide-sync{padding:0 15px 12px;margin-top:0}
