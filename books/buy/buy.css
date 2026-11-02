@@ -220,3 +220,11 @@
  .books-library-page .voice-script{font-size:.91rem;line-height:1.85}
  .books-library-page .voice-studio .review-actions button{min-width:0}
 }
+
+/* BOOKS-VOICE-ACCESS-20261102: hidden operator tab explained inside reader's account */
+.books-library-page .library-voice-access{margin-top:18px;padding:18px 20px;background:#f8f5ed;border:1px solid #d7d0c1;border-radius:8px}
+.books-library-page .library-voice-access h3{margin:0 0 8px;font:600 1.05rem/1.4 Arial,"Malgun Gothic",sans-serif;color:var(--navy)}
+.books-library-page .library-voice-access p{margin:0 0 14px;color:var(--muted);font-size:.86rem;line-height:1.7}
+.books-library-page .library-voice-access a{display:inline-flex;min-height:44px;align-items:center;padding:10px 16px;color:white;background:var(--navy);text-decoration:none;font:600 .83rem Arial,"Malgun Gothic",sans-serif;border-radius:4px}
+.books-library-page .library-voice-access a[hidden]{display:none}
+@media(max-width:700px){.books-library-page .library-voice-access{padding:15px}}

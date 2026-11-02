@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const read = path => readFileSync(new URL('../'+path, import.meta.url), 'utf8');
+const tabs = read('books/home-tabs.js');
+const libraryTabs = read('books/buy/library-tabs.js');
+const styles = read('books/styles.css');
+const libraryStyles = read('books/buy/buy.css');
+const store = read('books-commerce.js');
+test('storefront introduction is always visible with only four real section tabs', () => {
+  assert.match(tabs,/main\.prepend\(\.\.\.intro, bar\)/);
+  assert.match(tabs,/main\.querySelector\('\.hero'\)/);
+  assert.match(tabs,/main\.querySelector\('\.press-ribbon'\)/);
+  assert.doesNotMatch(tabs,/bookHomeTab-featured|\['featured', '추천·첫 화면'\]/);
+  const labels = [...tabs.matchAll(/\['(catalog|series|fields|about)', '([^']+)'\]/g)].map(x=>x[2]);
+  assert.deepEqual(labels, ['출판목록','시리즈','연구영역','소개·출판']);
+  assert.match(tabs,/return 'catalog'/);
+  assert.match(tabs,/key === 'series' \? '#series-tab' : '#catalog'/);
+  assert.match(styles,/\.book-home-panel\[hidden\]/);
+});
+test('voice access explanation is discoverable but never relaxes server administrator policy',()=>{
+  assert.match(libraryTabs,/library-voice-access/);
+  assert.match(libraryTabs,/서버에 등록된 계정/);
+  assert.match(libraryTabs,/voiceGuide\.append\(guideTitle, guideText, guideLink\)/);
+  assert.match(libraryTabs,/panels\.account\.append\(voiceGuide\)/);
+  assert.match(libraryTabs,/return_to', 'https:\/\/ekodi\.kr\/books\/library\/#lib-operator'/);
+  assert.match(libraryTabs,/if \(key === 'operator'\) button\.hidden = true/);
+  assert.match(libraryTabs,/buttons\.operator\.hidden = false/);
+  assert.match(libraryTabs,/guideLink\.hidden = true/);
+  assert.match(store,/if \(!buyer \|\| !operatorEmails\(env\)\.has\(buyer\.email\)\) return \{ status: 403/);
+  assert.match(libraryStyles,/BOOKS-VOICE-ACCESS-20261102/);
+});
