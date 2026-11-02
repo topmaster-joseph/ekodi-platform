@@ -213,3 +213,6 @@ body[data-mall-view="recommend"] .mall-recommend-inline-form{display:block}
  body[data-mall-view="catalog"] main#main > #shop,body[data-mall-view="recommend"] main#main > #recommend{padding-top:18px}
  .mall-recommend-inline-form > div{flex-direction:column}
 }
+
+/* Desktop category navigation is already present in the header; keep one tab row. */
+@media(min-width:641px){body[data-mall-view="catalog"] main#main > #filters{display:none}}
