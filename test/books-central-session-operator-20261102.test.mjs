@@ -73,6 +73,16 @@ test('invalid central refresh never silently reselects an old different identity
   assert.equal(data.values.has(OWN),false);
   assert.equal(data.values.has(CENTRAL),false);
 });
+test('temporary central refresh outage retains login state for recovery without falling back',async()=>{
+  const data=fixture({
+    central:{currentSession:{...valid('temporary-outage'),expires_at:1}},
+    own:legacy('stale-other-account'),
+    response:async()=>{throw new Error('temporary-network');},
+  });
+  assert.equal(await data.commerce.session(),null);
+  assert.equal(data.values.has(CENTRAL),true,'transient outage must preserve unified session');
+  assert.equal((await data.commerce.session()),null,'must not use stale local account');
+});
 test('server owns bookstore operator authorization: verified account email only',()=>{
   assert.match(commerce,/operator: operatorEmails\(env\)\.has\(buyer\.email\)/);
   assert.match(commerce,/if \(!buyer \|\| !operatorEmails\(env\)\.has\(buyer\.email\)\) return \{ status: 403/);
