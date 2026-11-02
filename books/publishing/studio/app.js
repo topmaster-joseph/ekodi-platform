@@ -7,6 +7,8 @@ const storeSelect=document.querySelector('#storeSelect');
 const storeList=document.querySelector('#storeList');
 const bookList=document.querySelector('#bookList');
 const refreshButton=document.querySelector('#refreshButton');
+const loginUrl=()=>`https://ekodi.kr/auth/?site=publishing&return_to=${encodeURIComponent(location.href)}`;
+const setSignedIn=authenticated=>{document.documentElement.classList.toggle('publishing-signed-in',authenticated);};
 let snapshot={stores:[],books:[]};
 
 async function api(path,options={}){
@@ -29,11 +31,12 @@ async function load(){
   try{
     snapshot=await api('/api/books/me');
     state.textContent=`${snapshot.account.email} 계정으로 연결되었습니다.`;
-    workspace.hidden=false;render();
+    workspace.hidden=false;setSignedIn(true);render();
   }catch(error){
+    workspace.hidden=true;setSignedIn(false);
     if(error.status===401){
-      const returnTo=encodeURIComponent(location.href);
-      state.innerHTML=`로그인이 필요합니다. <a href="https://ekodi.kr/auth/?site=books&return_to=${returnTo}">EKODI 통합인증으로 로그인</a>`;
+      state.innerHTML=`출판 스튜디오 인증을 확인하지 못했습니다. <a href="${loginUrl()}">통합 로그인으로 연결</a> <button type="button" id="retryStudioSession" class="ghost">다시 확인</button>`;
+      document.querySelector('#retryStudioSession')?.addEventListener('click',load);
     }else state.textContent=`연결 오류: ${error.message}`;
   }
 }
