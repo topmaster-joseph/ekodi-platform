@@ -42,11 +42,11 @@ test('workspace routes include a safe services section and no public menu admini
   assert.ok(html.includes('data-ekodi-authority-scope="tenant"'));
   assert.ok(css.includes(TENANT_SERVICE_CSS));
   assert.ok(css.includes('@media(max-width:620px)'));
-  assert.match(js,/common\.push\(\['services','서비스설정'\]\)/);
-  assert.doesNotMatch(js,/settings\.dataset\.adminSection='services'/);
-  assert.match(js,/!seen\.has\('services'\)/);
-  assert.match(js,/label:'공통메뉴'/);
-  assert.match(js,/label:'전용메뉴'/);
+  assert.match(js,/settings\.dataset\.adminSection='services'/);
+  assert.match(js,/settings\.dataset\.adminSection='services'/);
+  assert.match(js,/label:'업무메뉴'/);
+  assert.doesNotMatch(js,/label:'공통메뉴'/);
+  assert.doesNotMatch(js,/label:'전용메뉴'/);
   assert.match(js,/panel\.hidden=false/);
   assert.match(css,/\.admin-nav-service-settings\{/);
 });
