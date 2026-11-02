@@ -40,3 +40,18 @@
 @media(max-width:640px){.book-links>.buy-direct{grid-column:1/-1}}
 
 .language-edition-note{margin:.75rem 0 0;font-size:.82rem;line-height:1.6;color:var(--burgundy)}
+
+
+/* BOOKS-HOME-MEMBER-20261102 — 로그인한 회원명 바로 옆에 로그아웃 */
+.ekc-header[data-ekodi-chrome="books"] .ekc-account{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;font-family:Arial,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+.ekc-header[data-ekodi-chrome="books"] .ekc-account-name{display:block;max-width:140px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--navy);font-size:.8rem;font-weight:700}
+.ekc-header[data-ekodi-chrome="books"] .ekc-account-logout{min-height:40px;padding:0 10px;border:1px solid var(--navy);background:transparent;color:var(--navy);white-space:nowrap;font:600 .76rem Arial,"Malgun Gothic",sans-serif;cursor:pointer}
+.ekc-header[data-ekodi-chrome="books"] .ekc-account-logout:focus-visible{outline:3px solid #b59a5b;outline-offset:2px}
+.ekc-header[data-ekodi-chrome="books"] .ekc-account-logout:disabled{opacity:.6;cursor:wait}
+@media(max-width:640px){
+  .ekc-header[data-ekodi-chrome="books"] .ekc-masthead{grid-template-columns:minmax(0,1fr) auto;row-gap:4px;padding-top:4px;padding-bottom:6px}
+  .ekc-header[data-ekodi-chrome="books"] .ekc-actions{display:contents}
+  .ekc-header[data-ekodi-chrome="books"] .ekc-menu{grid-column:2;grid-row:1}
+  .ekc-header[data-ekodi-chrome="books"] .ekc-account{grid-column:1/-1;grid-row:2;justify-self:end;max-width:100%}
+  .ekc-header[data-ekodi-chrome="books"] .ekc-account-name{max-width:min(38vw,140px)}
+}
