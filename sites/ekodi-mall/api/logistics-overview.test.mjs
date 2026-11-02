@@ -18,7 +18,7 @@ test('seller-scoped overview counts attention and active shipments without buyer
   assert.equal(result.counts.shipped, 1);
   assert.equal(result.counts.delivered, 1);
   assert.equal(result.counts.returns, 1);
-  assert.equal(result.counts.attention, 2);
+  assert.equal(result.counts.attention, 3);
   assert.equal(result.supplierPayablePlannedAmount, 7500);
   assert.equal(result.execution.dashboardReadOnly, true);
   assert.equal(result.execution.payoutExecutionEnabled, false);
@@ -43,4 +43,35 @@ test('existing seller-authenticated API owns the logistics projection and does n
   assert.match(source, /const user = await authenticate\(request,env\)/);
   assert.match(source, /listSellerFulfillments\(env,user\.id\)/);
   assert.doesNotMatch(source, /\/api\/public\/logistics/);
+});
+
+test('review queue prioritizes blockers, returns only allowlisted fields, and never leaks buyer data', () => {
+  const sample = [
+    { id:'ful_aabbcc', orderId:'ord_8', status:'awaiting_pii', recipientName:'개인정보', address:'민감정보', supplierPayableAmount: 1000 },
+    { id:'ful_ff0011', orderId:'ord_9', status:'failed', recipientName:'개인정보', trackingNumber:'SECRET_TRACK' },
+    { id:'ful_5', orderId:'buyer@email.com', status:'return_requested', buyer:{ phone: '비밀' } },
+    { id:'ful_6', orderId:'ord_10', status:'shipped' }
+  ];
+  const result = buildSellerLogisticsOverview(sample, {});
+  assert.equal(result.counts.attention, 3);
+  assert.deepEqual(result.attentionQueue.map(item => item.status), ['failed','return_requested','awaiting_pii']);
+  assert.equal(result.attentionQueue[1].orderId, '');
+  assert.deepEqual(Object.keys(result.attentionQueue[0]), ['fulfillmentId','orderId','status','priority','label','nextAction']);
+  assert.doesNotMatch(JSON.stringify(result), /개인정보|민감정보|SECRET_TRACK|비밀|buyer@email.com|trackingNumber/);
+  assert.equal(result.attentionQueueTruncated, false);
+});
+
+test('review queue respects 20 item bound and keeps safety gates independent', () => {
+  const rows = Array.from({length: 31}, (_, i) => ({
+    id: 'ful_' + String(i + 1).padStart(32, '0'),
+    orderId: 'ord_' + i,
+    status: i % 2 ? 'failed' : 'ready_to_forward'
+  }));
+  const result = buildSellerLogisticsOverview(rows, {});
+  assert.equal(result.counts.attention, 31);
+  assert.equal(result.attentionQueue.length, 20);
+  assert.equal(result.attentionQueueTruncated, true);
+  assert.equal(result.attentionQueue[0].status, 'failed');
+  assert.equal(result.execution.dashboardReadOnly, true);
+  assert.equal(result.execution.refundExecutionEnabled, false);
 });
