@@ -72,7 +72,7 @@
         const title = document.createElement('h2'); title.textContent = '첫 책을 만나 보세요';
         const note = document.createElement('p'); note.textContent = '아직 구매한 책이 없습니다. 마음에 드는 책을 찾아 서재에 담아 보세요.';
         const link = document.createElement('a'); link.href = `${C.BASE}/#catalog`; link.textContent = '도서 목록 살펴보기';
-        empty.append(title, note, link); list.append(empty); return;
+        empty.append(title, note, link); list.append(empty); window.EkodiLibraryTabs?.render(items,libraryAccount); return;
       }
       for (const item of items) {
         const row = document.createElement('article'); row.className = 'library-item';
@@ -109,6 +109,7 @@
         actions.append(btn);
         row.append(C.cover(item), info, actions); list.append(row);
       }
+      window.EkodiLibraryTabs?.render(items,libraryAccount);
     } catch (e) {
       if (e.status === 401) { $('libStatus').textContent = '로그인이 필요합니다.'; $('libLogin').hidden = false; C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; }, () => load().then(operatorPanel)); }
       else $('libStatus').textContent = e.message;
@@ -134,13 +135,13 @@
       catch (e) {
         if (e.status === 403 || e.status === 401) {
           // 운영자 화면이 왜 안 보이는지 알 수 있게: 지금 로그인한 계정이 운영자 계정이 아니라는 안내만 보인다(권한은 서버가 판단).
-          const note = $('operatorNote');
-          if (note && libraryAccount) { note.hidden = false; note.textContent = `출판 도서 관리·낭독 음성 녹음은 운영자 구글 계정(topmaster.joseph@gmail.com 등)으로 로그인해야 보입니다. 지금 로그인: ${libraryAccount}`; }
+          // 권한이 없는 사용자의 일반 서재에는 관리자 계정·이메일을 노출하지 않는다.
           return;
         }
         continue;
       }
       $('operatorPanel').hidden = false;
+      window.EkodiLibraryTabs?.showOperator();
       const file = state.file, ready = state.readiness || {};
       const row = document.createElement('div'); row.className = 'op-row';
       const num = document.createElement('span'); num.className = 'op-no'; num.textContent = String(++no).padStart(2, '0');
