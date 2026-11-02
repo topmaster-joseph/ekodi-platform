@@ -69,7 +69,7 @@ test('devotion admin requests never select an old privileged token over a centra
       memberSession:async()=>memberToken?{access_token:memberToken}:null,Date,Math,JSON
     });
   };
-  assert.equal(await run(central('NEW_GOOGLE'),'NEW_GOOGLE'),'member account replaces old admin token');
+  assert.equal(await run(central('NEW_GOOGLE'),'NEW_GOOGLE'),'NEW_GOOGLE');
   assert.equal(await run(central('EXPIRED',1),null),'','expired current account must not become previous admin');
   assert.equal(await run(null,null),'OLD_ADMIN','old console fallback remains on independent host');
 });
