@@ -1,0 +1,434 @@
+{
+  "schema": "ekodi.worship.materials.v1",
+  "site": "ekodichurch",
+  "date": "2026-11-01",
+  "time": "11:00",
+  "title": "자라게 하시는 하나님 앞에서",
+  "scripture": "고린도전서 3:1–9",
+  "preacher": "정찬균 목사",
+  "order": [
+    [
+      "예배부름",
+      "인도자"
+    ],
+    [
+      "공동체 고백",
+      "다같이"
+    ],
+    [
+      "경배찬양",
+      "다같이"
+    ],
+    [
+      "대표기도",
+      "맡은이"
+    ],
+    [
+      "헌신찬양",
+      "다같이"
+    ],
+    [
+      "성경봉독 — 고린도전서 3:1–9",
+      "다같이"
+    ],
+    [
+      "말씀나눔 — 자라게 하시는 하나님 앞에서",
+      "정찬균 목사"
+    ],
+    [
+      "나눔기도",
+      "다같이"
+    ],
+    [
+      "결단찬양",
+      "다같이"
+    ],
+    [
+      "교회소식",
+      "인도자"
+    ],
+    [
+      "주기도문",
+      "다같이"
+    ]
+  ],
+  "devotion": [
+    [
+      "11/01",
+      "고린도전서 3:1–9"
+    ],
+    [
+      "11/02",
+      "고린도전서 3:10–23"
+    ],
+    [
+      "11/03",
+      "고린도전서 4:1–13"
+    ],
+    [
+      "11/04",
+      "고린도전서 4:14–21"
+    ],
+    [
+      "11/05",
+      "고린도전서 5:1–13"
+    ],
+    [
+      "11/06",
+      "고린도전서 6:1–11"
+    ],
+    [
+      "11/07",
+      "고린도전서 6:12–20"
+    ]
+  ],
+  "slides": [
+    {
+      "title": "에코디교회",
+      "kicker": "WHO IS GOD? WHO AM I? WHAT DO I DO?",
+      "lines": [
+        "잠시 후 예배가 시작됩니다",
+        "기대하는 마음으로 미리 준비해 주세요"
+      ],
+      "cover": true
+    },
+    {
+      "title": "Call to Worship",
+      "kicker": "예배부름",
+      "lines": [
+        "하나님이 우리를 한 밭에 부르시고 함께 자라게 하시는 은혜로 예배에 초대하십니다"
+      ]
+    },
+    {
+      "title": "Community Confession",
+      "kicker": "공동고백",
+      "lines": [
+        "그리스도의 몸 안에서 서로를 세우도록 부르신 하나님 앞에 공동체가 고백합니다"
+      ]
+    },
+    {
+      "title": "공동체 고백",
+      "kicker": "Community Confession",
+      "lines": [
+        "하나님은 우리를 세상에서 하나님의 구별된 백성으로 부르셨습니다.\n(갈 4:4-7, 롬 8:14-17, 벧전 2:9, 히 10:24-25)",
+        "하나님은 우리를 복음으로 서로 환대하며 나누는 공동체로 세우셨습니다.\n(창 1:27, 31, 행 2:42-47, 롬 12:13)",
+        "하나님은 우리를 세상에서 자기비움과 자기부정으로 자유롭고 거룩하게 하십니다.\n(행 1:8, 롬 8:28, 벧전 2:11-12, 렘 29:4-7, 빌 2:5-8, 눅 9:23)"
+      ]
+    },
+    {
+      "title": "Praise & Worship",
+      "kicker": "경배와 찬양",
+      "lines": [
+        "다같이"
+      ]
+    },
+    {
+      "title": "Represent Praying",
+      "kicker": "대표기도",
+      "lines": [
+        "맡은이"
+      ]
+    },
+    {
+      "title": "Song of Offering",
+      "kicker": "헌신찬양",
+      "lines": [
+        "다같이"
+      ]
+    },
+    {
+      "title": "Scripture Reading",
+      "kicker": "말씀읽기",
+      "lines": [
+        "고린도전서 3:1–9",
+        "EKODI 2026-11 공통본문"
+      ]
+    },
+    {
+      "title": "고린도 지협 · 서로 다른 길이 만나는 도시",
+      "kicker": "고린도전서 3장 배경",
+      "lines": [
+        "서쪽 바다(이오니아해) → 레카이온 항 → 고린도 → 겐그레아 항 → 동쪽 바다(에게해)",
+        "바울의 사역과 다양한 사람들이 만나던 항구 도시",
+        "위치 개념도 · 축척·거리·시간 미표기"
+      ]
+    },
+    {
+      "title": "자라게 하시는\n하나님 앞에서",
+      "kicker": "Sermon",
+      "lines": [
+        "Before the God Who Gives Growth.",
+        "在使生命成长的上帝面前。",
+        "成長させてくださる神の御前で。",
+        "Trước Đức Chúa Trời là Đấng làm cho lớn lên."
+      ],
+      "cover": true
+    },
+    {
+      "title": "成長させてくださる神の御前で。",
+      "kicker": "SERMON · 日本語",
+      "lines": [
+        "자라게 하시는 하나님 앞에서",
+        "설교 제목 · 화면을 보고 함께 읽기"
+      ]
+    },
+    {
+      "title": "Trước Đức Chúa Trời là Đấng làm cho lớn lên.",
+      "kicker": "SERMON · Tiếng Việt",
+      "lines": [
+        "자라게 하시는 하나님 앞에서",
+        "설교 제목 · 화면을 보고 함께 읽기"
+      ]
+    },
+    {
+      "title": "누구의 교회입니까?",
+      "kicker": "말씀나눔",
+      "lines": [
+        "고린도 교회는 바울과 아볼로의 이름으로\n서로 편을 가르며 다투었습니다.",
+        "교회의 주인은 어떤 사람이 아니라\n예수 그리스도이십니다.",
+        "하나님이 자라게 하시는 한 밭에서\n서로를 살리는 공동체가 됩시다."
+      ]
+    },
+    {
+      "title": "1 | 시기와 다툼은 자라지 못한 신앙의 표시입니다",
+      "kicker": "말씀나눔",
+      "lines": [
+        "고린도 교회에는 시기와 다툼이 있었습니다.",
+        "사람의 이름을 내세우는 자랑은\n그리스도의 몸을 나눕니다.",
+        "다른 의견을 적으로 만들지 말고\n말씀 앞에서 함께 들읍시다."
+      ]
+    },
+    {
+      "title": "2 | 사역자는 주인이 아니라 맡은 일꾼입니다",
+      "kicker": "말씀나눔",
+      "lines": [
+        "바울은 심었고 아볼로는 물을 주었습니다.",
+        "수고는 소중하지만 생명의 주인은 하나님입니다.",
+        "눈에 보이는 일과 보이지 않는 수고를\n서로 감사하며 기다립시다."
+      ]
+    },
+    {
+      "title": "3 | 자라게 하시는 이는 하나님이십니다",
+      "kicker": "말씀나눔",
+      "lines": [
+        "심는 사람과 물 주는 사람은\n한 목적을 위해 수고합니다.",
+        "교회는 하나님의 밭이요 하나님의 집입니다.",
+        "새로 온 사람과 다시 일어설 이웃에게\n환대와 회복의 자리를 열어 줍시다."
+      ]
+    },
+    {
+      "title": "그리스도의 복음 | 한 알의 밀알이 되신 주님",
+      "kicker": "말씀나눔",
+      "lines": [
+        "십자가는 자기 높임의 경쟁을 끝내고\n부활은 새 창조의 소망을 엽니다.",
+        "우리의 동역은 구원을 사는 공로가 아니라\n먼저 받은 은혜에 대한 응답입니다.",
+        "그리스도 안에서 서로를 세웁시다."
+      ]
+    },
+    {
+      "title": "함께 나눌 세 가지 질문",
+      "kicker": "말씀나눔",
+      "lines": [
+        "내 신앙에 누군가 심고 물 주었던\n감사의 기억은 무엇입니까?",
+        "사람을 기준으로 편을 나누거나\n비교했던 내 태도는 없습니까?",
+        "이번 주 내가 심거나 물 줄\n한 사람과 섬김은 무엇입니까?"
+      ]
+    },
+    {
+      "title": "공동체의 응답",
+      "kicker": "인도자 · 회중",
+      "lines": [
+        "우리의 이름을 높이고 싶을 때 / 그리스도만 우리의 주인임을 고백합니다",
+        "누군가 씨를 심을 때 / 함께 물을 주며 감사하겠습니다",
+        "열매가 더딜 때 / 자라게 하시는 하나님을 신뢰하겠습니다",
+        "다시 시작할 이웃 앞에서 / 회복의 자리를 함께 열겠습니다",
+        "다함께 / 말씀대로 살아내고 살려내겠습니다"
+      ]
+    },
+    {
+      "title": "이번 주 실천 한 걸음",
+      "kicker": "말씀나눔",
+      "lines": [
+        "눈에 잘 띄지 않는 수고를 하는\n한 사람에게 구체적으로 감사를 전합니다.",
+        "어려운 이웃에게 필요한 도움을 묻고\n함께할 수 있는 한 가지를 실천합니다.",
+        "하나님이 자라게 하시는 밭을 돌봅니다."
+      ]
+    },
+    {
+      "title": "Response Sharing & Praying",
+      "kicker": "나눔기도",
+      "lines": [
+        "다같이"
+      ]
+    },
+    {
+      "title": "Song of Commitment",
+      "kicker": "결단찬양",
+      "lines": [
+        "다같이"
+      ]
+    },
+    {
+      "title": "이번 주 매일묵상 · 11/01–11/07",
+      "kicker": "EKODI 2026-11 공통본문",
+      "lines": [
+        "일 11/01 고린도전서 3:1–9 · 월 11/02 고린도전서 3:10–23",
+        "화 11/03 고린도전서 4:1–13 · 수 11/04 고린도전서 4:14–21",
+        "목 11/05 고린도전서 5:1–13 · 금 11/06 고린도전서 6:1–11",
+        "토 11/07 고린도전서 6:12–20"
+      ]
+    },
+    {
+      "title": "Community Announce",
+      "kicker": "교회소식",
+      "lines": [
+        "인도자"
+      ]
+    },
+    {
+      "title": "주기도문",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "한국어 · English · 中文 · 日本語 · Tiếng Việt",
+        "주기도문 5개 언어 전문 수록"
+      ]
+    },
+    {
+      "title": "주기도문 | 한국어",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "하늘에 계신 우리 아버지,",
+        "아버지의 이름을 거룩하게 하시며 아버지의 나라가 오게 하시며",
+        "아버지의 뜻이 하늘에서와 같이 땅에서도 이루어지게 하소서.",
+        "오늘 우리에게 일용할 양식을 주시고",
+        "우리가 우리에게 잘못한 사람을 용서하여 준 것 같이",
+        "우리 죄를 용서하여 주시고 우리를 시험에 빠지지 않게 하시고",
+        "악에서 구하소서.",
+        "나라와 권능과 영광이 영원히 아버지의 것입니다. 아멘."
+      ]
+    },
+    {
+      "title": "주기도문 | English",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "Our Father which art in heaven,",
+        "Hallowed be thy name. Thy kingdom come.",
+        "Thy will be done in earth, as it is in heaven.",
+        "Give us this day our daily bread.",
+        "And forgive us our debts, as we forgive our debtors.",
+        "And lead us not into temptation, but deliver us from evil:",
+        "For thine is the kingdom, and the power, and the glory, for ever. Amen."
+      ]
+    },
+    {
+      "title": "주기도문 | 中文",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "我们在天上的父：",
+        "愿人都尊你的名为圣。愿你的国降临。",
+        "愿你的旨意行在地上，如同行在天上。",
+        "我们日用的饮食，今日赐给我们。",
+        "免我们的债，如同我们免了人的债。",
+        "不叫我们遇见试探，救我们脱离凶恶。",
+        "因为国度、权柄、荣耀，全是你的，直到永远。阿们。"
+      ]
+    },
+    {
+      "title": "주기도문 | 日本語",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "天にまします我らの父よ、",
+        "願わくは御名をあがめさせたまえ。御国を来たらせたまえ。",
+        "御心の天になるごとく、地にもなさせたまえ。",
+        "我らの日用の糧を、今日も与えたまえ。",
+        "我らに罪を犯す者を我らが赦すごとく、我らの罪をも赦したまえ。",
+        "我らを試みにあわせず、悪より救い出したまえ。",
+        "国と力と栄えとは、限りなく汝のものなればなり。アーメン。"
+      ]
+    },
+    {
+      "title": "주기도문 | Tiếng Việt",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "Lạy Cha chúng con ở trên trời,",
+        "danh Cha được thánh. Nước Cha được đến.",
+        "Ý Cha được nên, ở đất như trời.",
+        "Xin cho chúng con hôm nay đồ ăn đủ ngày.",
+        "Xin tha tội lỗi cho chúng con, như chúng con cũng tha kẻ phạm tội nghịch cùng chúng con.",
+        "Xin chớ để chúng con bị cám dỗ, mà cứu chúng con khỏi điều ác.",
+        "Vì nước, quyền, vinh hiển đều thuộc về Cha đời đời. A-men."
+      ]
+    }
+  ],
+  "publicBulletin": "/ekodichurch/worship/2026-11-01/",
+  "broadcastSafe": true,
+  "youtube": {
+    "channel": "https://www.youtube.com/@ekodichurch",
+    "title": "자라게 하시는 하나님 앞에서 | 고린도전서 3:1–9 | 2026.11.01 학원선교주일 에코디교회 주일모임",
+    "description": "2026년 11월 1일(일) 오전 11시 에코디교회 주일모임 · 성령강림절 후 스물셋째 주일 · 학원선교주일\n말씀제목 | 자라게 하시는 하나님 앞에서\n공통본문 | 고린도전서 3:1–9\n말씀나눔 | 정찬균 목사\n심는 이와 물 주는 이는 함께 하나님의 동역자일 뿐, 자라게 하시는 분은 하나님이십니다.\n다국어 자막: 영어·중국어·일본어·베트남어·몽골어 (ekodi.kr/live/church/)\n에클레시아 · 코이노니아 · 디아스포라 · 희년\n#에코디교회 #학원선교주일 #고린도전서 #주일모임",
+    "visibility": "public",
+    "chat": true,
+    "dvr": true,
+    "latency": "normal",
+    "status": "metadata-prepared-not-scheduled"
+  },
+  "interpretation": {
+    "captions": true,
+    "sourceLang": "ko",
+    "targetLangs": [
+      "en",
+      "zh",
+      "ja",
+      "vi",
+      "mn"
+    ],
+    "console": "/live/church/?mode=studio",
+    "viewer": "/live/church/",
+    "engine": "EKODI Live interpretation captions (Workers AI m2m100)"
+  },
+  "occasion": "성령강림절 후 스물셋째 주일 · 학원선교주일",
+  "sources": {
+    "bulletin": {
+      "title": "261101 에코디교회 주보 | 자라게 하시는 하나님 앞에서",
+      "fileId": "1Q67y_jkTta_n1v1b3upa0Dif3LTKKBDE00FQrxFT-dU",
+      "url": "https://docs.google.com/document/d/1Q67y_jkTta_n1v1b3upa0Dif3LTKKBDE00FQrxFT-dU/edit"
+    },
+    "slides": {
+      "title": "261101 에코디교회 예배 PPT | 자라게 하시는 하나님 앞에서",
+      "fileId": "1uoQGpZQL78y3Dr6ghj-Xth9SxYISctABXyYTNRc56EQ",
+      "url": "https://docs.google.com/presentation/d/1uoQGpZQL78y3Dr6ghj-Xth9SxYISctABXyYTNRc56EQ/edit"
+    },
+    "sermon": {
+      "title": "261101 에코디교회 말씀 원고 | 자라게 하시는 하나님 앞에서",
+      "fileId": "1a3XvMSqmzs1BewIT9nzewEQUJ-ORCU40rb5vwaFGONI",
+      "url": "https://docs.google.com/document/d/1a3XvMSqmzs1BewIT9nzewEQUJ-ORCU40rb5vwaFGONI/edit"
+    }
+  },
+  "slideSource": {
+    "type": "google-slides-text",
+    "fileId": "1uoQGpZQL78y3Dr6ghj-Xth9SxYISctABXyYTNRc56EQ",
+    "sourcePages": 36,
+    "publishedPages": 30,
+    "omittedPages": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      13
+    ],
+    "omittedReason": "찬양 악보 화면은 저작권 보호를 위해 공개 웹에서 제외(현장 PPT에서 사용)",
+    "rendering": "원본 PPT 문구를 16:9 비율 고정 HTML 슬라이드로 표시"
+  },
+  "stage": "final",
+  "lectionary": {
+    "source": "대한예수교장로회총회 매일성서정과",
+    "url": "https://www.pck.or.kr/bbs/board.php?bo_table=lectionary&wr_id=3069",
+    "readings": [
+      "미가 3:5–12",
+      "시편 43",
+      "데살로니가전서 2:9–13",
+      "마태복음 23:1–12"
+    ]
+  }
+}

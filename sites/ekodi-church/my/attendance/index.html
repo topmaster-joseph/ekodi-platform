@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko" data-ekodi-church-attendance="v2">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="google" content="notranslate">
+  <title>나의 출결 · 에코디교회</title>
+  <link rel="canonical" href="https://ekodi.kr/ekodichurch/my/attendance/">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/ekodichurch/">에코디교회</a>
+    <nav aria-label="교회 사용자"><a href="/ekodichurch/my/">마이페이지</a><a href="/ekodichurch/">교회 홈</a></nav>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <p class="eyebrow">MY ATTENDANCE</p>
+      <h1>나의 출결</h1>
+      <p>로그인한 본인의 예배·모임 출결 기록만 확인합니다. 기록되지 않은 예배는 자동으로 결석 처리하지 않습니다.</p>
+      <div id="state" class="state" role="status">로그인 상태를 확인하고 있습니다.</div>
+      <a id="login" class="primary" href="#" hidden>Google 계정으로 로그인</a>
+    </section>
+
+    <section id="app" hidden>
+      <div class="toolbar">
+        <label>조회연도 <select id="year"></select></label>
+        <button id="reload" type="button">새로고침</button>
+      </div>
+
+      <section class="summary" aria-label="출결 요약">
+        <article><span>교인</span><strong id="memberName">-</strong></article>
+        <article><span>기록 건수</span><strong id="recorded">0건</strong></article>
+        <article><span>출석 처리</span><strong id="attended">0건</strong></article>
+        <article><span>기록 기준 출석률</span><strong id="rate">-</strong></article>
+      </section>
+
+      <section class="detail-grid" aria-label="출결 상태별 집계">
+        <article><span>출석</span><strong id="presentCount">0</strong></article>
+        <article><span>지각</span><strong id="lateCount">0</strong></article>
+        <article><span>온라인</span><strong id="onlineCount">0</strong></article>
+        <article><span>결석</span><strong id="absentCount">0</strong></article>
+        <article><span>인정결석</span><strong id="excusedCount">0</strong></article>
+      </section>
+
+      <section class="streak-grid" aria-label="개인 출결 흐름">
+        <article><span>현재 연속출석</span><strong id="currentStreak">0회</strong></article>
+        <article><span>최장 연속출석</span><strong id="longestStreak">0회</strong></article>
+        <article><span>최근 출석</span><strong id="lastAttended">-</strong></article>
+        <article><span>최근 결석</span><strong id="lastAbsent">-</strong></article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><small>MONTHLY TREND</small><h2>월별 출결 흐름</h2></div><span>기록 기준</span></div>
+        <div id="monthlyTrend" class="monthly-list"><p class="empty">월별 출결을 불러오고 있습니다.</p></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><small>ATTENDANCE HISTORY</small><h2>개인별 출결현황</h2></div><span>본인 조회</span></div>
+        <div id="attendanceList" class="table-wrap"><p class="empty">출결 기록을 불러오고 있습니다.</p></div>
+      </section>
+
+      <p class="privacy">출결은 로그인한 본인에게만 표시합니다. 관리자는 교회 운영 권한 범위에서 전체 출결을 관리하며, 개인 화면에는 다른 교인의 기록이 표시되지 않습니다.</p>
+    </section>
+  </main>
+
+  <footer><a href="/ekodichurch/">에코디교회</a><span>출결 정보는 교회 안에서 필요한 범위로만 사용합니다.</span></footer>
+  <script src="./app.js" defer></script>
+</body>
+</html>
