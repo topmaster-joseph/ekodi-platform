@@ -90,3 +90,12 @@
  .book-series-actions a{min-width:0;text-align:center;padding:8px}
 }
 @media(prefers-reduced-motion:reduce){.book-home-panel{animation:none}}
+
+/* BOOKS-HOME-FOCUS-20261102 — remove duplicated network stripe on small screens */
+.books-home-page .book-home-tabs{position:relative;top:auto}
+@media(max-width:700px){
+  .books-home-page .ekc-network{display:none}
+  .books-home-page .ekc-header{box-shadow:0 2px 12px rgba(16,38,79,.045)}
+  .books-home-page .book-home-tabs{margin-top:0}
+  .books-home-page .book-home-panel .hero h1{max-width:18ch}
+}
