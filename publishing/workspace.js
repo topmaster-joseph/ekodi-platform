@@ -147,7 +147,15 @@
     const i = tabs.indexOf(document.activeElement); if (i < 0 || !['ArrowRight', 'ArrowLeft'].includes(e.key)) return;
     const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; history.replaceState(null, '', `#ws-${n.dataset.tab}`); show(n.dataset.tab, true); e.preventDefault();
   });
-  const fromHash = (location.hash.match(/^#ws-([a-z]+)$/) || [])[1];
+  // Header/hero links change the fragment without a full reload. Keep visible panels in sync.
+  const tabFromHash = () => (location.hash.match(/^#ws-(mine|write|progress|editions|channels|royalty|support)$/) || [])[1];
+  window.addEventListener('hashchange', () => {
+    const id = tabFromHash();
+    if (!id) return; // Other anchors, such as #consultation, are not workspace tabs.
+    show(id);
+    root.scrollIntoView({ block: 'start' });
+  });
+  const fromHash = tabFromHash();
   show(fromHash || 'mine');
   if (fromHash) root.scrollIntoView();
 })();
