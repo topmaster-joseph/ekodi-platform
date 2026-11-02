@@ -91,3 +91,11 @@ test('detail tab keyboard navigation supports arrows and home/end',()=>{
  f.tabButtons[0].handlers.keydown({key:'End',preventDefault(){}});
  assert.equal(f.tabButtons[3].attributes['aria-selected'],'true');
 });
+
+test('account choices stay two-column and readable below 460px',()=>{
+ const smallScreen=css.slice(css.indexOf('@media(max-width:460px){'));
+ assert.match(smallScreen,/#account \.account-wayfinder-grid\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+ assert.match(smallScreen,/#account \.account-wayfinder-grid button>strong\{font-size:12px;line-height:1\.35;word-break:keep-all/);
+ assert.match(smallScreen,/#account \.account-wayfinder-grid button>small\{display:none\}/);
+ assert.match(css,/@media\(max-width:720px\)[\s\S]*?\.public-detail-tabs\{width:calc\(100% - 24px\)/);
+});
