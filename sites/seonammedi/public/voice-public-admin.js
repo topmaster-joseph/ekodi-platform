@@ -25,13 +25,16 @@ function clearVoiceAdmin(){
 }
 
 function token(){
-  try{const platform=sessionStorage.getItem('ekodi-auth-token')||'';if(platform)return platform}catch{}
   try{
-    const raw=localStorage.getItem(SESSION_KEY)||'';if(!raw)return'';
-    const parsed=JSON.parse(raw),session=parsed?.currentSession||parsed?.session||parsed;
-    const access=String(session?.access_token||''),expires=Number(session?.expires_at||0);
-    return access&&(!expires||expires>Math.floor(Date.now()/1000)+30)?access:'';
-  }catch{return''}
+    const raw=localStorage.getItem(SESSION_KEY)||'';
+    if(raw){
+      const parsed=JSON.parse(raw),session=parsed?.currentSession||parsed?.session||parsed;
+      const access=String(session?.access_token||''),expires=Number(session?.expires_at||0);
+      // Expired central identity must not silently gain an old site administrator's token.
+      if(access)return expires&&expires<=Math.floor(Date.now()/1000)+30?'':access;
+    }
+  }catch{}
+  try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}
 }
 async function adminRequest(path,options={}){
   const bearer=token();if(!bearer){clearVoiceAdmin();throw new Error('authentication_required')}
