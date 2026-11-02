@@ -299,7 +299,7 @@ export function createDevotionSpeechUI(win = window, doc = document) {
   });
   ekodi.onStatus((message, ready) => {
     ekodiOption.disabled = !ready;
-    ekodiOption.textContent = ready ? '에코디 낭독 · 남성/여성' : '에코디 낭독 · 준비 중';
+    ekodiOption.textContent = ready ? '에코디 AI 낭독 · 남성/여성' : '에코디 낭독 · 준비 중';
     if (ready && !engineChoiceMade && data?.found) {
       engine.value = 'ekodi';
       voiceLabel.hidden = true;
