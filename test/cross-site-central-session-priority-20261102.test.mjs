@@ -58,7 +58,7 @@ async function seonamToken(main,hash=''){
  const localStorage=storage(main?{[KEY]:main}:{});
  const sessionStorage=storage({'ekodi-auth-token':'old-platform'});
  return runInNewContext('(async()=>{'+code+'return await token()})()',{
-  localStorage,sessionStorage,location:{hash},Date,Math,JSON,
+  localStorage,sessionStorage,location:{hash},Date,Math,JSON,PLATFORM_TOKEN_KEY:'ekodi-auth-token',CENTRAL_SESSION_KEY:KEY,
   centralSessionToken:()=>{if(!main)return '';const x=JSON.parse(main).currentSession;return x.expires_at>Math.floor(Date.now()/1000)+30?x.access_token:'';},
   userToken:async()=>'explicit-handoff'
  });
