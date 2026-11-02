@@ -180,3 +180,26 @@ body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-i
   .ekodi-devotion .dv-speech-gender,.ekodi-devotion .dv-speech-voice{flex:1 1 100%;justify-content:space-between}
   .ekodi-devotion .dv-speech-gender select,.ekodi-devotion .dv-speech-voice select{flex:0 1 70%;font-size:.87rem}
 }
+
+/* EKODI pre-reviewed narrator vs OS voice: clear, non-deceptive readiness. */
+.ekodi-devotion .dv-speech-engine{
+ display:flex;flex:1 1 100%;align-items:center;gap:8px;justify-content:flex-start;
+ font-size:.89rem;color:var(--dv-ink);word-break:keep-all
+}
+.ekodi-devotion .dv-speech-engine select{
+ min-height:44px;max-width:100%;min-width:165px;
+ border:1px solid #cfd9d1;border-radius:10px;background:#fff;color:var(--dv-ink);
+ padding:7px 10px;font:inherit
+}
+.ekodi-devotion .dv-speech-engine select:focus-visible{outline:2px solid var(--dv-accent);outline-offset:2px}
+.ekodi-devotion .dv-speech-voice[hidden]{display:none!important}
+@media(max-width:520px){
+ .ekodi-devotion .dv-speech-engine{justify-content:space-between}
+ .ekodi-devotion .dv-speech-engine select{flex:0 1 70%;min-width:0}
+}
+
+/* Show voice source and actual speaker choices before transport controls. */
+.ekodi-devotion .dv-speech-tools .dv-speech-engine{order:-5}
+.ekodi-devotion .dv-speech-tools .dv-speech-gender{order:-4}
+.ekodi-devotion .dv-speech-tools .dv-speech-voice{order:-3}
+.ekodi-devotion .dv-speech-tools .dv-speech-speed{order:-2}
