@@ -235,7 +235,10 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
 
 test('My guarded release manifest follows the lazy startup contract',async()=>{
   const manifest=await read('deploy/manifests/my.worker.json');
-  assert.match(manifest,/app\.js\?v=20261102-one-glance-v1/);
+  const canonical=JSON.parse(manifest).worker.requests.find(request=>request.url==='https://ekodi.kr/my/');
+  assert.ok(canonical,'canonical My EKODI production request must exist');
+  assert.ok(canonical.expect.includes('app.js?v='),'versioned My JS asset must load');
+  for(const tab of ['profile','identity','sharing','inbox'])assert.ok(canonical.expect.includes('data-public-tab="'+tab+'"'),'missing public detail tab: '+tab);
   assert.match(manifest,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
   assert.doesNotMatch(manifest,/church-marketing-ai\.js\?v=20260827-church-marketing-1/);
   assert.doesNotMatch(manifest,/channel-automation\.js\?v=20260903-channel-automation-1/);
