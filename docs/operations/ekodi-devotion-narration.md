@@ -7,13 +7,18 @@ Android Web Speech API does not provide a standard speaker gender attribute. Som
 
 The new EKODI mode plays two distinct, independently reviewed Korean MP3s for the same published Scripture day. The OS speech engine remains a functional temporary fallback. If no approved male/female pair exists, the UI truthfully shows '에코디 낭독 · 준비 중' rather than pretending to play something else.
 
+## Approval boundary (2026-11-02)
+
+The EKODI platform operator explicitly authorized the use of **EKODI-owned/licensed voice assets** for public daily devotional narration. This organizational authorization does not independently establish the consent of each identifiable male or female source speaker, nor does it override an older sample's audiobook-only consent. The speaker must opt into the additional **public devotional voice** scope in the protected EKODI Voice Studio, and fresh metadata must contain `devotionConsent=self-recorded-for-ekodi-public-devotion`, its timestamp, and a SHA256 matching the private sample bytes. No client screen or workflow may promote an old sample automatically.
+
 ## Controlled production workflow
 1. Gather two independently consented Korean reference recordings, one male and one female. Explicit, scope-specific reuse permission is required for voice conversion or public devotional delivery. Private bookstore voice samples are not automatically licensed for public Church devotional reuse.
 2. Export the already published daily reading with no token:
    node scripts/ekodi-voice/export-devotion-script.mjs 2026-11-02 private/devotion-script.json
    This uses the same public Bible API and narration segments as the user page and refuses future days. Do not export private drafts.
-3. On an authorized offline runner with the existing licensed MeloTTS + OpenVoice V2 engine and its checkpoints, render both distinct consented voices:
-   python scripts/ekodi-voice/render_devotion.py --script private/devotion-script.json --male-sample private/male.wav --female-sample private/female.wav --checkpoints checkpoints_v2 --out private/draft
+3. On an authorized offline runner, retrieve both distinct speaker consent JSON metadata files and corresponding private audio samples securely. Run the consent-enforced wrapper before existing MeloTTS + OpenVoice V2 rendering:
+   node scripts/ekodi-voice/render-consented-devotion.mjs private/devotion-script.json private/male-meta.json private/male.wav private/female-meta.json private/female.wav private/draft checkpoints_v2
+   The wrapper refuses when the two recorded voices lack individually scoped public devotional consent, separate speaker identity, valid private sample object keys or exact SHA256 matches. Do not invoke the lower-level rendering script directly to bypass this guard.
    Both outputs are private drafts. Do not commit source recordings, checkpoints or generated drafts.
 4. Independent human review is required for rights, Scripture fidelity, accurate Korean pronunciation, real speaker consent, naturalness, full recording length, listenability and accessibility. The reviewer records approval of the exact text SHA256 and separate speaker consent identifiers. No auto-approval is allowed.
 5. After review, run:
