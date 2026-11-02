@@ -12,10 +12,10 @@
   <link rel="canonical" href="{{PRODUCT_URL}}">
   <link rel="stylesheet" href="/assets/styles.css">
   <link rel="stylesheet" href="/assets/platform.css">
+  <link rel="stylesheet" href="/assets/product-detail.css">
   <title>{{PRODUCT_NAME}} | EKODI MALL</title>
 </head>
 <body>
-  <div class="notice">{{NOTICE}}</div>
   <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/#shop">MARKET</a><a href="/#stores">STORES</a><a href="/seller/">SELLER</a><a href="/checkout/">BAG <span class="nav-count" data-basket-count hidden>0</span></a></nav></header>
   <main class="detail-main detail-main-v2">
     <a class="back" href="/#shop">← 전체 상품</a>
@@ -24,7 +24,8 @@
       <div class="detail-copy">
         <p class="eyebrow">{{PRODUCT_BADGE}}</p>
         <p class="product-store"><span>STORE</span><a href="{{STORE_URL}}">{{STORE_NAME}} →</a></p>
-        <h1>{{PRODUCT_NAME}}</h1>
+        <h1>{{PRODUCT_HEADING}}</h1>
+        {{PRODUCT_SUBTITLE}}
         <p class="detail-desc">{{PRODUCT_DESCRIPTION}}</p>
         <dl>
           <div><dt>스토어</dt><dd><a href="{{STORE_URL}}">{{STORE_NAME}}</a></dd></div>

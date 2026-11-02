@@ -27,8 +27,10 @@ test('premium home renders navigation and retains core commerce entrypoints', ()
 
 test('buyer-facing payment copy matches the approved direct-sale-only production scope', () => {
   assert.equal(site.commerce.paymentsEnabled, true);
-  assert.match(site.notice, /에코디비즈 직접판매/);
+  assert.equal(site.notice, '', 'obsolete global banner must stay hidden');
+  assert.match(site.commerce.betaMessage, /에코디비즈.*직접판매/);
   assert.match(site.commerce.betaMessage, /다른 판매자의 대금/);
+  assert.match(readFileSync(new URL('../src/checkout.template.html', import.meta.url), 'utf8'), /\{\{BETA_MESSAGE\}\}/);
   assert.doesNotMatch(site.notice + site.commerce.betaMessage, /직접판매 온라인 결제는 활성화하지 않았습니다/);
 });
 

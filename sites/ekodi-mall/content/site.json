@@ -10,7 +10,7 @@
     "description": "Google 회원이면 자기 이름으로 상품을 등록하고 고유 공유링크를 준비할 수 있으며, 원하면 독립 스토어와 AI 판매 자동화로 확장하는 EKODI Commerce Platform.",
     "baseUrl": "https://ekodi.kr/ekodimall"
   },
-  "notice": "커머스 플랫폼 V2 · Google 회원은 상품 하나부터 무료로 시작할 수 있습니다. 온라인 결제는 검증된 에코디비즈 직접판매 상품에 한하며, 다른 상품은 판매처 이동 또는 상담으로 연결합니다.",
+  "notice": "",
   "hero": {
     "eyebrow": "EKODI COMMERCE PLATFORM",
     "title": "상품 하나부터|나만의 쇼핑몰까지|AI와 함께 성장하도록",
