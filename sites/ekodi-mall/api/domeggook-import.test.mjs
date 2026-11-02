@@ -187,3 +187,21 @@ test('image backfill fills licensed photos, falls back to smaller thumb, holds u
   const again = await backfillSupplyImages(env, f);
   assert.equal(again.tried, 0); // 12시간 내 재시도 안 함
 });
+
+test('verified EKODI operator can read cross-seller supplier inventory without public PII or write authority', async () => {
+  const { env } = setup({ MALL_OPERATIONS_EMAILS: 'joseph@ekodi.kr' });
+  const fetchImpl = fakeFetch(detail());
+  const imported = await withFetch(() => call(env, 'POST', '/api/products/import/domeggook', { itemNo: '55501234' }), fetchImpl);
+  assert.equal(imported.status, 201);
+  const own = await withFetch(() => call(env, 'GET', '/api/internal/products/by-provider'), fetchImpl);
+  assert.equal(own.status, 200);
+  const body = await own.json();
+  assert.equal(body.scope, 'operator-read-only');
+  assert.equal(body.products.length, 1);
+  assert.equal(body.products[0].readOnly, true);
+  assert.equal(body.products[0].supply.provider, 'domeggook');
+  assert.ok(!('email' in body.products[0].seller));
+  assert.ok(!('contact' in body.products[0].product));
+  const forbidden = await withFetch(() => call({ ...env, MALL_OPERATIONS_EMAILS: 'other@example.com' }, 'GET', '/api/internal/products/by-provider'), fetchImpl);
+  assert.equal(forbidden.status, 403, 'the role is checked on the server, not in tabs');
+});
