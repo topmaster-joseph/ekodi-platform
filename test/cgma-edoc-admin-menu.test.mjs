@@ -73,11 +73,11 @@ test('CGMA left menu: service settings precedes common and site-specific menus c
   const block = cut('const isBizWorkspace=', 'const adminHubScopes=') + cut('function groupsForRole(', 'function renderSecondaryNav(') + cut('function dedicatedSections(', 'function renderNav(');
   const navFor = (workspace, profile, menuVisible=()=>true) => new Function('workspace', 'service', 'workspaceRole', 'navigationProfile', 'canSection', 'mallLocalGroups', 'serviceMenuVisible', `${block}; return navBucketsForRole;`)(
     workspace, '', 'manager', () => profile, () => true, [], menuVisible)('manager').map(b => [b.label, b.items.map(([key]) => key)]);
-  assert.match(s, /common\.push\(\['services','서비스설정'\]\)/);
-  assert.doesNotMatch(s, /h\.append\(settings\)/);
+  assert.match(s, /settings\.dataset\.adminSection='services'/);
+  assert.match(s, /h\.append\(settings\)/);
   for (const profile of ['delegated-manager', 'local']) {
     const nav = navFor('cgma', profile);
-    assert.equal(nav[0][0], '공통메뉴', profile);
+    assert.equal(nav[0][0], '업무메뉴', profile);
     assert.equal(nav[1][0], '전용메뉴', profile);
     assert.deepEqual(nav[1][1], ['edocs','member','applications','booths','festival','market-oversight','petitions','ip-archive','education-survey'], profile);
   }
