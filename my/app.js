@@ -173,6 +173,49 @@ function syncSurfaceState({scroll=false}={}){
 // the chosen content right below; the old card menu step is no longer shown.
 const ACCOUNT_TABS=['basic','public','character','ai'];
 let activeAccountTab='basic';
+const PUBLIC_DETAIL_TABS=['profile','identity','sharing','inbox'];
+let activePublicDetailTab='profile';
+function syncPublicDetailTabs(){
+ if(!PUBLIC_DETAIL_TABS.includes(activePublicDetailTab))activePublicDetailTab='profile';
+ const selectedPanel=['identity','sharing'].includes(activePublicDetailTab)?'card':activePublicDetailTab;
+ document.querySelectorAll('[data-public-tab]').forEach(button=>{
+  const selected=button.dataset.publicTab===activePublicDetailTab;
+  button.setAttribute('aria-selected',String(selected));
+  button.tabIndex=selected?0:-1;
+  button.classList.toggle('is-active',selected);
+ });
+ document.querySelectorAll('[data-public-panel]').forEach(panel=>{
+  panel.hidden=activeAccountTab!=='public'||panel.dataset.publicPanel!==selectedPanel;
+ });
+ document.querySelectorAll('[data-public-card-pane]').forEach(panel=>{
+  panel.hidden=activePublicDetailTab!==panel.dataset.publicCardPane;
+ });
+ const card=document.querySelector('[data-public-panel="card"]');
+ if(card)card.setAttribute('aria-labelledby',activePublicDetailTab==='sharing'?'publicTabSharing':'publicTabIdentity');
+}
+function setPublicDetailTab(tab,{focus=false}={}){
+ if(!PUBLIC_DETAIL_TABS.includes(tab))return;
+ activePublicDetailTab=tab;
+ syncPublicDetailTabs();
+ try{sessionStorage.setItem('ekodi_my_public_detail_tab',tab)}catch{}
+ if(focus)document.querySelector('[data-public-tab="'+tab+'"]')?.focus();
+}
+function initPublicDetailTabs(){
+ try{const saved=sessionStorage.getItem('ekodi_my_public_detail_tab');if(PUBLIC_DETAIL_TABS.includes(saved))activePublicDetailTab=saved}catch{}
+ document.querySelectorAll('[data-public-tab]').forEach(button=>{
+  button.addEventListener('click',()=>setPublicDetailTab(button.dataset.publicTab));
+  button.addEventListener('keydown',event=>{
+   const current=PUBLIC_DETAIL_TABS.indexOf(button.dataset.publicTab);
+   const next=event.key==='ArrowRight'?PUBLIC_DETAIL_TABS[(current+1)%PUBLIC_DETAIL_TABS.length]:
+    event.key==='ArrowLeft'?PUBLIC_DETAIL_TABS[(current+PUBLIC_DETAIL_TABS.length-1)%PUBLIC_DETAIL_TABS.length]:
+    event.key==='Home'?PUBLIC_DETAIL_TABS[0]:event.key==='End'?PUBLIC_DETAIL_TABS[PUBLIC_DETAIL_TABS.length-1]:null;
+   if(!next)return;
+   event.preventDefault();
+   setPublicDetailTab(next,{focus:true});
+  });
+ });
+ syncPublicDetailTabs();
+}
 function syncAccountTabs(){
  if(!ACCOUNT_TABS.includes(activeAccountTab))activeAccountTab='basic';
  const isMenu=false;
@@ -183,6 +226,7 @@ function syncAccountTabs(){
  document.querySelectorAll('[data-account-open]').forEach(button=>{const on=button.dataset.accountOpen===activeAccountTab;button.setAttribute('aria-pressed',String(on));button.classList.toggle('is-active',on)});
  document.querySelectorAll('[data-account-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.accountTab===activeAccountTab)));
  document.querySelectorAll('[data-account-panel]').forEach(panel=>{panel.hidden=isMenu||panel.dataset.accountPanel!==activeAccountTab});
+ syncPublicDetailTabs();
 }
 function setAccountTab(tab){
  if(tab==='security')tab='basic'; // Old stored selection opens account basics.
@@ -558,6 +602,7 @@ window.addEventListener('hashchange',()=>{if(location.hash==='#memberHome')activ
 
 enforceMyVisualIsolation();
 initAccountTabs();
+initPublicDetailTabs();
 initServiceTabs();
 initHomeWayfinder();
 const compactWorkspace=$('#workspaceCompact');if(compactWorkspace)compactWorkspace.addEventListener('click',()=>setServicesTab('spaces'));
