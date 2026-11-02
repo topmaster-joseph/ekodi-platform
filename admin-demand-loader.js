@@ -60,6 +60,7 @@
     'infra-costs':{label:'비용·인프라 관리',icon:'▤',styles:['infra-cost-admin.css'],scripts:['infra-cost-admin.js'],real:'[data-section="infra-costs"]',hashes:['#infra-costs'],paths:['/admin/finance/infra-costs'],insert:'after-health'},
     storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],paths:['/admin/settings/storage','/admin/settings-records/storage','/admin/system/storage'],insert:'after-health'},
     security:{label:'Security',icon:'◆',styles:['admin-secret-generator.css'],scripts:['admin-secret-generator.js'],real:'[data-section="security"]',hashes:['#security'],insert:'after-health'},
+    'member-login-methods':{scripts:['member-login-methods-admin.js'],real:'[data-section="member-login-methods"]',hashes:['#member-login-methods']},
     deployments:{label:'Deployments',icon:'↑',styles:['release-control-admin.css'],scripts:['release-control-admin.js'],real:'[data-section="deployments"]',ready:'#releaseControl',hashes:['#deployments','#release'],insert:'after-security'},
     work: {
       label: '구인구직', icon: 'W',
