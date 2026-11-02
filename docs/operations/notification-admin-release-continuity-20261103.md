@@ -23,3 +23,6 @@ The original source passed notification and communication tests 11/11, full buil
 6. Auto-publishing and Web Push stay disabled until separate guarded secrets/owner activation and real-device validation.
 
 This report is not permission to merge a task PR, expose subscribers, or turn on live push delivery.
+
+## Current-main synchronization follow-up
+EKODI Orchestrator synchronized the official release branch with `main@fd33884fee632084c29f4d40ddddaa98f56077b1`, producing bot-authored merge `99e085e784b3c86e42f6ced18fe1330fc83d4fff`. Its pull-request check contexts appeared as `action_required`, which is not accepted as a real success. The previous owner-connected head `6f000f5151239adf77bd922f5e8ee8b37f46158f` passed 19/19 GitHub Actions checks, but those passes are from before synchronization. This additional documentation-only owner-connected push asks for authentic CI on the actual synchronized source tree and preserves all earlier source ancestry, receipts and guarded release requirements. No runtime change is introduced.
