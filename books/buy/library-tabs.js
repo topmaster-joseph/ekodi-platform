@@ -106,7 +106,7 @@
   function message(el,text) {
     const p = document.createElement('p');p.className = 'library-panel-empty';p.textContent = text;el.append(p);
   }
-  function render(items, account) {
+  function render(items, account, operatorAuthorized = false) {
     const rows = [...list.querySelectorAll('.library-item')];
     audioList.replaceChildren();orderList.replaceChildren();accountList.replaceChildren();
     let foundAudio = 0;
@@ -146,8 +146,11 @@
     const title = document.createElement('h2');title.textContent = '내 계정';
     const label = document.createElement('p');label.textContent = '로그인: ' + (account || '회원님');
     const copy = document.createElement('p');copy.textContent = '연결한 로그인 수단과 구매 권한은 EKODI 통합 인증에 따라 관리됩니다. 로그인 계정이 다르면 구매 도서가 다르게 보일 수 있습니다.';
+    const authority = document.createElement('p');
+    authority.className = 'library-operator-status';
+    authority.textContent = operatorAuthorized ? '에코디서점 운영자 권한: 서버 확인 완료' : '에코디서점 운영자 권한: 현재 로그인 계정에는 없음';
     const link = document.createElement('a');link.href = 'https://ekodi.kr/books/';link.textContent='에코디서점으로 돌아가기';
-    accountList.append(title,label,copy,link);
+    accountList.append(title,label,authority,copy,link);
   }
   function showOperator() {
     buttons.operator.hidden = false;
