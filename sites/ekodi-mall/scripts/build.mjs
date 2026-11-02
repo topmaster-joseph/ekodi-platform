@@ -201,7 +201,7 @@ await write('index.html', indexHtml);
 await write('provider-bookstore.json', JSON.stringify({
   products: products.filter((p) => p.source?.system === 'ekodi-bookstore').map((p) => ({
     id: p.id, name: p.name, price: p.price,
-    detailUrl: `${baseUrl}/products/${p.slug}/`,
+    detailUrl: p.source.detailUrl,
     saleReady: p.action?.type === 'external' && p.status === '판매 중'
   }))
 }));
