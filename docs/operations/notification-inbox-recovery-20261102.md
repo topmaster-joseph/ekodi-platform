@@ -18,5 +18,10 @@ The first-party orchestrator issued the recovery branch but reported `authentic_
 - Real events require authorized first-party publishers. Until those producers are connected, inbox entries may remain empty. Never invent user consent or synthesize marketing notifications.
 - A successful PR merge or staging build alone is **not** completion; official deployment, live API and privacy checks are required.
 
+## Current-main synchronization and authentic check continuity
+- The official recovery branch fast-forwarded to orchestrator-issued merge commit `0a8e129b12a5f39f5d67b9711e1c708eefa7f89b` (current main integration `4e2fafb69`). The functional source `92c55e0ac1b116e2c1edce480f35c96d7d4a45cd` is still a Git ancestor.
+- On that synchronized branch, local notification tests were rerun: 7/7 passed and service-layer boundary validation passed.
+- GitHub had not yet supplied authentic required checks to this newly generated merge commit. This second documentation-only change requests normal CI through the trusted owner-connected push. The orchestrator must still pin required checks to the *actual latest head*, not any earlier green source SHA.
+
 ## Independent approval boundaries
 Do not directly merge source PR #7612 or deploy from this worktree. No manual production secret mutation, no authority bypass, and no positive live Web Push claim without a real-device receipt.
