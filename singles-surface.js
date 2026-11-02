@@ -88,6 +88,8 @@ function allowApi(path,method){
  if(/^\/api\/admin\/reports\/(?:open|under_review|resolved|dismissed)$/.test(path)&&method==='GET')return [path.slice(4),true];
  if(/^\/api\/admin\/reports\/[0-9a-f-]{36}\/review$/i.test(path)&&method==='POST')return [path.slice(4),true];
  if(path==='/api/requests'&&method==='GET')return ['/requests',true];
+ const contactShare=path.match(/^\/api\/messages\/([0-9a-f-]{36})\/contact$/i);
+ if(contactShare&&method==='POST')return ['/messages/'+contactShare[1]+'/contact',true];
  const patterns=[
   [/^\/api\/events\/([0-9a-f-]{36})$/i,['GET'],'/events/'],
   [/^\/api\/events\/([0-9a-f-]{36})\/rsvp$/i,['POST','DELETE'],'/events/', '/rsvp'],
@@ -117,7 +119,8 @@ async function api(req,env,sub){
  // require the central paid-actions release gate; reads and consent remain free.
  const paidWrite=req.method==='POST'&&Boolean(
   sub.match(/^\/api\/events\/[0-9a-f-]{36}\/rsvp$/i)||
-  sub.match(/^\/api\/messages\/[0-9a-f-]{36}$/i));
+  sub.match(/^\/api\/messages\/[0-9a-f-]{36}$/i)||
+  sub.match(/^\/api\/messages\/[0-9a-f-]{36}\/contact$/i));
  if(paidWrite&&!paymentEnabled(env))return json({error:'paid_actions_not_launched'},503);
  if(sub==='/api/bank/orders'&&req.method==='POST'&&!bankEnabled(env))return json({error:'bank_collection_not_launched'},503);
  if(sub.match(/^\/api\/bank\/admin\/orders\/EDH-[A-F0-9]{32}\/review$/)&&!bankVerifyEnabled(env))return json({error:'bank_verification_not_launched'},503);

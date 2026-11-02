@@ -390,9 +390,10 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   // 회원이 공개로 고른 항목만 내보낸다(비공개 항목은 응답에 아예 싣지 않음).
   return reply(req,{profiles:profiles.map((p:any)=>{
    const show=(k:string)=>isVisible(p.visibility,k);
-   const details=Object.fromEntries(Object.keys(PROFILE_FIELDS).filter(k=>show(k)&&typeof p.details?.[k]==='string'&&p.details[k]).map(k=>[k,p.details[k]]));
-   return {id:p.user_id,display_name:p.display_name,broad_region:show('broad_region')?p.broad_region:'',intro:show('intro')?p.intro:'',
-    public_link:show('public_link')?p.public_link||null:null,details};
+   const protect=(value:unknown)=>typeof value==='string'&&paidModel()?maskContacts(value).text:value;
+   const details=Object.fromEntries(Object.keys(PROFILE_FIELDS).filter(k=>show(k)&&typeof p.details?.[k]==='string'&&p.details[k]).map(k=>[k,protect(p.details[k])]));
+   return {id:p.user_id,display_name:protect(p.display_name),broad_region:show('broad_region')?protect(p.broad_region):'',intro:show('intro')?protect(p.intro):'',
+    public_link:!paidModel()&&show('public_link')?p.public_link||null:null,details};
   })});
  }
  const interestUser=match(p,/^\/interests\/([0-9a-f-]{36})$/i);
@@ -486,7 +487,9 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(error)throw error;if(!data)return reply(req,{error:'request_state_changed'},409);
   return reply(req,{ok:true,status:decision});
  }
- const interestId=match(p,/^\/messages\/([0-9a-f-]{36})$/i);
+ const shareContact=match(p,/^\/messages\/([0-9a-f-]{36})\/contact$/i);
+ const interestId=match(p,/^\/messages\/([0-9a-f-]{36})$/i)||shareContact;
+ if(shareContact&&method!=='POST')return reply(req,{error:'method_not_allowed'},405);
  if(interestId&&['GET','POST'].includes(method)){
   const interest=await one(admin.from('singles_interests').select('from_user_id,to_user_id,status').eq('id',interestId));
   if(!interest||interest.status!=='accepted'||![interest.from_user_id,interest.to_user_id].includes(userId))
@@ -497,7 +500,23 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(method==='GET'){
    const messages=await many(admin.from('singles_messages').select('id,sender_id,body,created_at')
      .eq('interest_id',interestId).order('created_at',{ascending:true}).limit(100));
-   return reply(req,{messages});
+   const locked=paidModel()&&!await contactUnlocked(admin,userId,other);
+   return reply(req,{messages:locked?messages.map((m:any)=>({...m,body:maskContacts(String(m.body||'')).text})):messages});
+  }
+  // A personal contact is NEVER inferred from public profile, login identity, or payment.
+  // Each verified member must explicitly submit their own phone/email after BOTH invoices clear.
+  if(shareContact){
+   if(!paidModel()||!await contactUnlocked(admin,userId,other))return reply(req,{error:'contact_exchange_not_completed'},403);
+   const v=await body(req);
+   if(!v||v.share_consent!==true||typeof v.contact!=='string')return reply(req,{error:'contact_share_consent_required'},400);
+   const contact=v.contact.trim();
+   const phone=/^(?:\+?82[-. ]?)?0?1[016789][-. ]?\d{3,4}[-. ]?\d{4}$/;
+   const email=/^[^\s@]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+   if(contact.length>100||(!phone.test(contact)&&!email.test(contact)))return reply(req,{error:'invalid_contact'},400);
+   {const retry=await rateLimited(admin,userId,'message');if(retry)return tooMany(req,reply,'message',retry);}
+   const {error}=await admin.from('singles_messages').insert({interest_id:interestId,sender_id:userId,body:'[내 연락처] '+contact});
+   if(error)throw error;
+   return reply(req,{ok:true,shared:true});
   }
   // The sender of every new message (including replies) must have a valid
   // bank-confirmed community subscription; receiving/reading remains free.
