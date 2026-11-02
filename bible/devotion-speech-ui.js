@@ -1,6 +1,9 @@
 import { devotionSpeechSegments } from './devotion-share-audio.js';
+import { chooseKoreanVoice, koreanVoices, knownKoreanVoiceGender } from './devotion-voice-catalog.js';
 
-// On-device/browser speech synthesis. Playback is never automatic.
+// Device voice quality varies. Prefer explicitly named natural Korean voices,
+// offer verified male/female speaker choices, and never claim gender by pitch.
+// No autoplay, voice cloning, paid provider, or hidden transcription upload.
 export function createDevotionSpeechUI(win = window, doc = document) {
   const row = doc.createElement('section');
   row.className = 'dv-speech-tools';
@@ -8,35 +11,66 @@ export function createDevotionSpeechUI(win = window, doc = document) {
   row.setAttribute('aria-label', '매일묵상 본문 듣기');
 
   const button = (name, label) => {
-    const el = doc.createElement('button');
-    el.type = 'button';
-    el.className = 'dv-btn dv-speech-btn';
-    el.dataset.speechAction = name;
-    el.textContent = label;
-    return el;
+    const node = doc.createElement('button');
+    node.type = 'button';
+    node.className = 'dv-btn dv-speech-btn';
+    node.dataset.speechAction = name;
+    node.textContent = label;
+    return node;
+  };
+  const createOption = (value, label) => {
+    const opt = doc.createElement('option');
+    opt.value = value;
+    opt.textContent = label;
+    return opt;
   };
   const play = button('play', '본문 듣기');
   const pause = button('pause', '일시정지');
   const repeat = button('repeat', '다시듣기');
   const stopButton = button('stop', '정지');
-  const label = doc.createElement('label');
-  label.className = 'dv-speech-speed';
-  label.textContent = '속도 ';
+
+  const speedLabel = doc.createElement('label');
+  speedLabel.className = 'dv-speech-speed';
+  speedLabel.textContent = '낭독 속도 ';
   const speed = doc.createElement('select');
-  speed.setAttribute('aria-label', '읽기 속도');
-  for (const [value, name] of [['0.8','느리게'],['1','보통'],['1.2','빠르게']]) {
-    const opt = doc.createElement('option');
-    opt.value = value;
-    opt.textContent = name;
-    speed.append(opt);
-  }
-  speed.value = '1';
-  label.append(speed);
+  speed.setAttribute('aria-label', '낭독 속도');
+  speed.append(
+    createOption('0.82', '천천히'),
+    createOption('0.94', '차분하게'),
+    createOption('1.06', '조금 빠르게'),
+  );
+  speed.value = '0.94';
+  speedLabel.append(speed);
+
+  const genderLabel = doc.createElement('label');
+  genderLabel.className = 'dv-speech-gender';
+  genderLabel.textContent = '목소리 ';
+  const gender = doc.createElement('select');
+  gender.setAttribute('aria-label', '남성 또는 여성 목소리');
+  gender.append(
+    createOption('auto', '자동'),
+    createOption('male', '남성'),
+    createOption('female', '여성'),
+  );
+  gender.value = 'auto';
+  genderLabel.append(gender);
+
+  const voiceLabel = doc.createElement('label');
+  voiceLabel.className = 'dv-speech-voice';
+  voiceLabel.textContent = '기기 음성 ';
+  const voice = doc.createElement('select');
+  voice.setAttribute('aria-label', '설치된 한국어 음성 직접 선택');
+  voice.append(createOption('', '자동 선택'));
+  voice.value = '';
+  voiceLabel.append(voice);
+
   const status = doc.createElement('span');
   status.className = 'dv-speech-status';
   status.setAttribute('role', 'status');
   status.setAttribute('aria-live', 'polite');
-  row.append(play, pause, repeat, stopButton, label, status);
+
+  // Preserve the existing base control ordering for older screen-reader/test clients.
+  row.append(play, pause, repeat, stopButton, speedLabel, status, genderLabel, voiceLabel);
 
   const synth = win.speechSynthesis;
   const Utterance = win.SpeechSynthesisUtterance;
@@ -47,7 +81,29 @@ export function createDevotionSpeechUI(win = window, doc = document) {
   let index = 0;
   let playing = false;
   let paused = false;
+  let nextTimer = null;
+  let preferredVoice = '';
 
+  const preferenceKey = 'ekodi-devotion-voice-preference-v1';
+  function readPreference() {
+    try {
+      const value = JSON.parse(win.localStorage?.getItem(preferenceKey) || 'null');
+      if (['auto','male','female'].includes(value?.gender)) gender.value = value.gender;
+      if (['0.82','0.94','1.06'].includes(value?.speed)) speed.value = value.speed;
+      if (typeof value?.voice === 'string' && value.voice.length < 160) preferredVoice = value.voice;
+    } catch {}
+  }
+  function savePreference() {
+    try {
+      win.localStorage?.setItem(preferenceKey, JSON.stringify({
+        gender:gender.value, speed:speed.value, voice:voice.value,
+      }));
+    } catch {}
+  }
+  function getVoices() {
+    try { return typeof synth?.getVoices === 'function' ? synth.getVoices() : []; }
+    catch { return []; }
+  }
   function display(message) {
     status.textContent = message;
     play.disabled = !supported || !data?.found || playing;
@@ -56,18 +112,48 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     stopButton.disabled = !playing;
     pause.textContent = paused ? '계속 듣기' : '일시정지';
   }
-
+  function describeChoice() {
+    const all = koreanVoices(getVoices());
+    if (!all.length) return '기기의 한국어 음성을 확인하는 중입니다.';
+    const selected = voice.value
+      ? chooseKoreanVoice(all, 'auto', voice.value)
+      : chooseKoreanVoice(all, gender.value);
+    if (selected) {
+      const kind = knownKoreanVoiceGender(selected);
+      const suffix = kind === 'male' ? ' · 남성' : kind === 'female' ? ' · 여성' : '';
+      return '선택된 한국어 음성: ' + selected.name + suffix;
+    }
+    if (gender.value === 'male' || gender.value === 'female')
+      return (gender.value === 'male' ? '남성' : '여성') + ' 한국어 음성이 이 기기에 없습니다. 기기 음성 목록을 확인하거나 자동을 선택해 주세요.';
+    return '사용 가능한 한국어 음성을 선택해 주세요.';
+  }
+  function refreshVoices() {
+    const previouslyChosen = voice.value || preferredVoice;
+    const list = koreanVoices(getVoices());
+    const options = [createOption('', '자동 선택')];
+    for (const item of list) {
+      const kind = knownKoreanVoiceGender(item);
+      const label = item.name + (kind === 'male' ? ' (남성)' : kind === 'female' ? ' (여성)' : '');
+      options.push(createOption(String(item.voiceURI || item.name), label));
+    }
+    if (typeof voice.replaceChildren === 'function') voice.replaceChildren(...options);
+    else voice.children = options; // minimal DOM-like testing environments
+    voice.value = list.some(v => String(v.voiceURI || v.name) === previouslyChosen) ? previouslyChosen : '';
+    if (list.length) preferredVoice = voice.value;
+    voice.disabled = list.length === 0;
+    if (data?.found && !playing) display(describeChoice());
+  }
   function stop() {
     ++generation;
     playing = false;
     paused = false;
     segments = [];
     index = 0;
+    if (nextTimer != null) { win.clearTimeout?.(nextTimer); nextTimer = null; }
     if (supported) synth.cancel();
     display(data?.found ? '듣기 준비' : '');
   }
-
-  function speakNext(run) {
+  function speakNext(run, selectedVoice) {
     if (run !== generation || !playing) return;
     if (index >= segments.length) {
       playing = false;
@@ -77,16 +163,21 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     }
     const utterance = new Utterance(segments[index]);
     utterance.lang = 'ko-KR';
-    utterance.rate = Number(speed.value) || 1;
-    try {
-      const voices = typeof synth.getVoices === 'function' ? synth.getVoices() : [];
-      const korean = voices.find(v => /^ko(?:-|$)/i.test(v.lang));
-      if (korean) utterance.voice = korean;
-    } catch {}
+    utterance.rate = Number(speed.value) || 0.94;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    if (selectedVoice) utterance.voice = selectedVoice;
     utterance.onend = () => {
       if (run !== generation) return;
       index += 1;
-      speakNext(run);
+      const next = segments[index] || '';
+      const previous = segments[index - 1] || '';
+      // Gentle breathing pause between phrases; slightly longer after headings.
+      const delay = /^(성경 본문|말씀 묵상|적용 질문|오늘의 실천|함께 드리는 기도)/.test(previous) ? 280 : 140;
+      if (typeof win.setTimeout === 'function') nextTimer = win.setTimeout(() => {
+        nextTimer = null; speakNext(run, selectedVoice);
+      }, next ? delay : 0);
+      else speakNext(run, selectedVoice);
     };
     utterance.onerror = event => {
       if (run !== generation) return;
@@ -98,16 +189,39 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     try { synth.speak(utterance); }
     catch { playing = false; paused = false; display('음성 재생을 시작할 수 없습니다.'); }
   }
-
   function start() {
     if (!supported || !data?.found) return;
     stop();
+    refreshVoices();
+    const choices = koreanVoices(getVoices());
+    // A gender is never approximated by changing pitch of an unknown voice.
+    if (choices.length && gender.value !== 'auto' && !voice.value &&
+        !chooseKoreanVoice(choices, gender.value)) {
+      display(describeChoice());
+      return;
+    }
+    if (voice.value && !chooseKoreanVoice(choices, 'auto', voice.value)) {
+      display('선택했던 기기 음성을 찾을 수 없습니다. 다른 음성을 선택해 주세요.');
+      return;
+    }
+    const selectedVoice = chooseKoreanVoice(choices, gender.value, voice.value);
+    if (!selectedVoice && gender.value !== 'auto') {
+      display('선택한 성별의 한국어 음성이 없습니다. 자동을 선택해 주세요.');
+      return;
+    }
     segments = devotionSpeechSegments(data);
     if (!segments.length) { display('읽을 본문이 없습니다.'); return; }
     playing = true;
     const run = ++generation;
-    // First speak() happens directly in the user's click handler.
-    speakNext(run);
+    speakNext(run, selectedVoice);
+  }
+
+  readPreference();
+  if (supported) {
+    if (typeof synth.addEventListener === 'function') {
+      synth.addEventListener('voiceschanged', refreshVoices);
+    }
+    refreshVoices();
   }
   play.addEventListener('click', start);
   repeat.addEventListener('click', start);
@@ -118,6 +232,22 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     display(paused ? '일시정지됨' : `본문 듣는 중 · ${index + 1}/${segments.length}`);
   });
   stopButton.addEventListener('click', stop);
+  gender.addEventListener('change', () => {
+    stop(); voice.value = ''; preferredVoice = ''; savePreference(); display(describeChoice());
+  });
+  voice.addEventListener('change', () => {
+    stop();
+    preferredVoice = voice.value;
+    const selected = chooseKoreanVoice(getVoices(), 'auto', voice.value);
+    const known = knownKoreanVoiceGender(selected);
+    gender.value = known || 'auto';
+    savePreference();
+    display(describeChoice());
+  });
+  speed.addEventListener('change', () => {
+    savePreference();
+    if (!playing) display(describeChoice());
+  });
   win.addEventListener('pagehide', stop);
   display('');
   return {
@@ -126,9 +256,8 @@ export function createDevotionSpeechUI(win = window, doc = document) {
       stop();
       data = next?.found ? next : null;
       row.hidden = !data;
-      if (!supported && data) {
-        display('이 기기에서는 본문 듣기를 지원하지 않습니다.');
-      } else if (data) display('듣기 준비');
+      if (!supported && data) display('이 기기에서는 본문 듣기를 지원하지 않습니다.');
+      else if (data) { refreshVoices(); display(describeChoice()); }
     },
     stop,
   };
