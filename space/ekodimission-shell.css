@@ -211,3 +211,23 @@ main[data-mission-devotion] .mission-devotion-tools .mission-auth-button{
   .mission-site-header .mission-auth-state{max-width:104px;font-size:.72rem}
   .mission-site-header .mission-auth-button{flex:0 0 auto}
 }
+
+/* Fewer primary links, with all less-frequent destinations available from one compact disclosure. */
+.mission-site-header nav{overflow:visible!important;align-items:center;gap:clamp(.4rem,1vw,.82rem)}
+.mission-nav-more{position:relative;flex:0 0 auto;min-width:0}
+.mission-nav-more summary{list-style:none;cursor:pointer;border:1px solid var(--mission-line);border-radius:999px;padding:.35rem .58rem;min-height:40px;display:flex;align-items:center;justify-content:center;color:var(--mission-ink);font-size:.77rem;font-weight:800;white-space:nowrap}
+.mission-nav-more summary::-webkit-details-marker{display:none}
+.mission-nav-more summary::after{content:'⌄';margin-left:.3rem;font-size:.83rem}
+.mission-nav-more[open] summary,.mission-nav-more.has-active-page summary{background:rgba(49,92,70,.09);color:var(--mission-accent)}
+.mission-nav-more-links{position:absolute;z-index:40;right:0;top:calc(100% + 6px);min-width:165px;max-width:min(260px,calc(100vw - 28px));display:grid;gap:2px;padding:6px;border:1px solid var(--mission-line);border-radius:12px;background:var(--mission-card,#fffdf8);box-shadow:0 12px 28px rgba(15,35,26,.15)}
+.mission-nav-more-links a{display:flex;align-items:center;min-height:42px;padding:8px 12px;border-radius:8px;white-space:normal!important;word-break:keep-all;text-decoration:none}
+.mission-nav-more-links a:hover,.mission-nav-more-links a:focus-visible{background:rgba(49,92,70,.1)}
+.mission-nav-more summary:focus-visible,.mission-site-header nav>a:focus-visible{outline:2px solid var(--mission-accent);outline-offset:2px}
+@media(max-width:850px){.mission-site-header nav{flex-wrap:wrap!important;row-gap:.3rem;padding-block:.15rem}}
+@media(max-width:520px){
+ .mission-site-header{row-gap:.3rem!important}
+ .mission-site-header nav{gap:.38rem .52rem;justify-content:flex-start!important}
+ .mission-site-header nav>a{font-size:.75rem!important;min-height:40px;display:inline-flex;align-items:center;white-space:nowrap}
+ .mission-nav-more{margin-left:auto}
+ .mission-nav-more summary{font-size:.75rem;min-height:40px}
+}

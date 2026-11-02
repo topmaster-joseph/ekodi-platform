@@ -159,14 +159,18 @@ function syncHeroFocus(){
   const verseText=safeLocalizedText(document.querySelector('.daily-verse-text')?.textContent,copy.dailyFallback);
   const verseRef=safeLocalizedText(document.querySelector('.daily-verse-ref')?.textContent,copy.dailyCta);
   const currentSermon=safeLocalizedText(document.querySelector('.sermon-info h3')?.textContent,copy.sermonFallback);
-  if(devotionLabel)devotionLabel.textContent=copy.daily;
-  if(devotionText)devotionText.textContent=verseText;
-  if(devotionRef)devotionRef.textContent=verseRef||copy.dailyCta;
+  // The current devotion card uses the single public Bible devotional source.
+  // Never overwrite it with the unrelated rotating header verse.
+  if(devotion && !devotion.hasAttribute('data-ekodi-today-devotion')){
+    if(devotionLabel)devotionLabel.textContent=copy.daily;
+    if(devotionText)devotionText.textContent=verseText;
+    if(devotionRef)devotionRef.textContent=verseRef||copy.dailyCta;
+  }
   if(sermonLabel)sermonLabel.textContent=copy.sermon;
   if(sermonText)sermonText.textContent=currentSermon;
   if(sermonCta)sermonCta.textContent=copy.sermonCta;
   root.setAttribute('aria-label',`${copy.daily} · ${copy.sermon}`);
-  if(devotion)devotion.setAttribute('aria-label',`${copy.daily}: ${verseText}`);
+  if(devotion && !devotion.hasAttribute('data-ekodi-today-devotion'))devotion.setAttribute('aria-label',`${copy.daily}: ${verseText}`);
   if(sermon)sermon.setAttribute('aria-label',`${copy.sermon}: ${currentSermon}`);
 }
 function syncHeaderVerseLayout(){

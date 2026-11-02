@@ -102,7 +102,22 @@
     select.setAttribute('aria-label','언어 선택');
     select.innerHTML='<option value="ko-KR">한국어</option>';
     language.append(select);
-    nav.replaceChildren(...links,language);
+    // One accessible navigation: four high-frequency links and one disclosure.
+    // Maintain every canonical route without duplicating visible menu entries.
+    const primaryIndices=new Set([0,1,2,5]);
+    const primary=links.filter((a,index)=>primaryIndices.has(index));
+    const secondary=links.filter((a,index)=>!primaryIndices.has(index));
+    const more=document.createElement('details');
+    more.className='mission-nav-more';
+    const summary=document.createElement('summary');
+    summary.textContent='더보기';
+    summary.setAttribute('aria-label','추가 메뉴 열기');
+    const popup=document.createElement('div');
+    popup.className='mission-nav-more-links';
+    popup.append(...secondary);
+    more.append(summary,popup);
+    if(secondary.some(a=>a.hasAttribute('aria-current')))more.classList.add('has-active-page');
+    nav.replaceChildren(...primary,more,language);
     return {nav,select};
   }
   // Keep the canonical Korean page and its accessible DOM free of English eyebrow text.

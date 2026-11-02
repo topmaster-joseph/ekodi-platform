@@ -113,3 +113,37 @@ body:has(main :target) .hero{display:none!important}
 @media(prefers-reduced-motion:reduce){
   .hero .overview-grid a{transition:none!important}
 }
+
+/* Today's shared Scripture card is the first Church homepage content, not an unrelated header verse. */
+.hero .church-today-devotion{display:flex;flex-direction:column;align-items:flex-start;gap:.35rem;min-width:0}
+.hero .church-today-devotion [data-devotion-date]{font-size:.75rem;color:#496a60}
+.hero .church-today-devotion [data-devotion-passage]{font-weight:750;color:#28644f;line-height:1.45}
+.hero .church-today-devotion [data-devotion-keyline]{font-size:clamp(.93rem,1.4vw,1.14rem);line-height:1.5;word-break:keep-all;overflow-wrap:break-word}
+.hero .church-today-devotion .hero-focus-devotion-link{font-size:.79rem;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:800px){
+ .hero{min-height:0!important;padding-top:clamp(22px,5vw,42px)!important;padding-bottom:40px!important}
+ .hero .hero-content{min-width:0}
+ .hero .church-today-devotion{gap:.28rem}
+}
+
+/* Visible Church counterpart to Mission's daily devotion card.
+   Historical .hero-focus stays intentionally hidden by church-refresh.css. */
+.hero{min-height:0!important}
+.hero .hero-content{padding-top:clamp(16px,3vw,36px)!important;padding-bottom:clamp(24px,4vw,42px)!important}
+.hero .church-home-devotion{
+ width:min(760px,100%);margin:0 auto 1.3rem;padding:clamp(15px,2.2vw,23px);
+ border:1px solid #cbd9ca;border-radius:18px;background:#f4f8f0;
+ box-shadow:0 9px 28px rgba(20,53,39,.08);color:#173730;text-align:left;
+ display:flex;flex-direction:column;align-items:flex-start;gap:.35rem
+}
+.hero .church-home-devotion-heading{width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:.4rem .7rem;flex-wrap:wrap}
+.hero .church-home-devotion .hero-focus-label{font-size:clamp(.98rem,1.6vw,1.15rem);font-weight:850;letter-spacing:0;opacity:1}
+.hero .church-home-devotion time{font-size:.79rem;font-weight:700;color:#536d62}
+.hero .church-home-devotion [data-devotion-passage]{font-weight:850;font-size:clamp(.92rem,1.5vw,1.05rem);line-height:1.45}
+.hero .church-home-devotion [data-devotion-keyline]{margin:.1rem 0 .3rem;line-height:1.58}
+.hero .church-home-devotion a{display:inline-flex;align-items:center;min-height:44px;text-decoration:underline;text-underline-offset:4px;color:#245c44;font-size:.91rem;font-weight:800}
+.hero .church-home-devotion a:focus-visible{outline:2px solid #245c44;outline-offset:3px}
+@media(max-width:800px){
+ .hero .hero-content{padding-top:14px!important;padding-bottom:24px!important}
+ .hero .church-home-devotion{margin:0 auto 1rem;padding:14px 15px;border-radius:14px}
+}
