@@ -1,5 +1,5 @@
-/* EKODI Admin UI v3: service-specific readability overrides; global tokens live in Admin Design Engine. */
-/* Shared service cards follow the same readable surface instead of inheriting dark legacy panels. */
+/* EKODI Admin readability overrides (v3). */
+/* Shared service card readability. */
 body.admin-compact .social-connections,body.admin-compact .social-org-card,body.admin-compact .social-admin-summary article,body.admin-compact .social-connection-metrics article,
 body.admin-compact .service-control-card,body.admin-compact .finance-status article,body.admin-compact .finance-note,body.admin-compact .finance-table-wrap,
 body.admin-compact .books-admin-card,body.admin-compact .community-admin-card,body.admin-compact .marketing-ai-card{background:#fff!important;color:#172033!important;border-color:#dce5ee!important;box-shadow:none!important}
