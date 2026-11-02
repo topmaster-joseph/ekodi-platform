@@ -33,6 +33,6 @@ test('supplier inventory is cleared on sign-out and stale operator responses can
   assert.match(client, /dashboardRevision \+= 1/, 'sign-out invalidates in-flight inventory');
   assert.match(client, /revision !== dashboardRevision/, 'old account response must be ignored');
   assert.match(client, /sellerProducts = \[\]/, 'old product cards must not persist after sign-out');
-  assert.match(client, /operatorScope = false/, 'privileged role must not persist after sign-out');
+  assert.doesNotMatch(client, /operatorScope|api\/internal\/products\/by-provider/, 'cross-seller privileged inventory must never load in Seller Studio');
   assert.match(client, /renderLink\(null\)/, 'old seller share-link must be removed after sign-out');
 });
