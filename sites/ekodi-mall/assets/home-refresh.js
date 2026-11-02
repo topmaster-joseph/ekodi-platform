@@ -48,6 +48,7 @@
     if (current.hash === '#shop' || current.searchParams.has('category') || current.searchParams.has('q')) return 'catalog';
     return 'home';
   };
+  const catalogHeadings = {all:['ALL MARKET','전체상품','에코디몰의 상품을 한눈에 살펴보세요.'],local:['LOCAL MARKET','로컬·특산물','지역의 가치와 이야기를 담은 상품을 만나보세요.'],general:['FOOD & WELLNESS','식품·건강','먹거리와 건강한 일상을 위한 상품을 살펴보세요.'],living:['LIVING & TECH','생활·가전','일상의 편리함을 더하는 상품을 만나보세요.'],book:['BOOKS & LEARNING','책·배움','읽고 배우며 성장하는 상품을 살펴보세요.'],gift:['GIFTS','선물·기념품','마음을 전하는 선물과 기념품을 만나보세요.']};
   const categoryFromUrl = () => {
     const value = new URLSearchParams(window.location.search).get('category') || 'all';
     return allTypes.has(value) ? value : 'all';
@@ -56,6 +57,14 @@
     const mode = viewFromUrl();
     document.body.dataset.mallView = mode;
     const category = categoryFromUrl();
+    const heading = shop?.querySelector('.heading');
+    const copy = catalogHeadings[category] || catalogHeadings.all;
+    const eyebrow = heading?.querySelector('.eyebrow');
+    const title = heading?.querySelector('h2');
+    const description = heading?.querySelector('div > p:not(.eyebrow)');
+    if (eyebrow) eyebrow.textContent = copy[0];
+    if (title) title.textContent = copy[1];
+    if (description) description.textContent = copy[2];
     nav?.querySelectorAll('a[aria-current]').forEach(anchor => anchor.removeAttribute('aria-current'));
     if (mode === 'catalog') {
       const button = filterButtons.find(item => item.dataset.filter === category);
