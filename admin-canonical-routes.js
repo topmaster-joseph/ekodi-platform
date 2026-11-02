@@ -11,7 +11,7 @@ const SECTION_GROUP=Object.freeze({
   'common-services':'services','service-modules':'services',points:'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',capabilities:'services',openai:'services',
   'users-access':'accounts',security:'accounts',admins:'accounts','social-accounts':'accounts','ai-membership':'ai',
   work:'services',communication:'sites',community:'sites',books:'services','common-scripture':'services',devotional:'services',social:'services',finance:'finance',tax:'finance',
-  health:'ops','site-health':'ops',deployments:'ops',aiops:'ai',devices:'ops','device-autologon':'ops','pos-agent':'ops','api-cost':'finance','infra-costs':'finance',architecture:'ops',maturity:'ops','domain-control':'ops',services:'ops',
+  health:'ops','site-health':'ops',deployments:'ops',aiops:'ai',devices:'ops','pos-agent':'ops','api-cost':'finance','infra-costs':'finance',architecture:'ops',maturity:'ops','domain-control':'ops',services:'ops',
   'public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'ai','audit-records':'accounts',policies:'accounts',
 });
 const GROUP_DEFAULT=Object.freeze({
