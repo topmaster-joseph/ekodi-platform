@@ -55,7 +55,7 @@
   .wz-on .wz-hide{display:none!important}
   .wz-bar{position:relative;background:#fffdf8;border-bottom:1px solid #e6dfd2;padding:12px 16px}
   .wz-bar ol{display:flex;gap:6px;list-style:none;margin:0 auto;padding:0;max-width:960px;overflow-x:auto}
-  .wz-bar li button{border:1px solid #d9d2c4;background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap;cursor:pointer;color:#344}
+  .wz-bar li button,.wz-bar li a{border:1px solid #d9d2c4;background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap;cursor:pointer;color:#344;text-decoration:none;display:inline-flex;align-items:center}
   .wz-bar li button[aria-current="step"]{background:#173a2e;color:#fff;border-color:#173a2e}
   .wz-bar li button.wz-done{border-color:#7aa48f;color:#1f5b43}
   .wz-head{max-width:960px;margin:14px auto 0;padding:0 16px}
@@ -92,7 +92,7 @@
   const bar = document.createElement('nav');
   bar.className = 'wz-bar';
   bar.setAttribute('aria-label', '상품 등록 단계');
-  bar.innerHTML = `<ol>${steps.map((s, i) => `<li><button type="button" data-wz="${i}">${i + 1}. ${s.title}</button></li>`).join('')}<li><button type="button" class="wz-full" data-wz-full>전체 화면 보기</button></li></ol>`;
+  bar.innerHTML = `<ol>${steps.map((s, i) => `<li><button type="button" data-wz="${i}">${i + 1}. ${s.title}</button></li>`).join('')}<li><a href="#serverProducts" data-wz-providers>공급처별 상품</a></li><li><button type="button" class="wz-full" data-wz-full>전체 화면 보기</button></li></ol>`;
   const head = document.createElement('div');
   head.className = 'wz-head';
   head.innerHTML = '<h2 data-wz-title></h2><p data-wz-hint></p>';
@@ -172,6 +172,13 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function revealSupplierInventory() {
+    if (location.hash !== '#serverProducts') return;
+    if (!signedIn()) return;
+    if (document.documentElement.classList.contains('wz-on')) bar.querySelector('[data-wz-full]')?.click();
+    document.querySelector('#serverProducts')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+  window.addEventListener('hashchange', revealSupplierInventory);
   bar.addEventListener('click', (e) => {
     const full = e.target.closest('[data-wz-full]');
     if (full) {
@@ -226,8 +233,9 @@
 
   const start = () => { current = signedIn() ? Math.max(1, store.get()) : 0; apply(); };
   start();
+  if (location.hash === '#serverProducts') revealSupplierInventory();
   // Auth state resolves asynchronously after the central-login handoff.
   const loginBtn = document.querySelector('#sellerLogin');
-  if (loginBtn) new MutationObserver(() => { if (signedIn() && current === 0) go(1); })
+  if (loginBtn) new MutationObserver(() => { if (signedIn() && current === 0) { if (location.hash === '#serverProducts') revealSupplierInventory(); else go(1); } })
     .observe(loginBtn, { attributes: true, attributeFilter: ['hidden'] });
 })();
