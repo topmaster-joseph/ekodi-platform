@@ -7,7 +7,7 @@ const css=readFileSync(new URL('../assets/fulfillment-layout.css',import.meta.ur
 const js=readFileSync(new URL('../assets/fulfillment-lab.js',import.meta.url),'utf8');
 
 test('fulfillment steps have a single visible accessible panel with history support',()=>{
-  for(const [index,key] of ['orders','stages','policy'].entries()){
+  for(const [index,key] of ['orders','logistics','stages','policy'].entries()){
     assert.match(html,new RegExp('data-fulfillment-tab="'+key+'" id="fulfillment-tab-'+key+'" aria-controls="fulfillment-panel-'+key+'"'));
     assert.match(html,new RegExp('data-fulfillment-panel="'+key+'" id="fulfillment-panel-'+key+'" aria-labelledby="fulfillment-tab-'+key+'"'+(index?' hidden':'')));
   }
@@ -42,4 +42,16 @@ test('protected read-only API and no buyer PII exposure',()=>{
   assert.match(html,/id="gateForward"/);
   assert.doesNotMatch(html,/name="password"|name="apiKey"/);
   assert.doesNotMatch(js,/(POST|PUT|DELETE)\s*['"]|method:\s*['"](POST|PUT|DELETE)/);
+});
+
+test('logistics cockpit is tabbed, read-only, and resets seller data on logout',()=>{
+  assert.match(html,/data-fulfillment-panel="logistics"/);
+  for (const id of ['logisticsOrderCount','logisticsActive','logisticsShipped','logisticsAttention','logisticsPlanned','logisticsReadiness','logisticsLimitNote']) {
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(js,/renderLogistics\(result\.logisticsOverview\)/);
+  assert.match(js,/renderLogistics\(null\)/);
+  assert.match(js,/latest100Only/);
+  assert.match(js,/authenticated-seller/);
+  assert.doesNotMatch(html,/배송예약 실행|공급자 지급 실행/);
 });
