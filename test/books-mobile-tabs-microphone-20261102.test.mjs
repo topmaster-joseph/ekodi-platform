@@ -59,7 +59,7 @@ test('storefront has responsive tabbed panels while preserving existing catalog 
 test('reader panels separate operator, audiobook and purchase records without widening rights',()=>{
   assert.match(library,/<script src="\/buy\/library-tabs\.js" defer><\/script>/);
   assert.ok(library.indexOf('library-tabs.js')<library.indexOf('library.js'));
-  assert.match(libraryTabs,/role','tablist'/);
+  assert.match(libraryTabs,/role',\s*'tablist'/);
   assert.match(libraryTabs,/aria-selected/);
   assert.match(libraryTabs,/showOperator\(\)/);
   assert.match(libraryTabs,/Number\.isFinite\(amount\)/);
