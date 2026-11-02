@@ -12,12 +12,27 @@
   const normalize = (d, c = {}) => ({ accessToken: d.access_token || d.accessToken || '', refreshToken: d.refresh_token || d.refreshToken || c.refreshToken || '', expiresAt: Number(d.expires_at || d.expiresAt || 0) || Math.floor(Date.now() / 1000) + Number(d.expires_in || 3600) });
   const save = v => { try { localStorage.setItem(OWN_KEY, JSON.stringify(v)); } catch {} };
   const forget = () => { try { localStorage.removeItem(OWN_KEY); } catch {} };
-  function stored() {
-    const own = read(localStorage, OWN_KEY);
-    if (own?.accessToken) return own;
+  // EKODI 인증 원장 우선: 과거 서점 개별 로그인 세션이 새 통합 로그인을 가리지 않는다.
+  function centralStored() {
     const central = read(localStorage, CENTRAL_KEY);
     const s = central?.currentSession || central?.session || central;
     return s?.access_token ? normalize(s) : null;
+  }
+  function stored() {
+    const central = centralStored();
+    if (central?.accessToken) return { ...central, source: 'central' };
+    const own = read(localStorage, OWN_KEY);
+    return own?.accessToken ? { ...own, source: 'legacy' } : null;
+  }
+  function saveCentralSession(updated) {
+    try {
+      const raw = read(localStorage, CENTRAL_KEY);
+      const payload = { access_token: updated.accessToken, refresh_token: updated.refreshToken, expires_at: updated.expiresAt };
+      if (raw?.currentSession) localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...raw, currentSession: { ...raw.currentSession, ...payload } }));
+      else if (raw?.session) localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...raw, session: { ...raw.session, ...payload } }));
+      else localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...raw, ...payload }));
+      forget(); // 구형 서점 별도 세션은 다시 선택되지 않아야 한다.
+    } catch {}
   }
   async function bounded(url, options = {}) {
     const controller = new AbortController();
@@ -36,9 +51,27 @@
     let v = stored();
     if (!v?.accessToken) return null;
     if (!v.expiresAt || v.expiresAt > Math.floor(Date.now() / 1000) + 60) return v;
-    if (!v.refreshToken) { forget(); return null; }
-    try { v = normalize(await post(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, { refresh_token: v.refreshToken }), v); save(v); return v; }
-    catch { forget(); return null; }
+    if (!v.refreshToken) {
+      if (v.source === 'central') { try { localStorage.removeItem(CENTRAL_KEY); } catch {} }
+      forget(); return null;
+    }
+    try {
+      const refreshed = normalize(await post(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, { refresh_token: v.refreshToken }), v);
+      if (v.source === 'central') saveCentralSession(refreshed);
+      else save(refreshed);
+      return { ...refreshed, source: v.source };
+    } catch (error) {
+      // 네트워크 일시 장애로 전체 EKODI 로그인을 폐기하지 않는다.
+      // 무효한 갱신 토큰만 제거하고, 통합 계정이 구형 다른 계정으로 대체되지 않게 한다.
+      if (v.source === 'central') {
+        if (/^(invalid_grant|refresh_token_not_found|invalid_refresh_token|bad_jwt)$/.test(String(error.code || ''))) {
+          try { localStorage.removeItem(CENTRAL_KEY); } catch {}
+          forget();
+        }
+        return null;
+      }
+      forget(); return null;
+    }
   }
   async function api(path, { method = 'GET', body } = {}) {
     const s = await session();
@@ -48,7 +81,10 @@
     const rel = String(path || '').replace(/^\/+/, '');
     const r = await bounded(`${BASE}/api/commerce/${rel}`, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' });
     const d = await r.json().catch(() => ({}));
-    if (r.status === 401 && s) forget();
+    if (r.status === 401 && s) {
+      forget();
+      if (s.source === 'central') { try { localStorage.removeItem(CENTRAL_KEY); } catch {} }
+    }
     if (!r.ok) { const e = new Error(d.error || '요청을 처리하지 못했습니다.'); e.status = r.status; e.code = d.code || ''; throw e; }
     return d;
   }
@@ -87,7 +123,10 @@
           const verified = await post(`${SUPABASE_URL}/auth/v1/verify`, { token_hash: proof.tokenHash, type: 'email' });
           const s = normalize(verified);
           if (!s.accessToken) throw new Error('session_not_created');
-          save(s); onStatus(''); onSignedIn();
+          // 구글 인증도 EKODI 통합 원장으로 기록한다. 구형 서점 세션은 폐기.
+          try { localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...verified, expires_at: s.expiresAt })); forget(); }
+          catch { save(s); }
+          onStatus(''); onSignedIn();
         } catch (e) {
           onStatus(e.code === 'identity_conflict' ? '이 구글 계정은 다른 EKODI 사용자에 연결되어 있습니다.' : '구글 로그인에 실패했습니다. 다시 시도해 주세요.', true);
           mountGoogle(host, onStatus, onSignedIn);

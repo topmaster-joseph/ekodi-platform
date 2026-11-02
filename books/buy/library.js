@@ -62,6 +62,10 @@
       $('libLogin').hidden = true;
       const items = Array.isArray(data.items) ? data.items : [];
       libraryAccount = friendlyAccount(data);
+      if (data.operator === true) {
+        $('operatorPanel').hidden = false;
+        window.EkodiLibraryTabs?.showOperator();
+      }
       const who = document.createElement('span'); who.className = 'lib-account'; who.textContent = libraryAccount;
       const out = document.createElement('button'); out.type = 'button'; out.className = 'lib-switch'; out.textContent = '로그아웃';
       out.addEventListener('click', async () => { out.disabled = true; await C.signOut(); location.reload(); });
@@ -72,7 +76,7 @@
         const title = document.createElement('h2'); title.textContent = '첫 책을 만나 보세요';
         const note = document.createElement('p'); note.textContent = '아직 구매한 책이 없습니다. 마음에 드는 책을 찾아 서재에 담아 보세요.';
         const link = document.createElement('a'); link.href = `${C.BASE}/#catalog`; link.textContent = '도서 목록 살펴보기';
-        empty.append(title, note, link); list.append(empty); window.EkodiLibraryTabs?.render(items,libraryAccount); return;
+        empty.append(title, note, link); list.append(empty); window.EkodiLibraryTabs?.render(items,libraryAccount,data.operator === true); return;
       }
       for (const item of items) {
         const row = document.createElement('article'); row.className = 'library-item';
@@ -109,7 +113,7 @@
         actions.append(btn);
         row.append(C.cover(item), info, actions); list.append(row);
       }
-      window.EkodiLibraryTabs?.render(items,libraryAccount);
+      window.EkodiLibraryTabs?.render(items,libraryAccount,data.operator === true);
     } catch (e) {
       if (e.status === 401) { $('libStatus').textContent = '로그인이 필요합니다.'; $('libLogin').hidden = false; C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; }, () => load().then(operatorPanel)); }
       else $('libStatus').textContent = e.message;
