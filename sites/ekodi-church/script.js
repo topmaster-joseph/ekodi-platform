@@ -39,7 +39,7 @@ const communityCard = [...document.querySelectorAll('.community-cards article')]
 if (communityCard) {
   const link = communityCard.querySelector('a');
   if (link) {
-    link.href = 'https://community.ekodi.kr';
+    link.href = 'https://ekodi.kr/community';
     link.textContent = '에코디커뮤니티 보기 →';
   }
 }
@@ -55,7 +55,7 @@ async function syncChurchSocialLinks() {
   const preserved = [...host.querySelectorAll('a')].map((link) => link.cloneNode(true));
   const urls = new Set(preserved.map((link) => link.href));
   try {
-    const response = await fetch('https://api.ekodi.kr/api/social/registry', {
+    const response = await fetch('https://ekodi.kr/api/social/registry', {
       headers: { accept: 'application/json' },
       cache: 'no-store',
     });
@@ -75,7 +75,7 @@ async function syncChurchSocialLinks() {
       nodes.push(link);
       urls.add(channel.url);
     });
-    const hubUrl = 'https://social.ekodi.kr/?org=church';
+    const hubUrl = 'https://ekodi.kr/social/?org=church';
     if (!urls.has(hubUrl)) {
       const hub = document.createElement('a');
       hub.href = hubUrl;

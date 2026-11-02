@@ -18,5 +18,8 @@
   "protectedProductionReleaseUnchanged": true,
   "databaseAndRolesUnchanged": true,
   "rollbackRetainsLegacySourceUntilVerified": true,
-  "legacyRepositoryDeletionAllowed": false
+  "legacyRepositoryDeletionAllowed": false,
+  "prunedLegacyWorkflowCount": 8,
+  "legacySubdomainReferencesNormalizedInCandidate": true,
+  "legacyWorkflowCopiesExcludedFromCandidate": true
 }

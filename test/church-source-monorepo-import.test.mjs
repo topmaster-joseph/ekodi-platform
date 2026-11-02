@@ -31,7 +31,10 @@ test('Church import is lossless and explicitly non-deploying',async()=>{
   assert.equal(provenance.legacyRepositoryDeletionAllowed,false);
   assert.equal(provenance.existingProductionReleaseSource,provenance.originalRepository);
   assert.equal(provenance.existingProductionSourceSha,provenance.originalMainSha);
-  assert.equal((await files(root)).length,provenance.originalTrackedFileCount+1);
+  assert.equal(provenance.prunedLegacyWorkflowCount,8);
+  assert.equal(provenance.legacySubdomainReferencesNormalizedInCandidate,true);
+  assert.equal(provenance.legacyWorkflowCopiesExcludedFromCandidate,true);
+  assert.equal((await files(root)).length,provenance.originalTrackedFileCount-provenance.prunedLegacyWorkflowCount+1);
 });
 
 test('Church copy retains public, local-member, worship, live, privacy and CSP surfaces',async()=>{

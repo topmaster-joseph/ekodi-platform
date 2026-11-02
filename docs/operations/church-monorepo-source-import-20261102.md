@@ -14,7 +14,8 @@ Task: `church-source-monorepo-import-20261102` · EKODI Orchestrator authority. 
 - `git subtree add --prefix=sites/ekodi-church ... main` **without squash**. Integration commit `612239948452b55510560807ddcb8a58fd39e46b` retains the old Church source commit as its second parent.
 - Original 216 tracked paths and their blob SHAs equal the imported source exactly; both source tree objects are `30f2d5396b416aec9aca9773c84710052f4f8c35`.
 - `sites/ekodi-church/source-provenance.json` adds truthful staged-only metadata. The exact imported snapshot remains recoverable at the integration commit tree, before this small metadata addition.
-- The imported `.github` directory is *nested* in `sites/ekodi-church` and is not a root-level GitHub workflow. It must not be promoted as a new deploy lane.
+- After preserving the exact 216-file original Git tree and unsquashed ancestry, the **8 nested legacy `.github/workflows` copies were excluded** from the active canonical candidate. These outdated workflows are preserved in Git history, not enabled as a new deploy lane.
+- Legacy API/community/social subdomain references in candidate `_headers`, `script.js` and the corresponding test were normalized to first-party `https://ekodi.kr/<path>`; Church `church-online-status.js` now initiates auth at `https://ekodi.kr/auth/`. These changes are only in the candidate, not in the still-live Church source. The canonical snapshot no longer has byte-identical current working-tree assets, but the original tree is unchanged at the import commit.
 - Source's `npm test` ran 190/190 pass in the isolated canonical repo clone; new import-gate tests 2/2 pass; central repository SOT guard passed.
 
 ## Non-goals and protected dependencies

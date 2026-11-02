@@ -29,7 +29,7 @@
     const rawDestination=link.dataset.ekodiDestination||link.getAttribute('href')||'/my/';
     const destination=new URL(rawDestination,location.origin).toString();
     link.dataset.ekodiDestination=destination;
-    const login=new URL('/auth/',location.origin);
+    const login=new URL('https://ekodi.kr/auth/');
     login.searchParams.set('site','church');
     login.searchParams.set('return_to',destination);
     link.href=login.toString();
