@@ -85,13 +85,13 @@ test('Tax belongs to the EKODIBIZ dedicated admin menu, not global navigation', 
   const portal = await read('tax-portal-worker.js');
   assert.match(registry, /id: 'tax'/);
   assert.match(registry, /id: 'tax'[^\n]*internal: true/);
-  assert.match(bizRegistry, /id: 'tax'/);
-  assert.match(bizRegistry, /adminHref: '\/tax'/);
+  assert.doesNotMatch(bizRegistry, /id: 'tax', label:/);
+  assert.match(bizRegistry, /EKODIBIZ_TAX_MENU/);
+  assert.match(bizRegistry, /href: '\/tax\?tab=invoices'/);
   assert.match(bizRegistry, /\^\\\/tax/);
-  assert.match(portal, /EKODIBIZ_ADMIN_SCOPES/);
-  assert.match(portal, /id="ekodibizSiteSwitcher"/);
-  assert.match(portal, /사이트 전환/);
-  assert.match(portal, /scope\.id==='tax'/);
+  assert.doesNotMatch(portal, /id="ekodibizSiteSwitcher"/);
+  assert.match(portal, /href="\/ekodibiz\/admin\/finance"/);
+  assert.match(portal, /new URLSearchParams\(location\.search\)\.get\('tab'\)/);
 });
 
 test('shared deployment manifest verifies Tax portal', async () => {
