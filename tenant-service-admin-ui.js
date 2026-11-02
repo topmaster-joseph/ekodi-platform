@@ -108,7 +108,7 @@ export function renderTenantServiceAdmin(root,{items=[],error='',onToggle}={}){
   wrap.append(tabs,panel);
   // Preview uses the same server snapshot, not an optimistic or capability-expanding menu.
   const preview=elt('section','tenant-service-preview');
-  preview.append(elt('h3','','사이트 관리자 메뉴 미리보기'));
+  preview.append(elt('h3','','표시 중인 서비스 분야'));
   const visibleGroups=[...new Set(items.filter(item=>item.readiness==='ready'&&item.menuVisible).map(item=>item.categoryLabel))];
   preview.append(elt('p','',visibleGroups.length?visibleGroups.join(' · '):'현재 표시하도록 설정한 서비스가 없습니다.'));
   wrap.append(preview);
