@@ -51,7 +51,7 @@ test('every visible section is a detail route of exactly one v3 menu in its own 
   // ADMIN-LAYOUT-3L-001: 전체 운영상태 is merged into 홈 › 플랫폼 현황 (same panel).
   assert.deepEqual(adminMenuTabs('site-health'), ['site-health']);
   assert.equal(getAdminMenuForSection('health'), null);
-  assert.deepEqual(adminMenuTabs('pos-agent'), ['devices', 'device-autologon', 'pos-agent']);
+  assert.deepEqual(adminMenuTabs('pos-agent'), ['devices', 'pos-agent']);
   // Stage 2: the transitional site-tools menu is dissolved.
   assert.equal(ADMIN_MENUS.some(menu => menu.id === 'site-tools' || menu.transitional), false);
   // 사이트관리 2차 = site classifications (one detail each) + the menu-template ledger.
