@@ -10,14 +10,40 @@ if(!isNarrationDate(date)||!draft||!reviewFile)throw Error('usage: node approve-
 const seoulToday = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 if(date>seoulToday)throw Error('future_devotional_narration_not_public');
 const review=JSON.parse(readFileSync(reviewFile,'utf8'));
+const isStock = review.voiceSource === 'licensed-stock-preset';
+let stockSource = null;
+if (isStock) {
+  // These are vendor-distributed preset voices, not derived from an identifiable
+  // EKODI member's private voice. The model license and audibility still need
+  // independent approval; source-provider metadata alone is not a review.
+  const draftSource=JSON.parse(readFileSync(join(draft,'draft-provenance.json'),'utf8'));
+  if(draftSource.schema!=='ekodi.devotion.audio-draft.v1' ||
+      draftSource.status!=='draft-unapproved' ||
+      draftSource.date!==date ||
+      draftSource.sourceScriptSha256!==review.scriptSha256 ||
+      draftSource.model!=='supertonic-3' ||
+      draftSource.modelRevision!=='724fb5abbf5502583fb520898d45929e62f02c0b' ||
+      draftSource.pythonPackage!=='supertonic==1.3.1' ||
+      draftSource.modelLicense!=='OpenRAIL-M' ||
+      draftSource.packageLicense!=='MIT' ||
+      draftSource.speakerCloning!==false ||
+      draftSource.syntheticVoiceDisclosureRequired!==true ||
+      draftSource.tracks?.male?.preset!=='M4' ||
+      draftSource.tracks?.female?.preset!=='F5')
+    throw Error('licensed_stock_model_provenance_mismatch');
+  stockSource=draftSource;
+}
+const hasVoiceRights = isStock
+  ? review.modelLicenseApproved===true && review.stockPresetRightsApproved===true &&
+    review.syntheticSpeechDisclosureApproved===true
+  : Boolean(review.maleSpeakerConsent && review.femaleSpeakerConsent &&
+      review.maleSpeakerConsent!==review.femaleSpeakerConsent);
 if(review.date!==date || review.publisherApproval!==true ||
   review.rightsApproved!==true || review.textIntegrityApproved!==true ||
   review.voicePerformanceApproved!==true || review.accessibilityApproved!==true ||
   !review.reviewer?.trim() || !review.reviewedAt ||
-  !/^[a-f0-9]{64}$/i.test(review.scriptSha256||'') ||
-  !review.maleSpeakerConsent || !review.femaleSpeakerConsent ||
-  review.maleSpeakerConsent === review.femaleSpeakerConsent)
- throw Error('independent human approvals for both consented voices and the exact script required');
+  !/^[a-f0-9]{64}$/i.test(review.scriptSha256||'') || !hasVoiceRights)
+ throw Error('independent human approval and applicable voice source rights are required');
 const tracks={};
 for(const gender of ['male','female']){
  const path=resolve(draft,gender+'.mp3');
@@ -35,9 +61,24 @@ for(const gender of ['male','female']){
  };
 }
 if(tracks.male.sha256===tracks.female.sha256)throw Error('male/female must use distinct reviewed files');
+if (isStock) {
+  for(const gender of ['male','female']){
+    const source=stockSource.tracks[gender];
+    if(source.file!==gender+'.mp3' || source.sha256!==tracks[gender].sha256 ||
+       Math.abs(source.durationSec-tracks[gender].durationSec)>1 ||
+       !(Number(source.sizeBytes)>4096))
+      throw Error('stock_master_changed_since_review:'+gender);
+  }
+}
 const manifest={
  schema:'ekodi.devotion.narration.v1',date,status:'approved',
  language:'ko-KR',sourceScriptSha256:review.scriptSha256,
+ source: isStock
+   ? {kind:'licensed-stock-preset',model:'supertonic-3',
+      modelRevision:'724fb5abbf5502583fb520898d45929e62f02c0b',
+      modelLicense:'OpenRAIL-M',synthetic:true,
+      voices:{male:'M4',female:'F5'}}
+   : {kind:'consented-speakers',synthetic:true},
  review:{rights:true,textIntegrity:true,voicePerformance:true,accessibility:true},
  tracks,
 };
