@@ -69,7 +69,7 @@ function validPath(topic,path) {
 async function getDevice(request,env) {
   const token=tokenOf(request);
   if (!token) return null;
-  return env.DB.prepare('SELECT id, topics_json, consent_at FROM notification_devices WHERE token_hash=? AND disabled_at IS NULL')
+  return env.DB.prepare('SELECT id, endpoint, topics_json, consent_at FROM notification_devices WHERE token_hash=? AND disabled_at IS NULL')
     .bind(await sha(token)).first();
 }
 async function throttle(request,env) {
@@ -117,16 +117,20 @@ export async function handleNotificationApi(request,env) {
   if (path==='/api/notifications/subscription' && request.method==='POST') {
     if (!sameOrigin(request)) return error('origin_required',403);
     if (!await throttle(request,env)) return error('rate_limited',429);
-    if (!enabled(env)) return error('push_not_available',503);
     let body;
     try { body=await readBody(request); } catch { return error('invalid_json',400); }
     if (!/^[-_A-Za-z0-9]{43,128}$/.test(String(body?.deviceToken||''))) return error('device_token_required',400);
-    if (!validTopics(body?.topics)||!validSubscription(body)||body.consentVersion!==VERSION||body.marketingConsent!==false)
+    const inboxOnly=body.channel==='inbox' && body.subscription==null;
+    if (!inboxOnly && body.subscription && !enabled(env)) return error('push_not_available',503);
+    if (!validTopics(body?.topics)||body.consentVersion!==VERSION||body.marketingConsent!==false
+      || (!inboxOnly && (!enabled(env)||!validSubscription(body))))
       return error('valid_explicit_consent_required',400);
-    const tokenHash=await sha(body.deviceToken), time=NOW(), sub=body.subscription;
+    const tokenHash=await sha(body.deviceToken), time=NOW();
+    // In-app subscriptions use an internal marker, never a network destination.
+    const sub=inboxOnly ? {endpoint:'inbox:'+tokenHash,keys:{p256dh:'',auth:''}} : body.subscription;
     const id=crypto.randomUUID();
-    // Expired endpoints may be re-registered from a fresh browser token.
-    await env.DB.prepare('DELETE FROM notification_devices WHERE endpoint=? AND disabled_at IS NOT NULL').bind(sub.endpoint).run();
+    // Expired push endpoints may be re-registered from a fresh browser token.
+    if (!inboxOnly) await env.DB.prepare('DELETE FROM notification_devices WHERE endpoint=? AND disabled_at IS NOT NULL').bind(sub.endpoint).run();
     try {
       await env.DB.prepare(
         'INSERT INTO notification_devices (id,token_hash,endpoint,p256dh,auth_secret,topics_json,consent_version,consent_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?) '+
@@ -136,14 +140,15 @@ export async function handleNotificationApi(request,env) {
       if (String(err?.message||'').includes('UNIQUE')) return error('endpoint_already_registered',409);
       throw err;
     }
-    return json({ok:true,topics:body.topics,consentVersion:VERSION},201);
+    return json({ok:true,topics:body.topics,consentVersion:VERSION,channel:inboxOnly?'inbox':'webPush'},201);
   }
   if (!['/api/notifications/preferences','/api/notifications/inbox','/api/notifications/subscription'].includes(path))
     return error('not_found',404);
   const device=await getDevice(request,env);
   if (!device) return error('device_auth_required',401);
   if (path==='/api/notifications/preferences' && request.method==='GET')
-    return json({ok:true,topics:JSON.parse(device.topics_json),consentAt:device.consent_at});
+    return json({ok:true,topics:JSON.parse(device.topics_json),consentAt:device.consent_at,
+      channel:device.endpoint.startsWith('inbox:')?'inbox':'webPush'});
   if (path==='/api/notifications/inbox' && request.method==='GET') {
     const rows=await env.DB.prepare(
       'SELECT e.id,e.service_id,e.title,e.body,e.target_path,e.created_at FROM notification_deliveries d '+
@@ -170,7 +175,7 @@ export async function handleNotificationApi(request,env) {
   return error('method_not_allowed',405);
 }
 export async function runNotificationSchedule(env,{now=NOW(),limit=12,transport=fetch}={}) {
-  if (!enabled(env)||!env.DB?.prepare) return {enabled:false,processed:0};
+  if (!env.DB?.prepare) return {enabled:false,processed:0};
   const db=env.DB;
   const due=await db.prepare("SELECT id,topic FROM notification_events WHERE status='pending' AND scheduled_at<=? ORDER BY scheduled_at LIMIT 3").bind(now).all();
   for (const event of due.results||[]) {
@@ -184,14 +189,22 @@ export async function runNotificationSchedule(env,{now=NOW(),limit=12,transport=
   }
   // Consent revocation always wins over queued delivery and stale fanout.
   await db.prepare("DELETE FROM notification_deliveries WHERE status='pending' AND NOT EXISTS (SELECT 1 FROM notification_events e JOIN notification_devices dev ON dev.id=notification_deliveries.device_id JOIN json_each(dev.topics_json) j ON j.value=e.topic WHERE e.id=notification_deliveries.event_id AND dev.disabled_at IS NULL)").run();
+  // Inbox is available without VAPID keys; mark device-local inbox entries as delivered
+  // without performing a network push or exposing device identifiers.
+  await db.prepare("UPDATE notification_deliveries SET status='delivered',delivered_at=? WHERE status='pending' AND device_id IN (SELECT id FROM notification_devices WHERE endpoint LIKE 'inbox:%')")
+    .bind(now).run();
   const expiry=new Date(new Date(now).getTime()-15*60000).toISOString();
   await db.prepare("UPDATE notification_deliveries SET status='pending',locked_at=NULL WHERE status='processing' AND locked_at<?").bind(expiry).run();
+  if (!enabled(env)) {
+    await db.prepare("UPDATE notification_events SET status='done' WHERE status='fanout' AND NOT EXISTS (SELECT 1 FROM notification_deliveries WHERE event_id=notification_events.id AND status IN ('pending','processing'))").run();
+    return {enabled:false,processed:0,inbox:true};
+  }
   const rows=await db.prepare(
     "SELECT d.event_id,d.device_id,d.attempts,dev.endpoint,dev.p256dh,dev.auth_secret, "+
     "e.title,e.body,e.target_path,e.service_id FROM notification_deliveries d "+
     "JOIN notification_events e ON e.id=d.event_id JOIN notification_devices dev ON dev.id=d.device_id "+
     "WHERE d.status='pending' AND d.next_attempt_at<=? AND dev.disabled_at IS NULL "+
-    "AND EXISTS (SELECT 1 FROM json_each(dev.topics_json) WHERE value=e.topic) ORDER BY d.next_attempt_at LIMIT ?"
+    "AND dev.endpoint NOT LIKE 'inbox:%' AND EXISTS (SELECT 1 FROM json_each(dev.topics_json) WHERE value=e.topic) ORDER BY d.next_attempt_at LIMIT ?"
   ).bind(now,Math.max(1,Math.min(25,limit))).all();
   let processed=0, failed=0;
   for (const row of rows.results||[]) {
