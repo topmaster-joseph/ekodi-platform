@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { authorizeUrl, federatedAuthEmail, verifyAppleCode, verifyKakaoCode, verifyNaverCode, type VerifiedIdentity } from "./federated-providers.ts";
+import { createIdentityAdminHandler } from "./admin-persons.ts";
 
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -614,6 +615,8 @@ async function detachIdentity(req:Request,userId:string,identityId:string){
   }
   return json(req,{ok:true,newEkodiId:await ekodiIdForPerson(data.newPersonId)});
 }
+const handleIdentityAdmin=createIdentityAdminHandler({db:admin,json,verifyGoogle,sha256,googleClientId:GOOGLE_CLIENT_ID});
+
 function providerFrom(path:string,suffix:string){
   const match=path.match(new RegExp(`^/providers/([a-z0-9_-]+)${suffix.replaceAll("/","\\/")}$`));
   return match?.[1]??null;
@@ -638,6 +641,7 @@ Deno.serve(async(req)=>{
 
     const user=await currentUser(req);
     if(!user)return json(req,{error:"unauthorized"},401);
+    if(path.startsWith("/admin/"))return await handleIdentityAdmin(req,user.id,path);
 
     if(req.method==="POST"&&path==="/session/handoff")return await sessionHandoff(req,user);
     if(req.method==="GET"&&path==="/identities")return await listIdentities(req,user.id);

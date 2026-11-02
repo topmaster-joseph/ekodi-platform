@@ -402,16 +402,11 @@ Deno.serve(async(req)=>{
       return json(req,{ok:true,matched:people.length,people});
     }
 
-    const revertMatch=path.match(/^\/admin\/merges\/([0-9a-f-]{36})\/revert$/i);
-    if(req.method==="POST"&&revertMatch){
-      // Platform administrators can undo an owner-executed account merge. The DB function
-      // restores exactly the identities recorded at execution and audits both Persons.
-      if(!await platformAdmin(auth.user.id))return json(req,{error:"platform_admin_required"},403);
-      const {data,error}=await admin.rpc("person_merge_revert",{p_request:revertMatch[1].toLowerCase(),p_actor:auth.user.id});
-      if(error)throw error;
-      if(data?.ok!==true)return json(req,{error:String(data?.error||"merge_revert_failed")},409);
-      return json(req,{ok:true,restored:data.restored});
-    }
+    // Do not retain the old mutation route: it lacked a recent Google step-up
+    // and a mandatory reason. Only identity-api /admin/merge-requests/:id/revert
+    // can perform this action after the hardened administrator checks.
+    if(req.method==="POST"&&/^\/admin\/merges\/[0-9a-f-]{36}\/revert$/i.test(path))
+      return json(req,{error:"use_identity_api_with_step_up"},410);
 
     if(req.method==="GET"&&path==="/platform-authority"){
       return json(req,{ok:true,platformAdmin:await platformAdmin(auth.user.id)});

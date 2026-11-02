@@ -44,9 +44,11 @@ test('APIs: owner executes via identity-api; only a verified-Google platform adm
   assert.match(exec,/const row=await ownMergeRequest\(userId,id\)/);
   assert.match(exec,/admin\.rpc\("person_merge_execute",\{p_request:row\.id,p_actor:userId\}\)/);
   const access=await read('supabase/functions/access-api/index.ts');
-  const revert=access.slice(access.indexOf('const revertMatch'),access.indexOf('path==="/platform-authority"'));
-  assert.match(revert,/if\(!await platformAdmin\(auth\.user\.id\)\)return json\(req,\{error:"platform_admin_required"\},403\)/);
-  assert.match(revert,/admin\.rpc\("person_merge_revert"/);
+  assert.match(access,/use_identity_api_with_step_up/);
+  const hardened=await read('supabase/functions/identity-api/admin-persons.ts');
+  assert.match(hardened,/if\(!scope\.platform\)return json\(req,\{error:"platform_admin_required"\},403\)/);
+  assert.match(hardened,/admin_person_merge_revert/);
+  assert.match(hardened,/freshGoogle\(req,userId,scope\.personId\)/);
 });
 
 test('screens: owner decides in the auth hub, admin reverts from /admin/people, text only',async()=>{
@@ -57,7 +59,8 @@ test('screens: owner decides in the auth hub, admin reverts from /admin/people, 
   assert.match(ui,/confirm\(/);
   assert.doesNotMatch(ui,/innerHTML/);
   const js=await personAuthorityScript().text();
-  assert.match(js,/'\/admin\/merges\/'\+encodeURIComponent\(m\.id\)\+'\/revert','POST'/);
+  assert.match(js,/\/admin\/#member-login-methods/);
+  assert.doesNotMatch(js,/call\('\/admin\/merges\/'/);
   assert.doesNotMatch(js,/innerHTML/);
   assert.match(await read('auth-site/auth-router.js'),/federated-login\.js\?v=20261102-merge-policy-1/);
 });
