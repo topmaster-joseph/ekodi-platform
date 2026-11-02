@@ -609,19 +609,35 @@ function orderClient() {
   // ---- session (Google-verified central EKODI account) ----
   function read(store, key) { try { return JSON.parse(store.getItem(key) || 'null'); } catch { return null; } }
   function normalize(d, c = {}) { return { accessToken: d.access_token || d.accessToken || '', refreshToken: d.refresh_token || d.refreshToken || c.refreshToken || '', expiresAt: Number(d.expires_at || d.expiresAt || 0) || Math.floor(Date.now() / 1000) + Number(d.expires_in || 3600) }; }
-  function save(v) { try { localStorage.setItem(BUYER_KEY, JSON.stringify(v)); localStorage.removeItem(SIGNED_OUT_KEY); sessionStorage.removeItem(SIGNED_OUT_KEY); } catch {} }
+  function clearSignedOut() { try { localStorage.removeItem(SIGNED_OUT_KEY); sessionStorage.removeItem(SIGNED_OUT_KEY); } catch {} }
+  function save(v) { try { localStorage.setItem(BUYER_KEY, JSON.stringify(v)); clearSignedOut(); } catch {} }
   function forget() { try { localStorage.removeItem(BUYER_KEY); localStorage.setItem(SIGNED_OUT_KEY, '1'); sessionStorage.setItem(SIGNED_OUT_KEY, '1'); } catch {} }
-  function stored() {
-    // Respect an explicit QTIN logout even when the shared EKODI session still exists.
-    if (read(localStorage, SIGNED_OUT_KEY) || read(sessionStorage, SIGNED_OUT_KEY)) return null;
-    const own = read(localStorage, BUYER_KEY);
-    if (own?.accessToken) return own;
-    // Reuse an existing EKODI sign-in on this origin; the server re-verifies every request.
-    const admin = read(sessionStorage, 'ekodi-qtin-admin-session');
-    if (admin?.accessToken) return admin;
-    const central = read(localStorage, CENTRAL_KEY);
-    const s = central?.currentSession || central?.session || central;
+  function centralStored() {
+    const storedValue = read(localStorage, CENTRAL_KEY);
+    const s = storedValue?.currentSession || storedValue?.session || storedValue;
     return s?.access_token ? normalize(s) : null;
+  }
+  function saveCentralSession(v) {
+    try {
+      const value = read(localStorage, CENTRAL_KEY) || {};
+      const session = { access_token: v.accessToken, refresh_token: v.refreshToken, expires_at: v.expiresAt };
+      if (value?.currentSession) localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...value, currentSession: { ...value.currentSession, ...session } }));
+      else if (value?.session) localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...value, session: { ...value.session, ...session } }));
+      else localStorage.setItem(CENTRAL_KEY, JSON.stringify({ ...value, ...session }));
+      localStorage.removeItem(BUYER_KEY);
+      clearSignedOut();
+    } catch {}
+  }
+  function stored() {
+    // Explicit QTIN logout remains local until the user deliberately signs in again.
+    if (read(localStorage, SIGNED_OUT_KEY) || read(sessionStorage, SIGNED_OUT_KEY)) return null;
+    // A previous QTIN / site-admin login must not mask the current unified identity.
+    const central = centralStored();
+    if (central?.accessToken) return { ...central, source: 'central' };
+    const admin = read(sessionStorage, 'ekodi-qtin-admin-session');
+    if (admin?.accessToken) return { ...admin, source: 'admin' };
+    const own = read(localStorage, BUYER_KEY);
+    return own?.accessToken ? { ...own, source: 'legacy' } : null;
   }
   async function bounded(url, options = {}) {
     const controller = new AbortController();
@@ -640,14 +656,30 @@ function orderClient() {
     let v = stored();
     if (!v?.accessToken) return null;
     if (!v.expiresAt || v.expiresAt > Math.floor(Date.now() / 1000) + 60) return v;
-    if (!v.refreshToken) { forget(); return null; }
-    try { v = normalize(await post(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, { refresh_token: v.refreshToken }), v); save(v); return v; }
-    catch { forget(); return null; }
+    if (!v.refreshToken) { if (v.source === 'central') return null; forget(); return null; }
+    try {
+      const refreshed = normalize(await post(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, { refresh_token: v.refreshToken }), v);
+      if (v.source === 'central') saveCentralSession(refreshed);
+      else if (v.source === 'admin') {
+        try { sessionStorage.setItem('ekodi-qtin-admin-session', JSON.stringify(refreshed)); } catch {}
+      } else save(refreshed);
+      return { ...refreshed, source: v.source };
+    } catch (error) {
+      // Never fall back to a different historical identity on refresh failure.
+      // A transient network outage must not destroy the central EKODI session.
+      if (v.source === 'central') {
+        if (/^(invalid_grant|refresh_token_not_found|invalid_refresh_token|bad_jwt)$/.test(String(error.code || ''))) {
+          try { localStorage.removeItem(CENTRAL_KEY); localStorage.removeItem(BUYER_KEY); } catch {}
+        }
+        return null;
+      }
+      forget(); return null;
+    }
   }
   async function api(path) {
     const r = await bounded('/qtin/api' + path, { headers: { authorization: 'Bearer ' + session.accessToken }, cache: 'no-store' });
     const d = await r.json().catch(() => ({}));
-    if (r.status === 401) { forget(); session = null; showSignedOut(); throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.'); }
+    if (r.status === 401) { if (session?.source === 'central') { try { localStorage.removeItem(CENTRAL_KEY); } catch {} } forget(); session = null; showSignedOut(); throw new Error('로그인이 만료되었습니다. 다시 로그인해 주세요.'); }
     if (!r.ok) throw new Error(d.error || '정보를 불러오지 못했습니다.');
     return d;
   }
@@ -685,7 +717,7 @@ function orderClient() {
       const verified = await post(SUPABASE_URL + '/auth/v1/verify', { token_hash: proof.tokenHash, type: 'email' });
       session = normalize(verified);
       if (!session.accessToken) throw new Error('session_not_created');
-      save(session);
+      saveCentralSession(session);
       setStatus('');
       await onSignedIn(true);
     } catch (e) {
