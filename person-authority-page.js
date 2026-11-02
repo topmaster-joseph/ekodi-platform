@@ -119,15 +119,12 @@ export function personAuthorityScript(){
         const row=el('p','',(m.role==='survivor'?'이 ID로 합쳐진 ':'다른 ID로 합쳐진 ')+(PROVIDER[m.provider]||m.provider)+' 계정 · '
           +(m.status==='executed'?'병합 '+fmt(m.executedAt):'되돌림 '+fmt(m.revertedAt)));
         if(m.status==='executed'){
-          const undo=el('button','','되돌리기');undo.type='button';undo.style.marginLeft='10px';
-          undo.addEventListener('click',async()=>{
-            if(!confirm('이 계정 병합을 되돌릴까요? 합쳐졌던 로그인이 원래 계정으로 돌아갑니다.'))return;
-            undo.disabled=true;
-            try{const r=await call('/admin/merges/'+encodeURIComponent(m.id)+'/revert','POST');
-              row.textContent='되돌렸습니다 (로그인 '+r.restored+'개 복원). 다시 조회하면 최신 상태가 보입니다.';}
-            catch(error){undo.disabled=false;show('되돌리기 실패: '+error.message);}
-          });
-          row.append(undo);
+          // Legacy page is read-only. Destructive actions require the hardened central
+          // Admin flow (reason + fresh Google proof); never call the old mutation route.
+          const link=el('a','button','회원 로그인 수단에서 관리');
+          link.href='/admin/#member-login-methods';
+          link.style.marginLeft='10px';
+          row.append(link);
         }
         list.append(row);
       });
