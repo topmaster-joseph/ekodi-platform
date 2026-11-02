@@ -59,3 +59,17 @@
 .fulfillment-logistics-links a{display:inline-flex;align-items:center;min-height:42px;padding:8px 12px;border:1px solid #b8cdc1;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700;color:#173f35;word-break:keep-all}
 .fulfillment-logistics-links a:focus-visible{outline:3px solid #b17c44;outline-offset:2px}
 @media(max-width:540px){.fulfillment-logistics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fulfillment-logistics-grid article:last-child{grid-column:1/-1}}
+
+/* EKODI Logistics phase 2: accessible, task-first seller triage. */
+.fulfillment-logistics-triage{border:1px solid #dae5dc;border-radius:11px;padding:14px;margin-bottom:14px;background:#fff;min-width:0}
+.fulfillment-triage-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.fulfillment-triage-heading h3{margin:0;font-size:16px;line-height:1.4;word-break:keep-all}
+.fulfillment-triage-heading span{font-size:13px;font-weight:700;color:#425b4c;word-break:keep-all}
+.fulfillment-triage-description{font-size:13px;line-height:1.6;color:#526759;margin:7px 0 12px;word-break:keep-all}
+.fulfillment-triage-list{display:grid;gap:8px}
+.fulfillment-triage-item{background:#f8faf8;border:1px solid #e0e8e1;border-radius:9px;padding:11px;min-width:0}
+.fulfillment-triage-item-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.fulfillment-triage-item-head strong{font-size:14px;color:#173f35;word-break:keep-all}
+.fulfillment-triage-item-head span{font-size:12px;color:#66776a;overflow-wrap:anywhere}
+.fulfillment-triage-item p,.fulfillment-triage-empty{font-size:13px;line-height:1.6;color:#425b4c;margin:6px 0 0;word-break:keep-all}
+@media(max-width:390px){.fulfillment-logistics-triage{padding:11px}}
