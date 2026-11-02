@@ -305,7 +305,7 @@ test('upgrade failure reports stage codes and rolls back Agent, task and protoco
 test('Device Control activation stays synchronized with the canonical Admin panel controller', () => {
   assert.match(admin, /const panels = window\.EKODIAdminPanels/);
   assert.match(admin, /panels\?\.activate/);
-  assert.match(admin, /panels\.activate\(autologonRoute\(\) \? 'device-autologon' : 'devices'\)/);
+  assert.match(admin, /panels\.activate\('devices'\)/);
 });
 
 test('admin Device Control is lazy-loaded from authenticated production assets', () => {
