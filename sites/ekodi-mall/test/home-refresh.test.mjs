@@ -139,5 +139,5 @@ test('mall footer uses existing shared shell deduplication rather than a second 
   const shell = readFileSync(new URL('../../../ekodi-shell-injector.js', import.meta.url), 'utf8');
   assert.match(shell, /SHARED_FOOTER_REPLACES_LOCAL_FOOTER_SERVICES=new Set\(\['mall'\]\)/);
   assert.match(shell, /if\(sharedFooterReplacesLocalFooter\(this.serviceId\)\)\{element.remove\(\);return;\}/);
-  assert.doesNotMatch(template, /<footer[\\s>]/i);
+  assert.doesNotMatch(template, /<footer\b/i);
 });
