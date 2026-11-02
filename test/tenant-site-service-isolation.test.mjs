@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const script=readFileSync(new URL('../supabase/tests/tenant_site_service_isolation_live_probe.sql',import.meta.url),'utf8');
+const script=readFileSync(new URL('../scripts/sql/tenant_site_service_isolation_live_probe.sql',import.meta.url),'utf8');
 const workflow=readFileSync(new URL('../.github/workflows/supabase-local-ci.yml',import.meta.url),'utf8');
 
 test('synthetic tenant RPC regression has an unconditional rollback and no real identities',()=>{
@@ -24,6 +24,6 @@ test('synthetic tenant RPC regression has an unconditional rollback and no real 
 test('local Supabase gate runs transaction test on ephemeral Postgres only',()=>{
   assert.match(workflow,/Verify synthetic site-service tenant isolation \(full rollback\)/);
   assert.match(workflow,/docker exec -i "\$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1/);
-  assert.match(workflow,/supabase\/tests\/tenant_site_service_isolation_live_probe\.sql/);
+  assert.match(workflow,/scripts\/sql\/tenant_site_service_isolation_live_probe\.sql/);
   assert.match(workflow,/needs_db == 'true'/);
 });
