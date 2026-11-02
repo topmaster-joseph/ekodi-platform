@@ -224,7 +224,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   }
   async function siteServiceSettings(){
     $('summaryCards').replaceChildren();
-    renderTenantServiceAdmin($('mainPanel'),{items:siteServiceSnapshot?.items||[],error:siteServiceError,
+    renderTenantServiceAdmin($('mainPanel'),{items:(siteServiceSnapshot?.items||[]).map(item=>({...item,menuGroup:dedicatedSections().has(item.key)?'site':'common'})),error:siteServiceError,
       onToggle:async(item,next)=>{try{
         siteServiceSnapshot=await siteServiceApi('tenant_site_service_preference_set',{
           p_tenant_id:workspaceContext.tenantId,p_service_key:item.key,p_menu_visible:next});
