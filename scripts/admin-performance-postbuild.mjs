@@ -121,6 +121,11 @@ await writeFile(compactCssPath, compactCss);
 const compactJsPath = `${dist}admin-compact.js`;
 const compactJsSource = (await readFile(compactJsPath, 'utf8')).replace(/^[ \t]+/gm, '');
 await writeFile(compactJsPath, compactJsSource);
+// Preserve CSS semantics while removing redundant CRLF bytes before fingerprinting
+// and applying the pre-auth first-path budget.
+const compactCssOutputPath = `${dist}admin-compact.css`;
+const compactCssOutputSource = await readFile(compactCssOutputPath, 'utf8');
+await writeFile(compactCssOutputPath, compactCssOutputSource.replace(/\r\n/g, '\n'));
 
 // Keep the readable menu source in Git and ship a deterministic compact derivative.
 // The source hash makes stale generated runtime fail closed whenever the readable source changes.
