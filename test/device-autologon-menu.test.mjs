@@ -60,7 +60,7 @@ test('remote command opens local Microsoft UI only, not an automatic configurati
   assert.match(panel, /설정 완료 여부와는 별개/);
   assert.doesNotMatch(panel, /DefaultPassword|password:|input type="password"|localStorage|sessionStorage/);
   assert.match(admin, /'autologon\.open': '자동로그인 암호는 클라우드에서 받지 않습니다/);
-  assert.match(server, /'autologon\.open': \{ risk: 'maintain', confirm: true \}/);
+  assert.match(server, /'autologon\.open': \{ risk: 'privileged', confirm: true \}/);
   assert.match(agent, /function Open-AutologonManager/);
   assert.match(agent, /download\.sysinternals\.com\/files\/AutoLogon\.zip/);
   assert.match(agent, /Start-Process -FilePath \$binary/);
