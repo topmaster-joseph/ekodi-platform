@@ -1361,7 +1361,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     frame.title=meta[key]?.[0]||'청계면상인회 관리자';
     frame.referrerPolicy='no-referrer';
     frame.loading='eager';
-    frame.style.cssText='display:block;width:100%;height:1100px;max-width:100%;border:0;border-radius:10px;background:white';
+    frame.style.cssText='display:block;width:100%;height:70vh;min-height:360px;max-width:100%;border:0;border-radius:10px;background:white';
     frame.src=new URL('/cgma/operations-admin/?inline=1&section='+encodeURIComponent(panel),location.origin).href;
     // An unmerged Pages alias must not render an unrelated public page in an admin frame.
     try{
