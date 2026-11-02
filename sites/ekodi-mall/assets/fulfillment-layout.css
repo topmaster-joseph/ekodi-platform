@@ -46,3 +46,16 @@
 .fulfillment-policy-text p{font-size:13px;line-height:1.8;margin:0 0 13px;color:#435e4d}
 @media(max-width:850px){.fulfillment-heading{align-items:flex-start;flex-direction:column}.fulfillment-actions{justify-content:flex-start}}
 @media(max-width:540px){.fulfillment-main{padding:15px 12px 50px}.fulfillment-heading{gap:10px}.fulfillment-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.fulfillment-summary article{padding:10px 12px}.fulfillment-panel{padding:14px}.fulfillment-panel-header{align-items:flex-start;flex-direction:column}.fulfillment-stage-grid{grid-template-columns:1fr}.fulfillment-tabs button{font-size:12px;padding:10px 15px}.fulfillment-member-bar{align-items:flex-start;flex-direction:column;gap:5px}}
+
+/* Read-only logistics capability projection; reflow without hard-breaking Korean words. */
+.fulfillment-logistics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,175px),1fr));gap:10px;margin-bottom:14px}
+.fulfillment-logistics-grid article{background:#fafcfb;border:1px solid #e0e8e1;border-radius:11px;padding:13px;min-width:0}
+.fulfillment-logistics-grid small{display:block;color:#516958;font-size:12px;line-height:1.5;word-break:keep-all}
+.fulfillment-logistics-grid strong{display:block;margin-top:6px;color:#173f35;font-size:21px;overflow-wrap:break-word;word-break:keep-all}
+.fulfillment-logistics-note{border:1px solid #dce5de;border-radius:11px;padding:14px;background:#f7faf8}
+.fulfillment-logistics-note h3{font-size:15px;margin:0 0 7px}
+.fulfillment-logistics-note p{font-size:13px;line-height:1.65;color:#425b4c;word-break:keep-all;margin:0 0 7px}
+.fulfillment-logistics-links{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.fulfillment-logistics-links a{display:inline-flex;align-items:center;min-height:42px;padding:8px 12px;border:1px solid #b8cdc1;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700;color:#173f35;word-break:keep-all}
+.fulfillment-logistics-links a:focus-visible{outline:3px solid #b17c44;outline-offset:2px}
+@media(max-width:540px){.fulfillment-logistics-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fulfillment-logistics-grid article:last-child{grid-column:1/-1}}
