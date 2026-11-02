@@ -60,20 +60,18 @@ export function mountChurchAdminNavigation({root,tabsRoot,groups,activeKey,activ
   const visible = groups.map(group=>({...group,tabs:group.tabs.filter(canView)})).filter(group=>group.tabs.length);
   const href = tab=>base+'/'+tab.key;
   const activeGroup=visible.find(group=>group.tabs.some(tab=>tab.key===activeKey&&tab.owner===activeOwner));
-  for(const [scope,label] of [['common','공통메뉴'],['dedicated','전용메뉴']]){
-    const scoped=visible.filter(group=>group.scope===scope);
-    if(!scoped.length)continue;
-    const heading=document.createElement('span');heading.className='church-admin-nav-heading';heading.textContent=label;
-    root.append(heading);
-    for(const group of scoped){
-      const link=document.createElement('a');
-      const selected=group===activeGroup;
-      const first=selected?group.tabs.find(tab=>tab.key===activeKey&&tab.owner===activeOwner):group.tabs[0];
-      link.href=href(first);link.textContent=group.label;
-      link.dataset.adminNavGroup=group.id;
-      if(selected){link.classList.add('active');link.setAttribute('aria-current','location');}
-      root.append(link);
-    }
+  // Present one task menu. The original common/dedicated scopes remain registry metadata.
+  const settings=visible.find(group=>group.id==='services');
+  const groupsInOrder=[...(settings?[settings]:[]),...visible.filter(group=>group.id!=='services')];
+  for(const group of groupsInOrder){
+    const link=document.createElement('a');
+    const selected=group===activeGroup;
+    const first=selected?group.tabs.find(tab=>tab.key===activeKey&&tab.owner===activeOwner):group.tabs[0];
+    link.href=href(first);link.textContent=group.label;
+    link.dataset.adminNavGroup=group.id;
+    if(group.id==='services')link.classList.add('admin-nav-service-settings');
+    if(selected){link.classList.add('active');link.setAttribute('aria-current','location');}
+    root.append(link);
   }
   if(activeGroup&&activeGroup.tabs.length>1){
     tabsRoot.hidden=false;
