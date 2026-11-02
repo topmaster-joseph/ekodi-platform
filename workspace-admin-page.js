@@ -297,6 +297,8 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
         canView:tab=>{
           if(!role)return tab.owner==='church'&&tab.key==='overview';
           if(role==='worship_admin')return tab.owner==='church'&&tab.key==='worship';
+          // A site setting controls menu visibility only; it never changes server permissions.
+          if(tab.owner==='workspace'&&tab.key!=='services'&&!serviceMenuVisible(tab.key))return false;
           const capability=POLICY.capabilities[tab.capability];
           return Boolean(capability&&(permitted.includes('*')||permitted.includes(capability)));
         }
