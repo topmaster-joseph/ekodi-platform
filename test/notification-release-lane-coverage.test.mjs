@@ -37,3 +37,14 @@ test('notification server changes dispatch canonical Control API',async()=>{
   assert.match(api,/from '\.\/notification-control\.js'/);
   assert.match(converger,/if\(controlApiTouched\)[\s\S]*?deploy-control-api\.yml\/dispatches/);
 });
+
+test('immediate recovery merge uses exactly the same notification release owners',async()=>{
+  const recovery=await read('scripts/recover-release-provenance.mjs');
+  const shared=recovery.slice(recovery.indexOf('const sharedSiteTouched='),recovery.indexOf('const shellRuntimeTouched='));
+  assert.match(shared,/file\.startsWith\('notifications\/'\)/);
+  const api=recovery.slice(recovery.indexOf('const controlApiTouched='),recovery.indexOf('const sharedSiteTouched='));
+  for(const file of ['notification-control.js','notification-webpush.js'])
+    assert.ok(api.includes("'"+file+"'"),'immediate Control API release missed '+file);
+  assert.match(recovery,/if\(sharedSiteTouched\)[\s\S]*?deploy-site-core\.yml\/dispatches/);
+  assert.match(recovery,/if\(controlApiTouched\)[\s\S]*?deploy-control-api\.yml\/dispatches/);
+});
