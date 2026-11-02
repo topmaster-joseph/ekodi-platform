@@ -1,4 +1,5 @@
 import { sourceExecution } from './sourcing.js';
+import { buildSellerLogisticsOverview } from './logistics-overview.js';
 
 const FULFILLMENT_TRANSITIONS = Object.freeze({
   awaiting_pii: new Set(['ready_to_forward','cancel_requested','failed']),
@@ -454,9 +455,13 @@ export async function handleFulfillmentRequest(request, env) {
   const user = await authenticate(request,env);
   if (!user) return { status: 401, body: { error: 'Google 판매자 로그인이 필요합니다.' } };
   if (request.method === 'GET' && path === '/api/fulfillment/orders') {
+    // Seller-scoped read-only projection: never query cross-tenant data.
+    const fulfillments = await listSellerFulfillments(env,user.id);
+    const gates = { buyerPiiReleaseEnabled: enabled(env.BUYER_PII_RELEASE_ENABLED), supplierForwardEnabled: enabled(env.SUPPLIER_FORWARD_ENABLED), supplierPayoutExecutionEnabled: false, refundExecutionEnabled: false };
     return { status: 200, body: {
-      fulfillments: await listSellerFulfillments(env,user.id),
-      gates: { buyerPiiReleaseEnabled: enabled(env.BUYER_PII_RELEASE_ENABLED), supplierForwardEnabled: enabled(env.SUPPLIER_FORWARD_ENABLED), supplierPayoutExecutionEnabled: false, refundExecutionEnabled: false }
+      fulfillments,
+      gates,
+      logisticsOverview: buildSellerLogisticsOverview(fulfillments, gates)
     } };
   }
   const detail = path.match(/^\/api\/fulfillment\/(ful_[a-f0-9]{32})$/i);
