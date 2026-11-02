@@ -279,7 +279,8 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     // Service configuration is a common site-local operation, never a third sidebar bucket.
     if(role&&canSection('services',role)&&!seen.has('services'))common.push(['services','서비스 구성·사용 설정']);
     const buckets=[{id:'common',label:'공통 메뉴',items:common},{id:'site',label:'전용 메뉴',items:site}].filter(bucket=>bucket.items.length);
-    return buckets;
+    // CGMA retains its established dedicated-first workflow; no duplicate service bucket.
+    return workspace==='cgma'?[...buckets].reverse():buckets;
   }
   function renderNav(role=workspaceRole){
     const h=$('adminNav');h.replaceChildren();document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile(role);
