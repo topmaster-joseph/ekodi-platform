@@ -35,7 +35,7 @@ test('category tabs show products without the home hero and persist on reload', 
   assert.match(css, /body\\[data-mall-view="recommend"\\] main#main > :not\\(#recommend\\)/);
   assert.doesNotMatch(js, /mallNavProductsGrid|cloneNode\\(true\\)/);
   assert.match(template, /id="mallRecommendSearchForm"/);
-  assert.match(template, /<a href="#top">홈<\\/a>/);
+  assert.ok(template.includes('<a href="#top">홈</a>'));
 });
 
 test('buyer-facing payment copy matches the approved direct-sale-only production scope', () => {
