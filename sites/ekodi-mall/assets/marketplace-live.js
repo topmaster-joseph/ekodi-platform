@@ -18,7 +18,7 @@
     article.dataset.serverProduct = item.shareCode;
     article.dataset.category = category(p.category);
     article.dataset.name = text(p.name) || '상품';
-    article.dataset.status = '공개';
+    article.dataset.status = item.checkoutReady ? '판매 중' : '상품 준비중';
     article.dataset.href = href;
     article.dataset.regionIds = regionIds(region).join(',');
     article.dataset.primaryRegion = text(region?.primaryRegionId);
@@ -32,16 +32,16 @@
     const thumbLink = node('a', 'thumb-link'); thumbLink.href = href; thumbLink.setAttribute('aria-label', `${article.dataset.name} 자세히 보기`);
     if (/^https:\/\//.test(text(item.image))) { const img = node('img'); img.src = item.image; img.alt = article.dataset.name; img.loading = 'lazy'; img.decoding = 'async'; thumbLink.append(img); thumb.classList.add('has-image'); }
     thumb.append(thumbLink);
-    thumb.append(node('span', 'badge', store ? 'STORE PRODUCT' : 'PERSONAL PRODUCT'));
+    thumb.append(node('span', 'badge', item.checkoutReady ? '판매 중' : '상품 준비중'));
     const heart = node('button', 'heart', '♡'); heart.type = 'button'; heart.dataset.wish = id; heart.setAttribute('aria-label', `${article.dataset.name} 관심상품`); heart.setAttribute('aria-pressed', 'false'); thumb.append(heart);
 
     const body = node('div', 'card-body');
-    body.append(node('p', 'store-kicker', store ? `${store.name} · ${seller.displayName}` : `개인상품 · ${seller.displayName || '판매자'}`));
+    body.append(node('p', 'store-kicker', store ? `${store.name} · ${seller.displayName}` : seller.displayName === '에코디몰' ? '에코디몰 추천상품' : `판매자 · ${seller.displayName || '판매자'}`));
     const h3 = node('h3'); const title = node('a', '', article.dataset.name); title.href = href; h3.append(title); body.append(h3);
     const summary = text(p.oneLine) || text(p.audience) || '판매자가 등록한 공개 상품입니다.';
     body.append(node('p', 'card-summary', summary.length > 46 ? `${summary.slice(0, 45).trimEnd()}…` : summary));
     if (region?.label) body.append(node('p', 'region-chip', `지역 · ${text(region.label)}${region.verified ? ' · 확인됨' : ''}`));
-    const meta = node('div', 'meta'); meta.append(node('span', 'status', `${price(p.price)} · Mall 8%`));
+    const meta = node('div', 'meta'); meta.append(node('span', 'status', item.checkoutReady ? `${price(p.price)} · 판매 중` : `${price(p.price)} · 상품 준비중`));
     const detail = node('a', 'smallbtn', '자세히'); detail.href = href; meta.append(detail); body.append(meta);
     article.append(thumb, body);
     return article;
@@ -49,7 +49,7 @@
 
   async function load() {
     try {
-      const response = await fetch(`${API}/api/public/products?limit=24`, { headers: { accept: 'application/json' } });
+      const response = await fetch(`${API}/api/public/products?limit=240`, { headers: { accept: 'application/json' } });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
       const items = Array.isArray(body.products) ? body.products : [];
