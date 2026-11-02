@@ -73,17 +73,20 @@
                          {
                              "path":  "church-i18n.js",
                              "mode":  "100644",
-                             "blobSha":  "54149806b9b61f594b64ef1ef66638185d4f816a"
+                             "blobSha":  "54149806b9b61f594b64ef1ef66638185d4f816a",
+                             "normalizedBlobSha":  "ba24609ee1e79f8b55850c1924bf21b2a3978d53"
                          },
                          {
                              "path":  "church-i18n-extended.js",
                              "mode":  "100644",
-                             "blobSha":  "0a3085306483d0cd0fb5a69a294415aee54957dd"
+                             "blobSha":  "0a3085306483d0cd0fb5a69a294415aee54957dd",
+                             "normalizedBlobSha":  "0cd8a6134c8a0633fa0683a20f4ec848e0028a1c"
                          },
                          {
                              "path":  "church-i18n-payment-patch.js",
                              "mode":  "100644",
-                             "blobSha":  "8b59250316980c1bc19b67440d5e43602cd0611d"
+                             "blobSha":  "8b59250316980c1bc19b67440d5e43602cd0611d",
+                             "normalizedBlobSha":  "c6464688670f6d573e68527eb8d8f1485126623c"
                          },
                          {
                              "path":  "church-inline-live.css",
@@ -194,7 +197,8 @@
                          {
                              "path":  "index.html",
                              "mode":  "100644",
-                             "blobSha":  "7683f8859aae85283bc65f52223a41ebbc08db60"
+                             "blobSha":  "7683f8859aae85283bc65f52223a41ebbc08db60",
+                             "normalizedBlobSha":  "60c9debfb520df3d16510b65e8ddc8b92317f39e"
                          },
                          {
                              "path":  "live/host-intent.js",
@@ -355,7 +359,7 @@
                              "path":  "script.js",
                              "mode":  "100644",
                              "blobSha":  "a00b52f289097f5e32bad2ba115979dc1319b964",
-                             "normalizedBlobSha":  "5d6667819d91ec60b687f6b63aaa77e7f0a5a079"
+                             "normalizedBlobSha":  "3dc8d1a99f335a87ba01420164264e8daecb4623"
                          },
                          {
                              "path":  "styles.css",
@@ -613,12 +617,14 @@
                          {
                              "path":  "test/giving-contract.test.mjs",
                              "mode":  "100644",
-                             "blobSha":  "eb1d0e775f20503ec441f7484070d01d22826bcb"
+                             "blobSha":  "eb1d0e775f20503ec441f7484070d01d22826bcb",
+                             "normalizedBlobSha":  "a7bd960009b1b500cc607ca883ee16bb1bb44150"
                          },
                          {
                              "path":  "test/giving-nine-language-i18n.test.mjs",
                              "mode":  "100644",
-                             "blobSha":  "b7e3e2861ab861ef31c8207fb234f85093d401a6"
+                             "blobSha":  "b7e3e2861ab861ef31c8207fb234f85093d401a6",
+                             "normalizedBlobSha":  "64eed88dc062d695fe035499818f4b64c57cdfb0"
                          },
                          {
                              "path":  "test/homepage-i18n-coverage.test.mjs",
@@ -1070,11 +1076,17 @@
     "nestedWorkflowFilesInert":  false,
     "canonicalizedPaths":  [
                                "_headers",
+                               "church-i18n.js",
+                               "church-i18n-extended.js",
+                               "church-i18n-payment-patch.js",
                                "church-online-status.js",
+                               "index.html",
                                "script.js",
                                "test/church-csp-supabase-connect.test.mjs",
                                "test/church-live-system-verification.test.mjs",
                                "test/church-shell-login-live-integration.test.mjs",
+                               "test/giving-contract.test.mjs",
+                               "test/giving-nine-language-i18n.test.mjs",
                                "test/partner-news.test.mjs"
                            ],
     "upstreamTreeContainsExcludedWorkflows":  true

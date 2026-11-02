@@ -2,7 +2,7 @@
 
 This is a NON-DEPLOYED staged import of upstream repository topmaster-joseph/ekodi-church at source commit 520d4f2daf7e5e4dc53bf928c9df626b5f896600.
 
-The upstream commit contained 216 Git-tracked files. Eight historical .github/workflows files are excluded from the module because their old host references and write workflows are inappropriate for canonical EKODI. The other 208 files are retained, with five minimal path and test wiring adjustments to obey canonical apex URLs and preserve centralized authentication and protected releases.
+The upstream commit contained 216 Git-tracked files. Eight historical .github/workflows files are excluded from the module because their old host references and write workflows are inappropriate for canonical EKODI. The other 208 files are retained, with thirteen canonical URL, display-name, CSP and test wiring adjustments to obey canonical apex URLs and preserve centralized authentication and protected releases.
 
 See source-import-manifest.json: each file stores its original Git blob SHA; the five changed files also store normalizedBlobSha. This ensures that the exact upstream history remains provable without publishing obsolete subdomain URLs into a new operational source tree. Original full-history Git bundles are stored independently on authorized user2 and user3 devices, with ref-level restore tests.
 

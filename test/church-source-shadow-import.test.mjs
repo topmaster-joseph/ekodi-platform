@@ -31,6 +31,7 @@ test('Church shadow import has explicit non-production provenance and exact file
   assert.equal(manifest.importedTrackedFileCount, 208);
   assert.equal(manifest.excludedWorkflows.length, 8);
   assert.equal(manifest.nestedWorkflowFilesInert, false);
+  assert.equal(manifest.canonicalizedPaths.length, 13);
   const expected = new Set(manifest.trackedFiles.map(item => item.path));
   assert.equal(expected.size, 208, 'duplicate manifest entries');
   assert.ok([...expected].every(p => !p.includes('..') && !p.startsWith('/') ));
