@@ -1,8 +1,10 @@
 import { readFile } from 'node:fs/promises';
+import { auditSourceDeploymentBoundaries } from './audit-site-source-release-boundaries.mjs';
 const readJson=async path=>JSON.parse((await readFile(new URL(`../${path}`,import.meta.url),'utf8')).replace(/^\uFEFF/,''));
-const [registry,platformTruth]=await Promise.all([
+const [registry,platformTruth,boundaries]=await Promise.all([
   readJson('config/repository-source-of-truth.json'),
   readJson('config/platform-source-of-truth.json'),
+  readJson('platform-boundaries.json'),
 ]);
 const failures=[];
 const fail=message=>failures.push(message);
@@ -23,9 +25,13 @@ if(!names.has(registry.canonicalPlatformRepository)) fail('canonical repository 
 if(registry.rules?.duplicateImplementationRequiresCrossRepositoryReview!==true) fail('duplicate implementations must require cross-repository review');
 if(platformTruth.currentFacts?.canonicalWebRoot!=='https://ekodi.kr') fail('platform source-of-truth canonical web root drift');
 if(!(platformTruth.authorityPrecedence||[]).some(item=>item.path==='platform-route-registry.js')) fail('runtime route registry must remain in source-of-truth precedence');
+const releaseAudit=auditSourceDeploymentBoundaries(boundaries,registry);
+for(const error of releaseAudit.errors) fail('source/release topology: '+error);
 if(failures.length){
   console.error(`Repository source-of-truth validation failed (${failures.length})`);
   failures.forEach(item=>console.error(`- ${item}`));
   process.exit(1);
 }
 console.log(`Repository source-of-truth OK: ${entries.length} registered repositories, one canonical platform repository`);
+
+console.log('Source/release inventory: '+releaseAudit.registeredReleaseBoundaries+' declared units, '+releaseAudit.distinctDeploymentWorkflows+' deploy workflows; '+releaseAudit.registeredSatelliteRepositories.length+' registered satellites pending independent migration review. Tenant/workspace coverage is not asserted.');
