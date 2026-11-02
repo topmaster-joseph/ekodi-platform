@@ -228,3 +228,26 @@
 .books-library-page .library-voice-access a{display:inline-flex;min-height:44px;align-items:center;padding:10px 16px;color:white;background:var(--navy);text-decoration:none;font:600 .83rem Arial,"Malgun Gothic",sans-serif;border-radius:4px}
 .books-library-page .library-voice-access a[hidden]{display:none}
 @media(max-width:700px){.books-library-page .library-voice-access{padding:15px}}
+
+/* BOOKS-BUY-TABS-20261102: centered chrome, accessible cover and information tabs */
+.books-buy-page .ekc-shell,.books-buy-page .buy-page .shell{width:min(calc(100% - 36px),1120px);max-width:1120px;margin-left:auto;margin-right:auto}
+.books-buy-page .buy-hero{padding:28px 0 24px}
+.books-buy-page .buy-grid{grid-template-columns:minmax(190px,275px) minmax(0,1fr) minmax(270px,320px);gap:28px}
+.books-buy-page .buy-cover-wrap{min-width:0}
+.books-buy-page .buy-cover{position:static;display:block}
+.books-buy-page .buy-cover-button{display:block;width:100%;border:0;background:transparent;padding:0;cursor:pointer;text-align:left}
+.books-buy-page .buy-cover-button:focus-visible,.books-buy-page .buy-tab:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.books-buy-page .buy-cover-hint{text-align:center;color:var(--muted);font-size:.79rem;margin:12px 0 0;line-height:1.5}
+.books-buy-page .buy-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:22px;border:1px solid #dcd2c0;border-radius:6px 6px 0 0;overflow:hidden}
+.books-buy-page .buy-tab{min-height:46px;cursor:pointer;border:0;border-right:1px solid #dcd2c0;background:#f8f5ef;color:var(--navy);font:600 .88rem Arial,sans-serif}
+.books-buy-page .buy-tab:last-child{border-right:0}
+.books-buy-page .buy-tab[aria-selected=true]{background:var(--navy);color:white}
+.books-buy-page .buy-tab-panel{border:1px solid #dcd2c0;border-top:0;border-radius:0 0 6px 6px;padding:20px;min-height:155px;line-height:1.8;color:#29374e;background:#fffdf8}
+.books-buy-page .buy-tab-panel p{margin:0;white-space:normal}
+.books-buy-page .buy-tab-panel ol{margin:0;padding-left:23px}
+.books-buy-page .buy-tab-panel li{margin:0 0 6px}
+.books-buy-page .buy-benefit-short{font-size:.81rem;color:var(--muted);margin:12px 0 0;line-height:1.6}
+.books-buy-page .buy-card{padding:22px 20px}
+.books-buy-page .buy-card #audiobookBonusNote,.books-buy-page .buy-card #languageEditionNote{min-height:0;margin:7px 0;font-size:.79rem;line-height:1.5}
+@media(max-width:1050px){.books-buy-page .buy-grid{grid-template-columns:minmax(180px,230px) minmax(0,1fr)}.books-buy-page .buy-card{grid-column:1/-1;position:static}}
+@media(max-width:700px){.books-buy-page .ekc-shell,.books-buy-page .buy-page .shell{width:min(calc(100% - 24px),1120px)}.books-buy-page .buy-grid{display:flex;flex-direction:column;gap:18px}.books-buy-page .buy-cover-wrap{width:min(55vw,220px);margin:auto;order:1}.books-buy-page .buy-info{order:2;width:100%}.books-buy-page .buy-card{order:3;width:100%}.books-buy-page .buy-tab-panel{padding:15px;min-height:130px}}
