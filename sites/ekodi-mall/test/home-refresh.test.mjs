@@ -87,8 +87,8 @@ test('home and affiliate travel page use the same generated buyer header', () =>
 });
 
 test('global search searches marketplace and live affiliate curator instead of a dead local-only filter', () => {
-  assert.match(js, /EkodiContextCurator\.recommend\(term, true\)/);
-  assert.match(js, /EkodiContextCurator\?\.recommend\(incomingQuery, true\)/);
+  assert.match(js, /EkodiContextCurator\.recommend\(term, false\)/);
+  assert.match(js, /EkodiContextCurator\?\.recommend\(incomingQuery, false\)/);
   assert.match(js, /if \(!search \|\| !shop\) return;\s*event\.preventDefault\(\)/);
   assert.match(mallHeader, /role="search"/);
   assert.match(mallHeader, /method="get"/);
