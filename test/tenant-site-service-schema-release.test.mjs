@@ -9,7 +9,7 @@ const workflow=path('.github/workflows/deploy-tenant-site-service-schema.yml');
 const migration=path('supabase/migrations/20261102162000_tenant_site_service_catalog.sql');
 const aiToolMigration=path('supabase/migrations/20261103004500_tenant_ai_tool_selection.sql');
 const converger=path('scripts/converge-orchestrated-pr-merge.mjs');
-const blob=source=>createHash('sha1').update('blob '+Buffer.byteLength(source)+'\0'+source).digest('hex');
+const blob=source=>{const lf=source.replace(/\r\n/g,'\n');return createHash('sha1').update('blob '+Buffer.byteLength(lf)+'\0'+lf).digest('hex');};
 
 test('tenant schema workflow pins the exact reviewed migration',()=>{
   assert.equal(blob(migration),'c4cbedeb3cfc815e7e89346411f7ad1121afa9f0');
