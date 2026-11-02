@@ -380,6 +380,11 @@ const booksTouched=changedFiles.some(file=>
 );
 // PUBLISHING-HUMAN-PROD-001: Explicit server-authorized Supabase private schema
 // and existing Creator AI source lanes. GITHUB_TOKEN merges suppress main push.
+// TENANT-SERVICE-SCHEMA-RELEASE-001: protected promotion is separate from Site Core.
+const tenantSiteSchemaTouched=changedFiles.some(file=>
+  file==='supabase/migrations/20261102162000_tenant_site_service_catalog.sql'||
+  file==='.github/workflows/deploy-tenant-site-service-schema.yml'
+);
 const humanAuthorSchemaTouched=requiresHumanAuthorSchemaRelease(changedFiles);
 const creatorAuthorTouched=requiresCreatorAuthorRelease(changedFiles);
 // Publishing static pages (ekodi.kr/publishing) are served by the Publishing Worker's assets.
@@ -652,6 +657,27 @@ async function dispatchPostMergeDeploys(){
   // Verify the official merged PR and protected main are exactly the same commit.
   // If main advances before dispatch, fail closed: the production workflow will
   // also independently check its checkout SHA and signed orchestrator receipt.
+  if(tenantSiteSchemaTouched){
+    const mergedPr=await api('/pulls/'+pr.number);
+    if(!mergedPr.r.ok||mergedPr.data?.merged!==true)
+      fail('tenant-service-schema-release: protected merge required');
+    const mergeSha=String(mergedPr.data.merge_commit_sha||'');
+    if(!/^[a-f0-9]{40}$/.test(mergeSha))
+      fail('tenant-service-schema-release: missing protected merge SHA');
+    const mainHead=await api('/git/ref/heads/main');
+    if(!mainHead.r.ok||String(mainHead.data?.object?.sha||'')!==mergeSha)
+      fail('tenant-service-schema-release: main advanced; re-authorize new exact SHA');
+    const dispatched=await api('/actions/workflows/deploy-tenant-site-service-schema.yml/dispatches',{
+      method:'POST',body:JSON.stringify({ref:'main',inputs:{
+        release_branch_ref:branch,release_task_id:taskId,expected_main_sha:mergeSha
+      }})
+    });
+    if(dispatched.r.status!==204)
+      fail('tenant-service-schema-release: protected dispatch rejected HTTP '+dispatched.r.status);
+    console.log(JSON.stringify({ok:true,action:'protected-schema-release-dispatched',
+      workflow:'deploy-tenant-site-service-schema.yml',pr:pr.number,mergeSha,taskId,branch,
+      authority:'ekodi-orchestrator'}));
+  }
   if(humanAuthorSchemaTouched){
     const mergedPr=await api('/pulls/'+pr.number);
     if(!mergedPr.r.ok||mergedPr.data?.merged!==true)fail('human-author-schema-release: PR is not protected-merged');
