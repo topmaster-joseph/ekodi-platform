@@ -196,6 +196,16 @@ const indexHtml = fill(indexTemplate, {
 await rm(dist, { recursive: true, force: true });
 await ensureDir(dist);
 await write('index.html', indexHtml);
+// Operator Seller Studio displays the same publisher-approved bookstore mirror
+// as the Mall storefront. This read-only public projection is not a seller row.
+await write('provider-bookstore.json', JSON.stringify({
+  products: products.filter((p) => p.source?.system === 'ekodi-bookstore').map((p) => ({
+    id: p.id, name: p.name, price: p.price,
+    detailUrl: `${baseUrl}/products/${p.slug}/`,
+    saleReady: p.action?.type === 'external' && p.status === '판매 중'
+  }))
+}));
+
 await cp(path.join(root, 'assets'), path.join(dist, 'assets'), { recursive: true });
 await cp(path.join(root, '_headers'), path.join(dist, '_headers'));
 await cp(path.join(root, '_redirects'), path.join(dist, '_redirects'));
