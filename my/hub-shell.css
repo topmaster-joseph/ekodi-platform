@@ -304,6 +304,8 @@ body[data-active-tab="account"] #personal-ai{margin-top:0!important;padding-top:
 #account .account-grid>article[data-public-panel]>.public-profile-form,
 #account .account-grid>article[data-public-panel]>.digital-card-inbox{max-width:940px}
 #account .my-public-card-pane{display:grid;gap:12px;min-width:0;max-width:940px}
+/* Author display:grid must never override the browser's native [hidden] contract. */
+#account .my-public-card-pane[hidden]{display:none!important}
 #account .my-public-card-pane>h4{margin:3px 0 0;font-size:17px;color:#274734}
 #account .my-public-contact-grid{
   display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
