@@ -40,6 +40,22 @@
   const accountList = document.createElement('div');accountList.className = 'library-account-view';panels.account.append(accountList);
   panels.books.append(list);
   panels.operator.append(operator);
+  // 서버가 운영자 권한을 확인한 계정에만 녹음실을 노출한다.
+  // 일반 계정에는 숨겨진 탭의 존재 이유와 올바른 로그인 경로를 안내한다.
+  const voiceGuide = document.createElement('div');
+  voiceGuide.className = 'library-voice-access';
+  const guideTitle = document.createElement('h3');
+  guideTitle.textContent = '낭독 음성 녹음실';
+  const guideText = document.createElement('p');
+  guideText.textContent = '음성 녹음실은 출판 운영자로 서버에 등록된 계정에서만 이용할 수 있습니다. 현재 계정에 운영자 탭이 보이지 않으면 로그아웃 후 등록된 운영자 계정으로 로그인해 주세요.';
+  const guideLink = document.createElement('a');
+  const loginUrl = new URL('https://ekodi.kr/auth/');
+  loginUrl.searchParams.set('site', 'books');
+  loginUrl.searchParams.set('return_to', 'https://ekodi.kr/books/library/#lib-operator');
+  guideLink.href = loginUrl.toString();
+  guideLink.textContent = '운영자 계정으로 로그인';
+  voiceGuide.append(guideTitle, guideText, guideLink);
+  panels.account.append(voiceGuide);
   const related = document.querySelector('.library-related-links');
   const help = document.createElement('div');
   help.className = 'library-info-view';
@@ -135,6 +151,8 @@
   }
   function showOperator() {
     buttons.operator.hidden = false;
+    guideText.textContent = '운영자 권한이 확인됐습니다. 운영자 탭에서 낭독 음성을 녹음하거나 녹음 파일을 올릴 수 있습니다.';
+    guideLink.hidden = true;
     if (location.hash === '#lib-operator') select('operator');
   }
   window.EkodiLibraryTabs = {render,showOperator};
