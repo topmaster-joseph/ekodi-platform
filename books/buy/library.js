@@ -2,15 +2,15 @@
   'use strict';
   const C = window.EkodiBooksCommerce;
   const $ = id => document.getElementById(id);
-  async function download(item, button, audioTrack = null) {
+  async function downloadAudio(item, button, audioTrack) {
     button.disabled = true; const label = button.textContent; button.textContent = '준비 중…';
     try {
       const s = await C.session();
-      const route = audioTrack ? `download/audio/${encodeURIComponent(item.id)}/${encodeURIComponent(audioTrack.number)}` : `download/${encodeURIComponent(item.id)}`;
+      const route = `download/audio/${encodeURIComponent(item.id)}/${encodeURIComponent(audioTrack.number)}`;
       const r = await fetch(`${C.BASE}/api/commerce/${route}`, { headers: { authorization: 'Bearer ' + (s?.accessToken || '') }, cache: 'no-store' });
       if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || '파일을 받지 못했습니다.'); }
       const blob = await r.blob(); const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = audioTrack ? `${item.title}-${String(audioTrack.number).padStart(2,'0')}.mp3` : `${item.title}.epub`; document.body.append(a); a.click(); a.remove();
+      const a = document.createElement('a'); a.href = url; a.download = `${item.title}-${String(audioTrack.number).padStart(2,'0')}.mp3`; document.body.append(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 30000);
     } catch (e) { alert(e.message); }
     finally { button.disabled = false; button.textContent = label; }
@@ -82,9 +82,6 @@
         const row = document.createElement('article'); row.className = 'library-item';
         const info = document.createElement('div'); const h = document.createElement('h3'); h.textContent = item.title; const p = document.createElement('p');
         p.textContent = `${item.author} · ${new Date(item.grantedAt).toLocaleDateString('ko-KR')} 구매`; info.append(h, p);
-        const btn = document.createElement('button'); btn.type = 'button';
-        btn.textContent = item.downloadReady ? 'EPUB 받기' : '파일 준비 중'; btn.disabled = !item.downloadReady;
-        btn.addEventListener('click', () => download(item, btn));
         const audioArea = document.createElement('div');
         audioArea.className = 'audio-bonus';
         if (item.audiobook?.included) {
@@ -95,7 +92,7 @@
             if (!item.audiobook.ready) break;
             const audioButton = document.createElement('button');
             audioButton.type = 'button'; audioButton.textContent = `오디오북 ${track.number}장 · ${track.title} MP3 받기`;
-            audioButton.addEventListener('click', () => download(item, audioButton, track));
+            audioButton.addEventListener('click', () => downloadAudio(item, audioButton, track));
             audioArea.append(audioButton);
           }
         }
@@ -110,7 +107,7 @@
           actions.append(listen);
         }
         if (item.downloadReady) { const readBtn = document.createElement('button'); readBtn.type = 'button'; readBtn.className = 'read-btn'; readBtn.textContent = '펼쳐 읽기'; readBtn.addEventListener('click', () => read(item, readBtn)); actions.append(readBtn); }
-        actions.append(btn);
+        if (!item.downloadReady) { const pending = document.createElement('span'); pending.className = 'library-file-pending'; pending.textContent = '읽기 파일 준비 중'; actions.append(pending); }
         row.append(C.cover(item), info, actions); list.append(row);
       }
       window.EkodiLibraryTabs?.render(items,libraryAccount,data.operator === true);
