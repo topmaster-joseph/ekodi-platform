@@ -10,6 +10,7 @@ export const tenantAdminMetricsTabsMarkup = tenantAdminMetricsTabsMarkupFor();
 
 export const tenantAdminMetricsTabsCss = `
 .admin-view-tabs{display:flex;align-items:center;gap:6px;min-height:42px;margin:0 0 10px;padding:0 0 8px;border-bottom:1px solid #dfe5ec;overflow-x:auto;max-width:100%;scrollbar-width:thin}
+.admin-view-tabs[hidden],.admin-view-tabs [hidden]{display:none!important}
 .admin-view-tabs button{flex:0 0 auto;min-height:38px;padding:7px 15px;border:1px solid #d6e0ea;border-radius:9px;background:#fff;color:#475569;font:inherit;font-size:13px;font-weight:700;cursor:pointer;word-break:keep-all}
 .admin-view-tabs button:hover{background:#f1f6ff;border-color:#a5bee0}
 .admin-view-tabs button.active,.admin-view-tabs button[aria-selected="true"]{border-color:#9bbce5;background:#eaf3ff;color:#0b4fb3;font-weight:850}
@@ -30,9 +31,15 @@ export function mountTenantAdminMetricsTabs(metricsId = 'summaryCards', workId =
   if (!nav || !metrics || !work || nav.dataset.boundMetricsTabs === 'true') return;
   nav.dataset.boundMetricsTabs = 'true';
   const tabs = [...nav.querySelectorAll('[data-admin-view]')];
+  const metricsTab = tabs.find(tab => tab.dataset.adminView === 'metrics');
   const fromUrl = () => new URL(location.href).searchParams.get('adminView') === 'metrics' ? 'metrics' : 'work';
+  const hasMetrics = () => {
+    // Metric panels start empty. They are filled asynchronously by the owning screen.
+    // Hidden placeholders and absent metrics must not create a dead-end tab.
+    return Boolean(metrics.children?.length || String(metrics.textContent || '').trim());
+  };
   const show = (view, writeUrl = false) => {
-    const target = view === 'metrics' ? 'metrics' : 'work';
+    const target = view === 'metrics' && hasMetrics() ? 'metrics' : 'work';
     metrics.hidden = target !== 'metrics';
     work.hidden = target !== 'work';
     for (const tab of tabs) {
@@ -48,17 +55,36 @@ export function mountTenantAdminMetricsTabs(metricsId = 'summaryCards', workId =
       history.replaceState(history.state, '', url.pathname + url.search + url.hash);
     }
   };
-  for (const tab of tabs) tab.addEventListener('click', () => show(tab.dataset.adminView, true));
+  const refresh = () => {
+    const available = hasMetrics();
+    nav.hidden = !available;
+    if (metricsTab) {
+      metricsTab.hidden = !available;
+      metricsTab.disabled = !available;
+    }
+    // If a bookmarked metrics view is still loading, keep the requested URL
+    // while showing work. Once data arrives, restore the requested metrics view.
+    show(fromUrl());
+  };
+  for (const tab of tabs) tab.addEventListener('click', () => {
+    if (tab.dataset.adminView === 'metrics' && !hasMetrics()) return;
+    show(tab.dataset.adminView, true);
+  });
   nav.addEventListener('keydown', event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-    const current = tabs.indexOf(document.activeElement);
+    const availableTabs = tabs.filter(tab => !tab.hidden && !tab.disabled);
+    const current = availableTabs.indexOf(document.activeElement);
     if (current < 0) return;
     event.preventDefault();
-    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
-      : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-    tabs[next].focus();
-    tabs[next].click();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? availableTabs.length - 1
+      : (current + (event.key === 'ArrowRight' ? 1 : -1) + availableTabs.length) % availableTabs.length;
+    availableTabs[next]?.focus();
+    availableTabs[next]?.click();
   });
-  window.addEventListener('popstate', () => show(fromUrl()));
-  show(fromUrl());
+  window.addEventListener('popstate', refresh);
+  if (typeof MutationObserver === 'function') {
+    const observer = new MutationObserver(refresh);
+    observer.observe(metrics, { childList: true, subtree: true, characterData: true });
+  }
+  refresh();
 }
