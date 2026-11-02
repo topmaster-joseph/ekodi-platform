@@ -1,0 +1,17 @@
+{
+  "name": "EKODI 알림 구독",
+  "short_name": "EKODI 알림",
+  "lang": "ko",
+  "start_url": "/notifications/",
+  "scope": "/notifications/",
+  "display": "standalone",
+  "theme_color": "#14243b",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/notifications/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

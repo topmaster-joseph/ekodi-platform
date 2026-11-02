@@ -38,6 +38,7 @@ import { runAiProviderHealthSchedule } from './ai-provider-control.js';
 import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gateway.js';
 import { handleOrchestratorReleaseReceipt, handleOrchestratorCompletionReconciliation } from './ekodi-orchestrator-task-adapter.js';
 import { handleDevotionalControl } from './devotional-control.js';
+import { handleNotificationApi, runNotificationSchedule } from './notification-control.js';
 import { handleCommonScriptureControl } from './common-scripture-control.js';
 import { handlePublicChurchWorship } from './church-public-worship-control.js';
 import { handlePublicCommonScripture } from './common-scripture-registry.js';
@@ -159,6 +160,10 @@ export default {
     if (externalAccountPreflight) return externalAccountPreflight;
 
     const path = incoming.pathname;
+    if (path.startsWith('/api/notifications')) {
+      try { return applyApiSecurityHeaders(await handleNotificationApi(request,env)); }
+      catch (error) { console.error('Notifications API error',error); return errorResponse('알림 서비스를 처리할 수 없습니다.','NOTIFICATIONS_API_ERROR'); }
+    }
     const scriptureResponse=handlePublicCommonScripture(request);
     if(scriptureResponse)return applyApiSecurityHeaders(scriptureResponse);
     const publicWorship=await handlePublicChurchWorship(request,env);
@@ -433,6 +438,7 @@ export default {
       : null;
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
+    const notificationOutbox = runNotificationSchedule(env, { now:scheduledAt.toISOString(),limit:12 }).catch(error => { console.error('Notification outbox schedule error', error); return { processed:0, failed:1, error:'notification_schedule_failed' }; });
     // My Invest autopilot: Sentinel on every pass; weekly/monthly reports are idempotent per period.
     const investAutopilot = runInvestAutopilotSchedule(env, { now:scheduledAt.getTime() }).catch(error => { console.error('Invest autopilot schedule error', error); return { ran:false, error:'invest_autopilot_schedule_failed' }; });
     const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
@@ -450,6 +456,7 @@ export default {
     if (ctx?.waitUntil) {
       ctx.waitUntil(authorBilling);
       ctx.waitUntil(messengerOutbox);
+      ctx.waitUntil(notificationOutbox);
       ctx.waitUntil(investAutopilot);
       ctx.waitUntil(commandPulse);
       ctx.waitUntil(aiProviderHealth);
@@ -463,7 +470,7 @@ export default {
       if (seonamMediCrawlWatch) ctx.waitUntil(seonamMediCrawlWatch);
       if (externalAccountHealthDaily) ctx.waitUntil(externalAccountHealthDaily);
     }
-    const background = [authorBilling, messengerOutbox, investAutopilot, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration, marketingMetrics, marketingIndexNow];
+    const background = [authorBilling, messengerOutbox, notificationOutbox, investAutopilot, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration, marketingMetrics, marketingIndexNow];
     if (seonamMediHourly) background.push(seonamMediHourly);
     if (seonamMediRunnerWake) background.push(seonamMediRunnerWake);
     if (seonamMediCrawlWatch) background.push(seonamMediCrawlWatch);
