@@ -15,6 +15,6 @@ test('public church partner news is read-only and published-only', async () => {
   assert.ok(js.includes('/api/partner-news/public?tenant=ekodi-church&service=church'));
   assert.ok(js.includes("item.status==='PUBLISHED'"));
   assert.ok(!js.includes('/api/church/admin/partner-news'));
-  assert.ok(headers.includes("connect-src 'self' https://api.ekodi.kr"));
+  assert.ok(headers.includes("connect-src 'self' "));
   assert.ok(css.includes('.partner-news-feed'));
 });

@@ -1,13 +1,13 @@
-# Church source snapshot (shadow import)
+# Church canonicalized shadow source
 
-Source code and static assets are copied from topmaster-joseph/ekodi-church at SHA 520d4f2daf7e5e4dc53bf928c9df626b5f896600. All 216 tracked files, including original GitHub workflow YAML for native-test provenance, were imported. Nested workflow files are inert: GitHub Actions executes only workflows under the repository-root .github/workflows directory.
+This is a NON-DEPLOYED staged import of upstream repository topmaster-joseph/ekodi-church at source commit 520d4f2daf7e5e4dc53bf928c9df626b5f896600.
 
-IMPORTANT: This is not an operating source migration and is not used for production releases. The independent Church repository and Pages release remain authoritative until a separately approved, validated source transition with matching release provenance and rollback tests.
+The upstream commit contained 216 Git-tracked files. Eight historical .github/workflows files are excluded from the module because their old host references and write workflows are inappropriate for canonical EKODI. The other 208 files are retained, with five minimal path and test wiring adjustments to obey canonical apex URLs and preserve centralized authentication and protected releases.
 
-This directory has a full tracked-file Git blob SHA manifest at source-import-manifest.json. Verify the Git hashes of all tracked files against their manifest entries, run church native tests, preserve full Git history backups, and perform signed-in role/browser/regression verifications before cutover.
+See source-import-manifest.json: each file stores its original Git blob SHA; the five changed files also store normalizedBlobSha. This ensures that the exact upstream history remains provable without publishing obsolete subdomain URLs into a new operational source tree. Original full-history Git bundles are stored independently on authorized user2 and user3 devices, with ref-level restore tests.
 
-Subsequent step must update the existing central Church workflow source checkout to canonical platform module with guarded change approval, without changing Pages project, public canonical URL, Church auth, or Supabase API.
+IMPORTANT: This folder is NOT the live Church release owner. Current Church Pages deployment continues to check out topmaster-joseph/ekodi-church; no auth, domain, Pages, Supabase or API change was performed.
 
-Do not delete the old repository until all SOURCE-REPO-RETIREMENT-001 requirements pass, including independent offsite recovery and repository-scoped owner deletion authority.
+Next cutover requires an independent C2/C3 guarded migration to change the existing central Church source checkout and provenance marker, synthetic PC/mobile guest/member/admin/live smoke and rollback tests, safe old automation retirement, and per-repository irreversible deletion proof.
 
-Task: church-source-shadow-import-20261102 | Parent issue: #7575
+Task church-source-shadow-import-20261102 | EKODI Orchestrator issue #7575

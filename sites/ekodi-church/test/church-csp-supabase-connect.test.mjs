@@ -8,7 +8,7 @@ test('Church mounted pages may query their one canonical Supabase project',()=>{
   const csp=headers.match(/Content-Security-Policy:\s*([^\n]+)/)?.[1];
   assert.ok(csp,'Church Pages must publish an enforceable CSP');
   const connect=csp.match(/connect-src\s+([^;]+)/)?.[1]||'';
-  assert.match(connect,/^'self' https:\/\/api\.ekodi\.kr https:\/\/renzehysxirjilvdxacv\.supabase\.co$/);
+  assert.match(connect,/^'self' https:\/\/renzehysxirjilvdxacv\.supabase\.co$/);
   assert.doesNotMatch(connect,/https:\/\/\*|https:\/\/\*\.supabase|unsafe-inline|unsafe-eval/);
 });
 

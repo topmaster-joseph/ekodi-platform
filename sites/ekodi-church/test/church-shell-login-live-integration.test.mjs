@@ -14,7 +14,7 @@ test('language control hides the visible Language chrome and remains accessible'
 });
 
 test('My EKODI routes through central auth and returns to the requested page',()=>{
-  assert.match(status,/new URL\('\/auth\/',location\.origin\)/);
+  assert.match(status,/new URL\('https:\/\/ekodi\.kr\/auth\/'\)/);
   assert.match(status,/login\.searchParams\.set\('site','church'\)/);
   assert.match(status,/login\.searchParams\.set\('return_to',destination\)/);
   assert.match(status,/link\.href=login\.toString\(\)/);

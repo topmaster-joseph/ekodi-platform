@@ -28,11 +28,11 @@ test('Church shadow import has explicit non-production provenance and exact file
   assert.equal(manifest.sourceOwnershipTransferred, false);
   assert.equal(manifest.productionReleaseSwitched, false);
   assert.equal(manifest.legacyRepositoryDeletionAuthorized, false);
-  assert.equal(manifest.importedTrackedFileCount, 216);
-  assert.equal(manifest.excludedWorkflows.length, 0);
-  assert.equal(manifest.nestedWorkflowFilesInert, true);
+  assert.equal(manifest.importedTrackedFileCount, 208);
+  assert.equal(manifest.excludedWorkflows.length, 8);
+  assert.equal(manifest.nestedWorkflowFilesInert, false);
   const expected = new Set(manifest.trackedFiles.map(item => item.path));
-  assert.equal(expected.size, 216, 'duplicate manifest entries');
+  assert.equal(expected.size, 208, 'duplicate manifest entries');
   assert.ok([...expected].every(p => !p.includes('..') && !p.startsWith('/') ));
   const actual = walk(churchRoot).filter(path => path !== 'source-import-manifest.json' && path !== 'MIGRATION_README.md' && path !== '.gitattributes');
   assert.deepEqual(actual.sort(), [...expected].sort(), 'source asset tree has drifted');
@@ -42,7 +42,7 @@ test('Church copied HTML, JS, CSS, worship assets and tests match original Git b
   for(const entry of manifest.trackedFiles) {
     assert.match(entry.blobSha, /^[a-f0-9]{40}$/);
     const actual = gitBlobHash(readFileSync(resolve(churchRoot, entry.path)));
-    assert.equal(actual, entry.blobSha, 'source content changed: ' + entry.path);
+    assert.equal(actual, entry.normalizedBlobSha || entry.blobSha, 'source content changed: ' + entry.path);
   }
 });
 

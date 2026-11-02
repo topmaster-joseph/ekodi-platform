@@ -4,9 +4,16 @@
     "sourceRepository":  "topmaster-joseph/ekodi-church",
     "sourceCommit":  "520d4f2daf7e5e4dc53bf928c9df626b5f896600",
     "sourceTree":  "30f2d5396b416aec9aca9773c84710052f4f8c35",
-    "importedTrackedFileCount":  216,
+    "importedTrackedFileCount":  208,
     "excludedWorkflows":  [
-
+                              ".github/workflows/adopt-ekodi-domain.yml",
+                              ".github/workflows/ci.yml",
+                              ".github/workflows/community-brand-preview.yml",
+                              ".github/workflows/deploy-production.yml",
+                              ".github/workflows/normalize-community-brand.yml",
+                              ".github/workflows/promote-ekodi-domain.yml",
+                              ".github/workflows/safe-domain-transition.yml",
+                              ".github/workflows/worship-auto-merge.yml"
                           ],
     "sourceOwnershipTransferred":  false,
     "productionReleaseSwitched":  false,
@@ -18,46 +25,6 @@
                              "blobSha":  "34b01b6a085aee91d128eb31931fdff6c6889217"
                          },
                          {
-                             "path":  ".github/workflows/adopt-ekodi-domain.yml",
-                             "mode":  "100644",
-                             "blobSha":  "8daa60565bcb8178d204e630f142d6893c87891e"
-                         },
-                         {
-                             "path":  ".github/workflows/ci.yml",
-                             "mode":  "100644",
-                             "blobSha":  "81a8fd069e1220987f2865c5aae08625453d108c"
-                         },
-                         {
-                             "path":  ".github/workflows/community-brand-preview.yml",
-                             "mode":  "100644",
-                             "blobSha":  "63a90f0989bd463bac70739fef3b4d92f808e180"
-                         },
-                         {
-                             "path":  ".github/workflows/deploy-production.yml",
-                             "mode":  "100644",
-                             "blobSha":  "c2134841d4a0da709ad029218cf6022bf76690f3"
-                         },
-                         {
-                             "path":  ".github/workflows/normalize-community-brand.yml",
-                             "mode":  "100644",
-                             "blobSha":  "4a1d24dea6bc6208432d8645b05e9804c17b672e"
-                         },
-                         {
-                             "path":  ".github/workflows/promote-ekodi-domain.yml",
-                             "mode":  "100644",
-                             "blobSha":  "8389a7f3baa1dd8ccce5a591b20b7c5bea644cdf"
-                         },
-                         {
-                             "path":  ".github/workflows/safe-domain-transition.yml",
-                             "mode":  "100644",
-                             "blobSha":  "ed881dee8b30fd1ddd6a24ec3123eadc9fc0c48c"
-                         },
-                         {
-                             "path":  ".github/workflows/worship-auto-merge.yml",
-                             "mode":  "100644",
-                             "blobSha":  "0ad251c3f5218ef144bb8eb104bd161f0279fa0e"
-                         },
-                         {
                              "path":  ".gitignore",
                              "mode":  "100644",
                              "blobSha":  "31424ebded974ab13f2060d5b2c6a669451b3368"
@@ -65,7 +32,8 @@
                          {
                              "path":  "_headers",
                              "mode":  "100644",
-                             "blobSha":  "5ebf0e937c63f3f6324ee038a0211f096fecfb12"
+                             "blobSha":  "5ebf0e937c63f3f6324ee038a0211f096fecfb12",
+                             "normalizedBlobSha":  "1c6228c2b1ba79d4ba0e4323c2f5ec8354014bfc"
                          },
                          {
                              "path":  "church-character-identity.js",
@@ -155,7 +123,8 @@
                          {
                              "path":  "church-online-status.js",
                              "mode":  "100644",
-                             "blobSha":  "f7268e29a6516a27e85d706fb0976a679ef4fd1a"
+                             "blobSha":  "f7268e29a6516a27e85d706fb0976a679ef4fd1a",
+                             "normalizedBlobSha":  "97e14a4c2a3276d0fe136b4cb37fdbfd53517064"
                          },
                          {
                              "path":  "church-refresh.css",
@@ -385,7 +354,8 @@
                          {
                              "path":  "script.js",
                              "mode":  "100644",
-                             "blobSha":  "a00b52f289097f5e32bad2ba115979dc1319b964"
+                             "blobSha":  "a00b52f289097f5e32bad2ba115979dc1319b964",
+                             "normalizedBlobSha":  "5d6667819d91ec60b687f6b63aaa77e7f0a5a079"
                          },
                          {
                              "path":  "styles.css",
@@ -410,7 +380,8 @@
                          {
                              "path":  "test/church-csp-supabase-connect.test.mjs",
                              "mode":  "100644",
-                             "blobSha":  "a544a997477f540ac4e1e223fcfee61ba108cb3d"
+                             "blobSha":  "a544a997477f540ac4e1e223fcfee61ba108cb3d",
+                             "normalizedBlobSha":  "4d31ebaa79b51e81aaea0479ba8c4680d2c68550"
                          },
                          {
                              "path":  "test/church-devotion.test.mjs",
@@ -515,7 +486,8 @@
                          {
                              "path":  "test/church-live-system-verification.test.mjs",
                              "mode":  "100644",
-                             "blobSha":  "d502197b6f360ee234af2706bf8f5e4dfee3a671"
+                             "blobSha":  "d502197b6f360ee234af2706bf8f5e4dfee3a671",
+                             "normalizedBlobSha":  "cf17ba3f28d2989730a31ca6991210e1618315c3"
                          },
                          {
                              "path":  "test/church-live-viewer-end-20261102.test.mjs",
@@ -575,7 +547,8 @@
                          {
                              "path":  "test/church-shell-login-live-integration.test.mjs",
                              "mode":  "100644",
-                             "blobSha":  "8617eb73949663987cf0210b2c6616fad100c9e9"
+                             "blobSha":  "8617eb73949663987cf0210b2c6616fad100c9e9",
+                             "normalizedBlobSha":  "b4bcf52ec9fc2e8520ae3c3ec57e2189705ca3c2"
                          },
                          {
                              "path":  "test/church-url-locale-init.test.mjs",
@@ -655,7 +628,8 @@
                          {
                              "path":  "test/partner-news.test.mjs",
                              "mode":  "100644",
-                             "blobSha":  "59c1b6ca355c175c305d040df2e16b2385232219"
+                             "blobSha":  "59c1b6ca355c175c305d040df2e16b2385232219",
+                             "normalizedBlobSha":  "36ab81aa80e2c064a946c743f5721cbdbd2f1611"
                          },
                          {
                              "path":  "test/payment-i18n-runtime-wiring.test.mjs",
@@ -1093,5 +1067,15 @@
                              "blobSha":  "dda519e774dc7f2c60ad11984e2221651cd3c75b"
                          }
                      ],
-    "nestedWorkflowFilesInert":  true
+    "nestedWorkflowFilesInert":  false,
+    "canonicalizedPaths":  [
+                               "_headers",
+                               "church-online-status.js",
+                               "script.js",
+                               "test/church-csp-supabase-connect.test.mjs",
+                               "test/church-live-system-verification.test.mjs",
+                               "test/church-shell-login-live-integration.test.mjs",
+                               "test/partner-news.test.mjs"
+                           ],
+    "upstreamTreeContainsExcludedWorkflows":  true
 }
