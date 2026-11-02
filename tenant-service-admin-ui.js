@@ -1,5 +1,5 @@
 // Render-only UI helper. Server-side RPC is the authority for all reads and writes.
-export const TENANT_SERVICE_CSS = ".tenant-services{display:grid;gap:14px;min-width:0}.tenant-services>header{display:grid;gap:5px}.tenant-services>header h2{font-size:18px;margin:0;color:#1f2937}.tenant-services p{color:#64748b;font-size:12px;line-height:1.6;word-break:keep-all}.tenant-service-overview{display:flex;gap:7px;flex-wrap:wrap}.tenant-service-overview span{font-size:12px;color:#334155;background:#f5f7fb;border:1px solid #e0e6ee;border-radius:8px;padding:7px 10px}.tenant-service-overview strong{font-variant-numeric:tabular-nums;color:#16468d;margin-left:4px}.tenant-service-tabs{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 4px;border-bottom:1px solid #e4e8ef}.tenant-service-tabs button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:8px 12px;border:1px solid #dce3ec;border-radius:9px;background:#fff;font:inherit;font-size:12px;font-weight:750;color:#475569;cursor:pointer;word-break:keep-all}.tenant-service-tabs button[aria-selected=true]{color:#114fa0;background:#eaf2ff;border-color:#91b7ef}.tenant-service-tabs button:focus-visible,.tenant-service-row button:focus-visible{outline:2px solid #155eef;outline-offset:2px}.tenant-service-tabs small{font-size:11px;color:inherit;opacity:.8}.tenant-service-panel{display:grid;gap:10px;min-width:0}.tenant-service-panel>header{display:flex;justify-content:space-between;align-items:center;gap:10px}.tenant-service-panel>header h3{margin:0;font-size:15px;color:#1e293b}.tenant-service-panel>header small{font-size:12px;color:#64748b}.tenant-service-list{border:1px solid #e1e7ef;border-radius:12px;overflow:hidden}.tenant-service-row{display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid #edf0f5;padding:13px 15px;min-width:0;background:#fff}.tenant-service-row:first-child{border-top:0}.tenant-service-row>div{min-width:0}.tenant-service-row strong{font-size:14px;color:#1e293b;word-break:keep-all}.tenant-service-row p{margin:4px 0;font-size:12px}.tenant-service-row small{color:#64748b;font-size:11px;word-break:keep-all}.tenant-service-row button{min-height:40px;min-width:96px;flex:0 0 auto;padding:8px 11px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#334155;font-size:12px;font-weight:700;cursor:pointer}.tenant-service-row button[aria-pressed=true]{border-color:#9bbce5;color:#0b4fb3;background:#eaf3ff}.tenant-service-row button:disabled{opacity:.65;cursor:not-allowed}.tenant-service-error{background:#fff8f8;border:1px solid #efc1c1;border-radius:8px;padding:10px;color:#8a2525!important}.tenant-service-hint{margin:0;padding:9px 11px;border-radius:8px;background:#f8fafc;border:1px solid #e5e9f0}@media(max-width:620px){.tenant-service-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.tenant-service-tabs button{padding:8px 6px;min-width:0}.tenant-service-row{align-items:stretch;gap:10px;flex-direction:column}.tenant-service-row button{align-self:stretch;width:100%;min-height:44px}.tenant-service-panel>header{align-items:flex-start;flex-direction:column;gap:2px}}";
+export const TENANT_SERVICE_CSS = ".tenant-service-preview{border:1px solid #e1e7ef;border-radius:12px;padding:12px;min-width:0}.tenant-service-preview h3{font-size:14px;margin:0 0 6px}.tenant-service-preview p{margin:0;word-break:keep-all}.tenant-services{display:grid;gap:14px;min-width:0}.tenant-services>header{display:grid;gap:5px}.tenant-services>header h2{font-size:18px;margin:0;color:#1f2937}.tenant-services p{color:#64748b;font-size:12px;line-height:1.6;word-break:keep-all}.tenant-service-overview{display:flex;gap:7px;flex-wrap:wrap}.tenant-service-overview span{font-size:12px;color:#334155;background:#f5f7fb;border:1px solid #e0e6ee;border-radius:8px;padding:7px 10px}.tenant-service-overview strong{font-variant-numeric:tabular-nums;color:#16468d;margin-left:4px}.tenant-service-tabs{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0 4px;border-bottom:1px solid #e4e8ef}.tenant-service-tabs button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:8px 12px;border:1px solid #dce3ec;border-radius:9px;background:#fff;font:inherit;font-size:12px;font-weight:750;color:#475569;cursor:pointer;word-break:keep-all}.tenant-service-tabs button[aria-selected=true]{color:#114fa0;background:#eaf2ff;border-color:#91b7ef}.tenant-service-tabs button:focus-visible,.tenant-service-row button:focus-visible{outline:2px solid #155eef;outline-offset:2px}.tenant-service-tabs small{font-size:11px;color:inherit;opacity:.8}.tenant-service-panel{display:grid;gap:10px;min-width:0}.tenant-service-panel>header{display:flex;justify-content:space-between;align-items:center;gap:10px}.tenant-service-panel>header h3{margin:0;font-size:15px;color:#1e293b}.tenant-service-panel>header small{font-size:12px;color:#64748b}.tenant-service-list{border:1px solid #e1e7ef;border-radius:12px;overflow:hidden}.tenant-service-row{display:flex;align-items:center;justify-content:space-between;gap:14px;border-top:1px solid #edf0f5;padding:13px 15px;min-width:0;background:#fff}.tenant-service-row:first-child{border-top:0}.tenant-service-row>div{min-width:0}.tenant-service-row strong{font-size:14px;color:#1e293b;word-break:keep-all}.tenant-service-row p{margin:4px 0;font-size:12px}.tenant-service-row small{color:#64748b;font-size:11px;word-break:keep-all}.tenant-service-row button{min-height:40px;min-width:96px;flex:0 0 auto;padding:8px 11px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#334155;font-size:12px;font-weight:700;cursor:pointer}.tenant-service-row button[aria-pressed=true]{border-color:#9bbce5;color:#0b4fb3;background:#eaf3ff}.tenant-service-row button:disabled{opacity:.65;cursor:not-allowed}.tenant-service-error{background:#fff8f8;border:1px solid #efc1c1;border-radius:8px;padding:10px;color:#8a2525!important}.tenant-service-hint{margin:0;padding:9px 11px;border-radius:8px;background:#f8fafc;border:1px solid #e5e9f0}@media(max-width:620px){.tenant-service-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.tenant-service-tabs button{padding:8px 6px;min-width:0}.tenant-service-row{align-items:stretch;gap:10px;flex-direction:column}.tenant-service-row button{align-self:stretch;width:100%;min-height:44px}.tenant-service-panel>header{align-items:flex-start;flex-direction:column;gap:2px}}";
 
 export function renderTenantServiceAdmin(root,{items=[],error='',onToggle}={}){
   if(!root||typeof root.replaceChildren!=='function')return;
@@ -13,7 +13,7 @@ export function renderTenantServiceAdmin(root,{items=[],error='',onToggle}={}){
   const header=elt('header');
   header.append(
     elt('h2','','서비스설정'),
-    elt('p','','이 사이트의 관리자 메뉴 표시 여부를 정합니다. 기능 사용 권한과 결제·방송·자동게시 실행 설정은 별도로 관리합니다.')
+    elt('p','','사이트별 업무 메뉴를 구성합니다. 메뉴 표시 여부는 서비스 권한·과금·외부 연동을 변경하지 않습니다.')
   );
   wrap.append(header);
   if(error){
@@ -43,7 +43,7 @@ export function renderTenantServiceAdmin(root,{items=[],error='',onToggle}={}){
   const categories=[...new Set(items.map(item=>String(item.category||'other')))];
   const tabs=elt('nav','tenant-service-tabs');
   tabs.setAttribute('role','tablist');
-  tabs.setAttribute('aria-label','서비스 분류');
+  tabs.setAttribute('aria-label','업무별 서비스 분류');
   const panel=elt('section','tenant-service-panel');
   panel.id='tenant-service-category-panel';
   panel.setAttribute('role','tabpanel');
@@ -68,7 +68,7 @@ export function renderTenantServiceAdmin(root,{items=[],error='',onToggle}={}){
       body.append(elt('strong','',item.label),elt('p','',item.description),
         elt('small','',readiness[item.readiness]||'상태 확인 필요'));
       const readyToChange=item.readiness==='ready';
-      const button=elt('button','',readyToChange?(item.menuVisible?'표시 중':'숨김'):(readiness[item.readiness]||'준비 중'));
+      const button=elt('button','',readyToChange?(item.menuVisible?'사용 중':'미사용'):(readiness[item.readiness]||'준비 중'));
       button.type='button';
       button.dataset.serviceKey=item.key;
       button.setAttribute('aria-label',item.label+' 관리자 메뉴 '+(item.menuVisible?'숨기기':'표시하기'));
@@ -106,6 +106,13 @@ export function renderTenantServiceAdmin(root,{items=[],error='',onToggle}={}){
     tabs.append(tab);
   }
   wrap.append(tabs,panel);
+  // Preview uses the same server snapshot, not an optimistic or capability-expanding menu.
+  const preview=elt('section','tenant-service-preview');
+  preview.append(elt('h3','','표시 중인 서비스 분야'));
+  const visibleGroups=[...new Set(items.filter(item=>item.readiness==='ready'&&item.menuVisible).map(item=>item.categoryLabel))];
+  preview.append(elt('p','',visibleGroups.length?visibleGroups.join(' · '):'현재 표시하도록 설정한 서비스가 없습니다.'));
+  wrap.append(preview);
+
   wrap.append(elt('p','tenant-service-hint','메뉴를 숨겨도 자료는 삭제되지 않으며, 메뉴를 표시해도 새로운 권한이 부여되거나 자동 실행되지 않습니다.'));
   root.replaceChildren(wrap);
   const selected=root.dataset.tenantServiceCategory;
