@@ -269,6 +269,7 @@ const independentBoardTouched=sourceFiles.some(file=>
 // the canonical Control API (host-access route) and Site Core (studio UI).
 // Each deployed workflow retains receipt, staging and rollback checks.
 const controlApiTouched=sourceFiles.some(file=>[
+  'notification-control.js','notification-webpush.js',
   'realtime-control.js','realtime-tenant-registry.js','live-interpretation-control.js','simulcast-relay-policy.js',
   'scripts/converge-orchestrated-pr-merge.mjs',
   'scripts/recover-release-provenance.mjs'
@@ -277,6 +278,8 @@ const controlApiTouched=sourceFiles.some(file=>[
 // filter for Site Core. Use only source paths owned by the existing Site Core
 // workflow and only its receipt-bound, staged, guarded workflow_dispatch.
 const sharedSiteTouched=sourceFiles.some(file=>
+  // Immediate recovery merge must release the generated /notifications/ static assets.
+  file.startsWith('notifications/')||
   // AI Ops source and its shared readable-command stylesheet ship in Site Core.
   // A token-mediated protected merge does not trigger main push workflows.
   // Dispatch only the existing receipt-bound Site Core lane for these UI assets.
