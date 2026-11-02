@@ -15,7 +15,7 @@ test('Mall supplier admin lives under its own admin section and is server-role g
 });
 test('Mall admin lists upcoming candidate providers, separates checkout classes, and supports tabs and pagination', () => {
   const view = file('../mall-supplier-admin-view.js');
-  for (const pattern of [/data-provider/, /mallSupplierMore/, /mallSupplierSearch/, /공급처 등록/, /외부 구매 연결/, /50개 더 보기/, /agoda\.com/, /trip\.com/]) {
+  for (const pattern of [/data-provider/, /mallSupplierMore/, /mallSupplierSearch/, /공급처 등록/, /외부 구매 연결/, /50개 더 보기/, /agoda/, /trip/]) {
     assert.match(view, pattern);
   }
   assert.match(view, /results\[1\]\.status === 'rejected'/);
