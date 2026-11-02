@@ -129,6 +129,50 @@ async function status(request,env,ctx){
 
 // Read-only broker balance: mock by default; real KIS inquiry only with server vault secrets,
 // the operator switch and Supabase TOTP AAL2 on this exact session. Never places orders.
+
+const INVEST_OWNER_BROKER_OPTIONS=Object.freeze(['kis','toss']);
+const INVEST_OWNER_BROKER_DEFAULT='kis';
+async function ownerBrokerSelection(request,env,ctx){
+ // A broker preference is NOT a provider authorization, connection, or order approval.
+ // Keep the selection in the existing owner-scoped immutable audit event ledger:
+ // this avoids a new secret store, migration, or a parallel account registry.
+ if(String(ctx.identity.email||'').trim().toLowerCase()!==INVEST_DEFAULT_OWNER)
+  return json(request,env,{error:'LIVE_OWNER_ONLY'},403);
+ const allowed=INVEST_OWNER_BROKER_OPTIONS;
+ if(request.method==='GET'){
+  const row=await env.DB.prepare(`SELECT payload_json FROM investment_autopilot_events
+   WHERE subject_type=? AND subject_key=? AND event_type=?
+   ORDER BY id DESC LIMIT 1`).bind(ctx.subject.type,ctx.subject.key,'broker:preference').first();
+  const saved=parse(row?.payload_json,null)?.brokerId;
+  const selected=allowed.includes(saved)?saved:INVEST_OWNER_BROKER_DEFAULT;
+  return json(request,env,{
+   schema:'ekodi.invest.owner-broker-selection.v1',preferredBrokerId:selected,
+   defaultBrokerId:INVEST_OWNER_BROKER_DEFAULT,availableBrokers:allowed.map(id=>({
+    id,name:BROKER_ADAPTERS[id].name,docsUrl:BROKER_ADAPTERS[id].docsUrl,
+    connected:false,credentialsIncluded:false,liveTradingEnabled:false
+   })),connected:false,brokerAuthorizationGranted:false,liveOrdersEnabled:false
+  });
+ }
+ if(request.method==='PUT'){
+  const input=await body(request);
+  if(!input||Array.isArray(input)||typeof input!=='object'||Object.keys(input).length!==1||
+     typeof input.brokerId!=='string'||!allowed.includes(input.brokerId))
+   return json(request,env,{error:'BROKER_PREFERENCE_INVALID'},400);
+  const current=await env.DB.prepare(`SELECT payload_json FROM investment_autopilot_events
+   WHERE subject_type=? AND subject_key=? AND event_type=?
+   ORDER BY id DESC LIMIT 1`).bind(ctx.subject.type,ctx.subject.key,'broker:preference').first();
+  const saved=parse(current?.payload_json,null)?.brokerId;
+  if(input.brokerId!==(allowed.includes(saved)?saved:INVEST_OWNER_BROKER_DEFAULT))
+   await recordEvent(env,ctx,'broker:preference','info',{brokerId:input.brokerId});
+  await auditPrincipal(env,ctx.principal,'invest:owner-broker-preference');
+  return json(request,env,{
+   schema:'ekodi.invest.owner-broker-selection.v1',preferredBrokerId:input.brokerId,
+   connected:false,brokerAuthorizationGranted:false,liveOrdersEnabled:false,ordersPlaced:0
+  });
+ }
+ return json(request,env,{error:'METHOD_NOT_ALLOWED'},405);
+}
+
 async function ownerBrokerSnapshot(request,env,ctx){
  const brokerId=clean(new URL(request.url).searchParams.get('broker')||'kis',30);
  if(!Object.hasOwn(BROKER_ADAPTERS,brokerId))return json(request,env,{error:'BROKER_NOT_REGISTERED'},400);
@@ -149,7 +193,7 @@ async function ownerStrategyLab(request,env,ctx){
 }
 
 async function ownerLiveReadiness(request,env,ctx){
- const brokerId=clean(new URL(request.url).searchParams.get('broker')||'toss',30);
+ const brokerId=clean(new URL(request.url).searchParams.get('broker')||'kis',30);
  if(!Object.hasOwn(BROKER_ADAPTERS,brokerId))return json(request,env,{error:'BROKER_NOT_REGISTERED'},400);
  const account=await loadAccount(env,ctx);
  const validation=await paperValidation(env,ctx,account);
@@ -449,6 +493,7 @@ export async function handleInvestAutopilotApi(request,env){
  // Live control is pinned to the named highest administrator, regardless of env override.
  if(path.startsWith('/v1/invest/autopilot/live/')&&String(ctx.identity.email||'').trim().toLowerCase()!==INVEST_DEFAULT_OWNER)
   return json(request,env,{error:'LIVE_OWNER_ONLY'},403);
+ if(path==='/v1/invest/autopilot/broker/selection')return ownerBrokerSelection(request,env,ctx);
  if(path==='/v1/invest/autopilot/live/readiness'&&request.method==='GET')return ownerLiveReadiness(request,env,ctx);
  if(path==='/v1/invest/autopilot/broker/snapshot'&&request.method==='GET')return ownerBrokerSnapshot(request,env,ctx);
  if(path==='/v1/invest/autopilot/research/strategy-lab'&&request.method==='GET')return ownerStrategyLab(request,env,ctx);
