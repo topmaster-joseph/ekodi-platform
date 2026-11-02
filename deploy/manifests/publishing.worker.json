@@ -5,7 +5,7 @@
     "config": "wrangler.publishing.toml",
     "requests": [
       {"url":"https://ekodi.kr/publishing/","statuses":[200,301,302,307,308],"redirect":"follow","expect":["EKODI PROFESSIONAL PUBLISHING SERVICE","https://ekodi.kr/shell/shell.js"],"headerExpect":["x-ekodi-shell: v2"]},
-      {"url":"https://ekodi.kr/publishing/studio/","statuses":[200],"redirect":"follow","expect":["PUBLISHING STUDIO","https://ekodi.kr/shell/shell.js"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://ekodi.kr/publishing/studio/","statuses":[200],"redirect":"follow","expect":["저자 작업공간","https://ekodi.kr/shell/shell.js"],"headerExpect":["x-ekodi-shell: v2"]},
       {"url":"https://ekodi.kr/publishing/admin","statuses":[301,302,307,308],"redirect":"manual","headerExpect":["location: https://ekodi.kr/publishing/admin/"],"rollbackHeaderExpect":["publishing"]}
     ]
   }
