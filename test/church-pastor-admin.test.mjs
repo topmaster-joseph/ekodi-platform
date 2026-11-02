@@ -81,7 +81,8 @@ test('pastor admin client enforces church staff lookup before data modules', asy
   assert.match(source, /noRoleSpecificAdminPages/);
   assert.match(source, /ekodi:tenant-context/);
   assert.match(source, /canSection\(section\)/);
-  assert.match(source, /교인·돌봄 데이터 비공개/);
+  assert.match(source, /로그인 전에는 교인·돌봄·사역 데이터와 목회자 권한 정보를 표시하지 않습니다/);
+  assert.doesNotMatch(source, /card\('현재 상태','로그인 전'/);
   assert.match(source, /Google 계정으로 관리자 확인/);
   assert.match(source, /https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome/);
   assert.doesNotMatch(source, /https:\/\/(?:api|workspace-api)\.ekodi\.kr/);
