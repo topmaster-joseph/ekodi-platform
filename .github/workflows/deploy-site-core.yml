@@ -385,6 +385,7 @@ on:
       - 'test/openai-workspace-release-contract.test.mjs'
       - 'test/shared-site-admin-probe.test.mjs'
       - 'scripts/build.mjs'
+      - 'notifications/**'
       - 'scripts/verify-seonammedi-release-live.mjs'
       - 'scripts/finalize-seonammedi-release.mjs'
       - 'scripts/attest-worker-release-artifact.mjs'

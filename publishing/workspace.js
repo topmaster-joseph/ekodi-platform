@@ -147,7 +147,15 @@
     const i = tabs.indexOf(document.activeElement); if (i < 0 || !['ArrowRight', 'ArrowLeft'].includes(e.key)) return;
     const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; history.replaceState(null, '', `#ws-${n.dataset.tab}`); show(n.dataset.tab, true); e.preventDefault();
   });
-  const fromHash = (location.hash.match(/^#ws-([a-z]+)$/) || [])[1];
+  // Same-document menu links must actually activate the requested workspace tab.
+  const tabFromHash = () => (location.hash.match(/^#ws-(mine|write|progress|editions|channels|royalty|support)$/) || [])[1];
+  window.addEventListener('hashchange', () => {
+    const id = tabFromHash();
+    if (!id) return; // Preserve ordinary anchors, such as #consultation.
+    show(id);
+    root.scrollIntoView({ block: 'start' });
+  });
+  const fromHash = tabFromHash();
   show(fromHash || 'mine');
   if (fromHash) root.scrollIntoView();
 })();

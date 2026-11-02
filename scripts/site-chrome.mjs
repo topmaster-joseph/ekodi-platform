@@ -65,6 +65,8 @@ export const SITES = {
       ['출판 상담', `${ORIGIN}/publishing/consultation/`],
       ['제작·대행', `${ORIGIN}/publishing/production/`],
       ['유통', `${ORIGIN}/publishing/distribution/`],
+      ['내 원고·프로젝트', `${ORIGIN}/publishing/#ws-mine`],
+      ['출간 준비 현황', `${ORIGIN}/publishing/#ws-progress`],
       ['스튜디오', `${ORIGIN}/publishing/studio/`],
       ['UPaper 등록', `${ORIGIN}/publishing/upaper/`],
     ],
