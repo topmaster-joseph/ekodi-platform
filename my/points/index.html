@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="/my/hub-shell.css?v=20261102-one-glance-v1">
   <link rel="stylesheet" href="/my/points/styles.css?v=20261102-one-glance-v1">
 </head>
-<body data-ekodi-ui="USER" data-auth-state="member" data-active-tab="activity" class="my-subpage">
+<body data-points-tab="wallet" data-ekodi-ui="USER" data-auth-state="member" data-active-tab="activity" class="my-subpage">
   <header class="topbar my-comfort-header">
     <a class="brand" href="/my/#home" aria-label="My EKODI 홈"><span class="brand-leaf" aria-hidden="true"></span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
     <nav class="my-desktop-tabs" aria-label="주요 메뉴"><a href="/my/#home">홈</a><a href="/my/#platforms">내 서비스</a><a href="/my/#activity" aria-current="page">내 활동</a><a href="/my/#account">내 정보</a></nav>
@@ -23,7 +23,12 @@
     <div class="heading"><p class="kicker">MY EKODI · SITE POINTS</p><h1>내 활동포인트</h1>
       <p>사이트마다 적립·사용 내역이 따로 보관됩니다. 다른 사이트로의 전환이나 기부는 승인된 정책에 따라 처리됩니다.</p>
     </div>
-    <section class="panel" aria-labelledby="walletTitle">
+    <nav class="points-tabs" role="tablist" aria-label="활동포인트 세부 메뉴">
+      <button type="button" role="tab" id="pointsTabWallet" aria-controls="pointsWalletPanel" aria-selected="true" data-points-tab="wallet">잔액·내역</button>
+      <button type="button" role="tab" id="pointsTabClaims" aria-controls="claimSection" aria-selected="false" tabindex="-1" data-points-tab="claims">적립 활동</button>
+      <button type="button" role="tab" id="pointsTabInvite" aria-controls="referralSection" aria-selected="false" tabindex="-1" data-points-tab="invite">회원 초대</button>
+    </nav>
+    <section class="panel" id="pointsWalletPanel" role="tabpanel" aria-labelledby="pointsTabWallet">
       <div class="toolbar"><h2 id="walletTitle">사이트별 포인트</h2><label for="siteSelect">사이트 선택</label>
         <select id="siteSelect" disabled><option value="">사이트 확인 중</option></select></div>
       <p id="notice" role="status" aria-live="polite">로그인 상태를 확인하고 있습니다.</p>
@@ -32,7 +37,7 @@
         <h3>최근 거래</h3><div id="history" class="history" aria-live="polite"></div>
       </div>
     </section>
-    <section class="panel invite-panel" id="referralSection" hidden aria-labelledby="referralTitle">
+    <section class="panel invite-panel" id="referralSection" role="tabpanel" aria-labelledby="pointsTabInvite" hidden>
       <h2 id="referralTitle">새 회원 초대</h2>
       <p>초대 링크를 만들어 전달할 수 있습니다. 링크 복사나 공유만으로는 포인트가 적립되지 않습니다.</p>
       <div class="invite-tools"><button type="button" id="createReferralInvite">초대 링크 만들기</button>
@@ -46,7 +51,7 @@
       <button type="button" id="confirmReferralInvite">가입 후 초대 확인</button>
       <p id="referralConfirmStatus" role="status" aria-live="polite">로그인 후 직접 확인해 주세요.</p>
     </section>
-    <section class="panel invite-panel" id="claimSection" hidden aria-labelledby="claimTitle">
+    <section class="panel invite-panel" id="claimSection" role="tabpanel" aria-labelledby="pointsTabClaims" hidden>
       <h2 id="claimTitle">활동 증빙 신청</h2>
       <p>운영자가 확인할 수 있는 활동만 신청할 수 있습니다. 신청만으로는 적립되지 않으며, 확인 후 원장에 기록됩니다. 페이지 방문이나 공유는 증빙이 아닙니다.</p>
       <form id="claimForm" class="claim-form">
@@ -58,6 +63,7 @@
       <p id="claimStatus" role="status" aria-live="polite"></p>
       <h3>내 신청 현황</h3><div id="claimList" class="history" aria-live="polite"></div>
     </section>
+    <p class="points-tab-empty" id="pointsTabEmpty" role="status" hidden>현재 사이트에서 이용 가능한 활동이 없습니다. 사이트별 운영 정책에 따라 제공됩니다.</p>
     <p class="footnote">활동포인트는 현금과 다르며, 기부만으로 기부금영수증이 발급되지 않습니다. 포인트 적립과 전환·기부는 사이트별 운영 정책을 따릅니다.</p>
   </main>
   <footer class="my-custom-footer" aria-label="My EKODI 안내">
