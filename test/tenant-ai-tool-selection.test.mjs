@@ -11,7 +11,14 @@ test('AI tools stay within the existing site services screen and owner-controlle
   const css=await workspaceAdminCss().text();
   assert.match(js,/tenant_ai_tool_catalog_snapshot/);
   assert.match(js,/tenant_ai_tool_preference_set/);
-  assert.match(js,/p_tenant_id:workspaceContext\.tenantId,p_tool_id:item\.id,p_selected:next/);
+  // Both the legacy direct RPC call and the safer write -> fresh snapshot
+  // confirmation contract are valid; the latter must verify server state.
+  const directWrite=/p_tenant_id:workspaceContext\.tenantId,p_tool_id:item\.id,p_selected:next/.test(js);
+  const verifiedWrite=/kind:'ai',id:item\.id,selected:next/.test(js)
+    && /await call\(contract\.set,input,contract\.items\)/.test(js)
+    && /await call\(contract\.snapshot,\{p_tenant_id:tenantId\},contract\.items\)/.test(js)
+    && /service_preference_tenant_mismatch/.test(js);
+  assert.ok(directWrite||verifiedWrite,'AI tool selection must use the tenant-scoped RPC with read-after-write verification or its legacy direct form');
   assert.match(js,/aiTools:aiToolSnapshot\?\.tools\|\|\[\]/);
   assert.match(js,/Promise\.allSettled/);
   assert.match(css,/\.tenant-ai-tools-row/);
