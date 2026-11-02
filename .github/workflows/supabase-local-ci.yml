@@ -98,6 +98,17 @@ jobs:
             docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$migration"
           done
 
+      - name: Verify synthetic site-service tenant isolation (full rollback)
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --filter 'name=supabase_db_' --format '{{.ID}}' | head -n1)"
+          test -n "$db_container"
+          # The probe uses .invalid identities and rolls back every synthetic row.
+          docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            < supabase/tests/tenant_site_service_isolation_live_probe.sql
+          echo 'SITE-SERVICE-ISOLATION-001: synthetic admin, staff, cross-tenant, rollback PASS'
       - name: Prove secure defaults for new public objects
         if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         shell: bash
