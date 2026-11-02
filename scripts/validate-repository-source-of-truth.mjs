@@ -1,13 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import { auditSourceDeploymentBoundaries } from './audit-site-source-release-boundaries.mjs';
 import { auditFleetSourceReleaseTopology } from './audit-fleet-source-release-topology.mjs';
+import { inspectSatelliteRepositoryRetirement } from './inspect-satellite-repository-retirement.mjs';
 const readJson=async path=>JSON.parse((await readFile(new URL(`../${path}`,import.meta.url),'utf8')).replace(/^\uFEFF/,''));
-const [registry,platformTruth,boundaries,ecosystem,lifecycle]=await Promise.all([
+const [registry,platformTruth,boundaries,ecosystem,lifecycle,retirementPolicy]=await Promise.all([
   readJson('config/repository-source-of-truth.json'),
   readJson('config/platform-source-of-truth.json'),
   readJson('platform-boundaries.json'),
   readJson('config/ecosystem-services.json'),
   readJson('config/site-lifecycle-registry.json'),
+  readJson('config/site-repository-retirement-readiness.json'),
 ]);
 const failures=[];
 const fail=message=>failures.push(message);
@@ -32,6 +34,8 @@ const releaseAudit=auditSourceDeploymentBoundaries(boundaries,registry);
 for(const error of releaseAudit.errors) fail('source/release topology: '+error);
 const fleetAudit=auditFleetSourceReleaseTopology({ecosystem,lifecycle,boundaries,repositories:registry});
 for(const error of fleetAudit.errors) fail('fleet source/release inventory: '+error);
+const retirementAudit=inspectSatelliteRepositoryRetirement(retirementPolicy,registry);
+for(const error of retirementAudit.errors) fail('retirement guard: '+error);
 if(failures.length){
   console.error(`Repository source-of-truth validation failed (${failures.length})`);
   failures.forEach(item=>console.error(`- ${item}`));
@@ -42,3 +46,5 @@ console.log(`Repository source-of-truth OK: ${entries.length} registered reposit
 console.log('Source/release inventory: '+releaseAudit.registeredReleaseBoundaries+' declared units, '+releaseAudit.distinctDeploymentWorkflows+' deploy workflows; '+releaseAudit.registeredSatelliteRepositories.length+' registered satellites pending independent migration review. Tenant/workspace coverage is not asserted.');
 
 console.log('Fleet static inventory: services='+fleetAudit.totals.registeredServices+', workspaces='+fleetAudit.totals.registeredWorkspaceSites+', declared release units='+fleetAudit.totals.registeredReleaseBoundaries+', satellites='+fleetAudit.totals.registeredSatelliteRepositories+'. Dynamic workspaces/cloud runtime not audited.');
+
+console.log('Legacy repository retirement guard: '+retirementAudit.registeredSatelliteRepositories+' satellites retained; automatic deletion disabled.');

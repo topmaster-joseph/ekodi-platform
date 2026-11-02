@@ -16,7 +16,7 @@ Applies to every EKODI-managed first-party site, organization workspace, product
 4. Source secrets never ship into frontend assets. Distinct tenant financial, pastoral, membership and personal records remain scoped by authoritative server permissions, RLS, audit and data-ownership policy. Repository consolidation never merges these realms.
 5. Service-level secret scopes, security headers, staging, canary/smoke verification and rollback survive any source move. Cloudflare Pages/Workers and backend/provider state are deploy targets, **not secondary Git source-of-truth repositories**.
 6. CI must fail if a new release unit lacks source ownership, declared deploy lane, protected production authority or regression checks. Do not force a new per-tenant deploy lane when a registered shared service already owns the code.
-7. Existing external/satellite repositories remain untouched until a reviewed cutover. Preserve history and exact-source release proof, migrate the ownership paths and workflow, verify staging/auth/PC/mobile/rollback, then switch traffic under Orchestrator authority. Do not delete a repository or deployed resource on the basis of a new policy.
+7. Existing external/satellite repositories remain untouched until a reviewed cutover. Preserve history and exact-source release proof, migrate the ownership paths and workflow, verify staging/auth/PC/mobile/rollback, then switch traffic under Orchestrator authority. **After verified migration, independently backed-up history and a tested restore, obsolete GitHub source repositories are reviewed for deletion** under `SOURCE-REPO-RETIREMENT-001`, with per-repository owner authorization and independent post-deletion verification. No legacy repository or deployed resource may be deleted merely because a policy was approved.
 8. Default: use the existing capability and shared runtime before registering a new service or infrastructure boundary. Exceptions require documented technical, legal or customer-ownership justification.
 
 ## Current baseline (not migration completion)
@@ -38,3 +38,7 @@ F. Only after the audited rollout, consider a C2/C3 amendment and stronger fleet
 ## Change authority and rollback
 
 This is a proposed *source organization target*, not permission for production topology changes. A change to canonical source-of-truth, security realm, protected constitution, Cloudflare routing, DNS or production permissions follows the existing C2/C3 proposal, owner approval, amendment/version, CI, orchestrator-issued release receipt and reversible promotion process. A failed migration keeps the original deploy lane active or restores its last verified source SHA, without changing workspace identities or deleting historical repositories.
+
+## Final legacy repository cleanup
+
+See `docs/operations/site-repository-consolidation-retirement-runbook.md`. Deletion is a **last step after operational cutover and independent recovery proof**. The static readiness registry records the six current satellites with `deleteRequested=false`; it does not authorize or execute any destructive GitHub action. Fully migrated and approved legacy repositories should eventually be removed rather than remaining indefinitely active. Repositories with separate customer ownership remain subject to explicit ownership/contract review.

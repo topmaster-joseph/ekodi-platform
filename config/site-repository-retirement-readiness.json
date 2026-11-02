@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "policyId": "SOURCE-REPO-RETIREMENT-001",
+  "mode": "read-only-retirement-gate",
+  "sourceOfTruth": "config/repository-source-of-truth.json",
+  "canonicalRepository": "topmaster-joseph/ekodi-platform",
+  "scope": "all EKODI-managed current and future satellite repositories, with customer ownership exceptions reviewed",
+  "defaultDecision": "retain",
+  "automaticRepositoryDeletionAllowed": false,
+  "directWorkerRepositoryDeletionAllowed": false,
+  "deletionReviewAuthority": "EKODI Orchestrator guarded human/owner approval",
+  "separateReleaseUnitPreserved": true,
+  "finalDisposition": "delete old repository only after verified transfer, immutable archive, protected production operation and explicit repository-scoped authorization",
+  "requiredPreDeletionEvidence": [
+    "verified-legal-source-ownership-and-permission",
+    "complete-repository-history-mirror-or-bundle-offsite",
+    "restorable-backup-hash-and-restore-drill",
+    "all-source-references-and-webhooks-migrated",
+    "all-ci-release-and-cron-triggers-migrated-or-disabled",
+    "one-canonical-production-source-and-deploy-owner",
+    "guarded-staging-release-and-production-source-provenance",
+    "cross-site-regression-and-real-pc-mobile-auth",
+    "tenant-finance-personal-data-and-secrets-isolation",
+    "independent-release-and-rollback-test",
+    "legacy-deploy-credentials-revoked-and-live-bindings-reconciled",
+    "approved-orchestrator-release-receipt",
+    "explicit-repository-scoped-owner-deletion-authorization"
+  ],
+  "postDeletionEvidence": [
+    "legacy-repository-absence-confirmed",
+    "canonical-production-and-administrator-screens-reverified",
+    "no-legacy-deploy-credentials-or-live-provider-binding",
+    "recovery-archive-and-restoration-path-observable"
+  ],
+  "registeredSatellites": [
+    {
+      "repository": "topmaster-joseph/ekodi-site",
+      "classification": "unclassified-satellite",
+      "stage": "ownership-investigation",
+      "candidateCanonicalPath": "sites/ekodi-lab/",
+      "deleteRequested": false,
+      "notes": "README claims Lab operational source; central Lab workflow also exists. Ownership conflict requires independent verification."
+    },
+    {
+      "repository": "topmaster-joseph/ekodi-mall",
+      "classification": "active-satellite",
+      "stage": "legacy-readonly-evidence",
+      "candidateCanonicalPath": "sites/ekodi-mall/",
+      "deleteRequested": false,
+      "notes": "Legacy README/package disable production deploy. Verify source history bundle, all references, runtime and policy before retirement."
+    },
+    {
+      "repository": "topmaster-joseph/ekodi-church",
+      "classification": "active-satellite",
+      "stage": "active-source",
+      "candidateCanonicalPath": "sites/ekodi-church/",
+      "deleteRequested": false,
+      "notes": "Current Church Pages workflow reads independent main SHA; preserve public/member/admin/API, release marker and protected gates through migration."
+    },
+    {
+      "repository": "topmaster-joseph/jadam-maru",
+      "classification": "active-customer-site",
+      "stage": "ownership-investigation",
+      "candidateCanonicalPath": null,
+      "deleteRequested": false,
+      "notes": "Customer/operator source rights, three store identities and independent marketing workspaces need verification."
+    },
+    {
+      "repository": "topmaster-joseph/cheonggye-market",
+      "classification": "active-community-site",
+      "stage": "ownership-investigation",
+      "candidateCanonicalPath": null,
+      "deleteRequested": false,
+      "notes": "Separate association Pages workflow may operate independently. Verify provider-binding and association ownership."
+    },
+    {
+      "repository": "topmaster-joseph/cheonggye-merchants-site",
+      "classification": "active-project-site",
+      "stage": "ownership-investigation",
+      "candidateCanonicalPath": null,
+      "deleteRequested": false,
+      "notes": "Separate static association code; actual deployment and project rights unknown."
+    }
+  ]
+}
