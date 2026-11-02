@@ -1,6 +1,6 @@
 import { execFile as execFileCallback } from 'node:child_process';
 import { promisify } from 'node:util';
-import { existsSync } from 'node:fs';
+import { existsSync, createReadStream } from 'node:fs';
 import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { resolve, dirname, isAbsolute, join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -55,7 +55,8 @@ export async function createRestorableGitArchive({repository,source,destination}
   if(originalRefs.join('\n')!==restoredRefs.join('\n'))throw Error('All-ref restore mismatch');
   const restoredMain=await run('git',['-C',restored,'rev-parse','refs/heads/main']);
   if(restoredMain!==mainSha)throw Error('Restored main SHA mismatch');
-  const bytes=await readFile(bundle);
+  const hash=createHash('sha256');
+  for await(const chunk of createReadStream(bundle))hash.update(chunk);
   const report={
     contract:'ekodi.satellite-history-backup.v1',
     repository:repository||'synthetic-local-fixture',
@@ -63,7 +64,7 @@ export async function createRestorableGitArchive({repository,source,destination}
     restoredMainSha:restoredMain,
     gitRefCount:originalRefs.length,
     bundleBytes:(await stat(bundle)).size,
-    bundleSha256:createHash('sha256').update(bytes).digest('hex'),
+    bundleSha256:hash.digest('hex'),
     check:'mirror-git-fsck-bundle-verify-full-ref-restore-git-fsck',
     offsiteCopyVerified:false,
     productionReleaseVerified:false,
