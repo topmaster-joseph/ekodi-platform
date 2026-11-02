@@ -107,7 +107,13 @@ html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs a.active{
 html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs a:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
 html[data-ekodi-church-unified-admin="true"] #mainPanel{min-width:0}
 html[data-ekodi-church-unified-admin="true"] #mainPanel .table-wrap{overflow-x:auto;max-width:100%}
-html[data-ekodi-church-unified-admin="true"] #mainPanel :is(input,select,textarea){color-scheme:light}
+html[data-ekodi-church-unified-admin="true"] #mainPanel :is(input,select,textarea){color-scheme:light;background:#fff;color:#172033;border:1px solid #cbd5e1;border-radius:8px;min-height:40px;font-size:13px}
+html[data-ekodi-church-unified-admin="true"] #mainPanel :is(input,select,textarea):focus-visible{outline:2px solid #2563eb;outline-offset:1px}
+html[data-ekodi-church-unified-admin="true"] #mainPanel :is(input,select,textarea)::placeholder{color:#667085;opacity:1}
+html[data-ekodi-church-unified-admin="true"] #mainPanel input[type="checkbox"]{min-height:18px;width:18px;accent-color:#1f3c88}
+html[data-ekodi-church-unified-admin="true"] #mainPanel .trade-grid label{font-size:13px;line-height:1.4;word-break:keep-all}
+html[data-ekodi-church-unified-admin="true"] #mainPanel .panel h2{font-size:16px}
+html[data-ekodi-church-unified-admin="true"] .panel{padding:clamp(12px,1.6vw,20px)}
 @media(max-width:900px){html[data-ekodi-church-unified-admin="true"] main{padding:16px 12px 26px}html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs{justify-content:flex-start}}
 @media(max-width:620px){html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs{gap:5px}html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs a{flex:1 1 auto;min-height:44px;padding:8px 10px}html[data-ekodi-church-unified-admin="true"] .sidebar #adminNav a{min-height:44px}}
 `;
