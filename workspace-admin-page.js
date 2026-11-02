@@ -203,33 +203,48 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   let workspaceContext=null;
   let workspaceRole='';
   let siteServiceSnapshot=null,siteServiceError='';
+  let aiToolSnapshot=null,aiToolError='';
   function serviceMenuVisible(key){
     if(!Array.isArray(siteServiceSnapshot?.items))return true;
     const related=siteServiceSnapshot.items.filter(x=>x.readiness==='ready'&&x.navSection===key);
     return !related.length||related.some(x=>x.menuVisible===true);
   }
-  async function siteServiceApi(name,body){
+  async function siteServiceApi(name,body,resultKey='items'){
     const token=await accessToken();if(!token||!workspaceContext?.tenantId)throw new Error('사이트 관리자 로그인 필요');
     const r=await fetch(SUPABASE_URL+'/rest/v1/rpc/'+name,{method:'POST',cache:'no-store',
       headers:{apikey:SUPABASE_KEY,authorization:'Bearer '+token,'content-type':'application/json'},
       body:JSON.stringify(body),signal:AbortSignal.timeout(12000)});
     const data=await r.json().catch(()=>null);
     if(!r.ok)throw new Error(data?.message||data?.error||'서비스 설정 연결 오류 ('+r.status+')');
-    if(!Array.isArray(data?.items))throw new Error('서비스 원장 응답 형식 오류');
+    if(!Array.isArray(data?.[resultKey]))throw new Error('서비스 원장 응답 형식 오류');
     return data;
   }
   async function loadSiteServices(){
-    try{siteServiceSnapshot=await siteServiceApi('tenant_site_service_catalog_snapshot',{p_tenant_id:workspaceContext.tenantId});siteServiceError=''}
-    catch(e){siteServiceSnapshot=null;siteServiceError=e.message||'연결 실패'}
+    const tenant=workspaceContext?.tenantId;
+    if(!tenant){siteServiceSnapshot=null;aiToolSnapshot=null;siteServiceError='사이트 문맥 확인 필요';return;}
+    const results=await Promise.allSettled([
+      siteServiceApi('tenant_site_service_catalog_snapshot',{p_tenant_id:tenant}),
+      siteServiceApi('tenant_ai_tool_catalog_snapshot',{p_tenant_id:tenant},'tools')
+    ]);
+    if(results[0].status==='fulfilled'){siteServiceSnapshot=results[0].value;siteServiceError='';}
+    else{siteServiceSnapshot=null;siteServiceError=results[0].reason?.message||'서비스 설정 연결 실패';}
+    if(results[1].status==='fulfilled'){aiToolSnapshot=results[1].value;aiToolError='';}
+    else{aiToolSnapshot=null;aiToolError=results[1].reason?.message||'AI 도구 원장 연결 실패';}
   }
   async function siteServiceSettings(){
     $('summaryCards').replaceChildren();
     renderTenantServiceAdmin($('mainPanel'),{items:siteServiceSnapshot?.items||[],error:siteServiceError,
+      aiTools:aiToolSnapshot?.tools||[],aiError:aiToolError,
       onToggle:async(item,next)=>{try{
         siteServiceSnapshot=await siteServiceApi('tenant_site_service_preference_set',{
           p_tenant_id:workspaceContext.tenantId,p_service_key:item.key,p_menu_visible:next});
         siteServiceError='';renderNav(workspaceRole);await siteServiceSettings();
       }catch(e){siteServiceError=e.message||'설정 저장 실패';await siteServiceSettings()}},
+      onAiToggle:async(item,next)=>{try{
+        aiToolSnapshot=await siteServiceApi('tenant_ai_tool_preference_set',{
+          p_tenant_id:workspaceContext.tenantId,p_tool_id:item.id,p_selected:next},'tools');
+        aiToolError='';await siteServiceSettings();
+      }catch(e){aiToolError=e.message||'AI 도구 선택 저장 실패';await siteServiceSettings()}},
     });state(siteServiceError?'연결 확인 필요':'사이트 메뉴 설정');
   }
   const SECTION_CAPABILITY=service==='mall'?{services:POLICY.capabilities.site,design:POLICY.capabilities.site,languages:POLICY.capabilities.language,overview:POLICY.capabilities.dashboard,sales:POLICY.capabilities.sales,products:POLICY.capabilities.catalog,sourcing:POLICY.capabilities.supplyNetwork,amazon:POLICY.capabilities.supplyNetwork,marketing:POLICY.capabilities.marketing,channels:POLICY.capabilities.marketing,automation:POLICY.capabilities.marketing,growth:POLICY.capabilities.marketing,analytics:POLICY.capabilities.sales,confirmations:POLICY.capabilities.confirmations}:{services:POLICY.capabilities.site,chrome:POLICY.capabilities.site,design:POLICY.capabilities.site,languages:POLICY.capabilities.language,overview:POLICY.capabilities.dashboard,'business-center':POLICY.capabilities.operations,activities:POLICY.capabilities.activities,saturday:POLICY.capabilities.activities,mall:POLICY.capabilities.dashboard,mail:POLICY.capabilities.connections,publishing:POLICY.capabilities.marketing,marketing:POLICY.capabilities.marketing,work:POLICY.capabilities.operations,finance:POLICY.capabilities.finance,tax:POLICY.capabilities.finance,confirmations:POLICY.capabilities.confirmations,members:POLICY.capabilities.access,member:POLICY.capabilities.memberRoster,festival:POLICY.capabilities.access,edocs:POLICY.capabilities.access,applications:POLICY.capabilities.access,booths:POLICY.capabilities.access,'market-oversight':POLICY.capabilities.operations,petitions:POLICY.capabilities.access,'ip-archive':POLICY.capabilities.access,'education-survey':POLICY.capabilities.operations,status:POLICY.capabilities.logs,records:POLICY.capabilities.reports};
