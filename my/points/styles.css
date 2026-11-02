@@ -23,3 +23,15 @@ body.my-subpage main{max-width:1180px}
 body.my-subpage select,body.my-subpage input,body.my-subpage textarea{background:#fff!important;color:#183127!important;border:1px solid #cbdad0!important}
 body.my-subpage .my-footer-brand{text-align:left}
 body.my-subpage .my-desktop-tabs a[aria-current="page"]{background:#eaf2ee;color:#1f5c3d;border-radius:999px}
+
+/* Accessible personal points tabs. Server-controlled hidden panels remain hidden. */
+.points-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.points-tabs button{font:inherit;font-size:14px;font-weight:700;padding:11px 16px;min-height:44px;border:1px solid #d0ded3;border-radius:10px;background:white;color:#345545;cursor:pointer}
+.points-tabs button[aria-selected="true"]{color:white;background:#205b39;border-color:#205b39}
+.points-tabs button:focus-visible{outline:3px solid #81b7df;outline-offset:2px}
+body[data-points-tab="wallet"] #claimSection,body[data-points-tab="wallet"] #referralSection,body[data-points-tab="wallet"] #referralConfirmSection,
+body[data-points-tab="claims"] #pointsWalletPanel,body[data-points-tab="claims"] #referralSection,body[data-points-tab="claims"] #referralConfirmSection,
+body[data-points-tab="invite"] #pointsWalletPanel,body[data-points-tab="invite"] #claimSection{display:none!important}
+.points-tab-empty{padding:18px;border:1px solid #dce6de;border-radius:12px;background:white;color:#52665a;line-height:1.6}
+.points-tab-empty[hidden]{display:none!important}
+@media(max-width:420px){.points-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.points-tabs button{padding:10px 5px;font-size:13px;min-width:0}}
