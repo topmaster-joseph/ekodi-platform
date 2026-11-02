@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
@@ -154,10 +154,10 @@ test('CORS allows the step-up header and DELETE',async()=>{
  assert.match(pre.headers.get('access-control-allow-methods'),/DELETE/);
 });
 
-test('top-right shows one 본인인증 대기 button, a step-up dialog, and keeps the token in memory',async()=>{
+test('sidebar top shows one 본인인증 대기 button, a step-up dialog, and keeps the token in memory',async()=>{
  const html=await (await investMyRoute(new Request('https://ekodi.kr/invest'),{})).text();
  const js=await (await investMyRoute(new Request('https://ekodi.kr/invest/app.js'),{})).text();
- assert.match(html,/id="stepUpButton"[^>]*data-state="pending"[^>]*>본인인증 대기<\/button>/);
+ assert.match(html,/<nav class="sidebar"[\s\S]*?<div class="sidebar-auth"[\s\S]*?id="stepUpButton"[^>]*data-state="pending"[^>]*>/);
  assert.doesNotMatch(html,/본인 인증 확인 중<\/span>|class="avatar"/);
  assert.match(html,/<dialog id="stepUpDialog"/);assert.match(html,/휴대폰 번호 또는 주소 일부/);
  assert.match(js,/본인인증 완료/);assert.match(js,/x-ekodi-invest-step-up/);assert.match(js,/STEP_UP_REQUIRED/);
