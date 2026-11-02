@@ -219,4 +219,3 @@ test('a non-owner Google account is still refused when step-up is off',async()=>
  const r=await call('GET','/v1/invest/autopilot/policy');
  assert.equal(r.status,403);
 });
-

@@ -207,4 +207,3 @@ test('KIS refusal carries a sanitized provider reason without account digits', a
   assert.equal(kisProviderReason({ msg_cd: '<script>', msg1: '' }), null);
   assert.equal(kisProviderReason({ msg1: 'x'.repeat(500) }).message.length, 120);
 });
-
