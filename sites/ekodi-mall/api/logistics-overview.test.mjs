@@ -47,9 +47,9 @@ test('existing seller-authenticated API owns the logistics projection and does n
 
 test('review queue prioritizes blockers, returns only allowlisted fields, and never leaks buyer data', () => {
   const sample = [
-    { id:'ful_aabbcc', orderId:'ord_8', status:'awaiting_pii', recipientName:'개인정보', address:'민감정보', supplierPayableAmount: 1000 },
-    { id:'ful_ff0011', orderId:'ord_9', status:'failed', recipientName:'개인정보', trackingNumber:'SECRET_TRACK' },
-    { id:'ful_5', orderId:'buyer@email.com', status:'return_requested', buyer:{ phone: '비밀' } },
+    { id:'ful_aabbcc', orderId:'ord_8', status:'awaiting_pii', recipientName:'PERSON_SENTINEL_987', address:'ADDRESS_SENTINEL_654', supplierPayableAmount: 1000 },
+    { id:'ful_ff0011', orderId:'ord_9', status:'failed', recipientName:'PERSON_SENTINEL_987', trackingNumber:'TRACK_SENTINEL_321' },
+    { id:'ful_5', orderId:'buyer@email.com', status:'return_requested', buyer:{ phone: 'PHONE_SENTINEL_123' } },
     { id:'ful_6', orderId:'ord_10', status:'shipped' }
   ];
   const result = buildSellerLogisticsOverview(sample, {});
@@ -57,7 +57,7 @@ test('review queue prioritizes blockers, returns only allowlisted fields, and ne
   assert.deepEqual(result.attentionQueue.map(item => item.status), ['failed','return_requested','awaiting_pii']);
   assert.equal(result.attentionQueue[1].orderId, '');
   assert.deepEqual(Object.keys(result.attentionQueue[0]), ['fulfillmentId','orderId','status','priority','label','nextAction']);
-  assert.doesNotMatch(JSON.stringify(result), /개인정보|민감정보|SECRET_TRACK|비밀|buyer@email.com|trackingNumber/);
+  assert.doesNotMatch(JSON.stringify(result), /PERSON_SENTINEL_987|ADDRESS_SENTINEL_654|TRACK_SENTINEL_321|PHONE_SENTINEL_123|buyer@email.com|trackingNumber/);
   assert.equal(result.attentionQueueTruncated, false);
 });
 
