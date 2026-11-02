@@ -77,3 +77,11 @@ test('path/commit and migration authority fail closed',async t=>{
   await assert.rejects(buildChurchPagesCandidate({sourceDir:src,outputDir:src,platformSha:SHA}),/separate from source/);
   await assert.rejects(buildChurchPagesCandidate({sourceDir:src,outputDir:join(src,'subfolder'),platformSha:SHA}),/separate from source/);
 });
+
+test('Windows checkout CRLF conversion is reversed only if exact Git blob SHA matches',async t=>{
+  const {src,output}=await fixture(t);
+  await writeFile(join(src,'_headers'),'/*\r\n  X-Content-Type-Options: nosniff');
+  const report=await buildChurchPagesCandidate({sourceDir:src,outputDir:output,platformSha:SHA});
+  assert.equal(report.deployed,false);
+  assert.equal(await readFile(join(output,'_headers'),'utf8'),'/*\n  X-Content-Type-Options: nosniff');
+});
