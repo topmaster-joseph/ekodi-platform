@@ -240,9 +240,11 @@ function exportMarketCsv(){
 
 async function loadBrokerSnapshot(){
  const broker=el('brokerSelect').value,badge=el('brokerBadge');
+ const requestId=++marketRequestId;clearMarketRows('증권사 조회 전용 데이터를 확인하고 있습니다.');
  el('brokerRefresh').disabled=true;setText('brokerNotice','조회 중입니다.');
  try{
   const result=await apiCall('GET','/broker/snapshot?broker='+encodeURIComponent(broker));
+  if(requestId!==marketRequestId||el('owner').hidden||broker!==el('brokerSelect').value)return;
   if(!result.ok){badge.dataset.mode='error';badge.textContent='조회 실패';setText('brokerNotice','조회 실패: '+(result.data.error||result.status));return}
   const r=result.data;
   if(r.readOnly!==true||r.liveOrdersEnabled!==false||r.orderExecutionPerformed!==false)throw Error('BROKER_CONTRACT_MISMATCH');
@@ -260,14 +262,15 @@ async function loadBrokerSnapshot(){
   else{setText('brokerChange','—');setText('brokerChangeNote',ch&&ch.comparable===false?'이전 조회와 비교할 수 없음':'첫 조회 · 다음 조회부터 비교')}setText('brokerCurrency',snap?snap.currency:'KRW');
   setText('brokerSource',r.dataMode==='mock'?'모의 데이터 (실제 계좌 아님)':(r.brokerName||broker)+' 공식 API · 조회 전용');
   const rows=snap?snap.positions.map(p=>{const tr=document.createElement('tr');tr.append(cell(p.name||'-'),cell(p.symbol),cell(p.quantity,'num'),cell(won(p.marketValueMinor),'num'));return tr}):[];
+  setMarketSnapshot(r);
   if(rows.length)el('brokerRows').replaceChildren(...rows);else{const tr=document.createElement('tr');const td=cell(snap?'보유 종목이 없습니다.':'표시할 잔고가 없습니다.','empty');td.colSpan=4;tr.append(td);el('brokerRows').replaceChildren(tr)}
   const label={pass:'통과',fail:'실패',unverified:'확인 불가'};
   const checks=r.validation?r.validation.checks.map(c=>{const li=document.createElement('li');li.dataset.status=c.status;li.textContent=c.label+' — '+(label[c.status]||c.status);return li}):[];
   if(r.validation&&r.validation.accepted){const li=document.createElement('li');li.textContent='형식 검증 통과는 증권사 원본 인증·계좌 소유 확인과 별개입니다.';checks.push(li)}
   el('brokerChecks').replaceChildren(...(checks.length?checks:[Object.assign(document.createElement('li'),{textContent:'검증할 잔고가 없습니다.'})]));
   setText('brokerBlockers',r.blockers&&r.blockers.length?'실제 조회 대기 사유: '+r.blockers.map(b=>BROKER_BLOCKER[b]||b).join(', '):'');
- }catch{badge.dataset.mode='error';badge.textContent='조회 실패';setText('brokerNotice','잔고 조회에 실패했습니다. 실제 잔고를 표시하지 않습니다.')}
- finally{el('brokerRefresh').disabled=false}
+ }catch{if(requestId===marketRequestId){clearMarketRows('조회 실패 · 실제 잔고는 표시하지 않습니다.');badge.dataset.mode='error';badge.textContent='조회 실패';setText('brokerNotice','잔고 조회에 실패했습니다. 실제 잔고를 표시하지 않습니다.')}}
+ finally{if(requestId===marketRequestId)el('brokerRefresh').disabled=false}
 }
 async function loadLiveReadiness(){
  const broker=el('liveBroker').value;
@@ -399,7 +402,7 @@ function status(message,needsLogin){
  if(needsLogin){const a=document.createElement('a');a.href=login;a.textContent='안전하게 다시 로그인';root.append(a)}
 }
 function setStepUp(state){const b=el('stepUpButton');b.dataset.state=state;b.disabled=false;b.textContent=state==='done'?'본인인증 완료':'본인인증 대기';b.setAttribute('aria-pressed',state==='done'?'true':'false')}
-const TAB_OF={ownerSummary:'*',ownerTabs:'*',autopilot:'summary',brokerReadonly:'broker',autopilotPolicy:'autopilot',liveTrading:'live',export:'report',strategyLab:'research'};
+const TAB_OF={ownerSummary:'*',ownerTabs:'*',marketDashboard:'market',autopilot:'summary',brokerReadonly:'broker',autopilotPolicy:'autopilot',liveTrading:'live',export:'report',strategyLab:'research'};
 function tabFor(node){if(node.id&&TAB_OF[node.id])return TAB_OF[node.id];if(node.classList.contains('overview'))return 'summary';return 'analysis'}
 function tabTargets(){const owner=el('owner');const out=[];for(const child of owner.children){if(child.classList.contains('layout')){for(const inner of child.children)out.push(inner)}else out.push(child)}return out}
 function showTab(tab,{focus=false}={}){
@@ -414,6 +417,7 @@ function kpi(id,text,state){const node=el(id);if(!node)return;node.textContent=t
 function touchUpdated(){kpi('kpiUpdated',new Date().toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}))}
 function unlockOwner(){kpi('kpiAuth','완료','ok');routeHash();el('owner').hidden=false;el('authMessage').hidden=true;setStepUp('done');render();loadAutopilot();loadLiveReadiness();loadBrokerSnapshot();refreshLiveMfa()}
 function lockOwner(message){
+ ++marketRequestId;clearMarketRows('본인인증 후 조회할 수 있습니다.');
  kpi('kpiAuth','대기','warn');
  stepUpToken='';
  el('owner').hidden=true;el('authMessage').hidden=false;setStepUp('pending');
@@ -623,6 +627,8 @@ function init(){
  for(const id of ['capital','monthly','horizon','target','loss','cash','concentration','goal','mode'])el(id).addEventListener('change',render);
  el('calculate').addEventListener('click',render);el('reset').addEventListener('click',reset);el('holdingForm').addEventListener('submit',addHolding);
  el('demo').addEventListener('click',demo);el('clear').addEventListener('click',()=>{holdings=[];isDemo=false;render()});el('download').addEventListener('click',download);
+ for(const b of document.querySelectorAll('#marketFilters button[data-market-filter]'))b.addEventListener('click',()=>{marketFilter=b.dataset.marketFilter;for(const item of document.querySelectorAll('#marketFilters button'))item.setAttribute('aria-pressed',String(item===b));renderMarketRows()});
+ el('marketSearch').addEventListener('input',renderMarketRows);el('marketExport').addEventListener('click',exportMarketCsv);
  el('liveRefresh').addEventListener('click',loadLiveReadiness);el('brokerRefresh').addEventListener('click',loadBrokerSnapshot);el('labRefresh').addEventListener('click',loadStrategyLab);el('brokerSelect').addEventListener('change',loadBrokerSnapshot);
  el('liveMfaEnroll').addEventListener('click',enrollLiveMfa);
  el('liveMfaVerify').addEventListener('click',verifyLiveMfa);
