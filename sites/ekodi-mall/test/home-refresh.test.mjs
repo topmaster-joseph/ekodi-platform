@@ -120,3 +120,24 @@ test('legacy product, store, seller, checkout and policy headers match canonical
   assert.match(shared, /--ekodi-user-content-inline-size,var\(--ekodi-user-canvas-max,1240px\)/);
   assert.match(shared, /@media\(max-width:720px\)/);
 });
+
+test('shared buyer navigation retains category links and the approved ordering', () => {
+  const subpage = renderMallHeader({ publicPrefix:'/ekodimall', home:false });
+  const all = subpage.indexOf('>전체상품</a>');
+  const weekly = subpage.indexOf('>이번 주 추천</a>');
+  const travel = subpage.indexOf('>여행·레저</a>');
+  assert.ok(all >= 0 && all < weekly && weekly < travel);
+  for (const category of ['all','local','general','living','book','gift']) {
+    assert.ok(subpage.includes('/ekodimall/?category='+category+'#shop'), 'deep link missing: '+category);
+    assert.ok(js.includes(category+':'), 'category display copy missing: '+category);
+  }
+  assert.match(subpage, /placeholder="상품검색"/);
+  assert.match(subpage, /aria-current/);
+});
+
+test('mall footer uses existing shared shell deduplication rather than a second native footer', () => {
+  const shell = readFileSync(new URL('../../../ekodi-shell-injector.js', import.meta.url), 'utf8');
+  assert.match(shell, /SHARED_FOOTER_REPLACES_LOCAL_FOOTER_SERVICES=new Set\(\['mall'\]\)/);
+  assert.match(shell, /if\(sharedFooterReplacesLocalFooter\(this.serviceId\)\)\{element.remove\(\);return;\}/);
+  assert.doesNotMatch(template, /<footer[\\s>]/i);
+});
