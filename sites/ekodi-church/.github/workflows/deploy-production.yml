@@ -1,0 +1,132 @@
+name: Validate EKODI Church Release
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'script.js'
+      - 'partner-news.js'
+      - 'partner-news.css'
+      - 'live/**'
+      - 'worship/**'
+      - 'church-character-identity.js'
+      - 'church-life-hub.js'
+      - 'church-life-hub.css'
+      - 'church-life-hub-i18n.js'
+      - 'church-life-hub-i18n-state.js'
+      - 'giving.js'
+      - 'functions/api/giving/**'
+      - 'mypage/**'
+      - 'my/**'
+      - '_headers'
+      - 'test/**'
+      - 'package.json'
+      - '.github/workflows/deploy-production.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-church-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate giving boundary, worship operations and church life hub
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm test
+          echo 'Broadcast System Verification Contract: inherited from ekodi-platform/BROADCAST_SYSTEM_VERIFICATION_POLICY.md'
+          node --test test/church-live-system-verification.test.mjs
+      - name: Install test dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install synthetic broadcast browser
+        run: npx playwright install --with-deps chromium
+      - name: Virtual broadcaster and production synthetic canary
+        run: npm run test:live:synthetic
+      - name: Worship stage and portrait synthetic browser canary
+        run: npx playwright test test/church-worship-prism-synthetic.spec.mjs --reporter=line
+      - name: Independent worship viewer and camera UI browser synthetic
+        run: npx playwright test test/church-live-worship-viewer-synthetic.spec.mjs --reporter=line
+      - name: Cross-browser opt-in presenter slide synchronization synthetic
+        run: npx playwright test test/church-live-follow-presenter-synthetic.spec.mjs --reporter=line
+      - name: Validate release boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check giving.js
+          node --check script.js
+          node --check partner-news.js
+          grep -Fq "const endpoint='/api/partner-news/public" partner-news.js
+          if grep -Fq 'api.ekodi.kr' partner-news.js; then echo 'Deprecated API subdomain must not return.'; exit 1; fi
+          node --check live/live.js
+          node --check church-character-identity.js
+          node --check church-life-hub.js
+          node --check church-life-hub-i18n.js
+          node --check church-life-hub-i18n-state.js
+          node --check mypage/app.js
+          node --check my/app.js
+          test -s church-life-hub.css
+          test -s giving-config.json
+          test -s mypage/index.html
+          test -s mypage/styles.css
+          test -s my/index.html
+          test -s my/styles.css
+          test -s my/app.js
+          test -s live/index.html
+          grep -Fq '"provider": "missionfund"' giving-config.json
+          grep -Fq 'https://go.missionfund.org/fmd01' giving-config.json
+          grep -Fq '에코디교회 · 십일조·주일헌금' index.html
+          grep -Fq '에코디선교회 · 선교헌금' index.html
+          grep -Fq 'data-ekodi-life-hub' index.html
+          grep -Fq '에코디선교회' index.html
+          grep -Fq 'church-life-hub-i18n-state.js' index.html
+          grep -Fq 'church-life-hub-i18n.js' index.html
+          grep -Fq '부르심에서 교제로,' index.html
+          grep -Fq '예배 운영 콘솔' mypage/index.html
+          grep -Fq 'PPT 다운로드' mypage/index.html
+          grep -Fq '라이브 스튜디오 열기' mypage/index.html
+          grep -Fq 'EKODI CHURCH · MY PAGE' my/index.html
+          grep -Fq 'site=church' my/index.html
+          grep -Fq 'data-ekodi-header-actions' my/index.html
+          if grep -Fq 'https://ekodi.kr/my/' my/index.html || grep -Eq '내 EKODI|MY EKODI|다른 EKODI 활동' my/index.html; then
+            echo 'Church member surface must stay inside the church context.'
+            exit 1
+          fi
+          grep -Fq "church_worship_materials" mypage/app.js
+          grep -Fq "current_site_access" mypage/app.js
+          grep -Fq "metadata:{service:" live/live.js
+          grep -Fq "syncPublishedWorship" script.js
+          grep -Fq "href: '/ekodichurch/my/'" script.js
+          grep -Fq 'href="/ekodichurch/my/' index.html
+          if grep -Fq "https://ekodi.kr/ekodichurch/my" script.js || grep -Fq "https://ekodi.kr/ekodichurch/my" index.html; then
+            echo 'Church header member navigation must remain a site-local path.'
+            exit 1
+          fi
+          if grep -Fq "https://ekodi.kr/my/" index.html || grep -Fq "https://ekodi.kr/my/" script.js; then
+            echo 'Church public surface must use its site-local My Page, not global My EKODI.'
+            exit 1
+          fi
+          if grep -Fq 'https://my.ekodi.kr/' script.js; then
+            echo 'Deprecated My EKODI subdomain must not return.'
+            exit 1
+          fi
+          if grep -RniE 'TOSS_CLIENT_KEY|TOSS_SECRET_KEY|tosspayments\.com' -- index.html giving.js functions README.md _headers; then
+            echo 'Toss-specific dependency must not remain in the church giving surface.'
+            exit 1
+          fi
+          curl -L -fsS --connect-timeout 5 --max-time 20 -o /tmp/missionfund.html https://go.missionfund.org/fmd01
+          test -s /tmp/missionfund.html
+          echo 'Church release boundary verified. Production deployment is owned by the EKODI central release pipeline.'

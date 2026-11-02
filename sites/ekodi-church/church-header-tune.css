@@ -1,0 +1,334 @@
+
+.site-header .brand{
+  text-decoration:none;
+  cursor:pointer;
+}
+.site-header .brand strong{
+  color:#173730;
+  font-weight:900;
+  letter-spacing:-.035em;
+  text-shadow:0 .2px 0 currentColor;
+}
+.site-header .brand:hover strong,
+.site-header .brand:focus-visible strong{color:#806633}
+.site-header nav{gap:10px!important}
+.site-header nav>a{padding-inline:0!important;text-align:center!important}
+.site-header nav>a.shell-my{padding:7px 9px!important}
+.site-header .ekodi-user-language{
+  margin-inline-start:0!important;
+  gap:3px!important;
+}
+.site-header .ekodi-user-language__icon{
+  font-size:12px;
+  line-height:1;
+  opacity:.72;
+}
+.site-header .ekodi-user-language__label{display:none!important}
+.site-header .ekodi-user-language__select{
+  min-height:30px!important;
+  max-width:102px!important;
+  border-radius:999px!important;
+  border-color:rgba(23,55,48,.14)!important;
+  background:rgba(255,255,255,.46)!important;
+  padding:0 21px 0 8px!important;
+  font-size:10.5px!important;
+  font-weight:650!important;
+  letter-spacing:-.02em;
+  text-align:center!important;
+}
+.site-header #ekodi-ccm-mr-toggle{
+  position:static!important;
+  inset:auto!important;
+  z-index:auto!important;
+  min-width:0!important;
+  min-height:30px!important;
+  margin:0!important;
+  padding:6px 8px!important;
+  border:1px solid rgba(23,55,48,.14)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.46)!important;
+  color:#173730!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  font:650 10.5px/1.15 system-ui,-apple-system,"Noto Sans KR",sans-serif!important;
+  white-space:nowrap;
+  text-align:center!important;
+}
+.site-header #ekodi-ccm-mr-toggle:hover,
+.site-header #ekodi-ccm-mr-toggle:focus-visible{
+  background:#173730!important;
+  color:#fff!important;
+  border-color:#173730!important;
+}
+
+/* Header Scripture: larger, darker, and equally weighted for verse + reference. */
+.site-header .daily-verse{
+  gap:7px!important;
+  overflow:hidden;
+  color:rgba(23,55,48,.90)!important;
+  font-family:var(--serif)!important;
+  font-size:15px!important;
+  font-weight:600!important;
+  line-height:1.45!important;
+  letter-spacing:-.025em!important;
+  text-align:center!important;
+}
+.site-header .daily-verse-text,
+.site-header .daily-verse-ref{
+  display:inline!important;
+  color:inherit!important;
+  font:inherit!important;
+  font-weight:600!important;
+  letter-spacing:inherit!important;
+  opacity:1!important;
+  white-space:nowrap;
+}
+.site-header .daily-verse-text{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.site-header .daily-verse-ref{flex:0 0 auto}
+.site-header .daily-verse-ref::before{content:"·";margin-right:7px;opacity:.58}
+
+/* Make the right-side actions visually quieter than the Scripture. */
+.site-header nav{gap:7px!important;font-size:11.5px!important}
+.site-header nav>a{font-size:11.5px!important;font-weight:600!important}
+
+/* First-screen focus: daily meditation and the current Sunday sermon. */
+.hero-focus{
+  width:min(900px,100%);
+  margin:0 auto 28px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.hero-focus-card{
+  min-height:104px;
+  padding:17px 20px;
+  display:grid;
+  align-content:center;
+  justify-items:center;
+  gap:7px;
+  text-align:center;
+  border:1px solid rgba(255,255,255,.24);
+  background:rgba(255,255,255,.09);
+  -webkit-backdrop-filter:blur(12px);
+  backdrop-filter:blur(12px);
+  transition:transform .2s ease,background .2s ease,border-color .2s ease;
+}
+.hero-focus-card:hover,
+.hero-focus-card:focus-visible{
+  transform:translateY(-2px);
+  background:rgba(244,240,229,.96);
+  color:var(--deep);
+  border-color:rgba(244,240,229,.96);
+  outline:none;
+}
+.hero-focus-label{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.12em;
+  opacity:.72;
+}
+.hero-focus-card strong{
+  max-width:400px;
+  font-family:var(--serif);
+  font-size:17px;
+  font-weight:600;
+  line-height:1.5;
+}
+.hero-focus-card small{
+  font-size:10px;
+  line-height:1.4;
+  opacity:.68;
+}
+.hero-focus-devotion-ref{font-family:var(--serif)}
+
+/* Church page alignment: keep the header structure, center the content itself. */
+main,
+.hero-content,
+.section,
+.section-label,
+.intro-grid>*,
+.value-card,
+.worship-grid>*,
+.schedule>div,
+.message-head,
+.sermon-info,
+.community-head,
+.community-cards article,
+.online-head,
+.ministry-card,
+.giving-strip,
+.giving-copy,
+.compact-accounts>div,
+.location-copy,
+.community-visit-copy,
+.visit-panel,
+.giving-dialog-head,
+.giving-form,
+.giving-result{
+  text-align:center!important;
+}
+.hero-content,
+.intro-copy,
+.online-head,
+.community-head>p,
+.location-copy>p,
+.community-visit-copy>p,
+.visit-note,
+footer>p{
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+.intro-grid,.worship-grid{align-items:center!important}
+.message-head,.community-head{align-items:center!important}
+.message-head>div,.community-head>div{width:100%}
+.message-head>a{margin-left:auto!important;margin-right:auto!important}
+.community-cards article{align-items:center!important}
+.schedule>div{
+  grid-template-columns:1fr 1.55fr 1fr!important;
+  justify-items:center!important;
+  gap:14px!important;
+}
+.schedule span,.schedule strong,.schedule small{width:100%;text-align:center!important}
+.sermon-info>div,
+.youtube-direct-actions,
+.channel-links,
+.giving-primary-actions,
+.visit-actions,
+.ministry-kicker,
+.devotion-pulse{
+  justify-content:center!important;
+}
+.sermon-info .tag,.sermon-info .play{margin-left:auto;margin-right:auto}
+.ministry-card .compact-video{width:100%}
+.ministry-card .button{align-self:center}
+.giving-strip{justify-items:center!important}
+.giving-strip>*{width:100%}
+.compact-accounts>div{justify-items:center!important}
+.compact-accounts .copy-account{justify-self:center!important}
+.giving-field,.giving-amount-field,.giving-amount-field legend{text-align:center!important}
+.giving-field select{text-align:center!important;text-align-last:center!important}
+.giving-amount-field label{justify-content:center!important}
+.giving-amount-field label input{text-align:center!important}
+.location dl,.visit-panel dl{
+  grid-template-columns:1fr!important;
+  justify-items:center!important;
+  gap:5px!important;
+  text-align:center!important;
+}
+.location dd,.visit-panel dd{margin:0!important;text-align:center!important}
+.visit-facts div{
+  grid-template-columns:1fr!important;
+  justify-items:center!important;
+  gap:5px!important;
+  text-align:center!important;
+}
+.visit-actions{justify-content:center!important}
+.site-footer,.site-footer-inner{text-align:center!important}
+
+@media(max-width:1100px){
+  .site-header .daily-verse{font-size:14px!important}
+}
+@media(max-width:900px){
+  .site-header{gap:14px!important}
+  .site-header nav{gap:6px!important}
+  .site-header nav>a{font-size:11px!important}
+  .site-header .ekodi-user-language__select{max-width:98px!important}
+}
+@media(max-width:800px){
+  .hero-focus{grid-template-columns:1fr;max-width:620px;margin-bottom:24px}
+  .hero-focus-card{min-height:86px;padding:14px 16px}
+  .hero-focus-card strong{font-size:16px}
+  .schedule>div{grid-template-columns:1fr!important;gap:5px!important;padding:22px 0!important}
+  .schedule small{display:block!important}
+}
+@media(max-width:760px){
+  .site-header nav.open{gap:6px!important}
+  .site-header nav.open .ekodi-user-language,
+  .site-header nav.open #ekodi-ccm-mr-toggle{align-self:stretch}
+  .site-header nav.open .ekodi-user-language__select{width:100%;max-width:none!important}
+  .site-header nav.open #ekodi-ccm-mr-toggle{width:100%!important;justify-content:center}
+}
+@media(max-width:620px){
+  .site-header .daily-verse{gap:5px!important;font-size:12px!important;font-weight:600!important}
+  .site-header .daily-verse-ref::before{margin-right:5px}
+  .hero-focus{gap:8px}
+  .hero-focus-card{min-height:80px}
+}
+
+/* 2026-09-02 mobile header scripture layout */
+.site-header .daily-verse,
+.site-header .daily-verse-text,
+.site-header .daily-verse-ref{
+  word-break:keep-all!important;
+  overflow-wrap:normal!important;
+  hyphens:none!important;
+}
+@media(max-width:800px){
+  .site-header{
+    min-height:118px!important;
+    height:auto!important;
+    padding:12px 18px 44px!important;
+    overflow:visible!important;
+  }
+  .site-header .daily-verse{
+    position:absolute!important;
+    left:18px!important;
+    right:18px!important;
+    bottom:10px!important;
+    width:auto!important;
+    max-width:none!important;
+    min-width:0!important;
+    display:block!important;
+    overflow:visible!important;
+    font-size:12.5px!important;
+    line-height:1.45!important;
+    text-align:center!important;
+  }
+  .site-header .daily-verse-text,
+  .site-header .daily-verse-ref{
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  .site-header .daily-verse-text{display:block!important;min-width:0!important;width:100%!important}
+  .site-header .daily-verse-ref{display:block!important;margin-top:2px!important}
+  .site-header .daily-verse-ref::before{content:""!important;margin:0!important}
+}
+@media(max-width:420px){
+  .site-header{
+    min-height:124px!important;
+    padding-bottom:50px!important;
+  }
+  .site-header .daily-verse{
+    left:14px!important;
+    right:14px!important;
+    bottom:9px!important;
+    font-size:12px!important;
+  }
+}
+/* Keep the mobile Scripture bounded to the physical viewport even when the
+   authenticated/shared shell makes the header wider than the visual viewport. */
+@media(max-width:800px){
+  .site-header .daily-verse{
+    left:14px!important;
+    right:auto!important;
+    width:calc(100vw - 36px)!important;
+    max-width:calc(100vw - 36px)!important;
+    transform:none!important;
+    box-sizing:border-box!important;
+  }
+  .site-header .daily-verse-text,
+  .site-header .daily-verse-ref{
+    max-width:100%!important;
+  }
+}
+@media(max-width:420px){
+  .site-header .daily-verse{
+    width:calc(100vw - 28px)!important;
+    max-width:calc(100vw - 28px)!important;
+  }
+}

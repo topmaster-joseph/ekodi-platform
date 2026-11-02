@@ -1,0 +1,101 @@
+/* 함께하기 — one shared measure for header, hero and every section; centered copy. */
+:root{--tg-w:1040px;--tg-gutter:24px;--tg-line:#e3ddcf;--tg-card:#fffdf8;--tg-muted:#5f6b66}
+
+/* Header: brand and menu sit on the same edges as the content below. */
+body[data-ekodi-church-together] .site-header{position:sticky;top:0;background:rgba(18,49,43,.94);backdrop-filter:saturate(140%) blur(10px);-webkit-backdrop-filter:saturate(140%) blur(10px);border-bottom:1px solid rgba(200,166,107,.28);padding:0 max(var(--tg-gutter),calc((100% - var(--tg-w)) / 2))!important;height:76px}
+body[data-ekodi-church-together] .site-header nav{gap:30px!important;font-size:13px!important;letter-spacing:.04em}
+body[data-ekodi-church-together] .site-header nav a{position:relative;padding:6px 0;color:#f4f0e5cc;transition:color .2s}
+body[data-ekodi-church-together] .site-header nav a:hover,body[data-ekodi-church-together] .site-header nav a[aria-current=page]{color:#fff}
+body[data-ekodi-church-together] .site-header nav a[aria-current=page]::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1px;background:var(--gold)}
+
+.together-main{background:var(--paper);text-align:center}
+.together-wrap{width:min(var(--tg-w),100% - var(--tg-gutter) * 2);margin:0 auto}
+
+/* Hero */
+.together-hero{position:relative;overflow:hidden;color:#fff;padding:120px 0 110px;background:radial-gradient(120% 90% at 50% 0%,#24584b 0%,var(--deep) 58%,#0c241f 100%)}
+.together-hero::before{content:"";position:absolute;inset:auto 50% -320px auto;transform:translateX(50%);width:760px;height:760px;border-radius:50%;border:1px solid rgba(200,166,107,.16);box-shadow:0 0 0 70px rgba(200,166,107,.035),0 0 0 140px rgba(200,166,107,.025);pointer-events:none}
+.together-hero .together-wrap{position:relative}
+.together-hero .eyebrow{color:var(--gold);letter-spacing:.32em;font-size:12px;font-weight:600;margin:0}
+.together-rule{display:block;width:44px;height:1px;background:var(--gold);margin:22px auto 30px}
+.together-hero h1{font-family:var(--serif);font-weight:400;font-size:clamp(34px,5vw,60px);line-height:1.32;margin:0 0 28px;letter-spacing:-.01em}
+.together-hero h1 em{font-style:normal;color:#c9d8c6}
+.together-hero-copy{max-width:640px;margin:0 auto;line-height:2;color:#ffffffcc;font-size:16px;word-break:keep-all}
+.together-hero-actions{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:40px}
+
+/* Buttons */
+.together-main .button{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 30px;border-radius:999px;font:600 15px var(--sans);letter-spacing:.02em;cursor:pointer;border:1px solid var(--gold);transition:transform .2s,box-shadow .2s,background .2s}
+.together-main .button.primary{background:linear-gradient(180deg,#d6b77f,#bf9a5c);color:var(--deep);box-shadow:0 10px 26px -12px rgba(200,166,107,.9)}
+.together-main .button.primary:hover{transform:translateY(-1px);box-shadow:0 14px 30px -12px rgba(200,166,107,1)}
+.together-main .button.primary:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+.together-main .button.text{background:transparent;color:#fff;border-color:rgba(255,255,255,.45)}
+.together-main .button.text:hover{border-color:var(--gold);color:var(--gold)}
+
+/* Sections */
+.together-ways,.together-give,.together-join{padding:104px 0}
+.together-give{background:linear-gradient(180deg,#f6f2e8,var(--paper))}
+.together-kicker{margin:0 0 14px;font-size:11px;letter-spacing:.34em;color:#a4834c;font-weight:600}
+.together-main h2{font-family:var(--serif);font-weight:400;font-size:clamp(28px,3.4vw,40px);margin:0 0 20px;color:var(--ink)}
+.together-main h2::after{content:"";display:block;width:36px;height:1px;background:var(--gold);margin:22px auto 0}
+.together-lead{line-height:1.9;max-width:640px;margin:0 auto 46px;color:var(--tg-muted);word-break:keep-all}
+
+.together-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:46px}
+.together-grid article,.together-org{background:var(--tg-card);border:1px solid var(--tg-line);border-radius:22px;padding:40px 30px;box-shadow:0 1px 0 #fff inset,0 20px 40px -32px rgba(18,49,43,.45);transition:transform .25s,box-shadow .25s}
+.together-grid article:hover{transform:translateY(-3px);box-shadow:0 1px 0 #fff inset,0 28px 50px -30px rgba(18,49,43,.5)}
+.together-grid span{font-size:11px;letter-spacing:.24em;color:#a4834c;font-weight:600}
+.together-grid h3,.together-org h3{font-family:var(--serif);font-weight:700;font-size:23px;margin:16px 0 14px;color:var(--ink)}
+.together-grid p{line-height:1.9;margin:0;color:var(--tg-muted);word-break:keep-all}
+
+.together-give-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.together-org{border-top:3px solid var(--gold)}
+.together-org header{display:flex;flex-direction:column;align-items:center;gap:12px}
+.together-org h3{margin:0}
+.badge{font-size:12px;font-weight:600;padding:6px 14px;border-radius:999px;letter-spacing:.02em}
+.badge.ok{background:#e3efe6;color:var(--green)}
+.badge.muted{background:#efe9dc;color:#6b6b5f}
+.together-org dl{display:grid;grid-template-columns:auto auto;justify-content:center;gap:12px 18px;margin:28px 0;text-align:left}
+.together-org dt{color:var(--tg-muted);font-size:14px}
+.together-org dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.copy-account{margin-left:6px;font-size:12px;border:1px solid #d9cfba;background:#fff;border-radius:999px;padding:3px 11px;cursor:pointer;color:var(--ink)}
+.copy-account:hover{border-color:var(--gold)}
+.together-org small,.together-help{display:block;margin-top:14px;color:var(--tg-muted);line-height:1.7}
+.together-help{margin-top:30px;font-size:13px}
+.together-note{line-height:1.9;margin:0;color:var(--tg-muted)}
+.together-note a,.together-consent a{color:var(--green);text-decoration:underline;text-underline-offset:3px}
+
+/* Form: headings centered, fields keep a readable left edge. */
+#together-form{background:var(--tg-card);border:1px solid var(--tg-line);border-radius:24px;padding:40px;display:grid;gap:20px;text-align:left;box-shadow:0 26px 50px -38px rgba(18,49,43,.5)}
+.together-fields{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+#together-form label{display:grid;gap:8px;font-size:14px;font-weight:600;color:var(--ink)}
+#together-form input:not([type=checkbox]),#together-form textarea{font:400 16px var(--sans);padding:13px 15px;border:1px solid #d9d2c2;border-radius:12px;background:#fff;color:var(--ink);width:100%;transition:border-color .2s,box-shadow .2s}
+#together-form input:not([type=checkbox]):focus,#together-form textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,166,107,.2)}
+.together-ways-pick{border:1px solid var(--tg-line);border-radius:14px;padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0}
+.together-ways-pick legend{font-size:14px;font-weight:600;padding:0 8px}
+#together-form .together-ways-pick label,#together-form .together-consent{display:flex;gap:10px;align-items:flex-start;font-weight:400;line-height:1.7}
+#together-form input[type=checkbox]{accent-color:var(--green);width:16px;height:16px;margin-top:4px;flex:none}
+#together-form .together-consent{font-size:13px;color:var(--tg-muted)}
+#together-form button[type=submit]{width:100%}
+.together-hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;overflow:hidden}
+#together-form-status{margin:0;line-height:1.7;min-height:1.7em;text-align:center}
+#together-form-status[data-state=ok]{color:var(--green);font-weight:600}
+#together-form-status[data-state=error]{color:#a33a2a}
+
+@media(max-width:800px){
+  :root{--tg-gutter:16px}
+  body[data-ekodi-church-together] .site-header{height:70px;padding:0 16px!important}
+  body[data-ekodi-church-together] .site-header nav{background:var(--deep);padding:22px 16px;align-items:center}
+  .together-hero{padding:96px 0 84px}
+  .together-ways,.together-give,.together-join{padding:72px 0}
+  .together-grid,.together-give-grid,.together-fields,.together-ways-pick{grid-template-columns:1fr}
+  .together-grid article,.together-org{padding:32px 22px}
+  #together-form{padding:26px 18px}
+  .together-lead br,.together-note br{display:none}
+}
+@media(prefers-reduced-motion:reduce){.together-main *{transition:none!important}}
+.together-way{all:unset;box-sizing:border-box;display:block;cursor:pointer;background:#fff;border:1px solid #e3ddcf;border-radius:18px;padding:28px;transition:border-color .2s,box-shadow .2s,transform .2s}
+.together-way:hover{transform:translateY(-2px);box-shadow:0 12px 30px #12312b14}
+.together-way[aria-selected=true]{border-color:var(--gold,#c8a66b);box-shadow:0 0 0 2px var(--gold,#c8a66b) inset}
+.together-way:focus-visible{outline:3px solid var(--gold,#c8a66b);outline-offset:3px}
+.together-way span{font-size:12px;letter-spacing:.16em;font-weight:800;color:var(--gold,#a68c56)}
+.together-way p{line-height:1.7;color:#4c5b55}
+.together-way-go{display:inline-block;margin-top:8px;font-size:14px;color:#12312b}
+.together-pray{padding:56px 0}

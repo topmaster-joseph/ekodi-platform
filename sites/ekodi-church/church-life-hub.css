@@ -1,0 +1,94 @@
+/* EKODI Church Life Hub */
+.life-hub {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(4.5rem, 8vw, 8rem) clamp(1.25rem, 5vw, 5rem);
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255,255,255,.12), transparent 28rem),
+    linear-gradient(145deg, #183a32 0%, #0f2723 52%, #10201e 100%);
+  color: #f8f5ec;
+}
+.life-hub::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.7), transparent 88%);
+}
+.life-hub-inner { position: relative; z-index: 1; max-width: 1240px; margin: 0 auto; }
+.life-hub .section-label { color: rgba(255,255,255,.62); }
+.life-hub-head { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(260px, .7fr); gap: 2rem; align-items: end; margin: 1.8rem 0 2.5rem; }
+.life-hub-head h2 { margin: 0; font-family: "Gowun Batang", serif; font-size: clamp(2.25rem, 5vw, 4.9rem); line-height: 1.07; font-weight: 700; letter-spacing: -.04em; }
+.life-hub-head h2 em { color: #f3cf87; font-style: normal; }
+.life-hub-head p { margin: 0; color: rgba(255,255,255,.76); font-size: 1.03rem; line-height: 1.8; }
+.life-loop { display: grid; grid-template-columns: repeat(5, 1fr); gap: .65rem; margin-bottom: 2.2rem; }
+.life-loop span { min-height: 92px; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; border: 1px solid rgba(255,255,255,.14); border-radius: 18px; background: rgba(255,255,255,.055); backdrop-filter: blur(12px); }
+.life-loop b { font-size: .72rem; letter-spacing: .12em; color: #f3cf87; }
+.life-loop strong { font-size: .98rem; }
+.life-loop small { color: rgba(255,255,255,.58); line-height: 1.45; }
+.life-workspace { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; }
+.life-panel { border: 1px solid rgba(255,255,255,.13); border-radius: 24px; background: rgba(255,255,255,.07); backdrop-filter: blur(14px); padding: clamp(1.25rem, 2.6vw, 2rem); box-shadow: 0 18px 45px rgba(0,0,0,.13); }
+.life-panel h3 { margin: .35rem 0 .65rem; font-size: 1.35rem; }
+.life-panel > p { color: rgba(255,255,255,.7); line-height: 1.7; }
+.life-panel-kicker { display: flex; align-items: center; gap: .65rem; font-size: .72rem; letter-spacing: .11em; text-transform: uppercase; color: #f3cf87; }
+.life-panel-kicker span { width: 28px; height: 28px; display: inline-grid; place-items: center; border-radius: 999px; border: 1px solid rgba(243,207,135,.55); }
+.life-panel.word-lens { grid-column: span 7; }
+.life-panel.fellowship { grid-column: span 5; }
+.life-panel.memory { grid-column: span 5; }
+.life-panel.witness { grid-column: span 7; }
+.life-form { display: grid; gap: .8rem; margin-top: 1.1rem; }
+.life-form label { display: grid; gap: .4rem; font-size: .79rem; color: rgba(255,255,255,.67); }
+.life-form input, .life-form textarea { width: 100%; box-sizing: border-box; border: 1px solid rgba(255,255,255,.14); border-radius: 14px; background: rgba(6,19,17,.42); color: #fff; padding: .88rem 1rem; font: inherit; outline: none; resize: vertical; }
+.life-form textarea { min-height: 92px; }
+.life-form input:focus, .life-form textarea:focus { border-color: rgba(243,207,135,.8); box-shadow: 0 0 0 3px rgba(243,207,135,.08); }
+.life-form-actions { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
+.life-action { border: 0; border-radius: 999px; padding: .78rem 1.1rem; font: inherit; font-weight: 700; cursor: pointer; transition: transform .18s ease, background .18s ease; }
+.life-action:hover { transform: translateY(-1px); }
+.life-action.primary { background: #f3cf87; color: #1e2a25; }
+.life-action.secondary { background: rgba(255,255,255,.09); color: #fff; border: 1px solid rgba(255,255,255,.14); }
+.life-help { color: rgba(255,255,255,.5); font-size: .75rem; line-height: 1.5; }
+.presence-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .65rem; margin: 1.1rem 0; }
+.presence-button { min-height: 68px; border: 1px solid rgba(255,255,255,.12); border-radius: 16px; background: rgba(255,255,255,.055); color: #fff; font: inherit; text-align: left; padding: .8rem; cursor: pointer; }
+.presence-button strong { display: block; margin-bottom: .2rem; }
+.presence-button small { color: rgba(255,255,255,.58); }
+.presence-button[aria-pressed="true"] { border-color: rgba(243,207,135,.72); background: rgba(243,207,135,.13); }
+.live-links { display: grid; gap: .65rem; margin-top: 1rem; }
+.live-links a { display: flex; justify-content: space-between; align-items: center; gap: .8rem; padding: .88rem 1rem; border-radius: 14px; color: #fff; text-decoration: none; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); }
+.live-links a strong { font-size: .92rem; }
+.live-links a small { color: rgba(255,255,255,.58); }
+.life-status { min-height: 1.4em; margin-top: .7rem; color: #f3cf87; font-size: .78rem; }
+.memory-feed { display: grid; gap: .65rem; margin-top: 1rem; }
+.memory-item { padding: .85rem .95rem; border-radius: 14px; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.08); }
+.memory-item time { display: block; margin-bottom: .35rem; color: #f3cf87; font-size: .68rem; letter-spacing: .05em; }
+.memory-item strong { display: block; margin-bottom: .28rem; }
+.memory-item p { margin: 0; color: rgba(255,255,255,.72); line-height: 1.55; white-space: pre-wrap; }
+.witness-prompt { margin: 1rem 0; padding: 1rem 1.1rem; border-left: 2px solid #f3cf87; border-radius: 0 14px 14px 0; background: rgba(243,207,135,.075); color: rgba(255,255,255,.82); line-height: 1.7; }
+.life-record { margin-top: 1rem; padding: 1rem 1.1rem; border-radius: 16px; background: rgba(0,0,0,.14); min-height: 76px; }
+.life-record.empty { color: rgba(255,255,255,.47); }
+.life-record strong { display: block; margin-bottom: .35rem; color: #f3cf87; }
+.life-record p { margin: 0; color: rgba(255,255,255,.72); white-space: pre-wrap; line-height: 1.6; }
+.life-privacy { display: flex; align-items: flex-start; gap: .75rem; margin-top: 1.2rem; padding: 1rem 1.1rem; border-radius: 16px; background: rgba(0,0,0,.12); color: rgba(255,255,255,.62); font-size: .78rem; line-height: 1.6; }
+.life-privacy b { color: #f3cf87; }
+.community-activity-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .85rem; margin-top: 2rem; }
+.community-activity-grid article { min-height: 220px; display: flex; flex-direction: column; padding: 1.3rem; border: 1px solid rgba(0,0,0,.09); border-radius: 20px; background: rgba(255,255,255,.84); }
+.community-activity-grid span { font-size: .7rem; letter-spacing: .12em; color: #6e7c75; }
+.community-activity-grid h3 { margin: auto 0 .6rem; font-size: 1.22rem; }
+.community-activity-grid p { margin: 0; color: #66716c; line-height: 1.6; font-size: .91rem; }
+.community-activity-grid small { display: block; margin-top: .8rem; color: #956c32; }
+@media (max-width: 980px) {
+  .life-hub-head { grid-template-columns: 1fr; }
+  .life-loop { grid-template-columns: repeat(2, 1fr); }
+  .life-loop span:last-child { grid-column: span 2; }
+  .life-panel.word-lens, .life-panel.fellowship, .life-panel.memory, .life-panel.witness { grid-column: span 12; }
+  .community-activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .life-hub { padding-left: 1rem; padding-right: 1rem; }
+  .life-loop { grid-template-columns: 1fr; }
+  .life-loop span:last-child { grid-column: auto; }
+  .presence-grid, .community-activity-grid { grid-template-columns: 1fr; }
+  .life-form-actions { align-items: stretch; }
+  .life-action { width: 100%; }
+}

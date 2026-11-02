@@ -1,0 +1,436 @@
+{
+  "schema": "ekodi.worship.materials.v1",
+  "site": "ekodichurch",
+  "date": "2026-11-08",
+  "time": "11:00",
+  "title": "각자 받은 은사대로",
+  "scripture": "고린도전서 7:1–9",
+  "preacher": "정찬균 목사",
+  "order": [
+    [
+      "예배부름",
+      "인도자"
+    ],
+    [
+      "공동체 고백",
+      "다같이"
+    ],
+    [
+      "경배찬양",
+      "다같이"
+    ],
+    [
+      "대표기도",
+      "맡은이"
+    ],
+    [
+      "헌신찬양",
+      "다같이"
+    ],
+    [
+      "성경봉독 — 고린도전서 7:1–9",
+      "다같이"
+    ],
+    [
+      "말씀나눔 — 각자 받은 은사대로",
+      "정찬균 목사"
+    ],
+    [
+      "나눔기도",
+      "다같이"
+    ],
+    [
+      "결단찬양",
+      "다같이"
+    ],
+    [
+      "교회소식",
+      "인도자"
+    ],
+    [
+      "주기도문",
+      "다같이"
+    ]
+  ],
+  "devotion": [
+    [
+      "11/08",
+      "고린도전서 7:1–9"
+    ],
+    [
+      "11/09",
+      "고린도전서 7:10–16"
+    ],
+    [
+      "11/10",
+      "고린도전서 7:17–28"
+    ],
+    [
+      "11/11",
+      "고린도전서 7:29–40"
+    ],
+    [
+      "11/12",
+      "고린도전서 8:1–13"
+    ],
+    [
+      "11/13",
+      "고린도전서 9:1–12"
+    ],
+    [
+      "11/14",
+      "고린도전서 9:13–18"
+    ]
+  ],
+  "slides": [
+    {
+      "title": "에코디교회",
+      "kicker": "WHO IS GOD? WHO AM I? WHAT DO I DO?",
+      "lines": [
+        "잠시 후 예배가 시작됩니다",
+        "기대하는 마음으로 미리 준비해 주세요"
+      ],
+      "cover": true
+    },
+    {
+      "title": "Call to Worship",
+      "kicker": "예배부름",
+      "lines": [
+        "각 사람에게 다른 은사를 주신 하나님이 우리를 한 몸으로 불러 예배에 초대하십니다"
+      ]
+    },
+    {
+      "title": "Community Confession",
+      "kicker": "공동고백",
+      "lines": [
+        "서로 다른 삶의 자리에서 한 몸으로 부르신 하나님 앞에 공동체가 고백합니다"
+      ]
+    },
+    {
+      "title": "공동체 고백",
+      "kicker": "Community Confession",
+      "lines": [
+        "하나님은 우리를 세상에서 하나님의 구별된 백성으로 부르셨습니다.\n(갈 4:4-7, 롬 8:14-17, 벧전 2:9, 히 10:24-25)",
+        "하나님은 우리를 복음으로 서로 환대하며 나누는 공동체로 세우셨습니다.\n(창 1:27, 31, 행 2:42-47, 롬 12:13)",
+        "하나님은 우리를 세상에서 자기비움과 자기부정으로 자유롭고 거룩하게 하십니다.\n(행 1:8, 롬 8:28, 벧전 2:11-12, 렘 29:4-7, 빌 2:5-8, 눅 9:23)"
+      ]
+    },
+    {
+      "title": "Praise & Worship",
+      "kicker": "경배와 찬양",
+      "lines": [
+        "다같이"
+      ]
+    },
+    {
+      "title": "Represent Praying",
+      "kicker": "대표기도",
+      "lines": [
+        "맡은이"
+      ]
+    },
+    {
+      "title": "Song of Offering",
+      "kicker": "헌신찬양",
+      "lines": [
+        "다같이"
+      ]
+    },
+    {
+      "title": "Scripture Reading",
+      "kicker": "말씀읽기",
+      "lines": [
+        "고린도전서 7:1–9",
+        "EKODI 2026-11 공통본문"
+      ]
+    },
+    {
+      "title": "고린도 교회의 편지 · 질문에 답하는 바울",
+      "kicker": "고린도전서 7장 배경",
+      "lines": [
+        "고린도 교회가 써 보낸 질문 → 7:1부터 바울의 답장",
+        "6장: 무엇이든 괜찮다는 방종 · 7장: 몸을 멀리하는 금욕",
+        "두 극단 사이에서 몸과 관계를 하나님의 선물로 보는 길"
+      ]
+    },
+    {
+      "title": "각자 받은\n은사대로",
+      "kicker": "Sermon",
+      "lines": [
+        "Each According to the Gift Received.",
+        "各人照所领受的恩赐。",
+        "それぞれ受けた賜物に従って。",
+        "Mỗi người theo ân tứ mình đã nhận."
+      ],
+      "cover": true
+    },
+    {
+      "title": "それぞれ受けた賜物に従って。",
+      "kicker": "SERMON · 日本語",
+      "lines": [
+        "각자 받은 은사대로",
+        "설교 제목 · 화면을 보고 함께 읽기"
+      ]
+    },
+    {
+      "title": "Mỗi người theo ân tứ mình đã nhận.",
+      "kicker": "SERMON · Tiếng Việt",
+      "lines": [
+        "각자 받은 은사대로",
+        "설교 제목 · 화면을 보고 함께 읽기"
+      ]
+    },
+    {
+      "title": "같은 모양이 아니어도 괜찮습니다",
+      "kicker": "말씀나눔",
+      "lines": [
+        "가정을 이룬 이, 홀로 지내는 이,\n먼저 배우자를 보낸 이가 함께 예배합니다.",
+        "어떤 삶의 모양이 더 거룩하다고\n쉽게 말하지 않습니다.",
+        "각자 받은 은사대로\n주님께 속한 삶을 삽니다."
+      ]
+    },
+    {
+      "title": "1 | 몸과 관계도 하나님 앞에 있습니다",
+      "kicker": "말씀나눔",
+      "lines": [
+        "방종도 금욕도 몸을 하나님의 선물로\n보지 못한 모습입니다.",
+        "바울은 유혹이 많은 현실을\n외면하지 않습니다.",
+        "그 자리에서 하나님께\n신실하게 삽니다."
+      ]
+    },
+    {
+      "title": "2 | 서로에게 속한 사랑은 존중과 합의로 지켜집니다",
+      "kicker": "말씀나눔",
+      "lines": [
+        "바울은 남편과 아내에게\n같은 책임과 같은 존중을 말합니다.",
+        "기도를 위한 결정도\n서로 합의하여 정합니다.",
+        "함께 묻고 함께 정하는 것이\n그리스도인의 사랑입니다."
+      ]
+    },
+    {
+      "title": "3 | 각자 받은 은사대로 살아갑니다",
+      "kicker": "말씀나눔",
+      "lines": [
+        "결혼도 홀로 지냄도\n하나님께 받은 은사입니다.",
+        "더 성숙한 모양, 더 거룩한 모양을\n비교하지 않습니다.",
+        "지금 선 자리가\n주님을 섬기는 자리입니다."
+      ]
+    },
+    {
+      "title": "그리스도의 복음 | 자신을 내어 주신 주님",
+      "kicker": "말씀나눔",
+      "lines": [
+        "그리스도는 교회를 사랑하여\n자신을 내어 주셨습니다.",
+        "우리의 신실함은 은혜의 조건이 아니라\n먼저 받은 사랑에 대한 응답입니다.",
+        "그 사랑 안에서 서로를 존중합시다."
+      ]
+    },
+    {
+      "title": "함께 나눌 세 가지 질문",
+      "kicker": "말씀나눔",
+      "lines": [
+        "다른 사람의 삶의 모양을\n쉽게 판단했던 적은 없습니까?",
+        "묻지 않고 혼자 정했던 일은\n무엇입니까?",
+        "지금 내 자리에서 은사로 섬길\n한 가지는 무엇입니까?"
+      ]
+    },
+    {
+      "title": "공동체의 응답",
+      "kicker": "인도자 · 회중",
+      "lines": [
+        "다른 삶의 모양 앞에서 / 판단하지 않고 존중하겠습니다",
+        "가정과 공동체의 결정 앞에서 / 서로 묻고 함께 정하겠습니다",
+        "몸과 관계와 시간을 / 하나님께 드리겠습니다",
+        "각자 받은 은사대로 / 지금 선 자리에서 주님을 섬기겠습니다",
+        "다함께 / 말씀대로 살아내고 살려내겠습니다"
+      ]
+    },
+    {
+      "title": "이번 주 실천 한 걸음",
+      "kicker": "말씀나눔",
+      "lines": [
+        "가까운 이에게 요즘 무엇이 힘든지\n먼저 묻고 끝까지 들어 줍니다.",
+        "홀로 지내는 이웃이나 다른 형편의 지체와\n식사나 안부로 함께합니다.",
+        "들은 이야기는 조심스럽게 지켜 줍니다."
+      ]
+    },
+    {
+      "title": "Response Sharing & Praying",
+      "kicker": "나눔기도",
+      "lines": [
+        "다같이"
+      ]
+    },
+    {
+      "title": "Song of Commitment",
+      "kicker": "결단찬양",
+      "lines": [
+        "다같이"
+      ]
+    },
+    {
+      "title": "이번 주 매일묵상 · 11/08–11/14",
+      "kicker": "EKODI 2026-11 공통본문",
+      "lines": [
+        "일 11/08 고린도전서 7:1–9 · 월 11/09 고린도전서 7:10–16",
+        "화 11/10 고린도전서 7:17–28 · 수 11/11 고린도전서 7:29–40",
+        "목 11/12 고린도전서 8:1–13 · 금 11/13 고린도전서 9:1–12",
+        "토 11/14 고린도전서 9:13–18"
+      ]
+    },
+    {
+      "title": "Community Announce",
+      "kicker": "교회소식",
+      "lines": [
+        "인도자"
+      ]
+    },
+    {
+      "title": "주기도문",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "한국어 · English · 中文 · 日本語 · Tiếng Việt",
+        "주기도문 5개 언어 전문 수록"
+      ]
+    },
+    {
+      "title": "주기도문 | 한국어",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "하늘에 계신 우리 아버지,",
+        "아버지의 이름을 거룩하게 하시며 아버지의 나라가 오게 하시며",
+        "아버지의 뜻이 하늘에서와 같이 땅에서도 이루어지게 하소서.",
+        "오늘 우리에게 일용할 양식을 주시고",
+        "우리가 우리에게 잘못한 사람을 용서하여 준 것 같이",
+        "우리 죄를 용서하여 주시고 우리를 시험에 빠지지 않게 하시고",
+        "악에서 구하소서.",
+        "나라와 권능과 영광이 영원히 아버지의 것입니다. 아멘."
+      ]
+    },
+    {
+      "title": "주기도문 | English",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "Our Father which art in heaven,",
+        "Hallowed be thy name. Thy kingdom come.",
+        "Thy will be done in earth, as it is in heaven.",
+        "Give us this day our daily bread.",
+        "And forgive us our debts, as we forgive our debtors.",
+        "And lead us not into temptation, but deliver us from evil:",
+        "For thine is the kingdom, and the power, and the glory, for ever. Amen."
+      ]
+    },
+    {
+      "title": "주기도문 | 中文",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "我们在天上的父：",
+        "愿人都尊你的名为圣。愿你的国降临。",
+        "愿你的旨意行在地上，如同行在天上。",
+        "我们日用的饮食，今日赐给我们。",
+        "免我们的债，如同我们免了人的债。",
+        "不叫我们遇见试探，救我们脱离凶恶。",
+        "因为国度、权柄、荣耀，全是你的，直到永远。阿们。"
+      ]
+    },
+    {
+      "title": "주기도문 | 日本語",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "天にまします我らの父よ、",
+        "願わくは御名をあがめさせたまえ。御国を来たらせたまえ。",
+        "御心の天になるごとく、地にもなさせたまえ。",
+        "我らの日用の糧を、今日も与えたまえ。",
+        "我らに罪を犯す者を我らが赦すごとく、我らの罪をも赦したまえ。",
+        "我らを試みにあわせず、悪より救い出したまえ。",
+        "国と力と栄えとは、限りなく汝のものなればなり。アーメン。"
+      ]
+    },
+    {
+      "title": "주기도문 | Tiếng Việt",
+      "kicker": "THE LORD'S PRAYER",
+      "lines": [
+        "Lạy Cha chúng con ở trên trời,",
+        "danh Cha được thánh. Nước Cha được đến.",
+        "Ý Cha được nên, ở đất như trời.",
+        "Xin cho chúng con hôm nay đồ ăn đủ ngày.",
+        "Xin tha tội lỗi cho chúng con, như chúng con cũng tha kẻ phạm tội nghịch cùng chúng con.",
+        "Xin chớ để chúng con bị cám dỗ, mà cứu chúng con khỏi điều ác.",
+        "Vì nước, quyền, vinh hiển đều thuộc về Cha đời đời. A-men."
+      ]
+    }
+  ],
+  "publicBulletin": "/ekodichurch/worship/2026-11-08/",
+  "broadcastSafe": true,
+  "youtube": {
+    "channel": "https://www.youtube.com/@ekodichurch",
+    "title": "각자 받은 은사대로 | 고린도전서 7:1–9 | 2026.11.08 에코디교회 주일모임",
+    "description": "2026년 11월 8일(일) 오전 11시 에코디교회 주일모임 · 성령강림절 후 스물넷째 주일\n말씀제목 | 각자 받은 은사대로\n공통본문 | 고린도전서 7:1–9\n말씀나눔 | 정찬균 목사\n결혼한 이도 홀로 지내는 이도 하나님 앞에서 모자란 사람이 아닙니다. 서로를 존중하는 사랑 안에서, 각자 받은 은사대로 주님께 속한 삶을 삽니다.\n다국어 자막: 영어·중국어·일본어·베트남어·몽골어 (ekodi.kr/live/church/)\n에클레시아 · 코이노니아 · 디아스포라 · 희년\n#에코디교회 #고린도전서 #주일모임",
+    "visibility": "public",
+    "chat": true,
+    "dvr": true,
+    "latency": "normal",
+    "status": "metadata-prepared-not-scheduled"
+  },
+  "interpretation": {
+    "captions": true,
+    "sourceLang": "ko",
+    "targetLangs": [
+      "en",
+      "zh",
+      "ja",
+      "vi",
+      "mn"
+    ],
+    "console": "/live/church/?mode=studio",
+    "viewer": "/live/church/",
+    "engine": "EKODI Live interpretation captions (Workers AI m2m100)"
+  },
+  "occasion": "성령강림절 후 스물넷째 주일",
+  "sources": {
+    "bulletin": {
+      "title": "261108 에코디교회 주보 | 각자 받은 은사대로 (초안)",
+      "fileId": "1mgO47xUUq20MfgsoKr1F5QUHJPJn0eRDBNEMbdQQ8bk",
+      "url": "https://docs.google.com/document/d/1mgO47xUUq20MfgsoKr1F5QUHJPJn0eRDBNEMbdQQ8bk/edit"
+    },
+    "slides": {
+      "title": "261108 에코디교회 예배 PPT | 각자 받은 은사대로 (초안)",
+      "fileId": "1-4bKRan41PUH9L8I_L8RTJ2-fXXQYK_Lu3nzMyQgRE0",
+      "url": "https://docs.google.com/presentation/d/1-4bKRan41PUH9L8I_L8RTJ2-fXXQYK_Lu3nzMyQgRE0/edit"
+    },
+    "sermon": {
+      "title": "261108 에코디교회 말씀 원고 | 각자 받은 은사대로 (초안)",
+      "fileId": "1XMXbQm1HScUQZoBWsouQboC5sq_susPI-RxsfPotfgw",
+      "url": "https://docs.google.com/document/d/1XMXbQm1HScUQZoBWsouQboC5sq_susPI-RxsfPotfgw/edit"
+    }
+  },
+  "slideSource": {
+    "type": "google-slides-text",
+    "fileId": "1-4bKRan41PUH9L8I_L8RTJ2-fXXQYK_Lu3nzMyQgRE0",
+    "sourcePages": 36,
+    "publishedPages": 30,
+    "omittedPages": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      13
+    ],
+    "omittedReason": "찬양 악보 화면은 저작권 보호를 위해 공개 웹에서 제외(현장 PPT에서 사용)",
+    "rendering": "원본 PPT 문구를 16:9 비율 고정 HTML 슬라이드로 표시"
+  },
+  "stage": "draft",
+  "lectionary": {
+    "source": "대한예수교장로회총회 매일성서정과",
+    "url": "https://www.pck.or.kr/bbs/board.php?bo_table=lectionary",
+    "status": "needs-verification",
+    "note": "예장통합 지정 주일 명칭·본문 확인필요. 아래는 RCL A년 Proper 27 참고 본문",
+    "readings": [
+      "여호수아 24:1–3a, 14–25 (또는 아모스 5:18–24)",
+      "시편 78:1–7 (또는 시편 70)",
+      "데살로니가전서 4:13–18",
+      "마태복음 25:1–13"
+    ]
+  }
+}
