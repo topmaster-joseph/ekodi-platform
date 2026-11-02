@@ -302,6 +302,12 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface){
     const rootRedirect=canonicalExecutionRootRedirect(request,executionSurface);if(rootRedirect)return rootRedirect;
+    // BOOKS-LIBRARY-SLASH-20261102: the Books asset host redirects /library
+    // to /library/, losing the public /books mount if proxied unchanged.
+    // Resolve this canonical document alias before reaching the upstream asset host.
+    if(executionSurface.id==='books'&&path==='/books/library'&&['GET','HEAD'].includes(request.method)){
+      return canonicalSlashRedirect(request,'/books/library');
+    }
     const response=await proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);
     // Service metadata uses canonical apex URLs. The internal Cloud upstream
     // can no longer identify its service from the legacy host, so attach the
