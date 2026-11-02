@@ -280,11 +280,21 @@ function syncBrokerSelectors(id){
  el('brokerSelect').value=broker;el('liveBroker').value=broker;
  return broker;
 }
+function brokerPreferenceErrorLabel(result){
+ if(!result)return '네트워크 연결 실패';
+ if(result.ok)return '서버 응답 형식 오류';
+ const labels={401:'로그인 세션 확인 필요',403:'최고관리자 접근 권한 확인 필요',404:'선택 API 경로 배포 확인 필요',409:'선택 상태 충돌',500:'서버 처리 오류',503:'서버 데이터베이스 연결 확인 필요'};
+ const code=Number(result.status);
+ return (labels[code]||'응답 실패')+' (HTTP '+(Number.isInteger(code)&&code>=100&&code<=599?code:'알 수 없음')+')';
+}
+
 async function loadBrokerSelection(){
  const version=++brokerSelectionVersion;
+ let lastResponse=null;
  setText('preferredBrokerStatus','기본 증권사 설정을 확인하고 있습니다. 실제 주문은 잠금 상태입니다.');
  try{
   const r=await apiCall('GET','/broker/selection');
+  lastResponse=r;
   if(version!==brokerSelectionVersion||el('owner').hidden)return;
   if(!r.ok||r.data.schema!=='ekodi.invest.owner-broker-selection.v1'||
      r.data.liveOrdersEnabled!==false||r.data.connected!==false||
@@ -294,7 +304,7 @@ async function loadBrokerSelection(){
  }catch{
   if(version!==brokerSelectionVersion||el('owner').hidden)return;
   preferredBrokerId=syncBrokerSelectors('kis');
-  setText('preferredBrokerStatus','한국투자증권을 기본값으로 표시합니다. 서버 설정 확인 실패 · 계좌 미연결 · 실제 주문 차단');
+  setText('preferredBrokerStatus','한국투자증권을 기본값으로 표시합니다. 서버 설정 확인 실패 · '+brokerPreferenceErrorLabel(lastResponse)+' · 계좌 미연결 · 실제 주문 차단');
  }finally{
   if(version===brokerSelectionVersion&&!el('owner').hidden){loadBrokerSnapshot();loadLiveReadiness()}
  }
@@ -302,11 +312,13 @@ async function loadBrokerSelection(){
 async function saveBrokerSelection(id){
  if(!Object.hasOwn(BROKER_PREF_NAMES,id)||el('owner').hidden)return;
  const version=++brokerSelectionVersion,previous=preferredBrokerId;
+ let lastResponse=null;
  syncBrokerSelectors(id);
  for(const key of ['brokerSelect','liveBroker'])el(key).disabled=true;
  setText('preferredBrokerStatus','선택한 '+BROKER_PREF_NAMES[id]+' 설정을 서버에 저장하고 있습니다.');
  try{
   const r=await apiCall('PUT','/broker/selection',{brokerId:id});
+  lastResponse=r;
   if(version!==brokerSelectionVersion||el('owner').hidden)return;
   if(!r.ok||r.data.schema!=='ekodi.invest.owner-broker-selection.v1'||
      r.data.preferredBrokerId!==id||r.data.liveOrdersEnabled!==false||
@@ -316,7 +328,7 @@ async function saveBrokerSelection(id){
  }catch{
   if(version!==brokerSelectionVersion||el('owner').hidden)return;
   syncBrokerSelectors(previous);
-  setText('preferredBrokerStatus','설정 저장에 실패했습니다. 기존 '+BROKER_PREF_NAMES[previous]+' 설정을 유지합니다. 실제 주문 차단');
+  setText('preferredBrokerStatus','설정 저장에 실패했습니다. '+brokerPreferenceErrorLabel(lastResponse)+' · 기존 '+BROKER_PREF_NAMES[previous]+' 설정을 유지합니다. 실제 주문 차단');
  }finally{
   if(version===brokerSelectionVersion){
    for(const key of ['brokerSelect','liveBroker'])el(key).disabled=el('owner').hidden;
