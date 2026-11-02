@@ -95,7 +95,7 @@
   let deviceCatalog = Object.values(TYPE_FALLBACK);
   let currentDevices = [];
   const WINDOWS_PERFORMANCE_URL = '/admin/ops/devices/windows-performance';
-  const AUTOLOGON_URL = '/admin/ops/device-autologon';
+  const AUTOLOGON_URL = '/admin/ops/devices/autologon';
   function autologonRoute() {
     return window.location.pathname.replace(/\/$/, '') === AUTOLOGON_URL;
   }
@@ -136,11 +136,11 @@
   function showDevices() {
     const panels = window.EKODIAdminPanels;
     if (panels?.activate) {
-      panels.activate(autologonRoute() ? 'device-autologon' : 'devices');
+      panels.activate('devices');
     } else {
       document.querySelectorAll('[data-panel]').forEach(panel => {
         const targets = String(panel.dataset.panel || '').split(' ');
-        panel.classList.toggle('hidden-panel', !targets.includes(autologonRoute() ? 'device-autologon' : 'devices'));
+        panel.classList.toggle('hidden-panel', !targets.includes('devices'));
       });
       document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.remove('active'));
       document.querySelector('[data-device-control-nav]')?.classList.add('active');
@@ -1245,7 +1245,7 @@
     const label = document.createElement('span'); label.textContent = '로컬컴퓨터·기기'; button.append(label);
     const workspace = nav.querySelector('[data-section="workspace"]'); if (workspace) workspace.insertAdjacentElement('afterend', button); else nav.append(button);
 
-    const panel = document.createElement('section'); panel.id = 'deviceControlPanel'; panel.className = 'section ekodi-device-panel hidden-panel'; panel.dataset.panel = 'devices device-autologon';
+    const panel = document.createElement('section'); panel.id = 'deviceControlPanel'; panel.className = 'section ekodi-device-panel hidden-panel'; panel.dataset.panel = 'devices';
     panel.innerHTML = `
       <div class="device-panel-head">
         <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>${autologonRoute() ? 'PC 자동 로그인' : windowsPerformanceRoute() ? 'Windows 성능 관리' : '로컬컴퓨터·기기'}</h2><p>${autologonRoute() ? '연결된 Windows PC에서 Microsoft Autologon 창을 필요할 때만 엽니다. 설정 변경과 암호 입력은 해당 PC에서 직접 합니다.' : windowsPerformanceRoute() ? '등록된 PC만 표시합니다. 실제 Agent 실측값과 허용된 진단·시작프로그램·업데이트·안전 정리의 실행 영수증을 확인합니다.' : '현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.'}</p></div>
