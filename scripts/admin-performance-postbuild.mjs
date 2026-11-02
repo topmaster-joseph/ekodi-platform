@@ -114,7 +114,7 @@ const compactCssPath = `${dist}admin-compact.css`;
 let compactCss = await readFile(compactCssPath, 'utf8');
 const mobileCss = `\n/* admin mobile flow */\n@media(max-width:760px){body.admin-compact .app>main{padding-top:0!important}body.admin-compact .topbar{position:sticky!important;top:0!important;left:auto!important;right:auto!important;width:auto!important;height:auto!important;min-height:56px!important;padding:8px 12px!important;box-sizing:border-box!important;z-index:1200!important;background:#fff!important;color:#172033!important;border-bottom:1px solid #d9e3ec!important;box-shadow:none!important}body.admin-compact .topbar .menu{color:#172033!important;background:#fff!important;border:1px solid #d9e3ec!important;border-radius:12px!important;width:42px!important;height:42px!important}body.admin-compact .topbar .kicker{display:none!important}body.admin-compact .topbar h1{display:block!important;color:#172033!important;font-size:16px!important;line-height:1.3!important;margin:0!important}body.admin-compact .content{padding:12px 12px 32px!important}}\n`;
 if (!compactCss.includes('body.admin-compact .app>main{padding-top:0!important}')) compactCss += mobileCss;
-compactCss = compactCss.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\r\n/g, '\n');
+compactCss = compactCss.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\r\n/g, '\n').replace(/}\r?\n[ \t]*/g, '}').replace(/,\r?\n[ \t]*/g, ',');
 await writeFile(compactCssPath, compactCss);
 
 // Compact the generated compact runtime without changing JavaScript semantics.
