@@ -159,7 +159,7 @@ function clearPrivateView(message){
   referralConfirmSection.hidden=true;
   referralLink.value='';referralLink.hidden=true;
   document.getElementById('copyReferralInvite').hidden=true;
-  claimSection.hidden=true;refreshPointTabState();claimAdapter.replaceChildren();claimList.replaceChildren();claimStatus.textContent='';
+  claimSection.hidden=true;claimAdapter.replaceChildren();claimList.replaceChildren();refreshPointTabState();claimStatus.textContent='';
   document.getElementById('claimForm').reset();
   showMessage(message);
 }
