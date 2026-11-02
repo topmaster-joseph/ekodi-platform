@@ -60,8 +60,16 @@
       if (v.source === 'central') saveCentralSession(refreshed);
       else save(refreshed);
       return { ...refreshed, source: v.source };
-    } catch {
-      if (v.source === 'central') { try { localStorage.removeItem(CENTRAL_KEY); } catch {} }
+    } catch (error) {
+      // 네트워크 일시 장애로 전체 EKODI 로그인을 폐기하지 않는다.
+      // 무효한 갱신 토큰만 제거하고, 통합 계정이 구형 다른 계정으로 대체되지 않게 한다.
+      if (v.source === 'central') {
+        if (/^(invalid_grant|refresh_token_not_found|invalid_refresh_token|bad_jwt)$/.test(String(error.code || ''))) {
+          try { localStorage.removeItem(CENTRAL_KEY); } catch {}
+          forget();
+        }
+        return null;
+      }
       forget(); return null;
     }
   }
