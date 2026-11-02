@@ -266,6 +266,15 @@ body.admin-compact #deviceControlPanel .device-enrollment-result code{
 @media(max-width:700px){.device-performance-heading{flex-direction:column}.device-performance-freshness{white-space:normal}.device-performance-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:420px){.device-performance-stats{grid-template-columns:1fr 1fr}.device-performance-actions{display:grid;grid-template-columns:1fr}.device-performance-actions button{width:100%}}
 
+/* EKODI-PC-AUTOLOGON-MENU-001: dedicated, responsive on-demand settings surface. */
+.device-autologon-panel{min-width:0;display:grid;gap:12px;padding:14px;border:1px solid var(--line,#d7e0eb);border-radius:12px;background:var(--card,#fff);color:inherit}
+.device-autologon-panel h3{font-size:1rem!important;line-height:1.4!important;letter-spacing:0!important;opacity:1!important;text-transform:none!important;margin:0!important}
+.device-autologon-panel p{margin:0;font-size:.83rem;line-height:1.65;overflow-wrap:normal;word-break:keep-all}
+.device-autologon-panel .device-ops-grid{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.device-autologon-panel .device-ops-grid>*{display:inline-flex;justify-content:center;align-items:center;min-height:42px;padding:9px 14px;border-radius:10px;text-align:center;white-space:normal;word-break:keep-all}
+.device-autologon-panel .device-ops-grid a{text-decoration:none}
+@media(max-width:640px){.device-autologon-panel .device-ops-grid{flex-direction:column;align-items:stretch}.device-autologon-panel .device-ops-grid>*{width:100%}}
+
 /* EKODI-WINDOWS-PERFORMANCE-LINK-001: in-context canonical deep link, not a second admin service. */
 .device-performance-entry{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 12px;padding:14px 16px;border:1px solid var(--line,rgba(148,163,184,.3));border-radius:14px;min-width:0}
 .device-performance-entry>div{min-width:0}

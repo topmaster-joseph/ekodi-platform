@@ -95,10 +95,14 @@
   let deviceCatalog = Object.values(TYPE_FALLBACK);
   let currentDevices = [];
   const WINDOWS_PERFORMANCE_URL = '/admin/ops/devices/windows-performance';
+  const AUTOLOGON_URL = '/admin/ops/devices/autologon';
+  function autologonRoute() {
+    return window.location.pathname.replace(/\/$/, '') === AUTOLOGON_URL;
+  }
   function windowsPerformanceRoute() {
     return window.location.pathname.replace(/\/$/, '') === WINDOWS_PERFORMANCE_URL;
   }
-  let activeType = windowsPerformanceRoute() ? 'pc' : 'all';
+  let activeType = windowsPerformanceRoute() || autologonRoute() ? 'pc' : 'all';
   let rosterStatus = 'all';
   let rosterSearch = '';
   let showRetiredGroups = false;
@@ -140,8 +144,8 @@
       });
       document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.remove('active'));
       document.querySelector('[data-device-control-nav]')?.classList.add('active');
-      setPageTitle('로컬컴퓨터·기기');
-      if (location.hash !== '#devices' && !windowsPerformanceRoute()) history.replaceState(null, '', '#devices');
+      setPageTitle(autologonRoute() ? 'PC 자동 로그인' : '로컬컴퓨터·기기');
+      if (location.hash !== '#devices' && !windowsPerformanceRoute() && !autologonRoute()) history.replaceState(null, '', '#devices');
     }
     document.querySelector('.sidebar')?.classList.remove('open');
     loadDevices();
@@ -634,6 +638,42 @@
   }
 
 
+  // EKODI-PC-AUTOLOGON-MENU-001: only a local Windows dialog is opened.
+  // The web UI never requests, sends, stores or verifies the Windows password.
+  function autologonPanel(device) {
+    if (device.management?.type !== 'pc' || isInventory(device) || device.capabilities?.posAgent === true) return null;
+    const panel = document.createElement('section');
+    panel.className = 'device-autologon-panel';
+    panel.dataset.autologonPanel = 'v1';
+    const title = document.createElement('h3');
+    title.textContent = 'Windows 부팅·재부팅 자동 로그인';
+    const explanation = document.createElement('p');
+    explanation.textContent = '선택한 PC에서 Microsoft Sysinternals Autologon 설정 창만 엽니다. 자동 로그인 활성화·해제는 PC 앞의 사용자가 직접 선택합니다. EKODI는 Windows 암호를 수집하거나 설정 상태를 추정하지 않습니다.';
+    const actions = document.createElement('div');
+    actions.className = 'device-ops-grid';
+    const available = device.status === 'online' && device.management?.remoteCommandLevel === 'managed';
+    const launch = makeActionButton(device, 'autologon.open', '이 PC에서 Autologon 열기', 'primary', {}, !available);
+    if (!available) launch.title = '온라인 상태의 관리형 Windows PC에서만 열 수 있습니다. 오프라인 요청은 예약하지 않습니다.';
+    const official = document.createElement('a');
+    official.className = 'button secondary';
+    official.href = 'https://learn.microsoft.com/sysinternals/downloads/autologon';
+    official.target = '_blank';
+    official.rel = 'noopener noreferrer';
+    official.textContent = 'Microsoft 공식 사용 안내';
+    actions.append(launch, official);
+    const recent = latestCommandByType(device, 'autologon.open');
+    const proof = document.createElement('p');
+    proof.className = 'device-performance-proof';
+    proof.textContent = recent
+      ? '최근 창 열기 명령: ' + commandStatus(recent.status) + ' · ' + timeLabel(recent.completedAt || recent.claimedAt || recent.issuedAt) + ' · 자동 로그인 설정 완료 여부와는 별개입니다.'
+      : '창 열기 실행 기록이 없습니다. 현재 Windows 자동 로그인 설정은 별도로 확인해야 합니다.';
+    const warning = document.createElement('p');
+    warning.className = 'device-performance-proof';
+    warning.textContent = '물리적으로 보호된 운영 PC에만 사용하세요. 잠금 화면 보호를 해제할 수 있으므로 공유·휴대용 PC에는 권장하지 않습니다.';
+    panel.append(title, explanation, actions, proof, warning);
+    return panel;
+  }
+
   // EKODI-WINDOWS-PERFORMANCE-001: online Windows optimization uses only
   // the audited Device Control allowlist. This panel never calls the OS.
   function windowsPerformancePanel(device) {
@@ -817,6 +857,7 @@
 
     const health = document.createElement('div'); health.innerHTML = healthMarkup(device);
     const performance = windowsPerformancePanel(device);
+    const autologon = autologonRoute() ? autologonPanel(device) : null;
     const mainActions = document.createElement('div'); mainActions.className = 'device-ops-grid device-primary-actions';
     mainActions.append(
       makeActionButton(device, 'diagnostics.collect', '전체 진단', 'primary', {}, !capability(device, 'diagnostics')),
@@ -885,6 +926,8 @@
     if (posStatus) {
       values[3].textContent = '상태 보고 전용';
       card.append(head, meta, posAgentSummary(device, posStatus), foot);
+    } else if (autologonRoute() && autologon) {
+      card.append(head, meta, autologon);
     } else if (windowsPerformanceRoute() && performance) {
       // Keep the dedicated screen focused on diagnosis and proof. Full controls
       // are one click away in the existing device-management screen.
@@ -985,7 +1028,7 @@
     wrapper.className = 'device-roster-group';
     wrapper.dataset.rosterKey = group.key;
     wrapper.dataset.status = primary.status;
-    wrapper.open = windowsPerformanceRoute() || openRosterGroups.has(group.key);
+    wrapper.open = windowsPerformanceRoute() || autologonRoute() || openRosterGroups.has(group.key);
     const heading = document.createElement('summary');
     heading.className = 'device-roster-summary';
     const name = document.createElement('span'); name.className = 'device-roster-name';
@@ -1047,7 +1090,7 @@
   function renderTypeFilters(devices) {
     const host = document.querySelector('#deviceTypeFilters');
     if (!host) return;
-    if (windowsPerformanceRoute()) {
+    if (windowsPerformanceRoute() || autologonRoute()) {
       host.replaceChildren();
       return;
     }
@@ -1107,9 +1150,10 @@
     const grouped = groupRosterDevices(currentDevices);
     // A Windows-only deep link must not show POS/Kiosk or count them in its summary.
     const performanceMode = windowsPerformanceRoute();
-    const current = grouped.filter(group => !group.retired && (!performanceMode
+    const focusedPcMode = performanceMode || autologonRoute();
+    const current = grouped.filter(group => !group.retired && (!focusedPcMode
       || (group.primary.management?.type === 'pc' && !isInventory(group.primary) && group.primary.capabilities?.posAgent !== true)));
-    const counted = performanceMode ? current : showRetiredGroups ? grouped : current;
+    const counted = focusedPcMode ? current : showRetiredGroups ? grouped : current;
     const onlineGroups = current.filter(group => group.primary.status === 'online');
     const attentionGroups = current.filter(group => rosterNeedsAttention(group.primary));
     const scored = onlineGroups.filter(group => hasRosterHealthScore(group.primary));
@@ -1131,7 +1175,7 @@
     const query = rosterSearch.trim().toLocaleLowerCase();
     const visible = counted.filter(group => {
       const device = group.primary;
-      if (windowsPerformanceRoute() && (device.management?.type !== 'pc' || isInventory(device) || device.capabilities?.posAgent === true)) return false;
+      if (focusedPcMode && (device.management?.type !== 'pc' || isInventory(device) || device.capabilities?.posAgent === true)) return false;
       if (activeType !== 'all' && (device.management?.type || 'pc') !== activeType) return false;
       if (rosterStatus === 'online' && device.status !== 'online') return false;
       if (rosterStatus === 'attention' && !rosterNeedsAttention(device)) return false;
@@ -1204,12 +1248,16 @@
     const panel = document.createElement('section'); panel.id = 'deviceControlPanel'; panel.className = 'section ekodi-device-panel hidden-panel'; panel.dataset.panel = 'devices';
     panel.innerHTML = `
       <div class="device-panel-head">
-        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>${windowsPerformanceRoute() ? 'Windows 성능 관리' : '로컬컴퓨터·기기'}</h2><p>${windowsPerformanceRoute() ? '등록된 PC만 표시합니다. 실제 Agent 실측값과 허용된 진단·시작프로그램·업데이트·안전 정리의 실행 영수증을 확인합니다.' : '현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.'}</p></div>
+        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>${autologonRoute() ? 'PC 자동 로그인' : windowsPerformanceRoute() ? 'Windows 성능 관리' : '로컬컴퓨터·기기'}</h2><p>${autologonRoute() ? '연결된 Windows PC에서 Microsoft Autologon 창을 필요할 때만 엽니다. 설정 변경과 암호 입력은 해당 PC에서 직접 합니다.' : windowsPerformanceRoute() ? '등록된 PC만 표시합니다. 실제 Agent 실측값과 허용된 진단·시작프로그램·업데이트·안전 정리의 실행 영수증을 확인합니다.' : '현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.'}</p></div>
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
       </div>
       <div class="device-performance-entry" aria-label="Windows 성능 관리 전용 링크">
         <div><strong>Windows 성능 관리 전용</strong><p>안전한 진단과 실행 영수증을 기존 EKODI Device Agent로 통합합니다. 설치 없는 브라우저 직접 제어는 허용하지 않습니다.</p></div>
         <a class="button secondary" href="${windowsPerformanceRoute() ? '/admin/ops/devices' : WINDOWS_PERFORMANCE_URL}">${windowsPerformanceRoute() ? '전체 기기로 돌아가기' : 'Windows 성능 전용 화면'}</a>
+      </div>
+      <div class="device-performance-entry device-autologon-entry" aria-label="PC 자동 로그인 도구">
+        <div><strong>PC 자동 로그인</strong><p>필요할 때 PC에서 Microsoft 설정 창을 엽니다. 온라인 관리형 PC만 실행 가능하며 비밀번호는 서버로 전송하지 않습니다.</p></div>
+        <a class="button secondary" href="${autologonRoute() ? '/admin/ops/devices' : AUTOLOGON_URL}">${autologonRoute() ? '전체 기기로 돌아가기' : 'PC 자동 로그인 관리'}</a>
       </div>
       <details class="device-status-tools" open>
         <summary><strong>연결된 기기 · 상태 보기</strong><span id="deviceStatusSummary">상태 확인 중</span></summary>
@@ -1277,8 +1325,8 @@
     const quickSetup = panel.querySelector('.device-setup-tools');
     const statusTools = panel.querySelector('.device-status-tools');
     if (quickSetup && statusTools) statusTools.before(quickSetup);
-    if (windowsPerformanceRoute()) {
-      panel.dataset.windowsPerformanceMode = 'true';
+    if (windowsPerformanceRoute() || autologonRoute()) {
+      if (windowsPerformanceRoute()) panel.dataset.windowsPerformanceMode = 'true';
       if (quickSetup) quickSetup.open = false;
       if (statusTools) statusTools.open = true;
     }
@@ -1303,7 +1351,7 @@
       catch { event.currentTarget.textContent = '코드를 직접 선택해 복사하세요'; }
     });
 
-    if (location.hash === '#devices' || windowsPerformanceRoute()) showDevices();
+    if (location.hash === '#devices' || windowsPerformanceRoute() || autologonRoute()) showDevices();
     window.addEventListener('hashchange', () => { if (location.hash === '#devices') showDevices(); });
     timer = window.setInterval(() => { if (!panel.classList.contains('hidden-panel')) loadDevices(); }, 10000);
   }
