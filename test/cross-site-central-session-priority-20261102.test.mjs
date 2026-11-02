@@ -93,6 +93,7 @@ test('Seonam public notices and inline administrator prefer the central user',()
  const panel=section(publicSite,'function publicAdminToken(){','\nfunction sharedPublicAdmin(){');
  assert.ok(notice.indexOf('localStorage.getItem')<notice.indexOf('sessionStorage.getItem'));
  assert.ok(panel.indexOf('noticeToken()')<panel.indexOf('sessionStorage.getItem'));
+ assert.match(panel,/if\(s\?\.access_token\)return''/,'expired central must not fall back to legacy admin');
 });
 test('server authority is still required',()=>{
  assert.match(qtin,/if \(r\.status === 401\)/);
