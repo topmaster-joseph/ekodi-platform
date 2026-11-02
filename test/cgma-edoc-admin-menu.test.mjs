@@ -78,10 +78,11 @@ test('CGMA left menu: service settings precedes common and site-specific menus c
   for (const profile of ['delegated-manager', 'local']) {
     const nav = navFor('cgma', profile);
     assert.equal(nav[0][0], '업무메뉴', profile);
-    assert.equal(nav[1][0], '전용메뉴', profile);
-    assert.deepEqual(nav[1][1], ['edocs','member','applications','booths','festival','market-oversight','petitions','ip-archive','education-survey'], profile);
+    assert.equal(nav.length, 1, profile);
+    for(const key of ['edocs','member','applications','booths','festival','market-oversight','petitions','ip-archive','education-survey'])
+      assert.ok(nav[0][1].includes(key),key);
   }
-  assert.equal(navFor('ekodimission', 'delegated-manager')[0][0], '공통메뉴');
+  assert.equal(navFor('ekodimission', 'delegated-manager')[0][0], '업무메뉴');
   const hidden=navFor('cgma','local',key=>key!=='edocs');
   assert.ok(!hidden.flatMap(bucket=>bucket[1]).includes('edocs'), 'per-tenant visibility must filter site-specific menus');
 });
