@@ -15,8 +15,8 @@ export const CHURCH_ADMIN_MENU = Object.freeze([
     {key:'design',label:'사이트 디자인',owner:'workspace',capability:'site'},
     {key:'languages',label:'다국어',owner:'workspace',capability:'language'}
   ]},
-  {id:'services',scope:'common',label:'서비스 구성 · 사용 설정',tabs:[
-    {key:'services',label:'서비스 구성 · 사용 설정',owner:'workspace',capability:'site'}
+  {id:'services',scope:'common',label:'서비스설정',tabs:[
+    {key:'services',label:'서비스설정',owner:'workspace',capability:'site'}
   ]},
   {id:'authority',scope:'common',label:'사용자 · 권한',tabs:[
     {key:'members',label:'사용자 · 권한',owner:'workspace',capability:'access'},
@@ -60,7 +60,7 @@ export function mountChurchAdminNavigation({root,tabsRoot,groups,activeKey,activ
   const visible = groups.map(group=>({...group,tabs:group.tabs.filter(canView)})).filter(group=>group.tabs.length);
   const href = tab=>base+'/'+tab.key;
   const activeGroup=visible.find(group=>group.tabs.some(tab=>tab.key===activeKey&&tab.owner===activeOwner));
-  for(const [scope,label] of [['common','공통 메뉴'],['dedicated','전용 메뉴']]){
+  for(const [scope,label] of [['common','공통메뉴'],['dedicated','전용메뉴']]){
     const scoped=visible.filter(group=>group.scope===scope);
     if(!scoped.length)continue;
     const heading=document.createElement('span');heading.className='church-admin-nav-heading';heading.textContent=label;
