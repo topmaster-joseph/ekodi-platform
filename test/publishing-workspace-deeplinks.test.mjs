@@ -17,7 +17,7 @@ test('publishing workspace reacts to header and hero deep links without a reload
 test('menu links target real workspace tabs without exposing nonpublic manuscript data', () => {
   const home = read('publishing/index.html');
   for (const key of ['mine', 'progress']) {
-    assert.match(home, new RegExp('href="https://ekodi\\.kr/publishing/#ws-' + key + '"'));
+    assert.match(home, new RegExp('role="tab" id="tab-' + key + '"'));
     assert.match(home, new RegExp('role="tabpanel" id="ws-' + key + '"'));
   }
   const source = read('publishing/workspace.js');
