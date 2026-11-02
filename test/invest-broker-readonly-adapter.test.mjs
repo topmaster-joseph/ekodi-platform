@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
@@ -194,7 +194,7 @@ test('my invest page shows the read-only broker section with mock label and vali
   const js = await (await investMyRoute(new Request('https://ekodi.kr/invest/app.js'), {})).text();
   assert.match(html, /id="brokerReadonly"/); assert.match(html, /증권사 잔고 조회 · 조회 전용/);
   assert.match(html, /id="brokerBadge"[^>]*>미연결 · 모의 데이터</); assert.match(html, /id="brokerChecks"/);
-  assert.match(html, /href="#brokerReadonly"/);
+  assert.match(html, /role="tab" data-tab="broker"/);
   assert.match(js, /\/broker\/snapshot\?broker=/); assert.match(js, /loadBrokerSnapshot\(\)/);
   assert.match(js, /r\.readOnly!==true\|\|r\.liveOrdersEnabled!==false/);
   assert.doesNotMatch(js, /innerHTML|localStorage\.setItem|sessionStorage\.setItem/);
@@ -207,3 +207,4 @@ test('KIS refusal carries a sanitized provider reason without account digits', a
   assert.equal(kisProviderReason({ msg_cd: '<script>', msg1: '' }), null);
   assert.equal(kisProviderReason({ msg1: 'x'.repeat(500) }).message.length, 120);
 });
+
