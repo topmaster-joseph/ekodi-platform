@@ -194,6 +194,50 @@ async function loadStrategyLab(){
  }catch{setText('labStatus','연구 결과를 표시하지 못했습니다.');labLoaded=false}
  finally{el('labRefresh').disabled=false}
 }
+
+let marketRowsData=[],marketFilter='all',marketSource='미연결',marketCaptured='조회 전',marketRequestId=0;
+function marketVisibleRows(){
+ const search=String(el('marketSearch').value||'').trim().toLocaleLowerCase('ko-KR').slice(0,100);
+ let rows=marketRowsData.filter(p=>(marketFilter!=='kr'&&marketFilter!=='us'||p.market===marketFilter.toUpperCase())&&(!search||(p.name+' '+p.symbol).toLocaleLowerCase('ko-KR').includes(search)));
+ if(marketFilter==='value')rows=rows.slice().sort((a,b)=>a.value===b.value?a.symbol.localeCompare(b.symbol):a.value>b.value?-1:1);
+ if(marketFilter==='quantity')rows=rows.slice().sort((a,b)=>a.quantity===b.quantity?a.symbol.localeCompare(b.symbol):a.quantity>b.quantity?-1:1);
+ return rows;
+}
+function renderMarketRows(){
+ const rows=marketVisibleRows();
+ const nodes=rows.map(p=>{const tr=document.createElement('tr');tr.append(cell(p.name),cell(p.symbol),cell(p.market==='KR'?'국내':p.market==='US'?'해외':'미확인'),cell(p.quantityText,'num'),cell(won(p.value.toString()),'num'));return tr});
+ if(!nodes.length){const tr=document.createElement('tr');const td=cell(marketRowsData.length?'조건에 맞는 보유종목이 없습니다.':'조회된 보유종목이 없습니다.','empty');td.colSpan=5;tr.append(td);nodes.push(tr)}
+ el('marketRows').replaceChildren(...nodes);setText('marketCount','표시 종목 '+rows.length+'개');el('marketExport').disabled=!rows.length;
+}
+function clearMarketRows(message){
+ marketRowsData=[];marketSource='미연결';marketCaptured='조회 전';
+ setText('marketMode','시세 미연결 · 조회 대기');setText('marketAsOf','기준 시각: 조회 전');
+ setText('marketNotice',message||'조회된 보유종목이 없습니다.');renderMarketRows();
+}
+function setMarketSnapshot(result){
+ const snap=result.snapshot;
+ if(!snap||!Array.isArray(snap.positions)){clearMarketRows('조회할 보유종목이 없습니다.');return}
+ const safe=[];
+ for(const p of snap.positions.slice(0,300)){
+  if(!p||typeof p!=='object'||!/^\d{1,17}$/.test(String(p.marketValueMinor||''))||!/^\d+(?:\.\d{1,8})?$/.test(String(p.quantity||'')))continue;
+  const symbol=String(p.symbol||'').slice(0,20);
+  if(!/^[A-Z0-9.\-]{1,20}$/.test(symbol))continue;
+  safe.push({name:String(p.name||'종목명 미확인').slice(0,80),symbol,market:p.market==='KR'?'KR':p.market==='US'?'US':'',quantity:Number(p.quantity),quantityText:String(p.quantity),value:BigInt(p.marketValueMinor)});
+ }
+ marketRowsData=safe;
+ const mock=result.dataMode==='mock'||result.connection!=='connected-readonly';
+ marketSource=mock?'모의·미연결':'잔고 조회 · 시세 인증 별도';marketCaptured=snap.capturedAt||'';
+ setText('marketMode',marketSource);setText('marketAsOf','기준 시각: '+kstTime(marketCaptured));
+ setText('marketNotice',mock?'모의 또는 미연결 데이터의 보유종목입니다. 실제 시장 순위·실시간 시세·추천 종목이 아닙니다.':'계좌 조회 결과의 보유종목만 표시합니다. 실시간 시세는 별도 공급원 검증 전 미제공입니다.');
+ renderMarketRows();
+}
+function exportMarketCsv(){
+ const rows=marketVisibleRows();if(!rows.length)return;
+ const csv='\ufeff'+[['EKODI 보유종목 조회 보고서','시장 전체 순위 및 실시간 시세 아님'],['데이터 표시',marketSource],['기준 시각',marketCaptured],[],['종목명','종목코드','시장','보유 수량','평가금액(최소 화폐단위)'],...rows.map(p=>[p.name,p.symbol,p.market||'미확인',p.quantityText,p.value.toString()])].map(row=>row.map(csvCell).join(',')).join('\r\n');
+ const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='ekodi-invest-holdings.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
 async function loadBrokerSnapshot(){
  const broker=el('brokerSelect').value,badge=el('brokerBadge');
  el('brokerRefresh').disabled=true;setText('brokerNotice','조회 중입니다.');
