@@ -130,6 +130,7 @@ const ADMIN_ASSETS = new Set([
   '/admin-lazy-features.js',
   '/admin-menu-layout.js',
   '/admin-menu-registry.js',
+  '/member-login-methods-admin.js',
   '/domain-control-admin.js',
   '/admin-service-handoffs.js',
   '/admin-service-catalog.js',
