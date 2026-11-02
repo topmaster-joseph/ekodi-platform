@@ -56,15 +56,16 @@ test('books sign-in offers the central EKODI login and returns to the same page'
 });
 
 // 2026-11-02: 내 서재 — 휴대폰에서 계정은 짧게, 로그아웃 버튼, 운영자 화면이 안 보이는 이유 안내.
-test('library shows a short account, a sign-out button and why operator tools are hidden', async () => {
+test('library shows a short account, sign-out and server-authorized operator tab without leaking privileged email', async () => {
   const { readFile } = await import('node:fs/promises');
   const lib = await readFile(new URL('../books/buy/library.js', import.meta.url), 'utf8');
   const client = await readFile(new URL('../books/buy/commerce-client.js', import.meta.url), 'utf8');
   const html = await readFile(new URL('../books/library/index.html', import.meta.url), 'utf8');
   assert.match(lib, /libraryAccount = friendlyAccount\(data\)/);
   assert.match(lib, /await C\.signOut\(\); location\.reload\(\);/);
-  assert.match(lib, /운영자 구글 계정\(topmaster\.joseph@gmail\.com 등\)으로 로그인해야 보입니다/);
+  assert.doesNotMatch(lib, /운영자 구글 계정\(/);
+  assert.match(lib, /window\.EkodiLibraryTabs\?\.showOperator\(\)/);
   assert.match(client, /auth\/v1\/logout\?scope=local/);
   assert.match(client, /localStorage\.removeItem\(CENTRAL_KEY\)/);
-  assert.match(html, /id="operatorNote" hidden/);
+  assert.match(html, /src="\/buy\/library-tabs\.js"/);
 });

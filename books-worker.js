@@ -18,6 +18,17 @@ export const COMMERCE_CSP = [
   "object-src 'none'",
 ].join('; ');
 export const isCommercePage = (pathname) => /^\/(?:buy|library|review|audio-review|orders)(?:\/|$)/.test(pathname);
+// BOOKS-VOICE-MIC-20261102: 녹음실이 있는 문서만 마이크를 요청할 수 있다.
+// 다른 도서·관리자/API 페이지는 기본 deny 정책을 유지한다.
+export function withVoiceMicrophonePolicy(response, pathname) {
+  if (!/^\/(?:books\/)?library\/?(?:index\.html)?$/i.test(pathname)) return response;
+  if (!String(response.headers.get('content-type') || '').toLowerCase().includes('text/html')) return response;
+  const secured = new Response(response.body, response);
+  secured.headers.set('Permissions-Policy', 'camera=(), microphone=(self), geolocation=(), display-capture=(), usb=()');
+  secured.headers.set('Cache-Control', 'private, no-store');
+  return secured;
+}
+
 function withCommerceCsp(response) {
   const type = String(response.headers.get('content-type') || '').toLowerCase();
   if (!type.includes('text/html')) return response;
@@ -60,7 +71,7 @@ export default {
       const response = await env.ASSETS.fetch(assetRequest(request, '/store/'));
       return injectEkodiShell(response, 'books');
     }
-    if (isCommercePage(url.pathname)) return injectEkodiShell(withCommerceCsp(await env.ASSETS.fetch(request)), 'books');
+    if (isCommercePage(url.pathname)) return withVoiceMicrophonePolicy(injectEkodiShell(withCommerceCsp(await env.ASSETS.fetch(request)), 'books'), url.pathname);
     return injectEkodiShell(await env.ASSETS.fetch(request), 'books');
   },
 };
