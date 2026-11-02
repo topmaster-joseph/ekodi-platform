@@ -28,8 +28,8 @@
   async function upload(blob, msg) {
     msg.textContent = '올리는 중…';
     try {
-      const d = await api('PUT', blob, { 'content-type': blob.type || 'application/octet-stream', 'x-ekodi-voice-consent': 'self-recorded-for-ekodi-audiobooks', ...(devotionConsent() ? { 'x-ekodi-voice-devotion-consent': 'self-recorded-for-ekodi-public-devotion' } : {}), 'x-ekodi-voice-speaker': encodeURIComponent(speakerName()) });
-      msg.textContent = `저장했습니다 (${Math.round(d.size / 1024)}KB · ${d.format}). 오디오북 제작 ${d.devotionConsented ? '및 매일묵상 공개 음성 제작' : '전용'}으로 등록했습니다.`;
+      const d = await api('PUT', blob, { 'content-type': blob.type || 'application/octet-stream', 'x-ekodi-voice-consent': 'self-recorded-for-ekodi-audiobooks', ...(devotionConsent() ? { 'x-ekodi-voice-devotion-consent': 'self-recorded-for-ekodi-public-devotion', 'x-ekodi-voice-all-services-consent': 'self-recorded-for-ekodi-all-services' } : {}), 'x-ekodi-voice-speaker': encodeURIComponent(speakerName()) });
+      msg.textContent = `저장했습니다 (${Math.round(d.size / 1024)}KB · ${d.format}). 오디오북 제작 ${d.allServicesConsented ? '및 에코디 전체 서비스 공용 음성 제작' : d.devotionConsented ? '및 매일묵상 공개 음성 제작' : '전용'}으로 등록했습니다.`;
     } catch (e) { msg.textContent = e.message; }
   }
   async function render() {
@@ -176,8 +176,8 @@
       el('div', { className: 'voice-gender' }, el('label', {}, pickM, ' 남성 목소리 녹음'), el('label', {}, pickF, ' 여성 목소리 녹음')), nameInput,
       el('ol', { className: 'voice-script' }, ...SCRIPT.map(t => el('li', { textContent: t }))),
       el('label', { className: 'voice-consent' }, consent, ' 이 녹음은 위에 적은 사람 본인의 목소리이며, 본인이 에코디 오디오북 제작에 쓰는 것에 동의합니다.'),
-      el('label', { className: 'voice-consent' }, publicDevotionConsent, ' [선택] 저의 목소리를 에코디교회·에코디선교회·말씀대화의 공개 매일묵상 AI 낭독음성 제작과 배포에 사용하는 데 별도로 동의합니다.'),
-      el('p', { className: 'buy-msg', textContent: '매일묵상 공개 낭독에는 화자 본인의 동의가 필요합니다. 과거 오디오북 전용 녹음은 소급 동의되지 않으므로 화자 본인이 이 항목을 선택해 다시 등록해야 합니다.' }),
+      el('label', { className: 'voice-consent' }, publicDevotionConsent, ' [선택·화자 본인 1회 동의] 저의 목소리를 에코디교회·선교회·말씀대화·출판 등 에코디 전체 서비스에서 AI 음성 생성·가공·재사용·공개 낭독 및 배포에 사용하는 데 동의합니다. 서비스마다 중복 동의하지 않습니다.'),
+      el('p', { className: 'buy-msg', textContent: '에코디 운영자의 전체 서비스 사용 승인은 적용되어 있습니다. 화자 본인이 자신의 음성에 대해 한 번 동의하면 권한이 확인된 에코디 서비스에 재사용할 수 있습니다. 기존 오디오북 전용 녹음은 자동으로 소급 승인되지 않습니다.' }),
       el('div', { className: 'review-actions' }, rec, el('label', { className: 'voice-file' }, '또는 녹음 파일 올리기 ', file)),
       player, msg, micHelp,
     );
