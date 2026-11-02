@@ -47,27 +47,112 @@
     const rec = el('button', { type: 'button', className: 'primary', textContent: '● 녹음 시작' });
     const file = el('input', { type: 'file', accept: 'audio/*,.wav,.m4a,.mp3,.webm' });
     const player = el('audio', { controls: true, hidden: true });
-    let mr = null, chunks = [], started = 0, timer = 0;
+    let mr = null, chunks = [], started = 0, timer = 0, stream = null, previewUrl = '';
+    const MIN_DURATION_MS = 60000;
+    const micHelp = el('p', { className: 'voice-mic-help', hidden: true });
+    function micError(error) {
+      const kind = String(error?.name || '');
+      if (kind === 'NotAllowedError' || kind === 'PermissionDeniedError' || kind === 'SecurityError') {
+        return '마이크 권한이 차단되었습니다. 브라우저 주소창의 사이트 설정에서 마이크를 허용하고, 휴대폰 설정에서 해당 브라우저의 마이크 권한도 확인해 주세요.';
+      }
+      if (kind === 'NotFoundError' || kind === 'DevicesNotFoundError') return '연결된 마이크를 찾지 못했습니다. 휴대폰의 마이크가 연결되어 있는지 확인해 주세요.';
+      if (kind === 'NotReadableError' || kind === 'TrackStartError' || kind === 'AbortError') return '다른 앱에서 마이크를 사용 중일 수 있습니다. 통화·녹음 앱을 닫고 다시 시도해 주세요.';
+      if (kind === 'OverconstrainedError') return '마이크 장치 설정이 지원되지 않습니다. 다른 브라우저에서 다시 시도하거나 음성 파일을 올려 주세요.';
+      if (kind === 'NotSupportedError') return '이 브라우저에서는 지원되는 음성 녹음 형식을 만들 수 없습니다. 브라우저를 업데이트하거나 녹음 파일을 올려 주세요.';
+      return '마이크를 시작하지 못했습니다. 사이트·휴대폰의 마이크 권한을 확인하고 다시 시도해 주세요.';
+    }
+    function releaseStream() {
+      clearInterval(timer);
+      timer = 0;
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+    }
+    function supportedMime() {
+      if (!MediaRecorder.isTypeSupported) return '';
+      return ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find(type => MediaRecorder.isTypeSupported(type)) || '';
+    }
     rec.addEventListener('click', async () => {
-      if (!consent.checked || !nameInput.value.trim()) { msg.textContent = '읽는 사람 이름을 적고 본인 녹음·사용 동의에 체크해 주세요.'; return; }
       if (mr && mr.state === 'recording') { mr.stop(); return; }
+      if (!consent.checked || !nameInput.value.trim()) {
+        msg.textContent = '읽는 사람 이름을 적고 본인 녹음·사용 동의에 체크해 주세요.';
+        return;
+      }
+      micHelp.hidden = true;
+      if (window.isSecureContext === false || !navigator.mediaDevices?.getUserMedia) {
+        msg.textContent = '이 브라우저에서는 마이크 접근을 사용할 수 없습니다. HTTPS 주소(ekodi.kr)에서 최신 브라우저로 열고, 휴대폰 마이크 권한을 허용해 주세요.';
+        micHelp.hidden = false;
+        return;
+      }
+      if (typeof MediaRecorder === 'undefined') {
+        msg.textContent = '이 브라우저는 웹 녹음을 지원하지 않습니다. 최신 Chrome·Samsung Internet·Safari로 열거나 녹음 파일을 올려 주세요.';
+        micHelp.hidden = false;
+        return;
+      }
+      rec.disabled = true;
+      msg.textContent = '휴대폰에서 마이크 접근 허용을 선택해 주세요.';
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: false, channelCount: 1 } });
-        chunks = []; mr = new MediaRecorder(stream);
-        mr.ondataavailable = e => e.data.size && chunks.push(e.data);
-        mr.onstop = () => {
-          clearInterval(timer); stream.getTracks().forEach(t => t.stop()); rec.textContent = '● 다시 녹음';
-          const blob = new Blob(chunks, { type: mr.mimeType || 'audio/webm' });
-          if ((Date.now() - started) < 60000) { msg.textContent = '1분 이상 읽어 주세요(원고 전체 권장, 약 2~3분).'; return; }
-          player.src = URL.createObjectURL(blob); player.hidden = false;
+        // 반드시 버튼 클릭으로 호출한다. 페이지 로드만으로 권한을 요청하지 않는다.
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mimeType = supportedMime();
+        mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+        chunks = [];
+        const recording = mr;
+        recording.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
+        recording.onerror = e => {
+          msg.textContent = micError(e.error || e);
+          micHelp.hidden = false;
+          releaseStream();
+          rec.disabled = false;
+          rec.textContent = '● 녹음 다시 시도';
+        };
+        recording.onstop = () => {
+          releaseStream();
+          rec.disabled = false;
+          rec.textContent = '● 다시 녹음';
+          const elapsed = Date.now() - started;
+          if (elapsed < MIN_DURATION_MS) {
+            msg.textContent = '녹음이 1분보다 짧습니다. 최소 1분 이상 원고를 읽어 주세요.';
+            return;
+          }
+          const type = recording.mimeType || chunks[0]?.type || 'application/octet-stream';
+          const blob = new Blob(chunks, { type });
+          if (blob.size < 64 * 1024 || !/audio\/(webm|mp4|wav|mpeg|x-m4a)/i.test(type)) {
+            msg.textContent = '녹음 형식 또는 파일 크기를 확인할 수 없습니다. 아래에서 MP3·M4A·WAV·WebM 녹음 파일을 올려 주세요.';
+            return;
+          }
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          previewUrl = URL.createObjectURL(blob);
+          player.src = previewUrl;
+          player.hidden = false;
           const save = el('button', { type: 'button', className: 'primary', textContent: '이 녹음 저장' });
           save.addEventListener('click', () => upload(blob, msg), { once: true });
-          msg.replaceChildren('들어 보고 괜찮으면 저장해 주세요. ', save);
+          msg.replaceChildren('녹음을 들어 보고 괜찮으면 저장해 주세요. ', save);
         };
-        mr.start(); started = Date.now(); rec.textContent = '■ 녹음 끝내기';
-        timer = setInterval(() => { msg.textContent = `녹음 중 ${Math.floor((Date.now() - started) / 1000)}초 — 원고를 천천히, 평소 설교·강의하듯 읽어 주세요.`; }, 500);
-      } catch { msg.textContent = '마이크를 쓸 수 없습니다. 아래에서 휴대폰 녹음 파일을 올려 주세요.'; }
+        recording.start(1000);
+        started = Date.now();
+        rec.textContent = '■ 녹음 끝내기';
+        msg.textContent = '녹음 중입니다. 원고를 자연스럽게 읽어 주세요. (최소 1분)';
+        timer = setInterval(() => {
+          if (recording.state === 'recording') msg.textContent = '녹음 중 ' + Math.floor((Date.now() - started) / 1000) + '초 — 원고를 천천히 읽어 주세요.';
+        }, 1000);
+      } catch (error) {
+        releaseStream();
+        mr = null;
+        rec.textContent = '● 녹음 다시 시도';
+        msg.textContent = micError(error);
+        micHelp.hidden = false;
+      } finally {
+        rec.disabled = false;
+      }
     });
+    window.addEventListener('pagehide', () => {
+      if (mr?.state === 'recording') mr.stop();
+      releaseStream();
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    });
+    micHelp.textContent = '도움말: 주소창의 사이트 설정 → 권한 → 마이크 허용. 이어서 휴대폰 설정 → 앱 → 사용 중인 브라우저 → 권한 → 마이크 허용. 앱 내 브라우저에서는 외부 브라우저로 열어 주세요. 권한을 바꾼 후 녹음을 다시 시도할 수 있습니다.';
     file.addEventListener('change', () => { const f = file.files?.[0]; if (!f) return; if (!consent.checked || !nameInput.value.trim()) { msg.textContent = '읽는 사람 이름을 적고 본인 녹음·사용 동의에 체크해 주세요.'; return; } upload(f, msg); });
     host.replaceChildren(
       el('h2', { textContent: '에코디 낭독 음성 (EKODI Voice)' }),
@@ -76,7 +161,7 @@
       el('ol', { className: 'voice-script' }, ...SCRIPT.map(t => el('li', { textContent: t }))),
       el('label', { className: 'voice-consent' }, consent, ' 이 녹음은 위에 적은 사람 본인의 목소리이며, 본인이 에코디 오디오북 제작에 쓰는 것에 동의합니다.'),
       el('div', { className: 'review-actions' }, rec, el('label', { className: 'voice-file' }, '또는 녹음 파일 올리기 ', file)),
-      player, msg,
+      player, msg, micHelp,
     );
   }
   render();
