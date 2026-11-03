@@ -14,6 +14,7 @@ const registry=json('config/repository-source-of-truth.json');
 const retirement=json('config/site-repository-retirement-readiness.json');
 const architecture=json('governance/architecture/ekodi-os-architecture.json');
 const evolution=json('governance/architecture/ekodi-evolution-model.json');
+const serviceCreationEvidence=json('config/service-creation-evidence.json');
 const workflow=read('.github/workflows/deploy-ekodi-church-homepage.yml');
 const policy=constitution.churchCanonicalSourceTransferPolicy;
 
@@ -24,6 +25,8 @@ test('C2 owner-approved Church source target is versioned, explicit and separate
   assert.equal(amendment.relatedReleaseTopologyClass,'C3');
   assert.equal(amendment.approvedBy,constitution.changeControl.owner);
   assert.equal(amendment.constitutionVersion,constitution.version);
+  assert.equal(serviceCreationEvidence.policyVersion,constitution.version);
+  assert.equal(Object.keys(serviceCreationEvidence.records||{}).length,0,'Church source move must not register a new user-facing service');
   assert.equal(policy.canonicalRepository,'topmaster-joseph/ekodi-platform');
   assert.equal(policy.canonicalSourcePath,'sites/ekodi-church');
   assert.equal(policy.approvalStatus,'owner-approved-guarded-transition');
