@@ -38,3 +38,45 @@ The Mall service uses a *separate* `[[services]]` entry with the same binding na
 ## Current status
 
 Code and deterministic SQLite tests submitted in Draft #6638; this runbook itself does **not** configure the named entrypoints, D1, R2, any service bindings, staging/prod deployment, cron, customer access or payments. The EPUB editions of the Jubilee Theology two-book series are editorial revision 8 and **not approved for sale**.
+
+
+## 2026-11-03 — Development staging binding rollout, task #7855
+
+The protected Development staging configuration **now proposes** role-specific,
+read-only Cloudflare Worker service bindings:
+
+- `wrangler.books.staging.toml` → `PUBLISHING_RELEASE_GATE` to
+  `ekodi-publishing-staging`, entrypoint `BooksPublisherReleaseGate`.
+- `.github/workflows/deploy-ekodi-mall.yml` dynamically generates an isolated
+  `api/wrangler.staging.runtime.toml` binding to the **same Publisher Worker**
+  but `MallPublisherReleaseGate` (never the Books class). That generated file
+  stays ephemeral and is not applied to the production Mall API.
+- Before either staging deploy, the Developer account's release pipeline uses
+  the authenticated, read-only Wrangler `deployments list --name` against
+  `ekodi-publishing-staging`. Missing or inaccessible Worker inventory blocks
+  the staging deploy. The Consumer Worker deployment itself must also succeed
+  to prove the named binding is accepted by Cloudflare.
+
+### Mandatory limits
+
+This task does **not** configure any production Consumer service binding,
+`PUBLISHING_RELEASE_DB`, publisher-private asset store, author/publisher
+signature authority or verified entitlement. The publisher staging config
+keeps `PUBLISHING_PRIVATE_RELEASE_ENABLED = "false"`, so RPC calls must
+return `authorized:false` (including malformed, cross-channel and
+unverified requests). Mall staging payments remain disabled, and the current
+separate transaction rehearsal keeps its existing protection/cleanup.
+
+A successful static test or staging deploy proves **connectivity only**.
+To activate any commercial book, issue #7651 also requires a real immutable
+edition, rights/royalty/voice license and signed contract, audiobook QC, two
+channel-specific prepare/activate receipts, refund/revocation checks, operator
+Human Gate, and protected production staging/rollback evidence. Until then
+the production new-book sales lane remains fail-closed.
+
+### Rollback
+
+Remove the two Development-only `[[services]]` declarations from their
+source configs and redeploy **through the central Orchestrator release gate**;
+do not alter the production Publisher, Books or Mall APIs manually. Missing
+bindings naturally deny all new-edition public-release authorization.
