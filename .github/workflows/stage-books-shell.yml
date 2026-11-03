@@ -11,6 +11,17 @@ on:
         required: false
         type: string
         default: ''
+  # Orchestrator-issued receipt is mandatory: this is staging ONLY, never Books production.
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified EKODI Orchestrator recovery branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Matching verified Orchestrator receipt task'
+        required: true
+        type: string
   pull_request:
     paths:
       - 'books/**'
@@ -57,7 +68,7 @@ jobs:
           node --check books-worker.js
           node --check ekodi-shell-injector.js
           npm run validate:books
-          node --test test/publishing-staging-named-rpc-binding.test.mjs
+          node --test test/publishing-staging-named-rpc-binding.test.mjs test/books-stage-dispatch-contract.test.mjs
           grep -Fq "injectEkodiShell(await env.ASSETS.fetch(request), 'books')" books-worker.js
       - name: Enforce Development account boundary
         shell: bash

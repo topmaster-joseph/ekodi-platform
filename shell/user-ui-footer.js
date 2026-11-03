@@ -4,6 +4,9 @@ if(window.__EKODI_USER_UI_FOOTER_BOOTED)return;
 window.__EKODI_USER_UI_FOOTER_BOOTED=true;
 
 const VERSION=7;
+const TRAFFIC_STATS_ATTR='data-ekodi-footer-traffic';
+const TRAFFIC_STATS_URL='https://ekodi.kr/api/telemetry/public-summary';
+const trafficStatsRequests=new Map();
 const STYLE_ID='ekodi-user-ui-footer-style';
 const CONFIG_URL='https://ekodi.kr/shell/user-footer.json';
 const SITE_CHROME_URL='https://ekodi.kr/workspace-api/v1/site-chrome/public';
@@ -97,6 +100,11 @@ function installStyle(){
     .ekodi-user-ui-footer__links{display:flex!important;justify-content:center!important;align-items:center!important;gap:7px 18px!important;flex-wrap:wrap!important;white-space:normal!important}.ekodi-user-ui-footer a{color:var(--ekodi-user-footer-safe-link,#fff)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-link,#fff)!important;font-weight:700!important;text-decoration:none!important;text-underline-offset:3px!important}.ekodi-user-ui-footer a:hover,.ekodi-user-ui-footer a:focus-visible{text-decoration:underline!important}.ekodi-user-ui-footer a:focus-visible{outline:2px solid currentColor!important;outline-offset:3px!important}
     .ekodi-user-ui-footer__copyright,.ekodi-user-ui-footer__scope{color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;opacity:1!important}.ekodi-user-ui-footer__scope{max-width:800px!important;font-size:13px!important;line-height:1.7!important}
     [data-ekodi-legacy-common-footer-hidden]:not([data-ekodi-service-footer]){display:none!important}
+    .ekodi-footer-traffic{box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-wrap:wrap!important;gap:4px 12px!important;width:fit-content!important;max-width:100%!important;margin:8px auto 0!important;padding:9px 6px 0!important;border-top:1px solid currentColor!important;color:inherit!important;font:inherit!important;font-size:12px!important;font-weight:400!important;line-height:1.6!important;word-break:keep-all!important;opacity:.86!important;text-align:center!important}
+    .ekodi-footer-traffic__metric{display:inline-flex!important;align-items:baseline!important;gap:4px!important;white-space:nowrap!important}
+    .ekodi-footer-traffic__metric strong{font-weight:750!important;color:inherit!important}
+    .ekodi-footer-traffic__note{font-size:11px!important;opacity:.8!important;white-space:normal!important}
+    @media(max-width:390px){.ekodi-footer-traffic{gap:3px 9px!important;padding-inline:0!important;font-size:11.5px!important}}
     @media(max-width:720px){.ekodi-user-ui-footer{font-size:13px!important}.ekodi-user-ui-footer__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 28px))!important;padding:24px 0 26px!important;gap:12px!important}.ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{gap:4px 11px!important}.ekodi-user-ui-footer__scope{font-size:12.5px!important}}
   `;
   (document.head||document.documentElement).append(style);
@@ -207,21 +215,79 @@ function createFooter(config){
   }
   return footer;
 }
+// One shared summary widget serves a native service footer or the shared footer.
+// This is only a read-only public projection of the existing browser telemetry.
+function footerTrafficScope(){
+  if(!USER_SURFACES.has(surface()))return '';
+  const segments=location.pathname.split('/').filter(Boolean).map(value=>value.toLowerCase());
+  const root=segments[0]||'';
+  if(['admin','auth','api','my','privacy','terms'].includes(root)||['admin','auth','my'].includes(serviceId()))return '';
+  const child=root==='ekodibiz'&&['trade','marketing-ai','mall'].includes(segments[1])?'/'+segments[1]:'';
+  const url=new URL(TRAFFIC_STATS_URL);
+  url.searchParams.set('site_path',root+child);
+  url.searchParams.set('site_id',serviceId()||'root');
+  return url.toString();
+}
+function addTrafficMetric(parent,name,metric){
+  const item=appendText(parent,'span','','ekodi-footer-traffic__metric');
+  appendText(item,'span',name);
+  appendText(item,'strong',String(metric?.label||'—'));
+}
+function attachFooterTraffic(footer){
+  if(!(footer instanceof HTMLElement))return;
+  const scope=footerTrafficScope();
+  let node=footer.querySelector('['+TRAFFIC_STATS_ATTR+']');
+  if(!scope){node?.remove();return;}
+  installStyle();
+  if(!node){
+    node=appendText(footer.querySelector('.ekodi-user-ui-footer__inner')||footer,'div','','ekodi-footer-traffic');
+    node.setAttribute(TRAFFIC_STATS_ATTR,'v1');
+    node.setAttribute('role','group');
+  }
+  if(node.dataset.ekodiTrafficScope===scope)return;
+  node.dataset.ekodiTrafficScope=scope;
+  const english=String(document.documentElement.lang||'').toLowerCase().startsWith('en');
+  node.setAttribute('aria-label',english?'Site visit statistics':'사이트 방문 통계');
+  node.textContent=english?'Visit statistics loading':'방문 통계 확인 중';
+  let request=trafficStatsRequests.get(scope);
+  if(!request){
+    request=fetch(scope,{credentials:'omit',mode:'cors',cache:'default'})
+      .then(async response=>response.ok?response.json():null).catch(()=>null);
+    trafficStatsRequests.set(scope,request);
+  }
+  void request.then(data=>{
+    if(!node.isConnected||node.dataset.ekodiTrafficScope!==scope)return;
+    if(data?.status!=='ready'){
+      node.textContent=english?'Statistics unavailable':'방문 통계 준비 중';
+      return;
+    }
+    node.textContent='';
+    addTrafficMetric(node,english?'Today':'오늘 방문',data.today);
+    addTrafficMetric(node,english?'7 days':'최근 7일',data.last7Days);
+    addTrafficMetric(node,english?'30 days':'최근 30일',data.last30Days);
+    const note=appendText(node,'small',english?'Anonymous sessions · UTC':'익명 세션 · UTC 기준','ekodi-footer-traffic__note');
+    note.title=String(data.note||'');
+    node.title=String(data.note||'');
+  });
+}
+
 async function reconcile(){
   if(serviceOwnsFooter()){
     removeSharedFooter();
     creditNativeFooter();
+    attachFooterTraffic(nativeFooter());
     return;
   }
   if(!enabled()||!document.body)return;
   installStyle();
   suppressLegacyCommonFooters();
   const existing=dedupeSharedFooters();
-  if(existing){applyServiceContext(existing);applyReadableFooter(existing);return;}
+  if(existing){applyServiceContext(existing);applyReadableFooter(existing);attachFooterTraffic(existing);return;}
   const config=await loadConfig();
   if(serviceOwnsFooter()){
     removeSharedFooter();
     creditNativeFooter();
+    attachFooterTraffic(nativeFooter());
     return;
   }
   if(!config||document.querySelector(`[${FOOTER_ATTR}]`)||!document.body)return;
@@ -229,6 +295,7 @@ async function reconcile(){
   document.body.append(footer);
   dedupeSharedFooters();
   applyReadableFooter(footer);
+  attachFooterTraffic(footer);
   window.EKODIUserLanguage?.refresh?.();
   window.dispatchEvent(new CustomEvent('ekodi:user-footer-ready',{detail:{version:VERSION,surface:surface()}}));
 }
