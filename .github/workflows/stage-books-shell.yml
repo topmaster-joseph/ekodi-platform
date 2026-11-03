@@ -65,6 +65,12 @@ jobs:
           set -euo pipefail
           test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
           test -n "$CLOUDFLARE_API_TOKEN"
+      - name: Confirm protected Publisher staging Worker exists in Development account
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deployments list --name ekodi-publishing-staging --json > /tmp/publishing-stage-deployments.json
+          node -e "const d=require('/tmp/publishing-stage-deployments.json');const a=Array.isArray(d)?d:d.deployments||d.result||[];if(!Array.isArray(a)||!a.length)process.exit(1)"
       - name: Deploy isolated Books staging
         run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.books.staging.toml
       - name: Verify Books staging boundary and Shell
