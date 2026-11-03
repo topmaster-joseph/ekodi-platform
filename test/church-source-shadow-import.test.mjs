@@ -20,20 +20,22 @@ const walk = folder => readdirSync(folder, { withFileTypes: true }).flatMap(entr
 });
 
 test('Church shadow import has explicit non-production provenance and exact file set', () => {
-  assert.equal(manifest.contract, 'ekodi.church-shadow-import.v1');
-  assert.equal(manifest.mode, 'shadow-source-only');
+  assert.equal(manifest.contract, 'ekodi.church-reviewed-integration.v1');
+  assert.equal(manifest.mode, 'candidate-with-reviewed-unmerged-upstream-prs');
   assert.equal(manifest.sourceRepository, 'topmaster-joseph/ekodi-church');
   assert.equal(manifest.sourceCommit, '520d4f2daf7e5e4dc53bf928c9df626b5f896600');
   assert.equal(manifest.sourceTree, '30f2d5396b416aec9aca9773c84710052f4f8c35');
   assert.equal(manifest.sourceOwnershipTransferred, false);
   assert.equal(manifest.productionReleaseSwitched, false);
   assert.equal(manifest.legacyRepositoryDeletionAuthorized, false);
-  assert.equal(manifest.importedTrackedFileCount, 208);
+  assert.equal(manifest.originalImportedTrackedFileCount, 208);
+  assert.equal(manifest.importedTrackedFileCount, 212);
   assert.equal(manifest.excludedWorkflows.length, 8);
   assert.equal(manifest.nestedWorkflowFilesInert, false);
-  assert.equal(manifest.canonicalizedPaths.length, 13);
+  assert.equal(manifest.canonicalizedPaths.length, 31);
+  assert.equal(manifest.reviewedOverlays.changedFiles.length,20);
   const expected = new Set(manifest.trackedFiles.map(item => item.path));
-  assert.equal(expected.size, 208, 'duplicate manifest entries');
+  assert.equal(expected.size, 212, 'duplicate manifest entries');
   assert.ok([...expected].every(p => !p.includes('..') && !p.startsWith('/') ));
   const actual = walk(churchRoot).filter(path => path !== 'source-import-manifest.json' && path !== 'MIGRATION_README.md' && path !== '.gitattributes');
   assert.deepEqual(actual.sort(), [...expected].sort(), 'source asset tree has drifted');
