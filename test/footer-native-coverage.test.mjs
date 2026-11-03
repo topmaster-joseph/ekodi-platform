@@ -38,6 +38,13 @@ test('public counters retain existing privacy and native-footer deduplication be
   const shared = await readFile('shell/user-ui-footer.js', 'utf8');
   const backend = await readFile('traffic-intelligence-control.js', 'utf8');
   assert.match(shared, /attachFooterTraffic\(nativeFooter\(\)\)/);
+  assert.match(shared, /function sendNativeTrafficBeacon\(siteId,scope\)/);
+  assert.match(shared, /window\.__EKODI_SHELL_BOOTED/);
+  assert.match(shared, /navigator\.globalPrivacyControl===true\|\|navigator\.doNotTrack==='1'/);
+  assert.match(shared, /nativeTelemetrySent\.has\(scope\)/);
+  assert.match(shared, /navigator\.sendBeacon/);
+  assert.match(shared, /sendNativeTrafficBeacon\(data\.siteId,scope\)/);
+  assert.doesNotMatch(shared, /cf-connecting-ip|x-forwarded-for/);
   assert.match(shared, /if\(node\.dataset\.ekodiTrafficScope===scope\)return/);
   assert.match(backend, /count > 0 && count < 5/);
   assert.match(backend, /anonymous_browser_sessions/);
