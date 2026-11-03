@@ -6,6 +6,11 @@ const ME_PREFIX = '/api/books/me';
 const ADMIN_PREFIX = '/api/books/admin/network';
 const TITLE_STATES = new Set(['DRAFT', 'SUBMITTED', 'PUBLISHED', 'REJECTED']);
 
+// No direct moderation endpoint may create a new public edition without publisher-origin evidence.
+export function requiresVerifiedPublisherHandoff(priorStatus, nextStatus) {
+  return nextStatus === 'PUBLISHED' && priorStatus !== 'PUBLISHED';
+}
+
 function clean(value, max = 500) {
   return String(value ?? '').trim().slice(0, max);
 }
@@ -238,7 +243,7 @@ async function moderateTitle(request, env, auth, id) {
   // A Books Network moderation click is not a verified Publisher release receipt.
   // Existing PUBLISHED rows remain untouched, but a new public state requires
   // the independent Publisher contract, membership, edition and audio gates.
-  if (status === 'PUBLISHED' && current.status !== 'PUBLISHED') {
+  if (requiresVerifiedPublisherHandoff(current.status, status)) {
     return json({
       error: '판매 공개는 출판사의 검증된 판본·저자 계약·구독 자격·오디오북 검수 및 공식 인계 이후에만 가능합니다.',
       code: 'PUBLISHER_HANDOFF_REQUIRED'
