@@ -8,6 +8,7 @@
   const EXTENDED = new Set(['my', 'kac', 'vi', 'mn', 'id']);
   const FALLBACK = Object.freeze({
     '오늘의 삶': 'Today',
+    '매일묵상': 'Daily devotion',
     '실시간': 'Live',
     '오늘의 핵심 콘텐츠': 'Today’s featured content',
     '말씀으로 오늘 읽기': 'Read today through the Word',

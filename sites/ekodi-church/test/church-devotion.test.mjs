@@ -6,13 +6,13 @@ const page = readFileSync(new URL('../devotion/index.html', import.meta.url), 'u
 const home = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const script = readFileSync(new URL('../script.js', import.meta.url), 'utf8');
 
-test('church devotion page is titled 오늘의 매일묵상 and mounts the shared EKODI renderer', () => {
-  assert.match(page, /<h1>오늘의 매일묵상<\/h1>/);
-  assert.match(page, /<title>오늘의 매일묵상 \| 에코디교회<\/title>/);
+test('church devotion page is titled 에코디 오늘의 매일묵상 and mounts the shared EKODI renderer', () => {
+  assert.match(page, /<h1>에코디 오늘의 매일묵상<\/h1>/);
+  assert.match(page, /<title>에코디 오늘의 매일묵상 \| 에코디교회<\/title>/);
   assert.match(page, /data-ekodi-devotion data-base="\/ekodichurch\/devotion\/" data-date-mode="query" data-site-label="에코디교회"/);
   assert.match(page, /<script type="module" src="\/bible\/devotion\.js"><\/script>/);
   assert.match(page, /href="\/bible\/devotion\.css"/);
-  assert.match(page, /property="og:title" content="오늘의 매일묵상 · 에코디교회"/);
+  assert.match(page, /property="og:title" content="에코디 오늘의 매일묵상 · 에코디교회"/);
 });
 
 test('church devotion page uses the church header and footer', () => {
@@ -29,8 +29,9 @@ test('church devotion page ships no inline script (script-src self)', () => {
 
 test('homepage and runtime header link to the devotion page before QTIN', () => {
   const nav = home.slice(home.indexOf('<nav id="main-nav"'), home.indexOf('</nav>', home.indexOf('<nav id="main-nav"')));
-  assert.ok(nav.includes('<a class="nav-devotion" href="/ekodichurch/devotion/">매일묵상</a>'));
-  assert.ok(nav.indexOf('nav-devotion') < nav.indexOf('nav-qtin'));
+  assert.ok(nav.includes('<a href="/ekodichurch/devotion/">매일묵상</a>'));
+  assert.ok(nav.indexOf('>매일묵상</a>') < nav.indexOf('nav-qtin'));
+  assert.equal((nav.match(/매일묵상/g) || []).length, 1, 'do not duplicate devotion entry');
   assert.ok(script.includes("{ href: '/ekodichurch/devotion/', label: '매일묵상', className: 'nav-devotion' }"));
   assert.ok(script.indexOf("'/ekodichurch/devotion/'") < script.indexOf("'/qtin/church'"));
 });

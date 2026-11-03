@@ -38,6 +38,29 @@
   style.textContent = '.site-header.church-shell-solid{backdrop-filter:saturate(140%) blur(10px);-webkit-backdrop-filter:saturate(140%) blur(10px);box-shadow:0 6px 24px #0000001f}.site-header.church-shell-solid.church-shell-ink-light{background:rgba(18,49,43,.96)!important}.site-header.church-shell-solid.church-shell-ink-dark{background:rgba(250,249,245,.97)!important}';
   document.head.appendChild(style);
   pinHeader();
+
+  // This Church Pages source still owns the public Church UI. Reuse the EKODI
+  // read-only footer and the separate privacy-aware native visit adapter, not a
+  // second legal footer or a privileged admin shell.
+  function mountVisitSummary() {
+    const path = location.pathname;
+    if (!/^\/ekodichurch(?:\/|$)/.test(path) ||
+        /^\/ekodichurch\/(?:admin|my)(?:\/|$)/.test(path)) return;
+    if (!document.querySelector('footer[data-ekodi-service-footer]')) return;
+    document.documentElement.dataset.ekodiShellSurface = 'public';
+    if (window.__EKODI_USER_UI_FOOTER_BOOTED || document.querySelector('script[data-church-native-footer]')) return;
+    const beacon = document.createElement('script');
+    beacon.src = 'https://ekodi.kr/shell/native-visit-beacon.js';
+    beacon.async = false;
+    beacon.dataset.churchNativeBeacon = 'shared';
+    document.head.append(beacon);
+    const footer = document.createElement('script');
+    footer.src = 'https://ekodi.kr/shell/user-ui-footer.js';
+    footer.async = false;
+    footer.dataset.churchNativeFooter = 'shared';
+    document.head.append(footer);
+  }
+  mountVisitSummary();
   if (isHome) return;
 
   const absolutize = root => root.querySelectorAll('a[href^="#"]').forEach(a => {
