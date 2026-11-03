@@ -38,7 +38,7 @@
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
 }
 .hero .overview-grid a{min-height:74px!important}
-.hero .overview-grid a strong{font-size:clamp(15px,1.5vw,18px)!important}
+.hero .overview-grid a strong{font-size:clamp(15px,1.5vw,18px)!important;overflow-wrap:normal!important;word-break:keep-all!important}
 body:has(main :target) .hero{display:none!important}
 
 /* Show dated worship material only when requested. This avoids repeating the
@@ -96,7 +96,17 @@ body:has(main :target) .hero{display:none!important}
     color:#173730!important;
   }
   .site-header .menu-button{min-width:44px;min-height:44px;display:grid;place-items:center}
-  .hero{min-height:calc(100svh - 118px)!important}
+  /* Content-first mobile layout: never vertically center a viewport-height hero.
+     A tall mobile viewport must not create blank space above the greeting. */
+  .hero{
+    display:block!important;
+    height:auto!important;
+    min-height:0!important;
+    padding:clamp(18px,3vw,28px) 18px 32px!important;
+  }
+  .hero-content{width:min(680px,100%);padding:0!important}
+  .hero .eyebrow{margin-top:0}
+  .hero .overview-grid{margin-top:24px!important}
   .hero .overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .hero .overview-grid a{min-height:64px!important}
   #online .online-triad--broadcast{grid-template-columns:1fr}
