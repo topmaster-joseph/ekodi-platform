@@ -11,6 +11,17 @@ on:
         required: false
         type: string
         default: ''
+  # Orchestrator-issued receipt is mandatory: this is staging ONLY, never Books production.
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified EKODI Orchestrator recovery branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Matching verified Orchestrator receipt task'
+        required: true
+        type: string
   pull_request:
     paths:
       - 'books/**'
