@@ -38,6 +38,7 @@ footer .shell{padding:1.2rem 0;color:var(--sub)}
 <p class="warning" id="connection">저장소 연결을 확인하고 있습니다. 연결 전에는 실제 데이터가 저장되지 않습니다.</p>
 <section class="panel"><h2>새 원고 프로젝트</h2><form id="createForm"><label>도서 제목<input name="title" required maxlength="180" placeholder="새 도서의 제목"></label>
 <label>분야<select name="fieldId" required><option value="literature">문학·에세이</option><option value="humanities">인문·심리·관계</option><option value="business">경영·창업·경제</option><option value="ai-education">AI·기술·교육</option><option value="local-culture">지역·사회·문화</option><option value="life-practical">생활·취미·실용</option></select></label><button type="submit">집필 프로젝트 등록</button></form></section>
+<section class="panel" aria-labelledby="jubilee-title"><h2 id="jubilee-title">희년신학 시리즈 비공개 등록</h2><p>제1권과 제2권을 저자 소유의 집필 프로젝트로 중복 없이 준비합니다. 원고 파일 입고·출판 승인·판매는 이 작업에서 실행하지 않습니다.</p><button id="jubileeRegister" type="button" disabled>희년신학 2권 등록 확인 및 누락 프로젝트 생성</button><p id="jubileeStatus" role="status" aria-live="polite"></p></section>
 <section class="panel"><div class="toolbar"><h2>원고별 진행 현황</h2><span id="counts" class="hint">자료 확인 중</span></div>
 <div class="table-wrap"><table><thead><tr><th>번호</th><th>도서</th><th>분야</th><th>단계</th><th>예약일</th><th>수정</th><th>관리</th></tr></thead><tbody id="rows"><tr><td colspan="7">읽는 중…</td></tr></tbody></table></div></section>
 <section class="panel" id="selected" hidden><h2 id="detailTitle">원고 관리</h2>

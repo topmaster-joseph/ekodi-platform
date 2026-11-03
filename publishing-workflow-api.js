@@ -133,6 +133,33 @@ async function create(db,req,u){
   await audit(db,p,u,'create',null,'planning',1);
   return result(201,{ok:true,project:safe(p)});
 }
+const JUBILEE_PRIVATE_DRAFTS=[
+  '희년과 하나님 나라의 회복',
+  '우리는 다시 돌아갈 수 있는가',
+];
+async function registerJubileeDrafts(db,u,env){
+  // Only the independently authenticated, publisher-configured author owns this series.
+  const trustedOwner=String(env?.PUBLISHING_JUBILEE_AUTHOR_USER_ID||'').trim();
+  if(!trustedOwner)return error(503,'JUBILEE_OWNER_NOT_CONFIGURED');
+  if(u.userId!==trustedOwner)return error(403,'JUBILEE_OWNER_ONLY');
+  // Authenticated owner identity is server-derived; manuscript bytes are never uploaded here.
+  const registered=[];
+  for(const title of JUBILEE_PRIVATE_DRAFTS){
+    const id=crypto.randomUUID(),time=now();
+    const inserted=await db.prepare(
+      "INSERT INTO publishing_workflow_projects (id,author_user_id,title,field_id,collection_id,edition_id,created_at,updated_at) SELECT ?,?,?,'humanities','human',?,?,? WHERE NOT EXISTS (SELECT 1 FROM publishing_workflow_projects WHERE author_user_id=? AND title=? AND field_id='humanities' AND collection_id='human')"
+    ).bind(id,u.userId,title,id+':v1',time,time,u.userId,title).run();
+    const created=Number(inserted?.meta?.changes??inserted?.changes??0)===1;
+    const p=project(await db.prepare(
+      "SELECT * FROM publishing_workflow_projects WHERE author_user_id=? AND title=? AND field_id='humanities' AND collection_id='human' ORDER BY created_at ASC LIMIT 1"
+    ).bind(u.userId,title).first());
+    if(!p)throw Error('JUBILEE_DRAFT_LOOKUP_FAILED');
+    if(created)await audit(db,p,u,'create',null,'planning',1,{source:'jubilee-private-onboarding'});
+    registered.push({created,project:safe(p)});
+  }
+  return result(200,{ok:true,seriesId:'EKODI-JUBILEE-THEOLOGY',visibility:'private-workflow-only',
+    manuscriptIngested:false,publicationApproved:false,projects:registered});
+}
 async function list(db,u,r){
   const privileged=['editor','publisher','admin'].includes(r);
   const statement=privileged?
@@ -220,6 +247,7 @@ export async function handlePublishingWorkflow(req,env){
     const u=await identity(req,env);if(!u)return error(401,'LOGIN_REQUIRED');
     const db=env.PUBLISH_DB;let r=await role(db,u.userId);
     if(r==='author')r=(await claimInvite(db,u))||r;
+    if(path==='/api/workflow/jubilee/register'&&req.method==='POST')return registerJubileeDrafts(db,u,env);
     if(path==='/api/workflow/projects'){
       if(req.method==='POST')return create(db,req,u);
       if(req.method==='GET')return list(db,u,r);
