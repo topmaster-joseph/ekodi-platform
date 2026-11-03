@@ -57,6 +57,73 @@ const progressStreak=document.getElementById('pointsStreak');
 const progressVerifiedCount=document.getElementById('pointsVerifiedCount');
 const progressLevelHelp=document.getElementById('pointsLevelHelp');
 const progressMissions=document.getElementById('pointsMissionList');
+const weekSection=document.getElementById('pointsWeeklySection');
+const weekSummary=document.getElementById('pointsWeeklySummary');
+const weekDays=document.getElementById('pointsWeekDays');
+const goalSection=document.getElementById('pointsGoalSection');
+const goalForm=document.getElementById('pointsGoalForm');
+const weeklyTarget=document.getElementById('pointsWeeklyTarget');
+const ninetyTarget=document.getElementById('pointsNinetyTarget');
+const goalSummary=document.getElementById('pointsGoalSummary');
+const goalStatus=document.getElementById('pointsGoalStatus');
+const goalSave=document.getElementById('pointsSaveGoal');
+const goalReset=document.getElementById('pointsResetGoal');
+let currentProgress=null;
+let currentGoal=null;
+const weekDayNames=['월','화','수','목','금','토','일'];
+function renderWeek(data){
+  weekSection.hidden=true;
+  weekSummary.textContent='';
+  weekDays.replaceChildren();
+  const week=data?.week;
+  if(!week||!Array.isArray(week.days)||week.days.length!==7)return;
+  const active=Number(week.active_days),approved=Number(week.approved_activities),pending=Number(week.pending_activities);
+  if(![active,approved,pending].every(x=>Number.isSafeInteger(x)&&x>=0))return;
+  weekSummary.textContent='승인 활동 '+approved.toLocaleString('ko-KR')+'건 · 참여한 날 '+active+'일'+
+    (pending?' · 승인 대기 '+pending+'건':'');
+  week.days.forEach((day,index)=>{
+    const item=document.createElement('span');
+    const accepted=Number(day.approved)||0,waiting=Number(day.pending)||0;
+    const future=String(day.date)>String(data.date);
+    item.dataset.weekStatus=accepted>0?'approved':waiting>0?'pending':'empty';
+    item.setAttribute('role','listitem');
+    item.setAttribute('aria-label',String(day.date).slice(0,10)+' 승인 '+accepted+'건, 대기 '+waiting+'건');
+    const label=document.createElement('small');
+    label.textContent=weekDayNames[index];
+    const detail=document.createElement('strong');
+    detail.textContent=future?'예정':accepted>0?accepted+'건':waiting>0?'대기':'—';
+    item.append(label,detail);weekDays.append(item);
+  });
+  weekSection.hidden=false;
+}
+function renderGoalSummary(){
+  if(!currentGoal||!currentProgress){goalSummary.textContent='';return;}
+  const targetDays=Number(currentGoal.weekly_target_days);
+  const targetCount=Number(currentGoal.target_activities_90d);
+  const active=Number(currentProgress.week?.active_days);
+  const activities=Number(currentProgress.level?.verified_activities_90d);
+  if(![targetDays,targetCount,activities].every(Number.isSafeInteger))return;
+  goalSummary.textContent=(Number.isSafeInteger(active)?
+    '이번 주 '+active+'/'+targetDays+'일 · ':'이번 주 참여 기록 확인 중 · ')+
+    '90일 '+activities+'/'+targetCount+'건'+
+    (currentProgress.complete_window===false?' (일부 기록만 반영)':'');
+}
+function renderGoal(data){
+  const weekly=Number(data?.weekly_target_days),count=Number(data?.target_activities_90d);
+  if(!Number.isSafeInteger(weekly)||weekly<1||weekly>7||
+     !Number.isSafeInteger(count)||count<3||count>90)throw new Error('GOAL_INVALID_RESPONSE');
+  currentGoal={weekly_target_days:weekly,target_activities_90d:count};
+  weeklyTarget.value=String(weekly);
+  // A custom target may be outside the preset choices; preserve it accessibly.
+  if(!ninetyTarget.querySelector('option[value="'+count+'"]')){
+    const option=new Option(count+'건',String(count));
+    ninetyTarget.add(option);
+  }
+  ninetyTarget.value=String(count);
+  goalSection.hidden=false;
+  renderGoalSummary();
+}
+
 const PROGRESS_STATUS={available:'참여 가능',pending:'승인 대기',completed:'승인 완료'};
 function clearProgress(){
   progressSection.hidden=true;
@@ -66,6 +133,10 @@ function clearProgress(){
   progressVerifiedCount.textContent='—';
   progressLevelHelp.textContent='';
   progressMissions.replaceChildren();
+  currentProgress=null;currentGoal=null;
+  weekSection.hidden=true;weekSummary.textContent='';weekDays.replaceChildren();
+  goalSection.hidden=true;goalStatus.textContent='';goalSummary.textContent='';
+  weeklyTarget.value='3';ninetyTarget.value='10';
   progressNotice.textContent='검증된 활동 정보를 확인하고 있습니다.';
   refreshPointTabState();
 }
@@ -108,6 +179,9 @@ function renderProgress(data){
       progressMissions.append(row);
     }
   }
+  currentProgress=data;
+  renderWeek(data);
+  renderGoalSummary();
   progressNotice.textContent=data.complete_window===false?
     '최근 90일 기록 일부만 반영되었습니다. 레벨과 연속 참여는 잠정치입니다.':
     '서버에서 확인한 활동 기록입니다. 포인트는 별도 승인 정책으로 지급됩니다.';
@@ -310,6 +384,48 @@ function renderRows(rows){
     div.append(summary,amount);historyList.append(div);
   }
 }
+async function loadGoal(site,revision){
+  if(!sb||!enabled||revision!==viewRevision)return;
+  try{
+    const {data,error}=await sb.rpc('ekodi_points_my_recognition_goal',{p_site:site});
+    if(revision!==viewRevision||select.value!==site)return;
+    if(error)throw error;
+    renderGoal(data);
+    goalStatus.textContent=data.configured===true?
+      '저장된 나의 성취 목표입니다.':'기본 목표입니다. 저장하지 않아도 활동 기록은 유지됩니다.';
+  }catch{
+    if(revision!==viewRevision||select.value!==site)return;
+    goalSection.hidden=true;
+    goalStatus.textContent='';
+  }
+}
+async function saveGoal(event,reset=false){
+  if(event)event.preventDefault();
+  const site=select.value,revision=viewRevision;
+  if(!sb||!enabled||!currentProgress||!/^[a-z0-9_-]{2,64}$/.test(site))return;
+  const weekly=reset?null:Number(weeklyTarget.value);
+  const count=reset?null:Number(ninetyTarget.value);
+  if(!reset&&(!Number.isSafeInteger(weekly)||weekly<1||weekly>7||
+    !Number.isSafeInteger(count)||count<3||count>90)){
+    goalStatus.textContent='주간 1~7일, 최근 90일 3~90건 범위에서 선택해 주세요.';return;
+  }
+  goalSave.disabled=true;goalReset.disabled=true;
+  goalStatus.textContent=reset?'기본 목표로 변경하고 있습니다.':'성취 목표를 저장하고 있습니다.';
+  try{
+    const {data,error}=await sb.rpc('ekodi_points_set_recognition_goal',{
+      p_site:site,p_weekly_days:weekly,p_target_90d:count
+    });
+    if(revision!==viewRevision||select.value!==site)return;
+    if(error)throw error;
+    renderGoal(data);
+    goalStatus.textContent=reset?'기본 목표로 되돌렸습니다.':'나의 성취 목표를 저장했습니다.';
+  }catch{
+    if(revision===viewRevision&&select.value===site)
+      goalStatus.textContent='목표를 저장하지 못했습니다. 로그인 및 사이트 운영 상태를 확인해 주세요.';
+  }finally{goalSave.disabled=false;goalReset.disabled=false;}
+}
+goalForm.addEventListener('submit',event=>{void saveGoal(event,false);});
+goalReset.addEventListener('click',()=>{void saveGoal(null,true);});
 async function loadProgress(token,site,revision){
   clearProgress();
   if(!enabled||!/^[a-z0-9_-]{2,64}$/.test(site))return;
@@ -320,6 +436,7 @@ async function loadProgress(token,site,revision){
     const data=await request('/progress?site='+encodeURIComponent(site),token);
     if(revision!==viewRevision)return;
     renderProgress(data);
+    void loadGoal(site,revision);
   }catch{
     if(revision!==viewRevision)return;
     progressContent.hidden=true;
