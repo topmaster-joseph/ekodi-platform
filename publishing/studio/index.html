@@ -19,8 +19,8 @@
     </section>
     <section id="studio-new" data-studio-panel="new" role="tabpanel" aria-labelledby="tab-new" class="panel" hidden>
       <h2 id="bookFormTitle">새 책 등록</h2>
-      <p class="hint">초안은 개인 기록으로 저장됩니다. 출간 검토는 별도의 저자 권한 및 편집 승인이 필요합니다.</p>
-      <form id="bookForm"><label>제목<input name="title" required maxlength="200"></label><label>저자명<input name="author" required maxlength="160"></label><label>서점<select name="storeId" id="storeSelect"><option value="">나중에 선택</option></select></label><label>책 소개<textarea name="description" rows="3" maxlength="4000"></textarea></label><label>표지 이미지 URL<input name="coverImage" type="url"></label><label>판매가<input name="priceKrw" type="number" min="0" step="100" value="0"></label><label>판매 링크<input name="buyUrl" type="url"></label><div class="actions"><button value="DRAFT">초안 저장</button><button value="SUBMITTED" class="primary">출간 검토 요청</button></div></form>
+      <p class="hint">무료 회원은 개인 초안을 저장할 수 있습니다. 출간 검토 접수는 유료 저자 자격과 출판사 승인 절차에서 진행합니다.</p>
+      <form id="bookForm"><label>제목<input name="title" required maxlength="200"></label><label>저자명<input name="author" required maxlength="160"></label><label>서점<select name="storeId" id="storeSelect"><option value="">나중에 선택</option></select></label><label>책 소개<textarea name="description" rows="3" maxlength="4000"></textarea></label><label>표지 이미지 URL<input name="coverImage" type="url"></label><label>판매가<input name="priceKrw" type="number" min="0" step="100" value="0"></label><label>판매 링크<input name="buyUrl" type="url"></label><div class="actions"><button value="DRAFT">초안 저장</button><a class="studio-review-link ghost" href="/publishing/human/manage/">출간 검토 절차</a></div></form>
       <button id="cancelBookEdit" class="ghost edit-cancel" type="button" hidden>수정 취소</button>
     </section>
     <section id="studio-stores" data-studio-panel="stores" role="tabpanel" aria-labelledby="tab-stores" class="panel" hidden>
