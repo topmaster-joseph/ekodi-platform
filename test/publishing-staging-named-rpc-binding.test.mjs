@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {verifyBoundPublisherRelease} from '../publishing/human/publisher-release-rpc-service.js';
 
-const load=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+const load=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8').replace(/\r\n/g,'\n');
 const stagingBooks=load('wrangler.books.staging.toml');
 const stagingPublishing=load('wrangler.publishing.staging.toml');
 const stagingMallWorkflow=load('.github/workflows/deploy-ekodi-mall.yml');
