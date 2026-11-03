@@ -80,4 +80,16 @@ BEGIN
      OR has_function_privilege('anon','public.ekodi_points_set_recognition_goal(text,integer,integer)','EXECUTE')
   THEN RAISE EXCEPTION 'anonymous RPC execution permitted'; END IF;
 END $priv$;
+-- Keep person-target deletion/audit scans indexed at scale.
+DO $goal_index$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname='ekodi_points_private'
+      AND tablename='member_recognition_goals'
+      AND indexname='ekodi_point_recognition_goals_person_idx'
+  ) THEN
+    RAISE EXCEPTION 'recognition goals canonical-Person FK index absent';
+  END IF;
+END $goal_index$;
 SELECT 'POINT_RECOGNITION_GOALS_SMOKE_PASS' AS result;
