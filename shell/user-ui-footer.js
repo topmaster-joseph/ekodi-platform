@@ -7,6 +7,7 @@ const VERSION=7;
 const TRAFFIC_STATS_ATTR='data-ekodi-footer-traffic';
 const TRAFFIC_STATS_URL='https://ekodi.kr/api/telemetry/public-summary';
 const trafficStatsRequests=new Map();
+
 const STYLE_ID='ekodi-user-ui-footer-style';
 const CONFIG_URL='https://ekodi.kr/shell/user-footer.json';
 const SITE_CHROME_URL='https://ekodi.kr/workspace-api/v1/site-chrome/public';
@@ -261,6 +262,7 @@ function attachFooterTraffic(footer){
       node.textContent=english?'Statistics unavailable':'방문 통계 준비 중';
       return;
     }
+    window.dispatchEvent(new CustomEvent('ekodi:footer-traffic-ready',{detail:{siteId:data.siteId,scope}}));
     node.textContent='';
     addTrafficMetric(node,english?'Today':'오늘 방문',data.today);
     addTrafficMetric(node,english?'7 days':'최근 7일',data.last7Days);
