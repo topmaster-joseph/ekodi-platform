@@ -12,14 +12,14 @@ const productionBooks=load('wrangler.books.toml');
 const productionMall=load('sites/ekodi-mall/api/wrangler.toml');
 const service=load('publishing-release-entry.js');
 
-const BOOKS_BIND=\`[[services]]
+const BOOKS_BIND=`[[services]]
 binding = "PUBLISHING_RELEASE_GATE"
 service = "ekodi-publishing-staging"
-entrypoint = "BooksPublisherReleaseGate"\`;
-const MALL_BIND=\`[[services]]
+entrypoint = "BooksPublisherReleaseGate"`;
+const MALL_BIND=`[[services]]
           binding = "PUBLISHING_RELEASE_GATE"
           service = "ekodi-publishing-staging"
-          entrypoint = "MallPublisherReleaseGate"\`;
+          entrypoint = "MallPublisherReleaseGate"`;
 
 test('Books can reach only its protected Publisher RPC in Development staging',()=>{
   assert.ok(stagingBooks.includes(BOOKS_BIND));
