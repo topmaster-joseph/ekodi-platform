@@ -1,5 +1,5 @@
 {
-  "version": "1.27.6",
+  "version": "1.27.7",
   "effectiveDate": "2026-10-28",
   "status": "active",
   "title": "EKODI Platform Constitution",
@@ -1401,5 +1401,27 @@
       "admin-subdomain",
       "all-first-party-subdomains"
     ]
+  },
+  "churchCanonicalSourceTransferPolicy": {
+    "id": "CHURCH-SOURCE-ONE-REPO-20261103",
+    "changeClass": "C2",
+    "releaseTopologyChangeClass": "C3",
+    "approvedAt": "2026-11-03",
+    "approvalStatus": "owner-approved-guarded-transition",
+    "canonicalRepository": "topmaster-joseph/ekodi-platform",
+    "canonicalSourcePath": "sites/ekodi-church",
+    "preservedIndependentPagesProject": "ekodi-church",
+    "preservedIndependentReleaseWorkflow": ".github/workflows/deploy-ekodi-church-homepage.yml",
+    "canonicalPublicEntry": "https://ekodi.kr/ekodichurch",
+    "activeLegacySourceUntilVerifiedCutover": "topmaster-joseph/ekodi-church",
+    "releaseSourceSwitchFlag": "CHURCH_CANONICAL_SOURCE_CUTOVER_APPROVED",
+    "ownerApprovalDoesNotAuthorizeAutomaticProductionDeployment": true,
+    "requireProtectedOrchestratorReceipt": true,
+    "requireExactMainCommitAndPayloadSha": true,
+    "requireStagedMemberAdminLiveBrowserCanary": true,
+    "requireIndependentRollbackProof": true,
+    "preventCrossTenantDataAndFinanceCoalescing": true,
+    "legacyRepositoryDeletionRequiresSeparateOwnerApproval": true,
+    "legacyRepositoryRetainedUntilV2ReleaseVerified": true
   }
 }
