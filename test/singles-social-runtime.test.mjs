@@ -336,9 +336,19 @@ test('paid contact details require the settled pair, a verified partner and a fr
  res=await handleSinglesSocial(request('010-1234-5678',true),route,admin,uid,reply);
  assert.equal(res.status,200);
  assert.deepEqual(await res.json(),{ok:true,shared:true});
- assert.equal(admin.writes.length,1);
- assert.deepEqual(admin.writes[0].row,{interest_id:id,sender_id:uid,body:'[내 연락처] 010-1234-5678'});
+ assert.equal(admin.writes.length,0,'contact + receipt must be written by one DB transaction, not separate Edge inserts');
+ assert.deepEqual(admin.calls.find(c=>c.name==='singles_contact_share_record'),{
+  name:'singles_contact_share_record',
+  params:{p_interest:id,p_sender:uid,p_contact:'010-1234-5678',p_consent_version:'singles-contact-v1-20261103'}
+ });
  assert.equal(admin.calls.find(c=>c.name==='singles_rate_take').params.p_action,'message');
+ admin=rpcBy(db({accepted:true,...settledOptions}),{
+  ...PAID,singles_contact_share_record:{data:null,error:{message:'contact_exchange_not_completed'}}
+ });
+ res=await handleSinglesSocial(request('010-1234-5678',true),route,admin,uid,reply);
+ assert.equal(res.status,403);
+ assert.equal((await res.json()).error,'contact_exchange_not_completed');
+ assert.equal(admin.writes.length,0,'failed transaction cannot disclose contact');
 }));
 
 test('postpaid contact entitlement rejects stale, refunded, crossed and partial payments',()=>withPaid(async()=>{
@@ -385,6 +395,23 @@ test('paid connections display contact_shared only while both original invoices 
  }
 }));
 
+test('my contact consent history exposes only minimal evidence and recipient display name',()=>withPaid(async()=>{
+ const admin=rpcBy(db({accepted:true,extra:settledOptions.extra,lists:{
+  ...settledOptions.lists,
+  singles_paid_requests:[{id,requester_id:uid,responder_id:other,kind:'contact',status:'connected',requester_fee_krw:75000}],
+  singles_interests:[{id,from_user_id:uid,to_user_id:other,status:'accepted'}],
+  singles_profiles:[{user_id:other,display_name:'동행 상대'}],
+  singles_contact_share_receipts:[{recipient_id:other,consent_version:'singles-contact-v1-20261103',
+   consented_at:'2026-11-03T08:00:00Z',raw_contact:'010-0000-0000'}]
+ }}),PAID);
+ const response=await handleSinglesSocial(new Request('https://ekodi.kr/requests'),'/requests',admin,uid,reply);
+ assert.equal(response.status,200);
+ const json=await response.json();
+ assert.deepEqual(json.consent_history,[{display_name:'동행 상대',consent_version:'singles-contact-v1-20261103',consented_at:'2026-11-03T08:00:00Z'}]);
+ assert.ok(!JSON.stringify(json).includes('010-0000-0000'),'source contact never appears in audit history');
+ assert.ok(!JSON.stringify(json.consent_history).includes(other),'recipient UUID never appears in client view');
+}));
+
 test('paid conversation history only reveals explicitly shared contact on a current paid connection',()=>withPaid(async()=>{
  const messages=[{id,sender_id:other,body:'기존 번호 010-9876-5432 및 foo@example.org',created_at:'2026-10-27T00:00:00Z'},
   {id:'55555555-5555-4555-8555-555555555555',sender_id:other,body:'[내 연락처] 010-4567-8901',created_at:'2026-10-28T00:00:00Z'}];
@@ -397,10 +424,22 @@ test('paid conversation history only reveals explicitly shared contact on a curr
  assert.ok(!JSON.stringify(b).includes('foo@example.org'));
  admin=rpcBy(db({accepted:true,...settledOptions,lists:{...settledOptions.lists,singles_messages:messages}}),PAID);
  res=await handleSinglesSocial(req,'/messages/'+id,admin,uid,reply);
+ b=await res.json();
+ assert.equal(b.messages[1].body,'[내 연락처] [연락처 가림]','legacy/unreceipted contact cannot be exposed');
+ const receipt={message_id:messages[1].id,interest_id:id,request_id:id,sender_id:other,recipient_id:uid,consent_version:'singles-contact-v1-20261103'};
+ admin=rpcBy(db({accepted:true,...settledOptions,lists:{...settledOptions.lists,
+  singles_messages:messages,singles_contact_share_receipts:[receipt]}}),PAID);
+ res=await handleSinglesSocial(req,'/messages/'+id,admin,uid,reply);
  assert.equal(res.status,200);
  b=await res.json();
- assert.ok(!b.messages[0].body.includes('9876'));
- assert.equal(b.messages[1].body,messages[1].body,'explicitly shared contact is visible after fresh settlement');
+ assert.ok(!b.messages[0].body.includes('9876'),'old ordinary message remains masked');
+ assert.equal(b.messages[1].body,messages[1].body,'consent receipt linked to exact current payment permits sharing');
+ for(const bad of [{...receipt,recipient_id:other},{...receipt,request_id:other},{...receipt,consent_version:'outdated'}]){
+  admin=rpcBy(db({accepted:true,...settledOptions,lists:{...settledOptions.lists,
+   singles_messages:messages,singles_contact_share_receipts:[bad]}}),PAID);
+  res=await handleSinglesSocial(req,'/messages/'+id,admin,uid,reply);
+  assert.equal((await res.json()).messages[1].body,'[내 연락처] [연락처 가림]');
+ }
 }));
 
 test('paid contact route is centrally gated and member contact UI cannot reveal public profile links',async()=>{
@@ -411,7 +450,9 @@ test('paid contact route is centrally gated and member contact UI cannot reveal 
  assert.match(surface,/contactShare=path\.match\(/);
  assert.match(surface,/contactShare&&method==='POST'/);
  assert.ok(surface.includes('sub.match(/^\\/api\\/messages\\/[0-9a-f-]{36}\\/contact$/i)'));
- assert.match(ui,/share_consent:true/);
+ assert.match(ui,/share_consent:true,consent_version:'singles-contact-v1-20261103'/);
+ assert.match(social,/singles_contact_share_record/);
+ assert.match(social,/singles_contact_share_receipts/);
  assert.match(ui,/if\(!state\.paidModel&&typeof p\.public_link/);
  assert.match(social,/public_link:!paidModel\(\)&&show\('public_link'\)/);
 });

@@ -311,8 +311,8 @@ async function showPaidMessages(h){
   if(c.contact_shared)card.append(button('내 연락처 공유하기',async()=>{
    const contact=prompt('상대에게 공유할 본인의 휴대전화번호 또는 이메일을 입력해 주세요. (입력 전까지 공개되지 않습니다.)');
    if(!contact?.trim())return;
-   if(!confirm('연락처 제3자 제공 동의\n받는 사람: '+c.display_name+' (선택한 동행 회원)\n제공 목적: 상호 동의한 회원 간 자율적인 연락\n제공 항목: 입력하신 휴대전화번호 또는 이메일\n상대방 보유·이용 기간: 상대방이 삭제할 때까지 (이미 전달한 연락처는 회수할 수 없습니다)\n동의 거부권: 동의하지 않아도 다른 서비스는 이용할 수 있으며 연락처 전달만 제한됩니다.\n\n'+contact.trim()+'를 공유하시겠습니까?'))return;
-   try{await api('/messages/'+c.id+'/contact',{method:'POST',body:{contact:contact.trim(),share_consent:true}});notice(card,'연락처가 상대방에게 전달되었습니다. 대화 내용에서 확인할 수 있습니다.');}
+   if(!confirm('연락처 제3자 제공 동의 (2026-11-03 v1)\n받는 사람: '+c.display_name+' (선택한 동행 회원)\n제공 목적: 상호 동의한 회원 간 자율적인 연락\n제공 항목: 입력하신 휴대전화번호 또는 이메일\n상대방 보유·이용 기간: 상대방이 삭제할 때까지 (이미 전달한 연락처는 회수할 수 없습니다)\n동의 거부권: 동의하지 않아도 다른 서비스는 이용할 수 있으며 연락처 전달만 제한됩니다.\n\n'+contact.trim()+'를 공유하시겠습니까?'))return;
+   try{await api('/messages/'+c.id+'/contact',{method:'POST',body:{contact:contact.trim(),share_consent:true,consent_version:'singles-contact-v1-20261103'}});notice(card,'연락처가 상대방에게 전달되었습니다. 대화 내용에서 확인할 수 있습니다.');}
    catch(e){notice(card,errorText(e))}
   },'outline'));
   card.append(button('대화 내용 보기',messageThread(card,c.id)));
@@ -321,6 +321,14 @@ async function showPaidMessages(h){
    try{const x=await api('/messages/'+c.id,{method:'POST',body:{text:body.slice(0,1000)}});notice(card,x.masked?'메시지를 보냈습니다. 연락처로 보이는 부분은 가려졌습니다.':'메시지를 보냈습니다.')}
    catch(e){notice(card,errorText(e))}
   },'primary'));
+ });
+ h.append(text('h3','내 연락처 제공 동의 기록'));
+ appendList(h,d.consent_history||[],(card,r)=>{
+  card.append(text('h3',r.display_name||'동행 회원'));
+  const date=new Date(r.consented_at);
+  paragraph(card,'동의 시각: '+(Number.isNaN(date.getTime())?'기록 확인 중':date.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}))+
+   ' · 동의 버전: '+(r.consent_version||''));
+  paragraph(card,'동의 영수증에는 연락처 원문을 중복 보관하지 않습니다. 이미 상대가 받은 연락처는 회수할 수 없습니다.');
  });
 }
 async function showMessages(h){

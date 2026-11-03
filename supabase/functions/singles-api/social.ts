@@ -16,6 +16,7 @@ const verified=(m:any)=>active(m)&&Boolean(m.adult_verified_at);
 // 유료회원 모델(2026-10-28): SINGLES_REQUEST_BILLING_ENABLED=true이면 가입비를 낸 유료회원만 회원 기능을 쓴다.
 const paidModel=()=>requestBilling();
 export const SUBSCRIPTION_CODES=['sub_1d','sub_10d','sub_20d','sub_30d'];
+export const CONTACT_SHARE_CONSENT_VERSION='singles-contact-v1-20261103';
 async function isPaid(admin:Admin,userId:string){const {data,error}=await admin.rpc('singles_is_paid_member',{p_user:userId});if(error)throw error;return data===true}
 async function subscribed(admin:Admin,userId:string){return paidModel()?isPaid(admin,userId):hasBankPlan(admin,userId,'community')}
 // 연락처 가림: 연락처 교환이 수락되지 않은 사이에서는 전화번호·이메일·메신저 아이디·링크를 서버가 가린다.
@@ -36,20 +37,21 @@ export function maskContacts(text:string){
 async function contactUnlocked(admin:Admin,a:string,b:string,interestId:string){
  // An old pair-level unlock must NEVER authorize a different or refunded connection.
  // The active interest must match a completed contact invoice for this exact pair.
- if(!interestId)return false;
+ if(!interestId)return null;
  const [lo,hi]=a<b?[a,b]:[b,a];
  const grant=await one(admin.from('singles_contact_unlocks').select('request_id').eq('user_low',lo).eq('user_high',hi));
- if(!grant?.request_id)return false;
+ if(!grant?.request_id)return null;
  const request=await one(admin.from('singles_paid_requests')
   .select('kind,status,billing_mode,requester_id,responder_id,interest_id').eq('id',grant.request_id));
  if(request?.kind!=='contact'||request.status!=='connected'||request.billing_mode!=='postpaid'||
    request.interest_id!==interestId||
-   !((request.requester_id===a&&request.responder_id===b)||(request.requester_id===b&&request.responder_id===a)))return false;
+   !((request.requester_id===a&&request.responder_id===b)||(request.requester_id===b&&request.responder_id===a)))return null;
  const invoices=await many(admin.from('singles_request_invoices')
    .select('user_id,role,status,refund_due_at,refunded_at').eq('request_id',grant.request_id).limit(3));
- return invoices.length===2&&invoices.every((i:any)=>i.status==='paid'&&!i.refund_due_at&&!i.refunded_at)&&
+ const settled=invoices.length===2&&invoices.every((i:any)=>i.status==='paid'&&!i.refund_due_at&&!i.refunded_at)&&
   invoices.some((i:any)=>i.role==='requester'&&i.user_id===request.requester_id)&&
   invoices.some((i:any)=>i.role==='responder'&&i.user_id===request.responder_id);
+ return settled?String(grant.request_id):null;
 }
 async function blocked(admin:Admin,a:string,b:string){
  const items=await many(admin.from('singles_blocks').select('blocker_id,blocked_id')
@@ -459,7 +461,16 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
    const other=c.from_user_id===userId?c.to_user_id:c.from_user_id;
    if(candidates.has(other)&&await contactUnlocked(admin,userId,other,c.id))shared.add(other);
   }
+  // Only the authenticated sender may inspect their past consent evidence.
+  // This projection excludes message bodies, raw contacts and recipient UUIDs.
+  const myConsentReceipts=await many(admin.from('singles_contact_share_receipts')
+   .select('recipient_id,consent_version,consented_at').eq('sender_id',userId)
+   .order('consented_at',{ascending:false}).limit(30));
   return reply(req,{paid_model:true,billing:'postpaid_invoice',
+   consent_history:myConsentReceipts.map((r:any)=>({
+    display_name:byId.get(r.recipient_id)||'동행 회원',
+    consent_version:r.consent_version,consented_at:r.consented_at
+   })),
    requests:reqs.map((r:any)=>{const incoming=r.responder_id===userId,other=incoming?r.requester_id:r.responder_id;const inv=invByReq.get(r.id);
     return {id:r.id,kind:r.kind,status:r.status,incoming,display_name:byId.get(other)||'동행 회원',
      my_fee_krw:inv?inv.amount_krw:(incoming?quotes[r.kind]:r.requester_fee_krw),
@@ -519,11 +530,24 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(method==='GET'){
    const messages=await many(admin.from('singles_messages').select('id,sender_id,body,created_at')
      .eq('interest_id',interestId).order('created_at',{ascending:true}).limit(100));
-   const unlocked=paidModel()&&await contactUnlocked(admin,userId,other,interestId);
-   // Ordinary historical messages never become consent to expose a contact after payment.
-   const visible=paidModel()?messages.map((m:any)=>({
-    ...m,body:unlocked&&String(m.body||'').startsWith('[내 연락처] ')?m.body:maskContacts(String(m.body||'')).text
-   })):messages;
+   const currentRequest=paidModel()&&await contactUnlocked(admin,userId,other,interestId);
+   const contactMessages=currentRequest?messages.filter((m:any)=>String(m.body||'').startsWith('[내 연락처] ')):[];
+   const receipts=contactMessages.length?await many(admin.from('singles_contact_share_receipts')
+    .select('message_id,interest_id,request_id,sender_id,recipient_id,consent_version')
+    .eq('interest_id',interestId).eq('request_id',currentRequest)
+    .in('message_id',contactMessages.map((m:any)=>m.id)).limit(100)):[];
+   const consented=new Map(receipts.map((r:any)=>[r.message_id,r]));
+   // No old plain-text message or unreceipted contact is retroactively authorized by payment.
+   const visible=paidModel()?messages.map((m:any)=>{
+    const raw=String(m.body||'');
+    if(!raw.startsWith('[내 연락처] '))return {...m,body:maskContacts(raw).text};
+    const receipt:any=consented.get(m.id);
+    const recipient=m.sender_id===userId?other:userId;
+    const allowed=Boolean(currentRequest&&receipt&&receipt.sender_id===m.sender_id&&
+      receipt.recipient_id===recipient&&receipt.request_id===currentRequest&&
+      receipt.consent_version===CONTACT_SHARE_CONSENT_VERSION);
+    return {...m,body:allowed?raw:'[내 연락처] [연락처 가림]'};
+   }):messages;
    return reply(req,{messages:visible});
   }
   // A personal contact is NEVER inferred from public profile, login identity, or payment.
@@ -531,14 +555,28 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(shareContact){
    if(!paidModel()||!await contactUnlocked(admin,userId,other,interestId))return reply(req,{error:'contact_exchange_not_completed'},403);
    const v=await body(req);
-   if(!v||v.share_consent!==true||typeof v.contact!=='string')return reply(req,{error:'contact_share_consent_required'},400);
+   if(!v||v.share_consent!==true||typeof v.contact!=='string'||
+      (v.consent_version!==undefined&&v.consent_version!==CONTACT_SHARE_CONSENT_VERSION))
+     return reply(req,{error:'contact_share_consent_required'},400);
    const contact=v.contact.trim();
    const phone=/^(?:\+?82[-. ]?)?0?1[016789][-. ]?\d{3,4}[-. ]?\d{4}$/;
    const email=/^[^\s@]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
    if(contact.length>100||(!phone.test(contact)&&!email.test(contact)))return reply(req,{error:'invalid_contact'},400);
    {const retry=await rateLimited(admin,userId,'message');if(retry)return tooMany(req,reply,'message',retry);}
-   const {error}=await admin.from('singles_messages').insert({interest_id:interestId,sender_id:userId,body:'[내 연락처] '+contact});
-   if(error)throw error;
+   // The DB transaction locks both invoices and writes the message + immutable receipt.
+   // A failure rolls back both; the route never inserts a contact message on its own.
+   const {error}=await admin.rpc('singles_contact_share_record',{
+    p_interest:interestId,p_sender:userId,p_contact:contact,p_consent_version:CONTACT_SHARE_CONSENT_VERSION
+   });
+   if(error){
+    const code=rpcMsg(error);
+    if(code.includes('contact_exchange_not_completed')||code.includes('blocked')||
+      code.includes('mutual_consent_required')||code.includes('member_unavailable'))
+      return reply(req,{error:'contact_exchange_not_completed'},403);
+    if(code.includes('contact_share_consent_required'))return reply(req,{error:'contact_share_consent_required'},400);
+    if(code.includes('invalid_contact'))return reply(req,{error:'invalid_contact'},400);
+    throw error;
+   }
    return reply(req,{ok:true,shared:true});
   }
   // The sender of every new message (including replies) must have a valid
