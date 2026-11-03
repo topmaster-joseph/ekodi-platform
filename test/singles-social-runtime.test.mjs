@@ -295,14 +295,14 @@ test('contact masking hides phone, email, messenger IDs and links but keeps ordi
   const r=maskContacts(ok);assert.equal(r.masked,false,ok);assert.equal(r.text,ok);
  }
 });
-test('paid model: messages are masked until a contact exchange is accepted',()=>withPaid(async()=>{
+test('paid model: ordinary messages mask contacts even after an exchange is accepted',()=>withPaid(async()=>{
  const send=(extra)=>{const admin=rpcBy(db({accepted:true,extra}),PAID);return [admin,handleSinglesSocial(new Request('https://ekodi.kr/messages/'+id,{method:'POST',body:JSON.stringify({text:'연락 주세요 010-9876-5432'})}),'/messages/'+id,admin,uid,reply)]};
  let [admin,resP]=send({});let res=await resP;
  assert.equal(res.status,200);assert.equal((await res.json()).masked,true);
  assert.equal(admin.writes.find(w=>w.name==='singles_messages').row.body,'연락 주세요 [연락처 가림]');
  [admin,resP]=send({singles_contact_unlocks:{request_id:id}});res=await resP;
- assert.equal((await res.json()).masked,false);
- assert.equal(admin.writes.find(w=>w.name==='singles_messages').row.body,'연락 주세요 010-9876-5432');
+ assert.equal((await res.json()).masked,true);
+ assert.equal(admin.writes.find(w=>w.name==='singles_messages').row.body,'연락 주세요 [연락처 가림]');
 }));
 
 

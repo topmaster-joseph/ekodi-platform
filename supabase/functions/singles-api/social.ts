@@ -525,9 +525,10 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const v=await body(req);
   if(typeof v?.text!=='string'||!v.text.trim()||v.text.length>1000)return reply(req,{error:'invalid_message'},400);
   {const retry=await rateLimited(admin,userId,'message');if(retry)return tooMany(req,reply,'message',retry);}
-  // 연락처 교환이 수락되지 않은 사이에서는 메시지 속 연락처를 가려서 저장한다(유료회원 모델).
+  // 유료 동행의 일반 메시지는 결제 완료 후에도 연락처를 가린다.
+  // 개인 연락처 공개는 별도 제공 동의가 확인되는 /messages/:id/contact 경로만 허용한다.
   let stored=v.text.trim(),masked=false;
-  if(paidModel()&&!await contactUnlocked(admin,userId,other)){const r=maskContacts(stored);stored=r.text;masked=r.masked}
+  if(paidModel()){const r=maskContacts(stored);stored=r.text;masked=r.masked}
   const {error}=await admin.from('singles_messages').insert({interest_id:interestId,sender_id:userId,body:stored});
   if(error)throw error;return reply(req,{ok:true,masked});
  }
