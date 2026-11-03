@@ -26,7 +26,7 @@ Reference: [Community Reading & Dialogue provider decision](../governance/propos
 - 주제 변경 시 작성 중인 메모가 있으면 확인을 받은 뒤 초기화한다. 질문 복사나 링크 공유에는 비공개 메모를 절대 포함하지 않는다.
 - 브라우저 백그라운드에서도 시스템 시간을 기준으로 잔여 시간을 정확히 계산하고, 단계 변경은 진행자의 수동 조작만 허용한다.
 - 운영 사이트에 실시간 다중 이용자 세션·데이터베이스 연계가 있는 것처럼 표시하지 않는다.
-- Cloudflare Community worker는 `meeting-ui.js` 및 `meeting-mode.js`를 동일한 `/community/reading` 경로로 제공한다. 배포 Manifest의 별도 JS 검사도 보호한다.
+- 보호 배포 #41605310919에서 새 JS URL을 일부 POP가 404로 반환해 운영 검증이 실패하고 자동 롤백했다. 이에 진행 UI/타이머 모델을 기존에 안정적으로 제공된 `app.js`와 `topics.js` URL에 통합하고 버전 식별자를 사용한다. 별도 신규 JS 경로를 요청하지 않는다.
 
 ## 2단계 B 데이터·권한 경계: 향후 별도 보안 PR
 - 운영 Supabase의 `community_circles`, `community_circle_members`는 이미 존재한다. 새로운 회원 원장이나 병렬 인증 시스템을 만들지 않는다.

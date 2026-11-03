@@ -5,7 +5,7 @@ import { topicById } from '../community/reading/topics.js';
 import {
   createMeetingState, tickMeeting, toggleMeeting, changeMeetingStage,
   formatMeetingClock, formatMeetingNotes,
-} from '../community/reading/meeting-mode.js';
+} from '../community/reading/topics.js';
 
 const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 const topic = topicById('plague');
@@ -55,15 +55,17 @@ test('facilitator interface retains accessibility, privacy and correct Community
     read('community/reading/app.js'),
     read('community-worker.js'),
     read('community/reading/styles.css'),
-    read('community/reading/meeting-ui.js'),
+    read('community/reading/app.js'),
     read('deploy/manifests/community.worker.json'),
     read('.github/workflows/deploy-community.yml'),
   ]);
   for (const marker of ['id="meetingClock" role="timer" aria-live="off"', 'id="meetingStageButtons"', 'id="meetingNotes"',
     '실시간 다중 접속 모임은 아닙니다', '자동 전송·저장되지 않습니다']) assert.ok(page.includes(marker), marker);
   assert.ok(frontend.includes('initializeMeetingUI'));
-  assert.ok(worker.includes('meeting-ui'));
-  assert.ok(worker.includes('meeting-mode'));
+  assert.ok(page.includes('app.js?rv=meeting-20261103-b'));
+  assert.ok(frontend.includes('topics.js?rv=meeting-20261103-b'));
+  assert.equal(worker.includes('meeting-ui'), false);
+  assert.equal(worker.includes('meeting-mode'), false);
   assert.ok(styles.includes('@media(max-width:620px)'));
   assert.ok(ui.includes('replaceChildren()'));
   assert.ok(ui.includes('new Blob'));
@@ -71,7 +73,7 @@ test('facilitator interface retains accessibility, privacy and correct Community
   for (const forbidden of ['localStorage', 'sessionStorage', 'fetch(', 'innerHTML', 'access_token', 'service_role'])
     assert.equal(ui.includes(forbidden), false, forbidden);
   const probes = JSON.parse(manifest).worker.requests;
-  assert.ok(probes.some(p => p.url.endsWith('/community/reading/meeting-ui.js') &&
+  assert.ok(probes.some(p => p.url.includes('/community/reading/app.js?rv=meeting-20261103-b') &&
     p.redirect === 'manual' && p.statuses[0] === 200));
-  assert.ok(workflow.includes('node --check community/reading/meeting-ui.js'));
+  assert.ok(workflow.includes('node --check community/reading/app.js'));
 });
