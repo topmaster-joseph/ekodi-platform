@@ -479,6 +479,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   // Growth OS search specialist is a dynamic Site Core Admin asset.
   // Dispatch guarded Site Core even when only the lazy module changes.
   file==='search-visibility-admin.js'||
+  // Search & promotion status tabs (aliases + recommended prompts) are a Site Core Admin asset.
+  file==='promotion-status-admin.js'||
   // Growth OS summary and site-local automation tabs are Site Core assets.
   // A token-mediated orchestrator merge must dispatch their guarded release.
   ['growth-os-admin.js','growth-os-admin.css','tenant-automation-overview-ui.js','scripts/validate-admin-source.mjs'].includes(file)||
