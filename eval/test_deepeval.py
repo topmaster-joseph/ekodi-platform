@@ -30,3 +30,9 @@ class RouteContractMetric(BaseMetric):
 def test_offline_route_contract():
     case = LLMTestCase(input="이 요청을 로컬 모델로 라우팅해 줘", actual_output="node:ollama-local", expected_output="node:ollama-local")
     assert_test(case, [RouteContractMetric()], run_async=False)
+
+def test_wrong_route_fails_metric_without_network():
+    case = LLMTestCase(input="한국어 요청", actual_output="paid-model", expected_output="node:ollama-local")
+    metric = RouteContractMetric()
+    assert metric.measure(case) == 0.0
+    assert not metric.is_successful()
