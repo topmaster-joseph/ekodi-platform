@@ -182,6 +182,13 @@ jobs:
             *) echo "Invalid Development staging URL" >&2; exit 1 ;;
           esac
 
+      - name: Confirm Publisher Development named RPC deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deployments list --name ekodi-publishing-staging --json > /tmp/publishing-stage-deployments.json
+          node -e "const d=require('/tmp/publishing-stage-deployments.json');const a=Array.isArray(d)?d:d.deployments||d.result||[];if(!Array.isArray(a)||!a.length)process.exit(1)"
+
       - name: Generate one-time transaction rehearsal token
         shell: bash
         run: |
