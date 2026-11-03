@@ -30,6 +30,9 @@ const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';
 const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
 const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
 const PUBLIC_ASSETS = new Set([
+  '/promotion.css',
+  '/promotion.js',
+  '/promotion-core.js',
   '/homepage-ambient.css',
   '/homepage-ambient.js',
   '/homepage-auth-state.js',
