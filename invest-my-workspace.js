@@ -1018,6 +1018,16 @@ function init(){
  el('apWeekly').addEventListener('click',()=>showReport('weekly'));el('apMonthly').addEventListener('click',()=>showReport('monthly'));
  for(const b of document.querySelectorAll('#ownerTabs [data-tab]'))b.addEventListener('click',()=>navigateInvestSection(SECTION_TABS[b.dataset.tab][0][0]));
  el('ownerTabs').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;const list=[...document.querySelectorAll('#ownerTabs [data-tab]')];const i=list.findIndex(b=>b.getAttribute('aria-selected')==='true');const n=list[(i+(e.key==='ArrowRight'?1:list.length-1))%list.length];navigateInvestSection(SECTION_TABS[n.dataset.tab][0][0]);n.focus();e.preventDefault()});
+ el('ownerSubtabs').addEventListener('keydown',event=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+  const buttons=[...el('ownerSubtabs').querySelectorAll('button[data-section]')];
+  if(!buttons.length)return;
+  const index=buttons.findIndex(b=>b.getAttribute('aria-selected')==='true');
+  const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:
+   (index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;
+  navigateInvestSection(buttons[next].dataset.section,{focus:true});
+  event.preventDefault();
+ });
  if(typeof globalThis.addEventListener==='function')globalThis.addEventListener('hashchange',()=>{if(!el('owner').hidden)routeHash()});
  el('stepUpButton').addEventListener('click',openStepUp);el('stepUpForm').addEventListener('submit',submitStepUp);el('stepUpCancel').addEventListener('click',()=>el('stepUpDialog').close());
  authenticate();
