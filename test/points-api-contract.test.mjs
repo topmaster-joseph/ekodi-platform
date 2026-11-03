@@ -37,9 +37,9 @@ test('points API accepts only canonical apex and actual development staging orig
   assert.match(src, /if \(!ORIGINS\.has\(req\.headers\.get\("Origin"\) \|\| ""\)\)/);
 });
 
-test('Supabase Edge Function exposes member history only; admin policy is EKODI-only', () => {
+test('Supabase Edge Function exposes member self-read only; admin policy is EKODI-only', () => {
   assert.doesNotMatch(src, /\/admin\/overview|platform_admin|from\("profiles"\)/);
   assert.match(src, /resolvePerson\(bearer\.slice\(7\)\)/);
-  assert.match(src, /path !== "\/" && path !== "\/me" && path !== "\/sites"/);
+  assert.match(src, /path !== "\/" && path !== "\/me" && path !== "\/sites" && path !== "\/progress"/);
   assert.doesNotMatch(src, /\.insert\(|\.update\(|\.delete\(|\.rpc\(/);
 });
