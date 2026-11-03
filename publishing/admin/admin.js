@@ -141,7 +141,9 @@
       const body = el('textarea', { value: c.body, rows: 14, className: 'padmin-ai-body' });
       const save = el('button', { type: 'button', className: 'button', textContent: `${c.number}장 저장` });
       save.addEventListener('click', async () => { msg.textContent = '저장 중…'; try { await api(`admin/ai-books/${id}/chapters/${c.number}`, { title: title.value, body: body.value }, 'PUT'); msg.textContent = `${c.number}장을 저장했습니다.`; } catch (e) { msg.textContent = '저장하지 못했습니다.'; } });
-      parts.push(el('section', { className: 'padmin-ai-ch' }, el('h3', { textContent: `${c.number}장 · ${({ pending: '아직 안 씀', drafted: 'AI 초안', edited: '감수 중' })[c.status] || c.status}` }), title, body, save));
+      const fig = el('figure', { className: 'padmin-ai-fig' });
+      api(`admin/ai-books/${id}/images/${c.number}`).then(r => fig.append(el('img', { src: `data:${r.mime};base64,${r.data}`, alt: `${c.title} 삽화` }))).catch(() => {});
+      parts.push(el('section', { className: 'padmin-ai-ch' }, el('h3', { textContent: `${c.number}장 · ${({ pending: '아직 안 씀', drafted: 'AI 초안(편집 완료)', edited: '감수 중' })[c.status] || c.status}` }), fig, title, body, save));
     }
     const approve = el('button', { type: 'button', className: 'button primary', textContent: '감수 완료' });
     approve.addEventListener('click', async () => {
@@ -149,7 +151,24 @@
       try { const r = await api(`admin/ai-books/${id}/approve`, {}); msg.textContent = r.next; }
       catch (e) { msg.textContent = e.code === 'UNRESOLVED_MARKERS' ? '[확인필요]·[본문확인] 표시가 남아 있습니다. 확인 후 지워 주세요.' : e.code === 'CHAPTERS_INCOMPLETE' ? '아직 쓰지 않은 장이 있습니다.' : '처리하지 못했습니다.'; }
     });
-    parts.push(approve, msg);
+    parts.push(approve);
+    if (d.book.status === 'approved') {
+      // PUBLISHING-AI-EPUB-001: 감수 완료 → EPUB 내려받기 · 서점 출판 인계(판매는 서점 확정 전까지 닫힘)
+      const dl = el('button', { type: 'button', className: 'button', textContent: 'EPUB 내려받기' });
+      dl.addEventListener('click', async () => {
+        msg.textContent = 'EPUB 만드는 중…';
+        try {
+          const r = await fetch(`${API}/admin/ai-books/${id}/epub`, { headers: { authorization: `Bearer ${token()}` }, cache: 'no-store' });
+          if (!r.ok) throw new Error();
+          const url = URL.createObjectURL(await r.blob()); const a = el('a', { href: url, download: `${d.book.title}.epub` }); document.body.append(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 30000); msg.textContent = 'EPUB을 내려받았습니다.';
+        } catch { msg.textContent = 'EPUB을 만들지 못했습니다.'; }
+      });
+      const pub = el('button', { type: 'button', className: 'button primary', textContent: '서점 출판으로 넘기기' });
+      pub.addEventListener('click', async () => { try { const r = await api(`admin/ai-books/${id}/publish`, {}); msg.textContent = r.next; } catch { msg.textContent = '넘기지 못했습니다.'; } });
+      parts.push(dl, pub);
+    }
+    parts.push(msg);
     return parts;
   }
   async function show(id) {
