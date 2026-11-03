@@ -73,15 +73,24 @@ export const SEONAMMEDI_SITEMAP_PATHS = Object.freeze(['/', '/board/notices', '/
 // Daum Webmaster Tool ownership line (public value issued for https://seonammedi.kr,
 // owner-provided 2026-10-19). Daum has no IndexNow/API registration lane.
 export const SEONAMMEDI_DAUM_WEBMASTER_LINE = '#DaumWebMasterTool:a7f0b97c1ebcf8625674b86e301ffba14c26b9e3e4949468608dcf0bec5643d2:1T0ZRs6bn/unEVfM5aXupg==';
+// Daum Webmaster Tool ownership line issued for the Korean IDN
+// (https://xn--3e0b8b58jw4co4mnpll3k.kr), owner-provided 2026-11-03.
+export const SEONAMMEDI_IDN_DAUM_WEBMASTER_LINE = '#DaumWebMasterTool:09aaba3a7d5c249941e4d1c1ff4a0218067951fde4fb5cfdee13efe08fbe2f76:e72ZaETHYmtl8bFrs60rSQ==';
+// Each Daum line is served only on the host it was issued for.
+export function seonammediDaumWebmasterLine(host = 'seonammedi.kr') {
+  return String(host || '').toLowerCase() === 'xn--3e0b8b58jw4co4mnpll3k.kr'
+    ? SEONAMMEDI_IDN_DAUM_WEBMASTER_LINE
+    : SEONAMMEDI_DAUM_WEBMASTER_LINE;
+}
 export const SEONAMMEDI_ROBOTS_DISALLOW = Object.freeze(['/admin/', '/minutes/', '/api/', '/auth/', '/seonammedi/admin/']);
 
 function xmlEscape(value) {
   return String(value).replace(/[<>&'"]/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[ch]);
 }
 
-export function seonammediRobotsTxt() {
+export function seonammediRobotsTxt(host = 'seonammedi.kr') {
   return [
-    SEONAMMEDI_DAUM_WEBMASTER_LINE,
+    seonammediDaumWebmasterLine(host),
     'User-agent: *',
     'Allow: /',
     ...SEONAMMEDI_ROBOTS_DISALLOW.map(path => 'Disallow: ' + path),
@@ -163,7 +172,7 @@ export function seonammediDiscoveryResponse(request, incoming) {
       incoming.pathname === SEONAMMEDI_NAVER_FILE_PATH) {
     return discoveryResponse(SEONAMMEDI_NAVER_FILE_BODY, 'text/html; charset=utf-8', 'seonammedi-naver-ownership', request.method);
   }
-  if (incoming.pathname === '/robots.txt') return discoveryResponse(seonammediRobotsTxt(), 'text/plain; charset=utf-8', 'seonammedi-robots', request.method);
+  if (incoming.pathname === '/robots.txt') return discoveryResponse(seonammediRobotsTxt(incoming.hostname), 'text/plain; charset=utf-8', 'seonammedi-robots', request.method);
   if (incoming.pathname === '/sitemap.xml') return discoveryResponse(seonammediSitemapXml(), 'application/xml; charset=utf-8', 'seonammedi-sitemap', request.method);
   if (incoming.pathname === EKODI_INDEXNOW_KEY_PATH) return ekodiIndexNowKeyResponse();
   return null;
