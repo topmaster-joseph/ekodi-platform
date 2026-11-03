@@ -74,3 +74,14 @@ test('My Invest responsive typography and focus styling keep hierarchy legible',
  assert.match(css,/\.detail-tabs button:focus-visible/);
  assert.match(css,/\[data-tab-hidden\]\{display:none!important\}/);
 });
+
+
+test('nested detail tabs scope supplemental scenario and portfolio cards to the correct section',async()=>{
+ const html=await (await investMyRoute(get('/invest'),{})).text();
+ assert.match(html,/data-detail-parent="scenario"><header><h2>기간별 시나리오 변화/);
+ assert.match(html,/data-detail-parent="portfolio"><header><h2>내 자산 구성/);
+ const js=await (await investMyRoute(get('/invest/app.js'),{})).text();
+ assert.match(js,/node\.dataset\.detailParent===selected/);
+ assert.match(js,/!node\.dataset\.detailParent/);
+ assert.match(js,/const selected=entries\.find\(item=>item\[0\]===detailId\)/);
+});
