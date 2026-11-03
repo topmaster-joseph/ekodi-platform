@@ -138,7 +138,7 @@ test('Central Growth OS visibly separates Naver submission receipts from search 
   const control=read('search-visibility-control.js');
   const css=read('growth-os-admin.css');
   assert.match(source,/IndexNow 제출/);
-  assert.match(source,/IndexNow 제출 접수/);
+  assert.match(source,/제출 접수는 실제 색인이 아닙니다/);
   assert.match(source,/실제 색인이 아닙니다/);
   assert.match(source,/item\.indexNowSubmittedPages/);
   assert.match(css,/growth-os-automation-scroll/);
