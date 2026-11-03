@@ -19,3 +19,7 @@ Date: 2026-11-03 (Asia/Seoul).
 - JWT-verified production points-api deployment must follow schema preflight, with anonymous request rejection, canary and rollback checks.
 - Development synthetic browser E2E remains blocked by missing Cloudflare Access staging service-token GitHub secrets; never bypass Cloudflare Access or invent credentials.
 - Even technical readiness must NOT activate financial awards, site policies, transfers or donations without audited budget, second approver, site opt-in, fraud and legal controls.
+
+## Authenticated latest-main check renewal
+The initial owner-connected continuity HEAD 279d76361bb6eedc9e9ddfe33159c38ecf6404ca passed real CI, Supabase Local CI and orchestration checks. Concurrent EKODI changes then caused the official recovery branch to synchronize current main and advance to bot HEAD 478f53f3e7d75848048047fb2aab0028e46f6b08, whose PR event checks are action_required.
+This owner-connected update requests authentic GitHub checks on that latest synchronized official branch. It does not change executable source or authorize production database writes, schema promotion, feature activation, financial policy or credential issuance.
