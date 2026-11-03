@@ -29,3 +29,17 @@ test('never allows zero holdout or premature golden promotion',()=>{
   assert.throws(()=>createReviewBatch(rows,{holdoutCount:0}),/EVAL_CANDIDATE_CONFIG/);
   assert.throws(()=>createReviewBatch(rows,{total:49}),/EVAL_CANDIDATE_CONFIG/);
 });
+
+test('handles actual SQLite hex(goal) transport without exposing raw prompts',()=>{
+  const asciiRows=rows.map(({goal,...other})=>({...other,goal_hex:Buffer.from(goal,'utf8').toString('hex').toUpperCase()}));
+  let n=0;const batch=createReviewBatch(asciiRows,{idFactory:()=>String(++n)});
+  assert.equal(batch.sourceUniqueCount,62);
+  assert.equal(batch.calibration.length,40);
+  assert.equal(batch.holdout.length,10);
+  assert(!JSON.stringify(batch.calibration).includes('010-1234'));
+});
+test('malformed hex input does not poison a valid batch',()=>{
+  const accepted=rows.map(({goal,...other})=>({...other,goal_hex:Buffer.from(goal,'utf8').toString('hex')}));
+  accepted.push({id:'not-good',goal_hex:'not hex',state:'queued',risk:'normal'});
+  assert.equal(createReviewBatch(accepted).calibration.length,40);
+});
