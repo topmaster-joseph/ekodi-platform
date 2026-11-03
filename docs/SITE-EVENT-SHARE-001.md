@@ -19,7 +19,8 @@ Example, from a canonical Mission Saturday meeting date and existing RSVP route:
 https://ekodi.kr/ekodimission?meeting=2026-11-07#saturday
 ```
 
-- Line 1: organization or site display name, activity/event title, and *accurate action* separated by one space. Do not repeat the organization if the source title already includes it.
+- Line 1: organization or site display name, activity/event title, and *accurate action* separated by one space. Strip repeated leading organization names and repeated trailing action labels (e.g., `신청하기 신청하기`) when the source title already includes them.
+- If the event title includes the same event date shown on line 2, omit that date and redundant weekday from the title; do not alter the canonical deep link. Preserve intentional wording in the actual event name.
 - Line 2: actual **event date** in Korean weekday format; omit the entire line when an event date is absent or invalid. Never substitute a post creation, review, publication or update timestamp for the event date.
 - Last line: exactly one **public canonical deep link**, preserved from the owning service. Maintain event ID, meeting date, fragment, referral attribution and route as appropriate; never add access tokens, personal identifiers or admin state to public links.
 - Only actual registration flows may say **신청하기**; other events say **일정 보기** and informational activities say **자세히 보기**, or a service-appropriate truthful equivalent.

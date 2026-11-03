@@ -104,3 +104,23 @@ test('shared renderer keeps login, personal records and the native four-line sha
  assert.match(css,/dv-speech-btn/);
  assert.match(css,/min-height:44px/);
 });
+
+
+test('devotion share removes repeated title and excerpt without duplicating its public link',()=>{
+ const args={
+   date:'2026-11-03',
+   title:'에코디교회 에코디교회 오늘의 매일묵상',
+   excerpt:'에코디교회 오늘의 매일묵상',
+   url:'https://ekodi.kr/ekodichurch/devotion/?date=2026-11-03'
+ };
+ const lines=formatDevotionShareMessage(args).split('\n');
+ assert.deepEqual(lines,[
+   '2026년 11월 3일 화요일',
+   '에코디교회 오늘의 매일묵상',
+   'https://ekodi.kr/ekodichurch/devotion/?date=2026-11-03'
+ ]);
+ const different=formatDevotionShareMessage({...args,excerpt:'오늘의 말씀을 듣고 살아냅니다.'}).split('\n');
+ assert.equal(different.length,4);
+ assert.equal(different[2],'오늘의 말씀을 듣고 살아냅니다.');
+ assert.equal(different.at(-1),args.url);
+});
