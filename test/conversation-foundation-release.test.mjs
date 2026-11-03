@@ -69,12 +69,12 @@ test('KIS investment dependency changes cannot silently bypass Workspace deploym
   for(const [name,source] of [['Workspace',canonical],['Invest',invest]]){
     const triggers=triggerBlock(source);
     for(const path of required){
-      assert.ok(triggers.split('\\n').some(line=>line.trim()===`- '${path}'`),`${name} missing change trigger for ${path}`);
+      assert.ok(triggers.split(String.fromCharCode(10)).some(line=>line.trim()==="- '"+path+"'"),name+' missing change trigger for '+path);
     }
-    assert.match(source,/node --test[^\\n]*test\\/invest-broker-readonly-adapter\\.test\\.mjs/,`${name} must execute broker adapter tests`);
+    assert.ok(source.split(String.fromCharCode(10)).some(line=>line.trim().startsWith('node --test ') && line.includes('test/invest-broker-readonly-adapter.test.mjs')),name+' must execute broker adapter tests');
   }
-  assert.match(canonical,/production-workspace:/,'the guarded Workspace deployment lane must remain owned centrally');
-  assert.doesNotMatch(invest,/\\n\\s*production-workspace:/,'Invest validation must not create a second deployment owner');
+  assert.ok(canonical.includes('production-workspace:'),'the guarded Workspace deployment lane must remain owned centrally');
+  assert.ok(!invest.includes('production-workspace:'),'Invest validation must not create a second deployment owner');
 });
 
 test('canonical Shared Site workflow owns the shared-site manifest',async()=>{
