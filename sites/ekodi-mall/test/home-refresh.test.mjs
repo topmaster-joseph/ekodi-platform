@@ -49,6 +49,13 @@ test('buyer-facing payment copy matches the approved direct-sale-only production
   assert.doesNotMatch(site.notice + site.commerce.betaMessage, /직접판매 온라인 결제는 활성화하지 않았습니다/);
 });
 
+test('phone catalog uses one contained product column to avoid clipped cards', () => {
+  assert.match(css, /@media\\(max-width:480px\\)/);
+  assert.ok(css.includes('.mall-category-shortcuts~.shop .grid{grid-template-columns:minmax(0,1fr)}'));
+  assert.ok(css.includes('.mall-category-shortcuts~.shop .card{min-width:0;max-width:100%}'));
+  assert.ok(css.includes('body[data-mall-view="catalog"] main#main > :not(#filters):not(#shop)'));
+});
+
 test('category shortcuts map only to existing filters and destinations', () => {
   const known = new Set(['all','general','living','book','gift','local']);
   for (const [,category] of template.matchAll(/data-filter-target="([^"]+)"/g)) {
