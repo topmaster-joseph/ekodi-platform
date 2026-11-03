@@ -186,6 +186,42 @@ async function siteAutomationSnapshot(db) {
     caveat:'Aggregate observations only. No tenant actions, search ranking, or index acceptance is inferred.'};
 }
 
+// Join the existing Naver IndexNow submission ledger to the super-admin's
+// per-site aggregate without exposing tenant credentials or conflating a
+// submission receipt with search-engine indexing. Only canonical public sites
+// found in the registry may receive an observed count; absent sites are unknown.
+export function joinSiteIndexNowSubmissions(automation={},indexNow={}) {
+  const sourceReady=indexNow?.status==='naver_submission_only'&&Array.isArray(indexNow.sites);
+  const truncated=sourceReady&&indexNow.truncated===true;
+  const byPath=new Map();
+  if(sourceReady)for(const record of indexNow.sites){
+    try{
+      const url=new URL(String(record?.siteUrl||''));
+      if(url.origin!=='https://ekodi.kr'||url.search||url.hash||url.username||url.password)continue;
+      const path=url.pathname.replace(/\\/+$/,'')||'/';
+      if(!/^\\/[a-z0-9/_-]*$/i.test(path)||path.includes('//')||byPath.has(path))continue;
+      byPath.set(path,record);
+    }catch{}
+  }
+  return {
+    ...automation,
+    status:automation?.status==='ready'&&sourceReady&&!truncated?'ready':'partial',
+    sources:{...(automation?.sources||{}),indexNow:sourceReady?(truncated?'truncated':'ready'):'unavailable'},
+    sites:(Array.isArray(automation?.sites)?automation.sites:[]).map(site=>{
+      const path=String(site?.basePath||'').replace(/\\/+$/,'')||'/';
+      const recorded=sourceReady?byPath.get(path):null;
+      const raw=Number(recorded?.submittedPagesInSnapshot);
+      // A truncated 5,000-row sample cannot prove that an absent URL had zero
+      // submissions. Keep unknown as null; observed positive counts are minima.
+      const submitted=recorded&&Number.isFinite(raw)&&raw>=0
+        ?(truncated&&raw===0?null:Math.trunc(raw)):null;
+      return {...site,indexNowSubmittedPages:submitted,
+        lastIndexNowSubmittedAt:recorded?.lastSubmittedAt||null,
+        indexNowSampleTruncated:Boolean(recorded&&truncated)};
+    }),
+  };
+}
+
 // Pure validator exported for executable security/regression tests; HTTP entry still requires super_admin.
 export function validateEvidence(body,sites){
   if(!body||typeof body!=='object'||Array.isArray(body))throw new Error('INVALID_BODY');
@@ -235,7 +271,7 @@ export async function handleSearchVisibilityControl(request,env){
       return json({ok:true,schemaVersion:1,sites,providers:SEARCH_PROVIDER_CATALOG,
         evidence:(evidence.results||[]).filter(x=>sites.some(s=>s.url===x.site_url)),
         evidenceTruncated:(evidence.results||[]).length===6000,
-        audit:history.results||[],indexNow,automation,generatedAt:new Date().toISOString(),
+        audit:history.results||[],indexNow,automation:joinSiteIndexNowSubmissions(automation,indexNow),generatedAt:new Date().toISOString(),
         policy:'manual_confirmation_not_provider_api_verification'});
     }
     if(!String(request.headers.get('content-type')||'').includes('application/json'))return denied(415,'JSON_REQUIRED');
