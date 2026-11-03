@@ -284,10 +284,10 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     if(notificationTopic){
       mountTenantNotificationMetrics($('mainPanel'),{
         topic:notificationTopic,
-        load:async key=>{
+        load:async (key,window='7d')=>{
           const token=await accessToken();
           if(!token)throw new Error('AUTH_REQUIRED');
-          const response=await fetch('/api/notifications/admin/summary?topic='+encodeURIComponent(key),{
+          const response=await fetch('/api/notifications/admin/summary?topic='+encodeURIComponent(key)+'&window='+encodeURIComponent(window),{
             headers:{authorization:'Bearer '+token,accept:'application/json'},
             cache:'no-store',credentials:'omit'
           });

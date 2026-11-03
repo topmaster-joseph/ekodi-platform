@@ -37,15 +37,24 @@
     const output=el('section','','communication-notification-panel');
     output.hidden=true;
     const title=el('h3','통합 알림 운영');
-    const hint=el('p','개인별 기기 정보는 표시하지 않으며 최고관리자만 집계 현황을 볼 수 있습니다.');
+    const hint=el('p','현재 구독 기기 수와 선택 기간의 발행·전달 처리 현황을 구분합니다. 개인별 정보는 표시하지 않습니다.');
     const status=el('p','현황을 선택하면 최신 정보를 불러옵니다.','communication-note');
     status.setAttribute('role','status');
     const list=el('div','','communication-notification-list');
     const refresh=el('button','새로고침','communication-refresh');
     refresh.type='button';
+    const periodLabel=el('label','집계 기간 ');
+    const periodSelect=el('select','','communication-period');
+    periodSelect.setAttribute('aria-label','알림 집계 기간');
+    for(const [value,label] of [['7d','최근 7일'],['30d','최근 30일'],['all','전체 기간']]){
+      const option=el('option',label);
+      option.value=value;periodSelect.append(option);
+    }
+    periodSelect.value='7d';
+    periodLabel.append(periodSelect);
     const link=el('a','사용자 구독 화면','primary communication-link');
     link.href='/notifications/';link.target='_blank';link.rel='noopener';
-    output.append(title,hint,refresh,link,status,list);
+    output.append(title,hint,periodLabel,refresh,link,status,list);
     async function reload() {
       const api=window.EKODIAdminCore?.request;
       list.replaceChildren();
@@ -53,14 +62,18 @@
       status.textContent='알림 집계 현황을 조회하고 있습니다.';
       refresh.disabled=true;
       try {
-        const data=await api('/api/notifications/admin/summary');
+        const data=await api('/api/notifications/admin/summary?window='+encodeURIComponent(periodSelect.value));
         const top=el('p','웹푸시 발송: '+(data.webPushEnabled?'활성화':'비활성화')+' · 기기 정보 비공개','communication-note');
         list.append(top);
         for(const item of data.topics||[]){
           const line=el('article','','communication-notification-row');
+          const last=item.lastEventAt?new Date(item.lastEventAt):null;
           line.append(el('strong',item.label),
-            el('span','구독 기기 '+item.subscriberDevices+' · 이벤트 '+item.events+
-              ' · 전달 처리 '+item.delivered+' · 대기 '+item.pending+' · 실패 '+item.failed));
+            el('span','현재 구독 기기 '+item.subscriberDevices+' · 기간 내 이벤트 '+item.events+
+              ' · 전달 처리 '+item.delivered+' · 대기 '+item.pending+' · 실패 '+item.failed+
+              ' · 지연 '+(item.stalled||0)+' · 발행 지연 '+(item.eventsOverdue||0)),
+            el('small','마지막 발행: '+(last&&Number.isFinite(last.getTime())
+              ?last.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'기록 없음')));
           list.append(line);
         }
         status.textContent='알림 현황을 갱신했습니다.';
@@ -69,6 +82,7 @@
       } finally {refresh.disabled=false;}
     }
     refresh.addEventListener('click',reload);
+    periodSelect.addEventListener('change',()=>void reload());
     const tabs=[['mail','메일'],['live','라이브'],['notification','알림']];
     for(const [id,label] of tabs){
       const button=el('button',label,'communication-tab');

@@ -51,7 +51,7 @@ test('dashboard never renders unrecognized topics or mismatch from a server resp
   assert.equal(panel.dataset.notificationTopic,'mission');
   const status=panel.children.find(item=>item.attributes.role==='status');
   assert.match(status.textContent,/권한 또는 서버 연결/);
-  assert.equal(panel.children[4].children.length,0);
+  assert.equal(panel.children[5].children.length,0);
 });
 test('authorized counter displays aggregate numbers, never additional personal properties',async()=>{
   const {head}=documentFixture();
@@ -62,7 +62,7 @@ test('authorized counter displays aggregate numbers, never additional personal p
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(root.children.length,1);
   assert.equal(head.children.length,1);
-  const panel=root.children[0], rows=panel.children[4];
+  const panel=root.children[0], rows=panel.children[5];
   assert.equal(rows.children.length,1);
   const text=rows.children[0].children.map(item=>item.textContent).join(' ');
   assert.match(text,/구독 기기 7/);
@@ -70,3 +70,24 @@ test('authorized counter displays aggregate numbers, never additional personal p
   assert.equal(text.includes('example.invalid'),false);
 });
 test.after(()=>{globalThis.document=previousDocument});
+
+test('changing site alert metric window reloads only its own topic',async()=>{
+  documentFixture();
+  const root=new Element('div');
+  const calls=[];
+  mountTenantNotificationMetrics(root,{topic:'community',load:async(topic,window)=>{
+    calls.push({topic,window});
+    return {ok:true,topics:[{id:'community',label:'청계',subscriberDevices:4,events:2,delivered:1,pending:1,failed:0,stalled:1,eventsOverdue:1}]};
+  }});
+  await new Promise(resolve=>setImmediate(resolve));
+  const panel=root.children[0],periodSelect=panel.children[2].children[0];
+  assert.deepEqual(calls,[{topic:'community',window:'7d'}]);
+  periodSelect.value='30d';periodSelect.events.change();
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual(calls,[{topic:'community',window:'7d'},{topic:'community',window:'30d'}]);
+  const rows=panel.children[5];
+  assert.equal(rows.children.length,1);
+  const text=rows.children[0].children.map(x=>x.textContent).join(' ');
+  assert.match(text,/지연 1/);
+  assert.match(text,/현재 구독 기기 4/);
+});
