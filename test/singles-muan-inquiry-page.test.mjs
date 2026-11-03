@@ -11,7 +11,10 @@ test('무안군 질의서 페이지: 링크로 열리고 검색·스크립트 �
  const body=await r.text();
  assert.match(body,/<meta name="robots" content="noindex,nofollow,noarchive">/);
  assert.doesNotMatch(body,/<script/);
- for(const s of ['질 의 서','국내결혼중개업 신고','50,000원','500,000원','10,000원','가.','라.','EKODIBIZ'])assert.ok(body.includes(s),s);
+ for(const s of ['질 의 서','국내결혼중개업 신고','15,000원','75,000원','120,000원','150,000원','가.','라.','EKODIBIZ'])assert.ok(body.includes(s),s);
+ assert.doesNotMatch(body,/500,000원|적립금: 최초|요청자·수락자 각 10,000원/);
+ assert.match(body,/양측 모두 계좌이체 입금 확인/);
+ assert.match(body,/연락처는 양측 결제 확인 후/);
  assert.doesNotMatch(body,/확인필요|작성 참고/);
 });
 test('질의서 페이지는 읽기 전용', async()=>{
