@@ -287,7 +287,7 @@ function renderCommitteeNews(){
     const actions=publicTimelineAdminMode&&!auto&&id>0?'<div class="timeline-admin-actions"><span class="source-type">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-committee-news-edit="'+id+'">수정</button><button type="button" data-committee-news-status="'+id+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-committee-news-delete="'+id+'">삭제</button></div>'
       :publicTimelineAdminMode&&auto&&Number(item.monitorSourceId)>0?'<div class="timeline-admin-actions"><span class="source-type">자동수집</span><button type="button" data-committee-news-hide="'+Number(item.monitorSourceId)+'">공개 제외</button></div>':'';
     return '<article class="timeline-item'+' is-collapsed'+'" data-item-key="'+escapeHtml(itemShareKey(item))+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title||'')+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+(auto?'출처 확인 · 자동수집':'등록 소식')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+itemShareButton(item,'committee')+actions+'</div></article>';
-  }).join(''):'<p class="muted">현재 공개가 확인된 비상대책위 관련소식이 없습니다. 출처가 검증된 자료가 수집되면 자동으로 표시됩니다.</p>';
+  }).join(''):'<p class="muted">현재 공개가 확인된 비상대책위 활동소식이 없습니다. 출처가 검증된 자료가 수집되면 자동으로 표시됩니다.</p>';
   host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{
     const card=button.closest('.timeline-item'),collapsed=card.classList.toggle('is-collapsed');
     button.setAttribute('aria-expanded',collapsed?'false':'true');
@@ -1587,7 +1587,7 @@ function bindCommitteeNewsAdmin(){
     form.elements.title.value=item?.title||'';form.elements.summary.value=item?.summary||'';
     form.elements.category.value=item?.category||'신문';form.elements.evidence.value=item?.evidence||'';
     form.elements.status.value=item?.status||'published';form.elements.sourceUrl.value=(item?.links||[])[0]?.url||'';
-    el('committeeNewsFormTitle').textContent=item?'비상대책위 관련소식 수정':'비상대책위 관련소식 등록';
+    el('committeeNewsFormTitle').textContent=item?'비상대책위 활동소식 수정':'비상대책위 활동소식 등록';
     el('committeeNewsMessage').textContent='';
     if(visible)form.elements.date.focus();
   };
@@ -1619,7 +1619,7 @@ function bindCommitteeNewsAdmin(){
     const item=publicTimelineEntries.find(row=>Number(row.id)===id&&!row.autoCollected&&isCommitteeRelatedNews(row));
     if(!item)return;
     if(edit){open(true,item);return}
-    if(del&&!confirm('이 비상대책위 관련소식을 삭제할까요?'))return;
+    if(del&&!confirm('이 비상대책위 활동소식을 삭제할까요?'))return;
     try{
       if(del)await publicAdminJson('/api/seonammedi/admin/timeline/'+id,{method:'DELETE'});
       if(status)await publicAdminJson('/api/seonammedi/admin/timeline/'+id,{method:'PUT',body:JSON.stringify({status:item.status==='published'?'draft':'published'})});
