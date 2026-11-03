@@ -14,6 +14,7 @@ import { BROKER_ADAPTERS, INVEST_PERMISSION, evaluateBrokerReadiness } from './i
 import { verifiedOwnerAal2 } from './invest-owner-mfa.js';
 import { buildBrokerReadOnlyView } from './invest-broker-readonly-adapter.js';
 import { buildStrategyLab } from './invest-strategy-lab.js';
+import { screenShortTermValue } from './invest-short-term-value-engine.js';
 import { STAGE2_PAPER_PRESET_ID,STAGE2_PAPER_AUTOMATION,validatedStage2PaperPreset,stage2PaperPresetEligibility } from './invest-stage2-paper-preset.js';
 
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
@@ -189,6 +190,38 @@ async function ownerBrokerSnapshot(request,env,ctx){
 
 // Research only: synthetic-data strategy comparison. It never records strategy acceptance for
 // live gates (that requires verified market history) and never places or proposes orders.
+// POST is a read-only analysis, never a broker or D1 mutation.
+// Caller-supplied provider labels are NOT a verified provider attestation.
+async function ownerShortTermValueResearch(request,env,ctx){
+  if(request.method==='GET')return json(request,env,{
+    schema:'ekodi.invest.short-term-value-readiness.v1',
+    mode:'research_only',dataReady:false,
+    requirements:{kisReadOnlyConfigured:['paper','live'].includes(String(env.INVEST_BROKER_READONLY_KIS||'')),
+      kisVaultConfigured:Boolean(env.KIS_APP_KEY&&env.KIS_APP_SECRET&&env.KIS_ACCOUNT_NO),
+      opendartServerKeyConfigured:Boolean(env.OPENDART_API_KEY),
+      independentProviderEvidenceRequired:true,
+      officialKisFinancialAnalysisApiRetirement:'2026-11-11T16:00:00+09:00'},
+    dataSources:['KIS official quotes (after owner connection)','OpenDART financial disclosures (separate key)'],
+    liveOrderGate:'LIVE_EXECUTION_LOCKED',
+    nextStep:'connect_official_data_then_validate_provenance',
+    ordersPlaced:false,autoOrderSubmission:false,liveOrdersEnabled:false
+  });
+  if(request.method!=='POST')return json(request,env,{error:'METHOD_NOT_ALLOWED'},405);
+  // High-value personal research requires the same strong owner AAL2 proof as broker inquiry.
+  if(!verifiedOwnerAal2(request,ctx.identity.id))
+    return json(request,env,{error:'STRONG_MFA_AAL2_REQUIRED',ordersPlaced:false},403);
+  if(!String(request.headers.get('content-type')||'').toLowerCase().includes('application/json'))
+    return json(request,env,{error:'JSON_REQUIRED'},415);
+  const raw=await request.text();
+  if(raw.length>128000)return json(request,env,{error:'INPUT_TOO_LARGE'},413);
+  let input;
+  try{input=JSON.parse(raw)}catch{return json(request,env,{error:'INVALID_JSON'},400)}
+  if(!input||!Array.isArray(input.candidates))return json(request,env,{error:'CANDIDATES_REQUIRED'},400);
+  const result=screenShortTermValue(input);
+  await auditPrincipal(env,ctx.principal,'invest:short-term-value-research');
+  return json(request,env,result,result.error?422:200);
+}
+
 async function ownerStrategyLab(request,env,ctx){
  const account=await loadAccount(env,ctx);
  const validation=await paperValidation(env,ctx,account);
@@ -522,7 +555,7 @@ export async function handleInvestAutopilotApi(request,env){
  const {ok,headers}=cors(request,env);if(request.method==='OPTIONS')return new Response(null,{status:ok?204:403,headers});
  if(!ok)return json(request,env,{error:'ORIGIN_FORBIDDEN'},403);
  if(!env?.DB)return json(request,env,{error:'DATABASE_UNAVAILABLE'},503);
- const write=!['GET','HEAD'].includes(request.method);
+ const write=!['GET','HEAD'].includes(request.method)&&path!=='/v1/invest/autopilot/research/short-term-value';
  const ctx=await ownerContext(request,env,write);if(ctx.error)return json(request,env,{error:ctx.error},ctx.status);
  // Second factor ("본인인증", phone/address fragment) is an owner opt-in: INVEST_STEP_UP_REQUIRED='true'.
  // Without it the verified owner Google session plus the owner-email gate unlock the workspace;
@@ -550,6 +583,7 @@ export async function handleInvestAutopilotApi(request,env){
  if(path==='/v1/invest/autopilot/live/readiness'&&request.method==='GET')return ownerLiveReadiness(request,env,ctx);
  if(path==='/v1/invest/autopilot/broker/snapshot'&&request.method==='GET')return ownerBrokerSnapshot(request,env,ctx);
  if(path==='/v1/invest/autopilot/research/strategy-lab'&&request.method==='GET')return ownerStrategyLab(request,env,ctx);
+ if(path==='/v1/invest/autopilot/research/short-term-value')return ownerShortTermValueResearch(request,env,ctx);
  if(path==='/v1/invest/autopilot/live/orders'&&request.method==='POST')
   return json(request,env,{error:'LIVE_EXECUTION_LOCKED',executionPerformed:false,reason:'BROKER_AND_POLICY_GATES_NOT_VERIFIED'},423);
  if(path==='/v1/invest/autopilot/status'&&request.method==='GET')return status(request,env,ctx);
