@@ -40,6 +40,20 @@ Initial repository review found no `eval/` directory. Production Supabase `publi
 
 Extend in order: mall sourcing → social copywriting → privileged admin commands. Admin-command cases replay only in dry-run/sandbox with no live side effects. Production failures enter deduplicated privacy **quarantine** automatically; promotion to active goldens requires privacy and label review.
 
+## Phase 3 — private, zero-model-call Korean candidate extraction
+
+Verified live D1 `ekodi-auth` read-only on 2026-11-03: 59,036 `ai_command_tasks` rows and 158 distinct Korean goal strings (167 Korean rows); across the fleet 32,731 routing events and 2,098 orchestrator tasks. These are **raw source availability counts**, not 158 approved goldens. Many command tasks are repetitive autonomous entries.
+
+`eval/log-candidates.mjs` accepts an approved read-only D1 JSON stream on **stdin**, isolates 50 distinct Korean source records and creates 40 calibration **candidates** and 10 private hold-out **candidates**. The output contains only whitelisted intent/action templates, state, risk and random candidate IDs. Full source goals never appear in the output or logs; a separate private mapping contains the source task ID needed for later human review. It explicitly sets `eligibleForGolden:false`, leaves ground truth/tool/trajectory unset, and refuses to proceed with fewer than 50 distinct source goals. It never executes an AI model or writes to production D1.
+
+Execution must occur on an **authorized private machine** (not in a GitHub CI runner or a public repository). Protect the output directory with user-only filesystem ACL before execution. For example, after preparing `$privateReviewDir` outside the repository:
+
+```powershell
+npx --yes wrangler@4.156.2 d1 execute ekodi-auth --remote --command "SELECT id,goal,state,risk FROM ai_command_tasks WHERE goal GLOB '*[가-힣]*' ORDER BY created_at DESC LIMIT 300;" --json | node eval/log-candidates.mjs - $privateReviewDir --delete-input
+```
+
+No raw prompts are written to disk by the extractor when input is `-`. Avoid piping to logs, chat, CI or third-party services. Files are `calibration-review.jsonl`, `holdout-review.jsonl`, and `source-linkage-private.jsonl` in the restricted directory. They must never be published. Selection templates are **not faithful full evaluation questions**. To promote actual goldens, a human privacy reviewer must re-open each original **within the trusted D1 environment**, approve a privacy-safe semantic rewrite, label the expected route and tool sequence, record consent/retention, and freeze the dataset and hold-out under existing secured storage. Until then, 50 review candidates are **not** a validated 50-question benchmark.
+
 ## 2. Separate six-axis rubric
 
 | Dimension | Source | Rule |
