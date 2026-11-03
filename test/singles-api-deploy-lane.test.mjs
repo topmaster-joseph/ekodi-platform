@@ -54,9 +54,19 @@ test('preflight also requires the DB columns the code writes',async()=>{
   assert.throws(()=>contractQuery([],["public.t.c';drop table x--"]),/invalid_column/);
   const api=await readFile(new URL('../supabase/functions/singles-api/index.ts',import.meta.url),'utf8')
     +await readFile(new URL('../supabase/functions/singles-api/social.ts',import.meta.url),'utf8');
+  const atomicReceiptSql=await readFile(new URL('../supabase/migrations/20261103170000_singles_contact_share_atomic_receipts.sql',import.meta.url),'utf8');
   for(const col of contract.required_columns){
     const [, table, name]=col.split('.');
-    assert.ok(api.includes(table)&&api.includes(name+':'),col+' is written by the API');
+    if(table==='singles_contact_share_receipts'){
+      // These columns are inserted inside the atomic database function, not by the Edge client.
+      // Validate both schema provenance and the gated API call instead of requiring an Edge literal.
+      assert.match(atomicReceiptSql,/create table if not exists public\.singles_contact_share_receipts\(/);
+      assert.ok(atomicReceiptSql.includes(name+' '),col+' must exist in the audited migration');
+      assert.ok(api.includes("admin.rpc('singles_contact_share_record'"),'Edge uses atomic consent writer');
+      assert.ok(contract.required_functions.includes('public.singles_contact_share_record(uuid,uuid,text,text)'));
+    }else{
+      assert.ok(api.includes(table)&&api.includes(name+':'),col+' is written by the API');
+    }
   }
 });
 test('enrollment receipt records the exact optional consents chosen',async()=>{
