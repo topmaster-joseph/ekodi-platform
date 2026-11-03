@@ -26,3 +26,6 @@ This commit **does not** forge checks, issue a release receipt, merge, change ro
 - Development-only function/version/schema readiness and a synthetic authenticated member flow must be verified before a future authorized policy activation. Staging currently requires Cloudflare Access and must not be bypassed.
 - Conversion, donation, monetary value and paid member rights remain behind separately reviewed budget/legal/owner gates, with their existing defaults unchanged.
 - A code/CI/merged PR is not proof of operating service completion; only verified live behavior and recorded receipts allow a scoped completion claim.
+
+## Authenticated CI after main synchronization
+The first owner-connected recovery commit `c1e850bf70452add32741b109666b40f523063a4` passed real CI and Supabase Local CI in addition to the EKODI Orchestration Gate and My deployment validation. The official orchestrator then synchronized newer main to recovery head `b725d5ce8fb7bd61d841c01db488ab3646251580`, preserving source ancestry and with no main-behind commits at the time checked. Its bot-generated GitHub statuses are not equivalent to authentic passing checks. This second documentation-only owner-connected push requests normal required CI on the latest official head. No runtime, permission, feature flag, financial policy, migration or production data is changed by this note.
