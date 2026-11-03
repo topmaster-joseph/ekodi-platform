@@ -94,3 +94,15 @@ test('apex rewriting preserves create, transition, readiness, AI and evidence en
   const revision = requests.find(x => x.url === `${base}/projects/${id}/transition`);
   assert.equal(JSON.parse(revision.body).revision, 1);
 });
+
+test('jubilee registration button only posts through canonical authorized workflow', async()=>{
+  const signed=await client();
+  assert.equal(signed.node('jubileeRegister').disabled,false);
+  await signed.node('jubileeRegister').listeners.get('click')();
+  assert.ok(signed.requests.some(x=>x.url===base+'/jubilee/register'&&x.method==='POST'));
+  assert.match(signed.node('jubileeStatus').textContent,/원고 파일 입고/);
+  const guest=await client({signedIn:false});
+  assert.equal(guest.node('jubileeRegister').disabled,true);
+  await guest.node('jubileeRegister').listeners.get('click')();
+  assert.ok(!guest.requests.some(x=>x.method==='POST'));
+});
