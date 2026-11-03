@@ -81,7 +81,18 @@ export function createDevotionSpeechUI(win = window, doc = document) {
   engine.append(ekodiOption, createOption('device', '기기 음성'));
   engine.value = 'device';
   engineLabel.append(engine);
-  row.append(play, pause, repeat, stopButton, speedLabel, status, genderLabel, voiceLabel, engineLabel);
+  // Minimal primary controls; existing capabilities remain under one settings toggle.
+  const moreSettings=button('settings','음성 설정');
+  moreSettings.className+=' dv-speech-more';
+  moreSettings.setAttribute('aria-expanded','false');
+  row.dataset.advanced='false';
+  row.append(play, pause, repeat, stopButton, speedLabel, status, genderLabel, voiceLabel, engineLabel, moreSettings);
+  moreSettings.addEventListener('click',()=>{
+    const expanded=row.dataset.advanced!=='true';
+    row.dataset.advanced=String(expanded);
+    moreSettings.textContent=expanded?'설정 닫기':'음성 설정';
+    moreSettings.setAttribute('aria-expanded',String(expanded));
+  });
 
   const synth = win.speechSynthesis;
   const Utterance = win.SpeechSynthesisUtterance;
@@ -119,6 +130,7 @@ export function createDevotionSpeechUI(win = window, doc = document) {
   }
   function display(message) {
     status.textContent = message;
+    row.dataset.playing=String(Boolean(playing));
     play.disabled = (!supported && !ekodi.ready) || !data?.found || playing;
     pause.disabled = !playing;
     repeat.disabled = (!supported && !ekodi.ready) || !data?.found;
@@ -328,7 +340,7 @@ export function createDevotionSpeechUI(win = window, doc = document) {
         // The approved-mp3 state is checked for the currently published date.
         // A pending date never exposes another day's audio or private voice files.
         void ekodi.load(data.date).then(ready => {
-          if (!ready && !supported) display('이 기기는 음성합성을 지원하지 않고, 에코디 낭독음원도 준비되지 않았습니다.');
+          if (!ready && !supported) display('현재 이 기기에서는 듣기를 사용할 수 없습니다.');
         });
         if (!supported) display('에코디 낭독음원을 확인하고 있습니다.');
         else display(describeChoice());

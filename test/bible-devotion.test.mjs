@@ -119,7 +119,9 @@ test('shared renderer keeps canonical Scripture visible and merges response sect
   assert.match(js, /renderPassage\(scriptureBlock, data\)/);
   assert.match(js, /panels\.get\(tabId\)\.hidden = !on/);
   assert.match(js, /data-date-mode|dateMode === 'query'/);
-  assert.match(js, /renderScore\(score,a\.song\.abc\)/);
+  assert.match(js, /const authoredScore = String\(a\.song\.abc\|\|''\)\.trim\(\)/);
+  assert.match(js, /const scoreAbc = authoredScore \|\| dailyDevotionMelody/);
+  assert.match(js, /if\(scoreAbc\)renderScore\(score,scoreAbc\)/);
   assert.match(js, /setupMrPlayer\(a\.song\)/);
   assert.match(js, /renderAdminEditor\(data\)/);
 });
