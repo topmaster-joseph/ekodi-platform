@@ -367,32 +367,53 @@
   window.addEventListener('pageshow',()=>{void refreshMissionAuth()});
   window.addEventListener('storage',event=>{if(event.key===CENTRAL_AUTH_KEY)void refreshMissionAuth()});
 
+// SITE-EVENT-SHARE-001: canonical invitation copy; never duplicate the URL.
+function formatActivityShare(organization,activity,date,url,action='신청하기'){
+  const clean=value=>String(value??'').replace(/[\r\n\t\u2028\u2029]+/g,' ').replace(/\s+/g,' ').trim();
+  const org=clean(organization);
+  let name=clean(activity);
+  if(name===org)name='';
+  else if(name.startsWith(org+' '))name=name.slice(org.length+1);
+  const heading=[org,name,clean(action)].filter(Boolean).join(' ');
+  const match=clean(date).match(/^(\d{4})[-.](\d{1,2})[-.](\d{1,2})(?:\D|$)/);
+  let dayLabel='';
+  if(match){
+    const yyyy=Number(match[1]),mm=Number(match[2]),dd=Number(match[3]);
+    const day=new Date(Date.UTC(yyyy,mm-1,dd));
+    if(day.getUTCFullYear()===yyyy&&day.getUTCMonth()===mm-1&&day.getUTCDate()===dd){
+      const iso=String(yyyy).padStart(4,'0')+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+      dayLabel=iso+' ('+['일','월','화','수','목','금','토'][day.getUTCDay()]+')';
+    }
+  }
+  return [heading,dayLabel,clean(url)].filter(Boolean).join('\n');
+}
+
   // Share only publicly visible activity pages and public archive rows.
   function mountMissionShares(){
-    const buttonFor=(where,url,title)=>{
+    const buttonFor=(where,url,title,date='',action='자세히 보기')=>{
       if(!where)return;
       let button=where.querySelector('[data-mission-share-button]');
-      if(button){button.dataset.shareUrl=url;return}
+      if(button){Object.assign(button.dataset,{shareUrl:url,shareTitle:title,shareDate:date,shareAction:action});return}
       button=document.createElement('button');
       button.type='button';button.className='mission-share-button';
-      button.dataset.missionShareButton='';button.dataset.shareUrl=url;
+      button.dataset.missionShareButton='';Object.assign(button.dataset,{shareUrl:url,shareTitle:title,shareDate:date,shareAction:action});
       button.textContent='공유';button.setAttribute('aria-label',title+' 공유');
       const notice=document.createElement('span');
       notice.className='mission-share-note';notice.setAttribute('role','status');
       button.addEventListener('click',async()=>{
-        const link=button.dataset.shareUrl;
+        const message=formatActivityShare('에코디선교회',button.dataset.shareTitle,button.dataset.shareDate,button.dataset.shareUrl,button.dataset.shareAction);
         if(navigator.share){
-          try{await navigator.share({title,url:link});return}
+          try{await navigator.share({text:message});return}
           catch(error){if(error.name==='AbortError')return}
         }
-        try{await navigator.clipboard.writeText(link);notice.textContent='링크 복사됨'}
+        try{await navigator.clipboard.writeText(message);notice.textContent='링크 복사됨'}
         catch{
           let field=where.querySelector('.mission-share-fallback');
           if(!field){
-            field=document.createElement('input');field.className='mission-share-fallback';
+            field=document.createElement('textarea');field.rows=3;field.className='mission-share-fallback';
             field.setAttribute('aria-label','공유 링크');where.append(field);
           }
-          field.value=link;field.focus();field.select();
+          field.value=message;field.focus();field.select();
           try{
             if(document.execCommand('copy')){notice.textContent='링크 복사됨';field.remove()}
             else notice.textContent='선택한 링크를 복사하세요.';
@@ -419,7 +440,7 @@
         }
         let actions=row.querySelector('.mission-activity-row-actions');
         if(!actions){actions=document.createElement('div');actions.className='mission-activity-row-actions';row.append(actions)}
-        buttonFor(actions,url,title);
+        buttonFor(actions,url,title,date,'자세히 보기');
       });
     };
     renderRows();
@@ -435,7 +456,7 @@
       const slot=meeting.querySelector('.mission-saturday-feedback-head')||meeting.querySelector('.activity-copy');
       const update=()=>{
         const date=meeting.dataset.meetingDate;
-        if(date)buttonFor(slot,location.origin+'/ekodimission?meeting='+encodeURIComponent(date)+'#saturday','에코디선교회 '+date+' 토요모임');
+        if(date)buttonFor(slot,location.origin+'/ekodimission?meeting='+encodeURIComponent(date)+'#saturday','토요모임',date,'신청하기');
       };
       new MutationObserver(update).observe(meeting,{attributes:true,attributeFilter:['data-meeting-date']});
       update();
@@ -448,7 +469,7 @@
         // Preserve the two-column event hero and reuse existing event share controls.
         const host=hero.querySelector('.open-table-copy')||hero;
         host.append(slot);
-        buttonFor(slot,location.origin+location.pathname,hero.querySelector('h1')?.textContent?.trim()||document.title);
+        buttonFor(slot,location.origin+location.pathname,hero.querySelector('h1')?.textContent?.trim()||document.title,hero.querySelector('time[datetime]')?.getAttribute('datetime')||'',document.querySelector('[data-event-application]')?'신청하기':'자세히 보기');
       }
     }
   }

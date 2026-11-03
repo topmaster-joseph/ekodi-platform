@@ -1,4 +1,25 @@
 (()=>{
+// SITE-EVENT-SHARE-001: canonical invitation copy; never duplicate the URL.
+function formatActivityShare(organization,activity,date,url,action='신청하기'){
+  const clean=value=>String(value??'').replace(/[\r\n\t\u2028\u2029]+/g,' ').replace(/\s+/g,' ').trim();
+  const org=clean(organization);
+  let name=clean(activity);
+  if(name===org)name='';
+  else if(name.startsWith(org+' '))name=name.slice(org.length+1);
+  const heading=[org,name,clean(action)].filter(Boolean).join(' ');
+  const match=clean(date).match(/^(\d{4})[-.](\d{1,2})[-.](\d{1,2})(?:\D|$)/);
+  let dayLabel='';
+  if(match){
+    const yyyy=Number(match[1]),mm=Number(match[2]),dd=Number(match[3]);
+    const day=new Date(Date.UTC(yyyy,mm-1,dd));
+    if(day.getUTCFullYear()===yyyy&&day.getUTCMonth()===mm-1&&day.getUTCDate()===dd){
+      const iso=String(yyyy).padStart(4,'0')+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+      dayLabel=iso+' ('+['일','월','화','수','목','금','토'][day.getUTCDay()]+')';
+    }
+  }
+  return [heading,dayLabel,clean(url)].filter(Boolean).join('\n');
+}
+
   const defaultEvent=Object.freeze({
     eventSlug:'260926-chuseok-open-table',
     applicationRecordKey:'260926-chuseok-open-table',
@@ -35,6 +56,8 @@
     if(empty)empty.hidden=visible>0;
   }
   const shareStatus=m=>document.querySelectorAll('[data-share-status]').forEach(el=>el.textContent=m);
+  const shareDate=String(meta?.dataset.eventDate||document.querySelector('time[datetime]')?.getAttribute('datetime')||'');
+  const shareMessage=formatActivityShare('에코디선교회',title,shareDate,url,form?'신청하기':'자세히 보기');
   async function copy(v,m){try{await navigator.clipboard.writeText(v)}catch{const t=document.createElement('textarea');t.value=v;document.body.append(t);t.select();document.execCommand('copy');t.remove()}shareStatus(m)}
   const paymentSheet=document.querySelector('[data-mission-pay-sheet]');
   const paymentStatus=()=>paymentSheet?.querySelector('[data-mission-pay-status]');
@@ -51,7 +74,7 @@
   const hidePayment=()=>{if(!paymentSheet)return;paymentSheet.hidden=true;document.body.classList.remove('mission-pay-open')};
   const copyPayment=async(value,message)=>{await copy(value,message);const el=paymentStatus();if(el)el.textContent=message};
   document.addEventListener('click',async e=>{
-    if(e.target.closest('[data-share-event]')){if(navigator.share){try{await navigator.share({title,text:shareText,url});shareStatus('공유 창을 열었습니다.')}catch(err){if(err?.name!=='AbortError')await copy(url,'행사 링크를 복사했습니다.')}}else await copy(url,'행사 링크를 복사했습니다.');return}
+    if(e.target.closest('[data-share-event]')){if(navigator.share){try{await navigator.share({text:shareMessage});shareStatus('공유 창을 열었습니다.')}catch(err){if(err?.name!=='AbortError')await copy(shareMessage,'행사 안내를 복사했습니다.')}}else await copy(shareMessage,'행사 안내를 복사했습니다.');return}
     if(e.target.closest('[data-copy-invite]')){await copy(invite,'초대문을 복사했습니다.');return}
     if(e.target.closest('[data-mission-pay-open]')){showPayment();return}
     if(e.target.closest('[data-mission-pay-close]')){hidePayment();return}
