@@ -18,6 +18,9 @@ on:
       - 'invest-stage2-paper-preset.js'
       - 'invest-strategy-lab.js'
       - 'invest-short-term-value-engine.js'
+      - 'invest-opendart-readonly.js'
+      - 'test/invest-opendart-readonly.test.mjs'
+      - 'test/invest-opendart-runtime.test.mjs'
       - 'test/invest-short-term-value-engine.test.mjs'
       - 'test/invest-short-term-value-runtime.test.mjs'
       - 'test/invest-broker-readonly-adapter.test.mjs'
@@ -70,9 +73,9 @@ jobs:
       - name: Validate personalized Invest contracts
         run: |
           set -euo pipefail
-          for file in profile-official-data-adapter.js invest-personalization-runtime.js invest-market-core.js invest-automation-runtime.js invest-lifecycle-runtime.js invest-autopilot-core.js invest-autopilot-runtime.js invest-broker-readonly-adapter.js invest-broker-readonly-contract.js invest-broker-readonly-snapshot.js invest-owner-mfa.js invest-step-up.js invest-stage2-paper-preset.js invest-strategy-lab.js invest-short-term-value-engine.js invest-my-workspace.js invest-site-system.js invest-personal-control.js invest-user-page.js invest-subject-ui.js invest-admin.js workspace-platform-entry-worker.js platform-router-entry-worker.js platform-router-worker.js my/user-ai-ui.js; do node --check "$file"; done
+          for file in profile-official-data-adapter.js invest-personalization-runtime.js invest-market-core.js invest-automation-runtime.js invest-lifecycle-runtime.js invest-autopilot-core.js invest-autopilot-runtime.js invest-broker-readonly-adapter.js invest-broker-readonly-contract.js invest-broker-readonly-snapshot.js invest-owner-mfa.js invest-step-up.js invest-stage2-paper-preset.js invest-strategy-lab.js invest-short-term-value-engine.js invest-opendart-readonly.js invest-my-workspace.js invest-site-system.js invest-personal-control.js invest-user-page.js invest-subject-ui.js invest-admin.js workspace-platform-entry-worker.js platform-router-entry-worker.js platform-router-worker.js my/user-ai-ui.js; do node --check "$file"; done
           node --test test/invest-personalization-contract.test.mjs test/invest-market-core.test.mjs test/invest-site-system.test.mjs test/invest-lifecycle-runtime.test.mjs test/invest-autopilot-core.test.mjs test/invest-autopilot-runtime.test.mjs test/invest-autopilot-schedule.test.mjs test/invest-my-autopilot-ui.test.mjs
-          node --test test/invest-broker-readonly-adapter.test.mjs test/invest-broker-balance-history.test.mjs test/invest-owner-mfa.test.mjs test/invest-step-up.test.mjs test/invest-stage2-paper-preset.test.mjs test/invest-strategy-lab.test.mjs test/invest-short-term-value-engine.test.mjs test/invest-short-term-value-runtime.test.mjs test/conversation-foundation-release.test.mjs
+          node --test test/invest-broker-readonly-adapter.test.mjs test/invest-broker-balance-history.test.mjs test/invest-owner-mfa.test.mjs test/invest-step-up.test.mjs test/invest-stage2-paper-preset.test.mjs test/invest-strategy-lab.test.mjs test/invest-short-term-value-engine.test.mjs test/invest-short-term-value-runtime.test.mjs test/invest-opendart-readonly.test.mjs test/invest-opendart-runtime.test.mjs test/conversation-foundation-release.test.mjs
           node scripts/validate-additive-migrations.mjs migrations
           npm run build
           node scripts/validate-deployment-guardrails.mjs
