@@ -82,7 +82,7 @@
   function mountNavigation(){
     const nav=document.querySelector('[data-mission-nav]');
     if(!nav)return null;
-    const primary=new Set(['/ekodimission/devotion','/ekodimission#saturday','/ekodimission/activities','/ekodimission/participate']);
+    const primaryIndices=new Set([0,1,2,5]);
     const current=location.pathname.replace(/\/+$/,'')||'/';
     const link=item=>{
       const a=document.createElement('a');
@@ -94,6 +94,9 @@
       }
       return a;
     };
+    const links=contract.links.map(link);
+    const primary=links.filter((a,index)=>primaryIndices.has(index));
+    const secondary=links.filter((a,index)=>!primaryIndices.has(index));
     const dropdown=(className,label,items)=>{
       const details=document.createElement('details');details.className=className;
       const summary=document.createElement('summary');summary.textContent=label;
@@ -103,9 +106,17 @@
       document.addEventListener('click',e=>{if(details.open&&!details.contains(e.target))details.open=false});
       return details;
     };
-    const primaryItems=contract.links.filter(item=>primary.has(item.href));
-    const secondaryItems=contract.links.filter(item=>!primary.has(item.href));
-    const more=dropdown('mission-nav-more','더보기',secondaryItems);
+    const more=document.createElement('details');
+    more.className='mission-nav-more';
+    const summary=document.createElement('summary');
+    summary.textContent='더보기';
+    summary.setAttribute('aria-label','추가 메뉴 열기');
+    const popup=document.createElement('div');
+    popup.className='mission-nav-menu';
+    popup.append(...secondary);
+    more.append(summary,popup);
+    more.addEventListener('keydown',event=>{if(event.key==='Escape'){more.open=false;summary.focus()}});
+    document.addEventListener('click',event=>{if(more.open&&!more.contains(event.target))more.open=false});
     const mobile=dropdown('mission-nav-mobile','메뉴',contract.links);
     const language=document.createElement('label');
     language.className='mission-language';
@@ -116,7 +127,8 @@
     select.setAttribute('aria-label','언어 선택');
     select.innerHTML='<option value="ko-KR">한국어</option>';
     language.append(select);
-    nav.replaceChildren(...primaryItems.map(link),more,mobile,language);
+    nav.replaceChildren(...primary,more,language);
+    nav.insertBefore(mobile,language);
     return {nav,select};
   }
   // Keep the canonical Korean page and its accessible DOM free of English eyebrow text.
