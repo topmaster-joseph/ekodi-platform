@@ -551,7 +551,7 @@ test('IndexNow daily schedule runs once per KST day after 04:00 and never throws
 
 // ---------------------------------------------------------------- 배포 매핑 · 크론 연결
 
-const converge = fs.readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+const converge = fs.readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8').replace(/\r\n/g,'\n');
 function selector(name) {
   const start = converge.indexOf(`const ${name}=`);
   const end = converge.indexOf(');\n', start);
