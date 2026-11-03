@@ -85,6 +85,19 @@ const manifestConfig=await manifestRealm(site);
 const baseConfig=realms[site]||manifestConfig||implicitEkodiRealm(site)||realms.portal;
 const config={...baseConfig,operatingModel:manifestConfig?.operatingModel||baseConfig.operatingModel||'',userAccessPolicy:manifestConfig?.userAccessPolicy||baseConfig.userAccessPolicy||null};
 const commonServiceEntry=config.operatingModel==='shared-service';
+function trustedAdminCallbackReturn(target){
+  if(config.kind!=='portal'||target.origin!=='https://ekodi.kr'||target.pathname!=='/auth/'||
+    target.searchParams.get('site')!=='admin'||target.searchParams.get('via')!=='ekodi'||
+    [...target.searchParams.keys()].some(key=>!['site','via','return_to'].includes(key)))return false;
+  try{
+    const nested=new URL(target.searchParams.get('return_to')||'');
+    if(nested.origin!=='https://ekodi.kr'||nested.username||nested.password||nested.hash)return false;
+    if(nested.pathname==='/admin'||nested.pathname.startsWith('/admin/'))return true;
+    if(!['/tax','/tax/'].includes(nested.pathname))return false;
+    return [...nested.searchParams.keys()].every(key=>key==='tab')&&
+      (!nested.searchParams.has('tab')||['invoices','suppliers','customers','ledger'].includes(nested.searchParams.get('tab')));
+  }catch{return false}
+}
 function safeReturn(raw){
   const fallback=new URL(config.kind==='mission'&&DIRECT_LOGIN&&config.adminReturnTo?config.adminReturnTo:config.returnTo);
   if(!raw)return fallback.href;
@@ -100,11 +113,7 @@ function safeReturn(raw){
     const sameCanonicalPath=target.origin==='https://ekodi.kr'&&fallback.origin==='https://ekodi.kr'&&(prefix?(target.pathname===prefix||target.pathname.startsWith(prefix+'/')):(config.kind==='space'||(config.kind==='portal'&&target.pathname==='/')));
     // Provider-independent admin handoff is a single fixed, same-origin
     // callback, never an arbitrary external admin redirect.
-    const adminReturn=config.kind==='portal'&&target.origin==='https://ekodi.kr'
-      &&target.pathname==='/auth/'&&target.searchParams.get('site')==='admin'
-      &&target.searchParams.get('via')==='ekodi'
-      &&target.searchParams.get('return_to')?.startsWith('https://ekodi.kr/admin/')
-      &&![...target.searchParams.keys()].some(key=>!['site','via','return_to'].includes(key));
+    const adminReturn=trustedAdminCallbackReturn(target);
     const adminToolReturn=config.kind==='portal'&&target.origin==='https://ekodi.kr'
       &&['/admin/site-admins','/admin/site-admins/','/admin/people','/admin/people/'].includes(target.pathname);
     const internalEkodi=adminReturn||adminToolReturn||(config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath));
