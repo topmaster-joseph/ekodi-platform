@@ -3,6 +3,7 @@ export const DISCOVERY_ORIGIN = 'https://ekodi.kr';
 
 export const DISCOVERY_PUBLIC_ROUTES = Object.freeze([
   { path: '/', asset: 'index.html', changefreq: 'weekly', priority: '1.0', label: 'EKODI Ecosystem', title: 'EKODI | 에코디 생태계 · EKODI Ecosystem', description: '지금 사용할 수 있는 EKODI 플랫폼을 한눈에 만나는 연결 생태계.' },
+  { path: '/promotion', asset: 'promotion.html', changefreq: 'daily', priority: '0.7', label: 'EKODI Digital Square', title: '에코디 홍보광장 | EKODI Digital Square', description: '에코디 생태계의 공개 행사와 모임, 소식, 상품을 한눈에 확인하고 참여하는 홍보광장입니다.' },
   { path: '/history', asset: 'history.html', changefreq: 'monthly', priority: '0.5', label: 'EKODI History', title: 'EKODI History | 에코디 연혁', description: 'EKODI 생태계의 주요 흐름과 발전 과정을 확인합니다.' },
   { path: '/privacy', asset: 'privacy.html', changefreq: 'yearly', priority: '0.3', label: 'Privacy Policy', title: '개인정보처리방침 | EKODI', description: 'EKODI 서비스의 개인정보 처리 원칙과 정책을 안내합니다.' },
   { path: '/terms', asset: 'terms.html', changefreq: 'yearly', priority: '0.3', label: 'Terms of Service', title: '이용약관 | EKODI', description: 'EKODI 서비스 이용약관을 안내합니다.' },

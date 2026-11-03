@@ -30,6 +30,9 @@ const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';
 const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
 const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
 const PUBLIC_ASSETS = new Set([
+  '/promotion.css',
+  '/promotion.js',
+  '/promotion-core.js',
   '/homepage-ambient.css',
   '/homepage-ambient.js',
   '/homepage-auth-state.js',
@@ -767,6 +770,19 @@ export default {
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0', 'public-home');
+      }
+      // EKODI-PROMOTION-SQUARE-001: use the shared public shell and discovery projection.
+      if (url.pathname === '/promotion' || url.pathname === '/promotion/') {
+        if (!['GET','HEAD'].includes(request.method)) {
+          return withHostSecurity(new Response(null, {status:405,headers:{allow:'GET, HEAD'}}), PUBLIC_CSP, 'no-store', 'public-promotion-method');
+        }
+        if (url.pathname === '/promotion/') {
+          return withHostSecurity(new Response(null, {status:308,headers:{location:'/promotion'}}), PUBLIC_CSP, 'no-store', 'public-promotion-canonical');
+        }
+        const response = await env.ASSETS.fetch(assetRequest(request, '/promotion'));
+        const secured = withHostSecurity(response, PUBLIC_CSP, 'public, max-age=60', 'public-promotion');
+        if (request.method === 'HEAD') return secured;
+        return decorateDiscoveryResponse(injectEkodiShell(secured, 'ekodi', 'public'), '/promotion');
       }
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/pizzamaru/mokpodae' || url.pathname === '/pizzamaru/mokpodae/')) {
         const target=new URL('/pizzamaru',request.url);target.search=url.search;
