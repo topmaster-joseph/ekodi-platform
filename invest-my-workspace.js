@@ -255,7 +255,7 @@ function renderStrategyDetails(r){
  el('labComparisonTable').replaceChildren(strategyTable(
   ['전략','검증 구간 수익률','최대 낙폭','샤프','거래비용','채택 기준'],rows));
  const validation=el('labValidationDetails');validation.replaceChildren();
- validation.append(textNode('p','시계열 앞 '+Math.round(r.split.trainFraction*100)+'% 구간으로 설정하고 뒤쪽 데이터를 검증합니다. 아래 결과로 실거래가 승인되지 않습니다.','strategy-notice'));
+ validation.append(textNode('p','시계열 앞 '+Math.round(r.split.inSampleDays/Math.max(1,r.split.inSampleDays+r.split.outOfSampleDays)*100)+'% 구간으로 설정하고 뒤쪽 데이터를 검증합니다. 아래 결과로 실거래가 승인되지 않습니다.','strategy-notice'));
  for(const item of r.strategies){
   const section=document.createElement('div');section.className='strategy-notice';
   section.append(textNode('strong',item.label+' · '+(item.acceptance.passed?'검증 통과':'검증 미통과')));
