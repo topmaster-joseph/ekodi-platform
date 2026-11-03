@@ -484,4 +484,12 @@
   window.addEventListener('ekodi:auth-success',()=>void checkPresenceStaff());
   window.addEventListener('ekodi:auth-logout',()=>void checkPresenceStaff());
   window.addEventListener('focus',()=>void checkPresenceStaff());
+  // Activity public pages hydrate editorial updates without adding a second site shell.
+  const activityPage=location.pathname.replace(/\/+$/,'');
+  if(activityPage==='/ekodimission/activities'||activityPage.startsWith('/ekodimission/activities/')||activityPage.startsWith('/ekodimission/apply/')){
+    const script=document.createElement('script');
+    script.src='/ekodimission/assets/activity-editor.js';
+    script.defer=true;
+    document.head.append(script);
+  }
 })();
