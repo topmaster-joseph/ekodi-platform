@@ -67,14 +67,11 @@ test('simple daily illustration is date-specific, theme-aware and first-party in
  assert.equal(invalidHost.children.length,0);
 });
 
-test('published devotion uses auto melody and daily simple illustration only when human content absent',()=>{
- assert.match(source,/import \{ dailyDevotionMelody, renderDailyDevotionArt \}/);
- assert.match(source,/const authoredScore = String\(a\.song\.abc\|\|''\)\.trim\(\)/);
- assert.match(source,/const scoreAbc = authoredScore \|\| dailyDevotionMelody/);
- assert.match(source,/if\(scoreAbc\)renderScore\(score,scoreAbc\)/);
- assert.match(source,/if\(illustrationSrc && illustrationSrc!==/);
- assert.match(source,/else if\(!renderDailyDevotionArt\(panel,\{date:data\.date,passage:data\.passage,theme:a\.theme\}\)\)/);
- assert.match(css,/dv-daily-art/);
+test('published devotion omits score and picture tabs while preserving prayer',()=>{
+ assert.doesNotMatch(source,/import \{ dailyDevotionMelody, renderDailyDevotionArt \}/);
+ assert.doesNotMatch(source,/\{ id: '(song|image)',/);
+ assert.match(source,/\{ id: 'prayer', label: '묵상기도' \}/);
+ assert.match(source,/panelHead\(panel,'묵상기도','prayer'\)/);
 });
 
 test('voice setup collapses advanced selectors behind accessible toggle without removing audio actions',()=>{

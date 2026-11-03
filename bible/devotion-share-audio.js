@@ -14,9 +14,7 @@ export function devotionShareExcerpt(data, kind = 'page', personalText = '') {
   const a = data?.activities || {};
   switch (kind) {
     case 'poem': return preview((a.poem?.lines || []).join(' '));
-    case 'song': return preview((a.song?.verse || []).join(' '));
     case 'questions': return preview(a.questions?.[0]?.text || a.action);
-    case 'image': return preview(a.illustration?.alt || a.theme);
     case 'family': return preview(a.family);
     case 'action': return preview(a.action);
     case 'prayer': return preview(a.prayer);
@@ -33,12 +31,18 @@ export function formatDevotionShareMessage({date, title, excerpt, url}) {
   const day = ['일', '월', '화', '수', '목', '금', '토'][utc.getUTCDay()];
   const cleanUrl = new URL(url);
   if (cleanUrl.origin !== 'https://ekodi.kr' || !cleanUrl.pathname.startsWith('/')) throw new Error('invalid_devotion_url');
+  const heading=compact(title);
+  const rawBody=preview(excerpt);
+  // Do not repeat a sentence or phrase in the heading and excerpt.
+  const comparable=text=>compact(text).replace(/[·:;,.!?。~\-–—\[\](){}]/g,'').replace(/\s+/g,'');
+  const t=comparable(heading),b=comparable(rawBody);
+  const body=b && b!==t && !t.includes(b) && !b.includes(t) ? rawBody : '';
   return [
     `${Number(y)}년 ${Number(m)}월 ${Number(d)}일 ${day}요일`,
-    compact(title),
-    preview(excerpt),
+    heading,
+    body,
     cleanUrl.href,
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 export function devotionSpeechSegments(data) {
   if (!data?.found) return [];

@@ -1,5 +1,3 @@
-import { renderDevotionScore } from './devotion-score.js';
-import { dailyDevotionMelody, renderDailyDevotionArt } from './devotion-daily-creative.js';
 import { devotionShareExcerpt, formatDevotionShareMessage } from './devotion-share-audio.js';
 import { createDevotionSpeechUI } from './devotion-speech-ui.js';
 // EKODI 오늘의 매일묵상 — shared renderer for /bible, /ekodichurch and /ekodimission.
@@ -10,14 +8,12 @@ const API = '/bible/api/bible/devotion';
 const ORIGIN = 'https://ekodi.kr';
 const TABS = Object.freeze([
   { id: 'poem', label: '묵상 시' },
-  { id: 'song', label: '묵상 노래·악보' },
-  { id: 'image', label: '묵상 그림' },
   { id: 'questions', label: '질문 / 실천' },
   { id: 'family', label: '가정·어린이' },
-  { id: 'prayer', label: '한줄기도' },
+  { id: 'prayer', label: '묵상기도' },
   { id: 'records', label: '나의 묵상기록' },
 ]);
-const ATTRIBUTION = '묵상 적용(시·노래·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.';
+const ATTRIBUTION = '묵상 적용(시·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.';
 const ADMIN_TOKEN_KEY = 'ekodi-auth-token';
 const CENTRAL_AUTH_KEY = 'sb-renzehysxirjilvdxacv-auth-token';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
@@ -146,7 +142,6 @@ function boot(root) {
   summary.append(el('small', 'dv-kicker', '오늘의 공통본문'), passageTitle, theme, keyLine);
   const scriptureBlock = el('section', 'dv-panel dv-scripture-section');
   scriptureBlock.setAttribute('aria-label','개역한글 성경 본문');
-  const audioRow = el('section','dv-audio-row');
   const speechUI = createDevotionSpeechUI();
   const adminPanel = el('section','dv-admin');
   adminPanel.id = 'devotion-editor';
@@ -180,8 +175,7 @@ function boot(root) {
   toastEl.setAttribute('role', 'status');
   toastEl.setAttribute('aria-live', 'polite');
   // Page order (2026-10-27): Scripture → activity tabs and the selected panel → attribution → share.
-  // The passage summary card and the standalone CCM MR row are not shown; a licensed MR, when
-  // registered, plays inside the 묵상 노래 panel instead (see setupMrPlayer).
+  // Published devotional tabs prioritize Scripture, prayer, application and personal records.
   const adminBar = el('nav', 'dv-adminbar');
   adminBar.setAttribute('aria-label', '관리자 메뉴');
   adminBar.hidden = true;
@@ -324,46 +318,6 @@ function boot(root) {
   }
 
 
-  function renderScore(container, abc) {
-    const rendered=renderDevotionScore(container,abc);
-    if(!rendered)container.dataset.scoreStatus='unsupported-score';
-    else container.dataset.scoreStatus='first-party-svg-ready';
-  }
-
-  function setupMrPlayer(song) {
-    audioRow.replaceChildren();
-    const title = el('strong', '', '오늘의 CCM MR');
-    const detail = el('span', 'dv-audio-hint');
-    const url = String(song?.mrUrl || '');
-    audioRow.append(title, detail);
-    if (!/^\/bible\/media\/[a-z0-9/_-]+\.(mp3|ogg|m4a|webm)$/i.test(url)) {
-      audioRow.replaceChildren();
-      audioRow.hidden = true;
-      return;
-    }
-    audioRow.hidden = false;
-    (panels.get('song') || root).append(audioRow);
-    const audio = el('audio');
-    audio.src = url; audio.loop = true; audio.preload = 'metadata';
-    const toggle = el('button','dv-mini','MR 재생');
-    toggle.type = 'button'; toggle.setAttribute('aria-pressed','false');
-    const update = playing => {
-      toggle.textContent = playing ? 'MR 일시정지' : 'MR 재생';
-      toggle.setAttribute('aria-pressed', String(playing));
-    };
-    toggle.addEventListener('click', async () => {
-      if (!audio.paused) { audio.pause(); update(false); return; }
-      try { await audio.play(); update(true); detail.textContent = song.mrTitle || '반주 재생 중'; }
-      catch { detail.textContent = '브라우저 설정에서 음성 재생을 허용해 주세요.'; update(false); }
-    });
-    audio.addEventListener('ended',()=>update(false));
-    audio.addEventListener('error',()=>{update(false);detail.textContent='음원 파일을 확인할 수 없습니다.';});
-    audioRow.append(toggle,audio);
-    detail.textContent = song.mrTitle || '사용 허가된 반주';
-    // Browsers may block unmuted autoplay; never circumvent the user's audio preference.
-    audio.play().then(()=>update(true)).catch(()=>{update(false);detail.textContent='자동재생이 제한되었습니다. MR 재생 버튼을 누르세요.';});
-  }
-
   function renderAdminEditor(data) {
     adminPanel.hidden = adminSelection !== 'edit';
     const heading = el('h3','','관리자 · 묵상 적용 편집');
@@ -373,13 +327,9 @@ function boot(root) {
     const sections = [
       ['theme','주제','text'],['keyLine','핵심 문장','textarea'],
       ['poem.title','묵상 시 제목','text'],['poem.lines','시 · 줄마다 한 행','textarea'],
-      ['song.title','묵상 노래 제목','text'],['song.mood','노래 분위기','text'],
-      ['song.verse','노래 1절 · 줄마다 한 행','textarea'],['song.refrain','노래 후렴 · 줄마다 한 행','textarea'],
-      ['song.abc','악보 · ABC 표기법','textarea'],['song.mrUrl','CCM MR · 사용권 확인된 /bible/media/ 파일','text'],
-      ['song.mrTitle','MR 제목','text'],['illustration.src','그림 · /bible/media/ 파일 또는 공통 일러스트','text'],
-      ['illustration.alt','그림 설명','text'],['questions','적용 질문 · 각 행에 분류|질문','textarea'],
+      ['questions','적용 질문 · 각 행에 분류|질문','textarea'],
       ['action','오늘의 실천','textarea'],['family','가정·어린이','textarea'],
-      ['prayer','한줄기도 · 기도 예문','textarea'],
+      ['prayer','묵상기도 · 기도문','textarea'],
     ];
     const bindings = new Map();
     const getValue = path => {
@@ -391,7 +341,7 @@ function boot(root) {
       const label = el('label','dv-editor-field');
       const textLabel = el('span','',labelText);
       const field = el(kind === 'textarea'?'textarea':'input','dv-editor-input');
-      if(kind==='textarea') field.rows = path==='song.abc'?6:3;
+      if(kind==='textarea') field.rows = path==='prayer'?5:3;
       field.value = getValue(path);
       field.dataset.editor = path;
       field.setAttribute('aria-label',labelText);
@@ -414,7 +364,7 @@ function boot(root) {
         if(path==='questions') value=raw.split('\n').filter(Boolean).map(line=>{
           const i=line.indexOf('|');return {kind:i<0?'적용':line.slice(0,i).trim(),text:line.slice(i+1).trim()};
         });
-        else if(['poem.lines','song.verse','song.refrain'].includes(path)) value=raw.split('\n').map(v=>v.trim()).filter(Boolean);
+        else if(path==='poem.lines') value=raw.split('\n').map(v=>v.trim()).filter(Boolean);
         if(path.includes('.')) {
           const [head,tail]=path.split('.');
           out[head] ||= {};
@@ -761,14 +711,13 @@ function boot(root) {
     updateNextAccess();
     for (const panel of panels.values()) panel.replaceChildren();
     scriptureBlock.replaceChildren();
-    audioRow.replaceChildren();
     adminPanel.replaceChildren();
     adminPanel.hidden = true;
     if (!data.found) {
       status.textContent = data.error === 'scripture_not_registered'
         ? '이 날짜의 공통본문이 아직 등록되지 않았습니다. 다른 날짜를 선택해 주세요.'
         : '날짜 형식을 확인해 주세요.';
-      summary.hidden = scriptureBlock.hidden = shareRow.hidden = notice.hidden = audioRow.hidden = tabbar.hidden = panelWrap.hidden = true;
+      summary.hidden = scriptureBlock.hidden = shareRow.hidden = notice.hidden = tabbar.hidden = panelWrap.hidden = true;
       return;
     }
     status.textContent = '';
@@ -787,43 +736,6 @@ function boot(root) {
       const poem = el('div', 'dv-poem');
       for (const line of a.poem.lines) poem.append(el('p', '', line));
       panel.append(poem);
-    }
-    tabButtons.get('song').hidden = !a.song;
-    if (a.song) {
-      const panel = panels.get('song');
-      panelHead(panel, a.song.title, 'song');
-      panel.append(el('p', 'dv-meta', `분위기 · ${a.song.mood}`));
-      const verse = el('div', 'dv-song');
-      for (const line of a.song.verse) verse.append(el('p', '', line));
-      const refrain = el('div', 'dv-refrain');
-      refrain.append(el('small', '', '후렴'));
-      for (const line of a.song.refrain) refrain.append(el('p', '', line));
-      const score = el('div','dv-score');
-      panel.append(score,verse,refrain);
-      const authoredScore = String(a.song.abc||'').trim();
-      const scoreAbc = authoredScore || dailyDevotionMelody({date:data.date,passage:data.passage,theme:a.theme,title:a.song.title});
-      if(scoreAbc)renderScore(score,scoreAbc);
-      else score.append(el('p','dv-meta','표시할 선율이 없습니다.'));
-      panel.append(el('p','dv-meta',authoredScore
-        ? '등록된 악보를 표시합니다.'
-        : '오늘의 자동 창작 선율 · 8마디 연습용 초안이며 가사와의 대응은 아직 검수되지 않았습니다.'));
-    }
-    {
-      const panel = panels.get('image');
-      panelHead(panel,'말씀을 그리다','image');
-      const img=el('img','dv-illustration');
-      const illustrationSrc=String(a.illustration?.src||'');
-      if(illustrationSrc && illustrationSrc!=='/bible/devotion-illustration.svg'){
-        img.src=illustrationSrc;
-        img.alt=a.illustration?.alt || '오늘의 묵상 그림';
-        img.loading='lazy';img.decoding='async';
-        panel.append(img);
-      }else if(!renderDailyDevotionArt(panel,{date:data.date,passage:data.passage,theme:a.theme})){
-        img.src='/bible/devotion-illustration.svg';
-        img.alt='말씀의 길을 함께 걷는 그림';
-        panel.append(img);
-      }
-      panel.append(el('p','dv-meta',`묵상 그림 · ${a.theme}`));
     }
     {
       const panel = panels.get('questions');
@@ -850,15 +762,14 @@ function boot(root) {
     }
     {
       const panel=panels.get('prayer');
-      panelHead(panel,'한줄기도','prayer');
-      panel.append(el('p','dv-prayer',a.prayer));
+      panelHead(panel,'묵상기도','prayer');
+      panel.append(el('p','dv-prayer',a.prayer || '오늘의 말씀을 묵상하며 잠시 기도합니다.'));
       const go=el('button','dv-mini','나의 묵상기록에 적기');
       go.type='button';go.dataset.tab='records';
       panel.append(el('div','dv-share-row'));panel.lastChild.append(go);
       renderRecords(panels.get('records'), data);
     }
     notice.textContent = ATTRIBUTION + (data.activitySource === 'fallback' ? ' 이 날짜는 기본 묵상 적용 자료를 제공합니다.' : '');
-    setupMrPlayer(a.song);
     if(data.admin?.canEdit) renderAdminEditor(data);
     const legacyTab = {passage:'poem',action:'questions',mine:'records'}[location.hash.slice(1)];
     selectTab(legacyTab || location.hash.slice(1) || 'poem', { updateHash: false });
@@ -871,18 +782,16 @@ function boot(root) {
     const head = `[${siteLabel} 오늘의 매일묵상 ${m}/${day}] ${d.passage}`;
     switch (kind) {
       case 'poem': return { title: a.poem.title, text: `${head}\n\n${a.poem.lines.join('\n')}`, hash: 'poem' };
-      case 'song': return { title: a.song.title, text: `${head}\n\n${a.song.verse.join('\n')}\n(후렴) ${a.song.refrain.join(' / ')}`, hash: 'song' };
       case 'questions': return { title: '질문 / 실천', text: `${head}\n\n${a.questions.map((q, i) => `${i + 1}. [${q.kind}] ${q.text}`).join('\n')}\n오늘의 실천: ${a.action}`, hash: 'questions' };
-      case 'image': return { title: '묵상 그림', text: `${head}\n\n묵상 그림 · ${a.theme}`, hash: 'image' };
       case 'family': return { title: '가정·어린이 질문', text: `${head}\n\n👨‍👩‍👧 ${a.family}`, hash: 'family' };
       case 'action': return { title: '오늘의 실천', text: `${head}\n\n✔ 오늘의 실천: ${a.action}`, hash: 'action' };
-      case 'prayer': return { title: '한 줄 기도', text: `${head}\n\n🙏 ${a.prayer}`, hash: 'prayer' };
+      case 'prayer': return { title: '묵상기도', text: a.prayer, hash: 'prayer' };
       case 'mine': {
         const mine = panels.get('records').querySelector('textarea[name="prayer"]')?.value.trim();
         if (!mine) return null;
         return { title: '나의 한줄기도', text: `${head}\n\n${mine}`, hash: 'records' };
       }
-      default: return { title: `${siteLabel} 오늘의 매일묵상 · ${d.passage}`, text: a.keyLine, hash: '' };
+      default: return { title: d.passage, text: a.keyLine, hash: '' };
     }
   }
 
@@ -906,13 +815,13 @@ function boot(root) {
     const url = shareUrl(current.date, body.hash);
     if (copyOnly) { toast(await copy(url) ? '링크를 복사했습니다. 카카오톡 대화방에 붙여 넣어 주세요.' : url); return; }
     const privatePrayer = kind === 'mine' ? panels.get('records').querySelector('textarea[name="prayer"]')?.value.trim() || '' : '';
-    const title = kind === 'page' ? body.title : `${siteLabel} 오늘의 매일묵상 · ${body.title}`;
+    const title = `${siteLabel} 오늘의 매일묵상 · ${body.title}`;
     const message = formatDevotionShareMessage({
       date: current.date, title,
       excerpt: devotionShareExcerpt(current, kind, privatePrayer),
       url,
     });
-    // KakaoTalk, SMS and clipboard receive one complete four-line text.
+    // KakaoTalk, SMS and clipboard receive only nonduplicate lines and one canonical URL.
     // Supplying a separate title or url to the native share sheet can duplicate lines.
     if (navigator.share) {
       try { await navigator.share({ text: message }); return; }
@@ -971,7 +880,7 @@ function boot(root) {
         status.textContent = data.error === 'future_unavailable'
           ? futureNotice
           : data.error === 'invalid_date' ? '날짜를 확인해 주세요.' : '묵상 자료를 불러올 수 없습니다.';
-        summary.hidden = scriptureBlock.hidden = notice.hidden = shareRow.hidden = tabbar.hidden = panelWrap.hidden = audioRow.hidden = true;
+        summary.hidden = scriptureBlock.hidden = notice.hidden = shareRow.hidden = tabbar.hidden = panelWrap.hidden = true;
         // Mission guests should see the privacy notice, then the current day's
         // devotion immediately. The API itself still denies future dates (403).
         // Only use the authoritative Asia/Seoul "today" from that 403 response.

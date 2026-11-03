@@ -114,15 +114,13 @@ test('devotion assets ship without inline script or style (CSP self-only)', () =
 
 test('shared renderer keeps canonical Scripture visible and merges response sections', () => {
   const js = fs.readFileSync(new URL('devotion.js', bibleDir), 'utf8');
-  for (const id of ['poem','song','image','questions','family','prayer']) assert.ok(js.includes(`id: '${id}'`), id);
+  for (const id of ['poem','questions','family','prayer']) assert.ok(js.includes(`id: '${id}'`), id);
   for (const former of ['passage','action','mine']) assert.equal(js.includes(`id: '${former}'`), false, former);
   assert.match(js, /renderPassage\(scriptureBlock, data\)/);
   assert.match(js, /panels\.get\(tabId\)\.hidden = !on/);
   assert.match(js, /data-date-mode|dateMode === 'query'/);
-  assert.match(js, /const authoredScore = String\(a\.song\.abc\|\|''\)\.trim\(\)/);
-  assert.match(js, /const scoreAbc = authoredScore \|\| dailyDevotionMelody/);
-  assert.match(js, /if\(scoreAbc\)renderScore\(score,scoreAbc\)/);
-  assert.match(js, /setupMrPlayer\(a\.song\)/);
+  assert.doesNotMatch(js, /tabButtons\.get\('song'\)|tabButtons\.get\('image'\)/);
+  assert.match(js, /\{ id: 'prayer', label: '묵상기도' \}/);
   assert.match(js, /renderAdminEditor\(data\)/);
 });
 
@@ -182,7 +180,8 @@ test('page order: Scripture, tabs and panel, attribution, share, then admin menu
   const line = js.match(/root\.append\(([^)]*)\);/)[1].split(',').map(s => s.trim());
   assert.deepEqual(line, ['datebar', 'status', 'scriptureBlock', 'tabbar', 'panelWrap', 'notice', 'shareRow', 'adminBar', 'adminPanel', 'adminView', 'toastEl']);
   assert.doesNotMatch(js, /사용 권한이 확인된 반주 음원이 아직 등록되지 않았습니다/);
-  assert.match(js, /panels\.get\('song'\) \|\| root\)\.append\(audioRow\)/);
+  assert.doesNotMatch(js, /setupMrPlayer|panels\.get\('song'\)|audioRow/);
+  assert.match(js, /panelHead\(panel,'묵상기도','prayer'\)/);
 });
 
 test('mission devotion header spans the same 840px centre column as the content', () => {
