@@ -20,6 +20,27 @@ const SHA=/^sha256:[0-9a-f]{64}$/;
 const ID=/^[A-Za-z0-9][A-Za-z0-9._-]{2,159}$/;
 const CHANNELS=new Set(['books','ekodimall']);
 
+// Exact signed product binding: an approved edition pointer cannot be reused on
+// a different catalog row, price, author or downloadable EPUB. This evidence
+// comes from the private Publisher verifier, never from the browser JSON alone.
+const BOOK_ID=/^[A-Za-z0-9][A-Za-z0-9._-]{2,159}$/;
+const CATALOG_NO=/^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$/;
+function signedRetailIdentityMatches(proof,book){
+  if(proof?.retailIdentityVersion!==1 || !BOOK_ID.test(book?.id||'') ||
+     !CATALOG_NO.test(book?.catalogNo||'') ||
+     !book?.title || !book?.author || !book?.directSale?.fileKey ||
+     !book.directSale.fileKey.startsWith(book.id+'/') ||
+     book.directSale.fileKey.includes('..') ||
+     !book.directSale.fileKey.endsWith('.epub') ||
+     book?.listPrice?.currency!=='KRW' ||
+     !Number.isSafeInteger(book.listPrice.amount) || book.listPrice.amount<=0)
+    return false;
+  return proof.bookId===book.id && proof.catalogNo===book.catalogNo &&
+    proof.title===book.title && proof.author===book.author &&
+    proof.fileKey===book.directSale.fileKey &&
+    proof.priceKrw===book.listPrice.amount && proof.currency==='KRW';
+}
+
 export function existingEditionAllowed(book){
   const approved=EXISTING_BOOKSTORE_EDITION_IDENTITIES[book?.id]||HUMAN_APPROVED_BOOKSTORE_EDITIONS[book?.id];
   return Boolean(approved&&book.title===approved.title&&book.author===approved.author &&
@@ -44,6 +65,7 @@ export async function publisherAuthorizedForChannel(binding,book,channel) {
     return proof?.authorized===true&&proof.state==='released'&&
       proof.visibility==='public'&&proof.checkoutEnabled===true &&
       proof.channel===channel&&proof.publicationId===pointer.publicationId &&
-      proof.editionId===pointer.editionId&&proof.releaseDigest===pointer.releaseDigest;
+      proof.editionId===pointer.editionId&&proof.releaseDigest===pointer.releaseDigest &&
+      signedRetailIdentityMatches(proof,book);
   }catch{return false;}
 }
