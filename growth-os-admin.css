@@ -30,10 +30,11 @@
 /* Site automation aggregate: a single table within the existing Growth OS, not another sidebar. */
 .growth-os-automation-overview{min-width:0}
 .growth-os-automation-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
-.growth-os-automation-table{width:100%;min-width:680px;border-collapse:collapse;text-align:left;font-size:13px}
+.growth-os-automation-table{width:100%;min-width:880px;border-collapse:collapse;text-align:left;font-size:13px}
 .growth-os-automation-table :is(th,td){padding:11px 10px;border-bottom:1px solid var(--admin-border,#d9e2ec);vertical-align:middle;word-break:keep-all}
 .growth-os-automation-table thead th{background:var(--ekodi-ui-surface-raised,#f8fafc);font-weight:700}
 .growth-os-automation-table tbody th{font-weight:700}
 .growth-os-automation-table tbody th small{display:block;margin-top:4px;color:var(--admin-secondary,#66768a);font-weight:400;overflow-wrap:anywhere}
+.growth-os-automation-table tbody td small{display:block;margin-top:4px;font-size:11px;line-height:1.45;color:var(--admin-secondary,#66768a);white-space:normal;word-break:keep-all}
 .growth-os-automation-table td a{color:var(--ekodi-ui-accent,#155eef);text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
 @media(max-width:620px){.growth-os-automation-table{font-size:12px}.growth-os-automation-table :is(th,td){padding:10px 8px}}
