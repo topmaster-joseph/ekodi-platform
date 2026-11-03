@@ -4,6 +4,13 @@ compatibility_date = "2026-08-24"
 workers_dev = true
 preview_urls = false
 
+# PUBLISHING-AI-WEEKLY-001: 출판 워커의 유일한 예약 작업(매일 03:37 KST). 원고 초안은 무료 한도 안에서만.
+[triggers]
+crons = ["37 18 * * *"]
+
+[ai]
+binding = "AI"
+
 [[routes]]
 pattern = "publishing.ekodi.kr"
 zone_name = "ekodi.kr"
@@ -25,3 +32,6 @@ database_name = "ekodi-publishing"
 database_id = "658ba024-d5fa-4568-8679-07bf3f3b90ac"
 
 # 예약 준비는 크론을 새로 만들지 않고 EKODI Orchestrator 승인 스케줄러가 맡는다(§13 중복 스케줄러 금지).
+
+[vars]
+PUBLISHING_AI_FACTORY_ENABLED = "true"
