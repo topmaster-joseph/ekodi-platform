@@ -243,6 +243,13 @@ jobs:
           database_name = "ekodi-mall-staging"
           database_id = "$DB_ID"
           migrations_dir = "migrations"
+
+          # Development-only, role-specific Publisher RPC. The publisher's
+          # release flag stays false: no new sales, binding is not approval.
+          [[services]]
+          binding = "PUBLISHING_RELEASE_GATE"
+          service = "ekodi-publishing-staging"
+          entrypoint = "MallPublisherReleaseGate"
           EOF
 
       - name: Apply staging migrations
