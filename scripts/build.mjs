@@ -66,6 +66,8 @@ await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursiv
 await cp(`${root}sites/ekodi-singles/public`, `${output}singles`, { recursive: true });
 // Device-scoped opt-in notifications; permission UI and Service Worker share /notifications/ scope.
 await cp(`${root}notifications`, `${output}notifications`, { recursive: true });
+// Unified ministry news: public updates, owner editor, and consent-only subscriptions.
+await cp(`${root}sosik`, `${output}sosik`, { recursive: true });
 // EKODI Proposal Studio: local-only static draft editor, no server persistence.
 await cp(`${root}proposal`, `${output}proposal`, { recursive: true });
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });

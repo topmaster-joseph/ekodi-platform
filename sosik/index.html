@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>에코디 사역소식 | 교회·선교회</title>
+<meta name="description" content="에코디교회와 에코디선교회의 공개 승인된 사역소식, 기도와 동역 안내">
+<link rel="stylesheet" href="/sosik/style.css">
+<script src="/sosik/app.js" defer></script>
+</head>
+<body data-sosik-page="public">
+<main class="sosik-wrap">
+<section class="sosik-hero">
+  <p class="sosik-kicker">EKODI · 사역소식</p>
+  <h1>삶에서 기록한 소식, 함께 나누는 동행</h1>
+  <p>에코디교회와 에코디선교회에서 공개가 승인된 사역을 전합니다. 비공개 사역과 개인에 관한 정보는 이곳에 표시되지 않습니다.</p>
+  <div class="sosik-actions"><a href="/ekodichurch">에코디교회</a><a href="/ekodimission">에코디선교회</a><a href="/sosik/admin/">사역소식 관리</a></div>
+</section>
+<section class="sosik-panel" aria-labelledby="feedTitle">
+  <div class="sosik-row"><h2 id="feedTitle">공개 사역소식</h2><label>소속 선택 <select id="feedOrg"><option value="church">에코디교회 + 공동</option><option value="mission">에코디선교회 + 공동</option></select></label></div>
+  <p class="sosik-status" id="feedStatus" role="status">공개된 기록을 불러오고 있습니다.</p>
+  <div class="sosik-feed" id="feedList"></div>
+</section>
+<section class="sosik-panel" aria-labelledby="subscribeTitle">
+  <h2 id="subscribeTitle">사역소식 구독 신청</h2>
+  <p>교회와 선교회 명단은 분리하여 관리하며, 수신 동의가 확인된 이메일만 발송 대상이 됩니다. 구독 신청만으로 발송이 시작되지 않습니다.</p>
+  <form id="subscribeForm" class="sosik-form">
+    <label>소속 <select name="organization" required><option value="church">에코디교회</option><option value="mission">에코디선교회</option></select></label>
+    <label>받을 소식 <select name="audience" required><option value="supporters">후원 소식</option><option value="prayer">기도동역 소식</option></select></label>
+    <label>이름 <input name="name" maxlength="80" autocomplete="name"></label>
+    <label>이메일 <input name="email" type="email" required maxlength="254" autocomplete="email"></label>
+    <label class="sosik-check full"><input name="consent" type="checkbox" required><span>선택한 소속의 사역소식 이메일 수신에 동의합니다. 언제든 메일의 수신거부 링크로 철회할 수 있습니다.</span></label>
+    <label class="sosik-honey">웹사이트 <input name="website" tabindex="-1" autocomplete="off"></label>
+    <button type="submit" class="sosik-primary">수신 신청하기</button>
+  </form>
+  <p class="sosik-status" role="status" id="subscribeStatus"></p>
+  <p class="sosik-note">에코디교회(307-82-82097)는 기부금영수증 발급 가능 · 에코디선교회(120-82-72255)는 발급 불가. 신청 후에는 담당자 확인 결과를 안내합니다.</p>
+</section>
+</main>
+<footer class="sosik-footer"><div>에코디 사역소식 · <a href="/sosik/unsubscribe/">수신거부</a> · <a href="/sosik/admin/">관리</a> · <a href="/ekodimission/contact">문의</a></div></footer>
+</body></html>
