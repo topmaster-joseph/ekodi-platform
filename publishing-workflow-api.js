@@ -2,6 +2,7 @@
 import { FIELD_CATALOG } from './publishing/human/editorial-policy.js';
 import { publicationTransition, permittedAiRequest } from './publishing/workflow-policy.js';
 import { verifyCommercialRelease, verifyPublishingSubmission } from './publishing/release-entitlement.js';
+import { aiFactoryAdmin } from './publishing-ai-factory.js';
 
 const fields = new Set(FIELD_CATALOG.map(x=>x.id));
 const HASH=/^[a-f0-9]{64}$/, UUID=/^[0-9a-f-]{36}$/;
@@ -255,6 +256,10 @@ export async function handlePublishingWorkflow(req,env){
       if(!['publisher','admin'].includes(r))return error(403,'PUBLISHER_ONLY');
       const data=await db.prepare("SELECT id,title,edition_id,scheduled_at FROM publishing_workflow_projects WHERE stage='scheduled' AND scheduled_at<=? ORDER BY scheduled_at LIMIT 100").bind(now()).all();
       return result(200,{ok:true,due:data.results||[],note:'인계 후보이며 자동 판매가 아님'});
+    }
+    if(path.startsWith('/api/workflow/admin/ai-books')){
+      const res=await aiFactoryAdmin(db,req,path,u,r,(status,data)=>result(status,data));
+      if(res)return res;
     }
     // PUBLISHING-ADMIN-001 (§12): 출판 관리자 화면용 읽기 전용 요약. 권한은 출판 원장 역할로만 판단한다.
     if(path.startsWith('/api/workflow/admin/')&&req.method==='GET'){

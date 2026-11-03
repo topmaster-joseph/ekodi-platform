@@ -88,6 +88,8 @@ function allowApi(path,method){
  if(/^\/api\/admin\/reports\/(?:open|under_review|resolved|dismissed)$/.test(path)&&method==='GET')return [path.slice(4),true];
  if(/^\/api\/admin\/reports\/[0-9a-f-]{36}\/review$/i.test(path)&&method==='POST')return [path.slice(4),true];
  if(path==='/api/requests'&&method==='GET')return ['/requests',true];
+ const contactShare=path.match(/^\/api\/messages\/([0-9a-f-]{36})\/contact$/i);
+ if(contactShare&&method==='POST')return ['/messages/'+contactShare[1]+'/contact',true];
  const patterns=[
   [/^\/api\/events\/([0-9a-f-]{36})$/i,['GET'],'/events/'],
   [/^\/api\/events\/([0-9a-f-]{36})\/rsvp$/i,['POST','DELETE'],'/events/', '/rsvp'],
@@ -117,7 +119,8 @@ async function api(req,env,sub){
  // require the central paid-actions release gate; reads and consent remain free.
  const paidWrite=req.method==='POST'&&Boolean(
   sub.match(/^\/api\/events\/[0-9a-f-]{36}\/rsvp$/i)||
-  sub.match(/^\/api\/messages\/[0-9a-f-]{36}$/i));
+  sub.match(/^\/api\/messages\/[0-9a-f-]{36}$/i)||
+  sub.match(/^\/api\/messages\/[0-9a-f-]{36}\/contact$/i));
  if(paidWrite&&!paymentEnabled(env))return json({error:'paid_actions_not_launched'},503);
  if(sub==='/api/bank/orders'&&req.method==='POST'&&!bankEnabled(env))return json({error:'bank_collection_not_launched'},503);
  if(sub.match(/^\/api\/bank\/admin\/orders\/EDH-[A-F0-9]{32}\/review$/)&&!bankVerifyEnabled(env))return json({error:'bank_verification_not_launched'},503);
@@ -217,20 +220,20 @@ function singlesMuanInquiryPage(){
   row('제 목','온라인 교제·만남 커뮤니티 서비스(「에코디 동행」)의 「결혼중개업의 관리에 관한 법률」상 국내결혼중개업 신고 대상 여부 질의')
  ].join('');
  const svc=[
-  row('목적','결혼 전 성인 남녀의 교제·만남을 위한 커뮤니티. 서비스 화면·약관·광고에서 결혼 상담·알선이나 결혼 성사를 표방하지 않으며, “결혼 목적 연결” 기능을 제공하지 않음'),
+  row('목적','만 19세 이상 성인이 직접 상대를 선택하고 상호 동의하여 교제·소통하는 온라인 커뮤니티. 결혼 상대 추천·혼인 상담·결혼 성사 보장 기능은 제공하지 않으며, 실제 운영과 법령상 판단을 구분하여 질의함'),
   row('연결 방식','회원이 스스로 공개 프로필을 둘러보고 대화 요청을 보내며, 상대 회원이 수락한 경우에만 서로 대화가 가능함. 회사(운영자)가 특정 상대를 골라 소개하거나 만남을 주선하지 않음'),
   row('성인 확인','만 19세 이상 본인확인을 마친 회원만 요청·수락 가능'),
-  row('요금','<ul><li>월 이용권: 30일 50,000원(요청 기능 이용 기간)</li><li>적립금: 최초 500,000원 충전(요청 50회분), 이후 100,000원 단위 추가 충전</li><li>요청 1건당 상대가 수락한 때에 한해 요청자·수락자 각 10,000원을 적립금에서 차감(거절·무응답·탈퇴 시 차감 없음)</li></ul>'),
-  row('환불','미사용 적립금 전액 환불, 청약철회 7일, 회사 사정에 따른 중단 시 잔액 전액 환불'),
-  row('보호 조치','차단·신고·이용 횟수 제한, 신고 처리 담당자 지정, 개인정보 최소 수집(신앙 정보는 별도 동의)')
+  row('요금','<ul><li>가입비·선불 적립금 없음. 기간제 이용권: 1일 15,000원, 10일 75,000원, 20일 120,000원, 30일 150,000원</li><li>회원이 직접 선택한 상대에게 보내는 메시지 교환 요청: 요청자·수락자 각 15,000원</li><li>연락처 교환 요청: 양쪽 각 기본 150,000원(선택적 프로필 입력·공개에 따른 최대 50% 할인, 최저 75,000원)</li><li>요청할 때는 결제하지 않고 상대가 수락한 때에 양측에 각각 청구서 발행. 양측 모두 계좌이체 입금 확인 시 연결되며, 어느 한쪽이 7일 내 미결제하면 취소 및 선입금 환불</li></ul>'),
+  row('환불','적립금은 운영하지 않음. 구독권 법정 청약철회·서비스 미이용 여부에 따른 환불, 상대방 미결제로 연결이 취소되면 선입금 금액 환불. 세부 약관 및 법적 적정성 검토 중'),
+  row('보호 조치','차단·신고·요청 횟수 제한, 신고 처리, 만 19세 이상 확인, 개인정보 최소 수집(신앙 정보 별도 동의). 연락처는 양측 결제 확인 후 회원이 별도 제공 동의하고 직접 입력할 때만 전달')
  ].join('');
  const q=[
   '위 운영 방식이 「결혼중개업의 관리에 관한 법률」 제2조의 “결혼중개” 및 “결혼중개업”에 해당하여 같은 법 제3조에 따른 국내결혼중개업 신고가 필요한지 여부',
-  '특히 회원 상호 간 요청이 수락된 때에 양측으로부터 이용요금을 받는 방식이 “수수료·회비, 그 밖의 금품을 받고 결혼중개를 업으로 행하는 것”으로 판단될 수 있는지 여부, 그리고 판단에 영향을 주는 요소(결혼 목적 표방 여부, 운영자 개입 여부, 요금 구조 등)',
+  '특히 회원 직접 선택·상대 수락 후 양측 청구서 발행 및 계좌이체, 별도 명시적 동의에 따른 연락처 전달의 각 과정과 요금(구독권·메시지 교환·연락처 교환)이 “수수료·회비, 그 밖의 금품을 받고 결혼중개를 업으로 행하는 것”에 해당하는지 여부, 판단 요소(결혼 목적 표방·운영자 개입·요금 구조·연락처 전달 방식 등)',
   '신고 대상에 해당한다면, 신고에 필요한 요건(보증보험 금액, 사무소 요건, 서류 등)과 절차',
   '신고 대상이 아니라면, 서비스 소개·광고에서 피해야 할 표현이나 준수 권고 사항'
  ].map((t,i)=>'<li><span>'+'가나다라'[i]+'.</span>'+t+'</li>').join('');
- return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="description" content="EKODIBIZ가 무안군에 드리는 결혼중개업 신고 대상 여부 질의서"><title>질의서 · 결혼중개업 신고 대상 여부 · EKODIBIZ</title><link rel="stylesheet" href="/singles/styles.css"></head><body class="inquiry-body"><main id="main" class="inquiry-doc"><h1>질 의 서</h1><p class="inquiry-sub">(온라인 교제·만남 커뮤니티 서비스의 결혼중개업 신고 대상 여부)</p><table class="inquiry-table">'+head+'</table><h2>1. 질의 배경</h2><p>질의인은 결혼 전 성인(만 19세 이상)이 신앙 공동체 안에서 서로를 알아갈 수 있도록 돕는 온라인 서비스 「에코디 동행」(<a href="https://ekodi.kr/singles">ekodi.kr/singles</a>)의 개통을 준비하고 있습니다. 「결혼중개업의 관리에 관한 법률」을 준수하고자, 아래 운영 방식이 같은 법 제3조에 따른 국내결혼중개업 신고 대상에 해당하는지 질의드립니다.</p><h2>2. 서비스 운영 방식</h2><table class="inquiry-table">'+svc+'</table><h2>3. 질의 사항</h2><ol class="inquiry-q">'+q+'</ol><h2>4. 회신 요청</h2><p>개통 일정 수립을 위해 서면 또는 전자우편(<a href="mailto:joseph@ekodibiz.kr">joseph@ekodibiz.kr</a>)으로 회신해 주시면 감사하겠습니다. 필요하시면 서비스 화면과 약관 초안을 추가로 제출하겠습니다.</p><p class="inquiry-sign">2026년 10월 27일<br><strong>질의인 EKODIBIZ 대표 정 찬 균</strong></p></main></body></html>';
+ return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="description" content="EKODIBIZ가 무안군에 드리는 결혼중개업 신고 대상 여부 질의서"><title>질의서 · 결혼중개업 신고 대상 여부 · EKODIBIZ</title><link rel="stylesheet" href="/singles/styles.css"></head><body class="inquiry-body"><main id="main" class="inquiry-doc"><h1>질 의 서</h1><p class="inquiry-sub">(온라인 교제·만남 커뮤니티 서비스의 결혼중개업 신고 대상 여부)</p><table class="inquiry-table">'+head+'</table><h2>1. 질의 배경</h2><p>질의인은 결혼 전 성인(만 19세 이상)이 신앙 공동체 안에서 서로를 알아갈 수 있도록 돕는 온라인 서비스 「에코디 동행」(<a href="https://ekodi.kr/singles">ekodi.kr/singles</a>)의 개통을 준비하고 있습니다. 「결혼중개업의 관리에 관한 법률」을 준수하고자, 아래 운영 방식이 같은 법 제3조에 따른 국내결혼중개업 신고 대상에 해당하는지 질의드립니다.</p><h2>2. 서비스 운영 방식</h2><table class="inquiry-table">'+svc+'</table><h2>3. 질의 사항</h2><ol class="inquiry-q">'+q+'</ol><h2>4. 회신 요청</h2><p>개통 일정 수립을 위해 서면 또는 전자우편(<a href="mailto:joseph@ekodibiz.kr">joseph@ekodibiz.kr</a>)으로 회신해 주시면 감사하겠습니다. 필요하시면 서비스 화면과 약관 초안을 추가로 제출하겠습니다.</p><p class="inquiry-sign">2026년 11월 3일<br><strong>질의인 EKODIBIZ 대표 정 찬 균</strong></p></main></body></html>';
 }
 
 export async function routeSinglesSurface(request,env){

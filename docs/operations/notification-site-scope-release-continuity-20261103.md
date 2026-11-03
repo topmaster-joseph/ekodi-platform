@@ -1,0 +1,18 @@
+# EKODI notification site-scope release continuity
+
+Source PR: #7833
+Source commit: 033a32abbe4bab5cc2ff021e064c3a10c8f86ff2
+Official EKODI recovery PR: #7834
+Orchestrator task: orch_recovery_033a32abbe4bab5cc2ff021e064c3a10
+
+This documentation-only continuity change records the existing official release path. The original task PR remains superseded, and protected CI, the release receipt, guarded merge, staging, deployment, and production verification remain required.
+
+The source passed twenty targeted tests, full build, D1 additive migration checks, and service boundary checks. The change adds read-only per-site notification statistics with verified church and mission workspace contexts. The global administrative view keeps its existing access control. No sending configuration changes are included.
+
+Operator validation: review the exact deployed Worker version, anonymous access denial, authenticated site isolation, and desktop/mobile site service settings. Continue to block cross-site information and do not report completion from build results alone.
+
+## Latest-main recheck
+EKODI synced official recovery against main 41928da9fe96bb4b911cdde9e22b648184488ae9, yielding ec3b83ba4c8839a1402839b42251914e2ac44731. The original source SHA is still an ancestor. The prior authored build and target suite passed. This documentation-only continuation requests genuine CI on the newly synchronized head; it does not alter the runtime, permissions, or deployment approval.
+
+## Follow-up verification
+The official branch was synchronized with the latest repository main. The existing notification feature and its tests remain unchanged. The required release checks must still pass on the current branch before any deployment.

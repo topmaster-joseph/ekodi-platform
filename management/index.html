@@ -11,7 +11,7 @@
 <body>
   <header class="topbar">
     <a class="brand" href="/">EKODI <strong>경영플랫폼</strong></a>
-    <nav><a href="https://ekodi.kr/my/">My EKODI</a><a id="authLink" class="primary" href="https://ekodi.kr/auth/?site=management&amp;return_to=https%3A%2F%2Fekodi.kr%2Fmanagement%2F">로그인</a></nav>
+    <nav aria-label="EKODI 공통 계정 메뉴"></nav>
   </header>
 
   <main>
@@ -65,10 +65,21 @@
         </article>
       </div>
       <article class="chief-card">
-        <p class="eyebrow">경영비서AI</p>
-        <h2>무엇을 해결하고 싶은지 말하면 필요한 전문 AI를 연결합니다.</h2>
-        <div class="problem-links"><span>매출을 늘리고 싶어요</span><span>배달앱 메뉴를 한 번에 관리하고 싶어요</span><span>리뷰 대응이 밀렸어요</span><span>주문을 한곳에서 보고 싶어요</span></div>
-        <p class="note">외부 발송, 가격 변경, 환불, 주문 변경, 배달 배정 같은 영향 있는 행동은 공식 어댑터와 사람 승인이 없으면 실행하지 않습니다.</p>
+        <p class="eyebrow">경영비서AI · 업무 길잡이</p>
+        <h2>무엇을 해결하고 싶은지 말씀해 주세요.</h2>
+        <p>요청에 맞는 전문 AI를 찾아 현재 연결 상태를 안내합니다.</p>
+        <div class="problem-links" aria-label="업무 요청 예시">
+          <button id="exampleSales" type="button">매출을 늘리고 싶어요</button>
+          <button id="exampleMenu" type="button">배달앱 메뉴를 한 번에 관리하고 싶어요</button>
+          <button id="exampleReview" type="button">리뷰 대응이 밀렸어요</button>
+          <button id="exampleOrder" type="button">주문을 한곳에서 보고 싶어요</button>
+        </div>
+        <label class="request-label" for="managementRequest">해결하고 싶은 업무</label>
+        <textarea id="managementRequest" rows="3" maxlength="500" placeholder="예: 마케팅 홍보 콘텐츠를 만들고 싶어요"></textarea>
+        <div class="request-actions"><button id="routeRequest" type="button" class="button">관련 전문 AI 찾기</button></div>
+        <p id="requestRoutingStatus" class="note" role="status" aria-live="polite">요청을 입력하면 관련 전문 AI를 안내합니다.</p>
+        <div id="requestMatches" class="request-matches" aria-live="polite"></div>
+        <p class="note">현재는 브라우저 안에서만 단어를 분류하는 기초 안내입니다. 입력한 요청은 저장하거나 서버로 전송하지 않습니다. 외부 발송·가격 변경·환불·주문 변경 등은 여기서 실행하지 않습니다.</p>
       </article>
     </section>
   </main>

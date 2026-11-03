@@ -82,17 +82,42 @@
   function mountNavigation(){
     const nav=document.querySelector('[data-mission-nav]');
     if(!nav)return null;
-    const links=contract.links.map(item=>{
-      const a=document.createElement('a');
-      a.href=item.href;
-      a.textContent=item.label;
-      return a;
-    });
+    const primaryIndices=new Set([0,1,2,5]);
     const current=location.pathname.replace(/\/+$/,'')||'/';
-    for(const a of links){
+    const link=item=>{
+      const a=document.createElement('a');
+      a.href=item.href;a.textContent=item.label;
       const target=new URL(a.href,location.origin).pathname.replace(/\/+$/,'')||'/';
-      if(current===target||(target==='/ekodimission/activities'&&current.startsWith('/ekodimission/activities/')))a.setAttribute('aria-current','page');
-    }
+      if((current===target&&!(item.href.endsWith('#saturday')&&location.hash!=='#saturday'))||
+         (target==='/ekodimission/activities'&&current.startsWith('/ekodimission/activities/'))){
+        a.setAttribute('aria-current','page');
+      }
+      return a;
+    };
+    const links=contract.links.map(link);
+    const primary=links.filter((a,index)=>primaryIndices.has(index));
+    const secondary=links.filter((a,index)=>!primaryIndices.has(index));
+    const dropdown=(className,label,items)=>{
+      const details=document.createElement('details');details.className=className;
+      const summary=document.createElement('summary');summary.textContent=label;
+      const contents=document.createElement('div');contents.className='mission-nav-menu';
+      contents.append(...items.map(link));details.append(summary,contents);
+      details.addEventListener('keydown',e=>{if(e.key==='Escape'){details.open=false;summary.focus()}});
+      document.addEventListener('click',e=>{if(details.open&&!details.contains(e.target))details.open=false});
+      return details;
+    };
+    const more=document.createElement('details');
+    more.className='mission-nav-more';
+    const summary=document.createElement('summary');
+    summary.textContent='더보기';
+    summary.setAttribute('aria-label','추가 메뉴 열기');
+    const popup=document.createElement('div');
+    popup.className='mission-nav-menu';
+    popup.append(...secondary);
+    more.append(summary,popup);
+    more.addEventListener('keydown',event=>{if(event.key==='Escape'){more.open=false;summary.focus()}});
+    document.addEventListener('click',event=>{if(more.open&&!more.contains(event.target))more.open=false});
+    const mobile=dropdown('mission-nav-mobile','메뉴',contract.links);
     const language=document.createElement('label');
     language.className='mission-language';
     language.dataset.missionLanguageControl='';
@@ -102,7 +127,8 @@
     select.setAttribute('aria-label','언어 선택');
     select.innerHTML='<option value="ko-KR">한국어</option>';
     language.append(select);
-    nav.replaceChildren(...links,language);
+    nav.replaceChildren(...primary,more,language);
+    nav.insertBefore(mobile,language);
     return {nav,select};
   }
   // Keep the canonical Korean page and its accessible DOM free of English eyebrow text.
@@ -341,6 +367,93 @@
   window.addEventListener('pageshow',()=>{void refreshMissionAuth()});
   window.addEventListener('storage',event=>{if(event.key===CENTRAL_AUTH_KEY)void refreshMissionAuth()});
 
+  // Share only publicly visible activity pages and public archive rows.
+  function mountMissionShares(){
+    const buttonFor=(where,url,title)=>{
+      if(!where)return;
+      let button=where.querySelector('[data-mission-share-button]');
+      if(button){button.dataset.shareUrl=url;return}
+      button=document.createElement('button');
+      button.type='button';button.className='mission-share-button';
+      button.dataset.missionShareButton='';button.dataset.shareUrl=url;
+      button.textContent='공유';button.setAttribute('aria-label',title+' 공유');
+      const notice=document.createElement('span');
+      notice.className='mission-share-note';notice.setAttribute('role','status');
+      button.addEventListener('click',async()=>{
+        const link=button.dataset.shareUrl;
+        if(navigator.share){
+          try{await navigator.share({title,url:link});return}
+          catch(error){if(error.name==='AbortError')return}
+        }
+        try{await navigator.clipboard.writeText(link);notice.textContent='링크 복사됨'}
+        catch{
+          let field=where.querySelector('.mission-share-fallback');
+          if(!field){
+            field=document.createElement('input');field.className='mission-share-fallback';
+            field.setAttribute('aria-label','공유 링크');where.append(field);
+          }
+          field.value=link;field.focus();field.select();
+          try{
+            if(document.execCommand('copy')){notice.textContent='링크 복사됨';field.remove()}
+            else notice.textContent='선택한 링크를 복사하세요.';
+          }catch{notice.textContent='선택한 링크를 복사하세요.'}
+        }
+      });
+      where.append(button,notice);
+    };
+    const hashTitle=value=>{
+      let hash=2166136261;
+      for(const character of value){hash=Math.imul(hash^character.codePointAt(0),16777619)}
+      return (hash>>>0).toString(36);
+    };
+    const renderRows=()=>{
+      document.querySelectorAll('.mission-activity-row').forEach(row=>{
+        const title=row.querySelector('h3')?.textContent?.trim()||'에코디선교회 활동';
+        const date=row.dataset.meetingDate||row.querySelector('time')?.getAttribute('datetime')||'';
+        let url='';
+        if(row.dataset.meetingDate){
+          url=location.origin+'/ekodimission/activities?meeting='+encodeURIComponent(date)+'#saturday-'+date;
+        }else{
+          if(!row.id)row.id='mission-activity-'+(row.dataset.activityKey||date.replace(/[^0-9]/g,'')+'-'+hashTitle(title));
+          url=location.origin+'/ekodimission/activities#'+row.id;
+        }
+        let actions=row.querySelector('.mission-activity-row-actions');
+        if(!actions){actions=document.createElement('div');actions.className='mission-activity-row-actions';row.append(actions)}
+        buttonFor(actions,url,title);
+      });
+    };
+    renderRows();
+    let targetId='';
+    try{targetId=decodeURIComponent(location.hash.slice(1))}catch{}
+    if(targetId&&targetId.startsWith('mission-activity-')){
+      document.getElementById(targetId)?.scrollIntoView({block:'center'});
+    }
+    const historyList=document.querySelector('[data-saturday-history-list]');
+    if(historyList)new MutationObserver(renderRows).observe(historyList,{childList:true});
+    const meeting=document.querySelector('[data-mission-saturday]');
+    if(meeting){
+      const slot=meeting.querySelector('.mission-saturday-feedback-head')||meeting.querySelector('.activity-copy');
+      const update=()=>{
+        const date=meeting.dataset.meetingDate;
+        if(date)buttonFor(slot,location.origin+'/ekodimission?meeting='+encodeURIComponent(date)+'#saturday','에코디선교회 '+date+' 토요모임');
+      };
+      new MutationObserver(update).observe(meeting,{attributes:true,attributeFilter:['data-meeting-date']});
+      update();
+    }
+    if(/^\/ekodimission\/(?:activities\/|apply\/)/.test(location.pathname)||document.body.hasAttribute('data-activity-archive')){
+      // Event templates use different hero variants; every public activity needs a share action.
+      const hero=document.querySelector('main .sub-hero,main .event-hero,main .open-table-hero,main .event-intro,main > section:first-of-type')||document.querySelector('main');
+      if(hero&&!hero.querySelector('[data-share-event], [data-mission-share-button]')){
+        const slot=document.createElement('div');slot.className='mission-share-detail';
+        // Preserve the two-column event hero and reuse existing event share controls.
+        const host=hero.querySelector('.open-table-copy')||hero;
+        host.append(slot);
+        buttonFor(slot,location.origin+location.pathname,hero.querySelector('h1')?.textContent?.trim()||document.title);
+      }
+    }
+  }
+  mountMissionShares();
+
   const mounted=mountNavigation();
   void initLanguage(mounted?.select);
   // Private staff link: the platform API determines authority, never local UI state.
@@ -349,7 +462,7 @@
     const version=++presenceCheck;
     const nav=mounted?.nav;
     if(!nav)return;
-    nav.querySelector('[data-mission-presence-admin]')?.remove();
+    nav.querySelectorAll('[data-mission-presence-admin]').forEach(item=>item.remove());
     let token='';
     try{token=sessionStorage.getItem('ekodi-auth-token')||window.EKODI_MY_AUTH?.getAccessToken?.()||''}catch{}
     if(!token)return;
@@ -362,11 +475,21 @@
       link.href='/ekodimission/presence';
       link.textContent='현장 출결';
       link.dataset.missionPresenceAdmin='';
-      nav.append(link);
+      (nav.querySelector('.mission-nav-more .mission-nav-menu')||nav).append(link);
+      const mobileMenu=nav.querySelector('.mission-nav-mobile .mission-nav-menu');
+      if(mobileMenu)mobileMenu.append(link.cloneNode(true));
     }catch{}
   }
   void checkPresenceStaff();
   window.addEventListener('ekodi:auth-success',()=>void checkPresenceStaff());
   window.addEventListener('ekodi:auth-logout',()=>void checkPresenceStaff());
   window.addEventListener('focus',()=>void checkPresenceStaff());
+  // Activity public pages hydrate editorial updates without adding a second site shell.
+  const activityPage=location.pathname.replace(/\/+$/,'');
+  if(activityPage==='/ekodimission/activities'||activityPage.startsWith('/ekodimission/activities/')||activityPage.startsWith('/ekodimission/apply/')){
+    const script=document.createElement('script');
+    script.src='/ekodimission/assets/activity-editor.js';
+    script.defer=true;
+    document.head.append(script);
+  }
 })();

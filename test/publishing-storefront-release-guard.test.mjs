@@ -5,16 +5,18 @@ import { directSaleBook, authorizedPublicSaleBook } from '../books-commerce.js';
 
 const D='sha256:'+'f'.repeat(64);
 const newBook={
-  id:'BOOK-EKODI-NEW-003',title:'새로운 희년신학',author:'정찬균',
+  id:'BOOK-EKODI-NEW-003',title:'새로운 희년신학',author:'정찬균',catalogNo:'EB-NEW-003',
   status:'On Sale',published:true,
-  directSale:{enabled:true},listPrice:{amount:9900},
+  directSale:{enabled:true,fileKey:'BOOK-EKODI-NEW-003/ebook.epub'},listPrice:{amount:9900,currency:'KRW'},
   publisherRelease:{publicationId:'pub-jubilee-003',editionId:'edition-003',releaseDigest:D,
     approved:true,checkoutEnabled:true},
 };
 const cat={books:[newBook]};
 const live=channel=>({verifyPublicRelease:async req=>({
   authorized:true,state:'released',visibility:'public',checkoutEnabled:true,
-  ...req,channel,
+  ...req,channel,retailIdentityVersion:1,bookId:newBook.id,catalogNo:newBook.catalogNo,
+  title:newBook.title,author:newBook.author,fileKey:newBook.directSale.fileKey,
+  priceKrw:newBook.listPrice.amount,currency:'KRW',
 })});
 test('only matching pre-existing catalogue identities remain in legacy sale lane',async()=>{
   assert.equal(existingEditionAllowed({
@@ -47,7 +49,10 @@ test('release service must attest matching channel, digest, edition and status',
     {checkoutEnabled:false},{authorized:false},
   ]){
     const gate={verifyPublicRelease:async req=>({
-      authorized:true,state:'released',visibility:'public',checkoutEnabled:true,...req,...replacement,
+      authorized:true,state:'released',visibility:'public',checkoutEnabled:true,...req,
+      retailIdentityVersion:1,bookId:newBook.id,catalogNo:newBook.catalogNo,
+      title:newBook.title,author:newBook.author,fileKey:newBook.directSale.fileKey,
+      priceKrw:newBook.listPrice.amount,currency:'KRW',...replacement,
     })};
     assert.equal(await publisherAuthorizedForChannel(gate,newBook,'books'),false,
       JSON.stringify(replacement));
@@ -74,4 +79,24 @@ test('owner-approved English edition passes the publisher gate only with its exa
   assert.equal(existingEditionAllowed({...en,title:'Something Else'}),false);
   assert.equal(existingEditionAllowed({...en,directSale:{enabled:true,fileKey:'BOOK-EKODI-000001/ebook.epub'}}),false);
   assert.equal(existingEditionAllowed({...en,publisherRelease:newBook.publisherRelease}),false);
+});
+
+test('signed retail proof cannot be transferred to a different book, author, price, ISBN or file',async()=>{
+  const proof=live('books');
+  for(const changed of [
+    {...newBook,id:'BOOK-EKODI-NEW-004',directSale:{enabled:true,fileKey:'BOOK-EKODI-NEW-004/ebook.epub'}},
+    {...newBook,title:'무단으로 변경한 도서명'},
+    {...newBook,author:'다른 저자'},
+    {...newBook,catalogNo:'EB-OTHER-003'},
+    {...newBook,listPrice:{amount:19900,currency:'KRW'}},
+    {...newBook,listPrice:{amount:9900,currency:'USD'}},
+    {...newBook,directSale:{enabled:true,fileKey:'BOOK-EKODI-NEW-003/changed.epub'}},
+    {...newBook,directSale:{enabled:true,fileKey:'BOOK-EKODI-NEW-003/../other.epub'}},
+  ]){
+    assert.equal(await publisherAuthorizedForChannel(proof,changed,'books'),false,JSON.stringify(changed));
+  }
+  const oldShape={verifyPublicRelease:async req=>({authorized:true,state:'released',
+    visibility:'public',checkoutEnabled:true,...req})};
+  assert.equal(await publisherAuthorizedForChannel(oldShape,newBook,'books'),false,
+    'bare pointer proof without signed product metadata is never enough');
 });

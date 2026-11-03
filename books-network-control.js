@@ -11,6 +11,12 @@ export function requiresVerifiedPublisherHandoff(priorStatus, nextStatus) {
   return nextStatus === 'PUBLISHED' && priorStatus !== 'PUBLISHED';
 }
 
+// Submission requires a publisher-verified paid/chief author entitlement.
+// The Books Network personal archive does not grant this editorial capability.
+export function requiresVerifiedPublishingSubmission(nextStatus, priorStatus = '') {
+  return nextStatus === 'SUBMITTED' && priorStatus !== 'SUBMITTED';
+}
+
 function clean(value, max = 500) {
   return String(value ?? '').trim().slice(0, max);
 }
@@ -194,7 +200,11 @@ async function createTitle(request, env, auth) {
   }
   const now = new Date().toISOString();
   const requested = clean(input?.status, 20).toUpperCase();
-  const status = requested === 'SUBMITTED' ? 'SUBMITTED' : 'DRAFT';
+  if (requiresVerifiedPublishingSubmission(requested)) return json({
+    error: '출간 검토 신청은 출판사의 저자 자격·권한 검증 절차에서 진행해 주세요.',
+    code: 'PUBLISHER_SUBMISSION_REQUIRED'
+  }, 409, request, env);
+  const status = 'DRAFT';
   const result = await env.DB.prepare(`INSERT INTO books_creator_titles(owner_email,store_id,title,subtitle,author,description,cover_image,price_krw,buy_url,stage,status,created_at,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(auth.email, storeId, title, clean(input?.subtitle, 240), author, clean(input?.description, 4000), clean(input?.coverImage, 500), Math.max(0, Math.trunc(Number(input?.priceKrw)||0)), clean(input?.buyUrl, 500), clean(input?.stage || 'MANUSCRIPT', 30).toUpperCase(), status, now, now).run();
@@ -217,7 +227,11 @@ async function updateTitle(request, env, auth, id) {
     }
   }
   const requested = clean(input.status ?? current.status, 20).toUpperCase();
-  const status = requested === 'SUBMITTED' ? 'SUBMITTED' : 'DRAFT';
+  if (requiresVerifiedPublishingSubmission(requested)) return json({
+    error: '출간 검토 신청은 출판사의 저자 자격·권한 검증 절차에서 진행해 주세요.',
+    code: 'PUBLISHER_SUBMISSION_REQUIRED'
+  }, 409, request, env);
+  const status = 'DRAFT';
   const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE books_creator_titles SET store_id=?,title=?,subtitle=?,author=?,description=?,cover_image=?,price_krw=?,buy_url=?,stage=?,status=?,admin_note='',updated_at=? WHERE id=?`)
     .bind(storeId, clean(input.title ?? current.title, 200), clean(input.subtitle ?? current.subtitle, 240), clean(input.author ?? current.author, 160), clean(input.description ?? current.description, 4000), clean(input.coverImage ?? current.cover_image, 500), Math.max(0, Math.trunc(Number(input.priceKrw ?? current.price_krw)||0)), clean(input.buyUrl ?? current.buy_url, 500), clean(input.stage ?? current.stage, 30).toUpperCase(), status, now, id).run();
@@ -243,6 +257,12 @@ async function moderateTitle(request, env, auth, id) {
   // A Books Network moderation click is not a verified Publisher release receipt.
   // Existing PUBLISHED rows remain untouched, but a new public state requires
   // the independent Publisher contract, membership, edition and audio gates.
+  if (requiresVerifiedPublishingSubmission(status, current.status)) {
+    return json({
+      error: '출간 심사 접수는 출판사의 검증된 저자·구독·계약 절차에서만 가능합니다.',
+      code: 'PUBLISHER_SUBMISSION_REQUIRED'
+    }, 409, request, env);
+  }
   if (requiresVerifiedPublisherHandoff(current.status, status)) {
     return json({
       error: '판매 공개는 출판사의 검증된 판본·저자 계약·구독 자격·오디오북 검수 및 공식 인계 이후에만 가능합니다.',

@@ -46,6 +46,37 @@ test('Workspace API has one deployment owner while Invest keeps an independent v
   assert.doesNotMatch(invest,/guarded-worker-release\.mjs/);
 });
 
+test('KIS investment dependency changes cannot silently bypass Workspace deployment and validation',async()=>{
+  const [canonical,invest]=await Promise.all([
+    read('.github/workflows/release-messenger-investment-functional.yml'),
+    read('.github/workflows/release-invest-personalization.yml')
+  ]);
+  const required=[
+    'invest-broker-readonly-adapter.js',
+    'invest-broker-readonly-contract.js',
+    'invest-broker-readonly-snapshot.js',
+    'invest-owner-mfa.js',
+    'invest-step-up.js',
+    'invest-stage2-paper-preset.js',
+    'invest-strategy-lab.js',
+    'test/invest-broker-readonly-adapter.test.mjs',
+    'test/invest-broker-balance-history.test.mjs',
+    'test/invest-owner-mfa.test.mjs',
+    'test/invest-step-up.test.mjs',
+    'test/invest-stage2-paper-preset.test.mjs',
+    'test/invest-strategy-lab.test.mjs'
+  ];
+  for(const [name,source] of [['Workspace',canonical],['Invest',invest]]){
+    const triggers=triggerBlock(source);
+    for(const path of required){
+      assert.ok(triggers.split(String.fromCharCode(10)).some(line=>line.trim()==="- '"+path+"'"),name+' missing change trigger for '+path);
+    }
+    assert.ok(source.split(String.fromCharCode(10)).some(line=>line.trim().startsWith('node --test ') && line.includes('test/invest-broker-readonly-adapter.test.mjs')),name+' must execute broker adapter tests');
+  }
+  assert.ok(canonical.includes('production-workspace:'),'the guarded Workspace deployment lane must remain owned centrally');
+  assert.ok(!invest.includes('production-workspace:'),'Invest validation must not create a second deployment owner');
+});
+
 test('canonical Shared Site workflow owns the shared-site manifest',async()=>{
   const workflow=await read('.github/workflows/deploy-site-core.yml');
   assert.match(workflow,/name: Deploy EKODI Shared Site Core/);
