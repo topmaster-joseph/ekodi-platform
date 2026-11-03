@@ -39,7 +39,9 @@ function createPage({loggedIn=true,modulesSelected=null}={}){
 }
 
 test('management uses provider-neutral login and supported institution type',()=>{
-  assert.match(html,/>로그인<\/a>/);
+  assert.match(html,/<nav aria-label="EKODI 공통 계정 메뉴"><\/nav>/);
+  assert.match(html,/무료로 시작하기<\/a>/);
+  assert.doesNotMatch(html,/id="authLink"/);
   assert.doesNotMatch(html,/Google 로그인/);
   assert.match(html,/<option value="institution">기관<\/option>/);
   assert.doesNotMatch(html,/<option value="organization">기관<\/option>/);
@@ -76,6 +78,7 @@ test('logout removes specialist links and does not expose member controls',async
   runInContext('logout()',p.context);
   assert.equal(p.get('memberModuleLinks').children.length,0);
   assert.equal(p.get('memberApp').hidden,true);
-  assert.equal(p.get('authLink').textContent,'로그인');
+  assert.match(runInContext('authUrl()',p.context),/^https:\/\/ekodi\.kr\/auth\/\?site=management&return_to=/);
+  assert.equal(p.get('memberApp').hidden,true);
   assert.equal(p.sessionStorage.getItem('ekodi-management-session'),null);
 });
