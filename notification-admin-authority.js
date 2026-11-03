@@ -7,10 +7,15 @@ const JWT_RE=/^[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}$/;
 const ADMIN_ROLES=new Set(['tenant_admin','workspace_admin','store_owner','owner','admin','client_admin','senior_pastor']);
 // Do not infer cross-site ownership from a human-readable brand, URL, email,
 // administrator title, or a browser-supplied site identifier.
-const TENANT_TOPICS=Object.freeze({
-  'ekodi-church':'church',
-  'ekodichurch':'church',
-  'ekodimission':'mission'
+// Both tenant slug and site_key originate in the authenticated server RPC.
+// Confirmed current production registry pairs: church/church, mission/mission,
+// cheonggye/cgma and ekodimall/mall. Do not infer topics from request paths.
+const TENANT_TOPIC_BINDINGS=Object.freeze({
+  'ekodi-church':Object.freeze({topic:'church',site:'church'}),
+  'ekodichurch':Object.freeze({topic:'church',site:'church'}),
+  'ekodimission':Object.freeze({topic:'mission',site:'mission'}),
+  'cheonggye':Object.freeze({topic:'community',site:'cgma'}),
+  'ekodimall':Object.freeze({topic:'mall',site:'mall'})
 });
 function bearer(request){
   const auth=String(request.headers.get('authorization')||'');
@@ -43,14 +48,16 @@ export async function notificationAdminAuthority(request,env,{transport=fetch}={
     ]);
     if(!userResponse.ok||!contextResponse.ok)return null;
     const [user,contexts]=await Promise.all([userResponse.json(),contextResponse.json()]);
-    if(!user?.id||!user?.email||(user.email_confirmed_at==null&&user.confirmed_at==null)
-      ||!Array.isArray(contexts))return null;
+    if(!user?.id||!user?.email||!user.email_confirmed_at||!Array.isArray(contexts))return null;
     const allowedTopics=new Set();
     for(const context of contexts){
-      if(!context?.tenant_id||!ADMIN_ROLES.has(String(context.authorization_role||'').toLowerCase()))continue;
-      const key=String(context.tenant||'').trim().toLowerCase();
-      const topic=Object.hasOwn(TENANT_TOPICS,key)?TENANT_TOPICS[key]:null;
-      if(topic)allowedTopics.add(topic);
+      if(!context?.tenant_id||context.authority_scope!=='tenant'
+        ||context.operating_model!=='customer-site'
+        ||!ADMIN_ROLES.has(String(context.authorization_role||'').toLowerCase()))continue;
+      const slug=String(context.tenant||'').trim().toLowerCase();
+      const site=String(context.site||'').trim().toLowerCase();
+      const binding=Object.hasOwn(TENANT_TOPIC_BINDINGS,slug)?TENANT_TOPIC_BINDINGS[slug]:null;
+      if(binding?.site===site)allowedTopics.add(binding.topic);
     }
     return allowedTopics.size?{kind:'site',allowedTopics:[...allowedTopics]}:null;
   }catch{
