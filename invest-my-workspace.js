@@ -163,6 +163,116 @@ function sparkline(series,bench){
  for(const [arr,color,width,dash] of [[bench,'#b9c6bf',1.5,'4 3'],[series,'#164a3b',2.2,'']]){if(!arr.length)continue;const pl=document.createElementNS(ns,'polyline');pl.setAttribute('points',pts(arr));pl.setAttribute('fill','none');pl.setAttribute('stroke',color);pl.setAttribute('stroke-width',String(width));if(dash)pl.setAttribute('stroke-dasharray',dash);svg.append(pl)}
  return svg;
 }
+const STRATEGY_DETAILS=[
+ ['overview','전략 개요'],['comparison','전략 비교'],
+ ['validation','검증 결과'],['risk','리스크 분석'],['data','데이터 조건']
+];
+function textNode(tag,value,className){
+ const node=document.createElement(tag);
+ if(className)node.className=className;
+ node.textContent=value;return node;
+}
+function strategyTable(headings,rows){
+ const wrap=document.createElement('div');wrap.className='strategy-matrix';
+ const table=document.createElement('table');
+ const thead=document.createElement('thead'),tr=document.createElement('tr');
+ for(const label of headings)tr.append(textNode('th',label));
+ thead.append(tr);table.append(thead);
+ const tbody=document.createElement('tbody');
+ for(const values of rows){
+  const row=document.createElement('tr');
+  for(const value of values)row.append(textNode('td',String(value==null?'—':value)));
+  tbody.append(row);
+ }
+ table.append(tbody);wrap.append(table);
+ return wrap;
+}
+function setStrategyDetailPane(key,{focus=false}={}){
+ const active=STRATEGY_DETAILS.some(([id])=>id===key)?key:'overview';
+ for(const button of document.querySelectorAll('#strategyDetailTabs [data-strategy-detail]')){
+  const on=button.dataset.strategyDetail===active;
+  button.setAttribute('aria-selected',String(on));button.tabIndex=on?0:-1;
+  if(on&&focus)button.focus();
+ }
+ for(const [id] of STRATEGY_DETAILS){
+  const panel=el('strategyPane-'+id);
+  panel.hidden=id!==active;
+ }
+}
+function setupStrategyDetailTabs(){
+ const host=el('strategyLab');
+ const header=host.querySelector('header');
+ const nav=document.createElement('nav');
+ nav.id='strategyDetailTabs';nav.className='strategy-detail-tabs';nav.setAttribute('role','tablist');
+ nav.setAttribute('aria-label','AI 전략 연구 세부 메뉴');
+ const controls=el('labRefresh').closest('.controls');
+ host.insertBefore(nav,controls);
+ for(const [id,label] of STRATEGY_DETAILS){
+  const button=document.createElement('button');
+  button.type='button';button.id='strategyTab-'+id;
+  button.dataset.strategyDetail=id;button.setAttribute('role','tab');
+  button.setAttribute('aria-controls','strategyPane-'+id);button.textContent=label;
+  button.addEventListener('click',()=>setStrategyDetailPane(id));
+  nav.append(button);
+ }
+ nav.addEventListener('keydown',event=>{
+  const keys=['ArrowRight','ArrowLeft','Home','End'];
+  if(!keys.includes(event.key))return;
+  const buttons=[...nav.querySelectorAll('[data-strategy-detail]')];
+  const index=buttons.findIndex(b=>b.getAttribute('aria-selected')==='true');
+  const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:
+   (index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;
+  setStrategyDetailPane(buttons[next].dataset.strategyDetail,{focus:true});event.preventDefault();
+ });
+ const panes=new Map();
+ for(const [id,label] of STRATEGY_DETAILS){
+  const pane=document.createElement('section');
+  pane.id='strategyPane-'+id;pane.className='strategy-pane';
+  pane.setAttribute('role','tabpanel');pane.setAttribute('aria-labelledby','strategyTab-'+id);
+  pane.append(textNode('h3',label,'strategy-panel-title'));
+  host.append(pane);panes.set(id,pane);
+ }
+ const intro=header.nextElementSibling;
+ if(intro&&intro.classList.contains('notice'))panes.get('overview').append(intro);
+ panes.get('overview').append(el('labBenchmark'),el('labCards'));
+ panes.get('comparison').append(textNode('p','검증 구간 성과를 한눈에 비교합니다. 합성 시장 데이터이며 실제 수익이 아닙니다.','strategy-notice'));
+ const compare=document.createElement('div');compare.id='labComparisonTable';panes.get('comparison').append(compare);
+ const validation=document.createElement('div');validation.id='labValidationDetails';panes.get('validation').append(validation);
+ const risk=document.createElement('div');risk.id='labRiskDetails';panes.get('risk').append(risk);
+ panes.get('data').append(el('labAssumptions'),el('labUncertainty'));
+ panes.get('data').append(textNode('p','본 연구의 가상 데이터는 실제 계좌·실시간 시세·매매 권고 또는 실거래 승인 근거가 아닙니다.','strategy-notice'));
+ // Status and recalculation action stay visible regardless of the selected research detail tab.
+ setStrategyDetailPane('overview');
+}
+function renderStrategyDetails(r){
+ const rows=r.strategies.map(item=>{
+  const o=item.outOfSample||{};
+  return [item.label,pct(o.totalReturn),pctPlain(o.maxDrawdown),
+   o.sharpe==null?'—':o.sharpe.toFixed(2),
+   Math.round(item.costs).toLocaleString('ko-KR')+'원',
+   item.acceptance.passed?'통과':'미통과'];
+ });
+ el('labComparisonTable').replaceChildren(strategyTable(
+  ['전략','검증 구간 수익률','최대 낙폭','샤프','거래비용','채택 기준'],rows));
+ const validation=el('labValidationDetails');validation.replaceChildren();
+ validation.append(textNode('p','시계열 앞 '+Math.round(r.split.trainFraction*100)+'% 구간으로 설정하고 뒤쪽 데이터를 검증합니다. 아래 결과로 실거래가 승인되지 않습니다.','strategy-notice'));
+ for(const item of r.strategies){
+  const section=document.createElement('div');section.className='strategy-notice';
+  section.append(textNode('strong',item.label+' · '+(item.acceptance.passed?'검증 통과':'검증 미통과')));
+  const failures=item.acceptance.failures||[];
+  section.append(textNode('p',failures.length?failures.map(f=>f.label).join(' · '):'현재 연구 조건에서 별도 실패 항목 없음'));
+  validation.append(section);
+ }
+ const risk=el('labRiskDetails');risk.replaceChildren();
+ risk.append(textNode('p','가상 시장의 상승·하락·횡보·급락·회복 환경에서 계산된 최대 낙폭입니다. 실제 투자위험은 이보다 클 수 있습니다.','strategy-notice'));
+ const scenarios=[...new Set(r.strategies.flatMap(item=>(item.stress||[]).map(x=>x.label)))];
+ const riskRows=r.strategies.map(item=>[item.label,...scenarios.map(label=>{
+  const sample=item.stress.find(x=>x.label===label);
+  return sample?'−'+pctPlain(sample.maxDrawdown):'—';
+ })]);
+ risk.append(strategyTable(['전략',...scenarios],riskRows));
+}
+
 function labCard(s,r){
  const card=document.createElement('article');card.className='lab-card';card.dataset.best=String(r.bestByOutOfSampleSharpe===s.id);
  const h=document.createElement('h3');h.textContent=s.label;
@@ -255,6 +365,7 @@ async function loadStrategyLab(){
   const b=r.benchmark.outOfSample||{};
   setText('labBenchmark','비교 기준 · '+r.benchmark.label+': 검증 구간 수익률 '+pct(b.totalReturn)+', 최대 낙폭 '+pctPlain(b.maxDrawdown)+', 샤프 '+(b.sharpe==null?'—':b.sharpe.toFixed(2)));
   el('labCards').replaceChildren(...r.strategies.map(s=>labCard(s,r)));
+  renderStrategyDetails(r);
   setText('labUncertainty',r.uncertainty);
   setText('labStatus','계산 시각 '+kstTime(r.generatedAt)+' · 결과는 실거래 승인 조건에 반영되지 않습니다.');touchUpdated();
  }catch{setText('labStatus','연구 결과를 표시하지 못했습니다.');labLoaded=false}
@@ -890,6 +1001,7 @@ function download(){
  a.href=url;a.download='ekodi-invest-local-report.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function init(){
+ setupStrategyDetailTabs();
  for(const id of ['capital','monthly','horizon','target','loss','cash','concentration','goal','mode'])el(id).addEventListener('change',render);
  el('calculate').addEventListener('click',render);el('reset').addEventListener('click',reset);el('holdingForm').addEventListener('submit',addHolding);
  el('demo').addEventListener('click',demo);el('clear').addEventListener('click',()=>{holdings=[];isDemo=false;render()});el('download').addEventListener('click',download);
