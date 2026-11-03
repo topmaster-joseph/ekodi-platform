@@ -18,6 +18,7 @@ import { handleBooksDistributionRequest } from './books-distribution-control.js'
 import { handleBooksPipelineRequest } from './books-pipeline-control.js';
 import { handleBooksRoyaltyRequest } from './books-royalty-control.js';
 import { handleChurchReportsRequest, runChurchReportSchedule } from './church-reports-control.js';
+import { handleSosikRequest } from './sosik-api.js';
 import { handleAffiliateRequest } from './affiliate-control.js';
 import { handleOfferRegistryRequest } from './offer-registry-control.js';
 import { handleMallAdminRequest } from './mall-admin-control.js';
@@ -68,6 +69,10 @@ function disabledPasswordResponse(kind = 'admin') {
 export default {
   async fetch(request, env, ctx) {
     const path = new URL(request.url).pathname;
+
+    if (path === '/api/sosik' || path.startsWith('/api/sosik/')) {
+      return handleSosikRequest(request, env);
+    }
 
     if (path.startsWith('/api/insurance/admin')) {
       if (!insuranceAdminEnabled(env)) return disabledInsuranceAdminResponse();
