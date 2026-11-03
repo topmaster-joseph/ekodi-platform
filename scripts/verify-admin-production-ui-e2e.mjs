@@ -373,10 +373,10 @@ await verifyCommandConsoleRoundTrip();
 async function verifyAiOpsStageWorkspace() {
   // Real production UI assets; synthetic read-only session. No Provider writes.
   const root=page.locator('#aiOpsPanel');
-  const stages=['overview','providers','sites','reports','command'];
-  const targets={overview:'#aiOpsStageSummary',providers:'[data-ekodi-ai-provider-center]',sites:'.ai-ops-observe',reports:'.ai-evolution-block',command:'#aiChiefChat'};
+  const stages=['overview','providers','sites','reports','command','eval'];
+  const targets={overview:'#aiOpsStageSummary',providers:'[data-ekodi-ai-provider-center]',sites:'.ai-ops-observe',reports:'.ai-evolution-block',command:'#aiChiefChat',eval:'#aiEvalLabPanel'};
   await root.locator('[data-aiops-stage-tab]').first().waitFor({state:'visible',timeout:12000});
-  if(await root.locator('[data-aiops-stage-tab]').count()!==5)throw new Error('AI Ops primary tab count is not five');
+  if(await root.locator('[data-aiops-stage-tab]').count()!==stages.length)throw new Error('AI Ops primary tab count differs from the six verified stage contracts');
   for(const stage of stages){
     await root.locator('[data-aiops-stage-tab="'+stage+'"]').click();
     await page.waitForFunction(key=>{
@@ -386,6 +386,12 @@ async function verifyAiOpsStageWorkspace() {
         && panel.querySelector('[data-aiops-stage-tab="'+key+'"]')?.getAttribute('aria-pressed')==='true';
     },stage,{timeout:6000});
     await root.locator(targets[stage]).first().waitFor({state:'visible',timeout:12000});
+    if(stage==='eval'){
+      // The sixth tab is an existing delegated, read-only AI evaluation view.
+      // It must be present and scoped to this stage, not overlap the other five.
+      await root.locator('#aiEvalLabContent').waitFor({state:'visible',timeout:12000});
+      if(await root.locator('#aiOpsStageSummary').isVisible())throw new Error('AI Ops Eval Lab overlaps overview stage');
+    }
     if(stage==='sites'){
       const detail=root.locator('#aiSelectedDetail');
       if(await detail.isVisible())throw new Error('Site detail exposed before selecting a site');
@@ -410,14 +416,14 @@ async function verifyAiOpsStageWorkspace() {
       minWidth:Math.min(...tabs.map(tab=>tab.getBoundingClientRect().width)),
       minHeight:Math.min(...tabs.map(tab=>tab.getBoundingClientRect().height))};
   });
-  if(mobile.left < -2 || mobile.right > mobile.viewport+2 || mobile.count!==5
+  if(mobile.left < -2 || mobile.right > mobile.viewport+2 || mobile.count!==stages.length
     || mobile.navWidth<200 || mobile.minWidth<80 || mobile.minHeight<40)
     throw new Error('AI Ops mobile tab layout clipped: '+JSON.stringify(mobile));
   await root.locator('[data-aiops-stage-tab="overview"]').click();
   await page.screenshot({path:path.join(artifactsDir,'aiops-mobile-390.png'),fullPage:false});
   await page.setViewportSize({width:1440,height:1000});
   await page.screenshot({path:path.join(artifactsDir,'aiops-desktop-1440.png'),fullPage:false});
-  console.log('[PROD-E2E] aiops: five stages, selected detail, keyboard and 390px mobile verified');
+  console.log('[PROD-E2E] aiops: six stages (including Eval Lab), selected detail, keyboard and 390px mobile verified');
 }
 
 let selectedWorkArea = null;
