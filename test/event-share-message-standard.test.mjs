@@ -12,7 +12,7 @@ const paths=[
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 function formatter(path){
-  const text=read(path);
+  const text=read(path).replace(/\r\n/g,'\n');
   const start=text.indexOf('function formatActivityShare(');
   assert.ok(start>0,path+' formatter exists');
   const end=text.indexOf('\n}\n',start);
@@ -32,6 +32,9 @@ test('every EKODI event share adapter uses the same multiline invitation contrac
     const format=formatter(path);
     assert.equal(format(...inputs),expected,path);
     assert.equal(format('에코디선교회','에코디선교회 토요모임','2026-11-07',inputs[3],'신청하기'),expected,path+' never repeats organization');
+    assert.equal(format('에코디선교회','에코디선교회 에코디선교회 2026-11-07 (토) 토요모임 신청하기 신청하기','2026-11-07',inputs[3],'신청하기'),expected,path+' collapses repeated organization, date, weekday and CTA');
+    assert.equal(format('에코디선교회','토요모임 신청하기','2026-11-07',inputs[3],'신청하기'),expected,path+' never repeats action');
+    assert.equal(format('에코디선교회','토요모임 2026.11.07','2026-11-07',inputs[3],'신청하기'),expected,path+' never repeats date');
     assert.equal(format('서남권 국립의대 소통센터','정책 간담회','2026-10-15','https://ekodi.kr/seonammedi/?item=i42','일정 보기'),
       '서남권 국립의대 소통센터 정책 간담회 일정 보기\n2026-10-15 (목)\nhttps://ekodi.kr/seonammedi/?item=i42',path);
     assert.equal(format('에코디교회','교제 모임','','https://ekodi.kr/ekodichurch','자세히 보기'),

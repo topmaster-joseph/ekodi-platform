@@ -370,11 +370,11 @@
 // SITE-EVENT-SHARE-001: canonical invitation copy; never duplicate the URL.
 function formatActivityShare(organization,activity,date,url,action='신청하기'){
   const clean=value=>String(value??'').replace(/[\r\n\t\u2028\u2029]+/g,' ').replace(/\s+/g,' ').trim();
-  const org=clean(organization);
+  const org=clean(organization),cta=clean(action);
   let name=clean(activity);
-  if(name===org)name='';
-  else if(name.startsWith(org+' '))name=name.slice(org.length+1);
-  const heading=[org,name,clean(action)].filter(Boolean).join(' ');
+  while(org&&(name===org||name.startsWith(org+' '))){
+    name=name===org?'':name.slice(org.length).trim();
+  }
   const match=clean(date).match(/^(\d{4})[-.](\d{1,2})[-.](\d{1,2})(?:\D|$)/);
   let dayLabel='';
   if(match){
@@ -385,6 +385,17 @@ function formatActivityShare(organization,activity,date,url,action='신청하기
       dayLabel=iso+' ('+['일','월','화','수','목','금','토'][day.getUTCDay()]+')';
     }
   }
+  // Event dates and CTA labels belong in their own positions, not repeated in the title.
+  if(dayLabel){
+    const iso=dayLabel.slice(0,10);
+    name=name.replaceAll('('+iso+')','').replaceAll(iso,'')
+      .replaceAll(iso.replaceAll('-','.'),'')
+      .replace(/\([일월화수목금토]\)/g,' ').replace(/\s+/g,' ').trim();
+  }
+  while(cta&&(name===cta||name.endsWith(' '+cta))){
+    name=name===cta?'':name.slice(0,-cta.length).trim();
+  }
+  const heading=[org,name,cta].filter(Boolean).join(' ');
   return [heading,dayLabel,clean(url)].filter(Boolean).join('\n');
 }
 

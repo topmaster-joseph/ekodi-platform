@@ -114,14 +114,15 @@ test('devotion assets ship without inline script or style (CSP self-only)', () =
 
 test('shared renderer keeps canonical Scripture visible and merges response sections', () => {
   const js = fs.readFileSync(new URL('devotion.js', bibleDir), 'utf8');
-  for (const id of ['poem','song','image','questions','family','prayer']) assert.ok(js.includes(`id: '${id}'`), id);
+  for (const id of ['poem','song','prayer','questions','family']) assert.ok(js.includes(`id: '${id}'`), id);
+  assert.equal(js.includes("id: 'image'"),false,'illustration tab must not render');
   for (const former of ['passage','action','mine']) assert.equal(js.includes(`id: '${former}'`), false, former);
   assert.match(js, /renderPassage\(scriptureBlock, data\)/);
   assert.match(js, /panels\.get\(tabId\)\.hidden = !on/);
   assert.match(js, /data-date-mode|dateMode === 'query'/);
-  assert.match(js, /const authoredScore = String\(a\.song\.abc\|\|''\)\.trim\(\)/);
-  assert.match(js, /const scoreAbc = authoredScore \|\| dailyDevotionMelody/);
-  assert.match(js, /if\(scoreAbc\)renderScore\(score,scoreAbc\)/);
+  assert.doesNotMatch(js, /renderDevotionScore|dailyDevotionMelody|renderDailyDevotionArt|dv-score/);
+  assert.match(js, /panelHead\(panel,'묵상기도','prayer'\)/);
+  assert.match(js, /el\('p','dv-prayer',a\.prayer\)/);
   assert.match(js, /setupMrPlayer\(a\.song\)/);
   assert.match(js, /renderAdminEditor\(data\)/);
 });
