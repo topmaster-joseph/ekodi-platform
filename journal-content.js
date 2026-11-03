@@ -1,3 +1,5 @@
+import { approvedJournalPhoto } from './journal/media-policy.js';
+
 // Historical post text names the original Journal host; built from parts so no new subdomain literal is introduced.
 const LEGACY_JOURNAL_HOST = ['journal', 'ekodi', 'kr'].join('.');
 export const JOURNAL_META = Object.freeze({
@@ -208,6 +210,7 @@ export function toPublicSummary(post) {
     readMinutes: post.readMinutes,
     featured: post.featured,
     imageVariant: post.imageVariant,
+    coverPhoto: approvedJournalPhoto(post.coverPhoto),
     url: `${JOURNAL_META.canonicalOrigin}/p/${encodeURIComponent(post.slug)}`,
   };
 }
