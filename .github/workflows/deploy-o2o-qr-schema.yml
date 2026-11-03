@@ -1,0 +1,154 @@
+name: EKODI O2O Tenant QR Schema Release
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/deploy-o2o-qr-schema.yml"
+      - "supabase/migrations/*o2o_tenant_operator_qr.sql"
+      - "test/o2o-tenant-operator.test.mjs"
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: "Orchestrator-issued exact recovery branch"
+        required: true
+        type: string
+      release_task_id:
+        description: "Exact EKODI Orchestrator task ID"
+        required: true
+        type: string
+      expected_main_sha:
+        description: "Protected main SHA to promote"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-o2o-schema-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'protected-release' }}
+  cancel-in-progress: false
+
+env:
+  MIGRATION: supabase/migrations/20261103165945_o2o_tenant_operator_qr.sql
+  DEV_PROJECT: lxcxwbdwwojjkgybbqii
+  PROD_PROJECT: renzehysxirjilvdxacv
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Validate additive schema and least-privilege contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$MIGRATION"
+          ! grep -Eiq '(^|[[:space:]])(drop[[:space:]]+table|truncate[[:space:]]+table|drop[[:space:]]+column)' "$MIGRATION"
+          node scripts/validate-supabase-public-grants.mjs
+          node --test test/o2o-tenant-operator.test.mjs test/o2o-hub.test.mjs test/o2o-routing-reservation.test.mjs
+
+  promote:
+    needs: validate
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_SHA: ${{ inputs.expected_main_sha }}
+      RELEASE_BRANCH: ${{ inputs.release_branch_ref }}
+      RELEASE_TASK: ${{ inputs.release_task_id }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify immutable promotion SHA and orchestrator authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          [[ "$RELEASE_BRANCH" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]]
+          [[ "$RELEASE_TASK" =~ ^orch_[a-zA-Z0-9_-]+$ ]]
+          test "${RELEASE_BRANCH##*/}" = "$RELEASE_TASK"
+          branch_enc="$(printf '%s' "$RELEASE_BRANCH" | jq -sRr @uri)"
+          task_enc="$(printf '%s' "$RELEASE_TASK" | jq -sRr @uri)"
+          curl --fail-with-body -sS --retry 2 --max-time 20 \
+            "https://ekodi.kr/api/orchestrator/release-receipt?taskId=$task_enc&branchRef=$branch_enc" |
+            jq -e --arg task "$RELEASE_TASK" --arg branch "$RELEASE_BRANCH" \
+              '.ok == true and .authorized == true and .authority == "ekodi-orchestrator" and .taskId == $task and .branchRef == $branch' >/dev/null
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
+      - name: Load protected database credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-${TOKEN_B:-${TOKEN_C:-${TOKEN_D:-}}}}"
+          if [ -z "$token" ]; then echo 'Protected management credential unavailable'; exit 1; fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Promote DEV first and verify before PROD
+        shell: bash
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"
+          trap 'rm -rf "$scratch"' EXIT
+          query() {
+            local project="$1" file="$2" read_only="$3" out="$4" code
+            jq -Rs --argjson read_only "$read_only" '{query:.,read_only:$read_only}' "$file" > "$scratch/body.json"
+            code="$(curl -sS --retry 2 --max-time 75 -o "$out" -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$project/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' --data-binary @"$scratch/body.json")"
+            if [ "$code" != 201 ]; then echo "Schema query refused HTTP $code"; exit 1; fi
+          }
+          cat > "$scratch/prereq.sql" <<'SQL'
+          select
+            to_regclass('public.tenants') is not null as tenants,
+            to_regprocedure('public.current_site_activity_contexts()') is not null as contexts,
+            exists(select 1 from pg_extension where extname='pgcrypto') as crypto;
+          SQL
+          cat > "$scratch/proof.sql" <<'SQL'
+          select
+            (select count(*)=2 and bool_and(c.relrowsecurity)
+              from pg_catalog.pg_class c
+              join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+              where n.nspname='public' and c.relname in
+                ('o2o_campaign_links','o2o_campaign_audit')) as rls,
+            to_regprocedure('public.o2o_operator_snapshot(uuid)') is not null as snapshot_rpc,
+            to_regprocedure('public.o2o_operator_issue(uuid,text,text,text,timestamptz)') is not null as issue_rpc,
+            to_regprocedure('public.o2o_operator_revoke(uuid)') is not null as revoke_rpc,
+            to_regprocedure('public.o2o_public_resolve(text)') is not null as resolve_rpc,
+            not has_table_privilege('anon','public.o2o_campaign_links','select') as anon_table_denied,
+            not has_table_privilege('authenticated','public.o2o_campaign_links','select') as user_table_denied,
+            not has_table_privilege('authenticated','public.o2o_campaign_audit','insert') as audit_write_denied,
+            not has_function_privilege('anon','public.o2o_operator_issue(uuid,text,text,text,timestamptz)','execute') as anon_issue_denied,
+            not has_function_privilege('anon','public.o2o_operator_revoke(uuid)','execute') as anon_revoke_denied,
+            has_function_privilege('authenticated','public.o2o_operator_issue(uuid,text,text,text,timestamptz)','execute') as operator_issue_available,
+            has_function_privilege('anon','public.o2o_public_resolve(text)','execute') as anon_resolve_available;
+          SQL
+          for project in "$DEV_PROJECT" "$PROD_PROJECT"; do
+            query "$project" "$scratch/prereq.sql" true "$scratch/prereq.json"
+            jq -e 'length == 1 and (.[0] | all(.[]; . == true))' "$scratch/prereq.json" >/dev/null
+          done
+          query "$DEV_PROJECT" "$MIGRATION" false "$scratch/dev-applied.json"
+          query "$DEV_PROJECT" "$scratch/proof.sql" true "$scratch/dev-proof.json"
+          jq -e 'length == 1 and (.[0] | all(.[]; . == true))' "$scratch/dev-proof.json" >/dev/null
+          echo 'DEV QR RLS, authorization RPCs and revoked table access verified.'
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
+          query "$PROD_PROJECT" "$MIGRATION" false "$scratch/prod-applied.json"
+          query "$PROD_PROJECT" "$scratch/proof.sql" true "$scratch/prod-proof.json"
+          jq -e 'length == 1 and (.[0] | all(.[]; . == true))' "$scratch/prod-proof.json" >/dev/null
+          echo 'PROD QR RLS, authorization RPCs and revoked table access verified.'
+          echo "Schema blob $(git hash-object "$MIGRATION")"
