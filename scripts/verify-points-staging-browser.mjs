@@ -54,7 +54,7 @@ try{
           {type:'assertText',text:'신청했습니다'},
           {type:'assertText',text:ref},
           {type:'click',selector:'#pointsTabProgress'},
-          {type:'waitFor',selector:'#pointsMissionList .record',timeoutMs:15000},
+          {type:'waitFor',selector:'#pointsMissionList .record strong:has-text("승인 대기")',timeoutMs:15000},
           {type:'assertText',text:'승인 대기'},
           {type:'screenshot',name:`member-${name}`},
         ],
