@@ -374,7 +374,8 @@ jobs:
           verify_rpc store_public_storefront '{"p_slug":"jadam"}' /tmp/storefront-proof.json
           verify_rpc store_user_site_public_profile '{"p_slug":"jadam"}' /tmp/user-site-profile-proof.json
           verify_rpc store_user_site_public_snapshot '{"p_slug":"jadam"}' /tmp/user-site-snapshot-proof.json
-          verify_rpc mission_activity_page_public_snapshot '{"p_workspace_slug":"ekodimission"}' /tmp/mission-activity-editor-proof.json '"ok":true'
+          verify_rpc mission_activity_page_public_snapshot '{"p_workspace_slug":"ekodimission"}' /tmp/mission-activity-editor-proof.json
+          jq -e '.ok == true and (.items | type == "array")' /tmp/mission-activity-editor-proof.json >/dev/null
 
           if [ "${SUPABASE_SCHEMA_PREFLIGHT_MODE:-}" = 'public-rpc-proof' ]; then
             echo 'Space Supabase production schema contract verified read-only through six live public RPCs; schema mutation remained disabled.'
@@ -417,7 +418,7 @@ jobs:
             asset_code=$(curl -sS -o /tmp/mission-activity-editor.js -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimission/assets/activity-editor.js' || true)
             list_code=$(curl -sS -o /tmp/mission-activity-editor-list.html -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimission/activities' || true)
             if [ "$api_code" = '200' ] && [ "$asset_code" = '200' ] && [ "$list_code" = '200' ] &&
-               grep -Fq '"ok":true' /tmp/mission-activity-editor-public.json &&
+               jq -e '.ok == true and (.items | type == "array")' /tmp/mission-activity-editor-public.json >/dev/null &&
                grep -Fq 'data-mission-activity-edit' /tmp/mission-activity-editor.js &&
                grep -Fq 'data-activity-key=' /tmp/mission-activity-editor-list.html; then
               echo 'Mission public activity snapshot, browser editor and stable activity keys verified in production.'
