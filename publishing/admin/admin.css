@@ -24,3 +24,6 @@
 .padmin-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
 .padmin-form input{flex:1 1 220px;min-height:40px;padding:0 10px;border:1px solid #ccd;border-radius:8px;font:inherit}
 .padmin-form select{min-height:40px;padding:0 8px;border:1px solid #ccd;border-radius:8px;font:inherit}
+.padmin-ai-ch{margin:14px 0;padding:12px;border:1px solid #e3dccd;border-radius:10px;background:#fffdf8}
+.padmin-ai-title{width:100%;min-height:38px;padding:0 10px;margin:6px 0;border:1px solid #ccd;border-radius:8px;font:inherit;font-weight:600}
+.padmin-ai-body{width:100%;box-sizing:border-box;padding:10px;border:1px solid #ccd;border-radius:8px;font:15px/1.8 "Noto Serif KR",serif}

@@ -1,4 +1,5 @@
 import { handlePublishingWorkflow, prepareScheduledPublishing } from './publishing-workflow-api.js';
+import { aiFactoryTick } from './publishing-ai-factory.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { handlePrivateReleaseAdmin } from './publishing/human/private-release-api.js';
 import { runConfiguredPublishingReleaseTick } from './publishing/human/private-release-scheduler.js';
@@ -67,6 +68,8 @@ export default {
   async scheduled(controller,env,ctx){
     // Due approved work moves into a protected outbox, never directly to public sale.
     if(env?.PUBLISH_DB)await prepareScheduledPublishing(env);
+    // PUBLISHING-AI-WEEKLY-001: 같은 일일 예약 작업에서 무료 한도 안의 AI 협업 초안을 이어 쓴다(별도 스케줄러 없음).
+    if(env?.PUBLISH_DB){const ai=aiFactoryTick(env).catch(()=>null);if(ctx?.waitUntil)ctx.waitUntil(ai);else await ai;}
     if(env?.PUBLISHING_PRIVATE_RELEASE_ENABLED!=='true')return;
     const scheduledTime=controller?.scheduledTime;
     const nowIso=new Date(Number.isFinite(scheduledTime)?scheduledTime:Date.now()).toISOString();

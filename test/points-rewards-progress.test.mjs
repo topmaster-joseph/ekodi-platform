@@ -97,3 +97,32 @@ test('progress route is read-only, scoped to Person and enabled site, and hides 
   assert.match(src, /\.select\("rule_id,adapter,status,submitted_at"\)/);
   assert.doesNotMatch(src, /\.insert\(|\.update\(|\.delete\(|\.rpc\(/);
 });
+
+test('the KST Monday-to-Sunday week excludes Sunday and future evidence',()=>{
+  const result=buildPointProgress({now,adapters,rules,claims:[
+    claim('approved','2026-11-01T14:59:59Z'), // Sunday 23:59 KST
+    claim('approved','2026-11-01T15:00:00Z'), // Monday 00:00 KST
+    claim('approved','2026-11-02T15:10:00Z'), // Tuesday 00:10 KST
+    claim('pending','2026-11-02T15:20:00Z'),
+    claim('rejected','2026-11-02T15:25:00Z'),
+    claim('approved','2026-11-04T06:00:00Z'), // future Wednesday
+  ]});
+  assert.equal(result.week.start_date,'2026-11-02');
+  assert.equal(result.week.days.length,7);
+  assert.equal(result.week.active_days,2);
+  assert.equal(result.week.approved_activities,2);
+  assert.equal(result.week.pending_activities,1);
+  assert.equal(result.week.days[0].approved,1);
+  assert.equal(result.week.days[1].approved,1);
+  assert.equal(result.week.days[1].pending,1);
+  assert.equal(result.week.days[2].approved,0);
+});
+
+test('disabled and low-trust evidence never enters weekly recognition',()=>{
+  const result=buildPointProgress({now,rules:[
+    ...rules,{rule_id:'self',points:5,enabled:true}
+  ],adapters:[...adapters,adapter('self','devotion_self_report','low_trust')],
+    claims:[claim('approved','2026-11-02T15:10:00Z','self','devotion_self_report')]});
+  assert.equal(result.week.approved_activities,0);
+  assert.equal(result.week.active_days,0);
+});

@@ -18,6 +18,7 @@ on:
       - 'publishing/**'
       - 'publishing-worker.js'
       - 'publishing-workflow-api.js'
+      - 'publishing-ai-factory.js'
       - 'migrations/202610291000_publishing_workflow.sql'
       - 'wrangler.publishing.toml'
       - 'deploy/manifests/publishing.worker.json'
@@ -56,6 +57,7 @@ jobs:
           set -euo pipefail
           node --check publishing-worker.js
           node --check publishing-workflow-api.js
+          node --check publishing-ai-factory.js
           node --check publishing/app.js
           node --check publishing/studio/app.js
           node --check publishing/upaper/app.js

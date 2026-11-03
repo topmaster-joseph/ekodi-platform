@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0d223c">
+  <title>에코디 홍보광장 | EKODI Digital Square</title>
+  <meta name="description" content="에코디 생태계의 공개 행사, 공동체 소식과 상품을 한눈에 확인하고 참여하는 홍보광장.">
+  <link rel="stylesheet" href="/promotion.css">
+  <script type="module" src="/promotion.js"></script>
+</head>
+<body class="promotion-page">
+  <main class="promotion-wrap" id="promotionMain">
+    <section class="promotion-intro" aria-labelledby="promotionTitle">
+      <div class="promotion-topline">
+        <span class="promotion-eyebrow">EKODI DIGITAL SQUARE</span>
+        <a class="promotion-home" href="/">에코디 홈</a>
+      </div>
+      <h1 id="promotionTitle">에코디 홍보광장</h1>
+      <p>모임과 이야기, 지역의 소식을 한눈에. 공개된 에코디 활동에서 새로운 만남으로 연결됩니다.</p>
+      <div class="promotion-toolbar">
+        <nav class="promotion-filters" aria-label="홍보물 분류">
+          <button type="button" class="promotion-filter is-active" data-category="all" aria-pressed="true">전체</button>
+          <button type="button" class="promotion-filter" data-category="event" aria-pressed="false">행사·모임</button>
+          <button type="button" class="promotion-filter" data-category="notice" aria-pressed="false">소식·이야기</button>
+          <button type="button" class="promotion-filter" data-category="product" aria-pressed="false">상품</button>
+        </nav>
+        <div class="promotion-tools">
+          <label class="promotion-site-label" for="promotionSite">게시 사이트</label>
+          <select id="promotionSite" aria-label="게시 사이트 선택"><option value="all">모든 사이트</option></select>
+          <button type="button" id="promotionRefresh" class="promotion-tool">새로고침</button>
+          <button type="button" id="promotionScreen" class="promotion-tool promotion-screen-toggle">전광판 모드</button>
+        </div>
+      </div>
+    </section>
+    <section class="promotion-board-section" aria-labelledby="promotionBoardTitle">
+      <div class="promotion-board-heading">
+        <div>
+          <span class="promotion-small">PUBLIC CONTENT ONLY</span>
+          <h2 id="promotionBoardTitle">지금 공개된 홍보물</h2>
+        </div>
+        <p id="promotionCount" class="promotion-count" aria-live="polite">공개 정보를 확인하고 있습니다.</p>
+      </div>
+      <div id="promotionBoard" class="promotion-board" aria-busy="true">
+        <p class="promotion-empty">홍보물을 불러오는 중입니다.</p>
+      </div>
+    </section>
+    <div class="promotion-bottom">
+      <p id="promotionStatus" class="promotion-status" role="status" aria-live="polite">공개 승인된 콘텐츠만 표시합니다.</p>
+      <p id="promotionPageNumber" class="promotion-page-number"></p>
+    </div>
+    <p class="promotion-footnote">게시물은 각 사이트의 공개 원본과 연결됩니다. 수정·게시 승인·비공개 설정은 원본 사이트의 권한을 따릅니다.</p>
+  </main>
+</body>
+</html>

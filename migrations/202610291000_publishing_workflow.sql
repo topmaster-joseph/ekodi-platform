@@ -88,3 +88,18 @@ CREATE TABLE IF NOT EXISTS publishing_workflow_role_invites (
  invited_by TEXT NOT NULL, invited_at TEXT NOT NULL,
  claimed_by TEXT, claimed_at TEXT
 );
+-- PUBLISHING-AI-WEEKLY-001: 주 1권 AI 협업 초안(무료 모델) · 저자 감수 대기. 원고는 이 비공개 DB에만 둔다.
+CREATE TABLE IF NOT EXISTS publishing_ai_books (
+ id TEXT PRIMARY KEY, week INTEGER NOT NULL, genre TEXT NOT NULL, title TEXT NOT NULL,
+ plan_json TEXT NOT NULL DEFAULT '{}',
+ status TEXT NOT NULL CHECK(status IN ('drafting','author_review','approved','discarded')),
+ approved_by TEXT, approved_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_publishing_ai_books_week ON publishing_ai_books(week);
+CREATE TABLE IF NOT EXISTS publishing_ai_chapters (
+ book_id TEXT NOT NULL, number INTEGER NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL DEFAULT '',
+ body TEXT NOT NULL DEFAULT '', status TEXT NOT NULL CHECK(status IN ('pending','drafted','edited')),
+ updated_at TEXT NOT NULL, PRIMARY KEY(book_id, number),
+ FOREIGN KEY(book_id) REFERENCES publishing_ai_books(id)
+);
+CREATE TABLE IF NOT EXISTS publishing_ai_usage (day TEXT PRIMARY KEY, neurons INTEGER NOT NULL DEFAULT 0);

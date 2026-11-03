@@ -186,7 +186,10 @@ test('unapproved NEW ebook stays invisible at quote, no charge or entitlement ev
   assert.equal(db.raw.prepare('SELECT COUNT(*) n FROM books_entitlements').get().n,0);
 
   const approved={verifyPublicRelease:async req=>({
-    authorized:true,state:'released',visibility:'public',checkoutEnabled:true,...req})};
+    authorized:true,state:'released',visibility:'public',checkoutEnabled:true,...req,
+    retailIdentityVersion:1,bookId:book.id,catalogNo:book.catalogNo,
+    title:book.title,author:book.author,fileKey:book.directSale.fileKey,
+    priceKrw:book.listPrice.amount,currency:'KRW'})};
   const ready={...env,PUBLISHING_RELEASE_GATE:approved};
   assert.equal((await quote(ready,new Request('https://ekodi.kr/books/api/commerce/quote'),book.id)).status,200);
   const pending=await createOrder(ready,signedIn(),{bookId:book.id,consent:true});

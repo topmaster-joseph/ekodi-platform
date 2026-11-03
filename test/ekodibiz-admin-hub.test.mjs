@@ -54,7 +54,7 @@ test('site Finance sidebar links directly to four tax operations under finance o
   assert.match(script, /if\(key==='finance'&&isBizWorkspace&&!service&&canSection\('tax',role\)/);
   assert.match(script, /const taxMenu=Array\.isArray\(ADMIN_HUB\?\.taxMenu\)/);
   assert.match(script, /link\.href=item\.href/);
-  assert.match((await workspaceAdminPage().text()), /data-ekodi-admin-menu-model="common-plus-site"/);
+  assert.match((await workspaceAdminPage().text()), /data-ekodi-admin-menu-model="single-task-menu"/);
   assert.doesNotMatch(script, /\['tax','세금 · 증빙'\]/);
   assert.match(script, /isBizWorkspace&&section==='tax'/); // legacy workspace deep link kept
 });
