@@ -52,3 +52,11 @@ test('safety, privacy and responsive layout are explicit', () => {
   assert.match(css,/@media\(max-width:420px\)/);
   assert.doesNotMatch(css,/@import/);
 });
+
+test('strict production CSP supports quiz feedback and progress without inline style mutation', () => {
+  assert.doesNotMatch(js,/\.style\./);
+  assert.match(js,/setAttribute\('aria-valuenow'/);
+  assert.match(js,/classList\.toggle\('is-incorrect'/);
+  assert.match(css,/#progressBar\[aria-valuenow="14"\] #progressFill\{width:100\.0000%\}/);
+  assert.match(css,/\.answer-feedback\.is-incorrect\{color:/);
+});
