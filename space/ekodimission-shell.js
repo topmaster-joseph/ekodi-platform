@@ -441,11 +441,14 @@
       update();
     }
     if(/^\/ekodimission\/(?:activities\/|apply\/)/.test(location.pathname)||document.body.hasAttribute('data-activity-archive')){
-      const hero=document.querySelector('main .sub-hero,main .event-hero');
-      if(hero){
+      // Event templates use different hero variants; every public activity needs a share action.
+      const hero=document.querySelector('main .sub-hero,main .event-hero,main .open-table-hero,main .event-intro,main > section:first-of-type')||document.querySelector('main');
+      if(hero&&!hero.querySelector('[data-share-event], [data-mission-share-button]')){
         const slot=document.createElement('div');slot.className='mission-share-detail';
-        hero.append(slot);
-        buttonFor(slot,location.origin+location.pathname,'에코디선교회 활동');
+        // Preserve the two-column event hero and reuse existing event share controls.
+        const host=hero.querySelector('.open-table-copy')||hero;
+        host.append(slot);
+        buttonFor(slot,location.origin+location.pathname,hero.querySelector('h1')?.textContent?.trim()||document.title);
       }
     }
   }
