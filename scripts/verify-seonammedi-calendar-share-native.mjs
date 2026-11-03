@@ -28,8 +28,8 @@ const FIXTURE=Object.freeze({
 });
 const date=FIXTURE.eventStart.slice(0,10);
 const shareLink=origin+roots[origin]+'?schedule='+FIXTURE.id+'&date='+date;
-const shareText='서남권 국립의대 소통센터\n'+FIXTURE.title+'\n일정: 2026.10.15 18:00';
-const legacyShareText='서남권 국립의대 소통센터 일정\n'+FIXTURE.title+'\n2026.10.15 18:00';
+const shareText='서남권 국립의대 소통센터 '+FIXTURE.title+' 일정 보기\n2026-10-15 (목)\n'+shareLink;
+const legacyShareText='서남권 국립의대 소통센터\n'+FIXTURE.title+'\n일정: 2026.10.15 18:00';
 const acceptedShareTexts=expectMode==='predeploy'?[shareText,legacyShareText]:[shareText];
 const profiles=[
   {name:'desktop',width:1440,height:900,isMobile:false},
@@ -102,14 +102,15 @@ try{
       must(fixtureRequests.includes('2026-10'),'fixture_calendar_not_requested');
       await article.locator('button.seonam-calendar-copy').click();
       const copied=await page.evaluate(()=>navigator.clipboard.readText());
-      const observedShareText=acceptedShareTexts.find(text=>copied===text+'\n일정 확인: '+shareLink);
+      const observedShareText=acceptedShareTexts.find(text=>copied===text||(text===legacyShareText&&copied===text+'\n일정 확인: '+shareLink));
       row.clipboardMatches=Boolean(observedShareText);
       row.shareFormat=observedShareText===shareText?'current':observedShareText===legacyShareText?'legacy':'unknown';
       must(row.clipboardMatches,'title_time_url_clipboard_mismatch');
       await article.locator('button.seonam-calendar-share').click();
       const nativeArgs=await page.evaluate(()=>window.__ekodiRecordedShare||null);
-      row.webShareArgumentsMatch=Boolean(nativeArgs?.title?.includes(FIXTURE.title)
-        &&nativeArgs.text===observedShareText&&nativeArgs.url===shareLink);
+      row.webShareArgumentsMatch=Boolean(nativeArgs?.text===observedShareText
+        &&(observedShareText===shareText?(!nativeArgs.title&&!nativeArgs.url)
+          :(nativeArgs.title?.includes(FIXTURE.title)&&nativeArgs.url===shareLink)));
       must(row.webShareArgumentsMatch,'web_share_arguments_mismatch');
       row.fixtureCalendar=fixtureRequests.slice();
       row.mutatingRequestsBlocked=blockedMutations.length;
