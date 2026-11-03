@@ -76,7 +76,7 @@ test('Church QR director camera and resizable program require real deployment ca
  assert.match(w,/Verified director QR camera and overlay sizing assets in production/);
 });
 
-test('PR #114 worship-first approved layout requires source and live PC/mobile multilingual Chromium proof',async()=>{
+test('Church-approved layout requires five-viewport multilingual Chromium production proof',async()=>{
  const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
  for(const contract of [
   'church-homepage-layout.css',
@@ -87,7 +87,7 @@ test('PR #114 worship-first approved layout requires source and live PC/mobile m
   "if grep -Eiq 'meet",
   'Verify approved homepage on native Chromium across nine languages and PC/mobile',
   "const locales=['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id']",
-  "{name:'desktop',width:1440,height:900},{name:'mobile',width:390,height:844}",
+  "{name:'mobile-320',width:320,height:740},{name:'mobile-390',width:390,height:844},{name:'tablet-768',width:768,height:1000},{name:'desktop-1366',width:1366,height:900},{name:'desktop-1440',width:1440,height:900}",
   "const release=process.env.CHURCH_SOURCE_SHA",
   "initial.weeklyHidden,true",
   "initial.member,true",
