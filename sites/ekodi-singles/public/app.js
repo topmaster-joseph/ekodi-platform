@@ -61,6 +61,9 @@ function errorText(error){
  if(error?.message==='passes_discontinued')return '기간권은 구독권으로 바뀌었습니다.';
  if(error?.message==='already_connected')return '이미 메시지를 주고받을 수 있게 연결된 회원입니다.';
  if(error?.message==='contact_already_shared')return '이미 연락처 교환이 수락된 회원입니다.';
+ if(error?.message==='contact_exchange_not_completed')return '두 회원의 결제가 모두 확인되기 전에는 연락처를 공유할 수 없습니다.';
+ if(error?.message==='contact_share_consent_required')return '연락처를 공유하려면 별도의 명시적 동의가 필요합니다.';
+ if(error?.message==='invalid_contact')return '휴대전화번호 또는 이메일 주소만 입력해 주세요.';
  if(error?.message==='request_exists')return '같은 종류의 요청이 이미 대기 중입니다.';
  if(error?.message==='pilot_only')return '지금은 시범 운영 중이라 지정된 계정만 이용할 수 있습니다. 공개 개통 후 이용해 주세요.';
  if(error?.message==='join_order_already_open')return '이미 발급된 가입비 주문이 있습니다. 아래 입금·확인 내역을 확인해 주세요.';
@@ -236,7 +239,7 @@ async function showDiscover(h){
   card.append(text('span',p.broad_region||'지역 비공개','pill'));card.append(text('h3',p.display_name||'동행 회원'));paragraph(card,p.intro||'');
   const shown=PROFILE_FIELDS.filter(f=>f.detail&&typeof p.details?.[f.key]==='string'&&p.details[f.key]);
   if(shown.length){const dl=document.createElement('dl');dl.className='profile-facts';for(const f of shown)dl.append(text('dt',f.label),text('dd',p.details[f.key]));card.append(dl)}
-  if(typeof p.public_link==='string'&&p.public_link.startsWith('https://')){
+  if(!state.paidModel&&typeof p.public_link==='string'&&p.public_link.startsWith('https://')){
    const link=text('a','회원이 공유한 명함·프로필 링크 (공식 인증 아님)','outline');
    link.href=p.public_link;link.target='_blank';link.rel='noopener noreferrer';link.referrerPolicy='no-referrer';card.append(link);
   }
@@ -304,7 +307,14 @@ async function showPaidMessages(h){
  h.append(text('h3','연결된 회원'));
  appendList(h,d.connections||[],(card,c)=>{
   card.append(text('h3',c.display_name));
-  paragraph(card,c.contact_shared?'연락처 교환 성사 · 메시지 속 연락처가 그대로 보입니다.':'연락처 교환 전 · 메시지 속 연락처는 자동으로 가려집니다.');
+  paragraph(card,c.contact_shared?'양쪽 결제가 확인되었습니다. 각자의 연락처는 본인이 명시적으로 공유할 때에만 상대에게 전달됩니다.':'연락처 교환 전 · 메시지 속 연락처는 자동으로 가려집니다.');
+  if(c.contact_shared)card.append(button('내 연락처 공유하기',async()=>{
+   const contact=prompt('상대에게 공유할 본인의 휴대전화번호 또는 이메일을 입력해 주세요. (입력 전까지 공개되지 않습니다.)');
+   if(!contact?.trim())return;
+   if(!confirm('연락처 제3자 제공 동의\n받는 사람: '+c.display_name+' (선택한 동행 회원)\n제공 목적: 상호 동의한 회원 간 자율적인 연락\n제공 항목: 입력하신 휴대전화번호 또는 이메일\n상대방 보유·이용 기간: 상대방이 삭제할 때까지 (이미 전달한 연락처는 회수할 수 없습니다)\n동의 거부권: 동의하지 않아도 다른 서비스는 이용할 수 있으며 연락처 전달만 제한됩니다.\n\n'+contact.trim()+'를 공유하시겠습니까?'))return;
+   try{await api('/messages/'+c.id+'/contact',{method:'POST',body:{contact:contact.trim(),share_consent:true}});notice(card,'연락처가 상대방에게 전달되었습니다. 대화 내용에서 확인할 수 있습니다.');}
+   catch(e){notice(card,errorText(e))}
+  },'outline'));
   card.append(button('대화 내용 보기',messageThread(card,c.id)));
   card.append(button('메시지 보내기',async()=>{
    const body=prompt('상대에게 보낼 메시지 (최대 1000자)');if(!body?.trim())return;
