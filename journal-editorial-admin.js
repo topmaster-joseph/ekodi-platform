@@ -45,7 +45,7 @@ export async function mountJournalEditor(host,{getToken}={}) {
   host.className = 'journal-editorial';
   host.innerHTML = `
     <h3>에코디 저널 원고 편집·사진 검토</h3>
-    <p class="journal-editorial-note">기존 공개 글을 불러와 원고와 사진 메타데이터를 편집하고 검토 파일을 만듭니다. 이 화면은 서버 저장·게시·권리 승인을 실행하지 않습니다.</p>
+    <p class="journal-editorial-note">기존 공개 글과 비공개 초안을 불러와 원고와 사진 메타데이터를 편집합니다. 서버 초안 저장은 중앙 최고관리자 인증과 저장소가 준비된 경우에만 허용하며, 게시·권리 승인은 실행하지 않습니다.</p>
     <p data-journal-auth-status role="status">관리자 권한을 확인하고 있습니다.</p>
     <div data-journal-workspace hidden>
       <label>편집할 글 <select data-journal-select aria-label="편집할 글"><option value="">새 원고 작성</option></select></label>
@@ -61,7 +61,8 @@ export async function mountJournalEditor(host,{getToken}={}) {
       </form>
       <div class="journal-editorial-actions">
         <button type="button" class="secondary" data-journal-preview>미리보기</button>
-        <button type="button" class="primary" data-journal-export>검토용 원고 파일 저장</button>
+        <button type="button" class="primary" data-journal-save disabled>서버에 비공개 초안 저장</button>
+        <button type="button" class="secondary" data-journal-export>검토용 원고 파일 내보내기</button>
         <a href="/journal/" target="_blank" rel="noopener noreferrer">공개 저널 확인</a>
       </div>
       <p class="journal-editorial-note">사진은 저작권·초상권·개인정보 검토 전까지 항상 <strong>승인 대기</strong>로 기록합니다. 공개 발행은 기존 EKODI PR·승인·배포 절차에서 별도로 진행합니다.</p>
@@ -75,6 +76,7 @@ export async function mountJournalEditor(host,{getToken}={}) {
   const form=host.querySelector('[data-journal-form]');
   const status=host.querySelector('[data-journal-status]');
   const preview=host.querySelector('[data-journal-preview-content]');
+  const saveButton=host.querySelector('[data-journal-save]');
   const token=String(getToken?.()||'');
   if(!token){authStatus.textContent='관리자 로그인이 필요합니다.';return}
   let session;
@@ -97,7 +99,24 @@ export async function mountJournalEditor(host,{getToken}={}) {
     const data=await response.json();
     posts=Array.isArray(data.posts)?data.posts.filter(x=>typeof x.slug==='string'):[];
   }catch(error){authStatus.textContent=error.message;return}
+  const drafts=new Map();
+  try{
+    const response=await fetch('/api/journal/editorial/drafts',{
+      headers:{authorization:'Bearer '+token,accept:'application/json'},
+      credentials:'same-origin',cache:'no-store'
+    });
+    if(response.ok){
+      const data=await response.json();
+      for(const row of data.drafts||[]){
+        if(typeof row.slug==='string'&&Number.isSafeInteger(row.revision))drafts.set(row.slug,row);
+      }
+      saveButton.disabled=false;
+    }
+  }catch{ /* Private drafts not yet provisioned: remain review-export-only. */ }
   for(const post of posts)select.add(new Option(post.title||post.slug,post.slug));
+  for(const row of drafts.values()){
+    if(!posts.some(post=>post.slug===row.slug))select.add(new Option(row.title+' (비공개 초안)',row.slug));
+  }
   authStatus.textContent='최고관리자 권한 확인 완료 · 공개 글 '+posts.length+'편 연결';
   workspace.hidden=false;
   let current=null;
@@ -109,29 +128,75 @@ export async function mountJournalEditor(host,{getToken}={}) {
     if(!slug){clear();return}
     clear();
     try{
-      status.textContent='기존 글을 불러오는 중입니다.';
-      const response=await fetch('/journal/api/posts/'+encodeURIComponent(slug),{cache:'no-store'});
-      if(!response.ok)throw new Error('원고를 읽을 수 없습니다.');
-      const data=await response.json();
+      status.textContent='원고를 불러오는 중입니다.';
+      let shown=null;
+      if(posts.some(post=>post.slug===slug)){
+        const response=await fetch('/journal/api/posts/'+encodeURIComponent(slug),{cache:'no-store'});
+        if(!response.ok)throw new Error('공개 원고를 읽을 수 없습니다.');
+        const data=await response.json();
+        if(!data.post||data.post.slug!==slug)throw new Error('원고 식별자 불일치');
+        current=data.post;
+        shown=current;
+      }
+      if(drafts.has(slug)){
+        const response=await fetch('/api/journal/editorial/drafts/'+encodeURIComponent(slug),{
+          headers:{authorization:'Bearer '+token},credentials:'same-origin',cache:'no-store'
+        });
+        if(!response.ok)throw new Error('비공개 초안을 읽을 수 없습니다.');
+        const data=await response.json();
+        if(data.draft?.packet?.article?.slug!==slug)throw new Error('초안 식별자 불일치');
+        drafts.set(slug,data.draft);
+        shown=data.draft.packet.article;
+      }
       if(generation!==selection)return;
-      if(!data.post||data.post.slug!==slug)throw new Error('원고 식별자 불일치');
-      current=data.post;
+      if(!shown)throw new Error('원고를 찾을 수 없습니다.');
       for(const [key,value] of Object.entries({
-        slug:current.slug,title:current.title,excerpt:current.excerpt,
-        body:journalBodyToText(current.body),
-        photoSrc:current.coverPhoto?.src||'',photoAlt:current.coverPhoto?.alt||'',
-        photoCaption:current.coverPhoto?.caption||'',photoCredit:current.coverPhoto?.credit||''
+        slug:shown.slug,title:shown.title,excerpt:shown.excerpt,
+        body:journalBodyToText(shown.body),
+        photoSrc:shown.coverPhoto?.src||'',photoAlt:shown.coverPhoto?.alt||'',
+        photoCaption:shown.coverPhoto?.caption||'',photoCredit:shown.coverPhoto?.credit||''
       }))form.elements.namedItem(key).value=value;
       form.elements.namedItem('slug').readOnly=true;
       preview.hidden=true;
-      status.textContent='현재 공개판 기준일: '+String(current.updatedAt||'미확인')+'. 편집해도 서버에는 바로 저장되지 않습니다.';
-    }catch(error){status.textContent=error.message}
+      status.textContent=drafts.has(slug)
+        ? '비공개 초안 v'+drafts.get(slug).revision+' · 수정해도 공개되지 않습니다.'
+        : '공개 원고 기준일: '+String(current?.updatedAt||'미확인')+' · 초안 저장은 공개 발행이 아닙니다.';
+    }catch(error){if(generation===selection)status.textContent=error.message}
   });
   const packet=()=>createJournalReviewPacket(current,{
     slug:getField(form,'slug'),title:getField(form,'title'),
     excerpt:getField(form,'excerpt'),body:getField(form,'body'),
     photoSrc:getField(form,'photoSrc'),photoAlt:getField(form,'photoAlt'),
     photoCaption:getField(form,'photoCaption'),photoCredit:getField(form,'photoCredit'),
+  });
+  saveButton.addEventListener('click',async()=>{
+    if(saveButton.disabled)return;
+    let draft;
+    try{draft=packet()}catch(error){status.textContent='입력 확인: '+error.message;return}
+    const slug=draft.article.slug;
+    saveButton.disabled=true;
+    status.textContent='중앙 인증을 통해 비공개 초안을 저장하고 있습니다.';
+    try{
+      const response=await fetch('/api/journal/editorial/drafts',{
+        method:'POST',
+        headers:{authorization:'Bearer '+token,'content-type':'application/json',accept:'application/json'},
+        credentials:'same-origin',cache:'no-store',
+        body:JSON.stringify({
+          packet:draft,
+          expectedRevision:drafts.get(slug)?.revision||0,
+          sourceRevision:current?.updatedAt||null
+        })
+      });
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(response.status===409?'다른 수정본과 충돌했습니다. 원고를 다시 불러오세요.':data.error||'비공개 초안 저장 실패');
+      if(!data.draft||data.draft.slug!==slug)throw new Error('저장 응답 검증 실패');
+      drafts.set(slug,data.draft);
+      if(![...select.options].some(option=>option.value===slug))select.add(new Option(draft.article.title+' (비공개 초안)',slug));
+      select.value=slug;
+      form.elements.namedItem('slug').readOnly=true;
+      status.textContent='서버 비공개 초안 v'+data.draft.revision+' 저장 완료 · 공개 발행 및 사진 권리 승인은 수행하지 않았습니다.';
+    }catch(error){status.textContent='저장 실패: '+error.message}
+    finally{saveButton.disabled=false}
   });
   host.querySelector('[data-journal-preview]').addEventListener('click',()=>{
     try{const draft=packet();renderPreview(preview,draft);preview.hidden=false;status.textContent='미리보기 완료 · 공개 발행은 아직 이루어지지 않았습니다.'}
