@@ -37,7 +37,8 @@ export const ADMIN_MENUS = Object.freeze([
   { id: 'site-class-preparing', group: 'sites', siteClass: true, labels: { ko: '준비·비공개', en: 'Preparing & Private' }, sections: ['sites-preparing'] },
   { id: 'menu-templates', group: 'sites', labels: { ko: '관리자 메뉴 템플릿', en: 'Admin Menu Templates' }, sections: ['menu-templates'] },
   { id: 'control', group: 'ai', labels: { ko: 'AI 운영센터', en: 'AI Operations Center' }, sections: ['aiops'] },
-  { id: 'growth-intelligence', group: 'ai', labels: { ko: '통합 성장·지속가능성', en: 'Growth & Sustainability' }, sections: ['growth-os', 'search-visibility'] },
+  // 검색노출·홍보 현황 (owner request 2026-11-03): one menu, four top tabs.
+  { id: 'growth-intelligence', group: 'ai', labels: { ko: '검색노출·홍보 현황', en: 'Search & Promotion Status' }, sections: ['search-visibility', 'promotion-autopost', 'promotion-channels', 'growth-os'] },
   { id: 'automation-policy', group: 'ai', labels: { ko: 'AI 정책·사용 등급', en: 'AI Policies & Usage Tiers' }, sections: ['ai-settings', 'ai-membership'] },
   { id: 'engines', group: 'services', labels: { ko: '서비스 엔진', en: 'Service Engines' }, sections: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'] },
   { id: 'platform-content', group: 'services', labels: { ko: '플랫폼 콘텐츠 서비스', en: 'Platform Content Services' }, sections: ['books', 'common-scripture', 'devotional', 'social', 'work'] },
@@ -92,8 +93,11 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'security', group: 'accounts', icon: 'S', labels: { ko: '보안·인증 기록', en: 'Security & Identity Records' }, risk: 'high' },
   { id: 'admins', group: 'accounts', icon: '♙', labels: { ko: '관리자 계정·권한', en: 'Administrator Accounts & Access' }, risk: 'high', superAdminOnly: true },
   { id: 'social-accounts', group: 'accounts', icon: '↗', labels: { ko: '소셜계정 연결 현황', en: 'Social Account Connections' }, superAdminOnly: true },
-  { id: 'growth-os', group: 'ai', icon: '↗', labels: { ko: 'EKODI Growth OS', en: 'EKODI Growth OS' }, superAdminOnly: true },
-  { id: 'search-visibility', group: 'ai', icon: '◎', labels: { ko: '검색노출·홍보 관리', en: 'Search Visibility & Promotion' }, superAdminOnly: true },
+  { id: 'growth-os', group: 'ai', icon: '↗', labels: { ko: '성장 종합 (Growth OS)', en: 'Growth OS Summary' }, superAdminOnly: true },
+  { id: 'search-visibility', group: 'ai', icon: '◎', labels: { ko: '검색노출 현황', en: 'Search Visibility' }, superAdminOnly: true },
+  // Aliases of the MarketingAI '게시 · 홍보' console and the channel registry (promotion-status-admin.js).
+  { id: 'promotion-autopost', group: 'ai', icon: '↗', delegateSection: 'marketing-ai', labels: { ko: '홍보 자동게시 현황', en: 'Promotion Autopost Status' } },
+  { id: 'promotion-channels', group: 'ai', icon: '◌', delegateSection: 'social-accounts', labels: { ko: '홍보 채널 연결', en: 'Promotion Channel Connections' } },
   { id: 'points', group: 'services', icon: 'P', labels: { ko: '사이트별 활동포인트', en: 'Site Activity Points' }, superAdminOnly: true, risk: 'high' },
   { id: 'ai-membership', group: 'ai', icon: '◈', labels: { ko: '사용자 AI 등급·한도', en: 'User AI Tiers & Limits' }, risk: 'high' },
 
@@ -179,7 +183,7 @@ const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'users-access':'access',security:'security',admins:'access','social-accounts':'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content','common-scripture':'content',devotional:'content',social:'content',finance:'finance',tax:'content',
   health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices','pos-agent':'devices','api-cost':'finance','infra-costs':'finance',architecture:'status',maturity:'status','domain-control':'status',services:'status',
-  'search-visibility':'status','public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'security',policies:'settings',
+  'search-visibility':'status','promotion-autopost':'status','promotion-channels':'status','public-site-controls':'settings','language-status':'settings','ai-module-spec':'settings',storage:'settings','ai-settings':'settings','audit-records':'security',policies:'settings',
   'common-services':'catalog',confirmations:'catalog','life-ai':'catalog','personal-finance':'catalog',invest:'catalog','marketing-ai':'catalog','supply-network':'catalog',insurance:'catalog',capabilities:'catalog',openai:'catalog',
 });
 
@@ -227,4 +231,5 @@ if (typeof document !== 'undefined') {
   import('./common-scripture-admin.js').catch(error => console.warn('[EKODI Admin] common scripture bootstrap failed', error));
   import('./search-visibility-admin.js').then(() => window.dispatchEvent(new CustomEvent('ekodi-nav-changed', { detail:{ feature:'search-visibility' } }))).catch(error => console.warn('[EKODI Admin] search visibility bootstrap failed', error));
   import('./social-account-admin.js').catch(error => console.warn('[EKODI Admin] social account inventory unavailable', error));
+  import('./promotion-status-admin.js').catch(error => console.warn('[EKODI Admin] promotion status tabs unavailable', error));
 }

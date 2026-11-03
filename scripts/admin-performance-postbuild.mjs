@@ -151,6 +151,7 @@ const staticVersionInputs = [
   'marketing-ai-admin.js','marketing-ai-admin.css','growth-os-admin.js','growth-os-admin.css','author-billing-admin.js','author-billing-admin.css',
   'admin-perf-diagnostics.js',
   'search-visibility-admin.js',
+  'promotion-status-admin.js',
 ];
 function normalizeVersionedAdminAsset(value) {
   const asset = String(value || '').split(/[?#]/)[0].replace(/^\.\//, '').replace(/^\//, '').replace(/^admin\//, '');

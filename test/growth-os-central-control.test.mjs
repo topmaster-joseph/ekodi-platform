@@ -53,7 +53,7 @@ test('menu classification is platform-super-admin and separate from Marketing AI
   const group=ADMIN_MENUS.find(x=>x.id==='growth-intelligence');
   const item=ADMIN_MENU_REGISTRY.find(x=>x.id==='growth-os');
   const audience=JSON.parse(read('config/admin-menu-audience-policy.json'));
-  assert.deepEqual(group?.sections,['growth-os','search-visibility']);
+  assert.deepEqual(group?.sections,['search-visibility','promotion-autopost','promotion-channels','growth-os']);
   const specialist=ADMIN_MENU_REGISTRY.find(x=>x.id==='search-visibility');
   assert.equal(specialist?.group,'ai');
   assert.equal(specialist?.superAdminOnly,true);

@@ -480,6 +480,12 @@
       "search-visibility": {
         "audience": "platform-super-admin"
       },
+      "promotion-autopost": {
+        "audience": "platform-super-admin"
+      },
+      "promotion-channels": {
+        "audience": "platform-super-admin"
+      },
       "points": {
         "audience": "platform-super-admin"
       },
