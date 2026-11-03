@@ -54,6 +54,14 @@ export function evaluateAiCostEligibility(candidate = {}, context = {}) {
     return Object.freeze({ eligible:true, costClass, blockedBy:'' });
   }
   if (paidAiExecutionAuthorized(context)) return Object.freeze({ eligible:true, costClass, blockedBy:'' });
+  // AI-COST-002: money already prepaid to a provider (no auto-recharge) can be spent
+  // automatically, but only while the metered envelope still has headroom above the
+  // reserve. Exhausted or unknown envelope -> blocked, so nothing new is ever billed.
+  if (candidate.prepaidCredit === true) {
+    const remaining = Number(candidate.prepaidCreditRemainingUsd);
+    if (Number.isFinite(remaining) && remaining > 0) return Object.freeze({ eligible:true, costClass, blockedBy:'', funding:'prepaid-credit' });
+    return Object.freeze({ eligible:false, costClass, blockedBy:'prepaid_credit_envelope_exhausted' });
+  }
   return Object.freeze({ eligible:false, costClass, blockedBy:'paid_or_unclassified_cost_requires_explicit_budget' });
 }
 

@@ -41,3 +41,11 @@ test('CGMA member projection cannot control Google credentials', async () => {
   assert.match(layout, /https:\/\/ekodi\.kr\/cgma\/admin\/member/);
   assert.doesNotMatch(layout, /openCheonggyeMembers|import\('\.\/cheonggye-members-admin\.js'\)/);
 });
+
+test('member roster calls the storage service path (not the platform-admin /api/control route) and links the original sheet', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../cgma-member-admin.js', import.meta.url), 'utf8');
+  assert.match(source, /const API='\/storage\/api\/control\/storage\/google\/cheonggye-members'/);
+  assert.match(source, /docs\.google\.com\/spreadsheets\/d\/1NNYUFgkle_vzSvR-HWM6EVhvfd5qdgJmF2ZYbK9gtlo/);
+  assert.match(source, /원본 보기/);
+});

@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { genericAdminPublicMutationAllowed } from './publishing/human/books-publication-transition.js';
 
 const PUBLIC_PREFIX = '/api/books/public';
 const ADMIN_PREFIX = '/api/books/admin';
@@ -306,6 +307,8 @@ async function createPublication(request, env, sessionData) {
   if (!body || typeof body !== 'object') return json({ error: '도서 정보를 확인해 주세요.' }, 400, request, env);
   let p;
   try { p = publicationPayload(body); } catch (error) { return json({ error: error.message }, 400, request, env); }
+  if(!genericAdminPublicMutationAllowed(null,p))
+    return json({error:'신규 도서는 출판 승인·예약공개 절차를 거쳐야 합니다.',code:'BOOK_RELEASE_APPROVAL_REQUIRED'},409,request,env);
   if (await env.DB.prepare('SELECT id FROM books_publications WHERE id = ?').bind(p.id).first()) return json({ error: '이미 사용 중인 도서 ID입니다.' }, 409, request, env);
   const updatedBy = await adminId(env, sessionData.email);
   await env.DB.prepare(`INSERT INTO books_publications
@@ -327,6 +330,9 @@ async function updatePublication(request, env, sessionData, id) {
   const body = await readBody(request);
   let p;
   try { p = publicationPayload({ ...body, id }, current); } catch (error) { return json({ error: error.message }, 400, request, env); }
+  if(!genericAdminPublicMutationAllowed(current,p))
+    return json({error:'공개 도서의 정본·가격·판매처 변경 또는 신규 공개는 출판 승인 절차가 필요합니다.',
+      code:'BOOK_RELEASE_APPROVAL_REQUIRED'},409,request,env);
   const updatedBy = await adminId(env, sessionData.email);
   await env.DB.prepare(`UPDATE books_publications SET catalog_no=?, title=?, subtitle=?, author=?, series=?, series_number=?,
     publication_type=?, status=?, stage=?, editorial_field=?, language_label=?, format_json=?, edition=?, abstract=?, citation=?,

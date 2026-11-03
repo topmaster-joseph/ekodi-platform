@@ -27,3 +27,12 @@ test('seller and ops logins use the canonical ekodi.kr/auth/ entry and return to
     assert.match(text, /return_to/, name);
   }
 });
+
+test('supplier inventory is cleared on sign-out and stale operator responses cannot be rendered', () => {
+  const client = readFileSync(new URL('../assets/seller-server.js', import.meta.url), 'utf8');
+  assert.match(client, /dashboardRevision \+= 1/, 'sign-out invalidates in-flight inventory');
+  assert.match(client, /revision !== dashboardRevision/, 'old account response must be ignored');
+  assert.match(client, /sellerProducts = \[\]/, 'old product cards must not persist after sign-out');
+  assert.doesNotMatch(client, /operatorScope|api\/internal\/products\/by-provider/, 'cross-seller privileged inventory must never load in Seller Studio');
+  assert.match(client, /renderLink\(null\)/, 'old seller share-link must be removed after sign-out');
+});

@@ -98,6 +98,17 @@ jobs:
             docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$migration"
           done
 
+      - name: Verify synthetic site-service tenant isolation (full rollback)
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_container="$(docker ps --filter 'name=supabase_db_' --format '{{.ID}}' | head -n1)"
+          test -n "$db_container"
+          # The probe uses .invalid identities and rolls back every synthetic row.
+          docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            < scripts/sql/tenant_site_service_isolation_live_probe.sql
+          echo 'SITE-SERVICE-ISOLATION-001: synthetic admin, staff, cross-tenant, rollback PASS'
       - name: Prove secure defaults for new public objects
         if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         shell: bash
@@ -138,6 +149,17 @@ jobs:
           drop sequence public.__ekodi_grant_probe_seq;
           drop table public.__ekodi_grant_probe;
           SQL
+
+      - name: Execute activity point SQL smokes (rollback-only)
+        if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
+        env:
+          POINTS_SMOKE_DATABASE_URL: ${{ env.TEST_DB_URL }}
+        run: |
+          set -euo pipefail
+          node scripts/run-points-sql-smokes.mjs --existing-schema
+          # Full set incl. activity-stub smokes on an empty sibling database.
+          psql "$TEST_DB_URL" -v ON_ERROR_STOP=1 -q -c 'create database points_smoke_stub template template0'
+          POINTS_SMOKE_DATABASE_URL="${TEST_DB_URL%/postgres}/points_smoke_stub" node scripts/run-points-sql-smokes.mjs
 
       - name: Lint Postgres functions
         if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'

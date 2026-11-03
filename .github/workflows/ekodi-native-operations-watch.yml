@@ -7,6 +7,9 @@ on:
     - cron: '37 * * * *'
     # EKODI daily summary evidence at 08:45 Asia/Seoul.
     - cron: '45 23 * * *'
+    # One existing EKODI scheduler also owns weekly publishing and worship checks.
+    - cron: '0 23 * * 0'     # Monday 08:00 KST
+    - cron: '26 23 * * 2'    # Wednesday 08:26 KST
   pull_request:
     paths:
       - '.github/workflows/ekodi-native-operations-watch.yml'
@@ -19,6 +22,9 @@ on:
       - 'test/ekodi-native-workload-preparation.test.mjs'
       - 'config/common-scripture/**'
       - 'publishing/human/editorial-policy.js'
+      - 'scripts/ekodi-native-reservations.mjs'
+      - 'config/ekodi-native-reservations.json'
+      - 'test/ekodi-native-reservations.test.mjs'
 
 permissions:
   contents: read
@@ -42,7 +48,8 @@ jobs:
       - name: Verify owned, read-only monitoring contract
         run: |
           node --check scripts/ekodi-native-operations-watch.mjs
-          node --test test/ekodi-native-operations-watch.test.mjs test/ekodi-native-migration-status.test.mjs test/ekodi-native-workload-preparation.test.mjs
+          node --check scripts/ekodi-native-reservations.mjs
+          node --test test/ekodi-native-operations-watch.test.mjs test/ekodi-native-migration-status.test.mjs test/ekodi-native-workload-preparation.test.mjs test/ekodi-native-reservations.test.mjs
 
   observe:
     if: github.event_name != 'pull_request'
@@ -51,6 +58,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ github.token }}
       EKODI_WATCH_MODE: ${{ github.event.schedule == '45 23 * * *' && 'daily' || 'hourly' }}
+      EKODI_RESERVATION_PROFILE: ${{ github.event.schedule == '0 23 * * 0' && 'publishing' || github.event.schedule == '26 23 * * 2' && 'worship' || github.event.schedule == '45 23 * * *' && 'daily' || 'hourly' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -63,11 +71,19 @@ jobs:
           node scripts/ekodi-native-operations-watch.mjs \
             --mode="$EKODI_WATCH_MODE" \
             --output=ekodi-native-operations-evidence.json
+      - name: Execute EKODI native reservation observation and safe preparation
+        if: always()
+        run: |
+          node scripts/ekodi-native-reservations.mjs \
+            --profile="$EKODI_RESERVATION_PROFILE" \
+            --output=ekodi-native-reservations-evidence.json
       - name: Preserve privacy-safe evidence, including failures
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: ekodi-native-operations-${{ github.run_id }}
-          path: ekodi-native-operations-evidence.json
+          path: |
+            ekodi-native-operations-evidence.json
+            ekodi-native-reservations-evidence.json
           if-no-files-found: warn
           retention-days: 14

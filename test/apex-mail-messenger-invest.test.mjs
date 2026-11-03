@@ -67,3 +67,10 @@ test('shared staging verifies canonical Shell and apex Messenger/Invest paths',a
   assert.match(stage,/verify_public_path '\/invest'/);
   assert.match(stage,/pull-requests:\s*read/);
 });
+
+test('retired messenger subdomain redirects to the apex path and never serves the app',async()=>{
+  for(const path of ['/','/messenger-ui.js','/anything']){
+    const res=await platformEntry.fetch(new Request(`https://${['messenger','ekodi','kr'].join('.')}${path}`),env,{});
+    assert.equal(res.status,308);assert.equal(res.headers.get('location'),'https://ekodi.kr/messenger');
+  }
+});

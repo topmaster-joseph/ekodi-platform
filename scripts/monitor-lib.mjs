@@ -14,7 +14,7 @@ const INFRA_SITES = [
   ['ai-gateway', 'EKODI AI Gateway', 'ai.ekodi.kr'],
   ['api', 'EKODI API', 'ekodi.kr', 'https://ekodi.kr/api/health'],
   ['finance', 'EKODI Finance API', 'ekodi.kr/api/finance', 'https://ekodi.kr/api/finance/health'],
-  ['marketing-publish-api', 'Marketing Publishing API', 'marketing-publish-api.ekodi.kr', 'https://marketing-publish-api.ekodi.kr/health'],
+  ['marketing-publish-api', 'Marketing Publishing API', 'ekodi.kr/marketing-publish-api', 'https://ekodi.kr/marketing-publish-api/health'],
   ['shell-js', 'EKODI Shell JS', 'ekodi.kr', 'https://ekodi.kr/shell/shell.js'],
   ['shell-workspace', 'EKODI Workspace CSS', 'ekodi.kr', 'https://ekodi.kr/shell/workspace.css']
 ];

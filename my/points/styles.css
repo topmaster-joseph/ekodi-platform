@@ -1,0 +1,25 @@
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#152f25;background:#f8faf7}*{box-sizing:border-box}body{margin:0}.top{background:#fff;border-bottom:1px solid #e1e9e2;padding:16px max(18px,calc((100% - 1050px)/2));display:flex;justify-content:space-between;align-items:center;gap:12px}.brand{font-weight:800;color:#205c40;text-decoration:none;font-size:19px}.top nav{display:flex;gap:18px}.top nav a{font-size:13px;text-decoration:none;color:#425a4c}main{max-width:1050px;margin:0 auto;padding:38px 18px 70px}.heading{margin-bottom:25px}.heading h1{font-size:clamp(27px,4vw,39px);letter-spacing:-.035em;margin:4px 0 12px}.heading p{line-height:1.65;color:#63726b}.kicker{font-size:12px;letter-spacing:.09em;font-weight:750;color:#547764}.panel{background:#fff;border:1px solid #dce6de;border-radius:16px;padding:clamp(16px,3vw,26px)}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.toolbar h2{font-size:18px;margin:0 auto 0 0}.toolbar label{font-size:13px;color:#52665a}.toolbar select{padding:10px;border:1px solid #cbdad0;border-radius:9px;background:#fff;max-width:100%;min-width:170px}.balance{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:20px 0 26px;background:#f3f8f3;padding:24px;border-radius:13px}.balance strong{font-size:32px;font-variant-numeric:tabular-nums;color:#205b39}h3{font-size:16px}.history{display:grid}.record{display:flex;justify-content:space-between;gap:14px;padding:15px 0;border-top:1px solid #edf0ee}.record small{color:#68766c;display:block;margin-top:4px}.record strong{white-space:nowrap;font-variant-numeric:tabular-nums}.positive{color:#237d45}.negative{color:#a23d36}#notice{color:#52665a;line-height:1.5}.login{display:inline-block;background:#205b39;color:#fff;padding:11px 21px;border-radius:9px;text-decoration:none;font-weight:700}.footnote{font-size:13px;color:#67786c;margin-top:22px;line-height:1.6}footer{text-align:center;border-top:1px solid #e1e9e2;padding:25px;color:#79877d;font-size:12px}@media(max-width:540px){.top{padding:15px 18px}.top nav{gap:10px}.toolbar{align-items:stretch}.toolbar h2{width:100%}.toolbar label{align-self:center}.toolbar select{flex:1;min-width:0}.balance strong{font-size:27px}}
+.invite-panel{margin-top:16px}.invite-panel h2{font-size:18px;margin:0 0 9px}
+.invite-panel p{font-size:13px;color:#596d60;line-height:1.6;margin:8px 0 12px}
+.invite-tools{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.invite-panel button{background:#f7faf7;color:#205b39;border:1px solid #b9cebe;border-radius:9px;padding:10px 14px;cursor:pointer;font-weight:700}
+.invite-panel button[disabled]{cursor:default;opacity:.6}
+.invite-panel input[readonly]{flex:1;min-width:150px;border:1px solid #cbdad0;border-radius:9px;padding:10px;background:#fff;color:#345341}
+.invite-panel[hidden],.invite-panel [hidden]{display:none!important}
+
+.claim-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end}
+.claim-form label{display:grid;gap:5px;font-size:13px;color:#52665a;min-width:0}
+.claim-form select,.claim-form input,.claim-form textarea{border:1px solid #cbdad0;border-radius:9px;padding:10px;font:inherit;background:#fff;min-width:0;width:100%}
+.claim-form .claim-note{grid-column:1/-1}
+@media(max-width:640px){.claim-form{grid-template-columns:minmax(0,1fr)}}
+.record>div{min-width:0}.record>div strong{white-space:normal;overflow-wrap:anywhere}
+.login[hidden],#claimSection[hidden],#balanceView[hidden]{display:none!important}
+/* My EKODI subpages keep the personal light theme even though they are served on the
+   workspace surface (the shell would otherwise apply the dark workspace palette). */
+html:has(body.my-subpage),html:has(body.my-subpage) body.my-subpage[data-ekodi-ui="USER"]{background:#f7f8f3!important;color:#183127!important;color-scheme:light}
+body.my-subpage .heading h1{color:#183127!important}
+body.my-subpage .heading p,body.my-subpage .footnote{color:#63726b!important}
+body.my-subpage main{max-width:1180px}
+body.my-subpage select,body.my-subpage input,body.my-subpage textarea{background:#fff!important;color:#183127!important;border:1px solid #cbdad0!important}
+body.my-subpage .my-footer-brand{text-align:left}
+body.my-subpage .my-desktop-tabs a[aria-current="page"]{background:#eaf2ee;color:#1f5c3d;border-radius:999px}

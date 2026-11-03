@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="/buy/buy.css" />
 <link rel="stylesheet" href="/site-chrome.css">
 </head>
-<body>
+<body class="books-buy-page">
   <a class="skip" href="#main">본문으로 바로가기</a>
   <header class="ekc-header" data-ekodi-chrome="books"><div class="ekc-network"><div class="ekc-shell"><span class="ekc-network-label">EKODI 출판 생태계</span><nav class="ekc-network-links" aria-label="출판 생태계"><a href="https://ekodi.kr/publishing/"><b>출판</b><span>책을 만들다</span></a><a href="https://ekodi.kr/books/" aria-current="true"><b>에코디서점</b><span>책을 만나다</span></a><a href="https://ekodi.kr/ekodimall/?category=book"><b>에코디몰 책·배움</b><span>함께 나누다</span></a></nav></div></div><div class="ekc-shell ekc-masthead"><a class="ekc-brand" href="https://ekodi.kr/books/" aria-label="에코디서점 홈"><span class="ekc-mark" aria-hidden="true">ES</span><span class="ekc-brand-copy"><b>에코디서점</b><small>Faith · Scholarship · Community</small></span></a><div class="ekc-actions"><a class="ekc-cta" href="https://ekodi.kr/books/library/">내 서재</a><button class="menu-button ekc-menu" type="button" aria-expanded="false" aria-controls="site-nav">MENU</button></div><nav id="site-nav" class="ekc-nav" aria-label="에코디서점 메뉴"><a href="https://ekodi.kr/books/#catalog">도서</a><a href="https://ekodi.kr/books/series/">시리즈</a><a href="https://ekodi.kr/books/research/">리서치</a><a href="https://ekodi.kr/books/notes/">노트</a><a href="https://ekodi.kr/books/#about">소개</a><a class="ekc-nav-cta" href="https://ekodi.kr/books/library/">내 서재</a></nav></div></header>
   <main id="main" class="buy-page">
@@ -28,18 +28,13 @@
       <div class="shell" id="buyRoot">
         <p class="buy-crumb"><a href="/">에코디서점</a> · <a href="/#catalog">출판 목록</a> · <span id="crumbTitle">도서</span></p>
         <div class="buy-grid">
-          <div class="buy-cover" id="bookCover" aria-hidden="true"></div>
+          <div class="buy-cover-wrap"><button class="buy-cover-button" id="bookCoverButton" type="button" aria-label="표지를 눌러 목차 보기" aria-controls="bookTabPanel"><span class="buy-cover" id="bookCover"></span></button><p class="buy-cover-hint">표지를 누르면 목차를 볼 수 있습니다.</p></div>
           <div class="buy-info">
             <p class="buy-kicker">EKODI BOOKS · 에코디서점 직접 판매</p>
             <h1 class="buy-title" id="bookTitle">도서를 불러오는 중입니다</h1>
             <p class="buy-subtitle" id="bookSubtitle" hidden></p>
             <p class="buy-author" id="bookAuthor"></p>
-            <ul class="buy-points">
-              <li><span>결제 즉시 <b>내 서재</b>에 담기고, 언제든 다시 받을 수 있습니다.</span></li>
-              <li><span>EPUB 3 전자책 — 리디·교보·구글 플레이 북스 등 대부분의 전자책 앱에서 열립니다.</span></li>
-              <li><span>회원등급에 따라 할인된 가격이 자동으로 적용됩니다.</span></li>
-              <li><span>판매 수익은 출판의 다음 책과 공동체 연구로 이어집니다.</span></li>
-            </ul>
+            <div class="buy-tabs" role="tablist" aria-label="도서 정보"><button type="button" role="tab" class="buy-tab" id="bookTabIntro" aria-selected="true" aria-controls="bookTabPanel" data-book-tab="intro">책소개</button><button type="button" role="tab" class="buy-tab" id="bookTabToc" aria-selected="false" aria-controls="bookTabPanel" data-book-tab="toc" tabindex="-1">목차</button><button type="button" role="tab" class="buy-tab" id="bookTabBenefit" aria-selected="false" aria-controls="bookTabPanel" data-book-tab="benefit" tabindex="-1">구매혜택</button></div><section id="bookTabPanel" class="buy-tab-panel" role="tabpanel" aria-labelledby="bookTabIntro" aria-live="polite"><p id="bookTabText">도서 정보를 불러오는 중입니다.</p></section>
             <div class="buy-channels" id="otherChannels">
               <h3>다른 판매처</h3>
               <ul id="channelList"><li><b>유페이퍼</b><span>국내 전자책 판매처</span></li></ul>
@@ -48,7 +43,7 @@
           <aside class="buy-card" aria-label="구매">
             <h2>PURCHASE</h2>
             <div class="price-now"><strong id="priceNow">—</strong><del id="priceList"></del></div>
-            <p class="price-tier" id="priceTier"></p>
+            <p class="price-tier" id="priceTier"></p><p class="buy-benefit-short">회원등급별 할인 · 내 서재에서 열람</p>
             <table class="tier-table" aria-label="회원등급별 가격">
               <thead><tr><th>회원등급</th><th>가격</th></tr></thead>
               <tbody id="tierRows"></tbody>

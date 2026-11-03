@@ -16,7 +16,7 @@ MARKETING_YOUTUBE_DIRECT_CALLBACK_ENABLED = "false"
 STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi.kr"
 STORAGE_PRIMARY_SHARED_DRIVE_ID = "0ACM_FnMYWMFuUk9PVA"
 STORAGE_PRIMARY_SHARED_DRIVE_NAME = "EKODI"
-ALLOWED_ORIGINS = "https://admin.ekodi.kr,https://ekodi.kr,https://my.ekodi.kr"
+ALLOWED_ORIGINS = "https://ekodi.kr"
 
 [observability.logs]
 enabled = true

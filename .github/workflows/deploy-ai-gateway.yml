@@ -8,6 +8,10 @@ on:
       - 'ekodi-ai-provider-registry.js'
       - 'openai-provider-adapter.js'
       - 'anthropic-provider-adapter.js'
+      - 'api-usage-meter.js'
+      - 'ai-cost-policy.js'
+      - 'ai-provider-control.js'
+      - 'test/anthropic-prepaid-credit.test.mjs'
       - 'gemini-orchestrator-provider-adapter.js'
       - 'huggingface-provider-adapter.js'
       - 'test/ai-control-provider-router.test.mjs'
@@ -46,6 +50,7 @@ jobs:
           node --check gemini-orchestrator-provider-adapter.js
           node --check huggingface-provider-adapter.js
           node --test test/ai-control-provider-router.test.mjs
+          node --test test/anthropic-prepaid-credit.test.mjs
           node --check site-worker.js
           node --test test/ai-runtime-boundary.test.mjs
           ! grep -Fq 'pattern = "ai.ekodi.kr"' wrangler.ai.release.toml

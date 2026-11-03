@@ -1,6 +1,8 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { bibleCorePolicy, bibleProviderCatalog, readBiblePassage, readBibleReference, searchBible } from './bible-core.js';
 import { resolveDevotion, devotionShareText, isDevotionDate, seoulToday } from './devotional-activities.js';
+import { approvedNarration } from './bible/devotion-ekodi-narration.js';
+import DEVOTION_CARDS from './bible/og/manifest.json' with { type: 'json' };
 import { devotionAdminSession, devotionOverride, devotionViewer, saveDevotionOverride } from './devotional-admin-api.js';
 
 const MAX_MESSAGE = 4000;
@@ -213,9 +215,9 @@ async function handleAssist(request, env) {
   });
 }
 
-async function handleBibleApi(request, env, url) {
+async function handleBibleApi(request, env, url, ctx) {
   if (url.pathname === '/api/bible/devotion' && request.method === 'PUT') {
-    return saveDevotionOverride(request, env, await devotionAdminSession(request, env), resolveDevotion);
+    return saveDevotionOverride(request, env, await devotionAdminSession(request, env), resolveDevotion, ctx);
   }
   if (request.method !== 'GET') return json({ ok:false, error:'method_not_allowed' }, 405);
   if (url.pathname === '/api/bible/devotion/me') {
@@ -278,6 +280,14 @@ function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
 }
 
+// Share card (1200x630): a dated card for months rendered by scripts/render-devotion-cards.mjs,
+// otherwise the generic card. Cards hold only the public scripture list (date, title, passage).
+export function devotionCardUrl(devotion) {
+  const month = devotion?.found ? String(devotion.date || '').slice(0, 7) : '';
+  const dated = month && Array.isArray(DEVOTION_CARDS.months) && DEVOTION_CARDS.months.includes(month);
+  return `https://ekodi.kr/bible/og/${dated ? `${devotion.date}.jpg` : DEVOTION_CARDS.generic || 'devotion.jpg'}`;
+}
+
 export function devotionMetaTags(devotion) {
   const title = devotion.found ? `에코디 매일묵상 · ${devotion.passage}` : '에코디 매일묵상';
   const description = devotion.found ? devotionShareText(devotion).split('\n').slice(1).join(' ') + ' · 시·노래·적용질문·기도' : '에코디 공통본문으로 시·노래·적용질문·기도까지 함께하는 매일묵상';
@@ -290,7 +300,13 @@ export function devotionMetaTags(devotion) {
     `<meta property="og:description" content="${escapeHtml(description)}">`,
     `<meta property="og:url" content="${escapeHtml(url)}">`,
     '<meta property="og:locale" content="ko_KR">',
-    '<meta name="twitter:card" content="summary">',
+    `<meta property="og:image" content="${escapeHtml(devotionCardUrl(devotion))}">`,
+    '<meta property="og:image:type" content="image/jpeg">',
+    '<meta property="og:image:width" content="1200">',
+    '<meta property="og:image:height" content="630">',
+    `<meta property="og:image:alt" content="${escapeHtml(devotion.found ? `오늘의 매일묵상 ${devotion.passage}` : '오늘의 매일묵상')}">`,
+    '<meta name="twitter:card" content="summary_large_image">',
+    `<meta name="twitter:image" content="${escapeHtml(devotionCardUrl(devotion))}">`,
     `<meta name="twitter:title" content="${escapeHtml(title)}">`,
     `<meta name="twitter:description" content="${escapeHtml(description)}">`,
   ].join('\n  ');
@@ -331,8 +347,43 @@ async function assetFor(request, env, path) {
   return env.ASSETS.fetch(new Request(url, request));
 }
 
+
+/* Reviewed EKODI narration is public only for published dates. Asset bytes
+   remain separate from protected bookstore audio and are never synthesized
+   on request. No manifest or unapproved file is exposed by direct asset URL. */
+export async function publicDevotionNarration(request,env,internalPath) {
+  const matched = internalPath.match(/^\/narration\/(\d{4}-\d{2}-\d{2})\/(manifest\.json|male\.mp3|female\.mp3)$/);
+  const deny = (status,msg) => new Response(JSON.stringify({ok:false,error:msg}),{
+    status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}
+  });
+  if (!matched) return deny(404,'not_found');
+  if (!['GET','HEAD'].includes(request.method)) return deny(405,'method_not_allowed');
+  const [,date,file] = matched;
+  if (!isDevotionDate(date) || date>seoulToday()) return deny(404,'not_available');
+  const read=new Request(new URL('/narration/'+date+'/manifest.json',request.url),{method:'GET'});
+  let meta;
+  try {
+    const res=await env.ASSETS.fetch(read);
+    if (!res.ok) return deny(404,'not_available');
+    meta=await res.json();
+  } catch{return deny(404,'not_available');}
+  if (!approvedNarration(meta,date)) return deny(404,'not_available');
+  if (file==='manifest.json') {
+    return new Response(request.method==='HEAD'?null:JSON.stringify(meta),{
+      status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'public, max-age=300',...SECURITY_HEADERS}
+    });
+  }
+  const asset=await assetFor(request,env,'/narration/'+date+'/'+file);
+  if (!asset.ok) return deny(404,'not_available');
+  const headers=new Headers(asset.headers);
+  headers.set('content-type','audio/mpeg');
+  headers.set('cache-control','public, max-age=3600');
+  for(const [key,val] of Object.entries(SECURITY_HEADERS))headers.set(key,val);
+  return new Response(request.method==='HEAD'?null:asset.body,{status:asset.status,headers});
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const legacyRedirect = legacyCanonicalRedirect(url);
     if (legacyRedirect) return legacyRedirect;
@@ -361,7 +412,8 @@ export default {
         headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'no-store', ...SECURITY_HEADERS },
       });
     }
-    if (internalUrl.pathname.startsWith('/api/bible/')) return handleBibleApi(request, env, internalUrl);
+    if (internalUrl.pathname.startsWith('/narration/')) return publicDevotionNarration(request, env, internalUrl.pathname);
+    if (internalUrl.pathname.startsWith('/api/bible/')) return handleBibleApi(request, env, internalUrl, ctx);
     if (internalUrl.pathname === '/api/assist' && request.method === 'POST') return handleAssist(request, env);
     if (internalUrl.pathname === '/admin' || internalUrl.pathname === '/admin/') return Response.redirect('https://ekodi.kr/admin/system/aiops', 307);
 

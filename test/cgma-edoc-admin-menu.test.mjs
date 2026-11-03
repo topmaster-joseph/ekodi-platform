@@ -54,7 +54,7 @@ test('default order is 총무 → 사무국장 → 상인회장 and the request 
 test('admin module URL carries its content hash, so an immutable-cached old module is never served after a change', async () => {
   const { createHash } = await import('node:crypto');
   const [page, module] = await Promise.all([read('workspace-admin-page.js'), readFile(new URL('../cgma-edoc-admin.js', import.meta.url))]);
-  const hash = createHash('sha256').update(module).digest('hex').slice(0, 10);
+  const hash = createHash('sha256').update(module.toString('utf8').replace(/\r\n/g,'\n')).digest('hex').slice(0, 10);
   assert.match(page, new RegExp(`/cgma/admin/assets/cgma-edoc-admin\\.js\\?v=edocs-${hash}'`),
     `cgma-edoc-admin.js changed: set the loader version in workspace-admin-page.js to ?v=edocs-${hash}`);
 });
@@ -62,7 +62,27 @@ test('admin module URL carries its content hash, so an immutable-cached old modu
 test('admin stylesheet URL carries the stylesheet content hash', async () => {
   const { createHash } = await import('node:crypto');
   const [module, css] = await Promise.all([read('cgma-edoc-admin.js'), readFile(new URL('../cgma-edoc-admin.css', import.meta.url))]);
-  const hash = createHash('sha256').update(css).digest('hex').slice(0, 10);
+  const hash = createHash('sha256').update(css.toString('utf8').replace(/\r\n/g,'\n')).digest('hex').slice(0, 10);
   assert.match(module, new RegExp(`const STYLE='/cgma/admin/assets/cgma-edoc-admin\\.css\\?v=css-${hash}'`),
     `cgma-edoc-admin.css changed: set STYLE in cgma-edoc-admin.js to ?v=css-${hash}`);
+});
+
+test('CGMA left menu: service settings precedes common and site-specific menus consistently', async () => {
+  const s = await (await workspaceAdminScript()).text();
+  const cut = (from, to) => { const i = s.indexOf(from), j = s.indexOf(to, i); assert.ok(i >= 0 && j > i, `missing ${from}`); return s.slice(i, j); };
+  const block = cut('const isBizWorkspace=', 'const adminHubScopes=') + cut('function groupsForRole(', 'function renderSecondaryNav(') + cut('function dedicatedSections(', 'function renderNav(');
+  const navFor = (workspace, profile, menuVisible=()=>true) => new Function('workspace', 'service', 'workspaceRole', 'navigationProfile', 'canSection', 'mallLocalGroups', 'serviceMenuVisible', `${block}; return navBucketsForRole;`)(
+    workspace, '', 'manager', () => profile, () => true, [], menuVisible)('manager').map(b => [b.label, b.items.map(([key]) => key)]);
+  assert.match(s, /settings\.dataset\.adminSection='services'/);
+  assert.match(s, /h\.append\(settings\)/);
+  for (const profile of ['delegated-manager', 'local']) {
+    const nav = navFor('cgma', profile);
+    assert.equal(nav[0][0], '업무메뉴', profile);
+    assert.equal(nav.length, 1, profile);
+    for(const key of ['edocs','member','applications','booths','festival','market-oversight','petitions','ip-archive','education-survey'])
+      assert.ok(nav[0][1].includes(key),key);
+  }
+  assert.equal(navFor('ekodimission', 'delegated-manager')[0][0], '업무메뉴');
+  const hidden=navFor('cgma','local',key=>key!=='edocs');
+  assert.ok(!hidden.flatMap(bucket=>bucket[1]).includes('edocs'), 'per-tenant visibility must filter site-specific menus');
 });

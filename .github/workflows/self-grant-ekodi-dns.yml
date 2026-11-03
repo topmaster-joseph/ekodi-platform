@@ -102,7 +102,7 @@ jobs:
           for attempt in $(seq 1 18); do
             root=$(curl -L -sS -o /tmp/root.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/' || true)
             www=$(curl -L -sS -o /tmp/www.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://www.ekodi.kr/' || true)
-            books=$(curl -L -sS -o /tmp/books.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://books.ekodi.kr/' || true)
+            books=$(curl -L -sS -o /tmp/books.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/books/' || true)
             echo "attempt=$attempt root=$root www=$www books=$books"
             if [[ "$root" =~ ^[23] ]] && [[ "$www" =~ ^[23] ]] && [[ "$books" =~ ^[23] ]] && grep -q 'href="https://ekodi.kr/"' /tmp/books.html; then
               echo 'EKODI root, www, and Books navigation are healthy.'

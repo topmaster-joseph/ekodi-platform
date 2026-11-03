@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Script } from 'node:vm';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const retiredFiles = [
@@ -27,6 +28,14 @@ const forbiddenCompatibility = [
 const allowedExtensions = new Set(['.js','.mjs','.html','.css','.json','.yml','.yaml','.md']);
 const ignored = new Set(['.git','node_modules','dist','.wrangler']);
 const violations = [];
+
+// Classic browser scripts are not parsed by Node's module dependency graph.
+// Prevent a syntactically broken admin panel from passing build and deploying.
+try {
+  new Script(readFileSync(join(root, 'growth-os-admin.js'), 'utf8'), { filename:'growth-os-admin.js' });
+} catch (error) {
+  violations.push('growth-os-admin.js: classic script syntax invalid: ' + String(error?.message||error));
+}
 
 for (const file of retiredFiles) {
   if (existsSync(join(root, file))) violations.push(`retired source still exists: ${file}`);

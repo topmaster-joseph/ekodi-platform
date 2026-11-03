@@ -269,10 +269,21 @@
     return {state,login,logout};
   }
   const missionAuthUi=mountMissionAuth();
+  function missionAccountLabel(value){
+    const raw=String(value||'').trim();
+    const alias=/^identity\+([a-z0-9_-]+)\.[^@\s]+@ekodi\.kr$/i.exec(raw);
+    if(alias){
+      const labels={kakao:'카카오 계정',naver:'네이버 계정',google:'Google 계정',apple:'Apple 계정',daum:'다음 계정'};
+      return labels[alias[1].toLowerCase()]||'연결 계정';
+    }
+    const local=raw.includes('@')?raw.split('@')[0]:raw;
+    const name=local||'내 계정';
+    return name.length>16?name.slice(0,15)+'…':name;
+  }
   function paintMissionAuth(status,account=''){
     if(!missionAuthUi)return;
     const authenticated=status==='in';
-    missionAuthUi.state.textContent=authenticated?(String(account||'계정').slice(0,90)):'';
+    missionAuthUi.state.textContent=authenticated?missionAccountLabel(account):'';
     missionAuthUi.state.hidden=!authenticated;
     missionAuthUi.login.hidden=authenticated;
     missionAuthUi.logout.hidden=!authenticated;

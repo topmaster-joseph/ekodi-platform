@@ -1,5 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { identityLabel, renderLinkButtons } from './federated-login.js?v=20261027-federated-1';
+import { identityLabel, renderLinkButtons, policyBox, MERGE_POLICY_VERSION } from './federated-login.js?v=20261102-merge-policy-1';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -13,12 +13,12 @@ const services={
   trade:{name:'EKODI Global Trading',tenant:'ekoditrade',role:'member',returnTo:'https://ekodi.kr/ekodibiz/trade',origins:['https://ekodi.kr','https://trade.biz.ekodi.kr','https://trade.ekodi.kr'],requestable:false},
   mall:{name:'에코디몰',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodimall',origins:['https://ekodi.kr'],requestable:true},
   pay:{name:'에코디결제',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodipay',origins:['https://ekodi.kr'],requestable:false},
-  books:{name:'에코디북스',tenant:null,role:'member',returnTo:'https://ekodi.kr/books',origins:['https://books.ekodi.kr'],requestable:true},
+  books:{name:'에코디북스',tenant:null,role:'member',returnTo:'https://ekodi.kr/books',origins:['https://ekodi.kr'],requestable:true},
   church:{name:'에코디교회',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodichurch/',origins:['https://ekodi.kr'],requestable:true},
   lab:{name:'에코디연구소',tenant:null,role:'member',returnTo:'https://ekodi.kr/ekodilab',origins:['https://lab.ekodi.kr'],requestable:true},
   mission:{name:'에코디선교회',tenant:'ekodimission',role:'member',returnTo:'https://ekodi.kr/ekodimission',origins:['https://ekodi.kr'],requestable:true},
   community:{name:'커뮤니티',tenant:null,role:'member',returnTo:'https://ekodi.kr/community',origins:['https://ekodi.kr'],requestable:true},
-  edu:{name:'에코디교육',tenant:null,role:'member',returnTo:'https://ekodi.kr/edu',origins:['https://edu.ekodi.kr'],requestable:true},
+  edu:{name:'에코디교육',tenant:null,role:'member',returnTo:'https://ekodi.kr/edu',origins:['https://ekodi.kr'],requestable:true},
   media:{name:'에코디미디어',tenant:null,role:'member',returnTo:'https://ekodi.kr/media',origins:['https://media.ekodi.kr'],requestable:true},
   social:{name:'EKODI Social',tenant:null,role:'member',returnTo:'https://ekodi.kr/social',origins:['https://social.ekodi.kr'],requestable:false},
   energy:{name:'Energy AI',tenant:null,role:'member',returnTo:'https://ekodi.kr/energy',origins:['https://energy.ekodi.kr'],requestable:false},
@@ -53,7 +53,7 @@ function isMarketingReturnOrigin(origin){
   if(config.origins.includes(origin))return true;
   try{const u=new URL(origin);return u.protocol==='https:'&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(u.hostname)&&u.origin===origin}catch{return false}
 }
-const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;const home=new URL(config.returnTo);const ownCanonical=home.origin==='https://ekodi.kr'&&home.pathname!=='/'&&(target.pathname===home.pathname||target.pathname===home.pathname.replace(/\/$/,'')||target.pathname.startsWith(home.pathname.replace(/\/$/,'')+'/'));const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='church'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')))||((site==='portal'||site==='seonammedi')&&(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/'))));return ((config.origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath||(target.origin==='https://ekodi.kr'&&ownCanonical)||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
+const safeReturn=raw=>{try{const target=new URL(raw||config.returnTo);if(target.protocol!=='https:'||target.username||target.password)return config.returnTo;const home=new URL(config.returnTo);const ownCanonical=home.origin==='https://ekodi.kr'&&home.pathname!=='/'&&(target.pathname===home.pathname||target.pathname===home.pathname.replace(/\/$/,'')||target.pathname.startsWith(home.pathname.replace(/\/$/,'')+'/'));const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='church'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')||(target.pathname==='/live/church'||target.pathname.startsWith('/live/church/'))))||((site==='portal'||site==='seonammedi')&&(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/')))||(site==='portal'&&['/admin/site-admins','/admin/site-admins/','/admin/people','/admin/people/'].includes(target.pathname)));return ((config.origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath||(target.origin==='https://ekodi.kr'&&ownCanonical)||(marketing&&isMarketingReturnOrigin(target.origin)))?target.href:config.returnTo}catch{return config.returnTo}};
 const returnTo=safeReturn(params.get('return_to'));
 const sb=createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{detectSessionInUrl:true,persistSession:true}});
 const $=id=>document.getElementById(id);
@@ -210,10 +210,56 @@ function renderIdentityList(items){
     const left=document.createElement('div');
     const {label,display}=identityLabel(item);
     const email=document.createElement('strong');email.textContent=display;
-    const meta=document.createElement('span');meta.textContent=item.is_primary?'기본 로그인':'연결된 로그인';
+    const meta=document.createElement('small');meta.textContent=item.is_primary?'기본 로그인':'연결된 로그인';
     left.append(email,meta);
     const badge=document.createElement('span');badge.className='provider-badge';badge.textContent=label;badge.dataset.provider=item.provider||'google';
-    row.append(left,badge);host.append(row);
+    row.append(left,badge);
+    if(!item.is_current&&!item.is_primary){
+      const detach=document.createElement('button');detach.type='button';detach.className='quiet';detach.textContent='분리';
+      detach.addEventListener('click',()=>openDetach(item,label,row,detach));
+      row.append(detach);
+    }
+    host.append(row);
+  }
+}
+
+// Policy v1: detaching a login starts it as a new EKODI account; nothing paid is split or refunded.
+const DETACH_BLOCKED={
+  detach_current_login:'지금 로그인한 수단은 분리할 수 없습니다. 다른 로그인으로 접속한 뒤 분리해 주세요.',
+  detach_primary_login:'기본 로그인은 분리할 수 없습니다.',
+  detach_last_login:'마지막 로그인 수단은 분리할 수 없습니다.',
+  detach_financial_records:'이 로그인에 결제·구독·포인트 기록이 있어 분리할 수 없습니다. 해당 기록은 통합 ID에 남으며, 필요하면 관리자에게 문의해 주세요.'
+};
+async function openDetach(item,label,row,button){
+  button.disabled=true;
+  try{
+    const data=await identity(`/identities/${encodeURIComponent(item.id)}/detach-preview`,{method:'GET',authenticated:true});
+    if(data.blocked){notice('identityLinkStatus',DETACH_BLOCKED[data.blocked]||'이 로그인은 지금 분리할 수 없습니다.','warn');button.disabled=false;return;}
+    const panel=document.createElement('div');panel.className='notice detach-panel';
+    const intro=document.createElement('p');
+    intro.textContent=`${label} 로그인을 분리하면 이 로그인은 새 EKODI 계정으로 시작합니다. 이 로그인으로 만든 기록 ${Number(data.preview?.rows||0)}건은 함께 옮겨지고, 통합 ID의 권한·구독·포인트는 그대로 남습니다.`;
+    const policy=policyBox('위 기준을 확인했고, 이 로그인을 분리하는 데 동의합니다.');
+    const go=document.createElement('button');go.type='button';go.className='primary';go.textContent='분리하기';go.disabled=true;
+    const cancel=document.createElement('button');cancel.type='button';cancel.className='secondary';cancel.textContent='취소';
+    policy.check.addEventListener('change',()=>{go.disabled=!policy.check.checked});
+    cancel.addEventListener('click',()=>{panel.remove();button.disabled=false});
+    go.addEventListener('click',async()=>{
+      go.disabled=true;cancel.disabled=true;
+      try{
+        const result=await identity(`/identities/${encodeURIComponent(item.id)}/detach`,{method:'POST',authenticated:true,body:JSON.stringify({policy:MERGE_POLICY_VERSION})});
+        panel.remove();
+        notice('identityLinkStatus',`분리했습니다. ${label} 로그인은 이제 별도 계정(${result.newEkodiId||'새 EKODI ID'})입니다.`);
+        await loadLinkedIdentities();
+      }catch(e){
+        notice('identityLinkStatus',DETACH_BLOCKED[e.message]||'분리하지 못했습니다. 잠시 후 다시 시도해 주세요.','error');
+        go.disabled=!policy.check.checked;cancel.disabled=false;
+      }
+    });
+    const actions=document.createElement('div');actions.className='merge-actions';actions.append(go,cancel);
+    panel.append(intro,policy.wrap,actions);row.after(panel);
+  }catch(e){
+    console.error('detach preview',e);button.disabled=false;
+    notice('identityLinkStatus','분리 가능 여부를 확인하지 못했습니다.','error');
   }
 }
 
@@ -223,7 +269,7 @@ async function loadLinkedIdentities(){
     const data=await identity('/identities',{method:'GET',authenticated:true});
     renderIdentityList(data.identities||[]);
     $('addGoogleAccount').disabled=Boolean(data.reloginRequired);
-    if(!data.reloginRequired)renderLinkButtons();
+    if(!data.reloginRequired)renderLinkButtons(data.identities||[]);
     if(data.reloginRequired)notice('identityLinkStatus','현재 세션은 새 통합 프로필에 아직 연결되지 않았습니다. 다른 계정으로 다시 로그인하면 자동으로 전환됩니다.','warn');
     else show('identityLinkStatus',false);
   }catch(e){

@@ -40,6 +40,9 @@ DOMEGGOOK_MARGIN_PCT = "25"
 MALL_CURATION_SELLER_EMAIL = "joseph@ekodi.kr"
 # EKODI-MALL-DOMEGGOOK-AUTOORDER-001: provider paid API must remain OFF until account binding, contractual/PII permissions, and supervised pilot are verified.
 DOMEGGOOK_AUTO_ORDER_ENABLED = "false"
+# Historical one-order pilot suspended while supplier member error and buyer-PII handoff are unresolved.
+# A new explicitly approved pilot ID is required after contract, privacy and safety checks.
+DOMEGGOOK_PILOT_ORDER_IDS = ""
 # Login/getMyAsset only. Independent from paid order permission. Rate limited to once per 6 hours.
 DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED = "true"
 

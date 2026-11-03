@@ -145,3 +145,61 @@ body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-i
 .ekodi-devotion .dv-date-link[hidden]{display:none!important}
 .ekodi-devotion .dv-date-link[aria-disabled="true"]{pointer-events:none}
 @media(max-width:520px){.ekodi-devotion .dv-shared-tools{padding:6px 7px;gap:5px}.ekodi-devotion .dv-shared-account{max-width:135px;font-size:.73rem}}
+
+/* Shared devotional reading controls: no autoplay and no external TTS endpoint. */
+.ekodi-devotion .dv-speech-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 14px;padding:12px 14px;border:1px solid var(--dv-line);border-radius:14px;background:#f6f8f5}
+.ekodi-devotion .dv-speech-tools[hidden]{display:none!important}
+.ekodi-devotion .dv-speech-btn{min-height:44px;padding:8px 14px;white-space:nowrap}
+.ekodi-devotion .dv-speech-btn[data-speech-action="play"]{background:var(--dv-accent-dark);border-color:var(--dv-accent-dark);color:white}
+.ekodi-devotion .dv-speech-btn:disabled{opacity:.5;cursor:not-allowed}
+.ekodi-devotion .dv-speech-speed{display:flex;align-items:center;gap:5px;font-size:.86rem;color:var(--dv-ink);word-break:keep-all}
+.ekodi-devotion .dv-speech-speed select{min-height:44px;padding:6px 8px;border:1px solid #cfd9d1;border-radius:10px;background:white;font:inherit;color:var(--dv-ink)}
+.ekodi-devotion .dv-speech-status{flex:1 1 100%;font-size:.84rem;color:var(--dv-muted);line-height:1.4}
+.ekodi-devotion .dv-speech-tools button:focus-visible,.ekodi-devotion .dv-speech-speed select:focus-visible{outline:2px solid var(--dv-accent);outline-offset:2px}
+@media(max-width:520px){.ekodi-devotion .dv-speech-tools{gap:7px;padding:10px}.ekodi-devotion .dv-speech-btn{flex:1 1 calc(50% - 8px);padding:8px 5px;font-size:.9rem}.ekodi-devotion .dv-speech-speed{flex:1 1 100%;justify-content:flex-end}}
+
+/* Human-friendly Korean narration: verified voice choice + patient reading. */
+.ekodi-devotion .dv-speech-gender,.ekodi-devotion .dv-speech-voice{
+  display:flex;align-items:center;gap:6px;flex:1 1 185px;min-width:0;
+  font-size:.87rem;color:var(--dv-ink);white-space:nowrap
+}
+.ekodi-devotion .dv-speech-gender select,.ekodi-devotion .dv-speech-voice select{
+  flex:1 1 100px;min-width:0;max-width:100%;
+  border:1px solid #cfd9d1;background:#fff;color:var(--dv-ink);
+  border-radius:10px;min-height:44px;padding:7px 8px;font:inherit
+}
+.ekodi-devotion .dv-speech-gender select:focus-visible,
+.ekodi-devotion .dv-speech-voice select:focus-visible{
+  outline:2px solid var(--dv-accent);outline-offset:2px
+}
+.ekodi-devotion .dv-speech-voice select:disabled{opacity:.65}
+.ekodi-devotion .dv-speech-tools .dv-speech-status{
+  order:20;flex:1 1 100%;font-size:.85rem;line-height:1.55;word-break:keep-all
+}
+@media(max-width:520px){
+  .ekodi-devotion .dv-speech-gender,.ekodi-devotion .dv-speech-voice{flex:1 1 100%;justify-content:space-between}
+  .ekodi-devotion .dv-speech-gender select,.ekodi-devotion .dv-speech-voice select{flex:0 1 70%;font-size:.87rem}
+}
+
+/* EKODI pre-reviewed narrator vs OS voice: clear, non-deceptive readiness. */
+.ekodi-devotion .dv-speech-engine{
+ display:flex;flex:1 1 100%;align-items:center;gap:8px;justify-content:flex-start;
+ font-size:.89rem;color:var(--dv-ink);word-break:keep-all
+}
+.ekodi-devotion .dv-speech-engine select{
+ min-height:44px;max-width:100%;min-width:165px;
+ border:1px solid #cfd9d1;border-radius:10px;background:#fff;color:var(--dv-ink);
+ padding:7px 10px;font:inherit
+}
+.ekodi-devotion .dv-speech-engine select:focus-visible{outline:2px solid var(--dv-accent);outline-offset:2px}
+.ekodi-devotion .dv-speech-voice[hidden]{display:none!important}
+@media(max-width:520px){
+ .ekodi-devotion .dv-speech-engine{justify-content:space-between}
+ .ekodi-devotion .dv-speech-engine select{flex:0 1 70%;min-width:0}
+}
+
+/* Show voice source and actual speaker choices before transport controls. */
+.ekodi-devotion .dv-speech-tools .dv-speech-engine{order:-5}
+.ekodi-devotion .dv-speech-tools .dv-speech-gender{order:-4}
+.ekodi-devotion .dv-speech-tools .dv-speech-voice{order:-3}
+.ekodi-devotion .dv-speech-tools .dv-speech-speed{order:-2}

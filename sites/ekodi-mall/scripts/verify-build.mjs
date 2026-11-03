@@ -23,6 +23,9 @@ const checks = [
   ['products/reusable-daily-bottle/index.html', ['리유저블 데일리 보틀', 'PRODUCT PAGE', 'data-add-basket']],
   ['assets/commerce.js', ['ekodiMallInquiryBasketV1', 'data-basket-copy']],
   ['assets/seller.js', ['ekodiMallSellerStudioDraftV5', 'mall-seller', "plan: 'free'", 'product-link-reservation']],
+  ['assets/seller-providers.css', ['seller-provider-tab', 'aria-selected']],
+  ['provider-bookstore.json', ['"products"', 'bookstore-BOOK-EKODI']],
+  ['assets/seller-provider-catalog.js', ['ekodiMallProviderCatalog', 'coupang_partners', 'readCatalogs', 'affiliateRows', 'bookstoreRows']],
   ['assets/seller-server.js', ['/ekodimall/api', '서버에 저장', '게시 · 링크 활성화', '/api/products', '/share-links', '/api/orders?limit=20', '/api/settlements', '직접링크 복사 · 7%', '일반 상품링크 · 8%']],
   ['assets/seller-readiness.js', ['DIRECT SALE READINESS', '/api/readiness', '/api/verification/seller/submit', '/verification/submit', 'payments-disabled', 'product-checkout-gate']],
   ['assets/seller-analytics.js', ['SELLER ANALYTICS', '/api/analytics/summary', 'PAID GROSS', 'first-touch', 'visitor ID']],
@@ -32,7 +35,7 @@ const checks = [
   ['assets/shared-store.html', ['SELLER STOREFRONT', '/assets/public-store.js', '/assets/storefront.css']],
   ['assets/public-store.js', ['/api/public/stores/', 'Mall 8%', '/p/']],
   ['assets/storefront.css', ['storefront-public-hero', 'storefront-product']],
-  ['assets/marketplace-live.js', ['api/public/products?limit=24', 'Mall 8%', 'dataset.serverProduct']],
+  ['assets/marketplace-live.js', ['api/public/products?', '상품 준비중', 'dataset.serverProduct', 'data-filter', '상품 더 보기']],
   ['assets/free-ops.html', ['FREE · SAFE · MANUAL FIRST', '후보 저장 + 안전판단', '비밀정보 입력 금지', '/assets/free-ops.js']],
   ['assets/free-ops.js', ['ekodiMallFreeOpsDraftV1', '/api/internal/supplier-discovery/context', '/api/internal/supplier-candidates', '/assessment', '예상 손실']],
   ['assets/free-ops.css', ['free-flow', 'free-form', 'free-item', 'free-result']],
@@ -65,6 +68,16 @@ for (const [relative, needles] of checks) {
   for (const needle of needles) if (!content.includes(needle)) errors.push(`${relative} is missing marker: ${needle}`);
   if (/\{\{[A-Z0-9_]+\}\}/.test(content)) errors.push(`${relative} contains unresolved template tokens`);
 }
+// Keep the customer purchase path ahead of editorial and AI storytelling after static rendering.
+const homepage = await readFile(path.join(dist, 'index.html'), 'utf8');
+const buyerOrder = ['class="mall-category-shortcuts"', 'class="shop" id="shop"', 'class="mall-editorial"', 'class="context-recommend"'];
+const buyerPositions = buyerOrder.map((marker) => homepage.indexOf(marker));
+if (buyerPositions.some((pos) => pos < 0) || buyerPositions.some((pos, index) => index > 0 && pos <= buyerPositions[index - 1])) {
+  errors.push('Mall buyer-first homepage order drift: product grid must precede editorial and AI recommendations');
+}
+const homeCss = await readFile(path.join(dist, 'assets/home-refresh.css'), 'utf8');
+if (!homeCss.includes('.mall-category-shortcuts{display:none}')) errors.push('Mall desktop duplicated category shortcuts must remain hidden');
+
 if (errors.length) {
   console.error(`EKODI Mall build verification failed (${errors.length})`);
   errors.forEach((error) => console.error(`- ${error}`));

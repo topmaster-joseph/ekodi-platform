@@ -15,9 +15,9 @@ const active=(m:any)=>m?.status==='active'&&m.base_consent===true&&m.age_19_conf
 const verified=(m:any)=>active(m)&&Boolean(m.adult_verified_at);
 // 유료회원 모델(2026-10-28): SINGLES_REQUEST_BILLING_ENABLED=true이면 가입비를 낸 유료회원만 회원 기능을 쓴다.
 const paidModel=()=>requestBilling();
+export const SUBSCRIPTION_CODES=['sub_1d','sub_10d','sub_20d','sub_30d'];
 async function isPaid(admin:Admin,userId:string){const {data,error}=await admin.rpc('singles_is_paid_member',{p_user:userId});if(error)throw error;return data===true}
 async function subscribed(admin:Admin,userId:string){return paidModel()?isPaid(admin,userId):hasBankPlan(admin,userId,'community')}
-const feeFrom=(e:any)=>Number(rpcMsg(e).match(/insufficient_credit:(\d+)/)?.[1]||0);
 // 연락처 가림: 연락처 교환이 수락되지 않은 사이에서는 전화번호·이메일·메신저 아이디·링크를 서버가 가린다.
 const CONTACT_PATTERNS=[
  /(?:\+?82[\s.-]?)?0?1[016789][\s.-]*\d{3,4}[\s.-]*\d{4}/g,
@@ -193,27 +193,17 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   return reply(req,{ok:true,id:reportReview,status:data});
  }
  if(p==='/pricing'&&method==='GET'){
+  // 2026-10-31: 가입비 없음. 유료회원=구독권 보유, 요청·수락은 수락 후 청구서(후불).
   const rules=await many(admin.from('singles_price_rules').select('kind,display_name,standard_krw,floor_krw,max_discount_pct'));
-  const passes=await many(admin.from('singles_pass_plans').select('code,display_name,days,price_krw').eq('active',true).order('days'));
+  const plans=await many(admin.from('singles_bank_plans').select('code,display_name,amount_krw,duration_days').eq('active',true).in('code',SUBSCRIPTION_CODES).order('duration_days'));
   const paid=paidModel()?await isPaid(admin,userId):false;
   const quotes:Record<string,number>={};
   if(paid)for(const k of ['message','contact']){const {data,error}=await admin.rpc('singles_price_quote',{p_user:userId,p_kind:k});if(error)throw error;quotes[k]=data}
-  const grant=await one(admin.from('singles_pass_grants').select('expires_at').eq('user_id',userId));
-  return reply(req,{paid_model:paidModel(),paid_member:paid,join_fee_krw:500000,rules,passes,quotes,
-   pass_expires_at:grant?.expires_at&&Date.parse(grant.expires_at)>Date.now()?grant.expires_at:null});
+  const grant=await one(admin.from('singles_bank_grants').select('expires_at').eq('user_id',userId).eq('plan_code','subscription'));
+  return reply(req,{paid_model:paidModel(),paid_member:paid,billing:'postpaid_invoice',rules,subscription_plans:plans,quotes,
+   subscription_expires_at:grant?.expires_at&&Date.parse(grant.expires_at)>Date.now()?grant.expires_at:null});
  }
- const passCode=match(p,/^\/passes\/(pass_(?:1|10|20|30)d)$/);
- if(passCode&&method==='POST'){
-  if(!paidModel())return reply(req,{error:'paid_model_not_launched'},503);
-  const {data,error}=await admin.rpc('singles_pass_purchase',{p_user:userId,p_code:passCode});
-  if(error){
-   if(rpcMsg(error).includes('insufficient_credit'))return reply(req,{error:'credit_required',fee_krw:feeFrom(error)},402);
-   if(rpcMsg(error).includes('paid_membership_required'))return reply(req,{error:'paid_membership_required'},402);
-   if(rpcMsg(error).includes('pass_not_available'))return reply(req,{error:'pass_not_available'},404);
-   throw error;
-  }
-  return reply(req,{ok:true,pass_expires_at:data});
- }
+ if(/^\/passes\//.test(p))return reply(req,{error:'passes_discontinued'},410);
  if(p==='/profile'&&method==='GET'){
   const record=await one(admin.from('singles_profiles').select('display_name,broad_region,intro,public_link,details,visibility').eq('user_id',userId));
   const vis=Object.fromEntries(VISIBILITY_KEYS.map(k=>[k,isVisible(record?.visibility,k)]));
@@ -250,27 +240,85 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   return reply(req,{saved:true,discoverable:allowDiscover,adult_verified:verified(m)});
  }
  // Logged-in users can browse published events even before signing up for singles.
+ // 2026-11-01: 행사(event, 날짜 한 번)와 모임(group, 정기 소그룹)을 함께 내려주고 화면에서 나눈다. 정원·신청 수·내 신청 상태 포함.
  if(p==='/events'&&method==='GET'){
-  const events=await many(admin.from('singles_events').select('id,title,summary,region,starts_at,fee_krw')
-   .eq('state','published').gte('starts_at',new Date().toISOString()).order('starts_at').limit(40));
+  const now=new Date().toISOString();
+  const rows=await many(admin.from('singles_events').select('id,kind,title,summary,region,starts_at,schedule_note,capacity,fee_krw')
+   .eq('state','published').or('kind.eq.group,starts_at.gte.'+now).order('starts_at').limit(60));
+  const ids=rows.map((e:any)=>e.id);
+  const rsvps=ids.length?await many(admin.from('singles_event_rsvps').select('event_id,user_id,status').in('event_id',ids).in('status',['requested','approved'])):[];
+  const taken=new Map<string,number>();const mine=new Map<string,string>();
+  for(const r of rsvps){taken.set(r.event_id,(taken.get(r.event_id)||0)+1);if(r.user_id===userId)mine.set(r.event_id,r.status)}
+  const events=rows.map((e:any)=>({...e,taken:taken.get(e.id)||0,my_status:mine.get(e.id)||null}));
   return reply(req,{events});
  }
  const eventId=match(p,/^\/events\/([0-9a-f-]{36})$/i);
  if(eventId&&method==='GET'){
-  const event=await one(admin.from('singles_events').select('id,title,summary,description,region,starts_at,capacity,fee_krw')
+  const event=await one(admin.from('singles_events').select('id,kind,title,summary,description,region,starts_at,schedule_note,capacity,fee_krw')
     .eq('id',eventId).eq('state','published'));
   return event?reply(req,{event}):reply(req,{error:'not_found'},404);
  }
  const rsvpId=match(p,/^\/events\/([0-9a-f-]{36})\/rsvp$/i);
  if(rsvpId&&method==='POST'){
   if(!verified(m))return reply(req,{error:'adult_verification_required'},403);
-  if(!await subscribed(admin,userId))return reply(req,{error:'community_subscription_required'},402);
-  const event=await one(admin.from('singles_events').select('id,starts_at,fee_krw').eq('id',rsvpId).eq('state','published'));
-  if(!event||Date.parse(event.starts_at)<=Date.now())return reply(req,{error:'event_not_available'},409);
-  // Event-specific paid fees require a distinct verified receipt; subscriptions cannot silently waive them.
-  if(event.fee_krw>0)return reply(req,{error:'event_fee_verification_not_configured'},503);
-  const {error}=await admin.from('singles_event_rsvps').upsert({event_id:rsvpId,user_id:userId,status:'requested'}, {onConflict:'event_id,user_id'});
-  if(error)throw error;return reply(req,{ok:true,status:'requested'});
+  if(!await subscribed(admin,userId))return reply(req,{error:paidModel()?'paid_membership_required':'community_subscription_required'},402);
+  const {data,error}=await admin.rpc('singles_event_rsvp',{p_user:userId,p_event:rsvpId});
+  if(error){const msg=String(error.message||'');
+   if(msg.includes('event_full'))return reply(req,{error:'event_full'},409);
+   if(msg.includes('event_fee_verification_not_configured'))return reply(req,{error:'event_fee_verification_not_configured'},503);
+   if(msg.includes('event_not_available'))return reply(req,{error:'event_not_available'},409);
+   throw error;}
+  return reply(req,{ok:true,...data});
+ }
+ if(rsvpId&&method==='DELETE'){
+  const {data,error}=await admin.rpc('singles_event_rsvp_cancel',{p_user:userId,p_event:rsvpId});
+  if(error){if(String(error.message||'').includes('rsvp_not_found'))return reply(req,{error:'rsvp_not_found'},404);throw error}
+  return reply(req,{ok:true,...data});
+ }
+ // 운영자(설정 권한): 행사·모임 만들기·고치기·공개·취소와 신청자 보기.
+ if(p==='/admin/program'||p.startsWith('/admin/program/')){
+  const role=await one(admin.from('singles_bank_operators').select('enabled,can_configure').eq('user_id',userId));
+  if(role?.enabled!==true||role?.can_configure!==true)return reply(req,{error:'owner_capability_required'},403);
+  if(p==='/admin/program'&&method==='GET'){
+   const rows=await many(admin.from('singles_events').select('id,kind,title,summary,description,region,starts_at,schedule_note,capacity,fee_krw,state')
+    .order('starts_at',{ascending:false}).limit(80));
+   const ids=rows.map((e:any)=>e.id);
+   const rsvps=ids.length?await many(admin.from('singles_event_rsvps').select('event_id').in('event_id',ids).in('status',['requested','approved'])):[];
+   const taken=new Map<string,number>();for(const r of rsvps)taken.set(r.event_id,(taken.get(r.event_id)||0)+1);
+   return reply(req,{events:rows.map((e:any)=>({...e,taken:taken.get(e.id)||0})),regions:REGIONS});
+  }
+  const programId=match(p,/^\/admin\/program\/([0-9a-f-]{36})$/i);
+  if((p==='/admin/program'&&method==='POST')||(programId&&method==='PUT')){
+   const v=await body(req,20480);
+   const keys=['kind','title','summary','description','region','starts_at','schedule_note','capacity','state'];
+   if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!keys.includes(k)))return reply(req,{error:'invalid_program'},400);
+   const row:Record<string,unknown>={};
+   const str=(k:string,max:number,min=0)=>{if(v[k]===undefined)return true;if(typeof v[k]!=='string')return false;const t=v[k].trim();if(t.length<min||t.length>max)return false;row[k]=t;return true};
+   if(!str('title',120,3)||!str('summary',350)||!str('description',5000)||!str('schedule_note',80))return reply(req,{error:'invalid_program'},400);
+   if(v.kind!==undefined){if(!['event','group'].includes(v.kind))return reply(req,{error:'invalid_program'},400);row.kind=v.kind}
+   if(v.region!==undefined){if(typeof v.region!=='string'||(v.region&&!REGIONS.includes(v.region)))return reply(req,{error:'invalid_region'},400);row.region=v.region}
+   if(v.starts_at!==undefined){const t=Date.parse(v.starts_at);if(typeof v.starts_at!=='string'||!Number.isFinite(t))return reply(req,{error:'invalid_program'},400);row.starts_at=new Date(t).toISOString()}
+   if(v.capacity!==undefined){if(v.capacity!==null&&(!Number.isInteger(v.capacity)||v.capacity<1||v.capacity>500))return reply(req,{error:'invalid_program'},400);row.capacity=v.capacity}
+   if(v.state!==undefined){if(!['draft','published','cancelled'].includes(v.state))return reply(req,{error:'invalid_program'},400);row.state=v.state}
+   if(programId){
+    row.updated_at=new Date().toISOString();
+    const {data,error}=await admin.from('singles_events').update(row).eq('id',programId).select('id,state').maybeSingle();
+    if(error)throw error;if(!data)return reply(req,{error:'not_found'},404);
+    return reply(req,{ok:true,event:data});
+   }
+   if(!row.title||!row.starts_at)return reply(req,{error:'invalid_program'},400);
+   const {data,error}=await admin.from('singles_events').insert({...row,host_user_id:userId,state:row.state||'draft'}).select('id,state').single();
+   if(error)throw error;return reply(req,{ok:true,event:data},201);
+  }
+  const rsvpList=match(p,/^\/admin\/program\/([0-9a-f-]{36})\/rsvps$/i);
+  if(rsvpList&&method==='GET'){
+   const rows=await many(admin.from('singles_event_rsvps').select('user_id,status,created_at').eq('event_id',rsvpList).order('created_at').limit(500));
+   const ids=[...new Set<string>(rows.map((r:any)=>r.user_id))];
+   const names=ids.length?await many(admin.from('singles_profiles').select('user_id,display_name').in('user_id',ids)):[];
+   const byId=new Map(names.map((x:any)=>[x.user_id,x.display_name]));
+   return reply(req,{rsvps:rows.map((r:any)=>({display_name:byId.get(r.user_id)||'동행 회원',status:r.status,created_at:r.created_at}))});
+  }
+  return reply(req,{error:'not_found'},404);
  }
  const earlyBlock=match(p,/^\/blocks\/([0-9a-f-]{36})$/i);
  if(earlyBlock&&method==='POST'){
@@ -342,9 +390,10 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   // 회원이 공개로 고른 항목만 내보낸다(비공개 항목은 응답에 아예 싣지 않음).
   return reply(req,{profiles:profiles.map((p:any)=>{
    const show=(k:string)=>isVisible(p.visibility,k);
-   const details=Object.fromEntries(Object.keys(PROFILE_FIELDS).filter(k=>show(k)&&typeof p.details?.[k]==='string'&&p.details[k]).map(k=>[k,p.details[k]]));
-   return {id:p.user_id,display_name:p.display_name,broad_region:show('broad_region')?p.broad_region:'',intro:show('intro')?p.intro:'',
-    public_link:show('public_link')?p.public_link||null:null,details};
+   const protect=(value:unknown)=>typeof value==='string'&&paidModel()?maskContacts(value).text:value;
+   const details=Object.fromEntries(Object.keys(PROFILE_FIELDS).filter(k=>show(k)&&typeof p.details?.[k]==='string'&&p.details[k]).map(k=>[k,protect(p.details[k])]));
+   return {id:p.user_id,display_name:protect(p.display_name),broad_region:show('broad_region')?protect(p.broad_region):'',intro:show('intro')?protect(p.intro):'',
+    public_link:!paidModel()&&show('public_link')?p.public_link||null:null,details};
   })});
  }
  const interestUser=match(p,/^\/interests\/([0-9a-f-]{36})$/i);
@@ -354,22 +403,22 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const recipient=await membership(admin,interestUser);
   if(!verified(recipient)||recipient.discoverable!==true)return reply(req,{error:'connection_unavailable'},404);
   if(paidModel()){
-   // 요청 종류: message(메시지 교환) | contact(연락처 교환). 요청자 요금은 보류되고 상대 수락 시 확정된다.
+   // 요청 종류: message(메시지 교환) | contact(연락처 교환).
    let kind='message';
    if(Number(req.headers.get('content-length')||0)>0){const v=await body(req);if(v&&typeof v==='object'&&'kind' in v)kind=v.kind}
    if(!['message','contact'].includes(kind))return reply(req,{error:'invalid_request_kind'},400);
    if(!await isPaid(admin,userId))return reply(req,{error:'paid_membership_required'},402);
    {const retry=await rateLimited(admin,userId,'interest');if(retry)return tooMany(req,reply,'interest',retry);}
-   const {data,error}=await admin.rpc('singles_paid_request_create',{p_requester:userId,p_responder:interestUser,p_kind:kind});
+   const {data,error}=await admin.rpc('singles_postpaid_request_create',{p_requester:userId,p_responder:interestUser,p_kind:kind});
    if(error){
     const msg=rpcMsg(error);
-    if(msg.includes('insufficient_credit'))return reply(req,{error:'credit_required',fee_krw:feeFrom(error)},402);
     if(msg.includes('paid_membership_required'))return reply(req,{error:'paid_membership_required'},402);
     if(msg.includes('responder_unavailable'))return reply(req,{error:'connection_unavailable'},404);
     for(const code of ['request_exists','already_connected','contact_already_shared'])if(msg.includes(code))return reply(req,{error:code},409);
     throw error;
    }
-   return reply(req,{ok:true,status:'pending',request_id:data.request_id,kind,billing:{reserved_krw:data.fee_krw,charged_on:'acceptance'}});
+   // 요청할 때는 아무것도 결제·보류하지 않는다. 상대가 수락하면 양쪽에 청구서가 발행된다.
+   return reply(req,{ok:true,status:'pending',request_id:data.request_id,kind,billing:{fee_krw:data.fee_krw,charged_on:'acceptance_invoice'}});
   }
   const existing=await one(admin.from('singles_interests').select('id,status').eq('from_user_id',userId).eq('to_user_id',interestUser));
   if(existing)return reply(req,{ok:true,status:existing.status,interest_id:existing.id});
@@ -380,6 +429,8 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
  if(p==='/requests'&&method==='GET'&&paidModel()){
   const reqs=await many(admin.from('singles_paid_requests').select('id,requester_id,responder_id,kind,status,requester_fee_krw,responder_fee_krw,created_at')
    .or('requester_id.eq.'+userId+',responder_id.eq.'+userId).order('created_at',{ascending:false}).limit(50));
+  const invoices=await many(admin.from('singles_request_invoices').select('id,request_id,amount_krw,status,order_reference,due_at,refund_due_at,refunded_at').eq('user_id',userId).limit(100));
+  const invByReq=new Map<string,any>(invoices.map((i:any)=>[i.request_id,i]));
   const conns=await many(admin.from('singles_interests').select('id,from_user_id,to_user_id,status')
    .or('from_user_id.eq.'+userId+',to_user_id.eq.'+userId).eq('status','accepted').limit(50));
   const others=[...new Set([...reqs.map((r:any)=>r.requester_id===userId?r.responder_id:r.requester_id),...conns.map((c:any)=>c.from_user_id===userId?c.to_user_id:c.from_user_id)])];
@@ -389,10 +440,11 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   for(const k of ['message','contact']){const {data,error}=await admin.rpc('singles_price_quote',{p_user:userId,p_kind:k});if(error)throw error;quotes[k]=data}
   const unlocks=await many(admin.from('singles_contact_unlocks').select('user_low,user_high').or('user_low.eq.'+userId+',user_high.eq.'+userId));
   const shared=new Set(unlocks.map((u:any)=>u.user_low===userId?u.user_high:u.user_low));
-  return reply(req,{paid_model:true,
-   requests:reqs.map((r:any)=>{const incoming=r.responder_id===userId,other=incoming?r.requester_id:r.responder_id;
+  return reply(req,{paid_model:true,billing:'postpaid_invoice',
+   requests:reqs.map((r:any)=>{const incoming=r.responder_id===userId,other=incoming?r.requester_id:r.responder_id;const inv=invByReq.get(r.id);
     return {id:r.id,kind:r.kind,status:r.status,incoming,display_name:byId.get(other)||'동행 회원',
-     my_fee_krw:incoming?(r.status==='accepted'?r.responder_fee_krw:quotes[r.kind]):r.requester_fee_krw}}),
+     my_fee_krw:inv?inv.amount_krw:(incoming?quotes[r.kind]:r.requester_fee_krw),
+     invoice:inv?{id:inv.id,amount_krw:inv.amount_krw,status:inv.status,order_reference:inv.order_reference||null,due_at:inv.due_at,refund_due_at:inv.refund_due_at||null,refunded_at:inv.refunded_at||null}:null}}),
    connections:conns.map((c:any)=>{const other=c.from_user_id===userId?c.to_user_id:c.from_user_id;
     return {id:c.id,display_name:byId.get(other)||'동행 회원',contact_shared:shared.has(other)}})});
  }
@@ -416,15 +468,15 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
    const q=await one(admin.from('singles_paid_requests').select('requester_id,status').eq('id',decisionId).eq('responder_id',userId));
    if(!q||q.status!=='pending')return reply(req,{error:'connection_not_pending'},409);
    if(await blocked(admin,userId,q.requester_id))return reply(req,{error:'blocked'},403);
-   const {data,error}=await admin.rpc('singles_paid_request_decide',{p_responder:userId,p_request:decisionId,p_decision:decision});
+   const {data,error}=await admin.rpc('singles_postpaid_request_decide',{p_responder:userId,p_request:decisionId,p_decision:decision});
    if(error){
     const msg=rpcMsg(error);
-    if(msg.includes('responder_insufficient_credit'))return reply(req,{error:'credit_required',fee_krw:feeFrom(error)},402);
     if(msg.includes('paid_membership_required'))return reply(req,{error:'paid_membership_required'},402);
     if(msg.includes('request_not_pending'))return reply(req,{error:'request_state_changed'},409);
     throw error;
    }
-   return reply(req,{ok:true,status:data.status,kind:data.kind,interest_id:data.interest_id,billing:{charged_krw:data.fee_krw}});
+   // 수락하면 양쪽에 청구서가 발행되고, 둘 다 결제되면 연결된다.
+   return reply(req,{ok:true,status:data.status,kind:data.kind,billing:{invoice_id:data.invoice_id||null,fee_krw:data.fee_krw,due_days:7}});
   }
   const interest=await one(admin.from('singles_interests').select('from_user_id,to_user_id,status')
    .eq('id',decisionId).eq('to_user_id',userId));
@@ -435,7 +487,9 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(error)throw error;if(!data)return reply(req,{error:'request_state_changed'},409);
   return reply(req,{ok:true,status:decision});
  }
- const interestId=match(p,/^\/messages\/([0-9a-f-]{36})$/i);
+ const shareContact=match(p,/^\/messages\/([0-9a-f-]{36})\/contact$/i);
+ const interestId=match(p,/^\/messages\/([0-9a-f-]{36})$/i)||shareContact;
+ if(shareContact&&method!=='POST')return reply(req,{error:'method_not_allowed'},405);
  if(interestId&&['GET','POST'].includes(method)){
   const interest=await one(admin.from('singles_interests').select('from_user_id,to_user_id,status').eq('id',interestId));
   if(!interest||interest.status!=='accepted'||![interest.from_user_id,interest.to_user_id].includes(userId))
@@ -446,7 +500,23 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(method==='GET'){
    const messages=await many(admin.from('singles_messages').select('id,sender_id,body,created_at')
      .eq('interest_id',interestId).order('created_at',{ascending:true}).limit(100));
-   return reply(req,{messages});
+   const locked=paidModel()&&!await contactUnlocked(admin,userId,other);
+   return reply(req,{messages:locked?messages.map((m:any)=>({...m,body:maskContacts(String(m.body||'')).text})):messages});
+  }
+  // A personal contact is NEVER inferred from public profile, login identity, or payment.
+  // Each verified member must explicitly submit their own phone/email after BOTH invoices clear.
+  if(shareContact){
+   if(!paidModel()||!await contactUnlocked(admin,userId,other))return reply(req,{error:'contact_exchange_not_completed'},403);
+   const v=await body(req);
+   if(!v||v.share_consent!==true||typeof v.contact!=='string')return reply(req,{error:'contact_share_consent_required'},400);
+   const contact=v.contact.trim();
+   const phone=/^(?:\+?82[-. ]?)?0?1[016789][-. ]?\d{3,4}[-. ]?\d{4}$/;
+   const email=/^[^\s@]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+   if(contact.length>100||(!phone.test(contact)&&!email.test(contact)))return reply(req,{error:'invalid_contact'},400);
+   {const retry=await rateLimited(admin,userId,'message');if(retry)return tooMany(req,reply,'message',retry);}
+   const {error}=await admin.from('singles_messages').insert({interest_id:interestId,sender_id:userId,body:'[내 연락처] '+contact});
+   if(error)throw error;
+   return reply(req,{ok:true,shared:true});
   }
   // The sender of every new message (including replies) must have a valid
   // bank-confirmed community subscription; receiving/reading remains free.
@@ -455,9 +525,10 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const v=await body(req);
   if(typeof v?.text!=='string'||!v.text.trim()||v.text.length>1000)return reply(req,{error:'invalid_message'},400);
   {const retry=await rateLimited(admin,userId,'message');if(retry)return tooMany(req,reply,'message',retry);}
-  // 연락처 교환이 수락되지 않은 사이에서는 메시지 속 연락처를 가려서 저장한다(유료회원 모델).
+  // 유료 동행의 일반 메시지는 결제 완료 후에도 연락처를 가린다.
+  // 개인 연락처 공개는 별도 제공 동의가 확인되는 /messages/:id/contact 경로만 허용한다.
   let stored=v.text.trim(),masked=false;
-  if(paidModel()&&!await contactUnlocked(admin,userId,other)){const r=maskContacts(stored);stored=r.text;masked=r.masked}
+  if(paidModel()){const r=maskContacts(stored);stored=r.text;masked=r.masked}
   const {error}=await admin.from('singles_messages').insert({interest_id:interestId,sender_id:userId,body:stored});
   if(error)throw error;return reply(req,{ok:true,masked});
  }

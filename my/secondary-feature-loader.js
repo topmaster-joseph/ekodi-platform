@@ -1,13 +1,13 @@
 const MODULES=Object.freeze([
-  '/my/public-profile.js?v=20260923-public-person-v1',
-  '/my/digital-card-admin.js?v=20261008-messenger-share-1',
+  '/my/public-profile.js?v=20261103-read-guard-v1',
+  '/my/digital-card-admin.js?v=20261103-read-guard-v1',
   '/my/character-identity.js?v=20260906-ekodian-personal-v1',
   '/my/approval-brief.js?v=20260904-approval-hub-1',
   '/my/personal-finance.js?v=20260905-personal-finance-1',
   '/my/life-communication.js?v=20260824-life-ai-1',
 ]);
 const CLASSIC=Object.freeze([
-  '/my/church-marketing-ai.js?v=20260827-church-marketing-1',
+  '/my/church-marketing-ai.js?v=20261101-church-channel-center',
   '/my/channel-automation.js?v=20260903-channel-automation-1',
 ]);
 let startPromise=null;

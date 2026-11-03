@@ -1,0 +1,159 @@
+/* 2026-08-30 · Church-only footer identity and operator information */
+.site-footer.church-footer{
+  width:100%;
+  padding:30px 24px 24px!important;
+  background:#0b2722;
+  color:rgba(255,255,255,.72);
+  text-align:center!important;
+  display:block!important;
+}
+.church-footer-inner{
+  width:min(1120px,100%);
+  margin:0 auto;
+  display:grid;
+  justify-items:center;
+  gap:14px;
+  text-align:center;
+  font-family:var(--sans);
+}
+.church-footer-brand{
+  color:#fff;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.16em;
+}
+.church-footer-info{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
+  gap:7px 18px;
+  max-width:960px;
+  font-size:11px;
+  line-height:1.65;
+}
+.church-footer-info span,
+.church-footer-info a{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:rgba(255,255,255,.66);
+  text-align:center;
+}
+.church-footer-info a{
+  color:rgba(255,255,255,.9);
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+.church-footer-legal{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
+  gap:7px 18px;
+  width:min(760px,100%);
+  font-size:11px;
+  line-height:1.6;
+  text-align:center;
+}
+.church-footer-legal a{
+  color:rgba(255,255,255,.88);
+  text-decoration:none;
+  text-underline-offset:4px;
+}
+.church-footer-legal a:hover,
+.church-footer-legal a:focus-visible{
+  color:#fff;
+  text-decoration:underline;
+  outline:none;
+}
+.church-footer-bottom{
+  width:min(760px,100%);
+  margin-top:2px;
+  padding-top:13px;
+  border-top:1px solid rgba(255,255,255,.10);
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
+  gap:7px 18px;
+  color:rgba(255,255,255,.48);
+  font-size:10px;
+  line-height:1.6;
+  text-align:center;
+}
+.church-footer-bottom a{color:rgba(255,255,255,.82)}
+
+/* Church owns its footer. Hide any shared EKODI footer that an older shell bundle
+   may still append from cache while the central opt-out propagates. */
+html[data-ekodi-service="church"] .ekodi-user-ui-footer,
+.site-footer.church-footer ~ .ekodi-user-ui-footer{
+  display:none!important;
+}
+
+/* Header Scripture: keep the section title omitted, but always show the Bible reference. */
+.site-header .daily-verse{
+  max-width:760px;
+  gap:9px!important;
+  font-size:16px!important;
+}
+.site-header .daily-verse-label{display:none!important}
+.site-header .daily-verse-ref{
+  display:inline!important;
+  flex:0 0 auto;
+  color:#6f807a;
+  font-family:var(--sans);
+  font-size:11px!important;
+  font-weight:600;
+  white-space:nowrap;
+}
+
+/* Church closing section is text-led. No stock/real-life photo is rendered. */
+.community-visit{
+  display:block!important;
+  min-height:0!important;
+  background:#f6f2e9!important;
+}
+.community-visit-photo{
+  display:none!important;
+  min-height:0!important;
+  background-image:none!important;
+}
+.community-visit-copy{
+  width:min(900px,calc(100% - 48px));
+  margin:0 auto;
+  padding:76px 0 82px!important;
+  text-align:center;
+}
+.community-visit-copy>p:not(.eyebrow){
+  max-width:640px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+.community-visit-copy .visit-facts{
+  width:min(720px,100%);
+  margin-left:auto;
+  margin-right:auto;
+  text-align:left;
+}
+.community-visit-copy .visit-actions{justify-content:center}
+.photo-credit{display:none!important}
+
+@media(max-width:800px){
+  .site-header .daily-verse{font-size:12px!important;gap:6px!important}
+  .site-header .daily-verse-ref{font-size:9px!important}
+  .community-visit-copy{width:min(100% - 40px,900px);padding:56px 0 62px!important}
+}
+
+@media(max-width:720px){
+  .site-footer.church-footer{padding:27px 20px 22px!important}
+  .church-footer-info{display:grid;gap:5px}
+  .church-footer-legal{gap:6px 14px}
+  .church-footer-bottom{display:grid;gap:5px}
+}
+
+@media(max-width:480px){
+  .site-header .daily-verse{font-size:10px!important;gap:4px!important}
+  .site-header .daily-verse-ref{display:inline!important;font-size:8px!important}
+  .community-visit-copy{width:min(100% - 28px,900px);padding:48px 0 54px!important}
+}

@@ -16,12 +16,12 @@ const serviceOrigins={
   trade:['https://ekodi.kr','https://trade.biz.ekodi.kr','https://trade.ekodi.kr'],
   mall:['https://ekodi.kr'],
   pay:['https://ekodi.kr'],
-  books:['https://books.ekodi.kr'],
+  books:['https://ekodi.kr'],
   church:['https://ekodi.kr'],
   lab:['https://lab.ekodi.kr'],
   mission:['https://ekodi.kr'],
   community:['https://ekodi.kr'],
-  edu:['https://edu.ekodi.kr'],
+  edu:['https://ekodi.kr'],
   media:['https://media.ekodi.kr'],
   social:['https://social.ekodi.kr'],
   energy:['https://energy.ekodi.kr'],
@@ -31,7 +31,7 @@ const fallback=serviceDefaults[site]||`${origins[0]}/`;
 if(!origins.length||!requested||requested.length>180||!/^[a-z]+:[a-zA-Z0-9:_-]+$/.test(requested))throw new Error('target_workspace_not_applicable');
 
 function safeReturn(raw){
-  try{const target=new URL(raw||fallback);const base=new URL(fallback);const canonicalPath=base.origin==='https://ekodi.kr'&&base.pathname!=='/'&&(target.pathname===base.pathname||target.pathname===base.pathname.replace(/\/$/,'')||target.pathname.startsWith(base.pathname.replace(/\/$/,'')+'/'));const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='church'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/'))));return target.protocol==='https:'&&((origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath||(target.origin==='https://ekodi.kr'&&canonicalPath))?target.href:fallback;}
+  try{const target=new URL(raw||fallback);const base=new URL(fallback);const canonicalPath=base.origin==='https://ekodi.kr'&&base.pathname!=='/'&&(target.pathname===base.pathname||target.pathname===base.pathname.replace(/\/$/,'')||target.pathname.startsWith(base.pathname.replace(/\/$/,'')+'/'));const platformPath=target.origin==='https://ekodi.kr'&&((site==='cgma'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/')))||(site==='mission'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')))||(site==='church'&&(target.pathname==='/ekodichurch'||target.pathname.startsWith('/ekodichurch/')||(target.pathname==='/live/church'||target.pathname.startsWith('/live/church/')))));return target.protocol==='https:'&&((origins.includes(target.origin)&&target.origin!=='https://ekodi.kr')||platformPath||(target.origin==='https://ekodi.kr'&&canonicalPath))?target.href:fallback;}
   catch{return fallback;}
 }
 const returnTo=safeReturn(params.get('return_to'));

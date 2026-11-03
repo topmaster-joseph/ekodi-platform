@@ -74,11 +74,14 @@
 - 상품과 공급처 연결 및 Auto Source Dry-run
 - Free Ops에서 공급처 후보 등록·예상 마진 계산·기본 안전체크
 
-## 아직 켜지 않는 것
+## 현재 결제 운영 범위와 계속 차단하는 기능 (2026-10-31 운영 검증)
 
-- 실제 직접판매 온라인 결제 (`PAYMENTS_ENABLED=false` 유지)
+- 현재 `sites/ekodi-mall/api/wrangler.toml`의 `PAYMENTS_ENABLED="true"`이며 운영 `Mall 운영 API의 /health`의 `paymentsEnabled=true`/Toss `liveReady=true`가 확인되었다. **기존 실결제 활성화를 신규 승인이나 다른 판매자에게의 확대 승인으로 해석하지 않는다.**
+- 현재 허용된 Mall 토스 직접결제는 **판매주체가 에코디비즈인 직접판매 상품**에 한정한다. 타 판매자의 결제대금 수령·지급대행을 활성화하지 않는다. `pages/payout/` 정책을 기준으로 한다.
+- `payoutExecutionEnabled=false`, `buyerPiiReleaseEnabled=false`, `supplierForwardEnabled=false`, `refundExecutionEnabled=false` 및 `SOURCING_AUTO_ORDER_ENABLED=false`를 유지한다. 자동 환불·공급자 개인정보 전달·자동발주를 허용하지 않는다.
+- 환불·부분환불과 정산 검토는 `PAYMENT_OPERATIONS.md`를 기준으로 수행한다. 결제 승인·서버 검증은 판매자 검증·주문 gate를 우회할 수 없다.
+- `PAYMENTS_ENABLED` 변경이나 새 MID·판매자·상품군의 결제 범위 확대는 운영 승인·계약/법적 검증·스테이징·운영 실증 이후에만 수행한다.
 - 미검증 판매자의 주문 생성
-- 실제 Toss Client 결제창
 - 토스 지급대행 판매자 KYC와 지급 실행
 - 취소·부분취소·환불 원장 자동화
 - 구매자 배송정보/개인정보 수집 checkout
@@ -109,9 +112,9 @@ Mall 변경은 `.github/workflows/deploy-ekodi-mall.yml`에서 다음 순서로�
 7. production Pages 배포 직전 `scripts/disable-git-auto-deploy.mjs`가 Cloudflare Pages의 레거시 Git 자동배포를 강제로 끈다. 예상 소스는 `topmaster-joseph/ekodi-mall`뿐이며 다른 저장소가 연결되어 있으면 수정하지 않고 배포를 실패시킨다.
 8. 운영 Pages의 유일한 쓰기 경로는 이 저장소의 `.github/workflows/deploy-ekodi-mall.yml`에서 수행하는 Wrangler Direct Upload CI다. 레거시 저장소 push가 운영 또는 preview 배포를 만들 수 없어야 한다.
 
-## 결제·자동발주 기능을 켜기 전
+## 결제 범위 확대·자동발주 기능을 켜기 전
 
-`content/site.json`의 결제표시와 `api/wrangler.toml`의 `PAYMENTS_ENABLED`, 소싱 자동발주 gate를 활성화하기 전에 다음을 모두 만족해야 한다.
+`content/site.json`의 결제 대상 판매자·MID·상품군 확대 또는 소싱 자동발주 gate를 활성화하기 전에 다음을 모두 만족해야 한다.
 
 - 실제 사업자·고객센터 정보가 등록되어 있다.
 - 판매자 신원/사업자 검증과 직접판매 활성화 절차가 운영 가능하다.

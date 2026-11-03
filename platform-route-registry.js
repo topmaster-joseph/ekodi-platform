@@ -1,7 +1,7 @@
 export const PLATFORM_ROUTE_REGISTRY=Object.freeze({
   canonical:Object.freeze(['admin','my','auth','api','mcp','webhooks','health','connect']),
   platformServices:Object.freeze([
-    'ai','author','bible','books','business','cafe','cloud','community','cmpmyi','delivery','dev','developer','edu','education','energy','ekodilab','ekodimall','ekodimission','ekodipay','event','experience','finance-api','give','history','insurance','invest','journal','lab','life','live','local-commerce','login','logout','mail','mall','management','marketing','marketing-api','marketing-connect-api','marketing-publish-api','media','messenger','mission','money','pay','personal-finance-api','preview','privacy','publish','publishing','research','shell','singles','social','status','storage','stores','support','tax','terms','trade','try','work','workspace-api','www'
+    'ai','author','bible','books','business','cafe','cloud','community','cmpmyi','delivery','dev','developer','edu','education','energy','ekodilab','ekodimall','ekodimission','ekodipay','event','experience','finance-api','give','history','insurance','invest','journal','lab','life','live','local-commerce','login','logout','mail','mall','management','marketing','marketing-api','marketing-connect-api','marketing-publish-api','media','messenger','mission','money','pay','personal-finance-api','preview','privacy','publish','publishing','research','shell','singles','social','status','storage','stores','support','tax','terms','trade','try','video','work','workspace-api','www'
   ]),
   retiredIdentityPrefixes:Object.freeze(['group','org','personal','project','space','user']),
 });
@@ -49,6 +49,8 @@ export const PLATFORM_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'trade',prefix:'/trade',legacyHost:platformHost('trade')}),
   Object.freeze({id:'lab',prefix:'/ekodilab',host:'ekodilab.pages.dev',canonicalHost:platformHost('lab')}),
   Object.freeze({id:'cafe',prefix:'/cafe',host:'ekodi-cafe.pages.dev',canonicalHost:platformHost('cafe')}),
+  // 영상서재: original stays on Vercel; EKODI only links the canonical path (reversible: remove this line).
+  Object.freeze({id:'video',prefix:'/video',host:'ekodi-video.vercel.app',basePathAware:true}),
 ]);
 
 export const PLATFORM_LEGACY_HOST_PATHS=Object.freeze({

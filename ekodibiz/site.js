@@ -1,7 +1,21 @@
+// TOSS-MERCHANT-REVIEW-001: The registered public EKODIBIZ homepage must expose
+// the verified customer telephone in every localized legal footer before re-review.
+// EKODIBIZ is a public same-origin landing page. The central identity service
+// persists its own session; this page never consumes the extra one-use proof.
+// Remove that proof from the address before public rendering, without disturbing
+// ordinary #business/<area> links or the selected ?business= return route.
+function discardUnusedAuthProof(){
+  try{
+    const fragment=new URLSearchParams(location.hash.replace(/^#/,'')); 
+    if(fragment.has('ekodi_token'))history.replaceState(null,document.title,location.pathname+location.search);
+  }catch{}
+}
+discardUnusedAuthProof();
+
 const TEXT={
   'ko-KR':{
     title:'에코디비즈 | EKODIBIZ',description:'에코디비즈는 프로그램 개발, 태양광, 쇼핑몰, 컨설팅, 무역, 도서출판, AI·디지털 운영을 연결하는 비즈니스 파트너입니다.',
-    brandHome:'EKODI 첫 화면으로 이동',navLabel:'주요 메뉴',navBusiness:'사업분야',languageLabel:'언어',languageSelect:'언어 선택',
+    brandHome:'에코디비즈 첫 화면으로 이동',navLabel:'주요 메뉴',navBusiness:'사업분야',languageLabel:'언어',languageSelect:'언어 선택',
     heroTitle:'가치를 발견하고,<br><span>실행 가능한 사업으로.</span>',heroLead:'에코디비즈는 기술과 사업 운영을 연결해 사람과 조직의 가능성이 실제 성과로 이어지도록 돕습니다.',inquiry:'사업 문의',
     businessTitle:'필요한 기술보다,<br>필요한 결과에서 시작합니다.',viewDetail:'자세히 보기',
     businessSoftware:'프로그램 개발',businessSoftwareSummary:'웹·앱·업무 시스템을 실제 운영 흐름에 맞게 설계하고 구축합니다.',
@@ -16,10 +30,10 @@ const TEXT={
     backToBusiness:'← 사업분야 전체 보기',areaInquiry:'이 분야 사업 문의',partnerLogin:'관계자 로그인',partnerLoginNote:'관계자 로그인은 공개 첫 화면이 아니라 선택한 사업분야의 상세 화면에서만 제공합니다.',
     detailStep1:'현황과 목표를 함께 확인합니다.',detailStep2:'실행 가능한 구조와 다음 행동을 설계합니다.',detailStep3:'운영 결과를 확인하고 필요한 개선을 이어갑니다.',
     footerTagline:'Turn value into a business.',privacy:'개인정보처리방침',terms:'이용약관',refund:'환불정책',footerNavLabel:'푸터 메뉴',generalSubject:'에코디비즈 사업 문의',
-    footerCompany:'에코디비즈 · 대표 정찬균 · 사업자등록번호 213-13-01959<br>전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층 · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a>'
+    footerCompany:'에코디비즈 · 대표 정찬균 · 사업자등록번호 213-13-01959<br>전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층 · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a> · <a href="tel:+821035018542">010-3501-8542</a>'
   },  en:{
     title:'EKODIBIZ | Business in Action',description:'EKODIBIZ connects software development, solar energy, commerce, consulting, global trade, publishing and AI-powered digital operations.',
-    brandHome:'Go to the EKODI home page',navLabel:'Main navigation',navBusiness:'Business Areas',languageLabel:'Language',languageSelect:'Select language',
+    brandHome:'Go to the EKODIBIZ home page',navLabel:'Main navigation',navBusiness:'Business Areas',languageLabel:'Language',languageSelect:'Select language',
     heroTitle:'Discover value.<br><span>Turn it into a business that works.</span>',heroLead:'EKODIBIZ connects technology with business operations so promising ideas for people and organizations can become measurable outcomes.',inquiry:'Business Inquiry',
     businessTitle:'We start with the outcome,<br>not with the technology.',viewDetail:'View details',
     businessSoftware:'Software Development',businessSoftwareSummary:'We design and build web, app and operational systems around real workflows.',
@@ -34,10 +48,10 @@ const TEXT={
     backToBusiness:'← View all business areas',areaInquiry:'Inquire about this area',partnerLogin:'Partner Sign In',partnerLoginNote:'Partner sign-in is available only inside the selected business-area detail view, not on the public front page.',
     detailStep1:'We clarify the current situation and goal together.',detailStep2:'We design an executable structure and the next action.',detailStep3:'We review results and continue the improvements that matter.',
     footerTagline:'Turn value into a business.',privacy:'Privacy Policy',terms:'Terms of Use',refund:'Refund Policy',footerNavLabel:'Footer navigation',generalSubject:'EKODIBIZ Business Inquiry',
-    footerCompany:'EKODIBIZ · Representative Jung Chan-gyun · Business Registration No. 213-13-01959<br>1F, 17-4 Baengnyeondong 1-gil, Cheonggye-myeon, Muan-gun, Republic of Korea · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a>'
+    footerCompany:'EKODIBIZ · Representative Jung Chan-gyun · Business Registration No. 213-13-01959<br>1F, 17-4 Baengnyeondong 1-gil, Cheonggye-myeon, Muan-gun, Republic of Korea · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a> · <a href="tel:+821035018542">010-3501-8542</a>'
   },  'zh-CN':{
     title:'EKODIBIZ | 让价值成为事业',description:'EKODIBIZ连接软件开发、太阳能、商城、咨询、国际贸易、出版、投资以及AI数字化运营。',
-    brandHome:'前往 EKODI 首页',navLabel:'主导航',navBusiness:'业务领域',languageLabel:'语言',languageSelect:'选择语言',
+    brandHome:'前往 EKODIBIZ 首页',navLabel:'主导航',navBusiness:'业务领域',languageLabel:'语言',languageSelect:'选择语言',
     heroTitle:'发现价值，<br><span>把它变成可执行的事业。</span>',heroLead:'EKODIBIZ连接技术与业务运营，让个人和组织的潜力转化为真实成果。',inquiry:'业务咨询',
     businessTitle:'不从技术本身开始，<br>从真正需要的结果开始。',viewDetail:'查看详情',
     businessSoftware:'软件开发',businessSoftwareSummary:'围绕真实运营流程设计并构建网站、应用和业务系统。',
@@ -52,10 +66,10 @@ const TEXT={
     backToBusiness:'← 查看全部业务领域',areaInquiry:'咨询此业务',partnerLogin:'合作伙伴登录',partnerLoginNote:'合作伙伴登录只出现在所选业务领域的详情页，不显示在公开首页。',
     detailStep1:'共同确认现状与目标。',detailStep2:'设计可执行的结构和下一步行动。',detailStep3:'复盘运营结果并持续改进。',
     footerTagline:'Turn value into a business.',privacy:'隐私政策',terms:'使用条款',refund:'退款政策',footerNavLabel:'页脚导航',generalSubject:'EKODIBIZ 业务咨询',
-    footerCompany:'EKODIBIZ · 代表 Jung Chan-gyun · 营业登记号 213-13-01959<br>韩国 Muan-gun, Cheonggye-myeon, Baengnyeondong 1-gil 17-4, 1层 · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a>'
+    footerCompany:'EKODIBIZ · 代表 Jung Chan-gyun · 营业登记号 213-13-01959<br>韩国 Muan-gun, Cheonggye-myeon, Baengnyeondong 1-gil 17-4, 1层 · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a> · <a href="tel:+821035018542">010-3501-8542</a>'
   },  ja:{
     title:'EKODIBIZ | 価値を事業へ',description:'EKODIBIZはソフトウェア開発、太陽光、EC、コンサルティング、国際貿易、出版、投資、AIデジタル運営をつなぎます。',
-    brandHome:'EKODIのトップへ',navLabel:'メインナビゲーション',navBusiness:'事業分野',languageLabel:'言語',languageSelect:'言語を選択',
+    brandHome:'EKODIBIZのトップへ',navLabel:'メインナビゲーション',navBusiness:'事業分野',languageLabel:'言語',languageSelect:'言語を選択',
     heroTitle:'価値を見つけ、<br><span>実行できる事業へ。</span>',heroLead:'EKODIBIZは技術と事業運営をつなぎ、人と組織の可能性を実際の成果へ結びつけます。',inquiry:'事業お問い合わせ',
     businessTitle:'必要な技術ではなく、<br>必要な成果から始めます。',viewDetail:'詳しく見る',
     businessSoftware:'ソフトウェア開発',businessSoftwareSummary:'実際の業務フローに合わせてWeb、アプリ、業務システムを設計・構築します。',
@@ -70,10 +84,10 @@ const TEXT={
     backToBusiness:'← 事業分野一覧へ',areaInquiry:'この分野について問い合わせる',partnerLogin:'関係者ログイン',partnerLoginNote:'関係者ログインは公開トップではなく、選択した事業分野の詳細画面にのみ表示されます。',
     detailStep1:'現状と目標を一緒に確認します。',detailStep2:'実行できる構造と次の行動を設計します。',detailStep3:'運営結果を確認し、必要な改善を続けます。',
     footerTagline:'Turn value into a business.',privacy:'プライバシーポリシー',terms:'利用規約',refund:'返金ポリシー',footerNavLabel:'フッターナビゲーション',generalSubject:'EKODIBIZ 事業お問い合わせ',
-    footerCompany:'EKODIBIZ · 代表 Jung Chan-gyun · 事業者登録番号 213-13-01959<br>韓国 Muan-gun, Cheonggye-myeon, Baengnyeondong 1-gil 17-4, 1階 · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a>'
+    footerCompany:'EKODIBIZ · 代表 Jung Chan-gyun · 事業者登録番号 213-13-01959<br>韓国 Muan-gun, Cheonggye-myeon, Baengnyeondong 1-gil 17-4, 1階 · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a> · <a href="tel:+821035018542">010-3501-8542</a>'
   },  ne:{
     title:'EKODIBIZ | मूल्यलाई व्यवसायमा',description:'EKODIBIZ ले सफ्टवेयर विकास, सौर्य ऊर्जा, कमर्स, परामर्श, विश्वव्यापी व्यापार, प्रकाशन, लगानी र AI डिजिटल सञ्चालनलाई जोड्छ।',
-    brandHome:'EKODI गृहपृष्ठमा जानुहोस्',navLabel:'मुख्य नेभिगेसन',navBusiness:'व्यवसाय क्षेत्र',languageLabel:'भाषा',languageSelect:'भाषा छान्नुहोस्',
+    brandHome:'EKODIBIZ गृहपृष्ठमा जानुहोस्',navLabel:'मुख्य नेभिगेसन',navBusiness:'व्यवसाय क्षेत्र',languageLabel:'भाषा',languageSelect:'भाषा छान्नुहोस्',
     heroTitle:'मूल्य पहिचान गर्नुहोस्,<br><span>र त्यसलाई कार्यान्वयनयोग्य व्यवसाय बनाउनुहोस्।</span>',heroLead:'EKODIBIZ ले प्रविधि र व्यवसाय सञ्चालनलाई जोडेर व्यक्ति र संस्थाको सम्भावनालाई वास्तविक नतिजामा रूपान्तरण गर्न मद्दत गर्छ।',inquiry:'व्यवसाय सोधपुछ',
     businessTitle:'प्रविधिबाट होइन,<br>आवश्यक नतिजाबाट सुरु गर्छौं।',viewDetail:'विवरण हेर्नुहोस्',
     businessSoftware:'सफ्टवेयर विकास',businessSoftwareSummary:'वास्तविक कार्यप्रवाहअनुसार वेब, एप र सञ्चालन प्रणाली डिजाइन र निर्माण गर्छौं।',
@@ -88,10 +102,10 @@ const TEXT={
     backToBusiness:'← सबै व्यवसाय क्षेत्र',areaInquiry:'यस क्षेत्रबारे सोध्नुहोस्',partnerLogin:'साझेदार लगइन',partnerLoginNote:'साझेदार लगइन सार्वजनिक पहिलो पृष्ठमा होइन, छानिएको व्यवसाय क्षेत्रको विस्तृत पृष्ठमा मात्र उपलब्ध हुन्छ।',
     detailStep1:'हालको अवस्था र लक्ष्य सँगै स्पष्ट गर्छौं।',detailStep2:'कार्यान्वयनयोग्य संरचना र अर्को कदम डिजाइन गर्छौं।',detailStep3:'नतिजा समीक्षा गरी आवश्यक सुधार जारी राख्छौं।',
     footerTagline:'Turn value into a business.',privacy:'गोपनीयता नीति',terms:'प्रयोग सर्त',refund:'फिर्ता नीति',footerNavLabel:'फुटर नेभिगेसन',generalSubject:'EKODIBIZ व्यवसाय सोधपुछ',
-    footerCompany:'EKODIBIZ · प्रतिनिधि Jung Chan-gyun · व्यवसाय दर्ता नं. 213-13-01959<br>1F, 17-4 Baengnyeondong 1-gil, Cheonggye-myeon, Muan-gun, Republic of Korea · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a>'
+    footerCompany:'EKODIBIZ · प्रतिनिधि Jung Chan-gyun · व्यवसाय दर्ता नं. 213-13-01959<br>1F, 17-4 Baengnyeondong 1-gil, Cheonggye-myeon, Muan-gun, Republic of Korea · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a> · <a href="tel:+821035018542">010-3501-8542</a>'
   },  vi:{
     title:'EKODIBIZ | Biến giá trị thành kinh doanh',description:'EKODIBIZ kết nối phát triển phần mềm, năng lượng mặt trời, thương mại, tư vấn, thương mại quốc tế, xuất bản, đầu tư và vận hành số bằng AI.',
-    brandHome:'Đi tới trang chủ EKODI',navLabel:'Điều hướng chính',navBusiness:'Lĩnh vực kinh doanh',languageLabel:'Ngôn ngữ',languageSelect:'Chọn ngôn ngữ',
+    brandHome:'Đi tới trang chủ EKODIBIZ',navLabel:'Điều hướng chính',navBusiness:'Lĩnh vực kinh doanh',languageLabel:'Ngôn ngữ',languageSelect:'Chọn ngôn ngữ',
     heroTitle:'Khám phá giá trị,<br><span>biến thành hoạt động kinh doanh có thể triển khai.</span>',heroLead:'EKODIBIZ kết nối công nghệ với vận hành kinh doanh để tiềm năng của con người và tổ chức trở thành kết quả thực tế.',inquiry:'Liên hệ kinh doanh',
     businessTitle:'Không bắt đầu từ công nghệ,<br>mà từ kết quả cần đạt được.',viewDetail:'Xem chi tiết',
     businessSoftware:'Phát triển phần mềm',businessSoftwareSummary:'Thiết kế và xây dựng web, ứng dụng và hệ thống vận hành theo quy trình thực tế.',
@@ -106,7 +120,7 @@ const TEXT={
     backToBusiness:'← Xem tất cả lĩnh vực',areaInquiry:'Liên hệ về lĩnh vực này',partnerLogin:'Đăng nhập đối tác',partnerLoginNote:'Đăng nhập đối tác chỉ hiển thị trong trang chi tiết của lĩnh vực đã chọn, không hiển thị ở trang đầu công khai.',
     detailStep1:'Cùng làm rõ hiện trạng và mục tiêu.',detailStep2:'Thiết kế cấu trúc có thể triển khai và hành động tiếp theo.',detailStep3:'Rà soát kết quả vận hành và tiếp tục cải thiện.',
     footerTagline:'Turn value into a business.',privacy:'Chính sách quyền riêng tư',terms:'Điều khoản sử dụng',refund:'Chính sách hoàn tiền',footerNavLabel:'Điều hướng chân trang',generalSubject:'EKODIBIZ Liên hệ kinh doanh',
-    footerCompany:'EKODIBIZ · Đại diện Jung Chan-gyun · Mã đăng ký kinh doanh 213-13-01959<br>1F, 17-4 Baengnyeondong 1-gil, Cheonggye-myeon, Muan-gun, Republic of Korea · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a>'
+    footerCompany:'EKODIBIZ · Đại diện Jung Chan-gyun · Mã đăng ký kinh doanh 213-13-01959<br>1F, 17-4 Baengnyeondong 1-gil, Cheonggye-myeon, Muan-gun, Republic of Korea · <a id="footerEmail" target="_blank" rel="noopener noreferrer">ekodibiz@gmail.com</a> · <a href="tel:+821035018542">010-3501-8542</a>'
   }
 };
 const SUPPORTED=['ko-KR','en','zh-CN','ja','ne','vi'];
@@ -137,11 +151,26 @@ function initialLocale(){return normalizeLocale(cookieLocale()||localStorage.get
 let locale=initialLocale();
 function text(){return TEXT[locale]||TEXT['ko-KR']}
 function gmailHref(subject){return `https://mail.google.com/mail/?view=cm&fs=1&to=ekodibiz%40gmail.com&su=${encodeURIComponent(subject)}`}
-function commonLogin(slug){return `https://auth.ekodi.kr/?site=biz&return_to=${encodeURIComponent(`https://biz.ekodi.kr/#business/${slug}`)}`}
+// Auth handoff uses the fragment for a one-time proof, so preserve the selected
+// business area in a validated query parameter rather than a #business/... hash.
+function commonLogin(slug){
+  const auth=new URL('https://ekodi.kr/auth/');
+  const returnTo=new URL('https://ekodi.kr/ekodibiz/');
+  returnTo.searchParams.set('business',slug);
+  auth.searchParams.set('site','biz');
+  auth.searchParams.set('return_to',returnTo.href);
+  return auth.href;
+}
+function scopedLogin(site,returnTo){
+  const auth=new URL('https://ekodi.kr/auth/');
+  auth.searchParams.set('site',site);
+  auth.searchParams.set('return_to',returnTo);
+  return auth.href;
+}
 function partnerHref(slug){
   const type=BUSINESS[slug]?.login;
-  if(type==='trade')return 'https://ekodi.kr/ekodibiz/trade';
-  if(type==='mall')return 'https://ekodi.kr/ekodibiz/ekodimall/admin/';
+  if(type==='trade')return scopedLogin('trade','https://ekodi.kr/ekodibiz/trade');
+  if(type==='mall')return scopedLogin('mall','https://ekodi.kr/ekodimall/admin/');
   return commonLogin(slug);
 }
 function persistLocale(){
@@ -149,7 +178,14 @@ function persistLocale(){
   const domain=location.hostname==='ekodi.kr'||location.hostname.endsWith('.ekodi.kr')?'; Domain=.ekodi.kr; Secure':'';
   document.cookie=`ekodi_locale=${encodeURIComponent(locale)}; Path=/; Max-Age=31536000; SameSite=Lax${domain}`;
 }
-function detailSlug(){const match=location.hash.match(/^#business\/([a-z0-9-]+)$/);return match?.[1]&&BUSINESS[match[1]]?match[1]:null}
+function detailSlug(){
+  // "All areas" must override any post-login ?business=... fallback.
+  if(location.hash==='#business')return null;
+  const match=location.hash.match(/^#business\/([a-z0-9-]+)$/);
+  if(match?.[1]&&Object.hasOwn(BUSINESS,match[1]))return match[1];
+  const selected=new URLSearchParams(location.search).get('business');
+  return selected&&Object.hasOwn(BUSINESS,selected)?selected:null;
+}
 function renderDetail(slug){
   const t=text();const meta=BUSINESS[slug];if(!meta)return;
   $('#detailTitle').textContent=t[meta.title];$('#detailLead').textContent=t[meta.summary];

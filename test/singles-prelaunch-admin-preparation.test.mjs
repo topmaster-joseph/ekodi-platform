@@ -47,7 +47,7 @@ test('operator preparation requires authenticated identity plus server-side capa
  assert.ok(auth>=0&&call>auth);
  assert.match(source,/if \(!enabled\(\) && !prelaunchAdmin\)/);
  assert.match(app,/if\(prelaunchAdmin\)/);
- assert.match(app,/await showBrokerageReadiness\(h\)/);
+ assert.doesNotMatch(app,/showBrokerageReadiness/,'결혼중개업 준비 패널은 화면에서 제외(2026-10-31)');
  assert.match(app,/await showAllPricing\(h\)/);
 });
 test('unconfigured backend cannot surface preparation credentials or readiness',async()=>{

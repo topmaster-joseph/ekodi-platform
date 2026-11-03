@@ -13,6 +13,13 @@
 import { SIMULCAST_RELAY_CAPABILITY, SIMULCAST_RELAY_COMMANDS, SIMULCAST_RELAY_FFMPEG, SIMULCAST_RELAY_INGEST, SIMULCAST_RELAY_MAX_DESTINATIONS, SIMULCAST_RELAY_POLICY_ID, sanitizeSimulcastRelayPayload, summarizeSimulcastRelayResult } from './simulcast-relay-policy.js';
 
 export const LIVE_TRANSLATION_MODEL = '@cf/meta/m2m100-1.2b';
+// Server-side speech recognition for the studio. Phone browsers cannot run
+// their built-in speech recognition while the broadcast already holds the
+// microphone, so the studio sends short 16 kHz mono WAV chunks of the same
+// microphone and the Worker transcribes them.
+export const LIVE_STT_MODEL = '@cf/openai/whisper-large-v3-turbo';
+export const LIVE_STT_MAX_BASE64 = 700000; // ~16 s of 16 kHz mono 16-bit WAV
+const STT_TIMEOUT_MS = 15000;
 export const LIVE_CAPTION_MAX_CHARS = 400;
 export const LIVE_CAPTION_PAGE = 60;
 const STREAM_API = 'https://api.cloudflare.com/client/v4/accounts';
@@ -117,6 +124,18 @@ async function streamCall(env,path,{method='GET',payload}={}){
     throw Object.assign(new Error(message),{status:502,code:'stream_provider_error',providerStatus:response.status});
   }
   return data?.result??null;
+}
+
+// Whisper often returns stock phrases for silence or room noise; drop them.
+const STT_NOISE=/^(\s|[.…,!?~\-]|감사합니다|시청해 ?주셔서 감사합니다|구독과 좋아요|MBC 뉴스|thank you\.?|thanks for watching\.?|you)*$/i;
+export async function transcribeChunk(env,audio,sourceLang){
+  let timer;
+  const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('stt_timeout')),STT_TIMEOUT_MS)});
+  try{
+    const result=await Promise.race([env.AI.run(LIVE_STT_MODEL,{audio,task:'transcribe',language:sourceLang,vad_filter:true,condition_on_previous_text:false}),timeout]);
+    const text=normalizeCaptionText(result?.text??result?.transcription??'');
+    return STT_NOISE.test(text)?'':text;
+  }finally{clearTimeout(timer)}
 }
 
 // Translate one segment into every target language. Fail-open: a failed or
@@ -231,7 +250,7 @@ export async function handleLiveInterpretation(request,env,url,input,deps){
     await audit(env,tenant,host.actor,'captions.session.start','allowed',{sessionId:id,sourceLang,targets,trimmed:requested.length-targets.length});
     return json(request,env,{ok:true,session:safeSession(await env.DB.prepare('SELECT * FROM live_caption_sessions WHERE id=?').bind(id).first()),trimmedByPlan:requested.length-targets.length},201);
   }
-  const segMatch=path.match(/^\/api\/realtime\/captions\/sessions\/([^/]+)\/(segments|end)$/);
+  const segMatch=path.match(/^\/api\/realtime\/captions\/sessions\/([^/]+)\/(segments|audio|end)$/);
   if(segMatch&&request.method==='POST'){
     const session=await env.DB.prepare('SELECT * FROM live_caption_sessions WHERE id=?').bind(decodeURIComponent(segMatch[1])).first();
     if(!session)return json(request,env,{ok:false,error:'caption_session_not_found'},404);
@@ -243,9 +262,18 @@ export async function handleLiveInterpretation(request,env,url,input,deps){
       await audit(env,session.tenant_id,host.actor,'captions.session.end','allowed',{sessionId:session.id});
       return json(request,env,{ok:true,session:safeSession(await env.DB.prepare('SELECT * FROM live_caption_sessions WHERE id=?').bind(session.id).first())});
     }
-    const text=normalizeCaptionText(input?.text);
-    if(!text)return json(request,env,{ok:false,error:'caption_text_required'},400);
     const view=safeSession(session);
+    let text='';
+    if(segMatch[2]==='audio'){
+      const audio=typeof input?.audio==='string'?input.audio:'';
+      if(!audio||audio.length>LIVE_STT_MAX_BASE64||!/^[A-Za-z0-9+/=]+$/.test(audio))return json(request,env,{ok:false,error:'caption_audio_invalid'},400);
+      if(!env?.AI?.run)return json(request,env,{ok:false,error:'speech_recognition_unavailable'},503);
+      try{text=await transcribeChunk(env,audio,view.sourceLang)}catch{return json(request,env,{ok:false,error:'speech_recognition_failed'},502)}
+      if(!text)return json(request,env,{ok:true,empty:true,seq:Number(session.segment_count||0)});
+    }else{
+      text=normalizeCaptionText(input?.text);
+      if(!text)return json(request,env,{ok:false,error:'caption_text_required'},400);
+    }
     const bumped=await env.DB.prepare(`UPDATE live_caption_sessions SET segment_count=segment_count+1,updated_at=? WHERE id=? AND status='active' RETURNING segment_count`).bind(stamp,session.id).first();
     const seq=Number(bumped?.segment_count||0);
     if(!seq)return json(request,env,{ok:false,error:'caption_session_ended'},409);
@@ -355,7 +383,7 @@ export async function handleLiveInterpretation(request,env,url,input,deps){
     }catch(error){return json(request,env,{ok:false,error:error.code||'stream_provider_error',message:error.message},error.status||502)}
   }
   // ---------- EKODI-SIMULCAST-RELAY-001 (EKODI-owned simulcast, no paid service) ----------
-  if(path.startsWith('/api/realtime/relay'))return relayRoute({request,env,url,input,json,requireHost,tenantOf});
+  if(path.startsWith('/api/realtime/relay'))return relayRoute({request,env,url,input,json,requireHost,tenantOf,isPlatformOwner:deps.isPlatformOwner});
   return json(request,env,{ok:false,error:'live_addon_endpoint_not_found'},404);
 }
 
@@ -372,12 +400,14 @@ function relayDeviceView(row){
   const seen=Date.parse(String(row.last_seen_at||''));
   return {id:row.id,label:row.label,hostname:row.hostname,agentVersion:row.agent_version,online:Number.isFinite(seen)&&Date.now()-seen<RELAY_ONLINE_MS,lastSeenAt:row.last_seen_at||null,relayCapable:caps?.[SIMULCAST_RELAY_CAPABILITY]===true,revoked:Boolean(row.revoked_at)};
 }
-async function relayRoute({request,env,url,input,json,requireHost,tenantOf}){
+async function relayRoute({request,env,url,input,json,requireHost,tenantOf,isPlatformOwner}){
   const path=url.pathname,method=request.method;
+  // Binding the relay PC is a platform-owner action: EKODI super admin session or the configured platform owner Google account.
+  const canBindRelay=identity=>identity?.platformAdminRole==='super_admin'||Boolean(typeof isPlatformOwner==='function'&&isPlatformOwner(identity));
   const tenantValue=method==='GET'?url.searchParams.get('tenant'):input?.tenant;
   if(path==='/api/realtime/relay/devices'&&method==='GET'){
     const host=await requireHost(tenantValue);if(host.response)return host.response;
-    if(host.access.identity?.platformAdminRole!=='super_admin')return json(request,env,{ok:false,error:'relay_binding_super_admin_required'},403);
+    if(!canBindRelay(host.access.identity))return json(request,env,{ok:false,error:'relay_binding_super_admin_required'},403);
     const rows=await env.DB.prepare(`SELECT id,label,hostname,agent_version,capabilities_json,last_seen_at,revoked_at FROM device_registry WHERE revoked_at IS NULL ORDER BY last_seen_at DESC LIMIT 50`).all().catch(()=>({results:[]}));
     return json(request,env,{ok:true,devices:(rows.results||[]).map(relayDeviceView)});
   }
@@ -396,7 +426,7 @@ async function relayRoute({request,env,url,input,json,requireHost,tenantOf}){
     }
     return json(request,env,{ok:true,policy:SIMULCAST_RELAY_POLICY_ID,engine:'ekodi-device-relay',tenant,
       binding:binding?{deviceId:binding.device_id,armed:Boolean(binding.armed),boundAt:binding.bound_at,device:relayDeviceView(device)}:null,
-      canBind:host.access.identity?.platformAdminRole==='super_admin',
+      canBind:canBindRelay(host.access.identity),
       ingest:{server:SIMULCAST_RELAY_INGEST.url,streamKey:SIMULCAST_RELAY_INGEST.streamKey,full:SIMULCAST_RELAY_INGEST.full,note:'방송 PC의 OBS 설정 → 방송 → 서비스: 사용자 지정, 서버와 스트림 키를 입력합니다.'},
       ffmpeg:{version:SIMULCAST_RELAY_FFMPEG.version},
       destinations:(dests.results||[]).map(d=>({id:d.id,label:d.label,preset:d.preset,ingestHost:d.ingest_host,keyHint:d.key_hint,enabled:Boolean(d.enabled),createdAt:d.created_at})),
@@ -404,7 +434,7 @@ async function relayRoute({request,env,url,input,json,requireHost,tenantOf}){
       lastResult:last,pendingCommands:pending});
   }
   if(path==='/api/realtime/relay/bind'&&method==='POST'){
-    if(host.access.identity?.platformAdminRole!=='super_admin')return json(request,env,{ok:false,error:'relay_binding_super_admin_required'},403);
+    if(!canBindRelay(host.access.identity))return json(request,env,{ok:false,error:'relay_binding_super_admin_required'},403);
     const deviceId=clean(input?.deviceId,80);
     const row=await env.DB.prepare('SELECT id,revoked_at FROM device_registry WHERE id=?').bind(deviceId).first().catch(()=>null);
     if(!row||row.revoked_at)return json(request,env,{ok:false,error:'relay_device_not_found'},404);

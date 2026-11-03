@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "EKODI-JUBILEE-THEOLOGY",
+  "sourceRevision": "review-8",
+  "observedAt": "2026-10-29",
+  "evidenceKind": "artifact-structure-only",
+  "authorApprovalEvidence": false,
+  "publisherApprovalEvidence": false,
+  "publisherPrivateStorageVerified": false,
+  "publicCatalogVisible": false,
+  "scheduledReleaseAt": null,
+  "commercialReleaseAllowed": false,
+  "notice": "Hashes and counts only. The source files are local conversation artifacts, not attached to the GitHub repository or a verified publisher private object store. These are not proof of rights, citation accuracy, accessibility, author approval, publication or sale.",
+  "volumes": [
+    {
+      "reviewId": "EJT-01-REVIEW",
+      "volumeNumber": 1,
+      "manuscriptStatus": "editorial-review",
+      "title": "희년과 하나님 나라의 회복",
+      "format": "academic-theology",
+      "bodyCharactersWithWhitespace": 54243,
+      "pdfPages": 41,
+      "wordFootnoteReferences": 55,
+      "wordFootnoteItems": 55,
+      "chapters": 8,
+      "files": {
+        "docx": {
+          "sha256": "2e178260c4dfcdce7b10ebf9590feadbc72e58f542c2eefb3a48584234cfbdda",
+          "sizeBytes": 1559384
+        },
+        "epub": {
+          "sha256": "541f1ca14d5534246de139c820fdefb2d103a50f884d8ffe2b8fbbf463743d07",
+          "sizeBytes": 48823
+        },
+        "pdf": {
+          "sha256": "d8ac891b90cfaaf5c4024a42e59b5b06b3eb3629ca5e1e0ed031b85a356f2bc3",
+          "sizeBytes": 1164305
+        }
+      },
+      "epubPackage": {
+        "zipIntegrity": "passed",
+        "titleLanguage": "ko-KR",
+        "author": "정찬균"
+      },
+      "mandatoryOutstanding": [
+        "academic-footnotes-source-and-page-by-page",
+        "bible-translation-and-third-party-rights",
+        "official-epubcheck",
+        "screenreader-and-device-readthrough",
+        "author-final-approval",
+        "publisher-final-approval"
+      ]
+    },
+    {
+      "reviewId": "EJT-02-REVIEW",
+      "volumeNumber": 2,
+      "manuscriptStatus": "editorial-review",
+      "title": "우리는 다시 돌아갈 수 있는가",
+      "format": "general-theology",
+      "bodyCharactersWithWhitespace": 45738,
+      "pdfPages": 37,
+      "chapters": 9,
+      "files": {
+        "docx": {
+          "sha256": "229bb721c7d12d74a1ed7eefecd3b53db70c970bc2a1493fd2ee9556749df2ff",
+          "sizeBytes": 50797
+        },
+        "epub": {
+          "sha256": "ccffe95e7356727506bf0aeb3e197db28ea9080af7b51828cf45270cc1c7f1a2",
+          "sizeBytes": 41503
+        },
+        "pdf": {
+          "sha256": "60b84a02b88c2c5db2cfab782fb9dc419b6b078b726407135a5712064c6670e8",
+          "sizeBytes": 726168
+        }
+      },
+      "epubPackage": {
+        "zipIntegrity": "passed",
+        "titleLanguage": "ko-KR",
+        "author": "정찬균"
+      },
+      "mandatoryOutstanding": [
+        "author-literary-readthrough",
+        "fictional-character-review",
+        "bible-translation-and-third-party-rights",
+        "official-epubcheck",
+        "screenreader-and-device-readthrough",
+        "author-final-approval",
+        "publisher-final-approval"
+      ]
+    }
+  ]
+}

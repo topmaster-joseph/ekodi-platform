@@ -5,6 +5,7 @@ import { businessCenterCss, businessCenterScript } from './ekodibiz-business-cen
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
 import { churchPastorAdminPage, churchPastorAdminScript, isChurchPastorAdminPath } from './church-pastor-admin-page.js';
 import { siteAdminBootstrapPage, siteAdminBootstrapScript } from './site-admin-bootstrap-page.js';
+import { personAuthorityPage, personAuthorityScript } from './person-authority-page.js';
 import { dorajiOfficeResponse, isDorajiOfficePath } from './ekodibiz-doraji-office.js';
 import { dorajiOperatorResponse, isDorajiOperatorPath } from './ekodibiz-doraji-operator-ui.js';
 import { dorajiLedgerApiResponse, isDorajiLedgerApiPath } from './ekodibiz-doraji-ledger-api.js';
@@ -32,6 +33,7 @@ const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.css',
   '/homepage-ambient.js',
   '/homepage-auth-state.js',
+  '/points-active-client.js',
   '/ekodi-message-ui.js',
   '/tenant-live.css',
   '/tenant-live.js',
@@ -111,6 +113,8 @@ const ADMIN_ASSETS = new Set([
   '/admin-finance.css',
   '/infra-cost-admin.js',
   '/search-visibility-admin.js',
+  '/points-admin.js',
+  '/points-governance-admin.js',
   '/infra-cost-admin.css',
   '/admin-canonical-routes.js',
   '/admin-surface-labels.js',
@@ -796,6 +800,8 @@ export default {
       if (isRootMallPath(url.pathname)) return redirectNestedMallPath(request);
       if (['GET','HEAD'].includes(request.method) && (url.pathname === '/ekodi-church' || url.pathname.startsWith('/ekodi-church/'))) { const target=new URL(request.url); target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch'); return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}}); }
       if (['GET','HEAD'].includes(request.method) && url.pathname==='/site-admin-bootstrap.js') return siteAdminBootstrapScript();
+      if (['GET','HEAD'].includes(request.method) && url.pathname==='/admin/people/script') return personAuthorityScript();
+      if (['GET','HEAD'].includes(request.method) && (url.pathname==='/admin/people'||url.pathname==='/admin/people/')) return personAuthorityPage();
       if (['GET','HEAD'].includes(request.method) && (url.pathname==='/admin/site-admins'||url.pathname==='/admin/site-admins/')) return siteAdminBootstrapPage();
       if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
       if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');

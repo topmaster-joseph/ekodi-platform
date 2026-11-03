@@ -61,7 +61,7 @@ test('guest-facing copy stays guide-first while member actions remain explicit',
 test('production release guard only requires markers present in static Life HTML',()=>{
   const html=fs.readFileSync(new URL('../life/index.html',import.meta.url),'utf8');
   const release=JSON.parse(fs.readFileSync(new URL('../deploy/manifests/life.worker.json',import.meta.url),'utf8'));
-  const root=release.worker.requests.find(request=>request.url==='https://life.ekodi.kr/');
+  const root=release.worker.requests.find(request=>request.url==='https://ekodi.kr/life/');
   assert.ok(root);
   for(const marker of root.expect||[])assert.ok(html.includes(marker),`static Life HTML is missing release marker: ${marker}`);
 });

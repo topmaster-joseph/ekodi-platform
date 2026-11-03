@@ -1,13 +1,16 @@
 {
   "schemaVersion": 1,
   "policyId": "EKODI-NATIVE-MONITORING-HANDOFF-001",
-  "status": "native-workflow-active-first-observe-evidence-pending",
+  "status": "native-five-job-registry-protected-merged-runtime-receipt-pending",
   "operator": "ekodi-orchestrator",
   "principle": "EKODI owns scheduled health, deployment and completion monitoring; ChatGPT automations have no authority or operational dependency",
   "externalChatgptAutomations": {
     "intendedActiveCount": 0,
     "confirmedDisabledAt": "2026-10-12T12:29:50Z",
-    "mayRecreate": false
+    "mayRecreate": false,
+    "confirmedPausedCount": 5,
+    "confirmedPausedDate": "2026-10-30",
+    "confirmationContext": "Five direct authorized ChatGPT Automations updates returned success and is_enabled false. EKODI native runtime may not query these private account states."
   },
   "monitoring": [
     {

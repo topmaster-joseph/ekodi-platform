@@ -5,6 +5,9 @@ import { runSeonamMediHourlyCheck } from './seonammedi-monitor.js';
 import { fetchSeonamMediLinkPreview } from './seonammedi-link-import.js';
 import { createBoardAdapter, handleBoardAdapter } from './common-board-adapter.js';
 import { createBoardRuntimeGuard } from './board-runtime-guard.js';
+// Platform super_admin requires an active super_admin row on the Google administrator
+// allowlist, not just a legacy admins.role, so allowlist revocation takes effect here.
+const PLATFORM_SUPER_ADMIN_SQL="SELECT a.role FROM admins a JOIN admin_google_accounts g ON lower(trim(g.email))=lower(trim(a.email)) WHERE lower(trim(a.email))=? AND a.role='super_admin' AND g.role='super_admin' AND g.status='active' LIMIT 1";
 
 const PREFIX='/api/seonammedi';
 const AUTH_EXCHANGE_PATH=PREFIX+'/admin/auth/exchange';
@@ -415,7 +418,7 @@ async function listPublicNotices(request,env){
     WHERE status='published' ORDER BY pinned DESC,COALESCE(published_at,updated_at) DESC,id DESC LIMIT 40`).all();
   const principal=await principalFromSupabaseRequest(request).catch(()=>null);
   const email=lower(principal?.email||'');
-  const admin=email?await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email))=? AND role='super_admin' LIMIT 1").bind(email).first().catch(()=>null):null;
+  const admin=email?await env.DB.prepare(PLATFORM_SUPER_ADMIN_SQL).bind(email).first().catch(()=>null):null;
   return json({ok:true,items:(rows.results||[]).map(row=>publicNotice(row,{canManage:Boolean(admin)||Boolean(email&&lower(row.created_by)===email)}))});
 }
 
@@ -437,7 +440,7 @@ async function listPublicCalendar(request,env){
 async function noticeManageContext(request,env){
   const principal=await principalFromSupabaseRequest(request).catch(()=>null);
   const email=lower(principal?.email||'');
-  const admin=email?await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email))=? AND role='super_admin' LIMIT 1").bind(email).first().catch(()=>null):null;
+  const admin=email?await env.DB.prepare(PLATFORM_SUPER_ADMIN_SQL).bind(email).first().catch(()=>null):null;
   return {email,admin:Boolean(admin)};
 }
 async function readPublicNotice(request,env,id){
@@ -527,7 +530,7 @@ async function createPublicNotice(request,env){
 async function updatePublicNotice(request,env,id){
   const principal=await principalFromSupabaseRequest(request);if(!principal?.email)return json({ok:false,error:'authentication_required'},401);
   const row=await env.DB.prepare('SELECT id,title,body,created_by,image_key,image_type,image_keys_json,image_types_json FROM seonammedi_notices WHERE id=?').bind(id).first();if(!row)return json({ok:false,error:'not_found'},404);
-  const email=lower(principal.email),admin=await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email))=? AND role='super_admin' LIMIT 1").bind(email).first().catch(()=>null);
+  const email=lower(principal.email),admin=await env.DB.prepare(PLATFORM_SUPER_ADMIN_SQL).bind(email).first().catch(()=>null);
   if(lower(row.created_by)!==email&&!admin)return json({ok:false,error:'edit_forbidden'},403);
   const form=await request.formData().catch(()=>null);if(!form)return json({ok:false,error:'invalid_form'},400);
   const title=clean(form.get('title'),180),copy=clean(form.get('body'),10000);if(!title)return json({ok:false,error:'title_required'},400);
@@ -555,7 +558,7 @@ async function updatePublicNotice(request,env,id){
 async function deletePublicNotice(request,env,id){
   const principal=await principalFromSupabaseRequest(request);if(!principal?.email)return json({ok:false,error:'authentication_required'},401);
   const row=await env.DB.prepare('SELECT id,created_by,image_key,image_keys_json FROM seonammedi_notices WHERE id=?').bind(id).first();if(!row)return json({ok:false,error:'not_found'},404);
-  const email=lower(principal.email),admin=await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email))=? AND role='super_admin' LIMIT 1").bind(email).first().catch(()=>null);
+  const email=lower(principal.email),admin=await env.DB.prepare(PLATFORM_SUPER_ADMIN_SQL).bind(email).first().catch(()=>null);
   if(lower(row.created_by)!==email&&!admin)return json({ok:false,error:'delete_forbidden'},403);
   await env.DB.prepare('DELETE FROM seonammedi_notices WHERE id=?').bind(id).run();
   for(const key of noticeImageKeys(row))await deleteNoticeDriveKey(env,key);
@@ -840,7 +843,7 @@ function rosterDisplayName(note){const value=clean(note,200);return value.starts
 // Read-only roster for SeonamMedi administrators. Credential material, session
 // data and EKODI-wide operator accounts without site authority are never returned.
 async function listAdminRoster(env){
-  const platform=await env.DB.prepare("SELECT lower(trim(email)) AS email,created_at FROM admins WHERE role='super_admin' ORDER BY id").all();
+  const platform=await env.DB.prepare("SELECT lower(trim(a.email)) AS email,a.created_at FROM admins a JOIN admin_google_accounts g ON lower(trim(g.email))=lower(trim(a.email)) WHERE a.role='super_admin' AND g.role='super_admin' AND g.status='active' ORDER BY a.id").all();
   const tenant=await env.DB.prepare('SELECT id FROM customer_tenants WHERE slug=? LIMIT 1').bind(TENANT_SLUG).first();
   const grants=tenant?await env.DB.prepare(`SELECT lower(trim(email)) AS email,role,enabled,principal_type,capabilities_json,denied_capabilities_json,expires_at,note,created_at,updated_at
     FROM customer_access_grants WHERE tenant_id=? ORDER BY created_at,email`).bind(tenant.id).all():{results:[]};

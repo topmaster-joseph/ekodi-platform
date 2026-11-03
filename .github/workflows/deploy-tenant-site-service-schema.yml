@@ -1,0 +1,173 @@
+name: Deploy EKODI Tenant Service and AI Tool Selection Schema
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/deploy-tenant-site-service-schema.yml'
+      - 'supabase/migrations/20261102162000_tenant_site_service_catalog.sql'
+      - 'supabase/migrations/20261103004500_tenant_ai_tool_selection.sql'
+      - 'test/tenant-ai-tool-selection.test.mjs'
+      - 'test/tenant-site-service-schema-release.test.mjs'
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'EKODI Orchestrator-issued recovery branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Exact EKODI Orchestrator release task ID'
+        required: true
+        type: string
+      expected_main_sha:
+        description: 'Protected main merge commit to promote'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tenant-service-schema-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'protected-production' }}
+  cancel-in-progress: false
+
+env:
+  MIGRATION: supabase/migrations/20261102162000_tenant_site_service_catalog.sql
+  PINNED_BLOB: c4cbedeb3cfc815e7e89346411f7ad1121afa9f0
+  AI_TOOL_MIGRATION: supabase/migrations/20261103004500_tenant_ai_tool_selection.sql
+  AI_TOOL_PINNED_BLOB: 191ea282e70871a66cdbdb47f303de8284bff1c5
+  DEV_PROJECT: lxcxwbdwwojjkgybbqii
+  PROD_PROJECT: renzehysxirjilvdxacv
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate isolated migration and guarded promotion
+        run: |
+          set -euo pipefail
+          node scripts/validate-supabase-public-grants.mjs
+          node --test test/tenant-site-service-config.test.mjs test/tenant-site-service-schema-release.test.mjs test/tenant-ai-tool-selection.test.mjs
+          test "$(git hash-object "$MIGRATION")" = "$PINNED_BLOB"
+          test "$(git hash-object "$AI_TOOL_MIGRATION")" = "$AI_TOOL_PINNED_BLOB"
+          ! grep -Eiq '(^|[[:space:]])(drop[[:space:]]+table|truncate[[:space:]]+table|drop[[:space:]]+column)' "$MIGRATION"
+          ! grep -Eiq '(^|[[:space:]])(drop[[:space:]]+table|truncate[[:space:]]+table|drop[[:space:]]+column)' "$AI_TOOL_MIGRATION"
+
+  promote:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_SHA: ${{ inputs.expected_main_sha }}
+      RELEASE_BRANCH: ${{ inputs.release_branch_ref }}
+      RELEASE_TASK: ${{ inputs.release_task_id }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact protected merge and EKODI release receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git hash-object "$MIGRATION")" = "$PINNED_BLOB"
+          test "$(git hash-object "$AI_TOOL_MIGRATION")" = "$AI_TOOL_PINNED_BLOB"
+          [[ "$RELEASE_BRANCH" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]]
+          [[ "$RELEASE_TASK" =~ ^orch_[a-zA-Z0-9_-]+$ ]]
+          test "${RELEASE_BRANCH##*/}" = "$RELEASE_TASK"
+          branch_enc="$(printf '%s' "$RELEASE_BRANCH" | jq -sRr @uri)"
+          task_enc="$(printf '%s' "$RELEASE_TASK" | jq -sRr @uri)"
+          curl --fail-with-body -sS --retry 2 --max-time 20 \
+            "https://ekodi.kr/api/orchestrator/release-receipt?taskId=$task_enc&branchRef=$branch_enc" |
+            jq -e --arg task "$RELEASE_TASK" --arg branch "$RELEASE_BRANCH" \
+              '.ok == true and .authorized == true and .authority == "ekodi-orchestrator" and .taskId == $task and .branchRef == $branch' >/dev/null
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
+
+      - name: Resolve management credential without exposing secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-${TOKEN_B:-${TOKEN_C:-${TOKEN_D:-}}}}"
+          if [ -z "$token" ]; then echo 'Protected Supabase credential unavailable; no schema writes'; exit 1; fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Promote to dev first; verify; promote to production; verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          query() {
+            local project="$1" file="$2" read_only="$3" output="$4" code
+            jq -Rs --argjson read_only "$read_only" '{query:.,read_only:$read_only}' "$file" > "$tmp/request.json"
+            code="$(curl -sS --retry 2 --max-time 75 -o "$tmp/response.json" -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$project/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' --data-binary @"$tmp/request.json")"
+            if [ "$code" != 201 ]; then echo "Supabase query denied: HTTP $code (project scoped)"; exit 1; fi
+            cp "$tmp/response.json" "$output"
+          }
+          cat > "$tmp/prereq.sql" <<'SQL'
+          select (to_regclass('public.tenants') is not null
+            and to_regprocedure('public.current_site_activity_contexts()') is not null) as ready;
+          SQL
+          cat > "$tmp/proof.sql" <<'SQL'
+          select
+            (select count(*) = 32 from public.tenant_site_service_catalog) as catalog_count,
+            (select count(distinct category_key) = 12 from public.tenant_site_service_catalog) as categories,
+            (select count(*) = 3 and bool_and(c.relrowsecurity)
+              from pg_catalog.pg_class c
+              join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+              where n.nspname='public' and c.relname in
+                ('tenant_site_service_catalog','tenant_site_service_preferences','tenant_site_service_audit')) as rls,
+            to_regprocedure('public.tenant_site_service_catalog_snapshot(uuid)') is not null as read_rpc,
+            to_regprocedure('public.tenant_site_service_preference_set(uuid,text,boolean)') is not null as write_rpc,
+            not has_table_privilege('anon','public.tenant_site_service_catalog','select') as anon_private,
+            not has_table_privilege('authenticated','public.tenant_site_service_preferences','select') as user_private,
+            not has_table_privilege('service_role','public.tenant_site_service_audit','select') as service_private,
+            not has_function_privilege('anon','public.tenant_site_service_preference_set(uuid,text,boolean)','execute') as anon_write_denied,
+            has_function_privilege('authenticated','public.tenant_site_service_preference_set(uuid,text,boolean)','execute') as manager_rpc_available,
+            (select count(*)=12 from public.tenant_ai_tool_catalog) as ai_tools_registered,
+            (select count(*)=3 and bool_and(c.relrowsecurity) from pg_catalog.pg_class c
+              join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+              where n.nspname='public' and c.relname in
+                ('tenant_ai_tool_catalog','tenant_ai_tool_preferences','tenant_ai_tool_audit')) as ai_tools_rls,
+            to_regprocedure('public.tenant_ai_tool_catalog_snapshot(uuid)') is not null as ai_read_rpc,
+            to_regprocedure('public.tenant_ai_tool_preference_set(uuid,text,boolean)') is not null as ai_write_rpc,
+            not has_table_privilege('authenticated','public.tenant_ai_tool_preferences','select') as ai_direct_user_denied,
+            not has_function_privilege('anon','public.tenant_ai_tool_preference_set(uuid,text,boolean)','execute') as ai_anon_write_denied,
+            has_function_privilege('authenticated','public.tenant_ai_tool_preference_set(uuid,text,boolean)','execute') as ai_admin_rpc_available;
+          SQL
+          for project in "$DEV_PROJECT" "$PROD_PROJECT"; do
+            query "$project" "$tmp/prereq.sql" true "$tmp/preflight.json"
+            jq -e 'length == 1 and .[0].ready == true' "$tmp/preflight.json" >/dev/null
+          done
+          query "$DEV_PROJECT" "$MIGRATION" false "$tmp/dev-applied.json"
+          query "$DEV_PROJECT" "$AI_TOOL_MIGRATION" false "$tmp/dev-ai-applied.json"
+          query "$DEV_PROJECT" "$tmp/proof.sql" true "$tmp/dev-proof.json"
+          jq -e 'length == 1 and (.[0] | all(.[]; . == true))' "$tmp/dev-proof.json" >/dev/null
+          echo 'DEV service + AI tool catalog, RLS, revoked grants and RPCs verified.'
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
+          query "$PROD_PROJECT" "$MIGRATION" false "$tmp/prod-applied.json"
+          query "$PROD_PROJECT" "$AI_TOOL_MIGRATION" false "$tmp/prod-ai-applied.json"
+          query "$PROD_PROJECT" "$tmp/proof.sql" true "$tmp/prod-proof.json"
+          jq -e 'length == 1 and (.[0] | all(.[]; . == true))' "$tmp/prod-proof.json" >/dev/null
+          echo 'PRODUCTION service + AI tool catalog, RLS, revoked grants and RPCs verified. No service execution was activated.'

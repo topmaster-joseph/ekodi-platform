@@ -12,6 +12,9 @@ import { buildChannelEnvelope, dispatchChannelEnvelope } from './messenger-chann
 import { stepUpStatus, verifyStepUp, revokeStepUp, stepUpSession } from './invest-step-up.js';
 import { BROKER_ADAPTERS, INVEST_PERMISSION, evaluateBrokerReadiness } from './invest-market-core.js';
 import { verifiedOwnerAal2 } from './invest-owner-mfa.js';
+import { buildBrokerReadOnlyView } from './invest-broker-readonly-adapter.js';
+import { buildStrategyLab } from './invest-strategy-lab.js';
+import { STAGE2_PAPER_PRESET_ID,STAGE2_PAPER_AUTOMATION,validatedStage2PaperPreset,stage2PaperPresetEligibility } from './invest-stage2-paper-preset.js';
 
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
 const nowIso=()=>new Date().toISOString();
@@ -125,8 +128,77 @@ async function status(request,env,ctx){
 }
 
 
+// Read-only broker balance: mock by default; real KIS inquiry only with server vault secrets,
+// the operator switch and Supabase TOTP AAL2 on this exact session. Never places orders.
+
+const INVEST_OWNER_BROKER_OPTIONS=Object.freeze(['kis','toss']);
+// A choice is a UI preference only: broker credentials, account scopes and real orders remain separate.
+const INVEST_OWNER_BROKER_ENVIRONMENTS=Object.freeze({kis:Object.freeze(['paper','live']),toss:Object.freeze(['live'])});
+const INVEST_OWNER_BROKER_DEFAULT='kis';
+async function ownerBrokerSelection(request,env,ctx){
+ // This is a preference-only action. ownerContext() already enforces the configured
+ // highest administrator identity for /my/invest on every request. Do not impose a
+ // second, different hard-coded identity here: it breaks valid owner sessions when
+ // the canonical configured owner is ADMIN_EMAIL or INVEST_OWNER_EMAIL.
+ // Real-order readiness and live execution retain their separate named-owner lock.
+ // Keep the selection in the existing owner-scoped immutable audit event ledger.
+ const allowed=INVEST_OWNER_BROKER_OPTIONS;
+ if(request.method==='GET'){
+  const row=await env.DB.prepare(`SELECT payload_json FROM investment_autopilot_events
+   WHERE subject_type=? AND subject_key=? AND event_type=?
+   ORDER BY id DESC LIMIT 1`).bind(ctx.subject.type,ctx.subject.key,'broker:preference').first();
+  const saved=parse(row?.payload_json,null)?.brokerId;
+  const selected=allowed.includes(saved)?saved:INVEST_OWNER_BROKER_DEFAULT;
+  return json(request,env,{
+   schema:'ekodi.invest.owner-broker-selection.v1',preferredBrokerId:selected,
+   defaultBrokerId:INVEST_OWNER_BROKER_DEFAULT,availableBrokers:allowed.map(id=>({
+    id,name:BROKER_ADAPTERS[id].name,docsUrl:BROKER_ADAPTERS[id].docsUrl,
+    environments:INVEST_OWNER_BROKER_ENVIRONMENTS[id],accountConnection:'not_connected',
+    connected:false,credentialsIncluded:false,liveTradingEnabled:false,orderPermission:'blocked'
+   })),connected:false,brokerAuthorizationGranted:false,liveOrdersEnabled:false,selectionOnly:true
+  });
+ }
+ if(request.method==='PUT'){
+  const input=await body(request);
+  if(!input||Array.isArray(input)||typeof input!=='object'||Object.keys(input).length!==1||
+     typeof input.brokerId!=='string'||!allowed.includes(input.brokerId))
+   return json(request,env,{error:'BROKER_PREFERENCE_INVALID'},400);
+  const current=await env.DB.prepare(`SELECT payload_json FROM investment_autopilot_events
+   WHERE subject_type=? AND subject_key=? AND event_type=?
+   ORDER BY id DESC LIMIT 1`).bind(ctx.subject.type,ctx.subject.key,'broker:preference').first();
+  const saved=parse(current?.payload_json,null)?.brokerId;
+  if(input.brokerId!==(allowed.includes(saved)?saved:INVEST_OWNER_BROKER_DEFAULT))
+   await recordEvent(env,ctx,'broker:preference','info',{brokerId:input.brokerId});
+  await auditPrincipal(env,ctx.principal,'invest:owner-broker-preference');
+  return json(request,env,{
+   schema:'ekodi.invest.owner-broker-selection.v1',preferredBrokerId:input.brokerId,
+   connected:false,brokerAuthorizationGranted:false,liveOrdersEnabled:false,ordersPlaced:0,selectionOnly:true
+  });
+ }
+ return json(request,env,{error:'METHOD_NOT_ALLOWED'},405);
+}
+
+async function ownerBrokerSnapshot(request,env,ctx){
+ const brokerId=clean(new URL(request.url).searchParams.get('broker')||'kis',30);
+ if(!Object.hasOwn(BROKER_ADAPTERS,brokerId))return json(request,env,{error:'BROKER_NOT_REGISTERED'},400);
+ const strongMfaVerified=verifiedOwnerAal2(request,ctx.identity.id);
+ const result=await buildBrokerReadOnlyView({brokerId,env,db:env.DB,strongMfaVerified,subjectKey:ctx.subject.type+':'+ctx.subject.key});
+ await auditPrincipal(env,ctx.principal,'invest:owner-broker-readonly:'+result.dataMode+':'+result.connection);
+ return json(request,env,{...result,brokerName:BROKER_ADAPTERS[brokerId].name});
+}
+
+// Research only: synthetic-data strategy comparison. It never records strategy acceptance for
+// live gates (that requires verified market history) and never places or proposes orders.
+async function ownerStrategyLab(request,env,ctx){
+ const account=await loadAccount(env,ctx);
+ const validation=await paperValidation(env,ctx,account);
+ const lab=buildStrategyLab({policy:account.policy,paperDays:validation.days,paperLimitViolations:validation.failures.includes('paper_limit_violations')?1:0});
+ await auditPrincipal(env,ctx.principal,'invest:owner-strategy-lab');
+ return json(request,env,{...lab,liveGateEffect:'none'});
+}
+
 async function ownerLiveReadiness(request,env,ctx){
- const brokerId=clean(new URL(request.url).searchParams.get('broker')||'toss',30);
+ const brokerId=clean(new URL(request.url).searchParams.get('broker')||'kis',30);
  if(!Object.hasOwn(BROKER_ADAPTERS,brokerId))return json(request,env,{error:'BROKER_NOT_REGISTERED'},400);
  const account=await loadAccount(env,ctx);
  const validation=await paperValidation(env,ctx,account);
@@ -150,14 +222,64 @@ async function ownerLiveReadiness(request,env,ctx){
   liveExecutionEnabled:false,liveOrdersAccepted:false,
   state:account.state,
   broker:{id:broker.brokerId,name:broker.brokerName,permission:broker.permission,
+   docsUrl:BROKER_ADAPTERS[brokerId].docsUrl,
+   connectionStatus:'disconnected',readOnlyConnectionVerified:false,
    limitedLivePrerequisitesReady:broker.limitedLivePrerequisitesReady,
    liveEligible:broker.liveEligible,blockers:broker.liveBlockers,
    checks:broker.checks,credentialsIncluded:false},
-  activation:{eligible:activation.eligible,blockers:activation.blockers},
+  // Knowledge-based step-up alone never qualifies for live execution. This is a readiness view only.
+  activation:{eligible:strongMfaVerified&&activation.eligible,blockers:strongMfaVerified?activation.blockers:[...new Set([...activation.blockers,'strongMfaAal2'])]},
   requirements:['Supabase OTP 2차 인증 AAL2 완료','본인 명의 증권사 계정과 공식 API 권한','검증된 최신 시세·주문 조회 및 장부 대사',
    '투자금·1회 주문·손실 한도 설정','최소 60일 모의투자와 검증된 전략 평가',
    '비용·위험 고지와 별도 명시적 실거래 승인','별도 승인된 플랫폼·증권사 실거래 잠금 해제'],
   message:'최고관리자 전용 실거래 준비 화면입니다. 실제 주문 전송은 필수 증빙과 별도 보호 배포가 완료될 때까지 차단됩니다.'
+ });
+}
+
+
+async function ownerStage2PaperPreset(request,env,ctx){
+ // This endpoint only provides and applies a paper-risk configuration. It NEVER starts
+ // a strategy, places a paper order or turns on the hard-locked live broker endpoint.
+ if(String(ctx.identity.email||'').trim().toLowerCase()!==INVEST_DEFAULT_OWNER)
+  return json(request,env,{error:'LIVE_OWNER_ONLY'},403);
+ const account=await loadAccount(env,ctx);
+ const eligibility=stage2PaperPresetEligibility(account);
+ if(request.method==='GET'){
+  await auditPrincipal(env,ctx.principal,'invest:stage2-paper-preset-read');
+  return json(request,env,{
+   schema:'ekodi.invest.stage2-paper-preset.v1',
+   id:STAGE2_PAPER_PRESET_ID,
+   preset:validatedStage2PaperPreset(),
+   automation:STAGE2_PAPER_AUTOMATION,
+   eligibility,
+   currentPolicyPreserved:true,
+   applicationRequiresOwnerAction:true,
+   liveOrdersEnabled:false
+  });
+ }
+ if(request.method!=='POST')return json(request,env,{error:'METHOD_NOT_ALLOWED'},405);
+ const input=await body(request);
+ if(!input||Array.isArray(input)||typeof input!=='object'||Object.keys(input).length!==1||
+    input.confirm!=='APPLY_STAGE2_PAPER_ONLY')
+  return json(request,env,{error:'EXPLICIT_PAPER_PRESET_CONFIRMATION_REQUIRED'},400);
+ if(!eligibility.eligible)return json(request,env,{error:eligibility.reason,presetApplied:false},409);
+ // Fail closed on racing policy changes: only write if exactly the previously read
+ // empty policy remains, and if no live approval or paper operation has started.
+ const policy=validatedStage2PaperPreset();
+ const updated=await env.DB.prepare(`UPDATE investment_autopilot_accounts
+  SET policy_json=?,policy_fingerprint=?,updated_by=?,updated_at=?
+  WHERE subject_type=? AND subject_key=? AND state='RESEARCH_ONLY'
+   AND live_approval_json IS NULL AND policy_json=?`)
+  .bind(JSON.stringify(policy),policyFingerprint(policy),ctx.identity.email,nowIso(),
+   ctx.subject.type,ctx.subject.key,String(account.row?.policy_json||'{}')).run();
+ if(Number(updated?.meta?.changes||0)!==1)return json(request,env,{error:'POLICY_CHANGED_CONCURRENTLY',presetApplied:false},409);
+ await recordEvent(env,ctx,'stage2:paper-preset','info',{id:STAGE2_PAPER_PRESET_ID,fingerprint:policyFingerprint(policy),liveOrdersEnabled:false});
+ await auditPrincipal(env,ctx.principal,'invest:stage2-paper-preset-applied');
+ return json(request,env,{
+  schema:'ekodi.invest.stage2-paper-preset.v1',
+  id:STAGE2_PAPER_PRESET_ID,applied:true,state:'RESEARCH_ONLY',
+  policy,policyFingerprint:policyFingerprint(policy),
+  execution:'paper_only',paperTradingStarted:false,liveOrdersEnabled:false
  });
 }
 
@@ -254,8 +376,23 @@ async function paperOrder(request,env,ctx){
  const broker=createPaperBroker({cash:view.cash,positions:view.positions,realizedPnl:view.realizedPnl,feeRate:0.00015,slippageBps:10});
  const order=broker.submit(intent,{price:quote.price});
  const snap=broker.snapshot();
- await env.DB.prepare(insert).bind(...base,order.status,order.filledQty||0,order.avgPrice||0,order.fee||0,1,'[]',...meta).run();
- await saveAccount(env,ctx,{paper_ledger_json:JSON.stringify({...account.ledger,cash:snap.cash,positions:snap.positions,realizedPnl:snap.realizedPnl,dayKey:view.dayKey,dayStartEquity:view.dayStartEquity})});
+ // Claim the idempotency key first: a concurrent duplicate gets changes=0 and must not touch the ledger.
+ const claimed=await env.DB.prepare(insert).bind(...base,order.status,order.filledQty||0,order.avgPrice||0,order.fee||0,1,'[]',...meta).run();
+ if(Number(claimed?.meta?.changes)!==1){
+  const dup=await env.DB.prepare(`SELECT idempotency_key,status,filled_qty,avg_price FROM investment_autopilot_orders WHERE subject_type=? AND subject_key=? AND idempotency_key=?`).bind(ctx.subject.type,ctx.subject.key,intent.idempotencyKey).first();
+  return json(request,env,{ok:true,duplicate:true,order:dup},200);
+ }
+ // Compare-and-swap on the exact ledger this order was evaluated against, so two concurrent orders
+ // cannot both pass the budget check and overwrite each other.
+ const nextLedger=JSON.stringify({...account.ledger,cash:snap.cash,positions:snap.positions,realizedPnl:snap.realizedPnl,dayKey:view.dayKey,dayStartEquity:view.dayStartEquity});
+ const swapped=await env.DB.prepare(`UPDATE investment_autopilot_accounts SET paper_ledger_json=?,updated_by=?,updated_at=? WHERE subject_type=? AND subject_key=? AND paper_ledger_json=?`)
+  .bind(nextLedger,ctx.identity.email,nowIso(),ctx.subject.type,ctx.subject.key,String(account.row?.paper_ledger_json??'{}')).run();
+ if(Number(swapped?.meta?.changes)!==1){
+  await env.DB.prepare(`UPDATE investment_autopilot_orders SET status='RISK_BLOCKED',filled_qty=0,avg_price=0,fee=0,risk_allowed=0,risk_reasons_json=? WHERE subject_type=? AND subject_key=? AND idempotency_key=?`)
+   .bind(JSON.stringify(['ledger_conflict_retry']),ctx.subject.type,ctx.subject.key,intent.idempotencyKey).run();
+  await recordEvent(env,ctx,'paper:ledger-conflict','warning',{symbol:intent.symbol});
+  return json(request,env,{ok:false,allowed:false,reasons:['ledger_conflict_retry'],executionPerformed:false},409);
+ }
  await recordEvent(env,ctx,'paper:order','info',{symbol:intent.symbol,side:intent.side,status:order.status});
  await auditPrincipal(env,ctx.principal,'invest:autopilot-paper-order');
  return json(request,env,{ok:true,allowed:true,mode:'paper',order,ledger:ledgerView({...account.ledger,...snap,dayKey:view.dayKey,dayStartEquity:view.dayStartEquity},now),dataBasis:'paper_owner_supplied_quote',executionPerformed:false},201);
@@ -387,7 +524,14 @@ export async function handleInvestAutopilotApi(request,env){
  if(!env?.DB)return json(request,env,{error:'DATABASE_UNAVAILABLE'},503);
  const write=!['GET','HEAD'].includes(request.method);
  const ctx=await ownerContext(request,env,write);if(ctx.error)return json(request,env,{error:ctx.error},ctx.status);
- // Second factor ("본인인증"): Google login alone never unlocks the workspace.
+ // Second factor ("본인인증", phone/address fragment) is an owner opt-in: INVEST_STEP_UP_REQUIRED='true'.
+ // Without it the verified owner Google session plus the owner-email gate unlock the workspace;
+ // broker inquiry and live controls still require OTP AAL2 independently.
+ const stepUpRequired=String(env?.INVEST_STEP_UP_REQUIRED||'').trim().toLowerCase()==='true';
+ if(path==='/v1/invest/autopilot/step-up'&&!stepUpRequired){
+  if(request.method==='GET')return json(request,env,{verified:true,required:false},200);
+  return json(request,env,{error:'STEP_UP_DISABLED'},409);
+ }
  if(path==='/v1/invest/autopilot/step-up'){
   const audit=(type,severity,payload)=>recordEvent(env,ctx,type,severity,payload).catch(()=>{});
   let result;
@@ -397,12 +541,15 @@ export async function handleInvestAutopilotApi(request,env){
   else return json(request,env,{error:'METHOD_NOT_ALLOWED'},405);
   return json(request,env,result.body,result.status);
  }
- const stepUp=await stepUpSession(request,env,ctx);
- if(!stepUp.verified)return json(request,env,{error:'STEP_UP_REQUIRED'},403);
+ if(stepUpRequired){const stepUp=await stepUpSession(request,env,ctx);if(!stepUp.verified)return json(request,env,{error:'STEP_UP_REQUIRED'},403)}
  // Live control is pinned to the named highest administrator, regardless of env override.
  if(path.startsWith('/v1/invest/autopilot/live/')&&String(ctx.identity.email||'').trim().toLowerCase()!==INVEST_DEFAULT_OWNER)
   return json(request,env,{error:'LIVE_OWNER_ONLY'},403);
+ if(path==='/v1/invest/autopilot/broker/selection')return ownerBrokerSelection(request,env,ctx);
+ if(path==='/v1/invest/autopilot/stage2/preset')return ownerStage2PaperPreset(request,env,ctx);
  if(path==='/v1/invest/autopilot/live/readiness'&&request.method==='GET')return ownerLiveReadiness(request,env,ctx);
+ if(path==='/v1/invest/autopilot/broker/snapshot'&&request.method==='GET')return ownerBrokerSnapshot(request,env,ctx);
+ if(path==='/v1/invest/autopilot/research/strategy-lab'&&request.method==='GET')return ownerStrategyLab(request,env,ctx);
  if(path==='/v1/invest/autopilot/live/orders'&&request.method==='POST')
   return json(request,env,{error:'LIVE_EXECUTION_LOCKED',executionPerformed:false,reason:'BROKER_AND_POLICY_GATES_NOT_VERIFIED'},423);
  if(path==='/v1/invest/autopilot/status'&&request.method==='GET')return status(request,env,ctx);

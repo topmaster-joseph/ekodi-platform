@@ -1,0 +1,9 @@
+{
+  "schema": "ekodi.devotion-cards.v1",
+  "size": "1200x630",
+  "generic": "devotion.jpg",
+  "months": [
+    "2026-10",
+    "2026-11"
+  ]
+}

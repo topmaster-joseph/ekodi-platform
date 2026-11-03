@@ -22,7 +22,7 @@
     replies.replaceChildren();
     if(!items.length){
       const empty=document.createElement('li');
-      empty.textContent='이번 주 첫 참여 답글을 남겨 주세요.';
+      empty.textContent='아직 참여 신청이 없습니다. 첫 참여자가 되어 주세요.';
       replies.append(empty);
       return;
     }
@@ -41,7 +41,9 @@
           date.textContent=formatted.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
         }
       }
-      item.append(name,attendance,message,date);
+      item.append(name,attendance);
+      if(String(reply.body||'').trim())item.append(message);
+      item.append(date);
       if(reply.own)item.dataset.own='true';
       replies.append(item);
     }
@@ -57,11 +59,12 @@
     const day=new Date(meetingDate+'T00:00:00Z');
     if(!Number.isNaN(day.getTime()))dateText.textContent=day.toLocaleDateString('ko-KR',{timeZone:'UTC',month:'long',day:'numeric',weekday:'short'});
     const attendees=data.replies.filter(item=>item.attendance==='join').length;
-    count.textContent='참여 의사 '+attendees+'명 · 답글 '+data.replies.length+'개';
+    const comments=data.replies.filter(item=>String(item.body||'').trim()).length;
+    count.textContent='참여 의사 '+attendees+'명 · 답글 '+comments+'개';
     renderReplies(data.replies);
     const authenticated=data.me?.authenticated===true;
     if(login)login.hidden=authenticated;
-    if(submit)submit.textContent=authenticated?'참여 답글 등록·수정':'로그인 후 참여';
+    if(submit)submit.textContent=authenticated?'참여 신청 등록·수정':'로그인 후 참여';
     if(data.meeting.status!=='scheduled'){
       if(submit)submit.disabled=true;
       say('이번 주 모임은 일정이 변경되어 신청을 받지 않습니다.','error');
@@ -98,7 +101,7 @@
     const bearer=token();
     if(!bearer){
       if(login)login.hidden=false;
-      say('참여 답글은 로그인 후 등록할 수 있습니다. 오른쪽의 로그인 버튼을 선택해 주세요.','error');
+      say('참여 신청은 로그인 후 등록할 수 있습니다. 로그인 버튼을 선택해 주세요.','error');
       return;
     }
     const data=new FormData(form);
@@ -109,7 +112,7 @@
       body:String(data.get('body')||'').trim(),
       publicConsent:data.get('publicConsent')==='on'
     };
-    submit.disabled=true;say('참여 답글을 저장하고 있습니다.');
+    submit.disabled=true;say('참여 신청을 저장하고 있습니다.');
     try{
       const response=await fetch(endpoint,{method:'POST',
         headers:{'content-type':'application/json',accept:'application/json',authorization:'Bearer '+bearer},
@@ -117,7 +120,7 @@
       const saved=await response.json().catch(()=>null);
       if(!response.ok||!saved?.ok)throw new Error(saved?.error==='meeting_date_changed'?'모임 날짜가 바뀌었습니다. 새 날짜를 확인해 주세요.':saved?.error==='private_information_in_public_reply'?'공개 답글에 이메일이나 전화번호를 적지 말아 주세요.':saved?.error==='public_consent_required'?'공개 동의를 확인해 주세요.':'저장이 확인되지 않았습니다. 다시 시도해 주세요.');
       render(saved);
-      say('이번 주 참여 답글이 저장되었습니다. 수정하려면 내용을 바꾸고 다시 등록해 주세요.','success');
+      say('이번 주 참여 신청이 저장되었습니다. 수정하려면 내용을 바꾸고 다시 등록해 주세요.','success');
     }catch(error){
       say(error.message||'저장이 완료되지 않았습니다.','error');
     }finally{submit.disabled=false}

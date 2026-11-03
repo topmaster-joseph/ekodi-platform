@@ -14,6 +14,8 @@ on:
   pull_request:
     paths:
       - 'my/**'
+      - 'points-active-client.js'
+      - 'test/points-active-client.test.mjs'
       - 'my-worker.js'
       - 'invest-my-workspace.js'
       - 'invest-autopilot-core.js'
@@ -61,6 +63,8 @@ on:
     branches: [main]
     paths:
       - 'my/**'
+      - 'points-active-client.js'
+      - 'test/points-active-client.test.mjs'
       - 'my-worker.js'
       - 'invest-my-workspace.js'
       - 'invest-autopilot-core.js'
@@ -134,6 +138,9 @@ jobs:
           node --check invest-my-workspace.js
           node --check invest-autopilot-core.js
           node --check my/app.js
+          node --check my/points/app.js
+          node --check my/points-active-client.js
+          node --check points-active-client.js
           node --check my/public-profile.js
           node --check my/person-digital-card.js
           node --check my/digital-card-admin.js
@@ -170,7 +177,7 @@ jobs:
           grep -Fq 'private.person_messenger_contacts' "$MESSENGER_MIGRATION"
           grep -Fq 'person_identity_share_capabilities' "$MESSENGER_MIGRATION"
           grep -Fq 'set_my_identity_share_config_v2' "$MESSENGER_MIGRATION"
-          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs test/person-public-profile.test.mjs test/person-messenger-sharing.test.mjs test/person-digital-card-qr-ui.test.mjs test/invest-access-boundaries.test.mjs test/invest-my-autopilot-ui.test.mjs
+          node --test test/universal-membership-contract.test.mjs test/my-ekodi-contract.test.mjs test/my-private-workspace-routing.test.mjs test/my-manifest-services.test.mjs test/my-life-journey.test.mjs test/my-life-communication.test.mjs test/my-progressive-personalization.test.mjs test/my-docs-ai.test.mjs test/my-intent-os.test.mjs test/my-intent-execution-bridge.test.mjs test/person-public-profile.test.mjs test/person-messenger-sharing.test.mjs test/person-digital-card-qr-ui.test.mjs test/invest-access-boundaries.test.mjs test/invest-my-autopilot-ui.test.mjs test/my-points-link-contract.test.mjs test/my-points-referral-flow.test.mjs test/my-points-worker-runtime.test.mjs test/points-active-client.test.mjs test/points-active-heartbeat-contract.test.mjs
           test -f deploy/manifests/my.worker.json
 
   staging:
@@ -273,6 +280,26 @@ jobs:
             sleep 4
           done
           exit 1
+
+
+      - name: Verify Cloudflare Access protects points page and assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The entire isolated hostname is Access-protected. Verify the new
+          # member points route, JS, CSS and config do not bypass that boundary.
+          for route in /points/ /points/app.js /points/styles.css /config.js; do
+            safe_name=$(printf '%s' "$route" | tr '/' '_' | tr -cd 'a-zA-Z0-9_.')
+            body="/tmp/my-points-access-${safe_name}.html"
+            code=$(curl -L -sS -o "$body" -w '%{http_code}' \
+              --connect-timeout 5 --max-time 20 "${STAGING_URL}${route}")
+            test "$code" = '200' || { echo "Points access HTTP check failed: ${route} ${code}"; exit 1; }
+            grep -Fq 'Cloudflare Access' "$body" || {
+              echo "Points path does not show Cloudflare Access login: ${route}"; exit 1;
+            }
+          done
+          echo 'All four isolated My points paths are protected by Cloudflare Access.'
+
 
   production:
     if: >-

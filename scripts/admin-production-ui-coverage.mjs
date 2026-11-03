@@ -9,6 +9,7 @@ export function auditAdminProductionUiCoverage(menuIds, results) {
   const required = ['command-home', ...menuNames];
   if (menuNames.includes('search-visibility')) {
     required.push('search-visibility-interactions');
+    required.push('search-visibility-google-readonly');
   }
   const issues = [];
   if (menuNames.some(value => !value)) issues.push('empty registered menu ID');

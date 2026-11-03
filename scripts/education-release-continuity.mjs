@@ -22,6 +22,20 @@ export const EDUCATION_RELEASE_PATHS=Object.freeze(new Set([
 export function educationReleaseChanged(files){
  return Array.isArray(files)&&files.some(x=>typeof x==='string'&&(x.startsWith('education/')||EDUCATION_RELEASE_PATHS.has(x)));
 }
+
+/** The convergence workflow may have started before an official PR's last
+ * protected-main sync. Do NOT trust its old head SHA for release authority:
+ * select only ONE fully merged official PR for the exact branch, then require
+ * the canonical merge-to-PR association, actual merged source required CI and
+ * EKODI receipt in verifyEducationReleaseSnapshot before any dispatch. */
+export function selectMergedEducationPRForConvergence({pulls=[],branch=''}={}){
+ if(!parseOrchestratorReleaseBranch(branch)||!Array.isArray(pulls))return null;
+ const matching=pulls.filter(p=>p?.state==='closed'&&p.merged_at&&
+  p.base?.ref==='main'&&p.head?.ref===branch&&
+  /^[0-9a-f]{40}$/i.test(String(p.head?.sha||''))&&
+  /^[0-9a-f]{40}$/i.test(String(p.merge_commit_sha||'')));
+ return matching.length===1?matching[0]:null;
+}
 export function approvedEducationMerge({event={},pr={},files=[],mainSha=''}={}){
  const run=event.workflow_run||{};
  const branch=String(run.head_branch||'');
@@ -46,6 +60,13 @@ export function latestEducationMergeFromGit({run=execFileSync}={}){
    {encoding:'utf8',timeout:20000})||'').trim();
  return /^[0-9a-f]{40}$/i.test(commit)?commit:'';
 }
+// Strictly owner-authorized recovery of an already merged release. It only wakes
+// existing receipt/CI/snapshot-guarded dispatch; it does not approve deployment.
+export function approvedEducationRecoverySignal(event, owner='topmaster-joseph'){
+ return event?.action==='created' && event?.issue && !event.issue.pull_request &&
+  event?.comment?.user?.login===owner &&
+  String(event?.comment?.body||'').trim()==='EKODI-EDUCATION-RECONCILE';
+}
 export function releaseQuotaBudget(data,minRemaining=24){
  const remaining=Number(data?.resources?.core?.remaining ?? data?.rate?.remaining);
  if(!Number.isFinite(remaining)||remaining<0)return {ok:false,reason:'quota_unknown'};
@@ -69,10 +90,13 @@ async function main(){
  const eventName=process.env.GITHUB_EVENT_NAME||'';
  if(repo!=='topmaster-joseph/ekodi-platform'||!token||!eventPath||!fs.existsSync(eventPath))
    fail('trusted repository, Actions token and event required');
- if(!['workflow_run','schedule'].includes(eventName)||process.env.GITHUB_REF_NAME!=='main')
+ if(!['workflow_run','schedule','issue_comment'].includes(eventName)||process.env.GITHUB_REF_NAME!=='main')
    fail('protected main workflow_run or read-only scheduled recovery required');
  const event=JSON.parse(fs.readFileSync(eventPath,'utf8'));
  const run=event.workflow_run||{};
+ if(eventName==='issue_comment'&&!approvedEducationRecoverySignal(event)){
+   log('unauthorized_reconcile_signal');return;
+ }
  if(eventName==='workflow_run'&&(event.action!=='completed'||run.conclusion!=='success'||!parseOrchestratorReleaseBranch(run.head_branch))){
    log('non_release_run');return;
  }
@@ -95,13 +119,19 @@ async function main(){
  if(eventName==='workflow_run'){
    const branch=run.head_branch;
    const pulls=await api('/pulls?state=all&base=main&head='+encodeURIComponent(owner+':'+branch)+'&per_page=100');
-   pr=Array.isArray(pulls)?pulls.find(p=>p.head?.sha===run.head_sha&&p.merged_at!=null):null;
-   if(!pr){log('no_exact_verified_merge',{branch,sourceSha:run.head_sha});return;}
+   pr=selectMergedEducationPRForConvergence({pulls,branch});
+   if(!pr){log('no_unique_official_merged_pr_for_convergence',{branch,runSourceSha:run.head_sha});return;}
+   // A successful old convergence-run SHA is merely a wake-up signal;
+   // latest merged PR SHA still has to pass the full receipt, source-CI and
+   // merge-commit association validation below (never use run SHA to deploy).
+   if(pr.head.sha!==run.head_sha)log('convergence_head_advanced_before_protected_merge',{
+     pr:pr.number,branch,runSourceSha:run.head_sha,mergedSourceSha:pr.head.sha
+   });
    const changed=await api('/pulls/'+pr.number+'/files?per_page=100');
    if(!Array.isArray(changed)||changed.length===100)fail('PR files must be exhaustively inspectable');
    files=changed.map(item=>item.filename);
  }else{
-   // Schedule: 1 local git query + 1 exact commit/PR lookup instead of
+   // Schedule / owner-authorized recovery: 1 local git query + 1 exact commit/PR lookup instead of
    // listing 200 PRs and fetching up to 40 file lists every hour.
    const mergedSha=latestEducationMergeFromGit();
    if(!mergedSha){log('no_education_commit_in_bounded_local_history');return;}

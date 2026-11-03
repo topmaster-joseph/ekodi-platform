@@ -69,3 +69,50 @@ export async function federatedAuthEmail(provider:string,subject:string){
   return `${FEDERATED_ALIAS_LOCAL}+${provider}.${digest}@${FEDERATED_ALIAS_DOMAIN}`;
 }
 
+
+// ── Sign in with Apple (web, authorization code, response_mode=query) ─────────
+// No name/email scope is requested, so Apple permits a plain query redirect to the
+// static auth page and the stable `sub` is the only identifier: like Naver/Kakao it
+// gets its own alias auth user and joins an EKODI account only through explicit linking.
+const b64url=(bytes:Uint8Array)=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const b64urlJson=(value:unknown)=>b64url(new TextEncoder().encode(JSON.stringify(value)));
+function pemBody(pem:string){
+  const normalized=String(pem||"").replace(/\\n/g,"\n");
+  const body=normalized.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s+/g,"");
+  if(!body)throw new Error("apple_private_key_missing");
+  return Uint8Array.from(atob(body),c=>c.charCodeAt(0));
+}
+export async function appleClientSecret(deps:{teamId:string;keyId:string;servicesId:string;privateKey:string;now?:number}){
+  if(!deps.teamId||!deps.keyId||!deps.servicesId)throw new Error("apple_config_missing");
+  const key=await crypto.subtle.importKey("pkcs8",pemBody(deps.privateKey),{name:"ECDSA",namedCurve:"P-256"},false,["sign"]);
+  const iat=Math.floor((deps.now??Date.now())/1000);
+  const unsigned=`${b64urlJson({alg:"ES256",kid:deps.keyId,typ:"JWT"})}.${b64urlJson({iss:deps.teamId,iat,exp:iat+300,aud:"https://appleid.apple.com",sub:deps.servicesId})}`;
+  // WebCrypto ECDSA returns IEEE-P1363 (r||s), which is exactly the JWS ES256 encoding.
+  const signature=new Uint8Array(await crypto.subtle.sign({name:"ECDSA",hash:"SHA-256"},key,new TextEncoder().encode(unsigned)));
+  return `${unsigned}.${b64url(signature)}`;
+}
+function decodeJwtPayload(jwt:string){
+  const part=String(jwt||"").split(".")[1];
+  if(!part)throw new Error("apple_id_token_invalid");
+  const json=atob(part.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((part.length+3)%4));
+  return JSON.parse(new TextDecoder().decode(Uint8Array.from(json,c=>c.charCodeAt(0))));
+}
+export async function verifyAppleCode(code:string,_state:string,deps:{teamId:string;keyId:string;servicesId:string;privateKey:string;redirectUri:string;fetcher?:typeof fetch;now?:number}):Promise<VerifiedIdentity>{
+  const fetcher=deps.fetcher??fetch;
+  if(!code)throw new Error("apple_code_required");
+  const form=new URLSearchParams({grant_type:"authorization_code",code,redirect_uri:deps.redirectUri,client_id:deps.servicesId,client_secret:await appleClientSecret(deps)});
+  const token=await providerJson(await fetcher("https://appleid.apple.com/auth/token",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded",accept:"application/json"},body:form.toString()}),"apple_token");
+  // The id_token arrives directly from Apple's token endpoint over TLS in exchange for a
+  // code bound to our signed client secret (OIDC Core 3.1.3.7), so claims are checked, not re-signed.
+  const claims=decodeJwtPayload(token.id_token);
+  const nowSec=Math.floor((deps.now??Date.now())/1000);
+  if(claims.iss!=="https://appleid.apple.com"||claims.aud!==deps.servicesId||!claims.sub||!(Number(claims.exp)>nowSec))throw new Error("apple_id_token_invalid");
+  const email=String(claims.email||"").trim().toLowerCase();
+  const relay=/@privaterelay\.appleid\.com$/.test(email);
+  return {
+    subject:String(claims.sub),
+    email:relay?"":email,
+    emailVerified:Boolean(email)&&!relay&&(claims.email_verified===true||claims.email_verified==="true"),
+    displayName:null
+  };
+}

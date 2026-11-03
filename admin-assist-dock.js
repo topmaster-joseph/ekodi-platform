@@ -114,8 +114,10 @@
   }
   function addSessionMessage(role,text,extra={}){
     const value=String(text||'').trim();if(!value)return;
-    const session=ensureSession(value);
-    session.messages.push({role,text:value.slice(0,4000),at:now(),...extra});
+    const session=extra.sessionId?sessions.find(item=>item.id===extra.sessionId):ensureSession(value);
+    if(!session)return;
+    const {sessionId,...metadata}=extra;
+    session.messages.push({role,text:value.slice(0,4000),at:now(),...metadata});
     if(session.messages.length>MAX_MESSAGES)session.messages=session.messages.slice(-MAX_MESSAGES);
     session.updatedAt=now();if(extra.status)session.status=extra.status;
     sessions=[session,...sessions.filter(item=>item.id!==session.id)].slice(0,MAX_SESSIONS);
@@ -144,11 +146,15 @@
     });
     window.dispatchEvent(new CustomEvent('ekodi-admin-assist-ready'));
   }
+  function onAdminHome(){const routed=window.EKODIAdminRoutes?.sectionFromLocation?.(location);if(routed)return routed==='command-home';const path=location.pathname.replace(/\/+$/,'')||'/';return(path==='/admin'||path==='/admin/home')&&!location.hash.replace(/^#/,'')}
   function install(){
     if(!token())return;
     const existing=document.querySelector('#ekodiAssistDock');
     if(existing){root=existing;exposeBridge();return}
     watchWorkbenchPosition();
+    // ADMIN-HOME-NO-FLASH-001: a dock restored "open" must not paint over the super-admin
+    // home before Control decides; mark the home now, before the saved state is applied.
+    if(onAdminHome())document.body.classList.add('admin-command-home');
     root=el('div','ekodi-assist');root.id='ekodiAssistDock';
     root.innerHTML='<button type="button" class="ekodi-assist-launcher" id="ekodiAssistLauncher" aria-label="에코디와 대화 열기" aria-expanded="false">✦<span class="ekodi-assist-badge" id="ekodiAssistBadge" hidden></span></button><section class="ekodi-assist-panel" id="ekodiAssistPanel" hidden aria-label="에코디와 대화하기"><aside class="ekodi-assist-rail" id="ekodiAssistRail"><div class="ekodi-assist-rail-head"><strong id="ekodiAssistRailTitle">최근 대화</strong><button type="button" id="ekodiAssistNew" aria-label="새 대화">＋</button></div><div class="ekodi-assist-tabs" role="tablist"><button type="button" class="ekodi-assist-tab" data-assist-tab="ai">에코디와 대화</button><button type="button" class="ekodi-assist-tab" data-assist-tab="inbox">대화 · 문의</button></div><label class="ekodi-assist-search"><span>⌕</span><input id="ekodiAssistSearch" type="search" placeholder="최근 대화 검색" autocomplete="off"></label><div class="ekodi-assist-history" id="ekodiAssistHistory"></div><div class="ekodi-assist-rail-foot"><small id="ekodiAssistContext">현재 화면을 확인 중입니다.</small><a href="/operator" target="_blank" rel="noopener">운영자 전체 화면 ↗</a></div></aside><main class="ekodi-assist-main"><header class="ekodi-assist-head"><button type="button" class="ekodi-assist-rail-toggle" id="ekodiAssistRailToggle" aria-label="최근 대화 보기" aria-controls="ekodiAssistRail" aria-expanded="false">☰</button><div class="ekodi-assist-title"><strong id="ekodiAssistTitle">새 대화</strong><small>EKODI Orchestrator · 권한 기반 안전 실행</small></div><button type="button" class="ekodi-assist-close" id="ekodiAssistClose" aria-label="관리자 화면으로 돌아가기">×</button></header><div class="ekodi-assist-contextbar" role="status"><span class="ekodi-assist-context-label">현재 화면</span><strong id="ekodiAssistActivePage">관리자 작업영역</strong><span class="ekodi-assist-route-status" id="ekodiAssistRouteStatus" data-state="ready">명령 대기</span></div><div class="ekodi-assist-chat-scroll" id="ekodiAssistChat" aria-live="polite" data-ekodi-main-conversation="true"></div><footer class="ekodi-assist-composer-wrap" id="ekodiAssistComposer"><section class="ekodi-assist-proactive" id="ekodiAssistProactive" aria-label="에코디 선제 제안" hidden></section><form class="ekodi-assist-composer" id="ekodiAssistForm"><textarea class="ekodi-assist-command" id="ekodiAssistCommand" rows="2" maxlength="1800" placeholder="에코디와 대화하기"></textarea><div class="ekodi-assist-execution-row"><button type="button" class="ekodi-assist-plus" id="ekodiAssistComposerNew" aria-label="새 대화">＋</button><label class="ekodi-assist-target-label"><span>실행</span><select class="ekodi-assist-target" id="ekodiAssistExecutionTarget" aria-label="실행 대상"><option value="ekodi">EKODI</option><option value="chatgpt">ChatGPT</option><option value="claude">Claude</option><option value="gemini">Gemini</option><option value="qwen">Qwen</option><option value="factchat-institution">FactChat · 목포대</option><option value="multi">여러 AI</option></select></label><button type="submit" class="ekodi-assist-send" aria-label="선택한 대상으로 실행">실행</button></div></form><small>입력은 위 · 실행 대상은 아래 · 외부 AI 전송 시 민감정보는 차단합니다.</small></footer></main></section>';
     document.body.appendChild(root);document.body.classList.add('admin-command-history-ready');
@@ -219,6 +225,7 @@
         const bubble=el('div','ekodi-assist-bubble',message.text);
         if(message.role==='assistant'){const who=el('div','ekodi-assist-who');who.append(el('span','ekodi-assist-avatar',message.mode==='factchat-institution'?'F':'E'),el('strong','',message.kind==='status'?'EKODI 작업':message.mode==='factchat-institution'?FACTCHAT_INSTITUTION_LABEL:'에코디 AI'));row.append(who)}
         row.append(bubble);
+        if(message.role==='user'&&message.advisory?.label){row.append(el('small','ekodi-assist-turn-meta ekodi-assist-advisory',`판정: ${message.advisory.label} · ${message.advisory.reason}`))}
         if(message.provider||message.status){const meta=el('small','ekodi-assist-turn-meta',[message.provider,message.status&&statusLabel(message.status)].filter(Boolean).join(' · '));row.append(meta)}
         thread.append(row);
       }
@@ -431,15 +438,51 @@
   async function threadAction(id,action){try{await api(`/api/control/messenger/threads/${id}/${action}`,{method:'POST',body:'{}'});if(action==='close'){activeThread=null;await refreshSummary();renderInbox()}else await openThread(id)}catch(error){showStatus(error.message,true)}}
   function highRiskArea(text){return HIGH_RISK.find(item=>item.re.test(text))?.area||''}
 
+  /*AI-ROUTE-FAMILY-001:start*/
+  // Advisory verdict only (mirrors ai-router-score.js recommendModelFamily); never dispatches a provider.
+  function familyVerdict(input){
+    const text=String(input||'').toLowerCase();
+    const code=/\b(code|coding|git|github|branch|deploy|repository|repo|debug|refactor|test|migration)\b/.test(text)||/코드|코딩|깃|브랜치|배포|저장소|디버그|리팩터|테스트|마이그레이션/.test(text);
+    const research=!code&&(/\b(research|analyse|analyze|compare|evidence|literature|study)\b/.test(text)||/연구|분석|비교|근거|문헌|조사/.test(text));
+    const writing=!code&&!research&&(/\b(write|draft|rewrite|translate|email|document|copy)\b/.test(text)||/작성|초안|번역|이메일|문서|문구|글쓰기/.test(text));
+    const image=/\b(image|picture|illustration|logo|poster|thumbnail|dall-?e)\b/.test(text)||/이미지|그림|사진 ?생성|일러스트|로고|포스터|썸네일/.test(text);
+    const brainstorm=!code&&(/\b(brainstorm|ideas?|naming|slogan)\b/.test(text)||/브레인스토밍|아이디어|이름 ?짓|네이밍|슬로건/.test(text));
+    if(image)return{family:'chatgpt',label:'GPT 적합',reason:'이미지 생성'};
+    if(brainstorm)return{family:'chatgpt',label:'GPT 적합',reason:'자유 브레인스토밍'};
+    if(code)return{family:'claude',label:'Claude 적합',reason:'코드·저장소 작업'};
+    if(research)return{family:'claude',label:'Claude 적합',reason:'근거 기반 분석'};
+    if(writing)return{family:'claude',label:'Claude 적합',reason:'문서 작성'};
+    return{family:'claude',label:'Claude 적합',reason:'파일·판단 작업'};
+  }
+  /*AI-ROUTE-FAMILY-001:end*/
+
   function beginConversationTurn(text){
     const value=String(text||'').trim();if(!value)return null;
-    ensureSession(value);const history=aiHistory.slice(-8);rememberAi('user',value);addSessionMessage('user',value,{kind:'message',status:'active'});renderAi();scrollChat();return history;
+    ensureSession(value);const history=aiHistory.slice(-8);rememberAi('user',value);addSessionMessage('user',value,{kind:'message',status:'active',advisory:familyVerdict(value)});renderAi();scrollChat();return history;
+  }
+
+  async function pollFamilyJob(jobId,sessionId){
+    const scopedAdd=(role,message,metadata={})=>addSessionMessage(role,message,{...metadata,sessionId});
+    let lastNote='';
+    for(let attempt=0;attempt<305;attempt++){
+      await new Promise(resolve=>window.setTimeout(resolve,2000));
+      let response;try{response=await api(`/api/control/ai/assist/jobs/${encodeURIComponent(jobId)}`)}catch(error){scopedAdd('assistant',error.message,{kind:'status',status:'failed'});renderAi();return}
+      const job=response.job||{};
+      if(job.processingNote&&job.processingNote!==lastNote){lastNote=job.processingNote;scopedAdd('assistant',job.processingNote,{kind:'status',status:'processing'});renderAi()}
+      if(job.status==='completed'){
+        if(!job.verifiedRunnerReceipt||!job.result){scopedAdd('assistant','실행 영수증을 검증하지 못해 결과를 표시하지 않습니다.',{kind:'status',status:'failed'});renderAi();return}
+        const label=job.lane==='node:codex'?'실행: Codex':'실행: Claude Code';const fallback=job.result.fallbackFrom?` · 실제 대체 경로: ${job.result.fallbackFrom}`:'';
+        scopedAdd('assistant',job.result.output,{kind:'message',status:'verified',provider:`${label}${fallback}`,mode:'family_auto_dispatch'});if(state.activeSessionId===sessionId)rememberAi('assistant',job.result.output);renderAi();return;
+      }
+      if(['failed','cancelled'].includes(job.status)){scopedAdd('assistant',`자동 실행을 완료하지 못했습니다: ${job.error||job.status}`,{kind:'status',status:'failed'});renderAi();return}
+    }
+    scopedAdd('assistant','상태 확인 시간이 끝났습니다. 실행 결과로 간주하지 않습니다.',{kind:'status',status:'failed'});renderAi();
   }
 
   async function submitAi(text){
     const value=String(text||'').trim();if(!value)return;
     state.tab='ai';setTab('ai',false);
-    const history=beginConversationTurn(value);showStatus('요청을 분류하고 안전 경계를 확인 중입니다.');
+    const history=beginConversationTurn(value);const requestSessionId=activeSession()?.id;showStatus('요청을 분류하고 안전 경계를 확인 중입니다.');
     const c=context();const risky=highRiskArea(value);
     try{
       let result;let queued=null;let reply='';let provider=null;let mode=null;let status='active';
@@ -464,14 +507,15 @@
           status=queued.task?.state||queued.execution?.results?.[0]?.state||'queued';
         }
         result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message:value,context:c,history})});
+        if(result.async&&result.jobId){status=result.status||'queued';void pollFamilyJob(result.jobId,requestSessionId)}
         reply=String(result.reply||'응답을 받지 못했습니다.');provider=result.provider||null;mode=result.mode||'free_assist';rememberAi('assistant',reply);lastAiReply={text:reply,mode,provider,notice:result.notice||''};
         if(queued){const taskId=queued.task?.id||queued.execution?.results?.[0]?.taskId||'';reply=`${reply}\n\n${statusLabel(status)} · EKODI Command Plane${taskId?` #${taskId}`:''}에 기록하고 실행 경로를 확인했습니다.`;}
       }
-      addSessionMessage('assistant',reply,{kind:risky||HEALTH_RE.test(value)||queued?'status':'message',status,provider,mode});
+      addSessionMessage('assistant',reply,{kind:risky||HEALTH_RE.test(value)||queued?'status':'message',status,provider,mode,sessionId:requestSessionId});
       const session=activeSession();if(session&&['verified','resolved'].includes(status))session.status='done';if(session&&status==='failed')session.status='failed';saveSessions();
       await refreshSummary();renderAi();
     }catch(error){
-      addSessionMessage('assistant',error.message,{kind:'status',status:'failed'});const session=activeSession();if(session)session.status='failed';saveSessions();renderAi()
+      addSessionMessage('assistant',error.message,{kind:'status',status:'failed',sessionId:requestSessionId});const session=sessions.find(item=>item.id===requestSessionId);if(session)session.status='failed';saveSessions();renderAi()
     }
   }
 

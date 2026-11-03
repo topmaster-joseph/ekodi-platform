@@ -119,3 +119,9 @@
 .cgma-edoc-head-actions .cgma-edoc-btn{min-height:36px;padding:6px 12px;font-size:14px}
 @media (max-width:640px){.cgma-edoc-head-actions{margin-left:0;width:100%}.cgma-edoc-spacer{display:none}}
 #summaryCards[hidden],.cards[hidden]{display:none!important}
+/* ---- 원본 보기 · 원본 바꾸기 ---- */
+a.cgma-edoc-btn{display:inline-flex;align-items:center;text-decoration:none;box-sizing:border-box}
+.cgma-edoc-current{margin:0;font-size:14px;color:#14302f;word-break:break-all}
+.cgma-edoc-replace{border-top:1px dashed #e3eae8;padding-top:8px}
+.cgma-edoc-replace>summary{cursor:pointer;color:#0f5f5c;font-size:14px;padding:4px 0}
+.cgma-edoc-replace[open]{display:grid;gap:10px}

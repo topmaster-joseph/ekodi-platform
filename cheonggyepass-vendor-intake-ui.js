@@ -8,9 +8,21 @@ function clientMain(){
   const uploadField=form.querySelector('[data-pass-zip]');
   const setText=(node,value)=>{node.textContent=String(value??'')};
   const token=()=>{
+    // The canonical current EKODI identity must not be masked by an old region admin.
+    try{
+      const raw=localStorage.getItem('sb-renzehysxirjilvdxacv-auth-token');
+      if(raw){
+        const value=JSON.parse(raw),session=value?.currentSession||value?.session||value;
+        const access=String(session?.access_token||''),expires=Number(session?.expires_at||0);
+        return access&&(!expires||expires>Math.floor(Date.now()/1000)+30)?access:'';
+      }
+    }catch{return ''}
     const platform=sessionStorage.getItem('ekodi-auth-token');
     if(platform)return platform;
-    try{return JSON.parse(sessionStorage.getItem('ekodi-region-admin-session')||'null')?.accessToken||''}catch{return''}
+    try{
+      const admin=JSON.parse(sessionStorage.getItem('ekodi-region-admin-session')||'null');
+      return admin?.accessToken&&(!admin.expiresAt||admin.expiresAt>Math.floor(Date.now()/1000)+30)?admin.accessToken:'';
+    }catch{return''}
   };
   function renderFields(){
     const mode=delivery.value;

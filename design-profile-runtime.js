@@ -1,4 +1,5 @@
-﻿const TONES=new Set(['inherit','warm','calm','vivid','mono','night']);
+import { canManageSiteSubject, canonicalSiteSubject } from './site-chrome-runtime.js';
+const TONES=new Set(['inherit','warm','calm','vivid','mono','night']);
 const CHARACTERS=new Set(['auto','off','welcome','guide','read','idea']);
 const SEASONS=new Set(['auto','off','spring','summer','autumn','winter']);
 const MOTIONS=new Set(['inherit','still','gentle']);
@@ -37,17 +38,14 @@ function publicJson(data,status=200){return new Response(JSON.stringify(data),{s
 function privateJson(data,status=200){return new Response(JSON.stringify(data),{status,headers:responseHeaders('no-store')})}
 async function identity(request){
  const auth=clean(request.headers.get('authorization'),8192);const token=auth.toLowerCase().startsWith('bearer ')?auth.slice(7).trim():'';if(!token)return null;
- const r=await fetch('https://renzehysxirjilvdxacv.supabase.co/auth/v1/user',{headers:{apikey:'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_',authorization:`Bearer ${token}`},signal:AbortSignal.timeout(10000)}).catch(()=>null);if(!r?.ok)return null;const u=await r.json().catch(()=>null);return u?.id&&u?.email_confirmed_at?{id:String(u.id),email:clean(u.email,240).toLowerCase()}:null;
+ const r=await fetch('https://renzehysxirjilvdxacv.supabase.co/auth/v1/user',{headers:{apikey:'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_',authorization:`Bearer ${token}`},signal:AbortSignal.timeout(10000)}).catch(()=>null);if(!r?.ok)return null;const u=await r.json().catch(()=>null);return u?.id&&u?.email_confirmed_at?{id:String(u.id),email:clean(u.email,240).toLowerCase(),token}:null;
 }
-async function canManage(env,who,subjectKey){
- const tenant=await env.DB.prepare('SELECT id,status FROM customer_tenants WHERE slug=?').bind(subjectKey).first();if(!tenant||tenant.status!=='active')return false;
- const grant=await env.DB.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND email=?').bind(tenant.id,who.email).first();
- return Boolean(grant&&Number(grant.enabled)===1&&new Set(['store_owner','hq_manager','client_admin','manager','owner']).has(String(grant.role||'')));
-}
+// 사이트 스타일 관리 권한은 헤더·푸터와 같은 판정(D1 권한 + 운영공간 문맥 + 플랫폼 공통 역할 정책)을 씁니다.
+async function canManage(env,who,subjectKey){return canManageSiteSubject(env,who,subjectKey);}
 async function row(env,subjectKey,serviceId){return env.DB.prepare('SELECT profile_json,profile_version,updated_by,updated_at FROM site_design_profiles WHERE subject_type=? AND subject_key=? AND service_id=?').bind('tenant',subjectKey,serviceId).first()}
 export async function handleDesignProfileApi(request,env){
  const url=new URL(request.url);const path=url.pathname.replace(/\/+$/,'');if(!path.startsWith('/v1/design-profiles'))return null;if(request.method==='OPTIONS')return new Response(null,{status:204,headers:responseHeaders('no-store')});if(!env?.DB)return privateJson({error:'DATABASE_UNAVAILABLE'},503);
- const subjectKey=clean(url.searchParams.get('subject_key'),80).toLowerCase();const serviceId=clean(url.searchParams.get('service_id'),80).toLowerCase();if(!subjectKey||!serviceId)return privateJson({error:'SUBJECT_AND_SERVICE_REQUIRED'},400);
+ const subjectKey=canonicalSiteSubject(clean(url.searchParams.get('subject_key'),80).toLowerCase());const serviceId=clean(url.searchParams.get('service_id'),80).toLowerCase();if(!subjectKey||!serviceId)return privateJson({error:'SUBJECT_AND_SERVICE_REQUIRED'},400);
  if(path==='/v1/design-profiles/public'&&request.method==='GET'){
   const current=await row(env,subjectKey,serviceId);return publicJson({version:1,subjectKey,serviceId,profile:profile(parse(current?.profile_json,{})),updatedAt:current?.updated_at||null});
  }

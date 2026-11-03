@@ -8,7 +8,8 @@ const entry=await readFile(new URL('auth-site/auth-entry.js',root),'utf8');
 
 test('central auth blocks rapid repeated service handoff navigation',()=>{
   assert.match(entry,/ekodi-auth-entry:/);
-  assert.match(entry,/now - previous < 120000/);
+  assert.match(entry,/LOOP_WINDOW_MS = 15000/);
+  assert.match(entry,/LOOP_VISITS = 3/);
   assert.match(entry,/authLoopBlocked/);
   assert.match(entry,/site === 'admin' && params\.get\('direct'\) === '1'/);
   assert.match(entry,/adminDirectBridge = 'fallback'/);
@@ -24,7 +25,7 @@ test('central auth loop guard does not block interactive management or reload re
 
 test('auth router starts only after the loop decision and retry opens a fresh flow',()=>{
   assert.doesNotMatch(html,/<script type="module" src="\/auth-router\.js/);
-  assert.match(html,/<script type="module" src="\/auth-entry\.js\?v=20261028-singles-choose-account"><\/script>/);
-  assert.match(entry,/return import\('\.\/auth-router\.js\?v=20261028-singles-choose-account'\)/);
+  assert.match(html,/<script type="module" src="\/auth-entry\.js\?v=20261101-live-church-return-1"><\/script>/);
+  assert.match(entry,/return import\('\.\/auth-router\.js\?v=20261101-live-church-return-1'\)/);
   assert.match(entry,/retry\?\.addEventListener\('click'/);
 });

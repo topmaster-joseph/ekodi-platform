@@ -7,6 +7,8 @@ preview_urls = false
 # Protect exactly one Naver Search Advisor verification path, leaving the
 # existing church domain, Pages, Cloudflare DNS and legacy redirect Worker alone.
 # This is a path-specific ordinary Worker Route, NOT a Custom Domain.
+# Release also depends on the guarded Cloudflare redirect-rule script (registered
+# as an exact watch_files path in config/worker-deploy-lanes.json).
 [[routes]]
 pattern = "ekodichurch.kr/naver85321326d5553a0caa3a944158fc2969.html*"
 zone_name = "ekodichurch.kr"

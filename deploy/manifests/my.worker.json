@@ -53,8 +53,12 @@
           "My EKODI",
           "MY PLATFORMS",
           "CREATOR PORTFOLIO",
-          "app.js?v=20261009-hash-routing-v2",
-          "secondary-feature-loader.js?v=20261008-startup-defer-v1"
+          "app.js?v=",
+          "data-public-tab=\"profile\"",
+          "data-public-tab=\"identity\"",
+          "data-public-tab=\"sharing\"",
+          "data-public-tab=\"inbox\"",
+          "secondary-feature-loader.js?v=20261103-read-guard-v1"
         ]
       },
       {

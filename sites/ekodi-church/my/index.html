@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko" data-ekodi-church-member-home="v1">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="google" content="notranslate">
+  <title>에코디교회 마이페이지</title>
+  <link rel="canonical" href="https://ekodi.kr/ekodichurch/my/">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar" data-ekodi-user-header-root="church-local">
+    <a class="brand" data-ekodi-header-home href="/ekodichurch/">에코디교회</a>
+    <nav data-ekodi-header-actions aria-label="사이트 도구"></nav>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <p class="eyebrow">EKODI CHURCH · MY PAGE</p>
+      <h1>교회에서 필요한 것을 한곳에서 확인합니다.</h1>
+      <p>예배와 말씀, 공동체 활동, 실시간 연결을 교회 안에서 바로 찾습니다.</p>
+      <div id="memberState" class="member-state" role="status">로그인 상태를 확인하고 있습니다.</div>
+      <a id="loginAction" class="primary" href="https://ekodi.kr/auth/?site=church&return_to=https%3A%2F%2Fekodi.kr%2Fekodichurch%2Fmy%2F&direct=1" hidden>Google 계정으로 로그인</a>
+    </section>
+
+    <section class="quick-grid" aria-label="교회 바로가기">
+      <a class="card" href="/ekodichurch/#worship">
+        <small>WORSHIP</small><strong>예배</strong><span>다음 예배와 말씀 흐름을 확인합니다.</span>
+      </a>
+      <a class="card" href="/ekodichurch/#life-hub">
+        <small>TODAY</small><strong>오늘의 삶</strong><span>말씀을 오늘의 삶과 연결합니다.</span>
+      </a>
+      <a class="card" href="/ekodichurch/#community">
+        <small>COMMUNITY</small><strong>공동체 활동</strong><span>함께하는 모임과 활동을 확인합니다.</span>
+      </a>
+      <a class="card" href="/ekodichurch/live/">
+        <small>LIVE</small><strong>실시간 연결</strong><span>예배와 모임 방송에 참여합니다.</span>
+      </a>
+      <a class="card" href="/ekodichurch/my/giving/">
+        <small>MY GIVING</small><strong>나의 헌금</strong><span>본인 헌금내역과 기부금영수증 요청을 확인합니다.</span>
+      </a>
+      <a class="card" href="/ekodichurch/my/attendance/">
+        <small>MY ATTENDANCE</small><strong>나의 출결</strong><span>본인의 예배·모임 출결현황과 기록 기준 출석률을 확인합니다.</span>
+      </a>
+      <a class="card" id="presenceAdminLink" href="/ekodichurch/presence/" hidden style="display:none">
+        <small>ONSITE ATTENDANCE</small><strong>현장 출결 관리</strong><span>관리 권한이 있을 때만 표시됩니다.</span>
+      </a>
+    </section>
+
+  </main>
+
+  <footer><a href="/ekodichurch/">에코디교회</a><span>내 정보와 참여 서비스는 필요한 범위에서만 연결합니다.</span></footer>
+  <script src="./language.js" defer></script>
+  <script src="./app.js" defer></script>
+  <script src="./presence-admin-link.js" defer></script>
+</body>
+</html>

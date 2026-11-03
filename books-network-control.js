@@ -1,9 +1,21 @@
 import authWorker from './auth-worker.js';
+import { principalFromCustomerSession, principalFromSupabaseRequest } from './ekodi-principal.js';
 
 const PUBLIC_PREFIX = '/api/books/public/stores';
 const ME_PREFIX = '/api/books/me';
 const ADMIN_PREFIX = '/api/books/admin/network';
 const TITLE_STATES = new Set(['DRAFT', 'SUBMITTED', 'PUBLISHED', 'REJECTED']);
+
+// No direct moderation endpoint may create a new public edition without publisher-origin evidence.
+export function requiresVerifiedPublisherHandoff(priorStatus, nextStatus) {
+  return nextStatus === 'PUBLISHED' && priorStatus !== 'PUBLISHED';
+}
+
+// Submission requires a publisher-verified paid/chief author entitlement.
+// The Books Network personal archive does not grant this editorial capability.
+export function requiresVerifiedPublishingSubmission(nextStatus, priorStatus = '') {
+  return nextStatus === 'SUBMITTED' && priorStatus !== 'SUBMITTED';
+}
 
 function clean(value, max = 500) {
   return String(value ?? '').trim().slice(0, max);
@@ -77,19 +89,33 @@ async function ensureSchema(db) {
 }
 
 async function session(request, env) {
+  // Browser credentials are verified by their issuing backends; never trust a client-supplied email or role.
+  const authorization = request.headers.get('authorization') || '';
+  if (!authorization.startsWith('Bearer ')) return {
+    response: json({ error:'EKODI 계정 로그인이 필요합니다.', code:'LOGIN_REQUIRED' },401,request,env)
+  };
   const url = new URL(request.url);
   url.pathname = '/api/session';
   url.search = '';
-  const response = await authWorker.fetch(new Request(url.toString(), { method: 'GET', headers: request.headers }), env);
-  if (!response.ok) return { response };
-  const data = await response.clone().json().catch(() => null);
-  const email = clean(data?.email, 160).toLowerCase();
-  if (!email) return { response: json({ error: 'EKODI 계정 로그인이 필요합니다.', code: 'LOGIN_REQUIRED' }, 401, request, env) };
-  return { data, email };
+  // Central admin identity stays separate; member identity cannot acquire admin permissions by matching an email.
+  const response = await authWorker.fetch(new Request(url.toString(), { method:'GET', headers:request.headers }),env);
+  if (response.ok) {
+    const data = await response.json().catch(() => null);
+    const email = clean(data?.email,160).toLowerCase();
+    if (data?.authenticated && email) return { data, email, kind:'admin', personId:null };
+  }
+  const principal = await principalFromCustomerSession(request,env)
+    || await principalFromSupabaseRequest(request);
+  if (principal?.email) return {
+    data:{authenticated:true},email:clean(principal.email,160).toLowerCase(),
+    kind:'member',personId:principal.subject.type==='person'?principal.subject.key:null
+  };
+  return { response:json({error:'EKODI 계정 로그인이 필요합니다.',code:'LOGIN_REQUIRED'},401,request,env) };
 }
 
-async function isAdmin(env, email) {
-  const row = await env.DB.prepare('SELECT id FROM admins WHERE lower(email) = ?').bind(email).first();
+async function isAdmin(env, auth) {
+  if (auth.kind !== 'admin') return false;
+  const row = await env.DB.prepare('SELECT id FROM admins WHERE lower(email) = ?').bind(auth.email).first();
   return Boolean(row?.id);
 }
 
@@ -97,7 +123,7 @@ function storeRow(row) {
   return {
     id: Number(row.id), slug: row.slug, name: row.name, description: row.description,
     logoUrl: row.logo_url, theme: row.theme, status: row.status,
-    url: `https://books.ekodi.kr/store/${encodeURIComponent(row.slug)}`,
+    url: `https://ekodi.kr/books/store/${encodeURIComponent(row.slug)}`,
     createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }
@@ -174,7 +200,11 @@ async function createTitle(request, env, auth) {
   }
   const now = new Date().toISOString();
   const requested = clean(input?.status, 20).toUpperCase();
-  const status = requested === 'SUBMITTED' ? 'SUBMITTED' : 'DRAFT';
+  if (requiresVerifiedPublishingSubmission(requested)) return json({
+    error: '출간 검토 신청은 출판사의 저자 자격·권한 검증 절차에서 진행해 주세요.',
+    code: 'PUBLISHER_SUBMISSION_REQUIRED'
+  }, 409, request, env);
+  const status = 'DRAFT';
   const result = await env.DB.prepare(`INSERT INTO books_creator_titles(owner_email,store_id,title,subtitle,author,description,cover_image,price_krw,buy_url,stage,status,created_at,updated_at)
     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .bind(auth.email, storeId, title, clean(input?.subtitle, 240), author, clean(input?.description, 4000), clean(input?.coverImage, 500), Math.max(0, Math.trunc(Number(input?.priceKrw)||0)), clean(input?.buyUrl, 500), clean(input?.stage || 'MANUSCRIPT', 30).toUpperCase(), status, now, now).run();
@@ -197,7 +227,11 @@ async function updateTitle(request, env, auth, id) {
     }
   }
   const requested = clean(input.status ?? current.status, 20).toUpperCase();
-  const status = requested === 'SUBMITTED' ? 'SUBMITTED' : 'DRAFT';
+  if (requiresVerifiedPublishingSubmission(requested)) return json({
+    error: '출간 검토 신청은 출판사의 저자 자격·권한 검증 절차에서 진행해 주세요.',
+    code: 'PUBLISHER_SUBMISSION_REQUIRED'
+  }, 409, request, env);
+  const status = 'DRAFT';
   const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE books_creator_titles SET store_id=?,title=?,subtitle=?,author=?,description=?,cover_image=?,price_krw=?,buy_url=?,stage=?,status=?,admin_note='',updated_at=? WHERE id=?`)
     .bind(storeId, clean(input.title ?? current.title, 200), clean(input.subtitle ?? current.subtitle, 240), clean(input.author ?? current.author, 160), clean(input.description ?? current.description, 4000), clean(input.coverImage ?? current.cover_image, 500), Math.max(0, Math.trunc(Number(input.priceKrw ?? current.price_krw)||0)), clean(input.buyUrl ?? current.buy_url, 500), clean(input.stage ?? current.stage, 30).toUpperCase(), status, now, id).run();
@@ -205,7 +239,7 @@ async function updateTitle(request, env, auth, id) {
 }
 
 async function adminSnapshot(request, env, auth) {
-  if (!(await isAdmin(env, auth.email))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
+  if (!(await isAdmin(env, auth))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
   const [stores, titles] = await Promise.all([
     env.DB.prepare('SELECT * FROM books_creator_stores ORDER BY updated_at DESC LIMIT 200').all(),
     env.DB.prepare('SELECT * FROM books_creator_titles ORDER BY updated_at DESC LIMIT 500').all(),
@@ -214,12 +248,27 @@ async function adminSnapshot(request, env, auth) {
 }
 
 async function moderateTitle(request, env, auth, id) {
-  if (!(await isAdmin(env, auth.email))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
+  if (!(await isAdmin(env, auth))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
   const current = await env.DB.prepare('SELECT * FROM books_creator_titles WHERE id=?').bind(id).first();
   if (!current) return json({ error: '책을 찾을 수 없습니다.' }, 404, request, env);
   const input = await body(request) || {};
   const status = clean(input.status, 20).toUpperCase();
   if (!TITLE_STATES.has(status) || !['PUBLISHED','REJECTED','SUBMITTED'].includes(status)) return json({ error: '검토 상태가 올바르지 않습니다.' }, 400, request, env);
+  // A Books Network moderation click is not a verified Publisher release receipt.
+  // Existing PUBLISHED rows remain untouched, but a new public state requires
+  // the independent Publisher contract, membership, edition and audio gates.
+  if (requiresVerifiedPublishingSubmission(status, current.status)) {
+    return json({
+      error: '출간 심사 접수는 출판사의 검증된 저자·구독·계약 절차에서만 가능합니다.',
+      code: 'PUBLISHER_SUBMISSION_REQUIRED'
+    }, 409, request, env);
+  }
+  if (requiresVerifiedPublisherHandoff(current.status, status)) {
+    return json({
+      error: '판매 공개는 출판사의 검증된 판본·저자 계약·구독 자격·오디오북 검수 및 공식 인계 이후에만 가능합니다.',
+      code: 'PUBLISHER_HANDOFF_REQUIRED'
+    }, 409, request, env);
+  }
   await env.DB.prepare('UPDATE books_creator_titles SET status=?,admin_note=?,updated_at=? WHERE id=?')
     .bind(status, clean(input.adminNote, 1000), new Date().toISOString(), id).run();
   return json({ book: titleRow(await env.DB.prepare('SELECT * FROM books_creator_titles WHERE id=?').bind(id).first()) }, 200, request, env);

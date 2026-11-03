@@ -50,3 +50,5 @@ body{background:radial-gradient(circle at 8% 2%,rgba(255,211,106,.18),transparen
 .footer{background:#201b28}.footer-mark{background:var(--market-yellow);color:var(--ink)}
 .nav-count{background:var(--o)!important}.mobile a,.mobile button{color:var(--g)!important}
 @media(max-width:760px){.hero-copy:after{margin-top:28px}.hero-art{min-height:330px}.card{border-radius:22px}.partner,.local,.guide{border-radius:24px}}
+
+/* MALL-LIST-IMAGE-001 */.thumb{overflow:hidden}.thumb-link{position:absolute;inset:0;display:block}.thumb.has-image{background:#f5f2ec}.thumb-link img{width:100%;height:100%;object-fit:contain;display:block;transition:transform .25s}.thumb.book .thumb-link img{object-fit:contain;padding:14px}.card:hover .thumb-link img{transform:scale(1.03)}.thumb .badge,.thumb .heart{z-index:2}.card p.card-summary{min-height:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}

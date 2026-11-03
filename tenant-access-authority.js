@@ -102,7 +102,10 @@ async function adminSession(request,env){
 async function platformSuperAdminRow(env,email){
   const target=normalize(email);
   if(!env?.DB?.prepare||!target)return null;
-  const row=await env.DB.prepare("SELECT role FROM admins WHERE lower(trim(email)) = ? AND role = 'super_admin' LIMIT 1")
+  // A legacy admins.role alone is not authority: the same email must still hold an
+  // active super_admin row on the Google administrator allowlist. Disabling or
+  // removing that row therefore revokes platform scope here too (fail closed).
+  const row=await env.DB.prepare("SELECT a.role FROM admins a JOIN admin_google_accounts g ON lower(trim(g.email))=lower(trim(a.email)) WHERE lower(trim(a.email))=? AND a.role='super_admin' AND g.role='super_admin' AND g.status='active' LIMIT 1")
     .bind(target).first().catch(()=>null);
   return normalize(row?.role)==='super_admin'?row:null;
 }

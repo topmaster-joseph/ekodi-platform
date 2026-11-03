@@ -36,7 +36,7 @@ async function seed(db,{iterations=1000}={}){
 }
 
 function harness({email=OWNER,configured=true}={}){
- const env={DB:d1(),ALLOW_MUTATIONS:'true',ALLOWED_ORIGINS:'https://ekodi.kr',INVEST_OWNER_EMAIL:OWNER};
+ const env={DB:d1(),ALLOW_MUTATIONS:'true',ALLOWED_ORIGINS:'https://ekodi.kr',INVEST_OWNER_EMAIL:OWNER,INVEST_STEP_UP_REQUIRED:'true'};
  const ready=configured?seed(env.DB):Promise.resolve();
  const call=async(method,path,payload,token='')=>{
   await ready;
@@ -200,4 +200,22 @@ test('/my/invest/app.js survives the esbuild __name rewrite and leaves the 확�
  await new Promise(resolve=>setTimeout(resolve,50));
  assert.doesNotMatch(element('authMessage').textContent,/확인하고 있습니다/);
  assert.match(element('authMessage').textContent,/로그인/);
+});
+
+test('step-up is an owner opt-in: without INVEST_STEP_UP_REQUIRED the owner session unlocks directly',async()=>{
+ const {env,call}=harness({configured:false});
+ delete env.INVEST_STEP_UP_REQUIRED;
+ const status=await call('GET','/v1/invest/autopilot/step-up');
+ assert.equal(status.status,200);assert.deepEqual(status.body,{verified:true,required:false});
+ const post=await call('POST','/v1/invest/autopilot/step-up',{answer:'x'});
+ assert.equal(post.status,409);
+ const policy=await call('GET','/v1/invest/autopilot/policy');
+ assert.notEqual(policy.status,403);assert.notEqual(policy.body.error,'STEP_UP_REQUIRED');
+});
+
+test('a non-owner Google account is still refused when step-up is off',async()=>{
+ const {env,call}=harness({email:'someone@example.com',configured:false});
+ delete env.INVEST_STEP_UP_REQUIRED;
+ const r=await call('GET','/v1/invest/autopilot/policy');
+ assert.equal(r.status,403);
 });

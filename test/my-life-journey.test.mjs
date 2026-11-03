@@ -72,7 +72,7 @@ test('My EKODI journey surface stays inside My and does not query specialist pri
   assert.doesNotMatch(app,/from\(['"]community_/);
   assert.doesNotMatch(app,/from\(['"]business_/);
   assert.doesNotMatch(app,/from\(['"]life_reflections/);
-  assert.match(app,/https:\/\/life\.ekodi\.kr\/api\/journey/);
+  assert.match(app,/https:\/\/ekodi\.kr\/life\/api\/journey/);
   assert.doesNotMatch(journeyContract,/EKODI_LIFE_STAGE_BY_ID|lifeStageForId/);
   execFileSync(process.execPath,['--check',fileURLToPath(new URL('../my/journey/app.js',import.meta.url))],{stdio:'pipe'});
 });

@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { authorizeUrl, federatedAuthEmail, verifyKakaoCode, verifyNaverCode, type VerifiedIdentity } from "./federated-providers.ts";
+import { authorizeUrl, federatedAuthEmail, verifyAppleCode, verifyKakaoCode, verifyNaverCode, type VerifiedIdentity } from "./federated-providers.ts";
 
 const SUPABASE_URL=Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -84,7 +84,7 @@ async function verifyGoogle(token:string,nonce:string):Promise<VerifiedIdentity>
   };
 }
 
-// ── Redirect (authorization-code) providers: Naver, Kakao ──────────────────
+// ── Redirect (authorization-code) providers: Naver, Kakao, Apple ──────────────────
 // Dormant by default. A provider can sign anyone in only when BOTH gates open:
 //   1) its secrets are present in this function's environment (adapter is registered), and
 //   2) public.identity_providers.enabled = true for it (operator switch).
@@ -108,6 +108,14 @@ const adapters=new Map<string,ProviderAdapter>([
     id:"kakao",clientId:kakaoId,redirect:true,
     authorizeUrl:(nonce)=>authorizeUrl("https://kauth.kakao.com/oauth/authorize",{response_type:"code",client_id:kakaoId,redirect_uri:FEDERATED_REDIRECT_URI,state:nonce}),
     verify:(code,nonce)=>verifyKakaoCode(code,nonce,{clientId:kakaoId,clientSecret:kakaoSecret,redirectUri:FEDERATED_REDIRECT_URI})
+  });
+  // Apple needs a paid Apple Developer Program membership; it stays unregistered until
+  // all four values are synced, and off until identity_providers.enabled is switched on.
+  const apple={servicesId:envValue("APPLE_SERVICES_ID"),teamId:envValue("APPLE_TEAM_ID"),keyId:envValue("APPLE_KEY_ID"),privateKey:envValue("APPLE_PRIVATE_KEY")};
+  if(apple.servicesId&&apple.teamId&&apple.keyId&&apple.privateKey)adapters.set("apple",{
+    id:"apple",clientId:apple.servicesId,redirect:true,
+    authorizeUrl:(nonce)=>authorizeUrl("https://appleid.apple.com/auth/authorize",{response_type:"code",response_mode:"query",client_id:apple.servicesId,redirect_uri:FEDERATED_REDIRECT_URI,state:nonce}),
+    verify:(code,nonce)=>verifyAppleCode(code,nonce,{...apple,redirectUri:FEDERATED_REDIRECT_URI})
   });
 }
 
@@ -434,7 +442,10 @@ async function finishLink(req:Request,userId:string,provider:string){
     await writeIdentityAudit(initiatorPersonId,userId,"identity.merge_review_required",provider,null,{
       independentAccount:true
     });
-    return json(req,{error:"account_merge_review_required"},409);
+    // Both logins are now proven by the same person. Record an owner-decided merge
+    // request with a read-only inventory; nothing is moved until the owner approves.
+    const mergeRequest=initiatorPersonId?await openMergeRequest(initiatorPersonId,targetPersonId,userId,target.user.id,provider):null;
+    return json(req,{error:"account_merge_review_required",mergeRequest},409);
   }
   const {data:personId,error:linkError}=await admin.rpc("link_person_identity",{
     p_initiator_user_id:userId,
@@ -446,6 +457,8 @@ async function finishLink(req:Request,userId:string,provider:string){
   });
   if(linkError){
     console.error("link_person_identity",linkError.message);
+    if(/account_merge_review_required/i.test(linkError.message||""))
+      return json(req,{error:"account_merge_review_required"},409);
     const conflict=/already_linked|target_account|identity_already|requires_relink/i.test(linkError.message||"");
     return json(req,{error:conflict?"identity_already_linked":"identity_link_failed"},conflict?409:500);
   }
@@ -478,6 +491,129 @@ async function disconnectIdentity(req:Request,userId:string,identityId:string){
   return json(req,{ok:true,ekodiId},200);
 }
 
+
+// ---- Owner-decided Person merge, phase 1 (request + inventory, no data movement) ----
+function publicMergeRequest(row:any){
+  if(!row)return null;
+  return {id:row.id,status:row.status,provider:row.proven_provider,createdAt:row.created_at,
+    expiresAt:row.expires_at,inventory:row.inventory??{}};
+}
+async function openMergeRequest(survivorPersonId:string,absorbedPersonId:string,initiatorUserId:string,provenUserId:string,provider:string){
+  try{
+    const {data:existing,error:existingError}=await admin.from("person_merge_requests").select("*")
+      .eq("survivor_person_id",survivorPersonId).eq("absorbed_person_id",absorbedPersonId)
+      .in("status",["pending","approved"]).maybeSingle();
+    if(existingError)throw existingError;
+    const {data:inventory,error:inventoryError}=await admin.rpc("person_merge_inventory",
+      {p_survivor:survivorPersonId,p_absorbed:absorbedPersonId});
+    if(inventoryError)throw inventoryError;
+    const expiresAt=new Date(Date.now()+30*60*1000).toISOString();
+    let row:any;
+    if(existing){
+      const {data,error}=await admin.from("person_merge_requests").update({inventory,expires_at:expiresAt,
+        initiator_user_id:initiatorUserId,proven_user_id:provenUserId,proven_provider:provider})
+        .eq("id",existing.id).select("*").single();
+      if(error)throw error;row=data;
+    }else{
+      const {data,error}=await admin.from("person_merge_requests").insert({survivor_person_id:survivorPersonId,
+        absorbed_person_id:absorbedPersonId,initiator_user_id:initiatorUserId,proven_user_id:provenUserId,
+        proven_provider:provider,inventory,expires_at:expiresAt}).select("*").single();
+      if(error)throw error;row=data;
+    }
+    await writeIdentityAudit(survivorPersonId,initiatorUserId,"identity.merge_requested",provider,null,{
+      mergeRequestId:row.id,verdict:inventory?.verdict??null,absorbedRows:inventory?.absorbedRows??null
+    });
+    return publicMergeRequest(row);
+  }catch(error){
+    // The link stays refused either way; a missing request only means no report yet.
+    console.error("merge request",(error as Error)?.message||error);
+    return null;
+  }
+}
+async function ownMergeRequest(userId:string,id:string){
+  const personId=await personForUser(userId);
+  if(!personId)return null;
+  const {data,error}=await admin.from("person_merge_requests").select("*").eq("id",id).maybeSingle();
+  if(error)throw error;
+  // Only the surviving Person (the account that started the link) may see or act on it.
+  return data&&data.survivor_person_id===personId?data:null;
+}
+async function getMergeRequest(req:Request,userId:string,id:string){
+  const row=await ownMergeRequest(userId,id);
+  if(!row)return json(req,{error:"not_found"},404);
+  if(row.status==="pending"&&new Date(row.expires_at).getTime()<Date.now()){
+    await admin.from("person_merge_requests").update({status:"expired"}).eq("id",row.id).eq("status","pending");
+    row.status="expired";
+  }
+  return json(req,{ok:true,mergeRequest:publicMergeRequest(row)});
+}
+async function cancelMergeRequest(req:Request,userId:string,id:string){
+  const row=await ownMergeRequest(userId,id);
+  if(!row)return json(req,{error:"not_found"},404);
+  if(row.status!=="pending")return json(req,{error:"merge_request_not_pending"},409);
+  const {error}=await admin.from("person_merge_requests").update({status:"cancelled",decided_at:new Date().toISOString()})
+    .eq("id",row.id).eq("status","pending");
+  if(error)throw error;
+  await writeIdentityAudit(row.survivor_person_id,userId,"identity.merge_cancelled",row.proven_provider,null,{mergeRequestId:row.id});
+  return json(req,{ok:true,status:"cancelled"});
+}
+
+// Owner executes the merge. The DB function re-checks ownership, expiry and the
+// inventory at decision time and refuses anything with payment or service data.
+// Merge policy v1 (owner decision 2026-11-02): merging and detaching never move money.
+// Permissions are combined; activity keeps the login it came from; nothing is refunded
+// or split. The owner must acknowledge this exact policy before either action runs.
+const MERGE_POLICY_VERSION="merge-policy-v1";
+async function policyAcknowledged(req:Request){
+  const body=await req.json().catch(()=>({}));
+  return body?.policy===MERGE_POLICY_VERSION;
+}
+async function executeMergeRequest(req:Request,userId:string,id:string){
+  const row=await ownMergeRequest(userId,id);
+  if(!row)return json(req,{error:"not_found"},404);
+  if(!await policyAcknowledged(req))return json(req,{error:"policy_acknowledgement_required",policy:MERGE_POLICY_VERSION},428);
+  await writeIdentityAudit(row.survivor_person_id,userId,"identity.merge_policy_acknowledged",row.proven_provider,null,{mergeRequestId:row.id,policy:MERGE_POLICY_VERSION});
+  const {data,error}=await admin.rpc("person_merge_execute",{p_request:row.id,p_actor:userId});
+  if(error)throw error;
+  if(data?.ok!==true){
+    const code=String(data?.error||"merge_failed");
+    const status=code==="merge_request_expired"?410:code==="merge_owner_required"?403:409;
+    return json(req,{error:code,inventory:data?.inventory??null,blocking:data?.blocking??null},status);
+  }
+  return json(req,{ok:true,moved:data.moved});
+}
+// Owner detaches one login into a new, separate EKODI account (policy v1). The DB
+// function refuses the current/primary/last login and any login holding payment,
+// subscription or point records — those stay with the unified ID.
+async function ownIdentity(userId:string,identityId:string){
+  const personId=await personForUser(userId);
+  if(!personId)return null;
+  const {data,error}=await admin.from("login_identities").select("id,person_id,auth_user_id,provider,is_primary,status")
+    .eq("id",identityId).eq("status","active").maybeSingle();
+  if(error)throw error;
+  return data&&data.person_id===personId?data:null;
+}
+async function detachPreview(req:Request,userId:string,identityId:string){
+  const row=await ownIdentity(userId,identityId);
+  if(!row)return json(req,{error:"identity_not_found"},404);
+  const {data,error}=await admin.rpc("person_identity_detach_preview",{p_identity:identityId});
+  if(error)throw error;
+  const blocked=row.auth_user_id===userId?"detach_current_login":row.is_primary?"detach_primary_login":
+    (data?.financialTables??0)>0?"detach_financial_records":null;
+  return json(req,{ok:true,policy:MERGE_POLICY_VERSION,provider:row.provider,blocked,preview:data});
+}
+async function detachIdentity(req:Request,userId:string,identityId:string){
+  const row=await ownIdentity(userId,identityId);
+  if(!row)return json(req,{error:"identity_not_found"},404);
+  if(!await policyAcknowledged(req))return json(req,{error:"policy_acknowledgement_required",policy:MERGE_POLICY_VERSION},428);
+  const {data,error}=await admin.rpc("person_identity_detach",{p_identity:identityId,p_actor:userId,p_policy:MERGE_POLICY_VERSION});
+  if(error)throw error;
+  if(data?.ok!==true){
+    const code=String(data?.error||"detach_failed");
+    return json(req,{error:code,preview:data?.preview??null},code==="detach_owner_required"?403:409);
+  }
+  return json(req,{ok:true,newEkodiId:await ekodiIdForPerson(data.newPersonId)});
+}
 function providerFrom(path:string,suffix:string){
   const match=path.match(new RegExp(`^/providers/([a-z0-9_-]+)${suffix.replaceAll("/","\\/")}$`));
   return match?.[1]??null;
@@ -513,6 +649,13 @@ Deno.serve(async(req)=>{
     const linkExchangeProvider=providerFrom(path,"/link/exchange");
     if(req.method==="POST"&&linkExchangeProvider)return await finishLink(req,user.id,linkExchangeProvider);
 
+    const mergeMatch=path.match(/^\/merge-requests\/([0-9a-f-]{36})(\/cancel|\/execute)?$/i);
+    if(mergeMatch&&req.method==="GET"&&!mergeMatch[2])return await getMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
+    if(mergeMatch&&req.method==="POST"&&mergeMatch[2]==="/cancel")return await cancelMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
+    if(mergeMatch&&req.method==="POST"&&mergeMatch[2]==="/execute")return await executeMergeRequest(req,user.id,mergeMatch[1].toLowerCase());
+    const detachMatch=path.match(/^\/identities\/([0-9a-f-]{36})\/(detach-preview|detach)$/i);
+    if(detachMatch&&req.method==="GET"&&detachMatch[2]==="detach-preview")return await detachPreview(req,user.id,detachMatch[1].toLowerCase());
+    if(detachMatch&&req.method==="POST"&&detachMatch[2]==="detach")return await detachIdentity(req,user.id,detachMatch[1].toLowerCase());
     const identityMatch=path.match(/^\/identities\/([0-9a-f-]{36})$/i);
     if(req.method==="DELETE"&&identityMatch)return await disconnectIdentity(req,user.id,identityMatch[1]);
     return json(req,{error:"not_found"},404);

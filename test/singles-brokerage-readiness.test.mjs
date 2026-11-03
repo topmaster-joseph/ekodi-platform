@@ -16,7 +16,7 @@ test('registration preparation cannot publish marriage brokerage',()=>{
  assert.match(schema,/revoke all on public.singles_brokerage_readiness/);
  assert.doesNotMatch(schema,/brokerage_enabled\s*=\s*true/i);
  assert.match(edge,/brokerage_mode:'disabled'/);
- assert.match(ui,/진행 상태 저장은 행정기관 신고 수리 또는 등록을 의미하지 않습니다/);
+ assert.doesNotMatch(ui,/결혼중개업 신고|showBrokerageReadiness/,'2026-10-31: 운영자 화면에서도 결혼중개 준비 기능·언급을 제외');
 });
 test('administrator must have scoped role and all updates have an atomic audit event',()=>{
  assert.match(edge,/role\.can_configure!==true/);
@@ -38,7 +38,6 @@ test('private route never permits anonymous checklist disclosure',async()=>{
  assert.equal(social.status,503,'public member discovery must remain closed');
 });
 test('official filing remains a user-confirmed government flow rather than a platform submission',()=>{
- assert.match(ui,/CappBizCD=13510000012/);
- assert.match(ui,/rel='noopener noreferrer'/);
+ assert.doesNotMatch(ui,/CappBizCD=13510000012/);
  assert.doesNotMatch(edge,/application_submitted_by_platform:true/);
 });

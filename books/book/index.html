@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>도서 상세 | 에코디서점</title>
+  <meta name="description" content="에코디서점 도서 상세 — 표지, 소개, 목차, 판본, 가격과 판매 상태." />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/pages.css" />
+  <link rel="stylesheet" href="/responsive.css" />
+  <link rel="stylesheet" href="/site-chrome.css">
+  <link rel="stylesheet" href="/book/book.css">
+</head>
+<body>
+  <a class="skip" href="#main">본문으로 바로가기</a>
+  <header class="ekc-header" data-ekodi-chrome="books"><div class="ekc-network"><div class="ekc-shell"><span class="ekc-network-label">EKODI 출판 생태계</span><nav class="ekc-network-links" aria-label="출판 생태계"><a href="https://ekodi.kr/publishing/"><b>출판</b><span>책을 만들다</span></a><a href="https://ekodi.kr/books/" aria-current="true"><b>에코디서점</b><span>책을 만나다</span></a><a href="https://ekodi.kr/ekodimall/?category=book"><b>에코디몰 책·배움</b><span>함께 나누다</span></a></nav></div></div><div class="ekc-shell ekc-masthead"><a class="ekc-brand" href="https://ekodi.kr/books/" aria-label="에코디서점 홈"><span class="ekc-mark" aria-hidden="true">ES</span><span class="ekc-brand-copy"><b>에코디서점</b><small>Faith · Scholarship · Community</small></span></a><div class="ekc-actions"><a class="ekc-cta" href="https://ekodi.kr/books/library/">내 서재</a><button class="menu-button ekc-menu" type="button" aria-expanded="false" aria-controls="site-nav">MENU</button></div><nav id="site-nav" class="ekc-nav" aria-label="에코디서점 메뉴"><a href="https://ekodi.kr/books/#catalog">도서</a><a href="https://ekodi.kr/books/series/">시리즈</a><a href="https://ekodi.kr/books/research/">리서치</a><a href="https://ekodi.kr/books/notes/">노트</a><a href="https://ekodi.kr/books/#about">소개</a><a class="ekc-nav-cta" href="https://ekodi.kr/books/library/">내 서재</a></nav></div></header>
+  <main id="main">
+    <section class="page-hero">
+      <div class="shell">
+        <p class="breadcrumb"><a href="/">에코디서점</a><span>/</span><a href="/#catalog">Books</a><span>/</span><span id="crumb">도서</span></p>
+        <p class="kicker" id="kicker"></p>
+        <h1 id="title">도서 정보를 불러오는 중…</h1>
+        <p class="lead" id="subtitle"></p>
+      </div>
+    </section>
+    <section class="detail-section shell" id="bookRoot" hidden>
+      <div class="detail-grid">
+        <div class="detail-cover" id="cover"></div>
+        <article class="detail-meta">
+          <p class="byline" id="byline"></p>
+          <div class="detail-abstract"><h3>소개</h3><p id="abstract"></p></div>
+          <dl class="info-table" id="info"></dl>
+          <div class="actions" id="actions"></div>
+          <p class="book-language-note" id="languageNote" hidden></p>
+        </article>
+      </div>
+    </section>
+    <div class="content-band" id="tocBand" hidden>
+      <section class="content-panel shell">
+        <p class="kicker">TABLE OF CONTENTS</p>
+        <h2>목차</h2>
+        <ol class="book-toc" id="toc"></ol>
+        <p class="book-toc-source" id="tocSource"></p>
+      </section>
+    </div>
+    <section class="detail-section shell" id="missing" hidden><p>요청하신 도서를 찾을 수 없습니다. <a href="/#catalog">도서 목록 보기 →</a></p></section>
+  </main>
+  <footer class="ekc-footer" data-ekodi-chrome="books"><div class="ekc-shell"><div class="ekc-foot-grid"><section class="ekc-foot-brand"><p class="ekc-foot-name"><span class="ekc-mark" aria-hidden="true">ES</span><b>에코디서점</b></p><p>현장을 기록하고, 다시 인용될 수 있는 지식으로. 에코디서점은 신앙·학문·공동체의 언어를 독자에게 정직하게 전하는 서점입니다.</p><div class="ekc-social" data-ekodi-social-links data-org="books" data-variant="plain"></div></section><section><h2>에코디서점</h2><ul><li><a href="https://ekodi.kr/books/#catalog">도서 목록</a></li><li><a href="https://ekodi.kr/books/series/">시리즈</a></li><li><a href="https://ekodi.kr/books/research/">리서치</a></li><li><a href="https://ekodi.kr/books/notes/">노트</a></li><li><a href="https://ekodi.kr/books/library/">내 서재</a></li></ul></section><section><h2>출판 생태계</h2><ul><li><a href="https://ekodi.kr/publishing/">출판</a></li><li><a href="https://ekodi.kr/books/">에코디서점</a></li><li><a href="https://ekodi.kr/ekodimall/?category=book">에코디몰 책·배움</a></li><li><a href="https://ekodi.kr/">EKODI</a></li></ul></section><section><h2>판매자 정보</h2><ul class="ekc-info"><li>상호 에코디비즈 · 대표 정찬균</li><li>사업자등록번호 213-13-01959</li><li>통신판매업 2023-전남무안-0153</li><li>전남 무안군 청계면 백련동1길 17-4</li><li>문의 ekodibiz@gmail.com</li></ul></section></div><div class="ekc-foot-base"><p>© <span id="year">2026</span> 에코디서점 · EKODI</p><p><a href="https://ekodi.kr/privacy">개인정보처리방침</a><a href="https://ekodi.kr/terms">이용약관</a></p></div></div></footer>
+  <script src="/book/book.js" defer></script>
+  <script src="/social-links.js" defer></script>
+  <script src="/menu.js" defer></script>
+</body>
+</html>

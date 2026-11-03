@@ -132,7 +132,7 @@ function renderArticle(post) {
   `;
   document.title = `${title} | EKODI Journal`;
   const canonical = document.querySelector('link[rel="canonical"]');
-  if (canonical) canonical.href = `https://journal.ekodi.kr/p/${encodeURIComponent(post.slug)}`;
+  if (canonical) canonical.href = `https://ekodi.kr/journal/p/${encodeURIComponent(post.slug)}`;
   const description = document.querySelector('meta[name="description"]');
   if (description) description.content = excerpt;
 }

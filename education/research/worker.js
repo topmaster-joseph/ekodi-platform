@@ -1,5 +1,6 @@
 import { injectEkodiShell } from '../../ekodi-shell-injector.js';
 import { assessResearch, cleanResearchInput } from './planner.js';
+import { lookupCrossref } from './literature.js';
 
 const HEADERS = Object.freeze({
   'x-content-type-options':'nosniff',
@@ -109,6 +110,11 @@ export default {
   if(path==='/config.js')return new Response('window.EKODI_RESEARCH_CONFIG='+JSON.stringify(config(env))+';',{
    headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...HEADERS}
   });
+  if(path==='/api/literature'){
+    if(request.method!=='GET')return fail(405,'method_not_allowed');
+    try{return json({ok:true,...await lookupCrossref(url.searchParams.get('q'))});}
+    catch(error){return fail(error.status||503,error.message||'literature_provider_unavailable');}
+  }
   if(path==='/api/diagnosis'){
    if(request.method!=='POST')return fail(405,'method_not_allowed');
    try{return json({ok:true,diagnosis:assessResearch(cleanResearchInput(await readJson(request,3000)))});}

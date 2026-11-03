@@ -1,7 +1,10 @@
 import { canonicalDriveStatus, deleteCanonicalDriveFile, readCanonicalDriveFile, writeCanonicalDriveFile, writeCanonicalDriveStream } from './canonical-drive-writer.js';
 
 const STORAGE_PREFIX = '/api/storage/v1';
-const STORAGE_CONTROL_ORIGIN = 'https://drive.ekodi.kr';
+// The storage control plane is reached privately through the STORAGE service
+// binding when present, otherwise through its canonical apex path.
+const STORAGE_CONTROL_ORIGIN = 'https://ekodi.kr/storage';
+const STORAGE_INTERNAL_ORIGIN = 'https://storage.internal';
 const MAX_INLINE_BYTES = 50 * 1024 * 1024;
 const RETENTION_CLASSES = new Set(['temporary', 'operational', 'business_record', 'permanent']);
 const encoder = new TextEncoder();
@@ -38,14 +41,18 @@ function localCanonicalRuntime(env) {
   return Boolean(env.DB && env.STORAGE_CREDENTIAL_KEY && env.GOOGLE_DRIVE_CLIENT_SECRET);
 }
 
+function storageControlFetch(env, pathAndSearch, init) {
+  if (env?.STORAGE?.fetch) return env.STORAGE.fetch(new Request(`${STORAGE_INTERNAL_ORIGIN}${pathAndSearch}`, init));
+  return fetch(`${STORAGE_CONTROL_ORIGIN}${pathAndSearch}`, init);
+}
+
 async function proxyToStorageControl(request, env) {
   const source = new URL(request.url);
-  const target = new URL(source.pathname + source.search, STORAGE_CONTROL_ORIGIN);
   const headers = new Headers(request.headers);
   headers.delete('host');
   const init = { method: request.method, headers, redirect: 'manual' };
   if (!['GET', 'HEAD'].includes(request.method)) init.body = await request.clone().arrayBuffer();
-  const response = await fetch(target, init);
+  const response = await storageControlFetch(env, source.pathname + source.search, init);
   return new Response(response.body, { status: response.status, headers: response.headers });
 }
 
@@ -103,7 +110,7 @@ function errorStatus(message) {
 async function storeViaControlPlane(env, record, requestId) {
   const key = String(env.EKODI_STORAGE_GATEWAY_KEY || '').trim();
   if (!key) throw new Error('STORAGE_GATEWAY_KEY_MISSING');
-  const response = await fetch(`${STORAGE_CONTROL_ORIGIN}${STORAGE_PREFIX}/records`, {
+  const response = await storageControlFetch(env, `${STORAGE_PREFIX}/records`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -215,7 +222,7 @@ export async function handleStorageGateway(request, env = {}) {
     return json({
       version: '1.0.0',
       canonicalStore: 'google_workspace_shared_drive',
-      canonicalControlPlane: 'drive.ekodi.kr',
+      canonicalControlPlane: 'ekodi.kr/storage',
       credentialsSource: 'encrypted_storage_connections',
       routeSource: 'storage_routes',
       operationalStore: 'd1_or_supabase',
@@ -282,7 +289,7 @@ export const STORAGE_GATEWAY_CONTRACT = Object.freeze({
   version: '1.0.0',
   prefix: STORAGE_PREFIX,
   canonicalStore: 'google_workspace_shared_drive',
-  canonicalControlPlane: 'drive.ekodi.kr',
+  canonicalControlPlane: 'ekodi.kr/storage',
   credentialsSource: 'encrypted_storage_connections',
   routeSource: 'storage_routes',
   driveName: 'EKODI',

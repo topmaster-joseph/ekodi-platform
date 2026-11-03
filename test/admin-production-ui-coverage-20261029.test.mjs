@@ -4,20 +4,28 @@ import {auditAdminProductionUiCoverage} from '../scripts/admin-production-ui-cov
 
 const menuIds=['sites-core','search-visibility','accounts'];
 const success=id=>({id,ok:true});
-const complete=[success('command-home'),...menuIds.map(success),success('search-visibility-interactions')];
+const complete=[success('command-home'),...menuIds.map(success),
+  success('search-visibility-interactions'),success('search-visibility-google-readonly')];
 
 test('counts registered menu, Control and Search Visibility read-only proof once each',()=>{
   assert.deepEqual(auditAdminProductionUiCoverage(menuIds,complete),{
-    ok:true,actualCount:5,expectedCount:5,issues:[]
+    ok:true,actualCount:6,expectedCount:6,issues:[]
   });
 });
-test('the original 51/50 defect is impossible with explicit required probe',()=>{
+test('the original 52/51 drift cannot hide the new Google read-only proof',()=>{
   const menus=Array.from({length:49},(_,i)=>i===4?'search-visibility': 'menu-'+i);
-  const results=[success('command-home'),...menus.map(success),success('search-visibility-interactions')];
+  const results=[success('command-home'),...menus.map(success),
+    success('search-visibility-interactions'),success('search-visibility-google-readonly')];
   const coverage=auditAdminProductionUiCoverage(menus,results);
   assert.equal(coverage.ok,true);
-  assert.equal(coverage.expectedCount,51);
-  assert.equal(coverage.actualCount,51);
+  assert.equal(coverage.expectedCount,52);
+  assert.equal(coverage.actualCount,52);
+});
+test('missing Google read-only check cannot be mistaken for legacy complete coverage',()=>{
+  const incomplete=complete.filter(x=>x.id!=='search-visibility-google-readonly');
+  const result=auditAdminProductionUiCoverage(menuIds,incomplete);
+  assert.equal(result.ok,false);
+  assert.ok(result.issues.includes('missing: search-visibility-google-readonly'));
 });
 test('fails closed on a missing interaction, even when count matches via unexpected result',()=>{
   const shifted=[...complete.filter(x=>x.id!=='search-visibility-interactions'),success('placeholder')];

@@ -44,6 +44,10 @@ test('MFA controls are inside the owner-hidden research workspace and require de
  }
  assert.match(js,/if\(!sessionClient\|\|!verified\|\|!stepUpToken\)return/);
  assert.match(js,/strongMfa\?\.verified===true/);
+ assert.match(html,/value="kis">한국투자증권/);
+ assert.match(html,/id="liveBrokerDocs"/);
+ assert.match(js,/const safeDocs=\{toss:/);
+ assert.match(js,/r\.broker\.docsUrl===url/);
  assert.match(js,/liveMfaEnroll'\)\.addEventListener\('click',enrollLiveMfa/);
  assert.doesNotMatch(js,/localStorage\.setItem\([^\n]*[Mm][Ff][Aa]|sessionStorage\.setItem\([^\n]*[Mm][Ff][Aa]/);
 });

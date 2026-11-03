@@ -37,8 +37,11 @@ test('delegated admins use task-first navigation without changing authority',asy
   assert.match(church,/label:'예배 · 사역'/);
   assert.match(church,/label:'기록 · AI'/);
   assert.match(church,/label:'사이트 · 권한'/);
-  assert.match(church,/admin-nav-group-label/);
-  assert.match(church,/dataset\.adminSection=key/);
+  const churchNav=await read('church-admin-navigation.js');
+  assert.match(church,/mountChurchAdminNavigation/);
+  assert.match(churchNav,/church-admin-nav-heading/);
+  assert.match(churchNav,/dataset\.adminNavGroup=group\.id/);
+  assert.match(churchNav,/link\.href=href\(first\)/);
 
   assert.match(trade,/\['overview','홈'\]/);
   assert.match(trade,/\['companies','거래처'\]/);
@@ -120,8 +123,11 @@ test('delegated admin navigation never requires a category click before reaching
   assert.ok(store.includes("a.href=key==='overview'?ADMIN_BASE+'/overview':ADMIN_BASE+'/'+key"));
   assert.doesNotMatch(store,/a\.dataset\.group=group\.id/);
 
-  assert.match(church,/admin-nav-group-label/);
-  assert.ok(church.includes("a.href=key==='overview'?base+'/overview':base+'/'+key"));
+  const churchNav=await read('church-admin-navigation.js');
+  assert.match(church,/mountChurchAdminNavigation/);
+  assert.match(churchNav,/link\.href=href\(first\)/);
+  assert.match(churchNav,/root\.append\(link\)/);
+  assert.match(churchNav,/const href = tab=>base\+'\/'\+tab\.key/);
 
   assert.match(trade,/a\.href=sectionHref\(key\)/);
   assert.match(trade,/sub\.hidden=true/);

@@ -26,7 +26,7 @@ function setup(extra = {}) {
   db.prepare(`INSERT INTO orders (${names.join(',')}) VALUES (${names.map(() => '?').join(',')})`).run(...v);
   db.prepare("UPDATE orders SET status='paid', quantity=2, seller_settlement_amount=27900, paid_at='2026-10-25T00:00:00Z' WHERE id='ord_1'").run();
   db.prepare(`INSERT INTO order_buyers (order_id,name,phone,email,postcode,address1,address2,memo,privacy_consent_at,created_at) VALUES ('ord_1','김철수','010-1111-2222','a@b.kr','07328','서울 영등포구 국제금융로6길 30','5층|A','문앞','t','t')`).run();
-  const env = { DB: d1(db), DOMEMAE_API_KEY: 'AK', DOMEMAE_USER_ID: 'test-approved-member', DOMEMAE_APPROVED_MEMBER_ID: 'test-approved-member', DOMEMAE_PASSWORD: 'PW!', DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', ...extra };
+  const env = { DB: d1(db), DOMEMAE_API_KEY: 'AK', DOMEMAE_USER_ID: 'test-approved-member', DOMEMAE_APPROVED_MEMBER_ID: 'test-approved-member', DOMEMAE_PASSWORD: 'PW!', DOMEGGOOK_AUTO_ORDER_ENABLED: 'true', BUYER_PII_RELEASE_ENABLED: 'true', SUPPLIER_FORWARD_ENABLED: 'true', ...extra };
   return { db, env };
 }
 function supplier({ emoney = 100000, qty = 2, cost = 8000, setOrderOk = true, viewMode = 'WAITCHK', delivery = {} } = {}, log = []) {
@@ -47,6 +47,22 @@ function supplier({ emoney = 100000, qty = 2, cost = 8000, setOrderOk = true, vi
 test('format helpers strip pipes and follow documented order', () => {
   assert.equal(buildDeliInfo({ name: '김|철수', email: 'a@b', postcode: '07328', address1: '주소', address2: '5층', phone: '010' }), '김 철수|a@b|07328|주소|5층|010|010|');
   assert.equal(buildItemValue({}, { market: 'supply', qty: 2, deliMemo: '문앞|부탁' }), 'supply||P||00|2||에코디몰 위탁주문||문앞 부탁');
+});
+
+test('paid supplier orders fail closed when either buyer-PII or supplier-forwarding gate is off', async () => {
+  for (const blocked of ['BUYER_PII_RELEASE_ENABLED', 'SUPPLIER_FORWARD_ENABLED']) {
+    for (const mode of ['full', 'pilot']) {
+      const { env } = setup({
+        [blocked]: 'false',
+        DOMEGGOOK_AUTO_ORDER_ENABLED: mode === 'full' ? 'true' : 'false',
+        DOMEGGOOK_PILOT_ORDER_IDS: mode === 'pilot' ? 'mall_pilot_000001' : ''
+      });
+      const calls = [];
+      assert.equal(autoOrderEnabled(env), false, blocked);
+      assert.equal((await placeSupplierOrders(env, supplier({}, calls))).skipped, 'disabled');
+      assert.equal(calls.length, 0, 'no login, lookup, buyer disclosure or paid order before policy clearance');
+    }
+  }
 });
 
 test('paid supply order is placed once, verified, then tracked to shipping', async () => {
@@ -186,13 +202,13 @@ test('private order calls use canonical HTTPS and prohibit automatic redirects',
     const mode = init?.body ? new URLSearchParams(String(init.body)).get('mode') : new URL(String(url)).searchParams.get('mode');
     if (mode !== 'getItemView') {
       urls.push(String(url));
-      assert.equal(init?.redirect, 'error');
+      assert.equal(init?.redirect, 'manual');
     }
     return base(url, init);
   };
   const r = await placeSupplierOrders(env, fetchImpl);
   assert.equal(r.placed, 1);
-  assert.ok(urls.every((url) => url.startsWith('https://www.domeggook.com/ssl/api/')));
+  assert.ok(urls.every((url) => url.startsWith('https://domeggook.com/ssl/api/')));
 });
 
 
@@ -346,4 +362,50 @@ test('supplier login evidence tracks HTTP and JSON shape but never raw response 
   assert.equal(safeDomeggookLoginDiagnostic({ DOMEGGOOK_CLIENT_IP: '198.51.100.20' }, {
     status: 200, parsedJson: true, root: { result: 'unexpected-PII' }
   }).supplierResult, 'other');
+});
+
+test('supplier login reason is kept only after scrubbing ids, secrets and numbers', async () => {
+  const { scrubSupplierMessage } = await import('./domeggook-order.js');
+  const env = { DOMEMAE_USER_ID: 'myid77', DOMEMAE_PASSWORD: 'pw!123', DOMEMAE_API_KEY: 'abcdef0123456789abcdef', DOMEMAE_APPROVED_MEMBER_ID: 'sns@952821' };
+  const out = scrubSupplierMessage('아이디(myid77) 또는 비밀번호(pw!123) 불일치 sns@952821 abcdef0123456789abcdef 010-1234', env);
+  for (const bad of ['myid77', 'pw!123', '952821', 'abcdef', '1234']) assert.ok(!out.includes(bad), bad);
+  assert.ok(out.includes('비밀번호'));
+});
+
+test('setLogin goes to the official host and a blocked redirect is reported as transport, not supplier rejection', async () => {
+  const { login } = await import('./domeggook-order.js');
+  const env = { DOMEMAE_API_KEY: 'K', DOMEMAE_USER_ID: 'u', DOMEMAE_PASSWORD: 'p', DOMEMAE_APPROVED_MEMBER_ID: 'sns@1' };
+  const seen = [];
+  await assert.rejects(login(env, async (url) => { seen.push(String(url)); throw new TypeError('fetch failed: redirect mode is set to error'); }), (e) => /^redirect blocked/.test(e.supplierMessage));
+  assert.equal(seen[0], 'https://domeggook.com/ssl/api/');
+});
+
+test('login follows an https redirect inside domeggook.com with the same POST body, and blocks foreign redirects', async () => {
+  const { login } = await import('./domeggook-order.js');
+  const env = { DOMEMAE_API_KEY: 'K', DOMEMAE_USER_ID: 'sns@1', DOMEMAE_PASSWORD: 'p', DOMEMAE_APPROVED_MEMBER_ID: 'sns@1' };
+  const seen = [];
+  const ok = await login(env, async (url, init) => {
+    seen.push([String(url), init.method, String(init.body).includes('mode=setLogin')]);
+    if (String(url) === 'https://domeggook.com/ssl/api/') return new Response('', { status: 301, headers: { location: 'https://www.domeggook.com/ssl/api/' } });
+    return new Response(JSON.stringify({ domeggook: { id: 'sns@1', sId: 'S' } }), { status: 200 });
+  });
+  assert.equal(ok.id, 'sns@1');
+  assert.deepEqual(seen[1], ['https://www.domeggook.com/ssl/api/', 'POST', true]);
+  await assert.rejects(login(env, async () => new Response('', { status: 302, headers: { location: 'https://evil.example/x' } })),
+    (e) => /redirect blocked 302 to https:\/\/evil\.example/.test(e.supplierMessage));
+});
+
+test('supervised pilot: with auto-order OFF only the allow-listed order is placed', async () => {
+  const off = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false' });
+  assert.equal((await placeSupplierOrders(off.env, supplier({}, []))).skipped, 'disabled');
+  const other = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_PILOT_ORDER_IDS: 'mall_someotherorder1' });
+  const log0 = [];
+  assert.equal((await placeSupplierOrders(other.env, supplier({}, log0))).placed, 0);
+  assert.equal(log0.filter((c) => c.mode === 'setOrder').length, 0);
+  const { db, env } = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_PILOT_ORDER_IDS: 'mall_pilot_000001' });
+  db.prepare("UPDATE orders SET id='mall_pilot_000001' WHERE id='ord_1'").run();
+  db.prepare("UPDATE order_buyers SET order_id='mall_pilot_000001'").run();
+  const log = [];
+  assert.equal((await placeSupplierOrders(env, supplier({}, log))).placed, 1);
+  assert.equal(log.filter((c) => c.mode === 'setOrder').length, 1);
 });

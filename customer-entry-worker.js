@@ -258,7 +258,7 @@ export default {
       }
     }
 
-    if (path.startsWith('/api/google/') || path.startsWith('/api/admin-access/')) {
+    if (path.startsWith('/api/google/') || path.startsWith('/api/ekodi/admin/') || path.startsWith('/api/admin-access/')) {
       try {
         return await handleAdminGoogleAuth(request, env);
       } catch (error) {

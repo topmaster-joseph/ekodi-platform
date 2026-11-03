@@ -5,9 +5,24 @@
  * human editorial approval, verified stream or a released social UI.
  */
 export const AUTOMATION_MIGRATION_PR = Object.freeze([
-  Object.freeze({id:'native-scheduler',number:6890}),
+  Object.freeze({id:'native-scheduler',number:7044}),
   Object.freeze({id:'native-cutover-gate',number:6920}),
 ]);
+
+// This is an imported ChatGPT task snapshot for review, NOT an EKODI-live
+// authenticated API feed. It MUST NOT authorize task retirement or publication.
+export const LEGACY_TASK_SNAPSHOT=Object.freeze({
+  observedAt:'2026-10-30T19:08:00+09:00',
+  source:'operator_verified_chatgpt_automations_listing',
+  freshness:'historical_snapshot_not_live',
+  activeTaskCount:5,
+  activeTaskCountAfterOwnerPause:0,
+  ownerPauseReportedAt:'2026-10-30',
+  ownerPauseTaskCount:5,
+  nativeRuntimeCannotIndependentlyReadChatgptAccount:true,
+  inactivePreviouslyTracked:['mission-home-production-e2e'],
+  canDisableLegacy:false
+});
 
 export const LEGACY_MIGRATION_WORKLOADS=Object.freeze([
   Object.freeze({id:'social-accounts-release',kind:'monitor',missing:[
@@ -28,6 +43,15 @@ export const LEGACY_MIGRATION_WORKLOADS=Object.freeze([
     'pastor_approved_scripture','real_sermon_google_doc',
     'real_bulletin_google_doc','real_worship_google_slides',
     'owner_approval','exclusive_writer_lease','legacy_disable_receipt'
+  ]}),
+  Object.freeze({id:'church-naver-owner',kind:'monitor',trackingPr:7036,missing:[
+    'native_scheduled_job_artifact','public_naver_proof_http_200','legacy_home_redirect_301',
+    'native_naver_ownership_status_evidence',
+    'church_canonical_ekodi_kr_path_and_sitemap',
+    'verified_production_cloudflare_release_sha',
+    'first_party_desktop_mobile_e2e',
+    'owner_authorized_search_console_submission_evidence',
+    'legacy_disable_receipt'
   ]}),
 ]);
 
@@ -66,10 +90,12 @@ export function projectEkodiNativeMigration({proposals=[],checks=[]}={}){
   });
   return Object.freeze({
     owner:'EKODI Orchestrator',
+    importedTaskSnapshot:LEGACY_TASK_SNAPSHOT,
     mode:'read_only_no_legacy_cutover',
     purpose:'migration_gap_audit_not_approval',
     nativePrs:stages,tasks,
     verifiedLegacyDisabledCount:0,
+    legacyPausedReportedCount:LEGACY_TASK_SNAPSHOT.ownerPauseTaskCount,
     migrationCompleted:false,
     noChatgptAutomationCreated:true,
     externalActionsTaken:0,
@@ -81,5 +107,5 @@ export function renderEkodiMigrationSummary(report){
     '- Owner: EKODI Orchestrator; status: read-only, no cutover performed',
     ...report.nativePrs.map(pr=>'- PR #'+pr.pr+': '+pr.state+' ('+pr.reason+')'),
     ...report.tasks.map(task=>'- '+task.id+': delivery unverified; missing '+task.missingEvidence.join(', ')),
-    '- Existing ChatGPT tasks must NOT be stopped based on this report alone.'].join('\n');
+    '- All five ChatGPT tasks were paused on explicit owner request (2026-10-30); native monitoring is not yet full deliverable parity.'].join('\n');
 }

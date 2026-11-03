@@ -26,7 +26,7 @@ function env(principalEmail){
         return null;
       },
       async all(){
-        if(/FROM admins WHERE role='super_admin'/.test(sql))return {results:[{email:'owner@example.com',created_at:'2026-07-28T13:05:42Z',password_hash:'never'}]};
+        if(/FROM admins a JOIN admin_google_accounts g .*WHERE a\.role='super_admin' AND g\.role='super_admin' AND g\.status='active'/.test(sql))return {results:[{email:'owner@example.com',created_at:'2026-07-28T13:05:42Z',password_hash:'never'}]};
         if(/FROM customer_access_grants WHERE tenant_id=\? ORDER BY/.test(sql))return {results:grants};
         return {results:[]};
       },

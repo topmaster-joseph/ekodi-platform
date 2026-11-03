@@ -92,12 +92,12 @@ test('dedicated Windows performance route uses canonical admin, authenticated ha
   assert.match(handoff, /target\.pathname=routes\(\)\.pathFor\(r,new URL\(location\.href\)\.pathname\.split\('\/'\)\.slice\(4\)\)/);
   assert.match(admin, /WINDOWS_PERFORMANCE_URL = '\/admin\/ops\/devices\/windows-performance'/);
   assert.match(admin, /function windowsPerformanceRoute\(\)/);
-  assert.match(admin, /wrapper\.open = windowsPerformanceRoute\(\) \|\| openRosterGroups\.has\(group\.key\)/);
-  assert.match(admin, /const counted = performanceMode \? current : showRetiredGroups \? grouped : current/);
+  assert.match(admin, /wrapper\.open = windowsPerformanceRoute\(\) \|\| autologonRoute\(\) \|\| openRosterGroups\.has\(group\.key\)/);
+  assert.match(admin, /const counted = focusedPcMode \? current : showRetiredGroups \? grouped : current/);
   assert.match(admin, /else if \(windowsPerformanceRoute\(\) && performance\)/);
   assert.match(admin, /card\.append\(head, meta, performance, foot\)/);
-  assert.match(admin, /windowsPerformanceRoute\(\) && \(device\.management\?\.type !== 'pc' \|\| isInventory\(device\) \|\| device\.capabilities\?\.posAgent === true\)/);
-  assert.match(admin, /if \(location\.hash === '#devices' \|\| windowsPerformanceRoute\(\)\) showDevices\(\)/);
+  assert.match(admin, /focusedPcMode && \(device\.management\?\.type !== 'pc' \|\| isInventory\(device\) \|\| device\.capabilities\?\.posAgent === true\)/);
+  assert.match(admin, /if \(location\.hash === '#devices' \|\| windowsPerformanceRoute\(\) \|\| autologonRoute\(\)\) showDevices\(\)/);
   assert.match(admin, /href="\$\{windowsPerformanceRoute\(\) \? '\/admin\/ops\/devices' : WINDOWS_PERFORMANCE_URL\}"/);
   assert.match(css, /EKODI-WINDOWS-PERFORMANCE-LINK-001/);
 });

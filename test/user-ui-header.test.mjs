@@ -24,7 +24,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   ]);
 
   assert.match(header,/const VERSION=7/);
-  assert.match(header,/workspace-api\.ekodi\.kr\/v1\/site-chrome\/public/);
+  assert.match(header,/https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome\/public/);
   assert.match(header,/async function siteChrome\(\)/);
   assert.match(header,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.match(header,/DISABLED_MODES=new Set\(\['off','hidden','immersive'\]\)/);
@@ -69,7 +69,7 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(legacyMobileHeader,/attributeFilter:\['data-ekodi-shell-surface'\]/);
 
   assert.match(footerClient,/const VERSION=7/);
-  assert.match(footerClient,/workspace-api\.ekodi\.kr\/v1\/site-chrome\/public/);
+  assert.match(footerClient,/https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome\/public/);
   assert.match(footerClient,/siteConfigPromise/);
   assert.match(footerClient,/--ekodi-user-content-inline-size/);
   assert.match(footerClient,/--ekodi-user-canvas-max,1240px/);

@@ -44,6 +44,8 @@ function tenantKeyCandidates(value) {
     'ekodibiz-trade':['ekoditrade','ekodi-trade','ekodibiz-trade'],
     'ekodilab':['ekodi-lab','ekodilab'],
     'ekodi-lab':['ekodi-lab','ekodilab'],
+    // 청계면상인회: 채널 subject 'cgma', 인증 문맥(Supabase) tenant slug 'cheonggye'. 역방향 별칭은 두지 않습니다(청계잇다와 구분).
+    'cgma':['cgma','cheonggye'],
   };
   return [...new Set(aliases[key] || [key])].filter(Boolean);
 }

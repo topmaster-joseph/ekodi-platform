@@ -2,12 +2,16 @@ const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const ACCESS=`${SUPABASE_URL}/functions/v1/access-api`;
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
-const MARKETING_API='https://marketing-api.ekodi.kr';
+const MARKETING_API='https://ekodi.kr/marketing-api';
 const params=new URLSearchParams(location.search);
 const site='marketing';
 const returnOrigins=new Set(['https://marketing.ekodi.kr','https://jadam.ekodi.kr','https://pizzamaru.ekodi.kr','https://yogurt.ekodi.kr','https://yogurtpurple.ekodi.kr']);
 const isMarketingOrigin=origin=>{if(returnOrigins.has(origin))return true;try{const u=new URL(origin);return u.protocol==='https:'&&/^[a-z0-9-]+\.ai\.ekodi\.kr$/i.test(u.hostname)&&u.origin===origin}catch{return false}};
-const safeReturn=raw=>{try{const u=new URL(raw||'https://marketing.ekodi.kr');return u.protocol==='https:'&&!u.username&&!u.password&&isMarketingOrigin(u.origin)?u.href:'https://marketing.ekodi.kr/'}catch{return'https://marketing.ekodi.kr/'}};
+// The canonical apex mount https://ekodi.kr/ekodibiz/marketing-ai is accepted by
+// access-api validHandoff; accept exactly that path prefix here too (never the
+// whole apex origin), so login returns to the page the visitor came from.
+const isMarketingApexPath=u=>u.origin==='https://ekodi.kr'&&(u.pathname==='/ekodibiz/marketing-ai'||u.pathname.startsWith('/ekodibiz/marketing-ai/'));
+const safeReturn=raw=>{try{const u=new URL(raw||'https://marketing.ekodi.kr');return u.protocol==='https:'&&!u.username&&!u.password&&(isMarketingOrigin(u.origin)||isMarketingApexPath(u))?u.href:'https://marketing.ekodi.kr/'}catch{return'https://marketing.ekodi.kr/'}};
 const returnTo=safeReturn(params.get('return_to'));
 const explicitPro=params.get('plan')==='pro'||params.get('intent')==='pro';
 const manageMode=params.get('manage')==='1';

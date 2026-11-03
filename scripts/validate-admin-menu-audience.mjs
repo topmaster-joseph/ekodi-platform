@@ -45,6 +45,19 @@ export function validateAdminMenuAudience({ policy, orchestration, registryIds, 
     }
   }
 
+  // Customer-specific administrator menus are explicitly scoped, not added to all site-type templates.
+  for (const [workspaceKey, group] of Object.entries(policy?.workspaceScopedSiteAdminMenus || {})) {
+    if (!ID_PATTERN.test(workspaceKey) || group?.id !== workspaceKey) fail.push('invalid workspace-scoped admin group: ' + workspaceKey);
+    if (group?.scope !== 'workspace:' + workspaceKey) fail.push('workspace admin scope mismatch: ' + workspaceKey);
+    if (group?.audience !== 'site-admin') fail.push('workspace admin audience must remain site-admin: ' + workspaceKey);
+    if (!Array.isArray(group?.menus) || !group.menus.length) fail.push('workspace admin group requires menus: ' + workspaceKey);
+    const seen = new Set();
+    for (const menu of group?.menus || []) {
+      if (!ID_PATTERN.test(menu?.id || '') || !menu?.ko) fail.push('workspace menu id/label invalid: ' + workspaceKey);
+      if (seen.has(menu.id)) fail.push('duplicate workspace menu: ' + workspaceKey + '.' + menu.id);
+      seen.add(menu.id);
+    }
+  }
   const entries = policy?.classification?.entries || {};
   const registry = new Set(registryIds);
   for (const id of registry) {

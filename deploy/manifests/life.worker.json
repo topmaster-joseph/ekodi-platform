@@ -4,16 +4,16 @@
     "name": "ekodi-life-ai",
     "config": "wrangler.life.toml",
     "requests": [
-      {"url":"https://life.ekodi.kr/","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI","당신의 삶을 함께 생각합니다","말씀대화로 깊이 보기"],"headerExpect":["x-ekodi-shell: v2"]},
-      {"url":"https://life.ekodi.kr/relationship","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
-      {"url":"https://life.ekodi.kr/money","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
-      {"url":"https://life.ekodi.kr/work","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
-      {"url":"https://life.ekodi.kr/family","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
-      {"url":"https://life.ekodi.kr/heart","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
-      {"url":"https://life.ekodi.kr/future","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
-      {"url":"https://life.ekodi.kr/faith","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
-      {"url":"https://life.ekodi.kr/meaning","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
-      {"url":"https://life.ekodi.kr/health","statuses":[200],"expect":["ekodi-life-ai","\"stages\":[1,2,3,4,5]","\"whiteLabel\":true","\"ekodiShell\":true"]}
+      {"url":"https://ekodi.kr/life/","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI","당신의 삶을 함께 생각합니다","말씀대화로 깊이 보기"],"headerExpect":["x-ekodi-shell: v2"]},
+      {"url":"https://ekodi.kr/life/relationship","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://ekodi.kr/life/money","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://ekodi.kr/life/work","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://ekodi.kr/life/family","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://ekodi.kr/life/heart","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://ekodi.kr/life/future","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://ekodi.kr/life/faith","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://ekodi.kr/life/meaning","statuses":[200],"redirect":"follow","expect":["오늘의 질문","인생AI"]},
+      {"url":"https://ekodi.kr/life/health","statuses":[200],"expect":["ekodi-life-ai","\"stages\":[1,2,3,4,5]","\"whiteLabel\":true","\"ekodiShell\":true"]}
     ]
   }
 }

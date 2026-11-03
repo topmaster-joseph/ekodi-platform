@@ -13,6 +13,10 @@ test('market layer is simulation-first and live trading is disabled by default',
   assert.equal(INVEST_MARKET_POLICY.managedInvestmentServiceEnabled,false);
   assert.equal(BROKER_ADAPTERS.toss.liveTradingEnabled,false);
   assert.equal(BROKER_ADAPTERS.ibkr.liveTradingEnabled,false);
+  assert.equal(BROKER_ADAPTERS.kis.liveTradingEnabled,false);
+  assert.equal(BROKER_ADAPTERS.kis.credentialMode,'user_authorized_official_api');
+  assert.equal(BROKER_ADAPTERS.kis.docsUrl,'https://apiportal.koreainvestment.com/about-howto');
+  assert.equal(BROKER_ADAPTERS.toss.docsUrl,'https://developers.tossinvest.com/docs');
 });
 
 test('simulation may pass without broker credentials',()=>{

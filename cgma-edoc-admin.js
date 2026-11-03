@@ -3,7 +3,7 @@
 // by the Control API (cgma tenant authority or super_admin). Rendering uses textContent/DOM only and
 // signatures are inline SVG built from vector strokes, so the admin CSP (default-src 'self') holds.
 const API='/api/cgma/edocs';
-const STYLE='/cgma/admin/assets/cgma-edoc-admin.css?v=css-d897158e60';
+const STYLE='/cgma/admin/assets/cgma-edoc-admin.css?v=css-a3864c105e';
 const SVG_NS='http://www.w3.org/2000/svg';
 const STATUS=Object.freeze({draft:'초안',in_progress:'서명 진행 중',completed:'서명 완료',archived:'보관',cancelled:'취소'});
 const statusOf=doc=>doc.archived?'archived':doc.status;
@@ -117,8 +117,10 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
   const STATUS_BAR=[['','전체'],['in_progress','서명 진행'],['completed','서명 완료'],['archived','보관'],['draft','초안'],['cancelled','취소']];
 
   // ---------- list ----------
+  let intro=null;
+  const view=name=>{if(intro)intro.hidden=name!=='list';};
   async function showList(){
-    state('불러오는 중');
+    view('list');state('불러오는 중');
     const params=new URLSearchParams(Object.entries(filters).filter(([,v])=>v));
     const data=await request(params.toString()?`?${params}`:'');
     const sum=data.summary||{};
@@ -160,6 +162,7 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
 
   // ---------- new document ----------
   function showForm(listData){
+    view('form');
     const categories=listData?.categories||['회의록','제안서·견적서','결의서','계약·협약','공문','회계·정산','기타'];
     const title=el('input',{attrs:{type:'text',maxlength:'120',required:'',placeholder:'예: 2026년 10월 정기회의 회의록'}});
     const category=el('select',{},categories.map(c=>el('option',{text:c,attrs:{value:c}})));
@@ -264,6 +267,7 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
   // titles, categories, document dates and purpose per file; otherwise sensible defaults are proposed
   // (title from the file name, a leading YYMMDD/YYYYMMDD as the document date, 보관 as the purpose).
   function showBulk(listData){
+    view('bulk');
     const categories=listData?.categories||['회의록','제안서·견적서','결의서','계약·협약','공문','회계·정산','기타'];
     const picker=el('input',{attrs:{type:'file',multiple:'',accept:ARCHIVE_ACCEPT+',.json'}});
     const linkArea=el('textarea',{attrs:{rows:'4',placeholder:'한 줄에 하나씩: 제목 | https://docs.google.com/…  (제목은 생략 가능)','aria-label':'문서 링크 목록'}});
@@ -351,7 +355,7 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
 
   // ---------- detail ----------
   async function showDetail(id,flash=''){
-    state('불러오는 중');
+    view('detail');state('불러오는 중');
     const data=await request(`/${id}`);
     const doc=data.document,signers=data.signers||[];
     const chain=el('ol',{className:'cgma-edoc-chain',attrs:{'aria-label':'서명 순서 (왼쪽부터)'}});
@@ -375,11 +379,19 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
       actions.append(button('서명 요청 문구 복사',()=>copy(signRequestText(doc,signers),'서명 요청 문구'),'cgma-edoc-btn primary'),
         button('공유하기',()=>share(signRequestText(doc,signers),doc.title)));
     }
-    if(doc.content_kind==='file'&&doc.file_name)actions.append(button('원본 내려받기',async()=>{
-      try{const response=await request(`/${doc.id}/file`,{raw:true});if(!response.ok)throw new Error('원본 파일을 열 수 없습니다.');
-        const url=URL.createObjectURL(await response.blob());const a=el('a',{attrs:{href:url,download:doc.file_name}});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+    const fileBlobUrl=async()=>{const response=await request(`/${doc.id}/file`,{raw:true});if(!response.ok)throw new Error('원본 파일을 열 수 없습니다.');return URL.createObjectURL(await response.blob());};
+    // 원본 보기: PDF·이미지는 새 탭에서 바로 열고, 한글·오피스 파일은 내려받습니다.
+    const viewable=/^(application\/pdf|image\/)/.test(doc.file_mime||'');
+    if(doc.content_kind==='file'&&doc.file_name&&viewable)actions.append(button('원본 보기',async()=>{
+      const tab=window.open('','_blank');
+      try{const url=await fileBlobUrl();if(tab)tab.location.href=url;else window.location.assign(url);setTimeout(()=>URL.revokeObjectURL(url),300000);}
+      catch(error){tab?.close();fail(error);}
+    },'cgma-edoc-btn primary'));
+    if(doc.content_kind==='file'&&doc.file_name)actions.append(button('내려받기',async()=>{
+      try{const url=await fileBlobUrl();const a=el('a',{attrs:{href:url,download:doc.file_name}});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);}
       catch(error){fail(error);}
     }));
+    if(doc.source_url&&isHttpsLink(doc.source_url))actions.append(el('a',{className:'cgma-edoc-btn',text:'원문 링크',attrs:{href:doc.source_url,target:'_blank',rel:'noopener noreferrer'}}));
     if(doc.status==='completed'&&doc.mode!=='archive')actions.append(button('서명 확인서 인쇄 · PDF 저장',()=>window.print(),'cgma-edoc-btn primary'));
     if(['draft','in_progress'].includes(doc.status))actions.append(button('문서 취소',async()=>{
       const reason=window.prompt('취소 사유를 입력해 주세요. (기록은 삭제되지 않고 보존됩니다)');
@@ -403,8 +415,11 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
       const isArchive=doc.mode==='archive';
       const file=el('input',{attrs:{type:'file',accept:isArchive?ARCHIVE_ACCEPT:FILE_ACCEPT}});
       const draft=el('div',{className:'cgma-edoc-draft'},[el('p',{className:'cgma-edoc-notice',text:isArchive?'아직 보관 확정 전입니다. 원본을 확인한 뒤 ‘보관 확정’을 누르세요.':'아직 서명 요청 전인 초안입니다. 서명자 성명을 정한 뒤 서명 요청을 시작하세요.'})]);
-      const source=el('section',{className:'cgma-edoc-panel'},[el('h4',{text:'원본'})]);
-      if(doc.content_kind==='file'){draft.append(source);source.append(el('div',{className:'cgma-edoc-inline'},[el('label',{className:'cgma-edoc-field'},[el('span',{text:doc.file_name?'원본 파일 바꾸기':'원본 파일 올리기'}),file]),
+      const replace=el('details',{className:'cgma-edoc-replace'},[el('summary',{text:doc.content_sha256?'원본 바꾸기 (파일 또는 링크)':'원본 올리기 (파일 또는 링크)'})]);
+      if(!doc.content_sha256)replace.open=true;
+      const current=doc.file_name?`현재 원본: ${doc.file_name}`:(doc.source_url&&doc.content_sha256?'현재 원본: 링크만 보관 (사본 없음)':'아직 원본이 없습니다.');
+      const source=el('section',{className:'cgma-edoc-panel'},[el('h4',{text:'원본'}),el('p',{className:'cgma-edoc-current',text:current}),replace]);
+      if(doc.content_kind==='file'){draft.append(source);replace.append(el('div',{className:'cgma-edoc-inline'},[el('label',{className:'cgma-edoc-field'},[el('span',{text:'파일 선택'}),file]),
         button(doc.file_name?'바꾸기':'올리기',async()=>{const f=file.files?.[0];if(!f)return setMessage('파일을 선택해 주세요.',true);
           try{await request(`/${doc.id}/file`,{method:'PUT',body:f,headers:{'content-type':f.type||'application/octet-stream','x-ekodi-file-name':encodeURIComponent(f.name)}});await showDetail(doc.id,'원본을 올렸습니다.');}catch(error){fail(error);}})]));}
       if(doc.content_kind==='file'){
@@ -412,7 +427,7 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
         const linkRow=el('div',{className:'cgma-edoc-inline'},[el('label',{className:'cgma-edoc-field'},[el('span',{text:'또는 링크에서 가져오기 (구글 문서는 PDF 사본)'}),linkInput]),
           button('가져오기',async()=>{const url=linkInput.value.trim();if(!isHttpsLink(url))return setMessage('https:// 로 시작하는 문서 링크를 입력해 주세요.',true);
             try{await request(`/${doc.id}/import`,{method:'POST',body:JSON.stringify({url})});await showDetail(doc.id,'링크의 문서를 원본으로 가져왔습니다.');}catch(error){fail(error);}})]);
-        source.append(linkRow);
+        replace.append(linkRow);
         if(isArchive)linkRow.append(button('링크만 보관',async()=>{const url=linkInput.value.trim();if(!isHttpsLink(url))return setMessage('https:// 로 시작하는 문서 링크를 입력해 주세요.',true);
             try{await request(`/${doc.id}/import`,{method:'POST',body:JSON.stringify({url,link_only:true})});await showDetail(doc.id,'링크를 기록했습니다. ‘보관 확정’을 누르세요.');}catch(error){fail(error);}}));
       }
@@ -460,7 +475,7 @@ export async function mountCgmaEdocAdmin({root,summaryRoot,getToken,state=()=>{}
   function fail(error){setMessage(error?.message||'처리하지 못했습니다.',true);state('확인 필요');}
 
   root.replaceChildren(el('div',{className:'cgma-edoc'},[
-    el('p',{className:'cgma-edoc-intro',text:'회의록·제안서 등 주요 문서를 파일이나 링크로 올려 순서대로(왼쪽부터) 서명받거나 서명 없이 영구 보관합니다.'}),
+    intro=el('p',{className:'cgma-edoc-intro',text:'회의록·제안서 등 주요 문서를 파일이나 링크로 올려 순서대로(왼쪽부터) 서명받거나 서명 없이 영구 보관합니다.'}),
     status,body]));
   try{await showList();}catch(error){fail(error);}
   return {refresh:()=>showList().catch(fail),dispose(){cardsWatch?.disconnect();summaryRoot.hidden=false;}};

@@ -5,6 +5,12 @@ on:
     branches:
       - 'ai/*/orch_*'
   workflow_dispatch:
+    inputs:
+      post_merge_reconcile_branch:
+        description: 'Orchestrator branch of an immediately merged recovery PR whose remaining post-merge lanes must be dispatched'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -30,6 +36,7 @@ jobs:
     timeout-minutes: 12
     env:
       GH_TOKEN: ${{ github.token }}
+      POST_MERGE_RECONCILE_BRANCH: ${{ inputs.post_merge_reconcile_branch || '' }}
     steps:
       - uses: actions/checkout@v7
         with:

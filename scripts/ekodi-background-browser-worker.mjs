@@ -3,7 +3,28 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-const ORIGIN = 'https://ekodi.kr';
+const CANONICAL_ORIGIN = 'https://ekodi.kr';
+// Development staging verification (#6739): an explicit, fixed allowlist of the
+// isolated development-account staging hosts. Selectable only when the runner
+// declares EKODI_BROWSER_ENVIRONMENT=development; the default stays ekodi.kr.
+const DEVELOPMENT_STAGING_ORIGINS = Object.freeze([
+  'https://ekodi-admin-staging.ekodi-development.workers.dev',
+  'https://ekodi-my-staging.ekodi-development.workers.dev',
+]);
+export function resolveBrowserOrigin(env=process.env){
+  const requested=String(env.EKODI_BROWSER_ORIGIN||'').trim();
+  if(!requested||requested===CANONICAL_ORIGIN) return CANONICAL_ORIGIN;
+  if(env.EKODI_BROWSER_ENVIRONMENT!=='development'||!DEVELOPMENT_STAGING_ORIGINS.includes(requested)){
+    const e=new Error('Browser origin must be ekodi.kr or an allowlisted development staging host');
+    e.code='BROWSER_ORIGIN_FORBIDDEN'; throw e;
+  }
+  return requested;
+}
+const ORIGIN = resolveBrowserOrigin();
+// Cloudflare Access service token, attached only to same-origin staging requests.
+const STAGING_ACCESS = ORIGIN!==CANONICAL_ORIGIN && process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET
+  ? Object.freeze({'cf-access-client-id':process.env.CF_ACCESS_CLIENT_ID,'cf-access-client-secret':process.env.CF_ACCESS_CLIENT_SECRET})
+  : null;
 const PROFILE = Object.freeze({
   'compact-mobile': { width:320, height:568, isMobile:true, hasTouch:true },
   'mobile-portrait': { width:390, height:844, isMobile:true, hasTouch:true },
@@ -23,7 +44,7 @@ function safePath(value){
   const raw=clean(value,1200)||'/';
   let url;
   try { url=new URL(raw,ORIGIN); } catch { fail('BROWSER_URL_INVALID','Invalid browser target'); }
-  if(url.origin!==ORIGIN) fail('BROWSER_ORIGIN_FORBIDDEN','Browser navigation must stay on canonical ekodi.kr');
+  if(url.origin!==ORIGIN) fail('BROWSER_ORIGIN_FORBIDDEN',ORIGIN===CANONICAL_ORIGIN?'Browser navigation must stay on canonical ekodi.kr':'Browser navigation must stay on the allowlisted staging origin');
   if(url.username||url.password) fail('BROWSER_USERINFO_FORBIDDEN','URL userinfo is forbidden');
   return url.pathname+url.search+url.hash;
 }
@@ -128,6 +149,8 @@ export async function runTask(rawTask, options={}){
       blockedMutations.push({method,url:clean(req.url(),500)});
       return route.abort('blockedbyclient');
     }
+    if(STAGING_ACCESS && new URL(req.url()).origin===ORIGIN)
+      return route.continue({headers:{...req.headers(),...STAGING_ACCESS}});
     return route.continue();
   });
 

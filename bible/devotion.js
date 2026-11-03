@@ -1,4 +1,6 @@
 import { renderDevotionScore } from './devotion-score.js';
+import { devotionShareExcerpt, formatDevotionShareMessage } from './devotion-share-audio.js';
+import { createDevotionSpeechUI } from './devotion-speech-ui.js';
 // EKODI 오늘의 매일묵상 — shared renderer for /bible, /ekodichurch and /ekodimission.
 // Each host page provides its own header/footer and a mount:
 //   <div data-ekodi-devotion data-base="/ekodichurch/devotion/" data-date-mode="query" data-site-label="에코디교회"></div>
@@ -16,6 +18,7 @@ const TABS = Object.freeze([
 ]);
 const ATTRIBUTION = '묵상 적용(시·노래·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.';
 const ADMIN_TOKEN_KEY = 'ekodi-auth-token';
+const CENTRAL_AUTH_KEY = 'sb-renzehysxirjilvdxacv-auth-token';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const RECORD_TOPIC = '매일묵상';
@@ -23,6 +26,13 @@ const RECORD_TOPIC = '매일묵상';
 // EKODI member session written by the shared login (supabase-js format in localStorage).
 function memberSessionEntry() {
   try {
+    // A current unified account, including a broken/expired entry, must not
+    // silently become another previously signed-in person through legacy fallback.
+    const primary = localStorage.getItem(CENTRAL_AUTH_KEY);
+    if (primary) {
+      const parsed = JSON.parse(primary), session = parsed?.currentSession || parsed?.session || parsed;
+      return session?.access_token && session?.user ? { key:CENTRAL_AUTH_KEY, parsed, session } : null;
+    }
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i) || '';
       if (!/^sb-.*-auth-token$/.test(key)) continue;
@@ -58,8 +68,14 @@ async function memberSession() {
   return refreshing;
 }
 function adminConsoleToken() { try { return sessionStorage.getItem(ADMIN_TOKEN_KEY) || ''; } catch { return ''; } }
-// Admin-console token first (existing super-admin editor), otherwise the member's own token.
-async function requestToken() { return adminConsoleToken() || (await memberSession())?.access_token || ''; }
+// Current EKODI identity wins; a stale privileged console token is fallback
+// only when the browser has no unified session (e.g. on an independent domain).
+async function requestToken() {
+  try {
+    if (localStorage.getItem(CENTRAL_AUTH_KEY)) return (await memberSession())?.access_token || '';
+  } catch { return ''; }
+  return adminConsoleToken() || (await memberSession())?.access_token || '';
+}
 async function memberRest(path, init = {}) {
   const session = await memberSession();
   if (!session) throw Error('login_required');
@@ -130,6 +146,7 @@ function boot(root) {
   const scriptureBlock = el('section', 'dv-panel dv-scripture-section');
   scriptureBlock.setAttribute('aria-label','개역한글 성경 본문');
   const audioRow = el('section','dv-audio-row');
+  const speechUI = createDevotionSpeechUI();
   const adminPanel = el('section','dv-admin');
   adminPanel.id = 'devotion-editor';
   adminPanel.hidden = true;
@@ -173,6 +190,7 @@ function boot(root) {
   adminView.setAttribute('aria-live', 'polite');
   let adminSelection = '';
   root.append(datebar, status, scriptureBlock, tabbar, panelWrap, notice, shareRow, adminBar, adminPanel, adminView, toastEl);
+  scriptureBlock.after(speechUI.element);
   // Mission supplies this control through its own site shell.  Church and
   // Bible share the same concise account/logout convention alongside admin.
   const sharedAuthBar = siteKey==='mission' ? null : el('div','dv-shared-auth');
@@ -180,6 +198,17 @@ function boot(root) {
     const controls=el('div','dv-shared-tools');
     adminBar.before(controls);
     controls.append(adminBar,sharedAuthBar);
+  }
+  function devotionAccountLabel(value){
+    const raw=String(value||'').trim();
+    const alias=/^identity\+([a-z0-9_-]+)\.[^@\s]+@ekodi\.kr$/i.exec(raw);
+    if(alias){
+      const labels={kakao:'카카오 계정',naver:'네이버 계정',google:'Google 계정',apple:'Apple 계정',daum:'다음 계정'};
+      return labels[alias[1].toLowerCase()]||'연결 계정';
+    }
+    const local=raw.includes('@')?raw.split('@')[0]:raw;
+    const name=local||'내 계정';
+    return name.length>16?name.slice(0,15)+'…':name;
   }
   function showSharedAccount(viewer){
     if(!sharedAuthBar)return;
@@ -191,7 +220,7 @@ function boot(root) {
       sharedAuthBar.append(login);
       return;
     }
-    const account=el('span','dv-shared-account',String(viewer.email||'계정').slice(0,90));
+    const account=el('span','dv-shared-account',devotionAccountLabel(viewer?.displayName||viewer?.name||viewer?.email));
     account.title=account.textContent;
     const logout=el('button','dv-date-link','로그아웃');
     logout.type='button';
@@ -587,7 +616,7 @@ function boot(root) {
       form.addEventListener('submit', event => { event.preventDefault(); storageSet(localKey, JSON.stringify({ reflection: reflection.value, prayer: prayer.value })); toast('이 기기에 저장했습니다.'); });
       return;
     }
-    note.textContent = `${session.user?.email || '내 계정'} 계정에 저장됩니다. 나만 볼 수 있고, 공유는 직접 누를 때만 이루어집니다.`;
+    note.textContent = `${devotionAccountLabel(session.user?.user_metadata?.display_name||session.user?.email)}에 저장됩니다. 나만 볼 수 있고, 공유는 직접 누를 때만 이루어집니다.`;
     let records = [];
     let existing = null;
     const paint = () => {
@@ -724,6 +753,7 @@ function boot(root) {
   });
 
   function render(data) {
+    speechUI.setData(data);
     current = data;
     dateLabel.textContent = koreanDate(data.date);
     prev.href = pageUrl(data.prevDate);
@@ -827,8 +857,8 @@ function boot(root) {
     const [, m, day] = d.date.split('-').map(Number);
     const head = `[${siteLabel} 오늘의 매일묵상 ${m}/${day}] ${d.passage}`;
     switch (kind) {
-      case 'poem': return { title: a.poem.title, text: `${head}\n\n〈${a.poem.title}〉\n${a.poem.lines.join('\n')}`, hash: 'poem' };
-      case 'song': return { title: a.song.title, text: `${head}\n\n♪ ${a.song.title}\n${a.song.verse.join('\n')}\n(후렴) ${a.song.refrain.join(' / ')}`, hash: 'song' };
+      case 'poem': return { title: a.poem.title, text: `${head}\n\n${a.poem.lines.join('\n')}`, hash: 'poem' };
+      case 'song': return { title: a.song.title, text: `${head}\n\n${a.song.verse.join('\n')}\n(후렴) ${a.song.refrain.join(' / ')}`, hash: 'song' };
       case 'questions': return { title: '질문 / 실천', text: `${head}\n\n${a.questions.map((q, i) => `${i + 1}. [${q.kind}] ${q.text}`).join('\n')}\n오늘의 실천: ${a.action}`, hash: 'questions' };
       case 'image': return { title: '묵상 그림', text: `${head}\n\n묵상 그림 · ${a.theme}`, hash: 'image' };
       case 'family': return { title: '가정·어린이 질문', text: `${head}\n\n👨‍👩‍👧 ${a.family}`, hash: 'family' };
@@ -839,7 +869,7 @@ function boot(root) {
         if (!mine) return null;
         return { title: '나의 한줄기도', text: `${head}\n\n${mine}`, hash: 'records' };
       }
-      default: return { title: `${siteLabel} 오늘의 매일묵상 · ${d.passage}`, text: `${head}\n${a.keyLine}`, hash: '' };
+      default: return { title: `${siteLabel} 오늘의 매일묵상 · ${d.passage}`, text: a.keyLine, hash: '' };
     }
   }
 
@@ -862,11 +892,20 @@ function boot(root) {
     if (!body) { toast('먼저 나의 한줄기도를 적어 주세요.'); selectTab('records'); panels.get('records').querySelector('textarea[name="prayer"]')?.focus(); return; }
     const url = shareUrl(current.date, body.hash);
     if (copyOnly) { toast(await copy(url) ? '링크를 복사했습니다. 카카오톡 대화방에 붙여 넣어 주세요.' : url); return; }
+    const privatePrayer = kind === 'mine' ? panels.get('records').querySelector('textarea[name="prayer"]')?.value.trim() || '' : '';
+    const title = kind === 'page' ? body.title : `${siteLabel} 오늘의 매일묵상 · ${body.title}`;
+    const message = formatDevotionShareMessage({
+      date: current.date, title,
+      excerpt: devotionShareExcerpt(current, kind, privatePrayer),
+      url,
+    });
+    // KakaoTalk, SMS and clipboard receive one complete four-line text.
+    // Supplying a separate title or url to the native share sheet can duplicate lines.
     if (navigator.share) {
-      try { await navigator.share({ title: body.title, text: body.text, url }); return; }
+      try { await navigator.share({ text: message }); return; }
       catch (error) { if (error?.name === 'AbortError') return; }
     }
-    toast(await copy(`${body.text}\n\n${url}`) ? '내용과 링크를 복사했습니다. 카카오톡에 붙여 넣어 주세요.' : url);
+    toast(await copy(message) ? '날짜·제목·본문·링크를 복사했습니다. 카카오톡에 붙여 넣어 주세요.' : url);
   }
 
   root.addEventListener('click', event => {

@@ -212,3 +212,43 @@ body:has(.hero-split) .mission-site-header nav a{font-size:clamp(.81rem,.9vw,.89
   .mission-home-photo-fallback{height:auto;min-width:0;min-height:240px}
   .mission-home-photo-fallback strong{font-size:clamp(1.85rem,7vw,2.8rem)}
 }
+
+/* Home-only compact first view: remove oversized hero whitespace and make daily devotion visible. */
+.mission-home .hero-split{align-items:center}
+.mission-home .mission-home-devotion{
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  margin:.9rem 0 .35rem;padding:.8rem 1rem;
+  border:1px solid #cdd9cb;border-radius:1rem;background:rgba(246,250,242,.94)
+}
+.mission-home-devotion>div{min-width:0}
+.mission-home-devotion strong{display:block;color:var(--accent);font-size:.96rem}
+.mission-home-devotion p{margin:.15rem 0 0;font-size:.81rem;line-height:1.5;color:var(--muted)}
+.mission-home-devotion a{flex:0 0 auto;color:var(--accent);font-size:.8rem;font-weight:800;white-space:nowrap;text-underline-offset:3px}
+@media(max-width:760px){
+  .mission-home .hero-split{
+    display:grid;grid-template-columns:minmax(0,1fr)!important;grid-auto-rows:max-content;
+    align-items:start;justify-content:start;gap:1rem;
+    min-height:0!important;height:auto;padding:1.1rem 0 1.25rem
+  }
+  .mission-home .hero-copy{align-self:start;min-height:0}
+  .mission-home .hero-copy>.eyebrow{margin:0 0 .4rem}
+  .mission-home .hero h1{font-size:clamp(2.2rem,9.5vw,3rem);line-height:1.09;margin:.25rem 0 .65rem}
+  .mission-home .hero .lead{font-size:.94rem;line-height:1.6;margin:.5rem 0 .7rem}
+  .mission-home .mission-home-photo{height:210px;min-height:0;aspect-ratio:auto}
+  .mission-home .mission-home-photo-fallback{height:100%;min-height:0}
+  .mission-home .mission-home-current{padding-top:1.25rem}
+}
+@media(max-width:520px){
+  .mission-home .hero-split{padding:.95rem 0 1rem;gap:.8rem}
+  .mission-home .hero h1{font-size:clamp(2.15rem,9.6vw,2.7rem)}
+  .mission-home .hero .lead{font-size:.9rem;line-height:1.55}
+  .mission-home .mission-home-devotion{
+    display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+    gap:.55rem;margin:.7rem 0 .3rem;padding:.72rem .8rem
+  }
+  .mission-home .mission-home-devotion p{font-size:.77rem}
+  .mission-home .mission-home-devotion a{font-size:.73rem}
+  .mission-home .hero .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;margin-top:.75rem}
+  .mission-home .hero .actions .button{width:100%;min-height:38px;padding:.5rem .55rem;font-size:.81rem;white-space:nowrap}
+  .mission-home .mission-home-photo{height:185px}
+}

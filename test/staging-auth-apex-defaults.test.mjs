@@ -29,7 +29,9 @@ test('staging auth migration leaves isolated execution and disabled test data se
   const life=read('wrangler.life.staging.toml');
   const energy=read('wrangler.energy-staging.toml');
   const education=read('wrangler.education.staging.toml');
-  assert.match(my,/DATA_ENABLED = "false"/);
+  // Data may be enabled only on the development project; mode stays isolated (#6739).
+  assert.match(my,/DATA_ENABLED = "false"|SUPABASE_URL = "https:\/\/lxcxwbdwwojjkgybbqii\.supabase\.co"/);
+  assert.doesNotMatch(my,/renzehysxirjilvdxacv/);
   assert.match(my,/DATA_MODE = "isolated-staging"/);
   assert.match(life,/name = "ekodi-life-ai-staging"/);
   assert.match(energy,/name = "ekodi-energy-staging"/);

@@ -183,3 +183,20 @@ test('scheduler checks verified duplicate subscriptions before any charge',()=>{
   assert.match(universal,/saveVerifiedBillingAliases\(env\.DB, identity\)/);
   assert.match(billing,/membership_billing_collision_audit/);
 });
+
+test('the SQL identity ownership guard rejects cross-Person reparent in a transaction',()=>{
+  const guard=read('supabase/migrations/20261030013000_block_unreviewed_person_reparent.sql');
+  const api=read('supabase/functions/identity-api/index.ts');
+  assert.match(guard,/before update of person_id on public\.login_identities/);
+  assert.match(guard,/old\.person_id is distinct from new\.person_id/);
+  assert.match(guard,/raise exception 'account_merge_review_required'/);
+  assert.match(guard,/revoke all on function public\.block_unreviewed_person_reparent\(\)/);
+  assert.match(api,/if\(\/account_merge_review_required\/i\.test\(linkError\.message/);
+  assert.doesNotMatch(guard,/\bdrop table\b/i);
+});
+test('an active plus past-due subscription must be reconciled before a new paid selection',()=>{
+  const active={plan_id:'pro',status:'active',monthly_fee:39900};
+  const pastDue={plan_id:'plus',status:'past_due',monthly_fee:9900};
+  assert.throws(()=>choosePersonalSubscription([active,pastDue]),
+    {code:'ACCOUNT_BILLING_RECONCILIATION_REQUIRED'});
+});

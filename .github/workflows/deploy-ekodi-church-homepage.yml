@@ -1,6 +1,6 @@
 name: Deploy EKODI Church Homepage
 # Release reconciliation marker: church-operating-space-20260924
-# Reconcile Church public Pages to source commit 2c0de16777f93fb16a709e2cfcbe3d9787f637c2 (2026-10-27: 매일묵상 헤더 폭·탭 겹침 수정, ekodi-church#126).
+# Reconcile Church public Pages to source commit 520d4f2daf7e5e4dc53bf928c9df626b5f896600 (나의 예배 화면 방송 종료 안내·다음 방송 자동 연결, ekodi-church#141).
 
 on:
   workflow_dispatch:
@@ -30,30 +30,37 @@ env:
 
 jobs:
   deploy:
+    # A main push cannot directly authorize release; official dispatch with receipt only.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Checkout Church source
+      - name: Checkout independent Church source (legacy mode only)
+        if: vars.CHURCH_CANONICAL_SOURCE_CUTOVER_APPROVED != 'true'
         uses: actions/checkout@v7
         with:
           repository: topmaster-joseph/ekodi-church
           ref: main
           path: church
 
-      - name: Capture Church source revision
+      - name: Capture legacy Church revision
+        if: vars.CHURCH_CANONICAL_SOURCE_CUTOVER_APPROVED != 'true'
         shell: bash
-        run: echo "CHURCH_SOURCE_SHA=$(git -C church rev-parse HEAD)" >> "$GITHUB_ENV"
+        run: |
+          echo "CHURCH_SOURCE_SHA=$(git -C church rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "CHURCH_RELEASE_SOURCE_MODE=legacy" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
 
-      - name: Checkout EKODI orchestration control
+      - name: Checkout EKODI orchestration control at exact triggering commit
         uses: actions/checkout@v7
         with:
+          ref: ${{ github.sha }}
           path: .ekodi-control
 
       - name: EKODI AI Orchestration Gate
@@ -61,6 +68,21 @@ jobs:
           EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
           EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
         run: node "$GITHUB_WORKSPACE/.ekodi-control/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
+      - name: Bind canonical Church source (only after explicit cutover flag and receipt)
+        if: vars.CHURCH_CANONICAL_SOURCE_CUTOVER_APPROVED == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          platform_sha=$(git -C .ekodi-control rev-parse HEAD)
+          test "$platform_sha" = "$GITHUB_SHA"
+          test -f .ekodi-control/sites/ekodi-church/source-import-manifest.json
+          test -f .ekodi-control/scripts/build-church-pages-candidate.mjs
+          # A symlink preserves the module's relative test links into the central checkout.
+          ln -s "$GITHUB_WORKSPACE/.ekodi-control/sites/ekodi-church" church
+          echo "CHURCH_SOURCE_SHA=$platform_sha" >> "$GITHUB_ENV"
+          echo "CHURCH_RELEASE_SOURCE_MODE=canonical" >> "$GITHUB_ENV"
 
       - name: Validate Church source, privacy boundary and multilingual life hub
         shell: bash
@@ -181,9 +203,24 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf /tmp/ekodi-church-pages /tmp/ekodi-church-functions
-          mkdir -p /tmp/ekodi-church-pages
-          rsync -a --exclude='.git' --exclude='.github' church/ /tmp/ekodi-church-pages/
-          printf '{"contract":"ekodi.church-release.v1","sourceRepository":"topmaster-joseph/ekodi-church","sourceSha":"%s"}\n' "$CHURCH_SOURCE_SHA" > /tmp/ekodi-church-pages/church-release.json
+          if [[ "${CHURCH_RELEASE_SOURCE_MODE:-legacy}" == 'canonical' ]]; then
+            node .ekodi-control/scripts/build-church-pages-candidate.mjs \
+              --source .ekodi-control/sites/ekodi-church \
+              --output /tmp/ekodi-church-pages \
+              --sha "$CHURCH_SOURCE_SHA"
+            jq -e --arg sha "$CHURCH_SOURCE_SHA" '
+              .contract == "ekodi.church-release.v2" and
+              .sourceRepository == "topmaster-joseph/ekodi-platform" and
+              .sourceModule == "sites/ekodi-church" and
+              .sourceSha == $sha and
+              (.payloadSha256 | test("^[0-9a-f]{64}$"))
+            ' /tmp/ekodi-church-pages/church-release.json > /dev/null
+            echo "CHURCH_PAYLOAD_SHA256=$(jq -r .payloadSha256 /tmp/ekodi-church-pages/church-release.json)" >> "$GITHUB_ENV"
+          else
+            mkdir -p /tmp/ekodi-church-pages
+            rsync -a --exclude='.git' --exclude='.github' church/ /tmp/ekodi-church-pages/
+            printf '{"contract":"ekodi.church-release.v1","sourceRepository":"topmaster-joseph/ekodi-church","sourceSha":"%s"}\n' "$CHURCH_SOURCE_SHA" > /tmp/ekodi-church-pages/church-release.json
+          fi
           cd /tmp/ekodi-church-pages
           if [[ -d functions ]] && find functions -type f -print -quit | grep -q .; then
             npx --yes wrangler@${WRANGLER_VERSION} pages functions build functions --outdir=/tmp/ekodi-church-functions
@@ -219,6 +256,32 @@ jobs:
             sleep 10
           done
           echo "Church devotion verification failed: page=$page renderer=$renderer api=$api"
+          exit 1
+
+      - name: Verify production church together (partnership) page
+        shell: bash
+        run: |
+          set -euo pipefail
+          release="$CHURCH_SOURCE_SHA"
+          if [[ ! -f church/together/index.html ]]; then
+            echo 'Church source has no together page; skipping.'
+            exit 0
+          fi
+          for attempt in $(seq 1 30); do
+            page=$(curl -L -sS -o /tmp/church-together.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/together/?release=${release}" || true)
+            js=$(curl -L -sS -o /tmp/church-together.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/together/together.js?release=${release}" || true)
+            css=$(curl -L -sS -o /tmp/church-together.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/together/together.css?release=${release}" || true)
+            if [[ "$page" == 200 && "$js" == 200 && "$css" == 200 ]] \
+              && grep -Fq 'data-ekodi-church-together' /tmp/church-together.html \
+              && grep -Fq '기부금영수증 발급 가능' /tmp/church-together.html \
+              && grep -Fq '261028-together-partners' /tmp/church-together.js \
+              && grep -Fq '.together-hero' /tmp/church-together.css; then
+              echo 'Church together page verified.'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Church together verification failed: page=$page js=$js css=$css"
           exit 1
 
       - name: Verify production life hub assets and exact release
@@ -283,7 +346,18 @@ jobs:
               && grep -Fq 'refreshAuthToken' /tmp/church-live.js \
               && grep -Fq "searchParams.set('mode','studio')" /tmp/church-live-host-intent.js \
               && ! grep -Fq 'location.replace(next.href)' /tmp/church-live-host-intent.js \
-              && jq -e --arg sha "$CHURCH_SOURCE_SHA" '.contract == "ekodi.church-release.v1" and .sourceSha == $sha' /tmp/church-release.json >/dev/null; then
+              && jq -e --arg sha "$CHURCH_SOURCE_SHA" --arg mode "${CHURCH_RELEASE_SOURCE_MODE:-legacy}" --arg digest "${CHURCH_PAYLOAD_SHA256:-}" '
+                if $mode == "canonical" then
+                  .contract == "ekodi.church-release.v2" and
+                  .sourceRepository == "topmaster-joseph/ekodi-platform" and
+                  .sourceModule == "sites/ekodi-church" and
+                  .sourceSha == $sha and .payloadSha256 == $digest
+                else
+                  .contract == "ekodi.church-release.v1" and
+                  .sourceRepository == "topmaster-joseph/ekodi-church" and
+                  .sourceSha == $sha
+                end
+              ' /tmp/church-release.json >/dev/null; then
               echo 'Church production life hub assets and release SHA verified.'
               break
             fi
@@ -447,7 +521,8 @@ jobs:
                   const live=await page.evaluate(()=>({
                     hiddenHero:getComputedStyle(document.querySelector('.hero')).display==='none',
                     cards:document.querySelectorAll('#online .online-triad--broadcast .ministry-card').length,
-                    liveLink:!!document.querySelector('#online a[href="/live/church/"]'),
+                    // ekodi-church#123 plays shared EKODI Live inline, with a /live/church/ viewer fallback link.
+                    liveLink:!!document.querySelector('#online a[href="/live/church/"]')||(!!document.querySelector('#online #churchInlineLiveFrame')&&!!document.querySelector('#online a[href="/live/church/?mode=viewer"]')),
                     oldVideo:!!document.querySelector('a[href*="meet.jit.si"]')
                   }));
                   assert.equal(live.hiddenHero,true);

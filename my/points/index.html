@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko" data-ekodi-global-nav="off" data-ekodi-character="off" data-ekodi-footer-profile="inherit" data-ekodi-user-ai-entry="off" data-ekodi-progressive-home="off">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="ekodi-ui-type" content="USER">
+  <meta name="description" content="EKODI 사이트별 활동포인트 잔액 및 내역">
+  <title>내 활동포인트 | My EKODI</title>
+  <link rel="stylesheet" href="/my/styles.css?v=20260906-intent-os-1">
+  <link rel="stylesheet" href="/my/user-ui.css?v=20260822-user-ai-1">
+  <link rel="stylesheet" href="/my/comfort-ui.css?v=20260906-context-home-v1">
+  <link rel="stylesheet" href="/my/hub-shell.css?v=20261102-one-glance-v1">
+  <link rel="stylesheet" href="/my/points/styles.css?v=20261102-one-glance-v1">
+</head>
+<body data-ekodi-ui="USER" data-auth-state="member" data-active-tab="activity" class="my-subpage">
+  <header class="topbar my-comfort-header">
+    <a class="brand" href="/my/#home" aria-label="My EKODI 홈"><span class="brand-leaf" aria-hidden="true"></span><span><strong>My EKODI</strong><small>나의 에코디</small></span></a>
+    <nav class="my-desktop-tabs" aria-label="주요 메뉴"><a href="/my/#home">홈</a><a href="/my/#platforms">내 서비스</a><a href="/my/#activity" aria-current="page">내 활동</a><a href="/my/#account">내 정보</a></nav>
+    <div class="top-actions"></div>
+  </header>
+  <main>
+    <div class="heading"><p class="kicker">MY EKODI · SITE POINTS</p><h1>내 활동포인트</h1>
+      <p>사이트마다 적립·사용 내역이 따로 보관됩니다. 다른 사이트로의 전환이나 기부는 승인된 정책에 따라 처리됩니다.</p>
+    </div>
+    <section class="panel" aria-labelledby="walletTitle">
+      <div class="toolbar"><h2 id="walletTitle">사이트별 포인트</h2><label for="siteSelect">사이트 선택</label>
+        <select id="siteSelect" disabled><option value="">사이트 확인 중</option></select></div>
+      <p id="notice" role="status" aria-live="polite">로그인 상태를 확인하고 있습니다.</p>
+      <a id="loginLink" class="login" hidden href="#">로그인</a>
+      <div id="balanceView" hidden><div class="balance"><span>사용 가능한 포인트</span><strong><span id="balance">0</span> P</strong></div>
+        <h3>최근 거래</h3><div id="history" class="history" aria-live="polite"></div>
+      </div>
+    </section>
+    <section class="panel invite-panel" id="referralSection" hidden aria-labelledby="referralTitle">
+      <h2 id="referralTitle">새 회원 초대</h2>
+      <p>초대 링크를 만들어 전달할 수 있습니다. 링크 복사나 공유만으로는 포인트가 적립되지 않습니다.</p>
+      <div class="invite-tools"><button type="button" id="createReferralInvite">초대 링크 만들기</button>
+        <input id="referralLink" readonly aria-label="새 회원 초대 링크" placeholder="발급된 링크" hidden>
+        <button type="button" id="copyReferralInvite" hidden>링크 복사</button></div>
+      <p id="referralStatus" role="status" aria-live="polite"></p>
+    </section>
+    <section class="panel invite-panel" id="referralConfirmSection" hidden aria-labelledby="referralConfirmTitle">
+      <h2 id="referralConfirmTitle">새 회원 초대 확인</h2>
+      <p>이 링크로 처음 가입한 회원만 확인할 수 있습니다. 기존 회원·자기초대·중복 가입은 보상 대상이 아닙니다.</p>
+      <button type="button" id="confirmReferralInvite">가입 후 초대 확인</button>
+      <p id="referralConfirmStatus" role="status" aria-live="polite">로그인 후 직접 확인해 주세요.</p>
+    </section>
+    <section class="panel invite-panel" id="claimSection" hidden aria-labelledby="claimTitle">
+      <h2 id="claimTitle">활동 증빙 신청</h2>
+      <p>운영자가 확인할 수 있는 활동만 신청할 수 있습니다. 신청만으로는 적립되지 않으며, 확인 후 원장에 기록됩니다. 페이지 방문이나 공유는 증빙이 아닙니다.</p>
+      <form id="claimForm" class="claim-form">
+        <label>증빙 종류<select id="claimAdapter" required></select></label>
+        <label>증빙 참조<input id="claimRef" required maxlength="120" pattern="[A-Za-z0-9:._/\-]{3,120}" placeholder="예: post/1024, meet/2026-11-01" autocomplete="off"></label>
+        <label class="claim-note">설명 (선택)<textarea id="claimNote" maxlength="500" rows="2" placeholder="운영자가 확인할 수 있도록 간단히 적어 주세요."></textarea></label>
+        <button type="submit" id="claimSubmit">증빙 신청</button>
+      </form>
+      <p id="claimStatus" role="status" aria-live="polite"></p>
+      <h3>내 신청 현황</h3><div id="claimList" class="history" aria-live="polite"></div>
+    </section>
+    <p class="footnote">활동포인트는 현금과 다르며, 기부만으로 기부금영수증이 발급되지 않습니다. 포인트 적립과 전환·기부는 사이트별 운영 정책을 따릅니다.</p>
+  </main>
+  <footer class="my-custom-footer" aria-label="My EKODI 안내">
+    <div class="my-footer-inner">
+      <div class="my-footer-brand"><span class="brand-leaf" aria-hidden="true"></span><div><strong>My EKODI</strong><p>내가 참여하는 공간과 서비스를 한곳에서 이어보는 개인 통합 홈입니다.</p></div></div>
+      <nav aria-label="My EKODI 바로가기"><a href="/my/#platforms">내 서비스</a><a href="/my/#activity">내 활동</a><a href="/my/#account">내 정보</a></nav>
+      <p class="my-footer-note">좋은 생각이 모여, 더 좋은 하루가 됩니다.</p>
+    </div>
+    <div class="my-footer-credo"><strong>&#54632;&#44760;&#54616;&#51648;&#47564;, &#45824;&#49888; &#44208;&#51221;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</strong><span>My EKODI&#45716; &#45817;&#49888;&#51032; &#49440;&#53469;&#51012; &#51473;&#49900;&#50640; &#46160;&#44256; &#54596;&#50836;&#54620; &#51221;&#48372;&#50752; &#45796;&#51020; &#54665;&#46041;&#51012; &#50672;&#44208;&#54633;&#45768;&#45796;.</span><small class="my-footer-copyright">© EKODI (에코디). All rights reserved.</small></div>
+  </footer>
+  <script src="/my/config.js"></script><script type="module" src="/my/points/app.js"></script>
+</body></html>

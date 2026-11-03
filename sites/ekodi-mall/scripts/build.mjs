@@ -67,6 +67,13 @@ const heroTitle = heroParts.length >= 3
   ? `${esc(heroParts[0])}<br><em>${esc(heroParts[1])}</em><br>${esc(heroParts.slice(2).join(''))}`
   : esc(site.hero.title);
 
+/** 목록용 한 줄 요약: 첫 문장, 최대 46자. 자세한 설명은 상세페이지에서 본다. */
+export function shortSummary(text, max = 46) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  const first = (clean.match(/^.+?[.!?。](?=\s|$)/) || [clean])[0];
+  return first.length > max ? `${first.slice(0, max - 1).trimEnd()}…` : first;
+}
+
 function productCard(product, options = {}) {
   const href = `/products/${product.slug}/`;
   const store = storeMap.get(product.storeId);
@@ -77,7 +84,9 @@ function productCard(product, options = {}) {
   const regionChip = region.label ? `<p class="region-chip">지역 · ${esc(region.label)}${region.verified ? ' · 확인됨' : ''}</p>` : '';
   const heart = options.withHeart === false ? '' : `<button class="heart" data-wish="${esc(product.id)}" aria-label="${esc(product.name)} 관심상품" aria-pressed="false">♡</button>`;
   const storeKicker = store ? `<p class="store-kicker"><a href="/stores/${esc(store.slug)}/">${esc(store.name)}</a></p>` : '';
-  return `<article class="card"${data}><div class="thumb ${esc(product.category)}"><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p>${esc(product.description)}</p>${regionChip}<div class="meta"><span class="status">${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
+  // MALL-LIST-IMAGE-001: 대표이미지(도서 표지·판매자 사진)를 목록에 보이고, 이미지·제목 어디를 눌러도 상세로 간다.
+  const image = product.image ? `<img src="${esc(product.image)}" alt="${esc(product.name)}" loading="lazy" decoding="async">` : '';
+  return `<article class="card"${data}><div class="thumb ${esc(product.category)}${image ? ' has-image' : ''}"><a class="thumb-link" href="${href}" aria-label="${esc(product.name)} 자세히 보기">${image}</a><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p class="card-summary">${esc(shortSummary(product.description))}</p>${regionChip}<div class="meta"><span class="status">${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
 }
 
 function productDetailSections(product, store) {
@@ -187,6 +196,16 @@ const indexHtml = fill(indexTemplate, {
 await rm(dist, { recursive: true, force: true });
 await ensureDir(dist);
 await write('index.html', indexHtml);
+// Operator Seller Studio displays the same publisher-approved bookstore mirror
+// as the Mall storefront. This read-only public projection is not a seller row.
+await write('provider-bookstore.json', JSON.stringify({
+  products: products.filter((p) => p.source?.system === 'ekodi-bookstore').map((p) => ({
+    id: p.id, name: p.name, price: p.price,
+    detailUrl: p.source.detailUrl,
+    saleReady: p.action?.type === 'external' && p.status === '판매 중'
+  }))
+}));
+
 await cp(path.join(root, 'assets'), path.join(dist, 'assets'), { recursive: true });
 await cp(path.join(root, '_headers'), path.join(dist, '_headers'));
 await cp(path.join(root, '_redirects'), path.join(dist, '_redirects'));
@@ -212,8 +231,14 @@ for (const product of products) {
     : product.saleType === 'direct'
       ? '직접판매 상품은 판매자 확인과 결제·주문·정산 시스템 검증 후 에코디몰 결제를 활성화합니다. 현재 판매 준비 상태를 확인해 주세요.'
       : '에코디몰은 상품과 스토어의 관계, 판매 준비 상태를 분리 표시합니다. 가격과 판매 조건이 확정되지 않은 상품은 결제 가능한 상품처럼 표시하지 않습니다.';
+  // Preserve the full indexed title while keeping the visible book heading readable.
+  const hasBookSubtitle = product.category === 'book' && product.name.includes(' — ');
+  const [productHeading, ...subtitleParts] = hasBookSubtitle ? product.name.split(' — ') : [product.name];
+  const productSubtitle = subtitleParts.join(' — ');
   const html = fill(productTemplate, {
     PRODUCT_NAME: esc(product.name),
+    PRODUCT_HEADING: esc(productHeading),
+    PRODUCT_SUBTITLE: productSubtitle ? `<p class="detail-subtitle">${esc(productSubtitle)}</p>` : '',
     PRODUCT_DESCRIPTION: esc(product.description),
     PRODUCT_URL: esc(productUrl),
     PRODUCT_CATEGORY: esc(product.category),

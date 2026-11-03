@@ -188,6 +188,18 @@ test('named highest administrator alone can inspect live trading readiness after
  assert.equal(result.body.broker.liveEligible,false);
  assert.ok(result.body.broker.blockers.includes('READINESS_GLOBAL_LIVE_POLICY_ENABLED'));
  assert.ok(result.body.activation.blockers.includes('platformLiveSwitch'));
+ assert.ok(result.body.activation.blockers.includes('strongMfaAal2'));
+ assert.equal(result.body.activation.eligible,false);
+ assert.equal(result.body.broker.connectionStatus,'disconnected');
+ assert.equal(result.body.broker.readOnlyConnectionVerified,false);
+ assert.equal(result.body.broker.docsUrl,'https://developers.tossinvest.com/docs');
+ const kis=await call('GET','/v1/invest/autopilot/live/readiness?broker=kis');
+ assert.equal(kis.status,200);
+ assert.equal(kis.body.broker.name,'한국투자증권 (KIS Developers)');
+ assert.equal(kis.body.broker.liveEligible,false);
+ assert.equal(kis.body.broker.docsUrl,'https://apiportal.koreainvestment.com/about-howto');
+ assert.ok(kis.body.activation.blockers.includes('strongMfaAal2'));
+ assert.equal(env.DB.sqlite.prepare('SELECT COUNT(*) AS n FROM investment_autopilot_orders').get().n,0);
  assert.equal((await call('GET','/v1/invest/autopilot/live/readiness?broker=unknown')).status,400);
  const blocked=await call('POST','/v1/invest/autopilot/live/orders',{symbol:'069500',side:'BUY',qty:1,limitPrice:10000});
  assert.equal(blocked.status,423);

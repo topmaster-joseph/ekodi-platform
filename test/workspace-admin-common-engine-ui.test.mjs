@@ -29,13 +29,16 @@ test('workspace admin removes duplicate heading chrome and strongly marks active
   assert.match(css, /\.admin-nav-accordion-panel\[hidden\]\{display:none!important\}/);
 });
 
-test('workspace admin separates common and site menus with one-open accordion behavior', async () => {
+test('workspace admin keeps service settings above both independently expandable menu families', async () => {
   const response = workspaceAdminScript();
   const script = await response.text();
-  assert.match(script, /label:'공통 메뉴'/);
-  assert.match(script, /label:'전용 메뉴'/);
-  assert.match(script, /admin-nav-accordion-toggle/);
-  assert.match(script, /otherButton\?\.setAttribute\('aria-expanded',isCurrent\?'true':'false'\)/);
+  assert.match(script, /label:'업무메뉴'/);
+  assert.doesNotMatch(script, /label:'전용메뉴'/);
+  assert.match(script, /settings\.dataset\.adminSection='services'/);
+  assert.match(script, /h\.append\(settings\)/);
+  assert.match(script, /button\.setAttribute\('aria-expanded','true'\)/);
+  assert.match(script, /panel\.hidden=!opening/);
+  assert.doesNotMatch(script, /otherButton\?\.setAttribute\('aria-expanded',isCurrent/);
 });
 
 test('role capability engine keeps lower admin menus scoped', () => {

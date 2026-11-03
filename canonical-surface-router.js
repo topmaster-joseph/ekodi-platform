@@ -43,6 +43,8 @@ function cloneRequest(request,url){
     method:request.method,
     headers:request.headers,
     body:['GET','HEAD'].includes(request.method)?undefined:request.body,
+    // Node and Fetch require duplex when relaying a streamed mutation body.
+    ...(['GET','HEAD'].includes(request.method)?{}:{duplex:'half'}),
     redirect:request.redirect,
   });
 }
@@ -226,6 +228,17 @@ async function serveCanonicalAuth(request,env){
 async function proxyAdminRuntime(request,legacyFetch){
   return proxyLegacySurface(request,legacyFetch,SURFACE_PREFIXES.admin,'admin.ekodi.kr','admin');
 }
+// 영상서재 is served from an external origin under the apex, so it gets a
+// strict policy: no third-party connections, no framing, no plugins.
+const VIDEO_CSP=["default-src 'none'","script-src 'unsafe-inline'","style-src 'unsafe-inline' https://fonts.googleapis.com","font-src https://fonts.gstatic.com","img-src 'self' data: blob:","media-src 'self' blob: https:","connect-src 'none'","frame-ancestors 'none'","base-uri 'none'","form-action 'none'","object-src 'none'"].join('; ');
+function withVideoSecurityHeaders(response){
+  const headers=new Headers(response.headers);
+  if(String(headers.get('content-type')||'').includes('text/html'))headers.set('content-security-policy',VIDEO_CSP);
+  headers.set('x-content-type-options','nosniff');headers.set('referrer-policy','same-origin');
+  headers.set('permissions-policy','camera=(), microphone=(), geolocation=(), payment=()');
+  headers.set('x-ekodi-route','video-library-link');
+  return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
+}
 async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch){
   const upstreamUrl=new URL(request.url);
   let response;
@@ -247,6 +260,10 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     upstreamUrl.hostname=spec.host;upstreamUrl.pathname=stripPrefix(upstreamUrl.pathname,spec.prefix);
     response=await externalFetch(cloneRequest(request,upstreamUrl));
   }else return serviceUnavailable(spec.id);
+  // A WebSocket handshake must preserve Cloudflare's native 101 response and
+  // attached WebSocket. Wrapping it in new Response(body,{status:101}) throws
+  // and breaks first-party /edu QR screen sharing. No 101 is synthesized.
+  if(response.status===101&&response.webSocket)return response;
   const type=String(response.headers.get('content-type')||'').toLowerCase();
   const headers=new Headers(response.headers);let body=response.body;
   if(type.includes('text/html')||type.includes('javascript')||type.includes('text/css')||type.includes('application/json')||type.includes('text/plain')){
@@ -285,12 +302,19 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface){
     const rootRedirect=canonicalExecutionRootRedirect(request,executionSurface);if(rootRedirect)return rootRedirect;
+    // BOOKS-LIBRARY-SLASH-20261102: the Books asset host redirects /library
+    // to /library/, losing the public /books mount if proxied unchanged.
+    // Resolve this canonical document alias before reaching the upstream asset host.
+    if(executionSurface.id==='books'&&path==='/books/library'&&['GET','HEAD'].includes(request.method)){
+      return canonicalSlashRedirect(request,'/books/library');
+    }
     const response=await proxyExecutionSurface(request,env,executionSurface,legacyFetch,externalFetch);
     // Service metadata uses canonical apex URLs. The internal Cloud upstream
     // can no longer identify its service from the legacy host, so attach the
     // existing UI chrome at this canonical boundary without decorating assets
     // or repeating chrome already provided upstream.
     if(executionSurface.id==='cloud'&&typeof HTMLRewriter==='function'&&response.headers.get('x-ekodi-shell')!=='v2')return injectEkodiShell(response,'cloud');
+    if(executionSurface.id==='video')return withVideoSecurityHeaders(response);
     return executionSurface.id==='lab'?injectEkodiTenantReadability(response):response;
   }
   // Reserved Research paths must never fall through to an authenticated workspace
@@ -326,7 +350,7 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     return routed;
   }
   // Privileged tenant-recovery page owns its canonical path before admin shell fallback.
-  if(path==='/admin/site-admins'||path==='/admin/site-admins/'||path==='/site-admin-bootstrap.js'){
+  if(path==='/admin/site-admins'||path==='/admin/site-admins/'||path==='/site-admin-bootstrap.js'||path==='/admin/people'||path==='/admin/people/'||path==='/admin/people/script'){
     if(!['GET','HEAD'].includes(request.method))return new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});
     if(typeof legacyFetch!=='function')return serviceUnavailable('site-admin-bootstrap');
     const response=await legacyFetch(request);

@@ -4,7 +4,11 @@ const COMMON_USER_ACCESS_POLICY = Object.freeze({
   guestMode:'guide-only',
   minimumTier:'free',
   identityProvider:'google',
-  authHub:'https://auth.ekodi.kr/',
+  mandatoryUnifiedAuthOnUserPages:true,
+  publicViewingRequiresLogin:false,
+  exactInitiatingPageReturn:true,
+  memberAndAdminRolesServerVerified:true,
+  authHub:'https://ekodi.kr/auth/',
   enforcedBy:'shared-shell',
 });
 const COMMON_PUBLIC_ACCESS_POLICY = Object.freeze({
@@ -55,7 +59,8 @@ const SERVICES = [
   const ownedSite=ownedCustomerSiteFor(service.id);
   const operatingModel=operatingModelForService(service.id);
   const userAccessPolicy=operatingModel==='customer-site'?null:(service.defaultSurface==='public'?COMMON_PUBLIC_ACCESS_POLICY:COMMON_USER_ACCESS_POLICY);
-  return Object.freeze({...service,operatingModel,userAccessPolicy,tenantSlug:ownedSite?.slug||null,defaultActivityRole:ownedSite?.defaultActivityRole||null,defaultActivityRoleLabel:ownedSite?.defaultActivityRoleLabel||null});
+  const unifiedAuth=Object.freeze({requiredForUserPages:true,entry:'https://ekodi.kr/auth/',showCompactName:true,maxVisibleNameCharacters:12,publicViewingRequiresLogin:false,servicePermissionsServerVerified:true});
+  return Object.freeze({...service,operatingModel,userAccessPolicy,unifiedAuth,tenantSlug:ownedSite?.slug||null,defaultActivityRole:ownedSite?.defaultActivityRole||null,defaultActivityRoleLabel:ownedSite?.defaultActivityRoleLabel||null});
 });
 
 const canonicalPath=value=>{

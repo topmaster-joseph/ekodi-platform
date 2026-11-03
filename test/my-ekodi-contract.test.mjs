@@ -9,8 +9,8 @@ test('My EKODI is a unified private-first USER UI hub, not a second source of tr
   assert.match(html,/EKODI USER AI/);
   assert.match(html,/MY PLATFORMS/);
   assert.match(html,/MY SPACES/);
-  assert.match(html,/내 선택이 우선/);
-  assert.match(html,/공간별 데이터/);
+  assert.match(html,/class="account-privacy-note"/);
+  assert.doesNotMatch(html,/data-account-(?:open|tab|panel)="security"/);
   assert.match(app,/my_dashboard_access_context/);
   assert.match(app,/ACCESS_SNAPSHOT_TTL_MS=5\*60\*1000/);
   assert.match(app,/safe defaults without per-service fan-out/);
@@ -110,7 +110,11 @@ test('My EKODI staging is isolated from production personal data',async()=>{
   assert.match(prod,/DATA_ENABLED = "true"/);
   assert.match(prod,/workers_dev = true/);
   assert.doesNotMatch(prod,/my\.ekodi\.kr/);
-  assert.match(staging,/DATA_ENABLED = "false"/);
+  // Owner decision (2026-11-02, #6739): staging may read the DEVELOPMENT project
+  // only; production project identifiers and secret keys must never appear.
+  assert.match(staging,/DATA_ENABLED = "(true|false)"/);
+  assert.match(staging,/DATA_ENABLED = "false"|SUPABASE_URL = "https:\/\/lxcxwbdwwojjkgybbqii\.supabase\.co"/);
+  assert.doesNotMatch(staging,/renzehysxirjilvdxacv|sb_secret_|service_role/);
   assert.doesNotMatch(staging,/my\.ekodi\.kr/);
   assert.match(worker,/dataEnabled/);
   assert.match(worker,/person-scoped/);
@@ -231,8 +235,11 @@ test('My EKODI approval hub keeps unified visibility and person-scoped decision 
 
 test('My guarded release manifest follows the lazy startup contract',async()=>{
   const manifest=await read('deploy/manifests/my.worker.json');
-  assert.match(manifest,/app\.js\?v=20261009-hash-routing-v2/);
-  assert.match(manifest,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
+  const canonical=JSON.parse(manifest).worker.requests.find(request=>request.url==='https://ekodi.kr/my/');
+  assert.ok(canonical,'canonical My EKODI production request must exist');
+  assert.ok(canonical.expect.includes('app.js?v='),'versioned My JS asset must load');
+  for(const tab of ['profile','identity','sharing','inbox'])assert.ok(canonical.expect.includes('data-public-tab="'+tab+'"'),'missing public detail tab: '+tab);
+  assert.match(manifest,/secondary-feature-loader\.js\?v=20261103-read-guard-v1/);
   assert.doesNotMatch(manifest,/church-marketing-ai\.js\?v=20260827-church-marketing-1/);
   assert.doesNotMatch(manifest,/channel-automation\.js\?v=20260903-channel-automation-1/);
 });
@@ -315,7 +322,7 @@ test('My EKODI provides explicit privacy-first personal character selection',asy
 
 test('My versioned assets use immutable browser caching while runtime data remains uncached',async()=>{
   const [html,worker]=await Promise.all([read('my/index.html'),read('my-worker.js')]);
-  assert.match(html,/app\.js\?v=20261009-hash-routing-v2/);
+  assert.match(html,/app\.js\?v=20261102-public-detail-tabs-v1/);
   assert.match(worker,/searchParams\.has\('v'\)/);
   assert.match(worker,/public, max-age=31536000, immutable/);
   assert.match(worker,/manifest-fallback'[\s\S]{0,220}withVersionedAssetCache\(request/);
@@ -340,7 +347,7 @@ test('Convergent merge dispatches My EKODI production release with the orchestra
 
 test('My EKODI defers secondary feature bundles until after the critical startup path',async()=>{
   const [html,loader]=await Promise.all([read('my/index.html'),read('my/secondary-feature-loader.js')]);
-  assert.match(html,/secondary-feature-loader\.js\?v=20261008-startup-defer-v1/);
+  assert.match(html,/secondary-feature-loader\.js\?v=20261103-read-guard-v1/);
   for(const asset of [
     'public-profile.js','digital-card-admin.js','character-identity.js','approval-brief.js',
     'personal-finance.js','life-communication.js','church-marketing-ai.js','channel-automation.js'
@@ -353,4 +360,19 @@ test('My EKODI defers secondary feature bundles until after the critical startup
   assert.match(loader,/data-finance-open/);
   assert.match(loader,/a\[href="#account"\]/);
   assert.match(loader,/Promise\.allSettled/);
+});
+
+
+test('My EKODI account merges security overview into basic information and preserves authentication',async()=>{
+  const [html,app,css]=await Promise.all([read('my/index.html'),read('my/app.js'),read('my/hub-shell.css')]);
+  assert.match(html,/data-account-open="basic"/);
+  assert.match(html,/로그인 수단 관리/);
+  assert.match(html,/개인정보처리방침/);
+  assert.doesNotMatch(html,/data-account-open="security"/);
+  assert.doesNotMatch(html,/id="accountAuthButton"/);
+  assert.match(app,/if\(tab==='security'\)tab='basic'/);
+  assert.doesNotMatch(app,/accountAuthButton|accountLoginText/);
+  assert.match(app,/\$\('#authButton'\)\.addEventListener\('click',authAction\)/);
+  assert.match(css,/account-basic-profile/);
+  assert.match(css,/details\.personal-ai-policy\{display:block/);
 });

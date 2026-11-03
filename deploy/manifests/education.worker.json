@@ -5,7 +5,7 @@
     "config": "wrangler.education.toml",
     "requests": [
       {
-        "url": "https://edu.ekodi.kr/",
+        "url": "https://ekodi.kr/education/",
         "statuses": [
           200
         ],
@@ -20,7 +20,7 @@
         ]
       },
       {
-        "url": "https://edu.ekodi.kr/admission",
+        "url": "https://ekodi.kr/education/admission",
         "statuses": [
           200
         ],
@@ -32,7 +32,7 @@
         ]
       },
       {
-        "url": "https://edu.ekodi.kr/study",
+        "url": "https://ekodi.kr/education/study",
         "statuses": [
           200
         ],
@@ -44,7 +44,7 @@
         ]
       },
       {
-        "url": "https://edu.ekodi.kr/health",
+        "url": "https://ekodi.kr/education/health",
         "statuses": [
           200
         ],

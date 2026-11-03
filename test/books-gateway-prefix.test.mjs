@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { routeCanonicalSurface } from '../canonical-surface-router.js';
 
-const FILES = ['books/buy/commerce-client.js', 'books/buy/buy.js', 'books/buy/library.js', 'books/buy/result.js'];
+const FILES = ['books/buy/commerce-client.js', 'books/buy/buy.js', 'books/buy/library.js', 'books/buy/result.js', 'books/reader/epub-reader.js', 'books/review/review.js', 'books/reader/audio-player.js', 'books/audio-review/audio-review.js', 'books/orders/orders.js'];
 
 async function throughGateway(path, body, type = 'application/javascript; charset=utf-8') {
   const env = { BOOKS: { fetch: async () => new Response(body, { headers: { 'content-type': type } }) } };
@@ -42,4 +42,30 @@ test('cover/link paths get the /books mount exactly once (gateway may already ha
   assert.equal(mounted.under('https://ekodi.kr/x.png'), 'https://ekodi.kr/x.png');
   const direct = load('/buy/');
   assert.equal(direct.under('/assets/a.svg'), '/assets/a.svg');
+});
+
+// 2026-10-31: book purchase sign-in offers the central EKODI login (any login path),
+// returning to the exact purchase page; the central session is already accepted.
+test('books sign-in offers the central EKODI login and returns to the same page', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const src = await readFile(new URL('../books/buy/commerce-client.js', import.meta.url), 'utf8');
+  if (!/new URL\('https:\/\/ekodi\.kr\/auth\/'\)/.test(src)) throw new Error('central auth entry missing');
+  if (!/searchParams\.set\('return_to', location\.href\)/.test(src)) throw new Error('exact return missing');
+  if (!/host\.append\(centralLoginLink\(\)\)/.test(src)) throw new Error('link not mounted');
+  if (!/CENTRAL_KEY = 'sb-renzehysxirjilvdxacv-auth-token'/.test(src)) throw new Error('central session not read');
+});
+
+// 2026-11-02: 내 서재 — 휴대폰에서 계정은 짧게, 로그아웃 버튼, 운영자 화면이 안 보이는 이유 안내.
+test('library shows a short account, sign-out and server-authorized operator tab without leaking privileged email', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const lib = await readFile(new URL('../books/buy/library.js', import.meta.url), 'utf8');
+  const client = await readFile(new URL('../books/buy/commerce-client.js', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../books/library/index.html', import.meta.url), 'utf8');
+  assert.match(lib, /libraryAccount = friendlyAccount\(data\)/);
+  assert.match(lib, /await C\.signOut\(\); location\.reload\(\);/);
+  assert.doesNotMatch(lib, /운영자 구글 계정\(/);
+  assert.match(lib, /window\.EkodiLibraryTabs\?\.showOperator\(\)/);
+  assert.match(client, /auth\/v1\/logout\?scope=local/);
+  assert.match(client, /localStorage\.removeItem\(CENTRAL_KEY\)/);
+  assert.match(html, /src="\/buy\/library-tabs\.js"/);
 });

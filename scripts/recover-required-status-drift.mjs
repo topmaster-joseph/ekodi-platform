@@ -44,6 +44,18 @@ export function closedPrNoop(pr) {
   return pr?.state === 'closed';
 }
 
+// Draft PRs cannot merge: do not waste API budget polling or generating
+// verified merge-commit statuses that the platform will never consume.
+// The head identity and protected base must still match. On conversion to
+// ready-for-review, the normal strict merge reconciliation remains mandatory.
+export function draftPrNoop(pr, expectedHead) {
+  if (pr?.draft !== true) return false;
+  if (pr.state !== 'open' || pr.base?.ref !== 'main' || pr.head?.sha !== expectedHead) {
+    throw new Error('Draft PR identity or protected base changed during status recovery');
+  }
+  return true;
+}
+
 export function verifiedHeadPr(pr, expectedHead) {
   if (pr?.state !== 'open' || pr?.draft === true || pr?.base?.ref !== 'main')
     throw new Error('PR is no longer eligible for merge status reconciliation');
@@ -135,6 +147,14 @@ async function main() {
   if (closedPrNoop(initialPr)) {
     console.log('[EKODI][REQUIRED-STATUS-RECOVERY] PR #' + pr + ' is closed' +
       (initialPr?.merged ? ' (merged)' : ' (superseded or abandoned)') + '; no merge commit to reconcile');
+    return;
+  }
+  if (draftPrNoop(initialPr, head)) {
+    // This does not grant a merge or forge required statuses. Existing CI
+    // evidence remains visible on the draft head; ready PRs still verify all
+    // required contexts and their currently regenerated merge commit.
+    console.log('[EKODI][REQUIRED-STATUS-RECOVERY] PR #' + pr +
+      ' is a verified draft; skip merge status repair until ready for review');
     return;
   }
   const by = await waitForVerifiedHeadStatus({

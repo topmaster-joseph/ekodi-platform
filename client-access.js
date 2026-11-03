@@ -350,14 +350,9 @@
     head.className = 'section-head client-access-head';
     const heading = document.createElement('div');
     heading.append(text('p', 'USERS · ACCESS CONTROL', 'kicker'), text('h2', '사용자·접근 관리'));
-    heading.append(text('p', '사용자, 사이트 범위, 역할과 인증 상태를 한 화면에서 확인하고 필요한 접근권한만 관리합니다.', 'operations-copy'));
     const refresh = button('↻ 새로고침', 'secondary');
     refresh.id = 'refreshClients';
     head.append(heading, refresh);
-
-    const summary = document.createElement('div');
-    summary.className = 'client-access-summary';
-    summary.id = 'clientAccessSummary';
 
     const sync = document.createElement('div');
     sync.className = 'client-syncbar';
@@ -371,9 +366,22 @@
       const tab = button(label, `client-tab${key === activeTab ? ' active' : ''}`);
       tab.dataset.clientTab = key;
       tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(key === activeTab));
+      tab.tabIndex = key === activeTab ? 0 : -1;
       tab.addEventListener('click', () => setTab(key));
       tabs.append(tab);
     }
+    tabs.addEventListener('keydown', event => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      const items = [...tabs.querySelectorAll('[data-client-tab]')];
+      const index = items.indexOf(document.activeElement);
+      if (index < 0) return;
+      event.preventDefault();
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+        : (index + (event.key === 'ArrowRight' ? 1 : -1) + items.length) % items.length;
+      items[next].focus();
+      items[next].click();
+    });
 
     const toolbar = document.createElement('div');
     toolbar.className = 'client-filterbar';
@@ -412,7 +420,8 @@
       renderActiveTab();
     });
 
-    section.append(head, summary, sync, tabs, toolbar, body);
+    head.append(sync);
+    section.append(head, tabs, toolbar, body);
     content.append(section);
 
     const activateClients = () => {
@@ -429,16 +438,21 @@
 
     navButton.addEventListener('click', activateClients);
     refresh.addEventListener('click', () => loadDirectory(true));
-    return { section, summary, sync, tabs, toolbar, body, search, site, role, status, refresh };
+    return { section, sync, tabs, toolbar, body, search, site, role, status, refresh };
   }
 
   function setTab(tab) {
     if (!TAB_LABELS[tab]) return;
     activeTab = tab;
     bulkSelectedKeys.clear();
-    shell?.tabs.querySelectorAll('[data-client-tab]').forEach(node => node.classList.toggle('active', node.dataset.clientTab === tab));
+    shell?.tabs.querySelectorAll('[data-client-tab]').forEach(node => {
+      const selected = node.dataset.clientTab === tab;
+      node.classList.toggle('active', selected);
+      node.setAttribute('aria-selected', String(selected));
+      node.tabIndex = selected ? 0 : -1;
+    });
     if (tab === 'pending') shell.status.value = 'pre_registered';
-    else if (shell.status.value === 'pre_registered' && tab !== 'members') shell.status.value = '';
+    else if (shell.status.value === 'pre_registered') shell.status.value = '';
     renderActiveTab();
   }
 
@@ -457,23 +471,18 @@
   function renderSummary() {
     if (!shell) return;
     const members = loaded ? userMembers() : [];
-    const uniqueAccounts = loaded ? new Set(members.map(member => String(member.email || '').trim().toLowerCase()).filter(Boolean)).size : '—';
-    const active = loaded ? members.filter(member => member.status === 'active').length : '—';
-    const pending = loaded ? members.filter(member => member.status === 'pre_registered').length : '—';
-    const disabled = loaded ? members.filter(member => member.status === 'disabled').length : 0;
-    const expired = loaded ? members.filter(member => member.status === 'expired').length : 0;
-    const disabledExpired = loaded ? disabled + expired : '—';
-    shell.summary.replaceChildren();
-    const cards = [
-      ['전체 계정', uniqueAccounts, '현재 사용자 역할 범위의 중복 이메일 제거 계정'],
-      ['활성', active, '현재 인증되어 사용할 수 있는 사용자 멤버십'],
-      ['인증 대기', pending, 'Google 인증이 아직 완료되지 않은 사용자 멤버십'],
-      ['중지·만료', disabledExpired, loaded ? `중지 ${disabled} · 만료 ${expired}` : '권한 확인 후 표시'],
-    ];
-    for (const [label, cardValue, note] of cards) {
-      const card = document.createElement('article');
-      card.append(text('small', label), text('strong', String(cardValue)), text('span', note));
-      shell.summary.append(card);
+    const counts = {
+      members: members.length,
+      sites: directory.tenants.length,
+      pending: members.filter(member => member.status === 'pre_registered').length,
+      roles: directory.roles.filter(item => USER_ROLE_SET.has(item.role)).length,
+    };
+    for (const tab of shell.tabs.querySelectorAll('[data-client-tab]')) {
+      const key = tab.dataset.clientTab;
+      const label = TAB_LABELS[key];
+      const count = loaded ? counts[key] : null;
+      tab.textContent = count == null ? label : `${label} ${count}`;
+      tab.setAttribute('aria-label', count == null ? label : `${label} ${count}건`);
     }
   }
 

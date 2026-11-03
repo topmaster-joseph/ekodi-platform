@@ -108,7 +108,7 @@ test('a domain permission cannot authorize a tenant subpath or an unverified pro
 test('Google API denial and quota errors are redacted and never retried automatically',async()=>{
   for(const [status,expected] of [[403,'google_access_denied'],[429,'quota_limited']]){
     const {fetchImpl,calls}=fakeGoogle({status});
-    const out=await googleSearchConsoleReadOnly({env,site:domain,fetchImpl,cryptoImpl:webcrypto});
+    const out=await googleSearchConsoleReadOnly({env,site:domain,now:new Date('2026-10-30T01:00:00Z'),fetchImpl,cryptoImpl:webcrypto});
     assert.equal(out.state,expected);
     assert.equal(out.metrics,undefined);
     assert.equal(calls.filter(x=>x.url.includes('searchAnalytics')).length,1);

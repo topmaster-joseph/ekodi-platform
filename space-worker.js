@@ -5,7 +5,9 @@ import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
 import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
+import { renderBnslovePublicPage, bnslovePublicCss } from './bnslove-public-page.js';
 import { isMnuBizWorkspaceSlug, renderMnuBizPublicPage, mnubizPublicCss } from './mnubiz-public-page.js';
+import { isMnuBizSuncheonPath, renderMnuBizSuncheonPage } from './mnubiz-suncheon-page.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 
 const EKODIMISSION_PREFIX='/ekodimission';
@@ -24,7 +26,7 @@ const MISSION_TRIP_COLLAB_PATH='/ekodimission/edit/261003-autumn-trip';
 const MISSION_COLLAB_API='/ekodimission/api/collab';
 const MISSION_ADMIN_ACTIVITY_RPC_API='/ekodimission/api/admin/activity-rpc';
 const MISSION_ADMIN_ME_API='/ekodimission/api/admin/me';
-const MISSION_ADMIN_ACTIVITY_RPCS=new Set(['activity_admin_snapshot','activity_admin_update_participation','activity_admin_add_participant','activity_admin_share_status','activity_admin_create_share','activity_admin_revoke_share','activity_admin_upsert_media_link','activity_admin_hide_media_link','activity_admin_payment_snapshot','activity_admin_update_payment','activity_admin_message_recipients','activity_admin_record_message','activity_admin_message_history']);
+const MISSION_ADMIN_ACTIVITY_RPCS=new Set(['activity_admin_snapshot','activity_admin_update_participation','activity_admin_add_participant','activity_admin_share_status','activity_admin_create_share','activity_admin_revoke_share','activity_admin_upsert_media_link','activity_admin_hide_media_link','activity_admin_payment_snapshot','activity_admin_update_payment','activity_admin_message_recipients','activity_admin_record_message','activity_admin_message_history','ekodi_points_operator_award_attendance']);
 const MISSION_SHARE_PATH_RE=/^\/ekodimission\/share\/([A-Za-z0-9_-]{32,200})$/;
 const MISSION_ACTIVITY_ARCHIVE_RE=/^\/ekodimission\/activities\/([a-z0-9-]+)\/archive$/;
 const MISSION_ACTIVITY_MEDIA_RE=/^\/ekodimission\/api\/activities\/([a-z0-9-]+)\/media$/;
@@ -454,7 +456,7 @@ async function submitMissionEventApplication(request,env,eventKey=MISSION_EVENT_
   }catch{return json(env,{ok:false,error:'application_unavailable',message:'신청을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.'},503)}
 }
 async function publicSiteChrome(slug){
-  try{const r=await fetch(`https://workspace-api.ekodi.kr/v1/site-chrome/public?subject_key=${encodeURIComponent(slug)}`,{headers:{accept:'application/json'},signal:AbortSignal.timeout(5000)});if(!r.ok)return null;const data=await r.json().catch(()=>null);return data&&typeof data==='object'?data:null}catch{return null}
+  try{const r=await fetch(`https://ekodi.kr/workspace-api/v1/site-chrome/public?subject_key=${encodeURIComponent(slug)}`,{headers:{accept:'application/json'},signal:AbortSignal.timeout(5000)});if(!r.ok)return null;const data=await r.json().catch(()=>null);return data&&typeof data==='object'?data:null}catch{return null}
 }
 async function publicStorefront(slug,env){
   if(env.DATA_ENABLED!=='true'||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY)return null;
@@ -535,6 +537,20 @@ export default{
     if(url.pathname==='/jadam-storefront.css'||url.pathname==='/_ekodi/space/jadam-storefront.css')return withHeaders(env,jadamStorefrontCss(),'storefront-asset');
     if(url.pathname==='/restaurant-storefront.css'||url.pathname==='/_ekodi/space/restaurant-storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/mnubiz/assets/site.css')return withHeaders(env,mnubizPublicCss(),'mnubiz-asset');
+
+    if(['GET','HEAD'].includes(request.method)&&isMnuBizSuncheonPath(url.pathname)){
+      return injectEkodiShell(withHeaders(env,renderMnuBizSuncheonPage(url.pathname),'mnubiz-suncheon-page'),'community','public',{existingHeader:true});
+    }
+    if(['GET','HEAD'].includes(request.method)&&['/mnubiz/seminars/suncheon-2026/style.css','/mnubiz/seminars/suncheon-2026/client.js'].includes(url.pathname)){
+      if(!env?.ASSETS?.fetch)return new Response('Asset service unavailable',{status:503,headers:{'cache-control':'no-store'}});
+      const asset=await env.ASSETS.fetch(request);
+      const out=withHeaders(env,asset,'mnubiz-suncheon-asset');
+      out.headers.set('x-content-type-options','nosniff');
+      if(url.pathname.endsWith('/client.js'))out.headers.set('cache-control','no-store');
+      return out;
+    }
+
+    if(url.pathname==='/bnslove/site.css'&&['GET','HEAD'].includes(request.method))return withHeaders(env,bnslovePublicCss(),'bnslove-asset');
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/?route=workspace&source=space',307);
     if(url.pathname==='/auth/start'){
       if(!['GET','HEAD'].includes(request.method))return json(env,{error:'method_not_allowed'},405);
@@ -559,6 +575,9 @@ export default{
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-alias':`${requested}->${resolved.canonicalSlug}`}});
       }
       if(resolved.status==='paused')return withHeaders(env,new Response('<!doctype html><html lang="ko"><meta charset="utf-8"><title>사용자 사이트 일시중지 · EKODI</title><body><main><h1>사용자 사이트가 일시중지되었습니다.</h1><p>운영공간 관리자 설정에서 다시 활성화할 수 있습니다.</p></main></body></html>',{status:404,headers:{'content-type':'text/html; charset=utf-8'}}),'space-paused');
+      if(requested==='bnslove'&&!workspaceRoute?.service){
+        return withHeaders(env,renderBnslovePublicPage(),'space-organization');
+      }
       if(isMnuBizWorkspaceSlug(requested)&&workspaceRoute?.service==='community'){
         const target=new URL('/community/', 'https://ekodi.kr');target.searchParams.set('workspace','mnubiz');
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-workspace-service':'mnubiz/community'}});

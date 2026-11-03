@@ -30,6 +30,10 @@ async function jsonFetch(url,{token='',method='GET',body,headers={}}={}){
     const error=new Error(`HTTP_${response.status}`);
     error.status=response.status;
     error.payload=data;
+    // Which call failed, so a provider outage is diagnosable without raw logs.
+    // Host and path only: a query string can carry a page cursor or a token, and
+    // this value ends up in a public run annotation.
+    try{const target=new URL(url);error.endpoint=`${target.host}${target.pathname}`}catch{error.endpoint=''}
     throw error;
   }
   return data;
@@ -273,21 +277,77 @@ ON CONFLICT(provider,metric,period_start) DO UPDATE SET observed_value=excluded.
   return lines.join('\n');
 }
 
-export async function collectAll(env=process.env){
+export function describeCollectorError(error){
+  const status=Number(error?.status)||0;
+  const message=String(error?.message??error??'unknown').slice(0,200);
+  const endpoint=String(error?.endpoint??'').slice(0,160);
+  const detail=status?`${message} (HTTP ${status})`:message;
+  // `github telemetry unavailable: HTTP_500` named the provider but not the call.
+  // GitHub's three endpoints fail for different reasons — one of them paginates
+  // through every artifact in the repository — so the endpoint is the difference
+  // between knowing and guessing.
+  return endpoint?`${detail} at ${endpoint}`:detail;
+}
+
+/**
+ * One provider's bad day must not blind the whole dashboard.
+ *
+ * This was Promise.all, so a single rejection — an HTTP 500 from any provider —
+ * rejected the collection, wrote no SQL, and left provider_quota_snapshots
+ * frozen. That is how the free-tier dashboard went dark from 2026-10-14: the
+ * daily lane failed every night with nothing but `HTTP_500` to show, the error
+ * naming neither the provider nor the status, and the platform ran seventeen
+ * days without a reading of its own limits.
+ *
+ * Each provider now settles on its own: what answered is recorded, what failed
+ * is named. Completeness is judged where it belongs — the 26-hour staleness
+ * assertion in evaluate-free-tier-resource-proof.mjs turns a provider that keeps
+ * failing into a red lane, so a partial collection is visible without discarding
+ * the readings that did arrive. Collect what you can; judge separately.
+ */
+async function settleProvider(provider,promise,fallback){
+  try{
+    return await promise;
+  }catch(error){
+    const detail=describeCollectorError(error);
+    console.error(`[free-tier-resource-collector] ${provider} telemetry failed: ${detail}`);
+    // Readable from the run API even when raw job logs are unavailable.
+    if(process.env.GITHUB_ACTIONS){
+      console.log(`::warning title=${provider} telemetry unavailable::${detail.replace(/[\r\n]+/g,' ')}`);
+    }
+    return {...fallback,available:false,reason:'collector_error',error:detail,snapshots:[]};
+  }
+}
+
+export async function collectAll(env=process.env,{
+  fetchJson=jsonFetch,
+  loadCloudflare=loadCloudflareQuotaSnapshot,
+  loadOidcConfig=loadSupabaseOidcConfig,
+}={}){
   const observedAt=nowIso();
-  const githubPromise=collectGitHub({repository:env.GITHUB_REPOSITORY,token:env.GITHUB_TOKEN||'',observedAt});
-  const cloudflarePromise=loadCloudflareQuotaSnapshot(env.CLOUDFLARE_QUOTA_REPORT||'');
+  const githubPromise=collectGitHub({repository:env.GITHUB_REPOSITORY,token:env.GITHUB_TOKEN||'',fetchJson,observedAt});
+  const cloudflarePromise=loadCloudflare(env.CLOUDFLARE_QUOTA_REPORT||'');
   let supabasePromise;
   if(env.SUPABASE_ACCESS_TOKEN){
-    supabasePromise=collectSupabase({token:env.SUPABASE_ACCESS_TOKEN,observedAt}).then(result=>({...result,mode:'management_api'}));
+    supabasePromise=collectSupabase({token:env.SUPABASE_ACCESS_TOKEN,fetchJson,observedAt}).then(result=>({...result,mode:'management_api'}));
   }else if(env.SUPABASE_OIDC_TOKEN){
-    supabasePromise=loadSupabaseOidcConfig(env.SUPABASE_OIDC_CONFIG||DEFAULT_SUPABASE_OIDC_CONFIG)
-      .then(config=>collectSupabaseOidc({token:env.SUPABASE_OIDC_TOKEN,config,observedAt}));
+    supabasePromise=loadOidcConfig(env.SUPABASE_OIDC_CONFIG||DEFAULT_SUPABASE_OIDC_CONFIG)
+      .then(config=>collectSupabaseOidc({token:env.SUPABASE_OIDC_TOKEN,config,fetchJson,observedAt}));
   }else{
     supabasePromise=Promise.resolve({available:false,reason:'credential_missing',mode:'none',snapshots:[],freeOrganizations:[],activeProjects:[],projects:[],errors:[]});
   }
-  const [supabase,github,cloudflare]=await Promise.all([supabasePromise,githubPromise,cloudflarePromise]);
-  return {observedAt,cloudflare,supabase,github,snapshots:[...cloudflare.snapshots,...supabase.snapshots,...github.snapshots]};
+  const [supabase,github,cloudflare]=await Promise.all([
+    settleProvider('supabase',supabasePromise,{mode:'none',freeOrganizations:[],activeProjects:[],projects:[],errors:[]}),
+    settleProvider('github',githubPromise,{repository:String(env.GITHUB_REPOSITORY||'')}),
+    settleProvider('cloudflare',cloudflarePromise,{reportState:'unavailable'}),
+  ]);
+  const failedProviders=[['supabase',supabase],['github',github],['cloudflare',cloudflare]]
+    .filter(([,result])=>result.reason==='collector_error')
+    .map(([provider,result])=>({provider,error:result.error}));
+  return {
+    observedAt,cloudflare,supabase,github,failedProviders,
+    snapshots:[...cloudflare.snapshots,...supabase.snapshots,...github.snapshots],
+  };
 }
 
 async function main(){
@@ -300,7 +360,13 @@ async function main(){
     cloudflare:{available:result.cloudflare.available,reason:result.cloudflare.reason,state:result.cloudflare.reportState||'unknown',snapshots:result.cloudflare.snapshots.length},
     supabase:{available:result.supabase.available,reason:result.supabase.reason,mode:result.supabase.mode||'management_api',freeOrganizations:(result.supabase.freeOrganizations||[]).length,activeProjects:(result.supabase.activeProjects||[]).length,projects:(result.supabase.projects||[]).length,snapshots:result.supabase.snapshots.length},
     github:{repository:result.github.repository,snapshots:result.github.snapshots.length},
+    failedProviders:result.failedProviders,
   })+'\n');
+  // A partial reading is written and kept; a total blackout is still loud here,
+  // rather than leaving the lane green over an empty file.
+  if(!result.snapshots.length){
+    throw new Error(`NO_PROVIDER_TELEMETRY_COLLECTED: ${result.failedProviders.map(item=>`${item.provider}=${item.error}`).join('; ')||'no provider returned a measurement'}`);
+  }
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){

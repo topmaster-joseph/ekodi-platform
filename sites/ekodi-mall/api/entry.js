@@ -70,7 +70,7 @@ export function trustedSource(sourceType = '') { return sourceType === 'direct' 
 
 const PUBLIC_SELECT = `SELECT p.id,p.share_code,p.public_url,p.seller_type,p.seller_display_name,p.sale_type,p.category,p.name,p.audience,p.one_line,p.price,
   p.benefits_json,p.specs_json,p.story,p.fulfillment,p.contact,p.affiliate_url,p.checkout_ready,p.published_at,p.store_id,
-  p.primary_region_id,p.region_ids_json,p.region_label,p.local_relationship,p.region_verified,
+  p.primary_region_id,p.region_ids_json,p.region_label,p.local_relationship,p.region_verified,p.images_json,
   s.name AS store_name,s.slug AS store_slug,s.verification_status AS store_verification_status
   FROM products p LEFT JOIN stores s ON s.id=p.store_id`;
 
@@ -87,6 +87,8 @@ function publicProduct(row) {
       benefits: parseJson(row.benefits_json), specs: parseJson(row.specs_json), story: row.story || '', fulfillment: row.fulfillment || '',
       contact: row.contact || '', affiliateUrl: row.sale_type === 'affiliate' ? row.affiliate_url || '' : ''
     }),
+    // MALL-LIST-IMAGE-001: 판매자가 올린 첫 사진을 목록 대표이미지로 쓴다(없으면 빈 값 — 이미지를 만들어내지 않음).
+    image: (row.images_json ? publicImages(row.images_json, null)[0]?.url : '') || '',
     businessStoreVerified: verifiedBusinessStore,
     checkoutReady: Boolean(row.checkout_ready) && (row.seller_type !== 'business' || verifiedBusinessStore),
     paymentsEnabled: false,
@@ -113,9 +115,12 @@ export async function listProductIndex(env, limitValue) {
   return (rows.results || []).map((r) => ({ shareCode: r.share_code, product: maskPublicProductFields({ name: r.name, oneLine: r.one_line || '' }), publishedAt: r.published_at, updatedAt: r.updated_at }));
 }
 
-async function listPublicProducts(env, limitValue) {
-  const limit = Math.max(1, Math.min(48, Math.trunc(Number(limitValue) || 24)));
-  const result = await env.DB.prepare(`${PUBLIC_SELECT} WHERE p.status='published' ORDER BY p.published_at DESC LIMIT ?`).bind(limit).all();
+async function listPublicProducts(env, limitValue, offsetValue = 0, categoryValue = '') {
+  const limit = Math.max(1, Math.min(60, Math.trunc(Number(limitValue) || 24)));
+  const offset = Math.max(0, Math.min(2000, Math.trunc(Number(offsetValue) || 0)));
+  const requested = String(categoryValue || '').trim();
+  const category = ['general','living','book','gift'].includes(requested) ? requested : '';
+  const result = await env.DB.prepare(`${PUBLIC_SELECT} WHERE p.status='published' AND (?='' OR p.category=?) ORDER BY p.published_at DESC,p.id DESC LIMIT ? OFFSET ?`).bind(category, category, limit, offset).all();
   return (result.results || []).map(publicProduct);
 }
 
@@ -189,8 +194,16 @@ export default {
     if (origin && !origins(env).has(origin)) return reply({ error:'허용되지 않은 요청입니다.' },403,origin,env);
     const url = new URL(request.url);
 
-    if (request.method === 'GET' && url.pathname === '/health') {
-      const coreResponse = await core.fetch(request, env);
+    // The apex Mall gateway preserves /api/* paths; reuse the public health
+    // contract there without falling through to seller authentication.
+    if (url.pathname === '/api/public/health' && request.method !== 'GET') {
+      const response = reply({ error:'Method not allowed' },405,origin,env);
+      response.headers.set('allow','GET');
+      return response;
+    }
+    if (request.method === 'GET' && ['/health','/api/public/health'].includes(url.pathname)) {
+      const healthRequest = url.pathname === '/health' ? request : new Request(new URL('/health',url),request);
+      const coreResponse = await core.fetch(healthRequest, env);
       const coreBody = await coreResponse.clone().json().catch(() => ({}));
       const firstTouchReady = Boolean(env.DB) && await attributionSchemaReady(env);
       const sourcingReady = Boolean(env.DB) && await sourcingSchemaReady(env);
@@ -233,7 +246,7 @@ export default {
     }
     if (request.method === 'GET' && url.pathname === '/api/public/products') {
       if (!env.DB) return reply({ error:'Mall 전용 데이터베이스 연결이 없습니다.' },503,origin,env);
-      return reply({ products:await listPublicProducts(env,url.searchParams.get('limit')) },200,origin,env);
+      return reply({ products:await listPublicProducts(env,url.searchParams.get('limit'),url.searchParams.get('offset'),url.searchParams.get('category')) },200,origin,env);
     }
     if (request.method === 'GET' && url.pathname === '/api/public/fees') return reply({ individual:FEE_RATES,businessStore:10,pgIncluded:true,vatIncluded:true,proAiSubscriptionSeparate:true,attributionWindowDays:ATTRIBUTION_WINDOW_DAYS,serverAuthoritative:true },200,origin,env);
     if (request.method === 'POST' && url.pathname === '/api/public/attribution/visit') {

@@ -62,7 +62,24 @@ export function inferTaskTraits(task={}){
   const research=!code&&(/\b(research|analyse|analyze|compare|evidence|literature|study)\b/.test(text)||/연구|분석|비교|근거|문헌|조사/.test(text));
   const writing=!code&&!research&&(/\b(write|draft|rewrite|translate|email|document|copy)\b/.test(text)||/작성|초안|번역|이메일|문서|문구|글쓰기/.test(text));
   const category=code?'code':research?'analysis':writing?'writing':'general';
-  return Object.freeze({category,code,research,writing,latencyTargetMs:code?120000:30000});
+  const image=/\b(image|picture|illustration|logo|poster|thumbnail|dall-?e)\b/.test(text)||/이미지|그림|사진 ?생성|일러스트|로고|포스터|썸네일/.test(text);
+  const brainstorm=!code&&(/\b(brainstorm|ideas?|naming|slogan)\b/.test(text)||/브레인스토밍|아이디어|이름 ?짓|네이밍|슬로건/.test(text));
+  return Object.freeze({category,code,research,writing,image,brainstorm,latencyTargetMs:code?120000:30000});
+}
+
+// AI-ROUTE-FAMILY-001: advisory "which assistant fits" verdict for a user request.
+// Advisory only — it never invokes a provider; paid lanes stay governed by AI-COST-001.
+const FAMILY_LANES=Object.freeze({
+  chatgpt:Object.freeze(['node:codex','worker:chatgpt','openai-api']),
+  claude:Object.freeze(['node:claude-code','worker:claude','anthropic-api']),
+});
+export function recommendModelFamily(task={}){
+  const traits=inferTaskTraits(task);
+  let family='claude',reason='file/code/long-document/judgment work';
+  if(traits.image){family='chatgpt';reason='image generation';}
+  else if(traits.brainstorm){family='chatgpt';reason='free-form brainstorming';}
+  else if(traits.code||traits.research||traits.writing){family='claude';reason=traits.code?'code and repository work':traits.research?'analysis with evidence':'document drafting';}
+  return Object.freeze({policyId:'AI-ROUTE-FAMILY-001',family,reason,category:traits.category,preferredLanes:FAMILY_LANES[family],advisoryOnly:true});
 }
 
 function baseProfile(providerId){

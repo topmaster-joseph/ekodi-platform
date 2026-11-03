@@ -40,6 +40,8 @@ The first release supports Windows only. Android Enterprise and Apple MDM are de
 | `lock.resume_on` | Re-enables sign-in requirement on resume |
 | `autologon.open` | Opens the local Sysinternals Autologon UI; no password crosses the API |
 
+**Windows AutoLogon admin tool:** From `https://ekodi.kr/admin`, choose **운영·안정성 → 실행 인프라 → PC 자동 로그인** (canonical route: `/admin/ops/devices/autologon`). This platform-super-admin-only detail lists enrolled Windows PCs and lets an operator open the Microsoft Sysinternals UI only on a currently online managed PC. The command requires explicit confirmation and an audit record. Disabled/offline/portable or non-PC records are not automatically modified; the browser neither accepts nor transmits Windows credentials. Opening the local dialog is not proof that auto sign-in was enabled or that a restart was verified.
+
 Before the first power or resume-lock modification, the Agent exports the active Windows power scheme to `%ProgramData%\EKODI\DeviceAgent\power-before-ekodi.pow`.
 
 ## Transactional Windows Agent install and upgrade

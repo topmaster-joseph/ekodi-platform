@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildFleetStatus, renderFleetStatusHtml, EKODI_FLEET_STATUS } from '../ekodi-fleet-status.js';
+import { buildFleetStatus, projectLiveFleetRegistry, renderFleetStatusHtml, EKODI_FLEET_STATUS } from '../ekodi-fleet-status.js';
+import ecosystemServices from '../config/ecosystem-services.json' with { type: 'json' };
+import { readFile } from 'node:fs/promises';
 
 const NOW = '2026-10-21T00:00:00.000Z';
 const fresh = '2026-10-21T00:00:00.000Z';
@@ -14,6 +16,46 @@ test('empty input remains frozen but cannot report a healthy fleet without evide
   assert.equal(m.overall.label, '부분 관측');
   assert.equal(Object.isFrozen(m), true);
   assert.equal(Object.isFrozen(m.services), true);
+});
+
+test('canonical registry projects only distinct production-verified live services', () => {
+  const visible = projectLiveFleetRegistry([
+    { id: 'church', name: 'Church', url: 'https://ekodi.kr/ekodichurch', status: 'live', productionVerified: true },
+    { id: 'church', name: 'Duplicate', status: 'live', productionVerified: true },
+    { id: 'preparing', status: 'preparing', productionVerified: true },
+    { id: 'beta', status: 'beta', productionVerified: true },
+    { id: 'unverified', status: 'live', productionVerified: false },
+    { id: '', status: 'live', productionVerified: true },
+  ]);
+  assert.deepEqual(visible, [{
+    id: 'church', name: 'Church', url: 'https://ekodi.kr/ekodichurch', status: 'live',
+  }]);
+});
+
+test('registered live service without monitoring appears as a blind spot', () => {
+  const visible = projectLiveFleetRegistry([
+    { id: 'church', name: 'Church', status: 'live', productionVerified: true },
+    { id: 'mall', name: 'Mall', status: 'live', productionVerified: true },
+    { id: 'planned', status: 'preparing', productionVerified: false },
+  ]);
+  const model = buildFleetStatus({
+    now: NOW, registryServices: visible,
+    latestChecks: [{ service_id: 'church', status: 'online', checked_at: fresh }],
+  });
+  assert.deepEqual(model.blindSpots.unmonitored, ['mall']);
+  assert.equal(model.overall.health, 'partial');
+  assert.equal(model.overall.counts.total, 2);
+  assert.equal(model.services.some(x => x.id === 'planned'), false);
+});
+
+test('protected fleet route uses actual canonical service registry', async () => {
+  const source = await readFile(new URL('../ai-command-control.js', import.meta.url), 'utf8');
+  assert.match(source, /import ecosystemServices from '\.\/config\/ecosystem-services\.json' with/);
+  assert.match(source, /registryServices: projectLiveFleetRegistry\(ecosystemServices\.services\)/);
+  const live = projectLiveFleetRegistry(ecosystemServices.services);
+  assert.ok(live.some(x => x.id === 'church'));
+  assert.ok(live.every(x => x.status === 'live'));
+  assert.ok(live.every(x => x.id && x.name));
 });
 
 test('online latest checks roll up to healthy', () => {

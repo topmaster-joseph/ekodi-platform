@@ -133,6 +133,10 @@ export function lanesForChangedFiles(root,changedFiles,{workers=listProductionWo
     const closure=bundleClosure(root,worker.main,cache);
     const touched=[...closure].filter(file=>changed.has(file));
     if(changed.has(worker.config))touched.push(worker.config);
+    // A guarded release script may be outside the bundled Worker import graph.
+    // Only explicit exact-path dependencies can activate the corresponding lane.
+    const watchFiles=lanes[worker.config]?.watch_files;
+    if(Array.isArray(watchFiles))for(const file of watchFiles)if(changed.has(file))touched.push(file);
     if(worker.assets)for(const file of changed)if(file.startsWith(worker.assets+'/'))touched.push(file);
     const laneWorkflow=lanes[worker.config]?.workflow;
     if(laneWorkflow&&changed.has('.github/workflows/'+laneWorkflow))touched.push('.github/workflows/'+laneWorkflow);
@@ -209,6 +213,14 @@ export function validateWorkerLanes(root){
   for(const worker of workers){
     const lane=lanes[worker.config];
     if(!lane){errors.push(`${worker.config} (${worker.name}) has no entry in ${WORKER_LANES_FILE}`);continue}
+    if(lane.watch_files!==undefined){
+      if(!Array.isArray(lane.watch_files)||lane.watch_files.length===0){
+        errors.push(worker.config+' watch_files must be a nonempty array of exact paths');
+      }else for(const file of lane.watch_files){
+        if(typeof file!=='string'||!file||file.startsWith('/')||file.includes('\\')||file.split('/').includes('..')||file.includes('*')||!fs.existsSync(path.join(root,file)))
+          errors.push(worker.config+' watch_files must contain existing repo-relative exact file paths');
+      }
+    }
     if(lane.excluded){
       if(String(lane.excluded).trim().length<12)errors.push(`${worker.config} exclusion needs a reason`);
       continue;

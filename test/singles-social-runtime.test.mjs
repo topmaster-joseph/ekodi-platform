@@ -246,36 +246,44 @@ test('paid model: free members cannot request, accept, or save a profile',()=>wi
  res=await handleSinglesSocial(new Request('https://ekodi.kr/discover'),'/discover',admin,uid,reply);
  assert.equal(res.status,402);
 }));
-test('paid model: message and contact requests reserve through the atomic DB function',()=>withPaid(async()=>{
- for(const [kind,fee] of [[undefined,10000],['contact',75000]]){
-  const admin=rpcBy(db(),{...PAID,singles_paid_request_create:p=>({data:{request_id:id,fee_krw:fee,kind:p.p_kind},error:null})});
+test('postpaid: requests are created without any payment; the fee is only announced',()=>withPaid(async()=>{
+ for(const [kind,fee] of [[undefined,15000],['contact',112000]]){
+  const admin=rpcBy(db(),{...PAID,singles_postpaid_request_create:p=>({data:{request_id:id,fee_krw:fee,kind:p.p_kind},error:null})});
   const res=await handleSinglesSocial(paidReq(kind),'/interests/'+other,admin,uid,reply);
   assert.equal(res.status,200);const body=await res.json();
-  assert.equal(body.billing.reserved_krw,fee);assert.equal(body.billing.charged_on,'acceptance');
-  assert.deepEqual(admin.calls.find(c=>c.name==='singles_paid_request_create').params,{p_requester:uid,p_responder:other,p_kind:kind||'message'});
+  assert.deepEqual(body.billing,{fee_krw:fee,charged_on:'acceptance_invoice'});
+  assert.deepEqual(admin.calls.find(c=>c.name==='singles_postpaid_request_create').params,{p_requester:uid,p_responder:other,p_kind:kind||'message'});
+  assert.ok(!admin.calls.some(c=>/paid_request_create$/.test(c.name)&&c.name!=='singles_postpaid_request_create'),'no prepaid reservation');
   assert.equal(admin.writes.filter(w=>w.name==='singles_interests').length,0,'no direct interest insert');
  }
  const bad=await handleSinglesSocial(paidReq('marriage'),'/interests/'+other,rpcBy(db(),PAID),uid,reply);
  assert.equal(bad.status,400);
 }));
-test('paid model: insufficient credit returns 402 with the needed amount',()=>withPaid(async()=>{
- const admin=rpcBy(db(),{...PAID,singles_paid_request_create:{data:null,error:{message:'insufficient_credit:100000'}}});
- const res=await handleSinglesSocial(paidReq('contact'),'/interests/'+other,admin,uid,reply);
- assert.equal(res.status,402);assert.deepEqual(await res.json(),{error:'credit_required',fee_krw:100000});
+test('postpaid: duplicate or already-connected requests are refused without charging',()=>withPaid(async()=>{
+ for(const code of ['request_exists','already_connected','contact_already_shared']){
+  const admin=rpcBy(db(),{...PAID,singles_postpaid_request_create:{data:null,error:{message:code}}});
+  const res=await handleSinglesSocial(paidReq('contact'),'/interests/'+other,admin,uid,reply);
+  assert.equal(res.status,409);assert.equal((await res.json()).error,code);
+ }
 }));
-test('paid model: accepting charges the responder through the DB function; short balance is 402',()=>withPaid(async()=>{
+test('postpaid: accepting issues invoices through the DB function; nothing is connected yet',()=>withPaid(async()=>{
  const pending={requester_id:other,status:'pending'};
- let admin=rpcBy(db({extra:{singles_paid_requests:pending}}),{...PAID,singles_paid_request_decide:p=>({data:{status:p.p_decision,fee_krw:50000,interest_id:id,kind:'contact'},error:null})});
+ let admin=rpcBy(db({extra:{singles_paid_requests:pending}}),{...PAID,singles_postpaid_request_decide:p=>({data:{status:'awaiting_payment',fee_krw:75000,invoice_id:id,kind:'contact'},error:null})});
  let res=await handleSinglesSocial(respondReq('accepted'),'/requests/'+id+'/respond',admin,uid,reply);
- assert.equal(res.status,200);assert.equal((await res.json()).billing.charged_krw,50000);
- assert.deepEqual(admin.calls.find(c=>c.name==='singles_paid_request_decide').params,{p_responder:uid,p_request:id,p_decision:'accepted'});
+ assert.equal(res.status,200);const body=await res.json();
+ assert.equal(body.status,'awaiting_payment');assert.deepEqual(body.billing,{invoice_id:id,fee_krw:75000,due_days:7});
+ assert.deepEqual(admin.calls.find(c=>c.name==='singles_postpaid_request_decide').params,{p_responder:uid,p_request:id,p_decision:'accepted'});
  assert.equal(admin.writes.length,0,'no direct status write');
- admin=rpcBy(db({extra:{singles_paid_requests:pending}}),{...PAID,singles_paid_request_decide:{data:null,error:{message:'responder_insufficient_credit:30000'}}});
+ admin=rpcBy(db({extra:{singles_paid_requests:pending}}),{...FREE,singles_postpaid_request_decide:{data:null,error:{message:'paid_membership_required'}}});
  res=await handleSinglesSocial(respondReq('accepted'),'/requests/'+id+'/respond',admin,uid,reply);
- assert.equal(res.status,402);assert.deepEqual(await res.json(),{error:'credit_required',fee_krw:30000});
- admin=rpcBy(db({extra:{singles_paid_requests:{requester_id:other,status:'accepted'}}}),PAID);
+ assert.equal(res.status,402);
+ admin=rpcBy(db({extra:{singles_paid_requests:{requester_id:other,status:'awaiting_payment'}}}),PAID);
  res=await handleSinglesSocial(respondReq('declined'),'/requests/'+id+'/respond',admin,uid,reply);
  assert.equal(res.status,409);
+}));
+test('passes were replaced by subscriptions',()=>withPaid(async()=>{
+ const res=await handleSinglesSocial(new Request('https://ekodi.kr/passes/pass_10d',{method:'POST'}),'/passes/pass_10d',rpcBy(db(),PAID),uid,reply);
+ assert.equal(res.status,410);
 }));
 test('contact masking hides phone, email, messenger IDs and links but keeps ordinary text',()=>{
  for(const raw of ['제 번호는 010-1234-5678 이에요','01012345678','+82 10 1234 5678','메일 abc.def@gmail.com','abc (at) naver (dot) com',
@@ -287,12 +295,73 @@ test('contact masking hides phone, email, messenger IDs and links but keeps ordi
   const r=maskContacts(ok);assert.equal(r.masked,false,ok);assert.equal(r.text,ok);
  }
 });
-test('paid model: messages are masked until a contact exchange is accepted',()=>withPaid(async()=>{
+test('paid model: ordinary messages mask contacts even after an exchange is accepted',()=>withPaid(async()=>{
  const send=(extra)=>{const admin=rpcBy(db({accepted:true,extra}),PAID);return [admin,handleSinglesSocial(new Request('https://ekodi.kr/messages/'+id,{method:'POST',body:JSON.stringify({text:'연락 주세요 010-9876-5432'})}),'/messages/'+id,admin,uid,reply)]};
  let [admin,resP]=send({});let res=await resP;
  assert.equal(res.status,200);assert.equal((await res.json()).masked,true);
  assert.equal(admin.writes.find(w=>w.name==='singles_messages').row.body,'연락 주세요 [연락처 가림]');
  [admin,resP]=send({singles_contact_unlocks:{request_id:id}});res=await resP;
- assert.equal((await res.json()).masked,false);
- assert.equal(admin.writes.find(w=>w.name==='singles_messages').row.body,'연락 주세요 010-9876-5432');
+ assert.equal((await res.json()).masked,true);
+ assert.equal(admin.writes.find(w=>w.name==='singles_messages').row.body,'연락 주세요 [연락처 가림]');
 }));
+
+
+test('paid contact details require the settled pair, a verified partner and a fresh explicit sharing consent',()=>withPaid(async()=>{
+ const route='/messages/'+id+'/contact';
+ const request=(contact,consent)=>new Request('https://ekodi.kr'+route,{method:'POST',body:JSON.stringify({contact,share_consent:consent})});
+ let admin=rpcBy(db({accepted:true}),PAID);
+ let res=await handleSinglesSocial(request('010-1234-5678',true),route,admin,uid,reply);
+ assert.equal(res.status,403);
+ assert.equal((await res.json()).error,'contact_exchange_not_completed');
+ assert.equal(admin.writes.length,0,'payment-gated contact cannot leak');
+
+ admin=rpcBy(db({accepted:true,extra:{singles_contact_unlocks:{request_id:id}}}),PAID);
+ res=await handleSinglesSocial(request('010-1234-5678',false),route,admin,uid,reply);
+ assert.equal(res.status,400);
+ assert.equal((await res.json()).error,'contact_share_consent_required');
+ assert.equal(admin.writes.length,0);
+
+ for(const invalid of ['https://myprofile.example','@kakaoid','010-123','a'.repeat(101)]){
+  admin=rpcBy(db({accepted:true,extra:{singles_contact_unlocks:{request_id:id}}}),PAID);
+  res=await handleSinglesSocial(request(invalid,true),route,admin,uid,reply);
+  assert.equal(res.status,400,invalid);
+  assert.equal(admin.writes.length,0);
+ }
+
+ admin=rpcBy(db({accepted:true,extra:{singles_contact_unlocks:{request_id:id}}}),PAID);
+ res=await handleSinglesSocial(request('010-1234-5678',true),route,admin,uid,reply);
+ assert.equal(res.status,200);
+ assert.deepEqual(await res.json(),{ok:true,shared:true});
+ assert.equal(admin.writes.length,1);
+ assert.deepEqual(admin.writes[0].row,{interest_id:id,sender_id:uid,body:'[내 연락처] 010-1234-5678'});
+ assert.equal(admin.calls.find(c=>c.name==='singles_rate_take').params.p_action,'message');
+}));
+
+test('paid conversation history masks older contact data until verified payment unlock',()=>withPaid(async()=>{
+ const messages=[{id,sender_id:other,body:'기존 번호 010-9876-5432 및 foo@example.org',created_at:'2026-10-27T00:00:00Z'}];
+ const req=new Request('https://ekodi.kr/messages/'+id);
+ let admin=rpcBy(db({accepted:true,lists:{singles_messages:messages}}),PAID);
+ let res=await handleSinglesSocial(req,'/messages/'+id,admin,uid,reply);
+ assert.equal(res.status,200);
+ let b=await res.json();
+ assert.ok(!JSON.stringify(b).includes('9876'));
+ assert.ok(!JSON.stringify(b).includes('foo@example.org'));
+ admin=rpcBy(db({accepted:true,extra:{singles_contact_unlocks:{request_id:id}},lists:{singles_messages:messages}}),PAID);
+ res=await handleSinglesSocial(req,'/messages/'+id,admin,uid,reply);
+ assert.equal(res.status,200);
+ b=await res.json();
+ assert.equal(b.messages[0].body,messages[0].body);
+}));
+
+test('paid contact route is centrally gated and member contact UI cannot reveal public profile links',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const surface=await readFile(new URL('../singles-surface.js',import.meta.url),'utf8');
+ const ui=await readFile(new URL('../sites/ekodi-singles/public/app.js',import.meta.url),'utf8');
+ const social=await readFile(new URL('../supabase/functions/singles-api/social.ts',import.meta.url),'utf8');
+ assert.match(surface,/contactShare=path\.match\(/);
+ assert.match(surface,/contactShare&&method==='POST'/);
+ assert.ok(surface.includes('sub.match(/^\\/api\\/messages\\/[0-9a-f-]{36}\\/contact$/i)'));
+ assert.match(ui,/share_consent:true/);
+ assert.match(ui,/if\(!state\.paidModel&&typeof p\.public_link/);
+ assert.match(social,/public_link:!paidModel\(\)&&show\('public_link'\)/);
+});

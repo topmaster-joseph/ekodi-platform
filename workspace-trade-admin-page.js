@@ -1,5 +1,6 @@
 import { ekodiBizAdminScopeSnapshot } from './ekodibiz-admin-registry.js';
-function tradeAdminClient(ADMIN_HUB){
+import { tenantAdminPolicySnapshot } from './tenant-admin-policy.js';
+function tradeAdminClient(ADMIN_HUB, POLICY){
   const route=location.pathname.replace(/\/+$/,'').match(/^\/([^/]+)\/trade\/admin(?:\/([^/]+))?(?:\/.*)?$/i);
   if(!route)return;
   const workspaceUrlSlug=route[1].toLowerCase();
@@ -18,9 +19,24 @@ function tradeAdminClient(ADMIN_HUB){
   const scopeLabel=value=>value==='all'?'전체 거래회사':'선택 거래회사';
   const adminHubScopes=Array.isArray(ADMIN_HUB?.scopes)?ADMIN_HUB.scopes:[];
   let sb=null,access=null,companies=[],admins=[];
+  let authorizedAdminScopes=new Set();
+  const hasSiteAdminRole=role=>String(role||'').trim().toLowerCase()!=='platform_admin'&&(POLICY.roleCapabilities[String(role||'').trim().toLowerCase()]||[]).includes('*');
+  async function loadAuthorizedAdminScopes(){
+    authorizedAdminScopes=new Set();
+    if(access?.role!=='workspace_admin')return;
+    // A successful /trade/context check proves this particular site only.
+    authorizedAdminScopes.add('trade');
+    try{
+      const {data,error}=await sb.rpc('current_site_activity_contexts');
+      if(error||!Array.isArray(data))return;
+      for(const scope of adminHubScopes){
+        if((scope.tenantSlugs||[]).some(alias=>data.some(row=>String(row?.tenant||'').trim().toLowerCase()===alias&&hasSiteAdminRole(row?.authorization_role))))authorizedAdminScopes.add(scope.id);
+      }
+    }catch{ /* Fail closed: don't reveal other sites when the scope ledger is unavailable. */ }
+  }
 
   function state(text){if($('pageState'))$('pageState').textContent=text;}
-  function renderAdminScopeSwitcher(){const host=$('adminScopeSwitcher');if(!host)return;host.replaceChildren();if(access?.role!=='workspace_admin'||!adminHubScopes.length){host.hidden=true;return}host.hidden=false;host.dataset.ekodibizSiteSwitch='true';host.dataset.adminScopeCurrent='trade';host.setAttribute('aria-label','관리 사이트 전환');const label=document.createElement('span');label.className='admin-scope-label';label.textContent='사이트 전환';host.append(label);const select=document.createElement('select');select.className='admin-scope-select';select.setAttribute('aria-label','관리 사이트 전환');for(const scope of adminHubScopes){const option=document.createElement('option');option.value=scope.adminHref;option.textContent=scope.label;option.dataset.adminScope=scope.id;option.title=scope.description||scope.label;option.selected=scope.id==='trade';select.append(option)}select.onchange=()=>{if(select.value)location.assign(select.value)};host.append(select)}
+  function renderAdminScopeSwitcher(){const host=$('adminScopeSwitcher');if(!host)return;host.replaceChildren();if(access?.role!=='workspace_admin'||!adminHubScopes.length){host.hidden=true;return}host.hidden=false;host.dataset.ekodibizSiteSwitch='true';host.dataset.adminScopeCurrent='trade';host.setAttribute('aria-label','관리 사이트 전환');const label=document.createElement('span');label.className='admin-scope-label';label.textContent='사이트 전환';host.append(label);const select=document.createElement('select');select.className='admin-scope-select';select.setAttribute('aria-label','관리 사이트 전환');for(const scope of adminHubScopes.filter(item=>authorizedAdminScopes.has(item.id))){const option=document.createElement('option');option.value=scope.adminHref;option.textContent=scope.label;option.dataset.adminScope=scope.id;option.title=scope.description||scope.label;option.selected=scope.id==='trade';select.append(option)}select.onchange=()=>{if(select.value)location.assign(select.value)};host.append(select)}
   function card(label,value,small=''){return `<article class="card"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(small)}</small></article>`;}
   function sectionTitle(title,copy){$('pageTitle').textContent=title;$('pageCopy').textContent=copy;document.title=`${title} · 에코디비즈`;}
   function sectionHref(key){return key==='overview'?`${base}/overview`:`${base}/${key}`;}
@@ -278,7 +294,7 @@ function tradeAdminClient(ADMIN_HUB){
       sb=mod.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{detectSessionInUrl:false,persistSession:true}});
       $('workspaceLogout')?.addEventListener('click',async()=>{try{await sb.auth.signOut();}finally{location.assign(base);}});
       await consumeHandoff();const session=await currentSession();if(!session){authRequired();return;}
-      await loadContext();renderAdminScopeSwitcher();await loadCompanies();if(section==='access')await loadAdmins();
+      await loadContext();await loadAuthorizedAdminScopes();renderAdminScopeSwitcher();await loadCompanies();if(section==='access')await loadAdmins();
       if(section==='companies')renderCompanies();else if(section==='products'&&productCode)await renderProductDetail(productCode);else if(section==='products')await renderProducts();else if(section==='pipeline')await renderPipeline();else if(section==='access')renderAccess();else renderOverview();
     }catch(error){
       console.error('trade admin bootstrap',error);if(error.status===401||error.message==='login_required'){authRequired();return;}
@@ -289,4 +305,4 @@ function tradeAdminClient(ADMIN_HUB){
   boot();
 }
 
-export function workspaceTradeAdminScript(){return new Response(`(${tradeAdminClient.toString()})(${JSON.stringify(ekodiBizAdminScopeSnapshot())});`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
+export function workspaceTradeAdminScript(){return new Response(`(${tradeAdminClient.toString()})(${JSON.stringify(ekodiBizAdminScopeSnapshot())},${JSON.stringify(tenantAdminPolicySnapshot())});`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}

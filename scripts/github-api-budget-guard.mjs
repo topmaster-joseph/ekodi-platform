@@ -60,17 +60,30 @@ export function createGitHubBudgetClient({
     attempts: 0, cacheHits: 0, blocked: 0, reason: 'normal' };
   const inflight = new Map();
   const cache = new Map();
+  // Ephemeral, token-scoped validators for authorized conditional GETs only.
+  // Never use a 304 to manufacture an unseen success or cache a mutation.
+  const validators = new Map();
   async function request(route, init = {}) {
     if (!/^\/(?!\/)[\w?=./&%+,:-]+$/.test(route) || route.includes('..'))
       throw new Error('GitHub API path outside canonical repository is forbidden');
     const method = String(init.method || 'GET').toUpperCase();
+    // Headers() normalizes spelling/casing and detects privileged credentials
+    // even when callers provide a Headers object instead of a plain object.
+    const callerHeaders = new Headers(init.headers || {});
+    const callerHeaderNames = [...callerHeaders.keys()];
+    if (callerHeaderNames.some(name =>
+      /^(authorization|proxy-authorization|accept|if-none-match|x-github-api-version)$/i.test(name)))
+      throw new Error('GitHub client does not allow overriding authenticated or conditional headers');
     const nowMs = now();
     if (state.until > nowMs) {
       state.blocked++;
       onMetric({ type: 'blocked', reason: state.reason, retryAt: state.until });
       throw new GitHubRateDeferredError(state.until, 429, state.reason);
     }
-    const key = method === 'GET' && !init.body ? route : null;
+    // Extra headers can change provider response semantics and identity;
+    // never reuse a route-only validator or TTL entry for such requests.
+    const key = method === 'GET' && !init.body && callerHeaderNames.length === 0
+      ? route : null;
     if (key) {
       const cached = cache.get(key);
       if (cached?.expires > nowMs) {
@@ -84,18 +97,20 @@ export function createGitHubBudgetClient({
     }
     async function run() {
       state.attempts++;
+      const validator = key ? validators.get(key) : null;
       const response = await fetchImpl('https://api.github.com/repos/' + repo + route, {
         ...init,
         headers: {
+          ...Object.fromEntries(callerHeaders),
           authorization: 'Bearer ' + token,
           accept: 'application/vnd.github+json',
           'x-github-api-version': '2022-11-28',
           ...(init.body ? { 'content-type': 'application/json' } : {}),
-          ...(init.headers || {}),
+          ...(validator ? { 'if-none-match': validator.etag } : {}),
         },
         signal: init.signal || AbortSignal.timeout(12000),
       });
-      const data = response.status === 204 ? null :
+      const data = response.status === 204 || response.status === 304 ? null :
         await response.json().catch(() => ({}));
       const budget = inspectGitHubBudget({
         status: response.status, headers: response.headers, body: data, nowMs: now(), reserve,
@@ -109,7 +124,24 @@ export function createGitHubBudgetClient({
         status: response.status, remaining: budget.remaining, reason: budget.reason });
       if (budget.limited) throw new GitHubRateDeferredError(
         state.until || (now() + 60000), response.status, budget.reason);
+      if (response.status === 304) {
+        // GitHub only exempts correctly authorized unchanged conditional GETs
+        // from the primary budget. Require matching in-process 200 evidence.
+        if (!key || !validator || !validator.result?.ok)
+          throw new Error('GitHub unexpected 304 without validated response');
+        state.cacheHits++;
+        onMetric({ type: 'not_modified', status: 304, reason: budget.reason });
+        if (cacheMs > 0)
+          cache.set(key, { expires: now() + cacheMs, value: validator.result });
+        return validator.result;
+      }
       const result = { status: response.status, ok: response.ok, data };
+      if (key && response.ok) {
+        const etag = response.headers.get('etag');
+        if (typeof etag === 'string' && etag.length <= 256 &&
+            /^(?:W\/)?\"[^\r\n]*\"$/.test(etag)) validators.set(key, { etag, result });
+        else validators.delete(key);
+      }
       if (key && response.ok && cacheMs > 0)
         cache.set(key, { expires: now() + cacheMs, value: result });
       return result;

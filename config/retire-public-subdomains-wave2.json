@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "rootDomain": "ekodi.kr",
+  "status": "staged",
+  "note": "Run with scripts/retire-worker-custom-domains.mjs only after the per-worker deploy smoke tests stop probing these hosts.",
+  "targets": [
+    {
+      "label": "author",
+      "service": "ekodi-author-ai",
+      "apexHealth": "https://ekodi.kr/author/health",
+      "apexExpect": [
+        "ekodi-author-ai",
+        "author-events-v1"
+      ]
+    },
+    {
+      "label": "bible",
+      "service": "ekodi-bible-conversation",
+      "apexHealth": "https://ekodi.kr/bible/health",
+      "apexExpect": [
+        "ekodi-bible-conversation",
+        "\"canonicalPath\":\"/bible\""
+      ]
+    },
+    {
+      "label": "books",
+      "service": "ekodi-books",
+      "apexHealth": "https://ekodi.kr/books/health",
+      "apexExpect": [
+        "\"service\":\"ekodi-books\""
+      ]
+    },
+    {
+      "label": "edu",
+      "service": "ekodi-education",
+      "apexHealth": "https://ekodi.kr/education/health",
+      "apexExpect": [
+        "ekodi-education",
+        "\"officialSourceRequired\":true"
+      ]
+    },
+    {
+      "label": "exp",
+      "service": "ekodi-experience",
+      "apexHealth": "https://ekodi.kr/experience/health",
+      "apexExpect": [
+        "ekodi-experience",
+        "synthetic-only"
+      ]
+    },
+    {
+      "label": "try",
+      "service": "ekodi-experience",
+      "apexHealth": "https://ekodi.kr/experience/health",
+      "apexExpect": [
+        "ekodi-experience",
+        "synthetic-only"
+      ]
+    },
+    {
+      "label": "dev",
+      "service": "ekodi-experience",
+      "apexHealth": "https://ekodi.kr/developer/health",
+      "apexExpect": [
+        "ekodi-developer-portal",
+        "public-contract-only"
+      ]
+    },
+    {
+      "label": "journal",
+      "service": "ekodi-journal",
+      "apexHealth": "https://ekodi.kr/journal/health",
+      "apexExpect": [
+        "ekodi-journal",
+        "registered-common-service"
+      ]
+    },
+    {
+      "label": "life",
+      "service": "ekodi-life-ai",
+      "apexHealth": "https://ekodi.kr/life/health",
+      "apexExpect": [
+        "ekodi-life-ai",
+        "\"ekodiShell\":true"
+      ]
+    },
+    {
+      "label": "management",
+      "service": "ekodi-management",
+      "apexHealth": "https://ekodi.kr/management/api/catalog",
+      "apexExpect": [
+        "\"guestMode\":\"guide-only\""
+      ]
+    },
+    {
+      "label": "marketing-api",
+      "service": "ekodi-marketing-domain-api",
+      "apexHealth": "https://ekodi.kr/marketing-api/health",
+      "apexExpect": [
+        "\"ok\":true",
+        "ekodi-marketing-domain-api"
+      ]
+    },
+    {
+      "label": "marketing-publish-api",
+      "service": "ekodi-marketing-publishing-api",
+      "apexHealth": "https://ekodi.kr/marketing-publish-api/health",
+      "apexExpect": [
+        "ekodi-marketing-publishing"
+      ]
+    },
+    {
+      "label": "personal-finance-api",
+      "service": "ekodi-personal-finance-api",
+      "apexHealth": "https://ekodi.kr/personal-finance-api/health",
+      "apexExpect": [
+        "\"ok\":true",
+        "ekodi-personal-finance-api"
+      ]
+    },
+    {
+      "label": "publishing",
+      "service": "ekodi-publishing",
+      "apexHealth": "https://ekodi.kr/publishing/health",
+      "apexExpect": [
+        "ekodi-publishing"
+      ]
+    },
+    {
+      "label": "space",
+      "service": "ekodi-space",
+      "apexHealth": "https://ekodi.kr/space/health",
+      "apexExpect": [
+        "ekodi-space",
+        "operating-space"
+      ]
+    },
+    {
+      "label": "drive",
+      "service": "ekodi-storage-control",
+      "apexHealth": "https://ekodi.kr/storage/health",
+      "apexExpect": [
+        "\"service\":\"ekodi-storage-control\""
+      ]
+    },
+    {
+      "label": "workspace-api",
+      "service": "ekodi-workspace-platform-api",
+      "apexHealth": "https://ekodi.kr/workspace-api/health",
+      "apexExpect": [
+        "\"service\":\"ekodi-workspace-platform-api\""
+      ]
+    }
+  ]
+}

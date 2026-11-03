@@ -6,17 +6,20 @@ import worker from '../service-admin-entry-worker.js';
 const expectedHosts = [
   'ai.ekodi.kr','auth.ekodi.kr','cloud.ekodi.kr','live.ekodi.kr','live.biz.ekodi.kr','live.church.ekodi.kr','live.lab.ekodi.kr',
   'mail.biz.ekodi.kr','mail.church.ekodi.kr','trade.ekodi.kr','trade.biz.ekodi.kr',
-  'invest.ekodi.kr','messenger.ekodi.kr','management.ekodi.kr','marketing-api.ekodi.kr'
+  'invest.ekodi.kr','messenger.ekodi.kr','marketing-api.ekodi.kr'
 ];
 
 // 2026-10-24: ten of these hosts no longer have DNS (zero-subdomain retirement), so a
 // production check against them can only fail ("fetch failed") and blocked every
 // release and rollback. Routes stay; the manifest verifies every host that still resolves.
+// 2026-11-01: management and marketing-api lose DNS with the public subdomain wave 2 retirement.
+// 2026-11-01 (wave 2): the management host is retired outright, so its gateway route is removed;
+// the apex /management service owns its own admin handoff.
 test('broken production admin hosts are covered by the independent route gateway', () => {
   const config = fs.readFileSync('wrangler.service-admin-entry.toml', 'utf8');
   const manifest = JSON.parse(fs.readFileSync('deploy/manifests/service-admin-entry.worker.json', 'utf8'));
   const dnsRetiredHosts = manifest.worker.dnsRetiredHosts;
-  assert.equal(dnsRetiredHosts.length, 10);
+  assert.equal(dnsRetiredHosts.length, 11);
   for (const host of dnsRetiredHosts) assert.ok(expectedHosts.includes(host), `${host} is a gateway host`);
   for (const host of expectedHosts) {
     assert.match(config, new RegExp(`pattern = "${host.replaceAll('.', '\\.')}/admin\\*"`));

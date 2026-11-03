@@ -64,7 +64,7 @@ test('remaining Worker services use thin shared Shell adapters without moving do
   assert.match(site,/shellServiceForHost/);
   assert.match(shellInjector,/manifestServiceForHost/); assert.match(shellInjector,/SPECIAL_HOST_ALIASES/); assert.match(shellInjector,/trade\.biz\.ekodi\.kr/); assert.match(shellInjector,/shellServiceForRootPath/);
   assert.match(platform,/messenger\.ekodi\.kr/); assert.match(platform,/invest\.ekodi\.kr/); assert.match(platform,/injectEkodiShell/);
-  assert.match(platformEntry,/legacyPlatformRouter\.fetch/); assert.match(platformEntry,/injectEkodiShell\(response,'messenger'\)/);
+  assert.match(platformEntry,/legacyPlatformRouter\.fetch/); assert.match(platformEntry,/injectEkodiShell\(await withReleaseMarker\(messengerUserPage\(\)\),'messenger'\)/);
   assert.match(workToml,/main = "work-shell-worker\.js"/);
   assert.match(socialToml,/main = "social-shell-worker\.js"/);
   assert.match(energyToml,/main = "energy-shell-worker\.js"/);

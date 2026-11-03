@@ -905,9 +905,19 @@ try {
     status: entryResponse?.status() ?? null,
     contentType: String(entryHeaders['content-type'] || '').split(';')[0].slice(0, 80),
     cfCacheStatus: String(entryHeaders['cf-cache-status'] || '').slice(0, 40),
+    // The traffic governor's own labels for why it shed. Bounded metadata like the
+    // rest of this object — never the URL, query, token or body. Without them a 429
+    // here is unanswerable after the fact, because the governor's tier lives in
+    // isolate memory and is gone by the time anyone reads the run.
+    trafficTier: String(entryHeaders['x-ekodi-traffic-tier'] || '').slice(0, 20),
+    trafficReasons: String(entryHeaders['x-ekodi-traffic-reasons'] || '').slice(0, 80),
   };
   if (adminEntryTransport.status === 429) {
-    throw new Error('CF-QUOTA-001 circuit open: HTTP 429 at canonical Admin entry; no retry');
+    const shed = [
+      adminEntryTransport.trafficTier && `tier=${adminEntryTransport.trafficTier}`,
+      adminEntryTransport.trafficReasons && `reasons=${adminEntryTransport.trafficReasons}`,
+    ].filter(Boolean).join(' ');
+    throw new Error(`CF-QUOTA-001 circuit open: HTTP 429 at canonical Admin entry; no retry${shed ? ` (${shed})` : ''}`);
   }
   if ([401, 403].includes(adminEntryTransport.status)) {
     throw new Error('Admin entry rejected by production authentication boundary');
