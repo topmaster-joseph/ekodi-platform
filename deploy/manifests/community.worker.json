@@ -6,35 +6,70 @@
     "requests": [
       {
         "url": "https://ekodi.kr/community/",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "follow",
-        "expect": ["Community", "/social-links.js"]
+        "expect": [
+          "Community",
+          "/social-links.js"
+        ]
       },
       {
         "url": "https://ekodi.kr/community/social-links.js",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "follow",
-        "expect": ["ekodi.kr/api/social/registry"]
+        "expect": [
+          "ekodi.kr/api/social/registry"
+        ]
       },
       {
         "url": "https://ekodi.kr/community/reading/",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["함께읽기", "/community/reading/app.js"],
+        "expect": [
+          "함께읽기",
+          "/community/reading/app.js"
+        ],
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/community/reading/meeting-ui.js",
-        "statuses": [200],
+        "url": "https://ekodi.kr/community/reading/app.js?rv=meeting-20261103-b",
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["initializeMeetingUI", "meeting-mode.js"],
+        "expect": [
+          "initializeMeetingUI",
+          "meetingStage"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/community/reading/topics.js?rv=meeting-20261103-b",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "createMeetingState",
+          "formatMeetingClock"
+        ],
         "rollbackVerify": false
       },
       {
         "url": "https://ekodi.kr/community/health",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "follow",
-        "expect": ["\"socialRegistry\":true"]
+        "expect": [
+          "\"socialRegistry\":true"
+        ]
       }
     ]
   }

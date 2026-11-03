@@ -10,9 +10,11 @@ globalThis.HTMLRewriter ??= class {
 
 test('Community worker resolves canonical reading entry and nested assets without redirecting off apex', async () => {
   const visited = [];
+  const observedQueries = [];
   const env = { ASSETS: { fetch: async request => {
     const path = new URL(request.url).pathname;
     visited.push(path);
+    observedQueries.push(new URL(request.url).search);
     if(path==='/reading/index.html')return new Response(null,{status:307,headers:{location:'/reading/'}});
     return new Response(
       path === '/reading/' ? '<!doctype html><html lang="ko"><head></head><body><main><h1>함께읽기</h1></main></body></html>' : 'export const ready=true;',
@@ -31,10 +33,11 @@ test('Community worker resolves canonical reading entry and nested assets withou
   assert.equal(slash.status, 200);
   assert.equal(visited[2], '/reading/');
   assert.equal(slash.headers.get('location'), null);
-  for (const assetName of ['meeting-ui.js', 'meeting-mode.js']) {
-    const response = await worker.fetch(new Request('https://ekodi.kr/community/reading/' + assetName), env);
+  for (const assetName of ['app.js', 'topics.js']) {
+    const response = await worker.fetch(new Request('https://ekodi.kr/community/reading/' + assetName + '?rv=meeting-20261103-b'), env);
     assert.equal(response.status, 200, assetName);
     assert.equal(visited.at(-1), '/reading/' + assetName);
+    assert.equal(observedQueries.at(-1), '?rv=meeting-20261103-b');
     assert.match(await response.text(), /ready=true/);
   }
 });
