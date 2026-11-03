@@ -1,0 +1,35 @@
+name: EKODI Eval Lab / Offline Contract Gate
+on:
+  pull_request:
+    paths:
+      - 'eval/**'
+      - 'ai-router-score.js'
+      - 'scripts/build.mjs'
+      - '.github/workflows/ai-eval-lab.yml'
+  merge_group:
+    types: [checks_requested]
+permissions:
+  contents: read
+jobs:
+  deterministic-eval-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate evaluation code without paid API
+        run: |
+          node --check eval/gate.mjs
+          node --check eval/score.mjs
+          node --check eval/privacy.mjs
+          node --check ai-router-score.js
+          node --test eval/tests/*.test.mjs
+      - name: Ensure confidential goldens are not committed
+        run: |
+          if git ls-files eval | grep -E '(hold.?out|real.?logs|production.*jsonl|secret)' | grep -vE '\.(mjs|md)$'; then
+            echo 'Unsafe evaluation artifact path committed' >&2
+            exit 1
+          fi
+# Actual baseline gate requires centrally attested private data; fixture is not operational evidence.

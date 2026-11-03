@@ -2,7 +2,7 @@
   const API = 'https://ekodi.kr';
   const TOKEN_KEY = 'ekodi-auth-token';
   const SECTION = 'aiops';
-  const STAGE_LABELS = Object.freeze({ overview:'운영 현황', providers:'AI 공급자', sites:'사이트 관리', reports:'운영보고', command:'AI 지휘' });
+  const STAGE_LABELS = Object.freeze({ overview:'운영 현황', providers:'AI 공급자', sites:'사이트 관리', reports:'운영보고', command:'AI 지휘',eval:'AI 성적표' });
   let selectedDetailOpen = false;
   const REVIEW_STALE_MS = 30 * 60 * 1000;
 
@@ -79,6 +79,7 @@
       sites:'사이트를 선택하면 아래에 상태와 관리 기능이 펼쳐집니다.',
       reports:'운영보고와 플랫폼 개선 제안을 확인합니다.',
       command:'Chief AI 명령과 실행·감사 작업공간을 엽니다.',
+       eval:'50문항 이상, 문항당 3~5회 반복 평가로 검증된 결과만 표시합니다.',
     })[requested];
     const detail = $('#aiSelectedDetail');
     if (detail) detail.hidden = requested !== 'sites' || !selectedDetailOpen;
@@ -293,6 +294,7 @@
         <button type="button" data-aiops-stage-tab="sites" aria-pressed="false">사이트 관리</button>
         <button type="button" data-aiops-stage-tab="reports" aria-pressed="false">운영보고</button>
         <button type="button" data-aiops-stage-tab="command" aria-pressed="false">AI 지휘</button>
+        <button type="button" data-aiops-stage-tab="eval" aria-pressed="false">AI 성적표</button>
       </nav>
       <p class="ai-ops-stage-help" id="aiOpsStageHelp" role="status">실측 상태 요약과 지금 확인할 항목만 표시합니다.</p>
       <div class="ai-ops-main">

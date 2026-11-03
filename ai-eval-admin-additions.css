@@ -1,0 +1,14 @@
+#aiOpsPanel .ai-eval-lab-view{display:none;min-height:0;flex:1 1 auto;overflow:auto}
+#aiOpsPanel[data-aiops-stage="eval"] .ai-ops-main>.ai-ops-block:not(.ai-eval-lab-view),
+#aiOpsPanel[data-aiops-stage="eval"] .ai-ops-main>.ai-ops-observe{display:none!important}
+#aiOpsPanel[data-aiops-stage="eval"] .ai-eval-lab-view{display:block}
+.ai-eval-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ai-eval-heading h3{font-size:16px;margin:0;overflow-wrap:normal;word-break:keep-all}
+.ai-eval-heading button{background:#fff;color:#111;border:1px solid #ccc;border-radius:7px;padding:7px 12px;cursor:pointer}
+.ai-eval-content{margin-top:10px}
+.ai-eval-empty,.ai-eval-meta{font-size:13px;line-height:1.55;word-break:keep-all}
+.ai-eval-scroll{overflow-x:auto;max-width:100%;border:1px solid #eee;border-radius:7px}
+.ai-eval-scroll table{width:100%;border-collapse:collapse;min-width:940px;font-size:12px}
+.ai-eval-scroll th,.ai-eval-scroll td{padding:9px 10px;text-align:left;border-bottom:1px solid #eee;white-space:nowrap}
+.ai-eval-scroll th{font-weight:700}
+@media(max-width:768px){.ai-eval-heading h3{font-size:14px}.ai-eval-empty,.ai-eval-meta{font-size:12px}}
