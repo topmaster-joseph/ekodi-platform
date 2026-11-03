@@ -27,6 +27,7 @@ import { handleSystemHealthControl } from './system-health-control.js';
 import { handleSearchVisibilityControl } from './search-visibility-control.js';
 import { handleTrafficIntelligence } from './traffic-intelligence-control.js';
 import { handleApiCostControl } from './api-cost-control.js';
+import { handleAiEvalSummary } from './ai-eval-control.js';
 import { handleInfraCostControl } from './infra-cost-control.js';
 import { handleCloudflareSecretControl } from './cloudflare-secret-control.js';
 import { handleBooksNetworkRequest } from './books-network-control.js';
@@ -406,6 +407,11 @@ export default {
         if (response) return applyApiSecurityHeaders(response);
       }
       catch (error) { console.error('Device Control error', error); return errorResponse('Device Control 처리 중 오류가 발생했습니다.', 'DEVICE_CONTROL_ERROR'); }
+    }
+
+    if (path === '/api/control/ai/eval/summary') {
+      try { const response = await handleAiEvalSummary(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('EKODI Eval Lab route error', error?.name); return errorResponse('AI 성적표 데이터를 조회하지 못했습니다.', 'EVAL_LAB_ROUTE_ERROR'); }
     }
 
     if (path.startsWith('/api/control/ai/v8')) {

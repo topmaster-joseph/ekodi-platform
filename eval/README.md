@@ -25,6 +25,14 @@ Correction: the canonical source is **not** Supabase `ai_requests`; it is D1 `ek
 
 Gate rule (`opsGate`): block if completion upper bound falls below baseline lower bound − 0.02, or orphaned backlog grows; unknown = block.
 
+## Phase 2 — protected live operations observation (2026-11-03 candidate)
+
+The first production data source is D1 `ekodi-auth`. `ai_provider_routing_events` and `ekodi_orchestrator_tasks` hold operational counters; they are **not** a 50-case labelled Korean golden set and cannot prove tool argument correctness, hallucination or judge calibration.
+
+`ai-eval-control.js` implements `GET /api/control/ai/eval/summary` behind the canonical Control API. The server calls `authWorker.fetch('/api/session')`, requires an independently verified `super_admin` role and then reads **only SQL aggregates** through the existing D1 binding. Missing authorization => 401/403; missing D1 => 503. No new tables, permissions, paid calls, raw user prompts, identifiers or hold-out data are written or returned. `eval/operations-projection.mjs` reports provider selection-event/attempt ratios with 95% Wilson intervals and orchestrator task-state aggregates. **Selection ratio is not model accuracy**. 7-day-old assigned jobs are counted by age only, not falsely claimed to have no lease. Every response explicitly remains `needs-goldens-and-calibration` with zero independently evaluated cases. The admin shows this under an **운영 관측** subheading, separately from the unavailable AI quality scorecard.
+
+Validate with `node --test eval/tests/operations-projection.test.mjs` and zero external AI calls. In Dev and Production check unauthenticated 401, non-super-admin 403, verified admin read-only aggregates, no raw prompt exposure, viewports 320/390/768/1366/1440, and stale-session fallback. This stage does **not** meet the final completion requirement.
+
 ## 1. Real operational goldens: required, not yet available
 Initial repository review found no `eval/` directory. Production Supabase `public.ai_requests` had 0 rows on 2026-11-03. The canonical Cloudflare D1/Queue/log source and consent/retention policy must be verified before collecting **50 real Korean orchestrator-routing cases**. Do not fill this gap using synthetic fixtures. Capture only task intent, permitted route(s), observed route, ordered tool events, independent outcome label, cost, latency and safety counters.
 
