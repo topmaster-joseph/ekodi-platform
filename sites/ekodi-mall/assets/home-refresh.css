@@ -220,3 +220,10 @@ body[data-mall-view="recommend"] .mall-recommend-inline-form{display:block}
 /* Selected navigation is explicit on every Mall route. */
 .mall-primary-nav a[aria-current="page"]{color:var(--mall-orange);border-bottom:3px solid var(--mall-orange);font-weight:900}
 .mall-primary-nav a[aria-current="page"]:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+
+/* Mobile catalog: avoid clipped 2-up cards and horizontal page overflow on narrow phones. */
+@media(max-width:480px){
+ .mall-category-shortcuts~.shop .grid{grid-template-columns:minmax(0,1fr)}
+ .mall-category-shortcuts~.shop .card{min-width:0;max-width:100%}
+ .mall-category-shortcuts~.shop .card-body{min-width:0}
+}
