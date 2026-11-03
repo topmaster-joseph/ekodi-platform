@@ -12,6 +12,8 @@ const amendment=json('governance/amendments/2026-11-03-church-source-independent
 const boundaries=json('platform-boundaries.json');
 const registry=json('config/repository-source-of-truth.json');
 const retirement=json('config/site-repository-retirement-readiness.json');
+const architecture=json('governance/architecture/ekodi-os-architecture.json');
+const evolution=json('governance/architecture/ekodi-evolution-model.json');
 const workflow=read('.github/workflows/deploy-ekodi-church-homepage.yml');
 const policy=constitution.churchCanonicalSourceTransferPolicy;
 
@@ -41,6 +43,18 @@ test('independent Church Pages release is registered without changing other rele
   assert.equal(Object.values(boundaries.platforms)
     .filter(p=>p.deployWorkflow==='.github/workflows/deploy-ekodi-church-homepage.yml').length,1,
     'the existing Church deployment workflow must belong to only one independent unit');
+});
+
+test('existing Church deployment classification has explicit owner-approved sustainable cost and rollback evidence',()=>{
+  const classification=architecture.platformBoundaryClassification.church;
+  assert.equal(classification.layer,'responsible-independent-service');
+  assert.equal(classification.responsibilityClass,'ekodi-responsible');
+  const exception=evolution.boundaryCreationGate.approvedExpansionExceptions.find(x=>x.id==='church');
+  assert.ok(exception,'Church registration requires evidence, not a grandfather bypass');
+  for(const field of ['reason','expectedBenefit','incrementalMonthlyCost','rollbackPath','owner','observabilityPlan']) assert.ok(exception[field],field);
+  assert.match(exception.reason,/existing ekodi-church Cloudflare Pages project/);
+  assert.match(exception.incrementalMonthlyCost,/0 new fixed/);
+  assert.equal(evolution.sustainability.noSpeculativeServiceSplit,true);
 });
 
 test('legacy Church source remains authoritative live until verified v2 release',()=>{
