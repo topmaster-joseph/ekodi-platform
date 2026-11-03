@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="청계초등학교 1·2학년과 함께하는 70분 나만의 피자체험. 재미있는 퀴즈, 손 씻기와 안전 약속, 피자 만들기, 발표 활동을 한 화면에서 진행합니다.">
+  <meta name="ekodi-ui-type" content="USER">
+  <meta property="og:title" content="나만의 피자체험 | 에코디교육">
+  <meta property="og:description" content="세상에 하나뿐인 내 피자! 청계초 1·2학년 체험수업 · 2026년 11월 5일">
+  <meta name="theme-color" content="#fff9ef">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🍕%3C/text%3E%3C/svg%3E">
+  <title>나만의 피자체험 | EKODI Education</title>
+  <link rel="canonical" href="https://ekodi.kr/edu/pizza-experience/">
+  <link rel="stylesheet" href="./styles.css?v=20261103-1">
+  <script type="module" src="./app.js?v=20261103-1"></script>
+</head>
+<body data-ekodi-ui="USER" data-area="pizza-experience">
+<main id="pizza-exp" class="pizza-page">
+  <section class="pizza-hero" aria-labelledby="pizza-title">
+    <div class="pizza-hero-copy">
+      <p class="eyebrow"><span class="sparkle" aria-hidden="true">✦</span> EKODI EDUCATION · 어린이 체험수업</p>
+      <p class="welcome-chip">청계초등학교 1·2학년 · 꼬마 셰프 15명</p>
+      <h1 id="pizza-title">세상에 하나뿐인 <span>나만의 피자!</span></h1>
+      <p class="hero-lead">내가 고른 재료로 만들고, 친구들과 즐겁게 나누는 특별한 피자 여행.</p>
+      <div class="event-facts" aria-label="체험수업 정보">
+        <span><strong>날짜</strong> 2026. 11. 5. (목)</span>
+        <span><strong>시간</strong> 오전 9:20 – 10:30</span>
+        <span><strong>대상</strong> 1·2학년 15명</span>
+        <span><strong>방식</strong> 5명 × 3모둠</span>
+      </div>
+      <div class="hero-actions">
+        <button id="startLesson" class="btn btn-primary" type="button">수업 시작하기 <span aria-hidden="true">→</span></button>
+        <a class="btn btn-outline" href="#lesson-plan">70분 진행표 보기</a>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="hero-sticker">오늘은 내가 피자 요리사!</div>
+      <div class="hero-pizza"><span class="slice slice-a">🍅</span><span class="slice slice-b">🧀</span><span class="slice slice-c">🫑</span><span class="slice slice-d">🌽</span></div>
+      <div class="hero-doodle hero-doodle-one">✳</div><div class="hero-doodle hero-doodle-two">✧</div>
+    </div>
+  </section>
+
+  <nav class="page-tabs" aria-label="체험수업 메뉴">
+    <a href="#lesson-stage" class="selected">수업 화면</a>
+    <a href="#lesson-plan">70분 진행표</a>
+    <a href="#safety-prep">준비물·안전</a>
+    <a href="#lesson-takeaway">마무리 활동</a>
+  </nav>
+
+  <section class="classroom" id="lesson-stage" aria-labelledby="stage-title">
+    <div class="section-heading"><p class="eyebrow">INTERACTIVE CLASSROOM</p><h2 id="stage-title">우리 반 피자 교실</h2><p>큰 화면으로 보여 주며 화살표 버튼이나 키보드 ← →로 진행하세요.</p></div>
+    <div class="classroom-layout">
+      <div class="stage-shell" id="stageShell">
+        <div class="stage-toolbar">
+          <div class="lesson-progress-label"><span class="live-dot" aria-hidden="true"></span><strong id="sceneCounter">1 / 14</strong><span id="sceneKind">꼬마 셰프 환영</span></div>
+          <div class="stage-tools">
+            <button id="notesToggle" class="tool-button" type="button" aria-pressed="false">진행 멘트 보기</button>
+            <button id="fullscreenButton" class="tool-button" type="button" aria-label="수업 화면 전체화면">전체화면</button>
+          </div>
+        </div>
+        <div class="progress-track" role="progressbar" aria-label="수업 슬라이드 진행률" aria-valuemin="1" aria-valuemax="14" aria-valuenow="1" id="progressBar"><span id="progressFill"></span></div>
+        <div class="scene" id="scene" aria-live="polite" aria-atomic="true">
+          <div class="scene-loading">우리들의 피자 교실이 열립니다!</div>
+        </div>
+        <div id="instructorNotes" class="instructor-notes" hidden><strong>진행자 멘트</strong><p id="notesText"></p></div>
+        <div class="stage-bottom">
+          <button id="prevScene" class="btn btn-soft" type="button">← 이전</button>
+          <span class="stage-tip">손을 들고, 크게 말하고, 직접 만들어 봐요!</span>
+          <button id="nextScene" class="btn btn-primary" type="button">다음 →</button>
+        </div>
+      </div>
+      <aside class="teacher-panel" aria-labelledby="teacher-title">
+        <div class="teacher-head"><div><span class="teacher-kicker">진행자 도구</span><h3 id="teacher-title">수업 한눈에</h3></div><span class="panel-hat" aria-hidden="true">♨</span></div>
+        <div class="teacher-timer">
+          <p class="timer-label">활동 타이머</p>
+          <output id="timerDisplay" class="timer-display" aria-live="off">05:00</output>
+          <div class="timer-presets" aria-label="타이머 시간 선택">
+            <button type="button" data-minutes="3">3분</button><button type="button" data-minutes="5" aria-pressed="true">5분</button><button type="button" data-minutes="10">10분</button><button type="button" data-minutes="20">20분</button>
+          </div>
+          <div class="timer-actions"><button id="timerToggle" type="button">시작</button><button id="timerReset" type="button">초기화</button></div>
+          <p class="timer-help" id="timerNotice" role="status">피자 만들기와 퀴즈에 사용하세요.</p>
+        </div>
+        <div class="scene-outline"><p class="outline-heading">수업 순서</p><ol id="sceneList" aria-label="수업 화면 선택"></ol></div>
+      </aside>
+    </div>
+  </section>
+
+  <section id="lesson-plan" class="overview-section" aria-labelledby="plan-title">
+    <div class="section-heading"><p class="eyebrow">70-MINUTE PLAN</p><h2 id="plan-title">70분, 이렇게 진행해요</h2><p>긴 강의보다 짧은 질문과 손으로 하는 활동을 중심으로 진행합니다.</p></div>
+    <div class="schedule-grid">
+      <article><time>09:20–09:25</time><strong>꼬마 셰프 인사</strong><p>이름 대신 좋아하는 피자 토핑 외치기</p><span>5분</span></article>
+      <article><time>09:25–09:35</time><strong>재료 이야기·퀴즈</strong><p>토마토, 치즈, 채소, 도우 알아보기</p><span>10분</span></article>
+      <article><time>09:35–09:42</time><strong>손 씻기·안전</strong><p>깨끗한 손과 뜨거운 오븐 약속</p><span>7분</span></article>
+      <article><time>09:42–09:45</time><strong>내 피자 이름 정하기</strong><p>맛있는 상상력 한 스푼!</p><span>3분</span></article>
+      <article class="featured"><time>09:45–10:05</time><strong>나만의 피자 만들기</strong><p>도우 → 소스 → 치즈 → 토핑</p><span>20분</span></article>
+      <article><time>10:05–10:18</time><strong>피자 굽기·숫자놀이</strong><p>오븐은 어른만, 우리는 피자 퀴즈!</p><span>13분</span></article>
+      <article><time>10:18–10:25</time><strong>정리·완성 확인</strong><p>순서대로 받고 뜨거움에 조심하기</p><span>7분</span></article>
+      <article><time>10:25–10:30</time><strong>작품 발표·인사</strong><p>“내 피자의 이름은…” 서로 박수!</p><span>5분</span></article>
+    </div>
+    <p class="schedule-note">굽는 시간은 오븐 용량과 피자 크기에 따라 달라질 수 있습니다. 15판의 실제 조리 가능 시간을 미리 점검하고, 지연되면 발표와 퀴즈를 먼저 진행하세요.</p>
+  </section>
+
+  <section id="safety-prep" class="prep-section" aria-labelledby="prep-title">
+    <div class="section-heading"><p class="eyebrow">READY, SAFE, FUN!</p><h2 id="prep-title">체험 준비와 안전 약속</h2><p>진행자가 당일 확인할 항목입니다. 체크는 이 화면에만 표시되며 아이들의 개인정보는 저장하지 않습니다.</p></div>
+    <div class="prep-columns">
+      <article class="prep-card">
+        <h3>우리 모둠 준비물</h3>
+        <label><input type="checkbox"><span>15명분 도우·소스·치즈·토핑</span></label>
+        <label><input type="checkbox"><span>모둠별 재료 접시·집게·위생용품</span></label>
+        <label><input type="checkbox"><span>이름 구분용 피자 받침 또는 식별표</span></label>
+        <label><input type="checkbox"><span>완성품 식힘·포장 공간과 쓰레기통</span></label>
+        <label><input type="checkbox"><span>오븐 용량·굽는 순서·보조 인력 확인</span></label>
+      </article>
+      <article class="prep-card safety-card">
+        <h3>꼭 지킬 안전 약속</h3>
+        <label><input type="checkbox"><span>보호자·학교 측과 알레르기 확인: 밀, 우유, 토마토, 가공육 등</span></label>
+        <label><input type="checkbox"><span>조리 전 비누로 손 씻고 깨끗한 도구 사용</span></label>
+        <label><input type="checkbox"><span>오븐과 뜨거운 팬은 어른만 조작</span></label>
+        <label><input type="checkbox"><span>재료 간 교차 접촉과 식품 보관 위생 확인</span></label>
+        <label><input type="checkbox"><span>음식이 식은 뒤에 먹거나 포장하도록 안내</span></label>
+      </article>
+    </div>
+    <p class="safety-disclaimer">알레르기가 있는 어린이를 위한 대체 재료·개별 도구 준비 여부는 반드시 체험 전에 확인하세요. 수업 화면은 안전 교육 보조 자료이며 실제 조리 안전관리를 대신하지 않습니다.</p>
+  </section>
+
+  <section class="takeaway-section" id="lesson-takeaway" aria-labelledby="takeaway-title">
+    <span class="closing-illustration" aria-hidden="true">🍕</span>
+    <div><p class="eyebrow">OUR LITTLE CHEFS</p><h2 id="takeaway-title">모두 다르고, 모두 소중해요.</h2><p>“세상에 하나뿐인 내 피자처럼, 우리 모두 다르고 소중해요.” 내가 만든 피자 이름을 친구들에게 소개하고 서로 박수 쳐 주세요.</p>
+      <div class="takeaway-actions"><button id="printPlan" type="button" class="btn btn-outline">진행표 인쇄하기</button><a href="https://docs.google.com/presentation/d/1zVF_Em6uZwbKt9DQ_KzrBvBeAa9oB0tM/edit" target="_blank" rel="noopener noreferrer" class="btn btn-outline">진행자용 PPT 참고(권한 필요)</a></div>
+    </div>
+  </section>
+  <div class="page-ending"><span>EKODI EDUCATION · 청계초 나만의 피자체험</span><a href="/edu/">에코디교육 홈으로</a></div>
+</main>
+</body>
+</html>
