@@ -214,12 +214,12 @@ test('every public event list has accessible native share and copy actions, with
 
 test('copied schedule share message includes actual public event title, date, time and unchanged deep link',()=>{
   const item={id:12,kind:'event',eventStart:'2026-10-15T18:00',title:'평화광장 집회'};
-  const expectedHead='서남권 국립의대 소통센터\n평화광장 집회\n일정: 2026.10.15 18:00\n일정 확인: ';
+  const expectedHead='서남권 국립의대 소통센터 평화광장 집회 일정 보기\n2026-10-15 (목)\n';
   const apex=loadShareHelpers('https://ekodi.kr/seonammedi/board/notices?auth=private#fragment');
   const sub=loadShareHelpers('https://seonammedi.kr/board/notices?access_token=secret#fragment');
   assert.equal(apex.shareMessage(item),expectedHead+'https://ekodi.kr/seonammedi/board/notices?schedule=12&date=2026-10-15');
   assert.equal(sub.shareMessage(item),expectedHead+'https://seonammedi.kr/board/notices?schedule=12&date=2026-10-15');
-  assert.equal(sub.shareSummary(item),'서남권 국립의대 소통센터\n평화광장 집회\n일정: 2026.10.15 18:00');
+  assert.equal(sub.shareSummary(item),expectedHead+'https://seonammedi.kr/board/notices?schedule=12&date=2026-10-15');
   assert.ok(!sub.shareMessage(item).includes('access_token'));
 });
 
@@ -229,23 +229,23 @@ test('public calendar sharing excludes registration, publication and edit dates'
     createdAt:'2026-08-01T09:00',registeredAt:'2026-08-02T11:00',
     publishedAt:'2026-08-03T12:00',updatedAt:'2026-08-04T13:00'};
   const message=helpers.shareMessage(item);
-  assert.equal(message,'서남권 국립의대 소통센터\n시민 설명회\n일정: 2026.10.18 14:30\n일정 확인: https://seonammedi.kr/board/notices?schedule=25&date=2026-10-18');
+  assert.equal(message,'서남권 국립의대 소통센터 시민 설명회 일정 보기\n2026-10-18 (일)\nhttps://seonammedi.kr/board/notices?schedule=25&date=2026-10-18');
   assert.doesNotMatch(message,/등록일|게시일|수정일|2026[-.]08[-.]0[1-4]/);
-  assert.equal(helpers.shareSummary(item),'서남권 국립의대 소통센터\n시민 설명회\n일정: 2026.10.18 14:30');
+  assert.equal(helpers.shareSummary(item),message);
 });
 
 test('shared event titles are sanitized for readable, one-line messenger previews',()=>{
   const calendar=loadShareHelpers('https://seonammedi.kr/board/notices');
   const item={id:3,eventStart:'2026-11-09T09:30',title:'  평화광장\n집회\t안내  '};
-  assert.equal(calendar.shareMessage(item).split('\n')[1],'평화광장 집회 안내');
-  assert.equal(calendar.shareSummary({id:3,eventStart:'2026-11-09T09:30',title:'  '}).split('\n')[1],'일정');
+  assert.equal(calendar.shareMessage(item).split('\n')[0],'서남권 국립의대 소통센터 평화광장 집회 안내 일정 보기');
+  assert.equal(calendar.shareSummary({id:3,eventStart:'2026-11-09T09:30',title:'  '}).split('\n')[0],'서남권 국립의대 소통센터 일정 일정 보기');
   assert.equal(calendar.shareMessage({id:0,title:'없는 일정',eventStart:'2026-11-09T09:30'}),'');
 });
 
 test('title-sharing assets stay byte-identical across the main Site Core and independent board',async()=>{
   const site=await readFile(new URL('board-central-category.js',root),'utf8');
   const worker=await readFile(new URL('../../../services/independent-board/worker.js',root),'utf8');
-  assert.ok(worker.includes('const BOARD_CATEGORY_CLIENT_JS='+JSON.stringify(site)+';'));
+  assert.ok(worker.includes('const BOARD_CATEGORY_CLIENT_JS='+JSON.stringify(site.replace(/\r\n/g,'\n'))+';'));
   assert.ok(site.includes('/seonammedi/calendar-sidebar.js?v=20261020-event-open-1'));
   assert.ok(site.includes('/seonammedi/calendar-sidebar.css?v=20261020-event-open-1'));
 });

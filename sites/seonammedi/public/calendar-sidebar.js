@@ -1,6 +1,27 @@
 /* SeonamMedi sidebar schedule: public reading; server-authorized admin editing. */
 (() => {
   'use strict';
+// SITE-EVENT-SHARE-001: canonical invitation copy; never duplicate the URL.
+function formatActivityShare(organization,activity,date,url,action='신청하기'){
+  const clean=value=>String(value??'').replace(/[\r\n\t\u2028\u2029]+/g,' ').replace(/\s+/g,' ').trim();
+  const org=clean(organization);
+  let name=clean(activity);
+  if(name===org)name='';
+  else if(name.startsWith(org+' '))name=name.slice(org.length+1);
+  const heading=[org,name,clean(action)].filter(Boolean).join(' ');
+  const match=clean(date).match(/^(\d{4})[-.](\d{1,2})[-.](\d{1,2})(?:\D|$)/);
+  let dayLabel='';
+  if(match){
+    const yyyy=Number(match[1]),mm=Number(match[2]),dd=Number(match[3]);
+    const day=new Date(Date.UTC(yyyy,mm-1,dd));
+    if(day.getUTCFullYear()===yyyy&&day.getUTCMonth()===mm-1&&day.getUTCDate()===dd){
+      const iso=String(yyyy).padStart(4,'0')+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+      dayLabel=iso+' ('+['일','월','화','수','목','금','토'][day.getUTCDay()]+')';
+    }
+  }
+  return [heading,dayLabel,clean(url)].filter(Boolean).join('\n');
+}
+
   const API='/api/seonammedi';
   const WEEK=['일','월','화','수','목','금','토'];
   const localToday=()=>{
@@ -34,17 +55,8 @@
   // Provide a visible event title when users paste links into messengers.
   // Only published public calendar rows are passed into these helpers.
   const shareTitle=item=>String(item?.title||'일정').replace(/[\r\n\t\u2028\u2029]+/g,' ').replace(/\s+/g,' ').trim().slice(0,180)||'일정';
-  const shareSummary=item=>{
-    const start=String(item?.eventStart||'');
-    const date=dateOf(start).replaceAll('-','.');
-    const time=start.length>=16?start.slice(11,16):'';
-    // Registration, publication and edit dates are metadata, not event dates. Do not share them.
-    return '서남권 국립의대 소통센터\n'+shareTitle(item)+'\n일정: '+date+(time?' '+time:'');
-  };
-  const shareMessage=item=>{
-    const url=shareUrl(item);
-    return url?shareSummary(item)+'\n일정 확인: '+url:'';
-  };
+  const shareSummary=item=>{const url=shareUrl(item);return url?formatActivityShare('서남권 국립의대 소통센터',shareTitle(item),dateOf(item?.eventStart),url,'일정 보기'):'';};
+  const shareMessage=item=>shareSummary(item);
   // CALENDAR-EVENT-OPENS-LEFT-001 (owner request 2026-10-20): an event title opens the 행사·일정 detail in the left
   // content area. On the home app it opens in place (window.seonamOpenEvent); elsewhere it navigates there.
   const siteMount=()=>location.pathname.startsWith('/seonammedi')?'/seonammedi':'';
@@ -209,11 +221,7 @@
         const url=shareUrl(item);
         if(typeof navigator.share!=='function'){await copyShareLink(item,feedback);return;}
         try{
-          await navigator.share({
-            title:shareTitle(item)+' · 서남권 국립의대 소통센터',
-            text:shareSummary(item),
-            url
-          });
+          await navigator.share({text:shareMessage(item)});
           feedback.textContent='공유를 완료했습니다.';
         }catch(error){
           if(error?.name!=='AbortError')await copyShareLink(item,feedback);
