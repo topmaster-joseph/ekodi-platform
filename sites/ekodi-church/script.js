@@ -3,6 +3,13 @@ const nav = document.querySelector('#main-nav');
 const siteHeader = document.querySelector('.site-header');
 const churchT = (source) => window.EKODIChurchI18n?.t?.(source) || source;
 
+// Legacy bookmarks must open the single canonical devotional experience.
+// Never erase the former private-first localStorage records while removing their UI.
+if (location.hash === '#life-hub' || location.hash === '#daily-devotion') {
+  location.replace('/ekodichurch/devotion/' + location.search);
+}
+
+
 // Korean-first church identity in the public header. The locale layer translates it after boot.
 const headerBrandName = document.querySelector('.site-header .brand strong');
 if (headerBrandName) headerBrandName.textContent = '에코디교회';

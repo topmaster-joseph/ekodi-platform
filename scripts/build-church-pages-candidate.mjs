@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, mkdir, writeFile, stat, realpath } from 'node:fs/promises';
 import { resolve, relative, dirname, join, sep, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { verifyReviewedChurchSource } from './verify-reviewed-church-source.mjs';
 
 const HEX40=/^[0-9a-f]{40}$/;
 const DEPLOYABLE_EXTENSIONS=new Set(['.html','.js','.mjs','.css','.json','.svg','.png','.jpg','.jpeg','.webp','.gif','.ico','.txt','.xml','.webmanifest','.woff','.woff2']);
@@ -23,8 +24,7 @@ const allowedAssetPath=(path)=>{
 
 export function planChurchPagesCandidate(manifest,platformSha) {
   if(!HEX40.test(platformSha||''))throw new Error('Exact 40-hex platform source SHA required');
-  if(manifest?.contract!=='ekodi.church-shadow-import.v1'||manifest?.mode!=='shadow-source-only')
-    throw new Error('Unexpected Church source import manifest');
+  const reviewedSource=verifyReviewedChurchSource(manifest);
   if(manifest?.sourceRepository!=='topmaster-joseph/ekodi-church'||!HEX40.test(manifest.sourceCommit||''))
     throw new Error('Upstream provenance invalid');
   if(!Array.isArray(manifest.trackedFiles)||manifest.importedTrackedFileCount!==manifest.trackedFiles.length)
@@ -53,6 +53,7 @@ export function planChurchPagesCandidate(manifest,platformSha) {
     sourceSha:platformSha,
     upstreamRepository:manifest.sourceRepository,
     upstreamSourceSha:manifest.sourceCommit,
+    reviewedUpstreamPullRequests:reviewedSource?.pullRequests||null,
     assets:assets.sort((a,b)=>a.path.localeCompare(b.path))
   };
 }
@@ -95,6 +96,7 @@ export async function buildChurchPagesCandidate({sourceDir,outputDir,platformSha
     sourceSha:plan.sourceSha,
     upstreamSourceRepository:plan.upstreamRepository,
     upstreamSourceSha:plan.upstreamSourceSha,
+    ...(plan.reviewedUpstreamPullRequests?{reviewedUpstreamPullRequests:plan.reviewedUpstreamPullRequests}:{}),
     payloadSha256:payloadHash
   };
   // This is an offline-only candidate builder. The release workflow is deliberately untouched.

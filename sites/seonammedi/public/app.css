@@ -365,3 +365,10 @@ html body #organization .participant-head{margin:12px 0 4px!important;min-height
   html body footer.site-footer>a{grid-column:2;grid-row:1;margin:0;min-height:30px;padding:4px 10px;font-size:13px}
   html body footer.site-footer .site-footer-copy span{grid-column:1/-1;line-height:1.4}
 }
+/* 2026-11-03 owner request: committee view shows only 비상대책위 활동소식.
+   Activity-history list UI is hidden (records are preserved, not deleted). */
+#committee-activity.committee-news-only .committee-toolbar,
+#committee-activity.committee-news-only #committeeActivityFilters,
+#committee-activity.committee-news-only #committeeActivityForm,
+#committee-activity.committee-news-only #committeeActivityList,
+#committee-activity.committee-news-only #committeeActivityManageToggle{display:none!important}

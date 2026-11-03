@@ -1,0 +1,73 @@
+name: EKODI Church Canonical Offline Staging Candidate
+
+# Artifact-only preflight: NEVER uploads to Cloudflare or changes the live Church
+# Pages project, branch variables, credentials, routes, authorization or DNS.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/church-canonical-offline-staging.yml'
+      - 'sites/ekodi-church/**'
+      - 'scripts/build-church-pages-candidate.mjs'
+      - 'scripts/verify-reviewed-church-source.mjs'
+      - 'scripts/verify-church-pages-candidate.mjs'
+      - 'test/church-source-shadow-import.test.mjs'
+      - 'test/church-reviewed-pr-overlay.test.mjs'
+      - 'test/church-pages-candidate-build.test.mjs'
+      - 'test/church-canonical-offline-staging.test.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: church-canonical-artifact-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  candidate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout the exact protected main commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Configure Node.js without provider credentials
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Church import, content and deployment authority
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node --test \
+            test/church-source-shadow-import.test.mjs \
+            test/church-reviewed-pr-overlay.test.mjs \
+            test/church-pages-candidate-build.test.mjs \
+            test/church-guarded-canonical-cutover.test.mjs \
+            test/church-canonical-offline-staging.test.mjs
+          npm test --prefix sites/ekodi-church
+      - name: Build exact-source offline candidate only
+        env:
+          CHURCH_CANDIDATE_DIR: ${{ runner.temp }}/ekodi-church-canonical-offline
+        run: |
+          set -euo pipefail
+          node scripts/build-church-pages-candidate.mjs \
+            --source sites/ekodi-church \
+            --output "$CHURCH_CANDIDATE_DIR" \
+            --sha "$GITHUB_SHA"
+          node scripts/verify-church-pages-candidate.mjs \
+            --source sites/ekodi-church \
+            --artifact "$CHURCH_CANDIDATE_DIR" \
+            --sha "$GITHUB_SHA"
+          test -s "$CHURCH_CANDIDATE_DIR/church-release.json"
+      - name: Retain source-pinned public-only candidate for protected staging review
+        uses: actions/upload-artifact@v4
+        with:
+          name: church-canonical-offline-${{ github.sha }}
+          path: ${{ runner.temp }}/ekodi-church-canonical-offline/
+          if-no-files-found: error
+          retention-days: 7

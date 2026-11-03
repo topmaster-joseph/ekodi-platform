@@ -15,6 +15,7 @@ import { verifiedOwnerAal2 } from './invest-owner-mfa.js';
 import { buildBrokerReadOnlyView } from './invest-broker-readonly-adapter.js';
 import { buildStrategyLab } from './invest-strategy-lab.js';
 import { screenShortTermValue } from './invest-short-term-value-engine.js';
+import { fetchInvestOpenDart } from './invest-opendart-readonly.js';
 import { STAGE2_PAPER_PRESET_ID,STAGE2_PAPER_AUTOMATION,validatedStage2PaperPreset,stage2PaperPresetEligibility } from './invest-stage2-paper-preset.js';
 
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
@@ -220,6 +221,23 @@ async function ownerShortTermValueResearch(request,env,ctx){
   const result=screenShortTermValue(input);
   await auditPrincipal(env,ctx.principal,'invest:short-term-value-research');
   return json(request,env,result,result.error?422:200);
+}
+
+// Official filing lookups require the strongest owner identity factor.
+// Even when the key is present, unauthenticated callers trigger zero provider calls.
+async function ownerOpenDartResearch(request,env,ctx){
+  if(request.method!=='GET')return json(request,env,{error:'METHOD_NOT_ALLOWED'},405);
+  if(!verifiedOwnerAal2(request,ctx.identity.id))
+    return json(request,env,{error:'STRONG_MFA_AAL2_REQUIRED',ordersPlaced:false},403);
+  const url=new URL(request.url);
+  const kind=url.pathname.endsWith('/company')?'company':'financials';
+  const result=await fetchInvestOpenDart(env,{
+    kind,corpCode:url.searchParams.get('corp_code'),
+    year:url.searchParams.get('year'),report:url.searchParams.get('report')||'11011',
+    fs:url.searchParams.get('fs')||'CFS'
+  });
+  await auditPrincipal(env,ctx.principal,'invest:opendart-official:'+kind+':'+(result.httpStatus===200?'success':'blocked'));
+  return json(request,env,result.body,result.httpStatus);
 }
 
 async function ownerStrategyLab(request,env,ctx){
@@ -584,6 +602,7 @@ export async function handleInvestAutopilotApi(request,env){
  if(path==='/v1/invest/autopilot/broker/snapshot'&&request.method==='GET')return ownerBrokerSnapshot(request,env,ctx);
  if(path==='/v1/invest/autopilot/research/strategy-lab'&&request.method==='GET')return ownerStrategyLab(request,env,ctx);
  if(path==='/v1/invest/autopilot/research/short-term-value')return ownerShortTermValueResearch(request,env,ctx);
+ if(path==='/v1/invest/autopilot/research/opendart/company'||path==='/v1/invest/autopilot/research/opendart/financials')return ownerOpenDartResearch(request,env,ctx);
  if(path==='/v1/invest/autopilot/live/orders'&&request.method==='POST')
   return json(request,env,{error:'LIVE_EXECUTION_LOCKED',executionPerformed:false,reason:'BROKER_AND_POLICY_GATES_NOT_VERIFIED'},423);
  if(path==='/v1/invest/autopilot/status'&&request.method==='GET')return status(request,env,ctx);

@@ -24,6 +24,7 @@ jobs:
           node --check eval/gate.mjs
           node --check eval/score.mjs
           node --check eval/privacy.mjs
+          node --check eval/ops-baseline.mjs
           node --check ai-router-score.js
           node --test eval/tests/*.test.mjs
       - name: Ensure confidential goldens are not committed
