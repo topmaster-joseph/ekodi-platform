@@ -63,6 +63,7 @@ const smokes = [
   ['points-referral-shared-email-isolated-smoke.sql', 'REFERRAL_SHARED_EMAIL_SMOKE_PASS'],
   ['points-admin-governance-isolated-smoke.sql', 'POINT_ADMIN_GOVERNANCE_SMOKE_PASS'],
   ['points-evidence-anomaly-isolated-smoke.sql', 'POINT_EVIDENCE_ANOMALY_SMOKE_PASS'],
+  ['points-recognition-goals-isolated-smoke.sql', 'POINT_RECOGNITION_GOALS_SMOKE_PASS'],
 ];
 let failed = 0;
 for (const [file, marker, prelude = '', scope] of smokes) {
