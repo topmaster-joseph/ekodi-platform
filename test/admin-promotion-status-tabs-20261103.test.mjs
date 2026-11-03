@@ -34,3 +34,13 @@ test('promotion status module aliases existing panels and offers prompts for 에
   assert.ok(!source.includes('.submit('), 'prompts must not be submitted automatically');
   assert.ok(!/innerHTML\s*=\s*`[^`]*\$\{text\}/.test(source), 'prompt text is escaped');
 });
+
+test('production E2E verifies the prompt cards and the autopost console tab read-only', async () => {
+  const [worker, source] = await Promise.all([read('scripts/admin-authenticated-e2e-menu-worker.mjs'), read('promotion-status-admin.js')]);
+  assert.ok(worker.includes("const PROMOTION_STATUS_TABS = new Set(['search-visibility','promotion-autopost','promotion-channels','growth-os']);"));
+  assert.ok(worker.includes('else if (PROMOTION_STATUS_TABS.has(menuId)) await verifyPromotionStatus(trigger, alreadyActive, started);'));
+  assert.ok(worker.includes('#marketingAiAdminPanel [data-marketing-tab="channels"].active'));
+  assert.ok(!/verifyPromotionStatus[\s\S]{0,1600}(\.fill\(|data-promo-fill"\]'\)\.click|method:\s*'POST')/.test(worker), 'production proof stays read-only');
+  // Growth OS re-renders its innerHTML; the card must be re-attached per panel.
+  assert.ok(source.includes('new MutationObserver(reconcile).observe(panel, { childList: true })'));
+});
