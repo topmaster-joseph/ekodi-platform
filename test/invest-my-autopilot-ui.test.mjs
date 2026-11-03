@@ -42,7 +42,8 @@ test('My Invest exposes readable context-specific second-level tabs under owner 
  const html=await (await investMyRoute(get('/invest'),{})).text();
  const owner=html.indexOf('<section id="owner" hidden>');
  assert.ok(owner>0,'owner authentication gate must remain');
- for(const id of ['ownerTabs','detailContext','detailHeading','detailCrumb','detailTabs']){
+ assert.ok(html.includes('id="detailCrumb"'),'public breadcrumb can display the section name without protected content');
+ for(const id of ['ownerTabs','detailContext','detailHeading','detailTabs']){
   assert.ok(html.indexOf('id="'+id+'"')>owner,id+' stays owner-only');
  }
  assert.match(html,/role="tablist" aria-label="선택한 메뉴의 세부 기능"/);
