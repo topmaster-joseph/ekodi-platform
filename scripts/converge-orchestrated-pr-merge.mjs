@@ -479,6 +479,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   // Growth OS search specialist is a dynamic Site Core Admin asset.
   // Dispatch guarded Site Core even when only the lazy module changes.
   file==='search-visibility-admin.js'||
+  // Growth OS summary and site-local automation tabs are Site Core assets.
+  // A token-mediated orchestrator merge must dispatch their guarded release.
+  ['growth-os-admin.js','growth-os-admin.css','tenant-automation-overview-ui.js','scripts/validate-admin-source.mjs'].includes(file)||
   ['admin-menu-registry.js','admin-sidebar.js','admin-canonical-routes.js','admin-menu-layout.js','admin-menu-layout.compact.js','admin-menu-runtime.js','admin-demand-loader.js','release-control-admin.js','system-health-admin.js','admin-design-engine.js','config/design-engine.json','config/admin-role-navigation.json'].includes(file)||
   file==='workspace-admin-page.js'||
   // The Church pastor admin page is compiled into the shared Site Core route.
