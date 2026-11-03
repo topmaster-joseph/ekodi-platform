@@ -23,13 +23,41 @@
       add(tr,'td',amount(row.averageCostKrw));add(tr,'td',typeof row.averageLatencyMs==='number'?`${Math.round(row.averageLatencyMs)}ms`:'확인필요');add(tr,'td',typeof row.regressionCount==='number'?`${row.regressionCount}건`:'확인필요');
     });
   }
+  // Read-only operations are intentionally distinct from independently graded eval results.
+  function renderOperational(data){
+    const host=$('#aiEvalLabContent');if(!host)return;host.replaceChildren();
+    add(host,'p','실측 AI 평가 성적표: 확인필요 · 실제 골든셋 50문항, 문항당 3~5회 반복, 블라인드 채점과 검증 영수증이 필요합니다.','ai-eval-empty');
+    const op=data?.operational;
+    if(!op||op.source!=='cloudflare-d1-aggregate')return;
+    add(host,'h4','운영 관측 · 모델 품질 점수가 아닙니다','ai-eval-ops-title');
+    add(host,'p',`Cloudflare D1 집계 · 관측 ${date(op.observedAt)} · 최근 30일 자료 · 원문과 개인정보 미포함`,'ai-eval-meta');
+    const service=op.orchestrator;
+    if(service){
+      const rate=service.completionLast7d;
+      add(host,'p',`최근 7일 작업 완료 비율 ${pct(rate?.estimate)} (95% 구간 ${pct(rate?.lower)}–${pct(rate?.upper)}) · 7일 이상 배정 상태 ${Number(service.assignedOlderThan7Days)||0}건`,'ai-eval-meta');
+    }
+    const rows=Array.isArray(op.providers)?op.providers:[];
+    if(!rows.length){add(host,'p','확인필요 · 공급자별 관측 표본이 부족하거나 연결되지 않았습니다.','ai-eval-empty');return}
+    const scroll=add(host,'div','','ai-eval-scroll'),table=document.createElement('table');scroll.append(table);
+    const tr=document.createElement('tr'),thead=document.createElement('thead');thead.append(tr);table.append(thead);
+    ['공급자','시도','선택','관측 선택 비율 (95% 구간)','실패 이벤트'].forEach(value=>add(tr,'th',value));
+    const tbody=document.createElement('tbody');table.append(tbody);
+    rows.forEach(row=>{
+      const line=document.createElement('tr');tbody.append(line);
+      add(line,'th',String(row.provider||'확인필요'));
+      add(line,'td',String(Number(row.attempted)||0));
+      add(line,'td',String(Number(row.selected)||0));
+      add(line,'td',`${pct(row.selectionRate?.estimate)} (${pct(row.selectionRate?.lower)}–${pct(row.selectionRate?.upper)})`);
+      add(line,'td',String(Number(row.failed)||0));
+    });
+  }
   function valid(data){return data?.status==='verified' && data?.provenance?.releaseReceipt && data?.provenance?.independentVerifier && typeof data.verifiedAt==='string' && Number.isInteger(data.sampleCount) && data.sampleCount>=50 && Number.isInteger(data.repeatCount) && data.repeatCount>=3 && data.repeatCount<=5 && typeof data.baselineVersion==='string' && Array.isArray(data.rows) && data.rows.length>0;}
   async function load(){
     render('검증된 성적표를 조회하는 중입니다.');
     const t=token();if(!t){render('관리자 인증이 필요합니다. 로그인 후 새로고침해 주세요.');return}
     try{const response=await fetch(SOURCE,{method:'GET',cache:'no-store',credentials:'same-origin',headers:{authorization:`Bearer ${t}`}});
       if(!response.ok){render(`확인필요 · 성적표 API ${response.status}. 실제 기준선과 관리자 전용 집계 API 연결을 확인해 주세요.`);return}
-      const data=await response.json();if(!valid(data)){render('확인필요 · 검증 영수증, 독립검증자 또는 50문항×3회 이상 실측 증거가 없습니다. 예시 수치는 표시하지 않습니다.');return}
+      const data=await response.json();if(!valid(data)){renderOperational(data);return}
       render('',data);
     }catch{render('확인필요 · 성적표 조회에 실패했습니다. 운영 상태를 확인해 주세요.')}
   }

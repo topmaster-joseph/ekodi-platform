@@ -4,6 +4,9 @@ on:
     paths:
       - 'eval/**'
       - 'ai-router-score.js'
+      - 'ai-eval-control.js'
+      - 'ai-eval-admin.js'
+      - 'mission-control-entry-worker.js'
       - 'scripts/build.mjs'
       - '.github/workflows/ai-eval-lab.yml'
   merge_group:
@@ -25,6 +28,10 @@ jobs:
           node --check eval/score.mjs
           node --check eval/privacy.mjs
           node --check eval/ops-baseline.mjs
+          node --check eval/operations-projection.mjs
+          node --check ai-eval-control.js
+          node --check ai-eval-admin.js
+          node --check mission-control-entry-worker.js
           node --check ai-router-score.js
           node --test eval/tests/*.test.mjs
       - name: Ensure confidential goldens are not committed
