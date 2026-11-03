@@ -14,7 +14,7 @@ import { BROKER_ADAPTERS, INVEST_PERMISSION, evaluateBrokerReadiness } from './i
 import { verifiedOwnerAal2 } from './invest-owner-mfa.js';
 import { buildBrokerReadOnlyView } from './invest-broker-readonly-adapter.js';
 import { buildStrategyLab } from './invest-strategy-lab.js';
-import { screenShortTermValue, SHORT_VALUE_POLICY } from './invest-short-term-value-engine.js';
+import { screenShortTermValue } from './invest-short-term-value-engine.js';
 import { STAGE2_PAPER_PRESET_ID,STAGE2_PAPER_AUTOMATION,validatedStage2PaperPreset,stage2PaperPresetEligibility } from './invest-stage2-paper-preset.js';
 
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
@@ -210,9 +210,12 @@ async function ownerShortTermValueResearch(request,env,ctx){
   // High-value personal research requires the same strong owner AAL2 proof as broker inquiry.
   if(!verifiedOwnerAal2(request,ctx.identity.id))
     return json(request,env,{error:'STRONG_MFA_AAL2_REQUIRED',ordersPlaced:false},403);
-  const length=Number(request.headers.get('content-length')||0);
-  if(length>128000)return json(request,env,{error:'INPUT_TOO_LARGE'},413);
-  const input=await body(request);
+  if(!String(request.headers.get('content-type')||'').toLowerCase().includes('application/json'))
+    return json(request,env,{error:'JSON_REQUIRED'},415);
+  const raw=await request.text();
+  if(raw.length>128000)return json(request,env,{error:'INPUT_TOO_LARGE'},413);
+  let input;
+  try{input=JSON.parse(raw)}catch{return json(request,env,{error:'INVALID_JSON'},400)}
   if(!input||!Array.isArray(input.candidates))return json(request,env,{error:'CANDIDATES_REQUIRED'},400);
   const result=screenShortTermValue(input);
   await auditPrincipal(env,ctx.principal,'invest:short-term-value-research');
@@ -552,7 +555,7 @@ export async function handleInvestAutopilotApi(request,env){
  const {ok,headers}=cors(request,env);if(request.method==='OPTIONS')return new Response(null,{status:ok?204:403,headers});
  if(!ok)return json(request,env,{error:'ORIGIN_FORBIDDEN'},403);
  if(!env?.DB)return json(request,env,{error:'DATABASE_UNAVAILABLE'},503);
- const write=!['GET','HEAD'].includes(request.method);
+ const write=!['GET','HEAD'].includes(request.method)&&path!=='/v1/invest/autopilot/research/short-term-value';
  const ctx=await ownerContext(request,env,write);if(ctx.error)return json(request,env,{error:ctx.error},ctx.status);
  // Second factor ("본인인증", phone/address fragment) is an owner opt-in: INVEST_STEP_UP_REQUIRED='true'.
  // Without it the verified owner Google session plus the owner-email gate unlock the workspace;
