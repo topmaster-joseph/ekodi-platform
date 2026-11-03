@@ -33,9 +33,23 @@ export function maskContacts(text:string){
  for(const re of CONTACT_PATTERNS)out=out.replace(re,m=>{masked=true;const lead=m.match(/^\s/)?.[0]||'';return lead+'[연락처 가림]'});
  return {text:out,masked};
 }
-async function contactUnlocked(admin:Admin,a:string,b:string){
+async function contactUnlocked(admin:Admin,a:string,b:string,interestId:string){
+ // An old pair-level unlock must NEVER authorize a different or refunded connection.
+ // The active interest must match a completed contact invoice for this exact pair.
+ if(!interestId)return false;
  const [lo,hi]=a<b?[a,b]:[b,a];
- return Boolean(await one(admin.from('singles_contact_unlocks').select('request_id').eq('user_low',lo).eq('user_high',hi)));
+ const grant=await one(admin.from('singles_contact_unlocks').select('request_id').eq('user_low',lo).eq('user_high',hi));
+ if(!grant?.request_id)return false;
+ const request=await one(admin.from('singles_paid_requests')
+  .select('kind,status,billing_mode,requester_id,responder_id,interest_id').eq('id',grant.request_id));
+ if(request?.kind!=='contact'||request.status!=='connected'||request.billing_mode!=='postpaid'||
+   request.interest_id!==interestId||
+   !((request.requester_id===a&&request.responder_id===b)||(request.requester_id===b&&request.responder_id===a)))return false;
+ const invoices=await many(admin.from('singles_request_invoices')
+   .select('user_id,role,status,refund_due_at,refunded_at').eq('request_id',grant.request_id).limit(3));
+ return invoices.length===2&&invoices.every((i:any)=>i.status==='paid'&&!i.refund_due_at&&!i.refunded_at)&&
+  invoices.some((i:any)=>i.role==='requester'&&i.user_id===request.requester_id)&&
+  invoices.some((i:any)=>i.role==='responder'&&i.user_id===request.responder_id);
 }
 async function blocked(admin:Admin,a:string,b:string){
  const items=await many(admin.from('singles_blocks').select('blocker_id,blocked_id')
@@ -439,7 +453,12 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const quotes:Record<string,number>={};
   for(const k of ['message','contact']){const {data,error}=await admin.rpc('singles_price_quote',{p_user:userId,p_kind:k});if(error)throw error;quotes[k]=data}
   const unlocks=await many(admin.from('singles_contact_unlocks').select('user_low,user_high').or('user_low.eq.'+userId+',user_high.eq.'+userId));
-  const shared=new Set(unlocks.map((u:any)=>u.user_low===userId?u.user_high:u.user_low));
+  const candidates=new Set(unlocks.map((u:any)=>u.user_low===userId?u.user_high:u.user_low));
+  const shared=new Set<string>();
+  for(const c of conns){
+   const other=c.from_user_id===userId?c.to_user_id:c.from_user_id;
+   if(candidates.has(other)&&await contactUnlocked(admin,userId,other,c.id))shared.add(other);
+  }
   return reply(req,{paid_model:true,billing:'postpaid_invoice',
    requests:reqs.map((r:any)=>{const incoming=r.responder_id===userId,other=incoming?r.requester_id:r.responder_id;const inv=invByReq.get(r.id);
     return {id:r.id,kind:r.kind,status:r.status,incoming,display_name:byId.get(other)||'동행 회원',
@@ -500,13 +519,17 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(method==='GET'){
    const messages=await many(admin.from('singles_messages').select('id,sender_id,body,created_at')
      .eq('interest_id',interestId).order('created_at',{ascending:true}).limit(100));
-   const locked=paidModel()&&!await contactUnlocked(admin,userId,other);
-   return reply(req,{messages:locked?messages.map((m:any)=>({...m,body:maskContacts(String(m.body||'')).text})):messages});
+   const unlocked=paidModel()&&await contactUnlocked(admin,userId,other,interestId);
+   // Ordinary historical messages never become consent to expose a contact after payment.
+   const visible=paidModel()?messages.map((m:any)=>({
+    ...m,body:unlocked&&String(m.body||'').startsWith('[내 연락처] ')?m.body:maskContacts(String(m.body||'')).text
+   })):messages;
+   return reply(req,{messages:visible});
   }
   // A personal contact is NEVER inferred from public profile, login identity, or payment.
   // Each verified member must explicitly submit their own phone/email after BOTH invoices clear.
   if(shareContact){
-   if(!paidModel()||!await contactUnlocked(admin,userId,other))return reply(req,{error:'contact_exchange_not_completed'},403);
+   if(!paidModel()||!await contactUnlocked(admin,userId,other,interestId))return reply(req,{error:'contact_exchange_not_completed'},403);
    const v=await body(req);
    if(!v||v.share_consent!==true||typeof v.contact!=='string')return reply(req,{error:'contact_share_consent_required'},400);
    const contact=v.contact.trim();

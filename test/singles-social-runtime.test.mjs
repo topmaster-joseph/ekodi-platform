@@ -233,6 +233,10 @@ const rpcBy=(admin,map)=>{admin.rpc=async(name,params)=>{admin.calls.push({name,
 const paidReq=(kind)=>new Request('https://ekodi.kr/interests/'+other,{method:'POST',...(kind?{body:JSON.stringify({kind}),headers:{'content-length':'20'}}:{})});
 const respondReq=(decision)=>new Request('https://ekodi.kr/requests/'+id+'/respond',{method:'POST',body:JSON.stringify({decision})});
 const PAID={singles_is_paid_member:{data:true,error:null}},FREE={singles_is_paid_member:{data:false,error:null}};
+const settledOptions={
+ extra:{singles_contact_unlocks:{request_id:id},singles_paid_requests:{kind:'contact',status:'connected',billing_mode:'postpaid',requester_id:uid,responder_id:other,interest_id:id}},
+ lists:{singles_request_invoices:[{user_id:uid,role:'requester',status:'paid'},{user_id:other,role:'responder',status:'paid'}]}
+};
 
 test('paid model: free members cannot request, accept, or save a profile',()=>withPaid(async()=>{
  let admin=rpcBy(db(),FREE);
@@ -315,20 +319,20 @@ test('paid contact details require the settled pair, a verified partner and a fr
  assert.equal((await res.json()).error,'contact_exchange_not_completed');
  assert.equal(admin.writes.length,0,'payment-gated contact cannot leak');
 
- admin=rpcBy(db({accepted:true,extra:{singles_contact_unlocks:{request_id:id}}}),PAID);
+ admin=rpcBy(db({accepted:true,...settledOptions}),PAID);
  res=await handleSinglesSocial(request('010-1234-5678',false),route,admin,uid,reply);
  assert.equal(res.status,400);
  assert.equal((await res.json()).error,'contact_share_consent_required');
  assert.equal(admin.writes.length,0);
 
  for(const invalid of ['https://myprofile.example','@kakaoid','010-123','a'.repeat(101)]){
-  admin=rpcBy(db({accepted:true,extra:{singles_contact_unlocks:{request_id:id}}}),PAID);
+  admin=rpcBy(db({accepted:true,...settledOptions}),PAID);
   res=await handleSinglesSocial(request(invalid,true),route,admin,uid,reply);
   assert.equal(res.status,400,invalid);
   assert.equal(admin.writes.length,0);
  }
 
- admin=rpcBy(db({accepted:true,extra:{singles_contact_unlocks:{request_id:id}}}),PAID);
+ admin=rpcBy(db({accepted:true,...settledOptions}),PAID);
  res=await handleSinglesSocial(request('010-1234-5678',true),route,admin,uid,reply);
  assert.equal(res.status,200);
  assert.deepEqual(await res.json(),{ok:true,shared:true});
@@ -337,8 +341,53 @@ test('paid contact details require the settled pair, a verified partner and a fr
  assert.equal(admin.calls.find(c=>c.name==='singles_rate_take').params.p_action,'message');
 }));
 
-test('paid conversation history masks older contact data until verified payment unlock',()=>withPaid(async()=>{
- const messages=[{id,sender_id:other,body:'기존 번호 010-9876-5432 및 foo@example.org',created_at:'2026-10-27T00:00:00Z'}];
+test('postpaid contact entitlement rejects stale, refunded, crossed and partial payments',()=>withPaid(async()=>{
+ const route='/messages/'+id+'/contact';
+ const payload=()=>new Request('https://ekodi.kr'+route,{method:'POST',body:JSON.stringify({contact:'010-1234-5678',share_consent:true})});
+ const bad=[
+  ['lapsed request',{extra:{singles_paid_requests:{...settledOptions.extra.singles_paid_requests,status:'lapsed'}}}],
+  ['wrong request type',{extra:{singles_paid_requests:{...settledOptions.extra.singles_paid_requests,kind:'message'}}}],
+  ['mismatched interest',{extra:{singles_paid_requests:{...settledOptions.extra.singles_paid_requests,interest_id:other}}}],
+  ['prepaid request',{extra:{singles_paid_requests:{...settledOptions.extra.singles_paid_requests,billing_mode:'prepaid'}}}],
+  ['crossed beneficiary',{extra:{singles_paid_requests:{...settledOptions.extra.singles_paid_requests,responder_id:id}}}],
+  ['refunded invoice',{lists:{singles_request_invoices:[{user_id:uid,role:'requester',status:'paid'},{user_id:other,role:'responder',status:'refund_due'}]}}],
+  ['one-sided payment',{lists:{singles_request_invoices:[{user_id:uid,role:'requester',status:'paid'}]}}],
+  ['refunded timestamp despite paid status',{lists:{singles_request_invoices:[{user_id:uid,role:'requester',status:'paid'},{user_id:other,role:'responder',status:'paid',refunded_at:'2026-11-03T00:00:00Z'}]}}],
+  ['refund pending despite paid status',{lists:{singles_request_invoices:[{user_id:uid,role:'requester',status:'paid'},{user_id:other,role:'responder',status:'paid',refund_due_at:'2026-11-03T00:00:00Z'}]}}]
+ ];
+ for(const [label,variation] of bad){
+  const admin=rpcBy(db({accepted:true,...settledOptions,
+   extra:{...settledOptions.extra,...(variation.extra||{})},
+   lists:{...settledOptions.lists,...(variation.lists||{})}}),PAID);
+  const response=await handleSinglesSocial(payload(),route,admin,uid,reply);
+  assert.equal(response.status,403,label);
+  assert.equal((await response.json()).error,'contact_exchange_not_completed',label);
+  assert.equal(admin.writes.length,0,label);
+ }
+}));
+
+test('paid connections display contact_shared only while both original invoices remain settled',()=>withPaid(async()=>{
+ const connection={id,from_user_id:other,to_user_id:uid,status:'accepted'};
+ const requestRow={id,requester_id:uid,responder_id:other,kind:'contact',status:'connected',requester_fee_krw:75000};
+ for(const [label,status,expected] of [['settled','paid',true],['refunded','refund_due',false],['voided','void',false]]){
+  const admin=rpcBy(db({accepted:true,extra:settledOptions.extra,lists:{
+   ...settledOptions.lists,
+   singles_paid_requests:[requestRow],
+   singles_interests:[connection],
+   singles_contact_unlocks:[{user_low:uid,user_high:other,request_id:id}],
+   singles_request_invoices:[{user_id:uid,role:'requester',status:'paid'},{user_id:other,role:'responder',status}]
+  }}),PAID);
+  const res=await handleSinglesSocial(new Request('https://ekodi.kr/requests'),'/requests',admin,uid,reply);
+  assert.equal(res.status,200,label);
+  const json=await res.json();
+  assert.equal(json.connections.length,1,label);
+  assert.equal(json.connections[0].contact_shared,expected,label);
+ }
+}));
+
+test('paid conversation history only reveals explicitly shared contact on a current paid connection',()=>withPaid(async()=>{
+ const messages=[{id,sender_id:other,body:'기존 번호 010-9876-5432 및 foo@example.org',created_at:'2026-10-27T00:00:00Z'},
+  {id:'55555555-5555-4555-8555-555555555555',sender_id:other,body:'[내 연락처] 010-4567-8901',created_at:'2026-10-28T00:00:00Z'}];
  const req=new Request('https://ekodi.kr/messages/'+id);
  let admin=rpcBy(db({accepted:true,lists:{singles_messages:messages}}),PAID);
  let res=await handleSinglesSocial(req,'/messages/'+id,admin,uid,reply);
@@ -346,11 +395,12 @@ test('paid conversation history masks older contact data until verified payment 
  let b=await res.json();
  assert.ok(!JSON.stringify(b).includes('9876'));
  assert.ok(!JSON.stringify(b).includes('foo@example.org'));
- admin=rpcBy(db({accepted:true,extra:{singles_contact_unlocks:{request_id:id}},lists:{singles_messages:messages}}),PAID);
+ admin=rpcBy(db({accepted:true,...settledOptions,lists:{...settledOptions.lists,singles_messages:messages}}),PAID);
  res=await handleSinglesSocial(req,'/messages/'+id,admin,uid,reply);
  assert.equal(res.status,200);
  b=await res.json();
- assert.equal(b.messages[0].body,messages[0].body);
+ assert.ok(!b.messages[0].body.includes('9876'));
+ assert.equal(b.messages[1].body,messages[1].body,'explicitly shared contact is visible after fresh settlement');
 }));
 
 test('paid contact route is centrally gated and member contact UI cannot reveal public profile links',async()=>{
