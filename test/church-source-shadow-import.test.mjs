@@ -32,7 +32,7 @@ test('Church shadow import has explicit non-production provenance and exact file
   assert.equal(manifest.importedTrackedFileCount, 212);
   assert.equal(manifest.excludedWorkflows.length, 8);
   assert.equal(manifest.nestedWorkflowFilesInert, false);
-  assert.equal(manifest.canonicalizedPaths.length, 31);
+  assert.equal(manifest.canonicalizedPaths.length, 28);
   assert.equal(manifest.reviewedOverlays.changedFiles.length,20);
   const expected = new Set(manifest.trackedFiles.map(item => item.path));
   assert.equal(expected.size, 212, 'duplicate manifest entries');
@@ -44,8 +44,16 @@ test('Church shadow import has explicit non-production provenance and exact file
 test('Church copied HTML, JS, CSS, worship assets and tests match original Git blob SHA', () => {
   for(const entry of manifest.trackedFiles) {
     assert.match(entry.blobSha, /^[a-f0-9]{40}$/);
-    const actual = gitBlobHash(readFileSync(resolve(churchRoot, entry.path)));
-    assert.equal(actual, entry.normalizedBlobSha || entry.blobSha, 'source content changed: ' + entry.path);
+    const bytes = readFileSync(resolve(churchRoot, entry.path));
+    const expected = entry.normalizedBlobSha || entry.blobSha;
+    let actual = gitBlobHash(bytes);
+    // Validate exact committed Git bytes, not OS-specific checkout CRLFs.
+    // Only a byte-exact CRLF -> LF conversion matching the expected blob is allowed.
+    if(actual !== expected && bytes.includes(13)) {
+      const lfBytes = Buffer.from(bytes.toString('utf8').replace(/\r\n/g,'\n'),'utf8');
+      if(gitBlobHash(lfBytes) === expected) actual = expected;
+    }
+    assert.equal(actual, expected, 'source content changed: ' + entry.path);
   }
 });
 

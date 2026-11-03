@@ -69,7 +69,7 @@
       "path": "church-homepage-layout.css",
       "mode": "100644",
       "blobSha": "be2c986454e372a51dbd6fc4caa54460879516a6",
-      "normalizedBlobSha": "116fe72aebb57ce0b508d731ed33981a85ed85e9"
+      "normalizedBlobSha": "549f7dc4beec35985b7deb918433cc8978731579"
     },
     {
       "path": "church-i18n-extended.js",
@@ -108,7 +108,7 @@
       "path": "church-life-hub-i18n.js",
       "mode": "100644",
       "blobSha": "010b84d0c98baca45a9c60b4ccbb939515dc2aef",
-      "normalizedBlobSha": "0a447d63b025c55faffb628bf16b42e91f54fd8c"
+      "normalizedBlobSha": "866b6ff892c306336c96330dd0c6f8fe7312d986"
     },
     {
       "path": "church-life-hub.css",
@@ -135,7 +135,7 @@
       "path": "church-refresh.css",
       "mode": "100644",
       "blobSha": "c8bdb9432eab431b4a6e5e48e26ac1ea41de22bc",
-      "normalizedBlobSha": "4ad335ad5ce87bc1727c62a173faa27e557c2270"
+      "normalizedBlobSha": "3c48a7efacf779d66051a583366a9297171751bf"
     },
     {
       "path": "church-shell-i18n.js",
@@ -146,7 +146,7 @@
       "path": "church-shell.js",
       "mode": "100644",
       "blobSha": "2c0ea28de1c9bd1e6a426ec7a4cbec6d73a34bda",
-      "normalizedBlobSha": "4fe581f50767f3bf7967f8c0cc0f883f25919249"
+      "normalizedBlobSha": "142fe77a48afbc410725d60bf8b4566b1443a523"
     },
     {
       "path": "church-weekly-worship.css",
@@ -182,7 +182,7 @@
       "path": "devotion/index.html",
       "mode": "100644",
       "blobSha": "7978c99d26effd864855e4a13d1f5dc250feb964",
-      "normalizedBlobSha": "08b88ba3bf003b01d0ff844f827b90dcbc3a5b2a"
+      "normalizedBlobSha": "929d60f7edfda2ab1ba1e220dda6773b0c194ac2"
     },
     {
       "path": "Dockerfile",
@@ -192,8 +192,7 @@
     {
       "path": "docs/church-tab-plan-20261102.md",
       "mode": "100644",
-      "blobSha": "defc156dceb700561f242882f71882fd9fc7b29e",
-      "normalizedBlobSha": "6a8d5992493eec810d17e9d1527bdf961664bee4"
+      "blobSha": "defc156dceb700561f242882f71882fd9fc7b29e"
     },
     {
       "path": "giving-config.json",
@@ -209,7 +208,7 @@
       "path": "index.html",
       "mode": "100644",
       "blobSha": "7683f8859aae85283bc65f52223a41ebbc08db60",
-      "normalizedBlobSha": "f65603f08d7a1f4cb5e43018e273c75d401c6f4a"
+      "normalizedBlobSha": "050b4d623533f5bfe46d5eead5c3ce1f6b60bb93"
     },
     {
       "path": "live/host-intent.js",
@@ -220,7 +219,7 @@
       "path": "live/index.html",
       "mode": "100644",
       "blobSha": "f05cbca86b2714b7fc57c7f048da955a86467551",
-      "normalizedBlobSha": "e555ff8659c1df9c19fe65ad01b9210bc5cdc01b"
+      "normalizedBlobSha": "3a77682c2f5c035cb380d87e3419cbaad5f89545"
     },
     {
       "path": "live/live.css",
@@ -261,7 +260,7 @@
       "path": "my/attendance/index.html",
       "mode": "100644",
       "blobSha": "1673b25ab9f627463ce867caa98bdf13b79410bf",
-      "normalizedBlobSha": "72f804718c57d16b1f9c453e49c3e3634533f62f"
+      "normalizedBlobSha": "b4ffa1629d8f7c98b4c388152f48f7050181461d"
     },
     {
       "path": "my/attendance/styles.css",
@@ -277,7 +276,7 @@
       "path": "my/giving/index.html",
       "mode": "100644",
       "blobSha": "18f7971676fa47fba43a696f1c285ac92bffd445",
-      "normalizedBlobSha": "c72005af899821a31c5aad5d2658be6d712f9f40"
+      "normalizedBlobSha": "f9616cc9db6bc9d4f09703ce88105d8a391b07c2"
     },
     {
       "path": "my/giving/styles.css",
@@ -288,7 +287,7 @@
       "path": "my/index.html",
       "mode": "100644",
       "blobSha": "a2d9adb5000851078f37cadb88a0b0655cf07de5",
-      "normalizedBlobSha": "e2f9e7728e923bbe7f6189f42568cf992fb0213d"
+      "normalizedBlobSha": "c3096c45f8bb324c291aabd637721b26cc78e6e0"
     },
     {
       "path": "my/language.js",
@@ -298,8 +297,7 @@
     {
       "path": "my/member-work-tabs.css",
       "mode": "100644",
-      "blobSha": "10d5197fc8d16424ffbebce3da5cca92dcf6d5fb",
-      "normalizedBlobSha": "445b58d00c6d6d379f36c193245a0239b4da77e0"
+      "blobSha": "10d5197fc8d16424ffbebce3da5cca92dcf6d5fb"
     },
     {
       "path": "my/presence-admin-link.js",
@@ -310,7 +308,7 @@
       "path": "my/styles.css",
       "mode": "100644",
       "blobSha": "c77ac41d009f45c94ea236068bdb4c6df1e8dfcf",
-      "normalizedBlobSha": "ee04bd36ac5aa2feb79e36718fba63dd35f37a99"
+      "normalizedBlobSha": "3971d6585d80915b0c75b3c57f3e3ec753a93ef4"
     },
     {
       "path": "mypage/app.js",
@@ -381,7 +379,7 @@
       "path": "script.js",
       "mode": "100644",
       "blobSha": "a00b52f289097f5e32bad2ba115979dc1319b964",
-      "normalizedBlobSha": "eb776d2313a0f2a932ba2e6de94f108ae9dae105"
+      "normalizedBlobSha": "4233ff7e5944d3a693d096e6a1877a52afefb3a1"
     },
     {
       "path": "styles.css",
@@ -397,7 +395,7 @@
       "path": "test/church-approved-homepage-layout.test.mjs",
       "mode": "100644",
       "blobSha": "1aa75f8b0fcd0c3ab7d5f121dbb137b582c0d2c0",
-      "normalizedBlobSha": "f60562515b595388cbb9ad5956cec791f20c6f1c"
+      "normalizedBlobSha": "0dcf7208c6dbb78ba1ca54a558fc20c6cbd3f42b"
     },
     {
       "path": "test/church-brand-top-ownership.test.mjs",
@@ -408,7 +406,7 @@
       "path": "test/church-compact-tabs.test.mjs",
       "mode": "100644",
       "blobSha": "7e0d033488244752f911bda8fcd493deb700e805",
-      "normalizedBlobSha": "81b3b19cabbe5214844807aaf06a226e46bfeff0"
+      "normalizedBlobSha": "63ebc859c6ccde42f6b425d93db2368bb3ab7ff9"
     },
     {
       "path": "test/church-csp-supabase-connect.test.mjs",
@@ -420,7 +418,7 @@
       "path": "test/church-devotion.test.mjs",
       "mode": "100644",
       "blobSha": "70b925525e0d6b4136c2e9285d0daeb7904b99d0",
-      "normalizedBlobSha": "4fad6bf24bfe99a1c5a214cf223e7425e6a1e23c"
+      "normalizedBlobSha": "b249b5af5d8ba15710b9349201ae070b59a075d4"
     },
     {
       "path": "test/church-ekodi-live-bridge.test.mjs",
@@ -466,7 +464,7 @@
       "path": "test/church-life-hub.test.mjs",
       "mode": "100644",
       "blobSha": "80a717bad6ac6567620ac0f338b105a77ea77b70",
-      "normalizedBlobSha": "29119fe923214587200713e057976939488f8ced"
+      "normalizedBlobSha": "f8ac1be4eb2e1ce85538b1ed866090ab50e787ed"
     },
     {
       "path": "test/church-live-auth-loop.test.mjs",
@@ -562,8 +560,7 @@
     {
       "path": "test/church-native-footer.test.mjs",
       "mode": "100644",
-      "blobSha": "bc7aff11f66712dfd8af2b5d2d2d272da7664db2",
-      "normalizedBlobSha": "7aa037aa6db9a907e4b01d2cdb6c267993a081a6"
+      "blobSha": "bc7aff11f66712dfd8af2b5d2d2d272da7664db2"
     },
     {
       "path": "test/church-nine-language-shell.test.mjs",
@@ -688,7 +685,7 @@
       "path": "test/simple-home-progressive-disclosure.test.mjs",
       "mode": "100644",
       "blobSha": "b698b9b0e73aeaa004414fdf3b6f6bc665e5eeba",
-      "normalizedBlobSha": "843747ef4bb5994940d703cf1dfb518bbd6dfb37"
+      "normalizedBlobSha": "fed67fe52cb30ca06e12ee71ddf9167f5466ac92"
     },
     {
       "path": "test/together-page.test.mjs",
@@ -1123,13 +1120,11 @@
     "church-refresh.css",
     "church-shell.js",
     "devotion/index.html",
-    "docs/church-tab-plan-20261102.md",
     "index.html",
     "live/index.html",
     "my/attendance/index.html",
     "my/giving/index.html",
     "my/index.html",
-    "my/member-work-tabs.css",
     "my/styles.css",
     "script.js",
     "test/church-approved-homepage-layout.test.mjs",
@@ -1138,7 +1133,6 @@
     "test/church-devotion.test.mjs",
     "test/church-life-hub.test.mjs",
     "test/church-live-system-verification.test.mjs",
-    "test/church-native-footer.test.mjs",
     "test/church-shell-login-live-integration.test.mjs",
     "test/giving-contract.test.mjs",
     "test/giving-nine-language-i18n.test.mjs",
@@ -1224,7 +1218,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "116fe72aebb57ce0b508d731ed33981a85ed85e9",
+        "finalCanonicalBlobSha": "549f7dc4beec35985b7deb918433cc8978731579",
         "originalBaseBlobSha": "be2c986454e372a51dbd6fc4caa54460879516a6"
       },
       {
@@ -1237,7 +1231,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "0a447d63b025c55faffb628bf16b42e91f54fd8c",
+        "finalCanonicalBlobSha": "866b6ff892c306336c96330dd0c6f8fe7312d986",
         "originalBaseBlobSha": "010b84d0c98baca45a9c60b4ccbb939515dc2aef"
       },
       {
@@ -1250,7 +1244,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "4ad335ad5ce87bc1727c62a173faa27e557c2270",
+        "finalCanonicalBlobSha": "3c48a7efacf779d66051a583366a9297171751bf",
         "originalBaseBlobSha": "c8bdb9432eab431b4a6e5e48e26ac1ea41de22bc"
       },
       {
@@ -1263,7 +1257,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "4fe581f50767f3bf7967f8c0cc0f883f25919249",
+        "finalCanonicalBlobSha": "142fe77a48afbc410725d60bf8b4566b1443a523",
         "originalBaseBlobSha": "2c0ea28de1c9bd1e6a426ec7a4cbec6d73a34bda"
       },
       {
@@ -1276,7 +1270,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "08b88ba3bf003b01d0ff844f827b90dcbc3a5b2a",
+        "finalCanonicalBlobSha": "929d60f7edfda2ab1ba1e220dda6773b0c194ac2",
         "originalBaseBlobSha": "7978c99d26effd864855e4a13d1f5dc250feb964"
       },
       {
@@ -1289,7 +1283,7 @@
             "status": "A"
           }
         ],
-        "finalCanonicalBlobSha": "6a8d5992493eec810d17e9d1527bdf961664bee4",
+        "finalCanonicalBlobSha": "defc156dceb700561f242882f71882fd9fc7b29e",
         "originalBaseBlobSha": null
       },
       {
@@ -1302,7 +1296,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "f65603f08d7a1f4cb5e43018e273c75d401c6f4a",
+        "finalCanonicalBlobSha": "050b4d623533f5bfe46d5eead5c3ce1f6b60bb93",
         "originalBaseBlobSha": "7683f8859aae85283bc65f52223a41ebbc08db60"
       },
       {
@@ -1315,7 +1309,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "e555ff8659c1df9c19fe65ad01b9210bc5cdc01b",
+        "finalCanonicalBlobSha": "3a77682c2f5c035cb380d87e3419cbaad5f89545",
         "originalBaseBlobSha": "f05cbca86b2714b7fc57c7f048da955a86467551"
       },
       {
@@ -1328,7 +1322,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "72f804718c57d16b1f9c453e49c3e3634533f62f",
+        "finalCanonicalBlobSha": "b4ffa1629d8f7c98b4c388152f48f7050181461d",
         "originalBaseBlobSha": "1673b25ab9f627463ce867caa98bdf13b79410bf"
       },
       {
@@ -1341,7 +1335,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "c72005af899821a31c5aad5d2658be6d712f9f40",
+        "finalCanonicalBlobSha": "f9616cc9db6bc9d4f09703ce88105d8a391b07c2",
         "originalBaseBlobSha": "18f7971676fa47fba43a696f1c285ac92bffd445"
       },
       {
@@ -1354,7 +1348,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "e2f9e7728e923bbe7f6189f42568cf992fb0213d",
+        "finalCanonicalBlobSha": "c3096c45f8bb324c291aabd637721b26cc78e6e0",
         "originalBaseBlobSha": "a2d9adb5000851078f37cadb88a0b0655cf07de5"
       },
       {
@@ -1367,7 +1361,7 @@
             "status": "A"
           }
         ],
-        "finalCanonicalBlobSha": "445b58d00c6d6d379f36c193245a0239b4da77e0",
+        "finalCanonicalBlobSha": "10d5197fc8d16424ffbebce3da5cca92dcf6d5fb",
         "originalBaseBlobSha": null
       },
       {
@@ -1380,7 +1374,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "ee04bd36ac5aa2feb79e36718fba63dd35f37a99",
+        "finalCanonicalBlobSha": "3971d6585d80915b0c75b3c57f3e3ec753a93ef4",
         "originalBaseBlobSha": "c77ac41d009f45c94ea236068bdb4c6df1e8dfcf"
       },
       {
@@ -1393,7 +1387,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "eb776d2313a0f2a932ba2e6de94f108ae9dae105",
+        "finalCanonicalBlobSha": "4233ff7e5944d3a693d096e6a1877a52afefb3a1",
         "originalBaseBlobSha": "a00b52f289097f5e32bad2ba115979dc1319b964"
       },
       {
@@ -1406,7 +1400,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "f60562515b595388cbb9ad5956cec791f20c6f1c",
+        "finalCanonicalBlobSha": "0dcf7208c6dbb78ba1ca54a558fc20c6cbd3f42b",
         "originalBaseBlobSha": "1aa75f8b0fcd0c3ab7d5f121dbb137b582c0d2c0"
       },
       {
@@ -1419,7 +1413,7 @@
             "status": "A"
           }
         ],
-        "finalCanonicalBlobSha": "81b3b19cabbe5214844807aaf06a226e46bfeff0",
+        "finalCanonicalBlobSha": "63ebc859c6ccde42f6b425d93db2368bb3ab7ff9",
         "originalBaseBlobSha": null
       },
       {
@@ -1432,7 +1426,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "4fad6bf24bfe99a1c5a214cf223e7425e6a1e23c",
+        "finalCanonicalBlobSha": "b249b5af5d8ba15710b9349201ae070b59a075d4",
         "originalBaseBlobSha": "70b925525e0d6b4136c2e9285d0daeb7904b99d0"
       },
       {
@@ -1445,7 +1439,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "29119fe923214587200713e057976939488f8ced",
+        "finalCanonicalBlobSha": "f8ac1be4eb2e1ce85538b1ed866090ab50e787ed",
         "originalBaseBlobSha": "80a717bad6ac6567620ac0f338b105a77ea77b70"
       },
       {
@@ -1458,7 +1452,7 @@
             "status": "A"
           }
         ],
-        "finalCanonicalBlobSha": "7aa037aa6db9a907e4b01d2cdb6c267993a081a6",
+        "finalCanonicalBlobSha": "bc7aff11f66712dfd8af2b5d2d2d272da7664db2",
         "originalBaseBlobSha": null
       },
       {
@@ -1471,7 +1465,7 @@
             "status": "M"
           }
         ],
-        "finalCanonicalBlobSha": "843747ef4bb5994940d703cf1dfb518bbd6dfb37",
+        "finalCanonicalBlobSha": "fed67fe52cb30ca06e12ee71ddf9167f5466ac92",
         "originalBaseBlobSha": "b698b9b0e73aeaa004414fdf3b6f6bc665e5eeba"
       }
     ],
