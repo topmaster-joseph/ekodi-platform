@@ -4,7 +4,6 @@ import { readFile } from 'node:fs/promises';
 
 const NATIVE_PAGES = [
   'sites/ekodi-church/index.html',
-  'space/ekodimission.page',
   'sites/seonammedi/public/index.html',
   'sites/ekodi-lab/index.html',
   'ekodibiz/index.html',
@@ -19,6 +18,18 @@ test('native public site footers use the existing shared traffic module without 
     assert.match(source, /<footer\b/, path);
     assert.doesNotMatch(source, /data-ekodi-user-footer=/, path);
   }
+});
+
+test('Mission uses its existing public shell without changing serialized HTML contracts', async () => {
+  const home = await readFile('space/ekodimission.page', 'utf8');
+  const shell = await readFile('space/ekodimission-shell.js', 'utf8');
+  assert.match(home, /<html lang="ko">/);
+  assert.doesNotMatch(home, /data-ekodi-shell-surface="public"/);
+  assert.match(shell, /function mountNativeFooterTraffic\(\)/);
+  assert.match(shell, /dataset\.ekodiShellSurface='public'/);
+  assert.match(shell, /script\.src='https:\/\/ekodi\.kr\/shell\/user-ui-footer\.js'/);
+  assert.match(shell, /script\.dataset\.missionFooterTraffic='shared'/);
+  assert.match(shell, /mountNativeFooterTraffic\(\)/);
 });
 
 test('CGMA gateway adopts traffic module on public HTML, retaining existing route handling', async () => {
