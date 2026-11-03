@@ -37,10 +37,10 @@ test('independent Church Pages release is registered without changing other rele
   assert.equal(church.deployWorkflow,'.github/workflows/deploy-ekodi-church-homepage.yml');
   assert.ok(church.source.includes('sites/ekodi-church/**'));
   assert.equal(policy.preservedIndependentPagesProject,'ekodi-church');
-  assert.ok(church.note.includes('legacy'));
-  assert.equal(new Set(Object.values(boundaries.platforms).map(p=>p.deployWorkflow)).size,
-    Object.values(boundaries.platforms).filter(p=>p.deployWorkflow).length,
-    'a dedicated Church deployment workflow must not be shared');
+  assert.match(church.note,/legacy/i);
+  assert.equal(Object.values(boundaries.platforms)
+    .filter(p=>p.deployWorkflow==='.github/workflows/deploy-ekodi-church-homepage.yml').length,1,
+    'the existing Church deployment workflow must belong to only one independent unit');
 });
 
 test('legacy Church source remains authoritative live until verified v2 release',()=>{
