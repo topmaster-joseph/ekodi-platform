@@ -156,7 +156,7 @@ export function summarizeAutomationForSites({catalog=ADMIN_SERVICE_CATALOG,conne
       pendingJobs:subjectKey&&observed('jobs')?count(published?.pending):null,
       failedJobs:subjectKey&&observed('jobs')?count(published?.failed):null,
       lastPublishedAt:subjectKey&&observed('jobs')?published?.last_published_at||null:null,
-      autonomousPolicy:subjectKey&&observed('policies')?Boolean(Number(policy?.autonomous||0)):null,
+      autonomousPolicy:subjectKey&&observed('policies')&&policy?Boolean(Number(policy.autonomous||0)):null,
     };
   });
 }
