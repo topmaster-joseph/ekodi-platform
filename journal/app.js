@@ -95,7 +95,7 @@ function renderList() {
     const title = postText(post, 'title');
     const excerpt = postText(post, 'excerpt');
     const category = isKorean() ? post.categoryLabel : (post.categoryLabelEn || post.categoryLabel);
-    return `<a class="journal-card" href="/p/${encodeURIComponent(post.slug)}">
+    return `<a class="journal-card" href="/journal/p/${encodeURIComponent(post.slug)}">
       <div class="journal-thumb thumb-${Number(post.imageVariant) || 1}" aria-hidden="true"></div>
       <div class="journal-card-copy">
         <div class="journal-card-meta"><strong>${escapeHtml(category)}</strong><span>${escapeHtml(dateText(post.publishedAt))}</span><span>${escapeHtml(String(post.readMinutes))} ${escapeHtml(copy().min)}</span></div>
@@ -138,7 +138,7 @@ function renderArticle(post) {
 }
 
 async function showRoute() {
-  const match = location.pathname.match(/^\/p\/([^/]+)\/?$/);
+  const match = location.pathname.match(/^\/journal\/p\/([^/]+)\/?$/);
   if (!match) {
     articleView.hidden = true;
     listView.hidden = false;
@@ -148,7 +148,7 @@ async function showRoute() {
     return;
   }
   try {
-    const response = await fetch(`/api/posts/${encodeURIComponent(decodeURIComponent(match[1]))}`);
+    const response = await fetch(`/journal/api/posts/${encodeURIComponent(decodeURIComponent(match[1]))}`);
     if (!response.ok) throw new Error('not_found');
     const data = await response.json();
     listView.hidden = true;
@@ -156,7 +156,7 @@ async function showRoute() {
     renderArticle(data.post);
     window.scrollTo({ top: 0, behavior: 'instant' });
   } catch {
-    location.replace('/');
+    location.replace('/journal/');
   }
 }
 
@@ -169,7 +169,7 @@ function applyLocale(locale) {
 
 async function boot() {
   try {
-    const response = await fetch('/api/posts');
+    const response = await fetch('/journal/api/posts');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     state.posts = Array.isArray(data.posts) ? data.posts : [];
@@ -186,7 +186,7 @@ search.addEventListener('input', () => {
 window.addEventListener('ekodi:locale-change', (event) => applyLocale(event.detail?.locale));
 window.addEventListener('popstate', showRoute);
 document.addEventListener('click', (event) => {
-  const link = event.target.closest('a[href^="/p/"]');
+  const link = event.target.closest('a[href^="/journal/p/"]');
   if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   event.preventDefault();
   history.pushState({}, '', link.href);
@@ -196,7 +196,7 @@ document.addEventListener('click', (event) => {
 document.querySelector('.journal-back')?.addEventListener('click', (event) => {
   if (location.origin !== new URL(event.currentTarget.href, location.href).origin) return;
   event.preventDefault();
-  history.pushState({}, '', '/');
+  history.pushState({}, '', '/journal/');
   showRoute();
 });
 

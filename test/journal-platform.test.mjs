@@ -14,7 +14,7 @@ test('journal is an isolated registered service surface', () => {
 
 test('journal worker exposes health, feed, api and admin handoff', () => {
   const worker = read('journal-worker.js');
-  for (const marker of ['/health', '/feed.xml', '/api/posts', 'https://admin.ekodi.kr/journal']) {
+  for (const marker of ['/health', '/feed.xml', '/api/posts', 'https://ekodi.kr/admin/journal']) {
     assert.ok(worker.includes(marker), `missing ${marker}`);
   }
 });
@@ -25,4 +25,23 @@ test('journal public UI follows shared shell and locale contract', () => {
   assert.match(html, /EKODI JOURNAL/);
   assert.match(app, /ekodi:locale-change/);
   assert.match(app, /EKODIUserLanguage/);
+});
+
+test('journal public links and data requests stay under the canonical /journal path', () => {
+  const html = read('journal/index.html');
+  const app = read('journal/app.js');
+  const worker = read('journal-worker.js');
+  const expectedHtml = [
+    'href="/journal/feed.xml"', 'href="/journal/styles.css"',
+    'src="/journal/app.js"', 'href="/journal/" class="journal-back"',
+  ];
+  for (const expected of expectedHtml) assert.ok(html.includes(expected), `missing ${expected}`);
+  assert.match(app, /fetch\('\/journal\/api\/posts'\)/);
+  assert.match(app, /fetch\(\`\/journal\/api\/posts\//);
+  assert.match(app, /href="\/journal\/p\//);
+  assert.match(app, /location\.pathname\.match\(\/\^\\\/journal/);
+  assert.match(app, /history\.pushState\(\{\}, '', '\/journal\/'\)/);
+  assert.match(worker, /https:\/\/ekodi\.kr\/admin\/journal/);
+  assert.doesNotMatch(html, /(?:href|src)="\/(?:app\.js|styles\.css|feed\.xml)"/);
+  assert.doesNotMatch(app, /fetch\(['"\`]\/api\/posts/);
 });
