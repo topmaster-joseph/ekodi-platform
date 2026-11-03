@@ -29,6 +29,7 @@ jobs:
           node --check eval/privacy.mjs
           node --check eval/ops-baseline.mjs
           node --check eval/operations-projection.mjs
+          node --check eval/log-candidates.mjs
           node --check ai-eval-control.js
           node --check ai-eval-admin.js
           node --check mission-control-entry-worker.js
