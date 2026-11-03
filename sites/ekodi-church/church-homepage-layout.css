@@ -32,13 +32,13 @@
 .site-header .menu-button span{background:#173730!important}
 
 /* The large hero is the homepage, not a second header above every destination. */
-.hero{min-height:calc(100svh - 84px)!important}
+.hero{min-height:0!important}
 .hero .overview-grid{
   width:min(840px,100%)!important;
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
 }
 .hero .overview-grid a{min-height:74px!important}
-.hero .overview-grid a strong{font-size:clamp(15px,1.5vw,18px)!important}
+.hero .overview-grid a strong{font-size:clamp(15px,1.5vw,18px)!important;overflow-wrap:normal!important;word-break:keep-all!important}
 body:has(main :target) .hero{display:none!important}
 
 /* Show dated worship material only when requested. This avoids repeating the
@@ -46,12 +46,12 @@ body:has(main :target) .hero{display:none!important}
 .church-weekly-focus{display:none!important}
 .church-weekly-focus:target,.church-weekly-focus:has(:target){display:block!important}
 .church-weekly-inner{max-width:var(--church-content-width)}
-#weekly-worship,#online,#about,#worship,#life-hub,#community,#partner-news,#location{
+#weekly-worship,#online,#about,#worship,#community,#partner-news,#location{
   scroll-margin-top:96px;
 }
 
 /* Online has exactly two destinations: existing YouTube worship and EKODI Live.
-   Reflection stays in the Today's Life section, not in a duplicate third card. */
+   Daily devotion has one canonical dedicated page, not a duplicate homepage form. */
 #online .online-triad--broadcast{
   width:min(var(--church-content-width),100%);
   margin:clamp(20px,3vw,42px) auto 0;
@@ -96,7 +96,17 @@ body:has(main :target) .hero{display:none!important}
     color:#173730!important;
   }
   .site-header .menu-button{min-width:44px;min-height:44px;display:grid;place-items:center}
-  .hero{min-height:calc(100svh - 118px)!important}
+  /* Content-first mobile layout: never vertically center a viewport-height hero.
+     A tall mobile viewport must not create blank space above the greeting. */
+  .hero{
+    display:block!important;
+    height:auto!important;
+    min-height:0!important;
+    padding:clamp(18px,3vw,28px) 18px 32px!important;
+  }
+  .hero-content{width:min(680px,100%);padding:0!important}
+  .hero .eyebrow{margin-top:0}
+  .hero .overview-grid{margin-top:24px!important}
   .hero .overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
   .hero .overview-grid a{min-height:64px!important}
   #online .online-triad--broadcast{grid-template-columns:1fr}
@@ -112,4 +122,118 @@ body:has(main :target) .hero{display:none!important}
 }
 @media(prefers-reduced-motion:reduce){
   .hero .overview-grid a{transition:none!important}
+}
+
+/* Native fragment-tab fallback that works without a scripted router. */
+main:has(:target) > section:not(.hero):not(:target):not(:has(:target)){display:none!important}
+body:has(main :target) .hero{display:block!important;min-height:0!important;position:sticky;top:84px;z-index:80;padding:8px 12px!important;background:#fbfaf6!important}
+body:has(main :target) .hero .hero-glow,
+body:has(main :target) .hero .hero-focus,
+body:has(main :target) .hero .eyebrow,
+body:has(main :target) .hero h1,
+body:has(main :target) .hero .hero-copy,
+body:has(main :target) .hero .scroll-cue{display:none!important}
+body:has(main :target) .hero .hero-content{width:100%!important;max-width:1120px!important;padding:0!important;margin:auto!important;opacity:1!important;transform:none!important}
+body:has(main :target) .hero .overview-grid{display:grid!important;grid-template-columns:repeat(8,minmax(0,1fr))!important;width:100%!important;gap:5px!important;margin:0!important}
+
+body:has(main :target) .hero .overview-grid a{min-height:45px!important;padding:7px 3px!important;border:1px solid #d5e1d8!important;border-radius:9px!important;background:#f6faf7!important;color:#174536!important;box-shadow:none!important;justify-content:center!important;text-align:center!important}
+body:has(main :target) .hero .overview-grid a span,
+body:has(main :target) .hero .overview-grid a small{display:none!important}
+body:has(main :target) .hero .overview-grid a strong{font-size:13px!important;line-height:1.35!important;white-space:normal!important;word-break:keep-all!important}
+@media(max-width:800px){
+body:has(main :target) .hero{top:118px;padding:6px 10px!important}
+body:has(main :target) .hero .overview-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+body:has(main :target) .hero .overview-grid a{min-height:42px!important;padding:4px 2px!important}
+body:has(main :target) .hero .overview-grid a strong{font-size:12px!important}
+.hero h1{font-size:clamp(29px,7.5vw,44px)!important;line-height:1.3!important}
+}
+
+/* CHURCH-TABS-20261102: keep the destination and tab bar visible together.
+   This is reversible presentation only; all existing URLs and authority stay. */
+body:not(:has(main :target)) main > .hero{
+  min-height:0!important;
+  padding:clamp(16px,3vw,32px) 20px 28px!important
+}
+body:not(:has(main :target)) main > .hero .hero-content{
+  padding:clamp(14px,2vw,26px) 4px 16px!important;
+  transform:none!important;
+  opacity:1!important
+}
+body:not(:has(main :target)) main > .hero .overview-grid{
+  margin-top:20px!important;
+  gap:8px!important
+}
+body:not(:has(main :target)) main > .hero .overview-grid a{
+  min-height:55px!important;
+  padding:9px 7px!important
+}
+body:has(main :target) main > .hero{
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+  position:sticky!important;
+  top:84px!important
+}
+body:has(main :target) main > .hero .hero-content{
+  min-height:0!important;
+  padding:0!important
+}
+#about,#worship,#message,#community,#partner-news,#online,#location,#weekly-worship{
+  scroll-margin-top:165px!important
+}
+@media(max-width:800px){
+  body:not(:has(main :target)) main > .hero{
+    min-height:0!important;
+    padding:16px 14px 22px!important
+  }
+  body:not(:has(main :target)) main > .hero .hero-content{
+    padding:10px 3px 12px!important
+  }
+  body:not(:has(main :target)) main > .hero .overview-grid{
+    margin-top:16px!important;
+    gap:7px!important
+  }
+  body:has(main :target) main > .hero{
+    top:84px!important;
+    padding:6px 10px!important
+  }
+  #about,#worship,#message,#community,#partner-news,#online,#location,#weekly-worship{
+    scroll-margin-top:215px!important
+  }
+}
+
+/* The browser's hash scroll must never put selected content beneath the tabs. */
+body:has(main :target) main{padding-top:112px!important}
+body:has(main :target) main > .hero{
+  position:fixed!important;
+  top:84px!important;
+  left:0!important;
+  right:0!important;
+  width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:112px!important;
+  overflow:hidden!important
+}
+body:has(#about:target) .overview-grid a[href="#about"],
+body:has(#community:target) .overview-grid a[href="#community"],
+body:has(#worship:target) .overview-grid a[href="#worship"],
+body:has(#weekly-worship:target) .overview-grid a[href="#weekly-worship"],
+body:has(#partner-news:target) .overview-grid a[href="#partner-news"],
+body:has(#online:target) .overview-grid a[href="#online"],
+body:has(#location:target) .overview-grid a[href="#location"]{
+  background:#174536!important;
+  color:#fff!important;
+  border-color:#174536!important
+}
+
+body:has(main :target) main > .hero:has(~ :is(#about,#worship,#message,#community,#partner-news,#online,#location):target),
+body:has(main :target) main > .hero:has(~ :is(#about,#worship,#message,#community,#partner-news,#online,#location) :target){
+  min-height:0!important;
+  height:auto!important;
+  max-height:112px!important
+}
+body:has(main :target) .hero .overview-grid a strong{
+  overflow-wrap:normal!important;
+  word-break:keep-all!important
 }

@@ -118,24 +118,24 @@ footer{padding-top:54px;background:#0b2722}footer>p{max-width:820px;line-height:
 
 /* Detailed sections are retained but not shown until requested. Direct section
    hashes and nested anchors (such as #giving or #youtube) both open the parent. */
-#about,#worship,#message,#life-hub,#community,#partner-news,#online,#location{display:none!important}
-#about:target,#worship:target,#message:target,#life-hub:target,#community:target,#partner-news:target,#online:target,#location:target,
-#about:has(:target),#worship:has(:target),#message:has(:target),#life-hub:has(:target),#community:has(:target),#partner-news:has(:target),#online:has(:target),#location:has(:target){display:block!important}
+#about,#worship,#message,#community,#partner-news,#online,#location{display:none!important}
+#about:target,#worship:target,#message:target,#community:target,#partner-news:target,#online:target,#location:target,
+#about:has(:target),#worship:has(:target),#message:has(:target),#community:has(:target),#partner-news:has(:target),#online:has(:target),#location:has(:target){display:block!important}
 #location:target,#location:has(:target){display:grid!important}
 
 /* Once a destination is chosen, the hero becomes a quiet compact masthead so
    the selected content is immediately visible without losing orientation. */
-.hero:has(~ #about:target),.hero:has(~ #worship:target),.hero:has(~ #message:target),.hero:has(~ #life-hub:target),.hero:has(~ #community:target),.hero:has(~ #partner-news:target),.hero:has(~ #online:target),.hero:has(~ #location:target),
-.hero:has(~ #about :target),.hero:has(~ #worship :target),.hero:has(~ #message :target),.hero:has(~ #life-hub :target),.hero:has(~ #community :target),.hero:has(~ #partner-news :target),.hero:has(~ #online :target),.hero:has(~ #location :target){
+.hero:has(~ #about:target),.hero:has(~ #worship:target),.hero:has(~ #message:target),.hero:has(~ #community:target),.hero:has(~ #partner-news:target),.hero:has(~ #online:target),.hero:has(~ #location:target),
+.hero:has(~ #about :target),.hero:has(~ #worship :target),.hero:has(~ #message :target),.hero:has(~ #community :target),.hero:has(~ #partner-news :target),.hero:has(~ #online :target),.hero:has(~ #location :target){
   min-height:38svh!important;
 }
-.hero:has(~ #about:target) .hero-content,.hero:has(~ #worship:target) .hero-content,.hero:has(~ #message:target) .hero-content,.hero:has(~ #life-hub:target) .hero-content,.hero:has(~ #community:target) .hero-content,.hero:has(~ #online:target) .hero-content,.hero:has(~ #location:target) .hero-content,
-.hero:has(~ #about :target) .hero-content,.hero:has(~ #worship :target) .hero-content,.hero:has(~ #message :target) .hero-content,.hero:has(~ #life-hub :target) .hero-content,.hero:has(~ #community :target) .hero-content,.hero:has(~ #online :target) .hero-content,.hero:has(~ #location :target) .hero-content{
+.hero:has(~ #about:target) .hero-content,.hero:has(~ #worship:target) .hero-content,.hero:has(~ #message:target) .hero-content,.hero:has(~ #community:target) .hero-content,.hero:has(~ #online:target) .hero-content,.hero:has(~ #location:target) .hero-content,
+.hero:has(~ #about :target) .hero-content,.hero:has(~ #worship :target) .hero-content,.hero:has(~ #message :target) .hero-content,.hero:has(~ #community :target) .hero-content,.hero:has(~ #online :target) .hero-content,.hero:has(~ #location :target) .hero-content{
   padding-top:82px;
   padding-bottom:36px;
 }
-.hero:has(~ #about:target) .overview-grid,.hero:has(~ #worship:target) .overview-grid,.hero:has(~ #message:target) .overview-grid,.hero:has(~ #life-hub:target) .overview-grid,.hero:has(~ #community:target) .overview-grid,.hero:has(~ #online:target) .overview-grid,.hero:has(~ #location:target) .overview-grid,
-.hero:has(~ #about :target) .overview-grid,.hero:has(~ #worship :target) .overview-grid,.hero:has(~ #message :target) .overview-grid,.hero:has(~ #life-hub :target) .overview-grid,.hero:has(~ #community :target) .overview-grid,.hero:has(~ #online :target) .overview-grid,.hero:has(~ #location :target) .overview-grid{margin-top:22px}
+.hero:has(~ #about:target) .overview-grid,.hero:has(~ #worship:target) .overview-grid,.hero:has(~ #message:target) .overview-grid,.hero:has(~ #community:target) .overview-grid,.hero:has(~ #online:target) .overview-grid,.hero:has(~ #location:target) .overview-grid,
+.hero:has(~ #about :target) .overview-grid,.hero:has(~ #worship :target) .overview-grid,.hero:has(~ #message :target) .overview-grid,.hero:has(~ #community :target) .overview-grid,.hero:has(~ #online :target) .overview-grid,.hero:has(~ #location :target) .overview-grid{margin-top:22px}
 
 @media(max-width:800px){
   .hero{min-height:calc(100svh - 64px)!important}
@@ -145,9 +145,9 @@ footer{padding-top:54px;background:#0b2722}footer>p{max-width:820px;line-height:
   .hero .overview-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:30px}
   .hero .overview-grid a{min-height:60px;border-radius:15px;padding:13px 8px!important}
   .hero .overview-grid a strong{font-size:17px}
-  .hero:has(~ #about:target),.hero:has(~ #worship:target),.hero:has(~ #message:target),.hero:has(~ #life-hub:target),.hero:has(~ #community:target),.hero:has(~ #partner-news:target),.hero:has(~ #online:target),.hero:has(~ #location:target),
-  .hero:has(~ #about :target),.hero:has(~ #worship :target),.hero:has(~ #message :target),.hero:has(~ #life-hub :target),.hero:has(~ #community :target),.hero:has(~ #partner-news :target),.hero:has(~ #online :target),.hero:has(~ #location :target){min-height:31svh!important}
-  .hero:has(~ #about:target) h1,.hero:has(~ #worship:target) h1,.hero:has(~ #message:target) h1,.hero:has(~ #life-hub:target) h1,.hero:has(~ #community:target) h1,.hero:has(~ #online:target) h1,.hero:has(~ #location:target) h1{font-size:30px}
+  .hero:has(~ #about:target),.hero:has(~ #worship:target),.hero:has(~ #message:target),.hero:has(~ #community:target),.hero:has(~ #partner-news:target),.hero:has(~ #online:target),.hero:has(~ #location:target),
+  .hero:has(~ #about :target),.hero:has(~ #worship :target),.hero:has(~ #message :target),.hero:has(~ #community :target),.hero:has(~ #partner-news :target),.hero:has(~ #online :target),.hero:has(~ #location :target){min-height:31svh!important}
+  .hero:has(~ #about:target) h1,.hero:has(~ #worship:target) h1,.hero:has(~ #message:target) h1,.hero:has(~ #community:target) h1,.hero:has(~ #online:target) h1,.hero:has(~ #location:target) h1{font-size:30px}
 }
 
 @media(max-width:480px){
