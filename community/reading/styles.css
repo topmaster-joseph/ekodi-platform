@@ -67,6 +67,32 @@
 .sources-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
 .sources-grid a{display:block;margin-top:8px;font-size:.9rem;font-weight:750}
 .reading-feedback{font-size:.86rem;color:var(--read-accent);min-height:1.3rem;margin-top:15px}
-@media(max-width:920px){.topic-grid,.format-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.workshop-layout{grid-template-columns:minmax(0,1fr)}.reflection-grid{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:620px){.reading{width:calc(100% - 24px);padding-top:16px}.reading-heading{display:block;padding-bottom:14px}.reading-actions{margin-top:18px}.reading-actions .action{flex:1}.reading-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.reading-tabs a{text-align:center;font-size:.83rem;padding:10px 5px}.reading-section{padding:21px 0}.topic-grid,.format-grid,.sources-grid{grid-template-columns:minmax(0,1fr)}.section-heading{align-items:flex-start;flex-direction:column}.workshop-main,.workshop-aside{padding:15px}.question-actions .action{flex:1}.reflection-actions .action{flex:1}.topic-status{align-self:flex-start}}
+
+.meeting-layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:15px;align-items:start}
+.meeting-panel{border:1px solid var(--read-border);border-radius:15px;padding:20px;background:var(--read-surface);min-width:0}
+.meeting-panel h3{font-size:1.14rem;margin-bottom:4px}
+.meeting-subtitle{font-size:.9rem;color:var(--read-muted);margin-bottom:15px}
+.meeting-stage-buttons{list-style:none;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:7px;margin-bottom:19px}
+.meeting-stage-button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:1px;width:100%;height:100%;min-height:64px;border-radius:11px;background:#f7faf7;border:1px solid var(--read-border);padding:10px 11px;color:var(--read-ink);font-size:.84rem}
+.meeting-stage-button strong{font-weight:750;line-height:1.4}
+.meeting-stage-button small{color:var(--read-muted)}
+.meeting-stage-button[aria-current=step]{border-color:#579879;background:#e8f4eb;color:#155743;box-shadow:inset 0 0 0 1px #579879}
+.meeting-count-line{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:7px;font-size:.82rem;color:var(--read-muted);margin-bottom:9px}
+#meetingStageLabel{font-size:1.17rem;margin-bottom:5px}
+#meetingStageDetail{font-size:.92rem;color:var(--read-muted);min-height:50px;margin-bottom:12px}
+.meeting-timer{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;border-radius:12px;background:#f0f6f1;padding:15px;margin-bottom:13px}
+#meetingClock{font-size:clamp(1.8rem,5vw,2.7rem);font-variant-numeric:tabular-nums;font-weight:800;letter-spacing:.035em;line-height:1}
+.meeting-timer-actions,.meeting-navigation,.meeting-note-actions{display:flex;flex-wrap:wrap;gap:8px}
+.meeting-timer-actions .action{min-height:39px;font-size:.83rem}
+#meetingProgress{width:100%;height:12px;accent-color:var(--read-accent);display:block;margin:0 0 15px}
+.meeting-navigation .action{flex:1}
+.meeting-question{font-size:1.11rem;line-height:1.7;font-weight:750;margin:16px 0;min-height:80px}
+.meeting-companion .question-actions .action{flex:1}
+.meeting-notes{border-top:1px solid var(--read-border);padding-top:16px;margin-top:21px}
+.meeting-notes label{font-size:.95rem;font-weight:750;display:block;margin-bottom:9px}
+.meeting-notes textarea{display:block;width:100%;min-height:115px;resize:vertical;border-radius:11px;border:1px solid #bdcbc3;background:#fff;padding:11px;color:var(--read-ink);line-height:1.6}
+.meeting-note-actions{margin-top:10px}
+.meeting-note-actions .action{min-height:39px;font-size:.84rem}
+@media(max-width:920px){.meeting-layout{grid-template-columns:minmax(0,1fr)}.topic-grid,.format-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.workshop-layout{grid-template-columns:minmax(0,1fr)}.reflection-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:620px){.meeting-panel{padding:15px}.meeting-stage-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}.meeting-timer-actions{width:100%}.meeting-timer-actions .action{flex:1}.meeting-note-actions .action{flex:1}.meeting-companion .question-actions .action{min-width:0}.reading{width:calc(100% - 24px);padding-top:16px}.reading-heading{display:block;padding-bottom:14px}.reading-actions{margin-top:18px}.reading-actions .action{flex:1}.reading-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.reading-tabs a{text-align:center;font-size:.83rem;padding:10px 5px}.reading-section{padding:21px 0}.topic-grid,.format-grid,.sources-grid{grid-template-columns:minmax(0,1fr)}.section-heading{align-items:flex-start;flex-direction:column}.workshop-main,.workshop-aside{padding:15px}.question-actions .action{flex:1}.reflection-actions .action{flex:1}.topic-status{align-self:flex-start}}
 @media(prefers-reduced-motion:reduce){.reading{scroll-behavior:auto}}
