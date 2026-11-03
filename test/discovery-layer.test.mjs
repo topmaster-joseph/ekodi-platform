@@ -10,7 +10,7 @@ test('sitemap contains only declared public canonical routes', () => {
 });
 
 test('public route contract carries canonical metadata and static asset ownership where applicable', () => {
-  assert.deepEqual(DISCOVERY_PUBLIC_ROUTES.filter(route => route.asset).map(route => route.path), ['/', '/history', '/privacy', '/terms']);
+  assert.deepEqual(DISCOVERY_PUBLIC_ROUTES.filter(route => route.asset).map(route => route.path), ['/', '/promotion', '/history', '/privacy', '/terms']);
   for (const route of DISCOVERY_PUBLIC_ROUTES) {
     assert.ok(route.title.length > 5);
     assert.ok(route.description.length > 10);
