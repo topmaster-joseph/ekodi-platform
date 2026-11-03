@@ -13,3 +13,6 @@ Operator validation: review the exact deployed Worker version, anonymous access 
 
 ## Latest-main recheck
 EKODI synced official recovery against main 41928da9fe96bb4b911cdde9e22b648184488ae9, yielding ec3b83ba4c8839a1402839b42251914e2ac44731. The original source SHA is still an ancestor. The prior authored build and target suite passed. This documentation-only continuation requests genuine CI on the newly synchronized head; it does not alter the runtime, permissions, or deployment approval.
+
+## Follow-up verification
+The official branch was synchronized with the latest repository main. The existing notification feature and its tests remain unchanged. The required release checks must still pass on the current branch before any deployment.
