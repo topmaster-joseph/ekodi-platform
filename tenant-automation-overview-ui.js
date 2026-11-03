@@ -22,17 +22,17 @@ export const TENANT_AUTOMATION_CSS = `
 @media(max-width:620px){.tenant-auto-overview{padding:12px}.tenant-auto-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.tenant-auto-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.tenant-auto-tabs button{padding:8px 4px;min-width:0}}
 `;
 
-export function tenantAutomationOverviewModel({connections=[],publishChannels=[],jobs=[],policy={},growthOverview=null,service='',adminBase=''}={}) {
+export function tenantAutomationOverviewModel({connections=[],publishChannels=[],jobs=[],connectionsLoaded=false,publishingLoaded=false,jobsLoaded=false,policy={},growthOverview=null,service='',adminBase=''}={}) {
   const channels=Array.isArray(connections)?connections:[];
   const publishing=Array.isArray(publishChannels)?publishChannels:[];
   const queue=Array.isArray(jobs)?jobs:[];
-  const activeChannels=channels.filter(c=>c.status==='active').length;
-  const automaticChannels=publishing.filter(c=>c.status==='active'&&c.config?.autoPublishEnabled!==false).length;
-  const published=queue.filter(j=>j.status==='published').length;
-  const pending=queue.filter(j=>['queued','scheduled','retrying'].includes(j.status)).length;
-  const failed=queue.filter(j=>['failed','credentials_required'].includes(j.status)).length;
-  const lastPublished=queue.filter(j=>j.status==='published'&&j.published_at)
-    .map(j=>String(j.published_at)).sort().at(-1)||null;
+  const activeChannels=connectionsLoaded?channels.filter(c=>c.status==='active').length:null;
+  const automaticChannels=publishingLoaded?publishing.filter(c=>c.status==='active'&&c.config?.autoPublishEnabled!==false).length:null;
+  const published=jobsLoaded?queue.filter(j=>j.status==='published').length:null;
+  const pending=jobsLoaded?queue.filter(j=>['queued','scheduled','retrying'].includes(j.status)).length:null;
+  const failed=jobsLoaded?queue.filter(j=>['failed','credentials_required'].includes(j.status)).length:null;
+  const lastPublished=jobsLoaded?queue.filter(j=>j.status==='published'&&j.published_at)
+    .map(j=>String(j.published_at)).sort().at(-1)||null:null;
   const campaign=growthOverview?.ok===true&&growthOverview.subject?.type==='tenant'
     ?growthOverview.campaigns:null;
   const mall=service==='mall';
@@ -56,7 +56,7 @@ export function tenantAutomationOverviewHtml(model) {
     ['recommendation','AI 추천','<h3>콘텐츠·상품 추천</h3><p>'+(model.mall?'상품별 AI 추천 판단은 에코디몰의 기존 자동영업 화면을 사용합니다.':'사이트별 추천 실적 원장이 아직 연결되지 않았습니다. 없는 수치를 0건으로 표시하지 않습니다.')+'</p>'+(model.mall?'<p>'+toManagement('/growth')+'</p>':'')],
     ['promotion','홍보','<h3>홍보 캠페인</h3><ul><li>등록 캠페인: '+count(model.campaign?.total)+'</li><li>승인 대기: '+count(model.campaign?.awaitingApproval)+'</li><li>실패 캠페인: '+count(model.campaign?.failed)+'</li></ul><p>홍보 캠페인 실적과 실제 방문·전환은 구분합니다. 승인되지 않은 외부 발행이나 광고비 집행은 이 화면에서 실행되지 않습니다.</p>'],
     ['publishing','자동게시','<h3>채널·게시 자동화</h3><ul><li>활성 연결 채널: '+count(model.activeChannels)+'</li><li>자동게시 설정 채널: '+count(model.automaticChannels)+'</li><li>운영 정책: '+escape(model.policyMode)+'</li><li>예약·재시도 대기: '+count(model.pending)+'</li></ul><p>채널별 시간·한도·실패 재시도 설정은 기존 채널 관리에서 조정합니다.</p>'],
-    ['performance','성과','<h3>발행·성과</h3><ul><li>조회된 작업 원장 내 게시 성공: '+count(model.published)+'</li><li>마지막 성공: '+escape(model.lastPublished||'기록 없음')+'</li></ul><p>조회된 작업 목록의 성공 수는 전체 누적 실적이나 검색 유입·주문·수익을 의미하지 않습니다.</p>'+(model.mall?'<p>'+toManagement('/analytics')+'</p>':'<p>검색 유입 및 전환 측정은 아직 별도 검증이 필요합니다.</p>')],
+    ['performance','성과','<h3>발행·성과</h3><ul><li>조회된 작업 원장 내 게시 성공: '+count(model.published)+'</li><li>마지막 성공: '+escape(model.lastPublished||(model.published===null?'연동 미확인':'기록 없음'))+'</li></ul><p>조회된 작업 목록의 성공 수는 전체 누적 실적이나 검색 유입·주문·수익을 의미하지 않습니다.</p>'+(model.mall?'<p>'+toManagement('/analytics')+'</p>':'<p>검색 유입 및 전환 측정은 아직 별도 검증이 필요합니다.</p>')],
     ['errors','오류·조치','<h3>확인할 문제</h3><ul><li>조회된 실패·인증 필요 작업: '+count(model.failed)+'</li><li>예약·재시도 작업: '+count(model.pending)+'</li></ul><p>실패 원인과 재시도 조치는 아래의 「최근 게시 작업」에서 상세히 확인합니다. 타 사이트 데이터는 조회하지 않습니다.</p>'],
   ];
   return '<section id="tenantAutoOverview" class="tenant-auto-overview" aria-labelledby="tenantAutoHeading">'+
