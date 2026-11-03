@@ -67,6 +67,9 @@ jobs:
       - name: Validate Mall site and API contracts
         run: npm run check
 
+      - name: Enforce named Publisher RPC staging isolation
+        run: node --test ../../test/publishing-staging-named-rpc-binding.test.mjs
+
       - name: Build static site
         run: npm run build
 
