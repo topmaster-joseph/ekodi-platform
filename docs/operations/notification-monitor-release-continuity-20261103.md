@@ -11,3 +11,6 @@ The official protected recovery branch was issued by the EKODI Orchestrator. It 
 The original source passed 26 relevant notification and admin tests, a full build, 220 additive D1 migration checks, service boundary checks, administrator-source policy and whitespace validation. The new functionality is strictly read-only: seven/thirty-day/all-time event-cohort metrics, stalled queue counts, and current device subscriber counts. It preserves all site-scoped authorization and keeps automatic publishing and Web Push disabled by default.
 
 A complete release additionally requires actual first-party CI on the latest approved main, EKODI-managed protected merge, Control API and Site/Admin guarded production deployments, anonymous 403, and authenticated desktop/mobile dashboards. Do not classify this note as deployment evidence.
+
+## Revalidation on latest synchronized main
+The official recovery branch was synchronized to the latest main after its previous first-party CI passed. The original feature SHA remains in its ancestry. This non-runtime addition records the need for valid required CI on the synchronized branch; protected release and actual deployment checks remain unchanged.
