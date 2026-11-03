@@ -17,6 +17,7 @@ import { tenantLivePage } from './tenant-live-page.js';
 import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from './tenant-live-admin-page.js';
 import { isMallPicksPath, mallPicksResponse } from './mall-weekly-picks-page.js';
 import { decorateMallProductResponse, isMallProductPath } from './mall-product-jsonld.js';
+import { o2oHubPage } from './o2o-hub-page.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -37,6 +38,10 @@ const PUBLIC_ASSETS = new Set([
   '/homepage-ambient.js',
   '/homepage-auth-state.js',
   '/points-active-client.js',
+  '/o2o-hub-client.js',
+  '/o2o-link-core.js',
+  '/o2o-hub.css',
+  '/o2o-qr-vendor.js',
   '/ekodi-message-ui.js',
   '/tenant-live.css',
   '/tenant-live.js',
@@ -767,6 +772,19 @@ export default {
         return secured;
       }
       if (url.pathname === '/ai' || url.pathname.startsWith('/ai/')) return proxyPublicAi(request, env);
+      // EKODI-O2O-001: read-only public QR portal; existing tenant activity ledger owns check-in.
+      if (url.pathname === '/o2o' || url.pathname === '/o2o/') {
+        if (url.pathname === '/o2o/' && ['GET', 'HEAD'].includes(request.method)) {
+          const redirect = withHostSecurity(new Response(null, { status: 308, headers: { location: '/o2o' } }), PUBLIC_CSP, 'no-store', 'o2o-canonical');
+          redirect.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+          return redirect;
+        }
+        const response = o2oHubPage(request);
+        const secured = withHostSecurity(response, PUBLIC_CSP, 'no-store', 'o2o-public-qr-hub');
+        secured.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+        if (request.method === 'HEAD' || response.status !== 200) return secured;
+        return injectEkodiShell(secured, 'ekodi', 'public');
+      }
       if (url.pathname === '/' || url.pathname === '/index.html') {
         const response = await env.ASSETS.fetch(assetRequest(request, '/'));
         return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0', 'public-home');
