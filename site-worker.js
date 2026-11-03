@@ -18,6 +18,7 @@ import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from '
 import { isMallPicksPath, mallPicksResponse } from './mall-weekly-picks-page.js';
 import { decorateMallProductResponse, isMallProductPath } from './mall-product-jsonld.js';
 import { o2oHubPage } from './o2o-hub-page.js';
+import { isO2OIssuedLinkPath, o2oIssuedLinkResponse } from './o2o-issued-links.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -772,6 +773,13 @@ export default {
         return secured;
       }
       if (url.pathname === '/ai' || url.pathname.startsWith('/ai/')) return proxyPublicAi(request, env);
+      // EKODI-O2O-002: revocable public QR route; resolves from tenant-owned database records.
+      if (isO2OIssuedLinkPath(url.pathname)) {
+        const response = await o2oIssuedLinkResponse(request, env);
+        const secured = withHostSecurity(response, PUBLIC_CSP, 'private, no-store', 'o2o-issued-link');
+        secured.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+        return secured;
+      }
       // EKODI-O2O-001: read-only public QR portal; existing tenant activity ledger owns check-in.
       if (url.pathname === '/o2o' || url.pathname === '/o2o/') {
         if (url.pathname === '/o2o/' && ['GET', 'HEAD'].includes(request.method)) {
