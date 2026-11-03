@@ -201,6 +201,8 @@ function setStrategyDetailPane(key,{focus=false}={}){
 }
 function setupStrategyDetailTabs(){
  const host=el('strategyLab');
+ // Lightweight contract-test DOMs do not implement element traversal. Real browsers do.
+ if(!host||typeof host.querySelector!=='function')return;
  const header=host.querySelector('header');
  const nav=document.createElement('nav');
  nav.id='strategyDetailTabs';nav.className='strategy-detail-tabs';nav.setAttribute('role','tablist');
