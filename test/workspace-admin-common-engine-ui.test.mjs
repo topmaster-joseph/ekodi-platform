@@ -8,11 +8,11 @@ import {
   workspaceAdminSectionsForRole,
 } from '../workspace-admin-page.js';
 
-test('workspace admins expose common engine and common-plus-site menu model', async () => {
+test('workspace admins expose common engine and single-task-menu menu model', async () => {
   const response = workspaceAdminPage();
   const html = await response.text();
   assert.match(html, /data-ekodi-admin-common-engine="workspace"/);
-  assert.match(html, /data-ekodi-admin-menu-model="common-plus-site"/);
+  assert.match(html, /data-ekodi-admin-menu-model="single-task-menu"/);
   assert.match(html, /id="adminNav"/);
 });
 
