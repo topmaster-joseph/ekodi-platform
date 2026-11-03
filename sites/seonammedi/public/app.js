@@ -1663,3 +1663,29 @@ async function initPublicAdminControls(){
 window.addEventListener('ekodi:public-admin-runtime-ready',()=>{initPublicAdminControls().catch(()=>{})});
 
 // EKODI release marker: notice-list authorized edit/delete actions verified on merged main.
+
+
+// SITE-LOGOUT-001 (owner request 2026-11-03): footer 로그아웃 while a session is stored.
+// Same function as services/independent-board/site-logout.mjs; the home CSP (connect-src 'self')
+// blocks the auth-server revoke, so this page only clears the session in this browser.
+try{(function seonamSiteLogout(revoke){
+  const KEY='sb-renzehysxirjilvdxacv-auth-token';
+  const stores=()=>{const list=[];try{list.push(localStorage)}catch{}try{list.push(sessionStorage)}catch{}return list};
+  const token=()=>{for(const st of stores())try{const d=JSON.parse(st.getItem(KEY)||'null'),s=d?.currentSession||d?.session||d;if(s?.access_token)return String(s.access_token)}catch{}return ''};
+  const footer=document.querySelector('footer.site-footer');
+  if(!footer||footer.querySelector('.site-logout')||!token())return;
+  const button=document.createElement('button');button.type='button';button.className='site-logout';button.textContent='로그아웃';
+  button.addEventListener('click',async()=>{
+    button.disabled=true;
+    const current=token();
+    if(revoke&&current){
+      try{await fetch('https://renzehysxirjilvdxacv.supabase.co/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_',authorization:'Bearer '+current},cache:'no-store',keepalive:true})}catch{}
+    }
+    for(const st of stores())try{st.removeItem(KEY)}catch{}
+    // Drop sign-in intents so the page does not reopen a login flow after reload.
+    const url=new URL(location.href);['compose','reply','auth_attempt','choose_account'].forEach(k=>url.searchParams.delete(k));
+    // A hash-only difference would not reload the page, so reload explicitly then.
+    if(url.search===location.search)location.reload();else location.replace(url.href);
+  });
+  footer.append(button);
+})(false)}catch{}

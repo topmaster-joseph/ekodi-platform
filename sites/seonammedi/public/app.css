@@ -359,11 +359,13 @@ html body #organization .participant-head{margin:12px 0 4px!important;min-height
   html body.seonam-visual-ready main.seonam-visual-layout{width:calc(100% - 8px)!important;margin:4px auto 16px!important;gap:6px!important}
   html body.seonam-visual-ready main.seonam-visual-layout>.seonam-visual-content{padding:10px 8px!important;border-radius:10px}
   html body #organization.section{padding:4px 0 8px!important;border-top:0!important}
-  html body footer.site-footer{display:grid!important;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;row-gap:2px;align-items:center;margin-top:12px;padding:12px 10px max(18px,env(safe-area-inset-bottom))}
+  html body footer.site-footer{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto;column-gap:10px;row-gap:2px;align-items:center;margin-top:12px;padding:12px 10px max(18px,env(safe-area-inset-bottom))}
   html body footer.site-footer .site-footer-copy{display:contents;max-width:none}
   html body footer.site-footer .site-footer-copy strong{grid-column:1;grid-row:1}
   html body footer.site-footer>a{grid-column:2;grid-row:1;margin:0;min-height:30px;padding:4px 10px;font-size:13px}
   html body footer.site-footer .site-footer-copy span{grid-column:1/-1;line-height:1.4}
+  html body footer.site-footer>.site-logout{grid-column:3;grid-row:1;margin:0;min-height:30px;padding:4px 10px;font-size:13px}
+  html body footer.site-footer>:not(a):not(.site-logout):not(.site-footer-copy){grid-column:1/-1;min-width:0}
 }
 /* 2026-11-03 owner request: committee view shows only 비상대책위 활동소식.
    Activity-history list UI is hidden (records are preserved, not deleted). */
@@ -372,3 +374,7 @@ html body #organization .participant-head{margin:12px 0 4px!important;min-height
 #committee-activity.committee-news-only #committeeActivityForm,
 #committee-activity.committee-news-only #committeeActivityList,
 #committee-activity.committee-news-only #committeeActivityManageToggle{display:none!important}
+
+/* SITE-LOGOUT-001 (owner request 2026-11-03): footer 로그아웃 next to 관리, shown only while signed in. */
+footer.site-footer>.site-logout{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:6px 9px;border:1px solid #cbd5df;border-radius:9px;background:#fff;color:#b42318;font:inherit;font-size:13px;font-weight:600;line-height:1.3;white-space:nowrap;cursor:pointer}
+footer.site-footer>.site-logout:disabled{opacity:.6;cursor:wait}
