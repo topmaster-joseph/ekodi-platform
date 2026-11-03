@@ -27,6 +27,7 @@
     <a href="#topics">주제 탐색</a>
     <a href="#formats">모임 방식</a>
     <a href="#facilitator">진행 도구</a>
+    <a href="#meeting">모임 진행</a>
     <a href="#reflection">성찰 기록</a>
     <a href="#sources">자료·안내</a>
   </nav>
@@ -84,6 +85,64 @@
         <button type="button" class="action action-primary full" id="copyGuide">진행안 전체 복사</button>
         <a class="action action-outline full" id="createFromTopic" href="/community/?reading=create#circles">이 주제로 모임 개설</a>
         <p class="help-text">모임 개설·실제 참여는 커뮤니티의 기존 로그인 및 Circle 기능으로 이동합니다.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section id="meeting" class="reading-section" aria-labelledby="meetingSectionTitle">
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">LIVE FACILITATOR</span>
+        <h2 id="meetingSectionTitle">지금 함께 모임 진행하기</h2>
+        <p>주제별 순서와 시간을 함께 관리하는 진행자 도구입니다. 이 기기에서만 작동하며 실시간 다중 접속 모임은 아닙니다.</p>
+      </div>
+      <a class="action action-outline" href="/community/#circles">실제 모임 및 참여 관리</a>
+    </div>
+    <div class="meeting-layout">
+      <article class="meeting-panel">
+        <h3 id="meetingTitle"></h3>
+        <p class="meeting-subtitle">진행 순서를 선택하면 시간을 별도로 시작할 수 있습니다.</p>
+        <ol id="meetingStageButtons" class="meeting-stage-buttons" aria-label="모임 진행 순서"></ol>
+        <div class="meeting-count-line">
+          <span>진행 순서 <strong id="meetingStageCount"></strong></span>
+          <span id="meetingClockHint" aria-live="polite">정지 중</span>
+        </div>
+        <h4 id="meetingStageLabel"></h4>
+        <p id="meetingStageDetail"></p>
+        <div class="meeting-timer" aria-label="모임 진행 시간">
+          <span id="meetingClock" role="timer" aria-live="off">00:00</span>
+          <div class="meeting-timer-actions">
+            <button type="button" class="action action-primary" id="meetingRun">시간 시작</button>
+            <button type="button" class="action action-outline" id="meetingReset">이 순서 다시 시작</button>
+          </div>
+        </div>
+        <progress id="meetingProgress" max="100" value="0" aria-label="전체 모임 진행 비율"></progress>
+        <div class="meeting-navigation">
+          <button type="button" class="action action-outline" id="meetingPrevStage">이전 순서</button>
+          <button type="button" class="action action-outline" id="meetingNextStage">다음 순서</button>
+        </div>
+      </article>
+      <aside class="meeting-panel meeting-companion">
+        <div class="question-head">
+          <span>지금 함께 나눌 질문</span>
+          <strong id="meetingQuestionCount"></strong>
+        </div>
+        <p id="meetingQuestion" class="meeting-question" aria-live="polite"></p>
+        <div class="question-actions">
+          <button type="button" class="action action-outline" id="meetingQuestionPrev">이전 질문</button>
+          <button type="button" class="action action-outline" id="meetingQuestionNext">다음 질문</button>
+          <button type="button" class="action action-outline" id="meetingCopyQuestion">질문 공유</button>
+        </div>
+        <div class="meeting-notes">
+          <label for="meetingNotes">진행자가 기록할 공동 대화의 핵심</label>
+          <textarea id="meetingNotes" rows="5" maxlength="2500" placeholder="개인의 민감한 경험이나 참석자 실명을 동의 없이 적지 마세요."></textarea>
+          <div class="meeting-note-actions">
+            <button type="button" class="action action-primary" id="meetingExport">진행 메모 내려받기</button>
+            <button type="button" class="action action-outline" id="meetingShare">진행안 링크 공유</button>
+            <button type="button" class="action action-quiet" id="meetingClear">메모 지우기</button>
+          </div>
+        </div>
+        <p class="privacy-note">시간·질문·메모는 이 브라우저에서만 다룹니다. 서버나 다른 참가자에게 자동 전송·저장되지 않습니다. 새로고침 전에 필요한 기록을 파일로 내보내세요.</p>
       </aside>
     </div>
   </section>
