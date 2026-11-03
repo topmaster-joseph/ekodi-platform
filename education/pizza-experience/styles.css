@@ -1,0 +1,116 @@
+#pizza-exp {--ink:#272722;--rust:#c45131;--coral:#f17045;--cream:#fff9ef;--soft:#fff0d6;--sage:#eaf3da;--line:#eadbc6;--shadow:0 18px 44px rgba(97,60,20,.09);font-family:"Nunito","Nanum Gothic",system-ui,sans-serif;color:var(--ink);line-height:1.65;word-break:keep-all;overflow-wrap:normal;background:var(--cream);max-width:none;min-height:100vh}
+#pizza-exp *,#pizza-exp *::before,#pizza-exp *::after{box-sizing:border-box}
+#pizza-exp button,#pizza-exp a{font:inherit;touch-action:manipulation}
+#pizza-exp button{cursor:pointer}
+#pizza-exp button:focus-visible,#pizza-exp a:focus-visible,#pizza-exp input:focus-visible{outline:3px solid #245c8c;outline-offset:3px}
+#pizza-exp h1,#pizza-exp h2,#pizza-exp h3,#pizza-exp p{margin-top:0}
+#pizza-exp a{color:inherit;text-decoration:none}
+#pizza-exp .pizza-hero,#pizza-exp .page-tabs,#pizza-exp .classroom,#pizza-exp .overview-section,#pizza-exp .prep-section,#pizza-exp .takeaway-section,#pizza-exp .page-ending{max-width:1320px;margin-inline:auto}
+#pizza-exp .eyebrow{font-size:.78rem;letter-spacing:.16em;font-weight:900;color:#a0452b;text-transform:uppercase;margin-bottom:12px}
+#pizza-exp .pizza-hero{padding:52px 28px 42px;display:grid;grid-template-columns:1.3fr .9fr;gap:28px;align-items:center}
+#pizza-exp .welcome-chip{display:inline-block;background:#ffe9c1;border:1px solid #eaca8c;color:#743c1d;padding:7px 13px;border-radius:99px;font-weight:800;font-size:.87rem}
+#pizza-exp h1{font-size:clamp(2.4rem,5.2vw,4.9rem);letter-spacing:-.065em;line-height:1.17;max-width:700px;font-weight:900;margin:15px 0 20px}
+#pizza-exp h1 span{color:var(--rust);display:block}
+#pizza-exp .hero-lead{font-size:clamp(1rem,1.8vw,1.27rem);max-width:540px;color:#6b574a;line-height:1.8;margin-bottom:24px}
+#pizza-exp .event-facts{display:flex;gap:9px;flex-wrap:wrap;margin:0 0 26px}
+#pizza-exp .event-facts span{background:white;border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:.83rem}
+#pizza-exp .event-facts strong{color:var(--rust);margin-right:5px}
+#pizza-exp .hero-actions,#pizza-exp .takeaway-actions{display:flex;gap:10px;flex-wrap:wrap}
+#pizza-exp .btn{border-radius:15px;min-height:48px;border:1px solid transparent;padding:11px 20px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:900;font-size:.93rem}
+#pizza-exp .btn-primary{background:var(--rust);color:white;border-color:var(--rust);box-shadow:0 5px 0 #9a3826}
+#pizza-exp .btn-primary:hover{background:#a73a23}
+#pizza-exp .btn-outline{background:white;border:1px solid #d4b596;color:#743d25}
+#pizza-exp .btn-soft{background:#fff1dd;border-color:#ebd2b7;color:#824323}
+#pizza-exp .hero-art{min-height:340px;position:relative;display:flex;justify-content:center;align-items:center;background:radial-gradient(circle at center,#ffe5ad 0 47%,transparent 48%);isolation:isolate}
+#pizza-exp .hero-pizza{height:min(30vw,300px);width:min(30vw,300px);min-height:215px;min-width:215px;border-radius:50%;position:relative;border:17px solid #d99545;background:radial-gradient(circle at 45% 45%,#ffe783 0 27%,#fbc76a 67%,#f6b447 69%);box-shadow:0 10px 2px #ad672e,0 28px 38px rgba(113,60,14,.2);transform:rotate(-10deg)}
+#pizza-exp .hero-pizza::before{content:"";position:absolute;inset:10px;border-radius:50%;border:3px dotted #f1a949}
+#pizza-exp .slice{position:absolute;font-size:clamp(2rem,5vw,3.6rem);filter:drop-shadow(0 4px 1px rgba(125,70,10,.14))}
+#pizza-exp .slice-a{top:7%;left:19%}#pizza-exp .slice-b{top:43%;left:55%}#pizza-exp .slice-c{top:48%;left:10%}#pizza-exp .slice-d{top:11%;left:54%}
+#pizza-exp .hero-sticker{position:absolute;z-index:2;top:11px;right:0;transform:rotate(9deg);padding:12px 17px;background:#49754d;color:#fff;border-radius:10px;font-weight:900;box-shadow:var(--shadow)}
+#pizza-exp .hero-doodle{position:absolute;color:#dc7c45;font-size:4rem}#pizza-exp .hero-doodle-one{left:3%;top:10%}#pizza-exp .hero-doodle-two{bottom:1%;right:9%}
+#pizza-exp .page-tabs{padding:7px 28px 35px;display:flex;gap:10px;flex-wrap:wrap}
+#pizza-exp .page-tabs a{padding:9px 18px;border:1px solid #e8dbc6;border-radius:99px;background:white;font-weight:800;font-size:.87rem;color:#665b4d}
+#pizza-exp .page-tabs a:hover,#pizza-exp .page-tabs a.selected{color:#9a371e;background:#ffedd8;border-color:#dfb492}
+#pizza-exp .classroom,#pizza-exp .overview-section,#pizza-exp .prep-section{padding:30px 28px 66px;scroll-margin-top:70px}
+#pizza-exp .section-heading{margin-bottom:23px}#pizza-exp .section-heading h2{font-size:clamp(1.5rem,3vw,2.4rem);letter-spacing:-.04em;line-height:1.3;margin-bottom:5px}#pizza-exp .section-heading>p:last-child{color:#786a59;margin-bottom:0}
+#pizza-exp .classroom-layout{display:grid;grid-template-columns:minmax(0,1fr) 275px;gap:20px;align-items:start}
+#pizza-exp .stage-shell{background:#fff;border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:var(--shadow);min-width:0}
+#pizza-exp .stage-toolbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:16px 22px;background:#fffaf2}
+#pizza-exp .lesson-progress-label{display:flex;align-items:center;gap:10px;font-size:.83rem}
+#pizza-exp .lesson-progress-label strong{font-size:.97rem}
+#pizza-exp .lesson-progress-label span:last-child{color:#816953}
+#pizza-exp .live-dot{width:9px;height:9px;border-radius:50%;background:#5c915d}
+#pizza-exp .stage-tools{display:flex;gap:7px;flex-wrap:wrap}
+#pizza-exp .tool-button{border:1px solid #e6d4bd;background:white;border-radius:10px;padding:6px 11px;font-size:.79rem;font-weight:800}
+#pizza-exp .progress-track{height:5px;background:#f4e6d4}#pizza-exp .progress-track span{height:100%;display:block;background:#d56a39;width:7.14%;transition:width .2s}
+#pizza-exp .scene{min-height:440px;padding:42px clamp(18px,5vw,54px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(circle at top left,#fff8e5,#fff 65%);position:relative}
+#pizza-exp .scene-label{color:#a64f2c;letter-spacing:.16em;text-transform:uppercase;font-size:.8rem;font-weight:900;margin:0 0 9px}
+#pizza-exp .scene h3{font-size:clamp(1.7rem,4.5vw,3.35rem);letter-spacing:-.055em;line-height:1.27;margin:0 0 17px;max-width:750px}
+#pizza-exp .scene p{font-size:clamp(1rem,2vw,1.3rem);color:#5d5348;max-width:670px;line-height:1.78}
+#pizza-exp .scene .scene-emoji{font-size:clamp(4rem,9vw,7.4rem);line-height:1.2;margin-bottom:14px;filter:drop-shadow(0 12px 12px rgba(95,60,21,.12))}
+#pizza-exp .scene-visuals{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:12px 0}
+#pizza-exp .scene-visuals>span{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:120px;min-height:112px;border-radius:22px;background:#fff5e5;box-shadow:0 6px 0 #efdfc5;font-size:2.6rem;padding:12px}
+#pizza-exp .scene-visuals>span small{font-size:.85rem;font-weight:900;color:#70523e;margin-top:3px}
+#pizza-exp .scene .question{background:#fff1d6;border:1px solid #f0c78f;color:#8d3d26;padding:12px 20px;border-radius:16px;font-weight:900;font-size:clamp(1rem,1.8vw,1.27rem);margin-top:12px}
+#pizza-exp .scene .answer-buttons,#pizza-exp .topping-buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:10px}
+#pizza-exp .answer-buttons button,#pizza-exp .topping-buttons button{background:white;border:2px solid #e9c99e;padding:10px 18px;border-radius:13px;font-weight:900;min-height:48px}
+#pizza-exp .answer-buttons button:hover,#pizza-exp .topping-buttons button:hover{background:#fff1d5}
+#pizza-exp .answer-feedback{min-height:35px;font-weight:900;color:#376a44;margin-top:14px;font-size:1.05rem}
+#pizza-exp .pizza-builder{display:flex;flex-direction:column;align-items:center;gap:8px}
+#pizza-exp .make-pizza{width:210px;height:210px;border-radius:50%;border:15px solid #db9948;box-shadow:0 10px 0 #b46c2f;background:#fbd376;position:relative;overflow:hidden;flex:none}
+#pizza-exp .make-pizza .placed-topping{position:absolute;font-size:1.5rem;line-height:1;transform:translate(-50%,-50%)}
+#pizza-exp .placed-topping:nth-child(1){left:29%;top:24%}#pizza-exp .placed-topping:nth-child(2){left:68%;top:33%}#pizza-exp .placed-topping:nth-child(3){left:43%;top:63%}#pizza-exp .placed-topping:nth-child(4){left:75%;top:69%}#pizza-exp .placed-topping:nth-child(5){left:20%;top:58%}#pizza-exp .placed-topping:nth-child(6){left:54%;top:16%}#pizza-exp .placed-topping:nth-child(7){left:80%;top:46%}#pizza-exp .placed-topping:nth-child(8){left:29%;top:82%}#pizza-exp .placed-topping:nth-child(9){left:45%;top:42%}#pizza-exp .placed-topping:nth-child(10){left:58%;top:81%}#pizza-exp .placed-topping:nth-child(11){left:17%;top:34%}#pizza-exp .placed-topping:nth-child(12){left:53%;top:54%}
+#pizza-exp .builder-actions{display:flex;justify-content:center;gap:10px}
+#pizza-exp .builder-actions button{border:1px solid #e9c99e;background:#fff0dd;padding:7px 14px;border-radius:12px;font-weight:800}
+#pizza-exp .instructor-notes{background:#fff8e6;border-block:1px solid #ebd7b5;padding:14px 22px;font-size:.84rem}
+#pizza-exp .instructor-notes strong{color:#96411d}#pizza-exp .instructor-notes p{margin:4px 0 0}
+#pizza-exp .stage-bottom{padding:15px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;background:white}
+#pizza-exp .stage-tip{color:#8e8070;font-size:.76rem;text-align:center}
+#pizza-exp .teacher-panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:var(--shadow)}
+#pizza-exp .teacher-head{display:flex;justify-content:space-between;align-items:center}
+#pizza-exp .teacher-kicker{font-size:.72rem;color:var(--rust);font-weight:900}
+#pizza-exp .teacher-panel h3{font-size:1.17rem;margin:3px 0 17px}#pizza-exp .panel-hat{font-size:1.7rem;color:var(--rust)}
+#pizza-exp .teacher-timer{border-radius:17px;background:#fff4df;padding:16px;text-align:center}
+#pizza-exp .timer-label{font-size:.82rem;font-weight:900;margin:0}
+#pizza-exp .timer-display{font-size:clamp(2.3rem,5vw,3.5rem);letter-spacing:.06em;font-weight:900;color:#8a402a;display:block;font-variant-numeric:tabular-nums;line-height:1.3}
+#pizza-exp .timer-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:10px 0}
+#pizza-exp .timer-presets button{background:white;border:1px solid #e7c5a3;border-radius:8px;padding:4px 2px;font-size:.75rem}
+#pizza-exp .timer-presets button[aria-pressed=true]{background:#a34528;color:white}
+#pizza-exp .timer-actions{display:flex;gap:6px}
+#pizza-exp .timer-actions button{flex:1;border:0;border-radius:10px;background:#355b42;color:white;padding:9px;font-size:.85rem;font-weight:900}
+#pizza-exp .timer-actions button:last-child{background:#f7e2c4;color:#6c4d36}
+#pizza-exp .timer-help{font-size:.72rem;color:#766351;min-height:25px;line-height:1.5;margin:9px 0 0}
+#pizza-exp .scene-outline{margin-top:20px}
+#pizza-exp .outline-heading{font-size:.85rem;font-weight:900;margin:0 0 8px}
+#pizza-exp .scene-outline ol{margin:0;padding:0;list-style:none;display:grid;gap:4px;max-height:520px;overflow-y:auto}
+#pizza-exp .scene-outline button{display:flex;align-items:center;width:100%;text-align:left;gap:9px;font-size:.78rem;border:0;background:transparent;padding:8px;border-radius:10px}
+#pizza-exp .scene-outline button span{color:#a66347;background:#fff0df;border-radius:6px;padding:1px 5px;flex:none}
+#pizza-exp .scene-outline button[aria-current=step]{background:#fee7ca;font-weight:900}
+#pizza-exp .schedule-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+#pizza-exp .schedule-grid article{display:flex;flex-direction:column;background:white;border:1px solid var(--line);border-radius:18px;padding:20px;min-height:173px;position:relative}
+#pizza-exp .schedule-grid article.featured{background:#fff0db;border-color:#e2ba90}
+#pizza-exp .schedule-grid time{font-size:.78rem;color:#a45232;font-weight:900}
+#pizza-exp .schedule-grid strong{font-size:1.07rem;margin:8px 0}
+#pizza-exp .schedule-grid p{font-size:.84rem;color:#776858;line-height:1.6}
+#pizza-exp .schedule-grid article span{font-size:.75rem;font-weight:900;margin-top:auto;align-self:flex-start;border-radius:30px;padding:2px 9px;color:#6c543e;background:#fbecd7}
+#pizza-exp .schedule-note,#pizza-exp .safety-disclaimer{margin:18px 0 0;padding:13px 16px;background:#fff2dc;border-left:4px solid #b65c37;color:#6b4f38;border-radius:8px;font-size:.84rem}
+#pizza-exp .prep-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+#pizza-exp .prep-card{background:white;border:1px solid var(--line);padding:24px;border-radius:20px}
+#pizza-exp .prep-card h3{font-size:1.24rem;margin-bottom:14px}
+#pizza-exp .prep-card label{display:flex;align-items:flex-start;gap:11px;cursor:pointer;padding:10px 0;border-top:1px solid #f1e6d6;font-size:.89rem}
+#pizza-exp .prep-card input{accent-color:#357147;flex:none;margin-top:5px;width:18px;height:18px}
+#pizza-exp .prep-card input:checked+span{text-decoration:line-through;color:#8c8a82}
+#pizza-exp .safety-card{background:#f5faed}
+#pizza-exp .takeaway-section{display:flex;align-items:center;gap:32px;margin:0 auto 50px;padding:35px 45px;background:#e8f0d9;border-radius:26px}
+#pizza-exp .takeaway-section h2{font-size:clamp(1.5rem,3vw,2.3rem);margin-bottom:10px}#pizza-exp .takeaway-section p:not(.eyebrow){max-width:730px;color:#51624a}
+#pizza-exp .closing-illustration{font-size:6rem;line-height:1.2}
+#pizza-exp .page-ending{padding:22px 28px 42px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:.81rem;color:#766957}
+#pizza-exp .page-ending a{font-weight:900;color:#ae4c28}
+#pizza-exp .stage-shell:fullscreen{background:#fff;display:flex;flex-direction:column;border-radius:0;max-width:none}
+#pizza-exp .stage-shell:fullscreen .scene{flex:1;min-height:0}
+#pizza-exp .stage-shell:fullscreen .scene h3{font-size:clamp(2.3rem,6vw,5.3rem)}
+#pizza-exp .stage-shell:fullscreen .stage-tip{display:none}
+@media(max-width:980px){#pizza-exp .classroom-layout{grid-template-columns:1fr}#pizza-exp .teacher-panel{display:grid;grid-template-columns:275px minmax(0,1fr);gap:20px}#pizza-exp .scene-outline{margin:0}#pizza-exp .scene-outline ol{max-height:220px}#pizza-exp .schedule-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:690px){#pizza-exp .pizza-hero{grid-template-columns:1fr;padding:28px 18px 16px;gap:5px}#pizza-exp .hero-art{min-height:235px}#pizza-exp .hero-pizza{width:220px;height:220px;min-height:0;min-width:0}#pizza-exp .hero-sticker{top:3px;right:3px;font-size:.77rem}#pizza-exp .page-tabs{padding:12px 18px 25px}#pizza-exp .classroom,#pizza-exp .overview-section,#pizza-exp .prep-section{padding:20px 14px 42px}#pizza-exp .scene{min-height:405px;padding:30px 14px}#pizza-exp .scene-visuals>span{min-width:90px;min-height:85px;font-size:1.8rem}#pizza-exp .scene-visuals>span small{font-size:.73rem}#pizza-exp .teacher-panel{grid-template-columns:1fr;padding:17px}#pizza-exp .scene-outline ol{max-height:170px}#pizza-exp .prep-columns{grid-template-columns:1fr}#pizza-exp .takeaway-section{margin:0 14px 20px;padding:22px;flex-direction:column;align-items:start;gap:4px}#pizza-exp .closing-illustration{font-size:3.5rem}#pizza-exp .page-ending{padding-inline:20px}#pizza-exp .stage-tip{display:none}}
+@media(max-width:420px){#pizza-exp .stage-bottom{padding:12px}#pizza-exp .stage-bottom .btn{min-height:44px;padding:8px 13px}#pizza-exp .stage-toolbar{padding:12px}#pizza-exp .schedule-grid{grid-template-columns:1fr}#pizza-exp .schedule-grid article{min-height:130px}#pizza-exp .event-facts span{font-size:.76rem}#pizza-exp .page-tabs a{font-size:.79rem;padding:8px 13px}}
+@media print{#pizza-exp .pizza-hero,#pizza-exp .page-tabs,#pizza-exp .classroom,#pizza-exp .takeaway-section,#pizza-exp .page-ending{display:none!important}#pizza-exp .overview-section,#pizza-exp .prep-section{padding:12px!important}#pizza-exp .schedule-grid{grid-template-columns:repeat(2,1fr)}#pizza-exp .schedule-grid article{break-inside:avoid}#pizza-exp .prep-columns{grid-template-columns:1fr 1fr}#pizza-exp .prep-card{break-inside:avoid}}
