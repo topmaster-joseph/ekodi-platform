@@ -8,3 +8,11 @@ preview_urls = false
 directory = "./books"
 binding = "ASSETS"
 run_worker_first = true
+
+# Publisher-only RPC on the Development account. This named entrypoint cannot
+# authorize live sales because the publisher private release flag remains false.
+# No production or browser-visible binding is created by this staging config.
+[[services]]
+binding = "PUBLISHING_RELEASE_GATE"
+service = "ekodi-publishing-staging"
+entrypoint = "BooksPublisherReleaseGate"
