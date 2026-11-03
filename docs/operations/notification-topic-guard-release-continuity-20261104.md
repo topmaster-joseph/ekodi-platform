@@ -15,3 +15,6 @@ Completion still requires the EKODI Orchestrator to verify current-main ancestry
 
 ## Current-main protection revalidation
 After first-party tests passed on the previous protected recovery head, EKODI synchronized another independent main change. Source SHA remains an ancestor. This non-executable note requests authentic CI on the synchronized source while preserving release receipts, permissions, and secret isolation.
+
+## Third protected merge check
+Another independent EKODI release updated main and the Orchestrator synchronized the official branch. The source SHA remains in ancestry, and no source changes are made. Revalidate the current branch with authentic GitHub Actions rather than treating action-required checks as green; no direct protected merge or deployment bypass is used.
