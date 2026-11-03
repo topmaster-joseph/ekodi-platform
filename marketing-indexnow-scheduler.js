@@ -119,12 +119,19 @@ export async function submitChangedUrls(env, options = {}) {
   const nowIso = new Date(nowMs).toISOString();
   const { candidates, errors } = await collectIndexCandidates(env, { ...options, fetch:fetchImpl, now:nowMs });
   const changed = await changedCandidates(env, candidates);
-  const summary = { ok:true, candidates:candidates.length, changed:changed.length, submitted:0, failedBatches:0, batches:[], sourceErrors:errors };
+  // Submission success is meaningful only when every candidate source was read.
+  // A transient registry/Mall outage must not mark the KST day complete, since
+  // otherwise newly published URLs remain undiscovered until the next day.
+  // The historical committed fingerprint represents Naver acceptance; the
+  // shared IndexNow endpoint is informational under the existing contract.
+  const summary = { ok:true, status:'pending', candidates:candidates.length, changed:changed.length,
+    submitted:0, failedBatches:0, partnerFailures:0, batches:[], sourceErrors:errors };
   for (const batch of batches(changed, options.batchSize)) {
     const urls = batch.map(item => item.url);
     const results = [];
     for (const endpoint of INDEXNOW_ENDPOINTS) results.push(await submitBatch(fetchImpl, endpoint, urls));
     summary.batches.push(results);
+    summary.partnerFailures += results.filter(result => result.endpoint !== 'naver' && !result.ok).length;
     if (results.find(result => result.endpoint === 'naver')?.ok) {
       for (const item of batch) {
         await env.DB.prepare(`INSERT INTO marketing_indexnow_url_state(url,fingerprint,source,submitted_at,updated_at) VALUES(?,?,?,?,?)
@@ -136,7 +143,12 @@ export async function submitChangedUrls(env, options = {}) {
       summary.failedBatches += 1;
     }
   }
-  summary.ok = summary.failedBatches === 0;
+  summary.ok = summary.failedBatches === 0 && summary.sourceErrors.length === 0;
+  summary.status = summary.failedBatches ? 'naver_failed'
+    : summary.sourceErrors.length ? 'source_partial'
+    : summary.partnerFailures ? 'partner_partial'
+    : 'naver_accepted';
+  // Never interpret any of these statuses as verified search indexing.
   return summary;
 }
 
