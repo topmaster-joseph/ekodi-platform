@@ -67,6 +67,9 @@ jobs:
       - name: Validate Mall site and API contracts
         run: npm run check
 
+      - name: Enforce named Publisher RPC staging isolation
+        run: node --test ../../test/publishing-staging-named-rpc-binding.test.mjs
+
       - name: Build static site
         run: npm run build
 
@@ -179,6 +182,13 @@ jobs:
             *) echo "Invalid Development staging URL" >&2; exit 1 ;;
           esac
 
+      - name: Confirm Publisher Development named RPC deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deployments list --name ekodi-publishing-staging --json > /tmp/publishing-stage-deployments.json
+          node -e "const d=require('/tmp/publishing-stage-deployments.json');const a=Array.isArray(d)?d:d.deployments||d.result||[];if(!Array.isArray(a)||!a.length)process.exit(1)"
+
       - name: Generate one-time transaction rehearsal token
         shell: bash
         run: |
@@ -243,6 +253,13 @@ jobs:
           database_name = "ekodi-mall-staging"
           database_id = "$DB_ID"
           migrations_dir = "migrations"
+
+          # Development-only, role-specific Publisher RPC. The publisher's
+          # release flag stays false: no new sales, binding is not approval.
+          [[services]]
+          binding = "PUBLISHING_RELEASE_GATE"
+          service = "ekodi-publishing-staging"
+          entrypoint = "MallPublisherReleaseGate"
           EOF
 
       - name: Apply staging migrations
