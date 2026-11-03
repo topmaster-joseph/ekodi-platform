@@ -7,6 +7,24 @@ Follow `CONSTITUTION.md`, `AGENTS.override.md`, `AGENTS.md`, `AI_DEVELOPMENT_POL
 
 `eval/score.mjs` is a deterministic **independent rubric**, not an LLM judge. An AI cannot award itself model success. Semantic quality will require a blinded independent assessor plus a sampled human review, with signed calibration evidence. The judge version is pinned independently from the evaluated agent.
 
+## 0. Operational baseline (measured 2026-11-03 KST, Production D1 `ekodi-auth`, read-only aggregates)
+
+Correction: the canonical source is **not** Supabase `ai_requests`; it is D1 `ekodi-auth` —
+`ai_provider_routing_events` 32,665 rows (2026-10-01→) and `ekodi_orchestrator_tasks` 2,074 rows (2026-10-03→).
+`eval/ops-baseline.mjs` recomputes these with Wilson 95% intervals (`node --test eval/tests/ops-baseline.test.mjs`).
+
+| Metric | Measured | Note |
+|---|---|---|
+| Translation routing first-try success, last 7 days | ~96% per day (e.g. 143/149 on 11-02) | healthy |
+| Workers AI reliability (cumulative) | 817/845 = 96.7% | best, but blocked 2,833× by `free-quota-exhausted` |
+| Gemini (cumulative) | 1,469/2,692 = 54.6% | 1,148 failures `gemini_400_api_key_invalid` (historical) |
+| OpenRouter free | 209/718 = 29.1% | 492 empty responses |
+| Groq free | 113/1,626 = 6.9% | 1,504 `groq_free_empty_response` → demote/quarantine |
+| Orchestrator completion, last 7 days | 148/880 = 16.8% | 732 still `assigned` |
+| Orphaned `assigned` > 7 days, no lease | **658** | mostly `ekodi-github-actions-release-recovery`; attempt_count 0 |
+
+Gate rule (`opsGate`): block if completion upper bound falls below baseline lower bound − 0.02, or orphaned backlog grows; unknown = block.
+
 ## 1. Real operational goldens: required, not yet available
 Initial repository review found no `eval/` directory. Production Supabase `public.ai_requests` had 0 rows on 2026-11-03. The canonical Cloudflare D1/Queue/log source and consent/retention policy must be verified before collecting **50 real Korean orchestrator-routing cases**. Do not fill this gap using synthetic fixtures. Capture only task intent, permitted route(s), observed route, ordered tool events, independent outcome label, cost, latency and safety counters.
 

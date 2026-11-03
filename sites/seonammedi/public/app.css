@@ -335,3 +335,11 @@
 /* SITE-FOOTER-CREDIT-001 (owner request 2026-10-20): committee line + site maker credit on every page. */
 footer.site-footer .site-footer-copy .site-footer-credit{font-size:11px;line-height:1.5;color:#7a8794}
 footer.site-footer .site-footer-copy .site-footer-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}
+
+/* 2026-11-03 owner request: committee view shows only 비상대책위 활동소식.
+   Activity-history list UI is hidden (records are preserved, not deleted). */
+#committee-activity.committee-news-only .committee-toolbar,
+#committee-activity.committee-news-only #committeeActivityFilters,
+#committee-activity.committee-news-only #committeeActivityForm,
+#committee-activity.committee-news-only #committeeActivityList,
+#committee-activity.committee-news-only #committeeActivityManageToggle{display:none!important}
