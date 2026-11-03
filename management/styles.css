@@ -37,3 +37,18 @@
 .store-readiness ul{margin:8px 0 6px;padding-left:20px}
 .store-readiness li+li{margin-top:5px}
 .store-readiness .note{margin:8px 0 0;font-size:.79rem}
+
+.chief-card .problem-links button{border:1px solid #d8e0eb;border-radius:999px;background:#f7f9fc;color:#223247;padding:8px 13px;font:inherit;font-size:.88rem;text-align:left;cursor:pointer;word-break:keep-all;overflow-wrap:normal}
+.chief-card .problem-links button:hover,.chief-card .problem-links button:focus-visible{border-color:#7796c2;background:#edf3fb;outline-offset:2px}
+.request-label{display:block;margin:16px 0 7px;font-weight:750}
+#managementRequest{display:block;width:100%;min-height:100px;max-width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;color:#18202b;font:inherit;resize:vertical;word-break:keep-all;overflow-wrap:break-word}
+#managementRequest:focus-visible{outline:3px solid #9cc0f5;outline-offset:1px}
+.request-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.request-matches{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.request-matches:empty{display:none}
+.request-match{min-width:0;padding:15px;border:1px solid #dbe3ed;border-radius:12px;background:#f8fafc;word-break:keep-all}
+.request-match h3{margin:0 0 5px;font-size:1rem}
+.request-match small{display:block;color:#506176;font-size:.82rem}
+.request-match p{margin:10px 0;color:#425168;font-size:.88rem}
+.request-match .module-launch{font-size:.84rem}
+@media(max-width:760px){.request-matches{grid-template-columns:1fr}.request-actions .button{width:100%}.chief-card .problem-links{align-items:stretch}.chief-card .problem-links button{max-width:100%}}
