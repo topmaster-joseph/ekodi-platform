@@ -22,7 +22,7 @@ async function api(path,init={}){
     headers:{authorization:`Bearer ${token}`,'content-type':'application/json',...(init.headers||{})}});
   const body=await res.json().catch(()=>({}));
   if(!res.ok||body.success===false){
-    const msg=(body.errors||[]).map(e=>`${e.code}:${e.message}`).join('; ')||res.status;
+    const msg=`HTTP ${res.status} ${JSON.stringify(body.errors||body.messages||body).slice(0,300)}`;
     const e=new Error(`Cloudflare ${init.method||'GET'} ${path.split('?')[0]} failed: ${msg}`);e.status=res.status;throw e;
   }
   return body.result;
