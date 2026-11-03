@@ -14,6 +14,8 @@ const mode=process.argv[2];
 if(accountId!==DEVELOPMENT_ACCOUNT)throw new Error('development Cloudflare account required');
 if(!token||!run||!['open','close'].includes(mode))throw new Error('usage: points-staging-access.mjs open|close (CLOUDFLARE_API_TOKEN, POINTS_E2E_RUN)');
 const name=`ekodi-points-e2e-${run}`;
+process.on('uncaughtException',e=>{console.log(`::error::points-staging-access ${mode}: ${String(e?.message||e).slice(0,400)}`);process.exit(1);});
+process.on('unhandledRejection',e=>{console.log(`::error::points-staging-access ${mode}: ${String(e?.message||e).slice(0,400)}`);process.exit(1);});
 
 async function api(path,init={}){
   const res=await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}${path}`,{...init,
@@ -70,7 +72,7 @@ if(mode==='open'){
   const policies=[];
   for(const app of apps){
     const policy=await api(`/access/apps/${app.id}/policies`,{method:'POST',body:JSON.stringify({
-      name,decision:'non_identity',include:[{service_token:{token_id:created.id}}],exclude:[],require:[],precedence:1})});
+      name,decision:'non_identity',include:[{service_token:{token_id:created.id}}],exclude:[],require:[]})});
     policies.push(`${app.id}:${policy.id}`);
   }
   env('E2E_ACCESS_POLICIES',policies.join(','));
