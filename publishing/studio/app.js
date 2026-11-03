@@ -123,7 +123,7 @@ storeForm.addEventListener('submit',async event=>{
 bookForm.addEventListener('submit',async event=>{
   event.preventDefault();
   const data=Object.fromEntries(new FormData(bookForm));
-  data.status=event.submitter?.value==='SUBMITTED'?'SUBMITTED':'DRAFT';
+  data.status='DRAFT'; // Commercial review is handled by the verified Publisher workflow.
   data.storeId=data.storeId?Number(data.storeId):null;
   data.priceKrw=Number(data.priceKrw||0);
   const id=bookForm.dataset.editId;
