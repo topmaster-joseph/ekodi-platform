@@ -25,3 +25,7 @@
 .card{min-width:0}
 .card h3,.meta{word-break:keep-all;overflow-wrap:break-word}
 @media(max-width:760px){.hero{padding-top:18px}.panel{padding:16px}.studio-tabs{gap:4px}.studio-tabs button{font-size:.83rem;padding:8px 10px}.section-head{align-items:flex-start}.section-head h2{margin-bottom:6px}}
+
+/* The review workflow is a separate, verified publisher route, never a submit button. */
+.actions .studio-review-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 14px;border:1px solid #c8c0b1;border-radius:9px;font-weight:700;text-decoration:none;white-space:normal;text-align:center;color:#26342b}
+.actions .studio-review-link:focus-visible{outline:3px solid #b38354;outline-offset:2px}
