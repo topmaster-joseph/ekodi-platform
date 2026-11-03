@@ -7,6 +7,7 @@ const VERSION=7;
 const TRAFFIC_STATS_ATTR='data-ekodi-footer-traffic';
 const TRAFFIC_STATS_URL='https://ekodi.kr/api/telemetry/public-summary';
 const trafficStatsRequests=new Map();
+const nativeTelemetrySent=new Set();
 const STYLE_ID='ekodi-user-ui-footer-style';
 const CONFIG_URL='https://ekodi.kr/shell/user-footer.json';
 const SITE_CHROME_URL='https://ekodi.kr/workspace-api/v1/site-chrome/public';
@@ -233,6 +234,38 @@ function addTrafficMetric(parent,name,metric){
   appendText(item,'span',name);
   appendText(item,'strong',String(metric?.label||'—'));
 }
+// Native site pages use the read-only shared footer without the full EKODI
+// Shell. Preserve their ordinary, privacy-respecting visitor-session telemetry
+// by reusing the existing endpoint (no raw path, IP or user-agent sent).
+function sendNativeTrafficBeacon(siteId,scope){
+  if(window.__EKODI_SHELL_BOOTED||!USER_SURFACES.has(surface()))return;
+  if(navigator.globalPrivacyControl===true||navigator.doNotTrack==='1')return;
+  if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(String(siteId||'')))return;
+  if(nativeTelemetrySent.has(scope))return;
+  nativeTelemetrySent.add(scope);
+  const today=new Date().toISOString().slice(0,10);
+  const key='ekodi_traffic_daily:'+siteId+':'+today;
+  let sid='';
+  try{sid=localStorage.getItem(key)||'';}catch{}
+  if(!sid)try{sid=sessionStorage.getItem(key)||'';}catch{}
+  if(!/^[A-Za-z0-9_-]{16,96}$/.test(sid)){
+    try{sid=crypto.randomUUID().replace(/-/g,'_');}
+    catch{
+      const bytes=new Uint8Array(18);
+      crypto.getRandomValues(bytes);
+      sid=[...bytes].map(byte=>byte.toString(16).padStart(2,'0')).join('');
+    }
+    for(const storage of [localStorage,sessionStorage]){
+      try{storage.setItem(key,sid);break;}catch{}
+    }
+  }
+  const source=new URL(scope);
+  const sitePath=source.searchParams.get('site_path')||'';
+  const payload=JSON.stringify({sid,site_id:siteId,site_path:sitePath,surface:surface()});
+  const endpoint='https://ekodi.kr/api/telemetry/visit';
+  try{if(navigator.sendBeacon?.(endpoint,payload))return;}catch{}
+  try{fetch(endpoint,{method:'POST',mode:'cors',credentials:'omit',keepalive:true,headers:{'content-type':'text/plain;charset=UTF-8'},body:payload}).catch(()=>{});}catch{}
+}
 function attachFooterTraffic(footer){
   if(!(footer instanceof HTMLElement))return;
   const scope=footerTrafficScope();
@@ -261,6 +294,7 @@ function attachFooterTraffic(footer){
       node.textContent=english?'Statistics unavailable':'방문 통계 준비 중';
       return;
     }
+    sendNativeTrafficBeacon(data.siteId,scope);
     node.textContent='';
     addTrafficMetric(node,english?'Today':'오늘 방문',data.today);
     addTrafficMetric(node,english?'7 days':'최근 7일',data.last7Days);
