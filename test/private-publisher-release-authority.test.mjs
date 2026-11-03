@@ -20,7 +20,8 @@ function releaseRecord() {
 const rights=(digest=D)=>({trustedBackend:true,authorSignatureValid:true,
   publisherSignatureValid:true,assetDigestValid:true,rightsEvidenceValid:true,digest});
 const author=()=>({
-  ...releaseRecord(),
+  ...releaseRecord(),priceKrw:9900,
+  bookstore:{bookId:'BOOK-EKODI-NEW-004',catalogNo:'EB-NEW-004',author:'저자',fileKey:'BOOK-EKODI-NEW-004/ebook.epub'},
   authorApproval:{approvedBy:'author-publisher-01',approvedAt:'2026-10-27T00:00:00.000Z',digest:D},
   publisherApproval:{approvedBy:'publisher-01',approvedAt:'2026-10-28T00:00:00.000Z',digest:D},
 });
@@ -62,7 +63,9 @@ test('only service-authenticated bookstore and mall callers get exact release pr
       const result=await verifyPrivatePublisherRelease(env,request(ch),caller(ch),NOW);
       assert.deepEqual(result,{authorized:true,state:'released',visibility:'public',
         checkoutEnabled:true,channel:ch,publicationId:PUB,editionId:EDITION,
-        releaseDigest:D});
+        releaseDigest:D,retailIdentityVersion:1,bookId:'BOOK-EKODI-NEW-004',
+        catalogNo:'EB-NEW-004',title:releaseRecord().title,author:'저자',
+        fileKey:'BOOK-EKODI-NEW-004/ebook.epub',priceKrw:9900,currency:'KRW'});
     }
     assert.equal((await verifyPrivatePublisherRelease(env,request('books'),caller('ekodimall'),NOW)).authorized,false);
     assert.equal((await verifyPrivatePublisherRelease(env,request('books'),null,NOW)).authorized,false);
