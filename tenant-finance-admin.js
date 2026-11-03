@@ -10,7 +10,7 @@ const accessLabel=account=>account.transferEnabled?'이체 허용':(!isManual(ac
 const signedKrw=value=>`${Number(value)<0?'-':Number(value)>0?'+':''}${krw(Math.abs(Number(value)||0))}`;
 const IMPORT_REASON={INVALID_DATE:'거래일 형식 오류',INVALID_AMOUNT:'금액 없음',INVALID_DIRECTION:'입출금 구분 오류',EXTERNAL_ID_REQUIRED:'거래번호 없음',MISSING_DATE_OR_AMOUNT:'거래일 또는 금액 없음'};
 const TXN_PAGE=100;
-const FINANCE_TABS=[['accounts','계좌'],['ledger','거래내역'],['transfers','이체']];
+const FINANCE_TABS=[['accounts','계좌'],['ledger','거래내역'],['reports','회계보고서'],['transfers','이체']];
 const initialTab=()=>{try{const tab=new URL(location.href).searchParams.get('tab');const alias={overview:'accounts',import:'ledger'};const normalized=alias[tab]||tab;return FINANCE_TABS.some(([key])=>key===normalized)?normalized:'accounts';}catch{return'accounts';}};
 const isLegacyApi=error=>Number(error?.status)===404||String(error?.message||'').includes('BANKING_ENDPOINT_NOT_FOUND');
 const monthKey=value=>String(value||'').slice(0,7);
@@ -22,6 +22,17 @@ const localFilter=(list,f)=>list.filter(t=>{const d=String(t.bookedAt||'').slice
 const csvCellLocal=value=>{let text=String(value??'');if(/^[=+\-@\t\r]/.test(text))text=`'${text}`;return /[",\n\r]/.test(text)?`"${text.replace(/"/g,'""')}"`:text;};
 const csvTemplateHref='data:text/csv;charset=utf-8,'+encodeURIComponent('\uFEFF거래일시,구분,금액,잔액,적요,거래처,분류,거래번호\n2026-01-02 09:30,입금,100000,350000,후원금,홍길동,후원,example-001\n');
 const tag=value=>`<span class="tag ${['active','completed','approved'].includes(value)?'live':['failed','error','rejected'].includes(value)?'warn':''}">${esc(statusLabel(value))}</span>`;
+const ACCOUNTING_PROFILES=Object.freeze({
+  business:{label:'사업자 회계보고',purpose:'사업 운영·세무 증빙용',income:['매출','판매','용역','기타수입'],expense:['매입','인건비','임차료','수수료','세금·공과','마케팅','기타지출']},
+  church:{label:'교회 재정보고',purpose:'공동의회·운영위원회 보고용',income:['헌금','감사헌금','십일조','후원','기타수입'],expense:['예배·교육','선교','구제','목회운영','시설','기타지출']},
+  mission:{label:'비영리단체 회계보고',purpose:'후원자·운영위원회 보고용',income:['후원금','지정후원','회비','보조금','기타수입'],expense:['지정사업','사역비','구제·지원','행사비','운영비','기타지출']},
+  association:{label:'상인회·협회 정산보고',purpose:'회원·총회·보조사업 정산용',income:['회비','보조금','협찬','행사수입','기타수입'],expense:['사업비','행사비','홍보비','회의비','운영비','기타지출']},
+  organization:{label:'조직 회계보고',purpose:'운영책임자·구성원 보고용',income:['수입','후원','회비','보조금','기타수입'],expense:['사업비','인건비','운영비','행사비','기타지출']}
+});
+const accountingProfile=(scope,mode)=>{const key=String(scope||'').toLowerCase();if(mode==='church'||/church/.test(key))return ACCOUNTING_PROFILES.church;if(/mission/.test(key))return ACCOUNTING_PROFILES.mission;if(/cgma|cheonggye|association|merchant/.test(key))return ACCOUNTING_PROFILES.association;if(/biz|mall|trade|cafe|store/.test(key))return ACCOUNTING_PROFILES.business;return ACCOUNTING_PROFILES.organization;};
+const categoryName=(transaction,profile)=>{const value=String(transaction.category||'').trim();if(value)return value;const haystack=`${transaction.description||''} ${transaction.counterpartyName||''}`.toLowerCase();const list=transaction.direction==='in'?profile.income:profile.expense;return list.find(label=>haystack.includes(label.replace(/·/g,'').toLowerCase()))||list.at(-1);};
+const groupTransactions=(rows,profile)=>{const map=new Map();for(const row of rows){const direction=row.direction==='in'?'in':'out',category=categoryName(row,profile),key=`${direction}:${category}`;const item=map.get(key)||{direction,category,count:0,amount:0};item.count++;item.amount+=Number(row.amount)||0;map.set(key,item);}return[...map.values()].sort((a,b)=>a.direction.localeCompare(b.direction)||b.amount-a.amount);};
+const reportPeriodDefaults=()=>{const now=new Date(),from=new Date(now.getFullYear(),now.getMonth(),1),date=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;return{from:date(from),to:date(now)};};
 
 const parseCsv=value=>{
   const rows=[];let row=[],field='',quoted=false;
@@ -192,6 +203,23 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
       <div class="actions"><button class="button" type="button" data-bank-more hidden>더 보기</button></div>
     </section>`;
 
+    const profile=accountingProfile(scope,mode),period=reportPeriodDefaults();
+    const reportPanel=`<form id="bankReportForm" class="trade-form">
+      <div class="panel-head"><div><h3>${esc(profile.label)}</h3><p class="empty">${esc(profile.purpose)} · 실제 연결 장부에서 선택 기간의 수입·지출을 집계합니다.</p></div><span class="tag live">조직별 양식</span></div>
+      <div class="trade-grid">
+        <label>보고서 제목<input name="title" maxlength="120" value="${esc(profile.label)}" required></label>
+        <label>보고 대상<input name="audience" maxlength="120" value="${esc(profile.purpose)}"></label>
+        <label>시작일<input name="from" type="date" value="${period.from}" required></label>
+        <label>종료일<input name="to" type="date" value="${period.to}" required></label>
+        <label>대상 계좌<select name="accountId"><option value="">전체 계좌</option>${accounts.map(a=>`<option value="${esc(a.id)}">${esc(accountMap.get(a.id)||a.accountAlias)}</option>`).join('')}</select></label>
+        <label>작성자<input name="preparer" maxlength="80" placeholder="예: 회계 담당자"></label>
+      </div>
+      <label style="display:grid;gap:5px;margin-top:10px">보고 메모<textarea name="memo" rows="3" maxlength="500" placeholder="주요 사업, 지정후원, 특이 지출 등 보고에 필요한 설명"></textarea></label>
+      <div class="actions"><button class="button primary" type="submit">보고서 작성</button><button class="button" type="button" data-report-print disabled>인쇄 · PDF 저장</button><button class="button" type="button" data-report-export disabled>요약 CSV</button></div>
+    </form>
+    <p class="empty" data-report-scope-note>보고서에는 전체 계좌번호를 표시하지 않습니다. 미분류 거래는 조직 유형에 맞는 기타 항목으로 묶이며, 원장 분류를 보완하면 더 정확해집니다.</p>
+    <section data-accounting-report aria-live="polite"><p class="empty">기간과 보고 대상을 확인한 뒤 ‘보고서 작성’을 누르세요.</p></section>`;
+
     const transferAccounts=accounts.filter(account=>Boolean(account.transferEnabled));
     const transferForm=caps.manage&&transferAccounts.length?`<form id="bankTransferRequestForm" class="trade-form">
       <h3>이체 요청</h3><p class="empty">수취계좌 전체번호는 요청 단계에서 저장하지 않습니다. 승인 후 실제 실행 시에만 금융기관 연결로 전달합니다.</p>
@@ -225,6 +253,7 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
       ${tabNav}
       ${panel('accounts',accountsPanel)}
       ${panel('ledger',ledgerPanel)}
+      ${panel('reports',reportPanel)}
       ${panel('transfers',transfersPanel)}
       <details class="bank-help" style="margin-top:18px"><summary>안내 · 보안 원칙</summary>
         <p class="empty">조회·요청·승인을 분리합니다. 전체 계좌번호·인터넷뱅킹 비밀번호·인증서는 EKODI 데이터베이스에 저장하지 않습니다.</p>
@@ -299,6 +328,48 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
         select.value=chosen;
       }
     };
+    let currentReport=null;
+    const reportRows=async filters=>{
+      if(legacy.on)return localFilter(legacy.rows,filters);
+      try{
+        const rows=[];let offset=0,total=Infinity;
+        while(offset<total&&rows.length<5000){
+          const page=await request('/transactions',{query:{...filters,limit:TXN_PAGE,offset}});
+          const items=Array.isArray(page.transactions)?page.transactions:[];rows.push(...items);offset+=items.length;total=Number(page.totals?.count||rows.length);
+          if(!items.length)break;
+        }
+        return rows;
+      }catch(error){if(!isLegacyApi(error))throw error;legacy.on=true;return localFilter(legacy.rows,filters);}
+    };
+    const reportHtml=report=>`<article data-report-document style="border:1px solid #dfe5ee;border-radius:12px;padding:clamp(14px,3vw,28px);background:#fff;color:#172033">
+      <header style="border-bottom:2px solid #172033;padding-bottom:14px;margin-bottom:18px"><p style="margin:0 0 5px;color:#667085;font-size:12px">${esc(report.profile.purpose)}</p><h2 style="margin:0;font-size:clamp(22px,4vw,32px)">${esc(report.title)}</h2><p style="margin:8px 0 0;color:#667085">${esc(report.from)} ~ ${esc(report.to)} · ${esc(report.accountLabel)}</p></header>
+      <div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));margin-bottom:18px">${[['수입',krw(report.income)],['지출',krw(report.expense)],['기간 순증감',signedKrw(report.net)],['거래',`${report.rows.length.toLocaleString('ko-KR')}건`]].map(([label,value])=>`<div class="card"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`).join('')}</div>
+      <h3>항목별 수입 · 지출</h3><div class="table-wrap"><table><thead><tr><th>구분</th><th>회계 항목</th><th>건수</th><th>금액</th><th>구성비</th></tr></thead><tbody>${report.groups.map(item=>{const base=item.direction==='in'?report.income:report.expense;return`<tr><td>${item.direction==='in'?'수입':'지출'}</td><td><strong>${esc(item.category)}</strong></td><td class="right">${item.count.toLocaleString('ko-KR')}</td><td class="right">${esc(krw(item.amount))}</td><td class="right">${base?esc((item.amount/base*100).toFixed(1)+'%'):'0.0%'}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">선택 기간의 거래가 없습니다.</td></tr>'}</tbody></table></div>
+      ${report.memo?`<section style="margin-top:18px;padding:14px;background:#f7f9fc;border-radius:10px"><strong>보고 메모</strong><p style="white-space:pre-wrap;line-height:1.65;margin:7px 0 0">${esc(report.memo)}</p></section>`:''}
+      <footer style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:22px;padding-top:14px;border-top:1px solid #dfe5ee;color:#667085;font-size:12px"><span>작성자 ${esc(report.preparer||'미입력')}</span><span>작성일 ${esc(new Date().toLocaleDateString('ko-KR'))}</span></footer>
+      ${report.legacy?'<p style="margin-top:14px;color:#9a5a12;font-size:12px">금융 API 업데이트 반영 전 자료로 최근 50건 범위에서 작성되었습니다.</p>':''}
+    </article>`;
+    const reportForm=root.querySelector('#bankReportForm'),reportHost=root.querySelector('[data-accounting-report]'),printButton=root.querySelector('[data-report-print]'),reportExportButton=root.querySelector('[data-report-export]');
+    reportForm?.addEventListener('submit',async event=>{
+      event.preventDefault();const form=event.currentTarget,values=Object.fromEntries(new FormData(form));
+      if(values.from>values.to)return notice('보고서 시작일은 종료일보다 늦을 수 없습니다.','error');
+      try{
+        notice('실제 장부에서 회계보고서를 작성하고 있습니다.');
+        const rows=await reportRows({from:values.from,to:values.to,accountId:values.accountId||''});
+        const income=rows.filter(row=>row.direction==='in').reduce((sum,row)=>sum+Number(row.amount||0),0),expense=rows.filter(row=>row.direction==='out').reduce((sum,row)=>sum+Number(row.amount||0),0);
+        currentReport={...values,profile,rows,income,expense,net:income-expense,groups:groupTransactions(rows,profile),legacy:legacy.on,accountLabel:values.accountId?(accountMap.get(values.accountId)||'선택 계좌'):'전체 계좌'};
+        reportHost.innerHTML=reportHtml(currentReport);printButton.disabled=false;reportExportButton.disabled=false;
+        notice(`${currentReport.rows.length.toLocaleString('ko-KR')}건의 실제 장부 거래로 회계보고서를 작성했습니다.`,'good');
+      }catch(error){notice(`회계보고서 작성 실패: ${error.message}`,'error');}
+    });
+    printButton?.addEventListener('click',()=>{
+      if(!currentReport)return;const popup=window.open('','_blank','width=980,height=760');if(!popup)return notice('인쇄 창이 차단되었습니다. 브라우저의 팝업 허용 후 다시 시도해 주세요.','error');
+      popup.document.write(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${esc(currentReport.title)}</title><style>body{font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;margin:32px;color:#172033}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #dfe5ee;text-align:left}.right{text-align:right}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.card{border:1px solid #dfe5ee;border-radius:8px;padding:12px}.card span,.card strong{display:block}.card strong{margin-top:5px}@media print{body{margin:12mm}.button{display:none}}@media(max-width:620px){.cards{grid-template-columns:1fr 1fr}}</style></head><body>${reportHtml(currentReport)}</body></html>`);popup.document.close();popup.focus();setTimeout(()=>popup.print(),150);
+    });
+    reportExportButton?.addEventListener('click',()=>{
+      if(!currentReport)return;const lines=[['보고서',currentReport.title],['기간',`${currentReport.from}~${currentReport.to}`],['대상계좌',currentReport.accountLabel],['수입',currentReport.income],['지출',currentReport.expense],['순증감',currentReport.net],[],['구분','회계항목','건수','금액'],...currentReport.groups.map(item=>[item.direction==='in'?'수입':'지출',item.category,item.count,item.amount])];
+      const blob=new Blob(['\uFEFF'+lines.map(row=>row.map(csvCellLocal).join(',')).join('\r\n')+'\r\n'],{type:'text/csv;charset=utf-8'}),href=URL.createObjectURL(blob),link=document.createElement('a');link.href=href;link.download=`ekodi-accounting-report-${scope||'organization'}-${currentReport.from}-${currentReport.to}.csv`;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(href),1000);notice('회계보고서 요약을 CSV로 저장했습니다.','good');
+    });
     const ledgerError=error=>notice(`거래내역 조회 실패: ${error.message}`,'error');
     filterForm?.addEventListener('submit',event=>{event.preventDefault();loadLedger().catch(ledgerError);});
     root.querySelector('[data-bank-filter-reset]')?.addEventListener('click',()=>{filterForm.reset();loadLedger().catch(ledgerError);});
