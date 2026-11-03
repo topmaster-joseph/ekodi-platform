@@ -22,7 +22,7 @@ test('recognition preference uses a private, canonical-Person and per-site bound
 });
 
 test('personal goals are non-financial and resettable, not arbitrary point awards',()=>{
-  assert.match(sql,/p_weekly_days between 1 and 7/);
+  assert.match(sql,/p_weekly_days not between 1 and 7/);
   assert.match(sql,/p_weekly_days is null and p_target_90d is null/);
   assert.match(sql,/p_target_90d not between 3 and 90/);
   assert.match(sql,/INVALID_RECOGNITION_GOAL/);
