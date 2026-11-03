@@ -3,6 +3,13 @@
 // No prompts, user ids or payloads are read; only counts. Zero external AI calls.
 
 export const OPS_BASELINE_SQL = Object.freeze({
+  providerOverall: `SELECT provider_id,
+      SUM(event_type IN ('attempt','fallback-attempt')) AS tries,
+      SUM(event_type='selected') AS ok,
+      SUM(event_type='attempt-failed') AS failed
+    FROM ai_provider_routing_events
+    WHERE created_at >= ?1
+    GROUP BY provider_id HAVING tries > 0`,
   providerReliability: `SELECT provider_id,
       SUM(event_type IN ('attempt','fallback-attempt')) AS tries,
       SUM(event_type='selected') AS ok,
