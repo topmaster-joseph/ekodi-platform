@@ -24,6 +24,13 @@
         "rollbackVerify": false
       },
       {
+        "url": "https://ekodi.kr/community/reading/meeting-ui.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["initializeMeetingUI", "meeting-mode.js"],
+        "rollbackVerify": false
+      },
+      {
         "url": "https://ekodi.kr/community/health",
         "statuses": [200],
         "redirect": "follow",

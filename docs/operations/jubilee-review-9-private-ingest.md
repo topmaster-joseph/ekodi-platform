@@ -49,3 +49,11 @@ The review-9 ZIP was independently copied into the user's own ChatGPT Library in
 The required publisher R2 and D1 bindings, a verified `PUBLISHING_INGEST_AUTH` service, source-asset transport, installed migrations, per-book editorial review and author/publisher signatures are not configured on the live Worker. Do not switch the feature flag to `true` without a protected Orchestrator staging run and actual off-repo private storage receipt. Do not merge this Draft solely because unit tests pass.
 
 **Privacy:** the remote Desktop Commander monthly usage limit remained exhausted; it did not upload any manuscript to EKODI's actual publisher servers. No customer data, manuscript bytes, prices, signed credentials or publicly accessible links are added to GitHub.
+
+## Private draft project registration (2026-11-03)
+
+- Draft PR #7827 adds `POST /publishing/api/workflow/jubilee/register`, reached only from the authenticated publisher's manuscript management UI.
+- The backend must configure `PUBLISHING_JUBILEE_AUTHOR_USER_ID` to the verified publishing author's Supabase user ID through the protected service configuration. This is a server-side binding, never a browser-supplied ID. If missing the endpoint returns HTTP 503; for a different authenticated user it returns HTTP 403.
+- The endpoint creates or reuses two *private workflow records only*; it does not copy the review-9 ZIP, ingest review-10 artifacts, grant publishing authority or enable sales.
+- For real acceptance, sign in as the intended author, invoke the action, and reread both project IDs. Confirm non-owner denial, repeat-call idempotency and no public-catalog listing. Record project IDs in the private audit channel, not a public issue.
+- Do not activate publisher-private R2/D1 ingestion from this project-registration step. The original digest-pinned protected ingress and human author/publisher approval gates remain independent.

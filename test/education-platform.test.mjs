@@ -158,7 +158,7 @@ test('Lifelong-learning home offers truthful local discovery without changing Ad
   assert.match(home,/id="learningEmpty"/);
   assert.match(home,/id="learningClear"/);
   assert.equal((home.match(/class="interest-card"/g)||[]).length,6);
-  assert.equal((home.match(/class="path-card"/g)||[]).length,10);
+  assert.equal((home.match(/class="path-card"/g)||[]).length,11);
   for(const path of ['/admission','/study','/study/academy/','/study/ai-bootcamp/','https://ekodi.kr/learn/','https://ekodi.kr/research/']){
     assert.ok(home.includes('href="' + path + '"'),'preserve route ' + path);
   }
@@ -203,7 +203,7 @@ test('Photo-led lifelong homepage stays accessible, factual and local-search onl
   assert.match(home,/id="identityName"/);
   assert.equal((home.match(/class="audience-card"/g)||[]).length,6);
   assert.equal((home.match(/class="interest-card"/g)||[]).length,6);
-  assert.equal((home.match(/class="path-card"/g)||[]).length,10);
+  assert.equal((home.match(/class="path-card"/g)||[]).length,11);
   for(const link of ['/admission','/study','/study/academy/','/study/ai-bootcamp/','https://ekodi.kr/learn/','https://ekodi.kr/my/journey/']){
     assert.ok(home.includes('href="'+link+'"'), 'existing education route: '+link);
   }

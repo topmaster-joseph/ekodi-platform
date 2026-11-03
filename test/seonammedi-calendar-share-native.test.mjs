@@ -41,7 +41,7 @@ test('fixture click verifies clipboard, Web Share payload, direct-link focus and
 });
 test('post-deploy requires current sharing copy; predeploy accepts old or new but never registration metadata',()=>{
   assert.match(script,/expectMode==='predeploy'\?\[shareText,legacyShareText\]:\[shareText\]/);
-  assert.match(script,/nativeArgs\.text===observedShareText/);
+  assert.match(script,/nativeArgs\?\.text===observedShareText/);
   assert.match(script,/invalid_share_expectation_mode/);
   assert.match(script,/shareExpectationMode:expectMode/);
   assert.match(script,/githubEvent==='pull_request'\|\|githubEvent==='push'/);
@@ -58,6 +58,6 @@ test('GitHub workflow runs source or post-deploy native Chromium on both domains
   assert.match(workflow,/--origin=https:\/\/ekodi\.kr/);
   assert.match(workflow,/node --test test\/seonammedi-calendar-share-native\.test\.mjs/);
   assert.match(workflow,/actions\/upload-artifact@v4/);
-  assert.match(workflow,/permissions:\n  contents: read/);
+  assert.match(workflow,/permissions:\r?\n  contents: read/);
   assert.match(workflow,/cancel-in-progress: false/);
 });
