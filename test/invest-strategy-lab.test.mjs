@@ -73,6 +73,6 @@ test('page has the AI 전략 연구 tab and renders cards with DOM APIs only', a
   const js = await (await investMyRoute(new Request('https://ekodi.kr/invest/app.js'), {})).text();
   assert.match(html, /data-tab="research"[^>]*>AI 전략 연구</); assert.match(html, /id="strategyLab"/); assert.match(html, /실거래 승인 조건으로 쓰이지 않습니다/);
   assert.match(js, /\/research\/strategy-lab/); assert.match(js, /r\.recommendation!==null/);
-  assert.match(js, /strategyLab:'research'/);
+  assert.match(js, /research:\[\['strategyLab','AI 전략 연구'\],\['shortValueResearch','단기 가치발굴'\]\]/);
   assert.doesNotMatch(js, /innerHTML/);
 });
