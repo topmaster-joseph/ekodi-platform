@@ -19,6 +19,23 @@ const rightsValid=(v,digest)=>v?.trustedBackend===true&&
 const same=(r,input)=>r?.publicationId===input.publicationId&&
   r?.editionId===input.editionId&&r?.releaseDigest===input.releaseDigest;
 
+// Only metadata from the publisher's verified, version-bound edition may
+// become a consumer retail identity. Never trust the storefront's own labels.
+function signedRetailIdentity(candidate,record){
+  const store=candidate?.bookstore;
+  if(!store||candidate.title!==record.title||
+    typeof store.bookId!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]{2,159}$/.test(store.bookId)||
+    typeof store.catalogNo!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$/.test(store.catalogNo)||
+    typeof store.author!=='string'||!store.author.trim()||store.author.length>160||
+    typeof store.fileKey!=='string'||!store.fileKey.startsWith(store.bookId+'/')||
+    store.fileKey.includes('..')||!store.fileKey.endsWith('.epub')||
+    !Number.isSafeInteger(candidate.priceKrw)||candidate.priceKrw<=0)
+    return null;
+  return Object.freeze({retailIdentityVersion:1,bookId:store.bookId,
+    catalogNo:store.catalogNo,title:record.title,author:store.author,
+    fileKey:store.fileKey,priceKrw:candidate.priceKrw,currency:'KRW'});
+}
+
 /**
  * A *separate trusted RPC layer* supplies callerContext from its authenticated
  * Cloudflare service binding, never from user JSON, Origin, cookie or email.
@@ -60,6 +77,8 @@ export async function verifyPrivatePublisherRelease(env,input,callerContext,nowI
        candidate.authorApproval?.digest!==record.releaseDigest ||
        candidate.authorApproval?.approvedBy!==record.authorId ||
        candidate.publisherApproval?.digest!==record.releaseDigest)return no;
+    const retail=signedRetailIdentity(candidate,record);
+    if(!retail)return no;
     // Check canonical record again after the external rights/candidate validation.
     record=await readPrivateEdition(env.PUBLISHING_RELEASE_DB,input.editionId);
     if(record?.revision!==snapshotRevision || !same(record,input) ||
@@ -67,7 +86,7 @@ export async function verifyPrivatePublisherRelease(env,input,callerContext,nowI
     return Object.freeze({
       authorized:true,state:'released',visibility:'public',checkoutEnabled:true,
       channel:input.channel,publicationId:record.publicationId,
-      editionId:record.editionId,releaseDigest:record.releaseDigest,
+      editionId:record.editionId,releaseDigest:record.releaseDigest,...retail,
     });
   }catch{
     // Never disclose whether an edition, rights contract or user exists.
