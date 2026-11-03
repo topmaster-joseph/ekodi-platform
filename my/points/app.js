@@ -1,6 +1,39 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 const config=window.EKODI_MY_CONFIG||{};
 const select=document.getElementById('siteSelect');
+const pointTabButtons=[...document.querySelectorAll('.points-tabs [role="tab"]')];
+function refreshPointTabState(){
+ const current=document.body.dataset.pointsTab;
+ const claim=document.getElementById('claimSection');
+ const invite=document.getElementById('referralSection');
+ const confirm=document.getElementById('referralConfirmSection');
+ const progress=document.getElementById('pointsProgressSection');
+ document.getElementById('pointsTabEmpty').hidden=current==='wallet'||
+   (current==='claims'&&!claim.hidden)||
+   (current==='invite'&&(!invite.hidden||!confirm.hidden))||
+   (current==='progress'&&!progress.hidden);
+}
+function selectPointTab(name,focus=false){
+ document.body.dataset.pointsTab=name;
+ pointTabButtons.forEach(tab=>{
+  const active=tab.dataset.pointsTab===name;
+  tab.setAttribute('aria-selected',String(active));
+  tab.tabIndex=active?0:-1;
+  if(active&&focus)tab.focus();
+ });
+ refreshPointTabState();
+}
+pointTabButtons.forEach((tab,index)=>{
+ tab.addEventListener('click',()=>selectPointTab(tab.dataset.pointsTab));
+ tab.addEventListener('keydown',event=>{
+  const shift=event.key==='ArrowRight'?1:event.key==='ArrowLeft'?-1:0;
+  if(!shift&&event.key!=='Home'&&event.key!=='End')return;
+  event.preventDefault();
+  const next=event.key==='Home'?0:event.key==='End'?pointTabButtons.length-1:(index+shift+pointTabButtons.length)%pointTabButtons.length;
+  selectPointTab(pointTabButtons[next].dataset.pointsTab,true);
+ });
+});
+
 const notice=document.getElementById('notice');
 const login=document.getElementById('loginLink');
 const view=document.getElementById('balanceView');
@@ -16,6 +49,73 @@ const claimSection=document.getElementById('claimSection');
 const claimAdapter=document.getElementById('claimAdapter');
 const claimStatus=document.getElementById('claimStatus');
 const claimList=document.getElementById('claimList');
+const progressSection=document.getElementById('pointsProgressSection');
+const progressNotice=document.getElementById('pointsProgressNotice');
+const progressContent=document.getElementById('pointsProgressContent');
+const progressLevel=document.getElementById('pointsLevel');
+const progressStreak=document.getElementById('pointsStreak');
+const progressVerifiedCount=document.getElementById('pointsVerifiedCount');
+const progressLevelHelp=document.getElementById('pointsLevelHelp');
+const progressMissions=document.getElementById('pointsMissionList');
+const PROGRESS_STATUS={available:'참여 가능',pending:'승인 대기',completed:'승인 완료'};
+function clearProgress(){
+  progressSection.hidden=true;
+  progressContent.hidden=true;
+  progressLevel.textContent='—';
+  progressStreak.textContent='—';
+  progressVerifiedCount.textContent='—';
+  progressLevelHelp.textContent='';
+  progressMissions.replaceChildren();
+  progressNotice.textContent='검증된 활동 정보를 확인하고 있습니다.';
+  refreshPointTabState();
+}
+function renderProgress(data){
+  if(data?.reward_policy!=='recognition_only'||!Array.isArray(data.missions)||
+     !data.level||!data.streak)throw new Error('PROGRESS_INVALID_RESPONSE');
+  progressLevel.textContent=String(data.level.label||'—').slice(0,32);
+  const days=Number(data.streak.current_days);
+  const count=Number(data.level.verified_activities_90d);
+  progressStreak.textContent=Number.isSafeInteger(days)&&days>=0?days.toLocaleString('ko-KR')+'일':'—';
+  progressVerifiedCount.textContent=Number.isSafeInteger(count)&&count>=0?count.toLocaleString('ko-KR')+'건':'—';
+  const next=Number(data.level.next_at);
+  progressLevelHelp.textContent=data.level.next_at===null?
+    '현재 최고 성취 단계입니다. 회원 권한이나 금전적 보상은 변경되지 않습니다.':
+    Number.isSafeInteger(next)&&next>=0?
+      '다음 단계까지 검증 활동 '+Math.max(0,next-count).toLocaleString('ko-KR')+'건이 남았습니다.':
+      '현재 단계의 다음 목표를 확인할 수 없습니다.';
+  progressMissions.replaceChildren();
+  const missions=data.missions.slice(0,50);
+  if(!missions.length){
+    progressMissions.textContent='현재 이 사이트에 승인된 활동 미션이 없습니다.';
+  }else{
+    for(const mission of missions){
+      const row=document.createElement('div');row.className='record';
+      const labelWrap=document.createElement('div');
+      const label=document.createElement('strong');
+      label.textContent=ADAPTER_NAMES[mission.adapter]||'검증 활동';
+      const rule=document.createElement('small');
+      rule.textContent='확인된 활동만 반영 · '+String(mission.rule_id||'').slice(0,64);
+      labelWrap.append(label,rule);
+      const stateWrap=document.createElement('div');
+      const state=document.createElement('strong');
+      state.textContent=PROGRESS_STATUS[mission.today_status]||'참여 가능';
+      const expected=Number(mission.points_if_approved);
+      const amount=document.createElement('small');
+      amount.textContent=Number.isSafeInteger(expected)&&expected>0?
+        '승인 시 +'+expected.toLocaleString('ko-KR')+' P':'승인 후 정책 적용';
+      stateWrap.append(state,amount);
+      row.append(labelWrap,stateWrap);
+      progressMissions.append(row);
+    }
+  }
+  progressNotice.textContent=data.complete_window===false?
+    '최근 90일 기록 일부만 반영되었습니다. 레벨과 연속 참여는 잠정치입니다.':
+    '서버에서 확인한 활동 기록입니다. 포인트는 별도 승인 정책으로 지급됩니다.';
+  progressContent.hidden=false;
+  progressSection.hidden=false;
+  refreshPointTabState();
+}
+
 const ADAPTER_NAMES={content_approval:'콘텐츠 작성(승인 필요)',meeting_participation:'모임 참여',
   lecture_completion:'강의 완료',devotion_self_report:'말씀 묵상 기록',operator_confirmed:'운영자 확인 활동',attendance_checkin:'출석'};
 const CLAIM_STATUS={pending:'확인 대기',approved:'승인·적립',rejected:'반려',duplicate:'이미 적립됨'};
@@ -54,6 +154,7 @@ function showReferralControls(site,authorized){
   const active=enabled&&authorized===true&&site==='my';
   referralSection.hidden=!active;
   referralConfirmSection.hidden=!active||!uuidPattern.test(inviteCode);
+  refreshPointTabState();
 }
 function removeConfirmedInviteFromUrl(){
   const url=new URL(location.href);
@@ -129,7 +230,8 @@ function clearPrivateView(message){
   referralConfirmSection.hidden=true;
   referralLink.value='';referralLink.hidden=true;
   document.getElementById('copyReferralInvite').hidden=true;
-  claimSection.hidden=true;claimAdapter.replaceChildren();claimList.replaceChildren();claimStatus.textContent='';
+  claimSection.hidden=true;claimAdapter.replaceChildren();claimList.replaceChildren();refreshPointTabState();claimStatus.textContent='';
+  clearProgress();
   document.getElementById('claimForm').reset();
   showMessage(message);
 }
@@ -163,7 +265,7 @@ async function loadClaims(site,revision){
       claimAdapter.add(option);
     }
     document.getElementById('claimSubmit').disabled=!list.length;
-    renderClaims(mine);claimSection.hidden=false;
+    renderClaims(mine);claimSection.hidden=false;refreshPointTabState();
   }catch{/* claim panel stays hidden; wallet view is unaffected */}
 }
 async function submitClaim(event){
@@ -208,6 +310,24 @@ function renderRows(rows){
     div.append(summary,amount);historyList.append(div);
   }
 }
+async function loadProgress(token,site,revision){
+  clearProgress();
+  if(!enabled||!/^[a-z0-9_-]{2,64}$/.test(site))return;
+  progressSection.hidden=false;
+  progressNotice.textContent='검증된 활동 정보를 불러오고 있습니다.';
+  refreshPointTabState();
+  try{
+    const data=await request('/progress?site='+encodeURIComponent(site),token);
+    if(revision!==viewRevision)return;
+    renderProgress(data);
+  }catch{
+    if(revision!==viewRevision)return;
+    progressContent.hidden=true;
+    progressSection.hidden=false;
+    progressNotice.textContent='미션 정보를 확인할 수 없습니다. 현재 사이트 운영 정책과 연결 상태를 확인해 주세요.';
+    refreshPointTabState();
+  }
+}
 async function loadWallet(token,site,revision){
   if(!/^[a-z0-9_-]{2,64}$/.test(site))return;
   try{
@@ -220,6 +340,7 @@ async function loadWallet(token,site,revision){
 }
 async function start(){
   const revision=++viewRevision;
+  clearProgress();
   try{await handoff();}
   catch{showMessage('로그인 인계에 실패했습니다. 로그인 후 다시 시도해 주세요.');login.hidden=false;return;}
   if(revision!==viewRevision)return;
@@ -238,9 +359,10 @@ async function start(){
     const wanted=new URLSearchParams(location.search).get('site');
     if(wanted&&sites.some(site=>site.id===wanted))select.value=wanted;
     select.disabled=false;
-    select.onchange=()=>{const next=++viewRevision;showReferralControls(select.value,true);void loadWallet(session.access_token,select.value,next);void loadClaims(select.value,next);};
+    select.onchange=()=>{const next=++viewRevision;clearProgress();showReferralControls(select.value,true);void loadWallet(session.access_token,select.value,next);void loadClaims(select.value,next);void loadProgress(session.access_token,select.value,next);};
     showReferralControls(select.value,true);
     void loadClaims(select.value,revision);
+    void loadProgress(session.access_token,select.value,revision);
     await loadWallet(session.access_token,select.value,revision);
   }catch(e){if(revision===viewRevision)showMessage('포인트 목록을 확인할 수 없습니다. 연결 상태를 확인해 주세요.');}
 }
