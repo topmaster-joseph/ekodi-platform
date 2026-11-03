@@ -34,3 +34,15 @@ test('browser verifies live assets with only synthetic read-only session and pro
   assert.ok(workflow.includes("'scripts/verify-admin-production-ui-e2e.mjs'"));
   assert.ok(dispatcher.includes("'scripts/verify-admin-production-ui-e2e.mjs'"));
 });
+
+test('Eval Lab uses the same ephemeral admin session and is appended to the real AI Ops asset',()=>{
+  const evalSource=read('ai-eval-admin.js');
+  const aiopsSource=read('ai-ops-admin.js');
+  const build=read('scripts/build.mjs');
+  assert.match(evalSource,/sessionStorage\.getItem\('ekodi-auth-token'\)/);
+  assert.doesNotMatch(evalSource,/localStorage\.getItem\('ekodi-auth-token'\)/);
+  assert.match(aiopsSource,/sessionStorage\.getItem\(TOKEN_KEY\)/);
+  assert.match(build,/appendOutputSources\('ai-ops-admin\.js', \['ai-eval-admin\.js'\]\)/);
+  assert.match(evalSource,/data\.sampleCount>=50/);
+  assert.match(evalSource,/data\.repeatCount>=3/);
+});
