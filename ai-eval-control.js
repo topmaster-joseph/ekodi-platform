@@ -20,7 +20,11 @@ async function checkedSession(request,env){
     method:'GET',
     headers:request.headers,
   }),env);
-  if(!response.ok)return {error:json({error:'AUTH_SESSION_UNAVAILABLE'},response.status>=500?503:401)};
+  if(!response.ok) {
+    if(response.status===401)return {error:json({error:'AUTH_REQUIRED'},401)};
+    if(response.status===403)return {error:json({error:'SUPER_ADMIN_REQUIRED'},403)};
+    return {error:json({error:'AUTH_SESSION_UNAVAILABLE'},503)};
+  }
   const session=await response.json().catch(()=>null);
   if(session?.authenticated!==true)return {error:json({error:'AUTH_REQUIRED'},401)};
   if(session?.role!=='super_admin')return {error:json({error:'SUPER_ADMIN_REQUIRED'},403)};

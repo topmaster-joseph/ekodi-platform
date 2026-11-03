@@ -34,7 +34,11 @@ export function createReviewBatch(rows,{total=50,holdoutCount=10,idFactory=rando
   if(!Array.isArray(rows)||!Number.isInteger(total)||total<50||!Number.isInteger(holdoutCount)||holdoutCount<1||holdoutCount>=total)throw Error('EVAL_CANDIDATE_CONFIG');
   const unique=new Map();
   for(const row of rows){
-    const goal=String(row?.goal||'').trim().normalize('NFC');
+    // Wrangler JSON transported through Windows PowerShell can corrupt unescaped Unicode
+    // or embedded quotes. SQLite hex(goal) gives an ASCII-safe transport instead.
+    const hex=row?.goal_hex;
+    if(hex!=null&&(typeof hex!=='string'||hex.length>16000||hex.length%2!==0||!/^[0-9a-f]*$/i.test(hex)))continue;
+    const goal=String(hex!=null?Buffer.from(hex,'hex').toString('utf8'):(row?.goal||'')).trim().normalize('NFC');
     if(!KOREAN.test(goal)||goal.length<12||goal.length>8000||!row?.id)continue;
     const key=digest(goal); // transient in-memory dedup; never exported
     if(unique.has(key))continue;
@@ -81,7 +85,7 @@ function main(){
   if(src&&(src===root||src.startsWith(root+sep)))throw Error('RAW_INPUT_MUST_BE_OUTSIDE_REPOSITORY');
   try{
     // "-" reads the D1 pipe directly: raw task bodies never touch the filesystem.
-    const parsed=JSON.parse(readFileSync(src||0,'utf8').replace(/^\\uFEFF/,''));
+    const parsed=JSON.parse(readFileSync(src||0,'utf8').replace(/^\uFEFF/,''));
     const rows=Array.isArray(parsed)?(parsed[0]?.results||parsed):parsed.results;
     const batch=createReviewBatch(rows||[]);
     mkdirSync(out,{recursive:true,mode:0o700});
