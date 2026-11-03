@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { handleInvestAutopilotApi } from '../invest-autopilot-runtime.js';
+import { investMyRoute } from '../invest-my-workspace.js';
 
 const OWNER='owner@example.com',STEP='S'.repeat(43);
 function fakeEnv(){
@@ -58,4 +59,17 @@ test('owner POST analysis without Supabase AAL2 fails closed and never writes a 
  assert.equal(bad.body.ordersPlaced,false);
  const count=await env.DB.prepare('SELECT COUNT(*) AS total FROM investment_autopilot_orders').first();
  assert.equal(count.total,0);
+});
+
+test('private research tab reports KIS and OpenDART readiness without exposing order controls',async()=>{
+ const html=await (await investMyRoute(new Request('https://ekodi.kr/invest'),{})).text();
+ const js=await (await investMyRoute(new Request('https://ekodi.kr/invest/app.js'),{})).text();
+ assert.match(html,/id="shortValueResearch"/);
+ assert.match(html,/id="shortValueRefresh"/);
+ assert.match(html,/id="shortValueChecks"/);
+ assert.match(html,/단기 가치발굴/);
+ assert.match(js,/\/research\/short-term-value/);
+ assert.match(js,/shortValueResearch:'research'/);
+ assert.match(js,/loadShortValueReadiness\(/);
+ assert.doesNotMatch(js,/innerHTML/);
 });
