@@ -2,7 +2,7 @@
   'use strict';
   const SOURCE='/api/control/ai/eval/summary';
   const $=selector=>document.querySelector(selector);
-  const token=()=>{try{return localStorage.getItem('ekodi-auth-token')||''}catch{return''}};
+  const token=()=>{try{return sessionStorage.getItem('ekodi-auth-token')||''}catch{return''}};
   const add=(parent,tag,text,className)=>{const element=document.createElement(tag);if(className)element.className=className;element.textContent=text;parent.append(element);return element};
   const pct=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<=1?`${(100*v).toFixed(1)}%`:'확인필요';
   const amount=v=>typeof v==='number'&&Number.isFinite(v)&&v>=0?`₩${Math.round(v).toLocaleString('ko-KR')}`:'확인필요';
