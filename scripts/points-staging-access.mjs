@@ -28,19 +28,40 @@ async function api(path,init={}){
 const env=(k,v,secret=false)=>{if(secret)console.log(`::add-mask::${v}`);if(process.env.GITHUB_ENV)fs.appendFileSync(process.env.GITHUB_ENV,`${k}=${v}\n`);};
 const hostOf=domain=>String(domain||'').toLowerCase().replace(/^https?:\/\//,'').split('/')[0];
 
+// The Access login redirect for a protected host carries the app AUD as `kid`;
+// matching by AUD also covers workers.dev apps whose domain is a wildcard/path.
+async function accessAud(host){
+  try{
+    const res=await fetch(`https://${host}/api/session`,{redirect:'manual'});
+    const loc=res.headers.get('location')||'';
+    return new URL(loc,`https://${host}`).searchParams.get('kid')||'';
+  }catch{return '';}
+}
+const globMatch=(pattern,host)=>{
+  const p=hostOf(pattern);
+  if(!p)return false;
+  if(p===host)return true;
+  if(p.startsWith('*.'))return host.endsWith(p.slice(1));
+  return false;
+};
 async function stagingApps(){
-  const apps=await api('/access/apps?per_page=200');
-  return (apps||[]).filter(app=>{
-    const domains=[app.domain,...(app.self_hosted_domains||[]),...(app.destinations||[]).map(d=>d.uri)].map(hostOf);
-    return domains.some(d=>HOSTS.includes(d));
+  const apps=(await api('/access/apps?per_page=200'))||[];
+  const auds=new Set((await Promise.all(HOSTS.map(accessAud))).filter(Boolean));
+  const picked=apps.filter(app=>{
+    if(app.aud&&auds.has(app.aud))return true;
+    const domains=[app.domain,...(app.self_hosted_domains||[]),...(app.destinations||[]).map(d=>d.uri)];
+    return domains.some(d=>HOSTS.some(h=>globMatch(d,h)));
   });
+  return {apps:picked,all:apps,auds:[...auds]};
 }
 
 if(mode==='open'){
-  const apps=await stagingApps();
-  const all=await api('/access/apps?per_page=200');
-  console.log(`::notice::Access apps in account: ${(all||[]).length}; matching staging hosts: ${apps.map(a=>`${a.name||a.id}[${a.type||'?'}]`).join(', ')||'none'}`);
-  if(!apps.length){console.log('::warning::No Access app matched the staging hosts; continuing without a service token.');process.exit(0);}
+  const {apps,all,auds}=await stagingApps();
+  console.log(`::notice::Access apps in account: ${all.length} [${all.map(a=>`${a.name||a.id}|${a.type||'?'}|${hostOf(a.domain)}`).join('; ')}]; staging AUDs seen: ${auds.length}; matched: ${apps.map(a=>a.name||a.id).join(', ')||'none'}`);
+  if(!apps.length){
+    if(auds.length)throw new Error('staging hosts are behind Access but no Access app in the development account matches their AUD (token cannot read it?)');
+    console.log('::warning::Staging hosts are not behind Access; continuing without a service token.');process.exit(0);
+  }
   const created=await api('/access/service_tokens',{method:'POST',body:JSON.stringify({name,duration:'24h'})});
   if(!created?.client_id||!created?.client_secret||!created?.id)throw new Error('service token not issued');
   env('E2E_ACCESS_TOKEN_ID',created.id);
@@ -62,7 +83,7 @@ if(mode==='open'){
   }
   // Also sweep any run-named leftovers (e.g. a crash between create and env write).
   try{
-    for(const app of await stagingApps()){
+    for(const app of (await stagingApps()).apps){
       for(const p of (await api(`/access/apps/${app.id}/policies?per_page=100`))||[]){
         if(String(p.name||'').startsWith('ekodi-points-e2e-'))await api(`/access/apps/${app.id}/policies/${p.id}`,{method:'DELETE'}).catch(()=>{});
       }
