@@ -2,90 +2,90 @@
 const scenes = [
   {
     title: '반가워요, 꼬마 셰프 여러분!', label:'01 · 환영', emoji:'👩‍🍳',
-    intro:'오늘은 모두 피자 요리사! 우리가 직접 만드는 특별한 여행을 시작해요.',
-    question:'좋아하는 피자 토핑을 하나씩 외쳐 볼까요?',
+    intro:'오늘은 내가 피자 요리사!',
+    question:'좋아하는 토핑은?',
     notes:'아이들 눈을 보며 손을 흔들어 인사합니다. 좋아하는 재료를 3~4명에게 물어보고 모든 답에 박수를 쳐 주세요.'
   },
   {
     title:'오늘의 꼬마 셰프 미션 3가지',label:'02 · 오늘의 미션',emoji:'⭐',
-    intro:'재료를 알아보고, 안전하게 만들고, 친구의 작품을 칭찬해요.',
+    intro:'찾기 · 만들기 · 칭찬하기',
     visuals:[['🔎','재료 찾기'],['🫧','깨끗이 만들기'],['👏','서로 칭찬하기']],
     notes:'“우리가 오늘 할 일은 세 가지!” 손가락으로 하나, 둘, 셋을 세며 아이들과 함께 말해 봅니다.'
   },
   {
     title:'피자는 어디에서 유명해졌을까요?',label:'03 · 피자 여행',emoji:'🌍',
-    intro:'동그란 빵 위에 맛있는 재료를 올려 만드는 피자. 특히 이탈리아의 피자가 세계적으로 유명해졌어요.',
-    quiz:{options:['이탈리아 🇮🇹','달나라 🌙','남극 🐧'],correct:0,success:'정답! 이탈리아의 피자가 세계에 널리 알려졌어요.'},
+    intro:'피자는 이탈리아에서 유명해졌어요.',
+    quiz:{options:['이탈리아 🇮🇹','달나라 🌙','남극 🐧'],correct:0,success:'정답! 이탈리아!'},
     notes:'역사 강의는 길게 하지 않습니다. “달나라!”를 고른 아이도 웃으며 참여할 수 있도록 분위기를 만드세요.'
   },
   {
     title:'빨간 소스의 비밀',label:'04 · 토마토',emoji:'🍅',
-    intro:'토마토로 만든 소스는 피자에 새콤달콤한 맛과 색을 더해 줘요.',
-    question:'토마토는 보통 무슨 색일까요?',
+    intro:'새콤달콤 토마토소스!',
+    question:'토마토는 무슨 색?',
     notes:'토마토 소스를 보여 주고 색을 함께 외칩니다. 음식 알레르기나 싫어하는 재료가 있는 친구의 선택도 존중합니다.'
   },
   {
     title:'쭉~ 늘어나는 치즈!',label:'05 · 치즈',emoji:'🧀',
-    intro:'치즈는 따뜻해지면 녹아 부드러운 맛을 더해 줘요. 치즈는 보통 우유로 만들어요.',
-    question:'치즈는 무엇으로 만들까요? 손을 들어 대답해 봐요!',
+    intro:'치즈는 우유로 만들어요.',
+    question:'치즈는 무엇으로 만들까요?',
     notes:'우유 알레르기가 있는 아동은 반드시 대체 재료를 사용합니다. 치즈를 만지는 활동 전 도구를 확인하세요.'
   },
   {
     title:'알록달록 채소 친구들',label:'06 · 채소',emoji:'🥦',
-    intro:'파프리카, 옥수수, 양파 등 각자 좋아하는 토핑을 고를 수 있어요.',
+    intro:'좋아하는 토핑을 골라요!',
     visuals:[['🫑','파프리카'],['🌽','옥수수'],['🧅','양파']],
-    question:'세 가지 중 여러분이 가장 좋아하는 것은?',
+    question:'가장 좋아하는 채소는?',
     notes:'토핑을 한 가지씩 보여 주고 손들기 투표를 합니다. 먹기 싫은 재료를 억지로 넣게 하지 마세요.'
   },
   {
     title:'피자의 튼튼한 바닥, 도우!',label:'07 · 도우',emoji:'🍞',
-    intro:'도우는 피자의 바탕이 되는 반죽이에요. 소스와 치즈를 올릴 넓은 자리가 되어 줘요.',
-    question:'동그란 피자 도우는 어떤 모양일까요?',
+    intro:'도우 = 피자의 빵 바닥',
+    question:'도우는 어떤 모양?',
     notes:'손으로 큰 동그라미를 만들어 보게 합니다. 도우가 밀로 만들어지는 경우가 많으므로 밀 알레르기를 확인합니다.'
   },
   {
     title:'피자를 만들기 전, 첫 번째 일은?',label:'08 · 퀴즈',emoji:'🤔',
-    intro:'맛있는 피자보다 먼저 해야 할 일이 있어요. 무엇일까요?',
+    intro:'피자 만들기 전, 가장 먼저?',
     quiz:{options:['손 씻기 🫧','바로 먹기 🍕','친구 밀기 🏃'],correct:0,success:'맞아요! 깨끗한 손이 가장 먼저예요.'},
     notes:'정답을 고른 뒤 실제 손 씻기 장소로 이동할 준비를 합니다. 아이들은 음식과 기구를 만지기 전에 손을 씻습니다.'
   },
   {
     title:'보글보글, 손 씻기 약속!',label:'09 · 깨끗한 손',emoji:'🫧',
-    intro:'비누로 손바닥, 손등, 손가락 사이까지 꼼꼼하게 씻어요.',
+    intro:'비누로 손바닥 · 손등 · 손가락',
     visuals:[['🖐️','손바닥'],['🤲','손등·손가락'],['💧','잘 헹구기']],
-    question:'우리 모두 깨끗한 손으로 시작할까요?',
+    question:'깨끗한 손, 준비!',
     notes:'준비된 손 씻는 곳에서 모둠별로 이동합니다. 음식 준비 전 화장실 다녀오기, 손 씻기를 함께 확인합니다.'
   },
   {
     title:'안전 약속! 뜨거운 오븐은 어른만',label:'10 · 안전',emoji:'🔥',
-    intro:'뜨거운 오븐과 팬은 만지지 않아요. 도구는 차례로 쓰고, 뛰지 않아요.',
+    intro:'오븐은 어른만! 차례 지키기.',
     visuals:[['🙅','오븐 만지지 않기'],['🤝','차례 지키기'],['🚶','천천히 걷기']],
-    question:'뜨거운 오븐은 누가 만질까요? “어른만!”',
+    question:'오븐은 누가 만질까요?',
     notes:'오븐과 열판 주변의 접근 금지선을 알려 주세요. 조리·운반·절단 작업은 어른이 맡습니다.'
   },
   {
     title:'내 피자의 멋진 이름을 정해요!',label:'11 · 상상력',emoji:'💡',
-    intro:'우주 피자? 무지개 피자? 행복 피자? 무엇이든 좋아요.',
+    intro:'우주 · 무지개 · 행복 피자',
     visuals:[['🌈','무지개 피자'],['🚀','우주 피자'],['💛','행복 피자']],
-    question:'나만의 피자 이름을 마음속으로 외쳐 볼까요?',
+    question:'내 피자의 이름은?',
     notes:'종이에 이름을 적게 하거나 원하는 친구에게 말하게 합니다. 이름을 잘 못 짓는 친구에게는 “행복 피자”를 예시로 알려 주세요.'
   },
   {
     title:'이제 나만의 피자를 만들어 볼까요?',label:'12 · 가상 토핑 연습',emoji:'🍕',
-    intro:'아래 토핑을 눌러 연습해요. 실제 피자는 도우 → 소스 → 치즈 → 토핑 순서로 만들어요.',
+    intro:'도우 → 소스 → 치즈 → 토핑',
     builder:true,
     notes:'화면에서 한두 가지를 시연한 뒤 아이들이 각자의 자리에서 실물 피자를 만듭니다. 만드는 시간은 약 20분입니다. 실제 재료에 맞추어 안내하세요.'
   },
   {
     title:'피자가 구워지는 동안 숫자놀이!',label:'13 · 피자 수학',emoji:'🔢',
-    intro:'친구 15명이 5명씩 모둠을 만들면 모두 몇 모둠일까요?',
-    quiz:{options:['2모둠','3모둠','5모둠'],correct:1,success:'정답! 5명씩 3모둠이에요. 5 + 5 + 5 = 15!'},
+    intro:'15명 ÷ 5명 = 몇 모둠?',
+    quiz:{options:['2모둠','3모둠','5모둠'],correct:1,success:'정답! 3모둠!'},
     notes:'오븐은 어른이 관리합니다. 굽는 시간이 지연되면 3모둠이 차례로 “내 피자 이름”을 발표하게 합니다.'
   },
   {
     title:'모두 다르고, 모두 소중해요!',label:'14 · 마무리',emoji:'🎉',
-    intro:'우리의 피자는 서로 달라도 모두 특별해요. 서로의 작품에 큰 박수를 보내요!',
-    question:'“내 피자의 이름은 ___입니다!” 친구들에게 소개해 볼까요?',
+    intro:'내 피자, 친구 피자! 모두 특별해요.',
+    question:'내 피자의 이름은 ___!',
     notes:'작품 발표는 강요하지 않고 희망하는 친구부터 합니다. 완성품은 식힌 뒤 안전하게 전달하고 정리와 인사로 마칩니다.'
   }
 ];
@@ -271,5 +271,45 @@ function initialize() {
     });
   });
 
+  initializeMusic();
   render(); refreshTimer();
+}
+
+function initializeMusic() {
+  const audio=document.getElementById('pizzaMusic');
+  const toggles=Array.from(document.querySelectorAll('[data-music-toggle]'));
+  const volume=document.getElementById('pizzaMusicVolume');
+  const status=document.getElementById('pizzaMusicStatus');
+  if(!audio||!toggles.length)return;
+  // Original EKODI instrumental; playback requires an explicit user click.
+  audio.volume=Number(volume?.value??20)/100;
+  function sync() {
+    const playing=!audio.paused;
+    toggles.forEach(button=>{
+      button.textContent=playing?'■ 음악 중지':'♪ 음악 재생';
+      button.setAttribute('aria-pressed',String(playing));
+    });
+    if(status)status.textContent=playing?'음악 재생 중':'음악 중지';
+  }
+  function stopMusic() {
+    audio.pause();
+    try{audio.currentTime=0;}catch{/* unseekable prior to load */}
+    sync();
+  }
+  for(const button of toggles){
+    button.addEventListener('click',async()=>{
+      if(!audio.paused){stopMusic();return;}
+      try{await audio.play();}
+      catch{if(status)status.textContent='음악을 재생할 수 없습니다.';}
+      sync();
+    });
+  }
+  volume?.addEventListener('input',()=>{audio.volume=Number(volume.value)/100;});
+  document.querySelectorAll('[data-pizza-video]').forEach(link=>link.addEventListener('click',stopMusic));
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopMusic();});
+  window.addEventListener('pagehide',stopMusic);
+  audio.addEventListener('play',sync);
+  audio.addEventListener('pause',sync);
+  audio.addEventListener('error',()=>{if(status)status.textContent='음악 파일을 확인해주세요.';});
+  sync();
 }
