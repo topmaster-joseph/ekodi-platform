@@ -66,6 +66,27 @@ function storeSummaryIsValid(data,space){
       .every(key=>Number.isSafeInteger(metrics[key])&&metrics[key]>=0)
     &&typeof metrics.orderEnabled==='boolean');
 }
+function buildStoreReadinessChecks(summary){
+  const checks=[];
+  if(summary.canonicalMenuCount===0)checks.push('메뉴 원본이 0개로 조회됩니다. 공식 매장 메뉴의 등록·동기화 상태를 확인하세요.');
+  if(summary.canonicalMenuCount===0&&summary.platformListingCount>0)checks.push('판매채널 등록 항목이 있으나 공식 메뉴 원본이 0개입니다. 원본 데이터 연결·동기화를 확인하세요.');
+  if(summary.connectedChannelCount===0)checks.push('연결된 판매채널이 0개로 조회됩니다. 실제 채널 사용 여부와 연결 상태를 확인하세요.');
+  if(summary.canonicalMenuCount>0&&summary.platformListingCount===0)checks.push('메뉴 원본은 있으나 판매채널 등록 항목이 0개로 조회됩니다. 채널 등록 상태를 확인하세요.');
+  if(!summary.orderEnabled)checks.push('주문 기능이 비활성으로 조회됩니다. 실제 운영 방식에 맞는 설정인지 확인하세요.');
+  if(!checks.length)checks.push('기초 운영 지표가 확인됐습니다. 매출·재고·주문의 실적 분석은 해당 원본 데이터가 연결된 후에 판단해야 합니다.');
+  return checks;
+}
+function renderStoreReadiness(summary){
+  const section=document.createElement('div');section.className='store-readiness';
+  const heading=document.createElement('strong');heading.textContent='경영비서AI · 기초 운영 점검';
+  const list=document.createElement('ul');
+  for(const message of buildStoreReadinessChecks(summary)){
+    const item=document.createElement('li');item.textContent=message;list.append(item);
+  }
+  const note=document.createElement('p');note.className='note';note.textContent='확인된 KPI 4개에 대한 규칙 기반 안내입니다. 매출 예측, 주문·가격 변경 또는 자동 업무 실행은 하지 않습니다.';
+  section.append(heading,list,note);
+  return section;
+}
 function storeKpiRow(label,value){
   const cell=document.createElement('div');cell.className='store-kpi-cell';
   const term=document.createElement('dt');term.textContent=label;
@@ -96,7 +117,7 @@ async function loadStoreSummary(space,host,button){
       storeKpiRow('연결 채널',data.summary.connectedChannelCount),
       storeKpiRow('주문 설정',data.summary.orderEnabled?'활성':'비활성')
     );
-    host.replaceChildren(grid);
+    host.replaceChildren(grid,renderStoreReadiness(data.summary));
   }catch(error){
     if(!stillCurrent())return;
     host.replaceChildren();host.textContent='운영현황을 확인할 수 없습니다. 잠시 후 다시 조회해 주세요.';
