@@ -67,9 +67,12 @@ export async function withPublicEdgeCache(request,ctx,loader,cacheOverride){
   const response=await loader();
   if(!cacheableResponse(response))return response;
 
+  // Clone before the first decorate(): wrapping response.body locks the
+  // stream, so cloning afterwards left the MISS body unreadable (empty 500s).
+  const forCache=cache?.put?response.clone():null;
   const decorated=decorate(response,profile,'MISS');
-  if(cache?.put){
-    const stored=decorate(response.clone(),profile,'STORED');
+  if(forCache){
+    const stored=decorate(forCache,profile,'STORED');
     const write=cache.put(key,stored).catch(error=>console.warn('EKODI public edge cache write failed',{profile:profile.id,error:String(error?.message||error)}));
     if(ctx?.waitUntil)ctx.waitUntil(write);else await write;
   }

@@ -39,3 +39,18 @@ test('public channel previews and notice images have explicit short cache profil
   assert.equal(publicEdgeCacheProfile(new Request('https://ekodi.kr/api/seonammedi/channels/12/preview'))?.ttl,60);
   assert.equal(publicEdgeCacheProfile(new Request('https://ekodi.kr/api/seonammedi/notices/12/image/0'))?.ttl,60);
 });
+
+test('MISS responses keep a readable body while a copy is stored for the next HIT',async()=>{
+  const cache=memoryCache();
+  const pending=[];
+  const request=new Request('https://xn--3e0b8b58jw4co4mnpll3k.kr/api/seonammedi/page-data',{method:'GET'});
+  const body='{"ok":true,"page":{"hero":{"title":"x"}}}';
+  const loader=async()=>new Response(body,{status:200,headers:{'content-type':'application/json; charset=utf-8'}});
+  const first=await withPublicEdgeCache(request,{waitUntil(p){pending.push(p)}},loader,cache);
+  assert.equal(first.status,200);
+  assert.equal(await first.text(),body);
+  await Promise.all(pending);
+  const second=await withPublicEdgeCache(request,{waitUntil(){}},loader,cache);
+  assert.equal(second.headers.get('x-ekodi-edge-cache'),'HIT');
+  assert.equal(await second.text(),body);
+});
