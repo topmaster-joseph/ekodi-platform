@@ -41,7 +41,8 @@ test('church top tabs link to original owner paths and keep the active page visi
     mountChurchAdminNavigation({root,tabsRoot,groups:CHURCH_ADMIN_MENU,
       activeKey:'care',activeOwner:'church',canView:()=>true});
     const headings=root.children.filter(item=>item.className==='church-admin-nav-heading');
-    assert.deepEqual(headings.map(item=>item.textContent),['공통메뉴','전용메뉴']);
+    assert.equal(headings.length,0,'site administrator sees one task menu without scope headings');
+    assert.equal(root.children[0].dataset.adminNavGroup,'services','service settings must lead the menu');
     const links=root.children.filter(item=>item.href);
     assert.equal(links.find(item=>item.dataset.adminNavGroup==='people').href,'/ekodichurch/admin/care');
     assert.equal(links.filter(item=>item.dataset.adminNavGroup==='people').length,1);
@@ -76,7 +77,7 @@ test('both existing admin runtimes project the same registry without changing ow
   assert.match(workspaceJs,/mountChurchAdminNavigation/);
   assert.match(workspaceJs,/workspace==='ekodichurch'&&!service/);
   assert.match(workspaceJs,/!serviceMenuVisible\(tab\.key\)/);
-  assert.match(workspaceJs,/!seen.has\('services'\)/);
+  assert.match(workspaceJs,/settings\.dataset\.adminSection='services'/);
   assert.doesNotMatch(workspaceJs,/id:'service-config'/);
   assert.match(workspaceJs,/heading\.after\(tabs\)/);
   assert.match(workspaceCss,/church-admin-detail-tabs/);

@@ -1,10 +1,12 @@
-name: Deploy EKODI Tenant Service Catalog Schema
+name: Deploy EKODI Tenant Service and AI Tool Selection Schema
 
 on:
   pull_request:
     paths:
       - '.github/workflows/deploy-tenant-site-service-schema.yml'
       - 'supabase/migrations/20261102162000_tenant_site_service_catalog.sql'
+      - 'supabase/migrations/20261103004500_tenant_ai_tool_selection.sql'
+      - 'test/tenant-ai-tool-selection.test.mjs'
       - 'test/tenant-site-service-schema-release.test.mjs'
   workflow_dispatch:
     inputs:
@@ -31,6 +33,8 @@ concurrency:
 env:
   MIGRATION: supabase/migrations/20261102162000_tenant_site_service_catalog.sql
   PINNED_BLOB: c4cbedeb3cfc815e7e89346411f7ad1121afa9f0
+  AI_TOOL_MIGRATION: supabase/migrations/20261103004500_tenant_ai_tool_selection.sql
+  AI_TOOL_PINNED_BLOB: 191ea282e70871a66cdbdb47f303de8284bff1c5
   DEV_PROJECT: lxcxwbdwwojjkgybbqii
   PROD_PROJECT: renzehysxirjilvdxacv
 
@@ -47,9 +51,11 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/validate-supabase-public-grants.mjs
-          node --test test/tenant-site-service-config.test.mjs test/tenant-site-service-schema-release.test.mjs
+          node --test test/tenant-site-service-config.test.mjs test/tenant-site-service-schema-release.test.mjs test/tenant-ai-tool-selection.test.mjs
           test "$(git hash-object "$MIGRATION")" = "$PINNED_BLOB"
+          test "$(git hash-object "$AI_TOOL_MIGRATION")" = "$AI_TOOL_PINNED_BLOB"
           ! grep -Eiq '(^|[[:space:]])(drop[[:space:]]+table|truncate[[:space:]]+table|drop[[:space:]]+column)' "$MIGRATION"
+          ! grep -Eiq '(^|[[:space:]])(drop[[:space:]]+table|truncate[[:space:]]+table|drop[[:space:]]+column)' "$AI_TOOL_MIGRATION"
 
   promote:
     if: github.event_name == 'workflow_dispatch'
@@ -81,6 +87,7 @@ jobs:
           test "$GITHUB_SHA" = "$EXPECTED_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test "$(git hash-object "$MIGRATION")" = "$PINNED_BLOB"
+          test "$(git hash-object "$AI_TOOL_MIGRATION")" = "$AI_TOOL_PINNED_BLOB"
           [[ "$RELEASE_BRANCH" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]]
           [[ "$RELEASE_TASK" =~ ^orch_[a-zA-Z0-9_-]+$ ]]
           test "${RELEASE_BRANCH##*/}" = "$RELEASE_TASK"
@@ -136,19 +143,31 @@ jobs:
             not has_table_privilege('authenticated','public.tenant_site_service_preferences','select') as user_private,
             not has_table_privilege('service_role','public.tenant_site_service_audit','select') as service_private,
             not has_function_privilege('anon','public.tenant_site_service_preference_set(uuid,text,boolean)','execute') as anon_write_denied,
-            has_function_privilege('authenticated','public.tenant_site_service_preference_set(uuid,text,boolean)','execute') as manager_rpc_available;
+            has_function_privilege('authenticated','public.tenant_site_service_preference_set(uuid,text,boolean)','execute') as manager_rpc_available,
+            (select count(*)=12 from public.tenant_ai_tool_catalog) as ai_tools_registered,
+            (select count(*)=3 and bool_and(c.relrowsecurity) from pg_catalog.pg_class c
+              join pg_catalog.pg_namespace n on n.oid=c.relnamespace
+              where n.nspname='public' and c.relname in
+                ('tenant_ai_tool_catalog','tenant_ai_tool_preferences','tenant_ai_tool_audit')) as ai_tools_rls,
+            to_regprocedure('public.tenant_ai_tool_catalog_snapshot(uuid)') is not null as ai_read_rpc,
+            to_regprocedure('public.tenant_ai_tool_preference_set(uuid,text,boolean)') is not null as ai_write_rpc,
+            not has_table_privilege('authenticated','public.tenant_ai_tool_preferences','select') as ai_direct_user_denied,
+            not has_function_privilege('anon','public.tenant_ai_tool_preference_set(uuid,text,boolean)','execute') as ai_anon_write_denied,
+            has_function_privilege('authenticated','public.tenant_ai_tool_preference_set(uuid,text,boolean)','execute') as ai_admin_rpc_available;
           SQL
           for project in "$DEV_PROJECT" "$PROD_PROJECT"; do
             query "$project" "$tmp/prereq.sql" true "$tmp/preflight.json"
             jq -e 'length == 1 and .[0].ready == true' "$tmp/preflight.json" >/dev/null
           done
           query "$DEV_PROJECT" "$MIGRATION" false "$tmp/dev-applied.json"
+          query "$DEV_PROJECT" "$AI_TOOL_MIGRATION" false "$tmp/dev-ai-applied.json"
           query "$DEV_PROJECT" "$tmp/proof.sql" true "$tmp/dev-proof.json"
           jq -e 'length == 1 and (.[0] | all(.[]; . == true))' "$tmp/dev-proof.json" >/dev/null
-          echo 'DEV schema catalog, RLS, revoked grants and RPCs verified.'
+          echo 'DEV service + AI tool catalog, RLS, revoked grants and RPCs verified.'
           test "$GITHUB_SHA" = "$EXPECTED_SHA"
           test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
           query "$PROD_PROJECT" "$MIGRATION" false "$tmp/prod-applied.json"
+          query "$PROD_PROJECT" "$AI_TOOL_MIGRATION" false "$tmp/prod-ai-applied.json"
           query "$PROD_PROJECT" "$tmp/proof.sql" true "$tmp/prod-proof.json"
           jq -e 'length == 1 and (.[0] | all(.[]; . == true))' "$tmp/prod-proof.json" >/dev/null
-          echo 'PRODUCTION schema catalog, RLS, revoked grants and RPCs verified. No service execution was activated.'
+          echo 'PRODUCTION service + AI tool catalog, RLS, revoked grants and RPCs verified. No service execution was activated.'

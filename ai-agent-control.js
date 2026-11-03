@@ -14,6 +14,8 @@ import {
   redactOwnConversation,
   summarizeConversationText as summarize,
 } from './admin-assist-retention.js';
+import { familyAutoDispatchEnabled } from './ai-family-dispatch.js';
+import { enqueueFamilyDispatch, readFamilyDispatch } from './hybrid-execution.js';
 
 const PREFIX = '/api/control/ai';
 const MAX_LIST = 100;
@@ -321,6 +323,14 @@ async function handleAdminAssist(request, env, session) {
   const history = normalizeAssistHistory(body.history);
   const origin = normalizeAssistOrigin(body.origin);
   const isProbe = origin === 'automated_probe';
+  if(!isProbe&&familyAutoDispatchEnabled(env)){
+    if(session.role!=='super_admin')return json({ok:false,code:'FAMILY_DISPATCH_SUPER_ADMIN_REQUIRED',reply:'자동 실행은 최고관리자 권한과 사이트 권한 확인이 필요합니다.'},403,request,env);
+    if(!/^\/admin(?:\/|$)/.test(page.pathname||''))return json({ok:false,code:'FAMILY_DISPATCH_SITE_RBAC_CONTEXT_REQUIRED',reply:'사이트 권한 문맥을 서버에서 확인할 수 없어 자동 실행하지 않았습니다.'},403,request,env);
+    const dispatch=await enqueueFamilyDispatch(env,session,{message,context:page});
+    if(!dispatch.ok)return json({ok:false,code:dispatch.code,lane:dispatch.lane||null,degraded:true,reply:'검증된 실행 어댑터 또는 용량을 사용할 수 없어 자동 실행하지 않았습니다.'},dispatch.status,request,env);
+    return json({ok:true,async:true,jobId:dispatch.job.id,status:dispatch.job.status,lane:dispatch.lane,deduplicated:dispatch.deduplicated,
+      mode:'family_auto_dispatch',provider:null,reply:'실행 작업을 접수했습니다. 검증된 실행 영수증이 도착하면 이 대화에 결과를 표시합니다.'},202,request,env);
+  }
   // Feedback: a few summaries of this administrator's own completed, non-gated
   // conversations. Built before the audit row is inserted, so the in-flight turn
   // cannot feed itself, and never allowed to fail the request — an assistant
@@ -503,6 +513,14 @@ export async function handleAgentMissionControl(request, env) {
 
   if (request.method === 'POST' && url.pathname === `${PREFIX}/assist`) {
     return handleAdminAssist(request, env, auth.session);
+  }
+
+  const familyJobMatch=url.pathname.match(/^\/api\/control\/ai\/assist\/jobs\/(hyb_[A-Za-z0-9-]+)$/);
+  if(request.method==='GET'&&familyJobMatch){
+    if(auth.session.role!=='super_admin')return json({ok:false,code:'FAMILY_DISPATCH_SUPER_ADMIN_REQUIRED'},403,request,env);
+    const job=await readFamilyDispatch(env,auth.session,familyJobMatch[1]);
+    if(!job)return json({ok:false,code:'FAMILY_JOB_NOT_FOUND'},404,request,env);
+    return json({ok:true,job},200,request,env);
   }
 
   if (request.method === 'POST' && url.pathname === `${PREFIX}/evaluate`) {

@@ -12,6 +12,19 @@ export default {
     const url=new URL(request.url);
     if(url.pathname==='/health')return new Response(JSON.stringify({ok:true,service:'ekodi-community',socialRegistry:true,ekodiShell:true,contextModel:'person-space-role'}),{headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/community',307);
+    // The public canonical entry is /community/reading; the Community asset root is /reading.
+    const readingPath=url.pathname.replace(/^\/community(?=\/)/,'');
+    if(readingPath==='/reading'||readingPath==='/reading/'){
+      // Cloudflare static assets canonicalize an explicit index.html to /reading/, even
+      // when invoked through ASSETS.fetch; fetching the directory URL avoids a
+      // 307 Location: /reading/ that would escape the public /community mount.
+      const assetRequest=new Request(new URL('/reading/',url),request);
+      return injectEkodiShell(withHeaders(await env.ASSETS.fetch(assetRequest)),'community');
+    }
+    if(/^\/reading\/(?:app\.js|topics\.js|styles\.css)$/.test(readingPath)){
+      const assetRequest=new Request(new URL(readingPath,url),request);
+      return withHeaders(await env.ASSETS.fetch(assetRequest));
+    }
     return injectEkodiShell(withHeaders(await env.ASSETS.fetch(request)),'community');
   }
 };

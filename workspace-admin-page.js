@@ -7,6 +7,8 @@ import { TENANT_ADMIN_CAPABILITIES, tenantAdminPolicySnapshot } from './tenant-a
 import { ekodiBizAdminScopeSnapshot } from './ekodibiz-admin-registry.js';
 import { channelTargetOptions } from './channel-publishing-catalog.js';
 import {renderTenantServiceAdmin,TENANT_SERVICE_CSS} from './tenant-service-admin-ui.js';
+import {TENANT_AUTOMATION_CSS,tenantAutomationOverviewModel,tenantAutomationOverviewHtml,bindTenantAutomationOverview} from './tenant-automation-overview-ui.js';
+import {confirmTenantServicePreference} from './tenant-service-setting-verification.js';
 
 const WORKSPACE_SECTION_CAPABILITY=Object.freeze({
   root:Object.freeze({services:TENANT_ADMIN_CAPABILITIES.site,chrome:TENANT_ADMIN_CAPABILITIES.site,design:TENANT_ADMIN_CAPABILITIES.site,languages:TENANT_ADMIN_CAPABILITIES.language,overview:TENANT_ADMIN_CAPABILITIES.dashboard,'business-center':TENANT_ADMIN_CAPABILITIES.operations,activities:TENANT_ADMIN_CAPABILITIES.activities,saturday:TENANT_ADMIN_CAPABILITIES.activities,mall:TENANT_ADMIN_CAPABILITIES.dashboard,mail:TENANT_ADMIN_CAPABILITIES.connections,publishing:TENANT_ADMIN_CAPABILITIES.marketing,marketing:TENANT_ADMIN_CAPABILITIES.marketing,work:TENANT_ADMIN_CAPABILITIES.operations,finance:TENANT_ADMIN_CAPABILITIES.finance,tax:TENANT_ADMIN_CAPABILITIES.finance,confirmations:TENANT_ADMIN_CAPABILITIES.confirmations,members:TENANT_ADMIN_CAPABILITIES.access,member:TENANT_ADMIN_CAPABILITIES.memberRoster,festival:TENANT_ADMIN_CAPABILITIES.access,edocs:TENANT_ADMIN_CAPABILITIES.access,applications:TENANT_ADMIN_CAPABILITIES.access,booths:TENANT_ADMIN_CAPABILITIES.access,'market-oversight':TENANT_ADMIN_CAPABILITIES.operations,petitions:TENANT_ADMIN_CAPABILITIES.access,'ip-archive':TENANT_ADMIN_CAPABILITIES.access,'education-survey':TENANT_ADMIN_CAPABILITIES.operations,status:TENANT_ADMIN_CAPABILITIES.logs,records:TENANT_ADMIN_CAPABILITIES.reports}),
@@ -170,7 +172,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     {id:'marketing',label:'마케팅',sections:[...(workspace==='ekodimission'?[['saturday','토요모임'],['activities','행사 · 신청자']]:[]),['marketing','마케팅 AI'],['publishing','채널 · 자동게시']]},
     {id:'management',label:'경영',sections:[['finance','재무']]},
     {id:'tools',label:'운영도구',sections:[['mail','메일'],['languages','다국어 번역 · 게시']]},
-    {id:'site-access',label:'사이트 관리',sections:[['chrome','헤더 · 푸터'],['design','사이트 디자인'],...peopleSections,['status','운영 상태'],['records','변경 · 감사 기록']]}
+    {id:'site-access',label:'사이트 관리',sections:[['chrome','헤더 · 푸터'],['design','사이트 디자인'],...(workspace==='cgma'?peopleSections.filter(([key])=>key==='members'):peopleSections),['status','운영 상태'],['records','변경 · 감사 기록']]}
   ];
   const localRootGroups=[
     ...cgmaSiteGroups,
@@ -203,34 +205,74 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   let workspaceContext=null;
   let workspaceRole='';
   let siteServiceSnapshot=null,siteServiceError='';
+  let aiToolSnapshot=null,aiToolError='';
+  let sitePreferenceWritePending=false;
   function serviceMenuVisible(key){
     if(!Array.isArray(siteServiceSnapshot?.items))return true;
     const related=siteServiceSnapshot.items.filter(x=>x.readiness==='ready'&&x.navSection===key);
     return !related.length||related.some(x=>x.menuVisible===true);
   }
-  async function siteServiceApi(name,body){
+  async function siteServiceApi(name,body,resultKey='items'){
     const token=await accessToken();if(!token||!workspaceContext?.tenantId)throw new Error('사이트 관리자 로그인 필요');
     const r=await fetch(SUPABASE_URL+'/rest/v1/rpc/'+name,{method:'POST',cache:'no-store',
       headers:{apikey:SUPABASE_KEY,authorization:'Bearer '+token,'content-type':'application/json'},
       body:JSON.stringify(body),signal:AbortSignal.timeout(12000)});
     const data=await r.json().catch(()=>null);
     if(!r.ok)throw new Error(data?.message||data?.error||'서비스 설정 연결 오류 ('+r.status+')');
-    if(!Array.isArray(data?.items))throw new Error('서비스 원장 응답 형식 오류');
+    if(!Array.isArray(data?.[resultKey]))throw new Error('서비스 원장 응답 형식 오류');
     return data;
   }
   async function loadSiteServices(){
-    try{siteServiceSnapshot=await siteServiceApi('tenant_site_service_catalog_snapshot',{p_tenant_id:workspaceContext.tenantId});siteServiceError=''}
-    catch(e){siteServiceSnapshot=null;siteServiceError=e.message||'연결 실패'}
+    const tenant=workspaceContext?.tenantId;
+    if(!tenant){siteServiceSnapshot=null;aiToolSnapshot=null;siteServiceError='사이트 문맥 확인 필요';return;}
+    const results=await Promise.allSettled([
+      siteServiceApi('tenant_site_service_catalog_snapshot',{p_tenant_id:tenant}),
+      siteServiceApi('tenant_ai_tool_catalog_snapshot',{p_tenant_id:tenant},'tools')
+    ]);
+    if(results[0].status==='fulfilled'){siteServiceSnapshot=results[0].value;siteServiceError='';}
+    else{siteServiceSnapshot=null;siteServiceError=results[0].reason?.message||'서비스 설정 연결 실패';}
+    if(results[1].status==='fulfilled'){aiToolSnapshot=results[1].value;aiToolError='';}
+    else{aiToolSnapshot=null;aiToolError=results[1].reason?.message||'AI 도구 원장 연결 실패';}
   }
   async function siteServiceSettings(){
     $('summaryCards').replaceChildren();
     renderTenantServiceAdmin($('mainPanel'),{items:siteServiceSnapshot?.items||[],error:siteServiceError,
-      onToggle:async(item,next)=>{try{
-        siteServiceSnapshot=await siteServiceApi('tenant_site_service_preference_set',{
-          p_tenant_id:workspaceContext.tenantId,p_service_key:item.key,p_menu_visible:next});
-        siteServiceError='';renderNav(workspaceRole);await siteServiceSettings();
-      }catch(e){siteServiceError=e.message||'설정 저장 실패';await siteServiceSettings()}},
-    });state(siteServiceError?'연결 확인 필요':'사이트 메뉴 설정');
+      aiTools:aiToolSnapshot?.tools||[],aiError:aiToolError,
+      onToggle:async(item,next)=>{
+        if(sitePreferenceWritePending)return;
+        sitePreferenceWritePending=true;
+        try{
+          // The write RPC alone is not a save receipt: fetch an independent
+          // server snapshot before updating the visible menu or showing success.
+          siteServiceSnapshot=await confirmTenantServicePreference({
+            call:siteServiceApi,tenantId:workspaceContext.tenantId,
+            kind:'service',id:item.key,selected:next
+          });
+          siteServiceError='';renderNav(workspaceRole);
+        }catch(e){
+          siteServiceError=e.message||'서비스 설정 저장 확인 실패';
+        }finally{
+          sitePreferenceWritePending=false;
+          await siteServiceSettings();
+        }
+      },
+      onAiToggle:async(item,next)=>{
+        if(sitePreferenceWritePending)return;
+        sitePreferenceWritePending=true;
+        try{
+          aiToolSnapshot=await confirmTenantServicePreference({
+            call:siteServiceApi,tenantId:workspaceContext.tenantId,
+            kind:'ai',id:item.id,selected:next
+          });
+          aiToolError='';
+        }catch(e){
+          aiToolError=e.message||'AI 도구 설정 저장 확인 실패';
+        }finally{
+          sitePreferenceWritePending=false;
+          await siteServiceSettings();
+        }
+      },
+    });state(siteServiceError||aiToolError?'저장 검증 확인 필요':'사이트 메뉴 설정');
   }
   const SECTION_CAPABILITY=service==='mall'?{services:POLICY.capabilities.site,design:POLICY.capabilities.site,languages:POLICY.capabilities.language,overview:POLICY.capabilities.dashboard,sales:POLICY.capabilities.sales,products:POLICY.capabilities.catalog,sourcing:POLICY.capabilities.supplyNetwork,amazon:POLICY.capabilities.supplyNetwork,marketing:POLICY.capabilities.marketing,channels:POLICY.capabilities.marketing,automation:POLICY.capabilities.marketing,growth:POLICY.capabilities.marketing,analytics:POLICY.capabilities.sales,confirmations:POLICY.capabilities.confirmations}:{services:POLICY.capabilities.site,chrome:POLICY.capabilities.site,design:POLICY.capabilities.site,languages:POLICY.capabilities.language,overview:POLICY.capabilities.dashboard,'business-center':POLICY.capabilities.operations,activities:POLICY.capabilities.activities,saturday:POLICY.capabilities.activities,mall:POLICY.capabilities.dashboard,mail:POLICY.capabilities.connections,publishing:POLICY.capabilities.marketing,marketing:POLICY.capabilities.marketing,work:POLICY.capabilities.operations,finance:POLICY.capabilities.finance,tax:POLICY.capabilities.finance,confirmations:POLICY.capabilities.confirmations,members:POLICY.capabilities.access,member:POLICY.capabilities.memberRoster,festival:POLICY.capabilities.access,edocs:POLICY.capabilities.access,applications:POLICY.capabilities.access,booths:POLICY.capabilities.access,'market-oversight':POLICY.capabilities.operations,petitions:POLICY.capabilities.access,'ip-archive':POLICY.capabilities.access,'education-survey':POLICY.capabilities.operations,status:POLICY.capabilities.logs,records:POLICY.capabilities.reports};
   const roleCapabilities=role=>POLICY.roleCapabilities[String(role||'').trim().toLowerCase()]||[];
@@ -247,7 +289,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     const label=document.createElement('span');label.className='admin-scope-label';label.textContent='관리 사이트';host.append(label);
     const select=document.createElement('select');select.className='admin-scope-select';select.setAttribute('aria-label','관리 사이트 전환');
     for(const scope of visible){const option=document.createElement('option');option.value=scope.adminHref;option.textContent=scope.label;option.dataset.adminScope=scope.id;option.title=scope.description||scope.label;option.selected=scope.id===current;select.append(option)}
-    select.onchange=()=>{if(select.value&&select.value!==location.pathname+location.search)location.assign(select.value)};
+    select.onchange=()=>{if(select.value){const target=select.value.replace(/\/$/,'')+'/services';if(target!==location.pathname)location.assign(target)}};
     host.append(select);
   }
   const canSection=(key,role=workspaceRole)=>{if(CGMA_ONLY_SECTIONS.has(key)&&workspace!=='cgma')return false;if(key==='tax'&&!isBizWorkspace)return false;if(key==='business-center'&&!(isBizWorkspace&&!service&&hasFullWorkspaceAdminScope(role)))return false;const capability=SECTION_CAPABILITY[key];const allowed=roleCapabilities(role);return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)));};
@@ -277,13 +319,22 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     const groups=groupsForRole(role),dedicated=dedicatedSections(),seen=new Set(),common=[],site=[];
     for(const group of groups){for(const item of group.sections){const [key,label]=item;if(seen.has(key))continue;if(role?!canSection(key,role):!(workspace==='ekodimission'||key==='overview'))continue;if(typeof serviceMenuVisible==='function'&&!serviceMenuVisible(key))continue;seen.add(key);(dedicated.has(key)?site:common).push([key,label]);}}
     // Service configuration is a common site-local operation, never a third sidebar bucket.
-    if(role&&canSection('services',role)&&!seen.has('services'))common.push(['services','서비스설정']);
-    const buckets=[{id:'common',label:'공통메뉴',items:common},{id:'site',label:'전용메뉴',items:site}].filter(bucket=>bucket.items.length);
+    // Site service settings is a standalone navigation entry, never duplicated in work menus.
+    const items=[...common,...site].filter(([key])=>key!=='services');
+    // Site-local managers see one task-oriented menu; internal service ownership remains metadata.
+    const buckets=[{id:'work',label:'업무메뉴',items}].filter(bucket=>bucket.items.length);
     // Every tenant presents common operations first, then site-dedicated operations.
     return buckets;
   }
   function renderNav(role=workspaceRole){
     const h=$('adminNav');h.replaceChildren();document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile(role);
+    if(role&&canSection('services',role)){
+      const settings=document.createElement('a');settings.href=sectionHref('services');
+      settings.textContent='서비스설정';settings.dataset.adminSection='services';
+      settings.className='admin-nav-service-settings'+(section==='services'?' active':'');
+      if(section==='services')settings.setAttribute('aria-current','page');
+      h.append(settings);
+    }
     if(workspace==='ekodichurch'&&!service){
       document.documentElement.dataset.ekodiChurchUnifiedAdmin='true';
       const tabs=$('sectionNav');
@@ -1186,7 +1237,9 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     try{
       await exchangeCentralToken();const token=await accessToken();if(!token)return loginPanel('채널 연결에는 운영공간 로그인이 필요합니다.');state('채널 운영상태 확인 중');
       const growthControlPromise=service==='mall'?mallGrowthControl().catch(()=>({policy:{}})):Promise.resolve({policy:{}});
-      const [h,connectionData,automation,jobsData,growthControl,accountSummary,channelRegistry]=await Promise.all([growth('/health'),growth('/v1/connections'),automationApi('/v1/automation'),automationApi('/v1/jobs'),growthControlPromise,externalAccountApi('/summary?workspace='+encodeURIComponent(canonicalSubjectKey())).catch(()=>({accounts:[],stats:{}})),automationApi('/v1/channels').catch(()=>({channels:[],sites:[],unavailable:true}))]);
+      // A child service must not read its parent tenant's campaign summary.
+      const growthOverviewPromise=service&&service!=='mall'?Promise.resolve(null):growth('/v1/growth-os/overview').catch(()=>null);
+      const [h,connectionData,automation,jobsData,growthControl,accountSummary,channelRegistry,growthOverview]=await Promise.all([growth('/health'),growth('/v1/connections'),automationApi('/v1/automation'),automationApi('/v1/jobs'),growthControlPromise,externalAccountApi('/summary?workspace='+encodeURIComponent(canonicalSubjectKey())).catch(()=>({accounts:[],stats:{}})),automationApi('/v1/channels').catch(()=>({channels:[],sites:[],unavailable:true})),growthOverviewPromise]);
       const registryChannels=new Map((channelRegistry.channels||[]).map(c=>[String(c.id),c]));
       const registeredAccounts=registeredChannelAccounts(accountSummary),registryIds=new Set(registeredAccounts.map(a=>String(a.id))),allConnections=connectionData.connections||[],connections=(service&&service!=='mall')?allConnections.filter(x=>registryIds.has(String(x.metadata?.registryConnectionId||''))):allConnections,allPublishChannels=(automation.channels||[]).map(c=>({...c,external_id:c.external_id||c.external_account_id||'',siteBindings:registryChannels.get(String(c.id))?.siteBindings||[]})),publishChannels=(service&&service!=='mall')?allPublishChannels.filter(c=>connections.some(x=>String(x.provider)===String(c.provider)&&String(x.external_id)===String(c.external_account_id))):allPublishChannels,visibleChannelIds=new Set(publishChannels.map(c=>String(c.id))),allJobs=jobsData.jobs||[],jobs=(service&&service!=='mall')?allJobs.filter(j=>visibleChannelIds.has(String(j.channel_id))):allJobs,policy=automation.policy||{},growthPolicy=growthControl.policy||{};
       const platform=h.platform||{},activeConnections=connections.filter(x=>x.status==='active');
@@ -1238,8 +1291,9 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       $('pageTitle').textContent=service==='mall'?'SNS 통합 설정':'채널센터';
       $('breadcrumb').textContent=service==='mall'?'에코디몰 관리자 / 채널센터':workspaceLabel()+' 관리자 / 채널센터';
       $('mainPanel').classList.add('channel-shell-panel');
-      $('mainPanel').innerHTML=`<div class='channel-workbench'>${service==='mall'?renderMallSocialSetup({platform,connections,registeredAccounts:registeredAccounts.map(a=>({...a,provider:channelProviderFromRegistry(a)})),channels:publishChannels,jobs,policy,oauthNotice:channelOAuthNotice}):''}${service==='mall'?'':`<p class='empty'>${ae(workspaceLabel())} 전용 채널센터입니다. 이 화면과 EKODI 최고관리자의 사이트별 채널센터는 같은 연결·게시 원장을 사용하므로 어느 쪽에서 등록·수정해도 동일하게 반영됩니다.</p>`}${service==='mall'?'':quickBar}<div class='channel-main-grid ${service==='mall'?'mall-simple-grid':''}'><div class='channel-main-column'>${service==='mall'?`<details class='channel-detail-section'><summary>전체 채널 목록 · 확장 보기</summary>${catalogPanel}</details>`:catalogPanel}${service==='mall'?`<details id='channel-policy' class='channel-detail-section mall-social-open-policy'><summary>2. 발행 정책 · 연결 후 설정</summary>${policyForm}</details>`:`<details id='channel-policy' class='channel-detail-section'><summary>자동게시 공통 정책</summary>${policyForm}</details>`}${mallTestForm}${service==='mall'?`<details id='mall-sns-advanced' class='channel-detail-section'><summary>계정·채널 상세 관리 (고급)</summary>${accountSection}</details>`:accountSection}${aiForm?`<details id='channel-ai' class='channel-detail-section'><summary>AI 성과기반 배분</summary>${aiForm}</details>`:''}<details id='channel-connections' class='channel-detail-section'><summary>실제 연결 채널 · 세부 운영설정</summary><div class='service-list'>${connectionRows||'<div class="channel-empty">인증 완료된 채널이 없습니다.</div>'}${orphanRows}</div></details><details id='channel-jobs' class='channel-detail-section'><summary>최근 게시 작업</summary>${jobRows?`<div class='table-wrap'><table><thead><tr><th>채널</th><th>계정</th><th>상태</th><th>예약</th><th>게시</th><th>오류</th><th>조치</th></tr></thead><tbody>${jobRows}</tbody></table></div>`:'<div class="channel-empty">게시 작업 기록이 없습니다.</div>'}</details></div>${service==='mall'?'':`<aside class='channel-help'><h2>설정 안내</h2><div class='channel-help-step'><b>1</b><div><strong>${youtubeConnected?'YouTube 연결 유지':'최초 1회 연결'}</strong><p>${youtubeConnected?'현재 연결은 중앙 Vault가 유지합니다. 별도 Google 승인을 다시 요구하지 않습니다.':'YouTube 등 외부 채널은 처음 연결할 때만 공식 승인을 완료합니다.'}</p></div></div><div class='channel-help-step'><b>2</b><div><strong>관리자 로그인으로 운영</strong><p>연결이 정상인 동안 추가 OAuth 없이 운영설정과 자동게시를 관리합니다.</p></div></div><div class='channel-help-step'><b>3</b><div><strong>게시 결과 확인</strong><p>성공·실패·재시도 내역을 확인하고 필요한 조치를 합니다.</p></div></div><div class='channel-help-links'>${youtubeConnected?`<button class='button' type='button' data-channel-panel='channel-connections'>YouTube 연결상태 보기</button>`:`<button class='button' type='button' data-channel-quick='youtube'>YouTube 최초 연결</button>`}<button class='button' type='button' data-channel-panel='channel-policy'>자동게시 설정 바로가기</button><button class='button' type='button' data-channel-panel='channel-jobs'>게시 결과 바로가기</button></div></aside>`}</div></div>`;
+      $('mainPanel').innerHTML=`<div class='channel-workbench'>${tenantAutomationOverviewHtml(tenantAutomationOverviewModel({connections,publishChannels,jobs,connectionsLoaded:Array.isArray(connectionData.connections),publishingLoaded:Array.isArray(automation.channels),jobsLoaded:Array.isArray(jobsData.jobs),policy,growthOverview,service:service||'',adminBase}))}${service==='mall'?renderMallSocialSetup({platform,connections,registeredAccounts:registeredAccounts.map(a=>({...a,provider:channelProviderFromRegistry(a)})),channels:publishChannels,jobs,policy,oauthNotice:channelOAuthNotice}):''}${service==='mall'?'':`<p class='empty'>${ae(workspaceLabel())} 전용 채널센터입니다. 이 화면과 EKODI 최고관리자의 사이트별 채널센터는 같은 연결·게시 원장을 사용하므로 어느 쪽에서 등록·수정해도 동일하게 반영됩니다.</p>`}${service==='mall'?'':quickBar}<div class='channel-main-grid ${service==='mall'?'mall-simple-grid':''}'><div class='channel-main-column'>${service==='mall'?`<details class='channel-detail-section'><summary>전체 채널 목록 · 확장 보기</summary>${catalogPanel}</details>`:catalogPanel}${service==='mall'?`<details id='channel-policy' class='channel-detail-section mall-social-open-policy'><summary>2. 발행 정책 · 연결 후 설정</summary>${policyForm}</details>`:`<details id='channel-policy' class='channel-detail-section'><summary>자동게시 공통 정책</summary>${policyForm}</details>`}${mallTestForm}${service==='mall'?`<details id='mall-sns-advanced' class='channel-detail-section'><summary>계정·채널 상세 관리 (고급)</summary>${accountSection}</details>`:accountSection}${aiForm?`<details id='channel-ai' class='channel-detail-section'><summary>AI 성과기반 배분</summary>${aiForm}</details>`:''}<details id='channel-connections' class='channel-detail-section'><summary>실제 연결 채널 · 세부 운영설정</summary><div class='service-list'>${connectionRows||'<div class="channel-empty">인증 완료된 채널이 없습니다.</div>'}${orphanRows}</div></details><details id='channel-jobs' class='channel-detail-section'><summary>최근 게시 작업</summary>${jobRows?`<div class='table-wrap'><table><thead><tr><th>채널</th><th>계정</th><th>상태</th><th>예약</th><th>게시</th><th>오류</th><th>조치</th></tr></thead><tbody>${jobRows}</tbody></table></div>`:'<div class="channel-empty">게시 작업 기록이 없습니다.</div>'}</details></div>${service==='mall'?'':`<aside class='channel-help'><h2>설정 안내</h2><div class='channel-help-step'><b>1</b><div><strong>${youtubeConnected?'YouTube 연결 유지':'최초 1회 연결'}</strong><p>${youtubeConnected?'현재 연결은 중앙 Vault가 유지합니다. 별도 Google 승인을 다시 요구하지 않습니다.':'YouTube 등 외부 채널은 처음 연결할 때만 공식 승인을 완료합니다.'}</p></div></div><div class='channel-help-step'><b>2</b><div><strong>관리자 로그인으로 운영</strong><p>연결이 정상인 동안 추가 OAuth 없이 운영설정과 자동게시를 관리합니다.</p></div></div><div class='channel-help-step'><b>3</b><div><strong>게시 결과 확인</strong><p>성공·실패·재시도 내역을 확인하고 필요한 조치를 합니다.</p></div></div><div class='channel-help-links'>${youtubeConnected?`<button class='button' type='button' data-channel-panel='channel-connections'>YouTube 연결상태 보기</button>`:`<button class='button' type='button' data-channel-quick='youtube'>YouTube 최초 연결</button>`}<button class='button' type='button' data-channel-panel='channel-policy'>자동게시 설정 바로가기</button><button class='button' type='button' data-channel-panel='channel-jobs'>게시 결과 바로가기</button></div></aside>`}</div></div>`;
 
+      bindTenantAutomationOverview($('tenantAutoOverview'));
       // Keep the quick and advanced forms in sync. A manual connection check
       // must not silently turn a selected Brand Account flow back into email matching.
       const brandModeInputs=[...document.querySelectorAll('#mallSocialYoutubeConnectForm [name="youtubeBrandAccountMode"],#channelAccountForm [name="youtubeBrandAccountMode"]')];
@@ -1337,7 +1391,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     frame.title=meta[key]?.[0]||'청계면상인회 관리자';
     frame.referrerPolicy='no-referrer';
     frame.loading='eager';
-    frame.style.cssText='display:block;width:100%;height:1100px;max-width:100%;border:0;border-radius:10px;background:white';
+    frame.style.cssText='display:block;width:100%;height:70vh;min-height:360px;max-width:100%;border:0;border-radius:10px;background:white';
     frame.src=new URL('/cgma/operations-admin/?inline=1&section='+encodeURIComponent(panel),location.origin).href;
     // An unmerged Pages alias must not render an unrelated public page in an admin frame.
     try{
@@ -1664,8 +1718,9 @@ const WORKSPACE_ADMIN_VIEW_CSS = `
 @media(max-width:360px){.layout main > #summaryCards{grid-template-columns:1fr}}
 `;
 
-export function workspaceAdminCss(){return new Response(CHURCH_ADMIN_NAV_CSS+TENANT_SERVICE_CSS+CSS+MALL_DASH_CSS+MALL_SOURCING_TABS_CSS+MALL_SOCIAL_CSS+MALL_CHANNEL_CSS+AMAZON_ADMIN_CSS+MALL_SOCIAL_LAYOUT_CSS+WORKSPACE_ADMIN_VIEW_CSS+tenantAdminMetricsTabsCss+`html[data-ekodi-shell-surface="admin"] .sidebar #adminNav{align-content:start!important;grid-auto-rows:max-content!important;gap:3px!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion{align-content:start!important;grid-template-rows:max-content max-content!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion-toggle{min-height:36px!important;height:auto!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion-panel{align-content:start!important;grid-auto-rows:max-content!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar{background:#fff!important;color:#172033!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button){color:#273244!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button)[aria-current="page"],html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button).active{color:#111827!important;background:#eceff3!important;font-weight:800!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar #adminNav{align-content:start!important;grid-auto-rows:max-content!important;gap:3px!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion{align-content:start!important;grid-template-rows:max-content max-content!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion-toggle{min-height:36px!important;height:auto!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion-panel{align-content:start!important;grid-auto-rows:max-content!important}`+`.cards:empty{display:none!important}.confirmation-counts{font-size:13px;font-weight:500;color:#6b7280;margin-left:8px}.confirmation-new{margin-top:16px;border:1px solid #e6eaf1;border-radius:10px;padding:10px 14px;background:#fff}.confirmation-new>summary{cursor:pointer;font-weight:700;padding:4px 0}`+`:root[data-ekodi-shell-surface="admin"][data-ekodi-admin-theme="light"]{color-scheme:light!important;background:#f5f7fb!important;--ekodi-ui-bg:#f5f7fb;--ekodi-ui-surface:#fff;--ekodi-ui-surface-raised:#fff;--ekodi-ui-border:#e6eaf1;--ekodi-ui-text:#172033;--ekodi-ui-muted:#6b7280;--ekodi-ui-accent:#315d9a}:root[data-ekodi-shell-surface="admin"][data-ekodi-admin-theme="light"] body{background:#f5f7fb!important;color:#172033!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{top:0!important;height:100dvh!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="direct"]{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-gutter:stable!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar:has([data-ekodi-admin-nav-mode="direct"]){overflow:hidden!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{background:#f5f7fb!important;color:#172033!important}@media(max-width:860px){:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="direct"]{flex:0 0 auto!important;min-height:auto!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-gutter:auto!important}}`,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
+export function workspaceAdminCss(){return new Response(CHURCH_ADMIN_NAV_CSS+TENANT_SERVICE_CSS+TENANT_AUTOMATION_CSS+CSS+MALL_DASH_CSS+MALL_SOURCING_TABS_CSS+MALL_SOCIAL_CSS+MALL_CHANNEL_CSS+AMAZON_ADMIN_CSS+MALL_SOCIAL_LAYOUT_CSS+WORKSPACE_ADMIN_VIEW_CSS+tenantAdminMetricsTabsCss+`html[data-ekodi-shell-surface="admin"] .sidebar #adminNav{align-content:start!important;grid-auto-rows:max-content!important;gap:3px!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion{align-content:start!important;grid-template-rows:max-content max-content!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion-toggle{min-height:36px!important;height:auto!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion-panel{align-content:start!important;grid-auto-rows:max-content!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar{background:#fff!important;color:#172033!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button){color:#273244!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button)[aria-current="page"],html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button).active{color:#111827!important;background:#eceff3!important;font-weight:800!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar #adminNav{align-content:start!important;grid-auto-rows:max-content!important;gap:3px!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion{align-content:start!important;grid-template-rows:max-content max-content!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion-toggle{min-height:36px!important;height:auto!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion-panel{align-content:start!important;grid-auto-rows:max-content!important}`+`.cards:empty{display:none!important}.confirmation-counts{font-size:13px;font-weight:500;color:#6b7280;margin-left:8px}.confirmation-new{margin-top:16px;border:1px solid #e6eaf1;border-radius:10px;padding:10px 14px;background:#fff}.confirmation-new>summary{cursor:pointer;font-weight:700;padding:4px 0}`+`:root[data-ekodi-shell-surface="admin"][data-ekodi-admin-theme="light"]{color-scheme:light!important;background:#f5f7fb!important;--ekodi-ui-bg:#f5f7fb;--ekodi-ui-surface:#fff;--ekodi-ui-surface-raised:#fff;--ekodi-ui-border:#e6eaf1;--ekodi-ui-text:#172033;--ekodi-ui-muted:#6b7280;--ekodi-ui-accent:#315d9a}:root[data-ekodi-shell-surface="admin"][data-ekodi-admin-theme="light"] body{background:#f5f7fb!important;color:#172033!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{top:0!important;height:100dvh!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="direct"]{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-gutter:stable!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar:has([data-ekodi-admin-nav-mode="direct"]){overflow:hidden!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{background:#f5f7fb!important;color:#172033!important}@media(max-width:860px){:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="direct"]{flex:0 0 auto!important;min-height:auto!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-gutter:auto!important}}`,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
 export function workspaceAdminScript(){const payload=tenantAdminPolicySnapshot();return new Response(`window.__EKODI_WORKSPACE_ADMIN_RUNTIME__='20261002-common-engine-ui-v1';\n((__name)=>{\nconst youtubeDataApiDisabledProject=${youtubeDataApiDisabledProject.toString()};\nconst youtubeDataApiCloudUrl=${youtubeDataApiCloudUrl.toString()};\nconst renderMallSocialSetup=${renderMallSocialSetup.toString()};
-const mountTenantAdminMetricsTabs=${mountTenantAdminMetricsTabs.toString()};\nconst renderTenantServiceAdmin=${renderTenantServiceAdmin.toString()};\nconst CHURCH_ADMIN_MENU=${JSON.stringify(CHURCH_ADMIN_MENU)};\nconst mountChurchAdminNavigation=${mountChurchAdminNavigation.toString()};\n(${clientMain.toString()})(${JSON.stringify(payload)},${JSON.stringify(ekodiBizAdminScopeSnapshot())},${JSON.stringify(channelTargetOptions())});
+const mountTenantAdminMetricsTabs=${mountTenantAdminMetricsTabs.toString()};\nconst renderTenantServiceAdmin=${renderTenantServiceAdmin.toString()};\nconst tenantAutomationOverviewModel=${tenantAutomationOverviewModel.toString()};\nconst tenantAutomationOverviewHtml=${tenantAutomationOverviewHtml.toString()};\nconst bindTenantAutomationOverview=${bindTenantAutomationOverview.toString()};
+const confirmTenantServicePreference=${confirmTenantServicePreference.toString()};\nconst CHURCH_ADMIN_MENU=${JSON.stringify(CHURCH_ADMIN_MENU)};\nconst mountChurchAdminNavigation=${mountChurchAdminNavigation.toString()};\n(${clientMain.toString()})(${JSON.stringify(payload)},${JSON.stringify(ekodiBizAdminScopeSnapshot())},${JSON.stringify(channelTargetOptions())});
 (${workspaceAdminCompact.toString()})();\n})((target)=>target);`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
 export function isWorkspaceAdminPath(pathname){return isWorkspaceAdminPathShape(pathname)}

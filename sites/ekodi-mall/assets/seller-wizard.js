@@ -110,7 +110,7 @@
   const bar = document.createElement('nav');
   bar.className = 'wz-bar';
   bar.setAttribute('aria-label', '상품 등록 단계');
-  bar.innerHTML = `<ol>${steps.map((s, i) => `<li><button type="button" data-wz="${i}">${i + 1}. ${s.title}</button></li>`).join('')}<li><a href="#serverProducts" data-wz-providers>공급처별 상품</a></li><li><button type="button" class="wz-full" data-wz-full>전체 화면 보기</button></li></ol>`;
+  bar.innerHTML = `<ol><li><button type="button" data-wz-inventory>내 상품 목록</button></li>${steps.map((s, i) => `<li><button type="button" data-wz="${i}">${i + 1}. ${s.title}</button></li>`).join('')}<li><button type="button" class="wz-full" data-wz-full>전체 화면 보기</button></li></ol>`;
   const head = document.createElement('div');
   head.className = 'wz-head';
   head.innerHTML = '<h2 data-wz-title></h2><p data-wz-hint></p>';
@@ -132,9 +132,30 @@
     return [studio];
   }
 
+  function showInventory() {
+    if (!signedIn()) { document.documentElement.classList.remove('wz-inventory'); current = 0; apply(); return; }
+    document.documentElement.classList.add('wz-on', 'wz-inventory');
+    const inventory = document.querySelector('#serverProducts');
+    [...main.children].forEach(el => {
+      if (el === bar || el === head || el === err || el === nav) return;
+      el.classList.toggle('wz-hide', el !== inventory);
+    });
+    head.querySelector('[data-wz-title]').textContent = '내 상품 목록';
+    head.querySelector('[data-wz-hint]').textContent = '등록 상품 · 공급처별 필터 · 준비 상태를 한 화면에서 관리합니다.';
+    bar.querySelectorAll('[data-wz]').forEach(b => b.removeAttribute('aria-current'));
+    bar.querySelector('[data-wz-inventory]')?.setAttribute('aria-current', 'step');
+    nav.classList.add('wz-hide');
+    err.classList.add('wz-hide');
+    bar.querySelector('[data-wz-full]').textContent = '전체 화면 보기';
+  }
+
   function apply() {
+    if (document.documentElement.classList.contains('wz-inventory')) { showInventory(); return; }
     document.documentElement.classList.add('wz-on');
+    nav.classList.remove('wz-hide');
+    err.classList.remove('wz-hide');
     const step = steps[current];
+    bar.querySelector('[data-wz-inventory]')?.removeAttribute('aria-current');
     // The authentication stage is a gate, not a task after sign-in.
     // Keep its internal index for compatibility, but present a four-step flow.
     const authenticated = signedIn();
@@ -196,19 +217,22 @@
       }
     }
     current = target;
+    document.documentElement.classList.remove('wz-inventory');
     apply();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function revealSupplierInventory() {
     if (location.hash !== '#serverProducts' || !signedIn()) return;
-    if (document.documentElement.classList.contains('wz-on')) bar.querySelector('[data-wz-full]')?.click();
+    showInventory();
     document.querySelector('#serverProducts')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
   window.addEventListener('hashchange', revealSupplierInventory);
   bar.addEventListener('click', (e) => {
+    if (e.target.closest('[data-wz-inventory]')) { showInventory(); history.replaceState(null, '', '#serverProducts'); return; }
     const full = e.target.closest('[data-wz-full]');
     if (full) {
+      document.documentElement.classList.remove('wz-inventory');
       const on = document.documentElement.classList.toggle('wz-on');
       if (!on) document.querySelectorAll('.wz-hide').forEach((el) => el.classList.remove('wz-hide'));
       else apply();
@@ -258,11 +282,12 @@
   const publishBtn = () => form.querySelector('[data-server-publish]');
   new MutationObserver(() => { const b = publishBtn(); if (b && b.textContent !== '게시하기') b.textContent = '게시하기'; }).observe(form, { childList: true, subtree: true });
 
-  const start = () => { current = signedIn() ? Math.max(1, store.get()) : 0; apply(); };
+  window.ekodiSellerWizardOpenEditor = () => { go(1); document.querySelector('#studio')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); };
+  const start = () => { current = signedIn() ? Math.max(1, store.get()) : 0; apply(); if (signedIn() && location.hash !== '#studio') showInventory(); };
   start();
   if (location.hash === '#serverProducts') revealSupplierInventory();
   // Auth state resolves asynchronously after the central-login handoff.
   const loginBtn = document.querySelector('#sellerLogin');
-  if (loginBtn) new MutationObserver(() => { if (signedIn() && current === 0) { if (location.hash === '#serverProducts') revealSupplierInventory(); else go(1); } else if (!signedIn() && current !== 0) go(0); else if (location.hash === '#serverProducts') revealSupplierInventory(); else apply(); })
+  if (loginBtn) new MutationObserver(() => { if (signedIn() && current === 0) { if (location.hash === '#studio') go(1); else showInventory(); } else if (!signedIn() && current !== 0) go(0); else if (location.hash === '#serverProducts') revealSupplierInventory(); else apply(); })
     .observe(loginBtn, { attributes: true, attributeFilter: ['hidden'] });
 })();

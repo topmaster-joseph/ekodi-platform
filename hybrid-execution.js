@@ -3,6 +3,7 @@ import { assessBackgroundBrowserReceipt } from './background-browser-proof.js';
 import { CGMA_NATIVE_CANARY, inspectCgmaCanaryPayload } from './cgma-native-canary-policy.js';
 import { normalizeSlidesAudioPilot, validateSlidesAudioPilotReceipt, SLIDES_AUDIO_ITEMS, SLIDES_AUDIO_PRESENTATION_ID } from './google-workspace-slides-audio-policy.js';
 import { compareLocalExecutionCandidates, localExecutionPolicySnapshot, localExecutionScore, normalizeLocalResource } from './local-execution-policy.js';
+import { AI_FAMILY_AUTO_DISPATCH_POLICY, planFamilyDispatch, validateFamilyRunnerReceipt } from './ai-family-dispatch.js';
 
 const ADMIN_PREFIX = '/api/control/hybrid-execution';
 const AGENT_NEXT_PATH = '/api/device-agent/commands/next';
@@ -40,7 +41,11 @@ const TASK_POLICIES = Object.freeze({
   'profile.workstation.apply': { capability:'workstationProfile', risk:'maintain', confirm:true },
   'profile.workstation.restore': { capability:'workstationProfile', risk:'maintain', confirm:true },
   'agent.self_update': { capability:'protocolLaunch', risk:'maintain', confirm:true },
+  'ai.family.codex': { capability:'aiFamilyCodex', risk:'assist', payload:'ai-family-task', lane:'node:codex' },
+  'ai.family.claude-code': { capability:'aiFamilyClaudeCode', risk:'assist', payload:'ai-family-task', lane:'node:claude-code' },
 });
+
+const FAMILY_TASK_TYPES=new Set(['ai.family.codex','ai.family.claude-code']);
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -114,6 +119,13 @@ function sanitizePayload(type, rawPayload) {
       closeOwnedSurfaceOnAuthRequired:true,
       preserveUserOwnedSurfaces:true,
     };
+  }
+  if (policy.payload === 'ai-family-task') {
+    const prompt=safeText(rawPayload?.prompt,4000);
+    const requestKey=safeText(rawPayload?.requestKey,64);
+    const timeoutMs=clampInt(rawPayload?.timeoutMs,180000,600000,180000);
+    if(!prompt||!/^[a-f0-9]{64}$/.test(requestKey)||![180000,600000].includes(timeoutMs))throw new Error('PAYLOAD_INVALID');
+    return {prompt,requestKey,timeoutMs,lane:policy.lane,costKrw:0};
   }
   return {};
 }
@@ -326,7 +338,34 @@ async function activeCounts(env) {
   return new Map((rows.results || []).map(row => [row.device_id, Number(row.active_count) || 0]));
 }
 
+async function expireTimedOutFamilyJobs(env){
+  const rows=await env.DB.prepare(`SELECT id,payload_json,assigned_device_id,created_at FROM hybrid_execution_jobs
+    WHERE task_type IN ('ai.family.codex','ai.family.claude-code') AND status IN ('pending','assigned','leased') LIMIT 20`).all();
+  const now=new Date().toISOString();
+  for(const row of rows.results||[]){
+    const timeoutMs=Number(parseJson(row.payload_json,{}).timeoutMs||180000);
+    if(Date.now()-Date.parse(row.created_at)<=timeoutMs)continue;
+    const update=await env.DB.prepare(`UPDATE hybrid_execution_jobs SET status='failed',last_device_id=assigned_device_id,assigned_device_id=NULL,
+      lease_expires_at=NULL,last_error='execution_timeout',updated_at=?,completed_at=? WHERE id=? AND status IN ('pending','assigned','leased')`).bind(now,now,row.id).run();
+    if(update.meta?.changes)await event(env,row.id,row.assigned_device_id,'failed',{reason:'execution_timeout',terminal:true,timeoutMs});
+  }
+}
+
+async function activeFamilyCounts(env){
+  const rows=await env.DB.prepare(`SELECT assigned_device_id AS device_id,task_type,COUNT(*) AS active_count
+    FROM hybrid_execution_jobs WHERE task_type IN ('ai.family.codex','ai.family.claude-code')
+      AND status IN ('assigned','leased') AND assigned_device_id IS NOT NULL GROUP BY assigned_device_id,task_type`).all();
+  return new Map((rows.results||[]).map(row=>[`${row.device_id}:${row.task_type}`,Number(row.active_count)||0]));
+}
+
+async function activeFamilyCount(env){
+  const row=await env.DB.prepare(`SELECT COUNT(*) AS count FROM hybrid_execution_jobs
+    WHERE task_type IN ('ai.family.codex','ai.family.claude-code') AND status IN ('pending','assigned','leased')`).first();
+  return Number(row?.count)||0;
+}
+
 async function assignPending(env) {
+  await expireTimedOutFamilyJobs(env);
   await requeueExpired(env);
   const fabric = await readFabricSettings(env);
   if (!fabric.enabled) return;
@@ -334,6 +373,7 @@ async function assignPending(env) {
   if (!nodes.length) return;
 
   const counts = await activeCounts(env);
+  const familyCounts=await activeFamilyCounts(env);
   const now = new Date().toISOString();
   const jobs = await env.DB.prepare(`SELECT * FROM hybrid_execution_jobs
     WHERE status='pending' AND (not_before_at IS NULL OR not_before_at <= ?)
@@ -345,6 +385,10 @@ async function assignPending(env) {
       if (group && safeGroup(node.device_group) !== group) return false;
       const active = counts.get(node.device_id) || 0;
       if (active >= Math.max(1, Number(node.max_concurrency) || 1)) return false;
+      if(FAMILY_TASK_TYPES.has(job.task_type)){
+        const sameModel=familyCounts.get(`${node.device_id}:${job.task_type}`)||0;
+        if(sameModel>=AI_FAMILY_AUTO_DISPATCH_POLICY.perDeviceModelMax)return false;
+      }
       return nodeSupports(node, job);
     });
     if (!candidates.length) continue;
@@ -364,6 +408,7 @@ async function assignPending(env) {
       .bind(chosen.device_id, expires, now, job.id).run();
     if (update.meta?.changes) {
       counts.set(chosen.device_id, (counts.get(chosen.device_id) || 0) + 1);
+      if(FAMILY_TASK_TYPES.has(job.task_type))familyCounts.set(`${chosen.device_id}:${job.task_type}`,(familyCounts.get(`${chosen.device_id}:${job.task_type}`)||0)+1);
       await event(env, job.id, chosen.device_id, 'assigned', {
         priority:Number(job.priority) || 0,
         currentLoad:Number(chosen.current_load ?? 100),
@@ -465,6 +510,19 @@ export async function handleHybridAgentResult(request, env, commandId) {
       result.message = 'workspace_audio_receipt_unverified:' + proof.reason;
     }
   }
+  if(FAMILY_TASK_TYPES.has(job.task_type)&&success){
+    const timeoutMs=Number(parseJson(job.payload_json,{}).timeoutMs);
+    if(![180000,600000].includes(timeoutMs)||!Number.isFinite(Date.parse(job.created_at))||Date.now()>Date.parse(job.created_at)+timeoutMs){
+      success=false;
+      result.message='execution_timeout';
+    }
+  }
+  if(FAMILY_TASK_TYPES.has(job.task_type)&&success){
+    const lane=TASK_POLICIES[job.task_type].lane;
+    const proof=validateFamilyRunnerReceipt(result.runnerReceipt,{jobId:commandId,lane,deviceId:device.id});
+    if(!proof.ok){success=false;result.message=proof.code;}
+    else result.runnerReceipt=proof.receipt;
+  }
 
   if ((job.task_type === 'computer.browser.execute' && browserProof?.outcome === 'auth_required') ||
       (job.task_type === 'computer.workspace.slides.audio.insert' && result.workspaceSlidesAudio?.status === 'auth_required')) {
@@ -518,6 +576,88 @@ export async function handleHybridAgentResult(request, env, commandId) {
     terminal:true, attempt:Number(job.attempt_count) || 1,
   });
   return json({ ok:true, commandId, status:'failed', completedAt:now }, 200);
+}
+
+export async function handleHybridAgentHeartbeat(request,env,commandId){
+  if(request.method!=='POST'||!String(commandId||'').startsWith('hyb_'))return null;
+  if(!env.DB)return json({code:'HYBRID_DATABASE_UNAVAILABLE'},503);
+  await ensureSchema(env.DB);
+  const device=await authenticateDevice(request,env);
+  if(!device)return json({code:'DEVICE_AUTH_REQUIRED'},401);
+  const now=new Date().toISOString();
+  const row=await env.DB.prepare(`SELECT task_type,payload_json,created_at FROM hybrid_execution_jobs WHERE id=? AND assigned_device_id=? AND status='leased' AND lease_expires_at>=?`).bind(commandId,device.id,now).first();
+  if(!row||!FAMILY_TASK_TYPES.has(row.task_type))return json({code:'LEASE_FENCE_REJECTED'},409);
+  const timeoutMs=Number(parseJson(row.payload_json,{}).timeoutMs);
+  const deadline=Date.parse(row.created_at)+timeoutMs;
+  if(![180000,600000].includes(timeoutMs)||!Number.isFinite(deadline)||Date.now()>=deadline)return json({code:'LEASE_FENCE_REJECTED'},409);
+  const leaseExpiresAt=new Date(Math.min(Date.now()+LEASE_MS,deadline+60_000)).toISOString();
+  const update=await env.DB.prepare(`UPDATE hybrid_execution_jobs SET lease_expires_at=?,updated_at=?
+    WHERE id=? AND assigned_device_id=? AND status='leased' AND lease_expires_at>=?`)
+    .bind(leaseExpiresAt,now,commandId,device.id,now).run();
+  if(!update.meta?.changes)return json({code:'LEASE_FENCE_REJECTED'},409);
+  await event(env,commandId,device.id,'heartbeat',{leaseExpiresAt});
+  return json({ok:true,commandId,leaseExpiresAt},200);
+}
+
+export async function enqueueFamilyDispatch(env,session,{message,context={}}={}){
+  if(!env?.DB)return {ok:false,status:503,code:'EXECUTION_DB_UNAVAILABLE'};
+  await ensureSchema(env.DB);
+  const plan=planFamilyDispatch(message);
+  if(!plan.ok)return {ok:false,status:422,code:plan.code,reason:plan.reason||''};
+  if(await activeFamilyCount(env)>=AI_FAMILY_AUTO_DISPATCH_POLICY.globalMaxJobs)return {ok:false,status:429,code:'FAMILY_JOB_CAPACITY_REACHED'};
+  const nodes=await readyNodes(env);
+  if(!nodes.some(node=>capabilitiesObject(node)[plan.capability]===true))return {ok:false,status:409,code:'RUNNER_CAPABILITY_UNAVAILABLE',lane:plan.lane};
+  const site=safeText(context?.site||context?.workspaceId||context?.section||'admin',120);
+  const actor=safeText(session?.email||'',200);
+  const requestKey=await sha256(`${actor}\n${site}\n${plan.prompt}`);
+  const existingRows=await env.DB.prepare(`SELECT id,status,task_type,created_at,payload_json FROM hybrid_execution_jobs
+    WHERE task_type=? AND status IN ('pending','assigned','leased') ORDER BY created_at DESC LIMIT 50`).bind(plan.taskType).all();
+  const existing=(existingRows.results||[]).find(row=>parseJson(row.payload_json,{}).requestKey===requestKey);
+  if(existing)return {ok:true,status:202,deduplicated:true,job:existing,lane:plan.lane};
+  const now=new Date().toISOString();
+  const actorId=await adminId(env,session);
+  if(!actorId)return {ok:false,status:403,code:'FAMILY_DISPATCH_ADMIN_NOT_FOUND'};
+  const id=`hyb_${crypto.randomUUID()}`;
+  const payload=sanitizePayload(plan.taskType,{prompt:plan.prompt,requestKey,timeoutMs:plan.timeoutMs});
+  const insert=await env.DB.prepare(`INSERT INTO hybrid_execution_jobs
+    (id,task_type,payload_json,status,priority,required_capabilities_json,attempt_count,max_attempts,result_json,last_error,created_by,created_at,updated_at)
+    SELECT ?,? ,?,'pending',60,?,0,1,'{}','',?,?,?
+    WHERE (SELECT COUNT(*) FROM hybrid_execution_jobs
+      WHERE task_type IN ('ai.family.codex','ai.family.claude-code')
+      AND status IN ('pending','assigned','leased')) < ?`)
+    .bind(id,plan.taskType,safeJson(payload),JSON.stringify([plan.capability]),actorId,now,now,AI_FAMILY_AUTO_DISPATCH_POLICY.globalMaxJobs).run();
+  if(!insert.meta?.changes)return {ok:false,status:429,code:'FAMILY_JOB_CAPACITY_REACHED'};
+  await event(env,id,null,'created',{lane:plan.lane,costKrw:0,timeoutMs:plan.timeoutMs,site});
+  await audit(env,session,'ai.family.dispatch',id,JSON.stringify({lane:plan.lane,site,costKrw:0}));
+  await assignPending(env);
+  const job=await env.DB.prepare('SELECT id,status,task_type,assigned_device_id,created_at FROM hybrid_execution_jobs WHERE id=?').bind(id).first();
+  return {ok:true,status:202,deduplicated:false,job,lane:plan.lane};
+}
+
+export async function readFamilyDispatch(env,session,jobId){
+  await ensureSchema(env.DB);
+  const actorId=await adminId(env,session);
+  const row=await env.DB.prepare(`SELECT id,task_type,payload_json,status,assigned_device_id,last_device_id,result_json,last_error,created_at,updated_at,completed_at
+    FROM hybrid_execution_jobs WHERE id=? AND created_by=? AND task_type IN ('ai.family.codex','ai.family.claude-code')`).bind(jobId,actorId).first();
+  if(!row)return null;
+  const payload=parseJson(row.payload_json,{});const ageMs=Math.max(0,Date.now()-Date.parse(row.created_at));
+  const timedOut=!['completed','failed','cancelled'].includes(row.status)&&ageMs>Number(payload.timeoutMs||180000);
+  if(timedOut){
+    const now=new Date().toISOString();
+    const update=await env.DB.prepare(`UPDATE hybrid_execution_jobs SET status='failed',last_error='execution_timeout',last_device_id=assigned_device_id,assigned_device_id=NULL,lease_expires_at=NULL,updated_at=?,completed_at=? WHERE id=? AND created_by=? AND status IN ('pending','assigned','leased')`).bind(now,now,row.id,actorId).run();
+    if(update.meta?.changes){
+      row.status='failed';row.last_error='execution_timeout';row.completed_at=now;row.last_device_id=row.assigned_device_id;row.assigned_device_id=null;
+      await event(env,row.id,row.last_device_id,'failed',{reason:'execution_timeout',terminal:true,timeoutMs:payload.timeoutMs});
+    }else{
+      const fresh=await env.DB.prepare(`SELECT status,assigned_device_id,last_device_id,result_json,last_error,updated_at,completed_at FROM hybrid_execution_jobs WHERE id=? AND created_by=?`).bind(row.id,actorId).first();
+      if(!fresh)return null;
+      Object.assign(row,fresh);
+    }
+  }
+  const lane=TASK_POLICIES[row.task_type].lane;const result=parseJson(row.result_json,{});
+  const receipt=row.status==='completed'?validateFamilyRunnerReceipt(result.runnerReceipt,{jobId:row.id,lane,deviceId:row.assigned_device_id||row.last_device_id}):{ok:false};
+  return {id:row.id,status:row.status,lane,processingNote:ageMs>=AI_FAMILY_AUTO_DISPATCH_POLICY.processingNoteAfterMs&&!['completed','failed','cancelled'].includes(row.status)?'처리가 계속 진행 중입니다. 안전한 실행 영수증을 기다리고 있습니다.':null,
+    error:row.last_error||null,result:receipt.ok?receipt.receipt:null,verifiedRunnerReceipt:receipt.ok,createdAt:row.created_at,completedAt:row.completed_at};
 }
 
 async function listDashboard(env) {

@@ -114,8 +114,10 @@
   }
   function addSessionMessage(role,text,extra={}){
     const value=String(text||'').trim();if(!value)return;
-    const session=ensureSession(value);
-    session.messages.push({role,text:value.slice(0,4000),at:now(),...extra});
+    const session=extra.sessionId?sessions.find(item=>item.id===extra.sessionId):ensureSession(value);
+    if(!session)return;
+    const {sessionId,...metadata}=extra;
+    session.messages.push({role,text:value.slice(0,4000),at:now(),...metadata});
     if(session.messages.length>MAX_MESSAGES)session.messages=session.messages.slice(-MAX_MESSAGES);
     session.updatedAt=now();if(extra.status)session.status=extra.status;
     sessions=[session,...sessions.filter(item=>item.id!==session.id)].slice(0,MAX_SESSIONS);
@@ -459,10 +461,28 @@
     ensureSession(value);const history=aiHistory.slice(-8);rememberAi('user',value);addSessionMessage('user',value,{kind:'message',status:'active',advisory:familyVerdict(value)});renderAi();scrollChat();return history;
   }
 
+  async function pollFamilyJob(jobId,sessionId){
+    const scopedAdd=(role,message,metadata={})=>addSessionMessage(role,message,{...metadata,sessionId});
+    let lastNote='';
+    for(let attempt=0;attempt<305;attempt++){
+      await new Promise(resolve=>window.setTimeout(resolve,2000));
+      let response;try{response=await api(`/api/control/ai/assist/jobs/${encodeURIComponent(jobId)}`)}catch(error){scopedAdd('assistant',error.message,{kind:'status',status:'failed'});renderAi();return}
+      const job=response.job||{};
+      if(job.processingNote&&job.processingNote!==lastNote){lastNote=job.processingNote;scopedAdd('assistant',job.processingNote,{kind:'status',status:'processing'});renderAi()}
+      if(job.status==='completed'){
+        if(!job.verifiedRunnerReceipt||!job.result){scopedAdd('assistant','실행 영수증을 검증하지 못해 결과를 표시하지 않습니다.',{kind:'status',status:'failed'});renderAi();return}
+        const label=job.lane==='node:codex'?'실행: Codex':'실행: Claude Code';const fallback=job.result.fallbackFrom?` · 실제 대체 경로: ${job.result.fallbackFrom}`:'';
+        scopedAdd('assistant',job.result.output,{kind:'message',status:'verified',provider:`${label}${fallback}`,mode:'family_auto_dispatch'});if(state.activeSessionId===sessionId)rememberAi('assistant',job.result.output);renderAi();return;
+      }
+      if(['failed','cancelled'].includes(job.status)){scopedAdd('assistant',`자동 실행을 완료하지 못했습니다: ${job.error||job.status}`,{kind:'status',status:'failed'});renderAi();return}
+    }
+    scopedAdd('assistant','상태 확인 시간이 끝났습니다. 실행 결과로 간주하지 않습니다.',{kind:'status',status:'failed'});renderAi();
+  }
+
   async function submitAi(text){
     const value=String(text||'').trim();if(!value)return;
     state.tab='ai';setTab('ai',false);
-    const history=beginConversationTurn(value);showStatus('요청을 분류하고 안전 경계를 확인 중입니다.');
+    const history=beginConversationTurn(value);const requestSessionId=activeSession()?.id;showStatus('요청을 분류하고 안전 경계를 확인 중입니다.');
     const c=context();const risky=highRiskArea(value);
     try{
       let result;let queued=null;let reply='';let provider=null;let mode=null;let status='active';
@@ -487,14 +507,15 @@
           status=queued.task?.state||queued.execution?.results?.[0]?.state||'queued';
         }
         result=await api('/api/control/ai/assist',{method:'POST',body:JSON.stringify({message:value,context:c,history})});
+        if(result.async&&result.jobId){status=result.status||'queued';void pollFamilyJob(result.jobId,requestSessionId)}
         reply=String(result.reply||'응답을 받지 못했습니다.');provider=result.provider||null;mode=result.mode||'free_assist';rememberAi('assistant',reply);lastAiReply={text:reply,mode,provider,notice:result.notice||''};
         if(queued){const taskId=queued.task?.id||queued.execution?.results?.[0]?.taskId||'';reply=`${reply}\n\n${statusLabel(status)} · EKODI Command Plane${taskId?` #${taskId}`:''}에 기록하고 실행 경로를 확인했습니다.`;}
       }
-      addSessionMessage('assistant',reply,{kind:risky||HEALTH_RE.test(value)||queued?'status':'message',status,provider,mode});
+      addSessionMessage('assistant',reply,{kind:risky||HEALTH_RE.test(value)||queued?'status':'message',status,provider,mode,sessionId:requestSessionId});
       const session=activeSession();if(session&&['verified','resolved'].includes(status))session.status='done';if(session&&status==='failed')session.status='failed';saveSessions();
       await refreshSummary();renderAi();
     }catch(error){
-      addSessionMessage('assistant',error.message,{kind:'status',status:'failed'});const session=activeSession();if(session)session.status='failed';saveSessions();renderAi()
+      addSessionMessage('assistant',error.message,{kind:'status',status:'failed',sessionId:requestSessionId});const session=sessions.find(item=>item.id===requestSessionId);if(session)session.status='failed';saveSessions();renderAi()
     }
   }
 

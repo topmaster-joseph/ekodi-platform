@@ -14,6 +14,7 @@ test('CGMA dedicated admin sections are classified as site-admin in the shared r
   assert.equal(group.scope,'workspace:cgma');
   assert.deepEqual(group.menus.map(x=>x.id),six);
   assert.ok(file.includes("workspace==='cgma'?[{id:'cgma-review'"));
+  assert.ok(file.includes("workspace==='cgma'?peopleSections.filter(([key])=>key==='members'):peopleSections"), 'CGMA duplicate links are filtered');
   assert.ok(file.includes("if(workspace==='cgma'&&CGMA_EMBEDDED_PANELS[section])return cgmaEmbeddedAdmin(section)"));
 });
 
@@ -33,6 +34,7 @@ test('iframe only accepts exact same-origin, exact frame and authorized existing
   assert.ok(file.includes("postMessage({type:'ekodi:cgma-admin:session',accessToken:token},location.origin)"));
   assert.ok(!file.includes('accessToken='+encodeURIComponent));
   assert.ok(file.includes("summary.replaceChildren();host.replaceChildren()"));
+  assert.ok(file.includes("height:70vh;min-height:360px"), 'embedded panel should fit first viewport instead of reserving 1100px');
   assert.ok(file.includes("window.addEventListener('pagehide'"));
 });
 

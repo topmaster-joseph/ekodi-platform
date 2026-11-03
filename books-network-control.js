@@ -1,9 +1,15 @@
 import authWorker from './auth-worker.js';
+import { principalFromCustomerSession, principalFromSupabaseRequest } from './ekodi-principal.js';
 
 const PUBLIC_PREFIX = '/api/books/public/stores';
 const ME_PREFIX = '/api/books/me';
 const ADMIN_PREFIX = '/api/books/admin/network';
 const TITLE_STATES = new Set(['DRAFT', 'SUBMITTED', 'PUBLISHED', 'REJECTED']);
+
+// No direct moderation endpoint may create a new public edition without publisher-origin evidence.
+export function requiresVerifiedPublisherHandoff(priorStatus, nextStatus) {
+  return nextStatus === 'PUBLISHED' && priorStatus !== 'PUBLISHED';
+}
 
 function clean(value, max = 500) {
   return String(value ?? '').trim().slice(0, max);
@@ -77,19 +83,33 @@ async function ensureSchema(db) {
 }
 
 async function session(request, env) {
+  // Browser credentials are verified by their issuing backends; never trust a client-supplied email or role.
+  const authorization = request.headers.get('authorization') || '';
+  if (!authorization.startsWith('Bearer ')) return {
+    response: json({ error:'EKODI 계정 로그인이 필요합니다.', code:'LOGIN_REQUIRED' },401,request,env)
+  };
   const url = new URL(request.url);
   url.pathname = '/api/session';
   url.search = '';
-  const response = await authWorker.fetch(new Request(url.toString(), { method: 'GET', headers: request.headers }), env);
-  if (!response.ok) return { response };
-  const data = await response.clone().json().catch(() => null);
-  const email = clean(data?.email, 160).toLowerCase();
-  if (!email) return { response: json({ error: 'EKODI 계정 로그인이 필요합니다.', code: 'LOGIN_REQUIRED' }, 401, request, env) };
-  return { data, email };
+  // Central admin identity stays separate; member identity cannot acquire admin permissions by matching an email.
+  const response = await authWorker.fetch(new Request(url.toString(), { method:'GET', headers:request.headers }),env);
+  if (response.ok) {
+    const data = await response.json().catch(() => null);
+    const email = clean(data?.email,160).toLowerCase();
+    if (data?.authenticated && email) return { data, email, kind:'admin', personId:null };
+  }
+  const principal = await principalFromCustomerSession(request,env)
+    || await principalFromSupabaseRequest(request);
+  if (principal?.email) return {
+    data:{authenticated:true},email:clean(principal.email,160).toLowerCase(),
+    kind:'member',personId:principal.subject.type==='person'?principal.subject.key:null
+  };
+  return { response:json({error:'EKODI 계정 로그인이 필요합니다.',code:'LOGIN_REQUIRED'},401,request,env) };
 }
 
-async function isAdmin(env, email) {
-  const row = await env.DB.prepare('SELECT id FROM admins WHERE lower(email) = ?').bind(email).first();
+async function isAdmin(env, auth) {
+  if (auth.kind !== 'admin') return false;
+  const row = await env.DB.prepare('SELECT id FROM admins WHERE lower(email) = ?').bind(auth.email).first();
   return Boolean(row?.id);
 }
 
@@ -205,7 +225,7 @@ async function updateTitle(request, env, auth, id) {
 }
 
 async function adminSnapshot(request, env, auth) {
-  if (!(await isAdmin(env, auth.email))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
+  if (!(await isAdmin(env, auth))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
   const [stores, titles] = await Promise.all([
     env.DB.prepare('SELECT * FROM books_creator_stores ORDER BY updated_at DESC LIMIT 200').all(),
     env.DB.prepare('SELECT * FROM books_creator_titles ORDER BY updated_at DESC LIMIT 500').all(),
@@ -214,12 +234,21 @@ async function adminSnapshot(request, env, auth) {
 }
 
 async function moderateTitle(request, env, auth, id) {
-  if (!(await isAdmin(env, auth.email))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
+  if (!(await isAdmin(env, auth))) return json({ error: '관리자 권한이 필요합니다.' }, 403, request, env);
   const current = await env.DB.prepare('SELECT * FROM books_creator_titles WHERE id=?').bind(id).first();
   if (!current) return json({ error: '책을 찾을 수 없습니다.' }, 404, request, env);
   const input = await body(request) || {};
   const status = clean(input.status, 20).toUpperCase();
   if (!TITLE_STATES.has(status) || !['PUBLISHED','REJECTED','SUBMITTED'].includes(status)) return json({ error: '검토 상태가 올바르지 않습니다.' }, 400, request, env);
+  // A Books Network moderation click is not a verified Publisher release receipt.
+  // Existing PUBLISHED rows remain untouched, but a new public state requires
+  // the independent Publisher contract, membership, edition and audio gates.
+  if (requiresVerifiedPublisherHandoff(current.status, status)) {
+    return json({
+      error: '판매 공개는 출판사의 검증된 판본·저자 계약·구독 자격·오디오북 검수 및 공식 인계 이후에만 가능합니다.',
+      code: 'PUBLISHER_HANDOFF_REQUIRED'
+    }, 409, request, env);
+  }
   await env.DB.prepare('UPDATE books_creator_titles SET status=?,admin_note=?,updated_at=? WHERE id=?')
     .bind(status, clean(input.adminNote, 1000), new Date().toISOString(), id).run();
   return json({ book: titleRow(await env.DB.prepare('SELECT * FROM books_creator_titles WHERE id=?').bind(id).first()) }, 200, request, env);

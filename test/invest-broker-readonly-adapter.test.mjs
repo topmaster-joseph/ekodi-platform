@@ -71,10 +71,23 @@ test('KIS configuration requires the switch, vault secrets and a well-formed acc
   assert.equal(kisReadOnlyConfig({ ...ENV, KIS_ACCOUNT_NO: '1234' }).reason, 'KIS_ACCOUNT_REFERENCE_INVALID');
   assert.equal(kisReadOnlyConfig({ ...ENV, INVEST_BROKER_READONLY_KIS: 'orders' }).reason, 'KIS_READONLY_SWITCH_OFF');
   const { INVEST_BROKER_READONLY_KIS: _switch, ...vaultOnly } = ENV;
-  assert.equal(kisReadOnlyConfig(vaultOnly).environment, 'paper', 'vault secrets alone default to the paper server, never live');
+  assert.deepEqual(kisReadOnlyConfig(vaultOnly), { enabled: false, reason: 'KIS_READONLY_SWITCH_OFF' }, 'vault secrets alone never enable broker access');
+  assert.equal(kisReadOnlyConfig({ ...vaultOnly, INVEST_BROKER_READONLY_KIS: 'paper' }).environment, 'paper');
+  assert.equal(kisReadOnlyConfig({ ...vaultOnly, INVEST_BROKER_READONLY_KIS: 'live' }).environment, 'live');
   assert.equal(kisReadOnlyConfig({ KIS_APP_KEY: 'k', KIS_APP_SECRET: 's' }).reason, 'KIS_READONLY_SWITCH_OFF');
   const ok = kisReadOnlyConfig(ENV);
   assert.equal(ok.enabled, true); assert.equal(ok.cano, '50000000'); assert.equal(ok.productCode, '01');
+});
+
+test('vault credentials without operator switch do not trigger even token network calls', async () => {
+  const { INVEST_BROKER_READONLY_KIS: _switch, ...vaultOnly } = ENV;
+  const { calls, fetchImpl } = kisServer();
+  const view = await buildBrokerReadOnlyView({ brokerId: 'kis', env: vaultOnly, db: d1(), fetchImpl, now: NOW, strongMfaVerified: true });
+  assert.equal(view.connection, 'disconnected');
+  assert.equal(view.dataMode, 'mock');
+  assert.deepEqual(view.blockers, ['KIS_READONLY_SWITCH_OFF']);
+  assert.equal(view.liveOrdersEnabled, false);
+  assert.equal(calls.length, 0, 'credentials without an explicit switch must never trigger an OAuth or balance request');
 });
 
 test('real KIS inquiry stays mock without strong MFA (AAL2)', async () => {
