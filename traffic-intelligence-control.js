@@ -342,7 +342,7 @@ async function handlePublicSummary(request, env) {
       today:publicCounter(todayCount),
       last7Days:publicCounter(sevenCount),
       last30Days:publicCounter(thirtyCount),
-      note:'동의된 브라우저의 익명 일일 세션 집계입니다. 실제 사람 수나 페이지뷰가 아니며, 수집 거부 브라우저는 제외됩니다.',
+      note:'브라우저의 익명 일일 세션 집계입니다. 실제 사람 수나 페이지뷰가 아니며, 추적 거부 설정에 따른 미측정 방문이 있을 수 있습니다.',
     }, 200, origin);
     response.headers.set('cache-control', 'public, max-age=300, stale-while-revalidate=600');
     return response;
