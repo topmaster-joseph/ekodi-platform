@@ -33,16 +33,16 @@ test('church homepage starts simple while preserving every primary destination',
 
 
 test('daily devotion has one canonical main navigation link and an explicit EKODI heading', () => {
-  const nav = html.match(/<nav id="main-nav"[\\s\\S]*?<\\/nav>/)?.[0] || '';
-  assert.match(nav, /href="\\/ekodichurch\\/devotion\\/">매일묵상<\\/a>/);
+  const nav = html.match(/<nav id="main-nav"[\s\S]*?<\/nav>/)?.[0] || '';
+  assert.match(nav, /href="\/ekodichurch\/devotion\/">매일묵상<\/a>/);
   assert.equal((nav.match(/매일묵상/g) || []).length, 1, 'do not duplicate daily devotion in the main nav');
-  assert.doesNotMatch(html, /<strong>오늘의 삶<\\/strong>/);
-  assert.match(devotion, /<h1>에코디 오늘의 매일묵상<\\/h1>/);
+  assert.doesNotMatch(html, /<strong>오늘의 삶<\/strong>/);
+  assert.match(devotion, /<h1>에코디 오늘의 매일묵상<\/h1>/);
 });
 
 test('mobile hero is content-first instead of adding a viewport-height blank band', () => {
   const mobile = layout.slice(layout.indexOf('@media(max-width:800px)'));
-  assert.match(mobile, /\\.hero\\s*\\{[^}]*display:block!important;[^}]*height:auto!important;[^}]*min-height:0!important;/);
-  assert.match(mobile, /\\.hero-content\\{[^}]*padding:0!important/);
+  assert.match(mobile, /\.hero\s*\{[^}]*display:block!important;[^}]*height:auto!important;[^}]*min-height:0!important;/);
+  assert.match(mobile, /\.hero-content\{[^}]*padding:0!important/);
   assert.match(layout, /overflow-wrap:normal!important;word-break:keep-all!important/);
 });
