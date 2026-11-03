@@ -253,6 +253,7 @@ async function cgmaPublicPassthrough(request,fetchImpl=fetch){
 function injectCgmaFooterTraffic(response, request){
   const path=new URL(request.url).pathname;
   if(request.method!=='GET'||response.status!==200||!String(response.headers.get('content-type')||'').toLowerCase().includes('text/html'))return response;
+  if(typeof HTMLRewriter==='undefined')return response; // Node contract tests have no Worker HTMLRewriter
   if(/^\/(?:admin|auth|api)(?:\/|$)/i.test(path)||/^\/cgma\/(?:admin|auth|api)(?:\/|$)/i.test(path))return response;
   return new HTMLRewriter()
     .on('html',{element:e=>e.setAttribute('data-ekodi-shell-surface','public')})
