@@ -15,7 +15,10 @@ export default {
     // The public canonical entry is /community/reading; the Community asset root is /reading.
     const readingPath=url.pathname.replace(/^\/community(?=\/)/,'');
     if(readingPath==='/reading'||readingPath==='/reading/'){
-      const assetRequest=new Request(new URL('/reading/index.html',url),request);
+      // Cloudflare static assets canonicalize an explicit index.html to /reading/, even
+      // when invoked through ASSETS.fetch; fetching the directory URL avoids a
+      // 307 Location: /reading/ that would escape the public /community mount.
+      const assetRequest=new Request(new URL('/reading/',url),request);
       return injectEkodiShell(withHeaders(await env.ASSETS.fetch(assetRequest)),'community');
     }
     if(/^\/reading\/(?:app\.js|topics\.js|styles\.css)$/.test(readingPath)){

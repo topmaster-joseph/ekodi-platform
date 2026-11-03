@@ -35,7 +35,7 @@ test('canonical reading hub is scoped to Community and clearly distinguishes tem
   assert.match(page, /\/community\/\?reading=create/);
   assert.match(page, /\/community\/#circles/);
   assert.match(communityPage, /href="\/community\/reading"/);
-  assert.match(worker, /reading\/index\.html/);
+  assert.match(worker, /new URL\('\/reading\/'\s*,\s*url\)/);
   assert.match(worker, /readingPath/);
   assert.match(registry, /https:\/\/ekodi.kr\/community\/reading/);
 });
