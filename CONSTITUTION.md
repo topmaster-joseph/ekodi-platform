@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.27.5
+# EKODI Platform Constitution v1.27.7
 
 Effective: 2026-10-28
 
@@ -305,3 +305,12 @@ Machine-readable sustainable evolution authority: `governance/architecture/ekodi
 - The canonical operating-context target remains **Person + Workspace + Membership + Capability**, with authority resolved through **Person + Workspace + Role + Capability**.
 - Future-generation promotion requires an explicit C2/C3 constitutional amendment, EKODI Platform Super Administrator confirmation, repository validation, guarded merge, and production verification whenever runtime behavior changes.
 - Machine-readable generation definitions, scale tiers, forward-evolution gates and boundary rules are maintained in `governance/architecture/ekodi-evolution-model.json` and enforced by repository validators.
+
+
+## EKODI Church unified Git source and independent deployment — v1.27.7 (2026-11-03)
+
+- **C2 owner-approved source consolidation:** The one EKODI-owned Church implementation source becomes `topmaster-joseph/ekodi-platform/sites/ekodi-church`. The independently guarded deployment and rollback unit remains the **existing** Cloudflare Pages project `ekodi-church` under `.github/workflows/deploy-ekodi-church-homepage.yml`. One Git repository does not combine Church, Mission, membership, finance or pastoral authorization realms.
+- **C3 production switchover is separately gated:** Approval of the intended topology and a merged code change do not make a production cutover. Legacy repository `topmaster-joseph/ekodi-church` remains the live release source (v1) until explicit source-switch flag, an official orchestrator release receipt, exact protected `main` SHA and content hash, staging/browser guest/member/admin/live and PC/mobile role tests, and an independent rollback rehearsal all pass. Confirm the real v2 release marker and live service before declaring transition.
+- **Keep outstanding Church PR work:** Reconcile currently open upstream Church work and its original-to-normalized blob SHA provenance before replacing its release owner. No agent may merge a failed PR or erase Church changes merely to expedite repo deletion.
+- **Legacy repository deletion is separately authorized and post-cutover only:** Require a complete independently restorable offsite Git archive, no live legacy deployment tokens/webhooks/triggers, tenant finance/privacy isolation, rollback and latest production canaries, plus a repository-specific irreversible owner deletion decision. Do not delete repositories or production provider resources from a constitutional amendment alone.
+- This amendment does not relax any of the 21 Supreme Attributes, central `ekodi.kr/auth` return continuity, existing Shell, site-specific access controls, or rights of customer-owned repositories. See `governance/amendments/2026-11-03-church-source-independent-release-v1.27.7.json` and `SOURCE-REPO-RETIREMENT-001`.

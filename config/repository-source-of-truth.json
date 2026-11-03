@@ -15,7 +15,12 @@
       "name": "topmaster-joseph/ekodi-platform",
       "role": "canonical-platform",
       "mutationMode": "guarded-pr",
-      "owns": ["platform-core", "governance", "shared-edge", "embedded-services"]
+      "owns": [
+        "platform-core",
+        "governance",
+        "shared-edge",
+        "embedded-services"
+      ]
     },
     {
       "name": "topmaster-joseph/ekodi-site",
@@ -33,7 +38,20 @@
       "name": "topmaster-joseph/ekodi-church",
       "role": "active-satellite",
       "mutationMode": "scope-specific-guarded-pr",
-      "relationship": "church-owned implementation; canonical public routing is governed by the platform"
+      "relationship": "church-owned implementation; canonical public routing is governed by the platform",
+      "approvedConsolidation": {
+        "approvalId": "CHURCH-SOURCE-ONE-REPO-20261103",
+        "ownerApprovedAt": "2026-11-03",
+        "changeClass": "C2-C3",
+        "targetCanonicalRepository": "topmaster-joseph/ekodi-platform",
+        "targetSourceDirectory": "sites/ekodi-church",
+        "preservedPagesProject": "ekodi-church",
+        "preservedReleaseWorkflow": ".github/workflows/deploy-ekodi-church-homepage.yml",
+        "productionCutover": "pending-guarded-v2-release-and-live-sha-verification",
+        "legacyProductionSourceRemainsActive": true,
+        "automaticDeletionAuthorized": false,
+        "repositorySpecificDeletionApprovalRequired": true
+      }
     },
     {
       "name": "topmaster-joseph/jadam-maru",

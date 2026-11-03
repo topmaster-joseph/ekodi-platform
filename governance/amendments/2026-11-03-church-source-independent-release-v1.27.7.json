@@ -1,0 +1,67 @@
+{
+  "amendmentId": "CHURCH-SOURCE-ONE-REPO-INDEPENDENT-RELEASE-20261103",
+  "constitutionVersion": "1.27.7",
+  "approvedAt": "2026-11-03",
+  "approvedBy": "topmaster-joseph",
+  "status": "approved",
+  "changeClass": "C2",
+  "relatedReleaseTopologyClass": "C3",
+  "taskId": "church-owner-c2-amendment-20261103b",
+  "summary": "EKODI Church-owned implementation moves to topmaster-joseph/ekodi-platform/sites/ekodi-church as one canonical Git source, retaining the existing separately guarded ekodi-church Cloudflare Pages release and tenant-isolated services.",
+  "approvalBasis": "The user explicitly answered '승인' to the proposal to move Church operating source from the legacy ekodi-church repository into ekodi-platform/sites/ekodi-church while retaining the independent Pages project and requiring staging, role, broadcast and rollback validation.",
+  "approvalScope": {
+    "canonicalRepository": "topmaster-joseph/ekodi-platform",
+    "canonicalSourcePath": "sites/ekodi-church",
+    "legacySourceRepository": "topmaster-joseph/ekodi-church",
+    "protectedReleaseWorkflow": ".github/workflows/deploy-ekodi-church-homepage.yml",
+    "unchangedPagesProject": "ekodi-church",
+    "canonicalPublicEntry": "https://ekodi.kr/ekodichurch",
+    "scopedToChurch": true,
+    "retireOtherRepositories": false,
+    "legacyDeletionAuthorized": false,
+    "approvalOfIntentDoesNotAuthorizeProductionDeploy": true
+  },
+  "existingRuntimeEvidence": {
+    "sourceRepository": "topmaster-joseph/ekodi-church",
+    "sourceSha": "520d4f2daf7e5e4dc53bf928c9df626b5f896600",
+    "releaseContract": "ekodi.church-release.v1",
+    "productionSourceCutoverVerified": false
+  },
+  "requiredProductionGates": [
+    "exact-source-receipt-and-guarded-main",
+    "staging-preview-and-guest-route-health",
+    "authenticated-member-and-admin-authorization",
+    "attendance-and-giving-tenant-finance-isolation",
+    "live-broadcast-safe-canary",
+    "pc-mobile-multilingual-route-regression",
+    "independent-Church-Pages-project-release-provenance",
+    "production-v2-SHA-and-payload-hash-check",
+    "same-project-rollback-rehearsal",
+    "post-cutover-observability-and-legacy-automation-review"
+  ],
+  "rolloutPlan": [
+    "Merge constitutional C2/C3 source ownership record and source/release boundary in protected main.",
+    "Integrate Church outstanding upstream PRs with original-to-normalized Git blob provenance and complete regression tests.",
+    "Rebuild immutable Church Pages candidate at precise approved main SHA; verify staging including login and live paths.",
+    "Use EKODI Orchestrator authorized receipt and explicitly approved repository source flag for the same existing Pages project.",
+    "Verify production v2 source SHA, payload digest, independent rollback, browser/mobile, member/admin/live and finance separation.",
+    "Only then consider legacy GitHub repository retirement through separate full-history offsite restore, credentials/webhook closure and repository-specific owner deletion approval."
+  ],
+  "rollback": "Before promotion retain legacy v1 release and old GitHub source. After promotion, if marker/source SHA, role isolation or canary fails, restore the last known-good deployment of the SAME ekodi-church Pages project through approved orchestrator release; retain production user records, restore legacy source mode and investigate. No deletion of legacy GitHub source during rollback.",
+  "preserves": [
+    "Twenty-one non-optional EKODI Supreme Attributes",
+    "shared Shell and canonical ekodi.kr/auth return_to",
+    "independent Church Pages release project and rollback",
+    "church/mission and member/pastoral/finance workspace boundaries",
+    "existing production domain and Supabase Church API independence",
+    "read-only satellite retirement deletion gate"
+  ],
+  "approvalEvidence": {
+    "ownerInstructionDate": "2026-11-03",
+    "ownerInstructionRecorded": true,
+    "notExternalIdentityVerification": true,
+    "requiredPullRequestLabel": "constitution-approved"
+  },
+  "parentIssue": 7502,
+  "churchTrackingIssue": 7575
+}
