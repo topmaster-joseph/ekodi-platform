@@ -576,17 +576,105 @@ function status(message,needsLogin){
  if(needsLogin){const a=document.createElement('a');a.href=login;a.textContent='안전하게 다시 로그인';root.append(a)}
 }
 function setStepUp(state){const b=el('stepUpButton');b.dataset.state=state;b.disabled=false;b.textContent=state==='done'?'본인인증 완료':'본인인증 대기';b.setAttribute('aria-pressed',state==='done'?'true':'false')}
-const TAB_OF={ownerSummary:'*',ownerTabs:'*',marketDashboard:'market',autopilot:'summary',brokerReadonly:'broker',autopilotPolicy:'autopilot',liveTrading:'live',export:'report',strategyLab:'research',shortValueResearch:'research'};
-function tabFor(node){if(node.id&&TAB_OF[node.id])return TAB_OF[node.id];if(node.classList.contains('overview'))return 'summary';return 'analysis'}
-function tabTargets(){const owner=el('owner');const out=[];for(const child of owner.children){if(child.classList.contains('layout')){for(const inner of child.children)out.push(inner)}else out.push(child)}return out}
-function showTab(tab,{focus=false}={}){
- for(const node of tabTargets()){const t=tabFor(node);if(t==='*')continue;if(t===tab)node.removeAttribute('data-tab-hidden');else node.setAttribute('data-tab-hidden','')}
- if(tab==='research'&&!labLoaded)loadStrategyLab();if(tab==='research'&&!shortValueReadinessLoaded)loadShortValueReadiness();
- for(const b of document.querySelectorAll('#ownerTabs [data-tab]')){const on=b.dataset.tab===tab;b.setAttribute('aria-selected',on?'true':'false');b.tabIndex=on?0:-1;if(on&&focus)b.focus()}
- for(const a of document.querySelectorAll('.sidebar a[href^="#"]')){const target=el(a.getAttribute('href').slice(1));a.classList.toggle('current',!!target&&tabFor(target.closest('#owner > *, .layout > *')||target)===tab)}
+// One canonical section registry drives main tabs, sidebar links and hash deep links.
+const SECTION_TABS=Object.freeze({
+ summary:[['autopilot','AI 자동투자 운용']],
+ market:[['marketDashboard','국내 증시·종목']],
+ broker:[['brokerReadonly','증권사 잔고 조회']],
+ autopilot:[['autopilotPolicy','자동투자 정책·모의주문']],
+ analysis:[['portfolio','내 포트폴리오'],['design','투자분석 설계'],['scenario','시나리오 비교'],['insights','리스크 인사이트']],
+ research:[['strategyLab','AI 전략 연구'],['shortValueResearch','단기 가치발굴']],
+ live:[['liveTrading','AI 실거래 준비']],
+ report:[['export','보고서 내보내기']]
+});
+const TAB_OF=Object.freeze(Object.fromEntries(
+ Object.entries(SECTION_TABS).flatMap(([tab,items])=>items.map(([id])=>[id,tab]))
+));
+function tabFor(node){
+ if(!node)return 'analysis';
+ if(node.id==='ownerSummary'||node.id==='ownerTabs'||node.id==='ownerSubtabs')return '*';
+ if(node.id&&TAB_OF[node.id])return TAB_OF[node.id];
+ return 'analysis';
 }
-function routeHash(){const id=location.hash.slice(1);const target=id&&el(id);if(!target||!el('owner').contains(target)){showTab('summary');return}
- const holder=target.closest('#owner > section, #owner > div, .layout > section')||target;showTab(tabFor(holder));requestAnimationFrame(()=>target.scrollIntoView({block:'start'}))}
+function tabTargets(){
+ const owner=el('owner'),out=[];
+ for(const child of owner.children){
+  if(child.classList.contains('layout'))out.push(...child.children);
+  else out.push(child);
+ }
+ return out;
+}
+function navigateInvestSection(id,{focus=false}={}){
+ if(!TAB_OF[id])return;
+ history.replaceState(null,'',location.pathname+location.search+'#'+encodeURIComponent(id));
+ showTab(TAB_OF[id],{section:id,focus});
+}
+function showTab(tab,{section,focus=false}={}){
+ const items=SECTION_TABS[tab]||SECTION_TABS.summary;
+ const selected=items.some(([id])=>id===section)?section:items[0][0];
+ for(const node of tabTargets()){
+  if(tabFor(node)==='*')continue;
+  if(node.id===selected)node.removeAttribute('data-tab-hidden');
+  else node.setAttribute('data-tab-hidden','');
+ }
+ // The nested analysis layout must disappear when all its children are hidden.
+ for(const child of el('owner').children){
+  if(!child.classList.contains('layout'))continue;
+  const anyVisible=[...child.children].some(node=>!node.hasAttribute('data-tab-hidden'));
+  if(anyVisible)child.removeAttribute('data-tab-hidden');
+  else child.setAttribute('data-tab-hidden','');
+ }
+ if(selected==='strategyLab'&&!labLoaded)loadStrategyLab();
+ if(selected==='shortValueResearch'&&!shortValueReadinessLoaded)loadShortValueReadiness();
+ for(const button of document.querySelectorAll('#ownerTabs [data-tab]')){
+  const active=button.dataset.tab===tab;
+  button.setAttribute('aria-selected',String(active));
+  button.tabIndex=active?0:-1;
+ }
+ const subnav=el('ownerSubtabs');
+ subnav.replaceChildren();
+ subnav.hidden=items.length<=1;
+ if(!subnav.hidden){
+  for(const [id,label] of items){
+   const button=document.createElement('button');
+   button.type='button';button.setAttribute('role','tab');
+   button.setAttribute('aria-controls',id);
+   button.dataset.section=id;button.textContent=label;
+   const active=id===selected;
+   button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;
+   button.addEventListener('click',()=>navigateInvestSection(id));
+   subnav.append(button);
+  }
+ }
+ for(const a of document.querySelectorAll('.sidebar a[href^="#"]')){
+  const active=a.getAttribute('href')==='#'+selected;
+  a.classList.toggle('current',active);
+  if(active)a.setAttribute('aria-current','location');
+  else a.removeAttribute('aria-current');
+ }
+ if(focus){
+  const b=el('ownerSubtabs').querySelector('[aria-selected="true"]');
+  if(b)b.focus();
+  else document.querySelector('#ownerTabs [aria-selected="true"]')?.focus();
+ }
+}
+function routeHash(){
+ let id;
+ try{id=decodeURIComponent(location.hash.slice(1))}catch{id=''}
+ let selected=TAB_OF[id]?id:null;
+ if(!selected&&id){
+  const target=el(id);
+  const owner=el('owner');
+  let node=target;
+  while(node&&node!==owner){
+   if(node.id&&TAB_OF[node.id]){selected=node.id;break}
+   node=node.parentElement;
+  }
+ }
+ if(!selected){showTab('summary');return}
+ showTab(TAB_OF[selected],{section:selected});
+ requestAnimationFrame(()=>el('ownerSubtabs').scrollIntoView({block:'start'}));
+}
 function kpi(id,text,state){const node=el(id);if(!node)return;node.textContent=text;if(state)node.parentElement.dataset.state=state}
 function touchUpdated(){kpi('kpiUpdated',new Date().toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}))}
 function unlockOwner(){kpi('kpiAuth','완료','ok');routeHash();el('owner').hidden=false;el('authMessage').hidden=true;setStepUp('done');render();loadAutopilot();loadStage2Preset();loadBrokerSelection();refreshLiveMfa()}
@@ -814,8 +902,8 @@ function init(){
  el('policySave').addEventListener('click',savePolicy);el('apStart').addEventListener('click',()=>changeState('PAPER_TRADING'));el('apPause').addEventListener('click',()=>changeState('PAUSED'));
  el('apStop').addEventListener('click',emergencyStop);el('paperForm').addEventListener('submit',paperOrder);
  el('apWeekly').addEventListener('click',()=>showReport('weekly'));el('apMonthly').addEventListener('click',()=>showReport('monthly'));
- for(const b of document.querySelectorAll('#ownerTabs [data-tab]'))b.addEventListener('click',()=>{showTab(b.dataset.tab);history.replaceState(null,'',location.pathname+location.search)});
- el('ownerTabs').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;const list=[...document.querySelectorAll('#ownerTabs [data-tab]')];const i=list.findIndex(b=>b.getAttribute('aria-selected')==='true');const n=list[(i+(e.key==='ArrowRight'?1:list.length-1))%list.length];showTab(n.dataset.tab,{focus:true});e.preventDefault()});
+ for(const b of document.querySelectorAll('#ownerTabs [data-tab]'))b.addEventListener('click',()=>navigateInvestSection(SECTION_TABS[b.dataset.tab][0][0]));
+ el('ownerTabs').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;const list=[...document.querySelectorAll('#ownerTabs [data-tab]')];const i=list.findIndex(b=>b.getAttribute('aria-selected')==='true');const n=list[(i+(e.key==='ArrowRight'?1:list.length-1))%list.length];navigateInvestSection(SECTION_TABS[n.dataset.tab][0][0]);n.focus();e.preventDefault()});
  if(typeof globalThis.addEventListener==='function')globalThis.addEventListener('hashchange',()=>{if(!el('owner').hidden)routeHash()});
  el('stepUpButton').addEventListener('click',openStepUp);el('stepUpForm').addEventListener('submit',submitStepUp);el('stepUpCancel').addEventListener('click',()=>el('stepUpDialog').close());
  authenticate();
