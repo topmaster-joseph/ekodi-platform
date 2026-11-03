@@ -6,11 +6,18 @@ import { createHash } from 'node:crypto';
 const source = fs.readFileSync('tenant-finance-admin.js', 'utf8');
 const admin = fs.readFileSync('workspace-admin-page.js', 'utf8');
 
-test('common banking UI has exactly three stable task tabs', () => {
-  assert.ok(source.includes("const FINANCE_TABS=[['accounts','계좌'],['ledger','거래내역'],['transfers','이체']];"));
-  for (const marker of ["panel('accounts',accountsPanel)", "panel('ledger',ledgerPanel)", "panel('transfers',transfersPanel)"]) assert.ok(source.includes(marker), marker);
+test('common banking UI has four stable task tabs including accounting reports', () => {
+  assert.ok(source.includes("const FINANCE_TABS=[['accounts','계좌'],['ledger','거래내역'],['reports','회계보고서'],['transfers','이체']];"));
+  for (const marker of ["panel('accounts',accountsPanel)", "panel('ledger',ledgerPanel)", "panel('reports',reportPanel)", "panel('transfers',transfersPanel)"]) assert.ok(source.includes(marker), marker);
   assert.ok(!source.includes("panel('overview',overviewPanel)"));
   assert.ok(!source.includes("panel('import',"));
+});
+
+test('reports tab derives organization-specific printable and CSV summaries from the scoped ledger',()=>{
+  for(const marker of ['ACCOUNTING_PROFILES','accountingProfile(scope,mode)','bankReportForm','reportRows','reportHtml','data-report-print','data-report-export'])assert.ok(source.includes(marker),marker);
+  assert.ok(source.includes("if(/mission/.test(key))return ACCOUNTING_PROFILES.mission"));
+  assert.ok(source.includes("if(/cgma|cheonggye|association|merchant/.test(key))return ACCOUNTING_PROFILES.association"));
+  assert.ok(source.includes("if(mode==='church'||/church/.test(key))return ACCOUNTING_PROFILES.church"));
 });
 
 test('legacy query links preserve navigation', () => {
