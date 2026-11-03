@@ -36,3 +36,40 @@ test('autopilot client talks only to the owner API with DOM-safe rendering',asyn
  assert.match(css,/\.autopilot\{/);
  assert.match(css,/\.btn\.danger/);
 });
+
+
+test('My Invest exposes readable context-specific second-level tabs under owner gate',async()=>{
+ const html=await (await investMyRoute(get('/invest'),{})).text();
+ const owner=html.indexOf('<section id="owner" hidden>');
+ assert.ok(owner>0,'owner authentication gate must remain');
+ for(const id of ['ownerTabs','detailContext','detailHeading','detailCrumb','detailTabs']){
+  assert.ok(html.indexOf('id="'+id+'"')>owner,id+' stays owner-only');
+ }
+ assert.match(html,/role="tablist" aria-label="선택한 메뉴의 세부 기능"/);
+ assert.match(html,/id="detailTabs"[^>]*><\/nav>/,'detail tab labels must be generated from current section');
+ const js=await (await investMyRoute(get('/invest/app.js'),{})).text();
+ for(const text of [
+  "research:[['strategyLab','전략 비교·검증'],['shortValueResearch','단기 가치발굴·공시']]",
+  "analysis:[['portfolio','내 포트폴리오'],['design','투자분석 설계'],['scenario','시나리오 비교'],['insights','리스크 인사이트']]",
+  'function renderDetailTabs(group,selectedId)',
+  'function detailForHash(id)',
+  "if(updateUrl)history.replaceState(null,'',location.pathname+location.search+'#'+encodeURIComponent(selected))",
+  "a.setAttribute('aria-current','location')",
+  "b.setAttribute('aria-controls',id)",
+  "el('detailTabs').addEventListener('keydown'"
+ ])assert.ok(js.includes(text),'missing nested-navigation behavior: '+text);
+ assert.match(js,/const found=detailForHash\(hash\)/,'direct links and refresh must restore detail');
+ assert.match(js,/showTab\(found.group,\{detailId:found.id\}\)/,'direct links select their correct detail');
+ assert.doesNotMatch(js,/innerHTML|localStorage\.setItem|sessionStorage\.setItem/);
+});
+
+test('My Invest responsive typography and focus styling keep hierarchy legible',async()=>{
+ const css=await (await investMyRoute(get('/invest/style.css'),{})).text();
+ assert.match(css,/\.detail-context h2\{[^}]*font-size:23px/);
+ assert.match(css,/\.detail-tabs button\{[^}]*font-size:15px/);
+ assert.match(css,/\.sidebar a\{font-size:15px/);
+ assert.match(css,/\.tabs\{display:flex;flex-wrap:wrap/);
+ assert.match(css,/@media\(max-width:700px\)\{\.tabs\{flex-wrap:nowrap;overflow-x:auto\}/);
+ assert.match(css,/\.detail-tabs button:focus-visible/);
+ assert.match(css,/\[data-tab-hidden\]\{display:none!important\}/);
+});
