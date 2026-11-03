@@ -78,15 +78,22 @@ async function throttle(request,env) {
   const result=await env.AUTH_RATE_LIMITER.limit({key:'notifications:'+ip});
   return result?.success!==false;
 }
+export function topicPublisherReadiness(env,topic) {
+  if (!Object.hasOwn(NOTIFICATION_TOPICS,topic)) return {enabled:false,credentialsConfigured:false,ready:false};
+  // Every tenant must be explicitly enabled and use its own isolated credential.
+  // The former platform-global secret is not authorization for tenant events.
+  const enabled=env?.['NOTIFICATION_PUBLISH_'+topic.toUpperCase()+'_ENABLED']==='true';
+  const secret=String(env?.['NOTIFICATION_EVENT_SECRET_'+topic.toUpperCase()]||'');
+  const credentialsConfigured=secret.length>=32;
+  return {enabled,credentialsConfigured,ready:enabled&&credentialsConfigured};
+}
 async function authorizedEvent(request,env,topic) {
-  // Once a topic-specific credential exists, the global legacy credential
-  // must not grant publishing authority to that topic.
-  const topicSecret=Object.hasOwn(NOTIFICATION_TOPICS,topic)
-    ? String(env['NOTIFICATION_EVENT_SECRET_'+topic.toUpperCase()]||'') : '';
-  const secret=topicSecret ? topicSecret : String(env.NOTIFICATION_EVENT_SECRET||'');
+  const readiness=topicPublisherReadiness(env,topic);
+  if (!readiness.ready || request.headers.get('origin')) return false;
+  const secret=String(env['NOTIFICATION_EVENT_SECRET_'+topic.toUpperCase()]);
   const submitted=String(request.headers.get('x-ekodi-notification-secret')||'');
-  if (secret.length<32 || submitted.length!==secret.length || request.headers.get('origin')) return false;
-  const a=await sha(secret), b=await sha(submitted);
+  if(submitted.length!==secret.length)return false;
+  const a=await sha(secret),b=await sha(submitted);
   return a===b;
 }
 export async function handleNotificationApi(request,env) {

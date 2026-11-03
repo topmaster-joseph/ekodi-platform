@@ -48,7 +48,7 @@ test('explicit church/mission flags use separate signed topics without client cr
 test('topic-specific server credentials supersede the legacy global event secret',async()=>{
   let inserted=0;
   const env={NOTIFICATION_EVENT_SECRET:'global_legacy_secret_for_events_123456789',
-    NOTIFICATION_EVENT_SECRET_MISSION:longSecret,
+    NOTIFICATION_PUBLISH_MISSION_ENABLED:'true',NOTIFICATION_EVENT_SECRET_MISSION:longSecret,
     DB:{prepare(){return {bind(){return {async run(){inserted++;return {meta:{changes:1}}}}}}}}};
   const body={idempotencyKey:'mission:devotion:20261102',serviceId:'mission',topic:'mission',
     title:'에코디 매일묵상',body:'발행된 말씀',targetPath:'/ekodimission/'};

@@ -46,8 +46,13 @@ export function mountTenantNotificationMetrics(root,{topic,load}={}){
             ' · 발행 지연 '+(item.eventsOverdue||0))
         );
         const when=item.lastEventAt?new Date(item.lastEventAt):null;
-        line.append(create('small','마지막 발행: '+(when&&Number.isFinite(when.getTime())
-          ?when.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'기록 없음')));
+        line.append(
+          create('small','자동 발행 준비: '+(item.publisher?.ready?'완료':'대기')+
+            ' · 서비스 허용 '+(item.publisher?.enabled?'켜짐':'꺼짐')+
+            ' · 전용 인증키 '+(item.publisher?.credentialsConfigured?'설정됨':'미설정')),
+          create('small','마지막 발행: '+(when&&Number.isFinite(when.getTime())
+            ?when.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'기록 없음'))
+        );
         rows.append(line);
       }
       status.textContent=snapshot.topics.length
