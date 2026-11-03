@@ -39,6 +39,19 @@ test('Kakao/SMS share string has exactly date, title, single-line body, canonica
  assert.throws(()=>formatDevotionShareMessage({date:sample.date,title:'x',excerpt:'y',url:'https://evil.test/a'}),/invalid_devotion_url/);
 });
 
+test('share copy omits repeated title or section label without deleting meaningful prayer text',()=>{
+ const date='2026-11-03',url='https://ekodi.kr/ekodimission/devotion?date=2026-11-03#prayer';
+ const title='에코디선교회 오늘의 매일묵상 · 묵상기도';
+ const format=excerpt=>formatDevotionShareMessage({date,title,excerpt,url});
+ assert.equal(format(title).split('\n').length,3,'whole repeated headline omitted');
+ assert.equal(format('묵상기도').split('\n').length,3,'repeated short title omitted');
+ const revised=format('묵상기도: 주님, 오늘 우리를 인도하소서.');
+ assert.equal(revised.split('\n').length,4);
+ assert.equal(revised.split('\n')[2],'주님, 오늘 우리를 인도하소서.','meaningful prayer text preserved');
+ assert.equal(revised.split(url).length,2,'canonical URL occurs once');
+ assert.equal(format('서로 돕고 살리는 하루를 주소서.').split('\n').length,4);
+});
+
 test('speech reading uses passage, Scripture, reflection, question, action and prayer, with bounded chunks',()=>{
  const segments=devotionSpeechSegments(sample);
  assert.ok(segments[0].includes(sample.passage));

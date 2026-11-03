@@ -33,12 +33,23 @@ export function formatDevotionShareMessage({date, title, excerpt, url}) {
   const day = ['일', '월', '화', '수', '목', '금', '토'][utc.getUTCDay()];
   const cleanUrl = new URL(url);
   if (cleanUrl.origin !== 'https://ekodi.kr' || !cleanUrl.pathname.startsWith('/')) throw new Error('invalid_devotion_url');
-  const heading=compact(title),body=preview(excerpt);
+  const heading=compact(title),rawBody=preview(excerpt);
   const headline=heading.replace(/^(\S+)\s+\1(?=\s|$)/u,'$1');
+  // Avoid repeated titles and labels while keeping any genuinely new prayer or message.
+  const normalize=text=>compact(text).replace(/[·:;,.!?。~\-–—()[\]{}]/gu,'').replace(/\s+/gu,'');
+  let body=rawBody;
+  for(const part of [headline,...headline.split(/\s*·\s*/u).slice(-1)]){
+    if(!body)break;
+    const p=normalize(part),b=normalize(body);
+    if(p.length>=4 && b.length>=4 && p.includes(b)){body='';break;}
+    if(body.startsWith(part) && /^(?:$|[\s·:;,.!?。~\-–—])/u.test(body.slice(part.length))){
+      body=body.slice(part.length).replace(/^[\s·:;,.!?。~\-–—]+/u,'').trim();
+    }
+  }
   return [
     `${Number(y)}년 ${Number(m)}월 ${Number(d)}일 ${day}요일`,
     headline,
-    body===headline?'':body,
+    body,
     cleanUrl.href,
   ].filter(Boolean).join('\n');
 }

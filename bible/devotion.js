@@ -370,7 +370,7 @@ function boot(root) {
       ['song.mrTitle','MR 제목','text'],
       ['questions','적용 질문 · 각 행에 분류|질문','textarea'],
       ['action','오늘의 실천','textarea'],['family','가정·어린이','textarea'],
-      ['prayer','한줄기도 · 기도 예문','textarea'],
+      ['prayer','묵상기도 · 기도문','textarea'],
     ];
     const bindings = new Map();
     const getValue = path => {
