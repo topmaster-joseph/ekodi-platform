@@ -311,8 +311,8 @@ async function showPaidMessages(h){
   if(c.contact_shared)card.append(button('내 연락처 공유하기',async()=>{
    const contact=prompt('상대에게 공유할 본인의 휴대전화번호 또는 이메일을 입력해 주세요. (입력 전까지 공개되지 않습니다.)');
    if(!contact?.trim())return;
-   if(!confirm('연락처 제3자 제공 동의\n받는 사람: '+c.display_name+' (선택한 동행 회원)\n제공 목적: 상호 동의한 회원 간 자율적인 연락\n제공 항목: 입력하신 휴대전화번호 또는 이메일\n상대방 보유·이용 기간: 상대방이 삭제할 때까지 (이미 전달한 연락처는 회수할 수 없습니다)\n동의 거부권: 동의하지 않아도 다른 서비스는 이용할 수 있으며 연락처 전달만 제한됩니다.\n\n'+contact.trim()+'를 공유하시겠습니까?'))return;
-   try{await api('/messages/'+c.id+'/contact',{method:'POST',body:{contact:contact.trim(),share_consent:true}});notice(card,'연락처가 상대방에게 전달되었습니다. 대화 내용에서 확인할 수 있습니다.');}
+   if(!confirm('연락처 제3자 제공 동의 (2026-11-03 v1)\n받는 사람: '+c.display_name+' (선택한 동행 회원)\n제공 목적: 상호 동의한 회원 간 자율적인 연락\n제공 항목: 입력하신 휴대전화번호 또는 이메일\n상대방 보유·이용 기간: 상대방이 삭제할 때까지 (이미 전달한 연락처는 회수할 수 없습니다)\n동의 거부권: 동의하지 않아도 다른 서비스는 이용할 수 있으며 연락처 전달만 제한됩니다.\n\n'+contact.trim()+'를 공유하시겠습니까?'))return;
+   try{await api('/messages/'+c.id+'/contact',{method:'POST',body:{contact:contact.trim(),share_consent:true,consent_version:'singles-contact-v1-20261103'}});notice(card,'연락처가 상대방에게 전달되었습니다. 대화 내용에서 확인할 수 있습니다.');}
    catch(e){notice(card,errorText(e))}
   },'outline'));
   card.append(button('대화 내용 보기',messageThread(card,c.id)));
