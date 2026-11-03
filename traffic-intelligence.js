@@ -46,7 +46,7 @@ export function trafficSiteIdForHost(value) {
 // URL's first segment separate from the browser's self-reported service id.
 // Cloudflare zone request aggregates remain host-scoped and are not split here.
 export const ROOT_PATH_SITE_IDS = Object.freeze({
-  ai:'ai', bible:'bible', books:'books', community:'community',
+  ai:'ai', bible:'bible', books:'books', ekodibooks:'books', community:'community',
   ekodichurch:'church', ekodimission:'mission', ekodibiz:'biz',
   ekodimall:'mall', ekodilab:'lab', cgma:'cgma', cheonggye:'cheonggye',
   seonammedi:'seonammedi', pgm:'pgm', jadam:'jadam',
@@ -54,7 +54,7 @@ export const ROOT_PATH_SITE_IDS = Object.freeze({
   joseph:'joseph', live:'live', trade:'trade', journal:'journal',
   publishing:'publishing', invest:'invest', money:'money', social:'social',
   author:'author', business:'business', delivery:'delivery',
-  education:'edu', energy:'energy', support:'support', life:'life',
+  edu:'edu', education:'edu', energy:'energy', support:'support', life:'life',
   management:'management', cafe:'cafe', messenger:'messenger',
   insurance:'insurance', work:'work', space:'space', experience:'experience',
   lab:'lab', pay:'pay', stores:'stores',
