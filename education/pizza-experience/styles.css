@@ -42,7 +42,21 @@
 #pizza-exp .live-dot{width:9px;height:9px;border-radius:50%;background:#5c915d}
 #pizza-exp .stage-tools{display:flex;gap:7px;flex-wrap:wrap}
 #pizza-exp .tool-button{border:1px solid #e6d4bd;background:white;border-radius:10px;padding:6px 11px;font-size:.79rem;font-weight:800}
-#pizza-exp .progress-track{height:5px;background:#f4e6d4}#pizza-exp .progress-track span{height:100%;display:block;background:#d56a39;width:7.14%;transition:width .2s}
+#pizza-exp .progress-track{height:5px;background:#f4e6d4}#pizza-exp .progress-track span{height:100%;display:block;background:#d56a39;width:7.1429%;transition:width .2s}
+#pizza-exp #progressBar[aria-valuenow="1"] #progressFill{width:7.1429%}
+#pizza-exp #progressBar[aria-valuenow="2"] #progressFill{width:14.2857%}
+#pizza-exp #progressBar[aria-valuenow="3"] #progressFill{width:21.4286%}
+#pizza-exp #progressBar[aria-valuenow="4"] #progressFill{width:28.5714%}
+#pizza-exp #progressBar[aria-valuenow="5"] #progressFill{width:35.7143%}
+#pizza-exp #progressBar[aria-valuenow="6"] #progressFill{width:42.8571%}
+#pizza-exp #progressBar[aria-valuenow="7"] #progressFill{width:50.0000%}
+#pizza-exp #progressBar[aria-valuenow="8"] #progressFill{width:57.1429%}
+#pizza-exp #progressBar[aria-valuenow="9"] #progressFill{width:64.2857%}
+#pizza-exp #progressBar[aria-valuenow="10"] #progressFill{width:71.4286%}
+#pizza-exp #progressBar[aria-valuenow="11"] #progressFill{width:78.5714%}
+#pizza-exp #progressBar[aria-valuenow="12"] #progressFill{width:85.7143%}
+#pizza-exp #progressBar[aria-valuenow="13"] #progressFill{width:92.8571%}
+#pizza-exp #progressBar[aria-valuenow="14"] #progressFill{width:100.0000%}
 #pizza-exp .scene{min-height:440px;padding:42px clamp(18px,5vw,54px);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(circle at top left,#fff8e5,#fff 65%);position:relative}
 #pizza-exp .scene-label{color:#a64f2c;letter-spacing:.16em;text-transform:uppercase;font-size:.8rem;font-weight:900;margin:0 0 9px}
 #pizza-exp .scene h3{font-size:clamp(1.7rem,4.5vw,3.35rem);letter-spacing:-.055em;line-height:1.27;margin:0 0 17px;max-width:750px}
@@ -56,6 +70,7 @@
 #pizza-exp .answer-buttons button,#pizza-exp .topping-buttons button{background:white;border:2px solid #e9c99e;padding:10px 18px;border-radius:13px;font-weight:900;min-height:48px}
 #pizza-exp .answer-buttons button:hover,#pizza-exp .topping-buttons button:hover{background:#fff1d5}
 #pizza-exp .answer-feedback{min-height:35px;font-weight:900;color:#376a44;margin-top:14px;font-size:1.05rem}
+#pizza-exp .answer-feedback.is-incorrect{color:#a04429}
 #pizza-exp .pizza-builder{display:flex;flex-direction:column;align-items:center;gap:8px}
 #pizza-exp .make-pizza{width:210px;height:210px;border-radius:50%;border:15px solid #db9948;box-shadow:0 10px 0 #b46c2f;background:#fbd376;position:relative;overflow:hidden;flex:none}
 #pizza-exp .make-pizza .placed-topping{position:absolute;font-size:1.5rem;line-height:1;transform:translate(-50%,-50%)}
