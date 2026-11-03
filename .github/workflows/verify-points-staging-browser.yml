@@ -130,10 +130,13 @@ jobs:
           d1 "INSERT INTO sessions (token_hash,admin_id,expires_at,created_at) VALUES ('$token_hash',$admin_id,'$expires','$now')" >/dev/null
           session=''
           for attempt in 1 2 3 4 5 6; do  # new Access policies can take a moment to propagate
-            session="$(curl -fsS -H "cf-access-client-id: ${CF_ACCESS_CLIENT_ID:-}" -H "cf-access-client-secret: ${CF_ACCESS_CLIENT_SECRET:-}" -H "Authorization: Bearer $token" "$ADMIN_STAGING/api/session" || true)"
+            meta="$(curl -sS -o /tmp/session.json -w '%{http_code} %{content_type} %{redirect_url}' -H "cf-access-client-id: ${CF_ACCESS_CLIENT_ID:-}" -H "cf-access-client-secret: ${CF_ACCESS_CLIENT_SECRET:-}" -H "Authorization: Bearer $token" "$ADMIN_STAGING/api/session" || true)"
+            session="$(cat /tmp/session.json 2>/dev/null || true)"
             printf '%s' "$session" | jq -e '.role' >/dev/null 2>&1 && break
-            echo "staging /api/session not ready (attempt $attempt)"; sleep 10
+            body="$(printf '%s' "$session" | head -c 160 | tr -d '\r\n' | sed 's/[^[:print:]]//g')"
+            echo "::warning::staging /api/session attempt $attempt: $meta :: ${body}"; sleep 10
           done
+          printf '%s' "$session" | jq -e '.role' >/dev/null 2>&1 || { echo '::error::staging admin session was not accepted (see warnings above)'; exit 1; }
           printf '%s' "$session" | jq -e '.role=="super_admin"' >/dev/null
           echo "POINTS_E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
           echo 'Ephemeral development fixtures, member links and staging admin session ready.'

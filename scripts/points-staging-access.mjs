@@ -38,8 +38,9 @@ async function stagingApps(){
 
 if(mode==='open'){
   const apps=await stagingApps();
-  console.log(`Access apps protecting staging hosts: ${apps.map(a=>a.name||a.id).join(', ')||'none'}`);
-  if(!apps.length){console.log('No Access app on staging hosts; no service token needed.');process.exit(0);}
+  const all=await api('/access/apps?per_page=200');
+  console.log(`::notice::Access apps in account: ${(all||[]).length}; matching staging hosts: ${apps.map(a=>`${a.name||a.id}[${a.type||'?'}]`).join(', ')||'none'}`);
+  if(!apps.length){console.log('::warning::No Access app matched the staging hosts; continuing without a service token.');process.exit(0);}
   const created=await api('/access/service_tokens',{method:'POST',body:JSON.stringify({name,duration:'24h'})});
   if(!created?.client_id||!created?.client_secret||!created?.id)throw new Error('service token not issued');
   env('E2E_ACCESS_TOKEN_ID',created.id);
@@ -52,7 +53,7 @@ if(mode==='open'){
     policies.push(`${app.id}:${policy.id}`);
   }
   env('E2E_ACCESS_POLICIES',policies.join(','));
-  console.log(`Ephemeral Access service token issued and allowed on ${policies.length} staging app(s).`);
+  console.log(`::notice::Ephemeral Access service token issued and allowed on ${policies.length} staging app(s).`);
 }else{
   let failed=0;
   for(const pair of String(process.env.E2E_ACCESS_POLICIES||'').split(',').filter(Boolean)){
