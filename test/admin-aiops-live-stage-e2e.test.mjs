@@ -8,9 +8,9 @@ const source=read('ai-ops-admin.js');
 const workflow=read('.github/workflows/deploy-site-core.yml');
 const dispatcher=read('scripts/converge-orchestrated-pr-merge.mjs');
 
-test('production Admin browser verifier exercises all five AI Ops stages',()=>{
+test('production Admin browser verifier exercises all six AI Ops stages',()=>{
   assert.match(e2e,/function verifyAiOpsStageWorkspace\(\)/);
-  for(const id of ['overview','providers','sites','reports','command']){
+  for(const id of ['overview','providers','sites','reports','command','eval']){
     assert.ok(e2e.includes("'"+id+"'"),'missing live stage '+id);
     assert.ok(source.includes('data-aiops-stage-tab="'+id+'"'),'source stage missing '+id);
   }
@@ -21,6 +21,9 @@ test('production Admin browser verifier exercises all five AI Ops stages',()=>{
   assert.match(e2e,/ArrowRight/);
   assert.match(e2e,/width:390,height:844/);
   assert.match(e2e,/AI Ops mobile tab layout clipped/);
+  assert.match(e2e,/AI Ops Eval Lab overlaps overview stage/);
+  assert.match(e2e,/eval:'#aiEvalLabPanel'/);
+  assert.match(e2e,/mobile.count!==stages.length/);
 });
 
 test('browser verifies live assets with only synthetic read-only session and protected release',()=>{
