@@ -1,0 +1,25 @@
+:root{font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;color:#26372d;background:#f5f8f4}
+*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}
+.o2o-wrap{max-width:1080px;margin:0 auto;padding:clamp(18px,4vw,40px) 18px 72px}
+.o2o-hero{padding:clamp(16px,3vw,34px) 0 30px}.o2o-eyebrow{letter-spacing:.08em;color:#3e7755;font-size:12px;font-weight:800}
+.o2o-hero h1{font-size:clamp(27px,4vw,43px);line-height:1.3;letter-spacing:-.035em;margin:12px 0}
+.o2o-hero p{max-width:780px;line-height:1.75;color:#586c5e}
+.o2o-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.o2o-panel,.o2o-notice{border:1px solid #dbe6dc;background:white;border-radius:18px;padding:clamp(18px,3vw,28px)}
+.o2o-panel h2,.o2o-notice h2{font-size:21px;margin:0 0 22px}
+#o2o-form{display:flex;flex-direction:column;gap:9px}label{font-weight:700;font-size:14px}
+#o2o-form input,#o2o-form select{width:100%;min-height:46px;padding:10px 12px;border:1px solid #b8c9bc;border-radius:9px;background:white;color:#17271d;margin-bottom:12px}
+.o2o-help,.o2o-notice p{color:#526657;font-size:14px;line-height:1.75}
+button,.o2o-actions a{cursor:pointer;border:1px solid #b3c7b8;background:#fff;border-radius:9px;min-height:44px;padding:10px 13px;color:#24412d;text-align:center;font-weight:700;text-decoration:none}
+.o2o-primary{background:#25563a;color:white;border-color:#25563a}
+#o2o-status{min-height:26px;color:#28543b;font-size:14px;line-height:1.5;margin:14px 0 0}
+.o2o-preview{text-align:center}.o2o-qr{width:min(100%,300px);aspect-ratio:1;margin:0 auto 15px;display:grid;place-items:center;border:1px solid #dfebe0;border-radius:14px;padding:14px;background:#fff}
+.o2o-qr canvas,.o2o-qr img{max-width:100%;width:100%;height:auto;object-fit:contain}
+.o2o-url{overflow-wrap:anywhere;font-size:13px;color:#4d6555;min-height:40px;line-height:1.5}
+.o2o-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.o2o-actions a{background:#e5f0e8}
+.o2o-notice{margin-top:18px;background:#f9fbf8}.o2o-notice h2{margin-bottom:10px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #589c6c;outline-offset:2px}
+@media(max-width:680px){.o2o-grid{grid-template-columns:1fr}.o2o-wrap{padding-left:14px;padding-right:14px}.o2o-panel h2{margin-bottom:15px}}
+@media(max-width:340px){.o2o-actions{grid-template-columns:1fr}}
+@media print{body{background:#fff}.o2o-hero,#o2o-form,.o2o-help,#o2o-status,.o2o-notice,.o2o-actions{display:none!important}.o2o-grid{display:block}.o2o-panel{border:0}.o2o-preview{break-inside:avoid}.o2o-qr{width:300px}}
