@@ -425,7 +425,7 @@ test('Naver manual capture is admin-only, validates the URL and publishes the va
 
 // ---------------------------------------------------------------- IndexNow
 
-function indexNowFetch({ naverStatus = 200 } = {}) {
+function indexNowFetch({ naverStatus = 200, publicStatus = 202 } = {}) {
   const posts = [];
   const fetchImpl = async (url, init = {}) => {
     const u = String(url);
@@ -435,7 +435,7 @@ function indexNowFetch({ naverStatus = 200 } = {}) {
     assert.ok(['https://searchadvisor.naver.com/indexnow', 'https://api.indexnow.org/indexnow'].includes(u), `unexpected network ${u}`);
     const body = JSON.parse(init.body);
     posts.push({ url:u, body });
-    return new Response('', { status:u.includes('naver') ? naverStatus : 202 });
+    return new Response('', { status:u.includes('naver') ? naverStatus : publicStatus });
   };
   return { fetchImpl, posts };
 }
@@ -480,6 +480,58 @@ test('IndexNow submits only changed canonical URLs, in bounded batches, to Naver
   assert.equal(batches(Array.from({ length:25000 }, (_, i) => i), 50000).length, 3, 'never above the 10,000-URL IndexNow limit');
 });
 
+test('IndexNow incomplete registry and Mall source reads are never falsely reported as successful', async () => {
+  const { env, raw } = await seed();
+  const normal = indexNowFetch();
+  const now = Date.parse('2026-10-23T19:10:00.000Z'); // 04:10 KST
+  const failingRegistry = async () => { throw new Error('temporary discovery unavailable'); };
+  const partial = await runScheduledIndexNow(env, { now, fetch:normal.fetchImpl, registry:failingRegistry });
+  assert.equal(partial.ran,true);
+  assert.equal(partial.ok,false,'partially collected public URLs are not a completed daily discovery run');
+  assert.equal(partial.status,'source_partial');
+  assert.equal(partial.failedBatches,0,'Naver submission can succeed even while discovery is incomplete');
+  assert.match(partial.sourceErrors.join('|'),/registry:temporary discovery unavailable/);
+  assert.ok(partial.submitted>0,'successfully discovered URLs may still be safely submitted');
+  let state=raw.prepare('SELECT last_status,last_success_at FROM marketing_scheduler_state WHERE task_key=?').get(INDEXNOW_TASK_KEY);
+  assert.equal(state.last_status,'failed');
+  assert.equal(state.last_success_at,null);
+  assert.equal((await runScheduledIndexNow(env,{now:now+30*60_000,fetch:normal.fetchImpl,registry:registryOf([])})).reason,'NOT_DUE','bounded one-hour retry avoids hot-looping');
+  const restored = await runScheduledIndexNow(env, {
+    now:now+61*60_000,fetch:normal.fetchImpl,
+    registry:registryOf([{url:'https://ekodi.kr/new-public-page',updatedAt:'2026-10-24'}])
+  });
+  assert.equal(restored.ran,true);
+  assert.equal(restored.ok,true);
+  assert.equal(restored.changed,1,'the URL absent during the outage is recovered on the same KST day');
+  state=raw.prepare('SELECT last_status,last_success_at FROM marketing_scheduler_state WHERE task_key=?').get(INDEXNOW_TASK_KEY);
+  assert.equal(state.last_status,'ok');
+  assert.ok(state.last_success_at);
+
+  const brokenMall = await submitChangedUrls(env, {
+    now:now+120*60_000,registry:registryOf([]),
+    fetch:async (url,init)=>String(url).includes('/api/public/products')
+      ? new Response('',{status:503})
+      : normal.fetchImpl(url,init)
+  });
+  assert.equal(brokenMall.ok,false);
+  assert.equal(brokenMall.status,'source_partial');
+  assert.ok(brokenMall.sourceErrors.some(x=>x.startsWith('mall_products:HTTP 503')));
+});
+
+test('IndexNow partner endpoint failures are surfaced separately from accepted Naver submissions', async () => {
+  const { env } = await seed();
+  const partnerDown=indexNowFetch({publicStatus:503});
+  const report=await submitChangedUrls(env,{
+    now:NOW,fetch:partnerDown.fetchImpl,
+    registry:registryOf([{url:'https://ekodi.kr/new-public-article',updatedAt:'2026-10-24'}])
+  });
+  assert.equal(report.ok,true,'existing Naver-led submission contract is preserved');
+  assert.equal(report.status,'partner_partial','the overall status must not imply all endpoints accepted');
+  assert.equal(report.partnerFailures,1);
+  assert.equal(report.failedBatches,0);
+  assert.ok(report.batches[0].some(result=>result.endpoint==='indexnow'&&result.status===503&&!result.ok));
+});
+
 test('IndexNow daily schedule runs once per KST day after 04:00 and never throws', async () => {
   const { env } = await seed();
   const { fetchImpl } = indexNowFetch();
@@ -499,7 +551,7 @@ test('IndexNow daily schedule runs once per KST day after 04:00 and never throws
 
 // ---------------------------------------------------------------- 배포 매핑 · 크론 연결
 
-const converge = fs.readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+const converge = fs.readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8').replace(/\r\n/g,'\n');
 function selector(name) {
   const start = converge.indexOf(`const ${name}=`);
   const end = converge.indexOf(');\n', start);
