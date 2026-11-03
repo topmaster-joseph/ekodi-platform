@@ -65,3 +65,32 @@ test('missing membership, disabled provider, malformed responses fail closed',as
     assert.equal((await wrong.json()).error,'invalid_store_response');
   }finally{globalThis.fetch=previous}
 });
+
+test('malformed or missing upstream metrics never silently become invented zeros',async()=>{
+  const previous=globalThis.fetch;
+  const good={workspace_id:'s1',slug:'jadam',kind:'store',name:'매장',
+    store:{order_enabled:true},
+    summary:{canonical_menu_count:0,platform_listing_count:0,connected_channel_count:0}};
+  try{
+    for(const patch of [
+      {summary:{canonical_menu_count:null,platform_listing_count:0,connected_channel_count:0}},
+      {summary:{canonical_menu_count:'0',platform_listing_count:0,connected_channel_count:0}},
+      {summary:{canonical_menu_count:-1,platform_listing_count:0,connected_channel_count:0}},
+      {summary:{canonical_menu_count:0,platform_listing_count:3.5,connected_channel_count:0}},
+      {summary:{canonical_menu_count:0,platform_listing_count:0}},
+      {store:{order_enabled:null}}
+    ]){
+      const response={workspace:{...good,...patch}};
+      globalThis.fetch=async()=>new Response(JSON.stringify(response),{status:200,headers:{'content-type':'application/json'}});
+      const result=await worker.fetch(request('?slug=jadam',bearer),env,{});
+      assert.equal(result.status,502,JSON.stringify(patch));
+      assert.deepEqual(await result.json(),{error:'invalid_store_metrics'});
+    }
+    globalThis.fetch=async()=>new Response(JSON.stringify({workspace:good}),{status:200,headers:{'content-type':'application/json'}});
+    const valid=await worker.fetch(request('?slug=jadam',bearer),env,{});
+    assert.equal(valid.status,200,'genuine zero metrics must remain valid');
+    const body=await valid.json();
+    assert.equal(body.summary.canonicalMenuCount,0);
+    assert.equal(body.summary.orderEnabled,true);
+  }finally{globalThis.fetch=previous}
+});
