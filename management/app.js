@@ -14,8 +14,8 @@ function storedSession(){
 }
 function activeSession(){return Boolean(state.session?.accessToken&&state.session?.user?.id&&Number(state.session?.expiresAt||0)>Math.floor(Date.now()/1000)+30)}
 function selectionKey(){return activeSession()?`${SELECTION_KEY}:${state.session.user.id}`:null}
-function saveSession(value){clearSpaces();state.session=value;state.selection=null;sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));renderIdentity();if(state.catalog.length)renderMemberPicker()}
-function clearSession(){state.session=null;state.selection=null;clearSpaces();$('memberModuleLinks').replaceChildren();sessionStorage.removeItem(SESSION_KEY);renderIdentity()}
+function saveSession(value){clearSpaces();resetRequestRouting();state.session=value;state.selection=null;sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));renderIdentity();if(state.catalog.length)renderMemberPicker()}
+function clearSession(){state.session=null;state.selection=null;clearSpaces();resetRequestRouting();$('memberModuleLinks').replaceChildren();sessionStorage.removeItem(SESSION_KEY);renderIdentity()}
 function storedSelection(){
   const fallback={workspaceKind:'person',modules:['chief','marketing']};
   const key=selectionKey();
@@ -247,6 +247,72 @@ function renderModuleLaunches(){
   note.textContent=count?'연결 서비스에서 별도로 회원·이용권한을 확인합니다.':'선택한 전문 AI 가운데 현재 연결 가능한 서비스가 없습니다. 준비 중인 기능은 실행되지 않습니다.';
   host.append(note);
 }
+const REQUEST_KEYWORDS=Object.freeze({
+  marketing:['마케팅','홍보','광고','콘텐츠','검색노출','블로그','인스타','릴스','캠페인'],
+  menu:['메뉴','상품명','메뉴판','옵션','가격표'],
+  order:['주문','접수','포장','주문서','qr'],
+  review:['리뷰','후기','평점','댓글','답글'],
+  customer:['고객','재방문','단골','회원관리','휴면'],
+  sales:['매출','판매량','수익','매출액','매출분석'],
+  inventory:['재고','품절','발주','재료'],
+  delivery:['배달','배송','라이더','배차'],
+  settlement:['정산','수수료','입금','손익'],
+  staff:['직원','근무','근태','교육'],
+  booking:['예약','노쇼','방문일정']
+});
+function resetRequestRouting(){
+  const input=$('managementRequest');if(input)input.value='';
+  $('requestMatches').replaceChildren();
+  $('requestRoutingStatus').textContent='요청을 입력하면 관련 전문 AI를 안내합니다.';
+}
+function classifyManagementRequest(value){
+  const normalized=String(value||'').toLowerCase().trim().slice(0,500);
+  if(normalized.length<2)return [];
+  return state.catalog.map((module,index)=>{
+    const keywords=REQUEST_KEYWORDS[module.id]||[];
+    const matched=keywords.filter(word=>normalized.includes(word));
+    return {module,index,score:matched.length};
+  }).filter(item=>item.score>0)
+    .sort((a,b)=>b.score-a.score||a.index-b.index)
+    .slice(0,3);
+}
+function routeManagementRequest(){
+  const host=$('requestMatches');host.replaceChildren();
+  const status=$('requestRoutingStatus');
+  if(!activeSession()){status.textContent='로그인한 회원만 업무 안내를 사용할 수 있습니다.';return}
+  const prompt=String($('managementRequest').value||'').trim().slice(0,500);
+  if(prompt.length<2){status.textContent='해결하고 싶은 업무를 두 글자 이상 입력해 주세요.';return}
+  if(!state.catalog.length){status.textContent='전문 AI 목록을 확인하지 못했습니다. 다시 접속해 주세요.';return}
+  const matches=classifyManagementRequest(prompt);
+  if(!matches.length){status.textContent='일치하는 분야를 찾지 못했습니다. 위의 전문 AI 목록에서 직접 선택해 주세요.';return}
+  const chosen=new Set(state.selection?.modules||[]);
+  for(const {module} of matches){
+    const card=document.createElement('article');card.className='request-match';
+    const title=document.createElement('h3');title.textContent=module.name;
+    const stateLabel=document.createElement('small');
+    stateLabel.textContent=module.state==='existing'?'기존 서비스 연결':module.state==='foundation'?'기초 설계 · 준비 중':'준비 중';
+    const copy=document.createElement('p');copy.textContent=module.description||moduleDescription(module.id);
+    card.append(title,stateLabel,copy);
+    const link=safeModuleUrl(module);
+    if(link&&chosen.has(module.id)){
+      const open=document.createElement('a');open.href=link;open.className='module-launch';open.textContent=module.name+' 열기';
+      card.append(open);
+    }else if(link){
+      const hint=document.createElement('p');hint.className='note';hint.textContent='이용할 AI 선택에서 해당 서비스를 선택·저장하면 열 수 있습니다.';
+      card.append(hint);
+    }else{
+      const hint=document.createElement('p');hint.className='note';hint.textContent='아직 연결되지 않은 기능입니다. 업무 실행은 시작되지 않습니다.';
+      card.append(hint);
+    }
+    host.append(card);
+  }
+  status.textContent=`관련 전문 분야 ${matches.length}개를 찾았습니다. 입력한 문장의 단어를 기준으로 분류한 안내이며 실제 업무를 실행하지 않았습니다.`;
+}
+function useRequestExample(value){
+  if(!activeSession())return;
+  $('managementRequest').value=value;
+  routeManagementRequest();
+}
 function saveSelection(){
   if(!activeSession()){location.assign(authUrl());return}
   const modules=[...document.querySelectorAll('#memberModuleGrid input:checked')].map(input=>input.value);state.selection={workspaceKind:$('workspaceKind').value,modules};localStorage.setItem(selectionKey(),JSON.stringify(state.selection));$('saveStatus').textContent=`이 브라우저에 저장됨 · ${modules.length}개 AI 선택 · 이용권한은 각 서비스가 별도로 확인합니다.`;renderModuleLaunches();
@@ -258,6 +324,11 @@ async function boot(){
   if(activeSession())await loadVerifiedSpaces();
 }
 
+$('routeRequest').addEventListener('click',routeManagementRequest);
+$('exampleSales').addEventListener('click',()=>useRequestExample('매출을 늘리고 싶어요'));
+$('exampleMenu').addEventListener('click',()=>useRequestExample('배달앱 메뉴를 한 번에 관리하고 싶어요'));
+$('exampleReview').addEventListener('click',()=>useRequestExample('리뷰 대응이 밀렸어요'));
+$('exampleOrder').addEventListener('click',()=>useRequestExample('주문을 한곳에서 보고 싶어요'));
 $('refreshSpaces').addEventListener('click',loadVerifiedSpaces);
 $('saveSelection').addEventListener('click',saveSelection);$('logoutButton').addEventListener('click',logout);$('authLink').addEventListener('click',event=>{if(activeSession()){event.preventDefault();logout()}});
 boot();
