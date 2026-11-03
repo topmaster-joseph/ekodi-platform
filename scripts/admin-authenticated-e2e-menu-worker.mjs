@@ -598,6 +598,31 @@ async function verifyNormal(tab, alreadyActive, started) {
 }
 
 
+// ADMIN-PROMOTION-STATUS-20261103 — 검색노출·홍보 현황 tabs: the visible panel carries
+// the recommended-prompt card for 「에코디와 대화하기」, and the autopost tab opens the
+// MarketingAI '게시 · 홍보' console. Read-only: nothing is filled, sent or saved.
+const PROMOTION_STATUS_TABS = new Set(['search-visibility','promotion-autopost','promotion-channels','growth-os']);
+async function verifyPromotionStatus(tab, alreadyActive, started) {
+  await verifyNormal(tab, alreadyActive, started);
+  stage('promotion-prompts');
+  await page.waitForFunction(section => {
+    const card = document.querySelector(`[data-promo-prompts-for="${section}"]`);
+    const panel = card?.closest('[data-panel]');
+    return Boolean(card && !card.hidden && panel && !panel.hidden && !panel.classList.contains('hidden-panel')
+      && card.querySelectorAll('[data-promo-fill]').length >= 1 && String(card.innerText || '').includes('에코디와 대화하기'));
+  }, menuId, { timeout: 10_000 });
+  if (menuId === 'promotion-autopost') {
+    await page.waitForFunction(() => Boolean(document.querySelector('#marketingAiAdminPanel [data-marketing-tab="channels"].active')), null, { timeout: 12_000 });
+  }
+  const proof = await page.evaluate(section => {
+    const visible = [...document.querySelectorAll('[data-promo-prompts-for]')].filter(node => !node.hidden).map(node => node.dataset.promoPromptsFor);
+    return { promptCards: visible, promptCount: document.querySelectorAll(`[data-promo-prompts-for="${section}"] [data-promo-fill]`).length };
+  }, menuId);
+  if (proof.promptCards.length !== 1 || proof.promptCards[0] !== menuId) throw new Error(`promotion prompt card not scoped to ${menuId}: ${JSON.stringify(proof)}`);
+  const last = results[results.length - 1];
+  if (last?.id === menuId) Object.assign(last, { promotionStatusTab: true, productionMutation: false, ...proof });
+}
+
 // ADMIN-ARCH-ISOLATED-PROOF-20261029 — independent actual authenticated
 // production viewport measurement, no Social Hub dependency and no mutation.
 // Screenshots crop the read-only architecture layers, not account/identity UI.
@@ -961,6 +986,7 @@ try {
       else if (menuId === 'personal-finance') await verifyPersonalFinance(trigger, alreadyActive, started);
       else if (menuId === 'social-accounts') await verifySocialInventory(trigger, alreadyActive, started);
       else if (menuId === 'architecture') await verifyArchitectureResponsive(trigger, alreadyActive, started);
+      else if (PROMOTION_STATUS_TABS.has(menuId)) await verifyPromotionStatus(trigger, alreadyActive, started);
       else await verifyNormal(trigger, alreadyActive, started);
     }
   }
