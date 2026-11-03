@@ -9,6 +9,7 @@ import {
 
 const VISIT_PATH = '/api/telemetry/visit';
 const ADMIN_PATH = '/api/control/traffic-intelligence';
+const PUBLIC_SUMMARY_PATH = '/api/telemetry/public-summary';
 const encoder = new TextEncoder();
 
 function responseHeaders(origin = '') {
@@ -283,9 +284,81 @@ async function handleAdmin(request, env) {
   }
 }
 
+// Public counters are a deliberately coarse projection of existing anonymous browser
+// session aggregates. They are NOT people counts, pageviews or Cloudflare requests.
+function publicCounter(value) {
+  const count = Math.max(0, Number(value) || 0);
+  // Small non-zero daily aggregates are masked so a public footer cannot expose
+  // an individual's visit to a low-traffic site.
+  return count > 0 && count < 5 ? { label:'5 미만', suppressed:true } : { label:count.toLocaleString('ko-KR'), suppressed:false };
+}
+
+function utcDayOffset(now, daysAgo) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo)).toISOString().slice(0, 10);
+}
+
+async function handlePublicSummary(request, env) {
+  const rawOrigin = String(request.headers.get('origin') || '').trim();
+  if (rawOrigin && !isAllowedTelemetryOrigin(rawOrigin, env.ALLOWED_ORIGINS || '')) {
+    return json({ status:'forbidden' }, 403);
+  }
+  const origin = rawOrigin || '';
+  if (request.method !== 'GET') return json({ status:'method_not_allowed' }, 405, origin);
+  const url = new URL(request.url);
+  const sitePath = String(url.searchParams.get('site_path') || '').trim().toLowerCase();
+  // Reject non-site surfaces instead of accidentally reporting the root counter.
+  if (/^(?:api|admin|auth|my|privacy|terms)(?:\/|$)/.test(sitePath) || sitePath.length > 90) {
+    return json({ status:'not_site' }, 404, origin);
+  }
+  const host = rawOrigin ? normalizeTrafficHost(new URL(rawOrigin).hostname) : normalizeTrafficHost(url.hostname);
+  const siteId = safeSiteId(trafficSiteIdForVisit(host, sitePath, url.searchParams.get('site_id')));
+  if (!siteId || (siteId === 'root' && sitePath && sitePath !== 'root')) {
+    return json({ status:'not_site' }, 404, origin);
+  }
+  if (!env.DB?.prepare) return json({ status:'unavailable' }, 503, origin);
+  try {
+    const now = new Date();
+    const today = utcDayOffset(now, 0);
+    const sevenStart = utcDayOffset(now, 6);
+    const thirtyStart = utcDayOffset(now, 29);
+    const result = await env.DB.prepare(
+      "SELECT day, COUNT(*) AS sessions FROM traffic_human_sessions WHERE site_id = ? AND day >= ? GROUP BY day"
+    ).bind(siteId, thirtyStart).all();
+    const rows = result.results || [];
+    let todayCount = 0, sevenCount = 0, thirtyCount = 0;
+    for (const row of rows) {
+      const day = String(row.day || '');
+      const count = Math.max(0, Number(row.sessions) || 0);
+      if (day === today) todayCount += count;
+      if (day >= sevenStart) sevenCount += count;
+      if (day >= thirtyStart) thirtyCount += count;
+    }
+    const response = json({
+      status:'ready',
+      siteId,
+      basis:'anonymous_browser_sessions',
+      timezone:'UTC',
+      measuredThrough:now.toISOString(),
+      today:publicCounter(todayCount),
+      last7Days:publicCounter(sevenCount),
+      last30Days:publicCounter(thirtyCount),
+      note:'동의된 브라우저의 익명 일일 세션 집계입니다. 실제 사람 수나 페이지뷰가 아니며, 수집 거부 브라우저는 제외됩니다.',
+    }, 200, origin);
+    response.headers.set('cache-control', 'public, max-age=300, stale-while-revalidate=600');
+    return response;
+  } catch (error) {
+    // A fresh table is not proof of zero traffic, and collector gaps must not
+    // be papered over with fabricated zeros.
+    if (missingTrafficSchema(error)) return json({ status:'pending' }, 503, origin);
+    console.error('Traffic public summary read error', error);
+    return json({ status:'unavailable' }, 503, origin);
+  }
+}
+
 export async function handleTrafficIntelligence(request, env) {
   const path = new URL(request.url).pathname;
   if (path === VISIT_PATH) return handleVisit(request, env);
+  if (path === PUBLIC_SUMMARY_PATH) return handlePublicSummary(request, env);
   if (path === ADMIN_PATH) return handleAdmin(request, env);
   return null;
 }
