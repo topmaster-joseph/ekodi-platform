@@ -109,6 +109,13 @@ jobs:
           probe admin 'https://ekodi.kr/admin' '<title>EKODI Admin</title>'
           probe support 'https://ekodi.kr/support/' 'EKODI SUPPORT · OPPORTUNITY FIRST'
           probe support_health 'https://ekodi.kr/support/health' '"service":"ekodi-support-opportunity"'
+          # 서남권국립의대 customer domain: gateway hop vs direct origin, assets and data API.
+          probe seonammedi_idn 'https://xn--3e0b8b58jw4co4mnpll3k.kr/' '<title>'
+          probe seonammedi_idn_warm 'https://xn--3e0b8b58jw4co4mnpll3k.kr/' '<title>'
+          probe seonammedi_origin 'https://ekodi.kr/seonammedi/' '<title>'
+          probe seonammedi_appjs 'https://xn--3e0b8b58jw4co4mnpll3k.kr/app.js' 'fetch('
+          probe seonammedi_page_data 'https://xn--3e0b8b58jw4co4mnpll3k.kr/api/seonammedi/page-data' '{'
+          probe seonammedi_notices 'https://xn--3e0b8b58jw4co4mnpll3k.kr/board/notices' '<title>'
 
           {
             echo 'summary<<EOF'
