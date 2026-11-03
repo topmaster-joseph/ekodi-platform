@@ -51,6 +51,7 @@ function loginLink(){
 }
 function enableForms(enabled){
   connected=enabled;
+  $('jubileeRegister').disabled=!enabled;
   for(const elm of $('createForm').querySelectorAll('button,input,select'))elm.disabled=!enabled;
 }
 async function load(){
@@ -173,6 +174,20 @@ async function loadJobs(){
     holder.textContent=(data.jobs||[]).slice(0,12).map(j=>j.kind+' · '+j.status+' · '+j.created_at).join('\n')||'요청된 AI 작업이 없습니다.';
   }catch(e){holder.textContent=errorText(e);}
 }
+$('jubileeRegister').addEventListener('click',async()=>{
+  if(!connected)return;
+  const control=$('jubileeRegister');
+  control.disabled=true;
+  $('jubileeStatus').textContent='Checking existing projects...';
+  try{
+    const response=await api('jubilee/register',{method:'POST',body:'{}'});
+    await load();
+    const names=(response.projects||[]).map(x=>x.project?.title).filter(Boolean);
+    const newly=(response.projects||[]).filter(x=>x.created).length;
+    $('jubileeStatus').textContent=names.join(' / ')+' — 신규 '+newly+'권, 기존 '+(names.length-newly)+'권. 원고 파일 입고 및 출판 승인은 별도입니다.';
+  }catch(error){$('jubileeStatus').textContent='등록 실패: '+errorText(error);}
+  finally{control.disabled=!connected;}
+});
 $('createForm').addEventListener('submit',async(e)=>{
   e.preventDefault();if(!connected)return;
   try {
