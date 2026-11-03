@@ -386,7 +386,7 @@ jobs:
             sleep 3
           done
 
-      - name: Verify rendered nine-language church life hub
+      - name: Verify rendered nine-language church homepage and canonical devotion entry
         shell: bash
         run: |
           set -euo pipefail
@@ -405,7 +405,7 @@ jobs:
             await page.setViewport({width:1440,height:1100});
             for(const locale of locales){
               await page.goto(`https://ekodi.kr/ekodichurch/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
-              await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('[data-ekodi-life-hub]')&&document.querySelector('#life-reflection-form'),{timeout:25000},locale);
+              await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),{timeout:25000},locale);
               if(extended.has(locale)) await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
               if(locale!=='ko-KR'){
                 await page.waitForFunction(expected=>{
@@ -422,17 +422,18 @@ jobs:
                 return {
                   lang:document.documentElement.lang,
                   hero:document.querySelector('.hero h1')?.innerText||'',
-                  life:document.querySelector('[data-ekodi-life-hub]')?.innerText||'',
+                  devotion:!!document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),
+                  legacyHub:!!document.querySelector('[data-ekodi-life-hub],#life-reflection-form'),
                   body:clone.innerText,
                   options:[...document.querySelectorAll('[data-ekodi-language-control] select option')].map(o=>o.value)
                 };
               });
               assert.equal(snapshot.lang,locale);
               assert.deepEqual(snapshot.options,['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id']);
-              assert.ok(snapshot.life.length>200,`${locale} life hub is unexpectedly empty`);
+              assert.equal(snapshot.devotion,true,`${locale} canonical devotion card missing`);
+              assert.equal(snapshot.legacyHub,false,`${locale} retired life record UI returned`);
               if(locale==='ko-KR'){
                 assert.match(snapshot.hero,/부르심에서 교제로/);
-                assert.match(snapshot.life,/말씀이 일상이 되고/);
               }else{
                 const match=snapshot.body.match(/.{0,25}[가-힣].{0,25}/);
                 if(match) console.error(`${locale} residual Hangul: ${match[0]}`);
@@ -449,7 +450,7 @@ jobs:
             assert.equal(memberHeader.language,true,'member header must show the shared rounded language selector');
             assert.deepEqual(memberHeader.globalLinks,[],'member header must not expose EKODI root/My EKODI links');
             assert.equal(memberHeader.myPanel,false,'member page must not render the My EKODI handoff panel');
-            console.log('Rendered life hub and local-only member header verified.');
+            console.log('Nine-language canonical devotion and local-only member header verified.');
           }finally{
             await browser.close();
           }
@@ -474,7 +475,7 @@ jobs:
             const page=await browser.newPage();
             const failures=[];
             page.on('pageerror',e=>failures.push(String(e)));
-            for(const device of [{name:'desktop',width:1440,height:900},{name:'mobile',width:390,height:844}]){
+            for(const device of [{name:'mobile-320',width:320,height:740},{name:'mobile-390',width:390,height:844},{name:'tablet-768',width:768,height:1000},{name:'desktop-1366',width:1366,height:900},{name:'desktop-1440',width:1440,height:900}]){
               await page.setViewport({width:device.width,height:device.height,deviceScaleFactor:1});
               for(const locale of locales){
                 const url=origin+'?lang='+encodeURIComponent(locale)+'&release='+release;
@@ -492,7 +493,15 @@ jobs:
                     giving:!!document.querySelector('.giving-strip'),
                     // The shared shell wraps My Page in the central login (/auth/?…return_to=…/ekodichurch/my/).
                     member:[...document.querySelectorAll('.site-header a')].some(a=>{const h=a.getAttribute('href')||'';try{const u=new URL(h,location.origin);return u.pathname==='/ekodichurch/my/'||(u.pathname.startsWith('/auth')&&new URL(u.searchParams.get('return_to')||'/',location.origin).pathname==='/ekodichurch/my/')}catch{return false}}),
-                    qtin:!!document.querySelector('.site-header a[href="/qtin/church"]')
+                    qtin:!!document.querySelector('.site-header a[href="/qtin/church"]'),
+                    canonicalDevotion:!!document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),
+                    legacyLifeRecord:!!document.querySelector('[data-ekodi-life-hub],#life-reflection-form'),
+                    overflow:document.documentElement.scrollWidth>innerWidth+1,
+                    mobileGreetingGap:(()=>{
+                      const greeting=document.querySelector('.hero .eyebrow')?.getBoundingClientRect();
+                      const header=document.querySelector('.site-header')?.getBoundingClientRect();
+                      return greeting&&header?Math.round(greeting.top-header.bottom):null;
+                    })()
                   };
                 });
                 assert.equal(initial.language,locale);
@@ -502,6 +511,10 @@ jobs:
                 assert.equal(initial.sharedLive,true,'shared EKODI Live link retained');
                 assert.equal(initial.member,true,'site-local member navigation retained');
                 assert.equal(initial.qtin,true,'QTIN group-order link in the church header '+locale+' '+device.name);
+                assert.equal(initial.canonicalDevotion,true,'canonical daily devotion card missing '+locale+' '+device.name);
+                assert.equal(initial.legacyLifeRecord,false,'legacy journal UI returned '+locale+' '+device.name);
+                assert.equal(initial.overflow,false,'horizontal overflow '+locale+' '+device.name);
+                if(device.width<=800) assert.ok(initial.mobileGreetingGap>=0&&initial.mobileGreetingGap<100,'mobile header-to-greeting gap too large '+locale+' '+device.name+' gap '+initial.mobileGreetingGap);
                 assert.ok(initial.header.left>=-2&&initial.header.right<=device.width+2,'header clipped '+locale+' '+device.name);
                 if(locale==='ko-KR'){
                   await page.screenshot({path:'/tmp/church-approved-layout-proof/'+device.name+'-home.png',fullPage:false});
