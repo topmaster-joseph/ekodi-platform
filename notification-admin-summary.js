@@ -1,4 +1,4 @@
-import {handleAdminSessionFastPath} from './admin-session-fastpath.js';
+import {notificationAdminAuthority} from './notification-admin-authority.js';
 import {NOTIFICATION_TOPICS} from './notification-control.js';
 
 const PREFIX='/api/notifications/admin/summary';
@@ -12,25 +12,18 @@ function json(data,status=200){
     'referrer-policy':'no-referrer'
   }});
 }
-async function authorized(request,env){
-  const sessionUrl=new URL(request.url);
-  sessionUrl.pathname='/api/session';sessionUrl.search='';
-  const result=await handleAdminSessionFastPath(new Request(sessionUrl,{
-    method:'GET',headers:{authorization:request.headers.get('authorization')||''}
-  }),env);
-  if(!result?.ok)return false;
-  const session=await result.json().catch(()=>null);
-  return session?.authenticated===true&&session.role==='super_admin';
-}
-export async function handleNotificationAdminSummary(request,env){
+export async function handleNotificationAdminSummary(request,env,{transport=fetch}={}){
   const u=new URL(request.url);
   if(u.pathname!==PREFIX)return null;
   if(request.method!=='GET')return json({ok:false,error:'method_not_allowed'},405);
   if(!env.DB?.prepare)return json({ok:false,error:'notification_storage_unavailable'},503);
-  if(!await authorized(request,env))return json({ok:false,error:'super_admin_required'},403);
+  const actor=await notificationAdminAuthority(request,env,{transport});
+  if(!actor)return json({ok:false,error:'notification_admin_required'},403);
   const topic=u.searchParams.get('topic')||'all';
   if(topic!=='all'&&!TOPICS.includes(topic))return json({ok:false,error:'invalid_topic'},400);
-  const selected=topic==='all'?TOPICS:[topic];
+  const visible=actor.kind==='platform'?TOPICS:actor.allowedTopics;
+  if(topic!=='all'&&!visible.includes(topic))return json({ok:false,error:'topic_access_denied'},403);
+  const selected=topic==='all'?visible:[topic];
   const topics=[];
   try {
     for(const key of selected){
@@ -57,7 +50,7 @@ export async function handleNotificationAdminSummary(request,env){
   }catch{
     return json({ok:false,error:'notification_metrics_unavailable'},503);
   }
-  return json({ok:true,scope:topic,topics,webPushEnabled:
+  return json({ok:true,scope:actor.kind==='platform'?topic:'authorized_sites',topics,webPushEnabled:
     env.NOTIFICATIONS_SEND_ENABLED==='true'&&Boolean(env.NOTIFICATION_VAPID_PRIVATE_JWK)&&Boolean(env.NOTIFICATION_VAPID_PUBLIC_KEY),
     updatedAt:new Date().toISOString(),deviceDetailsExposed:false});
 }
