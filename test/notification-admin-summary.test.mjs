@@ -65,3 +65,52 @@ test('no admin summary can be used to mutate event/subscriber data',async()=>{
   assert.equal((await handleNotificationAdminSummary(new Request(url,{method:'POST',headers:{authorization:'Bearer '+f.token}}),{DB:f.db})).status,405);
   assert.equal(f.raw.prepare('SELECT COUNT(*) AS n FROM notification_devices').get().n,0);
 });
+
+test('period windows isolate historical events while subscriber count remains current',async()=>{
+  const f=fixture();await f.authorize();
+  const now=new Date('2026-11-03T12:00:00.000Z');
+  f.raw.prepare('INSERT INTO notification_devices VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(
+    'device-1','private-device-token','inbox:private-device-token','','','["mission"]','2026-11',
+    '2026-10-01T00:00:00Z','2026-10-01T00:00:00Z','2026-11-03T01:00:00Z',null);
+  const addEvent=f.raw.prepare('INSERT INTO notification_events (id,idempotency_key,service_id,topic,title,body,target_path,scheduled_at,created_at,status) VALUES(?,?,?,?,?,?,?,?,?,?)');
+  addEvent.run('old','mission:event:20261001','mission','mission','Private old title','Private old message','/ekodimission/',
+    '2026-10-01T12:00:00Z','2026-10-01T12:00:00Z','done');
+  addEvent.run('recent','mission:event:20261102','mission','mission','Private new title','Private new message','/ekodimission/',
+    '2026-11-02T12:00:00Z','2026-11-02T12:00:00Z','pending');
+  const addDelivery=f.raw.prepare('INSERT INTO notification_deliveries (event_id,device_id,status,next_attempt_at,delivered_at) VALUES(?,?,?,?,?)');
+  addDelivery.run('old','device-1','delivered','2026-10-01T12:00:00Z','2026-10-01T12:02:00Z');
+  addDelivery.run('recent','device-1','pending','2026-11-02T12:01:00Z',null);
+  const query=async window=>{
+    const u=new URL('https://ekodi.kr/api/notifications/admin/summary?topic=mission');
+    u.searchParams.set('window',window);
+    const r=await handleNotificationAdminSummary(new Request(u,{headers:{authorization:'Bearer '+f.token}}),{DB:f.db},{now});
+    return {status:r.status,body:await r.json(),headers:r.headers};
+  };
+  const last7=await query('7d');
+  assert.equal(last7.status,200);
+  assert.equal(last7.body.window,'7d');
+  assert.equal(last7.body.subscriberCountScope,'current_active_devices');
+  assert.equal(last7.body.topics[0].subscriberDevices,1);
+  assert.equal(last7.body.topics[0].events,1);
+  assert.equal(last7.body.topics[0].deliveries,1);
+  assert.equal(last7.body.topics[0].pending,1);
+  assert.equal(last7.body.topics[0].stalled,1);
+  assert.equal(last7.body.topics[0].eventsOverdue,1);
+  assert.equal(last7.body.topics[0].lastEventAt,'2026-11-02T12:00:00Z');
+  assert.equal(last7.body.topics[0].lastDeliveredAt,null);
+  const all=await query('all');
+  assert.equal(all.body.cutoff,null);
+  assert.equal(all.body.topics[0].subscriberDevices,1);
+  assert.equal(all.body.topics[0].events,2);
+  assert.equal(all.body.topics[0].delivered,1);
+  assert.equal(all.body.topics[0].stalled,1);
+  assert.equal(all.headers.get('cache-control'),'no-store');
+  const thirty=await query('30d');
+  assert.equal(thirty.body.topics[0].events,1);
+  const invalid=await query('365d');
+  assert.equal(invalid.status,400);
+  assert.equal(invalid.body.error,'invalid_window');
+  for(const secret of ['private-device-token','Private old title','Private new message']){
+    assert.equal(JSON.stringify(all.body).includes(secret),false);
+  }
+});
