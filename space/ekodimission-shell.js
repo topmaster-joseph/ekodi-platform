@@ -473,6 +473,25 @@ function formatActivityShare(organization,activity,date,url,action='신청하기
       }
     }
   }
+  // The Mission public shell owns navigation; the shared EKODI footer only
+  // adds site-scoped visit statistics to its existing native footer. Keep the
+  // serialized public HTML unchanged for the Mission ownership contract.
+  function mountNativeFooterTraffic(){
+    if(!/^\/ekodimission(?:\/|$)/.test(location.pathname))return;
+    document.documentElement.dataset.ekodiShellSurface='public';
+    if(window.__EKODI_USER_UI_FOOTER_BOOTED||document.querySelector('script[data-mission-footer-traffic]'))return;
+    const beacon=document.createElement('script');
+    beacon.src='https://ekodi.kr/shell/native-visit-beacon.js';
+    beacon.async=false;
+    beacon.dataset.missionFooterBeacon='shared';
+    document.head.append(beacon);
+    const script=document.createElement('script');
+    script.src='https://ekodi.kr/shell/user-ui-footer.js';
+    script.async=false;
+    script.dataset.missionFooterTraffic='shared';
+    document.head.append(script);
+  }
+  mountNativeFooterTraffic();
   mountMissionShares();
 
   const mounted=mountNavigation();
