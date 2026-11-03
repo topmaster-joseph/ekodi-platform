@@ -21,7 +21,7 @@ export default {
       const assetRequest=new Request(new URL('/reading/',url),request);
       return injectEkodiShell(withHeaders(await env.ASSETS.fetch(assetRequest)),'community');
     }
-    if(/^\/reading\/(?:app\.js|topics\.js|styles\.css)$/.test(readingPath)){
+    if(/^\/reading\/(?:app\.js|topics\.js|meeting-mode\.js|meeting-ui\.js|styles\.css)$/.test(readingPath)){
       const assetRequest=new Request(new URL(readingPath,url),request);
       return withHeaders(await env.ASSETS.fetch(assetRequest));
     }

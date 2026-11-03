@@ -1,4 +1,5 @@
 import { TOPICS, CATEGORIES, topicById, formatFacilitatorGuide } from './topics.js';
+import { initializeMeetingUI } from './meeting-ui.js';
 
 const $ = selector => document.querySelector(selector);
 const state = { category: '전체', topic: topicById(new URLSearchParams(location.search).get('topic')), questionIndex: 0 };
@@ -34,8 +35,11 @@ function renderFilters() {
 }
 
 function selectTopic(id, scrollToGuide = true) {
+  if (state.topic.id !== id && meetingUI.hasNotes() &&
+    !window.confirm('현재 진행 메모가 있습니다. 기록을 내려받지 않은 채 다른 주제로 이동하시겠습니까?')) return;
   state.topic = topicById(id);
   state.questionIndex = 0;
+  meetingUI.onTopicChanged();
   const url = new URL(location.href);
   url.searchParams.set('topic', state.topic.id);
   history.replaceState(null, '', url.pathname + url.search + url.hash);
@@ -76,6 +80,7 @@ function renderQuestion() {
   $('#currentQuestion').textContent = questions[state.questionIndex];
   $('#prevQuestion').disabled = state.questionIndex === 0;
   $('#nextQuestion').disabled = state.questionIndex >= questions.length - 1;
+  meetingUI.renderQuestion();
 }
 
 function renderWorkshop() {
@@ -142,6 +147,17 @@ function reflectionText() {
 function hasReflection() {
   return ['#readingInsight', '#readingDialogue', '#readingAction'].some(selector => $(selector).value.trim());
 }
+
+const meetingUI = initializeMeetingUI({
+  getTopic: () => state.topic,
+  getQuestionIndex: () => state.questionIndex,
+  setQuestionIndex: index => {
+    state.questionIndex = Math.min(Math.max(index, 0), state.topic.questions.length - 1);
+    renderQuestion();
+  },
+  announce,
+  copyText,
+});
 
 $('#prevQuestion').addEventListener('click', () => {
   state.questionIndex = Math.max(0, state.questionIndex - 1);
