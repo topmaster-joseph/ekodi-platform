@@ -211,7 +211,7 @@ async function loadOpenDartOfficial(e){
  const year=el('dartFinancialYear').value.trim();
  const report=el('dartReportCode').value;
  const fs=el('dartStatementType').value;
- if(!/^\\d{8}$/.test(corp)){setText('dartResearchStatus','DART 기업 고유번호 8자리를 확인해 주세요. 종목코드 6자리는 사용할 수 없습니다.');return}
+ if(!/^\d{8}$/.test(corp)){setText('dartResearchStatus','DART 기업 고유번호 8자리를 확인해 주세요. 종목코드 6자리는 사용할 수 없습니다.');return}
  const query=new URLSearchParams({corp_code:corp,year,report,fs});
  button.disabled=true;el('dartResearchResults').replaceChildren();
  setText('dartResearchStatus','OpenDART 공식 기업개황을 확인하고 있습니다.');
