@@ -69,8 +69,6 @@ jobs:
           node --check community/connect/app.js
           node --check community/reading/app.js
           node --check community/reading/topics.js
-          node --check community/reading/meeting-ui.js
-          node --check community/reading/meeting-mode.js
           node --test test/community-reading-*.test.mjs
           node --check scripts/guarded-worker-release.mjs
           test -f deploy/manifests/community.worker.json

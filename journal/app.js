@@ -1,3 +1,5 @@
+import { approvedJournalPhoto } from './media-policy.js';
+
 const COPY = Object.freeze({
   'ko-KR': { intro:'말씀과 삶, 기술과 공동체 사이에서 무엇을 만들고 왜 그렇게 선택했는지를 기록합니다.', manifesto:'기록은 기억을 넘어 책임이 됩니다. 성공뿐 아니라 질문, 실패, 수정, 검증의 흔적까지 남깁니다.', search:'검색', searchLabel:'저널 검색', all:'전체', empty:'조건에 맞는 글이 없습니다.', back:'← 모든 글', why:'WHY JOURNAL', closingTitle:'생각을 저장하지 않고 흘려보냅니다.', closingBody:'에코디의 기록은 특정 조직 안에 가두기 위한 지식이 아니라, 다음 사람과 공동체가 더 자유롭게 시작할 수 있도록 건네는 공공의 흔적을 지향합니다.', min:'분 읽기', original:'한국어 원문과 영문 번역을 함께 제공합니다.' },
   en: { intro:'A living record of what EKODI builds and why, between faith, life, technology, and community.', manifesto:'A record is more than memory. It becomes accountability, including questions, failures, corrections, and verification.', search:'Search', searchLabel:'Search the journal', all:'All', empty:'No articles match these filters.', back:'← All articles', why:'WHY JOURNAL', closingTitle:'Knowledge should flow, not be locked away.', closingBody:'EKODI records are meant to help the next person and community begin with greater freedom, not to trap knowledge inside one organization.', min:'min read', original:'Korean originals include an English reading version.' },
@@ -87,6 +89,19 @@ function matches(post) {
   const haystack = [post.title, post.titleEn, post.excerpt, post.excerptEn, post.categoryLabel, post.categoryLabelEn, ...(post.values || [])].join(' ').toLowerCase();
   return haystack.includes(q);
 }
+function photoCaption(photo) {
+  const caption = [photo.caption, photo.credit].filter(Boolean).map(escapeHtml).join(' · ');
+  return caption ? `<figcaption>${caption}</figcaption>` : '';
+}
+function photoHtml(input, className = '') {
+  const photo = approvedJournalPhoto(input);
+  if (!photo) return '';
+  return `<figure class="journal-photo ${className}"><img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt)}" loading="lazy" decoding="async">${photoCaption(photo)}</figure>`;
+}
+function coverHtml(post, className = '') {
+  return photoHtml(post.coverPhoto, className)
+    || `<div class="journal-thumb ${className} thumb-${Number(post.imageVariant) || 1}" aria-hidden="true"></div>`;
+}
 function renderList() {
   const posts = state.posts.filter(matches);
   empty.hidden = posts.length > 0;
@@ -96,7 +111,7 @@ function renderList() {
     const excerpt = postText(post, 'excerpt');
     const category = isKorean() ? post.categoryLabel : (post.categoryLabelEn || post.categoryLabel);
     return `<a class="journal-card" href="/journal/p/${encodeURIComponent(post.slug)}">
-      <div class="journal-thumb thumb-${Number(post.imageVariant) || 1}" aria-hidden="true"></div>
+      ${coverHtml(post, "journal-card-cover")}
       <div class="journal-card-copy">
         <div class="journal-card-meta"><strong>${escapeHtml(category)}</strong><span>${escapeHtml(dateText(post.publishedAt))}</span><span>${escapeHtml(String(post.readMinutes))} ${escapeHtml(copy().min)}</span></div>
         <h2>${escapeHtml(title)}</h2>
@@ -109,6 +124,7 @@ function renderList() {
 
 function bodyHtml(blocks = []) {
   return blocks.map((block) => {
+    if (block.type === 'photo') return photoHtml(block.photo, 'journal-body-photo');
     if (block.type === 'heading') return `<h2>${escapeHtml(block.text)}</h2>`;
     if (block.type === 'quote') return `<blockquote>${escapeHtml(block.text)}</blockquote>`;
     if (block.type === 'list') return `<ul>${(block.items || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
@@ -126,7 +142,7 @@ function renderArticle(post) {
     <h1 class="article-title">${escapeHtml(title)}</h1>
     <p class="article-deck">${escapeHtml(excerpt)}</p>
     <div class="article-byline"><span>${escapeHtml(post.author?.name || 'EKODI Editorial')}</span><span>${escapeHtml(String(post.readMinutes))} ${escapeHtml(copy().min)}</span><span>${escapeHtml(copy().original)}</span></div>
-    <div class="journal-thumb article-visual thumb-${Number(post.imageVariant) || 1}" aria-hidden="true"></div>
+    ${coverHtml(post, "article-visual")}
     <div class="article-body">${bodyHtml(blocks)}</div>
     <p class="article-disclosure">${escapeHtml(post.author?.disclosure || '')}</p>
   `;
