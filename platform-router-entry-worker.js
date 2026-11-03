@@ -257,7 +257,7 @@ function injectCgmaFooterTraffic(response, request){
   if(/^\/(?:admin|auth|api)(?:\/|$)/i.test(path)||/^\/cgma\/(?:admin|auth|api)(?:\/|$)/i.test(path))return response;
   return new HTMLRewriter()
     .on('html',{element:e=>e.setAttribute('data-ekodi-shell-surface','public')})
-    .on('body',{element:e=>e.append('<script src="https://ekodi.kr/shell/user-ui-footer.js" defer></script>',{html:true})})
+    .on('body',{element:e=>e.append('<script src="https://ekodi.kr/shell/native-visit-beacon.js" defer></script><script src="https://ekodi.kr/shell/user-ui-footer.js" defer></script>',{html:true})})
     .transform(response);
 }
 export async function routeCgmaPublic(request,env,fetchImpl=fetch){
