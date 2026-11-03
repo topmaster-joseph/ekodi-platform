@@ -138,7 +138,7 @@ jobs:
           grep -Fq 'ekodi-journal' /tmp/journal-health.json
           grep -Fq '<rss version="2.0">' /tmp/journal-feed.xml
           grep -Fq 'journal.ekodi.kr' /tmp/journal-posts.json
-          grep -Fiq 'location: https://admin.ekodi.kr/journal' /tmp/journal-admin.headers
+          grep -Fiq 'location: https://ekodi.kr/admin/journal' /tmp/journal-admin.headers
           if [[ "$remote_protected" == '1' ]]; then echo 'Development staging remains Access-protected; exact local runtime contract verified.'; fi
 
   deploy-production:
