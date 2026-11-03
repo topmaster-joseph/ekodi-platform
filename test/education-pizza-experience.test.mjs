@@ -60,3 +60,38 @@ test('strict production CSP supports quiz feedback and progress without inline s
   assert.match(css,/#progressBar\[aria-valuenow="14"\] #progressFill\{width:100\.0000%\}/);
   assert.match(css,/\.answer-feedback\.is-incorrect\{color:/);
 });
+
+test('short copy keeps 14 scenes, safety checklist and complete teaching sequence', () => {
+  assert.match(html, /보고 · 만들고 · 나눠요!/);
+  assert.match(html, /id="pizza-videos"/);
+  assert.match(html, /체험 전에 꼭 확인하세요/);
+  assert.match(js, /도우 → 소스 → 치즈 → 토핑/);
+  assert.equal((js.match(/notes:'/g) || []).length,14);
+  assert.equal((html.match(/<article(?: class="featured")?><time>/g) || []).length,8);
+});
+
+test('video recommendations use actual external source links without autoplay or embed', () => {
+  assert.equal((html.match(/data-pizza-video/g) || []).length,2);
+  assert.match(html, /youtube\.com\/watch\?v=u-EbLZDZ9d4/);
+  assert.match(html, /youtube\.com\/watch\?v=Guhd6XAEtsg/);
+  assert.match(html, /target="_blank" rel="noopener noreferrer"/);
+  assert.doesNotMatch(html, /<iframe/);
+});
+
+test('copyright-safe original audio is opt-in and supports play, stop, volume, and video handoff', () => {
+  const audioPath=resolve(root,'education/pizza-experience/pizza-playtime.mp3');
+  const original=readFileSync(audioPath);
+  assert.ok(original.length>40000 && original.length<800000,'audio size within web budget');
+  assert.match(original.subarray(0,4).toString('latin1'), /^(ID3|ÿû|ÿó)/);
+  assert.match(html, /id="pizzaMusic" src="\.\/pizza-playtime\.mp3" preload="none" loop/);
+  assert.equal((html.match(/data-music-toggle/g) || []).length,2);
+  assert.doesNotMatch(html, /<audio[^>]*\sautoplay/);
+  assert.match(js, /await audio\.play\(\)/);
+  assert.match(js, /audio\.pause\(\)/);
+  assert.match(js, /audio\.currentTime=0/);
+  assert.match(js, /visibilitychange/);
+  assert.match(js, /\[data-pizza-video\]/);
+  assert.match(js, /audio\.volume=Number\(volume\.value\)\/100/);
+  assert.match(css, /\.music-dock/);
+  assert.match(css, /\.media-section/);
+});
