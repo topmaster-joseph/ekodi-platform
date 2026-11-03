@@ -1,0 +1,86 @@
+name: Verify EKODI Points Readiness (Read Only)
+
+# Never deploys schema, changes secrets, activates rewards, or writes DB rows.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Fixed Supabase environment to inspect (read-only)'
+        required: true
+        type: choice
+        options:
+          - production
+          - development
+        default: production
+      require_ready:
+        description: 'Fail the job when the selected environment is not technically ready'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-points-readiness-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate source-contract and read-only behavior
+        run: node --test test/points-release-readiness.test.mjs
+
+  inspect:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    environment: ${{ inputs.target }}
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      TARGET: ${{ inputs.target }}
+      REQUIRE_READY: ${{ inputs.require_ready }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Require authoritative main and fixed target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          case "$TARGET" in production|development) ;; *) exit 2;; esac
+      - name: Resolve existing management credential without logging it
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-${TOKEN_B:-${TOKEN_C:-${TOKEN_D:-}}}}"
+          if [ -z "$token" ]; then echo 'Missing authorized Supabase Management API credential'; exit 2; fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Read-only readiness report (never activate points)
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=("--$TARGET")
+          if [ "$REQUIRE_READY" != 'true' ]; then args+=(--report); fi
+          node scripts/verify-points-release-readiness.mjs "${args[@]}"
+      - name: Record explicit non-activation boundary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### EKODI Points readiness inspection'
+            echo 'Read-only management checks; no DB mutation, deployment, flag changes, or economic authorization.'
+            echo 'Technical readiness is not a release or financial approval.'
+          } >> "$GITHUB_STEP_SUMMARY"
