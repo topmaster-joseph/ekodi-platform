@@ -156,7 +156,7 @@ export function summarizeAutomationForSites({catalog=ADMIN_SERVICE_CATALOG,conne
       pendingJobs:subjectKey&&observed('jobs')?count(published?.pending):null,
       failedJobs:subjectKey&&observed('jobs')?count(published?.failed):null,
       lastPublishedAt:subjectKey&&observed('jobs')?published?.last_published_at||null:null,
-      autonomousPolicy:subjectKey&&observed('policies')?Boolean(Number(policy?.autonomous||0)):null,
+      autonomousPolicy:subjectKey&&observed('policies')&&policy?Boolean(Number(policy.autonomous||0)):null,
     };
   });
 }
@@ -184,6 +184,46 @@ async function siteAutomationSnapshot(db) {
   return {status:Object.values(sources).every(x=>x==='ready')?'ready':'partial',
     sources,sites:summarizeAutomationForSites({...rows,sources}),
     caveat:'Aggregate observations only. No tenant actions, search ranking, or index acceptance is inferred.'};
+}
+
+// Combine the existing Naver IndexNow receipt ledger with the platform-only
+// per-site summary. Successful URL submission is NOT evidence of search indexing.
+// No tenant-local private records or credentials are exposed.
+export function joinSiteIndexNowSubmissions(automation={},indexNow={}) {
+  const ready=indexNow?.status==='naver_submission_only'&&Array.isArray(indexNow.sites);
+  const truncated=ready&&indexNow.truncated===true;
+  const normalize=value=>{
+    let path=String(value||'');
+    while(path.length>1&&path.endsWith('/'))path=path.slice(0,-1);
+    return path||'/';
+  };
+  const safePath=new RegExp('^/[a-z0-9/_-]*$','i');
+  const byPath=new Map();
+  if(ready)for(const record of indexNow.sites){
+    try{
+      const url=new URL(String(record?.siteUrl||''));
+      if(url.origin!=='https://ekodi.kr'||url.search||url.hash||url.username||url.password)continue;
+      const path=normalize(url.pathname);
+      if(!safePath.test(path)||path.includes('//')||byPath.has(path))continue;
+      byPath.set(path,record);
+    }catch{}
+  }
+  return {
+    ...automation,
+    status:automation?.status==='ready'&&ready&&!truncated?'ready':'partial',
+    sources:{...(automation?.sources||{}),indexNow:ready?(truncated?'truncated':'ready'):'unavailable'},
+    sites:(Array.isArray(automation?.sites)?automation.sites:[]).map(site=>{
+      const path=normalize(site?.basePath);
+      const recorded=ready?byPath.get(path):null;
+      const raw=recorded?Number(recorded.submittedPagesInSnapshot):NaN;
+      // A 5,000-row truncated sample cannot prove a missing URL was never sent.
+      const submitted=Number.isFinite(raw)&&raw>=0
+        ?(truncated&&raw===0?null:Math.trunc(raw)):null;
+      return {...site,indexNowSubmittedPages:submitted,
+        lastIndexNowSubmittedAt:recorded?.lastSubmittedAt||null,
+        indexNowSampleTruncated:Boolean(recorded&&truncated)};
+    }),
+  };
 }
 
 // Pure validator exported for executable security/regression tests; HTTP entry still requires super_admin.
@@ -235,7 +275,7 @@ export async function handleSearchVisibilityControl(request,env){
       return json({ok:true,schemaVersion:1,sites,providers:SEARCH_PROVIDER_CATALOG,
         evidence:(evidence.results||[]).filter(x=>sites.some(s=>s.url===x.site_url)),
         evidenceTruncated:(evidence.results||[]).length===6000,
-        audit:history.results||[],indexNow,automation,generatedAt:new Date().toISOString(),
+        audit:history.results||[],indexNow,automation:joinSiteIndexNowSubmissions(automation,indexNow),generatedAt:new Date().toISOString(),
         policy:'manual_confirmation_not_provider_api_verification'});
     }
     if(!String(request.headers.get('content-type')||'').includes('application/json'))return denied(415,'JSON_REQUIRED');
