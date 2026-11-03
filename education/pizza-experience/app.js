@@ -111,7 +111,7 @@ function initialize() {
     document.getElementById('sceneCounter').textContent = String(current + 1) + ' / ' + scenes.length;
     document.getElementById('sceneKind').textContent = item.label;
     document.getElementById('progressBar').setAttribute('aria-valuenow', String(current + 1));
-    document.getElementById('progressFill').style.width = String((current + 1) * 100 / scenes.length) + '%';
+    // Progress width follows the aria-valuenow state in CSS; CSP forbids inline styles.
     document.getElementById('notesText').textContent = item.notes;
     notes.hidden = !showNotes;
     let content = '<p class="scene-label">' + item.label + '</p>';
@@ -191,7 +191,7 @@ function initialize() {
       const correct = Number(choice.dataset.choice) === scenes[current].quiz.correct;
       const feedback = document.getElementById('answerFeedback');
       feedback.textContent = correct ? scenes[current].quiz.success : '괜찮아요! 다시 생각하고 골라 볼까요?';
-      feedback.style.color = correct ? '#34683f' : '#a04429';
+      feedback.classList.toggle('is-incorrect', !correct);
       Array.from(stage.querySelectorAll('[data-choice]')).forEach(function(button){button.setAttribute('aria-pressed',String(button === choice));});
     }
     const toppingButton = event.target.closest('[data-topping]');
