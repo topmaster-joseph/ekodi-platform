@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { makePrivateReleaseTestDb } from './private-release-sqlite-test-support.mjs';
 import { verifyBoundPublisherRelease } from '../publishing/human/publisher-release-rpc-service.js';
+import { publisherAuthorizedForChannel } from '../publishing/human/storefront-release-guard.js';
 
 const digest='sha256:'+'f'.repeat(64);
 const now='2026-10-30T06:10:00.000Z';
@@ -104,4 +105,24 @@ test('release RPC denies editions lacking signed product identity or price',asyn
     assert.equal(proof.authorized,false,'unbound product attributes must fail closed');
   }
  }finally{f.close();}
+});
+
+test('live named Publisher verifier proves the exact bookstore metadata, never a borrowed pointer',async()=>{
+ const f=fixture();try{
+  await f.register();
+  const book={id:'BOOK-EKODI-NEW-003',catalogNo:'EB-NEW-003',title:release().title,
+    author:'저자',directSale:{enabled:true,fileKey:'BOOK-EKODI-NEW-003/ebook.epub'},
+    listPrice:{currency:'KRW',amount:9900},
+    publisherRelease:{...request()}};
+  const binding={verifyPublicRelease:input=>verifyBoundPublisherRelease(f.env,'books',input,now)};
+  assert.equal(await publisherAuthorizedForChannel(binding,book,'books'),true);
+  for(const changed of [
+    {...book,title:'다른 책'},
+    {...book,catalogNo:'EB-FAKE-003'},
+    {...book,author:'다른 저자'},
+    {...book,directSale:{enabled:true,fileKey:'BOOK-EKODI-NEW-003/swapped.epub'}},
+    {...book,listPrice:{currency:'KRW',amount:19900}},
+  ])assert.equal(await publisherAuthorizedForChannel(binding,changed,'books'),false);
+  assert.equal(await publisherAuthorizedForChannel(binding,book,'ekodimall'),false);
+ }finally{f.close()}
 });
