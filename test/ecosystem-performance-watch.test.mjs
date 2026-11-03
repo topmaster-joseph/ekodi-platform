@@ -24,3 +24,12 @@ test('performance guard uses warning and incident response budgets', () => {
 test('performance incident guard forbids risky automatic latency repairs', () => {
   assert.match(workflow, /Do not change DNS, authentication policy, payment configuration, or customer data/);
 });
+
+test('performance guard measures the SeonamMedi customer domain against its origin', () => {
+  for (const target of [
+    'https://xn--3e0b8b58jw4co4mnpll3k.kr/',
+    'https://ekodi.kr/seonammedi/',
+    'https://xn--3e0b8b58jw4co4mnpll3k.kr/app.js',
+    'https://xn--3e0b8b58jw4co4mnpll3k.kr/api/seonammedi/page-data',
+  ]) assert.ok(workflow.includes(target), target);
+});
