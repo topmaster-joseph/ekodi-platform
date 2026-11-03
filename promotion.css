@@ -1,0 +1,68 @@
+/* EKODI Digital Square. Natural Korean wrapping at 320/390/768/1366/1440px. */
+:root{color-scheme:light;--promotion-ink:#102238;--promotion-muted:#53657a;--promotion-border:#dce4ee;--promotion-bg:#f3f7fb;--promotion-accent:#087c91}
+*{box-sizing:border-box}
+html{min-width:0}
+body.promotion-page{margin:0;color:var(--promotion-ink);background:var(--promotion-bg);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR","Malgun Gothic",sans-serif;word-break:keep-all;overflow-wrap:break-word}
+button,select{font:inherit}
+button{cursor:pointer}
+a{color:inherit}
+.promotion-wrap{width:min(1320px,100%);margin-inline:auto;padding:clamp(18px,3vw,40px) clamp(14px,3vw,36px) 56px;min-width:0}
+.promotion-intro{padding:clamp(24px,4vw,44px);border-radius:24px;color:#fff;background:linear-gradient(125deg,#0d223c 0%,#154a69 70%,#136b75 100%);box-shadow:0 18px 40px #17375320}
+.promotion-topline,.promotion-toolbar,.promotion-board-heading,.promotion-bottom{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.promotion-eyebrow,.promotion-small{font-size:clamp(11px,1.2vw,13px);font-weight:800;letter-spacing:.09em}
+.promotion-eyebrow{color:#a8e3ea}
+.promotion-home{font-size:13px;text-decoration:none;border:1px solid #ffffff70;border-radius:999px;padding:8px 12px}
+.promotion-home:hover,.promotion-home:focus-visible{background:#ffffff27}
+.promotion-intro h1{margin:18px 0 8px;font-size:clamp(30px,4.4vw,58px);line-height:1.2;letter-spacing:-.045em}
+.promotion-intro p{margin:0;color:#e2eef5;font-size:clamp(14px,1.5vw,18px);line-height:1.7}
+.promotion-toolbar{align-items:flex-end;flex-wrap:wrap;margin-top:28px}
+.promotion-filters{display:flex;flex-wrap:wrap;gap:7px;min-width:0}
+.promotion-filter,.promotion-tool{border:1px solid #ffffff72;background:transparent;color:#fff;border-radius:10px;padding:10px 14px;min-height:42px;font-size:14px;font-weight:750}
+.promotion-filter.is-active{background:#fff;color:#16354c;border-color:#fff}
+.promotion-filter:focus-visible,.promotion-tool:focus-visible,.promotion-card a:focus-visible,.promotion-share:focus-visible{outline:3px solid #44b8e2;outline-offset:3px}
+.promotion-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.promotion-site-label{font-size:12px;color:#d9e6ee;font-weight:700}
+.promotion-tools select{min-height:42px;min-width:132px;max-width:220px;border:1px solid #ffffff9c;border-radius:10px;background:#fff;color:#193347;padding:9px 10px}
+.promotion-board-section{margin-top:26px}
+.promotion-board-heading{align-items:flex-end;margin-bottom:16px}
+.promotion-board-heading h2{margin:4px 0 0;font-size:clamp(21px,2.5vw,30px);line-height:1.3}
+.promotion-small{color:#547d99}
+.promotion-count,.promotion-status,.promotion-page-number{color:var(--promotion-muted);font-size:13px;margin:0;line-height:1.6}
+.promotion-board{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.promotion-card{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-width:0;min-height:190px;border:1px solid var(--promotion-border);border-left:8px solid var(--card-accent,#3980ac);border-radius:18px;background:#fff;padding:clamp(18px,2.2vw,27px);box-shadow:0 6px 22px #1638560a}
+.promotion-card[data-category="event"]{--card-accent:#a44b55}
+.promotion-card[data-category="notice"]{--card-accent:#1b7a73}
+.promotion-card[data-category="product"]{--card-accent:#b17732}
+.promotion-card-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.promotion-chip{display:inline-flex;align-items:center;border-radius:999px;background:#eff5f9;color:#2b5269;font-size:12px;font-weight:800;padding:5px 10px}
+.promotion-site{font-size:12px;color:#687a8a;font-weight:700}
+.promotion-card h3{font-size:clamp(19px,2vw,27px);line-height:1.35;letter-spacing:-.025em;margin:6px 0 0}
+.promotion-card p{color:#586b7d;margin:8px 0 0;font-size:14px;line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.promotion-actions{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:auto}
+.promotion-link{display:inline-flex;align-items:center;border-radius:9px;background:#123955;color:white;text-decoration:none;font-weight:750;padding:10px 14px;font-size:13px}
+.promotion-link:hover{background:#185f82}
+.promotion-share{border:1px solid var(--promotion-border);border-radius:9px;background:#fff;color:#183e5c;padding:10px 12px;font-size:13px;font-weight:700}
+.promotion-empty{grid-column:1/-1;text-align:center;padding:48px 18px;margin:0;background:#fff;border:1px dashed #bfd0df;border-radius:18px;color:#55718a;line-height:1.65}
+.promotion-bottom{margin-top:14px;flex-wrap:wrap}
+.promotion-footnote{margin:22px 0 0;font-size:12px;line-height:1.7;color:#64778a}
+@media(max-width:767px){.promotion-board{grid-template-columns:minmax(0,1fr)}.promotion-intro{border-radius:17px}.promotion-toolbar{align-items:stretch}.promotion-tools{width:100%}.promotion-board-heading{align-items:flex-start;flex-wrap:wrap}.promotion-card{min-height:175px}}
+@media(max-width:390px){.promotion-filter,.promotion-tool{font-size:12px;padding:8px 10px}.promotion-tools select{min-width:0;max-width:100%}.promotion-intro{padding:20px 16px}.promotion-wrap{padding-inline:12px}.promotion-card{padding:18px}.promotion-card h3{font-size:19px}}
+/* Signage shares the same accessible content; only its presentation changes. */
+body.promotion-screen{background:#06172b;color:#fff;min-height:100vh}
+body.promotion-screen .promotion-wrap{width:100%;max-width:none;padding:clamp(12px,2vh,24px) clamp(14px,2vw,34px)}
+body.promotion-screen .promotion-intro{background:transparent;box-shadow:none;border-radius:0;padding:0 0 clamp(10px,2vh,22px)}
+body.promotion-screen .promotion-intro h1{margin:5px 0;font-size:clamp(30px,4vw,64px)}
+body.promotion-screen .promotion-intro>p,body.promotion-screen .promotion-toolbar,body.promotion-screen .promotion-footnote,body.promotion-screen .promotion-board-heading .promotion-small{display:none}
+body.promotion-screen .promotion-board-section{margin-top:0}
+body.promotion-screen .promotion-board-heading{margin-bottom:10px}
+body.promotion-screen .promotion-board-heading h2{font-size:clamp(16px,2vw,26px);color:#bad6ea}
+body.promotion-screen .promotion-count,body.promotion-screen .promotion-status,body.promotion-screen .promotion-page-number{color:#c0dae9}
+body.promotion-screen .promotion-board{display:flex;flex-direction:column;gap:clamp(8px,1.5vh,18px)}
+body.promotion-screen .promotion-card{min-height:0;flex:1;gap:6px;border-radius:12px;padding:clamp(11px,2vh,24px) clamp(14px,2.4vw,35px);background:#f9fcff;color:#102638}
+body.promotion-screen .promotion-card h3{font-size:clamp(22px,3vw,50px);margin:3px 0}
+body.promotion-screen .promotion-card p{display:none}
+body.promotion-screen .promotion-card .promotion-actions{margin:0}
+body.promotion-screen .promotion-card .promotion-link,body.promotion-screen .promotion-card .promotion-share{font-size:12px;padding:7px 10px}
+body.promotion-screen .promotion-board{min-height:65vh}
+body.promotion-screen :is([data-ekodi-user-header-root],.ekodi-user-ui-fallback-header,[data-ekodi-user-footer]){display:none!important}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
