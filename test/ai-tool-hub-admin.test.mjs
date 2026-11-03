@@ -71,9 +71,13 @@ test('AI operations center keeps the existing provider runtime and supports cura
   assert.match(body.innerHTML, /AI 상품 홍보/);
   assert.match(body.innerHTML, /href="\/ekodibiz\/marketing-ai"/);
   assert.match(body.innerHTML, /통합 자동실행은 검증 전 대기/);
+  assert.match(body.innerHTML, /기존 연결 정상/);
+  assert.match(body.innerHTML, /외부 API 미검증/);
   await select('site-settings');
   assert.match(body.innerHTML, /href="\/cgma\/admin\/services"/);
-  assert.match(body.innerHTML, /메뉴 표시 여부는 API 사용권/);
+  assert.match(body.innerHTML, /href="\/cheonggye\/admin\/services"/);
+  assert.match(body.innerHTML, /href="\/ekodilab\/admin\/services"/);
+  assert.match(body.innerHTML, /선택만으로 API 사용권/);
   assert.doesNotMatch(body.innerHTML, /권한을 자동 부여/);
   await select('providers');
   assert.match(body.innerHTML, /AI 공급자·모델/);

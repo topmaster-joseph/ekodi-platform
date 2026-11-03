@@ -101,5 +101,12 @@ test('account choices stay two-column and readable below 460px',()=>{
 });
 
 test('mobile account stylesheet cache key changes with compact layout',()=>{
- assert.match(html,/hub-shell\.css\?v=20261102-mobile-compact-v1/);
+ assert.match(html,/hub-shell\.css\?v=20261103-public-pane-hidden-v1/);
+});
+
+test('sharing and identity detail panels cannot both appear when one is hidden',()=>{
+ assert.match(css,/#account \.my-public-card-pane\{display:grid;/);
+ assert.match(css,/#account \.my-public-card-pane\[hidden\]\{display:none!important\}/);
+ assert.match(html,/data-public-card-pane="sharing" hidden/);
+ assert.match(app,/panel\.hidden=activePublicDetailTab!==panel\.dataset\.publicCardPane/);
 });

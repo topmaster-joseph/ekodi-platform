@@ -558,6 +558,7 @@
         "mission-control-entry-worker.js",
         "security-edge.js",
         "ai-agent-control.js",
+        "ai-family-dispatch.js",
         "ai-governance-runtime.js",
         "config/ai-mission-governance.json",
         "membership-billing.js",

@@ -7,6 +7,7 @@ import { TENANT_ADMIN_CAPABILITIES, tenantAdminPolicySnapshot } from './tenant-a
 import { ekodiBizAdminScopeSnapshot } from './ekodibiz-admin-registry.js';
 import { channelTargetOptions } from './channel-publishing-catalog.js';
 import {renderTenantServiceAdmin,TENANT_SERVICE_CSS} from './tenant-service-admin-ui.js';
+import {confirmTenantServicePreference} from './tenant-service-setting-verification.js';
 
 const WORKSPACE_SECTION_CAPABILITY=Object.freeze({
   root:Object.freeze({services:TENANT_ADMIN_CAPABILITIES.site,chrome:TENANT_ADMIN_CAPABILITIES.site,design:TENANT_ADMIN_CAPABILITIES.site,languages:TENANT_ADMIN_CAPABILITIES.language,overview:TENANT_ADMIN_CAPABILITIES.dashboard,'business-center':TENANT_ADMIN_CAPABILITIES.operations,activities:TENANT_ADMIN_CAPABILITIES.activities,saturday:TENANT_ADMIN_CAPABILITIES.activities,mall:TENANT_ADMIN_CAPABILITIES.dashboard,mail:TENANT_ADMIN_CAPABILITIES.connections,publishing:TENANT_ADMIN_CAPABILITIES.marketing,marketing:TENANT_ADMIN_CAPABILITIES.marketing,work:TENANT_ADMIN_CAPABILITIES.operations,finance:TENANT_ADMIN_CAPABILITIES.finance,tax:TENANT_ADMIN_CAPABILITIES.finance,confirmations:TENANT_ADMIN_CAPABILITIES.confirmations,members:TENANT_ADMIN_CAPABILITIES.access,member:TENANT_ADMIN_CAPABILITIES.memberRoster,festival:TENANT_ADMIN_CAPABILITIES.access,edocs:TENANT_ADMIN_CAPABILITIES.access,applications:TENANT_ADMIN_CAPABILITIES.access,booths:TENANT_ADMIN_CAPABILITIES.access,'market-oversight':TENANT_ADMIN_CAPABILITIES.operations,petitions:TENANT_ADMIN_CAPABILITIES.access,'ip-archive':TENANT_ADMIN_CAPABILITIES.access,'education-survey':TENANT_ADMIN_CAPABILITIES.operations,status:TENANT_ADMIN_CAPABILITIES.logs,records:TENANT_ADMIN_CAPABILITIES.reports}),
@@ -204,6 +205,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   let workspaceRole='';
   let siteServiceSnapshot=null,siteServiceError='';
   let aiToolSnapshot=null,aiToolError='';
+  let sitePreferenceWritePending=false;
   function serviceMenuVisible(key){
     if(!Array.isArray(siteServiceSnapshot?.items))return true;
     const related=siteServiceSnapshot.items.filter(x=>x.readiness==='ready'&&x.navSection===key);
@@ -235,17 +237,41 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     $('summaryCards').replaceChildren();
     renderTenantServiceAdmin($('mainPanel'),{items:siteServiceSnapshot?.items||[],error:siteServiceError,
       aiTools:aiToolSnapshot?.tools||[],aiError:aiToolError,
-      onToggle:async(item,next)=>{try{
-        siteServiceSnapshot=await siteServiceApi('tenant_site_service_preference_set',{
-          p_tenant_id:workspaceContext.tenantId,p_service_key:item.key,p_menu_visible:next});
-        siteServiceError='';renderNav(workspaceRole);await siteServiceSettings();
-      }catch(e){siteServiceError=e.message||'설정 저장 실패';await siteServiceSettings()}},
-      onAiToggle:async(item,next)=>{try{
-        aiToolSnapshot=await siteServiceApi('tenant_ai_tool_preference_set',{
-          p_tenant_id:workspaceContext.tenantId,p_tool_id:item.id,p_selected:next},'tools');
-        aiToolError='';await siteServiceSettings();
-      }catch(e){aiToolError=e.message||'AI 도구 선택 저장 실패';await siteServiceSettings()}},
-    });state(siteServiceError?'연결 확인 필요':'사이트 메뉴 설정');
+      onToggle:async(item,next)=>{
+        if(sitePreferenceWritePending)return;
+        sitePreferenceWritePending=true;
+        try{
+          // The write RPC alone is not a save receipt: fetch an independent
+          // server snapshot before updating the visible menu or showing success.
+          siteServiceSnapshot=await confirmTenantServicePreference({
+            call:siteServiceApi,tenantId:workspaceContext.tenantId,
+            kind:'service',id:item.key,selected:next
+          });
+          siteServiceError='';renderNav(workspaceRole);
+        }catch(e){
+          siteServiceError=e.message||'서비스 설정 저장 확인 실패';
+        }finally{
+          sitePreferenceWritePending=false;
+          await siteServiceSettings();
+        }
+      },
+      onAiToggle:async(item,next)=>{
+        if(sitePreferenceWritePending)return;
+        sitePreferenceWritePending=true;
+        try{
+          aiToolSnapshot=await confirmTenantServicePreference({
+            call:siteServiceApi,tenantId:workspaceContext.tenantId,
+            kind:'ai',id:item.id,selected:next
+          });
+          aiToolError='';
+        }catch(e){
+          aiToolError=e.message||'AI 도구 설정 저장 확인 실패';
+        }finally{
+          sitePreferenceWritePending=false;
+          await siteServiceSettings();
+        }
+      },
+    });state(siteServiceError||aiToolError?'저장 검증 확인 필요':'사이트 메뉴 설정');
   }
   const SECTION_CAPABILITY=service==='mall'?{services:POLICY.capabilities.site,design:POLICY.capabilities.site,languages:POLICY.capabilities.language,overview:POLICY.capabilities.dashboard,sales:POLICY.capabilities.sales,products:POLICY.capabilities.catalog,sourcing:POLICY.capabilities.supplyNetwork,amazon:POLICY.capabilities.supplyNetwork,marketing:POLICY.capabilities.marketing,channels:POLICY.capabilities.marketing,automation:POLICY.capabilities.marketing,growth:POLICY.capabilities.marketing,analytics:POLICY.capabilities.sales,confirmations:POLICY.capabilities.confirmations}:{services:POLICY.capabilities.site,chrome:POLICY.capabilities.site,design:POLICY.capabilities.site,languages:POLICY.capabilities.language,overview:POLICY.capabilities.dashboard,'business-center':POLICY.capabilities.operations,activities:POLICY.capabilities.activities,saturday:POLICY.capabilities.activities,mall:POLICY.capabilities.dashboard,mail:POLICY.capabilities.connections,publishing:POLICY.capabilities.marketing,marketing:POLICY.capabilities.marketing,work:POLICY.capabilities.operations,finance:POLICY.capabilities.finance,tax:POLICY.capabilities.finance,confirmations:POLICY.capabilities.confirmations,members:POLICY.capabilities.access,member:POLICY.capabilities.memberRoster,festival:POLICY.capabilities.access,edocs:POLICY.capabilities.access,applications:POLICY.capabilities.access,booths:POLICY.capabilities.access,'market-oversight':POLICY.capabilities.operations,petitions:POLICY.capabilities.access,'ip-archive':POLICY.capabilities.access,'education-survey':POLICY.capabilities.operations,status:POLICY.capabilities.logs,records:POLICY.capabilities.reports};
   const roleCapabilities=role=>POLICY.roleCapabilities[String(role||'').trim().toLowerCase()]||[];
@@ -1690,6 +1716,7 @@ const WORKSPACE_ADMIN_VIEW_CSS = `
 
 export function workspaceAdminCss(){return new Response(CHURCH_ADMIN_NAV_CSS+TENANT_SERVICE_CSS+CSS+MALL_DASH_CSS+MALL_SOURCING_TABS_CSS+MALL_SOCIAL_CSS+MALL_CHANNEL_CSS+AMAZON_ADMIN_CSS+MALL_SOCIAL_LAYOUT_CSS+WORKSPACE_ADMIN_VIEW_CSS+tenantAdminMetricsTabsCss+`html[data-ekodi-shell-surface="admin"] .sidebar #adminNav{align-content:start!important;grid-auto-rows:max-content!important;gap:3px!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion{align-content:start!important;grid-template-rows:max-content max-content!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion-toggle{min-height:36px!important;height:auto!important}html[data-ekodi-shell-surface="admin"] .sidebar #adminNav .admin-nav-accordion-panel{align-content:start!important;grid-auto-rows:max-content!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar{background:#fff!important;color:#172033!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button){color:#273244!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button)[aria-current="page"],html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar [data-ekodi-admin-nav] :is(a,button).active{color:#111827!important;background:#eceff3!important;font-weight:800!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar #adminNav{align-content:start!important;grid-auto-rows:max-content!important;gap:3px!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion{align-content:start!important;grid-template-rows:max-content max-content!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion-toggle{min-height:36px!important;height:auto!important}html[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar.sidebar .admin-nav-accordion-panel{align-content:start!important;grid-auto-rows:max-content!important}`+`.cards:empty{display:none!important}.confirmation-counts{font-size:13px;font-weight:500;color:#6b7280;margin-left:8px}.confirmation-new{margin-top:16px;border:1px solid #e6eaf1;border-radius:10px;padding:10px 14px;background:#fff}.confirmation-new>summary{cursor:pointer;font-weight:700;padding:4px 0}`+`:root[data-ekodi-shell-surface="admin"][data-ekodi-admin-theme="light"]{color-scheme:light!important;background:#f5f7fb!important;--ekodi-ui-bg:#f5f7fb;--ekodi-ui-surface:#fff;--ekodi-ui-surface-raised:#fff;--ekodi-ui-border:#e6eaf1;--ekodi-ui-text:#172033;--ekodi-ui-muted:#6b7280;--ekodi-ui-accent:#315d9a}:root[data-ekodi-shell-surface="admin"][data-ekodi-admin-theme="light"] body{background:#f5f7fb!important;color:#172033!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar{top:0!important;height:100dvh!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="direct"]{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;scrollbar-gutter:stable!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-sidebar:has([data-ekodi-admin-nav-mode="direct"]){overflow:hidden!important}:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-main{background:#f5f7fb!important;color:#172033!important}@media(max-width:860px){:root[data-ekodi-shell-surface="admin"] .ekodi-admin-shell-nav[data-ekodi-admin-nav-mode="direct"]{flex:0 0 auto!important;min-height:auto!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-gutter:auto!important}}`,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
 export function workspaceAdminScript(){const payload=tenantAdminPolicySnapshot();return new Response(`window.__EKODI_WORKSPACE_ADMIN_RUNTIME__='20261002-common-engine-ui-v1';\n((__name)=>{\nconst youtubeDataApiDisabledProject=${youtubeDataApiDisabledProject.toString()};\nconst youtubeDataApiCloudUrl=${youtubeDataApiCloudUrl.toString()};\nconst renderMallSocialSetup=${renderMallSocialSetup.toString()};
-const mountTenantAdminMetricsTabs=${mountTenantAdminMetricsTabs.toString()};\nconst renderTenantServiceAdmin=${renderTenantServiceAdmin.toString()};\nconst CHURCH_ADMIN_MENU=${JSON.stringify(CHURCH_ADMIN_MENU)};\nconst mountChurchAdminNavigation=${mountChurchAdminNavigation.toString()};\n(${clientMain.toString()})(${JSON.stringify(payload)},${JSON.stringify(ekodiBizAdminScopeSnapshot())},${JSON.stringify(channelTargetOptions())});
+const mountTenantAdminMetricsTabs=${mountTenantAdminMetricsTabs.toString()};\nconst renderTenantServiceAdmin=${renderTenantServiceAdmin.toString()};
+const confirmTenantServicePreference=${confirmTenantServicePreference.toString()};\nconst CHURCH_ADMIN_MENU=${JSON.stringify(CHURCH_ADMIN_MENU)};\nconst mountChurchAdminNavigation=${mountChurchAdminNavigation.toString()};\n(${clientMain.toString()})(${JSON.stringify(payload)},${JSON.stringify(ekodiBizAdminScopeSnapshot())},${JSON.stringify(channelTargetOptions())});
 (${workspaceAdminCompact.toString()})();\n})((target)=>target);`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
 export function isWorkspaceAdminPath(pathname){return isWorkspaceAdminPathShape(pathname)}
