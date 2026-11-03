@@ -147,6 +147,9 @@ await cp(`${root}auth-site/google-origin-bridge.html`, `${output}google-origin-b
 for (const asset of ['auth.css', 'auth.js', 'auth-bootstrap.js', 'auth-entry.js', 'auth-router.js', 'oauth-consent.js', 'marketing-auth-hotfix.js', 'auth-workspace-target.js', 'admin-auth.js', 'client-auth.js', 'author-auth.js', 'business-auth.js', 'marketing-onboarding.js', 'membership-ui.js', 'federated-login.js', 'email-password.js', 'google-origin-bridge.js']) await cp(`${root}auth-site/${asset}`, `${output}${asset}`);
 
 const [homepageServices, homepageStatusCounts] = await Promise.all([loadHomepageServices(), loadHomepageStatusCounts()]);
+await appendOutputSources('ai-ops-admin.js', ['ai-eval-admin.js']);
+await appendOutputSources('ai-ops-admin.css', ['ai-eval-admin-additions.css']);
+
 const homepageCards = renderServiceCards(homepageServices);
 const responsiveCss = await readFile(`${root}responsive.css`, 'utf8');
 const htmlAssets = [...assets.filter(asset => asset.endsWith('.html')), 'auth-center.html'];
