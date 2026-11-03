@@ -25,7 +25,7 @@ function fakeDb(){
           if(sql.includes('FROM books_creator_titles WHERE id=?'))return original;
           return null;
         },
-        async run(){stats.changes++;return {success:true,meta:{last_row_id:8,changes:1}}},
+        async run(){if (/^\s*(?:INSERT\s+INTO|UPDATE)\s+books_creator_titles\b/i.test(sql)) stats.changes++;return {success:true,meta:{last_row_id:8,changes:1}}},
         async all(){return {results:[]}}
       };
     }
