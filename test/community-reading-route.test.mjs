@@ -13,14 +13,15 @@ test('Community worker resolves canonical reading entry and nested assets withou
   const env = { ASSETS: { fetch: async request => {
     const path = new URL(request.url).pathname;
     visited.push(path);
+    if(path==='/reading/index.html')return new Response(null,{status:307,headers:{location:'/reading/'}});
     return new Response(
-      path.endsWith('.html') ? '<!doctype html><html lang="ko"><head></head><body><main><h1>함께읽기</h1></main></body></html>' : 'export const ready=true;',
-      { headers: { 'content-type': path.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/javascript; charset=utf-8' } }
+      path === '/reading/' ? '<!doctype html><html lang="ko"><head></head><body><main><h1>함께읽기</h1></main></body></html>' : 'export const ready=true;',
+      { headers: { 'content-type': path === '/reading/' ? 'text/html; charset=utf-8' : 'text/javascript; charset=utf-8' } }
     );
   }}};
   const page = await worker.fetch(new Request('https://ekodi.kr/community/reading'), env);
   assert.equal(page.status, 200);
-  assert.equal(visited[0], '/reading/index.html');
+  assert.equal(visited[0], '/reading/');
   assert.match(await page.text(), /함께읽기/);
   const asset = await worker.fetch(new Request('https://ekodi.kr/community/reading/topics.js'), env);
   assert.equal(asset.status, 200);
@@ -28,5 +29,6 @@ test('Community worker resolves canonical reading entry and nested assets withou
   assert.match(await asset.text(), /ready=true/);
   const slash = await worker.fetch(new Request('https://ekodi.kr/community/reading/'), env);
   assert.equal(slash.status, 200);
-  assert.equal(visited[2], '/reading/index.html');
+  assert.equal(visited[2], '/reading/');
+  assert.equal(slash.headers.get('location'), null);
 });
