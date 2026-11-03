@@ -201,7 +201,7 @@ async function createTitle(request, env, auth) {
   const now = new Date().toISOString();
   const requested = clean(input?.status, 20).toUpperCase();
   if (requiresVerifiedPublishingSubmission(requested)) return json({
-    error: '출간 검토 신청은 에코디 출판의 저자 자격·권한 검증 절차에서 진행해 주세요.',
+    error: '출간 검토 신청은 출판사의 저자 자격·권한 검증 절차에서 진행해 주세요.',
     code: 'PUBLISHER_SUBMISSION_REQUIRED'
   }, 409, request, env);
   const status = 'DRAFT';
@@ -228,7 +228,7 @@ async function updateTitle(request, env, auth, id) {
   }
   const requested = clean(input.status ?? current.status, 20).toUpperCase();
   if (requiresVerifiedPublishingSubmission(requested)) return json({
-    error: '출간 검토 신청은 에코디 출판의 저자 자격·권한 검증 절차에서 진행해 주세요.',
+    error: '출간 검토 신청은 출판사의 저자 자격·권한 검증 절차에서 진행해 주세요.',
     code: 'PUBLISHER_SUBMISSION_REQUIRED'
   }, 409, request, env);
   const status = 'DRAFT';
