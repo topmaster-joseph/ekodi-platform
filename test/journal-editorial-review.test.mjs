@@ -49,7 +49,7 @@ test('journal photos are never auto-approved by the review-only editor', () => {
   assert.throws(()=>createJournalReviewPacket(null,{...fields,photoSrc:'/journal/media/a.webp',photoAlt:''}),/invalid_editorial_text/);
 });
 
-test('canonical admin Journal link mounts only in shared admin and emits no server write', () => {
+test('Journal editor uses shared Admin and only writes private drafts with central authentication', () => {
   const ctx={window:{location:new URL('https://ekodi.kr/admin/journal')},URL,URLSearchParams};
   vm.runInNewContext(read('admin-canonical-routes.js'),ctx);
   assert.equal(ctx.window.EKODIAdminRoutes.sectionFromPath('/admin/journal'),'engine-professional');
@@ -67,8 +67,11 @@ test('canonical admin Journal link mounts only in shared admin and emits no serv
   assert.match(page,/session\.role!=='super_admin'/);
   assert.match(page,/\/journal\/api\/posts/);
   assert.match(page,/JSON\.stringify\(draft,null,2\)/);
-  assert.match(page,/서버 저장·게시·권리 승인을 실행하지 않습니다/);
-  assert.doesNotMatch(page,/method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/);
+  assert.match(page,/게시·권리 승인은 실행하지 않습니다/);
+  assert.match(page,/data-journal-save/);
+  assert.match(page,/method:'POST'/);
+  assert.match(page,/\/api\/journal\/editorial\/drafts/);
+  assert.doesNotMatch(page,/method:\s*['"](?:PUT|PATCH|DELETE)['"]/);
   assert.ok(build.includes('journal-editorial-admin.js'));
   assert.ok(build.includes('journal-editorial-packet.js'));
 });

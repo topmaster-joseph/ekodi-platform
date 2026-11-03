@@ -1,5 +1,6 @@
 import customerEntryWorker from './customer-entry-worker.js';
 import { handleAdminSessionFastPath } from './admin-session-fastpath.js';
+import { handleJournalEditorialDrafts } from './journal-editorial-control.js';
 import { handleAgentMissionControl } from './ai-agent-control.js';
 import { handleEkodiV8CommandControl } from './ai-command-control.js';
 import { acceptGitHubWebhook, drainGitHubObservations } from './github-operations-webhook.js';
@@ -229,6 +230,11 @@ export default {
     if ((path === '/operator' || path === '/operator/' || path === '/operator.js' || path === '/api/operator' || path === '/api/operator/' || path === '/api/operator.js') && request.method === 'GET') {
       const response = handleMessengerOperatorPage(request);
       if (response) return response;
+    }
+
+    if (path === '/api/journal/editorial/drafts' || path.startsWith('/api/journal/editorial/drafts/')) {
+      try { const response = await handleJournalEditorialDrafts(request,env); return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('[EKODI Journal] private draft control failed',error?.name); return errorResponse('저널 비공개 원고 API 사용 불가','JOURNAL_DRAFT_CONTROL_ERROR'); }
     }
 
     if (path === '/api/session' && request.method === 'GET') {
