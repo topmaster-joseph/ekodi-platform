@@ -50,7 +50,8 @@ test('buyer-facing payment copy matches the approved direct-sale-only production
 });
 
 test('phone catalog uses one contained product column to avoid clipped cards', () => {
-  assert.match(css, /@media\\(max-width:480px\\)/);
+  assert.ok(css.includes('@media(max-width:480px)'));
+
   assert.ok(css.includes('.mall-category-shortcuts~.shop .grid{grid-template-columns:minmax(0,1fr)}'));
   assert.ok(css.includes('.mall-category-shortcuts~.shop .card{min-width:0;max-width:100%}'));
   assert.ok(css.includes('body[data-mall-view="catalog"] main#main > :not(#filters):not(#shop)'));
