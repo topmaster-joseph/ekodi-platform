@@ -45,7 +45,9 @@ async function keys(){
 }
 function environment(db,vapid){
   return {DB:db,NOTIFICATIONS_SEND_ENABLED:'true',NOTIFICATION_VAPID_PUBLIC_KEY:vapid.publicKey,
-    NOTIFICATION_VAPID_PRIVATE_JWK:vapid.privateJwk,NOTIFICATION_EVENT_SECRET:'test_internal_event_secret_12345678901234567890'};
+    NOTIFICATION_VAPID_PRIVATE_JWK:vapid.privateJwk,
+    NOTIFICATION_PUBLISH_MISSION_ENABLED:'true',
+    NOTIFICATION_EVENT_SECRET_MISSION:'test_internal_event_secret_12345678901234567890'};
 }
 const consent='2026-11';
 test('push endpoints are allowlisted and reject internal SSRF targets',()=>{
@@ -79,7 +81,7 @@ test('explicit opt-in, namespace isolation, dedup, delivery and unsubscribe',asy
   assert.equal((await handleNotificationApi(request('/api/notifications/events','POST',{}),env)).status,403);
   const event={idempotencyKey:'mission:daily:20261102',serviceId:'mission',topic:'mission',
     title:'매일 묵상',body:'오늘의 말씀을 읽어보세요.',targetPath:'/ekodimission/'};
-  const sender={'x-ekodi-notification-secret':env.NOTIFICATION_EVENT_SECRET};
+  const sender={'x-ekodi-notification-secret':env.NOTIFICATION_EVENT_SECRET_MISSION};
   assert.equal((await handleNotificationApi(request('/api/notifications/events','POST',{...event,targetPath:'//evil.example/'},sender),env)).status,400);
   assert.equal((await handleNotificationApi(request('/api/notifications/events','POST',event,sender),env)).status,202);
   assert.equal((await handleNotificationApi(request('/api/notifications/events','POST',event,sender),env)).status,202);
@@ -118,7 +120,7 @@ test('topic opt-out before delivery stops push without changing other subscripti
   assert.equal((await handleNotificationApi(request('/api/notifications/subscription','POST',sub,origin),env)).status,201);
   const publisher={idempotencyKey:'mission:topic:optout:20261102',serviceId:'mission',topic:'mission',
     title:'새 묵상',body:'알림 취소를 검증합니다.',targetPath:'/ekodimission/'};
-  await handleNotificationApi(request('/api/notifications/events','POST',publisher,{'x-ekodi-notification-secret':env.NOTIFICATION_EVENT_SECRET}),env);
+  await handleNotificationApi(request('/api/notifications/events','POST',publisher,{'x-ekodi-notification-secret':env.NOTIFICATION_EVENT_SECRET_MISSION}),env);
   const patch=await handleNotificationApi(request('/api/notifications/preferences','PATCH',{topics:['church']},{...origin,authorization:'Bearer '+deviceToken}),env);
   assert.equal(patch.status,200);
   let sent=0;
@@ -144,7 +146,7 @@ test('expired push endpoint can be re-registered without reviving obsolete token
 
 test('in-app inbox works with push disabled and keeps explicit opt-in',async()=>{
   const db=database(),vapid=await keys();
-  const env={DB:db,NOTIFICATION_EVENT_SECRET:'test_internal_event_secret_12345678901234567890'};
+  const env={DB:db,NOTIFICATION_PUBLISH_MISSION_ENABLED:'true',NOTIFICATION_EVENT_SECRET_MISSION:'test_internal_event_secret_12345678901234567890'};
   const deviceToken=b64(crypto.getRandomValues(new Uint8Array(32)));
   const headers={origin:'https://ekodi.kr'};
   const body={deviceToken,channel:'inbox',topics:['mission'],consentVersion:consent,marketingConsent:false};
@@ -161,7 +163,7 @@ test('in-app inbox works with push disabled and keeps explicit opt-in',async()=>
   assert.deepEqual(pref.topics,['mission']);assert.equal(pref.channel,'inbox');
   const event={idempotencyKey:'mission:inbox:20261102',serviceId:'mission',topic:'mission',
     title:'오늘의 말씀',body:'새 묵상이 등록되었습니다.',targetPath:'/ekodimission/'};
-  assert.equal((await handleNotificationApi(request('/api/notifications/events','POST',event,{'x-ekodi-notification-secret':env.NOTIFICATION_EVENT_SECRET}),env)).status,202);
+  assert.equal((await handleNotificationApi(request('/api/notifications/events','POST',event,{'x-ekodi-notification-secret':env.NOTIFICATION_EVENT_SECRET_MISSION}),env)).status,202);
   let sendCount=0;
   const schedule=await runNotificationSchedule(env,{transport:async()=>{sendCount++;throw Error('must_not_push');}});
   assert.equal(schedule.enabled,false);assert.equal(schedule.inbox,true);assert.equal(sendCount,0);

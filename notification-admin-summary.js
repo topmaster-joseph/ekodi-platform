@@ -1,5 +1,5 @@
 import {notificationAdminAuthority} from './notification-admin-authority.js';
-import {NOTIFICATION_TOPICS} from './notification-control.js';
+import {NOTIFICATION_TOPICS,topicPublisherReadiness} from './notification-control.js';
 
 const PREFIX='/api/notifications/admin/summary';
 const TOPICS=Object.keys(NOTIFICATION_TOPICS);
@@ -62,7 +62,8 @@ export async function handleNotificationAdminSummary(request,env,{transport=fetc
         "MAX(e.created_at) AS lastEventAt FROM notification_events e WHERE e.topic=?"+eventFilter
       ).bind(...(cutoff?[stalledBefore,key,cutoff]:[stalledBefore,key])).first();
       topics.push({
-        id:key,label:NOTIFICATION_TOPICS[key],subscriberDevices:Number(subscribers?.n||0),
+        id:key,label:NOTIFICATION_TOPICS[key],publisher:topicPublisherReadiness(env,key),
+        subscriberDevices:Number(subscribers?.n||0),
         events:Number(event?.total||0),eventsPending:Number(event?.pending||0),
         eventsOverdue:Number(event?.overdue||0),lastEventAt:event?.lastEventAt||null,
         deliveries:Number(delivery?.total||0),delivered:Number(delivery?.delivered||0),

@@ -72,6 +72,9 @@
             el('span','현재 구독 기기 '+item.subscriberDevices+' · 기간 내 이벤트 '+item.events+
               ' · 전달 처리 '+item.delivered+' · 대기 '+item.pending+' · 실패 '+item.failed+
               ' · 지연 '+(item.stalled||0)+' · 발행 지연 '+(item.eventsOverdue||0)),
+            el('small','자동 발행 준비: '+(item.publisher?.ready?'완료':'대기')+
+              ' (서비스 허용 '+(item.publisher?.enabled?'설정됨':'꺼짐')+
+              ' · 전용 인증키 '+(item.publisher?.credentialsConfigured?'설정됨':'미설정')+')'),
             el('small','마지막 발행: '+(last&&Number.isFinite(last.getTime())
               ?last.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'기록 없음')));
           list.append(line);
