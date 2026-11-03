@@ -77,6 +77,20 @@ if (buyerPositions.some((pos) => pos < 0) || buyerPositions.some((pos, index) =>
 }
 const homeCss = await readFile(path.join(dist, 'assets/home-refresh.css'), 'utf8');
 if (!homeCss.includes('.mall-category-shortcuts{display:none}')) errors.push('Mall desktop duplicated category shortcuts must remain hidden');
+const { isPublicStaticSale } = await import('../api/public-sale-visibility.js');
+const originalItems = JSON.parse(await readFile(path.join(root, 'content/products.json'), 'utf8'));
+for (const item of originalItems) {
+  const marker = `data-product="${item.id}"`;
+  if (!isPublicStaticSale(item) && homepage.includes(marker)) errors.push('Preparing product leaked into Mall public grid: ' + item.id);
+  if (!isPublicStaticSale(item)) {
+    const detail = await readFile(path.join(dist, 'products', item.slug, 'index.html'), 'utf8');
+    if (!detail.includes('name="robots" content="noindex,follow"')) errors.push('Preparing product detail was not marked noindex: ' + item.id);
+  }
+}
+const publicSitemap = await readFile(path.join(dist, 'sitemap.xml'), 'utf8');
+for (const item of originalItems.filter((p) => !isPublicStaticSale(p))) {
+  if (publicSitemap.includes('/products/' + item.slug + '/')) errors.push('Preparing product listed in sitemap: ' + item.id);
+}
 
 if (errors.length) {
   console.error(`EKODI Mall build verification failed (${errors.length})`);
