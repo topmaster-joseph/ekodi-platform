@@ -32,8 +32,8 @@ test('journal public links and data requests stay under the canonical /journal p
   const app = read('journal/app.js');
   const worker = read('journal-worker.js');
   const expectedHtml = [
-    'href="/journal/feed.xml"', 'href="/journal/styles.css"',
-    'src="/journal/app.js"', 'href="/journal/" class="journal-back"',
+    'href="/journal/feed.xml"', 'href="/journal/styles.css?v=',
+    'src="/journal/app.js?v=', 'href="/journal/" class="journal-back"',
   ];
   for (const expected of expectedHtml) assert.ok(html.includes(expected), `missing ${expected}`);
   assert.match(app, /fetch\('\/journal\/api\/posts'\)/);

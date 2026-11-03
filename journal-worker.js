@@ -134,6 +134,15 @@ export default {
 
     if (path === '/' || /^\/p\/[^/]+$/.test(path)) return shellHtml(env, request);
 
-    const response = await env.ASSETS.fetch(request);    return withHeaders(response, response.headers.get('content-type')?.includes('text/html') ? 'public, max-age=60' : 'public, max-age=86400, immutable');
+    const response = await env.ASSETS.fetch(request);
+    const contentType = response.headers.get('content-type') || '';
+    const isHtml = contentType.includes('text/html');
+    const isCodeAsset = /\.(?:js|css)$/.test(path);
+    const cacheControl = isHtml
+      ? 'public, max-age=60'
+      : isCodeAsset
+        ? 'public, max-age=60, must-revalidate'
+        : 'public, max-age=86400, immutable';
+    return withHeaders(response, cacheControl);
   },
 };
