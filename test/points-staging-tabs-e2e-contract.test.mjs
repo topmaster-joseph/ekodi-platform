@@ -23,7 +23,10 @@ test('member E2E switches to visible activity tab before waiting for claim contr
 
 test('pending submission is projected by server after the claim and verified in E2E',()=>{
   ordered("{type:'click',selector:'#claimSubmit'}","{type:'assertText',text:'승인 대기'}","pending claim");
-  ordered("{type:'click',selector:'#claimSubmit'}","{type:'click',selector:'#pointsTabProgress'}","progress refresh after claim");
+  const submit=browser.indexOf("{type:'click',selector:'#claimSubmit'}");
+  assert.ok(submit>=0,'submit action missing');
+  assert.ok(browser.indexOf("{type:'click',selector:'#pointsTabProgress'}",submit)>submit,'progress tab not revisited after claim');
+  assert.match(browser,/selector:'#pointsMissionList \.record strong:has-text\("승인 대기"\)'/);
   assert.match(app,/await loadClaims\(site,revision\);[\s\S]{0,450}void loadProgress\(session\.access_token,site,revision\)/);
   assert.match(app,/revision===viewRevision&&select\.value===site&&session\?\.access_token/);
   assert.doesNotMatch(app,/award_evidence|points_admin_decide/);
