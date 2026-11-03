@@ -248,10 +248,21 @@ async function cgmaPublicPassthrough(request,fetchImpl=fetch){
   responseHeaders.set('x-content-type-options','nosniff');
   return new Response(method==='HEAD'?null:upstream.body,{status:upstream.status,statusText:upstream.statusText,headers:responseHeaders});
 }
+// CGMA public gateway keeps its native footer and adopts only the shared
+// read-only visit-summary module. Never inject it into private/admin surfaces.
+function injectCgmaFooterTraffic(response, request){
+  const path=new URL(request.url).pathname;
+  if(request.method!=='GET'||response.status!==200||!String(response.headers.get('content-type')||'').toLowerCase().includes('text/html'))return response;
+  if(/^\/(?:admin|auth|api)(?:\/|$)/i.test(path)||/^\/cgma\/(?:admin|auth|api)(?:\/|$)/i.test(path))return response;
+  return new HTMLRewriter()
+    .on('html',{element:e=>e.setAttribute('data-ekodi-shell-surface','public')})
+    .on('body',{element:e=>e.append('<script src="https://ekodi.kr/shell/user-ui-footer.js" defer></script>',{html:true})})
+    .transform(response);
+}
 export async function routeCgmaPublic(request,env,fetchImpl=fetch){
   if(new URL(request.url).hostname.toLowerCase()==='www.cgma.or.kr')return cgmaApexRedirect(request);
   const site=await readCgmaSiteControl(env);
-  if(site.publicStatus!=='maintenance')return cgmaPublicPassthrough(request,fetchImpl);
+  if(site.publicStatus!=='maintenance')return injectCgmaFooterTraffic(await cgmaPublicPassthrough(request,fetchImpl),request);
   if(!['GET','HEAD'].includes(request.method.toUpperCase()))return new Response(JSON.stringify({error:'site_maintenance'}),{status:503,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'maintenance'}});
   const redirectUrl=validPublicRedirectUrl(site.maintenanceRedirectUrl);
   if(site.maintenanceDisplayType==='url'&&redirectUrl&&site.redirectMode==='auto')return new Response(null,{status:302,headers:{location:redirectUrl,'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-public-site-mode':'maintenance-auto-redirect'}});
@@ -562,7 +573,7 @@ async function routePlatform(request,env,ctx){
       if(isSeasonalOperationsPath(url.pathname))return seasonalOperationsResponse(request,env);
       if(isSeasonalPortalPath(url.pathname))return seasonalPortalResponse(request);
       if(['GET','HEAD'].includes(request.method)&&isStorePosAgentDownloadPath(url.pathname))return storePosAgentDownload(request);
-      if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectCgmaRegionalLinks(injectEkodiProgressiveHome(injectEkodiTenantReadability(legacyResponse)));}
+      if(['GET','HEAD'].includes(request.method)&&isCgmaRoot(url.pathname)){const legacyResponse=await legacyPlatformRouter.fetch(request,env,ctx);return injectCgmaFooterTraffic(injectCgmaRegionalLinks(injectEkodiProgressiveHome(injectEkodiTenantReadability(legacyResponse))),request);}
       const mailApex=routeMailApex(request);if(mailApex)return mailApex;
       const messengerApex=await routeMessengerApex(request,env,ctx);if(messengerApex)return messengerApex;
       const investApex=await routeInvestApex(request,env,ctx);if(investApex)return investApex;
