@@ -165,7 +165,7 @@ test('cron cannot bypass a missing author digest or reviewer compliance flags',a
 });
 
 test('jubilee registration is private, idempotent and scoped to verified author',async()=>{
-  const {sql,api}=memory(),env={PUBLISH_DB:api};
+  const {sql,api}=memory(),env={PUBLISH_DB:api,PUBLISHING_JUBILEE_AUTHOR_USER_ID:'authorA'};
   const invoke=actor=>handlePublishingWorkflow(request('jubilee/register',{method:'POST',actor}),env);
   const initial=await invoke('authorA');
   assert.equal(initial.status,200);
@@ -183,12 +183,9 @@ test('jubilee registration is private, idempotent and scoped to verified author'
   assert.deepEqual(again.projects.map(x=>x.created),[false,false]);
   assert.deepEqual(again.projects.map(x=>x.project.id),first.projects.map(x=>x.project.id));
   const other=await invoke('authorB');
-  assert.equal(other.status,200);
-  const another=await other.json();
-  assert.deepEqual(another.projects.map(x=>x.created),[true,true]);
-  assert.ok(another.projects.every(x=>!first.projects.some(p=>p.project.id===x.project.id)));
-  assert.equal(sql.prepare('SELECT COUNT(*) AS count FROM publishing_workflow_projects').get().count,4);
-  assert.equal(sql.prepare("SELECT COUNT(*) AS count FROM publishing_workflow_audit WHERE action='create'").get().count,4);
+  assert.equal(other.status,403);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS count FROM publishing_workflow_projects').get().count,2);
+  assert.equal(sql.prepare("SELECT COUNT(*) AS count FROM publishing_workflow_audit WHERE action='create'").get().count,2);
 });
 test('jubilee private registration without database or authenticated author stays denied',async()=>{
   assert.equal((await handlePublishingWorkflow(request('jubilee/register',{method:'POST'}),{})).status,503);

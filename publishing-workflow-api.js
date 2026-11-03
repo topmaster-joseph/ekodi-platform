@@ -136,7 +136,11 @@ const JUBILEE_PRIVATE_DRAFTS=[
   '희년과 하나님 나라의 회복',
   '우리는 다시 돌아갈 수 있는가',
 ];
-async function registerJubileeDrafts(db,u){
+async function registerJubileeDrafts(db,u,env){
+  // Only the independently authenticated, publisher-configured author owns this series.
+  const trustedOwner=String(env?.PUBLISHING_JUBILEE_AUTHOR_USER_ID||'').trim();
+  if(!trustedOwner)return error(503,'JUBILEE_OWNER_NOT_CONFIGURED');
+  if(u.userId!==trustedOwner)return error(403,'JUBILEE_OWNER_ONLY');
   // Authenticated owner identity is server-derived; manuscript bytes are never uploaded here.
   const registered=[];
   for(const title of JUBILEE_PRIVATE_DRAFTS){
@@ -242,7 +246,7 @@ export async function handlePublishingWorkflow(req,env){
     const u=await identity(req,env);if(!u)return error(401,'LOGIN_REQUIRED');
     const db=env.PUBLISH_DB;let r=await role(db,u.userId);
     if(r==='author')r=(await claimInvite(db,u))||r;
-    if(path==='/api/workflow/jubilee/register'&&req.method==='POST')return registerJubileeDrafts(db,u);
+    if(path==='/api/workflow/jubilee/register'&&req.method==='POST')return registerJubileeDrafts(db,u,env);
     if(path==='/api/workflow/projects'){
       if(req.method==='POST')return create(db,req,u);
       if(req.method==='GET')return list(db,u,r);
