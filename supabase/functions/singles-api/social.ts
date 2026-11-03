@@ -461,7 +461,16 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
    const other=c.from_user_id===userId?c.to_user_id:c.from_user_id;
    if(candidates.has(other)&&await contactUnlocked(admin,userId,other,c.id))shared.add(other);
   }
+  // Only the authenticated sender may inspect their past consent evidence.
+  // This projection excludes message bodies, raw contacts and recipient UUIDs.
+  const myConsentReceipts=await many(admin.from('singles_contact_share_receipts')
+   .select('recipient_id,consent_version,consented_at').eq('sender_id',userId)
+   .order('consented_at',{ascending:false}).limit(30));
   return reply(req,{paid_model:true,billing:'postpaid_invoice',
+   consent_history:myConsentReceipts.map((r:any)=>({
+    display_name:byId.get(r.recipient_id)||'동행 회원',
+    consent_version:r.consent_version,consented_at:r.consented_at
+   })),
    requests:reqs.map((r:any)=>{const incoming=r.responder_id===userId,other=incoming?r.requester_id:r.responder_id;const inv=invByReq.get(r.id);
     return {id:r.id,kind:r.kind,status:r.status,incoming,display_name:byId.get(other)||'동행 회원',
      my_fee_krw:inv?inv.amount_krw:(incoming?quotes[r.kind]:r.requester_fee_krw),

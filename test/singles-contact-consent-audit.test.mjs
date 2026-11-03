@@ -43,6 +43,8 @@ test('atomic service-only RPC revalidates explicit consent and both paid unrefun
 test('Edge requires recorded consent for read and uses atomic RPC for write',()=>{
  assert.match(edge,/admin\.rpc\('singles_contact_share_record'/);
  assert.match(edge,/admin\.from\('singles_contact_share_receipts'\)/);
+ assert.match(edge,/\.eq\('sender_id',userId\)/);
+ assert.match(ui,/내 연락처 제공 동의 기록/);
  assert.match(edge,/receipt\.sender_id===m\.sender_id/);
  assert.match(edge,/receipt\.recipient_id===recipient/);
  assert.match(edge,/receipt\.request_id===currentRequest/);

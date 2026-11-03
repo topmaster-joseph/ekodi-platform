@@ -395,6 +395,23 @@ test('paid connections display contact_shared only while both original invoices 
  }
 }));
 
+test('my contact consent history exposes only minimal evidence and recipient display name',()=>withPaid(async()=>{
+ const admin=rpcBy(db({accepted:true,extra:settledOptions.extra,lists:{
+  ...settledOptions.lists,
+  singles_paid_requests:[{id,requester_id:uid,responder_id:other,kind:'contact',status:'connected',requester_fee_krw:75000}],
+  singles_interests:[{id,from_user_id:uid,to_user_id:other,status:'accepted'}],
+  singles_profiles:[{user_id:other,display_name:'동행 상대'}],
+  singles_contact_share_receipts:[{recipient_id:other,consent_version:'singles-contact-v1-20261103',
+   consented_at:'2026-11-03T08:00:00Z',raw_contact:'010-0000-0000'}]
+ }}),PAID);
+ const response=await handleSinglesSocial(new Request('https://ekodi.kr/requests'),'/requests',admin,uid,reply);
+ assert.equal(response.status,200);
+ const json=await response.json();
+ assert.deepEqual(json.consent_history,[{display_name:'동행 상대',consent_version:'singles-contact-v1-20261103',consented_at:'2026-11-03T08:00:00Z'}]);
+ assert.ok(!JSON.stringify(json).includes('010-0000-0000'),'source contact never appears in audit history');
+ assert.ok(!JSON.stringify(json.consent_history).includes(other),'recipient UUID never appears in client view');
+}));
+
 test('paid conversation history only reveals explicitly shared contact on a current paid connection',()=>withPaid(async()=>{
  const messages=[{id,sender_id:other,body:'기존 번호 010-9876-5432 및 foo@example.org',created_at:'2026-10-27T00:00:00Z'},
   {id:'55555555-5555-4555-8555-555555555555',sender_id:other,body:'[내 연락처] 010-4567-8901',created_at:'2026-10-28T00:00:00Z'}];

@@ -322,6 +322,14 @@ async function showPaidMessages(h){
    catch(e){notice(card,errorText(e))}
   },'primary'));
  });
+ h.append(text('h3','내 연락처 제공 동의 기록'));
+ appendList(h,d.consent_history||[],(card,r)=>{
+  card.append(text('h3',r.display_name||'동행 회원'));
+  const date=new Date(r.consented_at);
+  paragraph(card,'동의 시각: '+(Number.isNaN(date.getTime())?'기록 확인 중':date.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}))+
+   ' · 동의 버전: '+(r.consent_version||''));
+  paragraph(card,'동의 영수증에는 연락처 원문을 중복 보관하지 않습니다. 이미 상대가 받은 연락처는 회수할 수 없습니다.');
+ });
 }
 async function showMessages(h){
  if(state.paidModel){await showPaidMessages(h);return}
