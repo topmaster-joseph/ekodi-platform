@@ -1,4 +1,5 @@
 import { renderDevotionScore } from './devotion-score.js';
+import { dailyDevotionMelody, renderDailyDevotionArt } from './devotion-daily-creative.js';
 import { devotionShareExcerpt, formatDevotionShareMessage } from './devotion-share-audio.js';
 import { createDevotionSpeechUI } from './devotion-speech-ui.js';
 // EKODI 오늘의 매일묵상 — shared renderer for /bible, /ekodichurch and /ekodimission.
@@ -799,18 +800,30 @@ function boot(root) {
       for (const line of a.song.refrain) refrain.append(el('p', '', line));
       const score = el('div','dv-score');
       panel.append(score,verse,refrain);
-      if(a.song.abc)renderScore(score,a.song.abc);
-      else score.append(el('p','dv-meta','선율이 확정되지 않아 악보가 아직 없습니다. 관리자가 악보를 등록하면 오선보로 표시합니다.'));
-      panel.append(el('p','dv-meta','묵상 노래의 선율 악보는 작성·검수된 원곡 자료만 표시합니다.'));
+      const authoredScore = String(a.song.abc||'').trim();
+      const scoreAbc = authoredScore || dailyDevotionMelody({date:data.date,passage:data.passage,theme:a.theme,title:a.song.title});
+      if(scoreAbc)renderScore(score,scoreAbc);
+      else score.append(el('p','dv-meta','표시할 선율이 없습니다.'));
+      panel.append(el('p','dv-meta',authoredScore
+        ? '등록된 악보를 표시합니다.'
+        : '오늘의 자동 창작 선율 · 8마디 연습용 초안이며 가사와의 대응은 아직 검수되지 않았습니다.'));
     }
     {
       const panel = panels.get('image');
       panelHead(panel,'말씀을 그리다','image');
       const img=el('img','dv-illustration');
-      img.src=a.illustration?.src || '/bible/devotion-illustration.svg';
-      img.alt=a.illustration?.alt || '말씀의 길을 함께 걷는 사람들의 선그림';
-      img.loading='lazy';img.decoding='async';
-      panel.append(img,el('p','dv-meta',`묵상 그림 · ${a.theme}`));
+      const illustrationSrc=String(a.illustration?.src||'');
+      if(illustrationSrc && illustrationSrc!=='/bible/devotion-illustration.svg'){
+        img.src=illustrationSrc;
+        img.alt=a.illustration?.alt || '오늘의 묵상 그림';
+        img.loading='lazy';img.decoding='async';
+        panel.append(img);
+      }else if(!renderDailyDevotionArt(panel,{date:data.date,passage:data.passage,theme:a.theme})){
+        img.src='/bible/devotion-illustration.svg';
+        img.alt='말씀의 길을 함께 걷는 그림';
+        panel.append(img);
+      }
+      panel.append(el('p','dv-meta',`묵상 그림 · ${a.theme}`));
     }
     {
       const panel = panels.get('questions');

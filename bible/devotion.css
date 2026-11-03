@@ -203,3 +203,35 @@ body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-i
 .ekodi-devotion .dv-speech-tools .dv-speech-gender{order:-4}
 .ekodi-devotion .dv-speech-tools .dv-speech-voice{order:-3}
 .ekodi-devotion .dv-speech-tools .dv-speech-speed{order:-2}
+
+
+/* DEVOTION-VOICE-SIMPLE-001: daily reading starts with one clear action.
+   All prior controls are preserved under the opt-in accessible details toggle. */
+.ekodi-devotion .dv-speech-tools .dv-speech-gender{order:0;flex:1 1 100%;max-width:100%}
+.ekodi-devotion .dv-speech-tools .dv-speech-gender select{flex:1 1 auto;max-width:380px}
+.ekodi-devotion .dv-speech-tools .dv-speech-btn[data-speech-action="play"]{order:1;flex:1 1 160px}
+.ekodi-devotion .dv-speech-tools .dv-speech-btn[data-speech-action="pause"]{order:2;flex:1 1 110px}
+.ekodi-devotion .dv-speech-tools .dv-speech-btn[data-speech-action="stop"]{order:3}
+.ekodi-devotion .dv-speech-tools .dv-speech-more{order:4;flex:0 1 auto;min-height:44px;padding:8px 12px;background:#fff}
+.ekodi-devotion .dv-speech-tools .dv-speech-status{order:20;margin:0}
+.ekodi-devotion .dv-speech-tools .dv-speech-status:empty{display:none}
+.ekodi-devotion .dv-speech-tools .dv-speech-engine{order:6}
+.ekodi-devotion .dv-speech-tools .dv-speech-voice{order:7}
+.ekodi-devotion .dv-speech-tools .dv-speech-speed{order:8}
+.ekodi-devotion .dv-speech-tools .dv-speech-btn[data-speech-action="repeat"]{order:9}
+.ekodi-devotion .dv-speech-tools[data-advanced="false"] .dv-speech-engine,
+.ekodi-devotion .dv-speech-tools[data-advanced="false"] .dv-speech-voice,
+.ekodi-devotion .dv-speech-tools[data-advanced="false"] .dv-speech-speed,
+.ekodi-devotion .dv-speech-tools[data-advanced="false"] [data-speech-action="repeat"],
+.ekodi-devotion .dv-speech-tools[data-advanced="false"] [data-speech-action="pause"]:disabled,
+.ekodi-devotion .dv-speech-tools[data-advanced="false"] [data-speech-action="stop"]:disabled{display:none!important}
+.ekodi-devotion .dv-daily-art{display:block;width:100%;height:auto;max-height:420px;aspect-ratio:960/520;border:1px solid #e2e9da;border-radius:15px;overflow:hidden;background:#e9f1ed}
+.ekodi-devotion .dv-daily-art *{vector-effect:non-scaling-stroke}
+@media(max-width:520px){
+ .ekodi-devotion .dv-speech-tools{padding:9px;gap:7px}
+ .ekodi-devotion .dv-speech-tools .dv-speech-gender{justify-content:space-between;flex:1 1 100%}
+ .ekodi-devotion .dv-speech-tools .dv-speech-gender select{flex:0 1 70%;max-width:70%}
+ .ekodi-devotion .dv-speech-tools .dv-speech-btn[data-speech-action="play"]{flex:1 1 54%}
+ .ekodi-devotion .dv-speech-tools .dv-speech-more{flex:1 1 30%}
+ .ekodi-devotion .dv-daily-art{max-height:270px}
+}
