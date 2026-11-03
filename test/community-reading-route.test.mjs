@@ -31,4 +31,10 @@ test('Community worker resolves canonical reading entry and nested assets withou
   assert.equal(slash.status, 200);
   assert.equal(visited[2], '/reading/');
   assert.equal(slash.headers.get('location'), null);
+  for (const assetName of ['meeting-ui.js', 'meeting-mode.js']) {
+    const response = await worker.fetch(new Request('https://ekodi.kr/community/reading/' + assetName), env);
+    assert.equal(response.status, 200, assetName);
+    assert.equal(visited.at(-1), '/reading/' + assetName);
+    assert.match(await response.text(), /ready=true/);
+  }
 });
