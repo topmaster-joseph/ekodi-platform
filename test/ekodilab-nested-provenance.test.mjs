@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 test('Lab nested guarded Pages release inherits receipt without bypassing the release gate',async()=>{
-  const workflow=await readFile('.github/workflows/deploy-ekodi-lab-homepage.yml','utf8');
+  const workflow=(await readFile('.github/workflows/deploy-ekodi-lab-homepage.yml','utf8')).replace(/\r\n/g,'\n');
   const start=workflow.indexOf('  deploy:\n');
   const end=workflow.indexOf('    steps:\n',start);
   assert.ok(start>=0&&end>start,'deploy job contract found');
