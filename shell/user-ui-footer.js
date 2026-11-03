@@ -3,7 +3,7 @@
 if(window.__EKODI_USER_UI_FOOTER_BOOTED)return;
 window.__EKODI_USER_UI_FOOTER_BOOTED=true;
 
-const VERSION=8;
+const VERSION=7;
 const TRAFFIC_STATS_ATTR='data-ekodi-footer-traffic';
 const TRAFFIC_STATS_URL='https://ekodi.kr/api/telemetry/public-summary';
 const trafficStatsRequests=new Map();
