@@ -5,6 +5,7 @@ import authWorker from './auth-worker.js';
 import { buildEkodiPublicRegistry } from './public-discovery-registry.js';
 import { listSitePublicationSettings } from './site-publication-runtime.js';
 import { googleSearchConsoleReadOnly } from './google-search-console-readonly.js';
+import { ADMIN_SERVICE_CATALOG, canonicalServiceChannelAdminPath } from './admin-service-catalog.js';
 
 export const SEARCH_CONTROL_PATH='/api/control/search-visibility';
 export const SEARCH_PROVIDER_CATALOG=Object.freeze([
@@ -132,6 +133,59 @@ async function lastIndexNow(db,sites){
       })};
   }catch{return {source:'marketing_indexnow_url_state',status:'unavailable',truncated:false,sites:[]};}
 }
+// Platform-super-admin only: aggregate per-tenant marketing *status*, never credentials,
+// account names, campaign text, customer data, or another tenant's private detail.
+// A missing source stays null/unknown rather than being reported as zero or healthy.
+export function summarizeAutomationForSites({catalog=ADMIN_SERVICE_CATALOG,connections=[],jobs=[],policies=[],sources={}}={}) {
+  const byKey = rows => new Map((rows||[]).map(row=>[String(row.subject_key||''),row]));
+  const connectionMap=byKey(connections), jobMap=byKey(jobs), policyMap=byKey(policies);
+  const observed = name => sources[name] === 'ready';
+  const count = value => Math.max(0, Number(value)||0);
+  return catalog.filter(site=>site.kind==='site').map(site=>{
+    const subjectKey=String(site.channelSubjectKey||'').trim();
+    const link=site.channelAdminSection ? canonicalServiceChannelAdminPath(site) : '';
+    const connected=subjectKey&&observed('connections') ? connectionMap.get(subjectKey) : null;
+    const published=subjectKey&&observed('jobs') ? jobMap.get(subjectKey) : null;
+    const policy=subjectKey&&observed('policies') ? policyMap.get(subjectKey) : null;
+    return {
+      id:site.id,name:site.name,basePath:site.basePath,adminPath:link,
+      scope:subjectKey?'explicit_subject':'not_integrated',
+      activeChannels:subjectKey&&observed('connections')?count(connected?.active):null,
+      channelsTotal:subjectKey&&observed('connections')?count(connected?.total):null,
+      publishedTotal:subjectKey&&observed('jobs')?count(published?.published):null,
+      pendingJobs:subjectKey&&observed('jobs')?count(published?.pending):null,
+      failedJobs:subjectKey&&observed('jobs')?count(published?.failed):null,
+      lastPublishedAt:subjectKey&&observed('jobs')?published?.last_published_at||null:null,
+      autonomousPolicy:subjectKey&&observed('policies')?Boolean(Number(policy?.autonomous||0)):null,
+    };
+  });
+}
+async function siteAutomationSnapshot(db) {
+  const specs=[
+    ['connections',`SELECT subject_key,COUNT(*) AS total,
+      SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) AS active
+      FROM marketing_oauth_connections WHERE subject_type='tenant' GROUP BY subject_key`],
+    ['jobs',`SELECT subject_key,COUNT(*) AS total,
+      SUM(CASE WHEN status='published' THEN 1 ELSE 0 END) AS published,
+      SUM(CASE WHEN status IN ('queued','scheduled','retrying') THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN status IN ('failed','credentials_required') THEN 1 ELSE 0 END) AS failed,
+      MAX(published_at) AS last_published_at
+      FROM marketing_publication_jobs WHERE subject_type='tenant' GROUP BY subject_key`],
+    ['policies',`SELECT subject_key,
+      MAX(CASE WHEN mode='autonomous' THEN 1 ELSE 0 END) AS autonomous
+      FROM marketing_publish_policies WHERE subject_type='tenant' GROUP BY subject_key`],
+  ];
+  const replies=await Promise.all(specs.map(async([name,sql])=>{
+    try {const rows=await db.prepare(sql).all();return [name,'ready',rows.results||[]];}
+    catch {return [name,'unavailable',[]];}
+  }));
+  const sources=Object.fromEntries(replies.map(([name,status])=>[name,status]));
+  const rows=Object.fromEntries(replies.map(([name,,items])=>[name,items]));
+  return {status:Object.values(sources).every(x=>x==='ready')?'ready':'partial',
+    sources,sites:summarizeAutomationForSites({...rows,sources}),
+    caveat:'Aggregate observations only. No tenant actions, search ranking, or index acceptance is inferred.'};
+}
+
 // Pure validator exported for executable security/regression tests; HTTP entry still requires super_admin.
 export function validateEvidence(body,sites){
   if(!body||typeof body!=='object'||Array.isArray(body))throw new Error('INVALID_BODY');
@@ -172,15 +226,16 @@ export async function handleSearchVisibilityControl(request,env){
     await ensureSchema(env.DB);
     const sites=await publicSites(env);
     if(request.method==='GET'){
-      const [evidence,history,indexNow]=await Promise.all([
+      const [evidence,history,indexNow,automation]=await Promise.all([
         env.DB.prepare('SELECT site_url,provider_id,check_type,state,evidence_url,detail,source,actor,observed_at FROM search_visibility_evidence ORDER BY updated_at DESC LIMIT 6000').all(),
         env.DB.prepare('SELECT site_url,provider_id,check_type,previous_state,new_state,actor,observed_at FROM search_visibility_audit ORDER BY observed_at DESC LIMIT 50').all(),
         lastIndexNow(env.DB,sites),
+        siteAutomationSnapshot(env.DB),
       ]);
       return json({ok:true,schemaVersion:1,sites,providers:SEARCH_PROVIDER_CATALOG,
         evidence:(evidence.results||[]).filter(x=>sites.some(s=>s.url===x.site_url)),
         evidenceTruncated:(evidence.results||[]).length===6000,
-        audit:history.results||[],indexNow,generatedAt:new Date().toISOString(),
+        audit:history.results||[],indexNow,automation,generatedAt:new Date().toISOString(),
         policy:'manual_confirmation_not_provider_api_verification'});
     }
     if(!String(request.headers.get('content-type')||'').includes('application/json'))return denied(415,'JSON_REQUIRED');

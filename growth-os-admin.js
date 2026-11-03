@@ -25,7 +25,7 @@
     education:'education',books:'education',publishing:'education',journal:'education',lab:'education',
     'seonammedi':'institution',community:'institution',management:'platform',
   });
-  let items=[],registry=null,authorized=false,loading=false,loadError='',search='',currentId='';
+  let items=[],registry=null,automation=null,authorized=false,loading=false,loadError='',search='',currentId='';
   const panel=document.createElement('section');
   panel.id=ROOT_ID;panel.className='section ekodi-growth-control hidden-panel';
   panel.dataset.panel='growth-os';panel.hidden=true;
@@ -63,6 +63,31 @@
     const knownPublic=registered&&base?registered.has(base):null;
     const profile=profileOf(selected);
     const chosen=PROFILES[profile]||PROFILES.general;
+    // Read-only, centrally aggregated figures come only from the protected
+    // super-admin API. Public URL registration is never mislabelled as indexing.
+    const rawAutomation=Array.isArray(automation?.sites)?automation.sites:[];
+    const siteRows=catalog.filter(item=>item.kind==='site').map(item=>{
+      const recorded=rawAutomation.find(x=>x.id===item.id);
+      return {...item,...(recorded||{}),summaryAvailable:Boolean(recorded)};
+    }).filter(item=>!search||(item.name+' '+item.id+' '+item.group).toLowerCase().includes(search.toLowerCase()));
+    const metric=(value,suffix='')=>value===null||value===undefined?'미연동':String(value)+suffix;
+    const registeredPaths=publicPaths();
+    const summarySources=automation?.sources||{};
+    const automationTable=`<section class="growth-os-card growth-os-automation-overview" aria-label="사이트별 검색·추천·홍보 자동화 총괄현황">
+      <header><h3>사이트별 노출·추천·홍보 자동화 총괄</h3><small>중앙은 요약·이상징후, 상세는 해당 사이트 관리자</small></header>
+      <p class="growth-os-note">연결 채널과 게시 작업은 해당 사이트에 명시적으로 연결된 원장만 집계합니다. 공개 URL 등록은 실제 검색 색인·노출이 아닙니다. 미연동은 0건이 아닙니다.</p>
+      <div class="growth-os-automation-scroll"><table class="growth-os-automation-table"><thead><tr>
+      <th scope="col">사이트</th><th scope="col">공개 검색 원장</th><th scope="col">연결 채널</th><th scope="col">게시 성공 · 누적</th><th scope="col">대기 / 실패</th><th scope="col">상세 운영</th>
+      </tr></thead><tbody>${siteRows.map(item=>{
+        const base=safeBase(item),known=registeredPaths&&base?registeredPaths.has(base):null;
+        const adminPath=typeof item.adminPath==='string'&&/^\\/[a-z0-9/_-]+$/i.test(item.adminPath)?item.adminPath:'';
+        const pending=metric(item.pendingJobs),failed=metric(item.failedJobs);
+        return `<tr><th scope="row">${esc(item.name)}<small>${esc(base||'경로 미확인')}</small></th>
+          <td>${known===true?'공개 경로 있음':known===false?'공개 경로 미확인':'원장 미연동'}</td>
+          <td>${metric(item.activeChannels,'개')}</td><td>${metric(item.publishedTotal,'건')}</td>
+          <td>${pending} / ${failed}</td><td>${adminPath?`<a href="${esc(adminPath)}">사이트 관리자</a>`:'사이트 관리경로 미연동'}</td></tr>`;
+      }).join('')||'<tr><td colspan="6">조건에 맞는 사이트가 없습니다.</td></tr>'}</tbody></table></div>
+      <p class="growth-os-note">원장 상태 · 채널 ${esc(summarySources.connections||'미확인')} · 게시 ${esc(summarySources.jobs||'미확인')} · 정책 ${esc(summarySources.policies||'미확인')} · 세부 기능은 사이트별 접근권한으로 확인합니다.</p></section>`;
     const stats=[
       statusCard('중앙 등록 서비스',catalog.length,'기준: 기존 관리자 서비스 카탈로그'),
       statusCard('카탈로그상 사이트',catalog.filter(item=>item.kind==='site').length,'비공개 조직 원장 전체와 다를 수 있음'),
@@ -75,6 +100,7 @@
       <button class="secondary" type="button" data-growth-reload ${loading?'disabled':''}>${loading?'확인 중':'등록 현황 갱신'}</button></header>
       ${loadError?'<p class="growth-os-warning" role="status">'+esc(loadError)+'</p>':''}
       <div class="growth-os-stats">${stats}</div>
+      ${automationTable}
       <div class="growth-os-work">
         <section class="growth-os-card">
           <header><h3>대상 선택</h3><small>공통 서비스 카탈로그를 기반으로 검색</small></header>
@@ -108,14 +134,16 @@
     if(items.length&&registry&&!force){render();return;}
     loading=true;render();
     try{
-      const [catalog,publicRegistry]=await Promise.all([
+      const [catalog,publicRegistry,visibility]=await Promise.all([
         import('/admin/admin-service-catalog.js'),
         api('/public-registry.json').catch(()=>null),
+        api('/api/control/search-visibility',token()).catch(()=>null),
       ]);
       items=Array.isArray(catalog.ADMIN_SERVICE_CATALOG)?catalog.ADMIN_SERVICE_CATALOG:[];
       registry=publicRegistry;
+      automation=visibility?.automation||null;
       if(!currentId&&items.length)currentId=items.find(item=>item.kind==='site')?.id||items[0].id;
-      loadError=publicRegistry?'':'공개 검색 원장을 조회하지 못했습니다. 검색 등록 상태는 미확인으로 표시합니다.';
+      loadError=[!publicRegistry?'공개 검색 원장을 조회하지 못했습니다. 검색 등록 상태는 미확인으로 표시합니다.':'',!visibility?'자동화 집계 원장 연결 실패 · 개별 사이트에서 확인하십시오.':''].filter(Boolean).join(' ');
     }catch(e){loadError='관리자 서비스 기준정보 연결 실패 · '+String(e?.message||'').slice(0,100);}
     finally{loading=false;render();}
   }
