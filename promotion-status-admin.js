@@ -119,7 +119,10 @@
     ensureStyle();
     for (const [section, selector] of Object.entries(PANEL_FOR)) {
       const panel = document.querySelector(selector);
-      if (!panel || panel.querySelector(`:scope > [data-promo-prompts-for="${section}"]`)) continue;
+      if (!panel) continue;
+      // Panels such as Growth OS re-render their whole innerHTML; re-attach the card after each render.
+      if (!watched.has(panel)) { watched.add(panel); new MutationObserver(reconcile).observe(panel, { childList: true }); }
+      if (panel.querySelector(`:scope > [data-promo-prompts-for="${section}"]`)) continue;
       const card = promptCard(section);
       const anchor = panel.querySelector(':scope > header') || [...panel.children].find(node => node.tagName !== 'STYLE');
       if (anchor) anchor.after(card); else panel.prepend(card);
@@ -143,6 +146,7 @@
     if (attempt < 20) setTimeout(() => openPromotionTab(section, attempt + 1), 250);
   }
 
+  const watched = new WeakSet();
   let scheduled = false;
   function reconcile() {
     if (scheduled) return;
@@ -171,7 +175,7 @@
     return true;
   }
 
-  window.EKODIPromotionStatus = Object.freeze({ version: '1.0.0', sections: Object.freeze(Object.keys(PANEL_FOR)), prompts: PROMPTS, fillAssist });
+  window.EKODIPromotionStatus = Object.freeze({ version: '1.1.0', sections: Object.freeze(Object.keys(PANEL_FOR)), prompts: PROMPTS, fillAssist });
   if (!install()) {
     const retry = () => { if (install()) document.removeEventListener('DOMContentLoaded', retry); };
     document.addEventListener('DOMContentLoaded', retry);
