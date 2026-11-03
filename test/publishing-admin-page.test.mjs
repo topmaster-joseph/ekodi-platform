@@ -6,21 +6,21 @@ import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
-test('admin page lists seven sections with canonical, independent URLs', () => {
+test('admin page lists eight sections with canonical, independent URLs', () => {
   const html = read('publishing/admin/index.html');
   const sections = [...html.matchAll(/data-section="([a-z]+)" href="https:\/\/ekodi\.kr\/publishing\/admin\/([a-z]*)"/g)];
-  assert.deepEqual(sections.map(m => m[1]), ['overview', 'review', 'contracts', 'channels', 'settlement', 'audit', 'roles']);
+  assert.deepEqual(sections.map(m => m[1]), ['overview', 'review', 'ai', 'contracts', 'channels', 'settlement', 'audit', 'roles']);
   for (const [, id, slug] of sections) assert.equal(slug, id === 'overview' ? '' : id);
   assert.match(html, /noindex/);
 });
 
-test('admin script writes only role changes, uses central login with exact return and no root literals', () => {
+test('admin script writes only role changes and AI-manuscript review, uses central login with exact return and no root literals', () => {
   const js = read('publishing/admin/admin.js');
   assert.doesNotMatch(js, /(["'`])\/(?!\/)/);
-  // PUBLISHING-ROLES-001: the only write is the server-checked role endpoint.
-  assert.equal((js.match(/method: 'POST'/g) || []).length, 1);
-  assert.equal((js.match(/api\('admin\/roles', body\)/g) || []).length, 1);
-  assert.doesNotMatch(js, /method:\s*'(PUT|PATCH|DELETE)'/);
+  // PUBLISHING-ROLES-001 + PUBLISHING-AI-WEEKLY-001: writes go only to server-checked role and AI-review endpoints.
+  const writes = [...js.matchAll(/api\(([`'])(admin\/[^`']+)\1, (?!\))/g)].map(m => m[2]);
+  assert.deepEqual([...new Set(writes)].sort(), ['admin/ai-books/${id}/approve', 'admin/ai-books/${id}/chapters/${c.number}', 'admin/roles'].sort());
+  assert.doesNotMatch(js, /method:\s*'(PATCH|DELETE)'/);
   assert.match(js, /searchParams\.set\('return_to', location\.href\)/);
   assert.doesNotMatch(js, /@ekodi|topmaster|OPERATOR_EMAILS/, 'no email-string authorization');
 });

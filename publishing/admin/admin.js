@@ -14,7 +14,7 @@
     draft: '초안', signed: '서명 완료', revoked: '철회', preparing: '제작 중', under_review: '청취 검수 중', approved: '승인', editor: '편집자', publisher: '발행인', admin: '출판 관리자' };
   const L = k => LABELS[k] || k;
   const el = (tag, props = {}, ...kids) => { const n = document.createElement(tag); Object.assign(n, props); for (const k of kids) n.append(k); return n; };
-  const SECTIONS = ['overview', 'review', 'contracts', 'channels', 'settlement', 'audit', 'roles'];
+  const SECTIONS = ['overview', 'review', 'ai', 'contracts', 'channels', 'settlement', 'audit', 'roles'];
   let summary = null;
 
   function token() {
@@ -23,13 +23,13 @@
     }
     return '';
   }
-  async function api(rel, body) {
+  async function api(rel, body, method = 'POST') {
     const t = token();
     if (!t) throw Object.assign(new Error('LOGIN_REQUIRED'), { status: 401 });
     const c = new AbortController(); const timer = setTimeout(() => c.abort(), 9000);
     try {
       const init = { headers: { authorization: `Bearer ${t}` }, cache: 'no-store', signal: c.signal };
-      if (body) Object.assign(init, { method: 'POST', body: JSON.stringify(body), headers: { ...init.headers, 'content-type': 'application/json' } });
+      if (body) Object.assign(init, { method, body: JSON.stringify(body), headers: { ...init.headers, 'content-type': 'application/json' } });
       const r = await fetch(`${API}/${rel}`, init);
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw Object.assign(new Error(d.code || `HTTP_${r.status}`), { status: r.status, code: d.code });
@@ -68,6 +68,19 @@
       return [el('p', { className: 'muted', textContent: '승인·반려는 원고 관리 화면에서 판본 지문과 함께 서버가 검증합니다.' }),
         table(['도서', '단계', '최근 수정'], s.review.map(x => [x.title, L(x.stage), String(x.updatedAt).slice(0, 10)])),
         el('a', { className: 'button primary', href: `${ORIGIN}/publishing/human/manage/`, textContent: '원고 관리에서 심사하기' })];
+    },
+    // PUBLISHING-AI-WEEKLY-001: 주 1권 AI 협업 초안 — 읽고 고친 뒤 '감수 완료'. [확인필요]·[본문확인] 표시가 남아 있으면 완료되지 않는다.
+    async ai() {
+      const d = await api('admin/ai-books');
+      const out = [el('p', { className: 'muted', textContent: `무료 AI 한도 오늘 사용 ${d.budget.usedToday} / ${d.budget.dailyCap} · 유료 호출 없음 · 모든 책에 'AI 협업 초안 · 저자 감수' 표기` })];
+      out.push(table(['책', '분야', '진행', '상태'], d.books.map(b => [b.title, b.meta?.genre || b.genre, `${b.done}/${b.total}장`, ({ drafting: '초안 쓰는 중', author_review: '저자 감수 대기', approved: '감수 완료', discarded: '보류' })[b.status] || b.status])));
+      for (const b of d.books.filter(x => x.status !== 'drafting' || x.done > 0)) {
+        const open = el('button', { type: 'button', className: 'button', textContent: `「${b.title}」 원고 열기` });
+        open.addEventListener('click', async () => { view.replaceChildren(...await aiBook(b.id)); });
+        out.push(open);
+      }
+      if (!d.books.length) out.push(el('p', { className: 'muted', textContent: '첫 원고는 다음 예약 시간(매일 새벽 3시 37분)에 기획을 시작합니다.' }));
+      return out;
     },
     async contracts() {
       const s = await getSummary();
@@ -118,6 +131,26 @@
     return [el('h2', { textContent: '권한 초대' }), form, msg,
       el('p', { className: 'muted', textContent: '초대받은 사람이 같은 이메일로 인증된 에코디 계정에 로그인하면 서버가 이메일을 확인한 뒤 권한을 부여합니다. 모든 초대·수락·회수는 감사 기록에 남습니다.' }),
       el('h2', { textContent: '현재 권한자' }), roleTable, el('h2', { textContent: '초대 내역' }), invites];
+  }
+  async function aiBook(id) {
+    const d = await api(`admin/ai-books/${id}`);
+    const msg = el('p', { className: 'muted', role: 'status' });
+    const parts = [el('h2', { textContent: d.book.title }), el('p', { className: 'muted', textContent: `${d.book.meta.subtitle || ''} · ${d.book.meta.genre || ''} · 저자 ${d.book.meta.author} · ${d.book.meta.disclosure}` })];
+    for (const c of d.chapters) {
+      const title = el('input', { type: 'text', value: c.title, className: 'padmin-ai-title' });
+      const body = el('textarea', { value: c.body, rows: 14, className: 'padmin-ai-body' });
+      const save = el('button', { type: 'button', className: 'button', textContent: `${c.number}장 저장` });
+      save.addEventListener('click', async () => { msg.textContent = '저장 중…'; try { await api(`admin/ai-books/${id}/chapters/${c.number}`, { title: title.value, body: body.value }, 'PUT'); msg.textContent = `${c.number}장을 저장했습니다.`; } catch (e) { msg.textContent = '저장하지 못했습니다.'; } });
+      parts.push(el('section', { className: 'padmin-ai-ch' }, el('h3', { textContent: `${c.number}장 · ${({ pending: '아직 안 씀', drafted: 'AI 초안', edited: '감수 중' })[c.status] || c.status}` }), title, body, save));
+    }
+    const approve = el('button', { type: 'button', className: 'button primary', textContent: '감수 완료' });
+    approve.addEventListener('click', async () => {
+      if (!confirm('모든 장을 읽고 고쳤고, [확인필요]·[본문확인] 표시를 모두 해결했습니까?')) return;
+      try { const r = await api(`admin/ai-books/${id}/approve`, {}); msg.textContent = r.next; }
+      catch (e) { msg.textContent = e.code === 'UNRESOLVED_MARKERS' ? '[확인필요]·[본문확인] 표시가 남아 있습니다. 확인 후 지워 주세요.' : e.code === 'CHAPTERS_INCOMPLETE' ? '아직 쓰지 않은 장이 있습니다.' : '처리하지 못했습니다.'; }
+    });
+    parts.push(approve, msg);
+    return parts;
   }
   async function show(id) {
     for (const a of document.querySelectorAll('.padmin-nav a')) a.toggleAttribute('aria-current', a.dataset.section === id);
