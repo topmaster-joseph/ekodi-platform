@@ -163,3 +163,36 @@ test('cron cannot bypass a missing author digest or reviewer compliance flags',a
   assert.deepEqual(v,{ok:true,prepared:0,blocked:1});
   assert.equal(sql.prepare('SELECT COUNT(*) n FROM publishing_workflow_handoff_outbox').get().n,0);
 });
+
+test('jubilee registration is private, idempotent and scoped to verified author',async()=>{
+  const {sql,api}=memory(),env={PUBLISH_DB:api};
+  const invoke=actor=>handlePublishingWorkflow(request('jubilee/register',{method:'POST',actor}),env);
+  const initial=await invoke('authorA');
+  assert.equal(initial.status,200);
+  const first=await initial.json();
+  assert.equal(first.seriesId,'EKODI-JUBILEE-THEOLOGY');
+  assert.equal(first.manuscriptIngested,false);
+  assert.equal(first.publicationApproved,false);
+  assert.deepEqual(first.projects.map(x=>x.created),[true,true]);
+  assert.deepEqual(first.projects.map(x=>x.project.title),
+    ['희년과 하나님 나라의 회복','우리는 다시 돌아갈 수 있는가']);
+  assert.ok(first.projects.every(x=>x.project.stage==='planning'));
+  const repeated=await invoke('authorA');
+  assert.equal(repeated.status,200);
+  const again=await repeated.json();
+  assert.deepEqual(again.projects.map(x=>x.created),[false,false]);
+  assert.deepEqual(again.projects.map(x=>x.project.id),first.projects.map(x=>x.project.id));
+  const other=await invoke('authorB');
+  assert.equal(other.status,200);
+  const another=await other.json();
+  assert.deepEqual(another.projects.map(x=>x.created),[true,true]);
+  assert.ok(another.projects.every(x=>!first.projects.some(p=>p.project.id===x.project.id)));
+  assert.equal(sql.prepare('SELECT COUNT(*) AS count FROM publishing_workflow_projects').get().count,4);
+  assert.equal(sql.prepare("SELECT COUNT(*) AS count FROM publishing_workflow_audit WHERE action='create'").get().count,4);
+});
+test('jubilee private registration without database or authenticated author stays denied',async()=>{
+  assert.equal((await handlePublishingWorkflow(request('jubilee/register',{method:'POST'}),{})).status,503);
+  const {api}=memory();
+  const guest=new Request('https://ekodi.kr/publishing/api/workflow/jubilee/register',{method:'POST'});
+  assert.equal((await handlePublishingWorkflow(guest,{PUBLISH_DB:api})).status,401);
+});
