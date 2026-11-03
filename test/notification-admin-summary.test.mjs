@@ -52,6 +52,8 @@ test('summary aggregates per-topic data without exposing endpoint, token or priv
   const json=await result.json();
   assert.equal(json.ok,true);assert.equal(json.topics.length,1);
   assert.equal(json.topics[0].subscriberDevices,1);
+  assert.deepEqual(json.topics[0].publisher,
+    {enabled:false,credentialsConfigured:false,ready:false});
   assert.equal(json.topics[0].events,1);
   assert.equal(json.topics[0].delivered,1);
   assert.equal(json.webPushEnabled,false);
