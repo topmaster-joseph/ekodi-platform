@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="읽고, 질문하고, 대화하고, 삶에서 실천하는 에코디 함께읽기 독서모임. 누구나 주제별 모임을 발견하고 자신만의 모임을 시작할 수 있습니다.">
+  <title>함께읽기 · 에코디 독서모임</title>
+  <link rel="canonical" href="https://ekodi.kr/community/reading">
+  <link rel="stylesheet" href="/community/reading/styles.css">
+  <script type="module" src="/community/reading/app.js"></script>
+</head>
+<body>
+<main class="reading" id="main">
+  <div class="reading-heading">
+    <div>
+      <p class="eyebrow">EKODI COMMUNITY · READING & DIALOGUE</p>
+      <h1>함께읽기</h1>
+      <p class="reading-lede">한 권의 책에서 질문을 발견하고, 서로의 삶을 듣고, 작은 실천으로 이어갑니다.</p>
+    </div>
+    <div class="reading-actions">
+      <a class="action action-outline" href="/community/#circles">현재 모임 찾기</a>
+      <a class="action action-primary" id="createCircleLink" href="/community/?reading=create#circles">새 독서모임 만들기</a>
+    </div>
+  </div>
+
+  <nav class="reading-tabs" aria-label="함께읽기 세부 메뉴">
+    <a href="#topics">주제 탐색</a>
+    <a href="#formats">모임 방식</a>
+    <a href="#facilitator">진행 도구</a>
+    <a href="#reflection">성찰 기록</a>
+    <a href="#sources">자료·안내</a>
+  </nav>
+
+  <section id="topics" class="reading-section" aria-labelledby="topicsTitle">
+    <div class="section-heading">
+      <div><span class="eyebrow">DISCOVER</span><h2 id="topicsTitle">우리가 함께 읽을 질문</h2><p>아래 주제는 실제 개설된 모임이 아닌 <strong>모임을 시작하기 위한 진행안</strong>입니다.</p></div>
+    </div>
+    <div class="topic-filters" role="group" aria-label="주제 분류" id="topicFilters"></div>
+    <div class="topic-grid" id="topicGrid"></div>
+  </section>
+
+  <section id="formats" class="reading-section" aria-labelledby="formatsTitle">
+    <div class="section-heading"><div><span class="eyebrow">MEETING FORMATS</span><h2 id="formatsTitle">같은 책, 다양한 만남</h2><p>대상과 목적에 맞게 모임 방식을 조합할 수 있습니다.</p></div></div>
+    <div class="format-grid">
+      <article><h3>깊이 읽기</h3><p>장면·등장인물·문장에 집중하고 각자의 해석을 비교합니다.</p><small>고전 · 문학 · 비평</small></article>
+      <article><h3>하브루타 질문</h3><p>정답을 서두르지 않고 서로의 질문을 따라 대화합니다.</p><small>철학 · 성경 · 인문학</small></article>
+      <article><h3>사회와 연결</h3><p>책의 주제를 실제 사건, 공식 통계, 역사적 맥락과 함께 탐구합니다.</p><small>시민 · 역사 · 과학</small></article>
+      <article><h3>낭독과 경청</h3><p>짧은 문단을 번갈아 읽고, 느낀 점을 자신의 말로 표현합니다.</p><small>가족 · 청소년 · 접근성</small></article>
+      <article><h3>온라인·하이브리드</h3><p>원격 참여자에게도 균등한 발언과 기록 기회를 제공합니다.</p><small>디아스포라 · 지역 연계</small></article>
+      <article><h3>읽고 실천하기</h3><p>대화를 생활과 지역 문제에 연결하고 다음 모임에서 돌아봅니다.</p><small>공동체 · 희년 · 지역</small></article>
+    </div>
+  </section>
+
+  <section id="facilitator" class="reading-section" aria-labelledby="facilitatorTitle">
+    <div class="section-heading">
+      <div><span class="eyebrow">FACILITATOR KIT</span><h2 id="facilitatorTitle">진행자 도구</h2><p>선택한 주제를 그대로 사용하거나 우리 모임에 맞게 질문을 바꿀 수 있습니다.</p></div>
+      <span class="topic-status" id="activeTopicLabel" aria-live="polite">주제 선택 중</span>
+    </div>
+    <div class="workshop-layout">
+      <div class="workshop-main">
+        <h3 id="workshopTitle"></h3>
+        <p class="workshop-summary" id="workshopSummary"></p>
+        <h4>모임 진행 순서</h4>
+        <ol class="stage-list" id="stageList"></ol>
+        <div class="question-panel">
+          <div class="question-head"><span>함께 생각할 질문</span><strong id="questionIndex"></strong></div>
+          <p id="currentQuestion" aria-live="polite"></p>
+          <div class="question-actions">
+            <button type="button" class="action action-outline" id="prevQuestion">이전 질문</button>
+            <button type="button" class="action action-outline" id="nextQuestion">다음 질문</button>
+            <button type="button" class="action action-outline" id="copyQuestion">질문 복사</button>
+          </div>
+        </div>
+      </div>
+      <aside class="workshop-aside" aria-labelledby="guideTitle">
+        <h3 id="guideTitle">좋은 모임의 약속</h3>
+        <ul>
+          <li>한 사람에게 발언이 쏠리지 않도록 합니다.</li>
+          <li>해석의 차이를 존중하되 사실과 의견을 구분합니다.</li>
+          <li>개인의 경험과 민감한 발언은 동의 없이 공유하지 않습니다.</li>
+          <li>AI의 답변은 참고자료이며 최종 판단은 구성원이 합니다.</li>
+          <li>모임의 끝에는 삶에서 실천할 한 가지를 정합니다.</li>
+        </ul>
+        <button type="button" class="action action-primary full" id="copyGuide">진행안 전체 복사</button>
+        <a class="action action-outline full" id="createFromTopic" href="/community/?reading=create#circles">이 주제로 모임 개설</a>
+        <p class="help-text">모임 개설·실제 참여는 에코디 커뮤니티의 기존 로그인 및 Circle 기능으로 이동합니다.</p>
+      </aside>
+    </div>
+  </section>
+
+  <section id="reflection" class="reading-section" aria-labelledby="reflectionTitle">
+    <div class="section-heading"><div><span class="eyebrow">REFLECTION</span><h2 id="reflectionTitle">오늘의 나눔을 삶으로</h2><p>개인 생각을 정리하고, 공유 범위를 직접 결정할 수 있습니다.</p></div></div>
+    <div class="reflection-grid">
+      <label>오늘 마음에 남은 문장 또는 장면
+        <textarea id="readingInsight" rows="4" maxlength="2000" placeholder="어떤 장면이 나에게 질문을 남겼나요?"></textarea>
+      </label>
+      <label>함께 이야기하며 달라진 생각
+        <textarea id="readingDialogue" rows="4" maxlength="2000" placeholder="다른 사람의 이야기를 들으며 무엇을 새롭게 보았나요?"></textarea>
+      </label>
+      <label>이번 주에 실천할 한 가지
+        <textarea id="readingAction" rows="4" maxlength="2000" placeholder="작지만 실제로 할 수 있는 행동을 기록하세요."></textarea>
+      </label>
+    </div>
+    <div class="reflection-actions">
+      <button type="button" class="action action-primary" id="downloadReflection">내 기록 파일로 저장</button>
+      <button type="button" class="action action-outline" id="copyReflection">내 기록 복사</button>
+      <button type="button" class="action action-quiet" id="clearReflection">작성 내용 지우기</button>
+    </div>
+    <p class="privacy-note">이 화면의 기록은 서버로 전송하거나 자동 저장하지 않습니다. 이동·새로고침 전 파일로 저장하세요. 공동체 공유는 작성자가 직접 선택해야 합니다.</p>
+  </section>
+
+  <section id="sources" class="reading-section" aria-labelledby="sourcesTitle">
+    <div class="section-heading"><div><span class="eyebrow">READING MATERIALS</span><h2 id="sourcesTitle">자료를 정확히, 책은 깊이</h2><p>공공 통계와 저작권 있는 원문을 구분하며 탐구합니다.</p></div></div>
+    <div class="sources-grid">
+      <article>
+        <h3>《페스트》와 코로나19</h3>
+        <p>소설의 봉쇄·연대·고통의 장면을 실제 팬데믹 경험과 비교합니다. 국가 간 수치 비교에는 시점·검사량·보고체계 차이를 함께 설명해야 합니다.</p>
+        <a href="https://data.who.int/dashboards/covid19/cases" target="_blank" rel="noopener noreferrer">WHO 코로나19 사례 통계</a>
+        <a href="https://www.who.int/data/sets/global-excess-deaths-associated-with-covid-19-modelled-estimates" target="_blank" rel="noopener noreferrer">WHO 초과사망 추정</a>
+      </article>
+      <article>
+        <h3>에코디 자료와 실제 모임</h3>
+        <p>도서 정보는 에코디서점과 연결하고, 실제 회원·참가·모임관리는 커뮤니티 Circle에서 진행합니다. 주제별 질문지는 모임장이 자유롭게 수정할 수 있습니다.</p>
+        <a href="/books/">에코디서점 보기</a>
+        <a href="/community/#circles">운영 중인 Circle 보기</a>
+      </article>
+    </div>
+  </section>
+  <p class="reading-feedback" id="readingFeedback" role="status" aria-live="polite"></p>
+</main>
+</body>
+</html>
