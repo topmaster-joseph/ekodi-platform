@@ -801,6 +801,29 @@
         "marketing-publishing-api for immediate and scheduled distribution"
       ],
       "database": "platform-specific external storage and control-api tenant data"
+    },
+    "church": {
+      "kind": "independent-platform",
+      "source": [
+        "sites/ekodi-church/**",
+        "scripts/build-church-pages-candidate.mjs",
+        "test/church-guarded-canonical-cutover.test.mjs",
+        "test/church-pages-candidate-build.test.mjs",
+        "test/church-source-shadow-import.test.mjs"
+      ],
+      "domains": [
+        "ekodi.kr",
+        "ekodi-church.pages.dev"
+      ],
+      "publicEntry": "https://ekodi.kr/ekodichurch",
+      "deployWorkflow": ".github/workflows/deploy-ekodi-church-homepage.yml",
+      "sharedDependencies": [
+        "ekodi-shell",
+        "central auth hub",
+        "service-proxy"
+      ],
+      "database": "Church pastoral, membership, giving and attendance data remain authorized in existing independently guarded Church/Supabase services; no data migration is part of source cutover.",
+      "note": "C2/C3 approved target: single EKODI platform Git source at sites/ekodi-church with the same independent ekodi-church Pages deployment and rollback. Operational source remains topmaster-joseph/ekodi-church until guarded v2 live SHA and role/rollback verification. Legacy GitHub deletion requires separate repository-scoped owner approval."
     }
   },
   "rules": [
