@@ -16,7 +16,7 @@ create table if not exists public.mission_activity_page_edits (
   check (event_time is null or event_date is not null)
 );
 alter table public.mission_activity_page_edits enable row level security;
-revoke all on table public.mission_activity_page_edits from public, anon, authenticated;
+revoke all on table public.mission_activity_page_edits from public, anon, authenticated, service_role;
 
 create table if not exists public.mission_activity_page_edit_audit (
   id bigint generated always as identity primary key,
@@ -30,7 +30,7 @@ create table if not exists public.mission_activity_page_edit_audit (
 create index if not exists mission_activity_page_edit_audit_tenant_idx
   on public.mission_activity_page_edit_audit(workspace_tenant_id,activity_key,created_at desc);
 alter table public.mission_activity_page_edit_audit enable row level security;
-revoke all on table public.mission_activity_page_edit_audit from public, anon, authenticated;
+revoke all on table public.mission_activity_page_edit_audit from public, anon, authenticated, service_role;
 
 -- Whitelist one public workspace; project no editor, audit, participation or payment fields.
 create or replace function public.mission_activity_page_public_snapshot(p_workspace_slug text)
