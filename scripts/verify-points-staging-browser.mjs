@@ -35,6 +35,16 @@ try{
         path:`/points/?site=${site}#ekodi_token=${hash}&ekodi_type=magiclink`,
         deviceProfile:profile,allowMutation:true,timeoutMs:110000,
         actions:[
+          // The member surface uses accessible tabs; a hidden claim panel is
+          // not a browser-visible affordance until the member selects it.
+          {type:'waitFor',selector:'#pointsTabProgress',timeoutMs:15000},
+          {type:'click',selector:'#pointsTabProgress'},
+          {type:'waitFor',selector:'#pointsProgressContent:not([hidden])',timeoutMs:15000},
+          {type:'waitFor',selector:'#pointsWeeklySection:not([hidden])',timeoutMs:15000},
+          {type:'waitFor',selector:'#pointsGoalSection:not([hidden])',timeoutMs:15000},
+          {type:'assertText',text:'이번 주 검증된 참여'},
+          {type:'assertText',text:'나의 성취 목표'},
+          {type:'click',selector:'#pointsTabClaims'},
           {type:'waitFor',selector:'#claimSection:not([hidden])',timeoutMs:15000},
           {type:'assertText',text:'활동 증빙 신청'},
           {type:'fill',selector:'#claimRef',value:ref},
@@ -43,6 +53,9 @@ try{
           {type:'waitFor',selector:'#claimList .record',timeoutMs:15000},
           {type:'assertText',text:'신청했습니다'},
           {type:'assertText',text:ref},
+          {type:'click',selector:'#pointsTabProgress'},
+          {type:'waitFor',selector:'#pointsMissionList .record',timeoutMs:15000},
+          {type:'assertText',text:'승인 대기'},
           {type:'screenshot',name:`member-${name}`},
         ],
       },{artifactRoot:dir});
