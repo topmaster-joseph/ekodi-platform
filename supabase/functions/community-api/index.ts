@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { handleReading } from "./reading.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -168,6 +169,9 @@ Deno.serve(async (req) => {
   const workspace = await workspaceContext(req, userId);
   if (workspace.error) return json(req, { error: workspace.error }, workspace.error === "workspace_not_found" ? 404 : 400);
   try {
+    // Reading endpoints require verified auth and the same tenant context as all Circles.
+    const readingResponse = await handleReading(req, path, { admin, userId, workspace, json });
+    if (readingResponse) return readingResponse;
     if (req.method === "GET" && path === "/profile") {
       const { data } = await admin.from("community_profiles").select("*").eq("user_id", userId).maybeSingle();
       return json(req, { profile: data || null, email: session.user.email || "" });
@@ -239,9 +243,12 @@ Deno.serve(async (req) => {
       const { data: memberships, error } = await admin.from("community_circle_members").select("circle_id,role,status,created_at").eq("user_id", userId).order("created_at", { ascending: false });
       if (error) throw error;
       const ids = (memberships || []).map(m => m.circle_id);
-      const { data: circles } = ids.length ? await admin.from("community_circles").select("id,slug,name,summary,category,tags,mode,schedule_text,status").in("id", ids) : { data: [] as any[] };
+      const { data: circles } = ids.length ? await admin.from("community_circles").select("id,workspace_tenant_id,slug,name,summary,category,tags,mode,schedule_text,status").in("id", ids) : { data: [] as any[] };
       const map = new Map((circles || []).map(c => [c.id, c]));
-      return json(req, { circles: (memberships || []).map(m => ({ ...m, circle: map.get(m.circle_id) || null })) });
+      return json(req, { circles: (memberships || []).filter(m => {
+        const circle = map.get(m.circle_id);
+        return circle && (circle.workspace_tenant_id || null) === (workspace.tenantId || null);
+      }).map(m => ({ ...m, circle: map.get(m.circle_id) })) });
     }
     if (req.method === "GET" && path === "/people/recommendations") {
       const { data: me } = await admin.from("community_profiles").select("*").eq("user_id", userId).maybeSingle();
@@ -259,6 +266,12 @@ Deno.serve(async (req) => {
       if (!circle || circle.status !== "active") return json(req, { error: "circle_not_available" }, 404);
       if (workspace.tenantId && circle.workspace_tenant_id !== workspace.tenantId) return json(req, { error: "circle_not_available" }, 404);
       if (circle.workspace_tenant_id && (!workspace.tenantId || !workspace.member)) return json(req, { error: "workspace_membership_required" }, 403);
+      const { data: existing } = await admin.from("community_circle_members")
+        .select("circle_id,user_id,role,status,created_at,updated_at").eq("circle_id", circleId).eq("user_id", userId).maybeSingle();
+      if (existing && ["active", "pending"].includes(existing.status))
+        return json(req, { membership: existing }, existing.status === "active" ? 200 : 202);
+      if (existing && (existing.status === "blocked" || existing.role !== "member"))
+        return json(req, { error: "join_not_allowed" }, 403);
       if (circle.join_policy === "invite") return json(req, { error: "invite_only" }, 403);
       if (circle.capacity) { const { count } = await admin.from("community_circle_members").select("circle_id", { count: "exact", head: true }).eq("circle_id", circleId).eq("status", "active"); if ((count || 0) >= circle.capacity) return json(req, { error: "circle_full" }, 409); }
       const status = circle.join_policy === "open" ? "active" : "pending";

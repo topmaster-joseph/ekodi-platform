@@ -372,3 +372,335 @@ function initializeMeetingUI({ getTopic, getQuestionIndex, setQuestionIndex, ann
   renderStages();
   return { onTopicChanged, hasNotes, renderQuestion };
 }
+
+// EKODI reading workspace: authenticated Circle members only.
+// All server data is scoped by the authoritative Community API, not client roles.
+// These controls do not write until the member explicitly submits a form.
+function initializeSharedWorkspace() {
+  const root = $('#shared');
+  if (!root) return;
+  const apiBase = 'https://renzehysxirjilvdxacv.supabase.co/functions/v1/community-api';
+  const sbUrl = 'https://renzehysxirjilvdxacv.supabase.co';
+  const publishableKey = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+  const workspace = (new URLSearchParams(location.search).get('workspace') || '').trim().toLowerCase();
+  const scoped = path => {
+    const u = new URL(apiBase + path);
+    if (workspace) u.searchParams.set('workspace', workspace);
+    return u.toString();
+  };
+  const shared = { sb: null, session: null, circles: [], circleId: '', meetings: [],
+    meetingId: '', entries: [], members: [], attendance: [], canManage: false, parentId: null };
+  const $s = selector => root.querySelector(selector);
+  const message = text => { $s('#sharedStatus').textContent = text; };
+
+  function loginToCommunity() {
+    const auth = new URL('https://ekodi.kr/auth/');
+    auth.searchParams.set('site', 'community');
+    auth.searchParams.set('return_to', location.origin + location.pathname + location.search + '#shared');
+    location.assign(auth.toString());
+  }
+
+  async function request(path, options = {}) {
+    const session = (await shared.sb.auth.getSession()).data.session;
+    if (!session) throw new Error('login_required');
+    const res = await fetch(scoped(path), {
+      ...options, cache: 'no-store',
+      headers: { apikey: publishableKey, authorization: 'Bearer ' + session.access_token,
+        ...(options.body ? { 'content-type': 'application/json' } : {}), ...(options.headers || {}),
+        ...(workspace ? { 'x-ekodi-workspace': workspace } : {}) },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.error || 'request_failed'), { status: res.status });
+    return data;
+  }
+
+  const errorText = error => ({
+    login_required:'로그인이 필요합니다.',
+    reading_not_ready:'모임 공동기록 기능의 안전 검증이 아직 끝나지 않았습니다. 개인 기록 파일 기능은 계속 이용할 수 있습니다.',
+    circle_membership_required:'승인된 모임 회원만 공동기록을 이용할 수 있습니다.',
+    workspace_membership_required:'해당 운영공간의 활성 회원 권한이 필요합니다.',
+    manager_required:'모임장 또는 진행자 권한이 필요합니다.',
+    circle_full:'모임 정원이 가득 찼습니다.',
+    explicit_share_required:'공유하려면 공개에 명시적으로 동의해야 합니다.',
+    parent_not_found:'답글을 달 수 없는 기록입니다.',
+    review_not_allowed:'승인할 수 없는 신청이거나 정원이 가득 찼습니다.',
+  })[error.message] || '요청을 처리하지 못했습니다. 다시 확인해 주세요. (' + error.message + ')';
+
+  async function guard(action) {
+    try { await action(); } catch (error) {
+      console.error('community reading workspace', error);
+      message(errorText(error));
+    }
+  }
+
+  function setCircles(circles) {
+    shared.circles = circles.filter(item => item.status === 'active' && item.circle);
+    const select = $s('#sharedCircle');
+    select.replaceChildren(new Option('Circle 선택', ''));
+    shared.circles.forEach(item => select.add(new Option(item.circle.name, item.circle_id)));
+    select.disabled = shared.circles.length === 0;
+    const wanted = new URLSearchParams(location.search).get('circle');
+    select.value = shared.circles.some(c => c.circle_id === wanted) ? wanted : shared.circles[0]?.circle_id || '';
+  }
+
+  function clearMeeting() {
+    shared.meetingId = '';
+    shared.entries = [];
+    shared.attendance = [];
+    $s('#sharedMeeting').replaceChildren(new Option('회차 선택', ''));
+    $s('#sharedMeeting').disabled = true;
+    $s('#sharedWorkspace').hidden = true;
+    $s('#sharedEntryForm').reset();
+    shared.parentId = null;
+    $s('#sharedReplyContext').hidden = true;
+  }
+
+  async function loadCircles() {
+    if (!shared.session) return;
+    const { circles } = await request('/me/circles');
+    setCircles(circles || []);
+    if (!shared.circles.length) {
+      clearMeeting();
+      message('참여 중인 Circle이 없습니다. 먼저 Community에서 모임에 참여하거나 직접 개설하세요.');
+      return;
+    }
+    await loadCircle($s('#sharedCircle').value);
+  }
+
+  async function loadCircle(circleId) {
+    clearMeeting();
+    shared.circleId = circleId;
+    if (!circleId) return;
+    const access = await request('/circles/' + circleId + '/reading');
+    shared.canManage = Boolean(access.can_manage);
+    $s('#sharedManager').hidden = !shared.canManage;
+    const { meetings } = await request('/circles/' + circleId + '/reading/meetings');
+    shared.meetings = meetings || [];
+    const sel = $s('#sharedMeeting');
+    sel.replaceChildren(new Option('독서모임 회차 선택', ''));
+    shared.meetings.forEach(m => sel.add(new Option(m.title + (m.starts_at ? ' · ' + new Date(m.starts_at).toLocaleDateString('ko-KR') : ''), m.id)));
+    sel.disabled = shared.meetings.length === 0;
+    $s('#sharedRefresh').disabled = false;
+    if (shared.canManage) await loadMembers();
+    if (shared.meetings.length) {
+      sel.value = shared.meetings[0].id;
+      await loadMeeting(sel.value);
+    } else {
+      $s('#sharedWorkspace').hidden = !shared.canManage;
+      message(shared.canManage ? '새 독서모임 회차를 만들어 기록을 시작하세요.' : '아직 등록된 독서모임 회차가 없습니다.');
+    }
+    const u = new URL(location.href);
+    u.searchParams.set('circle', circleId);
+    history.replaceState(null, '', u.pathname + u.search + '#shared');
+  }
+
+  async function loadMembers() {
+    const data = await request('/circles/' + shared.circleId + '/reading/members');
+    shared.members = data.members || [];
+    const host = $s('#sharedMemberRequests');
+    host.replaceChildren();
+    const pending = shared.members.filter(m => m.status === 'pending');
+    if (!pending.length) host.textContent = '승인 대기자가 없습니다.';
+    pending.forEach(m => {
+      const row = document.createElement('div');
+      row.className = 'reading-review-item';
+      const label = document.createElement('span');
+      label.textContent = (m.display_name || '회원') + ' · ' + m.user_id.slice(0, 8);
+      row.append(label);
+      for (const [labelText, decision] of [['승인','approve'], ['거절','decline']]) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'action action-outline';
+        button.textContent = labelText;
+        button.addEventListener('click', () => guard(async () => {
+          if (!window.confirm(labelText + ' 처리하시겠습니까?')) return;
+          button.disabled = true;
+          await request('/circles/' + shared.circleId + '/reading/members/' + m.user_id + '/decision',
+            { method:'POST', body:JSON.stringify({decision}) });
+          await loadMembers();
+          message('참여 신청 처리 결과가 반영됐습니다.');
+        }));
+        row.append(button);
+      }
+      host.append(row);
+    });
+    const select = $s('#sharedAttendee');
+    select.replaceChildren(new Option('출석 대상 회원 선택', ''));
+    shared.members.filter(m => m.status === 'active').forEach(m =>
+      select.add(new Option((m.display_name || '회원') + ' · ' + m.user_id.slice(0,8), m.user_id)));
+  }
+
+  function renderAttendance() {
+    const host = $s('#sharedAttendanceRecords');
+    host.replaceChildren();
+    if (!shared.canManage) return;
+    const p = document.createElement('p');
+    p.textContent = '출석 기록 ' + shared.attendance.length + '건';
+    host.append(p);
+    shared.attendance.forEach(record => {
+      const line = document.createElement('p');
+      line.textContent = record.user_id.slice(0,8) + ' · ' +
+        ({present:'참석',absent:'불참',excused:'사유 불참'}[record.status] || record.status);
+      host.append(line);
+    });
+  }
+
+  function renderEntries() {
+    const host = $s('#sharedEntries');
+    host.replaceChildren();
+    if (!shared.entries.length) { host.textContent = '작성된 기록이 없습니다. 첫 질문이나 성찰을 남겨 보세요.'; return; }
+    shared.entries.forEach(entry => {
+      const card = document.createElement('article');
+      card.className = 'reading-shared-entry';
+      card.dataset.scope = entry.scope;
+      const by = document.createElement('small');
+      by.textContent = (entry.scope === 'private' ? '나만 보기' : '모임 공유') + ' · ' +
+        ({question:'질문',reflection:'성찰',action:'실천',reply:'답글'}[entry.kind] || entry.kind) +
+        ' · ' + new Date(entry.created_at).toLocaleString('ko-KR');
+      const body = document.createElement('p');
+      body.textContent = entry.content;
+      card.append(by,body);
+      const actions = document.createElement('div');
+      actions.className = 'reading-shared-entry-actions';
+      const reply = document.createElement('button');
+      reply.type = 'button'; reply.className = 'action action-outline'; reply.textContent = '답글';
+      reply.addEventListener('click', () => {
+        shared.parentId = entry.id;
+        const form = $s('#sharedEntryForm');
+        form.elements.namedItem('kind').value = 'reply';
+        form.elements.namedItem('scope').value = entry.scope;
+        form.elements.namedItem('scope').disabled = true;
+        $s('#sharedReplyContext').hidden = false;
+        form.elements.namedItem('content').focus();
+      });
+      actions.append(reply);
+      if (entry.author_user_id === shared.session.user.id) {
+        const remove = document.createElement('button');
+        remove.type = 'button';remove.className = 'action action-quiet';remove.textContent = '삭제';
+        remove.addEventListener('click', () => guard(async () => {
+          if (!window.confirm('내 기록을 삭제하시겠습니까?')) return;
+          await request('/circles/' + shared.circleId + '/reading/entries/' + entry.id + '/delete',
+            { method:'POST', body:'{}' });
+          await loadMeeting(shared.meetingId);
+        }));
+        actions.append(remove);
+        if (entry.scope === 'private' && !entry.parent_id) {
+          const share = document.createElement('button');
+          share.type = 'button';share.className = 'action action-outline';share.textContent = '모임 공유';
+          share.addEventListener('click', () => guard(async () => {
+            if (!window.confirm('이 기록을 모임의 모든 활성 회원에게 공개하시겠습니까?')) return;
+            await request('/circles/' + shared.circleId + '/reading/entries/' + entry.id + '/update',
+              { method:'POST', body:JSON.stringify({content:entry.content,scope:'circle',share_to_circle:true}) });
+            await loadMeeting(shared.meetingId);
+          }));
+          actions.append(share);
+        }
+      }
+      card.append(actions);
+      host.append(card);
+    });
+  }
+
+  async function loadMeeting(meetingId) {
+    shared.meetingId = meetingId;
+    if (!meetingId) { $s('#sharedWorkspace').hidden = !shared.canManage; return; }
+    const base = '/circles/' + shared.circleId + '/reading/meetings/' + meetingId;
+    const [entries, attendance] = await Promise.all([
+      request(base + '/entries'), request(base + '/attendance') ]);
+    shared.entries = entries.entries || [];
+    shared.attendance = attendance.attendance || [];
+    $s('#sharedWorkspace').hidden = false;
+    renderEntries();renderAttendance();
+    message('활성 모임 회원 권한을 확인했습니다. 다른 사람의 비공개 기록은 표시되지 않습니다.');
+  }
+
+  async function boot() {
+    if (!window.supabase?.createClient) { message('인증 연결을 불러오지 못했습니다. 다시 접속해 주세요.'); return; }
+    shared.sb = window.supabase.createClient(sbUrl,publishableKey,
+      { auth:{ persistSession:true,autoRefreshToken:true,detectSessionInUrl:false } });
+    const token = new URLSearchParams(location.hash.slice(1)).get('ekodi_token');
+    if (token) {
+      const parts = new URLSearchParams(location.hash.slice(1));
+      const {error} = await shared.sb.auth.verifyOtp({
+        token_hash:token, type:parts.get('ekodi_type') || 'email' });
+      if (error) throw error;
+      history.replaceState(null, '', location.pathname + location.search + '#shared');
+    }
+    shared.session = (await shared.sb.auth.getSession()).data.session;
+    $s('#sharedLogin').hidden = Boolean(shared.session);
+    if (!shared.session) { message('로그인 전에도 주제와 진행안은 열람할 수 있습니다. 모임 기록은 회원만 이용합니다.'); return; }
+    message('내 모임과 권한을 확인합니다.');
+    await loadCircles();
+  }
+
+  $s('#sharedLogin').addEventListener('click', loginToCommunity);
+  $s('#sharedCircle').addEventListener('change', () => guard(() => loadCircle($s('#sharedCircle').value)));
+  $s('#sharedMeeting').addEventListener('change', () => guard(() => loadMeeting($s('#sharedMeeting').value)));
+  $s('#sharedRefresh').addEventListener('click', () => guard(() => loadCircle(shared.circleId)));
+  $s('#sharedCancelReply').addEventListener('click', () => {
+    shared.parentId = null;
+    const form = $s('#sharedEntryForm');
+    form.elements.namedItem('kind').value = 'reflection';
+    form.elements.namedItem('scope').value = 'private';
+    form.elements.namedItem('scope').disabled = false;
+    $s('#sharedReplyContext').hidden = true;
+  });
+  $s('#sharedMeetingForm').addEventListener('submit', event => {
+    event.preventDefault();
+    guard(async () => {
+      const form = event.currentTarget, values = new FormData(form);
+      const date = values.get('starts_at');
+      const starts_at = date ? new Date(String(date)).toISOString() : null;
+      await request('/circles/' + shared.circleId + '/reading/meetings',
+        {method:'POST', body:JSON.stringify({title:values.get('title'),book_title:values.get('book_title'),starts_at})});
+      form.reset();
+      await loadCircle(shared.circleId);
+      message('독서모임 회차를 등록했습니다.');
+    });
+  });
+  $s('#sharedEntryForm').addEventListener('submit', event => {
+    event.preventDefault();
+    guard(async () => {
+      if (!shared.meetingId) throw new Error('회차를 먼저 선택하세요.');
+      const form = event.currentTarget, values = new FormData(form);
+      const scope = shared.parentId ? form.elements.namedItem('scope').value : values.get('scope');
+      const shareConsent = Boolean(form.elements.namedItem('share_to_circle').checked);
+      if (scope === 'circle' && !shareConsent) throw new Error('explicit_share_required');
+      await request('/circles/' + shared.circleId + '/reading/meetings/' + shared.meetingId + '/entries',
+        {method:'POST',body:JSON.stringify({
+          kind:shared.parentId ? 'reply' : values.get('kind'),scope,content:values.get('content'),
+          parent_id:shared.parentId,share_to_circle:shareConsent,
+        })});
+      form.reset();
+      form.elements.namedItem('scope').disabled = false;
+      shared.parentId = null;
+      $s('#sharedReplyContext').hidden = true;
+      await loadMeeting(shared.meetingId);
+      message('기록을 저장했습니다. 선택한 공개 범위에 따라 표시됩니다.');
+    });
+  });
+  $s('#sharedAttendanceSave').addEventListener('click', () => guard(async () => {
+    if (!shared.meetingId || !shared.canManage) return;
+    const user_id = $s('#sharedAttendee').value;
+    if (!user_id) throw new Error('출석 대상을 먼저 선택하세요.');
+    await request('/circles/' + shared.circleId + '/reading/meetings/' + shared.meetingId + '/attendance',
+      {method:'POST',body:JSON.stringify({user_id,status:$s('#sharedAttendanceStatus').value})});
+    await loadMeeting(shared.meetingId);
+    message('출석 상태를 저장했습니다.');
+  }));
+  $s('#sharedExport').addEventListener('click', () => {
+    if (!shared.session) return;
+    const mine = shared.entries.filter(e => e.author_user_id === shared.session.user.id);
+    if (!mine.length) { message('내보낼 기록이 없습니다.');return; }
+    const lines = ['EKODI 함께읽기 · 내 독서기록', ...mine.flatMap(e => ['',e.kind + ' (' + e.scope + ')',
+      e.content,'작성 ' + e.created_at])];
+    const url = URL.createObjectURL(new Blob(['\uFEFF',lines.join('\n')],{type:'text/plain;charset=utf-8'}));
+    const a = document.createElement('a');
+    a.href = url;a.download = 'ekodi-my-reading-' + new Date().toISOString().slice(0,10) + '.txt';
+    document.body.append(a);a.click();a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url),1000);
+    message('내 독서기록 파일을 내려받도록 요청했습니다.');
+  });
+  guard(boot);
+}
+initializeSharedWorkspace();

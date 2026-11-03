@@ -33,19 +33,21 @@
         "redirect": "manual",
         "expect": [
           "함께읽기",
+          "id=\"sharedWorkspace\"",
           "/community/reading/app.js"
         ],
         "rollbackVerify": false
       },
       {
-        "url": "https://ekodi.kr/community/reading/app.js?rv=meeting-20261103-b",
+        "url": "https://ekodi.kr/community/reading/app.js?rv=reading-shared-20261103-a",
         "statuses": [
           200
         ],
         "redirect": "manual",
         "expect": [
           "initializeMeetingUI",
-          "meetingStage"
+          "initializeSharedWorkspace",
+          "shareConsent"
         ],
         "rollbackVerify": false
       },

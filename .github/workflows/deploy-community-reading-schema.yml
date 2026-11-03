@@ -1,0 +1,170 @@
+name: Deploy Community Reading Private Schema
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261103142625_community_reading_shared_workspace.sql'
+      - 'scripts/sql/community-reading-dev-*.sql'
+      - 'test/community-reading-shared.test.mjs'
+      - '.github/workflows/deploy-community-reading-schema.yml'
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Authorized EKODI Orchestrator recovery branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Exact authorized EKODI release task'
+        required: true
+        type: string
+      expected_main_sha:
+        description: 'Protected main commit to promote'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: community-reading-schema-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'protected-production' }}
+  cancel-in-progress: false
+
+env:
+  MIGRATION: supabase/migrations/20261103142625_community_reading_shared_workspace.sql
+  PINNED_BLOB: 0335b407903342f624f73b441bdebac662acec62
+  DEV_PROJECT: lxcxwbdwwojjkgybbqii
+  PROD_PROJECT: renzehysxirjilvdxacv
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check source, immutable migration and privacy guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test test/community-reading-shared.test.mjs
+          node scripts/validate-supabase-public-grants.mjs
+          test "$(git hash-object "$MIGRATION")" = "$PINNED_BLOB"
+          ! grep -Eiq '(drop[[:space:]]+table|truncate[[:space:]]+table)' "$MIGRATION"
+          grep -Fq 'enable row level security' "$MIGRATION"
+          grep -Fq 'revoke all on table' "$MIGRATION"
+          grep -Fq 'security invoker' "$MIGRATION"
+
+  promote:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_BRANCH: ${{ inputs.release_branch_ref }}
+      RELEASE_TASK: ${{ inputs.release_task_id }}
+      EXPECTED_SHA: ${{ inputs.expected_main_sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify immutable, protected, orchestrator-authorized source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git hash-object "$MIGRATION")" = "$PINNED_BLOB"
+          [[ "$RELEASE_BRANCH" =~ ^ai/[A-Za-z0-9._-]+/orch_[A-Za-z0-9_-]+$ ]]
+          [[ "$RELEASE_TASK" =~ ^orch_[A-Za-z0-9_-]+$ ]]
+          test "${RELEASE_BRANCH##*/}" = "$RELEASE_TASK"
+          branch_enc="$(printf '%s' "$RELEASE_BRANCH" | jq -sRr @uri)"
+          task_enc="$(printf '%s' "$RELEASE_TASK" | jq -sRr @uri)"
+          curl --fail-with-body -sS --retry 2 --max-time 20             "https://ekodi.kr/api/orchestrator/release-receipt?taskId=$task_enc&branchRef=$branch_enc" |
+            jq -e --arg task "$RELEASE_TASK" --arg branch "$RELEASE_BRANCH"               '.ok==true and .authorized==true and .authority=="ekodi-orchestrator" and .taskId==$task and .branchRef==$branch' >/dev/null
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
+      - name: Resolve production-scoped Supabase credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-${TOKEN_B:-${TOKEN_C:-${TOKEN_D:-}}}}"
+          if [[ -z "$token" ]]; then echo 'Supabase protected credential missing; no production writes' >&2; exit 1; fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Verify DEV synthetic roles; conditionally promote approved schema; verify PROD
+        shell: bash
+        run: |
+          set -euo pipefail
+          temp="$(mktemp -d)"
+          trap 'rm -rf "$temp"' EXIT
+          query() {
+            local project="$1" file="$2" read_only="$3" output="$4" status
+            jq -Rs --argjson read_only "$read_only" '{query:.,read_only:$read_only}' "$file" > "$temp/request.json"
+            status=$(curl -sS --retry 2 --max-time 90 -o "$temp/response.json" -w '%{http_code}'               -X POST "https://api.supabase.com/v1/projects/$project/database/query"               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"               -H 'Content-Type: application/json' --data-binary @"$temp/request.json")
+            if [[ "$status" != 201 ]]; then echo "Database query failed HTTP $status for $project"; exit 1; fi
+            cp "$temp/response.json" "$output"
+          }
+          cat > "$temp/preflight.sql" <<'SQL'
+          select
+            (to_regclass('public.community_circles') is not null and
+             to_regclass('public.community_circle_members') is not null and
+             to_regclass('public.tenants') is not null) as core_ready,
+            (select count(*) from information_schema.tables where table_schema='public' and
+              table_name in ('community_reading_meetings','community_reading_entries',
+              'community_reading_attendance','community_reading_audit')) as table_count;
+          SQL
+          cat > "$temp/proof.sql" <<'SQL'
+          select
+            (select count(*)=4 and bool_and(c.relrowsecurity) from pg_class c
+              join pg_namespace n on n.oid=c.relnamespace where n.nspname='public'
+              and c.relname in ('community_reading_meetings','community_reading_entries',
+                'community_reading_attendance','community_reading_audit')) as reading_rls,
+            (select count(*)=4 and bool_and(not has_table_privilege('anon',c.oid,'select'))
+              and bool_and(not has_table_privilege('authenticated',c.oid,'select'))
+              and bool_and(has_table_privilege('service_role',c.oid,'select'))
+              from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public'
+              and c.relname in ('community_reading_meetings','community_reading_entries',
+                'community_reading_attendance','community_reading_audit')) as private_grants,
+            (select count(*)=3 from pg_constraint where conname in
+              ('reading_entry_meeting_fk','reading_entry_parent_fk','reading_attendance_meeting_fk')) as circle_integrity,
+            to_regprocedure('public.community_reading_review_member(uuid,uuid,uuid,text)') is not null as review_rpc,
+            not has_function_privilege('anon','public.community_reading_review_member(uuid,uuid,uuid,text)','execute') as anon_denied,
+            not has_function_privilege('authenticated','public.community_reading_review_member(uuid,uuid,uuid,text)','execute') as member_denied,
+            has_function_privilege('service_role','public.community_reading_review_member(uuid,uuid,uuid,text)','execute') as service_authorized;
+          SQL
+          query "$DEV_PROJECT" "$temp/preflight.sql" true "$temp/dev-preflight.json"
+          jq -e 'length==1 and .[0].core_ready==true and .[0].table_count==4' "$temp/dev-preflight.json" >/dev/null
+          query "$DEV_PROJECT" "$temp/proof.sql" true "$temp/dev-proof.json"
+          jq -e 'length==1 and (.[0]|all(.[]; .==true))' "$temp/dev-proof.json" >/dev/null
+          query "$DEV_PROJECT" scripts/sql/community-reading-dev-role-e2e.sql false "$temp/dev-test.json"
+          echo 'Development private schema and rollback-only synthetic role tests passed.'
+          query "$PROD_PROJECT" "$temp/preflight.sql" true "$temp/prod-before.json"
+          jq -e 'length==1 and .[0].core_ready==true and (.[0].table_count==0 or .[0].table_count==4)' "$temp/prod-before.json" >/dev/null
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
+          if jq -e '.[0].table_count==0' "$temp/prod-before.json" >/dev/null; then
+            query "$PROD_PROJECT" "$MIGRATION" false "$temp/prod-write.json"
+            echo 'Approved additive migration promoted to production.'
+          else
+            echo 'Production schema already present; checking idempotent proof without writes.'
+          fi
+          query "$PROD_PROJECT" "$temp/proof.sql" true "$temp/prod-proof.json"
+          jq -e 'length==1 and (.[0]|all(.[]; .==true))' "$temp/prod-proof.json" >/dev/null
+          echo 'Production schema RLS, revoked grants, foreign keys and review RPC verified.'
+      - name: Dispatch official Community API release after schema proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
+          gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/deploy-community-api.yml/dispatches"             -f ref=main -f inputs[release_branch_ref]="$RELEASE_BRANCH"             -f inputs[release_task_id]="$RELEASE_TASK"             -f inputs[expected_main_sha]="$EXPECTED_SHA"
+          echo 'Official Community API gated release dispatched.'

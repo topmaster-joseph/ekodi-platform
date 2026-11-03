@@ -46,7 +46,11 @@ test('privacy and consent: reading notes are not silently persisted or auto-shar
   assert.match(page, /공유는 작성자가 직접 선택/);
   assert.match(app, /new Blob/);
   assert.match(app, /window\.confirm/);
-  assert.doesNotMatch(app, /localStorage|sessionStorage|innerHTML\s*=|fetch\(/);
+  const localWorkshop = app.split('// EKODI reading workspace:')[0];
+  assert.doesNotMatch(localWorkshop, /localStorage|sessionStorage|innerHTML\s*=|fetch\(/);
+  // Server-backed records are explicit user actions, never automatic local reflection sync.
+  assert.match(app, /form\.addEventListener|sharedEntryForm/);
+  assert.match(app, /shareConsent/);
 });
 
 test('facilitator UI is keyboard-navigable and the questions are announced', async () => {
@@ -67,7 +71,10 @@ test('new group creation reuses existing Community login and circle workflow', a
   assert.match(app, /params\.get\('reading'\)==='create'/);
   assert.match(app, /openCircle\(\)/);
   assert.match(app, /briefs\[params\.get\('topic'\)\]/);
-  assert.doesNotMatch(await file('community/reading/app.js'), /supabase|access_token|Authorization/);
+  const appPage = await file('community/reading/app.js');
+  assert.doesNotMatch(appPage.split('// EKODI reading workspace:')[0], /supabase|access_token|Authorization/);
+  assert.match(appPage, /https:\/\/ekodi.kr\/auth\//);
+  assert.doesNotMatch(appPage, /SERVICE_ROLE|service_role/);
 });
 
 test('COVID evidence is linked to public-source datasets without inventing comparison figures', async () => {

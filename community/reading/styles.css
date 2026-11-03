@@ -96,3 +96,32 @@
 @media(max-width:920px){.meeting-layout{grid-template-columns:minmax(0,1fr)}.topic-grid,.format-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.workshop-layout{grid-template-columns:minmax(0,1fr)}.reflection-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:620px){.meeting-panel{padding:15px}.meeting-stage-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}.meeting-timer-actions{width:100%}.meeting-timer-actions .action{flex:1}.meeting-note-actions .action{flex:1}.meeting-companion .question-actions .action{min-width:0}.reading{width:calc(100% - 24px);padding-top:16px}.reading-heading{display:block;padding-bottom:14px}.reading-actions{margin-top:18px}.reading-actions .action{flex:1}.reading-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.reading-tabs a{text-align:center;font-size:.83rem;padding:10px 5px}.reading-section{padding:21px 0}.topic-grid,.format-grid,.sources-grid{grid-template-columns:minmax(0,1fr)}.section-heading{align-items:flex-start;flex-direction:column}.workshop-main,.workshop-aside{padding:15px}.question-actions .action{flex:1}.reflection-actions .action{flex:1}.topic-status{align-self:flex-start}}
 @media(prefers-reduced-motion:reduce){.reading{scroll-behavior:auto}}
+
+.reading-shared-actions{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:16px 0 20px}
+.reading-shared-actions>label{flex:1 1 220px;min-width:0}
+.reading-shared-actions label,.reading-shared-form label{display:grid;gap:6px;font-weight:750;font-size:.94rem}
+.reading-shared-actions select,.reading-shared-form select,.reading-shared-form input,.reading-shared-form textarea,.reading-shared-manager select{width:100%;max-width:100%;min-height:42px;padding:9px 10px;background:white;color:var(--read-ink);border:1px solid #bdcbc3;border-radius:10px;font:inherit}
+.reading-shared-form textarea{resize:vertical;min-height:115px}
+.reading-shared-actions select:disabled{opacity:.6}
+.reading-shared-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.reading-shared-manager{border:1px solid var(--read-border);background:var(--read-soft);border-radius:16px;padding:18px;margin-bottom:17px}
+.reading-shared-form,.reading-shared-records{display:grid;align-content:start;gap:12px;background:white;border:1px solid var(--read-border);border-radius:14px;padding:17px;min-width:0}
+.reading-shared-manager .reading-shared-form{grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;margin-bottom:15px}
+.reading-shared-manager .reading-shared-form .action{align-self:end}
+.reading-shared-manager .reading-shared-split>div{background:white;border-radius:12px;padding:15px;min-width:0}
+.reading-shared-manager .reading-shared-split select{margin-bottom:8px}
+.reading-shared-records{max-height:680px;overflow:auto}
+.reading-shared-entry{padding:13px 0;border-top:1px solid var(--read-border)}
+.reading-shared-entry p{white-space:pre-wrap;overflow-wrap:anywhere;margin:7px 0;font-size:.94rem}
+.reading-shared-entry small{font-size:.78rem;color:var(--read-muted)}
+.reading-shared-entry-actions,.reading-review-item{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.reading-shared-entry-actions button,.reading-review-item button{min-height:36px;font-size:.83rem}
+.reading-consent{display:flex!important;flex-direction:row;align-items:flex-start;font-size:.84rem!important;font-weight:500!important}
+.reading-consent input{width:17px!important;min-height:17px!important;flex:none;margin-top:4px}
+.reading-review-item{justify-content:space-between;padding:10px 0;border-top:1px solid var(--read-border)}
+.reading-shared-entry[data-scope="private"]{background:#f7faf8;border-radius:9px;padding:13px}
+.reading-shared-actions button:focus-visible,.reading-shared-form select:focus-visible,.reading-shared-form input:focus-visible,.reading-shared-form textarea:focus-visible{outline:3px solid #67a88e;outline-offset:2px}
+@media(max-width:850px){.reading-shared-split,.reading-shared-manager .reading-shared-form{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:620px){.reading-shared-actions>label{flex:1 1 100%}.reading-shared-actions .action{width:100%}.reading-shared-manager,.reading-shared-form,.reading-shared-records{padding:13px}}
+
+.reading [hidden]{display:none!important}

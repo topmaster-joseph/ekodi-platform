@@ -390,6 +390,10 @@ const tenantSiteSchemaTouched=changedFiles.some(file=>
   file==='supabase/migrations/20261103004500_tenant_ai_tool_selection.sql'||
   file==='.github/workflows/deploy-tenant-site-service-schema.yml'
 );
+const readingSchemaTouched=changedFiles.some(file=>
+  file==='supabase/migrations/20261103142625_community_reading_shared_workspace.sql'||
+  file==='.github/workflows/deploy-community-reading-schema.yml'
+);
 const humanAuthorSchemaTouched=requiresHumanAuthorSchemaRelease(changedFiles);
 const creatorAuthorTouched=requiresCreatorAuthorRelease(changedFiles);
 // Publishing static pages (ekodi.kr/publishing) are served by the Publishing Worker's assets.
@@ -689,6 +693,27 @@ async function dispatchPostMergeDeploys(){
       fail('tenant-service-schema-release: protected dispatch rejected HTTP '+dispatched.r.status);
     console.log(JSON.stringify({ok:true,action:'protected-schema-release-dispatched',
       workflow:'deploy-tenant-site-service-schema.yml',pr:pr.number,mergeSha,taskId,branch,
+      authority:'ekodi-orchestrator'}));
+  }
+  if(readingSchemaTouched){
+    const mergedPr=await api('/pulls/'+pr.number);
+    if(!mergedPr.r.ok||mergedPr.data?.merged!==true)
+      fail('community-reading-schema-release: protected merge required');
+    const mergeSha=String(mergedPr.data.merge_commit_sha||'');
+    if(!/^[a-f0-9]{40}$/.test(mergeSha))
+      fail('community-reading-schema-release: invalid merge SHA');
+    const mainHead=await api('/git/ref/heads/main');
+    if(!mainHead.r.ok||String(mainHead.data?.object?.sha||'')!==mergeSha)
+      fail('community-reading-schema-release: main advanced; exact-source approval required');
+    const dispatched=await api('/actions/workflows/deploy-community-reading-schema.yml/dispatches',{
+      method:'POST',body:JSON.stringify({ref:'main',inputs:{
+        release_branch_ref:branch,release_task_id:taskId,expected_main_sha:mergeSha
+      }})
+    });
+    if(dispatched.r.status!==204)
+      fail('community-reading-schema-release: protected dispatch rejected HTTP '+dispatched.r.status);
+    console.log(JSON.stringify({ok:true,action:'protected-community-reading-schema-dispatched',
+      workflow:'deploy-community-reading-schema.yml',pr:pr.number,mergeSha,taskId,branch,
       authority:'ekodi-orchestrator'}));
   }
   if(humanAuthorSchemaTouched){

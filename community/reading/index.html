@@ -7,7 +7,8 @@
   <title>함께읽기 · 에코디 독서모임</title>
   <link rel="canonical" href="https://ekodi.kr/community/reading">
   <link rel="stylesheet" href="/community/reading/styles.css">
-  <script type="module" src="/community/reading/app.js?rv=meeting-20261103-b"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.min.js"></script>
+  <script type="module" src="/community/reading/app.js?rv=reading-shared-20261103-a"></script>
 </head>
 <body>
 <main class="reading" id="main">
@@ -29,6 +30,7 @@
     <a href="#facilitator">진행 도구</a>
     <a href="#meeting">모임 진행</a>
     <a href="#reflection">성찰 기록</a>
+    <a href="#shared">모임 기록</a>
     <a href="#sources">자료·안내</a>
   </nav>
 
@@ -166,6 +168,67 @@
       <button type="button" class="action action-quiet" id="clearReflection">작성 내용 지우기</button>
     </div>
     <p class="privacy-note">이 화면의 기록은 서버로 전송하거나 자동 저장하지 않습니다. 이동·새로고침 전 파일로 저장하세요. 공동체 공유는 작성자가 직접 선택해야 합니다.</p>
+  </section>
+
+  <section id="shared" class="reading-section" aria-labelledby="sharedTitle">
+    <div class="section-heading">
+      <div><span class="eyebrow">MEMBER READING WORKSPACE</span>
+        <h2 id="sharedTitle">우리 모임의 함께읽기 기록</h2>
+        <p>실제 Circle 회원만 이용할 수 있습니다. 개인 기록은 기본 비공개이며 공유는 명시적으로 선택합니다.</p>
+      </div>
+      <a class="action action-outline" href="/community/#circles">Circle 둘러보기</a>
+    </div>
+    <p id="sharedStatus" class="privacy-note" role="status" aria-live="polite">로그인과 모임 권한을 확인합니다.</p>
+    <div class="reading-shared-actions">
+      <button type="button" id="sharedLogin" class="action action-primary">로그인하여 모임 기록 이용</button>
+      <label for="sharedCircle">내 Circle
+        <select id="sharedCircle" disabled><option value="">로그인 후 모임을 선택하세요</option></select>
+      </label>
+      <label for="sharedMeeting">독서모임 회차
+        <select id="sharedMeeting" disabled><option value="">모임을 선택하세요</option></select>
+      </label>
+      <button type="button" id="sharedRefresh" class="action action-outline" disabled>기록 새로고침</button>
+    </div>
+    <div id="sharedWorkspace" hidden>
+      <div id="sharedManager" class="reading-shared-manager" hidden>
+        <h3>모임장 관리</h3>
+        <form id="sharedMeetingForm" class="reading-shared-form">
+          <label>회차 제목 <input name="title" required maxlength="160" minlength="2" placeholder="예: 《페스트》 1회 토론"></label>
+          <label>읽을 책 <input name="book_title" maxlength="160" placeholder="책 제목 (선택)"></label>
+          <label>일시 <input name="starts_at" type="datetime-local"></label>
+          <button type="submit" class="action action-primary">새 회차 만들기</button>
+        </form>
+        <div class="reading-shared-split">
+          <div><h4>참여 승인</h4><div id="sharedMemberRequests"><p>신청 확인 중</p></div></div>
+          <div><h4>회차별 출석 관리</h4>
+            <label for="sharedAttendee">회원 선택</label><select id="sharedAttendee"></select>
+            <label for="sharedAttendanceStatus">출석 상태</label>
+            <select id="sharedAttendanceStatus"><option value="present">참석</option><option value="absent">불참</option><option value="excused">사유 있는 불참</option></select>
+            <button type="button" id="sharedAttendanceSave" class="action action-outline">출석 저장</button>
+            <div id="sharedAttendanceRecords"></div>
+          </div>
+        </div>
+      </div>
+      <div class="reading-shared-split">
+        <form id="sharedEntryForm" class="reading-shared-form">
+          <h3>기록 남기기</h3>
+          <label>기록 유형
+            <select name="kind"><option value="reflection">성찰</option><option value="question">질문</option><option value="action">실천 약속</option><option value="reply">답글</option></select>
+          </label>
+          <label>기록 내용 <textarea name="content" required rows="5" maxlength="2500" placeholder="개인정보·제3자의 민감한 이야기는 동의 없이 적지 마세요."></textarea></label>
+          <label>공개 범위
+            <select name="scope"><option value="private">나만 보기 (기본)</option><option value="circle">모임 회원에게 공유</option></select>
+          </label>
+          <label class="reading-consent"><input type="checkbox" name="share_to_circle"> 모임 공유를 선택한 경우 회원에게 공개되는 것에 동의합니다.</label>
+          <p id="sharedReplyContext" class="help-text" hidden>답글 작성 중 <button type="button" id="sharedCancelReply">취소</button></p>
+          <button type="submit" class="action action-primary">내 기록 저장하기</button>
+          <p class="help-text">공유 범위 변경은 작성자만 명시적으로 실행할 수 있습니다. 비회원은 열람할 수 없습니다.</p>
+        </form>
+        <div class="reading-shared-records"><h3>회차별 질문과 나눔</h3><div id="sharedEntries"><p>회차를 선택하세요.</p></div></div>
+      </div>
+      <button type="button" id="sharedExport" class="action action-outline">내 기록 내려받기</button>
+      <p class="privacy-note">모임 회원·모임장은 타인의 비공개 기록을 볼 수 없습니다. 운영자도 서버에서 회원 권한을 다시 확인합니다. 녹음·영상은 자동 수집하지 않습니다.</p>
+    </div>
   </section>
 
   <section id="sources" class="reading-section" aria-labelledby="sourcesTitle">

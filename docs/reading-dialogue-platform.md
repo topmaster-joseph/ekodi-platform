@@ -35,6 +35,16 @@ Reference: [Community Reading & Dialogue provider decision](../governance/propos
 - Supabase Service Role의 RLS 우회 특성을 고려하여 API에서 서버 측 소속·활성 회원·모임 상태를 반드시 확인해야 한다. 공개 UI에 서비스 키를 노출하지 않는다.
 - 버전 지정된 스키마 변경이 개발 환경에서 테스트되고, 정식 EKODI 보호 릴리스와 운영 실제 권한 시나리오가 통과하기 전에는 공유 데이터 기능을 활성화하거나 완료라고 표시하지 않는다.
 
+## 2단계 B 구현·보안·운영 승격 기준 (2026-11-03)
+- 신규 고객/로그인/모임 회원 원장을 만들지 않고 `community_circles` 및 `community_circle_members` 기존 행과 `workspace_tenant_id`를 사용한다. 커뮤니티 루트의 활성 모임 카드에서 해당 모임의 독서기록 화면으로 이동한다.
+- `/community/reading#shared`: 모임별 회차, 성찰·질문·답글·실천, 작성자 자신의 비공개/모임 공개, 명시적 공유 체크, 삭제 및 회차별 TXT 반출, 모임장 회차 등록·신청 승인·출석 관리.
+- 서버 측 `community-api/reading.ts`는 **매 요청** 인증·테넌트·모임 소속·활성 상태를 검증한다. 작성자가 아닌 사람의 비공개 기록은 응답에 포함하지 않는다. 개인 비공개 → 모임 공개 전환은 이중 명시적 승인 경로이며, 민감한 녹음·영상·발언 원문 자동수집은 없다.
+- 신규 4개 데이터 테이블은 `supabase/migrations/20261103142625_community_reading_shared_workspace.sql`로 정의한다. RLS 활성화 및 `anon`/`authenticated` 직접 권한 철회, 복합 FK로 다른 모임 회차/부모 기록/출석 교차 연결 차단. `community_reading_review_member`는 Service Role 전용 `SECURITY INVOKER` 원자적 승인 함수로 정원·회원자격·워크스페이스 활성자격과 감사 기록을 검증한다.
+- DEV에만 `scripts/sql/community-reading-dev-core-fixture.sql`로 실제 원장과 필드 규격이 일치하는 최소 테이블을 추가했으며 운영의 개인·회원 데이터는 복사하지 않았다. `scripts/sql/community-reading-dev-role-e2e.sql`의 합성 사용자/두 모임/정원/승인/크로스테넌트 FK 공격은 트랜잭션 내에서만 실행하고 `ROLLBACK` 한다.
+- 릴리스 순서는 **PR/헌법·CI → 오케스트레이터 보호 병합 → 영수증·정확한 main SHA 검증 → DEV 합성 역할 테스트 → PROD 테이블 원장·증분 마이그레이션·RLS/Grant/FK 증명 → 기존 Community API 인증·배포 → Cloudflare Community 공개 진입·모바일 화면 확인**이다.
+- 운영 배포는 `.github/workflows/deploy-community-reading-schema.yml`과 `deploy-community-api.yml`의 공식 경로만 사용한다. 기존 커뮤니티 Worker 소스 릴리스 역시 `deploy-community.yml`의 0% 후보·100% 승격·실환경 확인·자동 롤백을 따른다. 스테이징은 현재 명시적으로 비활성이라 완료로 가장하지 않는다.
+- DB/API 릴리스 실패 시 데이터 원장은 보호하되 회원 기록 작성은 실패-폐쇄(503 안내)하며, 일부 성공한 마이그레이션을 임의 삭제하지 않는다. 실제 회원 두 역할로 서버 기능을 재검증하지 않은 경우 PROD 인증 E2E 완료라고 보고하지 않는다.
+
 ## 《페스트》 표본 모임
 - 10분 작품 이해 → 15분 역사·공식통계 → 25분 인물 대화 → 20분 철학·신학 → 10분 실천
 - 국가별 누적 코로나19 수치의 시점과 보고 방식이 다르므로 통계 데이터는 고정 수치로 복제하지 않고 WHO 출처를 확인하도록 안내

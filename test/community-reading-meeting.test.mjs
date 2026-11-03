@@ -62,7 +62,7 @@ test('facilitator interface retains accessibility, privacy and correct Community
   for (const marker of ['id="meetingClock" role="timer" aria-live="off"', 'id="meetingStageButtons"', 'id="meetingNotes"',
     '실시간 다중 접속 모임은 아닙니다', '자동 전송·저장되지 않습니다']) assert.ok(page.includes(marker), marker);
   assert.ok(frontend.includes('initializeMeetingUI'));
-  assert.ok(page.includes('app.js?rv=meeting-20261103-b'));
+  assert.ok(page.includes('app.js?rv=reading-shared-20261103-a'));
   assert.ok(frontend.includes('topics.js?rv=meeting-20261103-b'));
   assert.equal(worker.includes('meeting-ui'), false);
   assert.equal(worker.includes('meeting-mode'), false);
@@ -70,10 +70,11 @@ test('facilitator interface retains accessibility, privacy and correct Community
   assert.ok(ui.includes('replaceChildren()'));
   assert.ok(ui.includes('new Blob'));
   assert.ok(ui.includes('hasNotes'));
+  const moderatorUI = ui.split('// EKODI reading workspace:')[0];
   for (const forbidden of ['localStorage', 'sessionStorage', 'fetch(', 'innerHTML', 'access_token', 'service_role'])
-    assert.equal(ui.includes(forbidden), false, forbidden);
+    assert.equal(moderatorUI.includes(forbidden), false, forbidden);
   const probes = JSON.parse(manifest).worker.requests;
-  assert.ok(probes.some(p => p.url.includes('/community/reading/app.js?rv=meeting-20261103-b') &&
+  assert.ok(probes.some(p => p.url.includes('/community/reading/app.js?rv=reading-shared-20261103-a') &&
     p.redirect === 'manual' && p.statuses[0] === 200));
   assert.ok(workflow.includes('node --check community/reading/app.js'));
 });
