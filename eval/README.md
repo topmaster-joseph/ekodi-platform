@@ -85,6 +85,10 @@ The official framework supports `deepeval test run` (pytest-style), agent trajec
 - https://deepeval.com/docs/evaluation-trajectory-based-llm-evals
 - https://deepeval.com/docs/metrics-custom
 
+### GitHub offline DeepEval CI proof
+
+`.github/workflows/ai-eval-lab.yml` contains an isolated `deepeval-offline-smoke` job (Python 3.11). It installs the free open-source DeepEval package, **without any external model credentials**, runs only synthetic custom `BaseMetric` tests, disables dotenv autoload and anonymous telemetry, and does not sign in to any hosted service. This is a verifiable **framework-compatibility test** only, not an operational AI-quality benchmark. See https://deepeval.com/docs/environment-variables and https://deepeval.com/docs/metrics-custom.
+
 ## 5. Admin dashboard and monitoring
 
 The existing `/admin#ai-ops` screen gets an `AI 성적표` tab. Read only from a future **authenticated, tenant-safe** `/api/control/ai/eval/summary` endpoint. It must require admin authorization and return a dated independent verification receipt, frozen baseline, 50+ cases, 3–5 repeats and calibrated CI. Until then UI must explicitly show **확인필요**, not sample percentages. Do not serve raw logs, individual user cases, hold-out prompts, or secrets.

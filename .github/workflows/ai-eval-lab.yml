@@ -42,3 +42,29 @@ jobs:
             exit 1
           fi
 # Actual baseline gate requires centrally attested private data; fixture is not operational evidence.
+
+  deepeval-offline-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      DEEPEVAL_DISABLE_DOTENV: '1'
+      DEEPEVAL_TELEMETRY_OPT_OUT: '1'
+      CONFIDENT_OPEN_BROWSER: '0'
+      CONFIDENT_API_KEY: ''
+      OPENAI_API_KEY: ''
+      ANTHROPIC_API_KEY: ''
+      GEMINI_API_KEY: ''
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install local-first open-source evaluator without provider credentials
+        run: |
+          python -m pip install --no-input deepeval
+          python -m pip show deepeval
+      - name: DeepEval pytest-style offline route metric
+        run: deepeval test run eval/test_deepeval.py --exit-on-first-failure
