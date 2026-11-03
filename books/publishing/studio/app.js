@@ -7,7 +7,7 @@ const storeSelect=document.querySelector('#storeSelect');
 const storeList=document.querySelector('#storeList');
 const bookList=document.querySelector('#bookList');
 const refreshButton=document.querySelector('#refreshButton');
-const studioLoginUrl=()=>'/auth/?site=publishing&return_to='+encodeURIComponent(location.href);
+const studioLoginUrl=()=>'https://ekodi.kr/auth/?site=publishing&return_to='+encodeURIComponent(location.href);
 function showAuthenticated(on){document.documentElement.classList.toggle('publishing-signed-in',on);workspace.hidden=!on;}
 let snapshot={stores:[],books:[]};
 
