@@ -47,7 +47,7 @@
 | C1 | design-review | 🟡 | 문서 세트 존재(MVP·SUBSCRIPTION·CONSENT-REVIEW·WITHDRAWAL-DATA·이 문서). 최종 승인 기록 없음 |
 | C2 | legal-consent-review | ⛔👤 | A 섹션 |
 | C3 | dev-migrations-rls | ✅ | 운영 DB 마이그레이션 적용·RLS 확인. 개발 DB 동기화 여부는 확인필요 |
-| C4 | synthetic-role-e2e | ⛔ | 회원·운영자·검토자·무권한 역할별 합성 계정 E2E 미실시 |
+| C4 | synthetic-role-e2e | 🟡 | 2026-11-04 DB 단계 자동화: `scripts/sql/singles_money_flows_probe.sql`(SINGLES-FLOW-001)이 PR·main마다 임시 DB에서 후불 청구·환불·청약철회·행사·초대 45개 검사를 합성 계정으로 돌리고 전부 되돌림(규칙 하나를 일부러 깨면 실패하는 것 확인). 브라우저 단계 역할별 E2E는 남음 |
 | C5 | staging | 🟡 | 사이트 배포 레인의 staging 관문은 통과하지만 동행 회원 기능은 스위치 OFF라 실제 흐름 미검증 |
 | C6 | guarded-release | ✅ | 사이트: Shared Site Core 레인 / 서버 함수: `deploy-singles-api.yml`(출처 게이트·DB 계약 확인·자동 롤백), 병합 후 자동 디스패치 실측 성공(2026-10-26) |
 | C7 | production-canary | 🟡 | 절차 작성 완료(아래 "공개 개통 카나리 절차", 2026-10-31). 실행은 소유자 결정 후 |
