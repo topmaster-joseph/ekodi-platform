@@ -114,12 +114,12 @@ test('pre-approval ledger: filters, monthly summary, export, import report and r
   assert.match(tenantUi,/파일연동 운영/);
   assert.match(tenantUi,/조회 전용 연결/);
   assert.match(tenantUi,/이미 있던 거래/);
-  assert.match(workspace,/tenant-finance-admin\.js\?v=027d36c54e28/);
-  assert.match(church,/tenant-finance-admin\.js\?v=027d36c54e28/);
+  assert.match(workspace,/tenant-finance-admin\.js\?v=e6f7c5d4e37d/);
+  assert.match(church,/tenant-finance-admin\.js\?v=e6f7c5d4e37d/);
 });
 
 test('finance admin is tabbed, keeps policy copy in a collapsible help and degrades gracefully before API promotion',()=>{
-  assert.ok(tenantUi.includes("const FINANCE_TABS=[['accounts','계좌'],['ledger','거래내역'],['transfers','이체']];"));
+  assert.ok(tenantUi.includes("const FINANCE_TABS=[['accounts','계좌'],['ledger','거래내역'],['reports','회계보고서'],['transfers','이체']];"));
   assert.match(tenantUi,/role="tablist"/);
   assert.match(tenantUi,/data-bank-panel/);
   assert.match(tenantUi,/<details class="bank-help"/);
@@ -127,4 +127,12 @@ test('finance admin is tabbed, keeps policy copy in a collapsible help and degra
   assert.match(tenantUi,/isLegacyApi/);
   assert.match(tenantUi,/최근 50건 기준/);
   assert.match(tenantUi,/data-bank-kpi="month"|data-bank-kpi="\$\{key\}"/);
+});
+
+test('organization accounting reports use tenant-scoped ledger data and organization-specific forms',()=>{
+  for(const marker of ['ACCOUNTING_PROFILES','사업자 회계보고','교회 재정보고','비영리단체 회계보고','상인회·협회 정산보고','bankReportForm','data-accounting-report','인쇄 · PDF 저장','요약 CSV'])assert.match(tenantUi,new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+  assert.match(tenantUi,/request\('\/transactions'/);
+  assert.match(tenantUi,/groupTransactions\(rows,profile\)/);
+  assert.match(tenantUi,/x-ekodi-workspace/);
+  assert.doesNotMatch(tenantUi,/organizationId/);
 });
