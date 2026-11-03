@@ -67,6 +67,9 @@ jobs:
           node --check community/community-enhancements.js
           node --check community/social-links.js
           node --check community/connect/app.js
+          node --check community/reading/app.js
+          node --check community/reading/topics.js
+          node --test test/community-reading-*.test.mjs
           node --check scripts/guarded-worker-release.mjs
           test -f deploy/manifests/community.worker.json
           if grep -Fq '[[routes]]' wrangler.community.toml || grep -Fq 'custom_domain = true' wrangler.community.toml; then
