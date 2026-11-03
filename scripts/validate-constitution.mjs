@@ -20,7 +20,7 @@ const executionFabric = json('config/autonomous-execution-fabric-policy.json');
 const remoteComputer = json('config/remote-computer-execution-policy.json');
 const sitePublicationConfig = json('config/site-publication-policy.json');
 
-if (constitution.version !== '1.27.6') fail('constitution version must be 1.27.6 with no re-login for signed-in people, user-initiated Google sign-in, visible signed-in state, mandatory pre-login authentication return, apex-only web topology and previous security safeguards');
+if (constitution.version !== '1.27.7') fail('constitution version must be 1.27.7 with no re-login for signed-in people, user-initiated Google sign-in, visible signed-in state, mandatory pre-login authentication return, apex-only web topology and previous security safeguards');
 if (constitution.status !== 'active') fail('constitution must be active');
 for (const principle of ['free-first-not-free-only','ekodi-core-is-source-of-truth','provider-independent-by-default','secure-by-default','one-domain-grammar','isolated-parallel-development','verification-first-evolution','security-native-intelligence','evidence-linked-recommendations','secure-projection-minimum-disclosure','integrated-responsibility-distributed-execution-standardized-connections','layered-governance-os-core-services-connections-workspaces','user-surface-engine-separation','capability-first-reuse','capability-before-service-enforced','sustainable-scale-by-evidence','workspace-over-space','generation-10-active-baseline','open-ended-evidence-driven-generation-evolution','sovereign-autonomy-with-human-authority','person-workspace-role-capability-authority','observe-detect-reason-plan-execute-verify-recover-learn','ekodibiz-exclusive-commercial-subject','ordinary-user-information-first-commercial-separation','completion-continuity-through-recoverable-interruptions','supreme-attributes-binding','guest-open-public-user-surfaces','self-verifying-all-surface-system-evidence','ekodi-owned-virtualization-first','authentication-return-continuity','canonical-human-url-without-tracking-query','evidence-gated-ai-claims','evidence-gated-external-knowledge','automatic-execution-background-only-enforced','public-by-default-site-publication-control','native-browser-execution-order-enforced','canonical-auth-entrypoints-enforced']) {
   if (!constitution.principles?.includes(principle)) fail(`missing constitutional principle: ${principle}`);
@@ -464,6 +464,22 @@ if(sitePublicationConfig.autoEnrollFutureSites!==true||sitePublicationConfig.def
 if(sitePublicationConfig.authority?.platformSuperAdmin!=='all-sites'||sitePublicationConfig.authority?.siteAdmin!=='own-site-only'||sitePublicationConfig.authority?.crossSiteSiteAdminMutation!==false) fail('site publication runtime authority drifted from the Constitution');
 if(sitePublicationConfig.safety?.preserveAdminAccessWhenPrivate!==true||sitePublicationConfig.safety?.preserveAuthenticationWhenPrivate!==true||sitePublicationConfig.safety?.preserveApiOperationsWhenPrivate!==true||sitePublicationConfig.safety?.localOverrideForbidden!==true||sitePublicationConfig.safety?.auditEveryMutation!==true||sitePublicationConfig.safety?.readFailureDisposition!==sitePublication.operationalRule?.readFailureDisposition) fail('site publication runtime safety contract drifted from the Constitution');
 
+const churchSource = constitution.churchCanonicalSourceTransferPolicy;
+if(churchSource?.id !== 'CHURCH-SOURCE-ONE-REPO-20261103' ||
+   churchSource?.approvalStatus !== 'owner-approved-guarded-transition' ||
+   churchSource?.canonicalRepository !== 'topmaster-joseph/ekodi-platform' ||
+   churchSource?.canonicalSourcePath !== 'sites/ekodi-church' ||
+   churchSource?.preservedIndependentPagesProject !== 'ekodi-church' ||
+   churchSource?.preservedIndependentReleaseWorkflow !== '.github/workflows/deploy-ekodi-church-homepage.yml' ||
+   churchSource?.activeLegacySourceUntilVerifiedCutover !== 'topmaster-joseph/ekodi-church' ||
+   churchSource?.ownerApprovalDoesNotAuthorizeAutomaticProductionDeployment !== true ||
+   churchSource?.requireProtectedOrchestratorReceipt !== true ||
+   churchSource?.requireExactMainCommitAndPayloadSha !== true ||
+   churchSource?.requireStagedMemberAdminLiveBrowserCanary !== true ||
+   churchSource?.requireIndependentRollbackProof !== true ||
+   churchSource?.preventCrossTenantDataAndFinanceCoalescing !== true ||
+   churchSource?.legacyRepositoryDeletionRequiresSeparateOwnerApproval !== true ||
+   churchSource?.legacyRepositoryRetainedUntilV2ReleaseVerified !== true) fail('Church C2/C3 independent release and legacy deletion constitutional protections missing');
 const amendmentDir = path.join(root, 'governance/amendments');
 const amendments = fs.readdirSync(amendmentDir).filter(name => name.endsWith('.json')).map(name => json(`governance/amendments/${name}`));
 const activeAmendment = amendments.find(item => item.constitutionVersion === constitution.version && item.status === 'approved');

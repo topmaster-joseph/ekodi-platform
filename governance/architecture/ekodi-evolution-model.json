@@ -229,6 +229,15 @@
         "rollbackPath": "Remove the ekodi.kr/local-commerce Worker route and service registry entry; shared Control API tables remain additive and inert until a later reviewed cleanup.",
         "owner": "EKODI 최고관리자",
         "observabilityPlan": "Worker health endpoint, Control API health endpoint, Cloudflare invocation logs, guarded release manifest and production verification status."
+      },
+      {
+        "id": "church",
+        "reason": "The existing ekodi-church Cloudflare Pages project already serves Church public worship, member and live routes, and retains a distinct guarded release/rollback boundary. This entry registers that previously operating project within the canonical platform architecture while moving only Git source ownership; it does not provision another Pages project, worker, domain, database, token or paid resource.",
+        "expectedBenefit": "Keep one EKODI-owned Git source without coupling Church production release, pastor/member authorization, attendance/giving privacy, or rollback to other sites. Preserve the current standalone project and release workflow during C2/C3 source migration.",
+        "incrementalMonthlyCost": "0 new fixed Cloudflare Pages projects or paid capacity; no new Workers/D1/R2/KV. Existing ekodi-church project and usage-based charges remain unchanged; independently audit future provider costs before promotion.",
+        "rollbackPath": "Do not enable canonical source switch until protected staging, authenticated canary and exact SHA approval. If cutover fails, restore the verified previous deployment in the same ekodi-church Pages project and return to legacy source mode; retain original source GitHub repo and data.",
+        "owner": "EKODI 최고관리자 (2026-11-03 C2/C3 approval; rollout separately orchestrated)",
+        "observabilityPlan": "Track existing Church Pages deploy action receipts, exact church-release.json v1/v2 source SHA and payload hash, Cloudflare project/route status, guest/member/admin/live/mobile canary, release errors, tenant/finance RLS checks and independent rollback test."
       }
     ],
     "existingBoundaryAction": "review for convergence before expansion; do not split further without passing the gate"

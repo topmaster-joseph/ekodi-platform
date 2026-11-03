@@ -52,10 +52,10 @@
     {
       "repository": "topmaster-joseph/ekodi-church",
       "classification": "active-satellite",
-      "stage": "active-source",
+      "stage": "migration-staging",
       "candidateCanonicalPath": "sites/ekodi-church/",
       "deleteRequested": false,
-      "notes": "Current Church Pages workflow reads independent main SHA; preserve public/member/admin/API, release marker and protected gates through migration."
+      "notes": "Owner approved C2/C3 target canonical source and independent Pages release. Live release still v1 from legacy GitHub until guarded v2 SHA/payload, preview member/admin/live and rollback proof; original repo and all Git history retained. Deletion requires independent offsite restorable archive, old webhook/credential revocation, and separate repository-scoped owner authorization."
     },
     {
       "repository": "topmaster-joseph/jadam-maru",
