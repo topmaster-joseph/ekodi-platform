@@ -9,6 +9,17 @@
   const status=section.querySelector('[data-saturday-history-status]');
   const endpoint='/ekodimission/board/api/saturday/history';
   let cursor='',generation=0,loading=false,yearsLoaded=false,observedDay='';
+  // A shared historical meeting URL filters the archive to its own month.
+  const requestedDate=new URLSearchParams(location.search).get('meeting')||'';
+  const sharedDate=/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)?requestedDate:'';
+  if(sharedDate){
+    const yearOption=document.createElement('option');
+    yearOption.value=sharedDate.slice(0,4);
+    yearOption.textContent=yearOption.value+'년';
+    year.append(yearOption);
+    year.value=yearOption.value;
+    month.value=sharedDate.slice(5,7);
+  }
   const kstDay=()=>{
     const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
     const part=type=>parts.find(item=>item.type===type)?.value||'';
@@ -16,7 +27,7 @@
   };
   const report=message=>{status.textContent=message};
   function createRow(meeting){
-    const article=document.createElement('article');article.className='mission-activity-row mission-saturday-history-row';
+    const article=document.createElement('article');article.className='mission-activity-row mission-saturday-history-row';article.dataset.meetingDate=meeting.date;article.id='saturday-'+meeting.date;
     const time=document.createElement('time');time.dateTime=meeting.date;
     const strong=document.createElement('strong');strong.textContent=meeting.date.slice(5).replace('-', '.');
     const yearEl=document.createElement('span');yearEl.textContent=meeting.date.slice(0,4);
@@ -28,7 +39,9 @@
     const when=document.createElement('span');
     const date=new Date(meeting.date+'T00:00:00Z');
     const day=date.toLocaleDateString('ko-KR',{timeZone:'UTC',month:'long',day:'numeric',weekday:'long'});
-    when.textContent=day+' 오전 11시';
+    const hour=Number(String(meeting.time||'11:00').split(':')[0]);
+    const minute=String(meeting.time||'11:00').split(':')[1]||'00';
+    when.textContent=day+' '+(hour>=12?'오후 ':'오전 ')+(hour%12||12)+'시'+(minute==='00'?'':(' '+minute+'분'));
     const venue=document.createElement('span');venue.textContent=meeting.venue||'에코디교회';
     meta.append(badge,when,venue);
     const title=document.createElement('h3');title.textContent=meeting.title||'토요 성경토론과 함께하는 식사';
@@ -54,11 +67,16 @@
       if(!yearsLoaded){
         for(const value of data.years||[]){
           if(!/^\d{4}$/.test(value))continue;
-          const option=document.createElement('option');option.value=value;option.textContent=value+'년';year.append(option);
+          if(!Array.from(year.options).some(option=>option.value===value)){
+            const option=document.createElement('option');option.value=value;option.textContent=value+'년';year.append(option);
+          }
         }
         yearsLoaded=true;
       }
       for(const meeting of data.items)list.append(createRow(meeting));
+      if(sharedDate&&location.hash==='#saturday-'+sharedDate){
+        list.querySelector('#saturday-'+sharedDate)?.scrollIntoView({block:'center',behavior:'instant'});
+      }
       if(!list.children.length){
         const empty=document.createElement('p');empty.className='mission-activity-empty';
         empty.textContent='선택한 기간에 지난 토요모임이 없습니다.';list.append(empty);

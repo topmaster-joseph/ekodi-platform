@@ -51,6 +51,11 @@
   function render(data){
     if(!data?.ok||!data.meeting?.date||!Array.isArray(data.replies))throw new Error('모임 안내를 확인하지 못했습니다.');
     meetingDate=data.meeting.date;
+    const sharedDate=new URLSearchParams(location.search).get('meeting')||'';
+    if(/^\d{4}-\d{2}-\d{2}$/.test(sharedDate)&&sharedDate!==meetingDate&&location.hash==='#saturday'){
+      location.replace('/ekodimission/activities?meeting='+encodeURIComponent(sharedDate)+'#saturday-'+sharedDate);
+      return;
+    }
     const heading=document.getElementById('mission-next-event');
     if(heading){
       const day=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',weekday:'short'}).format(new Date());
@@ -58,6 +63,16 @@
     }
     const day=new Date(meetingDate+'T00:00:00Z');
     if(!Number.isNaN(day.getTime()))dateText.textContent=day.toLocaleDateString('ko-KR',{timeZone:'UTC',month:'long',day:'numeric',weekday:'short'});
+    // Display the one-off meeting time from the canonical event API, not the weekly default.
+    const [hour,minute]=String(data.meeting.time||'11:00').split(':').map(Number);
+    const meetingTime=(hour>=12?'오후 ':'오전 ')+(hour%12||12)+':'+String(minute||0).padStart(2,'0');
+    const timeLabel=root.querySelector('.mission-saturday-date span:last-child');
+    if(timeLabel)timeLabel.textContent=meetingTime;
+    const timeFact=root.querySelector('.facts dd');
+    if(timeFact)timeFact.textContent='토요일 '+meetingTime;
+    const intro=root.querySelector('.activity-copy > p:not(.tag)');
+    if(intro)intro.textContent='이번 주 토요일 '+meetingTime+', 에코디교회에서 성경을 읽고 토론하며 함께 식사합니다. 처음 오시는 분도 환영합니다.';
+    root.dataset.meetingDate=meetingDate;
     const attendees=data.replies.filter(item=>item.attendance==='join').length;
     const comments=data.replies.filter(item=>String(item.body||'').trim()).length;
     count.textContent='참여 의사 '+attendees+'명 · 답글 '+comments+'개';
