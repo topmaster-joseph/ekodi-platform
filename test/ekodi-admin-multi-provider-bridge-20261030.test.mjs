@@ -57,9 +57,10 @@ test('alternative login is explicit, loops only through canonical auth and keeps
   assert.match(surface,/via','ekodi'/);
   assert.match(surface,/return_to',safeReturn/);
   assert.match(surface,/sessionStorage\.removeItem\(EKODI_BRIDGE_INTENT\)/);
-  assert.match(client,/const adminReturn=config\.kind==='portal'/);
-  assert.match(client,/target\.pathname==='\/auth\/'/);
-  assert.match(client,/target\.searchParams\.get\('via'\)==='ekodi'/);
+  assert.match(client,/function trustedAdminCallbackReturn\(target\)/);
+  assert.match(client,/const adminReturn=trustedAdminCallbackReturn\(target\)/);
+  assert.match(client,/target\.pathname!=='\/auth\/'/);
+  assert.match(client,/target\.searchParams\.get\('via'\)!=='ekodi'/);
   assert.match(router,/else if\(site==='admin'\)await import\('\.\/admin-auth\.js/);
 });
 
