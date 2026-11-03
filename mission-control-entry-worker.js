@@ -15,7 +15,7 @@ import { runInvestAutopilotSchedule } from './invest-autopilot-runtime.js';
 import { handleDeviceControl } from './device-control.js';
 import { handleDeviceWakeControl, runWakeOrchestration } from './device-wake-control.js';
 import { disableIneligibleWakeProfiles, enforceDesktopWakeRequest } from './device-wake-policy.js';
-import { claimHybridFallback, handleHybridAgentResult, handleHybridExecution } from './hybrid-execution.js';
+import { claimHybridFallback, handleHybridAgentHeartbeat, handleHybridAgentResult, handleHybridExecution } from './hybrid-execution.js';
 import { handleHybridExecutionMonitor, runHybridExecutionMonitor } from './hybrid-execution-monitor.js';
 import { handleMarketingAdminControl } from './marketing-admin-control.js';
 import { runScheduledMetricsCollection } from './marketing-metrics-collector.js';
@@ -385,6 +385,12 @@ export default {
         console.error('Hybrid Execution result error', error);
         return errorResponse('하이브리드 실행 결과 처리 중 오류가 발생했습니다.', 'HYBRID_EXECUTION_RESULT_ERROR');
       }
+    }
+
+    const hybridHeartbeatMatch=path.match(/^\/api\/device-agent\/commands\/(hyb_[^/]+)\/heartbeat$/);
+    if(request.method==='POST'&&hybridHeartbeatMatch){
+      try{return applyApiSecurityHeaders(await handleHybridAgentHeartbeat(request,env,decodeURIComponent(hybridHeartbeatMatch[1])))}
+      catch(error){console.error('Hybrid Execution heartbeat error',error);return errorResponse('실행 임대 갱신에 실패했습니다.','HYBRID_EXECUTION_HEARTBEAT_ERROR')}
     }
 
     if (path.startsWith('/api/control/devices') || path.startsWith('/api/device-agent')) {
