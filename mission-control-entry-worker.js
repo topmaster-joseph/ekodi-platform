@@ -210,7 +210,7 @@ export default {
       catch (error) { console.error('EKODI Orchestrator completion reconciliation error', error); return errorResponse('EKODI Orchestrator 완료 증거 조정 중 오류가 발생했습니다.', 'ORCHESTRATOR_COMPLETION_RECONCILIATION_ERROR'); }
     }
 
-    if (path === '/api/telemetry/visit') {
+    if (path === '/api/telemetry/visit' || path === '/api/telemetry/public-summary') {
       try { const response = await handleTrafficIntelligence(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Traffic telemetry error', error); return applyApiSecurityHeaders(new Response(null, { status:204 })); }
     }

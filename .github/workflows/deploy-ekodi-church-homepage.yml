@@ -84,19 +84,24 @@ jobs:
           echo "CHURCH_SOURCE_SHA=$platform_sha" >> "$GITHUB_ENV"
           echo "CHURCH_RELEASE_SOURCE_MODE=canonical" >> "$GITHUB_ENV"
 
-      - name: Validate Church source, privacy boundary and multilingual life hub
+      - name: Validate Church source, privacy boundary and canonical daily devotion
         shell: bash
         run: |
           set -euo pipefail
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-worship-admin.js church-weekly-worship.js church-weekly-worship.css church-homepage-layout.css worship/weekly.json worship/2026-10-18/materials.json church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub.js church-life-hub.css church-life-hub-i18n.js my/index.html my/app.js my/styles.css my/giving/index.html my/giving/app.js my/giving/styles.css my/attendance/index.html my/attendance/app.js my/attendance/styles.css; do
+          for file in index.html script.js live/index.html live/live.js live/host-intent.js live/live.css church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-header-tune.css church-online-status.js church-worship-admin.js church-weekly-worship.js church-weekly-worship.css church-homepage-layout.css worship/weekly.json worship/2026-10-18/materials.json church-live-entry.css giving.js church-footer.css community-visual.css church-life-hub-i18n.js my/index.html my/app.js my/styles.css my/giving/index.html my/giving/app.js my/giving/styles.css my/attendance/index.html my/attendance/app.js my/attendance/styles.css; do
             test -s "church/$file"
           done
-          for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js church-worship-admin.js church-weekly-worship.js giving.js church-life-hub.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
+          for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js church-worship-admin.js church-weekly-worship.js giving.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
             node --check "church/$file"
           done
-          grep -Fq 'data-ekodi-life-hub' church/index.html
+          grep -Fq '<strong>매일묵상</strong>' church/index.html
+          grep -Fq 'href="/ekodichurch/devotion/"' church/index.html
+          if grep -Eq 'data-ekodi-life-hub|id="life-hub"|id="daily-devotion"|id="life-reflection-form"|id="memory-form"|id="witness-form"|href="#life-hub"|church-life-hub\.(css|js)' church/index.html; then
+            echo 'Retired Church life record UI and scripts must not return.'
+            exit 1
+          fi
           grep -Fq 'data-church-worship-admin' church/index.html
           grep -Fq 'scope=worship-access' church/church-worship-admin.js
           grep -Fq 'data-church-weekly' church/index.html
@@ -114,8 +119,6 @@ jobs:
           jq -e '.schema=="ekodi.church.worship.index.v1" and (.services|any(.date=="2026-10-18"))' church/worship/weekly.json >/dev/null
           test -s church/_headers
           grep -Eq 'connect-src[^;]*https://renzehysxirjilvdxacv\.supabase\.co;' church/_headers
-          grep -Fq 'church-life-hub.js' church/index.html
-          grep -Fq 'church-life-hub.css' church/index.html
           grep -Fq 'church-life-hub-i18n.js' church/index.html
           grep -Fq 'church-i18n-extended.js' church/index.html
           grep -Fq 'church-online-status.js' church/index.html
@@ -128,8 +131,6 @@ jobs:
           grep -Fq 'AbortController' church/church-online-status.js
           grep -Fq "dataset.liveStatus='stale'" church/church-online-status.js
           grep -Fq '에코디선교회' church/index.html
-          grep -Fq 'PRIVATE FIRST' church/index.html
-          grep -Fq 'localStorage' church/church-life-hub.js
           grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' church/church-life-hub-i18n.js
           grep -Fq 'href="/ekodichurch/my/' church/index.html
           grep -Fq "href: '/ekodichurch/my/'" church/script.js
@@ -159,7 +160,7 @@ jobs:
           grep -Fq '<progress class="month-meter"' church/my/attendance/app.js
           if grep -Fq '운영자 기능은 별도 관리자 화면에서 처리합니다.' church/my/index.html; then echo 'Member home must not expose internal operator guidance.'; exit 1; fi
           test -s church/devotion/index.html
-          grep -Fq '<h1>오늘의 매일묵상</h1>' church/devotion/index.html
+          grep -Fq '<h1>에코디 오늘의 매일묵상</h1>' church/devotion/index.html
           grep -Fq 'data-ekodi-devotion data-base="/ekodichurch/devotion/"' church/devotion/index.html
           grep -Fq '<script type="module" src="/bible/devotion.js"></script>' church/devotion/index.html
           grep -Fq 'href="/ekodichurch/devotion/">매일묵상</a>' church/index.html
@@ -245,7 +246,7 @@ jobs:
             renderer=$(curl -L -sS -o /tmp/devotion-renderer.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/bible/devotion.js' || true)
             api=$(curl -sS -o /tmp/devotion-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/bible/api/bible/devotion?date=2026-10-26' || true)
             if [[ "$page" == 200 && "$renderer" == 200 && "$api" == 200 ]] \
-              && grep -Fq '<h1>오늘의 매일묵상</h1>' /tmp/church-devotion.html \
+              && grep -Fq '<h1>에코디 오늘의 매일묵상</h1>' /tmp/church-devotion.html \
               && grep -Fq 'class="site-header church-devotion-header"' /tmp/church-devotion.html \
               && grep -Fq 'data-ekodi-devotion' /tmp/church-devotion.html \
               && grep -Fq 'data-tab' /tmp/devotion-renderer.js \
@@ -284,7 +285,7 @@ jobs:
           echo "Church together verification failed: page=$page js=$js css=$css"
           exit 1
 
-      - name: Verify production life hub assets and exact release
+      - name: Verify production Church home, canonical devotion and exact release
         shell: bash
         run: |
           set -euo pipefail
@@ -296,9 +297,7 @@ jobs:
             giving_member_js=$(curl -L -sS -o /tmp/church-my-giving.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/my/giving/app.js?release=${release}" || true)
             attendance_member=$(curl -L -sS -o /tmp/church-my-attendance.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/my/attendance/?release=${release}" || true)
             attendance_member_js=$(curl -L -sS -o /tmp/church-my-attendance.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/my/attendance/app.js?release=${release}" || true)
-            life=$(curl -L -sS -o /tmp/life.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub.js?release=${release}" || true)
             life_i18n=$(curl -L -sS -o /tmp/life-i18n.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub-i18n.js?release=${release}" || true)
-            life_css=$(curl -L -sS -o /tmp/life.css -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-life-hub.css?release=${release}" || true)
             online_status=$(curl -L -sS -o /tmp/church-online-status.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-online-status.js?release=${release}" || true)
             worship_admin=$(curl -L -sS -o /tmp/church-worship-admin.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-worship-admin.js?release=${release}" || true)
             weekly_js=$(curl -L -sS -o /tmp/church-weekly-worship.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-weekly-worship.js?release=${release}" || true)
@@ -309,8 +308,10 @@ jobs:
             live_js=$(curl -L -sS -o /tmp/church-live.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/live.js?release=${release}" || true)
             live_intent=$(curl -L -sS -o /tmp/church-live-host-intent.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/host-intent.js?release=${release}" || true)
             marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
-            if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$attendance_member" == 200 && "$attendance_member_js" == 200 && "$life" == 200 && "$life_i18n" == 200 && "$life_css" == 200 && "$online_status" == 200 && "$worship_admin" == 200 && "$weekly_js" == 200 && "$weekly_css" == 200 && "$weekly_manifest" == 200 && "$weekly_service" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
-              && grep -Fq 'data-ekodi-life-hub' /tmp/church.html \
+            if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$attendance_member" == 200 && "$attendance_member_js" == 200 && "$life_i18n" == 200 && "$online_status" == 200 && "$worship_admin" == 200 && "$weekly_js" == 200 && "$weekly_css" == 200 && "$weekly_manifest" == 200 && "$weekly_service" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
+              && grep -Fq '<strong>매일묵상</strong>' /tmp/church.html \
+              && grep -Fq 'href="/ekodichurch/devotion/"' /tmp/church.html \
+              && ! grep -Eq 'data-ekodi-life-hub|id="life-hub"|id="daily-devotion"|id="life-reflection-form"|id="memory-form"|id="witness-form"|href="#life-hub"|church-life-hub\.(css|js)' /tmp/church.html \
               && grep -Fq 'data-church-worship-admin' /tmp/church.html \
               && grep -Fq 'scope=worship-access' /tmp/church-worship-admin.js \
               && grep -Fq 'data-church-weekly' /tmp/church.html \
@@ -336,7 +337,6 @@ jobs:
               && ! grep -Fq '운영자 기능은 별도 관리자 화면에서 처리합니다.' /tmp/church-my.html \
               && grep -Fq '에코디선교회' /tmp/church.html \
               && grep -Fq 'church-i18n-extended.js' /tmp/church.html \
-              && grep -Fq 'localStorage' /tmp/life.js \
               && grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' /tmp/life-i18n.js \
               && grep -Fq 'api/realtime/live?tenant=ekodichurch' /tmp/church-online-status.js \
               && grep -Fq 'AbortController' /tmp/church-online-status.js \
@@ -358,11 +358,11 @@ jobs:
                   .sourceSha == $sha
                 end
               ' /tmp/church-release.json >/dev/null; then
-              echo 'Church production life hub assets and release SHA verified.'
+              echo 'Church canonical devotion home, core assets and source SHA verified.'
               break
             fi
             if [[ "$attempt" == 18 ]]; then
-              echo "Production did not converge: root=$root member=$member giving_member=$giving_member giving_member_js=$giving_member_js attendance_member=$attendance_member attendance_member_js=$attendance_member_js life=$life life_i18n=$life_i18n life_css=$life_css online_status=$online_status weekly_js=$weekly_js weekly_css=$weekly_css weekly_manifest=$weekly_manifest weekly_service=$weekly_service live_css=$live_css live_js=$live_js live_intent=$live_intent marker=$marker"
+              echo "Production did not converge: root=$root member=$member giving_member=$giving_member giving_member_js=$giving_member_js attendance_member=$attendance_member attendance_member_js=$attendance_member_js life_i18n=$life_i18n online_status=$online_status weekly_js=$weekly_js weekly_css=$weekly_css weekly_manifest=$weekly_manifest weekly_service=$weekly_service live_css=$live_css live_js=$live_js live_intent=$live_intent marker=$marker"
               exit 1
             fi
             sleep 5
@@ -386,7 +386,7 @@ jobs:
             sleep 3
           done
 
-      - name: Verify rendered nine-language church life hub
+      - name: Verify rendered nine-language church homepage and canonical devotion entry
         shell: bash
         run: |
           set -euo pipefail
@@ -405,7 +405,7 @@ jobs:
             await page.setViewport({width:1440,height:1100});
             for(const locale of locales){
               await page.goto(`https://ekodi.kr/ekodichurch/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
-              await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('[data-ekodi-life-hub]')&&document.querySelector('#life-reflection-form'),{timeout:25000},locale);
+              await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),{timeout:25000},locale);
               if(extended.has(locale)) await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
               if(locale!=='ko-KR'){
                 await page.waitForFunction(expected=>{
@@ -422,17 +422,18 @@ jobs:
                 return {
                   lang:document.documentElement.lang,
                   hero:document.querySelector('.hero h1')?.innerText||'',
-                  life:document.querySelector('[data-ekodi-life-hub]')?.innerText||'',
+                  devotion:!!document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),
+                  legacyHub:!!document.querySelector('[data-ekodi-life-hub],#life-reflection-form'),
                   body:clone.innerText,
                   options:[...document.querySelectorAll('[data-ekodi-language-control] select option')].map(o=>o.value)
                 };
               });
               assert.equal(snapshot.lang,locale);
               assert.deepEqual(snapshot.options,['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id']);
-              assert.ok(snapshot.life.length>200,`${locale} life hub is unexpectedly empty`);
+              assert.equal(snapshot.devotion,true,`${locale} canonical devotion card missing`);
+              assert.equal(snapshot.legacyHub,false,`${locale} retired life record UI returned`);
               if(locale==='ko-KR'){
                 assert.match(snapshot.hero,/부르심에서 교제로/);
-                assert.match(snapshot.life,/말씀이 일상이 되고/);
               }else{
                 const match=snapshot.body.match(/.{0,25}[가-힣].{0,25}/);
                 if(match) console.error(`${locale} residual Hangul: ${match[0]}`);
@@ -449,7 +450,7 @@ jobs:
             assert.equal(memberHeader.language,true,'member header must show the shared rounded language selector');
             assert.deepEqual(memberHeader.globalLinks,[],'member header must not expose EKODI root/My EKODI links');
             assert.equal(memberHeader.myPanel,false,'member page must not render the My EKODI handoff panel');
-            console.log('Rendered life hub and local-only member header verified.');
+            console.log('Nine-language canonical devotion and local-only member header verified.');
           }finally{
             await browser.close();
           }
@@ -474,7 +475,7 @@ jobs:
             const page=await browser.newPage();
             const failures=[];
             page.on('pageerror',e=>failures.push(String(e)));
-            for(const device of [{name:'desktop',width:1440,height:900},{name:'mobile',width:390,height:844}]){
+            for(const device of [{name:'mobile-320',width:320,height:740},{name:'mobile-390',width:390,height:844},{name:'tablet-768',width:768,height:1000},{name:'desktop-1366',width:1366,height:900},{name:'desktop-1440',width:1440,height:900}]){
               await page.setViewport({width:device.width,height:device.height,deviceScaleFactor:1});
               for(const locale of locales){
                 const url=origin+'?lang='+encodeURIComponent(locale)+'&release='+release;
@@ -492,7 +493,15 @@ jobs:
                     giving:!!document.querySelector('.giving-strip'),
                     // The shared shell wraps My Page in the central login (/auth/?…return_to=…/ekodichurch/my/).
                     member:[...document.querySelectorAll('.site-header a')].some(a=>{const h=a.getAttribute('href')||'';try{const u=new URL(h,location.origin);return u.pathname==='/ekodichurch/my/'||(u.pathname.startsWith('/auth')&&new URL(u.searchParams.get('return_to')||'/',location.origin).pathname==='/ekodichurch/my/')}catch{return false}}),
-                    qtin:!!document.querySelector('.site-header a[href="/qtin/church"]')
+                    qtin:!!document.querySelector('.site-header a[href="/qtin/church"]'),
+                    canonicalDevotion:!!document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),
+                    legacyLifeRecord:!!document.querySelector('[data-ekodi-life-hub],#life-reflection-form'),
+                    overflow:document.documentElement.scrollWidth>innerWidth+1,
+                    mobileGreetingGap:(()=>{
+                      const greeting=document.querySelector('.hero .eyebrow')?.getBoundingClientRect();
+                      const header=document.querySelector('.site-header')?.getBoundingClientRect();
+                      return greeting&&header?Math.round(greeting.top-header.bottom):null;
+                    })()
                   };
                 });
                 assert.equal(initial.language,locale);
@@ -502,6 +511,10 @@ jobs:
                 assert.equal(initial.sharedLive,true,'shared EKODI Live link retained');
                 assert.equal(initial.member,true,'site-local member navigation retained');
                 assert.equal(initial.qtin,true,'QTIN group-order link in the church header '+locale+' '+device.name);
+                assert.equal(initial.canonicalDevotion,true,'canonical daily devotion card missing '+locale+' '+device.name);
+                assert.equal(initial.legacyLifeRecord,false,'legacy journal UI returned '+locale+' '+device.name);
+                assert.equal(initial.overflow,false,'horizontal overflow '+locale+' '+device.name);
+                if(device.width<=800) assert.ok(initial.mobileGreetingGap>=0&&initial.mobileGreetingGap<100,'mobile header-to-greeting gap too large '+locale+' '+device.name+' gap '+initial.mobileGreetingGap);
                 assert.ok(initial.header.left>=-2&&initial.header.right<=device.width+2,'header clipped '+locale+' '+device.name);
                 if(locale==='ko-KR'){
                   await page.screenshot({path:'/tmp/church-approved-layout-proof/'+device.name+'-home.png',fullPage:false});
