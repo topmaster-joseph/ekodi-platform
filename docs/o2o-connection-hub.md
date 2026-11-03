@@ -43,3 +43,17 @@ Release boundary: existing Shared Site Core (no new subdomain, worker, tenant or
 - Use isolated ai/chatgpt/<task-id> task PR; only orchestrator-issued recovery/promotion PR merges and deploys. No manual production deploy.
 - Rollback through guarded release revert of the new route and assets. No schema migration or side effects in this slice.
 - Do not label the platform or follow-on slices live or complete without independent production functional checks and auditable receipt.
+
+
+## 2026-11-04 incremental tenant operator implementation (EKODI-O2O-002)
+
+Implementation branch: ai/chatgpt/20261104-o2o-tenant-ops-5c21.
+
+- Existing Shared Site Worker now owns GET/HEAD /o2o/go/{opaque code}, with strict noindex/no-store and same-origin public URL validation. Revoked, expired and unknown codes fail closed. No scan writes or attendee profiling.
+- Existing workspace site service settings render a subordinate tenant-owned QR operator panel; no duplicate administrator sidebar/service exists. A server-authorized operator may issue and revoke a 7-, 30- or 90-day QR and check the database snapshot after mutation. Token exists only in the issue receipt; database stores SHA-256 digest.
+- An additive Supabase schema is prepared through CLI-generated migration 20261103165945_o2o_tenant_operator_qr.sql. RLS is enabled, private tables have direct grants revoked, issue/revoke/snapshot RPCs accept authenticated calls only and independently require current tenant-local operator scope. Public resolution returns a minimal site ID + destination projection only.
+- DEV/PROD preflight discovery: DEV has tenants and current_site_activity_contexts but not the canonical activity table/operator helper; PROD has both. The new schema intentionally depends on the existing common site context only, and leaves the separate canonical attendance lifecycle unchanged. No production table was written directly by this development task.
+- A new protected deploy-o2o-qr-schema.yml workflow validates new schema on PR, and accepts schema promotion only on immutable main SHA via exact orchestrator release receipt, production environment gate, DEV-before-PROD apply and independent RLS/RPC/grant proof. It does not deploy simply because source code merged.
+- Tests: new tenant operator routing/API/schema tests plus existing O2O and workspace route tests; synthetic Chrome operator issue/revoke/QR verification at 320, 390, 768, 1366, 1440px.
+- Blocker to declaring feature live: orchestrator-issued PR merge; guarded Shared Site Worker deployment; explicit authorized schema promotion on DEV and PROD; production operator identity tests with tenant-local account; verify issued link before and after revoke; observability receipt.
+- High-risk areas remain excluded: autonomous check-in, activity points, customer/merchant targeting, notifications, voice recording, payment or account identity inference. A QR visit remains navigation only; the canonical activity ledger alone can verify attendance with required audit proof.
