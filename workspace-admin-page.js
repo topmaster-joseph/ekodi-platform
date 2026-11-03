@@ -210,7 +210,11 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   let sitePreferenceWritePending=false;
   function serviceMenuVisible(key){
     if(!Array.isArray(siteServiceSnapshot?.items))return true;
-    const related=siteServiceSnapshot.items.filter(x=>x.readiness==='ready'&&x.navSection===key);
+    // The Mall owns a local "channels" route while the shared catalog stores
+    // social publishing visibility under "publishing". Translate only this
+    // established route; do not give the menu extra privileges.
+    const catalogSection=service==='mall'&&key==='channels'?'publishing':key;
+    const related=siteServiceSnapshot.items.filter(x=>x.readiness==='ready'&&x.navSection===catalogSection);
     return !related.length||related.some(x=>x.menuVisible===true);
   }
   async function siteServiceApi(name,body,resultKey='items'){
