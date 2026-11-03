@@ -41,7 +41,7 @@ function authUrl(){
 }
 function renderIdentity(){
   const member=activeSession();document.body.dataset.member=member?'1':'0';$('memberApp').hidden=!member;
-  const auth=$('authLink');auth.href=member?'#logout':authUrl();auth.textContent=member?'로그아웃':'로그인';
+  // EKODI common Shell owns header account actions; member body owns logout.
   const start=document.querySelector('.cta-row .button');if(start)start.href=authUrl();
   if(member)$('memberMeta').textContent=`무료등급 · ${state.session?.user?.email||'회원'} · 기능 선택형`;
 }
@@ -330,5 +330,5 @@ $('exampleMenu').addEventListener('click',()=>useRequestExample('배달앱 메�
 $('exampleReview').addEventListener('click',()=>useRequestExample('리뷰 대응이 밀렸어요'));
 $('exampleOrder').addEventListener('click',()=>useRequestExample('주문을 한곳에서 보고 싶어요'));
 $('refreshSpaces').addEventListener('click',loadVerifiedSpaces);
-$('saveSelection').addEventListener('click',saveSelection);$('logoutButton').addEventListener('click',logout);$('authLink').addEventListener('click',event=>{if(activeSession()){event.preventDefault();logout()}});
+$('saveSelection').addEventListener('click',saveSelection);$('logoutButton').addEventListener('click',logout);
 boot();
