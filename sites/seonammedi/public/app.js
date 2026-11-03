@@ -1,3 +1,24 @@
+// SITE-EVENT-SHARE-001: canonical invitation copy; never duplicate the URL.
+function formatActivityShare(organization,activity,date,url,action='신청하기'){
+  const clean=value=>String(value??'').replace(/[\r\n\t\u2028\u2029]+/g,' ').replace(/\s+/g,' ').trim();
+  const org=clean(organization);
+  let name=clean(activity);
+  if(name===org)name='';
+  else if(name.startsWith(org+' '))name=name.slice(org.length+1);
+  const heading=[org,name,clean(action)].filter(Boolean).join(' ');
+  const match=clean(date).match(/^(\d{4})[-.](\d{1,2})[-.](\d{1,2})(?:\D|$)/);
+  let dayLabel='';
+  if(match){
+    const yyyy=Number(match[1]),mm=Number(match[2]),dd=Number(match[3]);
+    const day=new Date(Date.UTC(yyyy,mm-1,dd));
+    if(day.getUTCFullYear()===yyyy&&day.getUTCMonth()===mm-1&&day.getUTCDate()===dd){
+      const iso=String(yyyy).padStart(4,'0')+'-'+String(mm).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+      dayLabel=iso+' ('+['일','월','화','수','목','금','토'][day.getUTCDay()]+')';
+    }
+  }
+  return [heading,dayLabel,clean(url)].filter(Boolean).join('\n');
+}
+
 const el=id=>document.getElementById(id);
 const money=n=>typeof n==='number'?new Intl.NumberFormat('ko-KR',{style:'currency',currency:'KRW',maximumFractionDigits:0}).format(n):'자료 입력 전';
 const safeUrl=value=>{try{const u=new URL(String(value||''));return u.protocol==='https:'?u.href:'#'}catch{return'#'}};
@@ -272,7 +293,7 @@ function itemShareKey(item){
   return 'h'+(hash>>>0).toString(36);
 }
 function itemShareButton(item,view){
-  return '<div class="item-share-row"><button type="button" class="secondary item-share" data-share-item="'+escapeHtml(itemShareKey(item))+'" data-share-view="'+(view==='committee'?'committee-activity':'timeline')+'" data-share-title="'+escapeHtml(item?.title||'')+'">공유</button></div>';
+  return '<div class="item-share-row"><button type="button" class="secondary item-share" data-share-item="'+escapeHtml(itemShareKey(item))+'" data-share-view="'+(view==='committee'?'committee-activity':'timeline')+'" data-share-title="'+escapeHtml(item?.title||'')+'" data-share-date="'+escapeHtml(view==='committee'?item?.date||'':'')+'">공유</button></div>';
 }
 function siteMountBase(){return location.origin+(location.pathname.startsWith('/seonammedi')?'/seonammedi/':'/')}
 // SITE-MOUNT-RELATIVE-LINKS-001 (2026-10-20): this page is also served at deep paths such as
@@ -290,10 +311,11 @@ mountRelativeLinks();
 function itemShareUrl(key,view){const u=new URL(siteMountBase());u.searchParams.set('item',key);u.hash=view;return u.href}
 async function shareSiteItem(button){
   const url=itemShareUrl(button.dataset.shareItem,button.dataset.shareView),title=button.dataset.shareTitle||document.title;
+  const message=formatActivityShare('서남권 국립의대 소통센터',title,button.dataset.shareDate||'',url,'자세히 보기');
   const done=text=>{const old='공유';button.textContent=text;setTimeout(()=>{button.textContent=old},1800)};
-  try{if(navigator.share){await navigator.share({title,url});return}}catch(error){if(error?.name==='AbortError')return}
-  try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(url);done('링크 복사됨');return}}catch{}
-  window.prompt('아래 링크를 복사해 공유하세요.',url);
+  try{if(navigator.share){await navigator.share({text:message});return}}catch(error){if(error?.name==='AbortError')return}
+  try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(message);done('안내 복사됨');return}}catch{}
+  window.prompt('아래 행사·활동 안내를 복사해 공유하세요.',message);
 }
 document.addEventListener('click',event=>{const button=event.target.closest?.('[data-share-item]');if(!button)return;event.preventDefault();shareSiteItem(button)});
 var sharedItemOpened=false;
