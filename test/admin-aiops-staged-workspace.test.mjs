@@ -7,8 +7,8 @@ const css = readFileSync(new URL('../admin-readable-command.css', import.meta.ur
 const provider = readFileSync(new URL('../admin-provider-control.js', import.meta.url), 'utf8');
 const readable = readFileSync(new URL('../admin-readable-command.js', import.meta.url), 'utf8');
 
-test('AI Ops provides five mutually exclusive progressive views with accessible button state', () => {
-  for (const stage of ['overview','providers','sites','reports','command']) {
+test('AI Ops provides six mutually exclusive progressive views with accessible button state', () => {
+  for (const stage of ['overview','providers','sites','reports','command','eval']) {
     assert.match(aiops, new RegExp('data-aiops-stage-tab="' + stage + '"'));
     assert.match(css, new RegExp('data-aiops-stage="' + stage + '"'));
   }
@@ -18,6 +18,9 @@ test('AI Ops provides five mutually exclusive progressive views with accessible 
   assert.match(aiops, /ArrowLeft','ArrowRight','Home','End/);
   assert.match(aiops, /section\.dataset\.aiopsStage = 'overview'/);
   assert.match(css, /AIOPS-STAGED-WORKSPACE-20261029/);
+  assert.match(css, /grid-template-columns:repeat\(6,minmax\(0,1fr\)\)/);
+  assert.match(css, /\.ai-ops-main > :is\([^\n]*\.ai-eval-lab-view\)/);
+  assert.match(css, /data-aiops-stage="eval"\] \.ai-ops-main > \.ai-eval-lab-view/);
 });
 
 test('overview counts and urgent items come from control APIs rather than sample numbers', () => {

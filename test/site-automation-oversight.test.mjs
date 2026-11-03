@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { summarizeAutomationForSites } from '../search-visibility-control.js';
+import { summarizeAutomationForSites, joinSiteIndexNowSubmissions } from '../search-visibility-control.js';
 import {
   tenantAutomationOverviewModel,
   tenantAutomationOverviewHtml,
@@ -93,4 +93,55 @@ test('Authority and UI reuse are protected by the existing platform/tenant gate'
   assert.match(site,/bindTenantAutomationOverview\(\$\('tenantAutoOverview'\)\)/);
   assert.match(site,/service&&service!=='mall'\?Promise\.resolve\(null\):growth/);
   assert.doesNotMatch(control,/token_ciphertext.*SELECT|SELECT.*token_ciphertext/);
+});
+
+test('Super-admin IndexNow site joins use canonical public paths and never infer actual indexing',()=>{
+  const catalog=[
+    {id:'mall',name:'에코디몰',kind:'site',basePath:'/ekodimall',channelSubjectKey:'ekodimall'},
+    {id:'cgma',name:'청계면상인회',kind:'site',basePath:'/cgma',channelSubjectKey:'cgma'},
+    {id:'private',name:'비공개 사이트',kind:'site',basePath:'/unpublished',channelSubjectKey:'private'},
+  ];
+  const rows=summarizeAutomationForSites({catalog,sources:{connections:'ready',jobs:'ready',policies:'ready'},policies:[{subject_key:'ekodimall',autonomous:0}]});
+  assert.equal(rows[0].autonomousPolicy,false,'recorded review policy is a real false state');
+  assert.equal(rows[1].autonomousPolicy,null,'missing policy is unknown, never a fabricated review setting');
+  const source={
+    status:'naver_submission_only',truncated:false,
+    sites:[
+      {siteUrl:'https://ekodi.kr/ekodimall/',submittedPagesInSnapshot:12,lastSubmittedAt:'2026-11-03T05:02:00Z'},
+      {siteUrl:'https://ekodi.kr/cgma',submittedPagesInSnapshot:0,lastSubmittedAt:null},
+      {siteUrl:'https://other.example/unpublished',submittedPagesInSnapshot:41,lastSubmittedAt:'2026-11-03T05:00:00Z'},
+      {siteUrl:'https://ekodi.kr/unpublished?token=secret',submittedPagesInSnapshot:99},
+    ],
+  };
+  const joined=joinSiteIndexNowSubmissions({status:'ready',sources:{jobs:'ready'},sites:rows},source);
+  assert.equal(joined.status,'ready');
+  assert.equal(joined.sources.indexNow,'ready');
+  assert.equal(joined.sites[0].indexNowSubmittedPages,12);
+  assert.equal(joined.sites[0].lastIndexNowSubmittedAt,'2026-11-03T05:02:00Z');
+  assert.equal(joined.sites[1].indexNowSubmittedPages,0,'an observed 0 from complete sample remains 0');
+  assert.equal(joined.sites[2].indexNowSubmittedPages,null,'non-public foreign-host or query evidence is not matched');
+  assert.doesNotMatch(JSON.stringify(joined),/secret|other\.example/);
+  const truncated=joinSiteIndexNowSubmissions({status:'ready',sites:rows},{...source,truncated:true});
+  assert.equal(truncated.status,'partial');
+  assert.equal(truncated.sources.indexNow,'truncated');
+  assert.equal(truncated.sites[0].indexNowSubmittedPages,12,'positive sample counts are documented minima');
+  assert.equal(truncated.sites[1].indexNowSubmittedPages,null,'truncated sample 0 cannot prove no historical submission');
+  assert.equal(truncated.sites[0].indexNowSampleTruncated,true);
+  const missing=joinSiteIndexNowSubmissions({status:'ready',sites:rows},{status:'unavailable',sites:[]});
+  assert.equal(missing.status,'partial');
+  assert.equal(missing.sources.indexNow,'unavailable');
+  assert.ok(missing.sites.every(site=>site.indexNowSubmittedPages===null));
+});
+
+test('Central Growth OS visibly separates Naver submission receipts from search indexing',()=>{
+  const source=read('growth-os-admin.js');
+  const control=read('search-visibility-control.js');
+  const css=read('growth-os-admin.css');
+  assert.match(source,/IndexNow 제출/);
+  assert.match(source,/제출 접수는 실제 색인이 아닙니다/);
+  assert.match(source,/실제 색인이 아닙니다/);
+  assert.match(source,/item\.indexNowSubmittedPages/);
+  assert.match(css,/growth-os-automation-scroll/);
+  assert.match(control,/joinSiteIndexNowSubmissions\(automation,indexNow\)/);
+  assert.match(control,/if\(!actor\)return denied\(403,'SUPER_ADMIN_REQUIRED'\)/);
 });

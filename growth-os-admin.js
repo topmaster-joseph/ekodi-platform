@@ -71,23 +71,27 @@
       return {...item,...(recorded||{}),summaryAvailable:Boolean(recorded)};
     }).filter(item=>!search||(item.name+' '+item.id+' '+item.group).toLowerCase().includes(search.toLowerCase()));
     const metric=(value,suffix='')=>value===null||value===undefined?'미연동':String(value)+suffix;
+    const observedAt=value=>{const date=value?new Date(value):null;return date&&!Number.isNaN(date.getTime())?date.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false})+' KST':'기록 없음';};
     const registeredPaths=publicPaths();
     const summarySources=automation?.sources||{};
     const automationTable=`<section class="growth-os-card growth-os-automation-overview" aria-label="사이트별 검색·추천·홍보 자동화 총괄현황">
       <header><h3>사이트별 노출·추천·홍보 자동화 총괄</h3><small>중앙은 요약·이상징후, 상세는 해당 사이트 관리자</small></header>
       <p class="growth-os-note">연결 채널과 게시 작업은 해당 사이트에 명시적으로 연결된 원장만 집계합니다. 공개 URL 등록은 실제 검색 색인·노출이 아닙니다. 미연동은 0건이 아닙니다.</p>
       <div class="growth-os-automation-scroll"><table class="growth-os-automation-table"><thead><tr>
-      <th scope="col">사이트</th><th scope="col">공개 검색 원장</th><th scope="col">연결 채널</th><th scope="col">게시 성공 · 누적</th><th scope="col">대기 / 실패</th><th scope="col">상세 운영</th>
+      <th scope="col">사이트</th><th scope="col">공개 검색 원장</th><th scope="col">IndexNow 제출</th><th scope="col">연결 채널</th><th scope="col">자동게시 정책</th><th scope="col">게시 성공 · 누적</th><th scope="col">대기 / 실패</th><th scope="col">상세 운영</th>
       </tr></thead><tbody>${siteRows.map(item=>{
         const base=safeBase(item),known=registeredPaths&&base?registeredPaths.has(base):null;
         const adminPath=typeof item.adminPath==='string'&&item.adminPath.startsWith('/')&&/^[a-z0-9][a-z0-9/_-]*$/i.test(item.adminPath.slice(1))?item.adminPath:'';
         const pending=metric(item.pendingJobs),failed=metric(item.failedJobs);
+        const submitted=item.indexNowSubmittedPages===null||item.indexNowSubmittedPages===undefined?'미연동':item.indexNowSampleTruncated?'최소 '+item.indexNowSubmittedPages+'개 URL':item.indexNowSubmittedPages+'개 URL';
+        const mode=item.autonomousPolicy===null||item.autonomousPolicy===undefined?'미연동':item.autonomousPolicy?'자율게시':'검토·승인형';
         return `<tr><th scope="row">${esc(item.name)}<small>${esc(base||'경로 미확인')}</small></th>
           <td>${known===true?'공개 경로 있음':known===false?'공개 경로 미확인':'원장 미연동'}</td>
-          <td>${metric(item.activeChannels,'개')}</td><td>${metric(item.publishedTotal,'건')}</td>
+          <td>${esc(submitted)}<small>${item.indexNowSubmittedPages===null||item.indexNowSubmittedPages===undefined?'네이버 접수 원장 미연동':esc('최근 '+observedAt(item.lastIndexNowSubmittedAt))}</small></td>
+          <td>${metric(item.activeChannels,'개')}</td><td>${esc(mode)}</td><td>${metric(item.publishedTotal,'건')}</td>
           <td>${pending} / ${failed}</td><td>${adminPath?`<a href="${esc(adminPath)}">사이트 관리자</a>`:'사이트 관리경로 미연동'}</td></tr>`;
-      }).join('')||'<tr><td colspan="6">조건에 맞는 사이트가 없습니다.</td></tr>'}</tbody></table></div>
-      <p class="growth-os-note">원장 상태 · 채널 ${esc(summarySources.connections||'미확인')} · 게시 ${esc(summarySources.jobs||'미확인')} · 정책 ${esc(summarySources.policies||'미확인')} · 세부 기능은 사이트별 접근권한으로 확인합니다.</p></section>`;
+      }).join('')||'<tr><td colspan="8">조건에 맞는 사이트가 없습니다.</td></tr>'}</tbody></table></div>
+      <p class="growth-os-note">원장 상태 · 채널 ${esc(summarySources.connections||'미확인')} · 게시 ${esc(summarySources.jobs||'미확인')} · 정책 ${esc(summarySources.policies||'미확인')} · IndexNow ${esc(summarySources.indexNow||'미확인')} · 제출 접수는 실제 색인이 아닙니다. 집계 상한은 최근 URL 5,000건이며, 원장 누락은 0으로 보지 않습니다. 세부 기능은 사이트별 접근권한으로 확인합니다.</p></section>`;
     const stats=[
       statusCard('중앙 등록 서비스',catalog.length,'기준: 기존 관리자 서비스 카탈로그'),
       statusCard('카탈로그상 사이트',catalog.filter(item=>item.kind==='site').length,'비공개 조직 원장 전체와 다를 수 있음'),

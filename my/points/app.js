@@ -359,6 +359,14 @@ async function submitClaim(event){
     claimStatus.textContent=data?.submitted?'신청했습니다. 운영자 확인 후 적립 여부가 표시됩니다.':'이미 신청한 증빙입니다.';
     document.getElementById('claimForm').reset();
     await loadClaims(site,revision);
+    // A successful evidence submission changes this site's approved/pending
+    // mission projection; refresh from the trusted server (never award in UI).
+    if(revision===viewRevision&&select.value===site){
+      const {data:{session}}=await sb.auth.getSession();
+      if(revision===viewRevision&&select.value===site&&session?.access_token){
+        void loadProgress(session.access_token,site,revision);
+      }
+    }
   }finally{button.disabled=false;}
 }
 document.getElementById('claimForm').addEventListener('submit',submitClaim);
