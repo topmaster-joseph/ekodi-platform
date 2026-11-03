@@ -8,6 +8,7 @@ const load=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8').replac
 const stagingBooks=load('wrangler.books.staging.toml');
 const stagingPublishing=load('wrangler.publishing.staging.toml');
 const stagingMallWorkflow=load('.github/workflows/deploy-ekodi-mall.yml');
+const stagingBooksWorkflow=load('.github/workflows/stage-books-shell.yml');
 const productionBooks=load('wrangler.books.toml');
 const productionMall=load('sites/ekodi-mall/api/wrangler.toml');
 const service=load('publishing-release-entry.js');
@@ -42,6 +43,15 @@ test('Development release flag and both commercial production configurations rem
   assert.doesNotMatch(productionMall,/PUBLISHING_RELEASE_GATE/);
   assert.match(stagingMallWorkflow,/PAYMENTS_ENABLED = "false"/);
   assert.match(stagingMallWorkflow,/TRANSACTION_REHEARSAL_ENABLED = "false"/);
+});
+test('both staging deployment lanes validate Publisher Worker account inventory first',()=>{
+  const inventory='deployments list --name ekodi-publishing-staging --json';
+  assert.ok(stagingBooksWorkflow.includes(inventory));
+  assert.ok(stagingMallWorkflow.includes(inventory));
+  assert.ok(stagingBooksWorkflow.indexOf(inventory)<stagingBooksWorkflow.indexOf('Deploy isolated Books staging'));
+  assert.ok(stagingMallWorkflow.indexOf(inventory)<stagingMallWorkflow.indexOf('Deploy staging Mall API'));
+  assert.ok(stagingBooksWorkflow.includes('CLOUDFLARE_DEVELOPMENT_API_TOKEN'));
+  assert.ok(stagingMallWorkflow.includes('CLOUDFLARE_DEVELOPMENT_API_TOKEN'));
 });
 test('named RPC still denies unknown, swapped or unverified release requests without private verified evidence',async()=>{
   const input={publicationId:'publ-123',editionId:'edition-123',releaseDigest:'sha256:'+'a'.repeat(64)};
