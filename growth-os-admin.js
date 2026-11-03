@@ -80,7 +80,7 @@
       <th scope="col">사이트</th><th scope="col">공개 검색 원장</th><th scope="col">연결 채널</th><th scope="col">게시 성공 · 누적</th><th scope="col">대기 / 실패</th><th scope="col">상세 운영</th>
       </tr></thead><tbody>${siteRows.map(item=>{
         const base=safeBase(item),known=registeredPaths&&base?registeredPaths.has(base):null;
-        const adminPath=typeof item.adminPath==='string'&&item.adminPath.startsWith('/')&&/^[a-z0-9/_-]+$/i.test(item.adminPath.slice(1))?item.adminPath:'';
+        const adminPath=typeof item.adminPath==='string'&&item.adminPath.startsWith('/')&&/^[a-z0-9][a-z0-9/_-]*$/i.test(item.adminPath.slice(1))?item.adminPath:'';
         const pending=metric(item.pendingJobs),failed=metric(item.failedJobs);
         return `<tr><th scope="row">${esc(item.name)}<small>${esc(base||'경로 미확인')}</small></th>
           <td>${known===true?'공개 경로 있음':known===false?'공개 경로 미확인':'원장 미연동'}</td>
