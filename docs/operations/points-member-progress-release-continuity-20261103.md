@@ -20,3 +20,6 @@ GitHub Actions can report `action_required` instead of authentic required checks
 7. Record exact branch/head, CI, staging, production URL, browser checks, errors/observability and verifier timestamp in an official EKODI completion receipt.
 
 This file does not authorize bypassing a human financial gate, changing the release source, manually merging a worker PR, changing server flags or deploying from this task workspace.
+
+## Latest-main authenticated check renewal (2026-11-03)
+The first owner-connected continuation commit `effe5fb1dc85027204156c988d17cb2e03b022c3` ran real GitHub CI, Supabase Local CI, Orchestration Gate and My deployment validation successfully. The official convergent workflow subsequently synchronized newer main onto the recovery head, currently requiring fresh checks on that **new** head rather than reusing earlier green CI. This additional non-executable update requests normal GitHub checks after synchronization. It does not approve, merge, deploy, relax policy, add a financial incentive or alter functional source code. The canonical member API remains default-off in production, and staging remains Cloudflare Access protected.
