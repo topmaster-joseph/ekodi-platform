@@ -62,14 +62,17 @@ test('a new private book is NOT mirrored even if its static JSON claims on sale'
   assert.deepEqual(bookstoreProducts({books:[forged]}),[]);
 });
 test('verified publishing service can safely include NEW editions in runtime mall projection', async()=>{
-  const book={id:'BOOK-NEW-000003',title:'승인된 도서',author:'정찬균',
-    links:{},listPrice:{amount:9900},directSale:{enabled:true,fileKey:'BOOK-NEW-000003/ebook.epub'},edition:'v1',
+  const book={id:'BOOK-NEW-000003',title:'승인된 도서',author:'정찬균',catalogNo:'EB-NEW-003',
+    links:{},listPrice:{amount:9900,currency:'KRW'},directSale:{enabled:true,fileKey:'BOOK-NEW-000003/ebook.epub'},edition:'v1',
     workflow:{manuscript:'complete',editing:'complete',epub:'validated',cover:'complete',metadata:'ready',storefront:'live'},
     publisherRelease:{publicationId:'pub-003',editionId:'edition-003',
       releaseDigest:'sha256:'+'f'.repeat(64)}};
   assert.deepEqual(await approvedBookstoreProducts({books:[book]},null),[]);
   const gate={verifyPublicRelease:async request=>({authorized:true,state:'released',
-    visibility:'public',checkoutEnabled:true,...request})};
+    visibility:'public',checkoutEnabled:true,...request,
+    retailIdentityVersion:1,bookId:book.id,catalogNo:book.catalogNo,
+    title:book.title,author:book.author,fileKey:book.directSale.fileKey,
+    priceKrw:book.listPrice.amount,currency:'KRW'})};
   const visible=await approvedBookstoreProducts({books:[book]},gate);
   assert.equal(visible.length,1);
   assert.equal(visible[0].action.url,'https://ekodi.kr/books/buy/?book=BOOK-NEW-000003&from=mall');
