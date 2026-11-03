@@ -103,3 +103,12 @@ CREATE TABLE IF NOT EXISTS publishing_ai_chapters (
  FOREIGN KEY(book_id) REFERENCES publishing_ai_books(id)
 );
 CREATE TABLE IF NOT EXISTS publishing_ai_usage (day TEXT PRIMARY KEY, neurons INTEGER NOT NULL DEFAULT 0);
+-- PUBLISHING-AI-CRAFT-001: 1차 초안 보관(편집 단계 재시도용) + 장별 삽화(글자 없는 그림, 비공개)
+CREATE TABLE IF NOT EXISTS publishing_ai_drafts (
+ book_id TEXT NOT NULL, number INTEGER NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL,
+ PRIMARY KEY(book_id, number)
+);
+CREATE TABLE IF NOT EXISTS publishing_ai_images (
+ book_id TEXT NOT NULL, number INTEGER NOT NULL, mime TEXT NOT NULL, data_b64 TEXT NOT NULL,
+ prompt TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, PRIMARY KEY(book_id, number)
+);
