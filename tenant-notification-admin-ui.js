@@ -2,7 +2,7 @@
 // All authority is enforced in the central API. Never accept client counts,
 // browser-supplied role claims or private device/subscription records.
 export function mountTenantNotificationMetrics(root,{topic,load}={}){
-  if(!root||!['church','mission'].includes(topic)||typeof load!=='function')return;
+  if(!root||!['church','mission','community','mall'].includes(topic)||typeof load!=='function')return;
   const create=(tag,label,className='')=>{
     const node=document.createElement(tag);
     if(className)node.className=className;

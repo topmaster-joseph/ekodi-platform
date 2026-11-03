@@ -15,6 +15,9 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'mission-activity-editor-api.js'
+      - 'test/ekodimission-activity-editor.test.mjs'
+      - 'supabase/migrations/20261103090000_mission_activity_inline_editor.sql'
       - 'mnubiz-public-page.js'
       - 'mnubiz-suncheon-page.js'
       - 'test/mnubiz-suncheon.test.mjs'
@@ -58,6 +61,9 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'mission-activity-editor-api.js'
+      - 'test/ekodimission-activity-editor.test.mjs'
+      - 'supabase/migrations/20261103090000_mission_activity_inline_editor.sql'
       - 'mnubiz-public-page.js'
       - 'mnubiz-suncheon-page.js'
       - 'test/mnubiz-suncheon.test.mjs'
@@ -129,6 +135,9 @@ jobs:
         run: |
           set -euo pipefail
           node --check space-worker.js
+          node --check mission-activity-editor-api.js
+          node --check space/ekodimission-activity-editor.js
+          node --test test/ekodimission-activity-editor.test.mjs
           node --check storefront-page.js
           node --check restaurant-storefront.js
           node --check restaurant-storefront-v2.js
@@ -305,7 +314,10 @@ jobs:
             to_regprocedure('public.store_user_site_public_profile(text)') is not null as user_site_profile,
             to_regprocedure('public.store_user_site_public_snapshot(text)') is not null as user_site_snapshot,
             exists(select 1 from public.tenants where slug='mokpo-mission' and settings->>'organization_engine'='v1') and exists(select 1 from public.tenants where slug='mokpo-presbytery' and settings->>'organization_engine'='v1') as mokpo_organizations,
-            to_regprocedure('public.organization_budget_command(text,text,jsonb)') is not null as organization_budget;"
+            to_regprocedure('public.organization_budget_command(text,text,jsonb)') is not null as organization_budget,
+            to_regclass('public.mission_activity_page_edits') is not null as mission_editor_table,
+            to_regprocedure('public.mission_activity_page_public_snapshot(text)') is not null as mission_editor_public,
+            to_regprocedure('public.mission_activity_page_update(text,text,text,text,text,date,time without time zone,bigint)') is not null as mission_editor_update;"
 
           query_sql "$proof_sql" /tmp/space-schema-before.json
 
@@ -321,9 +333,12 @@ jobs:
           if ! grep -Fq '"organization_budget":true' /tmp/space-schema-before.json; then
             apply_migration "$ORGANIZATION_BUDGET_MIGRATION"
           fi
+          if ! grep -Fq '"mission_editor_public":true' /tmp/space-schema-before.json || ! grep -Fq '"mission_editor_update":true' /tmp/space-schema-before.json || ! grep -Fq '"mission_editor_table":true' /tmp/space-schema-before.json; then
+            apply_migration 'supabase/migrations/20261103090000_mission_activity_inline_editor.sql'
+          fi
 
           query_sql "$proof_sql" /tmp/space-schema-after.json
-          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"mokpo_organizations":true' '"organization_budget":true'; do
+          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"mokpo_organizations":true' '"organization_budget":true' '"mission_editor_table":true' '"mission_editor_public":true' '"mission_editor_update":true'; do
             grep -Fq "$marker" /tmp/space-schema-after.json || { echo "Missing required Space Supabase contract: $marker"; cat /tmp/space-schema-after.json; exit 1; }
           done
 
@@ -359,9 +374,10 @@ jobs:
           verify_rpc store_public_storefront '{"p_slug":"jadam"}' /tmp/storefront-proof.json
           verify_rpc store_user_site_public_profile '{"p_slug":"jadam"}' /tmp/user-site-profile-proof.json
           verify_rpc store_user_site_public_snapshot '{"p_slug":"jadam"}' /tmp/user-site-snapshot-proof.json
+          verify_rpc mission_activity_page_public_snapshot '{"p_workspace_slug":"ekodimission"}' /tmp/mission-activity-editor-proof.json '"ok":true'
 
           if [ "${SUPABASE_SCHEMA_PREFLIGHT_MODE:-}" = 'public-rpc-proof' ]; then
-            echo 'Space Supabase production schema contract verified read-only through all five live public RPCs; schema mutation remained disabled.'
+            echo 'Space Supabase production schema contract verified read-only through six live public RPCs; schema mutation remained disabled.'
           else
             echo 'Space public RPC projections verified live after Management API schema preflight.'
           fi
@@ -392,6 +408,27 @@ jobs:
         env:
           EKODI_MISSION_VERIFY_SCOPE: space
         run: node scripts/verify-ekodimission-production.mjs
+      - name: Verify EKODI Mission inline activity editing on production
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            api_code=$(curl -sS -o /tmp/mission-activity-editor-public.json -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimission/api/activities/editor' || true)
+            asset_code=$(curl -sS -o /tmp/mission-activity-editor.js -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimission/assets/activity-editor.js' || true)
+            list_code=$(curl -sS -o /tmp/mission-activity-editor-list.html -w '%{http_code}' --connect-timeout 5 --max-time 20 'https://ekodi.kr/ekodimission/activities' || true)
+            if [ "$api_code" = '200' ] && [ "$asset_code" = '200' ] && [ "$list_code" = '200' ] &&
+               grep -Fq '"ok":true' /tmp/mission-activity-editor-public.json &&
+               grep -Fq 'data-mission-activity-edit' /tmp/mission-activity-editor.js &&
+               grep -Fq 'data-activity-key=' /tmp/mission-activity-editor-list.html; then
+              echo 'Mission public activity snapshot, browser editor and stable activity keys verified in production.'
+              break
+            fi
+            [ "$attempt" -lt 12 ] || { echo 'Mission inline activity editor production verification failed.'; exit 1; }
+            sleep 4
+          done
+          # Anonymous requests must not mutate public editorial content.
+          unauth_code=$(curl -sS -o /tmp/mission-activity-editor-unauth.json -w '%{http_code}' --connect-timeout 5 --max-time 20 -X POST 'https://ekodi.kr/ekodimission/api/activities/editor' -H 'content-type: application/json' --data '{}' || true)
+          [ "$unauth_code" = '401' ] || { echo "Guest activity mutation was not rejected: HTTP $unauth_code"; exit 1; }
       - name: Verify EKODI Mission collaborative photo upload surface
         shell: bash
         run: |

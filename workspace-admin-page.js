@@ -277,10 +277,13 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     // Service settings is the existing site-admin surface; do not invent a
     // second notification administrator menu or trust its client-side site.
     // A verified member token is independently scoped by the central API.
-    if(['ekodichurch','ekodi-church','ekodimission'].includes(workspace)){
-      const topic=workspace==='ekodimission'?'mission':'church';
+    const notificationTopic=mall?'mall'
+      :workspace==='ekodimission'?'mission'
+      :['ekodichurch','ekodi-church'].includes(workspace)?'church'
+      :['cgma','cheonggye'].includes(workspace)?'community':null;
+    if(notificationTopic){
       mountTenantNotificationMetrics($('mainPanel'),{
-        topic,
+        topic:notificationTopic,
         load:async key=>{
           const token=await accessToken();
           if(!token)throw new Error('AUTH_REQUIRED');

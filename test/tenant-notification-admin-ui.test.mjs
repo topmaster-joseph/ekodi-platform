@@ -8,7 +8,9 @@ import {Script} from 'node:vm';
 const screen=readFileSync(new URL('../workspace-admin-page.js',import.meta.url),'utf8');
 test('existing site service settings mount the topic-scoped dashboard without another menu',()=>{
   assert.match(screen,/mountTenantNotificationMetrics\(\$\('mainPanel'\)/);
-  assert.match(screen,/workspace==='ekodimission'\?'mission':'church'/);
+  assert.match(screen,/const notificationTopic=mall\?'mall'/);
+  assert.match(screen,/\['cgma','cheonggye'\].includes\(workspace\)\?'community'/);
+  assert.match(screen,/workspace==='ekodimission'\?'mission'/);
   assert.match(screen,/accessToken\(\)/);
   assert.match(screen,/\/api\/notifications\/admin\/summary\?topic=/);
   assert.match(screen,/credentials:'omit'/);
@@ -38,7 +40,7 @@ function documentFixture(){
 test('dashboard never renders unrecognized topics or mismatch from a server response',async()=>{
   documentFixture();
   const root=new Element('div');
-  mountTenantNotificationMetrics(root,{topic:'mall',load:async()=>({ok:true,topics:[]})});
+  mountTenantNotificationMetrics(root,{topic:'books',load:async()=>({ok:true,topics:[]})});
   assert.equal(root.children.length,0);
   mountTenantNotificationMetrics(root,{topic:'mission',load:async()=>({
     ok:true,topics:[{id:'church',label:'교회',subscriberDevices:50}]
