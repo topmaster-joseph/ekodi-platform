@@ -94,6 +94,7 @@ function routeFromPath(pathname){
   // Compatible friendly Growth OS alias for specialist Search Visibility.
   if(parts[0]==='admin'&&parts[1]==='growth'&&parts[2]==='search')return Object.freeze({section:'search-visibility',group:'ai',detailSegments:Object.freeze(normalizeDetailSegments(parts.slice(3)))});
   if(parts[0]!=='admin')return null;
+  if(parts[1]==='journal'&&parts.length===2)return Object.freeze({section:'engine-professional',group:'services',detailSegments:Object.freeze([])});
   if(parts.length===1)return Object.freeze({section:COMMAND_HOME,group:'home',detailSegments:Object.freeze([])});
   const group=String(parts[1]||'').toLowerCase();
   if(parts.length===2){
@@ -148,6 +149,7 @@ function isCanonicalHost(loc=window.location){return String(loc.hostname||'').to
 function navigationTarget(section,loc=window.location,detailSegments=null){
   if(!isCanonicalHost(loc))return legacyHashFor(section);
   const normalized=canonicalSection(normalizeSection(section));
+  if(normalized==='engine-professional'&&/^\/admin\/journal\/?$/.test(loc.pathname))return loc.pathname+loc.search;
   const current=detailSegments==null?routeFromPath(loc.pathname):null;
   const detail=detailSegments==null&&current?.section===normalized?current.detailSegments:detailSegments;
   return canonicalUrl(section,loc,detail||[]);
