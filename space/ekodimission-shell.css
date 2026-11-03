@@ -250,3 +250,20 @@ main[data-mission-devotion] .mission-devotion-tools .mission-auth-button{
 main.subpage{padding-top:.45rem}
 main.subpage .sub-hero{padding-top:.7rem;padding-bottom:1.35rem}
 @media(max-width:760px){.mission-home .hero-split{padding-top:.45rem;padding-bottom:1rem}main.subpage .sub-hero{padding-top:.4rem}}
+
+/* Authenticated editors change public activity copy in place; never expose controls to guests. */
+.mission-inline-edit-button{min-height:36px;padding:.35rem .7rem;border:1px solid #315c46;border-radius:999px;background:#f4f8f1;color:#244b36;font:inherit;font-size:.77rem;font-weight:800;cursor:pointer;white-space:nowrap}
+.mission-inline-edit-button:focus-visible,.mission-inline-edit-button:hover{outline:2px solid #315c46;outline-offset:2px}
+.mission-inline-saved{font-size:.72rem;color:#315c46;font-weight:700}
+.mission-inline-edit-panel{grid-column:1/-1;min-width:0;width:100%;margin:.6rem 0;padding:1rem;border:1px solid #b6cbbb;border-radius:1rem;background:#f8fbf6}
+.mission-inline-edit-form{display:grid;gap:.7rem;font-size:.86rem}
+.mission-inline-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+.mission-inline-fields label{display:grid;gap:.25rem;min-width:0;font-weight:800;color:#244b36}
+.mission-inline-fields input,.mission-inline-fields textarea{width:100%;min-width:0;border:1px solid #b8c8bd;border-radius:.55rem;background:white;color:#15271b;font:inherit;font-size:.87rem;line-height:1.4;padding:.55rem}
+.mission-inline-fields .mission-inline-wide{grid-column:1/-1}
+.mission-inline-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.55rem}
+.mission-inline-actions button{min-height:36px;padding:.35rem .8rem;border:1px solid #315c46;border-radius:999px;font:inherit;font-size:.82rem;font-weight:800;cursor:pointer}
+.mission-inline-actions button[type=submit]{background:#315c46;color:white}
+.mission-inline-actions [role=status]{font-size:.78rem;color:#315c46}
+.mission-inline-current-meta{font-size:.87rem;font-weight:800;color:#315c46;border-left:3px solid #315c46;padding:.45rem .65rem;background:#f3f8f1}
+@media(max-width:700px){.mission-inline-fields{grid-template-columns:minmax(0,1fr)}.mission-inline-edit-panel{padding:.8rem}}
