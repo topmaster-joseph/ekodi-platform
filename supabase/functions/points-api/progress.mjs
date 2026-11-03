@@ -61,6 +61,30 @@ export function buildPointProgress({ now = new Date(), adapters = [], rules = []
     longestStreak = Math.max(longestStreak, run);
     prev = time;
   }
+  // Monday–Sunday KST week. Count submitted approved evidence, not page views.
+  const mondayMs = todayMs - ((new Date(todayMs).getUTCDay() + 6) % 7) * DAY_MS;
+  const weekCounts = new Map();
+  for (const entry of recent) {
+    const day = kstDate(entry.submitted_at);
+    const ms = dateToMs(day);
+    if (ms < mondayMs || ms > todayMs || !['approved','pending'].includes(entry.status)) continue;
+    const counts = weekCounts.get(day) || { approved: 0, pending: 0 };
+    if (entry.status === 'approved') counts.approved++;
+    else counts.pending++;
+    weekCounts.set(day, counts);
+  }
+  const weekDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(mondayMs + index * DAY_MS).toISOString().slice(0, 10);
+    const counts = weekCounts.get(date) || { approved: 0, pending: 0 };
+    return { date, approved: counts.approved, pending: counts.pending };
+  });
+  const week = {
+    start_date: weekDays[0].date,
+    active_days: weekDays.filter(day => day.approved > 0).length,
+    approved_activities: weekDays.reduce((sum, day) => sum + day.approved, 0),
+    pending_activities: weekDays.reduce((sum, day) => sum + day.pending, 0),
+    days: weekDays,
+  };
   const count = approved.length;
   const tierIndex = TIERS.reduce((index, t, i) => count >= t.min ? i : index, 0);
   const level = TIERS[tierIndex];
@@ -72,6 +96,7 @@ export function buildPointProgress({ now = new Date(), adapters = [], rules = []
     reward_policy: "recognition_only",
     level: { id: level.id, label: level.label, verified_activities_90d: count, next_at: next?.min ?? null },
     streak: { current_days: currentStreak, longest_days_90d: longestStreak },
+    week,
     missions: eligible.map(a => ({
       rule_id: a.rule_id,
       adapter: a.adapter,

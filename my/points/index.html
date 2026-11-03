@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/my/user-ui.css?v=20260822-user-ai-1">
   <link rel="stylesheet" href="/my/comfort-ui.css?v=20260906-context-home-v1">
   <link rel="stylesheet" href="/my/hub-shell.css?v=20261102-one-glance-v1">
-  <link rel="stylesheet" href="/my/points/styles.css?v=20261103-rewards-progress-v1">
+  <link rel="stylesheet" href="/my/points/styles.css?v=20261103-goals-week-v1">
 </head>
 <body data-ekodi-ui="USER" data-auth-state="member" data-active-tab="activity" class="my-subpage" data-points-tab="wallet">
   <header class="topbar my-comfort-header">
@@ -49,6 +49,35 @@
           <article><small>최근 90일 승인 활동</small><strong id="pointsVerifiedCount">—</strong></article>
         </div>
         <p class="points-level-help" id="pointsLevelHelp"></p>
+        <section id="pointsWeeklySection" class="points-weekly" aria-labelledby="pointsWeeklyTitle" hidden>
+          <h3 id="pointsWeeklyTitle">이번 주 검증된 참여</h3>
+          <p id="pointsWeeklySummary" class="points-weekly-summary"></p>
+          <div id="pointsWeekDays" class="points-week-days" role="list" aria-label="월요일부터 일요일까지 참여 상태"></div>
+        </section>
+        <section id="pointsGoalSection" class="points-goals" aria-labelledby="pointsGoalTitle" hidden>
+          <h3 id="pointsGoalTitle">나의 성취 목표</h3>
+          <p>직접 정하는 참여 목표입니다. 목표 설정만으로 포인트가 적립되거나 회원 권한이 달라지지 않습니다.</p>
+          <form id="pointsGoalForm" class="points-goal-form">
+            <label for="pointsWeeklyTarget">이번 주 승인 참여 목표(일)
+              <select id="pointsWeeklyTarget" required>
+                <option value="1">1일</option><option value="2">2일</option><option value="3" selected>3일</option>
+                <option value="4">4일</option><option value="5">5일</option><option value="6">6일</option><option value="7">7일</option>
+              </select>
+            </label>
+            <label for="pointsNinetyTarget">최근 90일 승인 활동 목표(건)
+              <select id="pointsNinetyTarget" required>
+                <option value="3">3건</option><option value="7">7건</option><option value="10" selected>10건</option>
+                <option value="14">14건</option><option value="30">30건</option><option value="60">60건</option><option value="90">90건</option>
+              </select>
+            </label>
+            <div class="points-goal-actions">
+              <button id="pointsSaveGoal" type="submit">목표 저장</button>
+              <button id="pointsResetGoal" type="button">기본값으로</button>
+            </div>
+          </form>
+          <p id="pointsGoalSummary" class="points-goal-summary"></p>
+          <p id="pointsGoalStatus" role="status" aria-live="polite"></p>
+        </section>
         <h3>오늘 참여 가능한 미션</h3>
         <div id="pointsMissionList" class="history" aria-live="polite"></div>
         <p class="points-progress-note">승인된 증빙 신청의 제출일을 기준으로 집계합니다. 페이지 방문·공유 클릭·예배 출석·묵상 자기신고만으로는 성취 점수를 부여하지 않습니다.</p>
@@ -91,5 +120,5 @@
     </div>
     <div class="my-footer-credo"><strong>&#54632;&#44760;&#54616;&#51648;&#47564;, &#45824;&#49888; &#44208;&#51221;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</strong><span>My EKODI&#45716; &#45817;&#49888;&#51032; &#49440;&#53469;&#51012; &#51473;&#49900;&#50640; &#46160;&#44256; &#54596;&#50836;&#54620; &#51221;&#48372;&#50752; &#45796;&#51020; &#54665;&#46041;&#51012; &#50672;&#44208;&#54633;&#45768;&#45796;.</span><small class="my-footer-copyright">© EKODI (에코디). All rights reserved.</small></div>
   </footer>
-  <script src="/my/config.js"></script><script type="module" src="/my/points/app.js?v=20261103-rewards-progress-v1"></script>
+  <script src="/my/config.js"></script><script type="module" src="/my/points/app.js?v=20261103-goals-week-v1"></script>
 </body></html>
