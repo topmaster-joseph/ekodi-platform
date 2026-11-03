@@ -193,13 +193,13 @@ async function siteAutomationSnapshot(db) {
 export function joinSiteIndexNowSubmissions(automation={},indexNow={}) {
   const sourceReady=indexNow?.status==='naver_submission_only'&&Array.isArray(indexNow.sites);
   const truncated=sourceReady&&indexNow.truncated===true;
-  const byPath=new Map();
+  const stripTrailingSlash=value=>String(value||'').replace(new RegExp('/+
   if(sourceReady)for(const record of indexNow.sites){
     try{
       const url=new URL(String(record?.siteUrl||''));
       if(url.origin!=='https://ekodi.kr'||url.search||url.hash||url.username||url.password)continue;
-      const path=url.pathname.replace(/\\/+$/,'')||'/';
-      if(!/^\\/[a-z0-9/_-]*$/i.test(path)||path.includes('//')||byPath.has(path))continue;
+      const path=stripTrailingSlash(url.pathname);
+      if(!safePath.test(path)||path.includes('//')||byPath.has(path))continue;
       byPath.set(path,record);
     }catch{}
   }
@@ -208,7 +208,217 @@ export function joinSiteIndexNowSubmissions(automation={},indexNow={}) {
     status:automation?.status==='ready'&&sourceReady&&!truncated?'ready':'partial',
     sources:{...(automation?.sources||{}),indexNow:sourceReady?(truncated?'truncated':'ready'):'unavailable'},
     sites:(Array.isArray(automation?.sites)?automation.sites:[]).map(site=>{
-      const path=String(site?.basePath||'').replace(/\\/+$/,'')||'/';
+      const path=stripTrailingSlash(site?.basePath);
+      const recorded=sourceReady?byPath.get(path):null;
+      const raw=Number(recorded?.submittedPagesInSnapshot);
+      // A truncated 5,000-row sample cannot prove that an absent URL had zero
+      // submissions. Keep unknown as null; observed positive counts are minima.
+      const submitted=recorded&&Number.isFinite(raw)&&raw>=0
+        ?(truncated&&raw===0?null:Math.trunc(raw)):null;
+      return {...site,indexNowSubmittedPages:submitted,
+        lastIndexNowSubmittedAt:recorded?.lastSubmittedAt||null,
+        indexNowSampleTruncated:Boolean(recorded&&truncated)};
+    }),
+  };
+}
+
+// Pure validator exported for executable security/regression tests; HTTP entry still requires super_admin.
+export function validateEvidence(body,sites){
+  if(!body||typeof body!=='object'||Array.isArray(body))throw new Error('INVALID_BODY');
+  const siteUrl=safe(body.siteUrl,500),providerId=safe(body.providerId,64);
+  const checkType=safe(body.checkType,32),state=safe(body.state,32);
+  if(!sites.some(s=>s.url===siteUrl))throw new Error('SITE_NOT_PUBLIC');
+  if(!IDS.has(providerId))throw new Error('UNKNOWN_PROVIDER');
+  if(!CHECKS.has(checkType)||!STATES.has(state))throw new Error('INVALID_CHECK_OR_STATE');
+  const provider=SEARCH_PROVIDER_CATALOG.find(p=>p.id===providerId);
+  if(provider.group==='ai'&&checkType==='registration'&&state==='confirmed_manually')throw new Error('AI_REGISTRATION_NOT_SUPPORTED');
+  const evidenceUrl=safe(body.evidenceUrl,500),detail=safe(body.detail,700);
+  if(evidenceUrl){
+    let u;try{u=new URL(evidenceUrl)}catch{throw new Error('INVALID_EVIDENCE_URL')}
+    if(u.protocol!=='https:'||u.username||u.password)throw new Error('EVIDENCE_MUST_BE_HTTPS');
+  }
+  if(state==='confirmed_manually'&&!evidenceUrl&&!detail)throw new Error('CONFIRMATION_REQUIRES_EVIDENCE');
+  return {siteUrl,providerId,checkType,state,evidenceUrl,detail};
+}
+export async function handleSearchVisibilityControl(request,env){
+  const url=new URL(request.url);
+  if(url.pathname!==SEARCH_CONTROL_PATH)return null;
+  if(!['GET','PATCH'].includes(request.method))return denied(405,'METHOD_NOT_ALLOWED');
+  if(!sameOrigin(request))return denied(403,'ORIGIN_FORBIDDEN');
+  const actor=await superAdmin(request,env);
+  if(!actor)return denied(403,'SUPER_ADMIN_REQUIRED');
+  if(!env?.DB?.prepare)return denied(503,'DATABASE_UNAVAILABLE');
+  try{
+    // Explicit opt-in read-only Google report: no D1 table creation or audit
+    // writes. Authenticated super-admin and current public-registry match only.
+    if(url.searchParams.has('googleSiteUrl')){
+      if(request.method!=='GET')return denied(405,'METHOD_NOT_ALLOWED');
+      const siteUrl=url.searchParams.get('googleSiteUrl');
+      const allowed=await publicSites(env);
+      const site=allowed.find(x=>x.url===siteUrl);
+      if(!site)return denied(400,'SITE_NOT_PUBLIC');
+      return json({ok:true,google:await googleSearchConsoleReadOnly({env,site})});
+    }
+    await ensureSchema(env.DB);
+    const sites=await publicSites(env);
+    if(request.method==='GET'){
+      const [evidence,history,indexNow,automation]=await Promise.all([
+        env.DB.prepare('SELECT site_url,provider_id,check_type,state,evidence_url,detail,source,actor,observed_at FROM search_visibility_evidence ORDER BY updated_at DESC LIMIT 6000').all(),
+        env.DB.prepare('SELECT site_url,provider_id,check_type,previous_state,new_state,actor,observed_at FROM search_visibility_audit ORDER BY observed_at DESC LIMIT 50').all(),
+        lastIndexNow(env.DB,sites),
+        siteAutomationSnapshot(env.DB),
+      ]);
+      return json({ok:true,schemaVersion:1,sites,providers:SEARCH_PROVIDER_CATALOG,
+        evidence:(evidence.results||[]).filter(x=>sites.some(s=>s.url===x.site_url)),
+        evidenceTruncated:(evidence.results||[]).length===6000,
+        audit:history.results||[],indexNow,automation:joinSiteIndexNowSubmissions(automation,indexNow),generatedAt:new Date().toISOString(),
+        policy:'manual_confirmation_not_provider_api_verification'});
+    }
+    if(!String(request.headers.get('content-type')||'').includes('application/json'))return denied(415,'JSON_REQUIRED');
+    if(Number(request.headers.get('content-length')||0)>4000)return denied(413,'PAYLOAD_TOO_LARGE');
+    const body=await request.text();if(body.length>4000)return denied(413,'PAYLOAD_TOO_LARGE');
+    let entry;
+    try{entry=validateEvidence(JSON.parse(body),sites)}catch(error){return json({ok:false,code:safe(error.message,80)},400);}
+    const now=new Date().toISOString();
+    const prior=await env.DB.prepare('SELECT state FROM search_visibility_evidence WHERE site_url=? AND provider_id=? AND check_type=?')
+      .bind(entry.siteUrl,entry.providerId,entry.checkType).first();
+    const writes=[
+      env.DB.prepare("INSERT INTO search_visibility_evidence(site_url,provider_id,check_type,state,evidence_url,detail,source,actor,observed_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?) "+
+        "ON CONFLICT(site_url,provider_id,check_type) DO UPDATE SET state=excluded.state,evidence_url=excluded.evidence_url,detail=excluded.detail,source='manual',actor=excluded.actor,observed_at=excluded.observed_at,updated_at=excluded.updated_at")
+        .bind(entry.siteUrl,entry.providerId,entry.checkType,entry.state,entry.evidenceUrl,entry.detail,'manual',actor,now,now),
+      env.DB.prepare('INSERT INTO search_visibility_audit(id,site_url,provider_id,check_type,previous_state,new_state,actor,observed_at,detail) VALUES(?,?,?,?,?,?,?,?,?)')
+        .bind(crypto.randomUUID(),entry.siteUrl,entry.providerId,entry.checkType,prior?.state||'unknown',entry.state,actor,now,entry.detail),
+    ];
+    await env.DB.batch(writes);
+    return json({ok:true,siteUrl:entry.siteUrl,providerId:entry.providerId,checkType:entry.checkType,
+      state:entry.state,source:'manual',actor,observedAt:now});
+  }catch(error){
+    console.error('Search visibility ledger error',safe(error?.message,200));
+    return denied(503,'SEARCH_LEDGER_UNAVAILABLE');
+  }
+}
+),'')||'/';
+  const safePath=new RegExp('^/[a-z0-9/_-]*
+  if(sourceReady)for(const record of indexNow.sites){
+    try{
+      const url=new URL(String(record?.siteUrl||''));
+      if(url.origin!=='https://ekodi.kr'||url.search||url.hash||url.username||url.password)continue;
+      const path=stripTrailingSlash(url.pathname);
+      if(!safePath.test(path)||path.includes('//')||byPath.has(path))continue;
+      byPath.set(path,record);
+    }catch{}
+  }
+  return {
+    ...automation,
+    status:automation?.status==='ready'&&sourceReady&&!truncated?'ready':'partial',
+    sources:{...(automation?.sources||{}),indexNow:sourceReady?(truncated?'truncated':'ready'):'unavailable'},
+    sites:(Array.isArray(automation?.sites)?automation.sites:[]).map(site=>{
+      const path=stripTrailingSlash(site?.basePath);
+      const recorded=sourceReady?byPath.get(path):null;
+      const raw=Number(recorded?.submittedPagesInSnapshot);
+      // A truncated 5,000-row sample cannot prove that an absent URL had zero
+      // submissions. Keep unknown as null; observed positive counts are minima.
+      const submitted=recorded&&Number.isFinite(raw)&&raw>=0
+        ?(truncated&&raw===0?null:Math.trunc(raw)):null;
+      return {...site,indexNowSubmittedPages:submitted,
+        lastIndexNowSubmittedAt:recorded?.lastSubmittedAt||null,
+        indexNowSampleTruncated:Boolean(recorded&&truncated)};
+    }),
+  };
+}
+
+// Pure validator exported for executable security/regression tests; HTTP entry still requires super_admin.
+export function validateEvidence(body,sites){
+  if(!body||typeof body!=='object'||Array.isArray(body))throw new Error('INVALID_BODY');
+  const siteUrl=safe(body.siteUrl,500),providerId=safe(body.providerId,64);
+  const checkType=safe(body.checkType,32),state=safe(body.state,32);
+  if(!sites.some(s=>s.url===siteUrl))throw new Error('SITE_NOT_PUBLIC');
+  if(!IDS.has(providerId))throw new Error('UNKNOWN_PROVIDER');
+  if(!CHECKS.has(checkType)||!STATES.has(state))throw new Error('INVALID_CHECK_OR_STATE');
+  const provider=SEARCH_PROVIDER_CATALOG.find(p=>p.id===providerId);
+  if(provider.group==='ai'&&checkType==='registration'&&state==='confirmed_manually')throw new Error('AI_REGISTRATION_NOT_SUPPORTED');
+  const evidenceUrl=safe(body.evidenceUrl,500),detail=safe(body.detail,700);
+  if(evidenceUrl){
+    let u;try{u=new URL(evidenceUrl)}catch{throw new Error('INVALID_EVIDENCE_URL')}
+    if(u.protocol!=='https:'||u.username||u.password)throw new Error('EVIDENCE_MUST_BE_HTTPS');
+  }
+  if(state==='confirmed_manually'&&!evidenceUrl&&!detail)throw new Error('CONFIRMATION_REQUIRES_EVIDENCE');
+  return {siteUrl,providerId,checkType,state,evidenceUrl,detail};
+}
+export async function handleSearchVisibilityControl(request,env){
+  const url=new URL(request.url);
+  if(url.pathname!==SEARCH_CONTROL_PATH)return null;
+  if(!['GET','PATCH'].includes(request.method))return denied(405,'METHOD_NOT_ALLOWED');
+  if(!sameOrigin(request))return denied(403,'ORIGIN_FORBIDDEN');
+  const actor=await superAdmin(request,env);
+  if(!actor)return denied(403,'SUPER_ADMIN_REQUIRED');
+  if(!env?.DB?.prepare)return denied(503,'DATABASE_UNAVAILABLE');
+  try{
+    // Explicit opt-in read-only Google report: no D1 table creation or audit
+    // writes. Authenticated super-admin and current public-registry match only.
+    if(url.searchParams.has('googleSiteUrl')){
+      if(request.method!=='GET')return denied(405,'METHOD_NOT_ALLOWED');
+      const siteUrl=url.searchParams.get('googleSiteUrl');
+      const allowed=await publicSites(env);
+      const site=allowed.find(x=>x.url===siteUrl);
+      if(!site)return denied(400,'SITE_NOT_PUBLIC');
+      return json({ok:true,google:await googleSearchConsoleReadOnly({env,site})});
+    }
+    await ensureSchema(env.DB);
+    const sites=await publicSites(env);
+    if(request.method==='GET'){
+      const [evidence,history,indexNow,automation]=await Promise.all([
+        env.DB.prepare('SELECT site_url,provider_id,check_type,state,evidence_url,detail,source,actor,observed_at FROM search_visibility_evidence ORDER BY updated_at DESC LIMIT 6000').all(),
+        env.DB.prepare('SELECT site_url,provider_id,check_type,previous_state,new_state,actor,observed_at FROM search_visibility_audit ORDER BY observed_at DESC LIMIT 50').all(),
+        lastIndexNow(env.DB,sites),
+        siteAutomationSnapshot(env.DB),
+      ]);
+      return json({ok:true,schemaVersion:1,sites,providers:SEARCH_PROVIDER_CATALOG,
+        evidence:(evidence.results||[]).filter(x=>sites.some(s=>s.url===x.site_url)),
+        evidenceTruncated:(evidence.results||[]).length===6000,
+        audit:history.results||[],indexNow,automation:joinSiteIndexNowSubmissions(automation,indexNow),generatedAt:new Date().toISOString(),
+        policy:'manual_confirmation_not_provider_api_verification'});
+    }
+    if(!String(request.headers.get('content-type')||'').includes('application/json'))return denied(415,'JSON_REQUIRED');
+    if(Number(request.headers.get('content-length')||0)>4000)return denied(413,'PAYLOAD_TOO_LARGE');
+    const body=await request.text();if(body.length>4000)return denied(413,'PAYLOAD_TOO_LARGE');
+    let entry;
+    try{entry=validateEvidence(JSON.parse(body),sites)}catch(error){return json({ok:false,code:safe(error.message,80)},400);}
+    const now=new Date().toISOString();
+    const prior=await env.DB.prepare('SELECT state FROM search_visibility_evidence WHERE site_url=? AND provider_id=? AND check_type=?')
+      .bind(entry.siteUrl,entry.providerId,entry.checkType).first();
+    const writes=[
+      env.DB.prepare("INSERT INTO search_visibility_evidence(site_url,provider_id,check_type,state,evidence_url,detail,source,actor,observed_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?) "+
+        "ON CONFLICT(site_url,provider_id,check_type) DO UPDATE SET state=excluded.state,evidence_url=excluded.evidence_url,detail=excluded.detail,source='manual',actor=excluded.actor,observed_at=excluded.observed_at,updated_at=excluded.updated_at")
+        .bind(entry.siteUrl,entry.providerId,entry.checkType,entry.state,entry.evidenceUrl,entry.detail,'manual',actor,now,now),
+      env.DB.prepare('INSERT INTO search_visibility_audit(id,site_url,provider_id,check_type,previous_state,new_state,actor,observed_at,detail) VALUES(?,?,?,?,?,?,?,?,?)')
+        .bind(crypto.randomUUID(),entry.siteUrl,entry.providerId,entry.checkType,prior?.state||'unknown',entry.state,actor,now,entry.detail),
+    ];
+    await env.DB.batch(writes);
+    return json({ok:true,siteUrl:entry.siteUrl,providerId:entry.providerId,checkType:entry.checkType,
+      state:entry.state,source:'manual',actor,observedAt:now});
+  }catch(error){
+    console.error('Search visibility ledger error',safe(error?.message,200));
+    return denied(503,'SEARCH_LEDGER_UNAVAILABLE');
+  }
+}
+,'i');
+  const byPath=new Map();
+  if(sourceReady)for(const record of indexNow.sites){
+    try{
+      const url=new URL(String(record?.siteUrl||''));
+      if(url.origin!=='https://ekodi.kr'||url.search||url.hash||url.username||url.password)continue;
+      const path=stripTrailingSlash(url.pathname);
+      if(!safePath.test(path)||path.includes('//')||byPath.has(path))continue;
+      byPath.set(path,record);
+    }catch{}
+  }
+  return {
+    ...automation,
+    status:automation?.status==='ready'&&sourceReady&&!truncated?'ready':'partial',
+    sources:{...(automation?.sources||{}),indexNow:sourceReady?(truncated?'truncated':'ready'):'unavailable'},
+    sites:(Array.isArray(automation?.sites)?automation.sites:[]).map(site=>{
+      const path=stripTrailingSlash(site?.basePath);
       const recorded=sourceReady?byPath.get(path):null;
       const raw=Number(recorded?.submittedPagesInSnapshot);
       // A truncated 5,000-row sample cannot prove that an absent URL had zero
