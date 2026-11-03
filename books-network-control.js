@@ -235,6 +235,15 @@ async function moderateTitle(request, env, auth, id) {
   const input = await body(request) || {};
   const status = clean(input.status, 20).toUpperCase();
   if (!TITLE_STATES.has(status) || !['PUBLISHED','REJECTED','SUBMITTED'].includes(status)) return json({ error: '검토 상태가 올바르지 않습니다.' }, 400, request, env);
+  // A Books Network moderation click is not a verified Publisher release receipt.
+  // Existing PUBLISHED rows remain untouched, but a new public state requires
+  // the independent Publisher contract, membership, edition and audio gates.
+  if (status === 'PUBLISHED' && current.status !== 'PUBLISHED') {
+    return json({
+      error: '판매 공개는 출판사의 검증된 판본·저자 계약·구독 자격·오디오북 검수 및 공식 인계 이후에만 가능합니다.',
+      code: 'PUBLISHER_HANDOFF_REQUIRED'
+    }, 409, request, env);
+  }
   await env.DB.prepare('UPDATE books_creator_titles SET status=?,admin_note=?,updated_at=? WHERE id=?')
     .bind(status, clean(input.adminNote, 1000), new Date().toISOString(), id).run();
   return json({ book: titleRow(await env.DB.prepare('SELECT * FROM books_creator_titles WHERE id=?').bind(id).first()) }, 200, request, env);
