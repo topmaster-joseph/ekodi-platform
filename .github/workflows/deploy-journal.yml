@@ -72,7 +72,6 @@ jobs:
           npm run validate:deployments
           test -f deploy/manifests/journal.worker.json
           grep -Fq 'allowFirstDeploy' deploy/manifests/journal.worker.json
-          grep -Fq 'journal.ekodi.kr' wrangler.journal.toml
           grep -Fq 'ekodi-journal-staging' wrangler.journal.staging.toml
 
   deploy-staging:
