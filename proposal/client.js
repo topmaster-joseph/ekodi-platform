@@ -1,4 +1,4 @@
-import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,createProposalDraft,selectedStages,reviewProposalDraft,draftToMarkdown,validImportedDraft,normalizeReferenceUrl} from './core.js';
+import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,createProposalDraft,selectedStages,reviewProposalDraft,draftToMarkdown,validImportedDraft,normalizeReferenceUrl,restoreImportedProposalDraft} from './core.js';
 import {analyzeProposalSources,makeGuidedProposalDraft,calculateProposalBudget,reviewProposalBudget,parseKrwAmount,proposalToPrintHtml,proposalToPresentationMd,proposalBudgetToCsv,proposalToMarkdownWithBudget} from './analysis.js';
 import {buildProposalDocx} from './docx.js';
 import {buildProposalBudgetXlsx} from './xlsx.js';
@@ -7,6 +7,25 @@ import {inspectOfficeDocument} from './import.js';
 const byId=id=>document.getElementById(id);
 let project=null;
 let sources=[];
+let hasUnbackedChanges=false;
+function setBackupState(pending){
+  hasUnbackedChanges=pending;
+  const label=byId('backupState');
+  if(label)label.textContent=pending
+    ? '아직 백업하지 않은 변경사항이 있습니다. 다른 페이지로 이동하기 전에 프로젝트 JSON을 저장하세요.'
+    : '가장 최근 JSON 백업 이후 변경사항이 없습니다. 파일을 안전한 곳에 보관하세요.';
+}
+function confirmReplace(){
+  return !project||window.confirm('현재 제안서가 새 프로젝트로 대체됩니다. 필요한 경우 취소한 후 프로젝트 JSON을 백업하세요.');
+}
+window.addEventListener('beforeunload',event=>{
+  if(!hasUnbackedChanges)return;
+  event.preventDefault();
+  event.returnValue='';
+});
+document.addEventListener('input',event=>{
+  if(project&&event.target.closest('.workspace'))setBackupState(true);
+});
 const LABEL={text:'텍스트 미리보기',url:'웹주소 · 미검증',unsupported:'본문 분석 미지원',inspected:'구조 확인 · 발췌 없음',tooLarge:'허용 용량 초과'};
 function status(message){byId('status').textContent=message;}
 function make(tag,content,className){
@@ -56,7 +75,7 @@ async function addSources(files){
     }
     sources.push({name:file.name.slice(0,240),kind,excerpt,format:isOffice?ext:'',inspectionNote});
   }
-  renderSourceList();status('자료 '+sources.length+'건을 로컬에서 분류·발췌했습니다. 원본 서식 보존·근거 사실 확인·자동 변환은 수행하지 않았습니다.');
+  renderSourceList();if(project)setBackupState(true);status('자료 '+sources.length+'건을 로컬에서 분류·발췌했습니다. 원본 서식 보존·근거 사실 확인·자동 변환은 수행하지 않았습니다.');
 }
 byId('sourceInput').addEventListener('change',event=>{addSources(event.target.files).catch(()=>status('첨부 자료를 읽지 못했습니다.'));event.target.value='';});
 function addReferenceUrl(){
@@ -70,7 +89,7 @@ function addReferenceUrl(){
   if(sources.some(item=>item.name===safe))return status('이미 등록한 웹주소입니다.');
   sources.push({name:safe,kind:'url',excerpt:''});
   element.value='';
-  renderSourceList();
+  renderSourceList();if(project)setBackupState(true);
   status('웹주소를 참고 목록에 추가했습니다. 링크에 접근하거나 검증하지 않았습니다.');
 }
 byId('addUrlBtn').addEventListener('click',addReferenceUrl);
@@ -88,6 +107,11 @@ function snapshot(){
     if(section)section.body=element.value.slice(0,50000);
   }
   project.budgetRows=collectBudgetRows();
+  // Files and links added after opening the editor must also appear in backups.
+  project.sources=sources.slice(0,20).map(item=>({
+    name:item.name,verification:'not_verified',
+    readStatus:item.kind,excerpt:String(item.excerpt||'').slice(0,6000)
+  }));
   return project;
 }
 function draw(){
@@ -126,6 +150,7 @@ function draw(){
 }
 byId('generateBtn').addEventListener('click',()=>{
   try{
+    if(!confirmReplace())return;
     const inputTitle=byId('titleInput').value.trim();
     const inputIdea=byId('ideaInput').value.trim();
     // A source-only project is allowed, but source contents are never treated as verified facts.
@@ -135,7 +160,7 @@ byId('generateBtn').addEventListener('click',()=>{
     project=createProposalDraft({title,idea:inputIdea,domain:byId('domainInput').value,goal:byId('goalInput').value,sourceNames:sources.map(s=>s.name)});
     if(!inputTitle&&title)byId('titleInput').value=project.title;
     project.sources.forEach((row,index)=>{row.excerpt=sources[index]?.excerpt||'';row.readStatus=sources[index]?.kind||'unsupported';});
-    draw();byId('editor').scrollIntoView({behavior:'smooth',block:'start'});
+    draw();setBackupState(true);byId('editor').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(error){status(error.message);}
 });
 
@@ -315,21 +340,24 @@ byId('exportXlsx').addEventListener('click',()=>{
 byId('exportJson').addEventListener('click',()=>{
   if(!snapshot())return status('먼저 제안서 구조를 만들어 주세요.');
   download(basename()+'_프로젝트.json',JSON.stringify(project,null,2),'application/json;charset=utf-8');
-  status('브라우저 작업을 JSON으로 백업했습니다. 서버 저장은 하지 않았습니다.');
+  setBackupState(false);
+  status('프로젝트 JSON 파일의 다운로드를 시작했습니다. 다운로드 완료 여부를 확인하세요. 서버 저장은 하지 않았습니다.');
 });
 byId('importInput').addEventListener('change',async event=>{
   const file=event.target.files?.[0];event.target.value='';
   if(!file)return;
-  if(file.size>1100000)return status('1MB 이하의 프로젝트 백업 파일만 가져올 수 있습니다.');
+  if(file.size>6000000)return status('6MB 이하의 프로젝트 JSON 백업 파일만 가져올 수 있습니다.');
   try{
     const data=JSON.parse(await file.text());
-    if(!validImportedDraft(data))throw new Error('제안서 프로젝트 형식이 아닙니다.');
-    project=data;
+    const restored=restoreImportedProposalDraft(data);
+    if(!confirmReplace())return;
+    project=restored;
     byId('titleInput').value=project.title||'';
     byId('ideaInput').value=project.idea||'';
     byId('domainInput').value=PROPOSAL_DOMAINS.some(item=>item.id===project.domain)?project.domain:'auto';
     byId('goalInput').value=PROPOSAL_GOALS.some(item=>item.id===project.goal)?project.goal:'proposal';
-    sources=(project.sources||[]).slice(0,20).map(item=>({name:String(item.name||'자료').slice(0,1200),kind:/^https:\/\//.test(String(item.name||''))?'url':'unsupported',excerpt:''}));
-    renderSourceList();draw();status('백업 프로젝트를 복구했습니다. 원본 파일 내용은 다시 첨부해야 합니다.');
+    sources=(project.sources||[]).slice(0,20).map(item=>({name:item.name,kind:item.readStatus,excerpt:item.excerpt,format:/\.(hwpx|docx|xlsx|pptx)$/i.exec(item.name)?.[1]?.toLowerCase()||''}));
+    renderSourceList();draw();setBackupState(false);
+    status('JSON 백업의 문서와 텍스트 미리보기를 복구했습니다. 원본 파일은 다시 첨부하고 자료의 사실성을 확인하세요.');
   }catch(error){status('프로젝트 가져오기 실패: '+error.message);}
 });
