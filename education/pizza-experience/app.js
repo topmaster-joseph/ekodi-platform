@@ -340,9 +340,9 @@ function parseYoutubeId(value){
     if(!['https:','http:'].includes(u.protocol)||u.username||u.password)return '';
     const h=u.hostname.toLowerCase();
     let id='';
-    if(h==='youtu.be')id=u.pathname.split('/')[1]||'';
+    if(h==='youtu.be')id=u.pathname.split(String.fromCharCode(47))[1]||'';
     else if(['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','www.youtube-nocookie.com'].includes(h)){
-      const parts=u.pathname.split('/').filter(Boolean);
+      const parts=u.pathname.split(String.fromCharCode(47)).filter(Boolean);
       if(parts[0]==='watch')id=u.searchParams.get('v')||'';
       else if(['embed','shorts','live','v'].includes(parts[0]))id=parts[1]||'';
     }else return '';
