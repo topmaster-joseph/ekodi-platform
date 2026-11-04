@@ -7,16 +7,16 @@
   if(!grid||!filters)return;
   const categories=['general','living','book','gift'];
   const buttons=[...filters.querySelectorAll('[data-filter]')];
-  const shortcuts=[...document.querySelectorAll('.mall-category-shortcuts [data-filter-target]')];
+  const shortcuts=[...document.querySelectorAll('.mall-category-shortcuts [data-filter-target],.mall-primary-nav [data-filter-target]')];
   const cards=()=>[...grid.querySelectorAll('[data-product][data-category]')];
   const isLive=item=>item?.checkoutReady===true||
     (item?.product?.saleType==='affiliate'&&/^https:\/\//i.test(String(item?.product?.affiliateUrl||'')));
   const findButton=category=>buttons.find(b=>b.dataset.filter===category);
-  const findShortcut=category=>shortcuts.find(a=>a.dataset.filterTarget===category);
+  const findShortcuts=category=>shortcuts.filter(a=>a.dataset.filterTarget===category);
   const localCard=()=>cards().some(card=>Boolean(String(card.dataset.regionIds||'').trim()));
   const hasCategory=category=>cards().some(card=>card.dataset.category===category);
   const setVisible=(category,available)=>{
-    const nodes=[findButton(category),findShortcut(category)].filter(Boolean);
+    const nodes=[findButton(category),...findShortcuts(category)].filter(Boolean);
     for(const node of nodes){
       node.hidden=!available;
       node.dataset.mallEmptyCategory=available?'false':'true';
