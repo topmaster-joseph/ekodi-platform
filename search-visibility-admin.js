@@ -62,7 +62,8 @@
     <div class="sv-cards" aria-label="공개 사이트 현황">
       <article><small>공개 사이트</small><strong data-sv-sites>—</strong></article>
       <article><small>공개 URL</small><strong data-sv-pages>—</strong></article>
-      <article><small>이번 화면에서 점검됨</small><strong data-sv-audited>0</strong></article>
+      <article><small>기술점검 성공</small><strong data-sv-audited>0</strong></article>
+      <article><small>기술점검 실패</small><strong data-sv-failed>0</strong></article>
       <article><small>발견 인프라 상태</small><strong data-sv-infra>확인 전</strong></article>
     </div>
     <h3>운영 사이트 목록</h3>
@@ -423,7 +424,9 @@
   function render() {
     $('[data-sv-sites]').textContent=String(state.sites.length);
     $('[data-sv-pages]').textContent=String(state.resources.length);
-    $('[data-sv-audited]').textContent=String(state.audited.size);
+    const audits=[...state.audited.values()];
+    $('[data-sv-audited]').textContent=String(audits.filter(result=>!result.error).length);
+    $('[data-sv-failed]').textContent=String(audits.filter(result=>Boolean(result.error)).length);
     const target=$('[data-sv-rows]');target.replaceChildren();
     const q=$('#sv-search').value.trim().toLowerCase(), group=$('#sv-category-filter').value;
     const sites=state.sites.filter(site=>(!group||siteCategory(site)===group)&&
@@ -447,7 +450,7 @@
       const confirmed=['naver','google','daum','bing'].filter(providerId=>state.ledger?.evidence?.some(x=>
         x.site_url===site.url&&x.provider_id===providerId&&x.check_type==='registration'
         &&x.state==='confirmed_manually')).length;
-      providerCell.textContent=state.ledger?confirmed+'/4 수동 확인':'미확인';
+      providerCell.textContent=state.ledger?'수동확인 '+confirmed+' · 그 외 '+(4-confirmed):'근거 조회 전';
       providerCell.title='공급자 API의 실제 등록·색인 확정 수치가 아니라 관리자가 저장한 수동 확인 근거입니다.';
       const action=document.createElement('td'),button=document.createElement('button');
       button.type='button';button.className='secondary';button.textContent='관리';
@@ -472,6 +475,7 @@
       // A route-only installation still deserves visibility in the inventory.
       if(!byUrl.size)for(const resource of state.resources.filter(x=>x.type==='page'&&/^\/[^/]+\/?$/.test(x.path||'')))byUrl.set(resource.url,resource);
       state.sites=[...byUrl.values()];
+      state.audited.clear(); // Do not retain results from a previous inventory.
       renderProviderChoices();renderCategories();
       const [robots,sitemap]=await Promise.allSettled([fetchBounded('/robots.txt'),fetchBounded('/sitemap.xml')]);
       const ok=robots.status==='fulfilled' && sitemap.status==='fulfilled' && sitemap.value.includes('<urlset');
@@ -495,7 +499,7 @@
         !result.headings?'H1 제목 보완':null,
         !result.schema?'구조화 데이터 검토':null].filter(Boolean);
       state.audited.set(site.url,{
-        basic:Math.round(basic/4*100)+'점 ('+basic+'/4) · 기술 준비도',
+        error:null,basic:Math.round(basic/4*100)+'점 ('+basic+'/4) · 기술 준비도',
         ai:Math.round(ai/3*100)+'점 ('+ai+'/3) · 발견 준비도',
         improvements,raw:result
       });
@@ -506,16 +510,18 @@
   async function auditAll(){
     if(state.busy||!state.sites.length)return;
     state.busy=true;render();$('[data-sv-audit-all]').disabled=true;
-    let completed=0;
+    let attempted=0,passed=0,failed=0,skipped=0;
     // Sequential bounded requests avoid overloading EKODI or the browser.
     try{
       for(const site of state.sites) {
-        if(new URL(site.url).origin!==location.origin)continue; // Never browser-fetch arbitrary independent hosts.
+        if(new URL(site.url).origin!==location.origin){skipped++;continue;} // Never browser-fetch arbitrary independent hosts.
         if(!token())throw new Error('최고관리자 세션 종료');
         await auditOne(site,{quiet:true});
-        completed++;status('전체 기술 점검: '+completed+' / '+state.sites.length);
+        attempted++;
+        if(state.audited.get(site.url)?.error)failed++;else passed++;
+        status('기술점검 '+attempted+' / '+state.sites.length+' · 성공 '+passed+' · 실패 '+failed+' · 별도 호스트 제외 '+skipped);
       }
-      status('전체 사이트 기술 점검 종료: '+completed+'개. 검색엔진 인증·색인·실제 홍보 성과는 각 공급자의 데이터가 필요합니다.');
+      status('기술점검 종료: 성공 '+passed+' · 실패 '+failed+' · 별도 호스트 제외 '+skipped+'개. 검색엔진 등록·색인은 공급자 근거가 필요합니다.',failed>0);
     }catch(error){status('점검 중단: '+error.message,true);}
     finally{state.busy=false;$('[data-sv-audit-all]').disabled=false;render();}
   }
