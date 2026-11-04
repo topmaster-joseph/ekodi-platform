@@ -94,3 +94,72 @@ test('malformed or missing upstream metrics never silently become invented zeros
     assert.equal(body.summary.orderEnabled,true);
   }finally{globalThis.fetch=previous}
 });
+
+test('authorized store menu and channel records are projected with minimum public operational fields only',async()=>{
+  const previous=globalThis.fetch;
+  const record={workspace_id:'s1',slug:'jadam',kind:'store',name:'점포',role:'store_owner',
+    store:{order_enabled:true,phone:'do-not-share'},
+    summary:{canonical_menu_count:2,platform_listing_count:3,connected_channel_count:1},
+    menu:[{id:'private-id',name:'매운치킨',category:'치킨',base_price:19000,availability:'available',
+      options:{private:'secret'},listings:[{external_item_ref:'private'}]},
+      {name:'순살치킨',category:'치킨',base_price:null,availability:'unknown',privateKey:'hidden'}],
+    channels:[{provider:'baemin',display_name:'배달의민족',connection_status:'active',privateKey:'secret'},
+      {provider:'coupang',display_name:'쿠팡이츠',connection_status:'pending',token:'super-secret'}]};
+  try{
+    globalThis.fetch=async()=>new Response(JSON.stringify({workspace:record}),{status:200});
+    const response=await worker.fetch(request('?slug=jadam',bearer),env,{});
+    assert.equal(response.status,200);
+    const data=await response.json();
+    assert.equal(data.operations.status,'verified-read-only');
+    assert.equal(data.operations.menu.total,2);
+    assert.equal(data.operations.menu.shown,2);
+    assert.deepEqual(data.operations.menu.items[0],{name:'매운치킨',category:'치킨',basePrice:19000,availability:'available'});
+    assert.equal(data.operations.menu.items[1].basePrice,null);
+    assert.equal(data.operations.channels.items[0].provider,'baemin');
+    assert.equal(data.operations.channels.items[0].connectionStatus,'active');
+    for(const forbidden of ['do-not-share','private-id','privateKey','super-secret','external_item_ref','phone','token'])
+      assert.equal(JSON.stringify(data).includes(forbidden),false,forbidden);
+  }finally{globalThis.fetch=previous}
+});
+
+test('missing or inconsistent detail arrays do not claim zero inventory or channel records',async()=>{
+  const previous=globalThis.fetch;
+  const good={workspace_id:'s1',slug:'jadam',kind:'store',name:'점포',
+    store:{order_enabled:false},
+    summary:{canonical_menu_count:1,platform_listing_count:0,connected_channel_count:0}};
+  try{
+    for(const extra of [
+      {},{menu:[{name:'메뉴'}],channels:null},
+      {menu:[],channels:[]},
+      {menu:[{name:'메뉴'}],channels:[{privateKey:'bad'}]}
+    ]){
+      globalThis.fetch=async()=>new Response(JSON.stringify({workspace:{...good,...extra}}),{status:200});
+      const response=await worker.fetch(request('?slug=jadam',bearer),env,{});
+      assert.equal(response.status,200);
+      const data=await response.json();
+      assert.equal(data.operations.status,'unavailable');
+      assert.equal(data.summary.canonicalMenuCount,1);
+      assert.equal(data.summary.orderEnabled,false);
+      assert.equal(data.operations.menu,undefined);
+    }
+  }finally{globalThis.fetch=previous}
+});
+
+test('long detail lists are bounded and report truncation instead of hidden omission',async()=>{
+  const previous=globalThis.fetch;
+  const items=Array.from({length:53},(_,i)=>({name:'메뉴 '+i,base_price:i*1000}));
+  const channels=Array.from({length:27},(_,i)=>({provider:'provider-'+i,display_name:'채널 '+i,connection_status:'pending'}));
+  const space={workspace_id:'s1',slug:'jadam',kind:'store',name:'점포',store:{order_enabled:true},
+    summary:{canonical_menu_count:53,platform_listing_count:0,connected_channel_count:0},menu:items,channels};
+  try{
+    globalThis.fetch=async()=>new Response(JSON.stringify({workspace:space}),{status:200});
+    const response=await worker.fetch(request('?slug=jadam',bearer),env,{});
+    const data=await response.json();
+    assert.equal(data.operations.menu.total,53);
+    assert.equal(data.operations.menu.shown,40);
+    assert.equal(data.operations.menu.items.length,40);
+    assert.equal(data.operations.channels.total,27);
+    assert.equal(data.operations.channels.shown,24);
+    assert.equal(data.operations.channels.items.length,24);
+  }finally{globalThis.fetch=previous}
+});
