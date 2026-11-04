@@ -600,7 +600,7 @@ async function createAttribution(env, shareCode, refCode = '') {
 }
 
 async function checkoutProductRow(env, shareCode) {
-  return env.DB.prepare(`SELECT p.*,s.verification_status AS store_verification_status,sp.direct_sale_status
+  return env.DB.prepare(`SELECT p.*,s.verification_status AS store_verification_status,sp.direct_sale_status,sp.email AS seller_email
     FROM products p
     LEFT JOIN stores s ON s.id=p.store_id
     JOIN seller_profiles sp ON sp.user_id=p.seller_id
@@ -643,6 +643,13 @@ export async function buildOrderQuote(env, { shareCode, attributionToken = '', q
   const amounts = calculateOrderAmounts(row.price * qty, feeRatePercent);
   const blockers = [];
   if (row.direct_sale_status !== 'verified') blockers.push('seller-verification');
+  // The underwriting MID belongs to EKODIBIZ. Guest checkout approval does not
+  // authorize collecting unrelated third-party sellers' payments under this MID.
+  if (flag(env.MALL_TOSS_MERCHANT_ONLY) &&
+      !(row.seller_type === 'business' && businessStoreVerified &&
+        row.seller_email && ekodianEmails(env).has(String(row.seller_email).toLowerCase()))) {
+    blockers.push('merchant-of-record-not-authorized');
+  }
   if (row.seller_type === 'business' && !businessStoreVerified) blockers.push('business-store-verification');
   if (!row.checkout_ready) blockers.push('product-checkout-gate');
   const stockManaged = row.stock_quantity !== null && row.stock_quantity !== undefined;
