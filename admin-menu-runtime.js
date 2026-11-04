@@ -28,7 +28,7 @@ const SPACE_ADMIN_ROLES = Object.freeze([
 const SPACE_ADMIN_ROLE_SET = new Set(SPACE_ADMIN_ROLES.map(item => item[0]));
 const SPACE_ADMIN_MANAGE_PATHS = Object.freeze({
   'cheonggye-local':'/cheonggye/admin',
-  'cheonggye-pass':'/cheonggye/admin/pass',
+  'cheonggye-pass':'/cgpass/admin',
   cgma:'/cgma/admin',
   seonammedi:'/seonammedi/admin/?panel=access',
 });

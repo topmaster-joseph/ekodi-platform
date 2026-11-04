@@ -69,7 +69,7 @@ function clientMain(){
     const access=event?.detail||root.__EKODI_REGION_ACCESS__;
     if(!accessPage){
       if(!access?.canManageAccess){summaryHost?.closest('section')?.remove();return}
-      const summaryScope=cleanPath.startsWith('/cheonggye/admin/pass')?'cheonggye-pass':'cheonggye-local';
+      const summaryScope=(cleanPath.startsWith('/cgpass/admin')||cleanPath.startsWith('/cheonggye/admin/pass')||cleanPath.startsWith('/cheonggyepass/admin'))?'cheonggye-pass':'cheonggye-local';
       try{const data=await request('/api/customers/directory?tenant='+encodeURIComponent(summaryScope));renderSummaryUsers(data.members||[],summaryScope)}catch(error){if(summaryHost)summaryHost.innerHTML='<p class="muted">'+error.message+'</p>'}
       return;
     }

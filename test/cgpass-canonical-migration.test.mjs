@@ -91,6 +91,8 @@ test('canonical page and guarded admin preserve existing programs, access script
   assert.match(adminHtml,/local-region-admin-auth\.js/);
   assert.match(adminHtml,/cheonggyepass-vendor-intake-ui\.js/);
   assert.match(read('local-region-admin-auth.js'),/path==='\/cgpass\/admin'/);
+  assert.match(read('admin-menu-runtime.js'),/'cheonggye-pass':'\/cgpass\/admin'/);
+  assert.match(read('local-region-access-admin.js'),/cleanPath\.startsWith\('\/cgpass\/admin'\)/);
   assert.match(read('cheonggyepass-vendor-intake.js'),/const BASE='\/api\/cheonggyepass\/vendor-intake'/);
 });
 
