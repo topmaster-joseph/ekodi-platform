@@ -52,3 +52,21 @@
 .request-match p{margin:10px 0;color:#425168;font-size:.88rem}
 .request-match .module-launch{font-size:.84rem}
 @media(max-width:760px){.request-matches{grid-template-columns:1fr}.request-actions .button{width:100%}.chief-card .problem-links{align-items:stretch}.chief-card .problem-links button{max-width:100%}}
+
+.store-operations{margin-top:12px;padding:14px;border-radius:12px;border:1px solid #dbe3ef;background:#fff;color:#24354d;min-width:0;word-break:keep-all}
+.store-operations>strong{display:block;font-size:.94rem;margin-bottom:10px}
+.store-operation-tabs{display:flex;flex-wrap:wrap;gap:7px;max-width:100%;margin-bottom:12px}
+.store-operation-tab{border:1px solid #c4cfe0;border-radius:9px;padding:8px 11px;background:#f7f9fc;color:#1f3550;font:inherit;font-size:.88rem;cursor:pointer;word-break:keep-all;white-space:normal}
+.store-operation-tab[aria-pressed="true"]{background:#173c67;border-color:#173c67;color:#fff;font-weight:700}
+.store-operation-tab:focus-visible{outline:3px solid #8db3e6;outline-offset:2px}
+.store-operation-body{min-width:0;padding:12px;border-radius:9px;background:#f8fafc;border:1px solid #e6eaf0}
+.store-operation-body>strong{display:block;margin:0 0 8px}
+.store-operation-body p{margin:5px 0 9px;color:#536275;font-size:.86rem}
+.store-operation-list{list-style:none;padding:0;margin:8px 0 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.store-operation-list li{min-width:0;border-radius:8px;border:1px solid #dfe6ef;background:white;padding:10px}
+.store-operation-list strong,.store-operation-list span{display:block;overflow-wrap:break-word;word-break:keep-all}
+.store-operation-list strong{font-size:.91rem}
+.store-operation-list span{color:#56647a;margin-top:5px;font-size:.82rem}
+.store-operations>.note{margin:10px 0 0;font-size:.79rem}
+@media(max-width:760px){.store-operations{padding:10px}.store-operation-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.store-operation-tab{min-width:0;padding:9px 5px}.store-operation-list{grid-template-columns:1fr}}
+@media(max-width:359px){.store-operation-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}}
