@@ -27,7 +27,7 @@ export function approveExternalPortalUrl(value){
   if(/%2f|%5c|\\/i.test(url.pathname))return block('PATH_ENCODING_FORBIDDEN');
   // query and fragment are intentionally excluded from ALL logs and receipts.
   return Object.freeze({ok:true,origin:url.origin,hostname:url.hostname,path:url.pathname,
-    url:url.href,status:'READ_ONLY_APPROVED',canSubmit:false});
+    url:url.origin+url.pathname,status:'READ_ONLY_APPROVED',canSubmit:false});
 }
 export function requireExternalPortalTaskGrant(task={}, verifier){
   // Solely to validate permission proposals; NEVER unlocks mutation in this module.
