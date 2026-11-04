@@ -151,12 +151,12 @@ export function validateDeliInfo(buyer) {
   if (!buyer || typeof buyer !== 'object') return 'NO_BUYER';
   for (const field of ['name', 'postcode', 'address1', 'phone']) {
     const value = String(buyer[field] ?? '').trim();
-    if (!value || /[\\r\\n]/.test(value)) return 'INVALID_DELIINFO';
+    if (!value || /[\r\n]/.test(value)) return 'INVALID_DELIINFO';
   }
-  const phone = String(buyer.phone).replace(/[\\s()-]/g, '');
-  if (!/^0\\d{8,10}$/.test(phone)) return 'INVALID_DELIINFO';
-  if (buyer.email && /[\\r\\n]/.test(String(buyer.email))) return 'INVALID_DELIINFO';
-  if (buyer.address2 && /[\\r\\n]/.test(String(buyer.address2))) return 'INVALID_DELIINFO';
+  const phone = String(buyer.phone).replace(/[\s()-]/g, '');
+  if (!/^0\d{8,10}$/.test(phone)) return 'INVALID_DELIINFO';
+  if (buyer.email && /[\r\n]/.test(String(buyer.email))) return 'INVALID_DELIINFO';
+  if (buyer.address2 && /[\r\n]/.test(String(buyer.address2))) return 'INVALID_DELIINFO';
   return null;
 }
 
