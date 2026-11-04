@@ -1,6 +1,7 @@
 (() => {
   'use strict';
-  const API='https://api.ekodi.kr/api/sosik';
+  // Canonical EKODI Control API lives on the apex domain via service binding.
+  const API='/api/sosik';
   const $=id=>document.getElementById(id);
   const page=document.body.dataset.sosikPage;
   const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -59,6 +60,8 @@
     }catch(e){status('feedStatus','소식을 불러오지 못했습니다: '+e.message,true);}
   }
   function publicSetup(){
+    const target=new URLSearchParams(location.search).get('org');
+    if(target==='church'||target==='mission')$('feedOrg').value=target;
     $('feedOrg').addEventListener('change',publicFeed);
     $('subscribeForm').addEventListener('submit',async e=>{
       e.preventDefault();const f=e.currentTarget,fd=new FormData(f);
@@ -258,13 +261,22 @@
     return rows;
   }
   async function importContacts(){
-    const file=$('importFile').files[0];if(!file)return status('rosterStatus','CSV 파일을 선택하세요.',true);
-    if(file.size>1000000)return status('rosterStatus','CSV 파일 크기는 1MB 이하입니다.',true);
+    const file=$('importFile').files[0];if(!file)return status('rosterStatus','Excel(.xlsx) 또는 CSV 파일을 선택하세요.',true);
+    const excel=/\.xlsx$/i.test(file.name);
+    if(file.size>(excel?2000000:1000000))return status('rosterStatus',excel?'Excel 파일 크기는 2MB 이하입니다.':'CSV 파일 크기는 1MB 이하입니다.',true);
     try{
-      const rows=csvParse(await file.text()),cols=rows.shift().map(s=>s.trim());
-      const expected=['audience','email','name','consentAt','source'];
-      if(expected.some(h=>!cols.includes(h)))throw new Error('필수 열: '+expected.join(', '));
-      const data=rows.map(row=>Object.fromEntries(expected.map(h=>[h,(row[cols.indexOf(h)]||'').trim()])));
+      let data;
+      if(excel){
+        const reader=await import('/sosik/xlsx-reader.mjs');
+        data=await reader.readSosikXlsx(file);
+      }else{
+        if(!/\.csv$/i.test(file.name))throw new Error('지원 형식은 .xlsx 또는 .csv입니다.');
+        const rows=csvParse(await file.text()),cols=rows.shift().map(s=>s.trim());
+        const expected=['audience','email','name','consentAt','source'];
+        if(expected.some(h=>!cols.includes(h)))throw new Error('필수 열: '+expected.join(', '));
+        data=rows.map(row=>Object.fromEntries(expected.map(h=>[h,(row[cols.indexOf(h)]||'').trim()])));
+      }
+      if(!data.length)throw new Error('불러올 수신자 데이터가 없습니다.');
       const result=await api('/contacts/import',{method:'POST',body:{organization:$('rosterOrg').value,rows:data}});
       status('rosterStatus','동의 증빙 명단 등록 '+result.imported+'건, 기존 '+result.existing+'건. 조직별 명단은 합쳐지지 않습니다.');
       loadRoster();

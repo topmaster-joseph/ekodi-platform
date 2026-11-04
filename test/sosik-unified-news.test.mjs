@@ -57,10 +57,18 @@ test('external submit and send must not be available in public interface',async(
   const page=await readFile(new URL('../sosik/admin/index.html',import.meta.url),'utf8');
   assert.match(page,/외부기관 제출.*차단/);
 });
-test('publishing and unsubscribe URLs are present in static assets',async()=>{
+test('canonical same-origin API and private-image handling are used everywhere',async()=>{
   const app=await readFile(new URL('../sosik/app.js',import.meta.url),'utf8');
+  const embed=await readFile(new URL('../sosik/embed.js',import.meta.url),'utf8');
   const home=await readFile(new URL('../sosik/index.html',import.meta.url),'utf8');
+  const api=await readFile(new URL('../sosik-api.js',import.meta.url),'utf8');
+  assert.match(app,/const API='\/api\/sosik'/);
   assert.match(app,/\/publications\/.*\/approve/);
   assert.match(app,/\/unsubscribe/);
+  assert.match(app,/get\('org'\)/);
+  assert.match(embed,/fetch\('\/api\/sosik\/feed\?org='/);
+  assert.match(embed,/img\.src='\/api\/sosik\/media\?key='/);
+  assert.doesNotMatch(app+embed,/https:\/\/api\.ekodi\.kr/);
+  assert.match(api,/visibility='public' AND public_consent=1 AND published_at IS NOT NULL/);
   assert.match(home,/id="subscribeForm"/);
 });

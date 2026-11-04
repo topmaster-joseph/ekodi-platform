@@ -12,7 +12,7 @@
   const link=document.createElement('a');link.href='/sosik/?org='+org;link.textContent='사역소식 더 보기';link.style.cssText='display:inline-block;margin-top:14px;color:#146a78;text-decoration:underline';
   host.append(title,hint,status,list,link);
   main.append(host);
-  fetch('https://api.ekodi.kr/api/sosik/feed?org='+org,{cache:'no-store'})
+  fetch('/api/sosik/feed?org='+org,{cache:'no-store'})
     .then(res=>res.ok?res.json():Promise.reject(new Error('소식 조회 오류')))
     .then(data=>{
       if(!Array.isArray(data.items))throw new Error('사역소식 데이터 오류');
@@ -20,7 +20,7 @@
       for(const item of data.items.slice(0,6)){
         const card=document.createElement('article');card.style.cssText='padding:14px;border:1px solid #d7e5e8;border-radius:12px;background:#fff';
         if(item.photoKeys?.[0]){
-          const img=document.createElement('img');img.src='https://api.ekodi.kr/api/sosik/media?key='+encodeURIComponent(item.photoKeys[0]);img.loading='lazy';img.alt='공개 승인된 활동 사진';img.style.cssText='width:100%;height:140px;object-fit:cover;border-radius:9px';card.append(img);
+          const img=document.createElement('img');img.src='/api/sosik/media?key='+encodeURIComponent(item.photoKeys[0]);img.loading='lazy';img.alt='공개 승인된 활동 사진';img.style.cssText='width:100%;height:140px;object-fit:cover;border-radius:9px';card.append(img);
         }
         const date=document.createElement('small');date.textContent=item.date+' · '+(item.organization==='joint'?'공동':org==='church'?'교회':'선교회');
         const h=document.createElement('h3');h.textContent=item.title;h.style.cssText='font-size:1.06rem;margin:6px 0';

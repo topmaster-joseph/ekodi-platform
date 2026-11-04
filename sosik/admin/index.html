@@ -62,10 +62,10 @@
 <p class="sosik-status" id="draftStatus" role="status"></p>
 </section>
 <section class="sosik-panel" id="tab-roster" data-tab-panel="roster" hidden>
-<h2>조직별 독립 수신 명단</h2><p>구글시트 및 엑셀 파일은 동의 증빙 열을 포함한 CSV로 내보내 불러올 수 있습니다. 동의가 없는 연락처는 발송 대상으로 등록할 수 없습니다.</p>
+<h2>조직별 독립 수신 명단</h2><p>Excel(.xlsx)·CSV를 직접 불러올 수 있습니다. Google Sheets는 파일 → 다운로드 → Microsoft Excel(.xlsx) 또는 CSV로 저장한 뒤 사용하세요. 동의 증빙 없는 연락처는 발송할 수 없습니다.</p>
 <div class="sosik-form">
 <label>명단 소속 <select id="rosterOrg"><option value="church">에코디교회</option><option value="mission">에코디선교회</option></select></label>
-<label>CSV 파일 <input id="importFile" type="file" accept=".csv,text/csv"></label>
+<label>Excel(.xlsx) / CSV 파일 <input id="importFile" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
 <div><button type="button" id="importContacts">동의 증빙 명단 불러오기</button><button type="button" id="downloadTemplate">CSV 양식</button></div>
 </div>
 <p class="sosik-note">열 이름: audience,email,name,consentAt,source · audience: supporters/prayer/fan/missionfund · consentAt: 동의 날짜(ISO) · source: 동의 증빙 출처.</p>
