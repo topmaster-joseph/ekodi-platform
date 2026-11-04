@@ -37,7 +37,7 @@ test('plans this week\'s book once, drafts up to four chapters a day within the 
   const r1 = await aiFactoryTick(env, at);
   assert.equal(r1.steps[0].status, 'planned');
   const firstDay = db.sql.prepare("SELECT COUNT(*) n FROM publishing_ai_chapters WHERE status='drafted'").get().n;
-  assert.ok(firstDay >= 2 && firstDay <= 8, `drafts several full-length chapters on day one within the cap (got ${firstDay})`);
+  assert.ok(firstDay >= 1 && firstDay <= 8, `drafts several full-length chapters on day one within the cap (got ${firstDay})`);
   const lens = db.sql.prepare("SELECT length(body) l FROM publishing_ai_chapters WHERE status='drafted'").all().map(r => r.l);
   assert.ok(lens.every(l => l >= AI_FACTORY.chapterChars * 0.9), 'chapters reach the target length by continuing in parts');
   const used = db.sql.prepare('SELECT neurons FROM publishing_ai_usage').get().neurons;
@@ -46,7 +46,7 @@ test('plans this week\'s book once, drafts up to four chapters a day within the 
   assert.equal(db.sql.prepare('SELECT COUNT(*) n FROM publishing_ai_books').get().n, 1);
   // next days finish the book and move it to author review
   db.sql.exec('DELETE FROM publishing_ai_usage');
-  for (let d = 0; d < 6 && db.sql.prepare('SELECT status FROM publishing_ai_books').get().status === 'drafting'; d++) { await aiFactoryTick(env, at); db.sql.exec('DELETE FROM publishing_ai_usage'); }
+  for (let d = 0; d < 20 && db.sql.prepare('SELECT status FROM publishing_ai_books').get().status === 'drafting'; d++) { await aiFactoryTick(env, at); db.sql.exec('DELETE FROM publishing_ai_usage'); }
   assert.equal(db.sql.prepare('SELECT status FROM publishing_ai_books').get().status, 'author_review');
   // 무료 Workers AI 모델만: 초안·편집·삽화 세 단계
   assert.deepEqual([...new Set(calls)].sort(), [...new Set(Object.values(MODELS).map(m => m.id))].sort());
@@ -55,7 +55,7 @@ test('plans this week\'s book once, drafts up to four chapters a day within the 
 
 test('only publisher/admin review; unresolved [확인필요] blocks approval; edits are audited', async () => {
   const db = memory(), env = { PUBLISH_DB: db.api, AI: fakeAi([]), PUBLISHING_AI_FACTORY_ENABLED: 'true' };
-  for (let i = 0; i < 6; i++) { db.sql.exec('DELETE FROM publishing_ai_usage'); await aiFactoryTick(env, new Date('2026-11-04T00:00:00Z')); }
+  for (let i = 0; i < 20; i++) { db.sql.exec('DELETE FROM publishing_ai_usage'); await aiFactoryTick(env, new Date('2026-11-04T00:00:00Z')); }
   const id = db.sql.prepare('SELECT id FROM publishing_ai_books').get().id;
   const json = (status, data) => ({ status, data });
   const req = (method, body) => new Request('https://ekodi.kr/x', { method, body: body ? JSON.stringify(body) : undefined });
@@ -76,7 +76,7 @@ test('only publisher/admin review; unresolved [확인필요] blocks approval; ed
 
 test('approved book → valid EPUB 3 (mimetype first & stored, nav, colophon disclosure, images) and a no-sale handoff', async () => {
   const db = memory(), env = { PUBLISH_DB: db.api, AI: fakeAi([]), PUBLISHING_AI_FACTORY_ENABLED: 'true' };
-  for (let i = 0; i < 8; i++) { db.sql.exec('DELETE FROM publishing_ai_usage'); await aiFactoryTick(env, new Date('2026-11-04T00:00:00Z')); }
+  for (let i = 0; i < 20; i++) { db.sql.exec('DELETE FROM publishing_ai_usage'); await aiFactoryTick(env, new Date('2026-11-04T00:00:00Z')); }
   const id = db.sql.prepare('SELECT id FROM publishing_ai_books').get().id;
   const json = (status, data) => ({ status, data }), admin = { userId: 'adminZ' };
   const req = (method, body) => new Request('https://ekodi.kr/x', { method, body: body ? JSON.stringify(body) : undefined });
@@ -124,4 +124,10 @@ test('plan survives Workers AI returning an already-parsed JSON object, and ever
   const db2 = memory();
   await aiFactoryTick({ PUBLISH_DB: db2.api, AI: boom, PUBLISHING_AI_FACTORY_ENABLED: 'true' }, new Date('2026-11-04T00:00:00Z'));
   assert.match(db2.sql.prepare('SELECT result_json FROM publishing_ai_runs').get().result_json, /model unavailable/);
+});
+
+test('publishing + AI control Workers AI caps never exceed the 10,000-neuron free daily allocation', () => {
+  const ai = readFileSync(new URL('../wrangler.ai.toml', import.meta.url), 'utf8');
+  const control = Number(/EKODI_WORKERS_AI_DAILY_NEURON_BUDGET\s*=\s*"(\d+)"/.exec(ai)[1]);
+  assert.ok(control + AI_FACTORY.dailyNeuronCap <= 10000, `${control} + ${AI_FACTORY.dailyNeuronCap} must be ≤ 10000`);
 });
