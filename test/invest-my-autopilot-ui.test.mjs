@@ -38,30 +38,25 @@ test('autopilot client talks only to the owner API with DOM-safe rendering',asyn
 });
 
 
-test('My Invest exposes readable context-specific second-level tabs under owner gate',async()=>{
- const html=await (await investMyRoute(get('/invest'),{})).text();
+test('My Invest keeps every private function directly accessible from a readable left sidebar',async()=>{
+ const html=await (await investMyRoute(get('/invest/my'),{})).text();
  const owner=html.indexOf('<section id="owner" hidden>');
+ const menu=html.match(/<nav id="ownerSidebar"[^>]*>([\s\S]*?)<\/nav>/)?.[1]||'';
  assert.ok(owner>0,'owner authentication gate must remain');
- assert.ok(html.includes('id="detailCrumb"'),'public breadcrumb can display the section name without protected content');
- for(const id of ['ownerTabs','detailContext','detailHeading','detailTabs']){
-  assert.ok(html.indexOf('id="'+id+'"')>owner,id+' stays owner-only');
+ assert.ok(menu.includes('id="stepUpButton"'),'identity button must live above left sidebar menus');
+ assert.equal([...menu.matchAll(/<a /g)].length,14);
+ assert.match(html,/id="detailTabs" class="detail-tabs" hidden role="tablist"/);
+ assert.doesNotMatch(html,/<header class="top"|id="detailCrumb"|href="\/my">내 계정/);
+ assert.match(html,/id="investAuthIntro"/);
+ const js=await (await investMyRoute(get('/invest/my/app.js'),{})).text();
+ for(const id of ['manualOrder','brokerReadonly','marketDashboard','portfolio','autopilot','autopilotPolicy','liveTrading','strategyLab','shortValueResearch','design','scenario','insights','export']){
+  assert.match(js,new RegExp(id+':'));
  }
- assert.match(html,/role="tablist" aria-label="선택한 메뉴의 세부 기능"/);
- assert.match(html,/id="detailTabs"[^>]*><\/nav>/,'detail tab labels must be generated from current section');
- const js=await (await investMyRoute(get('/invest/app.js'),{})).text();
- for(const text of [
-  "research:[['strategyLab','AI 전략 검증'],['shortValueResearch','단기 가치발굴·공시'],['design','투자 설계'],['scenario','시나리오'],['insights','위험 분석']]",
-  "manual:[['manualOrder','주문 준비'],['brokerReadonly','증권사 잔고'],['marketDashboard','시장·종목'],['portfolio','내 보유자산']]",
-  "auto:[['autopilot','모의운용 현황'],['autopilotPolicy','자동투자 정책·모의주문'],['liveTrading','실거래 준비']]",
-  'function renderDetailTabs(group,selectedId)',
-  'function detailForHash(id)',
-  "if(updateUrl)history.replaceState(null,'',location.pathname+location.search+'#'+encodeURIComponent(selected))",
-  "a.setAttribute('aria-current','location')",
-  "b.setAttribute('aria-controls',id)",
-  "el('detailTabs').addEventListener('keydown'"
- ])assert.ok(js.includes(text),'missing nested-navigation behavior: '+text);
- assert.match(js,/const found=detailForHash\(hash\)/,'direct links and refresh must restore detail');
- assert.match(js,/showTab\(found.group,\{detailId:found.id\}\)/,'direct links select their correct detail');
+ assert.match(js,/const INVEST_DETAIL_PATHS=/);
+ assert.match(js,/a\.dataset\.investDetail===selected/);
+ assert.match(js,/history\.pushState/);
+ assert.match(js,/addEventListener\('popstate'/);
+ assert.match(js,/node\.dataset\.detailParent===selected/);
  assert.doesNotMatch(js,/innerHTML|localStorage\.setItem|sessionStorage\.setItem/);
 });
 
