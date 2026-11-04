@@ -12,6 +12,7 @@
     "public.singles_invite_remove(uuid,uuid)",
     "public.singles_event_rsvp(uuid,uuid)",
     "public.singles_event_rsvp_cancel(uuid,uuid)",
+    "public.singles_event_cancel(uuid,uuid)",
     "public.singles_subscription_withdrawal_eval(uuid,text)",
     "public.singles_subscription_withdraw(uuid,text)",
     "public.singles_order_refund_complete(uuid,text,text)",
