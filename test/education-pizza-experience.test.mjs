@@ -73,7 +73,9 @@ test('short copy keeps 14 scenes, safety checklist and complete teaching sequenc
 test('video recommendations use actual external source links without autoplay or embed', () => {
   assert.equal((html.match(/data-pizza-video/g) || []).length,2);
   assert.match(html, /youtube\.com\/watch\?v=u-EbLZDZ9d4/);
-  assert.match(html, /youtube\.com\/watch\?v=Guhd6XAEtsg/);
+  assert.match(html, /youtube\.com\/watch\?v=vRONQL0wuAE/);
+  assert.doesNotMatch(html, /Guhd6XAEtsg/);
+  assert.match(html, /아기상어 피자 만들기/);
   assert.match(html, /target="_blank" rel="noopener noreferrer"/);
   assert.doesNotMatch(html, /<iframe/);
 });
