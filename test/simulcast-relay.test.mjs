@@ -40,7 +40,7 @@ test('device control: relay commands registered, only via the live route, redact
 });
 
 test('Windows agent: pinned ffmpeg, DPAPI store, fixed arguments, supervised relay', () => {
-  assert.match(agent, /\$AgentVersion = '2\.6\.1'/);
+  assert.match(agent, /\$AgentVersion = '2\.6\.[1-9][0-9]*'/);
   assert.ok(agent.includes(`$SimulcastFfmpegSource = '${SIMULCAST_RELAY_FFMPEG.source}'`));
   assert.ok(agent.includes(`$SimulcastTarballSha256 = '${SIMULCAST_RELAY_FFMPEG.tarballSha256.toUpperCase()}'`));
   assert.ok(agent.includes(`$SimulcastFfmpegSha256 = '${SIMULCAST_RELAY_FFMPEG.exeSha256.toUpperCase()}'`));

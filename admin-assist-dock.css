@@ -50,8 +50,9 @@ html body.admin-compact:not(.admin-command-home) .ekodi-assist:not(.history-only
   border:0!important;
 }
 html body.admin-compact:not(.admin-command-home) .ekodi-assist:not(.history-only) .ekodi-assist-panel{
-  inset:72px 16px 18px auto!important;
-  width:min(518px,calc(100vw - var(--ekodi-assist-left,228px) - 32px))!important;
+  /* Anchor to the same left canvas inset as the persistent command entry. */
+  inset:72px auto 18px clamp(14px,2vw,28px)!important;
+  width:min(850px,calc(100% - clamp(28px,4vw,56px)))!important;
   height:auto!important;
   max-height:calc(100dvh - 90px)!important;
   border:1px solid #dae3f0!important;
@@ -309,3 +310,14 @@ html body.admin-compact .ekodi-assist :is(button,input,textarea,select):focus-vi
 body.admin-command-home:not(.admin-control-home):not(.admin-control-home-released) :is(.ekodi-assist,.ekodi-assist-bootstrap){opacity:0;pointer-events:none;animation:ekodiHomeHoldRelease 0s 8s forwards}
 @keyframes ekodiHomeHoldRelease{to{opacity:1;pointer-events:auto}}
 html body.admin-control-home[class] :is(.ekodi-assist,.ekodi-assist-bootstrap){display:none!important}
+
+/* ADMIN-ASSIST-TABLET-LEFT-20261104: 761–960px still has the desktop
+ * left content canvas. Override the legacy <=960px global left:0 drawer
+ * rule only on non-home pages; <=760px remains an edge-to-edge mobile panel. */
+@media(min-width:761px) and (max-width:960px){
+  html body.admin-compact.ekodi-admin-design-engine:not(.admin-command-home) .ekodi-assist:not(.history-only){
+    left:var(--ekodi-assist-left,var(--ekodi-admin-sidebar-width,228px))!important;
+    right:0!important;
+    width:auto!important;
+  }
+}
