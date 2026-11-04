@@ -607,9 +607,10 @@ async function verifyPromotionStatus(tab, alreadyActive, started) {
   stage('promotion-prompts');
   await page.waitForFunction(section => {
     const card = document.querySelector(`[data-promo-prompts-for="${section}"]`);
-    const panel = card?.closest('[data-panel]');
-    return Boolean(card && !card.hidden && panel && !panel.hidden && !panel.classList.contains('hidden-panel')
-      && card.querySelectorAll('[data-promo-fill]').length >= 1 && String(card.innerText || '').includes('에코디와 대화하기'));
+    // The prompt button lives in the top tab strip (or, without a strip, at the top of the panel).
+    return Boolean(card && !card.hidden && card.getBoundingClientRect().width > 0
+      && card.querySelectorAll('[data-promo-fill]').length >= 1 && String(card.textContent || '').includes('에코디와 대화하기')
+      && Boolean(card.querySelector(':scope > summary')?.getBoundingClientRect().width));
   }, menuId, { timeout: 10_000 });
   if (menuId === 'promotion-autopost') {
     await page.waitForFunction(() => Boolean(document.querySelector('#marketingAiAdminPanel [data-marketing-tab="channels"].active')), null, { timeout: 12_000 });

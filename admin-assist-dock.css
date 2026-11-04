@@ -49,9 +49,26 @@ html body.admin-compact:not(.admin-command-home) .ekodi-assist:not(.history-only
   background:transparent!important;
   border:0!important;
 }
+/* ASSIST-CENTER-20261104 (owner request): what is typed into 「에코디와 대화하기」 opens in
+   the CENTRE of the main workspace (wide card, max 1040px) instead of a 518px right drawer.
+   Previous drawer width kept for reference: min(518px, …). Mobile keeps its full-screen sheet. */
+html body.admin-compact:not(.admin-command-home).admin-command-active .ekodi-assist:not(.history-only){
+  background:rgba(241,245,251,.78)!important;
+}
+/* The bottom 「에코디와 대화하기」 bar stays the single input under the centred conversation
+   (follow-ups continue the same thread); the drawer's own composer stays hidden. */
+@media(min-width:761px){
+  html body.admin-compact:not(.admin-command-home).admin-command-active .ekodi-assist-bootstrap,
+  html body.admin-compact.ekodi-admin-design-engine:not(.admin-command-home).admin-command-active .ekodi-assist-bootstrap{
+    display:flex!important;
+  }
+  html body.admin-compact:not(.admin-command-home).admin-command-active .ekodi-assist-composer-wrap{
+    display:none!important;
+  }
+}
 html body.admin-compact:not(.admin-command-home) .ekodi-assist:not(.history-only) .ekodi-assist-panel{
-  inset:72px 16px 18px auto!important;
-  width:min(518px,calc(100vw - var(--ekodi-assist-left,228px) - 32px))!important;
+  inset:72px max(16px,calc((100% - 1040px)/2)) 18px max(16px,calc((100% - 1040px)/2))!important;
+  width:auto!important;
   height:auto!important;
   max-height:calc(100dvh - 90px)!important;
   border:1px solid #dae3f0!important;
@@ -151,7 +168,7 @@ html body.admin-compact:not(.admin-command-home) .ekodi-assist-close{
   background:#eafbf2;
 }
 html body.admin-compact:not(.admin-command-home) .ekodi-assist-chat-scroll{
-  padding:20px 19px 22px!important;
+  padding:24px max(20px,calc((100% - 860px)/2)) 24px!important;
   background:#fff!important;
 }
 html body.admin-compact:not(.admin-command-home) .ekodi-assist-welcome{

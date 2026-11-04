@@ -21,7 +21,9 @@ test('Admin AI command center preserves contextual page and task status',async()
 test('Admin non-home pages use a contextual drawer and only one active composer',async()=>{
   const [css,js]=await Promise.all([read('admin-assist-dock.css'),read('admin-assist-dock.js')]);
   assert.match(css,/COMMAND-CENTER-UX-20261023/);
-  assert.match(css,/not\(\.admin-command-home\)[\s\S]*?\.ekodi-assist-panel\{[\s\S]*?width:min\(518px/);
+  assert.match(css,/ASSIST-CENTER-20261104/);
+  // Owner request 2026-11-04: the task-page conversation is centred in the main workspace.
+  assert.match(css,/not\(\.admin-command-home\) \.ekodi-assist:not\(\.history-only\) \.ekodi-assist-panel\{\s*inset:72px max\(16px,calc\(\(100% - 1040px\)\/2\)\) 18px max\(16px,calc\(\(100% - 1040px\)\/2\)\)!important;\s*width:auto!important;/);
   assert.match(css,/\.admin-command-active \.ekodi-assist-bootstrap\{[\s\S]*?display:none!important/);
   assert.match(css,/\.ekodi-assist\.rail-open \.ekodi-assist-rail\{[\s\S]*?display:flex!important/);
   assert.match(css,/@media\(max-width:760px\)\{[\s\S]*?max-height:none!important/);

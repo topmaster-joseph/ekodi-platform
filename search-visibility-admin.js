@@ -56,10 +56,8 @@
     .search-visibility .sv-guide{padding:15px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;line-height:1.7}
     @media(max-width:760px){.search-visibility .sv-table{min-width:760px}.search-visibility .sv-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
     </style>
-    <header class="section-head"><div><p class="kicker">EKODI GROWTH OS · SEARCH DISCOVERY</p>
-      <h2>통합 검색노출·홍보 관리</h2>
-      <p class="sv-intro">사이트별 검색 준비도와 등록 확인 현황을 관리합니다. 기술 점검 결과는 실제 검색 노출을 뜻하지 않습니다.</p></div></header>
-    <div class="sv-cards" aria-label="공개 사이트 현황">
+    <!-- Owner request 2026-11-04: the menu tab already names this screen; header text removed so the status starts at the top. -->
+    <div class="sv-cards" aria-label="공개 사이트 현황 · 사이트별 검색 준비도와 등록 확인 현황입니다. 기술 점검 결과는 실제 검색 노출을 뜻하지 않습니다." title="사이트별 검색 준비도와 등록 확인 현황입니다. 기술 점검 결과는 실제 검색 노출을 뜻하지 않습니다.">
       <article><small>공개 사이트</small><strong data-sv-sites>—</strong></article>
       <article><small>공개 URL</small><strong data-sv-pages>—</strong></article>
       <article><small>기술점검 성공</small><strong data-sv-audited>0</strong></article>
@@ -228,7 +226,7 @@
       if(!data.ok||!data.google)throw new Error('조회 결과 형식 확인 필요');
       const report=data.google;
       const labels={
-        not_configured:'Google Search Console 읽기 전용 서비스 계정이 아직 서버에 연결되지 않았습니다.',
+        not_configured:'Google Search Console 읽기 전용 서비스 계정이 아직 서버에 연결되지 않았습니다. 에코디 배포 파이프라인의 「Search Console 실측 연결」 작업이 완료되면 자동으로 조회됩니다.',
         invalid_configuration:'Google 서비스 계정 설정이 올바르지 않습니다.',
         not_connected:'현재 계정에 이 사이트의 Search Console 속성 접근 권한이 없습니다.',
         not_verified:'Google Search Console에서 해당 속성이 검증되지 않았습니다.',
@@ -244,14 +242,17 @@
         return;
       }
       if(state.selectedSite!==siteUrl){googleStatus('사이트 선택이 변경되어 조회 결과를 폐기했습니다.');return;}
-      googleStatus('Google 공식 실측 · '+report.property+' · '+report.period.startDate+' ~ '+report.period.endDate);
+      // Path sites measured from the ekodi.kr domain property are filtered to their own pages only.
+      const scopeText=report.scope==='page_filter'&&report.pagePrefix?' (이 사이트 경로 '+report.pagePrefix+' 페이지만 집계)':'';
+      googleStatus('Google 공식 실측 · '+report.property+scopeText+' · '+report.period.startDate+' ~ '+report.period.endDate);
       const metrics=report.metrics;
       const metricText=metrics
         ? '검색 클릭 '+metrics.clicks.toLocaleString()+'회 · 노출 '+metrics.impressions.toLocaleString()+
           '회 · CTR '+metrics.ctrPercent.toFixed(2)+'% · 평균 순위 '+metrics.avgPosition.toFixed(1)
         : '현재 기간에 반환된 검색 성과 행이 없어 실측치를 확정할 수 없습니다.';
-      $('[data-sv-google-summary]').textContent=metricText+' · Google 제출 사이트맵 '+
-        report.sitemaps.length+'건. 이 수치는 전체 페이지 색인 완료나 AI 검색 인용을 의미하지 않습니다.';
+      const sitemapText=report.scope==='page_filter'?'':' · Google 제출 사이트맵 '+report.sitemaps.length+'건';
+      $('[data-sv-google-summary]').textContent=metricText+sitemapText+
+        '. 이 수치는 전체 페이지 색인 완료나 AI 검색 인용을 의미하지 않습니다. 네이버 노출·클릭은 공식 조회 API가 확인되지 않아 네이버 서치어드바이저 리포트에서 확인하세요(확인필요).';
     }catch(error){googleStatus('실측 조회 실패: '+error.message);}
     finally{button.disabled=false;}
   }
