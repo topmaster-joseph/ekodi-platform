@@ -53,6 +53,11 @@ export function mountTenantNotificationMetrics(root,{topic,load}={}){
           create('small','마지막 발행: '+(when&&Number.isFinite(when.getTime())
             ?when.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'기록 없음'))
         );
+        if(item.id==='mission'&&item.saturdayNotice){
+          line.append(create('small','토요모임 사전안내: '+
+            (item.saturdayNotice.ready?'발행 준비 완료':
+              item.saturdayNotice.enabled?'전용 발행 권한 대기':'비활성 (기본값)')));
+        }
         rows.append(line);
       }
       status.textContent=snapshot.topics.length
