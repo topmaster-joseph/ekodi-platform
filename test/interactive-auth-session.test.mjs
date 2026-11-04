@@ -103,6 +103,37 @@ test('heartbeat settings projection strips anything not allowlisted', () => {
   assert.equal(sanitizeInteractiveAuthSettings(null), null);
 });
 
+test('Domeggook external sign-in requires personal consent and projects no wallet or buyer data', () => {
+  const payload = sanitizeInteractiveAuthPayload(INTERACTIVE_AUTH_COMMANDS.start, {
+    service: 'domeggook-business', userWillSignInPersonally: true,
+    entryUrl: 'https://other.example/', credentialRelay: true, ttlMinutes: 30,
+  }, { now: Date.parse('2026-11-04T11:00:00Z'), randomUUID: () => SID.slice(4) });
+  assert.equal(payload.entryUrl, 'https://www.domeggook.com/main/');
+  assert.equal(payload.automationOrigin, 'https://www.domeggook.com');
+  assert.equal(payload.cookieExport, false);
+  assert.equal(payload.hostInputInjection, false);
+  assert.equal(payload.localConsentRequired, true);
+  const verify = sanitizeInteractiveAuthPayload(INTERACTIVE_AUTH_COMMANDS.verify, {
+    service: 'domeggook-business', sessionId: SID, readOnlyAcknowledged: true, mutation: true,
+  });
+  assert.equal(verify.probe, 'menu-only-readonly');
+  assert.equal(verify.mutation, false);
+  const projected = projectInteractiveAuthVerification({
+    sessionId: SID, service: 'domeggook-business', pageOrigin: 'https://www.domeggook.com',
+    authenticated: true, features: [{id:'dg-emoney-menu',menuVisible:true}],
+    usageLines: ['잔여 이머니 7,777원 · test@example.com 010-1234-5678'],
+  });
+  assert.equal(projected.authenticated, true);
+  assert.deepEqual(projected.usageLines, []);
+  assert.equal(projected.features[0].executionVerified, false);
+  assert.doesNotMatch(JSON.stringify(projected), /7,777|test@example.com|1234-5678/);
+  const receipt = { interactiveAuth: { ...invariants,
+    status: {sessionId:SID,service:'domeggook-business',state:'login_required',currentUrl:'https://www.domeggook.com/main/?token=do-not-leak'},
+  } };
+  assert.equal(assessInteractiveAuthReceipt(INTERACTIVE_AUTH_COMMANDS.start, receipt).outcome,'valid');
+  assert.doesNotMatch(JSON.stringify(projectInteractiveAuthStatus(receipt.interactiveAuth.status)), /token|do-not-leak/);
+});
+
 // ---------------------------------------------------------------------------
 // Integration: real Control API handler over a D1-compatible SQLite adapter.
 // ---------------------------------------------------------------------------
@@ -204,5 +235,6 @@ test('admin UI exposes the session panel without rendering credential fields', (
   const ui = readFileSync(new URL('../device-control-admin.js', import.meta.url), 'utf8');
   assert.match(ui, /function externalAuthPanel\(device\)/);
   assert.match(ui, /computer\.auth_session\.close/);
+  assert.match(ui, /domeggook-business/);
   assert.doesNotMatch(ui.slice(ui.indexOf('function externalAuthPanel')), /type=["']?password|input\.type\s*=\s*'password'/);
 });
