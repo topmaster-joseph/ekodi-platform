@@ -107,7 +107,12 @@ function safeReturn(raw){
       &&![...target.searchParams.keys()].some(key=>!['site','via','return_to'].includes(key));
     const adminToolReturn=config.kind==='portal'&&target.origin==='https://ekodi.kr'
       &&['/admin/site-admins','/admin/site-admins/','/admin/people','/admin/people/'].includes(target.pathname);
-    const internalEkodi=adminReturn||adminToolReturn||(config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath));
+    // A generic portal login must preserve the exact trusted service page.
+    // Admin, auth, API and machine endpoints still require their dedicated flows.
+    const portalPage=config.kind==='portal'&&target.origin==='https://ekodi.kr'
+      &&!/^\/(?:admin|auth|api|mcp|health|webhooks)(?:\/|$)/i.test(target.pathname)
+      &&!/(?:^|\/)(?:api|auth)(?:\/|$)/i.test(target.pathname);
+    const internalEkodi=portalPage||adminReturn||adminToolReturn||(config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath));
     const trustedLegacy=target.origin!=='https://ekodi.kr'&&allowedOrigins.has(target.origin);
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
     const churchLive=config.kind==='church'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/live/church'||target.pathname.startsWith('/live/church/'));
