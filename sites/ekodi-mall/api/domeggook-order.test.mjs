@@ -56,7 +56,7 @@ test('delivery information validation rejects unsafe inputs without exposing buy
     assert.equal(validateDeliInfo({ ...valid, [field]: ' ' }), 'INVALID_DELIINFO');
   }
   assert.equal(validateDeliInfo({ ...valid, phone: 'not-a-phone' }), 'INVALID_DELIINFO');
-  assert.equal(validateDeliInfo({ ...valid, address2: '5층\\nX-Injected: 1' }), 'INVALID_DELIINFO');
+  assert.equal(validateDeliInfo({ ...valid, address2: '5층\nX-Injected: 1' }), 'INVALID_DELIINFO');
 });
 
 test('invalid delivery data never reaches paid setOrder API', async () => {
