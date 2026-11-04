@@ -27,7 +27,7 @@ if (!interactive) {
 }
 
 async function loadAuthRouter() {
-  return import('./auth-router.js?v=20261104-coop-return-1');
+  return import('./auth-router.js?v=20261101-live-church-return-1');
 }
 
 if (repeated) {
