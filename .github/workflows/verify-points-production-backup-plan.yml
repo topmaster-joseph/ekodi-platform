@@ -1,0 +1,89 @@
+name: Verify EKODI Points Production Backup and Schema Plan
+
+# Inspection only. No writes to backups, schemas, functions, secrets or points.
+on:
+  workflow_dispatch:
+    inputs:
+      expected_main_sha:
+        description: 'Exact protected main SHA to inspect'
+        type: string
+        required: true
+      require_recent_backup:
+        description: 'Fail when no recent complete backup/PITR checkpoint is visible'
+        type: boolean
+        default: false
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-points-production-backup-readiness
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Test backup/manifest contract
+        run: node --test test/points-production-backup-plan.test.mjs
+
+  inspect:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      EXPECTED_SHA: ${{ inputs.expected_main_sha }}
+      REQUIRE_RECENT_BACKUP: ${{ inputs.require_recent_backup }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Require exact main identity and no branch drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
+      - name: Resolve existing production management credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-${TOKEN_B:-${TOKEN_C:-${TOKEN_D:-}}}}"
+          if [ -z "$token" ]; then echo 'Production credential not configured'; exit 2; fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Inspect production backup/manifest and fail closed when required
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "$REQUIRE_RECENT_BACKUP" = 'true' ]; then args+=(--require-recent-backup); fi
+          node scripts/points-production-backup-plan.mjs "${args[@]}"
+      - name: State explicit no-mutation boundary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### EKODI Points Production Backup/Schema Plan'
+            echo 'Read-only metadata and SQL file hashes only.'
+            echo 'No migration was applied. No backup restore tested. No points were activated.'
+            echo 'A backup visible in the inventory is not proof of successful restoration.'
+          } >> "$GITHUB_STEP_SUMMARY"
