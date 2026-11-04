@@ -153,7 +153,7 @@ test('admin quick connect downloads one bounded enrollment connector without req
 });
 
 test('existing registered devices upgrade transactionally and preserve registration', () => {
-  assert.match(agent, /\$AgentVersion = '2\.6\.1'/);
+  assert.match(agent, /\$AgentVersion = '2\.6\.2'/);
   // EKA-121: a task-instance Agent must not stop its own Scheduled Task mid-update.
   assert.match(agent, /\$script:AgentRunActive = \$true/);
   assert.match(agent, /if \(-not \$script:AgentRunActive\) \{\s+try \{ Stop-ScheduledTask/);
