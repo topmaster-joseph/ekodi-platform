@@ -135,3 +135,54 @@
 .overlay-resize-grip:before{content:'◢';display:block;line-height:19px;font-size:17px}
 .program-drag-handle:focus-visible,.presenter-drag-handle:focus-visible,.overlay-resize-grip:focus-visible{outline:3px solid #c5ff9a}
 @media(max-width:640px){.overlay-resize-grip{width:34px!important;height:34px!important}}
+
+
+/* EKODI Church Live: viewport-adaptive operator studio (2026-11-05).
+   The program canvas stays 16:9 at the media/source level; only the preview
+   container is taller. Fullscreen and mobile retain their own aspect rules. */
+.studio{min-width:0}
+.studio>*{min-width:0}
+.studio-panel{min-width:0}
+.studio-panel .panel-head strong,
+.studio-panel .section-heading strong,
+.studio-panel .section-heading small,
+.studio-panel .status-log,
+.studio-panel label,
+.studio-panel button{
+  word-break:keep-all;
+  overflow-wrap:break-word;
+}
+.studio-panel button{font-size:clamp(11px,.82vw,12px);line-height:1.35}
+.studio-panel .section-heading strong{font-size:12px}
+.studio-panel .section-heading small,
+.studio-panel small,
+.studio-panel .status-log{font-size:10px;line-height:1.45}
+.studio-panel .panel-head strong{font-size:clamp(13px,1vw,15px);line-height:1.3}
+.studio-panel .control-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.studio-panel .control-grid button{padding:9px 4px;min-width:0}
+.studio-panel .broadcast-actions button{padding:10px 6px}
+@media (min-width:901px){
+  .live-shell{width:calc(100% - clamp(24px,3vw,60px));max-width:1800px;padding:clamp(12px,2vh,24px) 0}
+  .studio{grid-template-columns:minmax(0,1fr) clamp(330px,29vw,430px);gap:clamp(10px,1.2vw,20px)}
+  .studio-panel{top:90px;max-height:calc(100dvh - 106px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+  .program-stage{min-height:0}
+  .program-screen{min-height:0;aspect-ratio:3/2;max-height:calc(100dvh - 165px)}
+  .program-screen video{position:absolute;inset:0}
+  .program-placeholder{inset:0;place-content:center}
+  .program-stage:fullscreen .program-screen{aspect-ratio:auto;max-height:none}
+}
+@media (min-width:901px) and (max-width:1160px){
+  .studio{grid-template-columns:minmax(0,1fr) minmax(305px,34%)}
+  .studio-panel .control-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:900px){
+  .live-shell{width:calc(100% - 28px);padding:14px 0}
+  .studio-panel{max-height:none;overflow:visible}
+  .studio-panel .control-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .program-screen{min-height:0;aspect-ratio:16/10}
+  .program-stage{min-height:0}
+}
+@media (max-width:480px){
+  .studio-panel .control-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .program-screen{aspect-ratio:16/9}
+}
