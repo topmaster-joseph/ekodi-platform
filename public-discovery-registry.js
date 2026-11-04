@@ -21,7 +21,10 @@ function normalizePath(value='/'){
 // Listing them in the sitemap sends crawlers a contradictory signal.
 export const PAGE_OWNED_NOINDEX_PATHS=Object.freeze(new Set(['/ekodibiz/trade',
   // Legacy Pages studio; the canonical church live entry is /live/church/.
-  '/ekodichurch/live']));
+  '/ekodichurch/live',
+  // The public parent workspace currently returns X-Robots-Tag: noindex.
+  // Exclude it from discovery and sitemap without changing its access policy.
+  '/mokdaehumun']));
 
 // Sites whose live entry 308s from /<site> to /<site>/ (audit run 39241336747).
 // The sitemap lists the final URL so crawlers get no redirect hop.
