@@ -5,7 +5,7 @@ import { investIntroPage, investAnalysisScript } from '../invest-access-ui.js';
 import { investMyRoute } from '../invest-my-workspace.js';
 
 test('public Invest login uses Invest realm and canonical private root',async()=>{
- const html=await investIntroPage().then(r=>r.text());
+ const html=await investIntroPage().text();
  const match=html.match(/href="(\/auth\/\?site=invest&return_to=[^"]+)"/);
  assert.ok(match);
  const url=new URL(match[1],'https://ekodi.kr');
@@ -15,7 +15,7 @@ test('public Invest login uses Invest realm and canonical private root',async()=
 });
 test('old public analysis auth handoff forwards to a private Invest fragment only',async()=>{
  const token='A'.repeat(43);
- const js=await investAnalysisScript().then(r=>r.text());
+ const js=await investAnalysisScript().text();
  const destinations=[];
  const location={hash:'#ekodi_token='+token+'&ekodi_type=email',pathname:'/invest/analysis',search:'',replace:dest=>destinations.push(dest)};
  vm.runInNewContext(js,{location,URLSearchParams,encodeURIComponent,history:{replaceState(){throw Error('valid token was discarded')}}});
