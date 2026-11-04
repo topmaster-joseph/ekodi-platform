@@ -242,7 +242,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   }
   async function siteServiceSettings(){
     $('summaryCards').replaceChildren();
-    renderTenantServiceAdmin($('mainPanel'),{items:siteServiceSnapshot?.items||[],error:siteServiceError,
+    renderTenantServiceAdmin($('mainPanel'),{siteKey:service==='mall'?'ekodimall':workspace,items:siteServiceSnapshot?.items||[],error:siteServiceError,
       aiTools:aiToolSnapshot?.tools||[],aiError:aiToolError,
       onToggle:async(item,next)=>{
         if(sitePreferenceWritePending)return;
