@@ -42,14 +42,12 @@ test('unusable sessions do not conceal a later valid Supabase OAuth session',()=
  };
  assert.equal(readToken(fallback),'valid-oauth-token');
 });
-test('public Invest client uses the canonical reader but retains the server-verified member gate',async()=>{
+test('public Invest analysis never requires a member token and only supports legacy auth handoff',async()=>{
  const source=await investAnalysisScript().text();
- assert.ok(source.includes(INVEST_MEMBER_SESSION_BROWSER_SOURCE));
- assert.match(source,/token=readEkodiMemberToken\(\)/);
- assert.match(source,/EKODI_MEMBER_SESSION_KEY\.test\(e\.key\)/);
- assert.match(source,/\/workspace-api\/v1\/invest\/common-analysis/);
- assert.match(source,/if\(!response\.ok\)throw Error\(\)/);
- assert.doesNotMatch(source,/ekodi_platform_session_v1/);
+ assert.ok(!source.includes(INVEST_MEMBER_SESSION_BROWSER_SOURCE));
+ assert.match(source,/location.replace\('\/invest\/my#ekodi_token=/);
+ assert.match(source,/new URLSearchParams\(location.hash/);
+ assert.doesNotMatch(source,/readEkodiMemberToken|Bearer |\/workspace-api\/v1\/invest\/common-analysis|ekodi_platform_session_v1/);
 });
 test('My Invest client reads canonical session, then requires server-side owner authorization and local step-up',async()=>{
  const response=await investMyRoute(new Request('https://ekodi.kr/invest/app.js'),{});

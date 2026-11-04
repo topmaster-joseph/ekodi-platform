@@ -4,7 +4,7 @@ const SCRIPT_HEADERS={'content-type':'application/javascript; charset=utf-8','ca
 
 export const INVEST_ASSET_SITES=Object.freeze([
   {id:'hub',path:'/invest',name:'Invest',tag:'Investment OS',summary:'투자기회 발굴부터 Evidence·실사·연결·사후관리와 금융자산 분석까지 하나의 공통 투자 운영체계로 연결합니다.'},
-  {id:'personal',path:'/my/invest',name:'내 투자',tag:'Personal Investment OS',summary:'로그인한 개인의 투자목표·정책·관심기회·포트폴리오와 승인된 계좌연결 상태를 한 곳에서 관리합니다.'},
+  {id:'personal',path:'/invest/my',name:'내 투자',tag:'Personal Investment OS',summary:'로그인한 개인의 투자목표·정책·관심기회·포트폴리오와 승인된 계좌연결 상태를 한 곳에서 관리합니다.'},
   {id:'opportunities',path:'/invest/opportunities',name:'투자기회',tag:'Opportunity Discovery',summary:'기업·창업·소상공인·지역·임팩트 프로젝트와 금융자산의 투자 검토 대상을 근거 중심으로 탐색합니다.'},
   {id:'projects',path:'/invest/projects',name:'기업·프로젝트',tag:'Project Investment',summary:'기업과 사업·프로젝트의 사업모델, 자금용도, IR, 주요 지표와 투자 검토 상태를 관리합니다.'},
   {id:'diligence',path:'/invest/diligence',name:'실사·Evidence',tag:'Evidence & Diligence',summary:'공식자료·재무·계약·시장근거·위험요소와 반대근거를 분리해 검증 가능한 실사 기록으로 관리합니다.'},
@@ -54,7 +54,7 @@ export function routeInvestSite(request){
   if(!['GET','HEAD'].includes(request.method))return null;
   const url=new URL(request.url),path=url.pathname.replace(/\/+$/,'')||'/';
   if(path==='/invest/admin')return investAdminHandoff(request);
-  if(path==='/invest/personal')return new Response(null,{status:308,headers:{location:new URL('/my/invest',request.url).toString(),'cache-control':'no-store'}});
+  if(path==='/invest/personal')return new Response(null,{status:308,headers:{location:new URL('/invest/my',request.url).toString(),'cache-control':'no-store'}});
   if(path==='/invest/assets/personal.js')return new Response('Legacy personal investment script retired',{status:410,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}});
   if(path==='/invest/assets/app.js')return investSiteScript();
   const site=investSiteForPath(path);if(!site)return isInvestPath(path)?new Response('Not Found',{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff'}}):null;

@@ -374,14 +374,21 @@ function internalHostRequest(request,host,pathname){
   const target=new URL(request.url);target.hostname=host;target.pathname=pathname;return new Request(target,{method:request.method,headers:request.headers,body:['GET','HEAD'].includes(request.method)?undefined:request.body,redirect:request.redirect});
 }
 async function routeMessengerApex(request,env,ctx){const url=new URL(request.url);if(request.method!=='GET'||!(url.pathname==='/messenger'||url.pathname.startsWith('/messenger/')))return null;const inner=url.pathname==='/messenger'?'/' : url.pathname.slice('/messenger'.length)||'/';if(inner==='/'||inner==='/index.html')return injectEkodiShell(await withReleaseMarker(messengerUserPage()),'messenger');if(inner==='/messenger-ui.js')return messengerUiScript();if(inner==='/app.js')return legacyPlatformRouter.fetch(internalHostRequest(request,MESSENGER_HOST,'/app.js'),env,ctx);return null;}
-async function routeInvestApex(request,env,ctx){
+export async function routeInvestApex(request,env,ctx){
   const url=new URL(request.url);
   if(!['GET','HEAD'].includes(request.method)||!(url.pathname==='/invest'||url.pathname.startsWith('/invest/')))return null;
   const inner=(url.pathname==='/invest'?'/' : url.pathname.slice('/invest'.length)||'/').replace(/\/+$/,'')||'/';
+  // Private Invest has its own canonical path under the public Invest mount.
+  // Route it BEFORE the public analysis fallback; asset/API responses retain the
+  // owner gate and no-store headers from investMyRoute.
+  if(inner==='/my'||inner.startsWith('/my/')){
+    if(!env?.MY?.fetch)return new Response(null,{status:503,headers:{'cache-control':'private, no-store'}});
+    return env.MY.fetch(request);
+  }
   if(inner==='/'||inner==='/index.html')return injectEkodiShell(investIntroPage(),'invest');
   if(inner==='/analysis')return injectEkodiShell(investAnalysisPage(),'invest');
   if(inner==='/analysis.js')return investAnalysisScript();
-  if(inner==='/personal'){const target=new URL('/my/invest',request.url);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store'}})}
+  if(inner==='/personal'){const target=new URL('/invest/my',request.url);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store'}})}
   if(inner==='/admin'||inner.startsWith('/assets/'))return null;
   // Legacy scripts are served only as compatibility assets; not rendered as the public entry.
   if(inner==='/invest-ui.js')return investUiScript();
