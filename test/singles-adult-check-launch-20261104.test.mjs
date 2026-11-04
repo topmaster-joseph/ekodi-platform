@@ -28,3 +28,24 @@ test('public launch is recorded as an owner decision with a rollback path',()=>{
  assert.match(gates,/\| G9 \| 공개 개통: `SINGLES_PUBLIC_LAUNCH_ENABLED=true` \| ✅ 2026-11-04 소유자 결정으로 개통/);
  assert.match(gates,/비밀값 삭제 시 즉시 초대 명단만 이용/);
 });
+test('owner is alerted by mail on a new request; failure never blocks the member; test button is operator-only',async()=>{
+ const live2={...live};
+ const bearer={authorization:'Bearer '+'x'.repeat(40),'content-type':'application/json',origin:'https://ekodi.kr'};
+ const realFetch=globalThis.fetch;
+ try{
+  globalThis.fetch=async()=>new Response(JSON.stringify({status:'requested'}),{status:200,headers:{'content-type':'application/json'}});
+  const r=await routeSinglesSurface(new Request('https://ekodi.kr/singles/api/bank/adult-check',{method:'POST',headers:bearer}),live2); // 본문 전달은 Workers 런타임 동작이라 여기서는 응답 처리만 검증
+  assert.equal(r.status,200);assert.deepEqual(await r.json(),{status:'requested'});
+  globalThis.fetch=async()=>new Response(JSON.stringify({error:'operator_capability_required'}),{status:403});
+  const denied=await routeSinglesSurface(new Request('https://ekodi.kr/singles/api/bank/admin/alert-test',{method:'POST',headers:bearer,body:'{}'}),live2);
+  assert.equal(denied.status,403);
+  globalThis.fetch=async()=>new Response(JSON.stringify({orders:[]}),{status:200});
+  const noMail=await routeSinglesSurface(new Request('https://ekodi.kr/singles/api/bank/admin/alert-test',{method:'POST',headers:bearer,body:'{}'}),live2);
+  assert.equal(noMail.status,503);assert.equal((await noMail.json()).error,'mail_not_configured');
+ }finally{globalThis.fetch=realFetch}
+ const worker=await read('singles-surface.js');
+ assert.match(worker,/export const SINGLES_OWNER_ALERT_TO='joseph@ekodi\.kr'/);
+ assert.match(worker,/개인정보 보호를 위해 이 메일에는 연락처를 넣지 않습니다/);
+ const block=worker.slice(worker.indexOf("if(sub==='/api/bank/adult-check'&&req.method==='POST'&&result.ok)"));
+ assert.doesNotMatch(block.slice(0,700),/data\.contact|contact\+/,'alert mail never includes the contact');
+});

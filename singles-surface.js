@@ -55,6 +55,7 @@ function allowApi(path,method){
  if(/^\/api\/passes\/pass_(?:1|10|20|30)d$/.test(path)&&method==='POST')return [path.slice(4),true];
  if(path==='/api/bank/admin/members'&&method==='GET')return ['/bank/admin/members',true];
  if(path==='/api/bank/adult-check'&&['GET','POST','DELETE'].includes(method))return ['/bank/adult-check',true];
+ if(path==='/api/bank/admin/alert-test'&&method==='POST')return ['/bank/admin/orders',true];
  // 2026-10-31 후불 청구서·운영 제안(소유자 승인).
  if(/^\/api\/bank\/invoices\/[0-9a-f-]{36}\/order$/i.test(path)&&method==='POST')return [path.slice(4),true];
  if(path==='/api/bank/admin/proposals'&&method==='GET')return ['/bank/admin/proposals',true];
@@ -136,11 +137,39 @@ async function api(req,env,sub){
   }
  }
  const url=new URL(env.SINGLES_API_URL);url.pathname=url.pathname.replace(/\/+$/,'')+targetPath;url.search='';
+ // 소유자 알림 테스트: 운영자 권한(Edge가 판정)을 확인한 뒤에만 테스트 메일을 보낸다.
+ if(sub==='/api/bank/admin/alert-test'){
+  const check=await fetch(new Request(url,{method:'GET',headers:{authorization:bearer,apikey:env.SUPABASE_PUBLISHABLE_KEY,'x-ekodi-service':'singles'},redirect:'manual'}));
+  if(!check.ok)return json({error:check.status===403?'operator_capability_required':'unauthorized'},check.status===403?403:401);
+  const r=await ownerAlert(env,'[에코디 동행] 알림 테스트','운영자 알림이 정상적으로 연결되었습니다.\n성인 확인 요청이 들어오면 이 주소로 알려 드립니다.\n\n운영 화면: https://ekodi.kr/singles/admin');
+  return r.sent?json(r):json({...r,error:r.reason},503);
+ }
  const result=await fetch(new Request(url,{method:req.method,headers:{authorization:bearer,apikey:env.SUPABASE_PUBLISHABLE_KEY,
   'content-type':'application/json','x-ekodi-service':'singles'},body:['POST','PUT'].includes(req.method)?req.body:undefined,redirect:'manual'}));
  const responseHeaders=headers('application/json; charset=utf-8',true);
  if(result.headers.get('retry-after'))responseHeaders.set('retry-after',result.headers.get('retry-after'));
+ // 성인 확인 요청이 접수되면 소유자에게 메일로 알린다(연락처 등 개인정보는 메일에 넣지 않는다). 알림 실패는 회원 응답에 영향이 없다.
+ if(sub==='/api/bank/adult-check'&&req.method==='POST'&&result.ok){
+  const text=await result.text();let data=null;try{data=JSON.parse(text)}catch{}
+  if(data?.status==='requested'){
+   const at=new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
+   await ownerAlert(env,'[에코디 동행] 성인 확인 요청 1건','새 성인 확인 요청이 접수되었습니다('+at+').\n\n운영 화면에서 요청 목록과 연락처를 확인하고, 신분증을 확인한 뒤 "확인 완료로 처리"를 눌러 주세요.\nhttps://ekodi.kr/singles/admin\n\n※ 개인정보 보호를 위해 이 메일에는 연락처를 넣지 않습니다.');
+  }
+  return new Response(text,{status:result.status,headers:responseHeaders});
+ }
  return new Response(result.body,{status:result.status,headers:responseHeaders});
+}
+// 소유자 알림 메일(문의 메일과 같은 EKODI Workspace 발송 경로). 설정이 없거나 실패하면 sent:false로 끝난다.
+export const SINGLES_OWNER_ALERT_TO='joseph@ekodi.kr';
+async function ownerAlert(env,subject,body){
+ try{
+  if(!env?.GOOGLE_SERVICE_ACCOUNT_EMAIL||!env?.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY)return {sent:false,reason:'mail_not_configured'};
+  const {serviceAccountToken}=await import('./mail-user-page.js');
+  const {sendGoogleMailMessage}=await import('./mail-google-adapter.js');
+  const token=await serviceAccountToken(SINGLES_OWNER_ALERT_TO,env,'https://www.googleapis.com/auth/gmail.send');
+  await sendGoogleMailMessage(token,{to:SINGLES_OWNER_ALERT_TO,subject,body});
+  return {sent:true};
+ }catch(e){return {sent:false,reason:'mail_send_failed'}}
 }
 function page(active='처음'){
  const nav=[['/singles','처음',false],['/singles/groups','우리 모임',false],['/singles/events','공개 행사',false],['/singles/discover','동행 찾기','paid'],['/singles/messages','메시지','paid'],['/singles/my','내 프로필','paid'],['/singles/subscribe','동행 안내·가입',true]];

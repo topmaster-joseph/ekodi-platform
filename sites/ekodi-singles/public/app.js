@@ -767,6 +767,8 @@ async function showMembersAdmin(h){
  try{
   const d=await api('/bank/admin/members');
   const reqs=d.adult_checks||[];
+  const tmsg=text('p','','status-text');
+  box.append(button('알림 테스트 메일 보내기',async()=>{try{await api('/bank/admin/alert-test',{method:'POST',body:{}});tmsg.textContent='joseph@ekodi.kr로 테스트 메일을 보냈습니다. 메일함을 확인해 주세요.'}catch(e){tmsg.textContent=e.message==='mail_not_configured'?'메일 발송 설정이 아직 없습니다. 이 화면의 요청 목록으로 확인해 주세요.':'테스트 메일을 보내지 못했습니다('+(e.message||'오류')+').'}}),tmsg);
   box.append(statTiles([['성인 확인 요청',reqs.length+'건'],['참여 회원',(d.members||[]).length+'명'],['성인 확인 완료',(d.members||[]).filter(m=>m.adult_verified_at).length+'명']]));
   if(reqs.length){box.append(text('h4','성인 확인 요청 · 연락해서 신분증을 확인한 뒤 처리하세요'));
    for(const q of reqs){const card=text('article','','mini-card');
