@@ -7,7 +7,7 @@ test('Singles flow probe runs entirely inside one rollback transaction with synt
  assert.match(script,/^-- SINGLES-FLOW-001[\s\S]*?\nbegin;\n/);
  assert.match(script,/\nrollback;\n$/);
  assert.doesNotMatch(script,/\bcommit\b/i);
- assert.equal((script.match(/SINGLES-FLOW PASS/g)||[]).length,4);
+ assert.equal((script.match(/SINGLES-FLOW PASS/g)||[]).length,5);
  assert.doesNotMatch(script,/ROLLBACK_PROBE/);
  assert.doesNotMatch(script,/@(?!singles-ci\.invalid|singles-ci\.INVALID)[a-z0-9.-]+\.[a-z]{2,}/i,'only .invalid identities');
  assert.doesNotMatch(script,/정찬균|100-123-456789|ekodi\.kr|gmail\.com/,'no real names, accounts or member emails');
@@ -16,5 +16,5 @@ test('Singles flow probe runs entirely inside one rollback transaction with synt
 test('CI runs the Singles flow probe on PRs touching it and on main',()=>{
  assert.match(workflow,/scripts\/sql\/singles_\[\^\/\]\*\\\.sql\$/);
  assert.match(workflow,/< scripts\/sql\/singles_money_flows_probe\.sql/);
- assert.match(workflow,/grep -c 'SINGLES-FLOW PASS'\)" -eq 4/);
+ assert.match(workflow,/grep -c 'SINGLES-FLOW PASS'\)" -eq 5/);
 });

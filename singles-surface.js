@@ -203,12 +203,21 @@ function singlesTermsPage(){
   ['제8조 (기록 보존)',ol([
    '대금결제·계약 기록은 5년, 소비자 불만·분쟁 처리 기록은 3년 보존합니다(전자상거래법 시행령).',
    '본인확인 결과는 성인 여부와 중복 확인용 암호화 값만 보관하며, 이름·생년월일·전화번호는 보관하지 않습니다.'])],
-  ['제9조 (약관의 변경과 문의)',ol([
-   '이 약관은 시범 운영 중인 초안이며, 법률 검토 후 공개 개통 때 확정합니다. 회원에게 불리한 변경은 시행 7일 전에 알립니다.',
+  ['제9조 (행사·모임 참가비)',ol([
+   '운영자는 행사·모임을 무료 또는 참가비가 있는 행사로 열 수 있습니다. 참가비는 신청 화면에 미리 표시합니다.',
+   '유료 행사는 신청하면 자리가 확보되며, 신청 후 3일 안에(늦어도 행사 1시간 전까지) 계좌이체로 입금이 확인되어야 신청이 완료됩니다. 기한 안에 입금이 확인되지 않으면 자동으로 취소됩니다.',
+   '행사 시작 24시간 전까지 취소하면 참가비를 전액 돌려드리며, 그 뒤 취소는 환불되지 않습니다. 회사가 행사를 취소하거나, 취소·만료 뒤 입금된 금액은 전액 돌려드립니다.'])],
+  ['제10조 (법적 근거)',ol([
+   '서비스 성격: 「결혼중개업의 관리에 관한 법률」 제2조의 결혼중개(결혼 상대 소개·알선)를 하지 않는 교제·만남 공동체로 운영합니다. 이 운영 방식은 법률 검토를 거쳤고, 관할 기관(무안군)에 서면으로 질의해 회신을 받았습니다(2026년 11월 확인).',
+   '청약철회·환불: 「전자상거래 등에서의 소비자보호에 관한 법률」 제17조(청약철회), 거래기록 보존: 같은 법 제6조와 시행령 제6조.',
+   '개인정보: 「개인정보 보호법」 제23조(민감정보는 별도 동의), 제16조 제3항(선택 정보 미제공을 이유로 서비스를 거부하지 않음).',
+   '본인확인: 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」 제23조의3에 따라 지정된 본인확인기관의 인증 결과를 사용합니다.'])],
+  ['제11조 (약관의 변경과 문의)',ol([
+   '이 약관은 법률 검토와 관할 기관(무안군) 질의 회신을 반영한 시범 운영 약관입니다. 회원에게 불리한 변경은 시행 7일 전에 알립니다.',
    '운영자: EKODIBIZ(대표 정찬균) · 사업자등록번호 213-13-01959 · 통신판매업신고 2023-전남무안-0153 · 문의 <a href="mailto:joseph@ekodibiz.kr">joseph@ekodibiz.kr</a>'])]
  ];
  const parts=sections.map(([h,b])=>'<section class="singles-privacy-item"><h2>'+h+'</h2>'+b+'</section>').join('');
- return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="description" content="에코디 동행 이용약관(시범 운영 초안). 동행은 결혼 상대를 소개·알선하지 않는 교제·만남 공동체입니다."><title>동행 이용약관 · EKODI 동행</title><link rel="stylesheet" href="/singles/styles.css"></head><body class="romantic-inner"><a class="skip" href="#main">본문 바로가기</a><header class="mast"><div class="mast-inner"><a class="logo" href="/singles"><strong>EKODI</strong><span>동행</span></a><nav aria-label="주요 메뉴"><a href="/singles">처음으로</a><a href="/singles/privacy">동행 개인정보 안내</a></nav></div></header><main id="main" class="singles-privacy singles-terms"><p class="eyebrow">EKODI · TERMS</p><h1>동행 이용약관</h1><p class="singles-privacy-review" role="status">시범 운영 · 기준일 2026-10-31 · 법률 검토 전 초안</p>'+parts+'<p class="singles-privacy-links"><a class="outline" href="/singles/privacy">동행 개인정보 안내</a><a class="primary" href="/singles">동행으로 돌아가기</a></p></main><footer><p><strong>EKODI 동행</strong><span>믿음으로 만나고 존중으로 이어집니다</span></p><a href="/singles/privacy">동행 개인정보 안내</a><a href="/privacy">공통 개인정보 보호</a></footer></body></html>';
+ return '<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="description" content="에코디 동행 이용약관(시범 운영). 동행은 결혼 상대를 소개·알선하지 않는 교제·만남 공동체입니다."><title>동행 이용약관 · EKODI 동행</title><link rel="stylesheet" href="/singles/styles.css"></head><body class="romantic-inner"><a class="skip" href="#main">본문 바로가기</a><header class="mast"><div class="mast-inner"><a class="logo" href="/singles"><strong>EKODI</strong><span>동행</span></a><nav aria-label="주요 메뉴"><a href="/singles">처음으로</a><a href="/singles/privacy">동행 개인정보 안내</a></nav></div></header><main id="main" class="singles-privacy singles-terms"><p class="eyebrow">EKODI · TERMS</p><h1>동행 이용약관</h1><p class="singles-privacy-review" role="status">시범 운영 · 기준일 2026-11-04 · 법률 검토·무안군 회신 반영</p>'+parts+'<p class="singles-privacy-links"><a class="outline" href="/singles/privacy">동행 개인정보 안내</a><a class="primary" href="/singles">동행으로 돌아가기</a></p></main><footer><p><strong>EKODI 동행</strong><span>믿음으로 만나고 존중으로 이어집니다</span></p><a href="/singles/privacy">동행 개인정보 안내</a><a href="/privacy">공통 개인정보 보호</a></footer></body></html>';
 }
 
 function singlesMuanInquiryPage(){
