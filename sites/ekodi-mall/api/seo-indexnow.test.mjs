@@ -17,11 +17,13 @@ function setup() {
   const dir = new URL('./migrations/', import.meta.url);
   for (const f of readdirSync(dir).filter((n) => n.endsWith('.sql')).sort()) db.exec(readFileSync(new URL(f, dir), 'utf8'));
   db.exec('PRAGMA foreign_keys=OFF');
-  const ins = db.prepare(`INSERT INTO products (id,seller_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,price,status,published_at,created_at,updated_at)
-    VALUES (?,'u',?,'u','에코디몰','individual','direct','living',?,1000,?,?,'t',?)`);
+  const ins = db.prepare(`INSERT INTO products (id,seller_id,share_code,public_url,seller_display_name,seller_type,sale_type,category,name,price,status,published_at,checkout_ready,stock_quantity,created_at,updated_at)
+    VALUES (?,'u',?,'u','에코디몰','individual','direct','living',?,1000,?,?,1,2,'t',?)`);
   ins.run('p1', 'p1', '상품1', 'published', '2026-10-27T01:00:00Z', '2026-10-27T01:00:00Z');
   ins.run('p2', 'p2', '상품2', 'published', '2026-10-27T02:00:00Z', '2026-10-27T02:00:00Z');
   ins.run('p3', 'p3', '비공개', 'draft', null, '2026-10-27T03:00:00Z');
+  ins.run('p4', 'p4', '준비중', 'published', '2026-10-27T04:00:00Z', '2026-10-27T04:00:00Z');
+  db.prepare("UPDATE products SET checkout_ready=0 WHERE id='p4'").run();
   return { db, env: { DB: d1(db), MALL_BASE_URL: 'https://ekodi.kr/ekodimall' } };
 }
 
@@ -49,7 +51,7 @@ test('failed submission keeps the cursor so URLs are retried', async () => {
   assert.equal(again.submitted, 2);
 });
 
-test('product index lists all published products for the sitemap', async () => {
+test('product index exposes only sale-ready products for public discovery', async () => {
   const { env } = setup();
   const list = await listProductIndex(env, 5000);
   assert.deepEqual(list.map((p) => p.shareCode).sort(), ['p1', 'p2']);

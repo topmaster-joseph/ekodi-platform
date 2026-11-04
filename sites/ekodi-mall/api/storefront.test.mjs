@@ -13,7 +13,7 @@ test('store slug accepts only stable public path characters', () => {
 
 test('public Storefront exposes published products only and owner listing stays seller-scoped', async () => {
   const source = await readFile(new URL('./storefront.js', import.meta.url), 'utf8');
-  assert.match(source, /p\.status='published'/);
+  assert.match(source, /PUBLIC_SALE_LISTING_WHERE/);
   assert.match(source, /WHERE s\.seller_id=\?/);
   assert.match(source, /publishedCount/);
   assert.match(source, /Storefront 탐색은 Mall 경로/);

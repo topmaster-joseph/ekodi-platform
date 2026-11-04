@@ -9,16 +9,20 @@
   const regionIds = (region) => Array.isArray(region?.regionIds) ? region.regionIds.map(text).filter(Boolean).slice(0, 8) : [];
   function node(tag, className = '', value = '') { const element = document.createElement(tag); if (className) element.className = className; if (value) element.textContent = value; return element; }
 
+  const isSaleReady = (item) => item?.checkoutReady === true || (item?.product?.saleType === 'affiliate' && /^https:\/\//i.test(text(item.product.affiliateUrl)));
   function productCard(item) {
     const id = `server:${item.shareCode}`;
     const href = item.publicUrl || `/p/${encodeURIComponent(item.shareCode)}`;
     const p = item.product || {}; const seller = item.seller || {}; const store = item.store || null; const region = p.region || null;
     const article = node('article', 'card');
+    const externalSale = p.saleType === 'affiliate' && /^https:\/\//i.test(text(p.affiliateUrl));
+    const saleLabel = externalSale ? '판매처에서 구매' : '판매 중';
     article.dataset.product = id;
     article.dataset.serverProduct = item.shareCode;
     article.dataset.category = category(p.category);
     article.dataset.name = text(p.name) || '상품';
-    article.dataset.status = item.checkoutReady ? '판매 중' : '상품 준비중';
+    article.dataset.status = saleLabel;
+    article.dataset.saleReady = 'true';
     article.dataset.href = href;
     article.dataset.regionIds = regionIds(region).join(',');
     article.dataset.primaryRegion = text(region?.primaryRegionId);
@@ -32,7 +36,7 @@
     const thumbLink = node('a', 'thumb-link'); thumbLink.href = href; thumbLink.setAttribute('aria-label', `${article.dataset.name} 자세히 보기`);
     if (/^https:\/\//.test(text(item.image))) { const img = node('img'); img.src = item.image; img.alt = article.dataset.name; img.loading = 'lazy'; img.decoding = 'async'; thumbLink.append(img); thumb.classList.add('has-image'); }
     thumb.append(thumbLink);
-    thumb.append(node('span', 'badge', item.checkoutReady ? '판매 중' : '상품 준비중'));
+    thumb.append(node('span', 'badge', saleLabel));
     const heart = node('button', 'heart', '♡'); heart.type = 'button'; heart.dataset.wish = id; heart.setAttribute('aria-label', `${article.dataset.name} 관심상품`); heart.setAttribute('aria-pressed', 'false'); thumb.append(heart);
 
     const body = node('div', 'card-body');
@@ -41,7 +45,7 @@
     const summary = text(p.oneLine) || text(p.audience) || '판매자가 등록한 공개 상품입니다.';
     body.append(node('p', 'card-summary', summary.length > 46 ? `${summary.slice(0, 45).trimEnd()}…` : summary));
     if (region?.label) body.append(node('p', 'region-chip', `지역 · ${text(region.label)}${region.verified ? ' · 확인됨' : ''}`));
-    const meta = node('div', 'meta'); meta.append(node('span', 'status', item.checkoutReady ? `${price(p.price)} · 판매 중` : `${price(p.price)} · 상품 준비중`));
+    const meta = node('div', 'meta'); meta.append(node('span', 'status', `${price(p.price)} · ${saleLabel}`));
     const detail = node('a', 'smallbtn', '자세히'); detail.href = href; meta.append(detail); body.append(meta);
     article.append(thumb, body);
     return article;
@@ -83,7 +87,7 @@
       if (requestGeneration !== generation) return;
       const items = Array.isArray(body.products) ? body.products : [];
       for (const item of items) {
-        if (!item?.shareCode || grid.querySelector(`[data-server-product="${CSS.escape(item.shareCode)}"]`)) continue;
+        if (!item?.shareCode || !isSaleReady(item) || grid.querySelector(`[data-server-product="${CSS.escape(item.shareCode)}"]`)) continue;
         grid.append(productCard(item));
       }
       offset += items.length;

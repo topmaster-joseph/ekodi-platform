@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderMallHeader } from '../../../mall-shared-header.js';
 import { loadBookstoreProducts, mergeBookstoreProducts } from './bookstore-products.mjs';
+import { isPublicStaticSale } from '../api/public-sale-visibility.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
@@ -56,6 +57,9 @@ const storeMap = new Map(stores.map((store) => [store.id, store]));
 const publishedStoreIds = new Set(stores.map((store) => store.id));
 const bookstoreMirror = await loadBookstoreProducts(root);
 const products = mergeBookstoreProducts(productsRaw, bookstoreMirror).filter((product) => product.published && publishedStoreIds.has(product.storeId));
+const saleProducts = products.filter(isPublicStaticSale);
+const saleStores = stores.filter((store) => saleProducts.some((product) => product.storeId === store.id));
+// Keep all published preparation records in the existing seller mirror and stable detail pages.
 const affiliateHubs = affiliateHubsRaw.filter((hub) => hub.published);
 const baseUrl = site.seo.baseUrl.replace(/\/$/, '');
 const basketHref = site.platform?.basketHref || '/checkout/';
@@ -124,11 +128,11 @@ const categoryFilters = site.categories.map((category, index) =>
 ).join('');
 const filters = `${categoryFilters}<button data-filter="local" data-filter-kind="region">${esc(site.local?.filterLabel || '내 로컬')}</button>`;
 
-const productCards = products.map((product) => productCard(product)).join('');
+const productCards = saleProducts.map((product) => productCard(product)).join('');
 
-const storeCards = stores.map((store) => {
+const storeCards = saleStores.map((store) => {
   const href = `/stores/${store.slug}/`;
-  const count = products.filter((product) => product.storeId === store.id).length;
+  const count = saleProducts.filter((product) => product.storeId === store.id).length;
   return `<a class="store-card" href="${href}"><div class="store-card-mark">${esc(store.name.slice(0, 1))}</div><div><p class="store-badge">${esc(store.badge || store.kind)}</p><h3>${esc(store.name)}</h3><p>${esc(store.description)}</p><span>${count}개 상품 · ${esc(store.status)}</span></div></a>`;
 }).join('');
 
@@ -173,7 +177,7 @@ const indexHtml = fill(indexTemplate, {
   FILTERS: filters,
   PRODUCTS: productCards,
   STORES: storeCards,
-  STORE_COUNT: stores.length,
+  STORE_COUNT: saleStores.length,
   SELLER_STUDIO_HREF: esc(sellerStudioHref),
   BASKET_HREF: esc(basketHref),
   LOCAL_EYEBROW: esc(site.local.eyebrow),
@@ -215,7 +219,7 @@ for (const product of products) {
   const store = storeMap.get(product.storeId);
   const isAffiliate = product.saleType === 'affiliate';
   const isPublisherSale = product.saleType === 'publisher' && product.action?.type === 'external';
-  const related = products
+  const related = saleProducts
     .filter((item) => item.id !== product.id)
     .sort((a, b) => Number(b.category === product.category) - Number(a.category === product.category))
     .slice(0, 3)
@@ -262,12 +266,14 @@ for (const product of products) {
     RELATED_PRODUCTS: related || '<p class="empty">함께 볼 다른 상품을 준비 중입니다.</p>',
     NOTICE: esc(site.notice)
   });
-  await write(`products/${product.slug}/index.html`, html);
+  // Retain old links to preparing products, but never let search engines index them.
+  const detailHtml = isPublicStaticSale(product) ? html : html.replace('</head>', '  <meta name="robots" content="noindex,follow">\n</head>');
+  await write(`products/${product.slug}/index.html`, detailHtml);
 }
 
 for (const store of stores) {
   const storeUrl = `${baseUrl}/stores/${store.slug}/`;
-  const storeProducts = products.filter((product) => product.storeId === store.id);
+  const storeProducts = saleProducts.filter((product) => product.storeId === store.id);
   const cards = storeProducts.map((product) => productCard(product, { withData: false, withHeart: false })).join('');
   const html = fill(storeTemplate, {
     STORE_NAME: esc(store.name),
@@ -359,8 +365,8 @@ for (const policy of pages.policies || []) {
 
 const urls = [
   `${baseUrl}/`,
-  ...stores.map((store) => `${baseUrl}/stores/${store.slug}/`),
-  ...products.map((product) => `${baseUrl}/products/${product.slug}/`),
+  ...saleStores.map((store) => `${baseUrl}/stores/${store.slug}/`),
+  ...saleProducts.map((product) => `${baseUrl}/products/${product.slug}/`),
   ...(pages.policies || []).map((policy) => `${baseUrl}/pages/${policy.slug}/`),
   ...affiliateHubs.map((hub) => `${baseUrl}/${hub.path || hub.id}/`),
   // Server-rendered weekly picks (site-worker, ekodi.kr/ekodimall/picks)
@@ -373,6 +379,8 @@ await write('build-meta.json', JSON.stringify({
   version: site.version,
   stores: stores.length,
   products: products.length,
+  publiclyListedProducts: saleProducts.length,
+  temporarilyHiddenProducts: products.length - saleProducts.length,
   policies: (pages.policies || []).length,
   affiliateHubs: affiliateHubs.length,
   platformMode: site.platform?.mode || 'unknown',
