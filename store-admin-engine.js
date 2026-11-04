@@ -3,6 +3,7 @@ import { createTerminalBridge } from './store-terminal-bridge.js';
 import { channelTargetOptions } from './channel-publishing-catalog.js';
 import { createStoreOrderModel } from './store-order-model.js';
 import { tenantAdminMetricsTabsMarkup, tenantAdminMetricsTabsCss, mountTenantAdminMetricsTabs } from './tenant-admin-metrics-tabs.js';
+import { TENANT_AUTOMATION_CSS, tenantAutomationOverviewModel, tenantAutomationOverviewHtml, bindTenantAutomationOverview } from './tenant-automation-overview-ui.js';
 
 const STORE_SECTION_CAPABILITY=Object.freeze({overview:TENANT_ADMIN_CAPABILITIES.dashboard,site:TENANT_ADMIN_CAPABILITIES.site,chrome:TENANT_ADMIN_CAPABILITIES.site,delivery:TENANT_ADMIN_CAPABILITIES.orders,pos:TENANT_ADMIN_CAPABILITIES.orders,mobile:TENANT_ADMIN_CAPABILITIES.orders,menu:TENANT_ADMIN_CAPABILITIES.catalog,orders:TENANT_ADMIN_CAPABILITIES.orders,customers:TENANT_ADMIN_CAPABILITIES.customers,reviews:TENANT_ADMIN_CAPABILITIES.reviews,sales:TENANT_ADMIN_CAPABILITIES.sales,inventory:TENANT_ADMIN_CAPABILITIES.inventory,marketing:TENANT_ADMIN_CAPABILITIES.marketing,publishing:TENANT_ADMIN_CAPABILITIES.marketing,work:TENANT_ADMIN_CAPABILITIES.operations,finance:TENANT_ADMIN_CAPABILITIES.finance,connections:TENANT_ADMIN_CAPABILITIES.connections,members:TENANT_ADMIN_CAPABILITIES.access});
 export function storeAdminCanAccess(role,section){const policy=tenantAdminPolicySnapshot();const allowed=policy.roleCapabilities[String(role||'').trim().toLowerCase()]||[];const capability=STORE_SECTION_CAPABILITY[String(section||'overview').toLowerCase()];return Boolean(capability&&(allowed.includes('*')||allowed.includes(capability)));}
@@ -71,7 +72,7 @@ main{width:100%;max-width:1320px;padding:22px 24px 42px;background:#f5f7f4!impor
 @media(max-width:720px){.pos-row{grid-template-columns:1fr auto}.pos-row .pos-mode{justify-self:end}.pos-row .actions{grid-column:1/-1;justify-content:stretch}}
 `;
 
-function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL){
+function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,OVERVIEW_HTML,OVERVIEW_BIND){
   let STORE_ID='';
   const PATH_PARTS=location.pathname.split('/').filter(Boolean);
   const IS_PORTFOLIO=PATH_PARTS[0]==='cmpmyi'&&PATH_PARTS[1]==='admin';
@@ -705,6 +706,16 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL){
   const targetOptions=(CHANNEL_CATALOG||[]).map(target=>`<option value="${esc(target.id)}">${esc(target.label)} — ${esc((target.formats||[]).map(format=>format.label).join(' · '))}</option>`).join('');
   const channelRows=channels.map(c=>{const related=jobs.filter(j=>String(j.channel_id)===String(c.id)),latest=related.filter(j=>j.published_at).sort((a,b)=>String(b.published_at).localeCompare(String(a.published_at)))[0],next=related.filter(j=>['scheduled','queued','pending','retrying'].includes(j.status)&&j.scheduled_at).sort((a,b)=>String(a.scheduled_at).localeCompare(String(b.scheduled_at)))[0];return `<form class="service-row channel-setting-row" data-store-channel="${esc(c.id)}"><div><strong>${esc(c.display_name||c.provider)}</strong><p>${esc(c.provider)} · ${esc(c.external_account_id||'')}</p><p class="channel-activity">최근 게시 ${esc(latest?publishingTime(latest.published_at):'없음')} · 다음 예약 ${esc(next?publishingTime(next.scheduled_at):'없음')}</p></div><div class="actions"><span class="tag ${c.status==='active'?'live':'warn'}">${esc(c.status==='active'?'연결됨':c.status||'확인 필요')}</span><label><input name="autoPublishEnabled" type="checkbox" ${c.config?.autoPublishEnabled?'checked':''}> 자동게시</label><input name="maxPostsPerDay" type="number" min="0" max="30" value="${Number(c.config?.maxPostsPerDay||0)}" aria-label="일일 게시 한도"><button class="button" type="submit">저장</button></div></form>`}).join('');
   const jobRows=jobs.slice(0,12).map(j=>`<tr><td>${esc(publishingJobStatus(j.status))}</td><td>${esc(publishingTime(j.scheduled_at))}</td><td>${esc(publishingTime(j.published_at))}</td><td>${esc(j.last_error||'-')}</td></tr>`).join('');
+  const overviewModel=OVERVIEW_MODEL({
+    // This store's OAuth/channel/queue rows are already filtered by its
+    // registered store account IDs above; never render parent tenant rows.
+    connections,publishChannels:channels,jobs,
+    connectionsLoaded:settled[2].status==='fulfilled'&&Array.isArray(connectionData.connections),
+    publishingLoaded:settled[3].status==='fulfilled'&&Array.isArray(automation.channels),
+    jobsLoaded:settled[3].status==='fulfilled'&&Array.isArray(automation.jobs),
+    policy,ownedAutopostStatus:health?.ownedTenantAutopost||null,
+    subjectKey:SLUG,service:'store',adminBase:ADMIN_BASE,
+  });
   const healthNotice=failures.length
     ? `<div class="publishing-health warn" data-publishing-partial><div><strong>일부 연결을 확인하지 못했습니다.</strong><span>${esc(failures.join(' · '))} — 확인된 데이터는 계속 표시합니다.</span></div><button class="button" id="retryPublishing" type="button">다시 확인</button></div>`
     : '<div class="publishing-health live" data-publishing-healthy><div><strong>채널 운영 원장 확인 완료</strong><span>계정 · OAuth · 자동게시 · 최근 작업을 같은 화면에서 확인합니다.</span></div></div>';
@@ -715,6 +726,7 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL){
       <a class="button" href="${STORE_BASE}/marketing">Marketing AI</a>
     </div>
     ${healthNotice}
+    ${OVERVIEW_HTML(overviewModel)}
     <section class="publishing-section" data-publishing-operations>
       <h2>채널 운영현황</h2>
       <p class="panel-lead">등록 계정과 연결 상태를 먼저 확인합니다. 정상 연결은 다시 인증하지 않고 저장된 Vault 연결을 재사용합니다.</p>
@@ -731,8 +743,9 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL){
       <div class="publishing-detail-body"><form id="storePublishPolicyForm" class="trade-form"><div class="trade-grid"><label>운영 모드<select name="mode"><option value="review" ${policy.mode==='review'?'selected':''}>검토 후 게시</option><option value="assisted" ${policy.mode==='assisted'?'selected':''}>보조 자동화</option><option value="autonomous" ${policy.mode==='autonomous'?'selected':''}>자율 게시</option></select></label><label>일일 총 한도<input name="maxDailyPosts" type="number" min="1" max="100" value="${Number(policy.maxDailyPosts||3)}"></label></div><div class="actions"><button class="button" type="submit">정책 저장</button></div></form></div>
     </details>
     <details class="publishing-detail"><summary>지원 채널 · 게시형식</summary><div class="publishing-detail-body"><div class="service-list">${catalogRows}</div></div></details>
-    <details class="publishing-detail"><summary>최근 게시 작업${jobs.length?' · '+jobs.length+'건':''}</summary><div class="publishing-detail-body">${jobRows?`<div class="table-wrap"><table><thead><tr><th>상태</th><th>예약</th><th>게시</th><th>오류</th></tr></thead><tbody>${jobRows}</tbody></table></div>`:'<div class="empty">게시 작업이 없습니다.</div>'}</div></details>
+    <details class="publishing-detail" id="storeRecentJobs"><summary>최근 게시 작업${jobs.length?' · '+jobs.length+'건':''}</summary><div class="publishing-detail-body">${jobRows?`<div class="table-wrap"><table><thead><tr><th>상태</th><th>예약</th><th>게시</th><th>오류</th></tr></thead><tbody>${jobRows}</tbody></table></div>`:'<div class="empty">게시 작업이 없습니다.</div>'}</div></details>
   `;
+  OVERVIEW_BIND($('tenantAutoOverview'));
   const retryPublishing=$('retryPublishing');if(retryPublishing)retryPublishing.onclick=()=>publishingPanel();
   $('storeChannelAccountForm').onsubmit=async e=>{e.preventDefault();try{const fd=new FormData(e.currentTarget),provider=String(fd.get('provider')||''),account=String(fd.get('account')||'').trim(),displayName=String(fd.get('displayName')||'').trim(),target=CHANNEL_TARGETS.get(provider),map=storeRegistryProvider(provider);if(provider==='youtube'&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(account))throw new Error('YouTube는 인증할 Google 이메일을 입력해 주세요.');const capabilities=target?.automationAdapter?['channel.publish']:provider==='naver_blog'?['channel.share']:['channel.manage'];setState('계정 등록 중');await externalAccountCall('/accounts',{method:'POST',body:JSON.stringify({workspaceSlug:SLUG,provider:map.provider,serviceKey:map.serviceKey,providerAccountId:account,loginHint:provider==='youtube'?account:'',displayName:displayName||account,connectionMode:map.connectionMode,capabilities,authorityRef:`store:${STORE_ID}`})});await publishingPanel()}catch(err){$('pageCopy').textContent=err.message;setState('계정 등록 확인 필요','warn')}};
   document.querySelectorAll('[data-store-auth]').forEach(b=>b.onclick=async()=>{try{const a=accounts.find(x=>String(x.id)===String(b.dataset.storeAuth));if(!a)throw new Error('등록 계정을 찾을 수 없습니다.');setState('외부 인증 준비');await startStoreChannelAuth(b.dataset.provider,a)}catch(err){$('pageCopy').textContent=err.message;setState('인증 확인 필요','warn')}});
@@ -820,12 +833,12 @@ const ROUTE_CACHE=new Map();
 export function storeAdminSlug(pathname){const m=new RegExp('^/([^/]+)/admin(?:/(?:'+STORE_SECTIONS+')(?:/[^/]+)*)?/?$','i').exec(String(pathname||''));if(!m)return'';const slug=m[1].toLowerCase();return ['cmpmyi','stores'].includes(slug)?'':slug}
 export function isStoreAdminPathShape(pathname){return Boolean(storeAdminSlug(pathname))}
 export async function resolveStoreAdminRoute(pathname,fetchImpl=fetch){const slug=storeAdminSlug(pathname);if(!slug)return null;if(BOOTSTRAP_STORE_PROFILES[slug])return BOOTSTRAP_STORE_PROFILES[slug];const cached=ROUTE_CACHE.get(slug);if(cached&&cached.expires>Date.now())return cached.value;try{const r=await fetchImpl('https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/store_admin_route_profile',{method:'POST',headers:{apikey:'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_','content-type':'application/json'},body:JSON.stringify({p_operating_slug:slug}),cache:'no-store'});if(!r.ok)return null;const value=await r.json();if(!value?.slug)return null;const profile={slug:String(value.slug),name:String(value.name||value.slug),mark:'ST',brand:'STORE OPERATIONS'};ROUTE_CACHE.set(slug,{value:profile,expires:Date.now()+300000});return profile}catch{return null}}
-export function storeAdminCss(){return new Response(CSS+tenantAdminMetricsTabsCss,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
+export function storeAdminCss(){return new Response(CSS+tenantAdminMetricsTabsCss+TENANT_AUTOMATION_CSS,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
 // Wrangler bundles with esbuild keepNames, which inserts __name(fn,"name") calls into
 // nested functions. They survive Function.prototype.toString(), so the serialised
 // browser script carries a private helper in its own IIFE (repo convention).
 export const STORE_ADMIN_NAME_PRELUDE='(()=>{const __name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n';
-export function storeAdminScript(){const payload=tenantAdminPolicySnapshot();return new Response(`${STORE_ADMIN_NAME_PRELUDE}(${mountTenantAdminMetricsTabs.toString()})();\n(${clientMain.toString()})(${JSON.stringify(payload)},${JSON.stringify(channelTargetOptions())},(${createStoreOrderModel.toString()})(),(${createTerminalBridge.toString()})());})();`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
+export function storeAdminScript(){const payload=tenantAdminPolicySnapshot();return new Response(`${STORE_ADMIN_NAME_PRELUDE}(${mountTenantAdminMetricsTabs.toString()})();\n(${clientMain.toString()})(${JSON.stringify(payload)},${JSON.stringify(channelTargetOptions())},(${createStoreOrderModel.toString()})(),(${createTerminalBridge.toString()})(),(${tenantAutomationOverviewModel.toString()}),(${tenantAutomationOverviewHtml.toString()}),(${bindTenantAutomationOverview.toString()}));})();`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
 export function storeAdminPage(profile){const p=profile||{slug:'store',name:'점포 운영공간',mark:'ST',brand:'STORE OPERATIONS'};const e=v=>String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const slug=e(p.slug),name=e(p.name),mark=e(p.mark||'ST'),brand=e(p.brand||'STORE OPERATIONS'),adminBase=e(p.adminBase||`/${p.slug}/admin`),userBase=p.portfolio?'/cmpmyi':`/${slug}`,embedded=p.embed===true;const requestParts=String(p.pathname||'').split('/').filter(Boolean);const requestedSection=(p.portfolio?requestParts[3]:requestParts[2])?.toLowerCase()||'overview';const initialMetaMap={
   overview:['운영 홈','오늘 매장의 주문·매출·고객 상태와 다음 행동을 한눈에 봅니다.'],
   mobile:['모바일 주문','휴대폰·태블릿으로 매장 어디서나 오늘 주문을 확인합니다. 결제는 휴대용 카드단말기로 받습니다.'],
