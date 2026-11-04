@@ -20,7 +20,7 @@ function migrated() {
   return db;
 }
 const BUYER = { name: '김구매', phone: '01012345678', email: 'buyer@example.com', postcode: '58556', address1: '전남 무안군 청계면 영산로 1', address2: '101호', memo: '문 앞', privacyConsent: true };
-const LIVE_WIDGET = { PAYMENTS_ENABLED: 'true', PAYMENT_PROVIDER: 'toss', TOSS_CLIENT_KEY: 'live_gck_x', TOSS_SECRET_KEY: 'live_gsk_y', MALL_BASE_URL: 'https://ekodi.kr/ekodimall' };
+const LIVE_WIDGET = { PAYMENTS_ENABLED: 'true', PAYMENT_PROVIDER: 'toss', TOSS_CLIENT_KEY: 'live_gck_x', TOSS_SECRET_KEY: 'live_gsk_y', MALL_BASE_URL: 'https://ekodi.kr/ekodimall', MALL_TOSS_MERCHANT_ONLY: 'true', MALL_EKODIAN_EMAILS: 's@x' };
 
 test('buyer validation requires recipient, mobile, 5-digit postcode, address and consent', () => {
   const ok = validateBuyer(BUYER);
