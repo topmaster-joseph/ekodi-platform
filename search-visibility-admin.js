@@ -396,7 +396,7 @@
       return {...item, url:u.href};
     } catch {return null;}
   };
-  const fetchBounded = async (url, { parse = 'text', timeout = 6500 } = {}) => {
+  const fetchBounded = async (url, { parse = 'text', timeout = 6500, withResponse = false } = {}) => {
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), timeout);
     try {
@@ -406,16 +406,35 @@
       if (limit > 1_500_000)throw new Error('응답 크기 초과');
       const text = await response.text();
       if (text.length > 1_500_000)throw new Error('응답 크기 초과');
-      return parse==='json'?JSON.parse(text):text;
+      return withResponse?{text,finalUrl:response.url||url,
+        contentType:response.headers.get('content-type')||'',robotsHeader:response.headers.get('x-robots-tag')||''}
+        :parse==='json'?JSON.parse(text):text;
     } finally {window.clearTimeout(timer);}
   };
-  const checkDocument = html => {
+  // The rendered page and its HTTP crawler directives must both be checked.
+  // A successful fetch of a redirected sign-in page is not a successful audit
+  // of the registered public site. These checks do not imply search indexing.
+  const noindexDirective = value => /(?:^|[,;\\s])(?:noindex|none)(?=$|[,;\\s])/i.test(String(value||''));
+  const validatePublicAuditResponse = (site, receipt) => {
+    const requested=new URL(site.url),final=new URL(receipt.finalUrl||site.url,requested);
+    const publicPath=url=>url.pathname.replace(/\\/+$/,'')||'/';
+    if(final.origin!==requested.origin||publicPath(final)!==publicPath(requested)||final.search||final.hash)
+      throw new Error('요청한 공개 경로 대신 다른 페이지로 이동했습니다');
+    if(!/^(?:text\\/html|application\\/xhtml\\+xml)(?:\\s*;|$)/i.test(receipt.contentType||''))
+      throw new Error('공개 문서가 HTML로 응답하지 않았습니다');
+    return receipt.text;
+  };
+  const checkDocument = (html, {robotsHeader=''} = {}) => {
     const dom = new DOMParser().parseFromString(html, 'text/html');
-    const meta = name => dom.querySelector('meta[name="'+name+'"]')?.getAttribute('content')?.trim() || '';
+    const metas=[...dom.querySelectorAll('meta[name]')];
+    const meta=name=>metas.find(item=>item.getAttribute('name')?.trim().toLowerCase()===name)
+      ?.getAttribute('content')?.trim()||'';
     const title = Boolean(dom.querySelector('title')?.textContent?.trim());
     const description = Boolean(meta('description'));
     const canonical = dom.querySelector('link[rel="canonical"]')?.getAttribute('href') || '';
-    const noindex = /(?:^|[,\s])noindex(?:$|[,\s])/i.test(meta('robots'));
+    const noindex = noindexDirective(robotsHeader)||
+      ['robots','googlebot','bingbot','oai-searchbot','gptbot','claude-searchbot']
+        .some(name=>noindexDirective(meta(name)));
     const headings = Boolean(dom.querySelector('h1')?.textContent?.trim());
     const schema = Boolean(dom.querySelector('script[type="application/ld+json"]')?.textContent?.trim());
     return {title, description, canonical, noindex, headings, schema};
@@ -487,15 +506,16 @@
   }
   async function auditOne(site,{quiet=false}={}) {
     try{
-      const html=await fetchBounded(site.url);
-      const result=checkDocument(html);
+      const receipt=await fetchBounded(site.url,{withResponse:true});
+      const html=validatePublicAuditResponse(site,receipt);
+      const result=checkDocument(html,{robotsHeader:receipt.robotsHeader});
       const correctCanonical=Boolean(result.canonical)&&new URL(result.canonical,site.url).href.replace(/\/$/,'')===site.url.replace(/\/$/,'');
       const basic=[result.title,result.description,correctCanonical,!result.noindex].filter(Boolean).length;
       const ai=[result.headings,result.schema,result.description].filter(Boolean).length;
       const improvements=[!result.title?'고유 페이지 제목 보완':null,
         !result.description?'검색 설명문 보완':null,
         !correctCanonical?'정규 URL(canonical) 정비':null,
-        result.noindex?'공개페이지 noindex 설정 점검':null,
+        result.noindex?'검색로봇 noindex 지시(메타·HTTP 헤더) 점검':null,
         !result.headings?'H1 제목 보완':null,
         !result.schema?'구조화 데이터 검토':null].filter(Boolean);
       state.audited.set(site.url,{
