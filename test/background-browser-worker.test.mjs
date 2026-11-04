@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { normalizeTask } from '../scripts/ekodi-background-browser-worker.mjs';
+import { normalizeTask, summarizeNativeNavigationPerformance } from '../scripts/ekodi-background-browser-worker.mjs';
 
 const source=fs.readFileSync(new URL('../scripts/ekodi-background-browser-worker.mjs',import.meta.url),'utf8');
 const policy=JSON.parse(fs.readFileSync(new URL('../config/background-browser-worker-policy.json',import.meta.url),'utf8'));
@@ -148,4 +148,14 @@ test('different verifier workflows do not share one cancellation group on the sa
   assert.match(workerWorkflow,/github\.workflow/);
   assert.match(workerWorkflow,/github\.event\.workflow_run\.head_sha \|\| github\.sha/);
   assert.doesNotMatch(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.device_profile/);
+});
+
+test('native browser emits deterministic per-route p50/p95 timings without third-party calls',()=>{
+  assert.deepEqual(summarizeNativeNavigationPerformance([]),{navigations:0,p50Ms:null,p95Ms:null,maxMs:null});
+  assert.deepEqual(summarizeNativeNavigationPerformance([
+    {elapsedMs:200},{elapsedMs:100},{elapsedMs:400},{elapsedMs:300}
+  ]),{navigations:4,p50Ms:200,p95Ms:400,maxMs:400});
+  assert.match(source,/performance:summarizeNativeNavigationPerformance\(navigationTimings\)/);
+  assert.match(source,/navigationTimings\.push\(\{path:canonicalPath/);
+  assert.equal(policy.provider.externalBrowserServiceRequired,false);
 });

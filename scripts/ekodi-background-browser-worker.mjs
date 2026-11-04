@@ -37,6 +37,14 @@ const SAFE_KEYS = new Set(['Enter','Tab','Escape','ArrowUp','ArrowDown','ArrowLe
 
 const clean=(value,max=300)=>String(value??'').trim().slice(0,max);
 const now=()=>new Date().toISOString();
+/** Browser speed evidence, not a claim of superiority to external providers. */
+export function summarizeNativeNavigationPerformance(samples=[]) {
+  const values=samples.map(s=>Number(s.elapsedMs)).filter(n=>Number.isFinite(n)&&n>=0).sort((a,b)=>a-b);
+  if(!values.length)return {navigations:0,p50Ms:null,p95Ms:null,maxMs:null};
+  const pct=p=>values[Math.min(values.length-1,Math.max(0,Math.ceil(p*values.length)-1))];
+  return {navigations:values.length,p50Ms:pct(0.50),p95Ms:pct(0.95),maxMs:values.at(-1)};
+}
+
 
 function fail(code,message){ const e=new Error(message||code); e.code=code; throw e; }
 
@@ -161,6 +169,7 @@ export async function runTask(rawTask, options={}){
   const results=[];
   const screenshots=[];
   const recoveredNavigations=[];
+  const navigationTimings=[];
   const remaining=()=>Math.max(100,deadline-Date.now());
   // Pace both desktop and mobile read-only navigation across canonical sites.
   // Avoid the previous 500ms desktop burst (12 registered routes) and keep
@@ -171,6 +180,7 @@ export async function runTask(rawTask, options={}){
     if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
     const canonicalPath=safePath(p);
     const target=ORIGIN+canonicalPath;
+    const navStarted=Date.now();
     for(let attempt=0;attempt<3;attempt++){
       const minimumGap=2200;
       const pause=Math.max(0,minimumGap-(Date.now()-lastNavigationAt));
@@ -222,6 +232,7 @@ export async function runTask(rawTask, options={}){
       }
       if(status!==null && status>=400) fail('BROWSER_NAVIGATION_HTTP_ERROR','Navigation '+canonicalPath+' returned HTTP '+status);
       for(const record of recoveredNavigations) if(record.path===canonicalPath) record.recovered=true;
+      navigationTimings.push({path:canonicalPath,elapsedMs:Date.now()-navStarted,attempts:attempt+1,status});
       return {url:page.url(),status};
     }
     fail('BROWSER_NAVIGATION_THROTTLED','Navigation '+canonicalPath+' exhausted attempts');
@@ -319,6 +330,8 @@ export async function runTask(rawTask, options={}){
       allowMutation:task.allowMutation,
       blockedMutations,
       recoveredNavigations,
+      performance:summarizeNativeNavigationPerformance(navigationTimings),
+      navigationTimings,
       results,
       screenshots,
       consoleErrors:consoleErrors.slice(0,20),

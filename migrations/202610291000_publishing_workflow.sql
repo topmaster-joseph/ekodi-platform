@@ -112,3 +112,5 @@ CREATE TABLE IF NOT EXISTS publishing_ai_images (
  book_id TEXT NOT NULL, number INTEGER NOT NULL, mime TEXT NOT NULL, data_b64 TEXT NOT NULL,
  prompt TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL, PRIMARY KEY(book_id, number)
 );
+-- PUBLISHING-AI-WEEKLY-001: 예약 실행 기록(상태·오류 메시지만, 원고 본문 없음)
+CREATE TABLE IF NOT EXISTS publishing_ai_runs (at TEXT NOT NULL, result_json TEXT NOT NULL);
