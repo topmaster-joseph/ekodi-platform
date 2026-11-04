@@ -3,6 +3,10 @@ const $=id=>document.getElementById(id);
 const ORIGIN='https://ekodi.kr';
 // Compose complete URLs so the apex router cannot prefix individual API suffixes.
 const BASE=`${ORIGIN}/publishing/api/workflow`;
+const AUTH_KEYS=['sb-renzehysxirjilvdxacv-auth-token','ekodi-books-buyer-session'];
+// Public Supabase publishable key, shared with EKODI's existing central auth client.
+const AUTH_SERVER='https://renzehysxirjilvdxacv.supabase.co/auth/v1/logout?scope=local';
+const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const STAGES=[
   ['planning','기획'],['drafting','집필'],['in_review','검수'],
   ['ready_for_author','저자 승인'],['publisher_approved','발행 승인'],['scheduled','예약'],
@@ -12,8 +16,9 @@ const LABELS={planning:'기획',drafting:'집필 중',in_review:'편집 검수',
   publisher_approved:'발행 승인 완료',scheduled:'출간 예약',
   handoff_ready:'판매 등록 인계 대기',released:'판매 활성화 확인'};
 let projects=[],active=null,userRole='author',connected=false;
+let requestVersion=0;
 function getToken(){
-  for(const key of ['sb-renzehysxirjilvdxacv-auth-token','ekodi-books-buyer-session']){
+  for(const key of AUTH_KEYS){
     try{
       const x=JSON.parse(localStorage.getItem(key)||'null');
       const v=x?.currentSession||x?.session||x;
@@ -39,15 +44,60 @@ async function api(path,options={}){
 function tell(text){$('result').textContent=text;}
 function errorText(error){
   if(error.status===401)return '로그인이 필요합니다. 에코디 계정으로 로그인해 주세요.';
+  if(error.status===403)return '현재 계정에는 출판 관리 권한이 없습니다. 다른 계정을 사용하려면 로그아웃해 주세요.';
   if(error.status===503)return '출판 업무 원장이 아직 연결되지 않았습니다. 운영 저장소 적용 전에는 기록을 변경할 수 없습니다.';
   if(error.code==='REVISION_CONFLICT')return '다른 작업자가 원고를 수정했습니다. 새로고침 후 다시 실행하세요.';
   return String(error.message||error)+(error.blockers?.length?'\n미완료: '+error.blockers.join(', '):'');
 }
 function loginLink(){
   const a=document.createElement('a');
-  const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('return_to',location.href);a.href=u.href;
+  const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','publishing');u.searchParams.set('return_to',location.href);a.href=u.href;
   a.textContent='에코디 계정 로그인';
   return a;
+}
+// Only a successful publishing API response proves the signed-in UI state.
+function setAuthControls(state){
+  $('authLogin').hidden=state==='authenticated';
+  $('authLogout').hidden=state!=='authenticated';
+}
+function sessionTokens(){
+  const tokens=new Set();
+  for(const key of AUTH_KEYS){
+    try{
+      const x=JSON.parse(localStorage.getItem(key)||'null');
+      const v=x?.currentSession||x?.session||x;
+      const token=v?.access_token||v?.accessToken;
+      if(token)tokens.add(token);
+    }catch{}
+  }
+  return [...tokens];
+}
+async function signOut(){
+  const control=$('authLogout');
+  control.disabled=true;
+  ++requestVersion;
+  enableForms(false);
+  // Revoke each distinct browser session via the established EKODI auth provider.
+  const requests=sessionTokens().map(async token=>{
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),8000);
+    try{
+      const response=await fetch(AUTH_SERVER,{method:'POST',headers:{
+        apikey:PUBLISHABLE_KEY,authorization:'Bearer '+token},cache:'no-store',signal:controller.signal});
+      return response.ok||response.status===401;
+    }catch{return false;}
+    finally{clearTimeout(timer);}
+  });
+  const outcomes=await Promise.all(requests);
+  ++requestVersion; // Discard any in-flight authenticated project response.
+  for(const key of AUTH_KEYS){try{localStorage.removeItem(key);}catch{}}
+  projects=[];active=null;renderDetail();enableForms(false);
+  setAuthControls('guest');
+  try{
+    await load();
+    if(outcomes.some(ok=>!ok))$('connection').append(document.createTextNode(
+      ' 브라우저에서는 로그아웃되었으나 서버 세션 종료 응답은 확인되지 않았습니다.'));
+  }finally{control.disabled=false;}
 }
 function enableForms(enabled){
   connected=enabled;
@@ -55,12 +105,17 @@ function enableForms(enabled){
   for(const elm of $('createForm').querySelectorAll('button,input,select'))elm.disabled=!enabled;
 }
 async function load(){
+  const version=++requestVersion;
   $('connection').textContent='출판 업무 원장 연결 확인 중…';
+  $('authLogin').href=loginLink().href;
   try{
     const health=await fetch(`${BASE}/health`,{cache:'no-store'}).then(x=>x.json());
+    if(version!==requestVersion)return;
     if(!health.dbConfigured){enableForms(false);throw Object.assign(new Error('PUBLISH_DB_NOT_CONFIGURED'),{status:503});}
     const data=await api('projects');
+    if(version!==requestVersion)return;
     projects=data.projects||[];userRole=data.role||'author';enableForms(true);
+    setAuthControls('authenticated');
     $('connection').textContent='출판 업무 원장 연결 · 권한: '+userRole+' · 예약 후에도 자동 판매되지 않습니다.';
     showList();
     if(active){
@@ -68,10 +123,14 @@ async function load(){
       renderDetail();
     }
   }catch(e){
+    if(version!==requestVersion)return;
     enableForms(false);
+    setAuthControls(e.status===403?'authenticated':'guest');
+    projects=[];active=null;renderDetail();
+    $('counts').textContent=e.status===401?'로그인 필요':'자료 확인 불가';
     $('connection').textContent=errorText(e);
-    if(e.status===401)$('connection').append(document.createTextNode(' '),loginLink());
-    $('rows').replaceChildren();const tr=$('rows').insertRow();const td=tr.insertCell();td.colSpan=7;td.textContent='자료를 불러오지 못했습니다.';
+    $('rows').replaceChildren();const tr=$('rows').insertRow();const td=tr.insertCell();td.colSpan=7;
+    td.textContent=e.status===401?'로그인 후 원고 프로젝트를 확인할 수 있습니다.':'자료를 불러오지 못했습니다.';
   }
 }
 function showList(){
@@ -217,5 +276,12 @@ $('saveEvidence').addEventListener('click',async()=>{
   }catch(err){tell(errorText(err));}
 });
 $('refresh').addEventListener('click',load);
+$('authLogout').addEventListener('click',signOut);
+if(typeof window!=='undefined')window.addEventListener('storage',event=>{
+  if(event.key!==null&&!AUTH_KEYS.includes(event.key))return;
+  ++requestVersion;enableForms(false);
+  projects=[];active=null;renderDetail();
+  load();
+});
 enableForms(false);load();
 
