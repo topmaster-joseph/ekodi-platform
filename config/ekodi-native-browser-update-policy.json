@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-AGENT-AUTOUPDATE-001",
+  "status": "enforced",
+  "owner": "ekodi-orchestrator",
+  "purpose": "Browser/Device Agent self-updates from protected release only; no marketplace/browser/OS updates",
+  "target": "tools/ekodi-device-agent/windows/ekodi-device-agent.ps1",
+  "manifest": "config/ekodi-device-agent-release.json",
+  "manifestOrigin": "https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/config/ekodi-device-agent-release.json",
+  "pinning": {
+    "immutableCommitRequired": true,
+    "sha256Required": true,
+    "strictNewerVersionRequired": true,
+    "sourceUrlConstructedLocally": true,
+    "arbitraryManifestUrlForbidden": true
+  },
+  "rollout": {
+    "initialPercent": 25,
+    "checkIntervalHours": 24,
+    "canaryDeviceHashOnly": true,
+    "localOptOutField": "browserAutoUpdateDisabled",
+    "broadRolloutRequiresNewProtectedReview": true
+  },
+  "safety": {
+    "interactiveAuthSessionBlocksUpdate": true,
+    "existingTransactionRollbackRequired": true,
+    "postRestartHeartbeatRequired": true,
+    "silentHostPrivilegeEscalationForbidden": true,
+    "extraCostForbidden": true,
+    "credentialsLogged": false,
+    "mainBranchDirectPushForbidden": true
+  },
+  "releaseState": "pending-orchestrator-merge-and-immutable-manifest",
+  "nativeBrowserProvider": "ekodi-owned-chromium-cdp"
+}
