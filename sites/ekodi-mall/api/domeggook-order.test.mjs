@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readdirSync, readFileSync } from 'node:fs';
-import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, validateDeliInfo, buildItemValue, probeDomeggookLogin, approvedMemberBindingReady, autoOrderEnabled, classifySupplierAuthError, safeDomeggookLoginDiagnostic, chooseOptionCode } from './domeggook-order.js';
+import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, validateDeliInfo, formatDomeggookMobile, buildItemValue, probeDomeggookLogin, approvedMemberBindingReady, autoOrderEnabled, classifySupplierAuthError, safeDomeggookLoginDiagnostic, chooseOptionCode } from './domeggook-order.js';
 
 function d1(db) {
   const wrap = (sql) => { const stmt = db.prepare(sql); let args = []; const api = {
@@ -44,19 +44,21 @@ function supplier({ emoney = 100000, qty = 2, cost = 8000, setOrderOk = true, vi
   };
 }
 
-test('format helpers strip pipes and follow documented order', () => {
-  assert.equal(buildDeliInfo({ name: '김|철수', email: 'a@b', postcode: '07328', address1: '주소', address2: '5층', phone: '010' }), '김 철수|a@b|07328|주소|5층|010|010|');
+test('format helpers strip pipes and follow v4.3 recipient schema', () => {
+  const buyer={ name:'김|철수',email:'a@b.kr',postcode:'07328',address1:'서울 주소',address2:'5층',phone:'010 2345 6789' };
+  assert.equal(buildDeliInfo(buyer),'김 철수|a@b.kr|07328|서울 주소|5층|010-2345-6789||에코디몰');
   assert.equal(buildItemValue({}, { market: 'supply', qty: 2, deliMemo: '문앞|부탁' }), 'supply||P||00|2||에코디몰 위탁주문||문앞 부탁');
 });
 
-test('delivery information validation rejects unsafe inputs without exposing buyer data', () => {
-  const valid = { name: '김철수', phone: '010-1111-2222', postcode: '07328', address1: '서울 영등포구', address2: '5층', email: 'a@b.kr' };
-  assert.equal(validateDeliInfo(valid), null);
-  for (const field of ['name', 'phone', 'postcode', 'address1']) {
-    assert.equal(validateDeliInfo({ ...valid, [field]: ' ' }), 'INVALID_DELIINFO');
-  }
-  assert.equal(validateDeliInfo({ ...valid, phone: 'not-a-phone' }), 'INVALID_DELIINFO');
-  assert.equal(validateDeliInfo({ ...valid, address2: '5층\nX-Injected: 1' }), 'INVALID_DELIINFO');
+test('delivery validation conforms to v4.3 and fails closed', () => {
+  const valid={name:'김철수',phone:'010-1111-2222',postcode:'07328',address1:'서울 영등포구',address2:'5층',email:'a@b.kr'};
+  assert.equal(validateDeliInfo(valid),null);
+  assert.equal(formatDomeggookMobile('010 2345 6789'),'010-2345-6789');
+  assert.equal(formatDomeggookMobile('01023456789'),'010-2345-6789');
+  for(const field of ['name','phone','postcode','address1','address2'])
+    assert.equal(validateDeliInfo({...valid,[field]:' '}),'INVALID_DELIINFO');
+  for(const invalid of [{phone:'not-a-phone'},{postcode:'1234'},{postcode:'123456'},{name:'가'.repeat(21)},{address2:'5층\nX-Injected: 1'}])
+    assert.equal(validateDeliInfo({...valid,...invalid}),'INVALID_DELIINFO');
 });
 
 test('invalid delivery data never reaches paid setOrder API', async () => {
@@ -97,7 +99,7 @@ test('paid supply order is placed once, verified, then tracked to shipping', asy
   assert.equal(set.get('sId'), 'SID1');
   assert.equal(set.get('id'), 'test-approved-member', 'uses the member id returned by login');
   assert.equal(set.get('item[55501234]'), 'supply||P||00|2||에코디몰 위탁주문||문앞');
-  assert.match(set.get('deliinfo'), /^김철수\|a@b\.kr\|07328\|/);
+  assert.equal(set.get('deliinfo'), '김철수|a@b.kr|07328|서울 영등포구 국제금융로6길 30|5층 A|010-1111-2222||에코디몰');
   const row = db.prepare('SELECT status,supplier_order_no,expected_cost FROM supplier_orders').get();
   assert.deepEqual({ ...row }, { status: 'placed', supplier_order_no: '9001', expected_cost: 19000 });
   const again = await placeSupplierOrders(env, supplier({}, log));
