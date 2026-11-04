@@ -19,7 +19,6 @@ import { investSubjectUiScript } from './invest-subject-ui.js';
 import { routeInvestSite } from './invest-site-system.js';
 import { isSinglesRoute, routeSinglesSurface } from './singles-surface.js';
 import { investIntroPage, investAnalysisPage, investAnalysisScript } from './invest-access-ui.js';
-import { investMyRoute } from './invest-my-workspace.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
@@ -382,7 +381,7 @@ async function routeInvestApex(request,env,ctx){
   // Private Invest has its own canonical path under the public Invest mount.
   // Route it BEFORE the public analysis fallback; asset/API responses retain the
   // owner gate and no-store headers from investMyRoute.
-  if(inner==='/my'||inner.startsWith('/my/'))return investMyRoute(request,env);
+  if(inner==='/my'||inner.startsWith('/my/'))return env.MY.fetch(request);
   if(inner==='/'||inner==='/index.html')return injectEkodiShell(investIntroPage(),'invest');
   if(inner==='/analysis')return injectEkodiShell(investAnalysisPage(),'invest');
   if(inner==='/analysis.js')return investAnalysisScript();
