@@ -41,6 +41,7 @@ import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gatew
 import { handleOrchestratorReleaseReceipt, handleOrchestratorCompletionReconciliation } from './ekodi-orchestrator-task-adapter.js';
 import { handleDevotionalControl } from './devotional-control.js';
 import { handleNotificationApi, runNotificationSchedule } from './notification-control.js';
+import { runMissionSaturdayNotice } from './notification-saturday-publisher.js';
 import { handleNotificationAdminSummary } from './notification-admin-summary.js';
 import { handleCommonScriptureControl } from './common-scripture-control.js';
 import { handlePublicChurchWorship } from './church-public-worship-control.js';
@@ -462,6 +463,12 @@ export default {
     const authorBilling = runAuthorBillingSchedule(env).catch(error => { console.error('Author billing schedule error', error); return { processed:0, error:'author_billing_schedule_failed' }; });
     const messengerOutbox = drainMessengerOutbox(env, { limit:20 }).catch(error => { console.error('Messenger outbox schedule error', error); return { processed:0, failed:1, error:'messenger_outbox_schedule_failed' }; });
     const notificationOutbox = runNotificationSchedule(env, { now:scheduledAt.toISOString(),limit:12 }).catch(error => { console.error('Notification outbox schedule error', error); return { processed:0, failed:1, error:'notification_schedule_failed' }; });
+    // Friday 09:00 KST only: read the canonical public meeting calendar.
+    // Independent first-party flag and mission-only credentials default OFF.
+    const missionSaturdayNotice = runMissionSaturdayNotice(env,{now:scheduledAt}).catch(error => {
+      console.error('Mission Saturday notice schedule error',error?.name||'schedule_failed');
+      return {status:'unavailable'};
+    });
     // My Invest autopilot: Sentinel on every pass; weekly/monthly reports are idempotent per period.
     const investAutopilot = runInvestAutopilotSchedule(env, { now:scheduledAt.getTime() }).catch(error => { console.error('Invest autopilot schedule error', error); return { ran:false, error:'invest_autopilot_schedule_failed' }; });
     const commandPulse = runEkodiPulseSchedule(env, { limit:1 }).catch(error => { console.error('EKODI v8 Pulse schedule error', error); return { ok:false, error:'ekodi_v8_pulse_failed' }; });
@@ -480,6 +487,7 @@ export default {
       ctx.waitUntil(authorBilling);
       ctx.waitUntil(messengerOutbox);
       ctx.waitUntil(notificationOutbox);
+      ctx.waitUntil(missionSaturdayNotice);
       ctx.waitUntil(investAutopilot);
       ctx.waitUntil(commandPulse);
       ctx.waitUntil(aiProviderHealth);
@@ -493,7 +501,7 @@ export default {
       if (seonamMediCrawlWatch) ctx.waitUntil(seonamMediCrawlWatch);
       if (externalAccountHealthDaily) ctx.waitUntil(externalAccountHealthDaily);
     }
-    const background = [authorBilling, messengerOutbox, notificationOutbox, investAutopilot, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration, marketingMetrics, marketingIndexNow];
+    const background = [authorBilling, messengerOutbox, notificationOutbox, missionSaturdayNotice, investAutopilot, commandPulse, aiProviderHealth, hybridWatchdog, recordingRetention, wakeOrchestration, marketingMetrics, marketingIndexNow];
     if (seonamMediHourly) background.push(seonamMediHourly);
     if (seonamMediRunnerWake) background.push(seonamMediRunnerWake);
     if (seonamMediCrawlWatch) background.push(seonamMediCrawlWatch);

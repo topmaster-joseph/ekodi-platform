@@ -61,8 +61,13 @@ export async function handleNotificationAdminSummary(request,env,{transport=fetc
         "SUM(CASE WHEN e.status='pending' AND e.scheduled_at<? THEN 1 ELSE 0 END) AS overdue, "+
         "MAX(e.created_at) AS lastEventAt FROM notification_events e WHERE e.topic=?"+eventFilter
       ).bind(...(cutoff?[stalledBefore,key,cutoff]:[stalledBefore,key])).first();
+      const publisher=topicPublisherReadiness(env,key);
+      const saturdayNotice=key==='mission'?{
+        enabled:env.NOTIFICATION_MISSION_SATURDAY_NOTICE_ENABLED==='true',
+        ready:publisher.ready&&env.NOTIFICATION_MISSION_SATURDAY_NOTICE_ENABLED==='true'
+      }:undefined;
       topics.push({
-        id:key,label:NOTIFICATION_TOPICS[key],publisher:topicPublisherReadiness(env,key),
+        id:key,label:NOTIFICATION_TOPICS[key],publisher,saturdayNotice,
         subscriberDevices:Number(subscribers?.n||0),
         events:Number(event?.total||0),eventsPending:Number(event?.pending||0),
         eventsOverdue:Number(event?.overdue||0),lastEventAt:event?.lastEventAt||null,
