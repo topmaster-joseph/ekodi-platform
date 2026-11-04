@@ -21,10 +21,10 @@
   },
   {
     "id": "coupang",
-    "name": "쿠팡 파트너스",
-    "eyebrow": "LIFE · SHOPPING",
-    "title": "생활에 필요한 상품을 이유부터 추천",
-    "description": "사람·상황·예산·용도를 기준으로 에코디가 상품 후보를 좁혀드립니다. 주문·결제·배송·반품은 쿠팡에서 진행합니다.",
+    "name": "쿠팡추천몰",
+    "eyebrow": "COUPANG PARTNERS · SHOPPING",
+    "title": "쿠팡추천몰",
+    "description": "쿠팡 제휴상품을 한곳에 모았습니다. 사람·상황·예산·용도에 맞게 찾아보고, 최신 가격·재고·배송 조건을 쿠팡에서 확인하세요. 주문·결제·배송·반품은 쿠팡에서 처리합니다.",
     "prompt": "예: 부모님께 드릴 5만원 이하 실용적인 건강 선물",
     "providerKeys": [
       "coupang",
@@ -35,8 +35,8 @@
     "mode": "shopping",
     "searchLabel": "사람·상황·예산·용도 등 상품 조건을 입력하세요",
     "resultsEyebrow": "SHOPPING RECOMMENDATIONS",
-    "resultsTitle": "상품 추천",
-    "resultsIntro": "현재 연결된 쇼핑 제휴망에서 조건에 맞는 상품 후보를 확인합니다.",
+    "resultsTitle": "쿠팡 제휴상품",
+    "resultsIntro": "현재 연결된 쿠팡 파트너스 상품을 살펴보세요. 구매 가능 여부와 가격은 쿠팡에서 최종 확인합니다.",
     "loadingLabel": "상품 후보를 불러오고 있습니다."
   }
 ]
