@@ -204,8 +204,8 @@ await write('index.html', indexHtml);
 // as the Mall storefront. This read-only public projection is not a seller row.
 await write('provider-bookstore.json', JSON.stringify({
   products: products.filter((p) => p.source?.system === 'ekodi-bookstore').map((p) => ({
-    id: p.id, name: p.name, price: p.price,
-    detailUrl: p.source.detailUrl,
+    id: p.id, bookId: p.source.bookId, name: p.name, price: p.price,
+    image: p.image || '', detailUrl: p.source.detailUrl,
     saleReady: p.action?.type === 'external' && p.status === '판매 중'
   }))
 }));
