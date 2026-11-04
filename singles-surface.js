@@ -54,6 +54,8 @@ function allowApi(path,method){
  if((path==='/api/identity/start'||path==='/api/identity/complete')&&method==='POST')return [path.slice(4),true];
  if(/^\/api\/passes\/pass_(?:1|10|20|30)d$/.test(path)&&method==='POST')return [path.slice(4),true];
  if(path==='/api/bank/admin/members'&&method==='GET')return ['/bank/admin/members',true];
+ if(path==='/api/bank/adult-check'&&['GET','POST','DELETE'].includes(method))return ['/bank/adult-check',true];
+ if(path==='/api/bank/admin/alert-test'&&method==='POST')return ['/bank/admin/orders',true];
  // 2026-10-31 후불 청구서·운영 제안(소유자 승인).
  if(/^\/api\/bank\/invoices\/[0-9a-f-]{36}\/order$/i.test(path)&&method==='POST')return [path.slice(4),true];
  if(path==='/api/bank/admin/proposals'&&method==='GET')return ['/bank/admin/proposals',true];
@@ -135,11 +137,39 @@ async function api(req,env,sub){
   }
  }
  const url=new URL(env.SINGLES_API_URL);url.pathname=url.pathname.replace(/\/+$/,'')+targetPath;url.search='';
+ // 소유자 알림 테스트: 운영자 권한(Edge가 판정)을 확인한 뒤에만 테스트 메일을 보낸다.
+ if(sub==='/api/bank/admin/alert-test'){
+  const check=await fetch(new Request(url,{method:'GET',headers:{authorization:bearer,apikey:env.SUPABASE_PUBLISHABLE_KEY,'x-ekodi-service':'singles'},redirect:'manual'}));
+  if(!check.ok)return json({error:check.status===403?'operator_capability_required':'unauthorized'},check.status===403?403:401);
+  const r=await ownerAlert(env,'[에코디 동행] 알림 테스트','운영자 알림이 정상적으로 연결되었습니다.\n성인 확인 요청이 들어오면 이 주소로 알려 드립니다.\n\n운영 화면: https://ekodi.kr/singles/admin');
+  return r.sent?json(r):json({...r,error:r.reason},503);
+ }
  const result=await fetch(new Request(url,{method:req.method,headers:{authorization:bearer,apikey:env.SUPABASE_PUBLISHABLE_KEY,
   'content-type':'application/json','x-ekodi-service':'singles'},body:['POST','PUT'].includes(req.method)?req.body:undefined,redirect:'manual'}));
  const responseHeaders=headers('application/json; charset=utf-8',true);
  if(result.headers.get('retry-after'))responseHeaders.set('retry-after',result.headers.get('retry-after'));
+ // 성인 확인 요청이 접수되면 소유자에게 메일로 알린다(연락처 등 개인정보는 메일에 넣지 않는다). 알림 실패는 회원 응답에 영향이 없다.
+ if(sub==='/api/bank/adult-check'&&req.method==='POST'&&result.ok){
+  const text=await result.text();let data=null;try{data=JSON.parse(text)}catch{}
+  if(data?.status==='requested'){
+   const at=new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
+   await ownerAlert(env,'[에코디 동행] 성인 확인 요청 1건','새 성인 확인 요청이 접수되었습니다('+at+').\n\n운영 화면에서 요청 목록과 연락처를 확인하고, 신분증을 확인한 뒤 "확인 완료로 처리"를 눌러 주세요.\nhttps://ekodi.kr/singles/admin\n\n※ 개인정보 보호를 위해 이 메일에는 연락처를 넣지 않습니다.');
+  }
+  return new Response(text,{status:result.status,headers:responseHeaders});
+ }
  return new Response(result.body,{status:result.status,headers:responseHeaders});
+}
+// 소유자 알림 메일(문의 메일과 같은 EKODI Workspace 발송 경로). 설정이 없거나 실패하면 sent:false로 끝난다.
+export const SINGLES_OWNER_ALERT_TO='joseph@ekodi.kr';
+async function ownerAlert(env,subject,body){
+ try{
+  if(!env?.GOOGLE_SERVICE_ACCOUNT_EMAIL||!env?.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY)return {sent:false,reason:'mail_not_configured'};
+  const {serviceAccountToken}=await import('./mail-user-page.js');
+  const {sendGoogleMailMessage}=await import('./mail-google-adapter.js');
+  const token=await serviceAccountToken(SINGLES_OWNER_ALERT_TO,env,'https://www.googleapis.com/auth/gmail.send');
+  await sendGoogleMailMessage(token,{to:SINGLES_OWNER_ALERT_TO,subject,body});
+  return {sent:true};
+ }catch(e){return {sent:false,reason:'mail_send_failed'}}
 }
 function page(active='처음'){
  const nav=[['/singles','처음',false],['/singles/groups','우리 모임',false],['/singles/events','공개 행사',false],['/singles/discover','동행 찾기','paid'],['/singles/messages','메시지','paid'],['/singles/my','내 프로필','paid'],['/singles/subscribe','동행 안내·가입',true]];
@@ -154,7 +184,7 @@ function singlesPrivacyReviewPage(){
   ['시범 운영과 개인정보 검토','동행은 현재 제한적 시범 운영 단계입니다. 회원 기능은 계정·본인확인·운영 승인에 따라 이용이 제한될 수 있습니다. 아래 개인정보 안내는 최종 승인 전 검토 문안이며, 처리자·보유기간·파기 기준·동의 문안은 법률 검토 및 확정이 필요합니다.'],
   ['어떤 정보를 다루나요?','EKODI 계정과 연결된 내부 식별자, 본인이 선택한 표시 이름·넓은 지역·한 줄 소개, 회원 참여와 동의 기록, 신고·차단 처리 기록을 서비스 목적에 필요한 범위에서 처리하도록 설계했습니다.'],
   ['신앙·신념 정보','신앙·종교 정보는 민감정보입니다. 일반 계정 로그인만으로 수집하거나 공개하지 않으며, 구체적인 이용 목적을 알린 뒤 별도 선택 동의를 받는 것을 원칙으로 합니다. 동의하지 않아도 공개 소개 화면을 볼 수 있습니다.'],
-  ['성인확인과 공개 범위','만 19세 이상 자기확인은 법적 본인확인을 대신하지 않습니다. 신뢰할 수 있는 본인확인 결과가 확인되기 전에는 상대방 검색·호감·메시지 등 개인 간 연결을 열지 않습니다. 신분증 원본을 이 사이트에 업로드하지 마세요. 프로필은 기본 비공개입니다.'],
+  ['성인확인과 공개 범위','만 19세 이상 자기확인은 법적 본인확인을 대신하지 않습니다. 신뢰할 수 있는 본인확인 결과가 확인되기 전에는 상대방 검색·호감·메시지 등 개인 간 연결을 열지 않습니다. 신분증 원본을 이 사이트에 업로드하지 마세요. 본인확인기관 연동 전에는 회원이 남긴 연락처로 운영자가 연락해 신분증을 영상통화·대면으로 확인하며, 사본은 받지 않고 확인이 끝나면 연락처를 바로 지웁니다. 프로필은 기본 비공개입니다.'],
   ['보관·철회·삭제','회원은 동의와 공개 설정을 변경하거나 탈퇴를 요청할 수 있어야 합니다. 철회 시 공개·추천은 즉시 중단되어야 하며, 개인정보 삭제 및 법정 보존 항목·기간은 실제 운영 체계와 일치하도록 개통 전에 확정합니다.'],
   ['서비스 성격과 결제','동행은 결혼 상대를 소개·알선·중개하지 않는 교제·만남 공동체이며, 만남·교제·결혼의 성사를 보장하지 않습니다. 결제 기록(구독권·청구서·환불)은 전자상거래법에 따라 보존하며, 요금·환불 기준은 <a href="/singles/terms">동행 이용약관</a>에서 확인할 수 있습니다. 유료 기능은 시범 계정·본인확인·운영 권한에 따라 제한될 수 있습니다.']
  ];

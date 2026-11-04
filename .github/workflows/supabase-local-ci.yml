@@ -120,8 +120,8 @@ jobs:
           out="$(docker exec -i "$db_container" psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
             < scripts/sql/singles_money_flows_probe.sql 2>&1)"
           printf '%s\n' "$out"
-          test "$(printf '%s\n' "$out" | grep -c 'SINGLES-FLOW PASS')" -eq 5
-          echo 'SINGLES-FLOW-001: postpaid, refund, withdrawal, events, paid events, rollback PASS'
+          test "$(printf '%s\n' "$out" | grep -c 'SINGLES-FLOW PASS')" -eq 6
+          echo 'SINGLES-FLOW-001: postpaid, refund, withdrawal, events, paid events, adult check, rollback PASS'
       - name: Prove secure defaults for new public objects
         if: github.event_name != 'pull_request' || steps.scope.outputs.needs_db == 'true'
         shell: bash

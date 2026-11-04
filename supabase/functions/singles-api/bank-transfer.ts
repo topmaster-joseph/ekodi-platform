@@ -331,6 +331,27 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const emails=await emailsFor(admin,[...new Set<string>(list.map((o:any)=>o.user_id))]);
   return reply(req,{orders:list.map((o:any)=>({...o,email:emails.get(o.user_id)||null}))});
  }
+ // 자체 성인 확인 요청(2026-11-04): 신분증 사본은 받지 않고, 운영자가 연락해 영상통화·대면으로 확인한다.
+ if(path==='/bank/adult-check'&&method==='GET'){
+  const row=await one(admin.from('singles_adult_check_requests').select('method,preferred_time,status,created_at,done_at').eq('user_id',userId));
+  return reply(req,{request:row||null});
+ }
+ if(path==='/bank/adult-check'&&method==='POST'){
+  const v=await payload(req);
+  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).some(k=>!['method','contact','preferred_time'].includes(k))||
+    typeof v.method!=='string'||typeof v.contact!=='string'||(v.preferred_time!==undefined&&typeof v.preferred_time!=='string'))
+   return reply(req,{error:'contact_required'},400);
+  const {data,error}=await admin.rpc('singles_adult_check_request',{p_user:userId,p_method:v.method,p_contact:v.contact,p_time:v.preferred_time||''});
+  if(error){const msg=String(error.message||'');
+   for(const [k,st] of [['membership_required',403],['invalid_method',400],['contact_required',400],['preferred_time_too_long',400]] as const)if(msg.includes(k))return reply(req,{error:k},st);
+   throw error;}
+  return reply(req,data);
+ }
+ if(path==='/bank/adult-check'&&method==='DELETE'){
+  const {data,error}=await admin.rpc('singles_adult_check_cancel',{p_user:userId});
+  if(error){if(String(error.message||'').includes('request_not_found'))return reply(req,{error:'request_not_found'},404);throw error}
+  return reply(req,data);
+ }
  if(path==='/bank/admin/members'&&method==='GET'){
   const role=await operator(admin,userId);
   if(!role||role.can_verify!==true)return reply(req,{error:'verification_capability_required'},403);
@@ -339,7 +360,11 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const attempts=await many(admin.from('singles_signup_attempts').select('user_id,email,action,detail,created_at')
     .order('created_at',{ascending:false}).limit(100));
   const emails=await emailsFor(admin,[...new Set<string>(members.map((m:any)=>m.user_id))]);
-  return reply(req,{members:members.map((m:any)=>({...m,email:emails.get(m.user_id)||null})),attempts});
+  // 처리할 성인 확인 요청(연락처는 확인 완료 시 DB가 지운다).
+  const checks=await many(admin.from('singles_adult_check_requests').select('user_id,method,contact,preferred_time,created_at').eq('status','requested').order('created_at').limit(100));
+  const cEmails=await emailsFor(admin,[...new Set<string>(checks.map((c:any)=>c.user_id))]);
+  return reply(req,{members:members.map((m:any)=>({...m,email:emails.get(m.user_id)||null})),attempts,
+   adult_checks:checks.map((c:any)=>({...c,email:cEmails.get(c.user_id)||null}))});
  }
  // H3(2026-10-31): 환불 대상 청구서 송금 처리. 돈은 운영자가 은행에서 직접 보내고, 여기서는 송금 거래번호만 기록한다.
  if(path==='/bank/admin/refunds'&&method==='GET'){
