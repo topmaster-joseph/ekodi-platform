@@ -412,8 +412,8 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
         $('#gateTitle').textContent = hub ? '협동조합 관리 권한을 확인해 주세요' : surface === 'admin' ? '이 조합의 관리자 권한을 확인해 주세요' : '조합원 등록 확인이 필요합니다';
         $('#gateMessage').textContent = '로그인 계정과 이 조합의 접근권한은 별도로 확인합니다. 이름만으로 권한이 부여되지는 않습니다.';
         $('#loginLink').hidden = true;
-        if (!platform && !hub && error.code !== 'COOP_JOIN_BLOCKED') { $('#application').hidden = false; $('#gateTitle').textContent = surface === 'admin' ? '이 조합의 관리자 권한이 없습니다' : '조합원 등록 확인이 필요합니다'; }
-        setStatus('이 계정에 등록된 조합별 권한이 없습니다.');
+        if (!platform && !hub && error.code !== 'COOP_JOIN_BLOCKED') { $('#application').hidden = false; $('#gate').hidden = surface !== 'admin'; $('#gateTitle').textContent = '이 조합의 관리자 권한이 없습니다'; }
+        setStatus(!platform && !hub && surface === 'members' ? '아직 이 조합의 조합원으로 등록되지 않은 계정입니다. 아래에서 바로 등록할 수 있습니다.' : '이 계정에 등록된 조합별 권한이 없습니다.');
       } else setStatus(errors[error.code] || error.message || '접근을 확인하지 못했습니다. 다시 시도해 주세요.', true);
     }
   }
