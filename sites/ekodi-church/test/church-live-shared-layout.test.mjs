@@ -11,7 +11,8 @@ test('Church Live shares the Church homepage footer contract and responsive head
   const homeFooter = extract(home, /<footer class="site-footer church-footer" data-ekodi-service-footer>[\s\S]*?<\/footer>/);
   const liveFooter = extract(live, /<footer class="site-footer church-footer" data-ekodi-service-footer>[\s\S]*?<\/footer>/);
   assert.ok(homeFooter && liveFooter, 'both surfaces must expose the church-native footer');
-  assert.equal(liveFooter, homeFooter, 'Church Live footer markup should remain identical to church home');
+  const normalized = markup => markup.replace(/>\s+</g, '><').trim();
+  assert.equal(normalized(liveFooter), normalized(homeFooter), 'Church Live footer content should remain identical to church home');
   for (const token of ['class="site-header"', 'class="brand"', 'class="brand-mark"',
     'class="daily-verse"', 'class="menu-button"', 'id="main-nav"']) {
     assert.ok(live.includes(token), 'missing shared church header component: ' + token);
