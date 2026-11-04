@@ -141,3 +141,21 @@ test('one-screen kiosk absorbs EKODI shared Shell width and footer without globa
   assert.match(kioskCss,/height:calc\(100dvh - 56px\)!important/);
   assert.match(kioskCss,/body\[data-area="pizza-experience"\]\{height:100dvh!important/);
 });
+
+test('YouTube video URLs survive central /edu path rewriting', async () => {
+  const {runInNewContext}=await import('node:vm');
+  const match=js.match(/function parseYoutubeId\(value\)\{[\s\S]*?\n\}/);
+  assert.ok(match,'YouTube parser function present');
+  assert.equal((js.match(/\.split\(String\.fromCharCode\(47\)\)/g)||[]).length,2);
+  assert.doesNotMatch(js,/\.split\('\/'\)/);
+  const cases=[
+    ['https://youtu.be/u-EbLZDZ9d4','u-EbLZDZ9d4'],
+    ['https://www.youtube.com/watch?v=vRONQL0wuAE','vRONQL0wuAE'],
+    ['https://youtube.com/shorts/vRONQL0wuAE','vRONQL0wuAE'],
+    ['https://youtube.com.evil.example/watch?v=u-EbLZDZ9d4','']
+  ];
+  for(const [url,expected] of cases){
+    const result=runInNewContext(match[0]+'\nparseYoutubeId(input);',{URL,input:url});
+    assert.equal(result,expected,url);
+  }
+});
