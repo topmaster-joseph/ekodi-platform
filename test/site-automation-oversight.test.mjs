@@ -145,3 +145,59 @@ test('Central Growth OS visibly separates Naver submission receipts from search 
   assert.match(control,/joinSiteIndexNowSubmissions\(automation,indexNow\)/);
   assert.match(control,/if\(!actor\)return denied\(403,'SUPER_ADMIN_REQUIRED'\)/);
 });
+
+test('Owned tenant readiness lists only the exact site, not another tenant from the shared health response',()=>{
+  const readonlyHealth={ok:true,subjects:[
+    {subjectType:'tenant',subjectKey:'ekodi-biz',state:'channel_required',activeChannels:0,usableChannels:0,eligibleContent:0,pendingJobs:0,policyMode:'autonomous',privateSecret:'must-stay-private'},
+    {subjectType:'tenant',subjectKey:'jadam',state:'content_required',activeChannels:1,usableChannels:1,eligibleContent:0,pendingJobs:0,policyMode:'autonomous',privateSecret:'another-store-private'},
+  ]};
+  const biz=tenantAutomationOverviewModel({
+    ownedAutopostStatus:readonlyHealth,subjectKey:'ekodi-biz',
+    connections:[],publishChannels:[],jobs:[],
+    connectionsLoaded:true,publishingLoaded:true,jobsLoaded:true,
+  });
+  assert.deepEqual(biz.autopost,{state:'channel_required',activeChannels:0,usableChannels:0,eligibleContent:0,pendingJobs:0,policyMode:'autonomous'});
+  const html=tenantAutomationOverviewHtml(biz);
+  assert.match(html,/자동게시 준비 상태/);
+  assert.match(html,/채널 연결 필요/);
+  assert.match(html,/href="#channel-account-section"/);
+  assert.match(html,/승인된 자동게시 콘텐츠가 없습니다/);
+  assert.doesNotMatch(html,/must-stay-private|another-store-private|jadam|피자마루/);
+  assert.doesNotMatch(html,/type="submit"|<form/);
+  assert.equal(tenantAutomationOverviewModel({ownedAutopostStatus:readonlyHealth,subjectKey:'unregistered-site'}).autopost,null);
+  assert.equal(tenantAutomationOverviewModel({ownedAutopostStatus:{...readonlyHealth,ok:false},subjectKey:'ekodi-biz'}).autopost,null);
+});
+
+test('Owned tenant readiness honors content and policy gates without inventing automatic publishing success',()=>{
+  const make=(state,overrides={})=>tenantAutomationOverviewModel({
+    subjectKey:'jadam',
+    ownedAutopostStatus:{ok:true,subjects:[{subjectType:'tenant',subjectKey:'jadam',state,
+      activeChannels:1,usableChannels:1,eligibleContent:0,pendingJobs:0,policyMode:'autonomous',
+      ...overrides}]},
+  });
+  const content=tenantAutomationOverviewHtml(make('content_required'));
+  assert.match(content,/승인 콘텐츠 필요/);
+  assert.match(content,/승인된 자동게시 콘텐츠가 없습니다/);
+  assert.doesNotMatch(content,/서버의 발행 선행조건을 통과했습니다/);
+  const review=tenantAutomationOverviewHtml(make('policy_review',{policyMode:'review',eligibleContent:2}));
+  assert.match(review,/href="#channel-policy"/);
+  assert.doesNotMatch(review,/승인된 자동게시 콘텐츠가 없습니다/);
+  const queued=tenantAutomationOverviewHtml(make('pending',{eligibleContent:2,pendingJobs:1}));
+  assert.match(queued,/href="#channel-jobs"/);
+  const ready=tenantAutomationOverviewHtml(make('ready',{eligibleContent:2,pendingJobs:0}));
+  assert.match(ready,/실제 발행과 방문·매출 성과는 별도로 검증/);
+  const malformed=make('ready',{activeChannels:-100,eligibleContent:NaN,usableChannels:'5',pendingJobs:Infinity});
+  assert.equal(malformed.autopost.activeChannels,null);
+  assert.equal(malformed.autopost.eligibleContent,null);
+  assert.equal(malformed.autopost.usableChannels,null);
+  assert.equal(malformed.autopost.pendingJobs,null);
+  assert.equal(make('mystery_status').autopost,null);
+  assert.match(TENANT_AUTOMATION_CSS,/@media\(max-width:620px\)/);
+});
+
+test('Site channel dashboard uses the existing health snapshot and exact canonical subject identity',()=>{
+  const site=read('workspace-admin-page.js');
+  assert.match(site,/h\?\.ownedTenantAutopost\|\|null,subjectKey:canonicalSubjectKey\(\)/);
+  assert.match(site,/const \[h,connectionData,automation,jobsData,growthControl/);
+  assert.doesNotMatch(read('tenant-automation-overview-ui.js'),/fetch\(|postMessage\(|location\.assign\(/);
+});
