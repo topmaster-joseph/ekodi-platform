@@ -7,7 +7,7 @@
 //          DOMEGGOOK_ORDER_ITEM_TEMPLATE 변수로 바꿀 수 있게 했다. 발주 직후 실제 주문을 조회해 수량을 대조한다.
 import { fetchDomeggookItem, PROVIDER } from './domeggook-import.js';
 import { raiseAlert } from './ops-alerts.js';
-import { approvedMemberBindingReady, autoOrderEnabled, pilotOrderIds, pilotReady } from './domeggook-gates.js';
+import { approvedMemberBindingReady, autoOrderEnabled, pilotOrderIds, pilotBudgetKrw, pilotReady } from './domeggook-gates.js';
 export { approvedMemberBindingReady, autoOrderEnabled, pilotOrderIds } from './domeggook-gates.js';
 
 // 10/29 www 호스트로 바꾼 뒤 redirect:'error' 와 겹쳐 모든 로그인이 실패했다. 상품조회와 같은 공식 호스트를 쓴다.
@@ -244,6 +244,13 @@ export async function placeSupplierOrders(env, fetchImpl = fetch, limit = 3) {
     if (item.status && item.status !== '판매중') { await fail('ITEM_STOPPED', `공급처 판매상태 '${item.status}' — 고객 환불 필요`); continue; }
     if (item.inventory !== null && item.inventory < o.quantity) { await fail('ITEM_STOCK', `공급처 재고 ${item.inventory}개 — 고객 환불 필요`); continue; }
     const cost = (item.cost || 0) * o.quantity + (item.shipping || 0);
+    // One-off pilot: fail closed if shipping or stock is uncertain, or all-in
+    // cost exceeds the expressly approved limit. Never submit a paid request.
+    if (!full && (item.shipping == null || item.inventory == null || !Number.isFinite(cost)
+      || cost <= 0 || cost > pilotBudgetKrw(env))) {
+      await fail('PILOT_BUDGET_OR_QUOTE', '시험주문 배송비·재고가 불명확하거나 승인 한도 초과로 발주를 중단했습니다');
+      continue;
+    }
     if (!item.cost || cost > Number(o.seller_settlement_amount || 0)) { await fail('NEGATIVE_MARGIN', `공급비 ${cost.toLocaleString('ko-KR')}원이 정산액을 넘어 발주를 멈췄습니다`); continue; }
     let balance;
     try { balance = await emoneyBalance(env, session, fetchImpl); }
