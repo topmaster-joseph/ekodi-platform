@@ -74,7 +74,9 @@ test('tenant roots stay Worker-first without exceeding Cloudflare route capacity
   const line=wrangler.match(/run_worker_first = \[(.*?)\]/s)?.[1]||'';
   const routes=[...line.matchAll(/"([^"]+)"/g)].map(match=>match[1]);
   assert.ok(routes.length<=100,'run_worker_first must stay within the Cloudflare route-entry limit');
-  for(const route of ['/jadam*','/pizzamaru*','/yogurt*','/cgma*'])assert.ok(routes.includes(route),'missing consolidated tenant Worker-first route: '+route);
+  for(const route of ['/jadam*','/pizzamaru*','/yogurt*'])assert.ok(routes.includes(route),'missing consolidated tenant Worker-first route: '+route);
+  // The /cg* prefix covers both /cgma and /cgpass within the 100-slot cap.
+  assert.ok(routes.includes('/cg*'),'CGMA and Cheonggye Pass must share one safe Worker-first prefix');
   for(const retired of ['/jadam/admin*','/jadam/marketing*','/pizzamaru/admin*','/pizzamaru/marketing*','/pizzamaru/mokpodae*','/yogurt/admin*','/yogurt/marketing*','/cgma/marketing*'])assert.ok(!routes.includes(retired),'redundant tenant route should be consolidated: '+retired);
 });
 

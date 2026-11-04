@@ -71,7 +71,10 @@ test('existing site/grant identity is preserved while publishing only the new ca
   assert.equal(pass.adminPath,'/cgpass/admin');
   assert.equal(pass.publicPath,'/cgpass');
   assert.equal(scopes.find(x=>x.slug==='cheonggye-local').publicPath,'/cheonggye');
-  assert.match(read('wrangler.site.toml'),/"\/cgpass\*"/);
+  assert.match(read('wrangler.site.toml'),/"\/cg\*"/);
+  const matches=path=>path.startsWith('/cg');
+  assert.equal(matches('/cgpass'),true);
+  assert.equal(matches('/cgma'),true);
   assert.match(read('customer-google-prereg.js'),/slug: 'cheonggye-pass'.*domain: 'ekodi.kr\/cgpass'/);
 });
 
