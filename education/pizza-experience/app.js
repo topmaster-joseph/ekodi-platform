@@ -90,6 +90,14 @@ const scenes = [
   }
 ];
 
+const scenePhotos = [
+  ['hero-pizza.webp','맛있는 피자'],['ingredients.webp','피자 재료'],['chef.webp','피자를 만드는 요리사'],
+  ['ingredients.webp','토마토와 피자 재료'],['cheese.webp','피자 치즈'],['ingredients.webp','알록달록 피자 재료'],
+  ['dough.webp','밀가루 반죽'],['washing.webp','손 씻는 모습'],['washing.webp','깨끗하게 손 씻기'],
+  ['oven.webp','뜨거운 피자 오븐'],['raw.webp','피자 도우와 토핑'],['making.webp','피자를 만드는 모습'],
+  ['oven.webp','피자를 굽는 오븐'],['baked.webp','완성된 피자']
+];
+
 const root = document.getElementById('pizza-exp');
 if (root) initialize();
 
@@ -114,28 +122,30 @@ function initialize() {
     // Progress width follows the aria-valuenow state in CSS; CSP forbids inline styles.
     document.getElementById('notesText').textContent = item.notes;
     notes.hidden = !showNotes;
-    let content = '<p class="scene-label">' + item.label + '</p>';
-    if (item.emoji) content += '<div class="scene-emoji" aria-hidden="true">' + item.emoji + '</div>';
+    const photo = scenePhotos[current];
+    let content = '<div class="scene-photo-frame"><img src="./photos/' + photo[0] + '" alt="' + photo[1] + '" draggable="false"></div><div class="scene-detail">';
+    content += '<p class="scene-label">' + item.label + '</p>';
+    if(item.emoji) content += '<div class="scene-emoji" aria-hidden="true">' + item.emoji + '</div>';
     content += '<h3>' + item.title + '</h3><p>' + item.intro + '</p>';
-    if (item.visuals) {
-      content += '<div class="scene-visuals" aria-label="오늘의 학습 이미지">' +
-        item.visuals.map(function(pair){ return '<span aria-label="' + pair[1] + '">' + pair[0] + '<small>' + pair[1] + '</small></span>'; }).join('') +
-        '</div>';
+    if(item.visuals){
+      content += '<div class="scene-visuals" aria-label="학습 항목">' +
+        item.visuals.map(pair => '<span aria-label="' + pair[1] + '">' + pair[0] + '<small>' + pair[1] + '</small></span>').join('') + '</div>';
     }
-    if (item.question) content += '<div class="question">' + item.question + '</div>';
-    if (item.quiz) {
-      content += '<div class="answer-buttons" role="group" aria-label="퀴즈 정답 고르기">';
-      content += item.quiz.options.map(function(option,idx){ return '<button type="button" data-choice="' + idx + '">' + option + '</button>'; }).join('');
-      content += '</div><div class="answer-feedback" id="answerFeedback" role="status"></div>';
+    if(item.question) content += '<div class="question">' + item.question + '</div>';
+    if(item.quiz){
+      content += '<div class="answer-buttons" role="group" aria-label="퀴즈 정답">' +
+        item.quiz.options.map((option,index) => '<button type="button" data-choice="' + index + '">' + option + '</button>').join('') +
+        '</div><div class="answer-feedback" id="answerFeedback" role="status"></div>';
     }
-    if (item.builder) {
-      content += '<div class="pizza-builder"><div class="make-pizza" id="makePizza" role="img" aria-label="토핑을 올리는 가상 피자"></div>';
-      content += '<div class="topping-buttons" role="group" aria-label="토핑 골라 올리기">';
-      content += '<button type="button" data-topping="tomato">🍅 토마토</button><button type="button" data-topping="cheese">🧀 치즈</button>';
-      content += '<button type="button" data-topping="corn">🌽 옥수수</button><button type="button" data-topping="pepper">🫑 파프리카</button></div>';
-      content += '<div class="builder-actions"><button type="button" id="clearToppings">피자 다시 꾸미기</button></div>';
-      content += '<div class="answer-feedback" id="toppingStatus" role="status"></div></div>';
+    if(item.builder){
+      content += '<div class="pizza-builder"><div class="make-pizza" id="makePizza" role="img" aria-label="토핑을 올리는 가상 피자"></div>' +
+        '<div class="topping-buttons" role="group" aria-label="토핑 골라 올리기">' +
+        '<button type="button" data-topping="tomato">🍅 토마토</button><button type="button" data-topping="cheese">🧀 치즈</button>' +
+        '<button type="button" data-topping="corn">🌽 옥수수</button><button type="button" data-topping="pepper">🫑 파프리카</button></div>' +
+        '<div class="builder-actions"><button type="button" id="clearToppings">다시 꾸미기</button></div>' +
+        '<div class="answer-feedback" id="toppingStatus" role="status"></div></div>';
     }
+    content += '</div>';
     stage.innerHTML = content;
     const prev = document.getElementById('prevScene');
     const next = document.getElementById('nextScene');
@@ -151,16 +161,17 @@ function initialize() {
   function goTo(index) {
     current = (index + scenes.length) % scenes.length;
     render();
+    sceneList.querySelector('[aria-current="step"]')?.scrollIntoView({block:'nearest',inline:'nearest'});
   }
   sceneList.innerHTML = scenes.map(function(item,index) {
-    return '<li><button type="button" data-scene="' + index + '"><span>' + String(index + 1).padStart(2,'0') + '</span>' + item.label.substring(5) + '</button></li>';
+    return '<li><button type="button" data-scene="' + index + '"><img src="./photos/' + scenePhotos[index][0] + '" alt="" loading="lazy"><span class="scene-label-small">' + String(index + 1).padStart(2,'0') + ' · ' + item.label.split('·').slice(1).join('·').trim() + '</span></button></li>';
   }).join('');
 
   document.getElementById('prevScene').addEventListener('click',function(){if(current > 0) goTo(current - 1);});
   document.getElementById('nextScene').addEventListener('click',function(){goTo(current + 1);});
   sceneList.addEventListener('click',function(event){const btn = event.target.closest('button[data-scene]');if(btn) goTo(Number(btn.dataset.scene));});
   document.getElementById('startLesson').addEventListener('click',function() {
-    goTo(0); document.getElementById('lesson-stage').scrollIntoView({behavior:'smooth',block:'start'});
+    goTo(0); switchView('lesson');
   });
   document.getElementById('notesToggle').addEventListener('click',function(event){
     showNotes = !showNotes;
@@ -181,8 +192,8 @@ function initialize() {
   document.addEventListener('keydown',function(event){
     if (!root.contains(document.activeElement) && document.activeElement !== document.body) return;
     if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName) || event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.key === 'ArrowRight') {event.preventDefault(); goTo(current + 1);}
-    if (event.key === 'ArrowLeft') {event.preventDefault(); if(current > 0) goTo(current - 1);}
+    if (event.key === 'ArrowRight') {event.preventDefault(); goTo(current + 1); switchView('lesson');}
+    if (event.key === 'ArrowLeft') {event.preventDefault(); if(current > 0) goTo(current - 1); switchView('lesson');}
   });
 
   stage.addEventListener('click',function(event){
@@ -265,11 +276,18 @@ function initialize() {
     });
   });
   document.getElementById('printPlan').addEventListener('click',function(){window.print();});
-  document.querySelectorAll('.page-tabs a').forEach(function(link){
-    link.addEventListener('click',function(){
-      document.querySelectorAll('.page-tabs a').forEach(function(a){a.classList.toggle('selected',a===link);});
-    });
+  document.querySelectorAll('[data-view]').forEach(function(button){
+    button.addEventListener('click',function(){switchView(button.dataset.view);});
   });
+  document.querySelectorAll('[data-quick-scene]').forEach(function(button){
+    button.addEventListener('click',function(){goTo(Number(button.dataset.quickScene));switchView('lesson');});
+  });
+  function switchView(view){
+    const views=['home','lesson','video','music','plan','safety','finale'];
+    if(!views.includes(view))return;
+    document.querySelectorAll('[data-panel]').forEach(panel=>{panel.hidden=panel.dataset.panel!==view;});
+    document.querySelectorAll('.experience-tabs [data-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.view===view)));
+  }
 
   initializeMusic();
   render(); refreshTimer();
@@ -299,17 +317,71 @@ function initializeMusic() {
   for(const button of toggles){
     button.addEventListener('click',async()=>{
       if(!audio.paused){stopMusic();return;}
+      stopYoutube();
       try{await audio.play();}
       catch{if(status)status.textContent='음악을 재생할 수 없습니다.';}
       sync();
     });
   }
   volume?.addEventListener('input',()=>{audio.volume=Number(volume.value)/100;});
-  document.querySelectorAll('[data-pizza-video]').forEach(link=>link.addEventListener('click',stopMusic));
+  const stopYoutube=initializeYoutubeMusic(stopMusic);
+  document.querySelectorAll('[data-pizza-video]').forEach(link=>link.addEventListener('click',()=>{stopMusic();stopYoutube();}));
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopMusic();});
   window.addEventListener('pagehide',stopMusic);
   audio.addEventListener('play',sync);
   audio.addEventListener('pause',sync);
   audio.addEventListener('error',()=>{if(status)status.textContent='음악 파일을 확인해주세요.';});
   sync();
+}
+
+function parseYoutubeId(value){
+  try {
+    const u=new URL(String(value||'').trim());
+    if(!['https:','http:'].includes(u.protocol)||u.username||u.password)return '';
+    const h=u.hostname.toLowerCase();
+    let id='';
+    if(h==='youtu.be')id=u.pathname.split('/')[1]||'';
+    else if(['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com','www.youtube-nocookie.com'].includes(h)){
+      const parts=u.pathname.split('/').filter(Boolean);
+      if(parts[0]==='watch')id=u.searchParams.get('v')||'';
+      else if(['embed','shorts','live','v'].includes(parts[0]))id=parts[1]||'';
+    }else return '';
+    return /^[A-Za-z0-9_-]{11}$/.test(id)?id:'';
+  }catch{return '';}
+}
+function initializeYoutubeMusic(stopLocalMusic){
+  const form=document.getElementById('youtubeMusicForm');
+  const input=document.getElementById('youtubeMusicUrl');
+  const status=document.getElementById('youtubeMusicMessage');
+  const target=document.getElementById('youtubePlayerFrame');
+  const dock=document.getElementById('youtubePlayerDock');
+  const stop=document.getElementById('stopYoutubeMusic');
+  const close=document.getElementById('closeYoutubeDock');
+  function stopYoutube(){
+    target.replaceChildren();
+    dock.hidden=true;
+    stop.disabled=true;
+    if(status)status.textContent='유튜브 음악 중지';
+  }
+  form.addEventListener('submit',function(event){
+    event.preventDefault();
+    const id=parseYoutubeId(input.value);
+    if(!id){status.textContent='올바른 유튜브 주소를 넣어 주세요.';return;}
+    stopYoutube();
+    stopLocalMusic();
+    const frame=document.createElement('iframe');
+    frame.title='유튜브 배경음악 재생';
+    frame.referrerPolicy='strict-origin-when-cross-origin';
+    frame.setAttribute('allow','autoplay; encrypted-media; picture-in-picture');
+    frame.setAttribute('allowfullscreen','');
+    frame.src='https://www.youtube-nocookie.com/embed/'+id+'?autoplay=1&playsinline=1&controls=1&enablejsapi=1&origin='+encodeURIComponent(location.origin);
+    target.appendChild(frame);
+    dock.hidden=false;
+    stop.disabled=false;
+    status.textContent='플레이어가 열렸어요. 필요하면 ▶를 누르세요.';
+  });
+  stop.addEventListener('click',stopYoutube);
+  close.addEventListener('click',stopYoutube);
+  window.addEventListener('pagehide',stopYoutube);
+  return stopYoutube;
 }

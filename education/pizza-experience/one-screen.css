@@ -1,0 +1,271 @@
+/* One-viewport presentation. All colors/layout remain scoped to EKODI Education's pizza page. */
+html:has(body[data-area="pizza-experience"]),body[data-area="pizza-experience"]{overflow:hidden}
+body[data-area="pizza-experience"]{margin:0}
+#pizza-exp.pizza-one-screen{--ink:#282724;--orange:#c45131;--line:#e6d7c2;--light:#fff9ef;--shadow:0 8px 30px rgba(57,38,20,.11);height:calc(100dvh - 58px);height:calc(100vh - 58px);max-width:none;min-height:460px;margin:0;padding:8px clamp(8px,1.3vw,18px) 10px;display:flex;flex-direction:column;gap:8px;overflow:hidden;background:linear-gradient(125deg,#f9f4e8,#fffaf3 56%,#eaf0e4);font-size:15px}
+#pizza-exp .experience-header{flex:0 0 52px;display:flex;align-items:center;gap:18px;justify-content:space-between;min-width:0;padding:5px 12px;border-radius:17px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow)}
+#pizza-exp .brand-lockup{display:flex;align-items:center;gap:8px;white-space:nowrap;min-width:0}
+#pizza-exp .brand-icon{font-size:1.75rem}
+#pizza-exp .brand-name{font-size:clamp(1.07rem,1.6vw,1.47rem);font-weight:900;letter-spacing:-.045em}
+#pizza-exp .brand-name strong{color:#b84321}
+#pizza-exp .brand-sub{font-size:.62rem;letter-spacing:.12em;font-weight:900;color:#a56a45;margin-left:5px}
+#pizza-exp .header-facts{display:flex;align-items:center;gap:13px;white-space:nowrap;font-size:.8rem;font-weight:700;color:#6c5945}
+#pizza-exp .header-facts strong{color:#3e372d}
+#pizza-exp .venue-label{color:#8c431f!important;font-weight:900}
+#pizza-exp .back-home{flex:none;font-weight:900;border:1px solid #e4cab0;border-radius:10px;padding:7px 9px;font-size:.76rem;color:#8e4828}
+#pizza-exp .experience-tabs{display:flex;align-items:center;justify-content:center;gap:8px;flex:0 0 45px;min-width:0;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#e6c39b transparent}
+#pizza-exp .experience-tabs button{flex:0 0 auto;min-height:37px;padding:6px 16px;border-radius:12px;border:1px solid #e6d0b6;background:#fff;color:#654e3d;font-weight:900;font-size:.86rem;white-space:nowrap}
+#pizza-exp .experience-tabs button:hover{background:#fff2db}
+#pizza-exp .experience-tabs button[aria-pressed="true"]{background:#a84b2c;border-color:#a84b2c;color:#fff;box-shadow:0 3px 0 #77321e}
+#pizza-exp .experience-viewport{flex:1;min-height:0;overflow:hidden}
+#pizza-exp .app-view{height:100%;min-height:0;overflow:hidden;max-width:1400px;margin:0 auto}
+#pizza-exp .app-view[hidden],#pizza-exp .youtube-player-dock[hidden]{display:none!important}
+#pizza-exp .app-home{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(275px,.7fr);grid-template-rows:minmax(0,1fr) 83px;gap:10px}
+#pizza-exp .home-poster{position:relative;border-radius:24px;overflow:hidden;min-width:0;min-height:0;background:#a05b2e}
+#pizza-exp .home-poster>img{width:100%;height:100%;object-fit:cover;display:block;object-position:50% 45%}
+#pizza-exp .poster-shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(17,14,11,.79),rgba(17,14,11,.32) 62%,transparent)}
+#pizza-exp .poster-content{position:absolute;top:50%;left:clamp(18px,4vw,56px);transform:translateY(-50%);color:#fff}
+#pizza-exp .poster-kicker{font-size:.75rem;letter-spacing:.16em;font-weight:900;color:#ffe58e}
+#pizza-exp .poster-content h1{color:white;font-size:clamp(2rem,5vw,4.7rem);line-height:1.19;letter-spacing:-.07em;margin:12px 0}
+#pizza-exp .poster-content h1 em{font-style:normal;color:#ffd37b}
+#pizza-exp .poster-content p{font-weight:800;font-size:1.06rem;color:#f8f0da}
+#pizza-exp .start-lesson{background:#ffce52;color:#33261a;border:0;border-radius:99px;padding:12px 31px;box-shadow:0 5px 0 #d7a33b;font-weight:900;font-size:1.08rem}
+#pizza-exp .home-info{background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:clamp(13px,1.8vw,23px);display:flex;flex-direction:column;min-width:0;min-height:0;gap:12px}
+#pizza-exp .info-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.8rem;font-weight:800;color:#77675a}
+#pizza-exp .info-head strong{color:#a54e2d}
+#pizza-exp .info-venue{background:#fff1cd;border-radius:15px;padding:11px 13px;display:flex;flex-direction:column}
+#pizza-exp .info-venue span{color:#876a39;font-size:.8rem;font-weight:800}
+#pizza-exp .info-venue strong{font-size:clamp(1rem,1.7vw,1.3rem);letter-spacing:-.035em;white-space:nowrap}
+#pizza-exp .info-steps{flex:1;display:grid;grid-template-rows:25px repeat(5,minmax(0,1fr));min-height:0}
+#pizza-exp .info-title{font-size:.83rem;color:#8b6e52;font-weight:900}
+#pizza-exp .info-steps button{background:#fff;border:0;border-top:1px solid #f0e4d7;display:flex;align-items:center;gap:10px;text-align:left;font-size:.93rem;font-weight:900;padding:5px 4px;min-height:0}
+#pizza-exp .info-steps button:hover{color:#af4a2b;background:#fdf3e8}
+#pizza-exp .info-steps button>span{font-variant-numeric:tabular-nums;font-size:.75rem;color:#aa5a33}
+#pizza-exp .info-steps button b{margin-left:auto;color:#a77b56}
+#pizza-exp .home-shortcuts{grid-column:1/-1;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;min-height:0}
+#pizza-exp .home-shortcuts button{background:#fff;display:flex;gap:10px;align-items:center;border:1px solid #ebd8bf;border-radius:15px;padding:6px;min-width:0;min-height:0;font-size:.85rem;font-weight:900}
+#pizza-exp .home-shortcuts button:hover{background:#fceace;border-color:#d89d73}
+#pizza-exp .home-shortcuts img{width:53%;height:100%;min-height:55px;max-height:70px;object-fit:cover;border-radius:10px}
+#pizza-exp .home-shortcuts button span{flex:1}
+#pizza-exp .app-lesson{display:flex;flex-direction:column;gap:8px}
+#pizza-exp .lesson-main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 205px;gap:10px}
+#pizza-exp .stage-shell{height:100%;min-height:0;display:flex;flex-direction:column;border-radius:20px;box-shadow:var(--shadow)}
+#pizza-exp .stage-toolbar{flex:none;padding:8px 13px;min-height:43px}
+#pizza-exp .stage-tools .tool-button{padding:6px 9px}
+#pizza-exp .progress-track{flex:0 0 5px}
+#pizza-exp .scene{flex:1;min-height:0!important;display:grid;grid-template-columns:minmax(0,1.04fr) minmax(0,.96fr);padding:0!important;overflow:hidden;align-items:stretch;text-align:left}
+#pizza-exp .scene-photo-frame{height:100%;min-height:0;overflow:hidden;background:#b77f5a}
+#pizza-exp .scene-photo-frame img{width:100%;height:100%;display:block;object-fit:cover}
+#pizza-exp .scene-detail{min-height:0;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;overflow:auto;padding:clamp(13px,2.4vw,34px)}
+#pizza-exp .scene .scene-emoji{font-size:2.1rem;margin:0 0 5px;line-height:1.15}
+#pizza-exp .scene h3{font-size:clamp(1.5rem,3vw,2.65rem);margin:0 0 12px;letter-spacing:-.06em;line-height:1.24;text-align:left}
+#pizza-exp .scene p{font-size:clamp(.85rem,1.3vw,1.06rem);margin:0 0 8px}
+#pizza-exp .scene .scene-label{font-size:.7rem;letter-spacing:.1em;margin:0 0 7px}
+#pizza-exp .scene .question{font-size:clamp(.86rem,1.4vw,1.07rem);padding:8px 12px;margin:5px 0}
+#pizza-exp .scene .scene-visuals{margin:7px 0;gap:7px}
+#pizza-exp .scene .scene-visuals>span{min-width:65px;min-height:63px;padding:5px;font-size:1.5rem;border-radius:11px;box-shadow:none}
+#pizza-exp .scene .scene-visuals>span small{font-size:.64rem}
+#pizza-exp .scene .answer-buttons,#pizza-exp .scene .topping-buttons{gap:6px;margin-top:7px;justify-content:start}
+#pizza-exp .scene .answer-buttons button,#pizza-exp .scene .topping-buttons button{font-size:.76rem;min-height:36px;padding:6px 9px;border-width:1px}
+#pizza-exp .scene .answer-feedback{min-height:25px;font-size:.83rem;margin-top:7px}
+#pizza-exp .scene .make-pizza{width:116px;height:116px;border-width:9px;box-shadow:0 5px 0 #b46c2f}
+#pizza-exp .scene .placed-topping{font-size:.95rem}
+#pizza-exp .scene .pizza-builder{gap:5px;align-items:start}
+#pizza-exp .instructor-notes{position:absolute;bottom:54px;left:14px;right:14px;z-index:5;border-radius:12px;box-shadow:var(--shadow);font-size:.8rem;max-height:120px;overflow-y:auto;border:1px solid #e2bc8f}
+#pizza-exp .stage-shell{position:relative}
+#pizza-exp .stage-bottom{flex:0 0 51px;min-height:0;padding:6px 14px}
+#pizza-exp .stage-bottom .btn{min-height:37px;padding:6px 14px}
+#pizza-exp .teacher-panel{min-height:0;display:flex;flex-direction:column;padding:12px;gap:12px;border-radius:18px}
+#pizza-exp .teacher-panel h3{margin:1px 0 6px;font-size:1rem}
+#pizza-exp .teacher-timer{padding:9px;min-height:0}
+#pizza-exp .timer-display{font-size:2.4rem}
+#pizza-exp .timer-presets button{font-size:.71rem}
+#pizza-exp .teacher-head{flex:none}
+#pizza-exp .lesson-side-info{margin-top:auto;display:flex;flex-direction:column;gap:7px;border-top:1px solid var(--line);padding-top:10px;font-size:.8rem}
+#pizza-exp .lesson-side-info strong{color:#ae4b2e}
+#pizza-exp .lesson-side-info span{color:#7e6c55;font-size:.74rem}
+#pizza-exp .lesson-side-info button{border:0;background:#faf0df;border-radius:9px;padding:8px;font-weight:900;color:#874527;text-align:left}
+#pizza-exp .lesson-filmstrip{flex:0 0 83px;list-style:none;margin:0;padding:0 1px;display:flex;gap:7px;overflow-x:auto;min-width:0;scrollbar-width:thin}
+#pizza-exp .lesson-filmstrip li{flex:0 0 114px;min-width:0}
+#pizza-exp .lesson-filmstrip button{width:100%;height:100%;padding:4px;border:2px solid transparent;border-radius:12px;background:#fff;display:flex;flex-direction:column;align-items:stretch;gap:2px}
+#pizza-exp .lesson-filmstrip button[aria-current="step"]{border-color:#b84c2f;background:#fff0d5}
+#pizza-exp .lesson-filmstrip img{width:100%;height:52px;object-fit:cover;border-radius:7px}
+#pizza-exp .lesson-filmstrip .scene-label-small{font-size:.72rem;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pizza-exp .compact-view{background:#fff;border:1px solid var(--line);border-radius:22px;padding:clamp(14px,2.2vw,28px);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:16px}
+#pizza-exp .panel-heading{flex:none}
+#pizza-exp .panel-heading span{font-size:.71rem;letter-spacing:.14em;color:#b35332;font-weight:900}
+#pizza-exp .panel-heading h2{margin:2px 0;font-size:clamp(1.4rem,3vw,2.1rem)}
+#pizza-exp .panel-heading p{font-size:.84rem;color:#71665c;margin:0}
+#pizza-exp .app-view .video-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;min-height:0;flex:1}
+#pizza-exp .app-view .video-card{display:flex;flex-direction:column;align-items:stretch;padding:9px;gap:8px;overflow:hidden}
+#pizza-exp .video-card img{width:100%;height:min(45vh,240px);min-height:110px;object-fit:cover;border-radius:12px}
+#pizza-exp .video-card>span{display:flex;flex-direction:column;gap:2px;padding:0 7px;font-size:.83rem}
+#pizza-exp .video-card>span strong{font-size:1.2rem}
+#pizza-exp .video-card>span>span{font-weight:900;color:#aa4f2b}
+#pizza-exp .secondary-nav{align-self:end;background:#e9f0e7;border:0;border-radius:11px;color:#335e43;font-weight:900;padding:8px 15px}
+#pizza-exp .youtube-music-form{display:flex;flex-direction:column;gap:7px;padding:18px;border-radius:15px;background:#fff5e7;max-width:880px}
+#pizza-exp .youtube-music-form label{font-size:.88rem;font-weight:900}
+#pizza-exp .url-input-row{display:flex;gap:8px}
+#pizza-exp .url-input-row input{flex:1;min-width:0;height:48px;border-radius:10px;border:1px solid #d9b99a;padding:11px;font-size:.91rem;background:#fff}
+#pizza-exp .youtube-help{font-size:.81rem;margin:0;color:#8d603d}
+#pizza-exp .music-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;min-height:0}
+#pizza-exp .music-choice-grid article{border:1px solid var(--line);border-radius:15px;padding:clamp(12px,2vw,22px);background:#fff;min-width:0}
+#pizza-exp .music-choice-grid article>span{font-size:2rem;color:#aa613e}
+#pizza-exp .music-choice-grid h3{margin:4px 0 2px;font-size:1.14rem}
+#pizza-exp .music-choice-grid p{font-size:.83rem;color:#776b60}
+#pizza-exp .music-choice-grid .btn{font-size:.8rem;padding:8px 15px;min-height:38px}
+#pizza-exp .schedule-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;min-height:0;flex:1}
+#pizza-exp .schedule-grid article{min-height:0;min-width:0;padding:15px;display:flex;flex-direction:column;justify-content:space-between;border-radius:14px}
+#pizza-exp .schedule-grid article strong{font-size:clamp(.9rem,1.3vw,1.1rem);line-height:1.35;margin:5px 0}
+#pizza-exp .plan-bottom{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.8rem;color:#7c6245}
+#pizza-exp .prep-columns{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:15px}
+#pizza-exp .prep-card{min-height:0;overflow:auto;padding:18px}
+#pizza-exp .prep-card h3{margin-bottom:6px;font-size:1.1rem}
+#pizza-exp .prep-card label{padding:9px 0;font-size:.85rem}
+#pizza-exp .safety-bottom{font-size:.8rem;color:#925f3f;margin:0}
+#pizza-exp .app-finale{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+#pizza-exp .finale-photo{overflow:hidden;border-radius:16px;min-height:0}
+#pizza-exp .finale-photo img{width:100%;height:100%;object-fit:cover}
+#pizza-exp .finale-copy{display:flex;flex-direction:column;justify-content:center;gap:14px;align-items:start}
+#pizza-exp .finale-copy span{font-size:.79rem;font-weight:900;letter-spacing:.13em;color:#a55731}
+#pizza-exp .finale-copy h2{font-size:clamp(2rem,4vw,3.4rem);line-height:1.22;margin:0}
+#pizza-exp .finale-copy p{font-size:1.3rem;font-weight:900}
+#pizza-exp .finale-copy a{display:inline-flex}
+#pizza-exp .music-dock{z-index:35;right:12px;bottom:10px;position:fixed;gap:7px;padding:6px 9px;border-radius:12px;max-width:calc(100vw - 20px)}
+#pizza-exp .music-dock .music-toggle{padding:7px 12px;font-size:.79rem}
+#pizza-exp .music-dock label{font-size:.71rem;white-space:nowrap}
+#pizza-exp .music-dock input{width:63px}
+#pizza-exp .open-youtube-panel{border:1px solid #d7ba96;background:white;border-radius:8px;color:#8e3721;font-weight:900;font-size:.73rem;padding:5px}
+#pizza-exp .youtube-player-dock{position:fixed;z-index:34;right:12px;bottom:70px;width:315px;max-width:calc(100vw - 24px);background:#fff;border:1px solid #d6b394;box-shadow:0 11px 35px #0003;padding:8px;border-radius:14px}
+#pizza-exp .youtube-player-heading{display:flex;align-items:center;justify-content:space-between;font-size:.79rem;padding:2px 4px 8px}
+#pizza-exp .youtube-player-heading button{background:#903f2c;color:white;border:0;border-radius:7px;font-weight:900;padding:4px 9px}
+#pizza-exp .youtube-embed{height:205px;min-height:200px}
+#pizza-exp .youtube-embed iframe{width:100%;height:100%;border:0;border-radius:8px}
+#pizza-exp .youtube-dock-note{font-size:.66rem;color:#7c6148}
+#pizza-exp button:disabled{opacity:.48;cursor:default}
+#pizza-exp .stage-shell:fullscreen{height:100%;background:#fff;display:flex;flex-direction:column;border-radius:0}
+#pizza-exp .stage-shell:fullscreen .scene{flex:1;min-height:0}
+#pizza-exp .stage-shell:fullscreen .scene h3{font-size:clamp(2rem,5vw,4rem)}
+@media(max-width:1100px){
+ #pizza-exp .brand-sub{display:none}
+ #pizza-exp .header-facts span:first-child{display:none}
+ #pizza-exp .home-info{gap:7px}
+ #pizza-exp .lesson-main{grid-template-columns:minmax(0,1fr) 180px}
+}
+@media(max-width:700px){
+ #pizza-exp.pizza-one-screen{padding:6px;gap:6px;height:calc(100dvh - 56px);height:calc(100vh - 56px)}
+ #pizza-exp .experience-header{flex:0 0 47px;gap:7px;padding:6px 9px}
+ #pizza-exp .brand-icon{font-size:1.4rem}
+ #pizza-exp .brand-name{font-size:1.02rem}
+ #pizza-exp .header-facts{font-size:.67rem;gap:5px}
+ #pizza-exp .header-facts span:last-child{display:none}
+ #pizza-exp .back-home{display:none}
+ #pizza-exp .experience-tabs{justify-content:flex-start;flex:0 0 40px;gap:5px}
+ #pizza-exp .experience-tabs button{min-height:34px;font-size:.76rem;padding:5px 11px}
+ #pizza-exp .app-home{display:grid;grid-template-columns:1fr;grid-template-rows:minmax(0,1.2fr) minmax(0,1fr) 63px;gap:7px}
+ #pizza-exp .home-poster{border-radius:17px}
+ #pizza-exp .poster-content{left:16px}
+ #pizza-exp .poster-content h1{font-size:clamp(1.7rem,7vw,2.9rem);margin:7px 0}
+ #pizza-exp .poster-content p{font-size:.8rem;margin:6px 0}
+ #pizza-exp .start-lesson{padding:8px 19px;font-size:.89rem}
+ #pizza-exp .home-info{padding:9px 13px;border-radius:15px;gap:5px}
+ #pizza-exp .info-head{font-size:.7rem}
+ #pizza-exp .info-venue{padding:5px 9px}
+ #pizza-exp .info-venue span{font-size:.67rem}
+ #pizza-exp .info-venue strong{font-size:1rem}
+ #pizza-exp .info-steps{grid-template-rows:17px repeat(5,minmax(0,1fr))}
+ #pizza-exp .info-title{font-size:.68rem}
+ #pizza-exp .info-steps button{padding:0 3px;font-size:.76rem;gap:7px}
+ #pizza-exp .info-steps button>span{font-size:.62rem}
+ #pizza-exp .home-shortcuts{grid-column:1;display:flex;overflow-x:auto;gap:6px}
+ #pizza-exp .home-shortcuts button{flex:0 0 112px;padding:4px;gap:5px;font-size:.71rem}
+ #pizza-exp .home-shortcuts img{min-height:40px;max-height:52px;width:54%}
+ #pizza-exp .lesson-main{display:flex;flex-direction:column;gap:5px}
+ #pizza-exp .stage-shell{min-height:0;flex:1}
+ #pizza-exp .stage-toolbar{padding:5px 8px;min-height:40px}
+ #pizza-exp .stage-tools{gap:4px}
+ #pizza-exp .stage-tools .tool-button{font-size:.7rem;padding:5px}
+ #pizza-exp .scene{display:grid;grid-template-columns:1fr;grid-template-rows:minmax(115px,.8fr) minmax(0,1.2fr)}
+ #pizza-exp .scene-photo-frame{min-height:0}
+ #pizza-exp .scene-detail{padding:11px 15px;justify-content:center}
+ #pizza-exp .scene .scene-emoji{font-size:1.36rem}
+ #pizza-exp .scene h3{font-size:clamp(1.1rem,4.8vw,1.65rem);margin-bottom:5px}
+ #pizza-exp .scene p{font-size:.8rem;margin-bottom:4px}
+ #pizza-exp .scene .scene-label{font-size:.63rem;margin:0 0 3px}
+ #pizza-exp .scene .question{font-size:.76rem;padding:5px 9px;margin:3px 0}
+ #pizza-exp .scene .scene-visuals{margin:1px 0}
+ #pizza-exp .scene .scene-visuals>span{min-width:54px;min-height:49px;font-size:1rem;padding:3px}
+ #pizza-exp .scene .scene-visuals>span small{font-size:.55rem}
+ #pizza-exp .scene .answer-buttons button,#pizza-exp .scene .topping-buttons button{min-height:29px;font-size:.7rem;padding:4px 7px}
+ #pizza-exp .scene .make-pizza{width:76px;height:76px;border-width:6px}
+ #pizza-exp .stage-bottom{flex:0 0 40px;padding:4px 7px}
+ #pizza-exp .stage-bottom .btn{min-height:32px;padding:4px 9px;font-size:.75rem}
+ #pizza-exp .teacher-panel{flex:none;padding:5px;min-height:56px;flex-direction:row;gap:5px;align-items:center}
+ #pizza-exp .teacher-head{display:none}
+ #pizza-exp .teacher-timer{width:100%;display:flex;gap:6px;align-items:center;padding:5px;background:#fff5e5}
+ #pizza-exp .timer-display{font-size:1.18rem;white-space:nowrap}
+ #pizza-exp .timer-presets{flex:1;display:flex;gap:3px;margin:0}
+ #pizza-exp .timer-presets button{flex:1;min-width:0;padding:3px;font-size:.65rem}
+ #pizza-exp .timer-actions{gap:3px}
+ #pizza-exp .timer-actions button{padding:5px;font-size:.7rem;white-space:nowrap}
+ #pizza-exp .timer-help,#pizza-exp .lesson-side-info{display:none}
+ #pizza-exp .lesson-filmstrip{flex:0 0 68px;gap:5px}
+ #pizza-exp .lesson-filmstrip li{flex-basis:92px}
+ #pizza-exp .lesson-filmstrip img{height:39px}
+ #pizza-exp .lesson-filmstrip .scene-label-small{font-size:.62rem}
+ #pizza-exp .compact-view{padding:13px;gap:10px}
+ #pizza-exp .panel-heading h2{font-size:1.4rem}
+ #pizza-exp .app-view .video-grid{grid-template-columns:1fr;gap:7px}
+ #pizza-exp .app-view .video-card{flex-direction:row;align-items:center;min-height:0;gap:9px}
+ #pizza-exp .video-card img{width:42%;height:100%;max-height:180px;min-height:70px}
+ #pizza-exp .video-card>span strong{font-size:.95rem}
+ #pizza-exp .youtube-music-form{padding:11px;gap:6px}
+ #pizza-exp .url-input-row{flex-direction:column;gap:6px}
+ #pizza-exp .url-input-row input{height:42px;font-size:.77rem}
+ #pizza-exp .url-input-row button{min-height:36px}
+ #pizza-exp .music-choice-grid{grid-template-columns:1fr}
+ #pizza-exp .music-choice-grid article{padding:9px}
+ #pizza-exp .music-choice-grid article>span{display:none}
+ #pizza-exp .music-choice-grid article h3{font-size:.95rem}
+ #pizza-exp .music-choice-grid article p{font-size:.74rem;margin:0 0 6px}
+ #pizza-exp .schedule-grid{grid-template-columns:1fr 1fr;gap:6px}
+ #pizza-exp .schedule-grid article{padding:9px;min-height:0}
+ #pizza-exp .schedule-grid article time{font-size:.67rem}
+ #pizza-exp .schedule-grid article strong{font-size:.79rem;margin:1px 0}
+ #pizza-exp .plan-bottom{font-size:.69rem}
+ #pizza-exp .prep-columns{grid-template-columns:1fr;gap:6px}
+ #pizza-exp .prep-card{padding:8px}
+ #pizza-exp .prep-card h3{font-size:.9rem;margin:0 0 3px}
+ #pizza-exp .prep-card label{padding:5px 0;font-size:.72rem}
+ #pizza-exp .prep-card input{width:15px;height:15px;margin-top:2px}
+ #pizza-exp .safety-bottom{font-size:.7rem}
+ #pizza-exp .app-finale{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+ #pizza-exp .finale-copy{gap:7px}
+ #pizza-exp .finale-copy h2{font-size:2rem}
+ #pizza-exp .music-dock{right:7px;bottom:7px;padding:4px 7px}
+ #pizza-exp .music-dock .music-toggle{padding:5px 8px}
+ #pizza-exp .music-dock input{width:50px}
+ #pizza-exp .youtube-player-dock{right:6px;bottom:53px;width:275px}
+ #pizza-exp .youtube-embed{height:205px}
+ #pizza-exp .stage-shell:fullscreen .scene{grid-template-rows:minmax(150px,1fr) minmax(0,1fr)}
+}
+@media(max-width:390px){
+ #pizza-exp .header-facts span:first-child{display:none}
+ #pizza-exp .brand-name{font-size:.92rem}
+ #pizza-exp .poster-content h1{font-size:1.66rem}
+ #pizza-exp .info-steps button{font-size:.7rem}
+}
+@media print{
+ html:has(body[data-area="pizza-experience"]),body[data-area="pizza-experience"]{overflow:visible}
+ #pizza-exp.pizza-one-screen{height:auto!important;overflow:visible}
+ #pizza-exp .experience-header,#pizza-exp .experience-tabs,#pizza-exp .music-dock,#pizza-exp .youtube-player-dock{display:none!important}
+ #pizza-exp .experience-viewport{overflow:visible}
+ #pizza-exp .app-view{display:none!important}
+ #pizza-exp .app-plan{display:block!important;height:auto;overflow:visible}
+ #pizza-exp .schedule-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* On phones, expose every top-level tab in two compact rows without horizontal scrolling. */
+@media(max-width:700px){
+ #pizza-exp .experience-tabs{flex:0 0 78px;flex-wrap:wrap;align-content:center;justify-content:center;gap:4px;overflow:hidden}
+ #pizza-exp .experience-tabs button{min-height:32px;padding:4px 7px;font-size:.7rem}
+}
