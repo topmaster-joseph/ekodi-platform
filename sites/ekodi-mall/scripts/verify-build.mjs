@@ -35,7 +35,7 @@ const checks = [
   ['assets/shared-store.html', ['SELLER STOREFRONT', '/assets/public-store.js', '/assets/storefront.css']],
   ['assets/public-store.js', ['/api/public/stores/', 'Mall 8%', '/p/']],
   ['assets/storefront.css', ['storefront-public-hero', 'storefront-product']],
-  ['assets/marketplace-live.js', ['api/public/products?', '상품 준비중', 'dataset.serverProduct', 'data-filter', '상품 더 보기']],
+  ['assets/marketplace-live.js', ['api/public/products?', 'isSaleReady', 'dataset.serverProduct', 'data-filter', '상품 더 보기']],
   ['assets/free-ops.html', ['FREE · SAFE · MANUAL FIRST', '후보 저장 + 안전판단', '비밀정보 입력 금지', '/assets/free-ops.js']],
   ['assets/free-ops.js', ['ekodiMallFreeOpsDraftV1', '/api/internal/supplier-discovery/context', '/api/internal/supplier-candidates', '/assessment', '예상 손실']],
   ['assets/free-ops.css', ['free-flow', 'free-form', 'free-item', 'free-result']],
