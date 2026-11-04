@@ -87,6 +87,7 @@
     active=tabFromHash()||(authenticated?'mine':'explore');
     paint();
   });
-  // Never expose member-only sections before the existing auth client resolves.
+  // Auth may resolve before this deferred script executes.
+  if(window.EKODI_EDU_SESSION){authenticated=Boolean(window.EKODI_EDU_SESSION.authenticated);resolved=true;active=tabFromHash()||(authenticated?'mine':'explore');}
   paint();
 })();
