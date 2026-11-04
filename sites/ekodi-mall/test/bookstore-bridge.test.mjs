@@ -5,6 +5,7 @@ import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { bookstoreProducts, approvedBookstoreProducts, loadBookstoreProducts, mergeBookstoreProducts } from '../scripts/bookstore-products.mjs';
+import { isPublicStaticSale, isPublicBookInformation, isPublicIndexableProduct } from '../api/public-sale-visibility.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -20,6 +21,18 @@ test('every bookstore title is mirrored into the 책·배움 corner', async () =
   }
   assert.ok(mirrored.some((product) => product.name.startsWith('에코디언을 찾아서')));
   assert.ok(mirrored.some((product) => product.name.startsWith('AI 시대의 진보와 빈곤')));
+});
+
+test('an existing publisher book is publicly indexable without pretending to be sale-ready', async () => {
+  const titles = await loadBookstoreProducts(root);
+  const book = titles.find(item => item.source?.bookId === 'BOOK-EKODI-000002');
+  assert.ok(book, 'a catalog-authorized existing edition must retain its public information page');
+  assert.equal(isPublicStaticSale(book), false, 'static release metadata is still incomplete');
+  assert.equal(isPublicBookInformation(book), true);
+  assert.equal(isPublicIndexableProduct(book), true);
+  assert.equal(isPublicIndexableProduct({ ...book, published: false }), false);
+  assert.equal(isPublicIndexableProduct({ ...book, source: { ...book.source, detailUrl: 'https://outside.invalid/books/fake' } }), false);
+  assert.equal(isPublicIndexableProduct({ published: true, status: '출간 준비', saleType: 'publisher', category: 'book' }), false);
 });
 
 test('a sale link opens a purchase button; no link never pretends to sell', () => {
