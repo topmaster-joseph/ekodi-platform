@@ -16,11 +16,12 @@ async function simulate({responses={},initialCards=[],selected='all'}={}){
     clicked:0,click(){this.clicked++;}
   }]));
   const links=Object.fromEntries([...cats,'local'].map(id=>[id,{dataset:{filterTarget:id},hidden:false}]));
+  const headerLinks=Object.fromEntries([...cats,'local'].map(id=>[id,{dataset:{filterTarget:id},hidden:false}]));
   const grid={querySelectorAll:()=>initialCards};
   const filters={querySelectorAll:()=>Object.values(nodes)};
   const doc={
     querySelector:selector=>selector==='#grid'?grid:selector==='#filters'?filters:null,
-    querySelectorAll:selector=>selector==='.mall-category-shortcuts [data-filter-target]'?Object.values(links):[]
+    querySelectorAll:selector=>selector==='.mall-category-shortcuts [data-filter-target],.mall-primary-nav [data-filter-target]'?[...Object.values(links),...Object.values(headerLinks)]:[]
   };
   const requested=[];
   const sandbox={document:doc,window:{addEventListener(){}},
@@ -37,16 +38,17 @@ async function simulate({responses={},initialCards=[],selected='all'}={}){
   runInNewContext(script,sandbox,{timeout:2000});
   await tick();
   await tick();
-  return {nodes,links,requested};
+  return {nodes,links,headerLinks,requested};
 }
 
 test('Toss underwriting filters hide all verified-empty categories without removing unrelated navigation',async()=>{
-  const {nodes,links,requested}=await simulate();
+  const {nodes,links,headerLinks,requested}=await simulate();
   assert.equal(requested.length,4);
   assert.ok(requested.every(x=>x.method==='GET'&&x.credentials==='omit'));
   for(const cat of [...cats,'local']){
     assert.equal(nodes[cat].hidden,true,cat);
     if(links[cat])assert.equal(links[cat].hidden,true,cat+' shortcut');
+    if(headerLinks[cat])assert.equal(headerLinks[cat].hidden,true,cat+' header navigation');
   }
   assert.equal(nodes.all.hidden,false);
 });
@@ -71,5 +73,6 @@ test('Mall build loads the guard and styles hidden categories without enabling c
   assert.ok(template.includes('실제 판매 가능한 상품만 목록에 표시합니다.'));
   assert.ok(template.includes('자체 비회원 카드결제는 아직 활성화되지 않았습니다.'));
   assert.match(css,/#filters \[data-filter\]\[hidden\]/);
+  assert.match(css,/\.mall-primary-nav \[data-filter-target\]\[hidden\]/);
   assert.doesNotMatch(script,/requestPayment\(|confirmPayment\(|TOSS_SECRET_KEY|method:\s*['"]POST['"]/);
 });
