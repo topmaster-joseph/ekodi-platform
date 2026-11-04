@@ -29,3 +29,13 @@ Only a local site administrator with the existing `tenant.site.manage` capabilit
 ## Remaining independent work
 
 For site types with dedicated admin implementations rather than the shared workspace-admin shell, this menu must be projected from the same catalog and same RPCs by an authorized change. Enabling or disabling actual backend service execution requires a separate scoped entitlement/operational control integration and review. Do not represent visibility configuration as engine activation.
+
+
+## Stabilization checkpoint — 2026-11-04 (TENANT-PRESET-ADVISORY-001)
+
+- Existing shared site managers receive **read-only site-type menu recommendations**, computed exclusively from their tenant's current 32-item service catalog snapshot and `readiness='ready'` entries. No recommendation changes a selection, entitlement, account connection, billing or authorization. Unknown site types receive no presumed profile.
+- Both menu projection and preset recommendation helpers must be injected into the generated `workspace-admin.js` browser runtime. Merely exporting the helpers from the source module is insufficient because the runtime serializes `renderTenantServiceAdmin` with `.toString()`. Test the **generated script**, not only a pure source helper.
+- On 2026-11-04 the connected production and development Supabase `public.tenants` returned no `slug` matching `books`, `ekodibooks`, `cmpmyi`, `jadam`, `pizzamaru` or `yogurt`. The production `site_access_registry` also returned no `site_key` matching these names. This is a **read-only inventory**, not proof that the services have no other canonical workspace identity.
+- `/books/admin` is currently owned by the platform Books admin handoff; `/cmpmyi/admin` is a three-store portfolio owned by a separate runtime. Do not automatically create tenant UUIDs, synthesize memberships, or redirect these dedicated owners to an unrelated site's service settings. Determine their canonical immutable workspace identities and approved tenant-bound authority first.
+- Future owner-specific service-settings additions reuse existing authenticated snapshot/write RPCs and verify changed preference by a fresh server read. If the authority context is absent, remain read-only and visibly report "site context unavailable". Never present an unverified toggle or an unsupported `/services` URL as working.
+- Follow `docs/admin-navigation-stability-contract.md`: preserve one site-owned sidebar and the platform service catalog; extend adapters and tests rather than redesigning the menu.
