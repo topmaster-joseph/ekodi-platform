@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import {recommendTenantServicePreset,renderTenantServiceAdmin} from '../tenant-service-admin-ui.js';
 import {workspaceAdminScript} from '../workspace-admin-page.js';
 
@@ -59,6 +60,11 @@ test('unready or unregistered services are never recommended as enabled; unknown
 test('bundle passes the current site key to the existing settings screen, not a second admin',async()=>{
   const script=await workspaceAdminScript().text();
   assert.match(script,/renderTenantServiceAdmin\(\$\('mainPanel'\),\{siteKey:service==='mall'\?'ekodimall':workspace/);
+  const summaryIdx=script.indexOf('const summarizeTenantServiceMenuProjection=');
+  const presetIdx=script.indexOf('const recommendTenantServicePreset=');
+  const renderIdx=script.indexOf('const renderTenantServiceAdmin=');
+  assert.ok(summaryIdx>0&&presetIdx>summaryIdx&&renderIdx>presetIdx,'serialized browser helpers must precede UI renderer');
+  assert.doesNotThrow(()=>new vm.Script(script),'generated browser script must parse');
   assert.match(script,/confirmTenantServicePreference/);
   assert.doesNotMatch(script,/localStorage\.setItem\(["']tenant_service_preference/);
 });
