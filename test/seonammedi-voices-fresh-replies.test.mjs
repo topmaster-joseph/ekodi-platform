@@ -119,5 +119,5 @@ test('public page provides login-first inline reply and owner-only controls',()=
   assert.match(freshVoiceClient,/adminAllowed\|\|item.mine/);
   assert.match(freshVoiceClient,/adminAllowed\|\|response.mine/);
   assert.match(freshVoiceClient,/\/replies\/submissions\//);
-  assert.match(freshVoiceClient,/textContent=String\(response.message\|\|''\)/);
+  assert.match(freshVoiceClient,/appendLinkedText\(body,String\(response.message\|\|''\)\)/,'reply text is rendered as text with safe links only');
 });
