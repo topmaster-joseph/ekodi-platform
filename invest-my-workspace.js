@@ -302,6 +302,7 @@ async function analyzeShortValueCandidates(event){
   if(data.schema!=='ekodi.invest.short-term-value-research.v1'||data.dataBasis!=='caller_supplied_unverified'||
      data.ordersPlaced!==false||data.paperOrdersPlaced!==false||data.liveOrdersEnabled!==false||data.autoOrderSubmission!==false||
      !Array.isArray(data.ranked)||!Array.isArray(data.excluded))throw Error('SHORT_VALUE_NON_EXECUTION_CONTRACT_MISMATCH');
+  clearResearchHandoff();
   renderShortValueCandidates(data);
   setText('shortValueCandidateStatus','분석 완료: 검토 후보 '+data.ranked.length+'개, 제외 '+data.excluded.length+'개. 입력자료는 검증되지 않았으며 실거래는 차단됩니다.');
  }catch{
@@ -817,6 +818,7 @@ function kpi(id,text,state){const node=el(id);if(!node)return;node.textContent=t
 function touchUpdated(){kpi('kpiUpdated',new Date().toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}))}
 function unlockOwner(){kpi('kpiAuth','완료','ok');routeHash();el('ownerSidebar').hidden=false;el('investAuthIntro').hidden=true;el('owner').hidden=false;el('authMessage').hidden=true;setStepUp('done');render();loadAutopilot();loadStage2Preset();loadBrokerSelection();refreshLiveMfa()}
 function lockOwner(message){
+ clearResearchHandoff();
  ++stage2PresetVersion;el('apStage2Apply').disabled=true;
  ++marketRequestId;++brokerSelectionVersion;++liveReadinessVersion;
  preferredBrokerId=syncBrokerSelectors('kis');
