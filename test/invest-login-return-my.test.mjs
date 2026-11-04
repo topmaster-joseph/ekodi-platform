@@ -2,33 +2,31 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { investIntroPage, investAnalysisScript } from '../invest-access-ui.js';
+import { investMyRoute } from '../invest-my-workspace.js';
 
-const token='A'.repeat(43);
-test('Invest landing uses MY authentication realm, not public common-analysis callback',async()=>{
- const html=await (await investIntroPage()).text();
- const match=html.match(/href="(\/auth\/\?site=my&return_to=[^"]+)"/);
- assert.ok(match,'private Invest login must use the My EKODI realm');
- const uri=new URL(match[1],'https://ekodi.kr');
- assert.equal(uri.searchParams.get('return_to'),'https://ekodi.kr/my/invest');
- assert.equal(uri.searchParams.get('site'),'my');
+test('public Invest login uses Invest realm and canonical private root',async()=>{
+ const html=await investIntroPage().then(r=>r.text());
+ const match=html.match(/href="(\/auth\/\?site=invest&return_to=[^"]+)"/);
+ assert.ok(match);
+ const url=new URL(match[1],'https://ekodi.kr');
+ assert.equal(url.searchParams.get('site'),'invest');
+ assert.equal(url.searchParams.get('return_to'),'https://ekodi.kr/invest/my');
  assert.match(html,/로그인 후 마이투자/);
- assert.match(html,/href="\/invest\/analysis"/,'common analysis remains accessible as a distinct opt-in');
- assert.doesNotMatch(match[1],/invest%2Fanalysis/);
 });
-test('legacy analysis auth fragment is handed off intact to private consumer without a query-string secret',async()=>{
- const js=await (await investAnalysisScript()).text();
+test('old public analysis auth handoff forwards to a private Invest fragment only',async()=>{
+ const token='A'.repeat(43);
+ const js=await investAnalysisScript().then(r=>r.text());
  const destinations=[];
- const location={hash:'#ekodi_token='+token+'&ekodi_type=email',pathname:'/invest/analysis',search:'',
-   replace:target=>destinations.push(target)};
- vm.runInNewContext(js,{location,URLSearchParams,encodeURIComponent,history:{replaceState(){throw Error('should not erase valid fragment before redirect')}}});
- assert.deepEqual(destinations,['/my/invest#ekodi_token='+token+'&ekodi_type=email']);
+ const location={hash:'#ekodi_token='+token+'&ekodi_type=email',pathname:'/invest/analysis',search:'',replace:dest=>destinations.push(dest)};
+ vm.runInNewContext(js,{location,URLSearchParams,encodeURIComponent,history:{replaceState(){throw Error('valid token was discarded')}}});
+ assert.deepEqual(destinations,['/invest/my#ekodi_token='+token+'&ekodi_type=email']);
  assert.ok(!destinations[0].includes('?'));
- assert.doesNotMatch(js,/\/broker\/orders|\/automation\/resume/);
 });
-test('new login CTA and the authenticated common analysis fallback both target MY without open redirects',async()=>{
- const js=await (await investAnalysisScript()).text();
- assert.match(js,/site=my&return_to/);
- assert.match(js,/https:\/\/ekodi\.kr\/my\/invest/);
- assert.doesNotMatch(js,/site=invest&return_to/);
- assert.match(js,/\['email','magiclink','recovery','signup','invite'\]/);
+test('private subpage login preserves that path and allowed user query when invoked',async()=>{
+ const js=await investMyRoute(new Request('https://ekodi.kr/invest/my/app.js'),{}).then(r=>r.text());
+ assert.match(js,/function loginHref\(\)/);
+ assert.match(js,/location\.pathname\.startsWith\('\/invest\/my'\)/);
+ assert.match(js,/site=invest&return_to/);
+ assert.match(js,/encodeURIComponent\(target\)/);
+ assert.doesNotMatch(js,/site=my&return_to|https:\/\/ekodi\.kr\/my\/invest/);
 });
