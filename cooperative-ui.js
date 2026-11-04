@@ -89,7 +89,7 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
   }
   function loginUrl() {
     const url = new URL('/auth/', 'https://ekodi.kr');
-    url.searchParams.set('site', 'portal');
+    url.searchParams.set('site', 'coop');
     url.searchParams.set('direct', '1');
     url.searchParams.set('return_to', 'https://ekodi.kr' + location.pathname + location.search);
     return url.href;
