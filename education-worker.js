@@ -45,6 +45,10 @@ export default{
     if(/^\/study\/live\/lab(?:\/|$)/.test(url.pathname)){response.headers.set('content-security-policy',SECURITY_HEADERS['content-security-policy'].replace("frame-ancestors 'none'","frame-ancestors 'self'"));response.headers.set('x-frame-options','SAMEORIGIN');}
     if(url.pathname.startsWith('/study/live/screen-share/'))
       response.headers.set('content-security-policy',SECURITY_HEADERS['content-security-policy'].replace("connect-src 'self' ","connect-src 'self' wss://ekodi.kr "));
+    // Only public pizza classroom HTML may embed a user-selected official YouTube player.
+    if(/^\/pizza-experience\/?$/.test(url.pathname) && String(response.headers.get('content-type')||'').includes('text/html')){
+      response.headers.set('content-security-policy',SECURITY_HEADERS['content-security-policy']+'; frame-src https://www.youtube-nocookie.com https://www.youtube.com');
+    }
     if(url.pathname.startsWith('/study/live/screen-share/'))response.headers.set('referrer-policy','no-referrer');
     return injectEkodiShell(response,'edu');
   }

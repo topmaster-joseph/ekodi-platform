@@ -97,3 +97,39 @@ test('copyright-safe original audio is opt-in and supports play, stop, volume, a
   assert.match(css, /\.music-dock/);
   assert.match(css, /\.media-section/);
 });
+
+test('one-viewport tabs, venue, professional photos and photo attribution are present', () => {
+  const single = readFileSync(resolve(root,'education/pizza-experience/one-screen.css'),'utf8');
+  assert.match(html,/피자마루 목포대점/);
+  assert.match(html,/id="youtubeMusicForm"/);
+  assert.equal((html.match(/data-panel="/g)||[]).length,7);
+  assert.equal((html.match(/class="experience-tabs"/g)||[]).length,1);
+  assert.match(single,/height:calc\(100dvh - 58px\)/);
+  assert.match(single,/\.experience-viewport\{flex:1;min-height:0;overflow:hidden/);
+  assert.match(single,/flex-wrap:wrap/);
+  assert.match(js,/scenePhotos\[current\]/);
+  const list=['hero-pizza','ingredients','dough','cheese','washing','oven','making','raw','baked','chef'];
+  for(const name of list){
+    const b=readFileSync(resolve(root,'education/pizza-experience/photos',name+'.webp'));
+    assert.ok(b.length>5000&&b.length<600000,'photo web budget '+name);
+    assert.equal(b.subarray(0,4).toString(),'RIFF');
+    assert.equal(b.subarray(8,12).toString(),'WEBP');
+  }
+  const credits=readFileSync(resolve(root,'education/pizza-experience/photos/CREDITS.md'),'utf8');
+  assert.match(credits,/Pexels/);
+  assert.match(credits,/not photos of Pizza maru/);
+});
+
+test('YouTube URL input is strictly video-ID validated and embedded only on pizza HTML', () => {
+  const worker=readFileSync(resolve(root,'education-worker.js'),'utf8');
+  assert.match(js,/function parseYoutubeId\(value\)/);
+  assert.match(js,/\^\[A-Za-z0-9_-\]\{11\}\$/);
+  assert.match(js,/youtube-nocookie\.com\/embed/);
+  assert.match(js,/target\.replaceChildren\(\)/);
+  assert.match(js,/stopLocalMusic\(\)/);
+  assert.match(html,/id="closeYoutubeDock"/);
+  assert.match(html,/id="stopYoutubeMusic"/);
+  assert.match(worker,/if\(\/\^\\\/pizza-experience\\\/\?\$\/.test\(url.pathname\)/);
+  assert.match(worker,/frame-src https:\/\/www\.youtube-nocookie\.com https:\/\/www\.youtube\.com/);
+  assert.doesNotMatch(worker,/SECURITY_HEADERS\['content-security-policy'\]\s*=.*youtube/);
+});
