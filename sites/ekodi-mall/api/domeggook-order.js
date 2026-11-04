@@ -145,6 +145,21 @@ export function buildItemValue(env, { market, qty, deliMemo, opt = '00' }) {
     .replaceAll('{sellerMemo}', '에코디몰 위탁주문').replaceAll('{deliMemo}', pipeSafe(deliMemo, 80));
 }
 
+/** Fail closed on malformed delivery data before any paid provider call.
+ * Do not log or persist the buyer's personal information. */
+export function validateDeliInfo(buyer) {
+  if (!buyer || typeof buyer !== 'object') return 'NO_BUYER';
+  for (const field of ['name', 'postcode', 'address1', 'phone']) {
+    const value = String(buyer[field] ?? '').trim();
+    if (!value || /[\\r\\n]/.test(value)) return 'INVALID_DELIINFO';
+  }
+  const phone = String(buyer.phone).replace(/[\\s()-]/g, '');
+  if (!/^0\\d{8,10}$/.test(phone)) return 'INVALID_DELIINFO';
+  if (buyer.email && /[\\r\\n]/.test(String(buyer.email))) return 'INVALID_DELIINFO';
+  if (buyer.address2 && /[\\r\\n]/.test(String(buyer.address2))) return 'INVALID_DELIINFO';
+  return null;
+}
+
 export function buildDeliInfo(buyer) {
   // 문서 예시 순서: 이름|이메일|우편번호|주소|상세주소|휴대폰|전화|회사명
   return [buyer.name, buyer.email, buyer.postcode, buyer.address1, buyer.address2, buyer.phone, buyer.phone, ''].map((v) => pipeSafe(v)).join('|');
@@ -203,7 +218,8 @@ export async function placeSupplierOrders(env, fetchImpl = fetch, limit = 3) {
       summary.failed += 1;
     };
     const buyer = await env.DB.prepare('SELECT name,phone,email,postcode,address1,address2,memo FROM order_buyers WHERE order_id=?').bind(o.id).first();
-    if (!buyer) { await fail('NO_BUYER', '받는 분 정보가 없어 발주할 수 없습니다'); continue; }
+    const deliveryError = validateDeliInfo(buyer);
+    if (deliveryError) { await fail(deliveryError, '수령인 필수정보가 누락되었거나 유효하지 않아 주문 API 호출을 차단했습니다'); continue; }
     const fetched = await fetchDomeggookItem(env, o.supply_item_no, fetchImpl);
     if (fetched.error) { await fail('ITEM_LOOKUP', fetched.error); continue; }
     const item = fetched.item;

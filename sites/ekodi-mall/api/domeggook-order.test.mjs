@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readdirSync, readFileSync } from 'node:fs';
-import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, buildItemValue, probeDomeggookLogin, approvedMemberBindingReady, autoOrderEnabled, classifySupplierAuthError, safeDomeggookLoginDiagnostic, chooseOptionCode } from './domeggook-order.js';
+import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, validateDeliInfo, buildItemValue, probeDomeggookLogin, approvedMemberBindingReady, autoOrderEnabled, classifySupplierAuthError, safeDomeggookLoginDiagnostic, chooseOptionCode } from './domeggook-order.js';
 
 function d1(db) {
   const wrap = (sql) => { const stmt = db.prepare(sql); let args = []; const api = {
@@ -47,6 +47,29 @@ function supplier({ emoney = 100000, qty = 2, cost = 8000, setOrderOk = true, vi
 test('format helpers strip pipes and follow documented order', () => {
   assert.equal(buildDeliInfo({ name: '김|철수', email: 'a@b', postcode: '07328', address1: '주소', address2: '5층', phone: '010' }), '김 철수|a@b|07328|주소|5층|010|010|');
   assert.equal(buildItemValue({}, { market: 'supply', qty: 2, deliMemo: '문앞|부탁' }), 'supply||P||00|2||에코디몰 위탁주문||문앞 부탁');
+});
+
+test('delivery information validation rejects unsafe inputs without exposing buyer data', () => {
+  const valid = { name: '김철수', phone: '010-1111-2222', postcode: '07328', address1: '서울 영등포구', address2: '5층', email: 'a@b.kr' };
+  assert.equal(validateDeliInfo(valid), null);
+  for (const field of ['name', 'phone', 'postcode', 'address1']) {
+    assert.equal(validateDeliInfo({ ...valid, [field]: ' ' }), 'INVALID_DELIINFO');
+  }
+  assert.equal(validateDeliInfo({ ...valid, phone: 'not-a-phone' }), 'INVALID_DELIINFO');
+  assert.equal(validateDeliInfo({ ...valid, address2: '5층\\nX-Injected: 1' }), 'INVALID_DELIINFO');
+});
+
+test('invalid delivery data never reaches paid setOrder API', async () => {
+  const { db, env } = setup();
+  db.prepare("UPDATE order_buyers SET postcode='' WHERE order_id='ord_1'").run();
+  const log = [];
+  const result = await placeSupplierOrders(env, supplier({}, log));
+  assert.equal(result.placed, 0);
+  assert.equal(result.failed, 1);
+  assert.equal(log.some((x) => x.mode === 'setOrder'), false);
+  const error = db.prepare('SELECT last_error FROM supplier_orders').get().last_error;
+  assert.match(error, /^INVALID_DELIINFO:/);
+  assert.ok(!error.includes('010-1111-2222'), 'buyer PII must not appear in supplier diagnostics');
 });
 
 test('paid supplier orders fail closed when either buyer-PII or supplier-forwarding gate is off', async () => {
