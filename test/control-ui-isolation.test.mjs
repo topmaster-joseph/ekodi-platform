@@ -58,3 +58,13 @@ test('Control updates dispatch the guarded shared Site Core through every sancti
   assert.match(workflow,/release_branch_ref:/);
   assert.match(workflow,/release_task_id:/);
 });
+
+test('embedded admin conversation and composer align left while standalone Control stays centered',()=>{
+  const embedded='html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"]';
+  assert.ok(css.includes(embedded+' .conversation{\n  margin-inline:0!important;\n  padding-inline:20px!important;\n}'));
+  assert.ok(css.includes(embedded+' .composer,\n'+embedded+' .composer-note{\n  margin-left:0!important;\n  margin-right:auto!important;\n}'));
+  assert.ok(css.includes('.conversation{max-width:880px;margin:0 auto'));
+  assert.ok(css.includes('.composer{max-width:880px;margin:0 auto'));
+  assert.ok(css.includes('@media(max-width:760px)'));
+  assert.ok(css.includes('.control-embedded-toolbar'));
+});
