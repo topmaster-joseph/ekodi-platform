@@ -43,6 +43,8 @@ DOMEGGOOK_AUTO_ORDER_ENABLED = "false"
 # Historical one-order pilot suspended while supplier member error and buyer-PII handoff are unresolved.
 # A new explicitly approved pilot ID is required after contract, privacy and safety checks.
 DOMEGGOOK_PILOT_ORDER_IDS = ""
+# Per-pilot all-in (supplier item + delivery) cap, separately authorized; 0 disables pilots.
+DOMEGGOOK_PILOT_MAX_TOTAL_KRW = "0"
 # Login/getMyAsset only. Independent from paid order permission. Rate limited to once per 6 hours.
 DOMEGGOOK_READONLY_AUTH_PROBE_ENABLED = "true"
 

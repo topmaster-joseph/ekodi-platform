@@ -420,17 +420,52 @@ test('login follows an https redirect inside domeggook.com with the same POST bo
     (e) => /redirect blocked 302 to https:\/\/evil\.example/.test(e.supplierMessage));
 });
 
-test('supervised pilot: with auto-order OFF only the allow-listed order is placed', async () => {
+test('supervised pilot: only one allow-listed order within 5,000 KRW is permitted', async () => {
   const off = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false' });
   assert.equal((await placeSupplierOrders(off.env, supplier({}, []))).skipped, 'disabled');
-  const other = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_PILOT_ORDER_IDS: 'mall_someotherorder1' });
+  const config = { DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_PILOT_ORDER_IDS: 'mall_pilot_000001', DOMEGGOOK_PILOT_MAX_TOTAL_KRW: '5000' };
+  for (const extra of [
+    { DOMEGGOOK_PILOT_MAX_TOTAL_KRW: '' },
+    { DOMEGGOOK_PILOT_MAX_TOTAL_KRW: '5001' },
+    { DOMEGGOOK_PILOT_ORDER_IDS: 'mall_pilot_000001,mall_another_000002' }
+  ]) {
+    const { env } = setup({ ...config, ...extra }), log = [];
+    assert.equal((await placeSupplierOrders(env, supplier({}, log))).skipped, 'disabled');
+    assert.equal(log.length, 0);
+  }
+  const other = setup({ ...config, DOMEGGOOK_PILOT_ORDER_IDS: 'mall_someotherorder1' });
   const log0 = [];
   assert.equal((await placeSupplierOrders(other.env, supplier({}, log0))).placed, 0);
   assert.equal(log0.filter((c) => c.mode === 'setOrder').length, 0);
-  const { db, env } = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_PILOT_ORDER_IDS: 'mall_pilot_000001' });
+  const { db, env } = setup(config);
   db.prepare("UPDATE orders SET id='mall_pilot_000001' WHERE id='ord_1'").run();
   db.prepare("UPDATE order_buyers SET order_id='mall_pilot_000001'").run();
   const log = [];
-  assert.equal((await placeSupplierOrders(env, supplier({}, log))).placed, 1);
+  assert.equal((await placeSupplierOrders(env, supplier({ cost:1000 }, log))).placed, 1);
   assert.equal(log.filter((c) => c.mode === 'setOrder').length, 1);
+  assert.equal((await placeSupplierOrders(env, supplier({ cost:1000 }, log))).placed, 0, 'no duplicate pilot order');
+  assert.equal(log.filter((c) => c.mode === 'setOrder').length, 1);
+});
+
+test('supervised pilot blocks costly or uncertain supplier quotes before paid API', async () => {
+  for (const supplierOptions of [{ cost: 1001 }, { cost: 1000, shippingUnknown: true }]) {
+    const { db, env } = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED:'false', DOMEGGOOK_PILOT_ORDER_IDS:'mall_pilot_000001', DOMEGGOOK_PILOT_MAX_TOTAL_KRW:'5000' });
+    db.prepare("UPDATE orders SET id='mall_pilot_000001' WHERE id='ord_1'").run();
+    db.prepare("UPDATE order_buyers SET order_id='mall_pilot_000001'").run();
+    const calls = [];
+    const base = supplier({ cost: supplierOptions.cost }, calls);
+    const fetchImpl = async (url, init) => {
+      const params = init?.body ? new URLSearchParams(String(init.body)) : new URL(String(url)).searchParams;
+      if (params.get('mode') === 'getItemView' && supplierOptions.shippingUnknown) return new Response(JSON.stringify({ domeggook: {
+        basis:{no:'55501234',title:'테스트상품',status:'판매중'},price:{supply:1000},qty:{inventory:50},
+        deli:{supply:{type:'조건부',fee:''}},desc:{license:{usable:true}}
+      }}));
+      return base(url, init);
+    };
+    const result = await placeSupplierOrders(env, fetchImpl);
+    assert.equal(result.placed, 0);
+    assert.equal(result.failed, 1);
+    assert.equal(calls.some(c => c.mode === 'setOrder'), false);
+    assert.match(db.prepare('SELECT last_error FROM supplier_orders').get().last_error, /PILOT_BUDGET_OR_QUOTE/);
+  }
 });
