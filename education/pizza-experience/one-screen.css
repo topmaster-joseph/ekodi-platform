@@ -304,3 +304,49 @@ body[data-area="pizza-experience"]>.ekodi-user-ui-footer{display:none!important}
  #pizza-exp .slide-quiz .answer-buttons button{min-height:27px;padding:2px 10px;font-size:.69rem}
  #pizza-exp .slide-quiz .answer-feedback{font-size:.68rem}
 }
+
+
+/* Dense slide fitting: prefer visible real photos + whole-slide readability to nested scrolling. */
+#pizza-exp .scene-detail{overflow:hidden;justify-content:center;padding:clamp(10px,1.3vw,19px)}
+#pizza-exp .scene .scene-emoji{display:none}
+#pizza-exp .scene h3{font-size:clamp(1.22rem,2.25vw,2.2rem);line-height:1.16;margin:0 0 6px}
+#pizza-exp .scene p{line-height:1.3;margin-bottom:4px}
+#pizza-exp .scene .scene-label{margin:0 0 4px}
+#pizza-exp .scene .question{margin:2px 0;padding:5px 9px;line-height:1.24}
+#pizza-exp .scene .scene-visuals{display:flex;flex-wrap:nowrap;align-items:stretch;gap:5px;width:100%;margin:3px 0}
+#pizza-exp .scene .scene-visuals>span{flex:1 1 0;min-width:0;min-height:47px;padding:4px 1px;font-size:1rem;line-height:1.15}
+#pizza-exp .scene .scene-visuals>span small{line-height:1.15;font-size:.67rem}
+#pizza-exp .scene .pizza-builder{display:grid;grid-template-columns:minmax(76px,116px) minmax(0,1fr);grid-template-rows:repeat(3,auto);align-items:center;gap:5px 7px;width:100%;max-width:490px}
+#pizza-exp .scene .make-pizza{grid-column:1;grid-row:1/4;width:100%;height:auto;aspect-ratio:1/1;min-width:0;max-width:116px;border-width:8px}
+#pizza-exp .scene .topping-buttons{grid-column:2;grid-row:1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:0}
+#pizza-exp .scene .topping-buttons button{min-width:0;padding:4px 1px;font-size:.71rem;min-height:30px}
+#pizza-exp .scene .builder-actions{grid-column:2;grid-row:2}
+#pizza-exp .scene .builder-actions button{padding:5px 8px;font-size:.73rem}
+#pizza-exp .scene .pizza-builder .answer-feedback{grid-column:2;grid-row:3;min-height:0;margin:0}
+#pizza-exp .scene .slide-quiz-list{display:flex;flex-direction:column;gap:6px;width:100%;max-width:490px}
+#pizza-exp .scene .slide-quiz{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 6px}
+#pizza-exp .scene .slide-quiz .question{background:transparent;border:0;padding:1px 0;margin:0;line-height:1.26;font-size:.81rem;min-width:0}
+#pizza-exp .scene .slide-quiz .answer-buttons{display:flex;flex-wrap:nowrap;grid-column:2;grid-row:1;gap:4px;margin:0}
+#pizza-exp .scene .slide-quiz .answer-buttons button{font-size:.72rem;min-width:39px;min-height:29px;padding:3px 6px}
+#pizza-exp .scene .slide-quiz .answer-feedback{grid-column:1/-1;min-height:0;margin:0;font-size:.69rem}
+#pizza-exp .scene .slide-quiz .answer-feedback:empty{display:none}
+@media(max-width:700px){
+ #pizza-exp .scene-detail{padding:8px 12px}
+ #pizza-exp .scene h3{font-size:clamp(1.06rem,4.5vw,1.4rem);line-height:1.2;margin:0 0 3px}
+ #pizza-exp .scene p{font-size:.74rem;line-height:1.24;margin:0 0 3px}
+ #pizza-exp .scene .scene-label{font-size:.61rem;letter-spacing:0;margin:0 0 3px}
+ #pizza-exp .scene:has(.slide-quiz-list),#pizza-exp .scene:has(.pizza-builder){grid-template-rows:minmax(75px,.29fr) minmax(0,1.71fr)}
+ #pizza-exp .scene:has(.scene-visuals){grid-template-rows:minmax(95px,.43fr) minmax(0,1.57fr)}
+ #pizza-exp .scene .scene-visuals>span{min-height:40px;font-size:.82rem}
+ #pizza-exp .scene .scene-visuals>span small{font-size:.57rem}
+ #pizza-exp .scene .slide-quiz-list{gap:3px}
+ #pizza-exp .scene .slide-quiz .question{font-size:.7rem}
+ #pizza-exp .scene .slide-quiz .answer-buttons button{font-size:.69rem;min-height:26px;padding:2px 5px}
+ #pizza-exp .scene .pizza-builder{grid-template-columns:77px minmax(0,1fr);gap:3px 5px}
+ #pizza-exp .scene .make-pizza{max-width:77px;border-width:6px}
+ #pizza-exp .scene .topping-buttons button{min-height:25px;font-size:.65rem;padding:2px 1px}
+ #pizza-exp .scene .pizza-builder .answer-feedback{font-size:.69rem}
+}
+
+/* Accessibility fallback: keep interactive content reachable at high browser zoom or short windows. */
+@media(max-height:620px){#pizza-exp .scene-detail{overflow:auto}}
