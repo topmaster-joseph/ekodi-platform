@@ -289,4 +289,32 @@ begin
  r:=public.singles_order_refund_complete(op,ref,'EV-RF-0001'); if r->>'status'<>'refunded' then raise exception 'FAIL refund complete'; end if;
  raise notice 'SINGLES-FLOW PASS: paid_events_ok';
 end $$;
+
+-- 자체 성인 확인 요청: 회원만·연락처 필수·운영자 확인 시 연락처 삭제·탈퇴 시 삭제(9종)
+do $$
+declare op uuid:=gen_random_uuid(); a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); n uuid:=gen_random_uuid(); r jsonb;
+begin
+ set local session_replication_role=replica;
+ insert into public.singles_memberships(user_id,person_id,status,age_19_confirmed,base_consent) values
+  (a,gen_random_uuid(),'active',true,true),(b,gen_random_uuid(),'active',true,true);
+ insert into public.singles_bank_operators(user_id,enabled,can_verify,can_configure) values(op,true,true,true)
+  on conflict(user_id) do update set enabled=true,can_verify=true;
+ begin perform public.singles_adult_check_request(n,'id_document_video','010-0000-0000',''); raise exception 'FAIL nonmember'; exception when insufficient_privilege then null; end;
+ begin perform public.singles_adult_check_request(a,'id_document_video','  ',''); raise exception 'FAIL contact'; exception when invalid_parameter_value then null; end;
+ begin perform public.singles_adult_check_request(a,'selfie','010-0000-0000',''); raise exception 'FAIL method'; exception when invalid_parameter_value then null; end;
+ r:=public.singles_adult_check_request(a,'id_document_video','010-0000-0000','평일 저녁');
+ if r->>'status'<>'requested' then raise exception 'FAIL req'; end if;
+ r:=public.singles_adult_check_request(a,'id_document_in_person','check@singles-ci.invalid','');
+ if (select method from public.singles_adult_check_requests where user_id=a)<>'id_document_in_person' then raise exception 'FAIL update'; end if;
+ begin perform public.singles_operator_verify_adult(a,a,'id_document_video',''); raise exception 'FAIL self'; exception when insufficient_privilege then null; end;
+ perform public.singles_operator_verify_adult(op,a,'id_document_video','영상통화 확인');
+ if (select status||'/'||coalesce(contact,'NULL') from public.singles_adult_check_requests where user_id=a)<>'done/NULL' then raise exception 'FAIL cleared'; end if;
+ if public.singles_adult_check_request(a,'id_document_video','010-0000-0000','')->>'status'<>'verified' then raise exception 'FAIL already'; end if;
+ -- 탈퇴하면 연락처 삭제
+ perform public.singles_adult_check_request(b,'id_document_video','010-1111-1111','');
+ perform public.singles_withdraw_member(b,'v');
+ if (select contact from public.singles_adult_check_requests where user_id=b) is not null then raise exception 'FAIL withdraw clear'; end if;
+ begin insert into public.singles_adult_check_requests(user_id,method,contact,status) values(gen_random_uuid(),'id_document_video','010-2222-2222','done'); raise exception 'FAIL constraint'; exception when check_violation then null; end;
+ raise notice 'SINGLES-FLOW PASS: adult_check_ok';
+end $$;
 rollback;

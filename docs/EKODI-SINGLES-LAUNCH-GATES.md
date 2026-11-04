@@ -91,7 +91,7 @@
 | G7 | 적립금 환불 처리 화면 | ✅ 해당 없음: 적립금 폐지(2026-10-31). 환불은 H3(청구서)·H6(구독권 청약철회)로 처리 |
 | G8 | 법률 검토(선불금·결혼중개업·입력·공개 할인·수락자 과금), 무안군 회신 | ✅ 2026-11 완료(소유자 확인). 약관 제10조에 법적 근거 표시 |
 | G10 | 본인확인기관 연동(포트원 V2 본인인증, `/singles/verify`): 이름·생년월일·전화번호 미저장, 만 19세 판정·CI 해시로 1인 1계정 | 🟡 코드·DB 배포. 포트원 가입·인증 채널 계약 후 Worker `SINGLES_PORTONE_STORE_ID`·`SINGLES_PORTONE_IDENTITY_CHANNEL_KEY`, Edge `PORTONE_API_SECRET`·`SINGLES_IDENTITY_PROVIDER_ENABLED` 설정 필요 |
-| G9 | 공개 개통: `SINGLES_PUBLIC_LAUNCH_ENABLED=true` | 👤 실증·검토 후 소유자 결정 |
+| G9 | 공개 개통: `SINGLES_PUBLIC_LAUNCH_ENABLED=true` | ✅ 2026-11-04 소유자 결정으로 개통. 성인 확인은 본인확인기관 연동 전까지 자체 확인(회원 앱 요청 → 운영자 영상통화·대면 신분증 확인, 사본 미수집·확인 후 연락처 삭제). 되돌리기: 비밀값 삭제 시 즉시 초대 명단만 이용 |
 
 **실증 시 켤 스위치(시범 명단 제한이 유지되는 상태):**
 - Edge(Supabase 비밀값): `SINGLES_ONBOARDING_ENABLED`, `SINGLES_SOCIAL_ENABLED`, `SINGLES_BANK_TRANSFER_ENABLED`, `SINGLES_BANK_VERIFICATION_ENABLED`, `SINGLES_REQUEST_BILLING_ENABLED` = `true` (`SINGLES_PUBLIC_LAUNCH_ENABLED`는 넣지 않음)
