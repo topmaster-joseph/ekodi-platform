@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.6.2'
+$AgentVersion = '2.6.3'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -1150,6 +1150,38 @@ function Invoke-EkodiAgentAutoUpdateIfApproved($config) {
   }
 }
 
+
+# A successful heartbeat from the OLD in-process Agent is not proof that
+# the NEW Agent successfully restarted. Verify only after a NEW process boots.
+function Confirm-EkodiAgentAutoUpdateAfterRestart {
+  if (-not (Test-Path -LiteralPath $AgentAutoUpdateStatePath)) { return }
+  try {
+    $receipt = Get-Content -LiteralPath $AgentAutoUpdateStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ([string]$receipt.outcome -cne 'installed-pending-restart') { return }
+    if ([string]$receipt.targetVersion -cne $AgentVersion) { return }
+    $receipt.outcome = 'verified-after-restart'
+    $receipt | Add-Member -NotePropertyName verifiedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force
+    $json = $receipt | ConvertTo-Json -Depth 3
+    [IO.File]::WriteAllText($AgentAutoUpdateStatePath, $json, [Text.UTF8Encoding]::new($false))
+  } catch {
+    # Never claim verified when the receipt is missing, unreadable or unwritable.
+  }
+}
+
+function Get-EkodiAgentAutoUpdateProjection {
+  $result = @{ state = 'not-recorded'; version = $AgentVersion }
+  if (-not (Test-Path -LiteralPath $AgentAutoUpdateStatePath)) { return $result }
+  try {
+    $receipt = Get-Content -LiteralPath $AgentAutoUpdateStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $safe = @('disabled-locally', 'no-approved-upgrade', 'outside-canary',
+      'hash-mismatch', 'version-mismatch', 'upgrade-unverified',
+      'installed-pending-restart', 'verified-after-restart',
+      'error-rollback-by-upgrader')
+    if ([string]$receipt.outcome -in $safe) { $result.state = [string]$receipt.outcome }
+  } catch { $result.state = 'unreadable' }
+  return $result
+}
+
 function Get-AgentSettings {
   $scheme = ''
   try { $scheme = Get-ActiveSchemeGuid } catch { $scheme = 'unknown' }
@@ -1163,6 +1195,7 @@ function Get-AgentSettings {
     backgroundBrowserCanary = Get-BackgroundBrowserCanaryState
     interactiveAuthSession = Get-EkodiInteractiveAuthSettingsProjection
     nativeBrowserUpdater = 'manifest-pinned-sha256-canary-v1'
+    nativeBrowserUpdateState = Get-EkodiAgentAutoUpdateProjection
   }
 }
 
@@ -4197,7 +4230,7 @@ function Run-Agent {
     $lastHeartbeat = [datetime]::MinValue
     while ($true) {
       try {
-        if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; $lastHeartbeat = Get-Date }
+        if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; Confirm-EkodiAgentAutoUpdateAfterRestart; $lastHeartbeat = Get-Date }
         Reconcile-DesktopCommanderRecovery
         try { if (Reconcile-EkodiInteractiveAuthSession) { Send-Heartbeat $config; $lastHeartbeat = Get-Date } } catch { }
         try { Reconcile-EkodiSimulcastRelay } catch { }
