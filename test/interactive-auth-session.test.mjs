@@ -152,7 +152,7 @@ function d1(db) {
 }
 const sha = v => createHash('sha256').update(v).digest('hex');
 
-function setup({ role = 'super_admin', capability = true, lastSeen = new Date().toISOString() } = {}) {
+function setup({ role = 'super_admin', capability = true, domeggookCapability = false, lastSeen = new Date().toISOString() } = {}) {
   const db = new DatabaseSync(':memory:');
   db.exec(`CREATE TABLE admins (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL DEFAULT '', password_salt TEXT NOT NULL DEFAULT '', password_iterations INTEGER, birth_hash TEXT NOT NULL DEFAULT '', birth_salt TEXT NOT NULL DEFAULT '', role TEXT NOT NULL DEFAULT 'super_admin', created_at TEXT NOT NULL DEFAULT '');
     CREATE TABLE sessions (token_hash TEXT PRIMARY KEY, admin_id INTEGER NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT '');
@@ -164,7 +164,7 @@ function setup({ role = 'super_admin', capability = true, lastSeen = new Date().
     await handleDeviceControl(new Request('https://ekodi.kr/api/control/devices', { headers: { authorization: 'Bearer admin-token-0123456789abcdef' } }), env);
     db.prepare(`INSERT INTO device_registry (id, label, platform, hostname, os_version, agent_version, token_hash, capabilities_json, settings_json, diagnostics_json, profile_name, last_seen_at, enrolled_at, enrolled_by)
       VALUES ('dev_1','PC','windows','USER4','Windows','2.5.7',?, ?, '{}', '{}', '', ?, ?, 1)`)
-      .run(sha('device-token-abcdef0123456789'), JSON.stringify({ interactiveAuthSession: capability }), lastSeen, lastSeen);
+      .run(sha('device-token-abcdef0123456789'), JSON.stringify({ interactiveAuthSession: capability, domeggookNativeAuth: domeggookCapability }), lastSeen, lastSeen);
   } };
 }
 const admin = (env, path, body) => handleDeviceControl(new Request(`https://ekodi.kr${path}`, {
@@ -204,6 +204,21 @@ test('integration: super admin starts a session, agent receives the fixed payloa
   assert.doesNotMatch(JSON.stringify(list), /x=y|zzz/);
   const auditRow = t.db.prepare("SELECT detail FROM audit_logs WHERE action='device.command.issue'").get();
   assert.match(auditRow.detail, new RegExp(`session=${issued.sessionId}`));
+});
+
+test('integration: Domeggook requires a separately upgraded native agent capability', async () => {
+  const command={type:INTERACTIVE_AUTH_COMMANDS.start,confirmed:true,
+    payload:{service:'domeggook-business',userWillSignInPersonally:true}};
+  const old=setup({domeggookCapability:false});await old.enroll();
+  const refused=await admin(old.env,'/api/control/devices/dev_1/commands',command);
+  assert.equal(refused.status,409);
+  assert.equal((await refused.json()).code,'DOMEGGOOK_NATIVE_AUTH_AGENT_UPGRADE_REQUIRED');
+  const updated=setup({domeggookCapability:true});await updated.enroll();
+  const permitted=await admin(updated.env,'/api/control/devices/dev_1/commands',command);
+  assert.equal(permitted.status,202);
+  const next=await (await agent(updated.env,'/api/device-agent/commands/next')).json();
+  assert.equal(next.command.payload.entryUrl,'https://www.domeggook.com/main/');
+  assert.equal(next.command.payload.cookieExport,false);
 });
 
 test('integration: a receipt that claims cookie export is stored as failed', async () => {
