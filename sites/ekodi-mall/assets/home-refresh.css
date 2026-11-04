@@ -229,5 +229,5 @@ body[data-mall-view="recommend"] .mall-recommend-inline-form{display:block}
 }
 
 /* TOSS-MALL-UNDERWRITING-001 — empty product categories must not appear in card-review navigation. */
-#filters [data-filter][hidden],.mall-category-shortcuts [data-filter-target][hidden]{display:none!important}
+#filters [data-filter][hidden],.mall-category-shortcuts [data-filter-target][hidden],.mall-primary-nav [data-filter-target][hidden]{display:none!important}
 .mall-merchant-review-note{margin:9px 0 0;font-size:12px;line-height:1.7;color:var(--muted,#5c6471);max-width:790px}
