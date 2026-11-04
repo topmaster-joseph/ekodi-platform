@@ -87,7 +87,7 @@ export async function handleTransactionRehearsal(request, env) {
     requireProof(safety.quote.checkoutReady === false, 'staging-safety-gate-open');
     requireProof(safety.quote.blockers.includes('payments-disabled'), 'payments-disabled-blocker-missing');
 
-    const isolatedEnv = { ...env, PAYMENTS_ENABLED:'true', PAYMENT_PROVIDER:'toss', TOSS_SECRET_KEY:'rehearsal-no-network', TOSS_CLIENT_KEY:'rehearsal-no-network' };
+    const isolatedEnv = { ...env, PAYMENTS_ENABLED:'true', PAYMENT_PROVIDER:'toss', TOSS_SECRET_KEY:'test_gsk_rehearsal_no_network', TOSS_CLIENT_KEY:'test_gck_rehearsal_no_network', MALL_TOSS_MERCHANT_ONLY:'true', MALL_EKODIAN_EMAILS:`${env.MALL_EKODIAN_EMAILS || ''},rehearsal@invalid.ekodi` };
     const created = await createOrder(isolatedEnv, { shareCode: ids.shareCode, quantity: 1, buyer: { name:'리허설 구매자', phone:'010-0000-0000', postcode:'00000', address1:'staging rehearsal synthetic address', privacyConsent:true } });
     requireProof(created.status === 201 && Boolean(created.order?.id), 'order-not-created');
     orderId = created.order.id;

@@ -151,7 +151,7 @@
     const facts = el('ul', 'pp-facts');
     if (data.product.fulfillment) facts.append(el('li', '', data.product.fulfillment));
     if (data.product.region?.label) facts.append(el('li', '', `${data.product.region.label}${data.product.region.verified ? '' : ' · 판매자 등록 지역'}`));
-    facts.append(el('li', '', '토스페이먼츠 안전결제 · 결제 정보는 판매자에게 공유되지 않습니다'));
+    // Never imply a ready gateway before the authoritative server quote is checked.
     // EKODI-MALL-TRUST-001: trust signals come from server facts only.
     const badges = el('div', 'pp-badges');
     if (data.seller.official) badges.append(el('span', 'pp-badge pp-badge-official', '에코디몰 공식'));
@@ -208,6 +208,11 @@
     if (quote) {
       const sourceLabel = quote.attributionType === 'direct' ? '판매자 직접공유' : quote.attributionType === 'ai' ? 'AI 기여' : 'EKODI Mall';
       feeBody.append(el('p', 'pp-quote', `SERVER QUOTE · ${sourceLabel} 경로 ${quote.feeRatePercent}% · 플랫폼 수수료 ${money(quote.platformFeeAmount)} · 판매자 정산예정 ${money(quote.sellerSettlementAmount)}`));
+    }
+    if (quote?.checkoutReady) {
+      facts.append(el('li', '', '비회원 카드결제 가능 · 로그인 불필요 · 카드 정보는 토스페이먼츠가 처리합니다.'));
+    } else if (data.product.saleType === 'direct') {
+      facts.append(el('li', '', '실제 판매 승인·가격·재고·결제 설정 확인 후 비회원 카드결제가 열립니다.'));
     }
     // EKODI-MALL-TOSS-WIDGET-007: buy now only when the order server says every gate is open.
     if (quote?.checkoutReady && window.EkodiMallCheckout) {
