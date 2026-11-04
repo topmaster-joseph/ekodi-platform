@@ -77,7 +77,7 @@ import { sharedProductId, shareUrlForProduct, prioritizeSharedProduct } from './
       const provider = text('small', 'affiliate-provider', clean(item.providerName) || '제휴 판매처');
       const title = text('h3', '', clean(item.productName) || '제휴 상품');
       const meta = text('p', '', [clean(item.category), Number(item.priceKrw) > 0 ? `${Number(item.priceKrw).toLocaleString('ko-KR')}원 표시` : '가격은 판매처에서 확인'].filter(Boolean).join(' · '));
-      const link = text('a', 'btn primary', isStay ? '예약 가능 여부 확인' : '판매처에서 확인'); link.href = url; link.target = '_blank'; link.rel = 'noopener sponsored';
+      const link = text('a', 'btn primary', isStay ? '예약 가능 여부 확인' : '쿠팡에서 확인·구매'); link.href = url; link.target = '_blank'; link.rel = 'noopener sponsored';
       const actions = document.createElement('div'); actions.className = 'affiliate-card-actions'; actions.append(link);
       if (shareUrlForProduct(window.location.href, item.id)) {
         const share = text('button', 'btn affiliate-share', '상품 공유');
