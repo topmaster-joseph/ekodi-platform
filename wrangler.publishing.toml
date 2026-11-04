@@ -4,9 +4,9 @@ compatibility_date = "2026-08-24"
 workers_dev = true
 preview_urls = false
 
-# PUBLISHING-AI-WEEKLY-001: 출판 워커의 유일한 예약 작업(매일 03:37 KST). 원고 초안은 무료 한도 안에서만.
+# PUBLISHING-AI-WEEKLY-001: 출판 워커의 유일한 예약 작업(매일 09:40 KST, 무료 한도 초기화 직후). 원고 초안은 무료 한도 안에서만.
 [triggers]
-crons = ["37 18 * * *"]
+crons = ["40 0 * * *"]
 
 [ai]
 binding = "AI"
@@ -30,6 +30,12 @@ run_worker_first = true
 binding = "PUBLISH_DB"
 database_name = "ekodi-publishing"
 database_id = "658ba024-d5fa-4568-8679-07bf3f3b90ac"
+
+# EKODI-WORKERS-AI-POOL-001: Workers AI 무료 한도 공용 장부(ai_provider_daily_budget 한 행)만 읽고 쓴다.
+[[d1_databases]]
+binding = "AI_LEDGER_DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 
 # 예약 준비는 크론을 새로 만들지 않고 EKODI Orchestrator 승인 스케줄러가 맡는다(§13 중복 스케줄러 금지).
 

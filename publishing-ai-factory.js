@@ -18,10 +18,12 @@ export const MODELS = Object.freeze({
 });
 export const AI_FACTORY = Object.freeze({
   model: MODELS.draft.id,
-  // 계정 무료 한도는 일 10,000(00:00 UTC 초기화). AI 관리 장치(ekodi-ai-control)가 자체 상한
-  // EKODI_WORKERS_AI_DAILY_NEURON_BUDGET=8000을 쓰고 실제로 매일 소진한다(ai_provider_quota_state 'exhausted', 2026-11-04).
-  // 두 상한의 합이 무료 한도를 넘지 않도록 출판은 2,000. 배분을 바꿀 때는 두 값을 함께 바꾼다(합계 ≤ 10,000).
-  dailyNeuronCap: 2000,
+  // EKODI-WORKERS-AI-POOL-001: 계정 무료 한도(일 10,000, 00:00 UTC 초기화)를 서비스들이 하나의 공용 장부
+  // (ekodi-auth.ai_provider_daily_budget 'cloudflare-workers-ai:neurons', 상한 9,500)에서 함께 쓴다.
+  // 출판은 초기화 직후(09:40 KST) 먼저 쓰되 하루 6,000을 넘지 않고, 남은 몫은 AI 관리 장치가 쓴다(부족하면 다른 무료 AI로 전환).
+  dailyNeuronCap: 6000,
+  sharedPoolCap: 9500,
+  sharedLedgerId: 'cloudflare-workers-ai:neurons',
   neuronsPerInputToken: MODELS.draft.in,
   neuronsPerOutputToken: MODELS.draft.out,
   chapters: 8,
@@ -60,16 +62,36 @@ function estimate(m, usage, prompt, text) {
   return inTok * m.in + outTok * m.out;
 }
 
-/** One free model call within the daily cap. Returns null when today's budget is spent. */
+// 공용 장부에서 원자적으로 예약하고(넘으면 거절), 실제 사용량으로 정산한다. 장부가 없으면 안전하게 쓰지 않는다.
+async function reservePool(env, amount) {
+  const db = env.AI_LEDGER_DB; if (!db?.prepare) return null;
+  const d = day(), t = now(), id = AI_FACTORY.sharedLedgerId;
+  await db.prepare('INSERT OR IGNORE INTO ai_provider_daily_budget (provider_id, usage_date, call_count, updated_at) VALUES (?, ?, 0, ?)').bind(id, d, t).run();
+  const r = await db.prepare('UPDATE ai_provider_daily_budget SET call_count = call_count + ?, updated_at = ? WHERE provider_id = ? AND usage_date = ? AND call_count + ? <= ?')
+    .bind(amount, t, id, d, amount, AI_FACTORY.sharedPoolCap).run();
+  return Number(r?.meta?.changes ?? r?.changes ?? 0) > 0 ? { day: d, amount } : null;
+}
+async function settlePool(env, reservation, actual) {
+  if (!reservation || !env.AI_LEDGER_DB?.prepare) return;
+  const delta = Math.ceil(actual) - reservation.amount; if (!delta) return;
+  await env.AI_LEDGER_DB.prepare('UPDATE ai_provider_daily_budget SET call_count = MAX(0, call_count + ?), updated_at = ? WHERE provider_id = ? AND usage_date = ?')
+    .bind(delta, now(), AI_FACTORY.sharedLedgerId, reservation.day).run();
+}
+
+/** One free model call within the daily caps (publishing share + shared account pool). Returns null when the budget is spent. */
 export async function generate(env, system, prompt, maxTokens, stage = 'draft') {
   const db = env.PUBLISH_DB, m = MODELS[stage] || MODELS.draft;
-  const worst = (system.length + prompt.length) / 1.5 * m.in + maxTokens * m.out;
+  const worst = Math.ceil((system.length + prompt.length) / 1.5 * m.in + maxTokens * m.out);
   if ((await usedToday(db)) + worst > AI_FACTORY.dailyNeuronCap) return null;
-  const out = await env.AI.run(m.id, { messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: stage === 'edit' ? 0.5 : 0.8 });
+  const hold = await reservePool(env, worst); if (!hold) return null;
+  let out;
+  try { out = await env.AI.run(m.id, { messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: stage === 'edit' ? 0.5 : 0.8 });
+  } catch (e) { await settlePool(env, hold, 0); throw e; }
   // Workers AI는 모델이 JSON을 내면 response를 이미 객체로 돌려줄 때가 있다 → 문자열로 되돌린다.
   const raw = out?.response ?? out?.result?.response ?? '';
   const text = (typeof raw === 'string' ? raw : JSON.stringify(raw)).trim();
-  await addUsage(db, estimate(m, out?.usage, system + prompt, text));
+  const used = estimate(m, out?.usage, system + prompt, text);
+  await addUsage(db, used); await settlePool(env, hold, used);
   return text;
 }
 
@@ -77,7 +99,10 @@ export async function generate(env, system, prompt, maxTokens, stage = 'draft') 
 export async function illustrate(env, prompt) {
   const db = env.PUBLISH_DB;
   if ((await usedToday(db)) + MODELS.image.perImage > AI_FACTORY.dailyNeuronCap) return null;
-  const out = await env.AI.run(MODELS.image.id, { prompt: String(prompt).slice(0, 1800), steps: 4 });
+  const hold = await reservePool(env, MODELS.image.perImage); if (!hold) return null;
+  let out;
+  try { out = await env.AI.run(MODELS.image.id, { prompt: String(prompt).slice(0, 1800), steps: 4 }); }
+  catch (e) { await settlePool(env, hold, 0); throw e; }
   await addUsage(db, MODELS.image.perImage);
   return typeof out?.image === 'string' ? out.image : null;
 }
@@ -200,7 +225,7 @@ async function chapterIllustration(env, book, meta, ch) {
 
 /** Daily tick from the publishing worker's single scheduled handler. */
 export async function aiFactoryTick(env, at = new Date()) {
-  if (env?.PUBLISHING_AI_FACTORY_ENABLED !== 'true' || !env?.AI || !env?.PUBLISH_DB) return { status: 'disabled' };
+  if (env?.PUBLISHING_AI_FACTORY_ENABLED !== 'true' || !env?.AI || !env?.PUBLISH_DB || !env?.AI_LEDGER_DB) return { status: 'disabled' };
   const week = Math.floor(at.getTime() / (7 * 864e5));
   const thisWeek = await env.PUBLISH_DB.prepare('SELECT id FROM publishing_ai_books WHERE week=? LIMIT 1').bind(week).first();
   const steps = [];
