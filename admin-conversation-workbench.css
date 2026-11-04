@@ -981,3 +981,33 @@ html body.admin-compact.ekodi-admin-design-engine .sidebar .admin-global-details
     pointer-events:auto!important;
   }
 }
+
+/* ADMIN-ASSIST-LEFT-FLUID-20261104
+ * In every non-home Admin section, the persistent input uses the same
+ * left canvas baseline as the first screen, with a fluid available width.
+ * Keep the established <=760px single-launcher/mobile drawer behavior. */
+@media(min-width:761px){
+  html body.admin-compact.ekodi-admin-design-engine:not(.admin-command-home) .ekodi-assist-bootstrap{
+    left:var(--ekodi-assist-left,var(--ekodi-admin-sidebar-width,228px))!important;
+    right:0!important;
+    justify-content:flex-start!important;
+    padding-left:clamp(14px,2vw,28px)!important;
+    padding-right:clamp(14px,2vw,28px)!important;
+  }
+  html body.admin-compact.ekodi-admin-design-engine:not(.admin-command-home) .ekodi-assist-bootstrap-form,
+  html body.admin-compact.ekodi-admin-design-engine:not(.admin-command-home) .ekodi-assist-bootstrap-form[data-execution-ready="true"]{
+    box-sizing:border-box!important;
+    width:min(850px,100%)!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+  html body.admin-compact.ekodi-admin-design-engine:not(.admin-command-home) .ekodi-assist-bootstrap-actions{
+    justify-content:flex-start!important;
+    flex-wrap:wrap!important;
+  }
+  html body.admin-compact.ekodi-admin-design-engine:not(.admin-command-home) .ekodi-assist-bootstrap-form[data-execution-ready="true"] .ekodi-assist-bootstrap-send{
+    margin-left:auto!important;
+  }
+}
