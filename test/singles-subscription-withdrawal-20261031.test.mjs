@@ -37,7 +37,7 @@ test('withdrawal revokes the period atomically and money is only recorded after 
 test('API requires explicit confirmation and reports why a withdrawal is refused',()=>{
  assert.match(bank,/v\.confirm!==true\)\s*return reply\(req,\{error:'withdrawal_confirmation_required'\},400\)/);
  assert.match(bank,/error:'withdrawal_not_allowed',reason:why\},409/);
- assert.match(bank,/kind:'subscription_withdrawal'/);
+ assert.match(bank,/kind:r\.reason==='withdrawal'\?'subscription_withdrawal':'event_fee',reason:r\.reason/);
  const i=bank.indexOf('if(orderRefundRef&&method===');
  assert.match(bank.slice(i,i+300),/role\.can_verify!==true/);
 });
@@ -56,8 +56,9 @@ test('member screen offers withdrawal with confirmation; operator queue labels i
  assert.match(app,/청약철회 신청\(전액 환불\)/);
  assert.match(app,/if\(!confirm\(money\(o\.amount_krw\)\+' 구독권을 청약철회합니까\?/);
  assert.match(app,/await showWithdrawals\(h\);\}/);
- assert.match(app,/\[구독권 청약철회\] /);
- assert.match(app,/'\/bank\/admin\/refunds\/'\+\(r\.kind==='subscription_withdrawal'\?'order\/':''\)/);
+ assert.match(app,/withdrawal:'구독권 청약철회'/);
+ assert.match(app,/'\[\'\+\(REFUND_REASON\[r\.reason\]\|\|'환불'\)\+'\] '/);
+ assert.match(app,/'\/bank\/admin\/refunds\/'\+\(r\.reason\?'order\/':''\)/);
  const html=await (await routeSinglesSurface(new Request('https://ekodi.kr/singles/terms'),live)).text();
  assert.ok(html.includes('요청 보내기·수락·거절·메시지·행사 신청)을 한 번도 이용하지 않았다면'));
  assert.ok(html.includes('결혼 상대를 소개·알선·중개하는 서비스가 아닙니다'));

@@ -41,7 +41,7 @@ test('multi-period price plans require verified bank grants and paid event fee d
  assert.match(bank,/const codes=planCode==='community'/);
  assert.match(bank,/\.eq\('plan_code',code\)/);
  assert.match(bank,/can_configure/);
- assert.match(social,/event_fee_verification_not_configured/);
+ assert.match(social,/data\?\.status==='pending_payment'&&data\.order_reference/,'paid events enroll only after verified payment');
  assert.match(social,/event_pricing_capability_required/);
  assert.match(social,/fee_locked_after_registration/);
  assert.match(router,/\/api\/admin\/events/);

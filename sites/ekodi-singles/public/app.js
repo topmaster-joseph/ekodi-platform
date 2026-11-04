@@ -45,6 +45,8 @@ function paywall(h,action){
  box.append(button('계좌이체 구독 안내',()=>location.assign('/singles/subscribe'),'primary'));h.append(box);
 }
 function errorText(error){
+ if(error?.message==='invalid_event_fee')return '참가비는 0원(무료) 또는 1,000원~1,000,000원으로 입력해 주세요.';
+ if(error?.message==='fee_locked_after_registration')return '신청자가 있어 참가비를 바꿀 수 없습니다.';
  if(error?.message==='event_full')return '정원이 찼습니다.';
  if(error?.message==='event_not_available')return '지금은 신청할 수 없는 행사입니다.';
  if(error?.message==='rsvp_not_found')return '취소할 신청이 없습니다.';
@@ -192,7 +194,10 @@ function appendList(h,items,onItem){
  const grid=text('div','','card-grid');for(const item of items){const card=text('article','','mini-card');onItem(card,item);grid.append(card)}h.append(grid);
 }
 // 행사(한 번의 만남)·모임(정기 소그룹). 보기는 로그인한 누구나, 참가 신청은 성인 확인된 유료회원.
-const RSVP_STATUS={requested:'신청 완료',approved:'참가 확정'};
+const localTime=iso=>{const d=new Date(iso);return Number.isFinite(d.getTime())?d.toLocaleString('ko-KR',{month:'long',day:'numeric',weekday:'short',hour:'numeric',minute:'2-digit'}):''};
+const RSVP_STATUS={requested:'신청 완료',approved:'참가 확정',pending_payment:'입금 대기'};
+const REFUND_REASON={withdrawal:'구독권 청약철회',event_cancel:'행사 참가 취소',event_cancelled:'행사 취소',event_unavailable:'기한 뒤 입금'};
+const EVENT_REFUND_RULE='참가비 환불: 행사 시작 24시간 전까지 취소하면 전액, 그 뒤 취소는 환불되지 않습니다. 운영자가 행사를 취소하면 전액 돌려드립니다.';
 function dateBadge(iso){const d=new Date(iso);const b=text('div','','date-badge');b.setAttribute('aria-hidden','true');
  b.append(text('span',(d.getMonth()+1)+'월'),text('strong',String(d.getDate())),text('small',['일','월','화','수','목','금','토'][d.getDay()]+'요일'));return b}
 function whenText(e){const d=new Date(e.starts_at);const t=d.toLocaleString('ko-KR',{month:'long',day:'numeric',weekday:'short',hour:'numeric',minute:'2-digit'});return e.kind==='group'?(e.schedule_note||'정기 모임')+(Date.parse(e.starts_at)>Date.now()?' · 첫 모임 '+t:''):t}
@@ -211,22 +216,29 @@ async function showEvents(h,kind='event'){
   const meta=text('p','','program-meta');meta.append(text('span',e.region||'지역 미정','pill'));if(e.my_status)meta.append(text('span',RSVP_STATUS[e.my_status]||e.my_status,'pill pill-on'));
   body.append(meta,text('h4',e.title),text('p',whenText(e),'program-when'));
   if(e.summary)body.append(text('p',e.summary,'program-summary'));
+  if(e.fee_krw>0)body.append(text('p',EVENT_REFUND_RULE,'program-rule'));
   const seats=e.capacity?e.taken+' / '+e.capacity+'명':'신청 '+e.taken+'명';
-  body.append(text('p',(e.fee_krw>0?'참가비 '+money(e.fee_krw)+' · 입금 확인 절차 준비 후 신청':'참가비 없음')+' · '+seats,'program-seats'));
+  body.append(text('p',(e.fee_krw>0?'참가비 '+money(e.fee_krw)+' · 계좌이체':'참가비 없음')+' · '+seats,'program-seats'));
+  if(e.my_payment&&!e.my_payment.paid)body.append(text('p','입금 기한 '+localTime(e.my_payment.pay_due_at)+' · 결제고유번호 '+e.my_payment.order_reference+' · "구독·청구서" 화면의 입금 내역에서 입금 완료를 눌러 주세요.','program-pay'));
   if(e.capacity){const bar=text('div','','seat-bar');const fill=text('span','');fill.style.width=Math.min(100,Math.round(e.taken/e.capacity*100))+'%';bar.append(fill);bar.setAttribute('aria-hidden','true');body.append(bar)}
   const row=text('div','','action-row');const msg=text('p','','status-text');
   row.append(button('자세히',async()=>{
    try{const dd=await api('/events/'+encodeURIComponent(e.id));const more=text('div','','program-detail');more.append(text('p',dd.event?.description||'자세한 안내는 곧 올라옵니다.'));row.after(more)}catch(err){msg.textContent=errorText(err)}
   }));
   if(e.my_status){
-   row.append(button('신청 취소',async()=>{if(!confirm('참가 신청을 취소할까요?'))return;
-    try{await api('/events/'+e.id+'/rsvp',{method:'DELETE'});msg.textContent='신청을 취소했습니다.'}catch(err){msg.textContent=errorText(err)}}));
-  }else if(!(e.fee_krw>0)&&!(e.capacity&&e.taken>=e.capacity)){
+   row.append(button('신청 취소',async()=>{
+    const paid=e.my_payment?.paid,early=Date.parse(e.starts_at)-Date.now()>86400000;
+    const ask=!e.my_payment?'참가 신청을 취소할까요?':!paid?'아직 입금 전입니다. 신청과 입금 주문을 취소할까요?':early?'취소하면 참가비 '+money(e.my_payment.fee_krw)+'을 입금하신 계좌로 전액 돌려드립니다. 취소할까요?':'행사 시작 24시간 이내라 참가비는 환불되지 않습니다. 그래도 취소할까요?';
+    if(!confirm(ask))return;
+    try{const r=await api('/events/'+e.id+'/rsvp',{method:'DELETE'});msg.textContent=r.refund_krw>0?'취소했습니다. '+money(r.refund_krw)+'을 3영업일 안에 돌려드립니다.':'신청을 취소했습니다.'}catch(err){msg.textContent=errorText(err)}}));
+  }else if(!(e.capacity&&e.taken>=e.capacity)){
    row.append(button(kind==='group'?'모임 참여 신청':'참가 신청',async()=>{
     if(state.paidModel&&!state.paid){msg.textContent='참가 신청은 유료회원(구독 중)만 할 수 있습니다. "동행 안내·가입"에서 구독권을 확인해 주세요.';return}
     if(!state.paidModel&&!state.subscription.active){paywall(card,'행사 참가 신청');return}
-    if(!confirm('"'+e.title+'"에 참가 신청할까요?'))return;
-    try{await api('/events/'+e.id+'/rsvp',{method:'POST',body:{}});msg.textContent='참가 신청을 접수했습니다. 자세한 안내는 운영자가 따로 드립니다.'}catch(err){msg.textContent=errorText(err)}
+    if(!confirm('"'+e.title+'"에 참가 신청할까요?'+(e.fee_krw>0?'\n\n참가비 '+money(e.fee_krw)+'은 신청 후 3일 안에(늦어도 행사 1시간 전까지) 계좌이체해 주세요. 기한 안에 입금이 확인되지 않으면 자동으로 취소됩니다.\n'+EVENT_REFUND_RULE:'')))return;
+    try{const r=await api('/events/'+e.id+'/rsvp',{method:'POST',body:{}});
+     if(r.status==='pending_payment'&&r.order){msg.textContent='자리를 잡아 두었습니다. '+[r.order.bank_name,r.order.account_number,r.order.account_holder].filter(Boolean).join(' ')+'로 '+money(r.order.amount_krw)+'을 '+localTime(r.pay_due_at)+'까지 입금한 뒤, "구독·청구서" 화면의 입금 내역에서 입금 완료를 눌러 주세요. (결제고유번호 '+r.order.reference+')'}
+     else msg.textContent='참가 신청을 접수했습니다. 자세한 안내는 운영자가 따로 드립니다.'}catch(err){msg.textContent=errorText(err)}
    },'primary'));
   }else if(e.capacity&&e.taken>=e.capacity)row.append(text('span','정원이 찼습니다','pill'));
   body.append(row,msg);card.append(body);grid.append(card);
@@ -370,7 +382,7 @@ async function reloadBankOrders(h){
   if(!rows.length){paragraph(panel,'아직 결제 내역이 없습니다.');return}
   for(const row of rows){
    const card=text('article','','mini-card');
-   card.append(text('h4',({sub_1d:'구독권 1일',sub_10d:'구독권 10일',sub_20d:'구독권 20일',sub_30d:'구독권 1달',request_fee:'요청·수락 청구서',consulting:'선택형 컨설팅'}[row.plan_code]||'행사 참가 구독')+' · '+money(row.amount_krw)));
+   card.append(text('h4',({sub_1d:'구독권 1일',sub_10d:'구독권 10일',sub_20d:'구독권 20일',sub_30d:'구독권 1달',request_fee:'요청·수락 청구서',event_fee:'행사·모임 참가비',consulting:'선택형 컨설팅'}[row.plan_code]||'행사 참가 구독')+' · '+money(row.amount_krw)));
    paragraph(card,'결제고유번호: '+row.reference);
    card.append(button('고유번호 복사',async()=>{
     try{await navigator.clipboard.writeText(row.reference);notice(card,'고유번호를 복사했습니다.');}
@@ -591,7 +603,7 @@ async function showWithdrawals(h){
  let w;try{w=await api('/bank/wallet')}catch{return}
  const list=w.withdrawals||[],done=w.order_refunds||[];
  if(!list.length&&!done.length)return;
- const box=text('section','','member-card');box.dataset.withdrawal='1';box.append(text('h3','구독권 청약철회'));
+ const box=text('section','','member-card');box.dataset.withdrawal='1';box.append(text('h3','청약철회·환불'));
  paragraph(box,'입금 확인일로부터 7일 안에, 그 구독 기간에 요청·수락·거절·메시지·행사 신청을 한 번도 하지 않았다면 전액 환불받을 수 있습니다(전자상거래법상 청약철회). 신청하면 그 구독 기간은 바로 회수됩니다.');
  for(const o of list){
   if(done.some(d=>d.reference===o.reference))continue;
@@ -611,7 +623,7 @@ async function showWithdrawals(h){
  }
  for(const d of done){
   const card=text('article','','mini-card');
-  card.append(text('p','청약철회 · '+money(d.amount_krw)+' · '+(d.status==='refunded'?'환불 완료 · '+String(d.refunded_at||'').slice(0,10)+' 송금':'환불 예정 · '+refundDeadline(d.refund_due_at)+'까지 입금하신 계좌로 돌려드립니다')));
+  card.append(text('p',(REFUND_REASON[d.reason]||'환불')+' · '+money(d.amount_krw)+' · '+(d.status==='refunded'?'환불 완료 · '+String(d.refunded_at||'').slice(0,10)+' 송금':'환불 예정 · '+refundDeadline(d.refund_due_at)+'까지 입금하신 계좌로 돌려드립니다')));
   box.append(card);
  }
  h.append(box);
@@ -655,7 +667,7 @@ const INVITE_ERR={account_not_found:'아직 ekodi.kr에 로그인한 적 없는 
 async function showProgramAdmin(h){
  let d;try{d=await api('/admin/program')}catch(e){if(e?.status===403)return;notice(h,errorText(e));return}
  const box=text('section','','member-card');box.append(text('h3','행사·모임 관리'));
- paragraph(box,'만든 뒤 "공개"를 눌러야 회원에게 보입니다. 참가비가 있는 행사는 입금 확인 절차가 준비될 때까지 신청을 받지 않으니, 지금은 무료로 여세요.');
+ paragraph(box,'만든 뒤 "공개"를 눌러야 회원에게 보입니다. 참가비는 선택입니다. 유료로 열면 신청자가 계좌이체하고, 입금 확인(아래 입금 확인 화면) 뒤 신청이 완료됩니다. '+EVENT_REFUND_RULE);
  const form=text('div','','program-form');
  const field=(label,el)=>{const w=text('label',label,'field');w.append(el);form.append(w);return el};
  const kind=document.createElement('select');for(const [v,l] of [['event','행사(한 번의 만남)'],['group','모임(정기 소그룹)']]){const o=document.createElement('option');o.value=v;o.textContent=l;kind.append(o)}field('종류',kind);
@@ -664,26 +676,27 @@ async function showProgramAdmin(h){
  const note=document.createElement('input');note.type='text';note.maxLength=80;note.placeholder='예: 매주 토요일 오후 3시';field('정기 일정(모임만)',note);
  const region=document.createElement('select');for(const r of ['',...(d.regions||[])]){const o=document.createElement('option');o.value=r;o.textContent=r||'지역 선택';region.append(o)}field('지역',region);
  const cap=document.createElement('input');cap.type='number';cap.min='1';cap.max='500';cap.placeholder='비우면 제한 없음';field('정원',cap);
+ const fee=document.createElement('input');fee.type='number';fee.min='0';fee.max='1000000';fee.step='1000';fee.placeholder='0이면 무료';field('참가비(원, 선택)',fee);
  const summary=document.createElement('input');summary.type='text';summary.maxLength=350;field('한 줄 소개',summary);
  const desc=document.createElement('textarea');desc.maxLength=5000;desc.rows=4;field('자세한 안내',desc);
  const msg=text('p','','status-text');
  form.append(button('초안으로 저장',async()=>{
   if(title.value.trim().length<3||!when.value){msg.textContent='제목(3자 이상)과 날짜를 입력해 주세요.';return}
-  const body={kind:kind.value,title:title.value.trim(),starts_at:new Date(when.value).toISOString(),schedule_note:note.value.trim(),region:region.value,summary:summary.value.trim(),description:desc.value.trim(),capacity:cap.value?Number(cap.value):null};
+  const body={kind:kind.value,title:title.value.trim(),starts_at:new Date(when.value).toISOString(),schedule_note:note.value.trim(),region:region.value,summary:summary.value.trim(),description:desc.value.trim(),capacity:cap.value?Number(cap.value):null,fee_krw:fee.value?Number(fee.value):0};
   try{await api('/admin/program',{method:'POST',body});msg.textContent='초안으로 저장했습니다. 아래 목록에서 "공개"를 누르면 회원에게 보입니다.'}catch(e){msg.textContent=errorText(e)}
  },'primary'),msg);
  const det=document.createElement('details');det.className='program-new';det.append(text('summary','새 행사·모임 만들기'),form);box.append(det);
  const STATE={draft:'초안',published:'공개 중',cancelled:'취소됨'};
  for(const e of d.events||[]){
   const card=text('article','','mini-card');
-  card.append(text('p',(e.kind==='group'?'[모임] ':'[행사] ')+e.title+' · '+STATE[e.state]+' · 신청 '+e.taken+(e.capacity?'/'+e.capacity:'')+'명'));
+  card.append(text('p',(e.kind==='group'?'[모임] ':'[행사] ')+e.title+' · '+STATE[e.state]+' · '+(e.fee_krw>0?money(e.fee_krw):'무료')+' · 신청 '+e.taken+(e.capacity?'/'+e.capacity:'')+'명'));
   paragraph(card,whenText(e)+(e.region?' · '+e.region:''));
   const row=text('div','','action-row');const m2=text('p','','status-text');
   const setState=(st,label,ask)=>button(label,async()=>{if(ask&&!confirm(ask))return;try{await api('/admin/program/'+e.id,{method:'PUT',body:{state:st}});m2.textContent=label+' 완료'}catch(err){m2.textContent=errorText(err)}},st==='published'?'primary':'outline');
   if(e.state!=='published')row.append(setState('published','공개'));
   if(e.state==='published')row.append(setState('draft','비공개로 돌리기'));
-  if(e.state!=='cancelled')row.append(setState('cancelled','취소',e.taken?'신청한 '+e.taken+'명에게는 따로 알려 주셔야 합니다. 취소할까요?':'취소할까요?'));
-  row.append(button('신청자 보기',async()=>{try{const r=await api('/admin/program/'+e.id+'/rsvps');m2.textContent=(r.rsvps||[]).filter(x=>x.status!=='cancelled').map(x=>x.display_name).join(', ')||'아직 신청자가 없습니다.'}catch(err){m2.textContent=errorText(err)}}));
+  if(e.state!=='cancelled')row.append(setState('cancelled','취소',(e.taken?'신청한 '+e.taken+'명에게는 따로 알려 주셔야 합니다. ':'')+(e.fee_krw>0?'입금을 마친 분은 전액 환불 대상으로 "환불 송금 처리"에 올라갑니다. ':'')+'취소할까요?'));
+  row.append(button('신청자 보기',async()=>{try{const r=await api('/admin/program/'+e.id+'/rsvps');m2.textContent=(r.rsvps||[]).filter(x=>x.status!=='cancelled').map(x=>x.display_name+(x.paid===false?'(입금 대기)':x.paid?'(입금 완료)':'')).join(', ')||'아직 신청자가 없습니다.'}catch(err){m2.textContent=errorText(err)}}));
   card.append(row,m2);box.append(card);
  }
  h.append(box);
@@ -698,7 +711,7 @@ async function showRefundsAdmin(h){
   if(!d.pending)paragraph(box,'지금은 환불할 건이 없습니다.');
   for(const r of d.refunds||[]){
    const card=text('article','','mini-card');
-   card.append(text('p',(r.kind==='subscription_withdrawal'?'[구독권 청약철회] ':'[청구서] ')+(r.email||'회원')+' · '+money(r.amount_krw)+' · '+(INVOICE_STATUS[r.status]||r.status)));
+   card.append(text('p',(r.reason?'['+(REFUND_REASON[r.reason]||'환불')+'] ':'[청구서] ')+(r.email||'회원')+' · '+money(r.amount_krw)+' · '+(INVOICE_STATUS[r.status]||r.status)));
    paragraph(card,'원 결제 주문 '+(r.order_reference||'-')+' · 입금 거래번호 '+(r.paid_trace||'-')+(r.paid_at?' · 입금 '+r.paid_at.slice(0,10):''));
    if(r.status==='refunded'){paragraph(card,'송금 거래번호 '+r.refund_trace+' · '+(r.refunded_at||'').slice(0,16).replace('T',' ')+' 완료');box.append(card);continue}
    paragraph(card,'지급 기한: '+refundDeadline(r.refund_due_at)+'까지(3영업일)');
@@ -710,7 +723,7 @@ async function showRefundsAdmin(h){
     const trace=input.value.trim();
     if(trace.length<4){msg.textContent=errorText({message:'refund_trace_required'});return}
     if(!confirm(money(r.amount_krw)+'을 '+(r.email||'회원')+'님 입금 계좌로 송금하셨습니까? 기록 후에는 되돌릴 수 없습니다.'))return;
-    try{await api('/bank/admin/refunds/'+(r.kind==='subscription_withdrawal'?'order/':'')+r.id+'/complete',{method:'POST',body:{refund_trace:trace}});msg.textContent='환불 완료로 기록했습니다.';input.disabled=true}
+    try{await api('/bank/admin/refunds/'+(r.reason?'order/':'')+r.id+'/complete',{method:'POST',body:{refund_trace:trace}});msg.textContent='환불 완료로 기록했습니다.';input.disabled=true}
     catch(e){msg.textContent=errorText(e)}
    },'primary'),msg);
    box.append(card);
@@ -828,7 +841,7 @@ async function showBankAdmin(h){
   for(const row of data.orders){
    const card=text('article','','mini-card');
    card.append(text('h4','결제고유번호 '+row.reference));
-   paragraph(card,'상품: '+({sub_1d:'구독권 1일',sub_10d:'구독권 10일',sub_20d:'구독권 20일',sub_30d:'구독권 1달',request_fee:'요청·수락 청구서',consulting:'선택형 컨설팅'}[row.plan_code]||'행사 참여')+' / '+money(row.amount_krw)+(row.email?' · '+row.email:''));
+   paragraph(card,'상품: '+({sub_1d:'구독권 1일',sub_10d:'구독권 10일',sub_20d:'구독권 20일',sub_30d:'구독권 1달',request_fee:'요청·수락 청구서',event_fee:'행사·모임 참가비',consulting:'선택형 컨설팅'}[row.plan_code]||'행사 참여')+' / '+money(row.amount_krw)+(row.email?' · '+row.email:''));
    paragraph(card,'상태: '+(stateLabel[row.status]||row.status));
    paragraph(card,'회원 입금 신고: '+(row.reported_paid_at||'없음'));
    paragraph(card,'관리자 확인: '+(row.verified_at||'미확인')+' / 회원 재확인: '+(row.member_acknowledged_at||'미확인'));

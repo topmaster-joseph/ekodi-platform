@@ -229,11 +229,64 @@ begin
  r:=public.singles_event_rsvp(c,ev); if r->>'status'<>'requested' then raise exception 'FAIL after cancel'; end if;
  -- 모임은 시작일이 지나도 신청 가능, 정원 없음
  r:=public.singles_event_rsvp(c,gr); if r->>'status'<>'requested' then raise exception 'FAIL group'; end if;
- -- 유료 행사·지난 행사·초안 거부
- update public.singles_events set fee_krw=10000 where id=ev;
- begin perform public.singles_event_rsvp(b,ev); raise exception 'FAIL fee'; exception when feature_not_supported then null; end;
- update public.singles_events set fee_krw=0,starts_at=now()-interval '1 hour' where id=ev;
+ -- 지난 행사 거부(유료 행사는 아래 별도 시나리오)
+ update public.singles_events set starts_at=now()-interval '1 hour' where id=ev;
  begin perform public.singles_event_rsvp(b,ev); raise exception 'FAIL past'; exception when no_data_found then null; end;
  raise notice 'SINGLES-FLOW PASS: events_ok';
+end $$;
+
+-- 유료 행사·모임: 자리 확보·주문·입금 확인·기한 만료·24시간 전 취소 환불·행사 취소 환불·늦은 입금 환불(12종)
+do $$
+declare op uuid:=gen_random_uuid(); a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); c uuid:=gen_random_uuid();
+ ev uuid; ev2 uuid; r jsonb; ref text; refb text;
+begin
+ set local session_replication_role=replica;
+ insert into public.singles_memberships(user_id,person_id,status,age_19_confirmed,base_consent,adult_verified_at) values
+  (a,gen_random_uuid(),'active',true,true,now()),(b,gen_random_uuid(),'active',true,true,now()),(c,gen_random_uuid(),'active',true,true,now());
+ insert into public.singles_bank_operators(user_id,enabled,can_verify,can_configure) values(op,true,true,true)
+  on conflict(user_id) do update set enabled=true,can_verify=true,can_configure=true;
+ insert into public.singles_bank_settings(id,bank_name,account_number,account_holder,active) values(1,'검증은행','000-000-000000','동행검증',true)
+  on conflict(id) do update set active=true,bank_name='검증은행',account_number='000-000-000000',account_holder='동행검증';
+ insert into public.singles_events(host_user_id,title,region,starts_at,capacity,state,kind,fee_krw) values(op,'유료 행사','전남광주',now()+interval '5 days',2,'published','event',20000) returning id into ev;
+ -- a: 신청 → 결제 대기 + 주문 2만원, 다시 눌러도 같은 주문
+ r:=public.singles_event_rsvp(a,ev); ref:=r->>'order_reference';
+ if r->>'status'<>'pending_payment' or (select amount_krw from public.singles_bank_orders where reference=ref)<>20000 then raise exception 'FAIL a %',r; end if;
+ if public.singles_event_rsvp(a,ev)->>'order_reference'<>ref then raise exception 'FAIL same order'; end if;
+ -- b 신청 → 정원 2 다 참(결제 대기도 자리 차지), c 거부
+ r:=public.singles_event_rsvp(b,ev); refb:=r->>'order_reference';
+ begin perform public.singles_event_rsvp(c,ev); raise exception 'FAIL full'; exception when check_violation then null; end;
+ -- a 입금 신고 → 운영자 확인 → 신청 완료
+ update public.singles_bank_orders set status='reported_paid',reported_paid_at=now() where reference=ref;
+ perform public.singles_bank_confirm_order(ref,op,'verified','EV-PAY-0001');
+ if (select status||'/'||(paid_at is not null)::text from public.singles_event_rsvps where order_reference=ref)<>'requested/true' then raise exception 'FAIL paid'; end if;
+ -- b 결제 기한 지남 → 자동 취소, 자리 반환, 주문 취소
+ update public.singles_event_rsvps set pay_due_at=now()-interval '1 minute' where order_reference=refb;
+ r:=public.singles_daily_ops(); if (r->>'event_payments_expired')::int<1 then raise exception 'FAIL expire %',r; end if;
+ if (select status from public.singles_bank_orders where reference=refb)<>'cancelled' then raise exception 'FAIL order cancel'; end if;
+ r:=public.singles_event_rsvp(c,ev); if r->>'status'<>'pending_payment' then raise exception 'FAIL seat back'; end if;
+ -- a 24시간 전 취소 → 전액 환불 대상
+ r:=public.singles_event_rsvp_cancel(a,ev); if (r->>'refund_krw')::int<>20000 then raise exception 'FAIL refund %',r; end if;
+ if not exists(select 1 from public.singles_order_refunds where reference=ref and reason='event_cancel' and amount_krw=20000) then raise exception 'FAIL refund row'; end if;
+ -- 운영자 행사 취소 → c(결제 완료) 전액 환불, 결제 대기 주문 취소
+ refb:=(select order_reference from public.singles_event_rsvps where event_id=ev and user_id=c);
+ update public.singles_bank_orders set status='reported_paid',reported_paid_at=now() where reference=refb;
+ perform public.singles_bank_confirm_order(refb,op,'verified','EV-PAY-0002');
+ begin perform public.singles_event_cancel(a,ev); raise exception 'FAIL nonowner'; exception when insufficient_privilege then null; end;
+ r:=public.singles_event_cancel(op,ev); if (r->>'refunds')::int<>1 or (r->>'refund_krw')::int<>20000 then raise exception 'FAIL cancel %',r; end if;
+ -- 24시간 이내 취소는 환불 없음
+ insert into public.singles_events(host_user_id,title,region,starts_at,state,kind,fee_krw) values(op,'임박 행사','서울',now()+interval '10 hours','published','event',10000) returning id into ev2;
+ r:=public.singles_event_rsvp(b,ev2); ref:=r->>'order_reference';
+ update public.singles_bank_orders set status='reported_paid',reported_paid_at=now() where reference=ref;
+ perform public.singles_bank_confirm_order(ref,op,'verified','EV-PAY-0003');
+ r:=public.singles_event_rsvp_cancel(b,ev2); if (r->>'refund_krw')::int<>0 then raise exception 'FAIL late refund'; end if;
+ -- 만료 뒤 들어온 입금 → 전액 환불 대상
+ r:=public.singles_event_rsvp(a,ev2); ref:=r->>'order_reference';
+ update public.singles_event_rsvps set pay_due_at=now()-interval '1 minute' where order_reference=ref; perform public.singles_event_payment_housekeeping();
+ update public.singles_bank_orders set status='reported_paid',reported_paid_at=now() where reference=ref;
+ perform public.singles_bank_confirm_order(ref,op,'verified','EV-PAY-0004');
+ if not exists(select 1 from public.singles_order_refunds where reference=ref and reason='event_unavailable') then raise exception 'FAIL late pay refund'; end if;
+ -- 환불 송금 기록은 기존 운영자 기능으로
+ r:=public.singles_order_refund_complete(op,ref,'EV-RF-0001'); if r->>'status'<>'refunded' then raise exception 'FAIL refund complete'; end if;
+ raise notice 'SINGLES-FLOW PASS: paid_events_ok';
 end $$;
 rollback;

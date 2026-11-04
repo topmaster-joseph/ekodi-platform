@@ -75,7 +75,7 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const withdrawals=[];
   for(const o of recent){const {data,error}=await admin.rpc('singles_subscription_withdrawal_eval',{p_user:userId,p_reference:o.reference});
    if(error)throw error;withdrawals.push({...o,eligible:data?.eligible===true,reason:data?.reason||null,deadline:data?.deadline||null});}
-  const order_refunds=await many(admin.from('singles_order_refunds').select('reference,amount_krw,status,revoked_days,requested_at,refund_due_at,refunded_at')
+  const order_refunds=await many(admin.from('singles_order_refunds').select('reference,amount_krw,status,reason,revoked_days,requested_at,refund_due_at,refunded_at')
    .eq('user_id',userId).order('requested_at',{ascending:false}).limit(20));
   return reply(req,{paid_model:Deno.env.get('SINGLES_REQUEST_BILLING_ENABLED')==='true',paid_member:active,
    subscription_expires_at:active?grant.expires_at:null,invoices,withdrawals,order_refunds});
@@ -355,12 +355,12 @@ export async function handleSinglesBank(req:Request,path:string,admin:Admin,user
   const refunds:any[]=rows.map((r:any)=>({id:r.id,kind:'invoice',amount_krw:r.amount_krw,status:r.status,role:r.role,email:emails.get(r.user_id)||null,
     self:r.user_id===userId,order_reference:r.order_reference,paid_trace:byRef.get(r.order_reference)?.bank_trace||null,
     paid_at:r.paid_at,refund_due_at:r.refund_due_at,refunded_at:r.refunded_at,refund_trace:r.refund_trace}));
-  const orows=await many(admin.from('singles_order_refunds').select('reference,user_id,amount_krw,status,revoked_days,requested_at,refund_due_at,refunded_at,refund_trace')
+  const orows=await many(admin.from('singles_order_refunds').select('reference,user_id,amount_krw,status,reason,revoked_days,requested_at,refund_due_at,refunded_at,refund_trace')
     .order('refund_due_at',{ascending:true}).limit(100));
   const oorders=orows.length?await many(admin.from('singles_bank_orders').select('reference,plan_code,bank_trace,verified_at').in('reference',orows.map((r:any)=>r.reference))):[];
   const oby=new Map<string,any>(oorders.map((o:any)=>[o.reference,o]));
   const oemails=await emailsFor(admin,[...new Set<string>(orows.map((r:any)=>r.user_id))]);
-  for(const r of orows)refunds.push({id:r.reference,kind:'subscription_withdrawal',amount_krw:r.amount_krw,status:r.status,role:null,
+  for(const r of orows)refunds.push({id:r.reference,kind:r.reason==='withdrawal'?'subscription_withdrawal':'event_fee',reason:r.reason,amount_krw:r.amount_krw,status:r.status,role:null,
     email:oemails.get(r.user_id)||null,self:r.user_id===userId,order_reference:r.reference,plan_code:oby.get(r.reference)?.plan_code||null,
     paid_trace:oby.get(r.reference)?.bank_trace||null,paid_at:oby.get(r.reference)?.verified_at||null,
     refund_due_at:r.refund_due_at,refunded_at:r.refunded_at,refund_trace:r.refund_trace});
