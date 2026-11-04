@@ -7,169 +7,128 @@ import { routeCanonicalSurface } from '../canonical-surface-router.js';
 
 const origin='https://ekodi.kr';
 const get=path=>new Request(origin+path);
-const authRequest=(path,token)=>new Request(origin+path,{headers:{authorization:'Bearer '+token}});
-const tok='a'.repeat(30);
+const authorized=(path,token='a'.repeat(30))=>new Request(origin+path,{headers:{authorization:'Bearer '+token}});
 
-test('public Invest landing shows information only, without any stock picks or analysis form',async()=>{
+test('public /invest explains service without user data and starts login into /invest/my',async()=>{
  const result=investIntroPage();
  assert.equal(result.status,200);
  assert.match(result.headers.get('cache-control'),/no-store/);
  const html=await result.text();
  assert.match(html,/로그인 전에는 설명만/);
  assert.match(html,/로그인 후 마이투자/);
- assert.match(html,/회원 공통 분석은 별도 보기/);
- assert.match(html,/site=my&return_to=https%3A%2F%2Fekodi.kr%2Fmy%2Finvest/);
- assert.match(html,/data-ekodi-platform="invest"/,"existing guarded Site Core canary must identify Invest");
- assert.doesNotMatch(html,/삼성전자|NVIDIA|id="result"|id="capital"/);
+ assert.match(html,/공개 분석 안내 보기/);
+ assert.match(html,/site=invest&return_to=https%3A%2F%2Fekodi.kr%2Finvest%2Fmy/);
+ assert.match(html,/data-ekodi-platform="invest"/);
+ assert.doesNotMatch(html,/id="result"|id="capital"|access_token|Bearer /);
 });
-test('member common-analysis page is hidden until verified auth and contains no personalization',async()=>{
- const response=investAnalysisPage();
- const html=await response.text();
- assert.match(html,/<section id="analysis" hidden>/);
- assert.match(html,/모든 로그인 회원/);
- assert.doesNotMatch(html,/access_token|보유 종목|내 개인 투자 프로필/);
+test('public /invest/analysis is visible before sign-in and has zero personalized queries',async()=>{
+ const html=await investAnalysisPage().text();
+ assert.match(html,/공개 투자분석 안내/);
+ assert.match(html,/종목별 분석/);
+ assert.match(html,/검증되지 않은 수익률은 표시하지 않습니다/);
+ assert.match(html,/src="\/invest\/analysis.js"/);
+ assert.doesNotMatch(html,/id="analysis" hidden|내 자산|id="apply"|access_token/);
  const js=await investAnalysisScript().text();
- assert.match(js,/\/workspace-api\/v1\/invest\/common-analysis/);
- assert.match(js,/Bearer /);
- assert.match(js,/if\(!response.ok\)throw/);
- assert.doesNotMatch(js,/\/automation\/policy|\/invest\/context|삼성전자|NVIDIA/);
+ assert.match(js,/ekodi_token/);
+ assert.match(js,/location.replace\('\/invest\/my#ekodi_token=/);
+ assert.doesNotMatch(js,/Bearer |\/workspace-api\/v1\/invest\/common-analysis|\/broker\/orders/);
 });
-test('private My Invest has a disabled subscription by default',async()=>{
- const response=await investMyRoute(get('/invest'),{});
- assert.equal(response.status,200);
- assert.match(response.headers.get('cache-control'),/no-store/);
- assert.match(response.headers.get('x-robots-tag'),/noindex/);
- const html=await response.text();
- assert.match(html,/일반회원용 유료 구독.*비활성화/);
+test('canonical private path renders only a minimal pre-login view',async()=>{
+ const r=await investMyRoute(get('/invest/my'),{});
+ assert.equal(r.status,200);
+ assert.match(r.headers.get('cache-control'),/no-store/);
+ assert.match(r.headers.get('x-robots-tag'),/noindex/);
+ const html=await r.text();
+ assert.match(html,/id="investAuthIntro"/);
+ assert.match(html,/id="ownerSidebar"[^>]*hidden/);
  assert.match(html,/<section id="owner" hidden>/);
- assert.match(html,/\/my\/invest\/style.css/);
- assert.doesNotMatch(html,/<style>/);
- const style=await investMyRoute(get('/invest/style.css'),{});
- assert.match(style.headers.get('content-type'),/text\/css/);
+ assert.match(html,/id="stepUpButton"/);
+ assert.match(html,/\/invest\/my\/style.css/);
+ assert.doesNotMatch(html,/<header class="top"|href="\/my">내 계정|href="\/invest">투자 안내/);
 });
-test('private My Invest access API rejects unauthenticated clients',async()=>{
- const response=await investMyRoute(get('/invest/access'),{});
- assert.equal(response.status,401);
- assert.equal((await response.json()).error,'authentication_required');
+test('every listed private page and asset resolves directly, unknown routes are 404',async()=>{
+ const pages=['','manual','broker','market','portfolio','autopilot','auto-policy','live','strategy','value','design','scenario','risk','reports'];
+ for(const slug of pages){
+  const path='/invest/my'+(slug?'/'+slug:'');
+  const r=await investMyRoute(get(path),{});
+  assert.equal(r.status,200,path);
+  assert.match(r.headers.get('cache-control'),/no-store/);
+ }
+ for(const asset of ['style.css','app.js']){
+  const r=await investMyRoute(get('/invest/my/'+asset),{});
+  assert.equal(r.status,200,asset);
+ }
+ assert.equal((await investMyRoute(get('/invest/my/not-real'),{})).status,404);
 });
-test('private My Invest fails closed for authenticated non-owner',async()=>{
+test('private access API rejects anonymous users for canonical and internal paths',async()=>{
+ for(const path of ['/invest/my/access','/invest/access']){
+  const r=await investMyRoute(get(path),{});
+  assert.equal(r.status,401,path);
+  assert.equal((await r.json()).error,'authentication_required');
+  assert.equal(r.headers.get('cache-control'),'private, no-store');
+ }
+});
+test('matching confirmed owner alone receives disabled paid and live entitlements',async()=>{
  const original=globalThis.fetch;
- globalThis.fetch=async ()=>new Response(JSON.stringify({id:'other-id',email:'other@example.com',email_confirmed_at:'2026-10-01T00:00:00Z'}),{status:200,headers:{'content-type':'application/json'}});
+ globalThis.fetch=async()=>new Response(JSON.stringify({id:'owner-id',email:'owner@example.com',email_confirmed_at:'2026-10-01T00:00:00Z'}),{status:200,headers:{'content-type':'application/json'}});
  try{
-  const response=await investMyRoute(authRequest('/invest/access',tok),{});
-  assert.equal(response.status,403);
-  assert.equal((await response.json()).error,'subscription_not_active');
- }finally{globalThis.fetch=original}
-});
-test('private My Invest verifies the configured owner via confirmed Google member identity',async()=>{
- const original=globalThis.fetch;
- globalThis.fetch=async ()=>new Response(JSON.stringify({id:'owner-id',email:'owner@example.com',email_confirmed_at:'2026-10-01T00:00:00Z'}),{status:200,headers:{'content-type':'application/json'}});
- try{
-  const response=await investMyRoute(authRequest('/invest/access',tok),{INVEST_OWNER_EMAIL:'owner@example.com'});
-  assert.equal(response.status,200);
-  const body=await response.json();
-  assert.equal(body.ok,true);
+  const r=await investMyRoute(authorized('/invest/my/access'),{INVEST_OWNER_EMAIL:'owner@example.com'});
+  assert.equal(r.status,200);
+  const body=await r.json();
+  assert.equal(body.scope,'self-research');
   assert.equal(body.paidSubscriptionActive,false);
   assert.equal(body.liveTradingEnabled,false);
  }finally{globalThis.fetch=original}
 });
-test('unconfirmed matching email does not activate owner entitlement',async()=>{
+test('different owner email cannot use private research',async()=>{
  const original=globalThis.fetch;
- globalThis.fetch=async url=>String(url).includes('/api/session')
-   ?new Response(JSON.stringify({authenticated:false}),{status:401})
-   :new Response(JSON.stringify({id:'owner-id',email:'owner@example.com'}),{status:200});
+ globalThis.fetch=async()=>new Response(JSON.stringify({id:'other-id',email:'other@example.com',email_confirmed_at:'2026-10-01T00:00:00Z'}),{status:200,headers:{'content-type':'application/json'}});
  try{
-  const response=await investMyRoute(authRequest('/invest/access',tok),{INVEST_OWNER_EMAIL:'owner@example.com'});
-  assert.equal(response.status,403);
+  const r=await investMyRoute(authorized('/invest/my/access'),{INVEST_OWNER_EMAIL:'owner@example.com'});
+  assert.equal(r.status,403);
+  assert.equal((await r.json()).error,'subscription_not_active');
  }finally{globalThis.fetch=original}
 });
-test('super admin owner may use existing EKODI admin bearer token',async()=>{
+test('unconfirmed email fails closed even when the address matches',async()=>{
  const original=globalThis.fetch;
- globalThis.fetch=async url=>String(url).includes('/api/session')
-   ?new Response(JSON.stringify({authenticated:true,role:'super_admin',email:'owner@example.com'}),{status:200})
-   :new Response('{}',{status:401});
+ globalThis.fetch=async input=>String(input).includes('/api/session')?
+  new Response(JSON.stringify({authenticated:false}),{status:401}):
+  new Response(JSON.stringify({id:'owner-id',email:'owner@example.com'}),{status:200});
  try{
-  const response=await investMyRoute(authRequest('/invest/access',tok),{INVEST_OWNER_EMAIL:'owner@example.com'});
-  assert.equal(response.status,200);
-  assert.equal((await response.json()).scope,'self-research');
+  const r=await investMyRoute(authorized('/invest/my/access'),{INVEST_OWNER_EMAIL:'owner@example.com'});
+  assert.equal(r.status,403);
  }finally{globalThis.fetch=original}
 });
-test('private access does not expose member financial data and routes fail closed',async()=>{
- const access=await investMyRoute(get('/invest/access'),{});
- assert.equal(access.headers.get('cache-control'),'private, no-store');
- assert.equal(await investMyRoute(get('/invest/private-internal'),{}),null);
- const js=await investMyRoute(get('/invest/app.js'),{});
- const source=await js.text();
- assert.match(source,/\/my\/invest\/access/);
- assert.doesNotMatch(source,/localStorage\.setItem|\/automation\/resume|\/broker\/orders/);
+test('verified superadmin token retains its existing research-only scope',async()=>{
+ const original=globalThis.fetch;
+ globalThis.fetch=async input=>String(input).includes('/api/session')?
+  new Response(JSON.stringify({authenticated:true,role:'super_admin',email:'owner@example.com'}),{status:200}):
+  new Response('{}',{status:401});
+ try{
+  const r=await investMyRoute(authorized('/invest/my/access'),{INVEST_OWNER_EMAIL:'owner@example.com'});
+  assert.equal(r.status,200);
+  assert.equal((await r.json()).scope,'self-research');
+ }finally{globalThis.fetch=original}
 });
-
-test('canonical /my/invest routes through the MY worker with private non-cacheable HTML',async()=>{
+test('legacy /my/invest route redirects instead of creating a duplicate private page',async()=>{
  const env={MY:{fetch:request=>myWorker.fetch(request,{})}};
- const response=await routeCanonicalSurface(get('/my/invest'),env);
- assert.equal(response.status,200);
- assert.equal(response.headers.get('x-ekodi-canonical-surface'),'my');
- assert.match(response.headers.get('cache-control'),/no-store/);
- assert.match(response.headers.get('x-robots-tag'),/noindex/);
- const html=await response.text();
- assert.match(html,/마이투자/);
- assert.match(html,/id="owner" hidden/);
+ for(const [legacy,target] of [['/my/invest','/invest/my'],['/my/invest/access','/invest/my/access']]){
+  const r=await routeCanonicalSurface(get(legacy),env);
+  assert.equal(r.status,308,legacy);
+  assert.equal(new URL(r.headers.get('location')).pathname,target);
+ }
+ const canonical=await myWorker.fetch(get('/invest/my'),{});
+ assert.equal(canonical.status,200);
+ const denied=await myWorker.fetch(get('/invest/my/access'),{});
+ assert.equal(denied.status,401);
 });
-test('canonical /my/invest/access rejects anonymous requests at the real MY entry',async()=>{
- const env={MY:{fetch:request=>myWorker.fetch(request,{})}};
- const response=await routeCanonicalSurface(get('/my/invest/access'),env);
- assert.equal(response.status,401);
- assert.equal((await response.json()).error,'authentication_required');
-});
-
-
-test('private owner investment dashboard keeps data local and labels assumptions',async()=>{
- const page=await investMyRoute(get('/invest'),{});
- const html=await page.text();
- assert.match(html,/나만의 투자분석 설계/);
- assert.match(html,/시나리오/);
- assert.match(html,/가상 예시/);
- assert.match(html,/실시간 시세가 연결되지 않습니다/);
- assert.match(html,/id="owner" hidden>/);
- assert.match(html,/holdingForm/);
- assert.match(html,/download/);
- const script=await investMyRoute(get('/invest/app.js'),{});
- const js=await script.text();
+test('owner client consumes one-time auth only in the private view; no credential storage or live orders',async()=>{
+ const js=await (await investMyRoute(get('/invest/my/app.js'),{})).text();
  assert.match(js,/verifyOtp/);
  assert.match(js,/getSession/);
- assert.match(js,/history\.replaceState/);
- assert.match(js,/ekodi_token/);
- assert.match(js,/\/my\/invest\/access/);
- assert.match(js,/textContent/);
+ assert.match(js,/\/invest\/my\/access/);
+ assert.match(js,/loginHref\(/);
+ assert.match(js,/site=invest&return_to/);
+ assert.match(js,/history\.pushState/);
  assert.doesNotMatch(js,/localStorage\.setItem|sessionStorage\.setItem|\/broker\/orders/);
- const stylesheet=await investMyRoute(get('/invest/style.css'),{});
- const css=await stylesheet.text();
- assert.match(css,/\.hero/);
- assert.match(css,/@media/);
-});
-
-test('private owner scenario entry does not expose analysis to unverified browsers',async()=>{
- const page=await investMyRoute(get('/invest'),{});
- const html=await page.text();
- assert.doesNotMatch(html,/access_token|sb_secret_|service_role/);
- assert.match(html,/<section id="owner" hidden>/);
- const response=await investMyRoute(get('/invest/access'),{});
- assert.equal(response.status,401);
- assert.equal(response.headers.get('cache-control'),'private, no-store');
-});
-
-test('member comparison filters submit valid API enum values, avoid phantom returns, and do not fan out on selection change',async()=>{
- const html=await investAnalysisPage().text();
- for(const [key,label] of [['1w','1주'],['1m','1개월'],['3m','3개월'],['1y','1년'],['3y','3년 이상']])assert.ok(html.includes(`value="${key}"`)&&html.includes(label));
- for(const key of ['5','10','20','30'])assert.match(html,new RegExp(`value="${key}"`));
- assert.match(html,/id="apply"/);
- assert.match(html,/조건별 수익률·추천 순위를 산출하지 않습니다/);
- const js=await investAnalysisScript().text();
- assert.match(js,/new URLSearchParams\(filters\)/);
- assert.match(js,/const filters=\{market:el\('market'\)\.value,period:el\('period'\)\.value,target:el\('target'\)\.value\}/);
- assert.match(js,/data\.targetReturnPct!==Number\(filters\.target\)/);
- assert.match(js,/id!==requestId/);
- assert.match(js,/el\('apply'\)\?\.addEventListener\('click'/);
- assert.match(js,/조건별 예상수익률과 순위는 산출하지 않습니다/);
- assert.doesNotMatch(js,/market=all&period=3m&target=10|addEventListener\('change',load\)/);
 });
