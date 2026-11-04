@@ -1,4 +1,5 @@
 import authWorker from './auth-worker.js';
+import { handleAgeVerificationRequest, pruneAgeVerification } from './age-verification-core.js';
 import { handlePointsControl } from './points-control.js';
 import { handleMailControl } from './mail-control.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
@@ -739,6 +740,9 @@ async function handleControl(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // Shared age verification gateway is a guarded EKODI Core capability, not a new service/worker.
+    const ageVerificationResponse = await handleAgeVerificationRequest(request, env);
+    if (ageVerificationResponse) return ageVerificationResponse;
     const confirmationPublicResponse = await handleConfirmationPublic(request, env);
     if (confirmationPublicResponse) return confirmationPublicResponse;
     const workspaceConfirmationResponse = await handleWorkspaceConfirmations(request, env);
@@ -786,7 +790,8 @@ export default {
     ctx.waitUntil((async () => {
       await Promise.all([
         runChecks(env),
-        cloudflareAccountSnapshot(env)
+        cloudflareAccountSnapshot(env),
+        pruneAgeVerification(env)
       ]);
       const [evolution] = await Promise.all([
         evolutionSnapshot(env),
