@@ -17,10 +17,12 @@ test('three explicit approved users and existing canonical drive, not public dom
   assert.match(policy.sharedDriveMembershipSourceOfTruth,/Google Drive permissions\.list/);
   for(const config of [prod,dev]){
     assert.match(config,/STORAGE_PRIMARY_GOOGLE_EMAIL = "joseph@ekodi\.kr"/);
-    assert.match(config,/STORAGE_PRIMARY_SHARED_DRIVE_ID = "0ACM_FnMYWMFuUk9PVA"/);
     assert.match(config,/STORAGE_SHARED_DRIVE_APPROVED_EMAILS = "joseph@ekodi\.kr,topmaster\.joseph@gmail\.com,ekodibiz@gmail\.com"/);
     assert.doesNotMatch(config,/anyone_at_company|STORAGE_PRIMARY_GOOGLE_EMAIL = "topmaster/);
   }
+  // Development must never mount the production shared-drive ID.
+  assert.match(prod,/STORAGE_PRIMARY_SHARED_DRIVE_ID = "0ACM_FnMYWMFuUk9PVA"/);
+  assert.match(dev,/STORAGE_PRIMARY_SHARED_DRIVE_ID = ""/);
   assert.equal(new Set(accounts).size,3);
 });
 
