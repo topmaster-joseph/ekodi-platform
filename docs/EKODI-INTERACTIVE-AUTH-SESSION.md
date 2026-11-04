@@ -52,3 +52,16 @@
 ## 롤백
 
 먼저 열린 세션을 **세션 즉시 종료·삭제**로 닫은 뒤 PR revert → guarded release → 각 PC `agent.self_update`. 이전 Agent는 세션 만료를 관리하지 않으므로 종료를 먼저 확인합니다.
+
+
+## 도매꾹 에코디비즈 전용 인증 (2026-11-04, 단계적 검증)
+
+- 관리자 진입: `https://ekodi.kr/admin/ops/devices?externalAuth=domeggook-business`
+- 공식 공급사 진입: `https://www.domeggook.com/main/` (EKODI 디바이스 에이전트의 등록 서비스 ID `domeggook-business`)
+- 별도 TinyFish 구독이나 기존 Opera·Chrome 사용자 프로필, 세션 쿠키 복사는 사용하지 않는다.
+- 최고관리자 명시 확인 + PC 앞 사람의 로컬 동의 후 신규 임시 Chromium 프로필에 로그인한다. 브라우저는 30분 기본, 최대 60분 후 자동 종료·삭제.
+- 로그인 단계 판정은 해당 공식 호스트·허용 경로·화면의 **로그아웃 표시**·비밀번호 입력화면 부재를 모두 요구한다. 이 판정은 화면 상태에 한정하며, 구매용 Private API 권한·사업자 회원 등급·이머니 잔액 확인을 대신하지 않는다.
+- 읽기 전용 점검에서는 메뉴별 존재 여부만 익명화하여 반환한다. 이메일·휴대전화·주소·계정 ID·잔액 숫자·자격증명·쿠키·인증번호는 수집하거나 서버에 전송하지 않는다.
+- 이 기능은 상품 주문·결제·공급처 개인정보 전송을 **절대로** 수행하지 않는다. 실제 도매꾹 소액 시험주문은 공식 `setOrder` API와 기존 `BUYER_PII_RELEASE_ENABLED`, `SUPPLIER_FORWARD_ENABLED`, `DOMEGGOOK_PILOT_ORDER_IDS`, `DOMEGGOOK_PILOT_MAX_TOTAL_KRW` 승인 가드를 모두 통과한 후 별도 수행해야 한다.
+- 공급사 사업자 자격은 공식 `setLogin` 반환의 회원등급 등을 공급사 규약으로 확인하며, 단순 브라우저 로그인 성공을 거래 승인으로 승격하지 않는다.
+- 기존 `EKODI-BROWSER-WORKER-001`의 ekodi.kr 출처 제한·자동인증 금지 정책은 변경하지 않는다.
