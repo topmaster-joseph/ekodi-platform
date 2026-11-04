@@ -14,3 +14,4 @@
 .mission-private-rsvp [data-mission-participation-status][data-state="error"]{color:#97392f}
 .mission-private-rsvp [hidden]{display:none!important}
 @media(max-width:390px){.mission-private-rsvp{padding:.75rem}.mission-private-options button{flex:1 1 calc(50% - .45rem)}}
+@media(max-width:760px){.mission-saturday-card{grid-template-columns:minmax(0,1fr)}.mission-saturday-card .activity-copy{min-width:0}.mission-private-rsvp{width:100%;max-width:100%;min-width:0}}
