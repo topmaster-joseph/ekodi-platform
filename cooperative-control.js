@@ -70,6 +70,53 @@ async function application(request, env, coop) {
   return json({ ok: true, status: 'pending', grantsCreated: false }, 202);
 }
 
+// 조합원 자가 등록(2026-11-04): 로그인한 본인이 "조합원으로 등록할까요?"에 동의 체크하면
+// 이 조합(tenant)에만 member 접근권한(관리 권한 없음)을 만들고 명부에 연결한다.
+// 같은 이름의 미연결 명부 행이 정확히 하나면 그 행에 계정을 연결하고, 없으면 새 조합원 행을 추가한다.
+async function join(request, env, coop) {
+  const identity = await cooperativeIdentity(request, env);
+  if (!identity?.email) return json({ ok: false, code: 'COOP_LOGIN_REQUIRED' }, 401);
+  if (request.method !== 'POST') return json({ ok: false, code: 'METHOD_NOT_ALLOWED' }, 405);
+  const body = await inputJson(request);
+  if (Object.keys(body).some(key => !['consent', 'representative', 'business'].includes(key))) return json({ ok: false, code: 'COOP_SELF_FIELDS_ONLY' }, 400);
+  if (body.consent !== true) return json({ ok: false, code: 'COOP_JOIN_CONSENT_REQUIRED' }, 400);
+  const representative = trim(body.representative, 80);
+  if (!representative) return json({ ok: false, code: 'COOP_REPRESENTATIVE_REQUIRED' }, 400);
+  const email = String(identity.email).trim().toLowerCase();
+  const tenant = await env.DB.prepare('SELECT id, status FROM customer_tenants WHERE slug = ? LIMIT 1').bind(coop.slug).first();
+  if (!tenant || tenant.status !== 'active') return json({ ok: false, code: 'COOP_TENANT_UNAVAILABLE' }, 503);
+  const existing = await cooperativeGrantForEmail(env, coop, email);
+  // 비활성·만료된 기존 권한(관리자가 막은 계정 등)은 자가 등록으로 되살리지 않는다.
+  if (existing && !cooperativeGrantDecision(existing).allowed) return json({ ok: false, code: 'COOP_JOIN_BLOCKED' }, 403);
+  const timestamp = new Date().toISOString();
+  if (!existing) {
+    await env.DB.prepare(`INSERT INTO customer_access_grants
+        (tenant_id, email, role, enabled, created_at, principal_type, capabilities_json, denied_capabilities_json, note, visibility, updated_at)
+      VALUES (?, ?, 'member', 1, ?, 'member', '[]', '[]', ?, 'private', ?)
+      ON CONFLICT(tenant_id, email) DO NOTHING`)
+      .bind(tenant.id, email, timestamp, 'cooperative self-join with explicit consent', timestamp).run();
+  }
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const project = await loadCooperativeProject(env.DB, coop);
+    const state = project.state;
+    if (!state.founders.some(f => f.accountEmail === email)) {
+      const unlinked = state.founders.filter(f => !f.accountEmail && f.representative === representative);
+      if (unlinked.length === 1) unlinked[0].accountEmail = email;
+      else state.founders.push({ id: `${coop.workspaceId}:member:${crypto.randomUUID()}`, representative, position: 'member',
+        business: trim(body.business, 160) || null, industry: null, shares: null, consent: 'pending', accountEmail: email });
+      try {
+        await saveCooperativeProject(env.DB, coop, state, project.revision, { identity, scope: 'self-join', role: 'member' });
+      } catch (error) { if (error.status === 409 && attempt < 2) continue; throw error; }
+    }
+    break;
+  }
+  await env.DB.prepare(`INSERT INTO cooperative_applications (workspace_id, person_id, email, representative, business, message, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, '', 'joined', ?, ?)
+    ON CONFLICT(workspace_id, person_id) DO UPDATE SET status = 'joined', representative = excluded.representative, business = COALESCE(excluded.business, cooperative_applications.business), updated_at = excluded.updated_at`)
+    .bind(coop.workspaceId, identity.id, email, representative, trim(body.business, 160) || null, timestamp, timestamp).run();
+  return json({ ok: true, status: 'member', alreadyMember: Boolean(existing) });
+}
+
 export async function routeCooperative(request, env) {
   const url = new URL(request.url);
   if (url.hostname !== 'ekodi.kr') return null;
@@ -174,6 +221,7 @@ export async function routeCooperative(request, env) {
     }
     if (!env.DB?.prepare) return json({ ok: false, code: 'COOP_DATABASE_UNAVAILABLE' }, 503);
     if (path === '/api/application' && !platformContext) return application(request, env, coop);
+    if (path === '/api/join' && !platformContext) return join(request, env, coop);
     const administrative = path === '/api/project' || path === '/api/export';
     const access = await resolveCooperativeAccess(request, env, coop, { administrative, platformContext });
     if (!access.allowed) return json({ ok: false, code: access.code }, access.status);
