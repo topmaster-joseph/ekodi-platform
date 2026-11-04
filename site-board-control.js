@@ -181,6 +181,24 @@ async function ensureSchema(env){
       UNIQUE(board_id,meeting_date,author_person_id)
     )`),
     env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_mission_saturday_replies_date ON ekodi_mission_saturday_replies(board_id,meeting_date,status,id)'),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS ekodi_mission_recurring_participation (
+      board_id TEXT NOT NULL,
+      person_id TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN (0,1)),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY(board_id,person_id)
+    )`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS ekodi_mission_saturday_private_rsvp (
+      board_id TEXT NOT NULL,
+      meeting_date TEXT NOT NULL,
+      person_id TEXT NOT NULL,
+      attendance TEXT NOT NULL CHECK(attendance IN ('join','cancel','maybe')),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      PRIMARY KEY(board_id,meeting_date,person_id)
+    )`),
+    env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_mission_private_rsvp_date ON ekodi_mission_saturday_private_rsvp(board_id,meeting_date,attendance)'),
   ]);
 }
 
@@ -380,6 +398,86 @@ async function missionSaturdayHistory(request,env,instance,method){
   });
 }
 
+// Private, revocable intention only. It never creates attendance proof or points.
+export function missionEffectiveRsvp(recurring,override,meetingStatus='scheduled'){
+  if(meetingStatus!=='scheduled')return 'unavailable';
+  if(['join','cancel','maybe'].includes(override))return override;
+  return recurring?'join':'maybe';
+}
+async function missionSaturdayParticipation(request,env,instance,who,method){
+  if(instance.status!=='active')return boardJson(instance,{error:'board_unavailable'},410);
+  if(!who.authenticated)return boardJson(instance,{error:'authentication_required'},401);
+  if(instance.visibility==='members'&&!who.boardMember)return boardJson(instance,{error:'board_membership_required'},403);
+  if(!['GET','POST'].includes(method))return boardJson(instance,{error:'method_not_allowed'},405);
+  const today=missionKstToday(),date=missionSaturdayFor(today);
+  await missionEnsureWeeklyDates(env,instance.board_id,today,date);
+  const meeting=await env.DB.prepare(`SELECT meeting_date,starts_at,venue,title,status
+    FROM ekodi_mission_saturday_events WHERE board_id=? AND meeting_date=? LIMIT 1`)
+    .bind(instance.board_id,date).first();
+  if(!meeting)return boardJson(instance,{error:'meeting_unavailable'},503);
+  if(method==='POST'){
+    const origin=request.headers.get('origin');
+    if(origin&&origin!==new URL(request.url).origin)return boardJson(instance,{error:'origin_not_allowed'},403);
+    const size=Number(request.headers.get('content-length')||0);
+    if(size>2048)return boardJson(instance,{error:'payload_too_large'},413);
+    const body=await parseBody(request);
+    if(!body||typeof body!=='object'||Array.isArray(body))return boardJson(instance,{error:'invalid_request'},400);
+    const stamp=now();
+    if(body.kind==='recurring'){
+      if(typeof body.enabled!=='boolean')return boardJson(instance,{error:'explicit_choice_required'},400);
+      await env.DB.prepare(`INSERT INTO ekodi_mission_recurring_participation
+        (board_id,person_id,enabled,created_at,updated_at)
+        VALUES (?,?,?,?,?) ON CONFLICT(board_id,person_id)
+        DO UPDATE SET enabled=excluded.enabled,updated_at=excluded.updated_at`)
+        .bind(instance.board_id,who.personId,body.enabled?1:0,stamp,stamp).run();
+      await audit(env,instance,who,body.enabled?'saturday.recurring.opt_in':'saturday.recurring.opt_out','recurring','saturday',{enabled:body.enabled});
+    }else if(body.kind==='meeting'){
+      if(body.meetingDate!==date)return boardJson(instance,{error:'meeting_date_changed',meetingDate:date},409);
+      if(meeting.status!=='scheduled')return boardJson(instance,{error:'meeting_not_open'},409);
+      if(!['join','cancel','maybe','default'].includes(body.attendance))return boardJson(instance,{error:'invalid_attendance'},400);
+      if(body.attendance==='default'){
+        await env.DB.prepare(`DELETE FROM ekodi_mission_saturday_private_rsvp
+          WHERE board_id=? AND meeting_date=? AND person_id=?`)
+          .bind(instance.board_id,date,who.personId).run();
+      }else{
+        await env.DB.prepare(`INSERT INTO ekodi_mission_saturday_private_rsvp
+          (board_id,meeting_date,person_id,attendance,created_at,updated_at)
+          VALUES (?,?,?,?,?,?) ON CONFLICT(board_id,meeting_date,person_id)
+          DO UPDATE SET attendance=excluded.attendance,updated_at=excluded.updated_at`)
+          .bind(instance.board_id,date,who.personId,body.attendance,stamp,stamp).run();
+      }
+      await audit(env,instance,who,'saturday.private_rsvp.update','saturday',date,{attendance:body.attendance});
+    }else return boardJson(instance,{error:'invalid_action'},400);
+  }
+  const recurring=await env.DB.prepare(`SELECT enabled FROM ekodi_mission_recurring_participation
+    WHERE board_id=? AND person_id=? LIMIT 1`).bind(instance.board_id,who.personId).first();
+  const override=await env.DB.prepare(`SELECT attendance FROM ekodi_mission_saturday_private_rsvp
+    WHERE board_id=? AND meeting_date=? AND person_id=? LIMIT 1`)
+    .bind(instance.board_id,date,who.personId).first();
+  const enabled=Number(recurring?.enabled||0)===1;
+  const response={
+    ok:true,meeting:{date:meeting.meeting_date,time:meeting.starts_at,status:meeting.status},
+    recurring:enabled,override:override?.attendance||null,
+    planned:missionEffectiveRsvp(enabled,override?.attendance,meeting.status),
+    actualAttendance:'not_verified',
+    note:'참여 예정 정보이며 실제 출석이나 포인트 지급을 의미하지 않습니다.'
+  };
+  if(who.manage){
+    const count=await env.DB.prepare(`SELECT COUNT(*) AS n FROM (
+      SELECT person_id FROM ekodi_mission_recurring_participation
+        WHERE board_id=? AND enabled=1
+      UNION
+      SELECT person_id FROM ekodi_mission_saturday_private_rsvp
+        WHERE board_id=? AND meeting_date=? AND attendance='join'
+    ) people LEFT JOIN ekodi_mission_saturday_private_rsvp override
+      ON override.board_id=? AND override.meeting_date=? AND override.person_id=people.person_id
+    WHERE COALESCE(override.attendance,'join')='join'`)
+      .bind(instance.board_id,instance.board_id,date,instance.board_id,date).first();
+    response.managerSummary={privatePlannedJoin:Number(count?.n||0),verifiedAttendanceNotIncluded:true};
+  }
+  return boardJson(instance,response);
+}
+
 async function missionSaturdayBoard(request,env,instance,who,method){
   const today=missionKstToday(),date=missionSaturdayFor(today);
   const stamp=now();
@@ -436,6 +534,9 @@ export async function handleSiteBoardRequest(request,env){
   }
   if(route.siteId==='ekodimission'&&sub==='/api/saturday'){
     return missionSaturdayBoard(request,env,instance,who,method);
+  }
+  if(route.siteId==='ekodimission'&&sub==='/api/saturday/participation'){
+    return missionSaturdayParticipation(request,env,instance,who,method);
   }
   if(method==='GET'&&sub==='/api/me'){
     const response=boardJson(instance,{
