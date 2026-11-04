@@ -396,12 +396,14 @@
       return {...item, url:u.href};
     } catch {return null;}
   };
-  const fetchBounded = async (url, { parse = 'text', timeout = 6500 } = {}) => {
+  const fetchBounded = async (url, { parse = 'text', timeout = 6500, requireHtml = false } = {}) => {
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), timeout);
     try {
       const response = await fetch(url, {cache:'no-store', credentials:'same-origin', signal:controller.signal});
       if (!response.ok)throw new Error('HTTP '+response.status);
+      if (requireHtml && !/^(?:text\/html|application\/xhtml\+xml)(?:\s*;|\s*$)/i.test(response.headers.get('content-type') || ''))
+        throw new Error('HTML 문서가 아닌 응답');
       const limit = Number(response.headers.get('content-length') || 0);
       if (limit > 1_500_000)throw new Error('응답 크기 초과');
       const text = await response.text();
@@ -487,7 +489,7 @@
   }
   async function auditOne(site,{quiet=false}={}) {
     try{
-      const html=await fetchBounded(site.url);
+      const html=await fetchBounded(site.url,{requireHtml:true});
       const result=checkDocument(html);
       const correctCanonical=Boolean(result.canonical)&&new URL(result.canonical,site.url).href.replace(/\/$/,'')===site.url.replace(/\/$/,'');
       const basic=[result.title,result.description,correctCanonical,!result.noindex].filter(Boolean).length;
