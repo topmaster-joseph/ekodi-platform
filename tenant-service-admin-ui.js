@@ -25,22 +25,23 @@ export function summarizeTenantServiceMenuProjection(items=[]){
 
 // Presentation-only suggestions: never modify a tenant preference or confer capabilities.
 // The catalog snapshot and its readiness flags remain authoritative.
-const TENANT_SERVICE_PRESETS = Object.freeze({
-  ministry: Object.freeze({label:'교회·선교 사역',keys:['members','events','channels','posthistory','accounting','documents','analytics']}),
-  business: Object.freeze({label:'기업·업무 운영',keys:['members','accounting','payments','channels','marketing','documents','analytics']}),
-  mall: Object.freeze({label:'쇼핑몰·판매 운영',keys:['members','payments','channels','autopost','marketing','analytics']}),
-  association: Object.freeze({label:'지역·단체 운영',keys:['members','events','channels','marketing','documents','accounting','analytics']}),
-  research: Object.freeze({label:'연구·교육 운영',keys:['members','events','documents','mail','analytics']})
-});
-const TENANT_SERVICE_SITE_PROFILES=Object.freeze({
-  ekodichurch:'ministry','ekodi-church':'ministry',ekodimission:'ministry',
-  ekodibiz:'business','ekodi-biz':'business',ekoditrade:'business',
-  ekodimall:'mall',cgma:'association',cheonggye:'association',
-  'cheonggye-local':'association',ekodilab:'research','ekodi-lab':'research'
-});
 export function recommendTenantServicePreset(siteKey,items=[]){
-  const profile=TENANT_SERVICE_SITE_PROFILES[String(siteKey||'').trim().toLowerCase()];
-  const preset=TENANT_SERVICE_PRESETS[profile];
+  // Self-contained because the admin runtime serializes this function for the browser.
+  const presets={
+    ministry:{label:'교회·선교 사역',keys:['members','events','channels','posthistory','accounting','documents','analytics']},
+    business:{label:'기업·업무 운영',keys:['members','accounting','payments','channels','marketing','documents','analytics']},
+    mall:{label:'쇼핑몰·판매 운영',keys:['members','payments','channels','autopost','marketing','analytics']},
+    association:{label:'지역·단체 운영',keys:['members','events','channels','marketing','documents','accounting','analytics']},
+    research:{label:'연구·교육 운영',keys:['members','events','documents','mail','analytics']}
+  };
+  const siteProfiles={
+    ekodichurch:'ministry','ekodi-church':'ministry',ekodimission:'ministry',
+    ekodibiz:'business','ekodi-biz':'business',ekoditrade:'business',
+    ekodimall:'mall',cgma:'association',cheonggye:'association',
+    'cheonggye-local':'association',ekodilab:'research','ekodi-lab':'research'
+  };
+  const profile=siteProfiles[String(siteKey||'').trim().toLowerCase()];
+  const preset=presets[profile];
   if(!preset||!Array.isArray(items))return null;
   const candidates=items.filter(item=>preset.keys.includes(String(item?.key||'')));
   const available=candidates.filter(item=>item.readiness==='ready');
