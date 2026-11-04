@@ -776,7 +776,7 @@ async function authenticate(){
  if(!tokens.length){status('본인 확인이 필요합니다. EKODI 통합 로그인을 완료해 주세요. ',true);return}
  for(const token of tokens){
   try{
-   const response=await withTimeout(fetch('/my/invest/access',{headers:{authorization:'Bearer '+token},cache:'no-store'}),15000);
+   const response=await withTimeout(fetch('/invest/my/access',{headers:{authorization:'Bearer '+token},cache:'no-store'}),15000);
    if(!response.ok)continue;
    const result=await response.json();
    if(result&&result.ok===true&&result.scope==='self-research'){
