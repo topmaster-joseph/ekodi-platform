@@ -36,7 +36,7 @@ test('five major sidebar headings are prominent and all 14 detail links are inde
  for(const title of ['투자 현황','직접투자','AI 자동투자','투자 분석·연구','기록'])
   assert.ok(nav.includes(title),title);
  const css=await get('/style.css');
- assert.match(css,/\.sidebar-group\{font-size:17px;font-weight:900/);
+ assert.match(css,/#ownerSidebar \.sidebar-group\{display:block!important;font-size:17px;font-weight:900/);
  assert.match(css,/#ownerSidebar a\[data-invest-detail\]\{font-size:14px;font-weight:620;line-height:1\.25;min-height:34px;padding:7px 9px 7px 24px/);
 });
 test('owner verification toggles compact sidebar layout only after authorization',async()=>{
