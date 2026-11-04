@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
-const adminAssets=['journal-editorial-admin.js','journal-editorial-packet.js'];
+const adminAssets=['journal-editorial-admin.js','journal-editorial-packet.js','journal-editorial-media-admin.js'];
 const watcherTest='test/journal-admin-release-watch.test.mjs';
 const count=(text,fragment)=>text.split(fragment).length-1;
 
