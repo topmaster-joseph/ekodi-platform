@@ -7,7 +7,7 @@
   'use strict';
   const BOOKS_API = '/books/api/commerce';
   const mirrorUrl = '/ekodimall/provider-bookstore.json';
-  const grid = document.getElementById('grid');
+  const grid = document.getElementById('grid') || document.querySelector('[data-bookstore-store-grid]');
   const detailId = document.body?.dataset.bookstoreBookId || '';
   const validId = id => /^BOOK-[A-Z0-9-]{3,40}$/.test(String(id || ''));
   if (!grid && !validId(detailId)) return;
@@ -113,6 +113,12 @@
       const card = productCard(book);
       if (card) grid.append(card);
     }
+    // Dedicated EKODI Books storefront is the same public sale collection,
+    // not a frozen build-time projection of the publisher's live approvals.
+    const count = document.querySelector('[data-bookstore-public-count]');
+    if (count) count.textContent = grid.querySelectorAll('.card').length + '개';
+    const state = document.querySelector('[data-bookstore-store-status]');
+    if (state) state.textContent = grid.querySelector('.card') ? '도서 판매 중' : '판매 준비 중';
     window.dispatchEvent(new CustomEvent('ekodi:marketplace-products-loaded', { detail: { category: 'book', count: released.size, source: 'books-approval' } }));
   }
   async function syncDetail() {
@@ -121,6 +127,13 @@
     const link = document.querySelector('[data-bookstore-purchase-link]');
     const note = document.querySelector('[data-bookstore-transaction-note]');
     if (!link || !status) return;
+    const setSection = (label, value) => {
+      for (const block of document.querySelectorAll('.product-info-block')) {
+        if (block.querySelector('small')?.textContent?.trim() !== label) continue;
+        const body = block.querySelector('p');
+        if (body) body.textContent = value;
+      }
+    };
     const detailsHref = '/books/book/?id=' + encodeURIComponent(detailId);
     let quote = null;
     try { quote = await quoteFor(detailId); } catch { /* Do not assume an approval. */ }
@@ -131,6 +144,8 @@
       link.classList.add('primary'); link.classList.remove('ghost');
       link.target = '_self'; link.rel = 'noopener';
       if (note) note.textContent = '에코디서점에서 직접 판매하는 전자책입니다. 구매·결제·내 서재 다운로드는 에코디서점에서 처리합니다.';
+      setSection('STATUS', '판매 중. 에코디서점의 실시간 승인과 EPUB 파일을 확인했습니다.');
+      setSection('COMMERCE', '에코디서점 자체 판매 전자책입니다. 안전한 결제와 구매 후 내 서재 다운로드로 연결됩니다.');
     } else {
       // A revoked edition or replaced EPUB cannot retain a stale purchase link.
       status.textContent = '판매 상태 확인 필요';
@@ -138,6 +153,8 @@
       link.classList.remove('primary'); link.classList.add('ghost');
       link.target = '_self'; link.rel = 'noopener';
       if (note) note.textContent = '판매 상태와 전자책 파일을 확인하고 있습니다. 구매 가능 여부는 에코디서점에서 다시 확인해 주세요.';
+      setSection('STATUS', '구매 상태를 다시 확인하고 있습니다. 승인 철회 또는 EPUB 파일 변경 시 구매가 중단됩니다.');
+      setSection('COMMERCE', '현재 구매 가능 여부는 에코디서점에서 확인해 주세요.');
     }
   }
   async function refresh() { await Promise.all([syncCatalog(), syncDetail()]); }
