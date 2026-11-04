@@ -8,11 +8,11 @@ const dist = path.join(root, 'dist');
 const site = JSON.parse(await readFile(path.join(root, 'content', 'site.json'), 'utf8'));
 const paymentsMarker = `"paymentsEnabled": ${site?.commerce?.paymentsEnabled === true}`;
 const checks = [
-  ['index.html', ['EKODI MALL', 'ALL MARKET', '7·8·9', '상품 하나부터', '무엇을 찾고 계세요?', '추천순위는 제휴수수료와 분리합니다', '/assets/marketplace-live.js', '/assets/context-curator.js', '/assets/local-commerce.js', '내 로컬']],
+  ['index.html', ['EKODI MALL', '쿠팡추천몰', 'ALL MARKET', '7·8·9', '상품 하나부터', '무엇을 찾고 계세요?', '추천순위는 제휴수수료와 분리합니다', '/assets/marketplace-live.js', '/assets/context-curator.js', '/assets/local-commerce.js', '내 로컬']],
   ['assets/local-commerce.js', ['ekodiMallLocalRegionV1', 'explicit', 'geolocation', '좌표는 저장하지 않습니다', 'ekodi:local-region-change']],
   ['assets/context-curator.js', ['ekodi.kr/api/affiliate/public/products', 'diversified', 'groupOffers', '제휴수수료와 분리합니다', 'data-context-prompt', 'context-detail-button', 'context-offer-dialog', '어디서 살까요?', '판매처에서 구매']],
   ['travel/stay/index.html', ['EKODI 숙소', '숙소 추천', '지역·일정·인원·예산 등 숙소 조건', 'data-affiliate-mode="stay"', 'affiliate-hub.js']],
-  ['coupang/index.html', ['쿠팡 파트너스', '상품 추천', '사람·상황·예산·용도 등 상품 조건', 'data-affiliate-mode="shopping"', '쿠팡 파트너스 활동의 일환', 'affiliate-hub.js']],
+  ['coupang/index.html', ['쿠팡추천몰', '쿠팡 제휴상품', '사람·상황·예산·용도 등 상품 조건', 'data-affiliate-mode="shopping"', '쿠팡 파트너스 활동의 일환', 'affiliate-hub.js']],
   ['assets/affiliate-hub.js', ['affiliate/public/products', 'noopener sponsored', '예약 가능 여부 확인']],
   ['assets/affiliate-share.js', ['shareUrlForProduct', 'prioritizeSharedProduct', 'https://ekodi.kr', 'product']],
   ['assets/context-curator.css', ['context-hero', 'context-result-grid', 'discover-grid', 'buyer-mobile', 'context-offer-dialog', 'context-detail-offer']],
