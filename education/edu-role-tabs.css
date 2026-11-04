@@ -4,7 +4,7 @@ body[data-area="home"] .visual-sidebar{display:none!important}
 body[data-area="home"] .visual-layout{display:block}
 body[data-area="home"] .visual-primary{width:100%;max-width:none}
 body[data-area="home"] .edu-tabs{display:flex;gap:8px;overflow-x:auto;max-width:1160px;margin:14px auto 18px;padding:8px 2px;scrollbar-width:thin}
-body[data-area="home"] .edu-tabs button{flex:0 0 auto;padding:12px 20px;border:1px solid #b8cce2;border-radius:12px;background:#fff;color:#12304a;font:700 clamp(14px,1.2vw,17px)/1.4 inherit;cursor:pointer;white-space:nowrap}
+body[data-area="home"] .edu-tabs button{flex:0 0 auto;padding:12px 20px;border:1px solid #b8cce2;border-radius:12px;background:#fff;color:#12304a;font-size:clamp(14px,1.2vw,17px);font-weight:700;line-height:1.4;cursor:pointer;white-space:nowrap}
 body[data-area="home"] .edu-tabs button.is-active{background:#1456ad;color:#fff;border-color:#1456ad}
 body[data-area="home"] .edu-tabs button:focus-visible{outline:3px solid #42a5f5;outline-offset:2px}
 body[data-area="home"] [data-edu-panel][hidden],body[data-area="home"] .edu-tabs[hidden],body[data-area="home"] .edu-tabs button[hidden]{display:none!important}
