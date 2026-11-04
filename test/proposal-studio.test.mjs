@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,PROPOSAL_STAGES,inferDomain,selectedStages,createProposalDraft,reviewProposalDraft,draftToMarkdown,validImportedDraft,normalizeReferenceUrl} from '../proposal/core.js';
+import {PROPOSAL_DOMAINS,PROPOSAL_GOALS,PROPOSAL_STAGES,inferDomain,selectedStages,createProposalDraft,reviewProposalDraft,draftToMarkdown,validImportedDraft,normalizeReferenceUrl,restoreImportedProposalDraft} from '../proposal/core.js';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('domains and goals are general-purpose and unique',()=>{
   assert.equal(PROPOSAL_DOMAINS.length,8);
@@ -76,4 +76,31 @@ test('public editor is CSP-compatible, read-only at origin, and privacy-labeled'
   assert.match(site,/X-Robots-Tag','noindex, nofollow, noarchive/);
   assert.match(site,/allow:'GET, HEAD'/);
   assert.match(build,/cp\(\`\$\{root\}proposal\`/);
+});
+
+test('restoring a JSON backup preserves authored work without trusting verification claims',()=>{
+  const original=createProposalDraft({title:'비공개 지원사업 제안서',idea:'사용자가 직접 작성한 계획',sourceNames:['근거자료.txt']});
+  original.sections[0].body='직접 작성한 본문은 복구되어야 한다.';
+  original.sources[0].verification='verified'; // JSON can be modified by anyone.
+  original.sources[0].readStatus='text';
+  original.sources[0].excerpt='원문 일부'.repeat(1500);
+  const recovered=restoreImportedProposalDraft(original);
+  assert.equal(recovered.sections[0].body,original.sections[0].body);
+  assert.equal(recovered.sources[0].verification,'not_verified');
+  assert.equal(recovered.sources[0].readStatus,'text');
+  assert.equal(recovered.sources[0].excerpt.length,6000);
+  assert.equal(original.sources[0].verification,'verified');
+  assert.equal(reviewProposalDraft(recovered).submissionReady,false);
+  assert.throws(()=>restoreImportedProposalDraft({schema:'unexpected'}),/형식/);
+});
+
+test('editor warns before overwriting unsaved work and exports remain local',()=>{
+  const html=read('proposal/index.html');
+  const client=read('proposal/client.js');
+  assert.match(html,/id="backupState"/);
+  assert.match(client,/window\.addEventListener\('beforeunload'/);
+  assert.match(client,/window\.confirm\(/);
+  assert.match(client,/restoreImportedProposalDraft\(data\)/);
+  assert.match(client,/setBackupState\(false\)/);
+  assert.match(client,/project\.sources=sources\.slice\(0,20\)/);
 });

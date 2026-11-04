@@ -41,7 +41,9 @@ on:
       - 'common-services-admin.js'
       - 'journal-editorial-admin.js'
       - 'journal-editorial-packet.js'
+      - 'journal-editorial-media-admin.js'
       - 'test/journal-editorial-review.test.mjs'
+      - 'test/journal-private-photo-intake.test.mjs'
       - 'test/journal-admin-release-watch.test.mjs'
       - 'common-services-admin.css'
       - 'personal-finance-admin.js'
@@ -126,6 +128,7 @@ jobs:
           node --check common-services-admin.js
           node --check journal-editorial-admin.js
           node --check journal-editorial-packet.js
+          node --check journal-editorial-media-admin.js
           node --check admin-menu-layout.js
           node --check admin-design-engine.js
           node --check scripts/validate-design-engine.mjs

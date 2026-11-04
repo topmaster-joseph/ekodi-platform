@@ -68,6 +68,7 @@ export async function mountJournalEditor(host,{getToken}={}) {
       <p class="journal-editorial-note">사진은 저작권·초상권·개인정보 검토 전까지 항상 <strong>승인 대기</strong>로 기록합니다. 공개 발행은 기존 EKODI PR·승인·배포 절차에서 별도로 진행합니다.</p>
       <p class="journal-editorial-status" data-journal-status role="status"></p>
       <section class="journal-editorial-preview" data-journal-preview-content aria-label="원고 미리보기" hidden></section>
+      <section data-journal-private-media></section>
     </div>
   `;
   const authStatus=host.querySelector('[data-journal-auth-status]');
@@ -121,7 +122,14 @@ export async function mountJournalEditor(host,{getToken}={}) {
   workspace.hidden=false;
   let current=null;
   let selection=0;
-  const clear=()=>{form.reset();form.elements.namedItem('slug').readOnly=false;current=null;preview.hidden=true;status.textContent='새 원고는 검토 파일로만 저장됩니다.'};
+  let mediaPanel=null;
+  import('./journal-editorial-media-admin.js').then(({mountPrivateJournalMedia})=>{
+    mediaPanel=mountPrivateJournalMedia(host.querySelector('[data-journal-private-media]'),{
+      token,getSlug:()=>getField(form,'slug'),hasSavedDraft:slug=>drafts.has(slug),
+    });
+    mediaPanel?.refresh();
+  }).catch(()=>{const slot=host.querySelector('[data-journal-private-media]');if(slot)slot.textContent='비공개 사진 편집 도구를 불러오지 못했습니다.'});
+  const clear=()=>{form.reset();form.elements.namedItem('slug').readOnly=false;current=null;preview.hidden=true;status.textContent='새 원고는 검토 파일로만 저장됩니다.';mediaPanel?.refresh()};
   select.addEventListener('change',async()=>{
     const generation=++selection;
     const slug=select.value;
@@ -157,6 +165,7 @@ export async function mountJournalEditor(host,{getToken}={}) {
         photoCaption:shown.coverPhoto?.caption||'',photoCredit:shown.coverPhoto?.credit||''
       }))form.elements.namedItem(key).value=value;
       form.elements.namedItem('slug').readOnly=true;
+      mediaPanel?.refresh();
       preview.hidden=true;
       status.textContent=drafts.has(slug)
         ? '비공개 초안 v'+drafts.get(slug).revision+' · 수정해도 공개되지 않습니다.'
@@ -194,6 +203,7 @@ export async function mountJournalEditor(host,{getToken}={}) {
       if(![...select.options].some(option=>option.value===slug))select.add(new Option(draft.article.title+' (비공개 초안)',slug));
       select.value=slug;
       form.elements.namedItem('slug').readOnly=true;
+      mediaPanel?.refresh();
       status.textContent='서버 비공개 초안 v'+data.draft.revision+' 저장 완료 · 공개 발행 및 사진 권리 승인은 수행하지 않았습니다.';
     }catch(error){status.textContent='저장 실패: '+error.message}
     finally{saveButton.disabled=false}

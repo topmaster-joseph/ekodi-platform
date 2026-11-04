@@ -73,7 +73,22 @@ function bindForms(){
   $('#shortlistForm')?.addEventListener('submit',event=>{event.preventDefault();const f=new FormData(event.currentTarget);const institution=safeText(f.get('institution'),120);if(!institution)return;state.shortlist.push({id:makeId(),institution,program:safeText(f.get('program'),140),level:safeText(f.get('level'),60),source:isHttps(f.get('source'))?String(f.get('source')):''});save();event.currentTarget.reset()});
   $('#studyForm')?.addEventListener('submit',event=>{event.preventDefault();const f=new FormData(event.currentTarget);const title=safeText(f.get('title'),140);if(!title)return;state.study.push({id:makeId(),kind:safeText(f.get('kind'),60),title,note:safeText(f.get('note'),220),source:isHttps(f.get('source'))?String(f.get('source')):''});save();event.currentTarget.reset()});
 }
-function renderAll(){renderToday();renderSummary();renderAdmission();renderStudy()}
+function renderAll(){
+  // The home dashboard must never render previously saved local records while signed out.
+  if(area==='home'&&!session){
+    const today=$('#todayList');if(today)today.replaceChildren();
+    for(const id of ['taskCount','shortlistCount','studyCount']){
+      const node=$('#'+id);if(node)node.textContent='—';
+    }
+    return;
+  }
+  renderToday();renderSummary();renderAdmission();renderStudy();
+}
 
-bindForms();$('#authButton')?.addEventListener('click',authAction);renderAll();renderIdentity();
-if(enabled){try{await handoff()}catch(error){console.error('education auth handoff',error)}await refreshSession();sb?.auth.onAuthStateChange((_event,next)=>{session=next;renderIdentity()})}
+bindForms();$('#authButton')?.addEventListener('click',authAction);
+if(enabled){
+  try{await handoff()}catch(error){console.error('education auth handoff',error)}
+  try{await refreshSession()}catch(error){console.error('education session lookup',error);session=null;renderIdentity()}
+  renderAll();
+  sb?.auth.onAuthStateChange((_event,next)=>{session=next;renderIdentity();renderAll()});
+}else{renderIdentity();renderAll()}

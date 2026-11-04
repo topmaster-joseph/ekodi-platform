@@ -132,3 +132,21 @@ export function validImportedDraft(data){
   if(typeof data?.idea!=='string'||data.idea.length>20000)return false;
   return Boolean(data&&typeof data==='object'&&data.schema==='ekodi.proposal.draft.v1'&&Array.isArray(data.sections)&&data.sections.length>0&&data.sections.length<=30&&data.sections.every(s=>typeof s.id==='string'&&typeof s.name==='string'&&typeof s.body==='string'&&s.body.length<=50000)&&typeof data.title==='string'&&data.title.length<=160&&data.decisions&&typeof data.decisions==='object');
 }
+
+/**
+ * Imported JSON is user-controlled data, not an attestation. Preserve authored
+ * text and local previews while resetting every imported evidence claim.
+ */
+export function restoreImportedProposalDraft(data){
+  if(!validImportedDraft(data))throw new Error('제안서 프로젝트 형식이 아닙니다.');
+  const validStatus=new Set(['text','url','unsupported','inspected','tooLarge']);
+  return {
+    ...data,
+    sources:(data.sources||[]).map(item=>({
+      name:item.name,
+      verification:'not_verified',
+      excerpt:typeof item.excerpt==='string'?item.excerpt.slice(0,6000):'',
+      readStatus:validStatus.has(item.readStatus)?item.readStatus:'unsupported'
+    }))
+  };
+}

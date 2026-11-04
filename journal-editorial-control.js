@@ -26,7 +26,7 @@ const publicSummary = row => ({
   state:'review_required',
 });
 
-async function verifyAdmin(request,env) {
+export async function verifyJournalSuperAdmin(request,env) {
   // The identity comes only from the existing EKODI central D1 session verifier.
   const sessionUrl=new URL(request.url);
   sessionUrl.pathname='/api/session';
@@ -70,7 +70,7 @@ export async function handleJournalEditorialDrafts(request,env){
   }
 
   let session;
-  try{session=await verifyAdmin(request,env)}catch{return fail('authentication_unavailable',503)}
+  try{session=await verifyJournalSuperAdmin(request,env)}catch{return fail('authentication_unavailable',503)}
   if(!session)return fail('super_admin_required',403);
   if(!env?.DB?.prepare||!env.DB.batch)return fail('draft_storage_unavailable',503);
 

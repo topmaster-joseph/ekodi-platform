@@ -41,7 +41,7 @@ test('regional pages declare separate chrome subject and operating boundary',asy
   assert.match(publicHtml,/<link rel="canonical" href="https:\/\/ekodi\.kr\/cheonggye">/);
   assert.match(publicHtml,/<meta property="og:url" content="https:\/\/ekodi\.kr\/cheonggye">/);
   assert.match(publicHtml,/href="\/cgma"/);
-  assert.match(publicHtml,/href="\/cheonggyepass"/);
+  assert.match(publicHtml,/href="\/cgpass"/);
   assert.doesNotMatch(publicHtml,/href="\/my\//);
   assert.doesNotMatch(publicHtml,/내 에코디/);
   assert.doesNotMatch(adminHtml,/rel="canonical"/);
@@ -49,7 +49,7 @@ test('regional pages declare separate chrome subject and operating boundary',asy
   assert.match(adminHtml,/운영권 보유 단체/);
   assert.match(adminHtml,/서비스별 운영주체/);
   assert.match(adminHtml,/청계면상인회 운영권 적용/);
-  assert.match(adminHtml,/href="\/cheonggye\/admin\/pass"/);
+  assert.match(adminHtml,/href="\/cgpass\/admin"/);
   assert.match(adminHtml,/href="\/cheonggye\/admin\/access"/);
   assert.match(adminHtml,/청계면상인회/);
   assert.match(adminHtml,/데이터는 이동·복사하지 않고/);
@@ -112,5 +112,5 @@ test('CGMA public home receives reciprocal links to Cheonggye and Cheonggye Pass
   const router=await fs.readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
     assert.match(router,/data-ekodi-cheonggye-links="v1"/);
     assert.match(router,/href="\/cheonggye"/);
-    assert.match(router,/href="\/cheonggyepass"/);
+    assert.match(router,/href="\/cgpass"/);
 });

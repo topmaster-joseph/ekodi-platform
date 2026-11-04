@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { registeredTenantPath } from '../site-publication-runtime.js';
 import { isPublicDiscoveryPath } from '../public-discovery-registry.js';
 test('tenant canonical path follows its registered ekodi.kr address', () => {
-  assert.equal(registeredTenantPath('cheonggye-pass', 'ekodi.kr/cheonggye/pass'), '/cheonggye/pass');
+  assert.equal(registeredTenantPath('cheonggye-pass', 'ekodi.kr/cheonggye/pass'), '/cgpass');
   assert.equal(registeredTenantPath('cheonggye-local', 'ekodi.kr/cheonggye'), '/cheonggye');
   assert.equal(registeredTenantPath('mnubiz', 'ekodi.kr/mnubiz'), '/mnubiz');
   assert.equal(registeredTenantPath('ekoditrade', 'ekodi.kr/ekodibiz/trade'), '/ekodibiz/trade');
