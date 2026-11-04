@@ -103,6 +103,10 @@ if (!approvedBook?.slug || !/^book-[a-z0-9-]+$/.test(approvedBook.slug)) {
     errors.push('Public bookstore page missing live purchase verification anchors');
   }
 }
+const booksStore = await readFile(path.join(dist, 'stores', 'ekodi-books', 'index.html'), 'utf8');
+for (const marker of ['data-bookstore-store="true"','data-bookstore-store-grid','data-bookstore-public-count','src="/assets/bookstore-live.js"']) {
+  if (!booksStore.includes(marker)) errors.push('Bookstore live storefront is missing ' + marker);
+}
 const liveBridge = await readFile(path.join(dist, 'assets', 'bookstore-live.js'), 'utf8');
 for (const marker of ['/books/api/commerce', '/public/approvals', '/quote?book=', 'checkout?.fileReady', "checkout?.mode === 'live'"]) {
   if (!liveBridge.includes(marker)) errors.push('Bookstore sale bridge lost verification gate: ' + marker);
