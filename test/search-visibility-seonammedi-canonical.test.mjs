@@ -72,3 +72,26 @@ test('Evidence source cannot be marked automatically verified from property meta
   assert.equal(Object.hasOwn(item,'actor'),false);
   assert.equal(Object.hasOwn(item,'observedAt'),false);
 });
+
+test('public technical audit accepts the approved SeonamMedi IDN only for its exact mount',()=>{
+  const ui=read('search-visibility-admin.js');
+  const declaration=ui.match(/  const correctPublicCanonical =[\s\S]*?\n  };/)?.[0];
+  assert.ok(declaration,'missing narrow public canonical audit helper');
+  const check=vm.runInNewContext('(()=>{'+declaration+'return correctPublicCanonical;})()', {URL});
+  assert.equal(check('https://ekodi.kr/','https://ekodi.kr/'),true,'root must not be a false canonical failure');
+  assert.equal(check('https://ekodi.kr/ekodimall','https://ekodi.kr/ekodimall/'),true);
+  assert.equal(check('https://ekodi.kr/seonammedi',canonical),true);
+  assert.equal(check('https://ekodi.kr/seonammedi/','https://서남권국립의대.kr/'),true);
+  assert.equal(check('https://ekodi.kr/seonammedi','https://seonammedi.kr/'),false,
+    'separate English host is not the Korean IDN canonical property');
+  assert.equal(check('https://ekodi.kr/ekodimall',canonical),false,
+    'IDN exception must not grant another tenant arbitrary canonical control');
+  assert.equal(check('https://ekodi.kr/cgmurrc',canonical),false);
+  assert.equal(check('https://ekodi.kr/seonammedi','http://'+idn+'/'),false);
+  assert.equal(check('https://ekodi.kr/seonammedi',canonical+'?from=admin'),false);
+  assert.equal(check('https://ekodi.kr/seonammedi',canonical+'#about'),false);
+  assert.equal(check('https://ekodi.kr/seonammedi','https://user:password@'+idn+'/'),false);
+  assert.equal(check('https://ekodi.kr/seonammedi',''),false);
+  assert.match(ui,/const correctCanonical=correctPublicCanonical\(site\.url,result\.canonical\)/);
+  assert.match(ui,/정규 URL\(canonical\) 정비/);
+});
