@@ -11,7 +11,7 @@ function storage(data={}){const values=new Map(Object.entries(data));return{
   getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key)
 }}
 function element(){return{children:[],dataset:{},value:'person',textContent:'',href:'',hidden:false,disabled:false,handlers:{},
-  setAttribute(){},addEventListener(type,handler){this.handlers[type]=handler},
+  attributes:{},setAttribute(name,value){this.attributes[name]=value},addEventListener(type,handler){this.handlers[type]=handler},
   replaceChildren(...children){this.children=children;this.textContent=''},append(...children){this.children.push(...children)}}}
 function page({spaces=[store,tenant],result=null,storeResponse=null,guest=false}={}){
   const elements=new Map(),calls=[];
@@ -134,4 +134,63 @@ test('channel listings with no canonical menu raise a data consistency warning',
   assert.match(list.children[0].textContent,/메뉴 원본이 0개/);
   assert.match(list.children[1].textContent,/원본 데이터 연결·동기화/);
   assert.equal(p.calls.filter(x=>x.path.includes('store-summary')).length,1);
+});
+
+test('authorized menu and channel detail tabs render only official projected records',async()=>{
+  const p=page({result:{
+    dataPolicy:'verified-read-only',workspace:{id:'store-1',slug:'jadam',kind:'store'},
+    summary:{canonicalMenuCount:2,platformListingCount:3,connectedChannelCount:1,orderEnabled:true},
+    operations:{status:'verified-read-only',
+      menu:{total:2,shown:2,items:[
+        {name:'매운치킨',category:'치킨',basePrice:19000,availability:'available'},
+        {name:'미확인 메뉴',category:'',basePrice:null,availability:''}]},
+      channels:{total:1,shown:1,items:[{provider:'baemin',name:'배달의민족',connectionStatus:'active'}]}}
+  }});
+  await p.flush();
+  const {button,panel}=kpiControl(p);await button.handlers.click();
+  assert.equal(panel.children.length,3);
+  const detail=panel.children[2];
+  assert.equal(detail.className,'store-operations');
+  assert.equal(detail.children[1].children.length,7);
+  const menu=detail.children[2];
+  assert.match(menu.children[1].textContent,/원본 2건 · 표시 2건/);
+  const list=menu.children[2];
+  assert.equal(list.children.length,2);
+  assert.equal(list.children[0].children[0].textContent,'매운치킨');
+  assert.match(list.children[0].children[1].textContent,/19,000원/);
+  assert.match(list.children[1].children[1].textContent,/가격 미확인/);
+  const channels=detail.children[1].children[1];
+  channels.handlers.click();
+  assert.equal(channels.attributes['aria-pressed'],'true');
+  assert.equal(detail.children[1].children[0].attributes['aria-pressed'],'false');
+  assert.equal(detail.children[2].children[2].children[0].children[0].textContent,'배달의민족');
+  const sales=detail.children[1].children[4];
+  sales.handlers.click();
+  assert.match(detail.children[2].children[1].textContent,/원본이 연결되지 않았습니다/);
+  assert.equal(p.calls.filter(x=>x.path.includes('store-summary')).length,1);
+});
+
+test('unavailable operational details do not invent counts, zero sales, or private entries',async()=>{
+  const p=page({result:{
+    dataPolicy:'verified-read-only',workspace:{id:'store-1',slug:'jadam',kind:'store'},
+    summary:{canonicalMenuCount:12,platformListingCount:31,connectedChannelCount:4,orderEnabled:true},
+    operations:{status:'unavailable'}
+  }});
+  await p.flush();const {button,panel}=kpiControl(p);await button.handlers.click();
+  const detail=panel.children[2],body=detail.children[2];
+  assert.match(body.children[1].textContent,/0건으로 판단하지 않습니다/);
+  assert.equal(JSON.stringify(detail.children).includes('주문 0건'),false);
+  assert.equal(p.calls.filter(x=>x.path.includes('store-summary')&&x.options.method!=='GET').length,0);
+});
+
+test('untrusted projection with malformed menu prices falls back to unavailable details',async()=>{
+  const p=page({result:{
+    dataPolicy:'verified-read-only',workspace:{id:'store-1',slug:'jadam',kind:'store'},
+    summary:{canonicalMenuCount:1,platformListingCount:0,connectedChannelCount:0,orderEnabled:true},
+    operations:{status:'verified-read-only',menu:{total:1,shown:1,items:[{name:'상품',category:'',basePrice:-100,availability:''}]},
+      channels:{total:0,shown:0,items:[]}}
+  }});
+  await p.flush();const {button,panel}=kpiControl(p);await button.handlers.click();
+  assert.match(panel.children[2].children[2].children[1].textContent,/상세 목록을 확인할 수 없습니다/);
+  assert.equal(panel.children[0].children.length,4);
 });
