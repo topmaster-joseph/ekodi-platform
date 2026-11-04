@@ -31,7 +31,7 @@
 2. 별도 PR로 `config/ekodi-device-agent-release.json`을 제출합니다. 이는 `approved=true`, `channel=protected-orchestrator`, 정식 `sourceCommit`, `sha256`, 단일 고정 상대경로, `rolloutPercent=25`를 포함해야 합니다.
 3. 설치된 Agent 2.6.2+는 하루에 한 번 승인 매니페스트를 읽습니다. 매니페스트 누락/위조/변경, 잘못된 버전, 해시 불일치, 25% 카나리 외 기기, 로컬 제외 설정, 사용 중인 외부 인증 세션에서는 **업데이트하지 않습니다**.
 4. 적합한 기기는 고정된 Git 커밋에서 파일을 내려받아 SHA-256과 PowerShell 소스 검사를 확인한 뒤, 기존 트랜잭션 업데이트(백업·원자적 교체·heartbeat·롤백)를 호출합니다. 실패시 정형 코드만 로컬에 기록합니다.
-5. 각 대상 기기는 **최초에** 정식 EKODI Device Agent 2.6.2 이상을 공식 관리자 업데이트/기기 설치 경로로 설치해야 합니다. 오래된 Agent에는 신규 자동업데이트 코드가 없으므로 무단 업데이트를 하지 않습니다. 앱·운영체제·Chrome 브라우저 설치는 별도 관리입니다.
+5. 각 대상 기기는 **최초에** 정식 EKODI Device Agent 2.6.3 이상을 공식 관리자 업데이트/기기 설치 경로로 설치해야 합니다. 오래된 Agent에는 신규 자동업데이트 코드가 없으므로 무단 업데이트를 하지 않습니다. 앱·운영체제·Chrome 브라우저 설치는 별도 관리입니다.
 6. 25% → 100% 확대에는 새 보호 PR과 실제 기기 재시작·heartbeat·보안 확인이 선행돼야 합니다.
 
 ### 운영 완료 판정
@@ -44,3 +44,12 @@ PR 병합이나 Node 단위테스트만으로 완료라 하지 않습니다. 실
 node --test test/ekodi-native-browser-batch.test.mjs test/ekodi-native-browser-auto-update.test.mjs test/background-browser-worker.test.mjs
 node scripts/validate-background-browser-worker.mjs
 ```
+
+## v2.1 업데이트 성공 판정 및 운영 성능 (2026-11-05)
+
+- 신규 Agent 버전은 2.6.3입니다. 실제 업데이트 완료 여부는 기존 실행 인스턴스의 heartbeat가 아니라 **재시작한 새로운 Agent 버전**이 heartbeat를 성공적으로 전송한 후 기록합니다.
+- 상태는 로컬에서 `installed-pending-restart` → `verified-after-restart`로 전환됩니다. 버전이 다르거나 상태 기록이 손상되면 성공으로 변경하지 않습니다.
+- 관리자 heartbeat에는 비밀정보를 제외한 `nativeBrowserUpdateState.state`와 버전만 전달됩니다.
+- 공식 브라우저 워크플로는 `navigationTimings` 및 `performance.p50Ms/p95Ms/maxMs`를 검사하고 실행 요약에 표시합니다. 이것은 에코디 자체 실행의 실제 지표이며 타사와 동일한 조건의 비교를 제공하지는 않습니다.
+- v2.6.3 파일이 보호된 main에 병합되고 배포되더라도 기존 2.5.x/2.6.1 기기에 자동 설치되지 않습니다. 기존 Agent의 공식 명령에 의한 1회 부트스트랩과 현장 권한이 선행되어야 합니다.
+- 자동업데이트 매니페스트는 공식 실기기 카나리 증거가 확인되기 전까지 생성·승인하지 않습니다.
