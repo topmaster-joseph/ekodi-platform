@@ -60,7 +60,7 @@ export function tenantAutomationOverviewModel({connections=[],publishChannels=[]
   const safeAdmin=/^\/[a-z0-9/_-]+$/i.test(String(adminBase||''))?adminBase:'';
   return {activeChannels,automaticChannels,published,pending,failed,lastPublished,autopost,
     policyMode:String(policy.mode||'unknown').slice(0,24),campaign,
-    mall,adminBase:safeAdmin,
+    mall,store:service==='store',adminBase:safeAdmin,
     // Source absence must not be represented as a successful zero count.
     discovery:'provider_evidence_not_connected',
     recommendation:mall?'mall_management_link':'not_connected',
@@ -73,21 +73,26 @@ export function tenantAutomationOverviewHtml(model) {
   const url=model.adminBase||'';
   const toManagement=path=>url?'<a href="'+escape(url+path)+'">해당 관리 화면 보기</a>':'관리 경로 미확인';
   const official=model.autopost;
+  // The three store-specific administrators use the same read-only cards but
+  // retain their existing local forms and URLs, not the workspace admin IDs.
+  const channelAccountAnchor=model.store?'#storeChannelAccounts':'#channel-account-section';
+  const policyAnchor=model.store?'#storePublishPolicy':'#channel-policy';
+  const jobsAnchor=model.store?'#storeRecentJobs':'#channel-jobs';
   const modeLabels={ready:'발행 조건 충족',channel_required:'채널 연결 필요',content_required:'승인 콘텐츠 필요',
     plan_required:'구독 상태 확인 필요',policy_review:'자동게시 정책 확인 필요',pending:'게시 작업 처리 중'};
   const optionalCount=value=>value===null||value===undefined?'확인 필요':String(value);
   const readiness=official?
     '<section class="tenant-auto-readiness" aria-label="실제 자동게시 준비 상태">'+
     '<strong>자동게시 준비 상태 · '+escape(modeLabels[official.state]||'확인 필요')+'</strong>'+
-    '<p>서버 원장 기준 · 활성 OAuth 채널 '+optionalCount(official.activeChannels)+'개 · 사용 가능 채널 '+optionalCount(official.usableChannels)+'개 · 승인된 게시 대상 '+optionalCount(official.eligibleContent)+'건 · 대기 '+optionalCount(official.pendingJobs)+'건</p>'+
+    '<p>'+(model.store?'사이트 통합 자동게시(tenant) 원장':'서버 원장')+' 기준 · 활성 OAuth 채널 '+optionalCount(official.activeChannels)+'개 · 사용 가능 채널 '+optionalCount(official.usableChannels)+'개 · 승인된 게시 대상 '+optionalCount(official.eligibleContent)+'건 · 대기 '+optionalCount(official.pendingJobs)+'건</p>'+
     '<ul>'+
     (official.state==='plan_required'?'<li>구독·이용 권한을 먼저 확인해야 합니다.</li>':'')+
-    (official.state==='policy_review'?'<li><a href="#channel-policy">게시 운영 정책 확인</a> 후 승인된 설정을 사용하세요.</li>':'')+
-    (official.activeChannels===0?'<li><a href="#channel-account-section">외부 채널 최초 연결</a>이 필요합니다. 외부 서비스 인증은 계정 소유자가 직접 승인합니다.</li>':'')+
-    (official.activeChannels!==0&&official.usableChannels===0?'<li><a href="#channel-overview">게시 채널 상태</a>와 허용 공급자 정책을 확인하세요.</li>':'')+
+    (official.state==='policy_review'?(model.store?'<li>통합 자동게시 정책(tenant)은 권한 있는 사이트 운영자가 확인해야 합니다. 아래 <a href="'+policyAnchor+'">점포 정책</a>과는 별도 원장입니다.</li>':'<li><a href="'+policyAnchor+'">게시 운영 정책 확인</a> 후 승인된 설정을 사용하세요.</li>'):'')+
+    (official.activeChannels===0?(model.store?'<li>사이트 통합 자동게시(tenant) 채널 연결이 필요합니다. <a href="'+channelAccountAnchor+'">점포 계정 연결 관리</a>는 별도 store 권한이므로 이것만으로 통합 자동게시 연결이 완료되지 않습니다.</li>':'<li><a href="'+channelAccountAnchor+'">외부 채널 최초 연결</a>이 필요합니다. 외부 서비스 인증은 계정 소유자가 직접 승인합니다.</li>'):'')+
+    (official.activeChannels!==0&&official.usableChannels===0?(model.store?'<li>사이트 통합 자동게시에 사용 가능한 채널과 공급자 정책을 확인해야 합니다. 점포 채널 설정과는 별도입니다.</li>':'<li><a href="#channel-overview">게시 채널 상태</a>와 허용 공급자 정책을 확인하세요.</li>'):'')+
     (official.eligibleContent===0?'<li>승인된 자동게시 콘텐츠가 없습니다. 관리자 콘텐츠 승인 원장에서 게시 대상 여부를 확인하세요.</li>':'')+
     (official.state==='ready'?'<li>서버의 발행 선행조건을 통과했습니다. 실제 발행과 방문·매출 성과는 별도로 검증합니다.</li>':'')+
-    (official.state==='pending'?'<li><a href="#channel-jobs">게시 작업 목록</a>에서 예약·재시도 상태를 확인하세요.</li>':'')+
+    (official.state==='pending'?(model.store?'<li>통합 자동게시 대기 작업과 <a href="'+jobsAnchor+'">점포 게시 작업</a>은 각각 별도 원장에서 확인해야 합니다.</li>':'<li><a href="'+jobsAnchor+'">게시 작업 목록</a>에서 예약·재시도 상태를 확인하세요.</li>'):'')+
     '</ul><p>이 요약은 해당 사이트의 조회 정보만 표시하며 채널을 연결하거나 게시물을 승인·발행하지 않습니다.</p></section>':'';
   const entry=[
     ['discovery','검색노출','<h3>검색노출 · SEO/AEO/GEO</h3><p>이 사이트의 검색엔진 등록·색인·AI 인용 실적은 별도 공급자 증거가 필요합니다. 공개 URL 또는 사이트맵이 존재해도 검색 결과 노출을 보장하지 않습니다.</p><p><a href="/sitemap.xml" target="_blank" rel="noopener">통합 공개 사이트맵 확인</a></p>'],
@@ -98,7 +103,7 @@ export function tenantAutomationOverviewHtml(model) {
     ['errors','오류·조치','<h3>확인할 문제</h3><ul><li>조회된 실패·인증 필요 작업: '+count(model.failed)+'</li><li>예약·재시도 작업: '+count(model.pending)+'</li></ul><p>실패 원인과 재시도 조치는 아래의 「최근 게시 작업」에서 상세히 확인합니다. 타 사이트 데이터는 조회하지 않습니다.</p>'],
   ];
   return '<section id="tenantAutoOverview" class="tenant-auto-overview" aria-labelledby="tenantAutoHeading">'+
-    '<header><h2 id="tenantAutoHeading">이 사이트의 검색·추천·홍보 자동화</h2><p>현재 사이트 권한으로 읽은 결과만 표시합니다. 중앙 최고관리자 화면은 여러 사이트의 요약만 제공합니다.</p></header>'+
+    '<header><h2 id="tenantAutoHeading">이 사이트의 검색·추천·홍보 자동화</h2><p>'+(model.store?'위 준비도는 사이트 통합 자동게시(tenant), 아래 연결·작업 수치는 점포 운영(store) 권한으로 조회한 별도 원장입니다. 두 권한과 실적을 합산하지 않습니다.':'현재 사이트 권한으로 읽은 결과만 표시합니다. 중앙 최고관리자 화면은 여러 사이트의 요약만 제공합니다.')+'</p></header>'+
     readiness+
     '<div class="tenant-auto-summary" aria-label="자동화 핵심 지표">'+
     [['연결 채널',model.activeChannels],['게시 자동화 ON',model.automaticChannels],['조회된 발행 성공',model.published],['조회된 오류',model.failed]]
