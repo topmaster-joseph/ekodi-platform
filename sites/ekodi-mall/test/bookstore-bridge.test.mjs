@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 import { bookstoreProducts, approvedBookstoreProducts, loadBookstoreProducts, mergeBookstoreProducts } from '../scripts/bookstore-products.mjs';
+import { isPublicStaticSale, isPublicBookInformation, isPublicIndexableProduct } from '../api/public-sale-visibility.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -20,6 +22,63 @@ test('every bookstore title is mirrored into the 책·배움 corner', async () =
   }
   assert.ok(mirrored.some((product) => product.name.startsWith('에코디언을 찾아서')));
   assert.ok(mirrored.some((product) => product.name.startsWith('AI 시대의 진보와 빈곤')));
+});
+
+test('an existing publisher book is publicly indexable without pretending to be sale-ready', async () => {
+  const titles = await loadBookstoreProducts(root);
+  const book = titles.find(item => item.source?.bookId === 'BOOK-EKODI-000002');
+  assert.ok(book, 'a catalog-authorized existing edition must retain its public information page');
+  assert.equal(isPublicStaticSale(book), false, 'static release metadata is still incomplete');
+  assert.equal(isPublicBookInformation(book), true);
+  assert.equal(isPublicIndexableProduct(book), true);
+  assert.equal(isPublicIndexableProduct({ ...book, published: false }), false);
+  assert.equal(isPublicIndexableProduct({ ...book, source: { ...book.source, detailUrl: 'https://outside.invalid/books/fake' } }), false);
+  assert.equal(isPublicIndexableProduct({ published: true, status: '출간 준비', saleType: 'publisher', category: 'book' }), false);
+});
+
+test('book detail purchase link opens only on a live file-ready server quote', async () => {
+  const script = readFileSync(path.join(root, 'assets/bookstore-live.js'), 'utf8');
+  async function detailFor(ready) {
+    const elements = {
+      '[data-bookstore-sale-status] dd': { textContent: '출간 준비 중' },
+      '[data-bookstore-purchase-link]': {
+        href: 'https://ekodi.kr/books/book/?id=BOOK-EKODI-000002',
+        textContent: '상태 확인',
+        classList: { add() {}, remove() {} }
+      },
+      '[data-bookstore-transaction-note]': { textContent: '' }
+    };
+    const calls = [];
+    const bookId = 'BOOK-EKODI-000002';
+    const quote = {
+      book: { id: bookId },
+      saleReadiness: { ready },
+      checkout: { open: ready, fileReady: ready, saleReady: ready, mode: 'live' },
+      price: { amount: 9900 }
+    };
+    const sandbox = {
+      document: {
+        body: { dataset: { bookstoreBookId: bookId } },
+        getElementById() { return null; },
+        querySelector(sel) { return elements[sel] || null; },
+        addEventListener() {}
+      },
+      window: { location: { origin: 'https://ekodi.kr' }, dispatchEvent() {} },
+      fetch: async url => { calls.push(url); return { ok: true, json: async () => quote }; },
+      AbortSignal, URL, Intl, CustomEvent: class {},
+    };
+    vm.runInNewContext(script, sandbox, { filename: 'bookstore-live.js' });
+    await new Promise(resolve => setTimeout(resolve, 25));
+    return { elements, calls };
+  }
+  const approved = await detailFor(true);
+  assert.equal(approved.elements['[data-bookstore-sale-status] dd'].textContent, '판매 중');
+  assert.match(approved.elements['[data-bookstore-purchase-link]'].href, /\/books\/buy\/\?book=BOOK-EKODI-000002/);
+  assert.equal(approved.calls.length, 1);
+  const revoked = await detailFor(false);
+  assert.equal(revoked.elements['[data-bookstore-sale-status] dd'].textContent, '판매 상태 확인 필요');
+  assert.match(revoked.elements['[data-bookstore-purchase-link]'].href, /\/books\/book\/\?id=BOOK-EKODI-000002/);
+  assert.equal(revoked.calls.length, 1);
 });
 
 test('a sale link opens a purchase button; no link never pretends to sell', () => {

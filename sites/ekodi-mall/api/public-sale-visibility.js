@@ -17,3 +17,23 @@ export function isPublicStaticSale(product) {
   try { const url = new URL(product.action.url); return url.protocol === 'https:' && Boolean(url.hostname); }
   catch { return false; }
 }
+
+/**
+ * A publisher-approved public BOOK page is informational even before checkout
+ * is available. Public discovery cards still require independently verified
+ * live checkout: search-indexability is NOT payment authorization.
+ * The bookstore mirror is allowlisted by existingEditionAllowed(), and cannot
+ * be forged through a seller-supplied product record.
+ */
+export function isPublicBookInformation(product) {
+  return product?.published === true &&
+    product.category === 'book' &&
+    product.source?.system === 'ekodi-bookstore' &&
+    /^BOOK-[A-Z0-9-]{3,40}$/.test(String(product.source.bookId || '')) &&
+    /^https:\/\/ekodi\.kr\/books\//.test(String(product.source.detailUrl || ''));
+}
+
+/** Index public information pages regardless of temporary checkout readiness. */
+export function isPublicIndexableProduct(product) {
+  return isPublicStaticSale(product) || isPublicBookInformation(product);
+}
