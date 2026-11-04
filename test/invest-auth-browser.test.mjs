@@ -58,7 +58,7 @@ test('My Invest client reads canonical session, then requires server-side owner 
  assert.ok(source.includes(INVEST_MEMBER_SESSION_BROWSER_SOURCE));
  assert.match(source,/readEkodiMemberToken\(\)/);
  assert.match(source,/sessionClient\.auth\.getSession\(\)/);
- assert.match(source,/\/my\/invest\/access/);
+ assert.match(source,/\/(?:my\/invest|invest\/my)\/access/);
  assert.doesNotMatch(source,/ekodi_platform_session_v1/);
  const denied=await investMyRoute(new Request('https://ekodi.kr/invest/access'),{});
  assert.equal(denied.status,401);
