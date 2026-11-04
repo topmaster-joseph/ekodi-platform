@@ -310,7 +310,7 @@ export default{
     const url=new URL(request.url);
     // Legacy My EKODI investment URLs remain redirects, not second private sites.
     // The canonical investment mount is /invest/my/* on the Shared Site route.
-    if(url.pathname==='/invest'||url.pathname.startsWith('/invest/')){
+    if(['/invest','/invest/access','/invest/app.js','/invest/style.css'].includes(url.pathname)){
       const target=new URL(request.url);
       target.pathname='/invest/my'+url.pathname.slice('/invest'.length);
       return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'private, no-store'}});
