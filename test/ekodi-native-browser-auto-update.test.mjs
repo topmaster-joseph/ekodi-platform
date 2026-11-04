@@ -46,3 +46,15 @@ test('native browser workers remain private, headless, canonical and cost indepe
   assert.match(worker,/performance:summarizeNativeNavigationPerformance\(navigationTimings\)/);
   assert.doesNotMatch(worker,/tinyfish|screenshotToRemoteSession|userBrowserCookie/i);
 });
+
+test('native Agent must not claim an update is verified until new-version heartbeat succeeds',()=>{
+  assert.match(agent, /\$AgentVersion = '2\.6\.3'/);
+  assert.match(agent,/function Confirm-EkodiAgentAutoUpdateAfterRestart/);
+  assert.match(agent,/outcome -cne 'installed-pending-restart'/);
+  assert.match(agent,/targetVersion -cne \$AgentVersion/);
+  assert.match(agent,/verified-after-restart/);
+  assert.match(agent,/Send-Heartbeat \$config; Confirm-EkodiAgentAutoUpdateAfterRestart/);
+  assert.match(agent,/nativeBrowserUpdateState = Get-EkodiAgentAutoUpdateProjection/);
+  const projection=agent.slice(agent.indexOf('function Get-EkodiAgentAutoUpdateProjection'),agent.indexOf('function Get-AgentSettings'));
+  assert.doesNotMatch(projection,/Get-AgentHeaders|Unprotect-LocalSecret|email|password/i);
+});
