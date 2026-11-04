@@ -1,0 +1,23 @@
+/* Education role/tab presentation, scoped to homepage only. */
+body[data-area="home"] .home-nav{display:none}
+body[data-area="home"] .visual-sidebar{display:none!important}
+body[data-area="home"] .visual-layout{display:block}
+body[data-area="home"] .visual-primary{width:100%;max-width:none}
+body[data-area="home"] .edu-tabs{display:flex;gap:8px;overflow-x:auto;max-width:1160px;margin:14px auto 18px;padding:8px 2px;scrollbar-width:thin}
+body[data-area="home"] .edu-tabs button{flex:0 0 auto;padding:12px 20px;border:1px solid #b8cce2;border-radius:12px;background:#fff;color:#12304a;font:700 clamp(14px,1.2vw,17px)/1.4 inherit;cursor:pointer;white-space:nowrap}
+body[data-area="home"] .edu-tabs button.is-active{background:#1456ad;color:#fff;border-color:#1456ad}
+body[data-area="home"] .edu-tabs button:focus-visible{outline:3px solid #42a5f5;outline-offset:2px}
+body[data-area="home"] [data-edu-panel][hidden],body[data-area="home"] .edu-tabs[hidden],body[data-area="home"] .edu-tabs button[hidden]{display:none!important}
+body[data-area="home"] .edu-service-panel{max-width:1160px;margin:12px auto;padding:22px;border-radius:18px;background:#fff;color:#12304a}
+body[data-area="home"] .edu-service-panel .service-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px}
+body[data-area="home"] .edu-service-panel .service-grid a{min-height:88px;display:flex;flex-direction:column;justify-content:center;font-size:1rem}
+body[data-area="home"][data-edu-view="guest"] .hero{padding:12px 0}
+body[data-area="home"][data-edu-view="guest"] .hero-copy{min-height:280px;padding:clamp(22px,3vw,36px)}
+body[data-area="home"][data-edu-view="guest"] .hero h1{font-size:clamp(1.8rem,3vw,2.9rem);letter-spacing:-.035em}
+body[data-area="home"][data-edu-view="guest"] .home-search,body[data-area="home"][data-edu-view="guest"] .hero-actions{display:none}
+body[data-area="home"][data-edu-view="guest"] .discover-section,body[data-area="home"][data-edu-view="guest"] .paths-section{display:none!important}
+body[data-area="home"][data-edu-view="guest"] .visual-banners{display:none}
+body[data-area="home"][data-edu-view="pending"] main.visual-home{visibility:hidden}
+body[data-area="home"] .section,body[data-area="home"] .edu-service-panel{scroll-margin-top:80px}
+@media(max-width:768px){body[data-area="home"] .edu-tabs{margin:8px 12px;padding:6px 0}body[data-area="home"] .edu-tabs button{padding:11px 14px}body[data-area="home"] .edu-service-panel{margin:12px;padding:16px}body[data-area="home"] .edu-service-panel .service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:390px){body[data-area="home"] .edu-tabs button{padding:10px 12px}body[data-area="home"] .edu-service-panel .service-grid{grid-template-columns:1fr 1fr}}
