@@ -24,6 +24,7 @@ const TENANT_PATH_ALIASES=Object.freeze({
   'ekodi-cafe':'/cafe',
   cgma:'/cgma',
   cheonggye:'/cheonggye',
+  'cheonggye-pass':'/cgpass',
   yogurtpurple:'/yogurt',
 });
 const SPECIAL_SITES=Object.freeze([
@@ -34,6 +35,10 @@ const SPECIAL_SITES=Object.freeze([
   Object.freeze({id:'ekodi',workspaceId:'platform',name:'EKODI',canonicalUrl:'https://ekodi.kr/',canonicalPath:'/',adminUrl:'https://ekodi.kr/admin/',exactRoot:true,authoritySiteKey:'ekodi'}),
   Object.freeze({id:'seonammedi',workspaceId:'seonammedi',name:'서남권 국립의대 소통센터',canonicalUrl:'https://ekodi.kr/seonammedi/',canonicalPath:'/seonammedi',adminUrl:'https://ekodi.kr/seonammedi/admin/',aliases:['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'],authoritySiteKey:'seonammedi'}),
   Object.freeze({id:'pyeonggongmok',workspaceId:'pyeonggongmok',name:'평생공부하는 목회자 모임',canonicalUrl:'https://ekodi.kr/pyeonggongmok/',canonicalPath:'/pyeonggongmok',adminUrl:'https://ekodi.kr/pyeonggongmok/admin/',authoritySiteKey:'pyeonggongmok'}),
+  // The same cheonggye-pass tenant/grants now use the shorter canonical entry.
+  Object.freeze({id:'cheonggye-pass',workspaceId:'cheonggye-pass',name:'청계패스',
+    canonicalUrl:'https://ekodi.kr/cgpass/',canonicalPath:'/cgpass',
+    adminUrl:'https://ekodi.kr/cgpass/admin/',tenantSlug:'cheonggye-pass',authoritySiteKey:'cheonggye-pass'}),
   Object.freeze({id:'cheonggye',workspaceId:'cheonggye',name:'청계잇다',canonicalUrl:'https://ekodi.kr/cheonggye/',canonicalPath:'/cheonggye',adminUrl:'https://ekodi.kr/cheonggye/admin/',authoritySiteKey:'cheonggye'}),
   Object.freeze({id:'cgma',workspaceId:'cgma',name:'청계면상인회',canonicalUrl:'https://ekodi.kr/cgma/',canonicalPath:'/cgma',adminUrl:'https://ekodi.kr/cgma/admin/',aliases:['cgma.or.kr','www.cgma.or.kr'],authoritySiteKey:'cgma',tenantSlug:'cheonggye'}),
 ]);
@@ -43,7 +48,7 @@ const normalizedId=value=>clean(value,100).toLowerCase().replace(/[^a-z0-9-]/g,'
 const trimPath=value=>{const raw=String(value||'/').split('?')[0].split('#')[0];const path=('/'+raw.replace(/^\/+|\/+$/g,'')).replace(/\/{2,}/g,'/');return path==='/'?'/':path.replace(/\/$/,'')};
 const pathForTenant=slug=>TENANT_PATH_ALIASES[clean(slug,100).toLowerCase()]||('/'+clean(slug,100).toLowerCase().replace(/[^a-z0-9-]/g,'-'));
 // customer_tenants.domain is the registered public address; an `ekodi.kr/<path>` value wins over the slug guess.
-export const registeredTenantPath=(slug,domain)=>{const raw=clean(domain,255).toLowerCase().replace(/^https?:\/\//,'');const m=raw.match(/^ekodi\.kr(\/[a-z0-9\-\/]+)$/);if(m){const path=trimPath(m[1]);if(path!=='/'&&!/(^|\/)(admin|api|auth)(\/|$)/.test(path))return path}return pathForTenant(slug)};
+export const registeredTenantPath=(slug,domain)=>{if(clean(slug,100).toLowerCase()==='cheonggye-pass')return '/cgpass';const raw=clean(domain,255).toLowerCase().replace(/^https?:\/\//,'');const m=raw.match(/^ekodi\.kr(\/[a-z0-9\-\/]+)$/);if(m){const path=trimPath(m[1]);if(path!=='/'&&!/(^|\/)(admin|api|auth)(\/|$)/.test(path))return path}return pathForTenant(slug)};
 const domainKey=site=>{try{const u=new URL(site.canonicalUrl);return u.hostname+(u.pathname==='/'?'/':u.pathname.replace(/\/$/,''))}catch{return site.canonicalPath||site.id}};
 const defaultMaintenanceTitle=site=>site.name?site.name+' 준비 중입니다':'현재 사이트 준비 중입니다';
 const defaultMaintenanceMessage='현재 관리자 점검 또는 준비 중입니다. 잠시 후 다시 확인해 주세요.';

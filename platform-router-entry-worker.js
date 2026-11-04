@@ -68,7 +68,7 @@ import { localRegionModuleAdminScript } from './local-region-module-admin.js';
 import { localRegionAdminAuthScript } from './local-region-admin-auth.js';
 import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
-import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath } from './regional-commerce-program-registry.js';
+import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath, legacyCheonggyePassCanonicalPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
 import { cheonggyePassVendorIntakeScript } from './cheonggyepass-vendor-intake-ui.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
@@ -295,7 +295,7 @@ async function routeDeploymentProbe(request,env){
 function injectCgmaRegionalLinks(response){
   const type=String(response.headers.get('content-type')||'').toLowerCase();
   if(!type.includes('text/html'))return response;
-  const html='<section data-ekodi-cheonggye-links="v1" style="width:min(1120px,calc(100% - 28px));margin:18px auto 30px;padding:16px;border:1px solid #d8dfd9;border-radius:18px;background:#fffdf8;color:#16312a;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif"><div style="font-size:12px;font-weight:900;letter-spacing:.08em;color:#52645e">청계 연결</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><strong style="margin-right:4px">지역과 혜택을 함께 연결합니다.</strong><a href="/cheonggye" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#174837;color:#fff;text-decoration:none;font-size:13px;font-weight:800">청계잇다</a><a href="/cheonggyepass" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#eef3f0;color:#174837;text-decoration:none;font-size:13px;font-weight:800">청계패스</a><a href="/cgma/ai-education/" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#fff;color:#111;border:1px solid #111;text-decoration:none;font-size:13px;font-weight:800">상인 AI 교육 수요조사</a></div></section>';
+  const html='<section data-ekodi-cheonggye-links="v1" style="width:min(1120px,calc(100% - 28px));margin:18px auto 30px;padding:16px;border:1px solid #d8dfd9;border-radius:18px;background:#fffdf8;color:#16312a;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif"><div style="font-size:12px;font-weight:900;letter-spacing:.08em;color:#52645e">청계 연결</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><strong style="margin-right:4px">지역과 혜택을 함께 연결합니다.</strong><a href="/cheonggye" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#174837;color:#fff;text-decoration:none;font-size:13px;font-weight:800">청계잇다</a><a href="/cgpass" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#eef3f0;color:#174837;text-decoration:none;font-size:13px;font-weight:800">청계패스</a><a href="/cgma/ai-education/" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#fff;color:#111;border:1px solid #111;text-decoration:none;font-size:13px;font-weight:800">상인 AI 교육 수요조사</a></div></section>';
   return new HTMLRewriter().on('body',{element:e=>e.append(html,{html:true})}).transform(response);
 }
 async function routePublicWorkspace(request,env){
@@ -642,6 +642,18 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/admin/people'||url.pathname==='/admin/people/')return personAuthorityPage();
         if(url.pathname==='/admin/site-admins'||url.pathname==='/admin/site-admins/')return siteAdminBootstrapPage();
         if(isChurchPastorAdminPath(url.pathname))return injectEkodiShell(churchPastorAdminPage(),'church','admin');
+        // Canonical public/admin address migration: preserve query parameters,
+        // use GET/HEAD only and never redirect vendor intake or credential APIs.
+        if(['GET','HEAD'].includes(request.method)){
+          const canonicalPass=legacyCheonggyePassCanonicalPath(url.pathname);
+          if(canonicalPass){
+            const target=new URL(request.url);target.pathname=canonicalPass;
+            return new Response(null,{status:308,headers:{
+              location:target.toString(),'cache-control':'no-store',
+              'x-content-type-options':'nosniff','x-ekodi-route':'cgpass-legacy-handoff',
+            }});
+          }
+        }
         const directCommerceProgram=regionalCommerceProgramFromPath(url.pathname);
         if(directCommerceProgram){
           const region=localRegionBySlug('cheonggye');

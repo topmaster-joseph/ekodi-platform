@@ -12,7 +12,7 @@ const TENANTS = Object.freeze([
   { slug: 'ekodimission', name: '에코디선교회', domain: 'ekodi.kr/ekodimission', realm: 'ekodimission-client' },
   { slug: 'cgma', name: '청계면상인회', domain: 'ekodi.kr/cgma', realm: 'cgma-client' },
   { slug: 'cheonggye-local', name: '청계잇다 지역플랫폼', domain: 'ekodi.kr/cheonggye', realm: 'portal' },
-  { slug: 'cheonggye-pass', name: '청계패스', domain: 'ekodi.kr/cheonggye/pass', realm: 'portal' },
+  { slug: 'cheonggye-pass', name: '청계패스', domain: 'ekodi.kr/cgpass', realm: 'portal' },
   { slug: 'cmpmyi', name: '통합 매장 운영', domain: 'ekodi.kr/cmpmyi', realm: 'cmpmyi-client' },
   { slug: 'jadam', name: '자담치킨 목포대점', domain: 'jadam.ekodi.kr', realm: 'jadam-client' },
   { slug: 'pizzamaru', name: '피자마루 목포대점', domain: 'pizzamaru.ekodi.kr', realm: 'pizzamaru-client' },
@@ -166,6 +166,8 @@ export async function ensureCustomerAccessSchema(db) {
     VALUES (?, ?, ?, 'active', ?)`);
   await db.batch(TENANTS.map(tenant => seed.bind(tenant.slug, tenant.name, tenant.domain, now)));
   await db.prepare("UPDATE customer_tenants SET domain = 'ekodi.kr/cgma' WHERE slug = 'cgma' AND domain <> 'ekodi.kr/cgma'").run();
+  // Existing CGPASS tenant/grants retain their IDs. Upgrade only known EKODI path aliases.
+  await db.prepare("UPDATE OR IGNORE customer_tenants SET domain = 'ekodi.kr/cgpass' WHERE slug = 'cheonggye-pass' AND lower(trim(domain)) IN ('ekodi.kr/cheonggye/pass','ekodi.kr/cheonggyepass')").run();
   await db.prepare("UPDATE customer_tenants SET domain = 'yogurt.ekodi.kr' WHERE slug = 'yogurt' AND domain <> 'yogurt.ekodi.kr'").run();
 
   try {

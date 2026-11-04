@@ -1,8 +1,8 @@
 # 청계패스 외부업체 통합 납품·검증 게이트
 
 ## 서비스 및 데이터 소유 경계
-- 정식 공개 주소: https://ekodi.kr/cheonggyepass
-- 정식 관리 주소: https://ekodi.kr/cheonggyepass/admin
+- 정식 공개 주소: https://ekodi.kr/cgpass
+- 정식 관리 주소: https://ekodi.kr/cgpass/admin
 - 청계잇다 연결: https://ekodi.kr/cheonggye/pass
 - 청계면상인회 회원·회비·회계·문서는 /cgma에서 분리 보존.
 - 공급자 상태: unassigned; 금전거래/정산은 미활성. 공급업체 전환이 지역플랫폼 소유권을 이전하지 않는다.
