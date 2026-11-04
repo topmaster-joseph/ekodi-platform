@@ -64,6 +64,33 @@ async function managementSpaces(request,env){
   return json({spaces,scope:'authenticated-member-only',identityKey:'ekodi_id',workspaceKey:'workspace_id'});
 }
 function validCount(value){return Number.isSafeInteger(value)&&value>=0}
+function safeOperatingLabel(value,max=90){
+  return typeof value==='string'?value.trim().slice(0,max):'';
+}
+function verifiedStoreOperations(space){
+  // The authorized RLS snapshot is the only detail source. Unknown is not zero.
+  const menu=space?.menu,channels=space?.channels;
+  if(!Array.isArray(menu)||!Array.isArray(channels))return {status:'unavailable'};
+  if(menu.length!==space.summary.canonical_menu_count
+    ||space.summary.connected_channel_count>channels.length
+    ||menu.some(item=>!item||typeof item!=='object'||!safeOperatingLabel(item.name))
+    ||channels.some(item=>!item||typeof item!=='object'||!safeOperatingLabel(item.provider)))return {status:'unavailable'};
+  return {
+    status:'verified-read-only',
+    menu:{total:menu.length,shown:Math.min(menu.length,40),items:menu.slice(0,40).map(item=>({
+      name:safeOperatingLabel(item.name,100),
+      category:safeOperatingLabel(item.category,50),
+      basePrice:typeof item.base_price==='number'&&Number.isFinite(item.base_price)
+        &&item.base_price>=0&&item.base_price<=1e12?item.base_price:null,
+      availability:safeOperatingLabel(item.availability,40)
+    }))},
+    channels:{total:channels.length,shown:Math.min(channels.length,24),items:channels.slice(0,24).map(item=>({
+      provider:safeOperatingLabel(item.provider,50),
+      name:safeOperatingLabel(item.display_name,90),
+      connectionStatus:safeOperatingLabel(item.connection_status,40)
+    }))}
+  };
+}
 async function managementStoreSummary(request,env,url){
   const authorization=String(request.headers.get('authorization')||'');
   if(!authorization.startsWith('Bearer '))return json({error:'unauthorized'},401);
@@ -95,6 +122,7 @@ async function managementStoreSummary(request,env,url){
       orderEnabled:space.store.order_enabled
     },
     dataPolicy:'verified-read-only',
+    operations:verifiedStoreOperations(space),
     generatedBy:'official-workspace-api'
   });
 }
