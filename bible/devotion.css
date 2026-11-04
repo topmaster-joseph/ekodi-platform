@@ -85,8 +85,7 @@
 .ekodi-devotion .dv-audio-hint{min-width:100%}
 .ekodi-devotion .dv-illustration{max-height:260px;aspect-ratio:1.65/1}
 }
-/* 2026-10-27: on the mission devotion page the header (brand + menu) spans the same centre column as the content. */
-body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-inline:16px}
+/* Mission navigation and footer widths are owned by the Mission Shell, not the shared Bible stylesheet. */
 /* 2026-10-27: 관리자 메뉴(로그인한 최고·교회·선교회 관리자) · 나의 묵상기록 */
 .ekodi-devotion .dv-adminbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0 6px;padding:10px 14px;border:1px solid #c9b47a;border-radius:14px;background:#fbf6e6}
 .ekodi-devotion .dv-adminbar[hidden]{display:none!important}
@@ -232,3 +231,69 @@ body:has([data-mission-devotion]) .mission-site-header{max-width:840px;padding-i
  .ekodi-devotion .dv-speech-tools .dv-speech-btn[data-speech-action="play"]{flex:1 1 54%}
  .ekodi-devotion .dv-speech-tools .dv-speech-more{flex:1 1 30%}
 }
+
+
+/* DEVOTION-VOICE-ONE-ROW-001: three primary choices always share one row.
+   Secondary playback/voice controls remain available below without reflowing
+   the primary controls, including on 320px mobile. */
+.ekodi-devotion .dv-speech-tools{
+  display:grid;
+  grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);
+  align-items:center;
+  column-gap:7px;
+  row-gap:8px;
+}
+.ekodi-devotion .dv-speech-tools .dv-speech-gender{
+  grid-column:1;grid-row:1;order:0;display:flex;
+  flex:initial;max-width:none;min-width:0;gap:4px;
+  justify-content:flex-start;font-size:.82rem;white-space:nowrap
+}
+.ekodi-devotion .dv-speech-tools .dv-speech-gender select{
+  min-width:0;max-width:none;flex:1 1 52px;
+  padding:7px 4px;font-size:.82rem
+}
+.ekodi-devotion .dv-speech-tools .dv-speech-btn[data-speech-action="play"]{
+  grid-column:2;grid-row:1;order:1;
+  width:100%;min-width:0;min-height:44px;flex:initial;
+  padding:7px 4px;font-size:.83rem
+}
+.ekodi-devotion .dv-speech-tools .dv-speech-more{
+  grid-column:3;grid-row:1;order:2;
+  width:100%;min-width:0;min-height:44px;flex:initial;
+  padding:7px 4px;font-size:.83rem
+}
+.ekodi-devotion .dv-speech-tools .dv-speech-status{
+  grid-column:1/-1;grid-row:3;order:30;min-width:0
+}
+.ekodi-devotion .dv-speech-tools .dv-speech-engine,
+.ekodi-devotion .dv-speech-tools .dv-speech-voice,
+.ekodi-devotion .dv-speech-tools .dv-speech-speed{
+  grid-column:1/-1;width:100%;min-width:0
+}
+.ekodi-devotion .dv-speech-tools .dv-speech-btn[data-speech-action="pause"],
+.ekodi-devotion .dv-speech-tools .dv-speech-btn[data-speech-action="stop"],
+.ekodi-devotion .dv-speech-tools .dv-speech-btn[data-speech-action="repeat"]{
+  grid-row:2;grid-column:auto;
+  width:100%;min-width:0;flex:initial;min-height:44px
+}
+@media(max-width:520px){
+ .ekodi-devotion .dv-speech-tools{
+   grid-template-columns:minmax(0,1.43fr) minmax(0,1fr) minmax(0,1fr);
+   padding:9px 8px;column-gap:5px;row-gap:7px
+ }
+ .ekodi-devotion .dv-speech-tools .dv-speech-gender{
+   grid-column:1;grid-row:1;flex:initial;
+   max-width:none;justify-content:flex-start;font-size:.73rem;gap:3px
+ }
+ .ekodi-devotion .dv-speech-tools .dv-speech-gender select{
+   flex:1 1 40px;max-width:none;font-size:.74rem;min-width:0;padding:7px 2px
+ }
+ .ekodi-devotion .dv-speech-tools .dv-speech-btn[data-speech-action="play"],
+ .ekodi-devotion .dv-speech-tools .dv-speech-more{
+   flex:initial;min-width:0;white-space:nowrap;
+   font-size:.76rem;padding:7px 2px
+ }
+}
+
+/* Preserve 44px touch targets over Mission-only compact button sizing. */
+.ekodi-devotion .dv-speech-tools .dv-speech-more{min-height:44px!important}

@@ -53,11 +53,21 @@ export function formatDevotionShareMessage({date, title, excerpt, url}) {
     cleanUrl.href,
   ].filter(Boolean).join('\n');
 }
+// Speak chapter/verse citations as Korean book references, not punctuation.
+// Keep the published on-screen reference intact; only the TTS script changes.
+export function spokenScriptureReference(reference) {
+  return compact(reference)
+    .replace(/(\d+)\s*:\s*(\d+)\s*[-–—~〜]\s*(\d+)\s*:\s*(\d+)/gu,
+      (_, a, b, c, d) => `${a}장 ${b}절부터 ${c}장 ${d}절`)
+    .replace(/(\d+)\s*:\s*(\d+)\s*[-–—~〜]\s*(\d+)/gu,
+      (_, chapter, start, end) => `${chapter}장 ${start}절부터 ${end}절`)
+    .replace(/(\d+)\s*:\s*(\d+)/gu, (_, chapter, verse) => `${chapter}장 ${verse}절`);
+}
 export function devotionSpeechSegments(data) {
   if (!data?.found) return [];
   const activities = data.activities || {};
   const items = [
-    `오늘의 매일묵상. ${compact(data.passage)}.`,
+    `오늘의 매일묵상. ${spokenScriptureReference(data.passage)}.`,
     activities.theme ? `오늘의 주제. ${compact(activities.theme)}.` : '',
     '성경 본문.',
   ];

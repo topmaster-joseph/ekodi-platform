@@ -37,7 +37,8 @@ test('Mission-only compact rhythm preserves readable verse spacing and focus beh
  assert.match(css,/\.dv-date-link\{\s*padding:5px 10px;min-height:36px/);
  assert.match(css,/\.dv-btn\{\s*padding:6px 11px;min-height:38px/);
  assert.match(css,/@media\(max-width:520px\)/);
- assert.match(css,/body:has\(main\[data-mission-devotion\]\) \.site-footer/);
+ assert.doesNotMatch(css,/body:has\(main\[data-mission-devotion\]\) \.site-footer,\s*main\[data-mission-devotion\]/);
+ assert.match(css,/\.mission-site-header,main,\.site-footer\{width:100%;max-width:var\(--mission-max\)/);
  assert.match(css,/main\[data-mission-devotion\] \.ekodi-devotion\{padding-left:0;padding-right:0\}/);
  assert.match(html,/<link rel="stylesheet" href="\/ekodimission\/assets\/shell.css">/);
  assert.match(html,/<link rel="stylesheet" href="\/bible\/devotion.css">/);

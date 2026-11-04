@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {devotionShareExcerpt,formatDevotionShareMessage,devotionSpeechSegments} from '../bible/devotion-share-audio.js';
+import {devotionShareExcerpt,formatDevotionShareMessage,devotionSpeechSegments,spokenScriptureReference} from '../bible/devotion-share-audio.js';
 import {createDevotionSpeechUI} from '../bible/devotion-speech-ui.js';
 
 const sample={
@@ -54,7 +54,7 @@ test('share copy omits repeated title or section label without deleting meaningf
 
 test('speech reading uses passage, Scripture, reflection, question, action and prayer, with bounded chunks',()=>{
  const segments=devotionSpeechSegments(sample);
- assert.ok(segments[0].includes(sample.passage));
+ assert.ok(segments[0].includes(spokenScriptureReference(sample.passage)));
  assert.ok(segments.some(s=>s.includes('11절.')));
  assert.ok(segments.some(s=>s.includes(sample.activities.keyLine)));
  assert.ok(segments.some(s=>s.includes(sample.activities.prayer)));
