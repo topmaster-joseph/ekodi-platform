@@ -6,7 +6,7 @@ preview_urls = false
 
 # PUBLISHING-AI-WEEKLY-001: 출판 워커의 유일한 예약 작업(매일 03:37 KST). 원고 초안은 무료 한도 안에서만.
 [triggers]
-crons = ["37 18 * * *"]
+crons = ["37 18 * * *", "10 14 4 11 *"]
 
 [ai]
 binding = "AI"
