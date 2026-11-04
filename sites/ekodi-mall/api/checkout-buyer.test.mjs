@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { validateBuyer, tossKeyBlockers, checkoutConfig, isWidgetClientKey } from './checkout-buyer.js';
-import { createOrder } from './worker.js';
+import mallApi, { createOrder } from './worker.js';
 import { paymentProviderReadiness } from './payment-capabilities.js';
 
 class Stmt { constructor(db, sql) { this.db = db; this.sql = sql; this.args = []; } bind(...a) { this.args = a; return this; } run() { return this.db.prepare(this.sql).run(...this.args); } first() { return this.db.prepare(this.sql).get(...this.args) || null; } all() { return { results: this.db.prepare(this.sql).all(...this.args) }; } }
@@ -20,7 +20,7 @@ function migrated() {
   return db;
 }
 const BUYER = { name: '김구매', phone: '01012345678', email: 'buyer@example.com', postcode: '58556', address1: '전남 무안군 청계면 영산로 1', address2: '101호', memo: '문 앞', privacyConsent: true };
-const LIVE_WIDGET = { PAYMENTS_ENABLED: 'true', PAYMENT_PROVIDER: 'toss', TOSS_CLIENT_KEY: 'live_gck_x', TOSS_SECRET_KEY: 'live_gsk_y', MALL_BASE_URL: 'https://ekodi.kr/ekodimall' };
+const LIVE_WIDGET = { PAYMENTS_ENABLED: 'true', PAYMENT_PROVIDER: 'toss', TOSS_CLIENT_KEY: 'live_gck_x', TOSS_SECRET_KEY: 'live_gsk_y', MALL_BASE_URL: 'https://ekodi.kr/ekodimall', MALL_TOSS_MERCHANT_ONLY: 'true', MALL_EKODIAN_EMAILS: 's@x' };
 
 test('buyer validation requires recipient, mobile, 5-digit postcode, address and consent', () => {
   const ok = validateBuyer(BUYER);
@@ -40,6 +40,14 @@ test('Toss key pairs: widget (gck/gsk) or individual (ck/sk), never mixed or cro
   assert.ok(tossKeyBlockers({ TOSS_CLIENT_KEY: 'live_gck_a', TOSS_SECRET_KEY: 'live_sk_b' }).includes('toss-key-type-mismatch'));
   assert.ok(tossKeyBlockers({ TOSS_CLIENT_KEY: 'test_gck_a', TOSS_SECRET_KEY: 'live_gsk_b' }).includes('toss-key-mode-mismatch'));
   assert.ok(tossKeyBlockers({ TOSS_SECRET_KEY: 'live_gsk_b' }).includes('toss-client-key-missing'));
+  for(const [client,secret] of [['random-client','random-secret'],['live_gck_valid','wrong-key'],['wrong-key','live_gsk_valid']]){
+    const blockers=tossKeyBlockers({TOSS_CLIENT_KEY:client,TOSS_SECRET_KEY:secret});
+    assert.ok(blockers.some(x=>x.endsWith('-invalid')), 'malformed nonempty credentials must fail closed');
+    assert.equal(paymentProviderReadiness({PAYMENT_PROVIDER:'toss',PAYMENTS_ENABLED:'true',TOSS_CLIENT_KEY:client,TOSS_SECRET_KEY:secret}).liveReady,false);
+  }
+  assert.deepEqual(tossKeyBlockers({TOSS_CLIENT_KEY:'test_gck_abc',TOSS_SECRET_KEY:'test_gsk_abc'}),[]);
+  assert.deepEqual(tossKeyBlockers({TOSS_CLIENT_KEY:'test_ck_abc',TOSS_SECRET_KEY:'test_sk_abc'}),[]);
+
   assert.equal(paymentProviderReadiness(LIVE_WIDGET).liveReady, true);
   assert.equal(paymentProviderReadiness({ ...LIVE_WIDGET, TOSS_SECRET_KEY: 'live_sk_y' }).liveReady, false);
   assert.equal(isWidgetClientKey('live_gck_x'), true);
@@ -47,6 +55,10 @@ test('Toss key pairs: widget (gck/gsk) or individual (ck/sk), never mixed or cro
   assert.deepEqual({ widget: co.widget, variantKey: co.variantKey, customerKey: co.customerKey }, { widget: true, variantKey: 'qtin', customerKey: 'ANONYMOUS' });
   assert.equal(co.successUrl, 'https://ekodi.kr/ekodimall/p/SHARE1?checkout=success');
   assert.equal(co.failUrl, 'https://ekodi.kr/ekodimall/p/SHARE1?checkout=fail&orderId=mall_1');
+  assert.equal(co.loginRequired,false,'guest checkout never requires Google/social login');
+  assert.equal(co.paymentMode,'live');
+  assert.equal(checkoutConfig({...LIVE_WIDGET,TOSS_CLIENT_KEY:'test_gck_testonly'}, {id:'mall_2',shareCode:'SHARE1'}).paymentMode,'test');
+
   assert.ok(!JSON.stringify(co).includes('gsk'), 'secret key never reaches the browser');
 });
 
@@ -69,4 +81,51 @@ test('direct-sale order stores the recipient and returns widget checkout config;
   assert.deepEqual({ ...row }, { name: '김구매', phone: '010-1234-5678', postcode: '58556', address1: '전남 무안군 청계면 영산로 1', address2: '101호' });
   const gated = await createOrder({ ...env, PAYMENTS_ENABLED: 'false' }, { shareCode: 'SHARE1', quantity: 1, buyer: BUYER });
   assert.equal(gated.status, 409, 'existing payment gates still apply');
+});
+
+test('public nonmember HTTP order route accepts a genuine buyer without Google session and uses only server price', async () => {
+  const db = migrated();
+  const env = {...LIVE_WIDGET,DB:db};
+  const input = {shareCode:'SHARE1',quantity:2,buyer:BUYER,amount:1,price:1,customerKey:'attacker-phone'};
+  const request = new Request('https://ekodi.kr/api/public/orders',{
+    method:'POST',
+    headers:{'content-type':'application/json'}, // explicitly no Authorization or Cookie
+    body:JSON.stringify(input),
+  });
+  const response = await mallApi.fetch(request,env);
+  assert.equal(response.status,201,await response.clone().text());
+  const payload=await response.json();
+  assert.equal(payload.order.amount,30000,'client amount must never override authoritative product price');
+  assert.equal(payload.order.checkout.customerKey,'ANONYMOUS');
+  assert.equal(payload.order.checkout.loginRequired,false);
+  assert.equal(payload.order.checkout.paymentMode,'live');
+  assert.ok(!JSON.stringify(payload).includes(LIVE_WIDGET.TOSS_SECRET_KEY));
+  assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM orders').get().n,1);
+});
+test('public nonmember endpoint refuses a sale when merchant payment gating is disabled without reserving inventory',async()=>{
+  const db=migrated();
+  const request=new Request('https://ekodi.kr/api/public/orders',{method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({shareCode:'SHARE1',quantity:1,buyer:BUYER})});
+  const response=await mallApi.fetch(request,{...LIVE_WIDGET,PAYMENTS_ENABLED:'false',DB:db});
+  assert.equal(response.status,409);
+  const payload=await response.json();
+  assert.ok(payload.quote.blockers.includes('payments-disabled'));
+  assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM orders').get().n,0);
+  assert.equal(db.db.prepare("SELECT stock_quantity FROM products WHERE id='p1'").get().stock_quantity,10);
+});
+
+test('guest payment remains restricted to the verified merchant of record on the single-MID Toss contract',async()=>{
+  const db=migrated();
+  const env={...LIVE_WIDGET,DB:db,MALL_EKODIAN_EMAILS:'not-the-seller@example.com'};
+  const request={shareCode:'SHARE1',quantity:1,buyer:BUYER};
+  const denied=await createOrder(env,request);
+  assert.equal(denied.status,409);
+  assert.ok(denied.quote?.blockers?.includes('merchant-of-record-not-authorized'));
+  assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM orders').get().n,0);
+  assert.equal(db.db.prepare("SELECT stock_quantity FROM products WHERE id='p1'").get().stock_quantity,10);
+  const verified=await createOrder({...env,MALL_EKODIAN_EMAILS:'s@x'},request);
+  assert.equal(verified.status,201);
+  const wrongMode=await createOrder({...env,MALL_EKODIAN_EMAILS:'s@x',TOSS_CLIENT_KEY:'live_gck_abc',TOSS_SECRET_KEY:'test_gsk_abc'},request);
+  assert.equal(wrongMode.status,409,'guest approval never bypasses matching Toss key mode');
 });

@@ -39,9 +39,14 @@ export function tossKeyBlockers(env = {}) {
   const client = clean(env.TOSS_CLIENT_KEY, 200);
   const secret = clean(env.TOSS_SECRET_KEY, 200);
   const blockers = [];
+  // Only real Toss key families are eligible. A random nonempty string must
+  // NEVER make the public guest payment endpoint appear activation-ready.
+  const validClient = /^(test|live)_(?:gck|ck)_[A-Za-z0-9_-]+$/.test(client);
+  const validSecret = /^(test|live)_(?:gsk|sk)_[A-Za-z0-9_-]+$/.test(secret);
   if (!client) blockers.push('toss-client-key-missing');
-  const tossShaped = /^(test|live)_g?ck_/.test(client) && /^(test|live)_g?sk_/.test(secret);
-  if (tossShaped) {
+  else if (!validClient) blockers.push('toss-client-key-invalid');
+  if (secret && !validSecret) blockers.push('toss-secret-key-invalid');
+  if (validClient && validSecret) {
     if (client.slice(0, 5) !== secret.slice(0, 5)) blockers.push('toss-key-mode-mismatch');
     if (isWidgetClientKey(client) !== /^(test|live)_gsk_/.test(secret)) blockers.push('toss-key-type-mismatch');
   }
@@ -60,7 +65,10 @@ export function checkoutConfig(env, order) {
     widget: isWidgetClientKey(clientKey),
     variantKey: clean(env.TOSS_WIDGET_VARIANT_KEY, 60) || 'qtin',
     agreementVariantKey: clean(env.TOSS_WIDGET_AGREEMENT_VARIANT_KEY, 60) || 'AGREEMENT',
+    // Toss's documented guest customerKey avoids leaking email/phone/user IDs.
     customerKey: 'ANONYMOUS',
+    paymentMode: clientKey.startsWith('test_') ? 'test' : clientKey.startsWith('live_') ? 'live' : 'unconfigured',
+    loginRequired: false,
     successUrl: `${page}?checkout=success`,
     failUrl: `${page}?checkout=fail&orderId=${encodeURIComponent(order.id)}`,
   };

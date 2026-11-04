@@ -91,9 +91,10 @@
     const total = el('b', { text: won(ctx.quote.unitAmount) });
     qty.addEventListener('input', () => { total.textContent = won(ctx.quote.unitAmount * Math.max(1, Math.min(20, Math.trunc(Number(qty.value) || 1)))); });
     const consent = el('input', { id: 'coConsent', type: 'checkbox' });
-    const payBtn = el('button', { class: 'btn primary', type: 'button', text: '결제하기' });
+    const payBtn = el('button', { class: 'btn primary', type: 'button', text: '비회원으로 카드결제' });
     const panel = el('section', { class: 'checkout-panel', 'aria-labelledby': 'coTitle' },
-      el('h2', { id: 'coTitle', text: '바로 구매' }),
+      el('h2', { id: 'coTitle', text: '비회원 주문 · 카드결제' }),
+      el('p', { class: 'checkout-guest-note', text: '회원가입이나 로그인 없이 주문할 수 있습니다. 승인된 판매상품의 가격과 재고는 서버에서 다시 확인합니다.' }),
       el('div', { class: 'checkout-qty' }, el('label', { for: 'coQty', text: '수량' }), qty, el('span', { class: 'checkout-total' }, '합계 ', total)),
       el('div', { class: 'checkout-grid' },
         field('coName', '받는 분', { autocomplete: 'name', maxlength: '40' }),
@@ -103,7 +104,11 @@
         field('coAddr1', '주소', { autocomplete: 'address-line1', maxlength: '200' }),
         field('coAddr2', '상세주소', { autocomplete: 'address-line2', maxlength: '120' }),
         field('coMemo', '배송 요청사항(선택)', { maxlength: '200' })),
-      el('label', { class: 'checkout-consent' }, consent, el('span', { text: '[필수] 주문·배송 안내를 위해 이름, 휴대전화, 이메일, 주소를 수집·이용하는 데 동의합니다. 판매자에게는 배송에 필요한 범위에서만 전달됩니다.' })),
+      el('label', { class: 'checkout-consent' }, consent, el('span', { text: '[필수] 주문·배송 안내를 위해 이름, 휴대전화, 배송주소 및 입력한 경우에만 이메일을 수집·이용합니다. 배송에 필요한 정보만 판매자에게 전달됩니다.' })),
+      el('p', { class: 'checkout-guest-policies' },
+        el('a', { href: '/ekodimall/pages/privacy/', target: '_blank', rel: 'noopener', text: '개인정보처리방침' }),
+        el('span', { text: ' · ' }),
+        el('a', { href: '/ekodimall/pages/returns/', target: '_blank', rel: 'noopener', text: '교환·환불 안내' })),
       msg, payBtn);
     host.append(panel);
     mountAddressSearch(panel);
@@ -125,6 +130,7 @@
 
     let widgets = null;
     let request = null;
+    let pendingGuestOrder = null; // memory-only, never persisted with buyer PII
     widgetPay.addEventListener('click', async () => {
       if (!widgets || !request) return;
       widgetPay.disabled = true; dialogMsg.textContent = '';
@@ -133,26 +139,37 @@
     });
 
     async function start() {
+      // A second click while the payment dialog is open must not reserve stock twice.
+      if (dialog.open || dialog.hasAttribute('open')) return;
       msg.textContent = '';
       if (!consent.checked) { msg.textContent = '개인정보 수집·이용에 동의해 주세요.'; return; }
       if (typeof window.TossPayments !== 'function') { msg.textContent = '결제 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.'; return; }
       payBtn.disabled = true;
       try {
         const v = id => document.getElementById(id).value;
-        const response = await fetch(`${ctx.api}/api/public/orders`, {
-          method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ shareCode: ctx.shareCode, attributionToken: ctx.attributionToken || '', quantity: Math.max(1, Math.min(20, Math.trunc(Number(qty.value) || 1))),
-            buyer: { name: v('coName'), phone: v('coPhone'), email: v('coEmail'), postcode: v('coPostcode'), address1: v('coAddr1'), address2: v('coAddr2'), memo: v('coMemo'), privacyConsent: true } }),
-        });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok || !body.order) throw new Error(body.error || '주문을 만들지 못했습니다.');
-        const order = body.order;
+        const orderInput = { shareCode: ctx.shareCode, attributionToken: ctx.attributionToken || '',
+          quantity: Math.max(1, Math.min(20, Math.trunc(Number(qty.value) || 1))),
+          buyer: { name: v('coName'), phone: v('coPhone'), email: v('coEmail'), postcode: v('coPostcode'), address1: v('coAddr1'), address2: v('coAddr2'), memo: v('coMemo'), privacyConsent: true } };
+        const signature = JSON.stringify(orderInput);
+        let order = pendingGuestOrder?.signature === signature &&
+          Date.parse(pendingGuestOrder.order?.expiresAt) > Date.now() + 60000
+          ? pendingGuestOrder.order : null;
+        if (!order) {
+          const response = await fetch(`${ctx.api}/api/public/orders`, {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(orderInput),
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok || !body.order) throw new Error(body.error || '주문을 만들지 못했습니다.');
+          order = body.order;
+          pendingGuestOrder = { signature, order };
+        }
         const co = order.checkout || {};
         request = { orderId: order.id, orderName: order.orderName, successUrl: co.successUrl, failUrl: co.failUrl, customerName: order.customerName, customerMobilePhone: order.customerMobilePhone };
         if (order.customerEmail) request.customerEmail = order.customerEmail;
         const toss = window.TossPayments(co.clientKey);
         if (co.widget) {
-          summary.textContent = `${order.orderName} · ${won(order.amount)}`;
+          summary.textContent = `${order.orderName} · ${won(order.amount)} · ${co.paymentMode === 'test' ? '테스트 결제(실제 청구 없음)' : '비회원 카드결제'}`;
           methods.replaceChildren(); agreement.replaceChildren(); widgetPay.disabled = true;
           backdrop.hidden = false;
           dialog.show ? dialog.show() : dialog.setAttribute('open', '');
