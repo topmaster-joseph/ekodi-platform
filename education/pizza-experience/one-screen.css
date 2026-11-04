@@ -279,3 +279,28 @@ body[data-area="pizza-experience"]>.ekodi-user-ui-footer{display:none!important}
 @media(max-width:700px){
  #pizza-exp.pizza-one-screen{height:calc(100dvh - 56px)!important}
 }
+
+/* Print the 70-minute handout normally even though the presentation itself is viewport-locked. */
+@media print{
+ html:has(body[data-area="pizza-experience"]),body[data-area="pizza-experience"]{height:auto!important;width:auto!important;overflow:visible!important}
+ #pizza-exp.pizza-one-screen{height:auto!important;width:100%!important;max-width:100%!important;overflow:visible!important}
+}
+
+/* PPT-aligned quizzes and user-selected YouTube's reliable new-window fallback. */
+#pizza-exp .slide-quiz-list{display:flex;flex-direction:column;gap:7px;width:100%;max-width:490px}
+#pizza-exp .slide-quiz .question{margin:2px 0 3px;padding:6px 10px;font-size:.84rem}
+#pizza-exp .slide-quiz .answer-buttons{margin:1px 0;display:flex;gap:7px}
+#pizza-exp .slide-quiz .answer-buttons button{min-height:31px;padding:3px 12px}
+#pizza-exp .slide-quiz .answer-feedback{margin:0;min-height:0;line-height:1.2;font-size:.73rem}
+#pizza-exp .url-input-row .youtube-new-window{display:inline-flex;align-items:center;justify-content:center;min-height:48px;white-space:nowrap;font-size:.84rem;font-weight:900}
+#pizza-exp .url-input-row .youtube-new-window[aria-disabled="true"]{opacity:.52;pointer-events:none}
+@media(max-width:700px){
+ #pizza-exp .url-input-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+ #pizza-exp .url-input-row input{grid-column:1/-1;width:100%}
+ #pizza-exp .url-input-row .btn{min-width:0;min-height:35px;font-size:.72rem;padding:5px 4px}
+ #pizza-exp .scene-detail:has(.slide-quiz-list){justify-content:flex-start}
+ #pizza-exp .slide-quiz-list{gap:3px}
+ #pizza-exp .slide-quiz .question{font-size:.74rem;margin:1px 0;padding:4px 7px}
+ #pizza-exp .slide-quiz .answer-buttons button{min-height:27px;padding:2px 10px;font-size:.69rem}
+ #pizza-exp .slide-quiz .answer-feedback{font-size:.68rem}
+}
