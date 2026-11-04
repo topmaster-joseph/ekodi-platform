@@ -37,7 +37,7 @@ export function registerCampusAiParticipant(agreement,input={}){
 }
 
 /** trustedEvidence is strictly a SERVER-side corroboration, never client-supplied. */
-export function previewCampusAiMonthlyCycle({agreement,participant,cycleIndex,priceMinor,spentMinor=0,reservedMinor=0,completedCycleKeys=[],trustedEvidence,preflightDossier}={}){
+export function previewCampusAiMonthlyCycle({agreement,participant,cycleIndex,priceMinor,spentMinor=0,reservedMinor=0,completedCycleKeys=[],trustedEvidence,verifyServerEvidence,preflightDossier}={}){
   if(agreement?.ok!==true||participant?.ok!==true||agreement.agreementId!==participant.agreementId||
     agreement.universityWorkspaceId!==participant.universityWorkspaceId)return blocked('TENANT_OR_AGREEMENT_SCOPE_MISMATCH');
   if(!Number.isInteger(cycleIndex)||cycleIndex<0||cycleIndex>2)return blocked('OUTSIDE_THREE_MONTH_TERM');
@@ -47,11 +47,14 @@ export function previewCampusAiMonthlyCycle({agreement,participant,cycleIndex,pr
   if(completedCycleKeys.includes(cycleKey))return blocked('DUPLICATE_CYCLE');
   const sum=spentMinor+reservedMinor+priceMinor;
   if(!Number.isSafeInteger(sum)||sum>agreement.budgetMinor)return blocked('UNIVERSITY_BUDGET_EXCEEDED');
+  let provenanceVerified=false;
+  try{provenanceVerified=typeof verifyServerEvidence==='function' && verifyServerEvidence(trustedEvidence,agreement,participant)===true;}
+  catch{provenanceVerified=false;}
   if(trustedEvidence?.verifiedBy!=='ekodi-core'||trustedEvidence.agreementId!==agreement.agreementId||
     trustedEvidence.universityWorkspaceId!==agreement.universityWorkspaceId||
     trustedEvidence.subjectRef!==participant.subjectRef||
     trustedEvidence.coveredProvider!==agreement.providerCode||
-    trustedEvidence.paymentPermission!==true||!id(trustedEvidence.auditReceiptRef))
+    trustedEvidence.paymentPermission!==true||!id(trustedEvidence.auditReceiptRef)||!provenanceVerified)
     return blocked('SERVER_VERIFIED_AUTHORITY_REQUIRED');
   const preflight=assessCampusAiPaymentPreflight(preflightDossier);
   if(preflight.status!=='REVIEW_REQUIRED'||preflight.blockers.length)
