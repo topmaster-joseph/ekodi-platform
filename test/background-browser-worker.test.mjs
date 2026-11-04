@@ -78,6 +78,11 @@ test('shared-site guarded release invokes native browser verification after prod
   // Bottom AI command box is retired platform-wide: zero instances on every post-release snapshot.
   assert.match(workerWorkflow,/github\.event_name \}\}" != "pull_request"[\s\S]*select\(\.type == "snapshot" and \(\(\.userAiEntryCount \/\/ 0\) > 0\)\)/);
   assert.match(workerWorkflow,/\.pageErrors \| length == 0/);
+  assert.match(workerWorkflow,/\.performance\.navigations/);
+  assert.match(workerWorkflow,/\.performance\.p50Ms/);
+  assert.match(workerWorkflow,/\.performance\.p95Ms/);
+  assert.match(workerWorkflow,/\.navigationTimings\[\]\?/);
+  assert.match(workerWorkflow,/Browser start count: 1/);
   assert.match(source,/url:clean\(page\.url\(\),500\)/);
   assert.match(workerWorkflow,/github\.event_name == 'pull_request'[\s\S]*'\/,\/my\/,\/admin\/'/);
   assert.match(workerWorkflow,/uses:\s*actions\/upload-artifact@v4\r?\n\s*if:\s*always\(\)/);
