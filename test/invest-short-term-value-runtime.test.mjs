@@ -69,7 +69,7 @@ test('private research tab reports KIS and OpenDART readiness without exposing o
  assert.match(html,/id="shortValueChecks"/);
  assert.match(html,/단기 가치발굴/);
  assert.match(js,/\/research\/short-term-value/);
- assert.match(js,/shortValueResearch:'research'/);
+ assert.match(js,/research:\[\['strategyLab','AI 전략 검증'\],\['shortValueResearch','저평가 종목·공시'/);
  assert.match(js,/loadShortValueReadiness\(/);
  assert.doesNotMatch(js,/innerHTML/);
 });
