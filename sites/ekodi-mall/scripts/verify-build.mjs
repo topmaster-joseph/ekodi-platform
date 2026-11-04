@@ -88,7 +88,30 @@ for (const item of originalItems) {
     if (!detail.includes('name="robots" content="noindex,follow"')) errors.push('Preparing product detail was not marked noindex: ' + item.id);
   }
 }
+const mirror = JSON.parse(await readFile(path.join(dist, 'provider-bookstore.json'), 'utf8'));
+const approvedBook = mirror.products?.find((p) => p.bookId === 'BOOK-EKODI-000002');
+if (!approvedBook?.slug || !/^book-[a-z0-9-]+$/.test(approvedBook.slug)) {
+  errors.push('Existing approved bookstore edition missing from stable publisher mirror');
+} else {
+  const detail = await readFile(path.join(dist, 'products', approvedBook.slug, 'index.html'), 'utf8');
+  if (!detail.includes('name="robots" content="index,follow,max-image-preview:large"') ||
+      detail.includes('name="robots" content="noindex')) {
+    errors.push('Public bookstore information page cannot inherit sale-status noindex');
+  }
+  if (!detail.includes('data-bookstore-book-id="BOOK-EKODI-000002"') ||
+      !detail.includes('data-bookstore-purchase-link')) {
+    errors.push('Public bookstore page missing live purchase verification anchors');
+  }
+}
+const liveBridge = await readFile(path.join(dist, 'assets', 'bookstore-live.js'), 'utf8');
+for (const marker of ['/books/api/commerce', '/public/approvals', '/quote?book=', 'checkout?.fileReady', "checkout?.mode === 'live'"]) {
+  if (!liveBridge.includes(marker)) errors.push('Bookstore sale bridge lost verification gate: ' + marker);
+}
+if (!homepage.includes('src="/assets/bookstore-live.js"')) errors.push('Mall homepage missing bookstore approval bridge');
 const publicSitemap = await readFile(path.join(dist, 'sitemap.xml'), 'utf8');
+if (approvedBook?.slug && !publicSitemap.includes('/products/' + approvedBook.slug + '/')) {
+  errors.push('Public bookstore information page missing from sitemap');
+}
 for (const item of originalItems.filter((p) => !isPublicStaticSale(p))) {
   if (publicSitemap.includes('/products/' + item.slug + '/')) errors.push('Preparing product listed in sitemap: ' + item.id);
 }
