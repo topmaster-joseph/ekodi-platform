@@ -1908,6 +1908,14 @@ $InteractiveAuthLastPath = Join-Path $Root 'interactive-auth-last.json'
 $InteractiveAuthSessionPattern = '^ias_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'
 # Local registry: the agent never trusts a URL from the network payload.
 $InteractiveAuthServices = @{
+  'domeggook-business' = @{
+    entryUrl = 'https://www.domeggook.com/main/'
+    origin = 'https://www.domeggook.com'
+    host = 'www.domeggook.com'
+    authPrefixes = @('/main/', '/my/', '/member/')
+    authMarker = 'logout-visible'
+    label = '도매꾹 (에코디비즈 사업자 주문 사전점검)'
+  }
   'factchat-mokpo' = @{
     entryUrl = 'https://mokpo.factchat.bot/dashboard/chat/40882'
     origin = 'https://mokpo.factchat.bot'
@@ -1927,6 +1935,9 @@ $InteractiveAuthFeatureKeywords = [ordered]@{
   'korea-in-data' = @('korea-in-data', 'korea in data')
   'law-in-data' = @('law-in-data', 'law in data')
   'usage-credit' = @('크레딧', 'credit', '사용량', '잔여', '한도')
+  'dg-member-menu' = @('마이페이지')
+  'dg-emoney-menu' = @('e-money', '이머니')
+  'dg-order-menu' = @('주문전체목록', '주문조회')
 }
 
 # JSON round-trips may yield strings (PS 5.1) or DateTime (PS 7); normalize to UTC.
@@ -2069,7 +2080,11 @@ $InteractiveAuthPageStateExpression = @'
   origin: location.origin,
   path: location.pathname,
   ready: document.readyState,
-  loginFormVisible: [...document.querySelectorAll('input[type=password]')].some(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; })
+  loginFormVisible: [...document.querySelectorAll('input[type=password]')].some(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }),
+  logoutMarkerVisible: [...document.querySelectorAll('a,button,[role=link]')].some(e => {
+    const r=e.getBoundingClientRect();
+    return r.width>0 && r.height>0 && /^(로그아웃|logout|log out)$/i.test((e.innerText || e.getAttribute('aria-label') || '').trim().replace(/\s+/g,' '));
+  })
 }))()
 '@
 
@@ -2099,7 +2114,8 @@ function Update-EkodiInteractiveAuthStatus($State) {
         # The URL alone is not proof: an SPA can sit on /dashboard while
         # redirecting to its login form. Require the settled page itself.
         $pageState = Invoke-EkodiInteractiveAuthEvaluate $currentPage $InteractiveAuthPageStateExpression
-        if ([string]$pageState.origin -eq $service.origin -and [string]$pageState.ready -eq 'complete' -and -not [bool]$pageState.loginFormVisible) {
+        if ([string]$pageState.origin -eq $service.origin -and [string]$pageState.ready -eq 'complete' -and -not [bool]$pageState.loginFormVisible -and
+            ([string]$service.authMarker -ne 'logout-visible' -or [bool]$pageState.logoutMarkerVisible)) {
           foreach ($prefix in $service.authPrefixes) { if (([string]$pageState.path).StartsWith($prefix)) { $authenticatedPath = $true } }
         }
       }
@@ -2258,12 +2274,13 @@ function Invoke-EkodiInteractiveAuthVerify($Payload) {
     .filter(vis)
     .map(e => (e.innerText || e.getAttribute('aria-label') || e.getAttribute('title') || '').trim().replace(/\s+/g, ' ').slice(0, 60))
     .filter(Boolean);
-  const usage = ((document.body && document.body.innerText) || '').split('\n')
+  const usage = (location.origin === 'https://www.domeggook.com' ? '' : ((document.body && document.body.innerText) || '')).split('\n')
     .map(s => s.trim()).filter(s => s && s.length <= 140 && /(크레딧|credit|사용량|잔여|한도|토큰)/i.test(s)).slice(0, 8);
   return JSON.stringify({
     origin: location.origin,
     path: location.pathname,
     loginFormVisible: [...document.querySelectorAll('input[type=password]')].some(vis),
+    logoutMarkerVisible: [...document.querySelectorAll('a,button,[role=link]')].some(e => vis(e) && /^(로그아웃|logout|log out)$/i.test((e.innerText || e.getAttribute('aria-label') || '').trim().replace(/\s+/g,' '))),
     labels: [...new Set(labels)].slice(0, 300),
     usage
   });
@@ -2271,7 +2288,7 @@ function Invoke-EkodiInteractiveAuthVerify($Payload) {
 '@
   $inventory = Invoke-EkodiInteractiveAuthEvaluate $page $expression
   if ([string]$inventory.origin -ne $service.origin) { throw 'interactive_auth_origin_mismatch' }
-  $authenticated = (-not [bool]$inventory.loginFormVisible)
+  $authenticated = (-not [bool]$inventory.loginFormVisible) -and ([string]$service.authMarker -ne 'logout-visible' -or [bool]$inventory.logoutMarkerVisible)
   $joined = (@($inventory.labels) -join "`n").ToLowerInvariant()
   $usageJoined = (@($inventory.usage) -join "`n").ToLowerInvariant()
   $features = @()
@@ -2285,6 +2302,8 @@ function Invoke-EkodiInteractiveAuthVerify($Payload) {
   $usageLines = @(@($inventory.usage) | ForEach-Object {
     ([string]$_) -replace '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '[email]'
   })
+  # Supplier account balance, buyer identity and other financial text must not leave the browser.
+  if ([string]$state.service -eq 'domeggook-business') { $usageLines = @() }
   $state.state = $(if ($authenticated) { 'verified' } else { 'login_required' })
   Save-EkodiInteractiveAuthState $state
   $verification = @{
