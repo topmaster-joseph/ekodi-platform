@@ -8,7 +8,7 @@ import fs from 'node:fs/promises';
 import { chromium } from 'playwright';
 
 const ORIGIN='https://ekodi.kr';
-const ADMIN=ORIGIN+'/cheonggyepass/admin';
+const ADMIN=ORIGIN+'/cgpass/admin';
 const API='/api/cheonggyepass/vendor-intake';
 const AUTH='/api/local-access/cheonggye-pass/me';
 const OUTPUT='artifacts/cheonggyepass-native-ui';

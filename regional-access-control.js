@@ -7,7 +7,7 @@ import { localRegionBySlug } from './local-region-registry.js';
 
 const SCOPES=Object.freeze({
   'cheonggye-local':Object.freeze({slug:'cheonggye-local',regionId:'local:cheonggye',label:'청계잇다 지역플랫폼',publicPath:'/cheonggye',adminPath:'/cheonggye/admin',service:'region'}),
-  'cheonggye-pass':Object.freeze({slug:'cheonggye-pass',regionId:'local:cheonggye',label:'청계패스',publicPath:'/cheonggye/pass',adminPath:'/cheonggye/admin/pass',service:'commerce-pass'}),
+  'cheonggye-pass':Object.freeze({slug:'cheonggye-pass',regionId:'local:cheonggye',label:'청계패스',publicPath:'/cgpass',adminPath:'/cgpass/admin',service:'commerce-pass'}),
 });
 const clean=value=>String(value||'').trim().toLowerCase();
 const DELEGATED_OPERATOR_ROLES=new Set(['owner','tenant_admin','workspace_admin','admin','manager','client_admin']);
