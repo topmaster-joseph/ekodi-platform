@@ -82,6 +82,7 @@ export function sanitizeNativeBrowserReceipt(report) {
   const visit=(value,key='',depth=0)=>{
     if(depth>12) return '[redacted-depth]';
     if(typeof value==='string'){
+      if(key==='canonicalOrigin') return value===CANONICAL_ORIGIN ? value : '[redacted-origin]';
       if(urlFields.has(key)) return redactNativeBrowserUrl(value);
       return redactNativeDiagnostic(value);
     }
