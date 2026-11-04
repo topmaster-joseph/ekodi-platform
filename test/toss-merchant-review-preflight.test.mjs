@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { assessMerchantReview,runMerchantReviewAudit,TARGETS } from '../scripts/toss-merchant-review-preflight.mjs';
 
-const publicHtml='<footer>에코디비즈 대표 정찬균 사업자등록번호 213-13-01959 백련동1길 17-4 <a href="tel:+821035018542">010-3501-8542</a></footer>';
+const publicHtml='<footer>에코디비즈 대표 정찬균 사업자등록번호 213-13-01959 백련동1길 17-4 <a href="tel:+821035018542">010-3501-8542</a></footer><section data-merchant-review="intangible-service">30일 자동홍보팩 서비스 내용 서비스 제공 기간 가격 미확정 환불정책 보기 https://ekodi.kr/ekodibiz/refund</section>';
 const locales=Array.from({length:6},(_,i)=>"footerCompany:'locale "+i+" <a href=\"tel:+821035018542\">010-3501-8542</a>',").join('\n');
 const pages={
   homepage:{ok:true,body:publicHtml},
@@ -16,6 +16,7 @@ test('quote-only services and consultation basket cannot satisfy Toss sale revie
   assert.equal(r.outcome,'blocked');
   assert.equal(r.checks.publicMerchantDisclosure.status,'pass');
   assert.equal(r.checks.localizedMerchantContact.status,'pass');
+  assert.equal(r.checks.intangibleServiceInformation.status,'pass');
   assert.equal(r.checks.approvedSellableProduct.status,'blocked');
   assert.equal(r.checks.guestPurchase.status,'blocked');
   assert.equal(r.checks.testCardWindow.status,'manual_required');
@@ -50,4 +51,11 @@ test('audit makes only four public GET requests without customer or payment cred
   assert.equal(r.outcome,'blocked');
   const src=readFileSync(new URL('../scripts/toss-merchant-review-preflight.mjs',import.meta.url),'utf8');
   assert.doesNotMatch(src,/method:\s*['"]POST['"]|requestPayment\(|confirmPayment\(|TOSS_SECRET_KEY|authorization:/);
+});
+
+test('missing duration or refund terms fails disclosure even when merchant phone exists',()=>{
+  const r=assessMerchantReview({pages:{...pages,homepage:{ok:true,body:publicHtml.replace('서비스 제공 기간','서비스 조건 협의').replace('환불정책 보기','참고')}}});
+  assert.equal(r.checks.publicMerchantDisclosure.status,'pass');
+  assert.equal(r.checks.intangibleServiceInformation.status,'blocked');
+  assert.equal(r.outcome,'blocked');
 });
