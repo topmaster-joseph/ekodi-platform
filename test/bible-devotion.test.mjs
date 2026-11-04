@@ -186,10 +186,12 @@ test('page order: Scripture, tabs and panel, attribution, share, then admin menu
   assert.match(js, /panels\.get\('song'\) \|\| root\)\.append\(audioRow\)/);
 });
 
-test('mission devotion header spans the same 840px centre column as the content', () => {
+test('mission devotional article stays readable while the shell controls site-wide header width', () => {
   const css = fs.readFileSync(new URL('devotion.css', bibleDir), 'utf8');
   assert.match(css, /\.ekodi-devotion\{[^}]*max-width:840px/);
-  assert.match(css, /body:has\(\[data-mission-devotion\]\) \.mission-site-header\{max-width:840px;padding-inline:16px\}/);
+  assert.doesNotMatch(css, /body:has\(\[data-mission-devotion\]\) \.mission-site-header\{max-width:840px/);
+  const shell = fs.readFileSync(new URL('../space/ekodimission-shell.css', import.meta.url), 'utf8');
+  assert.match(shell, /\.mission-site-header,main,\.site-footer\{width:100%;max-width:var\(--mission-max\)/);
 });
 
 test('admin menu and 나의 묵상기록 tab are wired', () => {
