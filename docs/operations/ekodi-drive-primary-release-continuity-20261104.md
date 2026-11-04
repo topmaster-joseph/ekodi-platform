@@ -24,3 +24,6 @@
 5. Production canary verifies admin warning/match UI, actual canonical storage writes only under the approved organization principal, and no cross-tenant data leaks. Only then record scoped completion.
 
 This file is not an authority to make the personal account a Workspace organizer, bypass privacy gates, or report migration finished.
+
+## Required checks after orchestrator synchronization
+The first owner-connected official recovery documentation HEAD `76a1dbc67539b90d7dd533970395cd55ca39a9d7` passed authentic CI, Supabase Local CI, orchestration, Storage Control deployment validation, and Admin Storage contracts. Concurrent platform merges subsequently synchronized the recovery branch to bot HEAD `c3d8dd3679bcc0201c6226459cd87d46d63783c5`, preserving the original functional source ancestor. Bot-generated `action_required` statuses do not count as passed CI. This non-runtime documentation addition requests authenticated checks again; it does not merge, deploy, alter member access, or remove any personal-account files.
