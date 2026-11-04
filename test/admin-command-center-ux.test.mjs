@@ -72,3 +72,16 @@ test('Non-home composer is left aligned, fluid and mobile safe at five reference
     assert.ok(formWidth>0&&formWidth+sidebar+2*pad<=viewport, 'no horizontal clipping at '+viewport);
   }
 });
+
+test('Tablet expanded Assist panel shares non-home input left canvas baseline',async()=>{
+  const css=await read('admin-assist-dock.css');
+  const marker=css.indexOf('ADMIN-ASSIST-TABLET-LEFT-20261104');
+  assert.ok(marker>0);
+  const contract=css.slice(marker);
+  assert.match(contract,/@media\(min-width:761px\) and \(max-width:960px\)/);
+  assert.match(contract,/\.ekodi-assist:not\(\.history-only\)\{/);
+  assert.match(contract,/left:var\(--ekodi-assist-left,var\(--ekodi-admin-sidebar-width,228px\)\)!important/);
+  assert.match(contract,/right:0!important/);
+  assert.match(contract,/width:auto!important/);
+  assert.doesNotMatch(contract,/max-width:760px|admin-command-home\.admin-command-active/);
+});
