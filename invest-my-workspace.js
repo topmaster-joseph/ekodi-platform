@@ -644,7 +644,7 @@ function renderDetailTabs(group,selectedId){
  const name=TAB_LABELS[group]||'선택한 기능';
  const selected=entries.find(([id])=>id===selectedId);
  el('detailHeading').textContent=name+(selected&&entries.length>1?' · '+selected[1]:'');
- el('detailCrumb').textContent=selected?selected[1]:name;
+ if(el('detailCrumb'))el('detailCrumb').textContent=selected?selected[1]:name;
  el('detailDescription').textContent=DETAIL_DESCRIPTIONS[group]||'선택한 기능을 확인합니다.';
  root.setAttribute('aria-label',name+' 세부 기능');
 }
