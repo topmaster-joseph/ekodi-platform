@@ -50,8 +50,9 @@ test('My Invest exposes readable context-specific second-level tabs under owner 
  assert.match(html,/id="detailTabs"[^>]*><\/nav>/,'detail tab labels must be generated from current section');
  const js=await (await investMyRoute(get('/invest/app.js'),{})).text();
  for(const text of [
-  "research:[['strategyLab','전략 비교·검증'],['shortValueResearch','단기 가치발굴·공시']]",
-  "analysis:[['portfolio','내 포트폴리오'],['design','투자분석 설계'],['scenario','시나리오 비교'],['insights','리스크 인사이트']]",
+  "research:[['strategyLab','AI 전략 검증'],['shortValueResearch','단기 가치발굴·공시'],['design','투자 설계'],['scenario','시나리오'],['insights','위험 분석']]",
+  "manual:[['manualOrder','주문 준비'],['brokerReadonly','증권사 잔고'],['marketDashboard','시장·종목'],['portfolio','내 보유자산']]",
+  "auto:[['autopilot','모의운용 현황'],['autopilotPolicy','자동투자 정책·모의주문'],['liveTrading','실거래 준비']]",
   'function renderDetailTabs(group,selectedId)',
   'function detailForHash(id)',
   "if(updateUrl)history.replaceState(null,'',location.pathname+location.search+'#'+encodeURIComponent(selected))",
