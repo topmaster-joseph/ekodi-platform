@@ -18,9 +18,10 @@ export const MODELS = Object.freeze({
 });
 export const AI_FACTORY = Object.freeze({
   model: MODELS.draft.id,
-  // 계정 무료 한도는 일 10,000(00:00 UTC 초기화). 다른 서비스(AI 관리 장치의 Llama 3.1 8B)가 최근 30일 하루 약 1,800을 쓴다
-  // (ai_provider_calls 토큰 기준 추정, 2026-11-05). 여유 700을 남기고 출판이 나머지를 쓴다.
-  dailyNeuronCap: 7500,
+  // 계정 무료 한도는 일 10,000(00:00 UTC 초기화). AI 관리 장치(ekodi-ai-control)가 자체 상한
+  // EKODI_WORKERS_AI_DAILY_NEURON_BUDGET=8000을 쓰고 실제로 매일 소진한다(ai_provider_quota_state 'exhausted', 2026-11-04).
+  // 두 상한의 합이 무료 한도를 넘지 않도록 출판은 2,000. 배분을 바꿀 때는 두 값을 함께 바꾼다(합계 ≤ 10,000).
+  dailyNeuronCap: 2000,
   neuronsPerInputToken: MODELS.draft.in,
   neuronsPerOutputToken: MODELS.draft.out,
   chapters: 8,
