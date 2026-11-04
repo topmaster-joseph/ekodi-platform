@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 2,
+  "seriesId": "EKODI-JUBILEE-THEOLOGY",
+  "handoffId": "EJT-20261102-REVIEW9-10-A11Y-PRIVATE",
+  "sourceRevisions": {
+    "01": "review-9",
+    "02": "review-10"
+  },
+  "artifactPackage": {
+    "sha256": "f057c5277139eeb8e2eeaaaf4bfe35973bb606da55566ef6414ed48a66702092",
+    "bytes": 9465054,
+    "manifestSha256": "62638d4b48b4f09995877b4e871ddfa076ee21c9f2dcdd54c5d9c6f7e24699e3",
+    "integrity": "verified-in-user-private-library",
+    "storageReadback": false
+  },
+  "primaryFiles": [
+    {
+      "path": "volume1/review9/manuscript.docx",
+      "edition": "review-9",
+      "sha256": "238d041d75de2f23182046d72e452c33effddb290179bd23710a5dc7f54174c0",
+      "bytes": 1559381
+    },
+    {
+      "path": "volume1/review9/reading.pdf",
+      "edition": "review-9",
+      "sha256": "3bb458c336ce722119321ddac93cda9991a22ae35bd59487e8bf99c6c65a187b",
+      "bytes": 1165840
+    },
+    {
+      "path": "volume1/review9/accessible.epub",
+      "edition": "review-9-a11y-20261102",
+      "sha256": "ad149ff74ce86e538f9dceadd4dc1fd3ee8fa8af9c9cbf80f77db156e0db711f",
+      "bytes": 77462
+    },
+    {
+      "path": "volume2/review10/manuscript.docx",
+      "edition": "review-10-editorial-candidate",
+      "sha256": "d05137f210b55d365b87d760191e9d599c1dd603f8f26ea0df044e157ef1ffb8",
+      "bytes": 50431
+    },
+    {
+      "path": "volume2/review10/reading.pdf",
+      "edition": "review-10-editorial-candidate",
+      "sha256": "02658449048a85b02c10e9462766d897afeaf5befd5de6e5bdc73b50a708fc51",
+      "bytes": 796343
+    },
+    {
+      "path": "volume2/review10/accessible.epub",
+      "edition": "review-10-editorial-a11y-candidate",
+      "sha256": "b7e516da451f5db6733cf7c1a8f2959d52eec8d4a7d744158ed0029352ebe62a",
+      "bytes": 68377
+    }
+  ],
+  "release": {
+    "privatePublisherIngest": false,
+    "authorApproved": false,
+    "publisherApproved": false,
+    "rightsApproved": false,
+    "publicCatalog": false,
+    "checkoutEnabled": false,
+    "saleAllowed": false,
+    "priceKrw": null,
+    "isbn": null,
+    "scheduledReleaseAt": null
+  },
+  "notice": "Public source stores only hashes and non-secret editorial metadata. No manuscript bytes, private ZIP, file links, service secrets or release authority. Mixed review-9/review-10 versions require new protected intake; legacy review-9-only path remains unchanged."
+}
