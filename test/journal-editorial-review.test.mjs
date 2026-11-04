@@ -69,6 +69,9 @@ test('Journal editor uses shared Admin and only writes private drafts with centr
   assert.match(page,/JSON\.stringify\(draft,null,2\)/);
   assert.match(page,/게시·권리 승인은 실행하지 않습니다/);
   assert.match(page,/data-journal-save/);
+  assert.match(page,/data-journal-private-media/);
+  assert.match(page,/import\('\.\/journal-editorial-media-admin\.js'\)/);
+  assert.match(page,/mountPrivateJournalMedia/);
   assert.match(page,/method:'POST'/);
   assert.match(page,/\/api\/journal\/editorial\/drafts/);
   assert.doesNotMatch(page,/method:\s*['"](?:PUT|PATCH|DELETE)['"]/);
