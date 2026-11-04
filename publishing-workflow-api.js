@@ -99,7 +99,7 @@ function project(row){
     releaseChannels:parse(row.channels_json),revision:row.revision,
     createdAt:row.created_at,updatedAt:row.updated_at};
 }
-const visible=(p,u,r)=>p.authorUserId===u.userId||['editor','publisher','admin'].includes(r);
+const visible=(p,u,r,access)=>p.authorUserId===u.userId||['editor','publisher','admin'].includes(r)||isLinkedJubileeProject(p,access);
 function safe(p){return {...p,releaseCandidate:undefined,authorApproval:p.authorApproval?{approvedAt:p.authorApproval.approvedAt}:null,
   publisherApproval:p.publisherApproval?{approvedAt:p.publisherApproval.approvedAt}:null};}
 async function audit(db,p,u,action,from,to,revision,detail={}){
@@ -137,22 +137,42 @@ const JUBILEE_PRIVATE_DRAFTS=[
   '희년과 하나님 나라의 회복',
   '우리는 다시 돌아갈 수 있는가',
 ];
+// Protected publisher credentials grant only this series' author workspace.
+// EKODI Persons, billing, points, and publication signatures remain separate.
+function jubileeAccountAccess(u,env){
+  const owner=String(env?.PUBLISHING_JUBILEE_AUTHOR_USER_ID||'').trim();
+  if(!owner)return null;
+  if(u.userId===owner)return {owner,linked:false};
+  const raw=String(env?.PUBLISHING_JUBILEE_AUTHOR_ALIASES||'');
+  if(!raw||raw.length>4096)return null;
+  let entries;try{entries=JSON.parse(raw)}catch{return null}
+  if(!Array.isArray(entries)||entries.length>8)return null;
+  const allowed=entries.some(x=>x&&typeof x==='object'&&!Array.isArray(x)
+    &&x.userId===u.userId&&String(x.email||'').toLowerCase()===u.email
+    &&Object.keys(x).every(k=>k==='userId'||k==='email'));
+  return allowed?{owner,linked:true}:null;
+}
+function isLinkedJubileeProject(p,access){
+  return Boolean(access?.linked&&p.authorUserId===access.owner
+    &&p.fieldId==='humanities'&&p.collectionId==='human'
+    &&JUBILEE_PRIVATE_DRAFTS.includes(p.title));
+}
 async function registerJubileeDrafts(db,u,env){
   // Only the independently authenticated, publisher-configured author owns this series.
   const trustedOwner=String(env?.PUBLISHING_JUBILEE_AUTHOR_USER_ID||'').trim();
   if(!trustedOwner)return error(503,'JUBILEE_OWNER_NOT_CONFIGURED');
-  if(u.userId!==trustedOwner)return error(403,'JUBILEE_OWNER_ONLY');
+  if(!jubileeAccountAccess(u,env))return error(403,'JUBILEE_OWNER_ONLY');
   // Authenticated owner identity is server-derived; manuscript bytes are never uploaded here.
   const registered=[];
   for(const title of JUBILEE_PRIVATE_DRAFTS){
     const id=crypto.randomUUID(),time=now();
     const inserted=await db.prepare(
       "INSERT INTO publishing_workflow_projects (id,author_user_id,title,field_id,collection_id,edition_id,created_at,updated_at) SELECT ?,?,?,'humanities','human',?,?,? WHERE NOT EXISTS (SELECT 1 FROM publishing_workflow_projects WHERE author_user_id=? AND title=? AND field_id='humanities' AND collection_id='human')"
-    ).bind(id,u.userId,title,id+':v1',time,time,u.userId,title).run();
+    ).bind(id,trustedOwner,title,id+':v1',time,time,trustedOwner,title).run();
     const created=Number(inserted?.meta?.changes??inserted?.changes??0)===1;
     const p=project(await db.prepare(
       "SELECT * FROM publishing_workflow_projects WHERE author_user_id=? AND title=? AND field_id='humanities' AND collection_id='human' ORDER BY created_at ASC LIMIT 1"
-    ).bind(u.userId,title).first());
+    ).bind(trustedOwner,title).first());
     if(!p)throw Error('JUBILEE_DRAFT_LOOKUP_FAILED');
     if(created)await audit(db,p,u,'create',null,'planning',1,{source:'jubilee-private-onboarding'});
     registered.push({created,project:safe(p)});
@@ -160,15 +180,18 @@ async function registerJubileeDrafts(db,u,env){
   return result(200,{ok:true,seriesId:'EKODI-JUBILEE-THEOLOGY',visibility:'private-workflow-only',
     manuscriptIngested:false,publicationApproved:false,projects:registered});
 }
-async function list(db,u,r){
+async function list(db,u,r,access){
   const privileged=['editor','publisher','admin'].includes(r);
   const statement=privileged?
     db.prepare('SELECT * FROM publishing_workflow_projects ORDER BY updated_at DESC LIMIT 100'):
-    db.prepare('SELECT * FROM publishing_workflow_projects WHERE author_user_id=? ORDER BY updated_at DESC LIMIT 100').bind(u.userId);
+    access?.linked?
+      db.prepare("SELECT * FROM publishing_workflow_projects WHERE author_user_id=? OR (author_user_id=? AND field_id='humanities' AND collection_id='human' AND title IN (?,?)) ORDER BY updated_at DESC LIMIT 100")
+        .bind(u.userId,access.owner,...JUBILEE_PRIVATE_DRAFTS):
+      db.prepare('SELECT * FROM publishing_workflow_projects WHERE author_user_id=? ORDER BY updated_at DESC LIMIT 100').bind(u.userId);
   const rows=await statement.all();
   return result(200,{ok:true,role:r,projects:(rows.results||[]).map(x=>safe(project(x)))});
 }
-async function transition(env,db,p,req,u,r){
+async function transition(env,db,p,req,u,r,access){
   const x=await input(req);
   if(!x||!Number.isInteger(x.revision))return error(400,'REVISION_REQUIRED');
   if(x.revision!==p.revision)return error(409,'REVISION_CONFLICT');
@@ -177,7 +200,7 @@ async function transition(env,db,p,req,u,r){
   const verification=x.action==='submit' ? await verifyPublishingSubmission(env,p) :
     ['publisher_approve','schedule','prepare_handoff'].includes(x.action)
       ? await verifyCommercialRelease(env,p):{};
-  const changed=publicationTransition(p,x.action,x,{...u,role:r},new Date(),verification);
+  const changed=publicationTransition(p,x.action,x,{...u,role:r,delegatedJubileeAuthor:isLinkedJubileeProject(p,access)},new Date(),verification);
   if(!changed.ok)return result(changed.code==='FORBIDDEN'?403:409,changed);
   const saved=await persist(db,p,changed.next,u,x.action);
   return saved?result(200,{ok:true,project:safe(saved)}):error(409,'REVISION_CONFLICT');
@@ -195,8 +218,8 @@ async function evidence(db,p,req,u,r){
     releaseCandidate:x.releaseCandidate},u,'evidence_recorded');
   return saved?result(200,{ok:true,project:safe(saved)}):error(409,'REVISION_CONFLICT');
 }
-async function ai(db,p,req,u){
-  if(p.authorUserId!==u.userId)return error(403,'AUTHOR_ONLY');
+async function ai(db,p,req,u,access){
+  if(p.authorUserId!==u.userId&&!isLinkedJubileeProject(p,access))return error(403,'AUTHOR_ONLY');
   if(!['planning','drafting','changes_requested'].includes(p.stage))return error(409,'EDITION_FROZEN');
   const x=await input(req);
   const check=permittedAiRequest(x?.kind,{provider:x?.provider||'core',spendKrw:x?.spendKrw||0,
@@ -247,10 +270,11 @@ export async function handlePublishingWorkflow(req,env){
     const u=await identity(req,env);if(!u)return error(401,'LOGIN_REQUIRED');
     const db=env.PUBLISH_DB;let r=await role(db,u.userId);
     if(r==='author')r=(await claimInvite(db,u))||r;
+    const jubileeAccess=jubileeAccountAccess(u,env);
     if(path==='/api/workflow/jubilee/register'&&req.method==='POST')return registerJubileeDrafts(db,u,env);
     if(path==='/api/workflow/projects'){
       if(req.method==='POST')return create(db,req,u);
-      if(req.method==='GET')return list(db,u,r);
+      if(req.method==='GET')return list(db,u,r,jubileeAccess);
     }
     if(path==='/api/workflow/due'&&req.method==='GET'){
       if(!['publisher','admin'].includes(r))return error(403,'PUBLISHER_ONLY');
@@ -280,7 +304,7 @@ export async function handlePublishingWorkflow(req,env){
     const match=/^\/api\/workflow\/projects\/([0-9a-f-]{36})(?:\/(.*))?$/.exec(path);
     if(!match)return error(404,'NOT_FOUND');
     const p=project(await db.prepare('SELECT * FROM publishing_workflow_projects WHERE id=?').bind(match[1]).first());
-    if(!p||!visible(p,u,r))return error(404,'NOT_FOUND');
+    if(!p||!visible(p,u,r,jubileeAccess))return error(404,'NOT_FOUND');
     const endpoint=match[2]||'';
     if(!endpoint&&req.method==='GET')return result(200,{ok:true,project:safe(p)});
     if(endpoint==='readiness'&&req.method==='GET'){
@@ -289,9 +313,9 @@ export async function handlePublishingWorkflow(req,env){
         blocker:gate.ready?null:gate.reason,publicationActive:false,
         note:'이 결과는 비공개 계약·오디오 검수 기록이며 실제 서점·몰 상품 등록과 결제를 증명하지 않습니다.'});
     }
-    if(endpoint==='transition'&&req.method==='POST')return transition(env,db,p,req,u,r);
+    if(endpoint==='transition'&&req.method==='POST')return transition(env,db,p,req,u,r,jubileeAccess);
     if(endpoint==='evidence'&&req.method==='POST')return evidence(db,p,req,u,r);
-    if(endpoint==='ai'&&req.method==='POST')return ai(db,p,req,u);
+    if(endpoint==='ai'&&req.method==='POST')return ai(db,p,req,u,jubileeAccess);
     if(endpoint==='ai'&&req.method==='GET')return jobs(db,p);
     return error(404,'NOT_FOUND');
   }catch{return error(503,'PUBLISHING_WORKFLOW_UNAVAILABLE')}
