@@ -54,3 +54,54 @@ test('coop realm never becomes an open redirect', () => {
     'javascript:alert(1)',
   ]) assert.equal(safeReturn(url), fallback, url);
 });
+
+// ── 조합원 자가 등록(로그인 후 "조합원으로 등록할까요?" 동의 체크) ──
+const { COOPERATIVES } = await import('../cooperative-registry.js');
+const { routeCooperative } = await import('../cooperative-control.js');
+const { loadCooperativeProject } = await import('../cooperative-store.js');
+const { fixture, authFetch } = await import('./helpers/cooperative-fixture.mjs');
+const [jubilee, open] = COOPERATIVES;
+const req = (coop, path, token = '', method = 'GET', body) => new Request(`https://ekodi.kr/${coop.slug}/api${path}`, {
+  method, headers: { ...(token ? { authorization: 'Bearer ' + token } : {}), ...(body ? { origin: 'https://ekodi.kr', 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined,
+});
+
+test('join requires login and an explicit consent check', async t => {
+  const f = fixture(); t.after(() => f.sqlite.close()); t.mock.method(globalThis, 'fetch', authFetch({ a: 'new@example.test' }));
+  assert.equal((await routeCooperative(req(open, '/join', '', 'POST', { representative: '홍길동', consent: true }), f.env)).status, 401);
+  assert.equal((await routeCooperative(req(open, '/join', 'a', 'POST', { representative: '홍길동', consent: false }), f.env)).status, 400);
+  assert.equal((await routeCooperative(req(open, '/join', 'a', 'POST', { representative: '홍길동', consent: true, role: 'owner' }), f.env)).status, 400);
+  assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM customer_access_grants').get().n, 0);
+});
+
+test('consented join creates a member-only grant in that cooperative and appends the roster', async t => {
+  const f = fixture(); t.after(() => f.sqlite.close()); t.mock.method(globalThis, 'fetch', authFetch({ a: 'New@Example.test' }));
+  assert.equal((await routeCooperative(req(open, '/me', 'a'), f.env)).status, 403);
+  const response = await routeCooperative(req(open, '/join', 'a', 'POST', { representative: '홍길동', business: '길동상회', consent: true }), f.env);
+  assert.equal(response.status, 200);
+  const me = await (await routeCooperative(req(open, '/me', 'a'), f.env)).json();
+  assert.equal(me.authority.role, 'member'); assert.equal(me.authority.canAdmin, false);
+  assert.equal(me.me.founder.representative, '홍길동'); assert.equal(me.me.founder.position, 'member');
+  assert.equal((await routeCooperative(req(open, '/project', 'a'), f.env)).status, 403, 'no admin capability');
+  assert.equal((await routeCooperative(req(jubilee, '/me', 'a'), f.env)).status, 403, 'other cooperative untouched');
+  assert.equal((await loadCooperativeProject(f.db, open)).state.founders.length, 6);
+  // idempotent
+  assert.equal((await routeCooperative(req(open, '/join', 'a', 'POST', { representative: '홍길동', consent: true }), f.env)).status, 200);
+  assert.equal((await loadCooperativeProject(f.db, open)).state.founders.length, 6);
+});
+
+test('join links an existing unlinked roster name instead of duplicating it', async t => {
+  const f = fixture(); t.after(() => f.sqlite.close()); t.mock.method(globalThis, 'fetch', authFetch({ b: 'park@example.test' }));
+  const before = (await loadCooperativeProject(f.db, jubilee)).state.founders;
+  const name = before[1].representative;
+  assert.equal((await routeCooperative(req(jubilee, '/join', 'b', 'POST', { representative: name, consent: true }), f.env)).status, 200);
+  const after = (await loadCooperativeProject(f.db, jubilee)).state.founders;
+  assert.equal(after.length, before.length);
+  assert.equal(after[1].accountEmail, 'park@example.test');
+});
+
+test('a disabled grant is never revived by self-join', async t => {
+  const f = fixture(); t.after(() => f.sqlite.close()); t.mock.method(globalThis, 'fetch', authFetch({ c: 'blocked@example.test' }));
+  f.grant(open, 'blocked@example.test', 'member', { enabled: 0 });
+  assert.equal((await routeCooperative(req(open, '/join', 'c', 'POST', { representative: '차단', consent: true }), f.env)).status, 403);
+  assert.equal((await routeCooperative(req(open, '/me', 'c'), f.env)).status, 403);
+});
