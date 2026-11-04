@@ -680,6 +680,8 @@ export async function handleGoogleDriveStorageControl(request, env) {
   const disconnectMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)$`));
   if (disconnectMatch && request.method === 'DELETE') {
     const row=await rowById(env,decodeURIComponent(disconnectMatch[1])); if (!row) return json({error:'Drive 연결을 찾을 수 없습니다.'},404,auth.response.headers);
+    if(row.role==='primary'&&row.status==='ready')
+      return json({error:'작동 중인 기본 저장소는 새 Workspace 관리 계정으로 전환한 뒤 해제할 수 있습니다.',code:'PRIMARY_DISCONNECT_REQUIRES_REPLACEMENT'},409,auth.response.headers);
     await env.DB.prepare(`UPDATE storage_connections SET status='disabled',credential_ciphertext='',credential_iv='',updated_at=? WHERE id=?`).bind(new Date().toISOString(),row.id).run();
     if (row.role === 'primary' && env.R2_BUCKET) {
       const cached=await readCheonggyeConnectionCache(env);
