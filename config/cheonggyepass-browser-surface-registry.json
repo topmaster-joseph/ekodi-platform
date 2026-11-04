@@ -9,13 +9,13 @@
   "surfaces": [
     {
       "id": "cheonggyepass.public",
-      "path": "/cheonggyepass",
+      "path": "/cgpass",
       "kind": "public",
       "enabled": true
     },
     {
       "id": "cheonggyepass.admin.guest",
-      "path": "/cheonggyepass/admin",
+      "path": "/cgpass/admin",
       "kind": "login-redirect",
       "enabled": true
     }
