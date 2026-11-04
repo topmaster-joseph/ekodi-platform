@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/assets/platform.css">
   <title>{{STORE_NAME}} | EKODI MALL</title>
 </head>
-<body>
+<body {{STORE_BOOKS_ATTR}}>
   <header class="header">
     <a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>
     <nav><a href="/#shop">MARKET</a><a href="/#stores">STORES</a><a href="/seller/">SELLER</a><a href="/checkout/">BAG <span class="nav-count" data-basket-count hidden>0</span></a></nav>
@@ -29,17 +29,18 @@
         <p class="detail-desc">{{STORE_DESCRIPTION}}</p>
         <dl class="store-facts">
           <div><dt>운영</dt><dd>{{STORE_OPERATOR}}</dd></div>
-          <div><dt>상태</dt><dd>{{STORE_STATUS}}</dd></div>
-          <div><dt>공개 상품</dt><dd>{{STORE_PRODUCT_COUNT}}개</dd></div>
+          <div><dt>상태</dt><dd {{STORE_STATUS_ATTR}}>{{STORE_STATUS}}</dd></div>
+          <div><dt>공개 상품</dt><dd {{STORE_COUNT_ATTR}}>{{STORE_PRODUCT_COUNT}}개</dd></div>
         </dl>
         <a class="btn ghost" href="{{STORE_CONTACT_URL}}" target="_blank" rel="noopener">스토어 문의</a>
       </div>
     </section>
     <section class="store-products">
       <div class="heading"><div><p class="eyebrow">STORE COLLECTION</p><h2>이 스토어의 상품</h2></div></div>
-      <div class="grid">{{STORE_PRODUCTS}}</div>
+      <div class="grid" {{STORE_BOOK_GRID_ATTR}}>{{STORE_PRODUCTS}}</div>
     </section>
   </main>
+  {{STORE_BOOKS_SCRIPT}}
   <script src="/assets/commerce.js" defer></script>
 </body>
 </html>
