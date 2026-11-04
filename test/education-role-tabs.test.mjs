@@ -27,3 +27,11 @@ test('education tabs preserve existing routes and avoid role-based API privilege
   assert.match(home,/href="\/admission"/);
   assert.match(home,/href="\/study"/);
 });
+
+test('auth-dependent dashboard is not rendered before verified session',()=>{
+  assert.match(app,/if\(area==='home'&&!session\)/);
+  assert.match(app,/try\{await refreshSession\(\)\}/);
+  assert.match(app,/else\{renderIdentity\(\);renderAll\(\)\}/);
+  assert.match(tabs,/guestSummary.hidden=authenticated/);
+  assert.match(tabs,/addEventListener\('load'/);
+});
