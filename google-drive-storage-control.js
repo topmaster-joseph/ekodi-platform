@@ -667,6 +667,16 @@ export async function handleGoogleDriveStorageControl(request, env) {
       const selected=drives.drives.find(d=>d.id===row.drive_id);
       if(!selected||selected.capabilities?.canManageMembers!==true||selected.capabilities?.canAddChildren!==true)
         return json({error:'공유드라이브 관리자 권한을 다시 확인해야 합니다.',code:'PRIMARY_SHARED_DRIVE_MANAGER_REQUIRED'},403,auth.response.headers);
+      // The primary OAuth credential also serves tenant-owned Cheonggye members
+      // Sheets. Verify the account retains edit rights before replacing that
+      // credential; never write a real member row as a permission probe.
+      const candidateAccess=await accessToken(env,row);
+      const sheetMeta=await driveFetch(candidateAccess,
+        `/files/${encodeURIComponent(CHEONGGYE_SPREADSHEET_ID)}?supportsAllDrives=true&fields=id,mimeType,capabilities(canEdit)`);
+      if(sheetMeta?.id!==CHEONGGYE_SPREADSHEET_ID||
+         sheetMeta?.mimeType!=='application/vnd.google-apps.spreadsheet'||
+         sheetMeta?.capabilities?.canEdit!==true)
+        return json({error:'상인회 회원현황 시트 편집 권한이 확인되지 않아 기존 연결을 유지합니다.',code:'CHEONGGYE_SHEET_EDIT_ACCESS_REQUIRED'},403,auth.response.headers);
       const result=await bootstrap(env,row);
       // Update the cached Sheets credential only after canonical routes are checked.
       const readyRow=await env.DB.prepare('SELECT * FROM storage_connections WHERE id=? AND status=?').bind(row.id,'ready').first();
