@@ -42,6 +42,14 @@ for (const [id, svc] of Object.entries(policy.services || {})) {
   must(new URL(mod.entryUrl).origin === mod.automationOrigin && mod.automationOrigin.startsWith('https://'), `service ${id} entry must be https on its own origin`);
 }
 must(Object.keys(INTERACTIVE_AUTH_SERVICES).length === Object.keys(policy.services || {}).length, 'service registry count drift');
+const domeggook = policy.services?.['domeggook-business'];
+must(domeggook?.loginEvidence === 'visible-logout-marker-and-no-password-form',
+  'Domeggook must prove a visible logout marker, not infer auth from home URL');
+must(policy.verification?.serviceSpecificGuards?.['domeggook-business']?.submitOrder === false,
+  'Domeggook native auth must remain read-only');
+must(policy.verification?.serviceSpecificGuards?.['domeggook-business']?.readEmoneyAmount === false,
+  'Domeggook native auth must not read balances');
+
 
 // The background worker contract must stay exactly as strict as before.
 const worker = JSON.parse(read('config/background-browser-worker-policy.json'));
@@ -63,6 +71,9 @@ const agent = read('tools/ekodi-device-agent/windows/ekodi-device-agent.ps1');
 const start = agent.indexOf('# EKODI-INTERACTIVE-AUTH-001');
 const end = agent.indexOf('function Get-WindowsOptionalFeatureStateSafe', start);
 must(start > 0 && end > start, 'agent interactive auth section missing');
+must(agent.includes("'domeggook-business' = @{") && agent.includes("logoutMarkerVisible"),
+  'agent native Domeggook service or boolean login evidence missing');
+
 const section = agent.slice(start, end);
 for (const forbidden of ['Network.getCookies', 'Network.getAllCookies', 'Storage.getCookies', 'Page.captureScreenshot', 'Page.startScreencast',
   'Input.dispatch', 'SendKeys', 'Set-Clipboard', 'Get-Clipboard', 'opera.exe', 'localStorage', 'sessionStorage', 'document.cookie', '--headless']) {

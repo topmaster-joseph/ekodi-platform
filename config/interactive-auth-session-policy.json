@@ -13,9 +13,24 @@
   },
   "backgroundBrowserWorkerPolicyUnchanged": "config/background-browser-worker-policy.json",
   "authority": {
-    "startRequires": ["admin-session", "super_admin", "explicit-confirmation", "device-online", "agent-capability-interactiveAuthSession", "local-consent-on-device"],
-    "verifyRequires": ["admin-session", "super_admin", "explicit-confirmation", "read-only-acknowledgement", "active-session-id"],
-    "closeRequires": ["admin-session"],
+    "startRequires": [
+      "admin-session",
+      "super_admin",
+      "explicit-confirmation",
+      "device-online",
+      "agent-capability-interactiveAuthSession",
+      "local-consent-on-device"
+    ],
+    "verifyRequires": [
+      "admin-session",
+      "super_admin",
+      "explicit-confirmation",
+      "read-only-acknowledgement",
+      "active-session-id"
+    ],
+    "closeRequires": [
+      "admin-session"
+    ],
     "autoAssignedJobsForbidden": true,
     "oneLiveSessionPerDevice": true
   },
@@ -30,8 +45,14 @@
   },
   "isolation": {
     "headed": true,
-    "browserPriority": ["ekodi-chromium", "chrome", "msedge"],
-    "forbiddenBrowsers": ["opera"],
+    "browserPriority": [
+      "ekodi-chromium",
+      "chrome",
+      "msedge"
+    ],
+    "forbiddenBrowsers": [
+      "opera"
+    ],
     "dedicatedEphemeralProfile": true,
     "activeUserProfileReuse": false,
     "passwordManagerEnabled": false,
@@ -55,9 +76,25 @@
     "factchat-mokpo": {
       "entryUrl": "https://mokpo.factchat.bot/dashboard/chat/40882",
       "automationOrigin": "https://mokpo.factchat.bot",
-      "authenticatedPathPrefixes": ["/dashboard"],
+      "authenticatedPathPrefixes": [
+        "/dashboard"
+      ],
       "identityProviderHostsObservedOnly": true,
       "officialGuide": "https://docs.mindlogic.ai/docs/general/baze/getting-started/introduction"
+    },
+    "domeggook-business": {
+      "entryUrl": "https://www.domeggook.com/main/",
+      "automationOrigin": "https://www.domeggook.com",
+      "authenticatedPathPrefixes": [
+        "/main/",
+        "/my/",
+        "/member/"
+      ],
+      "loginEvidence": "visible-logout-marker-and-no-password-form",
+      "officialGuide": "https://openapi.domeggook.com/ko/articles/%EB%A1%9C%EA%B7%B8%EC%9D%B8-e4aaf7c2",
+      "verification": "menu-only-readonly",
+      "supplierOrderExecution": false,
+      "secretOrBuyerDataCollection": false
     }
   },
   "verification": {
@@ -66,13 +103,45 @@
     "mutation": false,
     "uploads": false,
     "creditConsumingActions": false,
-    "reportedFields": ["feature menu visibility booleans", "menu label count", "masked credit/usage lines", "page origin", "login form visible"],
+    "reportedFields": [
+      "feature menu visibility booleans",
+      "menu label count",
+      "masked credit/usage lines",
+      "page origin",
+      "login form visible"
+    ],
     "menuVisibleIsNotExecutionVerified": true,
-    "executionTestsRequireSeparateApproval": ["meeting-notes upload", "hwp edit/save", "presentation generation/export", "super-agent", "deep-research", "*-in-data queries"]
+    "executionTestsRequireSeparateApproval": [
+      "meeting-notes upload",
+      "hwp edit/save",
+      "presentation generation/export",
+      "super-agent",
+      "deep-research",
+      "*-in-data queries"
+    ],
+    "serviceSpecificGuards": {
+      "domeggook-business": {
+        "requireVisibleLogoutMarker": true,
+        "sendUsageLines": false,
+        "readEmoneyAmount": false,
+        "submitOrder": false,
+        "sendBuyerPii": false,
+        "retainSessionAfterExpiry": false
+      }
+    }
   },
   "evidence": {
     "statusProjection": "interactive-auth-session.js#projectInteractiveAuthStatus",
-    "receiptInvariants": ["credentialsReturned=false", "cookiesExported=false", "storageStateExported=false", "passwordFieldRead=false", "screenCaptured=false", "clipboardShared=false", "hostInputInjection=false", "activeUserProfileReused=false"],
+    "receiptInvariants": [
+      "credentialsReturned=false",
+      "cookiesExported=false",
+      "storageStateExported=false",
+      "passwordFieldRead=false",
+      "screenCaptured=false",
+      "clipboardShared=false",
+      "hostInputInjection=false",
+      "activeUserProfileReused=false"
+    ],
     "closeRequiresProfileRemoved": true,
     "audit": "audit_logs device.command.issue with session id and service"
   },
