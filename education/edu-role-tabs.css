@@ -21,3 +21,6 @@ body[data-area="home"][data-edu-view="pending"] main.visual-home{visibility:hidd
 body[data-area="home"] .section,body[data-area="home"] .edu-service-panel{scroll-margin-top:80px}
 @media(max-width:768px){body[data-area="home"] .edu-tabs{margin:8px 12px;padding:6px 0}body[data-area="home"] .edu-tabs button{padding:11px 14px}body[data-area="home"] .edu-service-panel{margin:12px;padding:16px}body[data-area="home"] .edu-service-panel .service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:390px){body[data-area="home"] .edu-tabs button{padding:10px 12px}body[data-area="home"] .edu-service-panel .service-grid{grid-template-columns:1fr 1fr}}
+
+body[data-area="home"] .edu-guest-summary{max-width:56ch;margin:18px 0 0;color:#e7f1fc;font-size:clamp(.9rem,1.25vw,1.05rem);line-height:1.75;word-break:keep-all;overflow-wrap:normal}
+body[data-area="home"] .edu-guest-summary[hidden]{display:none!important}

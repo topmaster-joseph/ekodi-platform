@@ -34,6 +34,11 @@
       if(el){el.dataset.eduPanel=tab;managed.push(el);}
     }
   }
+  const heroHeading=document.querySelector('#heroTitle');
+  const guestSummary=document.createElement('p');
+  guestSummary.className='edu-guest-summary';
+  guestSummary.textContent='입시·진학, AI 실습교육, 학습·유학, 연구지원과 지역 평생교육을 한곳에서 안내합니다. 위의 교육과정 탭에서 이용할 서비스를 확인하세요.';
+  document.querySelector('.hero-copy')?.append(guestSummary);
   let active='explore';
   let authenticated=false;
   let resolved=false;
@@ -59,8 +64,8 @@
     document.body.dataset.eduView=authenticated?'member':resolved?'guest':'pending';
     nav.hidden=!resolved;
     document.querySelector('.visual-sidebar')?.setAttribute('hidden','');
-    const heroHeading=document.querySelector('#heroTitle');
-    if(heroHeading && !authenticated)heroHeading.textContent='누구나 배울 수 있는 EKODI Education';
+    if(heroHeading)heroHeading.textContent=authenticated?'오늘의 배움이 내일의 삶을 바꿉니다.':'누구나 배울 수 있는 EKODI Education';
+    guestSummary.hidden=authenticated;
   }
   function activate(id,scroll=true){
     if(!buttons.has(id))return;
@@ -90,4 +95,8 @@
   // Auth may resolve before this deferred script executes.
   if(window.EKODI_EDU_SESSION){authenticated=Boolean(window.EKODI_EDU_SESSION.authenticated);resolved=true;active=tabFromHash()||(authenticated?'mine':'explore');}
   paint();
+  // If the optional remote auth module fails to initialize, keep public guidance usable.
+  window.addEventListener('load',()=>{
+    if(!resolved){resolved=true;authenticated=false;active='explore';paint();}
+  },{once:true});
 })();
