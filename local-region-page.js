@@ -28,7 +28,7 @@ function publicLinks(region){
       tag:presentation.tag||'지역',
       desc:presentation.desc||module.summary,
       audiences:presentation.audiences||'resident student merchant organization',
-      href:module.id==='commerce-pass'?'/cheonggyepass':module.publicPath,
+      href:module.id==='commerce-pass'?'/cgpass':module.publicPath,
     }];
   }));
   return [
@@ -84,11 +84,11 @@ function baseStyle(){
 }
 
 function publicHeader(region){
-  return `<header class="site-header"><div class="site-header__inner"><a class="site-brand" href="/cheonggye" aria-label="${esc(region.brand)} 홈"><span class="site-brand__mark">청계</span><span class="site-brand__text">${esc(region.brand)}</span></a><nav class="site-nav" aria-label="청계잇다 주요 메뉴"><a href="#local-services">지역서비스</a><a href="/cheonggye/pass">청계패스</a><a href="#participate">소통</a></nav></div></header>`;
+  return `<header class="site-header"><div class="site-header__inner"><a class="site-brand" href="/cheonggye" aria-label="${esc(region.brand)} 홈"><span class="site-brand__mark">청계</span><span class="site-brand__text">${esc(region.brand)}</span></a><nav class="site-nav" aria-label="청계잇다 주요 메뉴"><a href="#local-services">지역서비스</a><a href="/cgpass">청계패스</a><a href="#participate">소통</a></nav></div></header>`;
 }
 
 function adminHeader(region){
-  return `<header class="site-header admin-header"><div class="site-header__inner"><a class="site-brand" href="/cheonggye/admin" aria-label="${esc(region.brand)} 관리자 홈"><span class="site-brand__mark">관리</span><span class="site-brand__text">${esc(region.brand)} 관리자</span></a><nav class="site-nav" aria-label="청계잇다 관리자 메뉴"><a href="/cheonggye/admin">통합현황</a><a href="/cheonggye/admin#operations" data-region-capability="tenant.operations.manage">운영권</a><a href="/cheonggye/admin/pass">청계패스</a><a href="/cheonggye/admin/forest">국민의숲</a><a href="/cheonggye/admin/access" data-region-capability="tenant.access.manage">사용자·권한</a><a href="/cgma/admin">상인회 관리</a><a class="site-nav__public" href="/cheonggye">사용자 화면</a></nav></div></header>`;
+  return `<header class="site-header admin-header"><div class="site-header__inner"><a class="site-brand" href="/cheonggye/admin" aria-label="${esc(region.brand)} 관리자 홈"><span class="site-brand__mark">관리</span><span class="site-brand__text">${esc(region.brand)} 관리자</span></a><nav class="site-nav" aria-label="청계잇다 관리자 메뉴"><a href="/cheonggye/admin">통합현황</a><a href="/cheonggye/admin#operations" data-region-capability="tenant.operations.manage">운영권</a><a href="/cgpass/admin">청계패스</a><a href="/cheonggye/admin/forest">국민의숲</a><a href="/cheonggye/admin/access" data-region-capability="tenant.access.manage">사용자·권한</a><a href="/cgma/admin">상인회 관리</a><a class="site-nav__public" href="/cheonggye">사용자 화면</a></nav></div></header>`;
 }
 
 function document(region,title,body,admin=false,canonicalPath=null){
@@ -115,7 +115,7 @@ function publicBody(region){
   <section class="section" id="local-services"><div class="section-head"><div><h2>지역 서비스</h2><p class="section-note">주민·상인·학생·기관이 함께 쓰되, 각 서비스는 필요한 정보부터 짧고 분명하게 보여줍니다.</p></div></div><div class="grid">${publicLinks(region).map(publicCard).join('')}</div></section>
   <section class="section personal" data-personalization-surface="local-cheonggye"><div class="personal__main"><strong>필요한 정보부터 간단하게</strong><p>청계잇다는 로그인하지 않아도 기본 지역정보를 사용할 수 있습니다. 맞춤 기능이 제공되는 경우에도 각 지역서비스 안에서 필요한 설정만 안내합니다.</p></div><div class="personal__aside"><strong>이용 원칙</strong><p>민감한 정보를 추정하지 않고, 공개 정보와 개인·단체의 비공개 정보는 구분해서 다룹니다.</p></div></section>
   <section class="section" id="participate"><div class="talk"><div><strong>청계에 말하기</strong><p>지역 제안·행사·상권·생활정보는 관련 지역서비스와 연결합니다. 필요한 의견과 제안을 쉽게 남길 수 있는 흐름을 우선합니다.</p></div><a class="button" href="#proposal">참여·제안 보기</a></div></section>
-  <section class="section" id="local-organizations"><div class="section-head"><div><h2>함께하는 지역 조직</h2><p class="section-note">지역의 기관·단체와 연결해 필요한 공개정보와 참여 기회를 안내합니다.</p></div></div><div class="org"><div><strong>청계면상인회</strong><div class="muted">지역 상권과 상인 네트워크를 연결하는 참여 조직입니다.</div></div><a class="button" href="/cgma">상인회 보기</a></div><div class="org" style="margin-top:10px"><div><strong>청계패스</strong><div class="muted">참여점포·쿠폰·포인트·지역혜택을 연결하는 독립 지역서비스입니다.</div></div><a class="button" href="/cheonggyepass">청계패스 보기</a></div></section>
+  <section class="section" id="local-organizations"><div class="section-head"><div><h2>함께하는 지역 조직</h2><p class="section-note">지역의 기관·단체와 연결해 필요한 공개정보와 참여 기회를 안내합니다.</p></div></div><div class="org"><div><strong>청계면상인회</strong><div class="muted">지역 상권과 상인 네트워크를 연결하는 참여 조직입니다.</div></div><a class="button" href="/cgma">상인회 보기</a></div><div class="org" style="margin-top:10px"><div><strong>청계패스</strong><div class="muted">참여점포·쿠폰·포인트·지역혜택을 연결하는 독립 지역서비스입니다.</div></div><a class="button" href="/cgpass">청계패스 보기</a></div></section>
   </main>`;
 }
 
@@ -138,7 +138,7 @@ function adminBody(region){
   <section class="section" id="operations" data-region-capability="tenant.operations.manage"><div class="section-head"><div><h2>운영권</h2><p class="section-note">현재 등록된 지역 운영단체와 실제 운영범위를 확인합니다.</p></div></div><table class="operator-table"><thead><tr><th>운영단체</th><th>역할</th><th>운영범위</th><th>상태</th><th>관리</th></tr></thead><tbody>${operatorRows}</tbody></table><div class="operator-note"><strong>청계면상인회 운영권 적용:</strong> 상인회 책임관리자·관리자·운영책임자는 청계잇다 운영화면에 위임된 운영권으로 접근할 수 있습니다. 사용자·권한 관리와 플랫폼 소유권 변경은 별도 명시 권한이 있어야 합니다.</div></section>
   <section class="section" data-region-capability="tenant.operations.manage"><div class="section-head"><div><h2>서비스별 운영주체</h2><p class="section-note">청계면상인회가 현재 모든 지역 공통서비스의 주 운영단체로 등록되어 있습니다.</p></div></div><table><thead><tr><th>지역서비스</th><th>주 운영단체</th><th>공동운영</th><th>상태</th></tr></thead><tbody>${rows}</tbody></table></section>
   <section class="section" id="operations-history" data-region-capability="tenant.operations.manage"><div class="section-head"><div><h2>운영권 이력</h2><p class="section-note">현재 운영권과 변경 기록을 실제 운영 데이터 기준으로 확인합니다. 이후 공동운영·이양이 발생해도 기록은 삭제하지 않습니다.</p></div></div><div data-region-operations-ledger><p class="muted">운영권 현황을 확인하고 있습니다.</p></div></section>
-  <section class="section"><div class="section-head"><div><h2>관리 바로가기</h2><p class="section-note">권한에 맞는 관리화면으로 이동합니다.</p></div></div><div class="admin-actions"><a class="admin-action" href="/cheonggye/admin/forest"><strong>국민의숲 프로젝트</strong><span>추진이력·현재단계·근거자료 공개상태를 관리합니다.</span></a><a class="admin-action" href="/cheonggye/admin/pass"><strong>청계패스 운영</strong><span>지역상품권·쿠폰·포인트와 외부 연동 상태를 관리합니다.</span></a><a class="admin-action" href="/cheonggye/admin/access" data-region-capability="tenant.access.manage"><strong>사용자·권한</strong><span>Google 이메일 사전등록, 역할, 만료일과 권한 회수를 관리합니다.</span></a><a class="admin-action" href="/cgma/admin"><strong>청계면상인회 관리</strong><span>회원·회비·회의·문서·회계 등 상인회 고유업무를 관리합니다.</span></a></div></section>
+  <section class="section"><div class="section-head"><div><h2>관리 바로가기</h2><p class="section-note">권한에 맞는 관리화면으로 이동합니다.</p></div></div><div class="admin-actions"><a class="admin-action" href="/cheonggye/admin/forest"><strong>국민의숲 프로젝트</strong><span>추진이력·현재단계·근거자료 공개상태를 관리합니다.</span></a><a class="admin-action" href="/cgpass/admin"><strong>청계패스 운영</strong><span>지역상품권·쿠폰·포인트와 외부 연동 상태를 관리합니다.</span></a><a class="admin-action" href="/cheonggye/admin/access" data-region-capability="tenant.access.manage"><strong>사용자·권한</strong><span>Google 이메일 사전등록, 역할, 만료일과 권한 회수를 관리합니다.</span></a><a class="admin-action" href="/cgma/admin"><strong>청계면상인회 관리</strong><span>회원·회비·회의·문서·회계 등 상인회 고유업무를 관리합니다.</span></a></div></section>
   <section class="section"><h2>권한 이양 원칙</h2><div class="policy">새 운영주체 등록 → 서비스별 공동운영 기간 → 책임권한 이양 → 기존 운영자 권한 축소의 순서로 처리합니다. 이양 시 지역 데이터는 이동·복사하지 않고 그대로 유지하며, 변경 전후 운영자와 감사이력을 보존합니다. 상인회 자체 데이터는 <strong>/cgma</strong> 소유로 남습니다.</div></section>
   <div class="auth-meta"><span class="auth-chip">로그인 <span data-region-auth-email></span></span><span class="auth-chip">권한 <span data-region-auth-role></span></span></div>
   </main>`;

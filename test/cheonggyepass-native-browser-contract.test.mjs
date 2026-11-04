@@ -7,7 +7,7 @@ const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 test('native browser QA uses real canonical markup but isolated fake identities and no production mutations',async()=>{
   const s=await read('scripts/verify-cheonggyepass-native-ui.mjs');
   assert.match(s,/const ORIGIN='https:\/\/ekodi\.kr'/);
-  assert.match(s,/const ADMIN=ORIGIN\+'\/cheonggyepass\/admin'/);
+  assert.match(s,/const ADMIN=ORIGIN\+'\/cgpass\/admin'/);
   assert.match(s,/import \{ chromium \} from 'playwright'/);
   assert.match(s,/browser\.newContext/);
   assert.match(s,/serviceWorkers:'block'/);
@@ -54,7 +54,7 @@ test('official EKODI background browser registry is canonical, read-only and bou
   assert.equal(registry.canonicalOrigin,'https://ekodi.kr');
   assert.ok(registry.maxPaths<=12);
   assert.deepEqual(registry.surfaces.filter(s=>s.enabled!==false).map(s=>s.path),[
-    '/cheonggyepass','/cheonggyepass/admin'
+    '/cgpass','/cgpass/admin'
   ]);
   assert.equal(registry.status,'read-only');
   assert.ok(!JSON.stringify(registry).includes('bearer'));

@@ -9,8 +9,8 @@ const PROGRAMS=Object.freeze({
     providerId:null,
     providerStatus:'unassigned',
     adapterVersion:'v1',
-    publicPath:'/cheonggyepass',
-    adminPath:'/cheonggyepass/admin',
+    publicPath:'/cgpass',
+    adminPath:'/cgpass/admin',
     regionalEntryPath:'/cheonggye/pass',
     regionalAdminEntryPath:'/cheonggye/admin/pass',
     capabilities:[
@@ -40,6 +40,21 @@ export function regionalCommerceProgramFromPath(pathname){
     return Object.freeze({program,admin:path===program.adminPath||path.startsWith(program.adminPath+'/'),canonical:true});
   }
   return null;
+}
+
+// Keep legacy entry points as 308 aliases without changing the immutable program ID.
+export function legacyCheonggyePassCanonicalPath(pathname){
+  const path=String(pathname||'').split(/[?#]/)[0].replace(/\/+$/,'')||'/';
+  const aliases=[
+    ['/cheonggyepass/admin','/cgpass/admin'],
+    ['/cheonggye/admin/pass','/cgpass/admin'],
+    ['/cheonggyepass','/cgpass'],
+    ['/cheonggye/pass','/cgpass'],
+  ];
+  for(const [legacy,canonical] of aliases){
+    if(path===legacy||path.startsWith(legacy+'/'))return canonical+path.slice(legacy.length);
+  }
+  return '';
 }
 
 export function regionalCommerceProgramFromLocalRoute(route){

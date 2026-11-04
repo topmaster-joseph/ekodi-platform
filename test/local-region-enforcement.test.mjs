@@ -51,7 +51,7 @@ test('every Cheonggye subservice resolves from both public and admin canonical p
 test('Cheonggye home links every registered regional subservice',async()=>{
   const html=await localRegionPublicPage(region).text();
   for(const module of region.modules){
-    const expected=module.id==='commerce-pass'?'/cheonggyepass':module.publicPath;
+    const expected=module.id==='commerce-pass'?'/cgpass':module.publicPath;
     assert.ok(html.includes('href="'+expected+'"'),module.id+' public link missing');
   }
   assert.match(html,/목포대 × 청계/);

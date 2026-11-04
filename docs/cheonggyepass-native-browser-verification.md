@@ -2,7 +2,7 @@
 
 ## 목적과 판정 구분
 
-정식 화면: \`https://ekodi.kr/cheonggyepass/admin\`.
+정식 화면: \`https://ekodi.kr/cgpass/admin\`.
 
 기존 2026-10-18 소스 PR #5203/#5214에서는 서버 접수·격리·감사원장 흐름을 **모의 관리자/외주사 신원 + SQLite + R2 fixture**로 확인했다. 이 문서의 Chromium 스크립트는 공개 운영 페이지에서 제공되는 실제 HTML/CSS/JS를 로드하되, 인증 API와 쓰기 요청은 격리 Chromium 안에서만 모의 처리한다.
 
@@ -38,7 +38,7 @@ node scripts/verify-cheonggyepass-native-ui.mjs
 
 운영 데이터나 타 업체 자료 훼손 금지. **사용자 또는 인증된 관리자의 명시적 승인으로 확보한 시험 전용 계정**만 사용하고, 비밀번호·Google OAuth 토큰·R2/D1 비밀값은 PR, 로그, 채팅 등에 올리지 말 것.
 
-1. 최고관리자 2개 중 승인된 한 계정으로 \`/cheonggyepass/admin\` 로그인. 계정 선택창이 정상이며 로그인 후 동일 관리 경로로 복귀하는지 확인. \`/api/local-access/cheonggye-pass/me\`의 \`authenticated\`, \`role\`, \`capabilities\`, \`canManageAccess\` 응답을 **비밀값·실제 이메일 제외**하고 증거화.
+1. 최고관리자 2개 중 승인된 한 계정으로 \`/cgpass/admin\` 로그인. 계정 선택창이 정상이며 로그인 후 동일 관리 경로로 복귀하는지 확인. \`/api/local-access/cheonggye-pass/me\`의 \`authenticated\`, \`role\`, \`capabilities\`, \`canManageAccess\` 응답을 **비밀값·실제 이메일 제외**하고 증거화.
 2. \`/cheonggye/admin/access?scope=cheonggye-pass\`에서 외주사 검증용 Google 이메일에 \`external_vendor\` 또는 \`external_developer\`를 기간 제한으로 등록. 외주사에 운영 배포·금융·타 조직 데이터 권한을 주지 않음.
 3. 외주사 브라우저의 독립 프로필로 로그인하여 본인 접수만 보이는지 확인. 검증 가능 PR URL과 정확한 SHA를 테스트 데이터로 접수; 접수 ID 및 \`submitted\` 상태, 본인 재조회 증거.
 4. 외주사에게 테스트 전용 공개 HTTPS API/문서 주소를 제출하게 하고, \`health\`를 필수로 포함. URL 등록만 검증; 외부 URL 호출과 금전거래는 금지.
@@ -61,7 +61,7 @@ node scripts/verify-cheonggyepass-native-ui.mjs
 별도 브라우저 서비스/새 워크플로가 없어도, 이미 등록된
 \`.github/workflows/ekodi-background-browser-worker.yml\`의 **Run workflow**를 이용한다. 보호 병합 후 \`main\`에서 다음 입력으로 각각 실행한다.
 
-- \`surface_path\`: \`/cheonggyepass/admin\`
+- \`surface_path\`: \`/cgpass/admin\`
 - \`surface_registry\`: \`config/cheonggyepass-browser-surface-registry.json\`
 - \`verification_lane\`: \`cheonggyepass-vendor-guest\`
 - \`device_profile\`: 먼저 \`desktop\`, 별도 실행으로 \`mobile-portrait\`
