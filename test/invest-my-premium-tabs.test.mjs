@@ -2,30 +2,28 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { investMyRoute } from '../invest-my-workspace.js';
 
-test('my invest keeps the KPI strip and hides redundant top tabs in favor of the primary sidebar', async () => {
-  const html = await (await investMyRoute(new Request('https://ekodi.kr/invest'), {})).text();
-  for (const id of ['kpiAuth', 'kpiBroker', 'kpiPaper', 'kpiLive', 'kpiUpdated']) assert.match(html, new RegExp(`id="${id}"`));
-  assert.match(html, /<strong id="kpiLive">잠금<\/strong>/);
-  const tabs = [...html.matchAll(/role="tab" data-tab="([a-z]+)"/g)].map(m => m[1]);
-  assert.deepEqual(tabs, ['summary', 'market', 'broker', 'autopilot', 'analysis', 'research', 'live', 'report']);
-  assert.match(html, /id="ownerTabs" class="tabs" hidden role="tablist"/);
-  assert.match(html, /href="#manualOrder">직접투자/);
-  assert.match(html, /href="#autopilot">AI 자동투자/);
-  assert.match(html, /href="#strategyLab">투자 분석·연구/);
-  // Korean-first: decorative English headings replaced
-  assert.doesNotMatch(html, /PRIVATE INVESTMENT STUDIO|EKODI AI PRIVATE WEALTH|>LOCAL</);
-  // owner tools stay hidden until both factors succeed
-  assert.match(html, /<section id="owner" hidden>/);
+test('private Invest shows only minimal login before owner validation',async()=>{
+ const html=await investMyRoute(new Request('https://ekodi.kr/invest/my'),{}).then(r=>r.text());
+ for(const id of ['kpiAuth','kpiBroker','kpiPaper','kpiLive','kpiUpdated'])assert.match(html,new RegExp('id="'+id+'"'));
+ assert.match(html,/<strong id="kpiLive">잠금<\/strong>/);
+ assert.match(html,/<section id="owner" hidden>/);
+ assert.match(html,/id="ownerSidebar"[^>]*hidden/);
+ assert.match(html,/id="investAuthIntro"/);
+ assert.doesNotMatch(html,/<header class="top"/);
+ assert.match(html,/id="stepUpButton"/);
+ assert.match(html,/id="ownerTabs" class="tabs" hidden role="tablist"/);
+ assert.match(html,/id="detailTabs" class="detail-tabs" hidden role="tablist"/);
 });
-
-test('client routes sidebar hashes to the owning tab and never hides the summary strip', async () => {
-  const js = await (await investMyRoute(new Request('https://ekodi.kr/invest/app.js'), {})).text();
-  assert.match(js, /ownerSummary:'\*',ownerTabs:'\*'/);
-  assert.match(js, /const DETAIL_GROUPS=\{/);
-  assert.match(js, /manual:\[\['manualOrder','주문 준비'\]/);
-  assert.match(js, /auto:\[\['autopilot','모의운용 현황'\]/);
-  assert.match(js, /report:\[\['export','보고서'\]/);
-  assert.match(js, /addEventListener\('hashchange'/);
-  assert.match(js, /kpi\('kpiPaper','확인 불가','warn'\)/);
-  assert.doesNotMatch(js, /innerHTML|localStorage\.setItem|sessionStorage\.setItem/);
+test('private subroutes are independent and summary indicators disappear outside overview',async()=>{
+ const js=await investMyRoute(new Request('https://ekodi.kr/invest/my/app.js'),{}).then(r=>r.text());
+ assert.match(js,/ownerSummary:'summary',ownerTabs:'\*'/);
+ assert.match(js,/const INVEST_DETAIL_PATHS=/);
+ assert.match(js,/const DETAIL_BY_SLUG=/);
+ assert.match(js,/const DETAIL_GROUPS=/);
+ assert.match(js,/const slug=pathname==='\/invest\/my'/);
+ assert.match(js,/addEventListener\('popstate'/);
+ assert.match(js,/loginHref\(\)/);
+ assert.match(js,/setStepUp\('done'\)/);
+ assert.match(js,/el\('ownerSidebar'\)\.hidden=false/);
+ assert.doesNotMatch(js,/innerHTML|localStorage\.setItem|sessionStorage\.setItem/);
 });
