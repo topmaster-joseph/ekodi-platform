@@ -159,7 +159,7 @@
   }
 
   function fallbackCards(context) {
-    const cards = [...document.querySelectorAll('#grid [data-product]')].slice(0, 4); results.replaceChildren();
+    const cards = [...document.querySelectorAll('#grid [data-product]')].filter((item) => item.dataset.saleReady === 'true' || item.dataset.status === '판매 중').slice(0, 4); results.replaceChildren();
     cards.forEach((item, index) => { const article = text('article', 'context-card', ''); const top = text('div', 'context-card-top', ''); top.append(text('span', 'context-fit', index === 0 ? '먼저 보기' : '큐레이션'), text('span', 'context-provider', item.querySelector('.store-kicker')?.textContent?.trim() || 'EKODI Mall')); article.append(top, text('h3', '', item.dataset.name || '상품')); const why = text('ul', 'context-card-reasons', ''); why.append(text('li', '', context.message ? '말씀하신 조건을 기준으로 현재 공개 상품에서 찾았습니다' : '에코디가 현재 공개한 상품입니다')); article.append(why); const action = text('div', 'context-card-action', ''); action.append(text('small', '', item.dataset.status || '준비 상태 확인')); const link = document.createElement('a'); link.href = item.dataset.href || '#shop'; link.textContent = '상품 자세히'; action.append(link); article.append(action); results.append(article); });
     if (!cards.length) results.replaceChildren(text('article', 'context-loading', '현재 추천 가능한 상품을 준비하고 있습니다.'));
   }

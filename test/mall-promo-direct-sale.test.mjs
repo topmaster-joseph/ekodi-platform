@@ -29,7 +29,14 @@ test('direct candidate fetch drops affiliate-looking items and fails closed', as
 
 test('mall promotable endpoint only exposes published, in-stock, photographed direct-sale products', async () => {
   const src = await readFile(new URL('../sites/ekodi-mall/api/entry.js', import.meta.url), 'utf8');
-  assert.match(src, /status='published' AND sale_type='direct' AND COALESCE\(affiliate_url,''\)='' AND stock_quantity>0 AND images_json<>'\[\]'/);
+  const rule = await readFile(new URL('../sites/ekodi-mall/api/public-sale-visibility.js', import.meta.url), 'utf8');
+  assert.match(src, /PUBLIC_SALE_LISTING_WHERE/);
+  assert.match(src, /p\.sale_type='direct' AND COALESCE\(p\.affiliate_url,''\)='' AND p\.images_json<>'\[\]'/);
+  assert.ok(rule.includes("p.status='published'"));
+  assert.ok(rule.includes('p.checkout_ready=1'));
+  assert.ok(rule.includes('p.stock_quantity>0'));
+  assert.ok(rule.includes('p.price>0'));
+  assert.ok(rule.includes("approved_store.verification_status='verified'"));
   const toml = await readFile(new URL('../wrangler.marketing-growth.toml', import.meta.url), 'utf8');
   assert.match(toml, /binding = "MALL_API"\nservice = "ekodi-mall-api"/);
 });
