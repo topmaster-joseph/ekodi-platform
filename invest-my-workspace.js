@@ -582,7 +582,7 @@ const DETAIL_GROUPS={
  summary:[['ownerOverview','투자 시작']],
  manual:[['manualOrder','주문 준비'],['brokerReadonly','증권사 잔고'],['marketDashboard','시장·종목'],['portfolio','내 보유자산']],
  auto:[['autopilot','모의운용 현황'],['autopilotPolicy','자동투자 정책·모의주문'],['liveTrading','실거래 준비']],
- research:[['strategyLab','AI 전략 검증'],['shortValueResearch','저평가 종목·공시'],['design','투자 설계'],['scenario','시나리오'],['insights','위험 분석']],
+ research:[['strategyLab','AI 전략 검증'],['shortValueResearch','단기 가치발굴·공시'],['design','투자 설계'],['scenario','시나리오'],['insights','위험 분석']],
  report:[['export','보고서']]
 };
 const TAB_OF={ownerSummary:'*',ownerTabs:'*',detailContext:'*',detailTabs:'*',
