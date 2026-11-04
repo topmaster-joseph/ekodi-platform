@@ -85,4 +85,11 @@
   window.addEventListener('ekodi:marketplace-products-loaded', render);
   document.addEventListener('ekodi:local-region-change', render);
   render();
+  // Approved bookstore titles can become purchasable without a new Mall build.
+  // The Books Worker is the only authority for file-bound release and live checkout.
+  import('./bookstore-live.mjs')
+    .then(({ mountApprovedBookstoreProducts }) => {
+      mountApprovedBookstoreProducts({ grid, render });
+    })
+    .catch(() => { /* Offline or unsupported module = no unverified sale listing. */ });
 })();
