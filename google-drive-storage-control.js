@@ -81,6 +81,11 @@ function primaryDomains(env) {
   return configured.length ? configured : ['ekodi.kr'];
 }
 function primaryAccountEmail(env) { return String(env.STORAGE_PRIMARY_GOOGLE_EMAIL || '').trim().toLowerCase(); }
+function approvedSharedDriveEmails(env) {
+  // Account whitelist is NOT a Google Drive permission grant. The actual
+  // membership remains managed and audited by Google Shared Drive.
+  return [...new Set([primaryAccountEmail(env),...splitList(env.STORAGE_SHARED_DRIVE_APPROVED_EMAILS)].filter(Boolean))];
+}
 function primarySharedDriveId(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_ID || '').trim(); }
 function primarySharedDriveName(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_NAME || 'EKODI').trim() || 'EKODI'; }
 function googleClientId(env) { return String(env.GOOGLE_DRIVE_CLIENT_ID || env.GOOGLE_CLIENT_ID || '').trim(); }
@@ -560,6 +565,8 @@ export async function handleGoogleDriveStorageControl(request, env) {
        // the existing encrypted connection and route mapping unchanged.
        if (payload.role === 'primary' && primaryAccountEmail(env) && email !== primaryAccountEmail(env))
          return html(`EKODI 기본 공유드라이브는 ${primaryAccountEmail(env)} 계정으로만 연결할 수 있습니다.`);
+       if (payload.role === 'secondary' && payload.accountHint && email !== payload.accountHint)
+         return html('요청한 EKODI 공유드라이브 이용 계정과 Google에서 로그인한 계정이 일치하지 않습니다.');
       const encrypted = await encryptCredential(env,{refreshToken:token.refresh_token});
       const id = crypto.randomUUID(); const now = new Date().toISOString();
       // Stage new OAuth without revoking the existing verified primary.
@@ -608,6 +615,11 @@ export async function handleGoogleDriveStorageControl(request, env) {
      const primary=connections.find(row=>row.role==='primary'&&row.status==='ready');
      return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),
        primaryAccountEmail:expected,primaryAccountMatched:Boolean(expected&&primary&&String(primary.account_email||'').toLowerCase()===expected&&primary.drive_id===primarySharedDriveId(env)),
+       approvedSharedDriveAccounts:approvedSharedDriveEmails(env).map(email=>{
+         const conn=connections.find(item=>String(item.account_email||'').toLowerCase()===email&&item.drive_id===primarySharedDriveId(env));
+         return {email,platformRole:email===expected?'canonical_steward':'approved_user',
+           platformConnection:conn?.status||'not_connected',googleMembershipVerification:'google_provider_source_of_truth'};
+       }),
        primarySharedDrive:{id:primarySharedDriveId(env),name:primarySharedDriveName(env)},
        redirectUri:googleOAuthRedirectUri(env),canonicalRedirectUri:CANONICAL_REDIRECT_URI,legacyRedirectUri:REDIRECT_URI,
        connections,routes:routes.results || [],policy:{primary:'Google Workspace Shared Drive EKODI',secondary:'migration or optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
@@ -615,14 +627,18 @@ export async function handleGoogleDriveStorageControl(request, env) {
   if (url.pathname === `${BASE}/oauth/start` && request.method === 'POST') {
     if (!ready(env)) return json({error:'Google Drive OAuth Secret 구성이 필요합니다.',code:'GOOGLE_DRIVE_NOT_CONFIGURED'},503,auth.response.headers);
     const body = await request.json().catch(() => ({})); const role = body.role === 'secondary' ? 'secondary' : 'primary'; const returnTo = safeAdminReturnPath(body.returnTo);
+    const accountHint=role==='secondary'?String(body.accountHint||'').trim().toLowerCase():'';
+    if(accountHint&&!approvedSharedDriveEmails(env).includes(accountHint))
+      return json({error:'기본 공유드라이브에 등록되지 않은 계정입니다.',code:'SHARED_DRIVE_ACCOUNT_NOT_APPROVED'},403,auth.response.headers);
     const nonce=b64url(crypto.getRandomValues(new Uint8Array(24))); const now=new Date(); const exp=new Date(now.getTime()+10*60*1000);
     await env.DB.prepare('DELETE FROM storage_oauth_states WHERE expires_at<=?').bind(now.toISOString()).run();
     await env.DB.prepare('INSERT INTO storage_oauth_states(nonce_hash,admin_email,connection_role,expires_at,created_at) VALUES(?,?,?,?,?)').bind(await nonceHash(nonce),auth.session.email,role,exp.toISOString(),now.toISOString()).run();
     const redirectUri=googleOAuthRedirectUri(env);
-    const state=await signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,redirectUri,exp:exp.getTime()});
+    const state=await signState(env,{nonce,role,accountHint,adminEmail:auth.session.email,returnTo,redirectUri,exp:exp.getTime()});
     const reconnectRow=await env.DB.prepare(`SELECT account_email FROM storage_connections WHERE role=? AND status!='disabled' ORDER BY updated_at DESC LIMIT 1`).bind(role).first();
     const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:redirectUri,response_type:'code',access_type:'offline',prompt:'consent',include_granted_scopes:'true',scope:SCOPES.join(' '),state});
     if(role==='primary'&&primaryAccountEmail(env))params.set('login_hint',primaryAccountEmail(env));
+     else if(accountHint)params.set('login_hint',accountHint);
      else if(reconnectRow?.account_email)params.set('login_hint',String(reconnectRow.account_email));
     return json({authorizeUrl:`${AUTH_URL}?${params}`,role},200,auth.response.headers);
   }
@@ -640,6 +656,9 @@ export async function handleGoogleDriveStorageControl(request, env) {
     try { available=await listDrives(env,row); } catch(error) { console.error('Drive select list failed',error); return googleReauthResponse(error,row.role,auth.response.headers) || json({error:'Google Drive 목록을 읽을 수 없습니다.',code:'DRIVE_LIST_FAILED'},502,auth.response.headers); }
     const selected=available.drives.find(d => d.id === String(body.driveId || ''));
     if (!selected) return json({error:'이 계정에서 사용할 수 없는 Drive입니다.'},400,auth.response.headers);
+    if(row.role==='secondary'&&selected.id===primarySharedDriveId(env)&&
+      !approvedSharedDriveEmails(env).includes(String(row.account_email||'').trim().toLowerCase()))
+      return json({error:'이 계정은 EKODI 기본 공유드라이브 이용 계정으로 등록되지 않았습니다.',code:'SHARED_DRIVE_ACCOUNT_NOT_APPROVED'},403,auth.response.headers);
     if(row.role==='primary'){
       const intendedId=primarySharedDriveId(env);
       const intendedName=primarySharedDriveName(env).toLowerCase();

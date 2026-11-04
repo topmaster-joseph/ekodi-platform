@@ -15,6 +15,7 @@ GOOGLE_DRIVE_OAUTH_REDIRECT_URI = "https://ekodi.kr/storage/api/control/storage/
 MARKETING_YOUTUBE_DIRECT_CALLBACK_ENABLED = "false"
 STORAGE_PRIMARY_GOOGLE_DOMAINS = "ekodi.kr"
 STORAGE_PRIMARY_GOOGLE_EMAIL = "joseph@ekodi.kr"
+STORAGE_SHARED_DRIVE_APPROVED_EMAILS = "joseph@ekodi.kr,topmaster.joseph@gmail.com,ekodibiz@gmail.com"
 STORAGE_PRIMARY_SHARED_DRIVE_ID = "0ACM_FnMYWMFuUk9PVA"
 STORAGE_PRIMARY_SHARED_DRIVE_NAME = "EKODI"
 ALLOWED_ORIGINS = "https://ekodi.kr"
