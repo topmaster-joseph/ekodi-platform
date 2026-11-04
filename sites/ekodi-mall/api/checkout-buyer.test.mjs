@@ -114,3 +114,18 @@ test('public nonmember endpoint refuses a sale when merchant payment gating is d
   assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM orders').get().n,0);
   assert.equal(db.db.prepare("SELECT stock_quantity FROM products WHERE id='p1'").get().stock_quantity,10);
 });
+
+test('guest payment remains restricted to the verified merchant of record on the single-MID Toss contract',async()=>{
+  const db=migrated();
+  const env={...LIVE_WIDGET,DB:db,MALL_EKODIAN_EMAILS:'not-the-seller@example.com'};
+  const request={shareCode:'SHARE1',quantity:1,buyer:BUYER};
+  const denied=await createOrder(env,request);
+  assert.equal(denied.status,409);
+  assert.ok(denied.quote?.blockers?.includes('merchant-of-record-not-authorized'));
+  assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM orders').get().n,0);
+  assert.equal(db.db.prepare("SELECT stock_quantity FROM products WHERE id='p1'").get().stock_quantity,10);
+  const verified=await createOrder({...env,MALL_EKODIAN_EMAILS:'s@x'},request);
+  assert.equal(verified.status,201);
+  const wrongMode=await createOrder({...env,MALL_EKODIAN_EMAILS:'s@x',TOSS_CLIENT_KEY:'live_gck_abc',TOSS_SECRET_KEY:'test_gsk_abc'},request);
+  assert.equal(wrongMode.status,409,'guest approval never bypasses matching Toss key mode');
+});
