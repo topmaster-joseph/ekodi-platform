@@ -11,8 +11,15 @@ const constitution=read('governance/constitution/constitution.json');
 const evidence=read('evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json');
 const workerWorkflow=fs.readFileSync(path.join(root,'.github/workflows/ekodi-background-browser-worker.yml'),'utf8');
 const sharedRelease=fs.readFileSync(path.join(root,'.github/workflows/deploy-site-core.yml'),'utf8');
+const nativeUpdate=read('config/ekodi-native-browser-update-policy.json');
+const nativeAgent=fs.readFileSync(path.join(root,'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'),'utf8');
 const failures=[];
 const fail=m=>failures.push(m);
+if(nativeUpdate.policyId!=='EKODI-AGENT-AUTOUPDATE-001'||nativeUpdate.owner!=='ekodi-orchestrator')fail('native agent auto-update identity mismatch');
+if(nativeUpdate.rollout?.initialPercent!==25||nativeUpdate.pinning?.sha256Required!==true||nativeUpdate.pinning?.immutableCommitRequired!==true)fail('agent auto-update must be immutable, checksum verified and canary-limited');
+if(nativeUpdate.safety?.existingTransactionRollbackRequired!==true||nativeUpdate.safety?.interactiveAuthSessionBlocksUpdate!==true)fail('agent auto-update rollback and active auth hold must remain enforced');
+for(const required of ['Test-EkodiApprovedAgentManifest','Test-EkodiAgentCanaryMembership','Get-FileHash -LiteralPath $candidate -Algorithm SHA256','Invoke-AgentUpgradeTransaction -CandidatePath $candidate -DeferRestart','Invoke-EkodiAgentAutoUpdateIfApproved $config']) if(!nativeAgent.includes(required))fail('agent auto-update safety marker missing: '+required);
+
 
 if(policy.schemaVersion!==1||policy.policyId!=='EKODI-BROWSER-WORKER-001'||policy.status!=='enforced') fail('background browser worker policy identity/status mismatch');
 if(policy.owner!=='ekodi-orchestrator') fail('EKODI Orchestrator must own the browser worker');
