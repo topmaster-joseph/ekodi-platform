@@ -149,3 +149,11 @@ test('Toss reviewer can read an intangible offer without a fictional price or ch
   assert.ok(html.includes('id="businessCards"'), 'informational areas remain distinct from sales');
   assert.doesNotMatch(html, /data-sale-category=["']\s*["']/i);
 });
+
+test('Toss merchant service facts remain visible before pressing More at every viewport',()=>{
+  const progressive=fs.readFileSync(new URL('../shell/progressive-home.js',import.meta.url),'utf8');
+  assert.match(html,/<html[^>]*data-ekodi-progressive-home="off"/);
+  assert.ok(html.includes('data-merchant-review="intangible-service"'));
+  assert.ok(html.includes('서비스 제공 기간')&&html.includes('환불정책 보기'));
+  assert.ok(progressive.includes("root.dataset.ekodiProgressiveHome==='off'"));
+});
