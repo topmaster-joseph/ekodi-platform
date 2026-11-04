@@ -64,3 +64,33 @@ test('unregistered realm fallback cannot invent a new EKODI subdomain',()=>{
   assert.equal(fn('unknown-plugin'),null);
   assert.equal(fn('admin'),null);
 });
+
+test('portal login retains exact canonical service page without allowing internal machine or admin routes',()=>{
+  const permitted=[
+    'https://ekodi.kr/publishing/human/manage/?tab=drafts',
+    'https://ekodi.kr/ekodimall/coupang/?sort=new',
+    'https://ekodi.kr/edu/study/live/?session=42',
+    'https://ekodi.kr/ai/conversation/?thread=xyz',
+    'https://ekodi.kr/ekodichurch/devotion/?day=2026-11-04',
+    'https://ekodi.kr/cgma/admin/edocs?filter=pending',
+  ];
+  for(const url of permitted){
+    assert.equal(clientTarget('portal',url),url,'client '+url);
+    assert.equal(loginTarget('portal',url),url,'workspace '+url);
+  }
+  const rejected=[
+    'https://evil.example/publishing/human/manage/',
+    'http://ekodi.kr/publishing/human/manage/',
+    'https://user:pw@ekodi.kr/publishing/human/manage/',
+    'https://ekodi.kr/admin/',
+    'https://ekodi.kr/auth/?site=portal',
+    'https://ekodi.kr/api/private',
+    'https://ekodi.kr/publishing/api/workflow/projects',
+    'https://ekodi.kr/mcp/',
+    'https://ekodi.kr/health',
+  ];
+  for(const url of rejected){
+    assert.equal(clientTarget('portal',url),'https://ekodi.kr/','client '+url);
+    assert.equal(loginTarget('portal',url),'https://ekodi.kr','workspace '+url);
+  }
+});
