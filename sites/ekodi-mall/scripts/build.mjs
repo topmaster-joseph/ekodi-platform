@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderMallHeader } from '../../../mall-shared-header.js';
 import { loadBookstoreProducts, mergeBookstoreProducts } from './bookstore-products.mjs';
-import { isPublicStaticSale } from '../api/public-sale-visibility.js';
+import { isPublicStaticSale, isPublicIndexableProduct } from '../api/public-sale-visibility.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
@@ -204,7 +204,8 @@ await write('index.html', indexHtml);
 // as the Mall storefront. This read-only public projection is not a seller row.
 await write('provider-bookstore.json', JSON.stringify({
   products: products.filter((p) => p.source?.system === 'ekodi-bookstore').map((p) => ({
-    id: p.id, name: p.name, price: p.price,
+    id: p.id, bookId: p.source.bookId, slug: p.slug, name: p.name, price: p.price,
+    image: p.image || '', description: p.description || '',
     detailUrl: p.source.detailUrl,
     saleReady: p.action?.type === 'external' && p.status === '판매 중'
   }))
@@ -219,6 +220,7 @@ for (const product of products) {
   const store = storeMap.get(product.storeId);
   const isAffiliate = product.saleType === 'affiliate';
   const isPublisherSale = product.saleType === 'publisher' && product.action?.type === 'external';
+  const isDirectPublisherSale = isPublisherSale && /^https:\/\/ekodi\.kr\/books\/buy\//.test(product.action?.url || '');
   const related = saleProducts
     .filter((item) => item.id !== product.id)
     .sort((a, b) => Number(b.category === product.category) - Number(a.category === product.category))
@@ -229,7 +231,7 @@ for (const product of products) {
     ? `<button class="btn primary" type="button" data-add-basket data-product-id="${esc(product.id)}" data-product-name="${esc(product.name)}" data-store-name="${esc(store.name)}" data-product-status="${esc(product.status)}" data-product-href="/products/${esc(product.slug)}/">${site.commerce.paymentsEnabled && Number.isFinite(product.price) ? '구매목록에 담기' : '상담목록에 담기'}</button>`
     : '';
   const transactionNote = product.saleType === 'publisher'
-    ? (isPublisherSale ? '에코디서점이 발행한 도서입니다. 구매 버튼을 누르면 공식 전자책 판매처(유페이퍼 등)로 이동하며, 결제·다운로드는 해당 판매처에서 처리합니다. 에코디서점에서 도서 정보와 판본을 확인할 수 있습니다.' : '에코디서점이 발행한 도서입니다. 판매처 등록이 끝나면 구매 버튼이 열립니다. 지금은 에코디서점에서 도서 정보를 확인할 수 있습니다.')
+    ? (isDirectPublisherSale ? '에코디서점에서 직접 발행·판매하는 전자책입니다. 구매·결제·내 서재 다운로드는 에코디서점에서 처리합니다.' : isPublisherSale ? '에코디서점 발행 도서입니다. 외부 공식 판매처를 이용하는 경우 결제와 다운로드는 그 판매처에서 처리합니다.' : '에코디서점이 발행한 도서입니다. 판매 준비가 완료되면 구매 버튼이 열립니다. 도서 정보를 먼저 확인할 수 있습니다.')
     : isAffiliate
     ? '이 상품은 외부 제휴 판매처에서 구매합니다. 구매 버튼을 누르면 제휴 링크로 이동하며, 에코디는 제휴 활동을 통해 일정 수수료를 제공받을 수 있습니다. 주문·결제·배송·반품은 해당 판매처에서 처리합니다.'
     : product.saleType === 'direct'
@@ -245,6 +247,12 @@ for (const product of products) {
     PRODUCT_SUBTITLE: productSubtitle ? `<p class="detail-subtitle">${esc(productSubtitle)}</p>` : '',
     PRODUCT_DESCRIPTION: esc(product.description),
     PRODUCT_URL: esc(productUrl),
+    ROBOTS_DIRECTIVE: isPublicIndexableProduct(product) ? 'index,follow,max-image-preview:large' : 'noindex,follow',
+    BOOK_SOURCE_ATTR: product.source?.system === 'ekodi-bookstore' ? `data-bookstore-book-id="${esc(product.source.bookId)}"` : '',
+    BOOK_STATUS_ATTR: product.source?.system === 'ekodi-bookstore' ? 'data-bookstore-sale-status' : '',
+    BOOK_ACTION_ATTR: product.source?.system === 'ekodi-bookstore' ? 'data-bookstore-purchase-link' : '',
+    BOOK_TRANSACTION_ATTR: product.source?.system === 'ekodi-bookstore' ? 'data-bookstore-transaction-note' : '',
+    BOOKSTORE_LIVE_SCRIPT: product.source?.system === 'ekodi-bookstore' ? '<script src="/assets/bookstore-live.js" defer></script>' : '',
     PRODUCT_CATEGORY: esc(product.category),
     PRODUCT_BADGE: esc(product.badge),
     PRODUCT_STATUS: esc(product.status),
@@ -266,9 +274,10 @@ for (const product of products) {
     RELATED_PRODUCTS: related || '<p class="empty">함께 볼 다른 상품을 준비 중입니다.</p>',
     NOTICE: esc(site.notice)
   });
-  // Retain old links to preparing products, but never let search engines index them.
-  const detailHtml = isPublicStaticSale(product) ? html : html.replace('</head>', '  <meta name="robots" content="noindex,follow">\n</head>');
-  await write(`products/${product.slug}/index.html`, detailHtml);
+  // Public bookstore titles remain searchable as *information* even when the
+  // static catalogue predates a valid, file-bound runtime publishing approval.
+  // Checkout remains guarded by the bookstore API and is never inferred from SEO.
+  await write(`products/${product.slug}/index.html`, html);
 }
 
 for (const store of stores) {
@@ -366,7 +375,7 @@ for (const policy of pages.policies || []) {
 const urls = [
   `${baseUrl}/`,
   ...saleStores.map((store) => `${baseUrl}/stores/${store.slug}/`),
-  ...saleProducts.map((product) => `${baseUrl}/products/${product.slug}/`),
+  ...products.filter(isPublicIndexableProduct).map((product) => `${baseUrl}/products/${product.slug}/`),
   ...(pages.policies || []).map((policy) => `${baseUrl}/pages/${policy.slug}/`),
   ...affiliateHubs.map((hub) => `${baseUrl}/${hub.path || hub.id}/`),
   // Server-rendered weekly picks (site-worker, ekodi.kr/ekodimall/picks)
@@ -380,6 +389,7 @@ await write('build-meta.json', JSON.stringify({
   stores: stores.length,
   products: products.length,
   publiclyListedProducts: saleProducts.length,
+  publiclyIndexableProductPages: products.filter(isPublicIndexableProduct).length,
   temporarilyHiddenProducts: products.length - saleProducts.length,
   policies: (pages.policies || []).length,
   affiliateHubs: affiliateHubs.length,

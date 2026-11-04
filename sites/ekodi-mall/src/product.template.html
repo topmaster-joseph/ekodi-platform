@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#173f35">
   <meta name="description" content="{{PRODUCT_DESCRIPTION}}">
+  <meta name="robots" content="{{ROBOTS_DIRECTIVE}}">
   <meta property="og:title" content="{{PRODUCT_NAME}} | EKODI MALL">
   <meta property="og:description" content="{{PRODUCT_DESCRIPTION}}">
   <meta property="og:type" content="product">
@@ -15,7 +16,7 @@
   <link rel="stylesheet" href="/assets/product-detail.css">
   <title>{{PRODUCT_NAME}} | EKODI MALL</title>
 </head>
-<body>
+<body {{BOOK_SOURCE_ATTR}}>
   <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/#shop">MARKET</a><a href="/#stores">STORES</a><a href="/seller/">SELLER</a><a href="/checkout/">BAG <span class="nav-count" data-basket-count hidden>0</span></a></nav></header>
   <main class="detail-main detail-main-v2">
     <a class="back" href="/#shop">← 전체 상품</a>
@@ -31,12 +32,12 @@
           <div><dt>스토어</dt><dd><a href="{{STORE_URL}}">{{STORE_NAME}}</a></dd></div>
           <div><dt>스토어 운영</dt><dd>{{STORE_OPERATOR}}</dd></div>
           <div><dt>스토어 상태</dt><dd>{{STORE_STATUS}}</dd></div>
-          <div><dt>상품 상태</dt><dd>{{PRODUCT_STATUS}}</dd></div>
+          <div {{BOOK_STATUS_ATTR}}><dt>상품 상태</dt><dd>{{PRODUCT_STATUS}}</dd></div>
           <div><dt>판매 방식</dt><dd>{{SALE_TYPE_LABEL}}</dd></div>
           <div><dt>가격</dt><dd>{{PRICE_LABEL}}</dd></div>
         </dl>
-        <p class="detail-note">{{TRANSACTION_NOTE}}</p>
-        <div class="detail-actions">{{BASKET_ACTION}}<a class="btn {{ACTION_CLASS}}" href="{{ACTION_URL}}" target="_blank" rel="{{ACTION_REL}}">{{ACTION_LABEL}}</a><a class="smallbtn" href="{{STORE_URL}}">스토어 보기</a></div>
+        <p class="detail-note" {{BOOK_TRANSACTION_ATTR}}>{{TRANSACTION_NOTE}}</p>
+        <div class="detail-actions">{{BASKET_ACTION}}<a class="btn {{ACTION_CLASS}}" {{BOOK_ACTION_ATTR}} href="{{ACTION_URL}}" target="_blank" rel="{{ACTION_REL}}">{{ACTION_LABEL}}</a><a class="smallbtn" href="{{STORE_URL}}">스토어 보기</a></div>
       </div>
     </section>
 
@@ -50,6 +51,7 @@
       <div class="grid">{{RELATED_PRODUCTS}}</div>
     </section>
   </main>
+  {{BOOKSTORE_LIVE_SCRIPT}}
   <script src="/assets/commerce.js" defer></script>
 </body>
 </html>
