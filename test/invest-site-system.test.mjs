@@ -7,7 +7,7 @@ import { INVEST_AUTOMATION_LOOP } from '../invest-automation-runtime.js';
 test('Invest exposes one canonical hub with specialized asset subpaths',()=>{
   const paths=INVEST_ASSET_SITES.map(site=>site.path);
   assert.deepEqual(paths,[
-    '/invest','/my/invest','/invest/opportunities','/invest/projects','/invest/diligence',
+    '/invest','/invest/my','/invest/opportunities','/invest/projects','/invest/diligence',
     '/invest/matching','/invest/aftercare','/invest/stock','/invest/bond','/invest/real-estate',
     '/invest/fund','/invest/alternative','/invest/portfolio','/invest/automation'
   ]);
@@ -18,7 +18,7 @@ test('Invest exposes one canonical hub with specialized asset subpaths',()=>{
 test('legacy personal investment path redirects to the canonical private My Invest',async()=>{
   const response=routeInvestSite(new Request('https://ekodi.kr/invest/personal'));
   assert.equal(response.status,308);
-  assert.equal(new URL(response.headers.get('location')).pathname,'/my/invest');
+  assert.equal(new URL(response.headers.get('location')).pathname,'/invest/my');
   assert.equal(response.headers.get('cache-control'),'no-store');
   const legacyScript=routeInvestSite(new Request('https://ekodi.kr/invest/assets/personal.js'));
   assert.equal(legacyScript.status,410);
