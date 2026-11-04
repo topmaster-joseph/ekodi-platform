@@ -55,20 +55,27 @@
     sensor: new Set(), robot: new Set(), other: new Set(),
   });
   // EKODI-INTERACTIVE-AUTH-001 (shared contract: interactive-auth-session.js)
-  const EXTERNAL_AUTH_SERVICE = Object.freeze({
-    id: 'factchat-mokpo',
-    label: 'FactChat · 국립목포대학교 기관계정',
-    host: 'mokpo.factchat.bot',
-    guide: 'https://docs.mindlogic.ai/docs/general/baze/getting-started/introduction',
+  const EXTERNAL_AUTH_SERVICES = Object.freeze({
+    'factchat-mokpo': Object.freeze({
+      id: 'factchat-mokpo', label: 'FactChat · 국립목포대학교 기관계정',
+      host: 'mokpo.factchat.bot',
+      guide: 'https://docs.mindlogic.ai/docs/general/baze/getting-started/introduction',
+    }),
+    'domeggook-business': Object.freeze({
+      id: 'domeggook-business', label: '도매꾹 · 에코디비즈 사업자 인증',
+      host: 'www.domeggook.com',
+      guide: 'https://openapi.domeggook.com/ko/articles/%EB%A1%9C%EA%B7%B8%EC%9D%B8-e4aaf7c2',
+    }),
   });
+  const externalAuthService = () => EXTERNAL_AUTH_SERVICES[new URLSearchParams(location.search).get('externalAuth')] || EXTERNAL_AUTH_SERVICES['factchat-mokpo'];
   const EXTERNAL_AUTH_STATE_LABELS = Object.freeze({
     awaiting_local_consent:'PC 사용자 동의 대기', declined:'PC에서 거부·무응답', launching:'창 여는 중',
     login_required:'로그인 대기 (PC에서 직접 입력)', authenticated:'로그인 확인됨', verifying:'점검 중',
     verified:'읽기 전용 점검 완료', closing:'종료 중', closed:'종료·프로필 삭제', expired:'만료·프로필 삭제', failed:'실패',
   });
   const CONFIRM_MESSAGES = {
-    'computer.auth_session.start': '선택한 PC에 FactChat 공식 로그인 창을 EKODI 전용 임시 브라우저로 엽니다.\n\n• PC 화면에 동의창이 먼저 뜨며, PC 앞의 본인이 [예]를 눌러야 열립니다.\n• 비밀번호·인증번호는 열린 창의 FactChat 공식 페이지에만 직접 입력하세요. EKODI·AI·채팅으로 보내지 마세요.\n• 기존 Opera/Chrome/Edge 프로필은 사용하지 않으며 30분 후 자동 종료·삭제됩니다.\n\n진행할까요?',
-    'computer.auth_session.verify': '로그인된 FactChat 화면에서 메뉴 표시와 크레딧·사용량 문구만 읽기 전용으로 점검합니다.\n파일 업로드·생성·크레딧 소모 작업은 실행하지 않습니다. 진행할까요?',
+    'computer.auth_session.start': '선택한 PC에 선택한 외부 서비스 공식 로그인 창을 EKODI 전용 임시 브라우저로 엽니다.\n\n• PC 화면에 동의창이 먼저 뜨며, PC 앞의 본인이 [예]를 눌러야 열립니다.\n• 비밀번호·인증번호는 열린 창의 공식 서비스 페이지에만 직접 입력하세요. EKODI·AI·채팅으로 보내지 마세요.\n• 기존 Opera/Chrome/Edge 프로필은 사용하지 않으며 30분 후 자동 종료·삭제됩니다.\n\n진행할까요?',
+    'computer.auth_session.verify': '로그인된 외부 서비스 화면에서 허용된 메뉴 표시만 읽기 전용으로 점검합니다.\n파일 업로드·생성·크레딧 소모 작업은 실행하지 않습니다. 진행할까요?',
     'autologon.open': '자동로그인 암호는 클라우드에서 받지 않습니다. 이 PC에서 Microsoft Autologon 창을 열까요?',
     'power.normal': '현재 Windows 전원 시간을 일반 업무 모드로 변경합니다. 기존 전원 계획을 백업하고, 같은 기기의 원상복구 기능으로 되돌릴 수 있습니다. PC 사용자 동의를 확인했나요?',
     'power.restore': '해당 PC에 보관된 EKODI 전원 계획 백업으로 원상복구합니다. 실행할까요?',
@@ -412,25 +419,26 @@
   }
 
   function externalAuthPanel(device) {
+    const service = externalAuthService();
     const box = document.createElement('details');
     box.className = 'device-details device-external-auth';
-    box.dataset.externalAuthService = EXTERNAL_AUTH_SERVICE.id;
+    box.dataset.externalAuthService = service.id;
     const session = device.settings?.interactiveAuthSession || null;
-    const live = session && ['awaiting_local_consent','launching','login_required','authenticated','verifying','verified'].includes(session.state);
-    const wanted = new URLSearchParams(location.search).get('externalAuth') === EXTERNAL_AUTH_SERVICE.id;
+    const live = session && session.service === service.id && ['awaiting_local_consent','launching','login_required','authenticated','verifying','verified'].includes(session.state);
+    const wanted = new URLSearchParams(location.search).get('externalAuth') === service.id;
     box.open = Boolean(live) || (wanted && device.status === 'online');
-    box.innerHTML = '<summary>외부 서비스 인증·검증 · FactChat</summary>';
+    box.innerHTML = '<summary>외부 서비스 인증·검증 · '+service.label+'</summary>';
     const supported = capability(device, 'interactiveAuthSession');
 
     const intro = document.createElement('p');
     intro.className = 'device-remote-note';
-    intro.textContent = '이 PC에 EKODI 전용 임시 브라우저로 FactChat 공식 로그인 창을 엽니다. 로그인은 PC 앞의 본인이 공식 페이지에 직접 합니다. EKODI는 비밀번호·인증번호·쿠키를 받지 않고, 사용자 Opera/Chrome/Edge와 키보드·마우스·클립보드를 건드리지 않습니다.';
+    intro.textContent = '이 PC에 EKODI 전용 임시 브라우저로 '+service.label+' 공식 로그인 창을 엽니다. 로그인은 PC 앞의 본인이 공식 페이지에 직접 합니다. EKODI는 비밀번호·인증번호·쿠키를 받지 않고, 사용자 Opera/Chrome/Edge와 키보드·마우스·클립보드를 건드리지 않습니다.';
 
     const status = document.createElement('div');
     status.className = 'device-remote-summary-card';
     const stateText = session ? (EXTERNAL_AUTH_STATE_LABELS[session.state] || '확인 필요') : '세션 없음';
     status.innerHTML = '<small></small><strong></strong><span></span>';
-    status.querySelector('small').textContent = `${EXTERNAL_AUTH_SERVICE.label} · Agent ${supported ? '지원' : '업데이트 필요'} · 기기 ${statusLabel(device.status)}`;
+    status.querySelector('small').textContent = `${service.label} · Agent ${supported ? '지원' : '업데이트 필요'} · 기기 ${statusLabel(device.status)}`;
     status.querySelector('strong').textContent = stateText;
     status.querySelector('span').textContent = session
       ? [
@@ -448,9 +456,9 @@
     const sessionId = session?.sessionId || '';
     actions.append(
       makeActionButton(device, 'computer.auth_session.start', live ? '새 로그인 창으로 다시 시작' : '로그인 창 열기', 'primary',
-        { service: EXTERNAL_AUTH_SERVICE.id, userWillSignInPersonally: true, ttlMinutes: 30 }, !supported || device.status !== 'online'),
+        { service: service.id, userWillSignInPersonally: true, ttlMinutes: 30 }, !supported || device.status !== 'online'),
       makeActionButton(device, 'computer.auth_session.verify', '로그인 후 읽기 전용 점검', 'secondary',
-        { sessionId, service: EXTERNAL_AUTH_SERVICE.id, readOnlyAcknowledged: true }, !supported || !live || !sessionId),
+        { sessionId, service: service.id, readOnlyAcknowledged: true }, !supported || !live || !sessionId),
       makeActionButton(device, 'computer.auth_session.close', '세션 즉시 종료·삭제', 'ghost',
         { sessionId }, !live),
     );
