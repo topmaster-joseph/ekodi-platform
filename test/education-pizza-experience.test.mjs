@@ -133,3 +133,11 @@ test('YouTube URL input is strictly video-ID validated and embedded only on pizz
   assert.match(worker,/frame-src https:\/\/www\.youtube-nocookie\.com https:\/\/www\.youtube\.com/);
   assert.doesNotMatch(worker,/SECURITY_HEADERS\['content-security-policy'\]\s*=.*youtube/);
 });
+
+test('one-screen kiosk absorbs EKODI shared Shell width and footer without global policy changes', () => {
+  const kioskCss=readFileSync(resolve(root,'education/pizza-experience/one-screen.css'),'utf8');
+  assert.match(kioskCss,/body\[data-area="pizza-experience"\]>\.ekodi-user-ui-footer\{display:none!important\}/);
+  assert.match(kioskCss,/#pizza-exp\.pizza-one-screen\{width:100vw!important/);
+  assert.match(kioskCss,/height:calc\(100dvh - 56px\)!important/);
+  assert.match(kioskCss,/body\[data-area="pizza-experience"\]\{height:100dvh!important/);
+});
