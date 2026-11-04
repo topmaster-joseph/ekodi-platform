@@ -62,8 +62,8 @@
     <div class="sv-cards" aria-label="공개 사이트 현황">
       <article><small>공개 사이트</small><strong data-sv-sites>—</strong></article>
       <article><small>공개 URL</small><strong data-sv-pages>—</strong></article>
-      <article><small>기술점검 성공</small><strong data-sv-audited>0</strong></article>
-      <article><small>기술점검 실패</small><strong data-sv-failed>0</strong></article>
+      <article><small>기술점검 성공</small><strong data-sv-audited>미실행</strong></article>
+      <article><small>기술점검 실패</small><strong data-sv-failed>미실행</strong></article>
       <article><small>발견 인프라 상태</small><strong data-sv-infra>확인 전</strong></article>
     </div>
     <h3>운영 사이트 목록</h3>
@@ -451,8 +451,10 @@
     $('[data-sv-sites]').textContent=String(state.sites.length);
     $('[data-sv-pages]').textContent=String(state.resources.length);
     const audits=[...state.audited.values()];
-    $('[data-sv-audited]').textContent=String(audits.filter(result=>!result.error).length);
-    $('[data-sv-failed]').textContent=String(audits.filter(result=>Boolean(result.error)).length);
+    // Zero checks performed is not a verified zero failures/successes.
+    const started=audits.length>0;
+    $('[data-sv-audited]').textContent=started?String(audits.filter(result=>!result.error).length):'미실행';
+    $('[data-sv-failed]').textContent=started?String(audits.filter(result=>Boolean(result.error)).length):'미실행';
     const target=$('[data-sv-rows]');target.replaceChildren();
     const q=$('#sv-search').value.trim().toLowerCase(), group=$('#sv-category-filter').value;
     const sites=state.sites.filter(site=>(!group||siteCategory(site)===group)&&
@@ -506,7 +508,7 @@
       const [robots,sitemap]=await Promise.allSettled([fetchBounded('/robots.txt'),fetchBounded('/sitemap.xml')]);
       const ok=robots.status==='fulfilled' && sitemap.status==='fulfilled' && sitemap.value.includes('<urlset');
       $('[data-sv-infra]').textContent=ok?'기술파일 응답':'확인 필요';
-      status('공개 레지스트리 '+state.sites.length+'개 사이트 / '+state.resources.length+'개 URL. 검색엔진 등록 또는 색인 완료를 의미하지 않습니다.');
+      status('공개 레지스트리 '+state.sites.length+'개 사이트 / '+state.resources.length+'개 URL. 기술점검은 버튼을 눌러 실행하며, 검색엔진 등록·색인 확인과 다릅니다.');
       render();
       await loadLedger();
     }catch(error){status('공개 사이트 원장을 불러오지 못했습니다: '+error.message,true);$('[data-sv-infra]').textContent='확인 실패';}
