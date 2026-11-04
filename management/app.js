@@ -93,6 +93,82 @@ function storeKpiRow(label,value){
   const amount=document.createElement('dd');amount.textContent=String(value);
   cell.append(term,amount);return cell;
 }
+const STORE_OPERATION_SECTIONS=Object.freeze([
+  {id:'menu',label:'메뉴'},
+  {id:'channels',label:'판매채널'},
+  {id:'orders',label:'주문'},
+  {id:'customers',label:'고객'},
+  {id:'sales',label:'매출'},
+  {id:'inventory',label:'재고'},
+  {id:'settlement',label:'정산'}
+]);
+function validStoreOperations(value){
+  if(!value||value.status!=='verified-read-only')return false;
+  for(const [group,maximum] of [['menu',40],['channels',24]]){
+    const record=value[group];
+    if(!record||!Number.isSafeInteger(record.total)||record.total<0
+      ||!Number.isSafeInteger(record.shown)||record.shown<0||record.shown>maximum
+      ||record.shown>record.total||!Array.isArray(record.items)
+      ||record.items.length!==record.shown)return false;
+  }
+  return value.menu.items.every(item=>typeof item?.name==='string'&&item.name.length>0
+    &&item.name.length<=100&&typeof item.category==='string'
+    &&(item.basePrice===null||(typeof item.basePrice==='number'&&Number.isFinite(item.basePrice)&&item.basePrice>=0))
+    &&typeof item.availability==='string')
+    &&value.channels.items.every(item=>typeof item?.provider==='string'&&item.provider.length>0
+      &&item.provider.length<=50&&typeof item.name==='string'&&typeof item.connectionStatus==='string');
+}
+function storeOperationItem(primary,secondary){
+  const item=document.createElement('li');
+  const title=document.createElement('strong');title.textContent=primary;
+  const note=document.createElement('span');note.textContent=secondary;
+  item.append(title,note);return item;
+}
+function renderStoreOperations(operations){
+  const section=document.createElement('section');section.className='store-operations';
+  const heading=document.createElement('strong');heading.textContent='매장 운영 상세 · 공식 원본';
+  const tabs=document.createElement('div');tabs.className='store-operation-tabs';
+  tabs.setAttribute('role','group');tabs.setAttribute('aria-label','운영 항목 선택');
+  const body=document.createElement('div');body.className='store-operation-body';
+  const valid=validStoreOperations(operations);
+  const buttons=[];
+  const show=sectionId=>{
+    for(const button of buttons)button.setAttribute('aria-pressed',button.dataset.section===sectionId?'true':'false');
+    body.replaceChildren();
+    const header=document.createElement('strong');header.textContent=STORE_OPERATION_SECTIONS.find(item=>item.id===sectionId).label;
+    body.append(header);
+    if(['menu','channels'].includes(sectionId)){
+      if(!valid){
+        const note=document.createElement('p');note.textContent='공식 운영 데이터의 상세 목록을 확인할 수 없습니다. 현재 숫자를 0건으로 판단하지 않습니다.';body.append(note);return;
+      }
+      const record=operations[sectionId];
+      const count=document.createElement('p');
+      count.textContent=`원본 ${record.total}건 · 표시 ${record.shown}건`;
+      body.append(count);
+      if(record.items.length===0){const empty=document.createElement('p');empty.textContent='공식 원본에 등록된 항목이 없습니다.';body.append(empty);return}
+      const list=document.createElement('ul');list.className='store-operation-list';
+      for(const item of record.items){
+        if(sectionId==='menu'){
+          const price=item.basePrice===null?'가격 미확인':`${item.basePrice.toLocaleString('ko-KR')}원`;
+          list.append(storeOperationItem(item.name,[item.category||'분류 미확인',price,item.availability||'판매 상태 미확인'].join(' · ')));
+        }else list.append(storeOperationItem(item.name||item.provider,[item.provider,item.connectionStatus||'연결 상태 미확인'].join(' · ')));
+      }
+      body.append(list);
+      if(record.total>record.shown){const note=document.createElement('p');note.textContent='목록 일부만 표시했습니다. 공식 운영 공간에서 전체 항목을 확인해 주세요.';body.append(note)}
+      return;
+    }
+    const notice=document.createElement('p');notice.textContent='현재 이 경영플랫폼에 검증된 해당 항목의 실적 원본이 연결되지 않았습니다. 0건 또는 0원으로 표시하지 않습니다.';
+    body.append(notice);
+  };
+  for(const item of STORE_OPERATION_SECTIONS){
+    const button=document.createElement('button');button.type='button';button.className='store-operation-tab';
+    button.dataset.section=item.id;button.textContent=item.label;
+    button.addEventListener('click',()=>show(item.id));tabs.append(button);buttons.push(button);
+  }
+  const note=document.createElement('p');note.className='note';note.textContent='매장 회원 권한으로 조회된 읽기 전용 정보입니다. 주문·가격·재고·정산을 변경하지 않습니다.';
+  section.append(heading,tabs,body,note);
+  show('menu');return section;
+}
 async function loadStoreSummary(space,host,button){
   if(!activeSession()||space.kind!=='store'||!validSpaceUrl(space.slug))return;
   const token=state.session.accessToken,userId=state.session.user.id,epoch=state.spacesRequest;
@@ -117,7 +193,7 @@ async function loadStoreSummary(space,host,button){
       storeKpiRow('연결 채널',data.summary.connectedChannelCount),
       storeKpiRow('주문 설정',data.summary.orderEnabled?'활성':'비활성')
     );
-    host.replaceChildren(grid,renderStoreReadiness(data.summary));
+    host.replaceChildren(grid,renderStoreReadiness(data.summary),renderStoreOperations(data.operations));
   }catch(error){
     if(!stillCurrent())return;
     host.replaceChildren();host.textContent='운영현황을 확인할 수 없습니다. 잠시 후 다시 조회해 주세요.';
