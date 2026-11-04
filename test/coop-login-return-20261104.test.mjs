@@ -59,7 +59,13 @@ test('coop realm never becomes an open redirect', () => {
 const { COOPERATIVES } = await import('../cooperative-registry.js');
 const { routeCooperative } = await import('../cooperative-control.js');
 const { loadCooperativeProject } = await import('../cooperative-store.js');
-const { fixture, authFetch } = await import('./helpers/cooperative-fixture.mjs');
+const { fixture: baseFixture, authFetch } = await import('./helpers/cooperative-fixture.mjs');
+// Production customer_access_grants columns used by self-join (fixture keeps the minimal shape).
+const fixture = () => { const f = baseFixture(); f.sqlite.exec(`ALTER TABLE customer_access_grants ADD COLUMN created_at TEXT;
+  ALTER TABLE customer_access_grants ADD COLUMN principal_type TEXT NOT NULL DEFAULT 'member';
+  ALTER TABLE customer_access_grants ADD COLUMN note TEXT NOT NULL DEFAULT '';
+  ALTER TABLE customer_access_grants ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private';
+  ALTER TABLE customer_access_grants ADD COLUMN updated_at TEXT;`); return f; };
 const [jubilee, open] = COOPERATIVES;
 const req = (coop, path, token = '', method = 'GET', body) => new Request(`https://ekodi.kr/${coop.slug}/api${path}`, {
   method, headers: { ...(token ? { authorization: 'Bearer ' + token } : {}), ...(body ? { origin: 'https://ekodi.kr', 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined,

@@ -5,7 +5,7 @@ import { COOPERATIVES, cooperativeInitialState } from '../../cooperative-registr
 export function fixture() {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec(`CREATE TABLE customer_tenants(id INTEGER PRIMARY KEY, slug TEXT UNIQUE, name TEXT, domain TEXT UNIQUE, status TEXT, created_at TEXT);
-    CREATE TABLE customer_access_grants(tenant_id INTEGER, email TEXT, role TEXT, enabled INTEGER, expires_at TEXT, capabilities_json TEXT DEFAULT '[]', denied_capabilities_json TEXT DEFAULT '[]', created_at TEXT, principal_type TEXT NOT NULL DEFAULT 'member', note TEXT NOT NULL DEFAULT '', visibility TEXT NOT NULL DEFAULT 'private', updated_at TEXT, PRIMARY KEY(tenant_id,email));
+    CREATE TABLE customer_access_grants(tenant_id INTEGER, email TEXT, role TEXT, enabled INTEGER, expires_at TEXT, capabilities_json TEXT DEFAULT '[]', denied_capabilities_json TEXT DEFAULT '[]', PRIMARY KEY(tenant_id,email));
     CREATE TABLE public_site_controls(site_id TEXT PRIMARY KEY, workspace_id TEXT, domain TEXT UNIQUE, public_status TEXT, updated_at TEXT);
     CREATE TABLE admins(id INTEGER PRIMARY KEY, email TEXT, role TEXT);
     CREATE TABLE sessions(token_hash TEXT PRIMARY KEY,admin_id INTEGER,expires_at TEXT,created_at TEXT);`);
