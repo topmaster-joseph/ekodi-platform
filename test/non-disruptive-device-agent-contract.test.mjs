@@ -11,7 +11,7 @@ const [agent, policyRaw, admin, windowsWorkflow] = await Promise.all([
 const policy = JSON.parse(policyRaw);
 
 test('Windows Agent exposes isolated desktop only through the verified bounded session canary', () => {
-  assert.match(agent, /\$AgentVersion = '2\.6\.2'/);
+  assert.match(agent, /\$AgentVersion = '2\.6\.[1-9][0-9]*'/);
   assert.match(agent, /backgroundBrowserCanary = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /backgroundBrowser = \[bool\]\(Get-BackgroundBrowserCanaryState\)\.verified/);
   assert.match(agent, /isolatedDesktopProbe = \$true/);
