@@ -12,7 +12,8 @@ import { buildEpub } from './publishing-ai-epub.js';
 // 단계별 무료 모델(Workers AI). 단가는 뉴런/토큰(Workers AI 단가표 기준, 확인필요: 단가 변경 시 갱신).
 export const MODELS = Object.freeze({
   draft: { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', in: 26668 / 1e6, out: 204805 / 1e6 },
-  edit: { id: '@cf/google/gemma-3-12b-it', in: 31371 / 1e6, out: 50560 / 1e6 },
+  // 2026-11-04 운영 확인: 이 계정은 Gemma 3 사용 불가(5018) → 편집도 Llama 3.3 70B로(편집 지시문으로 역할 분리)
+  edit: { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', in: 26668 / 1e6, out: 204805 / 1e6 },
   image: { id: '@cf/black-forest-labs/flux-1-schnell', perImage: 60 },
 });
 export const AI_FACTORY = Object.freeze({
