@@ -5,6 +5,7 @@ import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { bookstoreProducts, approvedBookstoreProducts, loadBookstoreProducts, mergeBookstoreProducts } from '../scripts/bookstore-products.mjs';
+import { eligibleApprovedBookOffer } from '../assets/bookstore-live.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -99,4 +100,35 @@ test('book details use compact headings and an explicit responsive artwork layou
   assert.match(css, /\.product-detail-v2 \.detail-copy h1/);
   assert.match(css, /align-items:start/);
   assert.match(css, /@media\(max-width:760px\)/);
+});
+
+test('Mall mirrors owner-approved editions but requires a live, file-ready bookstore quote before showing a purchase tile', () => {
+  const source = { id:'bookstore-BOOK-EKODI-000002', bookId:'BOOK-EKODI-000002',
+    name:'AI 시대의 진보와 빈곤 — 인공지능의 풍요를 모두의 몫으로', price:9900, saleReady:false };
+  const approved = { approvals:[{ bookId:source.bookId, edition:'전자책 초판 v1.0', approvedAt:'2026-11-04T01:00:00Z' }] };
+  const quote = { book:{id:source.bookId,title:'AI 시대의 진보와 빈곤',author:'정찬균'},
+    saleReadiness:{ready:true,source:'approval'},
+    checkout:{open:true,fileReady:true,saleReady:true,mode:'live'},price:{listPrice:9900,amount:9900} };
+  assert.equal(eligibleApprovedBookOffer(source, approved, quote), true);
+  assert.equal(eligibleApprovedBookOffer(source, { approvals:[] }, quote), false);
+  assert.equal(eligibleApprovedBookOffer(source, approved, { ...quote, checkout:{...quote.checkout,fileReady:false} }), false);
+  assert.equal(eligibleApprovedBookOffer(source, approved, { ...quote, checkout:{...quote.checkout,open:false} }), false);
+  assert.equal(eligibleApprovedBookOffer(source, approved, { ...quote, checkout:{...quote.checkout,mode:'test'} }), false);
+  assert.equal(eligibleApprovedBookOffer(source, approved, { ...quote, saleReadiness:{ready:false,source:'catalog'} }), false);
+  assert.equal(eligibleApprovedBookOffer(source, approved, { ...quote, book:{...quote.book,id:'BOOK-EKODI-000001'} }), false);
+  assert.equal(eligibleApprovedBookOffer(source, approved, { ...quote, price:{...quote.price,listPrice:1000} }), false);
+  assert.equal(eligibleApprovedBookOffer({...source,bookId:'BOOK-FAKE-UNTRUSTED'}, approved, quote), false);
+  assert.equal(eligibleApprovedBookOffer({...source,saleReady:true}, approved, quote), false);
+  const bridge = readFileSync(path.join(root, 'assets/bookstore-live.mjs'), 'utf8');
+  const app = readFileSync(path.join(root, 'assets/app.js'), 'utf8');
+  const build = readFileSync(path.join(root, 'scripts/build.mjs'), 'utf8');
+  assert.ok(app.includes("import('./bookstore-live.mjs')"));
+  assert.ok(bridge.includes("cache:'no-store'"));
+  assert.ok(bridge.includes("credentials:'omit'"));
+  assert.ok(bridge.includes('/public/approvals'));
+  assert.ok(bridge.includes('/quote?book='));
+  assert.ok(bridge.includes("document.addEventListener('visibilitychange'"));
+  assert.ok(build.includes('bookId: p.source.bookId'));
+  assert.ok(build.includes('image: p.image'));
+  assert.doesNotMatch(bridge, /createOrder|confirmPayment|paymentKey|BOOK_FILES\.get/);
 });
