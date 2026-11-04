@@ -446,6 +446,24 @@
     const schema = Boolean(dom.querySelector('script[type="application/ld+json"]')?.textContent?.trim());
     return {title, description, canonical, noindex, headings, schema};
   };
+  // The Korean IDN is the existing approved SeonamMedi canonical for the
+  // exact /seonammedi public mount. Other cross-origin canonicals remain errors.
+  const correctPublicCanonical = (siteUrl, canonicalValue) => {
+    if(!canonicalValue)return false;
+    try{
+      const requested=new URL(siteUrl),observed=new URL(canonicalValue,requested);
+      const path=url=>{
+        let value=url.pathname;
+        while(value.length>1&&value.endsWith('/'))value=value.slice(0,-1);
+        return value||'/';
+      };
+      if(requested.origin!=='https://ekodi.kr'||observed.protocol!=='https:'||
+        observed.username||observed.password||observed.search||observed.hash)return false;
+      if(requested.origin===observed.origin&&path(requested)===path(observed))return true;
+      return path(requested)==='/seonammedi'&&
+        observed.href==='https://xn--3e0b8b58jw4co4mnpll3k.kr/';
+    }catch{return false;}
+  };
   const siteResult = site => state.audited.get(site.url);
   function render() {
     $('[data-sv-sites]').textContent=String(state.sites.length);
@@ -518,7 +536,7 @@
       const receipt=await fetchBounded(site.url,{withResponse:true});
       const html=validatePublicAuditResponse(site,receipt);
       const result=checkDocument(html,{robotsHeader:receipt.robotsHeader});
-      const correctCanonical=Boolean(result.canonical)&&new URL(result.canonical,site.url).href.replace(/\/$/,'')===site.url.replace(/\/$/,'');
+      const correctCanonical=correctPublicCanonical(site.url,result.canonical);
       const basic=[result.title,result.description,correctCanonical,!result.noindex].filter(Boolean).length;
       const ai=[result.headings,result.schema,result.description].filter(Boolean).length;
       const improvements=[!result.title?'고유 페이지 제목 보완':null,
