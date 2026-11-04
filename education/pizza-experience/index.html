@@ -43,18 +43,18 @@
      <div class="info-venue"><span>오늘의 체험 장소</span><strong>📍 피자마루 목포대점</strong></div>
      <div class="info-steps"><span class="info-title">오늘의 활동</span>
        <button type="button" data-quick-scene="2"><span>01</span> 피자 이야기 <b>›</b></button>
-       <button type="button" data-quick-scene="5"><span>02</span> 재료 알아보기 <b>›</b></button>
-       <button type="button" data-quick-scene="8"><span>03</span> 위생·안전 <b>›</b></button>
-       <button type="button" data-quick-scene="11"><span>04</span> 피자 만들기 <b>›</b></button>
+       <button type="button" data-quick-scene="3"><span>02</span> 재료 알아보기 <b>›</b></button>
+       <button type="button" data-quick-scene="5"><span>03</span> 위생·안전 <b>›</b></button>
+       <button type="button" data-quick-scene="8"><span>04</span> 피자 만들기 <b>›</b></button>
        <button type="button" data-quick-scene="13"><span>05</span> 친구들과 발표 <b>›</b></button>
      </div>
    </div>
    <div class="home-shortcuts" aria-label="사진으로 수업 화면 선택">
      <button type="button" data-quick-scene="3"><img src="./photos/ingredients.webp" alt=""><span>재료</span></button>
-     <button type="button" data-quick-scene="6"><img src="./photos/dough.webp" alt=""><span>도우</span></button>
-     <button type="button" data-quick-scene="8"><img src="./photos/washing.webp" alt=""><span>손 씻기</span></button>
-     <button type="button" data-quick-scene="11"><img src="./photos/making.webp" alt=""><span>만들기</span></button>
-     <button type="button" data-quick-scene="12"><img src="./photos/oven.webp" alt=""><span>굽기</span></button>
+     <button type="button" data-quick-scene="4"><img src="./photos/dough.webp" alt=""><span>도우</span></button>
+     <button type="button" data-quick-scene="5"><img src="./photos/washing.webp" alt=""><span>손 씻기</span></button>
+     <button type="button" data-quick-scene="8"><img src="./photos/making.webp" alt=""><span>만들기</span></button>
+     <button type="button" data-quick-scene="10"><img src="./photos/oven.webp" alt=""><span>굽기</span></button>
      <button type="button" data-quick-scene="13"><img src="./photos/baked.webp" alt=""><span>완성</span></button>
    </div>
  </section>
@@ -99,7 +99,7 @@
    <div class="panel-heading"><span>MUSIC</span><h2>유튜브 배경음악</h2><p>원하는 영상의 링크를 붙여 넣으세요.</p></div>
    <form id="youtubeMusicForm" class="youtube-music-form">
      <label for="youtubeMusicUrl">유튜브 주소</label>
-     <div class="url-input-row"><input id="youtubeMusicUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." inputmode="url" autocomplete="url" spellcheck="false" required><button type="submit" id="playYoutubeMusic" class="btn btn-primary">▶ 유튜브 재생</button></div>
+     <div class="url-input-row"><input id="youtubeMusicUrl" type="url" placeholder="https://www.youtube.com/watch?v=..." inputmode="url" autocomplete="url" spellcheck="false" required><button type="submit" id="playYoutubeMusic" class="btn btn-primary">▶ 화면에서 재생</button><a id="openYoutubeNewWindow" class="btn btn-outline youtube-new-window" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true" tabindex="-1">↗ 새 창에서 듣기</a></div>
      <p id="youtubeMusicMessage" class="youtube-help" role="status">YouTube / youtu.be / Shorts 링크 지원 · 재생은 직접 클릭</p>
    </form>
    <div class="music-choice-grid">
@@ -111,11 +111,11 @@
    <div class="panel-heading"><span>SCHEDULE</span><h2>70분 진행표</h2><p>09:20–10:30 · 총 70분</p></div>
    <div class="schedule-grid">
      <article><time>09:20–09:25</time><strong>인사·미션</strong><span>5분</span></article>
-     <article><time>09:25–09:35</time><strong>재료·퀴즈</strong><span>10분</span></article>
+     <article><time>09:25–09:35</time><strong>농부·재료·순서</strong><span>10분</span></article>
      <article><time>09:35–09:42</time><strong>손 씻기·안전</strong><span>7분</span></article>
      <article><time>09:42–09:45</time><strong>피자 이름 짓기</strong><span>3분</span></article>
      <article class="featured"><time>09:45–10:05</time><strong>피자 만들기</strong><span>20분</span></article>
-     <article><time>10:05–10:18</time><strong>굽기·숫자놀이</strong><span>13분</span></article>
+     <article><time>10:05–10:18</time><strong>굽기·퀴즈·수학</strong><span>13분</span></article>
      <article><time>10:18–10:25</time><strong>정리·포장</strong><span>7분</span></article>
      <article><time>10:25–10:30</time><strong>발표·마무리</strong><span>5분</span></article>
    </div>
