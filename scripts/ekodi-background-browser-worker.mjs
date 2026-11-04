@@ -48,6 +48,52 @@ export function summarizeNativeNavigationPerformance(samples=[]) {
 
 function fail(code,message){ const e=new Error(message||code); e.code=code; throw e; }
 
+/** Keep useful browser evidence without preserving authentication URLs, tokens,
+ * emails or phone numbers. Sanitization happens BEFORE writing/returning JSON. */
+export function redactNativeBrowserUrl(raw) {
+  try {
+    const value=String(raw??'');
+    const relative=value.startsWith('/')&&!value.startsWith('//');
+    const u=new URL(value, CANONICAL_ORIGIN);
+    if(u.protocol!=='https:' && u.protocol!=='http:') return '[redacted-url]';
+    let pathname=u.pathname;
+    // Cloudflare challenges embed bearer-like nonces in path segments.
+    if(pathname.startsWith('/cdn-cgi/challenge-platform/'))
+      pathname='/cdn-cgi/challenge-platform/[redacted]';
+    else pathname=pathname.split('/').map(segment=>{
+      const decoded=segment.replace(/%[0-9a-f]{2}/ig,'');
+      return (decoded.length>46 || /(?:token|session|credential|secret|key|auth|jwt)/i.test(decoded) &&
+        decoded.length>16) ? '[redacted]' : segment;
+    }).join('/');
+    // Query values and fragments can contain state, one-time codes and PII.
+    return (relative?'':u.origin)+pathname;
+  } catch { return '[redacted-url]'; }
+}
+function redactNativeDiagnostic(value) {
+  return String(value??'')
+    .replace(/https?:\/\/[^\s"'<>]+/g, s=>redactNativeBrowserUrl(s))
+    .replace(/(bearer\s+)[a-z0-9._~+/=-]+/gi,'$1[redacted]')
+    .replace(/((?:api[-_]?key|access[-_]?token|refresh[-_]?token|client[-_]?secret|password|session|authorization)\s*[:=]\s*)[^\s,;]+/gi,'$1[redacted]')
+    .replace(/\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi,'[redacted-email]')
+    .replace(/(?:\+82[\s-]?)?0?1\d[\s-]?\d{3,4}[\s-]?\d{4}/g,'[redacted-phone]');
+}
+export function sanitizeNativeBrowserReceipt(report) {
+  const urlFields=new Set(['url','finalUrl','path','targetUrl']);
+  const visit=(value,key='',depth=0)=>{
+    if(depth>12) return '[redacted-depth]';
+    if(typeof value==='string'){
+      if(urlFields.has(key)) return redactNativeBrowserUrl(value);
+      return redactNativeDiagnostic(value);
+    }
+    if(Array.isArray(value)) return value.map(item=>visit(item,'',depth+1));
+    if(value&&typeof value==='object') return Object.fromEntries(
+      Object.entries(value).map(([k,v])=>[k,visit(v,k,depth+1)]));
+    return value;
+  };
+  return visit(report);
+}
+
+
 function safePath(value){
   const raw=clean(value,1200)||'/';
   let url;
@@ -339,8 +385,9 @@ export async function runTask(rawTask, options={}){
       requestFailures:requestFailures.slice(0,20),
       httpErrorResponses:httpErrorResponses.slice(0,40),
     };
-    await fs.writeFile(path.join(taskDir,'result.json'),JSON.stringify(report,null,2));
-    return report;
+    const safeReport=sanitizeNativeBrowserReceipt(report);
+    await fs.writeFile(path.join(taskDir,'result.json'),JSON.stringify(safeReport,null,2));
+    return safeReport;
   } finally {
     await context.close().catch(()=>{});
     await browser.close().catch(()=>{});
