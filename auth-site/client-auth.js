@@ -39,6 +39,9 @@ const realms={
   cafe:{name:'EKODI Cafe',returnTo:'https://ekodi.kr/cafe/',open:true,kind:'cafe'},
   // 청계면상인회: site=cgma logins (관리자 /cgma/admin/*, 정회원 등) return to the exact CGMA page they started
   // from (AUTH-RETURN-CONTINUITY-001). Without this realm they fell back to the portal and landed on the homepage.
+  // 협동조합(희년세상·열린유통): /jubilee, /open 관리자·조합원 로그인은 출발한 협동조합 화면으로 돌아간다.
+  // 이 realm이 없으면 portal로 처리되어 에코디 첫화면(https://ekodi.kr/)에 떨어졌다(2026-11-04).
+  coop:{name:'협동조합',returnTo:'https://ekodi.kr/business-coop/',origins:['https://ekodi.kr'],open:true,kind:'coop'},
   cgma:{name:'청계면상인회',returnTo:'https://ekodi.kr/cgma/',origins:['https://ekodi.kr','https://cgma.or.kr','https://www.cgma.or.kr'],open:true,kind:'cgma'},
   'cgma-client':{name:'청계상권 고객관리',returnTo:'https://ekodi.kr/cgma/client/',origins:['https://ekodi.kr','https://cgma.or.kr','https://cgma.ekodi.kr'],open:false,kind:'cgma-client'},
   'jadam-client':{name:'자담치킨 목포대점 고객관리',returnTo:'https://ekodi.kr/jadam/marketing/',origins:['https://jadam.ai.ekodi.kr','https://jadam.ekodi.kr'],open:false,kind:'jadam-client'},
@@ -93,6 +96,7 @@ function safeReturn(raw){
     const allowedOrigins=new Set(config.origins||[fallback.origin]);
     const hostname=target.hostname.toLowerCase();
     const cgmaPlatform=config.kind==='cgma-client'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/cgma'||target.pathname.startsWith('/cgma/'));
+    const coopPlatform=config.kind==='coop'&&target.origin==='https://ekodi.kr'&&['/jubilee','/open','/business-coop','/jubilee-distribution','/open-distribution'].some(root=>target.pathname===root||target.pathname.startsWith(root+'/'));
     const seonammediCanonical=config.kind==='seonammedi'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/seonammedi'||target.pathname.startsWith('/seonammedi/'));
     // A site-specific login may return only to that site's registered host or canonical mount.
     // Never silently accept /my or another EKODI workspace as a SeonamMedi return target.
@@ -107,7 +111,7 @@ function safeReturn(raw){
       &&![...target.searchParams.keys()].some(key=>!['site','via','return_to'].includes(key));
     const adminToolReturn=config.kind==='portal'&&target.origin==='https://ekodi.kr'
       &&['/admin/site-admins','/admin/site-admins/','/admin/people','/admin/people/'].includes(target.pathname);
-    const internalEkodi=adminReturn||adminToolReturn||(config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:sameCanonicalPath));
+    const internalEkodi=adminReturn||adminToolReturn||(config.kind==='seonammedi'?seonammediCanonical:(config.kind==='cgma-client'?cgmaPlatform:(config.kind==='coop'?coopPlatform:sameCanonicalPath)));
     const trustedLegacy=target.origin!=='https://ekodi.kr'&&allowedOrigins.has(target.origin);
     const missionPath=config.kind!=='mission'||(target.origin==='https://ekodi.kr'&&(target.pathname==='/ekodimission'||target.pathname.startsWith('/ekodimission/')));
     const churchLive=config.kind==='church'&&target.origin==='https://ekodi.kr'&&(target.pathname==='/live/church'||target.pathname.startsWith('/live/church/'));
