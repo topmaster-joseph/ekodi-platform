@@ -22,7 +22,7 @@ function fakeAi(calls) { return { run: async (model, input) => {
   if (model.includes('flux')) return { image: JPEG };
   const isPlan = input.messages[1].content.includes('JSON');
   const isScene = input.messages[0].content.includes('image prompts');
-  return { response: isPlan ? plan : isScene ? 'A quiet window at dawn' : '### 소제목\n> 핵심 문장\n' + '본문 '.repeat(200), usage: { prompt_tokens: 500, completion_tokens: isPlan ? 400 : isScene ? 20 : 3000 } };
+  return { response: isPlan ? plan : isScene ? 'A quiet window at dawn' : '### 소제목\n> 핵심 문장\n' + '본문 '.repeat(430), usage: { prompt_tokens: 500, completion_tokens: isPlan ? 400 : isScene ? 20 : 900 } };
 } }; }
 
 test('disabled unless the flag, binding and DB are all present; never a paid provider', async () => {
@@ -37,7 +37,9 @@ test('plans this week\'s book once, drafts up to four chapters a day within the 
   const r1 = await aiFactoryTick(env, at);
   assert.equal(r1.steps[0].status, 'planned');
   const firstDay = db.sql.prepare("SELECT COUNT(*) n FROM publishing_ai_chapters WHERE status='drafted'").get().n;
-  assert.ok(firstDay >= 2 && firstDay <= 4, `drafts 2-4 chapters on day one within the cap (got ${firstDay})`);
+  assert.ok(firstDay >= 2 && firstDay <= 8, `drafts several full-length chapters on day one within the cap (got ${firstDay})`);
+  const lens = db.sql.prepare("SELECT length(body) l FROM publishing_ai_chapters WHERE status='drafted'").all().map(r => r.l);
+  assert.ok(lens.every(l => l >= AI_FACTORY.chapterChars * 0.9), 'chapters reach the target length by continuing in parts');
   const used = db.sql.prepare('SELECT neurons FROM publishing_ai_usage').get().neurons;
   assert.ok(used <= AI_FACTORY.dailyNeuronCap, 'stays within the free daily cap');
   await aiFactoryTick(env, at); // same day: budget mostly spent → waits, never plans a second book

@@ -18,7 +18,9 @@ export const MODELS = Object.freeze({
 });
 export const AI_FACTORY = Object.freeze({
   model: MODELS.draft.id,
-  dailyNeuronCap: 5000,              // 계정 무료 한도(일 10,000) 중 출판 몫. 나머지는 다른 서비스 몫.
+  // 계정 무료 한도는 일 10,000(00:00 UTC 초기화). 다른 서비스(AI 관리 장치의 Llama 3.1 8B)가 최근 30일 하루 약 1,800을 쓴다
+  // (ai_provider_calls 토큰 기준 추정, 2026-11-05). 여유 700을 남기고 출판이 나머지를 쓴다.
+  dailyNeuronCap: 7500,
   neuronsPerInputToken: MODELS.draft.in,
   neuronsPerOutputToken: MODELS.draft.out,
   chapters: 8,
@@ -149,18 +151,27 @@ export async function draftNextChapter(env) {
   const prompt = `책: ${book.title} — ${meta.subtitle || ''}\n분야: ${meta.genre}\n독자: ${meta.audience}\n문체: ${meta.style}\n목차:\n${toc}\n
 이번 장: ${ch.number}. ${ch.title}\n요지: ${ch.summary}\n
 이 장의 본문을 약 ${AI_FACTORY.chapterChars}자로 쓰세요. 소제목 2~4개(### 로 시작), 짧은 문단, 장 끝에 "생각해 볼 질문" 2개. 제목 줄은 쓰지 마세요.`;
-  // 1차: 초안(큰 모델) → 2차: 베스트셀러 편집 기준으로 다시 쓰기(한국어 문장이 자연스러운 모델) → 3차: 삽화
-  let text = (await db.prepare('SELECT body FROM publishing_ai_drafts WHERE book_id=? AND number=?').bind(book.id, ch.number).first())?.body || '';
-  if (!text) {
-    text = await generate(env, SYSTEM, prompt, 3800, 'draft');
-    if (text === null) return { status: 'budget_wait' };
-    await db.prepare('INSERT OR REPLACE INTO publishing_ai_drafts (book_id, number, body, created_at) VALUES (?, ?, ?, ?)').bind(book.id, ch.number, clean(text, 20000), now()).run();
+  // 목표 분량까지 나눠 쓴다: 부분마다 초안 → 베스트셀러 편집. 진행은 저장해 두고 한도에 걸리면 다음 날 이어 쓴다(최대 4부분).
+  const saved = (await db.prepare('SELECT body FROM publishing_ai_drafts WHERE book_id=? AND number=?').bind(book.id, ch.number).first())?.body || '';
+  let state = { parts: [] };
+  try { state = saved.startsWith('{') ? JSON.parse(saved) : { parts: saved ? [saved] : [] }; } catch {}
+  const target = AI_FACTORY.chapterChars;
+  const length = () => state.parts.join('\n\n').length;
+  while (length() < target * 0.9 && state.parts.length < 4) {
+    const done = state.parts.join('\n\n');
+    const ask = state.parts.length === 0
+      ? `${prompt}\n이번에는 앞부분(소제목 1~2개)만 약 1,200자로 쓰세요. 장 끝 질문은 아직 쓰지 마세요.`
+      : `${prompt}\n지금까지 쓴 본문의 끝부분:\n${done.slice(-1500)}\n\n바로 이어서 다음 소제목부터 약 1,200자를 더 쓰세요. 앞 내용을 되풀이하지 마세요.${length() + 1300 >= target * 0.9 ? ' 이번이 마지막이니 장 끝에 "생각해 볼 질문" 2개로 마무리하세요.' : ''}`;
+    const part = await generate(env, SYSTEM + '\n' + CRAFT, ask, 2000, 'draft');
+    if (part === null) return { status: 'budget_wait', chapter: ch.number };
+    const edited = await generate(env, SYSTEM + '\n' + CRAFT, `다음은 「${book.title}」 ${ch.number}장 「${ch.title}」의 한 부분입니다. 문체: ${meta.style}. 독자: ${meta.audience}.\n편집 기준에 맞게 다듬어 본문만 출력하세요(분량 유지, 소제목은 ### 로).\n\n${part}`, 2200, 'edit');
+    state.parts.push(clean(edited !== null && edited.length > part.length * 0.6 ? edited : part, 8000));
+    await db.prepare('INSERT OR REPLACE INTO publishing_ai_drafts (book_id, number, body, created_at) VALUES (?, ?, ?, ?)').bind(book.id, ch.number, JSON.stringify(state), now()).run();
+    if (edited === null) return { status: 'budget_wait', chapter: ch.number };
   }
-  const edited = await generate(env, SYSTEM + '\n' + CRAFT, `다음은 「${book.title}」 ${ch.number}장 「${ch.title}」 초안입니다. 문체: ${meta.style}. 독자: ${meta.audience}.\n편집 기준에 맞게 전체를 다시 써서 본문만 출력하세요(분량 유지, 소제목은 ### 로).\n\n${text}`, 4200, 'edit');
-  if (edited === null) return { status: 'budget_wait' };
-  const finalText = edited.length > text.length * 0.6 ? edited : text; // 편집이 크게 줄면 초안 유지
+  const finalText = state.parts.join('\n\n');
   await db.prepare("UPDATE publishing_ai_chapters SET body=?, status='drafted', updated_at=? WHERE book_id=? AND number=?")
-    .bind(clean(finalText, 20000), now(), book.id, ch.number).run();
+    .bind(clean(finalText, 30000), now(), book.id, ch.number).run();
   await chapterIllustration(env, book, meta, ch).catch(() => null);
   return { status: 'drafted', id: book.id, chapter: ch.number };
 }
@@ -194,7 +205,7 @@ export async function aiFactoryTick(env, at = new Date()) {
   const steps = [];
   try {
     if (!thisWeek) steps.push(await planWeeklyBook(env, at));
-    for (let i = 0; i < 4; i++) { // 하루 최대 4장, 무료 상한을 만나면 멈춤
+    for (let i = 0; i < 8; i++) { // 무료 상한을 만나면 멈춤(보통 하루 3~4장)
       const r = await draftNextChapter(env); steps.push(r);
       if (r.status !== 'drafted') break;
     }
