@@ -6,9 +6,23 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/publishing-jubilee-author-bindings.yml'
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Exact EKODI Orchestrator released source branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Exact EKODI Orchestrator release task ID'
+        required: true
+        type: string
 
 permissions:
   contents: read
+
+env:
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
 concurrency:
   group: ekodi-publishing-production

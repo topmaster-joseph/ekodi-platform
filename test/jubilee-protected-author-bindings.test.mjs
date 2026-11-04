@@ -34,6 +34,9 @@ test('missing, malformed, duplicate, or privilege-bearing author bindings fail c
 test('binding activation is main-only, protected, secret-scoped and publication-safe',()=>{
   const workflow=readFileSync(new URL('../.github/workflows/publishing-jubilee-author-bindings.yml',import.meta.url),'utf8');
   assert.match(workflow,/branches:\s*\[main\]/);
+  assert.match(workflow,/workflow_dispatch:/);
+  assert.match(workflow,/EKODI_RELEASE_BRANCH_REF:.*inputs\.release_branch_ref/);
+  assert.match(workflow,/EKODI_RELEASE_TASK_ID:.*inputs\.release_task_id/);
   assert.doesNotMatch(workflow,/pull_request:/);
   assert.match(workflow,/validate-ekodi-ai-change-orchestration\.mjs --release/);
   assert.match(workflow,/wrangler@4\.119\.0 secret bulk/);
