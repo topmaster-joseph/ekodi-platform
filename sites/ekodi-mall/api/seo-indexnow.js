@@ -1,5 +1,6 @@
-// EKODI-MALL-SEO-INDEX-001: 새로 공개되거나 바뀐 에코디몰 상품 주소를 IndexNow(빙·네이버 등 참여 검색엔진)에 1시간마다 알린다.
-// 구글은 IndexNow 를 쓰지 않으므로 https://ekodi.kr/sitemap.xml(전체 상품 포함)로 수집된다.
+import { PUBLIC_SALE_LISTING_WHERE } from './public-sale-visibility.js';
+// EKODI-MALL-SEO-INDEX-001: 구매 가능한 공개상품 주소만 IndexNow 참여 검색엔진에 1시간마다 알린다.
+// 구글은 별도의 sitemap 경로를 사용한다. 준비 상품은 검색 등록 대상에서 제외한다.
 // 키는 ekodi.kr 공개 키 파일(https://ekodi.kr/<key>.txt)과 같은 값이다(공개값).
 const INDEXNOW_KEY = 'e4c0d1a7b29f43d8a65c712fe9b3048c';
 const ENDPOINT = 'https://api.indexnow.org/indexnow';
@@ -22,8 +23,8 @@ export async function submitProductIndexNow(env, fetchImpl = fetch, { force = fa
   const lastRun = await state(env, 'indexnow_run_at');
   if (!force && lastRun && Date.now() - Date.parse(lastRun) < INTERVAL_MS) return { skipped: 'recent' };
   const since = (await state(env, 'indexnow_since')) || '1970-01-01T00:00:00.000Z';
-  const rows = await env.DB.prepare(`SELECT share_code, COALESCE(updated_at,published_at) AS changed FROM products
-    WHERE status='published' AND COALESCE(updated_at,published_at) > ? ORDER BY changed LIMIT ?`).bind(since, limit).all();
+  const rows = await env.DB.prepare(`SELECT p.share_code, COALESCE(p.updated_at,p.published_at) AS changed FROM products p
+    WHERE ${PUBLIC_SALE_LISTING_WHERE} AND COALESCE(p.updated_at,p.published_at) > ? ORDER BY changed LIMIT ?`).bind(since, limit).all();
   const list = rows.results || [];
   await state(env, 'indexnow_run_at', isoNow());
   if (!list.length) return { submitted: 0 };
