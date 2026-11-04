@@ -19,6 +19,7 @@ import { investSubjectUiScript } from './invest-subject-ui.js';
 import { routeInvestSite } from './invest-site-system.js';
 import { isSinglesRoute, routeSinglesSurface } from './singles-surface.js';
 import { investIntroPage, investAnalysisPage, investAnalysisScript } from './invest-access-ui.js';
+import { investMyRoute } from './invest-my-workspace.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
@@ -378,10 +379,14 @@ async function routeInvestApex(request,env,ctx){
   const url=new URL(request.url);
   if(!['GET','HEAD'].includes(request.method)||!(url.pathname==='/invest'||url.pathname.startsWith('/invest/')))return null;
   const inner=(url.pathname==='/invest'?'/' : url.pathname.slice('/invest'.length)||'/').replace(/\/+$/,'')||'/';
+  // Private Invest has its own canonical path under the public Invest mount.
+  // Route it BEFORE the public analysis fallback; asset/API responses retain the
+  // owner gate and no-store headers from investMyRoute.
+  if(inner==='/my'||inner.startsWith('/my/'))return investMyRoute(request,env);
   if(inner==='/'||inner==='/index.html')return injectEkodiShell(investIntroPage(),'invest');
   if(inner==='/analysis')return injectEkodiShell(investAnalysisPage(),'invest');
   if(inner==='/analysis.js')return investAnalysisScript();
-  if(inner==='/personal'){const target=new URL('/my/invest',request.url);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store'}})}
+  if(inner==='/personal'){const target=new URL('/invest/my',request.url);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store'}})}
   if(inner==='/admin'||inner.startsWith('/assets/'))return null;
   // Legacy scripts are served only as compatibility assets; not rendered as the public entry.
   if(inner==='/invest-ui.js')return investUiScript();
