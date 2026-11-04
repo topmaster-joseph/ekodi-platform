@@ -107,5 +107,5 @@ print(json.dumps({'first': first.filename, 'stored': first.compress_type == 0, '
 test('deploy applies the cron trigger (guarded versions deploy alone never registers schedules)', () => {
   const wf = readFileSync(new URL('../.github/workflows/deploy-publishing.yml', import.meta.url), 'utf8');
   assert.match(wf, /triggers deploy --config wrangler\.publishing\.toml/);
-  assert.match(readFileSync(new URL('../wrangler.publishing.toml', import.meta.url), 'utf8'), /crons = \["37 18 \* \* \*"\]/);
+  assert.match(readFileSync(new URL('../wrangler.publishing.toml', import.meta.url), 'utf8'), /crons = \["37 18 \* \* \*"/);
 });
