@@ -62,7 +62,9 @@ export async function generate(env, system, prompt, maxTokens, stage = 'draft') 
   const worst = (system.length + prompt.length) / 1.5 * m.in + maxTokens * m.out;
   if ((await usedToday(db)) + worst > AI_FACTORY.dailyNeuronCap) return null;
   const out = await env.AI.run(m.id, { messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: stage === 'edit' ? 0.5 : 0.8 });
-  const text = String(out?.response ?? out?.result?.response ?? '').trim();
+  // Workers AI는 모델이 JSON을 내면 response를 이미 객체로 돌려줄 때가 있다 → 문자열로 되돌린다.
+  const raw = out?.response ?? out?.result?.response ?? '';
+  const text = (typeof raw === 'string' ? raw : JSON.stringify(raw)).trim();
   await addUsage(db, estimate(m, out?.usage, system + prompt, text));
   return text;
 }
@@ -92,8 +94,10 @@ export const CRAFT = `편집 기준(반드시 지킬 것):
 7) 같은 표현 반복·설교조·과장 금지. [확인필요]·[본문확인] 표시는 지우지 말고 그대로 둔다.`;
 
 function parseJson(text) {
-  const m = /\{[\s\S]*\}/.exec(String(text || ''));
-  try { return m ? JSON.parse(m[0]) : null; } catch { return null; }
+  const t = String(text || '').replace(/```(?:json)?/gi, '');
+  const start = t.indexOf('{'), end = t.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try { return JSON.parse(t.slice(start, end + 1)); } catch { return null; }
 }
 
 /** Pick this week's genre (rotation, never the same as last week's) and plan a book. */
@@ -108,10 +112,15 @@ export async function planWeeklyBook(env, at = new Date()) {
 국내 전자책 독자가 검색해 찾을 만하고 오래 팔릴 주제를 하나 정해 아래 JSON 하나만 출력하세요.
 {"title":"책 제목","subtitle":"부제","keywords":["검색어 5개"],"pitch":"소개 2문장","chapters":[{"title":"장 제목","summary":"장 요지 1~2문장"}]}
 chapters는 정확히 ${AI_FACTORY.chapters}개.`;
-  const text = await generate(env, SYSTEM, prompt, 1200);
-  if (text === null) return { status: 'budget_wait' };
-  const plan = parseJson(text);
-  if (!plan?.title || !Array.isArray(plan.chapters) || plan.chapters.length < 3) return { status: 'plan_invalid' };
+  let plan = null;
+  for (const stage of ['draft', 'edit']) { // 형식이 틀리면 다른 무료 모델로 한 번 더
+    const text = await generate(env, SYSTEM, prompt, 1600, stage);
+    if (text === null) return { status: 'budget_wait' };
+    plan = parseJson(text);
+    if (plan?.title && Array.isArray(plan.chapters) && plan.chapters.length >= 3) break;
+    plan = null;
+  }
+  if (!plan) return { status: 'plan_invalid' };
   const id = crypto.randomUUID(), t = now();
   const chapters = plan.chapters.slice(0, AI_FACTORY.chapters).map((c, i) => ({ number: i + 1, title: clean(c.title, 120) || `${i + 1}장`, summary: clean(c.summary, 400) }));
   const meta = { subtitle: clean(plan.subtitle, 160), keywords: (plan.keywords || []).map(k => clean(k, 40)).slice(0, 8), pitch: clean(plan.pitch, 600), genre: genre.label, audience: genre.audience, style: genre.style, disclosure: AI_FACTORY.disclosure, author: AI_FACTORY.author, publisher: AI_FACTORY.publisher };
@@ -182,11 +191,14 @@ export async function aiFactoryTick(env, at = new Date()) {
   const week = Math.floor(at.getTime() / (7 * 864e5));
   const thisWeek = await env.PUBLISH_DB.prepare('SELECT id FROM publishing_ai_books WHERE week=? LIMIT 1').bind(week).first();
   const steps = [];
-  if (!thisWeek) steps.push(await planWeeklyBook(env, at));
-  for (let i = 0; i < 4; i++) { // 하루 최대 4장, 무료 상한을 만나면 멈춤
-    const r = await draftNextChapter(env); steps.push(r);
-    if (r.status !== 'drafted') break;
-  }
+  try {
+    if (!thisWeek) steps.push(await planWeeklyBook(env, at));
+    for (let i = 0; i < 4; i++) { // 하루 최대 4장, 무료 상한을 만나면 멈춤
+      const r = await draftNextChapter(env); steps.push(r);
+      if (r.status !== 'drafted') break;
+    }
+  } catch (e) { steps.push({ status: 'error', message: String(e?.message || e).slice(0, 300) }); } // 실패 원인을 실행 기록에 남긴다
+  await env.PUBLISH_DB.prepare('INSERT INTO publishing_ai_runs (at, result_json) VALUES (?, ?)').bind(now(), JSON.stringify(steps).slice(0, 2000)).run().catch(() => null);
   return { status: 'ok', steps };
 }
 

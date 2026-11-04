@@ -109,3 +109,16 @@ test('deploy applies the cron trigger (guarded versions deploy alone never regis
   assert.match(wf, /triggers deploy --config wrangler\.publishing\.toml/);
   assert.match(readFileSync(new URL('../wrangler.publishing.toml', import.meta.url), 'utf8'), /crons = \["37 18 \* \* \*"/);
 });
+
+test('plan survives Workers AI returning an already-parsed JSON object, and every run is logged', async () => {
+  const db = memory();
+  const ai = { run: async (model, input) => model.includes('flux') ? { image: JPEG } : input.messages[1].content.includes('JSON')
+    ? { response: JSON.parse(plan), usage: { prompt_tokens: 500, completion_tokens: 400 } }
+    : { response: '### 소제목\n' + '본문 '.repeat(200), usage: { prompt_tokens: 500, completion_tokens: 3000 } } };
+  await aiFactoryTick({ PUBLISH_DB: db.api, AI: ai, PUBLISHING_AI_FACTORY_ENABLED: 'true' }, new Date('2026-11-04T00:00:00Z'));
+  assert.equal(db.sql.prepare('SELECT COUNT(*) n FROM publishing_ai_books').get().n, 1);
+  const boom = { run: async () => { throw new Error('model unavailable'); } };
+  const db2 = memory();
+  await aiFactoryTick({ PUBLISH_DB: db2.api, AI: boom, PUBLISHING_AI_FACTORY_ENABLED: 'true' }, new Date('2026-11-04T00:00:00Z'));
+  assert.match(db2.sql.prepare('SELECT result_json FROM publishing_ai_runs').get().result_json, /model unavailable/);
+});
