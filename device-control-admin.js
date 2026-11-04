@@ -428,7 +428,8 @@
     const wanted = new URLSearchParams(location.search).get('externalAuth') === service.id;
     box.open = Boolean(live) || (wanted && device.status === 'online');
     box.innerHTML = '<summary>외부 서비스 인증·검증 · '+service.label+'</summary>';
-    const supported = capability(device, 'interactiveAuthSession');
+    const supported = capability(device, 'interactiveAuthSession') &&
+      (service.id !== 'domeggook-business' || capability(device, 'domeggookNativeAuth'));
 
     const intro = document.createElement('p');
     intro.className = 'device-remote-note';
