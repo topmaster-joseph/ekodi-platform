@@ -12,6 +12,12 @@ export const TENANT_AUTOMATION_CSS = `
 .tenant-auto-tabs{display:flex;gap:6px;flex-wrap:wrap;max-width:100%}
 .tenant-auto-tabs button{font:inherit;font-size:13px;min-height:40px;padding:8px 12px;border:1px solid #cad8e8;border-radius:8px;background:#fff;color:#27476b;cursor:pointer;word-break:keep-all}
 .tenant-auto-tabs button[aria-selected="true"]{background:#eaf2ff;border-color:#8aaddb;font-weight:700}
+.tenant-auto-readiness{border-top:1px solid #e1e8f0;padding-top:12px;display:grid;gap:8px;min-width:0}
+.tenant-auto-readiness strong{font-size:15px;color:#243e5c;word-break:keep-all}
+.tenant-auto-readiness p{margin:0;font-size:13px;line-height:1.6;color:#526176;word-break:keep-all}
+.tenant-auto-readiness a{color:#1459a9;font-weight:650;text-decoration:underline;text-underline-offset:3px}
+.tenant-auto-readiness ul{padding-left:20px;margin:0}
+.tenant-auto-readiness li{font-size:13px;line-height:1.65;margin:3px 0;word-break:keep-all}
 .tenant-auto-panel{min-width:0;border-top:1px solid #e1e8f0;padding-top:12px}
 .tenant-auto-panel[hidden]{display:none!important}
 .tenant-auto-panel h3{margin:0 0 8px;font-size:15px}
@@ -22,7 +28,7 @@ export const TENANT_AUTOMATION_CSS = `
 @media(max-width:620px){.tenant-auto-overview{padding:12px}.tenant-auto-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.tenant-auto-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.tenant-auto-tabs button{padding:8px 4px;min-width:0}}
 `;
 
-export function tenantAutomationOverviewModel({connections=[],publishChannels=[],jobs=[],connectionsLoaded=false,publishingLoaded=false,jobsLoaded=false,policy={},growthOverview=null,service='',adminBase=''}={}) {
+export function tenantAutomationOverviewModel({connections=[],publishChannels=[],jobs=[],connectionsLoaded=false,publishingLoaded=false,jobsLoaded=false,policy={},growthOverview=null,ownedAutopostStatus=null,subjectKey='',service='',adminBase=''}={}) {
   const channels=Array.isArray(connections)?connections:[];
   const publishing=Array.isArray(publishChannels)?publishChannels:[];
   const queue=Array.isArray(jobs)?jobs:[];
@@ -35,9 +41,24 @@ export function tenantAutomationOverviewModel({connections=[],publishChannels=[]
     .map(j=>String(j.published_at)).sort().at(-1)||null:null;
   const campaign=growthOverview?.ok===true&&growthOverview.subject?.type==='tenant'
     ?growthOverview.campaigns:null;
+  // A shared health response reports multiple owned sites. Project only the
+  // exact current tenant, and allowlist status fields before any UI rendering.
+  const tenantKey=String(subjectKey||'').trim();
+  const approvedStates=new Set(['ready','channel_required','content_required','policy_review','plan_required','pending']);
+  const source=ownedAutopostStatus?.ok===true&&Array.isArray(ownedAutopostStatus.subjects)
+    ?ownedAutopostStatus.subjects.find(s=>s?.subjectType==='tenant'&&s?.subjectKey===tenantKey):null;
+  const saneCount=value=>Number.isSafeInteger(value)&&value>=0&&value<=1_000_000?value:null;
+  const autopost=source&&approvedStates.has(source.state)?{
+    state:source.state,
+    activeChannels:saneCount(source.activeChannels),
+    usableChannels:saneCount(source.usableChannels),
+    eligibleContent:saneCount(source.eligibleContent),
+    pendingJobs:saneCount(source.pendingJobs),
+    policyMode:['review','assisted','autonomous','missing'].includes(source.policyMode)?source.policyMode:'unknown',
+  }:null;
   const mall=service==='mall';
   const safeAdmin=/^\/[a-z0-9/_-]+$/i.test(String(adminBase||''))?adminBase:'';
-  return {activeChannels,automaticChannels,published,pending,failed,lastPublished,
+  return {activeChannels,automaticChannels,published,pending,failed,lastPublished,autopost,
     policyMode:String(policy.mode||'unknown').slice(0,24),campaign,
     mall,adminBase:safeAdmin,
     // Source absence must not be represented as a successful zero count.
@@ -51,6 +72,23 @@ export function tenantAutomationOverviewHtml(model) {
   const count=value=>value===null||value===undefined?'미연동':String(Math.max(0,Number(value)||0));
   const url=model.adminBase||'';
   const toManagement=path=>url?'<a href="'+escape(url+path)+'">해당 관리 화면 보기</a>':'관리 경로 미확인';
+  const official=model.autopost;
+  const modeLabels={ready:'발행 조건 충족',channel_required:'채널 연결 필요',content_required:'승인 콘텐츠 필요',
+    plan_required:'구독 상태 확인 필요',policy_review:'자동게시 정책 확인 필요',pending:'게시 작업 처리 중'};
+  const optionalCount=value=>value===null||value===undefined?'확인 필요':String(value);
+  const readiness=official?
+    '<section class="tenant-auto-readiness" aria-label="실제 자동게시 준비 상태">'+
+    '<strong>자동게시 준비 상태 · '+escape(modeLabels[official.state]||'확인 필요')+'</strong>'+
+    '<p>서버 원장 기준 · 활성 OAuth 채널 '+optionalCount(official.activeChannels)+'개 · 사용 가능 채널 '+optionalCount(official.usableChannels)+'개 · 승인된 게시 대상 '+optionalCount(official.eligibleContent)+'건 · 대기 '+optionalCount(official.pendingJobs)+'건</p>'+
+    '<ul>'+
+    (official.state==='plan_required'?'<li>구독·이용 권한을 먼저 확인해야 합니다.</li>':'')+
+    (official.state==='policy_review'?'<li><a href="#channel-policy">게시 운영 정책 확인</a> 후 승인된 설정을 사용하세요.</li>':'')+
+    (official.activeChannels===0?'<li><a href="#channel-account-section">외부 채널 최초 연결</a>이 필요합니다. 외부 서비스 인증은 계정 소유자가 직접 승인합니다.</li>':'')+
+    (official.activeChannels!==0&&official.usableChannels===0?'<li><a href="#channel-overview">게시 채널 상태</a>와 허용 공급자 정책을 확인하세요.</li>':'')+
+    (official.eligibleContent===0?'<li>승인된 자동게시 콘텐츠가 없습니다. 관리자 콘텐츠 승인 원장에서 게시 대상 여부를 확인하세요.</li>':'')+
+    (official.state==='ready'?'<li>서버의 발행 선행조건을 통과했습니다. 실제 발행과 방문·매출 성과는 별도로 검증합니다.</li>':'')+
+    (official.state==='pending'?'<li><a href="#channel-jobs">게시 작업 목록</a>에서 예약·재시도 상태를 확인하세요.</li>':'')+
+    '</ul><p>이 요약은 해당 사이트의 조회 정보만 표시하며 채널을 연결하거나 게시물을 승인·발행하지 않습니다.</p></section>':'';
   const entry=[
     ['discovery','검색노출','<h3>검색노출 · SEO/AEO/GEO</h3><p>이 사이트의 검색엔진 등록·색인·AI 인용 실적은 별도 공급자 증거가 필요합니다. 공개 URL 또는 사이트맵이 존재해도 검색 결과 노출을 보장하지 않습니다.</p><p><a href="/sitemap.xml" target="_blank" rel="noopener">통합 공개 사이트맵 확인</a></p>'],
     ['recommendation','AI 추천','<h3>콘텐츠·상품 추천</h3><p>'+(model.mall?'상품별 AI 추천 판단은 에코디몰의 기존 자동영업 화면을 사용합니다.':'사이트별 추천 실적 원장이 아직 연결되지 않았습니다. 없는 수치를 0건으로 표시하지 않습니다.')+'</p>'+(model.mall?'<p>'+toManagement('/growth')+'</p>':'')],
@@ -61,6 +99,7 @@ export function tenantAutomationOverviewHtml(model) {
   ];
   return '<section id="tenantAutoOverview" class="tenant-auto-overview" aria-labelledby="tenantAutoHeading">'+
     '<header><h2 id="tenantAutoHeading">이 사이트의 검색·추천·홍보 자동화</h2><p>현재 사이트 권한으로 읽은 결과만 표시합니다. 중앙 최고관리자 화면은 여러 사이트의 요약만 제공합니다.</p></header>'+
+    readiness+
     '<div class="tenant-auto-summary" aria-label="자동화 핵심 지표">'+
     [['연결 채널',model.activeChannels],['게시 자동화 ON',model.automaticChannels],['조회된 발행 성공',model.published],['조회된 오류',model.failed]]
     .map(([label,value])=>'<article><small>'+escape(label)+'</small><strong>'+count(value)+'</strong></article>').join('')+'</div>'+
