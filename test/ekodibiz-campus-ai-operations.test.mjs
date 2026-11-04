@@ -46,19 +46,19 @@ test('unverified client approval cannot authorize payment',()=>{
 });
 test('even clean evidence creates no payable intent',()=>{
   const r=previewCampusAiMonthlyCycle({agreement:agreement(),participant:participant(),cycleIndex:0,
-    priceMinor:20000,trustedEvidence:evidence(),preflightDossier:dossier()});
+    priceMinor:20000,trustedEvidence:evidence(),verifyServerEvidence:()=>true,preflightDossier:dossier()});
   assert.equal(r.status,'QUOTE_FOR_APPROVAL');assert.equal(r.executionAllowed,false);
   assert.equal(r.gatewayCheckoutIntent,null);assert.equal(r.paymentCore,CAMPUS_AI_PAYMENT_CORE);
 });
 test('missing written vendor permission or PG review blocks',()=>{
   const d=dossier();d.provider.writtenThirdPartyPaymentApproval=false;d.law.pgClassificationReviewed=false;
   const r=previewCampusAiMonthlyCycle({agreement:agreement(),participant:participant(),
-    cycleIndex:0,priceMinor:20000,trustedEvidence:evidence(),preflightDossier:d});
+    cycleIndex:0,priceMinor:20000,trustedEvidence:evidence(),verifyServerEvidence:()=>true,preflightDossier:d});
   assert.equal(r.code,'PREFLIGHT_BLOCKED');
 });
 test('cycle 4, duplicate and budget overrun blocked',()=>{
   const p={agreement:agreement(),participant:participant(),cycleIndex:1,
-    priceMinor:20000,trustedEvidence:evidence(),preflightDossier:dossier()};
+    priceMinor:20000,trustedEvidence:evidence(),verifyServerEvidence:()=>true,preflightDossier:dossier()};
   assert.equal(previewCampusAiMonthlyCycle({...p,cycleIndex:3}).code,'OUTSIDE_THREE_MONTH_TERM');
   assert.equal(previewCampusAiMonthlyCycle({...p,completedCycleKeys:['uni-2026-pilot:principal-random-001:openai:1']}).code,'DUPLICATE_CYCLE');
   assert.equal(previewCampusAiMonthlyCycle({...p,spentMinor:9999999}).code,'UNIVERSITY_BUDGET_EXCEEDED');
@@ -80,4 +80,16 @@ test('reconciliation is read-only and rejects out-of-balance amounts',()=>{
     providerChargesMinor:250000,refundsMinor:10000});
   assert.equal(r.unallocatedMinor,40000);assert.equal(r.executionAllowed,false);
   assert.equal(reconcileCampusAiContract({agreement:agreement(),universityReceivedMinor:100,providerChargesMinor:200}).ok,false);
+});
+
+test('client-forged EKODI verifier label does not authenticate a dossier',()=>{
+  const r=previewCampusAiMonthlyCycle({agreement:agreement(),participant:participant(),cycleIndex:0,
+    priceMinor:20000,trustedEvidence:evidence(),preflightDossier:dossier()});
+  assert.equal(r.code,'SERVER_VERIFIED_AUTHORITY_REQUIRED');
+});
+test('exceptions from server verifier fail closed',()=>{
+  const r=previewCampusAiMonthlyCycle({agreement:agreement(),participant:participant(),cycleIndex:0,
+    priceMinor:20000,trustedEvidence:evidence(),verifyServerEvidence:()=>{throw new Error('verification failed');},
+    preflightDossier:dossier()});
+  assert.equal(r.code,'SERVER_VERIFIED_AUTHORITY_REQUIRED');
 });
