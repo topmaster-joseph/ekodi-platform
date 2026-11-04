@@ -103,3 +103,9 @@ print(json.dumps({'first': first.filename, 'stored': first.compress_type == 0, '
   await aiFactoryAdmin(db.api, req('POST', {}), `/api/workflow/admin/ai-books/${id}/publish`, admin, 'admin', json);
   assert.equal(db.sql.prepare('SELECT COUNT(*) n FROM publishing_workflow_handoff_outbox').get().n, 1, 'idempotent handoff');
 });
+
+test('deploy applies the cron trigger (guarded versions deploy alone never registers schedules)', () => {
+  const wf = readFileSync(new URL('../.github/workflows/deploy-publishing.yml', import.meta.url), 'utf8');
+  assert.match(wf, /triggers deploy --config wrangler\.publishing\.toml/);
+  assert.match(readFileSync(new URL('../wrangler.publishing.toml', import.meta.url), 'utf8'), /crons = \["37 18 \* \* \*"\]/);
+});
