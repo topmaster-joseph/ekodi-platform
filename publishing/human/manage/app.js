@@ -43,6 +43,9 @@ async function api(path,options={}){
 }
 function tell(text){$('result').textContent=text;}
 function errorText(error){
+  if(error.message==='JUBILEE_OWNER_NOT_CONFIGURED')return '희년신학 저자 계정이 출판 서버에 연결되지 않았습니다. 에코디 관리자에게 저자 신원 연결을 요청하세요. 공개·판매 기능은 비활성 상태입니다.';
+  if(error.message==='JUBILEE_OWNER_ONLY')return '현재 로그인 계정은 희년신학 시리즈의 지정 저자 계정이 아닙니다. 올바른 계정으로 로그인해 주세요.';
+  if(error.message==='JUBILEE_DRAFT_LOOKUP_FAILED')return '희년신학 도서의 비공개 등록 후 재조회에 실패했습니다. 새로고침하여 실제 등록 상태를 다시 확인해 주세요.';
   if(error.status===401)return '로그인이 필요합니다. 에코디 계정으로 로그인해 주세요.';
   if(error.status===403)return '현재 계정에는 출판 관리 권한이 없습니다. 다른 계정을 사용하려면 로그아웃해 주세요.';
   if(error.status===503)return '출판 업무 원장이 아직 연결되지 않았습니다. 운영 저장소 적용 전에는 기록을 변경할 수 없습니다.';

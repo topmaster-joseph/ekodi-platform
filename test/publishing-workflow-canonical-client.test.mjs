@@ -51,7 +51,7 @@ async function client({ signedIn = true, healthStatus = 200 } = {}) {
     },
   });
   vm.runInContext(await response.text(), context);
-  const controls = vm.runInContext('({ load, transition, loadJobs, renderDetail, setActive: value => { active = value; } })', context);
+  const controls = vm.runInContext('({ load, transition, loadJobs, renderDetail, errorText, setActive: value => { active = value; } })', context);
   await new Promise(resolve => setImmediate(resolve));
   return { requests, node, controls };
 }
@@ -105,4 +105,11 @@ test('jubilee registration button only posts through canonical authorized workfl
   assert.equal(guest.node('jubileeRegister').disabled,true);
   await guest.node('jubileeRegister').listeners.get('click')();
   assert.ok(!guest.requests.some(x=>x.method==='POST'));
+});
+test('jubilee registration error messages distinguish missing owner, wrong owner and stale lookup',async()=>{
+  const {controls}=await client();
+  assert.match(controls.errorText({message:'JUBILEE_OWNER_NOT_CONFIGURED',status:503}),/저자 계정이 출판 서버에 연결되지/);
+  assert.match(controls.errorText({message:'JUBILEE_OWNER_ONLY',status:403}),/지정 저자 계정이 아닙니다/);
+  assert.match(controls.errorText({message:'JUBILEE_DRAFT_LOOKUP_FAILED',status:500}),/재조회에 실패/);
+  assert.match(controls.errorText({status:401,message:'LOGIN_REQUIRED'}),/로그인이 필요/);
 });
