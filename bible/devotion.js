@@ -1,5 +1,6 @@
 import { devotionShareExcerpt, formatDevotionShareMessage } from './devotion-share-audio.js';
 import { createDevotionSpeechUI } from './devotion-speech-ui.js';
+import { DEVOTION_VERSIONS,isDevotionVersion,officialDevotionPassageUrl } from './devotion-scripture-versions.js';
 // EKODI 오늘의 매일묵상 — shared renderer for /bible, /ekodichurch and /ekodimission.
 // Each host page provides its own header/footer and a mount:
 //   <div data-ekodi-devotion data-base="/ekodichurch/devotion/" data-date-mode="query" data-site-label="에코디교회"></div>
@@ -112,6 +113,9 @@ function boot(root) {
   const shareUrl = (date, hash) => `${ORIGIN}${pageUrl(date)}${hash ? `#${hash}` : ''}`;
   let current = null;
   let activeTab = 'poem';
+  const versionKey='ekodi-devotion-translation-v1';
+  const storedVersion=storageGet(versionKey);
+  let selectedScriptureVersion=isDevotionVersion(storedVersion)?storedVersion:'KRV1961';
 
   root.classList.add('ekodi-devotion');
   root.innerHTML = '';
@@ -300,26 +304,57 @@ function boot(root) {
   }
 
   function renderPassage(panel, data) {
-    panelHead(panel, `${data.passage} (개역한글)`);
-    const blocks = (data.scripture || []).filter(part => part?.ok && part.verses?.length);
-    if (!blocks.length) {
-      const link = el('a', 'dv-btn', '성경읽기에서 본문 열기');
-      link.href = '/bible/reader';
-      panel.append(link);
+    panel.replaceChildren();
+    const head=el('div','dv-panel-head dv-scripture-heading');
+    head.append(el('h3','',data.passage));
+    const versions=el('div','dv-scripture-versions');
+    versions.setAttribute('role','group');
+    versions.setAttribute('aria-label','성경 번역본 선택');
+    for(const version of DEVOTION_VERSIONS){
+      const btn=el('button','dv-scripture-version','('+version.label+')');
+      btn.type='button';
+      btn.dataset.bibleVersion=version.id;
+      btn.setAttribute('aria-pressed',String(selectedScriptureVersion===version.id));
+      btn.addEventListener('click',()=>{
+        if(selectedScriptureVersion===version.id)return;
+        selectedScriptureVersion=version.id;
+        storageSet(versionKey,selectedScriptureVersion);
+        if(current?.found)renderPassage(panel,current);
+      });
+      versions.append(btn);
+    }
+    head.append(versions);
+    panel.append(head);
+    if(selectedScriptureVersion!=='KRV1961'){
+      const version=DEVOTION_VERSIONS.find(v=>v.id===selectedScriptureVersion);
+      const url=officialDevotionPassageUrl(data,version.id);
+      speechUI.setOfficialListening({url,label:version.label});
+      panel.append(el('p','dv-scripture-official-notice',version.label+' 본문은 '+version.publisher+' 공식 사이트에서 확인합니다. 저작권 보호를 위해 여기에는 다른 번역본을 대신 표시하지 않습니다.'));
+      if(url){
+        const link=el('a','dv-btn dv-scripture-official-link','공식 사이트에서 읽고 듣기');
+        link.href=url;link.target='_blank';link.rel='noopener noreferrer';
+        link.setAttribute('aria-label',version.label+' 공식 성경 읽기 및 듣기 새 창 열기');
+        panel.append(link);
+        panel.append(el('p','dv-meta','듣기와 재생 속도는 공식 사이트에서 선택하세요. 번역본별 듣기 기능은 제공처에 따릅니다.'));
+      }else{
+        panel.append(el('p','dv-meta','공식 성경 책과 장을 확인하지 못했습니다. 개역한글로 전환하면 이 페이지에서 낭독할 수 있습니다.'));
+      }
       return;
     }
-    const verses = el('div', 'dv-verses');
-    for (const part of blocks) {
-      if (blocks.length > 1) verses.append(el('p', 'dv-chapter', `${part.book.name} ${part.chapter}장`));
-      for (const verse of part.verses) {
-        const p = el('p');
-        p.append(el('sup', '', String(verse.verse)), ' ', verse.text);
-        verses.append(p);
+    speechUI.setOfficialListening(null);
+    const blocks=(data.scripture||[]).filter(part=>part?.ok&&part.verses?.length);
+    if(!blocks.length){
+      const link=el('a','dv-btn','성경읽기에서 본문 보기');link.href='/bible/reader';panel.append(link);return;
+    }
+    const verses=el('div','dv-verses');
+    for(const part of blocks){
+      if(blocks.length>1)verses.append(el('p','dv-chapter',part.book.name+' '+part.chapter+'장'));
+      for(const verse of part.verses){
+        const item=el('p');item.append(el('sup','',String(verse.verse)),' ',verse.text);verses.append(item);
       }
     }
-    panel.append(verses, el('p', 'dv-meta', blocks[0].attribution || ''));
+    panel.append(verses,el('p','dv-meta',blocks[0].attribution||''));
   }
-
 
   function setupMrPlayer(song) {
     audioRow.replaceChildren();

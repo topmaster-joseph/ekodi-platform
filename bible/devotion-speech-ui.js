@@ -1,4 +1,5 @@
 import { devotionSpeechSegments } from './devotion-share-audio.js';
+import { isApprovedOfficialBibleHost } from './devotion-scripture-versions.js';
 import { createEkodiNarrationPlayer } from './devotion-ekodi-narration.js';
 import { chooseKoreanVoice, koreanVoices, knownKoreanVoiceGender } from './devotion-voice-catalog.js';
 
@@ -107,6 +108,7 @@ export function createDevotionSpeechUI(win = window, doc = document) {
   let paused = false;
   let nextTimer = null;
   let preferredVoice = '';
+  let officialSelection = null;
 
   const preferenceKey = 'ekodi-devotion-voice-preference-v1';
   function readPreference() {
@@ -131,6 +133,13 @@ export function createDevotionSpeechUI(win = window, doc = document) {
   function display(message) {
     status.textContent = message;
     row.dataset.playing=String(Boolean(playing));
+    if(officialSelection){
+      play.textContent='공식 듣기';
+      play.disabled=!data?.found||!officialSelection.url;
+      pause.disabled=true;repeat.disabled=true;stopButton.disabled=true;
+      return;
+    }
+    play.textContent='본문 듣기';
     play.disabled = (!supported && !ekodi.ready) || !data?.found || playing;
     pause.disabled = !playing;
     repeat.disabled = (!supported && !ekodi.ready) || !data?.found;
@@ -216,6 +225,14 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     catch { playing = false; paused = false; display('음성 재생을 시작할 수 없습니다.'); }
   }
   function start() {
+    if(officialSelection){
+      if(!data?.found||!officialSelection.url)return;
+      try{
+        win.open?.(officialSelection.url,'_blank','noopener,noreferrer');
+        display('공식 '+officialSelection.label+' 페이지를 새 창으로 요청했습니다. 창이 열리지 않으면 위의 공식 사이트 링크를 이용하세요.');
+      }catch{display('공식 사이트 링크를 눌러 주세요.');}
+      return;
+    }
     if (!supported || !data?.found) return;
     stop();
     refreshVoices();
@@ -332,6 +349,7 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     element: row,
     setData(next) {
       stop();
+      officialSelection=null;
       data = next?.found ? next : null;
       row.hidden = !data;
       if (!data) void ekodi.load('');
@@ -345,6 +363,14 @@ export function createDevotionSpeechUI(win = window, doc = document) {
         if (!supported) display('에코디 낭독음원을 확인하고 있습니다.');
         else display(describeChoice());
       }
+    },
+    setOfficialListening(next) {
+      stop();
+      officialSelection=next ? {
+        label:String(next.label||'번역본'),
+        url:isApprovedOfficialBibleHost(next.url)?next.url:null,
+      }:null;
+      display(officialSelection?officialSelection.label+'은 공식 제공처에서 읽고 듣습니다.':'');
     },
     stop,
   };
