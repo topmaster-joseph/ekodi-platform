@@ -507,3 +507,16 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-co
 .execution-card .gate-approve:hover{background:#000}
 .execution-card .gate-approve:disabled{opacity:.6;cursor:progress}
 html[data-ekodi-control="v2"][data-ekodi-control-design="premium"] .execution-card .gate-approve{background:#111827!important;color:#fff!important}
+
+/* ADMIN-CONTROL-CHAT-LEFT-001: in the embedded admin work area, align the
+ * conversation and command composer to the same left inset. Standalone
+ * /control retains its centered presentation and mobile still reflows. */
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .conversation{
+  margin-inline:0!important;
+  padding-inline:20px!important;
+}
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .composer,
+html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-control-embedded="admin"] .composer-note{
+  margin-left:0!important;
+  margin-right:auto!important;
+}
