@@ -128,3 +128,30 @@ test('legacy product, store, seller, checkout and policy headers match canonical
   assert.match(shared, /--ekodi-user-content-inline-size,var\(--ekodi-user-canvas-max,1240px\)/);
   assert.match(shared, /@media\(max-width:720px\)/);
 });
+
+
+test('Coupang affiliate recommendations have a dedicated top-level, mobile-reachable Mall category', () => {
+  const nav = renderMallHeader({ home: true });
+  const subnav = renderMallHeader({ publicPrefix: '/ekodimall', home: false });
+  const hubs = JSON.parse(readFileSync(new URL('../content/affiliate-hubs.json', import.meta.url), 'utf8'));
+  const coupang = hubs.find((hub) => hub.id === 'coupang');
+  const affiliate = readFileSync(new URL('../assets/affiliate-hub.js', import.meta.url), 'utf8');
+  const affiliateTemplate = readFileSync(new URL('../src/affiliate-hub.template.html', import.meta.url), 'utf8');
+
+  assert.match(nav, /href="\/coupang\/">쿠팡추천몰<\/a>/);
+  assert.match(subnav, /href="\/ekodimall\/coupang\/">쿠팡추천몰<\/a>/);
+  assert.match(subnav, /p.includes\("\/coupang\/"\)/);
+  assert.equal(coupang.name, '쿠팡추천몰');
+  assert.equal(coupang.title, '쿠팡추천몰');
+  assert.equal(coupang.path ?? coupang.id, 'coupang', 'reuse the existing provider-specific Mall route');
+  assert.deepEqual(coupang.providerKeys, ['coupang', 'coupang-partners']);
+  assert.match(coupang.disclosure, /쿠팡 파트너스 활동의 일환/);
+  assert.match(coupang.description, /주문·결제·배송·반품은 쿠팡/);
+  assert.match(template, /href="\/coupang\/"/);
+  assert.match(affiliateTemplate, /href="\/coupang\/">쿠팡추천몰/);
+  assert.match(affiliate, /providerMatches\(item\)/);
+  assert.match(affiliate, /쿠팡에서 확인·구매/);
+  assert.match(affiliate, /link\.target = '_blank'; link\.rel = 'noopener sponsored'/);
+  assert.match(css, /@media\(max-width:640px\)[\s\S]*\.mall-header \.mall-primary-nav\{display:flex/);
+  assert.doesNotMatch(affiliate, /checkoutReady|mall-checkout|createOrder/);
+});

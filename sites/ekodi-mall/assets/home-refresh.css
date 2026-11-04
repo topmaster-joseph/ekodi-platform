@@ -227,3 +227,10 @@ body[data-mall-view="recommend"] .mall-recommend-inline-form{display:block}
  .mall-category-shortcuts~.shop .card{min-width:0;max-width:100%}
  .mall-category-shortcuts~.shop .card-body{min-width:0}
 }
+
+/* Buyer categories remain reachable on mobile; an accessible horizontal row
+   avoids duplicate columns and keeps the direct/affiliate route distinction. */
+@media(max-width:640px){
+ .mall-header .mall-primary-nav{display:flex;justify-content:flex-start;gap:18px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;height:43px;min-height:43px;white-space:nowrap}
+ .mall-header .mall-primary-nav a{box-sizing:border-box;min-height:43px;padding:12px 1px}
+}
