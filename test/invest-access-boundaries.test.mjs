@@ -16,7 +16,9 @@ test('public Invest landing shows information only, without any stock picks or a
  assert.match(result.headers.get('cache-control'),/no-store/);
  const html=await result.text();
  assert.match(html,/로그인 전에는 설명만/);
- assert.match(html,/로그인 후 공통 분석/);
+ assert.match(html,/로그인 후 마이투자/);
+ assert.match(html,/회원 공통 분석은 별도 보기/);
+ assert.match(html,/site=my&return_to=https%3A%2F%2Fekodi.kr%2Fmy%2Finvest/);
  assert.match(html,/data-ekodi-platform="invest"/,"existing guarded Site Core canary must identify Invest");
  assert.doesNotMatch(html,/삼성전자|NVIDIA|id="result"|id="capital"/);
 });
