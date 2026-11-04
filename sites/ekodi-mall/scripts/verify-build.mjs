@@ -35,7 +35,7 @@ const checks = [
   ['assets/shared-store.html', ['SELLER STOREFRONT', '/assets/public-store.js', '/assets/storefront.css']],
   ['assets/public-store.js', ['/api/public/stores/', 'Mall 8%', '/p/']],
   ['assets/storefront.css', ['storefront-public-hero', 'storefront-product']],
-  ['assets/marketplace-live.js', ['api/public/products?', '상품 준비중', 'dataset.serverProduct', 'data-filter', '상품 더 보기']],
+  ['assets/marketplace-live.js', ['api/public/products?', 'isSaleReady', 'dataset.serverProduct', 'data-filter', '상품 더 보기']],
   ['assets/free-ops.html', ['FREE · SAFE · MANUAL FIRST', '후보 저장 + 안전판단', '비밀정보 입력 금지', '/assets/free-ops.js']],
   ['assets/free-ops.js', ['ekodiMallFreeOpsDraftV1', '/api/internal/supplier-discovery/context', '/api/internal/supplier-candidates', '/assessment', '예상 손실']],
   ['assets/free-ops.css', ['free-flow', 'free-form', 'free-item', 'free-result']],
@@ -77,6 +77,20 @@ if (buyerPositions.some((pos) => pos < 0) || buyerPositions.some((pos, index) =>
 }
 const homeCss = await readFile(path.join(dist, 'assets/home-refresh.css'), 'utf8');
 if (!homeCss.includes('.mall-category-shortcuts{display:none}')) errors.push('Mall desktop duplicated category shortcuts must remain hidden');
+const { isPublicStaticSale } = await import('../api/public-sale-visibility.js');
+const originalItems = JSON.parse(await readFile(path.join(root, 'content/products.json'), 'utf8'));
+for (const item of originalItems) {
+  const marker = `data-product="${item.id}"`;
+  if (!isPublicStaticSale(item) && homepage.includes(marker)) errors.push('Preparing product leaked into Mall public grid: ' + item.id);
+  if (!isPublicStaticSale(item)) {
+    const detail = await readFile(path.join(dist, 'products', item.slug, 'index.html'), 'utf8');
+    if (!detail.includes('name="robots" content="noindex,follow"')) errors.push('Preparing product detail was not marked noindex: ' + item.id);
+  }
+}
+const publicSitemap = await readFile(path.join(dist, 'sitemap.xml'), 'utf8');
+for (const item of originalItems.filter((p) => !isPublicStaticSale(p))) {
+  if (publicSitemap.includes('/products/' + item.slug + '/')) errors.push('Preparing product listed in sitemap: ' + item.id);
+}
 
 if (errors.length) {
   console.error(`EKODI Mall build verification failed (${errors.length})`);

@@ -1,4 +1,5 @@
 import { maskSupplierText } from './supplier-mask.js';
+import { PUBLIC_SALE_LISTING_WHERE } from './public-sale-visibility.js';
 const clean = (value, max = 500) => String(value ?? '').trim().slice(0, max);
 const STORE_SLUG = /^[a-z0-9-]{2,80}$/;
 
@@ -33,7 +34,7 @@ async function publicStore(env, slug) {
 
   const productsResult = await env.DB.prepare(`SELECT p.share_code AS shareCode,p.public_url AS publicUrl,p.name,p.one_line AS oneLine,p.category,
     p.sale_type AS saleType,p.price,p.published_at AS publishedAt
-    FROM products p WHERE p.store_id=? AND p.status='published'
+    FROM products p WHERE p.store_id=? AND ${PUBLIC_SALE_LISTING_WHERE}
     ORDER BY p.published_at DESC LIMIT 100`).bind(store.id).all();
   const products = productsResult.results || [];
   if (!products.length) return null;

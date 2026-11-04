@@ -1,4 +1,5 @@
 import { publicImages } from './product-media.js';
+import { PUBLIC_SALE_LISTING_WHERE } from './public-sale-visibility.js';
 import core from './worker.js';
 import { maskPublicProductFields } from './supplier-mask.js';
 import { runSupplyCuration, runSupplyGate } from './worker.js';
@@ -99,8 +100,8 @@ function publicProduct(row) {
 // EKODI-MALL-PROMOTABLE-001: 자동 홍보 대상 직접판매 상품 — 공개·재고 있음·사진 있음·제휴링크 없음.
 export async function listPromotableDirectProducts(env, limitValue) {
   const limit = Math.max(1, Math.min(48, Math.trunc(Number(limitValue) || 48)));
-  const result = await env.DB.prepare(`SELECT share_code,public_url,name,one_line,category,price,images_json,stock_quantity FROM products
-    WHERE status='published' AND sale_type='direct' AND COALESCE(affiliate_url,'')='' AND stock_quantity>0 AND images_json<>'[]'
+  const result = await env.DB.prepare(`SELECT p.share_code,p.public_url,p.name,p.one_line,p.category,p.price,p.images_json,p.stock_quantity FROM products p
+    WHERE ${PUBLIC_SALE_LISTING_WHERE} AND p.sale_type='direct' AND COALESCE(p.affiliate_url,'')='' AND p.images_json<>'[]'
     ORDER BY published_at DESC LIMIT ?`).bind(limit).all();
   return (result.results || []).map(row => {
     const image = publicImages(row.images_json, env.MALL_BASE_URL)[0];
@@ -110,7 +111,7 @@ export async function listPromotableDirectProducts(env, limitValue) {
 
 export async function listProductIndex(env, limitValue) {
   const limit = Math.max(1, Math.min(5000, Math.trunc(Number(limitValue) || 5000)));
-  const rows = await env.DB.prepare(`SELECT share_code,name,one_line,published_at,updated_at FROM products WHERE status='published'
+  const rows = await env.DB.prepare(`SELECT p.share_code,p.name,p.one_line,p.published_at,p.updated_at FROM products p WHERE ${PUBLIC_SALE_LISTING_WHERE}
     ORDER BY published_at DESC LIMIT ?`).bind(limit).all();
   return (rows.results || []).map((r) => ({ shareCode: r.share_code, product: maskPublicProductFields({ name: r.name, oneLine: r.one_line || '' }), publishedAt: r.published_at, updatedAt: r.updated_at }));
 }
@@ -120,7 +121,7 @@ async function listPublicProducts(env, limitValue, offsetValue = 0, categoryValu
   const offset = Math.max(0, Math.min(2000, Math.trunc(Number(offsetValue) || 0)));
   const requested = String(categoryValue || '').trim();
   const category = ['general','living','book','gift'].includes(requested) ? requested : '';
-  const result = await env.DB.prepare(`${PUBLIC_SELECT} WHERE p.status='published' AND (?='' OR p.category=?) ORDER BY p.published_at DESC,p.id DESC LIMIT ? OFFSET ?`).bind(category, category, limit, offset).all();
+  const result = await env.DB.prepare(`${PUBLIC_SELECT} WHERE ${PUBLIC_SALE_LISTING_WHERE} AND (?='' OR p.category=?) ORDER BY p.published_at DESC,p.id DESC LIMIT ? OFFSET ?`).bind(category, category, limit, offset).all();
   return (result.results || []).map(publicProduct);
 }
 
