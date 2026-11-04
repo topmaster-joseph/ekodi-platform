@@ -414,13 +414,20 @@
   // The rendered page and its HTTP crawler directives must both be checked.
   // A successful fetch of a redirected sign-in page is not a successful audit
   // of the registered public site. These checks do not imply search indexing.
-  const noindexDirective = value => /(?:^|[,;\\s])(?:noindex|none)(?=$|[,;\\s])/i.test(String(value||''));
+  const noindexDirective = value => String(value||'').toLowerCase()
+    .replaceAll(',',' ').replaceAll(';',' ').replaceAll('\n',' ').replaceAll('\t',' ')
+    .split(' ').some(word=>word.trim()==='noindex'||word.trim()==='none');
   const validatePublicAuditResponse = (site, receipt) => {
     const requested=new URL(site.url),final=new URL(receipt.finalUrl||site.url,requested);
-    const publicPath=url=>url.pathname.replace(/\\/+$/,'')||'/';
+    const publicPath=url=>{
+      let path=url.pathname;
+      while(path.length>1&&path.endsWith('/'))path=path.slice(0,-1);
+      return path||'/';
+    };
     if(final.origin!==requested.origin||publicPath(final)!==publicPath(requested)||final.search||final.hash)
       throw new Error('요청한 공개 경로 대신 다른 페이지로 이동했습니다');
-    if(!/^(?:text\\/html|application\\/xhtml\\+xml)(?:\\s*;|$)/i.test(receipt.contentType||''))
+    const type=String(receipt.contentType||'').split(';')[0].trim().toLowerCase();
+    if(!['text/html','application/xhtml+xml'].includes(type))
       throw new Error('공개 문서가 HTML로 응답하지 않았습니다');
     return receipt.text;
   };
