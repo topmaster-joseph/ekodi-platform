@@ -1539,8 +1539,12 @@ async function handleAdmin(request, env) {
     const device = await env.DB.prepare('SELECT id, label, revoked_at, capabilities_json, last_seen_at FROM device_registry WHERE id = ?').bind(deviceId).first();
     if (!device || device.revoked_at) return json({ error: '사용 가능한 Agent 기기를 찾을 수 없습니다.' }, 404, request, env);
     if (isInteractiveAuthCommand(commandType) && commandType !== INTERACTIVE_AUTH_COMMANDS.close) {
-      if (parseJson(device.capabilities_json)?.[INTERACTIVE_AUTH_CAPABILITY] !== true) {
+      const authCapabilities = parseJson(device.capabilities_json) || {};
+      if (authCapabilities[INTERACTIVE_AUTH_CAPABILITY] !== true) {
         return json({ error: '이 기기의 EKODI Agent가 외부 서비스 인증 세션을 아직 지원하지 않습니다. Agent 업데이트 후 다시 시도하세요.', code: 'INTERACTIVE_AUTH_AGENT_UPGRADE_REQUIRED' }, 409, request, env);
+      }
+      if (payload.service === 'domeggook-business' && authCapabilities.domeggookNativeAuth !== true) {
+        return json({ error: '도매꾹 자체 브라우저 지원을 위한 EKODI Agent 업데이트가 필요합니다.', code: 'DOMEGGOOK_NATIVE_AUTH_AGENT_UPGRADE_REQUIRED' }, 409, request, env);
       }
       if (statusFor(device.last_seen_at, null) !== 'online') {
         return json({ error: '기기가 온라인이 아닙니다. 사용자가 PC 앞에 있을 때만 로그인 창을 열 수 있습니다.', code: 'INTERACTIVE_AUTH_DEVICE_OFFLINE' }, 409, request, env);
