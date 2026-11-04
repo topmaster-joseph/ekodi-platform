@@ -145,24 +145,42 @@ export function buildItemValue(env, { market, qty, deliMemo, opt = '00' }) {
     .replaceAll('{sellerMemo}', '에코디몰 위탁주문').replaceAll('{deliMemo}', pipeSafe(deliMemo, 80));
 }
 
-/** Fail closed on malformed delivery data before any paid provider call.
- * Do not log or persist the buyer's personal information. */
+// Official 2026-07-07 setOrder v4.3 integration guide: mobile numbers must
+// contain hyphens; optional supplementary contacts are not copies of the mobile.
+export function formatDomeggookMobile(value) {
+  const digits = String(value ?? '').replace(/[\s()-]/g, '');
+  if (!/^(?:01\d{8,9}|050\d{7,8}|0707\d{7})$/.test(digits)) return '';
+  if (digits.length === 10) return digits.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3');
+  if (digits.length === 11) return digits.replace(/^(\d{3})(\d{4})(\d{4})$/, '$1-$2-$3');
+  return '';
+}
+
+/** Fail closed before a paid provider call; never persist recipient PII in diagnostics. */
 export function validateDeliInfo(buyer) {
   if (!buyer || typeof buyer !== 'object') return 'NO_BUYER';
-  for (const field of ['name', 'postcode', 'address1', 'phone']) {
+  const limits = { name: 20, email: 100, postcode: 5, address1: 200, address2: 200 };
+  for (const field of ['name', 'postcode', 'address1', 'address2', 'phone']) {
     const value = String(buyer[field] ?? '').trim();
     if (!value || /[\r\n]/.test(value)) return 'INVALID_DELIINFO';
   }
-  const phone = String(buyer.phone).replace(/[\s()-]/g, '');
-  if (!/^0\d{8,10}$/.test(phone)) return 'INVALID_DELIINFO';
-  if (buyer.email && /[\r\n]/.test(String(buyer.email))) return 'INVALID_DELIINFO';
-  if (buyer.address2 && /[\r\n]/.test(String(buyer.address2))) return 'INVALID_DELIINFO';
+  for (const [field, max] of Object.entries(limits)) {
+    const value = String(buyer[field] ?? '').trim();
+    if (value.length > max || /[\r\n]/.test(value)) return 'INVALID_DELIINFO';
+  }
+  if (!/^\d{5}$/.test(String(buyer.postcode).trim())) return 'INVALID_DELIINFO';
+  if (!formatDomeggookMobile(buyer.phone)) return 'INVALID_DELIINFO';
   return null;
 }
 
 export function buildDeliInfo(buyer) {
-  // 문서 예시 순서: 이름|이메일|우편번호|주소|상세주소|휴대폰|전화|회사명
-  return [buyer.name, buyer.email, buyer.postcode, buyer.address1, buyer.address2, buyer.phone, buyer.phone, ''].map((v) => pipeSafe(v)).join('|');
+  // 2026-07-07 v4.3 guide: recipient|email|ZIP5|address1|address2|mobile|extra contact|storefront.
+  // Customs clearance code is a ninth OPTIONAL field for overseas items only.
+  // Keep the non-applicable extra contact empty; storefront is required.
+  return [
+    pipeSafe(buyer.name, 20), pipeSafe(buyer.email, 100), pipeSafe(buyer.postcode, 5),
+    pipeSafe(buyer.address1, 200), pipeSafe(buyer.address2, 200),
+    formatDomeggookMobile(buyer.phone), '', '에코디몰'
+  ].join('|');
 }
 
 async function orderView(env, session, supplierOrderNo, fetchImpl) {
