@@ -22,11 +22,17 @@ test('private Invest mount routes to existing MY binding, never to public analys
 });
 test('the separate Invest public routes are always viewable without calling MY',async()=>{
  const env={MY:{fetch(){throw Error('public page must not call private service')}}};
- const root=await routeInvestApex(get('/invest'),env,{});
- const analysis=await routeInvestApex(get('/invest/analysis'),env,{});
- assert.equal(root.status,200);assert.equal(analysis.status,200);
- assert.match(await root.text(),/근거를 먼저 보는 투자분석/);
- assert.match(await analysis.text(),/공개 투자분석 안내/);
+ // Cloudflare implements HTMLRewriter natively; Node's test runner needs a
+ // minimal pass-through shell transformer to exercise Invest dispatch only.
+ const prior=globalThis.HTMLRewriter;
+ globalThis.HTMLRewriter=class {on(){return this}onDocument(){return this}transform(response){return response}};
+ try{
+  const root=await routeInvestApex(get('/invest'),env,{});
+  const analysis=await routeInvestApex(get('/invest/analysis'),env,{});
+  assert.equal(root.status,200);assert.equal(analysis.status,200);
+  assert.match(await root.text(),/근거를 먼저 보는 투자분석/);
+  assert.match(await analysis.text(),/공개 투자분석 안내/);
+ }finally{globalThis.HTMLRewriter=prior}
 });
 test('private login preserves the exact page and approved same-origin query',async()=>{
  const js=await investMyRoute(get('/invest/my/app.js'),{}).then(r=>r.text());
