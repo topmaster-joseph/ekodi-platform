@@ -33,6 +33,7 @@ async function handoff(){
 }
 async function refreshSession(){if(!sb)return;const {data}=await sb.auth.getSession();session=data.session;renderIdentity()}
 function renderIdentity(){
+  if(area==='home')document.dispatchEvent(new CustomEvent('ekodi-edu-session',{detail:{authenticated:Boolean(enabled&&session),resolved:true}}));
   const button=$('#authButton');if(!button)return;
   const name=$('#identityName');
   if(!enabled){button.textContent='격리 스테이징';button.disabled=true;if(name)name.textContent='데이터 격리 모드';return}
