@@ -80,6 +80,7 @@ function primaryDomains(env) {
   const configured = splitList(env.STORAGE_PRIMARY_GOOGLE_DOMAINS);
   return configured.length ? configured : ['ekodi.kr'];
 }
+function primaryAccountEmail(env) { return String(env.STORAGE_PRIMARY_GOOGLE_EMAIL || '').trim().toLowerCase(); }
 function primarySharedDriveId(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_ID || '').trim(); }
 function primarySharedDriveName(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_NAME || 'EKODI').trim() || 'EKODI'; }
 function googleClientId(env) { return String(env.GOOGLE_DRIVE_CLIENT_ID || env.GOOGLE_CLIENT_ID || '').trim(); }
@@ -550,6 +551,11 @@ export async function handleGoogleDriveStorageControl(request, env) {
       const email = String(profile.user?.emailAddress || '').trim().toLowerCase();
       const domain = email.split('@')[1] || '';
       if (payload.role === 'primary' && !primaryDomains(env).includes(domain)) return html(`기본 Drive는 ${primaryDomains(env).join(', ')} 조직 계정으로만 연결할 수 있습니다.`);
+       // Require the canonical EKODI Workspace operator, not merely any @ekodi.kr account.
+       // This check precedes disabling the previous connection; rejected OAuth keeps
+       // the existing encrypted connection and route mapping unchanged.
+       if (payload.role === 'primary' && primaryAccountEmail(env) && email !== primaryAccountEmail(env))
+         return html(`EKODI 기본 공유드라이브는 ${primaryAccountEmail(env)} 계정으로만 연결할 수 있습니다.`);
       const encrypted = await encryptCredential(env,{refreshToken:token.refresh_token});
       const id = crypto.randomUUID(); const now = new Date().toISOString();
       if (payload.role === 'primary') await env.DB.prepare(`UPDATE storage_connections SET status='disabled',updated_at=? WHERE role='primary' AND status!='disabled'`).bind(now).run();
@@ -592,7 +598,14 @@ export async function handleGoogleDriveStorageControl(request, env) {
   }
   if (url.pathname === `${BASE}/status` && request.method === 'GET') {
     const routes = await env.DB.prepare('SELECT service_key,folder_key,folder_name,folder_id,connection_role,updated_at FROM storage_routes ORDER BY folder_name').all();
-    return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),primarySharedDrive:{id:primarySharedDriveId(env),name:primarySharedDriveName(env)},redirectUri:googleOAuthRedirectUri(env),canonicalRedirectUri:CANONICAL_REDIRECT_URI,legacyRedirectUri:REDIRECT_URI,connections:await connectionRows(env),routes:routes.results || [],policy:{primary:'Google Workspace Shared Drive EKODI',secondary:'optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
+    const connections=await connectionRows(env);
+     const expected=primaryAccountEmail(env);
+     const primary=connections.find(row=>row.role==='primary'&&row.status!=='disabled');
+     return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),
+       primaryAccountEmail:expected,primaryAccountMatched:Boolean(expected&&primary&&String(primary.account_email||'').toLowerCase()===expected&&primary.drive_id===primarySharedDriveId(env)),
+       primarySharedDrive:{id:primarySharedDriveId(env),name:primarySharedDriveName(env)},
+       redirectUri:googleOAuthRedirectUri(env),canonicalRedirectUri:CANONICAL_REDIRECT_URI,legacyRedirectUri:REDIRECT_URI,
+       connections,routes:routes.results || [],policy:{primary:'Google Workspace Shared Drive EKODI',secondary:'migration or optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
   }
   if (url.pathname === `${BASE}/oauth/start` && request.method === 'POST') {
     if (!ready(env)) return json({error:'Google Drive OAuth Secret 구성이 필요합니다.',code:'GOOGLE_DRIVE_NOT_CONFIGURED'},503,auth.response.headers);
@@ -604,7 +617,8 @@ export async function handleGoogleDriveStorageControl(request, env) {
     const state=await signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,redirectUri,exp:exp.getTime()});
     const reconnectRow=await env.DB.prepare(`SELECT account_email FROM storage_connections WHERE role=? AND status!='disabled' ORDER BY updated_at DESC LIMIT 1`).bind(role).first();
     const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:redirectUri,response_type:'code',access_type:'offline',prompt:'consent',include_granted_scopes:'true',scope:SCOPES.join(' '),state});
-    if(reconnectRow?.account_email)params.set('login_hint',String(reconnectRow.account_email));
+    if(role==='primary'&&primaryAccountEmail(env))params.set('login_hint',primaryAccountEmail(env));
+     else if(reconnectRow?.account_email)params.set('login_hint',String(reconnectRow.account_email));
     return json({authorizeUrl:`${AUTH_URL}?${params}`,role},200,auth.response.headers);
   }
   const driveMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)/drives$`));
