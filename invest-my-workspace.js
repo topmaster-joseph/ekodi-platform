@@ -63,7 +63,12 @@ function ownerHtml(){return "<!doctype html><html lang=\"ko\"><head><meta charse
 function investBrowserClient(){
 'use strict';
 const el=(id)=>document.getElementById(id);
-const login='/auth/?site=my&return_to='+encodeURIComponent('https://ekodi.kr/my/invest');
+function loginHref(){
+ const path=location.pathname.startsWith('/invest/my')?location.pathname:'/invest/my';
+ const target='https://ekodi.kr'+path+location.search;
+ return '/auth/?site=invest&return_to='+encodeURIComponent(target);
+}
+const login=loginHref();
 const supabaseUrl='https://renzehysxirjilvdxacv.supabase.co';
 const supabaseKey='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const money=(v)=>new Intl.NumberFormat('ko-KR',{maximumFractionDigits:0}).format(Math.round(v))+'원';
@@ -594,7 +599,7 @@ const DETAIL_GROUPS={
  research:[['strategyLab','AI 전략 검증'],['shortValueResearch','단기 가치발굴·공시'],['design','투자 설계'],['scenario','시나리오'],['insights','위험 분석']],
  report:[['export','보고서']]
 };
-const TAB_OF={ownerSummary:'*',ownerTabs:'*',detailContext:'*',detailTabs:'*',
+const TAB_OF={ownerSummary:'summary',ownerTabs:'*',detailContext:'*',detailTabs:'*',
  ...Object.fromEntries(Object.entries(DETAIL_GROUPS).flatMap(([group,items])=>items.map(([id])=>[id,group])))};
 const TAB_LABELS={summary:'투자 현황',manual:'직접투자',auto:'AI 자동투자',research:'투자 분석·연구',report:'보고서'};
 const DETAIL_DESCRIPTIONS={
@@ -604,6 +609,12 @@ const DETAIL_DESCRIPTIONS={
  research:'AI 전략과 공시·가치·시나리오·위험을 구분해 검토합니다.',
  report:'직접 입력 자료와 분석 결과를 보고서로 보관합니다.'
 };
+const INVEST_DETAIL_PATHS={
+ ownerOverview:'',manualOrder:'manual',brokerReadonly:'broker',marketDashboard:'market',portfolio:'portfolio',
+ autopilot:'autopilot',autopilotPolicy:'auto-policy',liveTrading:'live',strategyLab:'strategy',
+ shortValueResearch:'value',design:'design',scenario:'scenario',insights:'risk',export:'reports'
+};
+const DETAIL_BY_SLUG=Object.fromEntries(Object.entries(INVEST_DETAIL_PATHS).map(([id,slug])=>[slug,id]));
 let selectedMainTab='summary',selectedDetailId='ownerOverview';
 function tabFor(node){if(node.id&&TAB_OF[node.id])return TAB_OF[node.id];if(node.classList.contains('overview'))return 'summary';return 'analysis'}
 function tabTargets(){const owner=el('owner');const out=[];for(const child of owner.children){if(child.classList.contains('layout')){for(const inner of child.children)out.push(inner)}else out.push(child)}return out}
@@ -655,22 +666,32 @@ function showTab(tab,{focus=false,detailId=null,updateUrl=false}={}){
   const on=b.dataset.tab===tab;b.setAttribute('aria-selected',on?'true':'false');b.tabIndex=on?0:-1;
   if(on&&focus)b.focus();
  }
- for(const a of document.querySelectorAll('.sidebar a[href^="#"]')){
-  const on=TAB_OF[a.getAttribute('href').slice(1)]===tab;
+ for(const a of document.querySelectorAll('#ownerSidebar a[data-invest-detail]')){
+  const on=a.dataset.investDetail===selected;
   a.classList.toggle('current',on);
   if(on)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');
  }
- if(updateUrl)history.replaceState(null,'',location.pathname+location.search+'#'+encodeURIComponent(selected));
+ if(updateUrl){
+  const slug=INVEST_DETAIL_PATHS[selected];
+  if(slug!==undefined){
+   const target='/invest/my'+(slug?'/'+slug:'')+location.search;
+   history.pushState(null,'',target);
+  }
+ }
 }
 function routeHash(){
  const hash=decodeURIComponent(location.hash.slice(1));
- const found=detailForHash(hash);
- if(found){showTab(found.group,{detailId:found.id});return}
- showTab('summary');
+ const legacy=detailForHash(hash);
+ if(legacy){showTab(legacy.group,{detailId:legacy.id,updateUrl:true});return}
+ const pathname=location.pathname.replace(/\/+$/,'');
+ const slug=pathname==='/invest/my'?'':pathname.startsWith('/invest/my/')?pathname.slice('/invest/my/'.length):'';
+ const id=DETAIL_BY_SLUG[slug]||'ownerOverview';
+ const group=TAB_OF[id]||'summary';
+ showTab(group,{detailId:id});
 }
 function kpi(id,text,state){const node=el(id);if(!node)return;node.textContent=text;if(state)node.parentElement.dataset.state=state}
 function touchUpdated(){kpi('kpiUpdated',new Date().toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}))}
-function unlockOwner(){kpi('kpiAuth','완료','ok');routeHash();el('owner').hidden=false;el('authMessage').hidden=true;setStepUp('done');render();loadAutopilot();loadStage2Preset();loadBrokerSelection();refreshLiveMfa()}
+function unlockOwner(){kpi('kpiAuth','완료','ok');routeHash();el('ownerSidebar').hidden=false;el('investAuthIntro').hidden=true;el('owner').hidden=false;el('authMessage').hidden=true;setStepUp('done');render();loadAutopilot();loadStage2Preset();loadBrokerSelection();refreshLiveMfa()}
 function lockOwner(message){
  ++stage2PresetVersion;el('apStage2Apply').disabled=true;
  ++marketRequestId;++brokerSelectionVersion;++liveReadinessVersion;
@@ -680,7 +701,9 @@ function lockOwner(message){
  kpi('kpiAuth','대기','warn');
  stepUpToken='';
  el('owner').hidden=true;el('authMessage').hidden=false;setStepUp('pending');
- status(message||'Google 로그인은 확인되었습니다. 안전을 위해 오른쪽 위 「본인인증 대기」 버튼을 눌러 추가 인증을 완료해 주세요.',false);
+ el('ownerSidebar').hidden=!verified;
+ el('investAuthIntro').hidden=verified;
+ status(message||'Google 로그인은 확인되었습니다. 안전을 위해 왼쪽 상단의 「본인인증 대기」 버튼을 눌러 추가 인증을 완료해 주세요.',false);
 }
 async function stepUpCall(method,payload){
  const response=await withTimeout(fetch(autopilotApi+'/step-up',{method,headers:{authorization:'Bearer '+ownerToken,'content-type':'application/json','x-ekodi-invest-step-up':stepUpToken},body:payload?JSON.stringify(payload):undefined,cache:'no-store'}),15000);
@@ -913,8 +936,24 @@ function init(){
  el('apWeekly').addEventListener('click',()=>showReport('weekly'));el('apMonthly').addEventListener('click',()=>showReport('monthly'));
  for(const b of document.querySelectorAll('#ownerTabs [data-tab]'))b.addEventListener('click',()=>showTab(b.dataset.tab,{updateUrl:true}));
  el('detailTabs').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const list=[...document.querySelectorAll('#detailTabs button[data-detail-target]')];if(!list.length)return;const i=list.findIndex(b=>b.getAttribute('aria-selected')==='true');const shift=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;const next=e.key==='Home'?list[0]:e.key==='End'?list[list.length-1]:list[(i+shift+list.length)%list.length];showTab(selectedMainTab,{detailId:next.dataset.detailTarget,updateUrl:true});next.focus();e.preventDefault()});
+ for(const a of document.querySelectorAll('#ownerSidebar a[data-invest-detail]')){
+  a.addEventListener('click',event=>{
+   const id=a.dataset.investDetail,group=TAB_OF[id];
+   if(!group||el('owner').hidden)return;
+   event.preventDefault();showTab(group,{detailId:id,updateUrl:true});
+  });
+ }
+ for(const a of document.querySelectorAll('.mode-card[href^="/invest/my/"]')){
+  a.addEventListener('click',event=>{
+   if(el('owner').hidden)return;
+   const id=Object.entries(INVEST_DETAIL_PATHS).find(([,slug])=>a.getAttribute('href')==='/invest/my/'+slug)?.[0];
+   if(!id)return;
+   event.preventDefault();showTab(TAB_OF[id],{detailId:id,updateUrl:true});
+  });
+ }
  el('ownerTabs').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;const list=[...document.querySelectorAll('#ownerTabs [data-tab]')];const i=list.findIndex(b=>b.getAttribute('aria-selected')==='true');const n=list[(i+(e.key==='ArrowRight'?1:list.length-1))%list.length];showTab(n.dataset.tab,{focus:true,updateUrl:true});e.preventDefault()});
  if(typeof globalThis.addEventListener==='function')globalThis.addEventListener('hashchange',()=>{if(!el('owner').hidden)routeHash()});
+ if(typeof globalThis.addEventListener==='function')globalThis.addEventListener('popstate',()=>{if(!el('owner').hidden)routeHash()});
  el('stepUpButton').addEventListener('click',openStepUp);el('stepUpForm').addEventListener('submit',submitStepUp);el('stepUpCancel').addEventListener('click',()=>el('stepUpDialog').close());
  authenticate();
 }
