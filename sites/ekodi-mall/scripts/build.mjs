@@ -286,6 +286,11 @@ for (const store of stores) {
   const cards = storeProducts.map((product) => productCard(product, { withData: false, withHeart: false })).join('');
   const html = fill(storeTemplate, {
     STORE_NAME: esc(store.name),
+    STORE_BOOKS_ATTR: store.id === 'store-ekodi-books' ? 'data-bookstore-store="true"' : '',
+    STORE_STATUS_ATTR: store.id === 'store-ekodi-books' ? 'data-bookstore-store-status' : '',
+    STORE_COUNT_ATTR: store.id === 'store-ekodi-books' ? 'data-bookstore-public-count' : '',
+    STORE_BOOK_GRID_ATTR: store.id === 'store-ekodi-books' ? 'data-bookstore-store-grid' : '',
+    STORE_BOOKS_SCRIPT: store.id === 'store-ekodi-books' ? '<script src="/assets/bookstore-live.js" defer></script>' : '',
     STORE_DESCRIPTION: esc(store.description),
     STORE_URL: esc(storeUrl),
     STORE_BADGE: esc(store.badge || store.kind),

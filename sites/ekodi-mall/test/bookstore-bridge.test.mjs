@@ -61,6 +61,7 @@ test('book detail purchase link opens only on a live file-ready server quote', a
         body: { dataset: { bookstoreBookId: bookId } },
         getElementById() { return null; },
         querySelector(sel) { return elements[sel] || null; },
+        querySelectorAll() { return []; },
         addEventListener() {}
       },
       window: { location: { origin: 'https://ekodi.kr' }, dispatchEvent() {} },
@@ -138,6 +139,20 @@ test('verified publishing service can safely include NEW editions in runtime mal
   const mismatched={verifyPublicRelease:async request=>({authorized:true,state:'released',
     visibility:'public',checkoutEnabled:true,...request,channel:'books'})};
   assert.deepEqual(await approvedBookstoreProducts({books:[book]},mismatched),[]);
+});
+
+test('EKODI Books storefront reflects real approval and sold-book counts', () => {
+  const template = readFileSync(path.join(root, 'src/store.template.html'), 'utf8');
+  const builder = readFileSync(path.join(root, 'scripts/build.mjs'), 'utf8');
+  const client = readFileSync(path.join(root, 'assets/bookstore-live.js'), 'utf8');
+  for (const key of ['STORE_BOOKS_ATTR','STORE_BOOKS_SCRIPT','STORE_BOOK_GRID_ATTR','STORE_STATUS_ATTR','STORE_COUNT_ATTR']) {
+    assert.ok(template.includes(key), 'missing dynamic bookstore control ' + key);
+    assert.ok(builder.includes(key), 'builder must provide ' + key);
+  }
+  assert.ok(client.includes('[data-bookstore-store-grid]'));
+  assert.ok(client.includes('[data-bookstore-public-count]'));
+  assert.ok(client.includes("setSection('STATUS'"));
+  assert.ok(client.includes("setSection('COMMERCE'"));
 });
 
 test('every mall static template omits the obsolete commerce V2 notice strip', () => {
