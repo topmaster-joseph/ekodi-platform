@@ -27,7 +27,15 @@ export function pilotOrderIds(env) {
     .filter((v) => /^mall_[A-Za-z0-9_]{6,60}$/.test(v)).slice(0, 3);
 }
 
+// The current owner authorization is ONE supplier order costing at most 5,000 KRW
+// including shipping. Unset, noninteger, or larger limits must fail closed.
+export function pilotBudgetKrw(env) {
+  const amount = Number(env?.DOMEGGOOK_PILOT_MAX_TOTAL_KRW || 0);
+  return Number.isSafeInteger(amount) && amount > 0 && amount <= 5000 ? amount : 0;
+}
+
 // An allow-listed pilot is still a paid order, not an exemption from consent or forwarding controls.
 export function pilotReady(env) {
-  return pilotOrderIds(env).length > 0 && credentialsReady(env) && supplierHandoffEnabled(env);
+  return pilotOrderIds(env).length === 1 && pilotBudgetKrw(env) > 0
+    && credentialsReady(env) && supplierHandoffEnabled(env);
 }
