@@ -1,103 +1,112 @@
 // 청계초 1·2학년 공개 체험수업. 개인정보 수집·저장·외부 통신 없음.
+// Based on the 14-slide "청계초_나만의피자체험_20261105.pptx" stored in Google Drive.
+// Each time and instructor note follows the PPT order, including overlapping practice slides 9–10.
 const scenes = [
   {
-    title: '반가워요, 꼬마 셰프 여러분!', label:'01 · 환영', emoji:'👩‍🍳',
-    intro:'오늘은 내가 피자 요리사!',
-    question:'좋아하는 토핑은?',
-    notes:'아이들 눈을 보며 손을 흔들어 인사합니다. 좋아하는 재료를 3~4명에게 물어보고 모든 답에 박수를 쳐 주세요.'
+    title:'오늘은 내가 요리사! 나만의 피자, 내 손으로!',label:'01 · 환영',time:'09:20–09:23',emoji:'👩‍🍳',
+    intro:'보고 · 웃고 · 만들고 · 함께 나눠요!',
+    question:'피자 좋아하는 친구, 손!',
+    notes:'09:20~09:23 (3분). 모두 환영! “오늘 여러분은 피자를 사 먹는 손님이 아니라, 만드는 요리사예요! 손들고 피자 좋아한다고 외쳐 볼까요?” 안전 및 알레르기 확인은 행사 전 교사와 별도로 완료. 아이들 사진 촬영은 학교 동의가 있을 때만.'
   },
   {
-    title:'오늘의 꼬마 셰프 미션 3가지',label:'02 · 오늘의 미션',emoji:'⭐',
-    intro:'찾기 · 만들기 · 칭찬하기',
-    visuals:[['🔎','재료 찾기'],['🫧','깨끗이 만들기'],['👏','서로 칭찬하기']],
-    notes:'“우리가 오늘 할 일은 세 가지!” 손가락으로 하나, 둘, 셋을 세며 아이들과 함께 말해 봅니다.'
+    title:'오늘의 미션 3가지',label:'02 · 미션 3가지',time:'09:23–09:25',emoji:'⭐',
+    intro:'우리 모두 멋진 꼬마 셰프!',
+    visuals:[['🔎','재료를 찾아요'],['🍕','내 피자를 만들어요'],['👏','함께 웃고 정리해요']],
+    notes:'09:23~09:25 (2분). “우리 세 가지 미션 중에서 어떤 게 가장 신나요?” 한 아이가 한마디씩 짧게 답하도록 하고 모두 큰 박수.'
   },
   {
-    title:'피자는 어디에서 유명해졌을까요?',label:'03 · 피자 여행',emoji:'🌍',
-    intro:'피자는 이탈리아에서 유명해졌어요.',
-    quiz:{options:['이탈리아 🇮🇹','달나라 🌙','남극 🐧'],correct:0,success:'정답! 이탈리아!'},
-    notes:'역사 강의는 길게 하지 않습니다. “달나라!”를 고른 아이도 웃으며 참여할 수 있도록 분위기를 만드세요.'
+    title:'피자는 어디에서 올까요?',label:'03 · 농부의 손길',time:'09:25–09:29',emoji:'🌾',
+    intro:'농부의 손길이 피자 한 판이 돼요. 무안 양파도 재료!',
+    visuals:[['🌾','밀가루'],['🍅','토마토'],['🥛','우유로 만든 치즈'],['🧅','무안 양파']],
+    question:'무안의 유명한 채소는?',
+    notes:'09:25~09:29 (4분). “피자가 배달될 때만 생기나요? 아니에요! 밀과 채소를 키우는 농부, 우유를 만드는 낙농가, 피자를 만드는 요리사가 함께해요.” “무안에서 유명한 채소는?” 답: 양파. 실제 사용할 재료는 행사 준비 상황에 맞춘다.'
   },
   {
-    title:'빨간 소스의 비밀',label:'04 · 토마토',emoji:'🍅',
-    intro:'새콤달콤 토마토소스!',
-    question:'토마토는 무슨 색?',
-    notes:'토마토 소스를 보여 주고 색을 함께 외칩니다. 음식 알레르기나 싫어하는 재료가 있는 친구의 선택도 존중합니다.'
+    title:'재료를 찾아라!',label:'04 · 재료 탐험',time:'09:29–09:32',emoji:'🍅',
+    intro:'말랑말랑 도우 · 빨간 토마토 · 쭉쭉 치즈 · 아삭 채소',
+    visuals:[['🍞','말랑말랑 도우'],['🍅','빨간 토마토'],['🧀','쭉쭉 치즈'],['🥬','아삭아삭 채소']],
+    question:'내가 올리고 싶은 재료는?',
+    notes:'09:29~09:32 (3분). 아이들이 재료 이름을 소리 내어 말하고, 가장 좋아하는 재료에 손들도록 유도. “도우는 무엇처럼 말랑해요?” 예: 빵반죽. 재료별 식품 알레르기가 있으므로 학생에게 맛보기를 강요하지 않는다.'
   },
   {
-    title:'쭉~ 늘어나는 치즈!',label:'05 · 치즈',emoji:'🧀',
-    intro:'치즈는 우유로 만들어요.',
-    question:'치즈는 무엇으로 만들까요?',
-    notes:'우유 알레르기가 있는 아동은 반드시 대체 재료를 사용합니다. 치즈를 만지는 활동 전 도구를 확인하세요.'
-  },
-  {
-    title:'알록달록 채소 친구들',label:'06 · 채소',emoji:'🥦',
-    intro:'좋아하는 토핑을 골라요!',
-    visuals:[['🫑','파프리카'],['🌽','옥수수'],['🧅','양파']],
-    question:'가장 좋아하는 채소는?',
-    notes:'토핑을 한 가지씩 보여 주고 손들기 투표를 합니다. 먹기 싫은 재료를 억지로 넣게 하지 마세요.'
-  },
-  {
-    title:'피자의 튼튼한 바닥, 도우!',label:'07 · 도우',emoji:'🍞',
-    intro:'도우 = 피자의 빵 바닥',
-    question:'도우는 어떤 모양?',
-    notes:'손으로 큰 동그라미를 만들어 보게 합니다. 도우가 밀로 만들어지는 경우가 많으므로 밀 알레르기를 확인합니다.'
-  },
-  {
-    title:'피자를 만들기 전, 첫 번째 일은?',label:'08 · 퀴즈',emoji:'🤔',
-    intro:'피자 만들기 전, 가장 먼저?',
-    quiz:{options:['손 씻기 🫧','바로 먹기 🍕','친구 밀기 🏃'],correct:0,success:'맞아요! 깨끗한 손이 가장 먼저예요.'},
-    notes:'정답을 고른 뒤 실제 손 씻기 장소로 이동할 준비를 합니다. 아이들은 음식과 기구를 만지기 전에 손을 씻습니다.'
-  },
-  {
-    title:'보글보글, 손 씻기 약속!',label:'09 · 깨끗한 손',emoji:'🫧',
-    intro:'비누로 손바닥 · 손등 · 손가락',
-    visuals:[['🖐️','손바닥'],['🤲','손등·손가락'],['💧','잘 헹구기']],
-    question:'깨끗한 손, 준비!',
-    notes:'준비된 손 씻는 곳에서 모둠별로 이동합니다. 음식 준비 전 화장실 다녀오기, 손 씻기를 함께 확인합니다.'
-  },
-  {
-    title:'안전 약속! 뜨거운 오븐은 어른만',label:'10 · 안전',emoji:'🔥',
-    intro:'오븐은 어른만! 차례 지키기.',
-    visuals:[['🙅','오븐 만지지 않기'],['🤝','차례 지키기'],['🚶','천천히 걷기']],
-    question:'오븐은 누가 만질까요?',
-    notes:'오븐과 열판 주변의 접근 금지선을 알려 주세요. 조리·운반·절단 작업은 어른이 맡습니다.'
-  },
-  {
-    title:'내 피자의 멋진 이름을 정해요!',label:'11 · 상상력',emoji:'💡',
-    intro:'우주 · 무지개 · 행복 피자',
-    visuals:[['🌈','무지개 피자'],['🚀','우주 피자'],['💛','행복 피자']],
-    question:'내 피자의 이름은?',
-    notes:'종이에 이름을 적게 하거나 원하는 친구에게 말하게 합니다. 이름을 잘 못 짓는 친구에게는 “행복 피자”를 예시로 알려 주세요.'
-  },
-  {
-    title:'이제 나만의 피자를 만들어 볼까요?',label:'12 · 가상 토핑 연습',emoji:'🍕',
+    title:'피자 만드는 순서',label:'05 · 만드는 순서',time:'09:32–09:35',emoji:'🍕',
     intro:'도우 → 소스 → 치즈 → 토핑',
+    visuals:[['🍞','1 도우 펴기'],['🍅','2 소스 바르기'],['🧀','3 치즈 올리기'],['🫑','4 토핑 꾸미기']],
+    question:'순서대로 함께 외쳐 볼까요?',
+    notes:'09:32~09:35 (3분). 도우→소스→치즈→토핑을 다 같이 리듬을 붙여 말한다. 실제 현장 레시피와 순서가 다르면 슬라이드 문구를 수정. 어린이는 화기·칼·오븐에 접근하지 않도록 한다.'
+  },
+  {
+    title:'손 씻기 탐정 퀴즈',label:'06 · 손 씻기',time:'09:35–09:38',emoji:'🫧',
+    intro:'깨끗한 손이 첫 번째 재료!',
+    quizzes:[
+      {question:'만들기 전에는 손을 씻을까요?',options:['⭕ O','❌ X'],correct:0,success:'맞아요! 만들기 전에 손 씻기.'},
+      {question:'기침·재채기 후에는?',options:['⭕ O','❌ X'],correct:0,success:'맞아요! 기침·재채기 후에도.'},
+      {question:'화장실에 다녀온 뒤에는?',options:['⭕ O','❌ X'],correct:0,success:'맞아요! 화장실 후에도.'}
+    ],
+    notes:'09:35~09:38 (3분). “언제 손을 씻어야 할까요?” 모두 정답 O. 비누와 흐르는 물로 손을 충분히 씻고, 손 씻기 장소에 어른이 동행한다. 손 씻기 또는 손 위생 운영은 09:38~09:42에 분산 진행.'
+  },
+  {
+    title:'꼬마 셰프 안전 약속',label:'07 · 안전 약속',time:'09:38–09:42',emoji:'🧼',
+    intro:'우리 모두 즐겁고 안전하게!',
+    visuals:[['🫧','손부터 깨끗하게'],['🤝','친구와 도구를 나눠요'],['🔥','뜨거운 오븐은 어른만!']],
+    notes:'09:38~09:42 (4분, 손 씻기 병행). 모두가 약속을 큰소리로 따라 말한다. 뜨거운 오븐과 칼은 성인 진행자 전담. 동선·작업대·알레르기와 음식 위생을 재확인. “가장 중요한 약속은 세 가지 모두!”'
+  },
+  {
+    title:'내 피자에게 이름을 지어 주세요',label:'08 · 피자 이름',time:'09:42–09:45',emoji:'💡',
+    intro:'세상에 하나뿐인 내 피자!',
+    visuals:[['🌈','무지개 피자'],['🌸','웃음꽃 피자'],['🚀','우주 탐험 피자']],
+    question:'나의 피자 이름은?',
+    notes:'09:42~09:45 (3분). “피자에도 멋진 이름을 붙여 볼까요?” 2~3명만 발표. 정답은 없고 모든 디자인이 훌륭함을 강조한다. 팀별로 재료를 나누고 본격 실습 준비.'
+  },
+  {
+    title:'이제 진짜 피자를 만들어요!',label:'09 · 실습 20분',time:'09:45–10:05',emoji:'👩‍🍳',
+    intro:'1 도우 → 2 소스 → 3 치즈 → 4 토핑',
     builder:true,
-    notes:'화면에서 한두 가지를 시연한 뒤 아이들이 각자의 자리에서 실물 피자를 만듭니다. 만드는 시간은 약 20분입니다. 실제 재료에 맞추어 안내하세요.'
+    notes:'09:45~10:05 (20분) 핵심 실습. 15명은 5명씩 세 테이블 권장. 테이블별 성인 보조 1명 배치 가능하면 이상적. 사전 준비: 개인용 도우 15장+예비, 소스/치즈/재료 알레르기 대체품, 일회용 장갑 또는 손 위생, 개별 트레이와 이름표, 도구, 쓰레기통. 실습 중 가위·칼·날카로운 도구 사용 금지. 반죽/도우는 식용에 적합한 사전 준비 제품 사용. 오븐 예열 완료. 오븐 용량과 예상 조리시간 미리 검증.'
   },
   {
-    title:'피자가 구워지는 동안 숫자놀이!',label:'13 · 피자 수학',emoji:'🔢',
-    intro:'15명 ÷ 5명 = 몇 모둠?',
-    quiz:{options:['2모둠','3모둠','5모둠'],correct:1,success:'정답! 3모둠!'},
-    notes:'오븐은 어른이 관리합니다. 굽는 시간이 지연되면 3모둠이 차례로 “내 피자 이름”을 발표하게 합니다.'
+    title:'토핑으로 그림을 그려 볼까?',label:'10 · 토핑 그림',time:'09:45–10:05 · 실습 중',emoji:'🎨',
+    intro:'재료를 놓는 방법만 바꿔도 달라져요!',
+    visuals:[['😊','웃는 얼굴'],['🌸','커다란 꽃'],['⭐','반짝 별']],
+    question:'어떤 모양을 만들고 싶나요?',
+    notes:'실습 중 보조 화면. “똑같이 하지 않아도 돼요. 웃는 얼굴, 꽃, 별, 좋아하는 모양 무엇이든 가능!” 아이들이 강사의 결과를 모방만 하지 않도록 창의성 강조. 이 슬라이드는 09:45~10:05 실습 동안 화면 유지 가능.'
   },
   {
-    title:'모두 다르고, 모두 소중해요!',label:'14 · 마무리',emoji:'🎉',
-    intro:'내 피자, 친구 피자! 모두 특별해요.',
-    question:'내 피자의 이름은 ___!',
-    notes:'작품 발표는 강요하지 않고 희망하는 친구부터 합니다. 완성품은 식힌 뒤 안전하게 전달하고 정리와 인사로 마칩니다.'
+    title:'피자가 익는 동안, 퀴즈!',label:'11 · 굽는 동안 퀴즈',time:'10:05–10:12',emoji:'❓',
+    intro:'오븐은 어른에게 맡기고, 우리는 퀴즈!',
+    quizzes:[
+      {question:'Q1. 치즈는 무엇으로 만들까요?',options:['① 우유','② 사이다'],correct:0,success:'정답! 우유로 만들어요.'},
+      {question:'Q2. 뜨거운 오븐은 누가 만질까요?',options:['① 어린이','② 어른'],correct:1,success:'정답! 어른만 만져요.'}
+    ],
+    notes:'10:05~10:12 (7분): 성인 담당자가 조리하며 질문. 정답 Q1: 우유, Q2: 어른. 화면에 정답 색이 노출되므로 “왜?”를 물어 설명을 유도. 실제 오븐 조리 시간과 가동 가능 용량에 따라 게임을 늘리거나 정리 활동으로 연결. 오븐에 15개 동시 조리할 수 없는 경우 작업 시작 순서를 조정해 앞선 조가 먼저 굽도록 사전 운영한다.'
+  },
+  {
+    title:'다 같이 피자 수학!',label:'12 · 피자 수학',time:'10:12–10:18',emoji:'🔢',
+    intro:'친구 15명이 피자를 1개씩 만들면?',
+    question:'모두 몇 개일까요?',
+    quiz:{options:['10개','15개','20개'],correct:1,success:'정답! 피자 15개! 5 + 5 + 5 = 15'},
+    notes:'10:12~10:18 (6분). “우리 15명이 한 판씩 만들면 몇 판? 15판!” 1학년이 세기 어려워하면 5명씩 세 팀을 손으로 표시하고 5+5+5=15로 설명. 진짜 오븐에 들어간 개수, 아직 못 익은 개수를 같이 세어볼 수도 있음.'
+  },
+  {
+    title:'진짜 요리사는 정리도 잘해요!',label:'13 · 함께 정리',time:'10:18–10:25',emoji:'🧹',
+    intro:'내 자리 정리 · 도구 제자리 · 손 다시 씻기',
+    visuals:[['🪑','내 자리 정리'],['🧺','도구 제자리'],['🫧','손 다시 씻기']],
+    notes:'10:18~10:25 (7분) 조리 완료 대기 및 정리. 각자 사용한 도구를 반납하고 자리 정리. 피자를 만질 때는 뜨거우므로 진행자만 꺼내고 포장. 충분히 식힌 뒤 제공/포장. 알레르기 라벨 및 개인 식품 구별. 완성이 지연되면 피자는 교사가 인계하는 방식으로 사전 협의.'
+  },
+  {
+    title:'우리 모두 멋진 피자 셰프!',label:'14 · 오늘의 주인공',time:'10:25–10:30',emoji:'🎉',
+    intro:'서로 다른 피자, 모두 멋진 작품! 함께해 줘서 고마워요!',
+    question:'“내 피자 이름은 ____!”',
+    notes:'10:25~10:30 (5분). 완성품을 보여주며 “각자의 피자가 다르게 생겼죠? 다 달라서 더 좋아요.” “피자를 만드는 데 농부, 가게, 요리사, 친구가 모두 함께했죠.” 이름표와 포장 확인. 사진은 교사와 보호자 동의가 확인된 경우에만 촬영. 피자가 아직 식지 않았다면 뜨거움 주의 안내. 전체 활동 70분 종료.'
   }
 ];
-
 const scenePhotos = [
-  ['hero-pizza.webp','맛있는 피자'],['ingredients.webp','피자 재료'],['chef.webp','피자를 만드는 요리사'],
-  ['ingredients.webp','토마토와 피자 재료'],['cheese.webp','피자 치즈'],['ingredients.webp','알록달록 피자 재료'],
-  ['dough.webp','밀가루 반죽'],['washing.webp','손 씻는 모습'],['washing.webp','깨끗하게 손 씻기'],
-  ['oven.webp','뜨거운 피자 오븐'],['raw.webp','피자 도우와 토핑'],['making.webp','피자를 만드는 모습'],
-  ['oven.webp','피자를 굽는 오븐'],['baked.webp','완성된 피자']
+  ['hero-pizza.webp','나만의 피자'],['chef.webp','피자를 만드는 요리사'],['ingredients.webp','농부의 재료'],
+  ['ingredients.webp','도우 치즈 토마토 등 재료'],['making.webp','피자 만드는 단계'],['washing.webp','손 씻기'],
+  ['washing.webp','손 씻기와 안전'],['raw.webp','나만의 피자 이름짓기'],['making.webp','피자 실습'],
+  ['raw.webp','토핑으로 꾸미는 피자'],['oven.webp','피자 굽는 오븐'],['baked.webp','완성된 피자 15개'],
+  ['washing.webp','작업대 정리'],['baked.webp','오늘의 피자 셰프']
 ];
-
 const root = document.getElementById('pizza-exp');
 if (root) initialize();
 
@@ -124,7 +133,7 @@ function initialize() {
     notes.hidden = !showNotes;
     const photo = scenePhotos[current];
     let content = '<div class="scene-photo-frame"><img src="./photos/' + photo[0] + '" alt="' + photo[1] + '" draggable="false"></div><div class="scene-detail">';
-    content += '<p class="scene-label">' + item.label + '</p>';
+    content += '<p class="scene-label">' + item.label + ' · ' + item.time + '</p>';
     if(item.emoji) content += '<div class="scene-emoji" aria-hidden="true">' + item.emoji + '</div>';
     content += '<h3>' + item.title + '</h3><p>' + item.intro + '</p>';
     if(item.visuals){
@@ -136,6 +145,14 @@ function initialize() {
       content += '<div class="answer-buttons" role="group" aria-label="퀴즈 정답">' +
         item.quiz.options.map((option,index) => '<button type="button" data-choice="' + index + '">' + option + '</button>').join('') +
         '</div><div class="answer-feedback" id="answerFeedback" role="status"></div>';
+    }
+    if(item.quizzes){
+      content += '<div class="slide-quiz-list">' + item.quizzes.map((quiz,index) =>
+        '<div class="slide-quiz" data-quiz-group="' + index + '"><div class="question">' + quiz.question + '</div>' +
+        '<div class="answer-buttons" role="group" aria-label="퀴즈 ' + (index+1) + ' 답하기">' +
+        quiz.options.map((option,optionIndex) => '<button type="button" data-choice="' + optionIndex + '">' + option + '</button>').join('') +
+        '</div><div class="answer-feedback" role="status"></div></div>'
+      ).join('') + '</div>';
     }
     if(item.builder){
       content += '<div class="pizza-builder"><div class="make-pizza" id="makePizza" role="img" aria-label="토핑을 올리는 가상 피자"></div>' +
@@ -164,7 +181,7 @@ function initialize() {
     sceneList.querySelector('[aria-current="step"]')?.scrollIntoView({block:'nearest',inline:'nearest'});
   }
   sceneList.innerHTML = scenes.map(function(item,index) {
-    return '<li><button type="button" data-scene="' + index + '"><img src="./photos/' + scenePhotos[index][0] + '" alt="" loading="lazy"><span class="scene-label-small">' + String(index + 1).padStart(2,'0') + ' · ' + item.label.split('·').slice(1).join('·').trim() + '</span></button></li>';
+    return '<li><button type="button" data-scene="' + index + '" title="' + item.time + ' · ' + item.label + '"><img src="./photos/' + scenePhotos[index][0] + '" alt="" loading="lazy"><span class="scene-label-small">' + String(index + 1).padStart(2,'0') + ' · ' + item.label.split('·').slice(1).join('·').trim() + '</span></button></li>';
   }).join('');
 
   document.getElementById('prevScene').addEventListener('click',function(){if(current > 0) goTo(current - 1);});
@@ -198,12 +215,19 @@ function initialize() {
 
   stage.addEventListener('click',function(event){
     const choice = event.target.closest('[data-choice]');
-    if (choice && scenes[current].quiz) {
-      const correct = Number(choice.dataset.choice) === scenes[current].quiz.correct;
-      const feedback = document.getElementById('answerFeedback');
-      feedback.textContent = correct ? scenes[current].quiz.success : '괜찮아요! 다시 생각하고 골라 볼까요?';
-      feedback.classList.toggle('is-incorrect', !correct);
-      Array.from(stage.querySelectorAll('[data-choice]')).forEach(function(button){button.setAttribute('aria-pressed',String(button === choice));});
+    if(choice){
+      const group=choice.closest('[data-quiz-group]');
+      const quiz=group ? scenes[current].quizzes?.[Number(group.dataset.quizGroup)] : scenes[current].quiz;
+      if(quiz){
+        const correct=Number(choice.dataset.choice)===quiz.correct;
+        const scope=group||stage;
+        const feedback=scope.querySelector('.answer-feedback');
+        if(feedback){
+          feedback.textContent=correct?quiz.success:'다시 생각해 볼까요?';
+          feedback.classList.toggle('is-incorrect',!correct);
+        }
+        Array.from(scope.querySelectorAll('[data-choice]')).forEach(button=>button.setAttribute('aria-pressed',String(button===choice)));
+      }
     }
     const toppingButton = event.target.closest('[data-topping]');
     if (toppingButton) {
@@ -357,6 +381,22 @@ function initializeYoutubeMusic(stopLocalMusic){
   const dock=document.getElementById('youtubePlayerDock');
   const stop=document.getElementById('stopYoutubeMusic');
   const close=document.getElementById('closeYoutubeDock');
+  const external=document.getElementById('openYoutubeNewWindow');
+  function updateExternalLink(){
+    const id=parseYoutubeId(input.value);
+    if(!external)return;
+    external.href=id?'https://www.youtube.com/watch?v='+id:'#';
+    external.setAttribute('aria-disabled',String(!id));
+    external.tabIndex=id?0:-1;
+  }
+  input.addEventListener('input',updateExternalLink);
+  external?.addEventListener('click',event=>{
+    if(!parseYoutubeId(input.value)){event.preventDefault();status.textContent='먼저 올바른 유튜브 주소를 입력하세요.';return;}
+    stopYoutube();
+    stopLocalMusic();
+    status.textContent='유튜브 새 창으로 연결합니다. 새 창에서 ▶를 눌러 주세요.';
+  });
+  updateExternalLink();
   function stopYoutube(){
     target.replaceChildren();
     dock.hidden=true;
@@ -369,6 +409,7 @@ function initializeYoutubeMusic(stopLocalMusic){
     if(!id){status.textContent='올바른 유튜브 주소를 넣어 주세요.';return;}
     stopYoutube();
     stopLocalMusic();
+    updateExternalLink();
     const frame=document.createElement('iframe');
     frame.title='유튜브 배경음악 재생';
     frame.referrerPolicy='strict-origin-when-cross-origin';
@@ -378,7 +419,7 @@ function initializeYoutubeMusic(stopLocalMusic){
     target.appendChild(frame);
     dock.hidden=false;
     stop.disabled=false;
-    status.textContent='플레이어가 열렸어요. 필요하면 ▶를 누르세요.';
+    status.textContent='화면에서 재생되지 않으면 「새 창에서 듣기」를 선택하세요.';
   });
   stop.addEventListener('click',stopYoutube);
   close.addEventListener('click',stopYoutube);
