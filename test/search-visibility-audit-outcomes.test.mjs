@@ -6,10 +6,12 @@ import { readFileSync } from 'node:fs';
 const source=readFileSync(new URL('../search-visibility-admin.js',import.meta.url),'utf8');
 
 test('search visibility audit reports successes and failures separately',()=>{
-  assert.match(source,/data-sv-audited>0/);
-  assert.match(source,/data-sv-failed>0/);
+  assert.match(source,/data-sv-audited>미실행/);
+  assert.match(source,/data-sv-failed>미실행/);
   assert.match(source,/audits\.filter\(result=>!result\.error\)\.length/);
   assert.match(source,/audits\.filter\(result=>Boolean\(result\.error\)\)\.length/);
+  assert.match(source,/const started=audits\.length>0/);
+  assert.match(source,/기술점검은 버튼을 눌러 실행하며/);
   assert.match(source,/if\(state\.audited\.get\(site\.url\)\?\.error\)failed\+\+;else passed\+\+;/);
   assert.match(source,/별도 호스트 제외/);
 });
