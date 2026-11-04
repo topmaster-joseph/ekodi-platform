@@ -1,0 +1,86 @@
+/* Church Live inherits the public church header/footer identity.
+   Keep all content on the same 1120px centered rail without modifying broadcast behavior. */
+:root{--church-content-width:1120px;--sans:Pretendard,'Noto Sans KR',system-ui,sans-serif;--serif:'Gowun Batang',serif}
+html{overflow-x:clip}
+body{overflow-x:clip}
+.site-header{
+  display:flex;align-items:center;justify-content:space-between;gap:clamp(10px,1.4vw,22px);
+  width:100%;min-height:84px;padding:12px max(18px,calc((100% - var(--church-content-width))/2));
+  position:sticky;top:0;z-index:60;background:#fbfaf6;color:#173730;
+  border-bottom:1px solid rgba(23,55,48,.14);
+  box-shadow:0 4px 22px rgba(20,45,35,.04)
+}
+.site-header .brand{flex:none;display:flex;align-items:center;gap:12px;color:#173730;text-decoration:none}
+.site-header .brand-mark{width:38px;height:38px;border:1px solid currentColor;border-radius:50%;display:grid;place-items:center;font:22px var(--serif)}
+.site-header .brand strong,.site-header .brand small{display:block}
+.site-header .brand strong{font:700 18px var(--serif);letter-spacing:-.03em}
+.site-header .brand small{margin-top:3px;font-size:8px;letter-spacing:.22em}
+.site-header .daily-verse{
+  display:flex;gap:6px;align-items:center;justify-content:center;flex:1 1 170px;
+  min-width:0;max-width:345px;color:#173730;text-align:center;
+  font:600 12px/1.5 var(--serif);word-break:keep-all;overflow-wrap:normal
+}
+.site-header .daily-verse-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.site-header .daily-verse-ref{flex:none;white-space:nowrap}
+.site-header .daily-verse-ref::before{content:'·';margin-right:5px;color:#81938b}
+.site-header nav{display:flex;align-items:center;gap:clamp(6px,.9vw,15px);flex:0 0 auto}
+.site-header nav>a{color:#173730;text-decoration:none;font-size:clamp(12px,1vw,14px);font-weight:650;white-space:nowrap}
+.site-header nav>a:hover,.site-header nav>a:focus-visible,
+.site-header nav>a[aria-current="page"]{color:#0e4235;text-decoration:underline;text-underline-offset:5px}
+.site-header .menu-button{display:none;flex:none;width:44px;height:44px;padding:9px;border:1px solid #d7ddd7;border-radius:10px;background:transparent;color:#173730}
+.site-header .menu-button span{display:block;width:22px;height:2px;margin:5px auto;background:#173730;border-radius:2px}
+.site-header .brand:focus-visible,.site-header .menu-button:focus-visible{outline:2px solid #886526;outline-offset:3px}
+.live-page-banner{padding:18px 20px;text-align:center}
+.live-page-banner::after{display:none}
+.live-page-banner-inner{width:min(var(--church-content-width),100%);margin-inline:auto;display:grid;justify-items:center;gap:5px;position:relative;z-index:1}
+.live-page-banner h1{margin:5px 0 0;font:700 clamp(22px,2.6vw,29px)/1.35 var(--serif);letter-spacing:-.03em}
+.live-page-banner p{max-width:640px;margin:0;color:#718078;font-size:13px;line-height:1.6;word-break:keep-all}
+.live-page-kicker{justify-self:center;grid-row:auto}
+.live-page-banner .live-state{margin-top:6px;color:#315b45;font-size:11px;padding:5px 12px}
+.live-shell{width:min(var(--church-content-width),calc(100% - 40px));margin:0 auto;padding:clamp(20px,3vw,34px) 0 50px;min-width:0}
+.live-intro{width:100%;max-width:880px;margin:0 auto;padding:clamp(28px,5vw,62px) 0;text-align:center}
+.live-intro .eyebrow{margin:0 0 12px}
+.live-intro h1{max-width:820px;margin:0 auto 18px;font:700 clamp(32px,4.2vw,56px)/1.38 var(--serif);letter-spacing:-.045em;word-break:keep-all;overflow-wrap:normal}
+.live-intro h1 em{font-style:normal}
+.live-intro .intro-copy{max-width:650px;margin:0 auto;font-size:clamp(14px,1.55vw,18px);line-height:1.8;word-break:keep-all;overflow-wrap:normal}
+.live-intro .entry-actions{justify-content:center;margin:22px 0 10px}
+.live-intro .entry-note{max-width:650px;margin:0 auto;font-size:12px;line-height:1.6}
+.studio,.viewer{min-width:0}
+.studio>* , .viewer>*{min-width:0}
+.site-footer.church-footer{width:100%}
+.church-footer-inner{max-width:var(--church-content-width)}
+@media(max-width:1120px){
+  .site-header{flex-wrap:wrap;padding-inline:20px}
+  .site-header .brand{margin-right:auto}
+  .site-header .daily-verse{order:3;flex:1 0 100%;max-width:none}
+  .site-header .daily-verse-text{max-width:calc(100% - 125px)}
+  .site-header .menu-button{display:block;order:2}
+  .site-header nav{display:none;position:absolute;top:100%;left:0;right:0;
+    z-index:70;flex-direction:column;align-items:stretch;gap:0;padding:8px 20px 14px;
+    background:#fbfaf6;border-bottom:1px solid rgba(23,55,48,.14);box-shadow:0 15px 25px #10251a18}
+  .site-header nav.open{display:flex}
+  .site-header nav>a{padding:12px;font-size:14px;min-height:44px}
+}
+@media(max-width:640px){
+  .site-header{min-height:0;padding:10px 14px;gap:5px 12px}
+  .site-header .daily-verse{font-size:11px;line-height:1.5}
+  .site-header .daily-verse-text{max-width:calc(100% - 104px)}
+  .site-header .daily-verse-ref{font-size:10px}
+  .live-page-banner{padding:14px 16px}
+  .live-page-banner h1{font-size:23px}
+  .live-page-banner p{font-size:12px}
+  .live-shell{width:calc(100% - 28px);padding:16px 0 30px}
+  .live-intro{padding:25px 0 34px}
+  .live-intro h1{font-size:clamp(29px,7.3vw,39px);line-height:1.45}
+  .live-intro .intro-copy{font-size:14px}
+  .live-intro .entry-actions{gap:9px}
+  .live-intro .entry-actions button{min-height:44px}
+  .site-footer.church-footer{padding:27px 18px 22px!important}
+}
+@media(max-width:359px){
+  .site-header .daily-verse{display:block;text-align:center}
+  .site-header .daily-verse-text{display:block;max-width:100%;white-space:normal}
+  .site-header .daily-verse-ref{display:block}
+  .site-header .daily-verse-ref::before{content:'';margin:0}
+  .live-intro h1{font-size:28px}
+}
