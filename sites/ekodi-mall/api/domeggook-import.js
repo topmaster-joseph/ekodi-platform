@@ -58,6 +58,8 @@ function deliveryFee(part) {
   if (!part || typeof part !== 'object') return null;
   const type = clean(part.type, 40);
   if (/무료|free/i.test(type)) return 0;
+  // A missing fee is NOT free shipping. Fail closed for paid orders and pilots.
+  if (part.fee == null || String(part.fee).trim() === '') return null;
   const fee = num(part.fee);
   return fee !== null && fee >= 0 ? Math.round(fee) : null;
 }

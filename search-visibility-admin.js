@@ -62,8 +62,8 @@
     <div class="sv-cards" aria-label="공개 사이트 현황">
       <article><small>공개 사이트</small><strong data-sv-sites>—</strong></article>
       <article><small>공개 URL</small><strong data-sv-pages>—</strong></article>
-      <article><small>기술점검 성공</small><strong data-sv-audited>0</strong></article>
-      <article><small>기술점검 실패</small><strong data-sv-failed>0</strong></article>
+      <article><small>기술점검 성공</small><strong data-sv-audited>미실행</strong></article>
+      <article><small>기술점검 실패</small><strong data-sv-failed>미실행</strong></article>
       <article><small>발견 인프라 상태</small><strong data-sv-infra>확인 전</strong></article>
     </div>
     <h3>운영 사이트 목록</h3>
@@ -396,7 +396,7 @@
       return {...item, url:u.href};
     } catch {return null;}
   };
-  const fetchBounded = async (url, { parse = 'text', timeout = 6500 } = {}) => {
+  const fetchBounded = async (url, { parse = 'text', timeout = 6500, withResponse = false } = {}) => {
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), timeout);
     try {
@@ -406,27 +406,73 @@
       if (limit > 1_500_000)throw new Error('응답 크기 초과');
       const text = await response.text();
       if (text.length > 1_500_000)throw new Error('응답 크기 초과');
-      return parse==='json'?JSON.parse(text):text;
+      return withResponse?{text,finalUrl:response.url||url,
+        contentType:response.headers.get('content-type')||'',robotsHeader:response.headers.get('x-robots-tag')||''}
+        :parse==='json'?JSON.parse(text):text;
     } finally {window.clearTimeout(timer);}
   };
-  const checkDocument = html => {
+  // The rendered page and its HTTP crawler directives must both be checked.
+  // A successful fetch of a redirected sign-in page is not a successful audit
+  // of the registered public site. These checks do not imply search indexing.
+  const noindexDirective = value => String(value||'').toLowerCase()
+    .replaceAll(',',' ').replaceAll(';',' ').replaceAll('\n',' ').replaceAll('\t',' ')
+    .split(' ').some(word=>word.trim()==='noindex'||word.trim()==='none');
+  const validatePublicAuditResponse = (site, receipt) => {
+    const requested=new URL(site.url),final=new URL(receipt.finalUrl||site.url,requested);
+    const publicPath=url=>{
+      let path=url.pathname;
+      while(path.length>1&&path.endsWith('/'))path=path.slice(0,-1);
+      return path||'/';
+    };
+    if(final.origin!==requested.origin||publicPath(final)!==publicPath(requested)||final.search||final.hash)
+      throw new Error('요청한 공개 경로 대신 다른 페이지로 이동했습니다');
+    const type=String(receipt.contentType||'').split(';')[0].trim().toLowerCase();
+    if(!['text/html','application/xhtml+xml'].includes(type))
+      throw new Error('공개 문서가 HTML로 응답하지 않았습니다');
+    return receipt.text;
+  };
+  const checkDocument = (html, {robotsHeader=''} = {}) => {
     const dom = new DOMParser().parseFromString(html, 'text/html');
-    const meta = name => dom.querySelector('meta[name="'+name+'"]')?.getAttribute('content')?.trim() || '';
+    const metas=[...dom.querySelectorAll('meta[name]')];
+    const meta=name=>metas.find(item=>item.getAttribute('name')?.trim().toLowerCase()===name)
+      ?.getAttribute('content')?.trim()||'';
     const title = Boolean(dom.querySelector('title')?.textContent?.trim());
     const description = Boolean(meta('description'));
     const canonical = dom.querySelector('link[rel="canonical"]')?.getAttribute('href') || '';
-    const noindex = /(?:^|[,\s])noindex(?:$|[,\s])/i.test(meta('robots'));
+    const noindex = noindexDirective(robotsHeader)||
+      ['robots','googlebot','bingbot','oai-searchbot','gptbot','claude-searchbot']
+        .some(name=>noindexDirective(meta(name)));
     const headings = Boolean(dom.querySelector('h1')?.textContent?.trim());
     const schema = Boolean(dom.querySelector('script[type="application/ld+json"]')?.textContent?.trim());
     return {title, description, canonical, noindex, headings, schema};
+  };
+  // The Korean IDN is the existing approved SeonamMedi canonical for the
+  // exact /seonammedi public mount. Other cross-origin canonicals remain errors.
+  const correctPublicCanonical = (siteUrl, canonicalValue) => {
+    if(!canonicalValue)return false;
+    try{
+      const requested=new URL(siteUrl),observed=new URL(canonicalValue,requested);
+      const path=url=>{
+        let value=url.pathname;
+        while(value.length>1&&value.endsWith('/'))value=value.slice(0,-1);
+        return value||'/';
+      };
+      if(requested.origin!=='https://ekodi.kr'||observed.protocol!=='https:'||
+        observed.username||observed.password||observed.search||observed.hash)return false;
+      if(requested.origin===observed.origin&&path(requested)===path(observed))return true;
+      return path(requested)==='/seonammedi'&&
+        observed.href==='https://xn--3e0b8b58jw4co4mnpll3k.kr/';
+    }catch{return false;}
   };
   const siteResult = site => state.audited.get(site.url);
   function render() {
     $('[data-sv-sites]').textContent=String(state.sites.length);
     $('[data-sv-pages]').textContent=String(state.resources.length);
     const audits=[...state.audited.values()];
-    $('[data-sv-audited]').textContent=String(audits.filter(result=>!result.error).length);
-    $('[data-sv-failed]').textContent=String(audits.filter(result=>Boolean(result.error)).length);
+    // Zero checks performed is not a verified zero failures/successes.
+    const started=audits.length>0;
+    $('[data-sv-audited]').textContent=started?String(audits.filter(result=>!result.error).length):'미실행';
+    $('[data-sv-failed]').textContent=started?String(audits.filter(result=>Boolean(result.error)).length):'미실행';
     const target=$('[data-sv-rows]');target.replaceChildren();
     const q=$('#sv-search').value.trim().toLowerCase(), group=$('#sv-category-filter').value;
     const sites=state.sites.filter(site=>(!group||siteCategory(site)===group)&&
@@ -480,22 +526,23 @@
       const [robots,sitemap]=await Promise.allSettled([fetchBounded('/robots.txt'),fetchBounded('/sitemap.xml')]);
       const ok=robots.status==='fulfilled' && sitemap.status==='fulfilled' && sitemap.value.includes('<urlset');
       $('[data-sv-infra]').textContent=ok?'기술파일 응답':'확인 필요';
-      status('공개 레지스트리 '+state.sites.length+'개 사이트 / '+state.resources.length+'개 URL. 검색엔진 등록 또는 색인 완료를 의미하지 않습니다.');
+      status('공개 레지스트리 '+state.sites.length+'개 사이트 / '+state.resources.length+'개 URL. 기술점검은 버튼을 눌러 실행하며, 검색엔진 등록·색인 확인과 다릅니다.');
       render();
       await loadLedger();
     }catch(error){status('공개 사이트 원장을 불러오지 못했습니다: '+error.message,true);$('[data-sv-infra]').textContent='확인 실패';}
   }
   async function auditOne(site,{quiet=false}={}) {
     try{
-      const html=await fetchBounded(site.url);
-      const result=checkDocument(html);
-      const correctCanonical=Boolean(result.canonical)&&new URL(result.canonical,site.url).href.replace(/\/$/,'')===site.url.replace(/\/$/,'');
+      const receipt=await fetchBounded(site.url,{withResponse:true});
+      const html=validatePublicAuditResponse(site,receipt);
+      const result=checkDocument(html,{robotsHeader:receipt.robotsHeader});
+      const correctCanonical=correctPublicCanonical(site.url,result.canonical);
       const basic=[result.title,result.description,correctCanonical,!result.noindex].filter(Boolean).length;
       const ai=[result.headings,result.schema,result.description].filter(Boolean).length;
       const improvements=[!result.title?'고유 페이지 제목 보완':null,
         !result.description?'검색 설명문 보완':null,
         !correctCanonical?'정규 URL(canonical) 정비':null,
-        result.noindex?'공개페이지 noindex 설정 점검':null,
+        result.noindex?'검색로봇 noindex 지시(메타·HTTP 헤더) 점검':null,
         !result.headings?'H1 제목 보완':null,
         !result.schema?'구조화 데이터 검토':null].filter(Boolean);
       state.audited.set(site.url,{
