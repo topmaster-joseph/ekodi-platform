@@ -129,3 +129,23 @@ test('Biz production release verifies public canonical legal contact, including 
   assert.ok(workflow.includes("grep -Fq 'tel:+821035018542' <<<\"$root\""));
   assert.ok(workflow.includes("grep -Fq '010-3501-8542' <<<\"$public_js\""));
 });
+
+test('Toss reviewer can read an intangible offer without a fictional price or checkout', () => {
+  const markers=[
+    'data-merchant-review="intangible-service"',
+    '30일 자동홍보팩','서비스 내용','서비스 제공 기간',
+    '가격 미확정','현재 가격 미확정','이 페이지에서는 주문·카드결제를 받지 않으며',
+    '환불정책 보기','https://ekodi.kr/ekodibiz/refund',
+    '실물상품·외부 판매자·제휴상품'
+  ];
+  for(const marker of markers)assert.ok(html.includes(marker),'Missing merchant review disclosure: '+marker);
+  const start=html.indexOf('<section class="merchant-service"');
+  const end=html.indexOf('</section>',start);
+  assert.ok(start>=0&&end>start);
+  const panel=html.slice(start,end);
+  assert.doesNotMatch(panel,/<form\b|<input\b|onclick=|data-payment-key=|TOSS_SECRET_KEY/);
+  assert.match(css,/\.merchant-service-detail\{display:grid/);
+  assert.match(css,/@media\(max-width:600px\)\{\.merchant-service/);
+  assert.ok(html.includes('id="businessCards"'), 'informational areas remain distinct from sales');
+  assert.doesNotMatch(html, /data-sale-category=["']\s*["']/i);
+});

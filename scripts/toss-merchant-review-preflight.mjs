@@ -20,6 +20,15 @@ export function assessMerchantReview({pages,checkedAt=new Date().toISOString()})
   const identity=[MERCHANT.name,MERCHANT.registration,MERCHANT.representative,MERCHANT.phone,MERCHANT.href].every(x=>html.includes(x))
     && /백련동1길|Baengnyeondong/.test(html) && pages.homepage?.ok;
   const phoneEveryLocale=pages.translations?.ok&&footers.length===6&&footers.every(s=>s.includes(MERCHANT.phone)&&s.includes(MERCHANT.href));
+  const serviceInformation=[
+    'data-merchant-review="intangible-service"',
+    '30일 자동홍보팩',
+    '서비스 내용',
+    '서비스 제공 기간',
+    '가격 미확정',
+    '환불정책 보기',
+    'https://ekodi.kr/ekodibiz/refund'
+  ].every(phrase=>html.includes(phrase));
   const quoteOnly=products.length>0&&products.every(p=>p?.priceMode==='quote');
   const quoteCount=products.filter(p=>p?.priceMode==='quote').length;
   const pricedCandidateCount=products.filter(p=>p?.priceMode!=='quote'&&Number.isSafeInteger(p?.amount)&&p.amount>0).length;
@@ -30,6 +39,9 @@ export function assessMerchantReview({pages,checkedAt=new Date().toISOString()})
       'Confirm name and address exactly match the business registration certificate.'),
     localizedMerchantContact:item(phoneEveryLocale?'pass':'blocked',
       phoneEveryLocale?'Six locale footerCompany entries contain the phone and tel URI.':'One or more localized legal footers missing/unavailable.'),
+    intangibleServiceInformation:item(serviceInformation?'pass':'blocked',
+      serviceInformation?'Public quote-only intangible service scope, plan period, contract-only delivery terms and refund link are disclosed.':'Intangible-service detail, duration/contract timing or refund link is absent.',
+      'Disclosure does not prove approved price, a guest purchase or a TEST card window.'),
     approvedSellableProduct:item(quoteOnly?'blocked':'manual_required',
       products.length?String(products.length)+' Biz offers: '+String(quoteCount)+' quote-only; '+String(pricedCandidateCount)+' fixed-price candidates (not evidence of a real purchase).':'Public catalog missing or invalid.',
       'Owner must approve an actual SKU, price, fulfillment and refund conditions. No fictitious product or price.'),
