@@ -77,6 +77,11 @@
               ' · 전용 인증키 '+(item.publisher?.credentialsConfigured?'설정됨':'미설정')+')'),
             el('small','마지막 발행: '+(last&&Number.isFinite(last.getTime())
               ?last.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'기록 없음')));
+          if(item.id==='mission'&&item.saturdayNotice){
+            line.append(el('small','토요모임 사전안내: '+
+              (item.saturdayNotice.ready?'발행 준비 완료':
+                item.saturdayNotice.enabled?'전용 발행 권한 대기':'비활성 (기본값)')));
+          }
           list.append(line);
         }
         status.textContent='알림 현황을 갱신했습니다.';
