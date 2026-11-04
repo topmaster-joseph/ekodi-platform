@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko-KR">
+<html lang="ko-KR" data-ekodi-service="church">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -12,39 +12,42 @@
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./live.css">
   <link rel="stylesheet" href="./worship-materials.css">
+  <link rel="stylesheet" href="../church-footer.css">
+  <link rel="stylesheet" href="./church-live-layout.css">
 </head>
-<body>
-<header class="church-shell-header" id="top">
-  <a class="church-shell-brand" id="churchHomeLink" href="https://ekodi.kr/ekodichurch/" aria-label="에코디교회 홈">
-    <span class="church-shell-mark" aria-hidden="true">E</span>
+<body data-ekodi-footer-mode="service">
+<header class="site-header" id="top">
+  <a class="brand" href="/ekodichurch/" aria-label="에코디교회 홈">
+    <span class="brand-mark" aria-hidden="true">E</span>
     <span><strong>에코디교회</strong><small>EKODI CHURCH</small></span>
   </a>
-  <nav class="church-shell-nav" aria-label="에코디교회 주요 메뉴">
-    <a href="https://ekodi.kr/ekodichurch/devotion/">매일묵상</a>
-    <a href="https://ekodi.kr/ekodichurch/#community">공동체</a>
-    <a class="active" href="https://ekodi.kr/ekodichurch/live/" aria-current="page"><span class="nav-live-dot" aria-hidden="true"></span>온라인</a>
-    <a href="https://ekodi.kr/ekodichurch/#location">오시는 길</a>
-    <a href="https://ekodi.kr/my/">My EKODI</a>
-  </nav>
-  <div class="church-shell-actions">
-    <span class="live-state" id="liveState">방송 확인 중</span>
-    <a href="https://ekodi.kr/ekodichurch/" data-leave-studio>교회 홈</a>
+  <div class="daily-verse" aria-live="polite">
+    <span class="daily-verse-text"></span><span class="daily-verse-ref"></span>
   </div>
+  <button class="menu-button" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="메뉴 열기"><span></span><span></span></button>
+  <nav id="main-nav" aria-label="주요 메뉴">
+    <a href="/ekodichurch/#worship">예배안내</a>
+    <a href="/ekodichurch/devotion/" class="nav-devotion">매일묵상</a>
+    <a href="/ekodichurch/#online" aria-current="page">온라인</a>
+    <a href="/ekodichurch/#location">오시는 길</a>
+    <a href="/qtin/church" class="nav-qtin">큐티인 신청</a>
+    <a href="/ekodichurch/my/" class="shell-my">마이페이지</a>
+  </nav>
 </header>
 
 <section class="live-page-banner" aria-labelledby="livePageTitle">
-  <div class="live-page-banner-copy">
+  <div class="live-page-banner-inner">
     <span class="live-page-kicker"><i aria-hidden="true"></i> LIVE · EKODI CHURCH</span>
     <h1 id="livePageTitle">에코디교회 실시간 예배</h1>
-    <p>예배의 흐름을 방해하지 않도록 필요한 기능만 한곳에 모았습니다. 방송과 참여가 교회 홈페이지 안에서 자연스럽게 이어집니다.</p>
+    <p>예배와 교제를 온라인에서도 함께 이어갑니다.</p>
+    <span class="live-state" id="liveState" role="status" aria-live="polite">방송 확인 중</span>
   </div>
-  <a class="live-page-home" href="https://ekodi.kr/ekodichurch/" data-leave-studio>교회 홈페이지로</a>
 </section>
 
 <main class="live-shell">
   <section class="live-intro" id="entryView">
     <p class="eyebrow">WORSHIP · FELLOWSHIP · LIVE</p>
-    <h1>예배를 방송하고,<br><em>어디서든 함께 참여합니다.</em></h1>
+    <h1>예배를 방송하고, <em>어디서든 함께 참여합니다.</em></h1>
     <p class="intro-copy">별도 앱 설치 없이 브라우저에서 방송을 시작하거나 현재 예배에 참여할 수 있습니다.</p>
     <div class="entry-actions">
       <button class="primary" id="hostButton" type="button">방송하기</button>
@@ -268,15 +271,27 @@
  <div id="managementCameraPairs" class="management-camera-pairs" aria-label="QR 승인 대기 및 연결 해제"></div>
  <p class="management-camera-security">QR은 30분 유효하며 추가 카메라는 방송 운영 권한을 갖지 않습니다.</p>
 </dialog>
-<footer class="church-shell-footer">
-  <a href="https://ekodi.kr/ekodichurch/" aria-label="에코디교회 홈"><strong>에코디교회</strong><small>EKODI CHURCH</small></a>
-  <p>말씀으로 삶을 읽고, 함께 살아내고 증언하는 공동체</p>
-  <nav aria-label="하단 메뉴">
-    <a href="https://ekodi.kr/privacy">개인정보처리방침</a>
-    <a href="https://ekodi.kr/terms">이용약관</a>
-    <a href="https://ekodi.kr/ekodichurch/#location">오시는 길</a>
-  </nav>
+<footer class="site-footer church-footer" data-ekodi-service-footer>
+  <div class="church-footer-inner">
+    <strong class="church-footer-brand">EKODI CHURCH</strong>
+    <div class="church-footer-info" aria-label="에코디교회 운영 정보">
+      <span>사업자 소재지 전남 무안군 청계면 백련동1길 17-4, 1층</span>
+      <span>운영주체 에코디교회</span>
+      <span>대표 정찬균</span>
+      <span>고유번호 307-82-82097</span>
+      <a href="mailto:ekodichurch@gmail.com">ekodichurch@gmail.com</a>
+    </div>
+    <nav class="church-footer-legal" aria-label="법적 고지">
+      <a data-ekodi-i18n="privacy" href="https://ekodi.kr/privacy">개인정보처리방침</a>
+      <a data-ekodi-i18n="terms" href="https://ekodi.kr/terms">이용약관</a>
+      <a data-ekodi-i18n="contact" href="mailto:ekodibiz@gmail.com">문의</a>
+    </nav>
+    <div class="church-footer-bottom"><span>© 2026 EKODI CHURCH</span><a href="#top">맨 위로 ↑</a></div>
+  </div>
 </footer>
+<script src="../church-daily-verse.js" defer></script>
+<script src="../church-shell.js" defer></script>
+<script src="./church-live-shell.js" defer></script>
 <script src="./host-intent.js" defer></script>
 <script src="./worship-materials.js" defer></script>
 <script src="./management-camera-qr.js" defer></script>
