@@ -75,3 +75,50 @@ test('audit truth requires an exact same-origin HTML result and accepts only sla
   assert.match(source,/result\.noindex\?'검색로봇 noindex 지시/);
   assert.doesNotMatch(source,/method:'POST'|method:"POST"/,'technical audit is read-only');
 });
+
+
+test('CSV technical-audit export uses public site scope, preserves unscanned rows, and neutralizes spreadsheet formulas',()=>{
+  const start=source.indexOf('  const technicalAuditCsv =');
+  const end=source.indexOf('  const downloadTechnicalAudit =',start);
+  assert.ok(start>0&&end>start,'pure CSV projection should be independently testable');
+  const format=vm.runInNewContext('(()=>{'+source.slice(start,end)+';return technicalAuditCsv;})()', {});
+  const sites=[
+    {name:'에코디몰',url:'https://ekodi.kr/ekodimall',token_ciphertext:'DO-NOT-LEAK'},
+    {name:'=HYPERLINK("http://attacker.invalid")',url:'https://ekodi.kr/other'},
+    {name:'목대 후문',url:'https://ekodi.kr/mokdaehumun'},
+    {name:'점검 실패',url:'https://ekodi.kr/unavailable'},
+  ];
+  const audited=new Map([
+    ['https://ekodi.kr/ekodimall',{basic:'100점 (4/4)',ai:'67점 (2/3)',
+      improvements:['구조화 데이터 검토'],raw:{noindex:false,privateSecret:'HIDDEN'}}],
+    ['https://ekodi.kr/mokdaehumun',{basic:'75점 (3/4)',ai:'33점 (1/3)',
+      improvements:['검색로봇 noindex 지시(메타·HTTP 헤더) 점검'],raw:{noindex:true}}],
+    ['https://ekodi.kr/unavailable',{error:'+CMD("calc")',raw:{privateSecret:'HIDDEN'}}],
+  ]);
+  const csv=format(sites,audited,'2026. 11. 5. 16:50:00');
+  const rows=csv.trim().split('\r\n');
+  assert.equal(rows.length,5,'one header plus every registered site, including unscanned ones');
+  assert.match(rows[0],/조회시각\(KST\).*기술점검 상태.*검색 차단/);
+  assert.match(rows[1],/에코디몰.*점검 완료.*100점 \(4\/4\).*차단 지시 없음/);
+  assert.match(rows[2],/미점검/,'no site observation must remain explicitly unknown');
+  assert.match(rows[2],/'=HYPERLINK/,'dangerous name must become spreadsheet literal');
+  assert.match(rows[3],/noindex 확인/);
+  assert.match(rows[4],/"'\+CMD\(""calc""\)"/,'error text beginning with a formula marker must be escaped');
+  assert.doesNotMatch(csv,/DO-NOT-LEAK|HIDDEN|token_ciphertext|privateSecret/);
+  assert.doesNotMatch(csv,/색인 완료|등록 완료|검색 실적/);
+});
+
+test('CSV export only activates after an audit and remains a local, read-only download',()=>{
+  assert.match(source,/data-sv-export disabled/);
+  assert.match(source,/exportButton\.disabled=state\.busy\|\|!started/);
+  assert.match(source,/state\.audited\.size/);
+  assert.match(source,/new Blob\(\['\\uFEFF',csv\],\{type:'text\/csv;charset=utf-8'\}\)/);
+  assert.match(source,/URL\.createObjectURL\(blob\)/);
+  assert.match(source,/URL\.revokeObjectURL\(href\)/);
+  assert.match(source,/data-sv-export'\]\)\.addEventListener\('click',downloadTechnicalAudit\)/);
+  const start=source.indexOf('  const technicalAuditCsv =');
+  const end=source.indexOf('  const siteResult =',start);
+  const exportCode=source.slice(start,end);
+  assert.doesNotMatch(exportCode,/fetch\(|XMLHttpRequest|\.send\(|postMessage\(/);
+  assert.match(exportCode,/검색엔진 등록·색인 여부는 포함하지 않습니다/);
+});
