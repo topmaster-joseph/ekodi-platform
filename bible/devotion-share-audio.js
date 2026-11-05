@@ -53,6 +53,37 @@ export function formatDevotionShareMessage({date, title, excerpt, url}) {
     cleanUrl.href,
   ].filter(Boolean).join('\n');
 }
+// Four public devotional activities use explicit field starts, preserving original verse/poem line breaks.
+// Page, family and personal-record sharing deliberately retain the existing compact message format.
+export function devotionSectionShareDetails(data,kind){
+  const a=data?.activities||{};
+  if(kind==='poem')return {
+    title:['묵상 시',a.poem?.title].filter(Boolean).join(' · '),
+    content:(a.poem?.lines||[]).join('\n'),
+  };
+  if(kind==='song')return {
+    title:['묵상 노래',a.song?.title].filter(Boolean).join(' · '),
+    content:[...(a.song?.verse||[]),...(a.song?.refrain?.length?['후렴: '+a.song.refrain.join(' / ')]:[])].join('\n'),
+  };
+  if(kind==='prayer')return {title:'묵상기도',content:a.prayer||''};
+  if(kind==='questions')return {
+    title:'질문 / 실천',
+    content:[...(a.questions||[]).map((q,i)=>(i+1)+'. ['+(q.kind||'적용')+'] '+(q.text||'')),...(a.action?['오늘의 실천: '+a.action]:[])].join('\n'),
+  };
+  return null;
+}
+export function formatDevotionSectionShareMessage({date,title,content,url}){
+  // Keep one canonical validation point for actual dates and ekodi.kr-only public deep links.
+  const dateLine=formatDevotionShareMessage({date,title,excerpt:'',url}).split('\n')[0];
+  const validatedUrl=new URL(url).href;
+  const fullContent=String(content??'').replace(/\r\n?/gu,'\n').trim();
+  return [
+    '일자: '+dateLine,
+    '제목: '+compact(title),
+    '내용: '+(fullContent||'등록된 내용이 없습니다.'),
+    '링크: '+validatedUrl,
+  ].join('\n');
+}
 // Speak chapter/verse citations as Korean book references, not punctuation.
 // Keep the published on-screen reference intact; only the TTS script changes.
 export function spokenScriptureReference(reference) {
