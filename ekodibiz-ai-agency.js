@@ -71,7 +71,7 @@ export async function agencyApi(request, url, env) {
   if (!(request.headers.get('content-type') || '').includes('application/json')) return fault('content_type_required', 415);
   if (Number(request.headers.get('content-length') || 0) > MAX_BODY) return fault('body_too_large', 413);
   const origin = request.headers.get('origin');
-  if (origin && origin !== url.origin) return fault('origin_mismatch', 403);
+  if (origin && origin !== url.origin && origin !== 'https://ekodi.kr') return fault('origin_mismatch', 403);
   let body;
   try {
     const raw = await request.text();
@@ -178,7 +178,11 @@ export async function agencyStore(request, storage) {
   if (url.pathname === '/agency/create') {
     const r = data.record;
     if (await storage.get('agency:' + r.id)) return fault('already_exists', 409);
+    const rateKey = 'rate:agency:' + new Date().toISOString().slice(0, 10) + ':' + await digest(r.email.toLowerCase());
+    const count = Number(await storage.get(rateKey) || 0);
+    if (count >= 3) return fault('rate_limited', 429);
     await storage.put('agency:' + r.id, r);
+    await storage.put(rateKey, count + 1);
     return reply({ ok:true });
   }
   if (url.pathname === '/agency/admin/list') {
