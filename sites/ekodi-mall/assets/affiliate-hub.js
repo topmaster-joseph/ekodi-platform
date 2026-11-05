@@ -23,7 +23,7 @@ import {
   const closeDetail = document.querySelector('#affiliateDetailClose');
 
   function cleanAffiliateQuery(value) {
-    return String(value ?? '').replace(/\\s+/g,' ').trim().slice(0,120);
+    return String(value ?? '').replace(/\s+/g,' ').trim().slice(0,120);
   }
   const text = (tag, className, value) => { const node = document.createElement(tag); if (className) node.className = className; node.textContent = value; return node; };
   const clean = cleanAffiliateText;
