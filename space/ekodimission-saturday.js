@@ -92,10 +92,15 @@
     if(form)form.hidden=!authenticated;
     if(login){
       login.hidden=authenticated||data.meeting.status!=='scheduled';
-      const returnTo=location.origin==='https://ekodi.kr'&&location.pathname.startsWith('/ekodimission')
-        ?new URL(location.href):new URL('https://ekodi.kr/ekodimission');
-      returnTo.hash='#saturday';
-      login.href='/auth/?site=mission&return_to='+encodeURIComponent(returnTo.href);
+      // Preserve the current meeting query when the browser has a trusted site URL.
+      // A static canonical fallback also supports non-browser test environments.
+      let returnUrl='https://ekodi.kr/ekodimission#saturday';
+      if(typeof location.href==='string'&&location.href.startsWith('https://ekodi.kr/ekodimission')){
+        const destination=new URL(location.href);
+        destination.hash='#saturday';
+        returnUrl=destination.href;
+      }
+      login.href='/auth/?site=mission&return_to='+encodeURIComponent(returnUrl);
     }
     if(submit)submit.textContent='참여 신청 등록·수정';
     if(data.meeting.status!=='scheduled'){
