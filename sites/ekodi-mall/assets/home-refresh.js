@@ -10,8 +10,7 @@
     search.value = incomingQuery;
     if (query) query.value = incomingQuery;
     search.dispatchEvent(new Event('input', { bubbles:true }));
-    // The entire catalog, including affiliate offers, is searched by the curator.
-    window.EkodiContextCurator?.recommend(incomingQuery, false);
+    // Catalog grouping is handled by the dedicated read-only search section.
   }
   if (params.has('wishlist')) window.addEventListener('load', () => document.getElementById('wishBtn')?.click(), {once:true});
 
@@ -20,19 +19,18 @@
     if (!search || !shop) return;
     event.preventDefault();
     const term = (query?.value || '').trim().slice(0, 120);
-    navigate('#shop', 'all');
-    const target = new URL(window.location.href);
-    if (term) target.searchParams.set('q', term);
-    window.history.replaceState(null, '', target.pathname + target.search + target.hash);
-    syncView();
-    if (term && window.EkodiContextCurator?.recommend) {
-      const contextInput = document.getElementById('contextInput');
-      if (contextInput) contextInput.value = term;
-      window.EkodiContextCurator.recommend(term, false);
-    } else {
-      shop.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-      search.focus({ preventScroll: true });
+    if (!term) {
+      // Clearing the search field is a real reset, never a replay of stale URL state.
+      navigate('#shop', 'all');
+      return;
     }
+    const target = new URL(window.location.href);
+    target.searchParams.delete('category');
+    target.searchParams.set('q', term);
+    target.hash = '#shop';
+    window.history.pushState(null, '', target.pathname + target.search + target.hash);
+    syncView();
+    window.scrollTo({top:0,behavior:'auto'});
   });
 
   // The Mall is one page with two explicit detail views: catalog and AI recommendations.
@@ -57,6 +55,8 @@
     const mode = viewFromUrl();
     document.body.dataset.mallView = mode;
     const category = categoryFromUrl();
+    const term = new URLSearchParams(window.location.search).get('q')?.trim().slice(0,120) || '';
+    document.body.dataset.mallSearch = mode === 'catalog' && term ? 'true' : 'false';
     const heading = shop?.querySelector('.heading');
     const copy = catalogHeadings[category] || catalogHeadings.all;
     const eyebrow = heading?.querySelector('.eyebrow');
@@ -79,6 +79,7 @@
       search.value = urlSearch;
       search.dispatchEvent(new Event('input', { bubbles:true }));
     }
+    window.dispatchEvent(new CustomEvent('ekodi:mall-route-change',{detail:{mode,category,q:term}}));
   }
   function navigate(hash, category, { keepSearch = false } = {}) {
     const next = new URL(window.location.href);
@@ -113,11 +114,16 @@
     if (document.body.dataset.mallView !== 'catalog') return;
     const next = new URL(window.location.href);
     next.searchParams.delete('category');
+    next.searchParams.delete('q');
     if (button.dataset.filter !== 'all') next.searchParams.set('category', button.dataset.filter);
     next.hash = '#shop';
     window.history.replaceState(null, '', next.pathname + next.search + next.hash);
     nav?.querySelectorAll('a[aria-current]').forEach(anchor => anchor.removeAttribute('aria-current'));
     nav?.querySelector(`a[data-filter-target="${button.dataset.filter}"]`)?.setAttribute('aria-current','page');
+    if(query) query.value='';
+    if(search) {search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));}
+    document.body.dataset.mallSearch='false';
+    window.dispatchEvent(new CustomEvent('ekodi:mall-route-change',{detail:{mode:'catalog',category:button.dataset.filter,q:''}}));
   }));
   aiForm?.addEventListener('submit', event => {
     event.preventDefault();
