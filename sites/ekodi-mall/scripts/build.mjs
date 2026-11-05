@@ -200,6 +200,12 @@ const indexHtml = fill(indexTemplate, {
 await rm(dist, { recursive: true, force: true });
 await ensureDir(dist);
 await write('index.html', indexHtml);
+await write('category-availability.json', JSON.stringify({
+  // Matches the source-of-truth sale-ready projection, not all draft categories.
+  categories: [...new Set(saleProducts.map(product => product.category).filter(Boolean))].sort(),
+  hasLocal: saleProducts.some(product => Array.isArray(product.region?.regionIds) && product.region.regionIds.length > 0)
+}));
+
 // Operator Seller Studio displays the same publisher-approved bookstore mirror
 // as the Mall storefront. This read-only public projection is not a seller row.
 await write('provider-bookstore.json', JSON.stringify({
