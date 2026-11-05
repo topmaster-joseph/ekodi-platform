@@ -291,7 +291,7 @@ body[data-mall-view="catalog"] main#main > #filters{padding-inline:16px}
 body[data-mall-search="true"] #shop>.heading,
 body[data-mall-search="true"] #shop>#grid,
 body[data-mall-search="true"] #shop>#empty,
-body[data-mall-search="true"] #shop~.mall-load-more{display:none!important}
+body[data-mall-search="true"] #shop .mall-load-more{display:none!important}
 body[data-mall-search="true"] #shop #mallSearchResults{display:block!important}
 .mall-search-results{width:100%;min-width:0}
 .mall-search-heading{padding:8px 0 18px;border-bottom:1px solid #e5e9ec}
