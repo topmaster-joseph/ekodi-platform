@@ -95,3 +95,20 @@ test('all provider and legal states remain non-authoritative for live charge',()
   const out=inspect(s);assert.equal(out.paymentAuthorized,false);
   assert.equal(CAMPUS_INDEPENDENCE_POLICY.internalPaymentCore,'https://ekodi.kr/ekodipay');
 });
+
+test('payment core outage is visible while contracts retain separate local ledger',()=>{
+  const value=healthy();value.runtime.local.paymentCoreAvailable=false;
+  const out=inspect(value);
+  assert.equal(out.coreAvailable,true);
+  assert.equal(out.coreFullyHealthy,false);
+  assert.equal(out.paymentAuthorized,false);
+  assert.ok(out.checks.some(x=>x.code==='campus-payment_core'&&x.health==='FAIL'));
+  assert.ok(out.nextActions.some(x=>x.kind==='RECHECK_FIRST_PARTY_HEALTH'));
+});
+test('missing verified restore drill cannot be marked fully healthy',()=>{
+  const value=healthy();delete value.runtime.local.backupRestoreVerified;
+  const out=inspect(value);
+  assert.equal(out.coreFullyHealthy,false);
+  assert.ok(out.checks.some(x=>x.code==='campus-backup_restore'&&x.health==='UNKNOWN'));
+  assert.equal(out.productionOperationVerified,false);
+});
