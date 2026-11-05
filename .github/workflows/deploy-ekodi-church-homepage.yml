@@ -96,7 +96,7 @@ jobs:
           for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js church-worship-admin.js church-weekly-worship.js giving.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
             node --check "church/$file"
           done
-          grep -Fq '<strong>매일묵상</strong>' church/index.html
+          grep -Eq '<strong>(오늘의 )?매일묵상</strong>' church/index.html
           grep -Fq 'href="/ekodichurch/devotion/"' church/index.html
           if grep -Eq 'data-ekodi-life-hub|id="life-hub"|id="daily-devotion"|id="life-reflection-form"|id="memory-form"|id="witness-form"|href="#life-hub"|church-life-hub\.(css|js)' church/index.html; then
             echo 'Retired Church life record UI and scripts must not return.'
@@ -309,7 +309,7 @@ jobs:
             live_intent=$(curl -L -sS -o /tmp/church-live-host-intent.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/host-intent.js?release=${release}" || true)
             marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
             if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$attendance_member" == 200 && "$attendance_member_js" == 200 && "$life_i18n" == 200 && "$online_status" == 200 && "$worship_admin" == 200 && "$weekly_js" == 200 && "$weekly_css" == 200 && "$weekly_manifest" == 200 && "$weekly_service" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
-              && grep -Fq '<strong>매일묵상</strong>' /tmp/church.html \
+              && grep -Eq '<strong>(오늘의 )?매일묵상</strong>' /tmp/church.html \
               && grep -Fq 'href="/ekodichurch/devotion/"' /tmp/church.html \
               && ! grep -Eq 'data-ekodi-life-hub|id="life-hub"|id="daily-devotion"|id="life-reflection-form"|id="memory-form"|id="witness-form"|href="#life-hub"|church-life-hub\.(css|js)' /tmp/church.html \
               && grep -Fq 'data-church-worship-admin' /tmp/church.html \
