@@ -14,12 +14,17 @@ import {
   const summary = document.querySelector('#affiliateSummary');
   const shareStatus = document.querySelector('#affiliateShareStatus');
   const requestedProductId = sharedProductId(window.location.search);
+  const initialSearch = new URLSearchParams(window.location.search).get('q');
+  if (input && initialSearch) input.value = cleanAffiliateQuery(initialSearch);
   let products = [];
   let loadFailed = false;
   const detail = document.querySelector('#affiliateProductDialog');
   const detailContent = document.querySelector('#affiliateDetailContent');
   const closeDetail = document.querySelector('#affiliateDetailClose');
 
+  function cleanAffiliateQuery(value) {
+    return String(value ?? '').replace(/\\s+/g,' ').trim().slice(0,120);
+  }
   const text = (tag, className, value) => { const node = document.createElement(tag); if (className) node.className = className; node.textContent = value; return node; };
   const clean = cleanAffiliateText;
   const safeHttps = safeAffiliateHttps;
