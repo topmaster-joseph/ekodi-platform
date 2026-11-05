@@ -5,6 +5,10 @@ const lower=value=>clean(value,320).toLowerCase();
 const json=(data,status=200,extraHeaders={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extraHeaders}});
 const now=()=>new Date().toISOString();
 const BOARD_MANAGE_ROLES=new Set(['owner','admin','moderator']);
+// Church announcement and event categories are official publications, not member posts.
+export function churchOfficialCategoryRequiresManager(siteId,categoryId){
+  return siteId==='ekodichurch'&&['notice','schedule'].includes(safeCategoryId(categoryId));
+}
 const PATH_TENANT_ALIASES=Object.freeze({
   ekodimission:'ekodimission',
   ekodichurch:'ekodichurch',
@@ -650,6 +654,7 @@ export async function handleSiteBoardRequest(request,env){
   if(method==='POST'&&sub==='/api/posts'){
     if(!who.authenticated)return boardJson(instance,{error:'authentication_required'},401);
     const body=await parseBody(request),title=clean(body?.title,200),textBody=clean(body?.body,20000);
+    if(churchOfficialCategoryRequiresManager(route.siteId,body?.categoryId)&&!who.manage)return boardJson(instance,{error:'official_category_requires_board_manager'},403);
     if(!title||!textBody)return boardJson(instance,{error:'title_and_body_required'},400);
     const stamp=now();
     const result=await env.DB.prepare(`INSERT INTO ekodi_board_posts
@@ -669,6 +674,11 @@ export async function handleSiteBoardRequest(request,env){
     const id=Number(apiPost[1]);
     const existing=await env.DB.prepare('SELECT * FROM ekodi_board_posts WHERE board_id=? AND id=? LIMIT 1').bind(instance.board_id,id).first();
     if(!existing)return boardJson(instance,{error:'not_found'},404);
+    // Even a previous author cannot alter or delete an official Church item without the editor role.
+    if(route.siteId==='ekodichurch'&&!who.manage){
+      const tagged=await env.DB.prepare("SELECT category_id FROM ekodi_board_post_categories WHERE board_id=? AND post_id=? AND category_id IN ('notice','schedule') LIMIT 1").bind(instance.board_id,id).first();
+      if(churchOfficialCategoryRequiresManager(route.siteId,tagged?.category_id))return boardJson(instance,{error:'official_category_requires_board_manager'},403);
+    }
     const owns=clean(existing.author_person_id,160)===who.personId;
     if(!owns&&!who.manage)return boardJson(instance,{error:'forbidden'},403);
     if(method==='DELETE'){
@@ -677,6 +687,7 @@ export async function handleSiteBoardRequest(request,env){
       return boardJson(instance,{ok:true});
     }
     const body=await parseBody(request),title=clean(body?.title??existing.title,200),textBody=clean(body?.body??existing.body,20000);
+    if(churchOfficialCategoryRequiresManager(route.siteId,body?.categoryId)&&!who.manage)return boardJson(instance,{error:'official_category_requires_board_manager'},403);
     if(!title||!textBody)return boardJson(instance,{error:'title_and_body_required'},400);
     await env.DB.prepare('UPDATE ekodi_board_posts SET title=?,body=?,updated_at=? WHERE board_id=? AND id=?').bind(title,textBody,now(),instance.board_id,id).run();
     if(body?.categoryId!==undefined){

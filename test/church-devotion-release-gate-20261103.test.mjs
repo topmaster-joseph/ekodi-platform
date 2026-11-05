@@ -17,7 +17,7 @@ test('deployment requires canonical daily devotion and refuses retired journal c
   assert.ok(workflow.includes("grep -Fq '<h1>에코디 오늘의 매일묵상</h1>' church/devotion/index.html"));
   assert.ok(workflow.includes("grep -Fq '<h1>에코디 오늘의 매일묵상</h1>' /tmp/church-devotion.html"));
   assert.ok(workflow.includes("grep -Fq 'href=\"/ekodichurch/devotion/\"' church/index.html"));
-  assert.ok(workflow.includes("grep -Fq '<strong>매일묵상</strong>' /tmp/church.html"));
+  assert.ok(workflow.includes("grep -Eq '<strong>(오늘의 )?매일묵상</strong>' /tmp/church.html"));
   for (const retired of ['data-ekodi-life-hub', 'life-reflection-form', 'memory-form', 'witness-form', 'church-life-hub\\.(css|js)']) {
     assert.ok(workflow.includes(retired), 'the release must explicitly reject ' + retired);
   }
