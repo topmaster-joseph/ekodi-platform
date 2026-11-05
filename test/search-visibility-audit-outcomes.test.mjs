@@ -122,3 +122,13 @@ test('CSV export only activates after an audit and remains a local, read-only do
   assert.doesNotMatch(exportCode,/fetch\(|XMLHttpRequest|\.send\(|postMessage\(/);
   assert.match(exportCode,/검색엔진 등록·색인 여부는 포함하지 않습니다/);
 });
+
+test('production Chromium verifies a synthetic read-only CSV download and unroutes its fixture',()=>{
+  const e2e=readFileSync(new URL('../scripts/verify-search-visibility-interactions.mjs',import.meta.url),'utf8');
+  assert.match(e2e,/data-sv-export/);
+  assert.match(e2e,/await page\.route\(url,auditFixture\)/);
+  assert.match(e2e,/page\.waitForEvent\('download'/);
+  assert.match(e2e,/await page\.unroute\(url,auditFixture\)/);
+  assert.match(e2e,/Technical audit attempted a mutation/);
+  assert.match(e2e,/local CSV download passed \(no writes\)/);
+});
