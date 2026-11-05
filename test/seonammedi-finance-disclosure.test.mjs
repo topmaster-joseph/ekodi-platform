@@ -9,7 +9,7 @@ const adminHtml=readFileSync(new URL('admin/index.html',base),'utf8');
 const control=readFileSync(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
 
 test('SeonamMedi public activity history exposes only the approved accounting summary and disclosure purpose',()=>{
-  const section=html.match(/<section class="committee-finance-disclosure"[\\s\\S]*?<\\/section>/)?.[0];
+  const section=html.match(/<section class="committee-finance-disclosure"[\s\S]*?<\/section>/)?.[0];
   assert.ok(section,'public finance card must be in committee activity history');
   for(const expected of ['기간','2026.10.29.','2026.11.03.','8,900,333원','10,672,100원','14,051,738원','비상대책위원회에 문의'])assert.ok(section.includes(expected),expected);
   assert.equal((section.match(/<dt>/g)||[]).length,4);
@@ -29,7 +29,7 @@ test('SeonamMedi admin-only JSON importer validates accounting and never publish
   const start=admin.indexOf('function financeImportEntries(report){');
   const end=admin.indexOf("$('financeImportButton')?.",start);
   assert.ok(start>0&&end>start,'isolated finance parser exists');
-  const parse=new Function(admin.slice(start,end)+'\\nreturn financeImportEntries;')();
+  const parse=new Function(admin.slice(start,end)+'\nreturn financeImportEntries;')();
   const fixture={reportId:'sample-report-01',asOfDate:'2026-11-04',previousBalance:150,totalIncome:60,totalExpense:20,closingBalance:190,
     income:[{date:null,count:2,amount:60,description:'총괄후원'}],
     expenses:[{date:'2026-11-03',amount:20,description:'교통비'}]};
