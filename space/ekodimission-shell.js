@@ -309,9 +309,8 @@
   function paintMissionAuth(status,account=''){
     if(!missionAuthUi)return;
     const authenticated=status==='in';
-    const accountId=authenticated?missionAccountLabel(account):'';
-    missionAuthUi.state.textContent=accountId;
-    missionAuthUi.state.title=authenticated?'로그인 아이디: '+accountId:'';
+    missionAuthUi.state.textContent=authenticated?missionAccountLabel(account):'';
+    missionAuthUi.state.title=authenticated?'로그인 아이디: '+missionAccountLabel(account):'';
     missionAuthUi.state.hidden=!authenticated;
     missionAuthUi.login.hidden=authenticated;
     missionAuthUi.logout.hidden=!authenticated;
