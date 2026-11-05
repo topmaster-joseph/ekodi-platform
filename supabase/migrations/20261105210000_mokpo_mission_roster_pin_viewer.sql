@@ -27,7 +27,7 @@ create table if not exists public.organization_event_rosters(
 );
 comment on table public.organization_event_rosters is 'Administrator-entered event rosters. Phone is projected publicly only masked.';
 alter table public.organization_event_rosters enable row level security;
-revoke all on public.organization_event_rosters from public, anon, authenticated;
+revoke all on public.organization_event_rosters from public, anon, authenticated, service_role;
 
 create table if not exists public.organization_pin_viewers(
   id uuid primary key default gen_random_uuid(),
@@ -43,7 +43,7 @@ create table if not exists public.organization_pin_viewers(
   unique (tenant_id, phone_digits)
 );
 alter table public.organization_pin_viewers enable row level security;
-revoke all on public.organization_pin_viewers from public, anon, authenticated;
+revoke all on public.organization_pin_viewers from public, anon, authenticated, service_role;
 
 create table if not exists public.organization_pin_sessions(
   token_hash text primary key,
@@ -54,7 +54,7 @@ create table if not exists public.organization_pin_sessions(
 );
 create index if not exists idx_organization_pin_sessions_expiry on public.organization_pin_sessions(expires_at);
 alter table public.organization_pin_sessions enable row level security;
-revoke all on public.organization_pin_sessions from public, anon, authenticated;
+revoke all on public.organization_pin_sessions from public, anon, authenticated, service_role;
 
 -- Public roster: names, churches, roles and attendance; phone masked to the last four digits.
 create or replace function public.organization_event_roster_public(p_slug text, p_event text)
