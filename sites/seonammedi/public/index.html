@@ -58,6 +58,21 @@
 #central-category-title,#central-category-buttons{display:none!important}
 #central-category-panel:has(#central-social-links:not([hidden])){padding:0!important;border:0!important;background:transparent!important}
 </style>
+<style id="committee-finance-disclosure-style">
+#committee-finance-disclosure{border:1px solid #d8e2e9;border-radius:12px;padding:clamp(14px,2.4vw,22px);background:#f8fbfc;margin:14px 0 20px;color:#243641;min-width:0}
+#committee-finance-disclosure .committee-finance-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#committee-finance-disclosure .committee-finance-heading h3{font-size:clamp(17px,2vw,21px);margin:3px 0 0}
+#committee-finance-disclosure .committee-finance-asof{font-size:12px;color:#546671}
+#committee-finance-disclosure .committee-finance-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:14px 0}
+#committee-finance-disclosure .committee-finance-metrics>div{border:1px solid #dfe8ed;border-radius:9px;background:#fff;padding:12px;min-width:0}
+#committee-finance-disclosure .committee-finance-metrics>div.committee-finance-period{grid-column:1/-1}
+#committee-finance-disclosure dt{font-size:12px;color:#56656d;font-weight:700}
+#committee-finance-disclosure dd{margin:6px 0 0;font-weight:800;font-size:clamp(16px,2.3vw,21px);word-break:keep-all}
+#committee-finance-disclosure .committee-finance-period dd{font-size:clamp(13px,1.7vw,16px)}
+#committee-finance-disclosure .committee-finance-purpose,#committee-finance-disclosure .committee-finance-contact{font-size:13px;line-height:1.75;margin:8px 0 0;word-break:keep-all}
+#committee-finance-disclosure .committee-finance-contact{color:#56656d}
+@media(max-width:540px){#committee-finance-disclosure .committee-finance-metrics{grid-template-columns:1fr}#committee-finance-disclosure .committee-finance-metrics>div.committee-finance-period{grid-column:auto}}
+</style>
 </head>
 <body>
 <header class="site-header">
@@ -109,6 +124,17 @@
 
 <section id="committee-activity" class="section activity-list-only committee-news-only" data-view-section="committee" hidden>
   <div class="section-head section-view-title section-title-actions"><div><p class="eyebrow">COMMITTEE ACTIVITIES</p><h2>비상대책위원회 활동이력</h2></div><div class="section-head-actions"><button class="secondary admin-login-entry" type="button" data-admin-login="committee-activity">관리자 로그인</button><button id="committeeActivityManageToggle" class="ekodi-public-admin-inline section-add-button" type="button" hidden aria-expanded="false" aria-controls="committeeActivityForm">＋ 추가</button></div></div>
+  <section class="committee-finance-disclosure" id="committee-finance-disclosure" aria-labelledby="committeeFinanceDisclosureTitle">
+    <div class="committee-finance-heading"><div><p class="eyebrow">FINANCIAL TRANSPARENCY</p><h3 id="committeeFinanceDisclosureTitle">비상대책위원회 회계 요약</h3></div><span class="committee-finance-asof">잔액 기준일 2026.11.04.</span></div>
+    <dl class="committee-finance-metrics">
+      <div class="committee-finance-period"><dt>기간</dt><dd>2026.10.29.~2026.11.03. (기재된 지출일 기준)</dd></div>
+      <div><dt>총수입</dt><dd>8,900,333원</dd></div>
+      <div><dt>총지출</dt><dd>10,672,100원</dd></div>
+      <div><dt>잔액</dt><dd>14,051,738원</dd></div>
+    </dl>
+    <p class="committee-finance-purpose">시민과 후원자에게 비상대책위원회 활동 재정의 기본 현황을 알리고, 후원금 운영의 투명성과 공적 책임을 높이기 위해 회계 총액을 공개합니다.</p>
+    <p class="committee-finance-contact">개별 수입·지출 내역과 증빙은 후원자 및 관계자의 정보를 보호하기 위해 공개하지 않습니다. 자세한 내용은 서남권 의대 설립 비상대책위원회에 문의해 주시기 바랍니다.</p>
+  </section>
   <div class="committee-toolbar">
     <label>활동 검색 <input id="committeeActivitySearch" type="search" placeholder="활동명·내용·날짜 검색" aria-label="비상대책위 활동이력 검색"></label>
   </div>
