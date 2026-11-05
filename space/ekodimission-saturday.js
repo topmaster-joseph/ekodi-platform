@@ -8,6 +8,8 @@
   const replies=root.querySelector('[data-mission-saturday-replies]');
   const dateText=root.querySelector('[data-mission-saturday-date]');
   const count=root.querySelector('[data-mission-saturday-count]');
+  const scriptureStatus=root.querySelector('[data-mission-saturday-scripture-status]');
+  const scriptureLink=root.querySelector('[data-mission-saturday-scripture-link]');
   const login=root.querySelector('[data-mission-saturday-login]');
   const submit=form?.querySelector('button[type="submit"]');
   const label=Object.freeze({join:'참여하겠습니다',question:'문의합니다',cancel:'참여를 취소합니다'});
@@ -97,6 +99,28 @@
       editing=true;
     }
   }
+  async function loadScripture(date, current){
+    if(!scriptureStatus||!scriptureLink)return;
+    scriptureStatus.hidden=false;
+    scriptureStatus.textContent='확인 중';
+    scriptureLink.hidden=true;
+    try{
+      const response=await fetch('/api/public/scripture/common?date='+encodeURIComponent(date),{
+        headers:{accept:'application/json'},cache:'no-store',signal:AbortSignal.timeout(9000)
+      });
+      const data=response.ok?await response.json().catch(()=>null):null;
+      if(current!==loading||meetingDate!==date)return;
+      if(data?.found===true&&data.status==='approved'&&typeof data.passage==='string'&&data.passage.trim()){
+        scriptureLink.href='/bible/devotion/'+encodeURIComponent(date);
+        scriptureLink.textContent=data.passage.trim();
+        scriptureLink.hidden=false;
+        scriptureStatus.hidden=true;
+      }else scriptureStatus.textContent='본문 등록 전';
+    }catch{
+      if(current!==loading||meetingDate!==date)return;
+      scriptureStatus.textContent='본문 확인 불가';
+    }
+  }
   async function load(){
     const current=++loading;
     const bearer=token();
@@ -106,7 +130,7 @@
       const response=await fetch(endpoint,{headers,credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(9000)});
       const data=await response.json().catch(()=>null);
       if(!response.ok)throw new Error('참여 답글을 불러올 수 없습니다.');
-      if(current===loading)render(data);
+      if(current===loading){render(data);void loadScripture(meetingDate,current);}
     }catch(error){
       if(current!==loading)return;
       if(count)count.textContent='일정 확인 불가';
