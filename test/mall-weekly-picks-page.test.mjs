@@ -116,9 +116,24 @@ test('weekly picks header shares responsive centered buyer chrome and functional
 test('shared Mall header links genuinely sellable Coupang recommendation channel while keeping external payment separate',()=>{
   const home=renderMallHeader({home:true});
   const canonical=renderMallHeader({home:false,publicPrefix:'/ekodimall'});
-  assert.ok(home.includes('href="/coupang/">쿠팡추천몰</a>'));
-  assert.ok(canonical.includes('href="/ekodimall/coupang/">쿠팡추천몰</a>'));
+  assert.ok(home.includes('href="/coupang/">쿠팡제휴몰</a>'));
+  assert.ok(canonical.includes('href="/ekodimall/coupang/">쿠팡제휴몰</a>'));
   assert.ok(!home.includes('data-filter-target="coupang"'), 'affiliate channel is not a direct D1 product filter');
   assert.ok(canonical.includes('p.includes("/coupang/")'), 'affiliate category is highlighted on its real page');
   assert.ok(canonical.includes('href="/ekodimall/travel/stay/"'), 'other independent affiliate sales stay visible');
+});
+
+test('weekly picks owns the AI input and reuses only the public verified-product curator', () => {
+  const html = renderMallPicksHtml({ items:[row(1)] });
+  assert.match(html, /id="recommend"/);
+  assert.match(html, /id="contextForm"/);
+  assert.match(html, /id="contextInput" name="q"/);
+  assert.match(html, /id="contextResults"/);
+  assert.match(html, /AI 추천받기/);
+  assert.match(html, /assets\/context-curator\.js/);
+  assert.match(html, /assets\/weekly-picks-recommend\.js/);
+  assert.ok(html.indexOf('id="recommend"') < html.indexOf('class="picks"'));
+  const script = readFileSync(new URL('../sites/ekodi-mall/assets/weekly-picks-recommend.js', import.meta.url), 'utf8');
+  assert.match(script, /searchParams\.get\('q'\)/);
+  assert.match(script, /EkodiContextCurator\?\.recommend/);
 });
