@@ -51,3 +51,17 @@ test('guest routes stay before seller authentication and marketplace settlement 
   assert.ok(config.includes('BUYER_PII_RELEASE_ENABLED = "false"'));
   assert.doesNotMatch(checkout, /Authorization\s*:\s*['"]Bearer|TOSS_SECRET_KEY|sellerVerificationApproved\s*=\s*true/);
 });
+
+test('verified member pending totals are visible, never redeemable or shared with affiliates',()=>{
+  assert.ok(checkout.includes('api/public/member-points/summary'));
+  assert.ok(checkout.includes("response.ok"));
+  assert.ok(checkout.includes("pendingPoints"));
+  assert.ok(checkout.includes("spendable===false"));
+  assert.ok(checkout.includes("now.userId===member.userId"));
+  assert.ok(checkout.includes("기존 구매 적립 증빙"));
+  assert.ok(checkout.includes("(사용 불가)"));
+  assert.ok(platform.includes("로그인 회원의 결제가 실제 확인되면 결제금액의 1%"));
+  assert.ok(platform.includes("쿠팡·여행 등 외부 제휴처 결제는 적립 대상에서 제외됩니다."));
+  assert.doesNotMatch(checkout,/포인트 적립 완료|포인트 사용 가능합니다/);
+  assert.ok(checkout.includes('실제 사용가능 잔액은 포인트 운영원장 개통 후 반영'));
+});
