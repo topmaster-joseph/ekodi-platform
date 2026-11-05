@@ -4,6 +4,7 @@ import { runCuration } from './domeggook-curation.js';
 import { applySupplyGate, hourlyRatchet, supplyApproved } from './domeggook-release.js';
 import { publicImages, uploadProductImage, deleteProductImage, reorderProductImages, servePublicMedia } from './product-media.js';
 import { validateBuyer, checkoutConfig } from './checkout-buyer.js';
+import { eligibleMember, memberEvidenceEnabled, pointEstimate, memberPurchaseOrderStatement, paidPurchasePointStatements, memberPointsView } from './member-purchase-points.js';
 import { commerceEventStatement } from './commerce-events.js';
 import { paymentExecutionBlockers, paymentProviderPublicView, selectedPaymentProvider } from './payment-capabilities.js';
 import { routeCommerceModel } from './commerce-os.js';
@@ -692,6 +693,9 @@ export async function createOrder(env, input) {
   if (!buyerResult.ok) return { error: buyerResult.errors[0], errors: buyerResult.errors, status: 400 };
   const buyer = buyerResult.buyer;
   const quote = result.quote;
+  // A caller's body cannot declare itself a member. Only the verified server
+  // Supabase Auth response (in the public route below) can provide a member.
+  const memberId = eligibleMember(input.member);
   const id = orderId();
   const now = isoNow();
   const expiresAt = addMinutesIso(30);
@@ -719,8 +723,9 @@ export async function createOrder(env, input) {
   const buyerInsert = env.DB.prepare(`INSERT INTO order_buyers
     (order_id,name,phone,email,postcode,address1,address2,memo,privacy_consent_at,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
     .bind(id, buyer.name, buyer.phone, buyer.email, buyer.postcode, buyer.address1, buyer.address2, buyer.memo, now, now);
+  const rewardOrder = memberId ? memberPurchaseOrderStatement(env,id,memberId,quote.grossAmount,now) : null;
   try {
-    await env.DB.batch([orderInsert, buyerInsert, orderEvent.statement]);
+    await env.DB.batch([orderInsert, buyerInsert, orderEvent.statement,...(rewardOrder?[rewardOrder]:[])]);
   } catch (error) {
     if (reserved) {
       await env.DB.prepare('UPDATE products SET stock_quantity=stock_quantity+? WHERE id=? AND stock_quantity IS NOT NULL')
@@ -741,7 +746,8 @@ export async function createOrder(env, input) {
       customerMobilePhone: buyer.phone.replace(/-/g, ''),
       customerEmail: buyer.email || undefined,
       checkout: checkoutConfig(env, { id, shareCode: quote.shareCode }),
-      quote
+      quote,
+      memberPoints: memberId && rewardOrder ? {ratePercent:1,estimatedPoints:pointEstimate(quote.grossAmount),status:'awaiting_payment',spendable:false} : null
     }
   };
 }
@@ -784,6 +790,9 @@ export async function recordConfirmedPayment(env, order, payment, provider = 'TO
     if (!settlementEvent) throw new Error('COMMERCE_SETTLEMENT_EVENT_REQUIRED');
     statements.push(settlementEvent.statement);
   }
+  // Evidence only: the canonical production points ledger is not yet active.
+  // Never grant real balances based only on a browser callback.
+  if(paid) statements.push(...paidPurchasePointStatements(env,order,payment,providerName,now));
   await env.DB.batch(statements);
   if (paid) await notifySupplyOrder(env, order).catch((error) => console.error('mall supply order notice', error));
 }
@@ -912,8 +921,23 @@ export default {
     if (request.method === 'POST' && url.pathname === '/api/public/orders') {
       const body = await readJson(request);
       if (!body?.shareCode) return json({ error: 'shareCode가 필요합니다.' }, 400, origin, env);
-      const result = await createOrder(env, body);
+      const suppliedBearer = request.headers.has('authorization');
+      const verifiedMember = suppliedBearer ? await authenticate(request, env) : null;
+      if(suppliedBearer && !verifiedMember) return json({error:'회원 로그인 인증이 만료되었습니다. 다시 로그인하거나 비회원으로 결제하세요.'},401,origin,env);
+      const result = await createOrder(env, { ...body, member:verifiedMember });
       return json(result.order ? { order: result.order } : { error: result.error, errors: result.errors || undefined, quote: result.quote || null }, result.status, origin, env);
+    }
+    // Authenticated, owner-only evidence status. Guest checkout never sees a member's points.
+    const pointsMatch=url.pathname.match(/^\/api\/public\/orders\/([^/]+)\/points$/);
+    if(request.method==='GET'&&pointsMatch){
+      const member=await authenticate(request,env);
+      const memberId=eligibleMember(member);
+      if(!memberId)return json({error:'회원 로그인이 필요합니다.'},401,origin,env);
+      if(!memberEvidenceEnabled(env))return json({status:'unavailable',spendable:false},503,origin,env);
+      const row=await env.DB.prepare('SELECT eligible_points,state FROM member_purchase_point_orders WHERE order_id=? AND auth_user_id=?')
+        .bind(decodeURIComponent(pointsMatch[1]).slice(0,100),memberId).first();
+      if(!row)return json({error:'적립 증빙을 찾을 수 없습니다.'},404,origin,env);
+      return json({memberPoints:memberPointsView(row)},200,origin,env);
     }
     if (request.method === 'POST' && url.pathname === '/api/public/payments/confirm') {
       const body = await readJson(request);
