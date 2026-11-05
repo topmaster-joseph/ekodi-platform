@@ -29,6 +29,9 @@ class_name = "RevenueStore"
 type = "durable-object"
 storage = "sqlite"
 
+[triggers]
+crons = ["0 0 * * *"] # UTC daily: safe task processing and AI agency management expiry
+
 [observability.logs]
 enabled = true
 invocation_logs = true
