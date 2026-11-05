@@ -59,3 +59,26 @@ D1 스키마 \`migrations/202611042330_age_verification_core.sql\`을 중앙 승
 - https://developers.portone.io/api/rest-v2/identityVerification
 - https://law.go.kr/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1026056227
 - https://law.go.kr/lsLinkCommonInfo.do?chrClsCd=010202&lsJoLnkSeq=1019739619
+
+## 2차 — 이용자 웹 화면 및 운영 준비 현황 (2026-11-05)
+
+- 이용자 주소: `https://ekodi.kr/verify/adult/?site=singles&return_to=%2Fsingles%2Fsubscribe`
+- 최초 진입: 사이트별 공급자·법정 기준을 서버에서 조회; 연동 미설정 시 **준비 중**만 표시, 결제/가입/인증 성공 상태는 표시하지 않음
+- 로그인: 에코디 공통 `/auth/`에서 구글 등 연결 수단으로 로그인 후 같은 URL로 복귀
+- 인증: 공식 PortOne 브라우저 SDK 호출 → 서버 `/complete`에서 원본 결과 검증. 모바일 redirect에서는 `identityVerificationId`를 URL에서 즉시 제거한 후 로그인 세션과 일치하는 요청만 처리
+- 결과 확인: 동일한 Supabase 사용자 계정 + 사이트 + 법적 정책별 90일 유효 인증. 원래 사이트 링크는 동일 출처·해당 사이트 소유 경로만 허용
+- CSS/JS는 `/verify/adult/`에 한정된 CSP, 캐시 금지, 검색 색인 금지, 별도 인증 서비스/배포 단위 없음. 다른 공개 페이지의 CSP는 변하지 않음
+- 읽기 전용 운영 현황: `GET /api/control/age-verification` (중앙 플랫폼 관리자 세션 필수). 공개 가능한 사이트 정책명, 공급자 준비 여부, DB 스키마 준비 여부, 현재 유효 인증 수, 24시간 인증 시도 수만 제공. 인증 대상·공급자 키·원문은 반환하지 않음
+- 기존 Control API Worker의 `MY_SUPABASE_URL/MY_SUPABASE_PUBLISHABLE_KEY` 또는 표준 Supabase 환경변수를 공용으로 사용할 수 있음. 브라우저에는 공개 가능 키만 전달
+- 기존 동행 `/singles/verify`를 무중단 유지. 새 공통 UI를 실제 동행 가입의 필수 게이트로 전환하려면 운영기관 채널·서비스별 법적 목적·로그인 복귀 E2E를 확인하고 별도 승격
+
+## 개통 중단 조건
+
+다음 항목 중 하나라도 충족되지 않으면 `AGE_VERIFICATION_ENABLED`를 활성화하지 않는다:
+1. 인증 공급자 이용계약 및 운영용 본인확인 채널 확정
+2. 본인확인 통신/인증기관의 운영 API 키·채널 정보 승인된 저장소에 안전하게 설정
+3. 실제 이용자의 명시적 개인정보 제공 및 인증 처리 고지의 법적 적정성 확인
+4. 동행과 같은 기존 민법상 성인 정책 vs 청소년보호법상 연령 정책의 목적별 사업 요건 확정
+5. 운영 인증·취소·미성년 차단·탈퇴·로그인 복귀 시험을 통과한 증빙 확보
+
+외부 사업자에게 포트원과 유사한 인증 중계 상품을 직접 판매하는 기능, 외부 고객별 API Key·과금·증명서 발급은 이 변경의 범위에 포함되지 않는다. 공급사와의 재판매/하위가맹·개인정보 처리위탁 계약, 사업자 책임이 먼저 검증되어야 한다.

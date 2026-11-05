@@ -242,6 +242,20 @@ const PUBLIC_CSP = [
 ].join('; ');
 
 const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self'","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co");
+// Strictly scoped to the hosted age-verification page; other sites retain PUBLIC_CSP.
+const AGE_VERIFY_CSP = [
+  "default-src 'none'",
+  "script-src 'self' https://cdn.portone.io",
+  "style-src 'self'",
+  "connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://*.portone.io",
+  "frame-src https://*.portone.io https://*.inicis.com https://*.danal.co.kr",
+  "img-src 'self' data: https:",
+  "frame-ancestors 'none'",
+  "base-uri 'none'",
+  "form-action 'self' https://*.portone.io https://*.inicis.com https://*.danal.co.kr",
+  "object-src 'none'",
+  "upgrade-insecure-requests"
+].join('; ');
 
 const MALL_CSP = [
   "default-src 'self'",
@@ -692,6 +706,31 @@ export default {
     }
 
     if (host === PUBLIC_HOST) {
+      // Host the same-origin age verification UX without a separate Worker or client secret.
+      if (url.pathname === '/verify/adult' || url.pathname.startsWith('/verify/adult/')) {
+        if (!['GET', 'HEAD'].includes(request.method)) {
+          const denied = withHostSecurity(new Response(null, {status:405,headers:{allow:'GET, HEAD'}}), AGE_VERIFY_CSP, 'no-store', 'age-verify-method-blocked');
+          denied.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+          return denied;
+        }
+        if (url.pathname === '/verify/adult') {
+          const target = new URL(request.url);
+          target.pathname = '/verify/adult/';
+          const canonical = withHostSecurity(new Response(null,{status:308,headers:{location:target.toString()}}), AGE_VERIFY_CSP, 'no-store','age-verify-canonical');
+          canonical.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+          return canonical;
+        }
+        const allowed = new Set(['/verify/adult/','/verify/adult/index.html','/verify/adult/styles.css','/verify/adult/app.js','/verify/adult/client.js']);
+        if (!allowed.has(url.pathname)) {
+          const missing = withHostSecurity(new Response('Not Found',{status:404}), AGE_VERIFY_CSP, 'no-store', 'age-verify-not-found');
+          missing.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+          return missing;
+        }
+        const response = await env.ASSETS.fetch(request);
+        const secured = withHostSecurity(response, AGE_VERIFY_CSP, 'private, no-store', 'age-verify-ui');
+        secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        return secured;
+      }
       // Browser-only proposal drafts: no upload API, persistence, public indexing or external execution.
       if (url.pathname === '/proposal' || url.pathname.startsWith('/proposal/')) {
         if (!['GET','HEAD'].includes(request.method)) {
