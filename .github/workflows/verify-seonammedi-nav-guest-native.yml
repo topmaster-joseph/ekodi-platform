@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'scripts/verify-seonammedi-nav-guest-native.mjs'
+      - 'scripts/verify-seonammedi-finance-firstparty.mjs'
+      - 'test/seonammedi-finance-firstparty.test.mjs'
       - '.github/workflows/verify-seonammedi-nav-guest-native.yml'
   push:
     branches: [main]
@@ -11,6 +13,8 @@ on:
       - 'sites/seonammedi/public/**'
       - 'services/independent-board/worker.js'
       - 'scripts/verify-seonammedi-nav-guest-native.mjs'
+      - 'scripts/verify-seonammedi-finance-firstparty.mjs'
+      - 'test/seonammedi-finance-firstparty.test.mjs'
   workflow_dispatch:
   issue_comment:
     types: [created]
@@ -37,7 +41,10 @@ jobs:
         with:
           node-version: '22'
       - name: Check trusted read-only verifier syntax before deploying UI
-        run: node --check scripts/verify-seonammedi-nav-guest-native.mjs
+        run: |
+          node --check scripts/verify-seonammedi-nav-guest-native.mjs
+          node --check scripts/verify-seonammedi-finance-firstparty.mjs
+          node --test test/seonammedi-finance-firstparty.test.mjs
   native-public-guest-audit:
     # Owner-only post-merge read-only probe. Issue comments run from trusted default main,
     # never from a contributor-controlled PR head and never receive write credentials.
@@ -62,13 +69,18 @@ jobs:
         with:
           node-version: '22'
       - name: Check trusted read-only verifier syntax
-        run: node --check scripts/verify-seonammedi-nav-guest-native.mjs
+        run: |
+          node --check scripts/verify-seonammedi-nav-guest-native.mjs
+          node --check scripts/verify-seonammedi-finance-firstparty.mjs
+          node --test test/seonammedi-finance-firstparty.test.mjs
       - name: Install EKODI Chromium harness
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
       - name: Check canonical and customer public surfaces on PC/mobile
         run: node scripts/verify-seonammedi-nav-guest-native.mjs
+      - name: Verify first-party finance public summary and protected administrator API
+        run: node scripts/verify-seonammedi-finance-firstparty.mjs
       - name: Upload screenshot and structured evidence
         if: always()
         uses: actions/upload-artifact@v4
