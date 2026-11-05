@@ -81,6 +81,9 @@ await cp(`${root}sites/mokpo-presbytery/index.html`, `${output}mokpo-presbytery/
 // Mokpo Presbytery mission pilot: isolated public static site.
 await mkdir(`${output}mokpo-presbytery/mission/`, { recursive: true });
 await cp(`${root}sites/mokpo-presbytery/mission/index.html`, `${output}mokpo-presbytery/mission/index.html`);
+await mkdir(`${output}mokpo-presbytery/mission/policy-council-2026/`, { recursive: true });
+await cp(`${root}sites/mokpo-presbytery/mission/policy-council-2026/index.html`, `${output}mokpo-presbytery/mission/policy-council-2026/index.html`);
+await cp(`${root}sites/mokpo-presbytery/mission/policy-council-2026/app.js`, `${output}mokpo-presbytery/mission/policy-council-2026/app.js`);
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 await cp(`${root}config/capability-foundry.json`, `${output}capability-foundry.json`);
 

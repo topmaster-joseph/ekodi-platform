@@ -12,8 +12,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / 'sites' / 'mokpo-presbytery'
 E = html.escape
+POLICY_PATH = '/mokpo-presbytery/mission/policy-council-2026/'
 
-CSS = """
+
+def mission_nav(prefix):
+    # Same header on the mission home and its sub-pages; sub-pages point anchors back to the home.
+    return [('노회 홈', '/mokpo-presbytery/', False), ('소개·구성', prefix + '#intro', False), ('사업계획', prefix + '#plans', False), ('예산', prefix + '#budget', False), ('회의·일정', prefix + '#meetings', False), ('자료실', prefix + '#resources', False), ('정책협의회 신청', POLICY_PATH, False), ('업무공간', prefix + '#workspace', True)]
+
+CSS = """.notice-card{border-color:#e3d3b4;background:#fbf7ef}main section.notice{padding-block:36px 8px;border-bottom:0}
+
 :root{--ink:#13232b;--sea:#1d4b57;--sea-2:#2c6474;--brass:#9a7434;--paper:#f4f6f4;--card:#fff;--line:#dce2df;--muted:#56656b;--soft:#e9efed}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.7 "Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;word-break:keep-all}
@@ -162,6 +169,7 @@ def mission():
 <p class="verse">사업계획과 예산은 부원회의 심의 전 초안입니다.</p></div>
 <dl class="facts"><div><dt>선교부장</dt><dd>김찬구 목사</dd></div><div><dt>소속</dt><dd>안좌대리교회</dd></div><div><dt>서기</dt><dd>정찬균 목사</dd></div><div><dt>소속</dt><dd>에코디교회</dd></div><div><dt>운영 기간</dt><dd>2026 가을–2027 가을</dd></div><div><dt>2027 예산(안)</dt><dd>3,000,000원</dd></div></dl></div></section>
 <main>
+<section id="notice" class="notice"><div class="wrap"><a class="card notice-card" href="{POLICY_PATH}"><span class="pill on">참가자 모집 · ~11. 23.(월)</span><h3>제111회기 총회 국내선교부 정책협의회 참석 신청</h3><p>2026. 12. 10.(목) 11:00–15:00 · 한국교회100주년기념관 그레이스홀 · 주제 「생명을 살리고, 공동체를 세우는 국내선교」</p><span class="go">안내 보고 신청하기 →</span></a></div></section>
 <section id="intro"><div class="wrap"><div class="sh"><div><span class="kicker">소개 · 구성</span><h2>선교부는 이렇게 일합니다</h2></div><p>서기가 작성하고, 부장이 검토·승인하며, 부원은 허용된 자료를 보고 의견을 냅니다. 모든 변경은 기록으로 남습니다.</p></div>
 <div class="grid"><div class="card"><span class="pill">1</span><h3>서기 작성</h3><p>사업계획·예산·회의록 초안을 작성하고 수정합니다.</p></div><div class="card"><span class="pill">2</span><h3>부장 검토 · 승인</h3><p>검토 후 승인하면 확정본이 됩니다.</p></div><div class="card"><span class="pill">3</span><h3>부원 열람 · 의견</h3><p>허용된 자료를 보고 의견을 남깁니다.</p></div><div class="card"><span class="pill">4</span><h3>감사 기록</h3><p>누가 언제 무엇을 바꿨는지 남습니다.</p></div></div></div></section>
 <section id="plans"><div class="wrap"><div class="sh"><div><span class="kicker">2027 사업계획(안)</span><h2>네 갈래의 사업</h2></div><p>부원회의 심의 전 초안입니다.</p></div>
@@ -170,17 +178,81 @@ def mission():
 <div class="tbl"><table><thead><tr><th scope="col">사업</th><th scope="col" class="n">금액</th><th scope="col" class="n">비율</th><th scope="col">배분</th></tr></thead><tbody>{rows}</tbody><tfoot><tr><th>합계</th><td class="n">{total:,}원</td><td class="n">100%</td><td></td></tr></tfoot></table></div>
 <p class="note">2026년 결산과 2027년 예산은 회계연도별로 따로 관리합니다.</p></div></section>
 <section id="meetings"><div class="wrap"><div class="sh"><div><span class="kicker">회의 · 일정</span><h2>회의와 일정</h2></div><p>확정된 일정만 게시합니다.</p></div>
-<div class="timeline"><div><b>2026. 10. 20.(화) 제135회 정기회</b><span>선교부 구성 · 2026년 사업 보고</span></div><div class="next"><b>선교부 첫 회의</b><span>부원 협의 후 공지합니다.</span></div><div class="next"><b>2027 가을노회</b><span>2027년 사업 결과 보고</span></div></div></div></section>
+<div class="timeline"><div><b>2026. 10. 20.(화) 제135회 정기회</b><span>선교부 구성 · 2026년 사업 보고</span></div><div class="next"><b>2026. 12. 10.(목) 총회 국내선교부 정책협의회</b><span>한국교회100주년기념관 그레이스홀 · <a href="{POLICY_PATH}">참석 신청</a></span></div><div class="next"><b>선교부 첫 회의</b><span>부원 협의 후 공지합니다.</span></div><div class="next"><b>2027 가을노회</b><span>2027년 사업 결과 보고</span></div></div></div></section>
 <section id="resources"><div class="wrap"><div class="sh"><div><span class="kicker">회의록 · 공문 · 자료실</span><h2>기록과 자료</h2></div><p>공개 가능한 자료만 게시합니다. 회의록과 증빙은 권한자에게만 보입니다.</p></div>
 <div class="grid"><div class="card"><span class="pill">기준 자료</span><h3>제135회 정기회 보고서</h3><p>선교부 사업·회계 보고의 기준 자료</p></div><div class="card locked"><span class="pill lock">권한 필요</span><h3>회의록 · 공문</h3><p>부원 업무공간에서 열람합니다.</p></div></div></div></section>
 <section id="workspace"><div class="wrap"><div class="sh"><div><span class="kicker">부원 업무공간</span><h2>선교부 운영관리</h2></div><p>EKODI 통합로그인으로 들어가며, 선교부 권한이 있는 분만 열립니다. 다른 부서·시찰회 데이터와 분리되어 있습니다.</p></div>
-<div class="grid"><a class="card" href="/mokpo-presbytery/mission/admin"><span class="pill on">로그인</span><h3>운영 홈</h3><p>회기·임원·공지·감사기록 현황</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/finance"><span class="pill on">로그인</span><h3>회계보고</h3><p>수입·지출 기록과 공개 승인</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/budget"><span class="pill on">로그인</span><h3>예산</h3><p>편성·집행률·승인 이력</p><span class="go">들어가기 →</span></a></div></div></section>
+<div class="grid"><a class="card" href="/mokpo-presbytery/mission/admin"><span class="pill on">로그인</span><h3>운영 홈</h3><p>회기·임원·공지·감사기록 현황</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/finance"><span class="pill on">로그인</span><h3>회계보고</h3><p>수입·지출 기록과 공개 승인</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/budget"><span class="pill on">로그인</span><h3>예산</h3><p>편성·집행률·승인 이력</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/registrations"><span class="pill on">로그인</span><h3>정책협의회 신청명단</h3><p>총회 양식 순서의 접수 명단 · 표 복사</p><span class="go">들어가기 →</span></a></div></div></section>
 </main>'''
-    nav = [('노회 홈', '/mokpo-presbytery/', False), ('소개·구성', '#intro', False), ('사업계획', '#plans', False), ('예산', '#budget', False), ('회의·일정', '#meetings', False), ('자료실', '#resources', False), ('업무공간', '#workspace', True)]
+    nav = mission_nav('')
     return chrome('선교부 · 목포노회', '목포노회 선교부 2027 사업계획 및 예산(안)', '목포노회', '선교부', nav, body, '/mokpo-presbytery/mission/')
+
+
+SCHEDULE = [
+    ('10:30–11:00', '등록 및 접수', []),
+    ('11:00–11:30', '개회예배', ['인도 최광우 목사 · 설교 강정원 목사 · 기도 문국진 장로']),
+    ('11:30–12:00', '총회 국내선교부 정책 및 노회와의 협력과제', ['문장옥 목사 (총회국내와군특수선교처 총무)']),
+    ('12:00–12:20', '기조발제 「생명의 하나님, 우리를 하나 되게 하소서」', ['손병렬 목사 (제111회기 총회주제위원장, 포항중앙교회)']),
+    ('12:20–13:30', '점심식사', []),
+    ('13:30–14:30', '목회 현장을 위한 정책 대담회', ['① 강소교회 목회 전략과 교회 활성화 방안 — 김선일 교수 (웨스트민스터신학대학원대학교)', '② 소그룹 목회의 실제와 공동체 활성화 방안 — 최영걸 목사 (서울, 홍익교회)', '③ 세대통합예배의 실제와 다음 세대 신앙전승 — 김일규 목사 (순천노회, 금당동부교회)']),
+    ('14:30–15:00', '목회 현장 적용을 위한 정책토론', []),
+]
+
+
+def policy_council():
+    sched = ''.join(f'<tr><td class="t">{E(t)}</td><td><b>{E(title)}</b>' + ''.join(f'<small>{E(x)}</small>' for x in sub) + '</td></tr>' for t, title, sub in SCHEDULE)
+    body = f'''<style>
+.pc-dl{{margin-top:18px;background:#fbf7ef;border:1px solid #e3d3b4;border-radius:12px;padding:12px 16px;font-size:15px}}.pc-dl b{{color:#7a5a22}}
+.pc-facts{{display:grid;grid-template-columns:96px minmax(0,1fr);gap:9px 14px;margin:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}}.pc-facts dt{{color:var(--muted);font-size:14px}}.pc-facts dd{{margin:0}}.pc-facts small{{color:var(--muted)}}
+.pc-sch td{{vertical-align:top}}.pc-sch td.t{{white-space:nowrap;color:var(--sea);font-weight:700;width:110px;font-variant-numeric:tabular-nums}}.pc-sch small{{display:block;color:var(--muted);font-size:13.5px}}
+.pc-form{{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}}
+.pc-form label{{display:block;font-size:14px;font-weight:600;margin:12px 0 5px}}.pc-form label em{{color:#b23b3b;font-style:normal}}
+.pc-form input,.pc-form select{{width:100%;font:inherit;padding:11px 12px;border:1px solid #c7d1ce;border-radius:9px;background:#fff;color:var(--ink)}}
+.pc-row{{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}}
+.pc-seg{{display:flex;gap:8px}}.pc-seg label{{flex:1;margin:0;border:1px solid #c7d1ce;border-radius:9px;padding:10px;text-align:center;cursor:pointer;font-weight:500}}.pc-seg input{{position:absolute;opacity:0;width:1px;height:1px}}.pc-seg label.on{{background:var(--sea);border-color:var(--sea);color:#fff}}
+.pc-person{{border:1px solid var(--line);border-radius:12px;padding:6px 14px 14px;margin-top:12px;background:#fbfcfb}}.pc-person h3{{margin:8px 0 0;font-size:15px;display:flex;justify-content:space-between}}.pc-person h3 button{{border:0;background:none;color:#b23b3b;cursor:pointer;font:inherit;font-size:13px}}
+.pc-btn{{width:100%;margin-top:16px;padding:14px;border:0;border-radius:11px;background:var(--sea);color:#fff;font:700 16px/1.4 inherit;cursor:pointer}}.pc-btn[disabled]{{opacity:.6}}
+.pc-add{{margin-top:10px;width:100%;padding:10px;border:1px dashed var(--sea-2);border-radius:10px;background:#fff;color:var(--sea);font:inherit;cursor:pointer}}
+.pc-consent{{display:flex!important;gap:8px;align-items:flex-start;font-weight:500!important}}.pc-consent input{{width:auto;margin-top:5px}}
+.pc-hp{{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}}
+.pc-err{{color:#b23b3b;font-size:14px;margin-top:8px;min-height:1em}}
+.pc-done{{border:1px solid #b9dcc8;background:#eef8f2;border-radius:12px;padding:18px;margin-top:14px}}.pc-done h3{{margin:0 0 6px;color:#1f6b45}}.pc-done .code{{font:700 20px/1.4 ui-monospace,monospace;letter-spacing:.06em}}
+@media(max-width:520px){{.pc-row{{grid-template-columns:1fr}}}}
+</style>
+<section class="hero"><div class="wrap"><div><span class="kicker">총회 국내선교부 정책협의회 · 참가자 모집</span>
+<h1>제111회기 총회 국내선교부<br>정책협의회 참석 안내</h1>
+<p class="lead">주제 「생명을 살리고, 공동체를 세우는 국내선교」</p>
+<p class="verse">“생명의 하나님, 우리를 하나 되게 하소서” (신 30:19–20, 엡 4:1–6)</p>
+<div class="pc-dl">노회 선교부 접수 마감 <b>2026. 11. 23.(월)</b><br><small>총회 제출 마감 11. 25.(수) 오후 5시 — 서기가 명단을 취합해 총회에 일괄 제출합니다.</small></div></div>
+<dl class="facts"><div><dt>일시</dt><dd>12. 10.(목)</dd></div><div><dt>시간</dt><dd>11:00–15:00</dd></div><div><dt>장소</dt><dd>그레이스홀</dd></div><div><dt>등록비</dt><dd>20,000원</dd></div></dl></div></section>
+<main>
+<section id="info"><div class="wrap"><div class="sh"><div><span class="kicker">행사 개요</span><h2>정책협의회 안내</h2></div><p>강소교회 목회전략, 소그룹 활성화 방안, 세대통합예배를 중심으로 목회 현장에 적용할 실천 과제를 논의합니다.</p></div>
+<dl class="pc-facts"><dt>행사명</dt><dd>제111회기 총회 국내선교부 정책협의회</dd><dt>일시</dt><dd>2026년 12월 10일(목) 11:00–15:00 <small>(등록 10:30부터)</small></dd><dt>장소</dt><dd>한국교회100주년기념관 그레이스홀(1층)<br><small>서울 종로구 대학로3길 29 (연지동) · <a href="https://map.naver.com/p/search/%ED%95%9C%EA%B5%AD%EA%B5%90%ED%9A%8C100%EC%A3%BC%EB%85%84%EA%B8%B0%EB%85%90%EA%B4%80" rel="noopener">네이버 지도</a></small></dd><dt>대상</dt><dd>노회 국내선교부 임원 (부장, 서기, 회계, 총무)</dd><dt>등록비</dt><dd>20,000원 (현장 접수)</dd><dt>협조사항</dt><dd>총회는 각 노회에 참석자 여비·등록비 지급을 요청했습니다. <small>(목포노회 지급 여부: 확인필요)</small></dd></dl></div></section>
+<section id="schedule"><div class="wrap"><div class="sh"><div><span class="kicker">붙임1</span><h2>일정표</h2></div><p>출처: 총회 국내선교부 공문 국내와군·특수선교처-2205 (2026. 11. 2.)</p></div>
+<div class="tbl"><table class="pc-sch"><tbody>{sched}</tbody></table></div></div></section>
+<section id="apply"><div class="wrap"><div class="sh"><div><span class="kicker">붙임2 양식</span><h2>참석 신청</h2></div><p>총회 「노회 국내선교부(전도부) 임원 및 정책협의회 참석자 명단」과 같은 항목입니다. 불참하는 임원도 <b>불참(X)</b>으로 제출해 주세요.</p></div>
+<form class="pc-form" id="pcForm" novalidate data-api="/api/organizations/mokpo-mission/policy-council-2026/registrations">
+<label>노회</label><input value="목포노회" readonly>
+<div id="pcPeople"></div>
+<button type="button" class="pc-add" id="pcAdd">＋ 한 명 더 추가 (최대 10명)</button>
+<div class="pc-hp" aria-hidden="true"><label>웹사이트<input name="website" tabindex="-1" autocomplete="off"></label></div>
+<label class="pc-consent"><input type="checkbox" id="pcConsent"> <span>개인정보(성명·연락처) 수집·이용에 동의합니다. 목적: 총회 정책협의회 참석자 명단 제출 · 보유: 2027. 1. 10.까지 후 자동 파기 · 성명·연락처는 암호화 저장되며 선교부 관리자만 열람합니다.</span></label>
+<div class="pc-err" id="pcErr" role="alert"></div>
+<button class="pc-btn" type="submit" id="pcSubmit">신청서 제출</button>
+<noscript><p class="note">신청서는 자바스크립트가 필요합니다. 서기에게 직접 연락해 주세요.</p></noscript>
+</form>
+<div class="pc-done" id="pcDone" hidden aria-live="polite"><h3>신청이 정상 접수되었습니다</h3><p>접수번호 <span class="code" id="pcCode"></span> · <span id="pcCount"></span>명</p><p class="note">수정·취소나 기타 문의는 선교부 서기 정찬균 목사(010-3501-8542)에게 접수번호와 함께 연락해 주세요.</p></div>
+</div></section>
+<section id="contact"><div class="wrap"><div class="sh"><div><span class="kicker">문의</span><h2>담당자</h2></div></div>
+<dl class="pc-facts"><dt>접수·문의</dt><dd>목포노회 선교부 서기 정찬균 목사 (에코디교회) · 010-3501-8542</dd><dt>선교부장</dt><dd>김찬구 목사 (안좌대리교회)</dd><dt>총회 문의</dt><dd>총회 국내와군특수선교처 서화신 목사 · 02-741-4353</dd></dl></div></section>
+</main>
+<script src="{POLICY_PATH}app.js" defer></script>'''
+    return chrome('정책협의회 참석 신청 · 목포노회 선교부', '제111회기 총회 국내선교부 정책협의회 참석 안내 및 신청', '목포노회', '선교부', mission_nav('/mokpo-presbytery/mission/'), body, '/mokpo-presbytery/mission/')
 
 
 if __name__ == '__main__':
     (SITE / 'index.html').write_text(home(), encoding='utf-8')
     (SITE / 'mission' / 'index.html').write_text(mission(), encoding='utf-8')
+    (SITE / 'mission' / 'policy-council-2026').mkdir(parents=True, exist_ok=True)
+    (SITE / 'mission' / 'policy-council-2026' / 'index.html').write_text(policy_council(), encoding='utf-8')
     print('wrote', SITE / 'index.html', SITE / 'mission' / 'index.html')
