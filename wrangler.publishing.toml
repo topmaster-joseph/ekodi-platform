@@ -20,6 +20,12 @@ custom_domain = true
 binding = "BOOKS"
 service = "ekodi-books"
 
+# PUBLISHING-AI-VIA-CONTROL-001: AI 관리 장치의 출판 전용 진입점(무료 AI만, 하루 호출 상한). 공개 경로·비밀키 없음.
+[[services]]
+binding = "AI_CONTROL"
+service = "ekodi-ai-control"
+entrypoint = "PublishingWriter"
+
 [assets]
 directory = "./publishing"
 binding = "ASSETS"
