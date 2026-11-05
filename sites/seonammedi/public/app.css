@@ -343,3 +343,86 @@ footer.site-footer .site-footer-copy .site-footer-credit a{color:inherit;text-de
 #committee-activity.committee-news-only #committeeActivityForm,
 #committee-activity.committee-news-only #committeeActivityList,
 #committee-activity.committee-news-only #committeeActivityManageToggle{display:none!important}
+
+
+/* Public finance disclosure: external stylesheet required by style-src 'self' CSP. */
+#committee-finance-disclosure {
+  width:100%;max-width:100%;min-width:0;
+  margin:12px 0 18px;padding:clamp(14px,2.5vw,22px);
+  border:1px solid #d8e2e9;border-radius:14px;
+  background:#f8fbfc;color:#243641;
+}
+#committee-finance-disclosure .committee-finance-heading {
+  display:flex;flex-wrap:wrap;align-items:center;
+  justify-content:space-between;gap:8px 16px;margin:0 0 14px;
+}
+#committee-finance-disclosure .committee-finance-heading h3 {
+  margin:0;font-size:clamp(19px,2.2vw,24px);
+  font-weight:800;line-height:1.35;letter-spacing:-.035em;
+}
+#committee-finance-disclosure .committee-finance-asof {
+  display:inline-flex;align-items:center;padding:5px 9px;
+  border-radius:8px;background:#eaf2f7;
+  font-size:12px;color:#465e70;line-height:1.4;white-space:nowrap;
+}
+#committee-finance-disclosure .committee-finance-metrics {
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;margin:0;padding:0;min-width:0;
+}
+#committee-finance-disclosure .committee-finance-metrics>div {
+  min-width:0;margin:0;padding:13px 14px;
+  border:1px solid #dfe8ed;border-radius:10px;background:#fff;
+}
+#committee-finance-disclosure .committee-finance-metrics>div.committee-finance-period {
+  grid-column:1/-1;display:flex;flex-wrap:wrap;
+  gap:5px 12px;align-items:baseline;padding:10px 14px;
+}
+#committee-finance-disclosure .committee-finance-metrics>div.committee-finance-balance {
+  border-color:#c4dce9;background:#eaf5fb;
+}
+#committee-finance-disclosure dt {
+  margin:0;color:#56656d;font-size:12px;font-weight:700;line-height:1.45;
+}
+#committee-finance-disclosure dd {
+  margin:6px 0 0;font-size:clamp(17px,2.1vw,22px);
+  font-weight:800;line-height:1.35;letter-spacing:-.025em;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+#committee-finance-disclosure .committee-finance-period dd {
+  margin:0;font-size:14px;font-weight:700;white-space:normal;
+}
+#committee-finance-disclosure .committee-finance-period small {
+  display:inline-block;margin-left:5px;
+  font-size:12px;font-weight:500;color:#667784;
+}
+#committee-finance-disclosure .committee-finance-remarks {
+  margin-top:13px;padding-top:11px;border-top:1px solid #dbe6ed;
+}
+#committee-finance-disclosure .committee-finance-purpose,
+#committee-finance-disclosure .committee-finance-contact {
+  margin:0;font-size:13px;line-height:1.65;word-break:keep-all;
+}
+#committee-finance-disclosure .committee-finance-contact {
+  margin-top:7px;color:#56656d;
+}
+@media(max-width:580px) {
+  #committee-finance-disclosure {padding:14px 12px;margin:9px 0 15px}
+  #committee-finance-disclosure .committee-finance-heading {align-items:flex-start;gap:7px;margin-bottom:11px}
+  #committee-finance-disclosure .committee-finance-heading h3 {width:100%;font-size:20px}
+  #committee-finance-disclosure .committee-finance-metrics {
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+  }
+  #committee-finance-disclosure .committee-finance-metrics>div {padding:10px 11px}
+  #committee-finance-disclosure .committee-finance-metrics>div.committee-finance-period {
+    grid-column:1/-1;display:block;padding:10px 11px;
+  }
+  #committee-finance-disclosure .committee-finance-metrics>div.committee-finance-balance {
+    grid-column:1/-1;
+  }
+  #committee-finance-disclosure dd {font-size:clamp(15px,3.6vw,19px);letter-spacing:-.04em}
+  #committee-finance-disclosure .committee-finance-period dd {margin-top:3px;font-size:13px}
+  #committee-finance-disclosure .committee-finance-period small {margin-left:0}
+  #committee-finance-disclosure .committee-finance-remarks {margin-top:10px;padding-top:10px}
+  #committee-finance-disclosure .committee-finance-purpose,
+  #committee-finance-disclosure .committee-finance-contact {font-size:12.5px;line-height:1.6}
+}
