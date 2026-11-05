@@ -160,7 +160,6 @@ test('policy page shows the officer roster in 붙임2 columns, no application fo
   const home=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/index.html',import.meta.url),'utf8');
   assert.ok(home.includes('/mokpo-presbytery/mission/policy-council-2026/'));
   assert.ok(home.includes('/mokpo-presbytery/mission/viewer/'));
-  assert.ok(home.includes('/mokpo-presbytery/mission/admin/registrations'));
   const page=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/policy-council-2026/index.html',import.meta.url),'utf8');
   assert.ok(!page.includes('id="pcForm"'));assert.ok(!page.includes('pcConsent'));
   for(const label of ['부서명','부서 직책','성명','교직','교회','연락처','정책협의회 참석'])assert.ok(page.includes(`<th>${label}</th>`),label);
@@ -175,13 +174,13 @@ test('policy page shows the officer roster in 붙임2 columns, no application fo
 test('both homes show only the intro first and one section per top-menu click; pilot notice on its own line',()=>{
   const mission=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/index.html',import.meta.url),'utf8');
   const presbytery=fs.readFileSync(new URL('../sites/mokpo-presbytery/index.html',import.meta.url),'utf8');
-  for(const [name,html,ids] of [['mission',mission,['intro','plans','budget','meetings','resources','workspace']],['presbytery',presbytery,['about','news','sichal','departments','churches','schedule','library','workspace']]]){
+  for(const [name,html,ids] of [['mission',mission,['intro','plans','budget','meetings','resources']],['presbytery',presbytery,['about','news','sichal','departments','churches','schedule','library','workspace']]]){
     assert.match(html,/<main class="views">/,name);
     assert.match(html,/main\.views>section\[id\]\{display:none/,name);
     assert.match(html,/main\.views>section\[id\]:target\{display:block\}/,name);
     assert.match(html,/body:has\(main\.views>section\[id\]:target\) section\.hero\{display:none\}/,name);
     for(const id of ids)assert.match(html,new RegExp(`<section id="${id}">`),`${name}#${id}`);
-    assert.doesNotMatch(html,/<script/,name);
+    if(name==='presbytery')assert.doesNotMatch(html,/<script/,name);
     assert.match(html,/<b>EKODI 기반 목포노회 업무지원 시범 공간<\/b><span class="pilot-note">공식 노회 홈페이지가 아닙니다<\/span>/,name);
   }
   assert.doesNotMatch(mission,/class="tabbar"|id="notice"/);
@@ -192,14 +191,43 @@ test('both homes show only the intro first and one section per top-menu click; p
   assert.ok(meetings.includes('href="/mokpo-presbytery/mission/policy-council-2026/"'));
 });
 
-test('viewer page logs in with phone + 4-digit PIN through Supabase RPCs only',()=>{
+test('login page offers EKODI login and chair phone login, then returns to the mission page',()=>{
   const page=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/viewer/index.html',import.meta.url),'utf8');
   assert.ok(page.includes('id="vwPhone"'));assert.ok(page.includes('id="vwPin"'));assert.ok(page.includes('maxlength="4"'));
-  assert.ok(page.includes('/mokpo-presbytery/mission/viewer/viewer.js'));
+  assert.ok(page.includes('href="/auth/?site=space&amp;return_to=https%3A%2F%2Fekodi.kr%2Fmokpo-presbytery%2Fmission%2F"'));
+  assert.ok(page.includes('data-return="/mokpo-presbytery/mission/#budget"'));
   const js=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/viewer/viewer.js',import.meta.url),'utf8');
-  for(const fn of ['organization_pin_login','organization_pin_snapshot','organization_pin_logout'])assert.ok(js.includes(fn),fn);
-  assert.ok(!js.includes('innerHTML'));assert.ok(js.includes('sessionStorage'));assert.ok(!js.includes('localStorage'));
-  for(const tab of ['임원·개요','정책협의회 명단','예산','회계','회의·출석','공지'])assert.ok(js.includes(`'${tab}'`),tab);
+  assert.ok(js.includes('organization_pin_login'));assert.ok(js.includes('sessionStorage'));assert.ok(!js.includes('localStorage'));assert.ok(!js.includes('innerHTML'));
+});
+
+test('mission home has no separate workspace: role panels render inside each menu section',()=>{
+  const home=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/index.html',import.meta.url),'utf8');
+  assert.doesNotMatch(home,/id="workspace"|업무공간/);
+  const menu=home.match(/<nav class="menu"[^>]*>(.*?)<\/nav>/)[1];
+  assert.match(menu,/<a href="\/mokpo-presbytery\/mission\/viewer\/" class="cta">로그인<\/a>/);
+  assert.match(home,/<div id="roleBar" class="rolebar" hidden data-supabase="https:\/\/renzehysxirjilvdxacv\.supabase\.co"/);
+  assert.match(home,/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2" defer><\/script>\s*<script src="\/mokpo-presbytery\/mission\/site\.js" defer><\/script>/);
+  const js=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/site.js',import.meta.url),'utf8');
+  assert.ok(!js.includes('innerHTML'));assert.ok(!js.includes('localStorage.'));
+  for(const fn of ['organization_site_context','organization_member_snapshot','organization_admin_snapshot','organization_admin_command','organization_budget_command','organization_budget_snapshot','organization_pin_snapshot','organization_pin_budget_approve','organization_pin_viewer_set','organization_event_roster_admin'])assert.ok(js.includes(`'${fn}'`),fn);
+  for(const id of ['intro','plans','budget','meetings','resources'])assert.ok(js.includes(`panel('${id}'`),id);
+  // only the chair (phone login with canApprove) gets an approve button; managers are told approval is the chair's.
+  assert.match(js,/role==='chair'&&data&&data\.viewer&&data\.viewer\.canApprove/);
+  const presbytery=fs.readFileSync(new URL('../sites/mokpo-presbytery/index.html',import.meta.url),'utf8');
+  assert.doesNotMatch(presbytery,/href="\/mokpo-presbytery\/mission\/admin"/);
+});
+
+test('inline-roles migration: member/manager context, chair-only approval, payload not callable directly',()=>{
+  const sql=fs.readFileSync(new URL('../supabase/migrations/20261106090000_mokpo_mission_inline_roles.sql',import.meta.url),'utf8');
+  assert.match(sql,/revoke all on function public\.organization_view_payload\(uuid,text,boolean\) from public, anon, authenticated/);
+  assert.match(sql,/grant execute on function public\.organization_site_context\(text\) to authenticated;/);
+  assert.match(sql,/grant execute on function public\.organization_member_snapshot\(text\) to authenticated;/);
+  assert.match(sql,/revoke all on function public\.organization_member_snapshot\(text\) from public, anon;/);
+  assert.match(sql,/if not coalesce\(v_can, false\) then raise exception 'budget_approver_required'/);
+  assert.match(sql,/raise exception 'budget_exceeds_target'/);
+  assert.match(sql,/'budget_approver_user_ids', jsonb_build_array\('pin-viewer:chair'\)/);
+  assert.match(sql,/v\.label like '선교부장%'/);
+  assert.doesNotMatch(sql,/010-?2549|01025496632/);
 });
 
 test('Supabase migration keeps tables private and exposes only the intended RPCs',()=>{
@@ -226,7 +254,7 @@ test('router serves the registration page and its script, 404 for other subpaths
     const res=await worker.fetch(new Request('https://ekodi.kr'+path),env,{waitUntil(){},passThroughOnException(){}});return {res,served};};
   const base='/mokpo-presbytery/mission/policy-council-2026';
   const vb='/mokpo-presbytery/mission/viewer';
-  for(const [path,asset] of [[base,base+'/'],[base+'/',base+'/'],[base+'/app.js',base+'/app.js'],[vb,vb+'/'],[vb+'/',vb+'/'],[vb+'/viewer.js',vb+'/viewer.js']]){
+  for(const [path,asset] of [[base,base+'/'],[base+'/',base+'/'],[base+'/app.js',base+'/app.js'],[vb,vb+'/'],[vb+'/',vb+'/'],[vb+'/viewer.js',vb+'/viewer.js'],['/mokpo-presbytery/mission/site.js','/mokpo-presbytery/mission/site.js']]){
     const {res,served}=await call(path);
     assert.equal(res.status,200,path);assert.deepEqual(served,[asset],path);
     assert.equal(res.headers.get('x-ekodi-route'),'mokpo-presbytery-static-pilot');
@@ -250,13 +278,13 @@ test('registrations admin section exists only for the mission department',async(
 
 test('static headers let the registration page run its same-origin script and reach the API',()=>{
   const headers=fs.readFileSync(new URL('../_headers',import.meta.url),'utf8');
-  for(const path of ['/mokpo-presbytery/mission/policy-council-2026/','/mokpo-presbytery/mission/policy-council-2026/*','/mokpo-presbytery/mission/viewer/','/mokpo-presbytery/mission/viewer/*']){
+  for(const path of ['/mokpo-presbytery/mission/','/mokpo-presbytery/mission/site.js','/mokpo-presbytery/mission/policy-council-2026/','/mokpo-presbytery/mission/policy-council-2026/*','/mokpo-presbytery/mission/viewer/','/mokpo-presbytery/mission/viewer/*']){
     const start=headers.indexOf('\n'+path+'\n');
     assert.ok(start>=0,path);
     const block=headers.slice(start+1).split(/\n\s*\n/)[0];
     assert.match(block,/! Content-Security-Policy/,path);
     const csp=block.split('\n').find(line=>line.trim().startsWith('Content-Security-Policy:'));
-    assert.match(csp,/script-src 'self'/,path);
+    assert.match(csp,/script-src 'self'( https:\/\/cdn\.jsdelivr\.net)?;/,path);
     assert.match(csp,/connect-src 'self' https:\/\/renzehysxirjilvdxacv\.supabase\.co;/,path);
     assert.doesNotMatch(csp,/unsafe-eval|script-src[^;]*unsafe-inline/,path);
   }

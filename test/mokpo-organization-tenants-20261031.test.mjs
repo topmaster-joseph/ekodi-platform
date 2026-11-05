@@ -58,7 +58,7 @@ test('static presbytery pages link to tenant admin and keep the roster locked', 
   const home = fs.readFileSync(new URL('../sites/mokpo-presbytery/index.html', import.meta.url), 'utf8');
   const mission = fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/index.html', import.meta.url), 'utf8');
   assert.match(home, /href="\/mokpo-presbytery\/admin"/);
-  assert.match(mission, /href="\/mokpo-presbytery\/mission\/admin"/);
+  assert.match(mission, /href="\/mokpo-presbytery\/mission\/viewer\/"/);
   assert.doesNotMatch(home, /href="[^"]*member/i);
 });
 
