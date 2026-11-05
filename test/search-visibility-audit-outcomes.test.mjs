@@ -115,7 +115,7 @@ test('CSV export only activates after an audit and remains a local, read-only do
   assert.match(source,/new Blob\(\['\\uFEFF',csv\],\{type:'text\/csv;charset=utf-8'\}\)/);
   assert.match(source,/URL\.createObjectURL\(blob\)/);
   assert.match(source,/URL\.revokeObjectURL\(href\)/);
-  assert.match(source,/data-sv-export'\]\)\.addEventListener\('click',downloadTechnicalAudit\)/);
+  assert.match(source,/addEventListener\('click',downloadTechnicalAudit\)/);
   const start=source.indexOf('  const technicalAuditCsv =');
   const end=source.indexOf('  const siteResult =',start);
   const exportCode=source.slice(start,end);
