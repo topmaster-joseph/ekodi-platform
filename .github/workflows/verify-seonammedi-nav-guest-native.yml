@@ -69,6 +69,8 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Check canonical and customer public surfaces on PC/mobile
         run: node scripts/verify-seonammedi-nav-guest-native.mjs
+      - name: Verify first-party finance public summary and protected administrator API
+        run: node scripts/verify-seonammedi-finance-firstparty.mjs
       - name: Upload screenshot and structured evidence
         if: always()
         uses: actions/upload-artifact@v4
