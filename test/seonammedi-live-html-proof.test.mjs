@@ -110,6 +110,9 @@ test('owner-approved English host projection is exact, origin-scoped and rejects
   assert.ok(converted.includes('content="https://seonammedi.kr/"'));
   assert.ok(converted.includes('https://seonammedi.kr/notices/3'));
   assert.ok(converted.includes('href="https://outside.example/x"'));
+  const lookalike=original.replace('https://outside.example/x','https://xn--3e0b8b58jw4co4mnpll3k.kr.evil.example/x');
+  const projection=projectedSeonamMediPublishedHtmlForProof(lookalike,customer);
+  assert.ok(projection.includes('https://xn--3e0b8b58jw4co4mnpll3k.kr.evil.example/x'),'unregistered lookalike must never be projected');
   assert.equal(projectedSeonamMediPublishedHtmlForProof(original,canonical),original);
   assert.throws(()=>projectedSeonamMediPublishedHtmlForProof(original,'https://untrusted.example'),/unexpected_seonammedi_html_verification_origin/);
   const live=converted.replace('href="/seonammedi/shared-site-header.css"','href="/shared-site-header.css"');
