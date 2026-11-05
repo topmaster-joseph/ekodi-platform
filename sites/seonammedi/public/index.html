@@ -20,7 +20,7 @@
   <meta property="og:image:alt" content="전남 국립의대 추천의 공정성 검증과 원점 재심사 촉구">
   <meta name="twitter:image" content="https://xn--3e0b8b58jw4co4mnpll3k.kr/seonammedi/assets/campaign-reconsideration-20261013.png">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://xn--3e0b8b58jw4co4mnpll3k.kr/#website","url":"https://xn--3e0b8b58jw4co4mnpll3k.kr/","name":"서남권 국립의대 소통센터","alternateName":["서남권국립의대","서남권국립의대 소통센터","서남권 국립의대","SEONAM MEDI","seonammedi.kr","서남권국립의대.kr"],"inLanguage":"ko"},{"@type":"WebPage","@id":"https://xn--3e0b8b58jw4co4mnpll3k.kr/#webpage","url":"https://xn--3e0b8b58jw4co4mnpll3k.kr/","name":"서남권 국립의대 소통센터 | SEONAM MEDI","description":"서남권국립의대(서남권 국립의대) 관련 공식자료, 활동이력, 관련보도, 시민 의견과 공개 정보를 확인하는 소통센터입니다.","inLanguage":"ko","isPartOf":{"@id":"https://xn--3e0b8b58jw4co4mnpll3k.kr/#website"}}]}</script>
-  <link rel="stylesheet" href="/seonammedi/app.css?v=20261105-finance-public-layout-1">
+  <link rel="stylesheet" href="/seonammedi/app.css?v=20261105-finance-inline-2">
 <style id="seonammedi-organization-mobile-fix">
 #organization{min-height:0!important;padding-bottom:24px!important;background:#fff!important}
 #organization .section-head{margin-bottom:12px!important;gap:8px;align-items:center}
@@ -114,16 +114,31 @@
     <div class="committee-finance-heading">
       <h3 id="committeeFinanceDisclosureTitle">회계내역 공개</h3>
       <span class="committee-finance-asof">잔액 기준일 2026.11.04.</span>
+      <button type="button" id="committeeFinanceEditToggle" class="ekodi-public-admin-inline committee-finance-edit-button" hidden aria-expanded="false" aria-controls="committeeFinanceEditForm">회계내역 수정</button>
     </div>
     <dl class="committee-finance-metrics">
       <div class="committee-finance-period">
         <dt>기간</dt>
-        <dd>2026.10.29. ~ 2026.11.03. <small>(기재된 지출일 기준)</small></dd>
+        <dd id="committeeFinancePeriod">2026.10.29. ~ 2026.11.03.</dd>
       </div>
-      <div class="committee-finance-income"><dt>총수입</dt><dd>8,900,333원</dd></div>
-      <div class="committee-finance-expense"><dt>총지출</dt><dd>10,672,100원</dd></div>
-      <div class="committee-finance-balance"><dt>잔액</dt><dd>14,051,738원</dd></div>
+      <div class="committee-finance-income"><dt>총수입</dt><dd id="committeeFinanceIncome">8,900,333원</dd></div>
+      <div class="committee-finance-expense"><dt>총지출</dt><dd id="committeeFinanceExpense">10,672,100원</dd></div>
+      <div class="committee-finance-balance"><dt>잔액</dt><dd id="committeeFinanceBalance">14,051,738원</dd></div>
     </dl>
+    <form id="committeeFinanceEditForm" class="committee-finance-editor ekodi-public-admin-inline" hidden>
+      <div class="committee-finance-editor-grid">
+        <label>시작일 <input name="startDate" type="date" required></label>
+        <label>종료일 <input name="endDate" type="date" required></label>
+        <label>총수입(원) <input name="income" type="number" min="0" max="999999999999" step="1" required></label>
+        <label>총지출(원) <input name="expense" type="number" min="0" max="999999999999" step="1" required></label>
+        <label>잔액(원) <input name="balance" type="number" min="0" max="999999999999" step="1" required></label>
+      </div>
+      <div class="committee-finance-editor-actions">
+        <button type="submit">저장</button>
+        <button type="button" id="committeeFinanceEditCancel" class="secondary">취소</button>
+        <span role="status" id="committeeFinanceEditMessage"></span>
+      </div>
+    </form>
     <div class="committee-finance-remarks">
       <p class="committee-finance-purpose">비상대책위원회의 재정 운영 현황을 시민과 후원자에게 알리고, 후원금 집행의 투명성과 공적 책임을 높이기 위해 총액을 공개합니다.</p>
       <p class="committee-finance-contact">개별 수입·지출 내역과 증빙은 개인정보 보호를 위해 공개하지 않습니다. 자세한 내용은 서남권 의대 설립 비상대책위원회에 문의해 주시기 바랍니다.</p>
@@ -152,12 +167,12 @@
   </form>
   <div id="committeeActivityList" class="timeline" aria-live="polite"></div>
   <section class="committee-news-section" aria-labelledby="committeeNewsTitle">
-    <div class="section-head"><div><p class="eyebrow">COMMITTEE IN THE NEWS</p><h3 id="committeeNewsTitle">비상대책위 활동소식</h3><p class="note">언론·방송·기관 자료 중 서남권 국립의대 비상대책위원회와 관련된 소식만 최신순으로 보여줍니다. 출처가 확인된 자동수집 자료와 관리자 등록 자료를 구분합니다.</p></div>
+    <div class="section-head"><div><p class="eyebrow">COMMITTEE IN THE NEWS</p><h3 id="committeeNewsTitle">비상대책위 활동이력</h3><p class="note">언론·방송·기관 자료 중 서남권 국립의대 비상대책위원회와 관련된 소식만 최신순으로 보여줍니다. 출처가 확인된 자동수집 자료와 관리자 등록 자료를 구분합니다.</p></div>
       <div class="section-head-actions"><button id="committeeNewsManageToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="committeeNewsForm">비대위 소식 등록</button><button id="committeeLinkToggle" class="ekodi-public-admin-inline" type="button" hidden aria-expanded="false" aria-controls="committeeLinkForm">링크로 등록</button><button id="committeeMonitorRun" class="ekodi-public-admin-inline" type="button" hidden data-monitor-run="committeeReviewMessage">지금 웹검색</button></div>
     </div>
     <form id="committeeNewsForm" class="panel module-compose inline-manage-form" hidden>
       <input name="id" type="hidden">
-      <strong id="committeeNewsFormTitle">비상대책위 활동소식 등록</strong>
+      <strong id="committeeNewsFormTitle">비상대책위 활동이력 등록</strong>
       <div class="inline-manage-grid"><label>발행일<input name="date" maxlength="40" placeholder="2026.10.13" required></label><label>출처 분류<select name="category"><option>신문</option><option>방송</option><option>통신사</option><option>잡지</option><option>유튜브</option><option>블로그</option><option>대학</option><option>정부·공공기관</option><option>공식기록</option><option>페이스북</option><option>페이스북 그룹</option><option>시민·단체</option><option>기타</option></select></label><label>상태<select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label></div>
       <label>제목<input name="title" maxlength="220" required></label>
       <label>소식 내용<textarea name="summary" maxlength="8000" rows="4"></textarea></label>
@@ -207,7 +222,7 @@
     <input type="hidden" name="id">
     <strong id="timelineManageTitle">관련소식 추가</strong>
     <div class="inline-manage-grid"><label>일자<input name="date" maxlength="40" placeholder="2026.10.07" required></label><label>출처 분류<input name="category" list="publicNewsCategories" maxlength="80" placeholder="신문 · 방송 · 대학" required></label><label>정렬<input name="sortOrder" type="number" min="0" max="9999" value="0"></label></div>
-    <label>자료 구분<select name="recordScope"><option value="news">관련소식</option><option value="committee">비상대책위 활동이력</option></select></label><label class="check"><input name="committeeRelated" type="checkbox"> 비상대책위 활동소식에도 표시</label><label>제목<input name="title" maxlength="220" required></label>
+    <label>자료 구분<select name="recordScope"><option value="news">관련소식</option><option value="committee">비상대책위 활동이력</option></select></label><label class="check"><input name="committeeRelated" type="checkbox"> 비상대책위 활동이력에도 표시</label><label>제목<input name="title" maxlength="220" required></label>
     <label>요약<textarea name="summary" maxlength="8000" rows="5"></textarea></label>
     <div class="inline-manage-grid"><label>근거 표시<input name="evidence" maxlength="500" placeholder="공식자료 · 언론보도 등"></label><label>상태<select name="status"><option value="published">공개</option><option value="draft">비공개</option></select></label></div>
     <div class="form-actions"><button type="submit">저장</button><button id="timelineManageCancel" type="button" class="secondary">취소</button><span id="timelineManageMessage" class="muted" role="status"></span></div>
@@ -282,7 +297,7 @@
 
 </main>
 <footer class="site-footer"><div class="site-footer-copy"><strong>서남권 국립의대 소통센터</strong><span>서남권 의대 설립 비상대책위원회 · 자료의 성격과 출처를 구분해 보존합니다.</span><span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="tel:01035018542">010-3501-8542</a> · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com</a></span></div><a href="admin/">관리</a></footer>
-<script src="/seonammedi/app.js?v=20261105-finance-public-layout-1" defer></script>
+<script src="/seonammedi/app.js?v=20261105-finance-inline-2" defer></script>
 <script src="/seonammedi/voice-public-admin.js?v=20261006-domain-routing-2" defer></script>
 
 <script src="/seonammedi/central-category-runtime.js?v=20261029-native-view-parity-1" defer></script>
