@@ -327,7 +327,7 @@ $('financeImportButton')?.addEventListener('click',async()=>{
 });
 
 function resetFinance(){const form=$('financeForm');form.reset();form.elements.id.value='';form.elements.type.value='income';form.elements.visible.checked=false;text($('financeFormTitle'),'회계내역 추가');text($('financeMessage'),'')}
-function editFinance(item){const form=$('financeForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.type.value=item.type||'income';form.elements.amount.value=String(item.amount||0);form.elements.purpose.value=item.purpose||'';form.elements.event.value=item.event||'';form.elements.evidenceStatus.value=item.evidenceStatus||'none';form.elements.note.value=item.note||'';form.elements.visible.checked=Boolean(item.visible);text($('financeFormTitle'),'회계내역 수정');showPanel('finance')}
+function editFinance(item){const form=$('financeForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.type.value=item.type||'income';form.elements.amount.value=String(item.amount||0);form.elements.purpose.value=item.purpose||'';form.elements.event.value=item.event||'';form.elements.evidenceStatus.value=item.evidenceStatus||'none';form.elements.note.value=item.note||'';form.elements.visible.checked=false;text($('financeFormTitle'),'회계내역 수정');showPanel('finance')}
 async function deleteFinance(item){if(!confirm('이 회계내역을 삭제할까요?'))return;try{await api('/api/seonammedi/admin/finance/'+item.id,{method:'DELETE'});await loadFinance();text($('financeMessage'),'삭제했습니다.')}catch(error){text($('financeMessage'),error.message)}}
 function renderFinance(){
   const host=$('financeList');host.replaceChildren();let income=0,expense=0;for(const item of state.finance){if(item.type==='income')income+=Number(item.amount||0);else expense+=Number(item.amount||0)}
@@ -337,7 +337,7 @@ function renderFinance(){
 }
 async function loadFinance(){if(!state.me?.permissions?.finance)return;const data=await api('/api/seonammedi/admin/finance');state.finance=data.items||[];renderFinance()}
 $('financeForm')?.addEventListener('submit',async event=>{
-  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload={date:form.elements.date.value,type:form.elements.type.value,amount:Number(form.elements.amount.value||0),purpose:form.elements.purpose.value,event:form.elements.event.value,evidenceStatus:form.elements.evidenceStatus.value,note:form.elements.note.value,visible:form.elements.visible.checked};
+  event.preventDefault();const form=event.currentTarget,id=form.elements.id.value;const payload={date:form.elements.date.value,type:form.elements.type.value,amount:Number(form.elements.amount.value||0),purpose:form.elements.purpose.value,event:form.elements.event.value,evidenceStatus:form.elements.evidenceStatus.value,note:form.elements.note.value,visible:false};
   try{text($('financeMessage'),'저장 중…');await api(id?'/api/seonammedi/admin/finance/'+id:'/api/seonammedi/admin/finance',{method:id?'PUT':'POST',body:JSON.stringify(payload)});resetFinance();await loadFinance();text($('financeMessage'),'저장했습니다.')}catch(error){text($('financeMessage'),error.message)}
 });
 
