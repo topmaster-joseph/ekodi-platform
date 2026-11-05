@@ -137,3 +137,169 @@
   window.addEventListener('hashchange', syncView);
   syncView();
 })();
+
+/* EKODI-MALL-UNIFIED-SEARCH-001
+ * Read-only, grouped search across ready Mall products and approved affiliate catalog.
+ * No checkout, automatic purchasing, user identity, or unverified listing is inferred. */
+(() => {
+  'use strict';
+  const section = document.getElementById('mallSearchResults');
+  const groupsHost = document.getElementById('mallSearchGroups');
+  const status = document.getElementById('mallSearchStatus');
+  const catalog = document.getElementById('grid');
+  if (!section || !groupsHost || !status || !catalog) return;
+  const headings = new Map([
+    ['coupang','쿠팡제휴몰'], ['travel','여행·레저'], ['book','책·배움'],
+    ['local','로컬·특산물'], ['general','식품·건강'],
+    ['living','생활·가전'], ['gift','선물·기념품'], ['other','기타 제휴상품']
+  ]);
+  const clean = value => String(value ?? '').replace(/\s+/g,' ').trim();
+  const safeUrl = (value, sameOrigin = false) => {
+    try {
+      const url = new URL(clean(value), window.location.origin);
+      if (url.protocol !== 'https:' || url.username || url.password) return '';
+      if (sameOrigin && url.origin !== window.location.origin) return '';
+      return url.href;
+    } catch { return ''; }
+  };
+  const price = amount => Number(amount) > 0 && Number.isFinite(Number(amount))
+    ? new Intl.NumberFormat('ko-KR').format(Number(amount))+'원' : '가격은 판매처에서 확인';
+  const tokensOf = input => clean(input).toLocaleLowerCase('ko-KR').split(/\s+/).filter(Boolean);
+  const matches = (item, tokens) => tokens.every(token => item.search.includes(token));
+  const element = (tag, cls, value) => {
+    const node = document.createElement(tag); if (cls) node.className = cls;
+    if (value !== undefined) node.textContent = value;
+    return node;
+  };
+  const bucketOf = item => {
+    if (clean(item?.regionIds)) return 'local';
+    return headings.has(item?.category) ? item.category : 'general';
+  };
+  function localRows() {
+    return [...catalog.querySelectorAll('[data-product]')].map(card => {
+      const name = clean(card.dataset.name || card.querySelector('h3')?.textContent);
+      const href = safeUrl(card.dataset.href || card.querySelector('h3 a')?.href, true);
+      const category = bucketOf(card.dataset);
+      const summary = clean(card.querySelector('.card-summary')?.textContent);
+      const displayedPrice = clean(card.querySelector('.meta .status')?.textContent).match(/\d[\d,]*원/)?.[0] || '';
+      if (!name || !href) return null;
+      return {key:'mall:'+href,category,name,summary,href,
+        image:safeUrl(card.querySelector('.thumb img')?.src),
+        shownPrice:displayedPrice,
+        search:[name,summary,card.dataset.search,headings.get(category)].map(clean).join(' ').toLocaleLowerCase('ko-KR')};
+    }).filter(Boolean);
+  }
+  function publicRow(raw) {
+    if (!raw?.checkoutReady && !(raw?.product?.saleType === 'affiliate' && safeUrl(raw?.product?.affiliateUrl))) return null;
+    const p = raw.product || {};
+    const name = clean(p.name);
+    const href = safeUrl(raw.publicUrl, true);
+    const category = bucketOf({category:p.category,regionIds:(p.region?.regionIds || []).join(',')});
+    if (!name || !href) return null;
+    const summary = clean(p.oneLine || p.audience);
+    return {key:'mall:'+href,category,name,summary,href,image:safeUrl(raw.image),
+      shownPrice:Number(p.price)>0?price(p.price):'',
+      search:[name,summary,clean(raw.store?.name),clean(raw.seller?.displayName),headings.get(category)].join(' ').toLocaleLowerCase('ko-KR')};
+  }
+  function affiliateRow(raw) {
+    if (!safeUrl(raw?.clickUrl) || !clean(raw?.productName)) return null;
+    const provider = clean(raw.merchantKey || raw.providerKey).toLowerCase().replace(/[^a-z0-9]/g,'');
+    const category = ['coupang','coupangpartners'].includes(provider) ? 'coupang'
+      : provider === 'agoda' ? 'travel' : 'other';
+    const name = clean(raw.productName);
+    const path = category === 'coupang' ? '/ekodimall/coupang/' : category === 'travel'
+      ? '/ekodimall/travel/stay/' : '';
+    const href = path ? safeUrl(path+'?q='+encodeURIComponent(name),true) : safeUrl(raw.clickUrl);
+    return {key:'affiliate:'+clean(raw.id),category,name,summary:[raw.category,raw.brand].map(clean).filter(Boolean).join(' · '),
+      href,image:safeUrl(raw.imageUrl),shownPrice:price(raw.priceKrw),
+      search:[name,raw.category,raw.brand,raw.model,raw.providerName,headings.get(category)].map(clean).join(' ').toLocaleLowerCase('ko-KR')};
+  }
+  let generation=0;
+  function render(query, allRows, warnings=[], loading=false) {
+    const tokens=tokensOf(query);
+    const dedup=new Map();
+    for(const item of allRows)if(item && item.href && matches(item,tokens))dedup.set(item.key,item);
+    const byCategory = new Map();
+    for (const row of dedup.values()) {
+      if (!byCategory.has(row.category)) byCategory.set(row.category,[]);
+      byCategory.get(row.category).push(row);
+    }
+    groupsHost.replaceChildren();
+    for(const [id,label] of headings){
+      const items=byCategory.get(id);
+      if(!items?.length)continue;
+      const block=element('section','mall-search-group');
+      const header=element('h3','',label);
+      header.append(element('small','',items.length+'개'));
+      const list=element('div','mall-search-cards');
+      for (const item of items) {
+        const card=element('article','mall-search-card');
+        const visual=element('a','mall-search-visual');
+        visual.href=item.href;
+        if(item.category==='other') {visual.target='_blank';visual.rel='noopener sponsored';}
+        if(item.image){
+          const img=element('img');
+          img.src=item.image;img.alt=item.name;img.loading='lazy';img.decoding='async';
+          img.addEventListener('error',()=>visual.replaceChildren(element('span','','이미지 준비 중')), {once:true});
+          visual.append(img);
+        }else visual.append(element('span','','이미지 준비 중'));
+        const body=element('div','mall-search-card-body');
+        const h4=element('h4');
+        const link=element('a','',item.name);link.href=item.href;
+        if(item.category==='other'){link.target='_blank';link.rel='noopener sponsored';}
+        h4.append(link);body.append(h4);
+        if(item.summary)body.append(element('p','',item.summary.length>70?item.summary.slice(0,69)+'…':item.summary));
+        if(item.shownPrice)body.append(element('p','mall-search-price',item.shownPrice));
+        card.append(visual,body);list.append(card);
+      }
+      block.append(header,list);groupsHost.append(block);
+    }
+    if (!dedup.size)groupsHost.append(element('p','mall-search-empty',loading?'전체 카테고리에서 관련 상품을 찾고 있습니다.':'현재 공개된 판매상품 중 조건에 맞는 결과가 없습니다.'));
+    const extra=warnings.length?' · 일부 제휴·판매처 조회가 실패했습니다.':'';
+    status.textContent='“'+query+'” 검색: '+dedup.size+'개 상품 · '+byCategory.size+'개 카테고리'+(loading?' · 추가 확인 중':'')+extra;
+  }
+  async function affiliateRows() {
+    const response=await fetch('/api/affiliate/public/products?storefront=ekodi-mall&limit=100',
+      {method:'GET',credentials:'omit',cache:'no-store',headers:{accept:'application/json'},signal:AbortSignal.timeout(10000)});
+    if(!response.ok)throw Error('affiliate unavailable');
+    const body=await response.json();
+    return (Array.isArray(body.products)?body.products:[]).map(affiliateRow).filter(Boolean);
+  }
+  async function marketRows(version) {
+    const rows=[];
+    // Follow the public sale-only API's own pagination, never draft inventory.
+    for(let offset=0;offset<2000;offset+=60) {
+      if(version!==generation)return rows;
+      const response=await fetch('/ekodimall/api/api/public/products?limit=60&offset='+offset,
+        {method:'GET',credentials:'omit',cache:'no-store',headers:{accept:'application/json'},signal:AbortSignal.timeout(10000)});
+      if(!response.ok)throw Error('marketplace unavailable');
+      const body=await response.json();
+      const page=Array.isArray(body.products)?body.products:[];
+      rows.push(...page.map(publicRow).filter(Boolean));
+      if(page.length<60)break;
+    }
+    return rows;
+  }
+  async function runSearch(query,version) {
+    const local=localRows();
+    render(query,local,[],true);
+    const [market,affiliate]=await Promise.allSettled([marketRows(version),affiliateRows()]);
+    if(version!==generation)return;
+    const warnings=[];
+    if(market.status!=='fulfilled')warnings.push('market');
+    if(affiliate.status!=='fulfilled')warnings.push('affiliate');
+    render(query,[...local,...(market.status==='fulfilled'?market.value:[]),...(affiliate.status==='fulfilled'?affiliate.value:[])],warnings,false);
+  }
+  let lastQuery='';
+  function onRoute(){
+    const query=clean(new URLSearchParams(window.location.search).get('q')).slice(0,120);
+    const active=document.body.dataset.mallSearch==='true' && !!query;
+    const version=++generation;
+    section.hidden=!active;
+    if(!active){groupsHost.replaceChildren();lastQuery='';return;}
+    lastQuery=query;
+    void runSearch(query,version);
+  }
+  window.addEventListener('ekodi:mall-route-change',onRoute);
+  onRoute();
+})();
