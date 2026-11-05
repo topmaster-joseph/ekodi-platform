@@ -34,7 +34,7 @@ export async function verifyEkodiAdult({ site, accessToken, redirectUrl } = {}) 
     identityVerificationId: start.identityVerificationId,
     ...(redirectUrl ? { redirectUrl } : {}),
   });
-  if (result?.code) throw new Error('provider_not_verified');
+  if (result && result.code !== undefined) throw new Error('provider_not_verified');
   return await completeEkodiAdult({ site, accessToken, identityVerificationId: start.identityVerificationId });
 }
 export async function completeEkodiAdult({ site, accessToken, identityVerificationId }) {

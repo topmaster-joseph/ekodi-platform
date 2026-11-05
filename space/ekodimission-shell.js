@@ -359,7 +359,32 @@
     }finally{if(missionAuthUi)missionAuthUi.logout.disabled=false}
   }
   missionAuthUi?.logout.addEventListener('click',()=>{void missionLogout()});
-  window.EKODIMissionAuth=Object.freeze({loginUrl:MISSION_LOGIN,getToken:()=>verifiedToken,refresh:refreshMissionAuth,logout:missionLogout});
+  // Self-owned profile data is fetched only after a member explicitly starts a
+  // per-event application. Return the minimum local form projection; never cache it.
+  async function missionApplicationContact(){
+    const accessToken=verifiedToken;
+    if(!accessToken)throw new Error('로그인 후 회원정보로 신청할 수 있습니다.');
+    const getSelf=async rpc=>{
+      const response=await fetch(SUPABASE_ORIGIN+'/rest/v1/rpc/'+rpc,{
+        method:'POST',headers:{authorization:'Bearer '+accessToken,apikey:SUPABASE_PUBLIC_KEY,
+          'content-type':'application/json','cache-control':'no-store'},
+        body:'{}',cache:'no-store',signal:AbortSignal.timeout(9000)
+      });
+      if(!response.ok)throw new Error('회원정보를 불러오지 못했습니다. 직접 입력해 주세요.');
+      return response.json();
+    };
+    const [profile,contact]=await Promise.all([
+      getSelf('get_my_public_profile'),getSelf('get_my_identity_share_config')
+    ]);
+    if(!verifiedToken||verifiedToken!==accessToken)throw new Error('로그인 상태가 변경되었습니다. 다시 확인해 주세요.');
+    return Object.freeze({
+      name:String(profile?.display_name||'').trim().slice(0,80),
+      phone:String(contact?.phone||'').trim().slice(0,40),
+      email:String(contact?.email||'').trim().slice(0,254)
+    });
+  }
+  window.EKODIMissionAuth=Object.freeze({loginUrl:MISSION_LOGIN,getToken:()=>verifiedToken,refresh:refreshMissionAuth,logout:missionLogout,
+    applicationContact:missionApplicationContact});
   normalizeMissionFooter();
   void refreshMissionAuth();
   window.addEventListener('ekodi:auth-success',()=>{void refreshMissionAuth()});
