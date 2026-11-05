@@ -99,16 +99,30 @@
       const [mirror, approvals] = await Promise.all([get(mirrorUrl), get(BOOKS_API + '/public/approvals')]);
       const approved = new Set((Array.isArray(approvals?.approvals) ? approvals.approvals : [])
         .map(record => record.bookId).filter(validId));
-      const pending = (Array.isArray(mirror?.products) ? mirror.products : [])
-        .filter(book => validId(book?.bookId) && book.saleReady !== true &&
-          approved.has(book.bookId) && /^book-[a-z0-9-]+$/.test(safe(book.slug)));
-      await Promise.all(pending.map(async book => {
+      const candidates = (Array.isArray(mirror?.products) ? mirror.products : [])
+        .filter(book => validId(book?.bookId) &&
+          (book.saleReady === true || approved.has(book.bookId)) &&
+          /^book-[a-z0-9-]+$/.test(safe(book.slug)));
+      await Promise.all(candidates.map(async book => {
+        // A static bookstore card may predate the quote price; refresh its label
+        // from the same live file- and checkout-ready quote used for purchase.
+        const existing = grid.querySelector('[data-product="' +
+          safe(book.id).replace(/[^a-zA-Z0-9_-]/g, '') + '"]');
+        const label = existing?.querySelector('.meta .status');
         try {
           const quote = await quoteFor(book.bookId);
-          if (readyQuote(quote, book.bookId)) {
-            released.set(book.bookId, { ...book, price: Number(quote.price.amount) });
+          if (!readyQuote(quote, book.bookId)) {
+            if (label) label.textContent = '가격 확인 · 판매 상태 확인 필요';
+            return;
           }
-        } catch { /* Missing evidence is never treated as a sale. */ }
+          const verifiedAmount = Number(quote.price.amount);
+          if (label) label.textContent = new Intl.NumberFormat('ko-KR').format(verifiedAmount) + '원 · 판매 중';
+          if (!existing && book.saleReady !== true) {
+            released.set(book.bookId, { ...book, price: verifiedAmount });
+          }
+        } catch {
+          if (label) label.textContent = '가격 확인 · 판매 상태 확인 필요';
+        }
       }));
     } catch { released = new Map(); } // Fail closed on transient source errors.
     grid.querySelectorAll('[data-bookstore-runtime-id]').forEach(card => card.remove());
