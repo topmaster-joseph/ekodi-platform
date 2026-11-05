@@ -2,6 +2,18 @@ name: EKODI Adult Verification Native Browser Smoke
 
 on:
   workflow_dispatch:
+  # Required-check PRs are created by human/agent credentials; use this
+  # path to exercise the native browser even if a bot merge suppresses push.
+  pull_request:
+    paths:
+      - '.github/workflows/age-verification-native-browser-smoke.yml'
+  # The protected orchestrator can use GITHUB_TOKEN to merge or dispatch,
+  # which does not reliably emit a subsequent push-triggered Actions run.
+  # A completed official release therefore causes an independent read-only
+  # end-to-end production check (including a failed overall deploy ledger).
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
   push:
     branches: [main]
     paths:
