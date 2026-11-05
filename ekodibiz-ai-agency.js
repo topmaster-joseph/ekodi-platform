@@ -185,10 +185,22 @@ export async function agencyStore(request, storage) {
     await storage.put(rateKey, count + 1);
     return reply({ ok:true });
   }
+  if (url.pathname === '/agency/expire') {
+    const records = await storage.list({ prefix:'agency:' });
+    let expired = 0;
+    for (const [key, record] of records) {
+      if (record.status !== 'active' || activeStatus(record) !== 'expired') continue;
+      record.status = 'expired';
+      record.audit.push({ at:new Date().toISOString(), action:'agency_management_expired' });
+      await storage.put(key, record);
+      expired++;
+    }
+    return reply({ ok:true, expired });
+  }
   if (url.pathname === '/agency/admin/list') {
     const items = [...(await storage.list({ prefix:'agency:' })).values()]
       .sort((a,b)=>String(b.issuedAt).localeCompare(String(a.issuedAt))).slice(0, 100)
-      .map(r=>({ ...publicRecord(r), customer:r.customer, email:r.email, organization:r.organization }));
+      .map(r=>({ ...publicRecord({ ...r, status:activeStatus(r) }), customer:r.customer, email:r.email, organization:r.organization }));
     return reply({ ok:true, items });
   }
   const r = await storage.get('agency:' + text(data.id, 64));
