@@ -1,5 +1,5 @@
 import authWorker from './auth-worker.js';
-import { handleAgeVerificationRequest, pruneAgeVerification } from './age-verification-core.js';
+import { handleAgeVerificationRequest, pruneAgeVerification, ageVerificationAdminSnapshot } from './age-verification-core.js';
 import { handlePointsControl } from './points-control.js';
 import { handleMailControl } from './mail-control.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
@@ -536,6 +536,10 @@ async function handleControl(request, env) {
   if (path === `${CONTROL_PREFIX}/confirmations` || path.startsWith(`${CONTROL_PREFIX}/confirmations/`)) {
     const response = await handleAdminConfirmations(request, env, auth.session);
     if (response) return response;
+  }
+
+  if (request.method === 'GET' && path === `${CONTROL_PREFIX}/age-verification`) {
+    return controlJson(await ageVerificationAdminSnapshot(env), 200, auth.response.headers);
   }
 
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/overview`) {

@@ -39,8 +39,17 @@ function policies(env) {
       SITE.test(site) && POLICIES.has(policy)));
   } catch { return {}; }
 }
+function authConfig(env) {
+  const supabaseUrl = String(env?.SUPABASE_URL || env?.MY_SUPABASE_URL || '');
+  const publishableKey = String(env?.SUPABASE_PUBLISHABLE_KEY || env?.MY_SUPABASE_PUBLISHABLE_KEY || '');
+  try {
+    const origin = new URL(supabaseUrl);
+    if (origin.protocol !== 'https:' || !origin.hostname.endsWith('.supabase.co') || !publishableKey) return null;
+    return { supabaseUrl: origin.origin, publishableKey };
+  } catch { return null; }
+}
 function configured(env) {
-  return Boolean(env?.DB && env?.SUPABASE_URL && env?.SUPABASE_PUBLISHABLE_KEY &&
+  return Boolean(env?.DB && authConfig(env) &&
     /^store-[a-zA-Z0-9-]{8,64}$/.test(String(env?.PORTONE_AGE_STORE_ID || '')) &&
     /^channel-key-[a-zA-Z0-9-]{8,64}$/.test(String(env?.PORTONE_AGE_CHANNEL_KEY || '')) &&
     env?.PORTONE_AGE_API_SECRET);
@@ -49,16 +58,17 @@ function config(env, site) {
   const policy = policies(env)[site];
   if (!SITE.test(site) || !policy || !configured(env)) return null;
   return { provider: 'portone-v2', storeId: env.PORTONE_AGE_STORE_ID,
-    channelKey: env.PORTONE_AGE_CHANNEL_KEY, policy };
+    channelKey: env.PORTONE_AGE_CHANNEL_KEY, policy, auth: authConfig(env) };
 }
 async function authenticate(req, env) {
   const authorization = req.headers.get('authorization') || '';
   if (!/^Bearer [^\s]+$/i.test(authorization)) return null;
-  const origin = new URL(String(env.SUPABASE_URL));
-  if (origin.protocol !== 'https:') return null;
+  const auth = authConfig(env);
+  if (!auth) return null;
+  const origin = new URL(auth.supabaseUrl);
   try {
     const response = await fetch(origin.origin + '/auth/v1/user', {
-      headers: { authorization, apikey: env.SUPABASE_PUBLISHABLE_KEY },
+      headers: { authorization, apikey: auth.publishableKey },
       redirect: 'error', signal: AbortSignal.timeout(7000),
     });
     if (!response.ok) return null;
@@ -203,4 +213,46 @@ export async function pruneAgeVerification(env) {
   } catch {
     console.warn('Age verification retention unavailable; migration may not be installed');
   }
+}
+
+/**
+ * Platform Control API read-only readiness view. Caller must have an authenticated,
+ * platform-scoped admin session before invoking this function. No personal rows or keys.
+ */
+export async function ageVerificationAdminSnapshot(env) {
+  let sitePolicies = {};
+  try {
+    const raw = JSON.parse(String(env?.AGE_VERIFICATION_SITE_POLICIES || '{}'));
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      sitePolicies = Object.fromEntries(Object.entries(raw).filter(([site, policy]) =>
+        SITE.test(site) && POLICIES.has(policy)));
+    }
+  } catch { /* Invalid config must not enable service. */ }
+  const result = {
+    service: 'ekodi-age-verification',
+    enabled: env?.AGE_VERIFICATION_ENABLED === 'true',
+    provider: 'portone-v2',
+    providerConfigured: configured(env),
+    schemaReady: false,
+    sitePolicies,
+    retentionDays: 30,
+    grantValidityDays: 90,
+    maxAttemptsPerDay: 5,
+    activeGrants: null,
+    attempts24h: null
+  };
+  if (!env?.DB) return result;
+  try {
+    const schema = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='age_verification_attempts'").first();
+    if (!schema) return result;
+    const now = Date.now();
+    const [grants, attempts] = await Promise.all([
+      env.DB.prepare('SELECT COUNT(*) AS total FROM age_verification_grants WHERE expires_at>?').bind(iso(now)).first(),
+      env.DB.prepare('SELECT COUNT(*) AS total FROM age_verification_attempts WHERE created_at>?').bind(iso(now - ONE_DAY)).first()
+    ]);
+    result.schemaReady = true;
+    result.activeGrants = Number(grants?.total || 0);
+    result.attempts24h = Number(attempts?.total || 0);
+  } catch { /* Fail closed; never pretend the schema is ready. */ }
+  return result;
 }

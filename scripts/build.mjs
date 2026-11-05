@@ -64,6 +64,9 @@ await Promise.all([
 ]);
 await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursive: true });
 await cp(`${root}sites/ekodi-singles/public`, `${output}singles`, { recursive: true });
+// Shared, provider-gated adult verification page; use the existing Singles Supabase UMD bundle.
+await cp(`${root}verify/adult`, `${output}verify/adult`, { recursive: true });
+await cp(`${root}age-verification-client.js`, `${output}verify/adult/client.js`);
 // Device-scoped opt-in notifications; permission UI and Service Worker share /notifications/ scope.
 await cp(`${root}notifications`, `${output}notifications`, { recursive: true });
 // EKODI Proposal Studio: local-only static draft editor, no server persistence.
