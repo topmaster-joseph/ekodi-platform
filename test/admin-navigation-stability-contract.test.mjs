@@ -8,7 +8,7 @@ const source=name=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
 
 test('ADMIN-NAV-STABLE-001: superadmin retains one categorized platform control plane',()=>{
   const registry=source('admin-menu-registry.js');
-  const groups=[...registry.matchAll(/\\{ id: '(home|sites|ai|services|finance|ops|settings|accounts)', icon:/g)].map(match=>match[1]);
+  const groups=[...registry.matchAll(/[{] id: '(home|sites|ai|services|finance|ops|settings|accounts)', icon:/g)].map(match=>match[1]);
   assert.deepEqual(groups,['home','sites','ai','services','finance','ops','settings','accounts']);
   assert.equal(new Set(groups).size,8);
   const js=source('workspace-admin-page.js');
