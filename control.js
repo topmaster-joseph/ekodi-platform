@@ -436,6 +436,7 @@
     strip.append(create,nav,history);
     top.after(strip);
     rail.hidden=true;
+    document.querySelectorAll('a[href="/admin/"]').forEach(link=>link.target='_top');
   }
   function resizeInput(){
     const input=$('#commandInput');
