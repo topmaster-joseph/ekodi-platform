@@ -142,6 +142,8 @@ export default {
     const response = await siteWorker.fetch(effective.request, env, ctx);
     if (effective.host === PUBLIC_HOST) {
       const pathname=new URL(effective.request.url).pathname;
+      // Age verification is an isolated trust UI, never a Workspace or an injected Shell home.
+      if(pathname==='/verify/adult'||pathname.startsWith('/verify/adult/'))return response;
       if(rootInternalPath(pathname)||isWorkspaceAdminPathShape(pathname))return response;
       if(standaloneBrandPlacePath(pathname))return injectEkodiTenantReadability(response);
       const serviceId=rootUserService(pathname);
