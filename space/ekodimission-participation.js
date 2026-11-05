@@ -66,6 +66,7 @@
       if(!response.ok||!data?.ok)throw new Error(data?.error==='meeting_date_changed'?'모임 날짜가 변경되었습니다. 다시 확인해 주세요.':data?.error==='meeting_not_open'?'이번 모임 신청이 마감되었습니다.':'참여 설정이 저장되지 않았습니다.');
       current=data;
       message('참여 설정이 저장되었습니다.');
+      window.dispatchEvent?.(new Event('ekodi:mission-participation-changed'));
     }catch(error){
       message(error.message||'저장에 실패했습니다.',true);
       // Restore the prior server-confirmed state; never claim a failed change was saved.
