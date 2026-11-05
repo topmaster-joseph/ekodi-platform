@@ -12,15 +12,20 @@ import { sharedProductId, shareUrlForProduct, prioritizeSharedProduct } from './
   const shareStatus = document.querySelector('#affiliateShareStatus');
   const requestedProductId = sharedProductId(window.location.search);
   let products = [];
+  let loadFailed = false;
 
   const text = (tag, className, value) => { const node = document.createElement(tag); if (className) node.className = className; node.textContent = value; return node; };
   const clean = (value) => String(value || '').trim();
   const safeHttps = (value) => { try { const url = new URL(value); return url.protocol === 'https:' ? url.href : ''; } catch { return ''; } };
-  const providerMatches = (item) => {
-    const haystack = [item.providerKey, item.providerName, item.merchantKey, item.merchantName, item.affiliateNetworkName].map((value) => clean(value).toLowerCase()).join(' ');
-    return keys.some((key) => haystack.includes(key));
-  };
-  const searchMatches = (item, query) => !query || [item.productName, item.category, item.providerName, item.merchantName].map(clean).join(' ').toLowerCase().includes(query);
+  // Merchant identity is authoritative: free-text names and network branding cannot qualify a product.
+  const providerId = (value) => clean(value).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const allowedProviders = new Set(keys.flatMap((key) => {
+    const id = providerId(key);
+    return id === 'coupangpartners' ? ['coupangpartners', 'coupang'] : [id];
+  }));
+  const providerMatches = (item) => allowedProviders.has(providerId(item.merchantKey || item.providerKey));
+  const searchMatches = (item, query) => !query || query.split(/\s+/).every((term) =>
+    [item.productName, item.category, item.providerName, item.merchantName].map(clean).join(' ').toLowerCase().includes(term));
 
   async function shareProduct(item) {
     const url = shareUrlForProduct(window.location.href, item.id);
@@ -56,19 +61,22 @@ import { sharedProductId, shareUrlForProduct, prioritizeSharedProduct } from './
 
   function render() {
     const query = clean(input?.value).toLowerCase();
-    const filtered = products.filter((item) => providerMatches(item) && searchMatches(item, query));
+    const filtered = products.filter((item) => providerMatches(item) && safeHttps(item.clickUrl) && searchMatches(item, query));
     const { products: visible, matched } = prioritizeSharedProduct(filtered, requestedProductId);
     grid.replaceChildren();
     if (shareStatus) {
-      const available = products.some((item) => providerMatches(item) && String(item.id) === requestedProductId);
+      const available = products.some((item) => providerMatches(item) && safeHttps(item.clickUrl) && String(item.id) === requestedProductId);
       shareStatus.textContent = requestedProductId && !available
         ? '공유된 상품이 현재 공개 목록에 없습니다. 다른 상품을 확인해 주세요.'
         : matched ? '공유받은 상품을 맨 앞에 표시했습니다. 최신 가격과 조건은 구매처에서 확인하세요.' : '';
     }
     if (!visible.length) {
       const empty = document.createElement('article'); empty.className = 'affiliate-empty';
-      empty.append(text('strong', '', query ? (isStay ? '조건에 맞는 숙소 후보가 아직 없습니다.' : '조건에 맞는 상품 후보가 아직 없습니다.') : (isStay ? '현재 공개 가능한 숙소 후보를 준비 중입니다.' : '현재 공개 가능한 상품 후보를 준비 중입니다.')), text('span', '', '제휴 API에서 유효한 HTTPS 링크가 확인된 항목만 자동 노출됩니다.'));
-      grid.append(empty); summary.textContent = '확인되지 않은 임의 링크는 표시하지 않습니다.'; return;
+      const message = loadFailed ? '제휴상품 목록 연결을 확인할 수 없습니다.' : query
+        ? (isStay ? '검색 조건에 맞는 아고다 숙소가 없습니다.' : '검색 조건에 맞는 쿠팡 제휴상품이 없습니다.')
+        : (isStay ? '현재 공개 검증을 통과한 아고다 숙소가 없습니다.' : '현재 공개 검증을 통과한 쿠팡 제휴상품이 없습니다.');
+      empty.append(text('strong', '', message), text('span', '', '승인된 제휴·추적·카탈로그와 유효한 HTTPS 판매처 링크가 확인된 상품만 노출합니다.'));
+      grid.append(empty); summary.textContent = loadFailed ? '목록 연결을 다시 확인해 주세요.' : '검증되지 않은 상품이나 임의 링크는 표시하지 않습니다.'; return;
     }
     visible.slice(0, 24).forEach((item) => {
       const url = safeHttps(item.clickUrl); if (!url) return;
@@ -95,5 +103,5 @@ import { sharedProductId, shareUrlForProduct, prioritizeSharedProduct } from './
   fetch(API, { headers: { accept: 'application/json' }, credentials: 'omit' })
     .then(async (response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json(); })
     .then((body) => { products = Array.isArray(body.products) ? body.products : []; render(); })
-    .catch(() => { products = []; render(); });
+    .catch(() => { products = []; loadFailed = true; render(); });
 })();
