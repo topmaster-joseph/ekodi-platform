@@ -1,6 +1,6 @@
 // EKODIBIZ AI purchase-agency intake and payment contract.
 // Customer prices are never accepted from browser input; live charging fails closed.
-import { readiness, activeProfileId, confirmPayment } from './ekodipay-core.js';
+import { readiness, activeProfileId, merchantKeys, confirmPayment } from './ekodipay-core.js';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' };
 const MAX_BODY = 8192;
@@ -35,7 +35,7 @@ function gates(env, totalSupplier) {
   const mode = pg.mode;
   const scopeApproved = env.AGENCY_PG_SCOPE_VERIFIED === 'true';
   const supplierApproved = totalSupplier === 0 || env.AGENCY_SUPPLIER_COLLECTION_VERIFIED === 'true';
-  return { ok: pg.ready && scopeApproved && supplierApproved && (mode === 'test' || (mode === 'live' && env.AGENCY_LIVE_ENABLED === 'true')), mode, profile, pg };
+  return { ok: pg.ready && pg.widget && scopeApproved && supplierApproved && (mode === 'test' || (mode === 'live' && env.AGENCY_LIVE_ENABLED === 'true')), mode, profile, pg, clientKey: merchantKeys(env, profile).clientKey };
 }
 async function store(env, pathname, body) {
   if (!env.REVENUE_STORE) throw new Error('store_unavailable');
@@ -64,7 +64,7 @@ export async function agencyApi(request, url, env) {
   const path = url.pathname.replace(/^\/ekodibiz(?=\/)/, '');
   if (!path.startsWith('/api/agency/')) return null;
   if (path === '/api/agency/health' && request.method === 'GET') {
-    return reply({ ok: true, service:'ai-purchase-agency', realPaymentsEnabled:false,
+    return reply({ ok: true, service:'ai-purchase-agency', realPaymentsEnabled: gates(env, 0).ok && gates(env, 0).mode === 'live',
       agencyScope:'approval-gated', plans:['individual-1-month','institution-3-months'] });
   }
   if (request.method !== 'POST') return fault('method_not_allowed', 405);
@@ -115,7 +115,7 @@ export async function agencyApi(request, url, env) {
         if (record.status !== 'accepted') return fault('contract_not_accepted', 409);
         const gate = gates(env, record.supplierAmount);
         if (!gate.ok) return fault('pg_or_supplier_scope_not_enabled', 503);
-        const clientKey = gate.pg.clientKey;
+        const clientKey = gate.clientKey;
         if (!clientKey || !Number.isSafeInteger(record.totalAmount) || record.totalAmount < 100) return fault('price_not_ready', 409);
         return reply({ ok:true, orderId:record.id, orderName:'에코디비즈 AI 서비스 구매위탁',
           amount:record.totalAmount, clientKey, mode:gate.mode,
