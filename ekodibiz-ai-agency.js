@@ -51,7 +51,7 @@ function publicRecord(record) {
     months:record.months, status:record.status, feeAmount:record.feeAmount,
     supplierAmount:record.supplierAmount, totalAmount:record.totalAmount,
     issuedAt:record.issuedAt, quoteAt:record.quoteAt || null,
-    acceptedAt:record.acceptedAt || null, paidAt:record.paidAt || null,
+    acceptedAt:record.acceptedAt || null, paidAt:record.paidAt || null, activatedAt:record.activatedAt || null,
     expiresAt:record.expiresAt || null, guidance:record.guidance || '' };
 }
 function activeStatus(record) {
@@ -137,9 +137,15 @@ export async function agencyApi(request, url, env) {
         return reply({ ok:true, record:publicRecord(saved.record) });
       }
     }
-    if (path === '/api/agency/admin/list' || path === '/api/agency/admin/quote') {
+    if (path === '/api/agency/admin/list' || path === '/api/agency/admin/quote' || path === '/api/agency/admin/activate') {
       if (!adminAuthorized(request, env)) return fault('admin_access_denied', 403);
       if (path === '/api/agency/admin/list') return reply({ ok:true, ...(await store(env, '/agency/admin/list', {})) });
+      if (path === '/api/agency/admin/activate') {
+        const id = text(body.id, 64);
+        if (!/^EBAI-[A-Z0-9]{24}$/.test(id) || body.confirmed !== true) return fault('activation_confirmation_required', 422);
+        const result = await store(env, '/agency/admin/activate', { id });
+        return reply({ ok:true, record:publicRecord(result.record) });
+      }
       const id = text(body.id, 64), fee = integer(body.feeAmount, MAX_FEE), supplier = integer(body.supplierAmount, MAX_SUPPLIER);
       if (!/^EBAI-[A-Z0-9]{24}$/.test(id) || fee === null || supplier === null ||
           fee + supplier < 100 || (supplier > 0 && env.AGENCY_SUPPLIER_COLLECTION_VERIFIED !== 'true'))
@@ -203,9 +209,15 @@ export async function agencyStore(request, storage) {
     if (r.status === 'paid_pending_fulfillment' || r.status === 'active') return reply({ ok:true, record:r });
     if (r.status!=='accepted' || r.totalAmount!==data.totalAmount) return fault('invalid_state', 409);
     r.paymentKey=data.paymentKey;r.paidAt=new Date().toISOString();
-    r.expiresAt=addMonths(r.paidAt,r.months);
+    // Paid is not supplied: the three/one-month service clock starts on verified activation.
     r.status='paid_pending_fulfillment';
     r.audit.push({at:r.paidAt,action:'pg_confirmed'});
+  } else if (url.pathname === '/agency/admin/activate') {
+    if (r.status !== 'paid_pending_fulfillment') return fault('invalid_state', 409);
+    r.activatedAt = new Date().toISOString();
+    r.expiresAt = addMonths(r.activatedAt, r.months);
+    r.status = 'active';
+    r.audit.push({at:r.activatedAt,action:'supplier_activation_verified'});
   } else return fault('not_found', 404);
   await storage.put('agency:' + r.id, r);
   return reply({ok:true,record:r});
