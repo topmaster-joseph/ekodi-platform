@@ -96,6 +96,7 @@ export function renderMallPicksHtml({ items = [], week = isoWeekInfo(), generate
 <link rel="stylesheet" href="/ekodimall/assets/styles.css">
 <link rel="stylesheet" href="/ekodimall/assets/platform.css">
 <link rel="stylesheet" href="/ekodimall/assets/home-refresh.css">
+<link rel="stylesheet" href="/ekodimall/assets/context-curator.css">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
@@ -120,6 +121,16 @@ h1{font-size:clamp(1.5rem,3.6vw,2.2rem);margin:.3rem 0 .4rem}
 .pick-cta{margin-top:auto;display:inline-block;text-align:center;border-radius:999px;padding:9px 14px;background:var(--accent);color:#fff;text-decoration:none;font-weight:600}
 .note{font-size:.82rem;color:var(--muted);margin-top:22px}
 .empty a,.note a{color:var(--accent)}
+.weekly-recommend{margin:26px 0 34px;padding:24px 25px;background:#eef4f7;border-radius:18px;border:1px solid #d9e2e8;scroll-margin-top:22px}
+.weekly-recommend h2,.weekly-list-title{font-size:clamp(1.15rem,2.5vw,1.5rem);margin:0 0 7px}
+.weekly-recommend .lead{font-size:.92rem;margin:0 0 16px}
+.weekly-recommend .context-form{max-width:850px;border-radius:15px;margin:0 0 10px}
+.weekly-recommend .context-form input{font-size:1rem}
+.weekly-recommend .context-result-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+.weekly-recommend .context-loading{min-height:90px}
+.weekly-recommend .context-disclosure{font-size:.8rem}
+.weekly-list-title{margin:0 0 16px}
+@media(max-width:640px){.weekly-recommend{padding:17px 14px}.weekly-recommend .context-form{flex-direction:column;border-radius:14px}.weekly-recommend .context-form button{min-height:42px}.weekly-recommend .context-form input{min-height:42px}.weekly-recommend .context-result-grid{grid-template-columns:minmax(0,1fr)}}
 </style>
 </head>
 <body>
@@ -129,11 +140,30 @@ ${renderMallHeader({ publicPrefix: '/ekodimall', home: false })}
   <h1>이번 주 에코디 추천</h1>
   <p class="lead">${esc(week.startDate)} 주간 · 생활에 바로 쓰는 상품을 이유와 함께 골랐습니다.</p>
   <p class="disclosure">${esc(MALL_PICKS_DISCLOSURE)}</p>
-  ${items.length ? `<ol class="picks">${cards}\n  </ol>` : empty}
+  <section class="weekly-recommend" id="recommend" aria-labelledby="weeklyRecommendTitle">
+    <h2 id="weeklyRecommendTitle">AI 추천받기</h2>
+    <p class="lead">원하는 상품이나 선물 조건을 입력하면 제휴 검증을 통과한 판매처의 상품을 비교해 추천합니다.</p>
+    <form class="context-form" id="contextForm" role="search" method="get" action="/ekodimall/picks">
+      <label class="sr-only" for="contextInput">원하는 상품이나 선물 조건</label>
+      <input id="contextInput" name="q" type="search" maxlength="180" autocomplete="off" placeholder="예: 부모님께 드릴 5만원대 건강 선물">
+      <button type="submit">AI 추천받기</button>
+    </form>
+    <p id="contextSummary" class="lead">현재 검증된 상품을 불러오고 있습니다.</p>
+    <div class="context-result-grid" id="contextResults" aria-live="polite">
+      <article class="context-loading"><strong>추천을 준비하고 있습니다.</strong><span>현재 연결된 상품만 표시합니다.</span></article>
+    </div>
+    <p id="contextDisclosure" class="context-disclosure">상품·숙소 링크에는 제휴수수료가 포함될 수 있습니다. 쿠팡 파트너스 활동의 일환으로 일정액의 수수료를 제공받으며, 추천순위는 제휴수수료와 분리합니다.</p>
+  </section>
+  <section class="weekly-list" aria-labelledby="weeklyListTitle">
+    <h2 class="weekly-list-title" id="weeklyListTitle">이번 주 추천 상품</h2>
+    ${items.length ? `<ol class="picks">${cards}\n  </ol>` : empty}
+  </section>
   <p class="note">가격·재고·배송 조건은 ${esc(kst)} (KST) 기준이며 판매처에서 달라질 수 있습니다. 주문·결제·배송·반품은 판매처에서 진행됩니다. · <a href="/ekodimall/">에코디몰 홈</a> · <a href="/ekodimall/coupang/">조건으로 상품 찾기</a></p>
   <span hidden data-generated-at="${esc(stamp)}"></span>
 </main>
 <script defer src="/ekodimall/assets/mall-header-nav.js"></script>
+<script defer src="/ekodimall/assets/context-curator.js"></script>
+<script defer src="/ekodimall/assets/weekly-picks-recommend.js"></script>
 </body>
 </html>`;
 }

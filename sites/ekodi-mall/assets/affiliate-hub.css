@@ -8,3 +8,10 @@
 .affiliate-share-status{font-size:.9rem;color:#294e7d;margin:.3rem 0 0}
 .affiliate-share-link{width:min(100%,580px);max-width:100%;border:1px solid #9bb0c7;border-radius:8px;padding:.6rem;background:#fff;color:#182c48;font:inherit}
 @media(max-width:800px){.affiliate-card-actions{width:100%}.affiliate-card-actions .btn{min-height:40px}}
+
+/* Affiliate pages put their own provider-specific search directly below the title. */
+.affiliate-hero{grid-template-columns:minmax(0,1fr);gap:16px;padding-top:clamp(28px,4vw,50px);padding-bottom:28px}
+.affiliate-hero h1{font-size:clamp(28px,4vw,45px);line-height:1.25}
+.affiliate-search{max-width:960px;margin-top:5px;padding:16px 18px}
+.affiliate-results{padding-top:32px}
+@media(max-width:800px){.affiliate-hero{padding-top:25px}.affiliate-search{padding:14px}.affiliate-search>div{grid-template-columns:minmax(0,1fr)}.affiliate-search input{min-width:0}}

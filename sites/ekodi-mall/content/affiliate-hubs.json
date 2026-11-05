@@ -1,11 +1,11 @@
 [
   {
     "id": "agoda",
-    "name": "EKODI 숙소",
+    "name": "여행·레저",
     "eyebrow": "TRAVEL · STAY",
-    "title": "여행 조건에 맞는 숙소 찾기",
-    "description": "지역·일정·동행·예산을 기준으로 숙소 후보를 좁혀드립니다. 최종 가격·예약 가능 여부와 예약·결제·취소·환불 조건은 연결된 판매처에서 확인합니다.",
-    "prompt": "예: 제주 가족여행, 성인 3명, 2박, 공항 이동이 편한 숙소",
+    "title": "아고다 제휴 숙소",
+    "description": "제휴·추적·카탈로그 검증을 통과한 아고다 숙소만 목록으로 보여드립니다. 예약 가능 여부와 결제·취소 조건은 아고다에서 최종 확인합니다.",
+    "prompt": "예: 제주, 서울, 가족 숙소",
     "providerKeys": [
       "agoda"
     ],
@@ -13,30 +13,29 @@
     "published": true,
     "path": "travel/stay",
     "mode": "stay",
-    "searchLabel": "지역·일정·인원·예산 등 숙소 조건을 입력하세요",
+    "searchLabel": "아고다 숙소 검색 · 지역·숙소명·분류",
     "resultsEyebrow": "STAY RECOMMENDATIONS",
-    "resultsTitle": "숙소 추천",
-    "resultsIntro": "현재 연결된 숙박 제휴망에서 조건에 맞는 후보를 확인합니다.",
-    "loadingLabel": "숙소 후보를 불러오고 있습니다."
+    "resultsTitle": "아고다 제휴 숙소 목록",
+    "resultsIntro": "공개 승인이 확인된 아고다 숙소만 표시합니다.",
+    "loadingLabel": "아고다 숙소 목록을 확인하고 있습니다."
   },
   {
     "id": "coupang",
-    "name": "쿠팡 파트너스",
+    "name": "쿠팡제휴몰",
     "eyebrow": "LIFE · SHOPPING",
-    "title": "생활에 필요한 상품을 이유부터 추천",
-    "description": "사람·상황·예산·용도를 기준으로 에코디가 상품 후보를 좁혀드립니다. 주문·결제·배송·반품은 쿠팡에서 진행합니다.",
-    "prompt": "예: 부모님께 드릴 5만원 이하 실용적인 건강 선물",
+    "title": "쿠팡파트너스 제휴상품",
+    "description": "확인된 쿠팡파트너스 제휴상품만 모아 보여드립니다. 상품 검색과 외부 판매처 이동을 지원하며 주문·결제·배송·반품은 쿠팡에서 진행합니다.",
+    "prompt": "예: 홍삼 선물, 주방용품, 생활용품",
     "providerKeys": [
-      "coupang",
-      "coupang-partners"
+      "coupang_partners"
     ],
     "disclosure": "이 페이지는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.",
     "published": true,
     "mode": "shopping",
-    "searchLabel": "사람·상황·예산·용도 등 상품 조건을 입력하세요",
+    "searchLabel": "쿠팡 제휴상품 검색",
     "resultsEyebrow": "SHOPPING RECOMMENDATIONS",
-    "resultsTitle": "상품 추천",
-    "resultsIntro": "현재 연결된 쇼핑 제휴망에서 조건에 맞는 상품 후보를 확인합니다.",
+    "resultsTitle": "쿠팡파트너스 상품",
+    "resultsIntro": "제휴 검증을 통과한 쿠팡파트너스 상품만 표시합니다.",
     "loadingLabel": "상품 후보를 불러오고 있습니다."
   }
 ]

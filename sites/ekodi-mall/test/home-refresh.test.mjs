@@ -10,17 +10,17 @@ const mallHeader = renderMallHeader({ home: true });
 const site = JSON.parse(readFileSync(new URL('../content/site.json', import.meta.url), 'utf8'));
 
 test('premium home renders navigation and retains core commerce entrypoints', () => {
-  for (const id of ['mallGlobalSearch','contextForm','contextInput','contextResults','filters','shop','grid','wishBtn','wishDialog','localRegionSelect']) {
+  for (const id of ['mallGlobalSearch','contextForm','contextInput','filters','shop','grid','wishBtn','wishDialog','localRegionSelect']) {
     assert.ok((template + mallHeader).includes('id="' + id + '"'), 'missing required anchor ' + id);
   }
-  for (const file of ['/assets/home-refresh.css','/assets/home-refresh.js','/assets/context-curator.js','/assets/commerce.js','/assets/marketplace-live.js']) {
+  for (const file of ['/assets/home-refresh.css','/assets/home-refresh.js','/assets/commerce.js','/assets/marketplace-live.js']) {
     assert.ok(template.includes(file), 'missing script or stylesheet ' + file);
   }
-  assert.ok(template.indexOf('mall-category-shortcuts') < template.indexOf('context-recommend'));
+  assert.ok(template.indexOf('mall-category-shortcuts') < template.indexOf('class="shop"'));
   assert.ok(template.indexOf('class="shop"') < template.indexOf('affiliate-gates'));
   assert.ok(template.indexOf('class="shop"') > template.indexOf('mall-category-shortcuts'));
   assert.ok(template.indexOf('class="shop"') < template.indexOf('mall-editorial'));
-  assert.ok(template.indexOf('class="shop"') < template.indexOf('context-recommend'));
+  assert.ok(template.indexOf('class="shop"') < template.indexOf('affiliate-gates'));
   assert.ok(css.includes('@media(min-width:641px)'));
   assert.ok(css.includes('.mall-category-shortcuts{display:none}'));
 });
@@ -34,9 +34,10 @@ test('category tabs show products without the home hero and persist on reload', 
     "window.addEventListener('hashchange', syncView)",
   ]) assert.ok(js.includes(marker), 'missing navigation contract ' + marker);
   assert.ok(css.includes('body[data-mall-view="catalog"] main#main > :not(#filters):not(#shop)'));
-  assert.ok(css.includes('body[data-mall-view="recommend"] main#main > :not(#recommend)'));
+  assert.doesNotMatch(css, /body\[data-mall-view="recommend"\]/);
   assert.doesNotMatch(js, /mallNavProductsGrid|cloneNode/);
-  assert.ok(template.includes('id="mallRecommendSearchForm"'));
+  assert.doesNotMatch(template, /id="mallRecommendSearchForm"|id="recommend"/);
+  assert.ok(template.includes('action="/ekodimall/picks" method="get"'));
   assert.ok(template.includes('<a href="#top">홈</a>'));
 });
 
@@ -62,7 +63,7 @@ test('category shortcuts map only to existing filters and destinations', () => {
   for (const [,category] of template.matchAll(/data-filter-target="([^"]+)"/g)) {
     assert.ok(known.has(category), 'unknown filter target ' + category);
   }
-  for (const href of ['/travel/stay/','/picks','#local','#recommend','#shop','#discover']) {
+  for (const href of ['/travel/stay/','/picks','#local','/ekodimall/picks#recommend','#shop','#discover']) {
     assert.ok((template + mallHeader).includes('href="' + href + '"'), 'missing target ' + href);
   }
   assert.match(js, /dispatchEvent\(new Event\('input'/);
@@ -93,13 +94,15 @@ test('home and affiliate travel page use the same generated buyer header', () =>
   for (const html of [template,affiliate]) assert.ok(html.includes('{{MALL_HEADER}}'));
   assert.match(build, /renderMallHeader\(\{ home: true/);
   assert.match(build, /renderMallHeader\(\{ home: false/);
-  for (const label of ['전체상품','여행·레저','AI 추천','이번 주 추천']) assert.ok(mallHeader.includes(label));
+  for (const label of ['전체상품','여행·레저','쿠팡제휴몰','이번 주 추천']) assert.ok(mallHeader.includes(label));
+  assert.doesNotMatch(mallHeader, />AI 추천<|>쿠팡추천몰</);
   assert.match(affiliate, /assets\/home-refresh\.css/);
 });
 
-test('global search searches marketplace and live affiliate curator instead of a dead local-only filter', () => {
-  assert.match(js, /EkodiContextCurator\.recommend\(term, false\)/);
-  assert.match(js, /EkodiContextCurator\?\.recommend\(incomingQuery, false\)/);
+test('global search filters live marketplace and context prompts route to weekly AI recommendations', () => {
+  assert.match(js, /window\.location\.assign\(url\.toString\(\)\)/);
+  assert.match(js, /window\.location\.replace\('\/ekodimall\/picks#recommend'\)/);
+  assert.doesNotMatch(template, /<script src="\/assets\/context-curator\.js"/);
   assert.match(js, /if \(!search \|\| !shop\) return;\s*event\.preventDefault\(\)/);
   assert.match(mallHeader, /role="search"/);
   assert.match(mallHeader, /method="get"/);
