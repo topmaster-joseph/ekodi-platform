@@ -12,6 +12,20 @@
   Cache-Control: no-store
   Access-Control-Allow-Origin: *
 
+# 목포노회 선교부 정책협의회 참석 신청: same-origin app.js and Control API intake only.
+# The global CSP (script-src 'none') would otherwise block the form script.
+/mokpo-presbytery/mission/policy-council-2026/
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-cache
+
+/mokpo-presbytery/mission/policy-council-2026/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-cache
+
 # Proposal Studio is a read-only browser-local editor; globally locked-down CSP
 # Otherwise the global CSP blocks its same-origin JS/CSS.
 /proposal/
