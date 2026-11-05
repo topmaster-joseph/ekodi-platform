@@ -22,3 +22,7 @@
 - Record exact SHA, CI, official workflow IDs, browser evidence, canonical domain, and timestamp before declaring completion.
 
 This note is not evidence of deployment or authorization for direct merging.
+
+## Latest-main synchronization: authentic checks regeneration
+
+The EKODI protected convergence process synchronized main into the official recovery branch, producing merge commit `2a1b5cd842bdad4664d44f7804d3e33ffac0eda0`. GitHub Actions classified its bot-triggered required checks as `action_required` (no executable jobs). This owner-connected, documentation-only update requests genuine required CI on the newly synchronized source head. The functional original commit `3c3f8c6bebed0625d3c6b6147fa50cd3bc550592` remains in ancestry. This step does not merge, deploy, mutate CSS/runtime source, forge test status, or bypass the official receipt gate.
