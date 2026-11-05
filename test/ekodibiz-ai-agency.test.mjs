@@ -118,6 +118,16 @@ test('service clock starts only after verified supplier activation', async () =>
   assert.equal(activated.status,200);
   assert.equal(activated.body.record.status,'active');
   assert.ok(Date.parse(activated.body.record.expiresAt)>Date.parse(activated.body.record.activatedAt));
+  const stored=await env.__storage.get('agency:'+receipt.id);
+  stored.expiresAt=new Date(Date.now()-1000).toISOString();
+  await env.__storage.put('agency:'+receipt.id,stored);
+  const sweep=new Request('https://revenue-store.internal/agency/expire',{
+    method:'POST',headers:{'content-type':'application/json'},body:'{}'
+  });
+  const ended=await agencyStore(sweep,env.__storage);
+  assert.equal((await ended.json()).expired,1);
+  const expired=await request(env,'/api/agency/status',receipt);
+  assert.equal(expired.body.record.status,'expired');
 });
 test('intake limits repeated submissions per email per day',async()=>{
   const env=environment();
