@@ -126,10 +126,11 @@ test('only the correct TEST channel and store can pass sandbox; LIVE never passe
     id=>({id,status:'VERIFIED',channel:{key:env.PORTONE_INICIS_SANDBOX_CHANNEL_KEY,type:'TEST'},storeId:'store-other12345'}),
     id=>({id:'other-id',status:'VERIFIED',channel:{key:env.PORTONE_INICIS_SANDBOX_CHANNEL_KEY,type:'TEST'}}),
   ];
-  for (const make of attempts) {
-    const id=(await startInicisSandbox(env,userA,now)).body.identityVerificationId;
+  for (const [i,make] of attempts.entries()) {
+    const user = userA + '-case-' + i;
+    const id=(await startInicisSandbox(env,user,now)).body.identityVerificationId;
     proof=make;
-    const res=await finishInicisSandbox(env,userA,id,now);
+    const res=await finishInicisSandbox(env,user,id,now);
     assert.equal(res.status,409);
     assert.equal(res.body.sandboxPassed,false);
     assert.equal(res.body.productionEligibility,false);
