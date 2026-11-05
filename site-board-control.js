@@ -9,6 +9,8 @@ const BOARD_MANAGE_ROLES=new Set(['owner','admin','moderator']);
 export function churchOfficialCategoryRequiresManager(siteId,categoryId){
   return siteId==='ekodichurch'&&['notice','schedule'].includes(safeCategoryId(categoryId));
 }
+const MISSION_OFFICIAL_CATEGORIES=Object.freeze(['mission-notice','mission-schedule']);
+const isMissionOfficialCategory=(instance,categoryId)=>instance.site_id==='ekodimission'&&MISSION_OFFICIAL_CATEGORIES.includes(categoryId);
 const PATH_TENANT_ALIASES=Object.freeze({
   ekodimission:'ekodimission',
   ekodichurch:'ekodichurch',
@@ -297,10 +299,17 @@ function safeAttachmentUrl(value){try{const url=new URL(clean(value,2000));retur
 const boardJson=(instance,data,status=200)=>json(data,status,{'x-ekodi-board-id':instance.board_id,'x-ekodi-board-independent':'true'});
 async function parseBody(request){try{return await request.json()}catch{return null}}
 
-async function listPosts(env,instance){
-  const rows=await env.DB.prepare(`SELECT p.id,p.title,p.body,p.created_at,p.updated_at,
+async function listPosts(env,instance,categoryId=''){
+  const selected=isMissionOfficialCategory(instance,categoryId)?categoryId:'';
+  const rows=selected
+    ?await env.DB.prepare(`SELECT p.id,p.title,p.body,p.created_at,p.updated_at,pc.category_id
+      FROM ekodi_board_posts p JOIN ekodi_board_post_categories pc
+        ON pc.board_id=p.board_id AND pc.post_id=p.id
+      WHERE p.board_id=? AND p.status='published' AND pc.category_id=?
+      ORDER BY p.created_at DESC,p.id DESC LIMIT 100`).bind(instance.board_id,selected).all()
+    :await env.DB.prepare(`SELECT p.id,p.title,p.body,p.created_at,p.updated_at,
       (SELECT pc.category_id FROM ekodi_board_post_categories pc WHERE pc.board_id=p.board_id AND pc.post_id=p.id ORDER BY pc.category_id LIMIT 1) AS category_id
-    FROM ekodi_board_posts p WHERE p.board_id=? AND p.status='published' ORDER BY p.created_at DESC,p.id DESC LIMIT 100`).bind(instance.board_id).all();
+      FROM ekodi_board_posts p WHERE p.board_id=? AND p.status='published' ORDER BY p.created_at DESC,p.id DESC LIMIT 100`).bind(instance.board_id).all();
   return (rows.results||[]).map(publicPost);
 }
 async function readPost(env,instance,id){
@@ -314,9 +323,9 @@ async function readPost(env,instance,id){
 }
 
 function htmlEscape(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
-function page(route,posts){
+function page(route,posts,categoryId=''){
   const items=posts.length?posts.map(post=>`<article><a href="${route.basePath}/post/${post.id}"><h2>${htmlEscape(post.title)}</h2></a><p>${htmlEscape(post.body).slice(0,220)}</p><time>${htmlEscape(post.createdAt)}</time></article>`).join(''):'<p class="empty">등록된 글이 없습니다.</p>';
-  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시판</title><style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(920px,calc(100% - 28px));margin:0 auto;padding:18px 0}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:22px;margin:0}article{padding:15px 0;border-bottom:1px solid #e6e6e6}h2{font-size:18px;margin:0 0 7px}a{color:#111;text-decoration:none}p{white-space:pre-wrap;line-height:1.5;margin:0 0 7px}time{font-size:12px;color:#666}.empty{padding:30px 0}</style></head><body><main><header><h1>게시판</h1></header>${items}</main></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
+  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${categoryId==='mission-notice'?'공지사항':categoryId==='mission-schedule'?'주요일정':'게시판'}</title><style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(920px,calc(100% - 28px));margin:0 auto;padding:18px 0}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:22px;margin:0}article{padding:15px 0;border-bottom:1px solid #e6e6e6}h2{font-size:18px;margin:0 0 7px}a{color:#111;text-decoration:none}p{white-space:pre-wrap;line-height:1.5;margin:0 0 7px}time{font-size:12px;color:#666}.empty{padding:30px 0}</style></head><body><main><header><h1>${categoryId==='mission-notice'?'공지사항':categoryId==='mission-schedule'?'주요일정':'게시판'}</h1>${categoryId?`<p><a href="/ekodimission">에코디선교회 홈으로</a></p>`:''}</header>${items}</main></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
 }
 function postPage(route,post){
   if(!post)return new Response('Not Found',{status:404});
@@ -544,7 +553,7 @@ export async function handleSiteBoardRequest(request,env){
   }
   if(method==='GET'&&sub==='/api/me'){
     const response=boardJson(instance,{
-      authenticated:who.authenticated,role:who.role,
+      authenticated:who.authenticated,role:who.role,manage:who.manage,
       account:who.authenticated?who.email:''
     });
     response.headers.set('cache-control','private, no-store');
@@ -640,11 +649,19 @@ export async function handleSiteBoardRequest(request,env){
     return boardJson(instance,{ok:true});
   }
 
-  if(method==='GET'&&sub==='/')return page(route,await listPosts(env,instance));
+  if(method==='GET'&&sub==='/'){
+    const categoryId=safeCategoryId(new URL(request.url).searchParams.get('category'));
+    const selected=isMissionOfficialCategory(instance,categoryId)?categoryId:'';
+    return page(route,await listPosts(env,instance,selected),selected);
+  }
   const postPageMatch=sub.match(/^\/post\/(\d+)$/);
   if(method==='GET'&&postPageMatch)return postPage(route,await readPost(env,instance,Number(postPageMatch[1])));
   if(method==='GET'&&sub==='/api/health')return boardJson(instance,{ok:true,boardId:instance.board_id,siteId:instance.site_id,aiIndependent:true,independent:true});
-  if(method==='GET'&&sub==='/api/posts')return boardJson(instance,{boardId:instance.board_id,items:await listPosts(env,instance)});
+  if(method==='GET'&&sub==='/api/posts'){
+    const categoryId=safeCategoryId(new URL(request.url).searchParams.get('category'));
+    const selected=isMissionOfficialCategory(instance,categoryId)?categoryId:'';
+    return boardJson(instance,{boardId:instance.board_id,categoryId:selected||null,items:await listPosts(env,instance,selected)});
+  }
   const apiPost=sub.match(/^\/api\/posts\/(\d+)$/);
   if(method==='GET'&&apiPost){
     const post=await readPost(env,instance,Number(apiPost[1]));
@@ -656,14 +673,16 @@ export async function handleSiteBoardRequest(request,env){
     const body=await parseBody(request),title=clean(body?.title,200),textBody=clean(body?.body,20000);
     if(churchOfficialCategoryRequiresManager(route.siteId,body?.categoryId)&&!who.manage)return boardJson(instance,{error:'official_category_requires_board_manager'},403);
     if(!title||!textBody)return boardJson(instance,{error:'title_and_body_required'},400);
+    const categoryId=safeCategoryId(body?.categoryId);
+    if(isMissionOfficialCategory(instance,categoryId)&&!who.manage)return boardJson(instance,{error:'official_post_manager_required'},403);
     const stamp=now();
     const result=await env.DB.prepare(`INSERT INTO ekodi_board_posts
       (board_id,author_person_id,author_email,title,body,status,created_at,updated_at) VALUES (?,?,?,?,?,'published',?,?)`)
       .bind(instance.board_id,who.personId,who.email,title,textBody,stamp,stamp).run();
     const id=Number(result?.meta?.last_row_id||0);
-    const categoryId=safeCategoryId(body?.categoryId);
     if(categoryId){
-      const category=await env.DB.prepare("SELECT category_id FROM ekodi_board_categories WHERE board_id=? AND category_id=? AND status='active' LIMIT 1").bind(instance.board_id,categoryId).first();
+      const official=isMissionOfficialCategory(instance,categoryId);
+      const category=official||await env.DB.prepare("SELECT category_id FROM ekodi_board_categories WHERE board_id=? AND category_id=? AND status='active' LIMIT 1").bind(instance.board_id,categoryId).first();
       if(category)await env.DB.prepare('INSERT OR IGNORE INTO ekodi_board_post_categories(board_id,post_id,category_id) VALUES (?,?,?)').bind(instance.board_id,id,categoryId).run();
     }
     await audit(env,instance,who,'post.create','post',id,{categoryId:categoryId||null});
@@ -681,6 +700,10 @@ export async function handleSiteBoardRequest(request,env){
     }
     const owns=clean(existing.author_person_id,160)===who.personId;
     if(!owns&&!who.manage)return boardJson(instance,{error:'forbidden'},403);
+    if(instance.site_id==='ekodimission'&&!who.manage){
+      const protectedCategory=await env.DB.prepare("SELECT category_id FROM ekodi_board_post_categories WHERE board_id=? AND post_id=? AND category_id IN ('mission-notice','mission-schedule') LIMIT 1").bind(instance.board_id,id).first();
+      if(protectedCategory)return boardJson(instance,{error:'official_post_manager_required'},403);
+    }
     if(method==='DELETE'){
       await env.DB.prepare(`UPDATE ekodi_board_posts SET status='deleted',updated_at=? WHERE board_id=? AND id=?`).bind(now(),instance.board_id,id).run();
       await audit(env,instance,who,'post.delete','post',id);
@@ -689,12 +712,13 @@ export async function handleSiteBoardRequest(request,env){
     const body=await parseBody(request),title=clean(body?.title??existing.title,200),textBody=clean(body?.body??existing.body,20000);
     if(churchOfficialCategoryRequiresManager(route.siteId,body?.categoryId)&&!who.manage)return boardJson(instance,{error:'official_category_requires_board_manager'},403);
     if(!title||!textBody)return boardJson(instance,{error:'title_and_body_required'},400);
+    if(isMissionOfficialCategory(instance,safeCategoryId(body?.categoryId))&&!who.manage)return boardJson(instance,{error:'official_post_manager_required'},403);
     await env.DB.prepare('UPDATE ekodi_board_posts SET title=?,body=?,updated_at=? WHERE board_id=? AND id=?').bind(title,textBody,now(),instance.board_id,id).run();
     if(body?.categoryId!==undefined){
       await env.DB.prepare('DELETE FROM ekodi_board_post_categories WHERE board_id=? AND post_id=?').bind(instance.board_id,id).run();
       const categoryId=safeCategoryId(body.categoryId);
       if(categoryId){
-        const category=await env.DB.prepare("SELECT category_id FROM ekodi_board_categories WHERE board_id=? AND category_id=? AND status='active' LIMIT 1").bind(instance.board_id,categoryId).first();
+        const category=isMissionOfficialCategory(instance,categoryId)||await env.DB.prepare("SELECT category_id FROM ekodi_board_categories WHERE board_id=? AND category_id=? AND status='active' LIMIT 1").bind(instance.board_id,categoryId).first();
         if(category)await env.DB.prepare('INSERT OR IGNORE INTO ekodi_board_post_categories(board_id,post_id,category_id) VALUES (?,?,?)').bind(instance.board_id,id,categoryId).run();
       }
     }

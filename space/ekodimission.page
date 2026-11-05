@@ -53,5 +53,34 @@
     </form>
   </div></div>
 </article>
-<p class="mission-home-archive-link"><a class="text-link" href="/ekodimission/activities">지난 토요모임·활동 보기 →</a> <span aria-hidden="true">·</span> <a class="text-link" href="/ekodimission/history">사역 연혁 보기 →</a></p></section></main>
+<p class="mission-home-archive-link"><a class="text-link" href="/ekodimission/activities">지난 토요모임·활동 보기 →</a> <span aria-hidden="true">·</span> <a class="text-link" href="/ekodimission/history">사역 연혁 보기 →</a></p></section>
+<section class="mission-home-board-grid" id="mission-updates" aria-label="에코디선교회 공지사항과 주요일정">
+  <article class="mission-home-board" data-mission-editorial="mission-notice" aria-labelledby="mission-notice-heading">
+    <div class="mission-home-board-head"><h2 id="mission-notice-heading">공지사항</h2><a href="/ekodimission/board?category=mission-notice">전체 보기</a></div>
+    <ol data-mission-board-items><li class="mission-home-board-empty">공지사항을 확인하고 있습니다.</li></ol>
+    <button type="button" class="mission-home-board-write" data-mission-board-create hidden>공지 등록</button>
+    <form class="mission-home-board-form" data-mission-board-form hidden>
+      <label>제목<input name="title" maxlength="160" required></label>
+      <label>내용<textarea name="body" maxlength="4000" rows="3"></textarea></label>
+      <div class="mission-home-board-actions"><button type="submit">저장</button><button type="button" data-mission-board-cancel>취소</button></div>
+      <p data-mission-board-form-status role="status"></p>
+    </form>
+  </article>
+  <article class="mission-home-board" data-mission-editorial="mission-schedule" aria-labelledby="mission-schedule-heading">
+    <div class="mission-home-board-head"><h2 id="mission-schedule-heading">주요일정</h2><a href="/ekodimission/board?category=mission-schedule">등록 일정 전체 보기</a></div>
+    <ol data-mission-board-items><li class="mission-home-board-empty">주요일정을 확인하고 있습니다.</li></ol>
+    <button type="button" class="mission-home-board-write" data-mission-board-create hidden>일정 등록</button>
+    <form class="mission-home-board-form" data-mission-board-form hidden>
+      <label>일정명<input name="title" maxlength="160" required></label>
+      <div class="mission-home-board-form-grid">
+        <label>날짜<input name="date" type="date" required></label>
+        <label>시간<input name="time" type="time" required></label>
+      </div>
+      <label>장소<input name="venue" maxlength="160" required></label>
+      <label>내용<textarea name="body" maxlength="4000" rows="3" placeholder="일정에 대한 안내를 적어 주세요."></textarea></label>
+      <div class="mission-home-board-actions"><button type="submit">저장</button><button type="button" data-mission-board-cancel>취소</button></div>
+      <p data-mission-board-form-status role="status"></p>
+    </form>
+  </article>
+</section></main>
 <footer class="site-footer"><div><strong>에코디선교회</strong><p>말씀대로 살아내고, 곁을 내어주며, 사람과 공동체를 살려내는 선교.</p></div><p class="footnote">EKODI MISSION · ekodi.kr/ekodimission</p></footer></body></html>
