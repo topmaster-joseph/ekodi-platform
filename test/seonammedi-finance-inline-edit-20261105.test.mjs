@@ -32,7 +32,7 @@ test('public finance editing uses site finance capability, audit and aggregate-o
   assert.match(server,/if\(approved\)page\.financeDisclosure=approved/);
   assert.match(server,/finance:\{raised:null,spent:null,balance:null,entries:\[\]\}/);
   assert.match(server,/PREFIX\+'\/admin\/finance-disclosure'&&request\.method==='PUT'/);
-  assert.match(app,/admin\.has\('finance'\)\)\{bindPublicFinanceAdmin\(\);bindFinanceDisclosureEditor\(\);\}/);
+  assert.match(app,/if\(admin\.has\('finance'\)\)bindFinanceDisclosureEditor\(\)/);
   assert.match(app,/publicAdminJson\('\/api\/seonammedi\/admin\/finance-disclosure',\{method:'PUT'/);
   assert.match(app,/if\(pageBody\.page\?\.financeDisclosure\)renderFinanceDisclosure/);
   assert.match(css,/\.committee-finance-editor\[hidden\]\{display:none!important\}/);
