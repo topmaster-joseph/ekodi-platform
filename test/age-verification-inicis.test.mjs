@@ -119,6 +119,15 @@ test('KG channel stays disabled until explicit contract flag and channel exist',
   assert.equal(legacy.body.channelKey,env.PORTONE_AGE_CHANNEL_KEY);
 });
 
+test('KG-only channel starts without requiring a separate legacy PortOne channel', async()=>{
+  const kgOnly={...env,PORTONE_AGE_CHANNEL_KEY:''};
+  const configured=await call('/config?site=singles',undefined,U,kgOnly);
+  assert.equal(configured.body.enabled,true);
+  const started=await call('/start',{site:'singles'},U,kgOnly);
+  assert.equal(started.status,201);
+  assert.match(started.body.identityVerificationId,/^ekodi-inicis-[0-9a-f]{32}$/);
+});
+
 test('KG initiation is server selected and transaction ID binds to provider', async()=>{
   const start=await call('/start',{site:'singles'});
   assert.equal(start.status,201);
