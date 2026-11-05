@@ -7,7 +7,7 @@ export function renderMallHeader({publicPrefix='',home=false,sellerHref}={}) {
  return '<header class="header buyer-header mall-header"><div class="mall-header-inner">'+
  '<div class="mall-header-top">'+
  '<a class="brand" href="'+href('#top')+'" aria-label="에코디몰 홈"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>'+
- '<form id="mallGlobalSearch" class="mall-global-search" role="search" action="'+root+'" method="get"><label for="mallGlobalQuery" class="sr-only">상품검색</label><input id="mallGlobalQuery" name="q" type="search" maxlength="120" placeholder="무엇을 찾고 계세요?" autocomplete="off"><button type="submit" aria-label="상품 검색하기">⌕</button></form>'+
+ '<form id="mallGlobalSearch" class="mall-global-search" role="search" action="/ekodimall/" method="get"><label for="mallGlobalQuery" class="sr-only">상품검색</label><input id="mallGlobalQuery" name="q" type="search" maxlength="120" placeholder="무엇을 찾고 계세요?" autocomplete="off"><button type="submit" aria-label="상품 검색하기">⌕</button></form>'+
  '<div class="actions">'+(home?'<button class="icon mall-search-mobile" id="searchBtn" aria-label="상품 검색">⌕</button>':'<a class="icon mall-search-mobile" href="'+href('#shop')+'" aria-label="상품 검색">⌕</a>')+
  (home?'<button class="icon" id="wishBtn" aria-label="관심상품 보기">♡ <span id="wishCount">0</span></button>':'<a class="icon" href="'+root+'?wishlist=1" aria-label="관심상품 보기">♡ <span id="wishCount">0</span></a>')+
  '<a class="seller-mini" href="'+(sellerHref||root+'seller/')+'">판매하기</a></div></div>'+
