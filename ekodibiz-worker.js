@@ -432,5 +432,8 @@ export default {
 
   async scheduled(_event, env, ctx) {
     ctx.waitUntil(processSafeTasks(env));
+    ctx.waitUntil(storeFetch(env, '/agency/expire', {
+      method:'POST', headers:JSON_HEADERS, body:'{}'
+    }).catch((error) => console.warn('EKODIBIZ agency expiry sweep failed', error?.message || 'unknown')));
   }
 };
