@@ -38,6 +38,7 @@
   const nav = document.querySelector('.mall-primary-nav');
   const allTypes = new Set(['all','general','living','book','gift','local']);
   const filterButtons = [...document.querySelectorAll('#filters button[data-filter]')];
+  let applyingRoute = false;
   const aiForm = document.getElementById('mallRecommendSearchForm');
   const aiInput = document.getElementById('mallRecommendSearchInput');
   const viewFromUrl = () => {
@@ -68,7 +69,12 @@
     nav?.querySelectorAll('a[aria-current]').forEach(anchor => anchor.removeAttribute('aria-current'));
     if (mode === 'catalog') {
       const button = filterButtons.find(item => item.dataset.filter === category);
-      if (button && !button.classList.contains('active')) button.click();
+      if (button && !button.classList.contains('active')) {
+        // Apply the selected filter without allowing its click handler to
+        // clear the URL's active global search query.
+        applyingRoute = true;
+        try { button.click(); } finally { applyingRoute = false; }
+      }
       nav?.querySelector(`a[data-filter-target="${category}"]`)?.setAttribute('aria-current', 'page');
     } else if (mode === 'recommend') {
       nav?.querySelector('a[href="#recommend"]')?.setAttribute('aria-current', 'page');
@@ -111,7 +117,7 @@
   });
   // Keep the selected filter deep-linkable, including /?category=book from the bookstore.
   filterButtons.forEach(button => button.addEventListener('click', () => {
-    if (document.body.dataset.mallView !== 'catalog') return;
+    if (applyingRoute || document.body.dataset.mallView !== 'catalog') return;
     const next = new URL(window.location.href);
     next.searchParams.delete('category');
     next.searchParams.delete('q');
