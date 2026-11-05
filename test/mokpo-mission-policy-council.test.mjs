@@ -184,3 +184,17 @@ test('registrations admin section exists only for the mission department',async(
   const hammu=await organizationAdminPage('/hammu/admin').text();
   assert.doesNotMatch(hammu,/정책협의회 신청명단/);
 });
+
+test('static headers let the registration page run its same-origin script and reach the API',()=>{
+  const headers=fs.readFileSync(new URL('../_headers',import.meta.url),'utf8');
+  for(const path of ['/mokpo-presbytery/mission/policy-council-2026/','/mokpo-presbytery/mission/policy-council-2026/*']){
+    const start=headers.indexOf('\n'+path+'\n');
+    assert.ok(start>=0,path);
+    const block=headers.slice(start+1).split(/\n\s*\n/)[0];
+    assert.match(block,/! Content-Security-Policy/,path);
+    const csp=block.split('\n').find(line=>line.trim().startsWith('Content-Security-Policy:'));
+    assert.match(csp,/script-src 'self'/,path);
+    assert.match(csp,/connect-src 'self'/,path);
+    assert.doesNotMatch(csp,/unsafe-eval|script-src[^;]*unsafe-inline/,path);
+  }
+});
