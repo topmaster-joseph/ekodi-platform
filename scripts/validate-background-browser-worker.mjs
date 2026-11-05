@@ -12,9 +12,27 @@ const evidence=read('evidence/runtime/background-browser-worker/2026-09-22-initi
 const workerWorkflow=fs.readFileSync(path.join(root,'.github/workflows/ekodi-background-browser-worker.yml'),'utf8');
 const sharedRelease=fs.readFileSync(path.join(root,'.github/workflows/deploy-site-core.yml'),'utf8');
 const nativeUpdate=read('config/ekodi-native-browser-update-policy.json');
+const browserIndependence=read('config/ekodi-browser-independence.json');
+const nativeOnlyExecutor=fs.readFileSync(path.join(root,'scripts/ekodi-independent-browser.mjs'),'utf8');
 const nativeAgent=fs.readFileSync(path.join(root,'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'),'utf8');
 const failures=[];
 const fail=m=>failures.push(m);
+if(browserIndependence.policyId!=='EKODI-NATIVE-BROWSER-INDEPENDENCE-001'||
+  browserIndependence.owner!=='ekodi-orchestrator'||
+  browserIndependence.externalBrowser?.required!==false||
+  browserIndependence.externalBrowser?.automaticFallback!==false||
+  browserIndependence.externalBrowser?.paidSubscriptionRequired!==false||
+  browserIndependence.nativeRuntime?.cloudReadOnlyAvailableWithoutPairedPC!==true)
+  fail('native EKODI browser must not depend on external paid service or paired device');
+if(policy.provider?.independentExecutionContract!=='config/ekodi-browser-independence.json'||
+   policy.provider?.paidExternalBrowserAccountRequired!==false||
+   policy.provider?.noPaidBrowserFallbackForIndependentExecutor!==true)
+  fail('browser independent execution policy must be bound to first-party worker');
+for(const mandatory of ['planEkodiIndependentBrowser','executeEkodiIndependentBrowser',
+  'EKODI_NATIVE_AGENT_REQUIRED','EKODI_NATIVE_CLOUD_RUNTIME_REQUIRED',
+  'EKODI_NATIVE_BROWSER_EXECUTION_FAILED'])
+  if(!nativeOnlyExecutor.includes(mandatory))fail('first-party execution contract marker missing: '+mandatory);
+
 if(nativeUpdate.policyId!=='EKODI-AGENT-AUTOUPDATE-001'||nativeUpdate.owner!=='ekodi-orchestrator')fail('native agent auto-update identity mismatch');
 if(nativeUpdate.rollout?.initialPercent!==25||nativeUpdate.pinning?.sha256Required!==true||nativeUpdate.pinning?.immutableCommitRequired!==true)fail('agent auto-update must be immutable, checksum verified and canary-limited');
 if(nativeUpdate.safety?.existingTransactionRollbackRequired!==true||nativeUpdate.safety?.interactiveAuthSessionBlocksUpdate!==true)fail('agent auto-update rollback and active auth hold must remain enforced');
