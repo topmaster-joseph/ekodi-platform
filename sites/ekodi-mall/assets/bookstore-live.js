@@ -81,11 +81,12 @@
     const heading = element('h3');
     const title = element('a', '', book.name); title.href = href; heading.append(title);
     const abstract = safe(book.description);
-    const summary = element('p', 'card-summary', abstract.length > 46 ? abstract.slice(0, 45).trimEnd() + '…' : abstract);
+    const summary = element('p', 'card-summary', abstract.length > 34 ? abstract.slice(0, 33).trimEnd() + '…' : abstract);
     const meta = element('div', 'meta');
     const amount = Number(book.price);
-    const priceLabel = Number.isFinite(amount) && amount > 0 ? new Intl.NumberFormat('ko-KR').format(amount) + '원 · ' : '';
-    const status = element('span', 'status', priceLabel + '판매 중');
+    // Only show the amount returned by a verified live Books quote, never invent a list price.
+    const priceLabel = Number.isFinite(amount) && amount > 0 ? new Intl.NumberFormat('ko-KR').format(amount) + '원' : '가격 확인';
+    const status = element('span', 'status', priceLabel + ' · 판매 중');
     const more = element('a', 'smallbtn', '자세히'); more.href = href;
     meta.append(status, more); body.append(store, heading, summary, meta);
     article.append(thumb, body);
@@ -103,7 +104,10 @@
           approved.has(book.bookId) && /^book-[a-z0-9-]+$/.test(safe(book.slug)));
       await Promise.all(pending.map(async book => {
         try {
-          if (readyQuote(await quoteFor(book.bookId), book.bookId)) released.set(book.bookId, book);
+          const quote = await quoteFor(book.bookId);
+          if (readyQuote(quote, book.bookId)) {
+            released.set(book.bookId, { ...book, price: Number(quote.price.amount) });
+          }
         } catch { /* Missing evidence is never treated as a sale. */ }
       }));
     } catch { released = new Map(); } // Fail closed on transient source errors.
