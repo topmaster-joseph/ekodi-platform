@@ -1,4 +1,5 @@
 import { sharedProductId, shareUrlForProduct, prioritizeSharedProduct } from './affiliate-share.js';
+import { providerMatches as isApprovedProvider, safeAffiliateHttps as safeHttps } from './affiliate-provider-filter.js';
 
 (() => {
   const API = 'https://ekodi.kr/api/affiliate/public/products?storefront=ekodi-mall&limit=100';
@@ -16,14 +17,7 @@ import { sharedProductId, shareUrlForProduct, prioritizeSharedProduct } from './
 
   const text = (tag, className, value) => { const node = document.createElement(tag); if (className) node.className = className; node.textContent = value; return node; };
   const clean = (value) => String(value || '').trim();
-  const safeHttps = (value) => { try { const url = new URL(value); return url.protocol === 'https:' ? url.href : ''; } catch { return ''; } };
-  // Merchant identity is authoritative: free-text names and network branding cannot qualify a product.
-  const providerId = (value) => clean(value).toLowerCase().replace(/[^a-z0-9]/g, '');
-  const allowedProviders = new Set(keys.flatMap((key) => {
-    const id = providerId(key);
-    return id === 'coupangpartners' ? ['coupangpartners', 'coupang'] : [id];
-  }));
-  const providerMatches = (item) => allowedProviders.has(providerId(item.merchantKey || item.providerKey));
+  const providerMatches = (item) => isApprovedProvider(item, keys);
   const searchMatches = (item, query) => !query || query.split(/\s+/).every((term) =>
     [item.productName, item.category, item.providerName, item.merchantName].map(clean).join(' ').toLowerCase().includes(term));
 
