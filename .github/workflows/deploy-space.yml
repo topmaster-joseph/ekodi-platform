@@ -41,6 +41,7 @@ on:
       - 'supabase/migrations/20260914095000_organization_subsite_operations.sql'
       - 'supabase/migrations/20261031123000_mokpo_presbytery_organization_tenants.sql'
       - 'supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql'
+      - 'supabase/migrations/20261106090000_mokpo_mission_inline_roles.sql'
       - 'supabase/migrations/20261031210000_organization_budget_lines.sql'
       - 'supabase/migrations/20260909001000_public_storefront.sql'
       - 'supabase/migrations/20260913013000_ekodimall_canonical_path.sql'
@@ -88,6 +89,7 @@ on:
       - 'supabase/migrations/20260914095000_organization_subsite_operations.sql'
       - 'supabase/migrations/20261031123000_mokpo_presbytery_organization_tenants.sql'
       - 'supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql'
+      - 'supabase/migrations/20261106090000_mokpo_mission_inline_roles.sql'
       - 'supabase/migrations/20261031210000_organization_budget_lines.sql'
       - 'supabase/migrations/20260909001000_public_storefront.sql'
       - 'supabase/migrations/20260913013000_ekodimall_canonical_path.sql'
@@ -123,6 +125,7 @@ env:
   MOKPO_ORGANIZATION_MIGRATION: supabase/migrations/20261031123000_mokpo_presbytery_organization_tenants.sql
   ORGANIZATION_BUDGET_MIGRATION: supabase/migrations/20261031210000_organization_budget_lines.sql
   MOKPO_ROSTER_VIEWER_MIGRATION: supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql
+  MOKPO_INLINE_ROLES_MIGRATION: supabase/migrations/20261106090000_mokpo_mission_inline_roles.sql
 
 jobs:
   validate:
@@ -321,7 +324,8 @@ jobs:
             to_regclass('public.mission_activity_page_edits') is not null as mission_editor_table,
             to_regprocedure('public.mission_activity_page_public_snapshot(text)') is not null as mission_editor_public,
             to_regprocedure('public.mission_activity_page_update(text,text,text,text,text,date,time without time zone,bigint)') is not null as mission_editor_update,
-            to_regprocedure('public.organization_pin_snapshot(text,text)') is not null and to_regprocedure('public.organization_event_roster_public(text,text)') is not null and to_regprocedure('public.organization_pin_viewer_set(text,text,text,text)') is not null as mokpo_roster_viewer;"
+            to_regprocedure('public.organization_pin_snapshot(text,text)') is not null and to_regprocedure('public.organization_event_roster_public(text,text)') is not null and to_regprocedure('public.organization_pin_viewer_set(text,text,text,text)') is not null as mokpo_roster_viewer,
+            to_regprocedure('public.organization_site_context(text)') is not null and to_regprocedure('public.organization_member_snapshot(text)') is not null and to_regprocedure('public.organization_pin_budget_approve(text,text,integer)') is not null as mokpo_inline_roles;"
 
           query_sql "$proof_sql" /tmp/space-schema-before.json
 
@@ -343,9 +347,12 @@ jobs:
           if ! grep -Fq '"mokpo_roster_viewer":true' /tmp/space-schema-before.json; then
             apply_migration "$MOKPO_ROSTER_VIEWER_MIGRATION"
           fi
+          if ! grep -Fq '"mokpo_inline_roles":true' /tmp/space-schema-before.json; then
+            apply_migration "$MOKPO_INLINE_ROLES_MIGRATION"
+          fi
 
           query_sql "$proof_sql" /tmp/space-schema-after.json
-          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"mokpo_organizations":true' '"organization_budget":true' '"mission_editor_table":true' '"mission_editor_public":true' '"mission_editor_update":true' '"mokpo_roster_viewer":true'; do
+          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"mokpo_organizations":true' '"organization_budget":true' '"mission_editor_table":true' '"mission_editor_public":true' '"mission_editor_update":true' '"mokpo_roster_viewer":true' '"mokpo_inline_roles":true'; do
             grep -Fq "$marker" /tmp/space-schema-after.json || { echo "Missing required Space Supabase contract: $marker"; cat /tmp/space-schema-after.json; exit 1; }
           done
 
@@ -392,7 +399,13 @@ jobs:
             pin_snapshot=$(curl -sS -o /tmp/mokpo-pin-snapshot.json -w '%{http_code}' -X POST "$base/organization_pin_snapshot" \
               -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H 'Content-Type: application/json' --data '{"p_slug":"mokpo-mission","p_token":"invalid"}')
             case "$pin_snapshot" in 4*) ;; *) echo "organization_pin_snapshot accepted an invalid token (HTTP $pin_snapshot)" >&2; exit 1;; esac
-            echo 'Mokpo mission roster/viewer RPCs: masked public roster, refused bad PIN and token.'
+            approve=$(curl -sS -o /tmp/mokpo-approve-proof.json -w '%{http_code}' -X POST "$base/organization_pin_budget_approve" \
+              -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H 'Content-Type: application/json' --data '{"p_slug":"mokpo-mission","p_token":"invalid","p_year":2027}')
+            case "$approve" in 4*) ;; *) echo "organization_pin_budget_approve accepted an invalid token (HTTP $approve)" >&2; exit 1;; esac
+            member=$(curl -sS -o /tmp/mokpo-member-proof.json -w '%{http_code}' -X POST "$base/organization_member_snapshot" \
+              -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H 'Content-Type: application/json' --data '{"p_slug":"mokpo-mission"}')
+            case "$member" in 4*) ;; *) echo "organization_member_snapshot served an anonymous caller (HTTP $member)" >&2; exit 1;; esac
+            echo 'Mokpo mission roster/viewer RPCs: masked public roster, refused bad PIN and token, anonymous approval and member reads refused.'
           fi
 
           if [ "${SUPABASE_SCHEMA_PREFLIGHT_MODE:-}" = 'public-rpc-proof' ]; then

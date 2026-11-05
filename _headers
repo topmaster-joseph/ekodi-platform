@@ -26,6 +26,19 @@
   ! Cache-Control
   Cache-Control: no-cache
 
+# 목포노회 선교부 홈: 권한별 열람·수정·승인 패널 (same-origin site.js + pinned supabase-js CDN, Supabase RPC only).
+/mokpo-presbytery/mission/
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-cache
+
+/mokpo-presbytery/mission/site.js
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-cache
+
 # 목포노회 선교부 부장 조회: phone + PIN read-only viewer (same-origin script, Supabase RPC only).
 /mokpo-presbytery/mission/viewer/
   ! Content-Security-Policy

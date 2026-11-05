@@ -16,15 +16,23 @@ E = html.escape
 SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co'
 SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_'
 POLICY_PATH = '/mokpo-presbytery/mission/policy-council-2026/'
+VIEWER_LOGIN = '/mokpo-presbytery/mission/viewer/'
 
 
 def mission_nav(prefix):
     # Same header on the mission home and its sub-pages; sub-pages point anchors back to the home.
-    return [('노회 홈', '/mokpo-presbytery/', False), ('소개·구성', prefix + '#intro', False), ('사업계획', prefix + '#plans', False), ('예산', prefix + '#budget', False), ('회의·일정', prefix + '#meetings', False), ('자료실', prefix + '#resources', False), ('업무공간', prefix + '#workspace', True)]
+    return [('노회 홈', '/mokpo-presbytery/', False), ('소개·구성', prefix + '#intro', False), ('사업계획', prefix + '#plans', False), ('예산', prefix + '#budget', False), ('회의·일정', prefix + '#meetings', False), ('자료실', prefix + '#resources', False), ('로그인', VIEWER_LOGIN, True)]
 
 CSS = """.notice-card{border-color:#e3d3b4;background:#fbf7ef}main section.notice{padding-block:36px 8px;border-bottom:0}
 .pilot-id{display:flex;flex-direction:column;line-height:1.5}.pilot-note{display:block;color:#b9c7c4}
 .hero .period{white-space:nowrap}
+.rolebar{background:#fbf7ef;border-bottom:1px solid #e3d3b4;font-size:14px}.rolebar .wrap{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-block:8px;flex-wrap:wrap}
+.role-panel{margin-top:28px;border:1px solid #e3d3b4;border-radius:14px;background:#fffdf8;padding:18px}.rp-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rp-head h3{margin:0;font-size:18px}
+.role-panel h4{margin:20px 0 8px;font-size:15px}.rp-table{width:100%;border-collapse:collapse;font-size:14.5px;background:#fff}.rp-table th,.rp-table td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}.rp-table th{color:var(--muted);font-weight:600;white-space:nowrap}.rp-table td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rp-empty{color:var(--muted)}.rp-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:12px 0}.rp-cards div{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}.rp-cards b{display:block;font-size:18px}.rp-cards span{color:var(--muted);font-size:13px}
+.rp-form{margin-top:16px;border-top:1px dashed #e3d3b4;padding-top:12px}.rp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.rp-form label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600}.rp-form input,.rp-form select{font:inherit;font-weight:400;padding:9px 10px;border:1px solid #c7d1ce;border-radius:8px;background:#fff}
+.rp-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}.rp-btn{display:inline-block;padding:9px 14px;border:1px solid var(--sea);border-radius:9px;background:#fff;color:var(--sea);font:600 14px/1.4 inherit;cursor:pointer;text-decoration:none}.rp-btn.primary{background:var(--sea);color:#fff}.rp-btn[disabled]{opacity:.6}
+.rp-link{border:0;background:none;color:var(--sea);text-decoration:underline;cursor:pointer;font:inherit;padding:0}.rp-msg{color:var(--muted);font-size:13.5px}.rp-approve{margin-top:14px;padding:12px;border:1px solid var(--sea);border-radius:10px;background:#eef6f5}.rp-approve p{margin:0 0 8px}.rp-alert{color:#b23b3b;padding-bottom:8px}.rp-ok{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:30;max-width:90vw;background:#1f6b45;color:#fff;font-weight:600;padding:11px 18px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
 main.views>section[id]{display:none;scroll-margin-top:80px;border-bottom:0;min-height:52vh}
 main.views>section[id]:target{display:block}
 body:has(main.views>section[id]:target) section.hero{display:none}
@@ -164,7 +172,7 @@ def home():
 <section id="library"><div class="wrap"><div class="sh"><div><span class="kicker">자료실</span><h2>기준 자료</h2></div><p>공개 가능한 자료의 목록입니다. 원본 파일은 권한 확인 후 제공합니다.</p></div>
 <div class="grid"><div class="card"><span class="pill">보고서</span><h3>제135회 정기회 보고서</h3><p>위원회·훈련원·유지재단·성서신학원·연합회·시찰회·재정부 보고, 노회 규칙 및 규정, 역대 임원 명단 수록</p><span class="meta">2026. 10. 20.</span></div><div class="card"><span class="pill">규정</span><h3>목포노회 규칙 및 규정</h3><p>정기회 보고서 수록본 기준</p></div></div></div></section>
 <section id="workspace"><div class="wrap"><div class="sh"><div><span class="kicker">회원 업무공간</span><h2>권한을 받은 분의 업무공간</h2></div><p>EKODI 통합로그인으로 들어가며, 공간마다 부여된 권한만큼만 열립니다.</p></div>
-<div class="grid"><a class="card" href="/mokpo-presbytery/admin"><span class="pill on">로그인</span><h3>노회 운영관리</h3><p>노회 공지·임원·회계·출석 관리</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin"><span class="pill on">로그인</span><h3>선교부 운영관리</h3><p>선교부 임원·공지·회계·출석 관리</p><span class="go">들어가기 →</span></a><div class="card locked" aria-disabled="true"><span class="pill lock">잠금</span><h3>회원명단</h3><p>최고관리자와 사전에 지정된 명단 관리자만 열람합니다.</p><span class="meta">권한이 없는 계정에서는 선택할 수 없습니다.</span></div></div></div></section>
+<div class="grid"><a class="card" href="/mokpo-presbytery/admin"><span class="pill on">로그인</span><h3>노회 운영관리</h3><p>노회 공지·임원·회계·출석 관리</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/viewer/"><span class="pill on">로그인</span><h3>선교부</h3><p>선교부 화면 안에서 권한별 열람·수정·승인</p><span class="go">로그인 →</span></a><div class="card locked" aria-disabled="true"><span class="pill lock">잠금</span><h3>회원명단</h3><p>최고관리자와 사전에 지정된 명단 관리자만 열람합니다.</p><span class="meta">권한이 없는 계정에서는 선택할 수 없습니다.</span></div></div></div></section>
 </main>'''
     nav = [('노회 소개', '#about', False), ('소식·공지', '#news', False), ('시찰회', '#sichal', False), ('부서·위원회', '#departments', False), ('소속 교회', '#churches', False), ('회의·일정', '#schedule', False), ('자료실', '#library', False), ('업무공간', '#workspace', True)]
     return chrome('목포노회 · EKODI 업무지원 시범 공간', '대한예수교장로회 목포노회 업무지원 시범 공간', '대한예수교장로회', '목포노회', nav, body, '/mokpo-presbytery/')
@@ -175,7 +183,8 @@ def mission():
     total = sum(v for _, v in budget)
     assert total == 3000000, total
     rows = ''.join(f'<tr><td>{E(n)}</td><td class="n">{v:,}원</td><td class="n">{v * 100 / total:.1f}%</td><td><div class="bar" aria-hidden="true"><i style="width:{v * 100 / max(x for _, x in budget):.1f}%"></i></div></td></tr>' for n, v in budget)
-    body = f'''<section class="hero"><div class="wrap"><div><span class="kicker">Mission Department · 2026–2027</span>
+    body = f'''<div id="roleBar" class="rolebar" hidden data-supabase="{SUPABASE_URL}" data-key="{SUPABASE_PUBLISHABLE_KEY}" data-slug="mokpo-mission"></div>
+<section class="hero"><div class="wrap"><div><span class="kicker">Mission Department · 2026–2027</span>
 <h1>함께 세우는 선교,<br>지역과 교회를 잇는 동행</h1>
 <p class="lead">2026년 가을노회 후부터 2027년 가을노회 전까지, 선교부의 사업과 예산, 회의와 기록을 한곳에서 나눕니다.</p>
 <p class="verse">사업계획과 예산은 부원회의 심의 전 초안입니다.</p></div>
@@ -185,17 +194,18 @@ def mission():
 <div class="grid"><div class="card"><span class="pill">1</span><h3>서기 작성</h3><p>사업계획·예산·회의록 초안을 작성하고 수정합니다.</p></div><div class="card"><span class="pill">2</span><h3>부장 검토 · 승인</h3><p>검토 후 승인하면 확정본이 됩니다.</p></div><div class="card"><span class="pill">3</span><h3>부원 열람 · 의견</h3><p>허용된 자료를 보고 의견을 남깁니다.</p></div><div class="card"><span class="pill">4</span><h3>감사 기록</h3><p>누가 언제 무엇을 바꿨는지 남습니다.</p></div></div></div></section>
 <section id="plans"><div class="wrap"><div class="sh"><div><span class="kicker">2027 사업계획(안)</span><h2>네 갈래의 사업</h2></div><p>부원회의 심의 전 초안입니다.</p></div>
 <div class="grid"><div class="card"><h3>선교정책 협력</h3><p>총회·노회 정책협의회 참여와 지역 선교 현안 검토</p></div><div class="card"><h3>전도 및 군선교</h3><p>전도사역 지원과 목포해군교회 협력</p></div><div class="card"><h3>농어촌·도서지역</h3><p>지역교회 필요 조사와 선교협력</p></div><div class="card"><h3>부원 교제 · 평가</h3><p>전체모임과 회의, 2027 가을노회 보고 준비</p></div></div></div></section>
-<section id="budget"><div class="wrap"><div class="sh"><div><span class="kicker">예산 편성(안)</span><h2>2027 예산안 3,000,000원</h2></div><p>확정 예산이 아닌 심의용 편성안입니다. 집행 내역과 증빙은 업무공간에서만 다룹니다.</p></div>
+<section id="budget"><div class="wrap"><div class="sh"><div><span class="kicker">예산 편성(안)</span><h2>2027 예산안 3,000,000원</h2></div><p>확정 예산이 아닌 심의용 편성안입니다. 사업별 편성·집행·승인은 로그인한 선교부 임원·부원에게 이 화면 안에서 보입니다.</p></div>
 <div class="tbl"><table><thead><tr><th scope="col">사업</th><th scope="col" class="n">금액</th><th scope="col" class="n">비율</th><th scope="col">배분</th></tr></thead><tbody>{rows}</tbody><tfoot><tr><th>합계</th><td class="n">{total:,}원</td><td class="n">100%</td><td></td></tr></tfoot></table></div>
 <p class="note">2026년 결산과 2027년 예산은 회계연도별로 따로 관리합니다.</p></div></section>
 <section id="meetings"><div class="wrap"><div class="sh"><div><span class="kicker">회의 · 일정</span><h2>회의와 일정</h2></div><p>확정된 일정만 게시합니다.</p></div>
 <div class="grid" style="margin-bottom:22px"><a class="card notice-card" href="{POLICY_PATH}"><span class="pill on">총회 제출 명단</span><h3>제111회기 총회 국내선교부 정책협의회</h3><p>2026. 12. 10.(목) 11:00–15:00 · 한국교회100주년기념관 그레이스홀 · 주제 「생명을 살리고, 공동체를 세우는 국내선교」</p><span class="meta">목포노회 참석: 선교부장 · 서기</span><span class="go">안내·일정표·참석자 명단 →</span></a></div>
 <div class="timeline"><div><b>2026. 10. 20.(화) 제135회 정기회</b><span>선교부 구성 · 2026년 사업 보고</span></div><div class="next"><b>2026. 12. 10.(목) 총회 국내선교부 정책협의회</b><span>한국교회100주년기념관 그레이스홀 · <a href="{POLICY_PATH}">참석자 명단</a></span></div><div class="next"><b>선교부 첫 회의</b><span>부원 협의 후 공지합니다.</span></div><div class="next"><b>2027 가을노회</b><span>2027년 사업 결과 보고</span></div></div></div></section>
 <section id="resources"><div class="wrap"><div class="sh"><div><span class="kicker">회의록 · 공문 · 자료실</span><h2>기록과 자료</h2></div><p>공개 가능한 자료만 게시합니다. 회의록과 증빙은 권한자에게만 보입니다.</p></div>
-<div class="grid"><div class="card"><span class="pill">기준 자료</span><h3>제135회 정기회 보고서</h3><p>선교부 사업·회계 보고의 기준 자료</p></div><div class="card locked"><span class="pill lock">권한 필요</span><h3>회의록 · 공문</h3><p>부원 업무공간에서 열람합니다.</p></div></div></div></section>
-<section id="workspace"><div class="wrap"><div class="sh"><div><span class="kicker">부원 업무공간</span><h2>선교부 운영관리</h2></div><p>EKODI 통합로그인으로 들어가며, 선교부 권한이 있는 분만 열립니다. 다른 부서·시찰회 데이터와 분리되어 있습니다.</p></div>
-<div class="grid"><a class="card" href="/mokpo-presbytery/mission/admin"><span class="pill on">로그인</span><h3>운영 홈</h3><p>회기·임원·공지·감사기록 현황</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/finance"><span class="pill on">로그인</span><h3>회계보고</h3><p>수입·지출 기록과 공개 승인</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/budget"><span class="pill on">로그인</span><h3>예산</h3><p>편성·집행률·승인 이력</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/viewer/"><span class="pill">휴대폰 로그인</span><h3>부장 조회</h3><p>휴대폰번호·비밀번호로 선교부 전체 현황 읽기 전용 조회</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/registrations"><span class="pill on">로그인</span><h3>정책협의회 명단</h3><p>참석자 명단 · 부장 조회 비밀번호 설정 · 표 복사</p><span class="go">들어가기 →</span></a></div></div></section>
-</main>'''
+<div class="grid"><div class="card"><span class="pill">기준 자료</span><h3>제135회 정기회 보고서</h3><p>선교부 사업·회계 보고의 기준 자료</p></div><div class="card locked"><span class="pill lock">권한 필요</span><h3>회의록 · 공문</h3><p>로그인한 선교부 부원에게 이 화면에서 보입니다.</p></div></div></div></section>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="/mokpo-presbytery/mission/site.js" defer></script>'''
     nav = mission_nav('')
     return chrome('선교부 · 목포노회', '목포노회 선교부 2027 사업계획 및 예산(안)', '목포노회', '선교부', nav, body, '/mokpo-presbytery/mission/')
 
@@ -259,37 +269,27 @@ VIEWER_PATH = '/mokpo-presbytery/mission/viewer/'
 
 def viewer_page():
     body = f'''<style>
-.vw-login{{max-width:420px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}}
-.vw-login label{{display:block;font-size:14px;font-weight:600;margin:12px 0 5px}}
-.vw-login input{{width:100%;font:inherit;font-size:18px;padding:12px;border:1px solid #c7d1ce;border-radius:9px;letter-spacing:.04em}}
-.vw-btn{{width:100%;margin-top:16px;padding:14px;border:0;border-radius:11px;background:var(--sea);color:#fff;font:700 16px/1.4 inherit;cursor:pointer}}.vw-btn[disabled]{{opacity:.6}}
+.lg-wrap{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;max-width:860px;margin:0 auto}}
+.lg-card{{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}}.lg-card h2{{margin:0 0 6px;font-size:20px}}
+.lg-card label{{display:block;font-size:14px;font-weight:600;margin:12px 0 5px}}.lg-card input{{width:100%;font:inherit;font-size:18px;padding:12px;border:1px solid #c7d1ce;border-radius:9px}}
+.vw-btn{{display:block;width:100%;margin-top:16px;padding:14px;border:0;border-radius:11px;background:var(--sea);color:#fff;font:700 16px/1.4 inherit;cursor:pointer;text-align:center;text-decoration:none}}.vw-btn[disabled]{{opacity:.6}}
 .vw-err{{color:#b23b3b;font-size:14px;margin-top:10px;min-height:1em}}
-.vw-head{{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}}
-.vw-out{{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer}}
-.vw-tabs{{display:flex;gap:6px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none;position:sticky;top:68px;background:var(--paper);z-index:3}}.vw-tabs::-webkit-scrollbar{{display:none}}
-.vw-tabs button{{flex:none;padding:9px 15px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);font:600 14.5px/1.4 inherit;cursor:pointer;white-space:nowrap}}
-.vw-tabs button[aria-selected="true"]{{background:var(--sea);border-color:var(--sea);color:#fff}}
-.vw-panel{{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;overflow-x:auto}}
-.vw-panel table{{width:100%;border-collapse:collapse;font-size:14.5px}}.vw-panel th,.vw-panel td{{border-bottom:1px solid var(--line);padding:9px 6px;text-align:left;vertical-align:top}}.vw-panel th{{color:var(--muted);font-weight:600;white-space:nowrap}}
-.vw-panel td{{white-space:nowrap}}.vw-panel td.n{{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}}
-.vw-cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}}.vw-cards div{{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fbfcfb}}.vw-cards b{{display:block;font-size:20px}}.vw-cards span{{color:var(--muted);font-size:13px}}
-.vw-empty{{color:var(--muted)}}
 </style>
-<section class="hero"><div class="wrap"><div><span class="kicker">읽기 전용 · 휴대폰 로그인</span><h1>선교부 부장 조회</h1><p class="lead">등록된 휴대폰번호와 4자리 비밀번호로 선교부 임원·정책협의회 명단·예산·회계·회의·공지를 한눈에 봅니다. 수정은 할 수 없습니다.</p></div></div></section>
-<main><section><div class="wrap">
-<form class="vw-login" id="vwLogin" novalidate data-supabase="{SUPABASE_URL}" data-key="{SUPABASE_PUBLISHABLE_KEY}" data-slug="mokpo-mission">
+<section class="hero"><div class="wrap"><div><span class="kicker">선교부 로그인</span><h1>권한에 따라 보고, 고치고, 승인합니다</h1><p class="lead">로그인하면 선교부 화면의 각 메뉴 안에서 내 권한에 맞는 내용과 기능이 나타납니다. 서기는 수정, 부장은 승인, 부원은 열람합니다.</p></div></div></section>
+<main><section><div class="wrap"><div class="lg-wrap">
+<div class="lg-card"><h2>서기 · 부원</h2><p class="note">에코디 통합로그인(이메일)으로 들어갑니다. 선교부 회원으로 등록된 계정만 내부 자료가 보입니다.</p><a class="vw-btn" href="/auth/?site=space&amp;return_to=https%3A%2F%2Fekodi.kr%2Fmokpo-presbytery%2Fmission%2F">에코디 통합로그인</a></div>
+<form class="lg-card" id="vwLogin" novalidate data-supabase="{SUPABASE_URL}" data-key="{SUPABASE_PUBLISHABLE_KEY}" data-slug="mokpo-mission" data-return="/mokpo-presbytery/mission/#budget">
+<h2>부장 (휴대폰)</h2><p class="note">등록된 휴대폰번호와 숫자 4자리 비밀번호. 5번 틀리면 30분 잠깁니다.</p>
 <label for="vwPhone">휴대폰번호</label><input id="vwPhone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="010-0000-0000">
 <label for="vwPin">비밀번호 (숫자 4자리)</label><input id="vwPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" pattern="[0-9]*">
 <div class="vw-err" id="vwErr" role="alert"></div>
-<button class="vw-btn" type="submit" id="vwSubmit">조회하기</button>
-<p class="note">비밀번호를 5번 틀리면 30분 동안 잠깁니다. 비밀번호 문의: 선교부 서기 정찬균 목사 010-3501-8542</p>
+<button class="vw-btn" type="submit" id="vwSubmit">로그인</button>
+<p class="note">비밀번호 문의: 선교부 서기 정찬균 목사 010-3501-8542</p>
 <noscript><p class="note">이 화면은 자바스크립트가 필요합니다.</p></noscript>
 </form>
-<div id="vwApp" hidden><div class="vw-head"><div><span class="kicker" id="vwWho"></span><h2 id="vwTitle" style="margin:4px 0 0">목포노회 선교부</h2></div><button class="vw-out" type="button" id="vwOut">로그아웃</button></div>
-<div class="vw-tabs" role="tablist" id="vwTabs"></div><div class="vw-panel" role="tabpanel" id="vwPanel"></div></div>
-</div></section></main>
+</div></div></section></main>
 <script src="{VIEWER_PATH}viewer.js" defer></script>'''
-    return chrome('부장 조회 · 목포노회 선교부', '목포노회 선교부 읽기 전용 조회', '목포노회', '선교부', mission_nav('/mokpo-presbytery/mission/'), body, '/mokpo-presbytery/mission/')
+    return chrome('로그인 · 목포노회 선교부', '목포노회 선교부 로그인', '목포노회', '선교부', mission_nav('/mokpo-presbytery/mission/'), body, '/mokpo-presbytery/mission/')
 
 
 if __name__ == '__main__':
