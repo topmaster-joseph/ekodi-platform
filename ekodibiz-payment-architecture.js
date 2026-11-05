@@ -12,7 +12,9 @@ function paymentSecurityHeaders(headers) {
 }
 
 async function normalizePaymentContract(response, pathname) {
-  const headers = paymentSecurityHeaders(response.headers);
+  // The agency application has a dedicated, tighter Toss SDK CSP issued by its owning worker.
+  const isAgencyAsset = /^\/(?:ekodibiz\/)?ai-agency(?:-admin)?(?:\/|\.js)?$/.test(pathname);
+  const headers = isAgencyAsset ? new Headers(response.headers) : paymentSecurityHeaders(response.headers);
   const type = response.headers.get('content-type') || '';
   if (!type.includes('application/json')) {
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
