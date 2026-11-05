@@ -94,7 +94,7 @@ test('home and affiliate travel page use the same generated buyer header', () =>
   assert.match(build, /renderMallHeader\(\{ home: true/);
   assert.match(build, /renderMallHeader\(\{ home: false/);
   for (const label of ['전체상품','여행·레저','쿠팡추천몰','로컬·특산물','식품·건강','생활·가전','책·배움','선물·기념품','이번 주 추천']) assert.ok(mallHeader.includes(label));
-  assert.doesNotMatch(mallHeader, /<a[^>]*>AI 추천<\\/a>/);
+  assert.ok(!mallHeader.includes('>AI 추천</a>'));
   assert.match(affiliate, /assets\/home-refresh\.css/);
 });
 
