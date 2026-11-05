@@ -29,11 +29,18 @@ export async function verifyEkodiAdult({ site, accessToken, redirectUrl } = {}) 
   const sdk = await portOneSdk();
   // On redirect-based browser flows, the host page must rehydrate the session and
   // call completeEkodiAdult() using the returned identityVerificationId.
-  const result = await sdk.requestIdentityVerification({
+  // KG Inicis unified identity requires flgFixedUser. N lets the certified
+  // provider collect details; EKODI does not ask for or persist raw customer PII.
+  if (!['portone-v2', 'kg-inicis-unified'].includes(start.provider))
+    throw new Error('provider_unavailable');
+  const payload = {
     storeId: start.storeId, channelKey: start.channelKey,
     identityVerificationId: start.identityVerificationId,
     ...(redirectUrl ? { redirectUrl } : {}),
-  });
+    ...(start.provider === 'kg-inicis-unified'
+      ? { bypass: { inicisUnified: { flgFixedUser: 'N' } } } : {}),
+  };
+  const result = await sdk.requestIdentityVerification(payload);
   if (result && result.code !== undefined) throw new Error('provider_not_verified');
   return await completeEkodiAdult({ site, accessToken, identityVerificationId: start.identityVerificationId });
 }
