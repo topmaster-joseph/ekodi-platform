@@ -96,8 +96,9 @@ test('both shared and native footers use one compact scoped presentation',async(
   assert.match(source,/attachFooterTraffic\(footer\)/);
   assert.match(source,/data-ekodi-footer-traffic/);
   assert.match(source,/max-width:390px/);
-  assert.match(source,/ekodi-footer-traffic\{[^\n]*gap:7px 18px!important/,'desktop counters have breathing room');
-  assert.match(source,/@media\(max-width:390px\)\{\.ekodi-footer-traffic\{gap:6px 13px!important/,'mobile counters remain spaced yet wrap');
+  assert.match(source,/ekodi-footer-traffic\{[^\n]*column-gap:28px!important;row-gap:10px!important/,'desktop counters have increased spacing');
+  assert.match(source,/@media\(max-width:390px\)\{\.ekodi-footer-traffic\{column-gap:20px!important;row-gap:8px!important/,'mobile counters retain separated and wrapped spacing');
+  assert.match(source,/ekodi-footer-traffic__note\{flex-basis:100%!important/,'UTC note is on its own line');
   assert.match(source,/익명 세션 · UTC 기준/);
   assert.match(shell,/trafficKnownRoots=new Set\('ai bible books ekodibooks/);
   assert.match(shell,/ delivery edu education energy/);
