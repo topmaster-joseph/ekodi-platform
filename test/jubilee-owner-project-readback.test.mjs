@@ -32,7 +32,8 @@ test('incomplete D1 response or invalid owner is rejected',()=>{
 test('read-only workflow is release-gated, privacy-safe, no write methods or public artifacts',()=>{
   const w=readFileSync(new URL('../.github/workflows/publishing-jubilee-project-readback.yml',import.meta.url),'utf8');
   assert.match(w,/workflow_dispatch:/);
-  assert.match(w,/validate-ekodi-ai-change-orchestration\.mjs --release/);
+  assert.match(w,/name: EKODI AI Orchestration Gate/);
+  assert.match(w,/validate-ekodi-ai-change-orchestration/);
   assert.match(w,/wrangler@4\.119\.0 d1 execute .*--remote --json/);
   assert.match(w,/PUBLISHING_JUBILEE_AUTHOR_USER_ID:.*secrets\./);
   assert.match(w,/SELECT id,title,author_user_id,stage,revision,manuscript_digest FROM/);
