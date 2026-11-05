@@ -42,7 +42,7 @@ const recRules = Object.freeze(CHECKS.map(([id,selector,severity])=>Object.freez
 })));
 const safeCount=value=>Number.isSafeInteger(value) && value>=0 && value<=1000000 ? value : null;
 const safeDate=value=>{
-  if(typeof value!=='string'||value.length>40)return null;
+  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value))return null;
   const millis=Date.parse(value);
   return Number.isFinite(millis)?millis:null;
 };
@@ -115,6 +115,9 @@ export function inspectCampusAiIndependentOperations(input={}, options={}){
   const uniqueTasks=[...new Map(tasks.map(t=>[t.idempotencyKey,t])).values()];
   return Object.freeze({
     policyId:CAMPUS_INDEPENDENCE_POLICY.id,
+    diagnosticOnly:true,
+    observationsExternallyAttested:false,
+    productionOperationVerified:false,
     evaluatedAt:new Date(time).toISOString(),
     status,coreAvailable:canUseCore,coreFullyHealthy:coreReady,
     aiModelInvoked:false,externalBrowserInvoked:false,
