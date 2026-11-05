@@ -69,8 +69,6 @@
     if(String(data.meeting.time||'11:00')!=='11:00'){
       const heroTime=document.querySelector('.mission-home-photo-fallback p');
       if(heroTime)heroTime.textContent='이번 주 토요일 '+meetingTime+' · 성경토론과 식사';
-      const sectionNote=document.querySelector('.mission-home-current .section-heading > p:last-child');
-      if(sectionNote)sectionNote.textContent='2024년 2월 3일부터 이어온 정기모임입니다. 이번 주 토요모임은 '+meetingTime+'에 진행합니다. 누구나 참여할 수 있으며 답글은 선택 사항입니다.';
     }
     const timeLabel=root.querySelector('.mission-saturday-date span:last-child');
     if(timeLabel)timeLabel.textContent=meetingTime;
