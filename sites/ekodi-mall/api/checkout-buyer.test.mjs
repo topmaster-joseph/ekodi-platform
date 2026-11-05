@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { validateBuyer, tossKeyBlockers, checkoutConfig, isWidgetClientKey } from './checkout-buyer.js';
-import mallApi, { createOrder } from './worker.js';
+import mallApi, { createOrder, recordConfirmedPayment } from './worker.js';
+import { pointEstimate, eligibleMember, verifiedRefundPointStatements, memberPointsView } from './member-purchase-points.js';
 import { paymentProviderReadiness } from './payment-capabilities.js';
 
 class Stmt { constructor(db, sql) { this.db = db; this.sql = sql; this.args = []; } bind(...a) { this.args = a; return this; } run() { return this.db.prepare(this.sql).run(...this.args); } first() { return this.db.prepare(this.sql).get(...this.args) || null; } all() { return { results: this.db.prepare(this.sql).all(...this.args) }; } }
@@ -128,4 +129,90 @@ test('guest payment remains restricted to the verified merchant of record on the
   assert.equal(verified.status,201);
   const wrongMode=await createOrder({...env,MALL_EKODIAN_EMAILS:'s@x',TOSS_CLIENT_KEY:'live_gck_abc',TOSS_SECRET_KEY:'test_gsk_abc'},request);
   assert.equal(wrongMode.status,409,'guest approval never bypasses matching Toss key mode');
+});
+
+const MEMBER_ID='0c58326e-bcd0-4f20-83af-0fb2f61fb7eb';
+const OTHER_ID='1dbda4bc-b809-4c09-897e-bc4a7ff2d951';
+const MEMBER={id:MEMBER_ID,email:'buyer@example.com',email_confirmed_at:'2026-11-05T01:00:00Z',is_anonymous:false};
+const POINTS_ENV={...LIVE_WIDGET,MALL_MEMBER_POINT_EVIDENCE_ENABLED:'true',MALL_TOSS_MERCHANT_ONLY:'true',MALL_EKODIAN_EMAILS:'s@x'};
+test('member-only 1% of paid KRW rounds down and never trusts anonymous or invalid sessions',()=>{
+  assert.equal(pointEstimate(15000),150);
+  assert.equal(pointEstimate(1999),19);
+  assert.equal(pointEstimate(15000,5000),100);
+  assert.equal(pointEstimate(15000,15000),0);
+  assert.equal(pointEstimate(99),0);
+  assert.equal(pointEstimate(-1),0);
+  assert.equal(pointEstimate(1.2),0);
+  assert.equal(eligibleMember(MEMBER),MEMBER_ID);
+  assert.equal(eligibleMember({...MEMBER,is_anonymous:true}),null);
+  assert.equal(eligibleMember({...MEMBER,email_confirmed_at:null}),null);
+  assert.equal(eligibleMember({...MEMBER,id:'not-a-uuid'}),null);
+});
+test('member receipt records one immutable 1% evidence only after Toss DONE, and refunds compensate it',async()=>{
+  const db=migrated();
+  const env={...POINTS_ENV,DB:db};
+  const created=await createOrder(env,{shareCode:'SHARE1',quantity:1,buyer:BUYER,member:MEMBER});
+  assert.equal(created.status,201,JSON.stringify(created));
+  assert.equal(created.order.memberPoints.estimatedPoints,150);
+  assert.equal(created.order.memberPoints.spendable,false);
+  const order=db.db.prepare('SELECT * FROM orders WHERE id=?').get(created.order.id);
+  assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM member_purchase_point_events').get().n,0);
+  const receipt={paymentKey:'test_paid_points',orderId:order.id,status:'DONE',totalAmount:15000,approvedAt:new Date().toISOString()};
+  await recordConfirmedPayment(env,order,receipt,'TOSS');
+  await recordConfirmedPayment(env,order,receipt,'TOSS');
+  const points=db.db.prepare('SELECT * FROM member_purchase_point_orders WHERE order_id=?').get(order.id);
+  assert.equal(points.auth_user_id,MEMBER_ID);
+  assert.equal(points.eligible_points,150);
+  assert.equal(points.state,'pending_core');
+  assert.equal(memberPointsView(points).spendable,false);
+  assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM member_purchase_point_events').get().n,1);
+  for(const refunded of [5000,5000,15000,15000,5000]){
+    await db.batch(verifiedRefundPointStatements(env,order,refunded,new Date().toISOString()));
+  }
+  const events=db.db.prepare('SELECT event_kind,delta_points FROM member_purchase_point_events ORDER BY rowid').all();
+  assert.deepEqual(events.map(x=>x.delta_points),[150,-50,-100]);
+  const final=db.db.prepare('SELECT eligible_points,refunded_krw,state FROM member_purchase_point_orders WHERE order_id=?').get(order.id);
+  assert.deepEqual({...final},{eligible_points:0,refunded_krw:15000,state:'reversed'});
+});
+test('guest orders and synthetic financial rehearsals cannot earn member rewards',async()=>{
+  const db=migrated();
+  const env={...POINTS_ENV,DB:db};
+  const guest=await createOrder(env,{shareCode:'SHARE1',buyer:BUYER});
+  assert.equal(guest.status,201);
+  assert.equal(guest.order.memberPoints,null);
+  const guestRow=db.db.prepare('SELECT * FROM orders WHERE id=?').get(guest.order.id);
+  await recordConfirmedPayment(env,guestRow,{paymentKey:'guest_payment',status:'DONE',totalAmount:15000},'TOSS');
+  const fake=await createOrder(env,{shareCode:'SHARE1',buyer:BUYER,member:MEMBER});
+  const fakeRow=db.db.prepare('SELECT * FROM orders WHERE id=?').get(fake.order.id);
+  await recordConfirmedPayment(env,fakeRow,{paymentKey:'rehearsal_payment',status:'DONE',totalAmount:15000},'REHEARSAL');
+  assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM member_purchase_point_events').get().n,0);
+});
+test('HTTP member identity is verified, browser spoofing is rejected and points proof is owner-only',async()=>{
+  const db=migrated();
+  const env={...POINTS_ENV,DB:db,SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public'};
+  const old=globalThis.fetch;
+  try{
+    globalThis.fetch=async(_url,{headers}={})=>{
+      if(String(headers?.authorization).includes('INVALID'))return new Response('{}',{status:401});
+      const id=String(headers?.authorization).includes('OTHER')?OTHER_ID:MEMBER_ID;
+      return new Response(JSON.stringify({...MEMBER,id}),{status:200,headers:{'content-type':'application/json'}});
+    };
+    const orderReq=token=>new Request('https://ekodi.kr/api/public/orders',{
+      method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token},
+      body:JSON.stringify({shareCode:'SHARE1',buyer:BUYER,member:{id:OTHER_ID,email_confirmed_at:'faked'}})
+    });
+    assert.equal((await mallApi.fetch(orderReq('INVALID'),env)).status,401);
+    assert.equal(db.db.prepare('SELECT COUNT(*) AS n FROM orders').get().n,0);
+    const created=await mallApi.fetch(orderReq('VALID'),env);
+    assert.equal(created.status,201,await created.clone().text());
+    const orderId=(await created.json()).order.id;
+    assert.equal(db.db.prepare('SELECT auth_user_id FROM member_purchase_point_orders WHERE order_id=?').get(orderId).auth_user_id,MEMBER_ID);
+    const order=db.db.prepare('SELECT * FROM orders WHERE id=?').get(orderId);
+    await recordConfirmedPayment(env,order,{paymentKey:'member_owned',status:'DONE',totalAmount:15000},'TOSS');
+    const path='https://ekodi.kr/api/public/orders/'+encodeURIComponent(orderId)+'/points';
+    assert.equal((await mallApi.fetch(new Request(path,{headers:{authorization:'Bearer OTHER'}}),env)).status,404);
+    const proof=await mallApi.fetch(new Request(path,{headers:{authorization:'Bearer VALID'}}),env);
+    assert.equal(proof.status,200);
+    assert.equal((await proof.json()).memberPoints.points,150);
+  }finally{globalThis.fetch=old;}
 });
