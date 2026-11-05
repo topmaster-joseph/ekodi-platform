@@ -26,9 +26,9 @@ class Db {
           async first() {
             if (sql.startsWith('SELECT name FROM sqlite_master')) return { name: 'age_verification_attempts' };
             if (sql.startsWith('SELECT COUNT(*)')) return { total: [...db.attempts.values()].filter(a => a.subject === args[0] && a.created > args[1]).length };
-            if (sql.startsWith('SELECT expires_at FROM age_verification_grants')) {
+            if (sql.startsWith('SELECT expires_at,attempt_id FROM age_verification_grants')) {
               const item = db.grants.get(args.slice(0, 3).join(':'));
-              return item && item.expires > args[3] ? { expires_at: item.expires } : null;
+              return item && item.expires > args[3] ? { expires_at: item.expires, attempt_id: item.attempt_id } : null;
             }
             if (sql.startsWith('SELECT status,expires_at FROM age_verification_attempts')) {
               const a = db.attempts.get(args[0]);
@@ -53,7 +53,7 @@ class Db {
             if (sql.startsWith('INSERT INTO age_verification_grants')) {
               const [verified, expires, id, subject, prior, time] = args, a = db.attempts.get(id);
               if (!a || a.subject !== subject || a.status !== prior || a.expires <= time) return { meta: { changes: 0 } };
-              db.grants.set([subject, a.site, a.policy].join(':'), { expires, verified });
+              db.grants.set([subject, a.site, a.policy].join(':'), { expires, verified, attempt_id: id });
               return { meta: { changes: 1 } };
             }
             if (sql.startsWith('DELETE FROM age_verification_')) return { meta: { changes: 0 } };
