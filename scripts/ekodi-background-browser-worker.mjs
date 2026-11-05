@@ -399,7 +399,7 @@ const invoked=process.argv[1]&&path.resolve(process.argv[1])===path.resolve(file
 if(invoked){
   const task=await readTask();
   runTask(task).then(result=>console.log(JSON.stringify(result))).catch(error=>{
-    console.error(JSON.stringify({ok:false,code:error.code||'BROWSER_WORKER_FAILED',message:clean(error.message,500),completedAt:now()}));
+    console.error(JSON.stringify(sanitizeNativeBrowserReceipt({ok:false,code:/^[A-Z][A-Z0-9_]{2,64}$/.test(String(error?.code||''))?error.code:'BROWSER_WORKER_FAILED',message:clean(error?.message||'Browser task failed',500),completedAt:now()})));
     process.exitCode=1;
   });
 }
