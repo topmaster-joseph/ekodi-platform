@@ -278,7 +278,7 @@ const moneyText=value=>new Intl.NumberFormat('ko-KR').format(Number(value||0))+'
 /** Import reads a local administrator-owned file; no private line items live in public source. */
 function financeImportEntries(report){
   const isWon=n=>Number.isSafeInteger(n)&&n>=0&&n<=1e12;
-  const isDate=s=>typeof s==='string'&&/^\\d{4}-\\d{2}-\\d{2}$/.test(s)&&Number.isFinite(Date.parse(s+'T00:00:00Z'));
+  const isDate=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s+'T00:00:00Z'));
   const id=String(report?.reportId||'').trim();
   if(!/^[a-zA-Z0-9_-]{8,110}$/.test(id)||!isDate(report?.asOfDate))throw Error('보고서 번호 또는 기준일이 올바르지 않습니다.');
   const income=report.income,expense=report.expenses;
