@@ -1,0 +1,40 @@
+name: EKODI KG Inicis Identity Verification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/kg-inicis-identity-verification.yml'
+      - 'age-verification-core.js'
+      - 'age-verification-client.js'
+      - 'verify/adult/app.js'
+      - 'test/age-verification-inicis.test.mjs'
+      - 'test/age-verification-inicis-sdk.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  identity-gate:
+    name: KG Inicis identity tests and backward compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source without secrets
+        uses: actions/checkout@v7
+      - name: Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify server and SDK modules
+        run: |
+          node --check age-verification-core.js
+          node --check age-verification-client.js
+          node --check verify/adult/app.js
+      - name: Verify KG Inicis LIVE-channel and disabled-mode security
+        run: |
+          node --test \
+            test/age-verification-core.test.mjs \
+            test/age-verification-inicis.test.mjs \
+            test/age-verification-inicis-sdk.test.mjs \
+            test/age-verification-ux.test.mjs
