@@ -6,12 +6,15 @@
   const shop = document.getElementById('shop');
   const params = new URLSearchParams(window.location.search);
   const incomingQuery = (params.get('q') || '').trim().slice(0,120);
+  // Old AI-only Mall bookmarks now resolve to the weekly recommendation page.
+  if (window.location.hash === '#recommend') {
+    window.location.replace('/ekodimall/picks#recommend');
+    return;
+  }
   if (search && incomingQuery) {
     search.value = incomingQuery;
     if (query) query.value = incomingQuery;
     search.dispatchEvent(new Event('input', { bubbles:true }));
-    // The entire catalog, including affiliate offers, is searched by the curator.
-    window.EkodiContextCurator?.recommend(incomingQuery, false);
   }
   if (params.has('wishlist')) window.addEventListener('load', () => document.getElementById('wishBtn')?.click(), {once:true});
 
@@ -25,26 +28,17 @@
     if (term) target.searchParams.set('q', term);
     window.history.replaceState(null, '', target.pathname + target.search + target.hash);
     syncView();
-    if (term && window.EkodiContextCurator?.recommend) {
-      const contextInput = document.getElementById('contextInput');
-      if (contextInput) contextInput.value = term;
-      window.EkodiContextCurator.recommend(term, false);
-    } else {
-      shop.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-      search.focus({ preventScroll: true });
-    }
+    shop.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    search.focus({ preventScroll: true });
   });
 
-  // The Mall is one page with two explicit detail views: catalog and AI recommendations.
+  // The storefront has only home and catalog views; AI discovery lives on weekly picks.
   // A single canonical #grid is retained: no cloned cards, duplicate hearts or overlay panels.
   const nav = document.querySelector('.mall-primary-nav');
   const allTypes = new Set(['all','general','living','book','gift','local']);
   const filterButtons = [...document.querySelectorAll('#filters button[data-filter]')];
-  const aiForm = document.getElementById('mallRecommendSearchForm');
-  const aiInput = document.getElementById('mallRecommendSearchInput');
   const viewFromUrl = () => {
     const current = new URL(window.location.href);
-    if (current.hash === '#recommend') return 'recommend';
     if (current.hash === '#shop' || current.searchParams.has('category') || current.searchParams.has('q')) return 'catalog';
     return 'home';
   };
@@ -70,8 +64,6 @@
       const button = filterButtons.find(item => item.dataset.filter === category);
       if (button && !button.classList.contains('active')) button.click();
       nav?.querySelector(`a[data-filter-target="${category}"]`)?.setAttribute('aria-current', 'page');
-    } else if (mode === 'recommend') {
-      nav?.querySelector('a[href="#recommend"]')?.setAttribute('aria-current', 'page');
     }
     const urlSearch = new URLSearchParams(window.location.search).get('q') || '';
     if (query) query.value = urlSearch;
@@ -104,9 +96,9 @@
     const link = event.target.closest('a[href]');
     if (!link || link.hasAttribute('data-filter-target')) return;
     const hash = link.getAttribute('href');
-    if (!['#shop', '#recommend', '#top'].includes(hash)) return;
+    if (!['#shop', '#top'].includes(hash)) return;
     event.preventDefault();
-    navigate(hash, 'all', { keepSearch: hash === '#recommend' });
+    navigate(hash, 'all');
   });
   // Keep the selected filter deep-linkable, including /?category=book from the bookstore.
   filterButtons.forEach(button => button.addEventListener('click', () => {
@@ -119,13 +111,15 @@
     nav?.querySelectorAll('a[aria-current]').forEach(anchor => anchor.removeAttribute('aria-current'));
     nav?.querySelector(`a[data-filter-target="${button.dataset.filter}"]`)?.setAttribute('aria-current','page');
   }));
-  aiForm?.addEventListener('submit', event => {
-    event.preventDefault();
-    const term = (aiInput?.value || '').trim().slice(0,180);
-    if (!term) { aiInput?.focus(); return; }
-    const contextInput = document.getElementById('contextInput');
-    if (contextInput) contextInput.value = term;
-    window.EkodiContextCurator?.recommend(term, true);
+  // Homepage context chips use the weekly-picks recommendation form (no legacy AI page).
+  document.addEventListener('click', event => {
+    const chip = event.target.closest('[data-context-prompt]');
+    if (!chip) return;
+    const term = (chip.dataset.contextPrompt || '').trim().slice(0,180);
+    const url = new URL('/ekodimall/picks', window.location.origin);
+    if (term) url.searchParams.set('q', term);
+    url.hash = 'recommend';
+    window.location.assign(url.toString());
   });
   window.addEventListener('popstate', syncView);
   window.addEventListener('hashchange', syncView);
