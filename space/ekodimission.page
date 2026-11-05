@@ -43,14 +43,15 @@
       <p role="status" aria-live="polite" data-mission-participation-status>참여 설정 확인 중입니다.</p>
     </div>
     <ul class="mission-saturday-replies" data-mission-saturday-replies aria-live="polite"><li>이번 주 답글을 불러오고 있습니다.</li></ul>
-    <form class="mission-saturday-form" data-mission-saturday-form>
+    <form class="mission-saturday-form" data-mission-saturday-form hidden>
       <div class="mission-saturday-form-fields"><label>표시 이름<input name="displayName" autocomplete="nickname" minlength="2" maxlength="30" required placeholder="닉네임"></label>
       <label>참여 의사<select name="attendance"><option value="join">참여하겠습니다</option><option value="question">문의합니다</option><option value="cancel">참여를 취소합니다</option></select></label></div>
       <label>답글 (선택)<textarea name="body" maxlength="500" rows="2" placeholder="남기고 싶은 말이 있을 때만 입력하세요."></textarea></label>
       <label class="mission-saturday-consent"><input name="publicConsent" type="checkbox" required> 표시 이름·참여 의사 및 입력한 답글(있는 경우)이 이 모임 페이지에 공개되는 것에 동의합니다.</label>
-      <div class="mission-saturday-form-actions"><button type="submit" class="button primary">참여 신청 등록·수정</button><a href="/auth/?site=mission&amp;return_to=https%3A%2F%2Fekodi.kr%2Fekodimission%23saturday" class="text-link" data-mission-saturday-login hidden>에코디 로그인</a></div>
+      <div class="mission-saturday-form-actions"><button type="submit" class="button primary">참여 신청 등록·수정</button></div>
       <p class="mission-saturday-status" data-mission-saturday-status role="status" aria-live="polite"></p>
     </form>
+    <a class="button primary mission-saturday-login-cta" data-mission-saturday-login href="/auth/?site=mission&amp;return_to=https%3A%2F%2Fekodi.kr%2Fekodimission%23saturday">로그인 후 참여하기</a>
   </div></div>
 </article>
 <p class="mission-home-archive-link"><a class="text-link" href="/ekodimission/activities">지난 토요모임·활동 보기 →</a> <span aria-hidden="true">·</span> <a class="text-link" href="/ekodimission/history">사역 연혁 보기 →</a></p></section>

@@ -88,8 +88,21 @@
     if(commentCount)commentCount.textContent=String(comments);
     renderReplies(data.replies);
     const authenticated=data.me?.authenticated===true;
-    if(login)login.hidden=authenticated;
-    if(submit)submit.textContent=authenticated?'참여 신청 등록·수정':'로그인 후 참여';
+    // Never let a guest submit a form that will fail HTML validation before login.
+    if(form)form.hidden=!authenticated;
+    if(login){
+      login.hidden=authenticated||data.meeting.status!=='scheduled';
+      // Preserve the current meeting query when the browser has a trusted site URL.
+      // A static canonical fallback also supports non-browser test environments.
+      let returnUrl='https://ekodi.kr/ekodimission#saturday';
+      if(typeof location.href==='string'&&location.href.startsWith('https://ekodi.kr/ekodimission')){
+        const destination=new URL(location.href);
+        destination.hash='#saturday';
+        returnUrl=destination.href;
+      }
+      login.href='/auth/?site=mission&return_to='+encodeURIComponent(returnUrl);
+    }
+    if(submit)submit.textContent='참여 신청 등록·수정';
     if(data.meeting.status!=='scheduled'){
       if(submit)submit.disabled=true;
       say('이번 주 모임은 일정이 변경되어 신청을 받지 않습니다.','error');
@@ -137,6 +150,8 @@
       if(current===loading){render(data);void loadScripture(meetingDate,current);}
     }catch(error){
       if(current!==loading)return;
+      if(form)form.hidden=true;
+      if(login)login.hidden=Boolean(token());
       if(count)count.textContent='–';
       if(commentCount)commentCount.textContent='–';
       if(replies){replies.replaceChildren();const item=document.createElement('li');item.textContent='현재 답글을 불러올 수 없습니다. 잠시 후 새로고침해 주세요.';replies.append(item);}
@@ -148,8 +163,9 @@
     if(!form.reportValidity()||!meetingDate)return;
     const bearer=token();
     if(!bearer){
+      form.hidden=true;
       if(login)login.hidden=false;
-      say('참여 신청은 로그인 후 등록할 수 있습니다. 로그인 버튼을 선택해 주세요.','error');
+      say('참여 신청은 로그인 후 등록할 수 있습니다. 로그인 후 참여하기를 선택해 주세요.','error');
       return;
     }
     const data=new FormData(form);

@@ -288,7 +288,7 @@
     const login=document.createElement('a');login.href=MISSION_LOGIN;
     login.className='mission-auth-button';login.textContent='로그인';
     const logout=document.createElement('button');logout.type='button';
-    logout.className='mission-auth-button';logout.hidden=true;logout.textContent='로그아웃';
+    logout.className='mission-auth-button mission-auth-logout';logout.hidden=true;logout.textContent='로그아웃';
     row.append(state,login,logout);
     target.append(row);
     if(devotion)mountDevotionAuthNextToAdmin(row,devotion);
@@ -310,6 +310,7 @@
     if(!missionAuthUi)return;
     const authenticated=status==='in';
     missionAuthUi.state.textContent=authenticated?missionAccountLabel(account):'';
+    missionAuthUi.state.title=authenticated?'로그인 아이디: '+missionAccountLabel(account):'';
     missionAuthUi.state.hidden=!authenticated;
     missionAuthUi.login.hidden=authenticated;
     missionAuthUi.logout.hidden=!authenticated;
