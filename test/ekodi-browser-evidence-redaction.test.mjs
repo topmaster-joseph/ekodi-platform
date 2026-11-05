@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  redactNativeBrowserUrl, sanitizeNativeBrowserReceipt
+  redactNativeBrowserUrl, sanitizeNativeBrowserReceipt, sanitizeNativeBrowserFailure
 } from '../scripts/ekodi-background-browser-worker.mjs';
 
 test('canonical browser location redacts query credentials and volatile CDP challenge path',()=>{
@@ -45,4 +45,15 @@ test('receipt strips secrets before JSON artifact output and preserves the verif
   for(const secret of ['private','nonceOfNoOne','verySecret','testBearerSecret1234','example.user@example.com','a.person@example.com','01035018542','010-3501-8542','temporarySecret'])
     assert.ok(!artifact.includes(secret),secret+' leaked in browser receipt');
   assert.equal(before.finalUrl,'https://ekodi.kr/admin/?token=private','sanitization must not mutate the original evidence structure');
+});
+
+test('native worker rejects arbitrary error codes and redacts failed-run diagnostics',()=>{
+  const err=new Error('Request https://ekodi.kr/admin/?code=example-private-value could not complete');
+  err.code='INVALID;UNTRUSTED';
+  const out=sanitizeNativeBrowserFailure(err);
+  assert.equal(out.ok,false);
+  assert.equal(out.code,'BROWSER_WORKER_FAILED');
+  assert.ok(!JSON.stringify(out).includes('example-private-value'));
+  assert.match(out.message,/https:\/\/ekodi.kr\/admin\//);
+  assert.ok(out.completedAt);
 });
