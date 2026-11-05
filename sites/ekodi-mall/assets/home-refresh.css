@@ -285,3 +285,32 @@ body[data-mall-view="catalog"] main#main > #filters{padding-inline:16px}
 .mall-member-points-hero{margin:12px 0 0;padding:8px 12px;max-width:790px;border:1px solid rgba(61,98,112,.17);border-radius:10px;font-size:12px;line-height:1.6;color:var(--muted,#52665f);background:rgba(255,255,255,.64)}
 .mall-member-points-hero span{color:inherit;white-space:normal}
 @media(max-width:600px){.mall-member-points-hero{font-size:11px;margin-top:9px;padding:7px 9px}}
+
+/* Global search is a separate central catalog view and never changes a sale gate. */
+#mallSearchResults[hidden]{display:none!important}
+body[data-mall-search="true"] #shop>.heading,
+body[data-mall-search="true"] #shop>#grid,
+body[data-mall-search="true"] #shop>#empty,
+body[data-mall-search="true"] #shop~.mall-load-more{display:none!important}
+body[data-mall-search="true"] #shop #mallSearchResults{display:block!important}
+.mall-search-results{width:100%;min-width:0}
+.mall-search-heading{padding:8px 0 18px;border-bottom:1px solid #e5e9ec}
+.mall-search-heading h2{font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;font-size:clamp(23px,3vw,29px);margin:4px 0 7px}
+.mall-search-heading p:last-child{font-size:13px;color:#647281;line-height:1.6;margin:0}
+.mall-search-group{padding:21px 0 18px;border-bottom:1px solid #e9ebec}
+.mall-search-group h3{font-size:19px;line-height:1.4;margin:0 0 13px}
+.mall-search-group h3 small{font-size:12px;color:#697b88;font-weight:500;margin-left:6px}
+.mall-search-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.mall-search-card{min-width:0;overflow:hidden;border:1px solid #e1e6e9;border-radius:15px;background:#fff}
+.mall-search-card .mall-search-visual{display:grid;place-items:center;height:165px;background:#f7f8f5;color:#80909a;font-size:12px}
+.mall-search-card .mall-search-visual img{height:100%;width:100%;object-fit:contain}
+.mall-search-card-body{padding:11px 12px 13px}
+.mall-search-card h4{font-size:14px;line-height:1.5;margin:0 0 8px}
+.mall-search-card h4 a{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;color:inherit;text-decoration:none}
+.mall-search-card p{font-size:11px;line-height:1.5;color:#617182;margin:0 0 8px}
+.mall-search-card .mall-search-price{font-size:13px;font-weight:850;color:#173b5b}
+.mall-search-card h4 a:focus-visible{outline:3px solid #315f91;outline-offset:2px}
+.mall-search-empty{padding:35px 16px;text-align:center;color:#617182;border:1px solid #e3e8eb;border-radius:15px;margin-top:18px}
+@media(max-width:880px){.mall-search-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:680px){.mall-search-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.mall-search-card .mall-search-visual{height:135px}}
+@media(max-width:410px){.mall-search-cards{grid-template-columns:minmax(0,1fr)}.mall-search-card .mall-search-visual{height:190px}}
