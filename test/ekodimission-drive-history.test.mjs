@@ -6,7 +6,7 @@ import test from 'node:test';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const read=name=>readFile(path.join(root,'space',name),'utf8');
-test('EKODI Mission archive restores documented activity years and does not publish private student data',async()=>{
+test('Mission archive preserves past activities while homepage adds current notices and schedules safely',async()=>{
   const [home,activities,stories,history,partners,vision]=await Promise.all([
     read('ekodimission.page'),read('ekodimission-activities.page'),
     read('ekodimission-stories.page'),read('ekodimission-history.page'),read('ekodimission-partners.page'),
@@ -22,7 +22,8 @@ test('EKODI Mission archive restores documented activity years and does not publ
   assert.ok(!home.includes('RECENT ACTIVITY · 2026'));
   assert.ok(home.includes('이번 주 토요모임'));
   assert.ok(home.includes('data-mission-saturday'));
-  assert.equal([...home.matchAll(/<section\b/g)].length,2,'The home should show only introduction and current events');
+  assert.equal([...home.matchAll(/<section\b/g)].length,3,'Home retains introduction and current gathering alongside official notices and schedule');
+  assert.ok(home.includes('id="mission-updates"'),'Official notice/schedule grid belongs to home, not historical archive');
   assert.ok(!activities.includes('mission-status upcoming'));
   assert.ok(!stories.includes('첫 활동은 2026년 9월 26일 진행 예정'));
   assert.ok(home.includes('/ekodimission/activities'));
