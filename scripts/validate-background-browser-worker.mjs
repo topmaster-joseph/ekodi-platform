@@ -24,10 +24,9 @@ if(browserIndependence.policyId!=='EKODI-NATIVE-BROWSER-INDEPENDENCE-001'||
   browserIndependence.externalBrowser?.paidSubscriptionRequired!==false||
   browserIndependence.nativeRuntime?.cloudReadOnlyAvailableWithoutPairedPC!==true)
   fail('native EKODI browser must not depend on external paid service or paired device');
-if(policy.provider?.independentExecutionContract!=='config/ekodi-browser-independence.json'||
-   policy.provider?.paidExternalBrowserAccountRequired!==false||
-   policy.provider?.noPaidBrowserFallbackForIndependentExecutor!==true)
-  fail('browser independent execution policy must be bound to first-party worker');
+if(policy.provider?.externalBrowserServiceRequired!==false||
+   policy.provider?.externalProviderDefault!=='forbidden')
+  fail('first-party native worker cannot depend on a paid external browser');
 for(const mandatory of ['planEkodiIndependentBrowser','executeEkodiIndependentBrowser',
   'EKODI_NATIVE_AGENT_REQUIRED','EKODI_NATIVE_CLOUD_RUNTIME_REQUIRED',
   'EKODI_NATIVE_BROWSER_EXECUTION_FAILED'])
