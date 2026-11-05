@@ -76,3 +76,34 @@ CREATE INDEX IF NOT EXISTS idx_ekodibiz_campus_ai_participants_termination
   ON ekodibiz_campus_ai_participants(agreement_id,stage);
 CREATE INDEX IF NOT EXISTS idx_ekodibiz_campus_ai_cycle_preview_state
   ON ekodibiz_campus_ai_cycle_previews(agreement_id,stage,due_date);
+
+
+-- Database-level safety under concurrent requests. The service/API still has
+-- to authenticate the immutable workspace identity and serialize decisions.
+CREATE TRIGGER IF NOT EXISTS ekodibiz_campus_ai_seat_limit_insert
+BEFORE INSERT ON ekodibiz_campus_ai_participants
+WHEN (SELECT COUNT(*) FROM ekodibiz_campus_ai_participants WHERE agreement_id=NEW.agreement_id)
+     >= (SELECT seat_limit FROM ekodibiz_campus_ai_agreements WHERE agreement_id=NEW.agreement_id)
+BEGIN
+  SELECT RAISE(ABORT,'SEAT_LIMIT_EXCEEDED');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ekodibiz_campus_ai_budget_insert
+BEFORE INSERT ON ekodibiz_campus_ai_cycle_previews
+WHEN (SELECT COALESCE(SUM(quote_minor),0) FROM ekodibiz_campus_ai_cycle_previews
+      WHERE agreement_id=NEW.agreement_id) + NEW.quote_minor
+     > (SELECT budget_minor FROM ekodibiz_campus_ai_agreements WHERE agreement_id=NEW.agreement_id)
+BEGIN
+  SELECT RAISE(ABORT,'CAMPUS_AI_BUDGET_EXCEEDED');
+END;
+
+CREATE TRIGGER IF NOT EXISTS ekodibiz_campus_ai_budget_update
+BEFORE UPDATE OF quote_minor ON ekodibiz_campus_ai_cycle_previews
+WHEN (SELECT COALESCE(SUM(quote_minor),0) FROM ekodibiz_campus_ai_cycle_previews
+      WHERE agreement_id=NEW.agreement_id AND NOT
+        (subject_ref=OLD.subject_ref AND cycle_index=OLD.cycle_index))
+      + NEW.quote_minor
+     > (SELECT budget_minor FROM ekodibiz_campus_ai_agreements WHERE agreement_id=NEW.agreement_id)
+BEGIN
+  SELECT RAISE(ABORT,'CAMPUS_AI_BUDGET_EXCEEDED');
+END;
