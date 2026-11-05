@@ -73,6 +73,17 @@ test('anonymous receipt tokens isolate requests and quote amount cannot be forge
   const payment=await request(env,'/api/agency/checkout',receipt);
   assert.equal(payment.status,503);
   assert.equal(payment.body.error,'pg_or_supplier_scope_not_enabled');
+  // Explicit staging profile can expose only its public client key after quote consent.
+  Object.assign(env, {
+    PAYMENTS_ENABLED:'true', AGENCY_PG_SCOPE_VERIFIED:'true',
+    TOSS_CLIENT_KEY:'test_gck_ai_agency_test_only',
+    TOSS_SECRET_KEY:'test_gsk_ai_agency_test_only'
+  });
+  const approvedCheckout=await request(env,'/api/agency/checkout',receipt);
+  assert.equal(approvedCheckout.status,200);
+  assert.equal(approvedCheckout.body.amount,25000);
+  assert.equal(approvedCheckout.body.clientKey,'test_gck_ai_agency_test_only');
+  assert.equal(approvedCheckout.body.secretKey,undefined);
 });
 test('institution plan is fixed at three months; supplier collections require explicit authorization', async () => {
   const env=environment();
