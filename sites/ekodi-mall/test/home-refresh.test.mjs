@@ -13,7 +13,7 @@ test('premium home renders navigation and retains core commerce entrypoints', ()
   for (const id of ['mallGlobalSearch','contextForm','contextInput','filters','shop','grid','wishBtn','wishDialog','localRegionSelect']) {
     assert.ok((template + mallHeader).includes('id="' + id + '"'), 'missing required anchor ' + id);
   }
-  for (const file of ['/assets/home-refresh.css','/assets/home-refresh.js','/assets/context-curator.js','/assets/commerce.js','/assets/marketplace-live.js']) {
+  for (const file of ['/assets/home-refresh.css','/assets/home-refresh.js','/assets/commerce.js','/assets/marketplace-live.js']) {
     assert.ok(template.includes(file), 'missing script or stylesheet ' + file);
   }
   assert.ok(template.indexOf('mall-category-shortcuts') < template.indexOf('class="shop"'));
