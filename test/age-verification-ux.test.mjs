@@ -24,6 +24,9 @@ test('canonical public hosted page, responsive assets, noindex and provider-only
     const item=await site('/verify/adult/'+file);
     assert.equal(item.status,200,file);
     assert.match(item.headers.get('cache-control'),/no-store/);
+    assert.equal(item.headers.get('x-content-type-options'),'nosniff');
+    assert.equal(item.headers.get('content-type'),file.endsWith('.css')
+      ? 'text/css; charset=utf-8' : 'text/javascript; charset=utf-8');
   }
   assert.equal((await site('/verify/adult/bogus.js')).status,404);
   assert.equal((await site('/verify/adult/', 'POST')).status,405);

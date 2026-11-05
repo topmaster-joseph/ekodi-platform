@@ -11,7 +11,7 @@ const state = { items: [], category: 'all', siteId: 'all', page: 0, loaded: fals
 const siteNames = Object.freeze({
   ekodimission: '에코디선교회', ekodichurch: '에코디교회',
   ekodimall: '에코디몰', ekodibooks: '에코디서점',
-  seonammedi: '서남권 국립의대 소통센터',
+  seonammedi: '서남권국립의대',
   cgma: '청계상인회', edu: '에코디 교육',
 });
 const categoryNames = { event: '행사·모임', notice: '소식·이야기', product: '상품' };

@@ -13,7 +13,7 @@ export const DISCOVERY_PUBLIC_ROUTES = Object.freeze([
   { path: '/pizzamaru', asset: null, changefreq: 'daily', priority: '0.9', label: '피자마루 목포대점 · PizzaMaru', title: '피자마루 목포대점 | 목포대 후문 피자 · 메뉴 · 배달주문', description: '국립목포대학교 후문·전남 무안군 청계면 피자마루 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 안내.' },
   { path: '/yogurt', asset: null, changefreq: 'daily', priority: '0.9', label: '요거트퍼플 목포대점 · Yogurt Purple', title: '요거트퍼플 목포대점 | 목포대 후문 디저트 · 메뉴 · 배달주문', description: '국립목포대학교 후문·전남 무안군 청계면 요거트퍼플 목포대점의 메뉴·가격·전화·영업시간·지도·배달주문 안내.' },
   { path: '/ekodimall', asset: null, changefreq: 'daily', priority: '0.8', label: 'EKODI Mall', title: 'EKODI Mall | 에코디몰', description: 'EKODI 생태계의 상품과 서비스를 만나는 공용 몰입니다.' },
-  { path: '/seonammedi', asset: null, changefreq: 'daily', priority: '0.9', label: 'Seonam National Medical School Communication Center', title: '서남권 국립의대 소통센터 | SEONAM MEDI', description: '서남권 국립의대 관련 공식자료, 활동이력, 관련보도, 시민 의견과 공개 정보를 확인하는 소통센터입니다.' },
+  { path: '/seonammedi', asset: null, changefreq: 'daily', priority: '0.9', label: 'Seonam National Medical School Communication Center', title: '서남권국립의대 | SEONAM MEDI', description: '서남권 국립의대 관련 공식자료, 활동이력, 관련보도, 시민 의견과 공개 정보를 확인할 수 있는 서남권국립의대 공식 사이트입니다.' },
 ]);
 
 export const DISCOVERY_PRIVATE_PREFIXES = Object.freeze([

@@ -322,7 +322,7 @@ mountRelativeLinks();
 function itemShareUrl(key,view){const u=new URL(siteMountBase());u.searchParams.set('item',key);u.hash=view;return u.href}
 async function shareSiteItem(button){
   const url=itemShareUrl(button.dataset.shareItem,button.dataset.shareView),title=button.dataset.shareTitle||document.title;
-  const message=formatActivityShare('서남권 국립의대 소통센터',title,button.dataset.shareDate||'',url,'자세히 보기');
+  const message=formatActivityShare('서남권국립의대',title,button.dataset.shareDate||'',url,'자세히 보기');
   const done=text=>{const old='공유';button.textContent=text;setTimeout(()=>{button.textContent=old},1800)};
   try{if(navigator.share){await navigator.share({text:message});return}}catch(error){if(error?.name==='AbortError')return}
   try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(message);done('안내 복사됨');return}}catch{}

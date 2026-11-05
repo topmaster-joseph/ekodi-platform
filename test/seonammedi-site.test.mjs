@@ -108,7 +108,7 @@ test('seonammedi hourly monitoring reuses the existing Control API cron instead 
 test('seonammedi source changes are wired to both Shared Site and Control API releases',async()=>{const [shared,control,manifestText]=await Promise.all([readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8'),readFile(new URL('../.github/workflows/deploy-control-api.yml',import.meta.url),'utf8'),readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8')]);for(const marker of ["sites/seonammedi/public/**","seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","migrations/0116_seonammedi_full_menu_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(shared.includes(marker),marker);for(const marker of ["seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","migrations/0116_seonammedi_full_menu_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(control.split(marker).length>=3,marker);const manifest=JSON.parse(manifestText);const urls=new Set(manifest.worker.requests.map(item=>item.url));for(const url of ['https://ekodi.kr/seonammedi/','https://ekodi.kr/seonammedi/app.js','https://ekodi.kr/api/seonammedi/voices/health','https://ekodi.kr/seonammedi/data.json','https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'])assert.ok(urls.has(url),url);const publicProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/seonammedi/');assert.ok(publicProbe);assert.ok(!publicProbe.expect.includes('사이트 일일점검'));const adminProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/seonammedi/admin/');assert.ok(adminProbe);for(const label of ['사이트 점검','정적 상태','동적 상태'])assert.ok(!adminProbe.expect.includes(label),label);const legacy=manifest.worker.requests.filter(item=>['https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'].includes(item.url));assert.ok(legacy.every(item=>item.statuses.includes(404)));});
 
 
-test('seonammedi branding is canonical and legacy public paths are deleted',async()=>{const html=await readFile(new URL('index.html',root),'utf8');assert.match(html,/서남권 국립의대 소통센터/);assert.doesNotMatch(html,/시민소통센터/);assert.match(html,/\/seonammedi\/app\.css/);});
+test('seonammedi branding is canonical and legacy public paths are deleted',async()=>{const html=await readFile(new URL('index.html',root),'utf8');assert.match(html,/서남권국립의대/);assert.doesNotMatch(html,/시민소통센터/);assert.match(html,/\/seonammedi\/app\.css/);});
 
 
 
@@ -145,7 +145,7 @@ test('seonammedi admin stays site-local before and after Google authentication',
   assert.match(adminJs,/CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token'/);
   assert.match(adminJs,/localStorage\.getItem\(CENTRAL_SESSION_KEY\)/);
   assert.doesNotMatch(adminJs,/cdn\.jsdelivr\.net|createClient\(/);
-  assert.match(auth,/seonammedi:\{name:'서남권 국립의대 소통센터'/);
+  assert.match(auth,/seonammedi:\{name:'서남권국립의대'/);
   assert.match(router,/handleSeonamMediAdminApi/);
   assert.match(migration,/ohwon69@gmail\.com/);
   assert.match(migration,/board_admin/);
@@ -866,7 +866,7 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(html,/<link rel="canonical" href="https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr\/">/);
   assert.match(html,/<a class="brand" href="\.\/">/);
   assert.match(html,/<a href="admin\/">관리<\/a>/);
-  assert.match(html,/<div class="site-footer-copy">\s*<strong>서남권 국립의대 소통센터<\/strong>\s*<span>서남권 의대 설립 비상대책위원회 · 자료의 성격과 출처를 구분해 보존합니다.<\/span>\s*<span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="tel:01035018542">010-3501-8542<\/a> · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com<\/a><\/span>\s*<\/div>/);
+  assert.match(html,/<div class="site-footer-copy">\s*<strong>서남권국립의대<\/strong>\s*<span>서남권 의대 설립 비상대책위원회 · 자료의 성격과 출처를 구분해 보존합니다.<\/span>\s*<span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="tel:01035018542">010-3501-8542<\/a> · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com<\/a><\/span>\s*<\/div>/);
   assert.ok(!html.includes('id="lastUpdated"'));
   assert.match(html,/id="homeLatestUpdatedAt"/);
   assert.ok(app.includes("'마지막 갱신 '+new Date(runAt).toLocaleString"));

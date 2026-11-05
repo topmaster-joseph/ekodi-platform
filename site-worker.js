@@ -728,6 +728,16 @@ export default {
         }
         const response = await env.ASSETS.fetch(request);
         const secured = withHostSecurity(response, AGE_VERIFY_CSP, 'private, no-store', 'age-verify-ui');
+        // Do not depend on static-asset gateway MIME guessing. X-Content-Type-Options:
+        // nosniff (in the canonical edge policy) blocks both CSS and ESM if their
+        // response is labelled text/plain or text/html by an upstream boundary.
+        if (response.ok) {
+          const mime = url.pathname.endsWith('.css') ? 'text/css; charset=utf-8'
+            : url.pathname.endsWith('.js') ? 'text/javascript; charset=utf-8'
+            : 'text/html; charset=utf-8';
+          secured.headers.set('Content-Type', mime);
+        }
+        secured.headers.set('X-Content-Type-Options', 'nosniff');
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return secured;
       }
