@@ -198,7 +198,7 @@ test('Supabase migration keeps tables private and exposes only the intended RPCs
   const sql=fs.readFileSync(new URL('../supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql',import.meta.url),'utf8');
   for(const t of ['organization_event_rosters','organization_pin_viewers','organization_pin_sessions']){
     assert.match(sql,new RegExp(`alter table public\\.${t} enable row level security`),t);
-    assert.match(sql,new RegExp(`revoke all on public\\.${t} from public, anon, authenticated`),t);
+    assert.match(sql,new RegExp(`revoke all on public\\.${t} from public, anon, authenticated, service_role`),t);
   }
   for(const fn of ['organization_event_roster_public\\(text,text\\)','organization_pin_login\\(text,text,text\\)','organization_pin_snapshot\\(text,text\\)','organization_pin_logout\\(text\\)'])
     assert.match(sql,new RegExp(`grant execute on function public\\.${fn} to anon, authenticated`),fn);
