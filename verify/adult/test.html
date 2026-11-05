@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <title>에코디 KG이니시스 테스트 인증</title>
+  <link rel="stylesheet" href="/verify/adult/styles.css">
+  <script type="module" src="/verify/adult/test.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="top">
+      <a class="brand" href="/" aria-label="에코디 첫화면">EKODI</a>
+      <span class="muted">인증 채널 점검 · 관리자 전용</span>
+    </header>
+    <main>
+      <div class="eyebrow">EKODI AGE VERIFY · SANDBOX</div>
+      <h1>KG이니시스 통합인증 테스트</h1>
+      <p class="lead">포트원에 등록된 테스트 채널을 연결하여 인증창 실행과 서버 응답을 확인합니다. 에코디 최고관리자만 실행할 수 있습니다.</p>
+      <section class="panel" aria-labelledby="testStatusHeading">
+        <h2 id="testStatusHeading">테스트 연결 상태</h2>
+        <p id="sandboxStatus" class="status" role="status" aria-live="polite">관리자 권한과 채널을 확인하고 있습니다.</p>
+        <p id="sandboxDetail" class="hint">운영 본인확인과 별개인 테스트 전용 화면입니다.</p>
+        <div class="actions">
+          <button id="sandboxStart" type="button" class="primary" hidden>KG이니시스 테스트 인증창 열기</button>
+          <a id="adminLogin" class="secondary" href="/admin" hidden>에코디 관리자 로그인</a>
+          <a class="secondary" href="/verify/adult/?site=singles">일반 성인인증 화면</a>
+        </div>
+      </section>
+      <section class="details" aria-labelledby="securityHeading">
+        <h2 id="securityHeading">테스트 보호 정책</h2>
+        <p><strong>테스트 성공은 실제 성인인증 완료가 아닙니다.</strong> 테스트 결과로 계정·구매·이용 권한을 부여하지 않습니다.</p>
+        <p>관리자 인증·횟수 제한·10분 거래 유효기간을 적용합니다. 인증기관 API를 통한 서버 검증은 포트원 서버 비밀키가 별도로 연결된 경우에만 가능합니다.</p>
+        <p>이름·생년월일·전화번호·CI·DI 및 공급자의 원본 응답은 에코디 테스트 기록에 저장하지 않습니다.</p>
+      </section>
+    </main>
+    <footer>© EKODI · KG이니시스 테스트 채널 · 운영 인증과 완전 분리</footer>
+  </div>
+</body>
+</html>

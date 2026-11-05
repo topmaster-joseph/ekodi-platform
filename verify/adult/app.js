@@ -78,7 +78,8 @@ async function main() {
   if (params.has('code')) {
     show('인증이 취소되었거나 실패했습니다. 다시 시도해 주세요.', 'error');
   } else if (returnedId) {
-    if (!/^ekodi-age-[0-9a-f]{32}$/.test(returnedId)) {
+    // Mobile redirects can return either the legacy or the KG Inicis ID prefix.
+    if (!/^ekodi-(?:age|inicis)-[0-9a-f]{32}$/.test(returnedId)) {
       show('잘못된 인증 응답입니다.', 'error');
     } else {
       try {
