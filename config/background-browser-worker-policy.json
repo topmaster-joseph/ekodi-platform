@@ -80,7 +80,10 @@
       "ekodi-native-remote-computer",
       "autonomous-execution-fabric"
     ],
-    "externalProviderDefault": "forbidden"
+    "externalProviderDefault": "forbidden",
+    "independentExecutionContract": "config/ekodi-browser-independence.json",
+    "paidExternalBrowserAccountRequired": false,
+    "noPaidBrowserFallbackForIndependentExecutor": true
   },
   "routingPolicy": "config/virtualization-routing-policy.json",
   "constitutionalPolicy": "AUTOMATIC-EXECUTION-LIFECYCLE-001",
