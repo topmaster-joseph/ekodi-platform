@@ -16,16 +16,22 @@
   const findShortcuts=category=>shortcuts.filter(a=>a.dataset.filterTarget===category);
   const localCard=()=>cards().some(card=>Boolean(String(card.dataset.regionIds||'').trim()));
   const hasCategory=category=>cards().some(card=>card.dataset.category===category);
+  // A category link is navigation, not an offer to purchase. Keep every
+  // category visible in the shared header even when there are zero sale-ready
+  // listings. Hide only empty in-page sale filters, never a navigation route.
   const setVisible=(category,available)=>{
-    const nodes=[findButton(category),...findShortcuts(category)].filter(Boolean);
-    for(const node of nodes){
-      node.hidden=!available;
-      node.dataset.mallEmptyCategory=available?'false':'true';
+    const filter=findButton(category);
+    if(filter){
+      filter.hidden=!available;
+      filter.dataset.mallEmptyCategory=available?'false':'true';
     }
-    if(!available&&findButton(category)?.classList.contains('active')){
-      const all=findButton('all');
-      if(all&&!all.hidden)all.click();
+    for(const link of findShortcuts(category)){
+      link.hidden=false;
+      link.dataset.mallEmptyCategory=available?'false':'true';
+      link.title=available?'':'현재 판매 가능한 상품이 없어 안내 화면으로 이동합니다.';
     }
+    // A direct /?category=... link must remain on that category's empty state;
+    // silently jumping to All incorrectly suggests the selected category sells.
   };
   const revealLoaded=()=>{
     for(const category of categories)if(hasCategory(category))setVisible(category,true);
