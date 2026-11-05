@@ -30,7 +30,12 @@ const date=FIXTURE.eventStart.slice(0,10);
 const shareLink=origin+roots[origin]+'?schedule='+FIXTURE.id+'&date='+date;
 const shareText='서남권국립의대 '+FIXTURE.title+' 일정 보기\n2026-10-15 (목)\n'+shareLink;
 const legacyShareText='서남권국립의대\n'+FIXTURE.title+'\n일정: 2026.10.15 18:00';
-const acceptedShareTexts=expectMode==='predeploy'?[shareText,legacyShareText]:[shareText];
+// BRAND-RENAME-20261105: until the rename ships, production still shows the
+// previous brand; accept it only in predeploy mode.
+const PREVIOUS_BRAND='서남권 국립의대 소통센터';
+const previousShareText=shareText.replace('서남권국립의대',PREVIOUS_BRAND);
+const previousLegacyShareText=legacyShareText.replace('서남권국립의대',PREVIOUS_BRAND);
+const acceptedShareTexts=expectMode==='predeploy'?[shareText,legacyShareText,previousShareText,previousLegacyShareText]:[shareText];
 const profiles=[
   {name:'desktop',width:1440,height:900,isMobile:false},
   {name:'mobile',width:390,height:844,isMobile:true}
@@ -98,18 +103,18 @@ try{
       row.scheduleTitle=await article.locator('strong').first().innerText();
       must(row.scheduleTitle===FIXTURE.title,'public_calendar_title_not_rendered');
       row.browserTabTitle=await page.title();
-      must(row.browserTabTitle===FIXTURE.title+' · 서남권국립의대','shared_page_title_mismatch');
+      must(row.browserTabTitle===FIXTURE.title+' · 서남권국립의대'||(expectMode==='predeploy'&&row.browserTabTitle===FIXTURE.title+' · '+PREVIOUS_BRAND),'shared_page_title_mismatch');
       must(fixtureRequests.includes('2026-10'),'fixture_calendar_not_requested');
       await article.locator('button.seonam-calendar-copy').click();
       const copied=await page.evaluate(()=>navigator.clipboard.readText());
-      const observedShareText=acceptedShareTexts.find(text=>copied===text||(text===legacyShareText&&copied===text+'\n일정 확인: '+shareLink));
+      const observedShareText=acceptedShareTexts.find(text=>copied===text||((text===legacyShareText||text===previousLegacyShareText)&&copied===text+'\n일정 확인: '+shareLink));
       row.clipboardMatches=Boolean(observedShareText);
-      row.shareFormat=observedShareText===shareText?'current':observedShareText===legacyShareText?'legacy':'unknown';
+      row.shareFormat=(observedShareText===shareText||observedShareText===previousShareText)?'current':(observedShareText===legacyShareText||observedShareText===previousLegacyShareText)?'legacy':'unknown';
       must(row.clipboardMatches,'title_time_url_clipboard_mismatch');
       await article.locator('button.seonam-calendar-share').click();
       const nativeArgs=await page.evaluate(()=>window.__ekodiRecordedShare||null);
       row.webShareArgumentsMatch=Boolean(nativeArgs?.text===observedShareText
-        &&(observedShareText===shareText?(!nativeArgs.title&&!nativeArgs.url)
+        &&((observedShareText===shareText||observedShareText===previousShareText)?(!nativeArgs.title&&!nativeArgs.url)
           :(nativeArgs.title?.includes(FIXTURE.title)&&nativeArgs.url===shareLink)));
       must(row.webShareArgumentsMatch,'web_share_arguments_mismatch');
       row.fixtureCalendar=fixtureRequests.slice();

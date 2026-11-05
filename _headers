@@ -41,6 +41,23 @@
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow, noarchive
 
+# EKODI adult eligibility verification — static fallback when Workers Assets bypasses the Worker.
+# The site-wide static script-src 'none' blocks the required JS and external styles.
+# Never loosen the policy globally; match ONLY this feature's HTML and support files.
+/verify/adult/
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.portone.io; style-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://*.portone.io; frame-src https://*.portone.io https://*.inicis.com https://*.danal.co.kr; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://*.portone.io https://*.inicis.com https://*.danal.co.kr; object-src 'none'; upgrade-insecure-requests
+  ! Cache-Control
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/verify/adult/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.portone.io; style-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://*.portone.io; frame-src https://*.portone.io https://*.inicis.com https://*.danal.co.kr; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://*.portone.io https://*.inicis.com https://*.danal.co.kr; object-src 'none'; upgrade-insecure-requests
+  ! Cache-Control
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+
 # Proposal Studio is a read-only browser-local editor; globally locked-down CSP
 # Otherwise the global CSP blocks its same-origin JS/CSS.
 /proposal/

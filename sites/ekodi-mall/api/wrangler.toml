@@ -21,6 +21,10 @@ PAYMENTS_ENABLED = "true"
 PAYMENT_PROVIDER = "toss"
 # Toss merchant onboarding MID is for EKODIBIZ direct sales only; no third-party settlement by guest approval.
 MALL_TOSS_MERCHANT_ONLY = "true"
+# Verified member only: append 1% purchase/refund evidence after Toss payment confirmation.
+# The canonical Supabase points ledger is NOT yet installed in production; never present pending as spendable.
+MALL_MEMBER_POINT_EVIDENCE_ENABLED = "true"
+MALL_MEMBER_POINT_CORE_ENABLED = "false"
 # EKODIPAY 공통 결제 모듈 상점: 에코디몰 MID q_ekodib62hb (큐티인과 같은 단일 상점).
 # 키: 변수 TOSS_CLIENT_KEY__MALL, Worker secret TOSS_SECRET_KEY__MALL (기존 TOSS_* 이름은 무시됨)
 EKODIPAY_PROFILE = "mall"
