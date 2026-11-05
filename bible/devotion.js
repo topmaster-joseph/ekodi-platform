@@ -1,4 +1,4 @@
-import { devotionShareExcerpt, formatDevotionShareMessage } from './devotion-share-audio.js';
+import { devotionShareExcerpt, formatDevotionShareMessage, devotionSectionShareDetails, formatDevotionSectionShareMessage } from './devotion-share-audio.js';
 import { createDevotionSpeechUI } from './devotion-speech-ui.js';
 import { DEVOTION_VERSIONS,isDevotionVersion,officialDevotionPassageUrl } from './devotion-scripture-versions.js';
 // EKODI 오늘의 매일묵상 — shared renderer for /bible, /ekodichurch and /ekodimission.
@@ -907,12 +907,16 @@ function boot(root) {
     const url = shareUrl(current.date, body.hash);
     if (copyOnly) { toast(await copy(url) ? '링크를 복사했습니다. 카카오톡 대화방에 붙여 넣어 주세요.' : url); return; }
     const privatePrayer = kind === 'mine' ? panels.get('records').querySelector('textarea[name="prayer"]')?.value.trim() || '' : '';
-    const title = kind === 'page' ? body.title : `${siteLabel} 오늘의 매일묵상 · ${body.title}`;
-    const message = formatDevotionShareMessage({
-      date: current.date, title,
-      excerpt: devotionShareExcerpt(current, kind, privatePrayer),
-      url,
-    });
+    const section=devotionSectionShareDetails(current,kind);
+    const title = section ? `${siteLabel} 오늘의 매일묵상 · ${section.title}` :
+      kind === 'page' ? body.title : `${siteLabel} 오늘의 매일묵상 · ${body.title}`;
+    const message = section
+      ? formatDevotionSectionShareMessage({date:current.date,title,content:section.content,url})
+      : formatDevotionShareMessage({
+        date: current.date, title,
+        excerpt: devotionShareExcerpt(current, kind, privatePrayer),
+        url,
+      });
     // KakaoTalk, SMS and clipboard receive one complete four-line text.
     // Supplying a separate title or url to the native share sheet can duplicate lines.
     if (navigator.share) {
