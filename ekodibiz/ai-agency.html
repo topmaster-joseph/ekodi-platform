@@ -49,7 +49,7 @@ footer .inner{max-width:1040px;margin:auto}
 <section aria-labelledby="heading">
 <p class="eyebrow">EKODIBIZ · AI PURCHASE AGENCY</p>
 <h1 id="heading">AI 서비스 구매·결제 위탁</h1>
-<p class="lead">AI 서비스 신청과 계약기간 관리를 에코디비즈가 도와드립니다. 대학·기관은 3개월 계약, 개인은 1개월 단위로 신청하며 계약은 자동 갱신되지 않습니다.</p>
+<p class="lead">AI 서비스 신청과 계약기간 관리를 에코디비즈가 도와드립니다. 대학·기관은 3개월 계약, 개인은 1개월 단위로 신청하며 에코디비즈 위탁관리 계약은 자동 갱신되지 않으며 공급사의 별도 구독·해지는 해당 공급사 조건을 확인해야 합니다.</p>
 <p class="quiet"><strong>판매·결제 주체를 구분합니다.</strong> 기본 위탁료는 에코디비즈 용역대금입니다. 공급사 구독료는 별도 표시하며 공급사의 수납·재판매 허용 조건이 확인된 건에만 함께 청구할 수 있습니다. 최종 금액은 개별 견적서로 확정합니다.</p>
 </section>
 <div class="layout">
@@ -58,7 +58,7 @@ footer .inner{max-width:1040px;margin:auto}
 <p class="muted">로그인 없이 신청할 수 있습니다. 비밀번호, 카드번호, AI 서비스 계정 비밀번호는 받지 않습니다.</p>
 <form id="agencyForm">
 <div class="choice" role="group" aria-label="계약 유형">
-<label><input type="radio" name="type" value="institution"><span><strong>대학·기관</strong><small>3개월 위탁 관리<br>기간 만료 시 자동 종료</small></span></label>
+<label><input type="radio" name="type" value="institution"><span><strong>대학·기관</strong><small>3개월 위탁 관리<br>위탁관리 기간 자동 종료</small></span></label>
 <label><input type="radio" name="type" value="individual" checked><span><strong>개인</strong><small>1개월 단위 위탁<br>재신청 시 갱신</small></span></label>
 </div>
 <div class="fields">
@@ -76,7 +76,7 @@ footer .inner{max-width:1040px;margin:auto}
 <div id="message" role="status" aria-live="polite"></div>
 <section class="result" id="result" hidden aria-live="polite">
 <h3>신청·견적 진행 현황</h3>
-<dl><dt>신청번호</dt><dd id="receiptId">—</dd><dt>유형·기간</dt><dd id="receiptType">—</dd><dt>상태</dt><dd id="receiptStatus">—</dd><dt>위탁료</dt><dd id="receiptFee">견적 대기</dd><dt>공급사 비용</dt><dd id="receiptSupplier">별도 확인</dd><dt>합계</dt><dd id="receiptTotal">미확정</dd><dt>관리 종료일</dt><dd id="receiptEnd">결제 이후 확정</dd></dl>
+<dl><dt>신청번호</dt><dd id="receiptId">—</dd><dt>유형·기간</dt><dd id="receiptType">—</dd><dt>상태</dt><dd id="receiptStatus">—</dd><dt>위탁료</dt><dd id="receiptFee">견적 대기</dd><dt>공급사 비용</dt><dd id="receiptSupplier">별도 확인</dd><dt>합계</dt><dd id="receiptTotal">미확정</dd><dt>관리 종료일</dt><dd id="receiptEnd">공급사 이용 개시 후 확정</dd></dl>
 <p class="muted" id="receiptGuide">견적이 확정되면 조회할 수 있습니다.</p>
 <div class="actions"><button class="button alt" id="refreshBtn" type="button">진행상황 새로고침</button><button class="button alt" id="copyBtn" type="button">신청 조회번호 복사</button><button class="button" id="acceptBtn" type="button" hidden>견적·계약조건 확인 및 동의</button><button class="button" id="paymentBtn" type="button" hidden>결제 진행</button></div>
 <div id="tossPanel" hidden><h3>결제수단 선택</h3><p class="muted">토스페이먼츠가 결제정보를 직접 처리합니다.</p><div id="tossMethods"></div><div id="tossAgreement"></div><button class="button" type="button" id="tossPayBtn">선택한 수단으로 결제하기</button></div>
@@ -86,7 +86,7 @@ footer .inner{max-width:1040px;margin:auto}
 <section class="card" aria-labelledby="flowTitle">
 <h2 id="flowTitle">진행 절차</h2>
 <ol class="info-list">
-<li>위탁신청서 작성</li><li>공급사 이용 조건 확인 및 개별 견적</li><li>견적·위탁조건 확인과 동의</li><li>승인된 토스페이먼츠 결제</li><li>이용 신청 대행 및 기간 관리</li><li>1개월 또는 3개월 경과 후 자동 종료</li>
+<li>위탁신청서 작성</li><li>공급사 이용 조건 확인 및 개별 견적</li><li>견적·위탁조건 확인과 동의</li><li>승인된 토스페이먼츠 결제</li><li>이용 신청 대행 및 기간 관리</li><li>1개월 또는 3개월 경과 시 에코디비즈 위탁관리 종료(공급사 구독 해지 별도 확인)</li>
 </ol>
 <p class="muted">실제 공급사 서비스 개통은 별도로 확인합니다. 에코디비즈가 AI 공급사 공식 판매자라고 표시하지 않습니다.</p>
 </section>
