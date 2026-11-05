@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {expectedSeonamMediHtmlAtOrigin,normalizeSeonamMediLiveHtml} from '../scripts/seonammedi-live-html-proof.mjs';
+import {expectedSeonamMediHtmlAtOrigin,normalizeSeonamMediLiveHtml,projectedSeonamMediPublishedHtmlForProof} from '../scripts/seonammedi-live-html-proof.mjs';
 import {compareSeonamMediPublishedHtml} from '../scripts/seonammedi-release-html-alias.mjs';
 
 const canonical='https://ekodi.kr/seonammedi';
@@ -101,4 +101,23 @@ test('customer-domain search verification tags are the only extra head bytes tol
   const moved=expected.replace('</head>',tags+'</head>');
   assert.throws(()=>normalizeSeonamMediLiveHtml(moved,{origin:customer,page:'index.html'}),/unexpected_search_verification_injection/);
   assert.notEqual(normalizeSeonamMediLiveHtml(live,{origin:canonical,page:'index.html'}).html,expected,'canonical mount never receives verification tags');
+});
+
+test('owner-approved English host projection is exact, origin-scoped and rejects unapproved mutations',()=>{
+  const original='<head><link rel="canonical" href="https://xn--3e0b8b58jw4co4mnpll3k.kr/"><meta property="og:url" content="https://xn--3e0b8b58jw4co4mnpll3k.kr/"><script type="application/ld+json">{"url":"https://xn--3e0b8b58jw4co4mnpll3k.kr/notices/3"}</script><a href="/seonammedi/shared-site-header.css">Link</a><a href="https://outside.example/x">Other</a></head>';
+  const converted=projectedSeonamMediPublishedHtmlForProof(original,customer);
+  assert.ok(converted.includes('href="https://seonammedi.kr/"'));
+  assert.ok(converted.includes('content="https://seonammedi.kr/"'));
+  assert.ok(converted.includes('https://seonammedi.kr/notices/3'));
+  assert.ok(converted.includes('href="https://outside.example/x"'));
+  assert.equal(projectedSeonamMediPublishedHtmlForProof(original,canonical),original);
+  assert.throws(()=>projectedSeonamMediPublishedHtmlForProof(original,'https://untrusted.example'),/unexpected_seonammedi_html_verification_origin/);
+  const live=converted.replace('href="/seonammedi/shared-site-header.css"','href="/shared-site-header.css"');
+  assert.equal(compareSeonamMediPublishedHtml(converted,live,['shared-site-header.css']).matched,true);
+  for(const tampered of [
+    live.replace('https://outside.example/x','https://evil.example/x'),
+    live.replace('notices/3','notices/4'),
+    live.replace('Link','Replaced'),
+    live.replace('</head>','<script>alert(1)</script></head>')
+  ])assert.equal(compareSeonamMediPublishedHtml(converted,tampered,['shared-site-header.css']).matched,false);
 });
