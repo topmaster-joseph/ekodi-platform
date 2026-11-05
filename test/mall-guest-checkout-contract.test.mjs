@@ -65,3 +65,14 @@ test('verified member pending totals are visible, never redeemable or shared wit
   assert.doesNotMatch(checkout,/포인트 적립 완료|포인트 사용 가능합니다/);
   assert.ok(checkout.includes('실제 사용가능 잔액은 포인트 운영원장 개통 후 반영'));
 });
+
+test('public first visible hero has precise direct-sale 1% policy without external payouts',()=>{
+  const css=read('../sites/ekodi-mall/assets/home-refresh.css');
+  const hero=platform.split('<div class="context-hero-copy">')[1]?.split('</div>')[0]||'';
+  assert.ok(hero.includes('mall-member-points-hero'),'reward disclosure must not be hidden behind the shop More control');
+  assert.ok(hero.includes('비회원도 결제 가능'));
+  assert.ok(hero.includes('로그인 회원 결제 확인 시 1% 포인트 적립 증빙'));
+  assert.ok(hero.includes('쿠팡·여행 등 외부 판매처 결제 제외'));
+  assert.ok(hero.includes('운영원장 개통 전으로 사용이 불가능합니다.'));
+  assert.ok(css.includes('.mall-member-points-hero{'));
+});
