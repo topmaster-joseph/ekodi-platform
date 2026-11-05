@@ -168,6 +168,14 @@
       return url.href;
     } catch { return ''; }
   };
+  const mallDetailHref = value => {
+    const raw=clean(value);
+    // Static Pages uses /products/... within its own root while the production
+    // Mall is mounted at /ekodimall/. Preserve absolute Core /p/ links.
+    const canonical = /^\/products\//.test(raw) && window.location.pathname.startsWith('/ekodimall')
+      ? '/ekodimall'+raw : raw;
+    return safeUrl(canonical,true);
+  };
   const price = amount => Number(amount) > 0 && Number.isFinite(Number(amount))
     ? new Intl.NumberFormat('ko-KR').format(Number(amount))+'원' : '가격은 판매처에서 확인';
   const tokensOf = input => clean(input).toLocaleLowerCase('ko-KR').split(/\s+/).filter(Boolean);
@@ -184,7 +192,7 @@
   function localRows() {
     return [...catalog.querySelectorAll('[data-product]')].map(card => {
       const name = clean(card.dataset.name || card.querySelector('h3')?.textContent);
-      const href = safeUrl(card.dataset.href || card.querySelector('h3 a')?.href, true);
+      const href = mallDetailHref(card.dataset.href || card.querySelector('h3 a')?.href);
       const category = bucketOf(card.dataset);
       const summary = clean(card.querySelector('.card-summary')?.textContent);
       const displayedPrice = clean(card.querySelector('.meta .status')?.textContent).match(/\d[\d,]*원/)?.[0] || '';
