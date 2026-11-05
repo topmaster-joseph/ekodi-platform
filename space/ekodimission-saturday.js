@@ -8,6 +8,7 @@
   const replies=root.querySelector('[data-mission-saturday-replies]');
   const dateText=root.querySelector('[data-mission-saturday-date]');
   const count=root.querySelector('[data-mission-saturday-count]');
+  const commentCount=root.querySelector('[data-mission-saturday-comment-count]');
   const scriptureStatus=root.querySelector('[data-mission-saturday-scripture-status]');
   const scriptureLink=root.querySelector('[data-mission-saturday-scripture-link]');
   const login=root.querySelector('[data-mission-saturday-login]');
@@ -79,9 +80,12 @@
     const intro=root.querySelector('.activity-copy > p:not(.tag)');
     if(intro)intro.textContent='이번 주 토요일 '+meetingTime+', 에코디교회에서 성경을 읽고 토론하며 함께 식사합니다. 처음 오시는 분도 환영합니다.';
     root.dataset.meetingDate=meetingDate;
-    const attendees=data.replies.filter(item=>item.attendance==='join').length;
-    const comments=data.replies.filter(item=>String(item.body||'').trim()).length;
-    count.textContent='참여 의사 '+attendees+'명 · 답글 '+comments+'개';
+    const attendees=Number.isSafeInteger(data.summary?.plannedJoin)?data.summary.plannedJoin:
+      data.replies.filter(item=>item.attendance==='join').length;
+    const comments=Number.isSafeInteger(data.summary?.comments)?data.summary.comments:
+      data.replies.filter(item=>String(item.body||'').trim()).length;
+    if(count)count.textContent=String(attendees);
+    if(commentCount)commentCount.textContent=String(comments);
     renderReplies(data.replies);
     const authenticated=data.me?.authenticated===true;
     if(login)login.hidden=authenticated;
@@ -133,7 +137,8 @@
       if(current===loading){render(data);void loadScripture(meetingDate,current);}
     }catch(error){
       if(current!==loading)return;
-      if(count)count.textContent='일정 확인 불가';
+      if(count)count.textContent='–';
+      if(commentCount)commentCount.textContent='–';
       if(replies){replies.replaceChildren();const item=document.createElement('li');item.textContent='현재 답글을 불러올 수 없습니다. 잠시 후 새로고침해 주세요.';replies.append(item);}
       say(error.message||'답글 확인 중 오류가 발생했습니다.','error');
     }
@@ -169,6 +174,7 @@
     }finally{submit.disabled=false}
   });
   window.addEventListener('ekodi:mission-auth-changed',()=>{void load()});
+  window.addEventListener('ekodi:mission-participation-changed',()=>{void load()});
   window.addEventListener('ekodi:auth-logout',()=>{editing=false;if(form){form.reset()}void load()});
   // Current Saturday remains visible through Saturday 23:59:59 in Seoul.
   // On Sunday the RSVP window rolls to the following Saturday.
@@ -183,7 +189,8 @@
     if(nowDay===observedDay)return;
     observedDay=nowDay;editing=false;
     form?.reset();
-    if(count)count.textContent='다음 모임 확인 중';
+    if(count)count.textContent='–';
+    if(commentCount)commentCount.textContent='–';
     void load();
   };
   const rolloverTimer=setInterval(refreshAfterDayChange,60000);
@@ -249,7 +256,7 @@
     }
     for(const item of items.slice(0,6)){
       const row=make('li'),link=make('a','',item.title);
-      link.href=item.id?'/ekodimission/board/post/'+encodeURIComponent(String(item.id)):'/ekodimission#saturday';
+      link.href=item.href||(item.id?'/ekodimission/board/post/'+encodeURIComponent(String(item.id)):'/ekodimission#saturday');
       const meta=make('small','mission-home-board-meta',item.meta||'');
       link.append(meta);row.append(link);
       if(manager&&item.post){
@@ -302,6 +309,24 @@
       upcoming.push({id:0,title:meeting.title||'토요 성경토론과 식사',meta:formatDate(meeting.date)+' '+String(meeting.time||'')+' · '+String(meeting.venue||'에코디교회'),date:meeting.date,time:meeting.time||'',post:null});
     }
     upcoming.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
+    try{
+      const shared=await readJson(api+'/shared-schedules');
+      if(shared.ok===true&&shared.mode==='published-read-only'&&Array.isArray(shared.items)){
+        const owned=new Map(posts.map(post=>[post.id,post]));
+        const items=shared.items.filter(item=>
+          ['ekodichurch','ekodimission'].includes(item.source)&&
+          /^\d{4}-\d{2}-\d{2}$/.test(item.date)&&item.date>=today()&&
+          /^\/(ekodichurch|ekodimission)(\/|\?|$)/.test(item.url||''))
+          .map(item=>({
+            id:item.id,title:item.title,
+            date:item.date,time:item.time,
+            meta:item.sourceLabel+' · '+formatDate(item.date)+' '+item.time+' · '+item.venue,
+            href:item.url,post:item.source==='ekodimission'?owned.get(item.id)||null:null
+          }));
+        draw(kind,items,error&&manager?error:'');
+        return;
+      }
+    }catch{ /* The local board and canonical Saturday remain independently usable. */ }
     draw(kind,upcoming,error);
   }
   async function removePost(kind,post){

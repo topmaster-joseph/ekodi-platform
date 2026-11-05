@@ -11,6 +11,8 @@ export function churchOfficialCategoryRequiresManager(siteId,categoryId){
 }
 const MISSION_OFFICIAL_CATEGORIES=Object.freeze(['mission-notice','mission-schedule']);
 const isMissionOfficialCategory=(instance,categoryId)=>instance.site_id==='ekodimission'&&MISSION_OFFICIAL_CATEGORIES.includes(categoryId);
+const isChurchOfficialCategory=(instance,categoryId)=>churchOfficialCategoryRequiresManager(instance.site_id,categoryId);
+const isPublicOfficialCategory=(instance,categoryId)=>isMissionOfficialCategory(instance,categoryId)||isChurchOfficialCategory(instance,categoryId);
 const PATH_TENANT_ALIASES=Object.freeze({
   ekodimission:'ekodimission',
   ekodichurch:'ekodichurch',
@@ -300,7 +302,7 @@ const boardJson=(instance,data,status=200)=>json(data,status,{'x-ekodi-board-id'
 async function parseBody(request){try{return await request.json()}catch{return null}}
 
 async function listPosts(env,instance,categoryId=''){
-  const selected=isMissionOfficialCategory(instance,categoryId)?categoryId:'';
+  const selected=isPublicOfficialCategory(instance,categoryId)?categoryId:'';
   const rows=selected
     ?await env.DB.prepare(`SELECT p.id,p.title,p.body,p.created_at,p.updated_at,pc.category_id
       FROM ekodi_board_posts p JOIN ekodi_board_post_categories pc
@@ -325,7 +327,7 @@ async function readPost(env,instance,id){
 function htmlEscape(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function page(route,posts,categoryId=''){
   const items=posts.length?posts.map(post=>`<article><a href="${route.basePath}/post/${post.id}"><h2>${htmlEscape(post.title)}</h2></a><p>${htmlEscape(post.body).slice(0,220)}</p><time>${htmlEscape(post.createdAt)}</time></article>`).join(''):'<p class="empty">등록된 글이 없습니다.</p>';
-  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${categoryId==='mission-notice'?'공지사항':categoryId==='mission-schedule'?'주요일정':'게시판'}</title><style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(920px,calc(100% - 28px));margin:0 auto;padding:18px 0}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:22px;margin:0}article{padding:15px 0;border-bottom:1px solid #e6e6e6}h2{font-size:18px;margin:0 0 7px}a{color:#111;text-decoration:none}p{white-space:pre-wrap;line-height:1.5;margin:0 0 7px}time{font-size:12px;color:#666}.empty{padding:30px 0}</style></head><body><main><header><h1>${categoryId==='mission-notice'?'공지사항':categoryId==='mission-schedule'?'주요일정':'게시판'}</h1>${categoryId?`<p><a href="/ekodimission">에코디선교회 홈으로</a></p>`:''}</header>${items}</main></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
+  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${['mission-notice','notice'].includes(categoryId)?'공지사항':['mission-schedule','schedule'].includes(categoryId)?'주요일정':'게시판'}</title><style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(920px,calc(100% - 28px));margin:0 auto;padding:18px 0}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:22px;margin:0}article{padding:15px 0;border-bottom:1px solid #e6e6e6}h2{font-size:18px;margin:0 0 7px}a{color:#111;text-decoration:none}p{white-space:pre-wrap;line-height:1.5;margin:0 0 7px}time{font-size:12px;color:#666}.empty{padding:30px 0}</style></head><body><main><header><h1>${['mission-notice','notice'].includes(categoryId)?'공지사항':['mission-schedule','schedule'].includes(categoryId)?'주요일정':'게시판'}</h1>${categoryId?`<p><a href="${route.siteId==='ekodichurch'?'/ekodichurch':'/ekodimission'}">${route.siteId==='ekodichurch'?'에코디교회':'에코디선교회'} 홈으로</a></p>`:''}</header>${items}</main></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
 }
 function postPage(route,post){
   if(!post)return new Response('Not Found',{status:404});
@@ -491,6 +493,79 @@ async function missionSaturdayParticipation(request,env,instance,who,method){
   return boardJson(instance,response);
 }
 
+// Public read-only federation: each board owns its own posts and permissions.
+// Only approved published schedule fields leave the board boundary.
+export function parseEkodiPublicSchedule(row,today=missionKstToday()){
+  if(!row||!['site:ekodichurch:main','site:ekodimission:main'].includes(row.board_id))return null;
+  const source=row.board_id==='site:ekodichurch:main'?'ekodichurch':'ekodimission';
+  const expected=source==='ekodichurch'?'schedule':'mission-schedule';
+  if(row.category_id!==expected)return null;
+  const lines=String(row.body||'').replace(/\r/g,'').split('\n');
+  const when=lines[0]?.match(/^일정:\s*(\d{4}-\d{2}-\d{2})\s+([01]\d|2[0-3]):([0-5]\d)$/);
+  const place=lines[1]?.match(/^장소:\s*(.{1,160})$/);
+  if(!when||!place||when[1]<today||!place[1].trim())return null;
+  const parsed=new Date(when[1]+'T00:00:00Z');
+  if(Number.isNaN(parsed.getTime())||parsed.toISOString().slice(0,10)!==when[1])return null;
+  const id=Number(row.id),title=clean(row.title,160);
+  if(!Number.isSafeInteger(id)||id<=0||!title)return null;
+  return {id,source,sourceLabel:source==='ekodichurch'?'에코디교회':'에코디선교회',
+    date:when[1],time:when[2]+':'+when[3],venue:place[1].trim(),title,
+    url:'/'+source+'/board/post/'+id,kind:'official-post'};
+}
+async function readSharedPublicSchedules(env,instance){
+  const today=missionKstToday(),missionId=boardId('ekodimission'),churchId=boardId('ekodichurch');
+  const sql=[
+    'SELECT p.id,p.board_id,p.title,p.body,pc.category_id FROM ekodi_board_posts p',
+    'JOIN ekodi_board_post_categories pc ON pc.board_id=p.board_id AND pc.post_id=p.id',
+    'JOIN ekodi_board_instances b ON b.board_id=p.board_id',
+    "WHERE p.status='published' AND b.status='active' AND b.visibility='public'",
+    "AND ((p.board_id=? AND pc.category_id='mission-schedule') OR (p.board_id=? AND pc.category_id='schedule'))",
+    'ORDER BY p.updated_at DESC,p.id DESC LIMIT 200'
+  ].join(' ');
+  const rows=await env.DB.prepare(sql).bind(missionId,churchId).all();
+  const items=(rows.results||[]).map(row=>parseEkodiPublicSchedule(row,today)).filter(Boolean);
+  await missionEnsureWeeklyDates(env,missionId,today,missionSaturdayFor(today));
+  const weekly=await env.DB.prepare(
+    "SELECT meeting_date,starts_at,venue,title,status FROM ekodi_mission_saturday_events WHERE board_id=? AND meeting_date>=? AND status='scheduled' ORDER BY meeting_date LIMIT 4"
+  ).bind(missionId,today).all();
+  for(const event of weekly.results||[]){
+    const date=String(event.meeting_date||'');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||items.some(item=>item.source==='ekodimission'&&item.date===date&&item.title===event.title))continue;
+    items.push({id:0,source:'ekodimission',sourceLabel:'에코디선교회',date,
+      time:String(event.starts_at||'11:00'),venue:String(event.venue||'에코디교회'),
+      title:String(event.title||'토요 성경토론과 식사'),
+      url:'/ekodimission?meeting='+encodeURIComponent(date)+'#saturday',kind:'recurring-meeting'});
+  }
+  items.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)||a.source.localeCompare(b.source));
+  return boardJson(instance,{ok:true,mode:'published-read-only',items:items.slice(0,30)});
+}
+// Return only anonymous aggregates; never expose private RSVP rows, names or member identities.
+// A date-specific override has priority over an ongoing recurring setting and public reply.
+export async function missionSaturdayPublicSummary(env,boardId,date){
+  const planned=await env.DB.prepare(`WITH candidates(person_id) AS (
+    SELECT person_id FROM ekodi_mission_recurring_participation WHERE board_id=? AND enabled=1
+    UNION
+    SELECT person_id FROM ekodi_mission_saturday_private_rsvp WHERE board_id=? AND meeting_date=? AND attendance='join'
+    UNION
+    SELECT author_person_id FROM ekodi_mission_saturday_replies WHERE board_id=? AND meeting_date=? AND status='published' AND attendance='join'
+  )
+  SELECT COUNT(*) AS n FROM candidates c
+    LEFT JOIN ekodi_mission_saturday_private_rsvp o ON o.board_id=? AND o.meeting_date=? AND o.person_id=c.person_id
+    LEFT JOIN ekodi_mission_recurring_participation r ON r.board_id=? AND r.person_id=c.person_id
+    LEFT JOIN ekodi_mission_saturday_replies p ON p.board_id=? AND p.meeting_date=? AND p.author_person_id=c.person_id AND p.status='published'
+  WHERE CASE
+    WHEN o.attendance IN ('cancel','maybe') THEN 0
+    WHEN o.attendance='join' THEN 1
+    WHEN p.attendance='cancel' THEN 0
+    WHEN r.enabled=1 THEN 1
+    WHEN p.attendance='join' THEN 1
+    ELSE 0 END=1`)
+    .bind(boardId,boardId,date,boardId,date,boardId,date,boardId,boardId,date).first();
+  const comments=await env.DB.prepare(`SELECT COUNT(*) AS n FROM ekodi_mission_saturday_replies
+    WHERE board_id=? AND meeting_date=? AND status='published' AND length(trim(COALESCE(body,'')))>0`)
+    .bind(boardId,date).first();
+  return {plannedJoin:Number(planned?.n||0),comments:Number(comments?.n||0)};
+}
 async function missionSaturdayBoard(request,env,instance,who,method){
   const today=missionKstToday(),date=missionSaturdayFor(today);
   const stamp=now();
@@ -528,9 +603,10 @@ async function missionSaturdayBoard(request,env,instance,who,method){
     id:Number(row.id),displayName:row.display_name,body:row.body,attendance:row.attendance,
     createdAt:row.created_at,updatedAt:row.updated_at,own:who.authenticated&&row.author_person_id===who.personId
   }));
+  const summary=await missionSaturdayPublicSummary(env,instance.board_id,date);
   return boardJson(instance,{
     ok:true,meeting:{date:meeting.meeting_date,time:meeting.starts_at,venue:meeting.venue,title:meeting.title,status:meeting.status},
-    replies,me:{authenticated:who.authenticated,displayName:replies.find(item=>item.own)?.displayName||'',role:who.role}
+    summary,replies,me:{authenticated:who.authenticated,displayName:replies.find(item=>item.own)?.displayName||'',role:who.role}
   });
 }
 
@@ -542,6 +618,12 @@ export async function handleSiteBoardRequest(request,env){
   if(!instance)return new Response('Board unavailable',{status:503,headers:{'cache-control':'no-store'}});
   const method=request.method.toUpperCase(),sub=route.subPath.replace(/\/+$/,'')||'/';
   const who=await actor(request,env,instance);
+  if(['ekodichurch','ekodimission'].includes(route.siteId)&&sub==='/api/shared-schedules'){
+    if(method!=='GET')return boardJson(instance,{error:'method_not_allowed'},405);
+    const otherSite=route.siteId==='ekodichurch'?'ekodimission':'ekodichurch';
+    await ensureInstance(env,{siteId:otherSite,tenantSlug:otherSite});
+    return readSharedPublicSchedules(env,instance);
+  }
   if(route.siteId==='ekodimission'&&sub==='/api/saturday/history'){
     return missionSaturdayHistory(request,env,instance,method);
   }
@@ -651,7 +733,7 @@ export async function handleSiteBoardRequest(request,env){
 
   if(method==='GET'&&sub==='/'){
     const categoryId=safeCategoryId(new URL(request.url).searchParams.get('category'));
-    const selected=isMissionOfficialCategory(instance,categoryId)?categoryId:'';
+    const selected=isPublicOfficialCategory(instance,categoryId)?categoryId:'';
     return page(route,await listPosts(env,instance,selected),selected);
   }
   const postPageMatch=sub.match(/^\/post\/(\d+)$/);
@@ -659,7 +741,7 @@ export async function handleSiteBoardRequest(request,env){
   if(method==='GET'&&sub==='/api/health')return boardJson(instance,{ok:true,boardId:instance.board_id,siteId:instance.site_id,aiIndependent:true,independent:true});
   if(method==='GET'&&sub==='/api/posts'){
     const categoryId=safeCategoryId(new URL(request.url).searchParams.get('category'));
-    const selected=isMissionOfficialCategory(instance,categoryId)?categoryId:'';
+    const selected=isPublicOfficialCategory(instance,categoryId)?categoryId:'';
     return boardJson(instance,{boardId:instance.board_id,categoryId:selected||null,items:await listPosts(env,instance,selected)});
   }
   const apiPost=sub.match(/^\/api\/posts\/(\d+)$/);
@@ -681,7 +763,7 @@ export async function handleSiteBoardRequest(request,env){
       .bind(instance.board_id,who.personId,who.email,title,textBody,stamp,stamp).run();
     const id=Number(result?.meta?.last_row_id||0);
     if(categoryId){
-      const official=isMissionOfficialCategory(instance,categoryId);
+      const official=isPublicOfficialCategory(instance,categoryId);
       const category=official||await env.DB.prepare("SELECT category_id FROM ekodi_board_categories WHERE board_id=? AND category_id=? AND status='active' LIMIT 1").bind(instance.board_id,categoryId).first();
       if(category)await env.DB.prepare('INSERT OR IGNORE INTO ekodi_board_post_categories(board_id,post_id,category_id) VALUES (?,?,?)').bind(instance.board_id,id,categoryId).run();
     }
@@ -718,7 +800,7 @@ export async function handleSiteBoardRequest(request,env){
       await env.DB.prepare('DELETE FROM ekodi_board_post_categories WHERE board_id=? AND post_id=?').bind(instance.board_id,id).run();
       const categoryId=safeCategoryId(body.categoryId);
       if(categoryId){
-        const category=isMissionOfficialCategory(instance,categoryId)||await env.DB.prepare("SELECT category_id FROM ekodi_board_categories WHERE board_id=? AND category_id=? AND status='active' LIMIT 1").bind(instance.board_id,categoryId).first();
+        const category=isPublicOfficialCategory(instance,categoryId)||await env.DB.prepare("SELECT category_id FROM ekodi_board_categories WHERE board_id=? AND category_id=? AND status='active' LIMIT 1").bind(instance.board_id,categoryId).first();
         if(category)await env.DB.prepare('INSERT OR IGNORE INTO ekodi_board_post_categories(board_id,post_id,category_id) VALUES (?,?,?)').bind(instance.board_id,id,categoryId).run();
       }
     }

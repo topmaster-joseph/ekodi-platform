@@ -433,7 +433,7 @@ function formatActivityShare(organization,activity,date,url,action='신청하기
       button=document.createElement('button');
       button.type='button';button.className='mission-share-button';
       button.dataset.missionShareButton='';Object.assign(button.dataset,{shareUrl:url,shareTitle:title,shareDate:date,shareAction:action});
-      button.textContent='공유';button.setAttribute('aria-label',title+' 공유');
+      button.textContent='공유하기';button.setAttribute('aria-label',title+' 공유하기');
       const notice=document.createElement('span');
       notice.className='mission-share-note';notice.setAttribute('role','status');
       button.addEventListener('click',async()=>{
