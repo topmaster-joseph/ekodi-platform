@@ -6,6 +6,7 @@ on:
       - 'scripts/verify-seonammedi-nav-guest-native.mjs'
       - 'scripts/verify-seonammedi-finance-firstparty.mjs'
       - 'test/seonammedi-finance-firstparty.test.mjs'
+      - 'test/seonammedi-native-committee-parity.test.mjs'
       - '.github/workflows/verify-seonammedi-nav-guest-native.yml'
   push:
     branches: [main]
@@ -44,7 +45,7 @@ jobs:
         run: |
           node --check scripts/verify-seonammedi-nav-guest-native.mjs
           node --check scripts/verify-seonammedi-finance-firstparty.mjs
-          node --test test/seonammedi-finance-firstparty.test.mjs
+          node --test test/seonammedi-finance-firstparty.test.mjs test/seonammedi-native-committee-parity.test.mjs
   native-public-guest-audit:
     # Owner-only post-merge read-only probe. Issue comments run from trusted default main,
     # never from a contributor-controlled PR head and never receive write credentials.
@@ -72,15 +73,15 @@ jobs:
         run: |
           node --check scripts/verify-seonammedi-nav-guest-native.mjs
           node --check scripts/verify-seonammedi-finance-firstparty.mjs
-          node --test test/seonammedi-finance-firstparty.test.mjs
+          node --test test/seonammedi-finance-firstparty.test.mjs test/seonammedi-native-committee-parity.test.mjs
+      - name: Verify first-party finance public summary and protected administrator API
+        run: node scripts/verify-seonammedi-finance-firstparty.mjs
       - name: Install EKODI Chromium harness
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
       - name: Check canonical and customer public surfaces on PC/mobile
         run: node scripts/verify-seonammedi-nav-guest-native.mjs
-      - name: Verify first-party finance public summary and protected administrator API
-        run: node scripts/verify-seonammedi-finance-firstparty.mjs
       - name: Upload screenshot and structured evidence
         if: always()
         uses: actions/upload-artifact@v4

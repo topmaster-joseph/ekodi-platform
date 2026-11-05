@@ -149,6 +149,13 @@ try {
                 .map(node=>node.id);
               const selected=section&&!section.hidden&&getComputedStyle(section).display!=='none';
               const filterVisible=filter&&getComputedStyle(filter).display!=='none';
+              // Owner's 2026-11-03 committee-news-only design intentionally hides the
+              // activity ledger filters/list while preserving the public finance card.
+              const committeeNewsOnly=sectionId==='committee-activity'&&section?.classList.contains('committee-news-only');
+              const financeCard=section?.querySelector('#committee-finance-disclosure');
+              const newsBlock=section?.querySelector('.committee-news-section');
+              const financeCardVisible=!!financeCard&&!financeCard.hidden&&getComputedStyle(financeCard).display!=='none';
+              const newsBlockVisible=!!newsBlock&&!newsBlock.hidden&&getComputedStyle(newsBlock).display!=='none';
               const nav=[...document.querySelectorAll('header.site-header nav a[aria-current="page"]')]
                 .map(node=>node.dataset.viewLink||node.textContent.trim());
               return {
@@ -158,6 +165,9 @@ try {
                 active,
                 selectedVisible:!!selected,
                 filterVisible:!!filterVisible,
+                committeeNewsOnly:!!committeeNewsOnly,
+                financeCardVisible:!!financeCardVisible,
+                newsBlockVisible:!!newsBlockVisible,
                 activeNav:nav,
                 legacyPanelHidden:!!panel?.hidden,
                 legacyTopic:document.body.dataset.seonammediCentralTopic||'',
@@ -179,9 +189,15 @@ try {
                   parity,{timeout:9000});
                 const reloaded=await menuSnapshot(parity);
                 const expectedNav={ '활동이력':'committee','관련소식':'status','소통채널':'channels'}[item.label];
+                const deliberateCommitteeLayout=clicked.committeeNewsOnly&&reloaded.committeeNewsOnly;
+                const filterParity=deliberateCommitteeLayout
+                  ?!clicked.filterVisible&&!reloaded.filterVisible&&
+                    clicked.financeCardVisible&&reloaded.financeCardVisible&&
+                    clicked.newsBlockVisible&&reloaded.newsBlockVisible
+                  :clicked.filterVisible&&reloaded.filterVisible&&!clicked.committeeNewsOnly&&!reloaded.committeeNewsOnly;
                 const valid=clicked.hash===parity.hash&&reloaded.hash===parity.hash
                   &&clicked.selectedVisible&&reloaded.selectedVisible
-                  &&clicked.filterVisible&&reloaded.filterVisible
+                  &&filterParity
                   &&clicked.activeNav.length===1&&clicked.activeNav[0]===expectedNav
                   &&reloaded.activeNav.length===1&&reloaded.activeNav[0]===expectedNav
                   &&clicked.legacyPanelHidden&&reloaded.legacyPanelHidden
@@ -192,7 +208,7 @@ try {
                 if(!valid)throw Error('native_click_reload_view_mismatch_'+item.label);
                 // Read-only subcategory parity: verify the selected chip and hash
                 // across refresh, browser history, and a fresh deep-link.
-                const filterRoute=item.label==='활동이력'
+                const filterRoute=item.label==='활동이력'&&!deliberateCommitteeLayout
                   ?{prefix:'committee-activity',id:'committeeActivityFilters',attribute:'data-committee-filter'}
                   :item.label==='관련소식'
                     ?{prefix:'timeline',id:'timelineFilters',attribute:'data-cat'}
