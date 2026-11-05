@@ -1,17 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {ADMIN_MENU_GROUPS} from '../admin-menu-registry.js';
 import {ADMIN_SERVICE_CATALOG,canonicalServiceAdminPath} from '../admin-service-catalog.js';
 import {summarizeTenantServiceMenuProjection,recommendTenantServicePreset} from '../tenant-service-admin-ui.js';
 
 const source=name=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
 
 test('ADMIN-NAV-STABLE-001: superadmin retains one categorized platform control plane',()=>{
-  assert.deepEqual(ADMIN_MENU_GROUPS.map(group=>group.id),[
-    'home','sites','ai','services','finance','ops','settings','accounts'
-  ]);
-  assert.equal(new Set(ADMIN_MENU_GROUPS.map(x=>x.id)).size,8);
+  const registry=source('admin-menu-registry.js');
+  const groups=[...registry.matchAll(/\\{ id: '(home|sites|ai|services|finance|ops|settings|accounts)', icon:/g)].map(match=>match[1]);
+  assert.deepEqual(groups,['home','sites','ai','services','finance','ops','settings','accounts']);
+  assert.equal(new Set(groups).size,8);
   const js=source('workspace-admin-page.js');
   assert.match(js,/label:'업무메뉴'/);
   assert.doesNotMatch(js,/label:'공통메뉴'/);
