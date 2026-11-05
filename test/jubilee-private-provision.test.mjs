@@ -43,6 +43,6 @@ test('GitHub workflow is production-gated and only creates private resources and
   assert.match(y,/004_private_jubilee_current_intake_receipts\.sql/);
   assert.match(y,/CREATE_EKODI_PRIVATE_PUBLISHING_RESOURCES/);
   assert.doesNotMatch(y,/upload-artifact|pull_request:|r2 object put|wrangler .* deploy/i);
-  assert.match(js,/PRIVATE_PROVISION_NO_PUBLIC_ROUTES/);
+  assert.match(js,/PRIVATE_JUBILEE_PROVISION_NO_PUBLIC_ROUTES/);
   assert.doesNotMatch(js,/\b(?:DELETE|PATCH|PUT)\b/);
 });
