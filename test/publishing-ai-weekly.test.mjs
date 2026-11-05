@@ -24,12 +24,13 @@ function memory() {
 }
 const plan = JSON.stringify({ title: '하루 10분 묵상', subtitle: '바쁜 날의 쉼', keywords: ['묵상'], pitch: '소개', chapters: Array.from({ length: 8 }, (_, i) => ({ title: `${i + 1}장 제목`, summary: '요지' })) });
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 0xff, 0xd9]).toString('base64');
+let fakeSeq = 0; // 부분마다 다른 글(반복 제거에 걸리지 않게)
 function fakeAi(calls) { return { run: async (model, input) => {
   calls.push(model);
   if (model.includes('flux')) return { image: JPEG };
   const isPlan = input.messages[1].content.includes('JSON');
   const isScene = input.messages[0].content.includes('image prompts');
-  return { response: isPlan ? plan : isScene ? 'A quiet window at dawn' : '### 소제목\n> 핵심 문장\n' + '본문 '.repeat(430), usage: { prompt_tokens: 500, completion_tokens: isPlan ? 400 : isScene ? 20 : 900 } };
+  return { response: isPlan ? plan : isScene ? 'A quiet window at dawn' : (() => { const k = String.fromCharCode(0xac00 + (++fakeSeq) * 37); return `### 소제목${k}\n> 핵심 문장${k}\n` + `본${k} `.repeat(430); })(), usage: { prompt_tokens: 500, completion_tokens: isPlan ? 400 : isScene ? 20 : 900 } };
 } }; }
 
 test('disabled unless the flag, binding and DB are all present; never a paid provider', async () => {
