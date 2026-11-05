@@ -289,3 +289,14 @@ test('static headers let the registration page run its same-origin script and re
     assert.doesNotMatch(csp,/unsafe-eval|script-src[^;]*unsafe-inline/,path);
   }
 });
+
+test('every 선교부 page carries the same login state (role bar + site.js), so 로그인 turns into 로그아웃 everywhere',()=>{
+  for(const file of ['../sites/mokpo-presbytery/mission/index.html','../sites/mokpo-presbytery/mission/policy-council-2026/index.html','../sites/mokpo-presbytery/mission/viewer/index.html']){
+    const html=fs.readFileSync(new URL(file,import.meta.url),'utf8');
+    assert.match(html,/<div id="roleBar" class="rolebar" hidden data-supabase=/,file);
+    assert.match(html,/<script src="\/mokpo-presbytery\/mission\/site\.js" defer><\/script>/,file);
+  }
+  const js=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/site.js',import.meta.url),'utf8');
+  assert.ok(js.includes('header a[href$=')&&js.includes('/mokpo-presbytery/mission/viewer/'));
+  assert.ok(js.includes("'이미 로그인되어 있습니다'"));
+});
