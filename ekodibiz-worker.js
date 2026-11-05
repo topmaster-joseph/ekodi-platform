@@ -413,7 +413,7 @@ export default {
       if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error:'method_not_allowed' }, 405);
       if (!env.ASSETS) return new Response('Assets unavailable', { status:503, headers:securityHeaders() });
       const assetUrl = new URL(request.url);
-      assetUrl.pathname = agencyAssets[path];
+      assetUrl.pathname = agencyAssets[path].endsWith('.html') ? agencyAssets[path].slice(0, -5) : agencyAssets[path];
       assetUrl.search = '';
       const response = withSecurity(await env.ASSETS.fetch(new Request(assetUrl, request)));
       const headers = new Headers(response.headers);
