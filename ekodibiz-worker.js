@@ -405,16 +405,21 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/ekodibiz(?=\/)/, '');
     if (path.startsWith('/api/agency/')) return agencyApi(request, url, env);
-    if (path === '/ai-agency' || path === '/ai-agency/' || path === '/ai-agency.js') {
+    const agencyAssets = {
+      '/ai-agency':'/ai-agency.html', '/ai-agency/':'/ai-agency.html', '/ai-agency.js':'/ai-agency.js',
+      '/ai-agency-admin':'/ai-agency-admin.html', '/ai-agency-admin/':'/ai-agency-admin.html', '/ai-agency-admin.js':'/ai-agency-admin.js'
+    };
+    if (Object.hasOwn(agencyAssets, path)) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error:'method_not_allowed' }, 405);
       if (!env.ASSETS) return new Response('Assets unavailable', { status:503, headers:securityHeaders() });
       const assetUrl = new URL(request.url);
-      assetUrl.pathname = path === '/ai-agency.js' ? '/ai-agency.js' : '/ai-agency.html';
+      assetUrl.pathname = agencyAssets[path];
       assetUrl.search = '';
       const response = withSecurity(await env.ASSETS.fetch(new Request(assetUrl, request)));
       const headers = new Headers(response.headers);
       headers.set('content-security-policy', "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' https://js.tosspayments.com https://ekodi.kr; connect-src 'self' https://*.tosspayments.com https://*.toss.im; frame-src https://*.tosspayments.com https://*.toss.im; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://*.tosspayments.com");
       headers.set('cache-control', 'no-store');
+      if (path.startsWith('/ai-agency-admin')) headers.set('x-robots-tag', 'noindex, nofollow');
       return new Response(request.method === 'HEAD' ? null : response.body, {status:response.status, statusText:response.statusText, headers});
     }
     if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=organization&source=biz.ekodi.kr', 307);
