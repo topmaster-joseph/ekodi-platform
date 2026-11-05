@@ -153,9 +153,9 @@ test('book cards use concise copy and verified prices or an explicit unknown-pri
   assert.match(build, /product\.category === 'book' \? 34 : 46/);
   assert.match(build, /'가격 확인 · '/);
   assert.match(build, /category-availability\.json/);
-  assert.match(books, /const verifiedAmount = Number\\(quote\\.price\\.amount\\)/);
-  assert.match(books, /released\\.set\\(book\\.bookId, \\{ \\.\\.\\.book, price: verifiedAmount \\}\\)/);
-  assert.match(books, /readyQuote\\(quote, book\\.bookId\\)/);
+  assert.match(books, /const verifiedAmount = Number\(quote\.price\.amount\)/);
+  assert.match(books, /released\.set\(book\.bookId, \{ \.\.\.book, price: verifiedAmount \}\)/);
+  assert.match(books, /readyQuote\(quote, book\.bookId\)/);
   assert.match(books, /가격 확인 · 판매 상태 확인 필요/);
   assert.match(books, /const quote = await quoteFor\(book\.bookId\)/);
   assert.match(css, /\.card\[data-category="book"\] \.card-summary/);
