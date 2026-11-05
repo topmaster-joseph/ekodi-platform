@@ -6,7 +6,7 @@ const NOW='2026-11-06T00:00:00.000Z';
 function healthy(){
   return {observedAt:NOW,runtime:{local:{
     ledgerAvailable:true,tenantIsolationVerified:true,auditAvailable:true,
-    taskQueueAvailable:true,financeReconciled:true,nativeBrowserAvailable:true,
+    taskQueueAvailable:true,financeReconciled:true,paymentCoreAvailable:true,backupRestoreVerified:true,nativeBrowserAvailable:true,
     recoveryPathAvailable:true,
   }},external:{aiSupplier:'online',governmentPortal:'online'},approvals:{
     universityContractVerified:true,individualConsentVerified:true,
