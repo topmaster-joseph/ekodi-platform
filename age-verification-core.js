@@ -3,6 +3,8 @@
 const ROOT = '/api/age-verification';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ID = /^ekodi-age-[0-9a-f]{32}$/;
+const INICIS_ID = /^ekodi-inicis-[0-9a-f]{32}$/;
+const INICIS_PROVIDER = 'kg-inicis-unified';
 const SITE = /^[a-z][a-z0-9-]{1,39}$/;
 const POLICIES = new Set(['civil_adult_19', 'youth_protection_19']);
 const ONE_DAY = 86400000;
@@ -48,17 +50,37 @@ function authConfig(env) {
     return { supabaseUrl: origin.origin, publishableKey };
   } catch { return null; }
 }
-function configured(env) {
-  return Boolean(env?.DB && authConfig(env) &&
+// Provider choice is server-only, scoped to each site and never accepted from callers.
+// Any unknown provider or malformed map fails closed instead of silently falling back.
+function providerForSite(env, site) {
+  try {
+    const choices = JSON.parse(String(env?.AGE_VERIFICATION_SITE_PROVIDERS || '{}'));
+    if (!choices || typeof choices !== 'object' || Array.isArray(choices)) return null;
+    const value = Object.hasOwn(choices, site) ? choices[site] : 'portone-v2';
+    return value === 'portone-v2' || value === INICIS_PROVIDER ? value : null;
+  } catch { return null; }
+}
+function channelForProvider(env, provider) {
+  if (provider === INICIS_PROVIDER) return env?.PORTONE_INICIS_AGE_CHANNEL_KEY;
+  if (provider === 'portone-v2') return env?.PORTONE_AGE_CHANNEL_KEY;
+  return null;
+}
+function attemptMatchesProvider(id, provider) {
+  return provider === INICIS_PROVIDER ? INICIS_ID.test(id || '') :
+    provider === 'portone-v2' && ID.test(id || '');
+}
+function configured(env, provider = 'portone-v2') {
+  return Boolean(env?.DB && authConfig(env) && env?.PORTONE_AGE_API_SECRET &&
     /^store-[a-zA-Z0-9-]{8,64}$/.test(String(env?.PORTONE_AGE_STORE_ID || '')) &&
-    /^channel-key-[a-zA-Z0-9-]{8,64}$/.test(String(env?.PORTONE_AGE_CHANNEL_KEY || '')) &&
-    env?.PORTONE_AGE_API_SECRET);
+    /^channel-key-[a-zA-Z0-9-]{8,64}$/.test(String(channelForProvider(env, provider) || '')) &&
+    (provider !== INICIS_PROVIDER || env?.AGE_VERIFICATION_INICIS_CONTRACT_APPROVED === 'true'));
 }
 function config(env, site) {
   const policy = policies(env)[site];
-  if (!SITE.test(site) || !policy || !configured(env)) return null;
-  return { provider: 'portone-v2', storeId: env.PORTONE_AGE_STORE_ID,
-    channelKey: env.PORTONE_AGE_CHANNEL_KEY, policy, auth: authConfig(env) };
+  const provider = providerForSite(env, site);
+  if (!SITE.test(site) || !policy || !provider || !configured(env, provider)) return null;
+  return { provider, storeId: env.PORTONE_AGE_STORE_ID,
+    channelKey: channelForProvider(env, provider), policy, auth: authConfig(env) };
 }
 async function authenticate(req, env) {
   const authorization = req.headers.get('authorization') || '';
@@ -126,9 +148,11 @@ export async function handleAgeVerificationRequest(request, env) {
   try {
     if (path === ROOT + '/status') {
       const row = await env.DB.prepare(
-        'SELECT expires_at FROM age_verification_grants WHERE subject_id=? AND site=? AND policy=? AND expires_at>?'
+        'SELECT expires_at,attempt_id FROM age_verification_grants WHERE subject_id=? AND site=? AND policy=? AND expires_at>?'
       ).bind(userId, site, cfg.policy, stamp).first();
-      return json({ verified: Boolean(row), site, policy: cfg.policy, expiresAt: row?.expires_at || null });
+      // A newly selected provider must not inherit a grant from a different provider.
+      const verified = Boolean(row && attemptMatchesProvider(row.attempt_id, cfg.provider));
+      return json({ verified, site, policy: cfg.policy, expiresAt: verified ? row.expires_at : null });
     }
     if (path === ROOT + '/start') {
       if (Object.keys(data).some(key => key !== 'site'))
@@ -138,7 +162,10 @@ export async function handleAgeVerificationRequest(request, env) {
       ).bind(userId, iso(now - ONE_DAY)).first();
       if (Number(limit?.total || 0) >= 5)
         return json({ error: 'too_many_attempts', retryAfterSeconds: 86400 }, 429);
-      const id = 'ekodi-age-' + crypto.randomUUID().replaceAll('-', '');
+      // Distinct provider-bound IDs prevent an outstanding request being finalized
+      // against a different provider after a site configuration change.
+      const prefix = cfg.provider === INICIS_PROVIDER ? 'ekodi-inicis-' : 'ekodi-age-';
+      const id = prefix + crypto.randomUUID().replaceAll('-', '');
       // The insert rechecks the daily quota atomically; concurrent calls cannot bypass it.
       const created = await env.DB.prepare(
         'INSERT INTO age_verification_attempts (id,subject_id,site,policy,status,created_at,expires_at) ' +
@@ -151,7 +178,7 @@ export async function handleAgeVerificationRequest(request, env) {
         expiresAt: iso(now + 10 * 60000) }, 201);
     }
     if (Object.keys(data).some(key => !['site', 'identityVerificationId'].includes(key)) ||
-        !ID.test(String(data.identityVerificationId || '')))
+        !attemptMatchesProvider(String(data.identityVerificationId || ''), cfg.provider))
       return json({ error: 'invalid_payload' }, 400);
     const id = data.identityVerificationId;
     const row = await env.DB.prepare(
@@ -167,6 +194,11 @@ export async function handleAgeVerificationRequest(request, env) {
     // Restrict proof to the configured store/channel whenever the provider returns those fields.
     if ((result.storeId && result.storeId !== cfg.storeId) ||
         (result.channel?.key && result.channel.key !== cfg.channelKey))
+      return json({ error: 'provider_context_mismatch' }, 502);
+    // KG Inicis production grants require the exact PortOne channel and LIVE
+    // evidence. Missing channel identity and TEST responses are NEVER sufficient.
+    if (cfg.provider === INICIS_PROVIDER &&
+        (result.channel?.key !== cfg.channelKey || result.channel?.type !== 'LIVE'))
       return json({ error: 'provider_context_mismatch' }, 502);
     const birthDate = result?.verifiedCustomer?.birthDate;
     if (typeof birthDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(birthDate))
@@ -232,7 +264,13 @@ export async function ageVerificationAdminSnapshot(env) {
     service: 'ekodi-age-verification',
     enabled: env?.AGE_VERIFICATION_ENABLED === 'true',
     provider: 'portone-v2',
-    providerConfigured: configured(env),
+    providerConfigured: Object.keys(sitePolicies).some(site => configured(env, providerForSite(env, site))),
+    siteProviders: Object.fromEntries(Object.keys(sitePolicies).map(site =>
+      [site, providerForSite(env, site) || 'invalid'])),
+    siteReadiness: Object.fromEntries(Object.keys(sitePolicies).map(site => {
+      const provider = providerForSite(env, site);
+      return [site, Boolean(provider && configured(env, provider))];
+    })),
     schemaReady: false,
     sitePolicies,
     retentionDays: 30,
