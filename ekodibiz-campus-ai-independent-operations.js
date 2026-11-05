@@ -25,6 +25,8 @@ const CHECKS = Object.freeze([
   ['audit','local.auditAvailable','critical'],
   ['queue','local.taskQueueAvailable','important'],
   ['finance_reconciliation','local.financeReconciled','important'],
+  ['payment_core','local.paymentCoreAvailable','important'],
+  ['backup_restore','local.backupRestoreVerified','important'],
   ['native_browser','local.nativeBrowserAvailable','supplementary'],
   ['recovery_path','local.recoveryPathAvailable','important'],
 ]);
