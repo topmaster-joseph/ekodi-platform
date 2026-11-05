@@ -1,0 +1,69 @@
+name: EKODI Jubilee Private Project Readback
+# Read-only production owner-scoped D1 audit, not an ingest or approval lane.
+on:
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified orchestrator release branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Verified orchestrator release task'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-publishing-readonly-audit
+  cancel-in-progress: false
+
+jobs:
+  readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+      EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PUBLISHING_JUBILEE_AUTHOR_USER_ID: ${{ secrets.PUBLISHING_JUBILEE_AUTHOR_USER_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Read-only D1 owner project inspection (never print IDs)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$PUBLISHING_JUBILEE_AUTHOR_USER_ID" =~ ^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$ ]] || { echo 'JUBILEE_PRIMARY_OWNER_NOT_BOUND'; exit 1; }
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          umask 077
+          result_file=$(mktemp)
+          error_file=$(mktemp)
+          trap 'rm -f "$result_file" "$error_file"' EXIT
+          sql="SELECT id,title,author_user_id,stage,revision,manuscript_digest FROM publishing_workflow_projects WHERE author_user_id='$PUBLISHING_JUBILEE_AUTHOR_USER_ID' AND field_id='humanities' AND collection_id='human' ORDER BY created_at ASC"
+          if ! npx --yes wrangler@4.119.0 d1 execute ekodi-publishing --remote --json --config wrangler.publishing.toml --command "$sql" > "$result_file" 2> "$error_file"; then
+            echo 'JUBILEE_REMOTE_D1_READ_FAILED (details suppressed to protect private project data)'
+            exit 1
+          fi
+          node scripts/jubilee-owner-project-readback.mjs "$result_file"
+      - name: Public health and guest isolation
+        shell: bash
+        if: success()
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 12 https://ekodi.kr/publishing/api/workflow/health | node -e '
+            let t="";process.stdin.on("data",x=>t+=x).on("end",()=>{
+              const h=JSON.parse(t);
+              if(!h.ok||!h.dbConfigured||h.saleActivationEnabled!==false)process.exit(1);
+              console.log("JUBILEE_PUBLIC_HEALTH_OK, SALES_DISABLED");
+            })'
+          response=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' --max-time 12 'https://ekodi.kr/publishing/api/workflow/jubilee/register')
+          test "$response" = '401'
+          echo 'JUBILEE_GUEST_ISOLATION_401_OK'
