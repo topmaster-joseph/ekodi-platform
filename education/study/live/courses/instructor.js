@@ -25,7 +25,7 @@ export const INSTRUCTOR=Object.freeze({
     {label:'EKODI 플랫폼',url:'https://ekodi.kr/',desc:'교육·연구·출판·비즈니스를 잇는 생태계'},
     {label:'에코디비즈',url:'https://ekodi.kr/ekodibiz',desc:'무역·AI 상권 마케팅'},
     {label:'청계면상인회',url:'https://cgma.or.kr/',desc:'지역 상권 공동체 홈페이지'},
-    {label:'서남권 국립의대 소통센터',url:'https://seonammedi.kr/',desc:'지역 현안 소통 사이트'},
+    {label:'서남권국립의대',url:'https://seonammedi.kr/',desc:'지역 현안 소통 사이트'},
     {label:'에코디 서점·출판',url:'https://ekodi.kr/books',desc:'저서와 전자책'},
     {label:'에코디교회',url:'https://ekodi.kr/ekodichurch',desc:'공동체 사이트'}
   ]),

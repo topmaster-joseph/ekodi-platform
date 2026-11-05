@@ -214,7 +214,7 @@ test('every public event list has accessible native share and copy actions, with
 
 test('copied schedule share message includes actual public event title, date, time and unchanged deep link',()=>{
   const item={id:12,kind:'event',eventStart:'2026-10-15T18:00',title:'평화광장 집회'};
-  const expectedHead='서남권 국립의대 소통센터 평화광장 집회 일정 보기\n2026-10-15 (목)\n';
+  const expectedHead='서남권국립의대 평화광장 집회 일정 보기\n2026-10-15 (목)\n';
   const apex=loadShareHelpers('https://ekodi.kr/seonammedi/board/notices?auth=private#fragment');
   const sub=loadShareHelpers('https://seonammedi.kr/board/notices?access_token=secret#fragment');
   assert.equal(apex.shareMessage(item),expectedHead+'https://ekodi.kr/seonammedi/board/notices?schedule=12&date=2026-10-15');
@@ -229,7 +229,7 @@ test('public calendar sharing excludes registration, publication and edit dates'
     createdAt:'2026-08-01T09:00',registeredAt:'2026-08-02T11:00',
     publishedAt:'2026-08-03T12:00',updatedAt:'2026-08-04T13:00'};
   const message=helpers.shareMessage(item);
-  assert.equal(message,'서남권 국립의대 소통센터 시민 설명회 일정 보기\n2026-10-18 (일)\nhttps://seonammedi.kr/board/notices?schedule=25&date=2026-10-18');
+  assert.equal(message,'서남권국립의대 시민 설명회 일정 보기\n2026-10-18 (일)\nhttps://seonammedi.kr/board/notices?schedule=25&date=2026-10-18');
   assert.doesNotMatch(message,/등록일|게시일|수정일|2026[-.]08[-.]0[1-4]/);
   assert.equal(helpers.shareSummary(item),message);
 });
@@ -237,8 +237,8 @@ test('public calendar sharing excludes registration, publication and edit dates'
 test('shared event titles are sanitized for readable, one-line messenger previews',()=>{
   const calendar=loadShareHelpers('https://seonammedi.kr/board/notices');
   const item={id:3,eventStart:'2026-11-09T09:30',title:'  평화광장\n집회\t안내  '};
-  assert.equal(calendar.shareMessage(item).split('\n')[0],'서남권 국립의대 소통센터 평화광장 집회 안내 일정 보기');
-  assert.equal(calendar.shareSummary({id:3,eventStart:'2026-11-09T09:30',title:'  '}).split('\n')[0],'서남권 국립의대 소통센터 일정 일정 보기');
+  assert.equal(calendar.shareMessage(item).split('\n')[0],'서남권국립의대 평화광장 집회 안내 일정 보기');
+  assert.equal(calendar.shareSummary({id:3,eventStart:'2026-11-09T09:30',title:'  '}).split('\n')[0],'서남권국립의대 일정 일정 보기');
   assert.equal(calendar.shareMessage({id:0,title:'없는 일정',eventStart:'2026-11-09T09:30'}),'');
 });
 

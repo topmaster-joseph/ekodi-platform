@@ -50,7 +50,7 @@ export function evaluateCrawlHealth({runs=[],wakes=[],now=Date.now(),policy=CRAW
 
 export function alertIssueBody(health,{source='EKODI',runUrl=''}={}){
   const lines=[
-    `@${CRAWL_HEALTH_POLICY.owner} 서남권 국립의대 소통센터의 활동이력·관련소식 기사 자동수집에 이상이 감지되었습니다.`,
+    `@${CRAWL_HEALTH_POLICY.owner} 서남권국립의대의 활동이력·관련소식 기사 자동수집에 이상이 감지되었습니다.`,
     '',
     ...health.reasons.map(reason=>'- '+reason),
     '',

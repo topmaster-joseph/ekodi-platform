@@ -303,7 +303,7 @@ async function ensureSchema(db){
   );
   CREATE INDEX IF NOT EXISTS idx_seonammedi_finance_public ON seonammedi_finance_entries(visible,entry_date,id);
   INSERT OR IGNORE INTO customer_tenants(slug,name,domain,status,created_at)
-    VALUES('seonammedi','서남권 국립의대 소통센터','ekodi.kr/seonammedi','active',CURRENT_TIMESTAMP);`);
+    VALUES('seonammedi','서남권국립의대','ekodi.kr/seonammedi','active',CURRENT_TIMESTAMP);`);
 }
 
 async function ensureTimelineScope(db){

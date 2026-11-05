@@ -10,13 +10,13 @@ const pages=[
   {path:'/board/voices',description:'시민의견',title:'시민의견'}
 ];
 
-test('Public board list pages on all mounts resolve to their one independent-domain canonical',async()=>{
+test('Public board list pages on all mounts resolve to a same-host canonical (ekodi.kr mount uses the Korean IDN)',async()=>{
   for(const root of roots)for(const page of pages){
     const result=await board.fetch(new Request(root+page.path),{});
     assert.equal(result.status,200,root+page.path);
     assert.match(result.headers.get('content-type')||'',/text\/html/);
     const html=await result.text();
-    const canonical='https://xn--3e0b8b58jw4co4mnpll3k.kr'+page.path;
+    const canonical=(root.startsWith('https://ekodi.kr')?'https://xn--3e0b8b58jw4co4mnpll3k.kr':root)+page.path;
     assert.ok(html.includes('<link rel="canonical" href="'+canonical+'">'),root+page.path);
     assert.equal((html.match(/<link rel="canonical"/g)||[]).length,1,root+page.path);
     assert.ok(html.includes('<meta name="description" content="'),root+page.path);
@@ -29,6 +29,6 @@ test('Public board list pages on all mounts resolve to their one independent-dom
 test('Private/other board surfaces never inherit public list discovery meta',()=>{
   const src=readFileSync(new URL('../services/independent-board/worker.js',import.meta.url),'utf8');
   assert.match(src,/!headExtra&&\(active==='voices'\|\|active==='notices'\)/);
-  assert.match(src,/noticePreviewMeta\(row,SEONAM_PUBLIC_ORIGIN/);
+  assert.match(src,/noticePreviewMeta\(row,seonamPublicOrigin\(req\)/);
   assert.match(src,/const discoveryMeta=/);
 });

@@ -7,7 +7,7 @@
     {id:'root',name:'EKODI',url:'https://ekodi.kr/',label:'ekodi.kr',status:'live',productionVerified:true,source:'core'},
     {id:'admin',name:'EKODI Admin',url:'https://ekodi.kr/admin/',label:'ekodi.kr/admin',status:'live',productionVerified:true,source:'core'},
     {id:'auth',name:'EKODI Auth',url:'https://ekodi.kr/auth/',label:'ekodi.kr/auth',status:'live',productionVerified:true,source:'core'},
-    {id:'seonammedi',name:'서남권 국립의대 소통센터',url:'https://ekodi.kr/seonammedi/',label:'ekodi.kr/seonammedi',status:'live',productionVerified:true,source:'workspace'}
+    {id:'seonammedi',name:'서남권국립의대',url:'https://ekodi.kr/seonammedi/',label:'ekodi.kr/seonammedi',status:'live',productionVerified:true,source:'workspace'}
   ];
   let catalog=[],overview=null,active='dynamic',loading=false;
   const token=()=>{try{return sessionStorage.getItem(TOKEN_KEY)||''}catch{return''}};
