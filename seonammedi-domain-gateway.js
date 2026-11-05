@@ -54,9 +54,17 @@ function rewriteText(text, incoming, contentType) {
   const customerOrigin = 'https://' + incoming.hostname;
   output = output.replaceAll('https://ekodi.kr/seonammedi/', customerOrigin + '/');
   output = output.replaceAll('https://ekodi.kr/seonammedi', customerOrigin);
+  // HOST-PRESERVING-LINKS-20261105: the Korean domain links stay on the Korean
+  // domain and the English domain stays on the English domain. Only the
+  // canonical tag follows the same host so each Daum/Naver registration owns
+  // its own pages (owner decision 2026-11-05).
+  for (const host of DOMAIN_HOSTS) {
+    if (host === incoming.hostname.toLowerCase()) continue;
+    output = output.replace(new RegExp('https://' + host.replaceAll('.', '\\.') + '(?=[/"\'<\\s?#]|$)', 'gi'), customerOrigin);
+  }
   if (contentType.includes('text/html')) {
     // Normalize legacy canonical from proxied HTML only, never sign-in or content links.
-    output = output.replace(/(<link\s+rel=["']canonical["']\s+href=["'])https:\/\/(?:seonammedi\.kr|xn--3e0b8b58jw4co4mnpll3k\.kr)/gi, '$1' + CANONICAL_ORIGIN);
+    output = output.replace(/(<link\s+rel=["']canonical["']\s+href=["'])https:\/\/(?:seonammedi\.kr|xn--3e0b8b58jw4co4mnpll3k\.kr)/gi, '$1' + customerOrigin);
     output = output.replaceAll('href="/seonammedi/', 'href="/');
     output = output.replaceAll('src="/seonammedi/', 'src="/');
     output = injectVerificationMeta(output, incoming.hostname);
@@ -88,6 +96,12 @@ function xmlEscape(value) {
   return String(value).replace(/[<>&'"]/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[ch]);
 }
 
+// Each customer domain advertises its own sitemap and URLs (host-preserving).
+export function seonammediHostOrigin(host) {
+  const value = String(host || '').toLowerCase();
+  return DOMAIN_HOSTS.has(value) ? 'https://' + value : CANONICAL_ORIGIN;
+}
+
 export function seonammediRobotsTxt(host = 'seonammedi.kr') {
   return [
     seonammediDaumWebmasterLine(host),
@@ -95,7 +109,7 @@ export function seonammediRobotsTxt(host = 'seonammedi.kr') {
     'Allow: /',
     ...SEONAMMEDI_ROBOTS_DISALLOW.map(path => 'Disallow: ' + path),
     '',
-    'Sitemap: ' + CANONICAL_ORIGIN + '/sitemap.xml',
+    'Sitemap: ' + seonammediHostOrigin(host) + '/sitemap.xml',
     '',
   ].join('\n');
 }
@@ -118,15 +132,16 @@ export function seonammediPublicNoticeSitemapEntries(payload) {
   return items;
 }
 
-export function seonammediSitemapXml(publishedNotices = []) {
+export function seonammediSitemapXml(publishedNotices = [], host = '') {
+  const origin = seonammediHostOrigin(host);
   const base = SEONAMMEDI_SITEMAP_PATHS.map(path => {
     const priority = path === '/' ? '1.0' : '0.8';
-    return '  <url><loc>' + xmlEscape(CANONICAL_ORIGIN + path) + '</loc><changefreq>daily</changefreq><priority>' + priority + '</priority></url>';
+    return '  <url><loc>' + xmlEscape(origin + path) + '</loc><changefreq>daily</changefreq><priority>' + priority + '</priority></url>';
   });
   const details = publishedNotices.map(({ path, lastmod }) => {
     if (!/^\/board\/notices\/[1-9]\d*$/.test(String(path || ''))) return '';
     const lastmodXml = /^\d{4}-\d{2}-\d{2}$/.test(String(lastmod || '')) ? '<lastmod>' + lastmod + '</lastmod>' : '';
-    return '  <url><loc>' + xmlEscape(CANONICAL_ORIGIN + path) + '</loc>' + lastmodXml + '<changefreq>weekly</changefreq><priority>0.7</priority></url>';
+    return '  <url><loc>' + xmlEscape(origin + path) + '</loc>' + lastmodXml + '<changefreq>weekly</changefreq><priority>0.7</priority></url>';
   }).filter(Boolean);
   return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + [...base, ...details].join('\n') + '\n</urlset>\n';
 }
@@ -135,17 +150,17 @@ export function seonammediSitemapXml(publishedNotices = []) {
 // Never query admin/finance/voice endpoints or publish a draft, deleted post or
 // user-submitted private data in the sitemap. On failure retain the three
 // already indexed static pages rather than failing the whole sitemap.
-export async function seonammediLiveSitemapXml(fetchPublic = fetch) {
+export async function seonammediLiveSitemapXml(fetchPublic = fetch, host = '') {
   try {
     const response = await fetchPublic(ORIGIN + SITE_PREFIX + '/board/api/notices', {
       method: 'GET',
       headers: { accept: 'application/json' },
     });
-    if (!response?.ok) return seonammediSitemapXml();
+    if (!response?.ok) return seonammediSitemapXml([], host);
     const payload = await response.json();
-    return seonammediSitemapXml(seonammediPublicNoticeSitemapEntries(payload));
+    return seonammediSitemapXml(seonammediPublicNoticeSitemapEntries(payload), host);
   } catch {
-    return seonammediSitemapXml();
+    return seonammediSitemapXml([], host);
   }
 }
 
@@ -173,7 +188,7 @@ export function seonammediDiscoveryResponse(request, incoming) {
     return discoveryResponse(SEONAMMEDI_NAVER_FILE_BODY, 'text/html; charset=utf-8', 'seonammedi-naver-ownership', request.method);
   }
   if (incoming.pathname === '/robots.txt') return discoveryResponse(seonammediRobotsTxt(incoming.hostname), 'text/plain; charset=utf-8', 'seonammedi-robots', request.method);
-  if (incoming.pathname === '/sitemap.xml') return discoveryResponse(seonammediSitemapXml(), 'application/xml; charset=utf-8', 'seonammedi-sitemap', request.method);
+  if (incoming.pathname === '/sitemap.xml') return discoveryResponse(seonammediSitemapXml([], incoming.hostname), 'application/xml; charset=utf-8', 'seonammedi-sitemap', request.method);
   if (incoming.pathname === EKODI_INDEXNOW_KEY_PATH) return ekodiIndexNowKeyResponse();
   return null;
 }
@@ -187,7 +202,7 @@ export default {
     // Generate the live sitemap only on GET, after the protected domain gate.
     // HEAD remains a cheap, side-effect-free static discovery response.
     if (request.method === 'GET' && incoming.pathname === '/sitemap.xml') {
-      const xml = await seonammediLiveSitemapXml();
+      const xml = await seonammediLiveSitemapXml(fetch, incoming.hostname);
       return discoveryResponse(xml, 'application/xml; charset=utf-8', 'seonammedi-sitemap', request.method);
     }
     const discovery = seonammediDiscoveryResponse(request, incoming);

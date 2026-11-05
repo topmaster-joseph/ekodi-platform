@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 
 // ---------- Behavioral harness: fake D1 + fake Supabase user endpoint ----------
-const TENANT = { id: 7, slug: 'seonammedi', name: '서남권 국립의대 소통센터', domain: 'ekodi.kr/seonammedi', status: 'active' };
+const TENANT = { id: 7, slug: 'seonammedi', name: '서남권국립의대', domain: 'ekodi.kr/seonammedi', status: 'active' };
 const GRANTS = [
   { tenant_id: 7, email: 'manager1@example.com', role: 'manager', enabled: 1, created_at: '2026-10-19T00:00:00Z', last_verified_at: null, principal_type: 'member', github_username: '', expires_at: null, visibility: 'public', display_name: '관리자1', user_last_login_at: '' },
   { tenant_id: 7, email: 'manager2@example.com', role: 'manager', enabled: 1, created_at: '2026-10-19T00:00:00Z', last_verified_at: null, principal_type: 'member', github_username: '', expires_at: null, visibility: 'private', display_name: '', user_last_login_at: '' },

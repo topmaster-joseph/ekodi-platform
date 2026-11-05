@@ -6,7 +6,7 @@ export const O2O_SITES = Object.freeze([
   Object.freeze({ id: 'education', name: '에코디교육', group: '교육·농업', root: '/edu', action: '참여하기' }),
   Object.freeze({ id: 'books', name: '에코디서점', group: '출판·독서', root: '/ekodibooks', action: '살펴보기' }),
   Object.freeze({ id: 'mall', name: '에코디몰', group: '커머스', root: '/ekodimall', action: '상품 보기' }),
-  Object.freeze({ id: 'civic', name: '서남권 국립의대 소통센터', group: '시민참여', root: '/seonammedi', action: '참여하기' }),
+  Object.freeze({ id: 'civic', name: '서남권국립의대', group: '시민참여', root: '/seonammedi', action: '참여하기' }),
 ]);
 const ORIGIN = 'https://ekodi.kr';
 const QUERY_KEYS = new Set(['meeting', 'event', 'activity', 'tab', 'section', 'page', 'category', 'id']);

@@ -162,10 +162,10 @@ async function seonamNoticePage(env,id){
   const jsonLd=JSON.stringify({
     '@context':'https://schema.org','@type':kind==='행사'?'Event':'Article',headline:title,url:canonical,
     datePublished:published||undefined,dateModified:clean(row.updated_at,80)||published||undefined,
-    publisher:{'@type':'Organization',name:'서남권 국립의대 소통센터',url:'https://ekodi.kr/seonammedi'}
+    publisher:{'@type':'Organization',name:'서남권국립의대',url:'https://ekodi.kr/seonammedi'}
   }).replace(/</g,'\\u003c');
   const page=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${html(title)} | 서남권 국립의대 소통센터</title><meta name="description" content="${html(body.slice(0,180))}">
+<title>${html(title)} | 서남권국립의대</title><meta name="description" content="${html(body.slice(0,180))}">
 <link rel="canonical" href="${canonical}"><meta name="robots" content="index,follow,max-image-preview:large">
 <meta property="og:type" content="article"><meta property="og:title" content="${html(title)}"><meta property="og:url" content="${canonical}">${imageCount?`<meta property="og:image" content="https://xn--3e0b8b58jw4co4mnpll3k.kr/api/seonammedi/notices/${Number(row.id)}/image/0"><meta name="twitter:card" content="summary_large_image">`:''}
 <script type="application/ld+json">${jsonLd}</script>

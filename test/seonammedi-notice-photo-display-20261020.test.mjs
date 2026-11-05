@@ -25,7 +25,7 @@ test('notice detail page renders photos server-side with link-preview image', as
   assert.equal(r.status, 200);
   const html = await r.text();
   assert.match(html, /<img src="\/board\/api\/files\/seonammedi%2Fnotices%2F22%2Fphoto\.jpg" alt="공지 첨부사진">/);
-  assert.equal(meta(html, 'property', 'og:image'), 'https://xn--3e0b8b58jw4co4mnpll3k.kr/board/api/files/seonammedi%2Fnotices%2F22%2Fphoto.jpg');
+  assert.equal(meta(html, 'property', 'og:image'), 'https://seonammedi.kr/board/api/files/seonammedi%2Fnotices%2F22%2Fphoto.jpg');
   assert.equal(meta(html, 'name', 'twitter:card'), 'summary_large_image');
   assert.equal(meta(html, 'property', 'og:title'), 'Test &lt;공지&gt;', 'titles are escaped in meta');
   assert.ok(!html.includes('<공지>'), 'raw title must not be injected');
@@ -39,7 +39,7 @@ test('detail page keeps the /seonammedi mount on ekodi.kr and canonical previews
 
 test('legacy ?id= share links get the same preview; photo-less notices fall back to a summary card', async () => {
   const shared = await (await get('https://seonammedi.kr/board/notices?id=22')).text();
-  assert.equal(meta(shared, 'property', 'og:image'), 'https://xn--3e0b8b58jw4co4mnpll3k.kr/board/api/files/seonammedi%2Fnotices%2F22%2Fphoto.jpg');
+  assert.equal(meta(shared, 'property', 'og:image'), 'https://seonammedi.kr/board/api/files/seonammedi%2Fnotices%2F22%2Fphoto.jpg');
   const plain = await (await get('https://seonammedi.kr/board/notices/19')).text();
   assert.equal(meta(plain, 'property', 'og:image'), null);
   assert.equal(meta(plain, 'name', 'twitter:card'), 'summary');

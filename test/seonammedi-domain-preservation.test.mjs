@@ -18,7 +18,7 @@ test('seonammedi.kr preserves host and proxies root to canonical path', async ()
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('x-ekodi-domain-mode'), 'customer-domain-preserved');
     const html = await response.text();
-    assert.match(html, /https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr\//);
+    assert.match(html, /<link rel="canonical" href="https:\/\/seonammedi\.kr\/">/); // host-preserving canonical (2026-11-05)
     assert.match(html, /href="\/app\.css"/);
     assert.doesNotMatch(html, /https:\/\/ekodi\.kr\/seonammedi\//);
   } finally {

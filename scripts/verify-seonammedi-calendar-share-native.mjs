@@ -28,8 +28,8 @@ const FIXTURE=Object.freeze({
 });
 const date=FIXTURE.eventStart.slice(0,10);
 const shareLink=origin+roots[origin]+'?schedule='+FIXTURE.id+'&date='+date;
-const shareText='서남권 국립의대 소통센터 '+FIXTURE.title+' 일정 보기\n2026-10-15 (목)\n'+shareLink;
-const legacyShareText='서남권 국립의대 소통센터\n'+FIXTURE.title+'\n일정: 2026.10.15 18:00';
+const shareText='서남권국립의대 '+FIXTURE.title+' 일정 보기\n2026-10-15 (목)\n'+shareLink;
+const legacyShareText='서남권국립의대\n'+FIXTURE.title+'\n일정: 2026.10.15 18:00';
 const acceptedShareTexts=expectMode==='predeploy'?[shareText,legacyShareText]:[shareText];
 const profiles=[
   {name:'desktop',width:1440,height:900,isMobile:false},
@@ -98,7 +98,7 @@ try{
       row.scheduleTitle=await article.locator('strong').first().innerText();
       must(row.scheduleTitle===FIXTURE.title,'public_calendar_title_not_rendered');
       row.browserTabTitle=await page.title();
-      must(row.browserTabTitle===FIXTURE.title+' · 서남권 국립의대 소통센터','shared_page_title_mismatch');
+      must(row.browserTabTitle===FIXTURE.title+' · 서남권국립의대','shared_page_title_mismatch');
       must(fixtureRequests.includes('2026-10'),'fixture_calendar_not_requested');
       await article.locator('button.seonam-calendar-copy').click();
       const copied=await page.evaluate(()=>navigator.clipboard.readText());

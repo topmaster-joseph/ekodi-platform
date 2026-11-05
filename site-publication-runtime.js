@@ -33,7 +33,7 @@ const SPECIAL_SITES=Object.freeze([
     canonicalUrl:'https://ekodi.kr/'+coop.publicSlug+'/',canonicalPath:'/'+coop.publicSlug,
     adminUrl:'https://ekodi.kr/'+coop.publicSlug+'/admin',tenantSlug:coop.slug,authoritySiteKey:coop.slug})),
   Object.freeze({id:'ekodi',workspaceId:'platform',name:'EKODI',canonicalUrl:'https://ekodi.kr/',canonicalPath:'/',adminUrl:'https://ekodi.kr/admin/',exactRoot:true,authoritySiteKey:'ekodi'}),
-  Object.freeze({id:'seonammedi',workspaceId:'seonammedi',name:'서남권 국립의대 소통센터',canonicalUrl:'https://ekodi.kr/seonammedi/',canonicalPath:'/seonammedi',adminUrl:'https://ekodi.kr/seonammedi/admin/',aliases:['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'],authoritySiteKey:'seonammedi'}),
+  Object.freeze({id:'seonammedi',workspaceId:'seonammedi',name:'서남권국립의대',canonicalUrl:'https://ekodi.kr/seonammedi/',canonicalPath:'/seonammedi',adminUrl:'https://ekodi.kr/seonammedi/admin/',aliases:['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr'],authoritySiteKey:'seonammedi'}),
   Object.freeze({id:'pyeonggongmok',workspaceId:'pyeonggongmok',name:'평생공부하는 목회자 모임',canonicalUrl:'https://ekodi.kr/pyeonggongmok/',canonicalPath:'/pyeonggongmok',adminUrl:'https://ekodi.kr/pyeonggongmok/admin/',authoritySiteKey:'pyeonggongmok'}),
   // The same cheonggye-pass tenant/grants now use the shorter canonical entry.
   Object.freeze({id:'cheonggye-pass',workspaceId:'cheonggye-pass',name:'청계패스',
