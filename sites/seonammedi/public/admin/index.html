@@ -126,7 +126,7 @@
         <div class="form-row"><label>일자<input name="date" type="date" required></label><label>구분<select name="type"><option value="income">수입</option><option value="expense">지출</option></select></label><label>금액<input name="amount" type="number" min="0" step="1" required></label></div>
         <label>목적·내용<input name="purpose" maxlength="500" required></label>
         <label>관련 행사<input name="event" maxlength="300"></label>
-        <div class="form-row"><label>증빙<select name="evidenceStatus"><option value="none">미등록</option><option value="held">증빙 보유</option><option value="verified">확인 완료</option></select></label><label class="check"><input type="checkbox" name="visible" checked> 개별 거래 비공개(공개 API에는 포함되지 않음)</label></div>
+        <div class="form-row"><label>증빙<select name="evidenceStatus"><option value="none">미등록</option><option value="held">증빙 보유</option><option value="verified">확인 완료</option></select></label><input type="checkbox" name="visible" hidden aria-label="개별 거래 비공개"><span class="note">개별 거래 비공개 · 공개 화면에는 요약만 표시</span></div>
         <label>관리 메모<textarea name="note" rows="3" maxlength="1000"></textarea></label>
         <div class="actions"><button type="submit">저장</button><button id="financeReset" type="button" class="secondary">초기화</button><span id="financeMessage" role="status"></span></div>
       </form>
