@@ -21,6 +21,25 @@
     }catch{return {token:'',userId:''};}
   }
   const pointEstimate=amount=>Math.floor(Math.max(0,Math.trunc(Number(amount)||0))/100);
+  // Short-lived, account-isolated read of pending evidence, never a spendable balance.
+  let pendingSummaryCache={userId:'',timestamp:0,promise:null};
+  async function pendingPointSummary(api,member){
+    if(!member?.token||!member.userId)return null;
+    if(pendingSummaryCache.userId===member.userId&&
+       Date.now()-pendingSummaryCache.timestamp<60000&&pendingSummaryCache.promise)
+      return pendingSummaryCache.promise;
+    const promise=fetch(`${api}/api/public/member-points/summary`,{
+      method:'GET',credentials:'omit',headers:{authorization:`Bearer ${member.token}`,accept:'application/json'}
+    }).then(async response=>{
+      if(!response.ok)return null;
+      const data=await response.json().catch(()=>null);
+      return data?.memberPoints?.spendable===false&&data.memberPoints.status==='pending_central_ledger'
+        ? data.memberPoints:null;
+    }).catch(()=>null);
+    pendingSummaryCache={userId:member.userId,timestamp:Date.now(),promise};
+    return promise;
+  }
+
 
   function el(tag, attrs = {}, ...children) {
     const node = document.createElement(tag);
@@ -114,7 +133,9 @@
     const payBtn = el('button', { class: 'btn primary', type: 'button', text: '비회원으로 카드결제' });
     const memberInfo=el('p',{class:'checkout-member-points',role:'status',text:'비회원도 로그인 없이 결제할 수 있습니다. 회원은 결제금액의 1% 포인트 적립 증빙을 기록합니다.'});
     const loginLink=el('a',{class:'checkout-member-login',href:'https://ekodi.kr/auth/?site=mall&return_to='+encodeURIComponent(location.href),text:'회원 로그인 후 1% 포인트 적립'});
+    let memberModeRenderSeq=0;
     async function refreshMemberMode(){
+      const renderSeq=++memberModeRenderSeq;
       const member=await memberSession();
       const estimate=pointEstimate(ctx.quote.unitAmount*Math.max(1,Math.min(20,Math.trunc(Number(qty.value)||1))));
       payBtn.textContent=member.token?'회원으로 카드결제':'비회원으로 카드결제';
@@ -122,6 +143,15 @@
         ? `회원 구매 1% · ${estimate}P 적립 증빙 예정 (실제 사용가능 잔액은 포인트 운영원장 개통 후 반영)`
         : '비회원 카드결제 가능 · 포인트 적립 없음';
       loginLink.hidden=Boolean(member.token);
+      if(member.token){
+        const pending=await pendingPointSummary(ctx.api,member);
+        if(pending&&renderSeq===memberModeRenderSeq){
+          const now=await memberSession();
+          if(now.userId===member.userId&&now.token){
+            memberInfo.textContent+=` · 기존 구매 적립 증빙 ${pending.pendingPoints}P (사용 불가)`;
+          }
+        }
+      }
     }
     qty.addEventListener('input',()=>void refreshMemberMode());
 
