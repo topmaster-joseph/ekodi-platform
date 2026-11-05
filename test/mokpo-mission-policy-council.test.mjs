@@ -172,16 +172,24 @@ test('policy page shows the officer roster in 붙임2 columns, no application fo
   assert.ok(app.includes('organization_event_roster_public'));assert.ok(!app.includes('innerHTML'));
 });
 
-test('mission home uses tabs for its main menus and the pilot notice is on its own line',()=>{
-  const home=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/index.html',import.meta.url),'utf8');
-  assert.match(home,/<nav class="tabbar"/);
-  for(const id of ['intro','plans','budget','meetings','resources','workspace'])assert.match(home,new RegExp(`<section id="${id}" class="tabpanel`),id);
-  assert.match(home,/main:has\(section\.tabpanel:target\) section\.tabpanel:not\(:target\)\{display:none\}/);
-  assert.doesNotMatch(home,/<script/);
-  for(const file of ['../sites/mokpo-presbytery/index.html','../sites/mokpo-presbytery/mission/index.html']){
-    const html=fs.readFileSync(new URL(file,import.meta.url),'utf8');
-    assert.match(html,/<b>EKODI 기반 목포노회 업무지원 시범 공간<\/b><span class="pilot-note">공식 노회 홈페이지가 아닙니다<\/span>/,file);
+test('both homes show only the intro first and one section per top-menu click; pilot notice on its own line',()=>{
+  const mission=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/index.html',import.meta.url),'utf8');
+  const presbytery=fs.readFileSync(new URL('../sites/mokpo-presbytery/index.html',import.meta.url),'utf8');
+  for(const [name,html,ids] of [['mission',mission,['intro','plans','budget','meetings','resources','workspace']],['presbytery',presbytery,['about','news','sichal','departments','churches','schedule','library','workspace']]]){
+    assert.match(html,/<main class="views">/,name);
+    assert.match(html,/main\.views>section\[id\]\{display:none/,name);
+    assert.match(html,/main\.views>section\[id\]:target\{display:block\}/,name);
+    assert.match(html,/body:has\(main\.views>section\[id\]:target\) section\.hero\{display:none\}/,name);
+    for(const id of ids)assert.match(html,new RegExp(`<section id="${id}">`),`${name}#${id}`);
+    assert.doesNotMatch(html,/<script/,name);
+    assert.match(html,/<b>EKODI 기반 목포노회 업무지원 시범 공간<\/b><span class="pilot-note">공식 노회 홈페이지가 아닙니다<\/span>/,name);
   }
+  assert.doesNotMatch(mission,/class="tabbar"|id="notice"/);
+  assert.match(mission,/<dt>운영 기간<\/dt><dd><span class="period">2026 가을노회 후<\/span><br><span class="period">~ 2027 가을노회 전<\/span><\/dd>/);
+  const menu=mission.match(/<nav class="menu"[^>]*>(.*?)<\/nav>/)[1];
+  assert.doesNotMatch(menu,/정책협의회/);
+  const meetings=mission.slice(mission.indexOf('<section id="meetings">'),mission.indexOf('</section>',mission.indexOf('<section id="meetings">')));
+  assert.ok(meetings.includes('href="/mokpo-presbytery/mission/policy-council-2026/"'));
 });
 
 test('viewer page logs in with phone + 4-digit PIN through Supabase RPCs only',()=>{
