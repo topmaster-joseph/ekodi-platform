@@ -252,3 +252,9 @@ body:has(.hero-split) .mission-site-header nav a{font-size:clamp(.81rem,.9vw,.89
   .mission-home .hero .actions .button{width:100%;min-height:38px;padding:.5rem .55rem;font-size:.81rem;white-space:nowrap}
   .mission-home .mission-home-photo{height:185px}
 }
+
+/* Per-event member convenience: never bypass the existing privacy consent or manual form. */
+.apply-form .mission-quick-apply{background:var(--accent,#315c46);color:#fff;margin-top:.7rem}
+.apply-form .mission-quick-apply[hidden]{display:none!important}
+.apply-form .mission-quick-apply:focus-visible{outline:2px solid var(--ink,#172019);outline-offset:3px}
+.apply-form .mission-quick-apply:disabled{opacity:.6;cursor:wait}
