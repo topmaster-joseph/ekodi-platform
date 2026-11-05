@@ -860,13 +860,43 @@ async function listAdminRoster(env){
 }
 
 const PAGE_KEYS=new Set(['status','organization']);
+// Finance disclosure is an aggregate-only public record, never a transaction ledger.
+const FINANCE_DISCLOSURE_KEY='financeDisclosure';
+const disclosureDateOk=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+'T00:00:00Z'))&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
+const disclosureMoneyOk=value=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0&&value<=999999999999;
+function approvedFinanceDisclosure(value){
+  if(!value||typeof value!=='object'||Array.isArray(value))return null;
+  const {startDate,endDate,income,expense,balance}=value;
+  if(!disclosureDateOk(startDate)||!disclosureDateOk(endDate)||endDate<startDate)return null;
+  if(![income,expense,balance].every(disclosureMoneyOk))return null;
+  return {startDate,endDate,income,expense,balance};
+}
+async function putFinanceDisclosure(request,env,auth){
+  if(!can(auth,FINANCE_CAP))return json({ok:false,error:'finance_forbidden'},403);
+  const body=await request.json().catch(()=>null);
+  const data=approvedFinanceDisclosure(body);
+  if(!data)return json({ok:false,error:'invalid_finance_disclosure'},400);
+  const now=new Date().toISOString();
+  await env.DB.prepare(`INSERT INTO seonammedi_page_sections(section_key,body_json,visible,updated_by,updated_at) VALUES(?,?,?,?,?)
+    ON CONFLICT(section_key) DO UPDATE SET body_json=excluded.body_json,visible=excluded.visible,updated_by=excluded.updated_by,updated_at=excluded.updated_at`)
+    .bind(FINANCE_DISCLOSURE_KEY,JSON.stringify(data),1,auth.email,now).run();
+  await audit(env,auth,'update','finance_disclosure',null,{key:FINANCE_DISCLOSURE_KEY});
+  return json({ok:true,data,updatedAt:now});
+}
 const parseJsonObject=value=>{try{const parsed=JSON.parse(String(value||'{}'));return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{}}catch{return{}}};
 function pageRow(row){return{key:row.section_key,data:parseJsonObject(row.body_json),visible:Boolean(row.visible),updatedBy:row.updated_by||'',updatedAt:row.updated_at||''}}
 async function listPublicPageData(env){
   // Finance ledgers and totals are administrator-only. Public page data must never
   // return finance rows, including those carrying a legacy visible=1 flag.
   const sections=await env.DB.prepare('SELECT section_key,body_json,visible,updated_by,updated_at FROM seonammedi_page_sections WHERE visible=1').all();
-  const page={};for(const row of sections.results||[])page[row.section_key]=parseJsonObject(row.body_json);
+  const page={};for(const row of sections.results||[]){
+    if(row.section_key===FINANCE_DISCLOSURE_KEY){
+      const approved=approvedFinanceDisclosure(parseJsonObject(row.body_json));
+      if(approved)page.financeDisclosure=approved;
+      continue;
+    }
+    page[row.section_key]=parseJsonObject(row.body_json);
+  }
   return json({ok:true,page,finance:{raised:null,spent:null,balance:null,entries:[]}});
 }
 function canManagePages(auth){return can(auth,PAGE_CAP)||can(auth,CONTENT_CAP)}
@@ -1338,6 +1368,7 @@ export async function handleSeonamMediAdminApi(request,env){
   let pageMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/pages\/(status|organization)$/);
   if(pageMatch&&request.method==='GET')return getAdminPage(env,auth,pageMatch[1]);
   if(pageMatch&&request.method==='PUT')return putAdminPage(request,env,auth,pageMatch[1]);
+  if(url.pathname===PREFIX+'/admin/finance-disclosure'&&request.method==='PUT')return putFinanceDisclosure(request,env,auth);
   if(url.pathname===PREFIX+'/admin/finance'&&request.method==='GET')return listAdminFinance(env,auth);
   if(url.pathname===PREFIX+'/admin/finance'&&request.method==='POST')return createFinance(request,env,auth);
   let financeMatch=url.pathname.match(/^\/api\/seonammedi\/admin\/finance\/(\d+)$/);
