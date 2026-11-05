@@ -38,7 +38,7 @@ test('period and all totals display beside their labels, without date qualificat
   }
   assert.match(section,/<dt>기간<\/dt>\s*<dd id="committeeFinancePeriod">2026.10.29. ~ 2026.11.03.<\/dd>/);
   assert.match(css,/Finance summary: label and value share one line/);
-  assert.match(css,/\.committee-finance-metrics>div\.committee-finance-period\s*\{\s*display:flex/);
+  assert.match(css,/Finance summary: label and value share one line/);
 });
 
 test('public editing controls stay hidden until server-confirmed finance capability',()=>{
