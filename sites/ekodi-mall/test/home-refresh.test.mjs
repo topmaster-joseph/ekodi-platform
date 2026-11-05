@@ -74,7 +74,10 @@ test('responsive storefront does not change payments or disclose false sales cla
   assert.match(css, /@media\(max-width:760px\)/);
   assert.match(css, /prefers-reduced-motion/);
   assert.doesNotMatch(template, /\d+%\s*할인|무료배송|누적 판매|베스트셀러/);
-  assert.doesNotMatch(js, /checkout|payment|localStorage|fetch\(/);
+  // Global search intentionally makes bounded, read-only public GET requests.
+  // This is not a payment pathway; credentials and purchase mutations remain absent.
+  assert.match(js, /method:'GET',credentials:'omit'/);
+  assert.doesNotMatch(js, /requestPayment\(|confirmPayment\(|localStorage|TOSS_SECRET_KEY|method:\s*['"]POST/);
 });
 
 test('real portrait has a separate slot and suppresses only the Mall landing mascot', () => {
