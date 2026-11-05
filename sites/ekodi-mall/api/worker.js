@@ -929,6 +929,32 @@ export default {
       const result = await createOrder(env, { ...body, member:verifiedMember });
       return json(result.order ? { order: result.order } : { error: result.error, errors: result.errors || undefined, quote: result.quote || null }, result.status, origin, env);
     }
+    // Member-only summary of server-verified, unpaid-to-core pending evidence.
+    // No guest lookups, no cross-account selection, and no spendable balance.
+    if(request.method==='GET'&&url.pathname==='/api/public/member-points/summary'){
+      const member=await authenticate(request,env);
+      const memberId=eligibleMember(member);
+      if(!memberId)return json({error:'회원 로그인이 필요합니다.'},401,origin,env);
+      if(!memberEvidenceEnabled(env))return json({status:'unavailable',spendable:false},503,origin,env);
+      const row=await env.DB.prepare(`SELECT
+        COALESCE(SUM(CASE WHEN state='pending_core' THEN eligible_points ELSE 0 END),0) AS pending_points,
+        COALESCE(SUM(CASE WHEN state='pending_core' THEN 1 ELSE 0 END),0) AS pending_orders,
+        COALESCE(SUM(CASE WHEN state='awaiting_payment' THEN 1 ELSE 0 END),0) AS awaiting_orders,
+        COALESCE(SUM(CASE WHEN state='reversed' THEN 1 ELSE 0 END),0) AS reversed_orders,
+        COALESCE(SUM(refunded_krw),0) AS verified_refunds_krw
+        FROM member_purchase_point_orders WHERE auth_user_id=?`)
+        .bind(memberId).first();
+      return json({memberPoints:{
+        ratePercent:1,
+        pendingPoints:Math.max(0,Math.trunc(Number(row?.pending_points)||0)),
+        pendingOrders:Math.max(0,Math.trunc(Number(row?.pending_orders)||0)),
+        awaitingOrders:Math.max(0,Math.trunc(Number(row?.awaiting_orders)||0)),
+        reversedOrders:Math.max(0,Math.trunc(Number(row?.reversed_orders)||0)),
+        status:'pending_central_ledger',
+        coreEnabled:false,spendable:false,
+        description:'에코디몰 직접판매 회원결제 증빙입니다. 운영 포인트 원장 개통·대사 전에는 실제 사용이 불가합니다.'
+      }},200,origin,env);
+    }
     // Authenticated, owner-only evidence status. Guest checkout never sees a member's points.
     const pointsMatch=url.pathname.match(/^\/api\/public\/orders\/([^/]+)\/points$/);
     if(request.method==='GET'&&pointsMatch){
