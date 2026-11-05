@@ -70,18 +70,40 @@ async function application(request, env, coop) {
   return json({ ok: true, status: 'pending', grantsCreated: false }, 202);
 }
 
+// 연락처·사업자번호 정규화(2026-11-06): 숫자만 받아 표준 표기로 저장한다. 형식이 틀리면 거절.
+function coopPhone(value) {
+  const digits = String(value ?? '').replace(/[\s-]/g, '');
+  if (!digits) return '';
+  if (!/^0\d{8,10}$/.test(digits)) return null;
+  if (digits.startsWith('02')) return digits.length === 9 ? `02-${digits.slice(2, 5)}-${digits.slice(5)}` : `02-${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return digits.length === 10 ? `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}` : `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+}
+function coopBusinessNumber(value) {
+  const digits = String(value ?? '').replace(/[\s-]/g, '');
+  if (!digits) return '';
+  if (!/^\d{10}$/.test(digits)) return null;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+}
+
 // 조합원 자가 등록(2026-11-04): 로그인한 본인이 "조합원으로 등록할까요?"에 동의 체크하면
 // 이 조합(tenant)에만 member 접근권한(관리 권한 없음)을 만들고 명부에 연결한다.
 // 같은 이름의 미연결 명부 행이 정확히 하나면 그 행에 계정을 연결하고, 없으면 새 조합원 행을 추가한다.
 async function join(request, env, coop) {
   const identity = await cooperativeIdentity(request, env);
   if (!identity?.email) return json({ ok: false, code: 'COOP_LOGIN_REQUIRED' }, 401);
+  // 등록 화면에 "지금 로그인된 이메일"을 보여 주기 위한 본인 확인(본인 이메일만 반환).
+  if (request.method === 'GET') return json({ ok: true, email: String(identity.email).trim().toLowerCase() });
   if (request.method !== 'POST') return json({ ok: false, code: 'METHOD_NOT_ALLOWED' }, 405);
   const body = await inputJson(request);
-  if (Object.keys(body).some(key => !['consent', 'representative', 'business'].includes(key))) return json({ ok: false, code: 'COOP_SELF_FIELDS_ONLY' }, 400);
+  if (Object.keys(body).some(key => !['consent', 'representative', 'business', 'phone', 'businessNumber'].includes(key))) return json({ ok: false, code: 'COOP_SELF_FIELDS_ONLY' }, 400);
   if (body.consent !== true) return json({ ok: false, code: 'COOP_JOIN_CONSENT_REQUIRED' }, 400);
   const representative = trim(body.representative, 80);
   if (!representative) return json({ ok: false, code: 'COOP_REPRESENTATIVE_REQUIRED' }, 400);
+  const phone = coopPhone(body.phone);
+  if (!phone) return json({ ok: false, code: phone === '' ? 'COOP_PHONE_REQUIRED' : 'COOP_PHONE_INVALID' }, 400);
+  const businessNumber = coopBusinessNumber(body.businessNumber);
+  if (businessNumber === null) return json({ ok: false, code: 'COOP_BUSINESS_NUMBER_INVALID' }, 400);
+  const business = trim(body.business, 160) || null;
   const email = String(identity.email).trim().toLowerCase();
   const tenant = await env.DB.prepare('SELECT id, status FROM customer_tenants WHERE slug = ? LIMIT 1').bind(coop.slug).first();
   if (!tenant || tenant.status !== 'active') return json({ ok: false, code: 'COOP_TENANT_UNAVAILABLE' }, 503);
@@ -101,9 +123,9 @@ async function join(request, env, coop) {
     const state = project.state;
     if (!state.founders.some(f => f.accountEmail === email)) {
       const unlinked = state.founders.filter(f => !f.accountEmail && f.representative === representative);
-      if (unlinked.length === 1) unlinked[0].accountEmail = email;
+      if (unlinked.length === 1) Object.assign(unlinked[0], { accountEmail: email, phone, ...(businessNumber ? { businessNumber } : {}), ...(business ? { business } : {}) });
       else state.founders.push({ id: `${coop.workspaceId}:member:${crypto.randomUUID()}`, representative, position: 'member',
-        business: trim(body.business, 160) || null, industry: null, shares: null, consent: 'pending', accountEmail: email });
+        business, businessNumber: businessNumber || null, phone, industry: null, shares: null, consent: 'pending', accountEmail: email });
       try {
         await saveCooperativeProject(env.DB, coop, state, project.revision, { identity, scope: 'self-join', role: 'member' });
       } catch (error) { if (error.status === 409 && attempt < 2) continue; throw error; }
@@ -113,7 +135,7 @@ async function join(request, env, coop) {
   await env.DB.prepare(`INSERT INTO cooperative_applications (workspace_id, person_id, email, representative, business, message, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, '', 'joined', ?, ?)
     ON CONFLICT(workspace_id, person_id) DO UPDATE SET status = 'joined', representative = excluded.representative, business = COALESCE(excluded.business, cooperative_applications.business), updated_at = excluded.updated_at`)
-    .bind(coop.workspaceId, identity.id, email, representative, trim(body.business, 160) || null, timestamp, timestamp).run();
+    .bind(coop.workspaceId, identity.id, email, representative, business, timestamp, timestamp).run();
   return json({ ok: true, status: 'member', alreadyMember: Boolean(existing) });
 }
 
@@ -254,9 +276,11 @@ export async function routeCooperative(request, env) {
     }
     if (path === '/api/my-business' && request.method === 'PUT' && !platformContext) {
       const body = await inputJson(request);
-      if (Object.keys(body).some(key => !['business', 'industry', 'revision'].includes(key))) return json({ ok: false, code: 'COOP_SELF_FIELDS_ONLY' }, 400);
+      if (Object.keys(body).some(key => !['business', 'industry', 'phone', 'businessNumber', 'revision'].includes(key))) return json({ ok: false, code: 'COOP_SELF_FIELDS_ONLY' }, 400);
       const founder = project.state.founders.find(f => f.accountEmail === access.identity.email);
       if (!founder) return json({ ok: false, code: 'COOP_ACCOUNT_NOT_LINKED' }, 403);
+      if ('phone' in body) { const phone = coopPhone(body.phone); if (phone === null) return json({ ok: false, code: 'COOP_PHONE_INVALID' }, 400); founder.phone = phone || null; }
+      if ('businessNumber' in body) { const number = coopBusinessNumber(body.businessNumber); if (number === null) return json({ ok: false, code: 'COOP_BUSINESS_NUMBER_INVALID' }, 400); founder.businessNumber = number || null; }
       founder.business = trim(body.business, 160) || null;
       founder.industry = trim(body.industry, 160) || null;
       const result = await saveCooperativeProject(env.DB, coop, project.state, body.revision, access);
