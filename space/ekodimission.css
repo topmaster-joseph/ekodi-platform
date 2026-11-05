@@ -141,6 +141,14 @@ body.mission-pay-open{overflow:hidden}
 .mission-saturday-date{min-height:inherit;gap:1rem}
 .mission-saturday-date strong{font-size:clamp(1.55rem,2.6vw,2.25rem);line-height:1.16}
 .mission-weekly-label{font-size:.79rem;font-weight:800;letter-spacing:.04em}
+/* Keep the label and its value together while preserving compact mobile reflow. */
+.mission-saturday-facts{grid-template-columns:minmax(0,1fr);gap:0;margin:.75rem 0 0}
+.mission-saturday-facts>div{display:grid;grid-template-columns:3.7rem minmax(0,1fr);align-items:start;column-gap:.65rem;min-width:0;padding:.5rem 0;border-top:1px solid var(--line)}
+.mission-saturday-facts dt{font-size:.84rem;line-height:1.6;font-weight:700}
+.mission-saturday-facts dd{min-width:0;margin:0;font-size:.94rem;line-height:1.6}
+.mission-saturday-facts dd>span{display:block}
+.mission-saturday-scripture{margin-top:.12rem;color:var(--muted);font-size:.88rem;font-weight:500}
+.mission-saturday-scripture a{color:var(--accent);font-weight:750;text-underline-offset:.18em}
 .mission-saturday-feedback{margin-top:1.5rem;padding-top:1.15rem;border-top:1px solid var(--line)}
 .mission-saturday-feedback-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap}
 .mission-saturday-feedback-head h4{font-size:1.04rem;margin:0}
