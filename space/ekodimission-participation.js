@@ -5,6 +5,8 @@
   const endpoint='/ekodimission/board/api/saturday/participation';
   const controls=root.querySelector('[data-mission-participation-controls]');
   const login=root.querySelector('[data-mission-participation-login]');
+  // The home RSVP section offers one central login CTA, not competing links.
+  const hasPrimaryLogin=Boolean(root.closest('[data-mission-saturday]')?.querySelector('[data-mission-saturday-login]'));
   const status=root.querySelector('[data-mission-participation-status]');
   const recurring=root.querySelector('[data-mission-recurring]');
   const buttons=[...root.querySelectorAll('[data-mission-rsvp]')];
@@ -31,7 +33,7 @@
     message('이번 주: '+(label[data.planned]||'확인 필요')+' · 실제 출석은 현장에서 확인합니다.');
   }
   function unauthenticated(){
-    current=null;controls.hidden=true;login.hidden=false;manager.hidden=true;
+    current=null;controls.hidden=true;login.hidden=hasPrimaryLogin;manager.hidden=true;
     message('로그인하면 한 번의 동의로 정기참여를 설정할 수 있습니다.');
   }
   async function load(){
@@ -48,7 +50,7 @@
       paint(body);
     }catch(error){
       if(id!==sequence)return;
-      controls.hidden=true;login.hidden=false;
+      controls.hidden=true;login.hidden=hasPrimaryLogin;
       message(error.message||'참여 설정 확인에 실패했습니다.',true);
     }
   }
