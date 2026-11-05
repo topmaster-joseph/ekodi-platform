@@ -68,7 +68,7 @@ test('verified member pending totals are visible, never redeemable or shared wit
 
 test('public first visible hero has precise direct-sale 1% policy without external payouts',()=>{
   const css=read('../sites/ekodi-mall/assets/home-refresh.css');
-  const hero=platform.split('<div class="context-hero-copy">')[1]?.split('</div>')[0]||'';
+  const hero=platform.split('<div class="context-hero-copy">')[1]?.split('<aside class="context-hero-visual')[0]||'';
   assert.ok(hero.includes('mall-member-points-hero'),'reward disclosure must not be hidden behind the shop More control');
   assert.ok(hero.includes('비회원도 결제 가능'));
   assert.ok(hero.includes('로그인 회원 결제 확인 시 1% 포인트 적립 증빙'));
