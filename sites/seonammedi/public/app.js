@@ -174,7 +174,7 @@ function renderPublicFinance(rows,adminMode=false){
   }).join(''):'<p class="muted">'+(adminMode?'등록된 회계내역이 없습니다.':'공개된 회계내역이 없습니다.')+'</p>';
 }
 
-const TIMELINE_FILTERS=['전체','신문','잡지','방송','통신사','유튜브','블로그','대학','정부·공공기관','공식기록','페이스북','페이스북 그룹','인스타그램','틱톡','시민·단체','기타'];
+const TIMELINE_FILTERS=['전체','비대위 활동','신문','잡지','방송','통신사','유튜브','블로그','대학','정부·공공기관','공식기록','페이스북','페이스북 그룹','인스타그램','틱톡','시민·단체','기타'];
 // Curated external source. Facebook group posts are not auto-published without independent verification.
 const RELATED_FACEBOOK_GROUP=Object.freeze({id:'2299276407568855',url:'https://www.facebook.com/groups/2299276407568855'});
 const COMMITTEE_FILTERS=['전체','회의·의결','성명·입장 발표','기자회견','집회·캠페인','면담·협의','공문·요청','행사·연대활동','기타 활동'];
@@ -205,6 +205,7 @@ const isCommitteeRelatedNews=item=>{
     && /서남권|국립의대|의과대학|목포대|전남|의대/.test(context);
 };
 function relatedNewsCategory(item){
+  if(isCommitteeRecord(item))return'비대위 활동';
   const type=String(item?.sourceType||item?.source_type||'').toLowerCase();
   const source=[item?.evidence||'',item?.publisher||'',...(item?.links||[]).map(link=>[link.source,link.url].filter(Boolean).join(' '))].join(' ').toLowerCase();
   const category=String(item?.category||'');
@@ -300,6 +301,54 @@ function renderTimelineFilters(){
     host.addEventListener('click',event=>{const button=event.target.closest('button[data-cat]');if(!button)return;const category=button.dataset.cat;if(!TIMELINE_FILTERS.includes(category))return;activeTimelineCategory=category;setCategoryRoute('timeline',category);renderTimelineFilters();renderPublicTimeline();});
   }
 }
+
+// A compact teaser for the closed list; expanded text is structured by headings below.
+function timelineTeaser(item){
+  let value=String(item?.summary||'').replace(/(?:^|\s)(?:제목|내용|본문|요약)\s*[:：]\s*/g,' ').replace(/\s+/g,' ').trim();
+  const title=String(item?.title||'').trim();
+  if(title&&value.startsWith(title))value=value.slice(title.length).replace(/^[\s:：—-]+/,'');
+  return escapeHtml(value?value.slice(0,165)+(value.length>165?'…':''):'제목을 눌러 상세 내용과 근거자료를 확인하세요.');
+}
+function timelineReadableSections(item){
+  const summary=String(item?.summary||'').replace(/\r\n?/g,'\n').replace(/\u2028|\u2029/g,'\n').trim();
+  if(!summary)return'<p class="timeline-article-empty">등록된 본문 설명이 없습니다.</p>';
+  // Make editorial labels readable even when pasted as one continuous line.
+  const normalized=summary.replace(/(?:^|\s+)(제목|내용|본문|요약|출처|작성자|발행일)\s*[:：]\s*/g,'\n$1: ');
+  const lines=normalized.split(/\n/).map(line=>line.trim()).filter(Boolean);
+  const sections=[];
+  let current={label:'내용',lines:[]};
+  const flush=()=>{
+    if(current.lines.length)sections.push(current);
+    current={label:'내용',lines:[]};
+  };
+  for(const line of lines){
+    const match=line.match(/^(제목|내용|본문|요약|출처|작성자|발행일)\s*[:：]\s*(.*)$/);
+    if(match){
+      flush();
+      const label=match[1]==='본문'||match[1]==='요약'?'내용':match[1];
+      // Do not repeat the card's title as if it were part of the body.
+      if(label==='제목'&&match[2].trim()===String(item?.title||'').trim())continue;
+      current.label=label;
+      if(match[2].trim())current.lines.push(match[2].trim());
+    }else current.lines.push(line);
+  }
+  flush();
+  return sections.map(part=>{
+    const paragraphs=part.lines.join('\n').split(/\n{2,}/).map(line=>line.trim()).filter(Boolean);
+    return '<section class="timeline-article-section"><h4>'+escapeHtml(part.label)+'</h4>'+
+      paragraphs.map(paragraph=>'<p>'+escapeHtml(paragraph)+'</p>').join('')+'</section>';
+  }).join('');
+}
+function timelineExpandedDetails(item){
+  const category=isCommitteeRecord(item)?'비대위 활동':relatedNewsCategory(item);
+  const meta='<div class="timeline-article-meta"><span>날짜: '+escapeHtml(item?.date||'날짜 미상')+
+    '</span><span>분류: '+escapeHtml(category)+'</span></div>';
+  const evidence=evidenceBlock(item);
+  return '<div class="timeline-expanded-article">'+meta+timelineReadableSections(item)+
+    (evidence?'<section class="timeline-article-section timeline-article-sources"><h4>출처·근거자료</h4>'+evidence+'</section>':'')+
+    '</div>';
+}
+
 const relatedNewsFilterMatches=(item,selected)=>{
   if(selected==='전체')return true;
   const category=relatedNewsCategory(item);
@@ -307,11 +356,11 @@ const relatedNewsFilterMatches=(item,selected)=>{
 };
 function renderPublicTimeline(){
   const host=el('timelineList');if(!host)return;
-  const relatedRows=publicTimelineEntries.filter(item=>!isCommitteeRecord(item)&&!isCommitteeRelatedNews(item));
+  const relatedRows=publicTimelineEntries; // Related news is an inclusive chronicle, including committee activities.
   const rows=relatedRows.filter(item=>relatedNewsFilterMatches(item,activeTimelineCategory)).slice().sort(timelineDescending);
   host.innerHTML=rows.length?rows.map((item,index)=>{
     const adminActions=publicTimelineAdminMode&&!item.autoCollected?'<div class="timeline-admin-actions"><span class="source-type '+(item.status==='published'?'':'is-private')+'">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-timeline-edit="'+Number(item.id)+'">수정</button><button type="button" data-timeline-status="'+Number(item.id)+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-timeline-delete="'+Number(item.id)+'">삭제</button></div>':publicContentInlineMode&&item.autoCollected&&Number(item.monitorSourceId)>0?'<div class="timeline-admin-actions"><span class="source-type">자동수집 기사</span><button type="button" data-monitor-hide="'+Number(item.monitorSourceId)+'">이 자료 삭제</button></div>':'';
-    return '<article class="timeline-item'+' is-collapsed'+'" data-item-key="'+escapeHtml(itemShareKey(item))+'" data-event-date="'+escapeHtml(item.date)+'"><div class="timeline-date">'+escapeHtml(item.date)+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title)+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary)+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+escapeHtml(item.evidence)+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+itemShareButton(item,'timeline')+adminActions+'</div></article>';
+    return '<article class="timeline-item'+' is-collapsed'+'" data-item-key="'+escapeHtml(itemShareKey(item))+'" data-event-date="'+escapeHtml(item.date)+'"><div class="timeline-date">'+escapeHtml(item.date)+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title)+'</button></h3><p class="timeline-summary">'+timelineTeaser(item)+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+escapeHtml(item.evidence)+'</span></div><div class="timeline-detail">'+timelineExpandedDetails(item)+'</div>'+itemShareButton(item,'timeline')+adminActions+'</div></article>';
   }).join(''):(activeTimelineCategory==='페이스북 그룹'?'<p class="muted">검증되어 공개된 그룹 게시물이 없습니다. 위의 페이스북 그룹 원문 링크를 확인해 주세요.</p>':'<p class="muted">이 분류에 공개된 관련소식이 없습니다.</p>');
   host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{const card=button.closest('.timeline-item');const collapsed=card.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',collapsed?'false':'true');}));
   attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS||[]);
@@ -331,12 +380,12 @@ function dropSupersededTimeline(rows){
 }
 function renderCommitteeNews(){
   const host=el('committeeNewsList');if(!host)return;
-  const rows=publicTimelineEntries.filter(isCommitteeRelatedNews).slice().sort(timelineDescending);
+  const rows=publicTimelineEntries.filter(item=>isCommitteeRecord(item)||isCommitteeRelatedNews(item)).slice().sort(timelineDescending);
   host.innerHTML=rows.length?rows.map((item,index)=>{
     const id=Number(item.id||0),auto=Boolean(item.autoCollected);
-    const actions=publicTimelineAdminMode&&!auto&&id>0?'<div class="timeline-admin-actions"><span class="source-type">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-committee-news-edit="'+id+'">수정</button><button type="button" data-committee-news-status="'+id+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-committee-news-delete="'+id+'">삭제</button></div>'
+    const actions=publicTimelineAdminMode&&!auto&&id>0&&!isCommitteeRecord(item)?'<div class="timeline-admin-actions"><span class="source-type">'+(item.status==='published'?'공개':'비공개')+'</span><button type="button" data-committee-news-edit="'+id+'">수정</button><button type="button" data-committee-news-status="'+id+'">'+(item.status==='published'?'비공개로':'공개로')+'</button><button type="button" data-committee-news-delete="'+id+'">삭제</button></div>'
       :publicTimelineAdminMode&&auto&&Number(item.monitorSourceId)>0?'<div class="timeline-admin-actions"><span class="source-type">자동수집</span><button type="button" data-committee-news-hide="'+Number(item.monitorSourceId)+'">공개 제외</button></div>':'';
-    return '<article class="timeline-item'+' is-collapsed'+'" data-item-key="'+escapeHtml(itemShareKey(item))+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title||'')+'</button></h3><p class="timeline-summary">'+escapeHtml(item.summary||'')+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+(auto?'출처 확인 · 자동수집':'등록 소식')+'</span></div><div class="timeline-detail">'+evidenceBlock(item)+'</div>'+itemShareButton(item,'committee')+actions+'</div></article>';
+    return '<article class="timeline-item'+' is-collapsed'+'" data-item-key="'+escapeHtml(itemShareKey(item))+'"><div class="timeline-date">'+escapeHtml(item.date||'')+'</div><div class="timeline-content"><h3><button type="button" class="timeline-toggle timeline-title-button" aria-expanded="false">'+escapeHtml(item.title||'')+'</button></h3><p class="timeline-summary">'+timelineTeaser(item)+'</p><div class="chips"><span class="chip">'+escapeHtml(relatedNewsCategory(item))+'</span><span class="chip">'+(auto?'출처 확인 · 자동수집':'등록 소식')+'</span></div><div class="timeline-detail">'+timelineExpandedDetails(item)+'</div>'+itemShareButton(item,'committee')+actions+'</div></article>';
   }).join(''):'<p class="muted">현재 공개가 확인된 비상대책위 활동이력이 없습니다. 출처가 검증된 자료가 수집되면 자동으로 표시됩니다.</p>';
   host.querySelectorAll('.timeline-toggle').forEach(button=>button.addEventListener('click',()=>{
     const card=button.closest('.timeline-item'),collapsed=card.classList.toggle('is-collapsed');
