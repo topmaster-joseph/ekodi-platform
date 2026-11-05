@@ -31,3 +31,7 @@
 ## 2026-11-05 main-sync 65e6364e authentic CI checkpoint
 - The latest protected owner-authored functional checkpoint `73eeddd3edea79106bcdedee16b0f2cc07ceee8f` passed authentic CI, Mall validation and EKODI Orchestrator AI Gate after updating the old exact-three-statement atomic order test to account for an optional fourth member-evidence statement. Commerce events, buyer information and point evidence remain in the **same** atomic order D1 batch.
 - Orchestrator bot synchronized official PR #8336 with concurrently advancing `main`, head now `65e6364e7394af5003cd49a03e3bb598354ae2ff`. Bot-created PR checks were marked `action_required`; this documentation-only human-owner checkpoint does **not** approve economic settlement, bypass branch protection or claim the global production points ledger is available. Run actual native CI and protected release again on the new head.
+
+## 2026-11-05 main-sync d85ba192 protected convergence
+- Verified authentic CI **success** on prior synchronized human checkpoint `e2ffc6b638586fa8c165803341548c0418886058`, together with EKODI AI gate and Mall validate. No test failures remain.
+- Concurrent protected `main` changes caused Orchestrator to refresh the recovery branch to bot-authored head `d85ba1928e07fd24d2dd153f616cf113d8ae9eac` while in final convergence, making the bot PR checks `action_required`. This owner-authored, **documentation-only** update requests fresh authentic CI without modifying any functional code, financial entitlement, merchant keys, production schema or actual payment configuration.
