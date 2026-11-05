@@ -35,8 +35,8 @@ test('every EKODI event share adapter uses the same multiline invitation contrac
     assert.equal(format('에코디선교회','에코디선교회 에코디선교회 2026-11-07 (토) 토요모임 신청하기 신청하기','2026-11-07',inputs[3],'신청하기'),expected,path+' collapses repeated organization, date, weekday and CTA');
     assert.equal(format('에코디선교회','토요모임 신청하기','2026-11-07',inputs[3],'신청하기'),expected,path+' never repeats action');
     assert.equal(format('에코디선교회','토요모임 2026.11.07','2026-11-07',inputs[3],'신청하기'),expected,path+' never repeats date');
-    assert.equal(format('서남권 국립의대 소통센터','정책 간담회','2026-10-15','https://ekodi.kr/seonammedi/?item=i42','일정 보기'),
-      '서남권 국립의대 소통센터 정책 간담회 일정 보기\n2026-10-15 (목)\nhttps://ekodi.kr/seonammedi/?item=i42',path);
+    assert.equal(format('서남권국립의대','정책 간담회','2026-10-15','https://ekodi.kr/seonammedi/?item=i42','일정 보기'),
+      '서남권국립의대 정책 간담회 일정 보기\n2026-10-15 (목)\nhttps://ekodi.kr/seonammedi/?item=i42',path);
     assert.equal(format('에코디교회','교제 모임','','https://ekodi.kr/ekodichurch','자세히 보기'),
       '에코디교회 교제 모임 자세히 보기\nhttps://ekodi.kr/ekodichurch',path);
     assert.equal(format('단체','행사','2026-02-30','https://ekodi.kr/x','신청하기'),
