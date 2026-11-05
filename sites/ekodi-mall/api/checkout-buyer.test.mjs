@@ -216,3 +216,56 @@ test('HTTP member identity is verified, browser spoofing is rejected and points 
     assert.equal((await proof.json()).memberPoints.points,150);
   }finally{globalThis.fetch=old;}
 });
+
+test('member summary counts server-confirmed pending 1% and refund compensation without exposing other accounts', async()=>{
+  const db=migrated();
+  const env={...POINTS_ENV,DB:db,SUPABASE_URL:'https://example.supabase.co',SUPABASE_PUBLISHABLE_KEY:'public'};
+  const oldFetch=globalThis.fetch;
+  try{
+    globalThis.fetch=async(_url,{headers}={})=>{
+      const token=String(headers?.authorization||'');
+      if(token.includes('INVALID'))return new Response('{}',{status:401});
+      return new Response(JSON.stringify({...MEMBER,id:token.includes('OTHER')?OTHER_ID:MEMBER_ID}),
+        {status:200,headers:{'content-type':'application/json'}});
+    };
+    const summaryReq=token=>new Request('https://ekodi.kr/api/public/member-points/summary',
+      token?{headers:{authorization:'Bearer '+token}}:{});
+    assert.equal((await mallApi.fetch(summaryReq(),env)).status,401,'guest cannot read summaries');
+    assert.equal((await mallApi.fetch(summaryReq('INVALID'),env)).status,401,'invalid JWT rejected');
+    assert.equal((await mallApi.fetch(summaryReq('VALID'),{...env,MALL_MEMBER_POINT_EVIDENCE_ENABLED:'false'})).status,503);
+    const before=await (await mallApi.fetch(summaryReq('VALID'),env)).json();
+    assert.equal(before.memberPoints.pendingPoints,0);
+    assert.equal(before.memberPoints.spendable,false);
+    const make=async quantity=>{
+      const created=await createOrder(env,{shareCode:'SHARE1',quantity,buyer:BUYER,member:MEMBER});
+      assert.equal(created.status,201);
+      return db.db.prepare('SELECT * FROM orders WHERE id=?').get(created.order.id);
+    };
+    const a=await make(1); // 150P at purchase
+    const b=await make(2); // 300P at purchase, later 100P reversal
+    const awaiting=await make(1);
+    const guest=await createOrder(env,{shareCode:'SHARE1',buyer:BUYER});
+    await recordConfirmedPayment(env,a,{paymentKey:'summary1',status:'DONE',totalAmount:15000},'TOSS');
+    await recordConfirmedPayment(env,b,{paymentKey:'summary2',status:'DONE',totalAmount:30000},'TOSS');
+    await db.batch(verifiedRefundPointStatements(env,b,10000,new Date().toISOString()));
+    const mine=await (await mallApi.fetch(summaryReq('VALID'),env)).json();
+    assert.deepEqual({
+      pendingPoints:mine.memberPoints.pendingPoints,
+      pendingOrders:mine.memberPoints.pendingOrders,
+      awaitingOrders:mine.memberPoints.awaitingOrders,
+      reversedOrders:mine.memberPoints.reversedOrders,
+      spendable:mine.memberPoints.spendable,
+      coreEnabled:mine.memberPoints.coreEnabled,
+    },{pendingPoints:350,pendingOrders:2,awaitingOrders:1,reversedOrders:0,spendable:false,coreEnabled:false});
+    assert.equal(mine.memberPoints.status,'pending_central_ledger');
+    const other=await (await mallApi.fetch(summaryReq('OTHER'),env)).json();
+    assert.equal(other.memberPoints.pendingPoints,0);
+    assert.equal(other.memberPoints.pendingOrders,0);
+    assert.equal(guest.order.memberPoints,null);
+    await db.batch(verifiedRefundPointStatements(env,b,30000,new Date().toISOString()));
+    const after=await (await mallApi.fetch(summaryReq('VALID'),env)).json();
+    assert.equal(after.memberPoints.pendingPoints,150);
+    assert.equal(after.memberPoints.reversedOrders,1);
+    assert.equal(awaiting.status,'payment_pending');
+  }finally{globalThis.fetch=oldFetch;}
+});
