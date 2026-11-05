@@ -53,3 +53,28 @@ node scripts/validate-background-browser-worker.mjs
 - 공식 브라우저 워크플로는 `navigationTimings` 및 `performance.p50Ms/p95Ms/maxMs`를 검사하고 실행 요약에 표시합니다. 이것은 에코디 자체 실행의 실제 지표이며 타사와 동일한 조건의 비교를 제공하지는 않습니다.
 - v2.6.3 파일이 보호된 main에 병합되고 배포되더라도 기존 2.5.x/2.6.1 기기에 자동 설치되지 않습니다. 기존 Agent의 공식 명령에 의한 1회 부트스트랩과 현장 권한이 선행되어야 합니다.
 - 자동업데이트 매니페스트는 공식 실기기 카나리 증거가 확인되기 전까지 생성·승인하지 않습니다.
+
+## 독립 실행 모드 (2026-11-06)
+
+에코디 브라우저는 별도 유료 브라우저 계정, 구독, 잔액, 접근 토큰 또는 외부 서비스 로그인 프로필을 필수조건으로 사용하지 않습니다. 실행 진입점은 `scripts/ekodi-independent-browser.mjs`이며, 보호된 오케스트레이터가 실행하는 Node/Playwright 작업자에서 사용합니다. 아래 명령은 실행 작업자의 Node·Chromium 설치가 필요하며 Cloudflare Worker 내부에서 직접 Chromium을 실행하는 것은 아닙니다.
+
+- `public-readonly`: PC가 오프라인이어도 클라우드 실행 가능 시 에코디 자체 `ekodi-background-browser-worker`와 격리된 한 번의 Chromium 실행을 이용해 최대 12개 경로를 확인합니다. 실행 대상은 기본적으로 `https://ekodi.kr`의 허용 경로뿐입니다.
+- `external-auth`: 이미 등록된 외부 사이트 중 하나를 에코디 디바이스에 연결할 때만 사용합니다. 정상 Agent와 PC 현장 동의가 없으면 `EKODI_NATIVE_AGENT_REQUIRED` 또는 `EKODI_HUMAN_LOGIN_CONSENT_REQUIRED`를 반환하며, 별도 유료 브라우저나 외부 서버에 인증정보를 전달하지 않습니다. 이 함수는 인증 창을 자동으로 실행하지 않으며, 기존 관리자 Control API 승인 절차를 통해 열어야 합니다.
+- 클라우드 런타임이 준비되지 않은 공개 페이지 작업은 `EKODI_NATIVE_CLOUD_RUNTIME_REQUIRED`로 종료하고 장애 사유를 기록합니다. 타사 브라우저로 자동 전환하거나 결제 비용을 요구하지 않습니다.
+- 비인가 변경·결제·주문·배송 개인정보 전송은 독립 실행 모드에 포함되지 않습니다.
+
+### 작업 예시
+
+```json
+{
+  "kind":"public-readonly",
+  "taskId":"ekodi-independent-site-check",
+  "paths":["/","/ekodimall/","/admin/"],
+  "deviceProfile":"desktop",
+  "screenshots":false
+}
+```
+
+`node scripts/ekodi-independent-browser.mjs <task.json>`를 실행하면 자체 Chromium 검증 결과와 P50/P95를 반환합니다. `config/ekodi-browser-independence.json`에 독립성 가드를 고정하고, `scripts/validate-background-browser-worker.mjs`와 GitHub 브라우저 워크플로에서 실행 계약을 확인합니다.
+
+**제약:** 브라우저 엔진의 독립 실행과 실제 PC 원격 제어, 외부 공급처 주문은 서로 다른 권한·실행 경로입니다. 구버전 Device Agent의 `EKA-121` 업데이트 장애 및 최초 현장 등록은 이 독립 실행 모드만으로 해결되었다고 간주하지 않습니다.
