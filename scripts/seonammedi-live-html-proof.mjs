@@ -60,6 +60,21 @@ export function expectedSeonamMediHtmlAtOrigin(sourceHtml,origin){
   return String(sourceHtml).replace(/((?:href|src)=["'])\/seonammedi\//g,'$1/');
 }
 
+/**
+ * Reproduce only the registered English customer gateway's first-party host
+ * projection (HOST-PRESERVING-LINKS-20261105) for strict published-byte proof.
+ * Never use it to mask unknown HTML or a new third-party host.
+ */
+export function projectedSeonamMediPublishedHtmlForProof(sourceHtml,origin){
+  assertOrigin(origin);
+  const html=String(sourceHtml);
+  if(origin!=='https://seonammedi.kr')return html;
+  return html
+    .replaceAll('https://ekodi.kr/seonammedi/','https://seonammedi.kr/')
+    .replaceAll('https://ekodi.kr/seonammedi','https://seonammedi.kr')
+    .replaceAll('https://xn--3e0b8b58jw4co4mnpll3k.kr','https://seonammedi.kr');
+}
+
 export function normalizeSeonamMediLiveHtml(rawHtml,{origin,page}){
   assertOrigin(origin);
   const pageName=String(page||'');

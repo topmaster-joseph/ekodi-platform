@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { assertSeonamMediAssetCachePolicy } from './seonammedi-cache-contract.mjs';
 import {dirname, join} from 'node:path';
 import {compareSeonamMediPublishedHtml} from './seonammedi-release-html-alias.mjs';
-import {normalizeSeonamMediLiveHtml} from './seonammedi-live-html-proof.mjs';
+import {normalizeSeonamMediLiveHtml,projectedSeonamMediPublishedHtmlForProof} from './seonammedi-live-html-proof.mjs';
 
 const args=Object.fromEntries(process.argv.slice(2).map(arg=>{
   const m=arg.match(/^--([^=]+)=(.*)$/);
@@ -89,7 +89,8 @@ for(let attempt=1;attempt<=attempts;attempt++){
           // 2026-10-20 SITE-MOUNT-RELATIVE-LINKS-001: these two site-owned shell assets moved from "./x" to
           // "/seonammedi/x" so deep paths (/notices/<id>) load them; the customer host strips the mount prefix.
           'central-category-menu.css','central-category-runtime.js'];
-        const match=compareSeonamMediPublishedHtml(published,normalized.html,allowlisted);
+        const expectedProjected=projectedSeonamMediPublishedHtmlForProof(published,origin);
+        const match=compareSeonamMediPublishedHtml(expectedProjected,normalized.html,allowlisted);
         if(!match.matched){
           const around=(value,pos)=>typeof pos==='number'?JSON.stringify(String(value).slice(Math.max(0,pos-48),Math.min(String(value).length,pos+96))):'unavailable';
           throw new Error(name+'_html_digest_mismatch expected='+expectedHash+' actual='+actualHash+' reason='+match.reason
