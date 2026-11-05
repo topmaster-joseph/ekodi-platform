@@ -894,6 +894,8 @@ export default {
         paymentsEnabled: flag(env.PAYMENTS_ENABLED),
         tossSecretConfigured: Boolean(env.TOSS_SECRET_KEY),
         paymentProvider: paymentProviderPublicView(env),
+        memberPurchasePoints: {ratePercent:1,evidenceEnabled:memberEvidenceEnabled(env),
+          coreEnabled:flag(env.MALL_MEMBER_POINT_CORE_ENABLED),spendable:false},
         payoutExecutionEnabled: false
       }, ok ? 200 : 503, origin, env);
     }
