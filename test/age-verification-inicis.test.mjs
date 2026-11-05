@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { handleAgeVerificationRequest, ageVerificationAdminSnapshot } from '../age-verification-core.js';
 
@@ -66,8 +66,14 @@ class FakeD1 {
   }
   async batch(commands){const output=[];for(const c of commands)output.push(await c.run());return output;}
 }
-const DB = new FakeD1();
-const env = {...envBase, DB};
+let DB, env;
+beforeEach(() => {
+  DB = new FakeD1();
+  env = {...envBase,DB};
+  current = U;
+  proof = null;
+  fetchCalls = [];
+});
 const makeRequest=(path,body,token='example')=>new Request(ROOT+path,{
   method:body?'POST':'GET',
   headers:{authorization:'Bearer '+token,...(body?{'content-type':'application/json'}:{})},
