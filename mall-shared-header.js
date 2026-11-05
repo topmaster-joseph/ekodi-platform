@@ -1,6 +1,6 @@
 // Shared Mall navigation for static Pages and weekly-picks edge rendering.
 export function renderMallHeader({publicPrefix='',home=false,sellerHref}={}) {
- const prefix=String(publicPrefix).replace(/\/+$/,'');
+ const prefix=String(publicPrefix || (home ? '' : '/ekodimall')).replace(/\/+$/,'');
  const root=prefix+'/';
  const href=hash=>home?hash:root+hash;
  const link=(hash,label,filter)=>'<a href="'+(home?hash:(filter?root+'?category='+encodeURIComponent(filter)+'#shop':root+hash))+'"'+(filter?' data-filter-target="'+filter+'"':'')+'>'+label+'</a>';
