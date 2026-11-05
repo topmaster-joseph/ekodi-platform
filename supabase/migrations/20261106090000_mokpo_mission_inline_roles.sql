@@ -54,6 +54,11 @@ begin
   if v_tenant is null then raise exception 'pin_session_required' using errcode = '42501'; end if;
   return public.organization_view_payload(v_tenant, v_label, v_can_approve);
 end $$;
+-- Explicitly preserve the existing PIN snapshot Data API privileges from
+-- 20261105210000_mokpo_mission_roster_pin_viewer.sql when recreating this RPC.
+-- No new roles or permissions are introduced.
+revoke all on function public.organization_pin_snapshot(text,text) from public;
+grant execute on function public.organization_pin_snapshot(text,text) to anon, authenticated;
 
 -- Who is looking at the page (EKODI login): manager (can_manage) / member (active tenant member) / none.
 create or replace function public.organization_site_context(p_slug text)
