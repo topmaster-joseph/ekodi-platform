@@ -145,7 +145,9 @@ export async function handleAgeVerificationRequest(request, env) {
   if (request.method === 'POST' && !data) return json({ error: 'invalid_payload' }, 400);
   const site = request.method === 'GET' ? url.searchParams.get('site') : data.site;
   const cfg = config(env, site);
-  if (!cfg) return json({ error: 'site_not_enabled' }, 403);
+  if (!cfg) return policies(env)[site]
+    ? json({ error: 'age_verification_unavailable' }, 503)
+    : json({ error: 'site_not_enabled' }, 403);
   const now = Date.now(), stamp = iso(now);
   try {
     if (path === ROOT + '/status') {
