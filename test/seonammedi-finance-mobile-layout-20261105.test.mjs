@@ -21,12 +21,30 @@ test('public financial disclosure has the approved title and only four aggregate
 });
 
 test('finance layout uses an external CSS file accepted by strict style-src self CSP',()=>{
-  assert.match(html,/href="\/seonammedi\/app\.css\?v=20261105-finance-public-layout-1"/);
+  assert.match(html,/href="\/seonammedi\/app\.css\?v=20261105-finance-inline-2"/);
   assert.doesNotMatch(html,/<style id="committee-finance-disclosure-style">/);
   assert.match(css,/#committee-finance-disclosure \.committee-finance-metrics\s*\{\s*display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(css,/@media\(max-width:580px\)\s*\{/);
-  assert.match(css,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css,/Finance summary: label and value share one line/);
   assert.match(css,/\.committee-finance-balance\s*\{\s*grid-column:1\/-1/);
   assert.match(css,/\.committee-finance-period\s*\{\s*grid-column:1\/-1/);
   assert.match(css,/font-variant-numeric:tabular-nums/);
+});
+
+test('period and all totals display beside their labels, without date qualification',()=>{
+  assert.doesNotMatch(section,/기재된 지출일 기준/);
+  for(const [label,id] of [['총수입','committeeFinanceIncome'],['총지출','committeeFinanceExpense'],['잔액','committeeFinanceBalance']]){
+    assert.match(section,new RegExp('<dt>'+label+'</dt><dd id="'+id+'">'));
+  }
+  assert.match(section,/<dt>기간<\/dt>\s*<dd id="committeeFinancePeriod">2026.10.29. ~ 2026.11.03.<\/dd>/);
+  assert.match(css,/Finance summary: label and value share one line/);
+  assert.match(css,/\.committee-finance-metrics>div\.committee-finance-period\s*\{\s*display:flex/);
+});
+
+test('public editing controls stay hidden until server-confirmed finance capability',()=>{
+  assert.match(section,/id="committeeFinanceEditToggle"[^>]*hidden/);
+  assert.match(section,/id="committeeFinanceEditForm"[^>]*hidden/);
+  assert.match(section,/name="startDate" type="date" required/);
+  assert.match(section,/name="endDate" type="date" required/);
+  for(const name of ['income','expense','balance'])assert.match(section,new RegExp('name="'+name+'" type="number"'));
 });
