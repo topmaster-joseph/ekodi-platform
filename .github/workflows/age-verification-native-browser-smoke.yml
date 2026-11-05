@@ -52,6 +52,18 @@ jobs:
           node --check scripts/ekodi-background-browser-worker.mjs
           node scripts/validate-background-browser-worker.mjs
           node --test test/background-browser-worker.test.mjs
+      - name: Require external scripts only in the sensitive authentication document
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const html=fs.readFileSync('verify/adult/index.html','utf8');
+          const tags=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
+          if(tags.length<1 || tags.some((m)=>!/\bsrc\s*=/.test(m[1]) || m[2].trim())) {
+            throw new Error('AGE_AUTH_INLINE_SCRIPT_FORBIDDEN');
+          }
+          console.log('Age verification HTML has only external script tags: '+tags.length);
+          NODE
       - name: Install isolated Chromium harness
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
@@ -95,11 +107,19 @@ jobs:
           jq -e '.ok == true and .mode == "ekodi-owned-background-browser" and .headless == true and .ephemeralContext == true and .activeUserProfileReused == false and .allowMutation == false' "$result"
           jq -e '[.results[] | select(.type == "assertText" and .matched == true)] | length == 1' "$result"
           jq -e '[.results[] | select(.type == "snapshot" and .horizontalOverflow == false and ((.bodyText // "") | contains("성인인증 서비스 연동을 준비 중입니다")))] | length >= 1' "$result"
-          jq -e '(.pageErrors | length) == 0 and (.consoleErrors | length) == 0 and (.blockedMutations | length) == 0 and (.httpErrorResponses | length) == 0 and (.screenshots | length) >= 1' "$result"
+          # Strict age CSP intentionally rejects Cloudflare-injected inline analytics and
+          # the static.cloudflareinsights.com beacon. They are expected security
+          # rejections, not application JS errors. Never relax the CSP.
+          jq -e '(.pageErrors | length) == 0 and (.blockedMutations | length) == 0 and (.httpErrorResponses | length) == 0 and (.screenshots | length) >= 1' "$result"
+          jq -e '([.consoleErrors[] | select(
+            ((startswith("Refused to execute inline script") and contains("Content Security Policy"))
+              or (startswith("Refused to load the script") and contains("static.cloudflareinsights.com/beacon.min.js") and contains("Content Security Policy")))
+            | not
+          )] | length) == 0' "$result"
           echo "## EKODI adult verification · ${{ matrix.profile }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Native Chromium: success (read only)" >> "$GITHUB_STEP_SUMMARY"
           echo "- Dynamic disabled state: confirmed" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Horizontal overflow / page errors / console errors: none" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Horizontal overflow and application page errors: none; only expected Cloudflare analytics CSP blocks allowed" >> "$GITHUB_STEP_SUMMARY"
           echo "- User cookies and profile reused: false" >> "$GITHUB_STEP_SUMMARY"
       - name: Assert production HTTP security gate
         shell: bash
