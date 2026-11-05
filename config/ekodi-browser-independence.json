@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-NATIVE-BROWSER-INDEPENDENCE-001",
+  "status": "enforced",
+  "owner": "ekodi-orchestrator",
+  "purpose": "Native EKODI browser execution must work without any paid external-browser account, quota, login profile, subscription or API.",
+  "nativeRuntime": {
+    "cloud": "ekodi-background-browser-worker",
+    "batch": "scripts/ekodi-native-browser-batch.mjs",
+    "pc": "ekodi-owned-chromium-cdp",
+    "auth": "EKODI-INTERACTIVE-AUTH-001",
+    "nativeOnly": true,
+    "cloudReadOnlyAvailableWithoutPairedPC": true
+  },
+  "externalBrowser": {
+    "required": false,
+    "defaultEnabled": false,
+    "automaticFallback": false,
+    "paidSubscriptionRequired": false,
+    "credentialSharing": false,
+    "thirdPartyBrowserSessionImport": false
+  },
+  "taskBoundaries": {
+    "publicSurfaceReadOnly": true,
+    "canonicalPublicOrigin": "https://ekodi.kr",
+    "maxPaths": 12,
+    "mutationDefault": false,
+    "externalSiteRequiresHumanLogin": true,
+    "deviceAuthenticationRequiresLocalConsent": true,
+    "noReusedPersonalBrowserProfile": true,
+    "noExternalSiteAutoPurchase": true
+  },
+  "whenNativeUnavailable": {
+    "publicSurface": "report-native-runtime-unavailable",
+    "externalAuthenticated": "request-local-ekodi-device-recovery",
+    "externalBrowserAutoFallback": "forbidden",
+    "paidUpgradePrompt": "forbidden"
+  },
+  "governance": {
+    "protectedMainRequired": true,
+    "orchestratorReleaseRequired": true,
+    "networkOriginGuardRequired": true,
+    "redactDiagnostics": true,
+    "realCanaryRequired": true,
+    "agentAutoUpdateRequiresLocalBootstrapAndApprovedSha256Manifest": true
+  }
+}

@@ -70,6 +70,11 @@ on:
   pull_request:
     paths:
       - 'scripts/ekodi-background-browser-worker.mjs'
+      - 'scripts/ekodi-independent-browser.mjs'
+      - 'scripts/ekodi-native-browser-batch.mjs'
+      - 'config/ekodi-browser-independence.json'
+      - 'test/ekodi-browser-independence.test.mjs'
+      - 'test/ekodi-browser-evidence-redaction.test.mjs'
       - 'scripts/validate-background-browser-worker.mjs'
       - 'config/background-browser-worker-policy.json'
       - 'config/board-surface-verification.json'
@@ -82,6 +87,11 @@ on:
     branches: [main]
     paths:
       - 'scripts/ekodi-background-browser-worker.mjs'
+      - 'scripts/ekodi-independent-browser.mjs'
+      - 'scripts/ekodi-native-browser-batch.mjs'
+      - 'config/ekodi-browser-independence.json'
+      - 'test/ekodi-browser-independence.test.mjs'
+      - 'test/ekodi-browser-evidence-redaction.test.mjs'
       - 'scripts/validate-background-browser-worker.mjs'
       - 'config/background-browser-worker-policy.json'
       - 'config/surface-system-verification-policy.json'
@@ -120,7 +130,7 @@ jobs:
         run: |
           node --check scripts/ekodi-background-browser-worker.mjs
           node scripts/validate-background-browser-worker.mjs
-          node --test test/background-browser-worker.test.mjs
+          node --test test/background-browser-worker.test.mjs test/ekodi-browser-independence.test.mjs test/ekodi-browser-evidence-redaction.test.mjs
 
   runtime-smoke:
     needs: contract
