@@ -351,6 +351,7 @@ for (const hub of affiliateHubs) {
     PROVIDER_KEYS: esc((hub.providerKeys || []).join(',')),
     MODE: esc(hub.mode || 'shopping'),
     SEARCH_LABEL: esc(hub.searchLabel || '찾는 조건을 입력하세요'),
+    SEARCH_BUTTON: hub.mode === 'stay' ? '숙소 검색' : '상품 검색',
     RESULTS_EYEBROW: esc(hub.resultsEyebrow || 'AFFILIATE RECOMMENDATIONS'),
     RESULTS_TITLE: esc(hub.resultsTitle || '추천'),
     RESULTS_INTRO: esc(hub.resultsIntro || '현재 연결된 제휴망에서 조건에 맞는 후보를 확인합니다.'),
