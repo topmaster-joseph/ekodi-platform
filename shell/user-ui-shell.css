@@ -739,3 +739,54 @@ html[data-ekodi-user-ui] .ekodi-standard-header__row :is(a,button):focus-visible
     overscroll-behavior-x:contain;
   }
 }
+
+
+/* Traffic metrics must work under style-src 'self' CSP: native footers cannot
+   rely on the shared footer script's dynamically inserted inline <style>. */
+.ekodi-footer-traffic[data-ekodi-footer-traffic]{
+  box-sizing:border-box!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex-wrap:wrap!important;
+  column-gap:28px!important;
+  row-gap:10px!important;
+  width:fit-content!important;
+  max-width:100%!important;
+  margin:8px auto 0!important;
+  padding:9px 6px 0!important;
+  border-top:1px solid currentColor!important;
+  color:inherit!important;
+  font-size:12px!important;
+  font-weight:400!important;
+  line-height:1.6!important;
+  word-break:keep-all!important;
+  opacity:.86!important;
+  text-align:center!important;
+}
+.ekodi-footer-traffic[data-ekodi-footer-traffic] .ekodi-footer-traffic__metric{
+  display:inline-flex!important;
+  align-items:baseline!important;
+  gap:6px!important;
+  white-space:nowrap!important;
+}
+.ekodi-footer-traffic[data-ekodi-footer-traffic] .ekodi-footer-traffic__metric strong{
+  font-weight:750!important;
+  color:inherit!important;
+}
+.ekodi-footer-traffic[data-ekodi-footer-traffic] .ekodi-footer-traffic__note{
+  flex-basis:100%!important;
+  margin-top:3px!important;
+  text-align:center!important;
+  font-size:11px!important;
+  opacity:.8!important;
+  white-space:normal!important;
+}
+@media(max-width:390px){
+  .ekodi-footer-traffic[data-ekodi-footer-traffic]{
+    column-gap:20px!important;
+    row-gap:8px!important;
+    padding-inline:0!important;
+    font-size:11.5px!important;
+  }
+}
