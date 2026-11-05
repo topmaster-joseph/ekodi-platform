@@ -19,7 +19,7 @@ test('Saturday RSVP defers form to authenticated state and uses canonical login 
   const js=await source('space/ekodimission-saturday.js');
   assert.match(js,/form\.hidden=!authenticated/);
   assert.match(js,/login\.hidden=authenticated\|\|data\.meeting\.status!=='scheduled'/);
-  assert.match(js,/returnTo\.hash='#saturday'/);
+  assert.match(js,/destination\.hash='#saturday'/);
   assert.match(js,/login\.href='\/auth\/\?site=mission&return_to='/);
   assert.match(js,/if\(!bearer\)\{[\s\S]{0,160}form\.hidden=true/);
   const recurring=await source('space/ekodimission-participation.js');
@@ -31,8 +31,8 @@ test('mission header provides identity next to logout and responds to mobile wid
   const shell=await source('space/ekodimission-shell.js');
   const css=await source('space/ekodimission-shell.css');
   const siteCss=await source('space/ekodimission.css');
-  assert.match(shell,/const accountId=authenticated\?missionAccountLabel\(account\):''/);
-  assert.match(shell,/missionAuthUi\.state\.textContent=accountId/);
+  assert.match(shell,/missionAuthUi\.state\.textContent=authenticated\?missionAccountLabel\(account\):''/);
+  assert.match(shell,/missionAuthUi\.state\.title=authenticated\?'로그인 아이디:'/);
   assert.match(shell,/mission-auth-logout/);
   assert.match(shell,/missionAuthUi\?\.logout\.addEventListener\('click'/);
   assert.match(css,/MISSION-MOBILE-HEADER-20261105/);
