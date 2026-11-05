@@ -6,7 +6,7 @@ function fixture(){
   return {
     observedAt:new Date().toISOString(),
     runtime:{local:{ledgerAvailable:true,tenantIsolationVerified:true,auditAvailable:true,taskQueueAvailable:true,
-      financeReconciled:true,nativeBrowserAvailable:true,recoveryPathAvailable:true}},
+      financeReconciled:true,paymentCoreAvailable:true,backupRestoreVerified:true,nativeBrowserAvailable:true,recoveryPathAvailable:true}},
     external:{aiSupplier:'offline',governmentPortal:'online'},
     approvals:{},
     termination:{unconfirmedCancellationCount:0,fourthChargeRiskCount:0},
