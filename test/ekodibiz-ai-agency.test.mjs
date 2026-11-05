@@ -11,6 +11,7 @@ class MemoryStorage {
 function environment() {
   const data = new MemoryStorage();
   return {
+    __storage:data,
     AGENCY_ADMIN_KEY:'dev-authorization-key-32-characters-minimum-only',
     REVENUE_STORE: {
       idFromName: (name) => name,
@@ -95,4 +96,35 @@ test('wrong-origin submission is rejected and health is read-only',async()=>{
   const healthUrl=new URL('https://ekodi.kr/ekodibiz/api/agency/health');
   const health=await agencyApi(new Request(healthUrl),healthUrl,env);
   assert.equal((await health.json()).realPaymentsEnabled,false);
+});
+
+
+test('service clock starts only after verified supplier activation', async () => {
+  const env=environment();
+  const applied=await request(env,'/api/agency/apply',{...form,email:'clock@example.test'});
+  const receipt={id:applied.body.id,receiptToken:applied.body.receiptToken};
+  await request(env,'/api/agency/admin/quote',{id:receipt.id,feeAmount:12000,supplierAmount:0},adminKey);
+  await request(env,'/api/agency/accept',{...receipt,accepted:true});
+  const internalReq=new Request('https://revenue-store.internal/agency/settle',{
+    method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({id:receipt.id,paymentKey:'test-payment-key',totalAmount:12000})
+  });
+  const internalResult=await agencyStore(internalReq,env.__storage);
+  assert.equal(internalResult.status,200);
+  const before=await request(env,'/api/agency/status',receipt);
+  assert.equal(before.body.record.status,'paid_pending_fulfillment');
+  assert.equal(before.body.record.expiresAt,null);
+  const activated=await request(env,'/api/agency/admin/activate',{id:receipt.id,confirmed:true},adminKey);
+  assert.equal(activated.status,200);
+  assert.equal(activated.body.record.status,'active');
+  assert.ok(Date.parse(activated.body.record.expiresAt)>Date.parse(activated.body.record.activatedAt));
+});
+test('intake limits repeated submissions per email per day',async()=>{
+  const env=environment();
+  for(let i=0;i<3;i++){
+    const applied=await request(env,'/api/agency/apply',{...form,email:'limited@example.test'});
+    assert.equal(applied.status,201);
+  }
+  const denied=await request(env,'/api/agency/apply',{...form,email:'limited@example.test'});
+  assert.equal(denied.status,429);
 });
