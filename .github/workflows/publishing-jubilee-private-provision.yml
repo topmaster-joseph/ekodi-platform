@@ -1,0 +1,106 @@
+name: EKODI Jubilee Protected Private Publishing Provision
+# Orchestrator-approved resource-only creation: no objects, public routes or sales.
+on:
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'EKODI verified official recovery source branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'EKODI verified official recovery task'
+        required: true
+        type: string
+      private_resource_approval:
+        description: 'Exact authorized private infrastructure creation phrase'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-publishing-production
+  cancel-in-progress: false
+
+env:
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
+
+jobs:
+  provision:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      JUBILEE_PRIVATE_RESOURCE_APPROVAL: ${{ inputs.private_resource_approval }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - id: resources
+        name: Provision exact private R2 and D1 resources only (idempotent)
+        run: node scripts/provision-jubilee-private-resources.mjs
+      - name: Install publisher-only additive D1 schema 001 through 004
+        shell: bash
+        env:
+          PRIVATE_D1_ID: ${{ steps.resources.outputs.private_d1_id }}
+        run: |
+          set -euo pipefail
+          test "$JUBILEE_PRIVATE_RESOURCE_APPROVAL" = 'CREATE_EKODI_PRIVATE_PUBLISHING_RESOURCES'
+          [[ "$PRIVATE_D1_ID" =~ ^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$ ]]
+          umask 077
+          config=$(mktemp --tmpdir="$PWD" .jubilee-private-XXXXXX.toml)
+          report=$(mktemp)
+          trap 'rm -f "$config" "$report"' EXIT
+          cat > "$config" <<TOML
+          name = "ekodi-publishing-private-schema-audit"
+          main = "./publishing-worker.js"
+          compatibility_date = "2026-08-24"
+          workers_dev = false
+          [[d1_databases]]
+          binding = "PUBLISHING_PRIVATE_INGEST_DB"
+          database_name = "ekodi-publishing-private-ingest"
+          database_id = "$PRIVATE_D1_ID"
+          TOML
+          for sqlfile in             publishing/human/sql/001_private_scheduled_editions.sql             publishing/human/sql/002_private_release_audit_outbox.sql             publishing/human/sql/003_private_jubilee_ingest_receipts.sql             publishing/human/sql/004_private_jubilee_current_intake_receipts.sql
+          do
+            # No destructive statements or content mutations, even on retries.
+            if sed '/^[[:space:]]*--/d' "$sqlfile" |
+              grep -Eiq '^[[:space:]]*(DROP|DELETE|UPDATE|INSERT|ALTER|REPLACE|ATTACH|PRAGMA)[[:space:]]'; then
+              echo 'PRIVATE_D1_SCHEMA_ONLY_CREATE_ALLOWED'
+              exit 1
+            fi
+            if ! npx --yes wrangler@4.119.0 d1 execute ekodi-publishing-private-ingest               --config "$config" --remote --file "$sqlfile" > "$report" 2>&1; then
+              echo 'PRIVATE_D1_ADDITIVE_MIGRATION_FAILED'
+              exit 1
+            fi
+            echo 'PRIVATE_D1_ADDITIVE_SCHEMA_APPLIED'
+          done
+          npx --yes wrangler@4.119.0 d1 execute ekodi-publishing-private-ingest             --config "$config" --remote --json             --command "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'publishing_%'" > "$report"
+          node --input-type=module - "$report" <<'NODE'
+          import {readFileSync} from 'node:fs';
+          const data=JSON.parse(readFileSync(process.argv[2],'utf8'));
+          const names=new Set((Array.isArray(data)?data.flatMap(x=>x.results||[]):data?.results||[])
+            .map(x=>x.name));
+          const required=[
+            'publishing_private_editions','publishing_release_channel_receipts',
+            'publishing_release_audit','publishing_release_outbox',
+            'publishing_private_handoff_receipts','publishing_private_handoff_audit',
+            'publishing_private_current_receipts','publishing_private_current_audit'];
+          if(!required.every(n=>names.has(n)))throw Error('PRIVATE_D1_SCHEMA_READBACK_INCOMPLETE');
+          console.log('PRIVATE_D1_SCHEMA_READBACK_OK tables='+required.length);
+          NODE
+      - name: Verify existing publishing health and guest isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 15 https://ekodi.kr/publishing/api/workflow/health |
+            node -e 'let s="";process.stdin.on("data",b=>s+=b).on("end",()=>{const h=JSON.parse(s);if(!h.ok||!h.dbConfigured||h.saleActivationEnabled!==false)process.exit(1);console.log("PRIVATE_PROVISION_PUBLIC_SALES_DISABLED")})'
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15             -X POST -H 'Content-Type: application/json' -d '{}'             https://ekodi.kr/publishing/api/workflow/jubilee/register)
+          test "$code" = "401"
+          echo 'PRIVATE_PROVISION_UNAUTHENTICATED_WRITE_401'
