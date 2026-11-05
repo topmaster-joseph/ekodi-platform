@@ -1,14 +1,15 @@
-// TOSS-MALL-UNDERWRITING-001: never advertise an empty sale category.
-// Read-only public listing probes; no payments, mutation, seller identity, or secrets.
+// TOSS-MALL-UNDERWRITING-001 / MALL-CHROME-WIDTH-001:
+// Read-only sale category navigation: identical availability rules on the Mall home,
+// weekly picks and affiliate pages. Never hide a category on incomplete evidence.
 (()=>{
   'use strict';
   const grid=document.querySelector('#grid');
   const filters=document.querySelector('#filters');
-  if(!grid||!filters)return;
   const categories=['general','living','book','gift'];
-  const buttons=[...filters.querySelectorAll('[data-filter]')];
+  const buttons=filters?[...filters.querySelectorAll('[data-filter]')]:[];
   const shortcuts=[...document.querySelectorAll('.mall-category-shortcuts [data-filter-target],.mall-primary-nav [data-filter-target]')];
-  const cards=()=>[...grid.querySelectorAll('[data-product][data-category]')];
+  if(!grid&&!shortcuts.length)return;
+  const cards=()=>grid?[...grid.querySelectorAll('[data-product][data-category]')]:[];
   const isLive=item=>item?.checkoutReady===true||
     (item?.product?.saleType==='affiliate'&&/^https:\/\//i.test(String(item?.product?.affiliateUrl||'')));
   const findButton=category=>buttons.find(b=>b.dataset.filter===category);
@@ -36,19 +37,45 @@
       const url='/ekodimall/api/api/public/products?limit=1&category='+encodeURIComponent(category);
       const response=await fetch(url,{method:'GET',cache:'no-store',credentials:'omit',
         headers:{accept:'application/json'},signal:AbortSignal.timeout(9000)});
-      if(!response.ok)return null; // Unknown is NOT proof of an empty category.
+      if(!response.ok)return null;
       const data=await response.json();
       if(!Array.isArray(data.products))return null;
       return data.products.some(isLive);
-    }catch{return null;} // Do not hide categories on a transient API failure.
+    }catch{return null;} // Read-only API failure is not proof of an empty category.
   };
-  Promise.all(categories.map(probe)).then(availability=>{
+  // On non-home views the static product cards are not in the DOM. Reuse the
+  // build's real sale-ready category set rather than guessing from route names.
+  const staticAvailability=async()=>{
+    if(grid)return {categories:[],hasLocal:false,complete:true};
+    try{
+      const response=await fetch('/ekodimall/category-availability.json',{
+        method:'GET',cache:'no-store',credentials:'omit',headers:{accept:'application/json'},signal:AbortSignal.timeout(9000)
+      });
+      if(!response.ok)return null;
+      const data=await response.json();
+      if(!Array.isArray(data.categories)||typeof data.hasLocal!=='boolean')return null;
+      return {categories:data.categories,hasLocal:data.hasLocal,complete:true};
+    }catch{return null;}
+  };
+  (async()=>{
+    const staticState=await staticAvailability();
+    const availability=await Promise.all(categories.map(probe));
     availability.forEach((available,i)=>{
-      if(available!==null)setVisible(categories[i],available||hasCategory(categories[i]));
+      const category=categories[i];
+      if(available===true||hasCategory(category)||staticState?.categories.includes(category)){
+        setVisible(category,true);
+      }else if(available===false&&staticState?.complete){
+        setVisible(category,false);
+      }
     });
-    if(availability.every(value=>value===false)&&!localCard())setVisible('local',false);
+    const staticLocal=Boolean(staticState?.hasLocal);
+    if(availability.every(value=>value===false)&&!localCard()&&!staticLocal&&staticState?.complete){
+      setVisible('local',false);
+    }
     revealLoaded();
-  });
-  new MutationObserver(revealLoaded).observe(grid,{childList:true,subtree:true});
-  window.addEventListener('ekodi:marketplace-products-loaded',revealLoaded);
+  })();
+  if(grid){
+    new MutationObserver(revealLoaded).observe(grid,{childList:true,subtree:true});
+    window.addEventListener('ekodi:marketplace-products-loaded',revealLoaded);
+  }
 })();

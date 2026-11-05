@@ -81,11 +81,12 @@
     const heading = element('h3');
     const title = element('a', '', book.name); title.href = href; heading.append(title);
     const abstract = safe(book.description);
-    const summary = element('p', 'card-summary', abstract.length > 46 ? abstract.slice(0, 45).trimEnd() + '…' : abstract);
+    const summary = element('p', 'card-summary', abstract.length > 34 ? abstract.slice(0, 33).trimEnd() + '…' : abstract);
     const meta = element('div', 'meta');
     const amount = Number(book.price);
-    const priceLabel = Number.isFinite(amount) && amount > 0 ? new Intl.NumberFormat('ko-KR').format(amount) + '원 · ' : '';
-    const status = element('span', 'status', priceLabel + '판매 중');
+    // Only show the amount returned by a verified live Books quote, never invent a list price.
+    const priceLabel = Number.isFinite(amount) && amount > 0 ? new Intl.NumberFormat('ko-KR').format(amount) + '원' : '가격 확인';
+    const status = element('span', 'status', priceLabel + ' · 판매 중');
     const more = element('a', 'smallbtn', '자세히'); more.href = href;
     meta.append(status, more); body.append(store, heading, summary, meta);
     article.append(thumb, body);
@@ -98,13 +99,30 @@
       const [mirror, approvals] = await Promise.all([get(mirrorUrl), get(BOOKS_API + '/public/approvals')]);
       const approved = new Set((Array.isArray(approvals?.approvals) ? approvals.approvals : [])
         .map(record => record.bookId).filter(validId));
-      const pending = (Array.isArray(mirror?.products) ? mirror.products : [])
-        .filter(book => validId(book?.bookId) && book.saleReady !== true &&
-          approved.has(book.bookId) && /^book-[a-z0-9-]+$/.test(safe(book.slug)));
-      await Promise.all(pending.map(async book => {
+      const candidates = (Array.isArray(mirror?.products) ? mirror.products : [])
+        .filter(book => validId(book?.bookId) &&
+          (book.saleReady === true || approved.has(book.bookId)) &&
+          /^book-[a-z0-9-]+$/.test(safe(book.slug)));
+      await Promise.all(candidates.map(async book => {
+        // A static bookstore card may predate the quote price; refresh its label
+        // from the same live file- and checkout-ready quote used for purchase.
+        const existing = grid.querySelector('[data-product="' +
+          safe(book.id).replace(/[^a-zA-Z0-9_-]/g, '') + '"]');
+        const label = existing?.querySelector('.meta .status');
         try {
-          if (readyQuote(await quoteFor(book.bookId), book.bookId)) released.set(book.bookId, book);
-        } catch { /* Missing evidence is never treated as a sale. */ }
+          const quote = await quoteFor(book.bookId);
+          if (!readyQuote(quote, book.bookId)) {
+            if (label) label.textContent = '가격 확인 · 판매 상태 확인 필요';
+            return;
+          }
+          const verifiedAmount = Number(quote.price.amount);
+          if (label) label.textContent = new Intl.NumberFormat('ko-KR').format(verifiedAmount) + '원 · 판매 중';
+          if (!existing && book.saleReady !== true) {
+            released.set(book.bookId, { ...book, price: verifiedAmount });
+          }
+        } catch {
+          if (label) label.textContent = '가격 확인 · 판매 상태 확인 필요';
+        }
       }));
     } catch { released = new Map(); } // Fail closed on transient source errors.
     grid.querySelectorAll('[data-bookstore-runtime-id]').forEach(card => card.remove());

@@ -3,7 +3,7 @@ export function renderMallHeader({publicPrefix='',home=false,sellerHref}={}) {
  const prefix=String(publicPrefix).replace(/\/+$/,'');
  const root=prefix+'/';
  const href=hash=>home?hash:root+hash;
- const link=(hash,label,filter)=>'<a href="'+(home?hash:(filter?root+'?category='+encodeURIComponent(filter)+'#shop':root+hash))+'"'+(home&&filter?' data-filter-target="'+filter+'"':'')+'>'+label+'</a>';
+ const link=(hash,label,filter)=>'<a href="'+(home?hash:(filter?root+'?category='+encodeURIComponent(filter)+'#shop':root+hash))+'"'+(filter?' data-filter-target="'+filter+'"':'')+'>'+label+'</a>';
  return '<header class="header buyer-header mall-header"><div class="mall-header-inner">'+
  '<div class="mall-header-top">'+
  '<a class="brand" href="'+href('#top')+'" aria-label="에코디몰 홈"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>'+
@@ -16,5 +16,5 @@ export function renderMallHeader({publicPrefix='',home=false,sellerHref}={}) {
  link('#shop','로컬·특산물','local')+link('#shop','식품·건강','general')+
  link('#shop','생활·가전','living')+link('#shop','책·배움','book')+
  link('#shop','선물·기념품','gift')+link('#recommend','AI 추천')+
- '</nav></div></header>'+(!home?'<script>(function(){var p=location.pathname,nav=document.querySelector(".mall-primary-nav");if(!nav)return;var a=Array.from(nav.querySelectorAll("a[href]")).find(function(link){return p.includes("/picks")?link.getAttribute("href").endsWith("/picks"):p.includes("/coupang/")?link.getAttribute("href").endsWith("/coupang/"):p.includes("/travel/")?link.getAttribute("href").endsWith("/travel/stay/"):false;});if(a)a.setAttribute("aria-current","page");})();</script>':'');
+ '</nav></div></header>'+(!home?'<script defer src="/ekodimall/assets/category-visibility.js"></script><script>(function(){var p=location.pathname,nav=document.querySelector(".mall-primary-nav");if(!nav)return;var a=Array.from(nav.querySelectorAll("a[href]")).find(function(link){return p.includes("/picks")?link.getAttribute("href").endsWith("/picks"):p.includes("/coupang/")?link.getAttribute("href").endsWith("/coupang/"):p.includes("/travel/")?link.getAttribute("href").endsWith("/travel/stay/"):false;});if(a)a.setAttribute("aria-current","page");})();</script>':'');
 }
