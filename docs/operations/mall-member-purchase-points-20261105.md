@@ -21,3 +21,9 @@
 - 이 변경은 기존 `ekodi-mall` D1 `0028_member_purchase_point_evidence.sql` 마이그레이션을 스테이징에 먼저 적용하고, 합성 주문·결제·환불 및 중복방지·크로스회원 읽기차단을 검사한다.
 - 토스 실제 결제 승인·프로덕션 시험 주문·고객 연락처 사용 없음. 외부 공급처 PII 전송, 자동발주, 임의 실환불·정산실행 불변.
 - protected main merge 뒤 운영 API/Pages 배포를 확인하고 `/ekodimall/api/api/public/health`의 `memberPurchasePoints` 상태와 첫화면 문구를 검증한다.
+
+## 보호된 Orchestrator 공식 작업 브랜치 검증 근거
+- Source PR #8335 (SHA `7c65c00118ec9456990790ec388caa9f56c12c78`) was automatically superseded **without merge** by EKODI Orchestrator recovery PR #8336 on `ai/chatgpt/orch_recovery_7c65c00118ec9456990790ec388caa9f`. This owner-authored documentation checkpoint reruns authentic PR workflow checks after bot-created `action_required` results; it does **not** bypass required CI, policy, review or production safeguards.
+- Live canonical storefront and `/ekodimall/coupang/` inspected in Opera on 2026-11-05; Coupang-priced offers can be purchased on the **external merchant** site. An empty first-party D1 `/api/api/public/products` does not mean there are zero sellable items across the whole shopping ecosystem.
+- Read-only Supabase catalog queries on both `renzehysxirjilvdxacv` (production) and `lxcxwbdwwojjkgybbqii` (development) confirmed no `ekodi_point_*` tables in production, while development has the wallet and append-only ledger. Therefore member 1% **evidence** is recorded with `spendable=false`, and the central points feature cannot be asserted complete.
+- New isolated D1 `0028` migration precedes the worker deploy; synthetic scenario tests cover verified JWT ownership, anonymous checkout, service-only Toss `DONE`, idempotent duplicate capture, partial/full refunds and rehearsal bypass. No production live charge, seller payout, public PII disclosure or points wallet mutation.
