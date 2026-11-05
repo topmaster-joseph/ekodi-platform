@@ -275,12 +275,63 @@ $('organizationForm')?.addEventListener('submit',async event=>{
 });
 
 const moneyText=value=>new Intl.NumberFormat('ko-KR').format(Number(value||0))+'원';
-function resetFinance(){const form=$('financeForm');form.reset();form.elements.id.value='';form.elements.type.value='income';form.elements.visible.checked=true;text($('financeFormTitle'),'회계내역 추가');text($('financeMessage'),'')}
+/** Import reads a local administrator-owned file; no private line items live in public source. */
+function financeImportEntries(report){
+  const isWon=n=>Number.isSafeInteger(n)&&n>=0&&n<=1e12;
+  const isDate=s=>typeof s==='string'&&/^\\d{4}-\\d{2}-\\d{2}$/.test(s)&&Number.isFinite(Date.parse(s+'T00:00:00Z'));
+  const id=String(report?.reportId||'').trim();
+  if(!/^[a-zA-Z0-9_-]{8,110}$/.test(id)||!isDate(report?.asOfDate))throw Error('보고서 번호 또는 기준일이 올바르지 않습니다.');
+  const income=report.income,expense=report.expenses;
+  if(!Array.isArray(income)||!Array.isArray(expense)||income.length+expense.length>100||!income.length||!expense.length)throw Error('수입·지출 내역이 올바르지 않습니다.');
+  const sum=items=>items.reduce((total,row)=>total+Number(row.amount),0);
+  if(![report.previousBalance,report.totalIncome,report.totalExpense,report.closingBalance].every(isWon)||
+    ![...income,...expense].every(row=>isWon(row?.amount)&&String(row?.description||'').trim().length>0)||
+    sum(income)!==report.totalIncome||sum(expense)!==report.totalExpense||
+    report.previousBalance+report.totalIncome-report.totalExpense!==report.closingBalance)throw Error('원본 금액과 총계·이월잔액이 일치하지 않습니다.');
+  if(!income.every(row=>Number.isSafeInteger(row.count)&&row.count>0&&row.count<=500))throw Error('수입 집계 건수가 올바르지 않습니다.');
+  if(!expense.every(row=>isDate(row.date))||!income.every(row=>!row.date||isDate(row.date)))throw Error('거래일이 올바르지 않습니다.');
+  const event='비대위 회계보고 '+report.asOfDate;
+  const makeRow=(row,type,index)=>{
+    const token=(type==='income'?'수입':'지출')+'-'+(index+1),missingDate=!row.date;
+    const sourceNote=[type==='income'?'집계 '+row.count+'건':'지출 1건',missingDate?'원본에 실제 거래일 미기재: 관리용 기준일로 기록':'',
+      String(row.note||''),index===0&&type==='income'?'원본 표제 기간: '+String(report.originalHeaderPeriod||''):''].filter(Boolean).join(' / ');
+    return{date:row.date||report.asOfDate,type,amount:row.amount,purpose:String(row.description).trim().slice(0,500),
+      event,evidenceStatus:'none',note:('보고서ID:'+id+'; 항목:'+token+'; '+sourceNote).slice(0,1000),visible:false,token};
+  };
+  return{reportId:id,rows:[...income.map((row,i)=>makeRow(row,'income',i)),...expense.map((row,i)=>makeRow(row,'expense',i))],
+    previousBalance:report.previousBalance,totalIncome:report.totalIncome,totalExpense:report.totalExpense,closingBalance:report.closingBalance};
+}
+$('financeImportButton')?.addEventListener('click',async()=>{
+  const btn=$('financeImportButton'),message=$('financeImportMessage'),file=$('financeImportFile')?.files?.[0];
+  if(!state.me?.permissions?.finance){text(message,'회계 관리자 권한이 필요합니다.');return}
+  if(!file||file.size>200000){text(message,'유효한 JSON 파일(200KB 이하)을 선택하세요.');return}
+  let report;
+  try{report=financeImportEntries(JSON.parse(await file.text()))}catch(e){text(message,e.message||'파일 검증 실패');return}
+  if(!confirm('검증된 '+report.rows.length+'개 항목을 관리자 전용 회계 원장에 등록할까요? 공개 화면에는 표시되지 않습니다.'))return;
+  btn.disabled=true;
+  let created=0,skipped=0;
+  try{
+    await loadFinance();
+    for(const row of report.rows){
+      const marker='보고서ID:'+report.reportId+'; 항목:'+row.token+';';
+      if(state.finance.some(x=>String(x.note||'').includes(marker))){skipped++;continue}
+      text(message,'원본 회계내역 등록 '+(created+skipped+1)+'/'+report.rows.length);
+      const {token,...payload}=row;
+      await api('/api/seonammedi/admin/finance',{method:'POST',body:JSON.stringify(payload)});
+      created++;
+    }
+    await loadFinance();
+    text(message,'관리자 전용 '+created+'건 등록, 기존 '+skipped+'건 제외. 보고서 대조: 이월잔액 '+moneyText(report.previousBalance)+' + 수입 '+moneyText(report.totalIncome)+' - 지출 '+moneyText(report.totalExpense)+' = 잔액 '+moneyText(report.closingBalance));
+  }catch(error){await loadFinance().catch(()=>{});text(message,'부분 등록됨('+created+'건): '+(error.message||'오류')+'. 동일 파일을 다시 선택하면 기등록 건을 제외합니다.')}
+  finally{btn.disabled=false}
+});
+
+function resetFinance(){const form=$('financeForm');form.reset();form.elements.id.value='';form.elements.type.value='income';form.elements.visible.checked=false;text($('financeFormTitle'),'회계내역 추가');text($('financeMessage'),'')}
 function editFinance(item){const form=$('financeForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.type.value=item.type||'income';form.elements.amount.value=String(item.amount||0);form.elements.purpose.value=item.purpose||'';form.elements.event.value=item.event||'';form.elements.evidenceStatus.value=item.evidenceStatus||'none';form.elements.note.value=item.note||'';form.elements.visible.checked=Boolean(item.visible);text($('financeFormTitle'),'회계내역 수정');showPanel('finance')}
 async function deleteFinance(item){if(!confirm('이 회계내역을 삭제할까요?'))return;try{await api('/api/seonammedi/admin/finance/'+item.id,{method:'DELETE'});await loadFinance();text($('financeMessage'),'삭제했습니다.')}catch(error){text($('financeMessage'),error.message)}}
 function renderFinance(){
   const host=$('financeList');host.replaceChildren();let income=0,expense=0;for(const item of state.finance){if(item.type==='income')income+=Number(item.amount||0);else expense+=Number(item.amount||0)}
-  text($('financeSummary'),'내부합계 · 수입 '+moneyText(income)+' · 지출 '+moneyText(expense)+' · 잔액 '+moneyText(income-expense));
+  text($('financeSummary'),'등록된 거래 합계 · 수입 '+moneyText(income)+' · 지출 '+moneyText(expense)+' · 당기 수지차 '+moneyText(income-expense)+' (이월잔액 미포함)');
   if(!state.finance.length){host.append(empty('등록된 회계내역이 없습니다.'));return}
   for(const item of state.finance){const article=document.createElement('article');article.className='item';const head=document.createElement('div');head.className='item-head';const left=document.createElement('div');const title=document.createElement('div');title.className='item-title';title.textContent=(item.type==='income'?'수입 ':'지출 ')+moneyText(item.amount)+' · '+item.purpose;const meta=document.createElement('div');meta.className='item-meta';meta.textContent=[item.date,item.event,item.evidenceStatus].filter(Boolean).join(' · ');left.append(title,meta);const flags=document.createElement('div');flags.append(tag(item.visible?'공개':'비공개',item.visible?'live':''));head.append(left,flags);article.append(head);if(item.note){const p=document.createElement('p');p.className='item-body';p.textContent=item.note;article.append(p)}const actions=document.createElement('div');actions.className='item-actions';actions.append(button('수정',()=>editFinance(item)),button('삭제',()=>deleteFinance(item),'danger'));article.append(actions);host.append(article)}
 }
