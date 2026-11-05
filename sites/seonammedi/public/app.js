@@ -109,7 +109,7 @@ let publicFinanceEntries=[];
 let publicFinanceDisclosure={startDate:'2026-10-29',endDate:'2026-11-03',income:8900333,expense:10672100,balance:14051738};
 function formatFinanceDisclosureDate(iso){return String(iso).replaceAll('-','.')+'.'}
 function renderFinanceDisclosure(data){
-  if(!data||!/^\\d{4}-\\d{2}-\\d{2}$/.test(data.startDate||'')||!/^\\d{4}-\\d{2}-\\d{2}$/.test(data.endDate||''))return;
+  if(!data||!/^\d{4}-\d{2}-\d{2}$/.test(data.startDate||'')||!/^\d{4}-\d{2}-\d{2}$/.test(data.endDate||''))return;
   if(!['income','expense','balance'].every(key=>Number.isSafeInteger(data[key])&&data[key]>=0))return;
   publicFinanceDisclosure={startDate:data.startDate,endDate:data.endDate,income:data.income,expense:data.expense,balance:data.balance};
   const values={
@@ -1691,7 +1691,8 @@ function renderPublicAdminControls(){
   if(admin.has('timeline')||admin.has('content'))bindPublicMonitorContentAdmin();
   if(admin.has('channels'))bindPublicChannelAdmin();
   if(admin.has('voices'))window.dispatchEvent(new CustomEvent('seonammedi:voice-inline-admin-authorized'));
-  if(admin.has('finance')){bindPublicFinanceAdmin();bindFinanceDisclosureEditor();}
+  if(admin.has('finance'))bindPublicFinanceAdmin();
+  if(admin.has('finance'))bindFinanceDisclosureEditor();
   if(admin.has('notices')){const noticeButton=el('noticeWriteButton');if(noticeButton)noticeButton.textContent='공지 작성';loadNotices();}
 }
 let publicAdminInitPromise=null;
