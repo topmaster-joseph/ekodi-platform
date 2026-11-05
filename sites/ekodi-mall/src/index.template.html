@@ -55,7 +55,16 @@
       <a href="#recommend"><span class="mall-shortcut-icon">✦</span><strong>AI 맞춤 추천</strong></a>
     </section>
     <div class="filters" id="filters">{{FILTERS}}</div>
-    <section class="shop" id="shop"><div class="heading"><div><p class="eyebrow">ALL MARKET</p><h2>전체상품</h2><p>에코디 큐레이션, 공개 스토어 상품, 개인상품을 한 시장에서 검색합니다. 판매 주체와 거래 상태는 상품마다 분명하게 표시합니다.</p><p class="mall-merchant-review-note">실제 판매 가능한 상품만 목록에 표시합니다. 판매 가능한 상품이 없는 분야는 안내만 제공하며, 외부 제휴상품의 주문·결제·반품은 해당 판매처가 처리합니다. 검증된 직접판매 상품의 상세화면에서는 회원가입 없이 비회원 카드결제를 이용할 수 있습니다. 판매 준비 중인 상품은 결제 버튼이 표시되지 않습니다.</p><p class="mall-member-points-policy">에코디몰 직접판매 상품은 비회원도 구매할 수 있습니다. 로그인 회원의 결제가 실제 확인되면 결제금액의 1% 포인트 적립 증빙을 기록합니다. 현재 포인트는 운영원장 개통 전이므로 사용할 수 없습니다. 쿠팡·여행 등 외부 제휴처 결제는 적립 대상에서 제외됩니다.</p></div><input class="search" id="search" type="search" placeholder="상품·판매자·스토어·키워드 검색" aria-label="상품 검색"></div><div class="grid" id="grid">{{PRODUCTS}}</div><div class="empty" id="empty" hidden>선택한 분야에 판매 가능한 상품이 없거나 검색 조건에 맞는 상품이 없습니다. 준비 중인 상품은 결제할 수 없습니다.</div></section>
+    <section class="shop" id="shop">
+      <section id="mallSearchResults" class="mall-search-results" aria-labelledby="mallSearchTitle" hidden>
+        <div class="mall-search-heading">
+          <p class="eyebrow">EKODI MALL · ALL CATEGORIES</p>
+          <h2 id="mallSearchTitle">통합 상품검색</h2>
+          <p id="mallSearchStatus" role="status" aria-live="polite">상품을 찾고 있습니다.</p>
+        </div>
+        <div id="mallSearchGroups" class="mall-search-groups"></div>
+      </section>
+      <div class="heading"><div><p class="eyebrow">ALL MARKET</p><h2>전체상품</h2><p>에코디 큐레이션, 공개 스토어 상품, 개인상품을 한 시장에서 검색합니다. 판매 주체와 거래 상태는 상품마다 분명하게 표시합니다.</p><p class="mall-merchant-review-note">실제 판매 가능한 상품만 목록에 표시합니다. 판매 가능한 상품이 없는 분야는 안내만 제공하며, 외부 제휴상품의 주문·결제·반품은 해당 판매처가 처리합니다. 검증된 직접판매 상품의 상세화면에서는 회원가입 없이 비회원 카드결제를 이용할 수 있습니다. 판매 준비 중인 상품은 결제 버튼이 표시되지 않습니다.</p><p class="mall-member-points-policy">에코디몰 직접판매 상품은 비회원도 구매할 수 있습니다. 로그인 회원의 결제가 실제 확인되면 결제금액의 1% 포인트 적립 증빙을 기록합니다. 현재 포인트는 운영원장 개통 전이므로 사용할 수 없습니다. 쿠팡·여행 등 외부 제휴처 결제는 적립 대상에서 제외됩니다.</p></div><input class="search" id="search" type="search" placeholder="상품·판매자·스토어·키워드 검색" aria-label="상품 검색"></div><div class="grid" id="grid">{{PRODUCTS}}</div><div class="empty" id="empty" hidden>선택한 분야에 판매 가능한 상품이 없거나 검색 조건에 맞는 상품이 없습니다. 준비 중인 상품은 결제할 수 없습니다.</div></section>
     <section class="mall-editorial" aria-label="테마별 쇼핑">
       <a class="mall-editorial-card mall-editorial-local" href="#local"><span class="mall-editorial-kicker">LOCAL & COMMUNITY</span><strong>지역의 가치를 잇는<br>착한 소비</strong><small>로컬 상품 보기 →</small></a>
       <a class="mall-editorial-card mall-editorial-travel" href="/travel/stay/"><span class="mall-editorial-kicker">TRAVEL & STAY</span><strong>일상을 벗어난<br>특별한 여행</strong><small>여행·숙소 찾기 →</small></a>
