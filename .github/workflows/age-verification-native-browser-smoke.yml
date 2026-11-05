@@ -15,12 +15,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: ekodi-age-native-smoke-\${{ github.ref }}-\${{ github.event_name }}
+  group: ekodi-age-native-smoke-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
   age-verification:
-    name: Native Chromium / \${{ matrix.profile }}
+    name: Native Chromium / ${{ matrix.profile }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     strategy:
@@ -47,7 +47,7 @@ jobs:
       - name: Generate read-only age verification browser task
         shell: bash
         env:
-          DEVICE_PROFILE: \${{ matrix.profile }}
+          DEVICE_PROFILE: ${{ matrix.profile }}
         run: |
           mkdir -p artifacts
           node - <<'NODE'
@@ -84,7 +84,7 @@ jobs:
           jq -e '[.results[] | select(.type == "assertText" and .matched == true)] | length == 1' "$result"
           jq -e '[.results[] | select(.type == "snapshot" and .horizontalOverflow == false and ((.bodyText // "") | contains("성인인증 서비스 연동을 준비 중입니다")))] | length >= 1' "$result"
           jq -e '(.pageErrors | length) == 0 and (.consoleErrors | length) == 0 and (.blockedMutations | length) == 0 and (.httpErrorResponses | length) == 0 and (.screenshots | length) >= 1' "$result"
-          echo "## EKODI adult verification · \${{ matrix.profile }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "## EKODI adult verification · ${{ matrix.profile }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Native Chromium: success (read only)" >> "$GITHUB_STEP_SUMMARY"
           echo "- Dynamic disabled state: confirmed" >> "$GITHUB_STEP_SUMMARY"
           echo "- Horizontal overflow / page errors / console errors: none" >> "$GITHUB_STEP_SUMMARY"
@@ -105,6 +105,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: age-verification-native-\${{ matrix.profile }}-\${{ github.run_id }}
+          name: age-verification-native-${{ matrix.profile }}-${{ github.run_id }}
           path: artifacts/age-native
           retention-days: 7
