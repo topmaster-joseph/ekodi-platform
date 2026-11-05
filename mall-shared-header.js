@@ -12,7 +12,7 @@ export function renderMallHeader({publicPrefix='',home=false,sellerHref}={}) {
  (home?'<button class="icon" id="wishBtn" aria-label="관심상품 보기">♡ <span id="wishCount">0</span></button>':'<a class="icon" href="'+root+'?wishlist=1" aria-label="관심상품 보기">♡ <span id="wishCount">0</span></a>')+
  '<a class="seller-mini" href="'+(sellerHref||root+'seller/')+'">판매하기</a></div></div>'+
  '<nav class="mall-primary-nav" aria-label="쇼핑 카테고리">'+
- link('#shop','전체상품','all')+'<a href="'+prefix+'/picks">이번 주 추천</a>'+'<a href="'+prefix+'/coupang/">쿠팡추천몰</a>'+'<a href="'+prefix+'/travel/stay/">여행·레저</a>'+
+ link('#shop','전체상품','all')+'<a href="'+prefix+'/picks">이번 주 추천</a>'+'<a href="'+prefix+'/coupang/">쿠팡제휴몰</a>'+'<a href="'+prefix+'/travel/stay/">여행·레저</a>'+
  link('#shop','로컬·특산물','local')+link('#shop','식품·건강','general')+
  link('#shop','생활·가전','living')+link('#shop','책·배움','book')+
  link('#shop','선물·기념품','gift')+
