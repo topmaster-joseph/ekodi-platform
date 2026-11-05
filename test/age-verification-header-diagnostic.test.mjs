@@ -1,35 +1,26 @@
-import { test } from 'node:test';
+import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-// Read-only production protocol diagnosis. Draft PR only; never ship this test into main.
-// No cookies, credentials, response bodies, private user data or secrets are logged.
-test('read-only EKODI age verification production response headers', async () => {
-  const paths = [
-    '/verify/adult/?site=singles',
-    '/verify/adult/styles.css',
-    '/verify/adult/app.js',
-    '/verify/adult/client.js',
-    '/singles/vendor/supabase-js-2.117.3.umd.js',
-    '/api/age-verification/config?site=singles'
-  ];
-  for(const path of paths) {
-    let response;
+// Intentionally failing draft-only diagnostics. NEVER MERGE. No secrets or PII.
+for (const [label, path] of [
+  ['HTML', '/verify/adult/?site=singles'],
+  ['CSS', '/verify/adult/styles.css'],
+  ['ESM', '/verify/adult/app.js'],
+  ['CLIENT', '/verify/adult/client.js']
+]) {
+  test('READ_ONLY_AGE_HEADER_DIAGNOSTIC_' + label, async () => {
     try {
-      response = await fetch('https://ekodi.kr' + path, {
-        redirect:'manual',
-        headers: { 'cache-control': 'no-cache', 'user-agent': 'ekodi-header-diagnostic-ci' },
-        signal: AbortSignal.timeout(18000)
+      const r = await fetch('https://ekodi.kr' + path, {
+        headers: {'Cache-Control':'no-cache','User-Agent':'ekodi-public-mime-audit'},
+        redirect:'manual',signal:AbortSignal.timeout(12000)
       });
-    } catch(error) {
-      console.log('EKODI_AGE_HEADER_PROBE', path, 'fetch_error=' + String(error?.cause?.code || error?.name || 'unknown'));
-      continue;
+      const keys=['content-type','content-security-policy','x-content-type-options','x-ekodi-route',
+        'x-ekodi-canonical-surface','cache-control','x-robots-tag','location'];
+      const summary=keys.map(k=>k+'='+JSON.stringify(r.headers.get(k))).join(' ');
+      assert.fail('PROTOCOL '+label+' HTTP '+r.status+' '+summary);
+    } catch (e) {
+      if (String(e.message||'').startsWith('PROTOCOL ')) throw e;
+      assert.fail('PROTOCOL '+label+' FETCH_ERROR '+String(e.cause?.code || e.name || e.message).slice(0,150));
     }
-    const headers = Object.fromEntries([
-      'content-type','content-security-policy','x-content-type-options',
-      'x-ekodi-route','x-ekodi-canonical-surface','cache-control',
-      'x-robots-tag', 'location'
-    ].map(k=>[k, response.headers.get(k)||'']));
-    console.log('EKODI_AGE_HEADER_PROBE', JSON.stringify({path,status:response.status,headers}));
-    assert.ok(response.status>=200 && response.status<600);
-  }
-});
+  });
+}
