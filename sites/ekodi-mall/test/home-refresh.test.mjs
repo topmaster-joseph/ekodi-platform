@@ -93,14 +93,21 @@ test('home and affiliate travel page use the same generated buyer header', () =>
   for (const html of [template,affiliate]) assert.ok(html.includes('{{MALL_HEADER}}'));
   assert.match(build, /renderMallHeader\(\{ home: true/);
   assert.match(build, /renderMallHeader\(\{ home: false/);
-  for (const label of ['전체상품','여행·레저','쿠팡추천몰','로컬·특산물','식품·건강','생활·가전','책·배움','선물·기념품','이번 주 추천']) assert.ok(mallHeader.includes(label));
+  for (const label of ['전체상품','여행·레저','쿠팡제휴몰','로컬·특산물','식품·건강','생활·가전','책·배움','선물·기념품','이번 주 추천']) assert.ok(mallHeader.includes(label));
   assert.ok(!mallHeader.includes('>AI 추천</a>'));
   assert.match(affiliate, /assets\/home-refresh\.css/);
 });
 
-test('global search searches marketplace and live affiliate curator instead of a dead local-only filter', () => {
-  assert.match(js, /EkodiContextCurator\.recommend\(term, false\)/);
-  assert.match(js, /EkodiContextCurator\?\.recommend\(incomingQuery, false\)/);
+test('global search groups sale-ready direct and verified affiliate products while empty search resets', () => {
+  assert.match(js, /EKODI-MALL-UNIFIED-SEARCH-001/);
+  assert.match(js, /mallSearchResults/);
+  assert.match(js, /mallSearchGroups/);
+  assert.match(js, /category-grouped|byCategory/);
+  assert.match(js, /\!term[\s\S]*navigate\('#shop', 'all'\)/);
+  assert.match(js, /let applyingRoute = false/);
+  assert.match(js, /if \(applyingRoute \|\| document\.body\.dataset\.mallView !== 'catalog'\) return/);
+  assert.match(js, /affiliate\/public\/products/);
+  assert.match(js, /api\/public\/products\?limit=60/);
   assert.match(js, /if \(!search \|\| !shop\) return;\s*event\.preventDefault\(\)/);
   assert.match(mallHeader, /role="search"/);
   assert.match(mallHeader, /method="get"/);
@@ -161,4 +168,24 @@ test('book cards use concise copy and verified prices or an explicit unknown-pri
   assert.match(books, /const quote = await quoteFor\(book\.bookId\)/);
   assert.match(css, /\.card\[data-category="book"\] \.card-summary/);
   assert.match(css, /-webkit-line-clamp:2/);
+});
+
+test('canonical Mall search groups and card details are rendered in the central content', () => {
+  assert.match(template, /id="mallSearchResults"/);
+  assert.match(template, /id="mallSearchGroups"/);
+  assert.match(template, /id="mallSearchStatus"/);
+  assert.match(css, /\.mall-search-cards\{display:grid/);
+  assert.match(css, /body\[data-mall-search="true"\] #shop>/);
+  const affiliate = readFileSync(new URL('../src/affiliate-hub.template.html', import.meta.url), 'utf8');
+  assert.match(affiliate, /id="affiliateProductDialog"/);
+  assert.match(affiliate, /id="affiliateDetailContent"/);
+  const affiliateScript = readFileSync(new URL('../assets/affiliate-hub.js', import.meta.url), 'utf8');
+  assert.match(affiliateScript, /showDetail\(item\)/);
+  assert.match(affiliateScript, /affiliate-card-image/);
+  assert.match(affiliateScript, /safeAffiliateHttps/);
+  assert.match(affiliateScript, /affiliateProviderMatches/);
+  assert.match(mallHeader, /쿠팡제휴몰/);
+  const affiliateCss = readFileSync(new URL('../assets/affiliate-hub.css', import.meta.url), 'utf8');
+  assert.match(affiliateCss, /affiliate-detail-dialog/);
+  assert.match(affiliateCss, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
 });
