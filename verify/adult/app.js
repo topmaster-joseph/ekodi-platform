@@ -57,6 +57,10 @@ async function main() {
   byId('purpose').textContent = cfg.policy === 'youth_protection_19'
     ? '확인 기준: 청소년보호법상 19세가 되는 해의 1월 1일부터.'
     : '확인 기준: 민법상 만 19세 생일이 지난 사람.';
+  if (cfg.provider === 'kg-inicis-unified') {
+    startButton.textContent = 'KG이니시스 통합인증 시작';
+    byId('purpose').textContent += ' · 이용 가능한 민간 인증수단은 공급사 승인 범위에 따라 표시됩니다.';
+  }
   const createClient = window.supabase?.createClient;
   if (typeof createClient !== 'function') { show('로그인 연결 모듈을 불러오지 못했습니다.', 'error'); return; }
   const client = createClient(cfg.auth.supabaseUrl, cfg.auth.publishableKey, {
