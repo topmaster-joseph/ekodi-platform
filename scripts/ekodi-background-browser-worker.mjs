@@ -77,6 +77,11 @@ function redactNativeDiagnostic(value) {
     .replace(/\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi,'[redacted-email]')
     .replace(/(?:\+82[\s-]?)?0?1\d[\s-]?\d{3,4}[\s-]?\d{4}/g,'[redacted-phone]');
 }
+export function sanitizeNativeBrowserFailure(error) {
+  const code=/^[A-Z][A-Z0-9_]{2,64}$/.test(String(error?.code||''))?error.code:'BROWSER_WORKER_FAILED';
+  return sanitizeNativeBrowserReceipt({ok:false,code,message:clean(error?.message||'Browser task failed',500),completedAt:now()});
+}
+
 export function sanitizeNativeBrowserReceipt(report) {
   const urlFields=new Set(['url','finalUrl','path','targetUrl']);
   const visit=(value,key='',depth=0)=>{
@@ -399,7 +404,7 @@ const invoked=process.argv[1]&&path.resolve(process.argv[1])===path.resolve(file
 if(invoked){
   const task=await readTask();
   runTask(task).then(result=>console.log(JSON.stringify(result))).catch(error=>{
-    console.error(JSON.stringify(sanitizeNativeBrowserReceipt({ok:false,code:/^[A-Z][A-Z0-9_]{2,64}$/.test(String(error?.code||''))?error.code:'BROWSER_WORKER_FAILED',message:clean(error?.message||'Browser task failed',500),completedAt:now()})));
+    console.error(JSON.stringify(sanitizeNativeBrowserFailure(error)));
     process.exitCode=1;
   });
 }
