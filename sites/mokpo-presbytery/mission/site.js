@@ -209,8 +209,13 @@
   function note(e){var b=document.getElementById('roleBar');if(b){var n=b.querySelector('.rp-alert')||b.appendChild(h('div',{class:'wrap rp-alert'}));n.textContent=explain(e);}}
   function safeConfirm(q){try{return window.confirm(q);}catch(e){return true;}}
 
+  function loginPageNotice(){
+    var lg=document.getElementById('vwLogin');if(!lg||!role)return;
+    var wrap=lg.parentNode;if(!wrap||wrap.querySelector('.rp-signed'))return;
+    wrap.insertBefore(h('div',{class:'lg-card rp-signed'},h('h2',{text:'이미 로그인되어 있습니다'}),h('p',{class:'note',text:roleText()[0]+' · '+roleText()[1]}),h('a',{class:'vw-btn',href:'/mokpo-presbytery/mission/#intro',text:'선교부 화면으로'})),wrap.firstChild);
+  }
   function render(){
-    header();
+    header();loginPageNotice();
     if(!role||role==='outsider'){
       var all=document.querySelectorAll('.role-panel');for(var i=0;i<all.length;i++)all[i].remove();
       if(role==='outsider')panel('intro','권한 확인',[h('p',{class:'note',text:'로그인한 계정은 목포노회 선교부 회원으로 등록되어 있지 않습니다. 선교부 서기에게 등록을 요청해 주세요.'})]);

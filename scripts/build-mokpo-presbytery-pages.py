@@ -17,6 +17,9 @@ SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co'
 SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_'
 POLICY_PATH = '/mokpo-presbytery/mission/policy-council-2026/'
 VIEWER_LOGIN = '/mokpo-presbytery/mission/viewer/'
+# Same login state on every 선교부 page: role bar + header 로그인/로그아웃 (site.js).
+ROLE_BAR = f'<div id="roleBar" class="rolebar" hidden data-supabase="{SUPABASE_URL}" data-key="{SUPABASE_PUBLISHABLE_KEY}" data-slug="mokpo-mission"></div>'
+ROLE_SCRIPTS = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>\n<script src="/mokpo-presbytery/mission/site.js" defer></script>'
 
 
 def mission_nav(prefix):
@@ -242,6 +245,7 @@ def policy_council():
 .pc-done{{border:1px solid #b9dcc8;background:#eef8f2;border-radius:12px;padding:18px;margin-top:14px}}.pc-done h3{{margin:0 0 6px;color:#1f6b45}}.pc-done .code{{font:700 20px/1.4 ui-monospace,monospace;letter-spacing:.06em}}
 @media(max-width:520px){{.pc-row{{grid-template-columns:1fr}}}}
 </style>
+{ROLE_BAR}
 <section class="hero"><div class="wrap"><div><span class="kicker">총회 국내선교부 정책협의회 · 노회 참석자 명단</span>
 <h1>제111회기 총회 국내선교부<br>정책협의회 참석 안내</h1>
 <p class="lead">주제 「생명을 살리고, 공동체를 세우는 국내선교」</p>
@@ -260,6 +264,7 @@ def policy_council():
 <section id="contact"><div class="wrap"><div class="sh"><div><span class="kicker">문의</span><h2>담당자</h2></div></div>
 <dl class="pc-facts"><dt>접수·문의</dt><dd>목포노회 선교부 서기 정찬균 목사 (에코디교회) · 010-3501-8542</dd><dt>선교부장</dt><dd>김찬구 목사 (안좌대리교회)</dd><dt>총회 문의</dt><dd>총회 국내와군특수선교처 서화신 목사 · 02-741-4353</dd></dl></div></section>
 </main>
+{ROLE_SCRIPTS}
 <script src="{POLICY_PATH}app.js" defer></script>'''
     return chrome('정책협의회 참석자 명단 · 목포노회 선교부', '제111회기 총회 국내선교부 정책협의회 안내 및 목포노회 참석자 명단', '목포노회', '선교부', mission_nav('/mokpo-presbytery/mission/'), body, '/mokpo-presbytery/mission/')
 
@@ -275,6 +280,7 @@ def viewer_page():
 .vw-btn{{display:block;width:100%;margin-top:16px;padding:14px;border:0;border-radius:11px;background:var(--sea);color:#fff;font:700 16px/1.4 inherit;cursor:pointer;text-align:center;text-decoration:none}}.vw-btn[disabled]{{opacity:.6}}
 .vw-err{{color:#b23b3b;font-size:14px;margin-top:10px;min-height:1em}}
 </style>
+{ROLE_BAR}
 <section class="hero"><div class="wrap"><div><span class="kicker">선교부 로그인</span><h1>권한에 따라 보고, 고치고, 승인합니다</h1><p class="lead">로그인하면 선교부 화면의 각 메뉴 안에서 내 권한에 맞는 내용과 기능이 나타납니다. 서기는 수정, 부장은 승인, 부원은 열람합니다.</p></div></div></section>
 <main><section><div class="wrap"><div class="lg-wrap">
 <div class="lg-card"><h2>서기 · 부원</h2><p class="note">에코디 통합로그인(이메일)으로 들어갑니다. 선교부 회원으로 등록된 계정만 내부 자료가 보입니다.</p><a class="vw-btn" href="/auth/?site=space&amp;return_to=https%3A%2F%2Fekodi.kr%2Fmokpo-presbytery%2Fmission%2F">에코디 통합로그인</a></div>
@@ -288,6 +294,7 @@ def viewer_page():
 <noscript><p class="note">이 화면은 자바스크립트가 필요합니다.</p></noscript>
 </form>
 </div></div></section></main>
+{ROLE_SCRIPTS}
 <script src="{VIEWER_PATH}viewer.js" defer></script>'''
     return chrome('로그인 · 목포노회 선교부', '목포노회 선교부 로그인', '목포노회', '선교부', mission_nav('/mokpo-presbytery/mission/'), body, '/mokpo-presbytery/mission/')
 
