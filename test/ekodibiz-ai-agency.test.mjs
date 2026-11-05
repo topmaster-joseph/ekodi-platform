@@ -19,7 +19,7 @@ function environment() {
   };
 }
 async function request(env, path, body={}, key='') {
-  const url = new URL('https://biz.ekodi.kr' + path);
+  const url = new URL('https://ekodi.kr/ekodibiz' + path);
   const req = new Request(url, { method:'POST',
     headers:{'content-type':'application/json',...(key ? {'x-ekodibiz-agency-admin':key} : {})},
     body:JSON.stringify(body) });
@@ -87,12 +87,12 @@ test('institution plan is fixed at three months; supplier collections require ex
 });
 test('wrong-origin submission is rejected and health is read-only',async()=>{
   const env=environment();
-  const url=new URL('https://biz.ekodi.kr/api/agency/apply');
+  const url=new URL('https://ekodi.kr/ekodibiz/api/agency/apply');
   const req=new Request(url,{method:'POST',headers:{origin:'https://evil.example','content-type':'application/json'},
     body:JSON.stringify(form)});
   const blocked=await agencyApi(req,url,env);
   assert.equal(blocked.status,403);
-  const healthUrl=new URL('https://biz.ekodi.kr/api/agency/health');
+  const healthUrl=new URL('https://ekodi.kr/ekodibiz/api/agency/health');
   const health=await agencyApi(new Request(healthUrl),healthUrl,env);
   assert.equal((await health.json()).realPaymentsEnabled,false);
 });
