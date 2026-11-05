@@ -20,6 +20,7 @@ export const MOKPO_POLICY_TENANT='mokpo-mission';
 // 노회 접수 마감: 2026-11-23(월) 24:00 KST. 서기가 취합해 총회 마감(11-25 17:00) 전에 제출한다.
 export const REGISTRATION_CLOSES_AT=Date.parse('2026-11-24T00:00:00+09:00');
 export const EXPIRES_AT='2027-01-09T15:00:00.000Z'; // 2027-01-10 00:00 KST: 30 days after the 2026-12-10 council
+export const REGISTRATION_ENABLED=false;
 export const CONSENT_VERSION='mokpo-policy2026-privacy-v1';
 const TABLE='mokpo_mission_policy_council_2026_registrations';
 const AUDIT='mokpo_mission_policy_council_2026_access_audit';
@@ -156,8 +157,10 @@ const clientAddress=request=>String(request.headers.get('cf-connecting-ip')||req
 const fingerprint=async(keys,people)=>lookupHash(keys,'submission:'+people.map(p=>[p.digits,p.church,p.attend].join('|')).join('/'));
 
 // ---------- POST ----------
-async function submit(request,env,{now}){
+async function submit(request,env,{now,registrationEnabled}){
   if(!sameOriginWrite(request))return fail('ORIGIN_FORBIDDEN','허용되지 않은 요청 출처입니다.',403);
+  // 2026-11-05: 목포노회는 참석 신청을 받지 않고 임원(부장·서기) 명단으로 제출한다 (Supabase organization_event_rosters).
+  if(!registrationEnabled)return fail('REGISTRATION_DISABLED','참석 신청은 받지 않습니다. 명단 문의는 선교부 서기에게 연락해 주세요.',410);
   if(now>=REGISTRATION_CLOSES_AT)return fail('REGISTRATION_CLOSED','노회 접수가 마감되었습니다. 선교부 서기에게 직접 연락해 주세요.',410);
   if(!String(request.headers.get('content-type')||'').toLowerCase().startsWith('application/json'))return fail('CONTENT_TYPE_INVALID','JSON 요청만 허용됩니다.',415);
   const key=idempotencyKey(request);
@@ -270,7 +273,7 @@ export async function handleMokpoMissionPolicyRegistrations(request,env,options=
   const now=typeof options.now==='function'?options.now():Date.now();
   const resolveAuthority=options.resolveAuthority||resolveTenantAccessAuthority;
   try{
-    if(request.method==='POST')return await submit(request,env,{now});
+    if(request.method==='POST')return await submit(request,env,{now,registrationEnabled:options.registrationEnabled??REGISTRATION_ENABLED});
     if(request.method==='GET')return await list(request,env,{now,resolveAuthority});
     return fail('METHOD_NOT_ALLOWED','허용되지 않은 요청입니다.',405,{allow:'GET, POST'});
   }catch(error){

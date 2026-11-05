@@ -12,14 +12,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / 'sites' / 'mokpo-presbytery'
 E = html.escape
+# Public Supabase project values (same as wrangler.site.toml vars); publishable key is browser-safe.
+SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co'
+SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_'
 POLICY_PATH = '/mokpo-presbytery/mission/policy-council-2026/'
 
 
 def mission_nav(prefix):
     # Same header on the mission home and its sub-pages; sub-pages point anchors back to the home.
-    return [('노회 홈', '/mokpo-presbytery/', False), ('소개·구성', prefix + '#intro', False), ('사업계획', prefix + '#plans', False), ('예산', prefix + '#budget', False), ('회의·일정', prefix + '#meetings', False), ('자료실', prefix + '#resources', False), ('정책협의회 신청', POLICY_PATH, False), ('업무공간', prefix + '#workspace', True)]
+    return [('노회 홈', '/mokpo-presbytery/', False), ('소개·구성', prefix + '#intro', False), ('사업계획', prefix + '#plans', False), ('예산', prefix + '#budget', False), ('회의·일정', prefix + '#meetings', False), ('자료실', prefix + '#resources', False), ('정책협의회 명단', POLICY_PATH, False), ('업무공간', prefix + '#workspace', True)]
 
 CSS = """.notice-card{border-color:#e3d3b4;background:#fbf7ef}main section.notice{padding-block:36px 8px;border-bottom:0}
+.pilot-id{display:flex;flex-direction:column;line-height:1.5}.pilot-note{display:block;color:#b9c7c4}
+.tabbar{position:sticky;top:68px;z-index:4;background:rgba(244,246,244,.97);border-bottom:1px solid var(--line)}
+.tabbar .wrap{display:flex;gap:6px;overflow-x:auto;padding-block:10px;scrollbar-width:none}.tabbar .wrap::-webkit-scrollbar{display:none}
+.tabbar a{flex:none;padding:9px 15px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);text-decoration:none;font-size:14.5px;font-weight:600;white-space:nowrap}
+.tabbar a:hover{border-color:var(--sea-2)}
+main section.tabpanel{scroll-margin-top:140px}
+main:not(:has(section.tabpanel:target)) section.tabpanel:not(.tab-default){display:none}
+main:has(section.tabpanel:target) section.tabpanel:not(:target){display:none}
+main:not(:has(section.tabpanel:target)) .tabbar a.tab-default,main:has(#intro:target) .tabbar a[href="#intro"],main:has(#plans:target) .tabbar a[href="#plans"],main:has(#budget:target) .tabbar a[href="#budget"],main:has(#meetings:target) .tabbar a[href="#meetings"],main:has(#resources:target) .tabbar a[href="#resources"],main:has(#workspace:target) .tabbar a[href="#workspace"]{background:var(--sea);border-color:var(--sea);color:#fff}
 
 :root{--ink:#13232b;--sea:#1d4b57;--sea-2:#2c6474;--brass:#9a7434;--paper:#f4f6f4;--card:#fff;--line:#dce2df;--muted:#56656b;--soft:#e9efed}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
@@ -88,7 +100,7 @@ footer.foot b{color:#fff}footer.foot a{color:#e6ece9}
 def chrome(title, desc, brand_small, brand, nav, body, base):
     links = ''.join(f'<a href="{E(h)}"{(" class=" + chr(34) + "cta" + chr(34)) if cta else ""}>{E(t)}</a>' for t, h, cta in nav)
     return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><meta name="description" content="{E(desc)}"><title>{E(title)}</title><style>{CSS}</style></head><body>
-<div class="pilot"><div class="wrap"><span><b>EKODI 기반 목포노회 업무지원 시범 공간</b> · 공식 노회 홈페이지가 아닙니다</span><span>공식 소식: <a href="http://cafe.daum.net/pckmp" style="color:#fff" rel="noopener">목포노회 카페</a></span></div></div>
+<div class="pilot"><div class="wrap"><span class="pilot-id"><b>EKODI 기반 목포노회 업무지원 시범 공간</b><span class="pilot-note">공식 노회 홈페이지가 아닙니다</span></span><span>공식 소식: <a href="http://cafe.daum.net/pckmp" style="color:#fff" rel="noopener">목포노회 카페</a></span></div></div>
 <header class="top"><div class="wrap"><a class="brand" href="{E(base)}"><span class="mark" aria-hidden="true"><i></i></span><span><small>{E(brand_small)}</small><strong>{E(brand)}</strong></span></a>
 <nav class="menu" aria-label="주 메뉴">{links}</nav>
 <details class="mnav"><summary aria-label="메뉴 열기">메뉴</summary><nav aria-label="모바일 메뉴">{links}</nav></details></div></header>
@@ -169,20 +181,21 @@ def mission():
 <p class="verse">사업계획과 예산은 부원회의 심의 전 초안입니다.</p></div>
 <dl class="facts"><div><dt>선교부장</dt><dd>김찬구 목사</dd></div><div><dt>소속</dt><dd>안좌대리교회</dd></div><div><dt>서기</dt><dd>정찬균 목사</dd></div><div><dt>소속</dt><dd>에코디교회</dd></div><div><dt>운영 기간</dt><dd>2026 가을–2027 가을</dd></div><div><dt>2027 예산(안)</dt><dd>3,000,000원</dd></div></dl></div></section>
 <main>
-<section id="notice" class="notice"><div class="wrap"><a class="card notice-card" href="{POLICY_PATH}"><span class="pill on">참가자 모집 · ~11. 23.(월)</span><h3>제111회기 총회 국내선교부 정책협의회 참석 신청</h3><p>2026. 12. 10.(목) 11:00–15:00 · 한국교회100주년기념관 그레이스홀 · 주제 「생명을 살리고, 공동체를 세우는 국내선교」</p><span class="go">안내 보고 신청하기 →</span></a></div></section>
-<section id="intro"><div class="wrap"><div class="sh"><div><span class="kicker">소개 · 구성</span><h2>선교부는 이렇게 일합니다</h2></div><p>서기가 작성하고, 부장이 검토·승인하며, 부원은 허용된 자료를 보고 의견을 냅니다. 모든 변경은 기록으로 남습니다.</p></div>
+<section id="notice" class="notice"><div class="wrap"><a class="card notice-card" href="{POLICY_PATH}"><span class="pill on">총회 제출 명단</span><h3>제111회기 총회 국내선교부 정책협의회 참석자 명단</h3><p>2026. 12. 10.(목) 11:00–15:00 · 한국교회100주년기념관 그레이스홀 · 주제 「생명을 살리고, 공동체를 세우는 국내선교」</p><span class="go">안내·명단 보기 →</span></a></div></section>
+<nav class="tabbar" aria-label="선교부 주요 메뉴"><div class="wrap"><a class="tab-default" href="#intro">소개·구성</a><a href="#plans">사업계획</a><a href="#budget">예산</a><a href="#meetings">회의·일정</a><a href="#resources">자료실</a><a href="#workspace">업무공간</a><a href="{POLICY_PATH}">정책협의회 명단</a></div></nav>
+<section id="intro" class="tabpanel tab-default"><div class="wrap"><div class="sh"><div><span class="kicker">소개 · 구성</span><h2>선교부는 이렇게 일합니다</h2></div><p>서기가 작성하고, 부장이 검토·승인하며, 부원은 허용된 자료를 보고 의견을 냅니다. 모든 변경은 기록으로 남습니다.</p></div>
 <div class="grid"><div class="card"><span class="pill">1</span><h3>서기 작성</h3><p>사업계획·예산·회의록 초안을 작성하고 수정합니다.</p></div><div class="card"><span class="pill">2</span><h3>부장 검토 · 승인</h3><p>검토 후 승인하면 확정본이 됩니다.</p></div><div class="card"><span class="pill">3</span><h3>부원 열람 · 의견</h3><p>허용된 자료를 보고 의견을 남깁니다.</p></div><div class="card"><span class="pill">4</span><h3>감사 기록</h3><p>누가 언제 무엇을 바꿨는지 남습니다.</p></div></div></div></section>
-<section id="plans"><div class="wrap"><div class="sh"><div><span class="kicker">2027 사업계획(안)</span><h2>네 갈래의 사업</h2></div><p>부원회의 심의 전 초안입니다.</p></div>
+<section id="plans" class="tabpanel"><div class="wrap"><div class="sh"><div><span class="kicker">2027 사업계획(안)</span><h2>네 갈래의 사업</h2></div><p>부원회의 심의 전 초안입니다.</p></div>
 <div class="grid"><div class="card"><h3>선교정책 협력</h3><p>총회·노회 정책협의회 참여와 지역 선교 현안 검토</p></div><div class="card"><h3>전도 및 군선교</h3><p>전도사역 지원과 목포해군교회 협력</p></div><div class="card"><h3>농어촌·도서지역</h3><p>지역교회 필요 조사와 선교협력</p></div><div class="card"><h3>부원 교제 · 평가</h3><p>전체모임과 회의, 2027 가을노회 보고 준비</p></div></div></div></section>
-<section id="budget"><div class="wrap"><div class="sh"><div><span class="kicker">예산 편성(안)</span><h2>2027 예산안 3,000,000원</h2></div><p>확정 예산이 아닌 심의용 편성안입니다. 집행 내역과 증빙은 업무공간에서만 다룹니다.</p></div>
+<section id="budget" class="tabpanel"><div class="wrap"><div class="sh"><div><span class="kicker">예산 편성(안)</span><h2>2027 예산안 3,000,000원</h2></div><p>확정 예산이 아닌 심의용 편성안입니다. 집행 내역과 증빙은 업무공간에서만 다룹니다.</p></div>
 <div class="tbl"><table><thead><tr><th scope="col">사업</th><th scope="col" class="n">금액</th><th scope="col" class="n">비율</th><th scope="col">배분</th></tr></thead><tbody>{rows}</tbody><tfoot><tr><th>합계</th><td class="n">{total:,}원</td><td class="n">100%</td><td></td></tr></tfoot></table></div>
 <p class="note">2026년 결산과 2027년 예산은 회계연도별로 따로 관리합니다.</p></div></section>
-<section id="meetings"><div class="wrap"><div class="sh"><div><span class="kicker">회의 · 일정</span><h2>회의와 일정</h2></div><p>확정된 일정만 게시합니다.</p></div>
-<div class="timeline"><div><b>2026. 10. 20.(화) 제135회 정기회</b><span>선교부 구성 · 2026년 사업 보고</span></div><div class="next"><b>2026. 12. 10.(목) 총회 국내선교부 정책협의회</b><span>한국교회100주년기념관 그레이스홀 · <a href="{POLICY_PATH}">참석 신청</a></span></div><div class="next"><b>선교부 첫 회의</b><span>부원 협의 후 공지합니다.</span></div><div class="next"><b>2027 가을노회</b><span>2027년 사업 결과 보고</span></div></div></div></section>
-<section id="resources"><div class="wrap"><div class="sh"><div><span class="kicker">회의록 · 공문 · 자료실</span><h2>기록과 자료</h2></div><p>공개 가능한 자료만 게시합니다. 회의록과 증빙은 권한자에게만 보입니다.</p></div>
+<section id="meetings" class="tabpanel"><div class="wrap"><div class="sh"><div><span class="kicker">회의 · 일정</span><h2>회의와 일정</h2></div><p>확정된 일정만 게시합니다.</p></div>
+<div class="timeline"><div><b>2026. 10. 20.(화) 제135회 정기회</b><span>선교부 구성 · 2026년 사업 보고</span></div><div class="next"><b>2026. 12. 10.(목) 총회 국내선교부 정책협의회</b><span>한국교회100주년기념관 그레이스홀 · <a href="{POLICY_PATH}">참석자 명단</a></span></div><div class="next"><b>선교부 첫 회의</b><span>부원 협의 후 공지합니다.</span></div><div class="next"><b>2027 가을노회</b><span>2027년 사업 결과 보고</span></div></div></div></section>
+<section id="resources" class="tabpanel"><div class="wrap"><div class="sh"><div><span class="kicker">회의록 · 공문 · 자료실</span><h2>기록과 자료</h2></div><p>공개 가능한 자료만 게시합니다. 회의록과 증빙은 권한자에게만 보입니다.</p></div>
 <div class="grid"><div class="card"><span class="pill">기준 자료</span><h3>제135회 정기회 보고서</h3><p>선교부 사업·회계 보고의 기준 자료</p></div><div class="card locked"><span class="pill lock">권한 필요</span><h3>회의록 · 공문</h3><p>부원 업무공간에서 열람합니다.</p></div></div></div></section>
-<section id="workspace"><div class="wrap"><div class="sh"><div><span class="kicker">부원 업무공간</span><h2>선교부 운영관리</h2></div><p>EKODI 통합로그인으로 들어가며, 선교부 권한이 있는 분만 열립니다. 다른 부서·시찰회 데이터와 분리되어 있습니다.</p></div>
-<div class="grid"><a class="card" href="/mokpo-presbytery/mission/admin"><span class="pill on">로그인</span><h3>운영 홈</h3><p>회기·임원·공지·감사기록 현황</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/finance"><span class="pill on">로그인</span><h3>회계보고</h3><p>수입·지출 기록과 공개 승인</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/budget"><span class="pill on">로그인</span><h3>예산</h3><p>편성·집행률·승인 이력</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/registrations"><span class="pill on">로그인</span><h3>정책협의회 신청명단</h3><p>총회 양식 순서의 접수 명단 · 표 복사</p><span class="go">들어가기 →</span></a></div></div></section>
+<section id="workspace" class="tabpanel"><div class="wrap"><div class="sh"><div><span class="kicker">부원 업무공간</span><h2>선교부 운영관리</h2></div><p>EKODI 통합로그인으로 들어가며, 선교부 권한이 있는 분만 열립니다. 다른 부서·시찰회 데이터와 분리되어 있습니다.</p></div>
+<div class="grid"><a class="card" href="/mokpo-presbytery/mission/admin"><span class="pill on">로그인</span><h3>운영 홈</h3><p>회기·임원·공지·감사기록 현황</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/finance"><span class="pill on">로그인</span><h3>회계보고</h3><p>수입·지출 기록과 공개 승인</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/budget"><span class="pill on">로그인</span><h3>예산</h3><p>편성·집행률·승인 이력</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/viewer/"><span class="pill">휴대폰 로그인</span><h3>부장 조회</h3><p>휴대폰번호·비밀번호로 선교부 전체 현황 읽기 전용 조회</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/admin/registrations"><span class="pill on">로그인</span><h3>정책협의회 명단</h3><p>참석자 명단 · 부장 조회 비밀번호 설정 · 표 복사</p><span class="go">들어가기 →</span></a></div></div></section>
 </main>'''
     nav = mission_nav('')
     return chrome('선교부 · 목포노회', '목포노회 선교부 2027 사업계획 및 예산(안)', '목포노회', '선교부', nav, body, '/mokpo-presbytery/mission/')
@@ -205,6 +218,7 @@ def policy_council():
 .pc-dl{{margin-top:18px;background:#fbf7ef;border:1px solid #e3d3b4;border-radius:12px;padding:12px 16px;font-size:15px}}.pc-dl b{{color:#7a5a22}}
 .pc-facts{{display:grid;grid-template-columns:96px minmax(0,1fr);gap:9px 14px;margin:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}}.pc-facts dt{{color:var(--muted);font-size:14px}}.pc-facts dd{{margin:0}}.pc-facts small{{color:var(--muted)}}
 .pc-sch td{{vertical-align:top}}.pc-sch td.t{{white-space:nowrap;color:var(--sea);font-weight:700;width:110px;font-variant-numeric:tabular-nums}}.pc-sch small{{display:block;color:var(--muted);font-size:13.5px}}
+.pc-roster{{width:100%;border-collapse:collapse;min-width:620px;text-align:center;background:var(--card)}}.pc-roster th,.pc-roster td{{border:1px solid #9aa7a3;padding:10px 6px}}.pc-roster th{{background:var(--soft)}}
 .pc-form{{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}}
 .pc-form label{{display:block;font-size:14px;font-weight:600;margin:12px 0 5px}}.pc-form label em{{color:#b23b3b;font-style:normal}}
 .pc-form input,.pc-form select{{width:100%;font:inherit;padding:11px 12px;border:1px solid #c7d1ce;border-radius:9px;background:#fff;color:var(--ink)}}
@@ -219,35 +233,64 @@ def policy_council():
 .pc-done{{border:1px solid #b9dcc8;background:#eef8f2;border-radius:12px;padding:18px;margin-top:14px}}.pc-done h3{{margin:0 0 6px;color:#1f6b45}}.pc-done .code{{font:700 20px/1.4 ui-monospace,monospace;letter-spacing:.06em}}
 @media(max-width:520px){{.pc-row{{grid-template-columns:1fr}}}}
 </style>
-<section class="hero"><div class="wrap"><div><span class="kicker">총회 국내선교부 정책협의회 · 참가자 모집</span>
+<section class="hero"><div class="wrap"><div><span class="kicker">총회 국내선교부 정책협의회 · 노회 참석자 명단</span>
 <h1>제111회기 총회 국내선교부<br>정책협의회 참석 안내</h1>
 <p class="lead">주제 「생명을 살리고, 공동체를 세우는 국내선교」</p>
 <p class="verse">“생명의 하나님, 우리를 하나 되게 하소서” (신 30:19–20, 엡 4:1–6)</p>
-<div class="pc-dl">노회 선교부 접수 마감 <b>2026. 11. 23.(월)</b><br><small>총회 제출 마감 11. 25.(수) 오후 5시 — 서기가 명단을 취합해 총회에 일괄 제출합니다.</small></div></div>
+<div class="pc-dl">목포노회 참석자: <b>선교부장 · 서기</b> (별도 신청은 받지 않습니다)<br><small>총회 제출 마감 11. 25.(수) 오후 5시 — 서기가 아래 명단을 총회에 제출합니다.</small></div></div>
 <dl class="facts"><div><dt>일시</dt><dd>12. 10.(목)</dd></div><div><dt>시간</dt><dd>11:00–15:00</dd></div><div><dt>장소</dt><dd>그레이스홀</dd></div><div><dt>등록비</dt><dd>20,000원</dd></div></dl></div></section>
 <main>
 <section id="info"><div class="wrap"><div class="sh"><div><span class="kicker">행사 개요</span><h2>정책협의회 안내</h2></div><p>강소교회 목회전략, 소그룹 활성화 방안, 세대통합예배를 중심으로 목회 현장에 적용할 실천 과제를 논의합니다.</p></div>
 <dl class="pc-facts"><dt>행사명</dt><dd>제111회기 총회 국내선교부 정책협의회</dd><dt>일시</dt><dd>2026년 12월 10일(목) 11:00–15:00 <small>(등록 10:30부터)</small></dd><dt>장소</dt><dd>한국교회100주년기념관 그레이스홀(1층)<br><small>서울 종로구 대학로3길 29 (연지동) · <a href="https://map.naver.com/p/search/%ED%95%9C%EA%B5%AD%EA%B5%90%ED%9A%8C100%EC%A3%BC%EB%85%84%EA%B8%B0%EB%85%90%EA%B4%80" rel="noopener">네이버 지도</a></small></dd><dt>대상</dt><dd>노회 국내선교부 임원 (부장, 서기, 회계, 총무)</dd><dt>등록비</dt><dd>20,000원 (현장 접수)</dd><dt>협조사항</dt><dd>총회는 각 노회에 참석자 여비·등록비 지급을 요청했습니다. <small>(목포노회 지급 여부: 확인필요)</small></dd></dl></div></section>
 <section id="schedule"><div class="wrap"><div class="sh"><div><span class="kicker">붙임1</span><h2>일정표</h2></div><p>출처: 총회 국내선교부 공문 국내와군·특수선교처-2205 (2026. 11. 2.)</p></div>
 <div class="tbl"><table class="pc-sch"><tbody>{sched}</tbody></table></div></div></section>
-<section id="apply"><div class="wrap"><div class="sh"><div><span class="kicker">붙임2 양식</span><h2>참석 신청</h2></div><p>총회 「노회 국내선교부(전도부) 임원 및 정책협의회 참석자 명단」과 같은 항목입니다. 불참하는 임원도 <b>불참(X)</b>으로 제출해 주세요.</p></div>
-<form class="pc-form" id="pcForm" novalidate data-api="/api/organizations/mokpo-mission/policy-council-2026/registrations">
-<label>노회</label><input value="목포노회" readonly>
-<div id="pcPeople"></div>
-<button type="button" class="pc-add" id="pcAdd">＋ 한 명 더 추가 (최대 10명)</button>
-<div class="pc-hp" aria-hidden="true"><label>웹사이트<input name="website" tabindex="-1" autocomplete="off"></label></div>
-<label class="pc-consent"><input type="checkbox" id="pcConsent"> <span>개인정보(성명·연락처) 수집·이용에 동의합니다. 목적: 총회 정책협의회 참석자 명단 제출 · 보유: 2027. 1. 10.까지 후 자동 파기 · 성명·연락처는 암호화 저장되며 선교부 관리자만 열람합니다.</span></label>
-<div class="pc-err" id="pcErr" role="alert"></div>
-<button class="pc-btn" type="submit" id="pcSubmit">신청서 제출</button>
-<noscript><p class="note">신청서는 자바스크립트가 필요합니다. 서기에게 직접 연락해 주세요.</p></noscript>
-</form>
-<div class="pc-done" id="pcDone" hidden aria-live="polite"><h3>신청이 정상 접수되었습니다</h3><p>접수번호 <span class="code" id="pcCode"></span> · <span id="pcCount"></span>명</p><p class="note">수정·취소나 기타 문의는 선교부 서기 정찬균 목사(010-3501-8542)에게 접수번호와 함께 연락해 주세요.</p></div>
-</div></section>
+<section id="roster"><div class="wrap"><div class="sh"><div><span class="kicker">붙임2 양식</span><h2>노회 국내선교부 임원 및 정책협의회 참석자 명단</h2></div><p>노회: 목포노회 · 연락처는 개인정보 보호를 위해 끝 네 자리만 표시합니다.</p></div>
+<div class="tbl"><table class="pc-roster" id="pcRoster" data-supabase="{SUPABASE_URL}" data-key="{SUPABASE_PUBLISHABLE_KEY}" data-slug="mokpo-mission" data-event="pck-policy-2026"><thead><tr><th>부서명</th><th>부서 직책</th><th>성명</th><th>교직</th><th>교회</th><th>연락처</th><th>정책협의회 참석</th></tr></thead>
+<tbody><tr><td>선교부</td><td>부장</td><td>김찬구</td><td>목사</td><td>안좌대리교회</td><td>—</td><td>O</td></tr><tr><td>선교부</td><td>서기</td><td>정찬균</td><td>목사</td><td>에코디교회</td><td>—</td><td>O</td></tr></tbody></table></div>
+<p class="note" id="pcRosterState">명단 변경은 선교부 서기에게 연락해 주세요.</p></div></section>
 <section id="contact"><div class="wrap"><div class="sh"><div><span class="kicker">문의</span><h2>담당자</h2></div></div>
 <dl class="pc-facts"><dt>접수·문의</dt><dd>목포노회 선교부 서기 정찬균 목사 (에코디교회) · 010-3501-8542</dd><dt>선교부장</dt><dd>김찬구 목사 (안좌대리교회)</dd><dt>총회 문의</dt><dd>총회 국내와군특수선교처 서화신 목사 · 02-741-4353</dd></dl></div></section>
 </main>
 <script src="{POLICY_PATH}app.js" defer></script>'''
-    return chrome('정책협의회 참석 신청 · 목포노회 선교부', '제111회기 총회 국내선교부 정책협의회 참석 안내 및 신청', '목포노회', '선교부', mission_nav('/mokpo-presbytery/mission/'), body, '/mokpo-presbytery/mission/')
+    return chrome('정책협의회 참석자 명단 · 목포노회 선교부', '제111회기 총회 국내선교부 정책협의회 안내 및 목포노회 참석자 명단', '목포노회', '선교부', mission_nav('/mokpo-presbytery/mission/'), body, '/mokpo-presbytery/mission/')
+
+
+VIEWER_PATH = '/mokpo-presbytery/mission/viewer/'
+
+
+def viewer_page():
+    body = f'''<style>
+.vw-login{{max-width:420px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}}
+.vw-login label{{display:block;font-size:14px;font-weight:600;margin:12px 0 5px}}
+.vw-login input{{width:100%;font:inherit;font-size:18px;padding:12px;border:1px solid #c7d1ce;border-radius:9px;letter-spacing:.04em}}
+.vw-btn{{width:100%;margin-top:16px;padding:14px;border:0;border-radius:11px;background:var(--sea);color:#fff;font:700 16px/1.4 inherit;cursor:pointer}}.vw-btn[disabled]{{opacity:.6}}
+.vw-err{{color:#b23b3b;font-size:14px;margin-top:10px;min-height:1em}}
+.vw-head{{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}}
+.vw-out{{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 14px;font:inherit;font-size:14px;cursor:pointer}}
+.vw-tabs{{display:flex;gap:6px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none;position:sticky;top:68px;background:var(--paper);z-index:3}}.vw-tabs::-webkit-scrollbar{{display:none}}
+.vw-tabs button{{flex:none;padding:9px 15px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);font:600 14.5px/1.4 inherit;cursor:pointer;white-space:nowrap}}
+.vw-tabs button[aria-selected="true"]{{background:var(--sea);border-color:var(--sea);color:#fff}}
+.vw-panel{{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;overflow-x:auto}}
+.vw-panel table{{width:100%;border-collapse:collapse;font-size:14.5px}}.vw-panel th,.vw-panel td{{border-bottom:1px solid var(--line);padding:9px 6px;text-align:left;vertical-align:top}}.vw-panel th{{color:var(--muted);font-weight:600;white-space:nowrap}}
+.vw-panel td{{white-space:nowrap}}.vw-panel td.n{{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}}
+.vw-cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}}.vw-cards div{{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fbfcfb}}.vw-cards b{{display:block;font-size:20px}}.vw-cards span{{color:var(--muted);font-size:13px}}
+.vw-empty{{color:var(--muted)}}
+</style>
+<section class="hero"><div class="wrap"><div><span class="kicker">읽기 전용 · 휴대폰 로그인</span><h1>선교부 부장 조회</h1><p class="lead">등록된 휴대폰번호와 4자리 비밀번호로 선교부 임원·정책협의회 명단·예산·회계·회의·공지를 한눈에 봅니다. 수정은 할 수 없습니다.</p></div></div></section>
+<main><section><div class="wrap">
+<form class="vw-login" id="vwLogin" novalidate data-supabase="{SUPABASE_URL}" data-key="{SUPABASE_PUBLISHABLE_KEY}" data-slug="mokpo-mission">
+<label for="vwPhone">휴대폰번호</label><input id="vwPhone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="010-0000-0000">
+<label for="vwPin">비밀번호 (숫자 4자리)</label><input id="vwPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" pattern="[0-9]*">
+<div class="vw-err" id="vwErr" role="alert"></div>
+<button class="vw-btn" type="submit" id="vwSubmit">조회하기</button>
+<p class="note">비밀번호를 5번 틀리면 30분 동안 잠깁니다. 비밀번호 문의: 선교부 서기 정찬균 목사 010-3501-8542</p>
+<noscript><p class="note">이 화면은 자바스크립트가 필요합니다.</p></noscript>
+</form>
+<div id="vwApp" hidden><div class="vw-head"><div><span class="kicker" id="vwWho"></span><h2 id="vwTitle" style="margin:4px 0 0">목포노회 선교부</h2></div><button class="vw-out" type="button" id="vwOut">로그아웃</button></div>
+<div class="vw-tabs" role="tablist" id="vwTabs"></div><div class="vw-panel" role="tabpanel" id="vwPanel"></div></div>
+</div></section></main>
+<script src="{VIEWER_PATH}viewer.js" defer></script>'''
+    return chrome('부장 조회 · 목포노회 선교부', '목포노회 선교부 읽기 전용 조회', '목포노회', '선교부', mission_nav('/mokpo-presbytery/mission/'), body, '/mokpo-presbytery/mission/')
 
 
 if __name__ == '__main__':
@@ -255,4 +298,6 @@ if __name__ == '__main__':
     (SITE / 'mission' / 'index.html').write_text(mission(), encoding='utf-8')
     (SITE / 'mission' / 'policy-council-2026').mkdir(parents=True, exist_ok=True)
     (SITE / 'mission' / 'policy-council-2026' / 'index.html').write_text(policy_council(), encoding='utf-8')
+    (SITE / 'mission' / 'viewer').mkdir(parents=True, exist_ok=True)
+    (SITE / 'mission' / 'viewer' / 'index.html').write_text(viewer_page(), encoding='utf-8')
     print('wrote', SITE / 'index.html', SITE / 'mission' / 'index.html')
