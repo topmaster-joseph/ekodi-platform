@@ -15,3 +15,10 @@
 .mission-private-rsvp [hidden]{display:none!important}
 @media(max-width:390px){.mission-private-rsvp{padding:.75rem}.mission-private-options button{flex:1 1 calc(50% - .45rem)}}
 @media(max-width:760px){.mission-saturday-card{grid-template-columns:minmax(0,1fr)}.mission-saturday-card .activity-copy{min-width:0}.mission-private-rsvp{width:100%;max-width:100%;min-width:0}}
+
+/* Tenant-manager read-only planned count. Verified attendance remains the presence service's authority. */
+.mission-private-manager{display:flex;align-items:center;gap:.45rem 1rem;flex-wrap:wrap;border-top:1px dashed var(--line,#ded8ca);padding-top:.65rem;margin-top:.8rem;font-size:.8rem}
+.mission-private-manager strong{font-variant-numeric:tabular-nums}
+.mission-private-manager a{color:var(--accent,#315c46);font-weight:750}
+.mission-private-manager small{flex-basis:100%;color:var(--muted,#5c665e);font-size:.72rem}
+.mission-private-manager[hidden]{display:none!important}

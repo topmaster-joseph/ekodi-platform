@@ -8,6 +8,8 @@
   const status=root.querySelector('[data-mission-participation-status]');
   const recurring=root.querySelector('[data-mission-recurring]');
   const buttons=[...root.querySelectorAll('[data-mission-rsvp]')];
+  const manager=root.querySelector('[data-mission-private-manager]');
+  const plannedCount=root.querySelector('[data-mission-planned-count]');
   const token=()=>window.EKODIMissionAuth?.getToken?.()||'';
   let current=null,sequence=0,busy=false;
   const message=(value,error=false)=>{status.textContent=value;status.dataset.state=error?'error':'ok'};
@@ -17,6 +19,10 @@
     controls.hidden=false;login.hidden=true;
     recurring.checked=data.recurring===true;
     recurring.disabled=busy;
+    const count=data?.managerSummary?.privatePlannedJoin;
+    const canView=typeof count==='number'&&Number.isSafeInteger(count)&&count>=0;
+    manager.hidden=!canView;
+    if(canView)plannedCount.textContent=String(count);
     buttons.forEach(button=>{
       const choice=button.dataset.missionRsvp;
       button.disabled=busy||data.planned==='unavailable';
@@ -25,11 +31,12 @@
     message('이번 주: '+(label[data.planned]||'확인 필요')+' · 실제 출석은 현장에서 확인합니다.');
   }
   function unauthenticated(){
-    current=null;controls.hidden=true;login.hidden=false;
+    current=null;controls.hidden=true;login.hidden=false;manager.hidden=true;
     message('로그인하면 한 번의 동의로 정기참여를 설정할 수 있습니다.');
   }
   async function load(){
     const id=++sequence,bearer=token();
+    manager.hidden=true;
     if(!bearer){unauthenticated();return;}
     try{
       const response=await fetch(endpoint,{headers:{accept:'application/json',authorization:'Bearer '+bearer},
