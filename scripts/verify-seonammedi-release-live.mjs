@@ -65,7 +65,14 @@ for(let attempt=1;attempt<=attempts;attempt++){
         throw new Error(name+'_published_artifact_digest_mismatch');
       // Ignore only strictly identified first-party publication-admin and
       // Cloudflare Web Analytics injections. Unknown HTML changes fail.
-      const normalized=normalizeSeonamMediLiveHtml(page.text,{origin,page:relative});
+      // HOST-PRESERVING-LINKS-20261105: on seonammedi.kr the gateway rewrites the
+      // published Korean IDN origin to the English origin. Published pages never
+      // contain the English origin, so reverse exactly that origin before the
+      // digest check; any other byte change still fails.
+      const liveText=new URL(origin).hostname.toLowerCase()==='seonammedi.kr'
+        ?page.text.replace(/https:\/\/seonammedi\.kr(?=[\/"'<\s?#]|$)/g,'https://xn--3e0b8b58jw4co4mnpll3k.kr')
+        :page.text;
+      const normalized=normalizeSeonamMediLiveHtml(liveText,{origin,page:relative});
       const actualHash=createHash('sha256').update(normalized.html).digest('hex');
       if(actualHash!==expectedHash){
         const customerHost=new URL(origin).hostname.toLowerCase();
