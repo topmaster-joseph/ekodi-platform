@@ -90,7 +90,7 @@ function productCard(product, options = {}) {
   const storeKicker = store ? `<p class="store-kicker"><a href="/stores/${esc(store.slug)}/">${esc(store.name)}</a></p>` : '';
   // MALL-LIST-IMAGE-001: 대표이미지(도서 표지·판매자 사진)를 목록에 보이고, 이미지·제목 어디를 눌러도 상세로 간다.
   const image = product.image ? `<img src="${esc(product.image)}" alt="${esc(product.name)}" loading="lazy" decoding="async">` : '';
-  return `<article class="card"${data}><div class="thumb ${esc(product.category)}${image ? ' has-image' : ''}"><a class="thumb-link" href="${href}" aria-label="${esc(product.name)} 자세히 보기">${image}</a><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p class="card-summary">${esc(shortSummary(product.description))}</p>${regionChip}<div class="meta"><span class="status">${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
+  return `<article class="card"${data}><div class="thumb ${esc(product.category)}${image ? ' has-image' : ''}"><a class="thumb-link" href="${href}" aria-label="${esc(product.name)} 자세히 보기">${image}</a><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p class="card-summary">${esc(shortSummary(product.description, product.category === 'book' ? 34 : 46))}</p>${regionChip}<div class="meta"><span class="status">${product.category === 'book' ? esc(Number(product.price) > 0 ? formatPrice(Number(product.price)) + ' · ' : '가격 확인 · ') : ''}${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
 }
 
 function productDetailSections(product, store) {
@@ -200,6 +200,12 @@ const indexHtml = fill(indexTemplate, {
 await rm(dist, { recursive: true, force: true });
 await ensureDir(dist);
 await write('index.html', indexHtml);
+await write('category-availability.json', JSON.stringify({
+  // Matches the source-of-truth sale-ready projection, not all draft categories.
+  categories: [...new Set(saleProducts.map(product => product.category).filter(Boolean))].sort(),
+  hasLocal: saleProducts.some(product => Array.isArray(product.region?.regionIds) && product.region.regionIds.length > 0)
+}));
+
 // Operator Seller Studio displays the same publisher-approved bookstore mirror
 // as the Mall storefront. This read-only public projection is not a seller row.
 await write('provider-bookstore.json', JSON.stringify({

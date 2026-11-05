@@ -8,3 +8,26 @@
 .affiliate-share-status{font-size:.9rem;color:#294e7d;margin:.3rem 0 0}
 .affiliate-share-link{width:min(100%,580px);max-width:100%;border:1px solid #9bb0c7;border-radius:8px;padding:.6rem;background:#fff;color:#182c48;font:inherit}
 @media(max-width:800px){.affiliate-card-actions{width:100%}.affiliate-card-actions .btn{min-height:40px}}
+
+/* MALL-CHROME-WIDTH-001: affiliate catalog follows the weekly-picks width. */
+.affiliate-hub{
+  width:min(var(--mall-content-width,1080px),calc(100% - 32px));
+  max-width:100%;margin-inline:auto;min-width:0;
+}
+.affiliate-hub .affiliate-hero{
+  padding:32px 16px 24px;
+  gap:clamp(16px,3vw,28px);
+}
+.affiliate-hub .affiliate-results{padding:28px 16px 36px}
+.affiliate-hub .affiliate-disclosure{margin:12px 16px 0}
+.affiliate-hub .affiliate-safety{padding:0 16px}
+.affiliate-hub .affiliate-results .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:800px){
+  .affiliate-hub{width:calc(100% - 28px)}
+  .affiliate-hub .affiliate-hero{padding:26px 14px 20px;grid-template-columns:minmax(0,1fr)}
+  .affiliate-hub .affiliate-results{padding:24px 14px}
+  .affiliate-hub .affiliate-disclosure{margin-inline:14px}
+  .affiliate-hub .affiliate-safety{padding:0 14px}
+  .affiliate-hub .affiliate-results .grid{grid-template-columns:minmax(0,1fr)}
+  .affiliate-hub .affiliate-search{max-width:100%;min-width:0}
+}

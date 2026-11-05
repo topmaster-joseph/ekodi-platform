@@ -76,3 +76,42 @@ test('Mall build loads the guard and styles hidden categories without enabling c
   assert.match(css,/\.mall-primary-nav \[data-filter-target\]\[hidden\]/);
   assert.doesNotMatch(script,/requestPayment\(|confirmPayment\(|TOSS_SECRET_KEY|method:\s*['"]POST['"]/);
 });
+
+test('weekly picks and affiliate pages use the same guarded category availability as the home',async()=>{
+  const links=Object.fromEntries(cats.map(cat=>[cat,{dataset:{filterTarget:cat},hidden:false}]));
+  const doc={
+    querySelector:()=>null,
+    querySelectorAll:selector=>selector==='.mall-category-shortcuts [data-filter-target],.mall-primary-nav [data-filter-target]'?Object.values(links):[]
+  };
+  const calls=[];
+  const sandbox={document:doc,window:{addEventListener(){}},AbortSignal:{timeout:()=>({})},
+    fetch:async url=>{
+      calls.push(url);
+      if(url==='/ekodimall/category-availability.json'){
+        return {ok:true,json:async()=>({categories:['book'],hasLocal:false})};
+      }
+      return {ok:true,json:async()=>({products:[]})};
+    }
+  };
+  runInNewContext(script,sandbox,{timeout:2000});
+  await tick();await tick();await tick();
+  assert.equal(links.book.hidden,false,'published static sale-ready books remain in the shared menu');
+  for(const cat of ['general','living','gift']){
+    assert.equal(links[cat].hidden,true,cat+' must be hidden with sufficient evidence');
+  }
+  assert.ok(calls.includes('/ekodimall/category-availability.json'));
+  assert.equal(calls.length,5,'one read-only static availability and four bounded category probes');
+});
+
+test('unknown static category availability never hides a menu item on API errors',async()=>{
+  const links=[{dataset:{filterTarget:'book'},hidden:false}];
+  const sandbox={
+    document:{querySelector:()=>null,querySelectorAll:()=>links},
+    window:{addEventListener(){}},
+    AbortSignal:{timeout:()=>({})},
+    fetch:async()=>{throw Error('transient outage');}
+  };
+  runInNewContext(script,sandbox,{timeout:2000});
+  await tick();await tick();await tick();
+  assert.equal(links[0].hidden,false);
+});

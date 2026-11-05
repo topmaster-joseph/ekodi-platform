@@ -8,6 +8,7 @@ const dist = path.join(root, 'dist');
 const site = JSON.parse(await readFile(path.join(root, 'content', 'site.json'), 'utf8'));
 const paymentsMarker = `"paymentsEnabled": ${site?.commerce?.paymentsEnabled === true}`;
 const checks = [
+  ['category-availability.json', ['"categories":', '"hasLocal":']],
   ['index.html', ['EKODI MALL', 'ALL MARKET', '7·8·9', '상품 하나부터', '무엇을 찾고 계세요?', '추천순위는 제휴수수료와 분리합니다', '/assets/marketplace-live.js', '/assets/category-visibility.js', '/assets/context-curator.js', '/assets/local-commerce.js', '내 로컬']],
   ['assets/category-visibility.js', ['TOSS-MALL-UNDERWRITING-001', 'data-filter-target', 'api/public/products', 'credentials', 'MutationObserver']],
   ['assets/local-commerce.js', ['ekodiMallLocalRegionV1', 'explicit', 'geolocation', '좌표는 저장하지 않습니다', 'ekodi:local-region-change']],

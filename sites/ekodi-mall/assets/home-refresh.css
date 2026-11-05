@@ -231,3 +231,45 @@ body[data-mall-view="recommend"] .mall-recommend-inline-form{display:block}
 /* TOSS-MALL-UNDERWRITING-001 — empty product categories must not appear in card-review navigation. */
 #filters [data-filter][hidden],.mall-category-shortcuts [data-filter-target][hidden],.mall-primary-nav [data-filter-target][hidden]{display:none!important}
 .mall-merchant-review-note{margin:9px 0 0;font-size:12px;line-height:1.7;color:var(--muted,#5c6471);max-width:790px}
+
+/* MALL-CHROME-WIDTH-001: every Mall top-level view follows the weekly-picks 1080px canvas.
+   The shared header is generated once; do not let page-specific styles change its controls. */
+:root{--mall-content-width:1080px}
+.mall-header .mall-header-inner{
+  width:min(var(--mall-content-width),calc(100% - 32px))!important;
+  max-width:100%;
+}
+.mall-header .seller-mini{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:36px;padding:8px 18px;border:1px solid var(--mall-navy);
+  border-radius:999px;background:var(--mall-navy);color:#fff;
+  font-size:12px;font-weight:800;line-height:1.25;white-space:nowrap;
+}
+.mall-header .seller-mini:focus-visible{outline:3px solid #37699c;outline-offset:3px}
+.mall-category-shortcuts~.shop{
+  width:min(var(--mall-content-width),calc(100% - 32px));
+  max-width:100%;margin-inline:auto;padding-inline:16px;
+}
+body[data-mall-view="catalog"] main#main > #shop,
+body[data-mall-view="catalog"] main#main > #filters,
+body[data-mall-view="recommend"] main#main > #recommend{
+  width:min(var(--mall-content-width),calc(100% - 32px));
+  max-width:100%;margin-inline:auto;
+}
+body[data-mall-view="catalog"] main#main > #shop{padding-inline:16px}
+body[data-mall-view="catalog"] main#main > #filters{padding-inline:16px}
+/* Two concise lines for all bookstore cards, without altering titles or purchase evidence. */
+.card[data-category="book"] .card-summary{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  line-clamp:2;overflow:hidden;min-height:0;margin-bottom:8px;
+}
+.card[data-category="book"] .meta{min-height:36px}
+@media(max-width:760px){
+  .mall-header .seller-mini{display:none}
+  .mall-header .mall-header-inner{width:calc(100% - 28px)!important}
+  .mall-category-shortcuts~.shop,
+  body[data-mall-view="catalog"] main#main > #shop,
+  body[data-mall-view="catalog"] main#main > #filters,
+  body[data-mall-view="recommend"] main#main > #recommend{width:calc(100% - 28px)}
+  .mall-category-shortcuts~.shop{padding-inline:0}
+}

@@ -128,3 +128,35 @@ test('legacy product, store, seller, checkout and policy headers match canonical
   assert.match(shared, /--ekodi-user-content-inline-size,var\(--ekodi-user-canvas-max,1240px\)/);
   assert.match(shared, /@media\(max-width:720px\)/);
 });
+
+test('all generated Mall section headers keep the same category labels and seller pill', () => {
+  const canonical = renderMallHeader({ publicPrefix: '/ekodimall', home: false });
+  const navLabels = markup => {
+    const nav = markup.match(/<nav class="mall-primary-nav"[^>]*>([\s\S]*?)<\/nav>/)?.[1] || '';
+    return [...nav.matchAll(/<a\b[^>]*>([^<]+)<\/a>/g)].map(match => match[1]);
+  };
+  assert.deepEqual(navLabels(mallHeader), navLabels(canonical));
+  for (const category of ['all', 'local', 'general', 'living', 'book', 'gift']) {
+    assert.ok(canonical.includes('data-filter-target="' + category + '"'));
+  }
+  assert.match(canonical, /assets\/category-visibility\.js/);
+  assert.match(css, /--mall-content-width:1080px/);
+  assert.match(css, /\.mall-header \.seller-mini\{[\s\S]*?border-radius:999px/);
+  assert.match(css, /body\[data-mall-view="catalog"\] main#main > #shop/);
+  const affiliateCss = readFileSync(new URL('../assets/affiliate-hub.css', import.meta.url), 'utf8');
+  assert.match(affiliateCss, /\.affiliate-hub\{[\s\S]*?--mall-content-width,1080px/);
+});
+
+test('book cards use concise copy and verified prices or an explicit unknown-price label', () => {
+  const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+  const books = readFileSync(new URL('../assets/bookstore-live.js', import.meta.url), 'utf8');
+  assert.match(build, /product\.category === 'book' \? 34 : 46/);
+  assert.match(build, /'가격 확인 · '/);
+  assert.match(build, /category-availability\.json/);
+  assert.match(books, /price: verifiedAmount/);
+  assert.match(books, /const verifiedAmount = Number\(quote\.price\.amount\)/);
+  assert.match(books, /가격 확인 · 판매 상태 확인 필요/);
+  assert.match(books, /const quote = await quoteFor\(book\.bookId\)/);
+  assert.match(css, /\.card\[data-category="book"\] \.card-summary/);
+  assert.match(css, /-webkit-line-clamp:2/);
+});
