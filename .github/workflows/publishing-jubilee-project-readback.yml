@@ -40,7 +40,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$PUBLISHING_JUBILEE_AUTHOR_USER_ID" =~ ^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$ ]] || { echo 'JUBILEE_PRIMARY_OWNER_NOT_BOUND'; exit 1; }
+          # Normalize surrounding line endings from the protected runner environment.
+          # Never echo the binding value. Keep both shell SQL and Node parser in sync.
+          owner=$(node -e 'process.stdout.write(String(process.env.PUBLISHING_JUBILEE_AUTHOR_USER_ID||"").trim())')
+          if [ -z "$owner" ]; then echo 'JUBILEE_PRIMARY_OWNER_MISSING'; exit 1; fi
+          [[ "$owner" =~ ^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$ ]] || { echo 'JUBILEE_PRIMARY_OWNER_FORMAT_INVALID'; exit 1; }
+          export PUBLISHING_JUBILEE_AUTHOR_USER_ID="$owner"
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
           umask 077
