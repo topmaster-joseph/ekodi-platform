@@ -21,7 +21,8 @@ test('protected live-release verifier uses exact photo-shell path, not arbitrary
   const alias=await readFile(new URL('../scripts/seonammedi-release-html-alias.mjs',import.meta.url),'utf8');
   const page=await readFile(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8');
   assert.ok(verifier.includes("'board-central-category.js'"),'published photo shell must be included in strict alias list');
-  assert.ok(verifier.includes('compareSeonamMediPublishedHtml(published,normalized.html,allowlisted)'),'strict byte-by-byte comparison must remain');
+  assert.ok(verifier.includes('compareSeonamMediPublishedHtml(expectedProjected,normalized.html,allowlisted)'),'strict byte-by-byte comparison must remain after registered-host projection');
+  assert.ok(verifier.includes('projectedSeonamMediPublishedHtmlForProof(published,origin)'),'only the approved first-party English customer origin may be projected');
   assert.ok(alias.includes('unapproved_domain_alias'),'unregistered paths must fail closed');
   assert.ok(page.includes('/seonammedi/board/ui/central-category.js?v=20261020-event-open-1'),'actual published home must use the verified Worker route');
   assert.ok(verifier.includes("'board/ui/central-category.js'"),'published Worker path must be included in the strict alias list');
