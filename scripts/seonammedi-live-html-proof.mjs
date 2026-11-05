@@ -72,7 +72,7 @@ export function projectedSeonamMediPublishedHtmlForProof(sourceHtml,origin){
   return html
     .replaceAll('https://ekodi.kr/seonammedi/','https://seonammedi.kr/')
     .replaceAll('https://ekodi.kr/seonammedi','https://seonammedi.kr')
-    .replace(/https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr(?=[/\"'<\\s?#]|$)/gi,'https://seonammedi.kr');
+    .replace(/https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr(?=[\/"'<\s?#]|$)/gi,'https://seonammedi.kr');
 }
 
 export function normalizeSeonamMediLiveHtml(rawHtml,{origin,page}){
