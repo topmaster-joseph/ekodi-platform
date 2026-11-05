@@ -862,7 +862,7 @@ async function listAdminRoster(env){
 const PAGE_KEYS=new Set(['status','organization']);
 // Finance disclosure is an aggregate-only public record, never a transaction ledger.
 const FINANCE_DISCLOSURE_KEY='financeDisclosure';
-const disclosureDateOk=value=>typeof value==='string'&&/^\\d{4}-\\d{2}-\\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+'T00:00:00Z'))&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
+const disclosureDateOk=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value+'T00:00:00Z'))&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
 const disclosureMoneyOk=value=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0&&value<=999999999999;
 function approvedFinanceDisclosure(value){
   if(!value||typeof value!=='object'||Array.isArray(value))return null;
