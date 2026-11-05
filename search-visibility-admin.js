@@ -70,6 +70,7 @@
     <div class="sv-toolbar">
       <button class="secondary" type="button" data-sv-reload>공개 사이트 목록 갱신</button>
       <button class="secondary" type="button" data-sv-audit-all>전체 사이트 기술점검</button>
+      <button class="secondary" type="button" data-sv-export disabled title="기술점검 실행 후 결과를 다운로드할 수 있습니다.">점검 결과 CSV</button>
       <label for="sv-category-filter">분류</label><select id="sv-category-filter" aria-label="사이트 분류 필터"><option value="">전체 분류</option></select>
       <label for="sv-search">검색</label><input id="sv-search" type="search" placeholder="사이트명 또는 주소">
       <span class="sv-count" data-sv-count aria-live="polite"></span>
@@ -464,6 +465,42 @@
         observed.href==='https://xn--3e0b8b58jw4co4mnpll3k.kr/';
     }catch{return false;}
   };
+  // Export only currently loaded public-site audit results. No private
+  // provider evidence, OAuth credentials or cross-tenant records are included.
+  // An unscanned row remains "미점검"; the export is NOT an indexing report.
+  const technicalAuditCsv = (sites, audited, generatedAt) => {
+    const cell = value => {
+      let text=String(value??'').replace(/[\u0000-\u001f\u007f]/g,' ');
+      if(/^\s*[=+\-@]/.test(text))text="'"+text; // spreadsheet formula injection
+      return '"'+text.replaceAll('"','""')+'"';
+    };
+    const header=['조회시각(KST)','사이트','공개 주소','기술점검 상태','SEO 기술 준비','AEO·GEO 발견 준비','개선 사항','검색 차단','오류'];
+    const rows=sites.map(site=>{
+      const result=audited.get(site.url);
+      const status=!result?'미점검':result.error?'점검 실패':'점검 완료';
+      const blocked=!result?'미점검':result.error?'확인 불가':result.raw?.noindex===true?'noindex 확인':'차단 지시 없음';
+      return [generatedAt,site.name||site.path||'사이트',site.url,status,
+        result?.error?'':result?.basic||'',result?.error?'':result?.ai||'',
+        Array.isArray(result?.improvements)?result.improvements.join(' / '):'',
+        blocked,result?.error||''];
+    });
+    return [header,...rows].map(row=>row.map(cell).join(',')).join('\r\n')+'\r\n';
+  };
+  const downloadTechnicalAudit = () => {
+    if(state.busy||!state.audited.size||!state.sites.length)return;
+    const now=new Date();
+    const timestamp=now.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false});
+    const csv=technicalAuditCsv(state.sites,state.audited,timestamp);
+    const blob=new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'});
+    const href=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=href;
+    link.download='ekodi-search-audit-'+now.toISOString().slice(0,10)+'.csv';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(href),1000);
+    status('기술점검 결과 '+state.audited.size+'건을 내보냈습니다. 미점검 사이트도 별도 표시했으며, 검색엔진 등록·색인 여부는 포함하지 않습니다.');
+  };
   const siteResult = site => state.audited.get(site.url);
   function render() {
     $('[data-sv-sites]').textContent=String(state.sites.length);
@@ -473,6 +510,9 @@
     const started=audits.length>0;
     $('[data-sv-audited]').textContent=started?String(audits.filter(result=>!result.error).length):'미실행';
     $('[data-sv-failed]').textContent=started?String(audits.filter(result=>Boolean(result.error)).length):'미실행';
+    const exportButton=$('[data-sv-export]');
+    exportButton.disabled=state.busy||!started;
+    exportButton.title=started?'전체 '+state.sites.length+'개 사이트 중 '+state.audited.size+'개 점검 결과 · 미점검 사이트도 표시':'기술점검 실행 후 결과를 다운로드할 수 있습니다.';
     const target=$('[data-sv-rows]');target.replaceChildren();
     const q=$('#sv-search').value.trim().toLowerCase(), group=$('#sv-category-filter').value;
     const sites=state.sites.filter(site=>(!group||siteCategory(site)===group)&&
@@ -575,6 +615,7 @@
   $('[data-sv-google-read]').addEventListener('click',loadGoogleSearch);
   $('[data-sv-reload]').addEventListener('click',load);
   $('[data-sv-audit-all]').addEventListener('click',auditAll);
+  $('[data-sv-export]').addEventListener('click',downloadTechnicalAudit);
   $('#sv-search').addEventListener('input',render);
   $('#sv-category-filter').addEventListener('change',render);
   $('[data-sv-manage-close]').addEventListener('click',()=>{$('[data-sv-manage-panel]').hidden=true;});
