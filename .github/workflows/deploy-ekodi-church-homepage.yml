@@ -107,7 +107,11 @@ jobs:
           grep -Fq 'data-church-weekly' church/index.html
           # Approved PR #114 public presentation only; preserve auth, giving, and worship.
           grep -Fq '<link rel="stylesheet" href="church-homepage-layout.css">' church/index.html
-          grep -Fq 'href="#weekly-worship">예배자료</a>' church/index.html
+          # Keep the worship proof strict while recognizing the reviewed six-menu layout.
+          # The verifier accepts only the original legacy header or the exact new
+          # first-level menu with all contextual worship/Together routes preserved.
+          node .ekodi-control/scripts/verify-church-header-navigation.mjs \
+            --html church/index.html --subnav church/church-section-nav.js
           grep -Fq 'online-triad--broadcast' church/index.html
           grep -Fq 'href="/live/church/"' church/index.html
           grep -Fq 'body:has(main :target) .hero{display:none!important}' church/church-homepage-layout.css

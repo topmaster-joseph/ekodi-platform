@@ -81,7 +81,7 @@ test('Church-approved layout requires five-viewport multilingual Chromium produc
  for(const contract of [
   'church-homepage-layout.css',
   'body:has(main :target) .hero{display:none!important}',
-  'href="#weekly-worship">예배자료</a>',
+  'verify-church-header-navigation.mjs',
   'online-triad--broadcast',
   'href="/live/church/"',
   "if grep -Eiq 'meet",
@@ -95,6 +95,7 @@ test('Church-approved layout requires five-viewport multilingual Chromium produc
   'live.cards,2',
   'Upload approved layout Chromium evidence'
  ])assert.ok(w.includes(contract),'missing Church layout guarded proof: '+contract);
+ assert.match(w,/verify-church-header-navigation\.mjs[\s\S]*?--html church\/index\.html --subnav church\/church-section-nav\.js/);
  assert.match(w,/actions\/upload-artifact@v4/);
  assert.match(w,/CHURCH_SOURCE_SHA/);
  assert.match(w,/validate-ekodi-ai-change-orchestration\.mjs/);
