@@ -191,13 +191,13 @@ test('both homes show only the intro first and one section per top-menu click; p
   assert.ok(meetings.includes('href="/mokpo-presbytery/mission/policy-council-2026/"'));
 });
 
-test('login page offers EKODI login and chair phone login, then returns to the mission page',()=>{
+test('login page offers EKODI login and name + last-4 login for 부장·부원, then returns to the mission page',()=>{
   const page=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/viewer/index.html',import.meta.url),'utf8');
-  assert.ok(page.includes('id="vwPhone"'));assert.ok(page.includes('id="vwPin"'));assert.ok(page.includes('maxlength="4"'));
+  assert.ok(page.includes('id="vwName"'));assert.ok(!page.includes('id="vwPhone"'));assert.ok(page.includes('id="vwPin"'));assert.ok(page.includes('maxlength="4"'));assert.ok(page.includes('휴대폰 끝 4자리'));
   assert.ok(page.includes('href="/auth/?site=space&amp;return_to=https%3A%2F%2Fekodi.kr%2Fmokpo-presbytery%2Fmission%2F"'));
   assert.ok(page.includes('data-return="/mokpo-presbytery/mission/#budget"'));
   const js=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/viewer/viewer.js',import.meta.url),'utf8');
-  assert.ok(js.includes('organization_pin_login'));assert.ok(js.includes('sessionStorage'));assert.ok(!js.includes('localStorage'));assert.ok(!js.includes('innerHTML'));
+  assert.ok(js.includes('organization_name_login'));assert.ok(!js.includes('organization_pin_login'));assert.ok(js.includes('sessionStorage'));assert.ok(!js.includes('localStorage'));assert.ok(!js.includes('innerHTML'));
 });
 
 test('mission home has no separate workspace: role panels render inside each menu section',()=>{
@@ -209,7 +209,7 @@ test('mission home has no separate workspace: role panels render inside each men
   assert.match(home,/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2" defer><\/script>\s*<script src="\/mokpo-presbytery\/mission\/site\.js" defer><\/script>/);
   const js=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/site.js',import.meta.url),'utf8');
   assert.ok(!js.includes('innerHTML'));assert.ok(!js.includes('localStorage.'));
-  for(const fn of ['organization_site_context','organization_member_snapshot','organization_admin_snapshot','organization_admin_command','organization_budget_command','organization_budget_snapshot','organization_pin_snapshot','organization_pin_budget_approve','organization_pin_viewer_set','organization_event_roster_admin'])assert.ok(js.includes(`'${fn}'`),fn);
+  for(const fn of ['organization_site_context','organization_member_snapshot','organization_admin_snapshot','organization_admin_command','organization_budget_command','organization_budget_snapshot','organization_pin_snapshot','organization_pin_budget_approve','organization_login_member_set','organization_login_member_disable','organization_login_members','organization_event_roster_admin'])assert.ok(js.includes(`'${fn}'`),fn);
   for(const id of ['intro','plans','budget','meetings','resources'])assert.ok(js.includes(`panel('${id}'`),id);
   // only the chair (phone login with canApprove) gets an approve button; managers are told approval is the chair's.
   assert.match(js,/role==='chair'&&data&&data\.viewer&&data\.viewer\.canApprove/);
@@ -299,4 +299,25 @@ test('every 선교부 page carries the same login state (role bar + site.js), so
   const js=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/site.js',import.meta.url),'utf8');
   assert.ok(js.includes('header a[href$=')&&js.includes('/mokpo-presbytery/mission/viewer/'));
   assert.ok(js.includes("'이미 로그인되어 있습니다'"));
+});
+
+test('signed-in: the header login link is hidden (single logout in the right-aligned account bar)',()=>{
+  const js=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/site.js',import.meta.url),'utf8');
+  assert.match(js,/for\(var i=0;i<login\.length;i\+\+\)login\[i\]\.hidden=true;/);
+  assert.doesNotMatch(js,/login\[i\]\.textContent='로그아웃'/);
+  const home=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/index.html',import.meta.url),'utf8');
+  assert.match(home,/\.rolebar \.wrap\{display:flex;justify-content:flex-end/);
+});
+
+test('name-login migration: password = last four digits, public roster shows no digits, manager-only registration',()=>{
+  const sql=fs.readFileSync(new URL('../supabase/migrations/20261106120000_mokpo_mission_name_login.sql',import.meta.url),'utf8');
+  assert.match(sql,/extensions\.crypt\(right\(v_phone,4\), extensions\.gen_salt\('bf', 8\)\)/);
+  assert.match(sql,/'phoneMasked', case when r\.phone = '' then '' else '010-\*\*\*\*-\*\*\*\*' end/);
+  assert.match(sql,/grant execute on function public\.organization_name_login\(text,text,text\) to anon, authenticated;/);
+  for(const fn of ['organization_login_member_set\\(text,text,text,text\\)','organization_login_member_disable\\(text,text\\)','organization_login_members\\(text\\)']){
+    assert.match(sql,new RegExp(`revoke all on function public\\.${fn} from public, anon;`),fn);
+    assert.match(sql,new RegExp(`grant execute on function public\\.${fn} to authenticated;`),fn);
+  }
+  assert.match(sql,/failed_count \+ 1 >= 5 then now\(\) \+ interval '30 minutes'/);
+  assert.doesNotMatch(sql,/010-?2549|01025496632|6632|3501|8542/);
 });
