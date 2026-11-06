@@ -30,7 +30,7 @@ test('notice and schedule pages share Church shell and avoid unsanitized HTML',(
     assert.equal((nav.match(/href="\/ekodichurch\/notices\/"/g)||[]).length,1,'notice menu link appears once');
     assert.equal((nav.match(/href="\/ekodichurch\/schedule\/"/g)||[]).length,1,'schedule menu link appears once');
     assert.ok(nav.indexOf('href="/ekodichurch/devotion/"')<nav.indexOf('href="/ekodichurch/schedule/"'));
-    assert.ok(nav.indexOf('href="/ekodichurch/schedule/"')<nav.indexOf('href="/ekodichurch/notices/"'));
+    assert.ok(nav.indexOf('href="/ekodichurch/notices/"')<nav.indexOf('href="/ekodichurch/schedule/"'));
   }
   assert.match(js,/post\.categoryId==='notice'/);
   assert.match(js,/post\?\.categoryId!=='schedule'/);
