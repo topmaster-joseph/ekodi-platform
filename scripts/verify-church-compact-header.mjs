@@ -45,7 +45,7 @@ export function verifyChurchCompactHeader(sourceDir, manifestFile) {
       href: m[1].match(/\bhref="([^"]+)"/)?.[1],
       text: m[2].replace(/<[^>]+>/g, '').trim()
     }));
-    if (JSON.stringify(anchors) !== JSON.stringify(LINKS)) fail(filename + ': primary links differ from reviewed six-link contract');
+    if (JSON.stringify(anchors.map(({href, text}) => [href, text])) !== JSON.stringify(LINKS)) fail(filename + ': primary links differ from reviewed six-link contract');
     if (!html.includes('church-compact-navigation.css')) fail(filename + ': missing responsive menu CSS');
     if (nav.includes('오늘의 삶') || nav.includes('큐티인 신청') || nav.includes('예배자료')) fail(filename + ': legacy item returned to primary menu');
   }
