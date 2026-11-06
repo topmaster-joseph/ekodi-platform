@@ -4,21 +4,21 @@ import {readFile} from 'node:fs/promises';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
-test('public Church sections remain canonical direct links with compact native tabs',async()=>{
+test('six primary Church tabs preserve every public deep link and member destinations',async()=>{
   const html=await read('index.html');
   const css=await read('church-homepage-layout.css');
-  const names=['about','community','worship','weekly-worship','partner-news','online','location'];
-  assert.ok(html.includes('href="/ekodichurch/devotion/"'),'canonical devotional page must remain the eighth tile');
+  const navigation=await read('church-section-nav.js');
+  const responsive=await read('church-compact-navigation.css');
+  const grid=html.match(/<div class="overview-grid"[\\s\\S]*?<\\/div>/)?.[0]||'';
+  assert.equal((grid.match(/<a href=/g)||[]).length,6,'only six home shortcuts');
+  for(const url of ['/ekodichurch/devotion/','/ekodichurch/#worship','/ekodichurch/notices/','/ekodichurch/schedule/','/ekodichurch/#together','/ekodichurch/my/'])
+    assert.ok(grid.includes('href="'+url+'"'),'missing six-menu destination '+url);
   assert.ok(!html.includes('id="life-hub"'),'legacy life record section must remain retired');
-  for(const section of names){
-    assert.ok(html.includes('href="#'+section+'"'),'missing public destination '+section);
-    assert.ok(html.includes('id="'+section+'"'),'missing section '+section);
-  }
-  assert.match(css,/body:not\(:has\(main :target\)\) main > \.hero/);
-  assert.match(css,/main:has\(:target\) > section:not\(\.hero\):not\(:target\):not\(:has\(:target\)\)/);
-  assert.match(css,/body:has\(main :target\) main > \.hero\{/);
-  assert.match(css,/position:fixed!important/);
-  assert.match(css,/grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  for(const section of ['about','community','worship','weekly-worship','partner-news','online','location'])
+    assert.ok(html.includes('id="'+section+'"'),'legacy deep-link target removed: '+section);
+  assert.match(navigation,/hashchange/);
+  assert.match(navigation,/church-section-active/);
+  assert.match(responsive,/min-height:44px/);
   assert.match(css,/overflow-wrap:normal!important/);
 });
 
