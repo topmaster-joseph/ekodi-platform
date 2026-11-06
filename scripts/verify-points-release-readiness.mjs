@@ -15,6 +15,7 @@ export const PREREQUISITES=Object.freeze([
 export const POINTS_CONTRACT=Object.freeze([
   'points_sites','points_rules','points_ledger','points_claims','recognition_goals',
   'recognition_read_rpc','recognition_write_rpc','anon_goals_denied','direct_goals_denied',
+  'points_tables_secure',
 ]);
 
 export const SCHEMA_QUERY=String.raw`select
@@ -36,7 +37,18 @@ export const SCHEMA_QUERY=String.raw`select
     else false end as anon_goals_denied,
   case when to_regclass('ekodi_points_private.member_recognition_goals') is not null
     then not has_table_privilege('authenticated',to_regclass('ekodi_points_private.member_recognition_goals'),'select')
-    else false end as direct_goals_denied`;
+    else false end as direct_goals_denied,
+  -- Fail closed if any points-owned table loses RLS or grants direct browser writes.
+  (select count(*)>0 and coalesce(bool_and(
+      c.relrowsecurity
+      and not has_table_privilege('anon',c.oid,'SELECT,INSERT,UPDATE,DELETE')
+      and not has_table_privilege('authenticated',c.oid,'INSERT,UPDATE,DELETE')
+    ),false)
+    from pg_class c join pg_namespace n on n.oid=c.relnamespace
+    where c.relkind in ('r','p')
+      and ((n.nspname='public' and c.relname like 'ekodi_point_%')
+        or n.nspname='ekodi_points_private')
+  ) as points_tables_secure`;
 export const MIGRATION_QUERY=String.raw`select version,name
   from supabase_migrations.schema_migrations
   where name like '%_ekodi_points_%'
