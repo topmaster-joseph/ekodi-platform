@@ -386,12 +386,13 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
       document.documentElement.dataset.ekodiChurchUnifiedAdmin='true';
       const tabs=$('sectionNav');
       tabs.className='church-admin-detail-tabs';
-      const heading=document.querySelector('main .heading');
-      if(heading&&tabs.previousElementSibling!==heading)heading.after(tabs);
+      const viewTabs=document.querySelector('main .admin-view-tabs');
+      if(viewTabs&&tabs.previousElementSibling!==viewTabs)viewTabs.after(tabs);
       const permitted=roleCapabilities(role);
       mountChurchAdminNavigation({
         root:h,tabsRoot:tabs,groups:CHURCH_ADMIN_MENU,
         activeKey:section,activeOwner:'workspace',base:'/ekodichurch/admin',
+        showUnavailable:Boolean(role),
         canView:tab=>{
           if(!role)return tab.owner==='church'&&tab.key==='overview';
           if(role==='worship_admin')return tab.owner==='church'&&tab.key==='worship';

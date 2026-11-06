@@ -54,11 +54,15 @@ export const CHURCH_ADMIN_MENU = Object.freeze([
 
 // The same menu builder is serialized into both generated client scripts.
 // Authorization is still enforced by each destination's own server-side gate.
-export function mountChurchAdminNavigation({root,tabsRoot,groups,activeKey,activeOwner,canView,base='/ekodichurch/admin'}){
+export function mountChurchAdminNavigation({root,tabsRoot,groups,activeKey,activeOwner,canView,base='/ekodichurch/admin',showUnavailable=false}){
   if(!root||!tabsRoot)return;
   root.replaceChildren();
   tabsRoot.replaceChildren();
-  const visible = groups.map(group=>({...group,tabs:group.tabs.filter(canView)})).filter(group=>group.tabs.length);
+  // One stable, deterministic menu outline across all Church admin routes.
+  // The site's current server-authorized capability still determines clickability:
+  // an unavailable row is inert text, never a link into a forbidden route.
+  const visible = groups.map(group=>({...group,tabs:group.tabs.filter(canView)}))
+    .filter(group=>showUnavailable||group.tabs.length);
   const href = tab=>base+'/'+tab.key;
   const activeGroup=visible.find(group=>group.tabs.some(tab=>tab.key===activeKey&&tab.owner===activeOwner));
   // Project the same authorized routes under two clear, non-clickable sections.
@@ -80,13 +84,19 @@ export function mountChurchAdminNavigation({root,tabsRoot,groups,activeKey,activ
       root.append(heading);
       currentScope=group.scope;
     }
-    const link=document.createElement('a');
     const selected=group===activeGroup;
     const first=selected?group.tabs.find(tab=>tab.key===activeKey&&tab.owner===activeOwner):group.tabs[0];
-    link.href=href(first);link.textContent=group.label;
+    const link=document.createElement(first?'a':'span');
+    if(first)link.href=href(first);
+    link.textContent=group.label;
     link.dataset.adminNavGroup=group.id;
     if(group.id==='services')link.classList.add('admin-nav-service-settings');
     if(selected){link.classList.add('active');link.setAttribute('aria-current','location');}
+    if(!first){
+      link.classList.add('church-admin-nav-unavailable');
+      link.setAttribute('aria-disabled','true');
+      link.setAttribute('title','현재 권한 또는 서비스설정에서 사용할 수 없는 메뉴');
+    }
     root.append(link);
   }
   if(activeGroup&&activeGroup.tabs.length>1){
@@ -110,10 +120,12 @@ html[data-ekodi-church-unified-admin="true"] .sidebar #adminNav .church-admin-na
 html[data-ekodi-church-unified-admin="true"] .sidebar #adminNav .church-admin-nav-heading:first-child{margin-top:0;padding-top:0;border-top:0}
 html[data-ekodi-church-unified-admin="true"] .sidebar #adminNav a{font-size:13px;min-height:37px;line-height:1.4;word-break:keep-all;overflow-wrap:normal}
 html[data-ekodi-church-unified-admin="true"] .sidebar #adminNav a.active{font-weight:800}
-html[data-ekodi-church-unified-admin="true"] main{min-width:0;padding:20px clamp(12px,2.2vw,28px) 32px}
+html[data-ekodi-church-unified-admin="true"] .sidebar #adminNav .church-admin-nav-unavailable{display:flex;align-items:center;min-height:37px;padding:8px 10px;color:#8b95a6;font-size:13px;line-height:1.4;opacity:.7;cursor:not-allowed;user-select:none}
+html[data-ekodi-church-unified-admin="true"] .sidebar #adminNav .church-admin-nav-unavailable[aria-disabled="true"]{pointer-events:none}
+html[data-ekodi-church-unified-admin="true"] main{position:relative;min-width:0;padding:10px clamp(12px,2.2vw,28px) 22px}
 html[data-ekodi-church-unified-admin="true"] main > *{max-width:1240px;margin-left:auto;margin-right:auto}
 html[data-ekodi-church-unified-admin="true"] main .heading{margin-bottom:8px}
-html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs{display:flex!important;flex-wrap:wrap;justify-content:flex-end;gap:6px;margin:0 auto 10px;padding:6px 0 10px;border-bottom:1px solid #e1e7ef;min-height:0}
+html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs{display:flex!important;flex-wrap:wrap;justify-content:flex-start!important;align-items:center;gap:6px;margin:0 0 8px!important;padding:0 0 8px;border-bottom:1px solid #e1e7ef;min-height:0;width:100%;box-sizing:border-box}
 html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs[hidden]{display:none!important}
 html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs a{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 13px;border:1px solid #d8e0ec;border-radius:9px;background:#fff;color:#344256;font-size:13px;font-weight:650;text-align:center;text-decoration:none;word-break:keep-all}
 html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs a:hover{background:#f1f5fa}
@@ -127,7 +139,24 @@ html[data-ekodi-church-unified-admin="true"] #mainPanel :is(input,select,textare
 html[data-ekodi-church-unified-admin="true"] #mainPanel input[type="checkbox"]{min-height:18px;width:18px;accent-color:#1f3c88}
 html[data-ekodi-church-unified-admin="true"] #mainPanel .trade-grid label{font-size:13px;line-height:1.4;word-break:keep-all}
 html[data-ekodi-church-unified-admin="true"] #mainPanel .panel h2{font-size:16px}
+/* All Church admin runtimes keep the semantic H1 for accessibility, while the
+   duplicate visual heading/description consumes no layout height or width. */
+html[data-ekodi-church-unified-admin="true"] .layout main > .heading{
+  position:absolute!important;width:1px!important;height:1px!important;
+  overflow:hidden!important;clip-path:inset(50%)!important;
+  margin:0!important;padding:0!important;border:0!important;
+  white-space:nowrap!important;display:block!important;
+}
+html[data-ekodi-church-unified-admin="true"] .layout main > .admin-view-tabs{
+  justify-content:flex-start!important;margin:0 0 8px!important;
+  padding:0 0 7px!important;min-height:0;
+}
+html[data-ekodi-church-unified-admin="true"] .layout main > .church-admin-detail-tabs{
+  justify-content:flex-start!important;margin:0 0 8px!important;
+}
+html[data-ekodi-church-unified-admin="true"] .layout main > #mainPanel{margin-top:0}
+
 html[data-ekodi-church-unified-admin="true"] .panel{padding:clamp(12px,1.6vw,20px)}
-@media(max-width:900px){html[data-ekodi-church-unified-admin="true"] main{padding:16px 12px 26px}html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs{justify-content:flex-start}}
+@media(max-width:900px){html[data-ekodi-church-unified-admin="true"] main{padding:9px 12px 18px}html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs{justify-content:flex-start}}
 @media(max-width:620px){html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs{gap:5px}html[data-ekodi-church-unified-admin="true"] .church-admin-detail-tabs a{flex:1 1 auto;min-height:44px;padding:8px 10px}html[data-ekodi-church-unified-admin="true"] .sidebar #adminNav a{min-height:44px}}
 `;
