@@ -69,8 +69,8 @@ export async function verifyIndependentBoardLive({
         assert.equal(withheld.headers.get('x-ekodi-region-publication'), 'private-owner-release-required', path);
         assert.equal(withheld.headers.get('x-content-type-options'), 'nosniff', path);
         assert.match(withheld.headers.get('x-robots-tag') || '', /noindex/i, path);
-        assert.match(withheld.headers.get('cache-control') || '', /(?:^|[,\\s])no-store(?:$|[,\\s])/i, path);
-        assert.match(withheld.headers.get('content-type') || '', /text\\/html/i, path);
+        assert.match(withheld.headers.get('cache-control') || '', /(?:^|[,\s])no-store(?:$|[,\s])/i, path);
+        assert.match(withheld.headers.get('content-type') || '', /text\/html/i, path);
         assert.match(await withheld.text(), /서비스 비공개/, path);
       }
       continue;
