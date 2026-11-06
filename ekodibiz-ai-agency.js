@@ -52,7 +52,9 @@ function publicRecord(record) {
     supplierAmount:record.supplierAmount, totalAmount:record.totalAmount,
     issuedAt:record.issuedAt, quoteAt:record.quoteAt || null,
     acceptedAt:record.acceptedAt || null, paidAt:record.paidAt || null, activatedAt:record.activatedAt || null,
-    expiresAt:record.expiresAt || null, guidance:record.guidance || '' };
+    expiresAt:record.expiresAt || null, guidance:record.guidance || '',
+    cycleCount:Array.isArray(record.monthlyRecords)?record.monthlyRecords.length:0,
+    renewalStopRecorded:!!record.renewalStopReceipt };
 }
 function activeStatus(record) {
   if (record.status === 'paid_pending_fulfillment' || record.status === 'active') {
@@ -137,9 +139,37 @@ export async function agencyApi(request, url, env) {
         return reply({ ok:true, record:publicRecord(saved.record) });
       }
     }
-    if (path === '/api/agency/admin/list' || path === '/api/agency/admin/quote' || path === '/api/agency/admin/activate') {
+    if (['/api/agency/admin/list','/api/agency/admin/quote','/api/agency/admin/activate',
+      '/api/agency/admin/record-cycle','/api/agency/admin/stop-renewal','/api/agency/admin/settlement'].includes(path)) {
       if (!adminAuthorized(request, env)) return fault('admin_access_denied', 403);
       if (path === '/api/agency/admin/list') return reply({ ok:true, ...(await store(env, '/agency/admin/list', {})) });
+      if (['/api/agency/admin/record-cycle','/api/agency/admin/stop-renewal','/api/agency/admin/settlement'].includes(path)) {
+        const id = text(body.id,64);
+        if (!/^EBAI-[A-Z0-9]{24}$/.test(id)) return fault('invalid_receipt',404);
+        // Accounting evidence only. These endpoints cannot charge or cancel any provider plan.
+        if (body.password || body.otp || body.cardNumber || body.apiKey || body.chatContent)
+          return fault('credentials_forbidden',422);
+        if (path === '/api/agency/admin/settlement') {
+          return reply({ok:true,...(await store(env,'/agency/admin/settlement',{id}))});
+        }
+        if (body.confirmed !== true) return fault('operator_confirmation_required',422);
+        if (path === '/api/agency/admin/record-cycle') {
+          const cycle = integer(body.cycle,3), amount = integer(body.amount,MAX_SUPPLIER);
+          const receiptRef = text(body.receiptRef,80), paidOn = text(body.paidOn,10);
+          if (cycle===null || cycle<1 || amount===null || amount<1 ||
+              !/^[A-Za-z0-9][A-Za-z0-9._:\/-]{5,79}$/.test(receiptRef) ||
+              !/^\d{4}-\d{2}-\d{2}$/.test(paidOn) || Number.isNaN(Date.parse(paidOn)) ||
+              new Date(paidOn+'T00:00:00Z').toISOString().slice(0,10)!==paidOn ||
+              Date.parse(paidOn+'T00:00:00Z')>Date.now())
+            return fault('cycle_evidence_invalid',422);
+          return reply({ok:true,...(await store(env,'/agency/admin/record-cycle',
+            {id,cycle,amount,paidOn,receiptRef}))});
+        }
+        const cancellationRef = text(body.cancellationRef,80);
+        if (!/^[A-Za-z0-9][A-Za-z0-9._:\/-]{5,79}$/.test(cancellationRef) || body.personalAccountKept !== true)
+          return fault('renewal_stop_evidence_invalid',422);
+        return reply({ok:true,...(await store(env,'/agency/admin/stop-renewal',{id,cancellationRef,personalAccountKept:true}))});
+      }
       if (path === '/api/agency/admin/activate') {
         const id = text(body.id, 64);
         if (!/^EBAI-[A-Z0-9]{24}$/.test(id) || body.confirmed !== true) return fault('activation_confirmation_required', 422);
@@ -209,7 +239,54 @@ export async function agencyStore(request, storage) {
     if (!constantTimeEqual(r.tokenHash, data.tokenHash)) return fault('not_found', 404);
     return reply({ ok:true, record:r });
   }
-  if (url.pathname === '/agency/admin/quote') {
+  // Read-only operator settlement of already received institutional funds.
+  // A handwritten reference is not proof of external payment or cancellation.
+  if (url.pathname === '/agency/admin/settlement') {
+    if (r.type !== 'institution' || r.months !== 3) return fault('institution_only',409);
+    const cycleRecords=Array.isArray(r.monthlyRecords)?r.monthlyRecords:[];
+    const recordedTotal=cycleRecords.reduce((sum,item)=>sum+item.amount,0);
+    const budget=Number.isSafeInteger(r.supplierAmount)?r.supplierAmount:0;
+    return reply({ok:true,settlement:{
+      id:r.id,organization:r.organization,months:3,contractStatus:activeStatus(r),
+      serviceFee:r.feeAmount,providerBudget:budget,
+      recordedSupplierSpending:recordedTotal,unallocatedProviderBudget:budget-recordedTotal,
+      cycles:cycleRecords.map(item=>({...item})),
+      renewalStopRecorded:!!r.renewalStopReceipt,
+      renewalStopReceipt:r.renewalStopReceipt || null,
+      accountKeptAttested:r.accountKeptAttested===true,
+      limitation:'수동 기재 증빙이며 실제 은행 이체·공급사 청구·해지를 독립 검증한 결과는 아닙니다.'
+    }});
+  }
+  if (url.pathname === '/agency/admin/record-cycle') {
+    if (r.type !== 'institution' || r.months !== 3) return fault('institution_only',409);
+    if (!['active','expired'].includes(activeStatus(r))) return fault('service_not_active',409);
+    if (!Number.isSafeInteger(r.supplierAmount) || r.supplierAmount<=0) return fault('no_provider_budget',409);
+    const {cycle,amount,paidOn,receiptRef}=data;
+    if (!Number.isSafeInteger(cycle)||cycle<1||cycle>3||!Number.isSafeInteger(amount)||amount<=0||
+        typeof receiptRef!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:\/-]{5,79}$/.test(receiptRef) ||
+        typeof paidOn!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(paidOn) ||
+        Number.isNaN(Date.parse(paidOn)) || new Date(paidOn+'T00:00:00Z').toISOString().slice(0,10)!==paidOn ||
+        Date.parse(paidOn+'T00:00:00Z')>Date.now()) return fault('cycle_evidence_invalid',422);
+    const cycles=Array.isArray(r.monthlyRecords)?r.monthlyRecords:[];
+    if (cycles.some(item=>item.cycle===cycle || item.receiptRef===receiptRef))
+      return fault('cycle_already_recorded',409);
+    const sum=cycles.reduce((amount,item)=>amount+item.amount,0)+amount;
+    if (!Number.isSafeInteger(sum)||sum>r.supplierAmount) return fault('supplier_budget_exceeded',409);
+    const at=new Date().toISOString();
+    r.monthlyRecords=[...cycles,{cycle,amount,paidOn,receiptRef,recordedAt:at}].sort((a,b)=>a.cycle-b.cycle);
+    r.audit.push({at,action:'manual_supplier_payment_evidence_recorded',cycle});
+  } else if (url.pathname === '/agency/admin/stop-renewal') {
+    if (r.type !== 'institution' || r.months !== 3) return fault('institution_only',409);
+    if (!['active','expired'].includes(activeStatus(r))) return fault('service_not_active',409);
+    const ref=data.cancellationRef;
+    if (typeof ref!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:\/-]{5,79}$/.test(ref)||
+      data.personalAccountKept!==true) return fault('renewal_stop_evidence_invalid',422);
+    if (r.renewalStopReceipt) return fault('renewal_stop_already_recorded',409);
+    const at=new Date().toISOString();
+    r.renewalStopReceipt={receiptRef:ref,recordedAt:at};
+    r.accountKeptAttested=true;
+    r.audit.push({at,action:'manual_provider_renewal_stop_evidence_recorded'});
+  } else if (url.pathname === '/agency/admin/quote') {
     if (!['awaiting_quote', 'quoted'].includes(r.status)) return fault('invalid_state', 409);
     r.feeAmount=data.feeAmount;r.supplierAmount=data.supplierAmount;
     r.totalAmount=data.feeAmount + data.supplierAmount;
