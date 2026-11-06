@@ -106,14 +106,23 @@ export async function generate(env, system, prompt, maxTokens, stage = 'draft') 
 }
 
 let tally = {}; // 오늘 실행에서 AI별 호출 수(실행 기록용)
+const BUDGET_CODES = new Set(['daily_cap_reached', 'no_free_provider', 'all_free_providers_unavailable']);
+let breaker = { fails: 0, off: false, reason: '' };
+export function resetControlBreaker() { breaker = { fails: 0, off: false, reason: '' }; }
+export function controlBreakerState() { return { ...breaker }; }
 /** 글 한 번: Workers AI(공용 장부)와 AI 관리 장치의 무료 AI를 단계에 맞는 순서로 시도한다. 둘 다 안 되면 null(다음 날로). */
 export async function writeText(env, system, prompt, maxTokens, stage = 'draft') {
   const viaControl = async () => {
-    if (typeof env.AI_CONTROL?.write !== 'function') return null;
+    if (breaker.off || typeof env.AI_CONTROL?.write !== 'function') return null;
+    let reason = '';
     try {
       const r = await env.AI_CONTROL.write({ system, prompt, maxTokens, purpose: 'publishing-' + stage });
-      if (r?.ok && typeof r.text === 'string' && r.text.trim()) { tally[r.provider || 'control'] = (tally[r.provider || 'control'] || 0) + 1; return r.text.trim(); }
-    } catch {}
+      if (r?.ok && typeof r.text === 'string' && r.text.trim()) { breaker.fails = 0; tally[r.provider || 'control'] = (tally[r.provider || 'control'] || 0) + 1; return r.text.trim(); }
+      if (BUDGET_CODES.has(r?.code)) return null; // 무료 몫 소진은 고장이 아니다
+      reason = String(r?.code || 'empty_answer');
+    } catch (e) { reason = String(e?.message || e).slice(0, 120); }
+    // 자동 차단(PUBLISHING-AI-BREAKER-001): 연속 3번 고장이면 오늘 실행에서는 연결을 끊고 Workers AI 혼자 쓴다. 다음 실행 때 다시 시험한다.
+    if (++breaker.fails >= 3) { breaker.off = true; breaker.reason = reason; }
     return null;
   };
   let failure = null;
@@ -289,15 +298,18 @@ export async function aiFactoryTick(env, at = new Date()) {
   const steps = [];
   const deadline = Date.now() + 11 * 60 * 1000; // 예약 실행 시간 한도(15분) 안에서 마치고, 남은 부분은 저장해 다음 날 이어 쓴다
   tally = {};
+  resetControlBreaker();
   try {
     const tidied = await tidyDraftedChapters(env); if (tidied) steps.push({ status: 'tidied', chapters: tidied });
     if (!thisWeek) steps.push(await planWeeklyBook(env, at));
     for (let i = 0; i < 12; i++) { // 무료 한도·시간 한도를 만나면 멈춤
       const r = await draftNextChapter(env, deadline); steps.push(r);
+      if (r.status === 'ready_for_review') continue; // 한 권을 마치면 남은 한도로 다음 책을 이어 쓴다
       if (r.status !== 'drafted') break;
     }
   } catch (e) { steps.push({ status: 'error', message: String(e?.message || e).slice(0, 300) }); } // 실패 원인을 실행 기록에 남긴다
   steps.push({ status: 'providers', calls: tally });
+  if (breaker.off) steps.push({ status: 'control_disconnected', reason: breaker.reason, fallback: 'workers-ai-only' });
   await env.PUBLISH_DB.prepare('INSERT INTO publishing_ai_runs (at, result_json) VALUES (?, ?)').bind(now(), JSON.stringify(steps).slice(0, 2000)).run().catch(() => null);
   return { status: 'ok', steps };
 }
