@@ -13,8 +13,9 @@ const [html,js,css,minutes,native,workflow]=await Promise.all([
 ]);
 
 test('finance and minutes are canonical deep links with consistent selected state',()=>{
+  const anchors=[...html.matchAll(/<a\\b[^>]*>/g)].map(match=>match[0]);
   for(const name of ['dashboard','minutes','finance','access']){
-    assert.match(html,new RegExp('<a\\\\b(?=[^>]*data-panel-target="'+name+'")(?=[^>]*href="\\\\?panel='+name+'")[^>]*>'),'missing deep-link '+name);
+    assert.ok(anchors.some(a=>a.includes('data-panel-target="'+name+'"')&&a.includes('href="?panel='+name+'"')),'missing deep-link '+name);
   }
   assert.match(html,/<a href="\?panel=finance" class="admin-finance-link" data-panel-target="finance">회계 관리<\/a>/);
   assert.match(html,/href="\?panel=minutes" data-go="minutes"/);
