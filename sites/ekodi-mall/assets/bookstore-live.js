@@ -112,15 +112,18 @@
         try {
           const quote = await quoteFor(book.bookId);
           if (!readyQuote(quote, book.bookId)) {
+            if (existing) existing.dataset.bookstoreQuotePending = 'true';
             if (label) label.textContent = '가격 확인 · 판매 상태 확인 필요';
             return;
           }
           const verifiedAmount = Number(quote.price.amount);
+          if (existing) existing.dataset.bookstoreQuotePending = 'false';
           if (label) label.textContent = new Intl.NumberFormat('ko-KR').format(verifiedAmount) + '원 · 판매 중';
-          if (!existing && book.saleReady !== true) {
+          if (!existing) {
             released.set(book.bookId, { ...book, price: verifiedAmount });
           }
         } catch {
+          if (existing) existing.dataset.bookstoreQuotePending = 'true';
           if (label) label.textContent = '가격 확인 · 판매 상태 확인 필요';
         }
       }));
@@ -134,9 +137,9 @@
     // Dedicated EKODI Books storefront is the same public sale collection,
     // not a frozen build-time projection of the publisher's live approvals.
     const count = document.querySelector('[data-bookstore-public-count]');
-    if (count) count.textContent = grid.querySelectorAll('.card').length + '개';
+    if (count) count.textContent = grid.querySelectorAll('.card:not([data-bookstore-quote-pending="true"])').length + '개';
     const state = document.querySelector('[data-bookstore-store-status]');
-    if (state) state.textContent = grid.querySelector('.card') ? '도서 판매 중' : '판매 준비 중';
+    if (state) state.textContent = grid.querySelector('.card:not([data-bookstore-quote-pending="true"])') ? '도서 판매 중' : '판매 준비 중';
     window.dispatchEvent(new CustomEvent('ekodi:marketplace-products-loaded', { detail: { category: 'book', count: released.size, source: 'books-approval' } }));
   }
   async function syncDetail() {
@@ -161,9 +164,9 @@
       link.textContent = '에코디서점에서 구매하기';
       link.classList.add('primary'); link.classList.remove('ghost');
       link.target = '_self'; link.rel = 'noopener';
-      if (note) note.textContent = '에코디서점에서 직접 판매하는 전자책입니다. 구매·결제·내 서재 다운로드는 에코디서점에서 처리합니다.';
+      if (note) note.textContent = '에코디서점에서 직접 판매하는 전자책입니다. 구매·결제 후 내 서재의 전자책 리더에서 열람할 수 있습니다. 전자책 구매에는 로그인이 필요합니다.';
       setSection('STATUS', '판매 중. 에코디서점의 실시간 승인과 EPUB 파일을 확인했습니다.');
-      setSection('COMMERCE', '에코디서점 자체 판매 전자책입니다. 안전한 결제와 구매 후 내 서재 다운로드로 연결됩니다.');
+      setSection('COMMERCE', '에코디서점 자체 판매 전자책입니다. 로그인 후 안전하게 결제하고 내 서재의 전자책 리더에서 열람합니다.');
     } else {
       // A revoked edition or replaced EPUB cannot retain a stale purchase link.
       status.textContent = '판매 상태 확인 필요';
