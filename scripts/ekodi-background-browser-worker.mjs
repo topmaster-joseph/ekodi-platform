@@ -37,7 +37,7 @@ const SAFE_KEYS = new Set(['Enter','Tab','Escape','ArrowUp','ArrowDown','ArrowLe
 
 const clean=(value,max=300)=>String(value??'').trim().slice(0,max);
 const now=()=>new Date().toISOString();
-/** Browser speed evidence, not a claim of superiority to external providers. */
+/** Synthetic page.goto(domcontentloaded) timing only (excludes pacing/settle); not LCP or real-user p75. */
 export function summarizeNativeNavigationPerformance(samples=[]) {
   const values=samples.map(s=>Number(s.elapsedMs)).filter(n=>Number.isFinite(n)&&n>=0).sort((a,b)=>a-b);
   if(!values.length)return {navigations:0,p50Ms:null,p95Ms:null,maxMs:null};
@@ -232,12 +232,18 @@ export async function runTask(rawTask, options={}){
     if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
     const canonicalPath=safePath(p);
     const target=ORIGIN+canonicalPath;
-    const navStarted=Date.now();
+    // Do not include the required Cloudflare request pacing in page-load metrics.
+    let pacingWaitMs=0;
     for(let attempt=0;attempt<3;attempt++){
       const minimumGap=2200;
       const pause=Math.max(0,minimumGap-(Date.now()-lastNavigationAt));
-      if(pause>0) await page.waitForTimeout(Math.min(pause,remaining()));
+      if(pause>0){
+        const paceStartedAt=Date.now();
+        await page.waitForTimeout(Math.min(pause,remaining()));
+        pacingWaitMs+=Date.now()-paceStartedAt;
+      }
       if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
+      const documentReadyStartedAt=Date.now();
       const startingResponses=httpErrorResponses.length;
       const startingPageErrors=pageErrors.length;
       const startingConsoleErrors=consoleErrors.length;
@@ -248,6 +254,7 @@ export async function runTask(rawTask, options={}){
         if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open during navigation'+quotaDetails()+'; no retry');
         throw error;
       }
+      const domContentLoadedElapsedMs=Date.now()-documentReadyStartedAt;
       lastNavigationAt=Date.now();
       if(new URL(page.url()).origin!==ORIGIN) fail('BROWSER_REDIRECT_ORIGIN_FORBIDDEN','Navigation escaped canonical origin');
       const status=response?.status()??null;
@@ -259,7 +266,9 @@ export async function runTask(rawTask, options={}){
           fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open: Cloudflare 1027; no retry or further requests');
       }
       // Allow dynamic imports to settle only while the quota circuit remains closed.
+      const settleStartedAt=Date.now();
       await page.waitForTimeout(Math.min(task.deviceProfile.includes('mobile')?650:250,remaining()));
+      const settleWaitMs=Date.now()-settleStartedAt;
       if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open after navigation'+quotaDetails()+'; no retry');
       const transient=[502,503,504];
       const subresourceErrors=httpErrorResponses.slice(startingResponses).filter(item=>
@@ -284,7 +293,22 @@ export async function runTask(rawTask, options={}){
       }
       if(status!==null && status>=400) fail('BROWSER_NAVIGATION_HTTP_ERROR','Navigation '+canonicalPath+' returned HTTP '+status);
       for(const record of recoveredNavigations) if(record.path===canonicalPath) record.recovered=true;
-      navigationTimings.push({path:canonicalPath,elapsedMs:Date.now()-navStarted,attempts:attempt+1,status});
+      // Read only numeric Navigation/Paint Timing entries; never collect URLs,
+      // queries, resource names, user IDs, cookies or session details.
+      const browserTiming=await page.evaluate(()=>{
+        const nav=performance.getEntriesByType('navigation')[0];
+        const fcp=performance.getEntriesByType('paint').find(entry=>entry.name==='first-contentful-paint');
+        const millis=value=>Number.isFinite(value)&&value>=0?Math.round(value):null;
+        return {
+          ttfbMs:nav?millis(nav.responseStart-nav.requestStart):null,
+          domContentLoadedMs:nav?millis(nav.domContentLoadedEventEnd-nav.startTime):null,
+          fcpMs:fcp?millis(fcp.startTime):null,
+        };
+      }).catch(()=>({ttfbMs:null,domContentLoadedMs:null,fcpMs:null}));
+      navigationTimings.push({path:canonicalPath,elapsedMs:domContentLoadedElapsedMs,
+        pacingWaitMs,settleWaitMs,ttfbMs:browserTiming.ttfbMs,
+        domContentLoadedMs:browserTiming.domContentLoadedMs,fcpMs:browserTiming.fcpMs,
+        attempts:attempt+1,status});
       return {url:page.url(),status};
     }
     fail('BROWSER_NAVIGATION_THROTTLED','Navigation '+canonicalPath+' exhausted attempts');
