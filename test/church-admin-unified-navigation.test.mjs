@@ -41,8 +41,15 @@ test('church top tabs link to original owner paths and keep the active page visi
     mountChurchAdminNavigation({root,tabsRoot,groups:CHURCH_ADMIN_MENU,
       activeKey:'care',activeOwner:'church',canView:()=>true});
     const headings=root.children.filter(item=>item.className==='church-admin-nav-heading');
-    assert.equal(headings.length,0,'site administrator sees one task menu without scope headings');
-    assert.equal(root.children[0].dataset.adminNavGroup,'services','service settings must lead the menu');
+    assert.deepEqual(headings.map(item=>item.textContent),['공통메뉴','전용메뉴']);
+    assert.equal(headings[0].attributes['role'],'heading');
+    assert.equal(headings[0].attributes['aria-level'],'2');
+    assert.equal(root.children[1].dataset.adminNavGroup,'services','service settings must be first inside common menu');
+    assert.equal(root.children.filter(item=>item.dataset.adminNavGroup==='services').length,1);
+    const dedicatedIndex=root.children.indexOf(headings[1]);
+    assert.ok(dedicatedIndex>1);
+    assert.ok(root.children.slice(1,dedicatedIndex).every(item=>CHURCH_ADMIN_MENU.find(group=>group.id===item.dataset.adminNavGroup)?.scope==='common'));
+    assert.ok(root.children.slice(dedicatedIndex+1).every(item=>CHURCH_ADMIN_MENU.find(group=>group.id===item.dataset.adminNavGroup)?.scope==='dedicated'));
     const links=root.children.filter(item=>item.href);
     assert.equal(links.find(item=>item.dataset.adminNavGroup==='people').href,'/ekodichurch/admin/care');
     assert.equal(links.filter(item=>item.dataset.adminNavGroup==='people').length,1);
@@ -64,6 +71,7 @@ test('role filtering never includes forbidden destinations or constructs a misle
     mountChurchAdminNavigation({root,tabsRoot,groups:CHURCH_ADMIN_MENU,
       activeKey:'worship',activeOwner:'church',canView:tab=>tab.key==='worship'});
     assert.deepEqual(root.children.filter(item=>item.href).map(item=>item.href),['/ekodichurch/admin/worship']);
+    assert.deepEqual(root.children.filter(item=>item.className==='church-admin-nav-heading').map(item=>item.textContent),['전용메뉴'],'restricted roles must not see an empty Common Menu');
     assert.equal(tabsRoot.children.length,0);
     assert.equal(tabsRoot.hidden,true);
   }finally{globalThis.document=original}
