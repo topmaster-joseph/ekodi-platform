@@ -16,9 +16,9 @@
   const findShortcuts=category=>shortcuts.filter(a=>a.dataset.filterTarget===category);
   const localCard=()=>cards().some(card=>Boolean(String(card.dataset.regionIds||'').trim()));
   const hasCategory=category=>cards().some(card=>card.dataset.category===category);
-  // A category link is navigation, not an offer to purchase. Keep every
-  // category visible in the shared header even when there are zero sale-ready
-  // listings. Hide only empty in-page sale filters, never a navigation route.
+  // Only advertise confirmed sale-ready categories in visible navigation.
+  // Direct category URLs remain reachable and show a truthful empty state.
+  // An API failure or incomplete inventory is never evidence that a category is empty.
   const setVisible=(category,available)=>{
     const filter=findButton(category);
     if(filter){
@@ -26,9 +26,9 @@
       filter.dataset.mallEmptyCategory=available?'false':'true';
     }
     for(const link of findShortcuts(category)){
-      link.hidden=false;
+      link.hidden=!available;
       link.dataset.mallEmptyCategory=available?'false':'true';
-      link.title=available?'':'현재 판매 가능한 상품이 없어 안내 화면으로 이동합니다.';
+      link.title=available?'':'현재 판매 가능한 상품이 없어 카테고리 메뉴에서 숨겼습니다.';
     }
     // A direct /?category=... link must remain on that category's empty state;
     // silently jumping to All incorrectly suggests the selected category sells.
@@ -46,7 +46,10 @@
       if(!response.ok)return null;
       const data=await response.json();
       if(!Array.isArray(data.products))return null;
-      return data.products.some(isLive);
+      if(data.products.some(isLive))return true;
+      // A partial page with non-sale-ready drafts is not proof of emptiness.
+      // Only an empty server response establishes that no public product exists.
+      return data.products.length===0?false:null;
     }catch{return null;} // Read-only API failure is not proof of an empty category.
   };
   // On non-home views the static product cards are not in the DOM. Reuse the
