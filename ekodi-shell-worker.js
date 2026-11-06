@@ -61,7 +61,7 @@ async function bundledShell(request,env,ctx){
   const illustrationUrl=new URL(request.url);illustrationUrl.pathname='/illustration-system.js';
   const designInheritanceUrl=new URL(request.url);designInheritanceUrl.pathname='/service-design-inheritance.js';
   const linkCompatUrl=new URL(request.url);linkCompatUrl.pathname='/ecosystem-link-compat.js';
-  const [shellResponse,navResponse,contextResponse,userHeaderResponse,userFooterResponse,userAiEntryResponse,userLanguageResponse,mediaMeetingResponse,characterRegistryResponse,characterIdentityResponse,userCharacterResponse,ccmMrResponse,adminShellResponse,uiGovernorResponse,publicSurfaceAdminResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse]=await Promise.all([
+  const [shellResponse,navResponse,contextResponse,userHeaderResponse,userFooterResponse,userAiEntryResponse,userLanguageResponse,mediaMeetingResponse,characterRegistryResponse,characterIdentityResponse,userCharacterResponse,ccmMrResponse,adminShellResponse,uiGovernorResponse,publicSurfaceAdminResponse,headerResponse,messageResponse,illustrationResponse,designInheritanceResponse,linkCompatResponse,unifiedAuthResponse]=await Promise.all([
     safeAssetFetch(env,shellUrl,request),
     safeAssetFetch(env,navUrl,request),
     safeAssetFetch(env,contextUrl,request),
@@ -82,13 +82,13 @@ async function bundledShell(request,env,ctx){
     safeAssetFetch(env,illustrationUrl,request),
     safeAssetFetch(env,designInheritanceUrl,request),
     safeAssetFetch(env,linkCompatUrl,request),
+    safeAssetFetch(env,unifiedAuthUrl,request),
   ]);
   if(!shellResponse.ok)return withHeaders(shellResponse);
   const shell=await shellResponse.text();
   const globalNav=navResponse.ok?await navResponse.text():'';
   const userContext=contextResponse.ok?await contextResponse.text():'';
   const userHeader=userHeaderResponse.ok?await userHeaderResponse.text():'';
-  const unifiedAuthResponse=await safeAssetFetch(env,unifiedAuthUrl,request);
   const unifiedAuth=unifiedAuthResponse.ok?await unifiedAuthResponse.text():'';
   const userFooter=userFooterResponse.ok?await userFooterResponse.text():'';
   const userAiEntry=userAiEntryResponse.ok?await userAiEntryResponse.text():'';
