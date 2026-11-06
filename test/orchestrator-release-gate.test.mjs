@@ -121,3 +121,56 @@ test('deployment workflows accept the canonical orchestrator task-id grammar',as
   const underscored='ai/openai/orch_shared_site_dispatch_contract_20261007';
   assert.ok(parseOrchestratorReleaseBranch(underscored));
 });
+
+test('temporary release-receipt server 500 recovers only after a fresh exact authorized 200',async()=>{
+  let attempts=0;
+  const fetchImpl=async()=>{
+    attempts++;
+    if(attempts===1)return new Response('{"ok":false,"reason":"ORCHESTRATOR_RELEASE_RECEIPT_ERROR"}',{status:500});
+    return new Response(JSON.stringify(body()),{status:200});
+  };
+  const receipt=await verifyOrchestratorReleaseReceipt(branchRef,{fetchImpl});
+  assert.equal(attempts,2);
+  assert.deepEqual(receipt,{taskId,branchRef,authority:'ekodi-orchestrator',state:'assigned'});
+});
+
+test('persistent release-receipt 5xx cannot be mistaken for approval after bounded retries',async()=>{
+  let attempts=0;
+  await assert.rejects(verifyOrchestratorReleaseReceipt(branchRef,{
+    fetchImpl:async()=>{attempts++;return new Response('upstream unavailable',{status:503})}
+  }),/orchestrator release receipt rejected: http_503/);
+  assert.equal(attempts,3);
+});
+
+test('release authorization denial, malformed successful response and wrong branch are never retried',async()=>{
+  for(const [status,payload,expected] of [
+    [403,{authorized:false,reason:'permission_denied'},/permission_denied/],
+    [404,{authorized:false,reason:'not_found'},/not_found/],
+    [200,body({authorized:false,reason:'deployment_not_delegated'}),/deployment_not_delegated/],
+    [200,body({branchRef:'ai/codex/'+taskId}),/branch mismatch/],
+  ]){
+    let attempts=0;
+    await assert.rejects(verifyOrchestratorReleaseReceipt(branchRef,{fetchImpl:async()=>{
+      attempts++;
+      return new Response(JSON.stringify(payload),{status});
+    }}),expected);
+    assert.equal(attempts,1,'denied receipts must not be retried');
+  }
+  let attempts=0;
+  await assert.rejects(verifyOrchestratorReleaseReceipt(branchRef,{fetchImpl:async()=>{
+    attempts++;
+    return new Response('not JSON',{status:200});
+  }}),/malformed JSON/);
+  assert.equal(attempts,1);
+});
+
+test('one transient timeout may retry but must still verify actual authority',async()=>{
+  let attempts=0;
+  const answer=await verifyOrchestratorReleaseReceipt(branchRef,{fetchImpl:async()=>{
+    attempts++;
+    if(attempts===1){const e=new Error('network timeout');e.name='TimeoutError';throw e}
+    return new Response(JSON.stringify(body()),{status:200});
+  }});
+  assert.equal(attempts,2);
+  assert.equal(answer.authority,'ekodi-orchestrator');
+});
