@@ -246,7 +246,10 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     await screenshot(member, coop.slug + '-service-member-390');
     await member.goto(root + '/admin'); await member.waitForSelector('#gate:not([hidden])');
     assert.equal(await member.locator('#workspace').isVisible(), false);
-    await member.goto('https://ekodi.kr/' + other.publicSlug + '/members'); await member.waitForSelector('#gate:not([hidden])');
+    await member.goto('https://ekodi.kr/' + other.publicSlug + '/members');
+    // Members of another cooperative may apply, but cannot read its private workspace.
+    await member.waitForSelector('#application:not([hidden])');
+    assert.equal(await member.locator('#gate').isVisible(), false);
     assert.equal(await member.locator('#workspace').isVisible(), false);
     proof(coop, 'member-record-readback-self-save-reload-download-and-authority-denials', { width: 390 });
     await member.goto(root + '/members'); await member.waitForSelector('#myBusinessForm');
