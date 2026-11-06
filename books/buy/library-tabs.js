@@ -60,7 +60,7 @@
   const help = document.createElement('div');
   help.className = 'library-info-view';
   const helpTitle = document.createElement('h2');helpTitle.textContent = '책을 더 편하게 읽으세요';
-  const helpCopy = document.createElement('p');helpCopy.textContent = '구매한 전자책은 보유 도서에서 바로 읽거나 EPUB 파일로 받을 수 있습니다. 오디오북은 검수·승인 후 제공되며 추가 결제는 없습니다.';
+  const helpCopy = document.createElement('p');helpCopy.textContent = '구매한 전자책은 ‘보유 도서’에서 ‘펼쳐 읽기’를 눌러 온라인 리더로 열람할 수 있습니다. 오디오북은 검수·승인된 경우 해당 도서 구매자에게 추가 결제 없이 제공됩니다.';
   help.append(helpTitle,helpCopy);
   if (related) help.append(related);
   panels.help.append(help);
