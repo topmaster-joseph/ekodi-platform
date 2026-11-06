@@ -10,6 +10,7 @@
   let checkout = null;
   let widgets = null;
   let loadedKey = '';
+  let campusReport = null;
 
   const won = (n) => Number.isSafeInteger(n) ? new Intl.NumberFormat('ko-KR').format(n) + '원' : '견적 대기';
   function message(text, isError) {
@@ -37,11 +38,67 @@
     return data;
   }
   function saveReceipt(item) {
+    campusReport = null;
+    $('campusPanel').hidden = true;
     receipt = item;
     try { sessionStorage.setItem(receiptKey, JSON.stringify(item)); } catch {}
     $('lookupId').value = item.id;
     $('lookupToken').value = item.receiptToken;
   }
+
+  function renderCampus(report) {
+    campusReport=report && report.months===3 ? report : null;
+    const panel=$('campusPanel');
+    panel.hidden=!campusReport;
+    if(!campusReport)return;
+    const x=campusReport;
+    $('campusFee').textContent=won(x.feeAmount);
+    $('campusBudget').textContent=won(x.supplierBudget);
+    $('campusSpent').textContent=won(x.recordedSupplierSpending);
+    $('campusRemaining').textContent=x.unallocatedSupplierBudget===null?'견적 대기':won(x.unallocatedSupplierBudget);
+    $('campusCancellation').textContent=x.renewalStopEvidenceRecorded
+      ?'관리자 증빙 등록됨 · 공급사 원본 확인 필요':'갱신중단 증빙 미등록';
+    const list=$('campusPeriods');
+    list.replaceChildren();
+    for(const p of x.periods){
+      const li=document.createElement('li');
+      li.textContent=p.status==='operator_recorded'
+        ?p.cycle+'개월차 · '+won(p.amount)+' · '+p.paidOn+' · 영수증 '+p.receiptRef
+        :p.cycle+'개월차 · 공급사 결제증빙 미등록';
+      list.append(li);
+    }
+    $('campusLimitation').textContent=x.limitation;
+  }
+  function campusCsvValue(value) {
+    const raw=String(value??'');
+    const safe=/^[=+@\-\t\r\n]/.test(raw)?"'"+raw:raw;
+    return '"'+safe.replace(/"/g,'""')+'"';
+  }
+  $('campusExport').addEventListener('click',()=>{
+    if(!campusReport||!receipt)return;
+    const x=campusReport;
+    const rows=[
+      ['문서','에코디비즈 대학 AI 구독료 위탁 정산요약'],
+      ['위탁번호',x.agreementId],['기관명',x.organization],
+      ['계약기간','3개월'],['계약상태',x.agreementStatus],
+      ['위탁료',x.feeAmount],['공급사 비용 예산',x.supplierBudget],
+      ['공급사 결제기록 합계',x.recordedSupplierSpending],
+      ['미배정 예산(환급 확정액 아님)',x.unallocatedSupplierBudget],
+      ['갱신중단 증빙등록',x.renewalStopEvidenceRecorded?'예':'아니오'],
+      ['안내',x.limitation]
+    ];
+    for(const p of x.periods)rows.push([
+      p.cycle+'개월차',p.status==='operator_recorded'?'수동기록':'미등록',
+      p.amount??'',p.paidOn??'',p.receiptRef??''
+    ]);
+    const csv='\uFEFF'+rows.map(row=>row.map(campusCsvValue).join(',')).join('\r\n');
+    const temp=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    const a=document.createElement('a');
+    a.href=temp;
+    a.download='EKODIBIZ-기관정산-'+x.agreementId+'.csv';
+    document.body.append(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(temp),1000);
+  });
   function paint(record) {
     current = record;
     $('result').hidden = false;
@@ -66,6 +123,7 @@
     try {
       const data = await api('/status', receipt);
       paint(data.record);
+      renderCampus(data.campus);
       message('최신 신청 상태를 확인했습니다.', false);
     } catch (error) { message(error.message, true); }
   }
