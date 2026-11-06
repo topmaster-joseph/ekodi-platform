@@ -34,7 +34,7 @@
     try { const p = JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, String.fromCharCode(47)))); const e = String(p.email || ''); const [u, d] = e.split('@'); return u && d ? `${u.slice(0, 2)}***@${d}` : ''; } catch { return ''; }
   }
   function loginBox(text) {
-    const u = new URL(`${ORIGIN}/auth/`); u.searchParams.set('return_to', location.href);
+    const u = new URL(`${ORIGIN}/auth/`); u.searchParams.set('site', 'publishing'); u.searchParams.set('return_to', location.href);
     return el('div', { className: 'ws-empty' }, el('p', { textContent: text }), el('a', { className: 'button primary', href: u.href, textContent: '에코디 계정으로 로그인' }));
   }
   function notice(text, retry) {

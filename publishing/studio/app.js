@@ -96,6 +96,7 @@ async function load(){
       notice('로그인 후 내 책과 서점을 관리할 수 있습니다. ');
       const link=document.createElement('a');
       const target=new URL('https://ekodi.kr/auth/');
+      target.searchParams.set('site','publishing');
       target.searchParams.set('return_to',location.href);
       link.href=target.href;link.textContent='EKODI 통합 로그인';
       state.append(link);
