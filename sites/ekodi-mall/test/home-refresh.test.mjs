@@ -192,3 +192,16 @@ test('canonical Mall search groups and card details are rendered in the central 
   assert.match(affiliateCss, /affiliate-detail-dialog/);
   assert.match(affiliateCss, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
 });
+
+
+test('standalone affiliate and weekly page headers return to the canonical Mall home, never an unmapped root', () => {
+  const fromOtherPage = renderMallHeader({home:false});
+  assert.match(fromOtherPage, /href="\/ekodimall\/#top"/);
+  assert.match(fromOtherPage, /action="\/ekodimall\/" method="get"/);
+  assert.match(fromOtherPage, /href="\/ekodimall\/\?category=book#shop"/);
+  assert.match(fromOtherPage, /href="\/ekodimall\/\?category=all#shop"/);
+  assert.match(fromOtherPage, /href="\/ekodimall\/coupang\/"/);
+  assert.match(fromOtherPage, /href="\/ekodimall\/travel\/stay\/"/);
+  assert.ok(!fromOtherPage.includes('>AI 추천</a>'));
+  assert.ok(!fromOtherPage.includes('쿠팡추천몰'));
+});
