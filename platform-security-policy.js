@@ -195,7 +195,17 @@ export function applyPlatformSecurityHeaders(response,request){
     headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
     const personalized=Boolean(String(request.headers.get('authorization')||'').trim()||String(request.headers.get('cookie')||'').trim());
     const safePublicRead=info.publicCacheableApi&&!personalized&&['GET','HEAD'].includes(String(request.method||'GET').toUpperCase());
-    if(isDocumentResponse(secured)&&!safePublicRead)headers.set('Cache-Control','no-store');
+    if(isDocumentResponse(secured)&&!safePublicRead){
+      // Preserve an already strict private + no-store policy (e.g. owner-
+      // frozen regional 404s). Replacing it with plain no-store weakens the
+      // explicit privacy signal and breaks the protected release verifier.
+      // All other sensitive documents still normalize to no-store, including
+      // any upstream public-cache or partial private-only directives.
+      const current=String(headers.get('cache-control')||'');
+      const directives=new Set(current.toLowerCase().split(',').map(value=>value.trim()));
+      if(!directives.has('private')||!directives.has('no-store')||directives.has('public'))
+        headers.set('Cache-Control','no-store');
+    }
   }
   headers.delete('X-Powered-By');
   headers.set('X-EKODI-Security-Policy','platform-edge-v2');
