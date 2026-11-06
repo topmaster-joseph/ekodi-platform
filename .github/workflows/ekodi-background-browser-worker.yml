@@ -149,10 +149,29 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      # GitHub's owned cache reduces repeated Chromium binary downloads.
+      # Cache key is tied to the exact pinned Playwright release and runner OS/arch.
+      # No paid browser provider, imported profile or untrusted executable URL.
+      - name: Restore cached Chromium binaries
+        id: chromium-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ekodi-native-chromium-${{ runner.os }}-${{ runner.arch }}-playwright-1.55.0-v1
       - name: Install isolated Chromium harness
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
+      - name: Record native Chromium cache evidence
+        if: always()
+        shell: bash
+        env:
+          CHROMIUM_CACHE_HIT: ${{ steps.chromium-cache.outputs.cache-hit }}
+        run: |
+          case "${CHROMIUM_CACHE_HIT}" in
+            true) echo '- Chromium binary cache: HIT (Playwright 1.55.0, pinned)' >> "$GITHUB_STEP_SUMMARY" ;;
+            *) echo '- Chromium binary cache: MISS (isolated installation)' >> "$GITHUB_STEP_SUMMARY" ;;
+          esac
       - name: Build bounded browser task
         shell: bash
         env:
