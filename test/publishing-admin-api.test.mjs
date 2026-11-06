@@ -95,3 +95,20 @@ test('admin invites by email; the verified account claims it; self, last-admin a
   const actions=db.sql.prepare("SELECT action FROM publishing_workflow_audit WHERE project_id='roles' ORDER BY created_at").all().map(x=>x.action);
   for(const a of ['role_invited','role_invite_claimed','role_revoked'])assert.ok(actions.includes(a),a+' audited');
 });
+
+test('admin summary counts AI books and audit rows show the AI book title, chapter and a system actor', async () => {
+  const db = memory();
+  db.sql.prepare("INSERT INTO publishing_workflow_roles (user_id,role,granted_by,granted_at) VALUES (?,?,?,?)").run('editorE', 'editor', 'seed', '2026-10-31');
+  const cols = db.sql.prepare("PRAGMA table_info(publishing_ai_books)").all().map(c => c.name);
+  const row = { id: 'book1', week: 20261102, genre: 'ai-everyday', title: 'AI 활용 시작하기', status: 'author_review', created_at: '2026-11-04T00:00:00Z', updated_at: '2026-11-06T00:00:00Z' };
+  const use = cols.filter(c => c in row);
+  const required = db.sql.prepare("PRAGMA table_info(publishing_ai_books)").all().filter(c => c.notnull && !(c.name in row) && c.dflt_value === null).map(c => c.name);
+  const all = [...use, ...required];
+  db.sql.prepare(`INSERT INTO publishing_ai_books (${all.join(',')}) VALUES (${all.map(() => '?').join(',')})`).run(...use.map(c => row[c]), ...required.map(() => ''));
+  db.sql.prepare("INSERT INTO publishing_workflow_audit (id,project_id,actor_user_id,action,from_stage,to_stage,revision,details_json,created_at) VALUES ('a1','ai:book1','system:ai-factory','ai_chapter_quality_polished',NULL,NULL,0,'{\"chapter\":3}','2026-11-06T00:40:00Z')").run();
+  const data = await (await handlePublishingWorkflow(request('admin/summary', { actor: 'editorE' }), env(db))).json();
+  assert.equal(data.aiBooks.author_review, 1);
+  const ev = data.recent.find(e => e.action === 'ai_chapter_quality_polished');
+  assert.equal(ev.title, 'AI 활용 시작하기 · 3장');
+  assert.equal(ev.actor, '자동(AI 원고 공장)');
+});
