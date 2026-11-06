@@ -48,7 +48,7 @@ test('native browser workers remain private, headless, canonical and cost indepe
 });
 
 test('native Agent must not claim an update is verified until new-version heartbeat succeeds',()=>{
-  assert.match(agent, /\$AgentVersion = '2\.6\.3'/);
+  assert.match(agent, /\$AgentVersion = '2\.6\.4'/);
   assert.match(agent,/function Confirm-EkodiAgentAutoUpdateAfterRestart/);
   assert.match(agent,/outcome -cne 'installed-pending-restart'/);
   assert.match(agent,/targetVersion -cne \$AgentVersion/);
@@ -57,4 +57,19 @@ test('native Agent must not claim an update is verified until new-version heartb
   assert.match(agent,/nativeBrowserUpdateState = Get-EkodiAgentAutoUpdateProjection/);
   const projection=agent.slice(agent.indexOf('function Get-EkodiAgentAutoUpdateProjection'),agent.indexOf('function Get-AgentSettings'));
   assert.doesNotMatch(projection,/Get-AgentHeaders|Unprotect-LocalSecret|email|password/i);
+});
+
+test('official Device Agent upgrade download is bounded, unique and always cleaned up',()=>{
+  const update = agent.slice(agent.indexOf('function Update-AgentFromOfficialSource {'),
+    agent.indexOf('# EKODI-AGENT-AUTOUPDATE-001:'));
+  assert.match(update,/NewGuid\(\)\.ToString\('N'\)/);
+  assert.match(update,/Invoke-WebRequest -UseBasicParsing -Uri \$AgentSourceUrl -OutFile \$temp -TimeoutSec 25 -ErrorAction Stop/);
+  assert.match(update,/Assert-AgentCandidate \$temp/);
+  assert.match(update,/Invoke-AgentUpgradeTransaction -CandidatePath \$temp -DeferRestart/);
+  assert.match(update,/finally \{/);
+  assert.match(update,/Remove-Item -LiteralPath \$temp -Force -ErrorAction SilentlyContinue/);
+  assert.doesNotMatch(update,/['"]ekodi-device-agent-update\.ps1['"]/);
+  // The command still requests normal transactional rollback/heartbeat and
+  // never mutates the origin allowlist, registry, session or UAC.
+  assert.doesNotMatch(update,/Set-ExecutionPolicy|runas|Bypass|CF_ACCESS_CLIENT_SECRET|chrome\.exe/i);
 });
