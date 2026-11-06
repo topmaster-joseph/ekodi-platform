@@ -162,3 +162,34 @@ test('book cards use concise copy and verified prices or an explicit unknown-pri
   assert.match(css, /\.card\[data-category="book"\] \.card-summary/);
   assert.match(css, /-webkit-line-clamp:2/);
 });
+
+
+test('Toss underwriting: buyer catalog precedes marketing hero and discloses bookstore login', () => {
+  assert.ok(template.indexOf('class="shop" id="shop"') < template.indexOf('class="context-hero mall-premium-hero"'), 'sale-ready products must precede editorial hero');
+  assert.ok(template.includes('id="top"'), 'home navigation anchor must remain valid');
+  assert.match(template, /에코디서점 전자책은 로그인 후 구매/);
+  assert.match(template, /판매 준비 중인 상품은 결제 버튼이 표시되지 않습니다/);
+  assert.match(template, /상품 상세에서 확인합니다/);
+});
+
+test('Toss underwriting: confirmed empty nav is hidden, and uncertain catalog is not misclassified', () => {
+  const visibility = readFileSync(new URL('../assets/category-visibility.js', import.meta.url), 'utf8');
+  assert.match(visibility, /link.hidden=!available/);
+  assert.match(visibility, /return data.products.length===0\?false:null/);
+  assert.match(visibility, /card.dataset.bookstoreQuotePending!=='true'/);
+  assert.match(css, /\.mall-primary-nav a\[data-filter-target\]\[hidden\]/);
+  assert.match(css, /\.mall-category-shortcuts a\[data-filter-target\]\[hidden\]/);
+});
+
+test('Toss underwriting: an unverified bookstore quote cannot expose a sale card', () => {
+  const builder = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../assets/app.js', import.meta.url), 'utf8');
+  const books = readFileSync(new URL('../assets/bookstore-live.js', import.meta.url), 'utf8');
+  assert.match(builder, /data-bookstore-quote-pending/);
+  assert.match(builder, /product.source\?\.system === 'ekodi-bookstore'/);
+  assert.match(app, /card.dataset.bookstoreQuotePending !== 'true'/);
+  assert.match(books, /if \(!readyQuote\(quote, book.bookId\)\)/);
+  assert.match(books, /existing.dataset.bookstoreQuotePending = 'false'/);
+  assert.match(books, /existing.dataset.bookstoreQuotePending = 'true'/);
+  assert.match(css, /\.card\[data-bookstore-quote-pending="true"\]\{display:none!important\}/);
+});
