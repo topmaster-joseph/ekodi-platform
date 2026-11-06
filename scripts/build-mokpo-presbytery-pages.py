@@ -136,9 +136,9 @@ def home():
     for name, key, meta, href in sichal:
         n = len(churches.get(key, []))
         if href:
-            sc_cards += f'<a class="card" href="{href}"><span class="pill on">운영 중</span><h3>{E(name)}</h3><p>시찰회 공지·임원·회계보고·출석을 운영합니다.</p><span class="meta">{E(meta)} · 확인된 교회 {n}곳</span><span class="go">함무시찰회 바로가기 →</span></a>'
+            sc_cards += f'<a class="card" href="{href}"><span class="pill on">운영 중</span><h3>{E(name)}</h3><p>시찰회 공지·임원·회계보고·출석을 운영합니다.</p><span class="meta">{E(meta)} · 소속 교회 {n}곳</span><span class="go">함무시찰회 바로가기 →</span></a>'
         else:
-            sc_cards += f'<div class="card"><span class="pill">공간 준비 중</span><h3>{E(name)}</h3><p>같은 엔진으로 독립 공간을 열 수 있습니다.</p><span class="meta">{E(meta)} · 확인된 교회 {n}곳</span></div>'
+            sc_cards += f'<div class="card"><span class="pill">공간 준비 중</span><h3>{E(name)}</h3><p>같은 엔진으로 독립 공간을 열 수 있습니다.</p><span class="meta">{E(meta)} · 소속 교회 {n}곳</span></div>'
     depts = (
         '<a class="card" href="/mokpo-presbytery/mission/"><span class="pill on">운영 중</span><h3>선교부</h3><p>2027 사업계획과 예산(안), 회의·자료, 부원 업무공간.</p><span class="meta">부장 김찬구 목사 · 서기 정찬균 목사</span><span class="go">선교부 바로가기 →</span></a>'
         + ''.join(f'<div class="card"><span class="pill">준비 중</span><h3>{E(n)}</h3><p>{E(d)}</p></div>' for n, d in [
@@ -161,7 +161,7 @@ def home():
 <h1>생명의 하나님,<br>우리를 하나 되게 하소서</h1>
 <p class="lead">노회와 시찰회, 부서와 교회가 한 공간에서 소식과 일정, 자료와 업무를 나눕니다. 공개 정보는 누구나 보고, 내부 업무는 권한을 받은 분만 다룹니다.</p>
 <p class="verse">신명기 30:19–20 · 에베소서 4:1–6 — 제135회 정기회 주제</p></div>
-<dl class="facts"><div><dt>제135회 정기회</dt><dd>2026. 10. 20.(화)</dd></div><div><dt>장소</dt><dd>양동제일교회당</dd></div><div><dt>목사회원</dt><dd>141명</dd></div><div><dt>장로회원</dt><dd>100명</dd></div><div><dt>시찰회</dt><dd>5개</dd></div><div><dt>회원명부 기준 교회</dt><dd>{total}곳</dd></div></dl></div></section>
+<dl class="facts"><div><dt>제135회 정기회</dt><dd>2026. 10. 20.(화)</dd></div><div><dt>장소</dt><dd>양동제일교회당</dd></div><div><dt>목사회원</dt><dd>141명</dd></div><div><dt>장로회원</dt><dd>100명</dd></div><div><dt>시찰회</dt><dd>5개</dd></div><div><dt>산하교회</dt><dd>{total}곳</dd></div></dl></div></section>
 <main class="views">
 <section id="about"><div class="wrap"><div class="sh"><div><span class="kicker">노회 소개</span><h2>함께 섬기는 목포노회</h2></div><p>대한예수교장로회 목포노회는 목포와 무안·신안·함평·진도 일대 교회가 함께하는 노회입니다. 이 공간은 노회 업무를 돕는 시범 서비스입니다.</p></div>
 <div class="grid"><div class="card"><h3>정기회</h3><p>제135회 정기회를 2026년 10월 20일 양동제일교회당에서 열었습니다.</p></div><div class="card"><h3>공식 소식처</h3><p>노회의 공식 공지는 <a href="http://cafe.daum.net/pckmp" rel="noopener">목포노회 카페</a>, 총회 소식은 <a href="https://www.pck.or.kr/" rel="noopener">총회 홈페이지</a>를 기준으로 합니다.</p></div><div class="card"><h3>시범 운영 원칙</h3><p>노회의 공식 승인 전까지 공개 정보만 게시합니다. 회원명부와 회계 증빙은 공개하지 않습니다.</p></div></div></div></section>
@@ -169,7 +169,7 @@ def home():
 <div class="grid"><a class="card" href="http://cafe.daum.net/pckmp" rel="noopener"><span class="pill">공식 출처</span><h3>목포노회 카페</h3><p>노회 공식 공지와 행정 안내</p><span class="go">원문 보기 →</span></a><a class="card" href="https://www.pck.or.kr/" rel="noopener"><span class="pill">공식 출처</span><h3>대한예수교장로회 총회</h3><p>총회 행정·교육·선교 안내</p><span class="go">원문 보기 →</span></a><a class="card" href="/hammu/"><span class="pill on">시찰회</span><h3>함무시찰회 공지</h3><p>시찰회가 직접 등록·관리하는 공지</p><span class="go">공지 보기 →</span></a></div></div></section>
 <section id="sichal"><div class="wrap"><div class="sh"><div><span class="kicker">시찰회</span><h2>다섯 시찰회</h2></div><p>시찰회마다 같은 엔진 위에 독립 공간을 두고, 임원·공지·회계·출석을 각자 관리합니다.</p></div><div class="grid five">{sc_cards}</div></div></section>
 <section id="departments"><div class="wrap"><div class="sh"><div><span class="kicker">부서 · 위원회</span><h2>부서와 위원회</h2></div><p>선교부가 첫 번째로 업무공간을 엽니다. 다른 부서와 위원회는 같은 방식으로 이어서 열 수 있습니다.</p></div><div class="grid">{depts}</div></div></section>
-<section id="churches"><div class="wrap"><div class="sh"><div><span class="kicker">소속 교회</span><h2>함께하는 교회</h2></div><p>제135회 정기회 회원명부에 나타난 교회 이름입니다. 시찰 구분은 장로회원 기재 기준이며, 확인되지 않은 교회는 따로 모았습니다.</p></div><div class="churches">{groups}</div><p class="note">교회 이름만 게시하며 주소·연락처는 게시하지 않습니다. 누락·오기는 노회 서기에게 알려 주십시오.</p></div></section>
+<section id="churches"><div class="wrap"><div class="sh"><div><span class="kicker">소속 교회</span><h2>함께하는 교회</h2></div><p>제135회 정기회 회원명부의 「산하교회 주소 및 교역자 명단」을 기준으로 시찰별·명부 순서대로 정리했습니다.</p></div><div class="churches">{groups}</div><p class="note">교회 이름만 게시하며 주소·연락처는 게시하지 않습니다. 누락·오기는 노회 서기에게 알려 주십시오.</p></div></section>
 <section id="schedule"><div class="wrap"><div class="sh"><div><span class="kicker">회의 · 일정</span><h2>노회 일정</h2></div><p>확정된 일정만 게시합니다.</p></div>
 <div class="timeline"><div><b>2026. 10. 20.(화) 제135회 정기회</b><span>양동제일교회당</span></div><div class="next"><b>다음 정기회</b><span>일정 확정 후 게시합니다.</span></div></div></div></section>
 <section id="library"><div class="wrap"><div class="sh"><div><span class="kicker">자료실</span><h2>기준 자료</h2></div><p>공개 가능한 자료의 목록입니다. 원본 파일은 권한 확인 후 제공합니다.</p></div>
