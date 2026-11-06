@@ -100,7 +100,7 @@ test('both existing admin runtimes project the same registry without changing ow
 
 test('same Church menu outline appears on all seven admin pages regardless of route owner',()=>{
   const original=globalThis.document;globalThis.document={createElement:()=>node()};
-  const expected=CHURCH_ADMIN_MENU.map(group=>group.label);
+  const expected=[...CHURCH_ADMIN_MENU.filter(group=>group.id==='services'),...CHURCH_ADMIN_MENU.filter(group=>group.id!=='services')].map(group=>group.label);
   try{
     const routes=[
       ['overview','church'],['people','church'],['worship','church'],
@@ -133,7 +133,7 @@ test('capability-limited church administrators see stable inert labels but no fo
       canView:tab=>tab.key==='worship',showUnavailable:true
     });
     const all=root.children.filter(item=>item.dataset.adminNavGroup);
-    assert.deepEqual(all.map(item=>item.textContent),CHURCH_ADMIN_MENU.map(group=>group.label));
+    assert.deepEqual(all.map(item=>item.textContent),[...CHURCH_ADMIN_MENU.filter(group=>group.id==='services'),...CHURCH_ADMIN_MENU.filter(group=>group.id!=='services')].map(group=>group.label));
     const linked=all.filter(item=>item.href);
     assert.deepEqual(linked.map(item=>item.href),['/ekodichurch/admin/worship']);
     for(const item of all.filter(item=>!item.href)){
