@@ -461,13 +461,25 @@ function startCycleRefresh(){
   cycleTimer=setInterval(refreshThemeCycle,minutes*60000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshThemeCycle();});
 }
-async function fetchJson(url){const response=await fetch(url,{cache:'no-store',mode:'cors'});if(!response.ok)throw new Error(`${new URL(url).pathname}_${response.status}`);return response.json();}
+async function fetchJson(url){const response=await fetch(url,{mode:'cors'});if(!response.ok)throw new Error(`${new URL(url).pathname}_${response.status}`);return response.json();}
 async function boot(){
-  try{manifest=await fetchJson(MANIFEST_URL);}catch(error){console.warn('EKODI Shell manifest unavailable',error);document.documentElement.dataset.ekodiVisualState='ready';return;}
-  try{
-    const remoteTheme=await fetchJson(THEME_URL);
+  // Both files are public and independent. Start together so the first render
+  // does not wait for one network round-trip before requesting the other.
+  // Their HTTP cache lifetimes are owned by the Shell Worker.
+  const [manifestResult,themeResult]=await Promise.allSettled([
+    fetchJson(MANIFEST_URL),
+    fetchJson(THEME_URL),
+  ]);
+  if(manifestResult.status!=='fulfilled'){
+    console.warn('EKODI Shell manifest unavailable',manifestResult.reason);
+    document.documentElement.dataset.ekodiVisualState='ready';
+    return;
+  }
+  manifest=manifestResult.value;
+  if(themeResult.status==='fulfilled'){
+    const remoteTheme=themeResult.value;
     if(remoteTheme&&typeof remoteTheme==='object')theme={...FALLBACK_THEME,...remoteTheme,workspace:{...FALLBACK_THEME.workspace,...remoteTheme.workspace},rules:{...FALLBACK_THEME.rules,...remoteTheme.rules},publicExperience:{...FALLBACK_THEME.publicExperience,...remoteTheme.publicExperience,motifs:{...FALLBACK_THEME.publicExperience.motifs,...remoteTheme.publicExperience?.motifs}},services:{...FALLBACK_THEME.services,...remoteTheme.services}};
-  }catch(error){console.warn('EKODI Shell theme fallback active',error);}
+  }else console.warn('EKODI Shell theme fallback active',themeResult.reason);
   const host=location.hostname.toLowerCase();
   service=manifest.services.find(item=>item.id===explicitService)||manifest.services.find(item=>{try{return new URL(item.url).hostname===host;}catch{return false;}})||null;
   if(!service)return;
