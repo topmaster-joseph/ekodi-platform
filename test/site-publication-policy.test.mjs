@@ -62,7 +62,7 @@ test('site publication runtime remains reusable while seonammedi omits the site-
     read('sites/seonammedi/public/admin/admin.css'),
   ]);
   assert.match(adminHtml,/sidebar-home-row/);
-  assert.match(adminHtml,/data-panel-target="dashboard"[^>]*>운영홈<\/button>/);
+  assert.match(adminHtml,/data-panel-target="dashboard"[^>]*href="\?panel=dashboard"[^>]*>운영홈<\/a>/);
   assert.doesNotMatch(adminHtml,/data-ekodi-site-publication-slot|사이트 공개여부/);
   assert.match(runtime,/document\.querySelector\('\[data-ekodi-site-publication-slot\]'\)/);
   assert.match(runtime,/ekodi-site-publication-inline/);
