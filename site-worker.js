@@ -445,6 +445,31 @@ function rewriteMallHtmlDocument(html, pathname = MALL_PREFIX, publicPrefix = MA
     : rewritten.replace('</head>', `${canonicalTag}\n</head>`);
   return rewritten;
 }
+// Only the known, identity-free storefront assets receive a brief browser TTL.
+// All catalog JSON, commerce, checkout, member, operator, admin and API paths
+// retain existing revalidation or no-store behavior.
+const MALL_PUBLIC_STARTUP_ASSETS = new Set([
+  'styles.css', 'platform.css', 'market-dna.css', 'context-curator.css', 'home-refresh.css',
+  'local-commerce.js', 'app.js', 'marketplace-live.js', 'bookstore-live.js',
+  'category-visibility.js', 'context-curator.js', 'commerce.js', 'home-refresh.js',
+]);
+function mallPublicStartupAssetCacheControl(request, upstreamResponse, pathname, publicPrefix = MALL_PREFIX) {
+  if (request.method !== 'GET' || upstreamResponse.status !== 200) return null;
+  // Do not mark any response that involves an authenticated browser request
+  // or a personalized upstream response as public-cacheable.
+  if (request.headers.has('authorization') || request.headers.has('cookie')
+      || upstreamResponse.headers.has('set-cookie')) return null;
+  const assetPrefix = `${publicPrefix}/assets/`;
+  if (!pathname.startsWith(assetPrefix)) return null;
+  const filename = pathname.slice(assetPrefix.length);
+  if (!MALL_PUBLIC_STARTUP_ASSETS.has(filename)) return null;
+  const upstreamCache = String(upstreamResponse.headers.get('cache-control') || '').toLowerCase();
+  if (/\b(?:private|no-store)\b/.test(upstreamCache)) return null;
+  const type = String(upstreamResponse.headers.get('content-type') || '').toLowerCase();
+  if (filename.endsWith('.css') && !type.includes('text/css')) return null;
+  if (filename.endsWith('.js') && !/(?:javascript|ecmascript)/.test(type)) return null;
+  return 'public, max-age=60, stale-while-revalidate=30';
+}
 async function proxyMallService(request, publicPrefix = MALL_PREFIX) {
   const incoming = new URL(request.url);
   const upstream = new URL(request.url);
@@ -482,7 +507,9 @@ async function proxyMallService(request, publicPrefix = MALL_PREFIX) {
   const apiSurface = incoming.pathname === `${publicPrefix}/api` || incoming.pathname.startsWith(`${publicPrefix}/api/`);
   const verificationOpsSurface = isMallVerificationOpsPath(incoming.pathname, publicPrefix);
   const adminEmbed = incoming.searchParams.get('embed') === 'admin';
-  const cacheControl = adminSurface || apiSurface || verificationOpsSurface || adminEmbed ? 'no-store' : 'public, max-age=0, must-revalidate';
+  const cacheControl = adminSurface || apiSurface || verificationOpsSurface || adminEmbed ? 'no-store'
+    : (mallPublicStartupAssetCacheControl(request, upstreamResponse, incoming.pathname, publicPrefix)
+       || 'public, max-age=0, must-revalidate');
   const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : verificationOpsSurface ? 'mall-verification-ops' : 'public-ekodi-mall';
   const mallCsp = adminEmbed ? MALL_ADMIN_EMBED_CSP : MALL_CSP;
   const response = withHostSecurity(new Response(responseBody, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), mallCsp, cacheControl, route);
