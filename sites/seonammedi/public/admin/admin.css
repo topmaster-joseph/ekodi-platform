@@ -84,3 +84,42 @@
   .heading>.secondary,.card-head>.secondary{min-width:84px;padding:8px 10px}
   .card{padding:13px}
 }
+
+
+/* Finance content tabs. The global navigation already identifies "회계 관리";
+   avoid repeating a page header and render only the selected function. */
+.finance-page{min-width:0}
+.finance-tabs{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;
+  margin:0 0 12px;padding:0;border-bottom:1px solid #dedede;
+}
+.finance-tabs [role="tab"]{
+  display:flex;align-items:center;justify-content:center;min-width:0;min-height:44px;
+  padding:10px 5px;border:0;border-bottom:3px solid transparent;
+  border-radius:7px 7px 0 0;background:transparent;color:#555;
+  font:inherit;font-size:13px;font-weight:650;line-height:1.35;
+  white-space:nowrap;word-break:keep-all;cursor:pointer;
+}
+.finance-tabs [role="tab"]:hover:not(.active){background:#f0f0f0;color:#171717}
+.finance-tabs [role="tab"].active{
+  color:#171717;background:#fff;border-bottom-color:#171717;font-weight:800;
+}
+.finance-tabs [role="tab"]:focus-visible{
+  outline:2px solid #171717;outline-offset:-2px;
+}
+.finance-pane{min-width:0}
+.finance-pane[hidden]{display:none!important}
+.finance-pane .card{margin:0}
+.finance-overview .card-head{margin-bottom:8px}
+.finance-overview .card-head h2{margin:0;font-size:15px}
+.finance-overview #financeSummary{margin:0 0 8px;font-weight:700;font-size:14px;line-height:1.7;word-break:keep-all}
+.finance-security-note{font-size:12px;color:#646464;line-height:1.7;word-break:keep-all;margin:8px 0 12px}
+.finance-pane input[type="file"]{display:block;max-width:100%;font:inherit;font-size:12px;padding:8px 0}
+#financeReportImportCard>label{display:block;margin-top:12px;font-weight:700;font-size:12px}
+#financeReportImportCard .actions{margin-top:10px}
+@media(max-width:560px){
+  .finance-tabs{gap:2px;margin-bottom:8px}
+  .finance-tabs [role="tab"]{min-height:42px;padding:10px 1px;font-size:12px}
+  .finance-pane .card{padding:13px}
+  .finance-overview #financeSummary{font-size:13px}
+}
