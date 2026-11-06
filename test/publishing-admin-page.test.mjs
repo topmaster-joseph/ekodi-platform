@@ -42,3 +42,14 @@ test('worker serves admin sections (deep links and refresh) with noindex, and re
   await worker.fetch(new Request('https://publishing.internal/admin/admin.js'), env);
   assert.equal(seen.at(-1), '/admin/admin.js', 'assets pass through');
 });
+
+test('admin page: Korean action names, old #section links, AI review card and its own dark theme', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const [js, css, html] = await Promise.all(['admin.js', 'admin.css', 'index.html'].map(f => readFile(new URL('../publishing/admin/' + f, import.meta.url), 'utf8')));
+  for (const code of ['ai_chapter_quality_polished', 'ai_book_author_reviewed', 'role_bootstrap_granted', 'create']) assert.match(js, new RegExp(code + ": '"));
+  assert.doesNotMatch(js, /\(\$\{a\.action\}\)/, 'raw action codes are not shown');
+  assert.match(js, /location\.hash/); assert.match(js, /hashchange/);
+  assert.match(js, /stat\('AI 원고 감수 대기', s\.aiBooks\?\.author_review \|\| 0, 'ai'\)/);
+  assert.match(html, /<meta name="color-scheme" content="light dark">/);
+  assert.match(css, /@media \(prefers-color-scheme:dark\)\{[\s\S]*\.padmin h1[^}]*color:#f3ecdc/);
+});

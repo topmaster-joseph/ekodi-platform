@@ -238,10 +238,15 @@ async function jobs(db,p){
 }
 const maskId=id=>{const v=String(id||'');return v.length>8?v.slice(0,4)+'…'+v.slice(-4):'…';};
 async function recentAudit(db,limit){
-  const rows=(await db.prepare(`SELECT a.action,a.from_stage,a.to_stage,a.revision,a.created_at,a.actor_user_id,p.title
+  // AI 원고 기록(project_id='ai:<책 id>')은 AI 책 제목과 장 번호로 보여 준다.
+  const rows=(await db.prepare(`SELECT a.action,a.from_stage,a.to_stage,a.revision,a.created_at,a.actor_user_id,
+      COALESCE(p.title,b.title) AS title,json_extract(a.details_json,'$.chapter') AS chapter
     FROM publishing_workflow_audit a LEFT JOIN publishing_workflow_projects p ON p.id=a.project_id
+    LEFT JOIN publishing_ai_books b ON a.project_id='ai:'||b.id
     ORDER BY a.created_at DESC LIMIT ?`).bind(limit).all()).results||[];
-  return rows.map(x=>({action:x.action,from:x.from_stage,to:x.to_stage,revision:x.revision,at:x.created_at,actor:maskId(x.actor_user_id),title:x.title||''}));
+  return rows.map(x=>({action:x.action,from:x.from_stage,to:x.to_stage,revision:x.revision,at:x.created_at,
+    actor:String(x.actor_user_id||'').startsWith('system:')?'자동(AI 원고 공장)':maskId(x.actor_user_id),
+    title:(x.title||'')+(x.chapter?` · ${x.chapter}장`:'')}));
 }
 async function adminSummary(db,r){
   const count=async sql=>(((await db.prepare(sql).all()).results)||[]);
@@ -252,10 +257,12 @@ async function adminSummary(db,r){
     count('SELECT role AS k, COUNT(*) AS n FROM publishing_workflow_roles GROUP BY role'),
   ]);
   const map=rows=>Object.fromEntries(rows.map(x=>[x.k,Number(x.n)||0]));
+  let aiBooks={};
+  try{aiBooks=map(await count('SELECT status AS k, COUNT(*) AS n FROM publishing_ai_books GROUP BY status'))}catch{aiBooks={}}
   const review=(await db.prepare(`SELECT id,title,stage,updated_at FROM publishing_workflow_projects
     WHERE stage IN ('in_review','ready_for_author','author_approved','publisher_approved','scheduled','handoff_ready')
     ORDER BY updated_at DESC LIMIT 50`).all()).results||[];
-  return {ok:true,role:r,stages:map(stages),contracts:map(contracts),audioQa:map(audio),roles:map(roles),
+  return {ok:true,role:r,stages:map(stages),contracts:map(contracts),audioQa:map(audio),roles:map(roles),aiBooks,
     review:review.map(x=>({id:x.id,title:x.title,stage:x.stage,updatedAt:x.updated_at})),
     recent:await recentAudit(db,20),saleActivationEnabled:false};
 }

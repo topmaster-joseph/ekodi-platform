@@ -13,6 +13,15 @@
     scheduled: '출간 예약', handoff_ready: '판매 인계 대기', released: '판매 중',
     draft: '초안', signed: '서명 완료', revoked: '철회', preparing: '제작 중', under_review: '청취 검수 중', approved: '승인', editor: '편집자', publisher: '발행인', admin: '출판 관리자' };
   const L = k => LABELS[k] || k;
+  // 기록 화면의 작업 이름(영문 코드 → 우리말). 모르는 코드는 그대로 보이되 화면을 깨지 않는다.
+  const ACTIONS = { create: '기획 등록', submit: '검수 요청', publisher_approve: '발행 승인', prepare_handoff: '판매 인계 준비', evidence_recorded: '근거 기록',
+    release_receipt: '출간 영수증', ai_job_queued: 'AI 작업 접수', ai_collab_ebook: 'AI 협업 전자책',
+    ai_chapter_quality_polished: 'AI 원고 자동 다듬기', ai_chapters_reset_for_rewrite: 'AI 원고 다시 쓰기', ai_chapter_edited: 'AI 원고 수정 저장',
+    ai_book_author_reviewed: 'AI 원고 감수 완료', ai_book_handoff_requested: '서점 출판 인계',
+    role_bootstrap_granted: '최초 관리자 지정', role_invited: '권한 초대', role_invite_claimed: '초대 수락', role_invite_cancelled: '초대 취소', role_revoked: '권한 회수' };
+  const A = k => ACTIONS[k] || String(k || '').replaceAll('_', ' ');
+  const change = a => a.from ? `${L(a.from)} → ${L(a.to || '-')} · ${A(a.action)}` : (a.to && a.action !== 'create' ? `${A(a.action)} → ${L(a.to)}` : A(a.action));
+  const when = at => { const d = new Date(at); return isNaN(d) ? String(at || '').slice(0, 16) : d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }); };
   const el = (tag, props = {}, ...kids) => { const n = document.createElement(tag); Object.assign(n, props); for (const k of kids) n.append(k); return n; };
   const SECTIONS = ['overview', 'review', 'ai', 'contracts', 'channels', 'settlement', 'audit', 'roles'];
   let summary = null;
@@ -38,7 +47,9 @@
   }
   function sectionFromPath() {
     const m = location.pathname.match(/admin\/([a-z]+)\/?$/);
-    return m && SECTIONS.includes(m[1]) ? m[1] : 'overview';
+    if (m && SECTIONS.includes(m[1])) return m[1];
+    const h = location.hash.replace(/^#/, ''); // 예전 링크(/publishing/admin/#ai)도 같은 화면으로
+    return SECTIONS.includes(h) ? h : 'overview';
   }
   function gate(e) {
     if (e.status === 401) {
@@ -51,7 +62,9 @@
     return retry('불러오지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.');
   }
   function retry(text) { const b = el('button', { type: 'button', className: 'button', textContent: '다시 시도' }); b.addEventListener('click', () => { summary = null; show(sectionFromPath()); }); return el('div', { className: 'padmin-empty' }, el('p', { textContent: text }), b); }
-  const stat = (label, n) => el('div', { className: 'padmin-stat' }, el('strong', { textContent: String(n ?? 0) }), el('span', { textContent: label }));
+  const stat = (label, n, section) => { const kids = [el('strong', { textContent: String(n ?? 0) }), el('span', { textContent: label })];
+    if (!section) return el('div', { className: 'padmin-stat' }, ...kids);
+    const a = el('a', { className: 'padmin-stat padmin-stat-link', href: `${ADMIN}/${section}` }, ...kids); a.dataset.section = section; return a; };
   const table = (heads, rows) => { const t = el('table'); t.append(el('thead', {}, el('tr', {}, ...heads.map(h => el('th', { scope: 'col', textContent: h }))))); const b = el('tbody'); for (const r of rows) b.append(el('tr', {}, ...r.map(c => el('td', { textContent: c })))); if (!rows.length) b.append(el('tr', {}, el('td', { colSpan: heads.length, className: 'muted', textContent: '기록 없음' }))); t.append(b); return el('div', { className: 'padmin-table' }, t); };
   const sum = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
   async function getSummary() { summary ??= await api('admin/summary'); who.textContent = `권한: ${L(summary.role)} · 판매 활성화는 Human Gate(자동 개통 없음)`; return summary; }
@@ -59,9 +72,9 @@
   const render = {
     async overview() {
       const s = await getSummary();
-      return [el('div', { className: 'padmin-stats' }, stat('전체 프로젝트', sum(s.stages)), stat('심사·승인 대기', s.review.length), stat('서명된 계약', s.contracts.signed || 0), stat('오디오 승인', s.audioQa.approved || 0), stat('편집 권한자', sum(s.roles))),
+      return [el('div', { className: 'padmin-stats' }, stat('AI 원고 감수 대기', s.aiBooks?.author_review || 0, 'ai'), stat('AI 원고 집필 중', s.aiBooks?.drafting || 0, 'ai'), stat('전체 프로젝트', sum(s.stages)), stat('심사·승인 대기', s.review.length, 'review'), stat('서명된 계약', s.contracts.signed || 0), stat('오디오 승인', s.audioQa.approved || 0), stat('편집 권한자', sum(s.roles))),
         el('h2', { textContent: '단계별 현황' }), table(['단계', '건수'], Object.entries(s.stages).map(([k, n]) => [L(k), String(n)])),
-        el('h2', { textContent: '최근 변경' }), table(['시각', '도서', '변경', '작업자'], s.recent.map(a => [String(a.at).slice(0, 16).replace('T', ' '), a.title, `${L(a.from || '-')} → ${L(a.to || '-')} (${a.action})`, a.actor]))];
+        el('h2', { textContent: '최근 변경' }), table(['시각', '도서', '변경', '작업자'], s.recent.map(a => [when(a.at), a.title || '-', change(a), a.actor]))];
     },
     async review() {
       const s = await getSummary();
@@ -101,7 +114,7 @@
     async audit() {
       const d = await api('admin/audit');
       return [el('p', { className: 'muted', textContent: '모든 단계 변경은 수정 번호와 함께 기록됩니다. 작업자 식별자는 일부만 표시합니다.' }),
-        table(['시각', '도서', '변경', '수정', '작업자'], d.events.map(a => [String(a.at).slice(0, 16).replace('T', ' '), a.title, `${L(a.from || '-')} → ${L(a.to || '-')} (${a.action})`, String(a.revision), a.actor]))];
+        table(['시각', '도서', '변경', '수정', '작업자'], d.events.map(a => [when(a.at), a.title || '-', change(a), String(a.revision), a.actor]))];
     },
     async roles() { return rolesView(await api('admin/roles')); },
   };
@@ -176,11 +189,12 @@
     view.replaceChildren(el('p', { className: 'muted', textContent: '불러오는 중…' }));
     try { view.replaceChildren(...await render[id]()); } catch (e) { view.replaceChildren(gate(e)); }
   }
-  document.querySelector('.padmin-nav').addEventListener('click', e => {
+  document.querySelector('.padmin').addEventListener('click', e => {
     const a = e.target.closest('a[data-section]'); if (!a) return;
     if (location.origin !== ORIGIN) return; // 다른 호스트에서는 정식 주소로 이동
     e.preventDefault(); history.pushState(null, '', a.href); show(a.dataset.section);
   });
   addEventListener('popstate', () => show(sectionFromPath()));
+  addEventListener('hashchange', () => show(sectionFromPath()));
   show(sectionFromPath());
 })();
