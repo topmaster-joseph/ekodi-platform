@@ -562,7 +562,7 @@ async function routePlatform(request,env,ctx){
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&
       (url.pathname==='/cheonggye/admin/services'||url.pathname==='/cheonggye/admin/services/'||
        url.pathname==='/ekodilab/admin/services'||url.pathname==='/ekodilab/admin/services/')){
-      return injectEkodiShell(workspaceAdminPage(),'space','admin');
+      return injectEkodiShell(workspaceAdminPage(url.pathname),'space','admin');
     }
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
@@ -637,7 +637,7 @@ async function routePlatform(request,env,ctx){
         if(isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage());
         if(['GET','HEAD'].includes(request.method)&&isEkodiBizRefundPolicyPath(url.pathname))return ekodiBizRefundPolicyResponse({head:request.method==='HEAD'});
         {const tradeProduct=tradeProductPublicRoute(url.pathname);if(tradeProduct)return injectEkodiTenantReadability(tradeProductPublicPage(tradeProduct));}
-        if(/^\/cheonggye\/admin\/publishing\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
+        if(/^\/cheonggye\/admin\/publishing\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(url.pathname),'space','admin');
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(url.pathname==='/site-admin-bootstrap.js')return siteAdminBootstrapScript();
         if(url.pathname==='/admin/people/script')return personAuthorityScript();
@@ -686,7 +686,7 @@ async function routePlatform(request,env,ctx){
           return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;
         }
         if(isWorkspaceAdminAssetPath(url.pathname))return legacyPlatformRouter.fetch(request,env,ctx);
-        if(isWorkspaceAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
+        if(isWorkspaceAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(url.pathname),'space','admin');
       }
       if(['GET','HEAD'].includes(request.method)&&isEkodiIndexNowKeyPath(url.pathname))return ekodiIndexNowKeyResponse();
       if(['GET','HEAD'].includes(request.method)&&url.pathname===EKODI_PUBLIC_REGISTRY_PATH)return ekodiPublicRegistryResponse(env,{head:request.method==='HEAD'});
