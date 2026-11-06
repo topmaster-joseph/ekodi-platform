@@ -234,3 +234,20 @@ test('sensitive API security still removes weak or contradictory upstream cachin
     assert.match(result.headers.get('x-robots-tag')||'',/noindex/);
   }
 });
+
+
+test('unrelated cooperative administrator routes still normalize their headers to the protected release contract',()=>{
+  for(const path of ['/jubilee/admin','/open/admin','/api/status']){
+    const request=new Request('https://ekodi.kr'+path);
+    const response=new Response('<!doctype html><title>protected</title>',{
+      status:200,headers:{
+        'content-type':'text/html; charset=utf-8',
+        'cache-control':'private, no-store, max-age=0',
+        'x-ekodi-route':'cooperative-admin',
+      },
+    });
+    const secured=applyPlatformSecurityHeaders(response,request);
+    assert.equal(secured.headers.get('cache-control'),'no-store',path);
+    assert.match(secured.headers.get('x-robots-tag')||'',/noindex/,path);
+  }
+});
