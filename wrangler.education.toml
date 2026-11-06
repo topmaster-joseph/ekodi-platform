@@ -27,6 +27,12 @@ AUTH_URL = "https://ekodi.kr/auth/?site=edu"
 binding = "EDU_DOCS"
 bucket_name = "ekodi-storage"
 
+# Super-admin instructor unlock verifies the central admin session through the Control API Worker
+# (a public same-zone fetch to https://ekodi.kr/api/session fails as a Worker subrequest).
+[[services]]
+binding = "CONTROL_API"
+service = "ekodi-auth-api"
+
 # One-time classroom QR rooms; SQLite DO is supported on Workers Free.
 [[durable_objects.bindings]]
 name = "EDU_SCREEN_ROOMS"

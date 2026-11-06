@@ -61,11 +61,12 @@ function viewerPage({m,token,contentType}){
     '<link rel="stylesheet" href="../../../../fonts/pretendard/pretendardvariable-dynamic-subset.css"><link rel="stylesheet" href="../../live.css"></head><body class="lv doc-view-body" data-live-surface="doc-view">'+
     '<main class="doc-view"><header class="doc-head"><p class="eyebrow">EKODI EDUCATION · 강사 제출 서류</p><h1>'+esc(m.label)+'</h1>'+
     '<p class="meta">'+(m.purpose?esc(m.purpose)+' · ':'')+'열람 기한 '+esc(fmt(m.expiresAt))+' (한국시간)</p></header>'+
-    '<figure class="doc-frame">'+(isPdf?'<object class="doc-pdf" data="'+file+'" type="application/pdf"><p class="meta">PDF 미리보기를 지원하지 않는 브라우저입니다. 아래 「내려받기」를 눌러 주세요.</p></object>'
+    '<figure class="doc-frame">'+(isPdf?'<div class="doc-pages" id="docPages" data-src="'+file+'"><p class="meta" id="docStatus">PDF를 불러오는 중입니다…</p></div>'
       :'<img class="doc-img" src="'+file+'" alt="'+esc(m.label)+'">')+
     '<figcaption class="doc-mark" aria-hidden="true">'+mark+'</figcaption></figure>'+
     '<p class="btn-row"><a class="btn btn-primary" href="'+file+'?download=1">내려받기</a></p>'+
-    '<p class="meta doc-note">이 링크는 공유받은 분만 열람하도록 만든 것입니다. 기한이 지나면 자동으로 삭제됩니다. 다른 곳에 다시 게시하지 말아 주세요.</p></main></body></html>';
+    '<p class="meta doc-note">이 링크는 공유받은 분만 열람하도록 만든 것입니다. 기한이 지나면 자동으로 삭제됩니다. 다른 곳에 다시 게시하지 말아 주세요.</p></main>'+
+    (isPdf?'<script type="module" src="../../doc-view.js"></script>':'')+'</body></html>';
 }
 function goneHtml(state){
   const msg=state==='expired'?'열람 기한이 지나 삭제된 서류입니다.':'없는 링크이거나 이미 삭제된 서류입니다.';
@@ -73,7 +74,7 @@ function goneHtml(state){
     '<body class="lv doc-view-body"><main class="doc-view"><h1>열람할 수 없습니다</h1><p class="meta">'+msg+' 강사에게 새 링크를 요청해 주세요.</p></main></body></html>';
 }
 function html(body,status){return new Response(body,{status,headers:{'content-type':'text/html; charset=utf-8',...PRIVATE,
-  'content-security-policy':"default-src 'self'; img-src 'self'; object-src 'self'; style-src 'self'; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"}});}
+  'content-security-policy':"default-src 'self'; img-src 'self' blob: data:; object-src 'none'; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; worker-src blob:; connect-src 'self'; font-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"}});}
 
 // Returns a Response for /study/live/docs/{s,f,api}/…, or null for anything else.
 export async function instructorDocs(request,env,{url=new URL(request.url),now=Date.now()}={}){

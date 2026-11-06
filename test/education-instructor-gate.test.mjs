@@ -229,3 +229,31 @@ test('lecture summary / practice downloads: session status endpoint and handout 
   assert.match(js,/if\(!instructor&&INSTRUCTOR_MODES\.has\(mode\)\)mode='slides'/);
   assert.match(js,/if\(mode==='slides'\|\|!instructor\)\{window\.print\(\);return;\}/);
 });
+
+test('super-admin unlock verifies through the Control API service binding (no same-zone public fetch)',async()=>{
+  const {adminUnlock,ADMIN_SESSION_URL}=await import('../education-instructor-gate.js');
+  const {readFile}=await import('node:fs/promises');
+  const calls=[];
+  const CONTROL_API={fetch:async(req)=>{calls.push(req);return new Response(JSON.stringify({authenticated:true,role:'super_admin',email:'a@b.kr'}),{status:200});}};
+  const key='k'.repeat(48);
+  const url='https://ekodi.kr/study/live/unlock/admin';
+  const req=()=>new Request(url,{method:'POST',headers:{origin:'https://ekodi.kr',authorization:'Bearer '+'t'.repeat(40)}});
+  const pub=async()=>{throw new Error('public same-zone fetch must not be used');};
+  const r=await adminUnlock(req(),{EDU_GATE_SIGNING_KEY:key,CONTROL_API},{fetchImpl:pub});
+  assert.equal(r.status,200);assert.match(r.headers.get('set-cookie')||'',/HttpOnly/);
+  assert.equal(calls.length,1);assert.equal(calls[0].url,ADMIN_SESSION_URL);assert.equal(calls[0].headers.get('authorization'),'Bearer '+'t'.repeat(40));
+  const denied=await adminUnlock(req(),{EDU_GATE_SIGNING_KEY:key,CONTROL_API:{fetch:async()=>new Response(JSON.stringify({authenticated:true,role:'admin'}),{status:200})}},{fetchImpl:pub});
+  assert.equal(denied.status,403,'ordinary admins are still refused');
+  const toml=await readFile(new URL('../wrangler.education.toml',import.meta.url),'utf8');
+  assert.match(toml,/\[\[services\]\]\nbinding = "CONTROL_API"\nservice = "ekodi-auth-api"/);
+});
+
+test('EKODI account login uses the Education realm and accepts the one-time handoff on return',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const js=await readFile(new URL('../education/study/live/gate-ekodi.js',import.meta.url),'utf8');
+  assert.match(js,/searchParams\.set\('site','edu'\)/,'site=portal can only return to the EKODI home page');
+  assert.doesNotMatch(js,/'site','portal'/);
+  assert.match(js,/ekodi_token/);assert.match(js,/auth\/v1\/verify/);
+  const auth=await readFile(new URL('../auth-site/client-auth.js',import.meta.url),'utf8');
+  assert.match(auth,/edu:\{name:'EKODI Education',returnTo:'https:\/\/ekodi\.kr\/edu\/'/,'edu realm returns under /edu/');
+});

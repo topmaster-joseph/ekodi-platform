@@ -660,6 +660,10 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .lv .doc-frame{position:relative;margin:0;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;min-height:200px}
 .lv .doc-img{display:block;width:100%;height:auto}
 .lv .doc-pdf{display:block;width:100%;height:78vh;border:0}
+.lv .doc-pages{display:block;width:100%}
+.lv .doc-pages>.meta{padding:16px}
+.lv .doc-page{display:block;width:100%;height:auto;border-bottom:1px solid var(--line)}
+.lv .doc-page:last-child{border-bottom:0}
 .lv .doc-mark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;text-align:center;padding:12%;
   font-size:clamp(1rem,3.4vw,1.75rem);font-weight:800;color:rgba(180,35,24,.28);transform:rotate(-24deg);line-height:1.4;word-break:keep-all}
 .lv .doc-note{font-size:.8125rem}
