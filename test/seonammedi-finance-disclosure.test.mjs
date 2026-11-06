@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 
 const base=new URL('../sites/seonammedi/public/',import.meta.url);
 const html=readFileSync(new URL('index.html',base),'utf8');
+const css=readFileSync(new URL('app.css',base),'utf8');
 const admin=readFileSync(new URL('admin/admin.js',base),'utf8');
 const adminHtml=readFileSync(new URL('admin/index.html',base),'utf8');
 const control=readFileSync(new URL('../seonammedi-admin-control.js',import.meta.url),'utf8');
@@ -14,7 +15,8 @@ test('SeonamMedi public activity history exposes only the approved accounting su
   for(const expected of ['기간','2026.10.29.','2026.11.03.','8,900,333원','10,672,100원','14,051,738원','비상대책위원회에 문의'])assert.ok(section.includes(expected),expected);
   assert.equal((section.match(/<dt>/g)||[]).length,4);
   for(const forbidden of ['손영득','목포대여교수회','김밥','영상·음향','7,000,000원','15,823,505원'])assert.ok(!section.includes(forbidden),'private item leaked: '+forbidden);
-  assert.ok(html.includes('@media(max-width:540px)'),'finance summary should adapt to narrow screens');
+  assert.ok(css.includes('@media(max-width:580px)'),'finance summary should adapt to narrow screens');
+  assert.ok(css.includes('grid-template-columns:repeat(2,minmax(0,1fr))'),'mobile cards should use two columns');
 });
 
 test('SeonamMedi admin-only JSON importer validates accounting and never publishes transaction details',()=>{
