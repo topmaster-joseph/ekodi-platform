@@ -1,46 +1,8 @@
-/**
- * Shared, dependency-free progressive tab enhancement for regional public surfaces.
- * The first panel remains usable without JavaScript; no authentication or API calls.
- */
-export function renderRegionTabsScript(){
-  return `<script>
-  (() => {
-    for (const tablist of document.querySelectorAll('[data-region-tablist]')) {
-      const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
-      if (!tabs.length) continue;
-      const activate = (active, focus = false, remember = false) => {
-        for (const tab of tabs) {
-          const selected = tab === active;
-          tab.setAttribute('aria-selected', String(selected));
-          tab.tabIndex = selected ? 0 : -1;
-          const panel = document.getElementById(tab.getAttribute('aria-controls'));
-          if (panel) panel.hidden = !selected;
-        }
-        if (focus) active.focus();
-        if (remember && window.history?.replaceState) {
-          window.history.replaceState(null, '', '#' + active.id);
-        }
-      };
-      for (const [index, tab] of tabs.entries()) {
-        tab.addEventListener('click', () => activate(tab, false, true));
-        tab.addEventListener('keydown', event => {
-          const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
-            : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length
-            : event.key === 'Home' ? 0
-            : event.key === 'End' ? tabs.length - 1
-            : -1;
-          if (next === -1) return;
-          event.preventDefault();
-          activate(tabs[next], true, true);
-        });
-      }
-      const hash = decodeURIComponent(window.location.hash.slice(1));
-      activate(tabs.find(tab => tab.id === hash) || tabs[0]);
-      window.addEventListener('hashchange', () => {
-        const target = tabs.find(tab => tab.id === decodeURIComponent(window.location.hash.slice(1)));
-        if (target) activate(target);
-      });
-    }
-  })();
-  </script>`;
+/** Accessible shared regional tabs. Served from an EKODI-owned path under strict script-src 'self'. */
+const CLIENT_SCRIPT = "\n  (() => {\n    for (const tablist of document.querySelectorAll('[data-region-tablist]')) {\n      const tabs = Array.from(tablist.querySelectorAll('[role=\"tab\"]'));\n      if (!tabs.length) continue;\n      const activate = (active, focus = false, remember = false) => {\n        for (const tab of tabs) {\n          const selected = tab === active;\n          tab.setAttribute('aria-selected', String(selected));\n          tab.tabIndex = selected ? 0 : -1;\n          const panel = document.getElementById(tab.getAttribute('aria-controls'));\n          if (panel) panel.hidden = !selected;\n        }\n        if (focus) active.focus();\n        if (remember && window.history?.replaceState) {\n          window.history.replaceState(null, '', '#' + active.id);\n        }\n      };\n      for (const [index, tab] of tabs.entries()) {\n        tab.addEventListener('click', () => activate(tab, false, true));\n        tab.addEventListener('keydown', event => {\n          const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length\n            : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length\n            : event.key === 'Home' ? 0\n            : event.key === 'End' ? tabs.length - 1\n            : -1;\n          if (next === -1) return;\n          event.preventDefault();\n          activate(tabs[next], true, true);\n        });\n      }\n      const hash = decodeURIComponent(window.location.hash.slice(1));\n      activate(tabs.find(tab => tab.id === hash) || tabs[0]);\n      window.addEventListener('hashchange', () => {\n        const target = tabs.find(tab => tab.id === decodeURIComponent(window.location.hash.slice(1)));\n        if (target) activate(target);\n      });\n    }\n  })();\n  ";
+
+export function regionTabsClientScript(){return CLIENT_SCRIPT;}
+export function renderRegionTabsScript(){return '<script src="/cheonggye/region-tabs-ui.js" defer></script>';}
+export function regionTabsScriptResponse(){
+  return new Response(CLIENT_SCRIPT,{status:200,headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}});
 }
