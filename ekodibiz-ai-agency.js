@@ -56,6 +56,36 @@ function publicRecord(record) {
     cycleCount:Array.isArray(record.monthlyRecords)?record.monthlyRecords.length:0,
     renewalStopRecorded:!!record.renewalStopReceipt };
 }
+/**
+ * Read-only university contract statement. Access is allowed ONLY through the
+ * already authenticated application receipt ID + hashed secret token.
+ * No individual roster, email, card, password, OTP or gateway payment key.
+ * Recorded supplier receipts are operator-entered; this is not bank proof.
+ */
+function campusSummary(record) {
+  if (record?.type !== 'institution' || record.months !== 3) return null;
+  const entries=Array.isArray(record.monthlyRecords)?record.monthlyRecords:[];
+  const budget=Number.isSafeInteger(record.supplierAmount)&&record.supplierAmount>=0?record.supplierAmount:null;
+  const spent=entries.reduce((sum,item)=>sum+(Number.isSafeInteger(item.amount)&&item.amount>0?item.amount:0),0);
+  return {
+    agreementId:record.id, organization:record.organization, months:3,
+    agreementStatus:activeStatus(record),
+    feeAmount:Number.isSafeInteger(record.feeAmount)?record.feeAmount:null,
+    supplierBudget:budget,
+    recordedSupplierSpending:spent,
+    unallocatedSupplierBudget:budget===null?null:Math.max(0,budget-spent),
+    periods:[1,2,3].map(cycle=>{
+      const receipt=entries.find(item=>item.cycle===cycle);
+      return {cycle,status:receipt?'operator_recorded':'not_recorded',
+        amount:receipt?.amount??null, paidOn:receipt?.paidOn??null,
+        receiptRef:receipt?.receiptRef??null};
+    }),
+    renewalStopEvidenceRecorded:!!record.renewalStopReceipt,
+    accountPreservationAttested:record.accountKeptAttested===true,
+    expiryDate:record.expiresAt||null,
+    limitation:'기재된 내역은 에코디비즈의 수동 증빙기록이며 공급사 결제·해지 및 환급액의 독립 검증 결과가 아닙니다.'
+  };
+}
 function activeStatus(record) {
   if (record.status === 'paid_pending_fulfillment' || record.status === 'active') {
     if (record.expiresAt && Date.parse(record.expiresAt) <= Date.now()) return 'expired';
@@ -107,7 +137,7 @@ export async function agencyApi(request, url, env) {
       if (!/^EBAI-[A-Z0-9]{24}$/.test(id)) return fault('invalid_receipt', 404);
       const { record } = await store(env, '/agency/load', { id, tokenHash });
       record.status = activeStatus(record);
-      if (path === '/api/agency/status') return reply({ ok:true, record:publicRecord(record) });
+      if (path === '/api/agency/status') return reply({ ok:true, record:publicRecord(record), campus:campusSummary(record) });
       if (path === '/api/agency/accept') {
         if (record.status !== 'quoted' || body.accepted !== true) return fault('quote_not_ready', 409);
         const result = await store(env, '/agency/accept', { id, tokenHash });
