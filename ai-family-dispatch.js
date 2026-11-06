@@ -37,6 +37,17 @@ export function planFamilyDispatch(message){
   });
 }
 
+
+/**
+ * True only when the authenticated device still holds a non-expired lease.
+ * A self-reported completion cannot resurrect a job whose lease has lapsed.
+ */
+export function familyLeaseReceiptAllowed(expiresAt, nowMs=Date.now()){
+  if(typeof expiresAt!=='string'||!expiresAt.trim())return false;
+  const expiry=Date.parse(expiresAt);
+  return Number.isFinite(expiry)&&Number.isFinite(nowMs)&&expiry>nowMs;
+}
+
 export function validateFamilyRunnerReceipt(receipt,{jobId,lane,deviceId}={}){
   if(!receipt||typeof receipt!=='object'||Array.isArray(receipt))return Object.freeze({ok:false,code:'RUNNER_RECEIPT_REQUIRED'});
   const output=String(receipt.output||'').trim();
