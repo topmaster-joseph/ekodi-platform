@@ -54,6 +54,7 @@ export function planChurchPagesCandidate(manifest,platformSha) {
     upstreamRepository:manifest.sourceRepository,
     upstreamSourceSha:manifest.sourceCommit,
     reviewedUpstreamPullRequests:reviewedSource?.pullRequests||null,
+    preservedPublicWorship:reviewedSource?.preservedPublicWorship||null,
     assets:assets.sort((a,b)=>a.path.localeCompare(b.path))
   };
 }
@@ -97,6 +98,7 @@ export async function buildChurchPagesCandidate({sourceDir,outputDir,platformSha
     upstreamSourceRepository:plan.upstreamRepository,
     upstreamSourceSha:plan.upstreamSourceSha,
     ...(plan.reviewedUpstreamPullRequests?{reviewedUpstreamPullRequests:plan.reviewedUpstreamPullRequests}:{}),
+    ...(plan.preservedPublicWorship?{preservedPublicWorship:plan.preservedPublicWorship}:{}),
     payloadSha256:payloadHash
   };
   // This is an offline-only candidate builder. The release workflow is deliberately untouched.

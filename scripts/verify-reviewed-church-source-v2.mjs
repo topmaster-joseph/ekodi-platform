@@ -50,6 +50,17 @@ const SOURCE_BLOBS={
   }
 };
 
+const POST_MERGE_WORSHIP=Object.freeze([
+  ['worship/2026-11-08/index.html','5e73dcf3e74fd3d05bfa2b6cd0cd84ccefef5eb4','c17448d9baef36c7653888911e5e9c3f20c23ea2'],
+  ['worship/2026-11-08/materials.json','61351b81e3530cb44696b0851e65314e9ca1d88a','f7293d3a6c4a3e94025bf531e52b11bba77224e8'],
+  ['worship/2026-11-08/worship.js','31588090e12cf7d4a6dab6b16deb9f155d263fe6','c4fbd044b5a0e4c85014fb55e45f6960cba4b350']
+]);
+const PRESERVED_WORSHIP_PR=Object.freeze({
+  mergedPR:150, mergedHeadSha:'74bfab8a62b254148573be620686b301b37317b0',
+  mergedCommitSha:'64509fb11d84e2a8269f9d71ebec58f0943e5463',
+  preservationPR:151, preservationHeadSha:'9ca89ef9190a61e101bfe0c6129cdc6a668a6a4b'
+});
+
 const HEX40=/^[a-f0-9]{40}$/;
 const stop=msg=>{throw new Error('Church stacked source: '+msg)};
 const matching=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
@@ -133,11 +144,41 @@ export function verifyReviewedChurchStackedSource(m){
   if(!Array.isArray(staged.changedFiles)||staged.changedFiles.length!==expectedPaths.length||
      !matching(sorted(staged.changedFiles.map(x=>x.path)),expectedPaths))
     stop('stacked changes incomplete or extra unreviewed paths');
+  // PR150 was independently merged into the old Church production source.
+  // PR151 re-stacks the exact public worship blobs onto PR149. We preserve
+  // original v1 source history and new v2 PR146/149 source chains unchanged.
+  const worship=m.postMergeWorshipReconciliation;
+  if(worship?.contract!=='ekodi.church-source-preservation.v1' ||
+     worship.mode!=='preserve-reviewed-merged-upstream-public-worship-only' ||
+     worship.originalManifestContract!=='ekodi.church-reviewed-integration.v2' ||
+     worship.sourceRepository!=='topmaster-joseph/ekodi-church' ||
+     worship.upstreamMergedPR!==PRESERVED_WORSHIP_PR.mergedPR ||
+     worship.upstreamMergedHeadSha!==PRESERVED_WORSHIP_PR.mergedHeadSha ||
+     worship.upstreamMergeCommitSha!==PRESERVED_WORSHIP_PR.mergedCommitSha ||
+     worship.sourcePreservationPR!==PRESERVED_WORSHIP_PR.preservationPR ||
+     worship.sourcePreservationHeadSha!==PRESERVED_WORSHIP_PR.preservationHeadSha ||
+     worship.publicNotice!=='2026-11-15 공동의회' ||
+     worship.changeScope!=='3 public worship assets; no auth, giving or member database changes' ||
+     worship.sourceOwnershipTransferred!==false || worship.productionReleaseSwitched!==false ||
+     worship.legacyRepositoryDeletionAuthorized!==false ||
+     !Array.isArray(worship.files)||worship.files.length!==POST_MERGE_WORSHIP.length)
+     stop('unapproved PR150 worship preservation provenance or authority');
+  for(const [index,[path,oldSha,newSha]] of POST_MERGE_WORSHIP.entries()){
+    const r=worship.files[index],old=prev.get(path),current=present.get(path);
+    if(!r||r.path!==path||r.previousCanonicalBlobSha!==oldSha||
+       r.verifiedUpstreamMainBlobSha!==newSha||
+       r.verifiedPreservationPRBlobSha!==newSha||
+       r.finalCanonicalBlobSha!==newSha||
+       old?.blobSha!==oldSha||!current||current.mode!==old.mode||
+       current.blobSha!==oldSha||current.normalizedBlobSha!==newSha)
+      stop('PR150/151 worship SHA or original audit drift: '+path);
+  }
+  const preservedWorshipPaths=new Set(POST_MERGE_WORSHIP.map(([path])=>path));
   for(const [path,original] of prev){
     const current=present.get(path);
     if(!current||current.blobSha!==original.blobSha||current.mode!==original.mode)
       stop('original Git blob or file mode replaced: '+path);
-    if(!expectedPaths.includes(path)&&path!==reconciledPath&&!matching(current,original))
+    if(!expectedPaths.includes(path)&&path!==reconciledPath&&!preservedWorshipPaths.has(path)&&!matching(current,original))
       stop('unreviewed original file normalized hash drift: '+path);
   }
   for(const [path,current] of present){
@@ -166,12 +207,13 @@ export function verifyReviewedChurchStackedSource(m){
   }
   const normalized=sorted(m.trackedFiles.filter(x=>x.normalizedBlobSha&&x.normalizedBlobSha!==x.blobSha).map(x=>x.path));
   if(!Array.isArray(m.canonicalizedPaths)||!matching(sorted(m.canonicalizedPaths),normalized)||
-     !uniq(m.canonicalizedPaths)||normalized.length!==34)
+     !uniq(m.canonicalizedPaths)||normalized.length!==37)
     stop('canonicalized Git blob inventory drifted');
   const previous=baseline.reviewedOverlays.pullRequests.map(x=>({number:x.number,headSha:x.headSha}));
   return Object.freeze({
     originalSourceSha:baseline.sourceCommit,
     integrationOrder:Object.freeze([143,144,142,146,149]),
-    pullRequests:Object.freeze([...previous,...[146,149].map(number=>({number,headSha:PR_HEADS[number]}))])
+    pullRequests:Object.freeze([...previous,...[146,149].map(number=>({number,headSha:PR_HEADS[number]}))]),
+    preservedPublicWorship:Object.freeze({...PRESERVED_WORSHIP_PR,files:Object.freeze(POST_MERGE_WORSHIP.map(([path,previousCanonicalBlobSha,finalCanonicalBlobSha])=>Object.freeze({path,previousCanonicalBlobSha,finalCanonicalBlobSha})))})
   });
 }

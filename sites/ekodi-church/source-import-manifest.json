@@ -1096,7 +1096,8 @@
     {
       "path": "worship/2026-11-08/index.html",
       "mode": "100644",
-      "blobSha": "5e73dcf3e74fd3d05bfa2b6cd0cd84ccefef5eb4"
+      "blobSha": "5e73dcf3e74fd3d05bfa2b6cd0cd84ccefef5eb4",
+      "normalizedBlobSha": "c17448d9baef36c7653888911e5e9c3f20c23ea2"
     },
     {
       "path": "worship/2026-11-08/logo.png",
@@ -1106,7 +1107,8 @@
     {
       "path": "worship/2026-11-08/materials.json",
       "mode": "100644",
-      "blobSha": "61351b81e3530cb44696b0851e65314e9ca1d88a"
+      "blobSha": "61351b81e3530cb44696b0851e65314e9ca1d88a",
+      "normalizedBlobSha": "f7293d3a6c4a3e94025bf531e52b11bba77224e8"
     },
     {
       "path": "worship/2026-11-08/prayer/index.html",
@@ -1141,7 +1143,8 @@
     {
       "path": "worship/2026-11-08/worship.js",
       "mode": "100644",
-      "blobSha": "31588090e12cf7d4a6dab6b16deb9f155d263fe6"
+      "blobSha": "31588090e12cf7d4a6dab6b16deb9f155d263fe6",
+      "normalizedBlobSha": "c4fbd044b5a0e4c85014fb55e45f6960cba4b350"
     },
     {
       "path": "worship/bulletin-data.js",
@@ -1204,7 +1207,10 @@
     "test/giving-nine-language-i18n.test.mjs",
     "test/partner-news.test.mjs",
     "test/simple-home-progressive-disclosure.test.mjs",
-    "test/together-page.test.mjs"
+    "test/together-page.test.mjs",
+    "worship/2026-11-08/index.html",
+    "worship/2026-11-08/materials.json",
+    "worship/2026-11-08/worship.js"
   ],
   "upstreamTreeContainsExcludedWorkflows": true,
   "originalImportedTrackedFileCount": 208,
@@ -2000,5 +2006,44 @@
         "taskId": "church-canonical-146-149-stage-20261106"
       }
     ]
+  },
+  "postMergeWorshipReconciliation": {
+    "contract": "ekodi.church-source-preservation.v1",
+    "mode": "preserve-reviewed-merged-upstream-public-worship-only",
+    "originalManifestContract": "ekodi.church-reviewed-integration.v2",
+    "sourceRepository": "topmaster-joseph/ekodi-church",
+    "upstreamMergedPR": 150,
+    "upstreamMergedHeadSha": "74bfab8a62b254148573be620686b301b37317b0",
+    "upstreamMergeCommitSha": "64509fb11d84e2a8269f9d71ebec58f0943e5463",
+    "sourcePreservationPR": 151,
+    "sourcePreservationHeadSha": "9ca89ef9190a61e101bfe0c6129cdc6a668a6a4b",
+    "files": [
+      {
+        "path": "worship/2026-11-08/index.html",
+        "previousCanonicalBlobSha": "5e73dcf3e74fd3d05bfa2b6cd0cd84ccefef5eb4",
+        "verifiedUpstreamMainBlobSha": "c17448d9baef36c7653888911e5e9c3f20c23ea2",
+        "verifiedPreservationPRBlobSha": "c17448d9baef36c7653888911e5e9c3f20c23ea2",
+        "finalCanonicalBlobSha": "c17448d9baef36c7653888911e5e9c3f20c23ea2"
+      },
+      {
+        "path": "worship/2026-11-08/materials.json",
+        "previousCanonicalBlobSha": "61351b81e3530cb44696b0851e65314e9ca1d88a",
+        "verifiedUpstreamMainBlobSha": "f7293d3a6c4a3e94025bf531e52b11bba77224e8",
+        "verifiedPreservationPRBlobSha": "f7293d3a6c4a3e94025bf531e52b11bba77224e8",
+        "finalCanonicalBlobSha": "f7293d3a6c4a3e94025bf531e52b11bba77224e8"
+      },
+      {
+        "path": "worship/2026-11-08/worship.js",
+        "previousCanonicalBlobSha": "31588090e12cf7d4a6dab6b16deb9f155d263fe6",
+        "verifiedUpstreamMainBlobSha": "c4fbd044b5a0e4c85014fb55e45f6960cba4b350",
+        "verifiedPreservationPRBlobSha": "c4fbd044b5a0e4c85014fb55e45f6960cba4b350",
+        "finalCanonicalBlobSha": "c4fbd044b5a0e4c85014fb55e45f6960cba4b350"
+      }
+    ],
+    "publicNotice": "2026-11-15 공동의회",
+    "changeScope": "3 public worship assets; no auth, giving or member database changes",
+    "sourceOwnershipTransferred": false,
+    "productionReleaseSwitched": false,
+    "legacyRepositoryDeletionAuthorized": false
   }
 }
