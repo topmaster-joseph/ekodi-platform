@@ -167,7 +167,7 @@ test('native browser emits deterministic per-route p50/p95 timings without third
 
 test('synthetic page navigation excludes intentional Cloudflare pacing and settle waits',()=>{
   const start=source.indexOf('  const goto=async p=>');
-  const end=source.indexOf('  try{\\n    results.push(',start);
+  const end=source.indexOf('  try{\n    results.push(',start);
   assert.ok(start>=0 && end>start,'browser navigation function must be present');
   const code=source.slice(start,end);
   const pace=code.indexOf('if(pause>0)');
@@ -177,11 +177,11 @@ test('synthetic page navigation excludes intentional Cloudflare pacing and settl
   const settle=code.indexOf("await page.waitForTimeout(Math.min(task.deviceProfile.includes('mobile')?650:250");
   assert.ok(pace>=0 && timer>pace && goto>timer && captured>goto && settle>captured,
     'real navigation clock must start after the policy pacing and stop on DOMContentLoaded');
-  assert.match(code,/navigationTimings\\.push\\(\\{path:canonicalPath,elapsedMs:domContentLoadedElapsedMs,/);
-  assert.match(code,/pacingWaitMs,settleWaitMs,ttfbMs:browserTiming\\.ttfbMs/);
-  assert.match(code,/domContentLoadedMs:browserTiming\\.domContentLoadedMs,fcpMs:browserTiming\\.fcpMs/);
-  assert.match(code,/const nav=performance\\.getEntriesByType\\('navigation'\\)\\[0\\]/);
-  assert.doesNotMatch(code,/elapsedMs:Date\\.now\\(\\)-navStarted/);
+  assert.match(code,/navigationTimings\.push\(\{path:canonicalPath,elapsedMs:domContentLoadedElapsedMs,/);
+  assert.match(code,/pacingWaitMs,settleWaitMs,ttfbMs:browserTiming\.ttfbMs/);
+  assert.match(code,/domContentLoadedMs:browserTiming\.domContentLoadedMs,fcpMs:browserTiming\.fcpMs/);
+  assert.match(code,/const nav=performance\.getEntriesByType\('navigation'\)\[0\]/);
+  assert.doesNotMatch(code,/elapsedMs:Date\.now\(\)-navStarted/);
   assert.match(code,/minimumGap=2200/,'quota-avoidance pacing must remain intact');
   assert.match(code,/CF_QUOTA_CIRCUIT_OPEN/);
   for(const privateField of ['location.href','document.cookie','localStorage','sessionStorage'])
