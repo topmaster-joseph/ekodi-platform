@@ -3,6 +3,7 @@ import { FIELD_CATALOG } from './publishing/human/editorial-policy.js';
 import { publicationTransition, permittedAiRequest } from './publishing/workflow-policy.js';
 import { verifyCommercialRelease, verifyPublishingSubmission } from './publishing/release-entitlement.js';
 import { aiFactoryAdmin } from './publishing-ai-factory.js';
+import { publicReleases } from './publishing-ai-release.js';
 
 const fields = new Set(FIELD_CATALOG.map(x=>x.id));
 const HASH=/^[a-f0-9]{64}$/, UUID=/^[0-9a-f-]{36}$/;
@@ -273,6 +274,11 @@ export async function handlePublishingWorkflow(req,env){
     dbConfigured:Boolean(env?.PUBLISH_DB),saleActivationEnabled:false,paidAiEnabled:false});
   if(!path.startsWith('/api/workflow/'))return error(404,'NOT_FOUND');
   if(!env?.PUBLISH_DB)return error(503,'PUBLISH_DB_NOT_CONFIGURED');
+  // PUBLISHING-AI-RELEASE-001: 출간된 AI 협업 도서 목록(공개, 읽기 전용) — 서점·저널이 합류용으로 읽는다.
+  if(path==='/api/workflow/public/ai-releases'&&req.method==='GET'){
+    try{const data=await publicReleases(env.PUBLISH_DB);return new Response(JSON.stringify(data),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'public, max-age=300'}});}
+    catch{return error(503,'RELEASES_UNAVAILABLE');}
+  }
   try {
     const u=await identity(req,env);if(!u)return error(401,'LOGIN_REQUIRED');
     const db=env.PUBLISH_DB;let r=await role(db,u.userId);
@@ -289,7 +295,7 @@ export async function handlePublishingWorkflow(req,env){
       return result(200,{ok:true,due:data.results||[],note:'인계 후보이며 자동 판매가 아님'});
     }
     if(path.startsWith('/api/workflow/admin/ai-books')){
-      const res=await aiFactoryAdmin(db,req,path,u,r,(status,data)=>result(status,data));
+      const res=await aiFactoryAdmin(db,req,path,u,r,(status,data)=>result(status,data),env);
       if(res)return res;
     }
     // PUBLISHING-ADMIN-001 (§12): 출판 관리자 화면용 읽기 전용 요약. 권한은 출판 원장 역할로만 판단한다.
