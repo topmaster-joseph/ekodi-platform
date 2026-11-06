@@ -500,3 +500,169 @@ footer.site-footer .site-footer-copy .site-footer-credit a{color:inherit;text-de
  .timeline-item .timeline-article-section p{font-size:13px;line-height:1.8}
  .timeline-article-meta{gap:5px 10px;font-size:11.5px}
 }
+
+
+/* SEONAMMEDI-FINANCE-RESPONSIVE-20261106: desktop 3-across totals, compact mobile rows.
+   Keep period on its own row; value remains beside its label at every breakpoint. */
+@media (min-width:960px) {
+  #committee-finance-disclosure .committee-finance-metrics {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:10px;
+  }
+  #committee-finance-disclosure .committee-finance-metrics>div.committee-finance-period {
+    grid-column:1/-1;
+  }
+  #committee-finance-disclosure .committee-finance-metrics>div.committee-finance-income,
+  #committee-finance-disclosure .committee-finance-metrics>div.committee-finance-expense,
+  #committee-finance-disclosure .committee-finance-metrics>div.committee-finance-balance {
+    grid-column:auto;
+    display:flex;
+    align-items:baseline;
+    flex-wrap:nowrap;
+    gap:8px;
+    padding:12px 10px;
+  }
+  #committee-finance-disclosure .committee-finance-metrics>div:not(.committee-finance-period) dt {
+    flex:0 0 auto;
+    font-size:12px;
+  }
+  #committee-finance-disclosure .committee-finance-metrics>div:not(.committee-finance-period) dd {
+    flex:0 1 auto;
+    min-width:0;
+    white-space:nowrap;
+    font-size:clamp(14px,1.15vw,18px);
+    font-variant-numeric:tabular-nums;
+    letter-spacing:-.04em;
+  }
+}
+@media (max-width:959px) {
+  #committee-finance-disclosure .committee-finance-metrics {
+    grid-template-columns:minmax(0,1fr);
+    gap:7px;
+  }
+  #committee-finance-disclosure .committee-finance-metrics>div,
+  #committee-finance-disclosure .committee-finance-metrics>div.committee-finance-period,
+  #committee-finance-disclosure .committee-finance-metrics>div.committee-finance-balance {
+    grid-column:1/-1;
+    display:flex;
+    align-items:baseline;
+    flex-wrap:nowrap;
+    gap:10px;
+    padding:10px 12px;
+  }
+  #committee-finance-disclosure .committee-finance-metrics dd {
+    min-width:0;
+    margin:0;
+  }
+  #committee-finance-disclosure .committee-finance-metrics .committee-finance-period dd {
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+}
+@media (max-width:400px) {
+  #committee-finance-disclosure .committee-finance-metrics>div,
+  #committee-finance-disclosure .committee-finance-metrics>div.committee-finance-period,
+  #committee-finance-disclosure .committee-finance-metrics>div.committee-finance-balance {
+    gap:7px;
+    padding:10px 9px;
+  }
+  #committee-finance-disclosure .committee-finance-metrics dt {
+    flex-basis:42px;
+  }
+  #committee-finance-disclosure .committee-finance-metrics .committee-finance-period dd {
+    font-size:clamp(11px,3vw,13px);
+  }
+}
+
+/* SEONAMMEDI-FOOTER-RESPONSIVE-20261106: unified content width and readable credits. */
+footer.site-footer {
+  width:100%;
+  max-width:1120px;
+  min-width:0;
+  margin: auto auto 0;
+  padding:22px clamp(18px,3vw,28px) max(24px,env(safe-area-inset-bottom));
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:16px 28px;
+  align-items:center;
+  box-sizing:border-box;
+  background:#fff;
+  border-top:1px solid #dce3ea;
+  color:#526477;
+  text-align:left;
+}
+footer.site-footer .site-footer-copy {
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:0;
+  max-width:100%;
+}
+footer.site-footer .site-footer-copy strong {
+  display:block;
+  font-size:15px;
+  line-height:1.45;
+  color:#183b5b;
+}
+footer.site-footer .site-footer-copy>span {
+  display:block;
+  max-width:100%;
+  font-size:12px;
+  line-height:1.65;
+  overflow-wrap:anywhere;
+}
+footer.site-footer .site-footer-copy .site-footer-credit {
+  font-size:11px;
+  line-height:1.65;
+  color:#637789;
+}
+footer.site-footer .site-footer-credit a {
+  display:inline;
+  padding:2px 0;
+  color:#315e80;
+  text-decoration:underline;
+  text-underline-offset:2px;
+  overflow-wrap:anywhere;
+}
+footer.site-footer>a[href="admin/"] {
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
+  justify-self:end;
+  align-self:start;
+  flex:0 0 auto;
+  min-height:38px;
+  margin:0;
+  padding:7px 14px;
+  border:1px solid #cbd8e3;
+  border-radius:10px;
+  background:#f8fbfe;
+  color:#225d8f;
+  font-size:12px;
+  font-weight:700;
+  text-decoration:none;
+  white-space:nowrap;
+}
+footer.site-footer>a[href="admin/"]:hover,
+footer.site-footer>a[href="admin/"]:focus-visible {
+  border-color:#225d8f;
+  background:#eaf4fb;
+}
+@media (max-width:760px) {
+  footer.site-footer {
+    gap:12px;
+    padding:18px 16px max(24px,env(safe-area-inset-bottom));
+  }
+  footer.site-footer .site-footer-copy strong {font-size:14px}
+  footer.site-footer .site-footer-copy>span {font-size:11.5px;line-height:1.65}
+  footer.site-footer .site-footer-copy .site-footer-credit {font-size:11px}
+  footer.site-footer>a[href="admin/"] {
+    min-height:36px;
+    padding:6px 10px;
+    font-size:12px;
+  }
+}
+@media (max-width:400px) {
+  footer.site-footer {grid-template-columns:minmax(0,1fr)}
+  footer.site-footer>a[href="admin/"] {justify-self:start;align-self:start}
+}
