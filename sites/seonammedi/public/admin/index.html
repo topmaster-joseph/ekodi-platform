@@ -6,7 +6,7 @@
   <meta name="ekodi-route-contract" content="CANONICAL-PATH-MOUNT-PARITY-001 CANONICAL-ROUTE-SLASH-PARITY-001">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>서남권국립의대 관리</title>
-  <link rel="stylesheet" href="/seonammedi/admin/admin.css?v=20261019-admin-roster-1">
+  <link rel="stylesheet" href="/seonammedi/admin/admin.css?v=20261106-admin-responsive-links-1">
 </head>
 <body>
 <header class="topbar">
@@ -20,11 +20,11 @@
     </div>
     <div class="sidebar-menu">
     <div class="sidebar-home-row">
-      <button class="active" data-panel-target="dashboard" type="button">운영홈</button>
+      <a class="active" data-panel-target="dashboard" href="?panel=dashboard" aria-current="page">운영홈</a>
     </div>
-    <button data-panel-target="minutes" type="button">내부 회의록</button>
-    <a href="?panel=finance" class="admin-finance-link">회계 관리</a>
-    <button data-panel-target="access" type="button">권한·관리자</button>
+    <a data-panel-target="minutes" href="?panel=minutes">내부 회의록</a>
+    <a href="?panel=finance" class="admin-finance-link" data-panel-target="finance">회계 관리</a>
+    <a data-panel-target="access" href="?panel=access">권한·관리자</a>
     </div>
   </aside>
   <main id="main">
@@ -35,7 +35,7 @@
         <article><span>시민의견</span><strong id="voiceCount">-</strong><small>접수·검토·공개 포함</small></article>
         <article><span>공지</span><strong id="noticeCount">-</strong><small>초안 포함</small></article>
       </div>
-      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><a href="../board/voices">시민의견 관리</a><a href="?panel=finance">회계 관리</a><a href="../board/notices">공지 관리</a><a href="../#organization">조직 관리</a><button type="button" data-go="minutes">내부 회의록</button></div></section>
+      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><a href="../board/voices">시민의견 관리</a><a href="?panel=finance" data-go="finance">회계 관리</a><a href="../board/notices">공지 관리</a><a href="../#organization">조직 관리</a><a href="?panel=minutes" data-go="minutes">내부 회의록</a></div></section>
     </section>
 
     <section class="panel-page" data-panel="organization" hidden>
@@ -141,7 +141,7 @@
     </section>
   </main>
 </div>
-<script type="module" src="/seonammedi/admin/admin.js?v=20261019-site-admin-roster-3"></script>
-<script type="module" src="/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2"></script>
+<script type="module" src="/seonammedi/admin/admin.js?v=20261106-admin-responsive-links-1"></script>
+<script type="module" src="/seonammedi/admin/admin-minutes.js?v=20261106-admin-responsive-links-1"></script>
 </body>
 </html>
