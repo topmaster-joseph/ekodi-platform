@@ -1,10 +1,11 @@
 // EKODIBIZ AI purchasing agency: narrowly-scoped canonical proxy.
 // Never grant the general EKODIBIZ worker access to unrelated apex paths.
-const AGENCY_ENTRY = /^\/ekodibiz\/ai-agency(?:-admin)?(?:\/|\.js)?$/;
+const AGENCY_ENTRY = /^\/ekodibiz\/(?:ai-agency(?:\/|\.js|\/(?:apply|university|individual|admin)\/?)?|ai-agency-admin(?:\/|\.js)?)$/;
+const AGENCY_SHARED_SCRIPT = '/ekodibiz/ai-agency-links.js';
 const AGENCY_API = /^\/ekodibiz\/api\/agency\/[a-z0-9/-]+$/;
 
 export function isEkodibizAgencyPath(pathname) {
-  return AGENCY_ENTRY.test(String(pathname || '')) || AGENCY_API.test(String(pathname || ''));
+  return pathname===AGENCY_SHARED_SCRIPT || AGENCY_ENTRY.test(String(pathname || '')) || AGENCY_API.test(String(pathname || ''));
 }
 
 export async function proxyEkodibizAgency(request, env) {
