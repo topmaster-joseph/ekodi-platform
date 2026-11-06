@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
+import {CHEONGGYE_PUBLICATION_HOLD} from '../region-publication-hold.js';
 
 export const LIVE_BOARDS = Object.freeze([
   {site: 'cgma', prefix: '/cgma/board'},
@@ -58,7 +59,22 @@ export async function verifyIndependentBoardLive({
     assert.match(response.headers.get('content-type') || '', /application\/json/i, path + ' content type');
     return {response, body: await response.json()};
   };
+  const privateBoards=[];
   for (const board of LIVE_BOARDS) {
+    // Owner's regional publication hold takes precedence over anonymous
+    // board endpoints. 404 + private/no-store/noindex is the correct gate,
+    // not a degraded public-board 200 or a reason to reopen the region.
+    if(board.site==='cheonggye'&&CHEONGGYE_PUBLICATION_HOLD){
+      privateBoards.push(board.site);
+      for(const path of [board.prefix+'/api/health',board.prefix+'/api/posts',board.prefix]){
+        const held=await request(path,[404]);
+        assert.equal(held.headers.get('x-ekodi-route'),'regional-private-hold',path);
+        assert.equal(held.headers.get('x-ekodi-region-publication'),'private-owner-release-required',path);
+        assert.match(held.headers.get('cache-control')||'',/private[^,]*,\s*no-store/i,path+' private no-store');
+        assert.match(held.headers.get('x-robots-tag')||'',/noindex/i,path+' private noindex');
+      }
+      continue;
+    }
     const id = 'site:' + board.site + ':main';
     const health = await json(board.prefix + '/api/health');
     assert.equal(health.body.ok, true, board.site + ' health');
@@ -112,7 +128,7 @@ export async function verifyIndependentBoardLive({
     await request('/singles/api/bank/plans', singles.body.social_enabled ? [401, 503] : [503]);
   }
   return {
-    ok: true, boards: LIVE_BOARDS.map(x => x.site),
+    ok: true, boards: LIVE_BOARDS.map(x => x.site), privateBoards,
     pathsChecked: checked.length,
     singlesSocialEnabled: Boolean(singles.body.social_enabled),
     singlesBankEnabled: Boolean(singles.body.bank_transfer_enabled),

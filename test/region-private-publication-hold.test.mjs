@@ -100,3 +100,31 @@ test('sitemap and public registry cannot advertise frozen regional pages',async(
     assert.equal(isCheonggyeUnreleasedPublicPath(path),false,item.url);
   }
 });
+
+
+test('protected release probes require the exact private no-store hold headers',async()=>{
+  assert.equal(CHEONGGYE_PUBLICATION_HOLD,true,'regional publication remains owner-approval gated');
+  const manifests=[
+    ['shared',new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),13],
+    ['control',new URL('../deploy/manifests/control-api.worker.json',import.meta.url),7]
+  ];
+  for(const [label,file,count] of manifests){
+    const manifest=JSON.parse(await readFile(file,'utf8'));
+    const probes=manifest.worker.requests.filter(x=>x.headerExpect?.includes('x-ekodi-route: regional-private-hold'));
+    assert.equal(probes.length,count,label+' hold probes count');
+    for(const probe of probes){
+      assert.deepEqual(probe.statuses,[404],probe.url);
+      assert.ok(probe.headerExpect.includes('cache-control: private, no-store'),probe.url);
+      assert.ok(probe.headerExpect.includes('x-ekodi-region-publication: private-owner-release-required'),probe.url);
+      assert.ok(probe.headerExpect.includes('x-robots-tag: noindex'),probe.url);
+      assert.ok(probe.headerExpect.includes('x-content-type-options: nosniff'),probe.url);
+    }
+  }
+  const heldPage=cheonggyePublicHoldResponse(new Request(root+'/cheonggye'));
+  const heldApi=cheonggyePublicApiHoldResponse(new Request(root+'/api/local-operations/cheonggye/modules/directory'));
+  for(const response of [heldPage,heldApi]){
+    assert.equal(response.status,404);
+    assert.equal(response.headers.get('cache-control'),'private, no-store, max-age=0');
+    assert.equal(response.headers.get('x-ekodi-route'),'regional-private-hold');
+  }
+});
