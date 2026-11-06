@@ -459,6 +459,8 @@ async function claimAssigned(env, deviceId) {
     payload:claimedPayload,
     issuedAt:job.created_at,
     claimedAt:now,
+    leaseExpiresAt,
+    attempt:Number(job.attempt_count)+1,
   };
 }
 
