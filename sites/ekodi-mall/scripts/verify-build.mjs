@@ -90,6 +90,17 @@ for (const item of originalItems) {
   }
 }
 const mirror = JSON.parse(await readFile(path.join(dist, 'provider-bookstore.json'), 'utf8'));
+const directBook = mirror.products?.find((p) => p.bookId === 'BOOK-EKODI-000001');
+if (!directBook?.slug) {
+  errors.push('Direct bookstore edition missing from the publisher mirror');
+} else {
+  const detail = await readFile(path.join(dist, 'products', directBook.slug, 'index.html'), 'utf8');
+  if (!detail.includes('data-bookstore-purchase-link href="https://ekodi.kr/books/book/?id=BOOK-EKODI-000001"') ||
+      !detail.includes('data-bookstore-price>가격 확인 필요') ||
+      !detail.includes('온라인 리더에서 열람') || detail.includes('/books/buy/')) {
+    errors.push('Static bookstore detail must display an information link and defer purchase and price to the live quote');
+  }
+}
 const approvedBook = mirror.products?.find((p) => p.bookId === 'BOOK-EKODI-000002');
 if (!approvedBook?.slug || !/^book-[a-z0-9-]+$/.test(approvedBook.slug)) {
   errors.push('Existing approved bookstore edition missing from stable publisher mirror');

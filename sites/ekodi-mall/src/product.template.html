@@ -34,7 +34,7 @@
           <div><dt>스토어 상태</dt><dd>{{STORE_STATUS}}</dd></div>
           <div {{BOOK_STATUS_ATTR}}><dt>상품 상태</dt><dd>{{PRODUCT_STATUS}}</dd></div>
           <div><dt>판매 방식</dt><dd>{{SALE_TYPE_LABEL}}</dd></div>
-          <div><dt>가격</dt><dd>{{PRICE_LABEL}}</dd></div>
+          <div><dt>가격</dt><dd {{BOOK_PRICE_ATTR}}>{{PRICE_LABEL}}</dd></div>
         </dl>
         <p class="detail-note" {{BOOK_TRANSACTION_ATTR}}>{{TRANSACTION_NOTE}}</p>
         <div class="detail-actions">{{BASKET_ACTION}}<a class="btn {{ACTION_CLASS}}" {{BOOK_ACTION_ATTR}} href="{{ACTION_URL}}" target="_blank" rel="{{ACTION_REL}}">{{ACTION_LABEL}}</a><a class="smallbtn" href="{{STORE_URL}}">스토어 보기</a></div>
