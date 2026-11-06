@@ -14,6 +14,14 @@ const SINGLES_PAGES = Object.freeze([
   '/singles/events', '/singles/messages', '/singles/subscribe',
 ]);
 
+// Verify the actual no-store directive, not a gateway-specific header ordering.
+export function assertPrivateBoardNoStore(response,path='private-board'){
+  assert.equal(response.status,404,path+' owner-held public route must remain 404');
+  const directives=String(response.headers.get('cache-control')||'').toLowerCase().split(',').map(x=>x.trim());
+  assert.ok(directives.includes('no-store'),path+' private 404 must include no-store');
+  assert.ok(!directives.includes('public'),path+' private 404 must not advertise public caching');
+}
+
 // Read-only production regression check. Do not add any write operation or credentials.
 export async function verifyIndependentBoardLive({
   origin = 'https://ekodi.kr',
@@ -70,12 +78,7 @@ export async function verifyIndependentBoardLive({
         const held=await request(path,[404]);
         assert.equal(held.headers.get('x-ekodi-route'),'regional-private-hold',path);
         assert.equal(held.headers.get('x-ekodi-region-publication'),'private-owner-release-required',path);
-        // Edge gateways may normalize the private, no-store producer response to
-        // no-store alone. The no-store directive is authoritative and stricter
-        // than private for storage; never accept public or cacheable responses.
-        const cacheDirectives=String(held.headers.get('cache-control')||'').toLowerCase().split(',').map(x=>x.trim());
-        assert.ok(cacheDirectives.includes('no-store'),path+' private 404 must include no-store');
-        assert.ok(!cacheDirectives.includes('public'),path+' private 404 must not advertise public caching');
+        assertPrivateBoardNoStore(held,path);
         assert.match(held.headers.get('x-robots-tag')||'',/noindex/i,path+' private noindex');
       }
       continue;
