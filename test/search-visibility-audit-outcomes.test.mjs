@@ -72,7 +72,7 @@ test('audit truth requires an exact same-origin HTML result and accepts only sla
   assert.match(source,/withResponse:true/);
   assert.match(source,/response\.headers\.get\('x-robots-tag'\)/);
   assert.match(source,/validatePublicAuditResponse\(site,receipt\)/);
-  assert.match(source,/result\.noindex\?'검색로봇 noindex 지시/);
+  assert.match(source,/result\.noindex&&!policyNoindex\?'검색로봇 noindex 지시/);
   assert.doesNotMatch(source,/method:'POST'|method:"POST"/,'technical audit is read-only');
 });
 
@@ -92,7 +92,7 @@ test('CSV technical-audit export uses public site scope, preserves unscanned row
     ['https://ekodi.kr/ekodimall',{basic:'100점 (4/4)',ai:'67점 (2/3)',
       improvements:['구조화 데이터 검토'],raw:{noindex:false,privateSecret:'HIDDEN'}}],
     ['https://ekodi.kr/mokdaehumun',{basic:'75점 (3/4)',ai:'33점 (1/3)',
-      improvements:['검색로봇 noindex 지시(메타·HTTP 헤더) 점검'],raw:{noindex:true}}],
+      improvements:[],policyNoindex:true,policyNote:'공유 운영 공간 · 검색 제외 정책 유지',raw:{noindex:true}}],
     ['https://ekodi.kr/unavailable',{error:'+CMD("calc")',raw:{privateSecret:'HIDDEN'}}],
   ]);
   const csv=format(sites,audited,'2026. 11. 5. 16:50:00');
@@ -102,7 +102,7 @@ test('CSV technical-audit export uses public site scope, preserves unscanned row
   assert.match(rows[1],/에코디몰.*점검 완료.*100점 \(4\/4\).*차단 지시 없음/);
   assert.match(rows[2],/미점검/,'no site observation must remain explicitly unknown');
   assert.match(rows[2],/'=HYPERLINK/,'dangerous name must become spreadsheet literal');
-  assert.match(rows[3],/noindex 확인/);
+  assert.match(rows[3],/정책상 검색 제외\(noindex\)/);
   assert.match(rows[4],/"'\+CMD\(""calc""\)"/,'error text beginning with a formula marker must be escaped');
   assert.doesNotMatch(csv,/DO-NOT-LEAK|HIDDEN|token_ciphertext|privateSecret/);
   assert.doesNotMatch(csv,/색인 완료|등록 완료|검색 실적/);
@@ -131,4 +131,25 @@ test('production Chromium verifies a synthetic read-only CSV download and unrout
   assert.match(e2e,/await page\.unroute\(url,auditFixture\)/);
   assert.match(e2e,/Technical audit attempted a mutation/);
   assert.match(e2e,/local CSV download passed \(no writes\)/);
+});
+
+test('documented operator-space noindex is policy-specific and absent noindex is a compliance warning',()=>{
+  const start=source.indexOf('  const documentedNoindexPolicy =');
+  const end=source.indexOf('  // Export only currently loaded',start);
+  assert.ok(start>0&&end>start);
+  const isExpected=vm.runInNewContext('(()=>{'+source.slice(start,end)+';return documentedNoindexPolicy;})()', {URL});
+  assert.equal(isExpected('https://ekodi.kr/mokdaehumun'),true);
+  assert.equal(isExpected('https://ekodi.kr/mokdaehumun/'),true);
+  for(const other of [
+    'https://ekodi.kr/cgmurrc',
+    'https://ekodi.kr/ekodimall',
+    'https://ekodi.kr/mokdaehumun/live/',
+    'https://other.example/mokdaehumun',
+    'https://ekodi.kr/mokdaehumun/?private=1',
+  ])assert.equal(isExpected(other),false,'unexpected policy inheritance: '+other);
+  assert.match(source,/policyNoindex&&!result\.noindex\?'공유 운영 공간 검색 제외 정책 누락 점검'/);
+  assert.match(source,/result\.noindex&&!policyNoindex\?'검색로봇 noindex 지시/);
+  assert.match(source,/policyNote=policyNoindex\?\(result\.noindex\?/);
+  assert.match(source,/result\.policyNoindex\?/);
+  assert.match(source,/const improvementDetails=\[result\?\.policyNote,/);
 });
