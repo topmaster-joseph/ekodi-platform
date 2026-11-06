@@ -16,6 +16,24 @@ await fs.mkdir(dir,{recursive:true});
 const report={target,run,site,checks:[],passed:false,startedAt:new Date().toISOString()};
 const devices=[['desktop','desktop'],['mobile','mobile-portrait']];
 
+// Supabase keeps only the newest magic link per user, so links are issued
+// just in time for each browser run (development project only).
+async function memberHash(envName){
+  const base=String(process.env.POINTS_E2E_SUPABASE_URL||'');
+  const key=String(process.env.POINTS_E2E_SUPABASE_SECRET||'');
+  const email=String(process.env.POINTS_E2E_MEMBER_EMAIL||'');
+  if(base==='https://lxcxwbdwwojjkgybbqii.supabase.co'&&key.startsWith('sb_secret_')&&email){
+    const res=await fetch(base+'/auth/v1/admin/generate_link',{method:'POST',
+      headers:{apikey:key,'content-type':'application/json'},body:JSON.stringify({type:'magiclink',email})});
+    const body=await res.json().catch(()=>({}));
+    const hash=String(body.hashed_token||body.properties?.hashed_token||'');
+    if(!res.ok||!hash)throw new Error('member magic link not issued ('+res.status+')');
+    console.log('::add-mask::'+hash);
+    return hash;
+  }
+  return String(process.env[envName]||'');
+}
+
 function check(label,result,extra={}){
   const row={label,passed:result?.ok===true,errors:result?.pageErrors?.length??null,
     blockedMutations:result?.blockedMutations?.length??null,error:result?.error?.code||result?.error?.message||null,...extra};
@@ -31,7 +49,7 @@ try{
   for(const [name,profile] of devices){
     if(target==='member'){
       const ref=`e2e/${run}-${name}`;
-      const hash=String(process.env[name==='desktop'?'POINTS_E2E_MEMBER_HASH_DESKTOP':'POINTS_E2E_MEMBER_HASH_MOBILE']||'');
+      const hash=await memberHash(name==='desktop'?'POINTS_E2E_MEMBER_HASH_DESKTOP':'POINTS_E2E_MEMBER_HASH_MOBILE');
       if(!/^[A-Za-z0-9_-]{20,200}$/.test(hash))throw new Error('member magic-link hash missing for '+name);
       const result=await runTask({
         taskId:`points-member-${run}-${name}`,
@@ -89,7 +107,7 @@ try{
   report.error=String(error?.code||error?.message||error).slice(0,300);
   console.log(`::error::${target} verification error: ${report.error}`.replace(/\r?\n/g,' '));
   // Read-only diagnostic: what the member actually sees (fresh single-use link).
-  const diagHash=String(process.env.POINTS_E2E_MEMBER_HASH_DIAG||'');
+  const diagHash=await memberHash('POINTS_E2E_MEMBER_HASH_DIAG').catch(()=>'');
   if(target==='member'&&/^[A-Za-z0-9_-]{20,200}$/.test(diagHash)){
     try{
       const diag=await runTask({

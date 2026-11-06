@@ -103,28 +103,13 @@ jobs:
           sql "with p as (insert into public.people(ekodi_id,display_name) values('EKD-E2E-$POINTS_E2E_RUN','E2E 검증 회원') returning id)
                insert into public.login_identities(person_id,auth_user_id,provider,provider_subject,email,status)
                select id,'$uid','e2e','e2e-$POINTS_E2E_RUN','$email','active' from p;" >/dev/null
-          for device in DESKTOP MOBILE DIAG; do
+          for device in DESKTOP MOBILE; do
             link="$(jq -nc --arg e "$email" '{type:"magiclink",email:$e}' | curl -fsS -X POST -H "apikey: $key" -H 'Content-Type: application/json' --data @- "$auth/generate_link")"
             hash="$(printf '%s' "$link" | jq -r '.hashed_token // .properties.hashed_token // empty')"
             [ -n "$hash" ]
             echo "::add-mask::$hash"
             echo "POINTS_E2E_MEMBER_HASH_${device}=$hash" >> "$GITHUB_ENV"
           done
-
-          # Diagnostic: the member API exactly as the My staging page calls it.
-          dlink="$(jq -nc --arg e "$email" '{type:"magiclink",email:$e}' | curl -fsS -X POST -H "apikey: $key" -H 'Content-Type: application/json' --data @- "$auth/generate_link")"
-          dhash="$(printf '%s' "$dlink" | jq -r '.hashed_token // .properties.hashed_token // empty')"
-          dsess="$(jq -nc --arg h "$dhash" '{type:"magiclink",token_hash:$h}' | curl -sS -X POST -H "apikey: $key" -H 'Content-Type: application/json' --data @- "https://$DEV_REF.supabase.co/auth/v1/verify" || true)"
-          djwt="$(printf '%s' "$dsess" | jq -r '.access_token // empty' 2>/dev/null || true)"
-          if [ -n "$djwt" ]; then
-            echo "::add-mask::$djwt"
-            for ep in "progress?site=$POINTS_E2E_SITE" "me?site=$POINTS_E2E_SITE"; do
-              out="$(curl -sS -o /tmp/pa.json -w '%{http_code}' -H "Origin: $MY_STAGING" -H "Authorization: Bearer $djwt" -H "apikey: $key" "https://$DEV_REF.supabase.co/functions/v1/points-api/$ep" || true)"
-              echo "::notice::points-api /$ep -> $out $(head -c 300 /tmp/pa.json | tr -d '\r\n')"
-            done
-          else
-            echo "::warning::diagnostic magic-link verify failed: $(printf '%s' "$dsess" | head -c 200 | tr -d '\r\n')"
-          fi
 
           # Staging admin session in the isolated staging D1 (never production).
           cf(){ curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' "$@"; }
@@ -162,7 +147,15 @@ jobs:
         env:
           POINTS_E2E_TARGET: member
           EKODI_BROWSER_ORIGIN: ${{ env.MY_STAGING }}
-        run: node scripts/verify-points-staging-browser.mjs
+          POINTS_E2E_SUPABASE_URL: https://lxcxwbdwwojjkgybbqii.supabase.co
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Only the newest magic link is valid, so the script issues one per device just in time.
+          keys="$(curl -fsS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$DEV_REF/api-keys?reveal=true")"
+          key="$(printf '%s' "$keys" | jq -r '[.[]|select(.type=="secret" and .name=="ekodi_points_control_staging")][0].api_key // empty')"
+          echo "::add-mask::$key"
+          POINTS_E2E_SUPABASE_SECRET="$key" POINTS_E2E_MEMBER_EMAIL="$E2E_MEMBER_EMAIL" node scripts/verify-points-staging-browser.mjs
 
       - name: EKODI browser — admin points console (admin staging)
         env:
