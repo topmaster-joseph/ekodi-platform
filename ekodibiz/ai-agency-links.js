@@ -50,22 +50,24 @@ export function mountAgencyCrossLinks(root=document,locationPath=window.location
       if(!target){if(status)status.textContent='공유할 페이지 주소가 확인되지 않습니다.';return;}
       const explain=(message)=>{if(status)status.textContent=message;};
       // Native share is user-initiated; do not include form fields or tokens.
-      try{
-        if(typeof navigator!=='undefined'&&typeof navigator.share==='function'){
+      if(typeof navigator!=='undefined'&&typeof navigator.share==='function'){
+        try{
           await navigator.share({title:'에코디비즈 AI 구독료 결제위탁',url:target});
           explain(feedbackMessage);
           return;
+        }catch(error){
+          if(error?.name==='AbortError')return; // User dismissed OS share sheet.
+          // Some desktop browsers expose Share but reject it; copy URL instead.
         }
-        if(typeof navigator!=='undefined'&&navigator.clipboard?.writeText){
+      }
+      if(typeof navigator!=='undefined'&&navigator.clipboard?.writeText){
+        try{
           await navigator.clipboard.writeText(target);
           explain('페이지 주소를 복사했습니다. '+feedbackMessage);
           return;
-        }
-        explain('공유용 주소: '+target+' · '+feedbackMessage);
-      }catch(error){
-        if(error?.name==='AbortError')return; // User dismissed OS share sheet.
-        explain('링크 복사가 제한되었습니다. 주소: '+target+' · '+feedbackMessage);
+        }catch{}
       }
+      explain('공유용 주소: '+target+' · '+feedbackMessage);
     });
   }
 }
