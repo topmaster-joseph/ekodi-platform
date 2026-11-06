@@ -70,3 +70,14 @@ test('the role line is filled on every tab, not only the overview', async () => 
   const js = await readFile(new URL('../publishing/admin/admin.js', import.meta.url), 'utf8');
   assert.match(js, /show\(sectionFromPath\(\)\);\n[^\n]*\n  getSummary\(\)\.catch\(\(\) => \{\}\);/);
 });
+
+test('manuscript manage page shows Korean labels instead of internal codes', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const [js, html] = await Promise.all(['app.js', 'index.html'].map(f => readFile(new URL('../publishing/human/manage/' + f, import.meta.url), 'utf8')));
+  assert.match(js, /PUBLISHING_RELEASE_NOT_CONFIGURED:'서점 판매 연결이 아직 설정되지 않았습니다/);
+  assert.match(js, /'판매 불가: '\+blockerText\(info\.blocker\)/);
+  assert.match(js, /fieldLabel\(p\.fieldId\)/);
+  assert.doesNotMatch(js, /'원고 버전 '\+p\.editionId/);
+  assert.match(html, /<label class="check"><input type="checkbox" name="consent"/);
+  assert.match(html, /원고 확인 코드 \(자동\)/);
+});
