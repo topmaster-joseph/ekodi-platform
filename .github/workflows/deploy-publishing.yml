@@ -21,6 +21,7 @@ on:
       - 'publishing-ai-factory.js'
       - 'publishing-ai-epub.js'
       - 'publishing-ai-quality.js'
+      - 'publishing-ai-release.js'
       - 'migrations/202610291000_publishing_workflow.sql'
       - 'wrangler.publishing.toml'
       - 'deploy/manifests/publishing.worker.json'
@@ -62,6 +63,7 @@ jobs:
           node --check publishing-ai-factory.js
           node --check publishing-ai-epub.js
           node --check publishing-ai-quality.js
+          node --check publishing-ai-release.js
           node --check publishing/app.js
           node --check publishing/studio/app.js
           node --check publishing/upaper/app.js

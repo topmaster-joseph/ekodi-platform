@@ -114,3 +114,10 @@ CREATE TABLE IF NOT EXISTS publishing_ai_images (
 );
 -- PUBLISHING-AI-WEEKLY-001: 예약 실행 기록(상태·오류 메시지만, 원고 본문 없음)
 CREATE TABLE IF NOT EXISTS publishing_ai_runs (at TEXT NOT NULL, result_json TEXT NOT NULL);
+
+-- PUBLISHING-AI-RELEASE-001: 최종 검수 확인으로 출간된 AI 협업 도서와 그 저널 글.
+CREATE TABLE IF NOT EXISTS publishing_ai_releases (book_id TEXT PRIMARY KEY, catalog_id TEXT NOT NULL UNIQUE, title TEXT NOT NULL, subtitle TEXT,
+  author TEXT NOT NULL, genre TEXT, abstract TEXT, toc_json TEXT, price_json TEXT NOT NULL, file_key TEXT NOT NULL, epub_sha256 TEXT NOT NULL, epub_bytes INTEGER,
+  disclosure TEXT NOT NULL, sensitive_json TEXT, released_by TEXT, released_at TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'on_sale');
+CREATE TABLE IF NOT EXISTS publishing_book_journal (id TEXT PRIMARY KEY, book_id TEXT NOT NULL, catalog_id TEXT NOT NULL, slug TEXT NOT NULL UNIQUE,
+  title TEXT NOT NULL, summary TEXT, body TEXT NOT NULL, theme TEXT, published_at TEXT NOT NULL);
