@@ -217,8 +217,9 @@ function completionEvidenceShapeValid(evidence,row){
     const item=required.find(entry=>entry?.name===name);
     if(!item||item.conclusion!=='success')return false;
   }
-  // The only allowed no-Worker release is the specifically Human-Gate approved
-  // native operations watch. OIDC collector must verify its actual main-branch
+  // No-Worker releases: (1) the Human-Gate approved native operations watch, and
+  // (2) releases whose files are all non-deploy surface, re-fetched server-side.
+  // Native watch: OIDC collector must verify its actual main-branch
   // scheduled/dispatch observe job and its non-empty evidence artifact.
   if(evidence.deliveryKind==='github-actions-schedule'){
     const w=evidence.nativeWorkflow||{};
@@ -238,6 +239,11 @@ function completionEvidenceShapeValid(evidence,row){
       ['Collect EKODI-owned read-only operational evidence',
        'Preserve privacy-safe evidence, including failures'].every(s=>w.verifiedSteps.includes(s)))return false;
     return true;
+  }
+  if(evidence.deliveryKind==='no-deploy-surface'){
+    if(evidence.deploymentSurface!=='none')return false;
+    if(Array.isArray(evidence.deployments)&&evidence.deployments.length)return false;
+    return isNonDeploySurface(evidence.files);
   }
   const deployments=Array.isArray(evidence.deployments)?evidence.deployments:[];
   if(!deployments.length)return false;
@@ -308,6 +314,12 @@ export async function handleOrchestratorCompletionReconciliation(request,env,{fe
     if(row.state==='completed')return new Response(JSON.stringify({ok:true,taskId:id,state:'completed',idempotent:true}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
     if(TERMINAL_STATES.has(row.state))return new Response(JSON.stringify({ok:false,reason:'terminal_state_not_completable',state:row.state}),{status:409,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
     if(!completionEvidenceShapeValid(body.evidence,row))return new Response(JSON.stringify({ok:false,reason:'completion_evidence_invalid'}),{status:400,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    if(body.evidence.deliveryKind==='no-deploy-surface'){
+      const files=await pullRequestFiles(Number(body.evidence.pr?.number),{fetchImpl});
+      const claimed=[...body.evidence.files].sort().join('\n');
+      if(!isNonDeploySurface(files)||[...files].sort().join('\n')!==claimed)
+        return new Response(JSON.stringify({ok:false,reason:'no_deploy_surface_unconfirmed'}),{status:409,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    }
     const live=await currentLiveHealth(env);
     if(!live)return new Response(JSON.stringify({ok:false,reason:'live_health_failed'}),{status:503,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
     const evidence=Object.freeze({...body.evidence,source:'github-actions-oidc-and-internal-canonical-health',live,receipt:Object.freeze({repository:oidc.repository,ref:oidc.ref,eventName:oidc.eventName,workflowRef:oidc.workflowRef,runId:oidc.runId,runAttempt:oidc.runAttempt})});
