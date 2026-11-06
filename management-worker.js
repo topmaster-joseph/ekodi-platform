@@ -136,7 +136,7 @@ function authorizedStoreAggregate(data,space,slug){
   if(!validCount(orders?.count)||!amountValid(orders?.averageTicket)
     ||!amountValid(metrics?.sales)||!validCount(metrics?.customers)
     ||!validCount(metrics?.newCustomers)||typeof finance?.connected!=='boolean')return null;
-  if(metrics.customers>orders.count||metrics.newCustomers<0)return null;
+  if(metrics.newCustomers>metrics.customers)return null;
   // These values are limited to EKODI-recorded orders. Do not imply POS/bank completeness.
   const finances=finance.connected
     ?{status:'internal-aggregate',cashIn:finance.cashIn,cashOut:finance.cashOut,costTotal:finance.costTotal}
