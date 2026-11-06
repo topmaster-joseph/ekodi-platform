@@ -57,7 +57,9 @@
       "provenance": {
         "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
         "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
-      }
+      },
+      "normalizedBlobSha": "d12249a1a80f159bb6ab73630717e5464270ea70",
+      "normalization": "prefix-free-display-names-v1"
     },
     {
       "path": "church-i18n.js",
@@ -65,7 +67,9 @@
       "provenance": {
         "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
         "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
-      }
+      },
+      "normalizedBlobSha": "58528eb8d75af1534f5d7181b105149985f6029a",
+      "normalization": "prefix-free-display-names-v1"
     },
     {
       "path": "church-public-updates.css",
@@ -105,7 +109,9 @@
       "provenance": {
         "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
         "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
-      }
+      },
+      "normalizedBlobSha": "50c906bb14756f2ae724c1283852ce86ce17b5e8",
+      "normalization": "prefix-free-display-names-v1"
     },
     {
       "path": "notices/index.html",
@@ -130,8 +136,8 @@
         "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
         "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
       },
-      "normalizedBlobSha": "d4513fd9701dd268a5ff395f5d67cce884023695",
-      "normalization": "replace-obsolete-EKODI-subdomain-URLs-with-canonical-paths-v1"
+      "normalizedBlobSha": "6227e5babac6e704398f85832776fe403fe64276",
+      "normalization": "apex-paths-and-prefix-free-display-names-v1"
     },
     {
       "path": "test/church-approved-homepage-layout.test.mjs",
@@ -246,5 +252,5 @@
     "legacyRepositoryDeletionAuthorized": false,
     "requiresIndependentPR150Reconciliation": true
   },
-  "explanation": "The original upstream script Git blob is SHA-pinned but is not deployed as-is: its 3 legacy host links are replaced by approved ekodi.kr paths in the separate staged output. The exact resulting normalized Git blob is pinned. This is a runtime correction, not bypass of the zero-subdomain policy."
+  "explanation": "Four original PR149 source blobs retain immutable upstream blob receipts and carry independently SHA-pinned, output-only normalization to the already approved EKODI canonical display names. Script also replaces three obsolete separate-host links with the existing apex routes. The stage contains only normalized output bytes, and the source remains a nondeployable offline preview."
 }
