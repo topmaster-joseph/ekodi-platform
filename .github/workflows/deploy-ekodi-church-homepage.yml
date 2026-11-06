@@ -263,6 +263,49 @@ jobs:
           echo "Church devotion verification failed: page=$page renderer=$renderer api=$api"
           exit 1
 
+      - name: Verify six-menu Church public notices, schedules and preserved worship on live canonical release
+        if: vars.CHURCH_CANONICAL_SOURCE_CUTOVER_APPROVED == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${CHURCH_RELEASE_SOURCE_MODE:-}" = canonical
+          release="$CHURCH_SOURCE_SHA"
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -o /tmp/church-six-live-home.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/?release=${release}" || true)
+            notice=$(curl -L -sS -o /tmp/church-six-live-notices.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/notices/?release=${release}" || true)
+            schedule=$(curl -L -sS -o /tmp/church-six-live-schedule.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/schedule/?release=${release}" || true)
+            selected=$(curl -L -sS -o /tmp/church-six-live-subnav.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-section-nav.js?release=${release}" || true)
+            shared=$(curl -L -sS -o /tmp/church-six-live-shared.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-shared-schedules.js?release=${release}" || true)
+            worship=$(curl -L -sS -o /tmp/church-six-live-worship.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/worship/2026-11-08/?release=${release}" || true)
+            marker_code=$(curl -L -sS -o /tmp/church-six-live-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
+            if [[ "$root" == 200 && "$notice" == 200 && "$schedule" == 200 && "$selected" == 200 && "$shared" == 200 && "$worship" == 200 && "$marker_code" == 200 ]] \
+              && grep -Fq 'data-church-public-page="notices"' /tmp/church-six-live-notices.html \
+              && grep -Fq 'data-church-notices' /tmp/church-six-live-notices.html \
+              && grep -Fq 'data-church-public-page="schedule"' /tmp/church-six-live-schedule.html \
+              && grep -Fq 'data-church-schedule' /tmp/church-six-live-schedule.html \
+              && grep -Fq 'data-church-shared-schedules' /tmp/church-six-live-home.html \
+              && grep -Fq 'shared-schedules' /tmp/church-six-live-shared.js \
+              && grep -Fq '공동의회' /tmp/church-six-live-worship.html \
+              && node .ekodi-control/scripts/verify-church-header-navigation.mjs \
+                   --html /tmp/church-six-live-home.html --subnav /tmp/church-six-live-subnav.js \
+              && jq -e --arg sha "$release" --arg digest "$CHURCH_PAYLOAD_SHA256" '
+                 .contract == "ekodi.church-release.v2" and
+                 .sourceRepository == "topmaster-joseph/ekodi-platform" and
+                 .sourceSha == $sha and .payloadSha256 == $digest and
+                 .preservedPublicWorship.mergedPR == 150 and
+                 .preservedPublicWorship.preservationPR == 151 and
+                 .preservedPublicWorship.preservationHeadSha == "9ca89ef9190a61e101bfe0c6129cdc6a668a6a4b"
+              ' /tmp/church-six-live-release.json >/dev/null; then
+              echo 'Canonical Church six menus, public notices, federated schedules, preserved worship and live source SHA verified.'
+              break
+            fi
+            if [[ "$attempt" == 18 ]]; then
+              echo "Church canonical public route verification failed: root=$root notice=$notice schedule=$schedule selected=$selected shared=$shared worship=$worship marker=$marker_code"
+              exit 1
+            fi
+            sleep 5
+          done
+
       - name: Verify production church together (partnership) page
         shell: bash
         run: |
