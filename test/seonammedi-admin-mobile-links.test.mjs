@@ -13,7 +13,7 @@ const [html,js,css,minutes,native,workflow]=await Promise.all([
 ]);
 
 test('finance and minutes are canonical deep links with consistent selected state',()=>{
-  const anchors=[...html.matchAll(/<a\\b[^>]*>/g)].map(match=>match[0]);
+  const anchors=html.match(/<a[^>]*>/g)||[];
   for(const name of ['dashboard','minutes','finance','access']){
     assert.ok(anchors.some(a=>a.includes('data-panel-target="'+name+'"')&&a.includes('href="?panel='+name+'"')),'missing deep-link '+name);
   }
