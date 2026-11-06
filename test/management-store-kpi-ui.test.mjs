@@ -13,7 +13,7 @@ function storage(data={}){const values=new Map(Object.entries(data));return{
 function element(){return{children:[],dataset:{},value:'person',textContent:'',href:'',hidden:false,disabled:false,handlers:{},
   attributes:{},setAttribute(name,value){this.attributes[name]=value},addEventListener(type,handler){this.handlers[type]=handler},
   replaceChildren(...children){this.children=children;this.textContent=''},append(...children){this.children.push(...children)}}}
-function page({spaces=[store,tenant],result=null,storeResponse=null,guest=false}={}){
+function page({spaces=[store,tenant],result=null,storeResponse=null,businessResult=null,businessResponse=null,guest=false}={}){
   const elements=new Map(),calls=[];
   const get=id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id)};
   const doc={body:{dataset:{}},getElementById:get,createElement:element,
@@ -28,6 +28,7 @@ function page({spaces=[store,tenant],result=null,storeResponse=null,guest=false}
     if(path==='/api/catalog')return {ok:true,json:async()=>({modules:[]})};
     if(path==='/api/spaces')return {ok:true,status:200,json:async()=>({spaces,scope:'authenticated-member-only'})};
     if(path.startsWith('/api/store-summary?'))return storeResponse?.promise??{ok:true,status:200,json:async()=>payload};
+    if(path.startsWith('/api/store-business-summary?'))return businessResponse?.promise??{ok:Boolean(businessResult),status:businessResult?200:503,json:async()=>businessResult??{error:'source_unavailable'}};
     throw Error('Unexpected fetch: '+path);
   };
   const location={href:'https://ekodi.kr/management/',pathname:'/management/',search:'',hash:'',assign(){}};
@@ -166,8 +167,10 @@ test('authorized menu and channel detail tabs render only official projected rec
   assert.equal(detail.children[2].children[2].children[0].children[0].textContent,'배달의민족');
   const sales=detail.children[1].children[4];
   sales.handlers.click();
-  assert.match(detail.children[2].children[1].textContent,/원본이 연결되지 않았습니다/);
+  await p.flush();
+  assert.match(detail.children[2].children[1].textContent,/공식 경영 집계를 확인할 수 없습니다/);
   assert.equal(p.calls.filter(x=>x.path.includes('store-summary')).length,1);
+  assert.equal(p.calls.filter(x=>x.path.includes('store-business-summary')).length,1);
 });
 
 test('unavailable operational details do not invent counts, zero sales, or private entries',async()=>{
@@ -193,4 +196,83 @@ test('untrusted projection with malformed menu prices falls back to unavailable 
   await p.flush();const {button,panel}=kpiControl(p);await button.handlers.click();
   assert.match(panel.children[2].children[2].children[1].textContent,/상세 목록을 확인할 수 없습니다/);
   assert.equal(panel.children[0].children.length,4);
+});
+
+const businessPayload={
+  dataPolicy:'verified-business-aggregate-read-only',
+  workspace:{id:'store-1',slug:'jadam',kind:'store'},asOf:'2026-11-07T00:00:00.000Z',
+  timezone:'Asia/Seoul',coverage:'ekodi-recorded-completed-orders-only',
+  source:'business_os_store_admin_snapshot',
+  orders:{completedCount:5,averageTicket:20000},
+  sales:{recordedCompletedSales:100000},
+  customers:{identifiedToday:3,newFromBaseOrders:1},
+  settlement:{status:'internal-aggregate',cashIn:130000,cashOut:50000,costTotal:45000}
+};
+test('store owner lazily loads Business OS once and renders scoped orders, sales, customers, and finance',async()=>{
+  const p=page({businessResult:businessPayload});await p.flush();
+  const {button,panel}=kpiControl(p);await button.handlers.click();
+  const detail=panel.children[2];
+  assert.equal(p.calls.filter(x=>x.path.includes('store-business-summary')).length,0);
+  detail.children[1].children[2].handlers.click(); // 주문
+  assert.match(detail.children[2].children[1].textContent,/확인하고 있습니다/);
+  await p.flush();
+  assert.match(detail.children[2].children[1].textContent,/한국시간/);
+  assert.equal(detail.children[2].children[2].children[0].children[1].textContent,'5건');
+  assert.match(detail.children[2].children[3].textContent,/POS/);
+  detail.children[1].children[4].handlers.click(); // 매출
+  assert.equal(detail.children[2].children[2].children[0].children[1].textContent,'100,000원');
+  detail.children[1].children[3].handlers.click(); // 고객
+  assert.equal(detail.children[2].children[2].children[0].children[1].textContent,'3명');
+  detail.children[1].children[6].handlers.click(); // 정산
+  assert.equal(detail.children[2].children[2].children[0].children[1].textContent,'130,000원');
+  assert.match(detail.children[2].children[3].textContent,/은행 입금/);
+  assert.equal(p.calls.filter(x=>x.path.includes('store-business-summary')).length,1);
+  assert.equal(p.calls.filter(x=>x.options.method==='POST').length,0);
+});
+
+test('store staff cannot request privileged business aggregates from client',async()=>{
+  const staff={...store,role:'store_staff'};
+  const p=page({spaces:[staff],businessResult:businessPayload});await p.flush();
+  const {button,panel}=kpiControl(p);await button.handlers.click();
+  const detail=panel.children[2];
+  detail.children[1].children[4].handlers.click();
+  assert.match(detail.children[2].children[1].textContent,/관리자 권한이 필요/);
+  assert.equal(p.calls.filter(x=>x.path.includes('store-business-summary')).length,0);
+});
+
+test('mismatched or malformed business identity and money fail closed to unavailable',async()=>{
+  for(const invalid of [
+    {...businessPayload,workspace:{id:'other-store',slug:'jadam',kind:'store'}},
+    {...businessPayload,sales:{recordedCompletedSales:-7}},
+    {...businessPayload,orders:{completedCount:'0',averageTicket:20000}},
+    {...businessPayload,settlement:{status:'internal-aggregate',cashIn:null,cashOut:0,costTotal:0}}
+  ]){
+    const p=page({businessResult:invalid});await p.flush();
+    const {button,panel}=kpiControl(p);await button.handlers.click();
+    const detail=panel.children[2];detail.children[1].children[4].handlers.click();
+    await p.flush();
+    assert.match(detail.children[2].children[1].textContent,/0건 또는 0원으로 간주하지 않습니다/);
+  }
+});
+
+test('delayed private revenue response cannot repopulate after logout',async()=>{
+  let done;const deferred={promise:new Promise(resolve=>done=resolve)};
+  const p=page({businessResponse:deferred});await p.flush();
+  const {button,panel}=kpiControl(p);await button.handlers.click();
+  const detail=panel.children[2];detail.children[1].children[4].handlers.click();
+  runInContext('logout()',p.ctx);
+  done({ok:true,status:200,json:async()=>businessPayload});
+  await p.flush();
+  assert.equal(p.get('memberApp').hidden,true);
+  assert.equal(p.get('verifiedSpacesList').children.length,0);
+  assert.equal(p.sess.getItem('ekodi-management-session'),null);
+  assert.equal(JSON.stringify(detail.children).includes('100,000원'),false);
+});
+
+test('unconnected internal finance is explicitly unverified instead of a false zero',async()=>{
+  const p=page({businessResult:{...businessPayload,settlement:{status:'not-connected'}}});
+  await p.flush();const {button,panel}=kpiControl(p);await button.handlers.click();
+  const detail=panel.children[2];detail.children[1].children[6].handlers.click();
+  await p.flush();
+  assert.match(detail.children[2].children[2].textContent,/0원으로 간주하지 않습니다/);
 });

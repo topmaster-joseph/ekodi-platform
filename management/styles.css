@@ -70,3 +70,10 @@
 .store-operations>.note{margin:10px 0 0;font-size:.79rem}
 @media(max-width:760px){.store-operations{padding:10px}.store-operation-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.store-operation-tab{min-width:0;padding:9px 5px}.store-operation-list{grid-template-columns:1fr}}
 @media(max-width:359px){.store-operation-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+.store-operation-body .store-kpi-grid{margin:9px 0;grid-template-columns:repeat(2,minmax(0,1fr))}
+.store-operation-body .store-kpi-cell{min-width:0;word-break:keep-all;overflow-wrap:break-word}
+.store-operation-body .store-kpi-cell dt{line-height:1.4}
+.store-operation-body .store-kpi-cell dd{font-variant-numeric:tabular-nums}
+.store-operation-body>.note{margin-top:9px;line-height:1.5}
+@media(max-width:390px){.store-operation-body .store-kpi-grid{grid-template-columns:1fr}}
