@@ -70,7 +70,14 @@ export async function verifyIndependentBoardLive({
         const held=await request(path,[404]);
         assert.equal(held.headers.get('x-ekodi-route'),'regional-private-hold',path);
         assert.equal(held.headers.get('x-ekodi-region-publication'),'private-owner-release-required',path);
-        assert.match(held.headers.get('cache-control')||'',/private[^,]*,\s*no-store/i,path+' private no-store');
+        const rawCacheControl=held.headers.get('cache-control')||'';
+        const cacheDirectives=new Set(rawCacheControl.toLowerCase().split(',').map(part=>part.trim()));
+        // Cache-Control is a set of comma-separated directives, not an
+        // ordered text prefix. Both protective directives remain mandatory.
+        for(const required of ['private','no-store']){
+          assert.ok(cacheDirectives.has(required),
+            path+' private no-store: missing '+required+' (actual cache-control='+JSON.stringify(rawCacheControl)+')');
+        }
         assert.match(held.headers.get('x-robots-tag')||'',/noindex/i,path+' private noindex');
       }
       continue;

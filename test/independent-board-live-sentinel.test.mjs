@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {verifyIndependentBoardLive, LIVE_BOARDS} from '../scripts/verify-independent-board-live.mjs';
 import {readFile} from 'node:fs/promises';
 
-function fixture({mismatch = false, subscription = true, leak = false, social = false, singlesLeak = false, privateLeak = false, privateHeaderLeak = false} = {}) {
+function fixture({mismatch = false, subscription = true, leak = false, social = false, singlesLeak = false, privateLeak = false, privateHeaderLeak = false, privateHeaderValue = null} = {}) {
   const calls = [];
   const fetcher = async (url, options) => {
     calls.push({path: url.pathname, method: options.method, authorization: options.headers.authorization});
@@ -16,7 +16,7 @@ function fixture({mismatch = false, subscription = true, leak = false, social = 
         'content-type':'text/html; charset=utf-8',
         'x-ekodi-route':'regional-private-hold',
         'x-ekodi-region-publication':'private-owner-release-required',
-        'cache-control':privateHeaderLeak?'public, max-age=3600':'private, no-store, max-age=0',
+        'cache-control':privateHeaderValue??(privateHeaderLeak?'public, max-age=3600':'private, no-store, max-age=0'),
         'x-robots-tag':'noindex, nofollow, noarchive, nosnippet',
       };
       return new Response('서비스 비공개',{status:privateLeak?200:404,headers:protectedHeaders});
@@ -104,4 +104,17 @@ test('owner-frozen Cheonggye public board must stay 404 private no-store, not si
     () => verifyIndependentBoardLive({fetcher:fixture({privateHeaderLeak:true}).fetcher,sleep:async()=>{}}),
     /private no-store/
   );
+});
+
+test('Cache-Control directives may be reordered but both private and no-store remain mandatory',async()=>{
+  for(const privateHeaderValue of ['no-store, private, max-age=0','max-age=0, PRIVATE, NO-STORE','private, max-age=0, no-store']){
+    const result=await verifyIndependentBoardLive({fetcher:fixture({privateHeaderValue}).fetcher,sleep:async()=>{}});
+    assert.deepEqual(result.privateBoards,['cheonggye']);
+  }
+  for(const privateHeaderValue of ['private, max-age=0','no-store, public, max-age=0','public, max-age=0','']){
+    await assert.rejects(
+      () => verifyIndependentBoardLive({fetcher:fixture({privateHeaderValue}).fetcher,sleep:async()=>{}}),
+      /private no-store: missing (?:private|no-store)/
+    );
+  }
 });
