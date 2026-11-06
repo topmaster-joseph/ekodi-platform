@@ -83,6 +83,11 @@ test('expired links answer 410 and delete the file; bad types, sizes and expirie
   const pdf=await (await upload(e,{kind:'bank',bytes:PDF,days:'1'})).json();
   const view=await (await call(e,pdf.item.path)).text();
   assert.match(view,/<object class="doc-pdf" data="\.\.\/f\//);assert.match(view,/통장 사본/);
+  const cv=await (await upload(e,{kind:'resume',bytes:PDF,days:'7',purpose:'AI부트캠프사업단 제출용'})).json();
+  assert.equal(cv.item.label,'이력서');
+  assert.match(await (await call(e,cv.item.path)).text(),/이력서/);
+  const f=await call(e,cv.item.path.replace(/^s\//,'f/'));
+  assert.match(f.headers.get('content-disposition')||'',/filename="resume\.pdf"/);
 });
 
 test('the manager page is behind the instructor password; share views are public; staging has no storage',async()=>{
