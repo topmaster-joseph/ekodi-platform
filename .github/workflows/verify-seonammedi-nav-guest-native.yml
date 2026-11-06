@@ -7,6 +7,9 @@ on:
       - 'scripts/verify-seonammedi-finance-firstparty.mjs'
       - 'test/seonammedi-finance-firstparty.test.mjs'
       - 'test/seonammedi-native-committee-parity.test.mjs'
+      - 'test/seonammedi-admin-mobile-links.test.mjs'
+      - 'scripts/verify-seonammedi-admin-nav-native.mjs'
+      - 'sites/seonammedi/public/admin/**'
       - '.github/workflows/verify-seonammedi-nav-guest-native.yml'
   push:
     branches: [main]
@@ -16,6 +19,8 @@ on:
       - 'scripts/verify-seonammedi-nav-guest-native.mjs'
       - 'scripts/verify-seonammedi-finance-firstparty.mjs'
       - 'test/seonammedi-finance-firstparty.test.mjs'
+      - 'test/seonammedi-admin-mobile-links.test.mjs'
+      - 'scripts/verify-seonammedi-admin-nav-native.mjs'
   workflow_dispatch:
   issue_comment:
     types: [created]
@@ -45,7 +50,8 @@ jobs:
         run: |
           node --check scripts/verify-seonammedi-nav-guest-native.mjs
           node --check scripts/verify-seonammedi-finance-firstparty.mjs
-          node --test test/seonammedi-finance-firstparty.test.mjs test/seonammedi-native-committee-parity.test.mjs
+          node --check scripts/verify-seonammedi-admin-nav-native.mjs
+          node --test test/seonammedi-finance-firstparty.test.mjs test/seonammedi-native-committee-parity.test.mjs test/seonammedi-admin-mobile-links.test.mjs
   native-public-guest-audit:
     # Owner-only post-merge read-only probe. Issue comments run from trusted default main,
     # never from a contributor-controlled PR head and never receive write credentials.
@@ -73,13 +79,16 @@ jobs:
         run: |
           node --check scripts/verify-seonammedi-nav-guest-native.mjs
           node --check scripts/verify-seonammedi-finance-firstparty.mjs
-          node --test test/seonammedi-finance-firstparty.test.mjs test/seonammedi-native-committee-parity.test.mjs
+          node --check scripts/verify-seonammedi-admin-nav-native.mjs
+          node --test test/seonammedi-finance-firstparty.test.mjs test/seonammedi-native-committee-parity.test.mjs test/seonammedi-admin-mobile-links.test.mjs
       - name: Verify first-party finance public summary and protected administrator API
         run: node scripts/verify-seonammedi-finance-firstparty.mjs
       - name: Install EKODI Chromium harness
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
+      - name: Verify actual finance/minutes links and mobile layout on both public domains
+        run: node scripts/verify-seonammedi-admin-nav-native.mjs
       - name: Check canonical and customer public surfaces on PC/mobile
         run: node scripts/verify-seonammedi-nav-guest-native.mjs
       - name: Upload screenshot and structured evidence
@@ -87,6 +96,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: seonammedi-native-nav-guest-${{ github.run_id }}
-          path: artifacts/seonammedi-nav-guest
+          path: |
+            artifacts/seonammedi-nav-guest
+            artifacts/seonammedi-admin-nav-native
           retention-days: 14
           if-no-files-found: warn
