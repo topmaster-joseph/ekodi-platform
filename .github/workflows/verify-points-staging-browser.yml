@@ -61,6 +61,8 @@ jobs:
           if [ -n "${STATIC_ACCESS_ID:-}" ] && [ -n "${STATIC_ACCESS_SECRET:-}" ]; then
             echo "::add-mask::$STATIC_ACCESS_SECRET"
             { echo "CF_ACCESS_CLIENT_ID=$STATIC_ACCESS_ID"; echo "CF_ACCESS_CLIENT_SECRET=$STATIC_ACCESS_SECRET"; } >> "$GITHUB_ENV"
+            echo 'E2E_ACCESS_EPHEMERAL=1' >> "$GITHUB_ENV"
+            node scripts/points-staging-access.mjs open-static
             echo 'Using repository Access service token.'
           else
             echo 'E2E_ACCESS_EPHEMERAL=1' >> "$GITHUB_ENV"
