@@ -69,3 +69,15 @@ test('library exposes owned EPUB through reader only, not an EPUB-save button', 
   assert.match(lib, /펼쳐 읽기/);
   assert.match(lib, /downloadAudio/);
 });
+
+
+test('Toss merchant review: purchase and policy delivery copy match the EPUB reader', () => {
+  const purchase = readFileSync(new URL('../books/buy/index.html', import.meta.url), 'utf8');
+  const checkout = readFileSync(new URL('../books/buy/buy.js', import.meta.url), 'utf8');
+  const commerce = JSON.parse(readFileSync(new URL('../books/commerce.json', import.meta.url), 'utf8'));
+  assert.match(purchase, /EPUB 전자책을 온라인 리더로 열람/);
+  assert.match(checkout, /전자책 리더에서 열람/);
+  assert.match(commerce.policy.delivery, /온라인 리더로 열람/);
+  assert.doesNotMatch(purchase, /EPUB 파일을 바로 받습니다/);
+  assert.doesNotMatch(commerce.policy.delivery, /EPUB 파일을 받습니다/);
+});
