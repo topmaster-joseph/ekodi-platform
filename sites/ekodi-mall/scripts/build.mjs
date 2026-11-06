@@ -85,12 +85,16 @@ function productCard(product, options = {}) {
   const regionIds = Array.isArray(region.regionIds) ? region.regionIds.filter((id) => regionMap.has(id)) : [];
   const searchable = `${product.name} ${product.badge} ${product.description} ${product.status} ${store?.name || ''} ${region.label || ''}`.toLowerCase();
   const data = options.withData === false ? '' : ` data-product="${esc(product.id)}" data-category="${esc(product.category)}" data-region-ids="${esc(regionIds.join(','))}" data-primary-region="${esc(region.primaryRegionId || '')}" data-region-label="${esc(region.label || '')}" data-local-relationship="${esc(region.relationship || '')}" data-region-verified="${region.verified ? 'true' : 'false'}" data-search="${esc(searchable)}" data-name="${esc(product.name)}" data-status="${esc(product.status)}" data-href="${href}"`;
+  // Static bookstore approval is not sufficient to advertise a live purchase;
+  // verify the commerce quote in the browser before exposing the catalog card.
+  const pendingQuote = options.withData !== false && product.source?.system === 'ekodi-bookstore'
+    ? ' data-bookstore-quote-pending="true" hidden' : '';
   const regionChip = region.label ? `<p class="region-chip">지역 · ${esc(region.label)}${region.verified ? ' · 확인됨' : ''}</p>` : '';
   const heart = options.withHeart === false ? '' : `<button class="heart" data-wish="${esc(product.id)}" aria-label="${esc(product.name)} 관심상품" aria-pressed="false">♡</button>`;
   const storeKicker = store ? `<p class="store-kicker"><a href="/stores/${esc(store.slug)}/">${esc(store.name)}</a></p>` : '';
   // MALL-LIST-IMAGE-001: 대표이미지(도서 표지·판매자 사진)를 목록에 보이고, 이미지·제목 어디를 눌러도 상세로 간다.
   const image = product.image ? `<img src="${esc(product.image)}" alt="${esc(product.name)}" loading="lazy" decoding="async">` : '';
-  return `<article class="card"${data}><div class="thumb ${esc(product.category)}${image ? ' has-image' : ''}"><a class="thumb-link" href="${href}" aria-label="${esc(product.name)} 자세히 보기">${image}</a><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p class="card-summary">${esc(shortSummary(product.description, product.category === 'book' ? 34 : 46))}</p>${regionChip}<div class="meta"><span class="status">${product.category === 'book' ? esc(Number(product.price) > 0 ? formatPrice(Number(product.price)) + ' · ' : '가격 확인 · ') : ''}${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
+  return `<article class="card"${data}${pendingQuote}><div class="thumb ${esc(product.category)}${image ? ' has-image' : ''}"><a class="thumb-link" href="${href}" aria-label="${esc(product.name)} 자세히 보기">${image}</a><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p class="card-summary">${esc(shortSummary(product.description, product.category === 'book' ? 34 : 46))}</p>${regionChip}<div class="meta"><span class="status">${product.category === 'book' ? esc(Number(product.price) > 0 ? formatPrice(Number(product.price)) + ' · ' : '가격 확인 · ') : ''}${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
 }
 
 function productDetailSections(product, store) {
