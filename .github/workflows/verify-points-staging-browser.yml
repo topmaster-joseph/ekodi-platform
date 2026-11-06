@@ -111,6 +111,21 @@ jobs:
             echo "POINTS_E2E_MEMBER_HASH_${device}=$hash" >> "$GITHUB_ENV"
           done
 
+          # Diagnostic: the member API exactly as the My staging page calls it.
+          dlink="$(jq -nc --arg e "$email" '{type:"magiclink",email:$e}' | curl -fsS -X POST -H "apikey: $key" -H 'Content-Type: application/json' --data @- "$auth/generate_link")"
+          dhash="$(printf '%s' "$dlink" | jq -r '.hashed_token // .properties.hashed_token // empty')"
+          dsess="$(jq -nc --arg h "$dhash" '{type:"magiclink",token_hash:$h}' | curl -sS -X POST -H "apikey: $key" -H 'Content-Type: application/json' --data @- "https://$DEV_REF.supabase.co/auth/v1/verify" || true)"
+          djwt="$(printf '%s' "$dsess" | jq -r '.access_token // empty' 2>/dev/null || true)"
+          if [ -n "$djwt" ]; then
+            echo "::add-mask::$djwt"
+            for ep in "progress?site=$POINTS_E2E_SITE" "me?site=$POINTS_E2E_SITE"; do
+              out="$(curl -sS -o /tmp/pa.json -w '%{http_code}' -H "Origin: $MY_STAGING" -H "Authorization: Bearer $djwt" -H "apikey: $key" "https://$DEV_REF.supabase.co/functions/v1/points-api/$ep" || true)"
+              echo "::notice::points-api /$ep -> $out $(head -c 300 /tmp/pa.json | tr -d '\r\n')"
+            done
+          else
+            echo "::warning::diagnostic magic-link verify failed: $(printf '%s' "$dsess" | head -c 200 | tr -d '\r\n')"
+          fi
+
           # Staging admin session in the isolated staging D1 (never production).
           cf(){ curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' "$@"; }
           db="$(cf "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?name=ekodi-auth-staging" | jq -r '[.result[]|select(.name=="ekodi-auth-staging")][0].uuid // empty')"
