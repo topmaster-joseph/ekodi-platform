@@ -1,3 +1,6 @@
+import { renderRegionTabsScript } from './region-tabs-ui.js';
+import { renderEkodiUserFooter } from './config/user-footer.js';
+
 function esc(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 
 function style(){
@@ -15,6 +18,34 @@ function style(){
   .pass-handoff [hidden],[data-pass-vendor-intake][hidden]{display:none!important}
   .pass-handoff{display:grid;gap:12px}.pass-handoff-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pass-handoff label{display:grid;gap:5px;font-size:13px;font-weight:750}.pass-handoff input,.pass-handoff select,.pass-review input,.pass-review select{width:100%;min-height:42px;border:1px solid #cdd9e1;border-radius:10px;padding:8px 10px;background:#fff;color:#17212b;font:inherit}.pass-handoff button,.pass-review button{min-height:42px;border:0;border-radius:10px;padding:8px 16px;background:#173f32;color:#fff;font:inherit;font-weight:800;cursor:pointer}.pass-handoff button:disabled,.pass-review button:disabled{opacity:.6;cursor:wait}.pass-handoff .wide{grid-column:1/-1}.pass-submission{border:1px solid #dce3e8;border-radius:13px;padding:13px;margin-top:8px;display:grid;gap:5px}.pass-submission a{color:#174837;font-size:14px}.pass-review{display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:8px}.pass-intake-note{font-size:13px;line-height:1.6;color:#526b7d}@media(max-width:620px){.pass-handoff-grid,.pass-review{grid-template-columns:1fr}}
   @media(max-width:620px){.row{grid-template-columns:1fr;gap:3px}}
+
+  /* Public pass: condensed status-led information, no active financial affordances. */
+  .pass-site-header{background:#fffdf8;border-bottom:1px solid #d9e3dc}
+  .pass-site-header__inner{max-width:1120px;width:calc(100% - 28px);margin:auto;min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .pass-site-header__brand{text-decoration:none;font-size:18px;font-weight:900;letter-spacing:-.03em;color:#173f32}
+  .pass-site-header__links{display:flex;gap:6px;flex-wrap:wrap}
+  .pass-site-header__links a{min-height:40px;display:inline-flex;align-items:center;padding:5px 11px;text-decoration:none;font-size:13px;font-weight:800;color:#315548;border-radius:9px}
+  .pass-site-header__links a:hover,.pass-site-header__links a:focus-visible{background:#e5f0e8}
+  .pass-public{padding-top:16px}
+  .pass-public .ecosystem{margin-bottom:10px}
+  .pass-public .hero{padding:18px 22px;border-radius:18px;background:linear-gradient(110deg,#edf6f0,#fffaf0);border-color:#d1e1d6}
+  .pass-public .hero h1{margin:2px 0 6px;font-size:clamp(28px,4vw,38px);line-height:1.25;color:#173f32}
+  .pass-public .hero .lead{margin:0;font-size:14px;line-height:1.6}
+  .pass-public .hero .eyebrow{color:#315e4f}
+  .pass-public .hero .status{margin-top:9px;background:#e0ece5;color:#214d3a}
+  .pass-public .panel{margin-top:12px;padding:15px;border-radius:15px}
+  .pass-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+  .pass-tab{min-width:0;min-height:46px;padding:9px 10px;border:1px solid #cfddd3;border-radius:12px;background:#fff;color:#315548;font:inherit;font-size:14px;font-weight:800;cursor:pointer;word-break:keep-all}
+  .pass-tab[aria-selected="true"]{background:#173f32;border-color:#173f32;color:#fff}
+  .pass-tab:focus-visible{outline:3px solid #7aac93;outline-offset:2px}
+  .pass-panel[hidden]{display:none!important}
+  .pass-panel{padding:16px 4px 4px;min-height:110px}
+  .pass-panel h2{font-size:17px;margin:0 0 6px}
+  .pass-panel p{margin:0;font-size:14px;line-height:1.65;color:#4b6257}
+  .pass-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .pass-links a{min-height:40px;display:inline-flex;align-items:center;padding:8px 12px;border:1px solid #d5e0d9;border-radius:10px;background:#f6faf7;color:#174837;text-decoration:none;font-size:13px;font-weight:800}
+  .pass-public{word-break:keep-all;overflow-wrap:break-word}
+  @media(max-width:620px){.pass-public .hero{padding:16px}.pass-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.pass-public .panel{padding:10px}.pass-tab{min-height:44px;font-size:13px}.pass-panel{padding:14px 5px 5px}}
   </style>`;
 }
 
@@ -25,10 +56,22 @@ function doc(region,program,title,body,surface){
   return `<!doctype html><html lang="ko" data-ekodi-site-subject="${esc(region.siteSubject)}" data-ekodi-local-region="${esc(region.id)}" data-ekodi-commerce-program="${esc(program.id)}" data-ekodi-region-surface="${surface}"${authAttrs}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="청계 지역의 쿠폰·포인트·상권 혜택을 연결하는 청계패스"><title>${esc(title)}</title>${canonical}${robots}${style()}<style>[data-region-auth-pending="1"] main{visibility:hidden}.auth-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.auth-chip{padding:6px 9px;border-radius:999px;background:#eef3f6;font-size:12px}.auth-chip span{font-weight:800}</style></head><body>${body}${scripts}</body></html>`;
 }
 
+
 export function regionalCommerceProgramPublicPage(region,program){
-  const body=`<main><nav class="ecosystem" aria-label="청계 연결"><a href="/cgma">청계면상인회</a><a href="/cheonggye">청계잇다</a><a href="/cgpass" aria-current="page">청계패스</a></nav><section class="hero"><div class="eyebrow">CHEONGGYE PASS · 지역 혜택</div><h1>${esc(program.publicName)}</h1><p class="lead">청계 지역의 참여점포와 쿠폰·할인·포인트 같은 상권 혜택을 한곳에서 확인하도록 준비하는 지역 서비스입니다.</p><div style="margin-top:14px"><span class="status">서비스 준비 중</span></div></section>
-  <section class="panel"><h2>이용할 수 있는 기능</h2><div class="grid"><div class="item"><strong>참여점포</strong><span class="muted">청계패스에 참여하는 가게와 공개정보를 확인합니다.</span></div><div class="item"><strong>쿠폰·할인</strong><span class="muted">점포와 지역에서 제공하는 혜택을 모아봅니다.</span></div><div class="item"><strong>포인트·상품권</strong><span class="muted">사용 가능한 혜택이 준비되면 이용 방법을 안내합니다.</span></div><div class="item"><strong>이용 안내</strong><span class="muted">현재 사용할 수 있는 기능과 준비 상태를 쉽게 확인합니다.</span></div></div><a class="button" href="/cheonggye">청계잇다에서 지역정보 보기</a> <a class="button" href="/cgma">청계면상인회 보기</a></section></main>`;
-  return new Response(doc(region,program,`${program.publicName} | ${region.brand}`,body,'public'),{status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'regional-commerce-program-public'}});
+  const tabs=[
+    {id:'stores',label:'참여점포',desc:'참여점포 정보는 확인·등록되는 대로 공개합니다. 현재는 지역 상점 정보를 먼저 확인할 수 있습니다.',links:[['청계 상점 정보','/cheonggye/commerce']]},
+    {id:'offers',label:'쿠폰·할인',desc:'청계패스의 쿠폰과 할인 혜택은 서비스 준비 중입니다. 실제 제공이 확인된 혜택만 공개하겠습니다.',links:[['지역 상권 보기','/cheonggye/commerce']]},
+    {id:'points',label:'포인트·상품권',desc:'포인트 적립·사용과 상품권 관련 서비스는 준비 중입니다. 발행·결제·정산 기능은 별도 확인 전까지 이용할 수 있는 것으로 안내하지 않습니다.',links:[]},
+    {id:'guide',label:'이용 안내',desc:'청계패스는 현재 안내 단계입니다. 지역의 공개정보는 청계잇다에서, 상인회 소식은 청계면상인회에서 확인하세요.',links:[['청계잇다','/cheonggye'],['청계면상인회','/cgma']]},
+  ];
+  const body=`<header class="pass-site-header"><div class="pass-site-header__inner"><a class="pass-site-header__brand" href="/cgpass" aria-current="page">청계패스</a><nav class="pass-site-header__links" aria-label="청계 연결"><a href="/cheonggye">청계잇다</a><a href="/cgma">청계면상인회</a></nav></div></header><main class="pass-public">
+  <section class="hero"><div class="eyebrow">CHEONGGYE PASS · 지역 혜택</div><h1>${esc(program.publicName)}</h1><p class="lead">지역 참여점포와 혜택을 한곳에서 찾기 위한 청계패스입니다. 분야를 선택해 공개 정보와 준비 상태를 확인하세요.</p><span class="status">서비스 준비 중</span></section>
+  <section class="panel" aria-label="청계패스 정보"><div class="pass-tabs" role="tablist" aria-label="청계패스 기능 안내" data-region-tablist>
+    ${tabs.map((tab,index)=>`<button class="pass-tab" type="button" role="tab" id="pass-tab-${tab.id}" aria-controls="pass-panel-${tab.id}" aria-selected="${index===0?'true':'false'}" tabindex="${index===0?'0':'-1'}">${esc(tab.label)}</button>`).join('')}
+  </div>
+  ${tabs.map((tab,index)=>`<section class="pass-panel" role="tabpanel" id="pass-panel-${tab.id}" aria-labelledby="pass-tab-${tab.id}"${index?' hidden':''}><h2>${esc(tab.label)}</h2><p>${esc(tab.desc)}</p>${tab.links.length?`<div class="pass-links">${tab.links.map(([label,url])=>`<a href="${esc(url)}">${esc(label)}</a>`).join('')}</div>`:''}</section>`).join('')}
+  </section></main>${renderEkodiUserFooter()}${renderRegionTabsScript()}`;
+  return new Response(doc(region,program,`${program.publicName} | ${region.brand}`,body,'public'),{status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'regional-commerce-program-public','x-ekodi-user-chrome':'v1'}});
 }
 
 export function regionalCommerceProgramAdminPage(region,program){
