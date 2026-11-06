@@ -108,3 +108,59 @@ test('no supplier subscription budget means no supplier payment receipts',async(
   assert.equal(r.status,409);
   assert.equal(r.body.error,'no_provider_budget');
 });
+
+test('university can see only own three-cycle statement through existing receipt code',async()=>{
+  const e=env(),{id,receiptToken}=await setup(e);
+  const status=await api(e,'/status',{id,receiptToken});
+  assert.equal(status.status,200);
+  const x=status.body.campus;
+  assert.equal(x.agreementId,id);
+  assert.equal(x.organization,'Synthetic Test University');
+  assert.equal(x.months,3);
+  assert.equal(x.periods.length,3);
+  assert.equal(x.feeAmount,20000);
+  assert.equal(x.supplierBudget,90000);
+  assert.equal(x.recordedSupplierSpending,0);
+  assert.equal(x.unallocatedSupplierBudget,90000);
+  assert.equal(x.renewalStopEvidenceRecorded,false);
+  for(const confidential of ['tokenHash','receiptToken','email','paymentKey','password','otp','chatContent','audit'])
+    assert.equal(JSON.stringify(x).includes('"'+confidential+'"'),false,confidential);
+});
+test('university lookup does not disclose a different contract or accept a wrong token',async()=>{
+  const e=env(),a=await setup(e);
+  const b=await api(e,'/apply',{...form,email:'another-manager@example.test',organization:'Other Campus'});
+  assert.equal(b.status,201);
+  const wrong=await api(e,'/status',{id:a.id,receiptToken:b.body.receiptToken});
+  assert.equal(wrong.status,404);
+  const wrong2=await api(e,'/status',{id:b.body.id,receiptToken:a.receiptToken});
+  assert.equal(wrong2.status,404);
+  const own=await api(e,'/status',{id:b.body.id,receiptToken:b.body.receiptToken});
+  assert.equal(own.status,200);
+  assert.equal(own.body.campus.organization,'Other Campus');
+  assert.equal(own.body.campus.supplierBudget,null);
+  assert.equal(own.body.campus.unallocatedSupplierBudget,null);
+});
+test('university summary reflects manual records and cancellation but cannot modify them',async()=>{
+  const e=env(),a=await setup(e);
+  await api(e,'/admin/record-cycle',cycle(a.id,1,25000,'INV-CAMPUS-001'),adminKey);
+  await api(e,'/admin/stop-renewal',{id:a.id,cancellationRef:'CANCEL-CAMPUS-001',
+    personalAccountKept:true,confirmed:true},adminKey);
+  const status=await api(e,'/status',{id:a.id,receiptToken:a.receiptToken});
+  assert.equal(status.body.campus.recordedSupplierSpending,25000);
+  assert.equal(status.body.campus.unallocatedSupplierBudget,65000);
+  assert.equal(status.body.campus.periods[0].status,'operator_recorded');
+  assert.equal(status.body.campus.periods[0].receiptRef,'INV-CAMPUS-001');
+  assert.equal(status.body.campus.periods[1].status,'not_recorded');
+  assert.equal(status.body.campus.renewalStopEvidenceRecorded,true);
+  assert.equal(status.body.campus.accountPreservationAttested,true);
+  const denied=await api(e,'/admin/record-cycle',cycle(a.id,2,25000,'INV-CAMPUS-002'));
+  assert.equal(denied.status,403);
+});
+test('individual receipt lookup does not expose a campus contract view',async()=>{
+  const e=env();
+  const a=await api(e,'/apply',{...form,type:'individual',organization:''});
+  assert.equal(a.status,201);
+  const status=await api(e,'/status',{id:a.body.id,receiptToken:a.body.receiptToken});
+  assert.equal(status.status,200);
+  assert.equal(status.body.campus,null);
+});
