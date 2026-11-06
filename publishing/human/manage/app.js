@@ -17,6 +17,15 @@ const LABELS={planning:'기획',drafting:'집필 중',in_review:'편집 검수',
   handoff_ready:'판매 등록 인계 대기',released:'판매 활성화 확인'};
 let projects=[],active=null,userRole='author',connected=false;
 let requestVersion=0;
+// 화면에 영문 코드 대신 우리말을 보인다(코드는 그대로 서버와 주고받는다).
+const ROLE_KO={admin:'출판 관리자',editor:'편집자',author:'저자',reviewer:'검수자',publisher:'발행자'};
+const BLOCKER_KO={PUBLISHING_RELEASE_NOT_CONFIGURED:'서점 판매 연결이 아직 설정되지 않았습니다(운영자 설정 필요)',
+  SEPARATE_SIGNED_PUBLISHING_CONTRACT_REQUIRED:'서명된 출판 계약이 필요합니다',FREE_PREMIUM_AUDIOBOOK_QA_REQUIRED:'오디오북 검수가 먼저 필요합니다',
+  NO_VERIFIED_PAID_MEMBERSHIP:'확인된 유료 회원 자격이 없습니다',MEMBERSHIP_READ_FAILED:'회원 자격을 확인하지 못했습니다(잠시 후 다시 시도)',
+  MEMBERSHIP_READ_NOT_CONFIGURED:'회원 자격 확인이 아직 설정되지 않았습니다',PUBLISHER_DATABASE_UNAVAILABLE:'출판 기록 저장소에 연결하지 못했습니다(잠시 후 다시 시도)',
+  VERIFICATION_UNAVAILABLE:'확인 서비스에 연결하지 못했습니다(잠시 후 다시 시도)',AUTHOR_ID_INVALID:'저자 정보가 올바르지 않습니다'};
+const blockerText=code=>BLOCKER_KO[code]||(code?'준비 조건 확인 필요':'준비 조건 확인 필요');
+const fieldLabel=id=>{try{const o=[...document.querySelectorAll('select[name=fieldId] option')].find(x=>x.value===id);if(o)return o.textContent;}catch{}return id||'-';};
 function getToken(){
   for(const key of AUTH_KEYS){
     try{
@@ -137,14 +146,14 @@ async function load(){
   }
 }
 function showList(){
-  $('counts').textContent=projects.length+'개 프로젝트 · '+userRole;
+  $('counts').textContent=projects.length+'개 프로젝트 · '+(ROLE_KO[userRole]||userRole);
   $('rows').replaceChildren();
   if(!projects.length){const row=$('rows').insertRow();const cell=row.insertCell();cell.colSpan=7;cell.textContent='등록된 프로젝트가 없습니다.';return;}
   projects.forEach((p,i)=>{
     const row=$('rows').insertRow();
-    const values=[i+1,p.title,p.fieldId,LABELS[p.stage]||p.stage,
+    const values=[i+1,p.title,fieldLabel(p.fieldId),LABELS[p.stage]||p.stage,
       p.scheduledAt?new Date(p.scheduledAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'미예약',p.revision];
-    values.forEach((value,j)=>{const cell=row.insertCell();cell.textContent=String(value);if(j===3)cell.className='tag';});
+    values.forEach((value,j)=>{const cell=row.insertCell();if(j===3){const t=document.createElement('span');t.className='tag';t.textContent=String(value);cell.append(t);}else cell.textContent=String(value);});
     const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='관리';
     button.addEventListener('click',()=>{active=p;renderDetail();$('selected').scrollIntoView({behavior:'smooth',block:'start'});});
     row.insertCell().append(button);
@@ -219,7 +228,7 @@ function renderDetail(){
   $('selected').hidden=!p;
   if(!p)return;
   $('detailTitle').textContent=p.title+' · '+(LABELS[p.stage]||p.stage);
-  $('editionInfo').textContent='원고 버전 '+p.editionId+' · 개정 '+p.revision+' · 출간 예약은 저자·발행자 승인 이후 가능';
+  $('editionInfo').textContent='원고 '+p.revision+'판 · 출간 예약은 저자·발행자 승인 이후 가능';$('editionInfo').title='판본 번호 '+p.editionId;
   resetFileSelection();
   $('manuscriptDigest').value=p.manuscriptDigest||'';
   $('releaseDigest').value=p.releaseDigest||'';
@@ -238,7 +247,7 @@ function renderDetail(){
     const info=await api(`projects/${p.id}/readiness`);
     tell(info.saleReadyForPublisherReview
       ? '비공개 자격·계약·오디오 검수 기록 확인됨. 실제 서점·몰 판매 및 구매자 제공은 별도 배포 승인 전입니다.'
-      : '판매 불가: '+(info.blocker||'준비 조건 확인 필요')+' · 개인 원고 보관 및 집필은 계속 가능합니다.');
+      : '판매 불가: '+blockerText(info.blocker)+' · 원고 보관과 집필은 계속할 수 있습니다.');
     return false; // This is a read-only diagnostic, not a completed state transition.
   });
   if(['planning','drafting','changes_requested'].includes(p.stage)){
