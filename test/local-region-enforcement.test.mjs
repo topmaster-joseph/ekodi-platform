@@ -123,3 +123,22 @@ test('generic Cheonggye production probes match the user-facing renderer instead
     for(const marker of probe.expect||[])assert.ok(html.includes(marker),module.id+' production marker not rendered: '+marker);
   }
 });
+
+
+test('guarded Site Core release checks Cheonggye root against real stable public identity, not stale copy',async()=>{
+  const manifest=JSON.parse(await fs.readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const entry=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/cheonggye');
+  assert.ok(entry,'release must check canonical public Cheonggye landing');
+  assert.deepEqual(entry.statuses,[200]);
+  assert.ok(entry.headerExpect.includes('x-ekodi-route: local-region-public'));
+  assert.ok(entry.expect.includes('data-ekodi-local-region="local:cheonggye"'),
+    'release must verify the public regional tenant marker');
+  assert.ok(!entry.expect.includes('지역 서비스'),
+    '2026-11-06 public landing uses compact category tabs and no longer has this obsolete literal');
+  const html=await localRegionPublicPage(region).text();
+  for(const marker of entry.expect)assert.ok(html.includes(marker),'public release candidate missing '+marker);
+  for(const prohibited of entry.forbid)assert.ok(!html.includes(prohibited),
+    'public regional landing leaked private operator workspace marker '+prohibited);
+  assert.match(html,/role="tablist"/);
+  assert.match(html,/청계 지역 공통 플랫폼/);
+});
