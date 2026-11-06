@@ -114,6 +114,19 @@ export function verifyReviewedChurchStackedSource(m){
   if(!Array.isArray(m.trackedFiles)||m.trackedFiles.length!==223||!uniq(m.trackedFiles.map(f=>f.path)))
     stop('223 canonical Git asset inventory invalid');
   const present=new Map(m.trackedFiles.map(f=>[f.path,f]));
+  const fixed=staged.localReconciliations;
+  const reconciledPath='test/church-compact-tabs.test.mjs';
+  const reconciledSha='be1a66be3fe7d37a9171930fe00585593d541724';
+  const historical=prev.get(reconciledPath);
+  const currentTest=present.get(reconciledPath);
+  if(!Array.isArray(fixed)||fixed.length!==1||
+     fixed[0].path!==reconciledPath||
+     fixed[0].previousCanonicalBlobSha!==(historical?.normalizedBlobSha||historical?.blobSha)||
+     fixed[0].finalCanonicalBlobSha!==reconciledSha||
+     fixed[0].taskId!=='church-canonical-146-149-stage-20261106'||
+     !String(fixed[0].reason||'').includes('six primary menu')||
+     (currentTest?.normalizedBlobSha||currentTest?.blobSha)!==reconciledSha)
+    stop('reviewed six-menu test reconciliation SHA or scope drifted');
   const added=expectedPaths.filter(p=>!prev.has(p));
   if(!matching(sorted(staged.addedFiles||[]),added)||added.length!==11)
     stop('eleven reviewed added files not enumerated');
@@ -124,7 +137,7 @@ export function verifyReviewedChurchStackedSource(m){
     const current=present.get(path);
     if(!current||current.blobSha!==original.blobSha||current.mode!==original.mode)
       stop('original Git blob or file mode replaced: '+path);
-    if(!expectedPaths.includes(path)&&!matching(current,original))
+    if(!expectedPaths.includes(path)&&path!==reconciledPath&&!matching(current,original))
       stop('unreviewed original file normalized hash drift: '+path);
   }
   for(const [path,current] of present){
