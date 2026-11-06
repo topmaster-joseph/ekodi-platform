@@ -112,7 +112,7 @@ test('missing or fabricated counts and finance amounts cannot silently become ze
     {...sample,orders:{count:null,averageTicket:20000}},
     {...sample,orders:{count:'0',averageTicket:20000}},
     {...sample,metrics:{...sample.metrics,sales:null}},
-    {...sample,metrics:{...sample.metrics,customers:6}},
+    {...sample,metrics:{...sample.metrics,newCustomers:6}},
     {...sample,finance:{...sample.finance,cashIn:-1}},
     {...sample,asOf:'unparseable timestamp'}
   ]){
