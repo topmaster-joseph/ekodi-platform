@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity, PLATFORM_SECURITY_CONSTANTS } from '../platform-security-policy.js';
+import { applyTrafficResponsePolicy } from '../traffic-governor.js';
+import { cheonggyePublicHoldResponse } from '../region-publication-hold.js';
 
 const limiter=success=>({limit:async()=>({success})});
 
@@ -198,4 +200,37 @@ test('Church iframe opt-in is exact-path, same-origin, document-only and CSP-gat
     'content-type':'text/html','content-security-policy':csp
   }}),new Request('https://malicious.example/ekodichurch/live/?embed=church-online'));
   assert.equal(crossDomain.headers.get('x-frame-options'),'DENY');
+});
+
+
+test('owner-frozen regional 404 keeps explicit private and no-store through real production middleware chain',()=>{
+  for(const path of ['/cheonggye','/cheonggye/board/api/health','/cheonggye/board/api/posts','/cheonggye/board']){
+    const request=new Request('https://ekodi.kr'+path);
+    const held=cheonggyePublicHoldResponse(request);
+    assert.equal(held?.status,404,path);
+    const traffic=applyTrafficResponsePolicy(held,request,{tier:'L1'});
+    const secured=applyPlatformSecurityHeaders(traffic,request);
+    const cache=String(secured.headers.get('cache-control')||'').toLowerCase();
+    const directives=cache.split(',').map(x=>x.trim());
+    assert.equal(secured.status,404,path);
+    assert.ok(directives.includes('private'),path+' private directive preserved');
+    assert.ok(directives.includes('no-store'),path+' no-store directive preserved');
+    assert.ok(!directives.includes('public'),path+' must never become public-cacheable');
+    assert.equal(secured.headers.get('x-ekodi-route'),'regional-private-hold');
+    assert.equal(secured.headers.get('x-ekodi-region-publication'),'private-owner-release-required');
+    assert.match(secured.headers.get('x-robots-tag')||'',/noindex/);
+  }
+});
+
+test('sensitive API security still removes weak or contradictory upstream caching',()=>{
+  const request=new Request('https://ekodi.kr/cheonggye/board/api/health');
+  for(const cache of ['public, max-age=3600','private, max-age=3600','public, private, no-store','no-store']){
+    const input=new Response('{}',{status:404,headers:{
+      'content-type':'application/json; charset=utf-8',
+      'cache-control':cache,
+    }});
+    const result=applyPlatformSecurityHeaders(input,request);
+    assert.equal(result.headers.get('cache-control'),'no-store',cache+' must normalize to no-store');
+    assert.match(result.headers.get('x-robots-tag')||'',/noindex/);
+  }
 });
