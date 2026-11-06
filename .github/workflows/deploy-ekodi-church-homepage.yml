@@ -514,7 +514,22 @@ jobs:
                 assert.equal(initial.weeklyHidden,true,'weekly panel hidden until selected');
                 assert.equal(initial.sharedLive,true,'shared EKODI Live link retained');
                 assert.equal(initial.member,true,'site-local member navigation retained');
-                assert.equal(initial.qtin,true,'QTIN group-order link in the church header '+locale+' '+device.name);
+                // Old headers expose QTIN directly. Six-item headers keep it in Together.
+                // Verify the actual rendered submenu in every viewport and locale.
+                if(!initial.qtin){
+                  await page.evaluate(()=>{location.hash='#together'});
+                  await page.waitForFunction(()=>!!document.querySelector('.church-section-subnav:not([hidden]) a[href="/qtin/church"]'),{timeout:9000});
+                  const contextual=await page.evaluate(()=>({
+                    qtin:!!document.querySelector('.church-section-subnav:not([hidden]) a[href="/qtin/church"]'),
+                    community:!!document.querySelector('.church-section-subnav a[href="#community"]'),
+                    partner:!!document.querySelector('.church-section-subnav a[href="#partner-news"]')
+                  }));
+                  assert.equal(contextual.qtin,true,'Together must expose QTIN '+locale+' '+device.name);
+                  assert.equal(contextual.community,true,'Together must expose community '+locale+' '+device.name);
+                  assert.equal(contextual.partner,true,'Together must expose partner news '+locale+' '+device.name);
+                  await page.evaluate(()=>{location.hash=''});
+                  await page.waitForFunction(()=>document.body.dataset.churchSelectedSection==='home',{timeout:9000});
+                }
                 assert.equal(initial.canonicalDevotion,true,'canonical daily devotion card missing '+locale+' '+device.name);
                 assert.equal(initial.legacyLifeRecord,false,'legacy journal UI returned '+locale+' '+device.name);
                 assert.equal(initial.overflow,false,'horizontal overflow '+locale+' '+device.name);

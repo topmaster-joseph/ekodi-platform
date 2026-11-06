@@ -96,6 +96,13 @@ test('Church-approved layout requires five-viewport multilingual Chromium produc
   'Upload approved layout Chromium evidence'
  ])assert.ok(w.includes(contract),'missing Church layout guarded proof: '+contract);
  assert.match(w,/verify-church-header-navigation\.mjs[\s\S]*?--html church\/index\.html --subnav church\/church-section-nav\.js/);
+ for(const marker of [
+   "location.hash='#together'",
+   ".church-section-subnav:not([hidden]) a[href=\"/qtin/church\"]",
+   "Together must expose community",
+   "Together must expose partner news",
+   "churchSelectedSection==='home'"
+ ])assert.ok(w.includes(marker),'missing contextual navigation live proof: '+marker);
  assert.match(w,/actions\/upload-artifact@v4/);
  assert.match(w,/CHURCH_SOURCE_SHA/);
  assert.match(w,/validate-ekodi-ai-change-orchestration\.mjs/);
