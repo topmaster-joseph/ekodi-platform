@@ -34,7 +34,7 @@ function style(){
   .pass-public .hero .eyebrow{color:#315e4f}
   .pass-public .hero .status{margin-top:9px;background:#e0ece5;color:#214d3a}
   .pass-public .panel{margin-top:12px;padding:15px;border-radius:15px}
-  .pass-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+  .pass-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
   .pass-tab{min-width:0;min-height:46px;padding:9px 10px;border:1px solid #cfddd3;border-radius:12px;background:#fff;color:#315548;font:inherit;font-size:14px;font-weight:800;cursor:pointer;word-break:keep-all}
   .pass-tab[aria-selected="true"]{background:#173f32;border-color:#173f32;color:#fff}
   .pass-tab:focus-visible{outline:3px solid #7aac93;outline-offset:2px}
@@ -61,7 +61,8 @@ export function regionalCommerceProgramPublicPage(region,program){
   const tabs=[
     {id:'stores',label:'참여점포',desc:'참여점포 정보는 확인·등록되는 대로 공개합니다. 현재는 지역 상점 정보를 먼저 확인할 수 있습니다.',links:[['청계 상점 정보','/cheonggye/commerce']]},
     {id:'offers',label:'쿠폰·할인',desc:'청계패스의 쿠폰과 할인 혜택은 서비스 준비 중입니다. 실제 제공이 확인된 혜택만 공개하겠습니다.',links:[['지역 상권 보기','/cheonggye/commerce']]},
-    {id:'points',label:'포인트·상품권',desc:'포인트 적립·사용과 상품권 관련 서비스는 준비 중입니다. 발행·결제·정산 기능은 별도 확인 전까지 이용할 수 있는 것으로 안내하지 않습니다.',links:[]},
+    {id:'points',label:'포인트',desc:'포인트 적립·사용은 아직 준비 중입니다. 적립률·사용처와 사용 조건이 확인된 후 안내합니다.',links:[]},
+    {id:'vouchers',label:'상품권',desc:'지역상품권의 발행·결제·정산 기능은 준비 중입니다. 공급자 계약과 운영 승인이 완료되기 전에는 사용할 수 없습니다.',links:[]},
     {id:'guide',label:'이용 안내',desc:'청계패스는 현재 안내 단계입니다. 지역의 공개정보는 청계잇다에서, 상인회 소식은 청계면상인회에서 확인하세요.',links:[['청계잇다','/cheonggye'],['청계면상인회','/cgma']]},
   ];
   const body=`<header class="pass-site-header"><div class="pass-site-header__inner"><a class="pass-site-header__brand" href="/cgpass" aria-current="page">청계패스</a><nav class="pass-site-header__links" aria-label="청계 연결"><a href="/cheonggye">청계잇다</a><a href="/cgma">청계면상인회</a></nav></div></header><main class="pass-public">
