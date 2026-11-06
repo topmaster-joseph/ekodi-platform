@@ -1,3 +1,4 @@
+import { isNonDeploySurface } from '../ekodi-orchestrator-task-adapter.js';
 const REQUIRED_WORKFLOWS=Object.freeze(['CI','EKODI AI Orchestration Gate']);
 const STAGING_EQUIVALENTS=Object.freeze({
   'Deploy CGMA Apex Edge':Object.freeze({
@@ -206,7 +207,27 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
   // Never treat PR preview workflows as promoted production deployments.
   const deploymentResponse=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:mergeSha,per_page:100});
   const triggered=(deploymentResponse.data?.workflow_runs||[]).filter(item=>/^(?:Deploy)\b/i.test(text(item?.name,160))&&['push','workflow_dispatch'].includes(text(item?.event,40)));
-  if(!triggered.length)return {verified:false,reason:'production_deployment_run_missing'};
+  if(!triggered.length){
+    // A merged release whose every file is outside any runtime (docs, eval, tests,
+    // non-deploy workflows, validators) has nothing to deploy. The endpoint
+    // re-fetches the file list itself before accepting this.
+    const files=[];
+    for(let page=1;page<=3;page++){
+      const response=await github.rest.pulls.listFiles({owner,repo,pull_number:Number(pr.number),per_page:100,page});
+      const batch=response.data||[];
+      if(batch.some(item=>item?.status==='removed'))return {verified:false,reason:'production_deployment_run_missing'};
+      files.push(...batch.map(item=>text(item?.filename,400)));
+      if(batch.length<100)break;
+      if(page===3)return {verified:false,reason:'production_deployment_run_missing'};
+    }
+    if(!isNonDeploySurface(files))return {verified:false,reason:'production_deployment_run_missing'};
+    return {
+      verified:true,source:'github-actions-authenticated-api',deliveryKind:'no-deploy-surface',deploymentSurface:'none',
+      taskId:task,branchRef:branch,
+      pr:{number:Number(pr.number),url:text(pr.html_url,400),mergedAt:text(pr.merged_at,80),mergeCommitSha:mergeSha},
+      requiredWorkflows,files:files.sort(),deployments:[],
+    };
+  }
   const deployments=[];
   let hasStaging=false,hasProduction=false;
   for(const original of triggered){

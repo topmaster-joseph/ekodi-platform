@@ -35,6 +35,14 @@
       <label class="field">용도 (화면 워터마크)<input type="text" name="purpose" maxlength="80" placeholder="예: 국립목포대학교 강사료 지급 확인용"></label>
       <button type="submit" class="btn btn-primary">링크 만들기</button>
     </form>
+    <form class="panel docs-card" data-kind="resume" aria-labelledby="docsResumeTitle">
+      <h2 id="docsResumeTitle">이력서</h2>
+      <p class="meta">서명·날짜까지 들어간 제출용 최종본(PDF 권장)을 올려 주세요.</p>
+      <label class="field">파일 (JPG·PNG·WebP·PDF, 10MB 이하)<input type="file" name="file" accept="image/jpeg,image/png,image/webp,application/pdf" required></label>
+      <label class="field">열람 기간<select name="days"><option value="1">1일</option><option value="3">3일</option><option value="7" selected>7일</option><option value="14">14일</option><option value="30">30일</option></select></label>
+      <label class="field">용도 (화면 워터마크)<input type="text" name="purpose" maxlength="80" placeholder="예: 국립목포대학교 AI부트캠프사업단 제출용"></label>
+      <button type="submit" class="btn btn-primary">링크 만들기</button>
+    </form>
   </div>
   <section class="panel" aria-labelledby="docsListTitle">
     <h2 id="docsListTitle">공유 중인 링크</h2>

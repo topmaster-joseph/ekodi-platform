@@ -29,7 +29,7 @@ def mission_nav(prefix):
 CSS = """.notice-card{border-color:#e3d3b4;background:#fbf7ef}main section.notice{padding-block:36px 8px;border-bottom:0}
 .pilot-id{display:flex;flex-direction:column;line-height:1.5}.pilot-note{display:block;color:#b9c7c4}
 .hero .period{white-space:nowrap}
-.rolebar{background:#fbf7ef;border-bottom:1px solid #e3d3b4;font-size:14px}.rolebar .wrap{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-block:8px;flex-wrap:wrap}
+.rolebar{background:#fbf7ef;border-bottom:1px solid #e3d3b4;font-size:14px}.rolebar .wrap{display:flex;justify-content:flex-end;align-items:center;gap:12px;padding-block:8px;flex-wrap:wrap;text-align:right}.rb-who{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.rb-role{color:var(--muted)}.rb-out{border:1px solid var(--sea);background:#fff;color:var(--sea);border-radius:999px;padding:5px 13px;font:600 13.5px/1.4 inherit;cursor:pointer}.rb-out:hover{background:var(--sea);color:#fff}
 .role-panel{margin-top:28px;border:1px solid #e3d3b4;border-radius:14px;background:#fffdf8;padding:18px}.rp-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rp-head h3{margin:0;font-size:18px}
 .role-panel h4{margin:20px 0 8px;font-size:15px}.rp-table{width:100%;border-collapse:collapse;font-size:14.5px;background:#fff}.rp-table th,.rp-table td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:left;vertical-align:top}.rp-table th{color:var(--muted);font-weight:600;white-space:nowrap}.rp-table td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rp-empty{color:var(--muted)}.rp-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:12px 0}.rp-cards div{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}.rp-cards b{display:block;font-size:18px}.rp-cards span{color:var(--muted);font-size:13px}
@@ -136,9 +136,9 @@ def home():
     for name, key, meta, href in sichal:
         n = len(churches.get(key, []))
         if href:
-            sc_cards += f'<a class="card" href="{href}"><span class="pill on">운영 중</span><h3>{E(name)}</h3><p>시찰회 공지·임원·회계보고·출석을 운영합니다.</p><span class="meta">{E(meta)} · 확인된 교회 {n}곳</span><span class="go">함무시찰회 바로가기 →</span></a>'
+            sc_cards += f'<a class="card" href="{href}"><span class="pill on">운영 중</span><h3>{E(name)}</h3><p>시찰회 공지·임원·회계보고·출석을 운영합니다.</p><span class="meta">{E(meta)} · 소속 교회 {n}곳</span><span class="go">함무시찰회 바로가기 →</span></a>'
         else:
-            sc_cards += f'<div class="card"><span class="pill">공간 준비 중</span><h3>{E(name)}</h3><p>같은 엔진으로 독립 공간을 열 수 있습니다.</p><span class="meta">{E(meta)} · 확인된 교회 {n}곳</span></div>'
+            sc_cards += f'<div class="card"><span class="pill">공간 준비 중</span><h3>{E(name)}</h3><p>같은 엔진으로 독립 공간을 열 수 있습니다.</p><span class="meta">{E(meta)} · 소속 교회 {n}곳</span></div>'
     depts = (
         '<a class="card" href="/mokpo-presbytery/mission/"><span class="pill on">운영 중</span><h3>선교부</h3><p>2027 사업계획과 예산(안), 회의·자료, 부원 업무공간.</p><span class="meta">부장 김찬구 목사 · 서기 정찬균 목사</span><span class="go">선교부 바로가기 →</span></a>'
         + ''.join(f'<div class="card"><span class="pill">준비 중</span><h3>{E(n)}</h3><p>{E(d)}</p></div>' for n, d in [
@@ -161,7 +161,7 @@ def home():
 <h1>생명의 하나님,<br>우리를 하나 되게 하소서</h1>
 <p class="lead">노회와 시찰회, 부서와 교회가 한 공간에서 소식과 일정, 자료와 업무를 나눕니다. 공개 정보는 누구나 보고, 내부 업무는 권한을 받은 분만 다룹니다.</p>
 <p class="verse">신명기 30:19–20 · 에베소서 4:1–6 — 제135회 정기회 주제</p></div>
-<dl class="facts"><div><dt>제135회 정기회</dt><dd>2026. 10. 20.(화)</dd></div><div><dt>장소</dt><dd>양동제일교회당</dd></div><div><dt>목사회원</dt><dd>141명</dd></div><div><dt>장로회원</dt><dd>100명</dd></div><div><dt>시찰회</dt><dd>5개</dd></div><div><dt>회원명부 기준 교회</dt><dd>{total}곳</dd></div></dl></div></section>
+<dl class="facts"><div><dt>제135회 정기회</dt><dd>2026. 10. 20.(화)</dd></div><div><dt>장소</dt><dd>양동제일교회당</dd></div><div><dt>목사회원</dt><dd>141명</dd></div><div><dt>장로회원</dt><dd>100명</dd></div><div><dt>시찰회</dt><dd>5개</dd></div><div><dt>산하교회</dt><dd>{total}곳</dd></div></dl></div></section>
 <main class="views">
 <section id="about"><div class="wrap"><div class="sh"><div><span class="kicker">노회 소개</span><h2>함께 섬기는 목포노회</h2></div><p>대한예수교장로회 목포노회는 목포와 무안·신안·함평·진도 일대 교회가 함께하는 노회입니다. 이 공간은 노회 업무를 돕는 시범 서비스입니다.</p></div>
 <div class="grid"><div class="card"><h3>정기회</h3><p>제135회 정기회를 2026년 10월 20일 양동제일교회당에서 열었습니다.</p></div><div class="card"><h3>공식 소식처</h3><p>노회의 공식 공지는 <a href="http://cafe.daum.net/pckmp" rel="noopener">목포노회 카페</a>, 총회 소식은 <a href="https://www.pck.or.kr/" rel="noopener">총회 홈페이지</a>를 기준으로 합니다.</p></div><div class="card"><h3>시범 운영 원칙</h3><p>노회의 공식 승인 전까지 공개 정보만 게시합니다. 회원명부와 회계 증빙은 공개하지 않습니다.</p></div></div></div></section>
@@ -169,7 +169,7 @@ def home():
 <div class="grid"><a class="card" href="http://cafe.daum.net/pckmp" rel="noopener"><span class="pill">공식 출처</span><h3>목포노회 카페</h3><p>노회 공식 공지와 행정 안내</p><span class="go">원문 보기 →</span></a><a class="card" href="https://www.pck.or.kr/" rel="noopener"><span class="pill">공식 출처</span><h3>대한예수교장로회 총회</h3><p>총회 행정·교육·선교 안내</p><span class="go">원문 보기 →</span></a><a class="card" href="/hammu/"><span class="pill on">시찰회</span><h3>함무시찰회 공지</h3><p>시찰회가 직접 등록·관리하는 공지</p><span class="go">공지 보기 →</span></a></div></div></section>
 <section id="sichal"><div class="wrap"><div class="sh"><div><span class="kicker">시찰회</span><h2>다섯 시찰회</h2></div><p>시찰회마다 같은 엔진 위에 독립 공간을 두고, 임원·공지·회계·출석을 각자 관리합니다.</p></div><div class="grid five">{sc_cards}</div></div></section>
 <section id="departments"><div class="wrap"><div class="sh"><div><span class="kicker">부서 · 위원회</span><h2>부서와 위원회</h2></div><p>선교부가 첫 번째로 업무공간을 엽니다. 다른 부서와 위원회는 같은 방식으로 이어서 열 수 있습니다.</p></div><div class="grid">{depts}</div></div></section>
-<section id="churches"><div class="wrap"><div class="sh"><div><span class="kicker">소속 교회</span><h2>함께하는 교회</h2></div><p>제135회 정기회 회원명부에 나타난 교회 이름입니다. 시찰 구분은 장로회원 기재 기준이며, 확인되지 않은 교회는 따로 모았습니다.</p></div><div class="churches">{groups}</div><p class="note">교회 이름만 게시하며 주소·연락처는 게시하지 않습니다. 누락·오기는 노회 서기에게 알려 주십시오.</p></div></section>
+<section id="churches"><div class="wrap"><div class="sh"><div><span class="kicker">소속 교회</span><h2>함께하는 교회</h2></div><p>제135회 정기회 회원명부의 「산하교회 주소 및 교역자 명단」을 기준으로 시찰별·명부 순서대로 정리했습니다.</p></div><div class="churches">{groups}</div><p class="note">교회 이름만 게시하며 주소·연락처는 게시하지 않습니다. 누락·오기는 노회 서기에게 알려 주십시오.</p></div></section>
 <section id="schedule"><div class="wrap"><div class="sh"><div><span class="kicker">회의 · 일정</span><h2>노회 일정</h2></div><p>확정된 일정만 게시합니다.</p></div>
 <div class="timeline"><div><b>2026. 10. 20.(화) 제135회 정기회</b><span>양동제일교회당</span></div><div class="next"><b>다음 정기회</b><span>일정 확정 후 게시합니다.</span></div></div></div></section>
 <section id="library"><div class="wrap"><div class="sh"><div><span class="kicker">자료실</span><h2>기준 자료</h2></div><p>공개 가능한 자료의 목록입니다. 원본 파일은 권한 확인 후 제공합니다.</p></div>
@@ -274,6 +274,7 @@ VIEWER_PATH = '/mokpo-presbytery/mission/viewer/'
 
 def viewer_page():
     body = f'''<style>
+.hero-center .wrap{{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}}.hero-center h1{{margin-inline:auto}}.hero-center p.lead{{margin-inline:auto}}
 .lg-wrap{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;max-width:860px;margin:0 auto}}
 .lg-card{{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}}.lg-card h2{{margin:0 0 6px;font-size:20px}}
 .lg-card label{{display:block;font-size:14px;font-weight:600;margin:12px 0 5px}}.lg-card input{{width:100%;font:inherit;font-size:18px;padding:12px;border:1px solid #c7d1ce;border-radius:9px}}
@@ -281,16 +282,16 @@ def viewer_page():
 .vw-err{{color:#b23b3b;font-size:14px;margin-top:10px;min-height:1em}}
 </style>
 {ROLE_BAR}
-<section class="hero"><div class="wrap"><div><span class="kicker">선교부 로그인</span><h1>권한에 따라 보고, 고치고, 승인합니다</h1><p class="lead">로그인하면 선교부 화면의 각 메뉴 안에서 내 권한에 맞는 내용과 기능이 나타납니다. 서기는 수정, 부장은 승인, 부원은 열람합니다.</p></div></div></section>
+<section class="hero hero-center"><div class="wrap"><div><span class="kicker">선교부 로그인</span><h1>권한에 따라 보고, 고치고, 승인합니다</h1><p class="lead">로그인하면 선교부 화면의 각 메뉴 안에서 내 권한에 맞는 내용과 기능이 나타납니다. 서기는 수정, 부장은 승인, 부원은 열람합니다. 부장·부원 비밀번호는 각자의 휴대폰번호 끝 4자리입니다.</p></div></div></section>
 <main><section><div class="wrap"><div class="lg-wrap">
-<div class="lg-card"><h2>서기 · 부원</h2><p class="note">에코디 통합로그인(이메일)으로 들어갑니다. 선교부 회원으로 등록된 계정만 내부 자료가 보입니다.</p><a class="vw-btn" href="/auth/?site=space&amp;return_to=https%3A%2F%2Fekodi.kr%2Fmokpo-presbytery%2Fmission%2F">에코디 통합로그인</a></div>
+<div class="lg-card"><h2>서기 (수정 권한)</h2><p class="note">에코디 통합로그인(이메일)으로 들어갑니다. 선교부 관리자로 등록된 계정만 수정할 수 있습니다.</p><a class="vw-btn" href="/auth/?site=space&amp;return_to=https%3A%2F%2Fekodi.kr%2Fmokpo-presbytery%2Fmission%2F">에코디 통합로그인</a></div>
 <form class="lg-card" id="vwLogin" novalidate data-supabase="{SUPABASE_URL}" data-key="{SUPABASE_PUBLISHABLE_KEY}" data-slug="mokpo-mission" data-return="/mokpo-presbytery/mission/#budget">
-<h2>부장 (휴대폰)</h2><p class="note">등록된 휴대폰번호와 숫자 4자리 비밀번호. 5번 틀리면 30분 잠깁니다.</p>
-<label for="vwPhone">휴대폰번호</label><input id="vwPhone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="010-0000-0000">
-<label for="vwPin">비밀번호 (숫자 4자리)</label><input id="vwPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" pattern="[0-9]*">
+<h2>부장 · 부원</h2><p class="note">이름과 비밀번호(본인 휴대폰번호 끝 4자리)로 들어갑니다. 5번 틀리면 30분 잠깁니다.</p>
+<label for="vwName">이름</label><input id="vwName" type="text" autocomplete="username" maxlength="40" placeholder="홍길동">
+<label for="vwPin">비밀번호 (휴대폰 끝 4자리)</label><input id="vwPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" pattern="[0-9]*">
 <div class="vw-err" id="vwErr" role="alert"></div>
 <button class="vw-btn" type="submit" id="vwSubmit">로그인</button>
-<p class="note">비밀번호 문의: 선교부 서기 정찬균 목사 010-3501-8542</p>
+<p class="note">등록·로그인 문의: 선교부 서기 정찬균 목사 010-3501-8542</p>
 <noscript><p class="note">이 화면은 자바스크립트가 필요합니다.</p></noscript>
 </form>
 </div></div></section></main>

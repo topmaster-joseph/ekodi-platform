@@ -11,6 +11,8 @@ function mockGithub(overrides={}){
   return {
     rest:{
       pulls:{
+        // Default: the merged PR changed a runtime file, so a real deployment is required.
+        listFiles:async({page})=>({data:page===1?(overrides.files||['independent-board-worker.js']).map(filename=>({filename,status:'modified'})):[]}),
         list:async()=>({data:overrides.pulls||[{
           number:3574,
           html_url:'https://github.com/topmaster-joseph/ekodi-platform/pull/3574',
@@ -319,4 +321,30 @@ test('only zero-job CI runs never count as success',async()=>{
     runs:ciRuns([{id:11,name:'CI',status:'completed',conclusion:'failure',created_at:'2026-10-20T02:18:19Z'}]),jobsByRun:zeroJob}),taskId,branchRef});
   assert.equal(evidence.verified,false);
   assert.equal(evidence.reason,'required_workflow_not_successful');
+});
+
+function noDeployGithub(files){
+  const github=mockGithub({runs:[
+    {id:1,name:'CI',status:'completed',conclusion:'success',html_url:'https://example/ci'},
+    {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success',html_url:'https://example/gate'},
+  ]});
+  github.rest.pulls.listFiles=async({page})=>({data:page===1?files.map(f=>typeof f==='string'?{filename:f,status:'modified'}:f):[]});
+  return github;
+}
+
+test('merged non-deploy-surface release verifies without a Deploy run',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:noDeployGithub(['eval/README.md','eval/ops-baseline.mjs','.github/workflows/ai-eval-lab.yml']),taskId,branchRef});
+  assert.equal(evidence.verified,true);
+  assert.equal(evidence.deliveryKind,'no-deploy-surface');
+  assert.equal(evidence.deploymentSurface,'none');
+  assert.deepEqual(evidence.deployments,[]);
+  assert.deepEqual(evidence.files,['.github/workflows/ai-eval-lab.yml','eval/README.md','eval/ops-baseline.mjs']);
+});
+
+test('runtime file or deletion without a Deploy run still fails closed',async()=>{
+  for(const files of [['eval/README.md','admin-ai-governor.js'],[{filename:'docs/a.md',status:'removed'}],['.github/workflows/deploy-control-api.yml']]){
+    const evidence=await collectAuthenticatedCompletionEvidence({github:noDeployGithub(files),taskId,branchRef});
+    assert.equal(evidence.verified,false);
+    assert.equal(evidence.reason,'production_deployment_run_missing');
+  }
 });

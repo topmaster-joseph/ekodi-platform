@@ -141,7 +141,7 @@ jobs:
         run: |
           npm run check
           node scripts/validate-orchestrator-completion-reconciliation.mjs
-          node --test test/orchestrator-completion-reconciler.test.mjs test/github-actions-oidc.test.mjs test/github-actions-completion-evidence.test.mjs test/orchestrator-completion-reconciliation-endpoint.test.mjs
+          node --test test/orchestrator-completion-reconciler.test.mjs test/github-actions-oidc.test.mjs test/github-actions-completion-evidence.test.mjs test/orchestrator-completion-reconciliation-endpoint.test.mjs test/orchestrator-no-deploy-surface.test.mjs
       - run: npm run build
         if: github.event_name != 'pull_request' || steps.scope.outputs.my_only != 'true'
       - name: Validate AI provider independence

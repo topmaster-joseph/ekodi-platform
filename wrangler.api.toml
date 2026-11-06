@@ -19,6 +19,14 @@ crons = ["*/10 * * * *"]
 
 [vars]
 ENVIRONMENT = "production"
+# KG Inicis TEST channel is public SDK configuration; do not put MID apikey
+# or the PortOne V2 server API Secret in this file.
+# The sandbox is available only to an authenticated EKODI super_admin and
+# NEVER writes a production age_verification_grants row.
+AGE_VERIFICATION_ENABLED = "false"
+AGE_VERIFICATION_SANDBOX_ENABLED = "true"
+PORTONE_INICIS_SANDBOX_STORE_ID = "store-9985e080-ae9c-4e43-bdf3-f2456079f445"
+PORTONE_INICIS_SANDBOX_CHANNEL_KEY = "channel-key-6829ef26-4829-4402-9dbe-4b6d3b5b4a15"
 # Friday 09:00 KST mission Saturday reminder. OFF until per-topic server
 # credential, mission publisher flag, signed event ingestion and consent reviewed.
 NOTIFICATION_MISSION_SATURDAY_NOTICE_ENABLED = "false"

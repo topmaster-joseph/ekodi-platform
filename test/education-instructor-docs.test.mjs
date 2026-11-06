@@ -55,7 +55,10 @@ test('upload → share link → viewer and file for anyone with the link → rev
   const html=await view.text();
   assert.match(html,/신분증 사본/);assert.match(html,/국립목포대학교 강사료 지급 확인용/);assert.match(html,/src="\.\.\/f\//);
   assert.match(view.headers.get('cache-control'),/no-store/);assert.match(view.headers.get('x-robots-tag'),/noindex/);assert.equal(view.headers.get('referrer-policy'),'no-referrer');
-  assert.match(view.headers.get('content-security-policy'),/script-src 'none'/);
+  {const csp=view.headers.get('content-security-policy');
+   assert.match(csp,/script-src 'self' https:\/\/cdn\.jsdelivr\.net;/,'viewer scripts: same origin + pinned pdf.js CDN only');
+   assert.doesNotMatch(csp,/unsafe-eval|unsafe-inline'[^;]*script|object-src 'self'/);
+   assert.match(csp,/connect-src 'self';/);assert.match(csp,/frame-ancestors 'none'/);}
   const file=await call(e,item.path.replace(/^s\//,'f/'));
   assert.equal(file.status,200);assert.equal(file.headers.get('content-type'),'image/png');
   assert.deepEqual(new Uint8Array(await file.arrayBuffer()),PNG);
@@ -82,7 +85,14 @@ test('expired links answer 410 and delete the file; bad types, sizes and expirie
   assert.equal(sniffType(PDF.buffer),'application/pdf');
   const pdf=await (await upload(e,{kind:'bank',bytes:PDF,days:'1'})).json();
   const view=await (await call(e,pdf.item.path)).text();
-  assert.match(view,/<object class="doc-pdf" data="\.\.\/f\//);assert.match(view,/통장 사본/);
+  assert.match(view,/<div class="doc-pages" id="docPages" data-src="\.\.\/f\//);assert.match(view,/통장 사본/);
+  assert.match(view,/<script type="module" src="\.\.\/\.\.\/doc-view\.js"><\/script>/,'PDF pages are drawn by the viewer script (phones cannot embed PDFs)');
+  assert.doesNotMatch(view,/<object/);
+  const cv=await (await upload(e,{kind:'resume',bytes:PDF,days:'7',purpose:'AI부트캠프사업단 제출용'})).json();
+  assert.equal(cv.item.label,'이력서');
+  assert.match(await (await call(e,cv.item.path)).text(),/이력서/);
+  const f=await call(e,cv.item.path.replace(/^s\//,'f/'));
+  assert.match(f.headers.get('content-disposition')||'',/filename="resume\.pdf"/);
 });
 
 test('the manager page is behind the instructor password; share views are public; staging has no storage',async()=>{
@@ -100,4 +110,11 @@ test('the manager page is behind the instructor password; share views are public
   assert.doesNotMatch(js,/localStorage|sessionStorage|document\.cookie/);
   const html=await readFile(new URL('../education/study/live/docs/index.html',import.meta.url),'utf8');
   assert.doesNotMatch(html,/<script(?![^>]*\ssrc=)[^>]*>|<style[\s>]|\sstyle=|\son[a-z]+=/i);
+});
+
+test('PDF viewer script pins pdf.js, disables eval and keeps the document same-origin',async()=>{
+  const js=await readFile(new URL('../education/study/live/doc-view.js',import.meta.url),'utf8');
+  assert.match(js,/https:\/\/cdn\.jsdelivr\.net\/npm\/pdfjs-dist@\d+\.\d+\.\d+\/legacy\/build\//);
+  assert.match(js,/isEvalSupported:false/);
+  assert.doesNotMatch(js,/localStorage|sessionStorage|document\.cookie|innerHTML/);
 });

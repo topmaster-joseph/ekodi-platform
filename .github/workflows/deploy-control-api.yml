@@ -140,6 +140,7 @@ on:
       - 'test/github-actions-oidc.test.mjs'
       - 'test/github-actions-completion-evidence.test.mjs'
       - 'test/orchestrator-completion-reconciliation-endpoint.test.mjs'
+      - 'test/orchestrator-no-deploy-surface.test.mjs'
       - 'test/orchestrator-release-receipt.test.mjs'
       - '.github/workflows/reconcile-orchestrator-completions.yml'
       - 'test/sovereign-capability-fabric.test.mjs'
@@ -378,6 +379,7 @@ on:
       - 'test/github-actions-oidc.test.mjs'
       - 'test/github-actions-completion-evidence.test.mjs'
       - 'test/orchestrator-completion-reconciliation-endpoint.test.mjs'
+      - 'test/orchestrator-no-deploy-surface.test.mjs'
       - 'test/orchestrator-release-receipt.test.mjs'
       - '.github/workflows/reconcile-orchestrator-completions.yml'
       - 'test/sovereign-capability-fabric.test.mjs'
@@ -543,7 +545,7 @@ jobs:
           node --check scripts/github-actions-completion-evidence.mjs
           node --check scripts/validate-orchestrator-completion-reconciliation.mjs
           node scripts/validate-orchestrator-completion-reconciliation.mjs
-          node --test test/orchestrator-completion-reconciler.test.mjs test/github-actions-oidc.test.mjs test/github-actions-completion-evidence.test.mjs test/orchestrator-completion-reconciliation-endpoint.test.mjs
+          node --test test/orchestrator-completion-reconciler.test.mjs test/github-actions-oidc.test.mjs test/github-actions-completion-evidence.test.mjs test/orchestrator-completion-reconciliation-endpoint.test.mjs test/orchestrator-no-deploy-surface.test.mjs
           node --check scripts/validate-additive-migrations.mjs
           node --check scripts/validate-ai-mission-governance.mjs
           node --check scripts/validate-security-baseline.mjs

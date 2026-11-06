@@ -59,3 +59,22 @@
 - https://developers.portone.io/api/rest-v2/identityVerification
 - https://help.portone.io/content/inicis
 - https://guide.portone.io/6a1cba84-a99b-4ee1-a5a8-fffea0092399
+
+## 2026-11-06 포트원 KG이니시스 테스트 채널 연결 (최고관리자 전용)
+
+포트원 관리자콘솔의 에코디비즈 상점에 등록된 KG이니시스 통합인증 V2 테스트 채널을 에코디의 sandbox 전용으로 연결한다. MID는 `MIIiasTest`이며, 테스트용 공개 채널 식별자와 포트원 서버 API Secret을 혼동하지 않는다.
+
+- 테스트 화면: `https://ekodi.kr/verify/adult/test.html`
+- 관리자 GET 준비 조회: `GET /api/control/age-verification/sandbox`
+- 관리자 POST 거래 발급: `POST /api/control/age-verification/sandbox/start` (빈 JSON 본문)
+- 관리자 POST 결과 검증: `POST /api/control/age-verification/sandbox/finish` (서버 발급 identityVerificationId)
+- 동일 출처 POST `https://ekodi.kr`, 중앙 `super_admin` 관리자 세션만 허용.
+- 설정: `AGE_VERIFICATION_SANDBOX_ENABLED=true`, `PORTONE_INICIS_SANDBOX_STORE_ID`, `PORTONE_INICIS_SANDBOX_CHANNEL_KEY`는 공개 SDK 식별자. KG MID apikey 및 포트원 V2 API Secret은 저장소에 절대 기록하지 않는다.
+- `AGE_VERIFICATION_ENABLED=false`로 실제 성인인증 권한은 비활성. TEST 응답은 운영 인증으로 승격하지 않는다.
+- 최고관리자별 24시간 5회 시도, 거래 10분 만료, D1 기존 시도 기록 30일 보관. 생년월일·CI·DI·전화번호·원본 응답을 보관하지 않는다.
+- SDK는 `bypass.inicisUnified.flgFixedUser = 'N'`으로 TEST 인증창과 모바일 복귀를 지원한다.
+- 포트원 V2 서버 API Secret이 별도로 설정된 경우에만 서버 결과 재조회가 가능하다. 미설정 시 `sandbox_server_proof_unavailable`로 차단한다.
+- 테스트 거래 ID·채널키·`channel.type === 'TEST'`·`status === 'VERIFIED'`를 모두 검증해도 오직 `sandboxPassed:true`, `productionEligibility:false`, `ageGrantCreated:false`를 반환하며 grants 테이블에 기록하지 않는다.
+- 운영 인증은 공급사 계약·업종 승인·운영 채널/비밀키 및 실제 E2E가 완료된 뒤 별도로 승인한다.
+
+테스트 API의 반환값은 사용자 계정이나 구매 권한에 적용할 수 없다.

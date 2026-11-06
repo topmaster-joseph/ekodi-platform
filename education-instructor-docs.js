@@ -1,6 +1,6 @@
 // EKODI Education — instructor document share (강사 서류 공유).
 //
-// The instructor uploads a copy of their own ID card (신분증 사본) or bank-book page (통장 사본) and gets a
+// The instructor uploads a copy of their own ID card (신분증 사본) bank-book page (통장 사본) or résumé (이력서) and gets a
 // share link. Anyone holding that link can view the file until the chosen expiry; afterwards the link answers
 // 410 and the file is deleted. Nothing about learners is stored here.
 //
@@ -16,7 +16,7 @@
 import { hasInstructorSession, isSameSiteRequest } from './education-instructor-gate.js';
 
 export const DOCS_PREFIX='edu/instructor-docs/';
-export const DOC_KINDS=Object.freeze({id:'신분증 사본',bank:'통장 사본'});
+export const DOC_KINDS=Object.freeze({id:'신분증 사본',bank:'통장 사본',resume:'이력서'});
 export const MAX_BYTES=10*1024*1024;
 export const EXPIRY_DAYS=Object.freeze([1,3,7,14,30]);
 const DAY=86400000;
@@ -61,11 +61,12 @@ function viewerPage({m,token,contentType}){
     '<link rel="stylesheet" href="../../../../fonts/pretendard/pretendardvariable-dynamic-subset.css"><link rel="stylesheet" href="../../live.css"></head><body class="lv doc-view-body" data-live-surface="doc-view">'+
     '<main class="doc-view"><header class="doc-head"><p class="eyebrow">EKODI EDUCATION · 강사 제출 서류</p><h1>'+esc(m.label)+'</h1>'+
     '<p class="meta">'+(m.purpose?esc(m.purpose)+' · ':'')+'열람 기한 '+esc(fmt(m.expiresAt))+' (한국시간)</p></header>'+
-    '<figure class="doc-frame">'+(isPdf?'<object class="doc-pdf" data="'+file+'" type="application/pdf"><p class="meta">PDF 미리보기를 지원하지 않는 브라우저입니다. 아래 「내려받기」를 눌러 주세요.</p></object>'
+    '<figure class="doc-frame">'+(isPdf?'<div class="doc-pages" id="docPages" data-src="'+file+'"><p class="meta" id="docStatus">PDF를 불러오는 중입니다…</p></div>'
       :'<img class="doc-img" src="'+file+'" alt="'+esc(m.label)+'">')+
     '<figcaption class="doc-mark" aria-hidden="true">'+mark+'</figcaption></figure>'+
     '<p class="btn-row"><a class="btn btn-primary" href="'+file+'?download=1">내려받기</a></p>'+
-    '<p class="meta doc-note">이 링크는 공유받은 분만 열람하도록 만든 것입니다. 기한이 지나면 자동으로 삭제됩니다. 다른 곳에 다시 게시하지 말아 주세요.</p></main></body></html>';
+    '<p class="meta doc-note">이 링크는 공유받은 분만 열람하도록 만든 것입니다. 기한이 지나면 자동으로 삭제됩니다. 다른 곳에 다시 게시하지 말아 주세요.</p></main>'+
+    (isPdf?'<script type="module" src="../../doc-view.js"></script>':'')+'</body></html>';
 }
 function goneHtml(state){
   const msg=state==='expired'?'열람 기한이 지나 삭제된 서류입니다.':'없는 링크이거나 이미 삭제된 서류입니다.';
@@ -73,7 +74,7 @@ function goneHtml(state){
     '<body class="lv doc-view-body"><main class="doc-view"><h1>열람할 수 없습니다</h1><p class="meta">'+msg+' 강사에게 새 링크를 요청해 주세요.</p></main></body></html>';
 }
 function html(body,status){return new Response(body,{status,headers:{'content-type':'text/html; charset=utf-8',...PRIVATE,
-  'content-security-policy':"default-src 'self'; img-src 'self'; object-src 'self'; style-src 'self'; script-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"}});}
+  'content-security-policy':"default-src 'self'; img-src 'self' blob: data:; object-src 'none'; style-src 'self'; script-src 'self' https://cdn.jsdelivr.net; worker-src blob:; connect-src 'self'; font-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"}});}
 
 // Returns a Response for /study/live/docs/{s,f,api}/…, or null for anything else.
 export async function instructorDocs(request,env,{url=new URL(request.url),now=Date.now()}={}){
@@ -92,7 +93,7 @@ export async function instructorDocs(request,env,{url=new URL(request.url),now=D
     const contentType=r.obj.httpMetadata?.contentType||'application/octet-stream';
     if(p.startsWith(BASE+'s/'))return html(viewerPage({m:r.m,token,contentType}),200);
     const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','application/pdf':'pdf'}[contentType]||'bin';
-    const name=(r.m.kind==='bank'?'bank-copy':'id-copy')+'.'+ext;
+    const name=({bank:'bank-copy',resume:'resume'}[r.m.kind]||'id-copy')+'.'+ext;
     return new Response(method==='HEAD'?null:r.obj.body,{headers:{'content-type':contentType,...PRIVATE,
       'content-disposition':(url.searchParams.get('download')?'attachment':'inline')+'; filename="'+name+'"',
       'content-security-policy':"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'",'x-frame-options':'SAMEORIGIN'}});
