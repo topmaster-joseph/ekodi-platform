@@ -285,3 +285,10 @@ body[data-mall-view="catalog"] main#main > #filters{padding-inline:16px}
 .mall-member-points-hero{margin:12px 0 0;padding:8px 12px;max-width:790px;border:1px solid rgba(61,98,112,.17);border-radius:10px;font-size:12px;line-height:1.6;color:var(--muted,#52665f);background:rgba(255,255,255,.64)}
 .mall-member-points-hero span{color:inherit;white-space:normal}
 @media(max-width:600px){.mall-member-points-hero{font-size:11px;margin-top:9px;padding:7px 9px}}
+
+/* Underwriting: confirmed-empty categories disappear from every visible navigation.
+   Preserve direct category URLs for truthful empty states and manual review. */
+.mall-primary-nav a[data-filter-target][hidden],
+.mall-category-shortcuts a[data-filter-target][hidden]{display:none!important}
+/* The product grid now precedes the editorial hero in the document flow. */
+.mall-premium-hero{margin-top:24px}
