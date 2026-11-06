@@ -376,7 +376,8 @@
     $('[data-sv-manage-path]').textContent=site.url;
     $('[data-sv-manage-basic]').textContent=crossOrigin?'별도 호스트':result?.basic||'미점검';
     $('[data-sv-manage-ai]').textContent=crossOrigin?'별도 호스트':result?.ai||'미점검';
-    $('[data-sv-manage-improve]').textContent=result?.improvements?.join(' · ')||'점검 후 표시';
+    const improvementDetails=[result?.policyNote,...(result?.improvements||[])].filter(Boolean);
+    $('[data-sv-manage-improve]').textContent=improvementDetails.join(' · ')||(result?'기본 항목 충족':'점검 후 표시');
     const audit=$('[data-sv-manage-audit]');audit.disabled=state.busy||crossOrigin;
     audit.title=crossOrigin?'별도 호스트의 브라우저 점검은 지원하지 않습니다.':'';
     const open=$('[data-sv-manage-open]');open.href=site.url;
@@ -465,6 +466,17 @@
         observed.href==='https://xn--3e0b8b58jw4co4mnpll3k.kr/';
     }catch{return false;}
   };
+  // /mokdaehumun is an operator-space landing page, not the public
+  // cooperative storefront. Its deliberate noindex must never be presented
+  // as an unconditional instruction to expose this workspace to crawlers.
+  // Never infer the policy for a different tenant from a similar URL.
+  const documentedNoindexPolicy = siteUrl => {
+    try {
+      const u=new URL(siteUrl);
+      return u.origin==='https://ekodi.kr'&&!u.search&&!u.hash&&
+        (u.pathname==='/mokdaehumun'||u.pathname==='/mokdaehumun/');
+    }catch{return false;}
+  };
   // Export only currently loaded public-site audit results. No private
   // provider evidence, OAuth credentials or cross-tenant records are included.
   // An unscanned row remains "미점검"; the export is NOT an indexing report.
@@ -478,7 +490,7 @@
     const rows=sites.map(site=>{
       const result=audited.get(site.url);
       const status=!result?'미점검':result.error?'점검 실패':'점검 완료';
-      const blocked=!result?'미점검':result.error?'확인 불가':result.raw?.noindex===true?'noindex 확인':'차단 지시 없음';
+      const blocked=!result?'미점검':result.error?'확인 불가':result.policyNoindex? (result.raw?.noindex===true?'정책상 검색 제외(noindex)':'검색 제외 정책 누락'):result.raw?.noindex===true?'noindex 확인·검토':'차단 지시 없음';
       return [generatedAt,site.name||site.path||'사이트',site.url,status,
         result?.error?'':result?.basic||'',result?.error?'':result?.ai||'',
         Array.isArray(result?.improvements)?result.improvements.join(' / '):'',
@@ -577,20 +589,23 @@
       const html=validatePublicAuditResponse(site,receipt);
       const result=checkDocument(html,{robotsHeader:receipt.robotsHeader});
       const correctCanonical=correctPublicCanonical(site.url,result.canonical);
+      const policyNoindex=documentedNoindexPolicy(site.url);
+      const policyNote=policyNoindex?(result.noindex?'공유 운영 공간 · 검색 제외 정책 유지':'공유 운영 공간 · 검색 제외 정책 누락 확인'):null;
       const basic=[result.title,result.description,correctCanonical,!result.noindex].filter(Boolean).length;
       const ai=[result.headings,result.schema,result.description].filter(Boolean).length;
       const improvements=[!result.title?'고유 페이지 제목 보완':null,
         !result.description?'검색 설명문 보완':null,
         !correctCanonical?'정규 URL(canonical) 정비':null,
-        result.noindex?'검색로봇 noindex 지시(메타·HTTP 헤더) 점검':null,
+        result.noindex&&!policyNoindex?'검색로봇 noindex 지시(메타·HTTP 헤더) 점검':null,
+        policyNoindex&&!result.noindex?'공유 운영 공간 검색 제외 정책 누락 점검':null,
         !result.headings?'H1 제목 보완':null,
         !result.schema?'구조화 데이터 검토':null].filter(Boolean);
       state.audited.set(site.url,{
         error:null,basic:Math.round(basic/4*100)+'점 ('+basic+'/4) · 기술 준비도',
         ai:Math.round(ai/3*100)+'점 ('+ai+'/3) · 발견 준비도',
-        improvements,raw:result
+        improvements,raw:result,policyNoindex,policyNote
       });
-      if(!quiet)status(site.name+' 기술 점검 완료. 우선 개선: '+(state.audited.get(site.url).improvements.join(', ')||'기본 항목 충족')+'. 이는 등록·검색순위·AI 인용 검증이 아닙니다.');
+      if(!quiet)status(site.name+' 기술 점검 완료. '+(policyNote?policyNote+' · ':'')+'우선 개선: '+(state.audited.get(site.url).improvements.join(', ')||'기본 항목 충족')+'. 이는 등록·검색순위·AI 인용 검증이 아닙니다.');
     }catch(error){state.audited.set(site.url,{basic:'점검 실패',ai:'근거 없음',error:error.message});if(!quiet)status(site.name+': '+error.message,true);}
     render();
   }
