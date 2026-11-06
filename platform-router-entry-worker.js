@@ -70,6 +70,7 @@ import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
 import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath, legacyCheonggyePassCanonicalPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
+import { regionTabsScriptResponse } from './region-tabs-ui.js';
 import { cheonggyePassVendorIntakeScript } from './cheonggyepass-vendor-intake-ui.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
@@ -593,6 +594,7 @@ async function routePlatform(request,env,ctx){
       const previewResponse=handlePreviewRequest(request);if(previewResponse)return previewResponse;
       if(['GET','HEAD'].includes(request.method)&&isInsurancePublicPath(url.pathname))return routeInsurancePublic(request,env);
       if(request.method==='GET'){
+        if(url.pathname==='/cheonggye/region-tabs-ui.js')return regionTabsScriptResponse();
         if(url.pathname==='/cheonggye/local-region-admin-auth.js')return localRegionAdminAuthScript();
         if(url.pathname==='/cheonggye/local-region-access-admin.js')return localRegionAccessAdminScript();
         if(url.pathname==='/cheonggye/local-region-operations-admin.js')return localRegionOperationsAdminScript();
