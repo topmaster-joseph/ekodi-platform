@@ -1,6 +1,6 @@
 import { COOPERATIVES, cooperativeBySlug, cooperativeInitialState, cooperativePublicProjection } from './cooperative-registry.js';
 import { cooperativeIdentity, cooperativeGrantForEmail, cooperativeGrantDecision, resolveCooperativeAccess } from './cooperative-core-access.js';
-import { loadCooperativeProject, saveCooperativeProject, normalizeCooperativeState, cooperativeMemberProjection } from './cooperative-store.js';
+import { loadCooperativeProject, saveCooperativeProject, normalizeCooperativeState, cooperativeMemberProjection, coopPhone, coopBusinessNumber } from './cooperative-store.js';
 import { cooperativePage, cooperativeOperationsPage } from './cooperative-page.js';
 import { cooperativeCss, cooperativeScript } from './cooperative-ui.js';
 import { cooperativeCharter } from './cooperative-charter.js';
@@ -68,21 +68,6 @@ async function application(request, env, coop) {
     ON CONFLICT(workspace_id, person_id) DO UPDATE SET representative = excluded.representative, business = excluded.business, message = excluded.message, updated_at = excluded.updated_at`)
     .bind(coop.workspaceId, identity.id, identity.email, representative, trim(body.business, 160) || null, trim(body.message, 1000), timestamp, timestamp).run();
   return json({ ok: true, status: 'pending', grantsCreated: false }, 202);
-}
-
-// 연락처·사업자번호 정규화(2026-11-06): 숫자만 받아 표준 표기로 저장한다. 형식이 틀리면 거절.
-function coopPhone(value) {
-  const digits = String(value ?? '').replace(/[\s-]/g, '');
-  if (!digits) return '';
-  if (!/^0\d{8,10}$/.test(digits)) return null;
-  if (digits.startsWith('02')) return digits.length === 9 ? `02-${digits.slice(2, 5)}-${digits.slice(5)}` : `02-${digits.slice(2, 6)}-${digits.slice(6)}`;
-  return digits.length === 10 ? `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}` : `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
-}
-function coopBusinessNumber(value) {
-  const digits = String(value ?? '').replace(/[\s-]/g, '');
-  if (!digits) return '';
-  if (!/^\d{10}$/.test(digits)) return null;
-  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
 }
 
 // 조합원 자가 등록(2026-11-04): 로그인한 본인이 "조합원으로 등록할까요?"에 동의 체크하면
@@ -273,6 +258,26 @@ export async function routeCooperative(request, env) {
       const h = new Headers(headers());
       h.set('content-disposition', `attachment; filename="${coop.slug}-formation.json"`);
       return new Response(JSON.stringify({ workspaceId: coop.workspaceId, slug: coop.slug, ...project }, null, 2), { headers: h });
+    }
+    // 명부 삭제(2026-11-07): 최고관리자(플랫폼)·조합 관리자(조합장)만. 조합장 예정 행은 삭제 불가.
+    // 삭제된 사람의 자가 등록 조합원 권한(member, 관리 권한 없음)도 함께 회수한다. 관리자 권한은 건드리지 않는다.
+    const founderPath = path.match(/^\/api\/founders\/([^/]+)$/);
+    if (founderPath && request.method === 'DELETE') {
+      if (!access.canAdmin) return json({ ok: false, code: 'COOP_ADMIN_REQUIRED' }, 403);
+      const id = decodeURIComponent(founderPath[1]);
+      const revision = Number(new URL(request.url).searchParams.get('revision'));
+      const founder = project.state.founders.find(f => f.id === id);
+      if (!founder) return json({ ok: false, code: 'COOP_FOUNDER_NOT_FOUND' }, 404);
+      if (founder.position === 'chair-designate') return json({ ok: false, code: 'COOP_CHAIR_UNDELETABLE' }, 400);
+      project.state.founders = project.state.founders.filter(f => f.id !== id);
+      const result = await saveCooperativeProject(env.DB, coop, project.state, revision, access);
+      if (founder.accountEmail) {
+        await env.DB.prepare(`DELETE FROM customer_access_grants WHERE email = ? AND role = 'member' AND capabilities_json = '[]'
+          AND tenant_id = (SELECT id FROM customer_tenants WHERE slug = ?)`).bind(founder.accountEmail, coop.slug).run();
+        await env.DB.prepare("UPDATE cooperative_applications SET status = 'removed', updated_at = ? WHERE workspace_id = ? AND email = ?")
+          .bind(new Date().toISOString(), coop.workspaceId, founder.accountEmail).run();
+      }
+      return json({ ok: true, workspaceId: coop.workspaceId, ...result, removed: id });
     }
     if (path === '/api/my-business' && request.method === 'PUT' && !platformContext) {
       const body = await inputJson(request);
