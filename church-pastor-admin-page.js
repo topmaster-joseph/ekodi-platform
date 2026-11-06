@@ -74,9 +74,13 @@ function pastorClient(POLICY){
     document.documentElement.dataset.ekodiChurchUnifiedAdmin='true';
     document.documentElement.dataset.ekodiAdminNavigationProfile=navigationProfile(role);
     const permitted=roleCapabilities(role);
+    // Place contextual tabs immediately after the compact Work/Metrics selector.
+    // Route-specific heading remains semantic but no longer wastes visible space.
+    const details=$('sectionNav'),viewTabs=document.querySelector('main .admin-view-tabs');
+    if(viewTabs&&details.previousElementSibling!==viewTabs)viewTabs.after(details);
     mountChurchAdminNavigation({
-      root:$('adminNav'),tabsRoot:$('sectionNav'),groups:CHURCH_ADMIN_MENU,
-      activeKey:section,activeOwner:'church',base,
+      root:$('adminNav'),tabsRoot:details,groups:CHURCH_ADMIN_MENU,
+      activeKey:section,activeOwner:'church',base,showUnavailable:Boolean(role),
       canView:tab=>{
         if(!role)return tab.owner==='church'&&tab.key==='overview';
         if(role==='worship_admin')return tab.owner==='church'&&tab.key==='worship';
