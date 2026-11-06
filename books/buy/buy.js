@@ -147,7 +147,13 @@
     finally { busy = false; render(); }
   }
   $('payBtn').addEventListener('click', pay);
-  $('signOut').addEventListener('click', () => { C.forget(); load(); });
+  $('signOut').addEventListener('click', async () => {
+    const button = $('signOut');
+    if (button.disabled) return;
+    button.disabled = true;
+    try { await C.signOut(); window.location.reload(); }
+    catch { button.disabled = false; $('accountStatus').textContent = '로그아웃을 마치지 못했습니다. 다시 시도해 주세요.'; }
+  });
   C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; $('accountStatus').style.color = err ? 'var(--danger)' : ''; }, load);
   document.querySelectorAll('[data-books-base]').forEach(a => { a.href = C.under(a.getAttribute('data-books-base')); });
   if (!bookId) { $('buyRoot').hidden = true; $('buyError').hidden = false; $('buyErrorText').textContent = '도서를 선택해 주세요.'; }
