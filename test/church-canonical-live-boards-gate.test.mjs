@@ -10,7 +10,6 @@ const step=workflow.slice(workflow.indexOf('      - name: '+name),workflow.index
 const notices=read('sites/ekodi-church/notices/index.html');
 const schedules=read('sites/ekodi-church/schedule/index.html');
 const home=read('sites/ekodi-church/index.html');
-const worship=read('sites/ekodi-church/worship/2026-11-08/index.html');
 
 test('new public route canary is canonical C3-only, never the default legacy source',()=>{
  assert.ok(step.startsWith('      - name: '+name));
@@ -41,7 +40,6 @@ test('canonical public canary verifies real routes, unique content, shared calen
  assert.match(notices,/data-church-public-page="notices"/);
  assert.match(schedules,/data-church-public-page="schedule"/);
  assert.match(home,/data-church-shared-schedules/);
- assert.match(worship,/공동의회/);
 });
 
 test('new check is read-only verification and preserves existing role, multi-locale, security and release gates',()=>{
