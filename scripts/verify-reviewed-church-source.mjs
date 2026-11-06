@@ -1,3 +1,4 @@
+import { verifyReviewedChurchStackedSource } from './verify-reviewed-church-source-v2.mjs';
 const HEX40=/^[a-f0-9]{40}$/;
 const HEX64=/^[a-f0-9]{64}$/;
 const BASE_SHA='520d4f2daf7e5e4dc53bf928c9df626b5f896600';
@@ -17,6 +18,8 @@ const equalSets=(a,b)=>a.size===b.size&&[...a].every(x=>b.has(x));
  * and never grants production cutover or legacy GitHub deletion authority.
  */
 export function verifyReviewedChurchSource(manifest) {
+  if(manifest?.contract==='ekodi.church-reviewed-integration.v2')
+    return verifyReviewedChurchStackedSource(manifest);
   if(manifest?.contract==='ekodi.church-shadow-import.v1' &&
      manifest?.mode==='shadow-source-only')return null;
   if(manifest?.contract!=='ekodi.church-reviewed-integration.v1' ||

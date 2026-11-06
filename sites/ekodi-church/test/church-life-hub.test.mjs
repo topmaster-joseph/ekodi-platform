@@ -32,6 +32,6 @@ test('community, mission, and EKODI Live remain independent public destinations'
   assert.ok(html.includes('에코디선교회'));
   assert.ok(html.includes('선교 · 섬김 · 후원'));
   assert.ok(html.includes('href="/live/church/"'));
-  assert.ok(html.includes('href="#community"'));
+  assert.ok(html.includes('href="/ekodichurch/#together"'));
   assert.doesNotMatch(html, /meet\.jit\.si|EKODIChurchLive/);
 });
