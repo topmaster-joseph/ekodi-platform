@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.6.3'
+$AgentVersion = '2.6.4'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -1082,11 +1082,18 @@ function Install-EkodiLocalAI {
 }
 
 function Update-AgentFromOfficialSource {
-  $temp = Join-Path $env:TEMP 'ekodi-device-agent-update.ps1'
-  Invoke-WebRequest -UseBasicParsing $AgentSourceUrl -OutFile $temp
-  [void](Assert-AgentCandidate $temp)
-  $result = Invoke-AgentUpgradeTransaction -CandidatePath $temp -DeferRestart
-  return @{ message = "EKODI Device Agent를 트랜잭션 방식으로 $($result.version) 버전으로 업데이트했습니다. 명령 결과 전송 후 Agent를 안전 재시작합니다."; restartRequired = $true; version = $result.version; settings = Get-AgentSettings }
+  # Unique candidate avoids a stale or concurrently reused TEMP payload.
+  # A bounded request fails with a normal command receipt instead of hanging
+  # until the central EKA-121 timeout. This is not a UAC/approval bypass.
+  $temp = Join-Path $env:TEMP ('ekodi-device-agent-official-' + [guid]::NewGuid().ToString('N') + '.ps1')
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri $AgentSourceUrl -OutFile $temp -TimeoutSec 25 -ErrorAction Stop
+    [void](Assert-AgentCandidate $temp)
+    $result = Invoke-AgentUpgradeTransaction -CandidatePath $temp -DeferRestart
+    return @{ message = "EKODI Device Agent를 트랜잭션 방식으로 $($result.version) 버전으로 업데이트했습니다. 명령 결과 전송 후 Agent를 안전 재시작합니다."; restartRequired = $true; version = $result.version; settings = Get-AgentSettings }
+  } finally {
+    Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
+  }
 }
 
 
