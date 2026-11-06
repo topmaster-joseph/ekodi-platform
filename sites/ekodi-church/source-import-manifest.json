@@ -1,10 +1,10 @@
 {
-  "contract": "ekodi.church-reviewed-integration.v1",
-  "mode": "candidate-with-reviewed-unmerged-upstream-prs",
+  "contract": "ekodi.church-reviewed-integration.v2",
+  "mode": "candidate-with-reviewed-stacked-upstream-prs",
   "sourceRepository": "topmaster-joseph/ekodi-church",
   "sourceCommit": "520d4f2daf7e5e4dc53bf928c9df626b5f896600",
   "sourceTree": "30f2d5396b416aec9aca9773c84710052f4f8c35",
-  "importedTrackedFileCount": 212,
+  "importedTrackedFileCount": 223,
   "excludedWorkflows": [
     ".github/workflows/adopt-ekodi-domain.yml",
     ".github/workflows/ci.yml",
@@ -41,6 +41,11 @@
       "blobSha": "26bd000adbf365440976c6c5f94a9edf7d02645a"
     },
     {
+      "path": "church-compact-navigation.css",
+      "mode": "100644",
+      "blobSha": "fcdb494c302d3692d5e82aca3aebd26014f51aa3"
+    },
+    {
       "path": "church-daily-verse.js",
       "mode": "100644",
       "blobSha": "1d478c80bf902c755274e1785be81bc6aa72e018"
@@ -69,13 +74,13 @@
       "path": "church-homepage-layout.css",
       "mode": "100644",
       "blobSha": "be2c986454e372a51dbd6fc4caa54460879516a6",
-      "normalizedBlobSha": "549f7dc4beec35985b7deb918433cc8978731579"
+      "normalizedBlobSha": "97b71aa4a3266430513f323afd6a55a3dac14a61"
     },
     {
       "path": "church-i18n-extended.js",
       "mode": "100644",
       "blobSha": "0a3085306483d0cd0fb5a69a294415aee54957dd",
-      "normalizedBlobSha": "0cd8a6134c8a0633fa0683a20f4ec848e0028a1c"
+      "normalizedBlobSha": "d12249a1a80f159bb6ab73630717e5464270ea70"
     },
     {
       "path": "church-i18n-payment-patch.js",
@@ -87,7 +92,7 @@
       "path": "church-i18n.js",
       "mode": "100644",
       "blobSha": "54149806b9b61f594b64ef1ef66638185d4f816a",
-      "normalizedBlobSha": "ba24609ee1e79f8b55850c1924bf21b2a3978d53"
+      "normalizedBlobSha": "58528eb8d75af1534f5d7181b105149985f6029a"
     },
     {
       "path": "church-inline-live.css",
@@ -132,10 +137,30 @@
       "normalizedBlobSha": "97e14a4c2a3276d0fe136b4cb37fdbfd53517064"
     },
     {
+      "path": "church-public-updates.css",
+      "mode": "100644",
+      "blobSha": "9229ba7eb5eccfa0d3cba2196781a6a5a4ec5799"
+    },
+    {
+      "path": "church-public-updates.js",
+      "mode": "100644",
+      "blobSha": "446936ca40d893b0c1dc6e128a91e2907436a741"
+    },
+    {
       "path": "church-refresh.css",
       "mode": "100644",
       "blobSha": "c8bdb9432eab431b4a6e5e48e26ac1ea41de22bc",
       "normalizedBlobSha": "3c48a7efacf779d66051a583366a9297171751bf"
+    },
+    {
+      "path": "church-section-nav.js",
+      "mode": "100644",
+      "blobSha": "9eb0de3e5332b324e8cd95872e57987a56b00f8b"
+    },
+    {
+      "path": "church-shared-schedules.js",
+      "mode": "100644",
+      "blobSha": "314b39ef88fa88c0bd49e02d59a6849ab38acd5d"
     },
     {
       "path": "church-shell-i18n.js",
@@ -182,7 +207,7 @@
       "path": "devotion/index.html",
       "mode": "100644",
       "blobSha": "7978c99d26effd864855e4a13d1f5dc250feb964",
-      "normalizedBlobSha": "929d60f7edfda2ab1ba1e220dda6773b0c194ac2"
+      "normalizedBlobSha": "08ef8c744271ec70b366ae84572e37603c2604b3"
     },
     {
       "path": "Dockerfile",
@@ -208,7 +233,7 @@
       "path": "index.html",
       "mode": "100644",
       "blobSha": "7683f8859aae85283bc65f52223a41ebbc08db60",
-      "normalizedBlobSha": "050b4d623533f5bfe46d5eead5c3ce1f6b60bb93"
+      "normalizedBlobSha": "50c906bb14756f2ae724c1283852ce86ce17b5e8"
     },
     {
       "path": "live/host-intent.js",
@@ -331,6 +356,12 @@
       "blobSha": "b12d66fc685f01aadd2a0b1c4eb57886b868f4fe"
     },
     {
+      "path": "notices/index.html",
+      "mode": "100644",
+      "blobSha": "b511da63e7133d00ed6fe238d45e6c8ee54a9f85",
+      "normalizedBlobSha": "1036fb223e87cd8781741e56b6ac2ce06b097bbc"
+    },
+    {
       "path": "package.json",
       "mode": "100644",
       "blobSha": "fa6a9c09d4759ae7a6b9c9c1db7af917799138f9"
@@ -376,10 +407,16 @@
       "blobSha": "075cd72288b7987fcba86d27c2d3f5d0acfe468f"
     },
     {
+      "path": "schedule/index.html",
+      "mode": "100644",
+      "blobSha": "804db74c194dd0b1b810423dd8f281a56039e490",
+      "normalizedBlobSha": "95fc21ab7cf6f4bd66aad51a285afc07774a8f41"
+    },
+    {
       "path": "script.js",
       "mode": "100644",
       "blobSha": "a00b52f289097f5e32bad2ba115979dc1319b964",
-      "normalizedBlobSha": "4233ff7e5944d3a693d096e6a1877a52afefb3a1"
+      "normalizedBlobSha": "6227e5babac6e704398f85832776fe403fe64276"
     },
     {
       "path": "styles.css",
@@ -395,12 +432,17 @@
       "path": "test/church-approved-homepage-layout.test.mjs",
       "mode": "100644",
       "blobSha": "1aa75f8b0fcd0c3ab7d5f121dbb137b582c0d2c0",
-      "normalizedBlobSha": "0dcf7208c6dbb78ba1ca54a558fc20c6cbd3f42b"
+      "normalizedBlobSha": "9f69a1b10fc58b757ab3f89d02e8a72c75c92f7a"
     },
     {
       "path": "test/church-brand-top-ownership.test.mjs",
       "mode": "100644",
       "blobSha": "741aec3426c78eccb312ea016cf64ea08aef1718"
+    },
+    {
+      "path": "test/church-compact-selected-navigation.test.mjs",
+      "mode": "100644",
+      "blobSha": "a634326bc6d70f8f3093ece0dd53cda1995bfcce"
     },
     {
       "path": "test/church-compact-tabs.test.mjs",
@@ -418,7 +460,7 @@
       "path": "test/church-devotion.test.mjs",
       "mode": "100644",
       "blobSha": "70b925525e0d6b4136c2e9285d0daeb7904b99d0",
-      "normalizedBlobSha": "b249b5af5d8ba15710b9349201ae070b59a075d4"
+      "normalizedBlobSha": "3787c765e6162157fcb2d610224e45db795eda1a"
     },
     {
       "path": "test/church-ekodi-live-bridge.test.mjs",
@@ -443,7 +485,8 @@
     {
       "path": "test/church-home-overview-navigation.test.mjs",
       "mode": "100644",
-      "blobSha": "4e15d4932663d06c07237fcbd1d6d3dd2eabb5b6"
+      "blobSha": "4e15d4932663d06c07237fcbd1d6d3dd2eabb5b6",
+      "normalizedBlobSha": "0ce6412dddfe38df931166bbe224fa228bb91bc6"
     },
     {
       "path": "test/church-i18n-idempotency.test.mjs",
@@ -464,7 +507,7 @@
       "path": "test/church-life-hub.test.mjs",
       "mode": "100644",
       "blobSha": "80a717bad6ac6567620ac0f338b105a77ea77b70",
-      "normalizedBlobSha": "f8ac1be4eb2e1ce85538b1ed866090ab50e787ed"
+      "normalizedBlobSha": "f150f78154a49316b27301e82b96d38930e8fe0c"
     },
     {
       "path": "test/church-live-auth-loop.test.mjs",
@@ -479,7 +522,8 @@
     {
       "path": "test/church-live-entry.test.mjs",
       "mode": "100644",
-      "blobSha": "670fcca27176709b3cac2d32cfc41d73e73384d0"
+      "blobSha": "670fcca27176709b3cac2d32cfc41d73e73384d0",
+      "normalizedBlobSha": "c11c75776afba13c74fe02c58048cbe7c1f4dce6"
     },
     {
       "path": "test/church-live-follow-presenter-synthetic.spec.mjs",
@@ -573,9 +617,25 @@
       "blobSha": "94f8159a5974dbbc740343c981f07b4616fcb72d"
     },
     {
+      "path": "test/church-public-notices-schedule.test.mjs",
+      "mode": "100644",
+      "blobSha": "1f50e776ab65623934ff775ac282011e25335f33",
+      "normalizedBlobSha": "9d904189a7cd5a41cc82a49b98f993b024f285d4"
+    },
+    {
       "path": "test/church-readability-headers.test.mjs",
       "mode": "100644",
       "blobSha": "5718c94d8fa524656c7b315ba4cc179fb9f48634"
+    },
+    {
+      "path": "test/church-selected-panel-runtime.test.mjs",
+      "mode": "100644",
+      "blobSha": "cdb5a6c62e25e87ac729d24f3adb204a62b4c94d"
+    },
+    {
+      "path": "test/church-shared-schedule-147.test.mjs",
+      "mode": "100644",
+      "blobSha": "0745a47058a625c001c4d306f91c59e4d5102dbd"
     },
     {
       "path": "test/church-shell-assets.test.mjs",
@@ -685,12 +745,13 @@
       "path": "test/simple-home-progressive-disclosure.test.mjs",
       "mode": "100644",
       "blobSha": "b698b9b0e73aeaa004414fdf3b6f6bc665e5eeba",
-      "normalizedBlobSha": "fed67fe52cb30ca06e12ee71ddf9167f5466ac92"
+      "normalizedBlobSha": "31e2673ac9e130df6829f13dd1474d14795802ec"
     },
     {
       "path": "test/together-page.test.mjs",
       "mode": "100644",
-      "blobSha": "3ebfe48e2750c63762c47b6f58247978e05d65ad"
+      "blobSha": "3ebfe48e2750c63762c47b6f58247978e05d65ad",
+      "normalizedBlobSha": "b2d64ebdbfe1b452ae92d0af778072a9276d5346"
     },
     {
       "path": "together/index.html",
@@ -1126,18 +1187,24 @@
     "my/giving/index.html",
     "my/index.html",
     "my/styles.css",
+    "notices/index.html",
+    "schedule/index.html",
     "script.js",
     "test/church-approved-homepage-layout.test.mjs",
     "test/church-compact-tabs.test.mjs",
     "test/church-csp-supabase-connect.test.mjs",
     "test/church-devotion.test.mjs",
+    "test/church-home-overview-navigation.test.mjs",
     "test/church-life-hub.test.mjs",
+    "test/church-live-entry.test.mjs",
     "test/church-live-system-verification.test.mjs",
+    "test/church-public-notices-schedule.test.mjs",
     "test/church-shell-login-live-integration.test.mjs",
     "test/giving-contract.test.mjs",
     "test/giving-nine-language-i18n.test.mjs",
     "test/partner-news.test.mjs",
-    "test/simple-home-progressive-disclosure.test.mjs"
+    "test/simple-home-progressive-disclosure.test.mjs",
+    "test/together-page.test.mjs"
   ],
   "upstreamTreeContainsExcludedWorkflows": true,
   "originalImportedTrackedFileCount": 208,
@@ -1472,5 +1539,457 @@
     "oldDeploymentWorkflowsExcluded": true,
     "protectedMainMigrationOnly": true,
     "legacyRepositoryDeletionAuthorized": false
+  },
+  "stackedReviewedOverlays": {
+    "contract": "ekodi.church-stacked-upstream-pr-audit.v1",
+    "originalSnapshotSha": "520d4f2daf7e5e4dc53bf928c9df626b5f896600",
+    "preservedPreviousReviewContract": "ekodi.church-upstream-pr-audit.v1",
+    "previouslyTrackedFileCount": 212,
+    "integrationOrder": [
+      146,
+      149
+    ],
+    "sourceStatus": "upstream-stacked-prs-unmerged",
+    "pullRequests": [
+      {
+        "number": 146,
+        "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+        "baseHeadSha": "9e8fc072d1d6d66286d9a275fe3960e50e5c5e72",
+        "sourceRepository": "topmaster-joseph/ekodi-church",
+        "sourceStatusAtIntegration": "open",
+        "changedSourcePaths": [
+          "church-homepage-layout.css",
+          "church-i18n-extended.js",
+          "church-i18n.js",
+          "church-public-updates.css",
+          "church-public-updates.js",
+          "church-shared-schedules.js",
+          "devotion/index.html",
+          "index.html",
+          "notices/index.html",
+          "schedule/index.html",
+          "script.js",
+          "test/church-approved-homepage-layout.test.mjs",
+          "test/church-home-overview-navigation.test.mjs",
+          "test/church-public-notices-schedule.test.mjs",
+          "test/church-shared-schedule-147.test.mjs",
+          "test/simple-home-progressive-disclosure.test.mjs"
+        ]
+      },
+      {
+        "number": 149,
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+        "baseHeadSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+        "sourceRepository": "topmaster-joseph/ekodi-church",
+        "sourceStatusAtIntegration": "open",
+        "changedSourcePaths": [
+          "church-compact-navigation.css",
+          "church-i18n-extended.js",
+          "church-i18n.js",
+          "church-section-nav.js",
+          "devotion/index.html",
+          "index.html",
+          "notices/index.html",
+          "schedule/index.html",
+          "script.js",
+          "test/church-approved-homepage-layout.test.mjs",
+          "test/church-compact-selected-navigation.test.mjs",
+          "test/church-devotion.test.mjs",
+          "test/church-home-overview-navigation.test.mjs",
+          "test/church-life-hub.test.mjs",
+          "test/church-live-entry.test.mjs",
+          "test/church-public-notices-schedule.test.mjs",
+          "test/church-selected-panel-runtime.test.mjs",
+          "test/simple-home-progressive-disclosure.test.mjs",
+          "test/together-page.test.mjs"
+        ]
+      }
+    ],
+    "changedFiles": [
+      {
+        "path": "church-compact-navigation.css",
+        "previousCanonicalBlobSha": null,
+        "originalBaseBlobSha": null,
+        "sourceChain": [
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "fcdb494c302d3692d5e82aca3aebd26014f51aa3"
+          }
+        ],
+        "finalCanonicalBlobSha": "fcdb494c302d3692d5e82aca3aebd26014f51aa3"
+      },
+      {
+        "path": "church-homepage-layout.css",
+        "previousCanonicalBlobSha": "549f7dc4beec35985b7deb918433cc8978731579",
+        "originalBaseBlobSha": "be2c986454e372a51dbd6fc4caa54460879516a6",
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "380ec056ca472eaba538dc7840a45d916ed6ccd3"
+          }
+        ],
+        "finalCanonicalBlobSha": "97b71aa4a3266430513f323afd6a55a3dac14a61"
+      },
+      {
+        "path": "church-i18n-extended.js",
+        "previousCanonicalBlobSha": "0cd8a6134c8a0633fa0683a20f4ec848e0028a1c",
+        "originalBaseBlobSha": "0a3085306483d0cd0fb5a69a294415aee54957dd",
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "2add4eee5c83fff672408a464f9f396e0adc795e"
+          },
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "d4f9ee7e51052c61e4baa7aaf1f87412ff69bcf5"
+          }
+        ],
+        "finalCanonicalBlobSha": "d12249a1a80f159bb6ab73630717e5464270ea70"
+      },
+      {
+        "path": "church-i18n.js",
+        "previousCanonicalBlobSha": "ba24609ee1e79f8b55850c1924bf21b2a3978d53",
+        "originalBaseBlobSha": "54149806b9b61f594b64ef1ef66638185d4f816a",
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "86f710116abee33562ed191cb924f366f76c63ee"
+          },
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "c2123abf86c9db6bba98b90bcbc2540692fdb208"
+          }
+        ],
+        "finalCanonicalBlobSha": "58528eb8d75af1534f5d7181b105149985f6029a"
+      },
+      {
+        "path": "church-public-updates.css",
+        "previousCanonicalBlobSha": null,
+        "originalBaseBlobSha": null,
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "9229ba7eb5eccfa0d3cba2196781a6a5a4ec5799"
+          }
+        ],
+        "finalCanonicalBlobSha": "9229ba7eb5eccfa0d3cba2196781a6a5a4ec5799"
+      },
+      {
+        "path": "church-public-updates.js",
+        "previousCanonicalBlobSha": null,
+        "originalBaseBlobSha": null,
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "446936ca40d893b0c1dc6e128a91e2907436a741"
+          }
+        ],
+        "finalCanonicalBlobSha": "446936ca40d893b0c1dc6e128a91e2907436a741"
+      },
+      {
+        "path": "church-section-nav.js",
+        "previousCanonicalBlobSha": null,
+        "originalBaseBlobSha": null,
+        "sourceChain": [
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "9eb0de3e5332b324e8cd95872e57987a56b00f8b"
+          }
+        ],
+        "finalCanonicalBlobSha": "9eb0de3e5332b324e8cd95872e57987a56b00f8b"
+      },
+      {
+        "path": "church-shared-schedules.js",
+        "previousCanonicalBlobSha": null,
+        "originalBaseBlobSha": null,
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "314b39ef88fa88c0bd49e02d59a6849ab38acd5d"
+          }
+        ],
+        "finalCanonicalBlobSha": "314b39ef88fa88c0bd49e02d59a6849ab38acd5d"
+      },
+      {
+        "path": "devotion/index.html",
+        "previousCanonicalBlobSha": "929d60f7edfda2ab1ba1e220dda6773b0c194ac2",
+        "originalBaseBlobSha": "7978c99d26effd864855e4a13d1f5dc250feb964",
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "f282755fe00ed052311eb5d98211e08939cba26f"
+          },
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "08ef8c744271ec70b366ae84572e37603c2604b3"
+          }
+        ],
+        "finalCanonicalBlobSha": "08ef8c744271ec70b366ae84572e37603c2604b3"
+      },
+      {
+        "path": "index.html",
+        "previousCanonicalBlobSha": "050b4d623533f5bfe46d5eead5c3ce1f6b60bb93",
+        "originalBaseBlobSha": "7683f8859aae85283bc65f52223a41ebbc08db60",
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "5ab179901ccc87871831cfea73d989bca7b9b9db"
+          },
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "2b4250abdf28cdaa896bed325262c013f5996cda"
+          }
+        ],
+        "finalCanonicalBlobSha": "50c906bb14756f2ae724c1283852ce86ce17b5e8"
+      },
+      {
+        "path": "notices/index.html",
+        "previousCanonicalBlobSha": null,
+        "originalBaseBlobSha": null,
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "b511da63e7133d00ed6fe238d45e6c8ee54a9f85"
+          },
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "1036fb223e87cd8781741e56b6ac2ce06b097bbc"
+          }
+        ],
+        "finalCanonicalBlobSha": "1036fb223e87cd8781741e56b6ac2ce06b097bbc"
+      },
+      {
+        "path": "schedule/index.html",
+        "previousCanonicalBlobSha": null,
+        "originalBaseBlobSha": null,
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "804db74c194dd0b1b810423dd8f281a56039e490"
+          },
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "95fc21ab7cf6f4bd66aad51a285afc07774a8f41"
+          }
+        ],
+        "finalCanonicalBlobSha": "95fc21ab7cf6f4bd66aad51a285afc07774a8f41"
+      },
+      {
+        "path": "script.js",
+        "previousCanonicalBlobSha": "4233ff7e5944d3a693d096e6a1877a52afefb3a1",
+        "originalBaseBlobSha": "a00b52f289097f5e32bad2ba115979dc1319b964",
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "603294d3e48ff4659b9232ca8b1bf181fd85a794"
+          },
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "f7b3ea040b28d788eff8e621d1891ea8a622b80a"
+          }
+        ],
+        "finalCanonicalBlobSha": "6227e5babac6e704398f85832776fe403fe64276"
+      },
+      {
+        "path": "test/church-approved-homepage-layout.test.mjs",
+        "previousCanonicalBlobSha": "0dcf7208c6dbb78ba1ca54a558fc20c6cbd3f42b",
+        "originalBaseBlobSha": "1aa75f8b0fcd0c3ab7d5f121dbb137b582c0d2c0",
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "18697e3cd84381004545813ff67279b7fb258fc3"
+          },
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "9f69a1b10fc58b757ab3f89d02e8a72c75c92f7a"
+          }
+        ],
+        "finalCanonicalBlobSha": "9f69a1b10fc58b757ab3f89d02e8a72c75c92f7a"
+      },
+      {
+        "path": "test/church-compact-selected-navigation.test.mjs",
+        "previousCanonicalBlobSha": null,
+        "originalBaseBlobSha": null,
+        "sourceChain": [
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "a634326bc6d70f8f3093ece0dd53cda1995bfcce"
+          }
+        ],
+        "finalCanonicalBlobSha": "a634326bc6d70f8f3093ece0dd53cda1995bfcce"
+      },
+      {
+        "path": "test/church-devotion.test.mjs",
+        "previousCanonicalBlobSha": "b249b5af5d8ba15710b9349201ae070b59a075d4",
+        "originalBaseBlobSha": "70b925525e0d6b4136c2e9285d0daeb7904b99d0",
+        "sourceChain": [
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "3787c765e6162157fcb2d610224e45db795eda1a"
+          }
+        ],
+        "finalCanonicalBlobSha": "3787c765e6162157fcb2d610224e45db795eda1a"
+      },
+      {
+        "path": "test/church-home-overview-navigation.test.mjs",
+        "previousCanonicalBlobSha": "4e15d4932663d06c07237fcbd1d6d3dd2eabb5b6",
+        "originalBaseBlobSha": "4e15d4932663d06c07237fcbd1d6d3dd2eabb5b6",
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "a43e50b8434562b1ab6a64030ff9d090e2bcfb81"
+          },
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "0ce6412dddfe38df931166bbe224fa228bb91bc6"
+          }
+        ],
+        "finalCanonicalBlobSha": "0ce6412dddfe38df931166bbe224fa228bb91bc6"
+      },
+      {
+        "path": "test/church-life-hub.test.mjs",
+        "previousCanonicalBlobSha": "f8ac1be4eb2e1ce85538b1ed866090ab50e787ed",
+        "originalBaseBlobSha": "80a717bad6ac6567620ac0f338b105a77ea77b70",
+        "sourceChain": [
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "f150f78154a49316b27301e82b96d38930e8fe0c"
+          }
+        ],
+        "finalCanonicalBlobSha": "f150f78154a49316b27301e82b96d38930e8fe0c"
+      },
+      {
+        "path": "test/church-live-entry.test.mjs",
+        "previousCanonicalBlobSha": "670fcca27176709b3cac2d32cfc41d73e73384d0",
+        "originalBaseBlobSha": "670fcca27176709b3cac2d32cfc41d73e73384d0",
+        "sourceChain": [
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "c11c75776afba13c74fe02c58048cbe7c1f4dce6"
+          }
+        ],
+        "finalCanonicalBlobSha": "c11c75776afba13c74fe02c58048cbe7c1f4dce6"
+      },
+      {
+        "path": "test/church-public-notices-schedule.test.mjs",
+        "previousCanonicalBlobSha": null,
+        "originalBaseBlobSha": null,
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "1f50e776ab65623934ff775ac282011e25335f33"
+          },
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "9d904189a7cd5a41cc82a49b98f993b024f285d4"
+          }
+        ],
+        "finalCanonicalBlobSha": "9d904189a7cd5a41cc82a49b98f993b024f285d4"
+      },
+      {
+        "path": "test/church-selected-panel-runtime.test.mjs",
+        "previousCanonicalBlobSha": null,
+        "originalBaseBlobSha": null,
+        "sourceChain": [
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "cdb5a6c62e25e87ac729d24f3adb204a62b4c94d"
+          }
+        ],
+        "finalCanonicalBlobSha": "cdb5a6c62e25e87ac729d24f3adb204a62b4c94d"
+      },
+      {
+        "path": "test/church-shared-schedule-147.test.mjs",
+        "previousCanonicalBlobSha": null,
+        "originalBaseBlobSha": null,
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "0745a47058a625c001c4d306f91c59e4d5102dbd"
+          }
+        ],
+        "finalCanonicalBlobSha": "0745a47058a625c001c4d306f91c59e4d5102dbd"
+      },
+      {
+        "path": "test/simple-home-progressive-disclosure.test.mjs",
+        "previousCanonicalBlobSha": "fed67fe52cb30ca06e12ee71ddf9167f5466ac92",
+        "originalBaseBlobSha": "b698b9b0e73aeaa004414fdf3b6f6bc665e5eeba",
+        "sourceChain": [
+          {
+            "prNumber": 146,
+            "headSha": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+            "upstreamBlobSha": "a5e26bb5c1021e96920947802dd5024e591f6a1d"
+          },
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "31e2673ac9e130df6829f13dd1474d14795802ec"
+          }
+        ],
+        "finalCanonicalBlobSha": "31e2673ac9e130df6829f13dd1474d14795802ec"
+      },
+      {
+        "path": "test/together-page.test.mjs",
+        "previousCanonicalBlobSha": "3ebfe48e2750c63762c47b6f58247978e05d65ad",
+        "originalBaseBlobSha": "3ebfe48e2750c63762c47b6f58247978e05d65ad",
+        "sourceChain": [
+          {
+            "prNumber": 149,
+            "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+            "upstreamBlobSha": "b2d64ebdbfe1b452ae92d0af778072a9276d5346"
+          }
+        ],
+        "finalCanonicalBlobSha": "b2d64ebdbfe1b452ae92d0af778072a9276d5346"
+      }
+    ],
+    "addedFiles": [
+      "church-compact-navigation.css",
+      "church-public-updates.css",
+      "church-public-updates.js",
+      "church-section-nav.js",
+      "church-shared-schedules.js",
+      "notices/index.html",
+      "schedule/index.html",
+      "test/church-compact-selected-navigation.test.mjs",
+      "test/church-public-notices-schedule.test.mjs",
+      "test/church-selected-panel-runtime.test.mjs",
+      "test/church-shared-schedule-147.test.mjs"
+    ],
+    "sourceOwnershipTransferred": false,
+    "productionReleaseSwitched": false,
+    "legacyRepositoryDeletionAuthorized": false,
+    "importedOldDeploymentWorkflows": false
   }
 }
