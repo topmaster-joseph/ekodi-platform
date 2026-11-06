@@ -21,7 +21,7 @@ test('public financial disclosure has the approved title and only four aggregate
 });
 
 test('finance layout uses an external CSS file accepted by strict style-src self CSP',()=>{
-  assert.match(html,/href="\/seonammedi\/app\.css\?v=20261105-finance-inline-2"/);
+  assert.match(html,/href="\/seonammedi\/app\.css\?v=20261106-finance-footer-responsive-1"/);
   assert.doesNotMatch(html,/<style id="committee-finance-disclosure-style">/);
   assert.match(css,/#committee-finance-disclosure \.committee-finance-metrics\s*\{\s*display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(css,/@media\(max-width:580px\)\s*\{/);
