@@ -50,8 +50,8 @@ test('admin page: Korean action names, old #section links, AI review card and it
   assert.doesNotMatch(js, /\(\$\{a\.action\}\)/, 'raw action codes are not shown');
   assert.match(js, /location\.hash/); assert.match(js, /hashchange/);
   assert.match(js, /stat\('AI 원고 감수 대기', s\.aiBooks\?\.author_review \|\| 0, 'ai'\)/);
-  assert.match(html, /<meta name="color-scheme" content="light dark">/);
-  assert.match(css, /@media \(prefers-color-scheme:dark\)\{[\s\S]*\.padmin h1[^}]*color:#f3ecdc/);
+  assert.match(html, /<meta name="color-scheme" content="dark">/);
+  assert.match(css, /:root\{color-scheme:dark\}/); assert.match(css, /\.padmin h1,\.padmin h2,\.padmin-stat strong\{color:#f6efe0\}/); assert.doesNotMatch(css, /prefers-color-scheme/);
 });
 
 test('publishing login links name the publishing site so the central login returns to the same page', async () => {
