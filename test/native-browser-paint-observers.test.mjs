@@ -62,3 +62,17 @@ test('browser worker captures metrics before page loads but only reports numbers
   assert.match(worker,/lcpCandidateMs:null,layoutShiftSumToSettle:null/);
   assert.doesNotMatch(installSyntheticPaintObservers.toString(),/fetch\(|sendBeacon|localStorage|sessionStorage|document\.querySelector|innerText|cookie/i);
 });
+
+test('owner-held private Cheonggye board is tested by denial sentinel, not public 200 smoke',()=>{
+  const registry=JSON.parse(readFileSync(new URL('../config/board-surface-verification.json',import.meta.url),'utf8'));
+  const board=registry.surfaces.find(item=>item.id==='cheonggye.board');
+  assert.equal(board.path,'/cheonggye/board');
+  assert.equal(board.enabled,false,'browser smoke must not expect HTTP 200 from owner-held private board');
+  assert.match(board.verificationNote,/owner-held-private-404/);
+  const liveVerifier=readFileSync(new URL('../scripts/verify-independent-board-live.mjs',import.meta.url),'utf8');
+  assert.match(liveVerifier,/CHEONGGYE_PUBLICATION_HOLD/);
+  assert.match(liveVerifier,/\[404\]/);
+  assert.match(liveVerifier,/private-owner-release-required/);
+  assert.match(liveVerifier,/noindex/);
+  assert.match(liveVerifier,/no-store/);
+});
