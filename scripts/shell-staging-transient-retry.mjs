@@ -4,18 +4,12 @@
 // production release still requires all guarded staging + provenance checks.
 import {spawn} from 'node:child_process';
 import {pathToFileURL} from 'node:url';
+import {canRetryCloudflareStagingTransport} from './lib/cloudflare-staging-transport.mjs';
 
 export const SHELL_STAGE_RETRY_DELAY_MS=18000;
 export const SHELL_STAGE_MAX_ATTEMPTS=2;
 const CONFIG='wrangler.shell.staging.toml';
-const QUOTA_OR_PERMISSION=/\b(?:HTTP\s*)?(?:401|403|429)\b|\b(?:error\s*)?1027\b|\bquota (?:circuit|exhausted)\b|\btoo many requests\b|\brate limit(?:ed|ing)\b|\b(?:unauthorized|forbidden|invalid token|permission denied)\b/i;
-const MALFORMED_RESPONSE=/received a malformed response from the API/i;
-const RESET_BEFORE_HEADERS=/upstream connect error or disconnect\/reset before headers/i;
-
-export function canRetryShellStageTransport(output){
-  const body=String(output??'');
-  return !QUOTA_OR_PERMISSION.test(body)&&MALFORMED_RESPONSE.test(body)&&RESET_BEFORE_HEADERS.test(body);
-}
+export const canRetryShellStageTransport=canRetryCloudflareStagingTransport;
 
 export async function runShellStageWithTransportRetry({
   run,
