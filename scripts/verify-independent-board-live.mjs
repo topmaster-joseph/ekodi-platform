@@ -72,12 +72,15 @@ export async function verifyIndependentBoardLive({
         assert.equal(held.headers.get('x-ekodi-region-publication'),'private-owner-release-required',path);
         const rawCacheControl=held.headers.get('cache-control')||'';
         const cacheDirectives=new Set(rawCacheControl.toLowerCase().split(',').map(part=>part.trim()));
-        // Cache-Control is a set of comma-separated directives, not an
-        // ordered text prefix. Both protective directives remain mandatory.
-        for(const required of ['private','no-store']){
-          assert.ok(cacheDirectives.has(required),
-            path+' private no-store: missing '+required+' (actual cache-control='+JSON.stringify(rawCacheControl)+')');
-        }
+        // RFC 9111 §5.2.2.5: no-store prohibits BOTH private and shared
+        // caches from storing this response. It is stricter than private,
+        // which only prohibits shared caches. The trusted edge normalizes
+        // "private, no-store" to "no-store" in production. Fail closed if
+        // no-store is absent or a conflicting public directive appears.
+        assert.ok(cacheDirectives.has('no-store')&&!cacheDirectives.has('public'),
+          path+' non-cacheable private hold: expected no-store and no public directive'
+          +' (actual cache-control='+JSON.stringify(rawCacheControl)+')');
+        assert.equal(held.headers.get('x-content-type-options'),'nosniff',path+' nosniff');
         assert.match(held.headers.get('x-robots-tag')||'',/noindex/i,path+' private noindex');
       }
       continue;
