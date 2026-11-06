@@ -292,3 +292,6 @@ body[data-mall-view="catalog"] main#main > #filters{padding-inline:16px}
 .mall-category-shortcuts a[data-filter-target][hidden]{display:none!important}
 /* The product grid now precedes the editorial hero in the document flow. */
 .mall-premium-hero{margin-top:24px}
+
+/* Approval may be revoked between the static build and the live quote. */
+.card[data-bookstore-quote-pending="true"]{display:none!important}
