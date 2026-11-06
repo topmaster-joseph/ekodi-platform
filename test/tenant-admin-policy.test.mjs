@@ -67,8 +67,8 @@ test('entry routers apply the shared Admin Shell to every user-site admin page',
   const siteWorker=await fs.promises.readFile(new URL('../site-worker.js',import.meta.url),'utf8');
   assert.match(source,/injectEkodiShell\(storeAdminPage\(\{\.\.\.storeRoute,pathname:url\.pathname\}\),'business','admin'\)/);
   assert.match(source,/injectEkodiShell\(churchPastorAdminPage\(\),'church','admin'\)/);
-  assert.match(source,/injectEkodiShell\(workspaceAdminPage\(\),'space','admin'\)/);
+  assert.match(source,/injectEkodiShell\(workspaceAdminPage\(url\.pathname\),'space','admin'\)/);
   assert.match(source,/injectEkodiShell\(mailAdminPage\(\),'mail','admin'\)/);
   assert.match(siteWorker,/injectEkodiShell\(churchPastorAdminPage\(\), 'church', 'admin'\)/);
-  assert.match(siteWorker,/injectEkodiShell\(workspaceAdminPage\(\), 'space', 'admin'\)/);
+  assert.match(siteWorker,/injectEkodiShell\(workspaceAdminPage\(url\.pathname\), 'space', 'admin'\)/);
 });
