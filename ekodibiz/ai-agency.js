@@ -78,7 +78,7 @@
   }
   function campusCsvValue(value) {
     const raw=String(value??'');
-    const safe=/^[=+@\-\t\r\n]/.test(raw)?"'"+raw:raw;
+    const safe=/^\s*[=+@-]/.test(raw)||/^[\t\r\n]/.test(raw)?"'"+raw:raw;
     return '"'+safe.replace(/"/g,'""')+'"';
   }
   $('campusExport').addEventListener('click',()=>{
