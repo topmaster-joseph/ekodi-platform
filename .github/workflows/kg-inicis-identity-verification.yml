@@ -9,6 +9,13 @@ on:
       - 'verify/adult/app.js'
       - 'test/age-verification-inicis.test.mjs'
       - 'test/age-verification-inicis-sdk.test.mjs'
+      - 'age-verification-sandbox.js'
+      - 'api-worker.js'
+      - 'site-worker.js'
+      - 'verify/adult/test.html'
+      - 'verify/adult/test.js'
+      - 'test/age-verification-sandbox.test.mjs'
+      - 'wrangler.api.toml'
   workflow_dispatch:
 
 permissions:
@@ -31,10 +38,15 @@ jobs:
           node --check age-verification-core.js
           node --check age-verification-client.js
           node --check verify/adult/app.js
+          node --check verify/adult/test.js
+          node --check age-verification-sandbox.js
+          node --check api-worker.js
+          node --check site-worker.js
       - name: Verify KG Inicis LIVE-channel and disabled-mode security
         run: |
           node --test \
             test/age-verification-core.test.mjs \
             test/age-verification-inicis.test.mjs \
             test/age-verification-inicis-sdk.test.mjs \
-            test/age-verification-ux.test.mjs
+            test/age-verification-ux.test.mjs \
+            test/age-verification-sandbox.test.mjs
