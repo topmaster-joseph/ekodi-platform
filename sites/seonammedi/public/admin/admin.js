@@ -21,6 +21,8 @@ function adminReturnUrl(){
   if(['dashboard','finance','minutes','access','organization','voices','notices'].includes(panel))next.searchParams.set('panel',panel);
   const org=current.get('org');
   if(panel==='organization'&&['bidae','mokpo','minhak'].includes(org))next.searchParams.set('org',org);
+  const financeTab=current.get('financeTab');
+  if(panel==='finance'&&['summary','ledger','manual','import'].includes(financeTab))next.searchParams.set('financeTab',financeTab);
   return next.href;
 }
 function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',adminReturnUrl());return u.href}
@@ -95,10 +97,42 @@ async function api(path,options={}){
 }
 // 관련소식·활동이력·소통채널 are managed on the public page itself (Owner, 2026-10-19).
 const ADMIN_ROUTE_PANELS=new Set(['dashboard','voices','finance','notices','organization','minutes','access']);
+const FINANCE_TAB_NAMES=['summary','ledger','manual','import'];
+let activeFinanceTab='summary';
+function showFinanceTab(name,{route=true,replace=false}={}){
+  const requested=FINANCE_TAB_NAMES.includes(name)?name:'summary';
+  activeFinanceTab=requested;
+  qsa('[data-finance-tab]').forEach(node=>{
+    const active=node.dataset.financeTab===requested;
+    node.classList.toggle('active',active);
+    node.setAttribute('aria-selected',active?'true':'false');
+    node.tabIndex=active?0:-1;
+  });
+  qsa('[data-finance-pane]').forEach(node=>{
+    node.hidden=node.dataset.financePane!==requested;
+  });
+  if(route)writeAdminRoute('finance',{replace});
+}
+qsa('[data-finance-tab]').forEach(node=>{
+  node.addEventListener('click',()=>showFinanceTab(node.dataset.financeTab));
+  node.addEventListener('keydown',event=>{
+    const i=FINANCE_TAB_NAMES.indexOf(node.dataset.financeTab);
+    let next=null;
+    if(event.key==='ArrowRight')next=(i+1)%FINANCE_TAB_NAMES.length;
+    if(event.key==='ArrowLeft')next=(i-1+FINANCE_TAB_NAMES.length)%FINANCE_TAB_NAMES.length;
+    if(event.key==='Home')next=0;
+    if(event.key==='End')next=FINANCE_TAB_NAMES.length-1;
+    if(next===null)return;
+    event.preventDefault();
+    const target=qs('[data-finance-tab="'+FINANCE_TAB_NAMES[next]+'"]');
+    showFinanceTab(FINANCE_TAB_NAMES[next]);target?.focus();
+  });
+});
 function writeAdminRoute(panel,{org=null,records=null,replace=false}={}){
   const url=new URL(location.href);
   if(panel&&panel!=='dashboard')url.searchParams.set('panel',panel);else url.searchParams.delete('panel');
   if(panel==='organization'&&org&&ORG_GROUPS.some(item=>item.key===org))url.searchParams.set('org',org);else url.searchParams.delete('org');
+  if(panel==='finance'&&activeFinanceTab!=='summary')url.searchParams.set('financeTab',activeFinanceTab);else url.searchParams.delete('financeTab');
   url.searchParams.delete('records');
   const next=url.pathname+(url.searchParams.toString()?'?'+url.searchParams.toString():'');
   history[replace?'replaceState':'pushState'](null,'',next);
@@ -111,6 +145,10 @@ function showPanel(name,{route=true,replace=false}={}){
     node.classList.toggle('active',active);
     if(active)node.setAttribute('aria-current','page');else node.removeAttribute('aria-current');
   });
+  if(target==='finance'){
+    const selected=new URLSearchParams(location.search).get('financeTab');
+    showFinanceTab(selected||activeFinanceTab,{route:false});
+  }
   if(route)writeAdminRoute(target,{replace});
   document.dispatchEvent(new CustomEvent('seonammedi:panel-change',{detail:{panel:target}}));
 }
@@ -353,7 +391,7 @@ $('financeImportButton')?.addEventListener('click',async()=>{
 });
 
 function resetFinance(){const form=$('financeForm');form.reset();form.elements.id.value='';form.elements.type.value='income';form.elements.visible.checked=false;text($('financeFormTitle'),'회계내역 추가');text($('financeMessage'),'')}
-function editFinance(item){const form=$('financeForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.type.value=item.type||'income';form.elements.amount.value=String(item.amount||0);form.elements.purpose.value=item.purpose||'';form.elements.event.value=item.event||'';form.elements.evidenceStatus.value=item.evidenceStatus||'none';form.elements.note.value=item.note||'';form.elements.visible.checked=false;text($('financeFormTitle'),'회계내역 수정');showPanel('finance')}
+function editFinance(item){const form=$('financeForm');form.elements.id.value=item.id;form.elements.date.value=item.date||'';form.elements.type.value=item.type||'income';form.elements.amount.value=String(item.amount||0);form.elements.purpose.value=item.purpose||'';form.elements.event.value=item.event||'';form.elements.evidenceStatus.value=item.evidenceStatus||'none';form.elements.note.value=item.note||'';form.elements.visible.checked=false;text($('financeFormTitle'),'회계내역 수정');showPanel('finance');showFinanceTab('manual');$('financeFormTitle')?.scrollIntoView({block:'nearest',behavior:'instant'})}
 async function deleteFinance(item){if(!confirm('이 회계내역을 삭제할까요?'))return;try{await api('/api/seonammedi/admin/finance/'+item.id,{method:'DELETE'});await loadFinance();text($('financeMessage'),'삭제했습니다.')}catch(error){text($('financeMessage'),error.message)}}
 function renderFinance(){
   const host=$('financeList');host.replaceChildren();let income=0,expense=0;for(const item of state.finance){if(item.type==='income')income+=Number(item.amount||0);else expense+=Number(item.amount||0)}
