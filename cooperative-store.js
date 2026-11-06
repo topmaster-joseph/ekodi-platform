@@ -15,6 +15,21 @@ const integer = (value, min, max, nullable = false) => {
   return value;
 };
 
+// 연락처·사업자번호 표준 표기(2026-11-06/07). 빈 값은 '', 형식 오류는 null.
+export function coopPhone(value) {
+  const digits = String(value ?? '').replace(/[\s-]/g, '');
+  if (!digits) return '';
+  if (!/^0\d{8,10}$/.test(digits)) return null;
+  if (digits.startsWith('02')) return digits.length === 9 ? `02-${digits.slice(2, 5)}-${digits.slice(5)}` : `02-${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return digits.length === 10 ? `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}` : `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+}
+export function coopBusinessNumber(value) {
+  const digits = String(value ?? '').replace(/[\s-]/g, '');
+  if (!digits) return '';
+  if (!/^\d{10}$/.test(digits)) return null;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+}
+
 export function normalizeCooperativeState(input, coop, previous = cooperativeInitialState(coop)) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) fail('COOP_INVALID_STATE');
   // Reject tenant/identity fields rather than allowing a client to move a record.
@@ -45,7 +60,9 @@ export function normalizeCooperativeState(input, coop, previous = cooperativeIni
       return { ...old, representative: text(f.representative, 80) || fail('COOP_REPRESENTATIVE_REQUIRED'),
         business: text(f.business, 160) || null, industry: text(f.industry, 160) || null,
         shares: integer(f.shares ?? null, 1, 100000000, true),
-        consent: choice(f.consent || 'pending', ['pending', 'confirmed']), accountEmail: email || null };
+        consent: choice(f.consent || 'pending', ['pending', 'confirmed']), accountEmail: email || null,
+        ...('phone' in f ? { phone: (v => v === null ? fail('COOP_PHONE_INVALID') : v || null)(coopPhone(f.phone)) } : {}),
+        ...('businessNumber' in f ? { businessNumber: (v => v === null ? fail('COOP_BUSINESS_NUMBER_INVALID') : v || null)(coopBusinessNumber(f.businessNumber)) } : {}) };
     });
     const linked = state.founders.map(f => f.accountEmail).filter(Boolean);
     if (new Set(linked).size !== linked.length) fail('COOP_DUPLICATE_ACCOUNT');
