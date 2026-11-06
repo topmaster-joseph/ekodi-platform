@@ -2245,7 +2245,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2268,7 +2270,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2332,7 +2336,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2355,7 +2361,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2378,7 +2386,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2603,7 +2613,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2647,7 +2659,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2691,7 +2705,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2735,7 +2751,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2779,7 +2797,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2823,7 +2843,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2867,7 +2889,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
@@ -2911,7 +2935,9 @@
         ],
         "forbid": [
           "role=\"tablist\"",
-          "지역 공개정보"
+          "지역 공개정보",
+          "운영공간",
+          "data-ekodi-operating-space-label"
         ],
         "headerExpect": [
           "x-ekodi-route: regional-private-hold",
