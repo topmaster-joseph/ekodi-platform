@@ -266,6 +266,8 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     const grantsBefore = f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants').get().count;
     const tenantId = f.sqlite.prepare('SELECT id FROM customer_tenants WHERE slug=?').get(coop.slug)?.id;
     assert.ok(tenantId, 'Existing cooperative must have its own tenant');
+    const otherTenantGrantsBefore = f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants WHERE email=? AND tenant_id<>?')
+      .get('applicant@example.test', tenantId).count;
     // Current member self-join requires representative, verified phone and explicit consent.
     // No privilege is issued merely by visiting the member registration surface.
     assert.equal(f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants').get().count, grantsBefore);
@@ -283,8 +285,8 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     assert.equal(grant?.role, 'member', 'Self-join must never grant admin capabilities');
     assert.equal(grant?.enabled, 1);
     assert.equal(f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants').get().count, grantsBefore + 1);
-    assert.equal(f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants WHERE email=? AND tenant_id<>?').get('applicant@example.test', tenantId).count, 0,
-      'Self-join cannot authorize any other cooperative');
+    assert.equal(f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants WHERE email=? AND tenant_id<>?').get('applicant@example.test', tenantId).count, otherTenantGrantsBefore,
+      'Self-join cannot change a pre-existing grant for any other cooperative');
     proof(coop, 'explicit-consent-self-join-grants-only-member-in-own-tenant', { width: 390 });
     await applicantContext.close();
     const intakeContext = await contextFor(390, adminToken);
