@@ -107,6 +107,13 @@ function baseStyle(){
   .region-panel .card span:not(.card__tag){display:block;font-size:12px;line-height:1.5}
   .region-panel .card__arrow{display:none!important}
   @media(max-width:680px){.local-page .hero{padding:16px}.local-page .hero h1{font-size:30px}.region-browse__head{align-items:flex-start;flex-direction:column;gap:2px}.region-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.region-panel{padding:10px}.region-panel .grid{grid-template-columns:1fr}.region-panel .card{min-height:76px;padding:11px}}
+  .region-panel .region-subnav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .region-subnav__link{min-width:0;min-height:66px;display:flex;flex-direction:column;justify-content:center;gap:4px;border:1px solid #d4e1d8;border-radius:11px;padding:10px 12px;background:#fbfdfb;text-decoration:none;color:#164735}
+  .region-subnav__link b{font-size:14px;font-weight:900;line-height:1.25}
+  .region-subnav__link span{font-size:11px;line-height:1.4;color:#5a7267}
+  .region-subnav__link:hover,.region-subnav__link:focus-visible{background:#e5f2e9;border-color:#9dc2ae;outline:2px solid #7db294;outline-offset:0}
+  @media(max-width:700px){.region-panel .region-subnav{grid-template-columns:repeat(2,minmax(0,1fr))}.region-subnav__link{padding:10px}}
+  @media(max-width:400px){.region-panel .region-subnav{grid-template-columns:1fr}.region-subnav__link{min-height:52px}}
   @media(max-width:390px){.region-tab{font-size:13px;min-height:44px}.region-panel .card{gap:8px}}
   </style>`;
 }
@@ -146,8 +153,10 @@ function publicBody(region){
     {id:'events',label:'행사·일자리',desc:'지역 행사, 구인구직, 숲 프로젝트를 찾아보세요.',ids:['events','jobs','forest']},
     {id:'connect',label:'참여·연결',desc:'나눔·지역방송·의견제안과 상인회 소식을 만나보세요.',ids:['sharing','broadcast','proposals']},
   ];
-  const groupCards=group=>group.ids.map(id=>linkById.get(id)).filter(Boolean).map(publicCard).join('')
-    +(group.id==='connect'?publicCard({id:'cgma',name:'청계면상인회',tag:'단체',desc:'상인회 공개 활동과 소식',href:'/cgma',audiences:'resident student merchant organization'}):'');
+  // Every secondary tab is a real canonical route, not a simulated detail panel.
+  const subLink=item=>`<a class="region-subnav__link" href="${esc(item.href)}" data-audiences="${esc(item.audiences||'resident student merchant organization')}" aria-label="${esc(item.name)} 페이지 열기"><b>${esc(item.name)}</b><span>${esc(item.desc)}</span></a>`;
+  const subMenu=group=>group.ids.map(id=>linkById.get(id)).filter(Boolean).map(subLink).join('')
+    +(group.id==='connect'?subLink({id:'cgma',name:'청계면상인회',tag:'단체',desc:'상인회 공개 활동과 소식',href:'/cgma',audiences:'resident student merchant organization'}):'');
   return `<main class="local-page">
   <section class="hero"><div class="eyebrow">청계 지역 공통 플랫폼</div><h1>${esc(region.brand)}</h1><p class="lead">청계의 생활정보와 상점, 혜택, 행사, 일자리, 참여 소식을 분야별로 간편하게 찾아보세요.</p></section>
   <section class="region-browse" id="regional-tabs" aria-label="청계 지역정보">
@@ -155,7 +164,7 @@ function publicBody(region){
     <div class="region-tabs" role="tablist" aria-label="청계 지역정보 분류" data-region-tablist>
       ${groups.map((group,index)=>`<button class="region-tab" type="button" role="tab" id="region-tab-${group.id}" aria-controls="region-panel-${group.id}" aria-selected="${index===0?'true':'false'}" tabindex="${index===0?'0':'-1'}">${esc(group.label)}</button>`).join('')}
     </div>
-    ${groups.map((group,index)=>`<section class="region-panel" role="tabpanel" id="region-panel-${group.id}" aria-labelledby="region-tab-${group.id}"${index?' hidden':''}><p class="region-panel__intro">${esc(group.desc)}</p><div class="grid">${groupCards(group)}</div></section>`).join('')}
+    ${groups.map((group,index)=>`<section class="region-panel" role="tabpanel" id="region-panel-${group.id}" aria-labelledby="region-tab-${group.id}"${index?' hidden':''}><p class="region-panel__intro">${esc(group.desc)}</p><nav class="region-subnav" aria-label="${esc(group.label)} 세부 메뉴" data-region-subnav>${subMenu(group)}</nav></section>`).join('')}
   </section>
   </main>${renderRegionTabsScript()}`;
 }
