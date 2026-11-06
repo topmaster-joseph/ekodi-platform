@@ -14,6 +14,29 @@ const GITHUB_REPOSITORY='topmaster-joseph/ekodi-platform';
 const GITHUB_API='https://api.github.com';
 const REQUIRED_COMPLETION_WORKFLOWS=Object.freeze(['CI','EKODI AI Orchestration Gate']);
 const LIVE_HEALTH_URL='https://ekodi.kr/api/health';
+// Changes that cannot reach a production runtime trigger no `Deploy …` workflow.
+// Without this list such releases could never be verified and stayed `assigned`
+// forever (measured 2026-11-06: 1,435 release-recovery tasks). Conservative on
+// purpose: anything not listed still requires deployment evidence.
+const NON_DEPLOY_SURFACE=Object.freeze([
+  /^docs\//,/^eval\//,/^tests?\//,/^evidence\//,
+  /^[^/]+\.md$/,/^docs?\/.*\.md$/,
+  /^\.github\/workflows\/(?!deploy-)[^/]+\.ya?ml$/,
+  /^scripts\/(?:validate|verify|audit|detect)-[^/]+\.mjs$/,
+]);
+export function isNonDeploySurface(files){
+  return Array.isArray(files)&&files.length>0&&files.every(file=>typeof file==='string'&&NON_DEPLOY_SURFACE.some(rule=>rule.test(file)));
+}
+async function pullRequestFiles(number,{fetchImpl=fetch}={}){
+  const files=[];
+  for(let page=1;page<=3;page++){
+    const response=await fetchJson(`${GITHUB_API}/repos/${GITHUB_REPOSITORY}/pulls/${encodeURIComponent(number)}/files?per_page=100&page=${page}`,{fetchImpl});
+    if(!response.ok||!Array.isArray(response.data))return null;
+    files.push(...response.data.map(item=>text(item?.filename,400)));
+    if(response.data.length<100)return files;
+  }
+  return null; // too large to classify safely → keep requiring deployment evidence
+}
 
 function githubHeaders(){return {Accept:'application/vnd.github+json','User-Agent':'ekodi-orchestrator-completion-reconciler','X-GitHub-Api-Version':'2022-11-28'}}
 
@@ -85,7 +108,12 @@ export async function collectOrchestratorCompletionEvidence({taskId:id,branchRef
   }
 
   const triggeredDeployRuns=runs.filter(item=>/^Deploy\b/i.test(text(item?.name,160)));
-  if(!triggeredDeployRuns.length)return Object.freeze({verified:false,reason:'production_deployment_run_missing'});
+  let deploymentSurface='production';
+  if(!triggeredDeployRuns.length){
+    const files=await pullRequestFiles(pr.number,{fetchImpl});
+    if(!isNonDeploySurface(files))return Object.freeze({verified:false,reason:'production_deployment_run_missing'});
+    deploymentSurface='none';
+  }
   const deployRuns=[];
   for(const original of triggeredDeployRuns){
     let selected=original;
@@ -114,8 +142,8 @@ export async function collectOrchestratorCompletionEvidence({taskId:id,branchRef
       productionJobs:successfulProduction.map(job=>text(job.name,160)),
     }));
   }
-  if(!stagingVerified)return Object.freeze({verified:false,reason:'staging_evidence_missing'});
-  if(!productionVerified)return Object.freeze({verified:false,reason:'production_promotion_evidence_missing'});
+  if(deploymentSurface==='production'&&!stagingVerified)return Object.freeze({verified:false,reason:'staging_evidence_missing'});
+  if(deploymentSurface==='production'&&!productionVerified)return Object.freeze({verified:false,reason:'production_promotion_evidence_missing'});
 
   let healthResponse=null;
   try{healthResponse=await fetchImpl(LIVE_HEALTH_URL,{headers:{Accept:'application/json','User-Agent':'ekodi-orchestrator-completion-reconciler'},cache:'no-store'})}catch(error){return Object.freeze({verified:false,reason:'live_health_unavailable',detail:text(error?.message||error,120)})}
@@ -133,6 +161,7 @@ export async function collectOrchestratorCompletionEvidence({taskId:id,branchRef
       const run=runs.find(item=>item?.name===name);
       return Object.freeze({name,runId:Number(run.id),url:text(run.html_url,400),conclusion:run.conclusion});
     })),
+    deploymentSurface,
     deployments:Object.freeze(deploymentEvidence),
     live:Object.freeze({url:LIVE_HEALTH_URL,ok:true,service:text(health.service,120),version:health.version??null,verifiedAt:now()}),
   });
@@ -143,7 +172,7 @@ async function persistCompletionEvidence(db,row,evidence,{actor='ekodi-orchestra
   const updated=now();
   const existingEvidence=parseJson(row.evidence_json,[]);
   const evidenceList=Array.isArray(existingEvidence)?existingEvidence:[existingEvidence].filter(Boolean);
-  const completionRecord={kind:'production-completion-reconciliation',source:evidence.source,pr:evidence.pr,requiredWorkflows:evidence.requiredWorkflows,deployments:evidence.deployments,live:evidence.live};
+  const completionRecord={kind:'production-completion-reconciliation',source:evidence.source,pr:evidence.pr,requiredWorkflows:evidence.requiredWorkflows,deploymentSurface:evidence.deploymentSurface||'production',deployments:evidence.deployments,live:evidence.live};
   const previousResult=parseJson(row.result_json,{});
   const resultJson={...(previousResult&&typeof previousResult==='object'&&!Array.isArray(previousResult)?previousResult:{}),ok:true,completion:'reconciled',mergeCommitSha:evidence.pr.mergeCommitSha,completedBy:'ekodi-orchestrator'};
   const result=await db.prepare(`UPDATE ekodi_orchestrator_tasks SET state='completed',state_version=state_version+1,pr_ref=?,
