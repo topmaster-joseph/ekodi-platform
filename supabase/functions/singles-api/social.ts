@@ -398,6 +398,11 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   if(!result.ok)return reply(req,{error:'identity_provider_unavailable'},502);
   const iv=result.data;
   if(iv?.status!=='VERIFIED'||iv?.id!==id)return reply(req,{error:'identity_not_verified'},409);
+  // 테스트 채널 결과는 실제 본인확인이 아니므로 성인 확인으로 쓰지 않는다(실연동 채널만 인정).
+  if(iv?.channel?.type!=='LIVE'&&Deno.env.get('SINGLES_IDENTITY_ALLOW_TEST')!=='true'){
+   await admin.from('singles_identity_verifications').update({status:'failed'}).eq('id',id).eq('user_id',userId);
+   return reply(req,{error:'identity_test_channel'},409);
+  }
   const adult=isAdult(iv?.verifiedCustomer?.birthDate);
   const ci=typeof iv?.verifiedCustomer?.ci==='string'&&iv.verifiedCustomer.ci?iv.verifiedCustomer.ci:'';
   const ciHash=ci?await sha256hex('ekodi-singles:'+ci):null;
