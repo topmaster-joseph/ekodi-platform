@@ -113,11 +113,12 @@ try{
       const diag=await runTask({
         taskId:`points-member-${run}-diag`,
         path:`/points/?site=${site}#ekodi_token=${diagHash}&ekodi_type=magiclink`,
-        deviceProfile:'desktop',allowMutation:false,timeoutMs:60000,
+        // allowMutation only so the auth handoff POST (verifyOtp) can run; no form is submitted.
+        deviceProfile:'desktop',allowMutation:true,timeoutMs:60000,
         actions:[
           {type:'waitFor',selector:'#pointsTabProgress',timeoutMs:15000},
           {type:'click',selector:'#pointsTabProgress'},
-          {type:'waitFor',selector:'#pointsProgressContent:not([hidden]), #pointsProgressNotice:has-text("확인할 수 없습니다"), #loginLink:not([hidden]), #notice:has-text("실패"), #notice:has-text("준비 중")',timeoutMs:15000},
+          {type:'waitFor',selector:'#pointsProgressContent:not([hidden]), #pointsProgressNotice:has-text("확인할 수 없습니다"), #loginLink:not([hidden]), #pointsTabEmpty:not([hidden])',timeoutMs:15000},
           {type:'snapshot'},
         ],
       },{artifactRoot:dir});
