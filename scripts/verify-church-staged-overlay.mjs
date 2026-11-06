@@ -35,6 +35,12 @@ const EXPECTED=new Map(Object.entries({
   'test/church-selected-panel-runtime.test.mjs':'cdb5a6c62e25e87ac729d24f3adb204a62b4c94d',
   'test/together-page.test.mjs':'b2d64ebdbfe1b452ae92d0af778072a9276d5346'
 }));
+const NORMALIZED=new Map(Object.entries({
+  'church-i18n-extended.js':'d12249a1a80f159bb6ab73630717e5464270ea70',
+  'church-i18n.js':'58528eb8d75af1534f5d7181b105149985f6029a',
+  'index.html':'50c906bb14756f2ae724c1283852ce86ce17b5e8',
+  'script.js':'6227e5babac6e704398f85832776fe403fe64276'
+}));
 const fail=reason=>{throw new Error('Church review overlay: '+reason)};
 const gitBlobSHA=bytes=>createHash('sha1').update(Buffer.from('blob '+bytes.length+'\0')).update(bytes).digest('hex');
 const allowedPath=path=>{
@@ -108,23 +114,25 @@ export async function verifyChurchStagedOverlay({repoRoot=resolve('.'),overlayDi
        item.provenance?.headSha!==head)
       fail('source git blob receipt mismatch: '+path);
     const bytes=await readSafe(join(overlay,'files'),path);
-    // This one upstream file contained three deprecated host references. The
-    // staged version must use approved apex paths, while preserving its exact
-    // *original* upstream Git blob SHA as the separate provenance receipt.
-    const normalized=path==='script.js';
-    const finalSha=normalized?'d4513fd9701dd268a5ff395f5d67cce884023695':expectedSha;
-    if(normalized){
-      if(item.normalizedBlobSha!==finalSha||
-         item.normalization!=='replace-obsolete-EKODI-subdomain-URLs-with-canonical-paths-v1')
-        fail('script normalization was not independently approved');
-      const content=bytes.toString('utf8');
-      for(const url of [
-        'https://ekodi.kr/community',
-        'https://ekodi.kr/api/social/registry',
-        'https://ekodi.kr/social/?org=church'
-      ])if(!content.includes(url))fail('approved canonical target absent: '+url);
-      if(/https:\/\/[a-z0-9-]+\.ekodi\.kr/i.test(content))
-        fail('legacy host still referenced by staged script');
+    // The exact upstream Git blobs remain pinned. Output-only normalization
+    // matches the already approved canonical platform naming and route policy.
+    const finalSha=NORMALIZED.get(path)||expectedSha;
+    const expectedRule=path==='script.js'
+      ?'apex-paths-and-prefix-free-display-names-v1'
+      :'prefix-free-display-names-v1';
+    if(NORMALIZED.has(path)){
+      if(item.normalizedBlobSha!==finalSha||item.normalization!==expectedRule)
+        fail('missing independently approved normalization: '+path);
+      if(path==='script.js'){
+        const content=bytes.toString('utf8');
+        for(const url of [
+          'https://ekodi.kr/community',
+          'https://ekodi.kr/api/social/registry',
+          'https://ekodi.kr/social/?org=church'
+        ])if(!content.includes(url))fail('approved canonical target absent: '+url);
+        if(/https:\/\/[a-z0-9-]+\.ekodi\.kr/i.test(content))
+          fail('separate-host URL still referenced by staged script');
+      }
     }else if(item.normalizedBlobSha||item.normalization)
       fail('unexpected source normalization: '+path);
     if(gitBlobSHA(bytes)!==finalSha)fail('staged source content differs from approved blob SHA: '+path);
