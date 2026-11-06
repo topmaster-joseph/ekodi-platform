@@ -109,8 +109,8 @@ try{
   // Read-only diagnostics: what the member actually sees (fresh single-use links).
   if(target==='member'){
     const probes=[
-      ['wallet',[{type:'waitFor',selector:'#balanceView:not([hidden]), #notice:not(:empty)',timeoutMs:15000},{type:'snapshot'}]],
-      ['progress',[{type:'waitFor',selector:'#balanceView:not([hidden]), #notice:not(:empty)',timeoutMs:15000},
+      ['wallet',[{type:'waitFor',selector:'#balanceView:not([hidden]), #notice:not(:empty):not(:has-text("있습니다"))',timeoutMs:15000},{type:'snapshot'}]],
+      ['progress',[{type:'waitFor',selector:'#balanceView:not([hidden]), #notice:not(:empty):not(:has-text("있습니다"))',timeoutMs:15000},
         {type:'click',selector:'#pointsTabProgress'},
         {type:'waitFor',selector:'#pointsProgressContent:not([hidden]), #pointsProgressNotice:has-text("확인할 수 없습니다"), #pointsTabEmpty:not([hidden])',timeoutMs:15000},
         {type:'snapshot'}]],
