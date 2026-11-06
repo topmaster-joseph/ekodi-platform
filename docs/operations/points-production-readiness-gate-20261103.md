@@ -40,3 +40,10 @@ Possible states: `prerequisites_missing`, `points_not_installed`, `points_partia
 The development goals migration and person-leading index are present and the isolated SQL contracts passed. A missing shared-email duplicate-referral denial migration was additionally applied in development and the `REFERRAL_SHARED_EMAIL_SMOKE_PASS` synthetic rollback test passed. Production remains unchanged. Supabase's intentional private-schema `rls_enabled_no_policy` information and authenticated SECURITY DEFINER RPC warning require continued source-verified least-privilege review, not bulk privilege grants.
 
 Do not merge worker PRs directly, disable CI, create secret credentials as a workaround, or substitute a passing UI check for live account credit verification.
+
+## 2026-11-07 live read-only security checkpoint
+
+- Authenticated Supabase inventory: production has canonical people/tenant prerequisites but **no points sites, rules, ledger, evidence claims, private recognition goals, recognition RPCs or points-api**. Development has those objects and an ACTIVE, JWT-verified points-api.
+- Development catalogue reports **17 points-owned tables** across `public.ekodi_point_*` and `ekodi_points_private`, all with RLS enabled; `anon` has no direct SELECT/INSERT/UPDATE/DELETE, and `authenticated` has no direct INSERT/UPDATE/DELETE.
+- Read-only `points_tables_secure` preflight checks every matching table, requires at least one table, and fails if any table loses RLS, allows anonymous table access or allows direct authenticated writes. Missing production tables return false.
+- This is a **security gate only**. It does not install schema, alter grants, activate earning, authorize redemption, or certify production. No member points are spendable based on this checkpoint.

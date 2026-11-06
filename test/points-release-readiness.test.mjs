@@ -36,6 +36,10 @@ test('partial or insecure schema must never pass release contract',()=>{
     migrations:applied,functions,expected});
   assert.equal(insecure.state,'points_contract_incomplete');
   assert.deepEqual(insecure.missing_contracts,['anon_goals_denied']);
+  const exposedTables=assess({schema:{...completeSchema,points_tables_secure:false},
+    migrations:applied,functions,expected});
+  assert.equal(exposedTables.state,'points_contract_incomplete');
+  assert.deepEqual(exposedTables.missing_contracts,['points_tables_secure']);
   const missingJwt=assess({schema:completeSchema,migrations:applied,
     functions:[{slug:'points-api',status:'ACTIVE',verify_jwt:false}],expected});
   assert.equal(missingJwt.state,'points_contract_incomplete');
@@ -73,6 +77,10 @@ test('real management requests are read-only, strictly project-scoped, never exp
   assert.deepEqual(requests.map(x=>x.method),['POST','POST','GET']);
   assert.ok(requests.every(x=>x.authorization==='Bearer test-only-secret'));
   assert.doesNotMatch(JSON.stringify(result),/test-only-secret/);
+  assert.match(SCHEMA_QUERY,/bool_and\(/);
+  assert.match(SCHEMA_QUERY,/c\.relrowsecurity/);
+  assert.match(SCHEMA_QUERY,/has_table_privilege\('anon'/);
+  assert.match(SCHEMA_QUERY,/has_table_privilege\('authenticated'/);
   for(const query of [SCHEMA_QUERY,MIGRATION_QUERY])
     assert.doesNotMatch(query,/^\s*(?:insert|update|delete|drop|truncate|alter|create|grant|revoke|call)\b/im);
 });
