@@ -108,8 +108,27 @@ export async function verifyChurchStagedOverlay({repoRoot=resolve('.'),overlayDi
        item.provenance?.headSha!==head)
       fail('source git blob receipt mismatch: '+path);
     const bytes=await readSafe(join(overlay,'files'),path);
-    if(gitBlobSHA(bytes)!==expectedSha)fail('staged source content differs from approved blob SHA: '+path);
-    verified.push({path,blobSha:expectedSha,bytes});
+    // This one upstream file contained three deprecated host references. The
+    // staged version must use approved apex paths, while preserving its exact
+    // *original* upstream Git blob SHA as the separate provenance receipt.
+    const normalized=path==='script.js';
+    const finalSha=normalized?'d4513fd9701dd268a5ff395f5d67cce884023695':expectedSha;
+    if(normalized){
+      if(item.normalizedBlobSha!==finalSha||
+         item.normalization!=='replace-obsolete-EKODI-subdomain-URLs-with-canonical-paths-v1')
+        fail('script normalization was not independently approved');
+      const content=bytes.toString('utf8');
+      for(const url of [
+        'https://ekodi.kr/community',
+        'https://ekodi.kr/api/social/registry',
+        'https://ekodi.kr/social/?org=church'
+      ])if(!content.includes(url))fail('approved canonical target absent: '+url);
+      if(/https:\/\/[a-z0-9-]+\.ekodi\.kr/i.test(content))
+        fail('legacy host still referenced by staged script');
+    }else if(item.normalizedBlobSha||item.normalization)
+      fail('unexpected source normalization: '+path);
+    if(gitBlobSHA(bytes)!==finalSha)fail('staged source content differs from approved blob SHA: '+path);
+    verified.push({path,sourceBlobSha:expectedSha,blobSha:finalSha,bytes});
   }
   if(seen.size!==EXPECTED.size)fail('incomplete audited source copy');
   const decode=path=>verified.find(v=>v.path===path)?.bytes.toString('utf8')||'';
