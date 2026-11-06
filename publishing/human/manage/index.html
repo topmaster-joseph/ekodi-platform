@@ -27,6 +27,8 @@ th{color:var(--sub);font-size:.85rem}tr:hover td{background:#f8faf9}
 .formline input,.formline select{width:100%}.digest-fields input[type=file]{min-width:0;width:100%;font-size:.85rem;max-width:100%}.digest-fields input[readonly]{font-size:.84rem;background:#f7faf8;overflow:hidden;text-overflow:ellipsis}.digest-fields label{min-width:0}
 output{display:block;white-space:pre-line;color:#154b46;font-size:.9rem}
 summary{cursor:pointer;font-weight:650}details{margin:.6rem 0}
+.check{display:flex;align-items:center;gap:.45rem;font-weight:600}.check input[type=checkbox]{min-width:0;width:1.1rem;height:1.1rem;padding:0;margin:0}
+td .tag{display:inline-block}td:nth-child(4),td:nth-child(5),td:nth-child(6){white-space:nowrap}
 .warning{border-left:3px solid #b07b31;padding:.45rem .8rem;background:#fff9ed;color:#714718}
 footer .shell{padding:1.2rem 0;color:var(--sub)}
 .toolbar-actions{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
@@ -49,19 +51,19 @@ footer .shell{padding:1.2rem 0;color:var(--sub)}
 <p class="hint" id="editionInfo"></p>
 <div class="formline digest-fields">
 <label>원고 파일 선택 (DOCX·PDF·EPUB·TXT)<input id="manuscriptFile" type="file" accept=".docx,.pdf,.epub,.txt,.md" aria-describedby="digestHelp"></label>
-<label>원고 SHA-256 지문 (자동 계산)<input id="manuscriptDigest" readonly maxlength="64" placeholder="원고 파일을 선택하면 자동 계산됩니다"></label>
+<label>원고 확인 코드 (자동)<input id="manuscriptDigest" readonly maxlength="64" placeholder="원고 파일을 선택하면 자동 계산됩니다"></label>
 <label>최종 출간 파일 선택 (EPUB·PDF·DOCX)<input id="releaseFile" type="file" accept=".epub,.pdf,.docx" aria-describedby="digestHelp"></label>
-<label>최종 출간 파일 SHA-256 지문<input id="releaseDigest" readonly maxlength="64" placeholder="출간 정본 파일을 선택하면 자동 계산됩니다"></label></div>
-<p id="digestHelp" class="hint">기기에서 파일을 선택하면 SHA-256 지문만 계산합니다. 이 단계에서 파일 내용은 서버로 전송·입고되지 않습니다. 구글 문서는 먼저 DOCX로 내보낸 뒤 선택하세요. 정식 원고 입고와 출판·판매 승인은 별도 절차입니다.</p>
+<label>출간 파일 확인 코드 (자동)<input id="releaseDigest" readonly maxlength="64" placeholder="출간 정본 파일을 선택하면 자동 계산됩니다"></label></div>
+<p id="digestHelp" class="hint">파일을 고르면 내용 대신 확인 코드(SHA-256 지문)만 계산합니다. 이 단계에서 파일 내용은 서버로 전송·입고되지 않습니다. 구글 문서는 먼저 DOCX로 내보낸 뒤 선택하세요. 정식 원고 입고와 출판·판매 승인은 별도 절차입니다.</p>
 <p id="digestStatus" role="status" aria-live="polite" class="hint"></p>
 <div class="actions" id="actions"></div><output id="result"></output>
 <details><summary>AI 집필 보조 요청 (무료·대기열)</summary><p><a href="/author/#studio">기존 Creator AI에서 실제 원고 집필 계속하기</a></p>
 <form id="aiForm"><label>요청 유형<select name="kind"><option value="research">자료 조사</option><option value="outline">구성·목차</option><option value="draft">초고 작성</option><option value="revision">재집필</option><option value="fact_check">사실 검토</option><option value="literary_edit">문학적 퇴고</option><option value="accessibility">접근성 검토</option></select></label>
-<label><input type="checkbox" name="consent" required> 원고 작업에 AI를 사용하는 데 동의합니다.</label><button>무료 AI 작업 요청</button></form><p class="hint">승인 전 유료 모델을 호출하지 않습니다. 요청 등록은 AI 작업 완료를 뜻하지 않습니다.</p>
+<label class="check"><input type="checkbox" name="consent" required> 원고 작업에 AI를 사용하는 데 동의합니다.</label><button>무료 AI 작업 요청</button></form><p class="hint">승인 전 유료 모델을 호출하지 않습니다. 요청 등록은 AI 작업 완료를 뜻하지 않습니다.</p>
 <div id="aiJobs" class="hint"></div></details>
-<details><summary>편집자 검수 증빙 등록</summary>
+<details><summary>편집자 검수 증빙 등록 (편집자 전용·고급)</summary>
 <p class="hint">정본 파일과 EPUBCheck·권리·서지·읽기 접근성·판매채널 검수 결과를 확인한 편집자만 등록합니다. 검증 전 임의로 모든 항목을 통과 처리하지 마세요.</p>
-<label>검수 증빙 JSON<textarea id="releaseEvidence" spellcheck="false" placeholder='{"rights":{"licenseChecked":true}, ...}'></textarea></label>
+<label>검수 결과 기록 (편집 도구가 만든 JSON을 붙여 넣기)<textarea id="releaseEvidence" spellcheck="false" placeholder='{"rights":{"licenseChecked":true}, ...}'></textarea></label>
 <button id="saveEvidence" class="secondary" type="button">검수 증빙 기록</button></details>
 </section>
 <section class="panel"><h2>판매 예약 관리 원칙</h2><p>예약은 최종 원고 지문에 묶이고, 작성·검수·저자 승인·발행자 승인·예약의 순서대로 진행됩니다. 예약 시간은 한국시간으로 입력하고 서버에는 UTC로 저장합니다. 예약 시간이 되어도 서점·몰 등록은 별도 서명 인계 검증이 필요합니다.</p><p class="hint">제1권 판매 정본 및 미완성 에코디언 제2~5권은 기존 판매 자산과 분리 보호됩니다.</p></section>
