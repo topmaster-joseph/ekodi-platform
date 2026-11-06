@@ -9,9 +9,9 @@ import {regionalCommerceProgramPublicPage} from '../regional-commerce-program-pa
 
 const region=localRegionBySlug('cheonggye');
 
-function simulateTabs(html,prefix,initialHash=''){
+function simulateTabs(html,prefix,initialHash='',expectedCount=4){
   const buttons=[...html.matchAll(new RegExp('id="('+prefix+'-tab-[^"]+)" aria-controls="([^"]+)"','g'))];
-  assert.equal(buttons.length,4,'expected four selectable information tabs');
+  assert.equal(buttons.length,expectedCount,'expected accessible selectable information tabs');
   const panelById=new Map(buttons.map(([,id,panelId])=>[panelId,{hidden:false}]));
   const tabs=buttons.map(([,id,panelId])=>{
     const attrs={'aria-controls':panelId};
@@ -51,6 +51,8 @@ test('Cheonggye exposes each registered public module and no dangling homepage a
   assert.equal((html.match(/role="tabpanel"/g)||[]).length,4);
   assert.match(html,/max-width:680px/);
   assert.match(html,/max-width:390px/);
+  assert.equal((html.match(/data-region-subnav/g)||[]).length,4);
+  assert.match(html,/class="region-subnav__link"/);
 });
 
 test('Cheonggye tabs activate requested deep link and support arrow-key navigation',async()=>{
@@ -74,15 +76,15 @@ test('Cheonggye tabs activate requested deep link and support arrow-key navigati
 test('CGPASS public tabs keep unlaunched benefits honest, and link to real regional pages',async()=>{
   const pass=regionalCommerceProgramById('cheonggye-pass');
   const html=await regionalCommerceProgramPublicPage(region,pass).text();
-  for(const name of ['참여점포','쿠폰·할인','포인트·상품권','이용 안내'])assert.ok(html.includes(name));
+  for(const name of ['참여점포','쿠폰·할인','포인트','상품권','이용 안내'])assert.ok(html.includes(name));
   assert.match(html,/서비스 준비 중/);
   assert.match(html,/href="\/cheonggye\/commerce"/);
   assert.match(html,/href="\/cheonggye"/);
   assert.match(html,/href="\/cgma"/);
   assert.doesNotMatch(html,/\/cheonggye\/admin/);
   assert.doesNotMatch(html,/결제하기|포인트 사용하기|쿠폰 발급하기/);
-  const {tabs,panelById}=simulateTabs(html,'pass','#pass-tab-guide');
-  assert.equal(tabs[3].attrs['aria-selected'],'true');
+  const {tabs,panelById}=simulateTabs(html,'pass','#pass-tab-guide',5);
+  assert.equal(tabs[4].attrs['aria-selected'],'true');
   assert.equal(panelById.get('pass-panel-guide').hidden,false);
   assert.equal(panelById.get('pass-panel-stores').hidden,true);
 });
