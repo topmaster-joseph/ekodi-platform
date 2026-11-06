@@ -12,7 +12,17 @@ const text=(node,value)=>{if(node)node.textContent=String(value??'')};
 const dateText=value=>{if(!value)return'';try{return new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}catch{return String(value)}};
 
 // legacy site','portal is intentionally rejected here; independent-domain admin auth uses the seonammedi realm.
-function adminReturnUrl(){const internal=location.hostname==='ekodi.kr'&&(location.pathname==='/seonammedi/admin'||location.pathname.startsWith('/seonammedi/admin/'));return location.origin+(internal?'/seonammedi/admin/':'/admin/')}
+function adminReturnUrl(){
+  const internal=location.hostname==='ekodi.kr'&&(location.pathname==='/seonammedi/admin'||location.pathname.startsWith('/seonammedi/admin/'));
+  const next=new URL(internal?'/seonammedi/admin/':'/admin/',location.origin);
+  // Preserve only supported admin navigation, never OAuth fragments or arbitrary query data.
+  const current=new URLSearchParams(location.search);
+  const panel=current.get('panel');
+  if(['dashboard','finance','minutes','access','organization','voices','notices'].includes(panel))next.searchParams.set('panel',panel);
+  const org=current.get('org');
+  if(panel==='organization'&&['bidae','mokpo','minhak'].includes(org))next.searchParams.set('org',org);
+  return next.href;
+}
 function authUrl(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','seonammedi');u.searchParams.set('direct','1');u.searchParams.set('return_to',adminReturnUrl());return u.href}
 function storedSession(){try{const value=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');return value?.accessToken?value:null}catch{return null}}
 function saveSession(value){sessionStorage.setItem(SESSION_KEY,JSON.stringify(value))}
@@ -96,8 +106,13 @@ function writeAdminRoute(panel,{org=null,records=null,replace=false}={}){
 function showPanel(name,{route=true,replace=false}={}){
   const target=ADMIN_ROUTE_PANELS.has(name)?name:'dashboard';
   qsa('[data-panel]').forEach(node=>{const active=node.dataset.panel===target;node.hidden=!active;node.classList.toggle('active',active)});
-  qsa('[data-panel-target]').forEach(node=>node.classList.toggle('active',node.dataset.panelTarget===target));
+  qsa('[data-panel-target]').forEach(node=>{
+    const active=node.dataset.panelTarget===target;
+    node.classList.toggle('active',active);
+    if(active)node.setAttribute('aria-current','page');else node.removeAttribute('aria-current');
+  });
   if(route)writeAdminRoute(target,{replace});
+  document.dispatchEvent(new CustomEvent('seonammedi:panel-change',{detail:{panel:target}}));
 }
 function restoreAdminRoute({replace=false}={}){
   const params=new URLSearchParams(location.search);
@@ -109,8 +124,16 @@ function restoreAdminRoute({replace=false}={}){
   if(panel==='organization')showOrgAdminTab(params.get('org')||'bidae',{route:false});
   if(replace)writeAdminRoute(panel,{org:panel==='organization'?(params.get('org')||'bidae'):null,replace:true});
 }
-qsa('[data-panel-target]').forEach(button=>button.addEventListener('click',()=>showPanel(button.dataset.panelTarget)));
-qsa('[data-go]').forEach(button=>button.addEventListener('click',()=>showPanel(button.dataset.go)));
+function navigateAdminPanel(event,node,panel){
+  // Normal clicks stay in the SPA; modifier and middle clicks keep native link behavior.
+  if(node.tagName==='A'){
+    if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+    event.preventDefault();
+  }
+  showPanel(panel);
+}
+qsa('[data-panel-target]').forEach(node=>node.addEventListener('click',event=>navigateAdminPanel(event,node,node.dataset.panelTarget)));
+qsa('[data-go]').forEach(node=>node.addEventListener('click',event=>navigateAdminPanel(event,node,node.dataset.go)));
 addEventListener('popstate',()=>restoreAdminRoute());
 
 function tag(label,cls=''){const span=document.createElement('span');span.className='tag '+cls;span.textContent=label;return span}
@@ -125,8 +148,11 @@ function updateDashboard(){
   text($('scopeSummary'),me.platform?'최고관리자 권한으로 이 사이트를 관리하고 있습니다.':(perms.length?perms.join('·')+' 관리 권한만 부여된 사이트 범위 관리자입니다.':'조회 권한만 있습니다.'));
   text($('adminIdentity'),me.email||'');text($('accessEmail'),me.email||'-');text($('accessRole'),adminRoleLabel(me));
   text($('accessPages'),me.permissions?.pages?'현재상황·조직구성 수정 가능':'권한 없음');const runHealth=$('runSiteHealth');if(runHealth)runHealth.hidden=!me.permissions?.health;text($('accessTimeline'),me.permissions?.timeline?'등록·수정·게시여부 선택 가능':'권한 없음');text($('accessVoices'),me.permissions?.voices?'접수내용 조회·상태변경·삭제 가능':'권한 없음');text($('accessFinance'),me.permissions?.finance?'회계내역 등록·수정·삭제 가능':'권한 없음');text($('accessContent'),me.permissions?.content?'분류·게시여부 선택 가능':'권한 없음');text($('accessNotice'),me.permissions?.notices?'작성·수정·삭제 가능':'권한 없음');text($('accessChannel'),me.permissions?.channels?'추가·수정·숨김·삭제 가능':'권한 없음');
-  const navVisibility={organization:Boolean(me.permissions?.pages),voices:Boolean(me.permissions?.voices),notices:Boolean(me.permissions?.notices),finance:Boolean(me.permissions?.finance)};
-  for(const [panel,visible] of Object.entries(navVisibility)){const node=qs('[data-panel-target="'+panel+'"]');if(node)node.hidden=!visible}
+  const navVisibility={organization:Boolean(me.permissions?.pages),voices:Boolean(me.permissions?.voices),notices:Boolean(me.permissions?.notices),finance:Boolean(me.permissions?.finance),minutes:Boolean(me.permissions?.pages)};
+  for(const [panel,visible] of Object.entries(navVisibility)){
+    const node=qs('[data-panel-target="'+panel+'"]');if(node)node.hidden=!visible;
+    qsa('[data-go="'+panel+'"]').forEach(shortcut=>{shortcut.hidden=!visible});
+  }
 }
 
 
@@ -499,5 +525,6 @@ async function init(refresh=false){
     console.error(error);
   }
 }
+restoreAdminRoute(); // Show the requested panel immediately; do not flash dashboard during API loading.
 init();
 })();
