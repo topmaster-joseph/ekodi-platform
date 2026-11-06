@@ -47,8 +47,8 @@ test('Toss underwriting filters hide all verified-empty categories without remov
   assert.ok(requested.every(x=>x.method==='GET'&&x.credentials==='omit'));
   for(const cat of [...cats,'local']){
     assert.equal(nodes[cat].hidden,true,cat);
-    if(links[cat]){assert.equal(links[cat].hidden,false,cat+' shortcut remains visible');assert.equal(links[cat].dataset.mallEmptyCategory,'true');}
-    if(headerLinks[cat]){assert.equal(headerLinks[cat].hidden,false,cat+' header navigation remains visible');assert.equal(headerLinks[cat].dataset.mallEmptyCategory,'true');}
+    if(links[cat]){assert.equal(links[cat].hidden,true,cat+' confirmed-empty shortcut is hidden');assert.equal(links[cat].dataset.mallEmptyCategory,'true');}
+    if(headerLinks[cat]){assert.equal(headerLinks[cat].hidden,true,cat+' confirmed-empty header navigation is hidden');assert.equal(headerLinks[cat].dataset.mallEmptyCategory,'true');}
   }
   assert.equal(nodes.all.hidden,false);
 });
@@ -67,7 +67,7 @@ test('deep linked empty category stays selected, shows no checkout offers, and d
   const {nodes,headerLinks}=await simulate({selected:'book'});
   assert.equal(nodes.book.hidden,true);
   assert.equal(nodes.all.clicked,0);
-  assert.equal(headerLinks.book.hidden,false);
+  assert.equal(headerLinks.book.hidden,true);
   assert.equal(headerLinks.book.dataset.mallEmptyCategory,'true');
 });
 test('Mall build loads the guard and styles hidden categories without enabling checkout',()=>{
@@ -75,7 +75,7 @@ test('Mall build loads the guard and styles hidden categories without enabling c
   assert.ok(template.includes('실제 판매 가능한 상품만 목록에 표시합니다.'));
   assert.ok(template.includes('회원가입 없이 비회원 카드결제를 이용할 수 있습니다.'));
   assert.match(css,/#filters \[data-filter\]\[hidden\]/);
-  assert.doesNotMatch(css,/\.mall-primary-nav \[data-filter-target\]\[hidden\]\{display:none/);
+  assert.match(css,/\.mall-primary-nav a\[data-filter-target\]\[hidden\]/);
   assert.match(css,/\.mall-primary-nav \[data-mall-empty-category="true"\]/);
   assert.doesNotMatch(script,/requestPayment\(|confirmPayment\(|TOSS_SECRET_KEY|method:\s*['"]POST['"]/);
 });
@@ -100,7 +100,7 @@ test('weekly picks and affiliate pages use the same guarded category availabilit
   await tick();await tick();await tick();
   assert.equal(links.book.hidden,false,'published static sale-ready books remain in the shared menu');
   for(const cat of ['general','living','gift']){
-    assert.equal(links[cat].hidden,false,cat+' navigation stays visible without active products');
+    assert.equal(links[cat].hidden,true,cat+' verified-empty navigation must be hidden');
     assert.equal(links[cat].dataset.mallEmptyCategory,'true');
   }
   assert.ok(calls.includes('/ekodimall/category-availability.json'));
@@ -120,12 +120,12 @@ test('unknown static category availability never hides a menu item on API errors
   assert.equal(links[0].hidden,false);
 });
 
-test('all category routes remain visible while the empty sale filters cannot enable checkout',async()=>{
+test('empty-category nav is hidden while direct category URLs remain valid and cannot enable checkout',async()=>{
   const {nodes,links,headerLinks}=await simulate();
   for(const cat of cats){
     assert.equal(nodes[cat].hidden,true);
-    assert.equal(headerLinks[cat].hidden,false);
-    assert.equal(links[cat].hidden,false);
+    assert.equal(headerLinks[cat].hidden,true);
+    assert.equal(links[cat].hidden,true);
     assert.match(headerLinks[cat].title,/현재 판매 가능한 상품이 없어/);
   }
   assert.doesNotMatch(script,/requestPayment\(|confirmPayment\(|TOSS_SECRET_KEY/);
