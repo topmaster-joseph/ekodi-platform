@@ -140,7 +140,13 @@
       ['중요 안내','미배정 금액은 환급 확정액이 아니며, 아래 기록은 수동 입력된 증빙입니다.'],
     ];
     for(const c of x.cycles)rows.push([c.cycle+'개월차 결제',c.paidOn+' / '+c.amount+'원 / '+c.receiptRef]);
-    const csv='\uFEFF'+rows.map(row=>row.map(value=>'"'+String(value??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+    // Guard Excel/spreadsheet formula injection from organization/user-supplied text.
+    const safeCell=value=>{
+      const raw=String(value??'');
+      const clean=/^[=+@-\t\r]/.test(raw)?"'"+raw:raw;
+      return '"'+clean.replace(/"/g,'""')+'"';
+    };
+    const csv='\uFEFF'+rows.map(row=>row.map(safeCell).join(',')).join('\r\n');
     const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
     const link=document.createElement('a');
     link.href=url;link.download='EKODIBIZ-AI-정산-'+x.id+'.csv';
