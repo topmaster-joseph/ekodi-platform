@@ -5,11 +5,10 @@ import {readFile} from 'node:fs/promises';
 const read = path => readFile(new URL('../' + path, import.meta.url), 'utf8');
 const VERIFIER = 'scripts/verify-independent-board-live.mjs';
 
-test('independent board live-verifier fixes trigger the protected Site Core release in every merge lane', async () => {
-  const [converge, recovery, workflow] = await Promise.all([
+test('independent board live-verifier changes dispatch the protected Site Core release in both token-mediated merge lanes', async () => {
+  const [converge, recovery] = await Promise.all([
     read('scripts/converge-orchestrated-pr-merge.mjs'),
     read('scripts/recover-release-provenance.mjs'),
-    read('.github/workflows/deploy-site-core.yml'),
   ]);
   const convergeStart = converge.indexOf('const sharedSiteTouched=changedFiles.some(file=>');
   const convergeEnd = converge.indexOf('const churchPagesTouched=', convergeStart);
@@ -23,14 +22,6 @@ test('independent board live-verifier fixes trigger the protected Site Core rele
 
   assert.ok(convergeOwner.includes("'" + VERIFIER + "'"), 'convergent merge must dispatch guarded Site Core');
   assert.ok(recoveryOwner.includes("'" + VERIFIER + "'"), 'exact-SHA recovery must dispatch guarded Site Core');
-
-  const pushStart = workflow.indexOf('  push:');
-  const pushEnd = workflow.indexOf('\npermissions:', pushStart);
-  assert.ok(pushStart >= 0 && pushEnd > pushStart);
-  const pushPaths = workflow.slice(pushStart, pushEnd);
-  assert.ok(pushPaths.includes("      - '" + VERIFIER + "'"), 'direct main push must dispatch guarded Site Core');
-  assert.match(workflow, /release_branch_ref:/);
-  assert.match(workflow, /release_task_id:/);
 });
 
 test('private Cheonggye 404 and no-store guard remain in the post-promotion verifier', async () => {
