@@ -53,3 +53,39 @@ test('Shell bundle starts unified auth fetch alongside all static fragments on c
   assert.equal(response.status,200);
   assert.match(await response.text(),/unified-user-auth\.js/);
 });
+
+test('public shared Shell is parser-nonblocking while admin and workspace boot timing stays unchanged', async () => {
+  const {injectEkodiShell}=await import('../ekodi-shell-injector.js');
+  const originalRewriter=globalThis.HTMLRewriter;
+  const insertions=[];
+  class FakeHTMLRewriter {
+    on(selector,handler){
+      if(selector==='head')handler.element({
+        prepend(html){insertions.push(html);},
+        append(html){insertions.push(html);},
+      });
+      return this;
+    }
+    transform(response){return response;}
+  }
+  globalThis.HTMLRewriter=FakeHTMLRewriter;
+  const scriptFor=(service,surface)=>{
+    insertions.length=0;
+    injectEkodiShell(
+      new Response('<html><head></head><body></body></html>',{
+        headers:{'content-type':'text/html; charset=utf-8'},
+      }),
+      service,surface,
+    );
+    return insertions.find(html=>html.includes('data-ekodi-member-gate'))||'';
+  };
+  try{
+    assert.match(scriptFor('church','public'),/<script src="https:\/\/ekodi\.kr\/shell\/shell\.js" defer /);
+    assert.match(scriptFor('mall','public'),/<script src="https:\/\/ekodi\.kr\/shell\/shell\.js" defer /);
+    assert.doesNotMatch(scriptFor('my','workspace'),/shell\/shell\.js" defer /);
+    assert.doesNotMatch(scriptFor('my','admin'),/shell\/shell\.js" defer /);
+  }finally{
+    if(originalRewriter===undefined)delete globalThis.HTMLRewriter;
+    else globalThis.HTMLRewriter=originalRewriter;
+  }
+});
