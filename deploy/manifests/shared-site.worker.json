@@ -2253,7 +2253,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2278,7 +2278,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2344,7 +2344,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2369,7 +2369,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2394,7 +2394,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2621,7 +2621,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2667,7 +2667,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2713,7 +2713,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2759,7 +2759,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2805,7 +2805,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2851,7 +2851,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2897,7 +2897,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2943,7 +2943,7 @@
           "x-ekodi-route: regional-private-hold",
           "x-ekodi-region-publication: private-owner-release-required",
           "x-robots-tag: noindex",
-          "cache-control: no-store",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
