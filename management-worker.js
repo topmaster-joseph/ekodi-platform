@@ -126,6 +126,73 @@ async function managementStoreSummary(request,env,url){
     generatedBy:'official-workspace-api'
   });
 }
+const BUSINESS_AGGREGATE_READ_ROLES=new Set(['store_owner','tenant_admin','platform_admin']);
+function amountValid(value){return typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=1e13}
+function authorizedStoreAggregate(data,space,slug){
+  if(!data||typeof data!=='object'
+    ||data.workspace?.key!==slug||data.workspace?.storeId!==space.workspace_id
+    ||typeof data.asOf!=='string'||!Number.isFinite(Date.parse(data.asOf)))return null;
+  const orders=data.orders,metrics=data.metrics,finance=data.finance;
+  if(!validCount(orders?.count)||!amountValid(orders?.averageTicket)
+    ||!amountValid(metrics?.sales)||!validCount(metrics?.customers)
+    ||!validCount(metrics?.newCustomers)||typeof finance?.connected!=='boolean')return null;
+  if(metrics.newCustomers>metrics.customers)return null;
+  // These values are limited to EKODI-recorded orders. Do not imply POS/bank completeness.
+  const finances=finance.connected
+    ?{status:'internal-aggregate',cashIn:finance.cashIn,cashOut:finance.cashOut,costTotal:finance.costTotal}
+    :{status:'not-connected'};
+  if(finance.connected&&(!amountValid(finances.cashIn)||!amountValid(finances.cashOut)||!amountValid(finances.costTotal)))return null;
+  return {
+    dataPolicy:'verified-business-aggregate-read-only',
+    workspace:{id:space.workspace_id,slug,kind:'store'},
+    asOf:data.asOf,timezone:'Asia/Seoul',
+    coverage:'ekodi-recorded-completed-orders-only',
+    source:'business_os_store_admin_snapshot',
+    orders:{completedCount:orders.count,averageTicket:orders.averageTicket},
+    sales:{recordedCompletedSales:metrics.sales},
+    customers:{identifiedToday:metrics.customers,newFromBaseOrders:metrics.newCustomers},
+    settlement:finances
+  };
+}
+async function managementBusinessAggregate(request,env,url){
+  const authorization=String(request.headers.get('authorization')||'');
+  if(!authorization.startsWith('Bearer '))return json({error:'unauthorized'},401);
+  const token=cleanToken(authorization.slice(7));
+  if(!token||!/^[-A-Za-z0-9._~+/=]+$/.test(token))return json({error:'unauthorized'},401);
+  const slug=url.searchParams.get('slug')||'';
+  if(!/^[a-z0-9](?:[a-z0-9-]{0,98}[a-z0-9])?$/.test(slug))return json({error:'invalid_store_slug'},400);
+  if(!supabaseReady(env))return json({error:'identity_integration_disabled'},503);
+  let scopeResponse;
+  try{
+    scopeResponse=await fetch(`${env.SUPABASE_URL}/functions/v1/workspace-api/spaces/resolve?slug=${encodeURIComponent(slug)}`,{
+      method:'GET',headers:{authorization:`Bearer ${token}`,apikey:env.SUPABASE_PUBLISHABLE_KEY,accept:'application/json'},redirect:'error'
+    });
+  }catch{return json({error:'store_service_unavailable'},503)}
+  if([401,403,404].includes(scopeResponse.status))return json({error:'store_not_authorized_or_found'},scopeResponse.status);
+  if(!scopeResponse.ok)return json({error:'store_service_unavailable'},503);
+  let scoped;
+  try{scoped=await scopeResponse.json()}catch{return json({error:'invalid_store_scope'},502)}
+  const space=scoped?.space;
+  if(!space||space.kind!=='store'||space.slug!==slug||typeof space.workspace_id!=='string'
+    ||!space.workspace_id||space.status!=='active')return json({error:'invalid_store_scope'},502);
+  if(!BUSINESS_AGGREGATE_READ_ROLES.has(space.role))return json({error:'business_aggregate_role_required'},403);
+  let response;
+  try{
+    response=await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/business_os_store_admin_snapshot`,{
+      method:'POST',
+      headers:{authorization:`Bearer ${token}`,apikey:env.SUPABASE_PUBLISHABLE_KEY,
+        'content-type':'application/json',accept:'application/json'},
+      body:JSON.stringify({p_workspace_key:slug}),redirect:'error'
+    });
+  }catch{return json({error:'business_aggregate_unavailable'},503)}
+  if([401,403,404].includes(response.status))return json({error:'business_aggregate_not_authorized'},403);
+  if(!response.ok)return json({error:'business_aggregate_unavailable'},503);
+  let data;
+  try{data=await response.json()}catch{return json({error:'invalid_business_aggregate'},502)}
+  const projection=authorizedStoreAggregate(data,space,slug);
+  if(!projection)return json({error:'invalid_business_aggregate'},502);
+  return json(projection);
+}
 function publicCatalog(){return MANAGEMENT_MODULES.map(module=>({id:module.id,name:module.name,phase:module.phase,state:module.state,role:module.role,url:module.url||null,reuseExisting:Boolean(module.reuseExisting)}))}
 function publicWorkspaceTypes(){return MANAGEMENT_WORKSPACE_TYPES.map(type=>({id:type.id,canonicalKind:type.canonicalKind,label:type.label,hierarchy:Boolean(type.hierarchy),profile:type.profile||null}))}
 
@@ -135,6 +202,7 @@ export default{async fetch(request,env,ctx){
   if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/?route=organization&source=management',307);
   if(url.pathname==='/api/spaces'){if(request.method!=='GET')return json({error:'method_not_allowed'},405);return managementSpaces(request,env)}
   if(url.pathname==='/api/store-summary'){if(request.method!=='GET')return json({error:'method_not_allowed'},405);return managementStoreSummary(request,env,url)}
+  if(url.pathname==='/api/store-business-summary'){if(request.method!=='GET')return json({error:'method_not_allowed'},405);return managementBusinessAggregate(request,env,url)}
   if(request.method==='GET'&&url.pathname==='/api/catalog')return json({platform:'management',guestMode:MANAGEMENT_ACCESS_POLICY.guestMode,minimumTier:MANAGEMENT_ACCESS_POLICY.minimumTier,workspaceKinds:MANAGEMENT_WORKSPACE_KINDS,workspaceTypes:publicWorkspaceTypes(),modules:publicCatalog()});
   if(request.method==='POST'&&url.pathname==='/api/auth/exchange')return exchangeAuth(request,env);
   const asset=await env.ASSETS.fetch(request);
