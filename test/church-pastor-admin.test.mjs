@@ -20,12 +20,12 @@ test('pastor admin route is scoped to canonical ekodichurch path', () => {
 });
 
 test('one pastor admin page projects navigation from the church-local role', () => {
-  assert.deepEqual(churchPastorSectionsForRole('senior_pastor'), ['overview','people','attendance','worship','care','calendar','ministry','offerings','banking','accounting','receipts','reports','ai','chrome','access']);
-  assert.deepEqual(churchPastorSectionsForRole('pastor'), ['overview','people','attendance','worship','care','calendar','ministry','reports','ai']);
+  assert.deepEqual(churchPastorSectionsForRole('senior_pastor'), ['overview','people','attendance','worship','care','calendar','ministry','offerings','banking','accounting','receipts','reports','documents','ai','chrome','access']);
+  assert.deepEqual(churchPastorSectionsForRole('pastor'), ['overview','people','attendance','worship','care','calendar','ministry','reports','documents','ai']);
   assert.deepEqual(churchPastorSectionsForRole('church_treasurer'), ['overview','offerings','banking','accounting','receipts']);
   assert.deepEqual(churchPastorSectionsForRole('church_finance'), ['overview','offerings','banking','accounting','receipts']);
   assert.deepEqual(churchPastorSectionsForRole('care_staff'), ['overview','people','attendance','care','calendar','ministry','ai']);
-  assert.deepEqual(churchPastorSectionsForRole('staff'), ['overview','people','attendance','worship','calendar','ministry','reports']);
+  assert.deepEqual(churchPastorSectionsForRole('staff'), ['overview','people','attendance','worship','calendar','ministry','reports','documents']);
   assert.deepEqual(churchPastorSectionsForRole('viewer'), ['overview','worship','calendar']);
   assert.equal(churchPastorCanAccess('viewer','care'), false);
   assert.equal(churchPastorCanAccess('pastor','offerings'), false);
@@ -139,4 +139,21 @@ test('church admin links channels to the shared tenant channel center and lets t
   assert.match(writeRoles, /'senior_pastor'/);
   // Owner approval covered the senior pastor only.
   assert.doesNotMatch(writeRoles, /'pastor'/);
+});
+
+test('church document archive is a reports-capability section backed by the church reports API', async () => {
+  const fs = await import('node:fs');
+  assert.equal(churchPastorCanAccess('pastor','documents'), true);
+  assert.equal(churchPastorCanAccess('church_treasurer','documents'), false);
+  assert.equal(churchPastorCanAccess('viewer','documents'), false);
+  assert.equal(isChurchPastorAdminPath('/ekodichurch/admin/documents'), true);
+  const control = fs.readFileSync(new URL('../church-reports-control.js', import.meta.url), 'utf8');
+  assert.match(control, /\$\{PREFIX\}\/documents/);
+  assert.match(control, /DOCUMENT_READ_ROLES/);
+  const asset = fs.readFileSync(new URL('../church-reports-admin.js', import.meta.url), 'utf8');
+  assert.match(asset, /ekodi:church-documents-ready/);
+  assert.match(asset, /rel="noopener noreferrer"/);
+  const migration = fs.readFileSync(new URL('../migrations/202611061500_church_documents_archive.sql', import.meta.url), 'utf8');
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS church_documents/);
+  assert.equal((migration.match(/'cdoc-2027-selfreliance-\d\d'/g) || []).length, 6);
 });
