@@ -203,7 +203,9 @@ export function applyPlatformSecurityHeaders(response,request){
       // any upstream public-cache or partial private-only directives.
       const current=String(headers.get('cache-control')||'');
       const directives=new Set(current.toLowerCase().split(',').map(value=>value.trim()));
-      if(!directives.has('private')||!directives.has('no-store')||directives.has('public'))
+      const ownerPrivateHold=headers.get('x-ekodi-route')==='regional-private-hold'&&
+        headers.get('x-ekodi-region-publication')==='private-owner-release-required';
+      if(!ownerPrivateHold||!directives.has('private')||!directives.has('no-store')||directives.has('public'))
         headers.set('Cache-Control','no-store');
     }
   }
