@@ -50,8 +50,11 @@ test('offline preview produces reproducible SHA and a marker that the production
     assert.equal(first.marker.reviewedSourceHeadSha,'b89c32f9330afbd114dc632306a7b9348c869b7b');
     assert.equal(first.marker.previewPayloadSha256,second.marker.previewPayloadSha256);
     assert.match(first.marker.previewPayloadSha256,/^[a-f0-9]{64}$/);
-    assert.ok(first.marker.addedAssets>=3);
-    assert.ok(first.marker.overwrittenAssets>=7);
+    const tracked=JSON.parse(await readFile(join(root,'sites/ekodi-church/source-import-manifest.json'),'utf8'));
+    const basePaths=new Set(tracked.trackedFiles.map(item=>item.path));
+    const deployableReviewPaths=manifest.files.map(item=>item.path).filter(path=>!path.startsWith('test/'));
+    assert.equal(first.marker.addedAssets,deployableReviewPaths.filter(path=>!basePaths.has(path)).length);
+    assert.equal(first.marker.overwrittenAssets,deployableReviewPaths.filter(path=>basePaths.has(path)).length);
     const page=await readFile(join(first.outputPath,'index.html'),'utf8');
     assert.ok(page.includes('church-section-nav.js'));
     assert.ok(page.includes('data-church-notices'));
