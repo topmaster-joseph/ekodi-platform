@@ -12,7 +12,7 @@ const token=String(process.env.CLOUDFLARE_API_TOKEN||'').trim();
 const run=String(process.env.POINTS_E2E_RUN||'').replace(/[^0-9a-z-]/gi,'').slice(0,40);
 const mode=process.argv[2];
 if(accountId!==DEVELOPMENT_ACCOUNT)throw new Error('development Cloudflare account required');
-if(!token||!run||!['open','close'].includes(mode))throw new Error('usage: points-staging-access.mjs open|close (CLOUDFLARE_API_TOKEN, POINTS_E2E_RUN)');
+if(!token||!run||!['open','open-static','close'].includes(mode))throw new Error('usage: points-staging-access.mjs open|close (CLOUDFLARE_API_TOKEN, POINTS_E2E_RUN)');
 const name=`ekodi-points-e2e-${run}`;
 process.on('uncaughtException',e=>{console.log(`::error::points-staging-access ${mode}: ${String(e?.message||e).slice(0,400)}`);process.exit(1);});
 process.on('unhandledRejection',e=>{console.log(`::error::points-staging-access ${mode}: ${String(e?.message||e).slice(0,400)}`);process.exit(1);});
@@ -57,7 +57,21 @@ async function stagingApps(){
   return {apps:picked,all:apps,auds:[...auds]};
 }
 
-if(mode==='open'){
+if(mode==='open-static'){
+  // Owner-provided service token (repository secrets): this API token cannot
+  // read service-token ids, so allow the account's own service tokens on the
+  // staging apps for this run only; removed in close.
+  const {apps}=await stagingApps();
+  if(!apps.length){console.log('::warning::Staging hosts are not behind a readable Access app; using the static token as-is.');process.exit(0);}
+  const policies=[];
+  for(const app of apps){
+    const policy=await api(`/access/apps/${app.id}/policies`,{method:'POST',body:JSON.stringify({
+      name,decision:'non_identity',include:[{any_valid_service_token:{}}],exclude:[],require:[]})});
+    policies.push(`${app.id}:${policy.id}`);
+  }
+  env('E2E_ACCESS_POLICIES',policies.join(','));
+  console.log(`::notice::Run-scoped service-auth policy added on ${policies.length} staging app(s).`);
+}else if(mode==='open'){
   const {apps,all,auds}=await stagingApps();
   console.log(`::notice::Access apps in account: ${all.length} [${all.map(a=>`${a.name||a.id}|${a.type||'?'}|${hostOf(a.domain)}`).join('; ')}]; staging AUDs seen: ${auds.length}; matched: ${apps.map(a=>a.name||a.id).join(', ')||'none'}`);
   if(!apps.length){
@@ -90,7 +104,8 @@ if(mode==='open'){
         if(String(p.name||'').startsWith('ekodi-points-e2e-'))await api(`/access/apps/${app.id}/policies/${p.id}`,{method:'DELETE'}).catch(()=>{});
       }
     }
-    for(const t of (await api('/access/service_tokens?per_page=100'))||[]){
+    const tokens=await api('/access/service_tokens?per_page=100').catch(e=>{if(e.status===403)return [];throw e;});
+    for(const t of tokens||[]){
       if(String(t.name||'').startsWith('ekodi-points-e2e-'))await api(`/access/service_tokens/${t.id}`,{method:'DELETE'}).catch(()=>{failed++;});
     }
   }catch(e){failed++;console.log(String(e.message));}
