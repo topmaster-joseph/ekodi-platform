@@ -164,6 +164,47 @@ export async function seonammediLiveSitemapXml(fetchPublic = fetch, host = '') {
   }
 }
 
+// RSS 2.0 feed of published notices for Naver Search Advisor "RSS 제출".
+// Same read-only public notices endpoint and fail-closed filter as the sitemap.
+function rssText(value, max, stripTags = false) {
+  const raw = String(value ?? '');
+  const text = (stripTags ? raw.replace(/<[^>]*>/g, ' ') : raw).replace(/\s+/g, ' ').trim();
+  return max && text.length > max ? text.slice(0, max - 1) + '…' : text;
+}
+export function seonammediRssXml(payload, host = '') {
+  const origin = seonammediHostOrigin(host);
+  const items = [];
+  if (payload?.ok === true && payload?.boardId === 'seonammedi.notice' && Array.isArray(payload.items)) {
+    const seen = new Set();
+    for (const row of payload.items.slice(0, 50)) {
+      const id = row?.id;
+      if (!Number.isSafeInteger(id) || id < 1 || row.status !== 'published' || seen.has(id)) continue;
+      seen.add(id);
+      const link = origin + '/board/notices/' + id;
+      const rawDate = String(row.publishedAt || row.createdAt || row.updatedAt || '');
+      const time = /^\d{4}-\d{2}-\d{2}T/.test(rawDate) ? Date.parse(rawDate) : NaN;
+      const title = rssText(row.title, 200) || '서남권국립의대 공지';
+      const description = rssText(row.excerpt || row.summary || row.body, 300, true);
+      items.push('    <item><title>' + xmlEscape(title) + '</title><link>' + xmlEscape(link) + '</link><guid isPermaLink="true">' + xmlEscape(link) + '</guid>' +
+        (Number.isFinite(time) ? '<pubDate>' + new Date(time).toUTCString() + '</pubDate>' : '') +
+        (description ? '<description>' + xmlEscape(description) + '</description>' : '') + '</item>');
+    }
+  }
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n' +
+    '    <title>서남권국립의대</title>\n    <link>' + xmlEscape(origin + '/') + '</link>\n' +
+    '    <description>서남권국립의대 공지와 활동소식</description>\n    <language>ko</language>\n' +
+    (items.length ? items.join('\n') + '\n' : '') + '  </channel>\n</rss>\n';
+}
+export async function seonammediLiveRssXml(fetchPublic = fetch, host = '') {
+  try {
+    const response = await fetchPublic(ORIGIN + SITE_PREFIX + '/board/api/notices', { method: 'GET', headers: { accept: 'application/json' } });
+    if (!response?.ok) return seonammediRssXml(null, host);
+    return seonammediRssXml(await response.json(), host);
+  } catch {
+    return seonammediRssXml(null, host);
+  }
+}
+
 function discoveryResponse(body, contentType, route, method) {
   return new Response(method === 'HEAD' ? null : body, {
     status: 200,
@@ -189,6 +230,7 @@ export function seonammediDiscoveryResponse(request, incoming) {
   }
   if (incoming.pathname === '/robots.txt') return discoveryResponse(seonammediRobotsTxt(incoming.hostname), 'text/plain; charset=utf-8', 'seonammedi-robots', request.method);
   if (incoming.pathname === '/sitemap.xml') return discoveryResponse(seonammediSitemapXml([], incoming.hostname), 'application/xml; charset=utf-8', 'seonammedi-sitemap', request.method);
+  if (incoming.pathname === '/rss.xml') return discoveryResponse(seonammediRssXml(null, incoming.hostname), 'application/rss+xml; charset=utf-8', 'seonammedi-rss', request.method);
   if (incoming.pathname === EKODI_INDEXNOW_KEY_PATH) return ekodiIndexNowKeyResponse();
   return null;
 }
@@ -204,6 +246,10 @@ export default {
     if (request.method === 'GET' && incoming.pathname === '/sitemap.xml') {
       const xml = await seonammediLiveSitemapXml(fetch, incoming.hostname);
       return discoveryResponse(xml, 'application/xml; charset=utf-8', 'seonammedi-sitemap', request.method);
+    }
+    if (request.method === 'GET' && incoming.pathname === '/rss.xml') {
+      const xml = await seonammediLiveRssXml(fetch, incoming.hostname);
+      return discoveryResponse(xml, 'application/rss+xml; charset=utf-8', 'seonammedi-rss', request.method);
     }
     const discovery = seonammediDiscoveryResponse(request, incoming);
     if (discovery) return discovery;
