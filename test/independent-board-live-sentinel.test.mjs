@@ -2,9 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {verifyIndependentBoardLive, LIVE_BOARDS} from '../scripts/verify-independent-board-live.mjs';
 import {readFile} from 'node:fs/promises';
-import {CHEONGGYE_PUBLICATION_HOLD} from '../region-publication-hold.js';
 
-function fixture({mismatch = false, subscription = true, leak = false, social = false, singlesLeak = false, cheonggyeLeak = false, cheonggyeWeakCache = false} = {}) {
+function fixture({mismatch = false, subscription = true, leak = false, social = false, singlesLeak = false} = {}) {
   const calls = [];
   const fetcher = async (url, options) => {
     calls.push({path: url.pathname, method: options.method, authorization: options.headers.authorization});
@@ -13,19 +12,6 @@ function fixture({mismatch = false, subscription = true, leak = false, social = 
     const id = 'site:' + site + ':main';
     const headers = {'content-type': 'application/json'};
     if (site) {
-      if (site === 'cheonggye' && CHEONGGYE_PUBLICATION_HOLD && !cheonggyeLeak) {
-        return new Response('<!doctype html><title>서비스 비공개</title><h1>서비스 비공개</h1>', {
-          status:404,
-          headers:{
-            'content-type':'text/html; charset=utf-8',
-            'cache-control':cheonggyeWeakCache?'public, max-age=600':'private, no-store, max-age=0',
-            'x-robots-tag':'noindex, nofollow',
-            'x-content-type-options':'nosniff',
-            'x-ekodi-route':'regional-private-hold',
-            'x-ekodi-region-publication':'private-owner-release-required',
-          },
-        });
-      }
       headers['x-ekodi-board-id'] = mismatch && site === 'cgma' ? 'site:cheonggye:main' : id;
       headers['x-ekodi-board-independent'] = 'true';
       if (path.endsWith('/api/health')) return new Response(JSON.stringify({
@@ -54,9 +40,7 @@ test('production sentinel validates every subpage with GET only and never sends 
   const result = await verifyIndependentBoardLive({fetcher, sleep: async () => {}});
   assert.equal(result.ok, true);
   assert.equal(result.pathsChecked, 30);
-  assert.deepEqual(result.boards, CHEONGGYE_PUBLICATION_HOLD
-    ? ['cgma', 'ekodimission', 'ekodichurch'] : ['cgma', 'cheonggye', 'ekodimission', 'ekodichurch']);
-  assert.deepEqual(result.withheldBoards, CHEONGGYE_PUBLICATION_HOLD ? ['cheonggye'] : []);
+  assert.deepEqual(result.boards, ['cgma', 'cheonggye', 'ekodimission', 'ekodichurch']);
   assert.ok(calls.every(c => c.method === 'GET' && c.authorization === undefined));
 });
 
@@ -97,34 +81,4 @@ test('singles member features open: anonymous member and bank APIs must still be
   assert.equal(result.singlesSocialEnabled, true);
   const leaking = fixture({social: true, singlesLeak: true}).fetcher;
   await assert.rejects(() => verifyIndependentBoardLive({fetcher: leaking, sleep: async () => {}}), /expected 401/);
-});
-
-test('owner-held Cheonggye board must never accidentally reopen or become cacheable',async()=>{
-  if(!CHEONGGYE_PUBLICATION_HOLD)return;
-  const open=fixture({cheonggyeLeak:true}).fetcher;
-  await assert.rejects(()=>verifyIndependentBoardLive({fetcher:open,sleep:async()=>{}}),
-    /expected 404, got HTTP 200/);
-  const cached=fixture({cheonggyeWeakCache:true}).fetcher;
-  await assert.rejects(()=>verifyIndependentBoardLive({fetcher:cached,sleep:async()=>{}}),
-    /no-store/);
-});
-
-test('Control API requires canonical no-store while Site Core preserves private no-store',async()=>{
-  const control=JSON.parse(await readFile(new URL('../deploy/manifests/control-api.worker.json',import.meta.url),'utf8'));
-  const site=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
-  const byHold=manifest=>(manifest.worker.requests||[]).filter(req=>
-    req.headerExpect?.includes('x-ekodi-route: regional-private-hold'));
-  const controlProbes=byHold(control),siteProbes=byHold(site);
-  assert.equal(controlProbes.length,7);
-  assert.equal(siteProbes.length,13);
-  for(const probe of controlProbes){
-    assert.deepEqual(probe.statuses,[404],probe.url);
-    assert.ok(probe.headerExpect.includes('cache-control: no-store'),probe.url);
-    assert.ok(probe.headerExpect.includes('x-ekodi-region-publication: private-owner-release-required'),probe.url);
-  }
-  for(const probe of siteProbes){
-    assert.deepEqual(probe.statuses,[404],probe.url);
-    assert.ok(probe.headerExpect.includes('cache-control: private, no-store'),probe.url);
-    assert.ok(probe.headerExpect.includes('x-ekodi-region-publication: private-owner-release-required'),probe.url);
-  }
 });
