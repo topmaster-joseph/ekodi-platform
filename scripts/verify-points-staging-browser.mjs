@@ -106,26 +106,27 @@ try{
 }catch(error){
   report.error=String(error?.code||error?.message||error).slice(0,300);
   console.log(`::error::${target} verification error: ${report.error}`.replace(/\r?\n/g,' '));
-  // Read-only diagnostic: what the member actually sees (fresh single-use link).
-  const diagHash=await memberHash('POINTS_E2E_MEMBER_HASH_DIAG').catch(()=>'');
-  if(target==='member'&&/^[A-Za-z0-9_-]{20,200}$/.test(diagHash)){
-    try{
-      const diag=await runTask({
-        taskId:`points-member-${run}-diag`,
-        path:`/points/?site=${site}#ekodi_token=${diagHash}&ekodi_type=magiclink`,
+  // Read-only diagnostics: what the member actually sees (fresh single-use links).
+  if(target==='member'){
+    const probes=[
+      ['wallet',[{type:'waitFor',selector:'#balanceView:not([hidden]), #notice:not(:empty)',timeoutMs:15000},{type:'snapshot'}]],
+      ['progress',[{type:'waitFor',selector:'#balanceView:not([hidden]), #notice:not(:empty)',timeoutMs:15000},
+        {type:'click',selector:'#pointsTabProgress'},
+        {type:'waitFor',selector:'#pointsProgressContent:not([hidden]), #pointsProgressNotice:has-text("확인할 수 없습니다"), #pointsTabEmpty:not([hidden])',timeoutMs:15000},
+        {type:'snapshot'}]],
+    ];
+    for(const [probe,actions] of probes){
+      try{
+        const diagHash=await memberHash('POINTS_E2E_MEMBER_HASH_DIAG');
+        if(!/^[A-Za-z0-9_-]{20,200}$/.test(diagHash))break;
         // allowMutation only so the auth handoff POST (verifyOtp) can run; no form is submitted.
-        deviceProfile:'desktop',allowMutation:true,timeoutMs:60000,
-        actions:[
-          {type:'waitFor',selector:'#pointsTabProgress',timeoutMs:15000},
-          {type:'click',selector:'#pointsTabProgress'},
-          {type:'waitFor',selector:'#pointsProgressContent:not([hidden]), #pointsProgressNotice:has-text("확인할 수 없습니다"), #loginLink:not([hidden]), #pointsTabEmpty:not([hidden])',timeoutMs:15000},
-          {type:'snapshot'},
-        ],
-      },{artifactRoot:dir});
-      const snap=(diag?.results||[]).find(r=>r.type==='snapshot');
-      console.log(`::notice::member diagnostic ok=${diag?.ok} url=${snap?.url||''} text=${String(snap?.bodyText||diag?.message||'').replace(/\s+/g,' ').slice(0,900)}`);
-      console.log(`::notice::member diagnostic console=${JSON.stringify((diag?.consoleErrors||[]).slice(0,5)).slice(0,700)} http=${JSON.stringify((diag?.httpErrorResponses||[]).slice(0,5)).slice(0,500)} req=${JSON.stringify((diag?.requestFailures||[]).slice(0,5)).slice(0,500)}`);
-    }catch(e){console.log(`::notice::member diagnostic failed: ${String(e?.message||e).replace(/\s+/g,' ').slice(0,400)}`);}
+        const diag=await runTask({taskId:`points-member-${run}-diag-${probe}`,
+          path:`/points/?site=${site}#ekodi_token=${diagHash}&ekodi_type=magiclink`,
+          deviceProfile:'desktop',allowMutation:true,timeoutMs:60000,actions},{artifactRoot:dir});
+        const snap=(diag?.results||[]).find(r=>r.type==='snapshot');
+        console.log(`::notice::member ${probe} diagnostic ok=${diag?.ok} text=${String(snap?.bodyText||diag?.message||'').replace(/\s+/g,' ').slice(0,700)} http=${JSON.stringify((diag?.httpErrorResponses||[]).slice(0,5)).slice(0,500)}`);
+      }catch(e){console.log(`::notice::member ${probe} diagnostic failed: ${String(e?.message||e).replace(/\s+/g,' ').slice(0,500)}`);}
+    }
   }
 }finally{
   report.finishedAt=new Date().toISOString();
