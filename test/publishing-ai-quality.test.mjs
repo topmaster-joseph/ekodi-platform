@@ -102,3 +102,24 @@ test('publishing binds only the named AI control entrypoint', async () => {
   assert.match(entry, /export class PublishingWriter extends WorkerEntrypoint/);
   assert.match(entry, /aiControlWorker\.scheduled\(controller, env, ctx\)/);
 });
+
+test('breaker: three AI control faults disconnect it for the run and Workers AI carries on; budget codes are not faults', async () => {
+  const { resetControlBreaker, controlBreakerState } = await import('../publishing-ai-factory.js');
+  resetControlBreaker();
+  let controlCalls = 0, workersCalls = 0;
+  const db = { prepare: () => ({ bind: () => ({ first: async () => ({ neurons: 0 }), run: async () => ({ meta: { changes: 1 } }) }), first: async () => null }) };
+  const env = {
+    PUBLISH_DB: db, AI_LEDGER_DB: db,
+    AI: { run: async () => { workersCalls++; return { response: '워커 문장', usage: { prompt_tokens: 1, completion_tokens: 1 } }; } },
+    AI_CONTROL: { async write() { controlCalls++; throw new Error('entrypoint_missing'); } },
+  };
+  for (let i = 0; i < 5; i++) assert.equal(await writeText(env, 's', 'p', 100, 'edit'), '워커 문장');
+  assert.equal(controlCalls, 3, 'stops calling the control plane after three faults');
+  assert.equal(workersCalls, 5);
+  assert.equal(controlBreakerState().off, true);
+  resetControlBreaker();
+  const budget = { ...env, AI_CONTROL: { async write() { controlCalls++; return { ok: false, code: 'daily_cap_reached' }; } } };
+  for (let i = 0; i < 5; i++) await writeText(budget, 's', 'p', 100, 'edit');
+  assert.equal(controlBreakerState().off, false, 'quota exhaustion is a wait, not a fault');
+  resetControlBreaker();
+});
