@@ -35,8 +35,9 @@ test('live pilot notice is accurate; legal draft is not presented as final appro
  assert.equal(res.status,200);
  assert.match(res.headers.get('x-robots-tag')||'',/noindex/);
  const body=await res.text();
- assert.match(body,/제한적 시범 운영/);
- assert.match(body,/최종 검토 중/);
+ assert.match(body,/공개 운영/);
+ assert.match(body,/법률 검토를 반영한 문안/);
+ assert.doesNotMatch(body,/최종 승인 전 검토 문안|최종 검토 중/);
  assert.doesNotMatch(body,/동행 회원가입은 아직 개통되지 않았습니다/);
  assert.match(body,/성인확인과 공개 범위/);
  assert.match(body,/프로필은 기본 비공개/);
