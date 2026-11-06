@@ -899,7 +899,7 @@ export default {
       if (['GET','HEAD'].includes(request.method) && (url.pathname==='/admin/people'||url.pathname==='/admin/people/')) return personAuthorityPage();
       if (['GET','HEAD'].includes(request.method) && (url.pathname==='/admin/site-admins'||url.pathname==='/admin/site-admins/')) return siteAdminBootstrapPage();
       if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
-      if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');
+      if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(url.pathname), 'space', 'admin');
       // Keep EKODIBIZ business-unit routes owned by the shared apex shell, even after Pay routing changes.
       if (isBusinessOsCommonPath(url.pathname)) return withHostSecurity(await businessOsCommonResponse(request), PUBLIC_CSP, 'no-store', 'public-ekodibiz-business-os');
       if (isDorajiLedgerApiPath(url.pathname)) return withHostSecurity(await dorajiLedgerApiResponse(request,env), PUBLIC_CSP, 'private, no-store', 'private-ekodibiz-doraji-ledger');
