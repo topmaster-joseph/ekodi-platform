@@ -36,7 +36,7 @@ test('dedicated region/lab public owners remain unchanged while only settings pa
     assert.ok(router.includes("url.pathname==='/"+slug+"/admin/services'"));
   }
   assert.ok(router.indexOf('SITE-AI-TOOLS-ADMIN-ROUTE-001')<router.indexOf('const canonical=await routeCanonicalSurface'));
-  assert.match(router,/return injectEkodiShell\(workspaceAdminPage\(\),'space','admin'\)/);
+  assert.match(router,/return injectEkodiShell\(workspaceAdminPage\(url\.pathname\),'space','admin'\)/);
 });
 
 test('workflow readiness uses canonical provider state, never implies external execution grants',()=>{

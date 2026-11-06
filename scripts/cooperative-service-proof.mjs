@@ -246,7 +246,10 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     await screenshot(member, coop.slug + '-service-member-390');
     await member.goto(root + '/admin'); await member.waitForSelector('#gate:not([hidden])');
     assert.equal(await member.locator('#workspace').isVisible(), false);
-    await member.goto('https://ekodi.kr/' + other.publicSlug + '/members'); await member.waitForSelector('#gate:not([hidden])');
+    await member.goto('https://ekodi.kr/' + other.publicSlug + '/members');
+    // Members of another cooperative may apply, but cannot read its private workspace.
+    await member.waitForSelector('#application:not([hidden])');
+    assert.equal(await member.locator('#gate').isVisible(), false);
     assert.equal(await member.locator('#workspace').isVisible(), false);
     proof(coop, 'member-record-readback-self-save-reload-download-and-authority-denials', { width: 390 });
     await member.goto(root + '/members'); await member.waitForSelector('#myBusinessForm');
@@ -261,18 +264,30 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     const applicant = await applicantContext.newPage(); await applicant.goto(root + '/members');
     await applicant.waitForSelector('#application:not([hidden])');
     const grantsBefore = f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants').get().count;
+    const tenantId = f.sqlite.prepare('SELECT id FROM customer_tenants WHERE slug=?').get(coop.slug)?.id;
+    assert.ok(tenantId, 'Existing cooperative must have its own tenant');
+    const otherTenantGrantsBefore = f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants WHERE email=? AND tenant_id<>?')
+      .get('applicant@example.test', tenantId).count;
+    // Current member self-join requires representative, verified phone and explicit consent.
+    // No privilege is issued merely by visiting the member registration surface.
+    assert.equal(f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants').get().count, grantsBefore);
     await applicant.locator('#applicationForm [name="representative"]').fill('가상 실증 신청자');
+    await applicant.locator('#applicationForm [name="phone"]').fill('010-1234-5678');
     await applicant.locator('#applicationForm [name="business"]').fill('가상 신청 사업체');
-    await applicant.locator('#applicationForm [name="message"]').fill('참여 의사만 접수합니다.');
     await applicant.locator('#applicationForm [name="consent"]').check();
     await applicant.locator('#applicationForm button[type="submit"]').click();
-    await applicant.waitForFunction(() => document.querySelector('#applicationResult').textContent.includes('접수되었습니다'));
+    await applicant.waitForFunction(() => document.querySelector('#applicationResult').textContent.includes('조합원으로 등록되었습니다.'));
     const application = f.sqlite.prepare('SELECT person_id,status,business FROM cooperative_applications WHERE workspace_id=? AND email=?').get(coop.workspaceId, 'applicant@example.test');
-    assert.ok(application, 'Submitted request must persist under the verified Core identity');
+    assert.ok(application, 'Explicit self-join must retain a tenant-scoped audit record');
     assert.equal(application.person_id, 'person:applicant@example.test');
-    assert.equal(application.status, 'pending'); assert.equal(application.business, '가상 신청 사업체');
-    assert.equal(f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants').get().count, grantsBefore);
-    proof(coop, 'participation-application-stored-without-membership-grant', { width: 390 });
+    assert.equal(application.status, 'joined'); assert.equal(application.business, '가상 신청 사업체');
+    const grant = f.sqlite.prepare('SELECT role,enabled FROM customer_access_grants WHERE tenant_id=? AND email=?').get(tenantId, 'applicant@example.test');
+    assert.equal(grant?.role, 'member', 'Self-join must never grant admin capabilities');
+    assert.equal(grant?.enabled, 1);
+    assert.equal(f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants').get().count, grantsBefore + 1);
+    assert.equal(f.sqlite.prepare('SELECT count(*) AS count FROM customer_access_grants WHERE email=? AND tenant_id<>?').get('applicant@example.test', tenantId).count, otherTenantGrantsBefore,
+      'Self-join cannot change a pre-existing grant for any other cooperative');
+    proof(coop, 'explicit-consent-self-join-grants-only-member-in-own-tenant', { width: 390 });
     await applicantContext.close();
     const intakeContext = await contextFor(390, adminToken);
     const intake = await intakeContext.newPage(); await intake.goto(root + '/admin');
@@ -280,8 +295,7 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     const intakeText = await intake.locator('[data-panel="accounts"]').innerText();
     assert.ok(intakeText.includes('가상 실증 신청자'));
     assert.ok(intakeText.includes('가상 신청 사업체'));
-    assert.ok(intakeText.includes('참여 의사만 접수합니다.'));
-    proof(coop, 'administrator-can-read-submitted-participation-request', { width: 390 });
+    proof(coop, 'administrator-can-read-self-joined-member-record-without-elevation', { width: 390 });
     await intakeContext.close();
 
     const publicContext = await contextFor(390);

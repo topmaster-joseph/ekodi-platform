@@ -77,7 +77,7 @@ test('site channel directory resolves to each canonical local administrator inst
     if(site.channelAggregate) assert.equal(site.channelSubjectKey,'',`${site.id}: aggregate hub must not impersonate one tenant ledger`);
     else assert.ok(site.channelSubjectKey,`${site.id}: channelSubjectKey`);
   }
-  assert.ok(router.includes("if(/^\\/cheonggye\\/admin\\/publishing\\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');"));
+  assert.ok(router.includes("if(/^\\/cheonggye\\/admin\\/publishing\\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(url.pathname),'space','admin');"));
 });
 
 test('central channel manager can scope connections to person, tenant or store without bypassing backend membership checks', () => {
