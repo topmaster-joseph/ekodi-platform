@@ -13,6 +13,7 @@ const ERR={
  identity_already_used:'이미 다른 에코디 계정에서 본인인증된 분입니다. 한 사람은 한 계정만 이용할 수 있습니다.',
  identity_key_missing:'이 인증 수단으로는 중복 가입 확인이 되지 않습니다. 휴대폰(통신사) 인증으로 다시 시도해 주세요.',
  identity_already_completed:'이미 처리된 인증입니다. 동행 안내·가입 화면에서 상태를 확인해 주세요.',
+ identity_test_channel:'본인인증이 아직 시험 연결 상태라 성인 확인으로 인정되지 않습니다. 동행 안내·가입 화면의 "운영자 확인으로 요청하기"를 이용해 주세요.',
  pilot_only:'지금은 시범 운영 중이라 지정된 계정만 이용할 수 있습니다.'
 };
 let client=null;
