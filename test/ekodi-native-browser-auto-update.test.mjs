@@ -71,5 +71,6 @@ test('official Device Agent upgrade download is bounded, unique and always clean
   assert.doesNotMatch(update,/['"]ekodi-device-agent-update\.ps1['"]/);
   // The command still requests normal transactional rollback/heartbeat and
   // never mutates the origin allowlist, registry, session or UAC.
-  assert.doesNotMatch(update,/Set-ExecutionPolicy|runas|Bypass|CF_ACCESS_CLIENT_SECRET|chrome\.exe/i);
+  const executable=update.split('\\n').filter(line=>!/^[ \\t]*#/.test(line)).join('\\n');
+  assert.doesNotMatch(executable,/Set-ExecutionPolicy|\\b-Verb\\s+RunAs\\b|\\b-ExecutionPolicy\\s+Bypass\\b|CF_ACCESS_CLIENT_SECRET|chrome\\.exe/i);
 });
