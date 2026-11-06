@@ -1,6 +1,6 @@
 // EKODI Education — instructor document share (강사 서류 공유).
 //
-// The instructor uploads a copy of their own ID card (신분증 사본) or bank-book page (통장 사본) and gets a
+// The instructor uploads a copy of their own ID card (신분증 사본) bank-book page (통장 사본) or résumé (이력서) and gets a
 // share link. Anyone holding that link can view the file until the chosen expiry; afterwards the link answers
 // 410 and the file is deleted. Nothing about learners is stored here.
 //
@@ -16,7 +16,7 @@
 import { hasInstructorSession, isSameSiteRequest } from './education-instructor-gate.js';
 
 export const DOCS_PREFIX='edu/instructor-docs/';
-export const DOC_KINDS=Object.freeze({id:'신분증 사본',bank:'통장 사본'});
+export const DOC_KINDS=Object.freeze({id:'신분증 사본',bank:'통장 사본',resume:'이력서'});
 export const MAX_BYTES=10*1024*1024;
 export const EXPIRY_DAYS=Object.freeze([1,3,7,14,30]);
 const DAY=86400000;
@@ -92,7 +92,7 @@ export async function instructorDocs(request,env,{url=new URL(request.url),now=D
     const contentType=r.obj.httpMetadata?.contentType||'application/octet-stream';
     if(p.startsWith(BASE+'s/'))return html(viewerPage({m:r.m,token,contentType}),200);
     const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','application/pdf':'pdf'}[contentType]||'bin';
-    const name=(r.m.kind==='bank'?'bank-copy':'id-copy')+'.'+ext;
+    const name=({bank:'bank-copy',resume:'resume'}[r.m.kind]||'id-copy')+'.'+ext;
     return new Response(method==='HEAD'?null:r.obj.body,{headers:{'content-type':contentType,...PRIVATE,
       'content-disposition':(url.searchParams.get('download')?'attachment':'inline')+'; filename="'+name+'"',
       'content-security-policy':"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'",'x-frame-options':'SAMEORIGIN'}});
