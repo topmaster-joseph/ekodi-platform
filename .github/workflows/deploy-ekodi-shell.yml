@@ -168,6 +168,7 @@ jobs:
           grep -Fq "'ekodibiz.kr':'biz'" shell/ecosystem-link-compat.js
           grep -Fq 'run_worker_first = true' wrangler.shell.toml
           grep -Fq 'run_worker_first = true' wrangler.shell.staging.toml
+          node --test test/shell-staging-transient-retry.test.mjs
           node --test test/ekodi-shell.test.mjs test/user-ui-header.test.mjs test/language-registry-v8.test.mjs test/user-global-nav.test.mjs test/admin-ui-shell.test.mjs test/public-surface-admin.test.mjs test/public-surface-admin-revocation.test.mjs test/seonammedi-voice-admin-revocation.test.mjs test/ekodian-identity-profile.test.mjs
           node scripts/validate-user-ui-dna.mjs
           node scripts/validate-ekodi-shell-adoption.mjs
@@ -203,7 +204,8 @@ jobs:
       - name: Prepare shared Message UI asset
         run: cp ekodi-message-ui.js shell/message-ui.js
       - name: Deploy isolated Shell staging
-        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.shell.staging.toml
+        # CF-QUOTA-001: retry only an explicit upstream reset; 429/auth/unknown fail closed.
+        run: node scripts/shell-staging-transient-retry.mjs
       - name: Confirm Shell staging deployment exists
         run: npx --yes wrangler@${WRANGLER_VERSION} deployments status --config wrangler.shell.staging.toml --json > /tmp/shell-staging-deployments.json
       - name: Verify Shell staging with release cache busting
