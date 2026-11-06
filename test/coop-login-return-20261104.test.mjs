@@ -138,3 +138,38 @@ test('join requires a valid phone, validates business number, and shows only the
   const edited = await edit.json();
   assert.equal(edited.me.founder.phone, '010-5555-6666'); assert.equal(edited.me.founder.businessNumber, null);
 });
+
+// ── 명부 삭제·관리자 사업장 정보 입력(2026-11-07) ──
+test('chair/admin can delete a roster member; the member grant is revoked; chair row is protected', async t => {
+  const f = fixture(); t.after(() => f.sqlite.close());
+  t.mock.method(globalThis, 'fetch', authFetch({ chair: 'chair@example.test', m: 'member@example.test' }));
+  f.grant(jubilee, 'chair@example.test', 'admin', { capabilities: ['tenant.site.manage'] });
+  assert.equal((await routeCooperative(req(jubilee, '/join', 'm', 'POST', { representative: '홍길동', phone: '01012345678', consent: true }), f.env)).status, 200);
+  let p = await (await routeCooperative(req(jubilee, '/project', 'chair'), f.env)).json();
+  const target = p.state.founders.find(x => x.accountEmail === 'member@example.test');
+  const chairRow = p.state.founders.find(x => x.position === 'chair-designate');
+  const del = (token, id, rev) => routeCooperative(new Request(`https://ekodi.kr/${jubilee.slug}/api/founders/${encodeURIComponent(id)}?revision=${rev}`, { method: 'DELETE', headers: { authorization: 'Bearer ' + token, origin: 'https://ekodi.kr' } }), f.env);
+  assert.equal((await del('m', target.id, p.revision)).status, 403, 'members cannot delete');
+  assert.equal((await del('chair', chairRow.id, p.revision)).status, 400, 'chair row protected');
+  const ok = await del('chair', target.id, p.revision);
+  assert.equal(ok.status, 200);
+  p = await (await routeCooperative(req(jubilee, '/project', 'chair'), f.env)).json();
+  assert.equal(p.state.founders.some(x => x.id === target.id), false);
+  assert.equal((await routeCooperative(req(jubilee, '/me', 'm'), f.env)).status, 403, 'member access revoked');
+  assert.equal((await routeCooperative(req(jubilee, '/me', 'chair'), f.env)).status, 200, 'admin grant untouched');
+});
+
+test('admin roster save validates and stores phone and business number', async t => {
+  const f = fixture(); t.after(() => f.sqlite.close());
+  t.mock.method(globalThis, 'fetch', authFetch({ chair: 'chair@example.test' }));
+  f.grant(open, 'chair@example.test', 'admin', { capabilities: ['tenant.site.manage'] });
+  const p = await (await routeCooperative(req(open, '/project', 'chair'), f.env)).json();
+  const put = founders => routeCooperative(req(open, '/project', 'chair', 'PUT', { revision: p.revision, state: { founders } }), f.env);
+  const bad = p.state.founders.map((x, i) => i === 1 ? { ...x, phone: '123' } : x);
+  assert.equal((await put(bad)).status, 400);
+  const good = p.state.founders.map((x, i) => i === 1 ? { ...x, phone: '01098765432', businessNumber: '2131301959', business: '테스트상회' } : x);
+  const saved = await put(good);
+  assert.equal(saved.status, 200);
+  const row = (await saved.json()).state.founders[1];
+  assert.equal(row.phone, '010-9876-5432'); assert.equal(row.businessNumber, '213-13-01959'); assert.equal(row.business, '테스트상회');
+});
