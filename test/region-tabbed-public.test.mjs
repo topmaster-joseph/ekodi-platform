@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {runInNewContext} from 'node:vm';
+import {regionTabsClientScript,regionTabsScriptResponse} from '../region-tabs-ui.js';
 import {localRegionBySlug} from '../local-region-registry.js';
 import {localRegionPublicPage} from '../local-region-page.js';
 import {regionalCommerceProgramById} from '../regional-commerce-program-registry.js';
@@ -32,9 +33,8 @@ function simulateTabs(html,prefix,initialHash=''){
     listeners:{},
     addEventListener(name,fn){this.listeners[name]=fn},
   };
-  const script=html.match(/<script>([\s\S]*?)<\/script>/);
-  assert.ok(script,'public tabs require a dependency-free interaction');
-  runInNewContext(script[1],{document,window});
+  assert.match(html,/<script src="\/cheonggye\/region-tabs-ui\.js" defer><\/script>/);
+  runInNewContext(regionTabsClientScript(),{document,window});
   return {tabs,panelById,window};
 }
 
@@ -85,4 +85,12 @@ test('CGPASS public tabs keep unlaunched benefits honest, and link to real regio
   assert.equal(tabs[3].attrs['aria-selected'],'true');
   assert.equal(panelById.get('pass-panel-guide').hidden,false);
   assert.equal(panelById.get('pass-panel-stores').hidden,true);
+});
+
+test('regional tabs script is served as same-origin JavaScript for CSP compatibility',async()=>{
+  const response=regionTabsScriptResponse();
+  assert.equal(response.status,200);
+  assert.match(response.headers.get('content-type'),/text\/javascript/);
+  assert.equal(response.headers.get('x-content-type-options'),'nosniff');
+  assert.match(await response.text(),/ArrowRight/);
 });
