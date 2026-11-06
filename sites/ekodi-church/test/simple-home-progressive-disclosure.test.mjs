@@ -9,15 +9,12 @@ const devotion = readFileSync(new URL('../devotion/index.html', import.meta.url)
 
 test('church homepage starts simple while preserving every primary destination', () => {
   const destinations = [
-    ['#about', '우리의 정체성'],
     ['/ekodichurch/devotion/', '매일묵상'],
+    ['/ekodichurch/#worship', '예배·방송'],
     ['/ekodichurch/notices/', '공지사항'],
     ['/ekodichurch/schedule/', '주요일정'],
-    ['#community', '공동체 활동'],
-    ['#worship', '예배'],
-    ['#online', '라이브 방송'],
-    ['#partner-news', '협력 소식'],
-    ['#location', '함께하기'],
+    ['/ekodichurch/#together', '함께하기'],
+    ['/ekodichurch/my/', '마이페이지'],
   ];
 
   for (const [href, label] of destinations) {
