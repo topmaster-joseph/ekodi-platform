@@ -80,6 +80,25 @@ try{
         if(new URL(page.url()).searchParams.get('panel')!==panel)throw Error('panel_url_not_preserved_'+panel);
       }
       await assertActive('finance');record.checks.push('finance_direct_link');
+      // Finance is a content-level tab surface. Verify each pane has one active
+      // tab and exactly one visible content section, without extra HTTP requests.
+      for(const tab of ['summary','ledger','manual','import']){
+        await page.locator('[data-finance-tab="'+tab+'"]').click();
+        const state=await page.evaluate(()=>{
+          const tabs=[...document.querySelectorAll('[data-finance-tab]')];
+          const panes=[...document.querySelectorAll('[data-finance-pane]')];
+          return {selected:tabs.filter(x=>x.getAttribute('aria-selected')==='true').map(x=>x.dataset.financeTab),
+            visible:panes.filter(x=>!x.hidden).map(x=>x.dataset.financePane),
+            panel:new URLSearchParams(location.search).get('panel'),
+            financeTab:new URLSearchParams(location.search).get('financeTab')||'summary'};
+        });
+        if(state.selected.length!==1||state.selected[0]!==tab||
+          state.visible.length!==1||state.visible[0]!==tab||
+          state.panel!=='finance'||state.financeTab!==tab)throw Error('finance_subtab_inconsistent_'+tab);
+      }
+      await page.locator('[data-finance-tab="summary"]').click();
+      record.checks.push('finance_tabs_display_and_route');
+
       await page.locator('.sidebar-menu [data-panel-target="minutes"]').click();
       await page.waitForFunction(()=>document.querySelector('#minutesList .admin-item'),{timeout:16000});
       await assertActive('minutes');record.checks.push('minutes_click_and_load');
