@@ -7,8 +7,8 @@ const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
 test('approved homepage gives dated worship its own first-class route without duplicating admin actions',async()=>{
  const html=await read('index.html');
  const css=await read('church-homepage-layout.css');
- assert.match(html,/href="#weekly-worship">예배자료<\/a>/);
- assert.match(html,/href="#weekly-worship"><span>06<\/span><strong>주보·PPT<\/strong>/);
+ assert.match(await read('church-section-nav.js'),/\['주보·PPT','#weekly-worship'\]/);
+ assert.match(html,/href="\/ekodichurch\/#worship"><span>02<\/span><strong>예배·방송<\/strong>/);
  assert.match(html,/data-church-weekly/);
  assert.equal((html.match(/data-church-worship-admin/g)||[]).length,1);
  assert.match(html,/data-weekly-editor hidden/);
