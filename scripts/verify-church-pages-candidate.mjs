@@ -55,6 +55,8 @@ export async function verifyChurchPagesCandidate({sourceDir,artifactDir,expected
   const actualPRs=marker.reviewedUpstreamPullRequests||null;
   if(JSON.stringify(actualPRs)!==JSON.stringify(plan.reviewedUpstreamPullRequests))
     fail('audited upstream Church PR provenance mismatch');
+  if(JSON.stringify(marker.preservedPublicWorship||null)!==JSON.stringify(plan.preservedPublicWorship))
+    fail('preserved PR150 worship SHA lineage missing or altered');
   return Object.freeze({contract:'ekodi.church-offline-verified.v1',
     sourceSha:expectedSourceSha,artifactFileCount:plan.assets.length,
     payloadSha256:computedPayload,sourceProvenance:'exact-git-blob',
