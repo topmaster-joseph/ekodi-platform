@@ -93,3 +93,12 @@ test('visible active destination follows exact current route and buttons copy on
   assert.equal(typeof buttons[0].handlers.click,'function');
   assert.equal(typeof buttons[1].handlers.click,'function');
 });
+
+test('legacy agency redirects intentionally strip secret-looking query parameters',async()=>{
+  const worker=await text('../ekodibiz-worker.js');
+  assert.ok(worker.includes("destination.search=''; // Old links must never forward private query parameters."));
+  assert.ok(worker.includes("destination.hash='';"));
+  assert.ok(worker.includes("Response.redirect(destination.toString(),308)"));
+  assert.ok(worker.includes("'/ai-agency':'/ai-agency/apply'"));
+  assert.ok(worker.includes("'/ai-agency-admin':'/ai-agency/admin'"));
+});
