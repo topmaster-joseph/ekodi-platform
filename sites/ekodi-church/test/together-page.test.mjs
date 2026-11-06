@@ -33,8 +33,10 @@ test('card giving only opens trusted missionfund host', () => {
   assert.match(js, /noopener,noreferrer/);
 });
 
-test('homepage links to together page', () => {
-  assert.match(home, /href="\/ekodichurch\/together\/">함께하기</);
+test('homepage groups participation and giving within the Together menu', () => {
+  assert.match(home, /href="\/ekodichurch\/#together">함께하기</);
+  const sub=readFileSync(new URL('../church-section-nav.js',import.meta.url),'utf8');
+  assert.match(sub,/\['참여·후원','\/ekodichurch\/together\/'\]/);
 });
 
 test('header and content share one centered measure', () => {
