@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { normalizeTask, summarizeNativeNavigationPerformance } from '../scripts/ekodi-background-browser-worker.mjs';
+import { normalizeTask, summarizeNativeNavigationPerformance, shouldBlockNativeTopLevelNavigation } from '../scripts/ekodi-background-browser-worker.mjs';
 
 const source=fs.readFileSync(new URL('../scripts/ekodi-background-browser-worker.mjs',import.meta.url),'utf8');
 const policy=JSON.parse(fs.readFileSync(new URL('../config/background-browser-worker-policy.json',import.meta.url),'utf8'));
@@ -198,4 +198,38 @@ test('native navigation stats treat deliberate throttle as out-of-band metadata'
   assert.deepEqual(summarizeNativeNavigationPerformance(data),{
     navigations:3,p50Ms:210,p95Ms:400,maxMs:400,
   });
+});
+
+
+test('native Chromium blocks cross-origin redirects before a top-level document request is sent',()=>{
+  for(const target of [
+    'https://evil.example/path','https://ekodi.kr.evil.example/',
+    'http://ekodi.kr/','https://ekodi.kr:8443/',
+    'javascript:alert(1)','data:text/html,test','invalid-url',
+    'https://admin:password@ekodi.kr/'
+  ]) assert.equal(shouldBlockNativeTopLevelNavigation(target),true,target);
+  for(const target of [
+    'https://ekodi.kr/','https://ekodi.kr/ekodimall/?campaign=1',
+    'https://ekodi.kr/admin/#section'
+  ]) assert.equal(shouldBlockNativeTopLevelNavigation(target),false,target);
+  assert.equal(shouldBlockNativeTopLevelNavigation(
+    'https://ekodi-admin-staging.ekodi-development.workers.dev/',
+    'https://ekodi-admin-staging.ekodi-development.workers.dev'
+  ),false,'allowlisted staging host remains valid only in explicit staging runtime');
+  assert.match(source,/await context\.route\('\*\*\/\*'/);
+  assert.doesNotMatch(source,/await page\.route\('\*\*\/\*'/);
+  assert.match(source,/req\.isNavigationRequest\(\)/);
+  assert.match(source,/req\.frame\(\)\.parentFrame\(\)===null/);
+  assert.match(source,/context\.on\('page',opened/);
+  assert.match(source,/route\.abort\('blockedbyclient'\)/);
+  assert.match(source,/if\(blockedExternalNavigations\.length\) fail\('BROWSER_REDIRECT_ORIGIN_FORBIDDEN'/);
+  assert.match(source,/blockedExternalNavigationCount:blockedExternalNavigations\.length/);
+  // Sensitive destination URL is never included in the blocked-nav evidence.
+  const handler=source.slice(source.indexOf("if(mainFrameNavigation && shouldBlockNativeTopLevelNavigation"),source.indexOf("if(quotaCircuit) return route.abort"));
+  assert.doesNotMatch(handler,/url:|host:|hostname:|requestUrl:/);
+});
+
+test('standalone worker sanitizes bad-task errors as well as runtime exceptions',()=>{
+  assert.match(source,/Promise\.resolve\(\)\.then\(readTask\)\.then\(runTask\)/);
+  assert.match(source,/console\.error\(JSON\.stringify\(sanitizeNativeBrowserFailure\(error\)\)\)/);
 });

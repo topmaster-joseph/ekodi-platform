@@ -77,6 +77,16 @@ export function summarizeNativeNavigationPerformance(samples=[]) {
 
 function fail(code,message){ const e=new Error(message||code); e.code=code; throw e; }
 
+/** Navigation guard: evaluated at the network interception layer, before a
+ * redirect or popup document request can leave the owned browser. */
+export function shouldBlockNativeTopLevelNavigation(rawUrl, allowedOrigin=ORIGIN) {
+  try {
+    const url=new URL(String(rawUrl??''));
+    return !['https:','http:'].includes(url.protocol) || url.origin!==allowedOrigin ||
+      Boolean(url.username||url.password);
+  } catch { return true; }
+}
+
 /** Keep useful browser evidence without preserving authentication URLs, tokens,
  * emails or phone numbers. Sanitization happens BEFORE writing/returning JSON. */
 export function redactNativeBrowserUrl(raw) {
@@ -216,7 +226,7 @@ export async function runTask(rawTask, options={}){
   const page=await context.newPage();
   // Install prior to each document request: getEntriesByType() cannot retrieve LCP.
   await page.addInitScript(installSyntheticPaintObservers);
-  const consoleErrors=[],pageErrors=[],requestFailures=[],httpErrorResponses=[],blockedMutations=[];
+  const consoleErrors=[],pageErrors=[],requestFailures=[],httpErrorResponses=[],blockedMutations=[],blockedExternalNavigations=[];
   let quotaCircuit=null;
   page.on('console',msg=>{ if(msg.type()==='error') consoleErrors.push(clean(msg.text(),500)); });
   page.on('pageerror',err=>pageErrors.push({
@@ -232,9 +242,22 @@ export async function runTask(rawTask, options={}){
     if(status===429 && new URL(res.url()).origin===ORIGIN) quotaCircuit={status,path:clean(new URL(res.url()).pathname,200),resourceType:clean(res.request().resourceType(),40)};
   });
 
-  await page.route('**/*',async route=>{
+  // Context routing covers both the initial tab and popups; page.route alone
+  // cannot intercept every newly opened top-level document request.
+  context.on('page',opened=>{if(opened!==page) opened.close().catch(()=>{});});
+  await context.route('**/*',async route=>{
     const req=route.request();
     const method=req.method().toUpperCase();
+    let mainFrameNavigation=false;
+    if(req.isNavigationRequest()){
+      try { mainFrameNavigation=req.frame().parentFrame()===null; }
+      catch { mainFrameNavigation=true; } // popup's first document
+    }
+    if(mainFrameNavigation && shouldBlockNativeTopLevelNavigation(req.url())){
+      // No URLs, query strings, host names or auth state enter the receipt.
+      blockedExternalNavigations.push({code:'BROWSER_REDIRECT_ORIGIN_FORBIDDEN'});
+      return route.abort('blockedbyclient');
+    }
     if(quotaCircuit) return route.abort('blockedbyclient'); // CF-QUOTA-001: stop new production requests
     if(!task.allowMutation && !['GET','HEAD','OPTIONS'].includes(method)){
       blockedMutations.push({method,url:clean(req.url(),500)});
@@ -282,6 +305,7 @@ export async function runTask(rawTask, options={}){
       try {
         response=await page.goto(target,{waitUntil:'domcontentloaded',timeout:Math.min(30000,remaining())});
       } catch(error) {
+        if(blockedExternalNavigations.length) fail('BROWSER_REDIRECT_ORIGIN_FORBIDDEN','External top-level navigation blocked before request');
         if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open during navigation'+quotaDetails()+'; no retry');
         throw error;
       }
@@ -419,6 +443,7 @@ export async function runTask(rawTask, options={}){
     }
 
     if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open before success receipt'+quotaDetails()+'; no false PASS');
+    if(blockedExternalNavigations.length) fail('BROWSER_REDIRECT_ORIGIN_FORBIDDEN','External top-level navigation blocked before request');
     const finalUrl=page.url();
     if(new URL(finalUrl).origin!==ORIGIN) fail('BROWSER_FINAL_ORIGIN_FORBIDDEN','Final browser origin is not canonical');
     const report={
@@ -442,6 +467,7 @@ export async function runTask(rawTask, options={}){
       hostInputInjection:false,
       allowMutation:task.allowMutation,
       blockedMutations,
+      blockedExternalNavigationCount:blockedExternalNavigations.length,
       recoveredNavigations,
       performance:summarizeNativeNavigationPerformance(navigationTimings),
       navigationTimings,
@@ -463,9 +489,11 @@ export async function runTask(rawTask, options={}){
 
 const invoked=process.argv[1]&&path.resolve(process.argv[1])===path.resolve(fileURLToPath(import.meta.url));
 if(invoked){
-  const task=await readTask();
-  runTask(task).then(result=>console.log(JSON.stringify(result))).catch(error=>{
-    console.error(JSON.stringify(sanitizeNativeBrowserFailure(error)));
-    process.exitCode=1;
-  });
+  // A malformed task file also needs the same redacted failure envelope.
+  Promise.resolve().then(readTask).then(runTask)
+    .then(result=>console.log(JSON.stringify(result)))
+    .catch(error=>{
+      console.error(JSON.stringify(sanitizeNativeBrowserFailure(error)));
+      process.exitCode=1;
+    });
 }
