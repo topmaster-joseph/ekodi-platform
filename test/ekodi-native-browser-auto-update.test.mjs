@@ -72,5 +72,8 @@ test('official Device Agent upgrade download is bounded, unique and always clean
   // The command still requests normal transactional rollback/heartbeat and
   // never mutates the origin allowlist, registry, session or UAC.
   const executable=update.split('\n').filter(line=>/^[ \t]*#/.test(line)).join('\n');
-  assert.doesNotMatch(executable,/Set-ExecutionPolicy|\b-Verb\s+RunAs\b|\b-ExecutionPolicy\s+Bypass\b|CF_ACCESS_CLIENT_SECRET|chrome\.exe/i);
+  const forbidden=/Set-ExecutionPolicy|(?:^|\s)-Verb\s+RunAs\b|(?:^|\s)-ExecutionPolicy\s+Bypass\b|CF_ACCESS_CLIENT_SECRET|chrome\.exe/i;
+  assert.doesNotMatch(executable,forbidden);
+  assert.match('Start-Process pwsh -Verb RunAs',forbidden,'test must detect privilege elevation');
+  assert.match('pwsh -ExecutionPolicy Bypass',forbidden,'test must detect execution-policy bypass');
 });
