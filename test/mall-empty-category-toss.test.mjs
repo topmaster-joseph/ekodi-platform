@@ -76,7 +76,7 @@ test('Mall build loads the guard and styles hidden categories without enabling c
   assert.ok(template.includes('회원가입 없이 비회원 카드결제를 이용할 수 있습니다.'));
   assert.match(css,/#filters \[data-filter\]\[hidden\]/);
   assert.match(css,/\.mall-primary-nav a\[data-filter-target\]\[hidden\]/);
-  assert.match(css,/\.mall-primary-nav \[data-mall-empty-category="true"\]/);
+  assert.match(css,/\.mall-primary-nav a\[data-filter-target\]\[hidden\]/);
   assert.doesNotMatch(script,/requestPayment\(|confirmPayment\(|TOSS_SECRET_KEY|method:\s*['"]POST['"]/);
 });
 
