@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {pathToFileURL} from 'node:url';
+import {CHEONGGYE_PUBLICATION_HOLD} from '../region-publication-hold.js';
 
 export const LIVE_BOARDS = Object.freeze([
   {site: 'cgma', prefix: '/cgma/board'},
@@ -59,6 +60,21 @@ export async function verifyIndependentBoardLive({
     return {response, body: await response.json()};
   };
   for (const board of LIVE_BOARDS) {
+    if (board.site === 'cheonggye' && CHEONGGYE_PUBLICATION_HOLD) {
+      // The owner deliberately froze all anonymous Cheonggye pages and assets,
+      // including its board. A 200 here is a security regression, not health.
+      for (const path of [board.prefix + '/api/health', board.prefix + '/api/posts', board.prefix]) {
+        const withheld = await request(path, [404]);
+        assert.equal(withheld.headers.get('x-ekodi-route'), 'regional-private-hold', path);
+        assert.equal(withheld.headers.get('x-ekodi-region-publication'), 'private-owner-release-required', path);
+        assert.equal(withheld.headers.get('x-content-type-options'), 'nosniff', path);
+        assert.match(withheld.headers.get('x-robots-tag') || '', /noindex/i, path);
+        assert.match(withheld.headers.get('cache-control') || '', /(?:^|[,\\s])no-store(?:$|[,\\s])/i, path);
+        assert.match(withheld.headers.get('content-type') || '', /text\\/html/i, path);
+        assert.match(await withheld.text(), /서비스 비공개/, path);
+      }
+      continue;
+    }
     const id = 'site:' + board.site + ':main';
     const health = await json(board.prefix + '/api/health');
     assert.equal(health.body.ok, true, board.site + ' health');
@@ -112,7 +128,9 @@ export async function verifyIndependentBoardLive({
     await request('/singles/api/bank/plans', singles.body.social_enabled ? [401, 503] : [503]);
   }
   return {
-    ok: true, boards: LIVE_BOARDS.map(x => x.site),
+    ok: true,
+    boards: LIVE_BOARDS.filter(x => x.site !== 'cheonggye' || !CHEONGGYE_PUBLICATION_HOLD).map(x => x.site),
+    withheldBoards: CHEONGGYE_PUBLICATION_HOLD ? ['cheonggye'] : [],
     pathsChecked: checked.length,
     singlesSocialEnabled: Boolean(singles.body.social_enabled),
     singlesBankEnabled: Boolean(singles.body.bank_transfer_enabled),
