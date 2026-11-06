@@ -31,7 +31,7 @@
 2. 별도 PR로 `config/ekodi-device-agent-release.json`을 제출합니다. 이는 `approved=true`, `channel=protected-orchestrator`, 정식 `sourceCommit`, `sha256`, 단일 고정 상대경로, `rolloutPercent=25`를 포함해야 합니다.
 3. 설치된 Agent 2.6.2+는 하루에 한 번 승인 매니페스트를 읽습니다. 매니페스트 누락/위조/변경, 잘못된 버전, 해시 불일치, 25% 카나리 외 기기, 로컬 제외 설정, 사용 중인 외부 인증 세션에서는 **업데이트하지 않습니다**.
 4. 적합한 기기는 고정된 Git 커밋에서 파일을 내려받아 SHA-256과 PowerShell 소스 검사를 확인한 뒤, 기존 트랜잭션 업데이트(백업·원자적 교체·heartbeat·롤백)를 호출합니다. 실패시 정형 코드만 로컬에 기록합니다.
-5. 각 대상 기기는 **최초에** 정식 EKODI Device Agent 2.6.3 이상을 공식 관리자 업데이트/기기 설치 경로로 설치해야 합니다. 오래된 Agent에는 신규 자동업데이트 코드가 없으므로 무단 업데이트를 하지 않습니다. 앱·운영체제·Chrome 브라우저 설치는 별도 관리입니다.
+5. 각 대상 기기는 **최초에** 정식 EKODI Device Agent 2.6.4 이상을 공식 관리자 업데이트/기기 설치 경로로 설치해야 합니다. 오래된 Agent에는 신규 자동업데이트 코드가 없으므로 무단 업데이트를 하지 않습니다. 앱·운영체제·Chrome 브라우저 설치는 별도 관리입니다.
 6. 25% → 100% 확대에는 새 보호 PR과 실제 기기 재시작·heartbeat·보안 확인이 선행돼야 합니다.
 
 ### 운영 완료 판정
@@ -78,3 +78,12 @@ node scripts/validate-background-browser-worker.mjs
 `node scripts/ekodi-independent-browser.mjs <task.json>`를 실행하면 자체 Chromium 검증 결과와 P50/P95를 반환합니다. `config/ekodi-browser-independence.json`에 독립성 가드를 고정하고, `scripts/validate-background-browser-worker.mjs`와 GitHub 브라우저 워크플로에서 실행 계약을 확인합니다.
 
 **제약:** 브라우저 엔진의 독립 실행과 실제 PC 원격 제어, 외부 공급처 주문은 서로 다른 권한·실행 경로입니다. 구버전 Device Agent의 `EKA-121` 업데이트 장애 및 최초 현장 등록은 이 독립 실행 모드만으로 해결되었다고 간주하지 않습니다.
+
+
+## Agent 2.6.4 공식 업데이트 신뢰성 보강
+
+기존 공식 다운로드 명령은 고정 TEMP 파일을 사용하고 명시적 요청 제한시간이 없었습니다. Agent 2.6.4부터 각 실행마다 임의 파일명을 사용하고 다운로드를 최대 25초로 제한합니다. 모든 완료·실패 경로에서 해당 임시 파일을 정리합니다.
+
+기존 `Assert-AgentCandidate`, 트랜잭션 백업·원자적 교체·롤백, 명령 결과 송신 후 안전 재시작은 그대로 유지합니다. 이 변경이 과거 `EKA-121`의 단독 원인임은 아직 입증되지 않았으며, 사용자 PC의 최초 연결 승인이나 보호된 Agent 배포 검증을 대신하지 않습니다.
+
+보호된 중앙 릴리스 후에도 새 Agent 2.6.4 설치 확인, 재시작 후 heartbeat, 도매꾹 인증 작업의 현장 동의, 실패시 롤백 검증을 별도로 수행해야 합니다.
