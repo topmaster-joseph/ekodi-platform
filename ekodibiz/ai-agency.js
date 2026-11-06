@@ -38,8 +38,15 @@
     return data;
   }
   function saveReceipt(item) {
+    // A contract code change is a security boundary: never retain prior details.
+    current = null;
+    checkout = null;
+    widgets = null;
+    loadedKey = '';
     campusReport = null;
     $('campusPanel').hidden = true;
+    $('result').hidden = true;
+    $('tossPanel').hidden = true;
     receipt = item;
     try { sessionStorage.setItem(receiptKey, JSON.stringify(item)); } catch {}
     $('lookupId').value = item.id;
@@ -120,12 +127,20 @@
   }
   async function refresh() {
     if (!receipt) { message('신청 조회번호와 보안코드를 입력해 주세요.', true); return; }
+    const queried = {id:receipt.id,receiptToken:receipt.receiptToken};
     try {
-      const data = await api('/status', receipt);
+      const data = await api('/status', queried);
+      // An older pending response must not paint a different university.
+      if(!receipt||receipt.id!==queried.id||receipt.receiptToken!==queried.receiptToken)return;
       paint(data.record);
       renderCampus(data.campus);
       message('최신 신청 상태를 확인했습니다.', false);
-    } catch (error) { message(error.message, true); }
+    } catch (error) {
+      if(!receipt||receipt.id!==queried.id||receipt.receiptToken!==queried.receiptToken)return;
+      current=null;campusReport=null;checkout=null;widgets=null;loadedKey='';
+      $('result').hidden=true;$('campusPanel').hidden=true;$('tossPanel').hidden=true;
+      message(error.message, true);
+    }
   }
   const form = $('agencyForm');
   form.querySelectorAll('[name="type"]').forEach((input) => input.addEventListener('change', () => {
