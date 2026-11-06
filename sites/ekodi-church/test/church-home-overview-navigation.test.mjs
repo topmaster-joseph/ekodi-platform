@@ -5,10 +5,10 @@ import { readFileSync } from 'node:fs';
 const css = readFileSync(new URL('../church-refresh.css', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
-test('church hero eight shortcuts use centered readable labels on desktop and mobile', () => {
+test('church hero ten shortcuts use centered readable labels on desktop and mobile', () => {
   const menu = html.match(/<div class="overview-grid"[\s\S]*?<\/div>/)?.[0];
   assert.ok(menu, 'overview menu must exist');
-  assert.equal((menu.match(/<a href=/g) || []).length, 8, 'there must be eight shortcuts');
+  assert.equal((menu.match(/<a href=/g) || []).length, 10, 'there must be ten shortcuts');
   assert.match(css, /\.hero \.overview-grid a\{[\s\S]*?place-items:center/);
   assert.match(css, /\.hero \.overview-grid a strong\{[^}]*font-size:18px;[^}]*text-align:center;/);
   assert.match(css, /@media\(max-width:800px\)\{[\s\S]*?\.hero \.overview-grid a strong\{font-size:17px\}/);
