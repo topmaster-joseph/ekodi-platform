@@ -19,8 +19,11 @@ const devices=[['desktop','desktop'],['mobile','mobile-portrait']];
 function check(label,result,extra={}){
   const row={label,passed:result?.ok===true,errors:result?.pageErrors?.length??null,
     blockedMutations:result?.blockedMutations?.length??null,error:result?.error?.code||result?.error?.message||null,...extra};
+  if(!row.passed)row.detail=JSON.stringify({code:result?.code??null,message:result?.message??null,error:result?.error,
+    pageErrors:(result?.pageErrors||[]).slice(0,3),url:result?.url??result?.finalUrl??null}).slice(0,600);
   report.checks.push(row);
   console.log('[EKODI-POINTS-STAGING] '+JSON.stringify(row));
+  if(!row.passed)console.log(`::error::${label}: ${row.detail}`.replace(/\r?\n/g,' '));
   return row.passed;
 }
 
@@ -84,6 +87,7 @@ try{
   report.passed=report.checks.length===devices.length&&report.checks.every(row=>row.passed);
 }catch(error){
   report.error=String(error?.code||error?.message||error).slice(0,300);
+  console.log(`::error::${target} verification error: ${report.error}`.replace(/\r?\n/g,' '));
 }finally{
   report.finishedAt=new Date().toISOString();
   await fs.writeFile(`${dir}/${target}-report.json`,JSON.stringify(report,null,2));
