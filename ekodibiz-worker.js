@@ -417,6 +417,8 @@ export default {
       if (request.method !== 'GET' && request.method !== 'HEAD') return json({error:'method_not_allowed'},405);
       const destination=new URL(request.url);
       destination.pathname=('/ekodibiz'+agencyLegacy[path]);
+      destination.search=''; // Old links must never forward private query parameters.
+      destination.hash='';
       return Response.redirect(destination.toString(),308);
     }
     // Reuse one verified application bundle; no duplicate payment/contract apps.
