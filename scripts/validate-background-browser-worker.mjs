@@ -14,9 +14,24 @@ const sharedRelease=fs.readFileSync(path.join(root,'.github/workflows/deploy-sit
 const nativeUpdate=read('config/ekodi-native-browser-update-policy.json');
 const browserIndependence=read('config/ekodi-browser-independence.json');
 const nativeOnlyExecutor=fs.readFileSync(path.join(root,'scripts/ekodi-independent-browser.mjs'),'utf8');
+const nativeWorkerSource=fs.readFileSync(path.join(root,'scripts/ekodi-background-browser-worker.mjs'),'utf8');
 const nativeAgent=fs.readFileSync(path.join(root,'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'),'utf8');
 const failures=[];
 const fail=m=>failures.push(m);
+for(const requirement of [
+  "shouldBlockNativeTopLevelNavigation",
+  "await context.route('**/*'",
+  "req.isNavigationRequest()",
+  "req.frame().parentFrame()===null",
+  "blockedExternalNavigationCount:blockedExternalNavigations.length",
+  "context.on('page',opened"
+]) {
+  if(!nativeWorkerSource.includes(requirement))fail('native browser top-level network isolation marker missing: '+requirement);
+}
+if(nativeWorkerSource.includes("await page.route('**/*'"))fail('page-only routing cannot secure popup navigation');
+if(!nativeWorkerSource.includes("Promise.resolve().then(readTask).then(runTask)"))
+  fail('native browser task parser must use the redacted failure path');
+
 if(browserIndependence.policyId!=='EKODI-NATIVE-BROWSER-INDEPENDENCE-001'||
    browserIndependence.owner!=='ekodi-orchestrator'||
    browserIndependence.externalBrowser?.required!==false||
