@@ -2236,24 +2236,22 @@
       {
         "url": "https://ekodi.kr/cheonggye",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "청계잇다",
-          "지역정보",
-          "동네·기관",
-          "상점·혜택",
-          "role=\"tablist\"",
-          "청계면상인회"
+          "서비스 비공개",
+          "외부 공개를 중단"
         ],
         "forbid": [
-          "운영공간",
-          "data-ekodi-operating-space-label"
+          "role=\"tablist\"",
+          "지역 공개정보"
         ],
         "headerExpect": [
-          "x-ekodi-route: local-region-public",
-          "x-ekodi-shell: v2",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2261,16 +2259,22 @@
       {
         "url": "https://ekodi.kr/cheonggye/region-tabs-ui.js",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "data-region-tablist",
-          "aria-selected",
-          "ArrowRight"
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
+          "role=\"tablist\"",
+          "지역 공개정보"
         ],
         "headerExpect": [
-          "content-type: text/javascript",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2319,13 +2323,22 @@
       {
         "url": "https://ekodi.kr/cheonggyepass",
         "statuses": [
-          308
+          404
         ],
         "redirect": "manual",
+        "expect": [
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
+          "role=\"tablist\"",
+          "지역 공개정보"
+        ],
         "headerExpect": [
-          "location: https://ekodi.kr/cgpass",
-          "x-ekodi-route: cgpass-legacy-handoff",
-          "cache-control: no-store",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2333,21 +2346,22 @@
       {
         "url": "https://ekodi.kr/cgpass",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "청계패스",
-          "서비스 준비 중",
-          "참여점포",
-          "쿠폰·할인",
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
           "role=\"tablist\"",
-          "href=\"/cheonggye\"",
-          "href=\"/cgma\""
+          "지역 공개정보"
         ],
         "headerExpect": [
-          "x-ekodi-route: regional-commerce-program-public",
-          "x-ekodi-shell: v2",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2355,13 +2369,22 @@
       {
         "url": "https://ekodi.kr/cheonggye/pass",
         "statuses": [
-          308
+          404
         ],
         "redirect": "manual",
+        "expect": [
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
+          "role=\"tablist\"",
+          "지역 공개정보"
+        ],
         "headerExpect": [
-          "location: https://ekodi.kr/cgpass",
-          "x-ekodi-route: cgpass-legacy-handoff",
-          "cache-control: no-store",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2571,17 +2594,22 @@
       {
         "url": "https://ekodi.kr/cheonggye/directory",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "기관·단체·지역안내",
-          "지역 공개정보",
-          "local-region-module-public.js"
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
+          "role=\"tablist\"",
+          "지역 공개정보"
         ],
         "headerExpect": [
-          "x-ekodi-route: local-region-module-public",
-          "x-ekodi-shell: v2",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2610,17 +2638,22 @@
       {
         "url": "https://ekodi.kr/cheonggye/commerce",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "상점·상권",
-          "지역 공개정보",
-          "local-region-module-public.js"
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
+          "role=\"tablist\"",
+          "지역 공개정보"
         ],
         "headerExpect": [
-          "x-ekodi-route: local-region-module-public",
-          "x-ekodi-shell: v2",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2649,17 +2682,22 @@
       {
         "url": "https://ekodi.kr/cheonggye/events",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "지역행사·프로그램",
-          "지역 공개정보",
-          "local-region-module-public.js"
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
+          "role=\"tablist\"",
+          "지역 공개정보"
         ],
         "headerExpect": [
-          "x-ekodi-route: local-region-module-public",
-          "x-ekodi-shell: v2",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2688,17 +2726,22 @@
       {
         "url": "https://ekodi.kr/cheonggye/jobs",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "구인구직",
-          "지역 공개정보",
-          "local-region-module-public.js"
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
+          "role=\"tablist\"",
+          "지역 공개정보"
         ],
         "headerExpect": [
-          "x-ekodi-route: local-region-module-public",
-          "x-ekodi-shell: v2",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2727,17 +2770,22 @@
       {
         "url": "https://ekodi.kr/cheonggye/sharing",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "나눔마켓",
-          "지역 공개정보",
-          "local-region-module-public.js"
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
+          "role=\"tablist\"",
+          "지역 공개정보"
         ],
         "headerExpect": [
-          "x-ekodi-route: local-region-module-public",
-          "x-ekodi-shell: v2",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2766,17 +2814,22 @@
       {
         "url": "https://ekodi.kr/cheonggye/broadcast",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "지역방송·라이브",
-          "지역 공개정보",
-          "local-region-module-public.js"
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
+          "role=\"tablist\"",
+          "지역 공개정보"
         ],
         "headerExpect": [
-          "x-ekodi-route: local-region-module-public",
-          "x-ekodi-shell: v2",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2805,17 +2858,22 @@
       {
         "url": "https://ekodi.kr/cheonggye/proposals",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "주민참여·제안",
-          "지역 공개정보",
-          "local-region-module-public.js"
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
+          "role=\"tablist\"",
+          "지역 공개정보"
         ],
         "headerExpect": [
-          "x-ekodi-route: local-region-module-public",
-          "x-ekodi-shell: v2",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2844,17 +2902,22 @@
       {
         "url": "https://ekodi.kr/cheonggye/forest",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "청계면 국민의숲",
-          "승달산",
-          "목포대"
+          "서비스 비공개",
+          "외부 공개를 중단"
+        ],
+        "forbid": [
+          "role=\"tablist\"",
+          "지역 공개정보"
         ],
         "headerExpect": [
-          "x-ekodi-route: local-region-forest-public",
-          "x-ekodi-shell: v2",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
