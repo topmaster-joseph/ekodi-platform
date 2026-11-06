@@ -1,4 +1,3 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { USER_SERVICES } from './user-services.js';
 
 const cfg = window.EKODI_MY_CONFIG || {};
@@ -6,6 +5,21 @@ const enabled = Boolean(cfg.dataEnabled && cfg.supabaseUrl && cfg.supabasePublis
 const hostSection = document.querySelector('#platforms');
 const ENTITLEMENT_SUBJECT_KEY = 'ekodi_my_entitlement_subject';
 let entitlementSession = null;
+// Reuse the central My EKODI app's verified session rather than constructing
+// a second Supabase client and awaiting a second getSession() on startup.
+let sessionRevision = 0;
+let entitlementRequestRevision = 0;
+function verifiedSession() {
+  const auth = window.EKODI_MY_AUTH;
+  if (auth?.isSignedIn?.() !== true) return null;
+  const access_token = String(auth.getAccessToken?.() || '');
+  return access_token ? { access_token } : null;
+}
+function isCurrentSession(session, revision) {
+  return revision === sessionRevision
+    && Boolean(session?.access_token)
+    && verifiedSession()?.access_token === session.access_token;
+}
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -189,12 +203,10 @@ function renderEntitlementManager(data, { degraded = false } = {}) {
   });
 }
 
-async function loadEntitlements(session, subject = storedEntitlementSubject()) {
+async function loadEntitlements(session, subject = storedEntitlementSubject(), revision = sessionRevision) {
+  const requestRevision = ++entitlementRequestRevision;
   entitlementSession = session || null;
-  if (!session?.access_token) {
-    renderEntitlementManager(null);
-    return;
-  }
+  if (!isCurrentSession(session, revision)) return;
   try {
     const url = new URL('https://ekodi.kr/api/membership/entitlements');
     if (subject) url.searchParams.set('subject', subject);
@@ -202,46 +214,58 @@ async function loadEntitlements(session, subject = storedEntitlementSubject()) {
       cache:'no-store',
       headers:{ authorization:`Bearer ${session.access_token}` },
     });
+    // A sign-out, account switch or subject switch must never publish stale
+    // entitlement results into the current user's page.
+    if (!isCurrentSession(session, revision) || requestRevision !== entitlementRequestRevision) return;
     if (response.status === 401) return renderEntitlementManager(null);
     if (!response.ok) throw new Error(`ai_entitlements_${response.status}`);
-    renderEntitlementManager(await response.json());
+    const data = await response.json();
+    if (!isCurrentSession(session, revision) || requestRevision !== entitlementRequestRevision) return;
+    renderEntitlementManager(data);
   } catch (error) {
+    if (!isCurrentSession(session, revision) || requestRevision !== entitlementRequestRevision) return;
     console.warn('AI entitlement portfolio', error);
     renderEntitlementManager(null, { degraded:true });
   }
 }
 
-async function loadPortfolio(session) {
-  if (!session?.access_token) {
-    renderGuest();
-    return;
-  }
+async function loadPortfolio(session, revision = sessionRevision) {
+  if (!isCurrentSession(session, revision)) return;
   try {
     const response = await fetch('https://ekodi.kr/api/membership/portfolio', {
       cache: 'no-store',
       headers: { authorization: `Bearer ${session.access_token}` },
     });
+    if (!isCurrentSession(session, revision)) return;
     if (response.status === 401) {
       renderGuest();
       return;
     }
     if (!response.ok) throw new Error(`membership_portfolio_${response.status}`);
-    renderPortfolio(await response.json());
-    await loadEntitlements(session);
+    const data = await response.json();
+    if (!isCurrentSession(session, revision)) return;
+    renderPortfolio(data);
+    await loadEntitlements(session, storedEntitlementSubject(), revision);
   } catch (error) {
+    if (!isCurrentSession(session, revision)) return;
     console.warn('universal membership portfolio', error);
     renderPortfolio(null, { degraded: true });
-    await loadEntitlements(session);
+    await loadEntitlements(session, storedEntitlementSubject(), revision);
   }
 }
 
-if (!enabled) {
-  renderGuest();
-} else {
-  const sb = createClient(cfg.supabaseUrl, cfg.supabasePublishableKey, {
-    auth: { detectSessionInUrl: false, persistSession: true },
-  });
-  const { data } = await sb.auth.getSession();
-  await loadPortfolio(data.session);
-  sb.auth.onAuthStateChange((_event, session) => { void loadPortfolio(session); });
+function refreshVerifiedMembership() {
+  const revision = ++sessionRevision;
+  ++entitlementRequestRevision;
+  const session = enabled ? verifiedSession() : null;
+  if (!session) {
+    entitlementSession = null;
+    renderGuest();
+    return;
+  }
+  void loadPortfolio(session, revision);
 }
+// An auth event may arrive before or after this ES module is evaluated.
+// Subscribe AND inspect current verified state, covering both races.
+window.addEventListener('ekodi:my-session', refreshVerifiedMembership);
+refreshVerifiedMembership();
