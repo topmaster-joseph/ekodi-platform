@@ -39,6 +39,13 @@ textarea{min-height:84px;resize:vertical}input:focus-visible,textarea:focus-visi
 .campus-report .periods{display:grid;gap:7px;padding:0;margin:10px 0;list-style:none}
 .campus-report .periods li{padding:10px 12px;border:1px solid #dce8df;border-radius:9px;background:white;overflow-wrap:break-word;font-size:13px}
 .campus-report .campus-note{font-size:12px;color:#65766b;line-height:1.65}
+.agency-navigation{max-width:1040px;margin:10px auto 0;padding:0 18px;display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.agency-navigation a,.agency-navigation button{font:inherit;font-size:12px;line-height:1.45;text-decoration:none;white-space:normal;display:inline-flex;align-items:center;min-height:36px;border-radius:8px;padding:7px 10px;background:#fff;border:1px solid #cedfd1;color:#194a35;cursor:pointer;text-align:center}
+.agency-navigation [aria-current="page"]{background:#1c5136;border-color:#1c5136;color:white;font-weight:800}
+.agency-navigation button{background:#f1f7f2}
+.agency-share-status{max-width:1040px;margin:4px auto 0;padding:0 18px;font-size:12px;color:#245d3a}
+.agency-share-status:empty{display:none}
+
 
 .price{font-weight:850;font-size:25px;letter-spacing:-.03em}
 #tossPanel{margin-top:15px}#tossMethods,#tossAgreement{min-height:30px}
@@ -55,7 +62,16 @@ body[data-agency-view="university"] #statusPanel{margin-top:0!important}
 </style>
 </head>
 <body>
-<header><div class="bar"><a class="logo" href="https://ekodi.kr/ekodibiz">EKODIBIZ</a><nav aria-label="주요 메뉴"><a href="https://ekodi.kr/ekodibiz">에코디비즈</a><a href="/ekodibiz/ai-agency/apply">위탁신청</a><a href="/ekodibiz/ai-agency/university">대학 계약조회</a></nav></div></header>
+<header><div class="bar"><a class="logo" href="https://ekodi.kr/ekodibiz">EKODIBIZ</a><nav aria-label="주요 메뉴"><a href="https://ekodi.kr/ekodibiz">에코디비즈</a></nav></div></header>
+<nav class="agency-navigation" aria-label="AI 위탁 서비스 화면 이동">
+  <a data-agency-link="apply" href="/ekodibiz/ai-agency/apply">위탁신청</a>
+  <a data-agency-link="university" href="/ekodibiz/ai-agency/university">대학 계약조회</a>
+  <a data-agency-link="individual" href="/ekodibiz/ai-agency/individual">개인 신청</a>
+  <a data-agency-link="admin" href="/ekodibiz/ai-agency/admin">운영자 관리</a>
+  <button class="agency-share" data-share-agency="current" type="button">이 화면 공유</button>
+  <button class="agency-share" data-share-agency="university" type="button">대학 조회 링크 공유</button>
+</nav>
+<p class="agency-share-status" id="agencyShareStatus" role="status" aria-live="polite"></p>
 <main>
 <section aria-labelledby="heading">
 <p class="eyebrow">EKODIBIZ · AI PURCHASE AGENCY</p>
@@ -124,5 +140,6 @@ body[data-agency-view="university"] #statusPanel{margin-top:0!important}
 </main>
 <footer><div class="inner">에코디비즈 · 사업자등록번호 213-13-01959 · 고객문의 ekodibiz@gmail.com<br>본 페이지는 위탁 서비스 신청 화면이며 토스페이먼츠와 AI 공급사의 공식 웹사이트가 아닙니다.</div></footer>
 <script src="/ekodibiz/ai-agency.js" defer></script>
+<script src="/ekodibiz/ai-agency-links.js" type="module"></script>
 <script src="https://ekodi.kr/shell/user-ui-footer.js" defer></script>
 </body></html>
