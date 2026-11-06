@@ -135,7 +135,9 @@ export async function handleAgeVerificationRequest(request, env) {
   if ((path === ROOT + '/status' && request.method !== 'GET') ||
       (path !== ROOT + '/status' && request.method !== 'POST'))
     return json({ error: 'method_not_allowed' }, 405);
-  if (!configured(env) || Object.keys(policies(env)).length === 0)
+  // A KG-only deployment does not require the unrelated legacy PortOne channel.
+  // A specific site's production provider is still checked in config() below.
+  if (!env?.DB || !authConfig(env) || Object.keys(policies(env)).length === 0)
     return json({ error: 'age_verification_unavailable' }, 503);
   const userId = await authenticate(request, env);
   if (!userId) return json({ error: 'unauthorized' }, 401);
@@ -143,7 +145,9 @@ export async function handleAgeVerificationRequest(request, env) {
   if (request.method === 'POST' && !data) return json({ error: 'invalid_payload' }, 400);
   const site = request.method === 'GET' ? url.searchParams.get('site') : data.site;
   const cfg = config(env, site);
-  if (!cfg) return json({ error: 'site_not_enabled' }, 403);
+  if (!cfg) return policies(env)[site]
+    ? json({ error: 'age_verification_unavailable' }, 503)
+    : json({ error: 'site_not_enabled' }, 403);
   const now = Date.now(), stamp = iso(now);
   try {
     if (path === ROOT + '/status') {

@@ -724,7 +724,7 @@ export default {
           canonical.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
           return canonical;
         }
-        const allowed = new Set(['/verify/adult/','/verify/adult/index.html','/verify/adult/styles.css','/verify/adult/app.js','/verify/adult/client.js']);
+        const allowed = new Set(['/verify/adult/','/verify/adult/index.html','/verify/adult/styles.css','/verify/adult/app.js','/verify/adult/client.js','/verify/adult/test.html','/verify/adult/test.js']);
         if (!allowed.has(url.pathname)) {
           const missing = withHostSecurity(new Response('Not Found',{status:404}), AGE_VERIFY_CSP, 'no-store', 'age-verify-not-found');
           missing.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
