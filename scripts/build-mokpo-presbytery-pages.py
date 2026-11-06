@@ -274,6 +274,7 @@ VIEWER_PATH = '/mokpo-presbytery/mission/viewer/'
 
 def viewer_page():
     body = f'''<style>
+.hero-center .wrap{{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}}.hero-center h1{{margin-inline:auto}}.hero-center p.lead{{margin-inline:auto}}
 .lg-wrap{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;max-width:860px;margin:0 auto}}
 .lg-card{{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}}.lg-card h2{{margin:0 0 6px;font-size:20px}}
 .lg-card label{{display:block;font-size:14px;font-weight:600;margin:12px 0 5px}}.lg-card input{{width:100%;font:inherit;font-size:18px;padding:12px;border:1px solid #c7d1ce;border-radius:9px}}
@@ -281,7 +282,7 @@ def viewer_page():
 .vw-err{{color:#b23b3b;font-size:14px;margin-top:10px;min-height:1em}}
 </style>
 {ROLE_BAR}
-<section class="hero"><div class="wrap"><div><span class="kicker">선교부 로그인</span><h1>권한에 따라 보고, 고치고, 승인합니다</h1><p class="lead">로그인하면 선교부 화면의 각 메뉴 안에서 내 권한에 맞는 내용과 기능이 나타납니다. 서기는 수정, 부장은 승인, 부원은 열람합니다. 부장·부원 비밀번호는 각자의 휴대폰번호 끝 4자리입니다.</p></div></div></section>
+<section class="hero hero-center"><div class="wrap"><div><span class="kicker">선교부 로그인</span><h1>권한에 따라 보고, 고치고, 승인합니다</h1><p class="lead">로그인하면 선교부 화면의 각 메뉴 안에서 내 권한에 맞는 내용과 기능이 나타납니다. 서기는 수정, 부장은 승인, 부원은 열람합니다. 부장·부원 비밀번호는 각자의 휴대폰번호 끝 4자리입니다.</p></div></div></section>
 <main><section><div class="wrap"><div class="lg-wrap">
 <div class="lg-card"><h2>서기 (수정 권한)</h2><p class="note">에코디 통합로그인(이메일)으로 들어갑니다. 선교부 관리자로 등록된 계정만 수정할 수 있습니다.</p><a class="vw-btn" href="/auth/?site=space&amp;return_to=https%3A%2F%2Fekodi.kr%2Fmokpo-presbytery%2Fmission%2F">에코디 통합로그인</a></div>
 <form class="lg-card" id="vwLogin" novalidate data-supabase="{SUPABASE_URL}" data-key="{SUPABASE_PUBLISHABLE_KEY}" data-slug="mokpo-mission" data-return="/mokpo-presbytery/mission/#budget">
