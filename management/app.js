@@ -124,7 +124,57 @@ function storeOperationItem(primary,secondary){
   const note=document.createElement('span');note.textContent=secondary;
   item.append(title,note);return item;
 }
-function renderStoreOperations(operations){
+const FINANCIAL_SECTION_IDS=new Set(['orders','customers','sales','settlement']);
+const FINANCIAL_READ_ROLES=new Set(['store_owner','tenant_admin','platform_admin']);
+function validBusinessAggregate(data,space){
+  const count=n=>Number.isSafeInteger(n)&&n>=0;
+  const money=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=1e13;
+  if(!data||data.dataPolicy!=='verified-business-aggregate-read-only'
+    ||data.workspace?.id!==space.id||data.workspace?.slug!==space.slug
+    ||data.workspace?.kind!=='store'||data.timezone!=='Asia/Seoul'
+    ||data.coverage!=='ekodi-recorded-completed-orders-only'
+    ||data.source!=='business_os_store_admin_snapshot'
+    ||typeof data.asOf!=='string'||!Number.isFinite(Date.parse(data.asOf))
+    ||!count(data.orders?.completedCount)||!money(data.orders?.averageTicket)
+    ||!money(data.sales?.recordedCompletedSales)
+    ||!count(data.customers?.identifiedToday)||!count(data.customers?.newFromBaseOrders)
+    ||data.customers.newFromBaseOrders>data.customers.identifiedToday
+    ||!['internal-aggregate','not-connected'].includes(data.settlement?.status))return false;
+  if(data.settlement.status==='internal-aggregate'
+    &&!['cashIn','cashOut','costTotal'].every(key=>money(data.settlement[key])))return false;
+  return true;
+}
+function renderBusinessAggregate(body,sectionId,data){
+  const stamp=document.createElement('p');stamp.textContent=
+    '조회 기준: '+new Date(data.asOf).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})+' · 한국시간';
+  body.append(stamp);
+  const grid=document.createElement('dl');grid.className='store-kpi-grid';
+  let disclaimer='';
+  const format=n=>n.toLocaleString('ko-KR')+'원';
+  if(sectionId==='orders'){
+    grid.append(storeKpiRow('오늘 기록된 완료 주문',data.orders.completedCount+'건'),
+      storeKpiRow('완료 주문 평균 결제액',format(data.orders.averageTicket)));
+    disclaimer='에코디 시스템에 기록된 완료 주문만 집계합니다. 배달앱·POS의 모든 주문을 포함한다고 보장하지 않습니다.';
+  }else if(sectionId==='sales'){
+    grid.append(storeKpiRow('오늘 기록된 완료 주문액',format(data.sales.recordedCompletedSales)));
+    disclaimer='에코디가 수집한 완료 주문의 합계이며, 전체 사업 매출이나 은행 입금액이 아닙니다.';
+  }else if(sectionId==='customers'){
+    grid.append(storeKpiRow('오늘 식별 가능한 주문 고객',data.customers.identifiedToday+'명'),
+      storeKpiRow('오늘 첫 주문으로 기록된 고객',data.customers.newFromBaseOrders+'명'));
+    disclaimer='기본 주문에 식별정보가 기록된 고객만 포함합니다. 외부 플랫폼 고객 전체를 나타내지 않습니다.';
+  }else if(data.settlement.status==='internal-aggregate'){
+    grid.append(storeKpiRow('내부 집계 현금수입',format(data.settlement.cashIn)),
+      storeKpiRow('내부 집계 현금지출',format(data.settlement.cashOut)),
+      storeKpiRow('내부 집계 비용',format(data.settlement.costTotal)));
+    disclaimer='에코디에 등록된 일별 내부 재무 집계입니다. 은행 입금·PG 정산 검증 자료가 아닙니다.';
+  }else{
+    const note=document.createElement('p');note.textContent='공식 내부 일별 재무 집계가 연결되지 않았습니다. 0원으로 간주하지 않습니다.';
+    body.append(note);return;
+  }
+  body.append(grid);
+  const note=document.createElement('p');note.className='note';note.textContent=disclaimer;body.append(note);
+}
+function renderStoreOperations(operations,space,stillCurrent){
   const section=document.createElement('section');section.className='store-operations';
   const heading=document.createElement('strong');heading.textContent='매장 운영 상세 · 공식 원본';
   const tabs=document.createElement('div');tabs.className='store-operation-tabs';
@@ -132,11 +182,38 @@ function renderStoreOperations(operations){
   const body=document.createElement('div');body.className='store-operation-body';
   const valid=validStoreOperations(operations);
   const buttons=[];
+  const aggregate={status:'idle',data:null};
+  let activeSection='menu';
   const show=sectionId=>{
+    activeSection=sectionId;
     for(const button of buttons)button.setAttribute('aria-pressed',button.dataset.section===sectionId?'true':'false');
     body.replaceChildren();
     const header=document.createElement('strong');header.textContent=STORE_OPERATION_SECTIONS.find(item=>item.id===sectionId).label;
     body.append(header);
+    if(FINANCIAL_SECTION_IDS.has(sectionId)){
+      const notice=document.createElement('p');
+      if(!FINANCIAL_READ_ROLES.has(space.role)){
+        notice.textContent='이 집계는 매장 소유자 또는 기관 관리자 권한이 필요합니다.';
+        body.append(notice);return;
+      }
+      if(aggregate.status==='idle'){
+        aggregate.status='loading';
+        void loadBusinessAggregate();
+      }
+      if(aggregate.status==='loading'){
+        notice.textContent='공식 완료 주문·경영 집계를 확인하고 있습니다.';
+        body.append(notice);return;
+      }
+      if(aggregate.status==='forbidden'){
+        notice.textContent='현재 계정은 이 매장의 집계 조회 권한이 없습니다.';
+        body.append(notice);return;
+      }
+      if(aggregate.status!=='ready'){
+        notice.textContent='공식 경영 집계를 확인할 수 없습니다. 0건 또는 0원으로 간주하지 않습니다.';
+        body.append(notice);return;
+      }
+      renderBusinessAggregate(body,sectionId,aggregate.data);return;
+    }
     if(['menu','channels'].includes(sectionId)){
       if(!valid){
         const note=document.createElement('p');note.textContent='공식 운영 데이터의 상세 목록을 확인할 수 없습니다. 현재 숫자를 0건으로 판단하지 않습니다.';body.append(note);return;
@@ -160,6 +237,29 @@ function renderStoreOperations(operations){
     const notice=document.createElement('p');notice.textContent='현재 이 경영플랫폼에 검증된 해당 항목의 실적 원본이 연결되지 않았습니다. 0건 또는 0원으로 표시하지 않습니다.';
     body.append(notice);
   };
+  async function loadBusinessAggregate(){
+    if(!stillCurrent())return;
+    const token=state.session?.accessToken;
+    if(!token){aggregate.status='unavailable';return}
+    try{
+      const path='/api/store-business-summary?slug='+encodeURIComponent(space.slug);
+      const response=await fetch(path,{method:'GET',headers:{authorization:'Bearer '+token,accept:'application/json'},cache:'no-store'});
+      if(!stillCurrent())return;
+      if(response.status===401){clearSession();return}
+      if(response.status===403){aggregate.status='forbidden';}
+      else if(!response.ok){aggregate.status='unavailable';}
+      else{
+        const data=await response.json();
+        if(!stillCurrent())return;
+        aggregate.data=validBusinessAggregate(data,space)?data:null;
+        aggregate.status=aggregate.data?'ready':'unavailable';
+      }
+    }catch{
+      if(!stillCurrent())return;
+      aggregate.status='unavailable';
+    }
+    if(stillCurrent()&&FINANCIAL_SECTION_IDS.has(activeSection))show(activeSection);
+  }
   for(const item of STORE_OPERATION_SECTIONS){
     const button=document.createElement('button');button.type='button';button.className='store-operation-tab';
     button.dataset.section=item.id;button.textContent=item.label;
@@ -193,7 +293,7 @@ async function loadStoreSummary(space,host,button){
       storeKpiRow('연결 채널',data.summary.connectedChannelCount),
       storeKpiRow('주문 설정',data.summary.orderEnabled?'활성':'비활성')
     );
-    host.replaceChildren(grid,renderStoreReadiness(data.summary),renderStoreOperations(data.operations));
+    host.replaceChildren(grid,renderStoreReadiness(data.summary),renderStoreOperations(data.operations,space,stillCurrent));
   }catch(error){
     if(!stillCurrent())return;
     host.replaceChildren();host.textContent='운영현황을 확인할 수 없습니다. 잠시 후 다시 조회해 주세요.';
