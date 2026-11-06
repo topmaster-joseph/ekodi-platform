@@ -229,10 +229,8 @@ body[data-mall-view="recommend"] .mall-recommend-inline-form{display:block}
 }
 
 /* TOSS-MALL-UNDERWRITING-001: no unready item may be presented as a purchasable offer.
-   Empty filters may be omitted, but navigation remains visible and leads to a safe empty state. */
+   Confirmed empty categories are hidden; direct URL requests retain their safe empty state. */
 #filters [data-filter][hidden]{display:none!important}
-.mall-primary-nav [data-mall-empty-category="true"]{opacity:.82}
-.mall-primary-nav [data-mall-empty-category="true"][aria-current="page"]{opacity:1}
 
 .mall-merchant-review-note{margin:9px 0 0;font-size:12px;line-height:1.7;color:var(--muted,#5c6471);max-width:790px}
 
