@@ -57,8 +57,9 @@
     {
       "id": "cheonggye.board",
       "path": "/cheonggye/board",
-      "enabled": true,
-      "kind": "board"
+      "enabled": false,
+      "kind": "board",
+      "verificationNote": "owner-held-private-404; checked by scripts/verify-independent-board-live.mjs"
     },
     {
       "id": "cgma.board",

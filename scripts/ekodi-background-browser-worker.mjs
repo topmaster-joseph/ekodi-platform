@@ -37,6 +37,35 @@ const SAFE_KEYS = new Set(['Enter','Tab','Escape','ArrowUp','ArrowDown','ArrowLe
 
 const clean=(value,max=300)=>String(value??'').trim().slice(0,max);
 const now=()=>new Date().toISOString();
+/** Early, synthetic-only paint observers. No URLs, element details, user data or events leave this page. */
+export function installSyntheticPaintObservers(){
+  const metrics={lcpCandidateMs:null,layoutShiftSumToSettle:null};
+  Object.defineProperty(window,'__EKODI_SYNTHETIC_PAINT__',{value:metrics,configurable:false});
+  if(typeof PerformanceObserver!=='function')return;
+  const supported=PerformanceObserver.supportedEntryTypes||[];
+  if(supported.includes('largest-contentful-paint')){
+    try{
+      new PerformanceObserver(list=>{
+        for(const entry of list.getEntries()){
+          if(Number.isFinite(entry.startTime)&&entry.startTime>=0)
+            metrics.lcpCandidateMs=Math.round(entry.startTime);
+        }
+      }).observe({type:'largest-contentful-paint',buffered:true});
+    }catch{}
+  }
+  if(supported.includes('layout-shift')){
+    metrics.layoutShiftSumToSettle=0;
+    try{
+      new PerformanceObserver(list=>{
+        for(const entry of list.getEntries()){
+          if(!entry.hadRecentInput&&Number.isFinite(entry.value)&&entry.value>=0)
+            metrics.layoutShiftSumToSettle=Math.round((metrics.layoutShiftSumToSettle+entry.value)*10000)/10000;
+        }
+      }).observe({type:'layout-shift',buffered:true});
+    }catch{metrics.layoutShiftSumToSettle=null;}
+  }
+}
+
 /** Synthetic page.goto(domcontentloaded) timing only (excludes pacing/settle); not LCP or real-user p75. */
 export function summarizeNativeNavigationPerformance(samples=[]) {
   const values=samples.map(s=>Number(s.elapsedMs)).filter(n=>Number.isFinite(n)&&n>=0).sort((a,b)=>a-b);
@@ -185,6 +214,8 @@ export async function runTask(rawTask, options={}){
     acceptDownloads:false,
   });
   const page=await context.newPage();
+  // Install prior to each document request: getEntriesByType() cannot retrieve LCP.
+  await page.addInitScript(installSyntheticPaintObservers);
   const consoleErrors=[],pageErrors=[],requestFailures=[],httpErrorResponses=[],blockedMutations=[];
   let quotaCircuit=null;
   page.on('console',msg=>{ if(msg.type()==='error') consoleErrors.push(clean(msg.text(),500)); });
@@ -303,11 +334,17 @@ export async function runTask(rawTask, options={}){
           ttfbMs:nav?millis(nav.responseStart-nav.requestStart):null,
           domContentLoadedMs:nav?millis(nav.domContentLoadedEventEnd-nav.startTime):null,
           fcpMs:fcp?millis(fcp.startTime):null,
+          // The 250/650ms synthetic settle is not a final page-lifetime LCP/CLS.
+          lcpCandidateMs:Number.isFinite(window.__EKODI_SYNTHETIC_PAINT__?.lcpCandidateMs)
+            ?window.__EKODI_SYNTHETIC_PAINT__.lcpCandidateMs:null,
+          layoutShiftSumToSettle:Number.isFinite(window.__EKODI_SYNTHETIC_PAINT__?.layoutShiftSumToSettle)
+            ?window.__EKODI_SYNTHETIC_PAINT__.layoutShiftSumToSettle:null,
         };
-      }).catch(()=>({ttfbMs:null,domContentLoadedMs:null,fcpMs:null}));
+      }).catch(()=>({ttfbMs:null,domContentLoadedMs:null,fcpMs:null,lcpCandidateMs:null,layoutShiftSumToSettle:null}));
       navigationTimings.push({path:canonicalPath,elapsedMs:domContentLoadedElapsedMs,
         pacingWaitMs,settleWaitMs,ttfbMs:browserTiming.ttfbMs,
         domContentLoadedMs:browserTiming.domContentLoadedMs,fcpMs:browserTiming.fcpMs,
+        lcpCandidateMs:browserTiming.lcpCandidateMs,layoutShiftSumToSettle:browserTiming.layoutShiftSumToSettle,
         attempts:attempt+1,status});
       return {url:page.url(),status};
     }
