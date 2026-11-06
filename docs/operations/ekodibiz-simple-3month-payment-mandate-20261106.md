@@ -12,6 +12,16 @@
 4. 담당자는 월별 결제영수증의 식별번호, 실제 지급액, 지급일을 **최대 3회 기록**한다. 기록은 결제를 실행하지 않으며, 중복 회차·영수증 및 총 계약예산 초과를 차단한다.
 5. 실제 공급사에서 자동갱신 중단을 확인한 뒤 **해지 확인번호만 기록**한다. 개인 계정과 대화기록은 삭제하지 않는다. 대학에는 별도 정산 요약 CSV를 제공한다.
 
+## 계약 후 대학·에코디비즈·개인 이용자 화면
+
+추가 도메인 또는 대학 전용 별도 계정을 생성하지 않는다.
+
+- **대학교 담당자**: 기존 `/ekodibiz/ai-agency`에 발급받은 신청번호 + 비밀 조회코드를 입력하면 본인 계약의 3개월 요약 화면이 노출된다. 신청/견적/계약 상태, 3회 수동 지급증빙 기록, 위탁료/공급사 예산/미배정 금액, 갱신중단 증빙 등록 여부, CSV 정산요약 조회. **비밀 조회코드는 계약 담당자가 보관하고 공유 범위를 관리**한다. 아직 대학 전체 조직의 SSO 역할 인증이 아니라 해당 계약 단위의 소지자 인증이다.
+- **에코디비즈**: 기존 `/ekodibiz/ai-agency-admin`에서만 견적과 수동 지급·종료 증빙을 입력·관리한다. 관리자 서버키 없이는 해당 API 403.
+- **개인 이용자**: 공급사의 기존 개인 계정을 계속 사용한다. 에코디 별도 계정 생성, 개인 비밀번호 입력, 대화내역 열람 기능을 추가하지 않는다.
+- **접근 경계**: 기존 `/api/agency/status`는 신청번호 + 비밀 조회코드 해시 검증 후 `campus` 집계 속성만 함께 반환한다. 대학 A의 조회코드로 대학 B 계약은 조회 불가. 개인 1개월 신청에는 `campus:null`.
+- **자료 검증 한계**: 대학 조회의 월별 금액과 확인번호는 관리자 수동 기재. 사용자의 실제 유료 구독 활성화/취소, 공급사 청구원본, 은행잔액, 환불액은 독립 검증하지 않는다. 민감한 영수증 원본·이용자 명단을 노출하지 않는다.
+
 ## 기존 화면에서 추가한 운영자 기능
 - `POST /api/agency/admin/record-cycle`: 관리자 인증 필요; `{id,cycle,amount,paidOn,receiptRef,confirmed:true}`. 결제 호출 없음.
 - `POST /api/agency/admin/stop-renewal`: 관리자 인증 필요; `{id,cancellationRef,personalAccountKept:true,confirmed:true}`. 공급사 구독 해지 호출 없음.
@@ -35,7 +45,7 @@
 
 ## 테스트/운영 검증
 ```sh
-node --test test/ekodibiz-ai-agency.test.mjs test/ekodibiz-ai-agency-mandate.test.mjs
+node --test test/ekodibiz-ai-agency.test.mjs test/ekodibiz-ai-agency-mandate.test.mjs test/ekodibiz-ai-agency-admin-mandate-ui.test.mjs
 node --check ekodibiz-ai-agency.js
 node --check ekodibiz/ai-agency-admin.js
 ```
