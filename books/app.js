@@ -45,9 +45,9 @@ function mergeCatalog(staticData,apiData){
   const extra=(apiData&&Array.isArray(apiData.books)?apiData.books:[]).filter(book=>book&&book.id&&!known.has(book.id)&&book.isPublic!==false);
   return {...base,books:[...base.books,...extra]};
 }
-async function fetchJson(url){const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`HTTP ${response.status} ${url}`);return response.json();}
+async function fetchJson(url,{cache='no-store'}={}){const response=await fetch(url,{cache});if(!response.ok)throw new Error(`HTTP ${response.status} ${url}`);return response.json();}
 async function fetchCatalog(){
-  const [staticResult,apiResult,approvalResult]=await Promise.allSettled([fetchJson(`${catalogBase()}/books.json`),fetchJson(`${API}/api/books/public/publications`),fetchJson(`${catalogBase()}/api/commerce/public/approvals`)]);
+  const [staticResult,apiResult,approvalResult]=await Promise.allSettled([fetchJson(`${catalogBase()}/books.json`,{cache:'default'}),fetchJson(`${API}/api/books/public/publications`),fetchJson(`${catalogBase()}/api/commerce/public/approvals`)]);
   if(staticResult.status==='rejected')console.warn('에코디서점 static catalog unavailable',staticResult.reason);
   if(apiResult.status==='rejected')console.warn('에코디서점 API catalog unavailable',apiResult.reason);
   const merged=mergeCatalog(staticResult.value,apiResult.value);
