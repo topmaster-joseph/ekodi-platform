@@ -38,7 +38,8 @@ export const CHURCH_ADMIN_MENU = Object.freeze([
     {key:'worship',label:'예배 · 말씀',owner:'church',capability:'worship'},
     {key:'calendar',label:'일정',owner:'church',capability:'calendar'},
     {key:'ministry',label:'사역 · 팀',owner:'church',capability:'ministry'},
-    {key:'reports',label:'사역보고',owner:'church',capability:'reports'}
+    {key:'reports',label:'사역보고',owner:'church',capability:'reports'},
+    {key:'documents',label:'문서보관',owner:'church',capability:'reports'}
   ]},
   {id:'finance',scope:'dedicated',label:'재정 · 증빙',tabs:[
     {key:'offerings',label:'헌금관리',owner:'church',capability:'offerings'},

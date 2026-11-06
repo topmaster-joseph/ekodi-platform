@@ -49,4 +49,25 @@
   async function saveSettings(ev){ev.preventDefault();const f=ev.currentTarget;try{await request('/api/church/admin/reports/settings',{method:'PUT',body:JSON.stringify({recipientEmail:f.recipientEmail.value,ccEmail:f.ccEmail.value,senderName:f.senderName.value,dueDay:Number(f.dueDay.value||0),autoSendAfterApproval:f.autoSendAfterApproval.checked})});flash('발송 설정을 저장했습니다.');await load()}catch(e){flash(e.message,true)}}
   async function ensureUpcoming(){const u=state?.upcoming;if(!u)return;try{const d=await request('/api/church/admin/reports/ensure',{method:'POST',body:JSON.stringify({year:u.year,month:u.month})});flash(`${d.report.title}을 준비했습니다.`);await load();await openReport(d.report.id)}catch(e){flash(e.message,true)}}
   window.addEventListener('ekodi:church-reports-ready',install,{once:true});install();
+  // 문서보관 (/ekodichurch/admin/documents)
+  const DOC_API=`${API}/api/church/admin/reports/documents`;
+  const CATEGORIES=['제출서류','신청서','목회계획서','정관','회의록','결산','공문','기타'];
+  const docHeaders=()=>{const h=new Headers({'content-type':'application/json'});if(token())h.set('authorization',`Bearer ${token()}`);return h};
+  const safeUrl=u=>/^https:\/\//.test(String(u||''))?String(u):'';
+  const link=(url,label)=>safeUrl(url)?`<a href="${esc(safeUrl(url))}" target="_blank" rel="noopener noreferrer">${label}</a>`:'-';
+  async function loadDocuments(){
+    const root=document.querySelector('#churchDocumentsRoot');if(!root)return;
+    if(!token()){root.innerHTML='<p class="empty">관리자 인증 후 문서보관 목록을 불러올 수 있습니다.</p>';return}
+    let data;
+    try{const r=await fetch(DOC_API,{headers:docHeaders(),cache:'no-store'});data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||`HTTP ${r.status}`)}
+    catch(err){root.innerHTML=`<p class="empty">문서 목록을 불러오지 못했습니다: ${esc(err.message)}</p>`;return}
+    const docs=Array.isArray(data.documents)?data.documents:[];
+    const bundles=[];for(const d of docs){const name=d.bundle||'기타 문서';let b=bundles.find(x=>x.name===name);if(!b){b={name,url:d.bundleUrl||'',items:[]};bundles.push(b)}b.items.push(d)}
+    const tables=bundles.map(b=>`<section class="church-doc-bundle"><h3>${esc(b.name)}${safeUrl(b.url)?` · <small>${link(b.url,'드라이브 폴더 열기')}</small>`:''}</h3><div class="table-wrap"><table><thead><tr><th>구분</th><th>문서</th><th>연도</th><th>구글문서</th><th>한글</th><th>비고</th>${data.canWrite?'<th></th>':''}</tr></thead><tbody>${b.items.map(d=>`<tr><td>${esc(d.category)}</td><td>${esc(d.title)}</td><td>${esc(d.year)}</td><td>${link(d.gdocUrl,'열기')}</td><td>${link(d.hwpxUrl,'내려받기')}</td><td>${esc(d.note)}</td>${data.canWrite?`<td><button class="button" type="button" data-doc-archive="${esc(d.id)}">목록에서 내리기</button></td>`:''}</tr>`).join('')}</tbody></table></div></section>`).join('')||'<p class="empty">등록된 문서가 없습니다.</p>';
+    const form=data.canWrite?`<details class="church-doc-add"><summary>문서 등록</summary><form id="churchDocForm"><label>묶음 이름<input name="bundle" maxlength="200" placeholder="예: 2027 목포노회 동반성장 자립화교회 지원신청"></label><label>묶음 폴더 링크<input name="bundleUrl" type="url" placeholder="https://drive.google.com/..."></label><label>문서 제목<input name="title" required maxlength="200"></label><label>구분<select name="category">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></label><label>연도<input name="year" maxlength="20"></label><label>구글문서 링크<input name="gdocUrl" type="url"></label><label>한글 파일 링크<input name="hwpxUrl" type="url"></label><label>비고<input name="note" maxlength="500"></label><button class="button primary" type="submit">등록</button></form></details>`:'';
+    root.innerHTML=`<h2>문서보관</h2><p class="empty">원본은 joseph@ekodi.kr 구글드라이브에 있으며, 공유받은 계정으로 로그인해야 열립니다.</p>${tables}${form}`;
+    root.querySelectorAll('[data-doc-archive]').forEach(button=>button.addEventListener('click',async()=>{if(!confirm('이 문서를 목록에서 내릴까요? 드라이브 원본은 그대로 남습니다.'))return;try{const r=await fetch(`${DOC_API}/${encodeURIComponent(button.dataset.docArchive)}/archive`,{method:'POST',headers:docHeaders()});if(!r.ok)throw new Error(`HTTP ${r.status}`);await loadDocuments()}catch(err){alert(`처리 실패: ${err.message}`)}}));
+    root.querySelector('#churchDocForm')?.addEventListener('submit',async event=>{event.preventDefault();const body=Object.fromEntries(new FormData(event.target).entries());try{const r=await fetch(DOC_API,{method:'POST',headers:docHeaders(),body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);await loadDocuments()}catch(err){alert(`등록 실패: ${err.message}`)}});
+  }
+  window.addEventListener('ekodi:church-documents-ready',loadDocuments);
 })();
