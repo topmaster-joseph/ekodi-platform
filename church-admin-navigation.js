@@ -61,10 +61,25 @@ export function mountChurchAdminNavigation({root,tabsRoot,groups,activeKey,activ
   const visible = groups.map(group=>({...group,tabs:group.tabs.filter(canView)})).filter(group=>group.tabs.length);
   const href = tab=>base+'/'+tab.key;
   const activeGroup=visible.find(group=>group.tabs.some(tab=>tab.key===activeKey&&tab.owner===activeOwner));
-  // Present one task menu. The original common/dedicated scopes remain registry metadata.
-  const settings=visible.find(group=>group.id==='services');
-  const groupsInOrder=[...(settings?[settings]:[]),...visible.filter(group=>group.id!=='services')];
+  // Project the same authorized routes under two clear, non-clickable sections.
+  // Keep Service Settings within Common Menu without duplicating its destination.
+  const settings=visible.find(group=>group.id==='services'&&group.scope==='common');
+  const groupsInOrder=[
+    ...(settings?[settings]:[]),
+    ...visible.filter(group=>group.scope==='common'&&group.id!=='services'),
+    ...visible.filter(group=>group.scope==='dedicated')
+  ];
+  let currentScope='';
   for(const group of groupsInOrder){
+    if(group.scope!==currentScope){
+      const heading=document.createElement('div');
+      heading.className='church-admin-nav-heading';
+      heading.textContent=group.scope==='common'?'공통메뉴':'전용메뉴';
+      heading.setAttribute('role','heading');
+      heading.setAttribute('aria-level','2');
+      root.append(heading);
+      currentScope=group.scope;
+    }
     const link=document.createElement('a');
     const selected=group===activeGroup;
     const first=selected?group.tabs.find(tab=>tab.key===activeKey&&tab.owner===activeOwner):group.tabs[0];
