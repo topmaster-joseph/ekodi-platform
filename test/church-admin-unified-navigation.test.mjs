@@ -87,10 +87,81 @@ test('both existing admin runtimes project the same registry without changing ow
   assert.match(workspaceJs,/!serviceMenuVisible\(tab\.key\)/);
   assert.match(workspaceJs,/settings\.dataset\.adminSection='services'/);
   assert.doesNotMatch(workspaceJs,/id:'service-config'/);
-  assert.match(workspaceJs,/heading\.after\(tabs\)/);
+  assert.match(workspaceJs,/viewTabs\.after\(tabs\)/);
+  assert.match(churchJs,/viewTabs\.after\(details\)/);
+  assert.match(workspaceJs,/showUnavailable:Boolean\(role\)/);
+  assert.match(churchJs,/showUnavailable:Boolean\(role\)/);
   assert.match(workspaceCss,/church-admin-detail-tabs/);
   assert.ok(CHURCH_ADMIN_NAV_CSS.includes('word-break:keep-all'));
   assert.ok(CHURCH_ADMIN_NAV_CSS.includes('@media(max-width:620px)'));
   assert.doesNotThrow(()=>new vm.Script(churchJs));
   assert.doesNotThrow(()=>new vm.Script(workspaceJs));
+});
+
+test('same Church menu outline appears on all seven admin pages regardless of route owner',()=>{
+  const original=globalThis.document;globalThis.document={createElement:()=>node()};
+  const expected=[...CHURCH_ADMIN_MENU.filter(group=>group.id==='services'),...CHURCH_ADMIN_MENU.filter(group=>group.id!=='services')].map(group=>group.label);
+  try{
+    const routes=[
+      ['overview','church'],['people','church'],['worship','church'],
+      ['offerings','church'],['ai','church'],['chrome','church'],
+      ['services','workspace'],['records','workspace']
+    ];
+    for(const [activeKey,activeOwner] of routes){
+      const root=node(),tabsRoot=node();
+      mountChurchAdminNavigation({
+        root,tabsRoot,groups:CHURCH_ADMIN_MENU,activeKey,activeOwner,
+        canView:()=>true,showUnavailable:true
+      });
+      const labels=root.children.filter(item=>item.dataset.adminNavGroup).map(item=>item.textContent);
+      assert.deepEqual(labels,expected,'different Church admin sidebar on '+activeKey);
+      const selected=root.children.filter(item=>item.classList.contains('active'));
+      assert.equal(selected.length,1,activeKey+' must have one active left menu');
+      assert.equal(selected[0].attributes['aria-current'],'location');
+      if(['people','worship','offerings','chrome'].includes(activeKey))
+        assert.equal(tabsRoot.hidden,false,'multi-action group must show contextual tabs');
+    }
+  }finally{globalThis.document=original;}
+});
+
+test('capability-limited church administrators see stable inert labels but no forbidden URLs or clickable links',()=>{
+  const original=globalThis.document;globalThis.document={createElement:()=>node()};
+  try{
+    const root=node(),tabsRoot=node();
+    mountChurchAdminNavigation({
+      root,tabsRoot,groups:CHURCH_ADMIN_MENU,activeKey:'worship',activeOwner:'church',
+      canView:tab=>tab.key==='worship',showUnavailable:true
+    });
+    const all=root.children.filter(item=>item.dataset.adminNavGroup);
+    assert.deepEqual(all.map(item=>item.textContent),[...CHURCH_ADMIN_MENU.filter(group=>group.id==='services'),...CHURCH_ADMIN_MENU.filter(group=>group.id!=='services')].map(group=>group.label));
+    const linked=all.filter(item=>item.href);
+    assert.deepEqual(linked.map(item=>item.href),['/ekodichurch/admin/worship']);
+    for(const item of all.filter(item=>!item.href)){
+      assert.equal(item.tagName,undefined); // inert span in the DOM adapter
+      assert.equal(item.attributes['aria-disabled'],'true');
+      assert.equal(item.classList.contains('church-admin-nav-unavailable'),true);
+    }
+    assert.deepEqual(root.children.filter(item=>item.className==='church-admin-nav-heading').map(item=>item.textContent),['공통메뉴','전용메뉴']);
+    assert.equal(tabsRoot.hidden,true,'limited worship role must not get hidden side routes');
+  }finally{globalThis.document=original;}
+});
+
+test('Church layout is compact, semantic and scoped to the Church tenant only',async()=>{
+  const [churchHtml,workspaceHtml,css,pastorJs,workspaceJs]=await Promise.all([
+    churchPastorAdminPage().text(),
+    (await import('../workspace-admin-page.js')).workspaceAdminPage('/ekodichurch/admin/services').text(),
+    Promise.resolve(CHURCH_ADMIN_NAV_CSS),
+    churchPastorAdminScript().text(),
+    workspaceAdminScript().text()
+  ]);
+  assert.match(churchHtml,/id="pageTitle"/,'H1 remains available to assistive technology');
+  assert.match(workspaceHtml,/id="pageTitle"/);
+  assert.match(css,/html\[data-ekodi-church-unified-admin="true"\] \.layout main > \.heading/);
+  assert.match(css,/clip-path:inset\(50%\)!important/);
+  assert.match(css,/justify-content:flex-start!important/);
+  assert.match(css,/padding:10px clamp\(12px,2\.2vw,28px\) 22px/);
+  assert.match(css,/\.church-admin-nav-unavailable\[aria-disabled="true"\]/);
+  assert.match(pastorJs,/viewTabs\.after\(details\)/);
+  assert.match(workspaceJs,/viewTabs\.after\(tabs\)/);
+  assert.match(css,/@media\(max-width:620px\)/,'small screen touch sizing preserved');
 });
