@@ -53,7 +53,7 @@
   }
   function gate(e) {
     if (e.status === 401) {
-      const u = new URL(`${ORIGIN}/auth/`); u.searchParams.set('return_to', location.href);
+      const u = new URL(`${ORIGIN}/auth/`); u.searchParams.set('site', 'publishing'); u.searchParams.set('return_to', location.href); // site 없으면 로그인 뒤 첫 화면으로 감
       who.textContent = '로그인이 필요합니다.';
       return el('div', { className: 'padmin-empty' }, el('p', { textContent: '출판 관리자는 에코디 계정으로 로그인한 출판 편집 권한자만 볼 수 있습니다.' }), el('a', { className: 'button primary', href: u.href, textContent: '에코디 계정으로 로그인' }));
     }

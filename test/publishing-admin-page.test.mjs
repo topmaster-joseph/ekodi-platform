@@ -53,3 +53,14 @@ test('admin page: Korean action names, old #section links, AI review card and it
   assert.match(html, /<meta name="color-scheme" content="light dark">/);
   assert.match(css, /@media \(prefers-color-scheme:dark\)\{[\s\S]*\.padmin h1[^}]*color:#f3ecdc/);
 });
+
+test('publishing login links name the publishing site so the central login returns to the same page', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const files = ['publishing/admin/admin.js', 'publishing/workspace.js', 'publishing/studio/app.js'];
+  for (const f of files) {
+    const src = await readFile(new URL('../' + f, import.meta.url), 'utf8');
+    assert.match(src, /searchParams\.set\(\s*'site'\s*,\s*'publishing'\s*\)/, f);
+  }
+  const auth = await readFile(new URL('../auth-site/client-auth.js', import.meta.url), 'utf8');
+  assert.match(auth, /publishing:\{name:'Publishing',returnTo:'https:\/\/ekodi\.kr\/publishing\/'/, 'login has a publishing return scope covering /publishing/admin/*');
+});
