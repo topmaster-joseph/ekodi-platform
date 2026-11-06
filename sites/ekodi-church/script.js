@@ -19,10 +19,16 @@ if (headerBrandLink) headerBrandLink.setAttribute('aria-label', '에코디교회
 // Public church header: keep only the most useful next actions and the church-local member home.
 if (nav) {
   const items = [
-    { href: '#worship', label: '예배안내' },
     { href: '/ekodichurch/devotion/', label: '매일묵상', className: 'nav-devotion' },
-    { href: '#online', label: '온라인' },
+    { href: '/ekodichurch/schedule/', label: '주요일정' },
+    { href: '/ekodichurch/notices/', label: '공지사항' },
+    { href: '#worship', label: '예배안내' },
+    { href: '#community', label: '공동체' },
+    { href: '#weekly-worship', label: '예배자료' },
+    { href: '#partner-news', label: '협력소식' },
+    { href: '#online', label: '온라인', className: 'nav-online' },
     { href: '#location', label: '오시는 길' },
+    { href: '/ekodichurch/together/', label: '함께하기', className: 'nav-together' },
     { href: '/qtin/church', label: '큐티인 신청', className: 'nav-qtin' },
     { href: '/ekodichurch/my/', label: '마이페이지', className: 'shell-my' },
   ];
