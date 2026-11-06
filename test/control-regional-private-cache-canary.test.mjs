@@ -50,3 +50,14 @@ test('the real Cheonggye 404 source remains private even when canonical Control 
     new Request('https://ekodi.kr/api/local-operations/cheonggye/modules/directory/admin')
   ),null,'privileged admin route must remain owned by its authorization gate');
 });
+
+test('board verifier contract changes automatically trigger the guarded Shared Site owner deploy',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+  const push=workflow.slice(workflow.indexOf('  push:'),workflow.indexOf('\npermissions:'));
+  assert.ok(push.includes("'scripts/verify-independent-board-live.mjs'"),
+    'live board sentinel must trigger its own protected release');
+  assert.ok(push.includes("'test/independent-board-live-sentinel.test.mjs'"),
+    'board sentinel regression tests must trigger protected release');
+  assert.ok(workflow.includes('run: node scripts/verify-independent-board-live.mjs'));
+  assert.ok(workflow.includes('Candidate at 0%, verify routes, promote and auto-rollback on failure'));
+});
