@@ -2241,7 +2241,10 @@
         "redirect": "manual",
         "expect": [
           "청계잇다",
-          "지역 서비스",
+          "지역정보",
+          "동네·기관",
+          "상점·혜택",
+          "role=\"tablist\"",
           "청계면상인회"
         ],
         "forbid": [
@@ -2251,6 +2254,23 @@
         "headerExpect": [
           "x-ekodi-route: local-region-public",
           "x-ekodi-shell: v2",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cheonggye/region-tabs-ui.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "data-region-tablist",
+          "aria-selected",
+          "ArrowRight"
+        ],
+        "headerExpect": [
+          "content-type: text/javascript",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -2320,8 +2340,10 @@
           "청계패스",
           "서비스 준비 중",
           "참여점포",
-          "청계면상인회 보기",
-          "청계잇다에서 지역정보 보기"
+          "쿠폰·할인",
+          "role=\"tablist\"",
+          "href=\"/cheonggye\"",
+          "href=\"/cgma\""
         ],
         "headerExpect": [
           "x-ekodi-route: regional-commerce-program-public",
