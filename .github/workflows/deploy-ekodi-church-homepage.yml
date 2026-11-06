@@ -107,7 +107,12 @@ jobs:
           grep -Fq 'data-church-weekly' church/index.html
           # Approved PR #114 public presentation only; preserve auth, giving, and worship.
           grep -Fq '<link rel="stylesheet" href="church-homepage-layout.css">' church/index.html
-          grep -Fq 'href="#weekly-worship">예배자료</a>' church/index.html
+          if [[ "${CHURCH_RELEASE_SOURCE_MODE:-legacy}" == canonical ]]; then
+            # C3 remains required; the central manifest must separately approve the exact Church PR #149 SHA.
+            node .ekodi-control/scripts/verify-church-compact-header.mjs --source church --manifest .ekodi-control/sites/ekodi-church/source-import-manifest.json
+          else
+            grep -Fq 'href="#weekly-worship">예배자료</a>' church/index.html
+          fi
           grep -Fq 'online-triad--broadcast' church/index.html
           grep -Fq 'href="/live/church/"' church/index.html
           grep -Fq 'body:has(main :target) .hero{display:none!important}' church/church-homepage-layout.css
@@ -284,6 +289,24 @@ jobs:
           done
           echo "Church together verification failed: page=$page js=$js css=$css"
           exit 1
+
+      - name: Verify canonical Church public routes with guarded release marker
+        if: env.CHURCH_RELEASE_SOURCE_MODE == 'canonical'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for slug in devotion notices schedule; do
+            ok=false
+            for attempt in $(seq 1 12); do
+              status=$(curl -L -sS -o "/tmp/church-public-${slug}.html" -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/${slug}/?release=${CHURCH_SOURCE_SHA}" || true)
+              if [[ "$status" == 200 ]] && grep -Fq 'church-compact-navigation.css' "/tmp/church-public-${slug}.html"; then
+                ok=true
+                break
+              fi
+              sleep 5
+            done
+            if [[ "$ok" != true ]]; then echo "Church ${slug} failed HTTP/menu canary"; exit 1; fi
+          done
 
       - name: Verify production Church home, canonical devotion and exact release
         shell: bash
@@ -510,7 +533,7 @@ jobs:
                 assert.equal(initial.weeklyHidden,true,'weekly panel hidden until selected');
                 assert.equal(initial.sharedLive,true,'shared EKODI Live link retained');
                 assert.equal(initial.member,true,'site-local member navigation retained');
-                assert.equal(initial.qtin,true,'QTIN group-order link in the church header '+locale+' '+device.name);
+                assert.equal(initial.qtin,process.env.CHURCH_RELEASE_SOURCE_MODE!=='canonical','QTIN moves under Together only after canonical cutover '+locale+' '+device.name);
                 assert.equal(initial.canonicalDevotion,true,'canonical daily devotion card missing '+locale+' '+device.name);
                 assert.equal(initial.legacyLifeRecord,false,'legacy journal UI returned '+locale+' '+device.name);
                 assert.equal(initial.overflow,false,'horizontal overflow '+locale+' '+device.name);
