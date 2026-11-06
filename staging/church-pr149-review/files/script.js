@@ -42,16 +42,16 @@ if (footerBrandName) footerBrandName.textContent = '에코디교회';
 const footerCopyright = document.querySelector('footer .footer-meta span');
 if (footerCopyright) footerCopyright.textContent = '© 2026 에코디교회';
 
-const communityCard = [...document.querySelectorAll('.community-cards article')].find((card) => card.querySelector('h3')?.textContent.includes('에코디커뮤니티'));
+const communityCard = [...document.querySelectorAll('.community-cards article')].find((card) => card.querySelector('h3')?.textContent.includes('커뮤니티'));
 if (communityCard) {
   const link = communityCard.querySelector('a');
   if (link) {
     link.href = 'https://ekodi.kr/community';
-    link.textContent = '에코디커뮤니티 보기 →';
+    link.textContent = '커뮤니티 보기 →';
   }
 }
 document.querySelectorAll('a[href="https://www.youtube.com/@ekodicommunity"]').forEach((link) => {
-  link.textContent = '에코디커뮤니티 채널 ↗';
+  link.textContent = '커뮤니티 채널 ↗';
 });
 
 // Keep canonical YouTube links from the page intact. The registry may add other
@@ -128,7 +128,7 @@ const youtubeChannels = {
   },
   mission: {
     playlist: 'UUm1PFvzN0PRnyiF8Xx_mYTw',
-    title: '에코디커뮤니티 최신 유튜브 영상',
+    title: '커뮤니티 최신 유튜브 영상',
   },
 };
 
