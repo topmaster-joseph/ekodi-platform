@@ -548,7 +548,9 @@ async function showJoin(h){
  let member=null;try{member=(await api('/me')).member}catch{}
  if(!member){paragraph(box,'먼저 "내 정보"에서 참여 동의를 저장해 주세요.');box.append(button('참여 동의하러 가기',()=>location.assign('/singles/my'),'primary'));h.append(box);return}
  if(!member.adult_verified){
-  if(state.status?.identity_verification){notice(box,'구독 전에 성인 본인인증이 필요합니다. 휴대폰 본인인증으로 1분 안에 끝납니다.');box.append(button('휴대폰 본인인증 하기',()=>location.assign('/singles/verify'),'primary'));}
+  if(state.status?.identity_verification){notice(box,'구독 전에 성인 본인인증이 필요합니다. 휴대폰 본인인증으로 1분 안에 끝납니다.');box.append(button('휴대폰 본인인증 하기',()=>location.assign('/singles/verify'),'primary'));
+   // 휴대폰 인증이 어렵거나 인증 연결이 잠시 안 될 때를 위한 예비 경로(운영자 신분증 확인).
+   const alt=document.createElement('details');alt.className='program-new';alt.append(text('summary','휴대폰 인증이 어려우신가요? 운영자 확인으로 요청하기'));box.append(alt);await adultCheckRequest(alt);}
   else await adultCheckRequest(box);
   h.append(box);await reloadBankOrders(h);return;
  }
