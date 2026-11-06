@@ -26,3 +26,20 @@ test('client settlement export escapes CSV formulas without storing operator key
   assert.doesNotMatch(js,/localStorage\.setItem\(['"]adminKey/);
   assert.doesNotMatch(js,/sessionStorage\.setItem\(['"]adminKey/);
 });
+
+test('one existing user-facing site hosts a private university summary without a new login provider',async()=>{
+  const html=await read('../ekodibiz/ai-agency.html');
+  const js=await read('../ekodibiz/ai-agency.js');
+  for(const id of ['campusPanel','campusFee','campusBudget','campusSpent','campusRemaining',
+    'campusCancellation','campusPeriods','campusExport','campusLimitation']){
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(html,/신청번호와 보안코드로 확인하는 계약별 조회 화면/);
+  assert.match(js,/renderCampus\(data\.campus\)/);
+  assert.match(js,/campusReport=report && report\.months===3/);
+  assert.match(js,/campusPanel'\)\.hidden = true/);
+  assert.match(js,/campusCsvValue/);
+  assert.match(js,/\.textContent=/);
+  assert.doesNotMatch(js,/innerHTML\s*=/);
+  assert.match(js,/text\/csv;charset=utf-8/);
+});
