@@ -43,3 +43,17 @@ test('one existing user-facing site hosts a private university summary without a
   assert.doesNotMatch(js,/innerHTML\s*=/);
   assert.match(js,/text\/csv;charset=utf-8/);
 });
+
+test('switching university receipt code clears old details and rejects stale lookup results',async()=>{
+  const js=await read('../ekodibiz/ai-agency.js');
+  assert.match(js,/current = null;\s*checkout = null;\s*widgets = null;/);
+  assert.match(js,/\$\('result'\)\.hidden = true;/);
+  assert.match(js,/receipt\.id!==queried\.id\|\|receipt\.receiptToken!==queried\.receiptToken/);
+  assert.match(js,/\$\('result'\)\.hidden=true;\$\('campusPanel'\)\.hidden=true/);
+});
+test('university CSV formula injection guard handles whitespace prefix',async()=>{
+  const js=await read('../ekodibiz/ai-agency.js');
+  assert.match(js,/const safe=\/\^\\s\*\[=\+@-\]/);
+  assert.match(js,/campusCsvValue/);
+  assert.match(js,/\.replace\(\/"\/g,'""'\)/);
+});
