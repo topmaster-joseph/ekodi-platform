@@ -507,8 +507,7 @@ async function proxyMallService(request, publicPrefix = MALL_PREFIX) {
   const apiSurface = incoming.pathname === `${publicPrefix}/api` || incoming.pathname.startsWith(`${publicPrefix}/api/`);
   const verificationOpsSurface = isMallVerificationOpsPath(incoming.pathname, publicPrefix);
   const adminEmbed = incoming.searchParams.get('embed') === 'admin';
-  const cacheControl = adminSurface || apiSurface || verificationOpsSurface || adminEmbed
-    ? 'no-store'
+  const cacheControl = adminSurface || apiSurface || verificationOpsSurface || adminEmbed ? 'no-store'
     : (mallPublicStartupAssetCacheControl(request, upstreamResponse, incoming.pathname, publicPrefix)
        || 'public, max-age=0, must-revalidate');
   const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : verificationOpsSurface ? 'mall-verification-ops' : 'public-ekodi-mall';
