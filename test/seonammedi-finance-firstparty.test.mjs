@@ -46,3 +46,18 @@ test('first-party browser path does not require TinyFish or a legacy browser con
   assert.doesNotMatch(script,/import\s+.*(?:tinyfish|opera|desktop.commander)/i);
   assert.match(script,/credentialUse:false/);
 });
+
+test('public finance layout is compact without removing the public site header or changing admin layout',async()=>{
+  const publicHtml=await readFile(new URL('../sites/seonammedi/public/index.html',import.meta.url),'utf8');
+  const adminHtml=await readFile(new URL('../sites/seonammedi/public/admin/index.html',import.meta.url),'utf8');
+  const publicStyle=publicHtml.match(/<style id="committee-finance-disclosure-style">([\\s\\S]*?)<\\/style>/)?.[1]||'';
+  assert.match(publicHtml,/<header class="site-header">[\\s\\S]*?<nav class="ekodi-six-nav"/);
+  assert.match(publicHtml,/<div class="committee-finance-period"><dt>기간<\\/dt><dd>2026\\.10\\.29\\.~2026\\.11\\.03\\.<\\/dd><\\/div>/);
+  assert.doesNotMatch(publicHtml,/기재된 지출일 기준/);
+  assert.match(publicStyle,/committee-finance-period\\{[^}]*display:flex;align-items:center;flex-wrap:wrap/);
+  assert.match(publicStyle,/committee-finance-metrics\\{display:grid;grid-template-columns:repeat\\(3,minmax\\(0,1fr\\)\\)/);
+  assert.match(publicStyle,/@media\\(max-width:540px\\)[^{]*\\{[^}]*grid-template-columns:1fr/);
+  assert.match(adminHtml,/data-panel="finance"/);
+  assert.match(adminHtml,/data-finance-tab="summary"/);
+  assert.doesNotMatch(adminHtml,/FINANCE ADMIN/);
+});
