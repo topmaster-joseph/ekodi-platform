@@ -425,7 +425,8 @@ export default {
       '/ai-agency/university':'/ai-agency.html', '/ai-agency/university/':'/ai-agency.html',
       '/ai-agency/individual':'/ai-agency.html', '/ai-agency/individual/':'/ai-agency.html',
       '/ai-agency/admin':'/ai-agency-admin.html', '/ai-agency/admin/':'/ai-agency-admin.html',
-      '/ai-agency.js':'/ai-agency.js', '/ai-agency-admin.js':'/ai-agency-admin.js'
+      '/ai-agency.js':'/ai-agency.js', '/ai-agency-admin.js':'/ai-agency-admin.js',
+      '/ai-agency-links.js':'/ai-agency-links.js'
     };
     if (Object.hasOwn(agencyAssets, path)) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error:'method_not_allowed' }, 405);
