@@ -11,6 +11,8 @@ test('church homepage starts simple while preserving every primary destination',
   const destinations = [
     ['#about', '우리의 정체성'],
     ['/ekodichurch/devotion/', '매일묵상'],
+    ['/ekodichurch/notices/', '공지사항'],
+    ['/ekodichurch/schedule/', '주요일정'],
     ['#community', '공동체 활동'],
     ['#worship', '예배'],
     ['#online', '라이브 방송'],
