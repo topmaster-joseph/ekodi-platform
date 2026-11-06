@@ -274,5 +274,5 @@ test('unconnected internal finance is explicitly unverified instead of a false z
   await p.flush();const {button,panel}=kpiControl(p);await button.handlers.click();
   const detail=panel.children[2];detail.children[1].children[6].handlers.click();
   await p.flush();
-  assert.match(detail.children[2].children[1].textContent,/0원으로 간주하지 않습니다/);
+  assert.match(detail.children[2].children[2].textContent,/0원으로 간주하지 않습니다/);
 });
