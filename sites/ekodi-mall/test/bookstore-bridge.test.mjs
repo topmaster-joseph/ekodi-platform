@@ -38,9 +38,10 @@ test('an existing publisher book is publicly indexable without pretending to be 
 
 test('book detail purchase link opens only on a live file-ready server quote', async () => {
   const script = readFileSync(path.join(root, 'assets/bookstore-live.js'), 'utf8');
-  async function detailFor(ready) {
+  async function detailFor(ready, { delayedApproval = false } = {}) {
     const elements = {
       '[data-bookstore-sale-status] dd': { textContent: '출간 준비 중' },
+      '[data-bookstore-price]': { textContent: '가격 확인 필요' },
       '[data-bookstore-purchase-link]': {
         href: 'https://ekodi.kr/books/book/?id=BOOK-EKODI-000002',
         textContent: '상태 확인',
@@ -49,37 +50,58 @@ test('book detail purchase link opens only on a live file-ready server quote', a
       '[data-bookstore-transaction-note]': { textContent: '' }
     };
     const calls = [];
+    let refresh;
+    let finishOldRequest;
     const bookId = 'BOOK-EKODI-000002';
-    const quote = {
+    const quote = ready => ({
       book: { id: bookId },
       saleReadiness: { ready },
       checkout: { open: ready, fileReady: ready, saleReady: ready, mode: 'live' },
-      price: { amount: 9900 }
-    };
+      price: { amount: 12345 }
+    });
     const sandbox = {
       document: {
         body: { dataset: { bookstoreBookId: bookId } },
         getElementById() { return null; },
         querySelector(sel) { return elements[sel] || null; },
         querySelectorAll() { return []; },
-        addEventListener() {}
+        addEventListener(event, handler) { if (event === 'visibilitychange') refresh = handler; }
       },
       window: { location: { origin: 'https://ekodi.kr' }, dispatchEvent() {} },
-      fetch: async url => { calls.push(url); return { ok: true, json: async () => quote }; },
+      fetch: async url => {
+        calls.push(url);
+        if (delayedApproval && calls.length === 1) {
+          return new Promise(resolve => {
+            finishOldRequest = () => resolve({ ok: true, json: async () => quote(true) });
+          });
+        }
+        return { ok: true, json: async () => quote(ready) };
+      },
       AbortSignal, URL, Intl, CustomEvent: class {},
     };
     vm.runInNewContext(script, sandbox, { filename: 'bookstore-live.js' });
-    await new Promise(resolve => setTimeout(resolve, 25));
+    if (delayedApproval) {
+      refresh();
+      await new Promise(resolve => setImmediate(resolve));
+      finishOldRequest();
+    }
+    await new Promise(resolve => setImmediate(resolve));
     return { elements, calls };
   }
   const approved = await detailFor(true);
   assert.equal(approved.elements['[data-bookstore-sale-status] dd'].textContent, '판매 중');
+  assert.equal(approved.elements['[data-bookstore-price]'].textContent, '12,345원');
   assert.match(approved.elements['[data-bookstore-purchase-link]'].href, /\/books\/buy\/\?book=BOOK-EKODI-000002/);
   assert.equal(approved.calls.length, 1);
   const revoked = await detailFor(false);
   assert.equal(revoked.elements['[data-bookstore-sale-status] dd'].textContent, '판매 상태 확인 필요');
+  assert.equal(revoked.elements['[data-bookstore-price]'].textContent, '가격 확인 필요');
   assert.match(revoked.elements['[data-bookstore-purchase-link]'].href, /\/books\/book\/\?id=BOOK-EKODI-000002/);
   assert.equal(revoked.calls.length, 1);
+  const stale = await detailFor(false, { delayedApproval: true });
+  assert.equal(stale.elements['[data-bookstore-sale-status] dd'].textContent, '판매 상태 확인 필요');
+  assert.match(stale.elements['[data-bookstore-purchase-link]'].href, /\/books\/book\/\?id=BOOK-EKODI-000002/);
+  assert.equal(stale.calls.length, 2);
 });
 
 test('a sale link opens a purchase button; no link never pretends to sell', () => {
