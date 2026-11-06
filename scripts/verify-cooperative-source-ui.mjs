@@ -24,6 +24,14 @@ assert.equal(bundledClient.productionMutation, false);
 assert.equal(bundledClient.serializedNameHelperCalls, true, 'Pinned Wrangler bundle must exercise preserved client function names');
 await fs.writeFile(path.join(artifactRoot, 'bundled-client.js'), bundledClient.script);
 const f = fixture();
+// Source-only browser proof exercises the current consent-based self-join.
+// Its base fixture intentionally has a minimal grant schema because other
+// unit tests extend it independently. Expand only this disposable in-memory DB.
+f.sqlite.exec(`ALTER TABLE customer_access_grants ADD COLUMN created_at TEXT;
+  ALTER TABLE customer_access_grants ADD COLUMN principal_type TEXT NOT NULL DEFAULT 'member';
+  ALTER TABLE customer_access_grants ADD COLUMN note TEXT NOT NULL DEFAULT '';
+  ALTER TABLE customer_access_grants ADD COLUMN visibility TEXT NOT NULL DEFAULT 'private';
+  ALTER TABLE customer_access_grants ADD COLUMN updated_at TEXT;`);
 f.env.ASSETS = { async fetch(request) {
   const pathname = new URL(request.url).pathname;
   assert.ok(COOPERATIVE_IMAGE_PATHS.has(pathname), 'Only declared public photos can enter source image delivery');
