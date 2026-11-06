@@ -142,11 +142,13 @@
     if (state) state.textContent = grid.querySelector('.card:not([data-bookstore-quote-pending="true"])') ? '도서 판매 중' : '판매 준비 중';
     window.dispatchEvent(new CustomEvent('ekodi:marketplace-products-loaded', { detail: { category: 'book', count: released.size, source: 'books-approval' } }));
   }
+  let detailRefresh = 0;
   async function syncDetail() {
     if (!validId(detailId)) return;
     const status = document.querySelector('[data-bookstore-sale-status] dd');
     const link = document.querySelector('[data-bookstore-purchase-link]');
     const note = document.querySelector('[data-bookstore-transaction-note]');
+    const price = document.querySelector('[data-bookstore-price]');
     if (!link || !status) return;
     const setSection = (label, value) => {
       for (const block of document.querySelectorAll('.product-info-block')) {
@@ -156,10 +158,13 @@
       }
     };
     const detailsHref = '/books/book/?id=' + encodeURIComponent(detailId);
+    const refresh = ++detailRefresh;
     let quote = null;
     try { quote = await quoteFor(detailId); } catch { /* Do not assume an approval. */ }
+    if (refresh !== detailRefresh) return;
     if (readyQuote(quote, detailId)) {
       status.textContent = '판매 중';
+      if (price) price.textContent = new Intl.NumberFormat('ko-KR').format(Number(quote.price.amount)) + '원';
       link.href = '/books/buy/?book=' + encodeURIComponent(detailId) + '&from=mall';
       link.textContent = '에코디서점에서 구매하기';
       link.classList.add('primary'); link.classList.remove('ghost');
@@ -170,6 +175,7 @@
     } else {
       // A revoked edition or replaced EPUB cannot retain a stale purchase link.
       status.textContent = '판매 상태 확인 필요';
+      if (price) price.textContent = '가격 확인 필요';
       link.href = detailsHref; link.textContent = '에코디서점에서 상태 확인';
       link.classList.remove('primary'); link.classList.add('ghost');
       link.target = '_self'; link.rel = 'noopener';
