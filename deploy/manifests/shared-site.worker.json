@@ -2241,7 +2241,7 @@
         "redirect": "manual",
         "expect": [
           "청계잇다",
-          "지역 서비스",
+          "data-ekodi-local-region=\"local:cheonggye\"",
           "청계면상인회"
         ],
         "forbid": [
