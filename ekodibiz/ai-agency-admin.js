@@ -143,7 +143,7 @@
     // Guard Excel/spreadsheet formula injection from organization/user-supplied text.
     const safeCell=value=>{
       const raw=String(value??'');
-      const clean=/^[=+@-\t\r]/.test(raw)?"'"+raw:raw;
+      const clean=/^[-=+@\t\r]/.test(raw)?"'"+raw:raw;
       return '"'+clean.replace(/"/g,'""')+'"';
     };
     const csv='\uFEFF'+rows.map(row=>row.map(safeCell).join(',')).join('\r\n');
