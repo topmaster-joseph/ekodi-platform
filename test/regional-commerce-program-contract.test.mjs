@@ -58,8 +58,9 @@ test('Cheonggye Pass routes are claimed before generic regional fallback',async(
   assert.ok(urls.has('https://ekodi.kr/cheonggye/admin/pass'));
   const passProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/cgpass');
   assert.ok(passProbe);
-  assert.ok(passProbe.expect.includes('서비스 준비 중'));
-  assert.ok(passProbe.expect.includes('참여점포'));
+  assert.deepEqual(passProbe.statuses,[404]);
+  assert.ok(passProbe.expect.includes('서비스 비공개'));
+  assert.ok(passProbe.headerExpect.includes('x-robots-tag: noindex'));
   assert.equal(passProbe.expect.includes('외부 연동 준비'),false);
   assert.equal(passProbe.expect.includes('가맹점'),false);
 });
