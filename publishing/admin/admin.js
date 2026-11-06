@@ -197,4 +197,6 @@
   addEventListener('popstate', () => show(sectionFromPath()));
   addEventListener('hashchange', () => show(sectionFromPath()));
   show(sectionFromPath());
+  // 어느 탭으로 들어와도 맨 위 권한 줄이 채워지게 한다(개요 외 탭에서 '권한을 확인하고 있습니다…'에 멈추던 문제).
+  getSummary().catch(() => {});
 })();
