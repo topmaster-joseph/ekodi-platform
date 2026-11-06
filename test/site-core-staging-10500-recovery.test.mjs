@@ -113,7 +113,7 @@ test('all three protected deployment triggers include this staging-only change',
 });
 
 test('explicit Cloudflare upstream malformed response permits only one Site Core staging retry',async()=>{
-  const output='Received a malformed response from the API\\nupstream connect error or disconnect/reset before headers';
+  const output='Received a malformed response from the API\nupstream connect error or disconnect/reset before headers';
   let attempts=0;const waits=[];
   const result=await runStagingWith10500Recovery({
     run:async()=>++attempts===1?event(1,output):event(0),
@@ -125,11 +125,11 @@ test('explicit Cloudflare upstream malformed response permits only one Site Core
 });
 
 test('Cloudflare upstream reset with quota/permission must never retry',async()=>{
-  const reset='Received a malformed response from the API\\nupstream connect error or disconnect/reset before headers';
+  const reset='Received a malformed response from the API\nupstream connect error or disconnect/reset before headers';
   for(const reason of ['HTTP 429','1027 quota exhausted','HTTP 403','invalid token']){
     let attempts=0;
     await assert.rejects(runStagingWith10500Recovery({
-      run:async()=>{attempts++;return event(1,reset+'\\n'+reason)},
+      run:async()=>{attempts++;return event(1,reset+'\n'+reason)},
       sleep:async()=>{throw new Error('unexpected sleep');},
     }),/fail-closed/);
     assert.equal(attempts,1);
