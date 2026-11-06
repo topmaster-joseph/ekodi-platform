@@ -63,13 +63,16 @@
       "name": "SINGLES_REQUEST_BILLING_ENABLED",
       "layer": "edge",
       "default": "false",
-      "gates": "유료회원 모델(2026-10-28): 가입비 50만원=적립금, 무료회원 기능 제한, 요청 보류·수락 확정 차감(기본 요금+입력·공개 할인), 기간제 메시지 이용권, 메시지 연락처 가림"
+      "gates": "유료회원 모델(2026-10-31 개정): 가입비 없음, 기간제 구독권 + 수락 후 양측 청구서(기본 요금+입력·공개 할인), 메시지 연락처 가림"
     },
     {
       "name": "SINGLES_PUBLIC_LAUNCH_ENABLED",
       "layer": "edge",
       "default": "false",
-      "gates": "공개 개통. 'true'가 아니면 시범 명단(singles_pilot_users)과 운영자만 회원 기능 사용(실증 단계)"
+      "gates": "공개 개통. 'true'가 아니면 시범 명단(singles_pilot_users)과 운영자만 회원 기능 사용(실증 단계)",
+      "production": "true",
+      "launchedAt": "2026-11-05",
+      "launchDecision": "owner (topmaster-joseph) 2026-11-04~05: 자체 성인 확인(운영자 신분증 확인)으로 공개 개통, Edge 비밀값 직접 저장"
     },
     {
       "name": "SINGLES_IDENTITY_PROVIDER_ENABLED",

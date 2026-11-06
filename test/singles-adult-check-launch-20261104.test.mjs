@@ -49,3 +49,13 @@ test('owner is alerted by mail on a new request; failure never blocks the member
  const block=worker.slice(worker.indexOf("if(sub==='/api/bank/adult-check'&&req.method==='POST'&&result.ok)"));
  assert.doesNotMatch(block.slice(0,700),/data\.contact|contact\+/,'alert mail never includes the contact');
 });
+test('PortOne public identifiers are configured; the secret never is; operator check stays as a fallback',async()=>{
+ const toml=await read('wrangler.site.toml');
+ assert.match(toml,/SINGLES_PORTONE_STORE_ID = "store-[0-9a-f-]{36}"/);
+ assert.match(toml,/SINGLES_PORTONE_IDENTITY_CHANNEL_KEY = "channel-key-[0-9a-f-]{36}"/);
+ assert.doesNotMatch(toml,/PORTONE_API_SECRET\s*=/);
+ assert.match(app,/휴대폰 인증이 어려우신가요\? 운영자 확인으로 요청하기/);
+ const store=toml.match(/SINGLES_PORTONE_STORE_ID = "([^"]+)"/)[1],channel=toml.match(/SINGLES_PORTONE_IDENTITY_CHANNEL_KEY = "([^"]+)"/)[1];
+ const s=await (await routeSinglesSurface(new Request('https://ekodi.kr/singles/api/status'),{...live,SINGLES_PORTONE_STORE_ID:store,SINGLES_PORTONE_IDENTITY_CHANNEL_KEY:channel})).json();
+ assert.deepEqual(s.identity_verification,{provider:'portone',store_id:store,channel_key:channel});
+});
