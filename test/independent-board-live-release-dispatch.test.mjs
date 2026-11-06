@@ -38,6 +38,12 @@ test('private Cheonggye 404 and no-store guard remain in the post-promotion veri
   assert.match(verifier, /CHEONGGYE_PUBLICATION_HOLD/);
   assert.match(verifier, /const held=await request\(path,\[404\]\)/);
   assert.match(verifier, /regional-private-hold/);
-  assert.match(verifier, /private no-store/);
+  // RFC 9111 no-store forbids storage by both private and shared caches.
+  // The live edge may normalize private,no-store to no-store alone.
+  assert.match(verifier, /cacheDirectives\.has\('no-store'\)/);
+  assert.match(verifier, /!cacheDirectives\.has\('public'\)/);
+  assert.match(verifier, /non-cacheable private hold/);
   assert.match(verifier, /private noindex/);
+  assert.match(verifier, /x-content-type-options/);
+  assert.match(verifier, /nosniff/);
 });
