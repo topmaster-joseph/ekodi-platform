@@ -1,4 +1,5 @@
 import { renderRegionTabsScript } from './region-tabs-ui.js';
+import { renderEkodiUserFooter } from './config/user-footer.js';
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 
@@ -19,6 +20,12 @@ function style(){
   @media(max-width:620px){.row{grid-template-columns:1fr;gap:3px}}
 
   /* Public pass: condensed status-led information, no active financial affordances. */
+  .pass-site-header{background:#fffdf8;border-bottom:1px solid #d9e3dc}
+  .pass-site-header__inner{max-width:1120px;width:calc(100% - 28px);margin:auto;min-height:60px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .pass-site-header__brand{text-decoration:none;font-size:18px;font-weight:900;letter-spacing:-.03em;color:#173f32}
+  .pass-site-header__links{display:flex;gap:6px;flex-wrap:wrap}
+  .pass-site-header__links a{min-height:40px;display:inline-flex;align-items:center;padding:5px 11px;text-decoration:none;font-size:13px;font-weight:800;color:#315548;border-radius:9px}
+  .pass-site-header__links a:hover,.pass-site-header__links a:focus-visible{background:#e5f0e8}
   .pass-public{padding-top:16px}
   .pass-public .ecosystem{margin-bottom:10px}
   .pass-public .hero{padding:18px 22px;border-radius:18px;background:linear-gradient(110deg,#edf6f0,#fffaf0);border-color:#d1e1d6}
@@ -57,14 +64,14 @@ export function regionalCommerceProgramPublicPage(region,program){
     {id:'points',label:'포인트·상품권',desc:'포인트 적립·사용과 상품권 관련 서비스는 준비 중입니다. 발행·결제·정산 기능은 별도 확인 전까지 이용할 수 있는 것으로 안내하지 않습니다.',links:[]},
     {id:'guide',label:'이용 안내',desc:'청계패스는 현재 안내 단계입니다. 지역의 공개정보는 청계잇다에서, 상인회 소식은 청계면상인회에서 확인하세요.',links:[['청계잇다','/cheonggye'],['청계면상인회','/cgma']]},
   ];
-  const body=`<main class="pass-public"><nav class="ecosystem" aria-label="청계 연결"><a href="/cgma">청계면상인회</a><a href="/cheonggye">청계잇다</a><a href="/cgpass" aria-current="page">청계패스</a></nav>
+  const body=`<header class="pass-site-header"><div class="pass-site-header__inner"><a class="pass-site-header__brand" href="/cgpass" aria-current="page">청계패스</a><nav class="pass-site-header__links" aria-label="청계 연결"><a href="/cheonggye">청계잇다</a><a href="/cgma">청계면상인회</a></nav></div></header><main class="pass-public">
   <section class="hero"><div class="eyebrow">CHEONGGYE PASS · 지역 혜택</div><h1>${esc(program.publicName)}</h1><p class="lead">지역 참여점포와 혜택을 한곳에서 찾기 위한 청계패스입니다. 분야를 선택해 공개 정보와 준비 상태를 확인하세요.</p><span class="status">서비스 준비 중</span></section>
   <section class="panel" aria-label="청계패스 정보"><div class="pass-tabs" role="tablist" aria-label="청계패스 기능 안내" data-region-tablist>
     ${tabs.map((tab,index)=>`<button class="pass-tab" type="button" role="tab" id="pass-tab-${tab.id}" aria-controls="pass-panel-${tab.id}" aria-selected="${index===0?'true':'false'}" tabindex="${index===0?'0':'-1'}">${esc(tab.label)}</button>`).join('')}
   </div>
   ${tabs.map((tab,index)=>`<section class="pass-panel" role="tabpanel" id="pass-panel-${tab.id}" aria-labelledby="pass-tab-${tab.id}"${index?' hidden':''}><h2>${esc(tab.label)}</h2><p>${esc(tab.desc)}</p>${tab.links.length?`<div class="pass-links">${tab.links.map(([label,url])=>`<a href="${esc(url)}">${esc(label)}</a>`).join('')}</div>`:''}</section>`).join('')}
-  </section></main>${renderRegionTabsScript()}`;
-  return new Response(doc(region,program,`${program.publicName} | ${region.brand}`,body,'public'),{status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'regional-commerce-program-public'}});
+  </section></main>${renderEkodiUserFooter()}${renderRegionTabsScript()}`;
+  return new Response(doc(region,program,`${program.publicName} | ${region.brand}`,body,'public'),{status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'regional-commerce-program-public','x-ekodi-user-chrome':'v1'}});
 }
 
 export function regionalCommerceProgramAdminPage(region,program){
