@@ -7,7 +7,7 @@ import { verifyReviewedChurchSource } from '../scripts/verify-reviewed-church-so
 import { planChurchPagesCandidate } from '../scripts/build-church-pages-candidate.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const original=JSON.parse(readFileSync(resolve(root,'sites/ekodi-church/source-import-manifest.json'),'utf8'));
+const original=JSON.parse(readFileSync(resolve(root,'sites/ekodi-church/source-import-baseline-v1.json'),'utf8'));
 const clone=()=>structuredClone(original);
 
 test('all three reviewed upstream PRs remain SHA-pinned, without claiming upstream merge or production deployment',()=>{

@@ -26,11 +26,13 @@ const nested=()=>[
   'church-section-filtered',"window.addEventListener('hashchange',show)"
 ].join('\n');
 
-test('original SHA-reviewed 3-PR canonical Church navigation remains accepted',()=>{
+test('SHA-reviewed five-PR Church six-menu preserves eight contextual destinations and controlled selection',()=>{
   const page=readFileSync(new URL('../sites/ekodi-church/index.html',import.meta.url),'utf8');
-  const proof=verifyChurchHeaderNavigation(page);
-  assert.equal(proof.contract,'legacy-reviewed');
-  assert.ok(proof.primaryItems>0);
+  const controller=readFileSync(new URL('../sites/ekodi-church/church-section-nav.js',import.meta.url),'utf8');
+  const proof=verifyChurchHeaderNavigation(page,controller);
+  assert.equal(proof.contract,'six-item-selected-content');
+  assert.equal(proof.primaryItems,6);
+  assert.equal(proof.contextItems,8);
 });
 
 test('six-item menu with full nested worship and Together destinations is accepted',()=>{
