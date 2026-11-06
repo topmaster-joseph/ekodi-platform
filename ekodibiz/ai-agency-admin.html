@@ -9,7 +9,7 @@ a{color:#25593a}h1{font-size:clamp(25px,4vw,34px);margin:0 0 8px}h2{font-size:18
 p{line-height:1.6}.muted{color:#697c71;font-size:13px}.panel{background:white;border:1px solid #d6e1d8;border-radius:13px;padding:18px;margin-top:16px}
 label{display:grid;gap:5px;font-size:13px;font-weight:700}input,textarea{width:100%;min-height:42px;border-radius:8px;border:1px solid #bdcec2;padding:10px;font:inherit;min-width:0}
 textarea{min-height:74px}button{border:1px solid #285a3c;background:#285a3c;color:white;border-radius:8px;padding:10px 14px;min-height:42px;font-weight:750;cursor:pointer}
-button.secondary{background:white;color:#285a3c}button:disabled{opacity:.5}.row{display:flex;align-items:end;gap:9px;flex-wrap:wrap}.row>*{flex:1}
+button.secondary{background:white;color:#285a3c}button:disabled{opacity:.5} .summary{white-space:pre-wrap;overflow-wrap:break-word;border:1px solid #e2ebe4;background:#f8faf8;border-radius:8px;padding:14px;line-height:1.65;font-size:13px} .note{border-left:3px solid #698774;padding-left:10px;font-size:13px;color:#52695b}.row{display:flex;align-items:end;gap:9px;flex-wrap:wrap}.row>*{flex:1}
 table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid #edf1ee;vertical-align:top}th{color:#557363;background:#f8faf8}
 #tableWrap{overflow:auto}.selector{background:#eff7f0;border-radius:8px;padding:13px;margin-top:10px}
 #message{font-size:13px;line-height:1.6}#message:empty{display:none}
@@ -29,4 +29,22 @@ table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}th,td{t
 <p class="muted">공급사 대리수납 금액은 서버에 해당 공급사 계약범위 승인이 등록되어 있는 경우에만 설정할 수 있습니다. 자동결제·자동갱신은 사용하지 않습니다.</p>
 <div class="row"><button type="submit" id="quoteBtn">견적 확정</button><button type="button" id="activateBtn" class="secondary" hidden>공급사 이용 개시 확인</button></div>
 </form></section>
+<section class="panel" id="opsDetail" hidden aria-label="3개월 위탁관리">
+<h2>3개월 결제·종료·정산</h2>
+<p class="note">실제 공급사에서 받은 영수증과 갱신중단 확인번호만 수동 기록합니다. 이 화면에서는 결제·구독해지·개인 계정 변경이 실행되지 않습니다.</p>
+<div id="settlementSummary" class="summary" aria-live="polite">정산 기록을 불러오는 중입니다.</div>
+<form id="cycleForm" hidden><h2>공급사 결제증빙 기록</h2><div class="row">
+<label>회차<select name="cycle" required><option value="1">1개월차</option><option value="2">2개월차</option><option value="3">3개월차</option></select></label>
+<label>실제 결제액 (원)<input name="amount" type="number" min="1" max="10000000" step="1" required></label>
+<label>결제일<input name="paidOn" type="date" required></label></div>
+<label>공급사 영수증 식별번호 (영문·숫자)<input name="receiptRef" autocomplete="off" maxlength="80" minlength="6" placeholder="예: INVOICE-2026-001" required></label>
+<button type="submit" id="recordCycleBtn">결제증빙 저장</button>
+</form>
+<form id="renewalForm" hidden><h2>3개월 종료 확인</h2>
+<label>공급사 갱신중단 확인번호<input name="cancellationRef" autocomplete="off" maxlength="80" minlength="6" placeholder="예: CANCEL-2027-001" required></label>
+<label style="display:flex;align-items:center;gap:8px;font-weight:500"><input name="personalAccountKept" type="checkbox" style="width:auto;min-height:0" required>개인 계정은 삭제하지 않았고, 공급사에서 갱신 중단을 확인했습니다.</label>
+<button type="submit" class="secondary" id="stopRenewalBtn">갱신중단 증빙 저장</button>
+</form>
+<div class="row"><button type="button" class="secondary" id="exportStatement">정산서 CSV 다운로드</button></div>
+</section>
 </main><script src="/ekodibiz/ai-agency-admin.js" defer></script></body></html>
