@@ -129,7 +129,9 @@
       "provenance": {
         "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
         "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
-      }
+      },
+      "normalizedBlobSha": "d4513fd9701dd268a5ff395f5d67cce884023695",
+      "normalization": "replace-obsolete-EKODI-subdomain-URLs-with-canonical-paths-v1"
     },
     {
       "path": "test/church-approved-homepage-layout.test.mjs",
@@ -243,5 +245,6 @@
     "sourceOwnershipTransferred": false,
     "legacyRepositoryDeletionAuthorized": false,
     "requiresIndependentPR150Reconciliation": true
-  }
+  },
+  "explanation": "The original upstream script Git blob is SHA-pinned but is not deployed as-is: its 3 legacy host links are replaced by approved ekodi.kr paths in the separate staged output. The exact resulting normalized Git blob is pinned. This is a runtime correction, not bypass of the zero-subdomain policy."
 }
