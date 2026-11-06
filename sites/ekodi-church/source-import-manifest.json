@@ -448,7 +448,7 @@
       "path": "test/church-compact-tabs.test.mjs",
       "mode": "100644",
       "blobSha": "7e0d033488244752f911bda8fcd493deb700e805",
-      "normalizedBlobSha": "63ebc859c6ccde42f6b425d93db2368bb3ab7ff9"
+      "normalizedBlobSha": "be1a66be3fe7d37a9171930fe00585593d541724"
     },
     {
       "path": "test/church-csp-supabase-connect.test.mjs",
@@ -1990,6 +1990,15 @@
     "sourceOwnershipTransferred": false,
     "productionReleaseSwitched": false,
     "legacyRepositoryDeletionAuthorized": false,
-    "importedOldDeploymentWorkflows": false
+    "importedOldDeploymentWorkflows": false,
+    "localReconciliations": [
+      {
+        "path": "test/church-compact-tabs.test.mjs",
+        "previousCanonicalBlobSha": "63ebc859c6ccde42f6b425d93db2368bb3ab7ff9",
+        "finalCanonicalBlobSha": "be1a66be3fe7d37a9171930fe00585593d541724",
+        "reason": "Superseded eight-shortcut test must assert six primary menu routes while checking all legacy hash deep-link IDs and member roles",
+        "taskId": "church-canonical-146-149-stage-20261106"
+      }
+    ]
   }
 }
