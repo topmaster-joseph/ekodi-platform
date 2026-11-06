@@ -70,7 +70,7 @@ export async function verifyIndependentBoardLive({
         const held=await request(path,[404]);
         assert.equal(held.headers.get('x-ekodi-route'),'regional-private-hold',path);
         assert.equal(held.headers.get('x-ekodi-region-publication'),'private-owner-release-required',path);
-        assert.match(held.headers.get('cache-control')||'',/private[^,]*,\\s*no-store/i,path+' private no-store');
+        assert.match(held.headers.get('cache-control')||'',/private[^,]*,\s*no-store/i,path+' private no-store');
         assert.match(held.headers.get('x-robots-tag')||'',/noindex/i,path+' private noindex');
       }
       continue;
