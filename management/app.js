@@ -174,7 +174,7 @@ function renderBusinessAggregate(body,sectionId,data){
   body.append(grid);
   const note=document.createElement('p');note.className='note';note.textContent=disclaimer;body.append(note);
 }
-function renderStoreOperations(operations){
+function renderStoreOperations(operations,space,stillCurrent){
   const section=document.createElement('section');section.className='store-operations';
   const heading=document.createElement('strong');heading.textContent='매장 운영 상세 · 공식 원본';
   const tabs=document.createElement('div');tabs.className='store-operation-tabs';
@@ -182,11 +182,38 @@ function renderStoreOperations(operations){
   const body=document.createElement('div');body.className='store-operation-body';
   const valid=validStoreOperations(operations);
   const buttons=[];
+  const aggregate={status:'idle',data:null};
+  let activeSection='menu';
   const show=sectionId=>{
+    activeSection=sectionId;
     for(const button of buttons)button.setAttribute('aria-pressed',button.dataset.section===sectionId?'true':'false');
     body.replaceChildren();
     const header=document.createElement('strong');header.textContent=STORE_OPERATION_SECTIONS.find(item=>item.id===sectionId).label;
     body.append(header);
+    if(FINANCIAL_SECTION_IDS.has(sectionId)){
+      const notice=document.createElement('p');
+      if(!FINANCIAL_READ_ROLES.has(space.role)){
+        notice.textContent='이 집계는 매장 소유자 또는 기관 관리자 권한이 필요합니다.';
+        body.append(notice);return;
+      }
+      if(aggregate.status==='idle'){
+        aggregate.status='loading';
+        void loadBusinessAggregate();
+      }
+      if(aggregate.status==='loading'){
+        notice.textContent='공식 완료 주문·경영 집계를 확인하고 있습니다.';
+        body.append(notice);return;
+      }
+      if(aggregate.status==='forbidden'){
+        notice.textContent='현재 계정은 이 매장의 집계 조회 권한이 없습니다.';
+        body.append(notice);return;
+      }
+      if(aggregate.status!=='ready'){
+        notice.textContent='공식 경영 집계를 확인할 수 없습니다. 0건 또는 0원으로 간주하지 않습니다.';
+        body.append(notice);return;
+      }
+      renderBusinessAggregate(body,sectionId,aggregate.data);return;
+    }
     if(['menu','channels'].includes(sectionId)){
       if(!valid){
         const note=document.createElement('p');note.textContent='공식 운영 데이터의 상세 목록을 확인할 수 없습니다. 현재 숫자를 0건으로 판단하지 않습니다.';body.append(note);return;
@@ -210,6 +237,29 @@ function renderStoreOperations(operations){
     const notice=document.createElement('p');notice.textContent='현재 이 경영플랫폼에 검증된 해당 항목의 실적 원본이 연결되지 않았습니다. 0건 또는 0원으로 표시하지 않습니다.';
     body.append(notice);
   };
+  async function loadBusinessAggregate(){
+    if(!stillCurrent())return;
+    const token=state.session?.accessToken;
+    if(!token){aggregate.status='unavailable';return}
+    try{
+      const path='/api/store-business-summary?slug='+encodeURIComponent(space.slug);
+      const response=await fetch(path,{method:'GET',headers:{authorization:'Bearer '+token,accept:'application/json'},cache:'no-store'});
+      if(!stillCurrent())return;
+      if(response.status===401){clearSession();return}
+      if(response.status===403){aggregate.status='forbidden';}
+      else if(!response.ok){aggregate.status='unavailable';}
+      else{
+        const data=await response.json();
+        if(!stillCurrent())return;
+        aggregate.data=validBusinessAggregate(data,space)?data:null;
+        aggregate.status=aggregate.data?'ready':'unavailable';
+      }
+    }catch{
+      if(!stillCurrent())return;
+      aggregate.status='unavailable';
+    }
+    if(stillCurrent()&&FINANCIAL_SECTION_IDS.has(activeSection))show(activeSection);
+  }
   for(const item of STORE_OPERATION_SECTIONS){
     const button=document.createElement('button');button.type='button';button.className='store-operation-tab';
     button.dataset.section=item.id;button.textContent=item.label;
@@ -243,7 +293,7 @@ async function loadStoreSummary(space,host,button){
       storeKpiRow('연결 채널',data.summary.connectedChannelCount),
       storeKpiRow('주문 설정',data.summary.orderEnabled?'활성':'비활성')
     );
-    host.replaceChildren(grid,renderStoreReadiness(data.summary),renderStoreOperations(data.operations));
+    host.replaceChildren(grid,renderStoreReadiness(data.summary),renderStoreOperations(data.operations,space,stillCurrent));
   }catch(error){
     if(!stillCurrent())return;
     host.replaceChildren();host.textContent='운영현황을 확인할 수 없습니다. 잠시 후 다시 조회해 주세요.';
