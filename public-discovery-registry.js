@@ -1,6 +1,7 @@
 import { DISCOVERY_ORIGIN, DISCOVERY_PUBLIC_ROUTES, canonicalUrl } from './discovery-layer.js';
 import { listSitePublicationSettings } from './site-publication-runtime.js';
 import { collectPublicDiscoveryItems } from './public-discovery-content.js';
+import { isCheonggyeUnreleasedPublicPath } from './region-publication-hold.js';
 
 export const EKODI_PUBLIC_REGISTRY_PATH='/public-registry.json';
 export const EKODI_PUBLIC_REGISTRY_POLICY='EKODI-PUBLIC-DISCOVERY-002';
@@ -33,6 +34,7 @@ export const TRAILING_SLASH_CANONICAL_PATHS=Object.freeze(new Set([
 export function isPublicDiscoveryPath(pathname='/'){
   const path=normalizePath(pathname).toLowerCase();
   if(PAGE_OWNED_NOINDEX_PATHS.has(path))return false;
+  if(isCheonggyeUnreleasedPublicPath(path))return false;
   if(BLOCKED_PREFIXES.some(prefix=>path===prefix||path.startsWith(prefix+'/')))return false;
   if(path.split('/').includes('admin'))return false;
   return true;

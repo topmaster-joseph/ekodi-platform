@@ -84,8 +84,9 @@ test('deployment manifests probe all generic module pages and content APIs',asyn
     assert.ok(controlUrls.has('https://ekodi.kr/api/local-operations/cheonggye/modules/'+module.id+'/admin'));
     const publicProbe=sharedRequests.find(item=>item.url==='https://ekodi.kr'+module.publicPath);
     const adminProbe=sharedRequests.find(item=>item.url==='https://ekodi.kr'+module.adminPath);
-    assert.ok(publicProbe?.expect?.includes('지역 공개정보'));
-    assert.ok(publicProbe?.expect?.includes('local-region-module-public.js'));
+    assert.deepEqual(publicProbe?.statuses,[404]);
+    assert.ok(publicProbe?.expect?.includes('서비스 비공개'));
+    assert.ok(publicProbe?.headerExpect?.includes('x-ekodi-route: regional-private-hold'));
     assert.ok(adminProbe?.expect?.includes('운영정보 등록·수정'));
     assert.ok(adminProbe?.expect?.includes('local-region-module-admin.js'));
   }

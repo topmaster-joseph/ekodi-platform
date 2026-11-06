@@ -348,15 +348,18 @@
       {
         "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/directory",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "\"module\":{\"id\":\"directory\"",
-          "\"items\":"
+          "REGIONAL_PUBLICATION_PRIVATE",
+          "서비스 비공개"
         ],
         "headerExpect": [
-          "cache-control: no-store",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -379,15 +382,18 @@
       {
         "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/commerce",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "\"module\":{\"id\":\"commerce\"",
-          "\"items\":"
+          "REGIONAL_PUBLICATION_PRIVATE",
+          "서비스 비공개"
         ],
         "headerExpect": [
-          "cache-control: no-store",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -410,15 +416,18 @@
       {
         "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/events",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "\"module\":{\"id\":\"events\"",
-          "\"items\":"
+          "REGIONAL_PUBLICATION_PRIVATE",
+          "서비스 비공개"
         ],
         "headerExpect": [
-          "cache-control: no-store",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -441,15 +450,18 @@
       {
         "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/jobs",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "\"module\":{\"id\":\"jobs\"",
-          "\"items\":"
+          "REGIONAL_PUBLICATION_PRIVATE",
+          "서비스 비공개"
         ],
         "headerExpect": [
-          "cache-control: no-store",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -472,15 +484,18 @@
       {
         "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/sharing",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "\"module\":{\"id\":\"sharing\"",
-          "\"items\":"
+          "REGIONAL_PUBLICATION_PRIVATE",
+          "서비스 비공개"
         ],
         "headerExpect": [
-          "cache-control: no-store",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -503,15 +518,18 @@
       {
         "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/broadcast",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "\"module\":{\"id\":\"broadcast\"",
-          "\"items\":"
+          "REGIONAL_PUBLICATION_PRIVATE",
+          "서비스 비공개"
         ],
         "headerExpect": [
-          "cache-control: no-store",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
@@ -534,15 +552,18 @@
       {
         "url": "https://ekodi.kr/api/local-operations/cheonggye/modules/proposals",
         "statuses": [
-          200
+          404
         ],
         "redirect": "manual",
         "expect": [
-          "\"module\":{\"id\":\"proposals\"",
-          "\"items\":"
+          "REGIONAL_PUBLICATION_PRIVATE",
+          "서비스 비공개"
         ],
         "headerExpect": [
-          "cache-control: no-store",
+          "x-ekodi-route: regional-private-hold",
+          "x-ekodi-region-publication: private-owner-release-required",
+          "x-robots-tag: noindex",
+          "cache-control: private, no-store",
           "x-content-type-options: nosniff"
         ],
         "rollbackVerify": false
