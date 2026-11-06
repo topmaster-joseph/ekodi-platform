@@ -4,6 +4,7 @@
   const $ = (id) => document.getElementById(id);
   const prefix = location.pathname.startsWith('/ekodibiz/') ? '/ekodibiz' : '';
   const apiBase = prefix + '/api/agency';
+  const isUniversityRoute=/\/ai-agency\/university\/?$/.test(location.pathname);
   const receiptKey = 'ekodibiz.ai.agency.receipt.v1';
   let receipt = null;
   let current = null;
@@ -141,6 +142,21 @@
       $('result').hidden=true;$('campusPanel').hidden=true;$('tossPanel').hidden=true;
       message(error.message, true);
     }
+  }
+  // Separate shareable URL, same privacy-preserving receipt-token backend.
+  // University access requires the receipt token, NOT just the URL.
+  if (isUniversityRoute) {
+    document.body.dataset.agencyView='university';
+    $('heading').textContent='대학 AI 구독료 위탁계약 조회';
+    $('campusRouteGuide').hidden=false;
+    $('apply').hidden=true;
+    const aside=document.querySelector('.layout > aside');
+    aside.prepend($('statusPanel'));
+    $('statusPanel').after($('result'));
+    const flow=aside.querySelector('[aria-labelledby="flowTitle"]');
+    if(flow)flow.hidden=true;
+    $('statusPanel').querySelector('h2').textContent='대학 계약 조회';
+    document.title='대학 AI 위탁계약 조회 | 에코디비즈';
   }
   const form = $('agencyForm');
   form.querySelectorAll('[name="type"]').forEach((input) => input.addEventListener('change', () => {
