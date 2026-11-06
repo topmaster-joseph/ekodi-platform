@@ -23,6 +23,12 @@ add('에코디교회 홈','ပင်မစာမျက်နှာ','EKODI Nawku
 add('메뉴 열기','မီနူးဖွင့်ရန်','Menu hpaw','Mở menu','Цэс нээх','Buka menu');
 add('주요 메뉴','အဓိက မီနူး','Main menu','Menu chính','Үндсэн цэс','Menu utama');
 add('예배안내','ဝတ်ပြုခြင်း','Nawku','Thờ phượng','Мөргөл','Ibadah');
+add('오늘의 매일묵상','ယနေ့ နေ့စဉ်ဆင်ခြင်ခြင်း','Dai Ni Daily Devotion','Suy niệm hôm nay','Өнөөдрийн бясалгал','Renungan hari ini');
+add('공지사항','အသိပေးချက်များ','Shiga ni','Thông báo','Зар мэдээ','Pengumuman');
+add('주요일정','အဓိက အစီအစဉ်များ','Hkring ni','Lịch chính','Гол хуваарь','Jadwal utama');
+add('전체보기','အားလုံးကြည့်ရန်','Yawng hpe yu','Xem tất cả','Бүгдийг үзэх','Lihat semua');
+add('예배와 모임 일정','ဝတ်ပြုနှင့် တွေ့ဆုံချိန်','Nawku hte hkrum ni','Lịch thờ phượng và gặp mặt','Мөргөл ба уулзалт','Jadwal ibadah dan pertemuan');
+add('교회 공식 알림','အသင်းတော် အကြောင်းကြားချက်','Htingnu shiga','Thông báo chính thức','Сүмийн албан мэдээ','Pengumuman resmi gereja');
 add('온라인','အွန်လိုင်း','Online','Trực tuyến','Онлайн','Online');
 add('큐티인 신청','QTIN မှာယူရန်','QTIN Order','Đặt QTIN','QTIN захиалах','Pesan QTIN');
 add('실시간 방송 시청','တိုက်ရိုက်ထုတ်လွှင့်မှု ကြည့်ရန်','Live yu u','Xem trực tiếp','Шууд үзэх','Tonton siaran langsung');
