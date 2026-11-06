@@ -898,6 +898,13 @@ export default {
       if (['GET','HEAD'].includes(request.method) && url.pathname==='/admin/people/script') return personAuthorityScript();
       if (['GET','HEAD'].includes(request.method) && (url.pathname==='/admin/people'||url.pathname==='/admin/people/')) return personAuthorityPage();
       if (['GET','HEAD'].includes(request.method) && (url.pathname==='/admin/site-admins'||url.pathname==='/admin/site-admins/')) return siteAdminBootstrapPage();
+      if (['GET','HEAD'].includes(request.method) && ['/sosik','/sosik/','/sosik/admin','/sosik/admin/','/sosik/unsubscribe','/sosik/unsubscribe/'].includes(url.pathname)) {
+        const isAdmin=url.pathname.startsWith('/sosik/admin');
+        const target=isAdmin?'/sosik/admin/':url.pathname.startsWith('/sosik/unsubscribe')?'/sosik/unsubscribe/':'/sosik/';
+        const response=await env.ASSETS.fetch(assetRequest(request,target));
+        const secured=withHostSecurity(response,isAdmin?ADMIN_CSP:PUBLIC_CSP,'no-store',isAdmin?'sosik-admin':'sosik-public');
+        return injectEkodiShell(secured,'ekodi',isAdmin?'admin':'public');
+      }
       if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
       if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');
       // Keep EKODIBIZ business-unit routes owned by the shared apex shell, even after Pay routing changes.

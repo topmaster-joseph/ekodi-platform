@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>사역소식 발행 관리 | EKODI</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/sosik/style.css">
+<script src="/sosik/app.js" defer></script>
+</head>
+<body data-sosik-page="admin">
+<main class="sosik-wrap">
+<section class="sosik-hero compact"><p class="sosik-kicker">EKODI · 통합 발행 관리</p><h1>사역소식 기록 · 선택 · 승인 · 발행</h1>
+<p>기록은 하나의 창고에 모으고, 교회와 선교회 발행대상 및 수신명단은 분리합니다.</p><div class="sosik-actions"><a href="/sosik/">공개 페이지</a><a href="/ekodichurch">교회</a><a href="/ekodimission">선교회</a><a id="sosikLoginLink" href="/auth/?site=church&amp;return_to=https%3A%2F%2Fekodi.kr%2Fsosik%2Fadmin%2F">중앙 로그인</a></div></section>
+<p id="adminStatus" class="sosik-status" role="status"></p>
+<nav class="sosik-tabs" aria-label="관리 단계">
+<button type="button" data-tab="record" aria-selected="true">1. 기록하기</button>
+<button type="button" data-tab="select">2. 체크 선택</button>
+<button type="button" data-tab="draft">3. 초안·승인</button>
+<button type="button" data-tab="roster">4. 수신자</button>
+<button type="button" data-tab="history">5. 발송이력</button>
+<button type="button" data-tab="agency">6. 기관보고</button>
+</nav>
+<section class="sosik-panel" id="tab-record" data-tab-panel="record">
+<h2>휴대폰 1분 기록</h2><p>외국인 사역 사진·이름·체류 관련 정보의 기본 공개범위는 후원자 한정입니다. 공개를 선택해도 별도의 명시적 동의와 발행 승인 없이는 공개되지 않습니다.</p>
+<form id="recordForm" class="sosik-form">
+<label>소속 <select name="organization"><option value="church">에코디교회</option><option value="mission">에코디선교회</option><option value="joint">공동</option></select></label>
+<label>활동 종류 <select name="kind"><option value="meeting">모임</option><option value="worship">예배</option><option value="service">봉사</option><option value="education">교육</option><option value="prayer">기도</option><option value="other">기타</option></select></label>
+<label>활동 날짜 <input name="date" type="date" required></label>
+<label>공개범위 <select name="visibility"><option value="supporters">후원자 한정(기본)</option><option value="external">외부보고 전용</option><option value="public">사이트 공개 신청</option></select></label>
+<label class="full">제목 <input name="title" maxlength="200" required placeholder="예: 토요 성경토론과 이웃 식사"></label>
+<label class="full">간단한 내용 <textarea name="body" maxlength="5000" rows="4" placeholder="무엇을, 누구와, 어떻게 했는지"></textarea></label>
+<label class="full">사진(최대 8장, 장당 5MB) <input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple></label>
+<label class="sosik-check full"><input type="checkbox" name="blurPhotos"><span>사진 전체 흐림 처리 후 업로드(얼굴을 포함한 원본 내용 보호). 특정 얼굴만 자동 식별하는 기능이 아닙니다.</span></label>
+<label class="sosik-check full"><input type="checkbox" name="peoplePresent"><span>사진·글에 식별 가능한 사람이나 민감정보가 있습니다.</span></label>
+<label class="sosik-check full"><input type="checkbox" name="publicConsent"><span>사이트 공개를 위한 당사자 동의 및 검토를 확인했습니다.</span></label>
+<label class="sosik-check full"><input type="checkbox" name="externalConsent"><span>외부기관 제출에 필요한 당사자 동의도 확인했습니다.</span></label>
+<input type="hidden" name="editId">
+<button class="sosik-primary" type="submit">기록 저장(비공개 초안)</button>
+</form><p class="sosik-status" id="recordStatus" role="status"></p>
+</section>
+<section class="sosik-panel" id="tab-select" data-tab-panel="select" hidden>
+<h2>기록 골라 발행 준비</h2>
+<div class="sosik-form"><label>소속 <select id="filterOrg"><option value="church">교회 + 공동</option><option value="mission">선교회 + 공동</option></select></label>
+<label>종류 <select id="filterKind"><option value="">전체</option><option value="worship">예배</option><option value="meeting">모임</option><option value="service">봉사</option><option value="education">교육</option><option value="prayer">기도</option><option value="other">기타</option></select></label>
+<label>시작일 <input id="filterFrom" type="date"></label><label>종료일 <input id="filterTo" type="date"></label><button id="loadEntries" type="button">목록 불러오기</button></div>
+<p class="sosik-status" id="selectStatus"></p><div id="entryList" class="sosik-entry-list"></div>
+<div class="sosik-actions"><button id="nextDraft" type="button" class="sosik-primary">체크한 기록으로 발행 초안 만들기</button></div>
+</section>
+<section class="sosik-panel" id="tab-draft" data-tab-panel="draft" hidden>
+<h2>대상 선택 · 초안 · 목회자 승인</h2>
+<form id="draftForm" class="sosik-form">
+<label>발행 소속 <select name="organization" id="draftOrg"><option value="church">에코디교회</option><option value="mission">에코디선교회</option></select></label>
+<label>수신 대상 <select name="audience"><option value="supporters">소속 후원자</option><option value="prayer">기도동역자</option><option value="fan">한국외국인선교회</option><option value="missionfund">미션펀드</option><option value="site">사이트 공개</option></select></label>
+<label>결과물 <select name="format"><option value="letter">선교편지</option><option value="report">사역보고서</option><option value="prayer">기도요청문</option><option value="missionfund">미션펀드 사진·기도편지 묶음</option></select></label>
+<label class="full">제목 <input name="title" maxlength="180" required placeholder="이번 달의 사역소식"></label>
+<p class="full" id="selectionCount">선택한 기록이 없습니다.</p><button type="submit" class="sosik-primary">사실 기반 초안 만들기</button>
+</form>
+<label>발행 본문 검토·수정 <textarea id="draftBody" rows="16" placeholder="먼저 기록을 선택하고 초안을 만들어 주세요."></textarea></label>
+<div class="sosik-actions"><button type="button" id="saveDraft">수정본 저장</button><button type="button" id="approveDraft" class="sosik-primary">정찬균 목사 승인</button><button type="button" id="testSend">본인 메일 시험 발송</button></div>
+<div class="sosik-actions"><button type="button" id="downloadWord">Word(.docx)</button><button type="button" id="downloadPdf">PDF로 저장(인쇄)</button><button type="button" id="downloadMissionfund">미션펀드 ZIP</button></div>
+<p class="sosik-note">최초 대량 발송과 외부기관 제출은 별도 사람 승인 및 오케스트레이터 검증 전까지 차단됩니다. EKODI 중앙 AI가 비식별 집계 기반 인사말을 보완할 수 있으며, 비활성 시에는 사실 기반 템플릿으로 대체합니다.</p>
+<p class="sosik-status" id="draftStatus" role="status"></p>
+</section>
+<section class="sosik-panel" id="tab-roster" data-tab-panel="roster" hidden>
+<h2>조직별 독립 수신 명단</h2><p>Excel(.xlsx)·CSV를 직접 불러올 수 있습니다. Google Sheets는 파일 → 다운로드 → Microsoft Excel(.xlsx) 또는 CSV로 저장한 뒤 사용하세요. 동의 증빙 없는 연락처는 발송할 수 없습니다.</p>
+<div class="sosik-form">
+<label>명단 소속 <select id="rosterOrg"><option value="church">에코디교회</option><option value="mission">에코디선교회</option></select></label>
+<label>Excel(.xlsx) / CSV 파일 <input id="importFile" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+<div><button type="button" id="importContacts">동의 증빙 명단 불러오기</button><button type="button" id="downloadTemplate">CSV 양식</button></div>
+</div>
+<p class="sosik-note">열 이름: audience,email,name,consentAt,source · audience: supporters/prayer/fan/missionfund · consentAt: 동의 날짜(ISO) · source: 동의 증빙 출처.</p>
+<p class="sosik-status" id="rosterStatus"></p><div id="rosterList" class="sosik-entry-list"></div>
+</section>
+<section class="sosik-panel" id="tab-history" data-tab-panel="history" hidden>
+<h2>발행·발송 감사 이력</h2><button type="button" id="refreshHistory">이력 새로고침</button>
+<div id="publicationList" class="sosik-entry-list"></div><h3>전달 기록</h3><div id="deliveryList" class="sosik-entry-list"></div>
+</section>
+<section class="sosik-panel" id="tab-agency" data-tab-panel="agency" hidden>
+<h2>한국외국인선교회(FAN) 제출 준비</h2>
+<p>제출처 공식 안내: <a href="https://kwma.org/%ED%9A%8C%EC%9B%90/?mod=document&amp;uid=28" target="_blank" rel="noopener">한국세계선교협의회 회원단체 등록 자료</a> · 전화 032-811-2256</p>
+<p><strong>공식 웹 제출 주소·양식·주기: 확인필요</strong> · 확인 전 자동 제출하지 않습니다. 제출 패키지 다운로드 후 기관 담당자의 안내에 따라 사람의 승인을 거쳐 제출합니다.</p>
+<div class="sosik-actions"><button type="button" id="agencyReport">현재 초안 보고서 다운로드</button><a href="http://www.fankorea.org/" target="_blank" rel="noopener">단체 공식 홈페이지</a></div>
+<p class="sosik-note">미션펀드용은 번호가 붙은 사진과 기도편지(.docx)를 ZIP으로 묶습니다. 공개용 사진과 외부보고용 사진의 동의 범위는 다릅니다.</p>
+</section>
+</main>
+<footer class="sosik-footer"><div>에코디 사역소식 관리 · <a href="/sosik/">공개 사역소식</a> · <a href="/ekodimission/contact">담당자 문의</a></div></footer>
+</body></html>

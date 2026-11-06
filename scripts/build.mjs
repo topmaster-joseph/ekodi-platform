@@ -69,6 +69,8 @@ await cp(`${root}verify/adult`, `${output}verify/adult`, { recursive: true });
 await cp(`${root}age-verification-client.js`, `${output}verify/adult/client.js`);
 // Device-scoped opt-in notifications; permission UI and Service Worker share /notifications/ scope.
 await cp(`${root}notifications`, `${output}notifications`, { recursive: true });
+// Unified ministry news: public updates, owner editor, and consent-only subscriptions.
+await cp(`${root}sosik`, `${output}sosik`, { recursive: true });
 // EKODI Proposal Studio: local-only static draft editor, no server persistence.
 await cp(`${root}proposal`, `${output}proposal`, { recursive: true });
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
