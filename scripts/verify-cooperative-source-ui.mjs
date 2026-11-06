@@ -201,8 +201,12 @@ try {
   assert.equal((await loadCooperativeProject(f.db, COOPERATIVES[0])).state.founders[1].business, '조합원 직접 등록 사업체');
   await screenshot(page, 'jubilee-distribution-member-390');
   await page.goto('https://ekodi.kr/open/members');
-  await page.waitForSelector('#gate:not([hidden])');
+  // A signed-in member of another cooperative sees an opt-in join form, not
+  // an admin workspace. No membership is granted until an explicit submission.
+  await page.waitForSelector('#application:not([hidden])');
+  assert.equal(await page.locator('#gate').isVisible(), false);
   assert.equal(await page.locator('#workspace').isVisible(), false);
+  assert.equal(await page.locator('#applicationForm button[type="submit"]').isVisible(), true);
   await page.goto('https://ekodi.kr/jubilee/admin');
   await page.waitForSelector('#gate:not([hidden])');
   assert.equal(await page.locator('#workspace').isVisible(), false);
