@@ -321,3 +321,9 @@ test('name-login migration: password = last four digits, public roster shows no 
   assert.match(sql,/failed_count \+ 1 >= 5 then now\(\) \+ interval '30 minutes'/);
   assert.doesNotMatch(sql,/010-?2549|01025496632|6632|3501|8542/);
 });
+
+test('login page intro is centered',()=>{
+  const page=fs.readFileSync(new URL('../sites/mokpo-presbytery/mission/viewer/index.html',import.meta.url),'utf8');
+  assert.match(page,/<section class="hero hero-center">/);
+  assert.match(page,/\.hero-center \.wrap\{grid-template-columns:minmax\(0,1fr\);justify-items:center;text-align:center\}/);
+});
