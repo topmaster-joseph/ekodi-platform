@@ -60,12 +60,13 @@ test('signed server-to-server proxy still works with same identity and path',asy
   assert.equal(new URL(g.last().url).pathname,'/api/storage/v1/files/opaque-private-id');
   assert.equal(g.last().headers.get('x-ekodi-storage-key'),key);
 });
-test('existing public health remains available and internal service-binding requests retain trust',async()=>{
+test('public health stays available while private-looking Host cannot bypass proxy authorization',async()=>{
   const g=gatewayEnv();
   const h=await handleStorageGateway(new Request(api+'/health'),g.env);
   assert.equal(h.status,200);
   const internal=await handleStorageGateway(new Request(
     'https://storage.internal/api/storage/v1/files/internal-only-test'),g.env);
-  assert.equal(internal.status,200);
-  assert.equal(g.count(),2);
+  assert.equal(internal.status,401);
+  assert.equal((await internal.json()).code,'STORAGE_UNAUTHORIZED');
+  assert.equal(g.count(),1);
 });
