@@ -7,6 +7,7 @@
 //   test_ 키에서는 운영자(OPERATOR_EMAILS)만 시험 결제할 수 있다.
 // • 결제 승인 후 내 서재 권한(books_entitlements)을 부여하고, 매출을 출판 재무 원장
 //   (books_finance_transactions · ekodi-direct 채널)에 기록한다.
+import { aiReleaseBooks, mergeAiReleases, isVerifiedAiRelease } from './books-ai-releases.js';
 import * as ekodipay from './ekodipay-core.js';
 import { publisherAuthorizedForChannel } from './publishing/human/storefront-release-guard.js';
 import { saleReadiness } from './books-sale-readiness.js';
@@ -61,6 +62,7 @@ export function directSaleBook(catalog, bookId) {
 export async function authorizedPublicSaleBook(env,catalog,bookId){
   const book=directSaleBook(catalog,bookId);
   if(!book)return null;
+  if(isVerifiedAiRelease(book))return book; // 출판 워커가 서버 간으로 확인해 준 최고관리자 출간본만
   return await publisherAuthorizedForChannel(env?.PUBLISHING_RELEASE_GATE,book,'books')?book:null;
 }
 
@@ -112,7 +114,8 @@ async function assetJson(env, path) {
   if (!response.ok) throw new Error(`asset ${path} ${response.status}`);
   return response.json();
 }
-export async function loadCatalog(env) { return assetJson(env, '/books.json'); }
+// BOOKS-AI-RELEASES-001: 기존 목록(books.json) + 출판 최종 확인으로 출간된 AI 협업 도서(서비스 바인딩).
+export async function loadCatalog(env) { const base = await assetJson(env, '/books.json'); return mergeAiReleases(base, await aiReleaseBooks(env)); }
 export async function loadPolicy(env) { return assetJson(env, '/commerce.json'); }
 
 function bearer(request) {

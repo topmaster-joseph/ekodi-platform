@@ -165,6 +165,15 @@
       catch (e) { msg.textContent = e.code === 'UNRESOLVED_MARKERS' ? '[확인필요]·[본문확인] 표시가 남아 있습니다. 확인 후 지워 주세요.' : e.code === 'CHAPTERS_INCOMPLETE' ? '아직 쓰지 않은 장이 있습니다.' : '처리하지 못했습니다.'; }
     });
     parts.push(approve);
+    // PUBLISHING-AI-RELEASE-001: 최고관리자는 최종 검수 확인 한 번으로 출판(EPUB·서점 판매·자동 가격·저널 첫 글).
+    const release = el('button', { type: 'button', className: 'button primary', textContent: '최종 검수 확인 · 출판' });
+    release.addEventListener('click', async () => {
+      if (!confirm('최종 검수를 확인하고 출판합니다.\n· 감수 안내 줄과 [확인필요] 표시는 출간본에서 빠집니다(원고 기록은 보존).\n· 가격은 분량·분야에 맞춰 자동으로 정해집니다.\n· 에코디서점 판매와 에코디저널 소개 글이 바로 시작됩니다.')) return;
+      msg.textContent = '출판하는 중…';
+      try { const r = await api(`admin/ai-books/${id}/release`, {}); msg.textContent = `출판 완료 · 판매가 ${r.price?.label || ''} · 에코디서점: ${r.storeUrl || ''}`; }
+      catch (e) { msg.textContent = e.code === 'SUPER_ADMIN_ONLY' ? '최고관리자만 바로 출판할 수 있습니다. 감수 완료 후 출판 관리자에게 요청하세요.' : e.code === 'CHAPTERS_INCOMPLETE' ? '아직 쓰지 않은 장이 있습니다.' : '출판하지 못했습니다. 잠시 후 다시 시도해 주세요.'; }
+    });
+    parts.push(release);
     if (d.book.status === 'approved') {
       // PUBLISHING-AI-EPUB-001: 감수 완료 → EPUB 내려받기 · 서점 출판 인계(판매는 서점 확정 전까지 닫힘)
       const dl = el('button', { type: 'button', className: 'button', textContent: 'EPUB 내려받기' });

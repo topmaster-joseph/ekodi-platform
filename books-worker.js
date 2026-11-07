@@ -1,5 +1,5 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
-import { handleCommerce } from './books-commerce.js';
+import { handleCommerce, loadCatalog } from './books-commerce.js';
 
 // BOOKS-COMMERCE-CSP-001: 공용 셸의 기본 CSP(script-src 'self')는 구글 로그인·토스 결제 스크립트를 막는다.
 // 구매·내 서재 화면에는 필요한 외부 출처만 명시한 CSP를 먼저 정해 두고, 셸은 그 위에 자기 출처만 더한다.
@@ -52,6 +52,11 @@ export default {
       });
     }
     // BOOKS-DIRECT-COMMERCE-001: 에코디서점 자체 판매 API (주문·결제승인·내 서재·다운로드)
+    // BOOKS-AI-RELEASES-001: 서점 목록은 기존 books.json에 출간된 AI 협업 도서를 합쳐서 보낸다.
+    if (url.pathname === '/books.json' && request.method === 'GET') {
+      try { return new Response(JSON.stringify(await loadCatalog(env)), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } }); }
+      catch { return env.ASSETS.fetch(request); }
+    }
     if (url.pathname === '/api/commerce' || url.pathname.startsWith('/api/commerce/')) {
       return handleCommerce(request, env);
     }
