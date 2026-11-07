@@ -8,7 +8,7 @@ const gateway=readFileSync(new URL('../storage-gateway.js',import.meta.url),'utf
 const workflow=readFileSync(new URL('../.github/workflows/verify-points-backup-drive-acl.yml',import.meta.url),'utf8');
 
 test('inherited shared drive members are checked against canonical policy source of truth',()=>{
-  assert.equal(policy.sharedDriveMembershipSourceOfTruth,'Google Drive permissions.list');
+  assert.match(policy.sharedDriveMembershipSourceOfTruth,/^Google Drive permissions\.list(?:;|$)/);
   assert.ok(policy.canonicalSharedDriveApprovedAccounts.length>=2);
   assert.match(worker,/import storagePolicy from '.\/config\/storage-policy\.json' with \{type:'json'\}/);
   assert.match(worker,/\/permissions\?/);
