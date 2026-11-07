@@ -245,16 +245,75 @@
     form.querySelector('[data-mission-board-form-status]').textContent='';
     form.elements.title.focus();
   }
+  // Public calendar reuses the existing read-only schedule projection and manager actions.
+  const scheduleCalendar={month:today().slice(0,7),selected:today(),items:[],error:''};
+  function selectedScheduleDay(){
+    draw('mission-schedule',scheduleCalendar.items.filter(item=>item.date===scheduleCalendar.selected),scheduleCalendar.error);
+  }
+  function renderScheduleCalendar(){
+    const card=cards.find(c=>c.dataset.missionEditorial==='mission-schedule');
+    const grid=card?.querySelector('[data-mission-calendar-days]');
+    const label=card?.querySelector('[data-mission-calendar-month]');
+    const selectedLabel=card?.querySelector('[data-mission-selected-label]');
+    if(!grid||!label||!selectedLabel)return;
+    const [year,month]=scheduleCalendar.month.split('-').map(Number);
+    const firstWeekday=new Date(Date.UTC(year,month-1,1)).getUTCDay();
+    const daysInMonth=new Date(Date.UTC(year,month,0)).getUTCDate();
+    label.textContent=year+'년 '+month+'월';
+    selectedLabel.textContent=formatDate(scheduleCalendar.selected)+' 일정';
+    grid.replaceChildren();
+    const counts=new Map();
+    for(const item of scheduleCalendar.items){
+      if(item.date?.startsWith(scheduleCalendar.month+'-')){
+        counts.set(item.date,(counts.get(item.date)||0)+1);
+      }
+    }
+    for(let i=0;i<firstWeekday;i++){
+      const pad=make('span','mission-calendar-padding');
+      pad.setAttribute('aria-hidden','true');grid.append(pad);
+    }
+    for(let day=1;day<=daysInMonth;day++){
+      const iso=scheduleCalendar.month+'-'+String(day).padStart(2,'0');
+      const count=counts.get(iso)||0;
+      const button=make('button','mission-calendar-day',String(day));
+      button.type='button';button.dataset.date=iso;
+      button.setAttribute('aria-label',year+'년 '+month+'월 '+day+'일, 일정 '+count+'건');
+      button.setAttribute('aria-pressed',String(iso===scheduleCalendar.selected));
+      if(iso===today())button.classList.add('is-today');
+      if(count)button.classList.add('has-event');
+      button.addEventListener('click',()=>{
+        scheduleCalendar.selected=iso;
+        for(const dateButton of grid.querySelectorAll('button[data-date]')){
+          dateButton.setAttribute('aria-pressed',String(dateButton.dataset.date===iso));
+        }
+        selectedLabel.textContent=formatDate(iso)+' 일정';
+        selectedScheduleDay();
+      });
+      grid.append(button);
+    }
+  }
+  function changeCalendarMonth(delta){
+    const [y,m]=scheduleCalendar.month.split('-').map(Number);
+    const next=new Date(Date.UTC(y,m-1+delta,1));
+    scheduleCalendar.month=next.getUTCFullYear()+'-'+String(next.getUTCMonth()+1).padStart(2,'0');
+    scheduleCalendar.selected=scheduleCalendar.month+'-01';
+    renderScheduleCalendar();selectedScheduleDay();
+  }
+  function showScheduleCalendar(items,error=''){
+    scheduleCalendar.items=[...items].sort((a,b)=>a.date.localeCompare(b.date)||String(a.time||'').localeCompare(String(b.time||''))||String(a.title||'').localeCompare(String(b.title||'')));
+    scheduleCalendar.error=error;
+    renderScheduleCalendar();selectedScheduleDay();
+  }
   function draw(kind,items,error=''){
     const card=cards.find(c=>c.dataset.missionEditorial===kind);
     if(!card)return;
     const list=card.querySelector('[data-mission-board-items]');
     list.replaceChildren();
     if(!items.length){
-      list.append(make('li','mission-home-board-empty',error||(kind==='mission-notice'?'등록된 공지사항이 없습니다.':'예정된 주요 일정이 없습니다.')));
+      list.append(make('li','mission-home-board-empty',error||(kind==='mission-notice'?'등록된 공지사항이 없습니다.':'이 날짜에 등록된 일정이 없습니다.')));
       return;
     }
-    for(const item of items.slice(0,6)){
+    for(const item of items.slice(0,kind==='mission-notice'?6:items.length)){
       const row=make('li'),link=make('a','',item.title);
       link.href=item.href||(item.id?'/ekodimission/board/post/'+encodeURIComponent(String(item.id)):'/ekodimission#saturday');
       const meta=make('small','mission-home-board-meta',item.meta||'');
@@ -323,11 +382,11 @@
             meta:item.sourceLabel+' · '+formatDate(item.date)+' '+item.time+' · '+item.venue,
             href:item.url,post:item.source==='ekodimission'?owned.get(item.id)||null:null
           }));
-        draw(kind,items,error&&manager?error:'');
+        showScheduleCalendar(items,error&&manager?error:'');
         return;
       }
     }catch{ /* The local board and canonical Saturday remain independently usable. */ }
-    draw(kind,upcoming,error);
+    showScheduleCalendar(upcoming,error);
   }
   async function removePost(kind,post){
     if(!manager||!post?.id||!window.confirm('이 게시글을 비공개 처리하시겠습니까?'))return;
@@ -396,6 +455,13 @@
     card.querySelector('[data-mission-board-cancel]')?.addEventListener('click',()=>{card.querySelector('[data-mission-board-form]').hidden=true;});
     card.querySelector('[data-mission-board-form]')?.addEventListener('submit',event=>{void save(event,card)});
   }
+  const calendarCard=cards.find(c=>c.dataset.missionEditorial==='mission-schedule');
+  calendarCard?.querySelector('[data-mission-calendar-prev]')?.addEventListener('click',()=>changeCalendarMonth(-1));
+  calendarCard?.querySelector('[data-mission-calendar-next]')?.addEventListener('click',()=>changeCalendarMonth(1));
+  calendarCard?.querySelector('[data-mission-calendar-today]')?.addEventListener('click',()=>{
+    scheduleCalendar.month=today().slice(0,7);scheduleCalendar.selected=today();
+    renderScheduleCalendar();selectedScheduleDay();
+  });
   window.addEventListener('ekodi:mission-auth-changed',()=>{void refreshManager()});
   window.addEventListener('ekodi:auth-logout',()=>{manager=false;refreshManagerVisibility()});
   void readNotices();

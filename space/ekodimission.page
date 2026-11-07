@@ -68,7 +68,18 @@
   </article>
   <article class="mission-home-board" data-mission-editorial="mission-schedule" aria-labelledby="mission-schedule-heading">
     <div class="mission-home-board-head"><h2 id="mission-schedule-heading">주요일정</h2><a href="/ekodimission/board?category=mission-schedule">등록 일정 전체 보기</a></div>
-    <ol data-mission-board-items><li class="mission-home-board-empty">주요일정을 확인하고 있습니다.</li></ol>
+    <div class="mission-calendar" data-mission-calendar aria-label="월간 주요일정 달력">
+      <div class="mission-calendar-controls">
+        <button type="button" data-mission-calendar-prev aria-label="이전 달">‹</button>
+        <strong data-mission-calendar-month aria-live="polite">달력 불러오는 중</strong>
+        <button type="button" data-mission-calendar-next aria-label="다음 달">›</button>
+        <button type="button" data-mission-calendar-today>오늘</button>
+      </div>
+      <div class="mission-calendar-weekdays" aria-hidden="true"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+      <div class="mission-calendar-days" data-mission-calendar-days role="group" aria-label="날짜 선택"></div>
+    </div>
+    <h3 class="mission-calendar-selection" data-mission-selected-label>선택한 날짜의 일정</h3>
+    <ol data-mission-board-items aria-live="polite"><li class="mission-home-board-empty">주요일정을 확인하고 있습니다.</li></ol>
     <button type="button" class="mission-home-board-write" data-mission-board-create hidden>일정 등록</button>
     <form class="mission-home-board-form" data-mission-board-form hidden>
       <label>일정명<input name="title" maxlength="160" required></label>
