@@ -18,6 +18,7 @@ on:
       - 'test/space-noindex-preservation.test.mjs'
       - 'bbq-cheonggye-site.js'
       - 'test/bbq-cheonggye-site.test.mjs'
+      - 'test/bbqcg-hard-cutover.test.mjs'
       - 'mission-activity-editor-api.js'
       - 'test/ekodimission-activity-editor.test.mjs'
       - 'supabase/migrations/20261103090000_mission_activity_inline_editor.sql'
@@ -72,6 +73,7 @@ on:
       - 'test/space-noindex-preservation.test.mjs'
       - 'bbq-cheonggye-site.js'
       - 'test/bbq-cheonggye-site.test.mjs'
+      - 'test/bbqcg-hard-cutover.test.mjs'
       - 'mission-activity-editor-api.js'
       - 'test/ekodimission-activity-editor.test.mjs'
       - 'supabase/migrations/20261103090000_mission_activity_inline_editor.sql'
@@ -160,6 +162,7 @@ jobs:
           node --test test/space-noindex-preservation.test.mjs
           node --check bbq-cheonggye-site.js
           node --test test/bbq-cheonggye-site.test.mjs
+          node --test test/bbqcg-hard-cutover.test.mjs
           node --check mission-activity-editor-api.js
           node --check space/ekodimission-activity-editor.js
           node --test test/ekodimission-activity-editor.test.mjs
