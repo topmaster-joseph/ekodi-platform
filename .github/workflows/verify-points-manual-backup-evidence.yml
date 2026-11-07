@@ -92,6 +92,7 @@ jobs:
             test -s "$output"
           }
           fetch_file "$RECEIPT_ID" "$target/receipt.json"
+          test "$(stat -c %s "$target/receipt.json")" -le 1048576
           fetch_file "$ARCHIVE_ID" "$target/archive.age"
           export POINTS_MANUAL_RECEIPT_PATH="$target/receipt.json"
           export POINTS_MANUAL_ENCRYPTED_ARTIFACT_PATH="$target/archive.age"
