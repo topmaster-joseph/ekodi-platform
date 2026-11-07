@@ -16,7 +16,7 @@ const providers=await import(new URL('supabase/functions/identity-api/federated-
 
 function loadLoginCore(){
   // The browser module imports supabase-js from a CDN; strip that line to test the pure helpers.
-  const src=read('auth-site/federated-login.js').replace(/^import \{ createClient \}[^\n]*\n/m,'const createClient=()=>{throw new Error("not in tests")};\n');
+  const src=read('auth-site/federated-login.js').replace(/^import \{ createClient \}[^\n]*\n/m,'const createClient=()=>{throw new Error("not in tests")};\n').replace(/from '\.\/login-lock\.js[^']*'/,`from '${new URL('../auth-site/login-lock.js',import.meta.url).href}'`);
   const dir=mkdtempSync(join(tmpdir(),'ekodi-fed-'));
   const file=join(dir,'federated-login.mjs');writeFileSync(file,src);
   return import(pathToFileURL(file).href);

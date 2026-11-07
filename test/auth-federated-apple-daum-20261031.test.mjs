@@ -55,7 +55,7 @@ test('Apple stays dormant: registered only with all four keys, behind the operat
 });
 
 test('Daum users get their own entry that runs the Kakao flow; provider id stays kakao',async()=>{
-  const src=read('auth-site/federated-login.js').replace(/^import \{ createClient \}[^\n]*\n/m,'const createClient=()=>{throw new Error("not in tests")};\n');
+  const src=read('auth-site/federated-login.js').replace(/^import \{ createClient \}[^\n]*\n/m,'const createClient=()=>{throw new Error("not in tests")};\n').replace(/from '\.\/login-lock\.js[^']*'/,`from '${new URL('../auth-site/login-lock.js',import.meta.url).href}'`);
   const dir=mkdtempSync(join(tmpdir(),'ekodi-fed-'));const file=join(dir,'m.mjs');writeFileSync(file,src);
   const login=await import(pathToFileURL(file).href);
   assert.equal(login.buttonText({id:'kakao',name:'카카오'},'login'),'카카오 계정으로 계속하기');
