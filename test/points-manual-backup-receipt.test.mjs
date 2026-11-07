@@ -124,7 +124,7 @@ test('even valid signatures cannot switch the requested archive file or receipt 
  assert.throws(()=>verifyPointsDriveProvenance(packet(),actualDriveMetadata(),
   {...keys,expectedArchiveFileId:'unrelated-encrypted-object'}),/ARCHIVE_FILE_ID_MISMATCH/);
  assert.throws(()=>verifyPointsDriveProvenance(packet(),actualDriveMetadata(),
-  {...keys,expectedReceiptFileId:'another-signed-receipt'}),/RECEIPT_FILE_ID_MISMATCH/);
+  {...keys,expectedReceiptFileId:'another-signed-receipt'}),/RECEIPT_RECEIPT_DRIVE_PROVENANCE_MISMATCH/);
  assert.throws(()=>verifyPointsDriveProvenance(packet(),actualDriveMetadata(),
   {...keys,manifestFolderId:'wrong-manifest-folder'}),/RECEIPT_DRIVE_PROVENANCE_MISMATCH/);
 });
