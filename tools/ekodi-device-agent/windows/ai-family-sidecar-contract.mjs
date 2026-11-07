@@ -86,7 +86,7 @@ export function planReadOnlyFamilyInvocation(claim,approval,nowMs=Date.now()){
 }
 
 export function meteredApiFreeEnvironment(source={}){
-  const allowed=['SYSTEMROOT','WINDIR','PATH','PATHEXT','APPDATA','LOCALAPPDATA',
+  const allowed=['SYSTEMROOT','SystemRoot','WINDIR','PATH','Path','PATHEXT','APPDATA','LOCALAPPDATA',
     'USERPROFILE','HOME','HOMEDRIVE','HOMEPATH','TEMP','TMP','COMSPEC'];
   const clean={};
   for(const key of allowed){
