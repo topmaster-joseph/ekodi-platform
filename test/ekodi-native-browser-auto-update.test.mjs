@@ -48,7 +48,7 @@ test('native browser workers remain private, headless, canonical and cost indepe
 });
 
 test('native Agent must not claim an update is verified until new-version heartbeat succeeds',()=>{
-  assert.match(agent, /\$AgentVersion = '2\.6\.3'/);
+  assert.match(agent, /\$AgentVersion = '2\.6\.4'/);
   assert.match(agent,/function Confirm-EkodiAgentAutoUpdateAfterRestart/);
   assert.match(agent,/outcome -cne 'installed-pending-restart'/);
   assert.match(agent,/targetVersion -cne \$AgentVersion/);

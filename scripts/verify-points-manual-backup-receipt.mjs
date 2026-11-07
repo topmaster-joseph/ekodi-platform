@@ -83,6 +83,9 @@ export function verifyPointsManualReceipt(packet, {expectedCommit, expectedDrive
     'RECEIPT_RESTORE_EVIDENCE_LOCATION_INVALID');
   assert(Array.isArray(restore.checks) && REQUIRED_CHECKS.every(check => restore.checks.includes(check)),
     'RECEIPT_RESTORE_CHECKS_MISSING');
+  assert(SHA.test(String(restore.evidence_sha256||'')) &&
+    Number.isSafeInteger(restore.evidence_bytes) && restore.evidence_bytes>=64 &&
+    restore.evidence_bytes<=1048576, 'RECEIPT_RESTORE_EVIDENCE_HASH_OR_SIZE_INVALID');
   const op = packet.signatures?.backup_operator;
   const auditor = packet.signatures?.independent_restorer;
   assert(op && auditor && op.actor && auditor.actor && op.actor !== auditor.actor,
@@ -122,31 +125,113 @@ export async function verifyEncryptedArtifact(path, {sha256,bytes}) {
   return {artifact_hash_verified:true,artifact_bytes:bytes};
 }
 
+
+/**
+ * Confirm actual Drive metadata fetched server-side through EKODI Storage
+ * Gateway; signed claims alone do not establish physical file locations.
+ */
+export function verifyPointsDriveProvenance(packet, metadata, options={}) {
+  verifyPointsManualReceipt(packet,options);
+  const statement=packet.statement;
+  const files=[
+    ['ARCHIVE',metadata?.archive,statement.archive.file_id,options.expectedArchiveFileId,
+      options.encryptedFolderId,statement.archive.bytes],
+    ['RECEIPT',metadata?.receipt,options.expectedReceiptFileId,options.expectedReceiptFileId,
+      options.manifestFolderId,null],
+    ['RESTORE',metadata?.restore,statement.restore.evidence_file_id,options.expectedRestoreFileId,
+      options.restoreFolderId,statement.restore.evidence_bytes],
+  ];
+  assert(DRIVE_ID.test(String(options.manifestFolderId||'')), 'RECEIPT_MANIFEST_FOLDER_REQUIRED');
+  for(const [kind,got,signedId,requestedId,parentId,expectedBytes] of files) {
+    assert(DRIVE_ID.test(String(requestedId||'')) && signedId===requestedId,
+      'RECEIPT_'+kind+'_FILE_ID_MISMATCH');
+    assert(got && got.ok===true && got.fileId===signedId &&
+      got.driveId===options.expectedDriveId &&
+      Array.isArray(got.parentIds) && got.parentIds.length===1 &&
+      got.parentIds[0]===parentId,'RECEIPT_'+kind+'_DRIVE_PROVENANCE_MISMATCH');
+    assert(Number.isSafeInteger(got.bytes) && got.bytes>0 &&
+      (expectedBytes===null || got.bytes===expectedBytes),
+      'RECEIPT_'+kind+'_DRIVE_SIZE_MISMATCH');
+  }
+  return {actual_google_drive_parents_verified:3,production_schema_write_authorized:false,
+    points_activation_authorized:false};
+}
+
+// An independently signed receipt must reference a real bounded evidence file
+// whose hash and fields match the restored archive and all required checks.
+// No private evidence contents are logged or returned to the operator.
+export async function verifyRestoreEvidenceFile(path,packet) {
+  assert(typeof path==='string' && path.length>0,'RECEIPT_RESTORE_EVIDENCE_FILE_REQUIRED');
+  const s=packet.statement;
+  const evidence=s.restore;
+  const info=await stat(path);
+  assert(info.isFile() && info.size===evidence.evidence_bytes,
+    'RECEIPT_RESTORE_EVIDENCE_SIZE_MISMATCH');
+  assert(info.size<=1048576 && info.size>=64,'RECEIPT_RESTORE_EVIDENCE_SIZE_INVALID');
+  const file=await readFile(path);
+  assert(createHash('sha256').update(file).digest('hex')===evidence.evidence_sha256,
+    'RECEIPT_RESTORE_EVIDENCE_HASH_MISMATCH');
+  let data;
+  try{data=JSON.parse(file.toString('utf8'));}catch{throw new Error('RECEIPT_RESTORE_EVIDENCE_JSON_INVALID');}
+  assert(data && !Array.isArray(data) && data.project_ref===s.project_ref &&
+    data.source_commit===s.source_commit &&
+    data.archive_sha256===s.archive.sha256 &&
+    data.archive_file_id===s.archive.file_id &&
+    data.target==='isolated_nonproduction_postgres' &&
+    data.verified_at===s.restore_verified_at &&
+    data.success===true &&
+    data.checks && !Array.isArray(data.checks) &&
+    REQUIRED_CHECKS.every(name=>data.checks[name]===true),
+    'RECEIPT_RESTORE_EVIDENCE_CONTENT_MISMATCH');
+  return {actual_restore_evidence_hash_verified:true,production_schema_write_authorized:false,
+    points_activation_authorized:false};
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
-    const receiptPath = process.env.POINTS_MANUAL_RECEIPT_PATH;
-    const encryptedPath = process.env.POINTS_MANUAL_ENCRYPTED_ARTIFACT_PATH;
-    assert(receiptPath && encryptedPath, 'RECEIPT_PROTECTED_INPUTS_REQUIRED');
-    const packet = JSON.parse(await readFile(receiptPath,'utf8'));
-    const result = verifyPointsManualReceipt(packet, {
+    const receiptPath=process.env.POINTS_MANUAL_RECEIPT_PATH;
+    assert(receiptPath,'RECEIPT_PROTECTED_INPUTS_REQUIRED');
+    const packet=JSON.parse(await readFile(receiptPath,'utf8'));
+    const options={
       expectedCommit:process.env.POINTS_MANUAL_EXPECTED_MAIN_SHA,
       expectedDriveId:process.env.POINTS_MANUAL_EXPECTED_DRIVE_ID,
       encryptedFolderId:process.env.POINTS_MANUAL_EXPECTED_ENCRYPTED_FOLDER_ID,
+      manifestFolderId:process.env.POINTS_MANUAL_EXPECTED_MANIFEST_FOLDER_ID,
       restoreFolderId:process.env.POINTS_MANUAL_EXPECTED_RESTORE_FOLDER_ID,
+      expectedArchiveFileId:process.env.POINTS_MANUAL_ARCHIVE_FILE_ID,
+      expectedReceiptFileId:process.env.POINTS_MANUAL_RECEIPT_FILE_ID,
+      expectedRestoreFileId:process.env.POINTS_MANUAL_RESTORE_FILE_ID,
       backupOperatorPublicKey:process.env.POINTS_MANUAL_BACKUP_OPERATOR_PUBKEY,
       independentRestorerPublicKey:process.env.POINTS_MANUAL_INDEPENDENT_RESTORER_PUBKEY,
-    });
-    const artifact = await verifyEncryptedArtifact(encryptedPath, result);
-    console.log(JSON.stringify({
-      status:'signed_restore_and_encrypted_artifact_verified',
-      signature_roles_verified:result.signature_roles_verified,
-      artifact_hash_verified:artifact.artifact_hash_verified,
-      production_schema_write_authorized:false,
-      points_activation_authorized:false,
-      backup_restore_owner_approval_required:true,
-    }));
-  } catch (e) {
+    };
+    const result=verifyPointsManualReceipt(packet,options);
+    if(process.argv.includes('--signed-pointers')){
+      // This mode verifies both independent signatures before the protected
+      // workflow fetches any receipt-declared file IDs. No secrets returned.
+      console.log(JSON.stringify({archive_file_id:packet.statement.archive.file_id,
+        restore_evidence_file_id:packet.statement.restore.evidence_file_id}));
+    }else{
+      const encryptedPath=process.env.POINTS_MANUAL_ENCRYPTED_ARTIFACT_PATH;
+      const evidencePath=process.env.POINTS_MANUAL_RESTORE_EVIDENCE_PATH;
+      const metaPath=process.env.POINTS_MANUAL_DRIVE_METADATA_PATH;
+      assert(encryptedPath && evidencePath && metaPath,'RECEIPT_PROTECTED_INPUTS_REQUIRED');
+      const metadata=JSON.parse(await readFile(metaPath,'utf8'));
+      const locations=verifyPointsDriveProvenance(packet,metadata,options);
+      const artifact=await verifyEncryptedArtifact(encryptedPath,result);
+      const evidence=await verifyRestoreEvidenceFile(evidencePath,packet);
+      console.log(JSON.stringify({
+        status:'signed_restore_artifact_and_drive_provenance_verified',
+        signature_roles_verified:result.signature_roles_verified,
+        actual_google_drive_parents_verified:locations.actual_google_drive_parents_verified,
+        artifact_hash_verified:artifact.artifact_hash_verified,
+        actual_restore_evidence_hash_verified:evidence.actual_restore_evidence_hash_verified,
+        production_schema_write_authorized:false,
+        points_activation_authorized:false,
+        backup_restore_owner_approval_required:true,
+      }));
+    }
+  } catch(e) {
     console.error('EKODI_POINTS_MANUAL_BACKUP_BLOCKED:'+String(e?.message||'UNKNOWN'));
-    process.exitCode = 2;
+    process.exitCode=2;
   }
 }

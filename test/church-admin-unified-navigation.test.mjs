@@ -88,7 +88,9 @@ test('both existing admin runtimes project the same registry without changing ow
   assert.match(workspaceJs,/settings\.dataset\.adminSection='services'/);
   assert.doesNotMatch(workspaceJs,/id:'service-config'/);
   assert.match(workspaceJs,/viewTabs\.after\(tabs\)/);
-  assert.match(churchJs,/viewTabs\.after\(details\)/);
+  // Church admin removed the work/metrics view tabs: no repositioning, no reload-per-click navigation.
+  assert.doesNotMatch(churchJs,/viewTabs\.after\(details\)/);
+  assert.match(churchJs,/history\.pushState\(\{churchAdminSection:next\}/);
   assert.match(workspaceJs,/showUnavailable:Boolean\(role\)/);
   assert.match(churchJs,/showUnavailable:Boolean\(role\)/);
   assert.match(workspaceCss,/church-admin-detail-tabs/);
@@ -161,7 +163,7 @@ test('Church layout is compact, semantic and scoped to the Church tenant only',a
   assert.match(css,/justify-content:flex-start!important/);
   assert.match(css,/padding:10px clamp\(12px,2\.2vw,28px\) 22px/);
   assert.match(css,/\.church-admin-nav-unavailable\[aria-disabled="true"\]/);
-  assert.match(pastorJs,/viewTabs\.after\(details\)/);
+  assert.doesNotMatch(pastorJs,/viewTabs\.after\(details\)/);
   assert.match(workspaceJs,/viewTabs\.after\(tabs\)/);
   assert.match(css,/@media\(max-width:620px\)/,'small screen touch sizing preserved');
 });

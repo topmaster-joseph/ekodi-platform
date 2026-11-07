@@ -677,7 +677,7 @@ test('seonammedi notice detail lets the author edit and delete the clicked post'
   assert.match(control,/async function updatePublicNotice\(request,env,id\)/);
   assert.match(control,/edit_forbidden/);
   assert.match(control,/request\.method==='PUT'/);
-  assert.match(control,/UPDATE seonammedi_notices SET title=\?,body=\?,image_key=\?,image_type=\?,image_keys_json=\?,image_types_json=\?,updated_at=\?/);
+  assert.match(control,/UPDATE seonammedi_notices SET title=\?,body=\?,pinned=\?,image_key=\?,image_type=\?,image_keys_json=\?,image_types_json=\?,updated_at=\?/);
 });
 
 
