@@ -349,7 +349,7 @@ test('every future weekly Saturday meets at 17:00, while history remains 11:00',
   assert.equal(db.events.get('site:ekodimission:main|2026-10-31')?.starts_at,'11:00');
   const canonical=await read('site-board-control.js');
   assert.match(canonical,/CASE WHEN meeting_date>='2026-11-07' THEN '17:00' ELSE '11:00' END/);
-  assert.match(canonical,/meeting_date>='2026-11-07' AND starts_at='11:00'/);
+  assert.match(canonical,/meeting_date>='2026-11-07' AND meeting_date>=\?\s+AND starts_at='11:00'/);
   const display=await read('space/ekodimission-saturday.js');
   assert.match(display,/data\.meeting\.time/);
   const history=await read('space/ekodimission-saturday-history.js');
