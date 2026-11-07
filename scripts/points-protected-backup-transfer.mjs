@@ -96,7 +96,7 @@ export async function uploadVerifiedEncryptedBackup({encryptedBytes,mainSha,reci
   };
   const manifest=Buffer.from(JSON.stringify(statement));
   const manifestHash=sha(manifest);
-  const manifestStore=(await storageRequest('/records',{key,fetchImpl,method:'POST',body:{
+  const manifestStore=await (await storageRequest('/records',{key,fetchImpl,method:'POST',body:{
     spaceId:'ekodi',serviceId:'backup',storageRoute:'backup',
     recordType:'supabase_production_encrypted_backup_manifest_pending_restore',
     createdBy:'ekodi-protected-backup-operator',retentionClass:'permanent',
