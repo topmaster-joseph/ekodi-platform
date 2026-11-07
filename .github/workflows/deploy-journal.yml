@@ -16,6 +16,7 @@ on:
       - 'journal/**'
       - 'journal-content.js'
       - 'journal-worker.js'
+      - 'journal-books.js'
       - 'wrangler.journal*.toml'
       - 'deploy/manifests/journal.worker.json'
       - 'test/journal-platform.test.mjs'
@@ -61,6 +62,7 @@ jobs:
           set -euo pipefail
           node --check journal-worker.js
           node --check journal-content.js
+          node --check journal-books.js
           node --check journal/app.js
           node --test test/journal-platform.test.mjs
           npm run validate:constitution
