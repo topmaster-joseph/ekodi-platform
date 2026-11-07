@@ -360,7 +360,8 @@ function initializePublicTimeline(rows){
 }
 
 async function load(){
-const [r,timelineResponse,pageResponse]=await Promise.all([fetch('/seonammedi/data.json',{cache:'no-store'}),fetch('/api/seonammedi/timeline',{cache:'no-store'}).catch(()=>null),fetch('/api/seonammedi/page-data',{cache:'no-store'}).catch(()=>null)]);
+// These two feeds are PUBLIC and honor their response Cache-Control; personal/admin APIs remain no-store.
+const [r,timelineResponse,pageResponse]=await Promise.all([fetch('/seonammedi/data.json',{cache:'default'}),fetch('/api/seonammedi/timeline',{cache:'no-store'}).catch(()=>null),fetch('/api/seonammedi/page-data',{cache:'default'}).catch(()=>null)]);
 if(!r.ok)throw new Error('data');const d=await r.json();
 if(timelineResponse?.ok){const timelineBody=await timelineResponse.json().catch(()=>({}));if(Array.isArray(timelineBody.items))d.timeline=timelineBody.items}
 if(pageResponse?.ok){const pageBody=await pageResponse.json().catch(()=>({}));if(Array.isArray(pageBody.page?.status?.items))d.status=pageBody.page.status.items;if(pageBody.page?.organization&&typeof pageBody.page.organization==='object')d.organization=pageBody.page.organization;if(pageBody.finance&&typeof pageBody.finance==='object')d.finance=pageBody.finance}

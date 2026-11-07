@@ -52,6 +52,10 @@
 <link rel="stylesheet" href="/seonammedi/shared-site-header.css?v=20261019-unified-shell-4">
 <script src="/seonammedi/board/ui/central-category.js?v=20261020-event-open-1" defer></script>
 <link rel="stylesheet" href="/seonammedi/home-public-feed.css?v=20261108-home-feed-2">
+  <!-- Start the two anonymous/public home feeds while deferred app.js loads.
+       The public edge controls TTL; finance detail and admin writes are not prefetched. -->
+  <link rel="preload" href="/seonammedi/data.json" as="fetch" type="application/json" crossorigin>
+  <link rel="preload" href="/api/seonammedi/page-data" as="fetch" type="application/json" crossorigin>
 
 <style id="ekodi-remove-duplicate-middle-menu">
 /* The header is the sole primary navigation; preserve the social preview. */
