@@ -6,6 +6,15 @@
 <header class="mission-site-header"><a class="mission-brand" href="/ekodimission"><span class="mission-brand-mark">E</span><span><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header>
 <main class="subpage"><a class="back" href="/ekodimission">← 에코디선교회</a><section class="sub-hero"><p class="eyebrow">MISSION ACTIVITIES</p><h1>함께 살아내는 일이<br>우리의 활동입니다.</h1><p>연도·월별 행사와 공개 가능한 결과를 찾아볼 수 있습니다. 선교회 설립과 사역의 흐름은 <a class="text-link" href="/ekodimission/history">연혁 메뉴</a>에서 확인합니다.</p></section>
 
+<section class="mission-activity-hub" data-mission-tabs="activities" aria-label="활동 세부 메뉴">
+  <div class="mission-content-tabs" role="tablist" aria-label="활동 메뉴">
+    <button type="button" role="tab" id="mission-activity-tab-saturday" aria-controls="mission-activity-saturday" aria-selected="true" tabindex="0" data-mission-tab="saturday">토요모임</button>
+    <button type="button" role="tab" id="join" aria-controls="mission-activity-join" aria-selected="false" tabindex="-1" data-mission-tab="join">함께하기</button>
+    <button type="button" role="tab" id="partners" aria-controls="mission-activity-partners" aria-selected="false" tabindex="-1" data-mission-tab="partners">협력</button>
+    <button type="button" role="tab" id="news" aria-controls="mission-activity-news" aria-selected="false" tabindex="-1" data-mission-tab="news">소식</button>
+    <button type="button" role="tab" id="qtin" aria-controls="mission-activity-qtin" aria-selected="false" tabindex="-1" data-mission-tab="qtin">큐티인 신청</button>
+  </div>
+  <div role="tabpanel" id="mission-activity-saturday" aria-labelledby="mission-activity-tab-saturday" data-mission-tab-panel="saturday">
 <section class="mission-saturday-archive" aria-labelledby="saturday-archive-title" data-mission-saturday-history>
   <div class="mission-activity-index-head">
     <div><p class="eyebrow">WEEKLY FELLOWSHIP · SINCE 2024.02.03</p><h2 id="saturday-archive-title">지난 토요모임 일정</h2></div>
@@ -59,5 +68,27 @@
     <article class="mission-activity-row" data-activity-item data-year="2018" data-month="" data-activity-key="history-2018-15"><time datetime="2018"><strong>2018</strong><span>설립</span></time><div class="mission-activity-row-copy"><div class="mission-activity-row-meta"><span class="mission-status completed">기록</span><span>선교회 연혁</span></div><h3>한국외국인선교회 무안지부 설립</h3><p>2018년 설립 사실은 기록에서 확인됩니다. 일부 계획서와 선교회 소개자료의 월·일 표기가 달라 정확한 날짜는 대조 중입니다.</p></div><div class="mission-activity-row-actions"><a class="mission-activity-detail-button" href="/ekodimission/history#history-2018">기록 배경 <span aria-hidden="true">→</span></a></div></article>
   </div>
   <p class="mission-activity-empty" data-activity-empty hidden>선택한 연도와 월에 등록된 활동이 없습니다.</p>
+</section>
+  </div>
+  <section role="tabpanel" id="mission-activity-join" aria-labelledby="join" data-mission-tab-panel="join" hidden>
+    <div class="mission-tab-detail"><h2>함께하기</h2><p>토요모임, 봉사, 식탁교제에 참여하는 방법을 확인하고 필요한 만큼 연결합니다.</p>
+      <div class="mission-tab-detail-links"><a href="/ekodimission/participate">참여 방법 자세히 보기</a><a href="/ekodimission#saturday">이번 주 모임 참여하기</a><a href="/ekodimission/contact">참여 문의하기</a></div>
+    </div>
+  </section>
+  <section role="tabpanel" id="mission-activity-partners" aria-labelledby="partners" data-mission-tab-panel="partners" hidden>
+    <div class="mission-tab-detail"><h2>협력</h2><p>지역 교회·단체·이웃과의 협력 사역을 소개합니다. 협력 제안과 연락은 별도 문의 페이지에서 받습니다.</p>
+      <div class="mission-tab-detail-links"><a href="/ekodimission/partners">협력 사역 자세히 보기</a><a href="/ekodimission/contact">협력 제안하기</a></div>
+    </div>
+  </section>
+  <section role="tabpanel" id="mission-activity-news" aria-labelledby="news" data-mission-tab-panel="news" hidden>
+    <div class="mission-tab-detail"><h2>소식</h2><p>선교회 활동과 공동체의 공개 가능한 소식을 한눈에 확인합니다. 제목을 선택하면 원문과 기록으로 이동합니다.</p>
+      <div class="mission-tab-detail-links"><a href="/ekodimission/stories">최근 소식·기록 자세히 보기</a><a href="/ekodimission#notices">공지사항 확인하기</a></div>
+    </div>
+  </section>
+  <section role="tabpanel" id="mission-activity-qtin" aria-labelledby="qtin" data-mission-tab-panel="qtin" hidden>
+    <div class="mission-tab-detail"><h2>큐티인 신청</h2><p>매일 말씀을 읽고 묵상할 수 있도록 큐티인 신청과 이용 안내를 연결합니다.</p>
+      <div class="mission-tab-detail-links"><a href="/qtin/mission">큐티인 신청 자세히 보기</a><a href="/ekodimission/devotion">오늘의 매일묵상 보기</a></div>
+    </div>
+  </section>
 </section></main>
 <footer class="site-footer"><div><strong>에코디선교회</strong><p>곁을 내어주는 선교, 함께 먹는 복음.</p></div><p class="footnote">ekodi.kr/ekodimission/activities</p></footer></body></html>
