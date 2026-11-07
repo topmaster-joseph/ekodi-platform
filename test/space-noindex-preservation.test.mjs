@@ -8,9 +8,9 @@ const html=(headers={})=>new Response('<h1>Store</h1>',{
 });
 
 test('space storefront must preserve a store-provided restrictive noindex',()=>{
-  const response=withHeaders({},html({'x-robots-tag':'noindex, nofollow, noarchive','x-ekodi-workspace':'bbqcheonggye'}),'space-storefront');
+  const response=withHeaders({},html({'x-robots-tag':'noindex, nofollow, noarchive','x-ekodi-workspace':'bbqcg'}),'space-storefront');
   assert.equal(response.headers.get('x-robots-tag'),'noindex, nofollow, noarchive');
-  assert.equal(response.headers.get('x-ekodi-workspace'),'bbqcheonggye');
+  assert.equal(response.headers.get('x-ekodi-workspace'),'bbqcg');
   assert.equal(response.headers.get('cache-control'),'no-store');
 });
 
@@ -29,10 +29,10 @@ test('private admin surfaces remain noindex even with explicit index from an inn
   assert.equal(response.headers.get('x-robots-tag'),'noindex, nofollow, noarchive');
 });
 test('unverified BBQ landing stays noindex through shared Space response wrapper',async()=>{
-  const request=new Request('https://ekodi.kr/bbqcheonggye');
+  const request=new Request('https://ekodi.kr/bbqcg');
   const publicResponse=await renderBbqCheonggyePage(request,{},{name:'BBQ 무안청계점'});
   assert.match(publicResponse.headers.get('x-robots-tag'),/noindex/);
   const wrapped=withHeaders({},publicResponse,'space-storefront');
   assert.equal(wrapped.headers.get('x-robots-tag'),'noindex, nofollow, noarchive');
-  assert.match(await wrapped.text(),/data-store-entity="bbqcheonggye"/);
+  assert.match(await wrapped.text(),/data-store-entity="bbqcg"/);
 });

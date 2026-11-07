@@ -522,6 +522,12 @@ export default{
       const target=new URL(url.pathname+url.search,'https://ekodi.kr');
       return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
     };
+    // An irreversible URL hard cutover: neither redirect nor alias the retired BBQ path.
+    if(/^\/bbqcheonggye(?:\/|$)/i.test(url.pathname)){
+      return withHeaders(env,new Response(request.method==='HEAD'?null:'이 주소는 사용하지 않습니다.',{
+        status:410,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive'}
+      }),'space-gone');
+    }
     const missionApplicationMatch=normalizedMissionPath(url.pathname).match(MISSION_ACTIVITY_APPLICATION_RE);
     if(missionApplicationMatch)return submitMissionEventApplication(request,env,missionApplicationMatch[1],missionApplicationMatch[1]);
     if(normalizedMissionPath(url.pathname)===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);
@@ -540,7 +546,7 @@ export default{
       const data=await publicStorefront(slug,env);
       return data?json(env,data):json(env,{error:'storefront_unavailable'},503);
     }
-    if(url.pathname==='/bbqcheonggye/assets/site.css')return withHeaders(env,bbqCheonggyeCss(),'bbqcheonggye-asset');
+    if(url.pathname==='/bbqcg/assets/site.css')return withHeaders(env,bbqCheonggyeCss(),'bbqcg-asset');
     if(url.pathname==='/storefront.css'||url.pathname==='/_ekodi/space/storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/jadam-storefront.css'||url.pathname==='/_ekodi/space/jadam-storefront.css')return withHeaders(env,jadamStorefrontCss(),'storefront-asset');
     if(url.pathname==='/restaurant-storefront.css'||url.pathname==='/_ekodi/space/restaurant-storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
@@ -597,7 +603,7 @@ export default{
       if(isOrganizationWorkspaceSlug(requested)&&!workspaceRoute?.service){
         return withHeaders(env,await renderOrganizationPublicPage(request,env,resolved,requested),'space-organization');
       }
-      if(requested==='bbqcheonggye'&&!workspaceRoute?.service&&resolved.source==='store-user-sites'){
+      if(requested==='bbqcg'&&!workspaceRoute?.service&&resolved.source==='store-user-sites'){
         return withHeaders(env,await renderBbqCheonggyePage(request,env,resolved.profile),'space-storefront');
       }
       if(resolved.storefront&&!workspaceRoute?.service){
