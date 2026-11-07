@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {verifyChurchHeaderNavigation} from '../scripts/verify-church-header-navigation.mjs';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {verifyChurchHeaderNavigation,verifyChurchPublicSubpageNavigation} from '../scripts/verify-church-header-navigation.mjs';
 
 const newNav=[
   ['/ekodichurch/devotion/','매일묵상'],
@@ -55,4 +57,55 @@ test('legacy menu must keep the original worship action and date-scoped data',()
   assert.equal(verifyChurchHeaderNavigation(sample).contract,'legacy-reviewed');
   assert.throws(()=>verifyChurchHeaderNavigation(sample.replace('data-church-weekly','data-missing')),/worship editor/);
   assert.throws(()=>verifyChurchHeaderNavigation(sample.replace('예배자료','마이페이지')),/unapproved primary navigation/);
+});
+
+
+const pageHtml=page=>{
+  const nav='<nav id="main-nav" aria-label="주요 메뉴">'+newNav.map(([href,label])=>
+    '<a href="'+href+'"'+(href==='/ekodichurch/'+page+'/'?' aria-current="page"':'')+'>'+label+'</a>').join('')+'</nav>';
+  const content={
+    devotion:'<main data-ekodi-devotion><script src="/bible/devotion.js"></script></main>',
+    notices:'<main data-church-notices></main><div data-church-public-manage hidden></div>',
+    schedule:'<main data-church-shared-schedules></main><div data-church-public-manage hidden></div>'
+  }[page];
+  return '<html><head><link href="church-compact-navigation.css"></head><body>'+
+    '<button class="menu-button" aria-expanded="false"></button>'+nav+
+    content+'<footer data-ekodi-service-footer></footer>'+
+    '<script src="/ekodichurch/church-shell.js" defer></script></body></html>';
+};
+
+test('devotion, notices and schedule keep exact same six main links and one current-route marker',()=>{
+  for(const page of ['devotion','notices','schedule']){
+    assert.deepEqual(verifyChurchPublicSubpageNavigation(pageHtml(page),page),
+      {contract:'six-item-subpage',page,primaryItems:6});
+    const source=readFileSync(new URL('../sites/ekodi-church/'+page+'/index.html',import.meta.url),'utf8');
+    // The central 223-file reviewed import is a pre-calendar snapshot while
+    // independent Church Pages still owns the deployed source. It must NOT be
+    // mistaken for a reviewed current Church calendar or a successful release.
+    // Source and live validations in the guarded Pages workflow stay strict.
+    if(page==='schedule'&&!source.includes('data-church-shared-schedules')){
+      assert.throws(()=>verifyChurchPublicSubpageNavigation(source,page),
+        /public schedule content\\/role guard missing: data-church-shared-schedules/);
+    }else{
+      assert.equal(verifyChurchPublicSubpageNavigation(source,page).page,page);
+    }
+  }
+});
+
+test('public page release check catches stale menu, duplicate menu, wrong current route and removed editor guard',()=>{
+  const good=pageHtml('devotion');
+  assert.throws(()=>verifyChurchPublicSubpageNavigation(good.replace('매일묵상','오늘의 삶'),'devotion'),/stale or inconsistent/);
+  assert.throws(()=>verifyChurchPublicSubpageNavigation(good.replace('/ekodichurch/#worship','/ekodichurch/#online'),'devotion'),/stale or inconsistent/);
+  assert.throws(()=>verifyChurchPublicSubpageNavigation(good+'<nav id="main-nav"></nav>','devotion'),/duplicate/);
+  assert.throws(()=>verifyChurchPublicSubpageNavigation(good.replace('aria-current="page"',''),'devotion'),/active route mismatch/);
+  assert.throws(()=>verifyChurchPublicSubpageNavigation(good.replace('church-compact-navigation.css','legacy-navigation.css'),'devotion'),/common shell missing/);
+  assert.throws(()=>verifyChurchPublicSubpageNavigation(pageHtml('schedule').replace('data-church-public-manage hidden','data-church-public-manage'),'schedule'),/content\/role guard/);
+  assert.throws(()=>verifyChurchPublicSubpageNavigation(pageHtml('notices'),'unsupported'),/unsupported subpage/);
+});
+
+test('CLI validates public subpages and emits machine-readable proof',()=>{
+  const cli=fileURLToPath(new URL('../scripts/verify-church-header-navigation.mjs',import.meta.url));
+  const page=fileURLToPath(new URL('../sites/ekodi-church/devotion/index.html',import.meta.url));
+  const proof=execFileSync(process.execPath,[cli,'--subpage',page,'--kind','devotion'],{encoding:'utf8'});
+  assert.deepEqual(JSON.parse(proof),{contract:'six-item-subpage',page:'devotion',primaryItems:6});
 });
