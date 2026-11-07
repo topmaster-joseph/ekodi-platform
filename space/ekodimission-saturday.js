@@ -300,7 +300,7 @@
     renderScheduleCalendar();selectedScheduleDay();
   }
   function showScheduleCalendar(items,error=''){
-    scheduleCalendar.items=[...items].sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||'')||a.title.localeCompare(b.title));
+    scheduleCalendar.items=[...items].sort((a,b)=>a.date.localeCompare(b.date)||String(a.time||'').localeCompare(String(b.time||''))||String(a.title||'').localeCompare(String(b.title||'')));
     scheduleCalendar.error=error;
     renderScheduleCalendar();selectedScheduleDay();
   }
