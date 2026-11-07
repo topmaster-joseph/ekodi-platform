@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url';
 export const PRODUCTION_PROJECT = 'renzehysxirjilvdxacv';
 export const AGE_HEADER = 'age-encryption.org/v1\n';
 const REQUIRED_CHECKS = Object.freeze([
-  'pg_restore_success', 'critical_tables_present', 'rls_and_grants_checked',
+  'isolated_restore_success', 'critical_tables_present', 'rls_and_grants_checked',
   'identity_integrity_checked', 'row_counts_compared'
 ]);
 const SHA = /^[a-f0-9]{64}$/;
