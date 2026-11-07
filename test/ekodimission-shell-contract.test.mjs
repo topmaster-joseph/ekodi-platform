@@ -71,7 +71,7 @@ test('mission header exposes six canonical links while activity detail routes re
   const source=await readFile(new URL('../space/ekodimission-shell.js',import.meta.url),'utf8');
   const activity=await readFile(new URL('../space/ekodimission-activities.page',import.meta.url),'utf8');
   assert.doesNotThrow(()=>validateMissionShellSource(source));
-  assert.match(source,/const primaryIndices=new Set\\(\\[0,1,2,3,4,5\\]\\)/);
+  assert.ok(source.includes('const primaryIndices=new Set([0,1,2,3,4,5])'));
   for(const menu of ['연혁','공지','묵상','일정','방송','활동'])assert.match(source,new RegExp("label:'"+menu+"'"));
   for(const destination of ['/ekodimission#saturday','/ekodimission/participate','/ekodimission/partners','/ekodimission/stories','/qtin/mission'])
     assert.ok(activity.includes('href="'+destination+'"'),destination);
