@@ -39,6 +39,8 @@ test('browser controls run only via confirmed allowlisted Device Control command
   assert.match(api, /'file_extensions\.restore': \{ risk: 'maintain', confirm: true, superAdmin: true \}/);
   assert.match(api, /FILE_EXTENSIONS_AGENT_UPGRADE_REQUIRED/);
   assert.match(api, /FILE_EXTENSIONS_DEVICE_OFFLINE/);
+  assert.match(api, /FILE_EXTENSIONS_MANAGED_WINDOWS_REQUIRED/);
+  assert.match(api, /device\.platform !== 'windows'/);
   assert.match(api, /DEVICE_COMMAND_SUPER_ADMIN_REQUIRED/);
   assert.match(api, /commandType\.startsWith\('file_extensions\.'\)/);
   assert.match(api, /DEVICE_JOB_NOT_ALLOWED/);
