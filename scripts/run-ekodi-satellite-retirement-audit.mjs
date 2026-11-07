@@ -114,13 +114,23 @@ export async function runEkodiSatelliteAudit({
   const legacy=await observeLegacy();
   // Static public text must never be conflated with runtime cloud access, or
   // smuggled into the source-retirement decision as an approval receipt.
+  const legacyRows=Array.isArray(legacy?.repositories)?legacy.repositories:[];
+  const observed=legacyRows.flatMap(row=>Array.isArray(row.observations)?row.observations:[]);
+  const writerCount=observed.filter(entry=>String(entry.status||'').startsWith('possible-active-')).length;
+  const unknownCount=legacyRows.filter(row=>row.status==='unverified-no-runtime-certification').length;
   if(legacy?.contract!=='ekodi.public-legacy-workflow-risk.v1'||
+     legacy.mode!=='fixed-public-read-only-no-github-provider-production-mutations'||
      legacy.repositoryDeletionAuthorized!==false||legacy.anyRepositoryDeleted!==false||
+     legacy.providerWorkflowActivationChecked!==false||legacy.privateRepositoryWorkflowsChecked!==false||
+     legacy.cloudflareSourceBindingChecked!==false||legacy.credentialOrWebhookInventoryChecked!==false||
      legacy.totalRegisteredSatellites!==audit.summary.fleet.registeredSatellites||
-     !Array.isArray(legacy.repositories)||
-     legacy.repositories.length!==audit.summary.fleet.registeredSatellites||
-     legacy.repositories.some((row,i)=>row.repository!==audit.summary.fleet.reportedRepositories[i].repository||
-       row.deletionDecision!=='retain')) {
+     legacyRows.length!==audit.summary.fleet.registeredSatellites||
+     legacy.possibleActiveLegacyWriters!==writerCount||
+     legacy.unverifiedRepositoryCount!==unknownCount||
+     legacyRows.some((row,i)=>row.repository!==audit.summary.fleet.reportedRepositories[i].repository||
+       row.deletionDecision!=='retain'||
+       (row.status==='review-required-legacy-writer')!==
+         row.observations?.some(entry=>String(entry.status||'').startsWith('possible-active-')))) {
     throw Error('invalid-legacy-workflow-risk-evidence');
   }
   audit.legacyWorkflow=legacy;
