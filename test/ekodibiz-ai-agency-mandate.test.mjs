@@ -23,11 +23,11 @@ async function api(e,path,body={},key=''){
   },body:JSON.stringify(body)}),url,e);
   return {status:response.status,body:await response.json()};
 }
-const form={type:'institution',provider:'Synthetic Example AI',service:'User-owned account',
+const form={type:'institution',months:3,provider:'Synthetic Example AI',service:'User-owned account',
   customer:'Contract Manager',email:'pilot-university@example.test',
   organization:'Synthetic Test University',description:'three month invoice-only synthetic test',terms:true,consent:true};
-async function setup(e,supplierAmount=90000){
-  const apply=await api(e,'/apply',form);assert.equal(apply.status,201);
+async function setup(e,supplierAmount=90000,months=form.months){
+  const apply=await api(e,'/apply',{...form,months});assert.equal(apply.status,201);
   const id=apply.body.id;const quote=await api(e,'/admin/quote',
     {id,feeAmount:20000,supplierAmount},adminKey);assert.equal(quote.status,200);
   const accept=await api(e,'/accept',{id,receiptToken:apply.body.receiptToken,accepted:true});
@@ -72,7 +72,7 @@ test('up to three manual receipts are recorded without making a provider charge'
   assert.equal(statement.renewalStopRecorded,false);
   assert.equal(e.PAYMENTS_ENABLED,undefined);
 });
-test('duplicate cycle, reused receipt, fourth cycle and supplier budget overrun are denied',async()=>{
+test('duplicate cycle, reused receipt, over-contract cycles and supplier budget overrun are denied',async()=>{
   const e=env(),{id}=await setup(e);
   assert.equal((await api(e,'/admin/record-cycle',cycle(id,1),adminKey)).status,200);
   assert.equal((await api(e,'/admin/record-cycle',cycle(id,1),adminKey)).status,409);
@@ -156,11 +156,48 @@ test('university summary reflects manual records and cancellation but cannot mod
   const denied=await api(e,'/admin/record-cycle',cycle(a.id,2,25000,'INV-CAMPUS-002'));
   assert.equal(denied.status,403);
 });
-test('individual receipt lookup does not expose a campus contract view',async()=>{
+test('individual receipt lookup discloses only that contract summary, no private credentials',async()=>{
   const e=env();
   const a=await api(e,'/apply',{...form,type:'individual',organization:''});
   assert.equal(a.status,201);
   const status=await api(e,'/status',{id:a.body.id,receiptToken:a.body.receiptToken});
   assert.equal(status.status,200);
-  assert.equal(status.body.campus,null);
+  assert.equal(status.body.campus.months,form.months);
+  assert.equal(status.body.campus.organization,null);
+  assert.equal(status.body.campus.periods.length,form.months);
+  assert.equal(status.body.campus.supplierBudget,null);
+  for(const confidential of ['tokenHash','receiptToken','email','paymentKey','audit'])
+    assert.equal(JSON.stringify(status.body.campus).includes('"'+confidential+'"'),false);
+});
+
+
+test('custom 5-month contract accepts month four and five, rejects sixth and duplicate references',async()=>{
+  const e=env(),{id,receiptToken}=await setup(e,150000,5);
+  const before=await api(e,'/status',{id,receiptToken});
+  assert.equal(before.body.campus.months,5);
+  assert.equal(before.body.campus.periods.length,5);
+  assert.equal((await api(e,'/admin/record-cycle',cycle(id,4,30000,'INV-FLEX-004'),adminKey)).status,200);
+  assert.equal((await api(e,'/admin/record-cycle',cycle(id,5,30000,'INV-FLEX-005'),adminKey)).status,200);
+  assert.equal((await api(e,'/admin/record-cycle',cycle(id,6,30000,'INV-FLEX-006'),adminKey)).status,422);
+  assert.equal((await api(e,'/admin/record-cycle',cycle(id,3,30000,'INV-FLEX-004'),adminKey)).status,409);
+  const statement=(await api(e,'/admin/settlement',{id},adminKey)).body.settlement;
+  assert.equal(statement.months,5);
+  assert.deepEqual(statement.cycles.map(item=>item.cycle),[4,5]);
+  assert.equal(statement.recordedSupplierSpending,60000);
+  const own=await api(e,'/status',{id,receiptToken});
+  assert.equal(own.body.campus.periods[3].status,'operator_recorded');
+  assert.equal(own.body.campus.periods[4].status,'operator_recorded');
+});
+
+test('individual custom month contract can use manual provider evidence without live payment',async()=>{
+  const e=env();
+  const individual=await api(e,'/apply',{...form,type:'individual',months:8,organization:'',email:'personal-eight@example.test'});
+  assert.equal(individual.status,201);
+  const id=individual.body.id,receiptToken=individual.body.receiptToken;
+  const result=await api(e,'/admin/settlement',{id},adminKey);
+  assert.equal(result.status,200);
+  assert.equal(result.body.settlement.months,8);
+  const status=await api(e,'/status',{id,receiptToken});
+  assert.equal(status.body.campus.periods.length,8);
+  assert.equal(e.PAYMENTS_ENABLED,undefined);
 });

@@ -2,11 +2,11 @@
 
 Task: \`issue-8421-ekodi-ai-ai\` · Issue #8421 · PR #8422
 Owner / merchant of record: EKODIBIZ.
-Client route: \`https://ekodi.kr/ekodibiz/ai-agency\`
-Operator route (not linked publicly): \`https://ekodi.kr/ekodibiz/ai-agency-admin\`
+Client route: \`https://ekodi.kr/ekodibiz/ai-agency/apply\`
+Operator route: \`https://ekodi.kr/ekodibiz/ai-agency/manage\` (admin API protected by the existing server key).
 
 ## Scope
-- One-month individual and three-month institution purchase-assistance requests.
+- Customer-selected 1–120-month integer contract terms for institution and individual requests, with no preselected duration. Legacy 1/3-month records remain unchanged.
 - Customer submits a **request for quote**, not an immediate subscription purchase.
 - Operator confirms provider permission and contract scope, then quotes separate EKODIBIZ service fee and optional supplier subscription collection.
 - Customer must accept the specific quoted price and contract terms before checkout.
@@ -33,20 +33,24 @@ The Worker shares the existing \`REVENUE_STORE\` Durable Object. This is **opera
 All unset configuration values fail closed. Application intake can remain enabled without payment.
 
 ## Workflow
-1. \`POST /api/agency/apply\` returns request ID and one-time display of a confidential receipt token. Store that token safely; no password is collected.
+1. \`POST /api/agency/apply\` requires integer \`months\` (1–120) and returns request ID and one-time display of a confidential receipt token. Store that token safely; no password is collected.
 2. \`POST /api/agency/status\` returns only the caller's request when ID + token hash match.
 3. Operator \`POST /api/agency/admin/list\`, \`/quote\`, \`/activate\` require private server-side admin key; never put that key in GitHub or URLs.
 4. \`POST /api/agency/accept\` records customer approval of the quoted service and money amount.
 5. \`POST /api/agency/checkout\` checks the configured merchant profile and scope; price and order ID come from stored server data.
 6. Toss V2 widget redirects to the same-origin receipt page, which calls \`POST /api/agency/confirm\`. The server verifies order ID and amount and calls Toss \`/v1/payments/confirm\` with a server-side secret and idempotency key.
-7. Operator confirms that the supplier enabled the service, starting the one/three-month management term.
+7. Operator confirms that the supplier enabled the service, starting the selected-month management term.
 
 ## Before production claim
 - Execute \`node --test test/ekodibiz-ai-agency.test.mjs\`; run main PR CI and EKODI AI orchestration gate.
-- Inspect \`/ekodibiz/ai-agency\`, \`/ekodibiz/ai-agency.js\`, \`/ekodibiz/ai-agency-admin\`, \`/ekodibiz/api/agency/health\` on the **real** hostname.
+- Inspect \`/ekodibiz/ai-agency/apply\`, \`/ekodibiz/ai-agency/university\`, \`/ekodibiz/ai-agency/individual\`, \`/ekodibiz/ai-agency/manage\`, \`/ekodibiz/ai-agency.js\`, \`/ekodibiz/api/agency/health\` on the **real** hostname.
 - Exercise the complete customer quote and staging Toss test-key flow; intentionally tamper with amounts, IDs and tokens and assert rejection.
 - Verify authorized EKODI administrator login integration or protected transition plan, personal-data retention and canonical Shared Drive archive receipts. Check provider-specific contract permission, PG MID scope, refund and tax documentation before final live switch.
 - Do not infer real money movement merely from a page rendering, CI success or user verbal approval.
 
 ## Rollback
 Revert the owning EKODIBIZ release through guarded workflow; set \`AGENCY_LIVE_ENABLED=false\` to stop new charges immediately. Retain verified payment/audit records and reconcile any in-flight Toss orders before structural changes.
+
+## 2026-11-08 variable month contract / labels
+
+EKODI issue [#8791](https://github.com/topmaster-joseph/ekodi-platform/issues/8791): Customers supply any whole month count from 1 to 120 (technical cap) without a default for institutions or individuals. Contract lookup is titled **계약 담당자** while retaining the compatible `/university` URL. Company operator administration is titled **업체 관리자** at `/manage`. Read-only monthly evidence/CSV uses the recorded term; older 1/3-month records are left intact. Live provider payment, direct supplier collection, regulator/provider permissions, card/OTP handling, and provider subscription cancellation are unchanged and approval-gated. The updated operational runbook is `docs/operations/ekodibiz-simple-3month-payment-mandate-20261106.md`.

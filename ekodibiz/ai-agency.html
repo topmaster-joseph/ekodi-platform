@@ -2,7 +2,7 @@
 <html lang="ko" data-ekodi-shell-surface="public" data-ekodi-progressive-home="off">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="index,follow"><meta name="description" content="에코디비즈 AI 서비스 구매·결제 위탁 신청. 대학·기관 3개월, 개인 월별 위탁관리.">
+<meta name="robots" content="index,follow"><meta name="description" content="에코디비즈 AI 서비스 구매·결제 위탁 신청. 기관·개인 모두 계약기간을 개월 단위로 직접 입력하는 위탁관리.">
 <title>AI 서비스 구매·결제 위탁 | 에코디비즈</title>
 <link rel="canonical" href="https://ekodi.kr/ekodibiz/ai-agency/apply">
 <style>
@@ -65,19 +65,19 @@ body[data-agency-view="university"] #statusPanel{margin-top:0!important}
 <header><div class="bar"><a class="logo" href="https://ekodi.kr/ekodibiz">EKODIBIZ</a><nav aria-label="주요 메뉴"><a href="https://ekodi.kr/ekodibiz">에코디비즈</a></nav></div></header>
 <nav class="agency-navigation" aria-label="AI 위탁 서비스 화면 이동">
   <a data-agency-link="apply" href="/ekodibiz/ai-agency/apply">위탁신청</a>
-  <a data-agency-link="university" href="/ekodibiz/ai-agency/university">대학 계약조회</a>
+  <a data-agency-link="university" href="/ekodibiz/ai-agency/university">계약 담당자</a>
   <a data-agency-link="individual" href="/ekodibiz/ai-agency/individual">개인 신청</a>
-  <a data-agency-link="manage" href="/ekodibiz/ai-agency/manage">운영자 관리</a>
+  <a data-agency-link="manage" href="/ekodibiz/ai-agency/manage">업체 관리자</a>
   <button class="agency-share" data-share-agency="current" type="button">이 화면 공유</button>
-  <button class="agency-share" data-share-agency="university" type="button">대학 조회 링크 공유</button>
+  <button class="agency-share" data-share-agency="university" type="button">계약 조회 링크 공유</button>
 </nav>
 <p class="agency-share-status" id="agencyShareStatus" role="status" aria-live="polite"></p>
 <main>
 <section aria-labelledby="heading">
 <p class="eyebrow">EKODIBIZ · AI PURCHASE AGENCY</p>
 <h1 id="heading">AI 서비스 구매·결제 위탁</h1>
-<p id="campusRouteGuide" class="muted" hidden>대학교 담당자 전용 계약조회입니다. 신청번호와 비밀 조회코드를 입력해야 해당 계약이 표시됩니다.</p>
-<p class="lead">AI 서비스 신청과 계약기간 관리를 에코디비즈가 도와드립니다. 대학·기관은 3개월 계약, 개인은 1개월 단위로 신청하며 에코디비즈 위탁관리 계약은 자동 갱신되지 않으며 공급사의 별도 구독·해지는 해당 공급사 조건을 확인해야 합니다.</p>
+<p id="campusRouteGuide" class="muted" hidden>계약 담당자 전용 조회입니다. 신청번호와 비밀 조회코드를 입력해야 해당 계약이 표시됩니다.</p>
+<p class="lead">AI 서비스 신청과 계약기간 관리를 에코디비즈가 도와드립니다. 기관·개인 모두 계약기간을 개월 수로 직접 입력하며 에코디비즈 위탁관리 계약은 자동 갱신되지 않으며 공급사의 별도 구독·해지는 해당 공급사 조건을 확인해야 합니다.</p>
 <p class="quiet"><strong>판매·결제 주체를 구분합니다.</strong> 기본 위탁료는 에코디비즈 용역대금입니다. 공급사 구독료는 별도 표시하며 공급사의 수납·재판매 허용 조건이 확인된 건에만 함께 청구할 수 있습니다. 최종 금액은 개별 견적서로 확정합니다.</p>
 </section>
 <div class="layout">
@@ -86,13 +86,14 @@ body[data-agency-view="university"] #statusPanel{margin-top:0!important}
 <p class="muted">로그인 없이 신청할 수 있습니다. 비밀번호, 카드번호, AI 서비스 계정 비밀번호는 받지 않습니다.</p>
 <form id="agencyForm">
 <div class="choice" role="group" aria-label="계약 유형">
-<label><input type="radio" name="type" value="institution"><span><strong>대학·기관</strong><small>3개월 위탁 관리<br>위탁관리 기간 자동 종료</small></span></label>
-<label><input type="radio" name="type" value="individual" checked><span><strong>개인</strong><small>1개월 단위 위탁<br>재신청 시 갱신</small></span></label>
+<label><input type="radio" name="type" value="institution"><span><strong>대학·기관</strong><small>기간 직접 입력<br>위탁관리 기간 자동 종료</small></span></label>
+<label><input type="radio" name="type" value="individual" checked><span><strong>개인</strong><small>기간 직접 입력<br>자동 갱신 없음</small></span></label>
 </div>
 <div class="fields">
 <label class="field">성함 또는 담당자명 <input name="customer" type="text" maxlength="80" required autocomplete="name"></label>
 <label class="field">이메일 <input name="email" type="email" maxlength="150" required autocomplete="email"></label>
 <label class="field wide" id="organizationGroup" hidden>기관명 <input name="organization" type="text" maxlength="100" autocomplete="organization"></label>
+<label class="field wide">계약기간 (개월) <input name="months" type="number" min="1" max="120" step="1" required placeholder="원하는 개월 수 입력" aria-describedby="monthsGuide"><span class="muted" id="monthsGuide">계약기간은 미리 정해져 있지 않습니다. 1~120개월 중 필요한 개월 수를 입력해 주세요. 공급사 구독기간과 자동갱신 여부는 별도 확인합니다.</span></label>
 <label class="field">AI 공급사명 <input name="provider" type="text" maxlength="80" placeholder="예: OpenAI, Anthropic" required></label>
 <label class="field">이용할 서비스 <input name="service" type="text" maxlength="120" placeholder="예: 업무용 AI 구독" required></label>
 <label class="field wide">요청사항 (선택) <textarea name="description" maxlength="600" placeholder="필요 계정 수, 예상 시작일, 문의사항 등. 인증정보는 적지 마세요."></textarea></label>
@@ -107,15 +108,15 @@ body[data-agency-view="university"] #statusPanel{margin-top:0!important}
 <dl><dt>신청번호</dt><dd id="receiptId">—</dd><dt>유형·기간</dt><dd id="receiptType">—</dd><dt>상태</dt><dd id="receiptStatus">—</dd><dt>위탁료</dt><dd id="receiptFee">견적 대기</dd><dt>공급사 비용</dt><dd id="receiptSupplier">별도 확인</dd><dt>합계</dt><dd id="receiptTotal">미확정</dd><dt>관리 종료일</dt><dd id="receiptEnd">공급사 이용 개시 후 확정</dd></dl>
 <p class="muted" id="receiptGuide">견적이 확정되면 조회할 수 있습니다.</p>
 <div class="actions"><button class="button alt" id="refreshBtn" type="button">진행상황 새로고침</button><button class="button alt" id="copyBtn" type="button">신청 조회번호 복사</button><button class="button" id="acceptBtn" type="button" hidden>견적·계약조건 확인 및 동의</button><button class="button" id="paymentBtn" type="button" hidden>결제 진행</button></div>
-<section class="campus-report" id="campusPanel" hidden aria-label="대학 계약·결제·정산 조회">
-<h4>대학 계약·결제·정산</h4>
+<section class="campus-report" id="campusPanel" hidden aria-label="계약·결제·정산 조회">
+<h4>계약·결제·정산</h4>
 <p class="muted">신청번호와 보안코드로 확인하는 계약별 조회 화면입니다. 개인 이용자의 계정·대화내용은 표시하지 않습니다.</p>
 <dl><dt>위탁료</dt><dd id="campusFee">—</dd><dt>공급사 비용 예산</dt><dd id="campusBudget">—</dd>
 <dt>기록된 지급합계</dt><dd id="campusSpent">—</dd><dt>미배정 예산</dt><dd id="campusRemaining">—</dd>
 <dt>공급사 갱신중단</dt><dd id="campusCancellation">확인 필요</dd></dl>
-<h4>월별 결제기록 (최대 3개월)</h4><ol class="periods" id="campusPeriods"></ol>
+<h4>계약기간별 월간 결제기록</h4><ol class="periods" id="campusPeriods"></ol>
 <p class="campus-note" id="campusLimitation">수동 기재 내역으로 실제 결제·해지·환급의 확정 증빙은 아닙니다.</p>
-<div class="actions"><button class="button alt" id="campusExport" type="button">대학 정산요약 CSV</button></div>
+<div class="actions"><button class="button alt" id="campusExport" type="button">계약 정산요약 CSV</button></div>
 </section>
 <div id="tossPanel" hidden><h3>결제수단 선택</h3><p class="muted">토스페이먼츠가 결제정보를 직접 처리합니다.</p><div id="tossMethods"></div><div id="tossAgreement"></div><button class="button" type="button" id="tossPayBtn">선택한 수단으로 결제하기</button></div>
 </section>
@@ -124,7 +125,7 @@ body[data-agency-view="university"] #statusPanel{margin-top:0!important}
 <section class="card" aria-labelledby="flowTitle">
 <h2 id="flowTitle">진행 절차</h2>
 <ol class="info-list">
-<li>위탁신청서 작성</li><li>공급사 이용 조건 확인 및 개별 견적</li><li>견적·위탁조건 확인과 동의</li><li>승인된 토스페이먼츠 결제</li><li>이용 신청 대행 및 기간 관리</li><li>1개월 또는 3개월 경과 시 에코디비즈 위탁관리 종료(공급사 구독 해지 별도 확인)</li>
+<li>위탁신청서 작성</li><li>공급사 이용 조건 확인 및 개별 견적</li><li>견적·위탁조건 확인과 동의</li><li>승인된 토스페이먼츠 결제</li><li>이용 신청 대행 및 기간 관리</li><li>신청한 계약기간 경과 시 에코디비즈 위탁관리 종료(공급사 구독 해지 별도 확인)</li>
 </ol>
 <p class="muted">실제 공급사 서비스 개통은 별도로 확인합니다. 에코디비즈가 AI 공급사 공식 판매자라고 표시하지 않습니다.</p>
 </section>

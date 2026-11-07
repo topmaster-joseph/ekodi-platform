@@ -30,8 +30,8 @@
     $('quoteForm').elements.guidance.value=item.guidance||'';
     $('quoteBtn').disabled=!['awaiting_quote','quoted'].includes(item.status);
     $('activateBtn').hidden=item.status!=='paid_pending_fulfillment';
-    $('opsDetail').hidden=item.type!=='institution';
-    if(item.type==='institution') void showSettlement().catch(e=>message(e.message,true));
+    $('opsDetail').hidden=false;
+    void showSettlement().catch(e=>message(e.message,true));
     $('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   async function load() {
@@ -66,16 +66,18 @@
   });
   $('activateBtn').addEventListener('click',async()=>{
     if(!selected||selected.status!=='paid_pending_fulfillment') return;
-    if(!confirm('실제 공급사 계정·이용권의 개시가 확인되었습니까? 확인하면 지금부터 1개월 또는 3개월 관리기간을 계산합니다.')) return;
+    if(!confirm('실제 공급사 계정·이용권의 개시가 확인되었습니까? 확인하면 지금부터 '+selected.months+'개월의 관리기간을 계산합니다.')) return;
     try {await call('/activate',{id:selected.id,confirmed:true});$('detail').hidden=true;await load();message('공급사 이용 개시일과 관리기간이 기록되었습니다.');}
     catch(e){message(e.message,true);}
   });
   function money(value){return Number.isSafeInteger(value)?new Intl.NumberFormat('ko-KR').format(value)+'원':'미확정';}
   async function showSettlement(){
-    if(!selected||selected.type!=='institution')return;
+    if(!selected)return;
     const result=await call('/settlement',{id:selected.id});
     settlement=result.settlement;
     const x=settlement;
+    $('opsTitle').textContent=x.months+'개월 계약 결제·종료·정산';
+    $('renewalTitle').textContent=x.months+'개월 계약 종료 확인';
     const cycles=x.cycles.map(c=>c.cycle+'개월차 · '+money(c.amount)+' · '+c.paidOn+' · '+c.receiptRef);
     $('settlementSummary').textContent=[
       '위탁번호: '+x.id,
@@ -89,7 +91,16 @@
       '※ '+x.limitation
     ].join('\n');
     const mayRecord=['active','expired'].includes(x.contractStatus);
-    $('cycleForm').hidden=!mayRecord||x.providerBudget<=0||x.cycles.length>=3;
+    const cycleSelect=$('cycleForm').elements.cycle;
+    cycleSelect.replaceChildren();
+    const recorded=new Set(x.cycles.map(item=>item.cycle));
+    for(let i=1;i<=x.months;i++){
+      if(recorded.has(i))continue;
+      const option=document.createElement('option');
+      option.value=String(i);option.textContent=i+'개월차';
+      cycleSelect.append(option);
+    }
+    $('cycleForm').hidden=!mayRecord||x.providerBudget<=0||cycleSelect.options.length===0;
     $('renewalForm').hidden=!mayRecord||x.renewalStopRecorded;
     $('exportStatement').disabled=false;
   }
@@ -130,8 +141,8 @@
     if(!selected||!settlement)return;
     const x=settlement;
     const rows=[
-      ['에코디비즈','대학 AI 구독료 결제위탁 정산요약'],
-      ['신청번호',x.id],['위탁기관',x.organization||''],
+      ['에코디비즈','AI 구독료 결제위탁 정산요약'],
+      ['신청번호',x.id],['계약기관·신청구분',x.organization||'개인'],
       ['위탁기간',x.months+'개월'],['계약상태',statusMap[x.contractStatus]||x.contractStatus],
       ['위탁료(원)',x.serviceFee],['공급사 구독료 예산(원)',x.providerBudget],
       ['결제증빙 등록 합계(원)',x.recordedSupplierSpending],
