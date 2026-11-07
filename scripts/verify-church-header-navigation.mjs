@@ -63,9 +63,49 @@ export function verifyChurchHeaderNavigation(html,nestedScript=''){
   return Object.freeze({contract:'six-item-selected-content',primaryItems:6,contextItems:requiredNested.length});
 }
 
+
+/**
+ * Strictly verify the actual publicly served subpage navigation. The Church
+ * home and subpages must share the same reviewed six-link contract; otherwise
+ * a successful static Pages deploy may mask an older routed or cached page.
+ * This is a read-only release gate, not a source-switch authorization.
+ */
+export function verifyChurchPublicSubpageNavigation(html,page) {
+  if(!['devotion','notices','schedule'].includes(page))fail('unsupported subpage');
+  const nav=extractNav(html),items=links(nav);
+  if(items.length!==MODERN.length||!MODERN.every(([href,label],index)=>
+    items[index][0]===href&&items[index][1]===label)){
+    fail('public '+page+' subpage has stale or inconsistent six-item navigation');
+  }
+  const expected='/ekodichurch/'+page+'/';
+  const active=[...nav.matchAll(/<a\b([^>]*)>[\s\S]*?<\/a>/g)]
+    .filter(([,attrs])=>/\\baria-current\\s*=\\s*"page"/.test(attrs))
+    .map(([,attrs])=>attrs.match(/\\bhref="([^"]+)"/)?.[1]||'');
+  if(active.length!==1||active[0]!==expected)fail('public '+page+' subpage active route mismatch');
+  if(!html.includes('church-compact-navigation.css')||
+    !html.includes('church-shell.js')||
+    !html.includes('class="menu-button"')||
+    !html.includes('data-ekodi-service-footer')){
+    fail('public '+page+' subpage common shell missing');
+  }
+  const required={
+    devotion:['data-ekodi-devotion','/bible/devotion.js'],
+    notices:['data-church-notices','data-church-public-manage hidden'],
+    schedule:['data-church-shared-schedules','data-church-public-manage hidden']
+  };
+  for(const marker of required[page])if(!html.includes(marker))fail('public '+page+' content/role guard missing: '+marker);
+  return Object.freeze({contract:'six-item-subpage',page,primaryItems:6});
+}
+
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
   try{
     const args=process.argv.slice(2);
+    if(args[0]==='--subpage'){
+      if(!args[1]||args[2]!=='--kind'||!args[3])fail('expected --subpage PUBLIC_HTML --kind devotion|notices|schedule');
+      const result=verifyChurchPublicSubpageNavigation(readFileSync(args[1],'utf8'),args[3]);
+      process.stdout.write(JSON.stringify(result)+'\n');
+      process.exit(0);
+    }
     if(args[0]!=='--html'||!args[1]||args[2]!=='--subnav'||!args[3])
       fail('expected --html CHURCH_HOME --subnav OPTIONAL_CONTROLLER_FILE');
     const html=readFileSync(args[1],'utf8');

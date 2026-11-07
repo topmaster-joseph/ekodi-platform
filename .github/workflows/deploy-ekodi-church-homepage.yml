@@ -172,6 +172,11 @@ jobs:
           test -s church/devotion/index.html
           grep -Eq '<h1>(에코디 )?오늘의 매일묵상</h1>' church/devotion/index.html
           grep -Fq 'data-ekodi-devotion data-base="/ekodichurch/devotion/"' church/devotion/index.html
+          # All reviewed Church public subpages share one six-menu Shell.
+          for page in devotion notices schedule; do
+            node .ekodi-control/scripts/verify-church-header-navigation.mjs \
+              --subpage "church/$page/index.html" --kind "$page"
+          done
           grep -Fq '<script type="module" src="/bible/devotion.js"></script>' church/devotion/index.html
           grep -Fq 'href="/ekodichurch/devotion/">매일묵상</a>' church/index.html
           grep -Fq "{ href: '/ekodichurch/devotion/', label: '매일묵상', className: 'nav-devotion' }" church/script.js
@@ -253,12 +258,17 @@ jobs:
           # The shared renderer ships in the Bible lane of the same release; allow it up to 10 minutes.
           for attempt in $(seq 1 60); do
             page=$(curl -L -sS -o /tmp/church-devotion.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/devotion/?release=${release}" || true)
+            notices=$(curl -L -sS -o /tmp/church-verify-notices.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/notices/?release=${release}" || true)
+            schedules=$(curl -L -sS -o /tmp/church-verify-schedule.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/schedule/?release=${release}" || true)
             renderer=$(curl -L -sS -o /tmp/devotion-renderer.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/bible/devotion.js' || true)
             api=$(curl -sS -o /tmp/devotion-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/bible/api/bible/devotion?date=2026-10-26' || true)
-            if [[ "$page" == 200 && "$renderer" == 200 && "$api" == 200 ]] \
+            if [[ "$page" == 200 && "$notices" == 200 && "$schedules" == 200 && "$renderer" == 200 && "$api" == 200 ]] \
               && grep -Eq '<h1>(에코디 )?오늘의 매일묵상</h1>' /tmp/church-devotion.html \
               && grep -Fq 'class="site-header church-devotion-header"' /tmp/church-devotion.html \
               && grep -Fq 'data-ekodi-devotion' /tmp/church-devotion.html \
+              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-devotion.html --kind devotion \
+              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-verify-notices.html --kind notices \
+              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-verify-schedule.html --kind schedule \
               && grep -Fq 'data-tab' /tmp/devotion-renderer.js \
               && grep -Fq '"activitySource":"curated"' /tmp/devotion-api.json; then
               echo 'Church devotion page verified.'
@@ -266,7 +276,7 @@ jobs:
             fi
             sleep 10
           done
-          echo "Church devotion verification failed: page=$page renderer=$renderer api=$api"
+          echo "Church public subpage navigation / devotion verification failed: devotion=$page notices=$notices schedules=$schedules renderer=$renderer api=$api"
           exit 1
 
       - name: Verify six-menu Church public notices, schedules and preserved worship on live canonical release
