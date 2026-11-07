@@ -5,6 +5,7 @@
   const prefix = location.pathname.startsWith('/ekodibiz/') ? '/ekodibiz' : '';
   const apiBase = prefix + '/api/agency';
   const isUniversityRoute=/\/ai-agency\/university\/?$/.test(location.pathname);
+  const isIndividualRoute=/\/ai-agency\/individual\/?$/.test(location.pathname);
   const receiptKey = 'ekodibiz.ai.agency.receipt.v1';
   let receipt = null;
   let current = null;
@@ -159,6 +160,15 @@
     document.title='대학 AI 위탁계약 조회 | 에코디비즈';
   }
   const form = $('agencyForm');
+  if(isIndividualRoute){
+    document.body.dataset.agencyView='individual';
+    $('heading').textContent='개인 AI 구독료 위탁신청';
+    const individual=form.querySelector('input[name="type"][value="individual"]');
+    individual.checked=true;
+    $('organizationGroup').hidden=true;
+    form.elements.organization.required=false;
+    document.title='개인 AI 구독료 위탁신청 | 에코디비즈';
+  }
   form.querySelectorAll('[name="type"]').forEach((input) => input.addEventListener('change', () => {
     const institution = form.elements.type.value === 'institution';
     $('organizationGroup').hidden = !institution;
