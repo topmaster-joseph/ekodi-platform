@@ -11,6 +11,7 @@ const accountId=String(process.env.CLOUDFLARE_ACCOUNT_ID||'').trim();
 const token=String(process.env.CLOUDFLARE_API_TOKEN||'').trim();
 const run=String(process.env.POINTS_E2E_RUN||'').replace(/[^0-9a-z-]/gi,'').slice(0,40);
 const mode=process.argv[2];
+const staticTokenId=String(process.env.STATIC_ACCESS_SERVICE_TOKEN_ID||'').trim();
 if(accountId!==DEVELOPMENT_ACCOUNT)throw new Error('development Cloudflare account required');
 if(!token||!run||!['open','open-static','close'].includes(mode))throw new Error('usage: points-staging-access.mjs open|close (CLOUDFLARE_API_TOKEN, POINTS_E2E_RUN)');
 const name=`ekodi-points-e2e-${run}`;
@@ -58,25 +59,28 @@ async function stagingApps(){
 }
 
 if(mode==='open-static'){
-  // Owner-provided service token (repository secrets): this API token cannot
-  // read service-token ids, so allow the account's own service tokens on the
-  // staging apps for this run only; removed in close.
+  // The static token's ID is an independent owner-protected input. Never
+  // create an any_valid_service_token policy: that authorizes unrelated
+  // services and is not scoped to this synthetic browser verification.
+  if(!/^[A-Za-z0-9_-]{8,128}$/.test(staticTokenId))
+    throw new Error('protected STATIC_ACCESS_SERVICE_TOKEN_ID is required for a least-privilege Access policy');
   const {apps}=await stagingApps();
-  if(!apps.length){console.log('::warning::Staging hosts are not behind a readable Access app; using the static token as-is.');process.exit(0);}
+  if(!apps.length)throw new Error('no readable development staging Access application; refusing broad or unverified access');
   const policies=[];
   for(const app of apps){
     const policy=await api(`/access/apps/${app.id}/policies`,{method:'POST',body:JSON.stringify({
-      name,decision:'non_identity',include:[{any_valid_service_token:{}}],exclude:[],require:[]})});
+      name,decision:'non_identity',include:[{service_token:{token_id:staticTokenId}}],exclude:[],require:[]})});
     policies.push(`${app.id}:${policy.id}`);
   }
   env('E2E_ACCESS_POLICIES',policies.join(','));
-  console.log(`::notice::Run-scoped service-auth policy added on ${policies.length} staging app(s).`);
+  console.log(`::notice::Run-scoped exact-service-token policy added on ${policies.length} staging app(s).`);
 }else if(mode==='open'){
   const {apps,all,auds}=await stagingApps();
   console.log(`::notice::Access apps in account: ${all.length} [${all.map(a=>`${a.name||a.id}|${a.type||'?'}|${hostOf(a.domain)}`).join('; ')}]; staging AUDs seen: ${auds.length}; matched: ${apps.map(a=>a.name||a.id).join(', ')||'none'}`);
   if(!apps.length){
-    if(auds.length)throw new Error('staging hosts are behind Access but no Access app in the development account matches their AUD (token cannot read it?)');
-    console.log('::warning::Staging hosts are not behind Access; continuing without a service token.');process.exit(0);
+    throw new Error(auds.length
+      ? 'development staging Access application mismatch; refusing unverified policy'
+      : 'development staging hosts are not behind a readable Access application; refusing unprotected E2E');
   }
   const created=await api('/access/service_tokens',{method:'POST',body:JSON.stringify({name,duration:'24h'})});
   if(!created?.client_id||!created?.client_secret||!created?.id)throw new Error('service token not issued');
@@ -101,12 +105,12 @@ if(mode==='open-static'){
   try{
     for(const app of (await stagingApps()).apps){
       for(const p of (await api(`/access/apps/${app.id}/policies?per_page=100`))||[]){
-        if(String(p.name||'').startsWith('ekodi-points-e2e-'))await api(`/access/apps/${app.id}/policies/${p.id}`,{method:'DELETE'}).catch(()=>{});
+        if(String(p.name||'')===name)await api(`/access/apps/${app.id}/policies/${p.id}`,{method:'DELETE'}).catch(()=>{failed++;});
       }
     }
     const tokens=await api('/access/service_tokens?per_page=100').catch(e=>{if(e.status===403)return [];throw e;});
     for(const t of tokens||[]){
-      if(String(t.name||'').startsWith('ekodi-points-e2e-'))await api(`/access/service_tokens/${t.id}`,{method:'DELETE'}).catch(()=>{failed++;});
+      if(String(t.name||'')===name)await api(`/access/service_tokens/${t.id}`,{method:'DELETE'}).catch(()=>{failed++;});
     }
   }catch(e){failed++;console.log(String(e.message));}
   console.log(failed?`Access cleanup finished with ${failed} issue(s).`:'Ephemeral Access policies and service token removed.');
