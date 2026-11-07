@@ -29,6 +29,11 @@ test('new PR153 header cleanup is the only new Church homepage change and source
     proof.previousCanonicalBlobSha);
   assert.equal(manifest.trackedFiles.find(x=>x.path==='index.html').normalizedBlobSha,
     proof.finalCanonicalBlobSha);
+  const upstreamTest=readFileSync(resolve(base,'test/church-inline-live.test.mjs'),'utf8');
+  assert.equal(gitSha(upstreamTest),'cb8ab8205f45eb946f032b237fcc616fc547dc7d');
+  assert.equal(manifest.trackedFiles.find(x=>x.path==='test/church-inline-live.test.mjs').normalizedBlobSha,
+    'cb8ab8205f45eb946f032b237fcc616fc547dc7d');
+  assert.equal(manifest.canonicalizedPaths.length,38);
   assert.doesNotMatch(home,/<div class="daily-verse"|<script[^>]+church-daily-verse\.js/);
   assert.match(home,/church-compact-navigation\.css/);
   assert.match(home,/church-section-nav\.js/);
