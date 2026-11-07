@@ -190,7 +190,9 @@
     return headings.has(item?.category) ? item.category : 'general';
   };
   function localRows() {
-    return [...catalog.querySelectorAll('[data-product]')].map(card => {
+    return [...catalog.querySelectorAll('[data-product]')]
+      .filter(card => card.dataset.bookstoreQuotePending !== 'true')
+      .map(card => {
       const name = clean(card.dataset.name || card.querySelector('h3')?.textContent);
       const href = mallDetailHref(card.dataset.href || card.querySelector('h3 a')?.href);
       const category = bucketOf(card.dataset);
@@ -204,6 +206,9 @@
     }).filter(Boolean);
   }
   function publicRow(raw) {
+    // A static Books projection cannot bypass the live publisher quote gate.
+    // Verified book cards enter through localRows after the quote succeeds.
+    if (raw?.product?.source?.system === 'ekodi-bookstore') return null;
     if (!raw?.checkoutReady && !(raw?.product?.saleType === 'affiliate' && safeUrl(raw?.product?.affiliateUrl))) return null;
     const p = raw.product || {};
     const name = clean(p.name);
@@ -315,5 +320,8 @@
     void runSearch(query,version);
   }
   window.addEventListener('ekodi:mall-route-change',onRoute);
+  window.addEventListener('ekodi:marketplace-products-loaded', () => {
+    if (document.body.dataset.mallSearch === 'true') onRoute();
+  });
   onRoute();
 })();
