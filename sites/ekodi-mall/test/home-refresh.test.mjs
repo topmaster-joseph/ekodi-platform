@@ -74,7 +74,8 @@ test('responsive storefront does not change payments or disclose false sales cla
   assert.match(css, /@media\(max-width:760px\)/);
   assert.match(css, /prefers-reduced-motion/);
   assert.doesNotMatch(template, /\d+%\s*할인|무료배송|누적 판매|베스트셀러/);
-  assert.doesNotMatch(js, /checkout|payment|localStorage|fetch\(/);
+  assert.match(js, /method:'GET',credentials:'omit'/);
+  assert.doesNotMatch(js, /requestPayment\(|confirmPayment\(|localStorage|TOSS_SECRET_KEY|method:\s*['"]POST/);
 });
 
 test('real portrait has a separate slot and suppresses only the Mall landing mascot', () => {
@@ -93,14 +94,21 @@ test('home and affiliate travel page use the same generated buyer header', () =>
   for (const html of [template,affiliate]) assert.ok(html.includes('{{MALL_HEADER}}'));
   assert.match(build, /renderMallHeader\(\{ home: true/);
   assert.match(build, /renderMallHeader\(\{ home: false/);
-  for (const label of ['전체상품','여행·레저','쿠팡추천몰','로컬·특산물','식품·건강','생활·가전','책·배움','선물·기념품','이번 주 추천']) assert.ok(mallHeader.includes(label));
+  for (const label of ['전체상품','여행·레저','쿠팡제휴몰','로컬·특산물','식품·건강','생활·가전','책·배움','선물·기념품','이번 주 추천']) assert.ok(mallHeader.includes(label));
   assert.ok(!mallHeader.includes('>AI 추천</a>'));
   assert.match(affiliate, /assets\/home-refresh\.css/);
 });
 
-test('global search searches marketplace and live affiliate curator instead of a dead local-only filter', () => {
-  assert.match(js, /EkodiContextCurator\.recommend\(term, false\)/);
-  assert.match(js, /EkodiContextCurator\?\.recommend\(incomingQuery, false\)/);
+test('global search groups sale-ready direct and verified affiliate products while empty search resets', () => {
+  assert.match(js, /EKODI-MALL-UNIFIED-SEARCH-001/);
+  assert.match(js, /mallSearchResults/);
+  assert.match(js, /mallSearchGroups/);
+  assert.match(js, /category-grouped|byCategory/);
+  assert.match(js, /\!term[\s\S]*navigate\('#shop', 'all'\)/);
+  assert.match(js, /let applyingRoute = false/);
+  assert.match(js, /if \(applyingRoute \|\| document\.body\.dataset\.mallView !== 'catalog'\) return/);
+  assert.match(js, /affiliate\/public\/products/);
+  assert.match(js, /api\/public\/products\?limit=60/);
   assert.match(js, /if \(!search \|\| !shop\) return;\s*event\.preventDefault\(\)/);
   assert.match(mallHeader, /role="search"/);
   assert.match(mallHeader, /method="get"/);
@@ -192,4 +200,37 @@ test('Toss underwriting: an unverified bookstore quote cannot expose a sale card
   assert.match(books, /existing.dataset.bookstoreQuotePending = 'false'/);
   assert.match(books, /existing.dataset.bookstoreQuotePending = 'true'/);
   assert.match(css, /\.card\[data-bookstore-quote-pending="true"\]\{display:none!important\}/);
+});
+
+test('canonical Mall search groups and card details are rendered in the central content', () => {
+  assert.match(template, /id="mallSearchResults"/);
+  assert.match(template, /id="mallSearchGroups"/);
+  assert.match(template, /id="mallSearchStatus"/);
+  assert.match(css, /\.mall-search-cards\{display:grid/);
+  assert.match(css, /body\[data-mall-search="true"\] #shop>/);
+  const affiliate = readFileSync(new URL('../src/affiliate-hub.template.html', import.meta.url), 'utf8');
+  assert.match(affiliate, /id="affiliateProductDialog"/);
+  assert.match(affiliate, /id="affiliateDetailContent"/);
+  const affiliateScript = readFileSync(new URL('../assets/affiliate-hub.js', import.meta.url), 'utf8');
+  assert.match(affiliateScript, /showDetail\(item\)/);
+  assert.match(affiliateScript, /affiliate-card-image/);
+  assert.match(affiliateScript, /safeAffiliateHttps/);
+  assert.match(affiliateScript, /affiliateProviderMatches/);
+  assert.match(mallHeader, /쿠팡제휴몰/);
+  const affiliateCss = readFileSync(new URL('../assets/affiliate-hub.css', import.meta.url), 'utf8');
+  assert.match(affiliateCss, /affiliate-detail-dialog/);
+  assert.match(affiliateCss, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+});
+
+
+test('standalone affiliate and weekly page headers return to the canonical Mall home, never an unmapped root', () => {
+  const fromOtherPage = renderMallHeader({home:false});
+  assert.match(fromOtherPage, /href="\/ekodimall\/#top"/);
+  assert.match(fromOtherPage, /action="\/ekodimall\/" method="get"/);
+  assert.match(fromOtherPage, /href="\/ekodimall\/\?category=book#shop"/);
+  assert.match(fromOtherPage, /href="\/ekodimall\/\?category=all#shop"/);
+  assert.match(fromOtherPage, /href="\/ekodimall\/coupang\/"/);
+  assert.match(fromOtherPage, /href="\/ekodimall\/travel\/stay\/"/);
+  assert.ok(!fromOtherPage.includes('>AI 추천</a>'));
+  assert.ok(!fromOtherPage.includes('쿠팡추천몰'));
 });
