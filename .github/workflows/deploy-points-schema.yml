@@ -1,0 +1,174 @@
+name: EKODI Points Schema Release (production, points stay off)
+
+# Owner approval 2026-11-07 (#6739): add the 20 points migrations to production
+# after the one-time pre-migration snapshot. Additive only (new points-owned
+# tables, functions and policies; existing tables are not modified). All 20 run
+# in ONE transaction, so any error leaves production unchanged. Points remain
+# inactive: no Edge deployment, no flags, no sites or rules are created here.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/deploy-points-schema.yml"
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: "Orchestrator-issued exact recovery branch"
+        required: true
+        type: string
+      release_task_id:
+        description: "Exact EKODI Orchestrator task ID"
+        required: true
+        type: string
+      expected_main_sha:
+        description: "Protected main SHA to promote"
+        required: true
+        type: string
+      snapshot_run_id:
+        description: "Successful production pre-migration snapshot run (Snapshot Supabase Before Points Migration)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ekodi-points-schema-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'protected-release' }}
+  cancel-in-progress: false
+
+env:
+  PROD_PROJECT: renzehysxirjilvdxacv
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Validate the exact 20 additive points migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(ls supabase/migrations | grep -E '^[0-9]{14}_ekodi_(site_activity_points|points)_.*\.sql$' | sort)
+          test "${#files[@]}" -eq 20
+          for f in "${files[@]}"; do
+            p="supabase/migrations/$f"
+            test -s "$p"
+            ! grep -Eiq '^[[:space:]]*(begin|commit|rollback)[[:space:]]*;' "$p"
+            ! grep -Eiq '(drop[[:space:]]+table|truncate[[:space:]]+table|drop[[:space:]]+column)' "$p"
+          done
+          node --test test/points-release-readiness.test.mjs test/points-production-backup-plan.test.mjs
+
+  promote:
+    needs: validate
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_SHA: ${{ inputs.expected_main_sha }}
+      RELEASE_BRANCH: ${{ inputs.release_branch_ref }}
+      RELEASE_TASK: ${{ inputs.release_task_id }}
+      SNAPSHOT_RUN: ${{ inputs.snapshot_run_id }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Verify immutable SHA, orchestrator authority and a fresh snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$EXPECTED_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          [[ "$RELEASE_BRANCH" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]]
+          [[ "$RELEASE_TASK" =~ ^orch_[a-zA-Z0-9_-]+$ ]]
+          test "${RELEASE_BRANCH##*/}" = "$RELEASE_TASK"
+          branch_enc="$(printf '%s' "$RELEASE_BRANCH" | jq -sRr @uri)"
+          task_enc="$(printf '%s' "$RELEASE_TASK" | jq -sRr @uri)"
+          curl --fail-with-body -sS --retry 2 --max-time 20 \
+            "https://ekodi.kr/api/orchestrator/release-receipt?taskId=$task_enc&branchRef=$branch_enc" |
+            jq -e --arg task "$RELEASE_TASK" --arg branch "$RELEASE_BRANCH" \
+              '.ok == true and .authorized == true and .authority == "ekodi-orchestrator" and .taskId == $task and .branchRef == $branch' >/dev/null
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
+          [[ "$SNAPSHOT_RUN" =~ ^[0-9]{6,20}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SNAPSHOT_RUN" |
+            jq -e '.path == ".github/workflows/snapshot-points-premigration.yml" and .conclusion == "success" and
+                   .head_branch == "main" and ((now - (.updated_at|fromdateiso8601)) < 172800)' >/dev/null
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SNAPSHOT_RUN/artifacts" |
+            jq -e '[.artifacts[] | select(.name|startswith("supabase-premigration-production-")) | select(.expired|not)] | length == 1' >/dev/null
+          echo "Production snapshot run $SNAPSHOT_RUN verified (<48h, artifact retained)."
+      - name: Load protected database credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-${TOKEN_B:-${TOKEN_C:-${TOKEN_D:-}}}}"
+          if [ -z "$token" ]; then echo 'Protected management credential unavailable'; exit 1; fi
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Apply all 20 migrations to production in one transaction
+        shell: bash
+        run: |
+          set -euo pipefail
+          scratch="$(mktemp -d)"; trap 'rm -rf "$scratch"' EXIT
+          query() {
+            local file="$1" read_only="$2" out="$3" code
+            jq -Rs --argjson read_only "$read_only" '{query:.,read_only:$read_only}' "$file" > "$scratch/body.json"
+            code="$(curl -sS --retry 0 --max-time 170 -o "$out" -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$PROD_PROJECT/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' --data-binary @"$scratch/body.json")"
+            if [ "$code" != 201 ]; then echo "::error::Query refused HTTP $code: $(head -c 400 "$out")"; exit 1; fi
+          }
+          # Precondition: none of the points migrations are installed yet.
+          node scripts/verify-points-release-readiness.mjs --production --report > "$scratch/before.json" || true
+          jq -e '.state == "points_not_installed" and .prerequisites_ok == true and .migration_count_recognized == 0' "$scratch/before.json" >/dev/null
+          mapfile -t files < <(ls supabase/migrations | grep -E '^[0-9]{14}_ekodi_(site_activity_points|points)_.*\.sql$' | sort)
+          test "${#files[@]}" -eq 20
+          {
+            echo 'begin;'
+            echo "set local lock_timeout = '10s';"
+            for f in "${files[@]}"; do
+              printf '\n-- >>> %s\n' "$f"
+              cat "supabase/migrations/$f"
+              printf '\n'
+            done
+            echo 'insert into supabase_migrations.schema_migrations(version,name) values'
+            sep=''
+            for f in "${files[@]}"; do
+              v="${f%%_*}"; n="${f#*_}"; n="${n%.sql}"
+              printf "%s('%s','%s')" "$sep" "$v" "$n"; sep=$',\n'
+            done
+            echo ' on conflict (version) do nothing;'
+            echo 'commit;'
+          } > "$scratch/release.sql"
+          echo "Release bundle sha256 $(sha256sum "$scratch/release.sql" | cut -d' ' -f1)"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
+          query "$scratch/release.sql" false "$scratch/applied.json"
+          echo 'Production points schema transaction committed.'
+      - name: Prove schema contract on production (points still inactive)
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify-points-release-readiness.mjs --production --report > /tmp/after.json || true
+          cat /tmp/after.json
+          echo "::notice title=points schema after release::$(jq -c '{state,migration_count_recognized,missing_contracts,points_api,points_activation_authorized}' /tmp/after.json)"
+          jq -e '.migration_count_recognized == 20 and (.missing_migrations|length) == 0 and (.missing_contracts|length) == 0 and .points_activation_authorized == false' /tmp/after.json >/dev/null
+          {
+            echo '### EKODI Points schema released to production'
+            echo '- 20 additive migrations committed in one transaction; contract verified.'
+            echo '- Points remain inactive: no Edge deployment, flags, sites or rules were changed.'
+          } >> "$GITHUB_STEP_SUMMARY"
