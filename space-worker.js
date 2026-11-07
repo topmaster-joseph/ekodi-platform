@@ -424,7 +424,7 @@ function withHeaders(env,response,route='asset'){
     // A renderer may impose a stricter unpublished / unverified content boundary.
     // Never relax an explicit noindex directive to index because of a shared public route.
     const sourceRobots=String(response.headers.get('x-robots-tag')||'');
-    const sourceRestrictive=/(^|[,\\s])(noindex|nofollow|noarchive)(?=$|[,\\s])/i.test(sourceRobots);
+    const sourceRestrictive=/(^|[,\s])(noindex|nofollow|noarchive)(?=$|[,\s])/i.test(sourceRobots);
     headers.set('x-robots-tag',publicProjection&&!sourceRestrictive?'index, follow':'noindex, nofollow, noarchive');
   }else if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
