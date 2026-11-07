@@ -9,7 +9,7 @@ test('premium customer layout exposes one accessible tab per real content panel'
   const html=await read('../ekodibiz/ai-agency.html');
   assert.match(html,/role="tablist" aria-label="AI 구독 위탁 서비스 메뉴"/);
   assert.match(html,/class="agency-hero"/);
-  assert.match(html,/class="agency-workspace"/);
+  assert.match(html,/class="layout agency-workspace"/);
   for(const [view,id] of Object.entries(tabPanels)){
     assert.match(html,new RegExp('role="tab"[^>]+aria-controls="'+id+'"[^>]+data-agency-tab="'+view+'"'));
     assert.match(html,new RegExp('id="'+id+'" role="tabpanel"[^>]+data-agency-panel="'+view+'"'));
