@@ -34,7 +34,9 @@ test('Public schedule read endpoint has canonical readonly federation and does n
   assert.ok(code.includes("value.venue.trim()"));
   assert.ok(code.includes("date<today"));
   assert.ok(code.includes("return {id,source,sourceLabel"));
-  assert.ok(!code.includes('description:'));
+  const publicProjection=code.slice(code.lastIndexOf('return {id,source,sourceLabel'));
+  assert.ok(publicProjection.includes('date,time,venue,title,url:'));
+  assert.ok(!publicProjection.includes('description:'));
   assert.ok(!code.includes('body:raw'));
   assert.ok(js.includes("p.status='published'"));
   assert.ok(js.includes("sub==='/api/shared-schedules'"));
