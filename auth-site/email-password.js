@@ -1,3 +1,4 @@
+import { isLoginBusy, lockLogin, unlockLogin } from './login-lock.js?v=20261107-login-lock-1';
 // EMAIL-ID-001: EKODI Mail verification and password login, independent of
 // provider-owned channel accounts. Nothing renders until server confirms all
 // operational release gates. Supabase Auth owns password storage and delivery.
@@ -148,7 +149,11 @@ export async function mountEmailPassword({resetOnly=false}={}){
     if((mode==='verify'||mode==='reset')&&!/^\d{6,8}$/.test(otp.value.trim())){
       message('메일의 숫자 인증코드를 입력해 주세요.');return;
     }
+    // One login at a time across every channel.
+    const signingIn=mode==='login'||mode==='verify';
+    if(signingIn&&isLoginBusy())return;
     busy=true;submit.disabled=true;
+    if(signingIn)lockLogin('이메일');
     try{
       if(mode==='signup'){
         const {data,error}=await supabase.auth.signUp({email:address,password:secret,
@@ -188,7 +193,7 @@ export async function mountEmailPassword({resetOnly=false}={}){
         setMode('login');
         message('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요.');
       }
-    }catch(error){message(emailError(error));}
+    }catch(error){if(signingIn)unlockLogin();message(emailError(error));}
     finally{busy=false;submit.disabled=false;}
   }
   form.addEventListener('submit',submitRequest);

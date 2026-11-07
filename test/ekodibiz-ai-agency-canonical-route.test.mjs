@@ -4,7 +4,8 @@ import {isEkodibizAgencyPath,proxyEkodibizAgency} from '../ekodibiz-agency-route
 
 test('canonical agency routes are narrowly scoped',()=>{
   for(const path of ['/ekodibiz/ai-agency','/ekodibiz/ai-agency/','/ekodibiz/ai-agency.js','/ekodibiz/ai-agency-admin',
-    '/ekodibiz/ai-agency-admin/','/ekodibiz/ai-agency-admin.js','/ekodibiz/api/agency/apply',
+    '/ekodibiz/ai-agency-admin/','/ekodibiz/ai-agency-admin.js','/ekodibiz/ai-agency/manage',
+    '/ekodibiz/ai-agency/manage/','/ekodibiz/api/agency/apply',
     '/ekodibiz/api/agency/admin/quote','/ekodibiz/api/agency/health']){
     assert.equal(isEkodibizAgencyPath(path),true,path);
   }

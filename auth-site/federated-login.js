@@ -7,6 +7,7 @@
 //   2) public.identity_providers.enabled = true for that provider.
 // With either gate closed this module renders nothing and changes nothing.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { isLoginBusy, lockLogin, unlockLogin } from './login-lock.js?v=20261107-login-lock-1';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -128,6 +129,9 @@ export function renderLinkButtons(linkedIdentities = []) {
 }
 
 async function start(provider, purpose, el, statusId) {
+  // One login at a time: ignore clicks while another channel is already signing in.
+  if (purpose === 'login' && isLoginBusy()) return;
+  if (purpose === 'login') lockLogin(provider.name || PROVIDER_LABELS[provider.id]);
   el.disabled = true;
   try {
     const path = purpose === 'link' ? `/providers/${provider.id}/link/challenge` : `/providers/${provider.id}/challenge`;
@@ -140,6 +144,7 @@ async function start(provider, purpose, el, statusId) {
     location.assign(challenge.authorizeUrl);
   } catch (error) {
     console.error('federated start', error);
+    if (purpose === 'login') unlockLogin();
     el.disabled = false;
     notice(statusId, error.message === 'storage_unavailable'
       ? '브라우저 저장소를 사용할 수 없어 이 로그인 방식을 시작하지 못했습니다.'
@@ -177,9 +182,21 @@ export function classifyCallback(search, pendingRaw, now = Date.now()) {
 
 function fail(text, restoreSearch) {
   history.replaceState({}, document.title, `${location.pathname}${restoreSearch || ''}`);
+  unlockLogin();
   const badge = $('serviceBadge'); if (badge) badge.textContent = '인증 실패';
   show('signedIn', false); show('signedOut', true); show('cancelSignedOut', true);
   notice('authStatus', text, 'error');
+  // A failed attempt must not strand the person: offer every login channel again,
+  // keeping the original site/return_to so success still lands on the page they came from.
+  const host = $('federatedButtonHost');
+  if (host && !host.querySelector('.federated-retry')) {
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'federated-btn federated-secondary federated-retry';
+    retry.textContent = '다른 방법으로 다시 로그인';
+    retry.addEventListener('click', () => location.replace(`${location.pathname}${restoreSearch || ''}`));
+    host.append(retry);
+  }
 }
 
 /**
@@ -197,7 +214,8 @@ export async function handleCallback() {
   const name = PROVIDER_LABELS[pending.provider];
   if (result.kind === 'denied') { fail(errorMessage('access_denied', name), pending.search); return true; }
   const badge = $('serviceBadge'); if (badge) badge.textContent = '인증 확인 중';
-  notice('authStatus', pending.purpose === 'link' ? `${name} 계정을 현재 EKODI 계정에 연결하고 있습니다.` : `${name} 계정을 확인하고 있습니다.`);
+  if (pending.purpose === 'link') notice('authStatus', `${name} 계정을 현재 EKODI 계정에 연결하고 있습니다.`);
+  else lockLogin(name, `${name} 로그인 중입니다. 계정을 확인한 뒤 원래 보던 화면으로 돌아갑니다.`);
   try {
     const body = JSON.stringify({ credential: result.code, nonce: result.state });
     if (pending.purpose === 'link') {
