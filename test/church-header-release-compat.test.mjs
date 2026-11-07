@@ -86,7 +86,7 @@ test('devotion, notices and schedule keep exact same six main links and one curr
 test('public page release check catches stale menu, duplicate menu, wrong current route and removed editor guard',()=>{
   const good=pageHtml('devotion');
   assert.throws(()=>verifyChurchPublicSubpageNavigation(good.replace('매일묵상','오늘의 삶'),'devotion'),/stale or inconsistent/);
-  assert.throws(()=>verifyChurchPublicSubpageNavigation(good.replace('/ekodichurch\/\#worship','/ekodichurch/#online'),'devotion'),/stale or inconsistent/);
+  assert.throws(()=>verifyChurchPublicSubpageNavigation(good.replace('/ekodichurch/#worship','/ekodichurch/#online'),'devotion'),/stale or inconsistent/);
   assert.throws(()=>verifyChurchPublicSubpageNavigation(good+'<nav id="main-nav"></nav>','devotion'),/duplicate/);
   assert.throws(()=>verifyChurchPublicSubpageNavigation(good.replace('aria-current="page"',''),'devotion'),/active route mismatch/);
   assert.throws(()=>verifyChurchPublicSubpageNavigation(good.replace('church-compact-navigation.css','legacy-navigation.css'),'devotion'),/common shell missing/);
