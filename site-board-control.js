@@ -369,14 +369,18 @@ async function missionEnsureWeeklyDates(env,boardId,today,nextSaturday){
   )
   INSERT OR IGNORE INTO ekodi_mission_saturday_events
    (board_id,meeting_date,starts_at,venue,title,status,created_at)
-  SELECT ?,meeting_date,CASE WHEN meeting_date='2026-11-07' THEN '17:00' ELSE '11:00' END,'에코디교회','토요 성경토론과 함께하는 식사',
+  SELECT ?,meeting_date,CASE WHEN meeting_date>='2026-11-07' THEN '17:00' ELSE '11:00' END,'에코디교회','토요 성경토론과 함께하는 식사',
     CASE WHEN meeting_date < ? THEN 'completed' ELSE 'scheduled' END,?
   FROM weekly WHERE meeting_date <= ?`)
     .bind(MISSION_SATURDAY_STARTED,until,boardId,today,now(),until).run();
-  // One-time November 7 exception for rows already registered with the default time.
+  // Owner-approved recurring time from 2026-11-07 onward is 17:00 KST.
+  // Reconcile old auto-generated 11:00 rows without rewriting history,
+  // cancelled meetings, custom time/place/title or attendance records.
   await env.DB.prepare(`UPDATE ekodi_mission_saturday_events SET starts_at='17:00'
-    WHERE board_id=? AND meeting_date='2026-11-07' AND starts_at='11:00'`)
-    .bind(boardId).run();
+    WHERE board_id=? AND meeting_date>='2026-11-07' AND meeting_date>=?
+      AND starts_at='11:00' AND status='scheduled' AND venue='에코디교회'
+      AND title='토요 성경토론과 함께하는 식사'`)
+    .bind(boardId,today).run();
   // A completed calendar day is archived after 00:00 Asia/Seoul.
   // Preserve cancelled/modified statuses; only scheduled dates roll to completed.
   await env.DB.prepare(`UPDATE ekodi_mission_saturday_events
