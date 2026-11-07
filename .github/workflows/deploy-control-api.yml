@@ -1031,6 +1031,24 @@ jobs:
           grep -Fq '"code":"PF_ADMIN_AUTH_REQUIRED"' /tmp/personal-finance.json
           grep -Fq '"publishedLocales":["ko-KR"]' /tmp/i18n.json
           grep -Fq '"inheritedDefault":true' /tmp/catalog.json
+      - name: Verify anonymous Storage Gateway private routes remain 401 in production
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          # No credential, cookie, real file identifier or DB write required.
+          # A cached 200, redirect, or upstream error is not acceptable.
+          for route in             /api/storage/v1/policy             /api/storage/v1/file-provenance/ekodi-anonymous-canary             /api/storage/v1/files/ekodi-anonymous-canary; do
+            headers="$(mktemp)"
+            body="$(mktemp)"
+            trap 'rm -f "$headers" "$body"' EXIT
+            status="$(curl --silent --show-error --retry 3 --retry-delay 2               --connect-timeout 5 --max-time 12 --max-redirs 0               -D "$headers" -o "$body" -w '%{http_code}'               "https://ekodi.kr$route")"
+            test "$status" = '401'
+            grep -Fq '"code":"STORAGE_UNAUTHORIZED"' "$body"
+            grep -Eiq '^cache-control:[[:space:]]*no-store' "$headers"
+            rm -f "$headers" "$body"
+            trap - EXIT
+          done
+          echo 'Storage Gateway: anonymous policy/file metadata/file reads rejected with 401 and no-store on the live canonical Control API.' >> "$GITHUB_STEP_SUMMARY"
       - name: Verify CGMA e-document signing API boundary without writing records
         shell: bash
         run: |
