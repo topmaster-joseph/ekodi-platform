@@ -413,14 +413,19 @@ function liveStudioHeaders(response){
   response.headers.set('permissions-policy','camera=(self), microphone=(self), display-capture=(self), geolocation=(), usb=()');
   return response;
 }
-function withHeaders(env,response,route='asset'){
+export function withHeaders(env,response,route='asset'){
   const headers=new Headers(response.headers);
   for(const [key,value] of Object.entries(securityHeaders(env)))headers.set(key,value);
   headers.set('x-ekodi-route',route);
   const contentType=headers.get('content-type')||'';
   if(contentType.includes('text/html')){
     headers.set('cache-control','no-store');
-    headers.set('x-robots-tag',['space-storefront','space-organization',EKODIMISSION_PUBLIC_ROUTE].includes(route)?'index, follow':'noindex, nofollow, noarchive');
+    const publicProjection=['space-storefront','space-organization',EKODIMISSION_PUBLIC_ROUTE].includes(route);
+    // A renderer may impose a stricter unpublished / unverified content boundary.
+    // Never relax an explicit noindex directive to index because of a shared public route.
+    const sourceRobots=String(response.headers.get('x-robots-tag')||'');
+    const sourceRestrictive=/(^|[,\s])(noindex|nofollow|noarchive)(?=$|[,\s])/i.test(sourceRobots);
+    headers.set('x-robots-tag',publicProjection&&!sourceRestrictive?'index, follow':'noindex, nofollow, noarchive');
   }else if(!headers.has('cache-control'))headers.set('cache-control','public, max-age=300');
   return new Response(response.body,{status:response.status,statusText:response.statusText,headers});
 }
