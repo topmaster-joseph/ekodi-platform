@@ -154,7 +154,7 @@ try{
         requireThat(Math.abs(parseFloat(homeHeader.fontSize)-parseFloat(initial.headerNavFontSize))<=1,'site_board_nav_font_mismatch');
         // NOTICE-MOUNT-LINK-001 (2026-10-20): featured/public-feed notice links must keep the site mount,
         // otherwise ekodi.kr/seonammedi/ opened ekodi.kr/notices/:id (EKODI operating-space page).
-        await home.waitForFunction(()=>document.querySelector('#homeSpotlight a.spotlight-card')||document.querySelector('#homeSpotlight[hidden]'),null,{timeout:20000}).catch(()=>{});
+        await home.waitForFunction(()=>document.querySelector('#homePublicFeed a.public-feed-row')||document.querySelector('#homePublicFeed[hidden]'),null,{timeout:20000}).catch(()=>{});
         const mount=paths[origin].home.replace(/\/$/,'');
         const noticeLinks=await home.evaluate(()=>[...document.querySelectorAll('a[href]')].map(a=>a.href).filter(h=>{try{return /\/notices\/\d+\/?$/.test(new URL(h).pathname)}catch{return false}}));
         entry.noticeLinkCount=noticeLinks.length;

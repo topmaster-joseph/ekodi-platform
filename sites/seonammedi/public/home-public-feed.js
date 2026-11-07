@@ -41,7 +41,7 @@ const items=(settled,key='items')=>settled.status==='fulfilled'?(Array.isArray(s
  const activities=timeline.filter(x=>x.recordScope==='committee').map(x=>({...x,url:home+'/#committee-activity'})).sort(sort);
  const news=timeline.filter(x=>x.recordScope!=='committee').map(x=>({...x,url:home+'/#timeline'})).sort(sort);
  root.innerHTML=section('공지사항',notices,home+'/board/notices',true)
-  +section('활동이력',activities,home+'/#committee-activity')
+  +section('활동이력',activities,home+'/#committee-activity',true)
   +section('관련소식',news,home+'/#timeline')
   +section('시민의견',opinions,home+'/board/voices');
  root.hidden=false;
