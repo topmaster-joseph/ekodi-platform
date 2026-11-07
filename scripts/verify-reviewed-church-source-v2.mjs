@@ -61,6 +61,15 @@ const PRESERVED_WORSHIP_PR=Object.freeze({
   preservationPR:151, preservationHeadSha:'9ca89ef9190a61e101bfe0c6129cdc6a668a6a4b'
 });
 
+const HOME_HEADER=Object.freeze({
+  sourcePR:153,
+  sourceHeadSha:'b9e2fdb608c55964438f6c5fa1f895e3c3095c08',
+  parentPR:151,
+  parentHeadSha:'9ca89ef9190a61e101bfe0c6129cdc6a668a6a4b',
+  sourceBlobSha:'e0e52a81d11a040ef943bc8411b21262e5b45a8b',
+  previousCanonicalBlobSha:'50c906bb14756f2ae724c1283852ce86ce17b5e8',
+  finalCanonicalBlobSha:'181d01fdc21044ee5853e97ec7dee89e6aaf7037'
+});
 const HEX40=/^[a-f0-9]{40}$/;
 const stop=msg=>{throw new Error('Church stacked source: '+msg)};
 const matching=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
