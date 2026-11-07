@@ -56,7 +56,7 @@
   }
 
   function renderCampus(report) {
-    campusReport=report && report.months===3 ? report : null;
+    campusReport=report && Number.isSafeInteger(report.months) && report.months>=1 ? report : null;
     const panel=$('campusPanel');
     panel.hidden=!campusReport;
     if(!campusReport)return;
@@ -87,9 +87,9 @@
     if(!campusReport||!receipt)return;
     const x=campusReport;
     const rows=[
-      ['문서','에코디비즈 대학 AI 구독료 위탁 정산요약'],
+      ['문서','에코디비즈 AI 구독료 위탁 정산요약'],
       ['위탁번호',x.agreementId],['기관명',x.organization],
-      ['계약기간','3개월'],['계약상태',x.agreementStatus],
+      ['계약기간',x.months+'개월'],['계약상태',x.agreementStatus],
       ['위탁료',x.feeAmount],['공급사 비용 예산',x.supplierBudget],
       ['공급사 결제기록 합계',x.recordedSupplierSpending],
       ['미배정 예산(환급 확정액 아님)',x.unallocatedSupplierBudget],
@@ -112,7 +112,7 @@
     current = record;
     $('result').hidden = false;
     $('receiptId').textContent = record.id;
-    $('receiptType').textContent = record.type === 'institution' ? '대학·기관 · 3개월' : '개인 · 1개월';
+    $('receiptType').textContent = (record.type === 'institution' ? '기관' : '개인')+' · '+record.months+'개월';
     const states = { awaiting_quote:'견적 검토중', quoted:'견적 확정 · 동의 대기',
       accepted:'위탁조건 동의 완료 · 결제 준비', paid_pending_fulfillment:'결제 확인 · 공급사 이용신청 준비',
       active:'서비스 이용 진행중', expired:'계약기간 종료' };
@@ -148,7 +148,7 @@
   // University access requires the receipt token, NOT just the URL.
   if (isUniversityRoute) {
     document.body.dataset.agencyView='university';
-    $('heading').textContent='대학 AI 구독료 위탁계약 조회';
+    $('heading').textContent='계약 담당자 · AI 구독료 위탁계약 조회';
     $('campusRouteGuide').hidden=false;
     $('apply').hidden=true;
     const aside=document.querySelector('.layout > aside');
@@ -156,8 +156,8 @@
     $('statusPanel').after($('result'));
     const flow=aside.querySelector('[aria-labelledby="flowTitle"]');
     if(flow)flow.hidden=true;
-    $('statusPanel').querySelector('h2').textContent='대학 계약 조회';
-    document.title='대학 AI 위탁계약 조회 | 에코디비즈';
+    $('statusPanel').querySelector('h2').textContent='계약 조회';
+    document.title='계약 담당자 · AI 위탁계약 조회 | 에코디비즈';
   }
   const form = $('agencyForm');
   if(isIndividualRoute){
@@ -184,7 +184,7 @@
         type:form.elements.type.value, customer:form.elements.customer.value,
         email:form.elements.email.value, organization:form.elements.organization.value,
         provider:form.elements.provider.value, service:form.elements.service.value,
-        description:form.elements.description.value,
+        description:form.elements.description.value, months:Number(form.elements.months.value),
         consent:form.elements.consent.checked, terms:form.elements.terms.checked
       });
       saveReceipt({id:data.id,receiptToken:data.receiptToken});
