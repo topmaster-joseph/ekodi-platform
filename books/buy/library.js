@@ -65,6 +65,9 @@
       if (data.operator === true) {
         $('operatorPanel').hidden = false;
         window.EkodiLibraryTabs?.showOperator();
+        // Initial voice GET may have returned 401 before Google sign-in. Recheck after
+        // the library server confirms this session is an operator; no client-side grant.
+        window.EkodiVoiceStudio?.refresh();
       }
       const who = document.createElement('span'); who.className = 'lib-account'; who.textContent = libraryAccount;
       const out = document.createElement('button'); out.type = 'button'; out.className = 'lib-switch'; out.textContent = '로그아웃';
