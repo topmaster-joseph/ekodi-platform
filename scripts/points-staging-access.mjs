@@ -78,8 +78,9 @@ if(mode==='open-static'){
   const {apps,all,auds}=await stagingApps();
   console.log(`::notice::Access apps in account: ${all.length} [${all.map(a=>`${a.name||a.id}|${a.type||'?'}|${hostOf(a.domain)}`).join('; ')}]; staging AUDs seen: ${auds.length}; matched: ${apps.map(a=>a.name||a.id).join(', ')||'none'}`);
   if(!apps.length){
-    if(auds.length)throw new Error('staging hosts are behind Access but no Access app in the development account matches their AUD (token cannot read it?)');
-    console.log('::warning::Staging hosts are not behind Access; continuing without a service token.');process.exit(0);
+    throw new Error(auds.length
+      ? 'development staging Access application mismatch; refusing unverified policy'
+      : 'development staging hosts are not behind a readable Access application; refusing unprotected E2E');
   }
   const created=await api('/access/service_tokens',{method:'POST',body:JSON.stringify({name,duration:'24h'})});
   if(!created?.client_id||!created?.client_secret||!created?.id)throw new Error('service token not issued');
