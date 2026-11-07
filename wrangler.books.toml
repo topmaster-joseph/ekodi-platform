@@ -35,6 +35,11 @@ database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 binding = "BOOK_FILES"
 bucket_name = "ekodi-book-files"
 
+# BOOKS-AI-RELEASES-001: 출판 워커(최종 검수 확인 출간 목록) — 서버 간 읽기 전용.
+[[services]]
+binding = "PUBLISHING"
+service = "ekodi-publishing"
+
 [[services]]
 binding = "EKODIPAY"
 service = "ekodi-mall-api"

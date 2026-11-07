@@ -17,6 +17,7 @@ on:
       - 'books/**'
       - 'books-worker.js'
       - 'books-commerce.js'
+      - 'books-ai-releases.js'
       - 'books-audiobook.js'
       - 'books-sale-readiness.js'
       - 'books-language-editions.js'
