@@ -64,7 +64,7 @@ test('guests have one login CTA outside form; members use existing session and l
   assert.match(saturday,/login\.hidden=authenticated\|\|data\.meeting\.status!=='scheduled'/);
   assert.match(saturday,/destination\.hash='#saturday'/);
   assert.match(shell,/missionAuthUi\.state\.textContent=authenticated\?missionAccountLabel\(account\):''/);
-  assert.match(shell,/missionAuthUi\.state\.title=authenticated\?'로그인 아이디:'/);
+  assert.ok(shell.includes("missionAuthUi.state.title=authenticated?'로그인 아이디: '"));
   assert.match(shell,/missionAuthUi\?\.logout\.addEventListener\('click'/);
 });
 
