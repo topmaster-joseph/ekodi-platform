@@ -44,3 +44,57 @@ test('audit detects lack of canonical repository and unclassified satellites', (
   assert.ok(report.errors.includes('exactly one canonical platform repository must be registered'));
   assert.deepEqual(report.undecidedSourceClassification,['other/site']);
 });
+
+
+test('two independent platforms cannot silently share one deploy workflow', () => {
+  const input={version:1,platforms:{
+    mall:{kind:'independent-platform',source:['sites/ekodi-mall/**'],deployWorkflow:'.github/workflows/deploy-all.yml'},
+    church:{kind:'independent-platform',source:['sites/ekodi-church/**'],deployWorkflow:'.github/workflows/deploy-all.yml'}
+  }};
+  const report=auditSourceDeploymentBoundaries(input,registry);
+  assert.equal(report.registeredReleaseBoundaries,2);
+  assert.equal(report.distinctDeploymentWorkflows,1);
+  assert.equal(report.independentReleaseUnits.length,2);
+  assert.equal(report.errors.length,2);
+  assert.ok(report.errors.every(x=>x.includes('independent release unit shares deployment workflow')));
+  assert.equal(report.actualProductionDeploymentBindingsChecked,false);
+});
+
+test('independent site cannot reuse a shared site-core release workflow', () => {
+  const input={version:1,platforms:{
+    'site-core':{kind:'shared-edge-runtime',source:['site-worker.js'],deployWorkflow:'.github/workflows/deploy-site-core.yml'},
+    'mail-service':{kind:'shared-provider-neutral-service',source:['mail-control.js'],deployWorkflow:'.github/workflows/deploy-site-core.yml'},
+    church:{kind:'independent-platform',source:['sites/ekodi-church/**'],deployWorkflow:'.github/workflows/deploy-site-core.yml'}
+  }};
+  const report=auditSourceDeploymentBoundaries(input,registry);
+  assert.equal(report.errors.length,1);
+  assert.match(report.errors[0],/^church: independent release unit shares deployment workflow/);
+});
+
+test('shared runtime lane reuse is allowed while separately deployed independent sites stay separate', () => {
+  const input={version:1,platforms:{
+    'site-core':{kind:'shared-edge-runtime',source:['site-worker.js'],deployWorkflow:'.github/workflows/deploy-site-core.yml'},
+    'mail-service':{kind:'shared-provider-neutral-service',source:['mail-control.js'],deployWorkflow:'.github/workflows/deploy-site-core.yml'},
+    church:{kind:'independent-platform',source:['sites/ekodi-church/**'],deployWorkflow:'.github/workflows/deploy-church.yml'},
+    lab:{kind:'independent-platform',source:['sites/ekodi-lab/**'],deployWorkflow:'.github/workflows/deploy-lab.yml'}
+  }};
+  const report=auditSourceDeploymentBoundaries(input,registry);
+  assert.deepEqual(report.errors,[]);
+  assert.deepEqual(report.sharedWorkflowGroups,[{
+    deployWorkflow:'.github/workflows/deploy-site-core.yml',units:['site-core','mail-service']
+  }]);
+  assert.deepEqual(report.independentReleaseUnits.map(x=>x.id).sort(),['church','lab']);
+});
+
+test('the actual protected fleet registry retains distinct independent lanes without claiming live cutover',async () => {
+  const {readFile}=await import('node:fs/promises');
+  const boundaries=JSON.parse(await readFile(new URL('../platform-boundaries.json',import.meta.url),'utf8'));
+  const registry=JSON.parse(await readFile(new URL('../config/repository-source-of-truth.json',import.meta.url),'utf8'));
+  const report=auditSourceDeploymentBoundaries(boundaries,registry);
+  assert.deepEqual(report.errors,[]);
+  assert.equal(report.registeredReleaseBoundaries,33);
+  assert.equal(report.registeredSatelliteRepositories.length,6);
+  assert.ok(report.independentReleaseUnits.length>10);
+  assert.equal(report.actualProductionDeploymentBindingsChecked,false);
+  assert.equal(report.allSatellitesMigrated,false);
+});
