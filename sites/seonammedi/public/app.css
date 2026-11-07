@@ -217,7 +217,7 @@
 .campaign-hero-image {
   display:block;
   width:100%;
-  max-width:1903px;
+  max-width:1360px;
   height:auto;
   margin-inline:auto;
   object-fit:contain;
@@ -359,3 +359,7 @@ footer.site-footer .site-footer-copy .site-footer-credit a{color:inherit;text-de
 #committee-finance-disclosure .committee-finance-purpose,#committee-finance-disclosure .committee-finance-contact{font-size:13px;line-height:1.6;margin:6px 0 0;word-break:keep-all}
 #committee-finance-disclosure .committee-finance-contact{color:#56656d}
 @media(max-width:540px){#committee-finance-disclosure dl.committee-finance-metrics>div{flex-direction:column;align-items:center;padding:8px 4px}#committee-finance-disclosure dl.committee-finance-metrics>div.committee-finance-period{flex-direction:row;align-items:baseline}#committee-finance-disclosure dl.committee-finance-metrics dd{font-size:14px}}
+
+/* 2026-11-07 owner request: 총수입 = 전기이월 + 기간수입 구분표기 */
+#committee-finance-disclosure dl.committee-finance-metrics .committee-finance-breakdown{flex-basis:100%;text-align:center;font-size:12px;color:#56656d;font-weight:600;font-variant-numeric:tabular-nums}
+@media(max-width:540px){#committee-finance-disclosure dl.committee-finance-metrics .committee-finance-breakdown{font-size:11px;line-height:1.35;word-break:keep-all}}

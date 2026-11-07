@@ -76,7 +76,7 @@ try {
                 .filter(x=>x.box.width>0&&x.box.right>document.documentElement.clientWidth+2)
                 .slice(0,8).map(x=>({tag:x.el.tagName.toLowerCase(),id:String(x.el.id||'').slice(0,45),className:typeof x.el.className==='string'?x.el.className.slice(0,70):'',right:Math.round(x.box.right),width:Math.round(x.box.width)})),
               heroOriginalPresent:!!document.querySelector('.campaign-hero-image'),
-              heroLoaded:(()=>{const img=document.querySelector('.campaign-hero-image');return !!img?.complete&&img.naturalWidth===1903&&img.naturalHeight===735})(),
+              heroLoaded:(()=>{const img=document.querySelector('.campaign-hero-image');return !!img?.complete&&img.naturalWidth===1360&&img.naturalHeight===459})(),
               writeButtonVisible:(()=>{const b=document.getElementById('freshWrite');return !!b&&b.getBoundingClientRect().width>0})(),
               editorShownWithoutLogin:(()=>{const el=document.getElementById('freshForm');return !!el&&!el.hidden&&getComputedStyle(el).display!=='none'})(),
               authButtonVisible:!!document.querySelector('#adminLogin'),
