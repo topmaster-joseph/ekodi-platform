@@ -8,7 +8,7 @@
   // Checkout truth remains server-side; this only avoids falsely advertising 0원.
   const price = (value) => {
     const amount = typeof value === 'number' ? value
-      : (typeof value === 'string' && /^\\d+$/.test(value.trim()) ? Number(value.trim()) : NaN);
+      : (typeof value === 'string' && /^\d+$/.test(value.trim()) ? Number(value.trim()) : NaN);
     return Number.isSafeInteger(amount) && amount > 0
       ? `${new Intl.NumberFormat('ko-KR').format(amount)}원` : '가격 확인';
   };
