@@ -50,10 +50,10 @@ test('public legacy workflow patterns report potential writer risk, not operatio
   const response=body=>({ok:true,headers:{get:()=>null},text:async()=>body});
   const result=await auditPublicLegacyWorkflowRisks({
     fetcher:async url=>response(url.includes('/ekodi-site/')
-      ? 'name: Lab\\non:\\n  push:\\n    branches: [main]\\njobs:\\n  deploy:\\n    steps:\\n      - uses: cloudflare/wrangler-action@v3'
+      ? 'name: Lab\non:\n  push:\n    branches: [main]\njobs:\n  deploy:\n    steps:\n      - uses: cloudflare/wrangler-action@v3'
       :url.includes('/ekodi-church/')
-      ? 'name: Worship\\non:\\n  workflow_run:\\n    workflows: [CI]\\npermissions:\\n  contents: write\\nsteps:\\n  script: github.rest.pulls.merge({})'
-      : 'name: CGMA\\non:\\n  push:\\n    branches: [main]\\nsteps:\\n  run: wrangler pages deploy .'),
+      ? 'name: Worship\non:\n  workflow_run:\n    workflows: [CI]\npermissions:\n  contents: write\nsteps:\n  script: github.rest.pulls.merge({})'
+      : 'name: CGMA\non:\n  push:\n    branches: [main]\nsteps:\n  run: wrangler pages deploy .'),
     now:new Date('2026-11-08T00:30:00.000Z')
   });
   assert.equal(result.totalRegisteredSatellites,6);
@@ -64,7 +64,7 @@ test('public legacy workflow patterns report potential writer risk, not operatio
   assert.ok(result.repositories.every(x=>x.deletionDecision==='retain'));
   assert.ok(result.repositories.find(x=>x.repository.endsWith('/ekodi-site')).status.startsWith('review-required'));
   assert.ok(result.repositories.find(x=>x.repository.endsWith('/ekodi-mall')).status.startsWith('unverified'));
-  assert.equal(classifyLegacyWorkflowText(FIXED_PUBLIC_PROBES[0],'on:\\n  pull_request:\\n').status,'no-publishing-pattern-detected');
+  assert.equal(classifyLegacyWorkflowText(FIXED_PUBLIC_PROBES[0],'on:\n  pull_request:\n').status,'no-publishing-pattern-detected');
 });
 
 test('legacy public-source workflow network errors remain unknown, never safe to delete',async()=>{
