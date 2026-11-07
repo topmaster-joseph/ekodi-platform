@@ -28,7 +28,7 @@ test('PR150 notice is preserved from the exact merged Church source and PR151 st
  const verified=verifyReviewedChurchSource(manifest);
  assert.deepEqual(verified.integrationOrder,[143,144,142,146,149]);
  assert.equal(manifest.importedTrackedFileCount,223);
- assert.equal(manifest.canonicalizedPaths.length,37);
+ assert.equal(manifest.canonicalizedPaths.length,38);
  assert.equal(manifest.productionReleaseSwitched,false);
  assert.equal(manifest.sourceOwnershipTransferred,false);
  assert.equal(manifest.legacyRepositoryDeletionAuthorized,false);
