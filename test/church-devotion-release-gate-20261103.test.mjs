@@ -13,18 +13,19 @@ test('Church deployment stays within official orchestrator release authority', (
   assert.match(workflow, /topmaster-joseph\/ekodi-church/);
 });
 
-test('deployment requires canonical daily devotion and refuses retired journal controls', () => {
-  assert.ok(workflow.includes("grep -Fq '<h1>에코디 오늘의 매일묵상</h1>' church/devotion/index.html"));
-  assert.ok(workflow.includes("grep -Fq '<h1>에코디 오늘의 매일묵상</h1>' /tmp/church-devotion.html"));
+test('deployment requires canonical daily devotion and keeps life records on-device only', () => {
+  // User decision 2026-11-08: the life hub (church PR #160) stays; the gate now checks the
+  // privacy boundary (device-local storage, no network writes) instead of banning the UI.
+  assert.ok(workflow.includes("grep -Eq '<h1>(에코디 )?오늘의 매일묵상</h1>' church/devotion/index.html"));
+  assert.ok(workflow.includes("grep -Eq '<h1>(에코디 )?오늘의 매일묵상</h1>' /tmp/church-devotion.html"));
   assert.ok(workflow.includes("grep -Fq 'href=\"/ekodichurch/devotion/\"' church/index.html"));
-  assert.ok(workflow.includes("grep -Eq '<strong>(오늘의 )?매일묵상</strong>' /tmp/church.html"));
-  for (const retired of ['data-ekodi-life-hub', 'life-reflection-form', 'memory-form', 'witness-form', 'church-life-hub\\.(css|js)']) {
-    assert.ok(workflow.includes(retired), 'the release must explicitly reject ' + retired);
-  }
-  assert.doesNotMatch(workflow, /grep -Fq 'data-ekodi-life-hub' church\/index\.html/);
+  assert.ok(workflow.includes('class="nav-devotion" href="/ekodichurch/devotion/">매일묵상</a>'));
+  assert.ok(workflow.includes("grep -Fq 'data-ekodi-life-hub' church/index.html"));
+  assert.ok(workflow.includes("grep -Fq 'localStorage' church/church-life-hub.js"));
+  assert.ok(workflow.includes('Church life hub must keep personal records on-device only'));
+  assert.ok(workflow.includes("grep -Eq 'fetch\\(|XMLHttpRequest|sendBeacon|supabase' church/church-life-hub.js"));
+  assert.doesNotMatch(workflow, /Retired Church life record UI and scripts must not return/);
   assert.doesNotMatch(workflow, /grep -Fq 'PRIVATE FIRST' church\/index\.html/);
-  assert.doesNotMatch(workflow, /grep -Fq 'church-life-hub\.js' church\/index\.html/);
-  assert.doesNotMatch(workflow, /grep -Fq '<h1>오늘의 매일묵상<\/h1>'/);
 });
 
 test('real browser deployment verification covers supported languages and five device widths', () => {
@@ -32,7 +33,6 @@ test('real browser deployment verification covers supported languages and five d
     assert.ok(workflow.includes('width:' + width + ','), 'missing device width ' + width);
   }
   assert.match(workflow, /const locales=\['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id'\]/);
-  assert.match(workflow, /initial\.legacyLifeRecord,false/);
   assert.match(workflow, /initial\.canonicalDevotion,true/);
   assert.match(workflow, /initial\.overflow,false/);
   assert.match(workflow, /mobileGreetingGap>=0&&initial\.mobileGreetingGap<100/);
