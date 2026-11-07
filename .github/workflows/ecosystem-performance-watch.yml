@@ -109,6 +109,11 @@ jobs:
           probe admin 'https://ekodi.kr/admin' '<title>EKODI Admin</title>'
           probe support 'https://ekodi.kr/support/' 'EKODI SUPPORT · OPPORTUNITY FIRST'
           probe support_health 'https://ekodi.kr/support/health' '"service":"ekodi-support-opportunity"'
+          # Public service-scoped HTTP timing only; no login/checkout or personal data.
+          # The existing Cloudflare quota gate also protects these three probes.
+          probe mall_home 'https://ekodi.kr/ekodimall/' 'EKODI MALL'
+          probe books_home 'https://ekodi.kr/books/' '에코디서점'
+          probe church_home 'https://ekodi.kr/ekodichurch/' '에코디교회'
           # 서남권국립의대 customer domain: gateway hop vs direct origin, assets and data API.
           probe seonammedi_idn 'https://xn--3e0b8b58jw4co4mnpll3k.kr/' '<title>'
           probe seonammedi_idn_warm 'https://xn--3e0b8b58jw4co4mnpll3k.kr/' '<title>'
