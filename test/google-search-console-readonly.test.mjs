@@ -128,3 +128,45 @@ test('Control API + UI expose only authenticated operator-initiated, never auto-
   assert.match(ui,/report\.state!=='connected'/);
   assert.doesNotMatch(ui,/google.*confirmed_manually/i);
 });
+
+test('ekodi.kr path site without its own property is measured only through a page filter on the domain property',async()=>{
+  const calls=[];
+  const fetchImpl=async(url,options={})=>{
+    const path=new URL(url).pathname;calls.push({path,method:options.method,body:options.body});
+    if(path==='/token')return json({access_token:'private-placeholder'});
+    if(path==='/webmasters/v3/sites')return json({siteEntry:[{siteUrl:'sc-domain:ekodi.kr',permissionLevel:'siteOwner'}]});
+    if(path.endsWith('/searchAnalytics/query')){
+      const body=JSON.parse(options.body);
+      assert.deepEqual(body.dimensionFilterGroups,[{groupType:'and',filters:[{dimension:'page',operator:'includingRegex',expression:'^https://ekodi\\.kr/seonammedi(?:[/?#]|$)'}]}]);
+      return json({rows:[{clicks:3,impressions:90,ctr:3/90,position:11.2}]});
+    }
+    throw Error('Unexpected Google request '+url);
+  };
+  const out=await googleSearchConsoleReadOnly({env,site:canonicalMount,fetchImpl,cryptoImpl:webcrypto,now:new Date('2026-10-30T00:00:00Z')});
+  assert.equal(out.state,'connected');
+  assert.equal(out.scope,'page_filter');
+  assert.equal(out.pagePrefix,'https://ekodi.kr/seonammedi');
+  assert.equal(out.metrics.clicks,3);
+  // Domain sitemaps belong to every EKODI site and are not attributed to one path.
+  assert.deepEqual(out.sitemaps,[]);
+  assert.ok(!calls.some(x=>x.path.endsWith('/sitemaps')));
+  const re=new RegExp('^https://ekodi\\.kr/seonammedi(?:[/?#]|$)');
+  assert.ok(re.test('https://ekodi.kr/seonammedi/news') && !re.test('https://ekodi.kr/seonammedix') && !re.test('https://ekodi.kr/church'));
+});
+
+test('page-filter fallback needs a readable ekodi.kr domain property and never applies to other hosts',async()=>{
+  const {googlePathFilter}=await import('../google-search-console-readonly.js');
+  assert.equal(googlePathFilter(canonicalMount,[{siteUrl:'sc-domain:ekodi.kr',permissionLevel:'siteUnverifiedUser'}]),null);
+  assert.equal(googlePathFilter({url:'https://example.kr/shop'},[{siteUrl:'sc-domain:ekodi.kr',permissionLevel:'siteOwner'}]),null);
+  assert.equal(googlePathFilter({url:'https://ekodi.kr/'},[{siteUrl:'sc-domain:ekodi.kr',permissionLevel:'siteOwner'}]),null);
+});
+
+test('reader key is provisioned only from the protected search-registration environment and never printed',()=>{
+  const wf=readFileSync(new URL('../.github/workflows/provision-search-console-reader.yml',import.meta.url),'utf8');
+  assert.match(wf,/environment: search-registration/);
+  assert.match(wf,/validate-ekodi-ai-change-orchestration\.mjs" --release/);
+  assert.match(wf,/secret put GOOGLE_SEARCH_SA_KEY_JSON --config wrangler\.api\.toml >\/dev\/null/);
+  assert.ok(!/echo[^\n]*\$GOOGLE_SEARCH_SA_KEY_JSON/.test(wf));
+  const proof=readFileSync(new URL('../scripts/search-console-reader-readiness.mjs',import.meta.url),'utf8');
+  assert.ok(proof.includes("GOOGLE_SEARCH_SCOPE")&&!/console\.log\([^)]*(private_key|access_token|accessToken|raw)\b/.test(proof));
+});
