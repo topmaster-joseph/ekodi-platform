@@ -30,7 +30,7 @@ test('workflow issues the token when secrets are absent and always removes it', 
 
 // Exercise the real CLI with all Cloudflare endpoints mocked. These tests
 // never create/deactivate actual Access apps or expose credential values.
-const mockedAccessProcess=String.raw\`
+const mockedAccessProcess=String.raw`
 const actions=[];
 const own='ekodi-points-e2e-'+process.env.POINTS_E2E_RUN;
 const json=result=>new Response(JSON.stringify({success:true,result}),{
@@ -58,7 +58,7 @@ globalThis.fetch=async (input,init={})=>{
 process.argv=[process.execPath,'scripts/points-staging-access.mjs',process.env.TEST_ACCESS_MODE];
 await import('./scripts/points-staging-access.mjs');
 console.log('ACCESS_PROBE='+JSON.stringify(actions));
-\`;
+`;
 function runMockAccess(mode,extra={}) {
   return spawnSync(process.execPath,['--input-type=module','-e',mockedAccessProcess],{
     env:{...process.env,
