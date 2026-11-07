@@ -33,3 +33,15 @@ test('performance guard measures the SeonamMedi customer domain against its orig
     'https://xn--3e0b8b58jw4co4mnpll3k.kr/api/seonammedi/page-data',
   ]) assert.ok(workflow.includes(target), target);
 });
+
+test('performance guard distinguishes Mall, Books and Church public service entry latency',()=>{
+  for (const [label,target] of [
+    ['mall_home','https://ekodi.kr/ekodimall/'],
+    ['books_home','https://ekodi.kr/books/'],
+    ['church_home','https://ekodi.kr/ekodichurch/'],
+  ]) {
+    assert.ok(workflow.includes('probe '+label+' '+String.fromCharCode(39)+target+String.fromCharCode(39)),target);
+  }
+  assert.match(workflow,/skip_nonessential != 'true'/);
+  assert.doesNotMatch(workflow,/probe .*https:\/\/ekodi\.kr\/ekodimall\/admin/);
+});
