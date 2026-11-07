@@ -11,7 +11,7 @@ test('Mission home keeps intro, current gathering and official updates while arc
     read('space/ekodimission.js'),read('space/ekodimission.css')
   ]);
   const sections=[...home.matchAll(/<section\b/g)];
-  assert.equal(sections.length,3,'Home contains hero, current Saturday and official notices/schedules without archive duplication');
+  assert.equal(sections.length,4,'Home contains hero, the tab wrapper, current Saturday and official notices/schedules without archive duplication');
   assert.match(home,/<section class="mission-home-board-grid"/);
   assert.ok(home.indexOf('id="mission-updates"')>home.indexOf('id="saturday"'),'Official boards appear after current gathering');
   assert.match(home,/class="hero hero-split"/);
