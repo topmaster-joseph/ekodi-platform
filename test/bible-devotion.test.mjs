@@ -135,7 +135,7 @@ test('church and mission devotion pages mount the shared renderer with their own
   assert.match(mission, /<script type="module" src="\/bible\/devotion\.js"><\/script>/);
   assert.doesNotMatch(mission, /style="/);
   assert.match(fs.readFileSync(new URL('../space-worker.js', import.meta.url), 'utf8'), /\['\/ekodimission\/devotion','\/ekodimission-devotion\.page'\]/);
-  assert.match(fs.readFileSync(new URL('../space/ekodimission-shell.js', import.meta.url), 'utf8'), /href:'\/ekodimission\/devotion',label:'매일묵상'/);
+  assert.match(fs.readFileSync(new URL('../space/ekodimission-shell.js', import.meta.url), 'utf8'), /href:'\/ekodimission\/devotion',label:'묵상'/);
 });
 
 test('future content is not exposed to unauthenticated clients or link crawlers',async()=>{
