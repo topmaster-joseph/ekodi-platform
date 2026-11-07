@@ -8,25 +8,23 @@ const html=read('sites/seonammedi/public/index.html');
 const css=read('sites/seonammedi/public/app.css');
 const browser=read('scripts/verify-seonammedi-hero-native.mjs');
 const workflow=read('.github/workflows/verify-seonammedi-hero-native.yml');
-const image=fs.readFileSync(new URL('../sites/seonammedi/public/assets/campaign-reconsideration-20261013.png',import.meta.url));
+const image=fs.readFileSync(new URL('../sites/seonammedi/public/assets/campaign-reconsideration-20261107.jpg',import.meta.url));
 
 test('submitted campaign banner is preserved as a byte-identical local site asset',()=>{
   const digest=crypto.createHash('sha256').update(image).digest('hex');
-  assert.equal(digest,'3d30b3faa1db1eeb075a4af8b25887000204ebb26c92f6640c5d70be7205c324');
-  assert.equal(image.subarray(0,8).toString('hex'),'89504e470d0a1a0a');
-  assert.equal(image.readUInt32BE(16),1903);
-  assert.equal(image.readUInt32BE(20),735);
-  assert.match(html,/class="campaign-hero-image" src="\/seonammedi\/assets\/campaign-reconsideration-20261013\.png"/);
+  assert.equal(digest,'f2aaed6182306ac7b8c2d5839f05e071e12ea7a096b6e06e44a77dd94dfd2825');
+  assert.equal(image.subarray(0,3).toString('hex'),'ffd8ff');
+  assert.match(html,/class="campaign-hero-image" src="\/seonammedi\/assets\/campaign-reconsideration-20261107\.jpg"/);
   assert.match(html,/fetchpriority="high"/);
-  assert.match(html,/property="og:image:width" content="1903"/);
-  assert.match(html,/property="og:image:height" content="735"/);
+  assert.match(html,/property="og:image:width" content="1360"/);
+  assert.match(html,/property="og:image:height" content="459"/);
   assert.match(html,/id="homeSpotlight"/);
   assert.match(html,/id="homeLatestUpdates"/);
 });
 
 test('responsive artwork is full-width and not cropped',()=>{
   assert.match(css,/\.campaign-hero-image\s*\{/);
-  assert.match(css,/max-width:1903px/);
+  assert.match(css,/max-width:1360px/);
   assert.match(css,/height:auto/);
   assert.match(css,/object-fit:contain/);
   assert.match(html,/class="campaign-hero-mobile-hint"/);
@@ -36,7 +34,7 @@ test('EKODI-owned native browser checks image bytes and geometry on two viewport
   assert.match(browser,/from 'playwright'/);
   assert.match(browser,/name:'desktop',width:1440/);
   assert.match(browser,/name:'mobile',width:390/);
-  assert.match(browser,/naturalWidth===1903&&entry\.naturalHeight===735/);
+  assert.match(browser,/naturalWidth===1360&&entry\.naturalHeight===459/);
   assert.match(browser,/assetSha256===expectedSha/);
   assert.match(browser,/horizontalOverflow/);
   assert.match(browser,/expectedBrowserPath/);
