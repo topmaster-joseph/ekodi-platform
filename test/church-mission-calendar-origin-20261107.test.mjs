@@ -15,6 +15,10 @@ test('Mission public calendar displays Church and Mission separately with keyboa
   assert.ok(js.includes("count.church")&&js.includes("count.mission"));
   assert.ok(js.includes("교회 '+count.church+'건, 선교회 '+count.mission+'건"));
   assert.ok(js.includes("item.source==='ekodimission'?owned.get(item.id)||null:null"));
+  assert.ok(js.includes("document.addEventListener('visibilitychange'"));
+  assert.ok(js.includes("window.addEventListener('focus'"));
+  assert.ok(js.includes("sharedScheduleTimer=setInterval"));
+  assert.ok(js.includes("clearInterval(sharedScheduleTimer)"));
   assert.ok(css.includes('mission-schedule-source-ekodichurch'));
   assert.ok(css.includes('mission-schedule-source-ekodimission'));
 });
