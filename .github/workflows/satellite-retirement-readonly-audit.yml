@@ -1,0 +1,53 @@
+name: EKODI Satellite Source and Retirement Read-Only Evidence (Manual Fallback)
+
+# EKODI Native Operations Watch owns the sole recurring daily audit at 08:45
+# KST. This separate workflow is a manual, protected-main recovery tool only.
+# A green audit is never proof of repo deletion, provider binding or offsite restore.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: satellite-retirement-readonly-manual-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout exact protected source without GitHub write credentials
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify read-only registry, public source markers and native owner contract
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          node --test \
+            test/ekodi-satellite-retirement-audit.test.mjs \
+            test/satellite-retirement-watch-report.test.mjs \
+            test/satellite-retirement-watch-workflow.test.mjs \
+            test/satellite-live-source-markers.test.mjs \
+            test/satellite-repository-retirement.test.mjs
+      - name: Execute only EKODI-owned public read-only manual observation
+        run: |
+          set -euo pipefail
+          node scripts/run-ekodi-satellite-retirement-audit.mjs \
+            --mode=manual --output-dir=ekodi-satellite-audit
+          cat ekodi-satellite-audit/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve public evidence on failure and success
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ekodi-satellite-retirement-manual-${{ github.run_id }}
+          path: ekodi-satellite-audit/
+          if-no-files-found: warn
+          retention-days: 14

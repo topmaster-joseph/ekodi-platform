@@ -360,7 +360,8 @@ function initializePublicTimeline(rows){
 }
 
 async function load(){
-const [r,timelineResponse,pageResponse]=await Promise.all([fetch('/seonammedi/data.json',{cache:'no-store'}),fetch('/api/seonammedi/timeline',{cache:'no-store'}).catch(()=>null),fetch('/api/seonammedi/page-data',{cache:'no-store'}).catch(()=>null)]);
+// These two feeds are PUBLIC and honor their response Cache-Control; personal/admin APIs remain no-store.
+const [r,timelineResponse,pageResponse]=await Promise.all([fetch('/seonammedi/data.json',{cache:'default'}),fetch('/api/seonammedi/timeline',{cache:'no-store'}).catch(()=>null),fetch('/api/seonammedi/page-data',{cache:'default'}).catch(()=>null)]);
 if(!r.ok)throw new Error('data');const d=await r.json();
 if(timelineResponse?.ok){const timelineBody=await timelineResponse.json().catch(()=>({}));if(Array.isArray(timelineBody.items))d.timeline=timelineBody.items}
 if(pageResponse?.ok){const pageBody=await pageResponse.json().catch(()=>({}));if(Array.isArray(pageBody.page?.status?.items))d.status=pageBody.page.status.items;if(pageBody.page?.organization&&typeof pageBody.page.organization==='object')d.organization=pageBody.page.organization;if(pageBody.finance&&typeof pageBody.finance==='object')d.finance=pageBody.finance}
@@ -484,33 +485,6 @@ updatePublicFinanceSummary(publicFinanceEntries);
 }
 
 const siteReady=load().catch(error=>{console.error('[seonammedi] data load failed',error)});
-function monitorHomeRows(items=[]){
-  const candidates=items.filter(item=>monitorPubliclyVisible(item)&&item.source_type!=='blog'&&safeUrl(item.resolved_url||item.url)!=='#')
-    .sort((a,b)=>String(b.published_at||b.first_seen_at||'').localeCompare(String(a.published_at||a.first_seen_at||'')));
-  const selected=[];
-  for(const item of candidates){
-    const url=timelineNormalizeUrl(item.resolved_url||item.url),date=monitorTimelineDate(item),title=String(item.title||'').trim();
-    if(!title)continue;
-    if(selected.some(prev=>(url&&prev.url===url)||(date&&prev.date===date&&timelineTitleSimilarity(prev.title,title)>=0.72)))continue;
-    selected.push({item,url,date,title});
-    if(selected.length===4)break;
-  }
-  return selected.map(row=>row.item);
-}
-function renderHomeMonitorUpdates(data){
-  const section=el('homeLatestUpdates'),list=el('homeLatestList'),updated=el('homeLatestUpdatedAt');
-  if(!section||!list)return;
-  const rows=monitorHomeRows(data?.items||[]);
-  section.hidden=!rows.length;
-  if(!rows.length){list.innerHTML='';return}
-  const runAt=data?.lastRun?.completed_at||'';
-  if(updated)updated.textContent=runAt?'마지막 갱신 '+new Date(runAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' · EKODI 자동갱신':'1시간마다 자동 갱신';
-  list.innerHTML=rows.map(item=>{
-    const when=kstDate(item.published_at||item.first_seen_at||'');
-    const state=item.review_state==='verified'?'검증 완료':'자동수집 · 원문 확인';
-    return `<a class="home-latest-card" href="${safeUrl(item.resolved_url||item.url)}" target="_blank" rel="noopener noreferrer"><span class="home-latest-meta">${escapeHtml(when||'최근')} · ${escapeHtml(item.query_label||'관련자료')}</span><strong>${escapeHtml(item.title||'수집 자료')}</strong><small>${escapeHtml(item.publisher||'출처 확인 중')} · ${escapeHtml(state)}</small></a>`;
-  }).join('');
-}
 let monitorFeedEntries=[];
 let monitorNextCursor=null;
 let monitorPageLoading=false;
@@ -542,7 +516,6 @@ async function loadMonitor({append=false}={}){
     if(summary)summary.textContent=run?('최근 점검 '+(run.status==='ok'?'정상':run.status==='partial'?'일부 확인':'확인 필요')+' · 출처 '+run.sources_checked+'개 · 신규 '+run.new_items+'건 · 사진·영상 근거 후보 '+Number(data.mediaCandidateCount||0)+'건'):'자동점검은 매시간 실행됩니다.';
     const rows=monitorFeedEntries.slice(0,18);window.__SEONAM_MONITOR_ITEMS=monitorFeedEntries;applyMonitorTimelineUpdates(window.__SEONAM_MONITOR_ITEMS);attachMonitorMedia(window.__SEONAM_MONITOR_ITEMS);
     if(list)list.innerHTML=rows.length?rows.map(item=>'<article class="source"><a href="'+safeUrl(item.resolved_url||item.url)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(item.title||'')+'</a>'+(item.summary_text?'<p>'+escapeHtml(item.summary_text)+'</p>':'')+'<small>'+escapeHtml(item.publisher||'출처 확인 중')+' · 자동수집 '+(item.source_type==='blog'?'블로그':'보도')+(item.media_type?' · '+(item.media_type==='video'?'영상 근거 후보':'사진 근거 후보'):'')+' · '+(item.source_type==='blog'?'개인·온라인 게시물 / 공식자료 교차확인 필요':'원문 확인 필요')+'</small></article>').join(''):'<p class="muted">현재 공개 검증된 자동수집 자료가 없습니다.</p>';
-    renderHomeMonitorUpdates(latestMonitorData);
     refreshStatusDetail();
   }catch(error){
     if(!append){
@@ -826,14 +799,6 @@ function showNoticeDetail(item){
   detail.querySelector('.notice-edit')?.addEventListener('click',()=>beginNoticeEdit(item));
   detail.querySelector('.notice-delete')?.addEventListener('click',()=>deleteNotice(item));
 }
-function renderFeaturedNotice(rows){
-  const host=el('homeSpotlight');if(!host)return;const now=Date.now(),recent=[...rows].sort((a,b)=>String(b.publishedAt||b.updatedAt||'').localeCompare(String(a.publishedAt||a.updatedAt||'')));
-  const activeEvents=recent.filter(item=>item.kind==='event'&&(!item.eventEnd||new Date(item.eventEnd).getTime()>=now));
-  const priority=recent.filter(item=>item.featured&&item.kind!=='event'),latestNotices=recent.filter(item=>item.kind!=='event');
-  const selected=[];for(const item of [...activeEvents,...priority,...latestNotices])if(!selected.some(x=>x.id===item.id))selected.push(item);const items=selected.slice(0,4);
-  host.hidden=!items.length;host.innerHTML=items.map(item=>'<a class="spotlight-card" href="'+noticePermalink(item.id)+'">'+(item.imageUrl?'<img src="'+escapeHtml(item.imageUrl)+'" alt="" loading="eager">':'<span class="spotlight-placeholder">공지</span>')+'<span class="spotlight-copy"><small>'+(item.kind==='event'?'행사·일정':'최근 게시글')+'</small><strong>'+escapeHtml(item.title||'공지')+'</strong><em>게시글 보기</em></span></a>').join('');
-  document.querySelector('.hero')?.classList.toggle('has-spotlight',items.length>0);
-}
 // CALENDAR-EVENT-OPENS-LEFT-001: the calendar opens an event in the left content area without a page load.
 window.seonamOpenEvent=id=>{
   const item=publicNotices.find(row=>Number(row.id)===Number(id));if(!item)return false;
@@ -849,7 +814,7 @@ async function loadNotices(){
   try{
     const token=noticeToken();const response=await fetch('/api/seonammedi/notices',{cache:'no-store',headers:token?{authorization:'Bearer '+token}:{}});const data=await response.json().catch(()=>({}));
     if(!response.ok||!data.ok)throw new Error(data.message||'공지 목록을 불러오지 못했습니다.');
-    publicNotices=Array.isArray(data.items)?data.items:[];renderNoticeRows();renderFeaturedNotice(publicNotices);
+    publicNotices=Array.isArray(data.items)?data.items:[];renderNoticeRows();
     const pathMatch=location.pathname.match(/^(?:\/seonammedi)?\/notices\/(\d+)\/?$/);const wanted=Number(pathMatch?.[1]||new URLSearchParams(location.search).get('notice')||0);const selected=publicNotices.find(item=>Number(item.id)===wanted);if(selected){showView('notices');showNoticeDetail(selected)}
   }catch(error){host.innerHTML='<p class="muted">'+escapeHtml(error.message||'공지 목록을 불러오지 못했습니다.')+'</p>'}
 }
@@ -885,6 +850,7 @@ async function compressNoticeImage(file){
 }
 function resetNoticeEditor(){
   noticeEditingId=0;noticeSelectedFiles=[];noticeExistingImages=[];noticeKeptImageIndexes=new Set();noticeCompose?.reset();renderNoticeImagePreview();
+  const pinRow=el('noticePinRow');if(pinRow){pinRow.hidden=true;const box=el('noticePinned');if(box)box.checked=false}
   const submit=noticeCompose?.querySelector('button[type="submit"]');if(submit)submit.textContent='게시하기';
   const message=el('noticeComposeMessage');if(message)message.textContent='';
 }
@@ -900,6 +866,9 @@ function beginNoticeEdit(item){
   if(!noticeOwnedByCurrentUser(item))return;
   noticeEditingId=Number(item.id)||0;noticeSelectedFiles=[];noticeExistingImages=[...(item.imageUrls||[])];noticeKeptImageIndexes=new Set(noticeExistingImages.map((_,index)=>index));
   noticeCompose.elements.title.value=item.title||'';noticeCompose.elements.body.value=item.body||'';
+  // 중요공지 is site-wide ordering: the server only honours it from a platform
+  // admin, so the checkbox appears only when this account may pin (canPin).
+  const pinRow=el('noticePinRow');if(pinRow){pinRow.hidden=!item.canPin;const box=el('noticePinned');if(box)box.checked=Boolean(item.pinned)}
   const submit=noticeCompose.querySelector('button[type="submit"]');if(submit)submit.textContent='수정 저장';
   const message=el('noticeComposeMessage');if(message)message.textContent='게시글을 수정 중입니다.';
   renderNoticeImagePreview();noticeCompose.hidden=false;noticeWriteButton.hidden=true;el('noticeDetail').hidden=true;noticeCompose.scrollIntoView({block:'start'});noticeCompose.elements.title.focus();
@@ -923,6 +892,9 @@ el('noticeComposeCancel')?.addEventListener('click',()=>{resetNoticeEditor();not
 noticeCompose?.addEventListener('submit',async event=>{
   event.preventDefault();const message=el('noticeComposeMessage'),token=noticeToken();if(!token){location.assign(noticeLoginUrl());return}
   const form=new FormData(noticeCompose);form.delete('images');for(const file of noticeSelectedFiles)form.append('images',file,file.name);
+  form.delete('pinned');
+  const pinRow=el('noticePinRow');
+  if(noticeEditingId&&pinRow&&!pinRow.hidden)form.set('pinned',el('noticePinned')?.checked?'1':'0');
   if(noticeEditingId)form.set('keepImageIndexes',JSON.stringify([...noticeKeptImageIndexes].sort((a,b)=>a-b)));
   const editingId=noticeEditingId,method=editingId?'PUT':'POST',url=editingId?'/api/seonammedi/notices/'+editingId:'/api/seonammedi/notices';
   message.textContent=editingId?'수정 저장 중입니다…':'게시 중입니다…';

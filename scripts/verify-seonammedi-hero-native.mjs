@@ -101,8 +101,7 @@ try {
             return false;
           })(),
           siteHeader:!!document.querySelector('.site-header nav'),
-          latestUpdates:!!document.querySelector('#homeLatestUpdates'),
-          spotlight:!!document.querySelector('#homeSpotlight'),
+          publicFeed:!!document.querySelector('#homePublicFeed'),
           mobileHint:!!document.querySelector('.campaign-hero-mobile-hint'),
           brand:document.querySelector('.brand')?.textContent?.trim().slice(0,100)
         };
@@ -120,7 +119,7 @@ try {
       must(Math.abs(entry.displayedWidth/entry.displayedHeight-1360/459)<0.015,'hero_image_is_cropped_or_distorted');
       must(entry.displayedWidth>=profile.width*0.90,'hero_not_prominent');
       must(!entry.horizontalOverflow,'viewport_horizontal_overflow');
-      must(entry.siteHeader&&entry.latestUpdates&&entry.spotlight,'homepage_functionality_missing');
+      must(entry.siteHeader&&entry.publicFeed,'homepage_functionality_missing');
       must(!entry.leadingEscapedText,'literal_escaped_newline_visible_above_header');
       must(entry.mobileHint,'mobile_magnification_instruction_missing');
       // The source-only probe additionally asserts the new shell truly mounted.

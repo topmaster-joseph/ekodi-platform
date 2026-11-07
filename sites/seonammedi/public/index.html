@@ -21,7 +21,7 @@
   <meta property="og:image:alt" content="전남 국립의대 추천의 공정성 검증과 원점 재심사 촉구">
   <meta name="twitter:image" content="https://xn--3e0b8b58jw4co4mnpll3k.kr/seonammedi/assets/campaign-reconsideration-20261107.jpg">
   <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","@id":"https://xn--3e0b8b58jw4co4mnpll3k.kr/#website","url":"https://xn--3e0b8b58jw4co4mnpll3k.kr/","name":"서남권국립의대","alternateName":["서남권국립의대","서남권 국립의대","SEONAM MEDI","seonammedi.kr","서남권국립의대.kr"],"inLanguage":"ko"},{"@type":"WebPage","@id":"https://xn--3e0b8b58jw4co4mnpll3k.kr/#webpage","url":"https://xn--3e0b8b58jw4co4mnpll3k.kr/","name":"서남권국립의대 | SEONAM MEDI","description":"서남권국립의대(서남권 국립의대) 관련 공식자료, 활동이력, 관련보도, 시민 의견과 공개 정보를 확인할 수 있는 서남권국립의대 공식 사이트입니다.","inLanguage":"ko","isPartOf":{"@id":"https://xn--3e0b8b58jw4co4mnpll3k.kr/#website"}}]}</script>
-  <link rel="stylesheet" href="/seonammedi/app.css?v=20261107-finance-hero-1">
+  <link rel="stylesheet" href="/seonammedi/app.css?v=20261108-home-feed-2">
 <style id="seonammedi-organization-mobile-fix">
 #organization{min-height:0!important;padding-bottom:24px!important;background:#fff!important}
 #organization .section-head{margin-bottom:12px!important;gap:8px;align-items:center}
@@ -51,7 +51,11 @@
 <link rel="stylesheet" href="/seonammedi/central-category-menu.css">
 <link rel="stylesheet" href="/seonammedi/shared-site-header.css?v=20261019-unified-shell-4">
 <script src="/seonammedi/board/ui/central-category.js?v=20261020-event-open-1" defer></script>
-<link rel="stylesheet" href="/seonammedi/home-public-feed.css?v=20261020-notice-thumb-1">
+<link rel="stylesheet" href="/seonammedi/home-public-feed.css?v=20261108-home-feed-2">
+  <!-- Start the two anonymous/public home feeds while deferred app.js loads.
+       The public edge controls TTL; finance detail and admin writes are not prefetched. -->
+  <link rel="preload" href="/seonammedi/data.json" as="fetch" type="application/json" crossorigin>
+  <link rel="preload" href="/api/seonammedi/page-data" as="fetch" type="application/json" crossorigin>
 
 <style id="ekodi-remove-duplicate-middle-menu">
 /* The header is the sole primary navigation; preserve the social preview. */
@@ -91,13 +95,6 @@
     <img class="campaign-hero-image" src="/seonammedi/assets/campaign-reconsideration-20261107.jpg" width="1360" height="459" fetchpriority="high" decoding="async" alt="서남권 국립의대 재심사 촉구 배너: 대통령님, 재심사를 지시해주십시오! 의혹을 남긴 채, 의과대학 설립을 밀어붙일 수는 없습니다. 교육부 장관은 목포대학교를 포함해 원점에서 재심사하라! 서남권 의대 비상대책위원회·국립목포대학교 교수평의회·목포시의회 의원 일동">
   </a>
   <p class="campaign-hero-mobile-hint">이미지를 누르면 원본 크기로 확인할 수 있습니다.</p>
-  <div class="campaign-hero-updates">
-    <aside id="homeSpotlight" class="home-spotlight" aria-label="최근 공지와 진행 중인 행사" hidden></aside>
-    <section id="homeLatestUpdates" class="home-latest-updates" aria-labelledby="homeLatestTitle" hidden>
-      <div class="home-latest-head"><div><h2 id="homeLatestTitle">최근 업데이트</h2></div><span id="homeLatestUpdatedAt" class="badge">1시간마다 자동 갱신</span></div>
-      <div id="homeLatestList" class="home-latest-list"></div>
-    </section>
-  </div>
 </section>
 
 <section id="homePublicFeed" class="home-public-feed" aria-label="최근 공개 게시물" hidden></section>
@@ -235,6 +232,7 @@
     <label>파일첨부 (사진 최대 5장)<input id="noticeImages" name="images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small>첨부 시 장당 5MB 이하로 자동 최적화합니다. JPG·PNG·WEBP·GIF · 최대 5장 · 선택 후 개별 삭제 가능</small></label>
     <div id="noticeImagePreview" class="notice-image-preview" aria-live="polite"></div>
     <label>내용<textarea name="body" maxlength="10000" rows="6" placeholder="내용을 입력하세요"></textarea></label>
+    <label id="noticePinRow" class="notice-pin-option" hidden><input id="noticePinned" name="pinned" type="checkbox" value="1"> 중요공지로 고정 (목록 맨 위에 표시)</label>
     <div class="form-actions"><button type="submit">게시하기</button><button id="noticeComposeCancel" type="button" class="secondary">취소</button><span id="noticeComposeMessage" class="muted" role="status"></span></div>
   </form>
   <div id="noticeDetail" class="notice-detail" hidden></div>
@@ -289,11 +287,11 @@
 
 </main>
 <footer class="site-footer"><div class="site-footer-copy"><strong>서남권국립의대</strong><span>서남권 의대 설립 비상대책위원회 · 자료의 성격과 출처를 구분해 보존합니다.</span><span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="tel:01035018542">010-3501-8542</a> · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com</a></span></div><a href="admin/">관리</a></footer>
-<script src="/seonammedi/app.js?v=20261107-finance-hero-1" defer></script>
+<script src="/seonammedi/app.js?v=20261108-home-feed-2" defer></script>
 <script src="/seonammedi/voice-public-admin.js?v=20261006-domain-routing-2" defer></script>
 
 <script src="/seonammedi/central-category-runtime.js?v=20261029-native-view-parity-1" defer></script>
-<script src="/seonammedi/home-public-feed.js?v=20261020-board-only-1" defer></script>
+<script src="/seonammedi/home-public-feed.js?v=20261108-home-feed-2" defer></script>
 <script src="https://ekodi.kr/shell/native-visit-beacon.js" defer></script>
 <script src="https://ekodi.kr/shell/user-ui-footer.js" defer></script>
 </body></html>

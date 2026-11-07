@@ -1,3 +1,7 @@
+// Release reconcile note (2026-11-08): church Pages deploys failed from 2026-11-05 at the
+// source-validation step against ekodi-church 64509fb. ekodi-church main 8af9848 (#160, six-menu
+// + Church–Mission calendar, /ekodichurch/schedule/) passes that step; this merged change asks the
+// Orchestrator to dispatch the guarded church release so the new pages go live.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';

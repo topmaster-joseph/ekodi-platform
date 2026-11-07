@@ -373,10 +373,21 @@ async function missionEnsureWeeklyDates(env,boardId,today,nextSaturday){
     CASE WHEN meeting_date < ? THEN 'completed' ELSE 'scheduled' END,?
   FROM weekly WHERE meeting_date <= ?`)
     .bind(MISSION_SATURDAY_STARTED,until,boardId,today,now(),until).run();
-  // One-time November 7 exception for rows already registered with the default time.
+  // 2026-11-07 was a one-day 17:00 exception. Every other Saturday defaults
+  // to 11:00 KST. Preserve an older exception row without rewriting history.
   await env.DB.prepare(`UPDATE ekodi_mission_saturday_events SET starts_at='17:00'
-    WHERE board_id=? AND meeting_date='2026-11-07' AND starts_at='11:00'`)
+    WHERE board_id=? AND meeting_date='2026-11-07' AND starts_at='11:00'
+      AND venue='에코디교회' AND title='토요 성경토론과 함께하는 식사'
+      AND status='scheduled'`)
     .bind(boardId).run();
+  // Roll back the earlier mistaken weekly-17:00 auto-conversion, bounded to
+  // upcoming scheduled rows with the unchanged default event metadata.
+  // Explicitly customized venue, title, time and cancelled/history stay intact.
+  await env.DB.prepare(`UPDATE ekodi_mission_saturday_events SET starts_at='11:00'
+    WHERE board_id=? AND meeting_date>'2026-11-07' AND meeting_date>=?
+      AND starts_at='17:00' AND status='scheduled' AND venue='에코디교회'
+      AND title='토요 성경토론과 함께하는 식사'`)
+    .bind(boardId,today).run();
   // A completed calendar day is archived after 00:00 Asia/Seoul.
   // Preserve cancelled/modified statuses; only scheduled dates roll to completed.
   await env.DB.prepare(`UPDATE ekodi_mission_saturday_events
@@ -534,6 +545,15 @@ export function parseEkodiPublicSchedule(row,today=missionKstToday()){
 // 같은 날짜에 '주일'이 들어간 교회 공식 일정 게시글이 있으면 그 게시글이 우선한다.
 export const CHURCH_SUNDAY_WORSHIP=Object.freeze({title:'주일예배',time:'11:00',venue:'에코디교회',weeks:4,
   venueOverrides:Object.freeze({'2026-11-08':'목포 평화광장'})});
+// 교회 공식 단건 일정(관리자 일정 테이블이 준비되기 전까지 공개 주요일정에 직접 등록).
+export const CHURCH_KEY_EVENTS=Object.freeze([
+  Object.freeze({date:'2026-11-15',time:'12:30',title:'공동의회 (주일예배 후)',venue:'에코디교회'}),
+]);
+export function churchKeyEvents(today=missionKstToday(),events=CHURCH_KEY_EVENTS){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(today)))return [];
+  return events.filter(e=>e.date>=today).map(e=>({id:0,source:'ekodichurch',sourceLabel:'에코디교회',date:e.date,time:e.time,
+    venue:e.venue,title:e.title,url:'/ekodichurch/schedule/',kind:'church-key-event'}));
+}
 export function churchSundayWorshipEvents(today=missionKstToday(),config=CHURCH_SUNDAY_WORSHIP){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(today)))return [];
   const first=new Date(today+'T00:00:00Z');
@@ -569,6 +589,9 @@ async function readSharedPublicSchedules(env,instance){
       time:String(event.starts_at||'11:00'),venue:String(event.venue||'에코디교회'),
       title:String(event.title||'토요 성경토론과 식사'),
       url:'/ekodimission?meeting='+encodeURIComponent(date)+'#saturday',kind:'recurring-meeting'});
+  }
+  for(const event of churchKeyEvents(today)){
+    if(!items.some(item=>item.source==='ekodichurch'&&item.date===event.date&&item.title===event.title))items.push(event);
   }
   for(const event of churchSundayWorshipEvents(today)){
     if(items.some(item=>item.source==='ekodichurch'&&item.date===event.date&&/주일/.test(item.title)))continue;

@@ -8,14 +8,6 @@ on:
         description: 'Exact currently protected main SHA'
         type: string
         required: true
-      encrypted_file_id:
-        description: 'Encrypted dump file ID from approved EKODI Shared Drive'
-        type: string
-        required: true
-      signed_receipt_file_id:
-        description: 'Two-signer restore receipt file ID from EKODI Shared Drive'
-        type: string
-        required: true
 
 permissions:
   contents: read
@@ -43,11 +35,12 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       EXPECTED_SHA: ${{ inputs.expected_main_sha }}
-      ARCHIVE_ID: ${{ inputs.encrypted_file_id }}
-      RECEIPT_ID: ${{ inputs.signed_receipt_file_id }}
+      ARCHIVE_ID: ${{ secrets.POINTS_MANUAL_ARCHIVE_FILE_ID }}
+      RECEIPT_ID: ${{ secrets.POINTS_MANUAL_RECEIPT_FILE_ID }}
       STORAGE_GATEWAY_KEY: ${{ secrets.EKODI_STORAGE_GATEWAY_KEY }}
       POINTS_MANUAL_EXPECTED_DRIVE_ID: ${{ secrets.POINTS_MANUAL_EXPECTED_DRIVE_ID }}
       POINTS_MANUAL_EXPECTED_ENCRYPTED_FOLDER_ID: ${{ secrets.POINTS_MANUAL_EXPECTED_ENCRYPTED_FOLDER_ID }}
+      POINTS_MANUAL_EXPECTED_MANIFEST_FOLDER_ID: ${{ secrets.POINTS_MANUAL_EXPECTED_MANIFEST_FOLDER_ID }}
       POINTS_MANUAL_EXPECTED_RESTORE_FOLDER_ID: ${{ secrets.POINTS_MANUAL_EXPECTED_RESTORE_FOLDER_ID }}
       POINTS_MANUAL_BACKUP_OPERATOR_PUBKEY: ${{ secrets.POINTS_MANUAL_BACKUP_OPERATOR_PUBKEY }}
       POINTS_MANUAL_INDEPENDENT_RESTORER_PUBKEY: ${{ secrets.POINTS_MANUAL_INDEPENDENT_RESTORER_PUBKEY }}
@@ -67,13 +60,13 @@ jobs:
           test "$GITHUB_SHA" = "$EXPECTED_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
-          for id in "$ARCHIVE_ID" "$RECEIPT_ID" "$POINTS_MANUAL_EXPECTED_DRIVE_ID" "$POINTS_MANUAL_EXPECTED_ENCRYPTED_FOLDER_ID" "$POINTS_MANUAL_EXPECTED_RESTORE_FOLDER_ID"; do
+          for id in "$ARCHIVE_ID" "$RECEIPT_ID" "$POINTS_MANUAL_EXPECTED_DRIVE_ID" "$POINTS_MANUAL_EXPECTED_ENCRYPTED_FOLDER_ID" "$POINTS_MANUAL_EXPECTED_MANIFEST_FOLDER_ID" "$POINTS_MANUAL_EXPECTED_RESTORE_FOLDER_ID"; do
             [[ "$id" =~ ^[A-Za-z0-9_-]{12,160}$ ]] || exit 2
           done
           for name in STORAGE_GATEWAY_KEY POINTS_MANUAL_BACKUP_OPERATOR_PUBKEY POINTS_MANUAL_INDEPENDENT_RESTORER_PUBKEY; do
             test -n "${!name}" || exit 2
           done
-      - name: Fetch actual encrypted blob and signed receipt through the existing protected storage gateway
+      - name: Verify signed IDs, real Google Drive parents, and actual restored evidence
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -81,23 +74,50 @@ jobs:
           target="$(mktemp -d)"
           trap 'rm -rf "$target"' EXIT
           test -n "$STORAGE_GATEWAY_KEY"
-          fetch_file() {
-            local id="$1" output="$2" status
+          # No direct Google credential, no production DB connection and no
+          # public GitHub artifact. All files remain only in this ephemeral job.
+          fetch_protected() {
+            local path="$1" output="$2" status
             status="$(curl --silent --show-error --fail --max-redirs 0 \
               --max-time 600 --retry 0 \
               -H "x-ekodi-storage-key: $STORAGE_GATEWAY_KEY" \
               --output "$output" --write-out '%{http_code}' \
-              "https://ekodi.kr/api/storage/v1/files/$id")"
+              "https://ekodi.kr/api/storage/v1/$path")"
             test "$status" = 200
             test -s "$output"
           }
-          fetch_file "$RECEIPT_ID" "$target/receipt.json"
+          fetch_protected "files/$RECEIPT_ID" "$target/receipt.json"
           test "$(stat -c %s "$target/receipt.json")" -le 1048576
-          fetch_file "$ARCHIVE_ID" "$target/archive.age"
           export POINTS_MANUAL_RECEIPT_PATH="$target/receipt.json"
-          export POINTS_MANUAL_ENCRYPTED_ARTIFACT_PATH="$target/archive.age"
+          export POINTS_MANUAL_RECEIPT_FILE_ID="$RECEIPT_ID"
           export POINTS_MANUAL_EXPECTED_MAIN_SHA="$EXPECTED_SHA"
+          # Verify both Ed25519 signatures before following receipt-declared IDs.
+          node scripts/verify-points-manual-backup-receipt.mjs \
+            --signed-pointers > "$target/pointers.json"
+          archive_id="$(jq -er '.archive_file_id' "$target/pointers.json")"
+          evidence_id="$(jq -er '.restore_evidence_file_id' "$target/pointers.json")"
+          [[ "$archive_id" =~ ^[A-Za-z0-9_-]{12,160}$ ]]
+          [[ "$evidence_id" =~ ^[A-Za-z0-9_-]{12,160}$ ]]
+          test "$archive_id" = "$ARCHIVE_ID"
+          export POINTS_MANUAL_ARCHIVE_FILE_ID="$ARCHIVE_ID"
+          export POINTS_MANUAL_RESTORE_FILE_ID="$evidence_id"
+          fetch_protected "file-provenance/$ARCHIVE_ID" "$target/archive-meta.json"
+          fetch_protected "file-provenance/$RECEIPT_ID" "$target/receipt-meta.json"
+          fetch_protected "file-provenance/$evidence_id" "$target/evidence-meta.json"
+          jq -n --slurpfile archive "$target/archive-meta.json" \
+            --slurpfile receipt "$target/receipt-meta.json" \
+            --slurpfile restore "$target/evidence-meta.json" \
+            '{archive:$archive[0],receipt:$receipt[0],restore:$restore[0]}' \
+            > "$target/metadata.json"
+          fetch_protected "files/$ARCHIVE_ID" "$target/archive.age"
+          fetch_protected "files/$evidence_id" "$target/restore-evidence.json"
+          test "$(stat -c %s "$target/restore-evidence.json")" -le 1048576
+          export POINTS_MANUAL_ENCRYPTED_ARTIFACT_PATH="$target/archive.age"
+          export POINTS_MANUAL_RESTORE_EVIDENCE_PATH="$target/restore-evidence.json"
+          export POINTS_MANUAL_DRIVE_METADATA_PATH="$target/metadata.json"
           node scripts/verify-points-manual-backup-receipt.mjs
+          # Fail closed if current main changes during protected validation.
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_SHA"
       - name: Explicit no-activation outcome
         if: always()
         shell: bash

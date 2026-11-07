@@ -39,10 +39,11 @@ async function session(request, env) {
   const identityResponse = await fetch(`${CENTRAL_SUPABASE_URL}/auth/v1/user`, { headers: { apikey: CENTRAL_PUBLISHABLE_KEY, authorization: `Bearer ${token}` }, cache: 'no-store' });
   const identity = identityResponse.ok ? await identityResponse.json().catch(() => null) : null;
   if (!identity?.id || !identity?.email || !identity?.email_confirmed_at) return { response: json({ error: '목회자 인증을 확인할 수 없습니다.' }, 401, request, env) };
-  const staffUrl = new URL(CHURCH_PASTOR_API); staffUrl.searchParams.set('table', 'church_staff'); staffUrl.searchParams.set('user_id', `eq.${identity.id}`); staffUrl.searchParams.set('limit', '1');
+  // staff-access는 church_staff 행과 함께 플랫폼 최고관리자 2명(검증된 Google 계정)을 senior_pastor로 인정한다.
+  const staffUrl = new URL(CHURCH_PASTOR_API); staffUrl.searchParams.set('scope', 'staff-access');
   const staffResponse = await fetch(staffUrl.toString(), { headers: { authorization: `Bearer ${token}`, accept: 'application/json' }, cache: 'no-store' });
-  const staffRows = staffResponse.ok ? await staffResponse.json().catch(() => []) : [];
-  const staff = staffRows?.[0] || null;
+  const staffBody = staffResponse.ok ? await staffResponse.json().catch(() => null) : null;
+  const staff = staffBody?.ok && staffBody.role ? { role: staffBody.role, display_name: staffBody.display_name } : null;
   if (!staff) return { response: json({ error: '에코디교회 목회자 운영권한이 필요합니다.' }, staffResponse.status === 401 ? 401 : 403, request, env) };
   return { data: { email: String(identity.email).toLowerCase(), userId: String(identity.id), role: String(staff.role || ''), displayName: staff.display_name || '' } };
 }

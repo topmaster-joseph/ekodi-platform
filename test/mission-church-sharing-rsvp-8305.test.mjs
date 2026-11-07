@@ -101,6 +101,35 @@ test('two independent official boards share only published future schedule metad
  }finally{f.sql.close();}
 });
 
+
+test('published Church and Mission feeds agree on 11:00 recurring Saturdays after the Nov 7 exception',async()=>{
+ const f=fixture();try{
+  await f.fetch('ekodimission','/api/health');
+  const next=missionSaturdayFor(missionKstToday());
+  const following=weeks=>{
+   const at=new Date(next+'T00:00:00Z');at.setUTCDate(at.getUTCDate()+7*weeks);
+   return at.toISOString().slice(0,10);
+  };
+  const legacyDate=following(1),customDate=following(2),board='site:ekodimission:main';
+  const sql=f.sql.prepare('INSERT INTO ekodi_mission_saturday_events(board_id,meeting_date,starts_at,venue,title,status,created_at) VALUES(?,?,?,?,?,?,?)');
+  sql.run(board,legacyDate,'17:00','에코디교회','토요 성경토론과 함께하는 식사','scheduled','2026-11-05T00:00:00Z');
+  sql.run(board,customDate,'15:30','사역지 현장','특별모임','scheduled','2026-11-05T00:00:00Z');
+  const [church,mission]=await Promise.all([
+   f.fetch('ekodichurch','/api/shared-schedules'),
+   f.fetch('ekodimission','/api/shared-schedules')
+  ]);
+  assert.equal(church.status,200);assert.equal(mission.status,200);
+  assert.deepEqual(church.data.items,mission.data.items);
+  const legacy=church.data.items.find(item=>item.source==='ekodimission'&&item.kind==='recurring-meeting'&&item.date===legacyDate);
+  const manual=church.data.items.find(item=>item.source==='ekodimission'&&item.kind==='recurring-meeting'&&item.date===customDate);
+  assert.equal(legacy?.time,'11:00','default after Nov 7 remains 11:00 in both public feeds');
+  assert.equal(manual?.time,'15:30','a site-specific approved manual override is retained');
+  assert.equal(f.sql.prepare('SELECT starts_at FROM ekodi_mission_saturday_events WHERE board_id=? AND meeting_date=?').get(board,legacyDate).starts_at,'11:00');
+  assert.equal(f.sql.prepare('SELECT starts_at FROM ekodi_mission_saturday_events WHERE board_id=? AND meeting_date=?').get(board,customDate).starts_at,'15:30');
+  assert.equal(JSON.stringify(church.data).includes('author_person_id'),false);
+ }finally{f.sql.close();}
+});
+
 test('federation rejects invalid, foreign, unpublished and private-format schedule rows',()=>{
  const base={id:3,board_id:'site:ekodichurch:main',category_id:'schedule',
   title:'공개 모임',body:'일정: 2026-12-15 14:00\n장소: 에코디교회'};
