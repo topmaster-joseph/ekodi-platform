@@ -27,7 +27,7 @@ async function request(env, path, body={}, key='') {
   const response = await agencyApi(req, url, env);
   return { status:response.status, body:await response.json() };
 }
-const form = {type:'individual',provider:'Example AI Provider',service:'Individual subscription',
+const form = {type:'individual',months:4,provider:'Example AI Provider',service:'Individual subscription',
   customer:'Test User',email:'test@example.test',organization:'',
   description:'Buy an authorized subscription',consent:true,terms:true};
 const adminKey='dev-authorization-key-32-characters-minimum-only';
@@ -85,11 +85,11 @@ test('anonymous receipt tokens isolate requests and quote amount cannot be forge
   assert.equal(approvedCheckout.body.clientKey,'test_gck_ai_agency_test_only');
   assert.equal(approvedCheckout.body.secretKey,undefined);
 });
-test('institution plan is fixed at three months; supplier collections require explicit authorization', async () => {
+test('institution term is user-chosen; supplier collections require explicit authorization', async () => {
   const env=environment();
-  const submitted=await request(env,'/api/agency/apply',{...form,type:'institution',organization:'Test University'});
+  const submitted=await request(env,'/api/agency/apply',{...form,type:'institution',organization:'Test University',months:7});
   assert.equal(submitted.status,201);
-  assert.equal(submitted.body.months,3);
+  assert.equal(submitted.body.months,7);
   const denied=await request(env,'/api/agency/admin/quote',
     {id:submitted.body.id,feeAmount:30000,supplierAmount:50000},adminKey);
   assert.equal(denied.status,422);
@@ -148,4 +148,44 @@ test('intake limits repeated submissions per email per day',async()=>{
   }
   const denied=await request(env,'/api/agency/apply',{...form,email:'limited@example.test'});
   assert.equal(denied.status,429);
+});
+
+
+test('month term is required, integral and bounded for both contract types',async()=>{
+  const env=environment();
+  for(const months of [undefined,null,0,-1,1.5,'12',121,Infinity]){
+    const bad=await request(env,'/api/agency/apply',{...form,months,email:'months-invalid@example.test'});
+    assert.equal(bad.status,422,String(months));
+  }
+  for(const months of [1,6,12,120]){
+    const applied=await request(env,'/api/agency/apply',{...form,months,email:'months-valid-'+months+'@example.test'});
+    assert.equal(applied.status,201);
+    assert.equal(applied.body.months,months);
+    const status=await request(env,'/api/agency/status',{id:applied.body.id,receiptToken:applied.body.receiptToken});
+    assert.equal(status.body.record.months,months);
+    assert.equal(status.body.campus.periods.length,months);
+  }
+  const healthUrl=new URL('https://ekodi.kr/ekodibiz/api/agency/health');
+  const health=await agencyApi(new Request(healthUrl),healthUrl,env);
+  assert.equal((await health.json()).maxMonths,120);
+});
+
+test('chosen 6-month contract expires six months after verified activation',async()=>{
+  const env=environment();
+  const applied=await request(env,'/api/agency/apply',{...form,months:6,email:'sixmonth@example.test'});
+  const receipt={id:applied.body.id,receiptToken:applied.body.receiptToken};
+  await request(env,'/api/agency/admin/quote',{id:receipt.id,feeAmount:12000,supplierAmount:0},adminKey);
+  await request(env,'/api/agency/accept',{...receipt,accepted:true});
+  await agencyStore(new Request('https://revenue-store.internal/agency/settle',{method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({id:receipt.id,paymentKey:'synthetic-payment',totalAmount:12000})}),env.__storage);
+  const activated=await request(env,'/api/agency/admin/activate',{id:receipt.id,confirmed:true},adminKey);
+  assert.equal(activated.status,200);
+  const start=new Date(activated.body.record.activatedAt);
+  const end=new Date(activated.body.record.expiresAt);
+  const expected=new Date(start);const day=expected.getUTCDate();expected.setUTCDate(1);
+  expected.setUTCMonth(expected.getUTCMonth()+6);
+  const last=new Date(Date.UTC(expected.getUTCFullYear(),expected.getUTCMonth()+1,0)).getUTCDate();
+  expected.setUTCDate(Math.min(day,last));
+  assert.equal(end.toISOString(),expected.toISOString());
 });
