@@ -8,7 +8,7 @@ const root='/ekodibiz/ai-agency';
 const text=path=>readFile(new URL(path,import.meta.url),'utf8');
 
 test('all role-specific URLs are canonical and contain no query, fragment, or credential',()=>{
-  const roles=['apply','university','individual','admin'];
+  const roles=['apply','university','individual','manage'];
   for(const role of roles){
     const url=new URL(agencyShareUrl(role,root+'/apply'));
     assert.equal(url.origin,'https://ekodi.kr');
@@ -23,8 +23,8 @@ test('all role-specific URLs are canonical and contain no query, fragment, or cr
 });
 test('current share resolves exact recognized role, never arbitrary location or private code',()=>{
   assert.equal(agencyShareUrl('current',root+'/university'),AGENCY_SHARE_PATHS.university);
-  assert.equal(agencyShareUrl('current',root+'/admin/'),AGENCY_SHARE_PATHS.admin);
-  assert.equal(agencyShareUrl('current','/ekodibiz/ai-agency-admin'),AGENCY_SHARE_PATHS.admin);
+  assert.equal(agencyShareUrl('current',root+'/manage/'),AGENCY_SHARE_PATHS.manage);
+  assert.equal(agencyShareUrl('current','/ekodibiz/ai-agency-admin'),AGENCY_SHARE_PATHS.manage);
   assert.equal(agencyShareUrl('current',root),AGENCY_SHARE_PATHS.apply);
   assert.equal(agencyShareUrl('current',root+'/university/other'),null);
   assert.equal(agencyShareUrl('current',root+'/university?receiptToken=SECRET'),null);
@@ -35,7 +35,7 @@ test('current share resolves exact recognized role, never arbitrary location or 
 test('shared navigation is present on both client and operator screens',async()=>{
   const [client,admin]=await Promise.all([text('../ekodibiz/ai-agency.html'),text('../ekodibiz/ai-agency-admin.html')]);
   for(const markup of [client,admin]){
-    for(const role of ['apply','university','individual','admin']){
+    for(const role of ['apply','university','individual','manage']){
       assert.ok(markup.includes('data-agency-link="'+role+'"'),role);
       assert.ok(markup.includes('href="'+root+'/'+role+'"'),role);
     }
@@ -54,7 +54,7 @@ test('canonical proxy, assets and frontend share script agree on same URL',async
   assert.ok(router.includes("const AGENCY_SHARED_SCRIPT = '/ekodibiz/ai-agency-links.js'"));
   assert.ok(worker.includes("'/ai-agency-links.js':'/ai-agency-links.js'"));
   assert.ok(worker.includes("'/ai-agency/university':'/ai-agency.html'"));
-  assert.ok(worker.includes("'/ai-agency/admin':'/ai-agency-admin.html'"));
+  assert.ok(worker.includes("'/ai-agency/manage':'/ai-agency-admin.html'"));
 });
 test('share source uses fixed whitelist and never reads receipt secrets',async()=>{
   const js=await text('../ekodibiz/ai-agency-links.js');
@@ -68,7 +68,7 @@ test('share source uses fixed whitelist and never reads receipt secrets',async()
   assert.ok(js.includes('navigator.clipboard.writeText'));
 });
 test('visible active destination follows exact current route and buttons copy only fixed links',async()=>{
-  const links=['apply','university','individual','admin'].map(view=>({
+  const links=['apply','university','individual','manage'].map(view=>({
     view,
     attrs:{'data-agency-link':view,href:'/old'},
     getAttribute(k){return this.attrs[k]},
@@ -88,7 +88,7 @@ test('visible active destination follows exact current route and buttons copy on
   };
   mountAgencyCrossLinks(fake,root+'/university');
   assert.equal(links.find(x=>x.view==='university').attrs['aria-current'],'page');
-  assert.equal(links.find(x=>x.view==='admin').attrs['aria-current'],undefined);
+  assert.equal(links.find(x=>x.view==='manage').attrs['aria-current'],undefined);
   assert.equal(links.find(x=>x.view==='apply').attrs.href,root+'/apply');
   assert.equal(typeof buttons[0].handlers.click,'function');
   assert.equal(typeof buttons[1].handlers.click,'function');
@@ -100,5 +100,14 @@ test('legacy agency redirects intentionally strip secret-looking query parameter
   assert.ok(worker.includes("destination.hash='';"));
   assert.ok(worker.includes("Response.redirect(destination.toString(),308)"));
   assert.ok(worker.includes("'/ai-agency':'/ai-agency/apply'"));
-  assert.ok(worker.includes("'/ai-agency-admin':'/ai-agency/admin'"));
+  assert.ok(worker.includes("'/ai-agency-admin':'/ai-agency/manage'"));
+});
+
+test('operator path avoids the shared /admin shell while legacy URLs remain role-safe', async()=>{
+  assert.equal(agencyShareUrl('manage',root+'/apply'),AGENCY_SHARE_PATHS.manage);
+  assert.equal(agencyShareUrl('current',root+'/manage/'),AGENCY_SHARE_PATHS.manage);
+  assert.equal(agencyViewForPath(root+'/admin'),'manage');
+  const worker=await text('../ekodibiz-worker.js');
+  assert.match(worker,/['"]\/ai-agency\/manage['"]\s*:\s*['"]\/ai-agency-admin\.html['"]/);
+  assert.ok(!AGENCY_SHARE_PATHS.manage.endsWith('/admin'));
 });

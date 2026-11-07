@@ -57,3 +57,12 @@ test('university CSV formula injection guard handles whitespace prefix',async()=
   assert.match(js,/campusCsvValue/);
   assert.match(js,/\.replace\(\/"\/g,'""'\)/);
 });
+
+test('individual subpath always selects personal contract even after form restoration',async()=>{
+  const js=await read('../ekodibiz/ai-agency.js');
+  assert.match(js,/isIndividualRoute/);
+  assert.match(js,/individual\.checked=true/);
+  assert.match(js,/organizationGroup'\)\.hidden=true/);
+  assert.match(js,/form\.elements\.organization\.required=false/);
+  assert.match(js,/개인 AI 구독료 위탁신청/);
+});
