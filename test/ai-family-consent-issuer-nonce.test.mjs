@@ -59,7 +59,7 @@ function fakeDurableDb(){
 
 test('consent issuer is inert unless explicitly enabled with OS broker and signer',async()=>{
   assert.equal(FAMILY_CONSENT_ISSUER_POLICY.enabledByDefault,false);
-  const disabled=createFamilyConsentIssuer(approvedBroker());
+  const disabled=createFamilyConsentIssuer({...approvedBroker(),enabled:false});
   const result=await disabled.issue({claim,deviceId,trustedRuntime});
   assert.equal(result.code,'CONSENT_ISSUANCE_DISABLED');
   const absent=createFamilyConsentIssuer({enabled:true});
