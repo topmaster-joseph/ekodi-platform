@@ -78,7 +78,7 @@ export function verifyChurchPublicSubpageNavigation(html,page) {
     fail('public '+page+' subpage has stale or inconsistent six-item navigation');
   }
   const expected='/ekodichurch/'+page+'/';
-  const active=[...nav.matchAll(/<a\\b([^>]*)>[\\s\\S]*?<\\/a>/g)]
+  const active=[...nav.matchAll(/<a\b([^>]*)>[\s\S]*?<\/a>/g)]
     .filter(([,attrs])=>/\\baria-current\\s*=\\s*"page"/.test(attrs))
     .map(([,attrs])=>attrs.match(/\\bhref="([^"]+)"/)?.[1]||'');
   if(active.length!==1||active[0]!==expected)fail('public '+page+' subpage active route mismatch');
@@ -103,7 +103,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
     if(args[0]==='--subpage'){
       if(!args[1]||args[2]!=='--kind'||!args[3])fail('expected --subpage PUBLIC_HTML --kind devotion|notices|schedule');
       const result=verifyChurchPublicSubpageNavigation(readFileSync(args[1],'utf8'),args[3]);
-      process.stdout.write(JSON.stringify(result)+'\\n');
+      process.stdout.write(JSON.stringify(result)+'\n');
       process.exit(0);
     }
     if(args[0]!=='--html'||!args[1]||args[2]!=='--subnav'||!args[3])
