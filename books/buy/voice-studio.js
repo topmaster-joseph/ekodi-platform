@@ -182,5 +182,8 @@
       player, msg, micHelp,
     );
   }
+  // A Google sign-in can finish after the initial unauthenticated probe returned 401.
+  // Expose only a read-only recheck; the server still authorizes each admin voice request.
+  window.EkodiVoiceStudio = Object.freeze({ refresh: render });
   render();
 })();
