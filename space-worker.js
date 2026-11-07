@@ -413,7 +413,7 @@ function liveStudioHeaders(response){
   response.headers.set('permissions-policy','camera=(self), microphone=(self), display-capture=(self), geolocation=(), usb=()');
   return response;
 }
-function withHeaders(env,response,route='asset'){
+export function withHeaders(env,response,route='asset'){
   const headers=new Headers(response.headers);
   for(const [key,value] of Object.entries(securityHeaders(env)))headers.set(key,value);
   headers.set('x-ekodi-route',route);
