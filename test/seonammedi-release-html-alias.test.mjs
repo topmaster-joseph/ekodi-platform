@@ -7,8 +7,8 @@ const expected=[
   '<link rel="stylesheet" href="/seonammedi/app.0123456789ab.css">',
   '<meta name="ekodi-release" content="release-test">',
   '</head><body>',
-  '<a href="/seonammedi/assets/campaign-reconsideration-20261013.png">',
-  '<img src="/seonammedi/assets/campaign-reconsideration-20261013.png">',
+  '<a href="/seonammedi/assets/campaign-reconsideration-20261107.jpg">',
+  '<img src="/seonammedi/assets/campaign-reconsideration-20261107.jpg">',
   '<script src="/seonammedi/app.0123456789ab.js"></script>',
   '<script src="/seonammedi/voice-public-admin.0123456789ab.js"></script>',
   '</a><h1>Public content unchanged</h1></body>'
@@ -16,7 +16,7 @@ const expected=[
 const allowed=[
   'app.0123456789ab.css','app.0123456789ab.js',
   'voice-public-admin.0123456789ab.js',
-  'assets/campaign-reconsideration-20261013.png'
+  'assets/campaign-reconsideration-20261107.jpg'
 ];
 
 test('customer public HTML can remove only five allowlisted asset mount prefixes',()=>{

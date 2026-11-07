@@ -11,9 +11,9 @@ const control=readFileSync(new URL('../seonammedi-admin-control.js',import.meta.
 test('SeonamMedi public activity history exposes only the approved accounting summary and disclosure purpose',()=>{
   const section=html.match(/<section class="committee-finance-disclosure"[\s\S]*?<\/section>/)?.[0];
   assert.ok(section,'public finance card must be in committee activity history');
-  for(const expected of ['기간','2026.10.29.','2026.11.03.','8,900,333원','10,672,100원','14,051,738원','비상대책위원회에 문의'])assert.ok(section.includes(expected),expected);
+  for(const expected of ['기간','2026.10.29.','2026.11.03.','8,900,333원','10,672,100원','14,051,738원','24,723,838원','전기이월 15,823,505원','비상대책위원회에 문의'])assert.ok(section.includes(expected),expected);
   assert.equal((section.match(/<dt>/g)||[]).length,4);
-  for(const forbidden of ['손영득','목포대여교수회','김밥','영상·음향','7,000,000원','15,823,505원'])assert.ok(!section.includes(forbidden),'private item leaked: '+forbidden);
+  for(const forbidden of ['손영득','목포대여교수회','김밥','영상·음향','7,000,000원'])assert.ok(!section.includes(forbidden),'private item leaked: '+forbidden);
   assert.ok(html.includes('@media(max-width:540px)'),'finance summary should adapt to narrow screens');
 });
 

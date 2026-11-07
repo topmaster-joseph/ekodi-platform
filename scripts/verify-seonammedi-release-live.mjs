@@ -78,7 +78,7 @@ for(let attempt=1;attempt<=attempts;attempt++){
             +' expectedFragment='+at(published,diff?.expectedOffset)+' actualFragment='+at(normalized.html,diff?.actualOffset));
         }
         const allowlisted=[...Object.values(expected.assets||{}).map(asset=>asset.path).filter(Boolean),
-          'assets/campaign-reconsideration-20261013.png',
+          'assets/campaign-reconsideration-20261107.jpg',
           // Published shell asset paths; only the customer-domain mount prefix may change.
           'shared-site-header.css','home-public-feed.css','home-public-feed.js',
           // New CSP-safe photo/category shell is an existing site-owned static asset.
