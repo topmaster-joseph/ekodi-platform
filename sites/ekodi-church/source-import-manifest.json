@@ -233,7 +233,7 @@
       "path": "index.html",
       "mode": "100644",
       "blobSha": "7683f8859aae85283bc65f52223a41ebbc08db60",
-      "normalizedBlobSha": "50c906bb14756f2ae724c1283852ce86ce17b5e8"
+      "normalizedBlobSha": "181d01fdc21044ee5853e97ec7dee89e6aaf7037"
     },
     {
       "path": "live/host-intent.js",
@@ -496,7 +496,8 @@
     {
       "path": "test/church-inline-live.test.mjs",
       "mode": "100644",
-      "blobSha": "484cc9e4199e1a898397cbcca10dfdf1260e7931"
+      "blobSha": "484cc9e4199e1a898397cbcca10dfdf1260e7931",
+      "normalizedBlobSha": "cb8ab8205f45eb946f032b237fcc616fc547dc7d"
     },
     {
       "path": "test/church-life-hub-i18n.test.mjs",
@@ -1210,7 +1211,8 @@
     "test/together-page.test.mjs",
     "worship/2026-11-08/index.html",
     "worship/2026-11-08/materials.json",
-    "worship/2026-11-08/worship.js"
+    "worship/2026-11-08/worship.js",
+    "test/church-inline-live.test.mjs"
   ],
   "upstreamTreeContainsExcludedWorkflows": true,
   "originalImportedTrackedFileCount": 208,
@@ -2045,5 +2047,27 @@
     "sourceOwnershipTransferred": false,
     "productionReleaseSwitched": false,
     "legacyRepositoryDeletionAuthorized": false
-  }
+  },
+    "postHomeHeaderReconciliation": {
+      "contract": "ekodi.church-home-header-cleanup.v1",
+      "changeScope": "homepage-only daily-verse DOM and reinjection script; preserve six links and body devotion",
+      "sourceRepository": "topmaster-joseph/ekodi-church",
+      "stackParentPR": 151,
+      "stackParentHeadSha": "9ca89ef9190a61e101bfe0c6129cdc6a668a6a4b",
+      "reviewedUpstreamPR": 153,
+      "reviewedUpstreamHeadSha": "b9e2fdb608c55964438f6c5fa1f895e3c3095c08",
+      "verifiedUpstreamBlobSha": "e0e52a81d11a040ef943bc8411b21262e5b45a8b",
+      "previousCanonicalBlobSha": "50c906bb14756f2ae724c1283852ce86ce17b5e8",
+      "finalCanonicalBlobSha": "181d01fdc21044ee5853e97ec7dee89e6aaf7037",
+      "previousCanonicalTestBlobSha": "484cc9e4199e1a898397cbcca10dfdf1260e7931",
+      "verifiedUpstreamTestBlobSha": "cb8ab8205f45eb946f032b237fcc616fc547dc7d",
+      "finalCanonicalTestBlobSha": "cb8ab8205f45eb946f032b237fcc616fc547dc7d",
+      "exactPreservedCanonicalNormalization": {
+        "sourcePrefix": "에코디",
+        "canonicalText": "커뮤니티 채널 ↗"
+      },
+      "sourceOwnershipTransferred": false,
+      "productionReleaseSwitched": false,
+      "legacyRepositoryDeletionAuthorized": false
+    }
 }
