@@ -209,7 +209,11 @@ login.href=authUrl.toString();
 
 // Reuse the same canonical one-time My EKODI auth handoff as /my/app.js.
 // The OTP proof is never sent to the points API or retained in navigation history.
-async function handoff(){
+// start() can re-enter from onAuthStateChange(SIGNED_IN) while the first
+// verifyOtp is still in flight; share one handoff so the link is redeemed once.
+let handoffOnce=null;
+function handoff(){return handoffOnce||=redeemHandoff();}
+async function redeemHandoff(){
   if(!location.hash.startsWith('#'))return;
   const params=new URLSearchParams(location.hash.slice(1));
   const token=params.get('ekodi_token');
