@@ -283,6 +283,26 @@ export async function writeCanonicalDriveStream(env, options = {}) {
   };
 }
 
+// Restricted Storage Gateway helper: independently query Google Drive file
+// provenance. Never infer a parent or shared-drive ID from the signed receipt.
+export async function readCanonicalDriveMetadata(env, fileId = '') {
+  const id=String(fileId||'').trim();
+  if(!id||!/^[A-Za-z0-9_-]{8,200}$/.test(id))throw new Error('CANONICAL_STORAGE_FILE_ID_REQUIRED');
+  const connection=await primaryConnection(env);
+  const token=await accessToken(env,connection);
+  const metadata=await driveJson(token,`/files/${encodeURIComponent(id)}?supportsAllDrives=true&fields=id,driveId,parents,size,mimeType`);
+  if(metadata?.id!==id||metadata?.driveId!==connection.drive_id||
+    !Array.isArray(metadata.parents)||metadata.parents.length!==1) {
+    throw new Error('CANONICAL_STORAGE_FILE_PROVENANCE_MISMATCH');
+  }
+  const bytes=Number(metadata.size);
+  if(!Number.isSafeInteger(bytes)||bytes<1)throw new Error('CANONICAL_STORAGE_FILE_SIZE_INVALID');
+  return {
+    fileId:id,driveId:metadata.driveId,parentIds:metadata.parents,
+    bytes,mimeType:String(metadata.mimeType||''),
+  };
+}
+
 export async function readCanonicalDriveFile(env, fileId = '') {
   const id=String(fileId||'').trim();
   if(!id||!/^[A-Za-z0-9_-]{8,200}$/.test(id))throw new Error('CANONICAL_STORAGE_FILE_ID_REQUIRED');
