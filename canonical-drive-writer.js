@@ -1,3 +1,4 @@
+import storagePolicy from './config/storage-policy.json' with {type:'json'};
 const DRIVE_UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const encoder = new TextEncoder();
@@ -285,6 +286,86 @@ export async function writeCanonicalDriveStream(env, options = {}) {
 
 // Restricted Storage Gateway helper: independently query Google Drive file
 // provenance. Never infer a parent or shared-drive ID from the signed receipt.
+// Fail-closed read-only proof: the canonical Shared Drive's inherited
+// permission scope must be explicitly reviewed before storing production PII.
+// Approved members come from the canonical policy, not a request or receipt.
+export async function verifyCanonicalBackupDriveAcl(env) {
+  const permitted = new Set((storagePolicy.canonicalSharedDriveApprovedAccounts || [])
+    .map(x=>String(x.email||'').trim().toLowerCase()).filter(Boolean));
+  if(permitted.size < 2 || !permitted.has('joseph@ekodi.kr') ||
+    storagePolicy.sharedDriveMembershipSourceOfTruth !== 'Google Drive permissions.list')
+    throw new Error('CANONICAL_BACKUP_APPROVED_MEMBERS_POLICY_INVALID');
+
+  const [connection, root] = await Promise.all([primaryConnection(env),routeFolder(env,'backup')]);
+  if(String(root.folder_name||'')!=='99_BACKUP')
+    throw new Error('CANONICAL_BACKUP_ROUTE_MISMATCH');
+  const token=await accessToken(env,connection), driveId=connection.drive_id;
+  const permissionParams=new URLSearchParams({
+    supportsAllDrives:'true',pageSize:'1000',
+    fields:'nextPageToken,permissions(type,role,emailAddress,deleted)'
+  });
+  const rootPermissions=await driveJson(token,
+    '/files/'+encodeURIComponent(driveId)+'/permissions?'+permissionParams);
+  const permissions=rootPermissions.permissions;
+  if(rootPermissions.nextPageToken || !Array.isArray(permissions) ||
+    permissions.length===0 || permissions.length>1000)
+    throw new Error('CANONICAL_BACKUP_MEMBERSHIP_INCOMPLETE');
+  const seen=new Set();
+  let stewardOrganizer=false;
+  for(const permission of permissions) {
+    const email=String(permission?.emailAddress||'').trim().toLowerCase();
+    if(permission?.type!=='user'||permission.deleted===true||!permitted.has(email)||
+       seen.has(email)||!['organizer','fileOrganizer','writer','reader','commenter'].includes(permission.role))
+      throw new Error('CANONICAL_BACKUP_MEMBERSHIP_UNAPPROVED');
+    seen.add(email);
+    if(email==='joseph@ekodi.kr'&&permission.role==='organizer')stewardOrganizer=true;
+  }
+  if(!stewardOrganizer)throw new Error('CANONICAL_BACKUP_STEWARD_NOT_ORGANIZER');
+
+  const folder=async(id,name,parent)=>{
+    const item=await driveJson(token,
+      '/files/'+encodeURIComponent(id)+'?supportsAllDrives=true&fields=id,name,parents,driveId,mimeType,hasAugmentedPermissions');
+    if(item?.id!==id || item?.name!==name || item?.driveId!==driveId ||
+      item?.mimeType!=='application/vnd.google-apps.folder' ||
+      !Array.isArray(item?.parents)||item.parents.length!==1 ||
+      item.parents[0]!==parent || item.hasAugmentedPermissions!==false)
+      throw new Error('CANONICAL_BACKUP_FOLDER_SCOPE_UNVERIFIED');
+    return item;
+  };
+  const findFolder=async(parent,name)=>{
+    const params=new URLSearchParams({
+      q:"'"+driveQueryValue(parent)+"' in parents and name = '"+driveQueryValue(name)+
+        "' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+      spaces:'drive',pageSize:'3',supportsAllDrives:'true',
+      includeItemsFromAllDrives:'true',
+      fields:'nextPageToken,files(id,name,parents,driveId,mimeType,hasAugmentedPermissions)'
+    });
+    const found=await driveJson(token,'/files?'+params);
+    if(found.nextPageToken || !Array.isArray(found.files)||found.files.length!==1)
+      throw new Error('CANONICAL_BACKUP_FOLDER_AMBIGUOUS_OR_MISSING');
+    const candidate=found.files[0];
+    await folder(candidate.id,name,parent);
+    return candidate.id;
+  };
+
+  await folder(root.folder_id,'99_BACKUP',driveId);
+  const base=await findFolder(root.folder_id,'SUPABASE_PROD');
+  const names=['ENCRYPTED_DUMPS','MANIFESTS','RESTORE_EVIDENCE'];
+  const entries={};
+  for(const name of names)entries[name]=await findFolder(base,name);
+  return {
+    ok:true,status:'private_drive_acl_and_backup_folders_verified',
+    canonicalDriveId:driveId,backupRootId:root.folder_id,
+    supabaseProdFolderId:base,subfolderIds:entries,
+    approvedMembershipCount:seen.size,
+    publicOrUnknownMembershipAllowed:false,
+    directExtraFolderGrantsAllowed:false,
+    productionSchemaWriteAuthorized:false,
+    backupExportAuthorized:false,
+    pointsActivationAuthorized:false
+  };
+}
+
 export async function readCanonicalDriveMetadata(env, fileId = '') {
   const id=String(fileId||'').trim();
   if(!id||!/^[A-Za-z0-9_-]{8,200}$/.test(id))throw new Error('CANONICAL_STORAGE_FILE_ID_REQUIRED');
