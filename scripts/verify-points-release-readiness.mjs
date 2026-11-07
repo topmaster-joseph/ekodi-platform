@@ -16,6 +16,7 @@ export const POINTS_CONTRACT=Object.freeze([
   'points_sites','points_rules','points_ledger','points_claims','recognition_goals',
   'recognition_read_rpc','recognition_write_rpc','anon_goals_denied','direct_goals_denied',
   'points_tables_secure',
+  'ledger_append_only_enforced','ledger_idempotency_unique',
 ]);
 
 export const SCHEMA_QUERY=String.raw`select
@@ -48,7 +49,23 @@ export const SCHEMA_QUERY=String.raw`select
     where c.relkind in ('r','p')
       and ((n.nspname='public' and c.relname like 'ekodi_point_%')
         or n.nspname='ekodi_points_private')
-  ) as points_tables_secure`;
+  ) as points_tables_secure,
+  -- Ledger mutations must be impossible: fail closed on disabled, missing,
+  -- or misdirected triggers even when RLS and grants still look secure.
+  exists(select 1 from pg_trigger t
+    where t.tgrelid=to_regclass('public.ekodi_point_ledger')
+      and not t.tgisinternal
+      and t.tgname='ekodi_points_ledger_append_only'
+      and t.tgenabled in ('O','A')
+      and t.tgfoid=to_regprocedure('ekodi_points_private.reject_ledger_mutation()')
+      and (t.tgtype & 27)=27
+  ) as ledger_append_only_enforced,
+  -- Replaying a server-verified event must not create another ledger credit.
+  exists(select 1 from pg_constraint c
+    where c.conrelid=to_regclass('public.ekodi_point_ledger')
+      and c.contype='u'
+      and pg_get_constraintdef(c.oid)='UNIQUE (site_id, user_id, event_key)'
+  ) as ledger_idempotency_unique`;
 export const MIGRATION_QUERY=String.raw`select version,name
   from supabase_migrations.schema_migrations
   where name like '%_ekodi_points_%'
