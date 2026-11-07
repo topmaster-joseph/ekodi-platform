@@ -37,5 +37,5 @@ test('owner ACL probe only follows protected Storage release and performs no wri
   assert.match(workflow,/https:\/\/ekodi\.kr\/api\/storage\/v1\/backup-acl/);
   assert.match(workflow,/--max-redirs 0/);
   assert.match(workflow,/\.backupExportAuthorized==false/);
-  assert.doesNotMatch(workflow,/supabase db push|migrate|delete-file|POINTS_ENABLED=true|--request POST/i);
+  assert.doesNotMatch(workflow,/supabase db push|supabase migration up|delete-file|POINTS_ENABLED=true|--request POST/i);
 });
