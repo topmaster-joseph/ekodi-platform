@@ -6,7 +6,7 @@ const template = readFileSync(new URL('../src/index.template.html', import.meta.
 const nav = readFileSync(new URL('../assets/home-refresh.js', import.meta.url), 'utf8');
 
 function themeAnchor(theme) {
-  const anchors = [...template.matchAll(/<a\\b([^>]*\\bclass="mall-editorial-card[^"]*"[^>]*)>([\\s\\S]*?)<\\/a>/g)];
+  const anchors = [...template.matchAll(/<a\b([^>]*\bclass="mall-editorial-card[^"]*"[^>]*)>([\s\S]*?)<\/a>/g)];
   return anchors.find(([, attrs]) => attrs.includes('mall-editorial-' + theme));
 }
 
@@ -30,10 +30,10 @@ test('regional settings card stays distinct from product catalog navigation', ()
 });
 
 test('theme category links use existing Mall history and filter contract', () => {
-  assert.match(nav, /document\\.querySelectorAll\\('a\\[data-filter-target\\]'\\)/);
-  assert.match(nav, /navigate\\('#shop', category\\)/);
-  assert.match(nav, /next\\.searchParams\\.set\\('category', category\\)/);
-  assert.match(nav, /window\\.history\\.pushState/);
-  assert.match(nav, /window\\.addEventListener\\('popstate', syncView\\)/);
-  assert.match(nav, /window\\.addEventListener\\('hashchange', syncView\\)/);
+  assert.match(nav, /document\.querySelectorAll\('a\[data-filter-target\]'\)/);
+  assert.match(nav, /navigate\('#shop', category\)/);
+  assert.match(nav, /next\.searchParams\.set\('category', category\)/);
+  assert.match(nav, /window\.history\.pushState/);
+  assert.match(nav, /window\.addEventListener\('popstate', syncView\)/);
+  assert.match(nav, /window\.addEventListener\('hashchange', syncView\)/);
 });
