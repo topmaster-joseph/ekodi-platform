@@ -865,8 +865,8 @@ export function syncAdminSidebar(root = document, options = {}) {
 const PANEL_TAB_STYLE_ID = 'ekodiAdminPanelTabsStyle';
 const PANEL_TAB_MIN_BLOCKS = 3;
 const PANEL_TAB_MAX_TABS = 8;
-const PANEL_TAB_SKIP = 'style,script,template,dialog,link,meta,.admin-panel-tabs,iframe';
-const PANEL_TAB_PINNED = '.device-panel-head,.admin-panel-head,.section-head:first-child,.hero';
+const PANEL_TAB_SKIP = 'style,script,template,dialog,link,meta,summary,.admin-panel-tabs,iframe';
+const PANEL_TAB_PINNED = '.device-panel-head,.admin-panel-head,.section-head:first-child,.hero,.device-metrics';
 export const ADMIN_PANEL_TAB_PRESETS = Object.freeze({
   devices: Object.freeze([
     { id: 'status', label: '기기 현황', match: '.device-status-tools,.admin-browser-diagnostic', default: true },
@@ -875,7 +875,19 @@ export const ADMIN_PANEL_TAB_PRESETS = Object.freeze({
     { id: 'tools', label: '전용 도구', match: '.device-performance-entry,.tapo-camera-panel,[data-tapo-camera-panel]' },
     { id: 'history', label: '변경 이력', match: '.admin-risk-history' },
   ]),
+  // 기기 현황 안쪽 세부 탭: 핵심 지표는 위에 고정하고, 세부 내용은 지표 바로 아래에서 전환한다.
+  'device-status': Object.freeze([
+    { id: 'list', label: '기기 목록', match: '.device-attention-summary,.device-roster-toolbar,.device-roster-overview,.device-type-filters,#ekodiDeviceList', default: true },
+    { id: 'jobs', label: '작업 관제', match: '#hybridExecutionPanel,.hybrid-execution' },
+    { id: 'browser', label: '브라우저 진단', match: '.admin-browser-diagnostic' },
+    { id: 'wake', label: '전원 복구', match: '.device-wake-control' },
+  ]),
 });
+// 패널 안쪽 묶음에 세부 탭을 적용한다(선택자 → 프리셋).
+const ADMIN_SUBTAB_HOSTS = Object.freeze([{ selector: '.device-status-tools', preset: 'device-status' }]);
+function subtabHostPreset(node) {
+  return ADMIN_SUBTAB_HOSTS.find(host => node.matches?.(host.selector))?.preset || '';
+}
 let panelTabsInstalled = false;
 function ensurePanelTabStyle(doc = document) {
   if (doc.getElementById(PANEL_TAB_STYLE_ID)) return;
@@ -889,7 +901,10 @@ function ensurePanelTabStyle(doc = document) {
 .admin-panel-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 14px;padding:4px;border:1px solid #d9e1ec;border-radius:12px;background:#f5f8fc;position:sticky;top:0;z-index:5}
 .admin-panel-tabs button{border:0;border-radius:9px;padding:8px 14px;background:transparent;color:#334155;font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
 .admin-panel-tabs button:hover{background:#e8eef7}
-.admin-panel-tabs button[aria-selected="true"]{background:#fff;color:#0f172a;box-shadow:0 1px 3px #0f172a26}
+.admin-panel-tabs button[aria-selected="true"]{background:#0f172a;color:#fff;box-shadow:0 1px 3px #0f172a40}
+.admin-panel-tabs.admin-panel-subtabs{position:static;margin:12px 0;background:#fff;border-color:#e2e8f0}
+.admin-panel-tabs.admin-panel-subtabs button{font-size:13px;padding:7px 12px}
+.admin-panel-tabs.admin-panel-subtabs button[aria-selected="true"]{background:#2563eb;color:#fff}
 .admin-panel-tabs button small{margin-left:6px;color:#64748b;font-weight:500}
 @media(max-width:760px){.admin-panel-tabs{flex-wrap:nowrap;overflow-x:auto}}`;
   doc.head?.append(style);
@@ -905,10 +920,10 @@ function panelBlocks(panel) {
   return [...panel.children].filter(node => !node.matches(PANEL_TAB_SKIP));
 }
 function panelTabStorageKey(panel) {
-  return `ekodi-admin-panel-tab:${location.pathname}:${panel.id || panel.dataset.panel || ''}`;
+  return `ekodi-admin-panel-tab:${location.pathname}:${panel.id || panel.dataset.panel || ''}:${subtabHostPreset(panel)}`;
 }
 function planPanelTabs(panel, blocks) {
-  const key = String(panel.dataset.panel || '').split(/\s+/).find(name => ADMIN_PANEL_TAB_PRESETS[name]);
+  const key = subtabHostPreset(panel) || String(panel.dataset.panel || '').split(/\s+/).find(name => ADMIN_PANEL_TAB_PRESETS[name]);
   const plan = new Map();
   const pinned = new Set();
   if (key) {
@@ -958,7 +973,8 @@ function applyPanelTabs(panel, doc = document) {
     for (const node of blocks) { delete node.dataset.ekodiTabHidden; delete node.dataset.ekodiTabPinned; }
     return;
   }
-  if (panel.dataset.ekodiTabbed !== 'true') panel.dataset.ekodiTabbed = 'true';
+  const tabbedValue = subtabHostPreset(panel) ? 'sub' : 'true';
+  if (panel.dataset.ekodiTabbed !== tabbedValue) panel.dataset.ekodiTabbed = tabbedValue;
   ensurePanelTabStyle(doc);
   const stored = (() => { try { return sessionStorage.getItem(panelTabStorageKey(panel)) || ''; } catch { return ''; } })();
   const requested = panel.dataset.ekodiActiveTab || stored;
@@ -990,7 +1006,15 @@ function applyPanelTabs(panel, doc = document) {
       return button;
     }));
   }
-  if (strip.parentElement !== panel) panel.prepend(strip);
+  const subtab = Boolean(subtabHostPreset(panel));
+  if (subtab) {
+    // details 안에서는 flex 순서를 쓰지 않고, 고정 지표 바로 다음에 세부 탭 줄을 둔다.
+    strip.classList.add('admin-panel-subtabs');
+    const anchor = [...plan.pinned].pop() || panel.querySelector(':scope>summary');
+    if (anchor ? strip.previousElementSibling !== anchor : strip.parentElement !== panel) {
+      if (anchor) anchor.insertAdjacentElement('afterend', strip); else panel.prepend(strip);
+    }
+  } else if (strip.parentElement !== panel) panel.prepend(strip);
   for (const node of plan.pinned) {
     if (node.dataset.ekodiTabHidden) delete node.dataset.ekodiTabHidden;
     if (node.dataset.ekodiTabPinned !== 'true') node.dataset.ekodiTabPinned = 'true';
@@ -1009,7 +1033,10 @@ function applyPanelTabs(panel, doc = document) {
 export function refreshAdminPanelTabs(doc = document) {
   for (const panel of doc.querySelectorAll('.content [data-panel]')) {
     if (panel.hidden || panel.classList.contains('hidden-panel')) continue;
-    try { applyPanelTabs(panel, doc); } catch (error) { console.warn('[EKODI admin tabs]', error?.message || error); }
+    try {
+      applyPanelTabs(panel, doc);
+      for (const host of ADMIN_SUBTAB_HOSTS) for (const node of panel.querySelectorAll(host.selector)) applyPanelTabs(node, doc);
+    } catch (error) { console.warn('[EKODI admin tabs]', error?.message || error); }
   }
 }
 export function installAdminPanelTabs(doc = document) {
@@ -1027,7 +1054,8 @@ export function installAdminPanelTabs(doc = document) {
   // 하위 트리 전체를 감시하지 않는다(관리자 성능 기준): 패널 자체의 표시 전환과 직계 블록 추가만 본다.
   const panelObserver = new MutationObserver(schedule);
   const watchPanels = () => {
-    for (const panel of content.querySelectorAll('[data-panel]')) {
+    const hosts = ADMIN_SUBTAB_HOSTS.map(host => host.selector).join(',');
+    for (const panel of content.querySelectorAll(`[data-panel],${hosts}`)) {
       if (watched.has(panel)) continue;
       watched.add(panel);
       panelObserver.observe(panel, { childList: true, attributes: true, attributeFilter: ['class', 'hidden'] });

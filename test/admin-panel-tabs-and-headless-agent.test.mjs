@@ -37,3 +37,11 @@ test('device bootstrap .cmd is served as a download, never rendered as text', as
   assert.match(block, /Content-Disposition: attachment;/);
   assert.match(block, /Content-Type: application\/octet-stream/);
 });
+
+test('기기 현황 detail is split into sub-tabs right below the pinned metrics', () => {
+  assert.match(sidebar, /'device-status': Object\.freeze\(\[/);
+  for (const label of ['기기 목록', '작업 관제', '브라우저 진단', '전원 복구']) assert.ok(sidebar.includes(`label: '${label}'`), label);
+  assert.match(sidebar, /selector: '\.device-status-tools', preset: 'device-status'/);
+  assert.match(sidebar, /\.device-metrics'/);
+  assert.match(sidebar, /anchor\.insertAdjacentElement\('afterend', strip\)/);
+});
