@@ -79,7 +79,16 @@ test('devotion, notices and schedule keep exact same six main links and one curr
     assert.deepEqual(verifyChurchPublicSubpageNavigation(pageHtml(page),page),
       {contract:'six-item-subpage',page,primaryItems:6});
     const source=readFileSync(new URL('../sites/ekodi-church/'+page+'/index.html',import.meta.url),'utf8');
-    assert.equal(verifyChurchPublicSubpageNavigation(source,page).page,page);
+    // The central 223-file reviewed import is a pre-calendar snapshot while
+    // independent Church Pages still owns the deployed source. It must NOT be
+    // mistaken for a reviewed current Church calendar or a successful release.
+    // Source and live validations in the guarded Pages workflow stay strict.
+    if(page==='schedule'&&!source.includes('data-church-shared-schedules')){
+      assert.throws(()=>verifyChurchPublicSubpageNavigation(source,page),
+        /public schedule content\\/role guard missing: data-church-shared-schedules/);
+    }else{
+      assert.equal(verifyChurchPublicSubpageNavigation(source,page).page,page);
+    }
   }
 });
 
