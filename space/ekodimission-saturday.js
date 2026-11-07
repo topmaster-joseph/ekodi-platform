@@ -280,9 +280,14 @@
       button.setAttribute('aria-label',year+'년 '+month+'월 '+day+'일, 일정 '+count+'건');
       button.setAttribute('aria-pressed',String(iso===scheduleCalendar.selected));
       if(iso===today())button.classList.add('is-today');
-      if(count){button.classList.add('has-event');button.append(make('span','mission-calendar-dot'));}
+      if(count)button.classList.add('has-event');
       button.addEventListener('click',()=>{
-        scheduleCalendar.selected=iso;renderScheduleCalendar();selectedScheduleDay();
+        scheduleCalendar.selected=iso;
+        for(const dateButton of grid.querySelectorAll('button[data-date]')){
+          dateButton.setAttribute('aria-pressed',String(dateButton.dataset.date===iso));
+        }
+        selectedLabel.textContent=formatDate(iso)+' 일정';
+        selectedScheduleDay();
       });
       grid.append(button);
     }
@@ -295,7 +300,8 @@
     renderScheduleCalendar();selectedScheduleDay();
   }
   function showScheduleCalendar(items,error=''){
-    scheduleCalendar.items=items;scheduleCalendar.error=error;
+    scheduleCalendar.items=[...items].sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||'')||a.title.localeCompare(b.title));
+    scheduleCalendar.error=error;
     renderScheduleCalendar();selectedScheduleDay();
   }
   function draw(kind,items,error=''){
