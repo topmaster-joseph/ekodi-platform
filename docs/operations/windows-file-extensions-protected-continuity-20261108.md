@@ -20,3 +20,7 @@ The source worker revision passed its own full CI and Device Control Windows CI.
 5. Agent updater references `config/ekodi-device-agent-release.json`; any SHA256-pinned canary rollout requires its own authorized manifest, version/commit/hash checks and positive postrestart heartbeat evidence. Never forge an approved release manifest.
 
 No secrets, credentials, bypass labels, statuses or privileged deployment authority are introduced here.
+
+## Post-sync authentic check request #2
+
+The owner-connected official HEAD `1cbfb1c48bd8fc73ea76d1fb8acfbfc55b3496cb` passed real full CI and Device Control Windows CI. EKODI Orchestrator subsequently synchronized current `main` into the protected branch, producing a new bot-authored head with `action_required` checks. Those checks are **not** equivalent to a test pass. This owner-connected documentation-only continuation requests genuine required checks on the newly synchronized source tree; release remains exclusively EKODI-controlled and blocked until exact current-head evidence exists. No runtime files or security policy are modified by this checkpoint.
