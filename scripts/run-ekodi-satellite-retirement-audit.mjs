@@ -20,6 +20,9 @@ const CONTRACT='ekodi.orchestrator-satellite-retirement-audit.v1';
 const EKODI='EKODI Orchestrator';
 const SOURCE='EKODI Native Operations Watch';
 const VALID_RUN_MODES=new Set(['daily','manual']);
+const observeFixedPublicMarkers=()=>auditSatelliteLiveSourceMarkers({
+  fetcher:(url,options)=>fetch(url,{...options,signal:AbortSignal.timeout(12000)})
+});
 
 export function classifyEkodiSatelliteAudit(retirement,markers,{runMode='daily'}={}) {
   if(!VALID_RUN_MODES.has(runMode)) throw Error('invalid-ekodi-satellite-audit-run-mode');
@@ -70,7 +73,7 @@ export function classifyEkodiSatelliteAudit(retirement,markers,{runMode='daily'}
 
 export async function collectEkodiSatelliteAudit({
   inspect=inspectCurrentRepositoryRetirements,
-  observe=auditSatelliteLiveSourceMarkers,
+  observe=observeFixedPublicMarkers,
   runMode='daily'
 }={}) {
   const retirement=await inspect();
@@ -96,7 +99,7 @@ export function renderEkodiSatelliteAuditSummary(audit) {
 
 export async function runEkodiSatelliteAudit({
   runMode='daily',outputDir='ekodi-satellite-audit',
-  inspect=inspectCurrentRepositoryRetirements,observe=auditSatelliteLiveSourceMarkers
+  inspect=inspectCurrentRepositoryRetirements,observe=observeFixedPublicMarkers
 }={}) {
   const audit=await collectEkodiSatelliteAudit({inspect,observe,runMode});
   // Untrusted source evidence is validated by the report builder before any
