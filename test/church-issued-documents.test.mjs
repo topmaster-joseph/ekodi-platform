@@ -29,3 +29,13 @@ test('issued documents are private: dedicated R2 binding, admin-only routes, saf
   assert.match(ui, /발급서류 올리기/);
   assert.doesNotMatch(ui, /https:\/\/api\.ekodi\.kr\/api\/church\/admin\/reports\/documents\/issued/);
 });
+
+test('reports/documents API resolves staff through staff-access so both platform super admins get full access', () => {
+  const control = read('church-reports-control.js');
+  assert.match(control, /searchParams\.set\('scope', 'staff-access'\)/);
+  assert.doesNotMatch(control, /searchParams\.set\('table', 'church_staff'\)/);
+  const pastorApi = read('supabase/functions/church-pastor-api/index.ts');
+  assert.match(pastorApi, /PERMANENT_SUPER_ADMINS\.has\(normalizedEmail\)/);
+  assert.match(pastorApi, /role:'senior_pastor',active:true,source:'platform_super_admin'/);
+  assert.match(pastorApi, /scope'\)==='staff-access'/);
+});
