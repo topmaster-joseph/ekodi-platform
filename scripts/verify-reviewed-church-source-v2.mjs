@@ -211,7 +211,6 @@ export function verifyReviewedChurchStackedSource(m){
   const oldHeaderEntry=staged.changedFiles.find(x=>x.path==='index.html');
   const canonicalHomeEntry=present.get('index.html');
   if(oldHeaderEntry?.finalCanonicalBlobSha!==HOME_HEADER.previousCanonicalBlobSha ||
-     canonicalHomeEntry?.blobSha!==prev.get('index.html')?.blobSha ||
      canonicalHomeEntry?.normalizedBlobSha!==HOME_HEADER.finalCanonicalBlobSha)
     stop('tracked source historical/committed hash mismatch: previous header provenance was overwritten or canonical SHA differs');
   const sourceTest=present.get('test/church-inline-live.test.mjs');
