@@ -29,12 +29,16 @@ function constantTimeEqual(a, b) {
   return diff === 0;
 }
 
+function sharedKeyAuthorized(request,env) {
+  const expected=String(env.EKODI_STORAGE_GATEWAY_KEY||'').trim();
+  const supplied=String(request.headers.get('x-ekodi-storage-key')||'').trim();
+  return expected && constantTimeEqual(expected,supplied);
+}
 function authorized(request, env) {
-  const url=new URL(request.url);
-  if(url.hostname==='storage.internal')return true;
-  const expected = String(env.EKODI_STORAGE_GATEWAY_KEY || '').trim();
-  const supplied = String(request.headers.get('x-ekodi-storage-key') || '').trim();
-  return expected && constantTimeEqual(expected, supplied);
+  // Only canonical Storage Worker may trust the private service-binding
+  // virtual host. Its public API proxy must independently require a key.
+  if(new URL(request.url).hostname==='storage.internal')return true;
+  return sharedKeyAuthorized(request,env);
 }
 
 function localCanonicalRuntime(env) {
@@ -205,7 +209,7 @@ export async function handleStorageGateway(request, env = {}) {
   // before dispatch: the internal binding intentionally trusts service callers.
   if (!localCanonicalRuntime(env)) {
     const publicHealth=request.method==='GET' && url.pathname===`${STORAGE_PREFIX}/health`;
-    if (!publicHealth && !authorized(request,env)) {
+    if (!publicHealth && !sharedKeyAuthorized(request,env)) {
       return json({error:'Storage Gateway 인증이 필요합니다.',code:'STORAGE_UNAUTHORIZED'},401);
     }
     return proxyToStorageControl(request,env);

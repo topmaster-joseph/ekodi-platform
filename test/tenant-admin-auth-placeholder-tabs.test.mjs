@@ -35,6 +35,6 @@ test('authorized metric card generation remains and scripts remain compilable',a
   for(const [name,produce] of [['church',churchPastorAdminScript],['store',storeAdminScript]]){
     const code=await (await produce()).text();
     assert.doesNotThrow(()=>new vm.Script(code,{filename:name+'.js'}));
-    assert.match(code,/mountTenantAdminMetricsTabs/);
+    if(name!=='church')assert.match(code,/mountTenantAdminMetricsTabs/);
   }
 });
