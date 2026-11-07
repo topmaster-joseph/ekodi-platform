@@ -182,6 +182,41 @@ export function verifyReviewedChurchStackedSource(m){
        current.blobSha!==oldSha||current.normalizedBlobSha!==newSha)
       stop('PR150/151 worship SHA or original audit drift: '+path);
   }
+  // PR153 extends the candidate without rewriting #142/#143/#144/#146/#149 or PR150/151 provenance.
+  // The exact upstream source differs only by the previously reviewed shorter
+  // central "커뮤니티 채널" label; restoring it must recover the pinned upstream blob SHA.
+  const header=m.postHomeHeaderReconciliation;
+  const normalization={sourceText:'에코디커뮤니티 채널 ↗',canonicalText:'커뮤니티 채널 ↗'};
+  if(header?.contract!=='ekodi.church-home-header-cleanup.v1' ||
+     header.changeScope!=='homepage-only daily-verse DOM and reinjection script; preserve six links and body devotion' ||
+     header.sourceRepository!=='topmaster-joseph/ekodi-church' ||
+     header.reviewedUpstreamPR!==HOME_HEADER.sourcePR ||
+     header.reviewedUpstreamHeadSha!==HOME_HEADER.sourceHeadSha ||
+     header.stackParentPR!==HOME_HEADER.parentPR ||
+     header.stackParentHeadSha!==HOME_HEADER.parentHeadSha ||
+     header.verifiedUpstreamBlobSha!==HOME_HEADER.sourceBlobSha ||
+     header.previousCanonicalBlobSha!==HOME_HEADER.previousCanonicalBlobSha ||
+     header.finalCanonicalBlobSha!==HOME_HEADER.finalCanonicalBlobSha ||
+     !matching(header.exactPreservedCanonicalNormalization,normalization) ||
+     header.sourceOwnershipTransferred!==false ||
+     header.productionReleaseSwitched!==false ||
+     header.legacyRepositoryDeletionAuthorized!==false)
+    stop('unreviewed or unauthorized homepage header source reconciliation');
+  const oldHeaderEntry=staged.changedFiles.find(x=>x.path==='index.html');
+  const canonicalHomeEntry=present.get('index.html');
+  if(oldHeaderEntry?.finalCanonicalBlobSha!==HOME_HEADER.previousCanonicalBlobSha ||
+     canonicalHomeEntry?.blobSha!==prev.get('index.html')?.blobSha ||
+     canonicalHomeEntry?.normalizedBlobSha!==HOME_HEADER.finalCanonicalBlobSha)
+    stop('previous header provenance was overwritten or canonical SHA differs');
+  const homeBytes=readFileSync(resolve(root,'index.html'));
+  const homeText=homeBytes.toString('utf8');
+  const upstreamHome=homeText.replace('>커뮤니티 채널 ↗</a>','>에코디커뮤니티 채널 ↗</a>');
+  if(upstreamHome===homeText ||
+     blobHash(homeBytes)!==HOME_HEADER.finalCanonicalBlobSha ||
+     blobHash(Buffer.from(upstreamHome))!==HOME_HEADER.sourceBlobSha ||
+     /class="daily-verse"|<script[^>]+church-daily-verse\.js/.test(homeText) ||
+     !/<a href="\/ekodichurch\/devotion\/">매일묵상<\/a>/.test(homeText))
+    stop('PR153 upstream source or removed header Scripture is unverified');
   const preservedWorshipPaths=new Set(POST_MERGE_WORSHIP.map(([path])=>path));
   for(const [path,original] of prev){
     const current=present.get(path);
