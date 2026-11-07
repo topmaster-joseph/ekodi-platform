@@ -15,3 +15,7 @@ During reconciliation with concurrent platform main changes, official recovery w
 - Automated tests use mocked Cloudflare responses; no provider app, user membership, point balance, financial or database state is modified by this source change.
 
 Official protected merge remains EKODI Orchestrator-owned. Real dev browser E2E execution, ephemeral fixture cleanup, genuine encrypted production backup/independent restore/ACL evidence, production schema release authority and points activation are **not** implied by a merged security patch. No economic rewards are authorized.
+
+## Latest-main synchronization checkpoint
+
+Official recovery previously passed authenticated CI and Orchestrator at commit `510758ee18ebf0b57fa1b9614a94aa9fecccf884` (CI run `42392515874`, all required checks success). Concurrent platform merges synchronized the *same official recovery branch* to `40382b6861f10f7654dff723559479e279746a4f`; GitHub-generated checks on this bot sync show `action_required` rather than authenticated executions. This documentation-only continuation asks for new owner-connected required checks on current main-equivalent HEAD. The functional least-privilege code, permissions, services, secrets, backup state and financial policy do not change. Actual protected merge and browser E2E must remain distinct evidence gates.
