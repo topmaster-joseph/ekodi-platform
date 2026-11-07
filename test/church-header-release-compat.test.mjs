@@ -85,7 +85,7 @@ test('devotion, notices and schedule keep exact same six main links and one curr
     // Source and live validations in the guarded Pages workflow stay strict.
     if(page==='schedule'&&!source.includes('data-church-shared-schedules')){
       assert.throws(()=>verifyChurchPublicSubpageNavigation(source,page),
-        /public schedule content\\/role guard missing: data-church-shared-schedules/);
+        /public schedule content\/role guard missing: data-church-shared-schedules/);
     }else{
       assert.equal(verifyChurchPublicSubpageNavigation(source,page).page,page);
     }
