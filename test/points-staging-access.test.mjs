@@ -26,3 +26,84 @@ test('workflow issues the token when secrets are absent and always removes it', 
   assert.match(wf,/if: always\(\) && env\.E2E_ACCESS_EPHEMERAL == '1'\n\s+run: node scripts\/points-staging-access\.mjs close/);
   assert.doesNotMatch(wf,/for name in [^\n]*CF_ACCESS_CLIENT_ID/);
 });
+
+
+// Exercise the real CLI with all Cloudflare endpoints mocked. These tests
+// never create/deactivate actual Access apps or expose credential values.
+const mockedAccessProcess=String.raw\`
+const actions=[];
+const own='ekodi-points-e2e-'+process.env.POINTS_E2E_RUN;
+const json=result=>new Response(JSON.stringify({success:true,result}),{
+  status:200,headers:{'content-type':'application/json'}
+});
+globalThis.fetch=async (input,init={})=>{
+  const url=String(input),method=init.method||'GET';
+  if(url.endsWith('/api/session'))return new Response(null,{status:200});
+  if(url.includes('/access/apps?per_page=200'))
+    return json([{id:'app1',name:'staging-only',domain:'ekodi-admin-staging.ekodi-development.workers.dev'}]);
+  if(url.endsWith('/access/apps/app1/policies')&&method==='POST'){
+    actions.push({method,url,body:JSON.parse(init.body)});
+    return json({id:'created-policy'});
+  }
+  if(url.endsWith('/access/apps/app1/policies?per_page=100'))
+    return json([{id:'same-run',name:own},{id:'another-run',name:'ekodi-points-e2e-other-run'}]);
+  if(url.endsWith('/access/service_tokens?per_page=100'))
+    return json([{id:'same-token',name:own},{id:'other-token',name:'ekodi-points-e2e-other-run'}]);
+  if(method==='DELETE'&&url.includes('/access/')){
+    actions.push({method,url});
+    return json(null);
+  }
+  throw new Error('UNEXPECTED_MOCK_API:'+method+':'+url);
+};
+process.argv=[process.execPath,'scripts/points-staging-access.mjs',process.env.TEST_ACCESS_MODE];
+await import('./scripts/points-staging-access.mjs');
+console.log('ACCESS_PROBE='+JSON.stringify(actions));
+\`;
+function runMockAccess(mode,extra={}) {
+  return spawnSync(process.execPath,['--input-type=module','-e',mockedAccessProcess],{
+    env:{...process.env,
+      CLOUDFLARE_ACCOUNT_ID:'46aad4738793fbaca88574832a2ccc0f',
+      CLOUDFLARE_API_TOKEN:'unit-test-cloudflare-development',
+      POINTS_E2E_RUN:'run-123456',
+      TEST_ACCESS_MODE:mode,
+      ...extra,
+    },encoding:'utf8',timeout:10000,
+  });
+}
+function actionsOf(result){
+  const raw=result.stdout.split(/\r?\n/).find(line=>line.startsWith('ACCESS_PROBE='));
+  assert.ok(raw,result.stdout+'\n'+result.stderr);
+  return JSON.parse(raw.slice('ACCESS_PROBE='.length));
+}
+
+test('static E2E grants only the exact protected service-token ID, never every account token',()=>{
+  const run=runMockAccess('open-static',{STATIC_ACCESS_SERVICE_TOKEN_ID:'approved-token-123456'});
+  assert.equal(run.status,0,run.stderr+'\n'+run.stdout);
+  const calls=actionsOf(run);
+  assert.equal(calls.length,1);
+  assert.equal(calls[0].body.name,'ekodi-points-e2e-run-123456');
+  assert.deepEqual(calls[0].body.include,[{service_token:{token_id:'approved-token-123456'}}]);
+  assert.equal(calls[0].body.decision,'non_identity');
+  assert.doesNotMatch(JSON.stringify(calls),/any_valid_service_token/);
+});
+test('missing protected static token ID rejects before any Access mutation',()=>{
+  const run=runMockAccess('open-static',{STATIC_ACCESS_SERVICE_TOKEN_ID:''});
+  assert.notEqual(run.status,0);
+  assert.match(run.stdout+run.stderr,/STATIC_ACCESS_SERVICE_TOKEN_ID is required/);
+  assert.doesNotMatch(run.stdout,/ACCESS_PROBE=/);
+});
+test('cleanup cannot delete any other E2E run policy or service token',()=>{
+  const run=runMockAccess('close',{STATIC_ACCESS_SERVICE_TOKEN_ID:''});
+  assert.equal(run.status,0,run.stderr+'\n'+run.stdout);
+  const calls=actionsOf(run);
+  assert.deepEqual(calls.filter(x=>x.method==='DELETE').map(x=>x.url.split('/').slice(-2).join('/')),
+    ['policies/same-run','service_tokens/same-token']);
+  assert.doesNotMatch(JSON.stringify(calls),/another-run|other-token/);
+});
+test('workflow cannot use a static Access credential without its exact token ID',()=>{
+  assert.match(wf,/STATIC_ACCESS_SERVICE_TOKEN_ID: \$\{\{ secrets\.CF_ACCESS_STAGING_SERVICE_TOKEN_ID \}\}/);
+  assert.match(wf,/&& \[ -n "\$\{STATIC_ACCESS_SERVICE_TOKEN_ID:-\}" \]/);
+  assert.doesNotMatch(script,/any_valid_service_token:\s*\{\}/);
+  assert.match(script,/String\(p\.name\|\|''\)===name/);
+  assert.match(script,/String\(t\.name\|\|''\)===name/);
+});
