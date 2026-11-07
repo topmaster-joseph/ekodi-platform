@@ -189,7 +189,7 @@ export function verifyReviewedChurchStackedSource(m){
   // The exact upstream source differs only by the previously reviewed shorter
   // central "커뮤니티 채널" label; restoring it must recover the pinned upstream blob SHA.
   const header=m.postHomeHeaderReconciliation;
-  const normalization={sourceText:'에코디커뮤니티 채널 ↗',canonicalText:'커뮤니티 채널 ↗'};
+  const normalization={sourcePrefix:'에코디',canonicalText:'커뮤니티 채널 ↗'};
   if(header?.contract!=='ekodi.church-home-header-cleanup.v1' ||
      header.changeScope!=='homepage-only daily-verse DOM and reinjection script; preserve six links and body devotion' ||
      header.sourceRepository!=='topmaster-joseph/ekodi-church' ||
@@ -225,7 +225,7 @@ export function verifyReviewedChurchStackedSource(m){
     stop('PR153 live header regression test source is unverified');
   const homeBytes=readFileSync(resolve(root,'index.html'));
   const homeText=homeBytes.toString('utf8');
-  const upstreamHome=homeText.replace('>커뮤니티 채널 ↗</a>','>에코디커뮤니티 채널 ↗</a>');
+  const upstreamHome=homeText.replace('>'+normalization.canonicalText+'</a>', '>'+normalization.sourcePrefix+normalization.canonicalText+'</a>');
   if(upstreamHome===homeText ||
      blobHash(homeBytes)!==HOME_HEADER.finalCanonicalBlobSha ||
      blobHash(Buffer.from(upstreamHome))!==HOME_HEADER.sourceBlobSha ||
