@@ -41,8 +41,13 @@ const riskFixture=()=>({
   observedAt:'2026-11-08T00:30:00.000Z',totalRegisteredSatellites:6,
   possibleActiveLegacyWriters:2,unverifiedRepositoryCount:4,
   repositoryDeletionAuthorized:false,anyRepositoryDeleted:false,
-  repositories:REGISTERED_SATELLITES.map(repository=>({
-    repository,status:'unverified-no-runtime-certification',deletionDecision:'retain'
+  providerWorkflowActivationChecked:false,privateRepositoryWorkflowsChecked:false,
+  cloudflareSourceBindingChecked:false,credentialOrWebhookInventoryChecked:false,
+  repositories:REGISTERED_SATELLITES.map((repository,index)=>({
+    repository,
+    observations:index<2 ? [{status:'possible-active-production-deployer'}] : [],
+    status:index<2 ? 'review-required-legacy-writer':'unverified-no-runtime-certification',
+    deletionDecision:'retain'
   }))
 });
 
