@@ -140,10 +140,17 @@ jobs:
           done
           printf '%s' "$session" | jq -e '.role' >/dev/null 2>&1 || { echo '::error::staging admin session was not accepted (see warnings above)'; exit 1; }
           printf '%s' "$session" | jq -e '.role=="super_admin"' >/dev/null
-          for ep in overview governance; do
-            code="$(curl -sS -o /tmp/g.json -w '%{http_code}' -H "cf-access-client-id: ${CF_ACCESS_CLIENT_ID:-}" -H "cf-access-client-secret: ${CF_ACCESS_CLIENT_SECRET:-}" -H "Authorization: Bearer $token" "$ADMIN_STAGING/api/control/points/$ep" || true)"
-            echo "::notice::admin points $ep -> $code $(jq -c '{error,keys:(keys)}' /tmp/g.json 2>/dev/null | head -c 300) claims=$(jq -c '.governance.claims // .governance.pending_claims // empty | length' /tmp/g.json 2>/dev/null)"
+          # A freshly added Access policy reaches Cloudflare edges unevenly; wait
+          # until the points API answers consistently before driving the browser.
+          ok=0
+          for attempt in $(seq 1 30); do
+            code="$(curl -sS -o /tmp/g.json -w '%{http_code}' -H "cf-access-client-id: ${CF_ACCESS_CLIENT_ID:-}" -H "cf-access-client-secret: ${CF_ACCESS_CLIENT_SECRET:-}" -H "Authorization: Bearer $token" "$ADMIN_STAGING/api/control/points/governance" || true)"
+            if [ "$code" = 200 ]; then ok=$((ok+1)); else ok=0; fi
+            [ "$ok" -ge 5 ] && break
+            sleep 4
           done
+          echo "::notice::admin points governance -> $code (consecutive ok $ok) $(jq -c '{error}' /tmp/g.json 2>/dev/null | head -c 200)"
+          [ "$ok" -ge 5 ] || { echo '::error::staging points API did not stabilise behind Access'; exit 1; }
           echo "POINTS_E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
           echo 'Ephemeral development fixtures, member links and staging admin session ready.'
 
