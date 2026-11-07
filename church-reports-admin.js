@@ -69,5 +69,32 @@
     root.querySelectorAll('[data-doc-archive]').forEach(button=>button.addEventListener('click',async()=>{if(!confirm('이 문서를 목록에서 내릴까요? 드라이브 원본은 그대로 남습니다.'))return;try{const r=await fetch(`${DOC_API}/${encodeURIComponent(button.dataset.docArchive)}/archive`,{method:'POST',headers:docHeaders()});if(!r.ok)throw new Error(`HTTP ${r.status}`);await loadDocuments()}catch(err){alert(`처리 실패: ${err.message}`)}}));
     root.querySelector('#churchDocForm')?.addEventListener('submit',async event=>{event.preventDefault();const body=Object.fromEntries(new FormData(event.target).entries());try{const r=await fetch(DOC_API,{method:'POST',headers:docHeaders(),body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);await loadDocuments()}catch(err){alert(`등록 실패: ${err.message}`)}});
   }
+  // 발급서류: 업로드해 두고 다음 제출 때 '최근서류'를 그대로 다시 쓴다.
+  const ISSUED_API=`${API}/api/church/admin/reports/documents/issued`;
+  const sizeText=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
+  async function loadIssued(){
+    const box=document.querySelector('#churchIssuedRoot');if(!box)return;
+    let data;
+    try{const r=await fetch(ISSUED_API,{headers:docHeaders(),cache:'no-store'});data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||`HTTP ${r.status}`)}
+    catch(err){box.innerHTML=`<h2>발급서류</h2><p class="empty">발급서류를 불러오지 못했습니다: ${esc(err.message)}</p>`;return}
+    const docs=Array.isArray(data.documents)?data.documents:[];const types=Array.isArray(data.types)?data.types:[];
+    const latest=docs.filter(d=>d.latest),history=docs.filter(d=>!d.latest);
+    const row=d=>`<tr><td>${esc(d.type)}</td><td>${esc(d.holder||'-')}</td><td>${esc(d.issuedOn)}</td><td>${esc(d.title)}</td><td><button class="button" type="button" data-issued-download="${esc(d.id)}" data-name="${esc(d.fileName)}">내려받기</button> <small>${esc(sizeText(d.size))}</small></td><td>${esc(d.note)}</td><td><button class="button" type="button" data-issued-archive="${esc(d.id)}">목록에서 내리기</button></td></tr>`;
+    const head='<thead><tr><th>종류</th><th>대상자</th><th>발급일</th><th>제목</th><th>파일</th><th>비고</th><th></th></tr></thead>';
+    box.innerHTML=`<h2>발급서류 <small>· 최근서류</small></h2><p class="empty">건강보험료 납부확인서·소득금액증명·통장사본 등 발급받은 서류를 올려 두면, 종류·대상자별 가장 최근 발급분이 '최근서류'로 표시됩니다. 파일은 목회자 관리자만 내려받을 수 있습니다.</p>
+      <div class="table-wrap"><table>${head}<tbody>${latest.map(row).join('')||'<tr><td colspan="7">아직 올린 발급서류가 없습니다.</td></tr>'}</tbody></table></div>
+      ${history.length?`<details><summary>이전 발급분 ${history.length}건</summary><div class="table-wrap"><table>${head}<tbody>${history.map(row).join('')}</tbody></table></div></details>`:''}
+      <details class="church-doc-add" open><summary>발급서류 올리기</summary><form id="churchIssuedForm"><label>종류<select name="type">${types.map(t=>`<option>${esc(t)}</option>`).join('')}</select></label><label>대상자(예: 본인·배우자·교회)<input name="holder" maxlength="60"></label><label>발급일<input name="issuedOn" type="date" required></label><label>제목<input name="title" maxlength="200" placeholder="예: 2026년 11월 건강보험료 납부확인서"></label><label>파일(PDF·JPG·PNG, 10MB 이하)<input name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required></label><label>비고<input name="note" maxlength="500"></label><button class="button primary" type="submit">올리기</button><p class="empty" data-issued-status></p></form></details>`;
+    box.querySelectorAll('[data-issued-download]').forEach(button=>button.addEventListener('click',async()=>{
+      try{const r=await fetch(`${ISSUED_API}/${encodeURIComponent(button.dataset.issuedDownload)}/file`,{headers:docHeaders(),cache:'no-store'});if(!r.ok)throw new Error(`HTTP ${r.status}`);
+        const url=URL.createObjectURL(await r.blob());const a=document.createElement('a');a.href=url;a.download=button.dataset.name||'document';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}
+      catch(err){alert(`내려받기 실패: ${err.message}`)}}));
+    box.querySelectorAll('[data-issued-archive]').forEach(button=>button.addEventListener('click',async()=>{if(!confirm('이 발급서류를 목록에서 내릴까요?'))return;try{const r=await fetch(`${ISSUED_API}/${encodeURIComponent(button.dataset.issuedArchive)}/archive`,{method:'POST',headers:docHeaders()});if(!r.ok)throw new Error(`HTTP ${r.status}`);await loadIssued()}catch(err){alert(`처리 실패: ${err.message}`)}}));
+    box.querySelector('#churchIssuedForm')?.addEventListener('submit',async event=>{event.preventDefault();const status=box.querySelector('[data-issued-status]');status.textContent='올리는 중입니다…';
+      const headers=new Headers();if(token())headers.set('authorization',`Bearer ${token()}`);
+      try{const r=await fetch(ISSUED_API,{method:'POST',headers,body:new FormData(event.target)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);await loadIssued()}
+      catch(err){status.textContent=`올리기 실패: ${err.message}`}});
+  }
+  window.addEventListener('ekodi:church-documents-ready',()=>{const root=document.querySelector('#churchDocumentsRoot');if(root&&!document.querySelector('#churchIssuedRoot')){const box=document.createElement('section');box.id='churchIssuedRoot';box.className='church-reports-admin';box.innerHTML='<p class="loading">발급서류를 불러오고 있습니다.</p>';root.after(box)}void loadIssued()});
   window.addEventListener('ekodi:church-documents-ready',loadDocuments);
 })();

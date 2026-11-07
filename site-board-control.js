@@ -500,17 +500,35 @@ export function parseEkodiPublicSchedule(row,today=missionKstToday()){
   const source=row.board_id==='site:ekodichurch:main'?'ekodichurch':'ekodimission';
   const expected=source==='ekodichurch'?'schedule':'mission-schedule';
   if(row.category_id!==expected)return null;
-  const lines=String(row.body||'').replace(/\r/g,'').split('\n');
-  const when=lines[0]?.match(/^일정:\s*(\d{4}-\d{2}-\d{2})\s+([01]\d|2[0-3]):([0-5]\d)$/);
-  const place=lines[1]?.match(/^장소:\s*(.{1,160})$/);
-  if(!when||!place||when[1]<today||!place[1].trim())return null;
-  const parsed=new Date(when[1]+'T00:00:00Z');
-  if(Number.isNaN(parsed.getTime())||parsed.toISOString().slice(0,10)!==when[1])return null;
+  // Both boards retain their own write contract: Church's official editor stores
+  // JSON, while Mission's official editor stores the two-line human-readable form.
+  // Never return a whole body/description: only approved public schedule metadata.
+  const raw=String(row.body||'');
+  let date='',time='',venue='';
+  if(raw.trimStart().startsWith('{')){
+    try{
+      const value=JSON.parse(raw);
+      if(value&&typeof value==='object'&&!Array.isArray(value)){
+        date=typeof value.date==='string'?value.date:'';
+        time=typeof value.time==='string'?value.time:'';
+        venue=typeof value.venue==='string'?value.venue.trim():'';
+      }
+    }catch{return null;}
+  }else{
+    const lines=raw.replace(/\r/g,'').split('\n');
+    const when=lines[0]?.match(/^일정:\s*(\d{4}-\d{2}-\d{2})\s+([01]\d|2[0-3]):([0-5]\d)$/);
+    const place=lines[1]?.match(/^장소:\s*(.{1,160})$/);
+    if(!when||!place)return null;
+    date=when[1];time=when[2]+':'+when[3];venue=place[1].trim();
+  }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)||
+    !venue||venue.length>160||date<today)return null;
+  const parsed=new Date(date+'T00:00:00Z');
+  if(Number.isNaN(parsed.getTime())||parsed.toISOString().slice(0,10)!==date)return null;
   const id=Number(row.id),title=clean(row.title,160);
   if(!Number.isSafeInteger(id)||id<=0||!title)return null;
   return {id,source,sourceLabel:source==='ekodichurch'?'에코디교회':'에코디선교회',
-    date:when[1],time:when[2]+':'+when[3],venue:place[1].trim(),title,
-    url:'/'+source+'/board/post/'+id,kind:'official-post'};
+    date,time,venue,title,url:'/'+source+'/board/post/'+id,kind:'official-post'};
 }
 async function readSharedPublicSchedules(env,instance){
   const today=missionKstToday(),missionId=boardId('ekodimission'),churchId=boardId('ekodichurch');

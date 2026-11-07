@@ -98,6 +98,10 @@
       </div>
       <div class="mission-calendar-weekdays" aria-hidden="true"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
       <div class="mission-calendar-days" data-mission-calendar-days role="group" aria-label="날짜 선택"></div>
+      <div class="mission-calendar-legend" aria-label="일정 출처 표시">
+        <span data-mission-calendar-origin="ekodichurch">교회 일정</span>
+        <span data-mission-calendar-origin="ekodimission">선교회 일정</span>
+      </div>
     </div>
     <h3 class="mission-calendar-selection" data-mission-selected-label>선택한 날짜의 일정</h3>
     <ol data-mission-board-items aria-live="polite"><li class="mission-home-board-empty">주요일정을 확인하고 있습니다.</li></ol>
