@@ -293,7 +293,7 @@ export async function verifyCanonicalBackupDriveAcl(env) {
   const permitted = new Set((storagePolicy.canonicalSharedDriveApprovedAccounts || [])
     .map(x=>String(x.email||'').trim().toLowerCase()).filter(Boolean));
   if(permitted.size < 2 || !permitted.has('joseph@ekodi.kr') ||
-    storagePolicy.sharedDriveMembershipSourceOfTruth !== 'Google Drive permissions.list')
+    !String(storagePolicy.sharedDriveMembershipSourceOfTruth||'').startsWith('Google Drive permissions.list'))
     throw new Error('CANONICAL_BACKUP_APPROVED_MEMBERS_POLICY_INVALID');
 
   const [connection, root] = await Promise.all([primaryConnection(env),routeFolder(env,'backup')]);
