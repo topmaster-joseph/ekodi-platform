@@ -213,7 +213,7 @@ export function verifyReviewedChurchStackedSource(m){
   if(oldHeaderEntry?.finalCanonicalBlobSha!==HOME_HEADER.previousCanonicalBlobSha ||
      canonicalHomeEntry?.blobSha!==prev.get('index.html')?.blobSha ||
      canonicalHomeEntry?.normalizedBlobSha!==HOME_HEADER.finalCanonicalBlobSha)
-    stop('previous header provenance was overwritten or canonical SHA differs');
+    stop('tracked source historical/committed hash mismatch: previous header provenance was overwritten or canonical SHA differs');
   const sourceTest=present.get('test/church-inline-live.test.mjs');
   if(sourceTest?.blobSha!==HOME_HEADER.previousCanonicalTestBlobSha ||
      sourceTest?.normalizedBlobSha!==HOME_HEADER.finalCanonicalTestBlobSha ||
