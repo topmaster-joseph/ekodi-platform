@@ -46,7 +46,11 @@ select
   false, false
 from public.tenants t
 where t.slug = 'bbqcheonggye'
-on conflict (tenant_id, slug) do nothing;
+  and not exists (
+    select 1 from public.stores existing
+    where existing.tenant_id = t.id and existing.slug = 'bbq-muan-cheonggye'
+  )
+on conflict do nothing;
 
 -- Reuse the existing store_user_sites automatic provisioning trigger.
 -- Preserve any existing operator-edited records; initialize only untouched defaults.
