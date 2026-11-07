@@ -2063,7 +2063,7 @@
       "verifiedUpstreamTestBlobSha": "cb8ab8205f45eb946f032b237fcc616fc547dc7d",
       "finalCanonicalTestBlobSha": "cb8ab8205f45eb946f032b237fcc616fc547dc7d",
       "exactPreservedCanonicalNormalization": {
-        "sourceText": "에코디커뮤니티 채널 ↗",
+        "sourcePrefix": "에코디",
         "canonicalText": "커뮤니티 채널 ↗"
       },
       "sourceOwnershipTransferred": false,
