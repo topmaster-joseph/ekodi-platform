@@ -1547,7 +1547,7 @@ async function handleAdmin(request, env) {
     try { payload = sanitizeCommandPayload(commandType, body.payload || {}); }
     catch { return json({ error: '기기 명령 인자가 유효하지 않습니다.', code: 'DEVICE_COMMAND_PAYLOAD_INVALID' }, 400, request, env); }
 
-    const device = await env.DB.prepare('SELECT id, label, revoked_at, capabilities_json, last_seen_at FROM device_registry WHERE id = ?').bind(deviceId).first();
+    const device = await env.DB.prepare('SELECT id, label, platform, revoked_at, capabilities_json, last_seen_at FROM device_registry WHERE id = ?').bind(deviceId).first();
     if (!device || device.revoked_at) return json({ error: '사용 가능한 Agent 기기를 찾을 수 없습니다.' }, 404, request, env);
     if (commandType.startsWith('file_extensions.')) {
       const capabilities = parseJson(device.capabilities_json);
@@ -1572,6 +1572,11 @@ async function handleAdmin(request, env) {
     }
     const management = await managementProfile(env, deviceId);
     const deviceType = normalizeDeviceType(management?.device_type || 'pc');
+    if (commandType.startsWith('file_extensions.') &&
+      (device.platform !== 'windows' || deviceType !== 'pc' ||
+       (management?.management_mode && management.management_mode !== 'managed'))) {
+      return json({ error: '파일 확장자 작업은 관리형 Windows PC에서만 실행할 수 있습니다.', code: 'FILE_EXTENSIONS_MANAGED_WINDOWS_REQUIRED' }, 403, request, env);
+    }
     if (!commandAllowedForDeviceType(deviceType, commandType)) {
       return json({ error: `${deviceTypePolicy(deviceType).label} 유형에서는 이 원격 작업을 허용하지 않습니다.`, code: 'DEVICE_TYPE_COMMAND_BLOCKED' }, 403, request, env);
     }
