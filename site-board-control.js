@@ -377,10 +377,10 @@ async function missionEnsureWeeklyDates(env,boardId,today,nextSaturday){
   // Reconcile old auto-generated 11:00 rows without rewriting history,
   // cancelled meetings, custom time/place/title or attendance records.
   await env.DB.prepare(`UPDATE ekodi_mission_saturday_events SET starts_at='17:00'
-    WHERE board_id=? AND meeting_date>='2026-11-07' AND starts_at='11:00'
-      AND status='scheduled' AND venue='에코디교회'
+    WHERE board_id=? AND meeting_date>='2026-11-07' AND meeting_date>=?
+      AND starts_at='11:00' AND status='scheduled' AND venue='에코디교회'
       AND title='토요 성경토론과 함께하는 식사'`)
-    .bind(boardId).run();
+    .bind(boardId,today).run();
   // A completed calendar day is archived after 00:00 Asia/Seoul.
   // Preserve cancelled/modified statuses; only scheduled dates roll to completed.
   await env.DB.prepare(`UPDATE ekodi_mission_saturday_events
