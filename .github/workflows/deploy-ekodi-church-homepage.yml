@@ -473,14 +473,14 @@ jobs:
                 await page.waitForFunction(expected=>{
                   if(document.documentElement.lang!==expected)return false;
                   const clone=document.body.cloneNode(true);
-                  clone.querySelectorAll('[data-ekodi-language-control]').forEach(node=>node.remove());
+                  clone.querySelectorAll('[data-ekodi-language-control],[data-ekodi-user-content]').forEach(node=>node.remove());
                   return !/[가-힣]/.test(clone.innerText);
                 },{timeout:20000,polling:'raf'},locale);
                 await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
               }
               const snapshot=await page.evaluate(()=>{
                 const clone=document.body.cloneNode(true);
-                clone.querySelectorAll('[data-ekodi-language-control]').forEach(node=>node.remove());
+                clone.querySelectorAll('[data-ekodi-language-control],[data-ekodi-user-content]').forEach(node=>node.remove());
                 return {
                   lang:document.documentElement.lang,
                   hero:document.querySelector('.hero h1')?.innerText||'',
