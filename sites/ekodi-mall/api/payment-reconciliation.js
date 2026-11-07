@@ -5,6 +5,7 @@ import { raiseAlert, resolveAlerts } from './ops-alerts.js';
 import { tossRequest, TossError } from '../../../ekodipay-core.js';
 import { commerceEventStatement } from './commerce-events.js';
 import { recordConfirmedPayment } from './worker.js';
+import { verifiedRefundPointStatements } from './member-purchase-points.js';
 
 export const MALL_PAYMENT_PROFILE = 'mall';
 // 결제창이 열린 직후의 주문은 건드리지 않는다(사용자가 결제 중일 수 있음).
@@ -114,7 +115,10 @@ export async function applyVerifiedPayment(env, order, payment, { now = new Date
     }
     const nextStatus = status === 'CANCELED' ? 'refunded' : 'partially_refunded';
     const cancels = Array.isArray(payment.cancels) ? payment.cancels : [];
-    const refunded = cancels.reduce((sum, c) => sum + Math.trunc(Number(c?.cancelAmount) || 0), 0);
+    // A full CANCELED response may omit its cancellation array. Never keep
+    // purchase rewards on a fully refunded payment.
+    const cancelledSum = cancels.reduce((sum, c) => sum + Math.max(0,Math.trunc(Number(c?.cancelAmount) || 0)), 0);
+    const refunded = Math.min(Number(order.gross_amount)||0,status==='CANCELED'&&!cancelledSum ? Number(order.gross_amount)||0 : cancelledSum);
     await env.DB.batch([
       env.DB.prepare('UPDATE orders SET status=?, reconciled_at=?, updated_at=? WHERE id=? AND status IN (\'paid\',\'partially_refunded\')').bind(nextStatus, nowIso, nowIso, order.id),
       env.DB.prepare('UPDATE order_payments SET status=?, updated_at=? WHERE order_id=?').bind(status, nowIso, order.id),
@@ -124,6 +128,7 @@ export async function applyVerifiedPayment(env, order, payment, { now = new Date
         action: 'payment.refund', idempotencyKey: `payment.refunded:${order.id}:${status}:${refunded}`, occurredAt: nowIso,
         payload: { status, refundedAmount: refunded, cancelCount: cancels.length },
       }).statement,
+      ...verifiedRefundPointStatements(env,order,refunded,nowIso),
     ]);
     return { action: 'refunded', status: nextStatus, refundedAmount: refunded };
   }

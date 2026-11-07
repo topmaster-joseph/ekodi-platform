@@ -310,9 +310,14 @@ export default{
     const url=new URL(request.url);
     // Legacy My EKODI investment URLs remain redirects, not second private sites.
     // The canonical investment mount is /invest/my/* on the Shared Site route.
-    if(['/invest','/invest/access','/invest/app.js','/invest/style.css'].includes(url.pathname)){
+    // The /my prefix is stripped above. Redirect every known legacy owner
+    // detail and asset, not just the root, without catching unrelated MY routes.
+    // Exact path allowlisting also avoids redirect loops for /invest/my/*.
+    const legacyInvestDetail=/^\/invest\/(?:manual|broker|market|portfolio|autopilot|auto-policy|live|strategy|value|design|scenario|risk|reports|access|app\.js|style\.css)\/?$/;
+    if(url.pathname==='/invest'||url.pathname==='/invest/'||legacyInvestDetail.test(url.pathname)){
       const target=new URL(request.url);
-      target.pathname='/invest/my'+url.pathname.slice('/invest'.length);
+      const suffix=url.pathname.slice('/invest'.length).replace(/\/+$/,'');
+      target.pathname='/invest/my'+suffix;
       return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'private, no-store'}});
     }
     const investMyResponse=await investMyRoute(request,env);

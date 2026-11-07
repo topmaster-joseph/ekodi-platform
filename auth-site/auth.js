@@ -24,7 +24,7 @@ const services={
   energy:{name:'Energy AI',tenant:null,role:'member',returnTo:'https://ekodi.kr/energy',origins:['https://energy.ekodi.kr'],requestable:false},
   admin:{name:'EKODI 관리자',tenant:null,role:'platform_admin',returnTo:'https://ekodi.kr/admin/',origins:['https://ekodi.kr','https://admin.ekodi.kr'],requestable:false},
   oauth:{name:'EKODI AI 연결',tenant:null,role:'member',returnTo:'https://ekodi.kr/auth/oauth/consent',origins:['https://ekodi.kr','https://auth.ekodi.kr'],requestable:false},
-  seonammedi:{name:'서남권 국립의대 소통센터',tenant:null,role:'member',returnTo:'https://seonammedi.kr/board/voices',origins:['https://seonammedi.kr','https://www.seonammedi.kr',new URL('https://서남권국립의대.kr').origin,new URL('https://www.서남권국립의대.kr').origin],requestable:false},
+  seonammedi:{name:'서남권국립의대',tenant:null,role:'member',returnTo:'https://seonammedi.kr/board/voices',origins:['https://seonammedi.kr','https://www.seonammedi.kr',new URL('https://서남권국립의대.kr').origin,new URL('https://www.서남권국립의대.kr').origin],requestable:false},
   portal:{name:'EKODI',tenant:null,role:'member',returnTo:'https://ekodi.kr',origins:['https://ekodi.kr','https://seonammedi.kr',new URL('https://서남권국립의대.kr').origin],requestable:false}
 };
 const PERSON_SCOPED_SITES=new Set(['social','energy']);
@@ -388,9 +388,9 @@ async function renderAccess(s){
       const target=new URL(returnTo);
       const seonamMediHandoff=site==='seonammedi'||['https://seonammedi.kr','https://www.seonammedi.kr',new URL('https://서남권국립의대.kr').origin,new URL('https://www.서남권국립의대.kr').origin].includes(target.origin);
       if(seonamMediHandoff){
-        routing=true;showProcessing('Google 인증이 완료되었습니다. 서남권 국립의대 소통센터로 안전하게 돌아가는 중입니다.');
+        routing=true;showProcessing('Google 인증이 완료되었습니다. 서남권국립의대로 안전하게 돌아가는 중입니다.');
         try{await handoffToService();return;}
-        catch(e){console.error('seonammedi portal handoff',e);showAccessFallback(s,'소통센터 인증 복귀에 실패했습니다. 다시 인증해 주세요.','error');return;}
+        catch(e){console.error('seonammedi portal handoff',e);showAccessFallback(s,'서남권국립의대 인증 복귀에 실패했습니다. 다시 인증해 주세요.','error');return;}
       }
       location.assign(returnTo);return;
     }

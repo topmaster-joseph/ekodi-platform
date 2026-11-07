@@ -85,6 +85,35 @@ export async function verifySearchVisibilityInteractions(page,artifactsDir,resul
     },new URL(url,page.url()).href,{timeout:7000});
     const title=await panel.locator('[data-sv-manage-name]').textContent();
     if(!title?.includes(firstName)||!title.includes(group))throw new Error('Manage opened another site');
+    // The public audit CSV is a client-only download. Exercise one synthetic
+    // same-origin HTML scan; never fetch private pages or change provider data.
+    const exportButton=panel.locator('[data-sv-export]');
+    if(!(await exportButton.isDisabled()))
+      throw new Error('Search Visibility audit CSV offered before a real scan');
+    const auditFixture=async route=>{
+      if(route.request().method()!=='GET')throw new Error('Technical audit attempted a mutation');
+      await route.fulfill({status:200,contentType:'text/html; charset=utf-8',
+        body:'<!doctype html><html lang="ko"><head><title>합성 기술 점검</title>'+
+          '<meta name="description" content="합성 공개 페이지 점검">'+
+          '<meta name="robots" content="index, follow">'+
+          '<link rel="canonical" href="'+url+'"></head>'+
+          '<body><h1>합성 기술 점검</h1></body></html>'});
+    };
+    await page.route(url,auditFixture);
+    try{
+      await panel.locator('[data-sv-manage-audit]').click();
+      await page.waitForFunction(()=>{
+        const exportButton=document.querySelector('#ekodiSearchVisibility [data-sv-export]');
+        const status=document.querySelector('#ekodiSearchVisibility [data-sv-status]');
+        return exportButton&&!exportButton.disabled&&status?.textContent?.includes('기술 점검 완료');
+      },null,{timeout:7500});
+      const [download]=await Promise.all([page.waitForEvent('download',{timeout:7500}),exportButton.click()]);
+      if(!/^ekodi-search-audit-\d{4}-\d{2}-\d{2}\.csv$/.test(download.suggestedFilename()))
+        throw new Error('Audit CSV download filename is not the canonical dated report');
+      console.log('[PROD-E2E] search-visibility: synthetic public audit and local CSV download passed (no writes)');
+    }finally{
+      await page.unroute(url,auditFixture);
+    }
     // Verify the newly released Google Search Console button using only
     // Playwright synthetic read-only responses, never production provider data.
     const googleButton=panel.locator('[data-sv-google-read]');

@@ -108,7 +108,11 @@ class ShellHeadInjector{
     const adminDirectGoogle=surface==='admin'?`<script src="${ADMIN_DIRECT_GOOGLE_SCRIPT}" defer data-ekodi-admin-direct-google="v1"></script>`:'';
     const visualShellMode=isMyEkodi(service)?'':` data-ekodi-shell="off"`;
     const memberGate=this.memberGate==='service-owned'?'service-owned':'shared';
-    element.prepend(`${bootStyle}${sharedStyle}${adminDirectGoogle}<script src="${SHELL_SCRIPT}" data-ekodi-service="${service}" data-ekodi-surface="${surface}" data-ekodi-member-gate="${memberGate}"${visualShellMode}></script>`,{html:true});
+    // Public pages already render usable content server-side; do not block
+    // HTML parsing on the shared Shell bundle. Keep workspace/admin boot
+    // timing unchanged until those authenticated surfaces are verified.
+    const deferredPublicShell=surface==='public'?' defer':'';
+    element.prepend(`${bootStyle}${sharedStyle}${adminDirectGoogle}<script src="${SHELL_SCRIPT}"${deferredPublicShell} data-ekodi-service="${service}" data-ekodi-surface="${surface}" data-ekodi-member-gate="${memberGate}"${visualShellMode}></script>`,{html:true});
   }
 }
 

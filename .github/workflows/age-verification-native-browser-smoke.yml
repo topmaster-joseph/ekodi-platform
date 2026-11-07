@@ -1,0 +1,142 @@
+name: EKODI Adult Verification Native Browser Smoke
+
+on:
+  workflow_dispatch:
+  # Required-check PRs are created by human/agent credentials; use this
+  # path to exercise the native browser even if a bot merge suppresses push.
+  pull_request:
+    paths:
+      - '.github/workflows/age-verification-native-browser-smoke.yml'
+  # The protected orchestrator can use GITHUB_TOKEN to merge or dispatch,
+  # which does not reliably emit a subsequent push-triggered Actions run.
+  # A completed official release therefore causes an independent read-only
+  # end-to-end production check (including a failed overall deploy ledger).
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/age-verification-native-browser-smoke.yml'
+      - '_headers'
+      - 'verify/adult/**'
+      - 'age-verification-client.js'
+      - 'age-verification-core.js'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-age-native-smoke-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  age-verification:
+    name: Native Chromium / ${{ matrix.profile }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        profile: [compact-mobile, desktop]
+    steps:
+      - name: Checkout official EKODI browser implementation
+        uses: actions/checkout@v7
+      - name: Setup Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify native browser contract
+        run: |
+          node --check scripts/ekodi-background-browser-worker.mjs
+          node scripts/validate-background-browser-worker.mjs
+          node --test test/background-browser-worker.test.mjs
+      - name: Require external scripts only in the sensitive authentication document
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const html=fs.readFileSync('verify/adult/index.html','utf8');
+          const tags=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)];
+          if(tags.length<1 || tags.some((m)=>!/\bsrc\s*=/.test(m[1]) || m[2].trim())) {
+            throw new Error('AGE_AUTH_INLINE_SCRIPT_FORBIDDEN');
+          }
+          console.log('Age verification HTML has only external script tags: '+tags.length);
+          NODE
+      - name: Install isolated Chromium harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Generate read-only age verification browser task
+        shell: bash
+        env:
+          DEVICE_PROFILE: ${{ matrix.profile }}
+        run: |
+          mkdir -p artifacts
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const profile=process.env.DEVICE_PROFILE;
+          if(!['compact-mobile','desktop'].includes(profile))throw Error('UNSUPPORTED_DEVICE');
+          const task={
+            taskId:'age-verification-native-'+profile+'-'+process.env.GITHUB_RUN_ID,
+            path:'/verify/adult/?site=singles',
+            deviceProfile:profile,
+            allowMutation:false,
+            timeoutMs:120000,
+            actions:[
+              {type:'waitFor',selector:'#status:has-text("성인인증 서비스 연동을 준비 중입니다")',timeoutMs:20000},
+              {type:'assertText',text:'성인인증 서비스 연동을 준비 중입니다. 현재 인증은 진행되지 않습니다.'},
+              {type:'snapshot'},
+              {type:'screenshot',name:'ekodi-age-'+profile,fullPage:true}
+            ]
+          };
+          fs.writeFileSync('artifacts/browser-task.json',JSON.stringify(task,null,2));
+          NODE
+      - name: Run EKODI-owned isolated browser
+        env:
+          EKODI_BROWSER_TASK_FILE: artifacts/browser-task.json
+          EKODI_BROWSER_ARTIFACT_DIR: artifacts/age-native
+        run: node scripts/ekodi-background-browser-worker.mjs
+      - name: Assert dynamic state, responsiveness and browser safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(find artifacts/age-native -name result.json -print -quit)
+          test -n "$result"
+          jq -e '.ok == true and .mode == "ekodi-owned-background-browser" and .headless == true and .ephemeralContext == true and .activeUserProfileReused == false and .allowMutation == false' "$result"
+          jq -e '[.results[] | select(.type == "assertText" and .matched == true)] | length == 1' "$result"
+          jq -e '[.results[] | select(.type == "snapshot" and .horizontalOverflow == false and ((.bodyText // "") | contains("성인인증 서비스 연동을 준비 중입니다")))] | length >= 1' "$result"
+          # Strict age CSP intentionally rejects Cloudflare-injected inline analytics and
+          # the static.cloudflareinsights.com beacon. They are expected security
+          # rejections, not application JS errors. Never relax the CSP.
+          jq -e '(.pageErrors | length) == 0 and (.blockedMutations | length) == 0 and (.httpErrorResponses | length) == 0 and (.screenshots | length) >= 1' "$result"
+          jq -e '([.consoleErrors[] | select(
+            ((startswith("Refused to execute inline script") and contains("Content Security Policy"))
+              or (startswith("Refused to load the script") and contains("static.cloudflareinsights.com/beacon.min.js") and contains("Content Security Policy")))
+            | not
+          )] | length) == 0' "$result"
+          echo "## EKODI adult verification · ${{ matrix.profile }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Native Chromium: success (read only)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Dynamic disabled state: confirmed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Horizontal overflow and application page errors: none; only expected Cloudflare analytics CSP blocks allowed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- User cookies and profile reused: false" >> "$GITHUB_STEP_SUMMARY"
+      - name: Assert production HTTP security gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS --retry 2 --connect-timeout 8 --max-time 25 \
+            -D artifacts/headers.txt -o artifacts/age-page.html \
+            'https://ekodi.kr/verify/adult/?site=singles'
+          grep -Eqi "^content-security-policy:.*script-src 'self' https://cdn.portone.io" artifacts/headers.txt
+          grep -Eqi '^cache-control:.*no-store' artifacts/headers.txt
+          grep -Eqi '^x-robots-tag:.*noindex' artifacts/headers.txt
+          curl --fail-with-body -sS --retry 2 --connect-timeout 8 --max-time 25 \
+            'https://ekodi.kr/api/age-verification/config?site=singles' | jq -e '.enabled == false'
+      - name: Upload redacted native-browser receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: age-verification-native-${{ matrix.profile }}-${{ github.run_id }}
+          path: artifacts/age-native
+          retention-days: 7

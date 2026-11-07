@@ -45,6 +45,8 @@ function paywall(h,action){
  box.append(button('계좌이체 구독 안내',()=>location.assign('/singles/subscribe'),'primary'));h.append(box);
 }
 function errorText(error){
+ if(error?.message==='contact_required')return '연락처(휴대폰 번호 또는 이메일)를 4자 이상 입력해 주세요.';
+ if(error?.message==='membership_required')return '먼저 "내 정보"에서 참여 동의를 저장해 주세요.';
  if(error?.message==='invalid_event_fee')return '참가비는 0원(무료) 또는 1,000원~1,000,000원으로 입력해 주세요.';
  if(error?.message==='fee_locked_after_registration')return '신청자가 있어 참가비를 바꿀 수 없습니다.';
  if(error?.message==='event_full')return '정원이 찼습니다.';
@@ -510,6 +512,34 @@ function subscriptionButtons(box,h){
   },'primary'));
  }
 }
+// 자체 성인 확인 요청: 신분증 사본을 받지 않고, 운영자가 연락해 영상통화·대면으로 확인한다.
+const ADULT_METHOD={id_document_video:'영상통화로 신분증 확인',id_document_in_person:'만나서 신분증 확인'};
+async function adultCheckRequest(box){
+ const wrap=text('div','','adult-check');box.append(wrap);
+ wrap.append(text('h4','성인 확인 요청'));
+ paragraph(wrap,'구독 전에 만 19세 이상인지 확인합니다. 운영자가 남겨 주신 연락처로 연락드려 신분증을 화면(영상통화) 또는 직접 보고 확인합니다. 신분증 사본은 받지 않고 저장하지 않으며, 확인이 끝나면 연락처도 바로 지웁니다.');
+ let cur=null;try{cur=(await api('/bank/adult-check')).request}catch{}
+ const msg=text('p','','status-text');
+ if(cur?.status==='requested'){
+  wrap.append(text('p','요청 접수됨 · '+(ADULT_METHOD[cur.method]||'')+(cur.preferred_time?' · 희망 시간 '+cur.preferred_time:'')+' · '+localTime(cur.created_at),'program-pay'));
+  paragraph(wrap,'운영자가 곧 연락드립니다. 연락처를 바꾸려면 아래에서 다시 요청하시면 됩니다.');
+  wrap.append(button('요청 취소',async()=>{try{await api('/bank/adult-check',{method:'DELETE'});msg.textContent='요청을 취소했고 연락처를 지웠습니다.'}catch(e){msg.textContent=errorText(e)}}),msg);
+ }
+ const form=text('div','','invite-form');
+ const method=document.createElement('select');for(const [v,l] of Object.entries(ADULT_METHOD)){const o=document.createElement('option');o.value=v;o.textContent=l;method.append(o)}
+ const f0=text('label','확인 방법','field');f0.append(method);
+ const contact=document.createElement('input');contact.type='text';contact.maxLength=100;contact.placeholder='휴대폰 번호 또는 이메일';
+ const f1=text('label','연락처','field');f1.append(contact);
+ const when=document.createElement('input');when.type='text';when.maxLength=60;when.placeholder='예: 평일 저녁 7시 이후';
+ const f2=text('label','연락 가능한 시간(선택)','field');f2.append(when);
+ form.append(f0,f1,f2,button(cur?.status==='requested'?'다시 요청하기':'성인 확인 요청하기',async()=>{
+  if(contact.value.trim().length<4){msg.textContent='연락처를 입력해 주세요.';return}
+  try{const r=await api('/bank/adult-check',{method:'POST',body:{method:method.value,contact:contact.value.trim(),preferred_time:when.value.trim()}});
+   msg.textContent=r.status==='verified'?'이미 성인 확인이 끝났습니다. 화면을 새로고침해 주세요.':'요청을 접수했습니다. 운영자가 연락드립니다.';contact.value=''}
+  catch(e){msg.textContent=errorText(e)}
+ },'primary'),msg);
+ wrap.append(form);
+}
 async function showJoin(h){
  const box=text('section','','paywall');box.append(text('h3','유료회원 시작 · 기간제 구독권 (가입비 없음)'));
  paragraph(box,'결제수단은 계좌이체입니다. 구독권을 고르면 주문번호가 발급됩니다. 입금하고 "계좌이체 완료 신고"를 누르면 운영자가 은행 내역과 대조해 확인하고, 확인되는 즉시 구독이 시작됩니다.');
@@ -518,8 +548,10 @@ async function showJoin(h){
  let member=null;try{member=(await api('/me')).member}catch{}
  if(!member){paragraph(box,'먼저 "내 정보"에서 참여 동의를 저장해 주세요.');box.append(button('참여 동의하러 가기',()=>location.assign('/singles/my'),'primary'));h.append(box);return}
  if(!member.adult_verified){
-  if(state.status?.identity_verification){notice(box,'구독 전에 성인 본인인증이 필요합니다. 휴대폰 본인인증으로 1분 안에 끝납니다.');box.append(button('휴대폰 본인인증 하기',()=>location.assign('/singles/verify'),'primary'));}
-  else notice(box,'구독 전에 성인 본인확인이 필요합니다. 운영자(joseph@ekodi.kr)에게 신분증 확인을 요청해 주세요.');
+  if(state.status?.identity_verification){notice(box,'구독 전에 성인 본인인증이 필요합니다. 휴대폰 본인인증으로 1분 안에 끝납니다.');box.append(button('휴대폰 본인인증 하기',()=>location.assign('/singles/verify'),'primary'));
+   // 휴대폰 인증이 어렵거나 인증 연결이 잠시 안 될 때를 위한 예비 경로(운영자 신분증 확인).
+   const alt=document.createElement('details');alt.className='program-new';alt.append(text('summary','휴대폰 인증이 어려우신가요? 운영자 확인으로 요청하기'));box.append(alt);await adultCheckRequest(alt);}
+  else await adultCheckRequest(box);
   h.append(box);await reloadBankOrders(h);return;
  }
  subscriptionButtons(box,h);
@@ -736,6 +768,20 @@ async function showMembersAdmin(h){
  paragraph(box,'가입 시도(시간·Google 계정)와 회원 상태입니다. 성인 확인은 신분증을 직접(대면·영상) 확인한 경우에만 처리하세요. 본인 계정은 처리할 수 없습니다.');
  try{
   const d=await api('/bank/admin/members');
+  const reqs=d.adult_checks||[];
+  const tmsg=text('p','','status-text');
+  box.append(button('알림 테스트 메일 보내기',async()=>{try{await api('/bank/admin/alert-test',{method:'POST',body:{}});tmsg.textContent='joseph@ekodi.kr로 테스트 메일을 보냈습니다. 메일함을 확인해 주세요.'}catch(e){tmsg.textContent=e.message==='mail_not_configured'?'메일 발송 설정이 아직 없습니다. 이 화면의 요청 목록으로 확인해 주세요.':'테스트 메일을 보내지 못했습니다('+(e.message||'오류')+').'}}),tmsg);
+  box.append(statTiles([['성인 확인 요청',reqs.length+'건'],['참여 회원',(d.members||[]).length+'명'],['성인 확인 완료',(d.members||[]).filter(m=>m.adult_verified_at).length+'명']]));
+  if(reqs.length){box.append(text('h4','성인 확인 요청 · 연락해서 신분증을 확인한 뒤 처리하세요'));
+   for(const q of reqs){const card=text('article','','mini-card');
+    card.append(text('p',accountTag(q.email||q.user_id)+' · '+(ADULT_METHOD[q.method]||q.method)+' · 연락처 '+q.contact+(q.preferred_time?' · '+q.preferred_time:'')+' · '+localTime(q.created_at)));
+    card.append(button('확인 완료로 처리',async()=>{
+     const note=prompt('확인 메모(선택: 신분증 종류 등, 번호는 적지 마세요)')||'';
+     try{await api('/bank/admin/members/'+q.user_id+'/adult-verify',{method:'POST',body:{method:q.method,note:note.slice(0,200)}});notice(card,'성인 확인을 기록했고 연락처를 지웠습니다.')}
+     catch(e){notice(card,e.message==='operator_self_verification_forbidden'?'본인 계정은 처리할 수 없습니다.':errorText(e))}
+    },'primary'));box.append(card)}
+   box.append(text('h4','회원 목록'));
+  }
   for(const m of d.members||[]){
    const card=text('article','','mini-card');
    card.append(text('h4',(m.email||m.user_id)+' · '+(m.status==='active'?'참여 중':m.status)));

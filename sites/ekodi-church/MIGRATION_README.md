@@ -15,3 +15,15 @@ This is **not production migration evidence**. The sourceOwnershipTransferred an
 Next: complete native unit/Chromium 320/390/768/1366/1440 browser, guest/member/admin/live checks, stage the exact content hash, acquire the EKODI Orchestrator protected release receipt, promote to the same independent ekodi-church Pages project, verify live v2 source SHA/digest and rollback, then independently review offsite restorable history and destructive repository retirement. Never delete the legacy GitHub repository from this migration PR.
 
 Task: church-upstream-pr142-144-canonical-reconcile-20261103. Governance: Church #7575, fleet #7502, Constitution 1.27.7.
+
+## 2026-11-06 reviewed stacked source extension — Church #146 → #149
+
+The earlier paragraph describes the **preserved historical 212-file v1 reviewed snapshot**, now stored byte-for-byte in `source-import-baseline-v1.json` and pinned by its original Git blob SHA (`09b01865a3f0ba99caf8b7b97fc787ee8ef83d51`). Its previous reviewed PR #143/#144/#142 source receipts are not rewritten.
+
+The **new 223-file v2 candidate** extends that original review with the exact *open, unmerged* Church source PRs:
+- [#146](https://github.com/topmaster-joseph/ekodi-church/pull/146) `b79dc3b19b562f9b654bffb55d797ea336c08d34`, parent `9e8fc072d1d6d66286d9a275fe3960e50e5c5e72`: public Church notices, read-only Church/Mission schedules, compact updates.
+- [#149](https://github.com/topmaster-joseph/ekodi-church/pull/149) `b89c32f9330afbd114dc632306a7b9348c869b7b`, parent `b79dc3b19b562f9b654bffb55d797ea336c08d34`: six first-level menu destinations and selected-section navigation with legacy deep-link targets preserved.
+
+The `stackedReviewedOverlays` register in `source-import-manifest.json` records 24 distinct upstream changed paths, 11 newly reviewed source files, both exact upstream Git blob SHAs per path, their previously canonical Git SHA, and the newly committed Git SHA. The pre-existing 212 original Git blob SHA identities remain unchanged. A **separate exact-SHA test-only reconciliation** updates the former eight-tile assertion to the now approved six-menu contract without expanding member or finance permissions. `scripts/verify-reviewed-church-source-v2.mjs` fails closed on an altered baseline, source head, parent, file/mode, missing path, unreviewed change, or claimed release/deletion authority.
+
+The two upstream PRs are **not represented as merged in the old Church repository**. This integration remains a **protected source candidate**, not a Cloudflare staging URL or a production release. `productionReleaseSwitched=false`, `sourceOwnershipTransferred=false`, `legacyRepositoryDeletionAuthorized=false`. Before any C3 change: protected CI, offline source/payload SHA verification, actual isolated staging guest/member/admin/live/finance tests and rollback, owner receipt/flag gate, real Cloudflare Pages v2 marker verification. The old independent Pages project and GitHub repository must remain operational and recoverable until those checks complete.

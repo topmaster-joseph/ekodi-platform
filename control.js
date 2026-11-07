@@ -42,7 +42,7 @@
     const response=await fetch(API+path,{cache:'no-store',...options,headers:{...headers(Boolean(options.body)),...(options.headers||{})}});
     const data=await response.json().catch(()=>({}));
     if(response.status===401||response.status===403)throw Object.assign(new Error('최고관리자 로그인이 필요합니다.'),{auth:true,status:response.status});
-    if(!response.ok)throw new Error(data.error||data.message||('요청 실패 ('+response.status+')'));
+    if(!response.ok)throw new Error(data.error||data.message||data.reply||('요청 실패 ('+response.status+')'));
     return data;
   }
   function toast(message){const node=$('#toast');node.textContent=message;node.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>node.hidden=true,2400)}
@@ -179,9 +179,17 @@
     }catch(error){pushMessage('assistant',String(error.message||'미리보기 실패'),{status:'failed'});}
     finally{state.busy=false;$('#sendButton').disabled=false}
   }
+  function isReadOnlySiteDirectoryRequest(input){
+    const v=String(input||'').toLowerCase().replace(/[!?？！.,。]/g,' ').replace(/\s+/g,' ').trim();
+    return v.length>0&&v.length<=100&&/(사이트|서비스)/.test(v)
+      &&/(목록|리스트|현황|보여|알려|나열)/.test(v)
+      &&/(에코디|ekodi|플랫폼|전체|모든)/.test(v)
+      &&!/(삭제|수정|변경|배포|등록해|추가해|생성해|만들어)/.test(v);
+  }
   async function submitCommand(value){
     if(state.busy)return;const message=String(value||'').trim();if(!message)return;
     state.busy=true;$('#sendButton').disabled=true;const target=$('#executionTarget').value;const executeNow=$('#executeNow').checked;const releaseMode=$('#orchestratorRelease')?.checked===true;
+    const readOnlyDirectory=!releaseMode&&isReadOnlySiteDirectoryRequest(message);
     const prior=historyForAssist();pushMessage('user',message,{target});$('#commandInput').value='';resizeInput();
     // CONTROL-EXTERNAL-AI-001: an external AI opens in a new window synchronously, inside
     // the click/Enter gesture, so pop-up blockers and the clipboard both allow it.
@@ -225,7 +233,7 @@
       // ordinary command was auto_blocked. A generic health check cannot
       // grant execution authority for an unrelated command.
       let healthReceipt=null;
-      if(executeNow){
+      if(executeNow&&!readOnlyDirectory){
         const actionPayload={
           agentId:'chief',actionType:'ui.change_request',area:'bounded_admin_change',
           target:'control',rationale:message.slice(0,900),
@@ -247,7 +255,7 @@
         healthReceipt=healthResponse.status==='fulfilled'?healthResponse.value:null;
       }
       const actionId=queued?.id||'';
-      const actionStatus=queued?.status||(executeNow?'receipt_unknown':'assist_only');
+      const actionStatus=queued?.status||(executeNow&&!readOnlyDirectory?'receipt_unknown':'assist_only');
       if(actionId){
         state.tasks.unshift({id:'action-'+actionId,title:title(message),status:actionStatus,target:'EKODI Action',at:now()});
         state.tasks=state.tasks.slice(0,40);saveState();
@@ -256,14 +264,15 @@
         message,history:prior,context:{source:'control-surface',pathname:location.pathname,executionTarget:target,actionId}
       })});
       const advice=String(result.reply||'AI 응답을 받지 못했습니다.');
-      const receipt=executeNow
+      const receipt=executeNow&&!readOnlyDirectory
         ?'\n\nEKODI Action #'+(actionId||'미확인')+' · '+statusLabel(actionStatus)+
           '\n시스템 건강점검: '+(healthReceipt?.status==='verified'?'검증됨':'미확인 또는 실패')+
           '\n명령 접수와 AI 답변은 코드 변경·배포 완료 증거가 아닙니다. 실제 실행에는 별도 실행기 검증과 필요한 승인이 적용됩니다.'
-        :'';
+        :readOnlyDirectory?'\n\n읽기 전용 등록부 조회입니다. 작업 실행·배포는 요청하지 않았습니다.':'';
       const reply=advice+receipt;
-      pushMessage('assistant',reply,{provider:result.provider||'EKODI',target,status:actionStatus,actionId});
-      state.results.unshift({title:title(message),summary:reply.slice(0,400),provider:result.provider||'EKODI',actionId,status:actionStatus,at:now()});
+      const viewStatus=readOnlyDirectory&&result.mode==='core_read_only'?'verified':actionStatus;
+      pushMessage('assistant',reply,{provider:result.provider||'EKODI',target,status:viewStatus,actionId});
+      state.results.unshift({title:title(message),summary:reply.slice(0,400),provider:result.provider||'EKODI',actionId,status:viewStatus,at:now()});
       state.results=state.results.slice(0,40);saveState();renderPanels();
     }catch(error){
       const actionId=queued?.id||'';
@@ -427,6 +436,7 @@
     strip.append(create,nav,history);
     top.after(strip);
     rail.hidden=true;
+    document.querySelectorAll('a[href="/admin/"]').forEach(link=>link.target='_top');
   }
   function resizeInput(){
     const input=$('#commandInput');

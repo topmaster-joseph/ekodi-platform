@@ -26,7 +26,12 @@ export function planFamilyDispatch(message){
   const recommendation=recommendModelFamily({prompt});
   const lane=LANE[recommendation.family];
   if(!prompt)return Object.freeze({ok:false,code:'ASSIST_MESSAGE_REQUIRED'});
-  if(lane==='node:codex'&&!traits.image&&!traits.brainstorm){
+  // The text-only native Codex CLI contract is NOT evidence of image output.
+  // Never enqueue an image request until an independent image runner is proven.
+  if(lane==='node:codex'&&traits.image){
+    return Object.freeze({ok:false,code:'CODEX_IMAGE_RUNTIME_UNVERIFIED',reason:'Automatic Codex image generation has not passed capability verification.'});
+  }
+  if(lane==='node:codex'&&!traits.brainstorm){
     return Object.freeze({ok:false,code:'CODEX_TASK_UNSUPPORTED',reason:'Codex lane is limited to proven image or brainstorming capabilities.'});
   }
   return Object.freeze({
@@ -35,6 +40,17 @@ export function planFamilyDispatch(message){
     timeoutMs:traits.code?AI_FAMILY_AUTO_DISPATCH_POLICY.codeTimeoutMs:AI_FAMILY_AUTO_DISPATCH_POLICY.generalTimeoutMs,
     costKrw:0,prompt,
   });
+}
+
+
+/**
+ * True only when the authenticated device still holds a non-expired lease.
+ * A self-reported completion cannot resurrect a job whose lease has lapsed.
+ */
+export function familyLeaseReceiptAllowed(expiresAt, nowMs=Date.now()){
+  if(typeof expiresAt!=='string'||!expiresAt.trim())return false;
+  const expiry=Date.parse(expiresAt);
+  return Number.isFinite(expiry)&&Number.isFinite(nowMs)&&expiry>nowMs;
 }
 
 export function validateFamilyRunnerReceipt(receipt,{jobId,lane,deviceId}={}){

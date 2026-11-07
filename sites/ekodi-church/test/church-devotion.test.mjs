@@ -18,7 +18,7 @@ test('church devotion page is titled 에코디 오늘의 매일묵상 and mounts
 test('church devotion page uses the church header and footer', () => {
   assert.match(page, /<header class="site-header church-devotion-header"/);
   assert.match(page, /<a class="brand" href="\/ekodichurch\/"/);
-  assert.match(page, /aria-current="page" class="nav-devotion">매일묵상<\/a>/);
+  assert.match(page, /href="\/ekodichurch\/devotion\/" aria-current="page">매일묵상<\/a>/);
   assert.match(page, /<footer class="site-footer church-footer" data-ekodi-service-footer>/);
   assert.match(page, /고유번호 307-82-82097/);
 });
@@ -27,13 +27,13 @@ test('church devotion page ships no inline script (script-src self)', () => {
   assert.doesNotMatch(page, /<script(?![^>]*src=)[^>]*>/);
 });
 
-test('homepage and runtime header link to the devotion page before QTIN', () => {
+test('homepage and runtime header have one devotion link before Together', () => {
   const nav = home.slice(home.indexOf('<nav id="main-nav"'), home.indexOf('</nav>', home.indexOf('<nav id="main-nav"')));
   assert.ok(nav.includes('<a href="/ekodichurch/devotion/">매일묵상</a>'));
-  assert.ok(nav.indexOf('>매일묵상</a>') < nav.indexOf('nav-qtin'));
+  assert.ok(nav.indexOf('>매일묵상</a>') < nav.indexOf('href="/ekodichurch/#together"'));
   assert.equal((nav.match(/매일묵상/g) || []).length, 1, 'do not duplicate devotion entry');
   assert.ok(script.includes("{ href: '/ekodichurch/devotion/', label: '매일묵상', className: 'nav-devotion' }"));
-  assert.ok(script.indexOf("'/ekodichurch/devotion/'") < script.indexOf("'/qtin/church'"));
+  assert.ok(script.indexOf("'/ekodichurch/devotion/'") < script.indexOf("'/ekodichurch/#together'"));
 });
 
 test('devotion header spans the centre column and tabs are not offset onto the panel', () => {

@@ -5,6 +5,7 @@
 // 승인은 파일 etag·크기에 묶인다. 파일을 새로 올리면 승인은 자동 무효 → 다시 검토·확정해야 판매된다.
 // 판권 확인·내용 검토 두 항목이 모두 체크되지 않은 승인은 만들 수 없다(fail closed).
 import { saleReadiness } from './books-sale-readiness.js';
+import { aiReleaseSaleReady } from './books-ai-releases.js';
 
 const clean = (v, max = 200) => String(v ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max);
 
@@ -28,6 +29,7 @@ export async function activeApproval(env, book) {
 export async function effectiveSaleReadiness(env, book) {
   const base = saleReadiness(book);
   if (base.ready) return { ...base, source: 'catalog' };
+  if (await aiReleaseSaleReady(env, book)) return { ready: true, reasons: [], label: '', source: 'ai_release', edition: book.directSale.edition, approvedAt: book.editionApproval?.approvedAt };
   if (book?.directSale?.enabled !== true || !(Math.trunc(Number(book?.listPrice?.amount)) > 0)) return base;
   const approval = await activeApproval(env, book);
   if (approval?.fileMatches && approval.rights_confirmed && approval.content_reviewed && Number(approval.list_price) === Math.trunc(Number(book.listPrice.amount))) {

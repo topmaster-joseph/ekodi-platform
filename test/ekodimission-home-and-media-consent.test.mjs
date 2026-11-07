@@ -5,13 +5,15 @@ import spaceWorker from '../space-worker.js';
 
 const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
 
-test('Mission home keeps only introduction + active/upcoming event while retaining independent archives',async()=>{
+test('Mission home keeps intro, current gathering and official updates while archiving past activities separately',async()=>{
   const [home,archive,js,css]=await Promise.all([
     read('space/ekodimission.page'),read('space/ekodimission-activities.page'),
     read('space/ekodimission.js'),read('space/ekodimission.css')
   ]);
   const sections=[...home.matchAll(/<section\b/g)];
-  assert.equal(sections.length,2,'No completed events, long index or history duplicated on home');
+  assert.equal(sections.length,3,'Home contains hero, current Saturday and official notices/schedules without archive duplication');
+  assert.match(home,/<section class="mission-home-board-grid"/);
+  assert.ok(home.indexOf('id="mission-updates"')>home.indexOf('id="saturday"'),'Official boards appear after current gathering');
   assert.match(home,/class="hero hero-split"/);
   assert.doesNotMatch(home,/open-table-meal-260925.jpg/,'Poster JPEG must not masquerade as a real photo');
   assert.match(home,/data-mission-public-photo/);

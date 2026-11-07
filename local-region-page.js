@@ -1,4 +1,5 @@
 import { renderEkodiUserFooter } from './config/user-footer.js';
+import { renderRegionTabsScript } from './region-tabs-ui.js';
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 
@@ -16,7 +17,7 @@ const MODULE_PRESENTATION=Object.freeze({
 
 const EXPERIENCE_LINKS=Object.freeze({
   neighborhood:{id:'neighborhood',name:'우리동네',tag:'생활',desc:'지역 소식과 생활정보',audiences:'resident student merchant organization',href:'/cheonggye/directory'},
-  campus:{id:'campus',name:'목포대 × 청계',tag:'대학',desc:'대학과 지역의 프로그램·상권·일자리 연결',audiences:'student resident merchant organization',href:'/cheonggye/directory#campus'},
+  campus:{id:'campus',name:'목포대 × 청계',tag:'대학',desc:'대학과 지역의 프로그램·상권·일자리 연결',audiences:'student resident merchant organization',href:'/cheonggye/directory'},
 });
 
 function publicLinks(region){
@@ -80,11 +81,45 @@ function baseStyle(){
   @media(max-width:900px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.intent-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.personal{grid-template-columns:1fr}.admin-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.admin-actions{grid-template-columns:1fr}.ledger-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.ledger-manage-grid{grid-template-columns:1fr}}
   @media(max-width:680px){.site-header__inner{min-height:58px;gap:8px}.site-brand__text{font-size:16px}.site-nav a{padding:0 9px;font-size:12px}.site-nav a:nth-child(2),.site-nav a:nth-child(3){display:none}main{width:min(100% - 20px,1120px);padding-top:14px}.hero{padding:24px 20px;border-radius:22px}.hero h1{font-size:40px}.hero .lead{font-size:16px;line-height:1.65}.section{margin-top:24px}.section-head{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.card{min-height:132px;padding:14px;border-radius:16px}.card strong{font-size:16px}.talk{grid-template-columns:1fr}.talk .button{width:100%}.org{align-items:flex-start;flex-direction:column}.access-form{grid-template-columns:1fr}.access-form .wide{grid-column:auto}th:nth-child(3),td:nth-child(3){display:none}}
   @media(max-width:390px){.site-nav a:not(:first-child){display:none}.grid{grid-template-columns:1fr 1fr}.card{min-height:126px}.hero-actions a{flex:1 1 calc(50% - 8px);justify-content:center}}
+
+  /* Compact, information-first regional public homepage. Admin views remain unchanged. */
+  .local-page{padding-top:16px}
+  .local-page .hero{padding:18px 22px;border-radius:18px;background:linear-gradient(110deg,#e7f3ec,#fffaf0)}
+  .local-page .hero:after{display:none}
+  .local-page .hero h1{font-size:clamp(29px,4vw,39px);line-height:1.25;margin:4px 0 6px}
+  .local-page .hero .lead{max-width:none;font-size:14px;line-height:1.6}
+  .region-browse{margin-top:16px}
+  .region-browse__head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .region-browse__head h2{margin:0;font-size:20px;letter-spacing:-.035em}
+  .region-browse__head p{margin:0;font-size:12px;color:var(--muted)}
+  .region-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+  .region-tab{min-width:0;min-height:46px;padding:9px 10px;border:1px solid #cddcd3;border-radius:12px;background:#fffdf8;color:#315548;font:inherit;font-size:14px;font-weight:800;cursor:pointer;word-break:keep-all}
+  .region-tab[aria-selected="true"]{background:var(--local-dark);color:#fff;border-color:var(--local-dark)}
+  .region-tab:focus-visible{outline:3px solid #7aac93;outline-offset:2px}
+  .region-panel{margin-top:10px;padding:15px;border:1px solid #d6e0d9;border-radius:15px;background:#fffdf8}
+  .region-panel[hidden]{display:none!important}
+  .region-panel__intro{margin:0 0 11px;color:var(--muted);font-size:13px;line-height:1.55}
+  .region-panel .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .region-panel .card{min-height:88px;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;padding:12px 14px;border-radius:12px;box-shadow:none}
+  .region-panel .card__tag{flex:0 0 auto;align-self:center;margin:0;white-space:nowrap}
+  .region-panel .card>div{min-width:0;flex:1}
+  .region-panel .card strong{margin:0 0 3px;font-size:15px;line-height:1.4}
+  .region-panel .card span:not(.card__tag){display:block;font-size:12px;line-height:1.5}
+  .region-panel .card__arrow{display:none!important}
+  @media(max-width:680px){.local-page .hero{padding:16px}.local-page .hero h1{font-size:30px}.region-browse__head{align-items:flex-start;flex-direction:column;gap:2px}.region-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.region-panel{padding:10px}.region-panel .grid{grid-template-columns:1fr}.region-panel .card{min-height:76px;padding:11px}}
+  .region-panel .region-subnav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .region-subnav__link{min-width:0;min-height:66px;display:flex;flex-direction:column;justify-content:center;gap:4px;border:1px solid #d4e1d8;border-radius:11px;padding:10px 12px;background:#fbfdfb;text-decoration:none;color:#164735}
+  .region-subnav__link b{font-size:14px;font-weight:900;line-height:1.25}
+  .region-subnav__link span{font-size:11px;line-height:1.4;color:#5a7267}
+  .region-subnav__link:hover,.region-subnav__link:focus-visible{background:#e5f2e9;border-color:#9dc2ae;outline:2px solid #7db294;outline-offset:0}
+  @media(max-width:700px){.region-panel .region-subnav{grid-template-columns:repeat(2,minmax(0,1fr))}.region-subnav__link{padding:10px}}
+  @media(max-width:400px){.region-panel .region-subnav{grid-template-columns:1fr}.region-subnav__link{min-height:52px}}
+  @media(max-width:390px){.region-tab{font-size:13px;min-height:44px}.region-panel .card{gap:8px}}
   </style>`;
 }
 
 function publicHeader(region){
-  return `<header class="site-header"><div class="site-header__inner"><a class="site-brand" href="/cheonggye" aria-label="${esc(region.brand)} 홈"><span class="site-brand__mark">청계</span><span class="site-brand__text">${esc(region.brand)}</span></a><nav class="site-nav" aria-label="청계잇다 주요 메뉴"><a href="#local-services">지역서비스</a><a href="/cgpass">청계패스</a><a href="#participate">소통</a></nav></div></header>`;
+  return `<header class="site-header"><div class="site-header__inner"><a class="site-brand" href="/cheonggye" aria-label="${esc(region.brand)} 홈"><span class="site-brand__mark">청계</span><span class="site-brand__text">${esc(region.brand)}</span></a><nav class="site-nav" aria-label="청계잇다 주요 메뉴"><a href="#regional-tabs">지역정보</a><a href="/cgpass">청계패스</a><a href="/cheonggye/proposals">참여·제안</a></nav></div></header>`;
 }
 
 function adminHeader(region){
@@ -109,15 +144,31 @@ function publicCard(item){
   return `<article id="${esc(item.id)}" class="card" data-audiences="${esc(item.audiences)}">${body}<span class="card__arrow">서비스 영역</span></article>`;
 }
 
+
 function publicBody(region){
-  return `<main class="local-page"><section class="hero"><div class="eyebrow">청계 지역 공통 플랫폼</div><h1>${esc(region.brand)}</h1><p class="lead">청계에서 필요한 소식, 상점, 행사, 일자리와 나눔을 한곳에서 찾고 지역의 사람·단체와 자연스럽게 연결됩니다.</p><div class="hero-actions" aria-label="빠른 시작"><a href="#commerce">가게 찾기</a><a href="#events">행사 보기</a><a href="#jobs">일자리</a><a href="#proposal">의견·제안</a></div></section>
-  <section class="section" aria-labelledby="intent-title"><div class="section-head"><div><h2 id="intent-title">오늘, 청계에서 무엇을 하시나요?</h2><p class="section-note">설명보다 목적을 먼저 고르면 필요한 영역으로 바로 이동합니다.</p></div></div><div class="intent-strip"><a href="#neighborhood">동네 소식 보기</a><a href="#commerce">상점·상권 찾기</a><a href="#events">행사 참여하기</a><a href="#proposal">지역에 의견 전하기</a></div></section>
-  <section class="section" id="local-services"><div class="section-head"><div><h2>지역 서비스</h2><p class="section-note">주민·상인·학생·기관이 함께 쓰되, 각 서비스는 필요한 정보부터 짧고 분명하게 보여줍니다.</p></div></div><div class="grid">${publicLinks(region).map(publicCard).join('')}</div></section>
-  <section class="section personal" data-personalization-surface="local-cheonggye"><div class="personal__main"><strong>필요한 정보부터 간단하게</strong><p>청계잇다는 로그인하지 않아도 기본 지역정보를 사용할 수 있습니다. 맞춤 기능이 제공되는 경우에도 각 지역서비스 안에서 필요한 설정만 안내합니다.</p></div><div class="personal__aside"><strong>이용 원칙</strong><p>민감한 정보를 추정하지 않고, 공개 정보와 개인·단체의 비공개 정보는 구분해서 다룹니다.</p></div></section>
-  <section class="section" id="participate"><div class="talk"><div><strong>청계에 말하기</strong><p>지역 제안·행사·상권·생활정보는 관련 지역서비스와 연결합니다. 필요한 의견과 제안을 쉽게 남길 수 있는 흐름을 우선합니다.</p></div><a class="button" href="#proposal">참여·제안 보기</a></div></section>
-  <section class="section" id="local-organizations"><div class="section-head"><div><h2>함께하는 지역 조직</h2><p class="section-note">지역의 기관·단체와 연결해 필요한 공개정보와 참여 기회를 안내합니다.</p></div></div><div class="org"><div><strong>청계면상인회</strong><div class="muted">지역 상권과 상인 네트워크를 연결하는 참여 조직입니다.</div></div><a class="button" href="/cgma">상인회 보기</a></div><div class="org" style="margin-top:10px"><div><strong>청계패스</strong><div class="muted">참여점포·쿠폰·포인트·지역혜택을 연결하는 독립 지역서비스입니다.</div></div><a class="button" href="/cgpass">청계패스 보기</a></div></section>
-  </main>`;
+  const linkById=new Map(publicLinks(region).map(item=>[item.id,item]));
+  const groups=[
+    {id:'life',label:'동네·기관',desc:'생활소식, 지역 기관과 목포대 연계 정보를 살펴보세요.',ids:['neighborhood','directory','campus']},
+    {id:'shops',label:'상점·혜택',desc:'청계 상권과 청계패스의 공개 혜택 정보를 확인하세요.',ids:['commerce','commerce-pass']},
+    {id:'events',label:'행사·일자리',desc:'지역 행사, 구인구직, 숲 프로젝트를 찾아보세요.',ids:['events','jobs','forest']},
+    {id:'connect',label:'참여·연결',desc:'나눔·지역방송·의견제안과 상인회 소식을 만나보세요.',ids:['sharing','broadcast','proposals']},
+  ];
+  // Every secondary tab is a real canonical route, not a simulated detail panel.
+  const subLink=item=>`<a class="region-subnav__link" href="${esc(item.href)}" data-audiences="${esc(item.audiences||'resident student merchant organization')}" aria-label="${esc(item.name)} 페이지 열기"><b>${esc(item.name)}</b><span>${esc(item.desc)}</span></a>`;
+  const subMenu=group=>group.ids.map(id=>linkById.get(id)).filter(Boolean).map(subLink).join('')
+    +(group.id==='connect'?subLink({id:'cgma',name:'청계면상인회',tag:'단체',desc:'상인회 공개 활동과 소식',href:'/cgma',audiences:'resident student merchant organization'}):'');
+  return `<main class="local-page">
+  <section class="hero"><div class="eyebrow">청계 지역 공통 플랫폼</div><h1>${esc(region.brand)}</h1><p class="lead">청계의 생활정보와 상점, 혜택, 행사, 일자리, 참여 소식을 분야별로 간편하게 찾아보세요.</p></section>
+  <section class="region-browse" id="regional-tabs" aria-label="청계 지역정보">
+    <div class="region-browse__head"><h2>지역정보</h2><p>원하는 분야를 선택하면 해당 정보만 표시됩니다.</p></div>
+    <div class="region-tabs" role="tablist" aria-label="청계 지역정보 분류" data-region-tablist>
+      ${groups.map((group,index)=>`<button class="region-tab" type="button" role="tab" id="region-tab-${group.id}" aria-controls="region-panel-${group.id}" aria-selected="${index===0?'true':'false'}" tabindex="${index===0?'0':'-1'}">${esc(group.label)}</button>`).join('')}
+    </div>
+    ${groups.map((group,index)=>`<section class="region-panel" role="tabpanel" id="region-panel-${group.id}" aria-labelledby="region-tab-${group.id}"${index?' hidden':''}><p class="region-panel__intro">${esc(group.desc)}</p><nav class="region-subnav" aria-label="${esc(group.label)} 세부 메뉴" data-region-subnav>${subMenu(group)}</nav></section>`).join('')}
+  </section>
+  </main>${renderRegionTabsScript()}`;
 }
+
 
 function adminBody(region){
   const rows=region.modules.map(module=>{

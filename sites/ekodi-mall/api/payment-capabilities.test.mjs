@@ -30,10 +30,10 @@ test('Toss is the only implemented live adapter in this release', () => {
   assert.equal(disabled.configured, false);
   assert.deepEqual(disabled.blockers, ['toss-secret-missing', 'toss-client-key-missing']);
 
-  const ready = paymentProviderReadiness({ PAYMENT_PROVIDER:'toss', TOSS_SECRET_KEY:'secret', TOSS_CLIENT_KEY:'client', PAYMENTS_ENABLED:'true' });
+  const ready = paymentProviderReadiness({ PAYMENT_PROVIDER:'toss', TOSS_SECRET_KEY:'test_gsk_testonly', TOSS_CLIENT_KEY:'test_gck_testonly', PAYMENTS_ENABLED:'true' });
   assert.equal(ready.activationReady, true);
   assert.equal(ready.liveReady, true);
-  assert.deepEqual(paymentExecutionBlockers({ PAYMENT_PROVIDER:'toss', TOSS_SECRET_KEY:'secret', TOSS_CLIENT_KEY:'client', PAYMENTS_ENABLED:'false' }), ['payments-disabled']);
+  assert.deepEqual(paymentExecutionBlockers({ PAYMENT_PROVIDER:'toss', TOSS_SECRET_KEY:'test_gsk_testonly', TOSS_CLIENT_KEY:'test_gck_testonly', PAYMENTS_ENABLED:'false' }), ['payments-disabled']);
 });
 
 test('manual bank is represented but cannot silently become executable', () => {

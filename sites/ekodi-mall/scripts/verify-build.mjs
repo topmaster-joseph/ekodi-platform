@@ -8,7 +8,9 @@ const dist = path.join(root, 'dist');
 const site = JSON.parse(await readFile(path.join(root, 'content', 'site.json'), 'utf8'));
 const paymentsMarker = `"paymentsEnabled": ${site?.commerce?.paymentsEnabled === true}`;
 const checks = [
-  ['index.html', ['EKODI MALL', 'ALL MARKET', '7·8·9', '상품 하나부터', '무엇을 찾고 계세요?', '추천순위는 제휴수수료와 분리합니다', '/assets/marketplace-live.js', '/assets/context-curator.js', '/assets/local-commerce.js', '내 로컬']],
+  ['category-availability.json', ['"categories":', '"hasLocal":']],
+  ['index.html', ['EKODI MALL', 'ALL MARKET', '7·8·9', '상품 하나부터', '무엇을 찾고 계세요?', '추천순위는 제휴수수료와 분리합니다', '/assets/marketplace-live.js', '/assets/category-visibility.js', '/assets/context-curator.js', '/assets/local-commerce.js', '내 로컬']],
+  ['assets/category-visibility.js', ['TOSS-MALL-UNDERWRITING-001', 'data-filter-target', 'api/public/products', 'credentials', 'MutationObserver']],
   ['assets/local-commerce.js', ['ekodiMallLocalRegionV1', 'explicit', 'geolocation', '좌표는 저장하지 않습니다', 'ekodi:local-region-change']],
   ['assets/context-curator.js', ['ekodi.kr/api/affiliate/public/products', 'diversified', 'groupOffers', '제휴수수료와 분리합니다', 'data-context-prompt', 'context-detail-button', 'context-offer-dialog', '어디서 살까요?', '판매처에서 구매']],
   ['travel/stay/index.html', ['EKODI 숙소', '숙소 추천', '지역·일정·인원·예산 등 숙소 조건', 'data-affiliate-mode="stay"', 'affiliate-hub.js']],
@@ -87,7 +89,45 @@ for (const item of originalItems) {
     if (!detail.includes('name="robots" content="noindex,follow"')) errors.push('Preparing product detail was not marked noindex: ' + item.id);
   }
 }
+const mirror = JSON.parse(await readFile(path.join(dist, 'provider-bookstore.json'), 'utf8'));
+const directBook = mirror.products?.find((p) => p.bookId === 'BOOK-EKODI-000001');
+if (!directBook?.slug) {
+  errors.push('Direct bookstore edition missing from the publisher mirror');
+} else {
+  const detail = await readFile(path.join(dist, 'products', directBook.slug, 'index.html'), 'utf8');
+  if (!detail.includes('data-bookstore-purchase-link href="https://ekodi.kr/books/book/?id=BOOK-EKODI-000001"') ||
+      !detail.includes('data-bookstore-price>가격 확인 필요') ||
+      !detail.includes('온라인 리더에서 열람') || detail.includes('/books/buy/')) {
+    errors.push('Static bookstore detail must display an information link and defer purchase and price to the live quote');
+  }
+}
+const approvedBook = mirror.products?.find((p) => p.bookId === 'BOOK-EKODI-000002');
+if (!approvedBook?.slug || !/^book-[a-z0-9-]+$/.test(approvedBook.slug)) {
+  errors.push('Existing approved bookstore edition missing from stable publisher mirror');
+} else {
+  const detail = await readFile(path.join(dist, 'products', approvedBook.slug, 'index.html'), 'utf8');
+  if (!detail.includes('name="robots" content="index,follow,max-image-preview:large"') ||
+      detail.includes('name="robots" content="noindex')) {
+    errors.push('Public bookstore information page cannot inherit sale-status noindex');
+  }
+  if (!detail.includes('data-bookstore-book-id="BOOK-EKODI-000002"') ||
+      !detail.includes('data-bookstore-purchase-link')) {
+    errors.push('Public bookstore page missing live purchase verification anchors');
+  }
+}
+const booksStore = await readFile(path.join(dist, 'stores', 'ekodi-books', 'index.html'), 'utf8');
+for (const marker of ['data-bookstore-store="true"','data-bookstore-store-grid','data-bookstore-public-count','src="/assets/bookstore-live.js"']) {
+  if (!booksStore.includes(marker)) errors.push('Bookstore live storefront is missing ' + marker);
+}
+const liveBridge = await readFile(path.join(dist, 'assets', 'bookstore-live.js'), 'utf8');
+for (const marker of ['/books/api/commerce', '/public/approvals', '/quote?book=', 'checkout?.fileReady', "checkout?.mode === 'live'"]) {
+  if (!liveBridge.includes(marker)) errors.push('Bookstore sale bridge lost verification gate: ' + marker);
+}
+if (!homepage.includes('src="/assets/bookstore-live.js"')) errors.push('Mall homepage missing bookstore approval bridge');
 const publicSitemap = await readFile(path.join(dist, 'sitemap.xml'), 'utf8');
+if (approvedBook?.slug && !publicSitemap.includes('/products/' + approvedBook.slug + '/')) {
+  errors.push('Public bookstore information page missing from sitemap');
+}
 for (const item of originalItems.filter((p) => !isPublicStaticSale(p))) {
   if (publicSitemap.includes('/products/' + item.slug + '/')) errors.push('Preparing product listed in sitemap: ' + item.id);
 }

@@ -14,6 +14,11 @@ directory = "./journal"
 binding = "ASSETS"
 run_worker_first = true
 
+# JOURNAL-BOOKS-001: 출판된 도서 글을 읽는 서버 간 읽기 전용 연결.
+[[services]]
+binding = "PUBLISHING"
+service = "ekodi-publishing"
+
 [observability.logs]
 enabled = true
 invocation_logs = true

@@ -258,3 +258,49 @@ test('trusted OIDC native watch release requires pinned task, post-merge observe
   assert.equal((await valid.json()).state,'completed');
   assert.equal(row.state,'completed');
 });
+
+function noDeployEvidence(files){
+  return {
+    verified:true,deliveryKind:'no-deploy-surface',deploymentSurface:'none',taskId,branchRef,
+    pr:{number:3574,url:'https://github.com/topmaster-joseph/ekodi-platform/pull/3574',mergedAt:'2026-10-05T05:45:00Z',mergeCommitSha:mergeSha},
+    requiredWorkflows:[
+      {name:'CI',runId:1,url:'https://example/ci',conclusion:'success'},
+      {name:'EKODI AI Orchestration Gate',runId:2,url:'https://example/gate',conclusion:'success'},
+    ],
+    files,deployments:[],
+  };
+}
+function withPrFiles(fetchImpl,files){
+  return async input=>{
+    const url=String(input);
+    if(url.startsWith('https://api.github.com/repos/topmaster-joseph/ekodi-platform/pulls/3574/files'))
+      return new Response(JSON.stringify(url.includes('page=1')?files.map(filename=>({filename})):[]),{status:200});
+    return fetchImpl(input);
+  };
+}
+
+test('no-deploy-surface completion is re-verified server-side against the PR file list',async()=>{
+  const {token,fetchImpl}=oidcFixture();
+  const {env,row}=dbFixture();
+  const files=['eval/README.md','eval/ops-baseline.mjs'];
+  const response=await handleOrchestratorCompletionReconciliation(request(token,{action:'complete',taskId,branchRef,evidence:noDeployEvidence(files)}),env,{fetchImpl:withPrFiles(fetchImpl,files)});
+  assert.equal(response.status,200);
+  assert.equal(row.state,'completed');
+  assert.equal(JSON.parse(row.production_evidence_json).deploymentSurface,'none');
+});
+
+test('no-deploy-surface claim that does not match the real PR files is refused',async()=>{
+  const {token,fetchImpl}=oidcFixture();
+  const {env,row}=dbFixture();
+  const response=await handleOrchestratorCompletionReconciliation(request(token,{action:'complete',taskId,branchRef,evidence:noDeployEvidence(['eval/README.md'])}),env,{fetchImpl:withPrFiles(fetchImpl,['eval/README.md','admin-ai-governor.js'])});
+  assert.equal(response.status,409);
+  assert.equal(row.state,'assigned');
+});
+
+test('no-deploy-surface evidence listing runtime files is rejected as invalid shape',async()=>{
+  const {token,fetchImpl}=oidcFixture();
+  const {env,row}=dbFixture();
+  const response=await handleOrchestratorCompletionReconciliation(request(token,{action:'complete',taskId,branchRef,evidence:noDeployEvidence(['admin-ai-governor.js'])}),env,{fetchImpl});
+  assert.equal(response.status,400);
+  assert.equal(row.state,'assigned');
+});

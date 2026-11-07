@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko-KR" data-ekodi-shell-surface="public">
+<html lang="ko-KR" data-ekodi-shell-surface="public" data-ekodi-progressive-home="off">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -13,6 +13,7 @@
   <a class="brand" href="https://ekodibiz.kr/" data-i18n-aria="brandHome" aria-label="에코디비즈 첫 화면으로 이동">EKODIBIZ</a>
   <nav aria-label="주요 메뉴" data-i18n-aria="navLabel">
     <a href="#business" data-i18n="navBusiness">사업분야</a>
+    <a href="https://ekodi.kr/ekodibiz/ai-agency/apply">AI 구매·결제 위탁</a><a href="https://ekodi.kr/ekodibiz/ai-agency/university">대학 계약조회</a>
   </nav>
 </header>
 <main>
@@ -21,7 +22,7 @@
       <p class="eyebrow">BUSINESS · TECHNOLOGY · CONNECTION</p>
       <h1 data-i18n-html="heroTitle">가치를 발견하고,<br><span>실행 가능한 사업으로.</span></h1>
       <p class="lead" data-i18n="heroLead">에코디비즈는 기술과 사업 운영을 연결해 사람과 조직의 가능성이 실제 성과로 이어지도록 돕습니다.</p>
-      <div class="actions"><a id="businessInquiry" class="primary" target="_blank" rel="noopener noreferrer" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=ekodibiz%40gmail.com" data-i18n="inquiry">사업 문의</a></div>
+      <div class="actions"><a class="primary" href="https://ekodi.kr/ekodibiz/ai-agency/apply">AI 서비스 구매·결제 위탁신청</a><a id="businessInquiry" class="primary" target="_blank" rel="noopener noreferrer" href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=ekodibiz%40gmail.com" data-i18n="inquiry">사업 문의</a></div>
     </section>
     <section id="business" class="business" aria-labelledby="businessTitle">
       <div class="section-head"><p class="eyebrow">WHAT WE DO</p><h2 id="businessTitle" data-i18n-html="businessTitle">필요한 기술보다,<br>필요한 결과에서 시작합니다.</h2></div>
@@ -35,7 +36,23 @@
         <a class="business-card" href="#business/ai-ops" data-business="ai-ops"><b>07</b><h3 data-i18n="businessAiOps">AI · 디지털 운영</h3><p data-i18n="businessAiOpsSummary">업무·고객·콘텐츠·데이터를 연결해 반복 가능한 디지털 운영 흐름을 설계합니다.</p><span data-i18n="viewDetail">자세히 보기</span></a>
         <a class="business-card" href="#business/marketing" data-business="marketing"><b>08</b><h3 data-i18n="businessMarketing">마케팅 · 커머스</h3><p data-i18n="businessMarketingSummary">브랜드 메시지부터 콘텐츠와 판매 접점까지 하나의 성장 흐름으로 연결합니다.</p><span data-i18n="viewDetail">자세히 보기</span></a>
       </div>
-    </section>    <section class="principle"><p class="eyebrow">HOW WE WORK</p><h2 data-i18n-html="principleTitle">공개 정보는 선명하게.<br>협업은 필요한 자리에서 깊게.</h2><p data-i18n="principleBody">사업분야를 선택하면 상세 정보와 해당 분야 관계자 업무공간을 확인할 수 있습니다.</p></section>
+    </section>
+    <!-- Business areas above are informational, NOT a storefront or empty product categories. -->
+    <section class="merchant-service" id="merchantService" aria-labelledby="merchantServiceTitle" data-merchant-review="intangible-service">
+      <p class="eyebrow">SERVICE INFORMATION · 무형 서비스</p>
+      <h2 id="merchantServiceTitle">30일 자동홍보팩 <span class="merchant-service-status">상담·견적 후 계약</span></h2>
+      <p class="merchant-service-intro">에코디비즈의 사업자 대상 홍보·마케팅 지원 용역입니다. 이 안내는 서비스의 내용과 제공 조건을 공개하기 위한 것이며, 지금 즉시 결제 가능한 상품으로 표시하지 않습니다.</p>
+      <dl class="merchant-service-detail">
+        <div><dt>서비스 내용</dt><dd>사업·고객 현황 진단, 30일 홍보 캘린더 구성, 채널별 콘텐츠 초안, 랜딩페이지 메시지와 성과 측정 지표 제안</dd></div>
+        <div><dt>제공 형태</dt><dd>상담 및 협의 후 전자문서·디지털 결과물 제공. 고객별 작업 범위와 전달 방법은 견적서·계약서에 명시</dd></div>
+        <div><dt>서비스 제공 기간</dt><dd>‘30일’은 홍보 계획안의 대상 기간입니다. 실제 용역 착수일, 수행 기간, 결과물 인도 일정은 계약 체결 전에 개별 견적서·계약서에서 확정하여 안내합니다.</dd></div>
+        <div><dt>이용요금·결제</dt><dd>현재 가격 미확정·개별 견적 방식입니다. 이 페이지에서는 주문·카드결제를 받지 않으며, 승인된 상품가격 없이 임의 결제창을 열지 않습니다.</dd></div>
+        <div><dt>취소·환불</dt><dd>구매 전 환불 기준을 확인할 수 있습니다. 개별 계약 조건과 관계 법령에 따라 처리하며 법령상 소비자 권리는 제한하지 않습니다. <a href="https://ekodi.kr/ekodibiz/refund">에코디비즈 환불정책 보기</a></dd></div>
+        <div><dt>판매주체 구분</dt><dd>이 안내는 에코디비즈 직접 제공 무형 용역에 한합니다. 실물상품·외부 판매자·제휴상품은 여기에서 결제하지 않으며, 판매주체와 결제계약을 별도로 확인합니다.</dd></div>
+      </dl>
+      <div class="merchant-service-actions"><a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=ekodibiz%40gmail.com&amp;su=30%EC%9D%BC%20%EC%9E%90%EB%8F%99%ED%99%8D%EB%B3%B4%ED%8C%A9%20%EA%B2%AC%EC%A0%81%20%EB%AC%B8%EC%9D%98" target="_blank" rel="noopener noreferrer">서비스 견적 문의</a><small>결제 전 서비스 내용·기간·요금·환불조건을 서면으로 확정합니다.</small></div>
+    </section>
+    <section class="principle"><p class="eyebrow">HOW WE WORK</p><h2 data-i18n-html="principleTitle">공개 정보는 선명하게.<br>협업은 필요한 자리에서 깊게.</h2><p data-i18n="principleBody">사업분야를 선택하면 상세 정보와 해당 분야 관계자 업무공간을 확인할 수 있습니다.</p></section>
   </div>
   <section id="detailView" class="detail" hidden aria-live="polite">
     <a class="detail-back" href="#business" data-i18n="backToBusiness">← 사업분야 전체 보기</a>

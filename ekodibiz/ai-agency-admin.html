@@ -1,0 +1,67 @@
+<!doctype html><html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>AI 구매위탁 운영검토 | 에코디비즈</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#17362a;background:#f5f7f5}*{box-sizing:border-box}
+body{margin:0}main{max-width:1050px;margin:auto;padding:28px 16px 55px}header{padding:18px;background:white;border-bottom:1px solid #dae5de}
+header div{max-width:1050px;margin:auto;display:flex;justify-content:space-between;gap:12px}
+a{color:#25593a}h1{font-size:clamp(25px,4vw,34px);margin:0 0 8px}h2{font-size:18px}
+p{line-height:1.6}.muted{color:#697c71;font-size:13px}.panel{background:white;border:1px solid #d6e1d8;border-radius:13px;padding:18px;margin-top:16px}
+label{display:grid;gap:5px;font-size:13px;font-weight:700}input,textarea,select{width:100%;min-height:42px;border-radius:8px;border:1px solid #bdcec2;padding:10px;font:inherit;min-width:0}
+textarea{min-height:74px}button{border:1px solid #285a3c;background:#285a3c;color:white;border-radius:8px;padding:10px 14px;min-height:42px;font-weight:750;cursor:pointer}
+button.secondary{background:white;color:#285a3c}button:disabled{opacity:.5} .summary{white-space:pre-wrap;overflow-wrap:break-word;border:1px solid #e2ebe4;background:#f8faf8;border-radius:8px;padding:14px;line-height:1.65;font-size:13px} .note{border-left:3px solid #698774;padding-left:10px;font-size:13px;color:#52695b}.row{display:flex;align-items:end;gap:9px;flex-wrap:wrap}.row>*{flex:1}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid #edf1ee;vertical-align:top}th{color:#557363;background:#f8faf8}
+#tableWrap{overflow:auto}.selector{background:#eff7f0;border-radius:8px;padding:13px;margin-top:10px}
+#message{font-size:13px;line-height:1.6}#message:empty{display:none}
+.agency-navigation{max-width:1050px;margin:10px auto 0;padding:0 16px;display:flex;flex-wrap:wrap;align-items:center;gap:7px}
+.agency-navigation a,.agency-navigation button{font:inherit;font-size:12px;line-height:1.45;text-decoration:none;white-space:normal;display:inline-flex;align-items:center;min-height:36px;border-radius:8px;padding:7px 10px;background:#fff;border:1px solid #cedfd1;color:#194a35;cursor:pointer;text-align:center}
+.agency-navigation [aria-current="page"]{background:#285a3c;border-color:#285a3c;color:#fff;font-weight:800}
+.agency-navigation button{background:#f1f7f2}
+.agency-share-status{max-width:1050px;margin:4px auto 0;padding:0 16px;font-size:12px;color:#245d3a}
+.agency-share-status:empty{display:none}
+
+@media(max-width:640px){.row{display:block}.row>*{margin-bottom:9px}}
+</style></head>
+<body><header><div><strong>EKODIBIZ · 운영검토</strong><a href="https://ekodi.kr/ekodibiz">에코디비즈 홈</a></div></header>
+<nav class="agency-navigation" aria-label="AI 위탁 서비스 화면 이동">
+  <a data-agency-link="apply" href="/ekodibiz/ai-agency/apply">위탁신청</a>
+  <a data-agency-link="university" href="/ekodibiz/ai-agency/university">대학 계약조회</a>
+  <a data-agency-link="individual" href="/ekodibiz/ai-agency/individual">개인 신청</a>
+  <a data-agency-link="admin" href="/ekodibiz/ai-agency/admin">운영자 관리</a>
+  <button type="button" data-share-agency="current">이 화면 공유</button>
+  <button type="button" data-share-agency="university">대학 조회 링크 공유</button>
+</nav>
+<p class="agency-share-status" id="agencyShareStatus" role="status" aria-live="polite"></p>
+<main><h1>AI 서비스 구매위탁 관리</h1>
+<p class="muted">관리자 전용 · 상담 신청 검토, 확정 견적과 서비스 개시 확인. 관리자 인증정보는 브라우저에 저장하지 않습니다. 실결제는 PG·공급사 검증과 서버 결제키가 준비된 경우에만 작동합니다.</p>
+<section class="panel"><div class="row"><label>운영 관리자 인증키<input id="adminKey" type="password" autocomplete="off" placeholder="서버에 등록된 관리자 키"></label><button id="load">신청 목록 조회</button></div><p id="message" role="status" aria-live="polite"></p></section>
+<section class="panel"><h2>접수된 신청</h2><div id="tableWrap"><table><thead><tr><th>신청번호 / 상태</th><th>신청인·기관</th><th>서비스·기간</th><th>견적</th><th>선택</th></tr></thead><tbody id="rows"><tr><td colspan="5">관리자 인증 후 목록을 조회합니다.</td></tr></tbody></table></div></section>
+<section class="panel" id="detail" hidden>
+<h2 id="selectedTitle">신청 검토</h2>
+<p id="selectedBody" class="muted"></p>
+<form id="quoteForm"><div class="row"><label>에코디비즈 위탁료 (원)<input name="feeAmount" type="number" min="0" max="5000000" step="1" required></label>
+<label>공급사 구독료 대리수납 (원)<input name="supplierAmount" type="number" min="0" max="10000000" step="1" value="0" required></label></div>
+<label>계약·견적 안내<textarea name="guidance" maxlength="400" placeholder="상세 수행범위·환불기준·공급사 권한 확인 사항을 입력합니다."></textarea></label>
+<p class="muted">공급사 대리수납 금액은 서버에 해당 공급사 계약범위 승인이 등록되어 있는 경우에만 설정할 수 있습니다. 자동결제·자동갱신은 사용하지 않습니다.</p>
+<div class="row"><button type="submit" id="quoteBtn">견적 확정</button><button type="button" id="activateBtn" class="secondary" hidden>공급사 이용 개시 확인</button></div>
+</form></section>
+<section class="panel" id="opsDetail" hidden aria-label="3개월 위탁관리">
+<h2>3개월 결제·종료·정산</h2>
+<p class="note">실제 공급사에서 받은 영수증과 갱신중단 확인번호만 수동 기록합니다. 이 화면에서는 결제·구독해지·개인 계정 변경이 실행되지 않습니다.</p>
+<div id="settlementSummary" class="summary" aria-live="polite">정산 기록을 불러오는 중입니다.</div>
+<form id="cycleForm" hidden><h2>공급사 결제증빙 기록</h2><div class="row">
+<label>회차<select name="cycle" required><option value="1">1개월차</option><option value="2">2개월차</option><option value="3">3개월차</option></select></label>
+<label>실제 결제액 (원)<input name="amount" type="number" min="1" max="10000000" step="1" required></label>
+<label>결제일<input name="paidOn" type="date" required></label></div>
+<label>공급사 영수증 식별번호 (영문·숫자)<input name="receiptRef" autocomplete="off" maxlength="80" minlength="6" placeholder="예: INVOICE-2026-001" required></label>
+<button type="submit" id="recordCycleBtn">결제증빙 저장</button>
+</form>
+<form id="renewalForm" hidden><h2>3개월 종료 확인</h2>
+<label>공급사 갱신중단 확인번호<input name="cancellationRef" autocomplete="off" maxlength="80" minlength="6" placeholder="예: CANCEL-2027-001" required></label>
+<label style="display:flex;align-items:center;gap:8px;font-weight:500"><input name="personalAccountKept" type="checkbox" style="width:auto;min-height:0" required>개인 계정은 삭제하지 않았고, 공급사에서 갱신 중단을 확인했습니다.</label>
+<button type="submit" class="secondary" id="stopRenewalBtn">갱신중단 증빙 저장</button>
+</form>
+<div class="row"><button type="button" class="secondary" id="exportStatement">정산서 CSV 다운로드</button></div>
+</section>
+</main><script src="/ekodibiz/ai-agency-admin.js" defer></script>
+<script src="/ekodibiz/ai-agency-links.js" type="module"></script></body></html>

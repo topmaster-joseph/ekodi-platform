@@ -18,6 +18,7 @@ import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from '
 import { isMallPicksPath, mallPicksResponse } from './mall-weekly-picks-page.js';
 import { decorateMallProductResponse, isMallProductPath } from './mall-product-jsonld.js';
 import { o2oHubPage } from './o2o-hub-page.js';
+import { isEkodibizAgencyPath, proxyEkodibizAgency } from './ekodibiz-agency-route.js';
 import { isO2OIssuedLinkPath, o2oIssuedLinkResponse } from './o2o-issued-links.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
@@ -242,6 +243,20 @@ const PUBLIC_CSP = [
 ].join('; ');
 
 const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self'","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co");
+// Strictly scoped to the hosted age-verification page; other sites retain PUBLIC_CSP.
+const AGE_VERIFY_CSP = [
+  "default-src 'none'",
+  "script-src 'self' https://cdn.portone.io",
+  "style-src 'self'",
+  "connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://*.portone.io",
+  "frame-src https://*.portone.io https://*.inicis.com https://*.danal.co.kr",
+  "img-src 'self' data: https:",
+  "frame-ancestors 'none'",
+  "base-uri 'none'",
+  "form-action 'self' https://*.portone.io https://*.inicis.com https://*.danal.co.kr",
+  "object-src 'none'",
+  "upgrade-insecure-requests"
+].join('; ');
 
 const MALL_CSP = [
   "default-src 'self'",
@@ -430,6 +445,31 @@ function rewriteMallHtmlDocument(html, pathname = MALL_PREFIX, publicPrefix = MA
     : rewritten.replace('</head>', `${canonicalTag}\n</head>`);
   return rewritten;
 }
+// Only the known, identity-free storefront assets receive a brief browser TTL.
+// All catalog JSON, commerce, checkout, member, operator, admin and API paths
+// retain existing revalidation or no-store behavior.
+const MALL_PUBLIC_STARTUP_ASSETS = new Set([
+  'styles.css', 'platform.css', 'market-dna.css', 'context-curator.css', 'home-refresh.css',
+  'local-commerce.js', 'app.js', 'marketplace-live.js', 'bookstore-live.js',
+  'category-visibility.js', 'context-curator.js', 'commerce.js', 'home-refresh.js',
+]);
+function mallPublicStartupAssetCacheControl(request, upstreamResponse, pathname, publicPrefix = MALL_PREFIX) {
+  if (request.method !== 'GET' || upstreamResponse.status !== 200) return null;
+  // Do not mark any response that involves an authenticated browser request
+  // or a personalized upstream response as public-cacheable.
+  if (request.headers.has('authorization') || request.headers.has('cookie')
+      || upstreamResponse.headers.has('set-cookie')) return null;
+  const assetPrefix = `${publicPrefix}/assets/`;
+  if (!pathname.startsWith(assetPrefix)) return null;
+  const filename = pathname.slice(assetPrefix.length);
+  if (!MALL_PUBLIC_STARTUP_ASSETS.has(filename)) return null;
+  const upstreamCache = String(upstreamResponse.headers.get('cache-control') || '').toLowerCase();
+  if (/\b(?:private|no-store)\b/.test(upstreamCache)) return null;
+  const type = String(upstreamResponse.headers.get('content-type') || '').toLowerCase();
+  if (filename.endsWith('.css') && !type.includes('text/css')) return null;
+  if (filename.endsWith('.js') && !/(?:javascript|ecmascript)/.test(type)) return null;
+  return 'public, max-age=60, stale-while-revalidate=30';
+}
 async function proxyMallService(request, publicPrefix = MALL_PREFIX) {
   const incoming = new URL(request.url);
   const upstream = new URL(request.url);
@@ -467,7 +507,9 @@ async function proxyMallService(request, publicPrefix = MALL_PREFIX) {
   const apiSurface = incoming.pathname === `${publicPrefix}/api` || incoming.pathname.startsWith(`${publicPrefix}/api/`);
   const verificationOpsSurface = isMallVerificationOpsPath(incoming.pathname, publicPrefix);
   const adminEmbed = incoming.searchParams.get('embed') === 'admin';
-  const cacheControl = adminSurface || apiSurface || verificationOpsSurface || adminEmbed ? 'no-store' : 'public, max-age=0, must-revalidate';
+  const cacheControl = adminSurface || apiSurface || verificationOpsSurface || adminEmbed ? 'no-store'
+    : (mallPublicStartupAssetCacheControl(request, upstreamResponse, incoming.pathname, publicPrefix)
+       || 'public, max-age=0, must-revalidate');
   const route = adminSurface ? 'admin-mall-proxy' : apiSurface ? 'mall-api-proxy' : verificationOpsSurface ? 'mall-verification-ops' : 'public-ekodi-mall';
   const mallCsp = adminEmbed ? MALL_ADMIN_EMBED_CSP : MALL_CSP;
   const response = withHostSecurity(new Response(responseBody, { status: upstreamResponse.status, statusText: upstreamResponse.statusText, headers }), mallCsp, cacheControl, route);
@@ -692,6 +734,44 @@ export default {
     }
 
     if (host === PUBLIC_HOST) {
+      // All agency routes belong to the EKODIBIZ service binding, not the apex static fallback.
+      // Preserve its authentication and payment CSP; do not broaden the general service proxy.
+      if (isEkodibizAgencyPath(url.pathname)) return proxyEkodibizAgency(request, env);
+      // Host the same-origin age verification UX without a separate Worker or client secret.
+      if (url.pathname === '/verify/adult' || url.pathname.startsWith('/verify/adult/')) {
+        if (!['GET', 'HEAD'].includes(request.method)) {
+          const denied = withHostSecurity(new Response(null, {status:405,headers:{allow:'GET, HEAD'}}), AGE_VERIFY_CSP, 'no-store', 'age-verify-method-blocked');
+          denied.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
+          return denied;
+        }
+        if (url.pathname === '/verify/adult') {
+          const target = new URL(request.url);
+          target.pathname = '/verify/adult/';
+          const canonical = withHostSecurity(new Response(null,{status:308,headers:{location:target.toString()}}), AGE_VERIFY_CSP, 'no-store','age-verify-canonical');
+          canonical.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+          return canonical;
+        }
+        const allowed = new Set(['/verify/adult/','/verify/adult/index.html','/verify/adult/styles.css','/verify/adult/app.js','/verify/adult/client.js','/verify/adult/test.html','/verify/adult/test.js']);
+        if (!allowed.has(url.pathname)) {
+          const missing = withHostSecurity(new Response('Not Found',{status:404}), AGE_VERIFY_CSP, 'no-store', 'age-verify-not-found');
+          missing.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+          return missing;
+        }
+        const response = await env.ASSETS.fetch(request);
+        const secured = withHostSecurity(response, AGE_VERIFY_CSP, 'private, no-store', 'age-verify-ui');
+        // Do not depend on static-asset gateway MIME guessing. X-Content-Type-Options:
+        // nosniff (in the canonical edge policy) blocks both CSS and ESM if their
+        // response is labelled text/plain or text/html by an upstream boundary.
+        if (response.ok) {
+          const mime = url.pathname.endsWith('.css') ? 'text/css; charset=utf-8'
+            : url.pathname.endsWith('.js') ? 'text/javascript; charset=utf-8'
+            : 'text/html; charset=utf-8';
+          secured.headers.set('Content-Type', mime);
+        }
+        secured.headers.set('X-Content-Type-Options', 'nosniff');
+        secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        return secured;
+      }
       // Browser-only proposal drafts: no upload API, persistence, public indexing or external execution.
       if (url.pathname === '/proposal' || url.pathname.startsWith('/proposal/')) {
         if (!['GET','HEAD'].includes(request.method)) {
@@ -846,7 +926,7 @@ export default {
       if (['GET','HEAD'].includes(request.method) && (url.pathname==='/admin/people'||url.pathname==='/admin/people/')) return personAuthorityPage();
       if (['GET','HEAD'].includes(request.method) && (url.pathname==='/admin/site-admins'||url.pathname==='/admin/site-admins/')) return siteAdminBootstrapPage();
       if (['GET','HEAD'].includes(request.method) && isChurchPastorAdminPath(url.pathname)) return injectEkodiShell(churchPastorAdminPage(), 'church', 'admin');
-      if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(), 'space', 'admin');
+      if (isWorkspaceAdminPath(url.pathname)) return injectEkodiShell(workspaceAdminPage(url.pathname), 'space', 'admin');
       // Keep EKODIBIZ business-unit routes owned by the shared apex shell, even after Pay routing changes.
       if (isBusinessOsCommonPath(url.pathname)) return withHostSecurity(await businessOsCommonResponse(request), PUBLIC_CSP, 'no-store', 'public-ekodibiz-business-os');
       if (isDorajiLedgerApiPath(url.pathname)) return withHostSecurity(await dorajiLedgerApiResponse(request,env), PUBLIC_CSP, 'private, no-store', 'private-ekodibiz-doraji-ledger');

@@ -7,7 +7,7 @@
 //          DOMEGGOOK_ORDER_ITEM_TEMPLATE 변수로 바꿀 수 있게 했다. 발주 직후 실제 주문을 조회해 수량을 대조한다.
 import { fetchDomeggookItem, PROVIDER } from './domeggook-import.js';
 import { raiseAlert } from './ops-alerts.js';
-import { approvedMemberBindingReady, autoOrderEnabled, pilotOrderIds, pilotReady } from './domeggook-gates.js';
+import { approvedMemberBindingReady, autoOrderEnabled, pilotOrderIds, pilotBudgetKrw, pilotReady } from './domeggook-gates.js';
 export { approvedMemberBindingReady, autoOrderEnabled, pilotOrderIds } from './domeggook-gates.js';
 
 // 10/29 www 호스트로 바꾼 뒤 redirect:'error' 와 겹쳐 모든 로그인이 실패했다. 상품조회와 같은 공식 호스트를 쓴다.
@@ -145,24 +145,42 @@ export function buildItemValue(env, { market, qty, deliMemo, opt = '00' }) {
     .replaceAll('{sellerMemo}', '에코디몰 위탁주문').replaceAll('{deliMemo}', pipeSafe(deliMemo, 80));
 }
 
-/** Fail closed on malformed delivery data before any paid provider call.
- * Do not log or persist the buyer's personal information. */
+// Official 2026-07-07 setOrder v4.3 integration guide: mobile numbers must
+// contain hyphens; optional supplementary contacts are not copies of the mobile.
+export function formatDomeggookMobile(value) {
+  const digits = String(value ?? '').replace(/[\s()-]/g, '');
+  if (!/^(?:01\d{8,9}|050\d{7,8}|0707\d{7})$/.test(digits)) return '';
+  if (digits.length === 10) return digits.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3');
+  if (digits.length === 11) return digits.replace(/^(\d{3})(\d{4})(\d{4})$/, '$1-$2-$3');
+  return '';
+}
+
+/** Fail closed before a paid provider call; never persist recipient PII in diagnostics. */
 export function validateDeliInfo(buyer) {
   if (!buyer || typeof buyer !== 'object') return 'NO_BUYER';
-  for (const field of ['name', 'postcode', 'address1', 'phone']) {
+  const limits = { name: 20, email: 100, postcode: 5, address1: 200, address2: 200 };
+  for (const field of ['name', 'postcode', 'address1', 'address2', 'phone']) {
     const value = String(buyer[field] ?? '').trim();
     if (!value || /[\r\n]/.test(value)) return 'INVALID_DELIINFO';
   }
-  const phone = String(buyer.phone).replace(/[\s()-]/g, '');
-  if (!/^0\d{8,10}$/.test(phone)) return 'INVALID_DELIINFO';
-  if (buyer.email && /[\r\n]/.test(String(buyer.email))) return 'INVALID_DELIINFO';
-  if (buyer.address2 && /[\r\n]/.test(String(buyer.address2))) return 'INVALID_DELIINFO';
+  for (const [field, max] of Object.entries(limits)) {
+    const value = String(buyer[field] ?? '').trim();
+    if (value.length > max || /[\r\n]/.test(value)) return 'INVALID_DELIINFO';
+  }
+  if (!/^\d{5}$/.test(String(buyer.postcode).trim())) return 'INVALID_DELIINFO';
+  if (!formatDomeggookMobile(buyer.phone)) return 'INVALID_DELIINFO';
   return null;
 }
 
 export function buildDeliInfo(buyer) {
-  // 문서 예시 순서: 이름|이메일|우편번호|주소|상세주소|휴대폰|전화|회사명
-  return [buyer.name, buyer.email, buyer.postcode, buyer.address1, buyer.address2, buyer.phone, buyer.phone, ''].map((v) => pipeSafe(v)).join('|');
+  // 2026-07-07 v4.3 guide: recipient|email|ZIP5|address1|address2|mobile|extra contact|storefront.
+  // Customs clearance code is a ninth OPTIONAL field for overseas items only.
+  // Keep the non-applicable extra contact empty; storefront is required.
+  return [
+    pipeSafe(buyer.name, 20), pipeSafe(buyer.email, 100), pipeSafe(buyer.postcode, 5),
+    pipeSafe(buyer.address1, 200), pipeSafe(buyer.address2, 200),
+    formatDomeggookMobile(buyer.phone), '', '에코디몰'
+  ].join('|');
 }
 
 async function orderView(env, session, supplierOrderNo, fetchImpl) {
@@ -226,6 +244,13 @@ export async function placeSupplierOrders(env, fetchImpl = fetch, limit = 3) {
     if (item.status && item.status !== '판매중') { await fail('ITEM_STOPPED', `공급처 판매상태 '${item.status}' — 고객 환불 필요`); continue; }
     if (item.inventory !== null && item.inventory < o.quantity) { await fail('ITEM_STOCK', `공급처 재고 ${item.inventory}개 — 고객 환불 필요`); continue; }
     const cost = (item.cost || 0) * o.quantity + (item.shipping || 0);
+    // One-off pilot: fail closed if shipping or stock is uncertain, or all-in
+    // cost exceeds the expressly approved limit. Never submit a paid request.
+    if (!full && (item.shipping == null || item.inventory == null || !Number.isFinite(cost)
+      || cost <= 0 || cost > pilotBudgetKrw(env))) {
+      await fail('PILOT_BUDGET_OR_QUOTE', '시험주문 배송비·재고가 불명확하거나 승인 한도 초과로 발주를 중단했습니다');
+      continue;
+    }
     if (!item.cost || cost > Number(o.seller_settlement_amount || 0)) { await fail('NEGATIVE_MARGIN', `공급비 ${cost.toLocaleString('ko-KR')}원이 정산액을 넘어 발주를 멈췄습니다`); continue; }
     let balance;
     try { balance = await emoneyBalance(env, session, fetchImpl); }

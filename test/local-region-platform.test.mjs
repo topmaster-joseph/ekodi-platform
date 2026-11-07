@@ -79,7 +79,7 @@ test('regional registry is reusable for additional regions',()=>{
 });
 
 
-test('Cheonggye public experience is local-first, readable, communicative and personalization-ready',async()=>{
+test('Cheonggye public experience is compact, accessible and information-first',async()=>{
   const region=localRegionBySlug('cheonggye');
   const response=localRegionPublicPage(region);
   const html=await response.text();
@@ -87,16 +87,26 @@ test('Cheonggye public experience is local-first, readable, communicative and pe
   assert.equal(response.headers.get('x-ekodi-site-experience'),'local-conversational-adaptive-v1');
   assert.match(html,/class="site-header"/);
   assert.match(html,/청계 지역 공통 플랫폼/);
-  assert.match(html,/오늘, 청계에서 무엇을 하시나요\?/);
-  assert.match(html,/청계에 말하기/);
-  assert.match(html,/필요한 정보부터 간단하게/);
-  assert.match(html,/로그인하지 않아도 기본 지역정보를 사용할 수 있습니다/);
+  assert.match(html,/지역정보/);
+  assert.match(html,/role="tablist"/);
+  assert.equal((html.match(/role="tab"/g)||[]).length,4);
+  assert.equal((html.match(/role="tabpanel"/g)||[]).length,4);
+  for(const id of ['life','shops','events','connect']){
+    assert.match(html,new RegExp('id="region-tab-'+id+'" aria-controls="region-panel-'+id+'"'));
+  }
+  assert.match(html,/id="region-panel-life"/);
+  assert.match(html,/id="region-panel-shops"[^>]+ hidden/);
+  assert.match(html,/href="\/cgma"/);
+  assert.match(html,/href="\/cgpass"/);
+  assert.match(html,/href="\/cheonggye\/proposals"/);
+  assert.doesNotMatch(html,/href="#proposal"/);
+  assert.doesNotMatch(html,/directory#campus/);
   assert.doesNotMatch(html,/href="\/my\//);
   assert.doesNotMatch(html,/내 에코디/);
   assert.match(html,/data-ekodi-personalization="progressive-consent"/);
   assert.match(html,/data-audiences=/);
+  assert.match(html,/\.region-panel \[hidden\]|\.region-panel\[hidden\]/);
   assert.match(html,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-  assert.match(html,/font-size:16px;line-height:1\.65/);
   assert.doesNotMatch(html,/>Space</);
 });
 

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { normalizeTask } from '../scripts/ekodi-background-browser-worker.mjs';
+import { normalizeTask, summarizeNativeNavigationPerformance, shouldBlockNativeTopLevelNavigation } from '../scripts/ekodi-background-browser-worker.mjs';
 
 const source=fs.readFileSync(new URL('../scripts/ekodi-background-browser-worker.mjs',import.meta.url),'utf8');
 const policy=JSON.parse(fs.readFileSync(new URL('../config/background-browser-worker-policy.json',import.meta.url),'utf8'));
@@ -78,6 +78,11 @@ test('shared-site guarded release invokes native browser verification after prod
   // Bottom AI command box is retired platform-wide: zero instances on every post-release snapshot.
   assert.match(workerWorkflow,/github\.event_name \}\}" != "pull_request"[\s\S]*select\(\.type == "snapshot" and \(\(\.userAiEntryCount \/\/ 0\) > 0\)\)/);
   assert.match(workerWorkflow,/\.pageErrors \| length == 0/);
+  assert.match(workerWorkflow,/\.performance\.navigations/);
+  assert.match(workerWorkflow,/\.performance\.p50Ms/);
+  assert.match(workerWorkflow,/\.performance\.p95Ms/);
+  assert.match(workerWorkflow,/\.navigationTimings\[\]\?/);
+  assert.match(workerWorkflow,/Browser start count: 1/);
   assert.match(source,/url:clean\(page\.url\(\),500\)/);
   assert.match(workerWorkflow,/github\.event_name == 'pull_request'[\s\S]*'\/,\/my\/,\/admin\/'/);
   assert.match(workerWorkflow,/uses:\s*actions\/upload-artifact@v4\r?\n\s*if:\s*always\(\)/);
@@ -148,4 +153,96 @@ test('different verifier workflows do not share one cancellation group on the sa
   assert.match(workerWorkflow,/github\.workflow/);
   assert.match(workerWorkflow,/github\.event\.workflow_run\.head_sha \|\| github\.sha/);
   assert.doesNotMatch(workerWorkflow,/group:\s*ekodi-background-browser-worker-\$\{\{ github\.ref \}\}-\$\{\{ inputs\.device_profile/);
+});
+
+test('native browser emits deterministic per-route p50/p95 timings without third-party calls',()=>{
+  assert.deepEqual(summarizeNativeNavigationPerformance([]),{navigations:0,p50Ms:null,p95Ms:null,maxMs:null});
+  assert.deepEqual(summarizeNativeNavigationPerformance([
+    {elapsedMs:200},{elapsedMs:100},{elapsedMs:400},{elapsedMs:300}
+  ]),{navigations:4,p50Ms:200,p95Ms:400,maxMs:400});
+  assert.match(source,/performance:summarizeNativeNavigationPerformance\(navigationTimings\)/);
+  assert.match(source,/navigationTimings\.push\(\{path:canonicalPath/);
+  assert.equal(policy.provider.externalBrowserServiceRequired,false);
+});
+
+test('synthetic page navigation excludes intentional Cloudflare pacing and settle waits',()=>{
+  const start=source.indexOf('  const goto=async p=>');
+  const end=source.indexOf('  try{\n    results.push(',start);
+  assert.ok(start>=0 && end>start,'browser navigation function must be present');
+  const code=source.slice(start,end);
+  const pace=code.indexOf('if(pause>0)');
+  const timer=code.indexOf('const documentReadyStartedAt=Date.now()');
+  const goto=code.indexOf("response=await page.goto(target,{waitUntil:'domcontentloaded'");
+  const captured=code.indexOf('const domContentLoadedElapsedMs=Date.now()-documentReadyStartedAt');
+  const settle=code.indexOf("await page.waitForTimeout(Math.min(task.deviceProfile.includes('mobile')?650:250");
+  assert.ok(pace>=0 && timer>pace && goto>timer && captured>goto && settle>captured,
+    'real navigation clock must start after the policy pacing and stop on DOMContentLoaded');
+  assert.match(code,/navigationTimings\.push\(\{path:canonicalPath,elapsedMs:domContentLoadedElapsedMs,/);
+  assert.match(code,/pacingWaitMs,settleWaitMs,ttfbMs:browserTiming\.ttfbMs/);
+  assert.match(code,/domContentLoadedMs:browserTiming\.domContentLoadedMs,fcpMs:browserTiming\.fcpMs/);
+  assert.match(code,/const nav=performance\.getEntriesByType\('navigation'\)\[0\]/);
+  assert.doesNotMatch(code,/elapsedMs:Date\.now\(\)-navStarted/);
+  assert.match(code,/minimumGap=2200/,'quota-avoidance pacing must remain intact');
+  assert.match(code,/CF_QUOTA_CIRCUIT_OPEN/);
+  for(const privateField of ['location.href','document.cookie','localStorage','sessionStorage'])
+    assert.ok(!code.slice(code.indexOf('const browserTiming=await page.evaluate'),code.indexOf('navigationTimings.push')).includes(privateField),
+      'numeric performance collection must not access '+privateField);
+});
+
+test('native navigation stats treat deliberate throttle as out-of-band metadata',()=>{
+  const data=[
+    {elapsedMs:130,pacingWaitMs:2200,settleWaitMs:250},
+    {elapsedMs:400,pacingWaitMs:2200,settleWaitMs:650},
+    {elapsedMs:210,pacingWaitMs:0,settleWaitMs:250},
+  ];
+  assert.deepEqual(summarizeNativeNavigationPerformance(data),{
+    navigations:3,p50Ms:210,p95Ms:400,maxMs:400,
+  });
+});
+
+
+test('native Chromium blocks cross-origin redirects before a top-level document request is sent',()=>{
+  for(const target of [
+    'https://evil.example/path','https://ekodi.kr.evil.example/',
+    'http://ekodi.kr/','https://ekodi.kr:8443/',
+    'javascript:alert(1)','data:text/html,test','invalid-url',
+    'https://admin:password@ekodi.kr/'
+  ]) assert.equal(shouldBlockNativeTopLevelNavigation(target),true,target);
+  for(const target of [
+    'https://ekodi.kr/','https://ekodi.kr/ekodimall/?campaign=1',
+    'https://ekodi.kr/admin/#section'
+  ]) assert.equal(shouldBlockNativeTopLevelNavigation(target),false,target);
+  assert.equal(shouldBlockNativeTopLevelNavigation(
+    'https://ekodi-admin-staging.ekodi-development.workers.dev/',
+    'https://ekodi-admin-staging.ekodi-development.workers.dev'
+  ),false,'allowlisted staging host remains valid only in explicit staging runtime');
+  assert.match(source,/await context\.route\('\*\*\/\*'/);
+  assert.doesNotMatch(source,/await page\.route\('\*\*\/\*'/);
+  assert.match(source,/req\.isNavigationRequest\(\)/);
+  assert.match(source,/req\.frame\(\)\.parentFrame\(\)===null/);
+  assert.match(source,/context\.on\('page',opened/);
+  assert.match(source,/route\.abort\('blockedbyclient'\)/);
+  assert.match(source,/if\(blockedExternalNavigations\.length\) fail\('BROWSER_REDIRECT_ORIGIN_FORBIDDEN'/);
+  assert.match(source,/blockedExternalNavigationCount:blockedExternalNavigations\.length/);
+  // Sensitive destination URL is never included in the blocked-nav evidence.
+  const handler=source.slice(source.indexOf("if(mainFrameNavigation && shouldBlockNativeTopLevelNavigation"),source.indexOf("if(quotaCircuit) return route.abort"));
+  assert.doesNotMatch(handler,/url:|host:|hostname:|requestUrl:/);
+});
+
+test('standalone worker sanitizes bad-task errors as well as runtime exceptions',()=>{
+  assert.match(source,/Promise\.resolve\(\)\.then\(readTask\)\.then\(runTask\)/);
+  assert.match(source,/console\.error\(JSON\.stringify\(sanitizeNativeBrowserFailure\(error\)\)\)/);
+});
+
+
+test('EKODI Chromium install cache is pinned and independent of paid browser services',()=>{
+  assert.match(workerWorkflow,/Restore cached Chromium binaries/);
+  assert.match(workerWorkflow,/uses: actions\/cache@v4/);
+  assert.match(workerWorkflow,/path: ~\/\.cache\/ms-playwright/);
+  assert.match(workerWorkflow,/ekodi-native-chromium-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-playwright-1\.55\.0-v1/);
+  assert.match(workerWorkflow,/npm install --no-save --package-lock=false playwright@1\.55\.0/);
+  assert.match(workerWorkflow,/npx playwright install --with-deps chromium/);
+  assert.match(workerWorkflow,/Record native Chromium cache evidence/);
+  assert.match(workerWorkflow,/CHROMIUM_CACHE_HIT: \$\{\{ steps\.chromium-cache\.outputs\.cache-hit \}\}/);
+  assert.doesNotMatch(workerWorkflow,/tinyfish|Browserstack|saucelabs/i);
 });

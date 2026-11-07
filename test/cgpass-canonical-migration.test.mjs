@@ -60,7 +60,7 @@ test('existing site/grant identity is preserved while publishing only the new ca
   assert.equal(sites[0].authoritySiteKey,'cheonggye-pass');
   assert.equal(registeredTenantPath('cheonggye-pass','ekodi.kr/cheonggye/pass'),'/cgpass');
   assert.equal(registeredTenantPath('cheonggye-local','ekodi.kr/cheonggye'),'/cheonggye');
-  assert.equal(isPublicDiscoveryPath('/cgpass'),true);
+  assert.equal(isPublicDiscoveryPath('/cgpass'),false); // owner-directed private hold until release approval
   // No legacy alias is advertised as a canonical discovery route.
   for(const oldPath of ['/cheonggye/pass','/cheonggyepass']){
     assert.equal(DISCOVERY_PUBLIC_ROUTES.some(route=>route.path===oldPath),false);
@@ -96,15 +96,15 @@ test('canonical page and guarded admin preserve existing programs, access script
   assert.match(read('cheonggyepass-vendor-intake.js'),/const BASE='\/api\/cheonggyepass\/vendor-intake'/);
 });
 
-test('protected release probes require new canonical content and old 308 locations',()=>{
+test('protected release probes keep public pass private while admin aliases remain canonical',()=>{
   const manifest=JSON.parse(read('deploy/manifests/shared-site.worker.json'));
   const byUrl=new Map(manifest.worker.requests.map(p=>[p.url,p]));
   for(const [path,expected,route] of [
-    ['/cgpass',200,'regional-commerce-program-public'],
+    ['/cgpass',404,'regional-private-hold'],
     ['/cgpass/admin',200,'regional-commerce-program-admin'],
-    ['/cheonggyepass',308,'cgpass-legacy-handoff'],
+    ['/cheonggyepass',404,'regional-private-hold'],
     ['/cheonggyepass/admin',308,'cgpass-legacy-handoff'],
-    ['/cheonggye/pass',308,'cgpass-legacy-handoff'],
+    ['/cheonggye/pass',404,'regional-private-hold'],
     ['/cheonggye/admin/pass',308,'cgpass-legacy-handoff']
   ]){
     const probe=byUrl.get('https://ekodi.kr'+path);

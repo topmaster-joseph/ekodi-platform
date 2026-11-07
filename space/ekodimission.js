@@ -195,6 +195,19 @@ function formatActivityShare(organization,activity,date,url,action='신청하기
   refreshMissionAdmin();
   if(!form)return;
   const status=form.querySelector('[data-application-status]');const submit=form.querySelector('button[type="submit"]');
+  // Per-event consent precedes every private profile read or application write.
+  // The existing manual/anonymous form and server-side registration gate remain authoritative.
+  const quick=document.createElement('button');quick.type='button';
+  quick.className='apply-submit mission-quick-apply';quick.dataset.missionQuickApply='';
+  quick.textContent='회원정보로 간편신청';quick.title='행사별 동의 후 저장된 회원정보로 신청합니다.';
+  quick.hidden=true;submit.before(quick);
+  let quickRegistrationOpen=false,quickBusy=false,applicationCompleted=false;
+  const syncQuick=()=>{
+    quick.hidden=!window.EKODIMissionAuth?.getToken?.()||!quickRegistrationOpen||applicationCompleted;
+    quick.disabled=quickBusy||Boolean(submit?.disabled);
+  };
+  window.addEventListener('ekodi:mission-auth-changed',syncQuick);
+  window.addEventListener('ekodi:auth-logout',syncQuick);
   const closeApplication=(data={})=>{
     for(const el of form.querySelectorAll('input,textarea,select,button[type="submit"]'))el.disabled=true;
     if(submit){submit.textContent='신청 마감';submit.setAttribute('aria-disabled','true')}
@@ -206,10 +219,53 @@ function formatActivityShare(organization,activity,date,url,action='신청하기
     }
     document.querySelectorAll('a[href="#apply"]').forEach(link=>{link.href=data.archive_url||'#apply';link.textContent=data.archive_url?'사진·영상 결과':'신청 마감';});
   };
-  fetch(registrationApi,{headers:{accept:'application/json'},credentials:'same-origin'})
+  fetch(registrationApi,{headers:{accept:'application/json'},credentials:'same-origin',cache:'no-store'})
     .then(r=>r.ok?r.json():null)
-    .then(data=>{if(data?.ok&&!data.registration_open)closeApplication(data)})
-    .catch(()=>{});
+    .then(data=>{
+      quickRegistrationOpen=Boolean(data?.ok&&data.registration_open===true);
+      if(data?.ok&&!data.registration_open)closeApplication(data);
+      syncQuick();
+    })
+    .catch(()=>{quickRegistrationOpen=false;syncQuick()});
+  syncQuick();
+  quick.addEventListener('click',async()=>{
+    const auth=window.EKODIMissionAuth,accessToken=auth?.getToken?.();
+    if(!accessToken||!quickRegistrationOpen||applicationCompleted||submit.disabled||quickBusy)return;
+    const consent=form.querySelector('[name="privacyConsent"]');
+    if(!consent?.checked){
+      status.dataset.state='error';status.textContent='이번 행사에 대한 개인정보 수집·이용 동의를 먼저 선택해 주세요.';
+      consent?.focus();return;
+    }
+    quickBusy=true;syncQuick();
+    status.dataset.state='';status.textContent='회원정보와 이번 행사 신청 가능 여부를 확인하고 있습니다.';
+    try{
+      const ready=await fetch(registrationApi,{headers:{accept:'application/json'},credentials:'same-origin',
+        cache:'no-store',signal:AbortSignal.timeout(8000)});
+      const gate=await ready.json().catch(()=>null);
+      if(!ready.ok||gate?.registration_open!==true){
+        quickRegistrationOpen=false;syncQuick();
+        throw new Error('이 행사는 신청이 마감되었거나 신청 상태를 확인할 수 없습니다.');
+      }
+      const profile=await auth.applicationContact();
+      if(auth.getToken()!==accessToken||!accessToken)throw new Error('로그인 상태가 변경되었습니다. 다시 확인해 주세요.');
+      if(submit.disabled||applicationCompleted||status.dataset.state==='closed')throw new Error('이 행사는 신청이 마감되었습니다.');
+      for(const [key,value] of Object.entries({name:profile.name,phone:profile.phone,email:profile.email})){
+        const input=form.querySelector('[name="'+key+'"]');
+        if(input&&!input.value.trim()&&value)input.value=value;
+      }
+      const missing=['name','phone'].map(key=>form.querySelector('[name="'+key+'"]'))
+        .find(input=>!input?.value?.trim());
+      if(missing){
+        status.dataset.state='error';status.textContent='저장된 이름·연락처가 부족합니다. 빈 항목만 직접 입력한 뒤 신청해 주세요.';
+        missing.focus();return;
+      }
+      if(!form.reportValidity())return;
+      form.requestSubmit(submit);
+    }catch(error){
+      status.dataset.state='error';
+      status.textContent=error?.message||'회원정보로 신청하지 못했습니다. 직접 입력해 주세요.';
+    }finally{quickBusy=false;syncQuick()}
+  });
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!paymentSheet?.hidden)hidePayment()});
   form.addEventListener('submit',async e=>{
     e.preventDefault();status.textContent='';status.dataset.state='';
@@ -223,7 +279,7 @@ function formatActivityShare(organization,activity,date,url,action='신청하기
       if(!response.ok||!result.ok||!result.applicationId)throw new Error(result.message||'신청 저장을 확인하지 못했습니다. 다시 신청해 주세요.');
       status.dataset.state='success';status.textContent='신청이 완료되었습니다. 아직 참가비를 납부하지 않았다면 바로 납부해 주세요.';
       try{const bus=new BroadcastChannel('ekodi-mission-applications-v1');bus.postMessage({activityKey:applicationRecordKey,applicationId:result.applicationId,at:Date.now()});bus.close()}catch{}
-      submit.textContent='신청 완료';
+      applicationCompleted=true;submit.textContent='신청 완료';syncQuick();
       const after=document.createElement('button');after.type='button';after.className='apply-submit mission-pay-after';after.dataset.missionPayOpen='';after.textContent='참가비 바로 납부하기';status.insertAdjacentElement('afterend',after);
       setTimeout(()=>after.focus(),0);
     }catch(error){status.dataset.state='error';status.textContent=error?.message||'신청을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.';submit.disabled=false;submit.textContent='다시 신청하기';}

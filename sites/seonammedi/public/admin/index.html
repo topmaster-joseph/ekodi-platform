@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="ekodi-route-contract" content="CANONICAL-PATH-MOUNT-PARITY-001 CANONICAL-ROUTE-SLASH-PARITY-001">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <title>서남권 국립의대 소통센터 관리</title>
-  <link rel="stylesheet" href="/seonammedi/admin/admin.css?v=20261019-admin-roster-1">
+  <title>서남권국립의대 관리</title>
+  <link rel="stylesheet" href="/seonammedi/admin/admin.css?v=20261106-finance-tab-layout-1">
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="./"><strong>서남권 국립의대 소통센터</strong><span>관리자</span></a>
+  <a class="brand" href="./"><strong>서남권국립의대</strong><span>관리자</span></a>
 </header>
 <div class="layout">
   <aside class="sidebar" aria-label="관리 메뉴">
@@ -20,11 +20,11 @@
     </div>
     <div class="sidebar-menu">
     <div class="sidebar-home-row">
-      <button class="active" data-panel-target="dashboard" type="button">운영홈</button>
+      <a class="active" data-panel-target="dashboard" href="?panel=dashboard" aria-current="page">운영홈</a>
     </div>
-    <button data-panel-target="minutes" type="button">내부 회의록</button>
-    <a href="?panel=finance" class="admin-finance-link">회계 관리</a>
-    <button data-panel-target="access" type="button">권한·관리자</button>
+    <a data-panel-target="minutes" href="?panel=minutes">내부 회의록</a>
+    <a href="?panel=finance" class="admin-finance-link" data-panel-target="finance">회계 관리</a>
+    <a data-panel-target="access" href="?panel=access">권한·관리자</a>
     </div>
   </aside>
   <main id="main">
@@ -35,7 +35,7 @@
         <article><span>시민의견</span><strong id="voiceCount">-</strong><small>접수·검토·공개 포함</small></article>
         <article><span>공지</span><strong id="noticeCount">-</strong><small>초안 포함</small></article>
       </div>
-      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><a href="../board/voices">시민의견 관리</a><a href="?panel=finance">회계 관리</a><a href="../board/notices">공지 관리</a><a href="../#organization">조직 관리</a><button type="button" data-go="minutes">내부 회의록</button></div></section>
+      <section class="card"><h2>관리 범위</h2><p id="scopeSummary">권한을 확인하고 있습니다.</p><div class="quick"><a href="../board/voices">시민의견 관리</a><a href="?panel=finance" data-go="finance">회계 관리</a><a href="../board/notices">공지 관리</a><a href="../#organization">조직 관리</a><a href="?panel=minutes" data-go="minutes">내부 회의록</a></div></section>
     </section>
 
     <section class="panel-page" data-panel="organization" hidden>
@@ -109,20 +109,49 @@
       </div>
     </section>
 
-    <section class="panel-page" data-panel="finance" hidden>
-      <div class="heading"><div><p class="eyebrow">FINANCE ADMIN</p><h1>회계 관리</h1><p>내부 회계내역과 증빙을 관리자 권한으로만 열람·등록·수정·삭제합니다.</p></div><button id="reloadFinance" type="button" class="secondary">새로고침</button></div>
-      <section class="card"><h2>회계 합계</h2><p id="financeSummary" role="status">회계내역을 불러오는 중입니다.</p></section>
-      <form id="financeForm" class="card form-card">
-        <input type="hidden" name="id">
-        <h2 id="financeFormTitle">회계내역 추가</h2>
-        <div class="form-row"><label>일자<input name="date" type="date" required></label><label>구분<select name="type"><option value="income">수입</option><option value="expense">지출</option></select></label><label>금액<input name="amount" type="number" min="0" step="1" required></label></div>
-        <label>목적·내용<input name="purpose" maxlength="500" required></label>
-        <label>관련 행사<input name="event" maxlength="300"></label>
-        <div class="form-row"><label>증빙<select name="evidenceStatus"><option value="none">미등록</option><option value="held">증빙 보유</option><option value="verified">확인 완료</option></select></label><label class="check"><input type="checkbox" name="visible" checked> 기존 공개 표시 보존(외부 회계 조회는 차단됨)</label></div>
-        <label>관리 메모<textarea name="note" rows="3" maxlength="1000"></textarea></label>
-        <div class="actions"><button type="submit">저장</button><button id="financeReset" type="button" class="secondary">초기화</button><span id="financeMessage" role="status"></span></div>
-      </form>
-      <section class="card"><h2>등록된 회계내역</h2><div id="financeList" class="item-list"></div></section>
+    <section class="panel-page finance-page" data-panel="finance" hidden aria-label="회계 관리">
+      <nav class="finance-tabs" role="tablist" aria-label="회계 관리 세부 메뉴">
+        <button id="financeTabSummary" type="button" role="tab" class="active" data-finance-tab="summary" aria-controls="financePaneSummary" aria-selected="true" tabindex="0">회계현황</button>
+        <button id="financeTabLedger" type="button" role="tab" data-finance-tab="ledger" aria-controls="financePaneLedger" aria-selected="false" tabindex="-1">전체내역</button>
+        <button id="financeTabManual" type="button" role="tab" data-finance-tab="manual" aria-controls="financePaneManual" aria-selected="false" tabindex="-1">개별등록</button>
+        <button id="financeTabImport" type="button" role="tab" data-finance-tab="import" aria-controls="financePaneImport" aria-selected="false" tabindex="-1">원본등록</button>
+      </nav>
+      <section id="financePaneSummary" role="tabpanel" aria-labelledby="financeTabSummary" data-finance-pane="summary" class="finance-pane">
+        <div class="card finance-overview">
+          <div class="card-head"><h2>회계현황</h2><button id="reloadFinance" type="button" class="secondary">새로고침</button></div>
+          <p id="financeSummary" role="status">회계내역을 불러오는 중입니다.</p>
+          <p class="finance-security-note">관리자 전용 합계입니다. 이월잔액은 포함되지 않으며, 공개 페이지에는 승인된 기간·총수입·총지출·잔액만 표시합니다.</p>
+        </div>
+      </section>
+      <section id="financePaneLedger" role="tabpanel" aria-labelledby="financeTabLedger" data-finance-pane="ledger" class="finance-pane" hidden>
+        <div class="card">
+          <h2>등록된 회계내역</h2>
+          <p class="finance-security-note">개별 거래와 관리 메모는 권한 있는 관리자에게만 표시됩니다.</p>
+          <div id="financeList" class="item-list"></div>
+        </div>
+      </section>
+      <section id="financePaneManual" role="tabpanel" aria-labelledby="financeTabManual" data-finance-pane="manual" class="finance-pane" hidden>
+        <form id="financeForm" class="card form-card">
+          <input type="hidden" name="id">
+          <h2 id="financeFormTitle">회계내역 추가</h2>
+          <div class="form-row"><label>일자<input name="date" type="date" required></label><label>구분<select name="type"><option value="income">수입</option><option value="expense">지출</option></select></label><label>금액<input name="amount" type="number" min="0" step="1" required></label></div>
+          <label>목적·내용<input name="purpose" maxlength="500" required></label>
+          <label>관련 행사<input name="event" maxlength="300"></label>
+          <div class="form-row"><label>증빙<select name="evidenceStatus"><option value="none">미등록</option><option value="held">증빙 보유</option><option value="verified">확인 완료</option></select></label><input type="checkbox" name="visible" hidden aria-label="개별 거래 비공개"><span class="note">개별 거래 비공개 · 공개 화면에는 요약만 표시</span></div>
+          <label>관리 메모<textarea name="note" rows="3" maxlength="1000"></textarea></label>
+          <div class="actions"><button type="submit">저장</button><button id="financeReset" type="button" class="secondary">초기화</button><span id="financeMessage" role="status"></span></div>
+        </form>
+      </section>
+      <section id="financePaneImport" role="tabpanel" aria-labelledby="financeTabImport" data-finance-pane="import" class="finance-pane" hidden>
+        <div class="card" id="financeReportImportCard">
+          <h2>회계보고서 원본 등록</h2>
+          <p class="finance-security-note">이 화면에서 선택한 JSON 파일을 확인한 후 권한이 있는 회계 API를 통해 비공개로 저장합니다. 공개 화면에는 거래 세부내역을 전송하지 않습니다.</p>
+          <label for="financeImportFile">관리자용 회계보고서 JSON 파일</label>
+          <input id="financeImportFile" type="file" accept=".json,application/json">
+          <div class="actions"><button id="financeImportButton" type="button">합계 검증 후 일괄 등록</button><span id="financeImportMessage" role="status" aria-live="polite"></span></div>
+          <p class="finance-security-note">수입 항목에 거래일이 없는 경우 보고 기준일로 저장하고 날짜 미기재 사실을 관리 메모에 남깁니다. 중단된 가져오기는 기존 등록 항목을 제외하고 재실행할 수 있습니다.</p>
+        </div>
+      </section>
     </section>
 
     <section class="panel-page" data-panel="access" hidden>
@@ -133,7 +162,7 @@
     </section>
   </main>
 </div>
-<script type="module" src="/seonammedi/admin/admin.js?v=20261019-site-admin-roster-3"></script>
-<script type="module" src="/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2"></script>
+<script type="module" src="/seonammedi/admin/admin.js?v=20261106-finance-tab-layout-1"></script>
+<script type="module" src="/seonammedi/admin/admin-minutes.js?v=20261106-finance-tab-layout-1"></script>
 </body>
 </html>

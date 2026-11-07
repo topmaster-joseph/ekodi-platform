@@ -193,3 +193,62 @@ test('jubilee private registration without database or authenticated author stay
   const guest=new Request('https://ekodi.kr/publishing/api/workflow/jubilee/register',{method:'POST'});
   assert.equal((await handlePublishingWorkflow(guest,{PUBLISH_DB:api})).status,401);
 });
+test('two verified Jubilee author aliases reuse one private owner project set without elevation',async()=>{
+  const {sql,api}=memory();
+  const env={PUBLISH_DB:api,PUBLISHING_JUBILEE_AUTHOR_USER_ID:'primary',
+    PUBLISHING_JUBILEE_AUTHOR_ALIASES:JSON.stringify([
+      {userId:'gmailOne',email:'gmailone@example.com'},
+      {userId:'gmailTwo',email:'gmailtwo@example.com'},
+    ])};
+  const invoke=actor=>handlePublishingWorkflow(request('jubilee/register',{method:'POST',actor}),env);
+  const added=await invoke('gmailOne');
+  assert.equal(added.status,200);
+  const first=(await added.json()).projects;
+  assert.deepEqual(first.map(x=>x.created),[true,true]);
+  const primary=(await (await invoke('primary')).json()).projects;
+  const second=(await (await invoke('gmailTwo')).json()).projects;
+  assert.deepEqual(primary.map(x=>x.created),[false,false]);
+  assert.deepEqual(second.map(x=>x.created),[false,false]);
+  assert.deepEqual(second.map(x=>x.project.id),first.map(x=>x.project.id));
+  assert.ok(first.every(x=>x.project.authorUserId==='primary'));
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM publishing_workflow_projects').get().n,2);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM publishing_workflow_audit WHERE actor_user_id=?').get('gmailOne').n,2);
+  for(const actor of ['primary','gmailOne','gmailTwo']){
+    const response=await handlePublishingWorkflow(request('projects',{actor}),env);
+    assert.equal(response.status,200);
+    assert.deepEqual((await response.json()).projects.map(p=>p.id).sort(),first.map(x=>x.project.id).sort());
+  }
+  const extra=await handlePublishingWorkflow(request('projects',{actor:'primary',method:'POST',
+    body:{title:'Primary owner unrelated book',fieldId:'literature'}}),env);
+  assert.equal(extra.status,201);
+  const otherId=(await extra.json()).project.id;
+  assert.equal((await handlePublishingWorkflow(request('projects/'+otherId,{actor:'gmailTwo'}),env)).status,404);
+  const aliasList=await handlePublishingWorkflow(request('projects',{actor:'gmailTwo'}),env);
+  assert.equal((await aliasList.json()).projects.length,2);
+  const id=first[0].project.id;
+  const revised=await handlePublishingWorkflow(request('projects/'+id+'/transition',{actor:'gmailTwo',method:'POST',
+    body:{action:'revise',revision:1,manuscriptDigest:'b'.repeat(64)}}),env);
+  assert.equal(revised.status,200);
+  assert.equal((await revised.json()).project.revision,2);
+  assert.equal(sql.prepare("SELECT actor_user_id FROM publishing_workflow_audit WHERE project_id=? AND action='revise'").get(id).actor_user_id,'gmailTwo');
+  const authorApproval=await handlePublishingWorkflow(request('projects/'+id+'/transition',{actor:'gmailTwo',method:'POST',
+    body:{action:'author_approve',revision:2,digest:'b'.repeat(64),rightsConsent:true}}),env);
+  assert.equal(authorApproval.status,403,'secondary logins must never sign as primary author');
+  assert.equal((await invoke('intruder')).status,403);
+  assert.equal((await handlePublishingWorkflow(request('projects/'+id,{actor:'intruder'}),env)).status,404);
+});
+
+test('Jubilee alias authorization rejects changed emails, malformed config and no binding',async()=>{
+  const {api}=memory();
+  const base={PUBLISH_DB:api,PUBLISHING_JUBILEE_AUTHOR_USER_ID:'primary'};
+  const config=[{userId:'gmailOne',email:'different@example.com'}];
+  for(const value of [undefined,'{bad JSON',JSON.stringify(config),
+    JSON.stringify([{userId:'gmailOne',email:'gmailone@example.com',role:'admin'}])]){
+    const env={...base,PUBLISHING_JUBILEE_AUTHOR_ALIASES:value};
+    const r=await handlePublishingWorkflow(request('jubilee/register',{method:'POST',actor:'gmailOne'}),env);
+    assert.equal(r.status,403);
+  }
+  const noOwner=await handlePublishingWorkflow(request('jubilee/register',{method:'POST',actor:'gmailOne'}),
+    {PUBLISH_DB:api,PUBLISHING_JUBILEE_AUTHOR_ALIASES:JSON.stringify([{userId:'gmailOne',email:'gmailone@example.com'}])});
+  assert.equal(noOwner.status,503);
+});

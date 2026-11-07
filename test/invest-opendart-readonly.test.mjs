@@ -33,7 +33,7 @@ test('company query is GET-only fixed OpenDART target and never echoes secret',a
    assert.equal(u.pathname,'/api/company.json');
    assert.equal(u.searchParams.get('crtfc_key'),KEY);
    assert.equal(u.searchParams.get('corp_code'),'00126380');
-   assert.equal(init.method,'GET');assert.equal(init.redirect,'error');
+   assert.equal(init.method,'GET');assert.equal(init.redirect,'manual');
    return json(company);
   }});
  assert.equal(calls,1);assert.equal(out.httpStatus,200);

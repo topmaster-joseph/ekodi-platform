@@ -111,3 +111,27 @@ test('all three protected deployment triggers include this staging-only change',
    assert.ok(src.includes('.github/workflows/stage-shared-site-shell.yml'),path+' must dispatch the guarded Site Core');
  }
 });
+
+test('explicit Cloudflare upstream malformed response permits only one Site Core staging retry',async()=>{
+  const output='Received a malformed response from the API\nupstream connect error or disconnect/reset before headers';
+  let attempts=0;const waits=[];
+  const result=await runStagingWith10500Recovery({
+    run:async()=>++attempts===1?event(1,output):event(0),
+    sleep:async ms=>waits.push(ms),log:()=>{},
+  });
+  assert.equal(result.ok,true);
+  assert.equal(result.attempts,2);
+  assert.deepEqual(waits,[STAGING_INTERNAL_AUTH_RETRY_DELAY_MS]);
+});
+
+test('Cloudflare upstream reset with quota/permission must never retry',async()=>{
+  const reset='Received a malformed response from the API\nupstream connect error or disconnect/reset before headers';
+  for(const reason of ['HTTP 429','1027 quota exhausted','HTTP 403','invalid token']){
+    let attempts=0;
+    await assert.rejects(runStagingWith10500Recovery({
+      run:async()=>{attempts++;return event(1,reset+'\n'+reason)},
+      sleep:async()=>{throw new Error('unexpected sleep');},
+    }),/fail-closed/);
+    assert.equal(attempts,1);
+  }
+});

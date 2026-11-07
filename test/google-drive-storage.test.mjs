@@ -76,9 +76,9 @@ test('Storage refreshes when the shared Admin panel controller activates the sec
 
 test('successful Google Drive OAuth returns directly to the exact admin route without an intermediate success page', () => {
   assert.ok(admin.includes("function currentAdminReturnPath(){return `${location.pathname}${location.search}${location.hash}`;}"));
-  assert.ok(admin.includes("JSON.stringify({role,returnTo:currentAdminReturnPath()})"));
+  assert.ok(admin.includes("JSON.stringify({role,accountHint,returnTo:currentAdminReturnPath()})"));
   assert.ok(control.includes("const returnTo = safeAdminReturnPath(body.returnTo);"));
-  assert.ok(control.includes("signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,redirectUri,exp:exp.getTime()})"));
+  assert.ok(control.includes("signState(env,{nonce,role,accountHint,adminEmail:auth.session.email,returnTo,redirectUri,exp:exp.getTime()})"));
   assert.ok(control.includes("return adminRedirect(payload.returnTo);"));
   assert.ok(control.includes("status:303"));
   assert.ok(control.includes("target.origin !== ADMIN_ORIGIN"));

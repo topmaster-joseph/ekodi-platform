@@ -27,7 +27,8 @@ function assertRole(action, user, project) {
   if (action === 'publisher_approve' || action === 'schedule' || action === 'prepare_handoff' ||
     action === 'release_receipt') return role === 'publisher';
   if (action === 'editor_pass' || action === 'request_changes') return role === 'editor' || role === 'publisher';
-  if (action === 'submit' || action === 'revise') return user.userId===project.authorUserId || role === 'editor';
+  if (action === 'submit' || action === 'revise') return user.userId===project.authorUserId || role === 'editor'
+    || (user.delegatedJubileeAuthor===true && project.collectionId==='human' && project.fieldId==='humanities');
   return false;
 }
 const isSha=value => HASH_RE.test(String(value || ''));

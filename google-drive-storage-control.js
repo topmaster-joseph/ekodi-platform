@@ -80,6 +80,12 @@ function primaryDomains(env) {
   const configured = splitList(env.STORAGE_PRIMARY_GOOGLE_DOMAINS);
   return configured.length ? configured : ['ekodi.kr'];
 }
+function primaryAccountEmail(env) { return String(env.STORAGE_PRIMARY_GOOGLE_EMAIL || '').trim().toLowerCase(); }
+function approvedSharedDriveEmails(env) {
+  // Account whitelist is NOT a Google Drive permission grant. The actual
+  // membership remains managed and audited by Google Shared Drive.
+  return [...new Set([primaryAccountEmail(env),...splitList(env.STORAGE_SHARED_DRIVE_APPROVED_EMAILS)].filter(Boolean))];
+}
 function primarySharedDriveId(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_ID || '').trim(); }
 function primarySharedDriveName(env) { return String(env.STORAGE_PRIMARY_SHARED_DRIVE_NAME || 'EKODI').trim() || 'EKODI'; }
 function googleClientId(env) { return String(env.GOOGLE_DRIVE_CLIENT_ID || env.GOOGLE_CLIENT_ID || '').trim(); }
@@ -496,8 +502,12 @@ async function bootstrap(env, row) {
   const routeRows = await env.DB.prepare(`SELECT service_key,folder_name,folder_id FROM storage_routes WHERE connection_role='primary' ORDER BY folder_name`).all();
   const created=[];
   for (const route of routeRows.results || []) {
-    if (route.folder_id) { created.push({serviceKey:route.service_key,name:route.folder_name,id:route.folder_id,reused:true}); continue; }
+    // A pre-existing route must already belong to the selected canonical drive.
+    // Never silently repoint a live service to a different provider/tenant folder.
     const existing = await findFolder(access,route.folder_name,archiveRoot);
+    if(route.folder_id && existing?.id !== route.folder_id)
+      throw new Error('CANONICAL_STORAGE_ROUTE_PARENT_MISMATCH:'+route.service_key);
+    if(route.folder_id) { created.push({serviceKey:route.service_key,name:route.folder_name,id:route.folder_id,reused:true}); continue; }
     const folder = existing || await createFolder(access,route.folder_name,archiveRoot);
     await env.DB.prepare('UPDATE storage_routes SET folder_id=?,updated_at=? WHERE service_key=?').bind(folder.id,new Date().toISOString(),route.service_key).run();
     created.push({serviceKey:route.service_key,name:route.folder_name,id:folder.id,reused:Boolean(existing)});
@@ -550,12 +560,20 @@ export async function handleGoogleDriveStorageControl(request, env) {
       const email = String(profile.user?.emailAddress || '').trim().toLowerCase();
       const domain = email.split('@')[1] || '';
       if (payload.role === 'primary' && !primaryDomains(env).includes(domain)) return html(`기본 Drive는 ${primaryDomains(env).join(', ')} 조직 계정으로만 연결할 수 있습니다.`);
+       // Require the canonical EKODI Workspace operator, not merely any @ekodi.kr account.
+       // This check precedes disabling the previous connection; rejected OAuth keeps
+       // the existing encrypted connection and route mapping unchanged.
+       if (payload.role === 'primary' && primaryAccountEmail(env) && email !== primaryAccountEmail(env))
+         return html(`EKODI 기본 공유드라이브는 ${primaryAccountEmail(env)} 계정으로만 연결할 수 있습니다.`);
+       if (payload.role === 'secondary' && payload.accountHint && email !== payload.accountHint)
+         return html('요청한 EKODI 공유드라이브 이용 계정과 Google에서 로그인한 계정이 일치하지 않습니다.');
       const encrypted = await encryptCredential(env,{refreshToken:token.refresh_token});
       const id = crypto.randomUUID(); const now = new Date().toISOString();
-      if (payload.role === 'primary') await env.DB.prepare(`UPDATE storage_connections SET status='disabled',updated_at=? WHERE role='primary' AND status!='disabled'`).bind(now).run();
+      // Stage new OAuth without revoking the existing verified primary.
+      // Do not cut over until an administrator-verified shared drive is ready.
       await env.DB.prepare(`INSERT INTO storage_connections(id,provider,role,account_email,account_domain,display_name,status,credential_ciphertext,credential_iv,scopes,created_by,created_at,updated_at,last_verified_at) VALUES(?,'google_drive',?,?,?,?, 'connected',?,?,?,?,?,?,?)`)
         .bind(id,payload.role,email,domain,String(profile.user?.displayName || ''),encrypted.ciphertext,encrypted.iv,SCOPES.join(' '),payload.adminEmail,now,now,now).run();
-      if (payload.role === 'primary') await writeCheonggyeConnectionCache(env,{id,status:'connected',credential_ciphertext:encrypted.ciphertext,credential_iv:encrypted.iv});
+      // Pending credentials must not overwrite the existing Sheets/Drive cache.
       return adminRedirect(payload.returnTo);
     } catch (error) { console.error('Google Drive OAuth callback failed',error); return html('Google Drive 계정 연결 중 오류가 발생했습니다.'); }
   }
@@ -592,19 +610,36 @@ export async function handleGoogleDriveStorageControl(request, env) {
   }
   if (url.pathname === `${BASE}/status` && request.method === 'GET') {
     const routes = await env.DB.prepare('SELECT service_key,folder_key,folder_name,folder_id,connection_role,updated_at FROM storage_routes ORDER BY folder_name').all();
-    return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),primarySharedDrive:{id:primarySharedDriveId(env),name:primarySharedDriveName(env)},redirectUri:googleOAuthRedirectUri(env),canonicalRedirectUri:CANONICAL_REDIRECT_URI,legacyRedirectUri:REDIRECT_URI,connections:await connectionRows(env),routes:routes.results || [],policy:{primary:'Google Workspace Shared Drive EKODI',secondary:'optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
+    const connections=await connectionRows(env);
+     const expected=primaryAccountEmail(env);
+     const primary=connections.find(row=>row.role==='primary'&&row.status==='ready');
+     return json({schemaVersion:1,configured:ready(env),primaryDomains:primaryDomains(env),
+       primaryAccountEmail:expected,primaryAccountMatched:Boolean(expected&&primary&&String(primary.account_email||'').toLowerCase()===expected&&primary.drive_id===primarySharedDriveId(env)),
+       approvedSharedDriveAccounts:approvedSharedDriveEmails(env).map(email=>{
+         const conn=connections.find(item=>String(item.account_email||'').toLowerCase()===email&&item.drive_id===primarySharedDriveId(env));
+         return {email,platformRole:email===expected?'canonical_steward':'approved_user',
+           platformConnection:conn?.status||'not_connected',googleMembershipVerification:'google_provider_source_of_truth'};
+       }),
+       primarySharedDrive:{id:primarySharedDriveId(env),name:primarySharedDriveName(env)},
+       redirectUri:googleOAuthRedirectUri(env),canonicalRedirectUri:CANONICAL_REDIRECT_URI,legacyRedirectUri:REDIRECT_URI,
+       connections,routes:routes.results || [],policy:{primary:'Google Workspace Shared Drive EKODI',secondary:'migration or optional Google accounts',webDelivery:'Cloudflare R2 when needed',credentials:'AES-GCM encrypted at rest'}},200,auth.response.headers);
   }
   if (url.pathname === `${BASE}/oauth/start` && request.method === 'POST') {
     if (!ready(env)) return json({error:'Google Drive OAuth Secret 구성이 필요합니다.',code:'GOOGLE_DRIVE_NOT_CONFIGURED'},503,auth.response.headers);
     const body = await request.json().catch(() => ({})); const role = body.role === 'secondary' ? 'secondary' : 'primary'; const returnTo = safeAdminReturnPath(body.returnTo);
+    const accountHint=role==='secondary'?String(body.accountHint||'').trim().toLowerCase():'';
+    if(accountHint&&!approvedSharedDriveEmails(env).includes(accountHint))
+      return json({error:'기본 공유드라이브에 등록되지 않은 계정입니다.',code:'SHARED_DRIVE_ACCOUNT_NOT_APPROVED'},403,auth.response.headers);
     const nonce=b64url(crypto.getRandomValues(new Uint8Array(24))); const now=new Date(); const exp=new Date(now.getTime()+10*60*1000);
     await env.DB.prepare('DELETE FROM storage_oauth_states WHERE expires_at<=?').bind(now.toISOString()).run();
     await env.DB.prepare('INSERT INTO storage_oauth_states(nonce_hash,admin_email,connection_role,expires_at,created_at) VALUES(?,?,?,?,?)').bind(await nonceHash(nonce),auth.session.email,role,exp.toISOString(),now.toISOString()).run();
     const redirectUri=googleOAuthRedirectUri(env);
-    const state=await signState(env,{nonce,role,adminEmail:auth.session.email,returnTo,redirectUri,exp:exp.getTime()});
+    const state=await signState(env,{nonce,role,accountHint,adminEmail:auth.session.email,returnTo,redirectUri,exp:exp.getTime()});
     const reconnectRow=await env.DB.prepare(`SELECT account_email FROM storage_connections WHERE role=? AND status!='disabled' ORDER BY updated_at DESC LIMIT 1`).bind(role).first();
     const params=new URLSearchParams({client_id:googleClientId(env),redirect_uri:redirectUri,response_type:'code',access_type:'offline',prompt:'consent',include_granted_scopes:'true',scope:SCOPES.join(' '),state});
-    if(reconnectRow?.account_email)params.set('login_hint',String(reconnectRow.account_email));
+    if(role==='primary'&&primaryAccountEmail(env))params.set('login_hint',primaryAccountEmail(env));
+     else if(accountHint)params.set('login_hint',accountHint);
+     else if(reconnectRow?.account_email)params.set('login_hint',String(reconnectRow.account_email));
     return json({authorizeUrl:`${AUTH_URL}?${params}`,role},200,auth.response.headers);
   }
   const driveMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)/drives$`));
@@ -615,27 +650,72 @@ export async function handleGoogleDriveStorageControl(request, env) {
   const selectMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)/select$`));
   if (selectMatch && request.method === 'POST') {
     const row=await rowById(env,decodeURIComponent(selectMatch[1])); if (!row) return json({error:'Drive 연결을 찾을 수 없습니다.'},404,auth.response.headers);
+    if(row.role==='primary'&&primaryAccountEmail(env)&&String(row.account_email||'').trim().toLowerCase()!==primaryAccountEmail(env))
+      return json({error:'기본 저장소는 지정된 EKODI Workspace 계정으로만 변경할 수 있습니다.',code:'PRIMARY_WORKSPACE_ACCOUNT_REQUIRED'},403,auth.response.headers);
     const body=await request.json().catch(() => ({})); let available;
     try { available=await listDrives(env,row); } catch(error) { console.error('Drive select list failed',error); return googleReauthResponse(error,row.role,auth.response.headers) || json({error:'Google Drive 목록을 읽을 수 없습니다.',code:'DRIVE_LIST_FAILED'},502,auth.response.headers); }
     const selected=available.drives.find(d => d.id === String(body.driveId || ''));
     if (!selected) return json({error:'이 계정에서 사용할 수 없는 Drive입니다.'},400,auth.response.headers);
+    if(row.role==='secondary'&&selected.id===primarySharedDriveId(env)&&
+      !approvedSharedDriveEmails(env).includes(String(row.account_email||'').trim().toLowerCase()))
+      return json({error:'이 계정은 EKODI 기본 공유드라이브 이용 계정으로 등록되지 않았습니다.',code:'SHARED_DRIVE_ACCOUNT_NOT_APPROVED'},403,auth.response.headers);
+    if(row.role==='primary'){
+      const intendedId=primarySharedDriveId(env);
+      const intendedName=primarySharedDriveName(env).toLowerCase();
+      const intended=intendedId?selected.id===intendedId:String(selected.name||'').toLowerCase()===intendedName;
+      const manager=selected.capabilities?.canManageMembers===true&&selected.capabilities?.canAddChildren===true;
+      if(!intended||selected.type!=='shared-drive'||!manager)
+        return json({error:'EKODI Workspace 공유드라이브의 관리자(Manager) 권한과 대상 Drive가 확인되어야 합니다.',code:'PRIMARY_SHARED_DRIVE_MANAGER_REQUIRED'},403,auth.response.headers);
+    }
     const now=new Date().toISOString();
     const canonicalRoot = row.role === 'primary' && selected.id === primarySharedDriveId(env) ? selected.rootId : '';
     await env.DB.prepare(`UPDATE storage_connections SET drive_id=?,drive_name=?,drive_root_id=?,archive_root_id=?,status='connected',last_verified_at=?,updated_at=? WHERE id=?`).bind(selected.id,selected.name,selected.rootId,canonicalRoot,now,now,row.id).run();
-    if (row.role === 'primary') await env.DB.prepare(`UPDATE storage_routes SET folder_id='',connection_role='primary',updated_at=?`).bind(now).run();
+    // Never clear the active route map while another connection is serving.
     return json({ok:true,drive:selected,archiveRootId:canonicalRoot || null},200,auth.response.headers);
   }
   const bootstrapMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)/bootstrap$`));
   if (bootstrapMatch && request.method === 'POST') {
     const row=await rowById(env,decodeURIComponent(bootstrapMatch[1])); if (!row) return json({error:'Drive 연결을 찾을 수 없습니다.'},404,auth.response.headers);
     if (row.role !== 'primary') return json({error:'EKODI 기본 폴더 구조는 primary Drive에만 생성합니다.'},409,auth.response.headers);
-    try { return json({ok:true,...await bootstrap(env,row)},200,auth.response.headers); } catch(error) { console.error('Drive bootstrap failed',error); return googleReauthResponse(error,row.role,auth.response.headers) || json({error:String(error.message || 'Drive 폴더 생성 실패'),code:'DRIVE_BOOTSTRAP_FAILED'},502,auth.response.headers); }
+    if(primaryAccountEmail(env)&&String(row.account_email||'').trim().toLowerCase()!==primaryAccountEmail(env))
+      return json({error:'기본 저장소 관리자 계정이 일치하지 않습니다.',code:'PRIMARY_WORKSPACE_ACCOUNT_REQUIRED'},403,auth.response.headers);
+    if(!isCanonicalSharedDrive(env,row))
+      return json({error:'공식 EKODI 공유드라이브가 선택되지 않았습니다.',code:'PRIMARY_SHARED_DRIVE_REQUIRED'},403,auth.response.headers);
+    try {
+      const drives=await listDrives(env,row);
+      const selected=drives.drives.find(d=>d.id===row.drive_id);
+      if(!selected||selected.capabilities?.canManageMembers!==true||selected.capabilities?.canAddChildren!==true)
+        return json({error:'공유드라이브 관리자 권한을 다시 확인해야 합니다.',code:'PRIMARY_SHARED_DRIVE_MANAGER_REQUIRED'},403,auth.response.headers);
+      // The primary OAuth credential also serves tenant-owned Cheonggye members
+      // Sheets. Verify the account retains edit rights before replacing that
+      // credential; never write a real member row as a permission probe.
+      const candidateAccess=await accessToken(env,row);
+      const sheetMeta=await driveFetch(candidateAccess,
+        `/files/${encodeURIComponent(CHEONGGYE_SPREADSHEET_ID)}?supportsAllDrives=true&fields=id,mimeType,capabilities(canEdit)`);
+      if(sheetMeta?.id!==CHEONGGYE_SPREADSHEET_ID||
+         sheetMeta?.mimeType!=='application/vnd.google-apps.spreadsheet'||
+         sheetMeta?.capabilities?.canEdit!==true)
+        return json({error:'상인회 회원현황 시트 편집 권한이 확인되지 않아 기존 연결을 유지합니다.',code:'CHEONGGYE_SHEET_EDIT_ACCESS_REQUIRED'},403,auth.response.headers);
+      const result=await bootstrap(env,row);
+      // Update the cached Sheets credential only after canonical routes are checked.
+      const readyRow=await env.DB.prepare('SELECT * FROM storage_connections WHERE id=? AND status=?').bind(row.id,'ready').first();
+      if(!readyRow) throw new Error('PRIMARY_WORKSPACE_CUTOVER_NOT_READY');
+      await writeCheonggyeConnectionCache(env,readyRow);
+      // The new canonical connection has passed Manager and route checks.
+      await env.DB.prepare(`UPDATE storage_connections SET status='disabled',updated_at=? WHERE role='primary' AND id<>? AND status!='disabled'`).bind(new Date().toISOString(),row.id).run();
+      return json({ok:true,...result},200,auth.response.headers);
+    } catch(error) { console.error('Drive bootstrap failed',error); return googleReauthResponse(error,row.role,auth.response.headers) || json({error:String(error.message || 'Drive 폴더 생성 실패'),code:'DRIVE_BOOTSTRAP_FAILED'},502,auth.response.headers); }
   }
   const disconnectMatch=url.pathname.match(new RegExp(`^${BASE}/connections/([^/]+)$`));
   if (disconnectMatch && request.method === 'DELETE') {
     const row=await rowById(env,decodeURIComponent(disconnectMatch[1])); if (!row) return json({error:'Drive 연결을 찾을 수 없습니다.'},404,auth.response.headers);
+    if(row.role==='primary'&&row.status==='ready')
+      return json({error:'작동 중인 기본 저장소는 새 Workspace 관리 계정으로 전환한 뒤 해제할 수 있습니다.',code:'PRIMARY_DISCONNECT_REQUIRES_REPLACEMENT'},409,auth.response.headers);
     await env.DB.prepare(`UPDATE storage_connections SET status='disabled',credential_ciphertext='',credential_iv='',updated_at=? WHERE id=?`).bind(new Date().toISOString(),row.id).run();
-    if (row.role === 'primary' && env.R2_BUCKET) await env.R2_BUCKET.delete(CHEONGGYE_CONNECTION_CACHE_KEY);
+    if (row.role === 'primary' && env.R2_BUCKET) {
+      const cached=await readCheonggyeConnectionCache(env);
+      if(cached?.id===row.id) await env.R2_BUCKET.delete(CHEONGGYE_CONNECTION_CACHE_KEY);
+    }
     return json({ok:true},200,auth.response.headers);
   }
   return json({error:'Google Drive Storage endpoint not found'},404,auth.response.headers);

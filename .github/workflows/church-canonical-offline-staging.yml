@@ -16,6 +16,9 @@ on:
       - 'test/church-reviewed-pr-overlay.test.mjs'
       - 'test/church-pages-candidate-build.test.mjs'
       - 'test/church-canonical-offline-staging.test.mjs'
+      - 'test/church-v2-candidate-e2e.test.mjs'
+      - 'test/church-pr150-worship-source-preservation.test.mjs'
+      - 'scripts/verify-reviewed-church-source-v2.mjs'
 
 permissions:
   contents: read
@@ -48,7 +51,10 @@ jobs:
             test/church-reviewed-pr-overlay.test.mjs \
             test/church-pages-candidate-build.test.mjs \
             test/church-guarded-canonical-cutover.test.mjs \
-            test/church-canonical-offline-staging.test.mjs
+            test/church-canonical-offline-staging.test.mjs \
+            test/church-reviewed-pr-overlay-v2.test.mjs \
+            test/church-v2-candidate-e2e.test.mjs \
+            test/church-pr150-worship-source-preservation.test.mjs
           npm test --prefix sites/ekodi-church
       - name: Build exact-source offline candidate only
         env:

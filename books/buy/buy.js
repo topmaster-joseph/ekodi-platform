@@ -107,7 +107,7 @@
       return;
     }
     $('payBtn').textContent = !open ? (preparing ? '전자책 준비 중' : '결제 준비 중') : quote.signedIn ? `${C.won(p?.amount)} 결제하기` : '로그인 후 결제';
-    $('payNote').textContent = !open ? (preparing ? '판매용 전자책 파일을 마무리하고 있습니다. 준비되는 대로 이곳에서 바로 구매하실 수 있습니다.' : '에코디서점 결제를 여는 중입니다. 지금은 아래의 다른 판매처를 이용하실 수 있습니다.') : quote.checkout.testOnly ? '운영자 시험 결제 모드입니다(실제 청구 없음).' : quote.checkout.operator && quote.checkout.fileReady === false ? '운영자 확인용 결제입니다. 전자책 파일이 아직 없어 일반 고객에게는 판매가 열리지 않았습니다(실제 청구됩니다).' : '안전한 토스페이먼츠 결제창이 열립니다. 결제 후 바로 내 서재에서 받으실 수 있습니다.';
+    $('payNote').textContent = !open ? (preparing ? '판매용 전자책 파일을 마무리하고 있습니다. 준비되는 대로 이곳에서 바로 구매하실 수 있습니다.' : '에코디서점 결제를 여는 중입니다. 지금은 아래의 다른 판매처를 이용하실 수 있습니다.') : quote.checkout.testOnly ? '운영자 시험 결제 모드입니다(실제 청구 없음).' : quote.checkout.operator && quote.checkout.fileReady === false ? '운영자 확인용 결제입니다. 전자책 파일이 아직 없어 일반 고객에게는 판매가 열리지 않았습니다(실제 청구됩니다).' : '안전한 토스페이먼츠 결제창이 열립니다. 결제 후 내 서재의 전자책 리더에서 열람할 수 있습니다.';
   }
   async function load() {
     try { quote = await C.api(`quote?book=${encodeURIComponent(bookId)}`); render(); }
@@ -147,7 +147,13 @@
     finally { busy = false; render(); }
   }
   $('payBtn').addEventListener('click', pay);
-  $('signOut').addEventListener('click', () => { C.forget(); load(); });
+  $('signOut').addEventListener('click', async () => {
+    const button = $('signOut');
+    if (button.disabled) return;
+    button.disabled = true;
+    try { await C.signOut(); window.location.reload(); }
+    catch { button.disabled = false; $('accountStatus').textContent = '로그아웃을 마치지 못했습니다. 다시 시도해 주세요.'; }
+  });
   C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; $('accountStatus').style.color = err ? 'var(--danger)' : ''; }, load);
   document.querySelectorAll('[data-books-base]').forEach(a => { a.href = C.under(a.getAttribute('data-books-base')); });
   if (!bookId) { $('buyRoot').hidden = true; $('buyError').hidden = false; $('buyErrorText').textContent = '도서를 선택해 주세요.'; }

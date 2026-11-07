@@ -31,3 +31,95 @@
 .admin-roster-table th,.admin-roster-table td{padding:9px 10px;border-bottom:1px solid #e3e8ee;text-align:left;vertical-align:top}
 .admin-roster-table th{font-weight:700;color:#3d4b58;background:#f6f8fa;white-space:nowrap}
 .admin-roster-table td:nth-child(3){word-break:break-all}
+
+
+/* 2026-11-06: unified admin navigation and readable responsive controls.
+   Keep Korean eojeol intact; never force manual line breaks to fit a viewport. */
+.sidebar-home-row{grid-template-columns:minmax(0,1fr)}
+.sidebar-menu [data-panel-target]{
+  display:flex;align-items:center;min-height:40px;width:100%;padding:9px 12px;
+  border:0;border-radius:9px;background:transparent;color:#444;text-decoration:none;
+  text-align:left;font:inherit;font-size:13px;font-weight:500;
+  white-space:nowrap;word-break:keep-all;overflow-wrap:normal;cursor:pointer;
+}
+.sidebar-menu [data-panel-target]:hover:not(.active){background:#f0f0f0;color:#171717}
+.sidebar-menu [data-panel-target].active{
+  background:#171717!important;color:#fff!important;font-weight:750;
+  text-decoration:none;
+}
+.sidebar-menu [data-panel-target]:focus-visible,.quick [data-go]:focus-visible{
+  outline:2px solid #171717;outline-offset:2px;
+}
+.sidebar-menu [data-panel-target][hidden],.quick [data-go][hidden]{display:none!important}
+.heading>div{min-width:0;flex:1 1 auto}
+.heading>.secondary,.card-head>.secondary{
+  display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  min-width:86px;min-height:38px;padding:8px 12px;
+  white-space:nowrap;word-break:keep-all;overflow-wrap:normal;
+  line-height:1.4;text-align:center;
+}
+.sidebar-tool-actions a,.sidebar-tool-actions button,.quick a,.quick button{
+  white-space:nowrap;word-break:keep-all;overflow-wrap:normal;
+}
+@media(max-width:860px){
+  .topbar{min-height:56px;height:56px;padding:8px 12px;align-items:center}
+  .topbar .brand{display:flex;align-items:baseline;gap:7px;min-width:0}
+  .topbar .brand strong,.topbar .brand span{white-space:nowrap;word-break:keep-all}
+  .sidebar{top:56px;padding:7px 10px}
+  .sidebar-tools{padding:0 0 7px;margin:0 0 5px}
+  .sidebar-tool-actions{display:flex;flex-wrap:wrap;gap:6px}
+  .sidebar-tool-actions a,.sidebar-tool-actions button{min-height:36px;padding:7px 12px;font-size:12px}
+  .sidebar-menu{gap:6px;scrollbar-width:thin;padding-bottom:3px}
+  .sidebar-home-row{display:flex;flex:0 0 auto}
+  .sidebar-menu [data-panel-target]{width:auto;flex:0 0 auto;min-height:38px;padding:8px 11px}
+  main{padding:10px 12px 24px}
+  .heading{gap:10px}
+}
+@media(max-width:560px){
+  .metrics{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+  .metrics article{min-width:0;padding:10px 8px}
+  .metrics strong{font-size:20px}
+  .metrics span,.metrics small{font-size:10px;line-height:1.5;word-break:keep-all}
+  .heading h1{font-size:22px}
+  .heading>.secondary,.card-head>.secondary{min-width:84px;padding:8px 10px}
+  .card{padding:13px}
+}
+
+
+/* Finance content tabs. The global navigation already identifies "회계 관리";
+   avoid repeating a page header and render only the selected function. */
+.finance-page{min-width:0}
+.finance-tabs{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;
+  margin:0 0 12px;padding:0;border-bottom:1px solid #dedede;
+}
+.finance-tabs [role="tab"]{
+  display:flex;align-items:center;justify-content:center;min-width:0;min-height:44px;
+  padding:10px 5px;border:0;border-bottom:3px solid transparent;
+  border-radius:7px 7px 0 0;background:transparent;color:#555;
+  font:inherit;font-size:13px;font-weight:650;line-height:1.35;
+  white-space:nowrap;word-break:keep-all;cursor:pointer;
+}
+.finance-tabs [role="tab"]:hover:not(.active){background:#f0f0f0;color:#171717}
+.finance-tabs [role="tab"].active{
+  color:#171717;background:#fff;border-bottom-color:#171717;font-weight:800;
+}
+.finance-tabs [role="tab"]:focus-visible{
+  outline:2px solid #171717;outline-offset:-2px;
+}
+.finance-pane{min-width:0}
+.finance-pane[hidden]{display:none!important}
+.finance-pane .card{margin:0}
+.finance-overview .card-head{margin-bottom:8px}
+.finance-overview .card-head h2{margin:0;font-size:15px}
+.finance-overview #financeSummary{margin:0 0 8px;font-weight:700;font-size:14px;line-height:1.7;word-break:keep-all}
+.finance-security-note{font-size:12px;color:#646464;line-height:1.7;word-break:keep-all;margin:8px 0 12px}
+.finance-pane input[type="file"]{display:block;max-width:100%;font:inherit;font-size:12px;padding:8px 0}
+#financeReportImportCard>label{display:block;margin-top:12px;font-weight:700;font-size:12px}
+#financeReportImportCard .actions{margin-top:10px}
+@media(max-width:560px){
+  .finance-tabs{gap:2px;margin-bottom:8px}
+  .finance-tabs [role="tab"]{min-height:42px;padding:10px 1px;font-size:12px}
+  .finance-pane .card{padding:13px}
+  .finance-overview #financeSummary{font-size:13px}
+}

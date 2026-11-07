@@ -24,7 +24,7 @@ test('each host serves only its own Daum line, crawl rules unchanged', async () 
     assert.equal(body.split('\n')[0], line);
     assert.ok(!body.includes(other));
     assert.match(body, /User-agent: \*\nAllow: \//);
-    assert.match(body, /Sitemap: https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr\/sitemap\.xml/);
+    assert.ok(body.includes(`Sitemap: https://${host}/sitemap.xml`));
     assert.equal(body, seonammediRobotsTxt(host));
   }
 });

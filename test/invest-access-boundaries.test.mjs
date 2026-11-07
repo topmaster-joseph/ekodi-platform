@@ -112,11 +112,22 @@ test('verified superadmin token retains its existing research-only scope',async(
 });
 test('legacy /my/invest route redirects instead of creating a duplicate private page',async()=>{
  const env={MY:{fetch:request=>myWorker.fetch(request,{})}};
- for(const [legacy,target] of [['/my/invest','/invest/my'],['/my/invest/access','/invest/my/access']]){
+ const legacyPaths=['','manual','broker','market','portfolio','autopilot','auto-policy','live',
+  'strategy','value','design','scenario','risk','reports','access','app.js','style.css'];
+ for(const slug of legacyPaths){
+  const legacy='/my/invest'+(slug?'/'+slug:'');
+  const target='/invest/my'+(slug?'/'+slug:'');
   const r=await routeCanonicalSurface(get(legacy),env);
   assert.equal(r.status,308,legacy);
-  assert.equal(new URL(r.headers.get('location')).pathname,target);
+  const location=new URL(r.headers.get('location'));
+  assert.equal(location.pathname,target,legacy);
+  assert.equal(location.origin,'https://ekodi.kr');
+  assert.match(r.headers.get('cache-control'),/no-store/);
  }
+ const withQuery=await routeCanonicalSurface(get('/my/invest/manual?year=2025&market=KR'),env);
+ assert.equal(withQuery.status,308);
+ assert.equal(new URL(withQuery.headers.get('location')).search,'?year=2025&market=KR');
+ // Never bounce the new canonical route back to itself.
  const canonical=await myWorker.fetch(get('/invest/my'),{});
  assert.equal(canonical.status,200);
  const denied=await myWorker.fetch(get('/invest/my/access'),{});

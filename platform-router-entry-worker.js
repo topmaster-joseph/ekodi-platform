@@ -70,6 +70,8 @@ import { localRegionAccessAdminScript } from './local-region-access-admin.js';
 import { localRegionOperationsAdminScript } from './local-region-operations-admin.js';
 import { regionalCommerceProgramFromLocalRoute, regionalCommerceProgramFromPath, legacyCheonggyePassCanonicalPath } from './regional-commerce-program-registry.js';
 import { regionalCommerceProgramPublicPage, regionalCommerceProgramAdminPage } from './regional-commerce-program-page.js';
+import { regionTabsScriptResponse } from './region-tabs-ui.js';
+import { CHEONGGYE_PUBLICATION_HOLD, cheonggyePublicHoldResponse } from './region-publication-hold.js';
 import { cheonggyePassVendorIntakeScript } from './cheonggyepass-vendor-intake-ui.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
@@ -293,6 +295,7 @@ async function routeDeploymentProbe(request,env){
   return injectEkodiShell(rewriteWorkspaceShellAssets(routed),'space','workspace');
 }
 function injectCgmaRegionalLinks(response){
+  if(CHEONGGYE_PUBLICATION_HOLD)return response; // Do not advertise unfinished private services.
   const type=String(response.headers.get('content-type')||'').toLowerCase();
   if(!type.includes('text/html'))return response;
   const html='<section data-ekodi-cheonggye-links="v1" style="width:min(1120px,calc(100% - 28px));margin:18px auto 30px;padding:16px;border:1px solid #d8dfd9;border-radius:18px;background:#fffdf8;color:#16312a;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif"><div style="font-size:12px;font-weight:900;letter-spacing:.08em;color:#52645e">청계 연결</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><strong style="margin-right:4px">지역과 혜택을 함께 연결합니다.</strong><a href="/cheonggye" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#174837;color:#fff;text-decoration:none;font-size:13px;font-weight:800">청계잇다</a><a href="/cgpass" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#eef3f0;color:#174837;text-decoration:none;font-size:13px;font-weight:800">청계패스</a><a href="/cgma/ai-education/" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#fff;color:#111;border:1px solid #111;text-decoration:none;font-size:13px;font-weight:800">상인 AI 교육 수요조사</a></div></section>';
@@ -561,7 +564,7 @@ async function routePlatform(request,env,ctx){
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&
       (url.pathname==='/cheonggye/admin/services'||url.pathname==='/cheonggye/admin/services/'||
        url.pathname==='/ekodilab/admin/services'||url.pathname==='/ekodilab/admin/services/')){
-      return injectEkodiShell(workspaceAdminPage(),'space','admin');
+      return injectEkodiShell(workspaceAdminPage(url.pathname),'space','admin');
     }
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
@@ -593,6 +596,7 @@ async function routePlatform(request,env,ctx){
       const previewResponse=handlePreviewRequest(request);if(previewResponse)return previewResponse;
       if(['GET','HEAD'].includes(request.method)&&isInsurancePublicPath(url.pathname))return routeInsurancePublic(request,env);
       if(request.method==='GET'){
+        if(url.pathname==='/cheonggye/region-tabs-ui.js')return regionTabsScriptResponse();
         if(url.pathname==='/cheonggye/local-region-admin-auth.js')return localRegionAdminAuthScript();
         if(url.pathname==='/cheonggye/local-region-access-admin.js')return localRegionAccessAdminScript();
         if(url.pathname==='/cheonggye/local-region-operations-admin.js')return localRegionOperationsAdminScript();
@@ -635,7 +639,7 @@ async function routePlatform(request,env,ctx){
         if(isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage());
         if(['GET','HEAD'].includes(request.method)&&isEkodiBizRefundPolicyPath(url.pathname))return ekodiBizRefundPolicyResponse({head:request.method==='HEAD'});
         {const tradeProduct=tradeProductPublicRoute(url.pathname);if(tradeProduct)return injectEkodiTenantReadability(tradeProductPublicPage(tradeProduct));}
-        if(/^\/cheonggye\/admin\/publishing\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
+        if(/^\/cheonggye\/admin\/publishing\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(url.pathname),'space','admin');
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
         if(url.pathname==='/site-admin-bootstrap.js')return siteAdminBootstrapScript();
         if(url.pathname==='/admin/people/script')return personAuthorityScript();
@@ -684,7 +688,7 @@ async function routePlatform(request,env,ctx){
           return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;
         }
         if(isWorkspaceAdminAssetPath(url.pathname))return legacyPlatformRouter.fetch(request,env,ctx);
-        if(isWorkspaceAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(),'space','admin');
+        if(isWorkspaceAdminPath(url.pathname))return injectEkodiShell(workspaceAdminPage(url.pathname),'space','admin');
       }
       if(['GET','HEAD'].includes(request.method)&&isEkodiIndexNowKeyPath(url.pathname))return ekodiIndexNowKeyResponse();
       if(['GET','HEAD'].includes(request.method)&&url.pathname===EKODI_PUBLIC_REGISTRY_PATH)return ekodiPublicRegistryResponse(env,{head:request.method==='HEAD'});
@@ -697,7 +701,7 @@ async function routePlatform(request,env,ctx){
       if(url.pathname.startsWith(EKODIBIZ_API_PREFIX))return routeEkodiBizApi(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(EKODIBIZ_ASSET_PREFIX))return routeEkodiBizAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname===DEPLOYMENT_PROBE_PATH)return routeDeploymentProbe(request,env);
-      if(['GET','HEAD'].includes(request.method)&&/^\/mokpo-presbytery(?:\/|$)/.test(url.pathname)){const path=url.pathname;if(!/^\/mokpo-presbytery\/(?:mission\/?)?$/.test(path)&&path!=='/mokpo-presbytery')return new Response('Not Found',{status:404,headers:{'cache-control':'no-store'}});if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});const target=new URL(request.url);target.pathname=path.startsWith('/mokpo-presbytery/mission')?'/mokpo-presbytery/mission/':'/mokpo-presbytery/';const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(upstream.body,upstream);out.headers.set('cache-control','no-store');out.headers.set('x-robots-tag','noindex, nofollow, noarchive');out.headers.set('x-ekodi-route','mokpo-presbytery-static-pilot');return out;}
+      if(['GET','HEAD'].includes(request.method)&&/^\/mokpo-presbytery(?:\/|$)/.test(url.pathname)){const path=url.pathname;const policyBase='/mokpo-presbytery/mission/policy-council-2026';const isPolicyPage=path===policyBase||path===policyBase+'/';const isPolicyScript=path===policyBase+'/app.js';const viewerBase='/mokpo-presbytery/mission/viewer';const isViewerPage=path===viewerBase||path===viewerBase+'/';const isViewerScript=path===viewerBase+'/viewer.js';const isSiteScript=path==='/mokpo-presbytery/mission/site.js';if(!isPolicyPage&&!isPolicyScript&&!isViewerPage&&!isViewerScript&&!isSiteScript&&!/^\/mokpo-presbytery\/(?:mission\/?)?$/.test(path)&&path!=='/mokpo-presbytery')return new Response('Not Found',{status:404,headers:{'cache-control':'no-store'}});if(!env?.ASSETS?.fetch)return new Response('Site assets unavailable',{status:503,headers:{'cache-control':'no-store'}});const target=new URL(request.url);target.pathname=isSiteScript?'/mokpo-presbytery/mission/site.js':isViewerScript?viewerBase+'/viewer.js':isViewerPage?viewerBase+'/':isPolicyScript?policyBase+'/app.js':isPolicyPage?policyBase+'/':path.startsWith('/mokpo-presbytery/mission')?'/mokpo-presbytery/mission/':'/mokpo-presbytery/';const upstream=await env.ASSETS.fetch(new Request(target.toString(),request));const out=new Response(upstream.body,upstream);out.headers.set('cache-control','no-store');out.headers.set('x-robots-tag','noindex, nofollow, noarchive');out.headers.set('x-ekodi-route','mokpo-presbytery-static-pilot');return out;}
       if(['GET','HEAD'].includes(request.method)&&isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname)){const response=await routePublicWorkspace(request,env);return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;}
       if(['GET','HEAD'].includes(request.method)&&url.pathname.startsWith(WORKSPACE_ASSET_PREFIX))return routeWorkspaceAsset(request,env);
       if(['GET','HEAD'].includes(request.method)&&url.pathname==='/auth/start'){
@@ -748,6 +752,9 @@ export default {
       return applyPlatformSecurityHeaders(response,request);
     };
     const incomingUrl=new URL(request.url);
+    // Owner-directed private freeze takes precedence over publication DB toggles and public routing.
+    const regionPrivateHold=cheonggyePublicHoldResponse(request);
+    if(regionPrivateHold)return finalize(regionPrivateHold);
     if(incomingUrl.pathname===RELEASE_ATTESTATION_PATH&&['GET','HEAD'].includes(request.method)){
       return finalize(releaseAttestationResponse(env));
     }

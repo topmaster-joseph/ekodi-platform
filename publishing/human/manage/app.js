@@ -17,6 +17,15 @@ const LABELS={planning:'기획',drafting:'집필 중',in_review:'편집 검수',
   handoff_ready:'판매 등록 인계 대기',released:'판매 활성화 확인'};
 let projects=[],active=null,userRole='author',connected=false;
 let requestVersion=0;
+// 화면에 영문 코드 대신 우리말을 보인다(코드는 그대로 서버와 주고받는다).
+const ROLE_KO={admin:'출판 관리자',editor:'편집자',author:'저자',reviewer:'검수자',publisher:'발행자'};
+const BLOCKER_KO={PUBLISHING_RELEASE_NOT_CONFIGURED:'서점 판매 연결이 아직 설정되지 않았습니다(운영자 설정 필요)',
+  SEPARATE_SIGNED_PUBLISHING_CONTRACT_REQUIRED:'서명된 출판 계약이 필요합니다',FREE_PREMIUM_AUDIOBOOK_QA_REQUIRED:'오디오북 검수가 먼저 필요합니다',
+  NO_VERIFIED_PAID_MEMBERSHIP:'확인된 유료 회원 자격이 없습니다',MEMBERSHIP_READ_FAILED:'회원 자격을 확인하지 못했습니다(잠시 후 다시 시도)',
+  MEMBERSHIP_READ_NOT_CONFIGURED:'회원 자격 확인이 아직 설정되지 않았습니다',PUBLISHER_DATABASE_UNAVAILABLE:'출판 기록 저장소에 연결하지 못했습니다(잠시 후 다시 시도)',
+  VERIFICATION_UNAVAILABLE:'확인 서비스에 연결하지 못했습니다(잠시 후 다시 시도)',AUTHOR_ID_INVALID:'저자 정보가 올바르지 않습니다'};
+const blockerText=code=>BLOCKER_KO[code]||(code?'준비 조건 확인 필요':'준비 조건 확인 필요');
+const fieldLabel=id=>{try{const o=[...document.querySelectorAll('select[name=fieldId] option')].find(x=>x.value===id);if(o)return o.textContent;}catch{}return id||'-';};
 function getToken(){
   for(const key of AUTH_KEYS){
     try{
@@ -43,6 +52,9 @@ async function api(path,options={}){
 }
 function tell(text){$('result').textContent=text;}
 function errorText(error){
+  if(error.message==='JUBILEE_OWNER_NOT_CONFIGURED')return '희년신학 저자 계정이 출판 서버에 연결되지 않았습니다. 에코디 관리자에게 저자 신원 연결을 요청하세요. 공개·판매 기능은 비활성 상태입니다.';
+  if(error.message==='JUBILEE_OWNER_ONLY')return '현재 로그인 계정은 희년신학 시리즈의 지정 저자 계정이 아닙니다. 올바른 계정으로 로그인해 주세요.';
+  if(error.message==='JUBILEE_DRAFT_LOOKUP_FAILED')return '희년신학 도서의 비공개 등록 후 재조회에 실패했습니다. 새로고침하여 실제 등록 상태를 다시 확인해 주세요.';
   if(error.status===401)return '로그인이 필요합니다. 에코디 계정으로 로그인해 주세요.';
   if(error.status===403)return '현재 계정에는 출판 관리 권한이 없습니다. 다른 계정을 사용하려면 로그아웃해 주세요.';
   if(error.status===503)return '출판 업무 원장이 아직 연결되지 않았습니다. 운영 저장소 적용 전에는 기록을 변경할 수 없습니다.';
@@ -134,14 +146,14 @@ async function load(){
   }
 }
 function showList(){
-  $('counts').textContent=projects.length+'개 프로젝트 · '+userRole;
+  $('counts').textContent=projects.length+'개 프로젝트 · '+(ROLE_KO[userRole]||userRole);
   $('rows').replaceChildren();
   if(!projects.length){const row=$('rows').insertRow();const cell=row.insertCell();cell.colSpan=7;cell.textContent='등록된 프로젝트가 없습니다.';return;}
   projects.forEach((p,i)=>{
     const row=$('rows').insertRow();
-    const values=[i+1,p.title,p.fieldId,LABELS[p.stage]||p.stage,
+    const values=[i+1,p.title,fieldLabel(p.fieldId),LABELS[p.stage]||p.stage,
       p.scheduledAt?new Date(p.scheduledAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'미예약',p.revision];
-    values.forEach((value,j)=>{const cell=row.insertCell();cell.textContent=String(value);if(j===3)cell.className='tag';});
+    values.forEach((value,j)=>{const cell=row.insertCell();if(j===3){const t=document.createElement('span');t.className='tag';t.textContent=String(value);cell.append(t);}else cell.textContent=String(value);});
     const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='관리';
     button.addEventListener('click',()=>{active=p;renderDetail();$('selected').scrollIntoView({behavior:'smooth',block:'start'});});
     row.insertCell().append(button);
@@ -150,7 +162,7 @@ function showList(){
 function button(text,fn){
   const b=document.createElement('button');b.type='button';b.textContent=text;
   b.addEventListener('click',async()=>{
-    b.disabled=true;try{await fn();await load();tell(text+' 처리 완료');}
+    b.disabled=true;try{const outcome=await fn();if(outcome===false)return;await load();tell(text+' 처리 완료');}
     catch(e){tell('처리 실패: '+errorText(e));}
     finally{b.disabled=false;}
   });
@@ -167,12 +179,57 @@ function askDigest(label,current){
   if(!/^[a-f0-9]{64}$/.test(digest.trim()))throw Error('SHA-256 지문은 64자리 소문자 16진수여야 합니다.');
   return digest.trim();
 }
+
+const DIGEST_FILE_LIMIT=100*1024*1024; // Mobile browsers should not hash huge files in memory.
+let stagedManuscript=null,stagedRelease=null;
+const hashGeneration={manuscript:0,release:0};
+function resetFileSelection(){
+  hashGeneration.manuscript++;
+  hashGeneration.release++;
+  stagedManuscript=null;stagedRelease=null;
+  $('manuscriptFile').value='';
+  $('releaseFile').value='';
+  $('digestStatus').textContent='';
+}
+async function fileSha256(file){
+  if(!file||typeof file.arrayBuffer!=='function')throw Error('해시를 계산할 원고 파일을 선택해 주세요.');
+  if(file.size> DIGEST_FILE_LIMIT)throw Error('파일이 100MB를 초과합니다. 용량을 줄인 정본으로 다시 선택해 주세요.');
+  if(!globalThis.crypto?.subtle)throw Error('보안 연결에서 SHA-256 계산을 사용할 수 없습니다.');
+  const digest=await globalThis.crypto.subtle.digest('SHA-256',await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');
+}
+async function hashSelectedFile(kind){
+  const manuscript=kind==='manuscript';
+  const input=$(manuscript?'manuscriptFile':'releaseFile');
+  const digestInput=$(manuscript?'manuscriptDigest':'releaseDigest');
+  const status=$('digestStatus');
+  const file=input.files?.[0];
+  const projectId=active?.id;
+  const generation=++hashGeneration[kind];
+  digestInput.value='';
+  if(manuscript)stagedManuscript=null;else stagedRelease=null;
+  if(!file){status.textContent='파일 선택이 취소됐습니다. 파일을 다시 선택해 주세요.';return;}
+  if(!projectId){status.textContent='먼저 원고 프로젝트를 선택해 주세요.';return;}
+  status.textContent='파일 지문을 계산하고 있습니다: '+file.name;
+  try{
+    const digest=await fileSha256(file);
+    if(generation!==hashGeneration[kind]||active?.id!==projectId||input.files?.[0]!==file)return;
+    const proof={projectId,digest,fileName:file.name};
+    if(manuscript)stagedManuscript=proof;else stagedRelease=proof;
+    digestInput.value=digest;
+    status.textContent=file.name+' · SHA-256 계산 완료. 파일 자체는 업로드되지 않았습니다.';
+  }catch(error){
+    if(generation!==hashGeneration[kind]||active?.id!==projectId)return;
+    status.textContent='계산 실패: '+error.message;
+  }
+}
 function renderDetail(){
   const p=active;
   $('selected').hidden=!p;
   if(!p)return;
   $('detailTitle').textContent=p.title+' · '+(LABELS[p.stage]||p.stage);
-  $('editionInfo').textContent='원고 버전 '+p.editionId+' · 개정 '+p.revision+' · 출간 예약은 저자·발행자 승인 이후 가능';
+  $('editionInfo').textContent='원고 '+p.revision+'판 · 출간 예약은 저자·발행자 승인 이후 가능';$('editionInfo').title='판본 번호 '+p.editionId;
+  resetFileSelection();
   $('manuscriptDigest').value=p.manuscriptDigest||'';
   $('releaseDigest').value=p.releaseDigest||'';
   const order=STAGES.map(([id,label])=>id==='ready_for_author'?['author_approved',label]:[id,label]);
@@ -190,31 +247,37 @@ function renderDetail(){
     const info=await api(`projects/${p.id}/readiness`);
     tell(info.saleReadyForPublisherReview
       ? '비공개 자격·계약·오디오 검수 기록 확인됨. 실제 서점·몰 판매 및 구매자 제공은 별도 배포 승인 전입니다.'
-      : '판매 불가: '+(info.blocker||'준비 조건 확인 필요')+' · 개인 원고 보관 및 집필은 계속 가능합니다.');
+      : '판매 불가: '+blockerText(info.blocker)+' · 원고 보관과 집필은 계속할 수 있습니다.');
+    return false; // This is a read-only diagnostic, not a completed state transition.
   });
   if(['planning','drafting','changes_requested'].includes(p.stage)){
     button('원고 새 판본 기록',async()=>{
-      const digest=askDigest('실제 원고 파일의 SHA-256 지문을 입력하세요.',$('manuscriptDigest').value);
-      if(digest)await transition('revise',{manuscriptDigest:digest,changedMetadata:true});
+      if(!stagedManuscript||stagedManuscript.projectId!==p.id)
+        throw Error('먼저 위의 원고 파일을 선택해 SHA-256 지문을 자동 계산해 주세요. 파일은 아직 업로드되지 않습니다.');
+      if(stagedManuscript.digest===p.manuscriptDigest)
+        throw Error('현재 버전과 동일한 파일입니다. 변경된 원고를 선택해 주세요.');
+      await transition('revise',{manuscriptDigest:stagedManuscript.digest});
     });
     if(p.stage!=='planning')button('편집 검수 요청',()=>transition('submit'));
   }
   if(p.stage==='in_review'){
-    button('수정 요청',async()=>{const notes=prompt('수정 요청 사유');if(notes?.trim())await transition('request_changes',{notes});});
+    button('수정 요청',async()=>{const notes=prompt('수정 요청 사유');if(!notes?.trim())return false;await transition('request_changes',{notes});});
     button('검수 통과',()=>transition('editor_pass',{checklist:{completed:true}}));
   }
   if(p.stage==='ready_for_author')button('저자 직접 승인',async()=>{
-    if(!confirm('이 원고와 출간 파일 정본에 대한 저작권 및 출간 동의를 확인하시겠습니까?'))return;
+    if(!confirm('이 원고와 출간 파일 정본에 대한 저작권 및 출간 동의를 확인하시겠습니까?'))return false;
     const digest=askDigest('승인할 최종 출간 파일 지문을 확인하세요.',p.releaseDigest);
-    if(digest)await transition('author_approve',{digest,rightsConsent:true});
+    if(!digest)return false;
+    await transition('author_approve',{digest,rightsConsent:true});
   });
   if(p.stage==='author_approved')button('발행자 최종 승인',async()=>{
     const digest=askDigest('출판 QA와 권리 증빙 검토 후 승인할 정본 지문',p.releaseDigest);
-    if(digest)await transition('publisher_approve',{digest});
+    if(!digest)return false;
+    await transition('publisher_approve',{digest});
   });
   if(p.stage==='publisher_approved')button('판매 예약 등록',async()=>{
     const korean=prompt('예약 출간일시 (한국시간 YYYY-MM-DD HH:MM)');
-    if(!korean)return;
+    if(!korean)return false;
     const m=/^(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d)$/.exec(korean.trim());
     if(!m)throw Error('날짜는 YYYY-MM-DD HH:MM 형식으로 입력하세요.');
     const local=new Date(korean.replace(' ','T')+':00+09:00');
@@ -275,6 +338,8 @@ $('saveEvidence').addEventListener('click',async()=>{
     tell('검수 증빙 저장 완료');await load();
   }catch(err){tell(errorText(err));}
 });
+$('manuscriptFile').addEventListener('change',()=>hashSelectedFile('manuscript'));
+$('releaseFile').addEventListener('change',()=>hashSelectedFile('release'));
 $('refresh').addEventListener('click',load);
 $('authLogout').addEventListener('click',signOut);
 if(typeof window!=='undefined')window.addEventListener('storage',event=>{

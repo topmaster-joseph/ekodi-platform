@@ -10,7 +10,7 @@ const reply=(_r,b,s=200)=>new Response(JSON.stringify(b),{status:s});
 function db({adult=null,pending={status:'pending'},rpc={}}={}){
  const calls=[];
  const member={status:'active',base_consent:true,age_19_confirmed:true,adult_verified_at:adult,religion_consent:true,discoverable:false};
- const make=name=>{const q={select(){return q},eq(){return q},maybeSingle:async()=>({data:name==='singles_memberships'?member:name==='singles_identity_verifications'?pending:null,error:null})};return q};
+ const make=name=>{const q={select(){return q},eq(){return q},update(){calls.push({n:'update:'+name});return q},maybeSingle:async()=>({data:name==='singles_memberships'?member:name==='singles_identity_verifications'?pending:null,error:null})};return q};
  return {from:make,calls,rpc:async(n,p)=>{calls.push({n,p});return rpc[n]?rpc[n](p):{data:null,error:null}}};
 }
 const post=(path,b)=>new Request('https://x'+path,{method:'POST',body:JSON.stringify(b||{})});
@@ -36,7 +36,7 @@ test('start issues a server-made id bound to the member; already verified skips'
 test('complete checks the provider server-side and stores only adult flag + CI hash',async()=>{
  let captured;
  const a=db({rpc:{singles_identity_complete:p=>{captured=p;return {data:'verified',error:null}}}});
- portone({status:'VERIFIED',id:ID,verifiedCustomer:{name:'홍길동',birthDate:'1990-05-05',phoneNumber:'01012345678',ci:'CI-VALUE'}});
+ portone({status:'VERIFIED',id:ID,channel:{type:'LIVE'},verifiedCustomer:{name:'홍길동',birthDate:'1990-05-05',phoneNumber:'01012345678',ci:'CI-VALUE'}});
  const r=await handleSinglesSocial(post('/identity/complete',{identity_verification_id:ID}),'/identity/complete',a,uid,reply);
  assert.equal(r.status,200);
  assert.equal(captured.p_adult,true);assert.match(captured.p_ci_hash,/^[0-9a-f]{64}$/);
@@ -46,8 +46,8 @@ test('complete rejects unverified, minors, duplicates and provider outages',asyn
  const run=async(body,rpcResult,ok=true)=>{portone(body,ok);const a=db({rpc:{singles_identity_complete:()=>({data:rpcResult,error:null})}});
   const r=await handleSinglesSocial(post('/identity/complete',{identity_verification_id:ID}),'/identity/complete',a,uid,reply);return [r.status,(await r.json()).error]};
  assert.deepEqual(await run({status:'FAILED',id:ID},'verified'),[409,'identity_not_verified']);
- assert.deepEqual(await run({status:'VERIFIED',id:ID,verifiedCustomer:{birthDate:'2010-01-01',ci:'x'}},'rejected_minor'),[403,'adult_required']);
- assert.deepEqual(await run({status:'VERIFIED',id:ID,verifiedCustomer:{birthDate:'1990-01-01',ci:'x'}},'duplicate'),[409,'identity_already_used']);
+ assert.deepEqual(await run({status:'VERIFIED',id:ID,channel:{type:'LIVE'},verifiedCustomer:{birthDate:'2010-01-01',ci:'x'}},'rejected_minor'),[403,'adult_required']);
+ assert.deepEqual(await run({status:'VERIFIED',id:ID,channel:{type:'LIVE'},verifiedCustomer:{birthDate:'1990-01-01',ci:'x'}},'duplicate'),[409,'identity_already_used']);
  assert.deepEqual(await run({},'verified',false),[502,'identity_provider_unavailable']);
  const bad=await handleSinglesSocial(post('/identity/complete',{identity_verification_id:'../x'}),'/identity/complete',db(),uid,reply);
  assert.equal(bad.status,400);
@@ -70,4 +70,15 @@ test('worker: verify page has its own wider CSP; other pages keep the strict one
  assert.equal(s.identity_verification.store_id,'store-1234abcd-0000');
  const ui=await readFile(new URL('../sites/ekodi-singles/public/verify.js',import.meta.url),'utf8');
  assert.match(ui,/requestIdentityVerification/);assert.doesNotMatch(ui,/PORTONE_API_SECRET|birthDate/);
+});
+
+test('test-channel results are never accepted as adult verification',async()=>{
+ const a=db({rpc:{singles_identity_complete:()=>({data:'verified',error:null})}});
+ portone({status:'VERIFIED',id:ID,channel:{type:'TEST'},verifiedCustomer:{birthDate:'1990-01-01',ci:'x'}});
+ const r=await handleSinglesSocial(post('/identity/complete',{identity_verification_id:ID}),'/identity/complete',a,uid,reply);
+ assert.equal(r.status,409);assert.equal((await r.json()).error,'identity_test_channel');
+ assert.ok(!a.calls.some(c=>c.n==='singles_identity_complete'),'no adult flag written');
+ portone({status:'VERIFIED',id:ID,verifiedCustomer:{birthDate:'1990-01-01',ci:'x'}});
+ const r2=await handleSinglesSocial(post('/identity/complete',{identity_verification_id:ID}),'/identity/complete',db(),uid,reply);
+ assert.equal((await r2.json()).error,'identity_test_channel','missing channel type fails closed');
 });

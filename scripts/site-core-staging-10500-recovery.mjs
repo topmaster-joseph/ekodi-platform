@@ -3,6 +3,7 @@
 // secrets-read error. CF-QUOTA-001: NEVER retry 429/1027 or a rate/quota response.
 import {spawn} from 'node:child_process';
 import {pathToFileURL} from 'node:url';
+import {canRetryCloudflareStagingTransport} from './lib/cloudflare-staging-transport.mjs';
 
 export const STAGING_INTERNAL_AUTH_RETRY_DELAY_MS=18000;
 export const MAX_STAGING_DEPLOY_ATTEMPTS=2;
@@ -21,16 +22,22 @@ export async function runStagingWith10500Recovery({
   if(typeof run!=='function')throw new TypeError('staging run callback required');
   const first=await run();
   if(first?.code===0)return {ok:true,attempts:1,internalAuthRecovered:false};
-  if(!mayRetryStaging10500(first?.output)){
-    throw new Error('Site Core staging deploy failed; not eligible for 10500-only recovery (CF-QUOTA-001 fail-closed)');
+  const auth10500=mayRetryStaging10500(first?.output);
+  const transportReset=canRetryCloudflareStagingTransport(first?.output);
+  if(!auth10500&&!transportReset){
+    throw new Error('Site Core staging deploy failed; not eligible for 10500-or-upstream-reset recovery (CF-QUOTA-001 fail-closed)');
   }
-  log('[EKODI][STAGING-10500] Cloudflare internal secrets-read error; one guarded staging retry after fixed delay');
+  log(auth10500
+    ? '[EKODI][STAGING-10500] Cloudflare internal secrets-read error; one guarded staging retry after fixed delay'
+    : '[EKODI][STAGING-TRANSPORT] Cloudflare malformed upstream reset; one guarded staging retry after fixed delay');
   await sleep(STAGING_INTERNAL_AUTH_RETRY_DELAY_MS);
   const second=await run();
   if(second?.code!==0){
     throw new Error(
       'Site Core staging retry failed; no further attempts or production promotion' +
-      (mayRetryStaging10500(second?.output)?' (Cloudflare 10500 persisted)':' (other error or quota circuit)')
+      (mayRetryStaging10500(second?.output)?' (Cloudflare 10500 persisted)'
+        :canRetryCloudflareStagingTransport(second?.output)?' (Cloudflare upstream reset persisted)'
+        :' (other error or quota circuit)')
     );
   }
   return {ok:true,attempts:MAX_STAGING_DEPLOY_ATTEMPTS,internalAuthRecovered:true};

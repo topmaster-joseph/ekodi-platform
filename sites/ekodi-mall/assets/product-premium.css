@@ -102,3 +102,15 @@
 .pp-badge{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--pp-line);background:#fff;font-size:12px;color:#3b413e;text-decoration:none}
 .pp-badge-official{background:#1f3d33;border-color:#1f3d33;color:#fff;font-weight:600}
 .pp-badge-link{color:var(--pp-muted)}
+
+/* Guest checkout: clear reviewable payment terms at mobile and desktop sizes. */
+.checkout-guest-note{margin:8px 0 16px;color:var(--pp-muted,#57645e);font-size:13px;line-height:1.65}
+.checkout-guest-policies{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:9px 0 14px;font-size:12px;line-height:1.6}
+.checkout-guest-policies a{color:var(--pp-green,#1f3d33);text-decoration:underline;text-underline-offset:2px}
+@media(max-width:600px){.checkout-guest-note{font-size:12px;margin-bottom:12px}.checkout-guest-policies{font-size:11px}}
+
+/* EKODI member / guest checkout: disclose 1% evidence without implying spendable points. */
+.checkout-member-points{margin:8px 0 4px;font-size:13px;line-height:1.7;color:#2f5d43;font-weight:650}
+.checkout-member-login{display:inline-flex;align-self:flex-start;margin:0 0 12px;font-size:12px;font-weight:700;color:#24523e;text-decoration:underline;text-underline-offset:3px}
+.checkout-member-login[hidden]{display:none!important}
+@media(max-width:600px){.checkout-member-points{font-size:12px}.checkout-member-login{font-size:12px}}

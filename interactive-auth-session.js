@@ -35,7 +35,23 @@ export const FACTCHAT_FEATURES = Object.freeze([
   { id: 'usage-credit', label: '크레딧·사용량', keywords: ['크레딧', 'credit', '사용량', '잔여', '한도'] },
 ]);
 
+export const DOMEGGOOK_FEATURES = Object.freeze([
+  { id: 'dg-member-menu', label: '회원·마이페이지', keywords: ['마이페이지'] },
+  { id: 'dg-emoney-menu', label: '이머니 메뉴', keywords: ['e-money', '이머니'] },
+  { id: 'dg-order-menu', label: '주문 조회 메뉴', keywords: ['주문전체목록', '주문조회'] },
+]);
+
 export const INTERACTIVE_AUTH_SERVICES = Object.freeze({
+  'domeggook-business': Object.freeze({
+    id: 'domeggook-business',
+    label: '도매꾹 · 에코디비즈 사업자 주문 사전점검',
+    entryUrl: 'https://www.domeggook.com/main/',
+    automationOrigin: 'https://www.domeggook.com',
+    authenticatedPathPrefixes: Object.freeze(['/main/', '/my/', '/member/']),
+    officialGuideUrl: 'https://openapi.domeggook.com/ko/articles/%EB%A1%9C%EA%B7%B8%EC%9D%B8-e4aaf7c2',
+    verificationProbe: 'menu-only-readonly',
+    features: DOMEGGOOK_FEATURES,
+  }),
   'factchat-mokpo': Object.freeze({
     id: 'factchat-mokpo',
     label: 'FactChat · 국립목포대학교 기관계정',
@@ -205,7 +221,7 @@ export function projectInteractiveAuthVerification(raw) {
       executionVerified: false,
       status: item.menuVisible === true ? 'menu_visible_execution_unverified' : 'menu_not_found',
     }));
-  const usageLines = (Array.isArray(raw.usageLines) ? raw.usageLines : [])
+  const usageLines = service.id === 'domeggook-business' ? [] : (Array.isArray(raw.usageLines) ? raw.usageLines : [])
     .map(line => maskSensitive(text(line, 140)))
     .filter(line => /(크레딧|credit|사용량|잔여|한도|토큰|token)/i.test(line))
     .slice(0, 8);

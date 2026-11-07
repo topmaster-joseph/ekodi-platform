@@ -96,7 +96,7 @@ jobs:
           for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js church-worship-admin.js church-weekly-worship.js giving.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
             node --check "church/$file"
           done
-          grep -Fq '<strong>매일묵상</strong>' church/index.html
+          grep -Eq '<strong>(오늘의 )?매일묵상</strong>' church/index.html
           grep -Fq 'href="/ekodichurch/devotion/"' church/index.html
           if grep -Eq 'data-ekodi-life-hub|id="life-hub"|id="daily-devotion"|id="life-reflection-form"|id="memory-form"|id="witness-form"|href="#life-hub"|church-life-hub\.(css|js)' church/index.html; then
             echo 'Retired Church life record UI and scripts must not return.'
@@ -107,7 +107,11 @@ jobs:
           grep -Fq 'data-church-weekly' church/index.html
           # Approved PR #114 public presentation only; preserve auth, giving, and worship.
           grep -Fq '<link rel="stylesheet" href="church-homepage-layout.css">' church/index.html
-          grep -Fq 'href="#weekly-worship">예배자료</a>' church/index.html
+          # Keep the worship proof strict while recognizing the reviewed six-menu layout.
+          # The verifier accepts only the original legacy header or the exact new
+          # first-level menu with all contextual worship/Together routes preserved.
+          node .ekodi-control/scripts/verify-church-header-navigation.mjs \
+            --html church/index.html --subnav church/church-section-nav.js
           grep -Fq 'online-triad--broadcast' church/index.html
           grep -Fq 'href="/live/church/"' church/index.html
           grep -Fq 'body:has(main :target) .hero{display:none!important}' church/church-homepage-layout.css
@@ -259,6 +263,49 @@ jobs:
           echo "Church devotion verification failed: page=$page renderer=$renderer api=$api"
           exit 1
 
+      - name: Verify six-menu Church public notices, schedules and preserved worship on live canonical release
+        if: vars.CHURCH_CANONICAL_SOURCE_CUTOVER_APPROVED == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${CHURCH_RELEASE_SOURCE_MODE:-}" = canonical
+          release="$CHURCH_SOURCE_SHA"
+          for attempt in $(seq 1 18); do
+            root=$(curl -L -sS -o /tmp/church-six-live-home.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/?release=${release}" || true)
+            notice=$(curl -L -sS -o /tmp/church-six-live-notices.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/notices/?release=${release}" || true)
+            schedule=$(curl -L -sS -o /tmp/church-six-live-schedule.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/schedule/?release=${release}" || true)
+            selected=$(curl -L -sS -o /tmp/church-six-live-subnav.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-section-nav.js?release=${release}" || true)
+            shared=$(curl -L -sS -o /tmp/church-six-live-shared.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-shared-schedules.js?release=${release}" || true)
+            worship=$(curl -L -sS -o /tmp/church-six-live-worship.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/worship/2026-11-08/?release=${release}" || true)
+            marker_code=$(curl -L -sS -o /tmp/church-six-live-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
+            if [[ "$root" == 200 && "$notice" == 200 && "$schedule" == 200 && "$selected" == 200 && "$shared" == 200 && "$worship" == 200 && "$marker_code" == 200 ]] \
+              && grep -Fq 'data-church-public-page="notices"' /tmp/church-six-live-notices.html \
+              && grep -Fq 'data-church-notices' /tmp/church-six-live-notices.html \
+              && grep -Fq 'data-church-public-page="schedule"' /tmp/church-six-live-schedule.html \
+              && grep -Fq 'data-church-schedule' /tmp/church-six-live-schedule.html \
+              && grep -Fq 'data-church-shared-schedules' /tmp/church-six-live-home.html \
+              && grep -Fq 'shared-schedules' /tmp/church-six-live-shared.js \
+              && grep -Fq '공동의회' /tmp/church-six-live-worship.html \
+              && node .ekodi-control/scripts/verify-church-header-navigation.mjs \
+                   --html /tmp/church-six-live-home.html --subnav /tmp/church-six-live-subnav.js \
+              && jq -e --arg sha "$release" --arg digest "$CHURCH_PAYLOAD_SHA256" '
+                 .contract == "ekodi.church-release.v2" and
+                 .sourceRepository == "topmaster-joseph/ekodi-platform" and
+                 .sourceSha == $sha and .payloadSha256 == $digest and
+                 .preservedPublicWorship.mergedPR == 150 and
+                 .preservedPublicWorship.preservationPR == 151 and
+                 .preservedPublicWorship.preservationHeadSha == "9ca89ef9190a61e101bfe0c6129cdc6a668a6a4b"
+              ' /tmp/church-six-live-release.json >/dev/null; then
+              echo 'Canonical Church six menus, public notices, federated schedules, preserved worship and live source SHA verified.'
+              break
+            fi
+            if [[ "$attempt" == 18 ]]; then
+              echo "Church canonical public route verification failed: root=$root notice=$notice schedule=$schedule selected=$selected shared=$shared worship=$worship marker=$marker_code"
+              exit 1
+            fi
+            sleep 5
+          done
+
       - name: Verify production church together (partnership) page
         shell: bash
         run: |
@@ -309,7 +356,7 @@ jobs:
             live_intent=$(curl -L -sS -o /tmp/church-live-host-intent.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/host-intent.js?release=${release}" || true)
             marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
             if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$attendance_member" == 200 && "$attendance_member_js" == 200 && "$life_i18n" == 200 && "$online_status" == 200 && "$worship_admin" == 200 && "$weekly_js" == 200 && "$weekly_css" == 200 && "$weekly_manifest" == 200 && "$weekly_service" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
-              && grep -Fq '<strong>매일묵상</strong>' /tmp/church.html \
+              && grep -Eq '<strong>(오늘의 )?매일묵상</strong>' /tmp/church.html \
               && grep -Fq 'href="/ekodichurch/devotion/"' /tmp/church.html \
               && ! grep -Eq 'data-ekodi-life-hub|id="life-hub"|id="daily-devotion"|id="life-reflection-form"|id="memory-form"|id="witness-form"|href="#life-hub"|church-life-hub\.(css|js)' /tmp/church.html \
               && grep -Fq 'data-church-worship-admin' /tmp/church.html \
@@ -510,7 +557,22 @@ jobs:
                 assert.equal(initial.weeklyHidden,true,'weekly panel hidden until selected');
                 assert.equal(initial.sharedLive,true,'shared EKODI Live link retained');
                 assert.equal(initial.member,true,'site-local member navigation retained');
-                assert.equal(initial.qtin,true,'QTIN group-order link in the church header '+locale+' '+device.name);
+                // Old headers expose QTIN directly. Six-item headers keep it in Together.
+                // Verify the actual rendered submenu in every viewport and locale.
+                if(!initial.qtin){
+                  await page.evaluate(()=>{location.hash='#together'});
+                  await page.waitForFunction(()=>!!document.querySelector('.church-section-subnav:not([hidden]) a[href="/qtin/church"]'),{timeout:9000});
+                  const contextual=await page.evaluate(()=>({
+                    qtin:!!document.querySelector('.church-section-subnav:not([hidden]) a[href="/qtin/church"]'),
+                    community:!!document.querySelector('.church-section-subnav a[href="#community"]'),
+                    partner:!!document.querySelector('.church-section-subnav a[href="#partner-news"]')
+                  }));
+                  assert.equal(contextual.qtin,true,'Together must expose QTIN '+locale+' '+device.name);
+                  assert.equal(contextual.community,true,'Together must expose community '+locale+' '+device.name);
+                  assert.equal(contextual.partner,true,'Together must expose partner news '+locale+' '+device.name);
+                  await page.evaluate(()=>{location.hash=''});
+                  await page.waitForFunction(()=>document.body.dataset.churchSelectedSection==='home',{timeout:9000});
+                }
                 assert.equal(initial.canonicalDevotion,true,'canonical daily devotion card missing '+locale+' '+device.name);
                 assert.equal(initial.legacyLifeRecord,false,'legacy journal UI returned '+locale+' '+device.name);
                 assert.equal(initial.overflow,false,'horizontal overflow '+locale+' '+device.name);

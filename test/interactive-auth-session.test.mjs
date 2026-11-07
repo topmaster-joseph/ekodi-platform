@@ -103,6 +103,37 @@ test('heartbeat settings projection strips anything not allowlisted', () => {
   assert.equal(sanitizeInteractiveAuthSettings(null), null);
 });
 
+test('Domeggook external sign-in requires personal consent and projects no wallet or buyer data', () => {
+  const payload = sanitizeInteractiveAuthPayload(INTERACTIVE_AUTH_COMMANDS.start, {
+    service: 'domeggook-business', userWillSignInPersonally: true,
+    entryUrl: 'https://other.example/', credentialRelay: true, ttlMinutes: 30,
+  }, { now: Date.parse('2026-11-04T11:00:00Z'), randomUUID: () => SID.slice(4) });
+  assert.equal(payload.entryUrl, 'https://www.domeggook.com/main/');
+  assert.equal(payload.automationOrigin, 'https://www.domeggook.com');
+  assert.equal(payload.cookieExport, false);
+  assert.equal(payload.hostInputInjection, false);
+  assert.equal(payload.localConsentRequired, true);
+  const verify = sanitizeInteractiveAuthPayload(INTERACTIVE_AUTH_COMMANDS.verify, {
+    service: 'domeggook-business', sessionId: SID, readOnlyAcknowledged: true, mutation: true,
+  });
+  assert.equal(verify.probe, 'menu-only-readonly');
+  assert.equal(verify.mutation, false);
+  const projected = projectInteractiveAuthVerification({
+    sessionId: SID, service: 'domeggook-business', pageOrigin: 'https://www.domeggook.com',
+    authenticated: true, features: [{id:'dg-emoney-menu',menuVisible:true}],
+    usageLines: ['잔여 이머니 7,777원 · test@example.com 010-1234-5678'],
+  });
+  assert.equal(projected.authenticated, true);
+  assert.deepEqual(projected.usageLines, []);
+  assert.equal(projected.features[0].executionVerified, false);
+  assert.doesNotMatch(JSON.stringify(projected), /7,777|test@example.com|1234-5678/);
+  const receipt = { interactiveAuth: { ...invariants,
+    status: {sessionId:SID,service:'domeggook-business',state:'login_required',currentUrl:'https://www.domeggook.com/main/?token=do-not-leak'},
+  } };
+  assert.equal(assessInteractiveAuthReceipt(INTERACTIVE_AUTH_COMMANDS.start, receipt).outcome,'valid');
+  assert.doesNotMatch(JSON.stringify(projectInteractiveAuthStatus(receipt.interactiveAuth.status)), /token|do-not-leak/);
+});
+
 // ---------------------------------------------------------------------------
 // Integration: real Control API handler over a D1-compatible SQLite adapter.
 // ---------------------------------------------------------------------------
@@ -121,7 +152,7 @@ function d1(db) {
 }
 const sha = v => createHash('sha256').update(v).digest('hex');
 
-function setup({ role = 'super_admin', capability = true, lastSeen = new Date().toISOString() } = {}) {
+function setup({ role = 'super_admin', capability = true, domeggookCapability = false, lastSeen = new Date().toISOString() } = {}) {
   const db = new DatabaseSync(':memory:');
   db.exec(`CREATE TABLE admins (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL DEFAULT '', password_salt TEXT NOT NULL DEFAULT '', password_iterations INTEGER, birth_hash TEXT NOT NULL DEFAULT '', birth_salt TEXT NOT NULL DEFAULT '', role TEXT NOT NULL DEFAULT 'super_admin', created_at TEXT NOT NULL DEFAULT '');
     CREATE TABLE sessions (token_hash TEXT PRIMARY KEY, admin_id INTEGER NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT '');
@@ -133,7 +164,7 @@ function setup({ role = 'super_admin', capability = true, lastSeen = new Date().
     await handleDeviceControl(new Request('https://ekodi.kr/api/control/devices', { headers: { authorization: 'Bearer admin-token-0123456789abcdef' } }), env);
     db.prepare(`INSERT INTO device_registry (id, label, platform, hostname, os_version, agent_version, token_hash, capabilities_json, settings_json, diagnostics_json, profile_name, last_seen_at, enrolled_at, enrolled_by)
       VALUES ('dev_1','PC','windows','USER4','Windows','2.5.7',?, ?, '{}', '{}', '', ?, ?, 1)`)
-      .run(sha('device-token-abcdef0123456789'), JSON.stringify({ interactiveAuthSession: capability }), lastSeen, lastSeen);
+      .run(sha('device-token-abcdef0123456789'), JSON.stringify({ interactiveAuthSession: capability, domeggookNativeAuth: domeggookCapability }), lastSeen, lastSeen);
   } };
 }
 const admin = (env, path, body) => handleDeviceControl(new Request(`https://ekodi.kr${path}`, {
@@ -175,6 +206,21 @@ test('integration: super admin starts a session, agent receives the fixed payloa
   assert.match(auditRow.detail, new RegExp(`session=${issued.sessionId}`));
 });
 
+test('integration: Domeggook requires a separately upgraded native agent capability', async () => {
+  const command={type:INTERACTIVE_AUTH_COMMANDS.start,confirmed:true,
+    payload:{service:'domeggook-business',userWillSignInPersonally:true}};
+  const old=setup({domeggookCapability:false});await old.enroll();
+  const refused=await admin(old.env,'/api/control/devices/dev_1/commands',command);
+  assert.equal(refused.status,409);
+  assert.equal((await refused.json()).code,'DOMEGGOOK_NATIVE_AUTH_AGENT_UPGRADE_REQUIRED');
+  const updated=setup({domeggookCapability:true});await updated.enroll();
+  const permitted=await admin(updated.env,'/api/control/devices/dev_1/commands',command);
+  assert.equal(permitted.status,202);
+  const next=await (await agent(updated.env,'/api/device-agent/commands/next')).json();
+  assert.equal(next.command.payload.entryUrl,'https://www.domeggook.com/main/');
+  assert.equal(next.command.payload.cookieExport,false);
+});
+
 test('integration: a receipt that claims cookie export is stored as failed', async () => {
   const t = setup(); await t.enroll();
   await admin(t.env, '/api/control/devices/dev_1/commands', { type: INTERACTIVE_AUTH_COMMANDS.start, confirmed: true, payload: { service: 'factchat-mokpo', userWillSignInPersonally: true } });
@@ -204,5 +250,6 @@ test('admin UI exposes the session panel without rendering credential fields', (
   const ui = readFileSync(new URL('../device-control-admin.js', import.meta.url), 'utf8');
   assert.match(ui, /function externalAuthPanel\(device\)/);
   assert.match(ui, /computer\.auth_session\.close/);
+  assert.match(ui, /domeggook-business/);
   assert.doesNotMatch(ui.slice(ui.indexOf('function externalAuthPanel')), /type=["']?password|input\.type\s*=\s*'password'/);
 });

@@ -1,4 +1,6 @@
 import authWorker from './auth-worker.js';
+import { handleAgeVerificationRequest, pruneAgeVerification, ageVerificationAdminSnapshot } from './age-verification-core.js';
+import { sandboxConfiguration, startInicisSandbox, finishInicisSandbox } from './age-verification-sandbox.js';
 import { handlePointsControl } from './points-control.js';
 import { handleMailControl } from './mail-control.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
@@ -537,6 +539,35 @@ async function handleControl(request, env) {
     if (response) return response;
   }
 
+  // KG Inicis TEST sandbox is guarded by the platform's Google-only super-admin
+  // session. It never writes age_verification_grants or changes service eligibility.
+  const ageSandboxBase = `${CONTROL_PREFIX}/age-verification/sandbox`;
+  if (path === ageSandboxBase || path === ageSandboxBase + '/start' || path === ageSandboxBase + '/finish') {
+    if (String(auth.session.role || '') !== 'super_admin')
+      return controlJson({ error: 'super_admin_required' }, 403, auth.response.headers);
+    if (request.method === 'GET' && path === ageSandboxBase)
+      return controlJson(sandboxConfiguration(env), 200, auth.response.headers);
+    if (request.method !== 'POST' || path === ageSandboxBase)
+      return controlJson({ error: 'method_not_allowed' }, 405, auth.response.headers);
+    if (request.headers.get('origin') !== 'https://ekodi.kr')
+      return controlJson({ error: 'origin_not_allowed' }, 403, auth.response.headers);
+    const body = await readJson(request);
+    if (!body || typeof body !== 'object' || Array.isArray(body))
+      return controlJson({ error: 'invalid_payload' }, 400, auth.response.headers);
+    const allowed = path.endsWith('/start') ? [] : ['identityVerificationId'];
+    if (Object.keys(body).some(k => !allowed.includes(k)))
+      return controlJson({ error: 'invalid_payload' }, 400, auth.response.headers);
+    const adminId = await adminIdForSession(env, auth.session);
+    const result = path.endsWith('/start')
+      ? await startInicisSandbox(env, adminId)
+      : await finishInicisSandbox(env, adminId, body.identityVerificationId);
+    return controlJson(result.body, result.status, auth.response.headers);
+  }
+
+  if (request.method === 'GET' && path === `${CONTROL_PREFIX}/age-verification`) {
+    return controlJson(await ageVerificationAdminSnapshot(env), 200, auth.response.headers);
+  }
+
   if (request.method === 'GET' && path === `${CONTROL_PREFIX}/overview`) {
     return controlJson(await overview(env), 200, auth.response.headers);
   }
@@ -739,6 +770,9 @@ async function handleControl(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // Shared age verification gateway is a guarded EKODI Core capability, not a new service/worker.
+    const ageVerificationResponse = await handleAgeVerificationRequest(request, env);
+    if (ageVerificationResponse) return ageVerificationResponse;
     const confirmationPublicResponse = await handleConfirmationPublic(request, env);
     if (confirmationPublicResponse) return confirmationPublicResponse;
     const workspaceConfirmationResponse = await handleWorkspaceConfirmations(request, env);
@@ -786,7 +820,8 @@ export default {
     ctx.waitUntil((async () => {
       await Promise.all([
         runChecks(env),
-        cloudflareAccountSnapshot(env)
+        cloudflareAccountSnapshot(env),
+        pruneAgeVerification(env)
       ]);
       const [evolution] = await Promise.all([
         evolutionSnapshot(env),

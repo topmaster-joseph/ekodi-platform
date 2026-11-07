@@ -18,7 +18,11 @@
   <link rel="stylesheet" href="partner-news.css">
   <link rel="stylesheet" href="church-weekly-worship.css">
   <link rel="stylesheet" href="church-homepage-layout.css">
+  <script src="church-shared-schedules.js" defer></script>
+  <link rel="stylesheet" href="church-public-updates.css">
   <link rel="stylesheet" href="church-inline-live.css">
+  <link rel="stylesheet" href="church-compact-navigation.css">
+  <script src="church-section-nav.js" defer></script>
 </head>
 <body data-ekodi-footer-mode="service">
   <header class="site-header" id="top">
@@ -33,13 +37,10 @@
     <button class="menu-button" aria-expanded="false" aria-controls="main-nav" aria-label="메뉴 열기"><span></span><span></span></button>
     <nav id="main-nav" aria-label="주요 메뉴">
       <a href="/ekodichurch/devotion/">매일묵상</a>
-      <a href="#community">공동체</a>
-      <a href="#weekly-worship">예배자료</a>
-      <a href="#partner-news">협력소식</a>
-      <a class="nav-online" href="#online"><span class="nav-online-dot" aria-hidden="true"></span>온라인</a>
-      <a href="#location">오시는 길</a>
-      <a class="nav-together" href="/ekodichurch/together/">함께하기</a>
-      <a class="nav-qtin" href="/qtin/church">큐티인 신청</a>
+      <a href="/ekodichurch/#worship">예배·방송</a>
+      <a href="/ekodichurch/notices/">공지사항</a>
+      <a href="/ekodichurch/schedule/">주요일정</a>
+      <a href="/ekodichurch/#together">함께하기</a>
       <a class="shell-my" href="/ekodichurch/my/">마이페이지</a>
     </nav>
   </header>
@@ -63,18 +64,31 @@
         <p class="eyebrow">WELCOME TO EKODI CHURCH</p>
         <h1><span class="hero-focus-label hero-continuity">부르심에서 교제로,</span>말씀으로 삶을 읽고,<br><em>함께 살아내고 증언합니다</em></h1>
         <p class="hero-copy">세상에서 구별된 에클레시아, 하나님과 하나된 코이노니아, 세상 속에 증인된 디아스포라.<br><strong class="hero-jubilee">그리고 자유와 회복을 일상과 관계 안에서 살아내는 희년.</strong></p>
-        <div class="overview-grid" aria-label="홈페이지 전체 메뉴">
-          <a href="#about"><span>01</span><strong>우리의 정체성</strong><small>에클레시아·코이노니아·디아스포라·희년</small></a>
-          <a href="/ekodichurch/devotion/"><span>02</span><strong>매일묵상</strong><small>오늘의 말씀을 묵상하기</small></a>
-          <a href="#community"><span>03</span><strong>공동체 활동</strong><small>교회·선교회·찬양·이웃·모임</small></a>
-          <a href="#worship"><span>04</span><strong>예배</strong><small>함께 모이는 시간</small></a>
-          <a href="#weekly-worship"><span>05</span><strong>주보·PPT</strong><small>날짜별 예배자료와 진행 화면</small></a>
-          <a href="#partner-news"><span>06</span><strong>협력 소식</strong><small>함께하는 기관·단체의 이야기</small></a>
-          <a href="#online"><span>07</span><strong>라이브 방송</strong><small>주일예배·활동 동시송출</small></a>
-          <a href="#location"><span>08</span><strong>함께하기</strong><small>주소와 연락처</small></a>
+        <div class="overview-grid" aria-label="에코디교회 주요 서비스">
+          <a href="/ekodichurch/devotion/"><span>01</span><strong>매일묵상</strong><small>오늘의 말씀과 묵상기도</small></a>
+          <a href="/ekodichurch/#worship"><span>02</span><strong>예배·방송</strong><small>예배안내·주보·온라인 방송</small></a>
+          <a href="/ekodichurch/notices/"><span>03</span><strong>공지사항</strong><small>교회에서 전하는 알림</small></a>
+          <a href="/ekodichurch/schedule/"><span>04</span><strong>주요일정</strong><small>교회·선교회 공개 일정</small></a>
+          <a href="/ekodichurch/#together"><span>05</span><strong>함께하기</strong><small>공동체·협력소식·오시는 길</small></a>
+          <a href="/ekodichurch/my/"><span>06</span><strong>마이페이지</strong><small>나의 교회 활동</small></a>
         </div>
       </div>
       <p class="scroll-cue">SCROLL <span></span></p>
+    </section>
+
+    <section class="church-public-panels" aria-label="교회 소식과 일정">
+      <article class="church-public-panel" id="notices">
+        <div class="church-public-heading"><div><small>NOTICE</small><h2>공지사항</h2></div><a href="/ekodichurch/notices/">전체보기</a></div>
+        <div data-church-notices data-limit="3" aria-live="polite"><p class="church-public-empty">공지사항을 불러오는 중입니다.</p></div>
+      </article>
+      <section class="church-shared-schedule section" id="church-schedules" data-church-shared-schedules data-limit="3" aria-labelledby="church-schedules-title">
+        <div class="church-shared-schedule-head">
+          <h2 id="church-schedules-title">주요일정</h2>
+          <a href="/ekodichurch/schedule/">전체보기</a>
+        </div>
+        <p>교회·선교회 공개 일정 · <a href="/ekodichurch/board?category=schedule">교회 일정 게시판</a></p>
+        <ol data-church-schedules-list aria-live="polite"><li class="church-shared-empty">공개 일정을 확인하고 있습니다.</li></ol>
+      </section>
     </section>
 
     <section class="church-live-entry" data-ekodi-church-live-entry aria-label="에코디교회 온라인 연결">
@@ -275,5 +289,6 @@
   <script src="church-life-hub-i18n.js"></script>
   <script src="giving.js"></script>
   <script src="partner-news.js"></script>
+  <script src="church-public-updates.js" defer></script>
 </body>
 </html>

@@ -687,6 +687,9 @@
     if (document.querySelector('#aiOpsPanel')) installChiefChat();
   });
   observer.observe(document.documentElement, { childList:true, subtree:true });
+  // When loaded directly by the AI 지휘 tab, the panel already exists. Mount
+  // the essential conversation immediately; unrelated enhancements stay idle.
+  if (document.querySelector('#aiOpsPanel')) installChiefChat();
 
   if (document.readyState === 'complete') schedule();
   else window.addEventListener('load', schedule, { once:true });

@@ -7,11 +7,11 @@ const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const url='https://ekodi.kr/ekodimission/board/api/saturday';
 
 function fakeDb(){
-  const events=new Map(),replies=new Map();
+  const events=new Map(),replies=new Map(),preferences=new Map(),privateResponses=new Map();
   let nextId=1;
   const board={board_id:'site:ekodimission:main',site_id:'ekodimission',tenant_slug:'ekodimission',status:'active',comments_enabled:1};
   return {
-    events,replies,
+    events,replies,preferences,privateResponses,
     async batch() {},
     prepare(sql){
       const statement={
@@ -34,6 +34,15 @@ function fakeDb(){
           if(sql.includes("UPDATE ekodi_mission_saturday_events")&&!sql.includes('SET starts_at')){
             for(const item of events.values())if(item.meeting_date<a[1]&&item.status==='scheduled')item.status='completed';
           }
+          if(sql.includes('INSERT INTO ekodi_mission_recurring_participation')){
+            preferences.set(a[0]+'|'+a[1],{enabled:a[2]});
+          }
+          if(sql.includes('INSERT INTO ekodi_mission_saturday_private_rsvp')){
+            privateResponses.set(a[0]+'|'+a[1]+'|'+a[2],{attendance:a[3]});
+          }
+          if(sql.includes('DELETE FROM ekodi_mission_saturday_private_rsvp')){
+            privateResponses.delete(a[0]+'|'+a[1]+'|'+a[2]);
+          }
           if(sql.includes('INSERT INTO ekodi_mission_saturday_replies')){
             const key=a[0]+'|'+a[1]+'|'+a[2],old=replies.get(key);
             replies.set(key,{id:old?.id||nextId++,author_person_id:a[2],display_name:a[3],body:a[4],attendance:a[5],created_at:old?.created_at||a[6],updated_at:a[7],meeting_date:a[1],status:'published'});
@@ -44,6 +53,9 @@ function fakeDb(){
           if(sql.includes('FROM ekodi_board_instances'))return board;
           if(sql.includes('FROM ekodi_board_memberships'))return null;
           if(sql.includes('FROM ekodi_mission_saturday_events'))return events.get(this.args[0]+'|'+this.args[1])||null;
+          if(sql.includes('SELECT enabled FROM ekodi_mission_recurring_participation'))return preferences.get(this.args[0]+'|'+this.args[1])||null;
+          if(sql.includes('SELECT attendance FROM ekodi_mission_saturday_private_rsvp'))return privateResponses.get(this.args[0]+'|'+this.args[1]+'|'+this.args[2])||null;
+          if(sql.includes('SELECT COUNT(*) AS n FROM ('))return {n:0};
           return null;
         },
         async all(){
@@ -219,6 +231,66 @@ test('registration history includes the first 2024-02-03 Saturday and remains pa
   assert.equal(db.events.size,size,'Repeated archive reads are idempotent');
 });
 
+test('private recurring RSVP uses explicit opt-in, allows one-off changes, and never marks verified attendance',async()=>{
+  const db=fakeDb(),e=env(db),privateUrl=url+'/participation';
+  const call=(method='GET',payload,authenticated=true,origin='https://ekodi.kr')=>handleSiteBoardRequest(
+    new Request(privateUrl,{method,headers:{...(authenticated?{authorization:'Bearer fake-verified-test-token'}:{}),...(method==='POST'?{'content-type':'application/json',origin}:{})},
+      ...(payload?{body:JSON.stringify(payload)}:{})}),e);
+  assert.equal((await call('GET',null,false)).status,401);
+  assert.equal((await call('POST',{kind:'recurring',enabled:true},false)).status,401);
+  const initial=await (await call()).json();
+  assert.equal(initial.recurring,false);
+  assert.equal(initial.planned,'maybe');
+  assert.equal(initial.actualAttendance,'not_verified');
+  assert.equal(initial.managerSummary,undefined);
+  assert.equal((await call('POST',{kind:'recurring',enabled:'yes'})).status,400,'explicit boolean consent is required');
+  const enabled=await (await call('POST',{kind:'recurring',enabled:true})).json();
+  assert.equal(enabled.recurring,true);
+  assert.equal(enabled.planned,'join');
+  assert.equal(db.preferences.size,1);
+  assert.equal(db.replies.size,0,'no automatic public comment or per-event public consent');
+  const meetingDate=enabled.meeting.date;
+  const absent=await (await call('POST',{kind:'meeting',meetingDate,attendance:'cancel'})).json();
+  assert.equal(absent.planned,'cancel');
+  assert.equal(absent.override,'cancel');
+  assert.equal((await call('POST',{kind:'meeting',meetingDate,attendance:'maybe'})).status,200);
+  assert.equal((await (await call()).json()).planned,'maybe');
+  assert.equal((await call('POST',{kind:'meeting',meetingDate,attendance:'join'})).status,200);
+  assert.equal((await (await call()).json()).planned,'join');
+  assert.equal((await call('POST',{kind:'meeting',meetingDate,attendance:'default'})).status,200);
+  assert.equal((await (await call()).json()).override,null);
+  assert.equal((await (await call()).json()).planned,'join','recurring setting resumes after clearing one-off override');
+  assert.equal((await call('POST',{kind:'meeting',meetingDate:'2020-01-01',attendance:'join'})).status,409);
+  assert.equal((await call('POST',{kind:'meeting',meetingDate,attendance:'unknown'})).status,400);
+  assert.equal((await call('POST',{kind:'recurring',enabled:true},true,'https://other.example')).status,403);
+  const ended=await (await call('POST',{kind:'recurring',enabled:false})).json();
+  assert.equal(ended.recurring,false);
+  assert.equal(ended.planned,'maybe');
+  assert.equal(db.privateResponses.size,0);
+  assert.equal(db.replies.size,0);
+  assert.equal(JSON.stringify(ended).includes('saturday-tester@example.org'),false);
+  const meeting=db.events.get('site:ekodimission:main|'+meetingDate);
+  meeting.status='cancelled';
+  assert.equal((await call('POST',{kind:'meeting',meetingDate,attendance:'join'})).status,409);
+});
+
+test('recurring RSVP remains person-private and is not shared across authenticated accounts',async()=>{
+  const db=fakeDb(),e=env(db),privateUrl=url+'/participation';
+  e.CONTROL_API.fetch=async request=>{
+    const email=String(request.headers.get('authorization')).includes('second')?'second@example.org':'first@example.org';
+    return new Response(JSON.stringify({authenticated:true,role:'admin',email}),{status:200});
+  };
+  const get=key=>handleSiteBoardRequest(new Request(privateUrl,{headers:{authorization:'Bearer '+key}}),e);
+  const put=(key,data)=>handleSiteBoardRequest(new Request(privateUrl,{method:'POST',
+    headers:{authorization:'Bearer '+key,origin:'https://ekodi.kr','content-type':'application/json'},body:JSON.stringify(data)}),e);
+  await put('first',{kind:'recurring',enabled:true});
+  const first=await (await get('first')).json(),second=await (await get('second')).json();
+  assert.equal(first.recurring,true);
+  assert.equal(second.recurring,false);
+  assert.equal(second.planned,'maybe');
+  assert.equal(db.preferences.size,1);
+});
+
 test('Mission landing, login state and image remain first-party and without hardcoded replies',async()=>{
  const [page,client,shell,css,worker]=await Promise.all([
   read('space/ekodimission.page'),read('space/ekodimission-saturday.js'),
@@ -250,7 +322,7 @@ test('Sunday headline, live rollover, history browser and first-party asset rema
    read('space/ekodimission-saturday-history.js'),read('space/ekodimission-activities.page'),
    read('space-worker.js')
  ]);
- assert.match(home,/2024년 2월 3일부터/);
+ assert.doesNotMatch(home,/2024년 2월 3일부터/);
  assert.match(home,/<\/figure><\/section>\s*<section class="activities mission-home-current"/);
  assert.match(client,/heading\.textContent=day==='Sun'\?'다음 토요모임':'이번 주 토요모임'/);
  assert.match(client,/refreshAfterDayChange/);

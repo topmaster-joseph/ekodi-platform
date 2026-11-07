@@ -54,3 +54,18 @@ test('separate panels are hidden only by the stage, preserving provider tab acti
   assert.match(provider, /x-ekodi-confirm-impact':'ai-provider-runtime-update/);
   assert.match(readable, /actionType:'ui\.change_request'/);
 });
+
+
+test('AI command tab loads Chief Chat immediately without restoring legacy Home Assist', () => {
+  const lazy = readFileSync(new URL('../admin-lazy-features.js', import.meta.url), 'utf8');
+  const demand = readFileSync(new URL('../admin-demand-loader.js', import.meta.url), 'utf8');
+  const bootstrap = readFileSync(new URL('../admin-assist-bootstrap.js', import.meta.url), 'utf8');
+  assert.match(aiops, /requested === 'command' && !section\.querySelector\('#aiChiefChat'\)/);
+  assert.match(aiops, /window\.EKODIAdminDemand\?\.loadScript/);
+  assert.match(aiops, /load\('admin-lazy-features\.js'\)/);
+  assert.match(lazy, /if \(document\.querySelector\('#aiOpsPanel'\)\) installChiefChat\(\);\s*if \(document\.readyState === 'complete'\) schedule\(\);/);
+  assert.match(lazy, /observer\.observe\(document\.documentElement, \{ childList:true, subtree:true \}\)/);
+  assert.match(demand, /secondaryScripts: \['admin-lazy-features\.js'\]/);
+  assert.match(bootstrap, /if\(R\(\)\)\{N\(\);return\}/);
+  assert.match(css, /data-aiops-stage="command"\] \.ai-ops-main > \.ai-chief-chat \{\s*display:flex!important/);
+});

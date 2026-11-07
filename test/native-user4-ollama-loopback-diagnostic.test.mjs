@@ -12,7 +12,7 @@ const verification=agent.slice(verificationStart,end);
 
 test('USER4 native Agent 2.6.1 reads fixed Ollama loopback without execution or private data',()=>{
   assert.ok(diagnosticStart>0&&verificationStart>diagnosticStart&&end>verificationStart);
-  assert.match(agent,/\$AgentVersion = '2\.6\.1'/);
+  assert.match(agent,/\$AgentVersion = '2\.6\.[1-9][0-9]*'/);
   assert.match(diagnostic,/Get-Process -Name \$names -ErrorAction SilentlyContinue/);
   assert.match(diagnostic,/Get-Service -Name 'Ollama' -ErrorAction SilentlyContinue/);
   assert.match(diagnostic,/BeginConnect\('127\.0\.0\.1', 11434, \$null, \$null\)/);

@@ -37,8 +37,107 @@ const SAFE_KEYS = new Set(['Enter','Tab','Escape','ArrowUp','ArrowDown','ArrowLe
 
 const clean=(value,max=300)=>String(value??'').trim().slice(0,max);
 const now=()=>new Date().toISOString();
+/** Early, synthetic-only paint observers. No URLs, element details, user data or events leave this page. */
+export function installSyntheticPaintObservers(){
+  const metrics={lcpCandidateMs:null,layoutShiftSumToSettle:null};
+  Object.defineProperty(window,'__EKODI_SYNTHETIC_PAINT__',{value:metrics,configurable:false});
+  if(typeof PerformanceObserver!=='function')return;
+  const supported=PerformanceObserver.supportedEntryTypes||[];
+  if(supported.includes('largest-contentful-paint')){
+    try{
+      new PerformanceObserver(list=>{
+        for(const entry of list.getEntries()){
+          if(Number.isFinite(entry.startTime)&&entry.startTime>=0)
+            metrics.lcpCandidateMs=Math.round(entry.startTime);
+        }
+      }).observe({type:'largest-contentful-paint',buffered:true});
+    }catch{}
+  }
+  if(supported.includes('layout-shift')){
+    metrics.layoutShiftSumToSettle=0;
+    try{
+      new PerformanceObserver(list=>{
+        for(const entry of list.getEntries()){
+          if(!entry.hadRecentInput&&Number.isFinite(entry.value)&&entry.value>=0)
+            metrics.layoutShiftSumToSettle=Math.round((metrics.layoutShiftSumToSettle+entry.value)*10000)/10000;
+        }
+      }).observe({type:'layout-shift',buffered:true});
+    }catch{metrics.layoutShiftSumToSettle=null;}
+  }
+}
+
+/** Synthetic page.goto(domcontentloaded) timing only (excludes pacing/settle); not LCP or real-user p75. */
+export function summarizeNativeNavigationPerformance(samples=[]) {
+  const values=samples.map(s=>Number(s.elapsedMs)).filter(n=>Number.isFinite(n)&&n>=0).sort((a,b)=>a-b);
+  if(!values.length)return {navigations:0,p50Ms:null,p95Ms:null,maxMs:null};
+  const pct=p=>values[Math.min(values.length-1,Math.max(0,Math.ceil(p*values.length)-1))];
+  return {navigations:values.length,p50Ms:pct(0.50),p95Ms:pct(0.95),maxMs:values.at(-1)};
+}
+
 
 function fail(code,message){ const e=new Error(message||code); e.code=code; throw e; }
+
+/** Navigation guard: evaluated at the network interception layer, before a
+ * redirect or popup document request can leave the owned browser. */
+export function shouldBlockNativeTopLevelNavigation(rawUrl, allowedOrigin=ORIGIN) {
+  try {
+    const url=new URL(String(rawUrl??''));
+    return !['https:','http:'].includes(url.protocol) || url.origin!==allowedOrigin ||
+      Boolean(url.username||url.password);
+  } catch { return true; }
+}
+
+/** Keep useful browser evidence without preserving authentication URLs, tokens,
+ * emails or phone numbers. Sanitization happens BEFORE writing/returning JSON. */
+export function redactNativeBrowserUrl(raw) {
+  try {
+    const value=String(raw??'');
+    const relative=value.startsWith('/')&&!value.startsWith('//');
+    const u=new URL(value, CANONICAL_ORIGIN);
+    if(u.protocol!=='https:' && u.protocol!=='http:') return '[redacted-url]';
+    let pathname=u.pathname;
+    // Cloudflare challenges embed bearer-like nonces in path segments.
+    if(pathname.startsWith('/cdn-cgi/challenge-platform/'))
+      pathname='/cdn-cgi/challenge-platform/[redacted]';
+    else pathname=pathname.split('/').map(segment=>{
+      const decoded=segment.replace(/%[0-9a-f]{2}/ig,'');
+      return (decoded.length>46 || /(?:token|session|credential|secret|key|auth|jwt)/i.test(decoded) &&
+        decoded.length>16) ? '[redacted]' : segment;
+    }).join('/');
+    // Query values and fragments can contain state, one-time codes and PII.
+    return (relative?'':u.origin)+pathname;
+  } catch { return '[redacted-url]'; }
+}
+function redactNativeDiagnostic(value) {
+  return String(value??'')
+    .replace(/https?:\/\/[^\s"'<>]+/g, s=>redactNativeBrowserUrl(s))
+    .replace(/(bearer\s+)[a-z0-9._~+/=-]+/gi,'$1[redacted]')
+    .replace(/((?:api[-_]?key|access[-_]?token|refresh[-_]?token|client[-_]?secret|password|session|authorization)\s*[:=]\s*)[^\s,;]+/gi,'$1[redacted]')
+    .replace(/\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi,'[redacted-email]')
+    .replace(/(?:\+82[\s-]?)?0?1\d[\s-]?\d{3,4}[\s-]?\d{4}/g,'[redacted-phone]');
+}
+export function sanitizeNativeBrowserFailure(error) {
+  const code=/^[A-Z][A-Z0-9_]{2,64}$/.test(String(error?.code||''))?error.code:'BROWSER_WORKER_FAILED';
+  return sanitizeNativeBrowserReceipt({ok:false,code,message:clean(error?.message||'Browser task failed',500),completedAt:now()});
+}
+
+export function sanitizeNativeBrowserReceipt(report) {
+  const urlFields=new Set(['url','finalUrl','path','targetUrl']);
+  const visit=(value,key='',depth=0)=>{
+    if(depth>12) return '[redacted-depth]';
+    if(typeof value==='string'){
+      if(key==='canonicalOrigin') return value===CANONICAL_ORIGIN ? value : '[redacted-origin]';
+      if(urlFields.has(key)) return redactNativeBrowserUrl(value);
+      return redactNativeDiagnostic(value);
+    }
+    if(Array.isArray(value)) return value.map(item=>visit(item,'',depth+1));
+    if(value&&typeof value==='object') return Object.fromEntries(
+      Object.entries(value).map(([k,v])=>[k,visit(v,k,depth+1)]));
+    return value;
+  };
+  return visit(report);
+}
+
 
 function safePath(value){
   const raw=clean(value,1200)||'/';
@@ -125,7 +224,10 @@ export async function runTask(rawTask, options={}){
     acceptDownloads:false,
   });
   const page=await context.newPage();
-  const consoleErrors=[],pageErrors=[],requestFailures=[],httpErrorResponses=[],blockedMutations=[];
+  // Install prior to each document request: getEntriesByType() cannot retrieve LCP.
+  await page.addInitScript(installSyntheticPaintObservers);
+  const consoleErrors=[],pageErrors=[],requestFailures=[],httpErrorResponses=[],blockedMutations=[],blockedExternalNavigations=[];
+  const supabaseCalls=[],documentLoads=[];
   let quotaCircuit=null;
   page.on('console',msg=>{ if(msg.type()==='error') consoleErrors.push(clean(msg.text(),500)); });
   page.on('pageerror',err=>pageErrors.push({
@@ -135,15 +237,40 @@ export async function runTask(rawTask, options={}){
     url:clean(page.url(),500),
   }));
   page.on('requestfailed',req=>requestFailures.push({url:clean(req.url(),500),failure:clean(req.failure()?.errorText,200)}));
+  page.on('request',req=>{
+    try{const u=new URL(req.url());
+      if(u.hostname.endsWith('.supabase.co')&&supabaseCalls.length<60)supabaseCalls.push(req.method()+' '+clean(u.pathname,120));
+      if(req.isNavigationRequest()&&req.frame().parentFrame()===null&&documentLoads.length<20)documentLoads.push(clean(u.pathname,120));
+    }catch{}
+  });
   page.on('response',res=>{
     const status=res.status();
-    if(status>=400) httpErrorResponses.push({url:clean(res.url(),500),status,statusText:clean(res.statusText(),120),resourceType:clean(res.request().resourceType(),80)});
+    if(status>=400){
+      const row={url:clean(res.url(),500),status,statusText:clean(res.statusText(),120),resourceType:clean(res.request().resourceType(),80)};
+      httpErrorResponses.push(row);
+      // Auth error codes only (e.g. otp_expired); never tokens or bodies of other endpoints.
+      if(/\/auth\/v1\/verify$/.test(new URL(res.url()).pathname))
+        res.json().then(b=>{row.authError=clean(b?.error_code||b?.code||'',60);row.authMessage=clean(b?.msg||b?.message||'',160);}).catch(()=>{});
+    }
     if(status===429 && new URL(res.url()).origin===ORIGIN) quotaCircuit={status,path:clean(new URL(res.url()).pathname,200),resourceType:clean(res.request().resourceType(),40)};
   });
 
-  await page.route('**/*',async route=>{
+  // Context routing covers both the initial tab and popups; page.route alone
+  // cannot intercept every newly opened top-level document request.
+  context.on('page',opened=>{if(opened!==page) opened.close().catch(()=>{});});
+  await context.route('**/*',async route=>{
     const req=route.request();
     const method=req.method().toUpperCase();
+    let mainFrameNavigation=false;
+    if(req.isNavigationRequest()){
+      try { mainFrameNavigation=req.frame().parentFrame()===null; }
+      catch { mainFrameNavigation=true; } // popup's first document
+    }
+    if(mainFrameNavigation && shouldBlockNativeTopLevelNavigation(req.url())){
+      // No URLs, query strings, host names or auth state enter the receipt.
+      blockedExternalNavigations.push({code:'BROWSER_REDIRECT_ORIGIN_FORBIDDEN'});
+      return route.abort('blockedbyclient');
+    }
     if(quotaCircuit) return route.abort('blockedbyclient'); // CF-QUOTA-001: stop new production requests
     if(!task.allowMutation && !['GET','HEAD','OPTIONS'].includes(method)){
       blockedMutations.push({method,url:clean(req.url(),500)});
@@ -161,6 +288,7 @@ export async function runTask(rawTask, options={}){
   const results=[];
   const screenshots=[];
   const recoveredNavigations=[];
+  const navigationTimings=[];
   const remaining=()=>Math.max(100,deadline-Date.now());
   // Pace both desktop and mobile read-only navigation across canonical sites.
   // Avoid the previous 500ms desktop burst (12 registered routes) and keep
@@ -171,11 +299,18 @@ export async function runTask(rawTask, options={}){
     if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
     const canonicalPath=safePath(p);
     const target=ORIGIN+canonicalPath;
+    // Do not include the required Cloudflare request pacing in page-load metrics.
+    let pacingWaitMs=0;
     for(let attempt=0;attempt<3;attempt++){
       const minimumGap=2200;
       const pause=Math.max(0,minimumGap-(Date.now()-lastNavigationAt));
-      if(pause>0) await page.waitForTimeout(Math.min(pause,remaining()));
+      if(pause>0){
+        const paceStartedAt=Date.now();
+        await page.waitForTimeout(Math.min(pause,remaining()));
+        pacingWaitMs+=Date.now()-paceStartedAt;
+      }
       if(Date.now()>=deadline) fail('BROWSER_TASK_TIMEOUT','Browser task timed out');
+      const documentReadyStartedAt=Date.now();
       const startingResponses=httpErrorResponses.length;
       const startingPageErrors=pageErrors.length;
       const startingConsoleErrors=consoleErrors.length;
@@ -183,9 +318,11 @@ export async function runTask(rawTask, options={}){
       try {
         response=await page.goto(target,{waitUntil:'domcontentloaded',timeout:Math.min(30000,remaining())});
       } catch(error) {
+        if(blockedExternalNavigations.length) fail('BROWSER_REDIRECT_ORIGIN_FORBIDDEN','External top-level navigation blocked before request');
         if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open during navigation'+quotaDetails()+'; no retry');
         throw error;
       }
+      const domContentLoadedElapsedMs=Date.now()-documentReadyStartedAt;
       lastNavigationAt=Date.now();
       if(new URL(page.url()).origin!==ORIGIN) fail('BROWSER_REDIRECT_ORIGIN_FORBIDDEN','Navigation escaped canonical origin');
       const status=response?.status()??null;
@@ -197,7 +334,9 @@ export async function runTask(rawTask, options={}){
           fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open: Cloudflare 1027; no retry or further requests');
       }
       // Allow dynamic imports to settle only while the quota circuit remains closed.
+      const settleStartedAt=Date.now();
       await page.waitForTimeout(Math.min(task.deviceProfile.includes('mobile')?650:250,remaining()));
+      const settleWaitMs=Date.now()-settleStartedAt;
       if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open after navigation'+quotaDetails()+'; no retry');
       const transient=[502,503,504];
       const subresourceErrors=httpErrorResponses.slice(startingResponses).filter(item=>
@@ -222,6 +361,28 @@ export async function runTask(rawTask, options={}){
       }
       if(status!==null && status>=400) fail('BROWSER_NAVIGATION_HTTP_ERROR','Navigation '+canonicalPath+' returned HTTP '+status);
       for(const record of recoveredNavigations) if(record.path===canonicalPath) record.recovered=true;
+      // Read only numeric Navigation/Paint Timing entries; never collect URLs,
+      // queries, resource names, user IDs, cookies or session details.
+      const browserTiming=await page.evaluate(()=>{
+        const nav=performance.getEntriesByType('navigation')[0];
+        const fcp=performance.getEntriesByType('paint').find(entry=>entry.name==='first-contentful-paint');
+        const millis=value=>Number.isFinite(value)&&value>=0?Math.round(value):null;
+        return {
+          ttfbMs:nav?millis(nav.responseStart-nav.requestStart):null,
+          domContentLoadedMs:nav?millis(nav.domContentLoadedEventEnd-nav.startTime):null,
+          fcpMs:fcp?millis(fcp.startTime):null,
+          // The 250/650ms synthetic settle is not a final page-lifetime LCP/CLS.
+          lcpCandidateMs:Number.isFinite(window.__EKODI_SYNTHETIC_PAINT__?.lcpCandidateMs)
+            ?window.__EKODI_SYNTHETIC_PAINT__.lcpCandidateMs:null,
+          layoutShiftSumToSettle:Number.isFinite(window.__EKODI_SYNTHETIC_PAINT__?.layoutShiftSumToSettle)
+            ?window.__EKODI_SYNTHETIC_PAINT__.layoutShiftSumToSettle:null,
+        };
+      }).catch(()=>({ttfbMs:null,domContentLoadedMs:null,fcpMs:null,lcpCandidateMs:null,layoutShiftSumToSettle:null}));
+      navigationTimings.push({path:canonicalPath,elapsedMs:domContentLoadedElapsedMs,
+        pacingWaitMs,settleWaitMs,ttfbMs:browserTiming.ttfbMs,
+        domContentLoadedMs:browserTiming.domContentLoadedMs,fcpMs:browserTiming.fcpMs,
+        lcpCandidateMs:browserTiming.lcpCandidateMs,layoutShiftSumToSettle:browserTiming.layoutShiftSumToSettle,
+        attempts:attempt+1,status});
       return {url:page.url(),status};
     }
     fail('BROWSER_NAVIGATION_THROTTLED','Navigation '+canonicalPath+' exhausted attempts');
@@ -295,6 +456,7 @@ export async function runTask(rawTask, options={}){
     }
 
     if(quotaCircuit) fail('CF_QUOTA_CIRCUIT_OPEN','CF-QUOTA-001 circuit open before success receipt'+quotaDetails()+'; no false PASS');
+    if(blockedExternalNavigations.length) fail('BROWSER_REDIRECT_ORIGIN_FORBIDDEN','External top-level navigation blocked before request');
     const finalUrl=page.url();
     if(new URL(finalUrl).origin!==ORIGIN) fail('BROWSER_FINAL_ORIGIN_FORBIDDEN','Final browser origin is not canonical');
     const report={
@@ -318,16 +480,22 @@ export async function runTask(rawTask, options={}){
       hostInputInjection:false,
       allowMutation:task.allowMutation,
       blockedMutations,
+      blockedExternalNavigationCount:blockedExternalNavigations.length,
       recoveredNavigations,
+      performance:summarizeNativeNavigationPerformance(navigationTimings),
+      navigationTimings,
       results,
       screenshots,
       consoleErrors:consoleErrors.slice(0,20),
       pageErrors:pageErrors.slice(0,20),
       requestFailures:requestFailures.slice(0,20),
       httpErrorResponses:httpErrorResponses.slice(0,40),
+      supabaseCalls,
+      documentLoads,
     };
-    await fs.writeFile(path.join(taskDir,'result.json'),JSON.stringify(report,null,2));
-    return report;
+    const safeReport=sanitizeNativeBrowserReceipt(report);
+    await fs.writeFile(path.join(taskDir,'result.json'),JSON.stringify(safeReport,null,2));
+    return safeReport;
   } finally {
     await context.close().catch(()=>{});
     await browser.close().catch(()=>{});
@@ -336,9 +504,11 @@ export async function runTask(rawTask, options={}){
 
 const invoked=process.argv[1]&&path.resolve(process.argv[1])===path.resolve(fileURLToPath(import.meta.url));
 if(invoked){
-  const task=await readTask();
-  runTask(task).then(result=>console.log(JSON.stringify(result))).catch(error=>{
-    console.error(JSON.stringify({ok:false,code:error.code||'BROWSER_WORKER_FAILED',message:clean(error.message,500),completedAt:now()}));
-    process.exitCode=1;
-  });
+  // A malformed task file also needs the same redacted failure envelope.
+  Promise.resolve().then(readTask).then(runTask)
+    .then(result=>console.log(JSON.stringify(result)))
+    .catch(error=>{
+      console.error(JSON.stringify(sanitizeNativeBrowserFailure(error)));
+      process.exitCode=1;
+    });
 }

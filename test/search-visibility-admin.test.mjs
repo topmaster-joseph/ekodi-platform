@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { ADMIN_MENUS, ADMIN_MENU_REGISTRY, getAdminMenuForSection } from '../admin-menu-registry.js';
 
@@ -38,7 +39,7 @@ test('Compact runtime source hash matches readable menu and code parses',()=>{
   const compact=read('admin-menu-layout.compact.js');
   assert.ok(compact.startsWith('// source-sha256:'+digest));
   assert.match(read('admin-menu-registry.js'),/ekodi-nav-changed/);
-  const parsed=spawnSync(process.execPath,['--check',new URL('../search-visibility-admin.js',import.meta.url).pathname],{encoding:'utf8'});
+  const parsed=spawnSync(process.execPath,['--check',fileURLToPath(new URL('../search-visibility-admin.js',import.meta.url))],{encoding:'utf8'});
   assert.equal(parsed.status,0,parsed.stderr);
 });
 test('Public read-only audit does not misrepresent indexing or submit provider credentials',()=>{

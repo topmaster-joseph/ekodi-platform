@@ -49,7 +49,9 @@ test('Commerce Event Ledger is append-oriented, idempotent and atomic with order
   assert.ok(events.includes('INSERT OR IGNORE INTO commerce_events'));
   assert.ok(events.includes('commerceEventStatement'));
   // Order, recipient (EKODI-MALL-TOSS-WIDGET-007) and order event are written in one atomic batch.
-  assert.ok(worker.includes('env.DB.batch([orderInsert, buyerInsert, orderEvent.statement])'));
+  // Preserve the atomic order + recipient + commerce event, adding optional verified-member evidence in the same transaction.
+  assert.ok(worker.includes('env.DB.batch([orderInsert, buyerInsert, orderEvent.statement,...(rewardOrder?[rewardOrder]:[])]);'));
+  assert.ok(worker.includes('const rewardOrder = memberId ? memberPurchaseOrderStatement'));
   assert.ok(worker.includes("eventType:'payment.recorded'"));
   assert.ok(worker.includes("eventType:'settlement.prepared'"));
   assert.doesNotMatch(events, /DELETE FROM commerce_events|UPDATE commerce_events/);

@@ -300,6 +300,17 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
       'x-robots-tag':'noindex, nofollow, noarchive',
     }});
   }
+  // Exact EKODI Core age-verification UI path is owned by the Shared Site.
+  // Route before the generic /{workspace}/{service} fallback without claiming
+  // the entire /verify namespace or reassigning a customer workspace.
+  if(path==='/verify/adult'||path.startsWith('/verify/adult/')){
+    if(typeof legacyFetch!=='function')return serviceUnavailable('age-verify-ui');
+    const response=await legacyFetch(request);
+    const routed=new Response(response.body,response);
+    routed.headers.set('x-ekodi-canonical-surface','age-verification-ui');
+    routed.headers.set('x-ekodi-canonical-path','/verify/adult');
+    return routed;
+  }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface){
     const rootRedirect=canonicalExecutionRootRedirect(request,executionSurface);if(rootRedirect)return rootRedirect;
     // BOOKS-LIBRARY-SLASH-20261102: the Books asset host redirects /library

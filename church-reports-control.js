@@ -177,7 +177,7 @@ async function churchApi(request, table, params = {}, prefer = '') {
   const endpoint = new URL(CHURCH_PASTOR_API); endpoint.searchParams.set('table', table);
   for (const [key, value] of Object.entries(params)) endpoint.searchParams.set(key, String(value));
   const headers = { authorization, accept: 'application/json', 'user-agent': 'EKODI-Church-Reports/1.0' }; if (prefer) headers.prefer = prefer;
-  const response = await fetch(endpoint.toString(), { headers, cache: 'no-store', redirect: 'error' });
+  const response = await fetch(endpoint.toString(), { headers, cache: 'no-store', redirect:'manual' });
   const data = await response.json().catch(() => []);
   if (!response.ok) throw new Error(data?.error ? `교회 원자료 동기화 실패: ${data.error}` : `교회 원자료 동기화 실패 (${response.status})`);
   return { data, count: Number((response.headers.get('content-range') || '/0').split('/').pop() || 0) };
@@ -407,12 +407,53 @@ export async function runChurchReportSchedule(env) {
   const rows = await env.DB.prepare("SELECT id FROM church_ministry_reports WHERE status='APPROVED' AND sent_at='' ORDER BY report_year, report_month LIMIT 10").all();
   for (const row of rows.results) await sendApproved(env, row.id, 'system');
 }
+const DOCUMENT_READ_ROLES = new Set(['senior_pastor','pastor','staff']);
+const DOCUMENT_CATEGORIES = new Set(['제출서류','신청서','목회계획서','정관','회의록','결산','공문','기타']);
+function documentUrl(value) {
+  const text = clean(value, 600); if (!text) return '';
+  try { const u = new URL(text); return u.protocol === 'https:' ? u.toString() : ''; } catch { return ''; }
+}
+function documentRow(row) {
+  return { id: row.id, bundle: row.bundle, bundleUrl: row.bundle_url, title: row.title, category: row.category, year: row.doc_year,
+    gdocUrl: row.gdoc_url, hwpxUrl: row.hwpx_url, note: row.note, sortOrder: Number(row.sort_order || 0), createdAt: row.created_at, updatedAt: row.updated_at };
+}
+async function listDocuments(request, env, sessionData) {
+  const rows = await env.DB.prepare("SELECT * FROM church_documents WHERE status='active' ORDER BY bundle DESC, sort_order ASC, created_at ASC LIMIT 300").all();
+  return json({ documents: (rows.results || []).map(documentRow), canWrite: roleAllowed(sessionData, WRITE_ROLES) }, 200, request, env);
+}
+async function createDocument(request, env, sessionData) {
+  const body = await readBody(request); if (!body) return json({ error: '문서 정보를 확인해 주세요.' }, 400, request, env);
+  const title = clean(body.title, 200); const gdocUrl = documentUrl(body.gdocUrl); const hwpxUrl = documentUrl(body.hwpxUrl);
+  if (!title || (!gdocUrl && !hwpxUrl)) return json({ error: '문서 제목과 https 링크(구글문서 또는 한글)를 입력해 주세요.' }, 400, request, env);
+  const category = DOCUMENT_CATEGORIES.has(clean(body.category, 40)) ? clean(body.category, 40) : '기타';
+  const now = new Date().toISOString(); const id = 'cdoc-' + crypto.randomUUID();
+  await env.DB.prepare('INSERT INTO church_documents (id,bundle,bundle_url,title,category,doc_year,gdoc_url,hwpx_url,note,sort_order,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
+    .bind(id, clean(body.bundle, 200), documentUrl(body.bundleUrl), title, category, clean(body.year, 20), gdocUrl, hwpxUrl, clean(body.note, 500), Math.trunc(Number(body.sortOrder) || 0), sessionData.email, now, now).run();
+  await audit(env, sessionData.email, 'church.document.create', id, title);
+  return json({ ok: true, id }, 201, request, env);
+}
+async function archiveDocumentRow(request, env, sessionData, id) {
+  const now = new Date().toISOString();
+  const result = await env.DB.prepare("UPDATE church_documents SET status='archived', updated_at=? WHERE id=? AND status='active'").bind(now, id).run();
+  if (!Number(result?.meta?.changes || 0)) return json({ error: '문서를 찾을 수 없습니다.' }, 404, request, env);
+  await audit(env, sessionData.email, 'church.document.archive', id, '');
+  return json({ ok: true }, 200, request, env);
+}
+
 export async function handleChurchReportsRequest(request, env) {
   const url = new URL(request.url); const path = url.pathname; if (!path.startsWith(PREFIX)) return null;
   if (request.method === 'OPTIONS') return preflight(request, env);
   const auth = await session(request, env); if (auth.response) return auth.response; const sessionData = auth.data || {};
   if (!sessionData.email) return json({ error: '목회자 인증이 필요합니다.' }, 401, request, env);
   if (request.method === 'GET' && path === PREFIX) return overview(request, env, sessionData);
+  if (path === `${PREFIX}/documents`) {
+    if (!roleAllowed(sessionData, DOCUMENT_READ_ROLES)) return json({ error: '문서보관 조회 권한이 없습니다.' }, 403, request, env);
+    if (request.method === 'GET') return listDocuments(request, env, sessionData);
+    if (request.method === 'POST') { if (!roleAllowed(sessionData, WRITE_ROLES)) return json({ error: '문서 등록 권한이 없습니다.' }, 403, request, env); return createDocument(request, env, sessionData); }
+    return json({ error: '허용되지 않은 요청입니다.' }, 405, request, env);
+  }
+  const documentMatch = path.match(/^\/api\/church\/admin\/reports\/documents\/(cdoc-[A-Za-z0-9-]{1,80})\/archive$/);
+  if (documentMatch && request.method === 'POST') { if (!roleAllowed(sessionData, WRITE_ROLES)) return json({ error: '문서 보관해제 권한이 없습니다.' }, 403, request, env); return archiveDocumentRow(request, env, sessionData, documentMatch[1]); }
   if (request.method === 'PUT' && path === `${PREFIX}/settings`) { if (!roleAllowed(sessionData, WRITE_ROLES)) return json({ error: '사역보고 설정 수정 권한이 없습니다.' }, 403, request, env); return updateSettings(request, env, sessionData); }
   if (request.method === 'POST' && path === `${PREFIX}/ensure`) {
     if (!roleAllowed(sessionData, WRITE_ROLES)) return json({ error: '사역보고 생성 권한이 없습니다.' }, 403, request, env);

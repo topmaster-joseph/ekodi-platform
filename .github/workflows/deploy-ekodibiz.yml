@@ -198,6 +198,10 @@ jobs:
             ops=$(curl -sS --max-time 15 'https://ekodi.kr/ekodibiz/api/ops/status' || true)
             if grep -Fq 'WHAT WE DO' <<<"$root" \
               && grep -Fq 'tel:+821035018542' <<<"$root" \
+              && grep -Fq 'data-ekodi-progressive-home="off"' <<<"$root" \
+              && grep -Fq 'data-merchant-review="intangible-service"' <<<"$root" \
+              && grep -Fq '서비스 제공 기간' <<<"$root" \
+              && grep -Fq '환불정책 보기' <<<"$root" \
               && grep -Fq '010-3501-8542' <<<"$public_js" \
               && grep -Fq 'operational-mvp' <<<"$health" \
               && grep -Fq 'approval-gated' <<<"$health" \

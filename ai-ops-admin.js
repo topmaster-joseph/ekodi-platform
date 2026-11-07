@@ -67,6 +67,17 @@
     const section = panel();
     if (!section || !Object.prototype.hasOwnProperty.call(STAGE_LABELS, requested)) return;
     section.dataset.aiopsStage = requested;
+    // Chief Chat is deliberately not part of the first Admin paint. Once the
+    // user enters AI 지휘, load that existing module immediately instead of
+    // depending on the background idle scheduler (which may defer indefinitely
+    // while the user is navigating). The shared loader deduplicates requests.
+    if (requested === 'command' && !section.querySelector('#aiChiefChat')) {
+      const load = window.EKODIAdminDemand?.loadScript;
+      if (typeof load === 'function') {
+        void load('admin-lazy-features.js').catch(error =>
+          console.warn('[EKODI AI Ops] Chief Chat module unavailable', error));
+      }
+    }
     const buttons = section.querySelectorAll('[data-aiops-stage-tab]');
     buttons.forEach(button => {
       const active = button.dataset.aiopsStageTab === requested;

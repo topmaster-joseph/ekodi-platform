@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readdirSync, readFileSync } from 'node:fs';
-import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, validateDeliInfo, buildItemValue, probeDomeggookLogin, approvedMemberBindingReady, autoOrderEnabled, classifySupplierAuthError, safeDomeggookLoginDiagnostic, chooseOptionCode } from './domeggook-order.js';
+import { placeSupplierOrders, trackSupplierOrders, buildDeliInfo, validateDeliInfo, formatDomeggookMobile, buildItemValue, probeDomeggookLogin, approvedMemberBindingReady, autoOrderEnabled, classifySupplierAuthError, safeDomeggookLoginDiagnostic, chooseOptionCode } from './domeggook-order.js';
 
 function d1(db) {
   const wrap = (sql) => { const stmt = db.prepare(sql); let args = []; const api = {
@@ -44,19 +44,21 @@ function supplier({ emoney = 100000, qty = 2, cost = 8000, setOrderOk = true, vi
   };
 }
 
-test('format helpers strip pipes and follow documented order', () => {
-  assert.equal(buildDeliInfo({ name: '김|철수', email: 'a@b', postcode: '07328', address1: '주소', address2: '5층', phone: '010' }), '김 철수|a@b|07328|주소|5층|010|010|');
+test('format helpers strip pipes and follow v4.3 recipient schema', () => {
+  const buyer={ name:'김|철수',email:'a@b.kr',postcode:'07328',address1:'서울 주소',address2:'5층',phone:'010 2345 6789' };
+  assert.equal(buildDeliInfo(buyer),'김 철수|a@b.kr|07328|서울 주소|5층|010-2345-6789||에코디몰');
   assert.equal(buildItemValue({}, { market: 'supply', qty: 2, deliMemo: '문앞|부탁' }), 'supply||P||00|2||에코디몰 위탁주문||문앞 부탁');
 });
 
-test('delivery information validation rejects unsafe inputs without exposing buyer data', () => {
-  const valid = { name: '김철수', phone: '010-1111-2222', postcode: '07328', address1: '서울 영등포구', address2: '5층', email: 'a@b.kr' };
-  assert.equal(validateDeliInfo(valid), null);
-  for (const field of ['name', 'phone', 'postcode', 'address1']) {
-    assert.equal(validateDeliInfo({ ...valid, [field]: ' ' }), 'INVALID_DELIINFO');
-  }
-  assert.equal(validateDeliInfo({ ...valid, phone: 'not-a-phone' }), 'INVALID_DELIINFO');
-  assert.equal(validateDeliInfo({ ...valid, address2: '5층\nX-Injected: 1' }), 'INVALID_DELIINFO');
+test('delivery validation conforms to v4.3 and fails closed', () => {
+  const valid={name:'김철수',phone:'010-1111-2222',postcode:'07328',address1:'서울 영등포구',address2:'5층',email:'a@b.kr'};
+  assert.equal(validateDeliInfo(valid),null);
+  assert.equal(formatDomeggookMobile('010 2345 6789'),'010-2345-6789');
+  assert.equal(formatDomeggookMobile('01023456789'),'010-2345-6789');
+  for(const field of ['name','phone','postcode','address1','address2'])
+    assert.equal(validateDeliInfo({...valid,[field]:' '}),'INVALID_DELIINFO');
+  for(const invalid of [{phone:'not-a-phone'},{postcode:'1234'},{postcode:'123456'},{name:'가'.repeat(21)},{address2:'5층\nX-Injected: 1'}])
+    assert.equal(validateDeliInfo({...valid,...invalid}),'INVALID_DELIINFO');
 });
 
 test('invalid delivery data never reaches paid setOrder API', async () => {
@@ -97,7 +99,7 @@ test('paid supply order is placed once, verified, then tracked to shipping', asy
   assert.equal(set.get('sId'), 'SID1');
   assert.equal(set.get('id'), 'test-approved-member', 'uses the member id returned by login');
   assert.equal(set.get('item[55501234]'), 'supply||P||00|2||에코디몰 위탁주문||문앞');
-  assert.match(set.get('deliinfo'), /^김철수\|a@b\.kr\|07328\|/);
+  assert.equal(set.get('deliinfo'), '김철수|a@b.kr|07328|서울 영등포구 국제금융로6길 30|5층 A|010-1111-2222||에코디몰');
   const row = db.prepare('SELECT status,supplier_order_no,expected_cost FROM supplier_orders').get();
   assert.deepEqual({ ...row }, { status: 'placed', supplier_order_no: '9001', expected_cost: 19000 });
   const again = await placeSupplierOrders(env, supplier({}, log));
@@ -418,17 +420,52 @@ test('login follows an https redirect inside domeggook.com with the same POST bo
     (e) => /redirect blocked 302 to https:\/\/evil\.example/.test(e.supplierMessage));
 });
 
-test('supervised pilot: with auto-order OFF only the allow-listed order is placed', async () => {
+test('supervised pilot: only one allow-listed order within 5,000 KRW is permitted', async () => {
   const off = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false' });
   assert.equal((await placeSupplierOrders(off.env, supplier({}, []))).skipped, 'disabled');
-  const other = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_PILOT_ORDER_IDS: 'mall_someotherorder1' });
+  const config = { DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_PILOT_ORDER_IDS: 'mall_pilot_000001', DOMEGGOOK_PILOT_MAX_TOTAL_KRW: '5000' };
+  for (const extra of [
+    { DOMEGGOOK_PILOT_MAX_TOTAL_KRW: '' },
+    { DOMEGGOOK_PILOT_MAX_TOTAL_KRW: '5001' },
+    { DOMEGGOOK_PILOT_ORDER_IDS: 'mall_pilot_000001,mall_another_000002' }
+  ]) {
+    const { env } = setup({ ...config, ...extra }), log = [];
+    assert.equal((await placeSupplierOrders(env, supplier({}, log))).skipped, 'disabled');
+    assert.equal(log.length, 0);
+  }
+  const other = setup({ ...config, DOMEGGOOK_PILOT_ORDER_IDS: 'mall_someotherorder1' });
   const log0 = [];
   assert.equal((await placeSupplierOrders(other.env, supplier({}, log0))).placed, 0);
   assert.equal(log0.filter((c) => c.mode === 'setOrder').length, 0);
-  const { db, env } = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED: 'false', DOMEGGOOK_PILOT_ORDER_IDS: 'mall_pilot_000001' });
+  const { db, env } = setup(config);
   db.prepare("UPDATE orders SET id='mall_pilot_000001' WHERE id='ord_1'").run();
   db.prepare("UPDATE order_buyers SET order_id='mall_pilot_000001'").run();
   const log = [];
-  assert.equal((await placeSupplierOrders(env, supplier({}, log))).placed, 1);
+  assert.equal((await placeSupplierOrders(env, supplier({ cost:1000 }, log))).placed, 1);
   assert.equal(log.filter((c) => c.mode === 'setOrder').length, 1);
+  assert.equal((await placeSupplierOrders(env, supplier({ cost:1000 }, log))).placed, 0, 'no duplicate pilot order');
+  assert.equal(log.filter((c) => c.mode === 'setOrder').length, 1);
+});
+
+test('supervised pilot blocks costly or uncertain supplier quotes before paid API', async () => {
+  for (const supplierOptions of [{ cost: 1001 }, { cost: 1000, shippingUnknown: true }]) {
+    const { db, env } = setup({ DOMEGGOOK_AUTO_ORDER_ENABLED:'false', DOMEGGOOK_PILOT_ORDER_IDS:'mall_pilot_000001', DOMEGGOOK_PILOT_MAX_TOTAL_KRW:'5000' });
+    db.prepare("UPDATE orders SET id='mall_pilot_000001' WHERE id='ord_1'").run();
+    db.prepare("UPDATE order_buyers SET order_id='mall_pilot_000001'").run();
+    const calls = [];
+    const base = supplier({ cost: supplierOptions.cost }, calls);
+    const fetchImpl = async (url, init) => {
+      const params = init?.body ? new URLSearchParams(String(init.body)) : new URL(String(url)).searchParams;
+      if (params.get('mode') === 'getItemView' && supplierOptions.shippingUnknown) return new Response(JSON.stringify({ domeggook: {
+        basis:{no:'55501234',title:'테스트상품',status:'판매중'},price:{supply:1000},qty:{inventory:50},
+        deli:{supply:{type:'조건부',fee:''}},desc:{license:{usable:true}}
+      }}));
+      return base(url, init);
+    };
+    const result = await placeSupplierOrders(env, fetchImpl);
+    assert.equal(result.placed, 0);
+    assert.equal(result.failed, 1);
+    assert.equal(calls.some(c => c.mode === 'setOrder'), false);
+    assert.match(db.prepare('SELECT last_error FROM supplier_orders').get().last_error, /PILOT_BUDGET_OR_QUOTE/);
+  }
 });

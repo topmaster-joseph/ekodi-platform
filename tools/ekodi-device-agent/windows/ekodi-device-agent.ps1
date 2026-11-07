@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.6.1'
+$AgentVersion = '2.6.3'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -39,6 +39,9 @@ $TaskName = 'EKODI Device Agent'
 $ProtocolScheme = 'ekodi-device'
 $ProtocolKey = 'Registry::HKEY_LOCAL_MACHINE\Software\Classes\ekodi-device'
 $AgentSourceUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+$AgentAutoUpdateManifestUrl = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/main/config/ekodi-device-agent-release.json'
+$AgentAutoUpdateStatePath = Join-Path $Root 'agent-auto-update-state.json'
+$script:LastAgentAutoUpdateCheck = [DateTime]::MinValue
 $AllowedApiBase = 'https://ekodi.kr'
 $UpgradeRoot = Join-Path $Root 'transactions'
 $script:RestartAfterCommand = $false
@@ -1086,6 +1089,99 @@ function Update-AgentFromOfficialSource {
   return @{ message = "EKODI Device Agent를 트랜잭션 방식으로 $($result.version) 버전으로 업데이트했습니다. 명령 결과 전송 후 Agent를 안전 재시작합니다."; restartRequired = $true; version = $result.version; settings = Get-AgentSettings }
 }
 
+
+# EKODI-AGENT-AUTOUPDATE-001: policy-pinned, bounded background updates.
+# Never execute mutable main code; only a SHA256-verifiable immutable commit.
+function Test-EkodiApprovedAgentManifest($m, [string]$installed) {
+  if (-not $m -or [string]$m.policyId -cne 'EKODI-AGENT-AUTOUPDATE-001' -or
+      [string]$m.channel -cne 'protected-orchestrator' -or $m.approved -ne $true -or
+      [string]$m.agentPath -cne 'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1') { return $false }
+  if ([string]$m.sourceCommit -cnotmatch '^[a-f0-9]{40}$' -or [string]$m.sha256 -cnotmatch '^[a-f0-9]{64}$') { return $false }
+  if ([int]$m.rolloutPercent -ne 25) { return $false } # first rollout is canary only
+  try {
+    $current = [Version]$installed
+    $next = [Version]([string]$m.version)
+    return ($next -gt $current -and $next.Major -eq $current.Major)
+  } catch { return $false }
+}
+function Test-EkodiAgentCanaryMembership([string]$deviceId, [int]$percent) {
+  if (-not $deviceId -or $percent -le 0 -or $percent -gt 100) { return $false }
+  $digest = [Security.Cryptography.SHA256]::Create()
+  try {
+    $hash = $digest.ComputeHash([Text.Encoding]::UTF8.GetBytes('ekodi-agent-canary:' + $deviceId))
+    return ([int]$hash[0] -lt [math]::Floor(256 * $percent / 100))
+  } finally { $digest.Dispose() }
+}
+function Invoke-EkodiAgentAutoUpdateIfApproved($config) {
+  if (-not $config -or $script:RestartAfterCommand -or
+      (Test-Path -LiteralPath $InteractiveAuthStatePath)) { return }
+  $now = (Get-Date).ToUniversalTime()
+  if (($now - $script:LastAgentAutoUpdateCheck).TotalHours -lt 24) { return }
+  $script:LastAgentAutoUpdateCheck = $now
+  $state = @{ checkedAt=$now.ToString('o'); installedVersion=$AgentVersion; outcome='error-or-unavailable' }
+  $candidate = ''
+  try {
+    if ($config.browserAutoUpdateDisabled -eq $true) { $state.outcome='disabled-locally'; return }
+    $manifest = Invoke-RestMethod -Method Get -Uri $AgentAutoUpdateManifestUrl -TimeoutSec 15
+    if (-not (Test-EkodiApprovedAgentManifest $manifest $AgentVersion)) { $state.outcome='no-approved-upgrade'; return }
+    if (-not (Test-EkodiAgentCanaryMembership ([string]$config.deviceId) ([int]$manifest.rolloutPercent))) {
+      $state.outcome='outside-canary'; return
+    }
+    $url = 'https://raw.githubusercontent.com/topmaster-joseph/ekodi-platform/' +
+      [string]$manifest.sourceCommit + '/tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'
+    $candidate = Join-Path $env:TEMP ('ekodi-approved-agent-'+[guid]::NewGuid().ToString('N')+'.ps1')
+    Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 25 -OutFile $candidate
+    if ((Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$manifest.sha256) {
+      $state.outcome='hash-mismatch'; return
+    }
+    if ([Version](Assert-AgentCandidate $candidate) -ne [Version]([string]$manifest.version)) {
+      $state.outcome='version-mismatch'; return
+    }
+    # This existing updater rolls back on errors and keeps user-owned windows untouched.
+    $result = Invoke-AgentUpgradeTransaction -CandidatePath $candidate -DeferRestart
+    if (-not $result.upgraded -or -not $result.heartbeatVerified) { $state.outcome='upgrade-unverified'; return }
+    $state.outcome='installed-pending-restart'
+    $state.targetVersion=[string]$manifest.version
+    $script:RestartAfterCommand=$true
+  } catch { $state.outcome='error-rollback-by-upgrader' }
+  finally {
+    if ($candidate) { Remove-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue }
+    try { $state | ConvertTo-Json -Depth 3 | Set-Content -LiteralPath $AgentAutoUpdateStatePath -Encoding UTF8 } catch {}
+  }
+}
+
+
+# A successful heartbeat from the OLD in-process Agent is not proof that
+# the NEW Agent successfully restarted. Verify only after a NEW process boots.
+function Confirm-EkodiAgentAutoUpdateAfterRestart {
+  if (-not (Test-Path -LiteralPath $AgentAutoUpdateStatePath)) { return }
+  try {
+    $receipt = Get-Content -LiteralPath $AgentAutoUpdateStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ([string]$receipt.outcome -cne 'installed-pending-restart') { return }
+    if ([string]$receipt.targetVersion -cne $AgentVersion) { return }
+    $receipt.outcome = 'verified-after-restart'
+    $receipt | Add-Member -NotePropertyName verifiedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force
+    $json = $receipt | ConvertTo-Json -Depth 3
+    [IO.File]::WriteAllText($AgentAutoUpdateStatePath, $json, [Text.UTF8Encoding]::new($false))
+  } catch {
+    # Never claim verified when the receipt is missing, unreadable or unwritable.
+  }
+}
+
+function Get-EkodiAgentAutoUpdateProjection {
+  $result = @{ state = 'not-recorded'; version = $AgentVersion }
+  if (-not (Test-Path -LiteralPath $AgentAutoUpdateStatePath)) { return $result }
+  try {
+    $receipt = Get-Content -LiteralPath $AgentAutoUpdateStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $safe = @('disabled-locally', 'no-approved-upgrade', 'outside-canary',
+      'hash-mismatch', 'version-mismatch', 'upgrade-unverified',
+      'installed-pending-restart', 'verified-after-restart',
+      'error-rollback-by-upgrader')
+    if ([string]$receipt.outcome -in $safe) { $result.state = [string]$receipt.outcome }
+  } catch { $result.state = 'unreadable' }
+  return $result
+}
+
 function Get-AgentSettings {
   $scheme = ''
   try { $scheme = Get-ActiveSchemeGuid } catch { $scheme = 'unknown' }
@@ -1098,6 +1194,8 @@ function Get-AgentSettings {
     health = Get-LightHealth
     backgroundBrowserCanary = Get-BackgroundBrowserCanaryState
     interactiveAuthSession = Get-EkodiInteractiveAuthSettingsProjection
+    nativeBrowserUpdater = 'manifest-pinned-sha256-canary-v1'
+    nativeBrowserUpdateState = Get-EkodiAgentAutoUpdateProjection
   }
 }
 
@@ -1908,6 +2006,14 @@ $InteractiveAuthLastPath = Join-Path $Root 'interactive-auth-last.json'
 $InteractiveAuthSessionPattern = '^ias_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'
 # Local registry: the agent never trusts a URL from the network payload.
 $InteractiveAuthServices = @{
+  'domeggook-business' = @{
+    entryUrl = 'https://www.domeggook.com/main/'
+    origin = 'https://www.domeggook.com'
+    host = 'www.domeggook.com'
+    authPrefixes = @('/main/', '/my/', '/member/')
+    authMarker = 'logout-visible'
+    label = '도매꾹 (에코디비즈 사업자 주문 사전점검)'
+  }
   'factchat-mokpo' = @{
     entryUrl = 'https://mokpo.factchat.bot/dashboard/chat/40882'
     origin = 'https://mokpo.factchat.bot'
@@ -1927,6 +2033,9 @@ $InteractiveAuthFeatureKeywords = [ordered]@{
   'korea-in-data' = @('korea-in-data', 'korea in data')
   'law-in-data' = @('law-in-data', 'law in data')
   'usage-credit' = @('크레딧', 'credit', '사용량', '잔여', '한도')
+  'dg-member-menu' = @('마이페이지')
+  'dg-emoney-menu' = @('e-money', '이머니')
+  'dg-order-menu' = @('주문전체목록', '주문조회')
 }
 
 # JSON round-trips may yield strings (PS 5.1) or DateTime (PS 7); normalize to UTC.
@@ -2069,7 +2178,11 @@ $InteractiveAuthPageStateExpression = @'
   origin: location.origin,
   path: location.pathname,
   ready: document.readyState,
-  loginFormVisible: [...document.querySelectorAll('input[type=password]')].some(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; })
+  loginFormVisible: [...document.querySelectorAll('input[type=password]')].some(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; }),
+  logoutMarkerVisible: [...document.querySelectorAll('a,button,[role=link]')].some(e => {
+    const r=e.getBoundingClientRect();
+    return r.width>0 && r.height>0 && /^(로그아웃|logout|log out)$/i.test((e.innerText || e.getAttribute('aria-label') || '').trim().replace(/\s+/g,' '));
+  })
 }))()
 '@
 
@@ -2099,7 +2212,8 @@ function Update-EkodiInteractiveAuthStatus($State) {
         # The URL alone is not proof: an SPA can sit on /dashboard while
         # redirecting to its login form. Require the settled page itself.
         $pageState = Invoke-EkodiInteractiveAuthEvaluate $currentPage $InteractiveAuthPageStateExpression
-        if ([string]$pageState.origin -eq $service.origin -and [string]$pageState.ready -eq 'complete' -and -not [bool]$pageState.loginFormVisible) {
+        if ([string]$pageState.origin -eq $service.origin -and [string]$pageState.ready -eq 'complete' -and -not [bool]$pageState.loginFormVisible -and
+            ([string]$service.authMarker -ne 'logout-visible' -or [bool]$pageState.logoutMarkerVisible)) {
           foreach ($prefix in $service.authPrefixes) { if (([string]$pageState.path).StartsWith($prefix)) { $authenticatedPath = $true } }
         }
       }
@@ -2258,12 +2372,13 @@ function Invoke-EkodiInteractiveAuthVerify($Payload) {
     .filter(vis)
     .map(e => (e.innerText || e.getAttribute('aria-label') || e.getAttribute('title') || '').trim().replace(/\s+/g, ' ').slice(0, 60))
     .filter(Boolean);
-  const usage = ((document.body && document.body.innerText) || '').split('\n')
+  const usage = (location.origin === 'https://www.domeggook.com' ? '' : ((document.body && document.body.innerText) || '')).split('\n')
     .map(s => s.trim()).filter(s => s && s.length <= 140 && /(크레딧|credit|사용량|잔여|한도|토큰)/i.test(s)).slice(0, 8);
   return JSON.stringify({
     origin: location.origin,
     path: location.pathname,
     loginFormVisible: [...document.querySelectorAll('input[type=password]')].some(vis),
+    logoutMarkerVisible: [...document.querySelectorAll('a,button,[role=link]')].some(e => vis(e) && /^(로그아웃|logout|log out)$/i.test((e.innerText || e.getAttribute('aria-label') || '').trim().replace(/\s+/g,' '))),
     labels: [...new Set(labels)].slice(0, 300),
     usage
   });
@@ -2271,7 +2386,7 @@ function Invoke-EkodiInteractiveAuthVerify($Payload) {
 '@
   $inventory = Invoke-EkodiInteractiveAuthEvaluate $page $expression
   if ([string]$inventory.origin -ne $service.origin) { throw 'interactive_auth_origin_mismatch' }
-  $authenticated = (-not [bool]$inventory.loginFormVisible)
+  $authenticated = (-not [bool]$inventory.loginFormVisible) -and ([string]$service.authMarker -ne 'logout-visible' -or [bool]$inventory.logoutMarkerVisible)
   $joined = (@($inventory.labels) -join "`n").ToLowerInvariant()
   $usageJoined = (@($inventory.usage) -join "`n").ToLowerInvariant()
   $features = @()
@@ -2285,6 +2400,8 @@ function Invoke-EkodiInteractiveAuthVerify($Payload) {
   $usageLines = @(@($inventory.usage) | ForEach-Object {
     ([string]$_) -replace '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '[email]'
   })
+  # Supplier account balance, buyer identity and other financial text must not leave the browser.
+  if ([string]$state.service -eq 'domeggook-business') { $usageLines = @() }
   $state.state = $(if ($authenticated) { 'verified' } else { 'login_required' })
   Save-EkodiInteractiveAuthState $state
   $verification = @{
@@ -3916,6 +4033,8 @@ function Send-Heartbeat($Config) {
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       workspaceSlidesAudio = [bool](Get-WorkspaceSlidesAudioState).verified
       interactiveAuthSession = [bool](Resolve-EkodiInteractiveBrowser)
+      domeggookNativeAuth = [bool](Resolve-EkodiInteractiveBrowser)
+      nativeBrowserAutoUpdate = $true
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
     }
@@ -4111,12 +4230,13 @@ function Run-Agent {
     $lastHeartbeat = [datetime]::MinValue
     while ($true) {
       try {
-        if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; $lastHeartbeat = Get-Date }
+        if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; Confirm-EkodiAgentAutoUpdateAfterRestart; $lastHeartbeat = Get-Date }
         Reconcile-DesktopCommanderRecovery
         try { if (Reconcile-EkodiInteractiveAuthSession) { Send-Heartbeat $config; $lastHeartbeat = Get-Date } } catch { }
         try { Reconcile-EkodiSimulcastRelay } catch { }
         Reconcile-ImagePrintPreviewPolicy
         Poll-Command $config
+        Invoke-EkodiAgentAutoUpdateIfApproved $config
         if (Test-Path -LiteralPath $InteractiveAuthStatePath) { try { Send-Heartbeat $config; $lastHeartbeat = Get-Date } catch { } }
         if ($script:RestartAfterCommand) { break }
       } catch {

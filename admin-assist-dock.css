@@ -49,26 +49,20 @@ html body.admin-compact:not(.admin-command-home) .ekodi-assist:not(.history-only
   background:transparent!important;
   border:0!important;
 }
-/* ASSIST-CENTER-20261104 (owner request): what is typed into 「에코디와 대화하기」 opens in
-   the CENTRE of the main workspace (wide card, max 1040px) instead of a 518px right drawer.
-   Previous drawer width kept for reference: min(518px, …). Mobile keeps its full-screen sheet. */
-html body.admin-compact:not(.admin-command-home).admin-command-active .ekodi-assist:not(.history-only){
-  background:rgba(241,245,251,.78)!important;
-}
-/* The bottom 「에코디와 대화하기」 bar stays the single input under the centred conversation
-   (follow-ups continue the same thread); the drawer's own composer stays hidden. */
+/* ASSIST-CENTER-20261104 (owner request): what is typed into 「에코디와 대화하기」 opens in the
+   main workspace instead of a 518px right drawer. Panel geometry follows the later owner-approved
+   left-canvas release (ADMIN-ASSIST-LEFT-FLUID-20261104, #8189). On desktop the bottom input bar
+   stays visible under the expanded conversation so follow-ups continue the same thread. */
 @media(min-width:761px){
   html body.admin-compact:not(.admin-command-home).admin-command-active .ekodi-assist-bootstrap,
   html body.admin-compact.ekodi-admin-design-engine:not(.admin-command-home).admin-command-active .ekodi-assist-bootstrap{
     display:flex!important;
   }
-  html body.admin-compact:not(.admin-command-home).admin-command-active .ekodi-assist-composer-wrap{
-    display:none!important;
-  }
 }
 html body.admin-compact:not(.admin-command-home) .ekodi-assist:not(.history-only) .ekodi-assist-panel{
-  inset:72px max(16px,calc((100% - 1040px)/2)) 18px max(16px,calc((100% - 1040px)/2))!important;
-  width:auto!important;
+  /* Anchor to the same left canvas inset as the persistent command entry. */
+  inset:72px auto 18px clamp(14px,2vw,28px)!important;
+  width:min(850px,calc(100% - clamp(28px,4vw,56px)))!important;
   height:auto!important;
   max-height:calc(100dvh - 90px)!important;
   border:1px solid #dae3f0!important;
@@ -320,9 +314,19 @@ html body.admin-compact .ekodi-assist :is(button,input,textarea,select):focus-vi
     transition:none!important;
   }
 }
-/* ADMIN-HOME-NO-FLASH-001: on the super-admin home the assist surfaces stay transparent
-   until native Control takes over or the session is known not to be a super admin.
-   Opacity cannot be re-enabled by descendants; the animation releases it after 8s. */
-body.admin-command-home:not(.admin-control-home):not(.admin-control-home-released) :is(.ekodi-assist,.ekodi-assist-bootstrap){opacity:0;pointer-events:none;animation:ekodiHomeHoldRelease 0s 8s forwards}
-@keyframes ekodiHomeHoldRelease{to{opacity:1;pointer-events:auto}}
+/* ADMIN-HOME-NO-FLASH-002: legacy assist stays hidden until the native Control
+   owns the home or an explicitly verified non-super-admin session releases it.
+   A timer must never uncover obsolete chat chrome during slow authentication. */
+body.admin-command-home:not(.admin-control-home):not(.admin-control-home-released) :is(.ekodi-assist,.ekodi-assist-bootstrap){visibility:hidden!important;pointer-events:none!important;animation:none!important}
 html body.admin-control-home[class] :is(.ekodi-assist,.ekodi-assist-bootstrap){display:none!important}
+
+/* ADMIN-ASSIST-TABLET-LEFT-20261104: 761–960px still has the desktop
+ * left content canvas. Override the legacy <=960px global left:0 drawer
+ * rule only on non-home pages; <=760px remains an edge-to-edge mobile panel. */
+@media(min-width:761px) and (max-width:960px){
+  html body.admin-compact.ekodi-admin-design-engine:not(.admin-command-home) .ekodi-assist:not(.history-only){
+    left:var(--ekodi-assist-left,var(--ekodi-admin-sidebar-width,228px))!important;
+    right:0!important;
+    width:auto!important;
+  }
+}

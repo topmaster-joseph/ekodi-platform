@@ -3,7 +3,7 @@ import { assessBackgroundBrowserReceipt } from './background-browser-proof.js';
 import { CGMA_NATIVE_CANARY, inspectCgmaCanaryPayload } from './cgma-native-canary-policy.js';
 import { normalizeSlidesAudioPilot, validateSlidesAudioPilotReceipt, SLIDES_AUDIO_ITEMS, SLIDES_AUDIO_PRESENTATION_ID } from './google-workspace-slides-audio-policy.js';
 import { compareLocalExecutionCandidates, localExecutionPolicySnapshot, localExecutionScore, normalizeLocalResource } from './local-execution-policy.js';
-import { AI_FAMILY_AUTO_DISPATCH_POLICY, planFamilyDispatch, validateFamilyRunnerReceipt } from './ai-family-dispatch.js';
+import { AI_FAMILY_AUTO_DISPATCH_POLICY, familyLeaseReceiptAllowed, planFamilyDispatch, validateFamilyRunnerReceipt } from './ai-family-dispatch.js';
 
 const ADMIN_PREFIX = '/api/control/hybrid-execution';
 const AGENT_NEXT_PATH = '/api/device-agent/commands/next';
@@ -459,6 +459,8 @@ async function claimAssigned(env, deviceId) {
     payload:claimedPayload,
     issuedAt:job.created_at,
     claimedAt:now,
+    leaseExpiresAt,
+    attempt:Number(job.attempt_count)+1,
   };
 }
 
@@ -485,6 +487,7 @@ export async function handleHybridAgentResult(request, env, commandId) {
   const job = await env.DB.prepare(`SELECT * FROM hybrid_execution_jobs
     WHERE id=? AND assigned_device_id=? AND status='leased'`).bind(commandId, device.id).first();
   if (!job) return json({ error:'처리 중인 하이브리드 작업을 찾을 수 없습니다.' }, 404);
+  if(FAMILY_TASK_TYPES.has(job.task_type)&&!familyLeaseReceiptAllowed(job.lease_expires_at))return json({code:'LEASE_FENCE_REJECTED'},409);
 
   const body = await readJson(request) || {};
   let success = body.success === true;
@@ -529,8 +532,9 @@ export async function handleHybridAgentResult(request, env, commandId) {
     const update = await env.DB.prepare(`UPDATE hybrid_execution_jobs
       SET status='completed', result_json=?, last_error='AUTH_REQUIRED', lease_expires_at=NULL,
           updated_at=?, completed_at=?
-      WHERE id=? AND assigned_device_id=? AND status='leased'`)
-      .bind(safeJson(result, 24000), now, now, commandId, device.id).run();
+      WHERE id=? AND assigned_device_id=? AND status='leased'
+        AND (task_type NOT IN ('ai.family.codex','ai.family.claude-code') OR lease_expires_at>=?)`)
+      .bind(safeJson(result, 24000), now, now, commandId, device.id, now).run();
     if (!update.meta?.changes) return json({ error:'작업 상태가 이미 변경되었습니다.' }, 409);
     await event(env, commandId, device.id, 'auth_required', {
       code:'AUTH_REQUIRED',
@@ -545,8 +549,9 @@ export async function handleHybridAgentResult(request, env, commandId) {
     const update = await env.DB.prepare(`UPDATE hybrid_execution_jobs
       SET status='completed', result_json=?, last_error='', lease_expires_at=NULL,
           updated_at=?, completed_at=?
-      WHERE id=? AND assigned_device_id=? AND status='leased'`)
-      .bind(safeJson(result, 24000), now, now, commandId, device.id).run();
+      WHERE id=? AND assigned_device_id=? AND status='leased'
+        AND (task_type NOT IN ('ai.family.codex','ai.family.claude-code') OR lease_expires_at>=?)`)
+      .bind(safeJson(result, 24000), now, now, commandId, device.id, now).run();
     if (!update.meta?.changes) return json({ error:'작업 상태가 이미 변경되었습니다.' }, 409);
     await event(env, commandId, device.id, 'completed', { attempt:Number(job.attempt_count) || 1 });
     return json({ ok:true, commandId, status:'completed', completedAt:now }, 200);
@@ -557,8 +562,9 @@ export async function handleHybridAgentResult(request, env, commandId) {
     const update = await env.DB.prepare(`UPDATE hybrid_execution_jobs
       SET status='pending', last_device_id=assigned_device_id, assigned_device_id=NULL,
           lease_expires_at=NULL, last_error=?, result_json=?, updated_at=?
-      WHERE id=? AND assigned_device_id=? AND status='leased'`)
-      .bind(errorMessage, safeJson(result, 24000), now, commandId, device.id).run();
+      WHERE id=? AND assigned_device_id=? AND status='leased'
+        AND (task_type NOT IN ('ai.family.codex','ai.family.claude-code') OR lease_expires_at>=?)`)
+      .bind(errorMessage, safeJson(result, 24000), now, commandId, device.id, now).run();
     if (!update.meta?.changes) return json({ error:'작업 상태가 이미 변경되었습니다.' }, 409);
     await event(env, commandId, device.id, 'requeued', { reason:'agent_failure', attempt:Number(job.attempt_count) || 1 });
     await assignPending(env);
@@ -568,8 +574,9 @@ export async function handleHybridAgentResult(request, env, commandId) {
   const update = await env.DB.prepare(`UPDATE hybrid_execution_jobs
     SET status='failed', last_device_id=assigned_device_id, assigned_device_id=NULL,
         lease_expires_at=NULL, last_error=?, result_json=?, updated_at=?, completed_at=?
-    WHERE id=? AND assigned_device_id=? AND status='leased'`)
-    .bind(errorMessage, safeJson(result, 24000), now, now, commandId, device.id).run();
+    WHERE id=? AND assigned_device_id=? AND status='leased'
+        AND (task_type NOT IN ('ai.family.codex','ai.family.claude-code') OR lease_expires_at>=?)`)
+    .bind(errorMessage, safeJson(result, 24000), now, now, commandId, device.id, now).run();
   if (!update.meta?.changes) return json({ error:'작업 상태가 이미 변경되었습니다.' }, 409);
   await event(env, commandId, device.id, 'failed', {
     reason:browserProofInvalid ? 'background_browser_proof_invalid' : 'agent_failure',

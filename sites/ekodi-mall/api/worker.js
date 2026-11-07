@@ -4,6 +4,7 @@ import { runCuration } from './domeggook-curation.js';
 import { applySupplyGate, hourlyRatchet, supplyApproved } from './domeggook-release.js';
 import { publicImages, uploadProductImage, deleteProductImage, reorderProductImages, servePublicMedia } from './product-media.js';
 import { validateBuyer, checkoutConfig } from './checkout-buyer.js';
+import { eligibleMember, memberEvidenceEnabled, pointEstimate, memberPurchaseOrderStatement, paidPurchasePointStatements, memberPointsView } from './member-purchase-points.js';
 import { commerceEventStatement } from './commerce-events.js';
 import { paymentExecutionBlockers, paymentProviderPublicView, selectedPaymentProvider } from './payment-capabilities.js';
 import { routeCommerceModel } from './commerce-os.js';
@@ -600,7 +601,7 @@ async function createAttribution(env, shareCode, refCode = '') {
 }
 
 async function checkoutProductRow(env, shareCode) {
-  return env.DB.prepare(`SELECT p.*,s.verification_status AS store_verification_status,sp.direct_sale_status
+  return env.DB.prepare(`SELECT p.*,s.verification_status AS store_verification_status,sp.direct_sale_status,sp.email AS seller_email
     FROM products p
     LEFT JOIN stores s ON s.id=p.store_id
     JOIN seller_profiles sp ON sp.user_id=p.seller_id
@@ -643,6 +644,13 @@ export async function buildOrderQuote(env, { shareCode, attributionToken = '', q
   const amounts = calculateOrderAmounts(row.price * qty, feeRatePercent);
   const blockers = [];
   if (row.direct_sale_status !== 'verified') blockers.push('seller-verification');
+  // The underwriting MID belongs to EKODIBIZ. Guest checkout approval does not
+  // authorize collecting unrelated third-party sellers' payments under this MID.
+  if (flag(env.MALL_TOSS_MERCHANT_ONLY) &&
+      !(row.seller_type === 'business' && businessStoreVerified &&
+        row.seller_email && ekodianEmails(env).has(String(row.seller_email).toLowerCase()))) {
+    blockers.push('merchant-of-record-not-authorized');
+  }
   if (row.seller_type === 'business' && !businessStoreVerified) blockers.push('business-store-verification');
   if (!row.checkout_ready) blockers.push('product-checkout-gate');
   const stockManaged = row.stock_quantity !== null && row.stock_quantity !== undefined;
@@ -685,6 +693,9 @@ export async function createOrder(env, input) {
   if (!buyerResult.ok) return { error: buyerResult.errors[0], errors: buyerResult.errors, status: 400 };
   const buyer = buyerResult.buyer;
   const quote = result.quote;
+  // A caller's body cannot declare itself a member. Only the verified server
+  // Supabase Auth response (in the public route below) can provide a member.
+  const memberId = eligibleMember(input.member);
   const id = orderId();
   const now = isoNow();
   const expiresAt = addMinutesIso(30);
@@ -712,8 +723,9 @@ export async function createOrder(env, input) {
   const buyerInsert = env.DB.prepare(`INSERT INTO order_buyers
     (order_id,name,phone,email,postcode,address1,address2,memo,privacy_consent_at,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)`)
     .bind(id, buyer.name, buyer.phone, buyer.email, buyer.postcode, buyer.address1, buyer.address2, buyer.memo, now, now);
+  const rewardOrder = memberId ? memberPurchaseOrderStatement(env,id,memberId,quote.grossAmount,now) : null;
   try {
-    await env.DB.batch([orderInsert, buyerInsert, orderEvent.statement]);
+    await env.DB.batch([orderInsert, buyerInsert, orderEvent.statement,...(rewardOrder?[rewardOrder]:[])]);
   } catch (error) {
     if (reserved) {
       await env.DB.prepare('UPDATE products SET stock_quantity=stock_quantity+? WHERE id=? AND stock_quantity IS NOT NULL')
@@ -734,7 +746,8 @@ export async function createOrder(env, input) {
       customerMobilePhone: buyer.phone.replace(/-/g, ''),
       customerEmail: buyer.email || undefined,
       checkout: checkoutConfig(env, { id, shareCode: quote.shareCode }),
-      quote
+      quote,
+      memberPoints: memberId && rewardOrder ? {ratePercent:1,estimatedPoints:pointEstimate(quote.grossAmount),status:'awaiting_payment',spendable:false} : null
     }
   };
 }
@@ -777,6 +790,9 @@ export async function recordConfirmedPayment(env, order, payment, provider = 'TO
     if (!settlementEvent) throw new Error('COMMERCE_SETTLEMENT_EVENT_REQUIRED');
     statements.push(settlementEvent.statement);
   }
+  // Evidence only: the canonical production points ledger is not yet active.
+  // Never grant real balances based only on a browser callback.
+  if(paid) statements.push(...paidPurchasePointStatements(env,order,payment,providerName,now));
   await env.DB.batch(statements);
   if (paid) await notifySupplyOrder(env, order).catch((error) => console.error('mall supply order notice', error));
 }
@@ -878,6 +894,8 @@ export default {
         paymentsEnabled: flag(env.PAYMENTS_ENABLED),
         tossSecretConfigured: Boolean(env.TOSS_SECRET_KEY),
         paymentProvider: paymentProviderPublicView(env),
+        memberPurchasePoints: {ratePercent:1,evidenceEnabled:memberEvidenceEnabled(env),
+          coreEnabled:flag(env.MALL_MEMBER_POINT_CORE_ENABLED),spendable:false},
         payoutExecutionEnabled: false
       }, ok ? 200 : 503, origin, env);
     }
@@ -905,8 +923,49 @@ export default {
     if (request.method === 'POST' && url.pathname === '/api/public/orders') {
       const body = await readJson(request);
       if (!body?.shareCode) return json({ error: 'shareCode가 필요합니다.' }, 400, origin, env);
-      const result = await createOrder(env, body);
+      const suppliedBearer = request.headers.has('authorization');
+      const verifiedMember = suppliedBearer ? await authenticate(request, env) : null;
+      if(suppliedBearer && !verifiedMember) return json({error:'회원 로그인 인증이 만료되었습니다. 다시 로그인하거나 비회원으로 결제하세요.'},401,origin,env);
+      const result = await createOrder(env, { ...body, member:verifiedMember });
       return json(result.order ? { order: result.order } : { error: result.error, errors: result.errors || undefined, quote: result.quote || null }, result.status, origin, env);
+    }
+    // Member-only summary of server-verified, unpaid-to-core pending evidence.
+    // No guest lookups, no cross-account selection, and no spendable balance.
+    if(request.method==='GET'&&url.pathname==='/api/public/member-points/summary'){
+      const member=await authenticate(request,env);
+      const memberId=eligibleMember(member);
+      if(!memberId)return json({error:'회원 로그인이 필요합니다.'},401,origin,env);
+      if(!memberEvidenceEnabled(env))return json({status:'unavailable',spendable:false},503,origin,env);
+      const row=await env.DB.prepare(`SELECT
+        COALESCE(SUM(CASE WHEN state='pending_core' THEN eligible_points ELSE 0 END),0) AS pending_points,
+        COALESCE(SUM(CASE WHEN state='pending_core' THEN 1 ELSE 0 END),0) AS pending_orders,
+        COALESCE(SUM(CASE WHEN state='awaiting_payment' THEN 1 ELSE 0 END),0) AS awaiting_orders,
+        COALESCE(SUM(CASE WHEN state='reversed' THEN 1 ELSE 0 END),0) AS reversed_orders,
+        COALESCE(SUM(refunded_krw),0) AS verified_refunds_krw
+        FROM member_purchase_point_orders WHERE auth_user_id=?`)
+        .bind(memberId).first();
+      return json({memberPoints:{
+        ratePercent:1,
+        pendingPoints:Math.max(0,Math.trunc(Number(row?.pending_points)||0)),
+        pendingOrders:Math.max(0,Math.trunc(Number(row?.pending_orders)||0)),
+        awaitingOrders:Math.max(0,Math.trunc(Number(row?.awaiting_orders)||0)),
+        reversedOrders:Math.max(0,Math.trunc(Number(row?.reversed_orders)||0)),
+        status:'pending_central_ledger',
+        coreEnabled:false,spendable:false,
+        description:'에코디몰 직접판매 회원결제 증빙입니다. 운영 포인트 원장 개통·대사 전에는 실제 사용이 불가합니다.'
+      }},200,origin,env);
+    }
+    // Authenticated, owner-only evidence status. Guest checkout never sees a member's points.
+    const pointsMatch=url.pathname.match(/^\/api\/public\/orders\/([^/]+)\/points$/);
+    if(request.method==='GET'&&pointsMatch){
+      const member=await authenticate(request,env);
+      const memberId=eligibleMember(member);
+      if(!memberId)return json({error:'회원 로그인이 필요합니다.'},401,origin,env);
+      if(!memberEvidenceEnabled(env))return json({status:'unavailable',spendable:false},503,origin,env);
+      const row=await env.DB.prepare('SELECT eligible_points,state FROM member_purchase_point_orders WHERE order_id=? AND auth_user_id=?')
+        .bind(decodeURIComponent(pointsMatch[1]).slice(0,100),memberId).first();
+      if(!row)return json({error:'적립 증빙을 찾을 수 없습니다.'},404,origin,env);
+      return json({memberPoints:memberPointsView(row)},200,origin,env);
     }
     if (request.method === 'POST' && url.pathname === '/api/public/payments/confirm') {
       const body = await readJson(request);

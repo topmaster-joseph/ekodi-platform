@@ -39,7 +39,8 @@
     cards().forEach((card) => {
       const filterMatch = categoryMatch(card);
       const searchMatch = !query || (card.dataset.search || '').includes(query);
-      card.hidden = !(filterMatch && searchMatch); if (!card.hidden) visible += 1;
+      const liveVerified = card.dataset.bookstoreQuotePending !== 'true';
+      card.hidden = !(filterMatch && searchMatch && liveVerified); if (!card.hidden) visible += 1;
     });
     if (empty) empty.hidden = visible > 0; syncHearts(); updateCount();
   }

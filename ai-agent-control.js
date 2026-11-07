@@ -15,6 +15,7 @@ import {
   summarizeConversationText as summarize,
 } from './admin-assist-retention.js';
 import { familyAutoDispatchEnabled } from './ai-family-dispatch.js';
+import { isSiteDirectoryListIntent, buildAdminSiteDirectoryReply } from './admin-site-directory-core.js';
 import { enqueueFamilyDispatch, readFamilyDispatch } from './hybrid-execution.js';
 
 const PREFIX = '/api/control/ai';
@@ -323,7 +324,7 @@ async function handleAdminAssist(request, env, session) {
   const history = normalizeAssistHistory(body.history);
   const origin = normalizeAssistOrigin(body.origin);
   const isProbe = origin === 'automated_probe';
-  if(!isProbe&&familyAutoDispatchEnabled(env)){
+  if(!isProbe&&!isSiteDirectoryListIntent(message)&&familyAutoDispatchEnabled(env)){
     if(session.role!=='super_admin')return json({ok:false,code:'FAMILY_DISPATCH_SUPER_ADMIN_REQUIRED',reply:'자동 실행은 최고관리자 권한과 사이트 권한 확인이 필요합니다.'},403,request,env);
     if(!/^\/admin(?:\/|$)/.test(page.pathname||''))return json({ok:false,code:'FAMILY_DISPATCH_SITE_RBAC_CONTEXT_REQUIRED',reply:'사이트 권한 문맥을 서버에서 확인할 수 없어 자동 실행하지 않았습니다.'},403,request,env);
     const dispatch=await enqueueFamilyDispatch(env,session,{message,context:page});
@@ -372,6 +373,18 @@ async function handleAdminAssist(request, env, session) {
   });
   const decision = evaluateMissionAction(auditAction);
   const stored = await insertAction(env, session, auditAction, decision);
+  // Static registry queries are Core reads: no model, change-request action or deployment.
+  if (isSiteDirectoryListIntent(message)) {
+    const reply = buildAdminSiteDirectoryReply();
+    const coreResult = { ok:true, mode:'core_read_only', provider:'ekodi-core', degraded:false };
+    const finalized = await finalizeAssistAction(env, stored.id, coreResult, { text:reply });
+    return json({
+      ok:true, actionId:stored.id, status:finalized.status, mode:coreResult.mode,
+      provider:'EKODI Core', degraded:false, reply,
+      source:'ekodi-registered-site-and-service-catalog', readOnly:true,
+      ekodian:ekodianFor(auditAction, decision, finalized.status),
+    }, 200, request, env);
+  }
   const gateway = buildCoreAiGateway(env, []);
   const configuredTimeout = Number(env.AI_ADMIN_TIMEOUT_MS || DEFAULT_ADMIN_ASSIST_TOTAL_TIMEOUT_MS);
   const totalTimeoutMs = Math.min(
@@ -396,6 +409,17 @@ async function handleAdminAssist(request, env, session) {
     }),
   });
   const value = result.value && typeof result.value === 'object' ? result.value : { text: String(result.value || '') };
+  const modelReply = String(value.text || '').trim();
+  // The request was nonempty (checked above). Reject a provider reply that falsely
+  // claims it was blank rather than presenting a fabricated answer as successful.
+  if (result.ok && /(?:didn't|did not|doesn't|does not) contain any content|(?:no|empty) (?:message|input) (?:was )?(?:provided|received)/i.test(modelReply)) {
+    const reply = '입력된 명령은 서버에 접수됐지만 AI 공급자가 내용을 인식하지 못했습니다. 작업 실행·배포는 확인되지 않았습니다. 잠시 후 다시 시도하거나 관리자 등록부를 조회해 주세요.';
+    const failed = { ...result, ok:false, degraded:true, mode:'provider_misread_input', notice:'nonempty_message_provider_misread' };
+    const finalized = await finalizeAssistAction(env, stored.id, failed, {text:reply});
+    return json({ok:false, actionId:stored.id, status:finalized.status, mode:failed.mode, degraded:true,
+      provider:result.provider || null, reply, notice:failed.notice,
+      ekodian:ekodianFor(auditAction, decision, finalized.status)}, 502, request, env);
+  }
   const finalized = await finalizeAssistAction(env, stored.id, result, value);
   const ekodian = ekodianFor(auditAction, decision, finalized.status);
   if (!result.ok) {

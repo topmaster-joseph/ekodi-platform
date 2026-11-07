@@ -93,7 +93,8 @@ test('home and affiliate travel page use the same generated buyer header', () =>
   for (const html of [template,affiliate]) assert.ok(html.includes('{{MALL_HEADER}}'));
   assert.match(build, /renderMallHeader\(\{ home: true/);
   assert.match(build, /renderMallHeader\(\{ home: false/);
-  for (const label of ['전체상품','여행·레저','AI 추천','이번 주 추천']) assert.ok(mallHeader.includes(label));
+  for (const label of ['전체상품','여행·레저','쿠팡추천몰','로컬·특산물','식품·건강','생활·가전','책·배움','선물·기념품','이번 주 추천']) assert.ok(mallHeader.includes(label));
+  assert.ok(!mallHeader.includes('>AI 추천</a>'));
   assert.match(affiliate, /assets\/home-refresh\.css/);
 });
 
@@ -127,4 +128,68 @@ test('legacy product, store, seller, checkout and policy headers match canonical
   assert.match(shared, /\.header:not\(\.mall-header\)/);
   assert.match(shared, /--ekodi-user-content-inline-size,var\(--ekodi-user-canvas-max,1240px\)/);
   assert.match(shared, /@media\(max-width:720px\)/);
+});
+
+test('all generated Mall section headers keep the same category labels and seller pill', () => {
+  const canonical = renderMallHeader({ publicPrefix: '/ekodimall', home: false });
+  const navLabels = markup => {
+    const nav = markup.match(/<nav class="mall-primary-nav"[^>]*>([\s\S]*?)<\/nav>/)?.[1] || '';
+    return [...nav.matchAll(/<a\b[^>]*>([^<]+)<\/a>/g)].map(match => match[1]);
+  };
+  assert.deepEqual(navLabels(mallHeader), navLabels(canonical));
+  for (const category of ['all', 'local', 'general', 'living', 'book', 'gift']) {
+    assert.ok(canonical.includes('data-filter-target="' + category + '"'));
+  }
+  assert.match(canonical, /assets\/category-visibility\.js/);
+  assert.match(css, /--mall-content-width:1080px/);
+  assert.match(css, /\.mall-header \.seller-mini\{[\s\S]*?border-radius:999px/);
+  assert.match(css, /body\[data-mall-view="catalog"\] main#main > #shop/);
+  const affiliateCss = readFileSync(new URL('../assets/affiliate-hub.css', import.meta.url), 'utf8');
+  assert.match(affiliateCss, /\.affiliate-hub\{[\s\S]*?--mall-content-width,1080px/);
+});
+
+test('book cards use concise copy and verified prices or an explicit unknown-price label', () => {
+  const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+  const books = readFileSync(new URL('../assets/bookstore-live.js', import.meta.url), 'utf8');
+  assert.match(build, /product\.category === 'book' \? 34 : 46/);
+  assert.match(build, /'가격 확인 · '/);
+  assert.match(build, /category-availability\.json/);
+  assert.match(books, /const verifiedAmount = Number\(quote\.price\.amount\)/);
+  assert.match(books, /released\.set\(book\.bookId, \{ \.\.\.book, price: verifiedAmount \}\)/);
+  assert.match(books, /readyQuote\(quote, book\.bookId\)/);
+  assert.match(books, /가격 확인 · 판매 상태 확인 필요/);
+  assert.match(books, /const quote = await quoteFor\(book\.bookId\)/);
+  assert.match(css, /\.card\[data-category="book"\] \.card-summary/);
+  assert.match(css, /-webkit-line-clamp:2/);
+});
+
+
+test('Toss underwriting: buyer catalog precedes marketing hero and discloses bookstore login', () => {
+  assert.ok(template.indexOf('class="shop" id="shop"') < template.indexOf('class="context-hero mall-premium-hero"'), 'sale-ready products must precede editorial hero');
+  assert.ok(template.includes('id="top"'), 'home navigation anchor must remain valid');
+  assert.match(template, /에코디서점 전자책은 로그인 후 구매/);
+  assert.match(template, /판매 준비 중인 상품은 결제 버튼이 표시되지 않습니다/);
+  assert.match(template, /상품 상세에서 확인합니다/);
+});
+
+test('Toss underwriting: confirmed empty nav is hidden, and uncertain catalog is not misclassified', () => {
+  const visibility = readFileSync(new URL('../assets/category-visibility.js', import.meta.url), 'utf8');
+  assert.match(visibility, /link.hidden=!available/);
+  assert.match(visibility, /return data.products.length===0\?false:null/);
+  assert.match(visibility, /card.dataset.bookstoreQuotePending!=='true'/);
+  assert.match(css, /\.mall-primary-nav a\[data-filter-target\]\[hidden\]/);
+  assert.match(css, /\.mall-category-shortcuts a\[data-filter-target\]\[hidden\]/);
+});
+
+test('Toss underwriting: an unverified bookstore quote cannot expose a sale card', () => {
+  const builder = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
+  const app = readFileSync(new URL('../assets/app.js', import.meta.url), 'utf8');
+  const books = readFileSync(new URL('../assets/bookstore-live.js', import.meta.url), 'utf8');
+  assert.match(builder, /data-bookstore-quote-pending/);
+  assert.match(builder, /product.source\?\.system === 'ekodi-bookstore'/);
+  assert.match(app, /card.dataset.bookstoreQuotePending !== 'true'/);
+  assert.match(books, /if \(!readyQuote\(quote, book.bookId\)\)/);
+  assert.match(books, /existing.dataset.bookstoreQuotePending = 'false'/);
+  assert.match(books, /existing.dataset.bookstoreQuotePending = 'true'/);
+  assert.match(css, /\.card\[data-bookstore-quote-pending="true"\]\{display:none!important\}/);
 });

@@ -226,6 +226,8 @@ const controlApiTouched=changedFiles.some(file=>
   (file.startsWith('migrations/')&&file.endsWith('.sql')&&!file.includes('messenger'))||[
   // CGMA motor festival 2026 intake API (Control API, D1 ekodi-auth).
   'motor-festival-registration-api.js',
+  // Mokpo mission policy council 2026 registrations (Control API, D1 ekodi-auth).
+  'mokpo-mission-policy-council-api.js',
   // cgmurrc booth shifts API (Control API, D1 ekodi-auth).
   'cgmurrc-booth-api.js',
   // CGMA e-documents · sequential signing API (Control API, D1 ekodi-auth + private R2).
@@ -551,6 +553,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='scripts/build.mjs'||
   file==='scripts/finalize-seonammedi-release.mjs'||
   file==='scripts/verify-seonammedi-release-live.mjs'||
+  // Board live verifier is an authoritative post-promotion Site Core gate.
+  // A token-mediated merge of its fix must dispatch a fresh guarded release.
+  file==='scripts/verify-independent-board-live.mjs'||
   file==='scripts/seonammedi-live-html-proof.mjs'||
   file==='scripts/seonammedi-cache-contract.mjs'||
   file==='test/seonammedi-cache-contract.test.mjs'||

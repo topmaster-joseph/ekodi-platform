@@ -17,6 +17,7 @@ const NETWORK = [
   { id: 'publishing', label: '출판', note: '책을 만들다', href: `${ORIGIN}/publishing/` },
   { id: 'books', label: '에코디서점', note: '책을 만나다', href: `${ORIGIN}/books/` },
   { id: 'mall', label: '에코디몰 책·배움', note: '함께 나누다', href: `${ORIGIN}/ekodimall/?category=book` },
+  { id: 'journal', label: '에코디저널', note: '기록을 나누다', href: `${ORIGIN}/journal/` },
 ];
 
 export const SITES = {
@@ -204,6 +205,11 @@ export function css(siteId) {
 export const MENU_JS = `// BOOKS-PUBLISHING-CHROME-001 — scripts/site-chrome.mjs가 생성합니다. 출판·에코디서점 공용 머리말 동작(모바일 메뉴, 현재 위치 표시).
 (() => {
   'use strict';
+  // AUTH-HANDOFF-FRAGMENT-ERASE-001: 출판·서점 화면은 로그인 인계 조각(#ekodi_token)을 쓰지 않으므로 주소창·기록에서 즉시 지운다.
+  try {
+    const frag = new URLSearchParams(location.hash.startsWith('#') ? location.hash.slice(1) : '');
+    if (frag.has('ekodi_token')) history.replaceState(history.state, '', location.pathname + location.search);
+  } catch {}
   const button = document.querySelector('.menu-button');
   const nav = document.getElementById('site-nav');
   if (nav) {

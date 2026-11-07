@@ -20,6 +20,8 @@ on:
       - 'publishing-workflow-api.js'
       - 'publishing-ai-factory.js'
       - 'publishing-ai-epub.js'
+      - 'publishing-ai-quality.js'
+      - 'publishing-ai-release.js'
       - 'migrations/202610291000_publishing_workflow.sql'
       - 'wrangler.publishing.toml'
       - 'deploy/manifests/publishing.worker.json'
@@ -60,6 +62,8 @@ jobs:
           node --check publishing-workflow-api.js
           node --check publishing-ai-factory.js
           node --check publishing-ai-epub.js
+          node --check publishing-ai-quality.js
+          node --check publishing-ai-release.js
           node --check publishing/app.js
           node --check publishing/studio/app.js
           node --check publishing/upaper/app.js
@@ -86,6 +90,9 @@ jobs:
             echo "Publishing production is unavailable or incomplete (HTTP $live_code); performing recovery bootstrap deploy."
             npx --yes wrangler@$WRANGLER_VERSION deploy --config wrangler.publishing.toml
           fi
+      - name: Apply Publishing cron trigger (versions deploy does not change schedules)
+        # PUBLISHING-AI-WEEKLY-001: 일일 예약(03:37 KST)은 'wrangler triggers deploy'로만 등록된다.
+        run: npx --yes wrangler@$WRANGLER_VERSION triggers deploy --config wrangler.publishing.toml
       - name: Deep verify Publishing production hostname
         shell: bash
         run: |

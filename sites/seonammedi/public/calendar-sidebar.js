@@ -66,7 +66,7 @@ function formatActivityShare(organization,activity,date,url,action='신청하기
   // Provide a visible event title when users paste links into messengers.
   // Only published public calendar rows are passed into these helpers.
   const shareTitle=item=>String(item?.title||'일정').replace(/[\r\n\t\u2028\u2029]+/g,' ').replace(/\s+/g,' ').trim().slice(0,180)||'일정';
-  const shareSummary=item=>{const url=shareUrl(item);return url?formatActivityShare('서남권 국립의대 소통센터',shareTitle(item),dateOf(item?.eventStart),url,'일정 보기'):'';};
+  const shareSummary=item=>{const url=shareUrl(item);return url?formatActivityShare('서남권국립의대',shareTitle(item),dateOf(item?.eventStart),url,'일정 보기'):'';};
   const shareMessage=item=>shareSummary(item);
   // CALENDAR-EVENT-OPENS-LEFT-001 (owner request 2026-10-20): an event title opens the 행사·일정 detail in the left
   // content area. On the home app it opens in place (window.seonamOpenEvent); elsewhere it navigates there.
@@ -328,7 +328,7 @@ function formatActivityShare(organization,activity,date,url,action='신청하기
         if(item.body)article.append(details);
         attachSharing(article,item);
         if(shareTarget&&Number(item.id)===shareTarget.id&&selected===shareTarget.date){
-          document.title=shareTitle(item)+' · 서남권 국립의대 소통센터';
+          document.title=shareTitle(item)+' · 서남권국립의대';
           article.classList.add('is-shared');
           if(!shareFocused){
             shareFocused=true;

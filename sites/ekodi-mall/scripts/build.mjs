@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderMallHeader } from '../../../mall-shared-header.js';
 import { loadBookstoreProducts, mergeBookstoreProducts } from './bookstore-products.mjs';
-import { isPublicStaticSale } from '../api/public-sale-visibility.js';
+import { isPublicStaticSale, isPublicIndexableProduct } from '../api/public-sale-visibility.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
@@ -85,16 +85,21 @@ function productCard(product, options = {}) {
   const regionIds = Array.isArray(region.regionIds) ? region.regionIds.filter((id) => regionMap.has(id)) : [];
   const searchable = `${product.name} ${product.badge} ${product.description} ${product.status} ${store?.name || ''} ${region.label || ''}`.toLowerCase();
   const data = options.withData === false ? '' : ` data-product="${esc(product.id)}" data-category="${esc(product.category)}" data-region-ids="${esc(regionIds.join(','))}" data-primary-region="${esc(region.primaryRegionId || '')}" data-region-label="${esc(region.label || '')}" data-local-relationship="${esc(region.relationship || '')}" data-region-verified="${region.verified ? 'true' : 'false'}" data-search="${esc(searchable)}" data-name="${esc(product.name)}" data-status="${esc(product.status)}" data-href="${href}"`;
+  // Static bookstore approval is not sufficient to advertise a live purchase;
+  // verify the commerce quote in the browser before exposing the catalog card.
+  const pendingQuote = options.withData !== false && product.source?.system === 'ekodi-bookstore'
+    ? ' data-bookstore-quote-pending="true" hidden' : '';
   const regionChip = region.label ? `<p class="region-chip">지역 · ${esc(region.label)}${region.verified ? ' · 확인됨' : ''}</p>` : '';
   const heart = options.withHeart === false ? '' : `<button class="heart" data-wish="${esc(product.id)}" aria-label="${esc(product.name)} 관심상품" aria-pressed="false">♡</button>`;
   const storeKicker = store ? `<p class="store-kicker"><a href="/stores/${esc(store.slug)}/">${esc(store.name)}</a></p>` : '';
   // MALL-LIST-IMAGE-001: 대표이미지(도서 표지·판매자 사진)를 목록에 보이고, 이미지·제목 어디를 눌러도 상세로 간다.
   const image = product.image ? `<img src="${esc(product.image)}" alt="${esc(product.name)}" loading="lazy" decoding="async">` : '';
-  return `<article class="card"${data}><div class="thumb ${esc(product.category)}${image ? ' has-image' : ''}"><a class="thumb-link" href="${href}" aria-label="${esc(product.name)} 자세히 보기">${image}</a><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p class="card-summary">${esc(shortSummary(product.description))}</p>${regionChip}<div class="meta"><span class="status">${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
+  return `<article class="card"${data}${pendingQuote}><div class="thumb ${esc(product.category)}${image ? ' has-image' : ''}"><a class="thumb-link" href="${href}" aria-label="${esc(product.name)} 자세히 보기">${image}</a><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p class="card-summary">${esc(shortSummary(product.description, product.category === 'book' ? 34 : 46))}</p>${regionChip}<div class="meta"><span class="status">${product.category === 'book' ? esc(Number(product.price) > 0 ? formatPrice(Number(product.price)) + ' · ' : '가격 확인 · ') : ''}${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
 }
 
-function productDetailSections(product, store) {
+function productDetailSections(product, store, requiresLiveQuote) {
   const saleLabel = saleTypeLabels[product.saleType] || product.saleType || '준비 중';
+  const statusText = requiresLiveQuote ? '에코디서점에서 판매 상태를 확인할 수 있습니다.' : `${product.status}. ${store.name}에서 운영·검토하는 상품입니다.`;
   const transactionText = product.saleType === 'publisher'
     ? (product.action?.type === 'external' ? '에코디서점이 직접 발행한 도서입니다. 구매 버튼을 누르면 공식 전자책 판매처로 이동해 구매합니다.' : '에코디서점이 직접 발행한 도서입니다. 판매처 등록이 끝나면 이곳에서 바로 구매하실 수 있습니다.')
     : product.saleType === 'affiliate'
@@ -105,8 +110,8 @@ function productDetailSections(product, store) {
   const sections = [
     { label: 'PURPOSE', title: '무엇을 제안하나요', body: product.description },
     ...(product.region?.label ? [{ label: 'LOCAL', title: '어느 지역과 연결되나요', body: `${product.region.label}${product.region.verified ? ' · 지역 연결 확인됨' : ' · 지역 연결 확인 필요'}` }] : []),
-    { label: 'STATUS', title: '지금 어디까지 준비됐나요', body: `${product.status}. ${store.name}에서 운영·검토하는 상품입니다.` },
-    { label: 'COMMERCE', title: '어떻게 거래되나요', body: `${saleLabel}. ${transactionText} ${Number.isFinite(product.price) ? `현재 표시 가격은 ${formatPrice(product.price)}입니다.` : '가격과 최종 판매 조건은 아직 확정되지 않았습니다.'}` }
+    { label: 'STATUS', title: '지금 어디까지 준비됐나요', body: statusText },
+    { label: 'COMMERCE', title: '어떻게 거래되나요', body: requiresLiveQuote ? '판매 상태와 가격은 에코디서점에서 확인할 수 있습니다.' : `${saleLabel}. ${transactionText} ${Number.isFinite(product.price) ? `현재 표시 가격은 ${formatPrice(product.price)}입니다.` : '가격과 최종 판매 조건은 아직 확정되지 않았습니다.'}` }
   ];
 
   const highlights = Array.isArray(product.detail?.highlights) ? product.detail.highlights : [];
@@ -200,11 +205,18 @@ const indexHtml = fill(indexTemplate, {
 await rm(dist, { recursive: true, force: true });
 await ensureDir(dist);
 await write('index.html', indexHtml);
+await write('category-availability.json', JSON.stringify({
+  // Matches the source-of-truth sale-ready projection, not all draft categories.
+  categories: [...new Set(saleProducts.map(product => product.category).filter(Boolean))].sort(),
+  hasLocal: saleProducts.some(product => Array.isArray(product.region?.regionIds) && product.region.regionIds.length > 0)
+}));
+
 // Operator Seller Studio displays the same publisher-approved bookstore mirror
 // as the Mall storefront. This read-only public projection is not a seller row.
 await write('provider-bookstore.json', JSON.stringify({
   products: products.filter((p) => p.source?.system === 'ekodi-bookstore').map((p) => ({
-    id: p.id, name: p.name, price: p.price,
+    id: p.id, bookId: p.source.bookId, slug: p.slug, name: p.name, price: p.price,
+    image: p.image || '', description: p.description || '',
     detailUrl: p.source.detailUrl,
     saleReady: p.action?.type === 'external' && p.status === '판매 중'
   }))
@@ -218,7 +230,10 @@ for (const product of products) {
   const productUrl = `${baseUrl}/products/${product.slug}/`;
   const store = storeMap.get(product.storeId);
   const isAffiliate = product.saleType === 'affiliate';
+  const isBookstoreBook = product.source?.system === 'ekodi-bookstore';
   const isPublisherSale = product.saleType === 'publisher' && product.action?.type === 'external';
+  const isDirectPublisherSale = isPublisherSale && /^https:\/\/ekodi\.kr\/books\/buy\//.test(product.action?.url || '');
+  const requiresLiveQuote = isBookstoreBook && (!isPublisherSale || isDirectPublisherSale);
   const related = saleProducts
     .filter((item) => item.id !== product.id)
     .sort((a, b) => Number(b.category === product.category) - Number(a.category === product.category))
@@ -228,8 +243,10 @@ for (const product of products) {
   const basketAction = site.commerce?.inquiryBasketEnabled && !isAffiliate && product.saleType !== 'publisher'
     ? `<button class="btn primary" type="button" data-add-basket data-product-id="${esc(product.id)}" data-product-name="${esc(product.name)}" data-store-name="${esc(store.name)}" data-product-status="${esc(product.status)}" data-product-href="/products/${esc(product.slug)}/">${site.commerce.paymentsEnabled && Number.isFinite(product.price) ? '구매목록에 담기' : '상담목록에 담기'}</button>`
     : '';
-  const transactionNote = product.saleType === 'publisher'
-    ? (isPublisherSale ? '에코디서점이 발행한 도서입니다. 구매 버튼을 누르면 공식 전자책 판매처(유페이퍼 등)로 이동하며, 결제·다운로드는 해당 판매처에서 처리합니다. 에코디서점에서 도서 정보와 판본을 확인할 수 있습니다.' : '에코디서점이 발행한 도서입니다. 판매처 등록이 끝나면 구매 버튼이 열립니다. 지금은 에코디서점에서 도서 정보를 확인할 수 있습니다.')
+  const transactionNote = requiresLiveQuote
+    ? '구매 가능 여부를 에코디서점에서 확인할 수 있습니다. 에코디서점에서 구매한 전자책은 로그인 후 내 서재의 온라인 리더에서 열람합니다.'
+    : product.saleType === 'publisher'
+    ? (isDirectPublisherSale ? '에코디서점에서 구매한 전자책은 로그인 후 내 서재의 온라인 리더에서 열람합니다.' : isPublisherSale ? '에코디서점 발행 도서입니다. 외부 공식 판매처를 이용하는 경우 결제와 다운로드는 그 판매처에서 처리합니다.' : '에코디서점이 발행한 도서입니다. 판매 준비가 완료되면 구매 버튼이 열립니다. 도서 정보를 먼저 확인할 수 있습니다.')
     : isAffiliate
     ? '이 상품은 외부 제휴 판매처에서 구매합니다. 구매 버튼을 누르면 제휴 링크로 이동하며, 에코디는 제휴 활동을 통해 일정 수수료를 제공받을 수 있습니다. 주문·결제·배송·반품은 해당 판매처에서 처리합니다.'
     : product.saleType === 'direct'
@@ -245,14 +262,21 @@ for (const product of products) {
     PRODUCT_SUBTITLE: productSubtitle ? `<p class="detail-subtitle">${esc(productSubtitle)}</p>` : '',
     PRODUCT_DESCRIPTION: esc(product.description),
     PRODUCT_URL: esc(productUrl),
+    ROBOTS_DIRECTIVE: isPublicIndexableProduct(product) ? 'index,follow,max-image-preview:large' : 'noindex,follow',
+    BOOK_SOURCE_ATTR: isBookstoreBook ? `data-bookstore-book-id="${esc(product.source.bookId)}"` : '',
+    BOOK_STATUS_ATTR: isBookstoreBook ? 'data-bookstore-sale-status' : '',
+    BOOK_PRICE_ATTR: requiresLiveQuote ? 'data-bookstore-price' : '',
+    BOOK_ACTION_ATTR: isBookstoreBook ? 'data-bookstore-purchase-link' : '',
+    BOOK_TRANSACTION_ATTR: isBookstoreBook ? 'data-bookstore-transaction-note' : '',
+    BOOKSTORE_LIVE_SCRIPT: isBookstoreBook ? '<script src="/assets/bookstore-live.js" defer></script>' : '',
     PRODUCT_CATEGORY: esc(product.category),
     PRODUCT_BADGE: esc(product.badge),
-    PRODUCT_STATUS: esc(product.status),
+    PRODUCT_STATUS: esc(requiresLiveQuote ? '판매 상태 확인 필요' : product.status),
     SALE_TYPE_LABEL: esc(saleTypeLabels[product.saleType] || product.saleType || '준비 중'),
-    PRICE_LABEL: esc(formatPrice(product.price)),
-    ACTION_LABEL: esc(product.action?.label || (isAffiliate ? '외부 판매처에서 구매' : '문의하기')),
-    ACTION_URL: esc(product.action?.url || site.links.inquiry),
-    ACTION_CLASS: isAffiliate || isPublisherSale ? 'primary' : 'ghost',
+    PRICE_LABEL: esc(requiresLiveQuote ? '가격 확인 필요' : formatPrice(product.price)),
+    ACTION_LABEL: esc(requiresLiveQuote ? '에코디서점에서 상태 확인' : product.action?.label || (isAffiliate ? '외부 판매처에서 구매' : '문의하기')),
+    ACTION_URL: esc(requiresLiveQuote ? `https://ekodi.kr/books/book/?id=${encodeURIComponent(product.source.bookId)}` : product.action?.url || site.links.inquiry),
+    ACTION_CLASS: !requiresLiveQuote && (isAffiliate || isPublisherSale) ? 'primary' : 'ghost',
     DETAIL_ART_CLASS: product.image ? ' has-image' : '',
     DETAIL_ART_IMAGE: product.image ? `<img src="${esc(product.image)}" alt="${esc(product.name)} 표지" loading="eager" decoding="async">` : '',
     ACTION_REL: product.saleType === 'publisher' ? 'noopener' : 'noopener sponsored',
@@ -262,13 +286,14 @@ for (const product of products) {
     STORE_STATUS: esc(store.status),
     STORE_URL: `/stores/${esc(store.slug)}/`,
     BASKET_ACTION: basketAction,
-    PRODUCT_DETAIL_SECTIONS: productDetailSections(product, store),
+    PRODUCT_DETAIL_SECTIONS: productDetailSections(product, store, requiresLiveQuote),
     RELATED_PRODUCTS: related || '<p class="empty">함께 볼 다른 상품을 준비 중입니다.</p>',
     NOTICE: esc(site.notice)
   });
-  // Retain old links to preparing products, but never let search engines index them.
-  const detailHtml = isPublicStaticSale(product) ? html : html.replace('</head>', '  <meta name="robots" content="noindex,follow">\n</head>');
-  await write(`products/${product.slug}/index.html`, detailHtml);
+  // Public bookstore titles remain searchable as *information* even when the
+  // static catalogue predates a valid, file-bound runtime publishing approval.
+  // Checkout remains guarded by the bookstore API and is never inferred from SEO.
+  await write(`products/${product.slug}/index.html`, html);
 }
 
 for (const store of stores) {
@@ -277,6 +302,11 @@ for (const store of stores) {
   const cards = storeProducts.map((product) => productCard(product, { withData: false, withHeart: false })).join('');
   const html = fill(storeTemplate, {
     STORE_NAME: esc(store.name),
+    STORE_BOOKS_ATTR: store.id === 'store-ekodi-books' ? 'data-bookstore-store="true"' : '',
+    STORE_STATUS_ATTR: store.id === 'store-ekodi-books' ? 'data-bookstore-store-status' : '',
+    STORE_COUNT_ATTR: store.id === 'store-ekodi-books' ? 'data-bookstore-public-count' : '',
+    STORE_BOOK_GRID_ATTR: store.id === 'store-ekodi-books' ? 'data-bookstore-store-grid' : '',
+    STORE_BOOKS_SCRIPT: store.id === 'store-ekodi-books' ? '<script src="/assets/bookstore-live.js" defer></script>' : '',
     STORE_DESCRIPTION: esc(store.description),
     STORE_URL: esc(storeUrl),
     STORE_BADGE: esc(store.badge || store.kind),
@@ -366,7 +396,7 @@ for (const policy of pages.policies || []) {
 const urls = [
   `${baseUrl}/`,
   ...saleStores.map((store) => `${baseUrl}/stores/${store.slug}/`),
-  ...saleProducts.map((product) => `${baseUrl}/products/${product.slug}/`),
+  ...products.filter(isPublicIndexableProduct).map((product) => `${baseUrl}/products/${product.slug}/`),
   ...(pages.policies || []).map((policy) => `${baseUrl}/pages/${policy.slug}/`),
   ...affiliateHubs.map((hub) => `${baseUrl}/${hub.path || hub.id}/`),
   // Server-rendered weekly picks (site-worker, ekodi.kr/ekodimall/picks)
@@ -380,6 +410,7 @@ await write('build-meta.json', JSON.stringify({
   stores: stores.length,
   products: products.length,
   publiclyListedProducts: saleProducts.length,
+  publiclyIndexableProductPages: products.filter(isPublicIndexableProduct).length,
   temporarilyHiddenProducts: products.length - saleProducts.length,
   policies: (pages.policies || []).length,
   affiliateHubs: affiliateHubs.length,

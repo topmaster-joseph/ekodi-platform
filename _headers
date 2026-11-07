@@ -12,6 +12,65 @@
   Cache-Control: no-store
   Access-Control-Allow-Origin: *
 
+# 목포노회 선교부 정책협의회 참석 신청: same-origin app.js and Control API intake only.
+# The global CSP (script-src 'none') would otherwise block the form script.
+/mokpo-presbytery/mission/policy-council-2026/
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-cache
+
+/mokpo-presbytery/mission/policy-council-2026/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-cache
+
+# 목포노회 선교부 홈: 권한별 열람·수정·승인 패널 (same-origin site.js + pinned supabase-js CDN, Supabase RPC only).
+/mokpo-presbytery/mission/
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-cache
+
+/mokpo-presbytery/mission/site.js
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-cache
+
+# 목포노회 선교부 부장 조회: phone + PIN read-only viewer (same-origin script, Supabase RPC only).
+/mokpo-presbytery/mission/viewer/
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/mokpo-presbytery/mission/viewer/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'
+  ! Cache-Control
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+# EKODI adult eligibility verification — static fallback when Workers Assets bypasses the Worker.
+# The site-wide static script-src 'none' blocks the required JS and external styles.
+# Never loosen the policy globally; match ONLY this feature's HTML and support files.
+/verify/adult/
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.portone.io; style-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://*.portone.io; frame-src https://*.portone.io https://*.inicis.com https://*.danal.co.kr; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://*.portone.io https://*.inicis.com https://*.danal.co.kr; object-src 'none'; upgrade-insecure-requests
+  ! Cache-Control
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+
+/verify/adult/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://cdn.portone.io; style-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co https://*.portone.io; frame-src https://*.portone.io https://*.inicis.com https://*.danal.co.kr; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://*.portone.io https://*.inicis.com https://*.danal.co.kr; object-src 'none'; upgrade-insecure-requests
+  ! Cache-Control
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow, noarchive
+
 # Proposal Studio is a read-only browser-local editor; globally locked-down CSP
 # Otherwise the global CSP blocks its same-origin JS/CSS.
 /proposal/

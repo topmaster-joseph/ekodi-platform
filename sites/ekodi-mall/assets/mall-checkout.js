@@ -2,6 +2,45 @@
 // Server decides everything (price, gates, keys); this only collects the recipient and starts Toss.
 (() => {
   const won = v => `${new Intl.NumberFormat('ko-KR').format(Math.max(0, Number(v) || 0))}원`;
+  // The same Supabase session and public publishable key as EKODI unified login.
+  // No browser-supplied member identity is trusted: the Mall API verifies Bearer.
+  const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+  let memberClient=null;
+  async function memberSession(){
+    if(!window.supabase?.createClient)return {token:'',userId:''};
+    try{
+      memberClient ||= window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,
+        {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+      const {data,error}=await memberClient.auth.getSession();
+      const session=error?null:data?.session;
+      const user=session?.user;
+      if(!session?.access_token||!user?.id||user.is_anonymous===true||
+        (!user.email_confirmed_at&&!user.phone_confirmed_at&&!user.confirmed_at))return {token:'',userId:''};
+      return {token:session.access_token,userId:user.id};
+    }catch{return {token:'',userId:''};}
+  }
+  const pointEstimate=amount=>Math.floor(Math.max(0,Math.trunc(Number(amount)||0))/100);
+  // Short-lived, account-isolated read of pending evidence, never a spendable balance.
+  let pendingSummaryCache={userId:'',timestamp:0,promise:null};
+  async function pendingPointSummary(api,member){
+    if(!member?.token||!member.userId)return null;
+    if(pendingSummaryCache.userId===member.userId&&
+       Date.now()-pendingSummaryCache.timestamp<60000&&pendingSummaryCache.promise)
+      return pendingSummaryCache.promise;
+    const promise=fetch(`${api}/api/public/member-points/summary`,{
+      method:'GET',credentials:'omit',headers:{authorization:`Bearer ${member.token}`,accept:'application/json'}
+    }).then(async response=>{
+      if(!response.ok)return null;
+      const data=await response.json().catch(()=>null);
+      return data?.memberPoints?.spendable===false&&data.memberPoints.status==='pending_central_ledger'
+        ? data.memberPoints:null;
+    }).catch(()=>null);
+    pendingSummaryCache={userId:member.userId,timestamp:Date.now(),promise};
+    return promise;
+  }
+
+
   function el(tag, attrs = {}, ...children) {
     const node = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
@@ -91,9 +130,35 @@
     const total = el('b', { text: won(ctx.quote.unitAmount) });
     qty.addEventListener('input', () => { total.textContent = won(ctx.quote.unitAmount * Math.max(1, Math.min(20, Math.trunc(Number(qty.value) || 1)))); });
     const consent = el('input', { id: 'coConsent', type: 'checkbox' });
-    const payBtn = el('button', { class: 'btn primary', type: 'button', text: '결제하기' });
+    const payBtn = el('button', { class: 'btn primary', type: 'button', text: '비회원으로 카드결제' });
+    const memberInfo=el('p',{class:'checkout-member-points',role:'status',text:'비회원도 로그인 없이 결제할 수 있습니다. 회원은 결제금액의 1% 포인트 적립 증빙을 기록합니다.'});
+    const loginLink=el('a',{class:'checkout-member-login',href:'https://ekodi.kr/auth/?site=mall&return_to='+encodeURIComponent(location.href),text:'회원 로그인 후 1% 포인트 적립'});
+    let memberModeRenderSeq=0;
+    async function refreshMemberMode(){
+      const renderSeq=++memberModeRenderSeq;
+      const member=await memberSession();
+      const estimate=pointEstimate(ctx.quote.unitAmount*Math.max(1,Math.min(20,Math.trunc(Number(qty.value)||1))));
+      payBtn.textContent=member.token?'회원으로 카드결제':'비회원으로 카드결제';
+      memberInfo.textContent=member.token
+        ? `회원 구매 1% · ${estimate}P 적립 증빙 예정 (실제 사용가능 잔액은 포인트 운영원장 개통 후 반영)`
+        : '비회원 카드결제 가능 · 포인트 적립 없음';
+      loginLink.hidden=Boolean(member.token);
+      if(member.token){
+        const pending=await pendingPointSummary(ctx.api,member);
+        if(pending&&renderSeq===memberModeRenderSeq){
+          const now=await memberSession();
+          if(now.userId===member.userId&&now.token){
+            memberInfo.textContent+=` · 기존 구매 적립 증빙 ${pending.pendingPoints}P (사용 불가)`;
+          }
+        }
+      }
+    }
+    qty.addEventListener('input',()=>void refreshMemberMode());
+
     const panel = el('section', { class: 'checkout-panel', 'aria-labelledby': 'coTitle' },
-      el('h2', { id: 'coTitle', text: '바로 구매' }),
+      el('h2', { id: 'coTitle', text: '비회원 주문 · 카드결제' }),
+      el('p', { class: 'checkout-guest-note', text: '회원가입이나 로그인 없이 주문할 수 있습니다. 승인된 판매상품의 가격과 재고는 서버에서 다시 확인합니다.' }),
+      memberInfo, loginLink,
       el('div', { class: 'checkout-qty' }, el('label', { for: 'coQty', text: '수량' }), qty, el('span', { class: 'checkout-total' }, '합계 ', total)),
       el('div', { class: 'checkout-grid' },
         field('coName', '받는 분', { autocomplete: 'name', maxlength: '40' }),
@@ -103,10 +168,15 @@
         field('coAddr1', '주소', { autocomplete: 'address-line1', maxlength: '200' }),
         field('coAddr2', '상세주소', { autocomplete: 'address-line2', maxlength: '120' }),
         field('coMemo', '배송 요청사항(선택)', { maxlength: '200' })),
-      el('label', { class: 'checkout-consent' }, consent, el('span', { text: '[필수] 주문·배송 안내를 위해 이름, 휴대전화, 이메일, 주소를 수집·이용하는 데 동의합니다. 판매자에게는 배송에 필요한 범위에서만 전달됩니다.' })),
+      el('label', { class: 'checkout-consent' }, consent, el('span', { text: '[필수] 주문·배송 안내를 위해 이름, 휴대전화, 배송주소 및 입력한 경우에만 이메일을 수집·이용합니다. 배송에 필요한 정보만 판매자에게 전달됩니다.' })),
+      el('p', { class: 'checkout-guest-policies' },
+        el('a', { href: '/ekodimall/pages/privacy/', target: '_blank', rel: 'noopener', text: '개인정보처리방침' }),
+        el('span', { text: ' · ' }),
+        el('a', { href: '/ekodimall/pages/returns/', target: '_blank', rel: 'noopener', text: '교환·환불 안내' })),
       msg, payBtn);
     host.append(panel);
     mountAddressSearch(panel);
+    void refreshMemberMode();
 
     const dialog = el('dialog', { class: 'checkout-dialog', 'aria-labelledby': 'coPayTitle' });
     const methods = el('div', { id: 'coPaymentMethods' });
@@ -125,6 +195,7 @@
 
     let widgets = null;
     let request = null;
+    let pendingGuestOrder = null; // memory-only, never persisted with buyer PII
     widgetPay.addEventListener('click', async () => {
       if (!widgets || !request) return;
       widgetPay.disabled = true; dialogMsg.textContent = '';
@@ -133,26 +204,40 @@
     });
 
     async function start() {
+      // A second click while the payment dialog is open must not reserve stock twice.
+      if (dialog.open || dialog.hasAttribute('open')) return;
       msg.textContent = '';
       if (!consent.checked) { msg.textContent = '개인정보 수집·이용에 동의해 주세요.'; return; }
       if (typeof window.TossPayments !== 'function') { msg.textContent = '결제 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.'; return; }
       payBtn.disabled = true;
       try {
         const v = id => document.getElementById(id).value;
-        const response = await fetch(`${ctx.api}/api/public/orders`, {
-          method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ shareCode: ctx.shareCode, attributionToken: ctx.attributionToken || '', quantity: Math.max(1, Math.min(20, Math.trunc(Number(qty.value) || 1))),
-            buyer: { name: v('coName'), phone: v('coPhone'), email: v('coEmail'), postcode: v('coPostcode'), address1: v('coAddr1'), address2: v('coAddr2'), memo: v('coMemo'), privacyConsent: true } }),
-        });
-        const body = await response.json().catch(() => ({}));
-        if (!response.ok || !body.order) throw new Error(body.error || '주문을 만들지 못했습니다.');
-        const order = body.order;
+        const orderInput = { shareCode: ctx.shareCode, attributionToken: ctx.attributionToken || '',
+          quantity: Math.max(1, Math.min(20, Math.trunc(Number(qty.value) || 1))),
+          buyer: { name: v('coName'), phone: v('coPhone'), email: v('coEmail'), postcode: v('coPostcode'), address1: v('coAddr1'), address2: v('coAddr2'), memo: v('coMemo'), privacyConsent: true } };
+        const member=await memberSession();
+        const signature = JSON.stringify({orderInput,memberId:member.userId});
+        let order = pendingGuestOrder?.signature === signature &&
+          Date.parse(pendingGuestOrder.order?.expiresAt) > Date.now() + 60000
+          ? pendingGuestOrder.order : null;
+        if (!order) {
+          const response = await fetch(`${ctx.api}/api/public/orders`, {
+            method: 'POST', headers: { 'content-type': 'application/json',
+              ...(member.token?{authorization:`Bearer ${member.token}`}:{}) },
+            body: JSON.stringify(orderInput),
+          });
+          const body = await response.json().catch(() => ({}));
+          if (!response.ok || !body.order) throw new Error(body.error || '주문을 만들지 못했습니다.');
+          order = body.order;
+          pendingGuestOrder = { signature, order };
+          if(member.token&&!order.memberPoints){memberInfo.textContent='회원 인증을 확인할 수 없어 이번 주문은 비회원 결제로 처리됩니다.';}
+        }
         const co = order.checkout || {};
         request = { orderId: order.id, orderName: order.orderName, successUrl: co.successUrl, failUrl: co.failUrl, customerName: order.customerName, customerMobilePhone: order.customerMobilePhone };
         if (order.customerEmail) request.customerEmail = order.customerEmail;
         const toss = window.TossPayments(co.clientKey);
         if (co.widget) {
-          summary.textContent = `${order.orderName} · ${won(order.amount)}`;
+          summary.textContent = `${order.orderName} · ${won(order.amount)} · ${co.paymentMode === 'test' ? '테스트 결제(실제 청구 없음)' : order.memberPoints ? '회원 카드결제 · 1% 적립 증빙 예정' : '비회원 카드결제'}`;
           methods.replaceChildren(); agreement.replaceChildren(); widgetPay.disabled = true;
           backdrop.hidden = false;
           dialog.show ? dialog.show() : dialog.setAttribute('open', '');
@@ -193,7 +278,22 @@
     try {
       const r = await fetch(`${api}/api/public/payments/confirm`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ paymentKey, orderId, amount }) });
       const data = await r.json().catch(() => ({}));
-      if (r.ok && data.payment?.status === 'DONE') { notify('주문이 완료되었습니다', `주문번호 ${orderId} · ${won(data.payment.totalAmount)} 결제가 확인되었습니다. 판매자가 배송을 준비합니다. 감사합니다.`, true); return 'paid'; }
+      if (r.ok && data.payment?.status === 'DONE') {
+        const member=await memberSession();
+        let pointsNote='';
+        if(member.token){
+          try{
+            const pr=await fetch(`${api}/api/public/orders/${encodeURIComponent(orderId)}/points`,
+              {headers:{authorization:`Bearer ${member.token}`}});
+            const evidence=pr.ok?(await pr.json()).memberPoints:null;
+            if(evidence)pointsNote=evidence.status==='pending_central_ledger'
+              ? ` 회원 구매 1% · ${evidence.points}P 적립 증빙이 기록되었습니다. 포인트 사용가능 잔액 반영은 운영원장 활성화 후 진행됩니다.`
+              : evidence.status==='reversed'?' 환불에 따라 회원 포인트 적립액이 조정되었습니다.':'';
+          }catch{} // Payment is completed even when the points read is unavailable.
+        }
+        notify('주문이 완료되었습니다',`주문번호 ${orderId} · ${won(data.payment.totalAmount)} 결제가 확인되었습니다. 판매자가 배송을 준비합니다.${pointsNote}`,true);
+        return 'paid';
+      }
       if (r.ok) { notify('결제 확인 중입니다', '결제가 아직 완료되지 않았습니다. 입금이 확인되면 주문이 완료됩니다.', true); return 'pending'; }
       notify('결제를 확인하지 못했습니다', `${data.error || '결제 승인 검증에 실패했습니다.'} 문제가 계속되면 주문번호 ${orderId}로 문의해 주세요.`, false); return 'error';
     } catch {

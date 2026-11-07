@@ -108,7 +108,7 @@ test('seonammedi hourly monitoring reuses the existing Control API cron instead 
 test('seonammedi source changes are wired to both Shared Site and Control API releases',async()=>{const [shared,control,manifestText]=await Promise.all([readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8'),readFile(new URL('../.github/workflows/deploy-control-api.yml',import.meta.url),'utf8'),readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8')]);for(const marker of ["sites/seonammedi/public/**","seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","migrations/0116_seonammedi_full_menu_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(shared.includes(marker),marker);for(const marker of ["seonammedi-monitor.js","seonammedi-civic-control.js","seonammedi-admin-control.js","migrations/0113_seonammedi_site_admin.sql","migrations/0116_seonammedi_full_menu_admin.sql","test/seonammedi-site.test.mjs"])assert.ok(control.split(marker).length>=3,marker);const manifest=JSON.parse(manifestText);const urls=new Set(manifest.worker.requests.map(item=>item.url));for(const url of ['https://ekodi.kr/seonammedi/','https://ekodi.kr/seonammedi/app.js','https://ekodi.kr/api/seonammedi/voices/health','https://ekodi.kr/seonammedi/data.json','https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'])assert.ok(urls.has(url),url);const publicProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/seonammedi/');assert.ok(publicProbe);assert.ok(!publicProbe.expect.includes('사이트 일일점검'));const adminProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/seonammedi/admin/');assert.ok(adminProbe);for(const label of ['사이트 점검','정적 상태','동적 상태'])assert.ok(!adminProbe.expect.includes(label),label);const legacy=manifest.worker.requests.filter(item=>['https://ekodi.kr/seonam-medi','https://ekodi.kr/seonam-med'].includes(item.url));assert.ok(legacy.every(item=>item.statuses.includes(404)));});
 
 
-test('seonammedi branding is canonical and legacy public paths are deleted',async()=>{const html=await readFile(new URL('index.html',root),'utf8');assert.match(html,/서남권 국립의대 소통센터/);assert.doesNotMatch(html,/시민소통센터/);assert.match(html,/\/seonammedi\/app\.css/);});
+test('seonammedi branding is canonical and legacy public paths are deleted',async()=>{const html=await readFile(new URL('index.html',root),'utf8');assert.match(html,/서남권국립의대/);assert.doesNotMatch(html,/시민소통센터/);assert.match(html,/\/seonammedi\/app\.css/);});
 
 
 
@@ -145,7 +145,7 @@ test('seonammedi admin stays site-local before and after Google authentication',
   assert.match(adminJs,/CENTRAL_SESSION_KEY='sb-renzehysxirjilvdxacv-auth-token'/);
   assert.match(adminJs,/localStorage\.getItem\(CENTRAL_SESSION_KEY\)/);
   assert.doesNotMatch(adminJs,/cdn\.jsdelivr\.net|createClient\(/);
-  assert.match(auth,/seonammedi:\{name:'서남권 국립의대 소통센터'/);
+  assert.match(auth,/seonammedi:\{name:'서남권국립의대'/);
   assert.match(router,/handleSeonamMediAdminApi/);
   assert.match(migration,/ohwon69@gmail\.com/);
   assert.match(migration,/board_admin/);
@@ -339,7 +339,7 @@ test('seonammedi public and admin menus keep the agreed content-first order',asy
   assert.match(html,/data-status-pane="timeline"/);
   assert.match(html,/data-status-pane="materials"/);
   const adminOrder=['운영홈','내부 회의록','권한·관리자'];
-  cursor=-1;for(const label of adminOrder){const next=adminHtml.indexOf('>'+label+'</button>',cursor+1);assert.ok(next>cursor,'admin menu order: '+label);cursor=next}
+  cursor=-1;for(const label of adminOrder){const next=adminHtml.indexOf('>'+label+'</a>',cursor+1);assert.ok(next>cursor,'admin menu order: '+label);cursor=next}
   for(const label of ['현재상황','소통채널','시민의견','회계','공지','조직'])assert.doesNotMatch(adminHtml,new RegExp('data-panel-target="[^"]+"[^>]*>'+label+'<\\/button>'));
   assert.doesNotMatch(adminHtml,/data-panel-target="timeline"|data-panel-target="content"/);
   assert.doesNotMatch(adminHtml,/data-ekodi-site-publication-slot|사이트 공개여부/);
@@ -838,8 +838,8 @@ test('seonammedi registered Google admins manage public content from user surfac
   assert.match(worker,/data-delete/);
   assert.match(worker,/data-reply-delete/);
   assert.match(worker,/\/api\/admin\/posts/);
-  assert.match(adminHtml,/data-panel-target="minutes"[^>]*>내부 회의록<\/button>/);
-  assert.match(adminHtml,/data-panel-target="access"[^>]*>권한·관리자<\/button>/);
+  assert.match(adminHtml,/data-panel-target="minutes"[^>]*href="\?panel=minutes"[^>]*>내부 회의록<\/a>/);
+  assert.match(adminHtml,/data-panel-target="access"[^>]*href="\?panel=access"[^>]*>권한·관리자<\/a>/);
   for(const label of ['현재상황','소통채널','시민의견','회계','공지','조직'])assert.doesNotMatch(adminHtml,new RegExp('data-panel-target="[^"]+"[^>]*>'+label+'<\\/button>'));
   assert.match(adminJs,/navVisibility/);
 });
@@ -866,7 +866,7 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(html,/<link rel="canonical" href="https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr\/">/);
   assert.match(html,/<a class="brand" href="\.\/">/);
   assert.match(html,/<a href="admin\/">관리<\/a>/);
-  assert.match(html,/<div class="site-footer-copy">\s*<strong>서남권 국립의대 소통센터<\/strong>\s*<span>서남권 의대 설립 비상대책위원회 · 자료의 성격과 출처를 구분해 보존합니다.<\/span>\s*<span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="tel:01035018542">010-3501-8542<\/a> · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com<\/a><\/span>\s*<\/div>/);
+  assert.match(html,/<div class="site-footer-copy">\s*<strong>서남권국립의대<\/strong>\s*<span>서남권 의대 설립 비상대책위원회 · 자료의 성격과 출처를 구분해 보존합니다.<\/span>\s*<span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="tel:01035018542">010-3501-8542<\/a> · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com<\/a><\/span>\s*<\/div>/);
   assert.ok(!html.includes('id="lastUpdated"'));
   assert.match(html,/id="homeLatestUpdatedAt"/);
   assert.ok(app.includes("'마지막 갱신 '+new Date(runAt).toLocaleString"));
@@ -880,7 +880,8 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(adminHtml,/href="\?panel=finance"[^>]*>회계 관리/);
   assert.match(adminHtml,/href="\.\.\/board\/notices">공지 관리/);
   assert.match(app,/\^\(\?:\\\/seonammedi\)\?\\\/notices/);
-  assert.ok(minutes.includes("location.origin+'/minutes/?token='"));
+  assert.ok(minutes.includes("location.hostname==='ekodi.kr'"));
+  assert.ok(minutes.includes("canonical?'/seonammedi/minutes/':'/minutes/'"),'share link retains each domain mount');
   assert.match(css,/min-height:100dvh;display:flex;flex-direction:column/);
   assert.match(css,/footer{margin-top:auto/);
   assert.doesNotMatch(html,/href="board\/finance">회계<\/a>/);
@@ -911,8 +912,12 @@ test('seonammedi customer domain cache-busts public and admin static assets',asy
   assert.equal(jsVersion,cssVersion,'public script and stylesheet must share one cache-buster');
   assert.ok(adminHtml.includes('<a class="brand" href="./">'));
   assert.ok(adminHtml.includes('<a href="../" target="_blank" rel="noopener">공개페이지</a>'));
-  assert.ok(adminHtml.includes('/seonammedi/admin/admin.js?v=20261019-site-admin-roster-3'));
-  assert.ok(adminHtml.includes('/seonammedi/admin/admin-minutes.js?v=20261006-domain-routing-2'));
+  const adminJsVersion=adminHtml.match(/\/seonammedi\/admin\/admin\.js\?v=(20[0-9]{6}-[a-z0-9-]+)/)?.[1];
+  const adminMinutesVersion=adminHtml.match(/\/seonammedi\/admin\/admin-minutes\.js\?v=(20[0-9]{6}-[a-z0-9-]+)/)?.[1];
+  const adminCssVersion=adminHtml.match(/\/seonammedi\/admin\/admin\.css\?v=(20[0-9]{6}-[a-z0-9-]+)/)?.[1];
+  assert.ok(adminJsVersion,'versioned administrator entry module');
+  assert.equal(adminMinutesVersion,adminJsVersion,'minutes and admin modules must share one release');
+  assert.equal(adminCssVersion,adminJsVersion,'admin CSS and JS must share one release');
 });
 
 

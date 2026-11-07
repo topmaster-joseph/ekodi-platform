@@ -60,14 +60,15 @@
     <div class="sv-cards" aria-label="공개 사이트 현황 · 사이트별 검색 준비도와 등록 확인 현황입니다. 기술 점검 결과는 실제 검색 노출을 뜻하지 않습니다." title="사이트별 검색 준비도와 등록 확인 현황입니다. 기술 점검 결과는 실제 검색 노출을 뜻하지 않습니다.">
       <article><small>공개 사이트</small><strong data-sv-sites>—</strong></article>
       <article><small>공개 URL</small><strong data-sv-pages>—</strong></article>
-      <article><small>기술점검 성공</small><strong data-sv-audited>0</strong></article>
-      <article><small>기술점검 실패</small><strong data-sv-failed>0</strong></article>
+      <article><small>기술점검 성공</small><strong data-sv-audited>미실행</strong></article>
+      <article><small>기술점검 실패</small><strong data-sv-failed>미실행</strong></article>
       <article><small>발견 인프라 상태</small><strong data-sv-infra>확인 전</strong></article>
     </div>
     <h3>운영 사이트 목록</h3>
     <div class="sv-toolbar">
       <button class="secondary" type="button" data-sv-reload>공개 사이트 목록 갱신</button>
       <button class="secondary" type="button" data-sv-audit-all>전체 사이트 기술점검</button>
+      <button class="secondary" type="button" data-sv-export disabled title="기술점검 실행 후 결과를 다운로드할 수 있습니다.">점검 결과 CSV</button>
       <label for="sv-category-filter">분류</label><select id="sv-category-filter" aria-label="사이트 분류 필터"><option value="">전체 분류</option></select>
       <label for="sv-search">검색</label><input id="sv-search" type="search" placeholder="사이트명 또는 주소">
       <span class="sv-count" data-sv-count aria-live="polite"></span>
@@ -376,7 +377,8 @@
     $('[data-sv-manage-path]').textContent=site.url;
     $('[data-sv-manage-basic]').textContent=crossOrigin?'별도 호스트':result?.basic||'미점검';
     $('[data-sv-manage-ai]').textContent=crossOrigin?'별도 호스트':result?.ai||'미점검';
-    $('[data-sv-manage-improve]').textContent=result?.improvements?.join(' · ')||'점검 후 표시';
+    const improvementDetails=[result?.policyNote,...(result?.improvements||[])].filter(Boolean);
+    $('[data-sv-manage-improve]').textContent=improvementDetails.join(' · ')||(result?'기본 항목 충족':'점검 후 표시');
     const audit=$('[data-sv-manage-audit]');audit.disabled=state.busy||crossOrigin;
     audit.title=crossOrigin?'별도 호스트의 브라우저 점검은 지원하지 않습니다.':'';
     const open=$('[data-sv-manage-open]');open.href=site.url;
@@ -397,7 +399,7 @@
       return {...item, url:u.href};
     } catch {return null;}
   };
-  const fetchBounded = async (url, { parse = 'text', timeout = 6500 } = {}) => {
+  const fetchBounded = async (url, { parse = 'text', timeout = 6500, withResponse = false } = {}) => {
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), timeout);
     try {
@@ -407,27 +409,123 @@
       if (limit > 1_500_000)throw new Error('응답 크기 초과');
       const text = await response.text();
       if (text.length > 1_500_000)throw new Error('응답 크기 초과');
-      return parse==='json'?JSON.parse(text):text;
+      return withResponse?{text,finalUrl:response.url||url,
+        contentType:response.headers.get('content-type')||'',robotsHeader:response.headers.get('x-robots-tag')||''}
+        :parse==='json'?JSON.parse(text):text;
     } finally {window.clearTimeout(timer);}
   };
-  const checkDocument = html => {
+  // The rendered page and its HTTP crawler directives must both be checked.
+  // A successful fetch of a redirected sign-in page is not a successful audit
+  // of the registered public site. These checks do not imply search indexing.
+  const noindexDirective = value => String(value||'').toLowerCase()
+    .replaceAll(',',' ').replaceAll(';',' ').replaceAll('\n',' ').replaceAll('\t',' ')
+    .split(' ').some(word=>word.trim()==='noindex'||word.trim()==='none');
+  const validatePublicAuditResponse = (site, receipt) => {
+    const requested=new URL(site.url),final=new URL(receipt.finalUrl||site.url,requested);
+    const publicPath=url=>{
+      let path=url.pathname;
+      while(path.length>1&&path.endsWith('/'))path=path.slice(0,-1);
+      return path||'/';
+    };
+    if(final.origin!==requested.origin||publicPath(final)!==publicPath(requested)||final.search||final.hash)
+      throw new Error('요청한 공개 경로 대신 다른 페이지로 이동했습니다');
+    const type=String(receipt.contentType||'').split(';')[0].trim().toLowerCase();
+    if(!['text/html','application/xhtml+xml'].includes(type))
+      throw new Error('공개 문서가 HTML로 응답하지 않았습니다');
+    return receipt.text;
+  };
+  const checkDocument = (html, {robotsHeader=''} = {}) => {
     const dom = new DOMParser().parseFromString(html, 'text/html');
-    const meta = name => dom.querySelector('meta[name="'+name+'"]')?.getAttribute('content')?.trim() || '';
+    const metas=[...dom.querySelectorAll('meta[name]')];
+    const meta=name=>metas.find(item=>item.getAttribute('name')?.trim().toLowerCase()===name)
+      ?.getAttribute('content')?.trim()||'';
     const title = Boolean(dom.querySelector('title')?.textContent?.trim());
     const description = Boolean(meta('description'));
     const canonical = dom.querySelector('link[rel="canonical"]')?.getAttribute('href') || '';
-    const noindex = /(?:^|[,\s])noindex(?:$|[,\s])/i.test(meta('robots'));
+    const noindex = noindexDirective(robotsHeader)||
+      ['robots','googlebot','bingbot','oai-searchbot','gptbot','claude-searchbot']
+        .some(name=>noindexDirective(meta(name)));
     const headings = Boolean(dom.querySelector('h1')?.textContent?.trim());
     const schema = Boolean(dom.querySelector('script[type="application/ld+json"]')?.textContent?.trim());
     return {title, description, canonical, noindex, headings, schema};
+  };
+  // The Korean IDN is the existing approved SeonamMedi canonical for the
+  // exact /seonammedi public mount. Other cross-origin canonicals remain errors.
+  const correctPublicCanonical = (siteUrl, canonicalValue) => {
+    if(!canonicalValue)return false;
+    try{
+      const requested=new URL(siteUrl),observed=new URL(canonicalValue,requested);
+      const path=url=>{
+        let value=url.pathname;
+        while(value.length>1&&value.endsWith('/'))value=value.slice(0,-1);
+        return value||'/';
+      };
+      if(requested.origin!=='https://ekodi.kr'||observed.protocol!=='https:'||
+        observed.username||observed.password||observed.search||observed.hash)return false;
+      if(requested.origin===observed.origin&&path(requested)===path(observed))return true;
+      return path(requested)==='/seonammedi'&&
+        observed.href==='https://xn--3e0b8b58jw4co4mnpll3k.kr/';
+    }catch{return false;}
+  };
+  // /mokdaehumun is an operator-space landing page, not the public
+  // cooperative storefront. Its deliberate noindex must never be presented
+  // as an unconditional instruction to expose this workspace to crawlers.
+  // Never infer the policy for a different tenant from a similar URL.
+  const documentedNoindexPolicy = siteUrl => {
+    try {
+      const u=new URL(siteUrl);
+      return u.origin==='https://ekodi.kr'&&!u.search&&!u.hash&&
+        (u.pathname==='/mokdaehumun'||u.pathname==='/mokdaehumun/');
+    }catch{return false;}
+  };
+  // Export only currently loaded public-site audit results. No private
+  // provider evidence, OAuth credentials or cross-tenant records are included.
+  // An unscanned row remains "미점검"; the export is NOT an indexing report.
+  const technicalAuditCsv = (sites, audited, generatedAt) => {
+    const cell = value => {
+      let text=String(value??'').replace(/[\u0000-\u001f\u007f]/g,' ');
+      if(/^\s*[=+\-@]/.test(text))text="'"+text; // spreadsheet formula injection
+      return '"'+text.replaceAll('"','""')+'"';
+    };
+    const header=['조회시각(KST)','사이트','공개 주소','기술점검 상태','SEO 기술 준비','AEO·GEO 발견 준비','개선 사항','검색 차단','오류'];
+    const rows=sites.map(site=>{
+      const result=audited.get(site.url);
+      const status=!result?'미점검':result.error?'점검 실패':'점검 완료';
+      const blocked=!result?'미점검':result.error?'확인 불가':result.policyNoindex? (result.raw?.noindex===true?'정책상 검색 제외(noindex)':'검색 제외 정책 누락'):result.raw?.noindex===true?'noindex 확인·검토':'차단 지시 없음';
+      return [generatedAt,site.name||site.path||'사이트',site.url,status,
+        result?.error?'':result?.basic||'',result?.error?'':result?.ai||'',
+        Array.isArray(result?.improvements)?result.improvements.join(' / '):'',
+        blocked,result?.error||''];
+    });
+    return [header,...rows].map(row=>row.map(cell).join(',')).join('\r\n')+'\r\n';
+  };
+  const downloadTechnicalAudit = () => {
+    if(state.busy||!state.audited.size||!state.sites.length)return;
+    const now=new Date();
+    const timestamp=now.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false});
+    const csv=technicalAuditCsv(state.sites,state.audited,timestamp);
+    const blob=new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'});
+    const href=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=href;
+    link.download='ekodi-search-audit-'+now.toISOString().slice(0,10)+'.csv';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(href),1000);
+    status('기술점검 결과 '+state.audited.size+'건을 내보냈습니다. 미점검 사이트도 별도 표시했으며, 검색엔진 등록·색인 여부는 포함하지 않습니다.');
   };
   const siteResult = site => state.audited.get(site.url);
   function render() {
     $('[data-sv-sites]').textContent=String(state.sites.length);
     $('[data-sv-pages]').textContent=String(state.resources.length);
     const audits=[...state.audited.values()];
-    $('[data-sv-audited]').textContent=String(audits.filter(result=>!result.error).length);
-    $('[data-sv-failed]').textContent=String(audits.filter(result=>Boolean(result.error)).length);
+    // Zero checks performed is not a verified zero failures/successes.
+    const started=audits.length>0;
+    $('[data-sv-audited]').textContent=started?String(audits.filter(result=>!result.error).length):'미실행';
+    $('[data-sv-failed]').textContent=started?String(audits.filter(result=>Boolean(result.error)).length):'미실행';
+    const exportButton=$('[data-sv-export]');
+    exportButton.disabled=state.busy||!started;
+    exportButton.title=started?'전체 '+state.sites.length+'개 사이트 중 '+state.audited.size+'개 점검 결과 · 미점검 사이트도 표시':'기술점검 실행 후 결과를 다운로드할 수 있습니다.';
     const target=$('[data-sv-rows]');target.replaceChildren();
     const q=$('#sv-search').value.trim().toLowerCase(), group=$('#sv-category-filter').value;
     const sites=state.sites.filter(site=>(!group||siteCategory(site)===group)&&
@@ -481,30 +579,34 @@
       const [robots,sitemap]=await Promise.allSettled([fetchBounded('/robots.txt'),fetchBounded('/sitemap.xml')]);
       const ok=robots.status==='fulfilled' && sitemap.status==='fulfilled' && sitemap.value.includes('<urlset');
       $('[data-sv-infra]').textContent=ok?'기술파일 응답':'확인 필요';
-      status('공개 레지스트리 '+state.sites.length+'개 사이트 / '+state.resources.length+'개 URL. 검색엔진 등록 또는 색인 완료를 의미하지 않습니다.');
+      status('공개 레지스트리 '+state.sites.length+'개 사이트 / '+state.resources.length+'개 URL. 기술점검은 버튼을 눌러 실행하며, 검색엔진 등록·색인 확인과 다릅니다.');
       render();
       await loadLedger();
     }catch(error){status('공개 사이트 원장을 불러오지 못했습니다: '+error.message,true);$('[data-sv-infra]').textContent='확인 실패';}
   }
   async function auditOne(site,{quiet=false}={}) {
     try{
-      const html=await fetchBounded(site.url);
-      const result=checkDocument(html);
-      const correctCanonical=Boolean(result.canonical)&&new URL(result.canonical,site.url).href.replace(/\/$/,'')===site.url.replace(/\/$/,'');
+      const receipt=await fetchBounded(site.url,{withResponse:true});
+      const html=validatePublicAuditResponse(site,receipt);
+      const result=checkDocument(html,{robotsHeader:receipt.robotsHeader});
+      const correctCanonical=correctPublicCanonical(site.url,result.canonical);
+      const policyNoindex=documentedNoindexPolicy(site.url);
+      const policyNote=policyNoindex?(result.noindex?'공유 운영 공간 · 검색 제외 정책 유지':'공유 운영 공간 · 검색 제외 정책 누락 확인'):null;
       const basic=[result.title,result.description,correctCanonical,!result.noindex].filter(Boolean).length;
       const ai=[result.headings,result.schema,result.description].filter(Boolean).length;
       const improvements=[!result.title?'고유 페이지 제목 보완':null,
         !result.description?'검색 설명문 보완':null,
         !correctCanonical?'정규 URL(canonical) 정비':null,
-        result.noindex?'공개페이지 noindex 설정 점검':null,
+        result.noindex&&!policyNoindex?'검색로봇 noindex 지시(메타·HTTP 헤더) 점검':null,
+        policyNoindex&&!result.noindex?'공유 운영 공간 검색 제외 정책 누락 점검':null,
         !result.headings?'H1 제목 보완':null,
         !result.schema?'구조화 데이터 검토':null].filter(Boolean);
       state.audited.set(site.url,{
         error:null,basic:Math.round(basic/4*100)+'점 ('+basic+'/4) · 기술 준비도',
         ai:Math.round(ai/3*100)+'점 ('+ai+'/3) · 발견 준비도',
-        improvements,raw:result
+        improvements,raw:result,policyNoindex,policyNote
       });
-      if(!quiet)status(site.name+' 기술 점검 완료. 우선 개선: '+(state.audited.get(site.url).improvements.join(', ')||'기본 항목 충족')+'. 이는 등록·검색순위·AI 인용 검증이 아닙니다.');
+      if(!quiet)status(site.name+' 기술 점검 완료. '+(policyNote?policyNote+' · ':'')+'우선 개선: '+(state.audited.get(site.url).improvements.join(', ')||'기본 항목 충족')+'. 이는 등록·검색순위·AI 인용 검증이 아닙니다.');
     }catch(error){state.audited.set(site.url,{basic:'점검 실패',ai:'근거 없음',error:error.message});if(!quiet)status(site.name+': '+error.message,true);}
     render();
   }
@@ -529,6 +631,7 @@
   $('[data-sv-google-read]').addEventListener('click',loadGoogleSearch);
   $('[data-sv-reload]').addEventListener('click',load);
   $('[data-sv-audit-all]').addEventListener('click',auditAll);
+  $('[data-sv-export]').addEventListener('click',downloadTechnicalAudit);
   $('#sv-search').addEventListener('input',render);
   $('#sv-category-filter').addEventListener('change',render);
   $('[data-sv-manage-close]').addEventListener('click',()=>{$('[data-sv-manage-panel]').hidden=true;});

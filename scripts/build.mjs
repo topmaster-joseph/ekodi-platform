@@ -64,6 +64,9 @@ await Promise.all([
 ]);
 await cp(`${root}sites/ekodi-insurance/public`, `${output}insurance`, { recursive: true });
 await cp(`${root}sites/ekodi-singles/public`, `${output}singles`, { recursive: true });
+// Shared, provider-gated adult verification page; use the existing Singles Supabase UMD bundle.
+await cp(`${root}verify/adult`, `${output}verify/adult`, { recursive: true });
+await cp(`${root}age-verification-client.js`, `${output}verify/adult/client.js`);
 // Device-scoped opt-in notifications; permission UI and Service Worker share /notifications/ scope.
 await cp(`${root}notifications`, `${output}notifications`, { recursive: true });
 // EKODI Proposal Studio: local-only static draft editor, no server persistence.
@@ -78,6 +81,13 @@ await cp(`${root}sites/mokpo-presbytery/index.html`, `${output}mokpo-presbytery/
 // Mokpo Presbytery mission pilot: isolated public static site.
 await mkdir(`${output}mokpo-presbytery/mission/`, { recursive: true });
 await cp(`${root}sites/mokpo-presbytery/mission/index.html`, `${output}mokpo-presbytery/mission/index.html`);
+await mkdir(`${output}mokpo-presbytery/mission/policy-council-2026/`, { recursive: true });
+await cp(`${root}sites/mokpo-presbytery/mission/policy-council-2026/index.html`, `${output}mokpo-presbytery/mission/policy-council-2026/index.html`);
+await cp(`${root}sites/mokpo-presbytery/mission/policy-council-2026/app.js`, `${output}mokpo-presbytery/mission/policy-council-2026/app.js`);
+await cp(`${root}sites/mokpo-presbytery/mission/site.js`, `${output}mokpo-presbytery/mission/site.js`);
+await mkdir(`${output}mokpo-presbytery/mission/viewer/`, { recursive: true });
+await cp(`${root}sites/mokpo-presbytery/mission/viewer/index.html`, `${output}mokpo-presbytery/mission/viewer/index.html`);
+await cp(`${root}sites/mokpo-presbytery/mission/viewer/viewer.js`, `${output}mokpo-presbytery/mission/viewer/viewer.js`);
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 await cp(`${root}config/capability-foundry.json`, `${output}capability-foundry.json`);
 

@@ -7,6 +7,7 @@ import { handleRegionalAccessControl } from './regional-access-control.js';
 import { handleLocalRegionOperations } from './local-region-operations-control.js';
 import { handleCheonggyePassVendorIntake } from './cheonggyepass-vendor-intake.js';
 import { MOTOR_FESTIVAL_API_PATH, handleMotorFestivalApplications, purgeExpiredMotorFestivalApplications } from './motor-festival-registration-api.js';
+import { isMokpoPolicyApiPath, handleMokpoMissionPolicyRegistrations, purgeExpiredMokpoMissionRegistrations } from './mokpo-mission-policy-council-api.js';
 import { isBoothApiPath, handleCgmurrcBooth } from './cgmurrc-booth-api.js';
 import { isEdocApiPath, handleCgmaEdocs } from './cgma-edoc-api.js';
 import { handleCustomerMemberDirectory } from './customer-member-directory.js';
@@ -280,6 +281,9 @@ export default {
     if (path === MOTOR_FESTIVAL_API_PATH || path === MOTOR_FESTIVAL_API_PATH + '/') {
       return handleMotorFestivalApplications(request, env);
     }
+    if (isMokpoPolicyApiPath(path)) {
+      return handleMokpoMissionPolicyRegistrations(request, env);
+    }
     if (isBoothApiPath(path)) {
       return handleCgmurrcBooth(request, env);
     }
@@ -346,6 +350,7 @@ export default {
   async scheduled(controller, env, ctx) {
     // Motor festival personal data retention: runs every cycle, before any early return.
     ctx.waitUntil(purgeExpiredMotorFestivalApplications(env).catch(error => console.error('Motor festival retention purge failed', error?.name || 'Error')));
+    ctx.waitUntil(purgeExpiredMokpoMissionRegistrations(env).catch(error => console.error('Mokpo mission policy council retention purge failed', error?.name || 'Error')));
     const reporting = await syncScheduledCoupangPartnerReports(env, { reason: 'schedule' })
       .catch(error => {
         console.error('EKODI Mall Coupang report schedule failed', error);

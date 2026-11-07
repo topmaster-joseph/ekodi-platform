@@ -53,7 +53,7 @@ function resolveSource(request,env){
   if(!expected||!origin||!key||!['production','development'].includes(source))return {error:'points_source_unavailable'};
   const host=new URL(request.url).hostname;
   if((host==='ekodi.kr'||host.endsWith('.ekodi.kr'))&&source!=='production')return {error:'points_environment_mismatch'};
-  return {origin,key};
+  return {origin,key,detailEnabled:source==='development'};
 }
 // Legacy service_role keys are JWTs and may also travel as a Bearer token.
 // New sb_secret_ keys are opaque and must be sent on the apikey header only.
@@ -71,8 +71,10 @@ async function rpc(src,name,args,requestFetch){
   const response=await requestFetch(src.origin+'/rest/v1/rpc/'+name,{
     method:'POST',
     headers:sourceHeaders(src.key,{'Content-Type':'application/json'}),
-    body:JSON.stringify(args),redirect:'error',signal:AbortSignal.timeout(8000),
+    // Workers fetch has no redirect:'error'; refuse any redirect explicitly.
+    body:JSON.stringify(args),redirect:'manual',signal:AbortSignal.timeout(8000),
   });
+  if(response.status>=300&&response.status<400)throw new Error('points_rpc_redirect_refused');
   const body=await response.json().catch(()=>null);
   if(!response.ok){
     const message=String(body?.message||'').trim();
@@ -82,10 +84,13 @@ async function rpc(src,name,args,requestFetch){
   }
   return body;
 }
-function rpcFailure(error,headers){
+function rpcFailure(error,headers,env){
   if(error?.known)return reply({error:error.message},409,headers);
-  console.error('points governance rpc unavailable',String(error?.message||'error').slice(0,120));
-  return reply({error:'points_governance_unavailable'},503,headers);
+  const reason=String(error?.message||error?.name||'error').slice(0,120);
+  console.error('points governance rpc unavailable',reason);
+  // Development source only: expose a sanitized reason code (no key, URL or body).
+  const detail=env?.POINTS_SOURCE_ENV==='development'?reason.replace(/[^\w:. -]/g,'').slice(0,80):undefined;
+  return reply({error:'points_governance_unavailable',...(detail?{detail}:{})},503,headers);
 }
 async function readOverview(src,headers,requestFetch){
   try{
@@ -95,8 +100,9 @@ async function readOverview(src,headers,requestFetch){
       endpoint.searchParams.set('limit',String(limit));
       const response=await requestFetch(endpoint.toString(),{
         method:'GET',headers:sourceHeaders(src.key),
-        redirect:'error',signal:AbortSignal.timeout(6000),
+        redirect:'manual',signal:AbortSignal.timeout(6000),
       });
+      if(response.status>=300&&response.status<400)throw Error('points_table_redirect_refused');
       if(!response.ok)throw Error('points_table_query_failed:'+response.status);
       const rows=await response.json();
       if(!Array.isArray(rows))throw Error('invalid_points_response');
@@ -105,7 +111,7 @@ async function readOverview(src,headers,requestFetch){
     return reply({read_only:true,...Object.fromEntries(entries),snapshot_at:new Date().toISOString()},200,headers);
   }catch(error){
     console.error('points admin projection unavailable',String(error?.message||'error').slice(0,120));
-    return reply({error:'points_governance_unavailable'},503,headers);
+    return reply({error:'points_governance_unavailable',...(src.detailEnabled?{detail:String(error?.message||error?.name||'error').replace(/[^\w:. -]/g,'').slice(0,80)}:{})},503,headers);
   }
 }
 async function readJson(request){
@@ -208,6 +214,6 @@ export async function handlePointsControl(request,env,session,headers=new Header
       p_actor:actor,p_request_id:requestId,p_approve:body.approve,p_note:body.note??null,
     },requestFetch),200,headers);
   }catch(error){
-    return rpcFailure(error,headers);
+    return rpcFailure(error,headers,env);
   }
 }

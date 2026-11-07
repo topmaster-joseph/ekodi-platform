@@ -44,7 +44,8 @@ test('church live host action preserves studio intent without forcing a page rel
 
 test('church header presents online as one hub while preserving EKODI Live and YouTube',async()=>{
   const [html,css]=await Promise.all([read('index.html'),read('church-live-entry.css')]);
-  assert.match(html,/class="nav-online" href="#online"/);
+  assert.match(html,/href="\/ekodichurch\/#worship">예배·방송<\/a>/);
+  assert.match(await read('church-section-nav.js'),/\['온라인 방송','#online'\]/);
   assert.match(html,/ONLINE · EKODI CHURCH/);
   assert.match(html,/\/live\/church\/\?mode=studio&amp;activity=sunday/);
   assert.match(html,/https:\/\/www\.youtube\.com\/@ekodichurch/);

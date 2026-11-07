@@ -23,6 +23,9 @@ SINGLES_SOCIAL_ENABLED = "true"
 SINGLES_PAID_ACTIONS_ENABLED = "true"
 SINGLES_BANK_TRANSFER_ENABLED = "true"
 SINGLES_BANK_VERIFICATION_ENABLED = "true"
+# 포트원 V2 본인인증 공개 식별자(회원 화면에 노출되는 값). 비밀키는 Supabase Edge 비밀값에만 둔다.
+SINGLES_PORTONE_STORE_ID = "store-9985e080-ae9c-4e43-bdf3-f2456079f445"
+SINGLES_PORTONE_IDENTITY_CHANNEL_KEY = "channel-key-6829ef26-4829-4402-9dbe-4b6d3b5b4a15"
 # TURNSTILE_SECRET_KEY remains a Worker secret. TURNSTILE_SITE_KEY is optional public metadata and is not set until a widget is provisioned.
 
 [version_metadata]

@@ -32,8 +32,13 @@ export function loadMySecondaryFeatures(){
   ]);
   return startPromise;
 }
+function hasVerifiedMySession(){
+  // My app.js exposes the already verified Supabase session; a guest
+  // should not download eight member-only feature modules before auth redirect.
+  return window.EKODI_MY_AUTH?.isSignedIn?.()===true;
+}
 function scheduleIdleLoad(){
-  const run=()=>void loadMySecondaryFeatures();
+  const run=()=>{if(hasVerifiedMySession())void loadMySecondaryFeatures();};
   if('requestIdleCallback' in window){
     window.requestIdleCallback(run,{timeout:1500});
   }else{
@@ -41,18 +46,24 @@ function scheduleIdleLoad(){
   }
 }
 function scheduleAfterLoad(){
+  if(!hasVerifiedMySession())return;
   if(document.readyState==='complete')scheduleIdleLoad();
   else window.addEventListener('load',scheduleIdleLoad,{once:true});
 }
 function shouldLoadNow(){
   return ['#account','#money','#personal-brand','#recommendations'].includes(location.hash);
 }
-window.addEventListener('hashchange',()=>{if(shouldLoadNow())void loadMySecondaryFeatures()});
+window.addEventListener('hashchange',()=>{if(hasVerifiedMySession()&&shouldLoadNow())void loadMySecondaryFeatures()});
 document.addEventListener('click',event=>{
   const target=event.target instanceof Element?event.target:null;
-  if(target?.closest('[data-finance-open],a[href="#account"],a[href="#money"],a[href="#personal-brand"],a[href="#recommendations"]')){
+  if(hasVerifiedMySession()&&target?.closest('[data-finance-open],a[href="#account"],a[href="#money"],a[href="#personal-brand"],a[href="#recommendations"]')){
     void loadMySecondaryFeatures();
   }
 },{capture:true,passive:true});
-if(shouldLoadNow())void loadMySecondaryFeatures();
+window.addEventListener('ekodi:my-session',event=>{
+  if(event?.detail?.signedIn!==true||!hasVerifiedMySession())return;
+  if(shouldLoadNow())void loadMySecondaryFeatures();
+  else scheduleAfterLoad();
+});
+if(hasVerifiedMySession()&&shouldLoadNow())void loadMySecondaryFeatures();
 scheduleAfterLoad();

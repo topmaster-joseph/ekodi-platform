@@ -28,6 +28,7 @@
 const EKODI_IDENTITY_API='https://renzehysxirjilvdxacv.supabase.co/functions/v1/identity-api';
 const EKODI_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const EKODI_AUTH_URL='https://ekodi.kr/auth/';
+const EKODI_SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const DEFAULT_INSTRUCTOR_EMAILS=['topmaster.joseph@gmail.com','joseph@ekodi.kr'];
 export function instructorEmails(env){
   const raw=String(env?.EDU_INSTRUCTOR_EMAILS||'').split(',').map(v=>v.trim().toLowerCase()).filter(v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v));
@@ -157,7 +158,7 @@ function lockPage({message='',configured=true,course='',backHref=''}){
     '<body class="lv gate-body" data-ekodi-ui="USER" data-live-surface="gate"><main class="gate" id="gateMain">'+
     '<section class="gate-card" aria-labelledby="gateTitle"><p class="eyebrow">PREMIUM STUDIO · 강사 전용</p><h1 id="gateTitle">강사 노트 열기</h1>'+
     '<p class="meta">진행 멘트와 정답 해설은 강사로 등록된 에코디 계정으로 열립니다. 강의 화면과 발표 화면은 로그인 없이 쓸 수 있습니다.</p>'+
-    (configured?'<div class="gate-form"><button type="button" id="gateEkodi" class="btn btn-primary" data-auth="'+esc(EKODI_AUTH_URL)+'">에코디 계정으로 노트 열기</button>'+
+    (configured?'<div class="gate-form"><button type="button" id="gateEkodi" class="btn btn-primary" data-auth="'+esc(EKODI_AUTH_URL)+'" data-sb="'+esc(EKODI_SUPABASE_URL)+'" data-key="'+esc(EKODI_PUBLISHABLE_KEY)+'">에코디 계정으로 노트 열기</button>'+
       '<p class="meta" id="gateEkodiStatus" role="status"></p></div>'+
       '<details class="gate-legacy"><summary>공용 강사 비밀번호로 열기 (전환 기간)</summary>'+
       '<form method="post" action="" class="gate-form" autocomplete="on"><label class="field" for="gatePassword">강사 비밀번호</label>'+
@@ -269,7 +270,12 @@ export async function adminUnlock(request,env,{url=new URL(request.url),fetchImp
   if(token.length<16||token.length>4096)return reply({ok:false,code:'admin_token_required',message:'EKODI 최고관리자 로그인이 필요합니다.'},401);
   let session=null;
   try{
-    const r=await fetchImpl(env?.EDU_ADMIN_SESSION_URL||ADMIN_SESSION_URL,{headers:{authorization:'Bearer '+token,accept:'application/json'},cache:'no-store'});
+    // Same-zone Worker-to-Worker: a public fetch('https://ekodi.kr/api/session') fails as an intra-zone
+    // subrequest, so production verifies through the Control API service binding (as ai-control does).
+    const init={headers:{authorization:'Bearer '+token,accept:'application/json'},redirect:'manual'};
+    const r=typeof env?.CONTROL_API?.fetch==='function'
+      ?await env.CONTROL_API.fetch(new Request(ADMIN_SESSION_URL,{method:'GET',...init}))
+      :await fetchImpl(env?.EDU_ADMIN_SESSION_URL||ADMIN_SESSION_URL,{...init,cache:'no-store'});
     if(r.ok)session=await r.json().catch(()=>null);
     else if(r.status!==401&&r.status!==403)return reply({ok:false,code:'admin_session_unavailable',message:'관리자 인증 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'},502);
   }catch{return reply({ok:false,code:'admin_session_unavailable',message:'관리자 인증 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'},502);}

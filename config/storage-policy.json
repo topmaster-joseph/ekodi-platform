@@ -2,6 +2,8 @@
   "version": "1.0.0",
   "canonicalStore": "google_workspace_shared_drive",
   "canonicalDriveName": "EKODI",
+  "canonicalPrimaryAccountEmail": "joseph@ekodi.kr",
+  "personalAccountNotCanonical": true,
   "canonicalDriveIdSource": "wrangler.storage.toml:STORAGE_PRIMARY_SHARED_DRIVE_ID",
   "controlPlane": "ekodi.kr/storage",
   "credentialsSource": "storage_connections:AES-GCM encrypted OAuth refresh token",
@@ -118,5 +120,20 @@
       "temporary_staging",
       "web_mirror"
     ]
-  }
+  },
+  "canonicalSharedDriveApprovedAccounts": [
+    {
+      "email": "joseph@ekodi.kr",
+      "purpose": "canonical_workspace_steward"
+    },
+    {
+      "email": "topmaster.joseph@gmail.com",
+      "purpose": "approved_shared_drive_user"
+    },
+    {
+      "email": "ekodibiz@gmail.com",
+      "purpose": "approved_shared_drive_user"
+    }
+  ],
+  "sharedDriveMembershipSourceOfTruth": "Google Drive permissions.list; application configuration does not grant provider access"
 }

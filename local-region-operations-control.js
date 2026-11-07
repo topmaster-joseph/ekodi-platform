@@ -1,3 +1,4 @@
+import { cheonggyePublicApiHoldResponse } from './region-publication-hold.js';
 import { localRegionBySlug } from './local-region-registry.js';
 import { resolveRegionalAccess } from './regional-access-control.js';
 import { TENANT_ADMIN_CAPABILITIES } from './tenant-admin-policy.js';
@@ -752,6 +753,8 @@ async function handleLocalRegionProject(request,env,match){
 }
 
 export async function handleLocalRegionOperations(request,env){
+  const publicHold=cheonggyePublicApiHoldResponse(request);
+  if(publicHold)return publicHold;
   const url=new URL(request.url);
   const moduleMatch=url.pathname.match(/^\/api\/local-operations\/([a-z0-9-]+)\/modules\/([a-z0-9-]+)(?:\/(admin|actions))?$/);
   if(moduleMatch){

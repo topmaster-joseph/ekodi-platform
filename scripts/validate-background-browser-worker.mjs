@@ -11,8 +11,48 @@ const constitution=read('governance/constitution/constitution.json');
 const evidence=read('evidence/runtime/background-browser-worker/2026-09-22-initial-proof.json');
 const workerWorkflow=fs.readFileSync(path.join(root,'.github/workflows/ekodi-background-browser-worker.yml'),'utf8');
 const sharedRelease=fs.readFileSync(path.join(root,'.github/workflows/deploy-site-core.yml'),'utf8');
+const nativeUpdate=read('config/ekodi-native-browser-update-policy.json');
+const browserIndependence=read('config/ekodi-browser-independence.json');
+const nativeOnlyExecutor=fs.readFileSync(path.join(root,'scripts/ekodi-independent-browser.mjs'),'utf8');
+const nativeWorkerSource=fs.readFileSync(path.join(root,'scripts/ekodi-background-browser-worker.mjs'),'utf8');
+const nativeAgent=fs.readFileSync(path.join(root,'tools/ekodi-device-agent/windows/ekodi-device-agent.ps1'),'utf8');
 const failures=[];
 const fail=m=>failures.push(m);
+for(const requirement of [
+  "shouldBlockNativeTopLevelNavigation",
+  "await context.route('**/*'",
+  "req.isNavigationRequest()",
+  "req.frame().parentFrame()===null",
+  "blockedExternalNavigationCount:blockedExternalNavigations.length",
+  "context.on('page',opened"
+]) {
+  if(!nativeWorkerSource.includes(requirement))fail('native browser top-level network isolation marker missing: '+requirement);
+}
+if(nativeWorkerSource.includes("await page.route('**/*'"))fail('page-only routing cannot secure popup navigation');
+if(!nativeWorkerSource.includes("Promise.resolve().then(readTask).then(runTask)"))
+  fail('native browser task parser must use the redacted failure path');
+
+if(browserIndependence.policyId!=='EKODI-NATIVE-BROWSER-INDEPENDENCE-001'||
+   browserIndependence.owner!=='ekodi-orchestrator'||
+   browserIndependence.externalBrowser?.required!==false||
+   browserIndependence.externalBrowser?.automaticFallback!==false||
+   browserIndependence.externalBrowser?.paidSubscriptionRequired!==false||
+   browserIndependence.nativeRuntime?.cloudReadOnlyAvailableWithoutPairedPC!==true)
+  fail('EKODI native browser must remain independent of paid browsers or paired PCs');
+if(policy.provider?.externalBrowserServiceRequired!==false||
+   policy.provider?.externalProviderDefault!=='forbidden')
+  fail('native browser provider must not require paid external browser');
+for(const marker of ['planEkodiIndependentBrowser','executeEkodiIndependentBrowser',
+  'EKODI_NATIVE_AGENT_REQUIRED','EKODI_NATIVE_CLOUD_RUNTIME_REQUIRED',
+  'EKODI_NATIVE_BROWSER_EXECUTION_FAILED']) {
+  if(!nativeOnlyExecutor.includes(marker))fail('independent executor marker absent: '+marker);
+}
+
+if(nativeUpdate.policyId!=='EKODI-AGENT-AUTOUPDATE-001'||nativeUpdate.owner!=='ekodi-orchestrator')fail('native agent auto-update identity mismatch');
+if(nativeUpdate.rollout?.initialPercent!==25||nativeUpdate.pinning?.sha256Required!==true||nativeUpdate.pinning?.immutableCommitRequired!==true)fail('agent auto-update must be immutable, checksum verified and canary-limited');
+if(nativeUpdate.safety?.existingTransactionRollbackRequired!==true||nativeUpdate.safety?.interactiveAuthSessionBlocksUpdate!==true)fail('agent auto-update rollback and active auth hold must remain enforced');
+for(const required of ['Test-EkodiApprovedAgentManifest','Test-EkodiAgentCanaryMembership','Get-FileHash -LiteralPath $candidate -Algorithm SHA256','Invoke-AgentUpgradeTransaction -CandidatePath $candidate -DeferRestart','Invoke-EkodiAgentAutoUpdateIfApproved $config']) if(!nativeAgent.includes(required))fail('agent auto-update safety marker missing: '+required);
+
 
 if(policy.schemaVersion!==1||policy.policyId!=='EKODI-BROWSER-WORKER-001'||policy.status!=='enforced') fail('background browser worker policy identity/status mismatch');
 if(policy.owner!=='ekodi-orchestrator') fail('EKODI Orchestrator must own the browser worker');

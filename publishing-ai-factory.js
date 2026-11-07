@@ -1,4 +1,6 @@
 import { buildEpub } from './publishing-ai-epub.js';
+import { QUALITY_RULES, fixForeignScript, polishChapter } from './publishing-ai-quality.js';
+import { releaseBook, journalTick } from './publishing-ai-release.js';
 // PUBLISHING-AI-WEEKLY-001 — 주 1권 "AI 협업 초안 · 저자 감수" 원고 공장.
 //
 // 원칙
@@ -8,16 +10,25 @@ import { buildEpub } from './publishing-ai-epub.js';
 //   공개 판매·외부 노출은 기존 승인 절차(판권·판본 확정, 계약, 서점 출판 확정)를 그대로 거친다.
 // - 표기: 모든 책에 "AI 협업 초안 · 저자 감수"를 판권 정보로 남긴다.
 // - 스케줄: 출판 워커의 하나뿐인 일일 예약 작업에서 실행한다(별도 스케줄러 없음).
+// - 무료 AI 자동 전환(PUBLISHING-AI-VIA-CONTROL-001): 초안은 Workers AI(공용 장부) 먼저, 한도가 차면 AI 관리 장치의
+//   무료 AI(Gemini·Groq·OpenRouter 등)로 이어 쓴다. 편집은 한국어가 자연스러운 AI 관리 장치 쪽을 먼저 쓴다. 유료 전환 없음.
+// - 주 기준: 월요일 00:00 UTC(09:40 KST 실행 기준 월요일)에 새 책을 기획한다.
 
 // 단계별 무료 모델(Workers AI). 단가는 뉴런/토큰(Workers AI 단가표 기준, 확인필요: 단가 변경 시 갱신).
 export const MODELS = Object.freeze({
   draft: { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', in: 26668 / 1e6, out: 204805 / 1e6 },
-  edit: { id: '@cf/google/gemma-3-12b-it', in: 31371 / 1e6, out: 50560 / 1e6 },
+  // 2026-11-04 운영 확인: 이 계정은 Gemma 3 사용 불가(5018) → 편집도 Llama 3.3 70B로(편집 지시문으로 역할 분리)
+  edit: { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', in: 26668 / 1e6, out: 204805 / 1e6 },
   image: { id: '@cf/black-forest-labs/flux-1-schnell', perImage: 60 },
 });
 export const AI_FACTORY = Object.freeze({
   model: MODELS.draft.id,
-  dailyNeuronCap: 5000,              // 계정 무료 한도(일 10,000) 중 출판 몫. 나머지는 다른 서비스 몫.
+  // EKODI-WORKERS-AI-POOL-001: 계정 무료 한도(일 10,000, 00:00 UTC 초기화)를 서비스들이 하나의 공용 장부
+  // (ekodi-auth.ai_provider_daily_budget 'cloudflare-workers-ai:neurons', 상한 9,500)에서 함께 쓴다.
+  // 출판은 초기화 직후(09:40 KST) 먼저 쓰되 하루 6,000을 넘지 않고, 남은 몫은 AI 관리 장치가 쓴다(부족하면 다른 무료 AI로 전환).
+  dailyNeuronCap: 6000,
+  sharedPoolCap: 9500,
+  sharedLedgerId: 'cloudflare-workers-ai:neurons',
   neuronsPerInputToken: MODELS.draft.in,
   neuronsPerOutputToken: MODELS.draft.out,
   chapters: 8,
@@ -39,6 +50,12 @@ export const GENRES = Object.freeze([
 ]);
 
 const now = () => new Date().toISOString();
+/** 월요일 기준 주 번호: 그 주 월요일 날짜(YYYYMMDD 정수). 예전 번호(에포크 주)와 겹치지 않는다. */
+export function mondayWeek(at = new Date()) {
+  const d = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return Number(d.toISOString().slice(0, 10).replaceAll('-', ''));
+}
 const day = (d = new Date()) => d.toISOString().slice(0, 10);
 const clean = (v, max = 4000) => String(v ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max);
 
@@ -56,22 +73,78 @@ function estimate(m, usage, prompt, text) {
   return inTok * m.in + outTok * m.out;
 }
 
-/** One free model call within the daily cap. Returns null when today's budget is spent. */
+// 공용 장부에서 원자적으로 예약하고(넘으면 거절), 실제 사용량으로 정산한다. 장부가 없으면 안전하게 쓰지 않는다.
+async function reservePool(env, amount) {
+  const db = env.AI_LEDGER_DB; if (!db?.prepare) return null;
+  const d = day(), t = now(), id = AI_FACTORY.sharedLedgerId;
+  await db.prepare('INSERT OR IGNORE INTO ai_provider_daily_budget (provider_id, usage_date, call_count, updated_at) VALUES (?, ?, 0, ?)').bind(id, d, t).run();
+  const r = await db.prepare('UPDATE ai_provider_daily_budget SET call_count = call_count + ?, updated_at = ? WHERE provider_id = ? AND usage_date = ? AND call_count + ? <= ?')
+    .bind(amount, t, id, d, amount, AI_FACTORY.sharedPoolCap).run();
+  return Number(r?.meta?.changes ?? r?.changes ?? 0) > 0 ? { day: d, amount } : null;
+}
+async function settlePool(env, reservation, actual) {
+  if (!reservation || !env.AI_LEDGER_DB?.prepare) return;
+  const delta = Math.ceil(actual) - reservation.amount; if (!delta) return;
+  await env.AI_LEDGER_DB.prepare('UPDATE ai_provider_daily_budget SET call_count = MAX(0, call_count + ?), updated_at = ? WHERE provider_id = ? AND usage_date = ?')
+    .bind(delta, now(), AI_FACTORY.sharedLedgerId, reservation.day).run();
+}
+
+/** One free model call within the daily caps (publishing share + shared account pool). Returns null when the budget is spent. */
 export async function generate(env, system, prompt, maxTokens, stage = 'draft') {
   const db = env.PUBLISH_DB, m = MODELS[stage] || MODELS.draft;
-  const worst = (system.length + prompt.length) / 1.5 * m.in + maxTokens * m.out;
+  const worst = Math.ceil((system.length + prompt.length) / 1.5 * m.in + maxTokens * m.out);
   if ((await usedToday(db)) + worst > AI_FACTORY.dailyNeuronCap) return null;
-  const out = await env.AI.run(m.id, { messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: stage === 'edit' ? 0.5 : 0.8 });
-  const text = String(out?.response ?? out?.result?.response ?? '').trim();
-  await addUsage(db, estimate(m, out?.usage, system + prompt, text));
+  const hold = await reservePool(env, worst); if (!hold) return null;
+  let out;
+  try { out = await env.AI.run(m.id, { messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: stage === 'edit' ? 0.5 : 0.8 });
+  } catch (e) { await settlePool(env, hold, 0); throw e; }
+  // Workers AI는 모델이 JSON을 내면 response를 이미 객체로 돌려줄 때가 있다 → 문자열로 되돌린다.
+  const raw = out?.response ?? out?.result?.response ?? '';
+  const text = (typeof raw === 'string' ? raw : JSON.stringify(raw)).trim();
+  const used = estimate(m, out?.usage, system + prompt, text);
+  await addUsage(db, used); await settlePool(env, hold, used);
   return text;
+}
+
+let tally = {}; // 오늘 실행에서 AI별 호출 수(실행 기록용)
+const BUDGET_CODES = new Set(['daily_cap_reached', 'no_free_provider', 'all_free_providers_unavailable']);
+let breaker = { fails: 0, off: false, reason: '' };
+export function resetControlBreaker() { breaker = { fails: 0, off: false, reason: '' }; }
+export function controlBreakerState() { return { ...breaker }; }
+/** 글 한 번: Workers AI(공용 장부)와 AI 관리 장치의 무료 AI를 단계에 맞는 순서로 시도한다. 둘 다 안 되면 null(다음 날로). */
+export async function writeText(env, system, prompt, maxTokens, stage = 'draft') {
+  const viaControl = async () => {
+    if (breaker.off || typeof env.AI_CONTROL?.write !== 'function') return null;
+    let reason = '';
+    try {
+      const r = await env.AI_CONTROL.write({ system, prompt, maxTokens, purpose: 'publishing-' + stage });
+      if (r?.ok && typeof r.text === 'string' && r.text.trim()) { breaker.fails = 0; tally[r.provider || 'control'] = (tally[r.provider || 'control'] || 0) + 1; return r.text.trim(); }
+      if (BUDGET_CODES.has(r?.code)) return null; // 무료 몫 소진은 고장이 아니다
+      reason = String(r?.code || 'empty_answer');
+    } catch (e) { reason = String(e?.message || e).slice(0, 120); }
+    // 자동 차단(PUBLISHING-AI-BREAKER-001): 연속 3번 고장이면 오늘 실행에서는 연결을 끊고 Workers AI 혼자 쓴다. 다음 실행 때 다시 시험한다.
+    if (++breaker.fails >= 3) { breaker.off = true; breaker.reason = reason; }
+    return null;
+  };
+  let failure = null;
+  const viaWorkers = async () => {
+    try { const t = await generate(env, system, prompt, maxTokens, stage); if (t !== null) tally['workers-ai'] = (tally['workers-ai'] || 0) + 1; return t; }
+    catch (e) { failure = e; return null; }
+  };
+  const order = stage === 'edit' ? [viaControl, viaWorkers] : [viaWorkers, viaControl];
+  for (const run of order) { const t = await run(); if (t !== null && t !== '') return t; }
+  if (failure) throw failure; // 한도 문제가 아닌 실제 오류는 실행 기록에 남긴다
+  return null;
 }
 
 /** One free illustration (no text in image). Returns base64 JPEG or null when today's budget is spent. */
 export async function illustrate(env, prompt) {
   const db = env.PUBLISH_DB;
   if ((await usedToday(db)) + MODELS.image.perImage > AI_FACTORY.dailyNeuronCap) return null;
-  const out = await env.AI.run(MODELS.image.id, { prompt: String(prompt).slice(0, 1800), steps: 4 });
+  const hold = await reservePool(env, MODELS.image.perImage); if (!hold) return null;
+  let out;
+  try { out = await env.AI.run(MODELS.image.id, { prompt: String(prompt).slice(0, 1800), steps: 4 }); }
+  catch (e) { await settlePool(env, hold, 0); throw e; }
   await addUsage(db, MODELS.image.perImage);
   return typeof out?.image === 'string' ? out.image : null;
 }
@@ -79,7 +152,8 @@ export async function illustrate(env, prompt) {
 const SYSTEM = `당신은 EKODI BOOKS의 한국어 원고 집필 보조자입니다. 저자 ${AI_FACTORY.author}의 감수를 받을 초안을 씁니다.
 규칙: 사실이 확실하지 않은 수치·인용·인명·출처는 만들지 말고 [확인필요]로 표시합니다. 실존 인물의 말을 지어내지 않습니다.
 성경 인용은 장절만 표기하고 본문은 저자가 확인하도록 [본문확인]을 붙입니다. 의료·법률·투자 조언은 일반 정보로만 씁니다.
-과장 광고 문구, 혐오·차별 표현을 쓰지 않습니다. 결과는 요청한 형식만 출력합니다.`;
+과장 광고 문구, 혐오·차별 표현을 쓰지 않습니다. 결과는 요청한 형식만 출력합니다.
+${QUALITY_RULES}`;
 
 // 베스트셀러 문장 기준(편집 단계에서 적용). 국내 실용·에세이 베스트셀러의 공통 문법을 정리한 편집 지침이다.
 export const CRAFT = `편집 기준(반드시 지킬 것):
@@ -92,32 +166,40 @@ export const CRAFT = `편집 기준(반드시 지킬 것):
 7) 같은 표현 반복·설교조·과장 금지. [확인필요]·[본문확인] 표시는 지우지 말고 그대로 둔다.`;
 
 function parseJson(text) {
-  const m = /\{[\s\S]*\}/.exec(String(text || ''));
-  try { return m ? JSON.parse(m[0]) : null; } catch { return null; }
+  const t = String(text || '').replace(/```(?:json)?/gi, '');
+  const start = t.indexOf('{'), end = t.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try { return JSON.parse(t.slice(start, end + 1)); } catch { return null; }
 }
 
 /** Pick this week's genre (rotation, never the same as last week's) and plan a book. */
 export async function planWeeklyBook(env, at = new Date()) {
   const db = env.PUBLISH_DB;
   const recent = (await db.prepare('SELECT genre, title FROM publishing_ai_books ORDER BY created_at DESC LIMIT 12').all()).results || [];
-  const week = Math.floor(at.getTime() / (7 * 864e5));
-  let genre = GENRES[week % GENRES.length];
-  if (recent[0]?.genre === genre.id) genre = GENRES[(week + 1) % GENRES.length];
+  const week = mondayWeek(at);
+  const turn = Math.floor((Date.UTC(Math.floor(week / 1e4), Math.floor(week / 100) % 100 - 1, week % 100) / 864e5 - 4) / 7);
+  let genre = GENRES[turn % GENRES.length];
+  if (recent[0]?.genre === genre.id) genre = GENRES[(turn + 1) % GENRES.length];
   const avoid = recent.map(r => r.title).filter(Boolean).slice(0, 12).join(' / ') || '없음';
   const prompt = `분야: ${genre.label}\n독자: ${genre.audience}\n문체: ${genre.style}\n분량: ${AI_FACTORY.chapters}장, 장당 약 ${AI_FACTORY.chapterChars}자(전자책 소책자)\n이미 낸 제목(겹치지 않게): ${avoid}\n
 국내 전자책 독자가 검색해 찾을 만하고 오래 팔릴 주제를 하나 정해 아래 JSON 하나만 출력하세요.
 {"title":"책 제목","subtitle":"부제","keywords":["검색어 5개"],"pitch":"소개 2문장","chapters":[{"title":"장 제목","summary":"장 요지 1~2문장"}]}
 chapters는 정확히 ${AI_FACTORY.chapters}개.`;
-  const text = await generate(env, SYSTEM, prompt, 1200);
-  if (text === null) return { status: 'budget_wait' };
-  const plan = parseJson(text);
-  if (!plan?.title || !Array.isArray(plan.chapters) || plan.chapters.length < 3) return { status: 'plan_invalid' };
+  let plan = null;
+  for (const stage of ['draft', 'edit']) { // 형식이 틀리면 다른 무료 모델로 한 번 더
+    const text = await writeText(env, SYSTEM, prompt, 1600, stage);
+    if (text === null) return { status: 'budget_wait' };
+    plan = parseJson(text);
+    if (plan?.title && Array.isArray(plan.chapters) && plan.chapters.length >= 3) break;
+    plan = null;
+  }
+  if (!plan) return { status: 'plan_invalid' };
   const id = crypto.randomUUID(), t = now();
-  const chapters = plan.chapters.slice(0, AI_FACTORY.chapters).map((c, i) => ({ number: i + 1, title: clean(c.title, 120) || `${i + 1}장`, summary: clean(c.summary, 400) }));
+  const chapters = plan.chapters.slice(0, AI_FACTORY.chapters).map((c, i) => ({ number: i + 1, title: clean(fixForeignScript(c.title).replaceAll('[확인필요]', ''), 120) || `${i + 1}장`, summary: clean(fixForeignScript(c.summary).replaceAll('[확인필요]', ''), 400) }));
   const meta = { subtitle: clean(plan.subtitle, 160), keywords: (plan.keywords || []).map(k => clean(k, 40)).slice(0, 8), pitch: clean(plan.pitch, 600), genre: genre.label, audience: genre.audience, style: genre.style, disclosure: AI_FACTORY.disclosure, author: AI_FACTORY.author, publisher: AI_FACTORY.publisher };
   await db.batch([
     db.prepare('INSERT INTO publishing_ai_books (id, week, genre, title, plan_json, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .bind(id, week, genre.id, clean(plan.title, 160), JSON.stringify(meta), 'drafting', t, t),
+      .bind(id, week, genre.id, clean(fixForeignScript(plan.title).replaceAll('[확인필요]', ''), 160), JSON.stringify(meta), 'drafting', t, t),
     ...chapters.map(c => db.prepare('INSERT INTO publishing_ai_chapters (book_id, number, title, summary, body, status, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .bind(id, c.number, c.title, c.summary, '', 'pending', t)),
   ]);
@@ -125,7 +207,7 @@ chapters는 정확히 ${AI_FACTORY.chapters}개.`;
 }
 
 /** Draft the next pending chapter of the active book. */
-export async function draftNextChapter(env) {
+export async function draftNextChapter(env, deadline = Infinity) {
   const db = env.PUBLISH_DB;
   const book = await db.prepare("SELECT * FROM publishing_ai_books WHERE status='drafting' ORDER BY created_at LIMIT 1").first();
   if (!book) return { status: 'idle' };
@@ -139,18 +221,29 @@ export async function draftNextChapter(env) {
   const prompt = `책: ${book.title} — ${meta.subtitle || ''}\n분야: ${meta.genre}\n독자: ${meta.audience}\n문체: ${meta.style}\n목차:\n${toc}\n
 이번 장: ${ch.number}. ${ch.title}\n요지: ${ch.summary}\n
 이 장의 본문을 약 ${AI_FACTORY.chapterChars}자로 쓰세요. 소제목 2~4개(### 로 시작), 짧은 문단, 장 끝에 "생각해 볼 질문" 2개. 제목 줄은 쓰지 마세요.`;
-  // 1차: 초안(큰 모델) → 2차: 베스트셀러 편집 기준으로 다시 쓰기(한국어 문장이 자연스러운 모델) → 3차: 삽화
-  let text = (await db.prepare('SELECT body FROM publishing_ai_drafts WHERE book_id=? AND number=?').bind(book.id, ch.number).first())?.body || '';
-  if (!text) {
-    text = await generate(env, SYSTEM, prompt, 3800, 'draft');
-    if (text === null) return { status: 'budget_wait' };
-    await db.prepare('INSERT OR REPLACE INTO publishing_ai_drafts (book_id, number, body, created_at) VALUES (?, ?, ?, ?)').bind(book.id, ch.number, clean(text, 20000), now()).run();
+  // 목표 분량까지 나눠 쓴다: 부분마다 초안 → 베스트셀러 편집. 진행은 저장해 두고 한도에 걸리면 다음 날 이어 쓴다(최대 4부분).
+  const saved = (await db.prepare('SELECT body FROM publishing_ai_drafts WHERE book_id=? AND number=?').bind(book.id, ch.number).first())?.body || '';
+  let state = { parts: [] };
+  try { state = saved.startsWith('{') ? JSON.parse(saved) : { parts: saved ? [saved] : [] }; } catch {}
+  const target = AI_FACTORY.chapterChars;
+  const length = () => state.parts.join('\n\n').length;
+  while (length() < target * 0.9 && state.parts.length < 4) {
+    if (Date.now() > deadline) return { status: 'time_wait', chapter: ch.number };
+    const done = state.parts.join('\n\n');
+    const heads = (done.match(/^###\s+.+$/gm) || []).map(h => h.replace(/^###\s+/, '').trim());
+    const ask = state.parts.length === 0
+      ? `${prompt}\n이번에는 앞부분(소제목 1~2개)만 약 1,200자로 쓰세요. 장 끝 질문은 아직 쓰지 마세요.`
+      : `${prompt}\n지금까지 쓴 본문의 끝부분:\n${done.slice(-1500)}\n\n바로 이어서 새 소제목부터 약 1,200자를 더 쓰세요. 이미 쓴 소제목(${heads.join(' / ') || '없음'})과 같은 주제·문장을 다시 쓰지 마세요.${length() + 1300 >= target * 0.9 ? ' 이번이 마지막이니 장 끝에 "생각해 볼 질문" 2개로 마무리하세요.' : ''}`;
+    const part = await writeText(env, SYSTEM + '\n' + CRAFT, ask, 2000, 'draft');
+    if (part === null) return { status: 'budget_wait', chapter: ch.number };
+    const edited = await writeText(env, SYSTEM + '\n' + CRAFT, `다음은 「${book.title}」 ${ch.number}장 「${ch.title}」의 한 부분입니다. 문체: ${meta.style}. 독자: ${meta.audience}.\n편집 기준에 맞게 다듬어 본문만 출력하세요(분량 유지, 소제목은 ### 로).\n\n${part}`, 2200, 'edit');
+    state.parts.push(clean(edited !== null && edited.length > part.length * 0.6 ? edited : part, 8000));
+    await db.prepare('INSERT OR REPLACE INTO publishing_ai_drafts (book_id, number, body, created_at) VALUES (?, ?, ?, ?)').bind(book.id, ch.number, JSON.stringify(state), now()).run();
+    if (edited === null) return { status: 'budget_wait', chapter: ch.number };
   }
-  const edited = await generate(env, SYSTEM + '\n' + CRAFT, `다음은 「${book.title}」 ${ch.number}장 「${ch.title}」 초안입니다. 문체: ${meta.style}. 독자: ${meta.audience}.\n편집 기준에 맞게 전체를 다시 써서 본문만 출력하세요(분량 유지, 소제목은 ### 로).\n\n${text}`, 4200, 'edit');
-  if (edited === null) return { status: 'budget_wait' };
-  const finalText = edited.length > text.length * 0.6 ? edited : text; // 편집이 크게 줄면 초안 유지
+  const finalText = polishChapter(state.parts.join('\n\n'), { title: ch.title, summary: ch.summary, genre: book.genre });
   await db.prepare("UPDATE publishing_ai_chapters SET body=?, status='drafted', updated_at=? WHERE book_id=? AND number=?")
-    .bind(clean(finalText, 20000), now(), book.id, ch.number).run();
+    .bind(clean(finalText, 30000), now(), book.id, ch.number).run();
   await chapterIllustration(env, book, meta, ch).catch(() => null);
   return { status: 'drafted', id: book.id, chapter: ch.number };
 }
@@ -168,7 +261,7 @@ async function chapterIllustration(env, book, meta, ch) {
   const db = env.PUBLISH_DB;
   const have = await db.prepare("SELECT 1 FROM publishing_ai_images WHERE book_id=? AND number=?").bind(book.id, ch.number).first();
   if (have) return;
-  const scene = await generate(env, 'You write one-sentence English image prompts. Output only the sentence.', `Describe one simple, symbolic scene (no text, no letters, no logos, no real people, no famous characters) for a Korean book chapter titled "${ch.title}" about: ${ch.summary}`, 80, 'edit');
+  const scene = await writeText(env, 'You write one-sentence English image prompts. Output only the sentence.', `Describe one simple, symbolic scene (no text, no letters, no logos, no real people, no famous characters) for a Korean book chapter titled "${ch.title}" about: ${ch.summary}`, 80, 'edit');
   if (!scene) return;
   const image = await illustrate(env, `${scene}. ${ART[book.genre] || ART['self-growth']}. no text, no watermark.`);
   if (!image) return;
@@ -176,23 +269,57 @@ async function chapterIllustration(env, book, meta, ch) {
     .bind(book.id, ch.number, 'image/jpeg', image, clean(scene, 400), now()).run();
 }
 
+/** 감수 전(AI 초안 그대로인) 장에 품질 보정을 적용한다. 저자가 고친 장(edited)은 건드리지 않는다. 바뀐 장 수를 돌려준다. */
+export async function tidyDraftedChapters(env) {
+  const db = env.PUBLISH_DB;
+  const rows = (await db.prepare(`SELECT c.book_id, c.number, c.title, c.summary, c.body, c.status, b.genre FROM publishing_ai_chapters c
+    JOIN publishing_ai_books b ON b.id = c.book_id WHERE b.status IN ('drafting','author_review') AND c.status IN ('drafted','pending')`).all()).results || [];
+  let changed = 0;
+  for (const r of rows) {
+    const summary = clean(fixForeignScript(r.summary).replaceAll('[확인필요]', ''), 400);
+    const body = r.status === 'drafted' && r.body ? polishChapter(r.body, { title: r.title, summary, genre: r.genre }) : r.body;
+    if (body === r.body && summary === r.summary) continue;
+    await db.batch([
+      db.prepare('UPDATE publishing_ai_chapters SET body=?, summary=?, updated_at=? WHERE book_id=? AND number=? AND status=?').bind(clean(body, 30000), summary, now(), r.book_id, r.number, r.status),
+      db.prepare("INSERT INTO publishing_workflow_audit (id,project_id,actor_user_id,action,from_stage,to_stage,revision,details_json,created_at) VALUES (?, ?, 'system:ai-factory', 'ai_chapter_quality_polished', NULL, NULL, 0, ?, ?)")
+        .bind(crypto.randomUUID(), 'ai:' + r.book_id, JSON.stringify({ chapter: r.number, before: String(r.body || '').length, after: String(body || '').length }), now()),
+    ]);
+    changed++;
+  }
+  return changed;
+}
+
 /** Daily tick from the publishing worker's single scheduled handler. */
 export async function aiFactoryTick(env, at = new Date()) {
-  if (env?.PUBLISHING_AI_FACTORY_ENABLED !== 'true' || !env?.AI || !env?.PUBLISH_DB) return { status: 'disabled' };
-  const week = Math.floor(at.getTime() / (7 * 864e5));
-  const thisWeek = await env.PUBLISH_DB.prepare('SELECT id FROM publishing_ai_books WHERE week=? LIMIT 1').bind(week).first();
+  if (env?.PUBLISHING_AI_FACTORY_ENABLED !== 'true' || !env?.AI || !env?.PUBLISH_DB || !env?.AI_LEDGER_DB) return { status: 'disabled' };
+  const week = mondayWeek(at);
+  const monday = `${String(week).slice(0, 4)}-${String(week).slice(4, 6)}-${String(week).slice(6, 8)}T00:00:00.000Z`;
+  // 예전 번호 방식으로 기획된 책도 이번 주(월요일 이후 생성)면 같은 주로 본다 → 한 주 한 권.
+  const thisWeek = await env.PUBLISH_DB.prepare('SELECT id FROM publishing_ai_books WHERE week=? OR created_at >= ? LIMIT 1').bind(week, monday).first();
   const steps = [];
-  if (!thisWeek) steps.push(await planWeeklyBook(env, at));
-  for (let i = 0; i < 4; i++) { // 하루 최대 4장, 무료 상한을 만나면 멈춤
-    const r = await draftNextChapter(env); steps.push(r);
-    if (r.status !== 'drafted') break;
-  }
+  const deadline = Date.now() + 11 * 60 * 1000; // 예약 실행 시간 한도(15분) 안에서 마치고, 남은 부분은 저장해 다음 날 이어 쓴다
+  tally = {};
+  resetControlBreaker();
+  try {
+    const tidied = await tidyDraftedChapters(env); if (tidied) steps.push({ status: 'tidied', chapters: tidied });
+    if (!thisWeek) steps.push(await planWeeklyBook(env, at));
+    for (let i = 0; i < 12; i++) { // 무료 한도·시간 한도를 만나면 멈춤
+      const r = await draftNextChapter(env, deadline); steps.push(r);
+      if (r.status === 'ready_for_review') continue; // 한 권을 마치면 남은 한도로 다음 책을 이어 쓴다
+      if (r.status !== 'drafted') break;
+    }
+  } catch (e) { steps.push({ status: 'error', message: String(e?.message || e).slice(0, 300) }); } // 실패 원인을 실행 기록에 남긴다
+  try { const posts = await journalTick(env.PUBLISH_DB, (s, p, n, st) => writeText(env, s, p, n, st)); if (posts.length) steps.push({ status: 'journal', posts }); }
+  catch (e) { steps.push({ status: 'journal_error', message: String(e?.message || e).slice(0, 200) }); }
+  steps.push({ status: 'providers', calls: tally });
+  if (breaker.off) steps.push({ status: 'control_disconnected', reason: breaker.reason, fallback: 'workers-ai-only' });
+  await env.PUBLISH_DB.prepare('INSERT INTO publishing_ai_runs (at, result_json) VALUES (?, ?)').bind(now(), JSON.stringify(steps).slice(0, 2000)).run().catch(() => null);
   return { status: 'ok', steps };
 }
 
-async function epubFor(db, book) {
+async function epubFor(db, book, given = null) {
   const meta = JSON.parse(book.plan_json || '{}');
-  const chapters = (await db.prepare('SELECT number, title, body FROM publishing_ai_chapters WHERE book_id=? ORDER BY number').bind(book.id).all()).results || [];
+  const chapters = given || (await db.prepare('SELECT number, title, body FROM publishing_ai_chapters WHERE book_id=? ORDER BY number').bind(book.id).all()).results || [];
   const images = new Map(((await db.prepare('SELECT number, mime, data_b64 FROM publishing_ai_images WHERE book_id=?').bind(book.id).all()).results || []).map(r => [r.number, { mime: r.mime, b64: r.data_b64 }]));
   const bytes = buildEpub({ id: book.id, title: book.title, subtitle: meta.subtitle, author: meta.author || AI_FACTORY.author, publisher: meta.publisher || AI_FACTORY.publisher, disclosure: meta.disclosure || AI_FACTORY.disclosure, keywords: meta.keywords, pitch: meta.pitch },
     chapters, images, new Date(book.approved_at || book.updated_at));
@@ -201,7 +328,7 @@ async function epubFor(db, book) {
 }
 
 // ---- 감수 화면 API (출판 관리자·발행인만) --------------------------------------------
-export async function aiFactoryAdmin(db, req, path, user, role, json) {
+export async function aiFactoryAdmin(db, req, path, user, role, json, releaseEnv = {}) {
   if (!['publisher', 'admin'].includes(role)) return json(403, { ok: false, code: 'PUBLISHER_ONLY' });
   if (path === '/api/workflow/admin/ai-books' && req.method === 'GET') {
     const rows = (await db.prepare(`SELECT b.id, b.title, b.genre, b.status, b.created_at, b.plan_json,
@@ -211,7 +338,7 @@ export async function aiFactoryAdmin(db, req, path, user, role, json) {
     return json(200, { ok: true, books: rows.map(r => ({ id: r.id, title: r.title, genre: r.genre, status: r.status, createdAt: r.created_at, done: r.done, total: r.total, meta: JSON.parse(r.plan_json || '{}') })),
       budget: { usedToday: Number(usage?.neurons || 0), dailyCap: AI_FACTORY.dailyNeuronCap, paid: false } });
   }
-  const m = /^\/api\/workflow\/admin\/ai-books\/([0-9a-f-]{36})(?:\/(chapters\/(\d{1,2})|approve|epub|publish|images\/(\d{1,2})))?$/.exec(path);
+  const m = /^\/api\/workflow\/admin\/ai-books\/([0-9a-f-]{36})(?:\/(chapters\/(\d{1,2})|approve|epub|publish|release|images\/(\d{1,2})))?$/.exec(path);
   if (!m) return null;
   const book = await db.prepare('SELECT * FROM publishing_ai_books WHERE id=?').bind(m[1]).first();
   if (!book) return json(404, { ok: false, code: 'NOT_FOUND' });
@@ -248,6 +375,12 @@ export async function aiFactoryAdmin(db, req, path, user, role, json) {
         .bind(crypto.randomUUID(), 'ai:' + book.id, user.userId, JSON.stringify({ chapter: Number(m[3]) }), now()),
     ]);
     return json(200, { ok: true });
+  }
+  if (m[2] === 'release' && req.method === 'POST') {
+    // PUBLISHING-AI-RELEASE-001: 최고관리자 최종 검수 확인 → 출판(EPUB·서점 파일·자동 가격·저널 첫 글).
+    if (role !== 'admin') return json(403, { ok: false, code: 'SUPER_ADMIN_ONLY' });
+    const r = await releaseBook(releaseEnv, db, book, user, { writeText: (s, p, n, st) => writeText(releaseEnv, s, p, n, st), epubFor: (b, chapters) => epubFor(db, b, chapters) });
+    return json(r.status, r.data);
   }
   if (m[2] === 'approve' && req.method === 'POST') {
     const pending = await db.prepare("SELECT COUNT(*) AS n FROM publishing_ai_chapters WHERE book_id=? AND (status='pending' OR length(body) < 200)").bind(book.id).first();

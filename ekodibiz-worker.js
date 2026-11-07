@@ -1,4 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
+import { agencyApi, agencyStore } from './ekodibiz-ai-agency.js';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const MAX_GOAL_LENGTH = 4000;
@@ -331,6 +332,8 @@ export class RevenueStore extends DurableObject {
   async fetch(request) {
     const url = new URL(request.url);
     const storage = this.ctx.storage;
+    const agencyResponse = await agencyStore(request, storage);
+    if (agencyResponse) return agencyResponse;
 
     if (url.pathname === '/lead' && request.method === 'POST') {
       const lead = await request.json();
@@ -400,6 +403,50 @@ export class RevenueStore extends DurableObject {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const path = url.pathname.replace(/^\/ekodibiz(?=\/)/, '');
+    if (path.startsWith('/api/agency/')) return agencyApi(request, url, env);
+    // Historic links resolve to stable, role-specific subpaths. Never put the
+    // receipt secret or personal account identifier in a URL.
+    const agencyLegacy = {
+      '/ai-agency':'/ai-agency/apply',
+      '/ai-agency/':'/ai-agency/apply',
+      '/ai-agency-admin':'/ai-agency/admin',
+      '/ai-agency-admin/':'/ai-agency/admin'
+    };
+    if (Object.hasOwn(agencyLegacy, path)) {
+      if (request.method !== 'GET' && request.method !== 'HEAD') return json({error:'method_not_allowed'},405);
+      const destination=new URL(request.url);
+      destination.pathname=('/ekodibiz'+agencyLegacy[path]);
+      destination.search=''; // Old links must never forward private query parameters.
+      destination.hash='';
+      return Response.redirect(destination.toString(),308);
+    }
+    // Reuse one verified application bundle; no duplicate payment/contract apps.
+    const agencyAssets = {
+      '/ai-agency/apply':'/ai-agency.html', '/ai-agency/apply/':'/ai-agency.html',
+      '/ai-agency/university':'/ai-agency.html', '/ai-agency/university/':'/ai-agency.html',
+      '/ai-agency/individual':'/ai-agency.html', '/ai-agency/individual/':'/ai-agency.html',
+      '/ai-agency/admin':'/ai-agency-admin.html', '/ai-agency/admin/':'/ai-agency-admin.html',
+      '/ai-agency.js':'/ai-agency.js', '/ai-agency-admin.js':'/ai-agency-admin.js',
+      '/ai-agency-links.js':'/ai-agency-links.js'
+    };
+    if (Object.hasOwn(agencyAssets, path)) {
+      if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error:'method_not_allowed' }, 405);
+      if (!env.ASSETS) return new Response('Assets unavailable', { status:503, headers:securityHeaders() });
+      const assetUrl = new URL(request.url);
+      assetUrl.pathname = agencyAssets[path].endsWith('.html') ? agencyAssets[path].slice(0, -5) : agencyAssets[path];
+      assetUrl.search = '';
+      const response = withSecurity(await env.ASSETS.fetch(new Request(assetUrl, request)));
+      const headers = new Headers(response.headers);
+      headers.set('content-security-policy', "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' https://js.tosspayments.com https://ekodi.kr; connect-src 'self' https://*.tosspayments.com https://*.toss.im; frame-src https://*.tosspayments.com https://*.toss.im; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://*.tosspayments.com");
+      headers.set('cache-control', 'no-store');
+      if (path.startsWith('/ai-agency/admin') || path.startsWith('/ai-agency/university') ||
+          path.startsWith('/ai-agency-admin')) headers.set('x-robots-tag', 'noindex, nofollow');
+      headers.set('x-ekodibiz-agency-route',path.startsWith('/ai-agency/admin')?'operator':
+        path.startsWith('/ai-agency/university')?'university':
+        path.startsWith('/ai-agency/individual')?'individual':'application');
+      return new Response(request.method === 'HEAD' ? null : response.body, {status:response.status, statusText:response.statusText, headers});
+    }
     if (url.pathname === '/admin' || url.pathname === '/admin/') return Response.redirect('https://admin.ekodi.kr/?route=organization&source=biz.ekodi.kr', 307);
     if (url.pathname.startsWith('/api/')) return handleApi(request, url, env, ctx);
     if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error: 'method_not_allowed' }, 405);
@@ -410,5 +457,8 @@ export default {
 
   async scheduled(_event, env, ctx) {
     ctx.waitUntil(processSafeTasks(env));
+    ctx.waitUntil(storeFetch(env, '/agency/expire', {
+      method:'POST', headers:JSON_HEADERS, body:'{}'
+    }).catch((error) => console.warn('EKODIBIZ agency expiry sweep failed', error?.message || 'unknown')));
   }
 };
