@@ -31,8 +31,8 @@ test('CDP reader is invoked only on isolated task profile after owner-owned brow
   const region=source.slice(begin,end<0?undefined:end);
   const portFile=region.indexOf("$portFile = Join-Path $TaskProfile 'DevToolsActivePort'");
   const wait=region.indexOf("if (-not (Test-Path -LiteralPath $portFile)) { throw 'cdp_port_file_missing' }");
-  const read=region.indexOf('$port = Read-EkodiOwnedDevToolsPort $portFile');
-  assert.ok(portFile>0 && wait>portFile && read>wait);
+  const readPosition=region.indexOf('$port = Read-EkodiOwnedDevToolsPort $portFile');
+  assert.ok(portFile>0 && wait>portFile && readPosition>wait);
   assert.match(region,/--user-data-dir=\$TaskProfile/);
   assert.doesNotMatch(region,/\$portLines = @\(Get-Content -LiteralPath \$portFile/);
   const owner=source.slice(source.indexOf('function Find-EkodiOwnedProfileBrowsers('),begin);
