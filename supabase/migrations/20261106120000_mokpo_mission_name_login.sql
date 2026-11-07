@@ -19,6 +19,10 @@ returns jsonb language sql stable security definer set search_path = public as $
   from public.organization_event_rosters r join public.tenants t on t.id = r.tenant_id
   where t.slug = lower(trim(p_slug)) and t.status = 'active' and r.event_key = lower(trim(p_event));
 $$;
+-- Preserve the exact current production ACL for this phone-masked public roster RPC.
+-- The source-public function remains publicly readable; no private viewer or member RPC is exposed.
+revoke all on function public.organization_event_roster_public(text,text) from public;
+grant execute on function public.organization_event_roster_public(text,text) to anon, authenticated;
 
 -- 서기/관리자: register or update a phone-login person. Password = last four digits of the phone (fixed).
 create or replace function public.organization_login_member_set(p_slug text, p_name text, p_phone text, p_role text)

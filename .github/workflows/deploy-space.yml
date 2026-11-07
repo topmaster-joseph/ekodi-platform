@@ -15,6 +15,9 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'test/space-noindex-preservation.test.mjs'
+      - 'bbq-cheonggye-site.js'
+      - 'test/bbq-cheonggye-site.test.mjs'
       - 'mission-activity-editor-api.js'
       - 'test/ekodimission-activity-editor.test.mjs'
       - 'supabase/migrations/20261103090000_mission_activity_inline_editor.sql'
@@ -38,6 +41,7 @@ on:
       - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
       - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
       - 'supabase/migrations/20260906006000_store_admin_routing.sql'
+      - 'supabase/migrations/20261108103000_bbqcheonggye_workspace.sql'
       - 'supabase/migrations/20260914095000_organization_subsite_operations.sql'
       - 'supabase/migrations/20261031123000_mokpo_presbytery_organization_tenants.sql'
       - 'supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql'
@@ -64,6 +68,9 @@ on:
     paths:
       - 'space/**'
       - 'space-worker.js'
+      - 'test/space-noindex-preservation.test.mjs'
+      - 'bbq-cheonggye-site.js'
+      - 'test/bbq-cheonggye-site.test.mjs'
       - 'mission-activity-editor-api.js'
       - 'test/ekodimission-activity-editor.test.mjs'
       - 'supabase/migrations/20261103090000_mission_activity_inline_editor.sql'
@@ -87,6 +94,7 @@ on:
       - 'supabase/migrations/20260906005000_store_user_site_provisioning.sql'
       - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
       - 'supabase/migrations/20260906006000_store_admin_routing.sql'
+      - 'supabase/migrations/20261108103000_bbqcheonggye_workspace.sql'
       - 'supabase/migrations/20260914095000_organization_subsite_operations.sql'
       - 'supabase/migrations/20261031123000_mokpo_presbytery_organization_tenants.sql'
       - 'supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql'
@@ -129,6 +137,9 @@ env:
   MOKPO_ROSTER_VIEWER_MIGRATION: supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql
   MOKPO_INLINE_ROLES_MIGRATION: supabase/migrations/20261106090000_mokpo_mission_inline_roles.sql
   MOKPO_NAME_LOGIN_MIGRATION: supabase/migrations/20261106120000_mokpo_mission_name_login.sql
+  BBQ_WORKSPACE_MIGRATION: supabase/migrations/20261108103000_bbqcheonggye_workspace.sql
+  BBQ_WORKSPACE_PINNED_BLOB: ca044387be75b2cfcff5d92881972ed59ac784fb
+  BBQ_DEV_PROJECT: lxcxwbdwwojjkgybbqii
 
 jobs:
   validate:
@@ -144,6 +155,9 @@ jobs:
         run: |
           set -euo pipefail
           node --check space-worker.js
+          node --test test/space-noindex-preservation.test.mjs
+          node --check bbq-cheonggye-site.js
+          node --test test/bbq-cheonggye-site.test.mjs
           node --check mission-activity-editor-api.js
           node --check space/ekodimission-activity-editor.js
           node --test test/ekodimission-activity-editor.test.mjs
@@ -174,6 +188,8 @@ jobs:
           grep -Fq "routeModel:['/{slug}','/{slug}/{service}']" space-worker.js
           grep -Fq 'memberNamespaceRequired:false' space-worker.js
           test -f deploy/manifests/space.worker.json
+          test -f "$BBQ_WORKSPACE_MIGRATION"
+          test "$(git hash-object "$BBQ_WORKSPACE_MIGRATION")" = "$BBQ_WORKSPACE_PINNED_BLOB"
           test -f supabase/migrations/20260906006000_store_admin_routing.sql
           grep -Fq 'store_admin_route_profile' supabase/migrations/20260906006000_store_admin_routing.sql
           grep -Fq 'store_public_storefront' supabase/migrations/20260909001000_public_storefront.sql
@@ -365,6 +381,69 @@ jobs:
 
           echo 'Space Supabase production schema contract verified through the Management API before Worker release.'
 
+      - name: Stage and verify approved BBQ store workspace before production
+        if: github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git hash-object "$BBQ_WORKSPACE_MIGRATION")" = "$BBQ_WORKSPACE_PINNED_BLOB"
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+          # Only data-plane registrations are provisioned. Never write a role or provider credential.
+          cat > "$temp_dir/proof.sql" <<'SQL'
+          select
+            (select count(*) = 1
+              from public.tenants t join public.stores s on s.tenant_id=t.id
+              join public.store_user_sites us on us.store_id=s.id
+              where t.slug='bbqcheonggye' and t.name='BBQ 무안청계점'
+                and t.kind='business' and t.settings->>'ownership'='customer'
+                and s.slug='bbq-muan-cheonggye' and s.name='BBQ 무안청계점'
+                and s.operating_space_slug='bbqcheonggye'
+                and us.status='active') as workspace_ready,
+            (select count(*) <= 1 from public.stores where operating_space_slug='bbqcheonggye') as unique_store_locator,
+            (select count(*) <= 1 from public.tenants where slug='bbqcheonggye') as unique_tenant_locator;
+          SQL
+          query_project() {
+            local project="$1" result_file="$2" code
+            jq -Rs '{query:.,read_only:true}' "$temp_dir/proof.sql" > "$temp_dir/query.json"
+            code=$(curl -sS --retry 2 --max-time 75 -o "$result_file" -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$project/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' --data-binary @"$temp_dir/query.json")
+            [ "$code" = 201 ] || { echo "Failed read-only DB readiness proof for $project (HTTP $code)"; exit 1; }
+          }
+          promote_project() {
+            local project="$1" code
+            jq -Rs '{query:.,read_only:false}' "$BBQ_WORKSPACE_MIGRATION" > "$temp_dir/migration.json"
+            code=$(curl -sS --retry 2 --max-time 75 -o "$temp_dir/migration-result.json" -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$project/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' --data-binary @"$temp_dir/migration.json")
+            [ "$code" = 201 ] || { echo "Guarded BBQ Workspace migration failed for $project (HTTP $code)"; exit 1; }
+          }
+          # A missing management credential cannot be turned into an unsecured browser/RPC write.
+          [ "${SUPABASE_SCHEMA_PREFLIGHT_MODE:-}" = management ] || {
+            echo "No authorized management credential for staged BBQ workspace provisioning."
+            exit 1
+          }
+          test -n "${SUPABASE_ACCESS_TOKEN:-}"
+          ! grep -Eiq '(insert[[:space:]]+into[[:space:]]+public\.(store_members|tenant_members|site_access_registry))' "$BBQ_WORKSPACE_MIGRATION"
+          for project in "$BBQ_DEV_PROJECT" "$SUPABASE_PROJECT_REF"; do
+            query_project "$project" "$temp_dir/before.json"
+            jq -e 'length == 1 and (.[0].unique_store_locator == true) and (.[0].unique_tenant_locator == true) ' "$temp_dir/before.json" >/dev/null
+            if ! jq -e '.[0].workspace_ready == true' "$temp_dir/before.json" >/dev/null; then
+              if [ "$project" = "$SUPABASE_PROJECT_REF" ]; then
+                test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+              fi
+              promote_project "$project"
+            fi
+            query_project "$project" "$temp_dir/after.json"
+            jq -e 'length == 1 and (.[0] | all(.[]; . == true))' "$temp_dir/after.json" >/dev/null
+            echo "BBQ customer workspace identity, tenant boundary and tenant ownership confirmed for $project."
+          done
+
       - name: Verify anonymous public projection RPC schema proof
         shell: bash
         env:
@@ -444,6 +523,52 @@ jobs:
             done
             exit 1
           fi
+      - name: Verify BBQ Cheonggye real apex storefront and admin boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          public_url='https://ekodi.kr/bbqcheonggye'
+          css_url='https://ekodi.kr/bbqcheonggye/assets/site.css'
+          admin_url='https://ekodi.kr/bbqcheonggye/admin/site'
+          ready=false
+          for attempt in $(seq 1 10); do
+            html_status=$(curl -sS --connect-timeout 5 --max-time 20 -D /tmp/bbq-live.headers -o /tmp/bbq-live.html -w '%{http_code}' "$public_url" || true)
+            css_status=$(curl -sS --connect-timeout 5 --max-time 20 -o /tmp/bbq-live.css -w '%{http_code}' "$css_url" || true)
+            if [ "$html_status" = 200 ] && [ "$css_status" = 200 ] &&
+               grep -Fq 'data-store-entity="bbqcheonggye"' /tmp/bbq-live.html &&
+               grep -Eiq '^x-ekodi-workspace:[[:space:]]*bbqcheonggye' /tmp/bbq-live.headers &&
+               grep -Fq '@media(max-width:560px)' /tmp/bbq-live.css; then
+              ready=true
+              break
+            fi
+            sleep 5
+          done
+          if [ "$ready" != true ]; then
+            echo "BBQ apex storefront failed: html=$html_status css=$css_status marker, route header and responsive CSS required."
+            exit 1
+          fi
+          grep -Eiq '^x-robots-tag:[[:space:]]*noindex' /tmp/bbq-live.headers || {
+            echo 'Unverified BBQ store data must remain noindex'; exit 1;
+          }
+          admin_status=$(curl -sS --connect-timeout 5 --max-time 20 -D /tmp/bbq-admin.headers -o /tmp/bbq-admin.html -w '%{http_code}' "$admin_url" || true)
+          case "$admin_status" in
+            200)
+              grep -Fq 'BBQ 무안청계점' /tmp/bbq-admin.html || {
+                echo 'Admin route returned 200 without BBQ store identity'; exit 1;
+              }
+              ! grep -Eiq 'sb_secret_|service_role_key|refresh_token[":][[:space:]]*"|access_token[":][[:space:]]*"' /tmp/bbq-admin.html || {
+                echo 'Admin guest HTML must never expose credentials'; exit 1;
+              }
+              ;;
+            301|302|303|307|308)
+              grep -Eiq '^location:[[:space:]]*https://ekodi.kr/auth/' /tmp/bbq-admin.headers || {
+                echo 'Admin sign-in must use canonical EKODI authentication'; exit 1;
+              }
+              ;;
+            401|403) echo 'Admin guest is denied protected data, as expected.' ;;
+            *) echo "BBQ admin route invalid HTTP $admin_status"; exit 1 ;;
+          esac
+          echo 'BBQ live apex root, verified responsive asset, privacy noindex and guest admin boundary PASS.'
       - name: Verify EKODI Mission production shell contract
         env:
           EKODI_MISSION_VERIFY_SCOPE: space
