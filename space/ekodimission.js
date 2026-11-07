@@ -1,4 +1,50 @@
 (()=>{
+
+  // Public, keyboard-operable content tabs. URLs retain the selected view on reload.
+  function mountMissionContentTabs(){
+    document.querySelectorAll('[data-mission-tabs]').forEach(group=>{
+      const buttons=[...group.querySelectorAll('[data-mission-tab]')];
+      const panels=[...group.querySelectorAll('[data-mission-tab-panel]')];
+      if(!buttons.length||buttons.length!==panels.length)return;
+      const groupName=group.dataset.missionTabs;
+      const values=new Set(buttons.map(item=>item.dataset.missionTab));
+      const activeFromUrl=()=>{
+        const hash=decodeURIComponent(location.hash.slice(1));
+        if(groupName==='home'&&hash==='mission-updates')return 'notices';
+        return values.has(hash)?hash:'saturday';
+      };
+      const show=(value)=>{
+        const selected=values.has(value)?value:'saturday';
+        for(const button of buttons){
+          const isActive=button.dataset.missionTab===selected;
+          button.setAttribute('aria-selected',String(isActive));
+          button.tabIndex=isActive?0:-1;
+        }
+        for(const panel of panels)panel.hidden=panel.dataset.missionTabPanel!==selected;
+      };
+      buttons.forEach((button,index)=>{
+        button.addEventListener('click',()=>{
+          const selected=button.dataset.missionTab;
+          show(selected);
+          if(location.hash!=='#'+selected)location.hash=selected;
+        });
+        button.addEventListener('keydown',event=>{
+          const keys=['ArrowRight','ArrowLeft','Home','End'];
+          if(!keys.includes(event.key))return;
+          event.preventDefault();
+          const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:
+            (index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;
+          buttons[next].focus();
+          buttons[next].click();
+        });
+      });
+      const sync=()=>show(activeFromUrl());
+      window.addEventListener('hashchange',sync);
+      window.addEventListener('popstate',sync);
+      sync();
+    });
+  }
+  mountMissionContentTabs();
 // SITE-EVENT-SHARE-001: canonical invitation copy; never duplicate the URL.
 function formatActivityShare(organization,activity,date,url,action='신청하기'){
   const clean=value=>String(value??'').replace(/[\r\n\t\u2028\u2029]+/g,' ').replace(/\s+/g,' ').trim();
