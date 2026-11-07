@@ -1,3 +1,4 @@
+import { lockLogin, unlockLogin, watchGoogleButton } from './login-lock.js?v=20261107-login-lock-1';
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const IDENTITY=`${SUPABASE_URL}/functions/v1/identity-api`;
@@ -130,6 +131,7 @@ function cancelledLoginTarget(){
 const $=id=>document.getElementById(id);
 const show=(id,on=true)=>$(id)?.classList.toggle('hide',!on);
 function notice(text,type=''){const el=$('authStatus');if(!el)return;el.textContent=text;el.className=`notice${type?` ${type}`:''}`;el.classList.remove('hide')}
+let googleWatch=null;
 let preopenedBridgeWindow=null;
 let resolvePreopenedBridge=null;
 const preopenedBridgeReady=PREOPENED_BRIDGE?new Promise(resolve=>{resolvePreopenedBridge=resolve}):Promise.resolve(null);
@@ -314,6 +316,7 @@ async function clearStaleSession(){
 }
 function showRetry(message){
   routing=false;
+  unlockLogin();
   $('serviceBadge').textContent='다시 시도';
   show('googleButtonHost',false);show('googleRetry',true);show('cancelSignedOut',true);
   notice(message,'error');
@@ -322,9 +325,10 @@ async function handleCredential(response,challenge){
   if(handlingCredential)return;
   if(!response?.credential){showRetry('Google 로그인이 완료되지 않았습니다. 다시 시도해 주세요.');return;}
   handlingCredential=true;
+  googleWatch?.settle();
   $('serviceBadge').textContent='확인 중';
   show('googleButtonHost',false);show('googleRetry',false);show('cancelSignedOut',false);
-  notice('Google 계정을 확인하고 있습니다.');
+  lockLogin('Google','Google 로그인 중입니다. 계정을 확인한 뒤 원래 보던 화면으로 돌아갑니다.');
   try{
     const proof=await identity('/google/exchange',{method:'POST',body:JSON.stringify({credential:response.credential,nonce:challenge.nonce})});
     const {error}=await timeout(sb.auth.verifyOtp({token_hash:proof.tokenHash,type:proof.type||'email'}),10000,'verify_timeout');
@@ -365,6 +369,7 @@ async function renderGoogle(){
     if(SINGLES_CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     if(ADMIN_TOOL_CHOOSE_ACCOUNT)googleButtonOptions.use_fedcm_for_button=false;
     window.google.accounts.id.renderButton(host,googleButtonOptions);
+    googleWatch=watchGoogleButton(host,()=>handlingCredential)||googleWatch;
     if(CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(CHURCH_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(SINGLES_CHOOSE_ACCOUNT)show('cancelSignedOut',true);

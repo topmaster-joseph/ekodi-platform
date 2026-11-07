@@ -1,5 +1,6 @@
+import { lockLogin, unlockLogin, watchGoogleButton } from './login-lock.js?v=20261107-login-lock-1';
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-import { identityLabel, renderLinkButtons, policyBox, MERGE_POLICY_VERSION } from './federated-login.js?v=20261102-merge-policy-1';
+import { identityLabel, renderLinkButtons, policyBox, MERGE_POLICY_VERSION } from './federated-login.js?v=20261107-login-lock-1';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -95,7 +96,7 @@ function showProcessing(text='Google 인증이 완료되었습니다. 요청한 
   notice('authStatus',text);
 }
 function showIdentityFailure(text){
-  routing=false;$('serviceBadge').textContent='인증 실패';show('signedIn',false);show('signedOut',true);show('googleButtonHost',false);show('googleRetry',true);show('cancelSignedOut',true);notice('authStatus',text,'error');
+  routing=false;handlingGoogle=false;unlockLogin();$('serviceBadge').textContent='인증 실패';show('signedIn',false);show('signedOut',true);show('googleButtonHost',false);show('googleRetry',true);show('cancelSignedOut',true);notice('authStatus',text,'error');
 }
 function showSignedIn(s){
   show('signedOut',false);show('signedIn',true);$('accountEmail').textContent=s?.user?.email||'인증 계정';
@@ -118,9 +119,12 @@ function loadGoogleLibrary(){
   });
 }
 
+let handlingGoogle=false;
 async function handleGoogleCredential(response,challenge){
   if(!response?.credential){showIdentityFailure('Google 인증이 완료되지 않았습니다. 다시 시도하거나 취소해 주세요.');return;}
   showProcessing('Google 계정을 확인하고 있습니다.');
+  handlingGoogle=true;
+  lockLogin('Google','Google 로그인 중입니다. 계정을 확인한 뒤 원래 보던 화면으로 돌아갑니다.');
   try{
     const proof=await identity('/google/exchange',{method:'POST',body:JSON.stringify({credential:response.credential,nonce:challenge.nonce})});
     const {error}=await sb.auth.verifyOtp({token_hash:proof.tokenHash,type:'email'});
@@ -142,6 +146,7 @@ async function prepareGoogle(){
     const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
     window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_prompt:true,callback:r=>handleGoogleCredential(r,challenge)});
     window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340))});
+    watchGoogleButton(host,()=>handlingGoogle);
     notice('authStatus',marketing?'Google 계정으로 본인을 확인하면 개인 Marketing AI 공간을 바로 이용할 수 있습니다.':'Google 계정으로 본인을 확인해 주세요.');
   }catch(e){
     console.error('prepare google identity',e);
