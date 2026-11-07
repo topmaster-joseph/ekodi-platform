@@ -172,7 +172,10 @@ test('every EKODI Mission page consumes one shared shell with published-only lan
   ]);
   assert.match(shell,/EKODI_MISSION_NAVIGATION_CONTRACT/);
   assert.match(shell,/version:3/);
-  for(const href of ['/ekodimission/activities','/ekodimission/live','/ekodimission/participate','/ekodimission/partners','/ekodimission/stories'])assert.match(shell,new RegExp(href.replace(/\//g,'\\/')));
+   // Public shell keeps six top-level links; other existing content is reached via activity tabs.
+   for(const href of ['/ekodimission/history','/ekodimission#notices','/ekodimission/devotion','/ekodimission#schedule','/ekodimission/live','/ekodimission/activities'])assert.ok(shell.includes("href:'"+href+"'"),href);
+   const activities=await readFile(new URL('../space/ekodimission-activities.page',import.meta.url),'utf8');
+   for(const href of ['/ekodimission/participate','/ekodimission/partners','/ekodimission/stories','/qtin/mission'])assert.ok(activities.includes('href="'+href+'"'),href);
   assert.match(shell,/language-registry\.json/);
   assert.match(shell,/api\/i18n\/v1\/status\?service=mission/);
   assert.match(shell,/api\/i18n\/v1\/catalog\?service=mission/);
@@ -436,10 +439,13 @@ test('mission remains the owner of its public UI while retaining shared admin sh
   assert.equal(response.headers.get('x-ekodi-independent-site'),'true');
 });
 
-test('EKODI Mission links to the shared QTIN group-order page from its menu and home actions', async () => {
+test('EKODI Mission links to shared QTIN group-order from activity details and home actions', async () => {
   const { readFile: rf } = await import('node:fs/promises');
   const shell = await rf(new URL('../space/ekodimission-shell.js', import.meta.url), 'utf8');
   const home = await rf(new URL('../space/ekodimission.page', import.meta.url), 'utf8');
-  assert.ok(shell.includes("href:'/qtin/mission',label:'큐티인 신청'"));
+  const activities = await rf(new URL('../space/ekodimission-activities.page', import.meta.url), 'utf8');
+  assert.ok(shell.includes("href:'/ekodimission/activities',label:'활동'"));
+  assert.ok(activities.includes('data-mission-tab="qtin"'));
+  assert.ok(activities.includes('href="/qtin/mission"'));
   assert.ok(home.includes('href="/qtin/mission"'));
 });
