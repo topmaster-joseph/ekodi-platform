@@ -49,7 +49,7 @@ test('focused PC page integrates into the existing authenticated device panel', 
 });
 
 test('remote command opens local Microsoft UI only, not an automatic configuration change', () => {
-  const panel = admin.match(/  function autologonPanel\(device\) \{[\s\S]*?\n  \}\n\n  \/\/ EKODI-WINDOWS-PERFORMANCE-001/)?.[0] || '';
+  const panel = admin.match(/  function autologonPanel\(device\) \{[\s\S]*?\n  \}\n\n  \/\/ EKODI-WINDOWS-FILE-EXTENSIONS-001/)?.[0] || '';
   assert.ok(panel, 'on-demand autologon panel is present');
   assert.match(panel, /device\.status === 'online' && device\.management\?\.remoteCommandLevel === 'managed'/);
   assert.match(panel, /makeActionButton\(device, 'autologon\.open', '이 PC에서 Autologon 열기', 'primary', \{\}, !available\)/);

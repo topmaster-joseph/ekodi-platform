@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { loadCooperativeProject } from '../cooperative-store.js';
 
-const tabs = ['현황', '출범 진행', '조합정보', '구성원·사업자', '설립서류', '총회·신고 일정', '공지', '회의록', '지원사업', '계정·권한'];
+const tabs = ['현황', '출범 진행', '조합정보', '조합원 명부', '설립서류', '총회·신고 일정', '공지', '회의록', '지원사업', '계정·권한'];
 const panelIds = ['overview', 'progress', 'profile', 'founders', 'documents', 'schedule', 'notices', 'meetings', 'supports', 'accounts'];
 
 export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f, cooperatives, checks, screenshot }) {
@@ -65,12 +65,12 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     assert.equal((await read(coop)).state.profile.firstYearBudget, null);
     proof(coop, 'profile-save-reload-and-null-budget');
 
-    await tab(page, '구성원·사업자');
+    await tab(page, '조합원 명부');
     const business = coop.name + ' 실증 사업체';
     await page.locator('#foundersForm [data-key="business"]').first().fill(business);
     for (const input of await page.locator('#foundersForm [data-key="shares"]').all()) await input.fill('1');
     await submit(page, 'foundersForm');
-    await reload(page); await tab(page, '구성원·사업자');
+    await reload(page); await tab(page, '조합원 명부');
     assert.equal(await page.locator('#foundersForm [data-key="business"]').first().inputValue(), business);
     assert.deepEqual((await read(coop)).state.founders.map(row => row.shares), [1, 1, 1, 1, 1]);
     proof(coop, 'founders-business-and-capital-save-reload');
@@ -224,7 +224,19 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     const memberContext = await contextFor(390, memberToken);
     const member = await memberContext.newPage(); await member.goto(root + '/members');
     await member.waitForSelector('#myBusinessForm');
-    for (const title of ['공지', '회의록', '지원사업']) assert.ok((await member.locator('#workspace').innerText()).includes(coop.name + ' ' + title + ' 실증'));
+    // Member content is correctly hidden in inactive tabs. Read each visible panel,
+    // instead of treating the container's innerText as if hidden panels were exposed.
+    for (const [label, panelId, title] of [
+      ['공지', 'notices', '공지'],
+      ['회의·의결', 'meetings', '회의록'],
+      ['지원사업', 'supports', '지원사업'],
+    ]) {
+      await tab(member, label);
+      const panel = member.locator('[data-panel="' + panelId + '"]');
+      assert.equal(await panel.isVisible(), true);
+      assert.ok((await panel.innerText()).includes(coop.name + ' ' + title + ' 실증'));
+    }
+    await tab(member, '나의 사업정보');
     const memberBusiness = coop.name + ' 조합원 실증 사업체';
     await member.locator('#myBusinessForm [name="business"]').fill(memberBusiness);
     await member.locator('#myBusinessForm [name="industry"]').fill('공동유통');

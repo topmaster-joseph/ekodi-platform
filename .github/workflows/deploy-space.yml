@@ -18,6 +18,7 @@ on:
       - 'test/space-noindex-preservation.test.mjs'
       - 'bbq-cheonggye-site.js'
       - 'test/bbq-cheonggye-site.test.mjs'
+      - 'test/bbqcg-hard-cutover.test.mjs'
       - 'mission-activity-editor-api.js'
       - 'test/ekodimission-activity-editor.test.mjs'
       - 'supabase/migrations/20261103090000_mission_activity_inline_editor.sql'
@@ -42,6 +43,7 @@ on:
       - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
       - 'supabase/migrations/20260906006000_store_admin_routing.sql'
       - 'supabase/migrations/20261108103000_bbqcheonggye_workspace.sql'
+      - 'supabase/migrations/20261108104500_bbqcg_hard_cutover.sql'
       - 'supabase/migrations/20260914095000_organization_subsite_operations.sql'
       - 'supabase/migrations/20261031123000_mokpo_presbytery_organization_tenants.sql'
       - 'supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql'
@@ -71,6 +73,7 @@ on:
       - 'test/space-noindex-preservation.test.mjs'
       - 'bbq-cheonggye-site.js'
       - 'test/bbq-cheonggye-site.test.mjs'
+      - 'test/bbqcg-hard-cutover.test.mjs'
       - 'mission-activity-editor-api.js'
       - 'test/ekodimission-activity-editor.test.mjs'
       - 'supabase/migrations/20261103090000_mission_activity_inline_editor.sql'
@@ -95,6 +98,7 @@ on:
       - 'supabase/migrations/20260909003000_storefront_public_snapshot.sql'
       - 'supabase/migrations/20260906006000_store_admin_routing.sql'
       - 'supabase/migrations/20261108103000_bbqcheonggye_workspace.sql'
+      - 'supabase/migrations/20261108104500_bbqcg_hard_cutover.sql'
       - 'supabase/migrations/20260914095000_organization_subsite_operations.sql'
       - 'supabase/migrations/20261031123000_mokpo_presbytery_organization_tenants.sql'
       - 'supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql'
@@ -137,8 +141,8 @@ env:
   MOKPO_ROSTER_VIEWER_MIGRATION: supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql
   MOKPO_INLINE_ROLES_MIGRATION: supabase/migrations/20261106090000_mokpo_mission_inline_roles.sql
   MOKPO_NAME_LOGIN_MIGRATION: supabase/migrations/20261106120000_mokpo_mission_name_login.sql
-  BBQ_WORKSPACE_MIGRATION: supabase/migrations/20261108103000_bbqcheonggye_workspace.sql
-  BBQ_WORKSPACE_PINNED_BLOB: ca044387be75b2cfcff5d92881972ed59ac784fb
+  BBQ_WORKSPACE_MIGRATION: supabase/migrations/20261108104500_bbqcg_hard_cutover.sql
+  BBQ_WORKSPACE_PINNED_BLOB: 3fb20a5e441b0f68474a2870026dd4085f62df2c
   BBQ_DEV_PROJECT: lxcxwbdwwojjkgybbqii
 
 jobs:
@@ -158,6 +162,7 @@ jobs:
           node --test test/space-noindex-preservation.test.mjs
           node --check bbq-cheonggye-site.js
           node --test test/bbq-cheonggye-site.test.mjs
+          node --test test/bbqcg-hard-cutover.test.mjs
           node --check mission-activity-editor-api.js
           node --check space/ekodimission-activity-editor.js
           node --test test/ekodimission-activity-editor.test.mjs
@@ -397,13 +402,13 @@ jobs:
             (select count(*) = 1
               from public.tenants t join public.stores s on s.tenant_id=t.id
               join public.store_user_sites us on us.store_id=s.id
-              where t.slug='bbqcheonggye' and t.name='BBQ 무안청계점'
+              where t.slug='bbqcg' and t.name='BBQ 무안청계점'
                 and t.kind='business' and t.settings->>'ownership'='customer'
                 and s.slug='bbq-muan-cheonggye' and s.name='BBQ 무안청계점'
-                and s.operating_space_slug='bbqcheonggye'
+                and s.operating_space_slug='bbqcg'
                 and us.status='active') as workspace_ready,
-            (select count(*) <= 1 from public.stores where operating_space_slug='bbqcheonggye') as unique_store_locator,
-            (select count(*) <= 1 from public.tenants where slug='bbqcheonggye') as unique_tenant_locator;
+            (select count(*) <= 1 from public.stores where operating_space_slug='bbqcg') as unique_store_locator,
+            (select count(*) <= 1 from public.tenants where slug='bbqcg') as unique_tenant_locator;
           SQL
           query_project() {
             local project="$1" result_file="$2" code
@@ -523,20 +528,20 @@ jobs:
             done
             exit 1
           fi
-      - name: Verify BBQ Cheonggye real apex storefront and admin boundary
+      - name: Verify BBQ CG canonical host and retired-URL hard block
         shell: bash
         run: |
           set -euo pipefail
-          public_url='https://ekodi.kr/bbqcheonggye'
-          css_url='https://ekodi.kr/bbqcheonggye/assets/site.css'
-          admin_url='https://ekodi.kr/bbqcheonggye/admin/site'
+          public_url='https://ekodi.kr/bbqcg'
+          css_url='https://ekodi.kr/bbqcg/assets/site.css'
+          admin_url='https://ekodi.kr/bbqcg/admin'
           ready=false
           for attempt in $(seq 1 10); do
             html_status=$(curl -sS --connect-timeout 5 --max-time 20 -D /tmp/bbq-live.headers -o /tmp/bbq-live.html -w '%{http_code}' "$public_url" || true)
             css_status=$(curl -sS --connect-timeout 5 --max-time 20 -o /tmp/bbq-live.css -w '%{http_code}' "$css_url" || true)
             if [ "$html_status" = 200 ] && [ "$css_status" = 200 ] &&
-               grep -Fq 'data-store-entity="bbqcheonggye"' /tmp/bbq-live.html &&
-               grep -Eiq '^x-ekodi-workspace:[[:space:]]*bbqcheonggye' /tmp/bbq-live.headers &&
+               grep -Fq 'data-store-entity="bbqcg"' /tmp/bbq-live.html &&
+               grep -Eiq '^x-ekodi-workspace:[[:space:]]*bbqcg' /tmp/bbq-live.headers &&
                grep -Fq '@media(max-width:560px)' /tmp/bbq-live.css; then
               ready=true
               break
@@ -568,7 +573,22 @@ jobs:
             401|403) echo 'Admin guest is denied protected data, as expected.' ;;
             *) echo "BBQ admin route invalid HTTP $admin_status"; exit 1 ;;
           esac
-          echo 'BBQ live apex root, verified responsive asset, privacy noindex and guest admin boundary PASS.'
+          # The former URL must never redirect to the replacement or serve an alias.
+          for former_path in /bbqcheonggye /bbqcheonggye/ /bbqcheonggye/admin /bbqcheonggye/admin/site /bbqcheonggye/assets/site.css; do
+            former_status=$(curl -sS --connect-timeout 5 --max-time 20 \
+              -D /tmp/bbq-former.headers -o /tmp/bbq-former.out -w '%{http_code}' \
+              "https://ekodi.kr$former_path" || true)
+            [ "$former_status" = 410 ] || {
+              echo "Retired BBQ path is still reachable: $former_path status=$former_status"; exit 1;
+            }
+            ! grep -Eiq '^location:' /tmp/bbq-former.headers || {
+              echo "Retired BBQ path may not redirect: $former_path"; exit 1;
+            }
+            grep -Eiq '^x-robots-tag:[[:space:]]*noindex' /tmp/bbq-former.headers || {
+              echo "Retired BBQ path must remain noindex: $former_path"; exit 1;
+            }
+          done
+          echo 'BBQ CG actual apex, mobile CSS, unverified noindex, guest admin boundary and old-path 410 PASS.'
       - name: Verify EKODI Mission production shell contract
         env:
           EKODI_MISSION_VERIFY_SCOPE: space
