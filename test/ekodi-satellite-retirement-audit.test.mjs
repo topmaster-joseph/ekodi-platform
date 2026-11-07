@@ -28,7 +28,7 @@ const fixture=()=>({
   contract:'ekodi.satellite-live-source-marker-audit.v1',
   mode:'public-read-only',canonicalRepository:'topmaster-joseph/ekodi-platform',
   checkedAt:'2026-11-08T00:30:00.000Z',readyForRepositoryDeletion:false,
-  services:[church,base],errors:['church:unverified-or-legacy-production-marker']
+  services:[structuredClone(church),structuredClone(base)],errors:['church:unverified-or-legacy-production-marker']
 });
 
 test('EKODI orchestrator owns six-repository daily observation and never grants deletion',async()=>{
