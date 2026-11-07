@@ -167,7 +167,7 @@ try {
       assert.ok(await page.locator('#workspace').innerText().then(text => text.includes('서버 저장')));
       await page.getByRole('tab', { name: '조합정보', exact: true }).click();
       await page.locator('#profileForm [name="purpose"]').fill('저장 전 다른 탭의 목적 입력 유지');
-      await page.getByRole('tab', { name: '구성원·사업자', exact: true }).click();
+      await page.getByRole('tab', { name: '조합원 명부', exact: true }).click();
       await page.locator('#foundersForm [data-key="business"]').first().fill(coop.name + ' 테스트 사업체');
       // The token is expired deliberately; the existing refresh contract must recover.
       await page.evaluate(() => { const key = 'ekodi-cooperative-auth.v1'; const data = JSON.parse(sessionStorage.getItem(key)); data.expiresAt = 1; sessionStorage.setItem(key, JSON.stringify(data)); });
