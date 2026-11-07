@@ -40,6 +40,23 @@ export function chooseGoogleProperty(entries,site){
   return null;
 }
 
+// SEARCH-VISIBILITY-GSC-PATH-FILTER-20261104: an ekodi.kr/<path> site without its own
+// URL-prefix property may be measured from the readable sc-domain:ekodi.kr property ONLY with
+// a page filter restricted to that path, so other EKODI tenants' traffic is never counted.
+// chooseGoogleProperty() above still never treats the domain permission as the path's property.
+export function googlePathFilter(site,entries){
+  let u;try{u=new URL(site?.url||'')}catch{return null}
+  if(u.protocol!=='https:'||u.hostname.toLowerCase()!=='ekodi.kr'||u.pathname==='/'||u.search||u.hash)return null;
+  const path=u.pathname.replace(/\/+$/,'');
+  if(!/^\/[a-z0-9][a-z0-9._~\/-]*$/i.test(path))return null;
+  const entry=(Array.isArray(entries)?entries:[]).find(x=>x?.siteUrl==='sc-domain:ekodi.kr');
+  if(!entry||!READABLE_PERMISSIONS.has(entry.permissionLevel))return null;
+  const escaped=('https://ekodi.kr'+path).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return {property:'sc-domain:ekodi.kr',permissionLevel:text(entry.permissionLevel,45),readable:true,
+    scope:'page_filter',pagePrefix:'https://ekodi.kr'+path,
+    filter:{dimension:'page',operator:'includingRegex',expression:'^'+escaped+'(?:[/?#]|$)'}};
+}
+
 function configuredKey(env){
   const raw=env?.GOOGLE_SEARCH_SA_KEY_JSON;
   if(typeof raw!=='string'||!raw.trim())return null;
@@ -102,9 +119,10 @@ export async function googleSearchConsoleReadOnly({env,site,fetchImpl=fetch,now=
     if(!accessToken)return {state:'google_unavailable'};
     const headers={authorization:'Bearer '+accessToken,accept:'application/json'};
     const allowed=await readJson(fetchImpl,WEBMASTERS_API+'/sites',{method:'GET',headers});
-    const selected=chooseGoogleProperty(allowed.siteEntry,site);
+    const selected=chooseGoogleProperty(allowed.siteEntry,site)||googlePathFilter(site,allowed.siteEntry);
     if(!selected)return {state:'not_connected',candidates:googlePropertyCandidates(site),
       guidance:'Grant the service account access to the exact Search Console property.'};
+    const pageFiltered=selected.scope==='page_filter';
     if(!selected.readable)return {state:'not_verified',property:selected.property,
       permissionLevel:selected.permissionLevel};
     const period=reportPeriod(now);
@@ -112,8 +130,10 @@ export async function googleSearchConsoleReadOnly({env,site,fetchImpl=fetch,now=
     const [analytics,sitemaps]=await Promise.all([
       readJson(fetchImpl,WEBMASTERS_API+'/sites/'+sitePath+'/searchAnalytics/query',
         {method:'POST',headers:{...headers,'content-type':'application/json'},
-          body:JSON.stringify({...period,dimensions:[],type:'web',rowLimit:1})}),
-      readJson(fetchImpl,WEBMASTERS_API+'/sites/'+sitePath+'/sitemaps',{method:'GET',headers}),
+          body:JSON.stringify({...period,dimensions:[],type:'web',rowLimit:1,
+            ...(pageFiltered?{dimensionFilterGroups:[{groupType:'and',filters:[selected.filter]}]}:{})})}),
+      // The domain property's sitemaps belong to every EKODI site; do not attribute them to one path.
+      pageFiltered?Promise.resolve({sitemap:[]}):readJson(fetchImpl,WEBMASTERS_API+'/sites/'+sitePath+'/sitemaps',{method:'GET',headers}),
     ]);
     // Empty Search Analytics result is missing data, not a measured zero.
     const row=Array.isArray(analytics.rows)?analytics.rows[0]:null;
@@ -123,6 +143,7 @@ export async function googleSearchConsoleReadOnly({env,site,fetchImpl=fetch,now=
     const sitemapRows=(Array.isArray(sitemaps.sitemap)?sitemaps.sitemap:[]).slice(0,40);
     return {state:'connected',source:'google_search_console_api',property:selected.property,
       permissionLevel:selected.permissionLevel,period,metrics,hasData:metrics!==null,
+      scope:pageFiltered?'page_filter':'property',pagePrefix:pageFiltered?selected.pagePrefix:null,
       sitemaps:sitemapRows.map(x=>({
         path:text(x.path,500),lastSubmitted:text(x.lastSubmitted,60),
         lastDownloaded:text(x.lastDownloaded,60),isPending:x.isPending===true,
