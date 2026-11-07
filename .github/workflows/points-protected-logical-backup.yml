@@ -1,0 +1,124 @@
+name: EKODI Points Protected Free-plan Logical Backup (Manual)
+
+# No backup runs on PR, push or cron. Requires production environment access,
+# owner-managed age recipient and DB URL, and independently verified Drive ACL.
+# Does not perform restore, DDL, function deployment or points activation.
+on:
+  workflow_dispatch:
+    inputs:
+      expected_main_sha:
+        description: 'Exact currently protected main commit SHA'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-points-protected-logical-backup
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: node --test test/points-protected-backup-transfer.test.mjs
+
+  backup:
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: production
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+      SUPABASE_PROD_DB_URL: ${{ secrets.SUPABASE_PRODUCTION_DB_URL }}
+      POINTS_BACKUP_AGE_RECIPIENT: ${{ secrets.POINTS_BACKUP_AGE_RECIPIENT }}
+      EKODI_STORAGE_GATEWAY_KEY: ${{ secrets.EKODI_STORAGE_GATEWAY_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.122.1
+      - name: Verify owner-backed environment and exact source
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          test "$GITHUB_REF" = refs/heads/main
+          [[ "$EXPECTED_MAIN_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$GITHUB_SHA" = "$EXPECTED_MAIN_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_MAIN_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_MAIN_SHA"
+          test -n "$SUPABASE_PROD_DB_URL"
+          test -n "$EKODI_STORAGE_GATEWAY_KEY"
+          [[ "$POINTS_BACKUP_AGE_RECIPIENT" =~ ^age1[a-z0-9]{30,120}$ ]]
+          node --input-type=module -e '
+            const u=new URL(process.env.SUPABASE_PROD_DB_URL);
+            const ref="renzehysxirjilvdxacv";
+            if (!["postgresql:","postgres:"].includes(u.protocol) ||
+                u.pathname!=="/postgres" ||
+                !u.username.includes(ref) && !u.hostname.includes(ref) ||
+                !(/(^|\.)supabase\.co$|(^|\.)supabase\.com$/.test(u.hostname)))
+              throw Error("PRODUCTION_DATABASE_IDENTITY_NOT_VERIFIED");
+          '
+          test "$(supabase --version)" = 2.122.1
+          node scripts/points-protected-backup-transfer.mjs --acl-only
+      - name: Install supported age encryption tool
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y age
+          command -v age
+      - name: Dump roles, schema and data, encrypt immediately, verify actual Drive readback
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          dir="$(mktemp -d)"
+          trap 'rm -rf "$dir"' EXIT
+          # Everything below is protected runner-local. Never upload plaintext
+          # SQL, tar files, recovery keys or database credentials as artifacts.
+          if ! supabase db dump --db-url "$SUPABASE_PROD_DB_URL" \
+            --role-only -f "$dir/roles.sql" >"$dir/cli.log" 2>&1; then
+            echo "::error::PRODUCTION_ROLES_DUMP_FAILED"; exit 2
+          fi
+          if ! supabase db dump --db-url "$SUPABASE_PROD_DB_URL" \
+            -f "$dir/schema.sql" >"$dir/cli.log" 2>&1; then
+            echo "::error::PRODUCTION_SCHEMA_DUMP_FAILED"; exit 2
+          fi
+          if ! supabase db dump --db-url "$SUPABASE_PROD_DB_URL" \
+            --data-only --use-copy -f "$dir/data.sql" >"$dir/cli.log" 2>&1; then
+            echo "::error::PRODUCTION_DATA_DUMP_FAILED"; exit 2
+          fi
+          for name in roles schema data; do
+            test -s "$dir/$name.sql"
+          done
+          tar -C "$dir" -czf "$dir/backup.tar.gz" roles.sql schema.sql data.sql
+          age -r "$POINTS_BACKUP_AGE_RECIPIENT" -o "$dir/backup.age" "$dir/backup.tar.gz"
+          export POINTS_BACKUP_ENCRYPTED_PATH="$dir/backup.age"
+          export POINTS_BACKUP_EXPECTED_MAIN_SHA="$EXPECTED_MAIN_SHA"
+          node scripts/points-protected-backup-transfer.mjs --encrypted-upload
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')" = "$EXPECTED_MAIN_SHA"
+      - name: State no-restore and no-activation result
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### Protected Supabase logical backup'
+            echo 'Only an encrypted archive and a pending-restore manifest may have been uploaded.'
+            echo 'No independent restore or two-signer receipt is produced by this job.'
+            echo 'No SQL schema write, functions deployment, grants, rewards, transfer, donation or spend activation.'
+            echo 'Never treat this run as migration or economic-release authorization.'
+          } >> "$GITHUB_STEP_SUMMARY"
