@@ -26,6 +26,7 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       STATIC_ACCESS_ID: ${{ secrets.CF_ACCESS_STAGING_CLIENT_ID }}
       STATIC_ACCESS_SECRET: ${{ secrets.CF_ACCESS_STAGING_CLIENT_SECRET }}
+      STATIC_ACCESS_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_STAGING_SERVICE_TOKEN_ID }}
       ADMIN_STAGING: https://ekodi-admin-staging.ekodi-development.workers.dev
       MY_STAGING: https://ekodi-my-staging.ekodi-development.workers.dev
       POINTS_E2E_RUN: ${{ github.run_id }}
@@ -58,7 +59,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -n "${STATIC_ACCESS_ID:-}" ] && [ -n "${STATIC_ACCESS_SECRET:-}" ]; then
+          # Never authorize any valid token on the development Access app.
+          # The static token requires a separately protected exact token ID.
+          if [ -n "${STATIC_ACCESS_ID:-}" ] && [ -n "${STATIC_ACCESS_SECRET:-}" ] && [ -n "${STATIC_ACCESS_SERVICE_TOKEN_ID:-}" ]; then
             echo "::add-mask::$STATIC_ACCESS_SECRET"
             { echo "CF_ACCESS_CLIENT_ID=$STATIC_ACCESS_ID"; echo "CF_ACCESS_CLIENT_SECRET=$STATIC_ACCESS_SECRET"; } >> "$GITHUB_ENV"
             echo 'E2E_ACCESS_EPHEMERAL=1' >> "$GITHUB_ENV"
