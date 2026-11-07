@@ -17,6 +17,8 @@ export const FAMILY_CONSENT_NONCE_SCHEMA=[
   ');',
   'CREATE INDEX IF NOT EXISTS idx_ai_family_consumed_nonces_at',
   '  ON ai_family_consumed_nonces(consumed_at);',
+  'CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_family_consumed_nonces_job',
+  '  ON ai_family_consumed_nonces(job_id);',
 ].join('\n');
 
 const CONSUME=[
