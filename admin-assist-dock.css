@@ -49,6 +49,16 @@ html body.admin-compact:not(.admin-command-home) .ekodi-assist:not(.history-only
   background:transparent!important;
   border:0!important;
 }
+/* ASSIST-CENTER-20261104 (owner request): what is typed into 「에코디와 대화하기」 opens in the
+   main workspace instead of a 518px right drawer. Panel geometry follows the later owner-approved
+   left-canvas release (ADMIN-ASSIST-LEFT-FLUID-20261104, #8189). On desktop the bottom input bar
+   stays visible under the expanded conversation so follow-ups continue the same thread. */
+@media(min-width:761px){
+  html body.admin-compact:not(.admin-command-home).admin-command-active .ekodi-assist-bootstrap,
+  html body.admin-compact.ekodi-admin-design-engine:not(.admin-command-home).admin-command-active .ekodi-assist-bootstrap{
+    display:flex!important;
+  }
+}
 html body.admin-compact:not(.admin-command-home) .ekodi-assist:not(.history-only) .ekodi-assist-panel{
   /* Anchor to the same left canvas inset as the persistent command entry. */
   inset:72px auto 18px clamp(14px,2vw,28px)!important;
@@ -152,7 +162,7 @@ html body.admin-compact:not(.admin-command-home) .ekodi-assist-close{
   background:#eafbf2;
 }
 html body.admin-compact:not(.admin-command-home) .ekodi-assist-chat-scroll{
-  padding:20px 19px 22px!important;
+  padding:24px max(20px,calc((100% - 860px)/2)) 24px!important;
   background:#fff!important;
 }
 html body.admin-compact:not(.admin-command-home) .ekodi-assist-welcome{

@@ -23,6 +23,9 @@ test('Admin non-home pages use a contextual drawer and only one active composer'
   assert.match(css,/COMMAND-CENTER-UX-20261023/);
   assert.match(css,/not\(\.admin-command-home\)[\s\S]*?\.ekodi-assist-panel\{[\s\S]*?inset:72px auto 18px clamp\(14px,2vw,28px\)/);
   assert.match(css,/width:min\(850px,calc\(100% - clamp\(28px,4vw,56px\)\)\)/);
+  assert.match(css,/ASSIST-CENTER-20261104/);
+  // The bottom input stays visible under the expanded conversation on desktop (single input).
+  assert.match(css,/@media\(min-width:761px\)\{\s*html body\.admin-compact:not\(\.admin-command-home\)\.admin-command-active \.ekodi-assist-bootstrap,/);
   assert.match(css,/\.admin-command-active \.ekodi-assist-bootstrap\{[\s\S]*?display:none!important/);
   assert.match(css,/\.ekodi-assist\.rail-open \.ekodi-assist-rail\{[\s\S]*?display:flex!important/);
   assert.match(css,/@media\(max-width:760px\)\{[\s\S]*?max-height:none!important/);
