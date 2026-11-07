@@ -1109,6 +1109,13 @@ jobs:
           JOB_STATUS: ${{ job.status }}
         run: |
           set -euo pipefail
+          # Transport-only recovery: the guarded deployment outcome is decided
+          # by preceding steps. GitHub status quota/permission denial remains a
+          # failed publisher, never a fabricated success or a deployment retry.
+          source scripts/github-status-transient.sh
+          if [[ "${GITHUB_ACTIONS:-}" == 'true' && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+            printf '\n### Control API GitHub status transport\n- Prior guarded deployment job outcome: `%s`. Publication is a separate API operation; a denial is not a new deployment or rollback.\n' "$JOB_STATUS" >> "$GITHUB_STEP_SUMMARY"
+          fi
           case "$JOB_STATUS" in
             success) state=success ;;
             cancelled) state=error ;;
