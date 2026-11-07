@@ -62,7 +62,7 @@ test('both administration scripts pass syntax check',()=>{
 test('church client provides esbuild helper before serializing the pastor runtime',async()=>{
   const script=await (await churchPastorAdminScript()).text();
   assert.match(script,/const __name=\(target,value\)=>Object\.defineProperty/);
-  assert.ok(script.indexOf('const __name=')<script.indexOf('const section='),'helper must be declared before runtime initializes');
+  assert.ok(script.indexOf('const __name=')<script.indexOf('let section='),'helper must be declared before runtime initializes');
 });
 test('tenant admin sidebar uses readable contrast and compact rows when common shell is active',async()=>{
   const css=await (await workspaceAdminCss()).text();
