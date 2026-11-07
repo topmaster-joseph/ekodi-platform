@@ -50,6 +50,17 @@ test('never silently accept removed contextual actions, retired menu or missing 
   assert.throws(()=>verifyChurchHeaderNavigation(modernHome()+'<nav id="main-nav"></nav>',nested()),/duplicate primary navigation/);
 });
 
+test('C3 canonical homepage rejects header verse markup and dynamic reinjection without removing body Scripture',()=>{
+  const withHeader=modernHome().replace('<nav id="main-nav"',
+    '<header class="site-header"><div class="daily-verse" aria-live="polite">header-only</div></header><nav id="main-nav"');
+  assert.throws(()=>verifyChurchHeaderNavigation(withHeader,nested()),/retired header Scripture/);
+  const withInjector=modernHome().replace('</body>','<script src="church-daily-verse.js"></script></body>');
+  assert.throws(()=>verifyChurchHeaderNavigation(withInjector,nested()),/verse reinjection/);
+  // Devotional body Scripture must remain possible and is outside the header cleanup scope.
+  const devotionalBody=modernHome().replace('<main>', '<main><p>말씀을 묵상합니다.</p>');
+  assert.equal(verifyChurchHeaderNavigation(devotionalBody,nested()).contract,'six-item-selected-content');
+});
+
 test('legacy menu must keep the original worship action and date-scoped data',()=>{
   const sample='<nav id="main-nav"><a href="#weekly-worship">예배자료</a></nav><section data-church-weekly></section>';
   assert.equal(verifyChurchHeaderNavigation(sample).contract,'legacy-reviewed');
