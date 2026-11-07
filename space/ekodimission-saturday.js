@@ -514,6 +514,11 @@
   });
   window.addEventListener('ekodi:mission-auth-changed',()=>{void refreshManager()});
   window.addEventListener('ekodi:auth-logout',()=>{manager=false;refreshManagerVisibility()});
+  // Refresh cross-site published events without manual reload; never poll in background.
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)void readSchedule()});
+  window.addEventListener('focus',()=>{void readSchedule()});
+  const sharedScheduleTimer=setInterval(()=>{if(!document.hidden)void readSchedule()},300000);
+  window.addEventListener('pagehide',()=>clearInterval(sharedScheduleTimer),{once:true});
   void readNotices();
   void readSchedule();
   void refreshManager();
