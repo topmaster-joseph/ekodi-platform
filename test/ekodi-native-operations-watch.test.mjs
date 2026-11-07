@@ -162,8 +162,9 @@ test('native workflow owns schedule and read-only permissions, not ChatGPT API',
   assert.doesNotMatch(source,/openai\.com|api\.openai\.com|chat\.openai\.com/);
   const parsed=JSON.parse(policy);
   assert.equal(parsed.externalChatgptAutomations.intendedActiveCount,0);
-  assert.equal(parsed.monitoring.length,5);
+  assert.equal(parsed.monitoring.length,6,'five existing monitoring lanes plus the six-repository EKODI audit');
   assert.ok(parsed.monitoring.some(x=>x.handoffState.includes('requires-authorized-sources')));
+  assert.ok(parsed.monitoring.some(x=>x.nativeOwner.includes('EKODI Orchestrator')&&x.frequency==='daily_0845_kst'));
 });
 
 test('GitHub 403 installation quota opens circuit and prevents further GETs',async()=>{
