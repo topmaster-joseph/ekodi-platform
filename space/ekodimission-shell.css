@@ -264,3 +264,38 @@ main.subpage .sub-hero{padding-top:.7rem;padding-bottom:1.35rem}
 .mission-inline-actions [role=status]{font-size:.78rem;color:#315c46}
 .mission-inline-current-meta{font-size:.87rem;font-weight:800;color:#315c46;border-left:3px solid #315c46;padding:.45rem .65rem;background:#f3f8f1}
 @media(max-width:700px){.mission-inline-fields{grid-template-columns:minmax(0,1fr)}.mission-inline-edit-panel{padding:.8rem}}
+
+
+/* Mission six-link header: compact member identity and a single mobile dropdown. */
+.mission-site-header .mission-auth-logout{
+  border:0;background:transparent;color:var(--mission-accent);
+  text-decoration:underline;text-underline-offset:.18em
+}
+.mission-site-header .mission-auth-state{font-weight:800}
+.mission-site-header nav>a:focus-visible,.mission-nav-mobile summary:focus-visible{
+  outline:2px solid var(--mission-accent);outline-offset:3px;border-radius:.3rem
+}
+@media(max-width:850px){
+  .mission-site-header{
+    display:grid;grid-template-columns:minmax(0,1fr) auto auto;
+    align-items:center;gap:.45rem;padding:.6rem .7rem
+  }
+  .mission-site-header .mission-brand{grid-column:1;grid-row:1;min-width:0;order:initial}
+  .mission-site-header nav{
+    grid-column:2;grid-row:1;order:initial;justify-content:flex-end;
+    margin:0;width:auto;max-width:none
+  }
+  .mission-site-header .mission-auth-actions{
+    grid-column:3;grid-row:1;order:initial;min-width:0;max-width:100%;gap:.3rem
+  }
+  .mission-site-header .mission-auth-state{max-width:88px}
+}
+@media(max-width:390px){
+  .mission-site-header{column-gap:.3rem}
+  .mission-site-header .mission-brand{gap:.3rem}
+  .mission-site-header .mission-brand-mark{width:1.8rem;height:1.8rem;flex:0 0 auto}
+  .mission-site-header .mission-brand strong{font-size:.76rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mission-site-header .mission-brand small{font-size:.51rem;letter-spacing:.07em}
+  .mission-site-header .mission-auth-state{max-width:62px;font-size:.66rem}
+  .mission-site-header .mission-auth-logout{font-size:.67rem;padding:.27rem}
+}
