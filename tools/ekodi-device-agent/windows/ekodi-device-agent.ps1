@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.6.3'
+$AgentVersion = '2.6.4'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -721,7 +721,7 @@ function Remove-AgentUpgradeSnapshot($Snapshot) {
 }
 
 function Start-AgentProcess {
-  Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',("`"$AgentPath`""),'-Run') | Out-Null
+  Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @('-NoProfile','-NonInteractive','-WindowStyle','Hidden','-ExecutionPolicy','Bypass','-File',("`"$AgentPath`""),'-Run') | Out-Null
 }
 
 function Test-AgentHeartbeatResume {
@@ -4093,9 +4093,45 @@ function Stop-ExistingAgentProcesses {
   Start-Sleep -Milliseconds 350
 }
 
+# Task Scheduler creates a visible console for powershell.exe before -WindowStyle Hidden
+# takes effect, so every 5-minute recovery trigger flashed a window on the desktop.
+# conhost --headless (Windows 10 1809+/build 17763) gives the Agent a console that is
+# never shown. Older builds fall back to the previous hidden-window launch.
+function Test-HeadlessConsoleSupported {
+  try {
+    $conhost = Join-Path $env:SystemRoot 'System32\conhost.exe'
+    if (-not (Test-Path -LiteralPath $conhost)) { return $false }
+    return ([Environment]::OSVersion.Version.Build -ge 17763)
+  } catch { return $false }
+}
+
+function Get-AgentHiddenLaunchSpec {
+  $agentArguments = "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AgentPath`" -Run"
+  if (Test-HeadlessConsoleSupported) {
+    return @{ execute = (Join-Path $env:SystemRoot 'System32\conhost.exe'); argument = "--headless powershell.exe $agentArguments"; headless = $true }
+  }
+  return @{ execute = 'powershell.exe'; argument = $agentArguments; headless = $false }
+}
+
+function Repair-AgentTaskHiddenLaunch {
+  # Converge already-registered tasks (installed by <= 2.6.3) without stopping the running instance.
+  try {
+    $spec = Get-AgentHiddenLaunchSpec
+    if (-not $spec.headless) { return $false }
+    $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    if (-not $task) { return $false }
+    $current = @($task.Actions)[0]
+    if ($current -and ([string]$current.Execute -ieq [string]$spec.execute) -and ([string]$current.Arguments -eq [string]$spec.argument)) { return $false }
+    $action = New-ScheduledTaskAction -Execute $spec.execute -Argument $spec.argument
+    Set-ScheduledTask -TaskName $TaskName -Action $action -ErrorAction Stop | Out-Null
+    return $true
+  } catch { return $false }
+}
+
 function Ensure-AgentTask {
   $userId = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-  $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$AgentPath`" -Run"
+  $launch = Get-AgentHiddenLaunchSpec
+  $action = New-ScheduledTaskAction -Execute $launch.execute -Argument $launch.argument
   # Recover after an Agent process exit while the operator remains signed in.
   # The existing global mutex prevents a second Agent instance from running.
   $logonTrigger = New-ScheduledTaskTrigger -AtLogOn -User $userId
@@ -4227,6 +4263,7 @@ function Run-Agent {
   $script:AgentRunActive = $true
   try {
     $config = Load-Config
+    [void](Repair-AgentTaskHiddenLaunch)
     $lastHeartbeat = [datetime]::MinValue
     while ($true) {
       try {
