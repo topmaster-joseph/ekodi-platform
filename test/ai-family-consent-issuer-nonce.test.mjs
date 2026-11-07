@@ -41,7 +41,7 @@ function fakeDurableDb(){
         return {async run(){
           if(/INSERT INTO/.test(sql)){
             const [key,job,device,at]=values;
-            if(consumed.has(key))return {meta:{changes:0}};
+            if(consumed.has(key)||[...consumed.values()].some(row=>row.job===job))return {meta:{changes:0}};
             consumed.set(key,{job,device,at});
             return {meta:{changes:1}};
           }
@@ -81,6 +81,8 @@ test('genuine Ed25519 consent issuer and verifier bind one job, device and reque
   assert.equal(await verify(result.approval,{claim,deviceId}),true);
   assert.equal(await verify(result.approval,{claim,deviceId}),false,'replay must fail');
   assert.equal(db.consumed.size,1);
+  const anotherNonce=randomBytes(24).toString('base64url');
+  assert.equal(await createDurableFamilyNonceConsumer(db,{clock:()=>NOW})(anotherNonce,{jobId,deviceId}),false,'a different signed nonce cannot restart an already-consumed job');
 });
 
 test('same durable nonce store rejects racing consent consumers across restarts',async()=>{
@@ -128,6 +130,7 @@ test('nonce consumer rejects missing/unavailable DB and malformed contexts witho
 
 test('nonce schema requires primary-key uniqueness and cleanup only after 24h',async()=>{
   assert.match(FAMILY_CONSENT_NONCE_SCHEMA,/nonce TEXT PRIMARY KEY NOT NULL/);
+  assert.match(FAMILY_CONSENT_NONCE_SCHEMA,/UNIQUE INDEX IF NOT EXISTS idx_ai_family_consumed_nonces_job/);
   const db=fakeDurableDb();
   const consume=createDurableFamilyNonceConsumer(db,{clock:()=>NOW});
   assert.equal(await consume(nonce,{jobId,deviceId}),true);
@@ -153,5 +156,6 @@ test('optional real SQLite smoke test exercises ON CONFLICT atomic uniqueness',a
     const second=createDurableFamilyNonceConsumer(adapter,{clock:()=>NOW});
     assert.equal((await first(nonce,{jobId,deviceId})),true);
     assert.equal((await second(nonce,{jobId,deviceId})),false);
+    assert.equal((await second(randomBytes(24).toString('base64url'),{jobId,deviceId})),false,'SQLite job-id unique index must also fence distinct nonces');
   }finally{database.close();}
 });
