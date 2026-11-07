@@ -530,6 +530,22 @@ export function parseEkodiPublicSchedule(row,today=missionKstToday()){
   return {id,source,sourceLabel:source==='ekodichurch'?'에코디교회':'에코디선교회',
     date,time,venue,title,url:'/'+source+'/board/post/'+id,kind:'official-post'};
 }
+// 에코디교회 주일예배: 매주 일요일 11:00 에코디교회. 특정 주일의 장소 변경은 아래 날짜표에 둔다.
+// 같은 날짜에 '주일'이 들어간 교회 공식 일정 게시글이 있으면 그 게시글이 우선한다.
+export const CHURCH_SUNDAY_WORSHIP=Object.freeze({title:'주일예배',time:'11:00',venue:'에코디교회',weeks:4,
+  venueOverrides:Object.freeze({'2026-11-08':'목포 평화광장'})});
+export function churchSundayWorshipEvents(today=missionKstToday(),config=CHURCH_SUNDAY_WORSHIP){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(today)))return [];
+  const first=new Date(today+'T00:00:00Z');
+  first.setUTCDate(first.getUTCDate()+(7-first.getUTCDay())%7);
+  return Array.from({length:config.weeks},(_,week)=>{
+    const day=new Date(first);day.setUTCDate(first.getUTCDate()+week*7);
+    const date=day.toISOString().slice(0,10);
+    return {id:0,source:'ekodichurch',sourceLabel:'에코디교회',date,time:config.time,
+      venue:config.venueOverrides[date]||config.venue,title:config.title,
+      url:'/ekodichurch/#worship',kind:'recurring-worship'};
+  });
+}
 async function readSharedPublicSchedules(env,instance){
   const today=missionKstToday(),missionId=boardId('ekodimission'),churchId=boardId('ekodichurch');
   const sql=[
@@ -553,6 +569,10 @@ async function readSharedPublicSchedules(env,instance){
       time:String(event.starts_at||'11:00'),venue:String(event.venue||'에코디교회'),
       title:String(event.title||'토요 성경토론과 식사'),
       url:'/ekodimission?meeting='+encodeURIComponent(date)+'#saturday',kind:'recurring-meeting'});
+  }
+  for(const event of churchSundayWorshipEvents(today)){
+    if(items.some(item=>item.source==='ekodichurch'&&item.date===event.date&&/주일/.test(item.title)))continue;
+    items.push(event);
   }
   items.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)||a.source.localeCompare(b.source));
   return boardJson(instance,{ok:true,mode:'published-read-only',items:items.slice(0,30)});
