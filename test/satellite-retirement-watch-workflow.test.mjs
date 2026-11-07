@@ -1,27 +1,52 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-const workflow = readFileSync(new URL('../.github/workflows/satellite-retirement-readonly-audit.yml',import.meta.url),'utf8');
 
-test('fleet watch runs only on protected main, daily and optional manual invocation',()=>{
-  assert.match(workflow,/\bon:\n  workflow_dispatch:\n  schedule:\n    - cron: '\d+ \d+ \* \* \*'/);
-  assert.match(workflow,/if: github\.ref == 'refs\/heads\/main'/);
-  assert.match(workflow,/branches: \[main\]/);
+const native=readFileSync(new URL('../.github/workflows/ekodi-native-operations-watch.yml',import.meta.url),'utf8');
+const fallback=readFileSync(new URL('../.github/workflows/satellite-retirement-readonly-audit.yml',import.meta.url),'utf8');
+const registry=JSON.parse(readFileSync(new URL('../config/ekodi-native-monitoring-ownership.json',import.meta.url),'utf8'));
+
+test('EKODI is the sole scheduled owner: its existing daily cron, no duplicate satellite cron',()=>{
+  assert.match(native,/name: EKODI Native Operations Watch/);
+  assert.match(native,/cron: '45 23 \* \* \*'/);
+  assert.match(native,/EKODI Orchestrator daily satellite source and independent release audit/);
+  assert.match(native,/github\.event\.schedule == '45 23 \* \* \*'/);
+  assert.doesNotMatch(fallback,/\n  schedule:|\n  push:/);
+  assert.match(fallback,/\bon:\n  workflow_dispatch:/);
+  assert.match(fallback,/if: github\.ref == 'refs\/heads\/main'/);
 });
 
-test('fleet watch is least privilege and has no production secrets or mutators',()=>{
-  assert.match(workflow,/permissions:\n  contents: read/);
-  assert.match(workflow,/persist-credentials: false/);
-  assert.doesNotMatch(workflow,/secrets\.|wrangler(?:@|\s)|gh repo delete|gh api -X DELETE|repository_dispatch|contents: write|GITHUB_TOKEN|pull-requests: write/);
-  assert.doesNotMatch(workflow,/run:\s*\|[^]*?(?:git push|npm run deploy|npx wrangler)/);
+test('EKODI orchestrator native monitor launches bounded read-only runner and retains artifact',()=>{
+  assert.match(native,/node --check scripts\/run-ekodi-satellite-retirement-audit\.mjs/);
+  assert.match(native,/test\/ekodi-satellite-retirement-audit\.test\.mjs/);
+  assert.match(native,/scripts\/run-ekodi-satellite-retirement-audit\.mjs/);
+  assert.match(native,/--output-dir=ekodi-satellite-audit/);
+  assert.match(native,/cat ekodi-satellite-audit\/summary\.md >> "\$GITHUB_STEP_SUMMARY"/);
+  assert.match(native,/ekodi-satellite-audit\//);
+  assert.match(native,/actions\/upload-artifact@v7/);
+  assert.match(native,/if: always\(\) && \(github\.event\.schedule == '45 23 \* \* \*' \|\| github\.event_name == 'workflow_dispatch'\)/);
 });
 
-test('fleet watch actually tests both audits and stores evidence instead of claiming deletion',()=>{
-  assert.match(workflow,/node --test \\\n\s*test\/satellite-retirement-watch-report\.test\.mjs/);
-  assert.match(workflow,/node scripts\/inspect-satellite-repository-retirement\.mjs/);
-  assert.match(workflow,/node scripts\/audit-satellite-live-source-markers\.mjs/);
-  assert.match(workflow,/node scripts\/audit-fleet-source-release-topology\.mjs/);
-  assert.match(workflow,/node scripts\/build-satellite-retirement-watch-report\.mjs/);
-  assert.match(workflow,/actions\/upload-artifact@v4/);
-  assert.match(workflow,/GITHUB_STEP_SUMMARY/);
+test('manual recovery audit stays protected main, least privilege, no independent scheduler or mutation',()=>{
+  assert.match(fallback,/permissions:\n  contents: read/);
+  assert.match(fallback,/persist-credentials: false/);
+  assert.match(fallback,/--mode=manual --output-dir=ekodi-satellite-audit/);
+  assert.match(fallback,/actions\/upload-artifact@v4/);
+  assert.match(fallback,/test\/satellite-live-source-markers\.test\.mjs/);
+  assert.match(fallback,/test\/satellite-retirement-watch-report\.test\.mjs/);
+  assert.doesNotMatch(fallback,/(secrets\.|wrangler(?:@|\s)|gh repo delete|gh api -X DELETE|repository_dispatch|contents: write|GITHUB_TOKEN|pull-requests: write)/);
+  assert.doesNotMatch(native,/(contents: write|issues: write|id-token: write)/);
+});
+
+test('native registry owns audit and disclaims unverified runtime or repo-deletion authority',()=>{
+  assert.equal(registry.operator,'ekodi-orchestrator');
+  const handoff=registry.monitoring.find(x=>x.formerTask.includes('6개 레거시 저장소'));
+  assert.ok(handoff);
+  assert.match(handoff.nativeOwner,/EKODI Orchestrator/);
+  assert.deepEqual(handoff.schedules,['.github/workflows/ekodi-native-operations-watch.yml']);
+  assert.equal(handoff.frequency,'daily_0845_kst');
+  assert.equal(handoff.handoffState,'native-scheduler-source-wired-runtime-receipt-pending');
+  assert.equal(registry.guardrails.readOnlyMonitoring,true);
+  assert.equal(registry.guardrails.noAutomaticReleaseWithoutHumanGate,true);
+  assert.doesNotMatch(JSON.stringify(handoff),/\.github\/workflows\/satellite-retirement-readonly-audit\.yml/);
 });
