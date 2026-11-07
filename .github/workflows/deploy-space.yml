@@ -136,7 +136,7 @@ env:
   MOKPO_INLINE_ROLES_MIGRATION: supabase/migrations/20261106090000_mokpo_mission_inline_roles.sql
   MOKPO_NAME_LOGIN_MIGRATION: supabase/migrations/20261106120000_mokpo_mission_name_login.sql
   BBQ_WORKSPACE_MIGRATION: supabase/migrations/20261108103000_bbqcheonggye_workspace.sql
-  BBQ_WORKSPACE_PINNED_BLOB: e41e71cae6007e10e2dde567e19c627828eb049f
+  BBQ_WORKSPACE_PINNED_BLOB: ca044387be75b2cfcff5d92881972ed59ac784fb
   BBQ_DEV_PROJECT: lxcxwbdwwojjkgybbqii
 
 jobs:
