@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "policyId": "EKODI-NATIVE-MONITORING-HANDOFF-001",
-  "status": "native-five-job-registry-protected-merged-runtime-receipt-pending",
+  "status": "native-monitoring-six-entry-source-wired-runtime-receipt-pending",
   "operator": "ekodi-orchestrator",
   "principle": "EKODI owns scheduled health, deployment and completion monitoring; ChatGPT automations have no authority or operational dependency",
   "externalChatgptAutomations": {
