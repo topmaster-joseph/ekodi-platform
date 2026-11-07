@@ -5,6 +5,34 @@
   const apiBase=prefix+'/api/agency/admin';
   let selected=null;
   let settlement=null;
+  // Tab panels preserve the existing server-key financial/authorization boundary.
+  const adminTabs=Array.from(document.querySelectorAll('[data-admin-tab]'));
+  function showAdminTab(target, focus=false){
+    if(target!=='list'&&!selected)return;
+    for(const tab of adminTabs){
+      const active=tab.dataset.adminTab===target;
+      tab.setAttribute('aria-selected',active?'true':'false');
+      tab.tabIndex=active?0:-1;
+      if(active&&focus)tab.focus();
+    }
+    $('adminApplications').hidden=target!=='list';
+    $('detail').hidden=target!=='review';
+    $('opsDetail').hidden=target!=='settlement';
+    if(target==='settlement'&&selected)void showSettlement().catch(error=>message(error.message,true));
+  }
+  for(const tab of adminTabs){
+    tab.addEventListener('click',()=>showAdminTab(tab.dataset.adminTab));
+    tab.addEventListener('keydown',event=>{
+      const index=adminTabs.indexOf(tab);
+      let next=null;
+      if(event.key==='ArrowRight')next=adminTabs[(index+1)%adminTabs.length];
+      if(event.key==='ArrowLeft')next=adminTabs[(index+adminTabs.length-1)%adminTabs.length];
+      if(event.key==='Home')next=adminTabs[0];
+      if(event.key==='End')next=adminTabs[adminTabs.length-1];
+      if(next){event.preventDefault();showAdminTab(next.dataset.adminTab,true);}
+    });
+  }
+  showAdminTab('list');
   const statusMap={awaiting_quote:'견적대기',quoted:'견적제시',accepted:'계약동의',paid_pending_fulfillment:'결제확인·공급사 개시대기',active:'서비스 개시',expired:'기간만료'};
   function message(value, error=false) { $('message').textContent=value; $('message').style.color=error?'#9e3728':'#24593b'; }
   async function call(path, body={}) {
@@ -30,8 +58,7 @@
     $('quoteForm').elements.guidance.value=item.guidance||'';
     $('quoteBtn').disabled=!['awaiting_quote','quoted'].includes(item.status);
     $('activateBtn').hidden=item.status!=='paid_pending_fulfillment';
-    $('opsDetail').hidden=false;
-    void showSettlement().catch(e=>message(e.message,true));
+    showAdminTab('review');
     $('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   async function load() {
@@ -67,7 +94,7 @@
   $('activateBtn').addEventListener('click',async()=>{
     if(!selected||selected.status!=='paid_pending_fulfillment') return;
     if(!confirm('실제 공급사 계정·이용권의 개시가 확인되었습니까? 확인하면 지금부터 '+selected.months+'개월의 관리기간을 계산합니다.')) return;
-    try {await call('/activate',{id:selected.id,confirmed:true});$('detail').hidden=true;await load();message('공급사 이용 개시일과 관리기간이 기록되었습니다.');}
+    try {await call('/activate',{id:selected.id,confirmed:true});selected=null;showAdminTab('list');await load();message('공급사 이용 개시일과 관리기간이 기록되었습니다.');}
     catch(e){message(e.message,true);}
   });
   function money(value){return Number.isSafeInteger(value)?new Intl.NumberFormat('ko-KR').format(value)+'원':'미확정';}
