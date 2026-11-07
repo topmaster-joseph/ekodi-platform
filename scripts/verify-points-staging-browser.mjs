@@ -104,7 +104,7 @@ try{
   }
   report.passed=report.checks.length===devices.length&&report.checks.every(row=>row.passed);
 }catch(error){
-  report.error=String(error?.code||error?.message||error).slice(0,300);
+  report.error=[error?.code,error?.message].filter(Boolean).join(': ').slice(0,300)||String(error).slice(0,300);
   console.log(`::error::${target} verification error: ${report.error}`.replace(/\r?\n/g,' '));
   // Read-only diagnostics: what the member actually sees (fresh single-use links).
   if(target==='member'){
