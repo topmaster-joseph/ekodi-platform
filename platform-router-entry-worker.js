@@ -478,6 +478,21 @@ async function routeSeonamMediApi(request,env,ctx){
 // Shared Site asset aliases (site-worker WORKSPACE_ADMIN_ASSET_ALIASES) instead of the workspace admin shell HTML.
 const WORKSPACE_ADMIN_ASSET_PATH=/^\/[a-z0-9][a-z0-9-]*\/admin\/assets\/[a-z0-9][a-z0-9._-]*\.(?:js|css)$/i;
 export function isWorkspaceAdminAssetPath(pathname){return WORKSPACE_ADMIN_ASSET_PATH.test(String(pathname||''))}
+// The former BBQ customer locator is permanently retired, not an alias or redirect.
+export function retiredBbqRouteResponse(request){
+  const path=new URL(request.url).pathname;
+  if(!/^\/bbqcheonggye(?:\/|$)/i.test(path))return null;
+  return new Response(request.method==='HEAD'?null:'이 주소는 사용하지 않습니다.',{
+    status:410,
+    headers:{
+      'content-type':'text/plain; charset=utf-8',
+      'cache-control':'no-store',
+      'x-robots-tag':'noindex, nofollow, noarchive',
+      'x-content-type-options':'nosniff',
+      'x-ekodi-route':'retired-bbq-locator',
+    },
+  });
+}
 async function routePlatform(request,env,ctx){
     const url=new URL(request.url);
     const host=resolvedHost(request,env);
@@ -752,6 +767,8 @@ export default {
       return applyPlatformSecurityHeaders(response,request);
     };
     const incomingUrl=new URL(request.url);
+    const retiredBbq=resolvedHost(request,env)===PUBLIC_HOST?retiredBbqRouteResponse(request):null;
+    if(retiredBbq)return finalize(retiredBbq);
     // Owner-directed private freeze takes precedence over publication DB toggles and public routing.
     const regionPrivateHold=cheonggyePublicHoldResponse(request);
     if(regionPrivateHold)return finalize(regionPrivateHold);
