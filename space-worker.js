@@ -522,6 +522,12 @@ export default{
       const target=new URL(url.pathname+url.search,'https://ekodi.kr');
       return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-alias':'space.ekodi.kr'}});
     };
+    // An irreversible URL hard cutover: neither redirect nor alias the retired BBQ path.
+    if(/^\/bbqcheonggye(?:\/|$)/i.test(url.pathname)){
+      return withHeaders(env,new Response(request.method==='HEAD'?null:'이 주소는 사용하지 않습니다.',{
+        status:410,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive'}
+      }),'space-gone');
+    }
     const missionApplicationMatch=normalizedMissionPath(url.pathname).match(MISSION_ACTIVITY_APPLICATION_RE);
     if(missionApplicationMatch)return submitMissionEventApplication(request,env,missionApplicationMatch[1],missionApplicationMatch[1]);
     if(normalizedMissionPath(url.pathname)===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);
