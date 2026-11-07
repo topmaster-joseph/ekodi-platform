@@ -61,3 +61,5 @@ a.padmin-stat-link:hover,a.padmin-stat-link:focus-visible{background:#1f3150;out
 .padmin-ai-title,.padmin-ai-body,.padmin-form input,.padmin-form select{background:#0e1a2b;color:var(--a-text);border-color:#4a5a78}
 .padmin-ai-body::placeholder,.padmin-form input::placeholder{color:#8f9aab}
 .padmin :focus-visible{outline:2px solid var(--a-accent);outline-offset:2px}
+.padmin-titlecell{display:inline-flex;align-items:center;gap:.75rem;flex-wrap:wrap}
+.padmin-titlecell .button.small{padding:.3rem .7rem;font-size:.82rem;min-height:0}

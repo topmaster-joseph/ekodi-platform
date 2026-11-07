@@ -76,7 +76,10 @@ jobs:
           set -euo pipefail
           args=()
           if [ "$REQUIRE_RECENT_BACKUP" = 'true' ]; then args+=(--require-recent-backup); fi
-          node scripts/points-production-backup-plan.mjs "${args[@]}"
+          rc=0; node scripts/points-production-backup-plan.mjs "${args[@]}" > /tmp/points-backup-plan.json 2>/tmp/points-backup-plan.err || rc=$?
+          cat /tmp/points-backup-plan.json; cat /tmp/points-backup-plan.err >&2
+          echo "::notice title=points backup plan::$(jq -c '{backup,backup_restore_owner_approval_required,applied:(.applied_migrations//.migration_status//null),pending:(.pending_migrations//null)}' /tmp/points-backup-plan.json 2>/dev/null | head -c 1500) $(head -c 300 /tmp/points-backup-plan.err | tr -d '\r\n')"
+          exit "$rc"
       - name: State explicit no-mutation boundary
         if: always()
         shell: bash

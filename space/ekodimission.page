@@ -6,12 +6,19 @@
   <div class="mission-home-photo-fallback" data-mission-photo-fallback>
     <span class="mission-home-photo-kicker">EKODI MISSION · OPEN TABLE</span>
     <strong>한 식탁에서<br>함께 만나는 이웃.</strong>
-    <p>매주 토요일 오전 11시 · 성경토론과 식사</p>
+    <p>토요일 모임 · 성경토론과 식사</p>
     <a href="/ekodimission/activities">공개 활동사진·기록 보기 →</a>
   </div>
   <img data-mission-public-photo-image alt="" loading="lazy" decoding="async" hidden>
   <figcaption data-mission-public-photo-caption hidden></figcaption>
 </figure></section>
+<section class="mission-home-switcher" id="mission-tabs" data-mission-tabs="home" aria-label="선교회 주요 소식">
+  <div class="mission-content-tabs" role="tablist" aria-label="첫 화면 주요 내용">
+    <button type="button" role="tab" id="mission-tab-saturday" aria-controls="mission-saturday-panel" aria-selected="true" tabindex="0" data-mission-tab="saturday">토요모임</button>
+    <button type="button" role="tab" id="notices" aria-controls="mission-notice-panel" aria-selected="false" tabindex="-1" data-mission-tab="notices">공지</button>
+    <button type="button" role="tab" id="schedule" aria-controls="mission-schedule-panel" aria-selected="false" tabindex="-1" data-mission-tab="schedule">일정</button>
+  </div>
+  <div id="mission-saturday-panel" role="tabpanel" aria-labelledby="mission-tab-saturday" data-mission-tab-panel="saturday">
 <section class="activities mission-home-current" id="saturday" aria-labelledby="mission-next-event">
 <div class="section-heading"><p class="eyebrow">EKODI MISSION · EVERY SATURDAY</p><h2 id="mission-next-event">이번 주 토요모임</h2></div>
 <article class="activity-card mission-saturday-card" data-mission-saturday>
@@ -42,20 +49,33 @@
       <a href="/auth/?site=mission&amp;return_to=https%3A%2F%2Fekodi.kr%2Fekodimission%23saturday" class="text-link" data-mission-participation-login hidden>로그인하고 정기참여 설정</a>
       <p role="status" aria-live="polite" data-mission-participation-status>참여 설정 확인 중입니다.</p>
     </div>
-    <ul class="mission-saturday-replies" data-mission-saturday-replies aria-live="polite"><li>이번 주 답글을 불러오고 있습니다.</li></ul>
-    <form class="mission-saturday-form" data-mission-saturday-form>
+    <div class="mission-attendance" data-mission-attendance aria-label="공개 참석자 명단">
+      <div class="mission-attendance-tabs" role="tablist" aria-label="참여 여부별 공개 명단">
+        <button type="button" role="tab" id="mission-attendance-join-tab" aria-controls="mission-attendance-join" aria-selected="true" tabindex="0" data-mission-attendance-tab="join">참여 <span data-mission-public-join-count>0</span></button>
+        <button type="button" role="tab" id="mission-attendance-cancel-tab" aria-controls="mission-attendance-cancel" aria-selected="false" tabindex="-1" data-mission-attendance-tab="cancel">불참 <span data-mission-public-cancel-count>0</span></button>
+      </div>
+      <div role="tabpanel" id="mission-attendance-join" aria-labelledby="mission-attendance-join-tab" data-mission-attendance-panel="join">
+        <ul class="mission-saturday-replies" data-mission-saturday-replies aria-live="polite"><li>공개 참여 명단을 불러오고 있습니다.</li></ul>
+      </div>
+      <div role="tabpanel" id="mission-attendance-cancel" aria-labelledby="mission-attendance-cancel-tab" data-mission-attendance-panel="cancel" hidden>
+        <ul class="mission-saturday-replies" data-mission-saturday-declined aria-live="polite"></ul>
+      </div>
+      <p class="mission-attendance-note">공개에 동의한 표시 이름만 보여줍니다. 개인 정기참여·비공개 참석 여부는 공개하지 않습니다.</p>
+    </div>
+    <form class="mission-saturday-form" data-mission-saturday-form hidden>
       <div class="mission-saturday-form-fields"><label>표시 이름<input name="displayName" autocomplete="nickname" minlength="2" maxlength="30" required placeholder="닉네임"></label>
       <label>참여 의사<select name="attendance"><option value="join">참여하겠습니다</option><option value="question">문의합니다</option><option value="cancel">참여를 취소합니다</option></select></label></div>
       <label>답글 (선택)<textarea name="body" maxlength="500" rows="2" placeholder="남기고 싶은 말이 있을 때만 입력하세요."></textarea></label>
       <label class="mission-saturday-consent"><input name="publicConsent" type="checkbox" required> 표시 이름·참여 의사 및 입력한 답글(있는 경우)이 이 모임 페이지에 공개되는 것에 동의합니다.</label>
-      <div class="mission-saturday-form-actions"><button type="submit" class="button primary">참여 신청 등록·수정</button><a href="/auth/?site=mission&amp;return_to=https%3A%2F%2Fekodi.kr%2Fekodimission%23saturday" class="text-link" data-mission-saturday-login hidden>에코디 로그인</a></div>
+      <div class="mission-saturday-form-actions"><button type="submit" class="button primary">참여 신청 등록·수정</button></div>
       <p class="mission-saturday-status" data-mission-saturday-status role="status" aria-live="polite"></p>
     </form>
+    <a class="button primary mission-saturday-login-cta" data-mission-saturday-login href="/auth/?site=mission&amp;return_to=https%3A%2F%2Fekodi.kr%2Fekodimission%23saturday">로그인 후 참여하기</a>
   </div></div>
 </article>
-<p class="mission-home-archive-link"><a class="text-link" href="/ekodimission/activities">지난 토요모임·활동 보기 →</a> <span aria-hidden="true">·</span> <a class="text-link" href="/ekodimission/history">사역 연혁 보기 →</a></p></section>
+<p class="mission-home-archive-link"><a class="text-link" href="/ekodimission/activities">지난 토요모임·활동 보기 →</a> <span aria-hidden="true">·</span> <a class="text-link" href="/ekodimission/history">사역 연혁 보기 →</a></p></section></div>
 <section class="mission-home-board-grid" id="mission-updates" aria-label="에코디선교회 공지사항과 주요일정">
-  <article class="mission-home-board" data-mission-editorial="mission-notice" aria-labelledby="mission-notice-heading">
+  <div id="mission-notice-panel" role="tabpanel" aria-labelledby="notices" data-mission-tab-panel="notices" hidden><article class="mission-home-board" data-mission-editorial="mission-notice" aria-labelledby="mission-notice-heading">
     <div class="mission-home-board-head"><h2 id="mission-notice-heading">공지사항</h2><a href="/ekodimission/board?category=mission-notice">전체 보기</a></div>
     <ol data-mission-board-items><li class="mission-home-board-empty">공지사항을 확인하고 있습니다.</li></ol>
     <button type="button" class="mission-home-board-write" data-mission-board-create hidden>공지 등록</button>
@@ -66,9 +86,21 @@
       <p data-mission-board-form-status role="status"></p>
     </form>
   </article>
-  <article class="mission-home-board" data-mission-editorial="mission-schedule" aria-labelledby="mission-schedule-heading">
+  </div>
+  <div id="mission-schedule-panel" role="tabpanel" aria-labelledby="schedule" data-mission-tab-panel="schedule" hidden><article class="mission-home-board" data-mission-editorial="mission-schedule" aria-labelledby="mission-schedule-heading">
     <div class="mission-home-board-head"><h2 id="mission-schedule-heading">주요일정</h2><a href="/ekodimission/board?category=mission-schedule">등록 일정 전체 보기</a></div>
-    <ol data-mission-board-items><li class="mission-home-board-empty">주요일정을 확인하고 있습니다.</li></ol>
+    <div class="mission-calendar" data-mission-calendar aria-label="월간 주요일정 달력">
+      <div class="mission-calendar-controls">
+        <button type="button" data-mission-calendar-prev aria-label="이전 달">‹</button>
+        <strong data-mission-calendar-month aria-live="polite">달력 불러오는 중</strong>
+        <button type="button" data-mission-calendar-next aria-label="다음 달">›</button>
+        <button type="button" data-mission-calendar-today>오늘</button>
+      </div>
+      <div class="mission-calendar-weekdays" aria-hidden="true"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+      <div class="mission-calendar-days" data-mission-calendar-days role="group" aria-label="날짜 선택"></div>
+    </div>
+    <h3 class="mission-calendar-selection" data-mission-selected-label>선택한 날짜의 일정</h3>
+    <ol data-mission-board-items aria-live="polite"><li class="mission-home-board-empty">주요일정을 확인하고 있습니다.</li></ol>
     <button type="button" class="mission-home-board-write" data-mission-board-create hidden>일정 등록</button>
     <form class="mission-home-board-form" data-mission-board-form hidden>
       <label>일정명<input name="title" maxlength="160" required></label>
@@ -82,5 +114,6 @@
       <p data-mission-board-form-status role="status"></p>
     </form>
   </article>
-</section></main>
+  </div>
+</section></section></main>
 <footer class="site-footer"><div><strong>에코디선교회</strong><p>말씀대로 살아내고, 곁을 내어주며, 사람과 공동체를 살려내는 선교.</p></div><p class="footnote">EKODI MISSION · ekodi.kr/ekodimission</p></footer></body></html>

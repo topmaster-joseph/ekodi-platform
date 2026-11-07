@@ -217,7 +217,7 @@
 .campaign-hero-image {
   display:block;
   width:100%;
-  max-width:1903px;
+  max-width:1360px;
   height:auto;
   margin-inline:auto;
   object-fit:contain;
@@ -343,3 +343,23 @@ footer.site-footer .site-footer-copy .site-footer-credit a{color:inherit;text-de
 #committee-activity.committee-news-only #committeeActivityForm,
 #committee-activity.committee-news-only #committeeActivityList,
 #committee-activity.committee-news-only #committeeActivityManageToggle{display:none!important}
+
+/* 2026-11-07 owner request: 회계 요약 — 기간 옆에 기간 값, 총수입·총지출·잔액 한 줄.
+   Kept in the external stylesheet so it applies even where inline <style> is not honoured. */
+#committee-finance-disclosure{border:1px solid #d8e2e9;border-radius:12px;padding:clamp(12px,1.5vw,18px);background:#f8fbfc;margin:8px 0 14px;color:#243641;min-width:0}
+#committee-finance-disclosure .committee-finance-heading{display:flex;align-items:center;justify-content:space-between;gap:6px 12px;flex-wrap:wrap}
+#committee-finance-disclosure .committee-finance-heading h3{font-size:clamp(17px,2vw,21px);margin:3px 0 0}
+#committee-finance-disclosure .committee-finance-asof{font-size:12px;color:#546671}
+#committee-finance-disclosure dl.committee-finance-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 8px}
+#committee-finance-disclosure dl.committee-finance-metrics>div{display:flex;align-items:baseline;justify-content:center;flex-wrap:wrap;gap:2px 8px;border:1px solid #dfe8ed;border-radius:9px;background:#fff;padding:10px 12px;min-width:0}
+#committee-finance-disclosure dl.committee-finance-metrics>div.committee-finance-period{grid-column:1/-1;justify-content:flex-start;padding:9px 12px}
+#committee-finance-disclosure dl.committee-finance-metrics dt{font-size:13px;color:#56656d;font-weight:700;margin:0}
+#committee-finance-disclosure dl.committee-finance-metrics dd{margin:0;font-weight:800;font-size:clamp(15px,2vw,20px);font-variant-numeric:tabular-nums;white-space:nowrap}
+#committee-finance-disclosure dl.committee-finance-metrics .committee-finance-period dd{font-size:clamp(14px,1.7vw,16px);font-weight:600}
+#committee-finance-disclosure .committee-finance-purpose,#committee-finance-disclosure .committee-finance-contact{font-size:13px;line-height:1.6;margin:6px 0 0;word-break:keep-all}
+#committee-finance-disclosure .committee-finance-contact{color:#56656d}
+@media(max-width:540px){#committee-finance-disclosure dl.committee-finance-metrics>div{flex-direction:column;align-items:center;padding:8px 4px}#committee-finance-disclosure dl.committee-finance-metrics>div.committee-finance-period{flex-direction:row;align-items:baseline}#committee-finance-disclosure dl.committee-finance-metrics dd{font-size:14px}}
+
+/* 2026-11-07 owner request: 총수입 = 전기이월 + 기간수입 구분표기 */
+#committee-finance-disclosure dl.committee-finance-metrics .committee-finance-breakdown{flex-basis:100%;text-align:center;font-size:12px;color:#56656d;font-weight:600;font-variant-numeric:tabular-nums}
+@media(max-width:540px){#committee-finance-disclosure dl.committee-finance-metrics .committee-finance-breakdown{font-size:11px;line-height:1.35;word-break:keep-all}}

@@ -72,8 +72,8 @@ async function inspect(page,where){
   const isHome=where.endsWith('-home');
   required(state.campaignVisible===isHome,'home_only_campaign_visibility_mismatch_'+where);
   if(isHome){
-    required(state.campaignSrc.includes('campaign-reconsideration-20261013.png'),'incorrect_home_campaign_source_'+where);
-    required(state.campaignNaturalWidth===1903&&state.campaignNaturalHeight===735,'home_campaign_dimensions_mismatch_'+where);
+    required(state.campaignSrc.includes('campaign-reconsideration-20261107.jpg'),'incorrect_home_campaign_source_'+where);
+    required(state.campaignNaturalWidth===1360&&state.campaignNaturalHeight===459,'home_campaign_dimensions_mismatch_'+where);
   }
   required(state.sideLabels.length===0&&state.active.length===0,'duplicate_left_menu_found_'+where);
   required(JSON.stringify(state.publicLinks)===JSON.stringify(labels),'header_six_menu_labels_mismatch_'+where);

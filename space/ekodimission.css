@@ -295,3 +295,155 @@ body:has(.hero-split) .mission-site-header nav a{font-size:clamp(.81rem,.9vw,.89
 .mission-home-board-form p[role=status]{min-height:1.1rem;color:var(--muted);font-size:.76rem;margin:0}
 @media(max-width:760px){.mission-home-board-grid{grid-template-columns:minmax(0,1fr);gap:.8rem;padding-top:.7rem}.mission-home-board{padding:1rem 1.1rem}}
 @media(max-width:350px){.mission-home-board-form-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* EKODI Mission home: compact, keyboard-accessible monthly schedule. */
+.mission-calendar{margin:.7rem 0 .55rem;min-width:0}
+.mission-calendar-controls{display:grid;grid-template-columns:2.1rem minmax(0,1fr) 2.1rem auto;align-items:center;gap:.35rem;margin-bottom:.65rem}
+.mission-calendar-controls strong{text-align:center;font-size:.94rem;font-weight:800;white-space:nowrap}
+.mission-calendar-controls button{display:grid;place-items:center;min-height:2.1rem;padding:0 .4rem;border:1px solid var(--line);border-radius:.5rem;background:transparent;color:var(--accent);font:inherit;font-size:1rem;font-weight:800;cursor:pointer}
+.mission-calendar-controls [data-mission-calendar-today]{font-size:.76rem;padding:0 .6rem}
+.mission-calendar-weekdays,.mission-calendar-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.mission-calendar-weekdays span{text-align:center;padding:.3rem 0;color:var(--muted);font-size:.74rem;font-weight:700}
+.mission-calendar-weekdays span:first-child{color:#a84d48}
+.mission-calendar-weekdays span:last-child{color:#356d99}
+.mission-calendar-padding{min-height:2.55rem}
+.mission-calendar-day{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;width:100%;min-height:2.55rem;padding:.25rem .1rem .65rem;border:1px solid transparent;border-radius:.5rem;background:transparent;color:var(--ink);font:inherit;font-size:.84rem;cursor:pointer}
+.mission-calendar-day.has-event{font-weight:800}
+.mission-calendar-day.has-event::after{content:"";position:absolute;bottom:.34rem;width:.31rem;height:.31rem;border-radius:50%;background:var(--accent)}
+.mission-calendar-day.is-today{border-color:var(--accent)}
+.mission-calendar-day[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.mission-calendar-day[aria-pressed="true"]::after{background:#fff}
+.mission-calendar-day:focus-visible,.mission-calendar-controls button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mission-calendar-selection{margin:.85rem 0 .2rem;padding-top:.65rem;border-top:1px solid var(--line);font-size:.87rem;font-weight:800;line-height:1.5}
+@media(max-width:350px){.mission-calendar-controls{gap:.2rem}.mission-calendar-controls strong{font-size:.83rem}.mission-calendar-day{font-size:.8rem;min-height:2.3rem}}
+
+
+/* EKODI Mission responsive overview + accessible content tabs (mission-responsive-tabs-attendance-20261107).
+   Scoped to the public Mission surface; no global shell or tenant leakage. */
+.mission-home .hero-split{
+  min-height:0!important;
+  padding:clamp(.8rem,2.2vw,1.5rem) 0 clamp(.9rem,2.5vw,1.7rem)!important;
+  gap:clamp(.8rem,2vw,1.5rem);
+  align-items:center
+}
+.mission-home .hero-copy{min-width:0}
+.mission-home .hero h1{
+  max-width:20ch;
+  font-size:clamp(1.95rem,3.25vw,3.25rem)!important;
+  line-height:1.2!important;
+  letter-spacing:-.045em;
+  margin:.3rem 0 .65rem!important;
+  overflow-wrap:break-word
+}
+.mission-home .hero .lead{
+  max-width:58ch;
+  margin:.3rem 0 .75rem;
+  font-size:clamp(.88rem,1.15vw,1rem)!important;
+  line-height:1.6
+}
+.mission-home .hero .actions{gap:.45rem;margin-top:.6rem}
+.mission-home .hero .actions .button{min-height:38px;padding:.5rem .82rem;font-size:.81rem}
+.mission-home .mission-home-photo{height:clamp(185px,21vw,260px);min-height:0!important}
+.mission-home .mission-home-photo-fallback{min-height:0;height:100%;padding:clamp(.8rem,2vw,1.35rem)}
+.mission-home .mission-home-photo-fallback strong{font-size:clamp(1.35rem,2.2vw,2.15rem)}
+.mission-home .mission-home-current{padding:.75rem 0 1rem}
+.mission-home .mission-home-current .section-heading h2{font-size:clamp(1.35rem,2vw,1.8rem);line-height:1.35}
+.mission-home-current .mission-saturday-card{display:grid;grid-template-columns:minmax(0,1fr)}
+.mission-home-current .mission-saturday-card .mission-saturday-date{
+  min-height:0;min-width:0;
+  display:flex;flex-direction:row;align-items:center;justify-content:flex-start;
+  flex-wrap:wrap;gap:.4rem 1rem;
+  padding:.6rem 1.1rem
+}
+.mission-home-current .mission-saturday-date strong{
+  display:block;min-width:0;
+  font-size:clamp(1.02rem,1.6vw,1.4rem)!important;
+  line-height:1.4;
+  white-space:normal!important;
+  overflow-wrap:break-word
+}
+.mission-home-current .mission-saturday-date span{font-size:clamp(.89rem,1.25vw,1.06rem);font-weight:750}
+.mission-home-current .activity-copy{padding:clamp(.85rem,1.8vw,1.25rem)}
+.mission-home-current .activity-copy h3{font-size:clamp(1.05rem,1.7vw,1.3rem);margin:.2rem 0}
+.mission-home-current .activity-copy>p:not(.tag){font-size:.9rem;line-height:1.55}
+.mission-home-switcher,.mission-activity-hub{min-width:0;padding-top:.55rem}
+.mission-content-tabs,.mission-attendance-tabs{
+  display:flex;align-items:stretch;gap:.4rem;
+  overflow-x:auto;max-width:100%;scrollbar-width:thin;
+  border-bottom:1px solid var(--line);
+  padding:.2rem 0 .45rem
+}
+.mission-content-tabs button,.mission-attendance-tabs button{
+  flex:0 0 auto;min-height:42px;border:1px solid var(--line);border-radius:.72rem;
+  padding:.52rem .9rem;background:#fffdf8;color:var(--ink);
+  font:800 .9rem/1.35 system-ui,-apple-system,"Noto Sans KR",sans-serif;
+  cursor:pointer;white-space:nowrap
+}
+.mission-content-tabs button[aria-selected="true"],.mission-attendance-tabs button[aria-selected="true"]{
+  background:var(--accent);color:#fff;border-color:var(--accent)
+}
+.mission-content-tabs button:focus-visible,.mission-attendance-tabs button:focus-visible{
+  outline:3px solid #a6bfa9;outline-offset:2px
+}
+[data-mission-tab-panel][hidden],[data-mission-attendance-panel][hidden],
+.mission-saturday-form[hidden],.mission-saturday-login-cta[hidden]{display:none!important}
+.mission-home .mission-home-board-grid{display:block;padding:.65rem 0 1.2rem}
+.mission-home .mission-home-board-grid .mission-home-board{max-width:100%;padding:clamp(.85rem,2vw,1.2rem)}
+.mission-attendance{margin:.75rem 0;min-width:0}
+.mission-attendance-tabs{padding-bottom:.4rem}
+.mission-attendance-tabs button{min-height:38px;padding:.45rem .85rem;font-size:.83rem}
+.mission-attendance-tabs button span{font-size:.79rem}
+.mission-attendance .mission-saturday-replies{
+  display:flex;flex-wrap:wrap;gap:.45rem;
+  margin:.65rem 0;max-height:220px;overflow:auto
+}
+.mission-attendance .mission-saturday-replies li{
+  padding:.35rem .7rem;border:1px solid var(--line);border-radius:999px;
+  background:#fffdf8;font-size:.85rem;line-height:1.5
+}
+.mission-attendance-note{font-size:.77rem;color:var(--muted);margin:.4rem 0 .65rem}
+.mission-saturday-login-cta{
+  display:inline-flex;align-items:center;justify-content:center;
+  margin:.55rem 0 0;padding:.55rem 1rem;min-height:42px;
+  font-size:.88rem;text-decoration:none
+}
+.mission-activity-hub{padding:.55rem 0 2rem}
+.mission-activity-hub [data-mission-tab-panel]{min-width:0}
+.mission-activity-hub .mission-saturday-archive{border-bottom:0;margin:0;padding:1.1rem 0}
+.mission-activity-hub .mission-activity-index{padding-top:.6rem}
+.mission-tab-detail{
+  margin:.85rem 0;padding:clamp(1rem,2vw,1.4rem);
+  background:var(--card);border:1px solid var(--line);border-radius:1rem
+}
+.mission-tab-detail h2{font-size:clamp(1.2rem,2vw,1.55rem);margin:0 0 .4rem}
+.mission-tab-detail p{margin:0 0 1rem;color:var(--muted);font-size:.94rem}
+.mission-tab-detail-links{display:flex;flex-wrap:wrap;gap:.55rem}
+.mission-tab-detail-links a{
+  display:inline-flex;align-items:center;min-height:42px;padding:.5rem .82rem;
+  border:1px solid var(--accent);border-radius:.7rem;
+  color:var(--accent);text-decoration:none;font-size:.84rem;font-weight:800
+}
+.mission-tab-detail-links a:hover,.mission-tab-detail-links a:focus-visible{
+  background:var(--accent);color:white
+}
+@media(max-width:900px){
+  .mission-home .hero-split{grid-template-columns:minmax(0,1fr)!important;gap:.8rem}
+  .mission-home .hero h1{font-size:clamp(1.8rem,4.8vw,2.7rem)!important}
+  .mission-home .mission-home-photo{height:clamp(165px,27vw,215px)}
+}
+@media(max-width:520px){
+  .mission-home .hero-split{padding:.55rem 0 .85rem!important}
+  .mission-home .hero h1{font-size:clamp(1.6rem,7vw,2.05rem)!important;line-height:1.22!important}
+  .mission-home .hero .lead{font-size:.86rem!important;line-height:1.52}
+  .mission-home .hero .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mission-home .hero .actions .button{white-space:normal;text-align:center;font-size:.76rem}
+  .mission-home .mission-home-photo{height:160px}
+  .mission-home .mission-home-photo-fallback strong{font-size:1.42rem}
+  .mission-home-current .mission-saturday-card .mission-saturday-date{padding:.55rem .75rem}
+  .mission-home-current .mission-saturday-date strong{font-size:1.05rem!important}
+  .mission-home-current .mission-saturday-date span{font-size:.86rem}
+  .mission-content-tabs button{flex:1 1 auto;padding:.5rem .55rem;font-size:.82rem}
+  .mission-activity-hub .mission-content-tabs{flex-wrap:wrap;overflow:visible}
+  .mission-activity-hub .mission-content-tabs button{flex:1 1 29%;white-space:normal}
+  .mission-saturday-login-cta{width:100%}
+}

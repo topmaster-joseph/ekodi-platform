@@ -325,7 +325,7 @@ function renderClaims(rows){
     const div=document.createElement('div');div.className='record';
     const summary=document.createElement('div');const label=document.createElement('strong');
     label.textContent=(ADAPTER_NAMES[row.adapter]||'활동 증빙')+' · '+String(row.source_ref||'');
-    const date=document.createElement('small');date.textContent=row.submitted_at?new Date(row.submitted_at).toLocaleString('ko-KR'):'';
+    const date=document.createElement('small');date.textContent=row.submitted_at?new Date(row.submitted_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'';
     summary.append(label,date);
     const state=document.createElement('strong');state.textContent=CLAIM_STATUS[row.status]||'처리 중';
     state.className=row.status==='approved'?'positive':row.status==='rejected'?'negative':'';
@@ -393,7 +393,7 @@ function renderRows(rows){
     const div=document.createElement('div');div.className='record';
     const summary=document.createElement('div');const label=document.createElement('strong');
     label.textContent=names[row.event_kind]||'포인트 거래';const date=document.createElement('small');
-    date.textContent=row.created_at?new Date(row.created_at).toLocaleString('ko-KR'):'';
+    date.textContent=row.created_at?new Date(row.created_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'';
     summary.append(label,date);
     const amount=document.createElement('strong');const value=Number(row.amount)||0;
     amount.textContent=(value>0?'+':'')+value.toLocaleString('ko-KR')+' P';
