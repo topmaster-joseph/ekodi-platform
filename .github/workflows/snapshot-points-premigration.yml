@@ -1,0 +1,77 @@
+name: Snapshot Supabase Before Points Migration (read-only)
+
+# One-time logical backup taken immediately before the points migrations are
+# applied (#6739, owner decision 2026-11-07: free one-time backup). Read-only:
+# pg_dump through the Supabase CLI's temporary login role. Nothing is applied,
+# restored or activated here. The dump stays in a private, short-lived artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Supabase project to snapshot'
+        required: true
+        type: choice
+        options: [development, production]
+        default: development
+
+permissions:
+  contents: read
+
+concurrency:
+  group: points-premigration-snapshot-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TARGET: ${{ inputs.target }}
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Fixed targets only; production only from main
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$TARGET" in
+            development) echo 'PROJECT_REF=lxcxwbdwwojjkgybbqii' >> "$GITHUB_ENV" ;;
+            production) test "$GITHUB_REF" = 'refs/heads/main'; echo 'PROJECT_REF=renzehysxirjilvdxacv' >> "$GITHUB_ENV" ;;
+            *) exit 2 ;;
+          esac
+          token="${TOKEN_A:-${TOKEN_B:-${TOKEN_C:-${TOKEN_D:-}}}}"
+          [ -n "$token" ] || { echo '::error::Supabase management credential missing'; exit 2; }
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Dump schema, roles and data (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p snapshot
+          supabase link --project-ref "$PROJECT_REF" >/dev/null
+          supabase db dump --linked -f snapshot/schema.sql
+          supabase db dump --linked --role-only -f snapshot/roles.sql
+          supabase db dump --linked --data-only --use-copy -f snapshot/data.sql
+          ( cd snapshot && sha256sum schema.sql roles.sql data.sql > SHA256SUMS )
+          gzip -9 snapshot/data.sql
+          bytes="$(du -sb snapshot | cut -f1)"
+          tables="$(grep -c '^COPY ' <(gzip -dc snapshot/data.sql.gz) || true)"
+          echo "::notice title=pre-migration snapshot ($TARGET)::project=$PROJECT_REF bytes=$bytes copy_tables=$tables utc=$(date -u +%FT%TZ) commit=$GITHUB_SHA"
+          {
+            echo "### Pre-migration snapshot ($TARGET)"
+            echo "- project: \`$PROJECT_REF\`, commit: \`$GITHUB_SHA\`, size: $bytes bytes, tables with data: $tables"
+            echo '- Read-only dump. No migration applied, nothing restored, points not activated.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the snapshot private and short-lived
+        uses: actions/upload-artifact@v7
+        with:
+          name: supabase-premigration-${{ inputs.target }}-${{ github.run_id }}
+          path: snapshot/
+          retention-days: 30
+          if-no-files-found: error
