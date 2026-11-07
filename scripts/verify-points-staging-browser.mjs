@@ -16,11 +16,32 @@ await fs.mkdir(dir,{recursive:true});
 const report={target,run,site,checks:[],passed:false,startedAt:new Date().toISOString()};
 const devices=[['desktop','desktop'],['mobile','mobile-portrait']];
 
+// Supabase keeps only the newest magic link per user, so links are issued
+// just in time for each browser run (development project only).
+async function memberHash(envName){
+  const base=String(process.env.POINTS_E2E_SUPABASE_URL||'');
+  const key=String(process.env.POINTS_E2E_SUPABASE_SECRET||'');
+  const email=String(process.env.POINTS_E2E_MEMBER_EMAIL||'');
+  if(base==='https://lxcxwbdwwojjkgybbqii.supabase.co'&&key.startsWith('sb_secret_')&&email){
+    const res=await fetch(base+'/auth/v1/admin/generate_link',{method:'POST',
+      headers:{apikey:key,'content-type':'application/json'},body:JSON.stringify({type:'magiclink',email})});
+    const body=await res.json().catch(()=>({}));
+    const hash=String(body.hashed_token||body.properties?.hashed_token||'');
+    if(!res.ok||!hash)throw new Error('member magic link not issued ('+res.status+')');
+    console.log('::add-mask::'+hash);
+    return hash;
+  }
+  return String(process.env[envName]||'');
+}
+
 function check(label,result,extra={}){
   const row={label,passed:result?.ok===true,errors:result?.pageErrors?.length??null,
     blockedMutations:result?.blockedMutations?.length??null,error:result?.error?.code||result?.error?.message||null,...extra};
+  if(!row.passed)row.detail=JSON.stringify({code:result?.code??null,message:result?.message??null,error:result?.error,
+    pageErrors:(result?.pageErrors||[]).slice(0,3),url:result?.url??result?.finalUrl??null}).slice(0,600);
   report.checks.push(row);
   console.log('[EKODI-POINTS-STAGING] '+JSON.stringify(row));
+  if(!row.passed)console.log(`::error::${label}: ${row.detail}`.replace(/\r?\n/g,' '));
   return row.passed;
 }
 
@@ -28,7 +49,7 @@ try{
   for(const [name,profile] of devices){
     if(target==='member'){
       const ref=`e2e/${run}-${name}`;
-      const hash=String(process.env[name==='desktop'?'POINTS_E2E_MEMBER_HASH_DESKTOP':'POINTS_E2E_MEMBER_HASH_MOBILE']||'');
+      const hash=await memberHash(name==='desktop'?'POINTS_E2E_MEMBER_HASH_DESKTOP':'POINTS_E2E_MEMBER_HASH_MOBILE');
       if(!/^[A-Za-z0-9_-]{20,200}$/.test(hash))throw new Error('member magic-link hash missing for '+name);
       const result=await runTask({
         taskId:`points-member-${run}-${name}`,
@@ -84,6 +105,29 @@ try{
   report.passed=report.checks.length===devices.length&&report.checks.every(row=>row.passed);
 }catch(error){
   report.error=String(error?.code||error?.message||error).slice(0,300);
+  console.log(`::error::${target} verification error: ${report.error}`.replace(/\r?\n/g,' '));
+  // Read-only diagnostics: what the member actually sees (fresh single-use links).
+  if(target==='member'){
+    const probes=[
+      ['wallet',[{type:'waitFor',selector:'#balanceView:not([hidden]), #notice:not(:empty):not(:has-text("있습니다"))',timeoutMs:15000},{type:'snapshot'}]],
+      ['progress',[{type:'waitFor',selector:'#balanceView:not([hidden]), #notice:not(:empty):not(:has-text("있습니다"))',timeoutMs:15000},
+        {type:'click',selector:'#pointsTabProgress'},
+        {type:'waitFor',selector:'#pointsProgressContent:not([hidden]), #pointsProgressNotice:has-text("확인할 수 없습니다"), #pointsTabEmpty:not([hidden])',timeoutMs:15000},
+        {type:'snapshot'}]],
+    ];
+    for(const [probe,actions] of probes){
+      try{
+        const diagHash=await memberHash('POINTS_E2E_MEMBER_HASH_DIAG');
+        if(!/^[A-Za-z0-9_-]{20,200}$/.test(diagHash))break;
+        // allowMutation only so the auth handoff POST (verifyOtp) can run; no form is submitted.
+        const diag=await runTask({taskId:`points-member-${run}-diag-${probe}`,
+          path:`/points/?site=${site}#ekodi_token=${diagHash}&ekodi_type=magiclink`,
+          deviceProfile:'desktop',allowMutation:true,timeoutMs:60000,actions},{artifactRoot:dir});
+        const snap=(diag?.results||[]).find(r=>r.type==='snapshot');
+        console.log(`::notice::member ${probe} diagnostic ok=${diag?.ok} text=${String(snap?.bodyText||diag?.message||'').replace(/\s+/g,' ').slice(0,700)} http=${JSON.stringify((diag?.httpErrorResponses||[]).slice(0,5)).slice(0,500)}`);
+      }catch(e){console.log(`::notice::member ${probe} diagnostic failed: ${String(e?.message||e).replace(/\s+/g,' ').slice(0,500)}`);}
+    }
+  }
 }finally{
   report.finishedAt=new Date().toISOString();
   await fs.writeFile(`${dir}/${target}-report.json`,JSON.stringify(report,null,2));

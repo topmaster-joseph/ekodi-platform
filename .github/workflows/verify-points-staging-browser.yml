@@ -147,7 +147,21 @@ jobs:
         env:
           POINTS_E2E_TARGET: member
           EKODI_BROWSER_ORIGIN: ${{ env.MY_STAGING }}
-        run: node scripts/verify-points-staging-browser.mjs
+          POINTS_E2E_SUPABASE_URL: https://lxcxwbdwwojjkgybbqii.supabase.co
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Only the newest magic link is valid, so the script issues one per device just in time.
+          keys="$(curl -fsS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$DEV_REF/api-keys?reveal=true")"
+          key="$(printf '%s' "$keys" | jq -r '[.[]|select(.type=="secret" and .name=="ekodi_points_control_staging")][0].api_key // empty')"
+          echo "::add-mask::$key"
+          # Diagnostic: verify a fresh link with the page's publishable key, as the browser does.
+          pub="$(sed -n 's/^SUPABASE_PUBLISHABLE_KEY *= *"\(.*\)"/\1/p' wrangler.my.staging.toml)"
+          dl="$(jq -nc --arg e "$E2E_MEMBER_EMAIL" '{type:"magiclink",email:$e}' | curl -fsS -X POST -H "apikey: $key" -H 'Content-Type: application/json' --data @- "https://$DEV_REF.supabase.co/auth/v1/admin/generate_link")"
+          dh="$(printf '%s' "$dl" | jq -r '.hashed_token // .properties.hashed_token // empty')"
+          code="$(jq -nc --arg h "$dh" '{type:"magiclink",token_hash:$h}' | curl -sS -o /tmp/v.json -w '%{http_code}' -X POST -H "apikey: $pub" -H "Origin: $MY_STAGING" -H 'Content-Type: application/json' --data @- "https://$DEV_REF.supabase.co/auth/v1/verify" || true)"
+          echo "::notice::publishable verify -> $code $(jq -c 'del(.access_token,.refresh_token,.user)' /tmp/v.json 2>/dev/null | head -c 300)"
+          POINTS_E2E_SUPABASE_SECRET="$key" POINTS_E2E_MEMBER_EMAIL="$E2E_MEMBER_EMAIL" node scripts/verify-points-staging-browser.mjs
 
       - name: EKODI browser — admin points console (admin staging)
         env:

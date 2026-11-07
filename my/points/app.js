@@ -218,7 +218,12 @@ async function handoff(){
     if(!sb)return;
     const type=params.get('ekodi_type')||'email';
     const {error}=await sb.auth.verifyOtp({token_hash:token,type});
-    if(error)throw error;
+    if(error){
+      // A one-time link already redeemed by an earlier load of this page (reload,
+      // back/forward, shell re-boot) is fine when that load stored the session.
+      const {data:{session}}=await sb.auth.getSession();
+      if(!session?.access_token)throw error;
+    }
   } finally {
     window.history.replaceState({},document.title,location.pathname+location.search);
   }
