@@ -1037,7 +1037,12 @@ jobs:
           set -Eeuo pipefail
           # No credential, cookie, real file identifier or DB write required.
           # A cached 200, redirect, or upstream error is not acceptable.
-          for route in             /api/storage/v1/policy             /api/storage/v1/file-provenance/ekodi-anonymous-canary             /api/storage/v1/files/ekodi-anonymous-canary; do
+          routes=(
+            '/api/storage/v1/policy'
+            '/api/storage/v1/file-provenance/ekodi-anonymous-canary'
+            '/api/storage/v1/files/ekodi-anonymous-canary'
+          )
+          for route in "${routes[@]}"; do
             headers="$(mktemp)"
             body="$(mktemp)"
             trap 'rm -f "$headers" "$body"' EXIT
