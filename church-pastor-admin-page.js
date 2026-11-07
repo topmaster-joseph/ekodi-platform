@@ -51,7 +51,7 @@ function pastorClient(POLICY){
     accounting:['회계관리','수입·지출 원장과 증빙을 관리합니다. 헌금수입은 헌금관리에서 자동 분개됩니다.'],
     receipts:['기부금영수증','교인의 발급 요청을 확인하고 검토·발급 상태를 관리합니다.'],
     reports:['사역보고','지난 사역과 다음 계획을 실제 교회 기록에 따라 작성·검토·승인·발송합니다.'],
-    documents:['문서보관','노회 제출서류·회의록·결산 등 교회 공식 문서를 구글문서·한글 파일 링크로 등록하고 보관합니다.'],
+    documents:['문서보관','노회 제출서류·회의록·결산 등 교회 공식 문서를 인쇄용 웹페이지·한글 파일 링크로 등록하고 보관합니다.'],
     ai:['AI 목회비서','말씀·예배·돌봄의 반복 업무를 돕되 목회 기밀의 경계를 지킵니다.'],
     chrome:['헤더 · 푸터','교회 사용자 사이트의 헤더와 푸터 기본정보를 관리합니다.'],
     access:['목회자 · 권한','교회 운영공간의 역할과 민감정보 접근 범위를 확인합니다.']
@@ -414,7 +414,7 @@ function pastorClient(POLICY){
     window.dispatchEvent(new CustomEvent('ekodi:church-reports-ready'));
   }
   function documents(){
-    $('summaryCards').innerHTML=[...staffCards(),card('보관 원본','구글드라이브','joseph@ekodi.kr'),card('형식','구글문서 · 한글','두 형식 함께 보관')].join('');
+    $('summaryCards').innerHTML=[...staffCards(),card('보관 원본','구글드라이브','joseph@ekodi.kr'),card('형식','웹페이지 · 한글','인쇄용 웹페이지와 한글 파일')].join('');
     $('mainPanel').innerHTML='<div id="churchDocumentsRoot" class="church-reports-admin"><p class="loading">문서보관 목록을 불러오고 있습니다.</p></div>';
     state('문서보관');
     window.dispatchEvent(new CustomEvent('ekodi:church-documents-ready'));
