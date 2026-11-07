@@ -1,4 +1,4 @@
-import { canonicalDriveStatus, deleteCanonicalDriveFile, readCanonicalDriveFile, writeCanonicalDriveFile, writeCanonicalDriveStream } from './canonical-drive-writer.js';
+import { canonicalDriveStatus, deleteCanonicalDriveFile, readCanonicalDriveFile, readCanonicalDriveMetadata, writeCanonicalDriveFile, writeCanonicalDriveStream } from './canonical-drive-writer.js';
 
 const STORAGE_PREFIX = '/api/storage/v1';
 // The storage control plane is reached privately through the STORAGE service
@@ -200,7 +200,16 @@ export async function handleStorageGateway(request, env = {}) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(STORAGE_PREFIX)) return null;
 
-  if (!localCanonicalRuntime(env)) return proxyToStorageControl(request, env);
+  // The public API Worker has no Google credential material and proxies into
+  // a privileged Storage service binding. Authorize at THIS public boundary
+  // before dispatch: the internal binding intentionally trusts service callers.
+  if (!localCanonicalRuntime(env)) {
+    const publicHealth=request.method==='GET' && url.pathname===`${STORAGE_PREFIX}/health`;
+    if (!publicHealth && !authorized(request,env)) {
+      return json({error:'Storage Gateway 인증이 필요합니다.',code:'STORAGE_UNAUTHORIZED'},401);
+    }
+    return proxyToStorageControl(request,env);
+  }
 
   if (request.method === 'GET' && url.pathname === `${STORAGE_PREFIX}/health`) {
     const status = await canonicalDriveStatus(env);
@@ -242,6 +251,18 @@ export async function handleStorageGateway(request, env = {}) {
       console.error('Storage R2 archive error',error);
       const message=String(error?.message || 'STORAGE_ARCHIVE_ERROR');
       return json({ error:'R2 녹화본을 공유드라이브로 보관하지 못했습니다.', code:message.split(':')[0] },errorStatus(message));
+    }
+  }
+
+  // Same server-only storage credential as /files/:id. Return factual Google
+  // metadata (drive, parent, size), not any caller-supplied receipt assertion.
+  if (request.method === 'GET' && url.pathname.startsWith(`${STORAGE_PREFIX}/file-provenance/`)) {
+    try {
+      const fileId=decodeURIComponent(url.pathname.slice(`${STORAGE_PREFIX}/file-provenance/`.length));
+      return json({ok:true,...await readCanonicalDriveMetadata(env,fileId)});
+    } catch (error) {
+      const message=String(error?.message||'STORAGE_FILE_PROVENANCE_ERROR');
+      return json({error:'공유드라이브 파일의 위치를 검증하지 못했습니다.',code:message.split(':')[0]},errorStatus(message));
     }
   }
 
