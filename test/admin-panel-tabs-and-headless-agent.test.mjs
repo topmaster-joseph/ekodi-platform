@@ -30,3 +30,10 @@ test('Device Agent scheduled task launches through a headless console so no wind
   const run = agent.slice(agent.indexOf('function Run-Agent {'));
   assert.match(run, /\[void\]\(Repair-AgentTaskHiddenLaunch\)/);
 });
+
+test('device bootstrap .cmd is served as a download, never rendered as text', async () => {
+  const headers = await readFile(new URL('../_headers', import.meta.url), 'utf8');
+  const block = headers.slice(headers.indexOf('/ekodi-device-bootstrap.cmd'));
+  assert.match(block, /Content-Disposition: attachment;/);
+  assert.match(block, /Content-Type: application\/octet-stream/);
+});
