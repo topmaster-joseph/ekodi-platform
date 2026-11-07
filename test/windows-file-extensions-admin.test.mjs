@@ -27,7 +27,7 @@ test('file extensions remain in existing platform-super-admin execution infrastr
 test('browser controls run only via confirmed allowlisted Device Control commands on online PC', () => {
   assert.match(admin, /FILE_EXTENSIONS_URL = '\/admin\/ops\/devices\/file-extensions'/);
   assert.match(admin, /fileExtensionsRoute\(\)/);
-  assert.match(admin, /data\.fileExtensionsPanel = 'v1'/);
+  assert.match(admin, /dataset\.fileExtensionsPanel = 'v1'/);
   assert.match(admin, /device\.status === 'online' && device\.management\?\.remoteCommandLevel === 'managed'/);
   assert.match(admin, /capability\(device, 'fileExtensions'\)/);
   assert.match(admin, /file_extensions\.status', '현재 상태 확인'/);
