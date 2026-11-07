@@ -4,6 +4,11 @@ name: EKODI Church Canonical Offline Staging Candidate
 # Pages project, branch variables, credentials, routes, authorization or DNS.
 on:
   workflow_dispatch:
+  # GITHUB_TOKEN-driven protected convergence merges may not generate push CI
+  # events; refresh immutable, public-only artifact evidence from protected
+  # main daily without release credentials or Cloudflare permissions.
+  schedule:
+    - cron: '53 14 * * *'
   push:
     branches: [main]
     paths:
