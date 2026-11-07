@@ -61,6 +61,18 @@ const PRESERVED_WORSHIP_PR=Object.freeze({
   preservationPR:151, preservationHeadSha:'9ca89ef9190a61e101bfe0c6129cdc6a668a6a4b'
 });
 
+const HOME_HEADER=Object.freeze({
+  sourcePR:153,
+  sourceHeadSha:'b9e2fdb608c55964438f6c5fa1f895e3c3095c08',
+  parentPR:151,
+  parentHeadSha:'9ca89ef9190a61e101bfe0c6129cdc6a668a6a4b',
+  sourceBlobSha:'e0e52a81d11a040ef943bc8411b21262e5b45a8b',
+  previousCanonicalBlobSha:'50c906bb14756f2ae724c1283852ce86ce17b5e8',
+  finalCanonicalBlobSha:'181d01fdc21044ee5853e97ec7dee89e6aaf7037',
+  previousCanonicalTestBlobSha:'484cc9e4199e1a898397cbcca10dfdf1260e7931',
+  sourceTestBlobSha:'cb8ab8205f45eb946f032b237fcc616fc547dc7d',
+  finalCanonicalTestBlobSha:'cb8ab8205f45eb946f032b237fcc616fc547dc7d'
+});
 const HEX40=/^[a-f0-9]{40}$/;
 const stop=msg=>{throw new Error('Church stacked source: '+msg)};
 const matching=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
@@ -173,12 +185,58 @@ export function verifyReviewedChurchStackedSource(m){
        current.blobSha!==oldSha||current.normalizedBlobSha!==newSha)
       stop('PR150/151 worship SHA or original audit drift: '+path);
   }
+  // PR153 extends the candidate without rewriting #142/#143/#144/#146/#149 or PR150/151 provenance.
+  // The exact upstream source differs only by the previously reviewed shorter
+  // central "커뮤니티 채널" label; restoring it must recover the pinned upstream blob SHA.
+  const header=m.postHomeHeaderReconciliation;
+  const normalization={sourcePrefix:'에코디',canonicalText:'커뮤니티 채널 ↗'};
+  if(header?.contract!=='ekodi.church-home-header-cleanup.v1' ||
+     header.changeScope!=='homepage-only daily-verse DOM and reinjection script; preserve six links and body devotion' ||
+     header.sourceRepository!=='topmaster-joseph/ekodi-church' ||
+     header.reviewedUpstreamPR!==HOME_HEADER.sourcePR ||
+     header.reviewedUpstreamHeadSha!==HOME_HEADER.sourceHeadSha ||
+     header.stackParentPR!==HOME_HEADER.parentPR ||
+     header.stackParentHeadSha!==HOME_HEADER.parentHeadSha ||
+     header.verifiedUpstreamBlobSha!==HOME_HEADER.sourceBlobSha ||
+     header.previousCanonicalBlobSha!==HOME_HEADER.previousCanonicalBlobSha ||
+     header.finalCanonicalBlobSha!==HOME_HEADER.finalCanonicalBlobSha ||
+     header.previousCanonicalTestBlobSha!==HOME_HEADER.previousCanonicalTestBlobSha ||
+     header.verifiedUpstreamTestBlobSha!==HOME_HEADER.sourceTestBlobSha ||
+     header.finalCanonicalTestBlobSha!==HOME_HEADER.finalCanonicalTestBlobSha ||
+     !matching(header.exactPreservedCanonicalNormalization,normalization) ||
+     header.sourceOwnershipTransferred!==false ||
+     header.productionReleaseSwitched!==false ||
+     header.legacyRepositoryDeletionAuthorized!==false)
+    stop('unreviewed or unauthorized homepage header source reconciliation');
+  const oldHeaderEntry=staged.changedFiles.find(x=>x.path==='index.html');
+  const canonicalHomeEntry=present.get('index.html');
+  if(oldHeaderEntry?.finalCanonicalBlobSha!==HOME_HEADER.previousCanonicalBlobSha ||
+     canonicalHomeEntry?.normalizedBlobSha!==HOME_HEADER.finalCanonicalBlobSha)
+    stop('tracked source historical/committed hash mismatch: previous header provenance was overwritten or canonical SHA differs');
+  const sourceTest=present.get('test/church-inline-live.test.mjs');
+  if(sourceTest?.blobSha!==HOME_HEADER.previousCanonicalTestBlobSha ||
+     sourceTest?.normalizedBlobSha!==HOME_HEADER.finalCanonicalTestBlobSha ||
+     prev.get('test/church-inline-live.test.mjs')?.blobSha!==HOME_HEADER.previousCanonicalTestBlobSha)
+    stop('original live test provenance was altered');
+  const liveTestBytes=readFileSync(resolve(root,'test/church-inline-live.test.mjs'));
+  if(blobHash(liveTestBytes)!==HOME_HEADER.sourceTestBlobSha ||
+     !liveTestBytes.toString('utf8').includes('assert.doesNotMatch(html,/src="church-daily-verse.js"/'))
+    stop('PR153 live header regression test source is unverified');
+  const homeBytes=readFileSync(resolve(root,'index.html'));
+  const homeText=homeBytes.toString('utf8');
+  const upstreamHome=homeText.replace('>'+normalization.canonicalText+'</a>', '>'+normalization.sourcePrefix+normalization.canonicalText+'</a>');
+  if(upstreamHome===homeText ||
+     blobHash(homeBytes)!==HOME_HEADER.finalCanonicalBlobSha ||
+     blobHash(Buffer.from(upstreamHome))!==HOME_HEADER.sourceBlobSha ||
+     /class="daily-verse"|<script[^>]+church-daily-verse\.js/.test(homeText) ||
+     !/<a href="\/ekodichurch\/devotion\/">매일묵상<\/a>/.test(homeText))
+    stop('PR153 upstream source or removed header Scripture is unverified');
   const preservedWorshipPaths=new Set(POST_MERGE_WORSHIP.map(([path])=>path));
   for(const [path,original] of prev){
     const current=present.get(path);
     if(!current||current.blobSha!==original.blobSha||current.mode!==original.mode)
       stop('original Git blob or file mode replaced: '+path);
-    if(!expectedPaths.includes(path)&&path!==reconciledPath&&!preservedWorshipPaths.has(path)&&!matching(current,original))
+    if(!expectedPaths.includes(path)&&path!==reconciledPath&&path!=='test/church-inline-live.test.mjs'&&!preservedWorshipPaths.has(path)&&!matching(current,original))
       stop('unreviewed original file normalized hash drift: '+path);
   }
   for(const [path,current] of present){
@@ -191,7 +249,7 @@ export function verifyReviewedChurchStackedSource(m){
     const item=present.get(path),original=prev.get(path);
     const r=staged.changedFiles.find(x=>x.path===path);
     const expectedChain=[146,149].filter(pr=>SOURCE_BLOBS[pr][path]);
-    if(!item||!r||r.finalCanonicalBlobSha!==(item.normalizedBlobSha||item.blobSha)||
+    if(!item||!r||r.finalCanonicalBlobSha!==(path==='index.html'?HOME_HEADER.previousCanonicalBlobSha:(item.normalizedBlobSha||item.blobSha))||
        r.previousCanonicalBlobSha!==(original?(original.normalizedBlobSha||original.blobSha):null)||
        r.originalBaseBlobSha!==(original?original.blobSha:null)||
        !Array.isArray(r.sourceChain) ||
@@ -207,13 +265,14 @@ export function verifyReviewedChurchStackedSource(m){
   }
   const normalized=sorted(m.trackedFiles.filter(x=>x.normalizedBlobSha&&x.normalizedBlobSha!==x.blobSha).map(x=>x.path));
   if(!Array.isArray(m.canonicalizedPaths)||!matching(sorted(m.canonicalizedPaths),normalized)||
-     !uniq(m.canonicalizedPaths)||normalized.length!==37)
+     !uniq(m.canonicalizedPaths)||normalized.length!==38)
     stop('canonicalized Git blob inventory drifted');
   const previous=baseline.reviewedOverlays.pullRequests.map(x=>({number:x.number,headSha:x.headSha}));
   return Object.freeze({
     originalSourceSha:baseline.sourceCommit,
     integrationOrder:Object.freeze([143,144,142,146,149]),
     pullRequests:Object.freeze([...previous,...[146,149].map(number=>({number,headSha:PR_HEADS[number]}))]),
-    preservedPublicWorship:Object.freeze({...PRESERVED_WORSHIP_PR,files:Object.freeze(POST_MERGE_WORSHIP.map(([path,previousCanonicalBlobSha,finalCanonicalBlobSha])=>Object.freeze({path,previousCanonicalBlobSha,finalCanonicalBlobSha})))})
+    preservedPublicWorship:Object.freeze({...PRESERVED_WORSHIP_PR,files:Object.freeze(POST_MERGE_WORSHIP.map(([path,previousCanonicalBlobSha,finalCanonicalBlobSha])=>Object.freeze({path,previousCanonicalBlobSha,finalCanonicalBlobSha})))}),
+    reviewedHomeHeader:Object.freeze({...HOME_HEADER})
   });
 }

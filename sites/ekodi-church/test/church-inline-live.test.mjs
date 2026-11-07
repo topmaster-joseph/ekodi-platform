@@ -76,7 +76,7 @@ test('Church homepage points to the single canonical EKODI Live system',async()=
   const js=await read('church-inline-live.js');
   assert.match(js,/new URL\('\/live\/church\/', location.origin\)/);
   assert.match(html,/href="\/live\/church\/\?mode=studio&amp;activity=event"/);
-  assert.match(html,/src="church-daily-verse.js"/);
+  assert.doesNotMatch(html,/src="church-daily-verse.js"/,'homepage header must not re-inject the daily Scripture line');
   assert.doesNotMatch(html,/href="\/ekodichurch\/live\/\?mode=studio/);
   new Function(js);
 });
