@@ -145,13 +145,21 @@ test('optional real SQLite smoke test exercises ON CONFLICT atomic uniqueness',a
   const database=new sqlite.DatabaseSync(':memory:');
   try{
     database.exec(FAMILY_CONSENT_NONCE_SCHEMA);
-    const adapter={prepare(sql){
-      const stmt=database.prepare(sql);
-      return {bind(...args){return {async run(){
-        const result=stmt.run(...args);
-        return {meta:{changes:Number(result.changes)}};
-      }}};
-    }};
+    const adapter={
+      prepare(sql){
+        const stmt=database.prepare(sql);
+        return {
+          bind(...args){
+            return {
+              async run(){
+                const result=stmt.run(...args);
+                return {meta:{changes:Number(result.changes)}};
+              },
+            };
+          },
+        };
+      },
+    };
     const first=createDurableFamilyNonceConsumer(adapter,{clock:()=>NOW});
     const second=createDurableFamilyNonceConsumer(adapter,{clock:()=>NOW});
     assert.equal((await first(nonce,{jobId,deviceId})),true);
