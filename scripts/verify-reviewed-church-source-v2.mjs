@@ -235,7 +235,7 @@ export function verifyReviewedChurchStackedSource(m){
     const item=present.get(path),original=prev.get(path);
     const r=staged.changedFiles.find(x=>x.path===path);
     const expectedChain=[146,149].filter(pr=>SOURCE_BLOBS[pr][path]);
-    if(!item||!r||r.finalCanonicalBlobSha!==(item.normalizedBlobSha||item.blobSha)||
+    if(!item||!r||r.finalCanonicalBlobSha!==(path==='index.html'?HOME_HEADER.previousCanonicalBlobSha:(item.normalizedBlobSha||item.blobSha))||
        r.previousCanonicalBlobSha!==(original?(original.normalizedBlobSha||original.blobSha):null)||
        r.originalBaseBlobSha!==(original?original.blobSha:null)||
        !Array.isArray(r.sourceChain) ||
@@ -258,6 +258,7 @@ export function verifyReviewedChurchStackedSource(m){
     originalSourceSha:baseline.sourceCommit,
     integrationOrder:Object.freeze([143,144,142,146,149]),
     pullRequests:Object.freeze([...previous,...[146,149].map(number=>({number,headSha:PR_HEADS[number]}))]),
-    preservedPublicWorship:Object.freeze({...PRESERVED_WORSHIP_PR,files:Object.freeze(POST_MERGE_WORSHIP.map(([path,previousCanonicalBlobSha,finalCanonicalBlobSha])=>Object.freeze({path,previousCanonicalBlobSha,finalCanonicalBlobSha})))})
+    preservedPublicWorship:Object.freeze({...PRESERVED_WORSHIP_PR,files:Object.freeze(POST_MERGE_WORSHIP.map(([path,previousCanonicalBlobSha,finalCanonicalBlobSha])=>Object.freeze({path,previousCanonicalBlobSha,finalCanonicalBlobSha})))}),
+    reviewedHomeHeader:Object.freeze({...HOME_HEADER})
   });
 }
