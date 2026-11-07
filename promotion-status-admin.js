@@ -37,25 +37,35 @@
 
   const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
   const content = () => document.querySelector('#app .content') || document.querySelector('.content');
-  const currentSection = () => window.EKODIAdminRoutes?.sectionFromLocation?.(location) || window.EKODIAdminPanels?.current?.() || '';
+  let sectionHint = '';
+  const currentSection = () => window.EKODIAdminRoutes?.sectionFromLocation?.(location) || sectionHint || window.EKODIAdminPanels?.current?.() || '';
 
   function ensureStyle() {
     if (document.getElementById('ekodiPromotionStatusStyle')) return;
     const style = document.createElement('style');
     style.id = 'ekodiPromotionStatusStyle';
     style.textContent = `
-.ekodi-promo-prompts{margin:0 0 14px;padding:12px 14px;border:1px solid #cfe0f3;border-radius:12px;background:#f4f9ff;color:#172033}
+.ekodi-promo-prompts{position:relative;display:flex;justify-content:flex-end;margin:0 0 8px;color:#172033}
 .ekodi-promo-prompts[hidden]{display:none!important}
-.ekodi-promo-prompts h3{margin:0 0 4px;font-size:14px}
-.ekodi-promo-prompts p.ekodi-promo-guide{margin:0 0 8px;color:#4a5b70;font-size:12.5px;line-height:1.55}
-.ekodi-promo-prompts ol{margin:0;padding:0;list-style:none;display:grid;gap:8px}
-.ekodi-promo-prompts li{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:9px 10px;border:1px solid #dbe6f2;border-radius:9px;background:#fff}
-.ekodi-promo-prompts li span{flex:1;min-width:0;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
-.ekodi-promo-prompts .ekodi-promo-actions{display:flex;gap:6px;flex-shrink:0}
-.ekodi-promo-prompts button{min-height:30px;padding:4px 10px;border:1px solid #bcd3ec;border-radius:8px;background:#fff;color:#0b5cab;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
-.ekodi-promo-prompts button.primary{background:#0b5cab;border-color:#0b5cab;color:#fff}
-.ekodi-promo-prompts small.ekodi-promo-state{display:block;min-height:16px;margin-top:6px;color:#2f5f86;font-size:12px}
-@media(max-width:760px){.ekodi-promo-prompts li{flex-direction:column}.ekodi-promo-prompts .ekodi-promo-actions{align-self:flex-end}}`;
+.ekodi-promo-prompts>summary{list-style:none;display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:5px 12px;border:1px solid #bcd3ec;border-radius:999px;background:#fff;color:#0b5cab;font-size:13px;font-weight:750;cursor:pointer;user-select:none}
+.ekodi-promo-prompts>summary::-webkit-details-marker{display:none}
+.ekodi-promo-prompts>summary .ekodi-promo-count{display:inline-grid;place-items:center;min-width:20px;height:20px;border-radius:10px;background:#e8f1fc;font-size:11px}
+.ekodi-promo-prompts[open]>summary{background:#0b5cab;border-color:#0b5cab;color:#fff}
+.ekodi-promo-prompts[open]>summary .ekodi-promo-count{background:rgba(255,255,255,.22)}
+.ekodi-promo-pop{position:absolute;right:0;top:40px;z-index:30;width:min(720px,calc(100vw - 40px));padding:12px;border:1px solid #cfe0f3;border-radius:14px;background:#fff;box-shadow:0 18px 44px rgba(15,23,42,.16)}
+.ekodi-promo-pop strong{all:unset;font-weight:800}
+.ekodi-promo-pop p.ekodi-promo-guide{margin:0 0 8px;color:#4a5b70;font-size:12.5px;line-height:1.55}
+.ekodi-promo-pop ol{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.ekodi-promo-pop li{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:9px 10px;border:1px solid #dbe6f2;border-radius:9px;background:#f8fbff}
+.ekodi-promo-pop li span{flex:1;min-width:0;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+.ekodi-promo-pop .ekodi-promo-actions{display:flex;gap:6px;flex-shrink:0}
+.ekodi-promo-pop button{min-height:30px;padding:4px 10px;border:1px solid #bcd3ec;border-radius:8px;background:#fff;color:#0b5cab;font:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.ekodi-promo-pop button.primary{background:#0b5cab;border-color:#0b5cab;color:#fff}
+.ekodi-promo-pop small.ekodi-promo-state{display:block;min-height:16px;margin-top:6px;color:#2f5f86;font-size:12px}
+
+.admin-work-strip .ekodi-promo-prompts{margin:0 0 0 auto;flex:0 0 auto}
+@media(max-width:760px){.ekodi-promo-pop{position:fixed;left:12px;right:12px;top:118px;width:auto;max-height:70vh;overflow:auto}.admin-work-strip .ekodi-promo-prompts{margin-left:8px}
+.ekodi-promo-pop li{flex-direction:column}.ekodi-promo-pop .ekodi-promo-actions{align-self:flex-end}}`;
     document.head.append(style);
   }
 
@@ -81,14 +91,16 @@
   }
 
   function promptCard(section) {
-    const card = document.createElement('section');
+    // Owner request 2026-11-04: one compact 「추천 지시문」 button; the list opens on click.
+    const card = document.createElement('details');
     card.className = 'ekodi-promo-prompts';
     card.dataset.promoPromptsFor = section;
-    card.setAttribute('aria-label', '추천 지시문');
-    card.innerHTML = `<h3>추천 지시문</h3>
-      <p class="ekodi-promo-guide">아래 문장을 화면 아래 <b>「에코디와 대화하기」</b> 창에 넣고 실행하면, 에코디가 이 화면의 현황 확인과 다음 조치를 한 번에 진행합니다. <b>[대화창에 넣기]</b>를 누르면 바로 입력되고, 확인 후 <b>실행</b>을 누르시면 됩니다.</p>
+    card.innerHTML = `<summary aria-label="추천 지시문 열기">추천 지시문 <span class="ekodi-promo-count">${PROMPTS[section].length}</span></summary>
+      <div class="ekodi-promo-pop" role="dialog" aria-label="추천 지시문">
+      <p class="ekodi-promo-guide"><strong>[대화창에 넣기]</strong>를 누르면 「에코디와 대화하기」 창에 입력됩니다. 확인 후 <strong>실행</strong>을 누르세요.</p>
       <ol>${PROMPTS[section].map((text, index) => `<li><span>${esc(text)}</span><div class="ekodi-promo-actions"><button type="button" class="primary" data-promo-fill="${index}">대화창에 넣기</button><button type="button" data-promo-copy="${index}">복사</button></div></li>`).join('')}</ol>
-      <small class="ekodi-promo-state" role="status" aria-live="polite"></small>`;
+      <small class="ekodi-promo-state" role="status" aria-live="polite"></small></div>`;
+    document.addEventListener('click', event => { if (card.open && !card.contains(event.target)) card.open = false; });
     const state = card.querySelector('.ekodi-promo-state');
     card.addEventListener('click', async event => {
       const fill = event.target.closest?.('[data-promo-fill]');
@@ -96,7 +108,9 @@
       if (!fill && !copy) return;
       const text = PROMPTS[section][Number((fill || copy).dataset.promoFill ?? (fill || copy).dataset.promoCopy)] || '';
       if (fill) {
-        state.textContent = fillAssist(text) ? '「에코디와 대화하기」 창에 넣었습니다. 내용을 확인하고 실행을 누르세요.' : (await copyText(text) ? '대화창을 찾지 못해 복사했습니다. 「에코디와 대화하기」 창에 붙여넣어 주세요.' : '대화창을 열 수 없습니다. 문장을 직접 복사해 주세요.');
+        const filled = fillAssist(text);
+        if (filled) card.open = false;
+        state.textContent = filled ? '「에코디와 대화하기」 창에 넣었습니다. 내용을 확인하고 실행을 누르세요.' : (await copyText(text) ? '대화창을 찾지 못해 복사했습니다. 「에코디와 대화하기」 창에 붙여넣어 주세요.' : '대화창을 열 수 없습니다. 문장을 직접 복사해 주세요.');
       } else {
         state.textContent = await copyText(text) ? '복사했습니다. 「에코디와 대화하기」 창에 붙여넣어 실행하세요.' : '복사하지 못했습니다. 문장을 직접 선택해 복사해 주세요.';
       }
@@ -115,24 +129,41 @@
     return changed;
   }
 
+  // Owner request 2026-11-04: the 「추천 지시문」 button sits at the right end of the top tab
+  // strip (3차 menu) so the screen content starts at the top. The strip is re-rendered on
+  // navigation, so it is watched and the button re-attached; without a strip it falls back
+  // to the top of the panel.
+  function strip() { return document.querySelector('.admin-work-strip'); }
+  function watch(node) {
+    if (!node || watched.has(node)) return;
+    watched.add(node);
+    new MutationObserver(reconcile).observe(node, { childList: true });
+  }
   function ensureCards() {
     ensureStyle();
+    const current = currentSection();
+    const bar = strip();
+    watch(bar); watch(bar?.parentElement);
     for (const [section, selector] of Object.entries(PANEL_FOR)) {
       const panel = document.querySelector(selector);
       if (!panel) continue;
       // Panels such as Growth OS re-render their whole innerHTML; re-attach the card after each render.
-      if (!watched.has(panel)) { watched.add(panel); new MutationObserver(reconcile).observe(panel, { childList: true }); }
-      if (panel.querySelector(`:scope > [data-promo-prompts-for="${section}"]`)) continue;
-      const card = promptCard(section);
-      const anchor = panel.querySelector(':scope > header') || [...panel.children].find(node => node.tagName !== 'STYLE');
-      if (anchor) anchor.after(card); else panel.prepend(card);
+      watch(panel);
+      const card = cards.get(section) || promptCard(section);
+      cards.set(section, card);
+      if (bar && section === current) {
+        if (card.parentElement !== bar || bar.lastElementChild !== card) bar.append(card);
+      } else {
+        const first = [...panel.children].find(node => node.tagName !== 'STYLE');
+        if (card.parentElement !== panel) { if (first) first.before(card); else panel.append(card); }
+      }
     }
-    syncCards(currentSection());
+    syncCards(current);
   }
 
   // Shared panels (MarketingAI, channel registry) show the card only under this menu.
   function syncCards(section) {
-    for (const card of document.querySelectorAll('[data-promo-prompts-for]')) card.hidden = card.dataset.promoPromptsFor !== section;
+    for (const card of document.querySelectorAll('[data-promo-prompts-for]')) { card.hidden = card.dataset.promoPromptsFor !== section; if (card.hidden) card.open = false; }
   }
 
   function openPromotionTab(section, attempt = 0) {
@@ -147,6 +178,7 @@
   }
 
   const watched = new WeakSet();
+  const cards = new Map();
   let scheduled = false;
   function reconcile() {
     if (scheduled) return;
@@ -165,6 +197,7 @@
     window.addEventListener('ekodi-admin-section-changed', event => {
       const section = String(event.detail?.section || '');
       applyAliases();
+      sectionHint = section;
       ensureCards();
       syncCards(section);
       openPromotionTab(section);
@@ -175,7 +208,7 @@
     return true;
   }
 
-  window.EKODIPromotionStatus = Object.freeze({ version: '1.1.0', sections: Object.freeze(Object.keys(PANEL_FOR)), prompts: PROMPTS, fillAssist });
+  window.EKODIPromotionStatus = Object.freeze({ version: '1.3.0', sections: Object.freeze(Object.keys(PANEL_FOR)), prompts: PROMPTS, fillAssist });
   if (!install()) {
     const retry = () => { if (install()) document.removeEventListener('DOMContentLoaded', retry); };
     document.addEventListener('DOMContentLoaded', retry);
