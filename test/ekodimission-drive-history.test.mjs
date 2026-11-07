@@ -22,7 +22,7 @@ test('Mission archive preserves past activities while homepage adds current noti
   assert.ok(!home.includes('RECENT ACTIVITY · 2026'));
   assert.ok(home.includes('이번 주 토요모임'));
   assert.ok(home.includes('data-mission-saturday'));
-  assert.equal([...home.matchAll(/<section\b/g)].length,3,'Home retains introduction and current gathering alongside official notices and schedule');
+  assert.equal([...home.matchAll(/<section\b/g)].length,4,'Home keeps introduction, tabs, current gathering and official notices/schedule');
   assert.ok(home.includes('id="mission-updates"'),'Official notice/schedule grid belongs to home, not historical archive');
   assert.ok(!activities.includes('mission-status upcoming'));
   assert.ok(!stories.includes('첫 활동은 2026년 9월 26일 진행 예정'));
