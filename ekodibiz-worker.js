@@ -410,8 +410,8 @@ export default {
     const agencyLegacy = {
       '/ai-agency':'/ai-agency/apply',
       '/ai-agency/':'/ai-agency/apply',
-      '/ai-agency-admin':'/ai-agency/admin',
-      '/ai-agency-admin/':'/ai-agency/admin'
+      '/ai-agency-admin':'/ai-agency/manage',
+      '/ai-agency-admin/':'/ai-agency/manage'
     };
     if (Object.hasOwn(agencyLegacy, path)) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return json({error:'method_not_allowed'},405);
@@ -425,6 +425,7 @@ export default {
     const agencyAssets = {
       '/ai-agency/apply':'/ai-agency.html', '/ai-agency/apply/':'/ai-agency.html',
       '/ai-agency/university':'/ai-agency.html', '/ai-agency/university/':'/ai-agency.html',
+      '/ai-agency/manage':'/ai-agency-admin.html', '/ai-agency/manage/':'/ai-agency-admin.html',
       '/ai-agency/individual':'/ai-agency.html', '/ai-agency/individual/':'/ai-agency.html',
       '/ai-agency/admin':'/ai-agency-admin.html', '/ai-agency/admin/':'/ai-agency-admin.html',
       '/ai-agency.js':'/ai-agency.js', '/ai-agency-admin.js':'/ai-agency-admin.js',
@@ -440,9 +441,9 @@ export default {
       const headers = new Headers(response.headers);
       headers.set('content-security-policy', "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' https://js.tosspayments.com https://ekodi.kr; connect-src 'self' https://*.tosspayments.com https://*.toss.im; frame-src https://*.tosspayments.com https://*.toss.im; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://*.tosspayments.com");
       headers.set('cache-control', 'no-store');
-      if (path.startsWith('/ai-agency/admin') || path.startsWith('/ai-agency/university') ||
+      if (path.startsWith('/ai-agency/manage') || path.startsWith('/ai-agency/admin') || path.startsWith('/ai-agency/university') ||
           path.startsWith('/ai-agency-admin')) headers.set('x-robots-tag', 'noindex, nofollow');
-      headers.set('x-ekodibiz-agency-route',path.startsWith('/ai-agency/admin')?'operator':
+      headers.set('x-ekodibiz-agency-route',path.startsWith('/ai-agency/manage')||path.startsWith('/ai-agency/admin')?'operator':
         path.startsWith('/ai-agency/university')?'university':
         path.startsWith('/ai-agency/individual')?'individual':'application');
       return new Response(request.method === 'HEAD' ? null : response.body, {status:response.status, statusText:response.statusText, headers});
