@@ -520,6 +520,52 @@ jobs:
             done
             exit 1
           fi
+      - name: Verify BBQ Cheonggye real apex storefront and admin boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          public_url='https://ekodi.kr/bbqcheonggye'
+          css_url='https://ekodi.kr/bbqcheonggye/assets/site.css'
+          admin_url='https://ekodi.kr/bbqcheonggye/admin/site'
+          ready=false
+          for attempt in $(seq 1 10); do
+            html_status=$(curl -sS --connect-timeout 5 --max-time 20 -D /tmp/bbq-live.headers -o /tmp/bbq-live.html -w '%{http_code}' "$public_url" || true)
+            css_status=$(curl -sS --connect-timeout 5 --max-time 20 -o /tmp/bbq-live.css -w '%{http_code}' "$css_url" || true)
+            if [ "$html_status" = 200 ] && [ "$css_status" = 200 ] &&
+               grep -Fq 'data-store-entity="bbqcheonggye"' /tmp/bbq-live.html &&
+               grep -Eiq '^x-ekodi-workspace:[[:space:]]*bbqcheonggye' /tmp/bbq-live.headers &&
+               grep -Fq '@media(max-width:560px)' /tmp/bbq-live.css; then
+              ready=true
+              break
+            fi
+            sleep 5
+          done
+          if [ "$ready" != true ]; then
+            echo "BBQ apex storefront failed: html=$html_status css=$css_status marker, route header and responsive CSS required."
+            exit 1
+          fi
+          grep -Eiq '^x-robots-tag:[[:space:]]*noindex' /tmp/bbq-live.headers || {
+            echo 'Unverified BBQ store data must remain noindex'; exit 1;
+          }
+          admin_status=$(curl -sS --connect-timeout 5 --max-time 20 -D /tmp/bbq-admin.headers -o /tmp/bbq-admin.html -w '%{http_code}' "$admin_url" || true)
+          case "$admin_status" in
+            200)
+              grep -Fq 'BBQ 무안청계점' /tmp/bbq-admin.html || {
+                echo 'Admin route returned 200 without BBQ store identity'; exit 1;
+              }
+              ! grep -Eiq 'sb_secret_|service_role_key|refresh_token[":][[:space:]]*"|access_token[":][[:space:]]*"' /tmp/bbq-admin.html || {
+                echo 'Admin guest HTML must never expose credentials'; exit 1;
+              }
+              ;;
+            301|302|303|307|308)
+              grep -Eiq '^location:[[:space:]]*https://ekodi.kr/auth/' /tmp/bbq-admin.headers || {
+                echo 'Admin sign-in must use canonical EKODI authentication'; exit 1;
+              }
+              ;;
+            401|403) echo 'Admin guest is denied protected data, as expected.' ;;
+            *) echo "BBQ admin route invalid HTTP $admin_status"; exit 1 ;;
+          esac
+          echo 'BBQ live apex root, verified responsive asset, privacy noindex and guest admin boundary PASS.'
       - name: Verify EKODI Mission production shell contract
         env:
           EKODI_MISSION_VERIFY_SCOPE: space
