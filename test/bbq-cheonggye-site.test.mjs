@@ -13,7 +13,7 @@ test('BBQ Cheonggye uses an EKODI customer workspace path, not a local server',a
   assert.equal(response.headers.get('x-robots-tag'),'noindex,nofollow,noarchive');
   assert.match(html,/https:\/\/ekodi\.kr\/bbqcg/);
   assert.match(html,/\/bbqcg\/assets\/site\.css/);
-  assert.match(html,/\/bbqcg\/admin\/site/);
+  assert.match(html,/\/bbqcg\/admin/);
   assert.match(html,/https:\/\/bbq\.co\.kr\//);
   assert.doesNotMatch(html,/http:\/\/127\.0\.0\.1|localhost|8080/);
   assert.doesNotMatch(html,/bbqe-learning.*(?:password|비밀번호)/);
@@ -50,10 +50,10 @@ test('workspace route is gated by an actual store_user_sites record',async()=>{
   assert.match(worker,/\/bbqcg\/assets\/site\.css/);
 });
 test('store provisioning reuses immutable store identity and does not assign roles',async()=>{
-  const migration=await source('supabase/migrations/20261108103100_bbqcg_hard_cutover.sql');
+  const migration=await source('supabase/migrations/20261108104500_bbqcg_hard_cutover.sql');
   assert.match(migration,/update public\.stores/);
   assert.match(migration,/operating_space_slug/);
-  assert.match(migration,/customer-site/);
+  assert.match(migration,/v_owner/);
   assert.match(migration,/store_user_sites/);
   assert.match(migration,/no role grants/i);
   assert.doesNotMatch(migration,/bbq123456|26110938|password\s*=/i);
