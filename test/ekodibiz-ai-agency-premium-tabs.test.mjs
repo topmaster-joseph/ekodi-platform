@@ -28,7 +28,7 @@ test('premium customer layout exposes one accessible tab per real content panel'
 
 test('tab behavior stays keyboard accessible without replacing secure receipt and provider payment states',async()=>{
   const js=await read('../ekodibiz/ai-agency.js');
-  for(const term of ["'ArrowRight'","'ArrowLeft'","'Home'","'End'","'aria-selected'","tabIndex","tabPanels","activateTab('status')","activateTab('contract')"]){
+  for(const term of ["ArrowRight","ArrowLeft","'Home'","'End'","'aria-selected'","tabIndex","tabPanels","activateTab('status')","activateTab('contract')"]){
     assert.ok(js.includes(term),term);
   }
   assert.match(js,/const visible=tabButtons\.filter\(item=>!item\.hidden\)/);
