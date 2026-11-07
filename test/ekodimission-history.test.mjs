@@ -41,7 +41,7 @@ test('shared header and homepage now present history as distinct from activities
    read('ekodimission-activities.page'),read('ekodimission-stories.page'),
    readFile(new URL('../space-worker.js',import.meta.url),'utf8')
  ]);
- assert.match(shell,/href:'\/ekodimission\/activities',label:'활동'[\s\S]*href:'\/ekodimission\/history',label:'연혁'[\s\S]*href:'\/ekodimission\/live',label:'라이브'/);
+ assert.match(shell,/href:'\\/ekodimission\\/history',label:'연혁'[\\s\\S]*href:'\\/ekodimission#notices',label:'공지'[\\s\\S]*href:'\\/ekodimission\\/devotion',label:'묵상'[\\s\\S]*href:'\\/ekodimission#schedule',label:'일정'[\\s\\S]*href:'\\/ekodimission\\/live',label:'방송'[\\s\\S]*href:'\\/ekodimission\\/activities',label:'활동'/);
  assert.match(shell,/location.replace\('\/ekodimission\/history'\+location.hash\)/);
  assert.ok(home.includes('href="/ekodimission/history"'),'Landing directs to the independent history page');
  assert.ok(home.includes('이번 주 토요모임'));
