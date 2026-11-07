@@ -1,29 +1,17 @@
-name: EKODI Satellite Source and Retirement Read-Only Evidence
+name: EKODI Satellite Source and Retirement Read-Only Evidence (Manual Fallback)
 
-# Observation is not deployment approval or deletion authorization. This workflow
-# only reads the canonical registry and fixed public source-release markers.
+# EKODI Native Operations Watch owns the sole recurring daily audit at 08:45
+# KST. This separate workflow is a manual, protected-main recovery tool only.
+# A green audit is never proof of repo deletion, provider binding or offsite restore.
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '23 1 * * *'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/satellite-retirement-readonly-audit.yml'
-      - 'config/site-repository-retirement-readiness.json'
-      - 'config/repository-source-of-truth.json'
-      - 'scripts/audit-satellite-live-source-markers.mjs'
-      - 'scripts/inspect-satellite-repository-retirement.mjs'
-      - 'scripts/audit-fleet-source-release-topology.mjs'
-      - 'scripts/build-satellite-retirement-watch-report.mjs'
-      - 'test/satellite-retirement-watch-report.test.mjs'
 
 permissions:
   contents: read
 
 concurrency:
-  group: satellite-retirement-readonly-${{ github.ref }}
-  cancel-in-progress: true
+  group: satellite-retirement-readonly-manual-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   observe:
@@ -31,59 +19,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Checkout exact protected source without persisted Git credentials
+      - name: Checkout exact protected source without GitHub write credentials
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Node.js for reproducible evidence
-        uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
-      - name: Prove offline public audit and retirement guards
+      - name: Verify read-only registry, public source markers and native owner contract
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           node --test \
+            test/ekodi-satellite-retirement-audit.test.mjs \
             test/satellite-retirement-watch-report.test.mjs \
+            test/satellite-retirement-watch-workflow.test.mjs \
             test/satellite-live-source-markers.test.mjs \
             test/satellite-repository-retirement.test.mjs
-      - name: Capture static registry and independent release-unit boundaries
+      - name: Execute only EKODI-owned public read-only manual observation
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/satellite-retirement-readonly"
-          node scripts/inspect-satellite-repository-retirement.mjs \
-            > "$RUNNER_TEMP/satellite-retirement-readonly/retirement.json"
-          node scripts/audit-fleet-source-release-topology.mjs \
-            > "$RUNNER_TEMP/satellite-retirement-readonly/topology.json"
-      - name: Observe only fixed public Church and Lab release markers
-        run: |
-          set -euo pipefail
-          # The CLI returns nonzero when Church is still legacy. That is an
-          # expected observation, not permission to bypass release or delete.
-          set +e
-          node scripts/audit-satellite-live-source-markers.mjs \
-            > "$RUNNER_TEMP/satellite-retirement-readonly/live-markers.json"
-          audit_result=$?
-          set -e
-          if test "$audit_result" -ne 0; then
-            echo '::warning::One or more public markers are legacy/unavailable. See the retained report; no release or deletion was attempted.'
-          fi
-      - name: Build fail-closed six-repository observation report
-        run: |
-          set -euo pipefail
-          evidence_dir="$RUNNER_TEMP/satellite-retirement-readonly"
-          node scripts/build-satellite-retirement-watch-report.mjs \
-            "$evidence_dir/retirement.json" "$evidence_dir/live-markers.json" \
-            > "$evidence_dir/report.json"
-          node scripts/build-satellite-retirement-watch-report.mjs \
-            "$evidence_dir/retirement.json" "$evidence_dir/live-markers.json" --markdown \
-            >> "$GITHUB_STEP_SUMMARY"
-      - name: Retain public read-only source evidence without provider secrets
+          node scripts/run-ekodi-satellite-retirement-audit.mjs \
+            --mode=manual --output-dir=ekodi-satellite-audit
+          cat ekodi-satellite-audit/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve public evidence on failure and success
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ekodi-satellite-retirement-readonly-${{ github.run_id }}
-          path: ${{ runner.temp }}/satellite-retirement-readonly/
+          name: ekodi-satellite-retirement-manual-${{ github.run_id }}
+          path: ekodi-satellite-audit/
           if-no-files-found: warn
           retention-days: 14
