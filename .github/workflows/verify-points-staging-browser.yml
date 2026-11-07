@@ -140,6 +140,10 @@ jobs:
           done
           printf '%s' "$session" | jq -e '.role' >/dev/null 2>&1 || { echo '::error::staging admin session was not accepted (see warnings above)'; exit 1; }
           printf '%s' "$session" | jq -e '.role=="super_admin"' >/dev/null
+          for ep in overview governance; do
+            code="$(curl -sS -o /tmp/g.json -w '%{http_code}' -H "cf-access-client-id: ${CF_ACCESS_CLIENT_ID:-}" -H "cf-access-client-secret: ${CF_ACCESS_CLIENT_SECRET:-}" -H "Authorization: Bearer $token" "$ADMIN_STAGING/api/control/points/$ep" || true)"
+            echo "::notice::admin points $ep -> $code $(jq -c '{error,keys:(keys)}' /tmp/g.json 2>/dev/null | head -c 300) claims=$(jq -c '.governance.claims // .governance.pending_claims // empty | length' /tmp/g.json 2>/dev/null)"
+          done
           echo "POINTS_E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
           echo 'Ephemeral development fixtures, member links and staging admin session ready.'
 
