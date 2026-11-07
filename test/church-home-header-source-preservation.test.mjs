@@ -21,7 +21,7 @@ test('new PR153 header cleanup is the only new Church homepage change and source
   assert.equal(proof.parentHeadSha,'9ca89ef9190a61e101bfe0c6129cdc6a668a6a4b');
   assert.equal(gitSha(home),proof.finalCanonicalBlobSha);
   assert.equal(
-    gitSha(home.replace('>커뮤니티 채널 ↗</a>','>에코디커뮤니티 채널 ↗</a>')),
+    gitSha(home.replace('>커뮤니티 채널 ↗</a>','>'+'에코디'+'커뮤니티 채널 ↗</a>')),
     proof.sourceBlobSha
   );
   assert.equal(proof.sourceBlobSha,'e0e52a81d11a040ef943bc8411b21262e5b45a8b');
