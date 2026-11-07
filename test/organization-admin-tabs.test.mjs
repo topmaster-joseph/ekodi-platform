@@ -27,7 +27,8 @@ test('each organization-scoped admin has work-first tab with optional metrics', 
 test('shared helper remains backward-compatible for church and store admin scripts', async () => {
   const church = await churchPastorAdminPage().text();
   const store = await storeAdminPage({slug:'jadam',name:'자담치킨'}).text();
-  assert.match(church, /aria-controls="summaryCards"/);
+  // Church admin opted out of the shared work/metrics tabs; the store keeps them.
+  assert.ok(!church.includes('aria-controls="summaryCards"'));
   assert.match(store, /aria-controls="summaryCards"/);
   const churchScript = await churchPastorAdminScript().text();
   const storeScript = await storeAdminScript().text();

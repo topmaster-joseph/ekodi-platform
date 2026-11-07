@@ -1,0 +1,40 @@
+name: EKODI Church Source PR Tests
+
+# Read-only PR guard: runs the same Church module test suite that
+# "Deploy EKODI Church Homepage" runs at release time, so a broken Church
+# test (e.g. a syntax error) is caught before merge instead of blocking deploy.
+# Never deploys, never uses release credentials.
+on:
+  pull_request:
+    paths:
+      - 'sites/ekodi-church/**'
+      - '.github/workflows/church-source-pr-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: church-source-pr-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  church-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Syntax-check Church test modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in sites/ekodi-church/test/*.mjs; do
+            node --check "$file"
+          done
+      - name: Run Church module test suite (same as release validation)
+        run: npm test --prefix sites/ekodi-church

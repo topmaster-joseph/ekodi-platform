@@ -448,7 +448,7 @@
       "path": "test/church-compact-tabs.test.mjs",
       "mode": "100644",
       "blobSha": "7e0d033488244752f911bda8fcd493deb700e805",
-      "normalizedBlobSha": "be1a66be3fe7d37a9171930fe00585593d541724"
+      "normalizedBlobSha": "c5efe244d669d4d4c8fb9d4475ef404981f1802f"
     },
     {
       "path": "test/church-csp-supabase-connect.test.mjs",
@@ -2003,8 +2003,8 @@
       {
         "path": "test/church-compact-tabs.test.mjs",
         "previousCanonicalBlobSha": "63ebc859c6ccde42f6b425d93db2368bb3ab7ff9",
-        "finalCanonicalBlobSha": "be1a66be3fe7d37a9171930fe00585593d541724",
-        "reason": "Superseded eight-shortcut test must assert six primary menu routes while checking all legacy hash deep-link IDs and member roles",
+        "finalCanonicalBlobSha": "c5efe244d669d4d4c8fb9d4475ef404981f1802f",
+        "reason": "Superseded eight-shortcut test must assert six primary menu routes while checking all legacy hash deep-link IDs and member roles; regex literal de-double-escaped (church-compact-tabs-regex-20261108) so the six-menu test module parses",
         "taskId": "church-canonical-146-149-stage-20261106"
       }
     ]
