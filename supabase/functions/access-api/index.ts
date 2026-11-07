@@ -144,7 +144,7 @@ async function personAuthoritySummary(personId:string){
   const [{data:person,error:personError},{data:identities,error:identityError}]=await Promise.all([
     admin.from("people").select("id,ekodi_id,display_name,status,created_at").eq("id",personId).maybeSingle(),
     admin.from("login_identities")
-      .select("auth_user_id,provider,provider_subject,email,email_verified,status,is_primary,linked_at,last_seen_at")
+      .select("id,auth_user_id,provider,provider_subject,email,email_verified,status,is_primary,linked_at,last_seen_at")
       .eq("person_id",personId).order("linked_at",{ascending:true})
   ]);
   if(personError)throw personError;
@@ -171,7 +171,7 @@ async function personAuthoritySummary(personId:string){
   return {
     person:{id:person?.id??personId,ekodiId:person?.ekodi_id??null,displayName:clip(person?.display_name,80)||null,
       status:person?.status??"unknown",createdAt:person?.created_at??null},
-    identities:rows.map((r:any)=>({provider:r.provider,email:r.email,emailVerified:Boolean(r.email_verified),
+    identities:rows.map((r:any)=>({id:r.id,provider:r.provider,email:r.email,emailVerified:Boolean(r.email_verified),
       status:r.status,isPrimary:Boolean(r.is_primary),linkedAt:r.linked_at,lastSeenAt:r.last_seen_at,
       subject:subjectHint(r.provider_subject)})),
     authority:{
@@ -189,6 +189,54 @@ async function personAuthoritySummary(personId:string){
     merges:(merges??[]).map((m:any)=>({id:m.id,status:m.status,role:m.survivor_person_id===personId?"survivor":"absorbed",
       provider:m.proven_provider,executedAt:m.executed_at,revertedAt:m.reverted_at}))
   };
+}
+// Site administrators may only VIEW the login methods of members of the sites they
+// administer; e-mails are masked and nothing in this view can change an account.
+async function administeredTenantIds(userId:string){
+  const linkedIds=await personAuthUserIds(userId);
+  const {data,error}=await admin.from("tenant_members").select("tenant_id,role,status")
+    .in("user_id",linkedIds).eq("status","active").in("role",["tenant_admin","platform_admin"]);
+  if(error)throw error;
+  return [...new Set((data??[]).map((row:any)=>row.tenant_id).filter(Boolean))] as string[];
+}
+const maskEmail=(value:unknown)=>{
+  const email=String(value??"").trim();
+  const at=email.indexOf("@");
+  if(at<1)return email?"***":null;
+  const local=email.slice(0,at),domain=email.slice(at+1);
+  const dot=domain.lastIndexOf(".");
+  const host=dot>0?domain.slice(0,dot):domain,tld=dot>0?domain.slice(dot):"";
+  return `${local.slice(0,Math.min(2,local.length-1)||1)}***@${host.slice(0,1)}***${tld}`;
+};
+async function siteAdminMemberView(personId:string,tenantIds:string[]){
+  const {data:rows,error}=await admin.from("login_identities")
+    .select("auth_user_id,provider,email,email_verified,status,is_primary,linked_at,last_seen_at")
+    .eq("person_id",personId).order("linked_at",{ascending:true});
+  if(error)throw error;
+  const userIds=[...new Set((rows??[]).filter((r:any)=>r.status==="active").map((r:any)=>r.auth_user_id).filter(Boolean))];
+  if(!userIds.length||!tenantIds.length)return null;
+  const {data:members,error:memberError}=await admin.from("tenant_members")
+    .select("role,status,tenant_id,tenants(slug,name)").in("user_id",userIds).in("tenant_id",tenantIds);
+  if(memberError)throw memberError;
+  if(!(members??[]).length)return null; // not a member of a site this admin runs
+  const {data:person}=await admin.from("people").select("ekodi_id,display_name,status").eq("id",personId).maybeSingle();
+  return {
+    person:{ekodiId:person?.ekodi_id??null,displayName:clip(person?.display_name,80)||null,status:person?.status??"unknown"},
+    identities:(rows??[]).filter((r:any)=>r.status==="active").map((r:any)=>({provider:r.provider,email:maskEmail(r.email),
+      emailVerified:Boolean(r.email_verified),status:r.status,isPrimary:Boolean(r.is_primary),linkedAt:r.linked_at,lastSeenAt:r.last_seen_at})),
+    tenantRoles:(members??[]).map((m:any)=>({tenant:m.tenants?{slug:m.tenants.slug,name:m.tenants.name}:null,role:m.role,status:m.status}))
+  };
+}
+// Step-up for account-changing admin actions: the administrator must have signed in
+// (not merely refreshed a session) within the last 15 minutes.
+const STEP_UP_MS=15*60*1000;
+function recentSignIn(user:any){
+  const at=Date.parse(String(user?.last_sign_in_at||""));
+  return Number.isFinite(at)&&Date.now()-at<=STEP_UP_MS;
+}
+async function readReason(req:Request){
+  const body=await req.json().catch(()=>null);
+  return clip(body?.reason,500);
 }
 async function shadowPolicy(){
   const {data,error}=await admin.from("trust_policy_versions")
@@ -388,8 +436,25 @@ Deno.serve(async(req)=>{
       // Read-only Person authority lookup for platform administrators. Exact match
       // only (email, EKODI ID or internal Person ID) so it cannot enumerate members;
       // every lookup is itself written to identity_audit_logs.
-      if(!await platformAdmin(auth.user.id))return json(req,{error:"platform_admin_required"},403);
       const query=clip(requestUrl.searchParams.get("q"),254);
+      if(!await platformAdmin(auth.user.id)){
+        // Site administrators: view-only, own-site members only, masked e-mails.
+        const tenantIds=await administeredTenantIds(auth.user.id);
+        if(!tenantIds.length)return json(req,{error:"platform_admin_required"},403);
+        if(query.length<3)return json(req,{error:"query_too_short"},400);
+        if(lookupKind(query)==="person_id")return json(req,{error:"lookup_by_email_or_ekodi_id"},400);
+        const members=[];
+        for(const personId of (await lookupPersonIds(query)).slice(0,5)){
+          const view=await siteAdminMemberView(personId,tenantIds);
+          if(view)members.push(view);
+        }
+        const {error:siteAuditError}=await admin.from("identity_audit_logs").insert({
+          person_id:null,auth_user_id:auth.user.id,action:"site_admin.member_login_lookup",
+          metadata:{matched:members.length,kind:lookupKind(query)}
+        });
+        if(siteAuditError)console.error("site admin lookup audit failed",siteAuditError.message);
+        return json(req,{ok:true,mode:"site_admin_readonly",matched:members.length,people:members});
+      }
       if(query.length<3)return json(req,{error:"query_too_short"},400);
       const personIds=await lookupPersonIds(query);
       const people=[];
@@ -399,7 +464,7 @@ Deno.serve(async(req)=>{
         action:"admin.person_lookup",metadata:{matched:people.length,kind:lookupKind(query)}
       });
       if(auditError)console.error("person lookup audit failed",auditError.message);
-      return json(req,{ok:true,matched:people.length,people});
+      return json(req,{ok:true,mode:"platform_admin",matched:people.length,people});
     }
 
     const revertMatch=path.match(/^\/admin\/merges\/([0-9a-f-]{36})\/revert$/i);
@@ -407,14 +472,45 @@ Deno.serve(async(req)=>{
       // Platform administrators can undo an owner-executed account merge. The DB function
       // restores exactly the identities recorded at execution and audits both Persons.
       if(!await platformAdmin(auth.user.id))return json(req,{error:"platform_admin_required"},403);
-      const {data,error}=await admin.rpc("person_merge_revert",{p_request:revertMatch[1].toLowerCase(),p_actor:auth.user.id});
+      if(!recentSignIn(auth.user))return json(req,{error:"reauth_required"},401);
+      const reason=await readReason(req);
+      if(reason.length<5)return json(req,{error:"reason_required"},400);
+      const requestId=revertMatch[1].toLowerCase();
+      const {data,error}=await admin.rpc("person_merge_revert",{p_request:requestId,p_actor:auth.user.id});
       if(error)throw error;
       if(data?.ok!==true)return json(req,{error:String(data?.error||"merge_revert_failed")},409);
+      const {error:auditError}=await admin.from("identity_audit_logs").insert({
+        person_id:null,auth_user_id:auth.user.id,action:"admin.merge_revert_reason",
+        metadata:{mergeRequestId:requestId,reason}
+      });
+      if(auditError)console.error("merge revert reason audit failed",auditError.message);
       return json(req,{ok:true,restored:data.restored});
     }
 
+    const detachMatch=path.match(/^\/admin\/identities\/([0-9a-f-]{36})\/detach$/i);
+    if(req.method==="POST"&&detachMatch){
+      // Platform administrators only (site administrators view, never change). The DB
+      // function refuses the primary login, the last login and any login holding
+      // payment / subscription / point records, and audits both Persons with the reason.
+      if(!await platformAdmin(auth.user.id))return json(req,{error:"platform_admin_required"},403);
+      if(!recentSignIn(auth.user))return json(req,{error:"reauth_required"},401);
+      const reason=await readReason(req);
+      if(reason.length<5)return json(req,{error:"reason_required"},400);
+      const {data,error}=await admin.rpc("person_identity_admin_detach",{
+        p_identity:detachMatch[1].toLowerCase(),p_actor:auth.user.id,p_reason:reason
+      });
+      if(error)throw error;
+      if(data?.ok!==true){
+        const code=String(data?.error||"detach_failed");
+        return json(req,{error:code},code==="identity_not_found"?404:code==="reason_required"?400:409);
+      }
+      return json(req,{ok:true,detachmentId:data.detachmentId,newPersonId:data.newPersonId});
+    }
+
     if(req.method==="GET"&&path==="/platform-authority"){
-      return json(req,{ok:true,platformAdmin:await platformAdmin(auth.user.id)});
+      const authority={ok:true,platformAdmin:await platformAdmin(auth.user.id),siteAdmin:false,stepUpFresh:recentSignIn(auth.user)};
+      if(!authority.platformAdmin)authority.siteAdmin=(await administeredTenantIds(auth.user.id)).length>0;
+      return json(req,authority);
     }
 
     if(req.method==="POST"&&path==="/site-admins/bootstrap"){

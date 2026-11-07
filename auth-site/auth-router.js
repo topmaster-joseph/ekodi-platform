@@ -20,6 +20,20 @@ if(!params.get('return_to')&&params.get('returnTo')){
   params.delete('returnTo');
   changed=true;
 }
+// Always come back to the page the person was on (owner request 2026-11-07): when a login
+// link did not carry return_to, use the EKODI page that opened this login screen. Each
+// login module still validates the target against its own allowlist before redirecting.
+if(!params.get('return_to')&&document.referrer){
+  try{
+    const from=new URL(document.referrer);
+    const host=from.hostname.toLowerCase();
+    if(from.protocol==='https:'&&!from.username&&!from.password&&(host==='ekodi.kr'||host.endsWith('.ekodi.kr'))&&!from.pathname.startsWith('/auth')){
+      from.hash='';
+      params.set('return_to',from.href);
+      changed=true;
+    }
+  }catch{}
+}
 if(changed)history.replaceState({},document.title,url.href);
 
 const manageMode=params.get('manage')==='1';
@@ -55,20 +69,20 @@ async function loadMarketingAuth(){
   catch(error){console.warn('Versioned Marketing auth load failed; retrying canonical asset.',error);return await import('./marketing-auth-hotfix.js')}
 }
 async function loadClientAuth(){
-  try{return await import('./client-auth.js?v=20261101-live-church-return-1')}
+  try{return await import('./client-auth.js?v=20261107-login-lock-1')}
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 
 // Naver/Kakao callbacks return here without site/return_to; the federated module restores them.
 // Dormant providers never issue a callback, so this is a no-op until an operator enables one.
 let federated=null;
-try{federated=await import('./federated-login.js?v=20261102-merge-policy-1')}catch(error){console.warn('federated login module unavailable',error)}
+try{federated=await import('./federated-login.js?v=20261107-login-lock-1')}catch(error){console.warn('federated login module unavailable',error)}
 const federatedHandled=federated?await federated.handleCallback():false;
 
 if(federatedHandled){/* the federated module owns this page load */}
 else if(site!=='admin'&&params.get('ekodi_email_action')==='reset'){
   // A recovery OTP screen must run before regular session handoff/Google auto-login.
-  const mounted=await import('./email-password.js').then(m=>m.mountEmailPassword({resetOnly:true})).catch(()=>false);
+  const mounted=await import('./email-password.js?v=20261107-login-lock-1').then(m=>m.mountEmailPassword({resetOnly:true})).catch(()=>false);
   if(!mounted){
     const status=document.getElementById('authStatus');
     if(status)status.textContent='이메일 비밀번호 재설정은 현재 준비 중입니다. 기존 로그인 방식을 사용해 주세요.';
@@ -89,7 +103,7 @@ else{
   // Login-identity management (Kakao/Naver/Google 계정 추가, 계정 병합) lives in auth.js only.
   if(!targetedWorkspace&&!manageMode&&site!=='marketing'&&(site==='portal'||isRegistryUserService||firstPartyClientSites.has(site)||trustedEkodiReturn))await loadClientAuth();
   else{
-    await import('./auth.js?v=20261102-merge-policy-1');
+    await import('./auth.js?v=20261107-login-lock-1');
     if(targetedWorkspace)await import('./auth-workspace-target.js?v=20261101-live-church-return-1');
     if(site==='marketing')await import('./marketing-onboarding.js?v=20260817-workspace-label-1');
     await import('./membership-ui.js');
@@ -102,5 +116,5 @@ if(!federatedHandled&&federated&&site!=='admin'&&params.get('ekodi_email_action'
 // Optional EKODI Mail/password entry stays hidden until the identity backend
 // confirms BOTH email ownership enforcement and EKODI Mail sender readiness.
 if(!federatedHandled&&site!=='admin'&&params.get('ekodi_email_action')!=='reset'){
-  import('./email-password.js').then(m=>m.mountEmailPassword()).catch(error=>console.warn('email auth module unavailable',error));
+  import('./email-password.js?v=20261107-login-lock-1').then(m=>m.mountEmailPassword()).catch(error=>console.warn('email auth module unavailable',error));
 }
