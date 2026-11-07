@@ -65,7 +65,7 @@
   const stat = (label, n, section) => { const kids = [el('strong', { textContent: String(n ?? 0) }), el('span', { textContent: label })];
     if (!section) return el('div', { className: 'padmin-stat' }, ...kids);
     const a = el('a', { className: 'padmin-stat padmin-stat-link', href: `${ADMIN}/${section}` }, ...kids); a.dataset.section = section; return a; };
-  const table = (heads, rows) => { const t = el('table'); t.append(el('thead', {}, el('tr', {}, ...heads.map(h => el('th', { scope: 'col', textContent: h }))))); const b = el('tbody'); for (const r of rows) b.append(el('tr', {}, ...r.map(c => el('td', { textContent: c })))); if (!rows.length) b.append(el('tr', {}, el('td', { colSpan: heads.length, className: 'muted', textContent: '기록 없음' }))); t.append(b); return el('div', { className: 'padmin-table' }, t); };
+  const table = (heads, rows) => { const t = el('table'); t.append(el('thead', {}, el('tr', {}, ...heads.map(h => el('th', { scope: 'col', textContent: h }))))); const b = el('tbody'); for (const r of rows) b.append(el('tr', {}, ...r.map(c => c instanceof Node ? el('td', {}, c) : el('td', { textContent: c })))); if (!rows.length) b.append(el('tr', {}, el('td', { colSpan: heads.length, className: 'muted', textContent: '기록 없음' }))); t.append(b); return el('div', { className: 'padmin-table' }, t); };
   const sum = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
   async function getSummary() { summary ??= await api('admin/summary'); who.textContent = `권한: ${L(summary.role)} · 판매 활성화는 Human Gate(자동 개통 없음)`; return summary; }
 
@@ -86,12 +86,17 @@
     async ai() {
       const d = await api('admin/ai-books');
       const out = [el('p', { className: 'muted', textContent: `무료 AI 한도 오늘 사용 ${d.budget.usedToday} / ${d.budget.dailyCap} · 유료 호출 없음 · 모든 책에 'AI 협업 초안 · 저자 감수' 표기` })];
-      out.push(table(['책', '분야', '진행', '상태'], d.books.map(b => [b.title, b.meta?.genre || b.genre, `${b.done}/${b.total}장`, ({ drafting: '초안 쓰는 중', author_review: '저자 감수 대기', approved: '감수 완료', discarded: '보류' })[b.status] || b.status])));
-      for (const b of d.books.filter(x => x.status !== 'drafting' || x.done > 0)) {
-        const open = el('button', { type: 'button', className: 'button', textContent: `「${b.title}」 원고 열기` });
-        open.addEventListener('click', async () => { view.replaceChildren(...await aiBook(b.id)); });
-        out.push(open);
-      }
+      const openable = b => b.status !== 'drafting' || b.done > 0;
+      const titleCell = b => {
+        const cell = el('span', { className: 'padmin-titlecell' }, el('span', { textContent: b.title }));
+        if (openable(b)) {
+          const open = el('button', { type: 'button', className: 'button small', textContent: '원고 열기', ariaLabel: `「${b.title}」 원고 열기` });
+          open.addEventListener('click', async () => { view.replaceChildren(...await aiBook(b.id)); });
+          cell.append(open);
+        }
+        return cell;
+      };
+      out.push(table(['책', '분야', '진행', '상태'], d.books.map(b => [titleCell(b), b.meta?.genre || b.genre, `${b.done}/${b.total}장`, ({ drafting: '초안 쓰는 중', author_review: '저자 감수 대기', approved: '감수 완료', discarded: '보류' })[b.status] || b.status])));
       if (!d.books.length) out.push(el('p', { className: 'muted', textContent: '첫 원고는 다음 예약 시간(매일 새벽 3시 37분)에 기획을 시작합니다.' }));
       return out;
     },
