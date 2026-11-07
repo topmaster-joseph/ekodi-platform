@@ -26,6 +26,7 @@ on:
       - 'config/ekodi-native-reservations.json'
       - 'test/ekodi-native-reservations.test.mjs'
       - 'scripts/run-ekodi-satellite-retirement-audit.mjs'
+      - 'scripts/audit-public-legacy-workflow-risks.mjs'
       - 'scripts/build-satellite-retirement-watch-report.mjs'
       - 'scripts/audit-satellite-live-source-markers.mjs'
       - 'scripts/inspect-satellite-repository-retirement.mjs'
@@ -57,6 +58,7 @@ jobs:
           node --check scripts/ekodi-native-operations-watch.mjs
           node --check scripts/ekodi-native-reservations.mjs
           node --check scripts/run-ekodi-satellite-retirement-audit.mjs
+          node --check scripts/audit-public-legacy-workflow-risks.mjs
           node --test test/ekodi-native-operations-watch.test.mjs test/ekodi-native-migration-status.test.mjs test/ekodi-native-workload-preparation.test.mjs test/ekodi-native-reservations.test.mjs test/ekodi-satellite-retirement-audit.test.mjs test/satellite-retirement-watch-workflow.test.mjs
 
   observe:
