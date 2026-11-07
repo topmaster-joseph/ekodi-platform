@@ -68,7 +68,7 @@ try{
       if(result.boards?.length===2&&result.boards[0].links.length===1&&result.boards[1].links.length===1)break;
       await pause(75);
     }
-    const pass=result?.width===width&&result.scroll<=result.client&&result.boards?.length===2&&result.boards[0].links.length===1&&result.boards[1].links.length===2&&
+    const pass=result?.width===width&&result.scroll<=result.client&&result.boards?.length===2&&result.boards[0].links.length===1&&result.boards[1].links.length===1&&
       result.boards.every(b=>b.width<=result.client+1&&!b.unexpectedImage)&&result.boards[1].links[0].includes('토요 성경토론')&&result.calendarDays>=28;
     console.log(width,pass?'PASS':'FAIL',JSON.stringify(result));
     if(!pass)failed=true;
@@ -79,7 +79,7 @@ try{
       if('${todayKst.slice(0,7)}'!=='${nextKst.slice(0,7)}')c.querySelector('[data-mission-calendar-next]').click();
       const day=c.querySelector('[data-date="${nextKst}"]');day?.click();
       const links=[...c.querySelectorAll('ol>li>a')].map(a=>a.textContent);
-      const pressed=day?.getAttribute('aria-pressed');
+      const pressed=c.querySelector('[data-date="${nextKst}"]')?.getAttribute('aria-pressed');
       c.querySelector('[data-mission-calendar-today]').click();
       const todayRestored=c.querySelector('[data-date="${todayKst}"]')?.getAttribute('aria-pressed');
       return {clicked:!!day,pressed,links,todayRestored};
