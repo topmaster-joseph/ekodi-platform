@@ -20,3 +20,13 @@ test('2026-11-08 Sunday worship is held at Mokpo Peace Plaza; today counts when 
   assert.equal(CHURCH_SUNDAY_WORSHIP.venueOverrides['2026-11-08'], '목포 평화광장');
   assert.deepEqual(churchSundayWorshipEvents('bad'), []);
 });
+
+test('2026-11-15 congregational meeting is a public church key date after Sunday worship', async () => {
+  const { churchKeyEvents } = await import('../site-board-control.js');
+  const [meeting] = churchKeyEvents('2026-11-08');
+  assert.equal(meeting.date, '2026-11-15');
+  assert.equal(meeting.time, '12:30');
+  assert.equal(meeting.venue, '에코디교회');
+  assert.match(meeting.title, /공동의회/);
+  assert.equal(churchKeyEvents('2026-11-16').length, 0);
+});

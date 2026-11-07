@@ -19,7 +19,7 @@ test('ADMIN-PANEL-TABS-001: right workspace panels switch blocks by tabs without
 });
 
 test('Device Agent scheduled task launches through a headless console so no window flashes', () => {
-  assert.match(agent, /\$AgentVersion = '2\.6\.4'/);
+  assert.match(agent, /\$AgentVersion = '2\.6\.5'/);
   assert.match(agent, /function Get-AgentHiddenLaunchSpec/);
   assert.match(agent, /argument = "--headless powershell\.exe \$agentArguments"/);
   assert.match(agent, /Build -ge 17763/);
