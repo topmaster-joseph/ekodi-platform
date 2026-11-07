@@ -71,6 +71,7 @@ try{
           {type:'fill',selector:'#claimRef',value:ref},
           {type:'fill',selector:'#claimNote',value:'EKODI browser staging verification'},
           {type:'click',selector:'#claimSubmit'},
+          {type:'waitFor',selector:'#claimStatus:has-text("신청했습니다")',timeoutMs:15000},
           {type:'waitFor',selector:'#claimList .record',timeoutMs:15000},
           {type:'assertText',text:'신청했습니다'},
           {type:'assertText',text:ref},
