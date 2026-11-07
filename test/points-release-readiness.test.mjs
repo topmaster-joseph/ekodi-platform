@@ -40,6 +40,13 @@ test('partial or insecure schema must never pass release contract',()=>{
     migrations:applied,functions,expected});
   assert.equal(exposedTables.state,'points_contract_incomplete');
   assert.deepEqual(exposedTables.missing_contracts,['points_tables_secure']);
+  for (const property of ['ledger_append_only_enforced','ledger_idempotency_unique']) {
+    const weakened=assess({schema:{...completeSchema,[property]:false},
+      migrations:applied,functions,expected});
+    assert.equal(weakened.state,'points_contract_incomplete');
+    assert.deepEqual(weakened.missing_contracts,[property]);
+    assert.equal(weakened.points_activation_authorized,false);
+  }
   const missingJwt=assess({schema:completeSchema,migrations:applied,
     functions:[{slug:'points-api',status:'ACTIVE',verify_jwt:false}],expected});
   assert.equal(missingJwt.state,'points_contract_incomplete');
@@ -81,6 +88,10 @@ test('real management requests are read-only, strictly project-scoped, never exp
   assert.match(SCHEMA_QUERY,/c\.relrowsecurity/);
   assert.match(SCHEMA_QUERY,/has_table_privilege\('anon'/);
   assert.match(SCHEMA_QUERY,/has_table_privilege\('authenticated'/);
+  assert.match(SCHEMA_QUERY,/t\.tgenabled in \('O','A'\)/);
+  assert.match(SCHEMA_QUERY,/t\.tgfoid=to_regprocedure\('ekodi_points_private\.reject_ledger_mutation\(\)'\)/);
+  assert.match(SCHEMA_QUERY,/t\.tgtype & 27/);
+  assert.match(SCHEMA_QUERY,/pg_get_constraintdef\(c\.oid\)='UNIQUE \(site_id, user_id, event_key\)'/);
   for(const query of [SCHEMA_QUERY,MIGRATION_QUERY])
     assert.doesNotMatch(query,/^\s*(?:insert|update|delete|drop|truncate|alter|create|grant|revoke|call)\b/im);
 });
