@@ -18,8 +18,10 @@ test('submitted campaign banner is preserved as a byte-identical local site asse
   assert.match(html,/fetchpriority="high"/);
   assert.match(html,/property="og:image:width" content="1360"/);
   assert.match(html,/property="og:image:height" content="459"/);
-  assert.match(html,/id="homeSpotlight"/);
-  assert.match(html,/id="homeLatestUpdates"/);
+  // 2026-11-07 owner request: the hero is followed by the public feed, not spotlight/최근 업데이트.
+  assert.doesNotMatch(html,/id="homeSpotlight"/);
+  assert.doesNotMatch(html,/id="homeLatestUpdates"/);
+  assert.match(html,/<\/section>\s*\n\s*<section id="homePublicFeed" class="home-public-feed"/);
 });
 
 test('responsive artwork is full-width and not cropped',()=>{
