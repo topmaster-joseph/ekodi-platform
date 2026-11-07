@@ -885,6 +885,7 @@ async function compressNoticeImage(file){
 }
 function resetNoticeEditor(){
   noticeEditingId=0;noticeSelectedFiles=[];noticeExistingImages=[];noticeKeptImageIndexes=new Set();noticeCompose?.reset();renderNoticeImagePreview();
+  const pinRow=el('noticePinRow');if(pinRow){pinRow.hidden=true;const box=el('noticePinned');if(box)box.checked=false}
   const submit=noticeCompose?.querySelector('button[type="submit"]');if(submit)submit.textContent='게시하기';
   const message=el('noticeComposeMessage');if(message)message.textContent='';
 }
@@ -900,6 +901,9 @@ function beginNoticeEdit(item){
   if(!noticeOwnedByCurrentUser(item))return;
   noticeEditingId=Number(item.id)||0;noticeSelectedFiles=[];noticeExistingImages=[...(item.imageUrls||[])];noticeKeptImageIndexes=new Set(noticeExistingImages.map((_,index)=>index));
   noticeCompose.elements.title.value=item.title||'';noticeCompose.elements.body.value=item.body||'';
+  // 중요공지 is site-wide ordering: the server only honours it from a platform
+  // admin, so the checkbox appears only when this account may pin (canPin).
+  const pinRow=el('noticePinRow');if(pinRow){pinRow.hidden=!item.canPin;const box=el('noticePinned');if(box)box.checked=Boolean(item.pinned)}
   const submit=noticeCompose.querySelector('button[type="submit"]');if(submit)submit.textContent='수정 저장';
   const message=el('noticeComposeMessage');if(message)message.textContent='게시글을 수정 중입니다.';
   renderNoticeImagePreview();noticeCompose.hidden=false;noticeWriteButton.hidden=true;el('noticeDetail').hidden=true;noticeCompose.scrollIntoView({block:'start'});noticeCompose.elements.title.focus();
@@ -923,6 +927,9 @@ el('noticeComposeCancel')?.addEventListener('click',()=>{resetNoticeEditor();not
 noticeCompose?.addEventListener('submit',async event=>{
   event.preventDefault();const message=el('noticeComposeMessage'),token=noticeToken();if(!token){location.assign(noticeLoginUrl());return}
   const form=new FormData(noticeCompose);form.delete('images');for(const file of noticeSelectedFiles)form.append('images',file,file.name);
+  form.delete('pinned');
+  const pinRow=el('noticePinRow');
+  if(noticeEditingId&&pinRow&&!pinRow.hidden)form.set('pinned',el('noticePinned')?.checked?'1':'0');
   if(noticeEditingId)form.set('keepImageIndexes',JSON.stringify([...noticeKeptImageIndexes].sort((a,b)=>a-b)));
   const editingId=noticeEditingId,method=editingId?'PUT':'POST',url=editingId?'/api/seonammedi/notices/'+editingId:'/api/seonammedi/notices';
   message.textContent=editingId?'수정 저장 중입니다…':'게시 중입니다…';
