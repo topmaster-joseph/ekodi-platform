@@ -1,5 +1,9 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
-import { JOURNAL_META, getPost, getPublishedPosts, toPublicSummary } from './journal-content.js';
+import { JOURNAL_META, getPublishedPosts, toPublicSummary } from './journal-content.js';
+import { bookJournalPosts, mergePosts } from './journal-books.js';
+
+// JOURNAL-BOOKS-001: 기존 글 + 출판된 도서 글(출판 워커 서비스 바인딩).
+async function allPosts(env) { return mergePosts(getPublishedPosts(), await bookJournalPosts(env)); }
 
 const SECURITY_HEADERS = {
   'x-content-type-options': 'nosniff',
@@ -51,8 +55,7 @@ function xmlEscape(value) {
     .replaceAll("'", '&apos;');
 }
 
-function rss() {
-  const posts = getPublishedPosts();
+function rss(posts) {
   const items = posts.map((post) => `    <item>
       <title>${xmlEscape(post.title)}</title>
       <link>${JOURNAL_META.canonicalOrigin}/p/${encodeURIComponent(post.slug)}</link>
@@ -72,10 +75,10 @@ function rss() {
 </channel></rss>`;
 }
 
-function sitemap() {
+function sitemap(posts) {
   const urls = [
     `<url><loc>${JOURNAL_META.canonicalOrigin}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`,
-    ...getPublishedPosts().map((post) =>
+    ...posts.map((post) =>
       `<url><loc>${JOURNAL_META.canonicalOrigin}/p/${encodeURIComponent(post.slug)}</loc><lastmod>${new Date(post.updatedAt).toISOString()}</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>`
     ),
   ];  return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>`;
@@ -112,19 +115,20 @@ export default {
     if (path === '/robots.txt') {
       return text(`User-agent: *\nAllow: /\nSitemap: ${JOURNAL_META.canonicalOrigin}/sitemap.xml\n`);
     }
-    if (path === '/feed.xml' || path === '/rss.xml') return text(rss(), 'application/rss+xml; charset=utf-8');
-    if (path === '/sitemap.xml') return text(sitemap(), 'application/xml; charset=utf-8');
+    if (path === '/feed.xml' || path === '/rss.xml') return text(rss(await allPosts(env)), 'application/rss+xml; charset=utf-8');
+    if (path === '/sitemap.xml') return text(sitemap(await allPosts(env)), 'application/xml; charset=utf-8');
 
     if (path === '/api/posts') {
       return json({
         journal: JOURNAL_META,
-        posts: getPublishedPosts().map(toPublicSummary),
+        posts: (await allPosts(env)).map(toPublicSummary),
       }, 200, PUBLIC_CACHE);
     }
 
     const apiPost = path.match(/^\/api\/posts\/([^/]+)$/);
     if (apiPost) {
-      const post = getPost(decodeURIComponent(apiPost[1]));
+      const slug = decodeURIComponent(apiPost[1]);
+      const post = (await allPosts(env)).find(p => p.slug === String(slug || '').trim()) || null;
       return post ? json({ journal: JOURNAL_META, post }, 200, PUBLIC_CACHE) : json({ error: 'not_found' }, 404);
     }
 
