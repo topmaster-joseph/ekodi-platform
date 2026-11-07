@@ -200,7 +200,16 @@ export async function handleStorageGateway(request, env = {}) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(STORAGE_PREFIX)) return null;
 
-  if (!localCanonicalRuntime(env)) return proxyToStorageControl(request, env);
+  // The public API Worker has no Google credential material and proxies into
+  // a privileged Storage service binding. Authorize at THIS public boundary
+  // before dispatch: the internal binding intentionally trusts service callers.
+  if (!localCanonicalRuntime(env)) {
+    const publicHealth=request.method==='GET' && url.pathname===`${STORAGE_PREFIX}/health`;
+    if (!publicHealth && !authorized(request,env)) {
+      return json({error:'Storage Gateway 인증이 필요합니다.',code:'STORAGE_UNAUTHORIZED'},401);
+    }
+    return proxyToStorageControl(request,env);
+  }
 
   if (request.method === 'GET' && url.pathname === `${STORAGE_PREFIX}/health`) {
     const status = await canonicalDriveStatus(env);
