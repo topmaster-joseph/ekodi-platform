@@ -104,6 +104,9 @@ const COMMAND_POLICIES = Object.freeze({
   'lock.resume_off': { risk: 'maintain' },
   'lock.resume_on': { risk: 'maintain' },
   'autologon.open': { risk: 'privileged', confirm: true },
+  'file_extensions.status': { risk: 'observe', superAdmin: true },
+  'file_extensions.show': { risk: 'maintain', confirm: true, superAdmin: true },
+  'file_extensions.restore': { risk: 'maintain', confirm: true, superAdmin: true },
   'diagnostics.collect': { risk: 'observe' },
   'computer.system.read': { risk: 'observe' },
   'computer.process.list': { risk: 'observe' },
@@ -624,6 +627,14 @@ export function summarizeCommandResult(result = {}, commandType = '') {
   // The Agent returns only aggregate cleanup proof. Project the removed file
   // COUNT for this exact allowlisted command, without exposing file names or
   // paths, or treating a missing/malformed count as a measured zero.
+  if (String(commandType).startsWith('file_extensions.') && result?.fileExtensions && typeof result.fileExtensions === 'object') {
+    const state = result.fileExtensions;
+    summary.fileExtensions = {
+      visibility: ['shown', 'hidden', 'unconfigured'].includes(state.visibility) ? state.visibility : 'unknown',
+      canRestore: state.canRestore === true,
+      checkedAt: safeText(state.checkedAt, 40),
+    };
+  }
   if (commandType === 'maintenance.temp_cleanup') {
     const removedFiles = finiteNumber(result.removedFiles);
     if (removedFiles !== null && Number.isSafeInteger(removedFiles) && removedFiles >= 0)
@@ -1357,7 +1368,7 @@ async function handleAdmin(request, env) {
     const body = await readJson(request) || {};
     const commandType = safeText(body.type, 80);
     const policy = COMMAND_POLICIES[commandType];
-    if (!policy) return json({ error: '자동 배정할 수 없는 작업입니다.', code: 'DEVICE_JOB_NOT_ALLOWED' }, 400, request, env);
+    if (!policy || commandType.startsWith('file_extensions.')) return json({ error: '파일 확장자 설정은 온라인 PC를 직접 지정해야 합니다.', code: 'DEVICE_JOB_NOT_ALLOWED' }, 400, request, env);
     if (policy.confirm && body.confirmed !== true) return json({ error: '이 작업은 관리자 확인이 필요합니다.', code: 'DEVICE_JOB_CONFIRM_REQUIRED' }, 409, request, env);
     // A person must be present at a specific PC; never auto-assign login windows.
     if (isInteractiveAuthCommand(commandType)) return json({ error: '외부 서비스 인증 세션은 자동 배정할 수 없습니다.', code: 'INTERACTIVE_AUTH_JOB_FORBIDDEN' }, 400, request, env);
@@ -1530,7 +1541,7 @@ async function handleAdmin(request, env) {
       return json({ error: '이 작업은 관리자 확인이 필요합니다.', code: 'DEVICE_COMMAND_CONFIRM_REQUIRED' }, 409, request, env);
     }
     if (policy.superAdmin && auth.session?.role !== 'super_admin') {
-      return json({ error: '외부 서비스 인증 세션은 최고관리자만 시작할 수 있습니다.', code: 'INTERACTIVE_AUTH_SUPER_ADMIN_REQUIRED' }, 403, request, env);
+      return json({ error: '이 기기 제어 작업은 최고관리자만 실행할 수 있습니다.', code: 'DEVICE_COMMAND_SUPER_ADMIN_REQUIRED' }, 403, request, env);
     }
     let payload = {};
     try { payload = sanitizeCommandPayload(commandType, body.payload || {}); }
@@ -1538,6 +1549,15 @@ async function handleAdmin(request, env) {
 
     const device = await env.DB.prepare('SELECT id, label, revoked_at, capabilities_json, last_seen_at FROM device_registry WHERE id = ?').bind(deviceId).first();
     if (!device || device.revoked_at) return json({ error: '사용 가능한 Agent 기기를 찾을 수 없습니다.' }, 404, request, env);
+    if (commandType.startsWith('file_extensions.')) {
+      const capabilities = parseJson(device.capabilities_json);
+      if (capabilities.fileExtensions !== true) {
+        return json({ error: '해당 PC의 Windows Agent 업데이트가 필요합니다.', code: 'FILE_EXTENSIONS_AGENT_UPGRADE_REQUIRED' }, 409, request, env);
+      }
+      if (statusFor(device.last_seen_at, device.revoked_at) !== 'online') {
+        return json({ error: '온라인 PC에서만 파일 확장자 상태를 확인하거나 변경할 수 있습니다.', code: 'FILE_EXTENSIONS_DEVICE_OFFLINE' }, 409, request, env);
+      }
+    }
     if (isInteractiveAuthCommand(commandType) && commandType !== INTERACTIVE_AUTH_COMMANDS.close) {
       const authCapabilities = parseJson(device.capabilities_json) || {};
       if (authCapabilities[INTERACTIVE_AUTH_CAPABILITY] !== true) {
