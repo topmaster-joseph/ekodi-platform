@@ -21,6 +21,48 @@ table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}th,td{t
 .agency-share-status:empty{display:none}
 
 @media(max-width:640px){.row{display:block}.row>*{margin-bottom:9px}}
+
+/* Premium EKODIBIZ operator surface: authentication and finance gates are unchanged. */
+:root{color:#183a2c;background:#f5f8f6}
+body{background:linear-gradient(#f4f8f5,#fafcfa 450px)}
+header{padding:13px 20px;background:#fff;border-color:#dee9df;box-shadow:0 2px 16px #12362408}
+header div{max-width:1200px;align-items:center}
+header strong{color:#174b34;letter-spacing:.02em;font-size:16px}
+header a{font-size:12px}
+main.biz-admin{max-width:1200px;padding:23px 20px 56px}
+.admin-heading{padding:18px 22px;background:linear-gradient(110deg,#fff,#e8f3eb);border:1px solid #dde9e0;border-radius:14px}
+.admin-heading h1{font-size:clamp(22px,3vw,29px);color:#123d2c;margin:0}
+.admin-heading .eyebrow{font-size:10px;letter-spacing:.15em;color:#498465;font-weight:800;margin:0 0 5px}
+main>.muted{font-size:12px;margin:12px 3px;line-height:1.65}
+.panel{border-color:#dce8df;border-radius:13px;padding:20px 22px;box-shadow:0 7px 25px #113b2908}
+.panel h2{margin:0 0 14px;color:#184a35;font-size:18px;letter-spacing:-.03em}
+.panel p{line-height:1.65}
+#adminKey{max-width:440px}
+#message{margin-top:6px}
+.agency-navigation{max-width:1200px;gap:5px;margin-top:8px}
+.agency-navigation a,.agency-navigation button{font-size:12px;border:1px solid transparent;background:transparent}
+.agency-navigation [aria-current="page"]{background:#e9f4ec;border-color:#d5e7db;color:#19523a}
+.agency-share-status{max-width:1200px}
+.admin-tabs{display:flex;align-items:center;gap:5px;padding:5px;margin:16px 0 6px;background:white;border:1px solid #dce7df;border-radius:11px;box-shadow:0 6px 20px #12382409}
+.admin-tabs button{flex:1;min-height:43px;background:transparent;border:0;border-radius:8px;color:#5c7465;font-size:13px}
+.admin-tabs button:hover{background:#ecf5ee;color:#17513a}
+.admin-tabs button[aria-selected="true"]{background:linear-gradient(115deg,#1b6143,#104731);color:#fff;box-shadow:0 3px 10px #12472c23}
+.admin-tabs button:focus-visible{outline:3px solid #8bc59e;outline-offset:2px}
+.panel input,.panel textarea,.panel select{background:#fbfdfb;border-color:#d0dfd4;color:#153f2c}
+button:not([role="tab"]){border-color:#1b6040;background:#1b6040}
+button.secondary{background:#fff;color:#285a3c}
+#tableWrap{border:1px solid #edf1ed;border-radius:9px}
+#tableWrap th{background:#f5f9f5}
+#tableWrap td{white-space:pre-line;line-height:1.6}
+@media(max-width:680px){
+ header{padding:12px}
+ main.biz-admin{padding:14px 12px 35px}
+ .admin-heading{padding:15px}
+ .panel{padding:14px}
+ .admin-tabs button{font-size:11px;padding:9px 4px}
+ .agency-navigation{padding:0 12px}
+ .row>*{width:100%}
+}
 </style></head>
 <body><header><div><strong>EKODIBIZ · 업체 관리자</strong><a href="https://ekodi.kr/ekodibiz">에코디비즈 홈</a></div></header>
 <nav class="agency-navigation" aria-label="AI 위탁 서비스 화면 이동">
@@ -32,11 +74,16 @@ table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}th,td{t
   <button type="button" data-share-agency="university">계약 조회 링크 공유</button>
 </nav>
 <p class="agency-share-status" id="agencyShareStatus" role="status" aria-live="polite"></p>
-<main><h1>AI 서비스 구매위탁 관리</h1>
+<main class="biz-admin"><div class="admin-heading"><p class="eyebrow">EKODIBIZ / AGENCY MANAGEMENT</p><h1>AI 서비스 구매위탁 관리</h1></div>
 <p class="muted">관리자 전용 · 상담 신청 검토, 확정 견적과 서비스 개시 확인. 관리자 인증정보는 브라우저에 저장하지 않습니다. 실결제는 PG·공급사 검증과 서버 결제키가 준비된 경우에만 작동합니다.</p>
 <section class="panel"><div class="row"><label>업체 관리자 인증키<input id="adminKey" type="password" autocomplete="off" placeholder="서버에 등록된 관리자 키"></label><button id="load">신청 목록 조회</button></div><p id="message" role="status" aria-live="polite"></p></section>
-<section class="panel"><h2>접수된 신청</h2><div id="tableWrap"><table><thead><tr><th>신청번호 / 상태</th><th>신청인·기관</th><th>서비스·기간</th><th>견적</th><th>선택</th></tr></thead><tbody id="rows"><tr><td colspan="5">관리자 인증 후 목록을 조회합니다.</td></tr></tbody></table></div></section>
-<section class="panel" id="detail" hidden>
+<nav class="admin-tabs" role="tablist" aria-label="업체 관리자 세부 메뉴">
+  <button type="button" role="tab" aria-selected="true" tabindex="0" id="adminTabList" aria-controls="adminApplications" data-admin-tab="list">신청목록</button>
+  <button type="button" role="tab" aria-selected="false" tabindex="-1" id="adminTabReview" aria-controls="detail" data-admin-tab="review">견적·계약검토</button>
+  <button type="button" role="tab" aria-selected="false" tabindex="-1" id="adminTabSettlement" aria-controls="opsDetail" data-admin-tab="settlement">정산·종료관리</button>
+</nav>
+<section class="panel" id="adminApplications" role="tabpanel" aria-labelledby="adminTabList" data-admin-panel="list"><h2>접수된 신청</h2><div id="tableWrap"><table><thead><tr><th>신청번호 / 상태</th><th>신청인·기관</th><th>서비스·기간</th><th>견적</th><th>선택</th></tr></thead><tbody id="rows"><tr><td colspan="5">관리자 인증 후 목록을 조회합니다.</td></tr></tbody></table></div></section>
+<section class="panel" id="detail" role="tabpanel" aria-labelledby="adminTabReview" data-admin-panel="review" hidden>
 <h2 id="selectedTitle">신청 검토</h2>
 <p id="selectedBody" class="muted"></p>
 <form id="quoteForm"><div class="row"><label>에코디비즈 위탁료 (원)<input name="feeAmount" type="number" min="0" max="5000000" step="1" required></label>
@@ -45,7 +92,7 @@ table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}th,td{t
 <p class="muted">공급사 대리수납 금액은 서버에 해당 공급사 계약범위 승인이 등록되어 있는 경우에만 설정할 수 있습니다. 자동결제·자동갱신은 사용하지 않습니다.</p>
 <div class="row"><button type="submit" id="quoteBtn">견적 확정</button><button type="button" id="activateBtn" class="secondary" hidden>공급사 이용 개시 확인</button></div>
 </form></section>
-<section class="panel" id="opsDetail" hidden aria-label="계약기간별 위탁관리">
+<section class="panel" id="opsDetail" role="tabpanel" aria-labelledby="adminTabSettlement" data-admin-panel="settlement" hidden aria-label="계약기간별 위탁관리">
 <h2 id="opsTitle">계약기간별 결제·종료·정산</h2>
 <p class="note">실제 공급사에서 받은 영수증과 갱신중단 확인번호만 수동 기록합니다. 이 화면에서는 결제·구독해지·개인 계정 변경이 실행되지 않습니다.</p>
 <div id="settlementSummary" class="summary" aria-live="polite">정산 기록을 불러오는 중입니다.</div>
