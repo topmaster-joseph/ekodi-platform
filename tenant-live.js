@@ -234,7 +234,30 @@ async function stopRecording(){
 }
 function cameraErrorText(error,prefix='카메라 사용 불가'){const name=error?.name||'';if(name==='NotReadableError'||/could not start video source/i.test(error?.message||''))return `${prefix}: 카메라를 다른 앱이나 탭(QR카메라 화면, 영상통화 등)이 쓰고 있습니다. 그 화면을 닫고 「카메라」를 다시 눌러 주세요.`;if(name==='NotAllowedError')return `${prefix}: 카메라·마이크 권한을 허용해 주세요(주소창 왼쪽 자물쇠 → 권한).`;if(name==='NotFoundError')return `${prefix}: 연결된 카메라를 찾지 못했습니다.`;return `${prefix}: ${error?.message||error}`}
 async function prepareStudio(){show('studioView');note('준비 중');try{await acquireCamera();await refreshCameraDevices();state.studioPrepared=true;$('goLiveButton').disabled=false;await loadExternalDestinations();note('준비 완료');return true}catch(error){state.studioPrepared=false;$('goLiveButton').disabled=true;note(cameraErrorText(error,'준비 실패'));return false}}
-async function startHost(){if(state.room&&state.session&&state.pc)return true;if(state.hosting)return false;state.hosting=true;show('studioView');note('연결 중');try{if(!state.room){const created=await createRoom();if(!created){state.hosting=false;return false}state.room=created.room}$('roomTitle').textContent=state.room.title;$('shareLink').value=`${location.origin}${cfg.livePath}?room=${encodeURIComponent(state.room.id)}`;$('roomLinks').classList.remove('hidden');const stream=state.local||await acquireCamera(),program=ensureProgram()||stream;await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'starting'})});await createSession(state.room.id,'owner');await publishStream(program,'program');startChatPolling();startParticipantMonitoring();await refreshManagementCameraPairs();note('송출 준비 완료');return true}catch(error){state.hosting=false;$('goLiveButton').disabled=false;note(`연결 실패: ${error.message}`);return false}}
+// Host auto-recovery (2026-11-07): a network blip must not silently end the worship broadcast.
+// On a failed/stuck publisher connection, open a fresh media session and republish the same program
+// to the same live room; viewers re-pull automatically.
+function watchHostConnection(){const pc=state.pc;if(!pc)return;pc.addEventListener('connectionstatechange',()=>{if(state.pc!==pc||!state.room||state.closing)return;const c=pc.connectionState;if(c==='connected'){clearTimeout(state.hostRecoverTimer);setHostLinkState('ok');return}if(c==='failed')void recoverHostPublish();else if(c==='disconnected'){setHostLinkState('unstable');clearTimeout(state.hostRecoverTimer);state.hostRecoverTimer=setTimeout(()=>{if(state.pc===pc&&pc.connectionState!=='connected')void recoverHostPublish()},5000)}})}
+function setHostLinkState(kind){const badge=$('programBadge');if(!badge||!state.isLive)return;badge.dataset.link=kind;if(kind==='ok'&&/재연결|불안정/.test(badge.textContent))badge.textContent='LIVE';if(kind==='unstable')badge.textContent='LIVE · 연결 불안정';if(kind==='recovering')badge.textContent='LIVE · 재연결 중'}
+async function recoverHostPublish(){
+  if(state.hostRecovering||!state.room||state.closing)return;state.hostRecovering=true;setHostLinkState('recovering');let attempt=0;
+  try{
+    while(state.room&&!state.closing&&(state.isLive||state.hosting)){
+      attempt++;note(`송출 연결이 끊겨 자동으로 다시 연결하고 있습니다 (${attempt}회차) — 방송은 종료되지 않았습니다.`);
+      try{
+        if(navigator.onLine===false)throw new Error('offline');
+        const old=state.session,oldPc=state.pc;
+        if(old)await api(`/rooms/${encodeURIComponent(state.room.id)}/sessions/${encodeURIComponent(old.id)}/leave`,{method:'POST',session:true,body:'{}'}).catch(()=>{});
+        try{oldPc?.close()}catch{}
+        await createSession(state.room.id,'owner');
+        await publishStream(state.program||ensureProgram()||state.local,'program');
+        watchHostConnection();setHostLinkState('ok');note('송출이 다시 연결되었습니다. 방송은 계속 진행 중입니다.');return;
+      }catch(error){await new Promise(r=>setTimeout(r,Math.min(15000,2000*attempt)))}
+    }
+  }finally{state.hostRecovering=false}
+}
+window.addEventListener('online',()=>{if(state.room&&(state.isLive||state.hosting)&&state.pc&&state.pc.connectionState!=='connected')void recoverHostPublish()});
+async function startHost(){if(state.room&&state.session&&state.pc)return true;if(state.hosting)return false;state.hosting=true;show('studioView');note('연결 중');try{if(!state.room){const created=await createRoom();if(!created){state.hosting=false;return false}state.room=created.room}$('roomTitle').textContent=state.room.title;$('shareLink').value=`${location.origin}${cfg.livePath}?room=${encodeURIComponent(state.room.id)}`;$('roomLinks').classList.remove('hidden');const stream=state.local||await acquireCamera(),program=ensureProgram()||stream;await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'starting'})});await createSession(state.room.id,'owner');await publishStream(program,'program');watchHostConnection();startChatPolling();startParticipantMonitoring();await refreshManagementCameraPairs();note('송출 준비 완료');return true}catch(error){state.hosting=false;$('goLiveButton').disabled=false;note(`연결 실패: ${error.message}`);return false}}
 async function goLive(){if(!state.room)return;try{await api(`/rooms/${state.room.id}/status`,{method:'POST',body:JSON.stringify({status:'live'})});state.isLive=true;void keepAwake(true);$('programBadge').textContent='LIVE';$('liveState').textContent='방송 중';$('goLiveButton').disabled=true;$('goLiveButton').textContent='방송 중';$('endLiveButton').disabled=false;$('endLiveButton').classList.remove('hidden');startLiveElapsed();note('방송 중 · 자동 녹화');await startRecording()}catch(error){$('goLiveButton').disabled=false;note(`방송 시작 실패: ${error.message}`)}}
 async function startBroadcast(){
   // Check server-side tenant authority before allocating rooms, provider sessions,
@@ -283,14 +306,14 @@ function startViewerEndWatch(id){
     try{const live=await api(`/live?tenant=${encodeURIComponent(cfg.tenant)}`);if(live&&typeof live.live==='boolean'){failures=0;return Boolean(live.live&&live.room&&live.room.id===id)}}catch{}
     try{const d=await api(`/rooms/${encodeURIComponent(id)}`);failures=0;return d.room?.status==='live'}catch{failures++;return failures<3}
   };
-  const tick=async()=>{if(state.hosting||!state.room||state.room.id!==id)return;if(!await stillLive())return void viewerBroadcastEnded();state.viewerEndTimer=setTimeout(tick,VIEWER_STATUS_POLL_MS)};
+  const tick=async()=>{if(state.hosting||!state.room||state.room.id!==id)return;if(!await stillLive())return void viewerBroadcastEnded();if(state.viewerStalled){state.viewerStalled=false;note('영상이 멈춰 자동으로 다시 연결합니다.','viewerStatus');clearInterval(state.viewerFreezeTimer);await closeViewerSession();void joinViewer(id);return}state.viewerEndTimer=setTimeout(tick,VIEWER_STATUS_POLL_MS)};
   state.viewerEndTimer=setTimeout(tick,VIEWER_STATUS_POLL_MS);
   state.viewerEndCheck=()=>{clearTimeout(state.viewerEndTimer);state.viewerEndTimer=setTimeout(tick,1500)};
-  const pc=state.pc;pc?.addEventListener?.('connectionstatechange',()=>{if(['failed','disconnected','closed'].includes(pc.connectionState))state.viewerEndCheck?.()});
+  const pc=state.pc;pc?.addEventListener?.('connectionstatechange',()=>{if(state.pc!==pc)return;if(pc.connectionState==='failed'){state.viewerStalled=true;state.viewerEndCheck?.()}else if(pc.connectionState==='disconnected'){setTimeout(()=>{if(state.pc===pc&&pc.connectionState!=='connected'){state.viewerStalled=true;state.viewerEndCheck?.()}},6000)}});
   for(const track of state.remote.getTracks()){track.addEventListener?.('ended',()=>state.viewerEndCheck?.());track.addEventListener?.('mute',()=>state.viewerEndCheck?.())}
   // Frozen-frame guard: if the picture stops advancing for ~12s, check status right away.
   const video=$('viewerVideo');let lastTime=-1,stalled=0;
-  state.viewerFreezeTimer=setInterval(()=>{if(!video||state.room?.id!==id||!video.srcObject){clearInterval(state.viewerFreezeTimer);return}const t=video.currentTime;if(t===lastTime){if(++stalled>=3){stalled=0;state.viewerEndCheck?.()}}else{stalled=0;lastTime=t}},4000);
+  state.viewerFreezeTimer=setInterval(()=>{if(!video||state.room?.id!==id||!video.srcObject){clearInterval(state.viewerFreezeTimer);return}const t=video.currentTime;if(t===lastTime&&!video.paused){if(++stalled>=3){stalled=0;state.viewerStalled=true;state.viewerEndCheck?.()}}else{stalled=0;lastTime=t}},4000);
 }
 async function viewerBroadcastEnded(message='방송이 종료되었습니다.'){clearTimeout(state.viewerEndTimer);clearInterval(state.viewerFreezeTimer);state.viewerEndCheck=null;await closeViewerSession();const empty=$('viewerEmpty');if(empty){empty.textContent=`${message} 다음 방송이 시작되면 자동으로 연결됩니다.`;empty.classList.remove('hidden')}note('방송 종료','viewerStatus');waitNextBroadcast()}
 function waitNextBroadcast(){clearTimeout(state.viewerNextTimer);const tick=async()=>{if(state.hosting)return;try{const live=await api(`/live?tenant=${encodeURIComponent(cfg.tenant)}`);if(live.live&&live.room){void joinViewer(live.room.id);return}}catch{}state.viewerNextTimer=setTimeout(tick,VIEWER_NEXT_POLL_MS)};state.viewerNextTimer=setTimeout(tick,VIEWER_NEXT_POLL_MS)}
