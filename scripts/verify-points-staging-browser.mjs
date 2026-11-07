@@ -109,6 +109,13 @@ try{
   // Read-only diagnostics: what the member actually sees (fresh single-use links).
   if(target==='member'){
     const probes=[
+      ['claim',[{type:'waitFor',selector:'#balanceView:not([hidden]), #notice:not(:empty):not(:has-text("있습니다"))',timeoutMs:15000},
+        {type:'click',selector:'#pointsTabClaims'},
+        {type:'waitFor',selector:'#claimSection:not([hidden])',timeoutMs:15000},
+        {type:'fill',selector:'#claimRef',value:`e2e/${run}-diag`},
+        {type:'click',selector:'#claimSubmit'},
+        {type:'waitFor',selector:'#claimList .record',timeoutMs:15000},
+        {type:'snapshot'}]],
       ['wallet',[{type:'waitFor',selector:'#balanceView:not([hidden]), #notice:not(:empty):not(:has-text("있습니다"))',timeoutMs:15000},{type:'snapshot'}]],
       ['progress',[{type:'waitFor',selector:'#balanceView:not([hidden]), #notice:not(:empty):not(:has-text("있습니다"))',timeoutMs:15000},
         {type:'click',selector:'#pointsTabProgress'},
@@ -124,7 +131,7 @@ try{
           path:`/points/?site=${site}#ekodi_token=${diagHash}&ekodi_type=magiclink`,
           deviceProfile:'desktop',allowMutation:true,timeoutMs:60000,actions},{artifactRoot:dir});
         const snap=(diag?.results||[]).find(r=>r.type==='snapshot');
-        console.log(`::notice::member ${probe} diagnostic ok=${diag?.ok} text=${String(snap?.bodyText||diag?.message||'').replace(/\s+/g,' ').slice(0,700)} http=${JSON.stringify((diag?.httpErrorResponses||[]).slice(0,5)).slice(0,500)}`);
+        console.log(`::notice::member ${probe} diagnostic ok=${diag?.ok} text=${String(snap?.bodyText||diag?.message||'').replace(/\s+/g,' ').slice(0,700)} loads=${JSON.stringify(diag?.documentLoads||[])} supabase=${JSON.stringify(diag?.supabaseCalls||[]).slice(0,600)} http=${JSON.stringify((diag?.httpErrorResponses||[]).slice(0,5)).slice(0,400)}`);
       }catch(e){console.log(`::notice::member ${probe} diagnostic failed: ${String(e?.message||e).replace(/\s+/g,' ').slice(0,500)}`);}
     }
   }
