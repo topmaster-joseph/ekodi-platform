@@ -62,7 +62,8 @@ jobs:
   observe:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    # Includes the daily bounded public-source audit (3 fixed GET probes).
+    timeout-minutes: 8
     env:
       GITHUB_TOKEN: ${{ github.token }}
       EKODI_WATCH_MODE: ${{ github.event.schedule == '45 23 * * *' && 'daily' || 'hourly' }}
