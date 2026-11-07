@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.6.4'
+$AgentVersion = '2.6.5'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -68,6 +68,8 @@ $ImagePrintPreviewBackupRoot = Join-Path $Root 'image-print-preview'
 $ImagePrintPreviewBackupMeta = Join-Path $ImagePrintPreviewBackupRoot 'baseline.json'
 $ImagePrintPreviewBackupReg = Join-Path $ImagePrintPreviewBackupRoot 'baseline.reg'
 $ImagePrintPreviewPolicyStatePath = Join-Path $ImagePrintPreviewBackupRoot 'policy.json'
+$FileExtensionsBackupDir = Join-Path $Root 'file-extensions'
+$FileExtensionsBackupPath = Join-Path $FileExtensionsBackupDir 'baseline.json'
 
 function Test-IsAdministrator {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -3855,10 +3857,107 @@ function Reconcile-ImagePrintPreviewPolicy {
   if (-not $state.previewFirst) { [void](Repair-ImagePrintPreview) }
 }
 
+# EKODI-WINDOWS-FILE-EXTENSIONS-001: act only on this signed-in
+# Agent identity's HKCU. Never accept registry paths, usernames or scripts
+# from a cloud job. A SYSTEM/service task must fail closed.
+function Assert-FileExtensionsUser {
+  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+  $sid = if ($identity.User) { [string]$identity.User.Value } else { '' }
+  if (-not $sid -or $sid -in @('S-1-5-18','S-1-5-19','S-1-5-20')) {
+    throw 'file_extensions_interactive_user_required'
+  }
+  return $sid
+}
+
+function Get-FileExtensionsState {
+  $sid = Assert-FileExtensionsUser
+  $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
+  if (-not (Test-Path -LiteralPath $key)) { throw 'file_extensions_explorer_key_unavailable' }
+  $entry = Get-Item -LiteralPath $key -ErrorAction Stop
+  $present = @($entry.GetValueNames()) -contains 'HideFileExt'
+  $raw = $null
+  if ($present) {
+    if ($entry.GetValueKind('HideFileExt') -ne [Microsoft.Win32.RegistryValueKind]::DWord) {
+      throw 'file_extensions_unexpected_registry_type'
+    }
+    $raw = [int]$entry.GetValue('HideFileExt')
+  }
+  $visibility = if (-not $present) { 'unconfigured' } elseif ($raw -eq 0) { 'shown' } else { 'hidden' }
+  $canRestore = $false
+  if (Test-Path -LiteralPath $FileExtensionsBackupPath) {
+    try {
+      $backup = Get-Content -LiteralPath $FileExtensionsBackupPath -Raw -Encoding UTF8 | ConvertFrom-Json
+      $canRestore = ([string]$backup.sid -eq $sid)
+    } catch { }
+  }
+  return @{
+    visibility = $visibility
+    canRestore = [bool]$canRestore
+    checkedAt = (Get-Date).ToUniversalTime().ToString('o')
+  }
+}
+
+function Set-FileExtensionsVisible {
+  $sid = Assert-FileExtensionsUser
+  $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
+  if (-not (Test-Path -LiteralPath $key)) { throw 'file_extensions_explorer_key_unavailable' }
+  $entry = Get-Item -LiteralPath $key -ErrorAction Stop
+  $present = @($entry.GetValueNames()) -contains 'HideFileExt'
+  if ($present -and $entry.GetValueKind('HideFileExt') -ne [Microsoft.Win32.RegistryValueKind]::DWord) {
+    throw 'file_extensions_unexpected_registry_type'
+  }
+  if (Test-Path -LiteralPath $FileExtensionsBackupPath) {
+    $existing = Get-Content -LiteralPath $FileExtensionsBackupPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ([string]$existing.sid -ne $sid) { throw 'file_extensions_backup_account_mismatch' }
+  } else {
+    New-Item -ItemType Directory -Path $FileExtensionsBackupDir -Force | Out-Null
+    @{
+      sid = $sid
+      existed = [bool]$present
+      value = $(if ($present) { [int]$entry.GetValue('HideFileExt') } else { $null })
+      createdAt = (Get-Date).ToUniversalTime().ToString('o')
+    } | ConvertTo-Json -Compress | Set-Content -LiteralPath $FileExtensionsBackupPath -Encoding UTF8 -ErrorAction Stop
+  }
+  New-ItemProperty -Path $key -Name 'HideFileExt' -Value 0 -PropertyType DWord -Force -ErrorAction Stop | Out-Null
+  $state = Get-FileExtensionsState
+  if ($state.visibility -ne 'shown') { throw 'file_extensions_apply_verification_failed' }
+  return @{ message = '파일 확장자 표시를 적용하고 레지스트리를 재확인했습니다. 열려 있는 파일 탐색기를 다시 열면 표시가 갱신됩니다.'; fileExtensions = $state }
+}
+
+function Restore-FileExtensionsVisibility {
+  $sid = Assert-FileExtensionsUser
+  if (-not (Test-Path -LiteralPath $FileExtensionsBackupPath)) { throw 'file_extensions_backup_unavailable' }
+  $backup = Get-Content -LiteralPath $FileExtensionsBackupPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ([string]$backup.sid -ne $sid) { throw 'file_extensions_backup_account_mismatch' }
+  $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
+  if (-not (Test-Path -LiteralPath $key)) { throw 'file_extensions_explorer_key_unavailable' }
+  if ($backup.existed -eq $true) {
+    $original = [int]$backup.value
+    New-ItemProperty -Path $key -Name 'HideFileExt' -Value $original -PropertyType DWord -Force -ErrorAction Stop | Out-Null
+    $expected = if ($original -eq 0) { 'shown' } else { 'hidden' }
+  } else {
+    Remove-ItemProperty -Path $key -Name 'HideFileExt' -ErrorAction SilentlyContinue
+    $expected = 'unconfigured'
+  }
+  $state = Get-FileExtensionsState
+  if ($state.visibility -ne $expected) { throw 'file_extensions_restore_verification_failed' }
+  Remove-Item -LiteralPath $FileExtensionsBackupPath -Force -ErrorAction Stop
+  return @{ message = 'EKODI 변경 전 파일 확장자 설정으로 복원하고 재확인했습니다.'; fileExtensions = (Get-FileExtensionsState) }
+}
+
 function Invoke-DeviceCommand([pscustomobject]$Command) {
   $type = [string]$Command.type
   $payload = if ($Command.PSObject.Properties.Name -contains 'payload' -and $Command.payload) { $Command.payload } else { [pscustomobject]@{} }
+  if ($type -like 'file_extensions.*') {
+    $issued = [DateTimeOffset]::MinValue
+    try { $issued = [DateTimeOffset]::Parse([string]$Command.issuedAt) } catch { throw 'file_extensions_invalid_issue_time' }
+    $age = ([DateTimeOffset]::UtcNow - $issued.ToUniversalTime()).TotalMinutes
+    if ($age -lt -1 -or $age -gt 5) { throw 'file_extensions_command_expired' }
+  }
   switch ($type) {
+    'file_extensions.status' { return @{ message = '파일 확장자 표시 상태를 실제 Windows 계정에서 확인했습니다.'; fileExtensions = Get-FileExtensionsState } }
+    'file_extensions.show' { return Set-FileExtensionsVisible }
+    'file_extensions.restore' { return Restore-FileExtensionsVisibility }
     'power.always_on' {
       Save-PowerBackup
       Invoke-PowerCfg @('/change', 'standby-timeout-ac', '0') | Out-Null
@@ -4028,7 +4127,7 @@ function Send-Heartbeat($Config) {
     capabilities = @{
       powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
       diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true; simulcastRelay = $true
+      networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; fileExtensions = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true; simulcastRelay = $true
       computerRead = $true; processRead = $true; agentStatus = $true
       isolatedCommand = $false; filesystemRead = $false; filesystemWrite = $false; backgroundBrowserCanary = [bool](Get-BackgroundBrowserCanaryState).verified; backgroundBrowser = [bool](Get-BackgroundBrowserCanaryState).verified; isolatedDesktopProbe = $true; isolatedDesktopCanary = [bool](Get-IsolatedDesktopCanaryState).verified; isolatedDesktopGuestCanary = [bool](Get-IsolatedDesktopGuestCanaryState).verified; isolatedDesktopUiCanary = [bool](Get-IsolatedDesktopUiCanaryState).verified; isolatedDesktopSessionCanary = [bool](Get-IsolatedDesktopSessionCanaryState).verified; isolatedDesktop = [bool](Get-IsolatedDesktopSessionCanaryState).verified
       workspaceSlidesAudio = [bool](Get-WorkspaceSlidesAudioState).verified
@@ -4190,7 +4289,7 @@ function Install-Agent {
       capabilities = @{
         powerProfiles = $true; resumeLock = $true; restore = $true; autologonLocalConsent = $true
         diagnostics = $true; storageMaintenance = $true; windowsUpdate = $true; startupManagement = $true
-        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true; simulcastRelay = $true
+        networkDiagnostics = $true; printerDiagnostics = $true; imagePrintPreview = $true; fileExtensions = $true; workstationProfile = $true; protocolLaunch = $true; localAiInstall = $true; localAiVerify = $true; simulcastRelay = $true
         arbitraryShell = $false; screenCapture = $false; credentialCollection = $false
       }
     } | ConvertTo-Json -Depth 8
