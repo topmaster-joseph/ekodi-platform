@@ -56,7 +56,8 @@ test('public finance layout is compact without removing the public site header o
   assert.doesNotMatch(publicHtml,/기재된 지출일 기준/);
   assert.match(publicStyle,/committee-finance-period\{[^}]*display:flex;align-items:center;flex-wrap:wrap/);
   assert.match(publicStyle,/committee-finance-metrics\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(publicStyle,/@media\(max-width:540px\)[^{]*\{[^}]*grid-template-columns:1fr/);
+  // Owner request 2026-11-07: 총수입·총지출·잔액 stay on one row on phones too.
+  assert.doesNotMatch(publicStyle,/@media\(max-width:540px\)[^{]*\{[^}]*grid-template-columns:1fr/);
   assert.match(adminHtml,/data-panel="finance"/);
   assert.match(adminHtml,/data-finance-tab="summary"/);
   assert.doesNotMatch(adminHtml,/FINANCE ADMIN/);
