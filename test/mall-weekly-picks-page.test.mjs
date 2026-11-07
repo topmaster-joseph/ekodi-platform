@@ -116,8 +116,8 @@ test('weekly picks header shares responsive centered buyer chrome and functional
 test('shared Mall header links genuinely sellable Coupang recommendation channel while keeping external payment separate',()=>{
   const home=renderMallHeader({home:true});
   const canonical=renderMallHeader({home:false,publicPrefix:'/ekodimall'});
-  assert.ok(home.includes('href="/coupang/">쿠팡추천몰</a>'));
-  assert.ok(canonical.includes('href="/ekodimall/coupang/">쿠팡추천몰</a>'));
+  assert.ok(home.includes('href="/coupang/">쿠팡제휴몰</a>'));
+  assert.ok(canonical.includes('href="/ekodimall/coupang/">쿠팡제휴몰</a>'));
   assert.ok(!home.includes('data-filter-target="coupang"'), 'affiliate channel is not a direct D1 product filter');
   assert.ok(canonical.includes('p.includes("/coupang/")'), 'affiliate category is highlighted on its real page');
   assert.ok(canonical.includes('href="/ekodimall/travel/stay/"'), 'other independent affiliate sales stay visible');
