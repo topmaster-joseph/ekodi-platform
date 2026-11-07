@@ -1,0 +1,247 @@
+{
+  "contract": "ekodi.church-reviewed-source-overlay.v1",
+  "mode": "offline-audit-candidate-only",
+  "baseCanonicalManifest": "sites/ekodi-church/source-import-manifest.json",
+  "baseManifestGitBlobSha": "09b01865a3f0ba99caf8b7b97fc787ee8ef83d51",
+  "baseOriginalSourceSha": "520d4f2daf7e5e4dc53bf928c9df626b5f896600",
+  "basePreviouslyReviewedPRs": [
+    143,
+    144,
+    142
+  ],
+  "sourceRepository": "topmaster-joseph/ekodi-church",
+  "sourceBranch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+  "sourceHead": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+  "stackedSourcePRs": [
+    {
+      "number": 143,
+      "head": "9e8fc072d1d6d66286d9a275fe3960e50e5c5e72",
+      "status": "open"
+    },
+    {
+      "number": 146,
+      "head": "b79dc3b19b562f9b654bffb55d797ea336c08d34",
+      "status": "open"
+    },
+    {
+      "number": 149,
+      "head": "b89c32f9330afbd114dc632306a7b9348c869b7b",
+      "status": "open"
+    }
+  ],
+  "relatedMergedChurchPRs": [
+    {
+      "number": 148,
+      "head": "9d8dc821ae316b8b4c165da89187d7cb7f343425",
+      "status": "merged; reconstructed in stacked source"
+    },
+    {
+      "number": 150,
+      "head": "74bfab8a62b254148573be620686b301b37317b0",
+      "status": "merged; contemporaneous worship files held for separate reviewed reconciliation"
+    }
+  ],
+  "plannedEntryCount": 24,
+  "files": [
+    {
+      "path": "church-homepage-layout.css",
+      "blobSha": "380ec056ca472eaba538dc7840a45d916ed6ccd3",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "church-i18n-extended.js",
+      "blobSha": "d4f9ee7e51052c61e4baa7aaf1f87412ff69bcf5",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "church-i18n.js",
+      "blobSha": "c2123abf86c9db6bba98b90bcbc2540692fdb208",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "church-public-updates.css",
+      "blobSha": "9229ba7eb5eccfa0d3cba2196781a6a5a4ec5799",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "church-public-updates.js",
+      "blobSha": "446936ca40d893b0c1dc6e128a91e2907436a741",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "church-shared-schedules.js",
+      "blobSha": "314b39ef88fa88c0bd49e02d59a6849ab38acd5d",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "devotion/index.html",
+      "blobSha": "08ef8c744271ec70b366ae84572e37603c2604b3",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "index.html",
+      "blobSha": "2b4250abdf28cdaa896bed325262c013f5996cda",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "notices/index.html",
+      "blobSha": "1036fb223e87cd8781741e56b6ac2ce06b097bbc",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "schedule/index.html",
+      "blobSha": "95fc21ab7cf6f4bd66aad51a285afc07774a8f41",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "script.js",
+      "blobSha": "f7b3ea040b28d788eff8e621d1891ea8a622b80a",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "test/church-approved-homepage-layout.test.mjs",
+      "blobSha": "9f69a1b10fc58b757ab3f89d02e8a72c75c92f7a",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "test/church-home-overview-navigation.test.mjs",
+      "blobSha": "0ce6412dddfe38df931166bbe224fa228bb91bc6",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "test/church-public-notices-schedule.test.mjs",
+      "blobSha": "9d904189a7cd5a41cc82a49b98f993b024f285d4",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "test/church-shared-schedule-147.test.mjs",
+      "blobSha": "0745a47058a625c001c4d306f91c59e4d5102dbd",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "test/simple-home-progressive-disclosure.test.mjs",
+      "blobSha": "31e2673ac9e130df6829f13dd1474d14795802ec",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "church-compact-navigation.css",
+      "blobSha": "fcdb494c302d3692d5e82aca3aebd26014f51aa3",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "church-section-nav.js",
+      "blobSha": "9eb0de3e5332b324e8cd95872e57987a56b00f8b",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "test/church-compact-selected-navigation.test.mjs",
+      "blobSha": "a634326bc6d70f8f3093ece0dd53cda1995bfcce",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "test/church-devotion.test.mjs",
+      "blobSha": "3787c765e6162157fcb2d610224e45db795eda1a",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "test/church-life-hub.test.mjs",
+      "blobSha": "f150f78154a49316b27301e82b96d38930e8fe0c",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "test/church-live-entry.test.mjs",
+      "blobSha": "c11c75776afba13c74fe02c58048cbe7c1f4dce6",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "test/church-selected-panel-runtime.test.mjs",
+      "blobSha": "cdb5a6c62e25e87ac729d24f3adb204a62b4c94d",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    },
+    {
+      "path": "test/together-page.test.mjs",
+      "blobSha": "b2d64ebdbfe1b452ae92d0af778072a9276d5346",
+      "provenance": {
+        "branch": "ai/chatgpt/church-compact-header-selected-content-20261106",
+        "headSha": "b89c32f9330afbd114dc632306a7b9348c869b7b"
+      }
+    }
+  ],
+  "scope": "public-church-UI-and-tests-only",
+  "conditions": {
+    "productionReleaseSwitched": false,
+    "releaseCandidateApproved": false,
+    "sourceOwnershipTransferred": false,
+    "legacyRepositoryDeletionAuthorized": false,
+    "requiresIndependentPR150Reconciliation": true
+  }
+}
