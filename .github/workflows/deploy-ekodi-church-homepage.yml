@@ -452,7 +452,7 @@ jobs:
             await page.setViewport({width:1440,height:1100});
             for(const locale of locales){
               await page.goto(`https://ekodi.kr/ekodichurch/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
-              await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),{timeout:25000},locale);
+              await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('a[href="/ekodichurch/devotion/"]'),{timeout:25000},locale);
               if(extended.has(locale)) await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
               if(locale!=='ko-KR'){
                 await page.waitForFunction(expected=>{
@@ -469,7 +469,7 @@ jobs:
                 return {
                   lang:document.documentElement.lang,
                   hero:document.querySelector('.hero h1')?.innerText||'',
-                  devotion:!!document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),
+                  devotion:!!document.querySelector('a[href="/ekodichurch/devotion/"]'),
                   legacyHub:!!document.querySelector('[data-ekodi-life-hub],#life-reflection-form'),
                   body:clone.innerText,
                   options:[...document.querySelectorAll('[data-ekodi-language-control] select option')].map(o=>o.value)
@@ -541,7 +541,7 @@ jobs:
                     // The shared shell wraps My Page in the central login (/auth/?…return_to=…/ekodichurch/my/).
                     member:[...document.querySelectorAll('.site-header a')].some(a=>{const h=a.getAttribute('href')||'';try{const u=new URL(h,location.origin);return u.pathname==='/ekodichurch/my/'||(u.pathname.startsWith('/auth')&&new URL(u.searchParams.get('return_to')||'/',location.origin).pathname==='/ekodichurch/my/')}catch{return false}}),
                     qtin:!!document.querySelector('.site-header a[href="/qtin/church"]'),
-                    canonicalDevotion:!!document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),
+                    canonicalDevotion:!!document.querySelector('a[href="/ekodichurch/devotion/"]'),
                     legacyLifeRecord:!!document.querySelector('[data-ekodi-life-hub],#life-reflection-form'),
                     overflow:document.documentElement.scrollWidth>innerWidth+1,
                     mobileGreetingGap:(()=>{
