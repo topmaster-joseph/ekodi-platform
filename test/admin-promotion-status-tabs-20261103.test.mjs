@@ -42,5 +42,9 @@ test('production E2E verifies the prompt cards and the autopost console tab read
   assert.ok(worker.includes('#marketingAiAdminPanel [data-marketing-tab="channels"].active'));
   assert.ok(!/verifyPromotionStatus[\s\S]{0,1600}(\.fill\(|data-promo-fill"\]'\)\.click|method:\s*'POST')/.test(worker), 'production proof stays read-only');
   // Growth OS re-renders its innerHTML; the card must be re-attached per panel.
-  assert.ok(source.includes('new MutationObserver(reconcile).observe(panel, { childList: true })'));
+  assert.ok(source.includes('new MutationObserver(reconcile).observe(node, { childList: true })'));
+  assert.ok(source.includes('watch(panel);'));
+  // The 추천 지시문 button sits at the right end of the top tab strip and survives strip re-renders.
+  assert.ok(source.includes("document.querySelector('.admin-work-strip')") && source.includes('watch(bar); watch(bar?.parentElement);'));
+  assert.ok(source.includes("document.createElement('details')"));
 });
