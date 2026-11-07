@@ -15,6 +15,7 @@ export function auditSourceDeploymentBoundaries(boundaries, registry) {
   }
   const units = Object.entries(boundaries?.platforms || {});
   const workflows = new Set();
+  const workflowOwners = new Map();
   const boundaryIds = [];
   for (const [id, unit] of units) {
     boundaryIds.push(id);
@@ -25,6 +26,27 @@ export function auditSourceDeploymentBoundaries(boundaries, registry) {
       errors.push(id + ': missing guarded workflow reference');
     } else {
       workflows.add(unit.deployWorkflow);
+      if (!workflowOwners.has(unit.deployWorkflow)) workflowOwners.set(unit.deployWorkflow, []);
+      workflowOwners.get(unit.deployWorkflow).push({ id, kind: String(unit.kind || 'unknown') });
+    }
+  }
+  // A shared runtime may deliberately own several logical service labels.
+  // A separately marked independent release unit may not silently reuse any
+  // other unit's deployment lane, even if the other unit is a shared service.
+  // This is source-registry validation, not proof of deployed cloud bindings.
+  const independentReleaseUnits = [];
+  const sharedWorkflowGroups = [];
+  for (const [workflow, owners] of workflowOwners) {
+    const independent = owners.filter(entry => entry.kind.startsWith('independent-'));
+    independentReleaseUnits.push(...independent.map(entry => ({
+      id: entry.id, kind: entry.kind, deployWorkflow: workflow
+    })));
+    if (owners.length > 1) {
+      sharedWorkflowGroups.push({ deployWorkflow: workflow, units: owners.map(entry => entry.id) });
+      for (const entry of independent) {
+        errors.push(entry.id + ': independent release unit shares deployment workflow ' + workflow +
+          ' with ' + owners.filter(other => other.id !== entry.id).map(other => other.id).join(', '));
+      }
     }
   }
   const repos = registry?.repositories || [];
@@ -42,6 +64,10 @@ export function auditSourceDeploymentBoundaries(boundaries, registry) {
     registeredReleaseBoundaries: boundaryIds.length,
     registeredReleaseBoundaryIds: boundaryIds.sort(),
     distinctDeploymentWorkflows: workflows.size,
+    independentReleaseUnits,
+    sharedWorkflowGroups,
+    // This audit has no Cloudflare, production secret or account access.
+    actualProductionDeploymentBindingsChecked: false,
     registeredSatelliteRepositories: satellites.map(repo => ({name:repo.name, role:repo.role, mutationMode:repo.mutationMode})),
     undecidedSourceClassification: satellites.filter(repo => repo.role === 'unclassified-satellite').map(repo => repo.name),
     // Site/workspace inventory is a separate authoritative tenant registry.
