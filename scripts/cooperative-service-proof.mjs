@@ -224,7 +224,19 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     const memberContext = await contextFor(390, memberToken);
     const member = await memberContext.newPage(); await member.goto(root + '/members');
     await member.waitForSelector('#myBusinessForm');
-    for (const title of ['공지', '회의록', '지원사업']) assert.ok((await member.locator('#workspace').innerText()).includes(coop.name + ' ' + title + ' 실증'));
+    // Member content is correctly hidden in inactive tabs. Read each visible panel,
+    // instead of treating the container's innerText as if hidden panels were exposed.
+    for (const [label, panelId, title] of [
+      ['공지', 'notices', '공지'],
+      ['회의·의결', 'meetings', '회의록'],
+      ['지원사업', 'supports', '지원사업'],
+    ]) {
+      await tab(member, label);
+      const panel = member.locator('[data-panel="' + panelId + '"]');
+      assert.equal(await panel.isVisible(), true);
+      assert.ok((await panel.innerText()).includes(coop.name + ' ' + title + ' 실증'));
+    }
+    await tab(member, '나의 사업정보');
     const memberBusiness = coop.name + ' 조합원 실증 사업체';
     await member.locator('#myBusinessForm [name="business"]').fill(memberBusiness);
     await member.locator('#myBusinessForm [name="industry"]').fill('공동유통');
