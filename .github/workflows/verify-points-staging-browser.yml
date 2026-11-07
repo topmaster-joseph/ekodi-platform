@@ -6,6 +6,18 @@ name: Verify Points Staging (EKODI Browser)
 # Never targets production: fixed development project ref and staging origins.
 on:
   workflow_dispatch:
+  # A protected main merge of this workflow or its Points browser/security
+  # contract must run the actual DEVELOPMENT screen E2E. No prod credentials,
+  # no production database, no member awards.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-points-staging-browser.yml'
+      - 'scripts/points-staging-access.mjs'
+      - 'scripts/verify-points-staging-browser.mjs'
+      - 'scripts/ekodi-background-browser-worker.mjs'
+      - 'my/points/**'
+      - 'test/points-staging-access.test.mjs'
 
 permissions:
   contents: read
@@ -16,6 +28,7 @@ concurrency:
 
 jobs:
   verify:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: development
