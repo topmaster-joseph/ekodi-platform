@@ -58,7 +58,7 @@ jobs:
           test "$status" = 200
           jq -e '.ok==true and
             .status=="private_drive_acl_and_backup_folders_verified" and
-            (.approvedMembershipCount|type=="number" and .>=1) and
+            (.approvedMembershipCount|type=="number") and (.approvedMembershipCount>=1) and
             .publicOrUnknownMembershipAllowed==false and
             .directExtraFolderGrantsAllowed==false and
             .backupExportAuthorized==false and
