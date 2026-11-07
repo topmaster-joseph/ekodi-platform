@@ -74,15 +74,22 @@ test('two independent official boards share only published future schedule metad
   const mission=await f.fetch('ekodimission','/api/posts','POST',
    {title:'선교회 연말 모임',body:'일정: '+next+' 16:00\n장소: 에코디교회',categoryId:'mission-schedule'},'mission-editor');
   assert.equal(mission.status,201);
+  const churchJson=await f.fetch('ekodichurch','/api/posts','POST',
+   {title:'교회 봉사 모임',body:JSON.stringify({date:next,time:'18:30',venue:'교회 교육관',description:'외부 공유 금지 내부 메모'}),categoryId:'schedule'},'church-editor');
+  assert.equal(churchJson.status,201);
   const churchOwn=await f.fetch('ekodichurch','/api/posts?category=schedule');
-  assert.deepEqual(churchOwn.data.items.map(x=>x.title),['교회 연말 모임']);
+  assert.deepEqual(churchOwn.data.items.map(x=>x.title).sort(),['교회 봉사 모임','교회 연말 모임'].sort());
   const missionOwn=await f.fetch('ekodimission','/api/posts?category=mission-schedule');
   assert.deepEqual(missionOwn.data.items.map(x=>x.title),['선교회 연말 모임']);
   const fromChurch=await f.fetch('ekodichurch','/api/shared-schedules');
   const fromMission=await f.fetch('ekodimission','/api/shared-schedules');
   assert.equal(fromChurch.status,200);assert.equal(fromMission.status,200);
   assert.deepEqual(fromChurch.data.items,fromMission.data.items);
-  for(const entry of ['교회 연말 모임','선교회 연말 모임'])assert.ok(fromChurch.data.items.some(x=>x.title===entry));
+  for(const entry of ['교회 연말 모임','교회 봉사 모임','선교회 연말 모임'])assert.ok(fromChurch.data.items.some(x=>x.title===entry));
+  const churchJsonProjection=fromChurch.data.items.find(x=>x.title==='교회 봉사 모임');
+  assert.deepEqual({source:churchJsonProjection.source,date:churchJsonProjection.date,time:churchJsonProjection.time,venue:churchJsonProjection.venue},
+    {source:'ekodichurch',date:next,time:'18:30',venue:'교회 교육관'});
+  assert.ok(!JSON.stringify(fromChurch.data).includes('외부 공유 금지 내부 메모'));
   assert.ok(fromChurch.data.items.some(x=>x.kind==='recurring-meeting'&&x.source==='ekodimission'));
   assert.ok(fromChurch.data.items.some(x=>x.url==='/ekodichurch/board/post/'+church.data.id));
   assert.ok(!JSON.stringify(fromChurch.data).includes('비공개 논의 없음'));
@@ -103,6 +110,22 @@ test('federation rejects invalid, foreign, unpublished and private-format schedu
  assert.equal(parseEkodiPublicSchedule({...base,body:'자유 형식 메모'}),null);
  assert.equal(parseEkodiPublicSchedule({...base,body:'일정: 2026-12-15 14:00\n장소: '}),null);
  assert.equal(parseEkodiPublicSchedule(base)?.source,'ekodichurch');
+ const json={...base,body:JSON.stringify({date:'2026-12-15',time:'14:00',venue:'교회 1층',description:'비공개 사역 계획'})};
+ const projected=parseEkodiPublicSchedule(json,'2026-11-07');
+ assert.equal(projected?.source,'ekodichurch');
+ assert.equal(projected?.venue,'교회 1층');
+ assert.equal(projected?.time,'14:00');
+ assert.equal(projected?.url,'/ekodichurch/board/post/3');
+ assert.ok(!JSON.stringify(projected).includes('비공개 사역 계획'));
+ for(const payload of [
+   {date:'2026-02-30',time:'14:00',venue:'교회'},
+   {date:'2026-12-15',time:'24:10',venue:'교회'},
+   {date:'2026-12-15',time:'14:00',venue:''},
+   {date:'2026-12-15',time:'14:00',venue:'x'.repeat(161)}
+ ])assert.equal(parseEkodiPublicSchedule({...json,body:JSON.stringify(payload)},'2026-11-07'),null);
+ assert.equal(parseEkodiPublicSchedule({...json,category_id:'notice'},'2026-11-07'),null);
+ assert.equal(parseEkodiPublicSchedule({...json,board_id:'site:other:main'},'2026-11-07'),null);
+
 });
 
 test('Mission summary renders one inline heading and updates after private RSVP changes',async()=>{
