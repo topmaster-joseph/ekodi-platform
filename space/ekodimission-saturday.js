@@ -6,6 +6,9 @@
   const form=root.querySelector('[data-mission-saturday-form]');
   const status=root.querySelector('[data-mission-saturday-status]');
   const replies=root.querySelector('[data-mission-saturday-replies]');
+  const declined=root.querySelector('[data-mission-saturday-declined]');
+  const publicJoinCount=root.querySelector('[data-mission-public-join-count]');
+  const publicCancelCount=root.querySelector('[data-mission-public-cancel-count]');
   const dateText=root.querySelector('[data-mission-saturday-date]');
   const count=root.querySelector('[data-mission-saturday-count]');
   const commentCount=root.querySelector('[data-mission-saturday-comment-count]');
@@ -13,7 +16,6 @@
   const scriptureLink=root.querySelector('[data-mission-saturday-scripture-link]');
   const login=root.querySelector('[data-mission-saturday-login]');
   const submit=form?.querySelector('button[type="submit"]');
-  const label=Object.freeze({join:'참여하겠습니다',question:'문의합니다',cancel:'참여를 취소합니다'});
   let meetingDate='',loading=0,editing=false;
   const token=()=>window.EKODIMissionAuth?.getToken?.()||'';
   const say=(message,state='')=>{
@@ -21,36 +23,56 @@
     status.dataset.state=state;
     status.textContent=message;
   };
+  // The Saturday API returns only consented public replies. Never mix private RSVP data
+  // into the public name-only attendance lists or display message bodies/timestamps.
   function renderReplies(items){
-    replies.replaceChildren();
-    if(!items.length){
-      const empty=document.createElement('li');
-      empty.textContent='아직 참여 신청이 없습니다. 첫 참여자가 되어 주세요.';
-      replies.append(empty);
-      return;
-    }
-    for(const reply of items){
-      const item=document.createElement('li');
-      const name=document.createElement('strong');
-      name.textContent=String(reply.displayName||'참여자');
-      const attendance=document.createElement('span');
-      attendance.textContent=' · '+(label[reply.attendance]||'답글');
-      const message=document.createElement('p');
-      message.textContent=String(reply.body||'');
-      const date=document.createElement('small');
-      if(reply.createdAt){
-        const formatted=new Date(reply.createdAt);
-        if(!Number.isNaN(formatted.getTime())){
-          date.textContent=formatted.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
-        }
+    for(const [kind,container,countNode,emptyText] of [
+      ['join',replies,publicJoinCount,'공개된 참여 명단이 없습니다.'],
+      ['cancel',declined,publicCancelCount,'공개된 불참 명단이 없습니다.']
+    ]){
+      if(!container)continue;
+      const names=items.filter(item=>item.attendance===kind&&typeof item.displayName==='string'&&item.displayName.trim());
+      if(countNode)countNode.textContent=String(names.length);
+      container.replaceChildren();
+      if(!names.length){
+        const empty=document.createElement('li');
+        empty.textContent=emptyText;
+        container.append(empty);
+        continue;
       }
-      item.append(name,attendance);
-      if(String(reply.body||'').trim())item.append(message);
-      item.append(date);
-      if(reply.own)item.dataset.own='true';
-      replies.append(item);
+      for(const item of names){
+        const row=document.createElement('li');
+        row.textContent=item.displayName.trim();
+        container.append(row);
+      }
     }
   }
+  function mountAttendanceTabs(){
+    const wrapper=root.querySelector('[data-mission-attendance]');
+    if(!wrapper)return;
+    const tabs=[...wrapper.querySelectorAll('[data-mission-attendance-tab]')];
+    const panels=[...wrapper.querySelectorAll('[data-mission-attendance-panel]')];
+    const select=(kind)=>{
+      for(const button of tabs){
+        const active=button.dataset.missionAttendanceTab===kind;
+        button.setAttribute('aria-selected',String(active));
+        button.tabIndex=active?0:-1;
+      }
+      for(const panel of panels)panel.hidden=panel.dataset.missionAttendancePanel!==kind;
+    };
+    tabs.forEach((button,index)=>{
+      button.addEventListener('click',()=>select(button.dataset.missionAttendanceTab));
+      button.addEventListener('keydown',event=>{
+        if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+        event.preventDefault();
+        const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:
+          (index+(event.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+        tabs[next].focus();tabs[next].click();
+      });
+    });
+    select('join');
+  }
+  mountAttendanceTabs();
   function render(data){
     if(!data?.ok||!data.meeting?.date||!Array.isArray(data.replies))throw new Error('모임 안내를 확인하지 못했습니다.');
     meetingDate=data.meeting.date;
@@ -88,8 +110,19 @@
     if(commentCount)commentCount.textContent=String(comments);
     renderReplies(data.replies);
     const authenticated=data.me?.authenticated===true;
-    if(login)login.hidden=authenticated;
-    if(submit)submit.textContent=authenticated?'참여 신청 등록·수정':'로그인 후 참여';
+    if(form)form.hidden=!authenticated;
+    if(login){
+      login.hidden=authenticated||data.meeting.status!=='scheduled';
+      // Return to the exact Mission meeting context after unified authentication.
+      let returnUrl='https://ekodi.kr/ekodimission#saturday';
+      if(location.origin==='https://ekodi.kr'&&location.pathname==='/ekodimission'){
+        const destination=new URL(location.href);
+        destination.hash='#saturday';
+        returnUrl=destination.href;
+      }
+      login.href='/auth/?site=mission&return_to='+encodeURIComponent(returnUrl);
+    }
+    if(submit)submit.textContent='참여 신청 등록·수정';
     if(data.meeting.status!=='scheduled'){
       if(submit)submit.disabled=true;
       say('이번 주 모임은 일정이 변경되어 신청을 받지 않습니다.','error');
@@ -137,21 +170,27 @@
       if(current===loading){render(data);void loadScripture(meetingDate,current);}
     }catch(error){
       if(current!==loading)return;
+      if(form)form.hidden=true;
+      if(login)login.hidden=Boolean(token());
       if(count)count.textContent='–';
       if(commentCount)commentCount.textContent='–';
-      if(replies){replies.replaceChildren();const item=document.createElement('li');item.textContent='현재 답글을 불러올 수 없습니다. 잠시 후 새로고침해 주세요.';replies.append(item);}
+      if(publicJoinCount)publicJoinCount.textContent='–';
+      if(publicCancelCount)publicCancelCount.textContent='–';
+      if(replies){replies.replaceChildren();const item=document.createElement('li');item.textContent='현재 공개 명단을 불러올 수 없습니다. 잠시 후 새로고침해 주세요.';replies.append(item);}
+      if(declined)declined.replaceChildren();
       say(error.message||'답글 확인 중 오류가 발생했습니다.','error');
     }
   }
   form?.addEventListener('submit',async event=>{
     event.preventDefault();
-    if(!form.reportValidity()||!meetingDate)return;
     const bearer=token();
     if(!bearer){
+      form.hidden=true;
       if(login)login.hidden=false;
-      say('참여 신청은 로그인 후 등록할 수 있습니다. 로그인 버튼을 선택해 주세요.','error');
+      say('참여 신청은 로그인 후 가능합니다. 로그인 후 참여하기를 선택해 주세요.','error');
       return;
     }
+    if(!form.reportValidity()||!meetingDate)return;
     const data=new FormData(form);
     const body={
       meetingDate,

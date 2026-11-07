@@ -67,22 +67,16 @@ test('autumn trip static page matches the published 50k 15-person content',async
   assert.equal(page.includes('예배'),false);
 });
 
-test('mission language guard accepts a complete compact nav without dropping any route',async()=>{
-  const legacy=await readFile(new URL('../space/ekodimission-shell.js',import.meta.url),'utf8');
-  const replacement=[
-    'const primaryIndices=new Set([0,1,2,5])',
-    'const primary=links.filter((a,index)=>primaryIndices.has(index))',
-    'const secondary=links.filter((a,index)=>!primaryIndices.has(index))',
-    "more.className='mission-nav-more'",
-    "summary.setAttribute('aria-label','추가 메뉴 열기')",
-    'popup.append(...secondary)',
-    'more.append(summary,popup)',
-    'nav.replaceChildren(...primary,more,language)',
-  ].join(';');
-  const compact=legacy.includes('nav.replaceChildren(...primary,more,language)')
-    ? legacy
-    : legacy.replace('nav.replaceChildren(...links,language)',replacement);
-  assert.match(compact,/nav\.replaceChildren\(\.\.\.primary,more,language\)/,'either supported fixture must produce the compact layout');
-  assert.doesNotThrow(()=>validateMissionShellSource(compact));
-  assert.throws(()=>validateMissionShellSource(compact.replace('popup.append(...secondary)','popup.append()')),/missing valid flat or compact navigation projection/);
+test('mission header exposes six canonical links while activity detail routes remain accessible',async()=>{
+  const source=await readFile(new URL('../space/ekodimission-shell.js',import.meta.url),'utf8');
+  const activity=await readFile(new URL('../space/ekodimission-activities.page',import.meta.url),'utf8');
+  assert.doesNotThrow(()=>validateMissionShellSource(source));
+  assert.ok(source.includes('const primaryIndices=new Set([0,1,2,3,4,5])'));
+  for(const menu of ['연혁','공지','묵상','일정','방송','활동'])assert.match(source,new RegExp("label:'"+menu+"'"));
+  for(const destination of ['/ekodimission#saturday','/ekodimission/participate','/ekodimission/partners','/ekodimission/stories','/qtin/mission'])
+    assert.ok(activity.includes('href="'+destination+'"'),destination);
+  assert.throws(()=>validateMissionShellSource(source.replace(
+    'nav.replaceChildren(...primary,...(secondary.length?[more]:[]),language)',
+    'nav.replaceChildren(language)'
+  )),/missing valid six-link desktop and mobile navigation projection/);
 });
