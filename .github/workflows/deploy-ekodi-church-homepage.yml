@@ -96,11 +96,17 @@ jobs:
           for file in script.js live/live.js live/host-intent.js church-character-identity.js church-i18n.js church-i18n-extended.js church-i18n-payment-patch.js church-shell-i18n.js church-header-controls.js church-online-status.js church-worship-admin.js church-weekly-worship.js giving.js church-life-hub-i18n.js my/app.js my/giving/app.js my/attendance/app.js; do
             node --check "church/$file"
           done
-          grep -Eq '<strong>(오늘의 )?매일묵상</strong>' church/index.html
+          # Church PR #148/#160: daily devotion is now a first-level menu link (user-approved 2026-11-08).
+          grep -Eq '<strong>(오늘의 )?매일묵상</strong>|class="nav-devotion" href="/ekodichurch/devotion/">매일묵상</a>' church/index.html
           grep -Fq 'href="/ekodichurch/devotion/"' church/index.html
-          if grep -Eq 'data-ekodi-life-hub|id="life-hub"|id="daily-devotion"|id="life-reflection-form"|id="memory-form"|id="witness-form"|href="#life-hub"|church-life-hub\.(css|js)' church/index.html; then
-            echo 'Retired Church life record UI and scripts must not return.'
-            exit 1
+          # User decision 2026-11-08: the life hub returns with church PR #160 and its repository tests.
+          # The platform keeps the sharper privacy boundary: personal records never leave the device.
+          if grep -Fq 'data-ekodi-life-hub' church/index.html; then
+            grep -Fq 'localStorage' church/church-life-hub.js
+            if grep -Eq 'fetch\(|XMLHttpRequest|sendBeacon|supabase' church/church-life-hub.js; then
+              echo 'Church life hub must keep personal records on-device only (no network writes).'
+              exit 1
+            fi
           fi
           grep -Fq 'data-church-worship-admin' church/index.html
           grep -Fq 'scope=worship-access' church/church-worship-admin.js
@@ -164,7 +170,7 @@ jobs:
           grep -Fq '<progress class="month-meter"' church/my/attendance/app.js
           if grep -Fq '운영자 기능은 별도 관리자 화면에서 처리합니다.' church/my/index.html; then echo 'Member home must not expose internal operator guidance.'; exit 1; fi
           test -s church/devotion/index.html
-          grep -Fq '<h1>에코디 오늘의 매일묵상</h1>' church/devotion/index.html
+          grep -Eq '<h1>(에코디 )?오늘의 매일묵상</h1>' church/devotion/index.html
           grep -Fq 'data-ekodi-devotion data-base="/ekodichurch/devotion/"' church/devotion/index.html
           grep -Fq '<script type="module" src="/bible/devotion.js"></script>' church/devotion/index.html
           grep -Fq 'href="/ekodichurch/devotion/">매일묵상</a>' church/index.html
@@ -250,7 +256,7 @@ jobs:
             renderer=$(curl -L -sS -o /tmp/devotion-renderer.js -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/bible/devotion.js' || true)
             api=$(curl -sS -o /tmp/devotion-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/bible/api/bible/devotion?date=2026-10-26' || true)
             if [[ "$page" == 200 && "$renderer" == 200 && "$api" == 200 ]] \
-              && grep -Fq '<h1>에코디 오늘의 매일묵상</h1>' /tmp/church-devotion.html \
+              && grep -Eq '<h1>(에코디 )?오늘의 매일묵상</h1>' /tmp/church-devotion.html \
               && grep -Fq 'class="site-header church-devotion-header"' /tmp/church-devotion.html \
               && grep -Fq 'data-ekodi-devotion' /tmp/church-devotion.html \
               && grep -Fq 'data-tab' /tmp/devotion-renderer.js \
@@ -356,9 +362,8 @@ jobs:
             live_intent=$(curl -L -sS -o /tmp/church-live-host-intent.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/live/host-intent.js?release=${release}" || true)
             marker=$(curl -L -sS -o /tmp/church-release.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "https://ekodi.kr/ekodichurch/church-release.json?release=${release}" || true)
             if [[ "$root" == 200 && "$member" == 200 && "$giving_member" == 200 && "$giving_member_js" == 200 && "$attendance_member" == 200 && "$attendance_member_js" == 200 && "$life_i18n" == 200 && "$online_status" == 200 && "$worship_admin" == 200 && "$weekly_js" == 200 && "$weekly_css" == 200 && "$weekly_manifest" == 200 && "$weekly_service" == 200 && "$live_css" == 200 && "$live_js" == 200 && "$live_intent" == 200 && "$marker" == 200 ]] \
-              && grep -Eq '<strong>(오늘의 )?매일묵상</strong>' /tmp/church.html \
+              && grep -Eq '<strong>(오늘의 )?매일묵상</strong>|class="nav-devotion" href="/ekodichurch/devotion/">매일묵상</a>' /tmp/church.html \
               && grep -Fq 'href="/ekodichurch/devotion/"' /tmp/church.html \
-              && ! grep -Eq 'data-ekodi-life-hub|id="life-hub"|id="daily-devotion"|id="life-reflection-form"|id="memory-form"|id="witness-form"|href="#life-hub"|church-life-hub\.(css|js)' /tmp/church.html \
               && grep -Fq 'data-church-worship-admin' /tmp/church.html \
               && grep -Fq 'scope=worship-access' /tmp/church-worship-admin.js \
               && grep -Fq 'data-church-weekly' /tmp/church.html \
@@ -469,8 +474,7 @@ jobs:
                 return {
                   lang:document.documentElement.lang,
                   hero:document.querySelector('.hero h1')?.innerText||'',
-                  devotion:!!document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),
-                  legacyHub:!!document.querySelector('[data-ekodi-life-hub],#life-reflection-form'),
+                  devotion:!!document.querySelector('a[href="/ekodichurch/devotion/"]'),
                   body:clone.innerText,
                   options:[...document.querySelectorAll('[data-ekodi-language-control] select option')].map(o=>o.value)
                 };
@@ -478,7 +482,6 @@ jobs:
               assert.equal(snapshot.lang,locale);
               assert.deepEqual(snapshot.options,['ko-KR','en','zh-CN','ja','my','kac','vi','mn','id']);
               assert.equal(snapshot.devotion,true,`${locale} canonical devotion card missing`);
-              assert.equal(snapshot.legacyHub,false,`${locale} retired life record UI returned`);
               if(locale==='ko-KR'){
                 assert.match(snapshot.hero,/부르심에서 교제로/);
               }else{
@@ -541,8 +544,7 @@ jobs:
                     // The shared shell wraps My Page in the central login (/auth/?…return_to=…/ekodichurch/my/).
                     member:[...document.querySelectorAll('.site-header a')].some(a=>{const h=a.getAttribute('href')||'';try{const u=new URL(h,location.origin);return u.pathname==='/ekodichurch/my/'||(u.pathname.startsWith('/auth')&&new URL(u.searchParams.get('return_to')||'/',location.origin).pathname==='/ekodichurch/my/')}catch{return false}}),
                     qtin:!!document.querySelector('.site-header a[href="/qtin/church"]'),
-                    canonicalDevotion:!!document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),
-                    legacyLifeRecord:!!document.querySelector('[data-ekodi-life-hub],#life-reflection-form'),
+                    canonicalDevotion:!!document.querySelector('a[href="/ekodichurch/devotion/"]'),
                     overflow:document.documentElement.scrollWidth>innerWidth+1,
                     mobileGreetingGap:(()=>{
                       const greeting=document.querySelector('.hero .eyebrow')?.getBoundingClientRect();
@@ -574,7 +576,6 @@ jobs:
                   await page.waitForFunction(()=>document.body.dataset.churchSelectedSection==='home',{timeout:9000});
                 }
                 assert.equal(initial.canonicalDevotion,true,'canonical daily devotion card missing '+locale+' '+device.name);
-                assert.equal(initial.legacyLifeRecord,false,'legacy journal UI returned '+locale+' '+device.name);
                 assert.equal(initial.overflow,false,'horizontal overflow '+locale+' '+device.name);
                 if(device.width<=800) assert.ok(initial.mobileGreetingGap>=0&&initial.mobileGreetingGap<100,'mobile header-to-greeting gap too large '+locale+' '+device.name+' gap '+initial.mobileGreetingGap);
                 assert.ok(initial.header.left>=-2&&initial.header.right<=device.width+2,'header clipped '+locale+' '+device.name);
