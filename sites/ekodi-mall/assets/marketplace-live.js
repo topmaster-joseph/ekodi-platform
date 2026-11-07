@@ -4,7 +4,14 @@
   if (!grid) return;
 
   const text = (value) => String(value || '').trim();
-  const price = (value) => Number.isFinite(Number(value)) ? `${new Intl.NumberFormat('ko-KR').format(Number(value))}원` : '가격 확정 전';
+  // Missing, zero, negative or malformed prices are never a verified buyer-facing offer.
+  // Checkout truth remains server-side; this only avoids falsely advertising 0원.
+  const price = (value) => {
+    const amount = typeof value === 'number' ? value
+      : (typeof value === 'string' && /^\d+$/.test(value.trim()) ? Number(value.trim()) : NaN);
+    return Number.isSafeInteger(amount) && amount > 0
+      ? `${new Intl.NumberFormat('ko-KR').format(amount)}원` : '가격 확인';
+  };
   const category = (value) => ['general','living','book','gift'].includes(value) ? value : 'general';
   const regionIds = (region) => Array.isArray(region?.regionIds) ? region.regionIds.map(text).filter(Boolean).slice(0, 8) : [];
   function node(tag, className = '', value = '') { const element = document.createElement(tag); if (className) element.className = className; if (value) element.textContent = value; return element; }
