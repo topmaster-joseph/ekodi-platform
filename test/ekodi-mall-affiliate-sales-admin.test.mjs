@@ -6,8 +6,12 @@ const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('affiliate hubs identify direct and network merchant fields', async () => {
   const source = await read('sites/ekodi-mall/assets/affiliate-hub.js');
-  assert.match(source, /item\.merchantKey/);
-  assert.match(source, /item\.merchantName/);
+  const providerGuard = await read('sites/ekodi-mall/assets/affiliate-share.js');
+  // Merchant/source identity was moved to a stricter shared helper; display
+  // names are never trusted as proof that a product belongs to Agoda/Coupang.
+  assert.match(providerGuard, /item\?\.merchantKey \|\| item\?\.providerKey/);
+  assert.match(source, /affiliateProviderMatches/);
+  assert.match(source, /item\.providerName/);
   assert.match(source, /noopener sponsored/);
 });
 
