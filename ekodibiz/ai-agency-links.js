@@ -8,7 +8,7 @@ export const AGENCY_SHARE_PATHS=Object.freeze({
   apply:ROOT+'/apply',
   university:ROOT+'/university',
   individual:ROOT+'/individual',
-  admin:ROOT+'/admin'
+  manage:ROOT+'/manage'
 });
 const ROUTE_TO_VIEW=Object.freeze({
   '/ekodibiz/ai-agency':'apply',
@@ -19,10 +19,12 @@ const ROUTE_TO_VIEW=Object.freeze({
   '/ekodibiz/ai-agency/university/':'university',
   '/ekodibiz/ai-agency/individual':'individual',
   '/ekodibiz/ai-agency/individual/':'individual',
-  '/ekodibiz/ai-agency/admin':'admin',
-  '/ekodibiz/ai-agency/admin/':'admin',
-  '/ekodibiz/ai-agency-admin':'admin',
-  '/ekodibiz/ai-agency-admin/':'admin'
+  '/ekodibiz/ai-agency/manage':'manage',
+  '/ekodibiz/ai-agency/manage/':'manage',
+  '/ekodibiz/ai-agency/admin':'manage',
+  '/ekodibiz/ai-agency/admin/':'manage',
+  '/ekodibiz/ai-agency-admin':'manage',
+  '/ekodibiz/ai-agency-admin/':'manage'
 });
 export function agencyViewForPath(pathname){
   if(typeof pathname!=='string')return null;
