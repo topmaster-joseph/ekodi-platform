@@ -149,7 +149,7 @@ jobs:
             [ "$ok" -ge 5 ] && break
             sleep 4
           done
-          echo "::notice::admin points governance -> $code (consecutive ok $ok) $(jq -c '{error}' /tmp/g.json 2>/dev/null | head -c 200)"
+          echo "::notice::admin points governance -> $code (consecutive ok $ok) $(jq -c '{error,detail}' /tmp/g.json 2>/dev/null | head -c 200)"
           [ "$ok" -ge 5 ] || { echo '::error::staging points API did not stabilise behind Access'; exit 1; }
           echo "POINTS_E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
           echo 'Ephemeral development fixtures, member links and staging admin session ready.'
