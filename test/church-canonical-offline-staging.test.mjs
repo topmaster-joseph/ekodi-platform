@@ -75,3 +75,18 @@ test('candidate staging workflow is main-only, public-artifact-only, provider-cr
   assert.doesNotMatch(workflow,/pull_request:/);
   assert.match(workflow,/retention-days: 7/);
 });
+
+
+test('an unattended protected-main refresh repairs bot-merge push suppression without new release authority',()=>{
+  const workflow=readFileSync(resolve(root,'.github/workflows/church-canonical-offline-staging.yml'),'utf8');
+  assert.match(workflow,/on:\n\s*workflow_dispatch:\n/);
+  assert.match(workflow,/schedule:\n\s*- cron: '53 14 \* \* \*'/);
+  assert.match(workflow,/push:\n\s*branches: \[main\]/);
+  assert.match(workflow,/jobs:\n\s*candidate:\n\s*if: github\.ref == 'refs\/heads\/main'/);
+  assert.match(workflow,/test "\$\(git rev-parse HEAD\)" = "\$GITHUB_SHA"/);
+  assert.match(workflow,/name: church-canonical-offline-\$\{\{ github\.sha \}\}/);
+  assert.match(workflow,/retention-days: 7/);
+  assert.doesNotMatch(workflow,/workflow_run:|issue_comment:|pull_request:|repository_dispatch:/);
+  assert.doesNotMatch(workflow,/secrets\.|CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|wrangler|pages deploy|GH_TOKEN/);
+  assert.match(workflow,/permissions:\s*\n\s*contents: read/);
+});
