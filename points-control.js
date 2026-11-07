@@ -71,8 +71,10 @@ async function rpc(src,name,args,requestFetch){
   const response=await requestFetch(src.origin+'/rest/v1/rpc/'+name,{
     method:'POST',
     headers:sourceHeaders(src.key,{'Content-Type':'application/json'}),
-    body:JSON.stringify(args),redirect:'error',signal:AbortSignal.timeout(8000),
+    // Workers fetch has no redirect:'error'; refuse any redirect explicitly.
+    body:JSON.stringify(args),redirect:'manual',signal:AbortSignal.timeout(8000),
   });
+  if(response.status>=300&&response.status<400)throw new Error('points_rpc_redirect_refused');
   const body=await response.json().catch(()=>null);
   if(!response.ok){
     const message=String(body?.message||'').trim();
@@ -98,8 +100,9 @@ async function readOverview(src,headers,requestFetch){
       endpoint.searchParams.set('limit',String(limit));
       const response=await requestFetch(endpoint.toString(),{
         method:'GET',headers:sourceHeaders(src.key),
-        redirect:'error',signal:AbortSignal.timeout(6000),
+        redirect:'manual',signal:AbortSignal.timeout(6000),
       });
+      if(response.status>=300&&response.status<400)throw Error('points_table_redirect_refused');
       if(!response.ok)throw Error('points_table_query_failed:'+response.status);
       const rows=await response.json();
       if(!Array.isArray(rows))throw Error('invalid_points_response');
