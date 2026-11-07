@@ -14,6 +14,15 @@ test('Mission homepage shows notices and schedules after the Saturday gathering'
   assert.match(css,/@media\(max-width:760px\)\{\.mission-home-board-grid\{grid-template-columns:minmax\(0,1fr\)/);
   assert.match(script,/posts\?category=/);
   assert.match(script,/data\.meeting\?\.status==='scheduled'/);
+  assert.match(page,/data-mission-calendar-days/);
+  assert.match(page,/data-mission-calendar-prev/);
+  assert.match(page,/data-mission-selected-label/);
+  assert.match(css,/\.mission-calendar-day\[aria-pressed="true"\]/);
+  assert.match(script,/function renderScheduleCalendar\(/);
+  assert.match(script,/scheduleCalendar\.items\.filter\(item=>item\.date===scheduleCalendar\.selected\)/);
+  assert.match(script,/showScheduleCalendar\(items,error&&manager\?error:''\)/);
+  assert.match(script,/items\.slice\(0,kind==='mission-notice'\?6:items\.length\)/);
+
 });
 
 function fixture(){
