@@ -177,7 +177,7 @@ async function churchApi(request, table, params = {}, prefer = '') {
   const endpoint = new URL(CHURCH_PASTOR_API); endpoint.searchParams.set('table', table);
   for (const [key, value] of Object.entries(params)) endpoint.searchParams.set(key, String(value));
   const headers = { authorization, accept: 'application/json', 'user-agent': 'EKODI-Church-Reports/1.0' }; if (prefer) headers.prefer = prefer;
-  const response = await fetch(endpoint.toString(), { headers, cache: 'no-store', redirect: 'error' });
+  const response = await fetch(endpoint.toString(), { headers, cache: 'no-store', redirect:'manual' });
   const data = await response.json().catch(() => []);
   if (!response.ok) throw new Error(data?.error ? `교회 원자료 동기화 실패: ${data.error}` : `교회 원자료 동기화 실패 (${response.status})`);
   return { data, count: Number((response.headers.get('content-range') || '/0').split('/').pop() || 0) };

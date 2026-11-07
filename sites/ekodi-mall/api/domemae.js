@@ -182,7 +182,7 @@ async function itemLookup(env, actor, body) {
   const params = new URLSearchParams({ ver: '4.6', mode: 'getItemView', aid: env.DOMEMAE_API_KEY, no: itemNo, om: 'json' });
   let response;
   try {
-    response = await fetch(`${ENDPOINT}?${params.toString()}`, { method: 'GET', headers: { accept: 'application/json' }, redirect: 'error' });
+    response = await fetch(`${ENDPOINT}?${params.toString()}`, { method: 'GET', headers: { accept: 'application/json' }, redirect:'manual' });
   } catch {
     await recordCheck(env, 'item_lookup', itemNo, 'failed', { actor, reason: 'network' });
     return { status: 502, body: { error: '도매매 공식 API 연결에 실패했습니다.', code: 'DOMEMAE_NETWORK_ERROR' } };

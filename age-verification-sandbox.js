@@ -77,7 +77,7 @@ export async function finishInicisSandbox(env, adminId, id, now = Date.now()) {
   try {
     const response = await fetch('https://api.portone.io/identity-verifications/' + encodeURIComponent(id), {
       headers: { authorization: 'PortOne ' + env.PORTONE_AGE_API_SECRET },
-      redirect: 'error', signal: AbortSignal.timeout(10000)
+      redirect:'manual', signal: AbortSignal.timeout(10000)
     });
     if (!response.ok) return { status: 502, body: { error: 'sandbox_provider_unavailable' } };
     proof = await response.json();

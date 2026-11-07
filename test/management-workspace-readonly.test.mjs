@@ -44,7 +44,7 @@ test('member workspace projection uses verified Edge Function and returns minima
     assert.equal(calls[0].url,'https://example.supabase.co/functions/v1/workspace-api/spaces');
     assert.equal(calls[0].init.headers.authorization,'Bearer header.user.signature');
     assert.equal(calls[0].init.method,'GET');
-    assert.equal(calls[0].init.redirect,'error');
+    assert.equal(calls[0].init.redirect,'manual');
   }finally{globalThis.fetch=original}
 });
 

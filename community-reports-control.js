@@ -154,7 +154,7 @@ async function collectCommunitySources(request, env, report) {
   const response = await fetch(endpoint.toString(), {
     method: 'GET',
     headers: { authorization, accept: 'application/json', 'user-agent': 'EKODI-Community-Reports/1.1' },
-    redirect: 'error',
+    redirect:'manual',
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data?.error ? `Community 원자료 동기화 실패: ${data.error}` : `Community 원자료 동기화 실패 (${response.status})`);
