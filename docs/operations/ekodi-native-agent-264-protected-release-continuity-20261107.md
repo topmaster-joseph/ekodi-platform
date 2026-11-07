@@ -22,3 +22,7 @@ First-party EKODI Orchestrator issued the recovery PR but parked at `authentic_r
 - Existing Agent users have **not** been proven upgraded to 2.6.4. Old live self-update attempt failed `EKA-121` and requires normal local PC authorization; do not bypass Windows approval, force remote install, duplicate a payment or transfer customer PII.
 - The Agent auto-update release manifest remains absent pending protected release and real device canary. An installed 2.6.4 agent requires a fresh version-matched heartbeat after restart; a CI pass is not proof of a real device update.
 - Post-merge acceptance: staged and production release receipts where applicable; real device agent version + heartbeat; browser read-only canary; and an auditable rollback path on failure.
+
+## Latest-main synchronization verification (second authentic check pass)
+
+At 2026-11-07 KST, the first owner-authenticated recovery HEAD `044b18c063a00673a686474fb504759102af871c` passed all 11 authentic required checks, including full CI and Windows Agent contract. Subsequently central main gained a separate Seonam Medi board change; the recovery branch synchronized main again, yielding merge commit `e7cecd823fa13daca07bb427ca65929b62d6a8a4`. A green check from the earlier HEAD must **not** be transplanted or forged for this new merge commit. This second documentation-only commit requests checks on the new exact HEAD; it does not change runtime or grant merge/deploy authority. EKODI's authentic protected CI, release-provenance validation and central orchestrator remain decisive.
