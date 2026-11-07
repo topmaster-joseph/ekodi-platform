@@ -234,3 +234,13 @@ test('standalone affiliate and weekly page headers return to the canonical Mall 
   assert.ok(!fromOtherPage.includes('>AI 추천</a>'));
   assert.ok(!fromOtherPage.includes('쿠팡추천몰'));
 });
+
+
+test('unified search does not revive unapproved live-quote bookstore products', () => {
+  const books = readFileSync(new URL('../assets/bookstore-live.js', import.meta.url), 'utf8');
+  assert.match(js, /card\.dataset\.bookstoreQuotePending !== 'true'/);
+  assert.match(js, /raw\?\.product\?\.source\?\.system === 'ekodi-bookstore'/);
+  assert.match(js, /ekodi:marketplace-products-loaded/);
+  assert.match(books, /existing\.dataset\.bookstoreQuotePending = 'false'/);
+  assert.match(books, /existing\.dataset\.bookstoreQuotePending = 'true'/);
+});
