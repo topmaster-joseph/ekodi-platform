@@ -25,7 +25,7 @@ function packet() {
       parent_folder_id:keys.encryptedFolderId,file_id:'encrypted-file-fixture',sha256,bytes:artifact.length},
     restore:{success:true,target:'isolated_nonproduction_postgres',folder_id:keys.restoreFolderId,
       evidence_file_id:'restore-proof-fixture',checks:[
-        'pg_restore_success','critical_tables_present','rls_and_grants_checked',
+        'isolated_restore_success','critical_tables_present','rls_and_grants_checked',
         'identity_integrity_checked','row_counts_compared']}};
   const msg=Buffer.from(canonicalReceiptStatement(statement));
   return {statement,signatures:{
@@ -69,7 +69,7 @@ test('stale proof, missing restore check or untrusted restore target is refused'
  const target=packet();target.statement.restore.target='production';reseal(target);
  assert.throws(()=>verifyPointsManualReceipt(target,keys),/RESTORE_NOT_VERIFIED/);
 });
-test('real encrypted artifact download must match its signed hash and length',async()=>{
+test('age-header fixture must match the signed hash and exact length',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'ekodi-points-proof-'));
  try {
    const path=join(dir,'fixture.age');await writeFile(path,artifact);
