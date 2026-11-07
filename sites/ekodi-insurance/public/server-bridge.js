@@ -12,6 +12,7 @@
       : STAGING_API;
   const STATE_KEY = 'ekodi-insurance-staging-v3';
   const ACCESS_KEY = 'ekodi-insurance-consultation-access-v1';
+  const MAX_ACCESS_ITEMS = 256;
 
   function toast(message) {
     const el = document.createElement('div');
@@ -26,15 +27,56 @@
       return Array.isArray(state?.advisorChat?.messages) ? state.advisorChat.messages.slice(-20) : [];
     } catch { return []; }
   }
+  function readAccessStrict() {
+    const raw = localStorage.getItem(ACCESS_KEY);
+    if (raw === null) return [];
+    const items = JSON.parse(raw);
+    if (!Array.isArray(items) || items.some(item =>
+      !item || typeof item.id !== 'string' || !item.id ||
+      typeof item.accessToken !== 'string' || !item.accessToken)) {
+      throw new Error('revocation_access_invalid');
+    }
+    return items;
+  }
   function loadAccess() {
-    try {
-      const items = JSON.parse(localStorage.getItem(ACCESS_KEY) || '[]');
-      return Array.isArray(items) ? items.filter(item => item?.id && item?.accessToken) : [];
-    } catch { return []; }
+    try { return readAccessStrict(); }
+    catch { return []; } // display only; writes are guarded separately
   }
   function writeAccess(items) {
-    localStorage.setItem(ACCESS_KEY, JSON.stringify(items.slice(0, 20)));
-    renderWithdrawalPanel();
+    // Never silently evict an older, still-valid consultation revocation token.
+    if (!Array.isArray(items)) {
+      throw new Error('revocation_access_invalid');
+    }
+    // An unreadable existing store is NOT an empty store. Never overwrite it,
+    // including after an otherwise successful server-side revocation.
+    readAccessStrict();
+    if (items.some(item => !item || typeof item.id !== 'string' || !item.id ||
+        typeof item.accessToken !== 'string' || !item.accessToken)) {
+      throw new Error('revocation_access_invalid');
+    }
+    // Capacity blocks NEW requests only, not historical token deletion.
+    const encoded = JSON.stringify(items);
+    localStorage.setItem(ACCESS_KEY, encoded);
+    if (localStorage.getItem(ACCESS_KEY) !== encoded) throw new Error('revocation_access_verify_failed');
+    // A broken DOM redraw cannot turn a successfully persisted revocation
+    // capability into a reported storage failure.
+    try { renderWithdrawalPanel(); } catch { /* retained in browser storage */ }
+  }
+  function canPersistRevocationAccess() {
+    // Fail closed BEFORE sending contact data if storage is disabled, corrupt,
+    // at the protected capacity, or cannot accept an extra token record.
+    const probeKey = ACCESS_KEY + '-probe-' + Math.random().toString(36).slice(2);
+    try {
+      const entries = readAccessStrict();
+      if (entries.length >= MAX_ACCESS_ITEMS) return false;
+      const sample = 'x'.repeat(512);
+      localStorage.setItem(probeKey, sample);
+      return localStorage.getItem(probeKey) === sample;
+    } catch {
+      return false;
+    } finally {
+      try { localStorage.removeItem(probeKey); } catch { /* no credentials stored in probe */ }
+    }
   }
   function handoffForm(form) {
     return form instanceof HTMLFormElement && form.querySelector('[name="contact"]') && form.querySelector('[name="name"]');
@@ -103,8 +145,9 @@
     };
   }
   function saveAccess(consultation, accessToken) {
-    if (!consultation?.id || !accessToken) return;
+    if (!consultation?.id || !accessToken) throw new Error('revocation_access_missing');
     const items = loadAccess().filter(item => item.id !== consultation.id);
+    if (items.length >= MAX_ACCESS_ITEMS) throw new Error('revocation_access_capacity');
     items.unshift({ id: consultation.id, accessToken, status: consultation.status, createdAt: consultation.createdAt });
     writeAccess(items);
   }
@@ -113,46 +156,124 @@
       toast('설계사 연락요청에는 연락정보 처리 동의가 필요합니다. AI 대화 공유는 선택입니다.');
       return;
     }
+    if (!canPersistRevocationAccess()) {
+      toast('브라우저에 철회 권한을 보관할 수 없어 상담요청을 보내지 않았습니다. 저장공간과 브라우저 설정을 확인해 주세요.');
+      return;
+    }
     const submit = form?.querySelector('button[type="submit"]');
     if (submit) submit.disabled = true;
+    let serverAccepted = false;
+    let tokenSaved = false;
+    let autoRevoked = false;
+    let serverReceipt = null;
     try {
       const response = await fetch(`${API}/api/consultations`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
+        credentials: 'omit',
+        redirect: 'error',
+        cache: 'no-store',
         body: JSON.stringify(payload)
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || '상담요청 저장 실패');
+      serverAccepted = true;
+      serverReceipt = { id: body.consultation?.id, accessToken: body.accessToken };
       saveAccess(body.consultation, body.accessToken);
+      tokenSaved = true;
       form?.reset();
       form?.classList.add('hidden');
       toast(body.consultation?.transcriptShared
         ? '상담요청과 선택한 AI 대화가 암호화되어 등록되었습니다.'
         : '상담요청이 등록되었습니다. AI 대화 원문은 공유하지 않았습니다.');
     } catch (error) {
-      console.error('Insurance handoff bridge', error);
-      toast('상담요청 서버 연결을 확인해 주세요. 브라우저의 보험관리 기록은 그대로 유지됩니다.');
+      // Network rejection and post-acceptance local token failure are radically
+      // different. Never prompt a second server POST after an accepted response:
+      // that may create an unrevocable duplicate consultation.
+      console.error('Insurance handoff bridge', error?.message === 'revocation_access_missing' ? 'missing revocation credential' : 'request or storage error');
+      if (serverAccepted && tokenSaved) {
+        // An incidental form/UI failure after safely storing the bearer token
+        // must not cancel a valid customer request or lose revoke access.
+        toast('상담요청이 등록되었습니다. 철회 권한은 이 브라우저에 저장되었습니다.');
+      } else if (serverAccepted) {
+        // When the server has accepted but the one-time revoke capability
+        // cannot be kept, use that capability exactly once to cancel the
+        // newly created request. Never retry on 429/quota or network errors.
+        if (serverReceipt?.id && serverReceipt?.accessToken) {
+          try {
+            const rollback = await fetch(`${API}/api/consultations/${encodeURIComponent(serverReceipt.id)}/revoke`, {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              credentials: 'omit',
+              redirect: 'error',
+              cache: 'no-store',
+              body: JSON.stringify({ accessToken: serverReceipt.accessToken })
+            });
+            const confirmation = await rollback.json().catch(() => null);
+            autoRevoked = rollback.ok &&
+              confirmation?.consultation?.id === serverReceipt.id &&
+              confirmation?.consultation?.status === 'revoked';
+          } catch { /* one attempt only; customer is told status is unconfirmed */ }
+        }
+        let warning = form?.querySelector('#insuranceRevokeSaveFailure');
+        if (!warning && form) {
+          warning = document.createElement('p');
+          warning.id = 'insuranceRevokeSaveFailure';
+          warning.setAttribute('role', 'alert');
+          warning.className = 'notice';
+          form.append(warning);
+        }
+        if (autoRevoked) {
+          if (warning) warning.textContent = '서버 상담요청은 접수 직후 자동 철회되었습니다. 연락처와 선택 공유한 대화의 서버 암호문은 철회 처리되었습니다. 브라우저 저장공간을 확인한 후 다시 요청할 수 있습니다.';
+          toast('철회 권한 저장에 실패하여 서버 상담요청을 자동 철회했습니다.');
+        } else {
+          if (warning) warning.textContent = '서버가 상담요청을 접수했으나 철회 권한을 저장하지 못했고 자동 철회도 확인되지 않았습니다. 중복 신청하지 말고 상담 관리자에게 직접 철회를 문의하세요.';
+          toast('서버 접수 후 자동 철회 여부를 확인하지 못했습니다. 중복 등록하지 마세요.');
+        }
+      } else {
+        toast('상담요청 서버 연결을 확인해 주세요. 브라우저의 보험관리 기록은 그대로 유지됩니다.');
+      }
     } finally {
-      if (submit) submit.disabled = false;
+      // An accepted but unconfirmed server request must never be accidentally
+      // submitted a second time by repeated clicks.
+      if (submit) submit.disabled = serverAccepted && !tokenSaved && !autoRevoked;
     }
   }
   async function revokeConsultation(item, button) {
     if (!item?.id || !item?.accessToken) return;
     if (button) button.disabled = true;
+    let serverRevoked = false;
     try {
       const response = await fetch(`${API}/api/consultations/${encodeURIComponent(item.id)}/revoke`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
+        credentials: 'omit',
+        redirect: 'error',
+        cache: 'no-store',
         body: JSON.stringify({ accessToken: item.accessToken })
       });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error || '상담요청 철회 실패');
-      writeAccess(loadAccess().filter(entry => entry.id !== item.id));
+      const confirmation = await response.json().catch(() => null);
+      if (!response.ok || confirmation?.consultation?.id !== item.id ||
+          confirmation?.consultation?.status !== 'revoked') {
+        throw new Error('server_revoke_not_confirmed');
+      }
+      serverRevoked = true;
+      writeAccess(readAccessStrict().filter(entry => entry.id !== item.id));
       toast('상담요청을 철회하고 서버의 연락처·공유대화 암호문을 제거했습니다.');
-    } catch (error) {
-      console.error('Insurance consultation revoke', error);
-      toast('상담요청 철회에 실패했습니다. 네트워크 연결을 확인해 주세요.');
-      if (button) button.disabled = false;
+    } catch {
+      // A successful server revoke is NOT a network failure. Never send
+      // another bearer request merely because local browser storage failed.
+      if (serverRevoked) {
+        const warning = document.createElement('p');
+        warning.setAttribute('role', 'alert');
+        warning.className = 'notice';
+        warning.textContent = '서버 상담요청 철회는 완료되었습니다. 다만 이 브라우저의 철회 목록을 갱신하지 못했습니다. 브라우저 기록을 초기화하지 마세요.';
+        button?.after(warning);
+        toast('서버 철회는 완료되었지만 브라우저 기록 갱신에 실패했습니다.');
+      } else {
+        toast('상담요청 철회를 확인하지 못했습니다. 네트워크 연결을 확인해 주세요.');
+        if (button) button.disabled = false;
+      }
     }
   }
   function renderWithdrawalPanel() {
@@ -166,9 +287,19 @@
       panel.innerHTML = '<div class="panel-head"><div><p class="eyebrow">SERVER CONSULTATIONS</p><h3>설계사 상담요청 관리</h3></div><span class="pill neutral" id="serverConsultationCount">0건</span></div><p class="muted">이 브라우저에서 요청한 서버 상담만 표시합니다. 철회하면 서버의 암호화 연락처와 선택 공유대화가 제거됩니다.</p><div id="serverConsultationList" class="list-empty">현재 브라우저에 철회 가능한 상담요청 기록이 없습니다.</div>';
       privacy.append(panel);
     }
-    const items = loadAccess();
     const count = panel.querySelector('#serverConsultationCount');
     const list = panel.querySelector('#serverConsultationList');
+    let items;
+    try { items = readAccessStrict(); }
+    catch {
+      if (count) count.textContent = '확인 필요';
+      if (list) {
+        list.className = 'notice';
+        list.textContent = '이 브라우저의 상담 철회 기록을 안전하게 읽을 수 없습니다. 기록을 삭제하거나 초기화하지 말고 관리자에게 복구를 요청하세요.';
+        list.setAttribute('role', 'alert');
+      }
+      return;
+    }
     if (count) count.textContent = `${items.length}건`;
     if (!list) return;
     if (!items.length) {

@@ -1,27 +1,58 @@
 const KEY='ekodi-insurance-staging-v3';
 const LEGACY_KEYS=['ekodi-insurance-staging-v2','ekodi-insurance-staging-v1'];
+let localRecordsUnreadable=false;
 const state=loadState();
 const views=[...document.querySelectorAll('.view')];
 
 function blankState(){return{policies:[],claims:[],consultations:[],diagnosis:null,advisorChat:{messages:[]}};}
+function parsedBrowserRecords(raw){
+  // Do not treat corrupt or truncated local records as an empty account.
+  // Otherwise the next ordinary save could overwrite the only original.
+  const value=JSON.parse(raw);
+  if(!value||typeof value!=='object'||Array.isArray(value)||
+    ['policies','claims','consultations'].some(key=>Object.hasOwn(value,key)&&!Array.isArray(value[key]))||
+    (Object.hasOwn(value,'advisorChat')&&
+      (!value.advisorChat||typeof value.advisorChat!=='object'||Array.isArray(value.advisorChat)||
+      (Object.hasOwn(value.advisorChat,'messages')&&!Array.isArray(value.advisorChat.messages))))){
+    throw new Error('UNREADABLE_INSURANCE_LOCAL_RECORDS');
+  }
+  return normalizeState(value);
+}
 function loadState(){
   try{
     const current=localStorage.getItem(KEY);
-    if(current)return normalizeState(JSON.parse(current));
+    if(current!==null)return parsedBrowserRecords(current);
     for(const legacyKey of LEGACY_KEYS){
       const legacy=localStorage.getItem(legacyKey);
-      if(!legacy)continue;
-      const migrated=normalizeState(JSON.parse(legacy));
+      if(legacy===null)continue;
+      const migrated=parsedBrowserRecords(legacy);
       localStorage.setItem(KEY,JSON.stringify(migrated));
-      LEGACY_KEYS.forEach(k=>localStorage.removeItem(k));
+      // Keep legacy v1/v2 source for recovery. Only a separate explicit user
+      // deletion can remove it after safe archive/rollback review.
       return migrated;
     }
     return blankState();
-  }catch{return blankState();}
+  }catch{
+    localRecordsUnreadable=true;
+    return blankState();
+  }
 }
 function normalizeState(value){const base=blankState();const merged={...base,...(value||{})};merged.advisorChat={...base.advisorChat,...(value?.advisorChat||{})};if(!Array.isArray(merged.advisorChat.messages))merged.advisorChat.messages=[];if(!Array.isArray(merged.consultations))merged.consultations=[];return merged;}
-function saveState(){localStorage.setItem(KEY,JSON.stringify(state));renderDashboard();renderPolicies();renderClaimPolicies();renderPrivacy();renderAdvisorChat();}
+function saveState(){if(localRecordsUnreadable)return;localStorage.setItem(KEY,JSON.stringify(state));renderDashboard();renderPolicies();renderClaimPolicies();renderPrivacy();renderAdvisorChat();}
 function money(v){return new Intl.NumberFormat('ko-KR').format(Number(v||0))+'원';}
+// Keep malformed browser records strictly read-only even if a later view
+// dynamically inserts an enabled control after initial page setup.
+function guardUnreadableRecordInteraction(event){
+  if(!localRecordsUnreadable)return;
+  if(event.type==='click'){
+    const control=event.target?.closest?.('button,input,[role="button"]');
+    if(!control||control.matches('[data-view], .nav button'))return;
+  }
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}
+document.addEventListener('click',guardUnreadableRecordInteraction,true);
+document.addEventListener('submit',guardUnreadableRecordInteraction,true);
 function uid(){return crypto?.randomUUID?.()||String(Date.now())+Math.random().toString(16).slice(2);}
 function esc(v=''){return String(v).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
 function show(view){const exists=views.some(v=>v.id===view);const target=exists?view:'home';views.forEach(v=>v.classList.toggle('active',v.id===target));history.replaceState(null,'',target==='home'?'#home':'#'+target);window.scrollTo({top:0,behavior:'smooth'});if(target==='advisor')queueMicrotask(()=>document.getElementById('aiChatInput')?.focus());}
@@ -101,15 +132,16 @@ function setupAdvisorChat(){
   ensureChatStyles();
   document.querySelectorAll('[data-view="advisor"]').forEach(button=>{const strong=button.querySelector('strong');const small=button.querySelector('small');if(strong)strong.textContent='AI 상담';else if(button.closest('.nav'))button.textContent='AI 상담';if(small)small.textContent='AI 채팅 후 필요할 때 설계사 전화 연결';});
   const section=document.getElementById('advisor');
+  const canonicalInsurancePage=location.hostname==='ekodi.kr' && /^\/insurance(?:\/|$)/.test(location.pathname);
   section.innerHTML=`<div class="section-head"><div><p class="eyebrow">AI INSURANCE CONCIERGE</p><h2>AI 보험상담</h2></div><button class="text-button" data-view="home">홈으로</button></div>
     <div class="boundary-banner"><strong>AI가 먼저 충분히 상담합니다.</strong><span>기존 보험 이해, 보장 점검, 청구 준비를 돕습니다. 특정 상품의 가입을 확정적으로 권유하거나 보험금 지급을 보장하지 않습니다. 꼭 필요하고 사용자가 요청할 때만 실제 설계사 전화상담으로 연결합니다.</span></div>
     <div class="chat-layout">
       <div class="panel chat-panel">
-        <div class="chat-head"><div><span class="ai-dot"></span><strong>EKODI Insurance AI</strong><small>STAGING · 외부 AI 전송 없음</small></div><button id="resetChatBtn" class="text-button" type="button">대화 지우기</button></div>
+        <div class="chat-head"><div><span class="ai-dot"></span><strong>EKODI Insurance AI</strong><small>${canonicalInsurancePage ? '무료 안내 · 대화는 브라우저에 보관' : 'STAGING · 외부 AI 전송 없음'}</small></div><button id="resetChatBtn" class="text-button" type="button">대화 지우기</button></div>
         <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
         <div class="quick-prompts" aria-label="빠른 질문"><button type="button" data-chat-prompt="내 보험을 어떻게 점검하면 좋을까요?">내 보험 점검</button><button type="button" data-chat-prompt="병원비를 냈는데 보험청구는 무엇부터 확인해야 하나요?">보험청구</button><button type="button" data-chat-prompt="보험료가 부담되는데 무엇을 먼저 확인해야 하나요?">보험료</button></div>
         <form id="aiChatForm" class="chat-compose"><textarea id="aiChatInput" rows="2" maxlength="1200" required placeholder="보험에 대해 편하게 물어보세요. 주민번호, 상세 병명 등 불필요한 민감정보는 입력하지 마세요."></textarea><button class="primary" type="submit">보내기</button></form>
-        <p class="notice">현재 스테이징에서는 대화가 이 브라우저에만 저장됩니다. 실제 생성형 AI 모델에는 전송하지 않고 상담 흐름과 안전경계를 검증합니다.</p>
+        <p class="notice">${canonicalInsurancePage ? 'AI 대화는 기본적으로 이 브라우저에 보관됩니다. 연락처 처리를 동의하고 서버 상담요청을 접수할 때만 연락정보를 암호화해 전송하며, 대화 원문 공유는 별도 선택사항입니다.' : '현재 스테이징에서는 대화가 이 브라우저에만 저장되며 외부 생성형 AI로 전송하지 않습니다.'}</p>
       </div>
       <aside class="panel handoff-panel">
         <span class="pill">HUMAN HANDOFF</span><h3>실제 설계사가 꼭 필요할 때</h3><p>AI 상담으로 해결되지 않거나 실제 상품 설명·가입 절차가 필요하면 사용자가 직접 전화상담을 요청할 수 있습니다.</p>
@@ -118,11 +150,11 @@ function setupAdvisorChat(){
           <label>이름<input name="name" required maxlength="60" /></label>
           <label>연락처<input name="contact" required maxlength="80" placeholder="전화번호 또는 연락 가능한 번호" /></label>
           <label>연락 희망시간<select name="preferredTime"><option>시간 관계없음</option><option>오전</option><option>오후</option><option>저녁</option></select></label>
-          <div class="consent-box"><input id="humanConsent" type="checkbox" required /><label for="humanConsent"><strong>설계사 연락 요청</strong><span>AI 상담내용의 요약과 연락처를 상담 담당자가 확인하는 것에 동의합니다. 스테이징에서는 같은 브라우저의 관리자 화면에만 저장됩니다.</span></label></div>
+          <div class="consent-box"><input id="humanConsent" type="checkbox" required /><label for="humanConsent"><strong>설계사 연락 요청</strong><span>${canonicalInsurancePage ? '설계사 연락을 요청하면 동의한 연락정보를 암호화해 저장하며, AI 대화 원문은 별도 선택 동의가 필요합니다. 서버 연결이 안 되면 요청이 접수되지 않습니다.' : '스테이징에서는 요청과 상담대화가 같은 브라우저에만 보관됩니다.'}</span></label></div>
           <button class="primary" type="submit">상담요청 등록</button>
         </form>
-        <div class="handoff-note"><strong>관리자 관리항목</strong><span>고객명 · 연락처 · AI 상담요약 · 대화내용 · 요청시각 · 처리상태</span></div>
-        <a class="admin-preview-link" href="/admin" target="_blank" rel="noopener">스테이징 상담관리 보기 →</a>
+        <div class="handoff-note"><strong>관리자 관리항목</strong><span>상담동의 연락정보 · AI 상담요약 · 선택동의한 대화내용만 · 요청시각 · 처리상태</span></div>
+        <a class="admin-preview-link" href="${canonicalInsurancePage ? '/admin/services/insurance' : '/admin'}" target="_blank" rel="noopener">${canonicalInsurancePage ? '상담관리 →' : '스테이징 상담관리 보기 →'}</a>
       </aside>
     </div>`;
   section.querySelector('#aiChatForm').addEventListener('submit',handleChatSubmit);
@@ -149,12 +181,31 @@ function aiReply(text){
   if(/(안녕|처음|무엇을|뭘 물어)/i.test(q))return '저는 기존 보험 정리, 보험료 점검, 보장 확인 순서, 보험금 청구 준비를 도와드릴 수 있습니다. 특정 상품을 확정적으로 추천하거나 보험금 지급을 보장하지는 않습니다. 궁금한 상황을 한 문장으로 적어 주세요.';
   return '말씀하신 내용을 기준으로 먼저 사실관계를 정리하는 것이 좋겠습니다. 현재 가입한 보험이 무엇인지, 월 보험료가 어느 정도인지, 그리고 가장 걱정되는 위험이나 해결하고 싶은 문제가 무엇인지 알려주시면 확인 순서를 함께 정리해 드릴게요. 상세 병명이나 주민번호 같은 민감정보는 적지 않으셔도 됩니다.';
 }
-function sendUserMessage(text){const clean=String(text||'').trim();if(!clean)return;addChatMessage('user',clean,false);addChatMessage('assistant',aiReply(clean),false);localStorage.setItem(KEY,JSON.stringify(state));renderAdvisorChat();renderDashboard();renderPrivacy();if(needsHuman(clean))showHumanRequest(true);}
+function sendUserMessage(text){if(localRecordsUnreadable)return;const clean=String(text||'').trim();if(!clean)return;addChatMessage('user',clean,false);addChatMessage('assistant',aiReply(clean),false);localStorage.setItem(KEY,JSON.stringify(state));renderAdvisorChat();renderDashboard();renderPrivacy();if(needsHuman(clean))showHumanRequest(true);}
 function handleChatSubmit(e){e.preventDefault();const input=e.currentTarget.querySelector('#aiChatInput');sendUserMessage(input.value);input.value='';input.focus();}
 function showHumanRequest(on=true){const form=document.getElementById('humanRequestForm');if(!form)return;form.classList.toggle('hidden',!on);if(on)form.querySelector('input')?.focus();}
 function summarizeConversation(messages){const userMessages=messages.filter(m=>m.role==='user').slice(-5).map(m=>m.text.trim()).filter(Boolean);if(!userMessages.length)return 'AI 상담 후 설계사 전화연락 요청';const text=userMessages.join(' / ');return text.length>260?text.slice(0,257)+'...':text;}
 function handleHumanRequest(e){
-  e.preventDefault();const data=Object.fromEntries(new FormData(e.currentTarget));const transcript=state.advisorChat.messages.slice(-30).map(m=>({role:m.role,text:m.text,createdAt:m.createdAt}));
+  e.preventDefault();
+  // The production submit listener in server-bridge.js intercepts this form
+  // before the local staging handler. If that bridge is missing, never create a
+  // fake "registered" consultation, store unconsented contact/transcript in
+  // localStorage, clear the form, or imply that an adviser will call back.
+  if(location.hostname==='ekodi.kr' && /^\/insurance(?:\/|$)/.test(location.pathname)){
+    let status=e.currentTarget.querySelector('#insuranceHandoffFallbackStatus');
+    if(!status){
+      status=document.createElement('p');
+      status.id='insuranceHandoffFallbackStatus';
+      status.setAttribute('role','alert');
+      status.setAttribute('aria-live','assertive');
+      status.className='notice';
+      e.currentTarget.append(status);
+    }
+    status.textContent='상담요청이 서버에 접수되지 않았습니다. 현재 연결 상태를 확인한 후 다시 시도해 주세요. 입력한 연락처와 대화는 서버로 전송되지 않았습니다.';
+    toast('서버 연결이 준비되지 않아 상담요청을 접수하지 않았습니다.');
+    return;
+  }
+  const data=Object.fromEntries(new FormData(e.currentTarget));const transcript=state.advisorChat.messages.slice(-30).map(m=>({role:m.role,text:m.text,createdAt:m.createdAt}));
   const item={id:uid(),name:data.name.trim(),contact:data.contact.trim(),preferredTime:data.preferredTime,summary:summarizeConversation(transcript),transcript,createdAt:new Date().toISOString(),status:'신규',source:'AI_CHAT_HANDOFF',sharedScope:'conversation_summary_and_contact'};
   state.consultations.unshift(item);addChatMessage('assistant','설계사 전화상담 요청이 등록되었습니다. 실제 운영에서는 담당자가 상담요약과 연락처를 확인한 뒤 연락드리도록 연결합니다. 현재 스테이징에서는 같은 브라우저의 관리자 화면에만 저장됩니다.',false);saveState();e.currentTarget.reset();showHumanRequest(false);toast('설계사 상담요청을 등록했습니다.');
 }
@@ -190,3 +241,14 @@ document.getElementById('confirmDeleteBtn').addEventListener('click',()=>{
 });
 
 setupAdvisorChat();renderDashboard();renderPolicies();renderClaimPolicies();renderPrivacy();show((location.hash||'#home').slice(1));
+if(localRecordsUnreadable){
+  const notice=document.createElement('p');
+  notice.className='panel notice';
+  notice.setAttribute('role','alert');
+  notice.textContent='기존 보험기록을 안전하게 불러오지 못했습니다. 데이터 손실을 막기 위해 저장·삭제·상담 입력을 중단했습니다. 브라우저 기록을 삭제하거나 초기화하지 말고 관리자에게 복구를 요청하세요.';
+  document.getElementById('app')?.prepend(notice);
+  document.querySelectorAll('button,input,textarea,select').forEach(control=>{
+    if(control.matches('[data-view], .nav button'))return;
+    control.disabled=true;
+  });
+}
