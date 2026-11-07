@@ -112,6 +112,9 @@
     return a;
   }
   async function mountGoogle(host, onStatus, onSignedIn) {
+    // Keep the independent EKODI sign-in available immediately, even if Google GSI
+    // or its challenge endpoint never becomes ready. This grants no new authority.
+    host.replaceChildren(centralLoginLink());
     onStatus('구글 로그인을 준비하고 있습니다.');
     try {
       const [challenge] = await Promise.all([post(`${IDENTITY}/challenge`), waitForGoogle()]);
@@ -136,7 +139,10 @@
       window.google.accounts.id.renderButton(host, { type: 'standard', theme: 'outline', size: 'large', text: 'continue_with', shape: 'rectangular', width: Math.min(340, Math.max(220, host.clientWidth || 300)) });
       host.append(centralLoginLink());
       onStatus('');
-    } catch { onStatus('구글 로그인을 준비하지 못했습니다. 새로고침 후 다시 시도해 주세요.', true); }
+    } catch {
+      host.replaceChildren(centralLoginLink());
+      onStatus('구글 로그인을 준비하지 못했습니다. 다른 로그인 방법을 선택하거나 잠시 후 다시 시도해 주세요.', true);
+    }
   }
   // 게이트웨이가 HTML·JSON 속 경로에 이미 /books를 붙여 줄 때가 있으므로, 아직 없을 때만 붙인다.
   const under = p => { const v = String(p || ''); if (!BASE || !/^\/(?!\/)/.test(v) || v === BASE || v.startsWith(`${BASE}/`) || v.startsWith(`${BASE}#`)) return v; return `${BASE}${v}`; };
