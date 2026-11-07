@@ -128,3 +128,12 @@ test('protected release probes require the exact private no-store hold headers',
     assert.equal(response.headers.get('x-ekodi-route'),'regional-private-hold');
   }
 });
+
+test('router keeps the regional hold private no-store policy end to end (traffic governor + security headers)',async()=>{
+  const {applyTrafficResponsePolicy}=await import('../traffic-governor.js');
+  const held=cheonggyePublicApiHoldResponse(new Request(root+'/api/local-operations/cheonggye/modules/directory'));
+  const out=applyTrafficResponsePolicy(held,new Request(root+'/api/local-operations/cheonggye/modules/directory',{headers:{cookie:'a=b'}}),{tier:'L1'});
+  assert.equal(out.headers.get('cache-control'),'private, no-store, max-age=0');
+  const leaky=applyTrafficResponsePolicy(new Response('{}',{headers:{'content-type':'application/json','cache-control':'public, no-store'}}),new Request(root+'/api/x',{headers:{cookie:'a=b'}}),{tier:'L1'});
+  assert.equal(leaky.headers.get('cache-control'),'no-store');
+});

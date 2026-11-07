@@ -207,7 +207,11 @@ export function applyTrafficResponsePolicy(response,request,assessment={}){
   const url=new URL(request.url);
   const privateContext=privatePath(url.pathname)||request.headers.has('authorization')||request.headers.has('cookie');
   if(privateContext&&cacheableContent(out)){
-    out.headers.set('cache-control','no-store');
+    // Keep an upstream policy that is already strictly uncacheable (e.g. the
+    // owner-frozen regional hold's "private, no-store, max-age=0"); flattening
+    // it to plain no-store drops the private signal the release canary checks.
+    const directives=new Set(String(out.headers.get('cache-control')||'').toLowerCase().split(',').map(v=>v.trim()).filter(Boolean));
+    if(!directives.has('no-store')||directives.has('public'))out.headers.set('cache-control','no-store');
     out.headers.delete('cloudflare-cdn-cache-control');
     return out;
   }
