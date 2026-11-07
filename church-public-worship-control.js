@@ -14,7 +14,7 @@ export async function handlePublicChurchWorship(request,env={},dependencies={}){
   const origin=String(env.PUBLIC_WORSHIP_SUPABASE_URL||SUPABASE).replace(/\/+$/,'');
   const key=String(env.PUBLIC_WORSHIP_SUPABASE_PUBLISHABLE_KEY||PUBLIC_KEY);
   try{
-    const res=await (dependencies.fetch||fetch)(origin+'/rest/v1/church_worship_materials?'+params,{headers:{apikey:key,accept:'application/json'},redirect:'error'});
+    const res=await (dependencies.fetch||fetch)(origin+'/rest/v1/church_worship_materials?'+params,{headers:{apikey:key,accept:'application/json'},redirect:'manual'});
     if(!res.ok)return json({ok:false,code:'WORSHIP_SOURCE_UNAVAILABLE'},502);
     const data=await res.json();
     if(!Array.isArray(data))return json({ok:false,code:'WORSHIP_SOURCE_INVALID'},502);

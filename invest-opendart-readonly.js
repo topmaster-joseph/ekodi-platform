@@ -47,7 +47,7 @@ export async function fetchInvestOpenDart(env,input,options={}){
   let response;
   try{
     const fetcher=options.fetchImpl??fetch;
-    response=await fetcher(url.href,{method:'GET',redirect:'error',cache:'no-store',
+    response=await fetcher(url.href,{method:'GET',redirect:'manual',cache:'no-store',
       headers:{accept:'application/json'},signal:AbortSignal.timeout(7500)});
   }catch{return {httpStatus:502,body:{schema:INVEST_DART_SCHEMA,error:'OPENDART_UNAVAILABLE',ordersPlaced:false}}}
   if(!response.ok)return {httpStatus:502,body:{schema:INVEST_DART_SCHEMA,error:'OPENDART_UPSTREAM_HTTP_ERROR',ordersPlaced:false}};

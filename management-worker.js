@@ -45,7 +45,7 @@ async function managementSpaces(request,env){
     response=await fetch(`${env.SUPABASE_URL}/functions/v1/workspace-api/spaces`,{
       method:'GET',
       headers:{authorization:`Bearer ${token}`,apikey:env.SUPABASE_PUBLISHABLE_KEY,accept:'application/json'},
-      redirect:'error'
+      redirect:'manual'
     });
   }catch{return json({error:'workspace_service_unavailable'},503)}
   if(response.status===401||response.status===403)return json({error:'workspace_access_denied'},response.status);
@@ -102,7 +102,7 @@ async function managementStoreSummary(request,env,url){
   let response;
   try{
     response=await fetch(`${env.SUPABASE_URL}/functions/v1/workspace-api/spaces/store-dashboard?slug=${encodeURIComponent(slug)}`,{
-      method:'GET',headers:{authorization:`Bearer ${token}`,apikey:env.SUPABASE_PUBLISHABLE_KEY,accept:'application/json'},redirect:'error'
+      method:'GET',headers:{authorization:`Bearer ${token}`,apikey:env.SUPABASE_PUBLISHABLE_KEY,accept:'application/json'},redirect:'manual'
     });
   }catch{return json({error:'store_service_unavailable'},503)}
   if([401,403,404].includes(response.status))return json({error:'store_not_authorized_or_found'},response.status);
@@ -165,7 +165,7 @@ async function managementBusinessAggregate(request,env,url){
   let scopeResponse;
   try{
     scopeResponse=await fetch(`${env.SUPABASE_URL}/functions/v1/workspace-api/spaces/resolve?slug=${encodeURIComponent(slug)}`,{
-      method:'GET',headers:{authorization:`Bearer ${token}`,apikey:env.SUPABASE_PUBLISHABLE_KEY,accept:'application/json'},redirect:'error'
+      method:'GET',headers:{authorization:`Bearer ${token}`,apikey:env.SUPABASE_PUBLISHABLE_KEY,accept:'application/json'},redirect:'manual'
     });
   }catch{return json({error:'store_service_unavailable'},503)}
   if([401,403,404].includes(scopeResponse.status))return json({error:'store_not_authorized_or_found'},scopeResponse.status);
@@ -182,7 +182,7 @@ async function managementBusinessAggregate(request,env,url){
       method:'POST',
       headers:{authorization:`Bearer ${token}`,apikey:env.SUPABASE_PUBLISHABLE_KEY,
         'content-type':'application/json',accept:'application/json'},
-      body:JSON.stringify({p_workspace_key:slug}),redirect:'error'
+      body:JSON.stringify({p_workspace_key:slug}),redirect:'manual'
     });
   }catch{return json({error:'business_aggregate_unavailable'},503)}
   if([401,403,404].includes(response.status))return json({error:'business_aggregate_not_authorized'},403);

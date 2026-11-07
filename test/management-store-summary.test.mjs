@@ -46,7 +46,7 @@ test('verified RLS store snapshot is reduced to safe aggregate read model',async
     assert.equal(calls[0].url,'https://example.supabase.co/functions/v1/workspace-api/spaces/store-dashboard?slug=jadam');
     assert.equal(calls[0].init.headers.authorization,'Bearer token.signature');
     assert.equal(calls[0].init.method,'GET');
-    assert.equal(calls[0].init.redirect,'error');
+    assert.equal(calls[0].init.redirect,'manual');
   }finally{globalThis.fetch=previous}
 });
 

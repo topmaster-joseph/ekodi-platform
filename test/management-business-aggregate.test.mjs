@@ -65,7 +65,7 @@ test('RLS store-owner scope and SQL-authorized aggregate return only whitelisted
     assert.match(up.calls[0].target,/workspace-api\/spaces\/resolve\?slug=jadam/);
     assert.equal(up.calls[0].init.headers.authorization,'Bearer member-token.signature');
     assert.equal(up.calls[1].init.method,'POST');
-    assert.equal(up.calls[1].init.redirect,'error');
+    assert.equal(up.calls[1].init.redirect,'manual');
     assert.equal(up.calls[1].init.headers.authorization,'Bearer member-token.signature');
     assert.equal(up.calls[1].init.headers.apikey,'publishable-test');
     assert.deepEqual(JSON.parse(up.calls[1].init.body),{p_workspace_key:'jadam'});

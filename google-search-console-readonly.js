@@ -70,7 +70,7 @@ function apiError(response){
   return 'google_unavailable';
 }
 async function readJson(fetchImpl,url,options={}){
-  const response=await fetchImpl(url,{...options,redirect:'error',signal:AbortSignal.timeout(10000)});
+  const response=await fetchImpl(url,{...options,redirect:'manual',signal:AbortSignal.timeout(10000)});
   if(!response.ok)throw new Error(apiError(response));
   const length=Number(response.headers.get('content-length')||0);
   if(length>MAX_GOOGLE_RESPONSE_BYTES)throw new Error('google_response_too_large');

@@ -91,7 +91,7 @@ async function authenticate(req, env) {
   try {
     const response = await fetch(origin.origin + '/auth/v1/user', {
       headers: { authorization, apikey: auth.publishableKey },
-      redirect: 'error', signal: AbortSignal.timeout(7000),
+      redirect:'manual', signal: AbortSignal.timeout(7000),
     });
     if (!response.ok) return null;
     const user = await response.json();
@@ -112,7 +112,7 @@ async function providerVerification(id, env) {
   try {
     const response = await fetch('https://api.portone.io/identity-verifications/' + encodeURIComponent(id), {
       headers: { authorization: 'PortOne ' + env.PORTONE_AGE_API_SECRET },
-      redirect: 'error', signal: AbortSignal.timeout(10000),
+      redirect:'manual', signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) return null;
     return await response.json();

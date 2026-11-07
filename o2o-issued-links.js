@@ -34,7 +34,7 @@ export async function o2oIssuedLinkResponse(request, env, fetcher = fetch) {
       headers: { apikey: key, 'content-type': 'application/json', accept: 'application/json' },
       body: JSON.stringify({ p_token: matched[1] }),
       signal: AbortSignal.timeout(4500),
-      redirect: 'error'
+      redirect:'manual'
     });
     if (!response.ok) return statusResponse(response.status >= 500 ? 503 : 404);
     const result = await response.json();
