@@ -1128,7 +1128,9 @@ jobs:
             --arg description "Control API production deployment: $JOB_STATUS; AI configured=${AI_PROVIDER_READY_COUNT:-0}" \
             --arg target_url "$target_url" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}')
-          curl --fail-with-body -sS \
+          # Call the already-tested quota-aware transport explicitly. A 403/429
+          # fails this publication step; release evidence remains separate.
+          github_status_curl --fail-with-body -sS \
             -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H 'Accept: application/vnd.github+json' \
