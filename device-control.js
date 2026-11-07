@@ -1541,7 +1541,7 @@ async function handleAdmin(request, env) {
       return json({ error: '이 작업은 관리자 확인이 필요합니다.', code: 'DEVICE_COMMAND_CONFIRM_REQUIRED' }, 409, request, env);
     }
     if (policy.superAdmin && auth.session?.role !== 'super_admin') {
-      return json({ error: '이 기기 제어 작업은 최고관리자만 실행할 수 있습니다.', code: 'DEVICE_COMMAND_SUPER_ADMIN_REQUIRED' }, 403, request, env);
+      return json({ error: '이 기기 제어 작업은 최고관리자만 실행할 수 있습니다.', code: isInteractiveAuthCommand(commandType) ? 'INTERACTIVE_AUTH_SUPER_ADMIN_REQUIRED' : 'DEVICE_COMMAND_SUPER_ADMIN_REQUIRED' }, 403, request, env);
     }
     let payload = {};
     try { payload = sanitizeCommandPayload(commandType, body.payload || {}); }
