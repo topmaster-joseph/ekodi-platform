@@ -97,5 +97,32 @@
       }
     }
   }
-  load();
+  // Partner news belongs to the below-the-fold Together section. Avoid an
+  // immediate extra API request on every church homepage visit. Direct
+  // #partner-news links, keyboard/hash navigation and old browsers still load.
+  let started=false;
+  function startOnce(){
+    if(started)return;
+    started=true;
+    void load();
+  }
+  if(location.hash==='#partner-news'){
+    startOnce();
+  }else if('IntersectionObserver' in window){
+    const observer=new IntersectionObserver(entries=>{
+      if(entries.some(entry=>entry.isIntersecting)){
+        observer.disconnect();
+        startOnce();
+      }
+    },{rootMargin:'320px 0px'});
+    observer.observe(section);
+    window.addEventListener('hashchange',()=>{
+      if(location.hash==='#partner-news'){
+        observer.disconnect();
+        startOnce();
+      }
+    });
+  }else{
+    startOnce();
+  }
 })();
