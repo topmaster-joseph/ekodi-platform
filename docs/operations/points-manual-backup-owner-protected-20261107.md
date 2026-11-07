@@ -1,0 +1,41 @@
+# EKODI Points — Owner-approved protected logical backup / restore proof
+
+**Task:** `points-manual-backup-proof-20261107` · Issues #7778 and #6739  
+**State (2026-11-07 KST):** verifier and read-only workflow implemented as guarded PR; **no actual production backup, encryption-key provisioning, Drive upload or restore has been executed**. No production migration or points activation.
+
+## Verified target and current evidence
+
+- The connected Google Drive account can access the **EKODI Shared Drive** and the **canonical `99_BACKUP/SUPABASE_PROD` folder**, which already has `ENCRYPTED_DUMPS`, `MANIFESTS`, and `RESTORE_EVIDENCE` subfolders. At inspection, **each was empty**. No new Google Drive/Storage credential system or alternate storage provider was created.
+- The archive folder's inherited permission list was not returned by Google Drive metadata (`access_not_verified`). Folder accessibility **is not proof of least-privilege sharing**. Before uploading any ciphertext, independently inspect Shared Drive membership, link sharing, file inheritance, available quota and retention/access logs. The connected session has access but is a secondary approved account, not automatically the canonical primary storage-worker identity.
+- The protected Supabase production readiness job [42363845134](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/42363845134) reported 0/20 points migrations and missing `points-api`; the backup inventory job [42363846607](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/42363846607) reported no recent managed backup and PITR disabled.
+- Authenticated Supabase organization lookup reports **Free**. The staging browser [42321120999](https://github.com/topmaster-joseph/ekodi-platform/actions/runs/42321120999) passed on desktop and mobile, but **is not production restore proof**.
+- Desktop Commander user2 was online but returned the monthly-usage limit. No remote shell command or production data export was attempted. Do not retry or work around this account limit.
+
+## Authorization boundary
+
+Owner approved **planning, protected encrypted backup and isolated restore verification**. The approval does **not** extend to directly writing production schema, promoting all 20 migrations, activating points/transfer/donation/redemption, spending money, loosening access, or altering Shared Drive membership without access review.
+
+No production credentials, private signing keys, raw dumps or plaintext logs in this repo, chat, public PR, Actions artifact, or unencrypted remote drive.
+
+## Protected backup and restore process — not yet run
+
+1. **Protect destination and roles first.** Verify `EKODI/99_BACKUP/SUPABASE_PROD/ENCRYPTED_DUMPS` is private and appropriate for restricted production PII. Configure a protected approved operator and an **independent** restore verifier, their separate Ed25519 signing keys (private keys outside GitHub/CI), recipient-only `age` X25519 backup encryption, retention and destruction rules. Existing first-party Storage Gateway is the canonical write/read path. Do not disclose Google refresh tokens to the operator or ordinary agent.
+2. **Generate a Supabase-compatible logical backup in a protected runner only.** Refer to the current [Supabase official restore guidance](https://supabase.com/docs/guides/self-hosting/restore-from-platform): `supabase db dump` for **roles, schema and data separately** and a guarded restore procedure, rather than assuming unrestricted raw `pg_dump` is fully compatible with Supabase-managed schemas. Handle unavoidable intermediate SQL only in approved ephemeral private storage; do not write plaintext to persistent Actions artifacts, Drive or R2. Fail closed if temporary space, key, DB scope, CLI version or access cannot be verified. Inventory Storage object bytes separately; they are not included in the SQL dump.
+3. **Encrypt before external persistence.** Package the compatible dumps and manifest in the protected environment; encrypt to the approved age recipient; save only ciphertext in `ENCRYPTED_DUMPS`. Compute size and SHA-256, upload through the existing storage gateway (large encrypted objects may need its streaming/R2-staging path, never a public bucket), read back and hash the actual downloaded encrypted artifact. Verify actual Google Drive metadata and parent-folder association with the connected Drive API; do not accept a signer self-claim as physical folder proof.
+4. **Independently restore in a nonproduction isolated environment.** Different qualified verifier downloads ciphertext, decrypts only in a protected restore sandbox, executes the Supabase-compatible restore, and checks source/target row totals, critical Auth/Person/tenant objects, RLS/grants and migration consistency. Never point a restore command at the production project; destroy test credentials/data after private evidence retention.
+5. **Attest without exposing contents.** Produce one canonical signed statement, backed by separately stored encrypted artifact and restore evidence. Fields: `version=1`, `type=ekodi_points_manual_backup_restore`, exact production project ref and original main SHA, backup/restore UTC ISO timestamps, encrypted archive (`age-x25519-v1`, Drive/folder/file ID, SHA-256 and bytes), and isolated restore evidence (`isolated_nonproduction_postgres`, evidence file/folder IDs, `success=true`, all five verified checks). Backup operator and independent restorer sign the same canonical statement with **different Ed25519 keys**. The private signatures are generated off CI; the verifier receives public keys only. Never put actual production IDs, file links or signer private keys in public issue logs.
+6. **Use the strictly read-only workflow** `.github/workflows/verify-points-manual-backup-evidence.yml` on *exact current protected main*: provide archive and signed-receipt Drive file IDs in the protected manual dispatch, never in an ordinary PR; ensure protected `EKODI_STORAGE_GATEWAY_KEY`, expected Drive/folder IDs, independent public keys and production environment gate are configured. The workflow downloads the real encrypted file and signed receipt through the existing Storage Gateway; checks strict main SHA, two signatures, project, timestamps ≤48h, expected location claims, archive byte length/age header/SHA-256 and required nonproduction restore checks. Missing keys, unreadable files, hash mismatch, untrusted signatures and stale proof **fail closed**.
+7. **Continue separate protected review**: a successful receipt check is not self-authorizing. An authorized owner/security reviewer must independently confirm folder metadata and the restore drill, approve a separate version-pinned schema-promotion workflow and rollback. No manual SQL, Edge Function promotion or points flag is part of this read-only workflow.
+
+## Unresolved operational blockers
+
+- Original database export/restore and encryption key custody have **not** been completed or verified; do not report a backup exists.
+- The Shared Drive folder inherits permissions whose full metadata was unavailable; an independent membership/privacy check is still needed before storing production customer data.
+- The current GitHub backup inventory workflow checks only Supabase **managed** backups/PITR; it must not be bypassed or relabeled as manual-backup proof. The new workflow is a **separate cryptographic evidence verifier**, not an installer or replacement for owner/security approval.
+- All 20 points production migrations and the production JWT points-api remain uninstalled/disabled at the inspected checkpoint. Existing tenant identities, mall purchases and mission-related data remain untouched.
+
+## Proof & regression contract
+
+- `node --test test/points-manual-backup-receipt.test.mjs`: valid two-signer receipt; corrupt signature; mismatched project/commit/location; stale backup; absent restore checks; rejected production restore target; encrypted artifact readback size/header/checksum.
+- The production verifier returns `production_schema_write_authorized=false`, `points_activation_authorized=false`, `backup_restore_owner_approval_required=true` even if all evidence passes.
+- The restore statement's `isolated_restore_success` check can be fulfilled by a genuine Supabase-compatible `psql` restore or a valid `pg_restore` scenario; **not by a test fixture**.
