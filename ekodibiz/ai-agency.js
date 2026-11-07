@@ -13,6 +13,37 @@
   let widgets = null;
   let loadedKey = '';
   let campusReport = null;
+  // The canonical page switches visible panels without a separate app or login.
+  const tabButtons = Array.from(document.querySelectorAll('[data-agency-tab]'));
+  const tabPanels = Array.from(document.querySelectorAll('[data-agency-panel]'));
+  function activateTab(target, focus=false) {
+    const button=tabButtons.find(item=>item.dataset.agencyTab===target && !item.hidden);
+    if(!button)return;
+    for(const tab of tabButtons){
+      const active=tab===button;
+      tab.setAttribute('aria-selected',active?'true':'false');
+      tab.tabIndex=active?0:-1;
+    }
+    for(const panel of tabPanels)panel.hidden=panel.dataset.agencyPanel!==target;
+    if(focus)button.focus();
+  }
+  for(const tab of tabButtons){
+    tab.addEventListener('click',()=>activateTab(tab.dataset.agencyTab));
+    tab.addEventListener('keydown',event=>{
+      const visible=tabButtons.filter(item=>!item.hidden);
+      const index=visible.indexOf(tab);
+      const keys={ArrowRight:1,ArrowLeft:-1};
+      let next=null;
+      if(Object.hasOwn(keys,event.key)) next=visible[(index+keys[event.key]+visible.length)%visible.length];
+      if(event.key==='Home')next=visible[0];
+      if(event.key==='End')next=visible[visible.length-1];
+      if(next){event.preventDefault();activateTab(next.dataset.agencyTab,true);}
+    });
+  }
+  for(const action of document.querySelectorAll('[data-open-agency-tab]')){
+    action.addEventListener('click',()=>activateTab(action.dataset.openAgencyTab,true));
+  }
+  activateTab(isUniversityRoute?'status':'apply');
 
   const won = (n) => Number.isSafeInteger(n) ? new Intl.NumberFormat('ko-KR').format(n) + '원' : '견적 대기';
   function message(text, isError) {
@@ -47,6 +78,8 @@
     loadedKey = '';
     campusReport = null;
     $('campusPanel').hidden = true;
+    $('contractEmpty').hidden = false;
+    $('campusCycleDetails').open = false;
     $('result').hidden = true;
     $('tossPanel').hidden = true;
     receipt = item;
@@ -59,8 +92,10 @@
     campusReport=report && Number.isSafeInteger(report.months) && report.months>=1 ? report : null;
     const panel=$('campusPanel');
     panel.hidden=!campusReport;
+    $('contractEmpty').hidden=!!campusReport;
     if(!campusReport)return;
     const x=campusReport;
+    $('cycleOverview').textContent=x.periods.filter(p=>p.status==='operator_recorded').length+' / '+x.months+'회 등록';
     $('campusFee').textContent=won(x.feeAmount);
     $('campusBudget').textContent=won(x.supplierBudget);
     $('campusSpent').textContent=won(x.recordedSupplierSpending);
@@ -125,6 +160,7 @@
     $('acceptBtn').hidden = record.status !== 'quoted';
     $('paymentBtn').hidden = record.status !== 'accepted';
     if (record.status !== 'accepted') $('tossPanel').hidden = true;
+    activateTab('status');
     $('result').scrollIntoView({behavior:'smooth', block:'nearest'});
   }
   async function refresh() {
@@ -150,14 +186,10 @@
     document.body.dataset.agencyView='university';
     $('heading').textContent='계약 담당자 · AI 구독료 위탁계약 조회';
     $('campusRouteGuide').hidden=false;
-    $('apply').hidden=true;
-    const aside=document.querySelector('.layout > aside');
-    aside.prepend($('statusPanel'));
-    $('statusPanel').after($('result'));
-    const flow=aside.querySelector('[aria-labelledby="flowTitle"]');
-    if(flow)flow.hidden=true;
+    $('agencyTabApply').hidden=true;
     $('statusPanel').querySelector('h2').textContent='계약 조회';
     document.title='계약 담당자 · AI 위탁계약 조회 | 에코디비즈';
+    activateTab('status');
   }
   const form = $('agencyForm');
   if(isIndividualRoute){
@@ -241,6 +273,7 @@
         loadedKey = checkout.clientKey;
       }
       $('tossPanel').hidden = false;
+      activateTab('contract');
       message((checkout.mode === 'test' ? '시험결제' : '승인된 실결제') + ' 금액: ' + won(checkout.amount), false);
     } catch (error) { message(error.message, true); }
     finally { button.disabled = false; }
