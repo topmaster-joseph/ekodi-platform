@@ -1,5 +1,6 @@
 import { buildEpub } from './publishing-ai-epub.js';
 import { QUALITY_RULES, fixForeignScript, polishChapter } from './publishing-ai-quality.js';
+import { releaseBook, journalTick } from './publishing-ai-release.js';
 // PUBLISHING-AI-WEEKLY-001 — 주 1권 "AI 협업 초안 · 저자 감수" 원고 공장.
 //
 // 원칙
@@ -308,15 +309,17 @@ export async function aiFactoryTick(env, at = new Date()) {
       if (r.status !== 'drafted') break;
     }
   } catch (e) { steps.push({ status: 'error', message: String(e?.message || e).slice(0, 300) }); } // 실패 원인을 실행 기록에 남긴다
+  try { const posts = await journalTick(env.PUBLISH_DB, (s, p, n, st) => writeText(env, s, p, n, st)); if (posts.length) steps.push({ status: 'journal', posts }); }
+  catch (e) { steps.push({ status: 'journal_error', message: String(e?.message || e).slice(0, 200) }); }
   steps.push({ status: 'providers', calls: tally });
   if (breaker.off) steps.push({ status: 'control_disconnected', reason: breaker.reason, fallback: 'workers-ai-only' });
   await env.PUBLISH_DB.prepare('INSERT INTO publishing_ai_runs (at, result_json) VALUES (?, ?)').bind(now(), JSON.stringify(steps).slice(0, 2000)).run().catch(() => null);
   return { status: 'ok', steps };
 }
 
-async function epubFor(db, book) {
+async function epubFor(db, book, given = null) {
   const meta = JSON.parse(book.plan_json || '{}');
-  const chapters = (await db.prepare('SELECT number, title, body FROM publishing_ai_chapters WHERE book_id=? ORDER BY number').bind(book.id).all()).results || [];
+  const chapters = given || (await db.prepare('SELECT number, title, body FROM publishing_ai_chapters WHERE book_id=? ORDER BY number').bind(book.id).all()).results || [];
   const images = new Map(((await db.prepare('SELECT number, mime, data_b64 FROM publishing_ai_images WHERE book_id=?').bind(book.id).all()).results || []).map(r => [r.number, { mime: r.mime, b64: r.data_b64 }]));
   const bytes = buildEpub({ id: book.id, title: book.title, subtitle: meta.subtitle, author: meta.author || AI_FACTORY.author, publisher: meta.publisher || AI_FACTORY.publisher, disclosure: meta.disclosure || AI_FACTORY.disclosure, keywords: meta.keywords, pitch: meta.pitch },
     chapters, images, new Date(book.approved_at || book.updated_at));
@@ -325,7 +328,7 @@ async function epubFor(db, book) {
 }
 
 // ---- 감수 화면 API (출판 관리자·발행인만) --------------------------------------------
-export async function aiFactoryAdmin(db, req, path, user, role, json) {
+export async function aiFactoryAdmin(db, req, path, user, role, json, releaseEnv = {}) {
   if (!['publisher', 'admin'].includes(role)) return json(403, { ok: false, code: 'PUBLISHER_ONLY' });
   if (path === '/api/workflow/admin/ai-books' && req.method === 'GET') {
     const rows = (await db.prepare(`SELECT b.id, b.title, b.genre, b.status, b.created_at, b.plan_json,
@@ -335,7 +338,7 @@ export async function aiFactoryAdmin(db, req, path, user, role, json) {
     return json(200, { ok: true, books: rows.map(r => ({ id: r.id, title: r.title, genre: r.genre, status: r.status, createdAt: r.created_at, done: r.done, total: r.total, meta: JSON.parse(r.plan_json || '{}') })),
       budget: { usedToday: Number(usage?.neurons || 0), dailyCap: AI_FACTORY.dailyNeuronCap, paid: false } });
   }
-  const m = /^\/api\/workflow\/admin\/ai-books\/([0-9a-f-]{36})(?:\/(chapters\/(\d{1,2})|approve|epub|publish|images\/(\d{1,2})))?$/.exec(path);
+  const m = /^\/api\/workflow\/admin\/ai-books\/([0-9a-f-]{36})(?:\/(chapters\/(\d{1,2})|approve|epub|publish|release|images\/(\d{1,2})))?$/.exec(path);
   if (!m) return null;
   const book = await db.prepare('SELECT * FROM publishing_ai_books WHERE id=?').bind(m[1]).first();
   if (!book) return json(404, { ok: false, code: 'NOT_FOUND' });
@@ -372,6 +375,12 @@ export async function aiFactoryAdmin(db, req, path, user, role, json) {
         .bind(crypto.randomUUID(), 'ai:' + book.id, user.userId, JSON.stringify({ chapter: Number(m[3]) }), now()),
     ]);
     return json(200, { ok: true });
+  }
+  if (m[2] === 'release' && req.method === 'POST') {
+    // PUBLISHING-AI-RELEASE-001: 최고관리자 최종 검수 확인 → 출판(EPUB·서점 파일·자동 가격·저널 첫 글).
+    if (role !== 'admin') return json(403, { ok: false, code: 'SUPER_ADMIN_ONLY' });
+    const r = await releaseBook(releaseEnv, db, book, user, { writeText: (s, p, n, st) => writeText(releaseEnv, s, p, n, st), epubFor: (b, chapters) => epubFor(db, b, chapters) });
+    return json(r.status, r.data);
   }
   if (m[2] === 'approve' && req.method === 'POST') {
     const pending = await db.prepare("SELECT COUNT(*) AS n FROM publishing_ai_chapters WHERE book_id=? AND (status='pending' OR length(body) < 200)").bind(book.id).first();

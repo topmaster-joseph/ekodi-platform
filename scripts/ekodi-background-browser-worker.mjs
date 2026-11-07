@@ -227,6 +227,7 @@ export async function runTask(rawTask, options={}){
   // Install prior to each document request: getEntriesByType() cannot retrieve LCP.
   await page.addInitScript(installSyntheticPaintObservers);
   const consoleErrors=[],pageErrors=[],requestFailures=[],httpErrorResponses=[],blockedMutations=[],blockedExternalNavigations=[];
+  const supabaseCalls=[],documentLoads=[];
   let quotaCircuit=null;
   page.on('console',msg=>{ if(msg.type()==='error') consoleErrors.push(clean(msg.text(),500)); });
   page.on('pageerror',err=>pageErrors.push({
@@ -236,9 +237,21 @@ export async function runTask(rawTask, options={}){
     url:clean(page.url(),500),
   }));
   page.on('requestfailed',req=>requestFailures.push({url:clean(req.url(),500),failure:clean(req.failure()?.errorText,200)}));
+  page.on('request',req=>{
+    try{const u=new URL(req.url());
+      if(u.hostname.endsWith('.supabase.co')&&supabaseCalls.length<60)supabaseCalls.push(req.method()+' '+clean(u.pathname,120));
+      if(req.isNavigationRequest()&&req.frame().parentFrame()===null&&documentLoads.length<20)documentLoads.push(clean(u.pathname,120));
+    }catch{}
+  });
   page.on('response',res=>{
     const status=res.status();
-    if(status>=400) httpErrorResponses.push({url:clean(res.url(),500),status,statusText:clean(res.statusText(),120),resourceType:clean(res.request().resourceType(),80)});
+    if(status>=400){
+      const row={url:clean(res.url(),500),status,statusText:clean(res.statusText(),120),resourceType:clean(res.request().resourceType(),80)};
+      httpErrorResponses.push(row);
+      // Auth error codes only (e.g. otp_expired); never tokens or bodies of other endpoints.
+      if(/\/auth\/v1\/verify$/.test(new URL(res.url()).pathname))
+        res.json().then(b=>{row.authError=clean(b?.error_code||b?.code||'',60);row.authMessage=clean(b?.msg||b?.message||'',160);}).catch(()=>{});
+    }
     if(status===429 && new URL(res.url()).origin===ORIGIN) quotaCircuit={status,path:clean(new URL(res.url()).pathname,200),resourceType:clean(res.request().resourceType(),40)};
   });
 
@@ -477,6 +490,8 @@ export async function runTask(rawTask, options={}){
       pageErrors:pageErrors.slice(0,20),
       requestFailures:requestFailures.slice(0,20),
       httpErrorResponses:httpErrorResponses.slice(0,40),
+      supabaseCalls,
+      documentLoads,
     };
     const safeReport=sanitizeNativeBrowserReceipt(report);
     await fs.writeFile(path.join(taskDir,'result.json'),JSON.stringify(safeReport,null,2));

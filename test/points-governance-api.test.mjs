@@ -43,7 +43,7 @@ test('proposal calls the audited RPC with the server-derived actor, never a brow
   const res=await handlePointsControl(post('/requests',{...proposal,actor:'ekodi-admin:spoof@x.kr'}),env,admin,new Headers(),fetcher);
   assert.equal(res.status,201);
   assert.equal(seen.url,'https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/ekodi_points_admin_propose');
-  assert.equal(seen.opts.redirect,'error');
+  assert.equal(seen.opts.redirect,'manual');
   assert.equal(seen.opts.headers.apikey,key);
   assert.equal(seen.args.p_actor,'ekodi-admin:owner@ekodi.kr');
   assert.deepEqual(seen.args.p_target,proposal.target);
@@ -108,4 +108,16 @@ test('P2 routes: scan is read-gated, claim/anomaly decisions are write-gated and
     '/rest/v1/rpc/ekodi_points_admin_resolve_anomaly','/rest/v1/rpc/ekodi_points_admin_propose_adapter']);
   for(const [,args] of calls)assert.equal(args.p_actor,'ekodi-admin:owner@ekodi.kr');
   assert.equal(calls[2][1].p_anomaly,12);
+});
+
+test('Workers-compatible redirect handling: never redirect:error, refuse 3xx',async()=>{
+  let opts;
+  const redirecting=async(url,o)=>{opts=o;return new Response(null,{status:302,headers:{location:'https://evil.example/'}});};
+  const res=await handlePointsControl(new Request(base+'/governance'),env,admin,new Headers(),redirecting);
+  assert.equal(opts.redirect,'manual');
+  assert.equal(res.status,503);
+  assert.equal((await res.json()).detail,undefined); // production source: no detail
+  const dev={...env,POINTS_SOURCE_ENV:'development',POINTS_SUPABASE_URL:'https://lxcxwbdwwojjkgybbqii.supabase.co/'};
+  const r2=await handlePointsControl(new Request('https://ekodi-admin-staging.ekodi-development.workers.dev/api/control/points/governance'),dev,admin,new Headers(),redirecting);
+  assert.equal((await r2.json()).detail,'points_rpc_redirect_refused');
 });

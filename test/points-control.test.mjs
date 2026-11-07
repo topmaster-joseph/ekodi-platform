@@ -32,7 +32,7 @@ test('points projection reads only explicit fields from approved server-side sou
     assert.equal(opts.method,'GET');assert.equal(opts.headers.apikey,key);
     // Opaque sb_secret_-style keys go on apikey only (never as a Bearer JWT).
     assert.equal(opts.headers.Authorization,undefined);
-    assert.equal(opts.redirect,'error');
+    assert.equal(opts.redirect,'manual');
     assert.ok(u.searchParams.get('select'));assert.ok(Number(u.searchParams.get('limit'))<=1000);
     return new Response('[]',{status:200});
   };

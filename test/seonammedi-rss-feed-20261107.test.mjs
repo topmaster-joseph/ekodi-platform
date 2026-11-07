@@ -41,3 +41,9 @@ test('HEAD /rss.xml is a static side-effect-free response', async () => {
   assert.match(response.headers.get('content-type'), /application\/rss\+xml/);
   assert.equal(response.headers.get('x-ekodi-route'), 'seonammedi-rss');
 });
+
+test('home page advertises the canonical RSS feed for crawler discovery', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const html = await readFile(new URL('../sites/seonammedi/public/index.html', import.meta.url), 'utf8');
+  assert.match(html, /<link rel="alternate" type="application\/rss\+xml" title="서남권국립의대 공지" href="https:\/\/xn--3e0b8b58jw4co4mnpll3k\.kr\/rss\.xml">/);
+});
