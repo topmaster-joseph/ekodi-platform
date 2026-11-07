@@ -304,7 +304,11 @@
     const counts=new Map();
     for(const item of scheduleCalendar.items){
       if(item.date?.startsWith(scheduleCalendar.month+'-')){
-        counts.set(item.date,(counts.get(item.date)||0)+1);
+        const countsForDay=counts.get(item.date)||{total:0,church:0,mission:0};
+        countsForDay.total+=1;
+        if(item.source==='ekodichurch')countsForDay.church+=1;
+        if(item.source==='ekodimission')countsForDay.mission+=1;
+        counts.set(item.date,countsForDay);
       }
     }
     for(let i=0;i<firstWeekday;i++){
@@ -313,13 +317,15 @@
     }
     for(let day=1;day<=daysInMonth;day++){
       const iso=scheduleCalendar.month+'-'+String(day).padStart(2,'0');
-      const count=counts.get(iso)||0;
+      const count=counts.get(iso)||{total:0,church:0,mission:0};
       const button=make('button','mission-calendar-day',String(day));
       button.type='button';button.dataset.date=iso;
-      button.setAttribute('aria-label',year+'년 '+month+'월 '+day+'일, 일정 '+count+'건');
+      button.setAttribute('aria-label',year+'년 '+month+'월 '+day+'일, 일정 '+count.total+'건, 교회 '+count.church+'건, 선교회 '+count.mission+'건');
       button.setAttribute('aria-pressed',String(iso===scheduleCalendar.selected));
       if(iso===today())button.classList.add('is-today');
-      if(count)button.classList.add('has-event');
+      if(count.total)button.classList.add('has-event');
+      if(count.church)button.classList.add('has-church-event');
+      if(count.mission)button.classList.add('has-mission-event');
       button.addEventListener('click',()=>{
         scheduleCalendar.selected=iso;
         for(const dateButton of grid.querySelectorAll('button[data-date]')){
@@ -356,6 +362,11 @@
       const row=make('li'),link=make('a','',item.title);
       link.href=item.href||(item.id?'/ekodimission/board/post/'+encodeURIComponent(String(item.id)):'/ekodimission#saturday');
       const meta=make('small','mission-home-board-meta',item.meta||'');
+      if(kind==='mission-schedule'&&['ekodichurch','ekodimission'].includes(item.source)){
+        const sourceLabel=item.source==='ekodichurch'?'교회 일정':'선교회 일정';
+        const source=make('span','mission-schedule-source mission-schedule-source-'+item.source,sourceLabel);
+        row.append(source);
+      }
       link.append(meta);row.append(link);
       if(manager&&item.post){
         const actions=make('div','mission-home-board-post-actions');
@@ -401,10 +412,10 @@
     postsByKind.set(kind,posts);
     const upcoming=posts.map(post=>{
       const info=scheduleData(post);
-      return info?{id:post.id,title:post.title,meta:formatDate(info.date)+' '+info.time+' · '+info.venue,date:info.date,time:info.time,post}:null;
+      return info?{id:post.id,title:post.title,source:'ekodimission',meta:formatDate(info.date)+' '+info.time+' · '+info.venue,date:info.date,time:info.time,post}:null;
     }).filter(item=>item&&item.date>=today());
     if(meeting&&meeting.date>=today()&&!upcoming.some(item=>item.date===meeting.date&&item.title===meeting.title)){
-      upcoming.push({id:0,title:meeting.title||'토요 성경토론과 식사',meta:formatDate(meeting.date)+' '+String(meeting.time||'')+' · '+String(meeting.venue||'에코디교회'),date:meeting.date,time:meeting.time||'',post:null});
+      upcoming.push({id:0,title:meeting.title||'토요 성경토론과 식사',source:'ekodimission',meta:formatDate(meeting.date)+' '+String(meeting.time||'')+' · '+String(meeting.venue||'에코디교회'),date:meeting.date,time:meeting.time||'',post:null});
     }
     upcoming.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time));
     try{
@@ -416,9 +427,9 @@
           /^\d{4}-\d{2}-\d{2}$/.test(item.date)&&item.date>=today()&&
           /^\/(ekodichurch|ekodimission)(\/|\?|$)/.test(item.url||''))
           .map(item=>({
-            id:item.id,title:item.title,
+            id:item.id,title:item.title,source:item.source,
             date:item.date,time:item.time,
-            meta:item.sourceLabel+' · '+formatDate(item.date)+' '+item.time+' · '+item.venue,
+            meta:formatDate(item.date)+' '+item.time+' · '+item.venue,
             href:item.url,post:item.source==='ekodimission'?owned.get(item.id)||null:null
           }));
         showScheduleCalendar(items,error&&manager?error:'');
@@ -503,6 +514,11 @@
   });
   window.addEventListener('ekodi:mission-auth-changed',()=>{void refreshManager()});
   window.addEventListener('ekodi:auth-logout',()=>{manager=false;refreshManagerVisibility()});
+  // Refresh cross-site published events without manual reload; never poll in background.
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)void readSchedule()});
+  window.addEventListener('focus',()=>{void readSchedule()});
+  const sharedScheduleTimer=setInterval(()=>{if(!document.hidden)void readSchedule()},300000);
+  window.addEventListener('pagehide',()=>clearInterval(sharedScheduleTimer),{once:true});
   void readNotices();
   void readSchedule();
   void refreshManager();
