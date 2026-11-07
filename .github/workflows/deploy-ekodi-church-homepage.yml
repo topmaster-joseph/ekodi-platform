@@ -457,7 +457,7 @@ jobs:
             await page.setViewport({width:1440,height:1100});
             for(const locale of locales){
               await page.goto(`https://ekodi.kr/ekodichurch/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
-              await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('.overview-grid a[href="/ekodichurch/devotion/"]'),{timeout:25000},locale);
+              await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('a[href="/ekodichurch/devotion/"]'),{timeout:25000},locale);
               if(extended.has(locale)) await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
               if(locale!=='ko-KR'){
                 await page.waitForFunction(expected=>{
