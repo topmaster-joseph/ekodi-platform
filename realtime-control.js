@@ -742,6 +742,8 @@ async function renegotiateSession(request,env,room,session,input){
 async function leaveSession(request,env,room,session){
   const stamp=new Date().toISOString();
   await env.DB.prepare(`UPDATE realtime_media_sessions SET status='closed',updated_at=? WHERE id=? AND room_id=?`).bind(stamp,session.id,room.id).run();
+  // A departed publisher's tracks must not stay pullable: a reconnecting host republishes under a new session.
+  if(session.provider_session_id)await env.DB.prepare(`UPDATE realtime_media_tracks SET status='closed',updated_at=? WHERE room_id=? AND publisher_session_id=? AND status='active'`).bind(stamp,room.id,session.provider_session_id).run().catch(()=>{});
   return json(request,env,{ok:true,closed:true});
 }
 
