@@ -68,7 +68,10 @@ const HOME_HEADER=Object.freeze({
   parentHeadSha:'9ca89ef9190a61e101bfe0c6129cdc6a668a6a4b',
   sourceBlobSha:'e0e52a81d11a040ef943bc8411b21262e5b45a8b',
   previousCanonicalBlobSha:'50c906bb14756f2ae724c1283852ce86ce17b5e8',
-  finalCanonicalBlobSha:'181d01fdc21044ee5853e97ec7dee89e6aaf7037'
+  finalCanonicalBlobSha:'181d01fdc21044ee5853e97ec7dee89e6aaf7037',
+  previousCanonicalTestBlobSha:'484cc9e4199e1a898397cbcca10dfdf1260e7931',
+  sourceTestBlobSha:'cb8ab8205f45eb946f032b237fcc616fc547dc7d',
+  finalCanonicalTestBlobSha:'cb8ab8205f45eb946f032b237fcc616fc547dc7d'
 });
 const HEX40=/^[a-f0-9]{40}$/;
 const stop=msg=>{throw new Error('Church stacked source: '+msg)};
@@ -197,6 +200,9 @@ export function verifyReviewedChurchStackedSource(m){
      header.verifiedUpstreamBlobSha!==HOME_HEADER.sourceBlobSha ||
      header.previousCanonicalBlobSha!==HOME_HEADER.previousCanonicalBlobSha ||
      header.finalCanonicalBlobSha!==HOME_HEADER.finalCanonicalBlobSha ||
+     header.previousCanonicalTestBlobSha!==HOME_HEADER.previousCanonicalTestBlobSha ||
+     header.verifiedUpstreamTestBlobSha!==HOME_HEADER.sourceTestBlobSha ||
+     header.finalCanonicalTestBlobSha!==HOME_HEADER.finalCanonicalTestBlobSha ||
      !matching(header.exactPreservedCanonicalNormalization,normalization) ||
      header.sourceOwnershipTransferred!==false ||
      header.productionReleaseSwitched!==false ||
@@ -208,6 +214,15 @@ export function verifyReviewedChurchStackedSource(m){
      canonicalHomeEntry?.blobSha!==prev.get('index.html')?.blobSha ||
      canonicalHomeEntry?.normalizedBlobSha!==HOME_HEADER.finalCanonicalBlobSha)
     stop('previous header provenance was overwritten or canonical SHA differs');
+  const sourceTest=present.get('test/church-inline-live.test.mjs');
+  if(sourceTest?.blobSha!==HOME_HEADER.previousCanonicalTestBlobSha ||
+     sourceTest?.normalizedBlobSha!==HOME_HEADER.finalCanonicalTestBlobSha ||
+     prev.get('test/church-inline-live.test.mjs')?.blobSha!==HOME_HEADER.previousCanonicalTestBlobSha)
+    stop('original live test provenance was altered');
+  const liveTestBytes=readFileSync(resolve(root,'test/church-inline-live.test.mjs'));
+  if(blobHash(liveTestBytes)!==HOME_HEADER.sourceTestBlobSha ||
+     !liveTestBytes.toString('utf8').includes('assert.doesNotMatch(html,/src="church-daily-verse.js"/'))
+    stop('PR153 live header regression test source is unverified');
   const homeBytes=readFileSync(resolve(root,'index.html'));
   const homeText=homeBytes.toString('utf8');
   const upstreamHome=homeText.replace('>커뮤니티 채널 ↗</a>','>에코디커뮤니티 채널 ↗</a>');
@@ -222,7 +237,7 @@ export function verifyReviewedChurchStackedSource(m){
     const current=present.get(path);
     if(!current||current.blobSha!==original.blobSha||current.mode!==original.mode)
       stop('original Git blob or file mode replaced: '+path);
-    if(!expectedPaths.includes(path)&&path!==reconciledPath&&!preservedWorshipPaths.has(path)&&!matching(current,original))
+    if(!expectedPaths.includes(path)&&path!==reconciledPath&&path!=='test/church-inline-live.test.mjs'&&!preservedWorshipPaths.has(path)&&!matching(current,original))
       stop('unreviewed original file normalized hash drift: '+path);
   }
   for(const [path,current] of present){
@@ -251,7 +266,7 @@ export function verifyReviewedChurchStackedSource(m){
   }
   const normalized=sorted(m.trackedFiles.filter(x=>x.normalizedBlobSha&&x.normalizedBlobSha!==x.blobSha).map(x=>x.path));
   if(!Array.isArray(m.canonicalizedPaths)||!matching(sorted(m.canonicalizedPaths),normalized)||
-     !uniq(m.canonicalizedPaths)||normalized.length!==37)
+     !uniq(m.canonicalizedPaths)||normalized.length!==38)
     stop('canonicalized Git blob inventory drifted');
   const previous=baseline.reviewedOverlays.pullRequests.map(x=>({number:x.number,headSha:x.headSha}));
   return Object.freeze({
