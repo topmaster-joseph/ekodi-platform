@@ -4,7 +4,18 @@ on:
   pull_request:
     paths:
       - 'scripts/cloudflare-web-domain-inventory.mjs'
+      - 'test/cloudflare-inventory-protected-push-guard.test.mjs'
       - '.github/workflows/cloudflare-web-domain-inventory.yml'
+  push:
+    branches: [main]
+    # Read-only provider evidence after an authorized EKODI main merge.
+    # Never watch other sites, broad source changes, or unreviewed branches.
+    paths:
+      - '.github/workflows/cloudflare-web-domain-inventory.yml'
+      - 'scripts/cloudflare-web-domain-inventory.mjs'
+      - 'scripts/classify-cloudflare-pages-source.mjs'
+      - 'test/cloudflare-web-domain-inventory.test.mjs'
+      - 'test/cloudflare-inventory-protected-push-guard.test.mjs'
   workflow_dispatch:
   schedule:
     - cron: '37 17 * * 1'
@@ -24,6 +35,7 @@ jobs:
       - run: |
           node --check scripts/cloudflare-web-domain-inventory.mjs
           node scripts/cloudflare-web-domain-inventory.mjs --self-test
+          node --test test/cloudflare-inventory-protected-push-guard.test.mjs
 
   production:
     if: github.event_name != 'pull_request'
