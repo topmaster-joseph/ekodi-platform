@@ -41,7 +41,7 @@ function providerRows(){const providers=runtime?.providers||[];if(!providers.len
 function roleRows(policy){return Object.entries(policy?.openai?.roles||{}).map(([name,role])=>`<div class="ai-mgmt-role" data-ai-role="${esc(name)}"><label><input type="checkbox" data-field="enabled" ${role.enabled?'checked':''}> <strong>${esc(name)}</strong></label><select data-field="profile">${['fast','balanced','deep'].map(value=>`<option value="${value}" ${role.profile===value?'selected':''}>${value}</option>`).join('')}</select><span>${esc(role.risk||'read_only')}</span></div>`).join('')}
 function learningRows(items=[]){if(!items.length)return `<p class="ai-mgmt-empty">${t('아직 저장된 학습 이벤트가 없습니다.','No learning events recorded yet.')}</p>`;return items.map(item=>`<div class="ai-mgmt-learning"><strong>${esc(item.capability||'general')}</strong><span>${esc(item.outcome)}</span><small>${esc(item.created_at||'')}</small></div>`).join('')}
 function auditRows(){if(!audit.length)return `<p class="ai-mgmt-empty">${t('설정 변경 이력이 없습니다.','No settings audit yet.')}</p>`;return audit.slice(0,8).map(item=>`<div class="ai-mgmt-audit"><strong>rev ${esc(item.revision)}</strong><span>${esc(item.action||'update')} · ${esc(item.actor||'admin')}</span><small>${esc(item.created_at||'')}</small></div>`).join('')}
-function setMessage(text,error=false){const node=$('#aiManagementMessage');if(!node)return;node.textContent=text||'';node.classList.toggle('error',error)}
+function setMessage(text,error=false){const node=$('#aiManagementMessage')||$('#aiManagementBody .ai-mgmt-empty');if(!node||(!text&&!$('#aiManagementMessage')))return;node.textContent=text||'';node.classList.toggle('error',error)}
 function show(){window.EKODIAdminPanels?.activate?.(SECTION)}
 function render(){
   const root=$('#aiManagementBody');if(!root||!snapshot)return;
@@ -73,7 +73,9 @@ function editedPolicy(){
   policy.governance={...(policy.governance||{}),maxParallelCollaborators:Number($('#aiMgmtParallel')?.value)||4};
   return policy;
 }
-async function load(){
+let loading=null;
+function load(){if(loading)return loading;loading=loadOnce().finally(()=>{loading=null});return loading}
+async function loadOnce(){
   try{setMessage(t('AI 설정을 불러오는 중…','Loading AI settings…'));const [settings,status,auditData]=await Promise.all([request(SETTINGS),request(RUNTIME).catch(()=>null),request(SETTINGS+'/audit?limit=10').catch(()=>({audit:[]}))]);snapshot=settings;runtime=status;audit=auditData.audit||[];render();setMessage('')}
   catch(error){setMessage(`${t('설정 로드 실패','Load failed')}: ${error.message}`,true)}
 }
@@ -95,9 +97,13 @@ function installPanel(){
   panel=document.createElement('section');panel.id='aiManagementPanel';panel.className='section ai-management-panel hidden-panel';panel.dataset.panel=SECTION;panel.hidden=true;
   panel.innerHTML='<div id="aiManagementBody"><p class="ai-mgmt-empty">AI 설정을 준비하는 중…</p></div>';content.prepend(panel);return panel;
 }
-function mount(){const button=installNav(),panel=installPanel();if(!button||!panel)return false;window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:SECTION}}));if(location.hash==='#ai-settings'||location.pathname.endsWith('/ai-settings')){show();load()}return true}
+function mount(){const button=installNav(),panel=installPanel();if(!button||!panel)return false;queueMicrotask(()=>watchPanel(panel));window.dispatchEvent(new CustomEvent('ekodi-feature-installed',{detail:{section:SECTION}}));if(location.hash==='#ai-settings'||location.pathname.endsWith('/ai-settings')){show();load()}return true}
 function init(){if(mount())return;const observer=new MutationObserver(()=>{if(mount())observer.disconnect()});observer.observe(document.documentElement,{childList:true,subtree:true})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 window.addEventListener('ekodi-admin-context-changed',()=>{if(window.EKODIAdminPanels?.current?.()===SECTION)load()});
+// AI-SETTINGS-LOAD-001: 메뉴·세부 탭·주소로 들어와도 설정을 불러온다(예전 왼쪽 버튼 클릭에만 의존하지 않음).
+window.addEventListener('ekodi-admin-section-changed',event=>{if(event?.detail?.section===SECTION&&!snapshot)load()});
+function loadWhenVisible(){const panel=$('#aiManagementPanel');if(panel&&!panel.hidden&&!panel.classList.contains('hidden-panel')&&!snapshot)load()}
+function watchPanel(panel){if(!panel||panel.dataset.aiLoadWatch==='true')return;panel.dataset.aiLoadWatch='true';new MutationObserver(loadWhenVisible).observe(panel,{attributes:true,attributeFilter:['class','hidden']});loadWhenVisible()}
 window.EKODIAIManagement=Object.freeze({mount,load,save,version:'1.2.0'});
 })();
