@@ -72,7 +72,7 @@ test('deep linked empty category stays selected, shows no checkout offers, and d
 });
 test('Mall build loads the guard and styles hidden categories without enabling checkout',()=>{
   assert.ok(template.includes('/assets/category-visibility.js'));
-  assert.ok(template.includes('실제 판매 가능한 상품만 목록에 표시합니다.'));
+  assert.ok(template.includes('실제 판매 가능한 상품과 출판사에서 공개한 전자책 정보카드를 구별해 표시합니다.'));
   assert.ok(template.includes('회원가입 없이 비회원 카드결제를 이용할 수 있습니다.'));
   assert.match(css,/#filters \[data-filter\]\[hidden\]/);
   assert.match(css,/\.mall-primary-nav a\[data-filter-target\]\[hidden\]/);
