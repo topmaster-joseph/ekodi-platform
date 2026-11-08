@@ -113,3 +113,58 @@ test('mobile account remains displayed even when the seller action is hidden', (
   assert.match(css,/\.mall-header \.mall-account-id/);
   assert.doesNotMatch(css,/\.mall-account\s*\{display:none/);
 });
+
+
+test('all six legacy Mall page templates load the same shared account controller', () => {
+  const kinds=['product','store','seller','checkout','page','book-checkout'];
+  for(const kind of kinds) {
+    const page=readFileSync(new URL('../sites/ekodi-mall/src/'+kind+'.template.html',import.meta.url),'utf8');
+    assert.match(page,/class="header"/,kind+' missing header');
+    assert.match(page,/\/ekodimall\/assets\/mall-account-header\.js/,kind+' missing login controller');
+    assert.match(page,/\/ekodimall\/assets\/mall-account-header\.css/,kind+' missing account layout');
+  }
+  assert.match(script,/legacy\.append\(host\)/);
+  assert.match(css,/\.header:not\(\.mall-header\)>\.mall-account/);
+});
+
+test('legacy header receives one member ID/logout outside mobile-hidden navigation', async () => {
+  const make = (tag) => ({
+    tag, attrs:{},children:[],hidden:false, textContent:'',
+    setAttribute(name,value){this.attrs[name]=value;},
+    append(...items){this.children.push(...items);},
+    addEventListener(type,listener){if(type==='click')this.click=listener;},
+    querySelector(selector){
+      const attribute=selector.slice(1,-1);
+      const queue=[...this.children];
+      while(queue.length){
+        const node=queue.shift();
+        if(Object.hasOwn(node.attrs,attribute))return node;
+        queue.push(...node.children);
+      }
+      return null;
+    }
+  });
+  const legacy=make('header');
+  const storage=new Map([[centralKey,JSON.stringify({access_token:'valid-session',expires_at:4102444800})]]);
+  const ctx={
+    document:{
+      querySelectorAll(){return [];},
+      querySelector(selector){return selector==='header.header'?legacy:null;},
+      createElement:make,addEventListener(){},hidden:false
+    },
+    localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key)},
+    window:{location:{href:'https://ekodi.kr/ekodimall/products/book-a/',reload(){}},addEventListener(){}},
+    fetch:async url=>({ok:true,json:async()=>({id:'member-1',email:'member@example.com'})}),
+    URL,Date,JSON,AbortController,setTimeout,clearTimeout
+  };
+  vm.runInNewContext(script,ctx);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(legacy.children.length,1);
+  const account=legacy.children[0];
+  assert.ok(account.attrs['data-mall-account']!==undefined);
+  const id=account.querySelector('[data-mall-id]');
+  const logout=account.querySelector('[data-mall-logout]');
+  assert.equal(id.textContent,'member@example.com');
+  assert.equal(logout.textContent,'로그아웃');
+  assert.equal(account.querySelector('[data-mall-signed]').hidden,false);
+});
