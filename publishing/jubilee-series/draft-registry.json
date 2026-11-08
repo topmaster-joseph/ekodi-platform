@@ -17,7 +17,7 @@
       "author": "정찬균",
       "genre": "academic-theology",
       "fieldId": "humanities",
-      "manuscriptRevision": "author-selected-20261108-pdf",
+      "manuscriptRevision": "review-9",
       "stage": "citation-and-rights-review",
       "language": "ko",
       "sourceAssetLocation": "private-external-not-linked",
@@ -43,7 +43,8 @@
         "viewerVerified": false
       },
       "previousManuscriptRevision": "review-9",
-      "continuedHumanWritingStatus": "ai-assisted-author-review-required"
+      "continuedHumanWritingStatus": "ai-assisted-author-review-required",
+      "activeEditorialManuscriptRevision": "author-selected-20261108-pdf"
     },
     {
       "reviewId": "EJT-02-REVIEW",
@@ -53,7 +54,7 @@
       "author": "정찬균",
       "genre": "general-theology",
       "fieldId": "humanities",
-      "manuscriptRevision": "author-selected-20261108-pdf",
+      "manuscriptRevision": "review-9",
       "stage": "literary-and-rights-review",
       "language": "ko",
       "sourceAssetLocation": "private-external-not-linked",
@@ -78,7 +79,8 @@
         "viewerVerified": false
       },
       "previousManuscriptRevision": "review-9",
-      "continuedHumanWritingStatus": "ai-assisted-author-review-required"
+      "continuedHumanWritingStatus": "ai-assisted-author-review-required",
+      "activeEditorialManuscriptRevision": "author-selected-20261108-pdf"
     }
   ],
   "activeEditorialBaselineManifest": "author-selected-baseline-20261108.json",
