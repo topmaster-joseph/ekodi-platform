@@ -211,6 +211,7 @@ export function toPublicSummary(post) {
     featured: post.featured,
     imageVariant: post.imageVariant,
     coverPhoto: approvedJournalPhoto(post.coverPhoto),
+    book: post.book || null,
     url: `${JOURNAL_META.canonicalOrigin}/p/${encodeURIComponent(post.slug)}`,
   };
 }
