@@ -8,7 +8,9 @@ import {inspect,pointMigrations,PROJECTS} from './verify-points-release-readines
 
 const base=new URL('../supabase/migrations/',import.meta.url);
 const sha256=text=>createHash('sha256').update(text).digest('hex');
-const REQUIRED_SOURCE_COUNT=20;
+// Security review 2026-11-08: add guard migration 20261108224500 (#7778).
+// Fail closed if any further migration is added without source review.
+const REQUIRED_SOURCE_COUNT=21;
 const MAX_BACKUP_AGE_HOURS=48;
 
 export async function migrationManifest({directory=base,read=readFile,list=readdir}={}){
