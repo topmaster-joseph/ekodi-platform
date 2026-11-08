@@ -89,6 +89,15 @@ export async function uploadVerifiedEncryptedBackup({encryptedBytes,mainSha,reci
     cipher:'age-x25519-v1',recipient_fingerprint_sha256:sha(Buffer.from(recipient)),
     encrypted_archive:{file_id:archiveId,sha256:archiveHash,bytes:encryptedBytes.length,
       drive_id:acl.canonicalDriveId,folder_id:acl.subfolderIds.ENCRYPTED_DUMPS},
+    // Supabase CLI db dump deliberately omits managed auth/storage schema
+    // state and Storage object bytes. Never imply this is a full-instance
+    // or disaster-recovery-equivalent backup before separate inventories.
+    coverage:{type:'application_logical_only',
+      supabase_managed_auth_included:false,
+      supabase_managed_storage_metadata_included:false,
+      storage_object_bytes_included:false,
+      edge_function_code_included:false,
+      full_instance_recovery_verified:false},
     independent_restore_verified:false,
     two_signer_receipt_verified:false,
     production_schema_write_authorized:false,
