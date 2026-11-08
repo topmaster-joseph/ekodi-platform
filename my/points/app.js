@@ -173,7 +173,7 @@ function renderProgress(data){
       const expected=Number(mission.points_if_approved);
       const amount=document.createElement('small');
       amount.textContent=Number.isSafeInteger(expected)&&expected>0?
-        '승인 시 +'+expected.toLocaleString('ko-KR')+' P':'승인 후 정책 적용';
+        '정책·일일 한도 충족 시 최대 +'+expected.toLocaleString('ko-KR')+' P':'승인 후 정책 적용';
       stateWrap.append(state,amount);
       row.append(labelWrap,stateWrap);
       progressMissions.append(row);
@@ -192,7 +192,7 @@ function renderProgress(data){
 
 const ADAPTER_NAMES={content_approval:'콘텐츠 작성(승인 필요)',meeting_participation:'모임 참여',
   lecture_completion:'강의 완료',devotion_self_report:'말씀 묵상 기록',operator_confirmed:'운영자 확인 활동',attendance_checkin:'출석'};
-const CLAIM_STATUS={pending:'확인 대기',approved:'승인·적립',rejected:'반려',duplicate:'이미 적립됨'};
+const CLAIM_STATUS={pending:'확인 대기',approved:'증빙 승인',rejected:'반려',duplicate:'이미 적립됨'};
 const CLAIM_ERRORS={EVIDENCE_CLAIM_DAILY_LIMIT:'오늘 신청 가능한 횟수(10건)를 모두 사용했습니다.',
   EVIDENCE_CLAIM_NOT_AVAILABLE:'지금은 이 증빙을 신청할 수 없습니다.',INVALID_EVIDENCE_REF:'증빙 참조 형식을 확인해 주세요(영문·숫자·/·:·-, 3~120자).'};
 const uuidPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
