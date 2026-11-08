@@ -8,6 +8,11 @@
   // Tab panels preserve the existing server-key financial/authorization boundary.
   const adminTabs=Array.from(document.querySelectorAll('[data-admin-tab]'));
   function showAdminTab(target, focus=false){
+    for(const tab of adminTabs){
+      const locked=tab.dataset.adminTab!=='list'&&!selected;
+      tab.disabled=locked;
+      tab.setAttribute('aria-disabled',locked?'true':'false');
+    }
     if(target!=='list'&&!selected)return;
     for(const tab of adminTabs){
       const active=tab.dataset.adminTab===target;
@@ -23,12 +28,14 @@
   for(const tab of adminTabs){
     tab.addEventListener('click',()=>showAdminTab(tab.dataset.adminTab));
     tab.addEventListener('keydown',event=>{
-      const index=adminTabs.indexOf(tab);
+      const available=adminTabs.filter(item=>!item.disabled);
+      const index=available.indexOf(tab);
+      if(index<0)return;
       let next=null;
-      if(event.key==='ArrowRight')next=adminTabs[(index+1)%adminTabs.length];
-      if(event.key==='ArrowLeft')next=adminTabs[(index+adminTabs.length-1)%adminTabs.length];
-      if(event.key==='Home')next=adminTabs[0];
-      if(event.key==='End')next=adminTabs[adminTabs.length-1];
+      if(event.key==='ArrowRight')next=available[(index+1)%available.length];
+      if(event.key==='ArrowLeft')next=available[(index+available.length-1)%available.length];
+      if(event.key==='Home')next=available[0];
+      if(event.key==='End')next=available[available.length-1];
       if(next){event.preventDefault();showAdminTab(next.dataset.adminTab,true);}
     });
   }
@@ -50,7 +57,6 @@
   function cell(tr,value) {const td=document.createElement('td');td.textContent=value;tr.append(td);return td;}
   function pick(item) {
     selected=item;
-    $('detail').hidden=false;
     $('selectedTitle').textContent='신청 검토 · '+item.id;
     $('selectedBody').textContent=(item.customer||'')+' · '+(item.organization||'개인')+' · '+item.email+' · '+item.provider+' / '+item.service+' · '+item.months+'개월';
     $('quoteForm').elements.feeAmount.value=item.feeAmount??'';
@@ -64,6 +70,11 @@
   async function load() {
     try {
       const {items}=await call('/list');
+      if(selected&&!items.some(item=>item.id===selected.id)){
+        selected=null;
+        settlement=null;
+        showAdminTab('list');
+      }
       const tbody=$('rows'); tbody.replaceChildren();
       if(!items.length){ const tr=document.createElement('tr');cell(tr,'아직 신청 내역이 없습니다.');tbody.append(tr);}
       for(const item of items) {
@@ -88,7 +99,7 @@
     if(!Number.isSafeInteger(feeAmount)||!Number.isSafeInteger(supplierAmount)) {message('원 단위 정수 금액을 입력하세요.',true);return;}
     if(!confirm(selected.id+'의 위탁료 '+feeAmount+'원, 공급사 수납 '+supplierAmount+'원을 견적 확정하시겠습니까?')) return;
     $('quoteBtn').disabled=true;
-    try {await call('/quote',{id:selected.id,feeAmount,supplierAmount,guidance:form.guidance.value});await load();message('견적을 확정했습니다. 고객이 조회코드로 확인 후 동의할 수 있습니다.');}
+    try {await call('/quote',{id:selected.id,feeAmount,supplierAmount,guidance:form.guidance.value});selected=null;settlement=null;showAdminTab('list');await load();message('견적을 확정했습니다. 고객이 조회코드로 확인 후 동의할 수 있습니다.');}
     catch(e){message(e.message,true);$('quoteBtn').disabled=false;}
   });
   $('activateBtn').addEventListener('click',async()=>{
