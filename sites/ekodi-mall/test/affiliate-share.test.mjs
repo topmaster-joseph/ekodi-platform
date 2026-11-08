@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validAffiliateProductId, sharedProductId, shareUrlForProduct, prioritizeSharedProduct, validatedAgodaPartnerSearch} from '../assets/affiliate-share.js';
+import {validAffiliateProductId, sharedProductId, shareUrlForProduct, prioritizeSharedProduct, validatedAgodaPartnerSearch, trackedAgodaPartnerSearch} from '../assets/affiliate-share.js';
 
 test('canonical Mall share URLs contain only a validated product ID', () => {
   assert.equal(shareUrlForProduct('https://ekodi.kr/ekodimall/coupang/?foo=secret#section', 5277), 'https://ekodi.kr/ekodimall/coupang/?product=5277');
@@ -47,4 +47,19 @@ test('owner generated Agoda search link is strictly scoped and does not authoriz
     'javascript:alert(1)',
     ''
   ]) assert.equal(validatedAgodaPartnerSearch(bad), '', bad);
+});
+
+test('Agoda generated report tags retain CID and reject user identifiers or link substitutions', () => {
+  const base = 'https://www.agoda.com/partners/partnersearch.aspx?pcs=1&cid=1980072&hl=ko-kr';
+  const expected = base + '&tag=ekodi_mall_stay';
+  assert.equal(trackedAgodaPartnerSearch(base, 'ekodi_mall_stay'), expected);
+  assert.equal(new URL(expected).searchParams.get('cid'), '1980072');
+  assert.equal(new URL(expected).searchParams.get('tag'), 'ekodi_mall_stay');
+  for (const bad of [
+    '', 'ekodi_mall', 'ekodi_mall_stay_2026', 'ekodi_mall_stay&cid=1111111',
+    'ekodi_mall_01012345678@example.com', 'ekodi_mall_/escape', 'ekodi_mall_가나다',
+    'EKODI_mall_stay', 'ekodi_mall_stay?redirect=evil.example'
+  ]) assert.equal(trackedAgodaPartnerSearch(base, bad), '', bad);
+  assert.equal(trackedAgodaPartnerSearch(base + '&tag=old_tag_here', 'ekodi_mall_stay'), '');
+  assert.equal(trackedAgodaPartnerSearch('https://evil.example/', 'ekodi_mall_stay'), '');
 });
