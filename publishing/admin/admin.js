@@ -32,10 +32,10 @@
     }
     return '';
   }
-  async function api(rel, body, method = 'POST') {
+  async function api(rel, body, method = 'POST', ms = 9000) {
     const t = token();
     if (!t) throw Object.assign(new Error('LOGIN_REQUIRED'), { status: 401 });
-    const c = new AbortController(); const timer = setTimeout(() => c.abort(), 9000);
+    const c = new AbortController(); const timer = setTimeout(() => c.abort(), ms);
     try {
       const init = { headers: { authorization: `Bearer ${t}` }, cache: 'no-store', signal: c.signal };
       if (body) Object.assign(init, { method, body: JSON.stringify(body), headers: { ...init.headers, 'content-type': 'application/json' } });
@@ -188,11 +188,24 @@
     return nodes;
   }
   // 삽화가 깨지면(빈 응답·손상된 데이터) 깨진 그림 대신 그 자리를 숨긴다.
-  function figImg(r, title) {
+  // 삽화가 없거나 깨지면 숨기고, 다시 만들 수 있으면 '삽화 다시 만들기' 버튼을 대신 보여 준다(무료 한도 안에서만).
+  function figImg(r, title, regen) {
     const img = el('img', { alt: `${title} 삽화`, decoding: 'async' });
-    const hide = () => { const f = img.closest('figure'); if (f) f.hidden = true; else img.remove(); };
-    img.addEventListener('error', hide, { once: true });
-    if (r && r.data) img.src = `data:${r.mime || 'image/jpeg'};base64,${r.data}`; else queueMicrotask(hide);
+    const fail = () => {
+      const f = img.closest('figure');
+      if (!regen) { if (f) f.hidden = true; else img.remove(); return; }
+      const b = el('button', { type: 'button', className: 'button', textContent: '삽화 다시 만들기' });
+      const note = el('span', { className: 'muted', role: 'status' });
+      b.addEventListener('click', async () => {
+        b.disabled = true; note.textContent = ' 만드는 중… (1분 안팎)';
+        try { const nr = await regen(); const box = b.parentNode; box.replaceChildren(figImg(nr, title, regen)); }
+        catch (e) { b.disabled = false; note.textContent = String(e && e.message || '').includes('BUDGET') ? ' 오늘 무료 사용량을 다 썼습니다. 내일 다시 눌러 주세요.' : ' 만들지 못했습니다. 잠시 뒤 다시 눌러 주세요.'; }
+      });
+      const box = el('div', { className: 'fig-regen' }, b, note);
+      if (f) { f.hidden = false; f.replaceChildren(box); } else img.replaceWith(box);
+    };
+    img.addEventListener('error', fail, { once: true });
+    if (r && r.data) img.src = `data:${r.mime || 'image/jpeg'};base64,${r.data}`; else queueMicrotask(fail);
     return img;
   }
   function ebookReader(d, getChapter, onEdit) {
@@ -229,7 +242,8 @@
         const c = getChapter(p.number);
         page.append(el('p', { className: 'rd-ch-no', textContent: `${p.number}장` }), el('h2', { className: 'rd-ch-title', textContent: c.title }));
         const fig = el('figure', { className: 'rd-fig' });
-        api(`admin/ai-books/${d.book.id}/images/${p.number}`).then(r => { if (pages[at] === p) fig.append(figImg(r, c.title)); }).catch(() => {});
+        const regen = c.body.trim() ? () => api(`admin/ai-books/${d.book.id}/images/${p.number}`, {}, 'POST', 90000) : null;
+        api(`admin/ai-books/${d.book.id}/images/${p.number}`).catch(() => null).then(r => { if (pages[at] === p) fig.append(figImg(r, c.title, regen)); });
         page.append(fig, ...(c.body.trim() ? readerBlocks(c.body) : [el('p', { className: 'rd-empty', textContent: '아직 쓰지 않은 장입니다.' })]));
       }
       pos.textContent = p.kind === 'cover' ? '표지' : p.kind === 'toc' ? '차례' : `${p.number} / ${d.chapters.length}장`;
@@ -258,7 +272,8 @@
       const save = el('button', { type: 'button', className: 'button', textContent: `${c.number}장 저장` });
       save.addEventListener('click', async () => { msg.textContent = '저장 중…'; try { await api(`admin/ai-books/${id}/chapters/${c.number}`, { title: title.value, body: body.value }, 'PUT'); msg.textContent = `${c.number}장을 저장했습니다.`; } catch (e) { msg.textContent = '저장하지 못했습니다.'; } });
       const fig = el('figure', { className: 'padmin-ai-fig' });
-      api(`admin/ai-books/${id}/images/${c.number}`).then(r => fig.append(figImg(r, c.title))).catch(() => {});
+      const regen = c.body.trim() ? () => api(`admin/ai-books/${id}/images/${c.number}`, {}, 'POST', 90000) : null;
+      api(`admin/ai-books/${id}/images/${c.number}`).catch(() => null).then(r => fig.append(figImg(r, c.title, regen)));
       const sec = el('section', { className: 'padmin-ai-ch', id: `ai-ch-${c.number}` }, el('h3', { textContent: `${c.number}장 · ${({ pending: '아직 안 씀', drafted: 'AI 초안(편집 완료)', edited: '감수 중' })[c.status] || c.status}` }), fig, title, body, save);
       editors.set(c.number, { title, body }); editSections.push(sec);
       body.addEventListener('input', () => reader?.refresh()); title.addEventListener('input', () => reader?.refresh());
