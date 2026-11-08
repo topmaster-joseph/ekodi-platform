@@ -74,6 +74,7 @@ import { regionTabsScriptResponse } from './region-tabs-ui.js';
 import { CHEONGGYE_PUBLICATION_HOLD, cheonggyePublicHoldResponse } from './region-publication-hold.js';
 import { cheonggyePassVendorIntakeScript } from './cheonggyepass-vendor-intake-ui.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
+import { ensureFooterTraffic } from './footer-traffic-guarantee.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
 import { applyTrafficResponsePolicy, assessTrafficTier, recordTrafficOutcome, trafficRequestGuard } from './traffic-governor.js';
 import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
@@ -764,6 +765,8 @@ export default {
     const finalize=response=>{
       record(response.status);
       response=applyTrafficResponsePolicy(response,request,traffic);
+      // FOOTER-TRAFFIC-GUARANTEE: every public HTML page leaving the Shared Site shows footer visit stats.
+      try{response=ensureFooterTraffic(response,request)}catch(error){console.error('footer traffic guarantee skipped',error)}
       return applyPlatformSecurityHeaders(response,request);
     };
     const incomingUrl=new URL(request.url);

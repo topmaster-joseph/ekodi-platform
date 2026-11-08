@@ -2,6 +2,7 @@ import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { SUPPORT_STAGES, OPPORTUNITY_SERVICES, analyzeGuidanceChange, scoreOpportunity, fillOfficialForm, buildNextActions, requiresHumanGate, rankOpportunities, buildProactiveBrief } from './support/core.js';
 import { assessNeedState } from './support/need-sensing.js';
 import { officialSourceStatus, fetchBizinfoNotices, fetchVerifiedInstitutionNotices, fetchCombinedOpportunityNotices } from './support/sources.js';
+import { withFooterTraffic } from './footer-traffic-guarantee.js';
 
 export const BENEFIT_RADAR_CAPABILITY=Object.freeze({id:'support.benefit-radar',generation:10,contract:'ekodi.benefit-radar.v1',actionTier:'assist',execution:'information-recommendation-and-prep-only',highImpact:'human-gated',consent:'consent-first',ordinaryUserMode:'information-only',commercialSubject:'ekodibiz'});
 
@@ -50,7 +51,7 @@ async function serveOpportunityApp(request,env,assetPath='/index.html'){const as
 async function assetResponse(request,env,pathname){const assetUrl=new URL(request.url);assetUrl.pathname=pathname;return env.ASSETS.fetch(new Request(assetUrl,{method:'GET',headers:request.headers}))}
 function enrichBrief(profile,brief,needContext={}){const needAssessment=assessNeedState(profile,needContext);return{...brief,capability:BENEFIT_RADAR_CAPABILITY,needAssessment,followUpQuestions:needAssessment.questions,notificationEligible:needAssessment.proactiveEligible,proactivePolicy:{requiresExplicitConsent:true,activityContextDefault:false,sensitiveInferenceDefault:false,externalDataDefault:false}}}
 
-export default{async fetch(request,env){
+const ekodiWorkerEntry={async fetch(request,env){
   const url=new URL(request.url);
   const pathname=featurePath(url);
   if(url.hostname==='ekodi.kr'&&!(url.pathname===FEATURE_PREFIX||url.pathname.startsWith(`${FEATURE_PREFIX}/`)))return fetch(request);
@@ -71,3 +72,5 @@ export default{async fetch(request,env){
   if(request.method==='GET'&&SPECIALIST_PATHS.has(pathname.replace(/\/$/,'')))return serveOpportunityApp(request,env,'/service.html');
   const response=await assetResponse(request,env,pathname);return injectEkodiShell(withHeaders(response,env),'support');
 }};
+// FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
+export default withFooterTraffic(ekodiWorkerEntry);

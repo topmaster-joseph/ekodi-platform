@@ -222,10 +222,12 @@ function footerTrafficScope(){
   if(!USER_SURFACES.has(surface()))return '';
   const segments=location.pathname.split('/').filter(Boolean).map(value=>value.toLowerCase());
   const root=segments[0]||'';
-  if(['admin','auth','api','my','privacy','terms'].includes(root)||['admin','auth','my'].includes(serviceId()))return '';
+  if(['admin','auth','api','my'].includes(root)||['admin','auth','my'].includes(serviceId()))return '';
+  // Shared legal pages are public too: they show the EKODI root site summary.
+  const sharedLegal=['privacy','terms'].includes(root);
   const child=root==='ekodibiz'&&['trade','marketing-ai','mall'].includes(segments[1])?'/'+segments[1]:'';
   const url=new URL(TRAFFIC_STATS_URL);
-  url.searchParams.set('site_path',root+child);
+  url.searchParams.set('site_path',sharedLegal?'':root+child);
   url.searchParams.set('site_id',serviceId()||'root');
   return url.toString();
 }
