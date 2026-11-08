@@ -34,4 +34,4 @@ As of 2026-11-08 KST. EKODI Orchestrator work item: https://github.com/topmaster
 
 ## Rollback and validation
 
-Remove `campaignTag` or revert the controlled Mall change to fall back according to the verified contract. Never modify the owner-generated base CID, add visitor identifiers to a tag, or change tracking IDs from an unauthenticated source. A malformed tag fails closed.
+Revert this controlled Mall change to restore the previously verified untagged partner link. A missing or malformed `campaignTag` intentionally suppresses the new CTA rather than making an untracked redirect. Never modify the owner-generated base CID, add visitor identifiers to a tag, or change tracking IDs from an unauthenticated source. A malformed tag fails closed.
