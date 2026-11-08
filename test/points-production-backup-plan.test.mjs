@@ -77,7 +77,7 @@ test('migration manifest fails closed on missing files and destructive SQL',asyn
   await assert.rejects(migrationManifest({list:async()=>[fakeFile],read:async()=> 'select 1;'}),/requires_fresh_review/);
   const real=await migrationManifest();
   assert.equal(real.files.length,21);
-  const files=Array.from({length:20},(_,i)=>'20261104'+String(i).padStart(6,'0')+'_ekodi_points_'+i+'.sql');
+  const files=Array.from({length:21},(_,i)=>'20261104'+String(i).padStart(6,'0')+'_ekodi_points_'+i+'.sql');
   await assert.rejects(migrationManifest({list:async()=>files,read:async()=> 'DROP TABLE public.people;'}),/requires_manual_security_review/);
 });
 
