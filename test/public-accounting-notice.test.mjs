@@ -38,4 +38,3 @@ test('site shell and administrator expose accounting notice through governed nav
   assert.match(admin,/PUBLIC_ACCOUNTING_SCOPES/);
   for(const marker of ['조직별 전용 양식','profile.basis','사용자 회계공지 보기'])assert.match(admin,new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
 });
-
