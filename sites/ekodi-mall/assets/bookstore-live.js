@@ -165,13 +165,15 @@
     if (readyQuote(quote, detailId)) {
       status.textContent = '판매 중';
       if (price) price.textContent = new Intl.NumberFormat('ko-KR').format(Number(quote.price.amount)) + '원';
-      link.href = '/books/buy/?book=' + encodeURIComponent(detailId) + '&from=mall';
-      link.textContent = '에코디서점에서 구매하기';
+      // MALL-BOOKS-DIRECT-CHECKOUT-001: 출처(에코디서점)는 안내하되 구매는 에코디몰 화면에서 바로 진행한다.
+      const mallBase = String(window.location?.pathname || '').startsWith('/ekodimall') ? '/ekodimall' : '';
+      link.href = mallBase + '/checkout/book/?book=' + encodeURIComponent(detailId);
+      link.textContent = '에코디몰에서 바로 구매';
       link.classList.add('primary'); link.classList.remove('ghost');
       link.target = '_self'; link.rel = 'noopener';
-      if (note) note.textContent = '에코디서점에서 직접 판매하는 전자책입니다. 구매·결제 후 내 서재의 전자책 리더에서 열람할 수 있습니다. 전자책 구매에는 로그인이 필요합니다.';
+      if (note) note.textContent = '에코디서점(출처)이 출판·승인한 전자책을 에코디몰에서 직접 판매합니다. 에코디몰에서 바로 결제하고, 구매한 전자책은 같은 EKODI 계정의 내 서재에서 열람합니다. 구매에는 로그인이 필요합니다.';
       setSection('STATUS', '판매 중. 에코디서점의 실시간 승인과 EPUB 파일을 확인했습니다.');
-      setSection('COMMERCE', '에코디서점 자체 판매 전자책입니다. 로그인 후 안전하게 결제하고 내 서재의 전자책 리더에서 열람합니다.');
+      setSection('COMMERCE', '에코디몰 직접판매 전자책입니다(출처: 에코디서점, 판매자: 에코디비즈). 로그인 후 에코디몰에서 안전하게 결제하고 내 서재에서 열람합니다.');
     } else {
       // A revoked edition or replaced EPUB cannot retain a stale purchase link.
       status.textContent = '판매 상태 확인 필요';

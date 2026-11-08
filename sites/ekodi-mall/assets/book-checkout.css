@@ -1,0 +1,24 @@
+/* MALL-BOOKS-DIRECT-CHECKOUT-001 */
+.book-checkout-main{max-width:1080px;margin:0 auto;padding:24px 20px 64px}
+.bc-card{background:#fff;border:1px solid #eadfd2;border-radius:24px;padding:28px;margin-top:14px}
+.bc-grid{display:grid;grid-template-columns:200px 1fr 320px;gap:28px;align-items:start}
+.bc-cover img,.bc-cover .cover-fallback{width:100%;border-radius:10px;box-shadow:0 10px 30px rgba(23,63,53,.18);display:block}
+.bc-cover .cover-fallback{aspect-ratio:2/3;background:#173f35;color:#fff;padding:18px;font-weight:700}
+.bc-source{display:inline-flex;gap:6px;align-items:center;background:#fff3d6;color:#7a4b00;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:700;text-decoration:none}
+.bc-info h1{font-size:26px;line-height:1.35;margin:10px 0 6px}
+.bc-sub{color:#555;margin:0 0 6px}.bc-author{color:#777;font-size:14px}
+.bc-buy{border:1px solid #eadfd2;border-radius:18px;padding:20px;background:#fffaf4}
+.bc-price{font-size:28px;font-weight:800;color:#173f35}.bc-price del{font-size:15px;color:#999;margin-left:8px;font-weight:400}
+.bc-small{font-size:13px;color:#666;margin:6px 0}
+.bc-consent{display:flex;gap:8px;font-size:13px;color:#444;margin:14px 0;line-height:1.5}
+.bc-pay{width:100%;padding:14px;border:0;border-radius:12px;background:#173f35;color:#fff;font-weight:800;font-size:16px;cursor:pointer}
+.bc-pay:disabled{background:#b9c4c0;cursor:not-allowed}
+.bc-msg{color:#b42318;font-size:14px;min-height:1em}.bc-msg.ok{color:#17663a}
+.bc-owned{display:block;background:#e8f5ee;color:#17663a;border-radius:12px;padding:12px;font-weight:700;text-decoration:none}
+.bc-login .btn{display:block;text-align:center;margin:8px 0}
+.bc-result{text-align:center;padding:24px 0}.bc-seal{font-size:40px;color:#173f35;font-weight:800}
+.bc-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.bc-policy{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:22px}
+.bc-policy article{background:#fffaf4;border:1px solid #eadfd2;border-radius:16px;padding:16px;font-size:13px;color:#555;line-height:1.6}
+.bc-policy h3{font-size:14px;margin:0 0 6px;color:#173f35}
+@media (max-width:860px){.bc-grid{grid-template-columns:1fr}.bc-cover{max-width:180px}}

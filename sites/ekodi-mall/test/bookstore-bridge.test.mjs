@@ -67,7 +67,7 @@ test('book detail purchase link opens only on a live file-ready server quote', a
         querySelectorAll() { return []; },
         addEventListener(event, handler) { if (event === 'visibilitychange') refresh = handler; }
       },
-      window: { location: { origin: 'https://ekodi.kr' }, dispatchEvent() {} },
+      window: { location: { origin: 'https://ekodi.kr', pathname: '/ekodimall/products/book-test/' }, dispatchEvent() {} },
       fetch: async url => {
         calls.push(url);
         if (delayedApproval && calls.length === 1) {
@@ -91,7 +91,7 @@ test('book detail purchase link opens only on a live file-ready server quote', a
   const approved = await detailFor(true);
   assert.equal(approved.elements['[data-bookstore-sale-status] dd'].textContent, '판매 중');
   assert.equal(approved.elements['[data-bookstore-price]'].textContent, '12,345원');
-  assert.match(approved.elements['[data-bookstore-purchase-link]'].href, /\/books\/buy\/\?book=BOOK-EKODI-000002/);
+  assert.match(approved.elements['[data-bookstore-purchase-link]'].href, /\/ekodimall\/checkout\/book\/\?book=BOOK-EKODI-000002/);
   assert.equal(approved.calls.length, 1);
   const revoked = await detailFor(false);
   assert.equal(revoked.elements['[data-bookstore-sale-status] dd'].textContent, '판매 상태 확인 필요');
@@ -116,10 +116,11 @@ test('a sale link opens a purchase button; no link never pretends to sell', () =
   assert.equal(pending.status, '판매처 등록 준비 중');
 });
 
-test('direct-sale titles send mall buyers to the bookstore checkout', () => {
+test('direct-sale titles are bought directly in the mall checkout (source: bookstore)', () => {
   const [direct] = bookstoreProducts({ books: [{ id: 'BOOK-EKODI-000001', catalogNo: 'EB-MONO-001', title: '에코디언을 찾아서', author: '정찬균', edition: 'v1', workflow: { manuscript: 'complete', editing: 'complete', epub: 'validated', cover: 'complete', metadata: 'ready', storefront: 'live' }, listPrice: { amount: 9900 }, links: { upaper: 'https://ekodi.upaper.kr/content/1' }, directSale: { enabled: true, fileKey: 'BOOK-EKODI-000001/ebook.epub' } }] });
-  assert.equal(direct.action.url, 'https://ekodi.kr/books/buy/?book=BOOK-EKODI-000001&from=mall');
-  assert.equal(direct.action.label, '에코디서점에서 구매하기');
+  assert.equal(direct.action.url, 'https://ekodi.kr/ekodimall/checkout/book/?book=BOOK-EKODI-000001');
+  assert.equal(direct.action.label, '에코디몰에서 바로 구매');
+  assert.equal(direct.badge, '에코디서점');
 });
 
 test('unready direct-sale titles are shown in the mall but never as on sale', () => {
@@ -157,7 +158,7 @@ test('verified publishing service can safely include NEW editions in runtime mal
     priceKrw:book.listPrice.amount,currency:'KRW'})};
   const visible=await approvedBookstoreProducts({books:[book]},gate);
   assert.equal(visible.length,1);
-  assert.equal(visible[0].action.url,'https://ekodi.kr/books/buy/?book=BOOK-NEW-000003&from=mall');
+  assert.equal(visible[0].action.url,'https://ekodi.kr/ekodimall/checkout/book/?book=BOOK-NEW-000003');
   const mismatched={verifyPublicRelease:async request=>({authorized:true,state:'released',
     visibility:'public',checkoutEnabled:true,...request,channel:'books'})};
   assert.deepEqual(await approvedBookstoreProducts({books:[book]},mismatched),[]);
@@ -195,4 +196,17 @@ test('book details use compact headings and an explicit responsive artwork layou
   assert.match(css, /\.product-detail-v2 \.detail-copy h1/);
   assert.match(css, /align-items:start/);
   assert.match(css, /@media\(max-width:760px\)/);
+});
+
+test('mall book checkout pages are built, record the mall channel and show the bookstore source', () => {
+  const template = readFileSync(path.join(root, 'src/book-checkout.template.html'), 'utf8');
+  const builder = readFileSync(path.join(root, 'scripts/build.mjs'), 'utf8');
+  const client = readFileSync(path.join(root, 'assets/book-checkout.js'), 'utf8');
+  assert.match(template, /data-books-api-base="\/books"/);
+  assert.match(template, /https:\/\/ekodi\.kr\/books\/buy\/commerce-client\.js/);
+  for (const page of ['checkout/book/index.html', 'checkout/book/success/index.html', 'checkout/book/fail/index.html']) assert.ok(builder.includes(page));
+  assert.ok(builder.includes('출처 · 에코디서점'));
+  assert.match(client, /source: 'mall'/);
+  assert.ok(client.includes('ekodimall\\/checkout\\/book\\/success'));
+  assert.doesNotMatch(client, /accounts\.google\.com/);
 });

@@ -19,13 +19,16 @@
     $('payMode').className = `review-readiness ${pay.ready && pay.mode === 'live' ? 'ok' : 'warn'}`;
     const host = document.createDocumentFragment();
     const head = document.createElement('div'); head.className = 'op-row op-head';
-    for (const t of ['No.', '도서 · 구매자', '금액', '상태', '']) head.append(cell('span', '', t));
+    for (const t of ['No.', '도서 · 구매자', '금액 · 판매채널', '상태', '']) head.append(cell('span', '', t));
     host.append(head);
     (data.orders || []).forEach((o, i) => {
       const row = document.createElement('div'); row.className = 'op-row';
       row.append(cell('span', 'op-no', String(i + 1).padStart(2, '0')));
       const t = cell('b', 'op-title', `${o.book_title} · ${o.buyer_email}`); t.title = `${o.id} · ${new Date(o.created_at).toLocaleString('ko-KR')}`; row.append(t);
-      row.append(cell('span', 'op-meta', `${won(o.amount)} · ${new Date(o.approved_at || o.created_at).toLocaleDateString('ko-KR')}`));
+      // MALL-BOOKS-DIRECT-CHECKOUT-001: 에코디몰 화면에서 결제된 주문인지 서점 관리자가 바로 구분한다.
+      const meta = cell('span', 'op-meta', `${won(o.amount)} · ${new Date(o.approved_at || o.created_at).toLocaleDateString('ko-KR')} · `);
+      const ch = cell('b', `op-channel ${o.channel === 'mall' ? 'is-mall' : 'is-bookstore'}`, o.channelLabel || (o.channel === 'mall' ? '에코디몰' : '에코디서점'));
+      ch.dataset.channel = o.channel || 'bookstore'; meta.append(ch); row.append(meta);
       row.append(cell('span', `op-badge ${o.status === 'paid' ? 'on' : 'off'}`, STATUS[o.status] || o.status));
       const actions = cell('span', 'op-actions', '');
       if (o.receipt_url) { const a = cell('a', 'op-btn ghost', '영수증'); a.href = o.receipt_url; a.target = '_blank'; a.rel = 'noopener'; actions.append(a); }
@@ -45,7 +48,8 @@
     });
     if (!(data.orders || []).length) host.append(cell('p', 'buy-msg', '아직 주문이 없습니다.'));
     $('ordersRoot').replaceChildren(host); $('ordersRoot').hidden = false;
-    $('ordersStatus').textContent = `결제 완료 ${data.paid || 0}건 · ${won(data.revenue)}`;
+    const byChannel = (data.channels || []).map(c => `${c.label} ${c.paid}건 · ${won(c.revenue)}`).join(' / ');
+    $('ordersStatus').textContent = `결제 완료 ${data.paid || 0}건 · ${won(data.revenue)}${byChannel ? ` (판매채널별: ${byChannel})` : ''}`;
   }
   async function load() {
     try { render(await C.api('admin/orders?limit=100')); $('reviewLogin').hidden = true; }

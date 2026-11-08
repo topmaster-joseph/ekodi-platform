@@ -10,6 +10,7 @@ import { saleReadiness } from '../../../books-sale-readiness.js';
 export const BOOKSTORE_STORE_ID = 'store-ekodi-books';
 export const BOOKSTORE_CATEGORY = 'book';
 const BOOKSTORE_BASE = 'https://ekodi.kr/books';
+export const MALL_CHECKOUT = 'https://ekodi.kr/ekodimall/checkout/book/';
 
 const slugFor = (book) => `book-${String(book.catalogNo || book.id).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}`;
 const absolute = (url) => {
@@ -25,7 +26,8 @@ function projectProducts(books) {
     // BOOKS-DIRECT-COMMERCE-001: 에코디서점 자체 판매가 켜진 도서는 서점 결제 페이지로 보낸다.
     // BOOKS-SALE-READINESS-001: 출판 공정이 끝나지 않은 도서는 몰에서도 구매 버튼·'판매 중'을 내지 않는다.
     const readiness = saleReadiness(book);
-    const directUrl = book.directSale?.enabled && readiness.ready ? `${BOOKSTORE_BASE}/buy/?book=${encodeURIComponent(book.id)}&from=mall` : '';
+    // MALL-BOOKS-DIRECT-CHECKOUT-001: 출처는 에코디서점으로 표시하되 구매는 에코디몰 결제 화면에서 바로 진행한다.
+    const directUrl = book.directSale?.enabled && readiness.ready ? `${MALL_CHECKOUT}?book=${encodeURIComponent(book.id)}` : '';
     const saleUrl = directUrl || absolute(book.links?.upaper || book.links?.korea || book.links?.google || book.links?.amazon);
     const price = Number(book.listPrice?.amount);
     const detailUrl = absolute(book.detailUrl) || `${BOOKSTORE_BASE}/#catalog`;
@@ -46,7 +48,7 @@ function projectProducts(books) {
       image: absolute(book.coverImage) || '',
       source: { system: 'ekodi-bookstore', bookId: book.id, detailUrl },
       action: saleUrl
-        ? { type: 'external', label: directUrl ? '에코디서점에서 구매하기' : '전자책 구매하기', url: saleUrl }
+        ? { type: 'external', label: directUrl ? '에코디몰에서 바로 구매' : '전자책 구매하기', url: saleUrl }
         : { type: 'inquiry', label: '에코디서점에서 보기', url: detailUrl }
     };
   });
