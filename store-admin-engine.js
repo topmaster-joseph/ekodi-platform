@@ -525,6 +525,80 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
     const label={new:'신규',pending_customer:'고객확인 대기',in_progress:'처리 중',in_delivery:'배달 중',completed:'완료',cancelled:'취소',unknown:'확인필요'};
     return `<div class="table-wrap"><table><thead><tr><th>채널</th><th>주문</th><th>상태</th><th>금액</th><th>시각</th></tr></thead><tbody>${rows.map(o=>`<tr class="${o.status==='new'?'pos-order-new':''}"><td>${esc(o.provider_label)}</td><td>${esc(o.provider_order_id||'—')}</td><td>${esc(label[o.status]||o.status)}</td><td>${o.total==null?'—':won(o.total)}</td><td>${esc(o.ordered_at?new Date(o.ordered_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Seoul'}):'—')}</td></tr>`).join('')}</tbody></table></div>`;
   }
+  function mountBbqPosTabs(){
+    const root=$('mainPanel');
+    if(!root)return;
+    const options=[
+      ['programs','프로그램','.pos-programs'],
+      ['orders','최근 주문','.pos-orders'],
+      ['channels','배달플랫폼','.pos-platforms'],
+      ['agent','Agent 관리','.pos-agent-guide']
+    ];
+    const panes=options.map(([id,label,selector])=>({id,label,node:root.querySelector(selector)}))
+      .filter(item=>item.node);
+    if(panes.length<2)return;
+    const nav=document.createElement('nav');
+    nav.className='bbq-pos-subtabs';
+    nav.setAttribute('role','tablist');
+    nav.setAttribute('aria-label','POS 세부 기능');
+    for(const item of panes){
+      item.node.dataset.bbqPosPane=item.id;
+      item.node.id='bbqPosPane-'+item.id;
+      item.node.setAttribute('role','tabpanel');
+      item.node.setAttribute('aria-labelledby','bbqPosTab-'+item.id);
+      const button=document.createElement('button');
+      button.type='button';
+      button.id='bbqPosTab-'+item.id;
+      button.dataset.bbqPosTab=item.id;
+      button.setAttribute('role','tab');
+      button.setAttribute('aria-controls',item.node.id);
+      button.textContent=item.label;
+      nav.append(button);
+    }
+    root.prepend(nav);
+    const agentLine=root.querySelector('.pos-agent-line');
+    const fromUrl=new URLSearchParams(location.search).get('posTab');
+    const chosen=panes.some(item=>item.id===state.posSubTab)?state.posSubTab
+      :panes.some(item=>item.id===fromUrl)?fromUrl:'programs';
+    const activate=(id,updateUrl=false)=>{
+      if(!panes.some(item=>item.id===id))return;
+      state.posSubTab=id;
+      for(const item of panes)item.node.hidden=item.id!==id;
+      if(agentLine)agentLine.hidden=id!=='programs'&&id!=='agent';
+      if(id==='agent'){
+        const details=panes.find(item=>item.id==='agent')?.node;
+        if(details)details.open=true;
+      }
+      for(const button of nav.querySelectorAll('[data-bbq-pos-tab]')){
+        const active=button.dataset.bbqPosTab===id;
+        button.setAttribute('aria-selected',String(active));
+        button.tabIndex=active?0:-1;
+      }
+      if(updateUrl){
+        const url=new URL(location.href);
+        if(id==='programs')url.searchParams.delete('posTab');
+        else url.searchParams.set('posTab',id);
+        url.searchParams.delete('adminView');
+        history.replaceState(history.state,'',url.pathname+url.search+url.hash);
+      }
+    };
+    nav.addEventListener('click',event=>{
+      const button=event.target.closest('[data-bbq-pos-tab]');
+      if(button&&nav.contains(button))activate(button.dataset.bbqPosTab,true);
+    });
+    nav.addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      const buttons=[...nav.querySelectorAll('[data-bbq-pos-tab]')];
+      const index=buttons.indexOf(document.activeElement);
+      if(index<0)return;
+      event.preventDefault();
+      const next=event.key==='Home'?0:event.key==='End'?buttons.length-1
+        :(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;
+      buttons[next]?.focus();
+      buttons[next]?.click();
+    });
+    activate(chosen);
+  }
   function renderPosConsole(){
     const agent=state.localAgent,agentOnline=Boolean(agent?.ok);
     const agentTargets=new Map((Array.isArray(agent?.targets)?agent.targets:[]).map(row=>[String(row.id||''),row]));
@@ -539,6 +613,7 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
       :`<div class="pos-agent-line" data-state="offline"><b>○ 이 PC의 POS Agent가 연결되지 않았습니다.</b><span>웹 사용 가능 · 주문·배달·메뉴·매출 등 EKODI 웹 기능은 그대로 사용할 수 있습니다. Windows 프로그램 바로 전환만 Agent가 필요합니다. Agent가 켜져 있는데도 연결되지 않으면 브라우저 주소창의 ‘로컬 네트워크 액세스’ 요청을 허용하세요.</span><button class="button" id="refreshPosAgent" type="button">Agent 상태 확인</button></div>`;
     const alert=state.posLive?.newOrderAlert?`<div class="pos-new-order" role="status">신규 주문 ${num(state.posLive.newOrderAlert)}건이 들어왔습니다. 화면은 자동으로 전환되지 않습니다.</div>`:'';
     $('mainPanel').innerHTML=`<div class="commerce-toolbar"><div><h2>EKODI Store Console</h2><p class="panel-lead">이 화면을 매장 운영의 기본 화면으로 사용합니다. 주문·배달·연결 등 EKODI 웹 기능은 Agent 없이 사용할 수 있고, VPOS·먹깨비 등 이 PC에 설치된 Windows 프로그램을 앞으로 가져오는 기능만 <strong>EKODI POS Agent</strong>가 담당합니다. Agent 창을 별도로 열어 둘 필요는 없습니다.</p></div></div>${alert}${agentLine}<section class="pos-programs" aria-label="주문 · POS 프로그램"><h2>주문 · POS 프로그램</h2><div class="pos-rows">${rows}</div><p class="pos-hint">바로 전환은 직원이 직접 누를 때만 동작합니다. 새 주문이 와도 다른 창을 자동으로 앞으로 가져오지 않습니다. 공식 API가 없는 주문앱은 “Windows 앱 전환 방식” 또는 “미연결”로 표시합니다.</p></section><section class="pos-orders"><h2>최근 주문</h2>${posRecentOrders()}<div class="actions"><a class="button" href="${ADMIN_BASE}/orders">웹 주문관리</a><a class="button" href="${ADMIN_BASE}/delivery">웹 배달관리</a><a class="button" href="${ADMIN_BASE}/connections">연결관리</a></div></section><section class="pos-platforms"><h2>배달플랫폼 연결 상태</h2><div class="pos-platform-tags">${platformTags}</div></section><details class="pos-agent-guide"${guideOpen?' open':''}><summary>Agent 실행 · 중지 안내 · 설치 · 진단 (관리자용)</summary><div class="pos-agent-guide-body"><div class="service-list"><div class="service-row"><div><strong>처음 설치</strong><p><strong>명령어를 직접 입력하지 마세요.</strong> 원클릭 설치 파일을 내려받아 저장한 뒤 우클릭 → 관리자 권한으로 실행합니다. 필요한 Agent 구성파일을 공식 저장소에서 함께 받아 설치하며, 설치 후에는 Windows 로그인 시 자동 시작됩니다. 브라우저는 내려받은 파일을 자동 실행하지 않으므로 이 POS PC에서 한 번 직접 실행해야 합니다.</p></div><div class="actions"><a class="button primary" href="${POS_AGENT_FILES.setup}" target="_blank" rel="noopener">원클릭 설치 (.cmd)</a><a class="button" href="${POS_AGENT_FILES.compatSetup}" target="_blank" rel="noopener">호환 설치 · XML 오류용 (.cmd)</a><a class="button" href="${POS_AGENT_FILES.advancedInstall}" target="_blank" rel="noopener">고급 설치 (.ps1)</a></div></div><div class="service-row"><div><strong>즉시 실행</strong><p>이미 설치된 PC에서 Agent가 꺼져 있을 때 실행 파일을 저장한 뒤 실행합니다. 권한 거부 시 관리자 권한으로 실행합니다.</p></div><a class="button primary" href="${POS_AGENT_FILES.start}" target="_blank" rel="noopener">실행 파일 (.cmd)</a></div><div class="service-row"><div><strong>현재 Agent 중지</strong><p>중지 파일은 현재 실행만 멈춥니다. 웹 POS 통합화면은 계속 사용할 수 있고 다음 Windows 로그인 시 자동 시작됩니다.</p></div><a class="button" href="${POS_AGENT_FILES.stop}" target="_blank" rel="noopener">중지 파일 (.cmd)</a></div><div class="service-row"><div><strong>프로그램 진단 (읽기 전용)</strong><p>이 PC에서 실행 중인 프로그램의 프로세스 이름과 창 제목만 확인합니다. 어떤 프로그램도 실행·종료·전환하지 않으며, 결과를 확인한 뒤 설정에 반영합니다.</p></div><a class="button" href="${POS_AGENT_FILES.diagnose}" target="_blank" rel="noopener">진단 파일 (.ps1)</a></div><div class="service-row"><div><strong>설치 · 삭제 · 여러 POS PC 관리</strong><p>업그레이드, 완전 삭제(remove-pos-agent.cmd), 중앙 상태 등록은 CMPMYI POS Agent 관리 화면에서 진행합니다.</p></div><a class="button" href="/cmpmyi/admin/agent" target="_blank" rel="noopener">POS Agent 관리</a></div></div><div class="note">현재 PowerShell 위치가 <span class="tech">C:\\Users\\...</span>처럼 설치 파일이 없는 폴더라면 <span class="tech">-File .\\install-pos-agent.ps1</span> 명령은 실패합니다. 기본 설치는 명령어 대신 <strong>원클릭 설치 (.cmd)</strong>를 사용하세요. <strong>0x80041318 / 작업 XML 범위 오류가 반복되면 호환 설치 · XML 오류용 (.cmd)</strong>을 사용하면 작업 스케줄러를 우회합니다. <strong>0x80041318 / 작업 XML 범위 오류는 최신 설치기가 1분 재시작 간격과 호환 설정으로 자동 보정합니다.</strong> 같은 오류가 보인 기존 설치 창은 닫고 원클릭 설치 파일을 새로 내려받아 다시 실행하세요. 완전 제거는 CMPMYI POS Agent 관리 화면의 원클릭 삭제(remove-pos-agent.cmd)를 사용합니다.${agentOnline?'':' 현재 Agent 상태: '+esc(state.localAgentError||'')+'.'}</div><div class="actions"><a class="button" href="${POS_AGENT_FILES.guide}" target="_blank" rel="noopener">전체 Agent 안내</a></div></div></details>`;
+    if(SLUG==='bbqcg'&&!IS_PORTFOLIO)mountBbqPosTabs();
     const refresh=$('refreshPosAgent');if(refresh)refresh.onclick=()=>posPanel();
     document.querySelectorAll('[data-pos-target]').forEach(button=>button.onclick=async()=>{
       button.disabled=true;const original=button.textContent;button.textContent='전환 중';
@@ -552,6 +627,14 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
   }
   async function posPanel(){
     setState('POS 통합화면 확인 중');
+    if(SLUG==='bbqcg'&&!IS_PORTFOLIO){
+      // Draw the local store's selected workspace immediately. Optional Windows
+      // Agent probing must never hold up the left-navigation content switch.
+      renderPosConsole();
+      await probePosAgent();
+      if(section==='pos')renderPosConsole();
+      return;
+    }
     await probePosAgent();
     renderPosConsole();
   }
