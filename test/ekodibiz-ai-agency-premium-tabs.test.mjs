@@ -22,7 +22,7 @@ test('premium customer layout exposes one accessible tab per real content panel'
   assert.match(html,/id="cycleOverview"/);
   assert.match(html,/<details class="cycle-details"/);
   assert.match(html,/@media\(max-width:760px\)/);
-  assert.match(html,/@media\(max-width:390px\)/);
+  assert.match(html,/@media\(max-width:440px\)/);
   assert.doesNotMatch(html,/2건 전체 신청|홍길동|010-1234-5678|02-1234-5678/);
 });
 
@@ -71,4 +71,12 @@ test('premium company admin is a real tabbed view without exposing private acces
   assert.doesNotMatch(js,/localStorage\.setItem\(/);
   assert.doesNotMatch(js,/sessionStorage\.setItem\(/);
   assert.match(html,/input,textarea,select\{width:100%/);
+});
+
+test('narrow phone layout keeps all tabs visible and stacks long contract choice labels',async()=>{
+  const html=await read('../ekodibiz/ai-agency.html');
+  assert.match(html,/@media\(max-width:440px\)\{/);
+  assert.match(html,/\.agency-tabs\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\);overflow:visible/);
+  assert.match(html,/#agencyForm \.choice\{grid-template-columns:1fr\}/);
+  assert.doesNotMatch(html,/@media\(max-width:390px\)\{[^}]*overflow-x:auto/);
 });
