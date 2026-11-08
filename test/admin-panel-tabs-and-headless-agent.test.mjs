@@ -45,3 +45,18 @@ test('기기 현황 detail is split into sub-tabs right below the pinned metrics
   assert.match(sidebar, /\.device-metrics'/);
   assert.match(sidebar, /anchor\.insertAdjacentElement\('afterend', strip\)/);
 });
+
+test('ADMIN-PANEL-TABS-002: own tab bar never disables tabs (no add/remove flicker) and churn trips a breaker', () => {
+  assert.match(sidebar, /:scope>\[role="tablist"\]:not\(\.admin-panel-tabs\)/);
+  assert.match(sidebar, /function isMeaningfulTabLabel/);
+  assert.match(sidebar, /PANEL_TAB_CHURN_LIMIT = 8/);
+  assert.match(sidebar, /panel\.dataset\.ekodiPanelTabs = 'off';/);
+  assert.match(sidebar, /if \(node\.hidden\) \{ if \(last\) last\.nodes\.push\(node\); else pinned\.add\(node\); return; \}/);
+});
+
+test('/work/admin renders the platform admin sidebar and a horizontal tab rail', async () => {
+  assert.match(sidebar, /\^\\\/\(\?:admin\|work\\\/admin\)\(\?:\\\/\|\$\)/);
+  const css = await readFile(new URL('../work-admin.css', import.meta.url), 'utf8');
+  assert.match(css, /WORK-ADMIN-TABS-001/);
+  assert.match(css, /\.work-admin-rail\{order:-1!important;flex-direction:row!important/);
+});

@@ -243,3 +243,16 @@ body.admin-compact .work-admin-public-link{
   body.admin-compact .work-admin-layout{grid-template-columns:1fr!important}
   body.admin-compact .work-admin-rail{border-left:0!important;border-bottom:1px solid #d7e4df!important}
 }
+
+/* WORK-ADMIN-TABS-001 (2026-11-08): 오른쪽 세로 레일을 화면 위 가로 탭으로 바꿔 한눈에 전환한다. */
+body.admin-compact .work-admin .work-admin-layout{display:flex!important;flex-direction:column!important;grid-template-columns:none!important;min-height:0!important}
+body.admin-compact .work-admin .work-admin-rail{order:-1!important;flex-direction:row!important;align-items:center!important;gap:12px!important;padding:8px 12px!important;border-left:0!important;border-bottom:1px solid #d9e2ec!important;background:#f5f8fc!important}
+body.admin-compact .work-admin .work-admin-rail-label{margin:0 4px 0 0!important;white-space:nowrap!important}
+body.admin-compact .work-admin .work-admin-rail-nav{display:flex!important;flex-wrap:wrap!important;gap:6px!important;flex:1 1 auto!important}
+body.admin-compact .work-admin .work-admin-rail-button{width:auto!important;display:inline-flex!important;align-items:center!important;gap:6px!important;padding:8px 14px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#334155!important;box-shadow:none!important}
+body.admin-compact .work-admin .work-admin-rail-button small,body.admin-compact .work-admin .work-admin-rail-button span{display:none!important}
+body.admin-compact .work-admin .work-admin-rail-button strong{margin:0!important;font-size:14px!important;color:inherit!important}
+body.admin-compact .work-admin .work-admin-rail-button:hover{background:#e8eef7!important}
+body.admin-compact .work-admin .work-admin-rail-button.active{background:#0f172a!important;color:#fff!important}
+body.admin-compact .work-admin .work-admin-rail-footer{margin:0 0 0 auto!important;padding:0!important;border:0!important;display:flex!important;align-items:center!important;gap:6px!important;white-space:nowrap!important}
+@media(max-width:760px){body.admin-compact .work-admin .work-admin-rail{flex-wrap:wrap!important}body.admin-compact .work-admin .work-admin-rail-nav{flex-wrap:nowrap!important;overflow-x:auto!important}}
