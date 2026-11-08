@@ -26,24 +26,24 @@ BEGIN
   insert into public.ekodi_point_sites(site_id,display_name,enabled,daily_cap)
     values(site_a,'Test A',true,500),(site_b,'Test B',true,500);
   insert into public.ekodi_point_rules(site_id,rule_id,points,daily_cap,daily_events,min_active_seconds,enabled)
-    values(site_a,'active',20,60,3,60,true);
+    values(site_a,'verified',20,60,3,60,true);
   insert into public.ekodi_point_transfer_policies(from_site,to_site,numerator,denominator,daily_cap,enabled)
     values(site_a,site_b,1,2,150,true);
   insert into public.ekodi_point_donation_campaigns(site_id,title,recipient_name,enabled)
     values(site_b,'QA donation campaign','QA recipient',true)
     returning campaign_id into v_campaign_id;
   begin
-    perform ekodi_points_private.award_activity(site_a,person_id,'active','points-invalid-0001',
+    perform ekodi_points_private.award_activity(site_a,person_id,'verified','points-invalid-0001',
       '{"verified_active_seconds":10}'::jsonb);
   exception when sqlstate 'P0001' then rejected := true; end;
-  if not rejected then raise exception 'Low activity duration was accepted'; end if;
-  result := ekodi_points_private.award_activity(site_a,person_id,'active','points-earn-0001',
+  if not rejected then raise exception 'Unverified elapsed duration was accepted'; end if;
+  result := ekodi_points_private.award_activity(site_a,person_id,'verified','points-earn-0001',
     '{"verified_active_seconds":65}'::jsonb);
   if (result->>'balance')::bigint <> 20 then raise exception 'Award failed: %',result; end if;
-  result := ekodi_points_private.award_activity(site_a,person_id,'active','points-earn-0001',
+  result := ekodi_points_private.award_activity(site_a,person_id,'verified','points-earn-0001',
     '{"verified_active_seconds":65}'::jsonb);
   if result->>'reason' <> 'DUPLICATE' then raise exception 'Award replay: %',result; end if;
-  perform ekodi_points_private.award_activity(site_a,person_id,'active','points-earn-0002',
+  perform ekodi_points_private.award_activity(site_a,person_id,'verified','points-earn-0002',
     '{"verified_active_seconds":65}'::jsonb);
   result := ekodi_points_private.spend(site_a,person_id,5,'points-spend-0001','QA purchase');
   if (result->>'balance')::bigint <> 35 then raise exception 'Spend failed: %',result; end if;
