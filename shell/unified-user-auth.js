@@ -64,6 +64,13 @@ function paint(){
   scheduled=false;
   const header=activeUserHeader();
   if(!header)return;
+  // A site-owned verified account control supersedes the generic shell chip.
+  // Mall already provides account ID and logout in the top actions; never
+  // append the separate profile name to its category navigation.
+  if(header.querySelector('[data-mall-account]')){
+    header.querySelector('[data-ekodi-unified-auth]')?.remove();
+    return;
+  }
   const container=header.querySelector('[data-ekodi-header-actions],.header-actions,.nav-actions,.top-actions')||header.querySelector('nav')||header;
   let node=header.querySelector('[data-ekodi-unified-auth]');
   if(!node){
