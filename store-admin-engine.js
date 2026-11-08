@@ -860,6 +860,35 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
       startPosLiveRefresh();
       return;
     }
+    // BBQCG only: a denied/disconnected *optional* marketing or delivery adapter must
+    // not be mistaken for a rejected store administrator. Keep required workspace and
+    // business-OS authorization as hard gates; do not expand any database/API rights.
+    if(SLUG==='bbqcg'){
+      if(section==='work'){
+        state.snapshot={operations:{}};
+        state.connector={connectors:[]};state.delivery={};state.commerce={};state.smsOrders=null;
+        return render();
+      }
+      setState('실데이터 확인 중');
+      const primarySnapshot=await rpc('business_os_store_admin_snapshot',{p_workspace_key:SLUG});
+      const supplemental=await Promise.allSettled([
+        control('/api/marketing/connectors/status?store='+encodeURIComponent(STORE_ID)),
+        optionalRpc('store_delivery_platform_admin_snapshot',{p_slug:SLUG,p_days:deliveryWindow()}),
+        optionalRpc('delivery_commerce_admin_snapshot',{p_slug:SLUG}),
+        section==='orders'?optionalWorkspace('/v1/store-sms/orders'):Promise.resolve(null)
+      ]);
+      const available=index=>supplemental[index].status==='fulfilled'?supplemental[index].value:null;
+      state.snapshot=primarySnapshot;
+      state.connector=available(0)||{connectors:[]};
+      state.delivery=available(1)||{};
+      state.commerce=available(2)||{};
+      state.smsOrders=available(3);
+      render();
+      if(supplemental.some(item=>item.status==='rejected')){
+        setState('매장 운영 · 일부 채널 확인 필요','warn');
+      }
+      return;
+    }
     setState('\uC2E4\uB370\uC774\uD130 \uD655\uC778 \uC911');
     const [snapshot,connector,delivery,commerce,smsOrders]=await Promise.all([rpc('business_os_store_admin_snapshot',{p_workspace_key:SLUG}),control('/api/marketing/connectors/status?store='+encodeURIComponent(STORE_ID)),optionalRpc('store_delivery_platform_admin_snapshot',{p_slug:SLUG,p_days:deliveryWindow()}),optionalRpc('delivery_commerce_admin_snapshot',{p_slug:SLUG}),section==='orders'?optionalWorkspace('/v1/store-sms/orders'):Promise.resolve(null)]);
     state.snapshot=snapshot;state.connector=connector;state.delivery=delivery||{};state.commerce=commerce||{};state.smsOrders=smsOrders;render();
