@@ -19,7 +19,8 @@ export const MODELS = Object.freeze({
   draft: { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', in: 26668 / 1e6, out: 204805 / 1e6 },
   // 2026-11-04 운영 확인: 이 계정은 Gemma 3 사용 불가(5018) → 편집도 Llama 3.3 70B로(편집 지시문으로 역할 분리)
   edit: { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', in: 26668 / 1e6, out: 204805 / 1e6 },
-  image: { id: '@cf/black-forest-labs/flux-1-schnell', perImage: 60 },
+  // 고품질 삽화: flux-1-schnell 최대 8단계, 1024×1024(512 타일 4개). 4×4.8 + 8×9.6 = 96 뉴런 → 여유 두고 100.
+  image: { id: '@cf/black-forest-labs/flux-1-schnell', perImage: 100, steps: 8 },
 });
 export const AI_FACTORY = Object.freeze({
   model: MODELS.draft.id,
@@ -143,10 +144,34 @@ export async function illustrate(env, prompt) {
   if ((await usedToday(db)) + MODELS.image.perImage > AI_FACTORY.dailyNeuronCap) return null;
   const hold = await reservePool(env, MODELS.image.perImage); if (!hold) return null;
   let out;
-  try { out = await env.AI.run(MODELS.image.id, { prompt: String(prompt).slice(0, 1800), steps: 4 }); }
+  try { out = await env.AI.run(MODELS.image.id, { prompt: String(prompt).slice(0, 1800), steps: MODELS.image.steps }); }
   catch (e) { await settlePool(env, hold, 0); throw e; }
   await addUsage(db, MODELS.image.perImage);
   return typeof out?.image === 'string' ? out.image : null;
+}
+
+/** 삽화 무결성 검사: base64 → JPEG(SOI·SOF 크기·EOI·최소 용량). 깨진 그림은 저장·출간에 쓰지 않는다. */
+export function jpegCheck(b64) {
+  let bytes;
+  try { const bin = atob(String(b64 || '')); bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); }
+  catch { return { ok: false, reason: 'not_base64' }; }
+  const n = bytes.length;
+  if (n < 20000) return { ok: false, reason: 'too_small', bytes: n };
+  if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) return { ok: false, reason: 'no_soi', bytes: n };
+  if (bytes[n - 2] !== 0xFF || bytes[n - 1] !== 0xD9) return { ok: false, reason: 'no_eoi', bytes: n };
+  let i = 2, width = 0, height = 0, sos = false;
+  while (i + 4 <= n) {
+    if (bytes[i] !== 0xFF) return { ok: false, reason: 'bad_marker', bytes: n };
+    const mk = bytes[i + 1];
+    if (mk === 0xD8 || mk === 0x01 || (mk >= 0xD0 && mk <= 0xD7)) { i += 2; continue; }
+    const len = (bytes[i + 2] << 8) | bytes[i + 3];
+    if (len < 2 || i + 2 + len > n) return { ok: false, reason: 'bad_segment', bytes: n };
+    if (mk >= 0xC0 && mk <= 0xC3) { height = (bytes[i + 5] << 8) | bytes[i + 6]; width = (bytes[i + 7] << 8) | bytes[i + 8]; }
+    if (mk === 0xDA) { sos = true; break; }
+    i += 2 + len;
+  }
+  if (!sos || width < 512 || height < 512) return { ok: false, reason: 'no_frame', bytes: n, width, height };
+  return { ok: true, bytes: n, width, height };
 }
 
 const SYSTEM = `당신은 EKODI BOOKS의 한국어 원고 집필 보조자입니다. 저자 ${AI_FACTORY.author}의 감수를 받을 초안을 씁니다.
@@ -265,11 +290,63 @@ async function chapterIllustration(env, book, meta, ch, force = false) {
   }
   const scene = await writeText(env, 'You write one-sentence English image prompts. Output only the sentence.', `Describe one simple, symbolic scene (no text, no letters, no logos, no real people, no famous characters) for a Korean book chapter titled "${ch.title}" about: ${ch.summary}`, 80, 'edit');
   if (!scene) return null;
-  const image = await illustrate(env, `${scene}. ${ART[book.genre] || ART['self-growth']}. no text, no watermark.`);
+  // 고품질 지시(구도·빛·질감)를 붙이고, 깨진 결과는 한 번 더 만든다. 두 번 다 깨지면 저장하지 않는다.
+  const full = `${scene}. ${ART[book.genre] || ART['self-growth']}. ${QUALITY_ART}`;
+  let image = null;
+  for (let t = 0; t < 2 && !image; t++) {
+    const got = await illustrate(env, full);
+    if (!got) return null; // 무료 한도 소진
+    if (jpegCheck(got).ok) image = got;
+  }
   if (!image) return null;
   await db.prepare('INSERT OR REPLACE INTO publishing_ai_images (book_id, number, mime, data_b64, prompt, created_at) VALUES (?, ?, ?, ?, ?, ?)')
     .bind(book.id, ch.number, 'image/jpeg', image, clean(scene, 400), now()).run();
+  await markImage(db, book.id, ch.number, IMAGE_LEVEL, true);
   return image;
+}
+
+const QUALITY_ART = 'professional book illustration, single clear focal subject, balanced composition with generous negative space, soft natural lighting, rich but harmonious colors, fine detail, sharp focus, no text, no letters, no watermark, no logo';
+export const IMAGE_LEVEL = 2; // 1 = 초기(4단계), 2 = 고품질(8단계 + 품질 지시)
+async function ensureImageMeta(db) {
+  await db.prepare('CREATE TABLE IF NOT EXISTS publishing_ai_image_meta (book_id TEXT NOT NULL, number INTEGER NOT NULL, level INTEGER NOT NULL DEFAULT 1, valid INTEGER NOT NULL DEFAULT 1, reason TEXT, checked_at TEXT, PRIMARY KEY (book_id, number))').run();
+}
+async function markImage(db, bookId, number, level, valid, reason = null) {
+  await ensureImageMeta(db);
+  await db.prepare('INSERT OR REPLACE INTO publishing_ai_image_meta (book_id, number, level, valid, reason, checked_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(bookId, number, level, valid ? 1 : 0, reason, now()).run();
+}
+
+/**
+ * 예약 실행에서 호출: 삽화를 자동으로 돌본다(무료 한도 안, 한 번에 max장).
+ * 1) 모든 책: 쓴 장인데 삽화가 없거나 깨졌으면 고품질로 새로 넣는다.
+ * 2) 감수 중(판매 전) 책: 예전 품질 삽화를 고품질로 바꾼다. 판매 중인 책의 멀쩡한 삽화는 바꾸지 않는다.
+ */
+export async function imageCareTick(env, max = 3) {
+  const db = env.PUBLISH_DB; await ensureImageMeta(db);
+  const rows = (await db.prepare(`SELECT b.id, b.title, b.genre, b.status, b.plan_json, c.number, c.title AS ctitle, c.summary, c.body,
+      i.data_b64 IS NOT NULL AS has, m.level, m.valid
+    FROM publishing_ai_chapters c JOIN publishing_ai_books b ON b.id=c.book_id
+    LEFT JOIN publishing_ai_images i ON i.book_id=c.book_id AND i.number=c.number
+    LEFT JOIN publishing_ai_image_meta m ON m.book_id=c.book_id AND m.number=c.number
+    WHERE c.status!='pending' ORDER BY b.created_at DESC, c.number`).all()).results || [];
+  const done = [];
+  for (const r of rows) {
+    if (done.length >= max) break;
+    let need = null;
+    if (!r.has) need = 'missing';
+    else if (r.valid === null || r.valid === undefined) { // 아직 검사 안 한 삽화: 검사 결과를 남긴다
+      const img = await db.prepare('SELECT data_b64 FROM publishing_ai_images WHERE book_id=? AND number=?').bind(r.id, r.number).first();
+      const chk = jpegCheck(img?.data_b64); await markImage(db, r.id, r.number, 1, chk.ok, chk.ok ? null : chk.reason);
+      if (!chk.ok) need = 'broken:' + chk.reason; else r.level = 1;
+    } else if (!r.valid) need = 'broken';
+    if (!need && (r.level || 1) < IMAGE_LEVEL && ['drafting', 'author_review'].includes(r.status)) need = 'upgrade';
+    if (!need) continue;
+    const book = { id: r.id, title: r.title, genre: r.genre };
+    const image = await chapterIllustration(env, book, JSON.parse(r.plan_json || '{}'), { number: r.number, title: r.ctitle, summary: r.summary }, true);
+    if (!image) { done.push({ book: r.id.slice(0, 8), chapter: r.number, need, result: 'budget_or_failed' }); break; }
+    done.push({ book: r.id.slice(0, 8), chapter: r.number, need, result: 'ok' });
+  }
+  return done;
 }
 
 /** 감수 전(AI 초안 그대로인) 장에 품질 보정을 적용한다. 저자가 고친 장(edited)은 건드리지 않는다. 바뀐 장 수를 돌려준다. */
@@ -312,6 +389,8 @@ export async function aiFactoryTick(env, at = new Date()) {
       if (r.status !== 'drafted') break;
     }
   } catch (e) { steps.push({ status: 'error', message: String(e?.message || e).slice(0, 300) }); } // 실패 원인을 실행 기록에 남긴다
+  try { const care = await imageCareTick(env); if (care.length) steps.push({ status: 'images', care }); }
+  catch (e) { steps.push({ status: 'images_error', message: String(e?.message || e).slice(0, 200) }); }
   try { const posts = await journalTick(env.PUBLISH_DB, (s, p, n, st) => writeText(env, s, p, n, st)); if (posts.length) steps.push({ status: 'journal', posts }); }
   catch (e) { steps.push({ status: 'journal_error', message: String(e?.message || e).slice(0, 200) }); }
   steps.push({ status: 'providers', calls: tally });
@@ -341,13 +420,21 @@ export async function aiFactoryAdmin(db, req, path, user, role, json, releaseEnv
     return json(200, { ok: true, books: rows.map(r => ({ id: r.id, title: r.title, genre: r.genre, status: r.status, createdAt: r.created_at, done: r.done, total: r.total, meta: JSON.parse(r.plan_json || '{}') })),
       budget: { usedToday: Number(usage?.neurons || 0), dailyCap: AI_FACTORY.dailyNeuronCap, paid: false } });
   }
-  const m = /^\/api\/workflow\/admin\/ai-books\/([0-9a-f-]{36})(?:\/(chapters\/(\d{1,2})|approve|epub|publish|release|images\/(\d{1,2})))?$/.exec(path);
+  const m = /^\/api\/workflow\/admin\/ai-books\/([0-9a-f-]{36})(?:\/(chapters\/(\d{1,2})|approve|epub|publish|release|images\/(\d{1,2})(\.jpg)?))?$/.exec(path);
   if (!m) return null;
   const book = await db.prepare('SELECT * FROM publishing_ai_books WHERE id=?').bind(m[1]).first();
   if (!book) return json(404, { ok: false, code: 'NOT_FOUND' });
   if (!m[2] && req.method === 'GET') {
     const chapters = (await db.prepare('SELECT number, title, summary, body, status, updated_at FROM publishing_ai_chapters WHERE book_id=? ORDER BY number').bind(book.id).all()).results || [];
     return json(200, { ok: true, book: { id: book.id, title: book.title, status: book.status, meta: JSON.parse(book.plan_json || '{}') }, chapters });
+  }
+  if (m[4] && m[5] && req.method === 'GET') { // 바이너리 삽화: JSON보다 25% 작고 파싱이 없어 큰 그림도 끊기지 않는다
+    const img = await db.prepare('SELECT mime, data_b64 FROM publishing_ai_images WHERE book_id=? AND number=?').bind(book.id, Number(m[4])).first();
+    if (!img) return json(404, { ok: false, code: 'NO_IMAGE' });
+    const chk = jpegCheck(img.data_b64);
+    if (!chk.ok) return json(422, { ok: false, code: 'IMAGE_BROKEN', reason: chk.reason });
+    const bin = atob(img.data_b64); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Response(bytes, { headers: { 'content-type': img.mime || 'image/jpeg', 'content-length': String(bytes.length), 'cache-control': 'private, max-age=300', 'x-content-type-options': 'nosniff' } });
   }
   if (m[4] && req.method === 'GET') {
     const img = await db.prepare('SELECT mime, data_b64 FROM publishing_ai_images WHERE book_id=? AND number=?').bind(book.id, Number(m[4])).first();
