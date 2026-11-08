@@ -70,3 +70,14 @@ test('panels with their own tabs are left alone, and hidden tabs can be revealed
   assert.match(e2e, /async function revealPanelTab/);
   assert.match(e2e, /await revealPanelTab\(search\);/);
 });
+
+test('Growth OS: 머리말·핵심지표는 고정하고 짧은 탭 이름을 쓰며 모바일 탭 글자가 잘리지 않는다', async () => {
+  const growth = await readFile(new URL('../growth-os-admin.js', import.meta.url), 'utf8');
+  assert.match(sidebar, /const PANEL_TAB_PINNED = '\[data-ekodi-tab-pin\],/);
+  assert.match(sidebar, /node\.dataset\?\.ekodiTabLabel \|\| node\.getAttribute\?\.\('aria-label'\)/);
+  assert.match(sidebar, /\.admin-panel-tabs>button\{flex:0 0 auto!important;min-width:max-content!important/);
+  assert.match(growth, /<header class="growth-os-head" data-ekodi-tab-pin>/);
+  assert.match(growth, /<div class="growth-os-stats" data-ekodi-tab-pin /);
+  assert.match(growth, /growth-os-warning" role="status" data-ekodi-tab-pin/);
+  for (const label of ['자동화 총괄', '대상별 진단', '공통 엔진']) assert.ok(growth.includes(`data-ekodi-tab-label="${label}"`), label);
+});

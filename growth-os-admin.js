@@ -74,7 +74,7 @@
     const observedAt=value=>{const date=value?new Date(value):null;return date&&!Number.isNaN(date.getTime())?date.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false})+' KST':'기록 없음';};
     const registeredPaths=publicPaths();
     const summarySources=automation?.sources||{};
-    const automationTable=`<section class="growth-os-card growth-os-automation-overview" aria-label="사이트별 검색·추천·홍보 자동화 총괄현황">
+    const automationTable=`<section class="growth-os-card growth-os-automation-overview" data-ekodi-tab-label="자동화 총괄" aria-label="사이트별 검색·추천·홍보 자동화 총괄현황">
       <header><h3>사이트별 노출·추천·홍보 자동화 총괄</h3><small>중앙은 요약·이상징후, 상세는 해당 사이트 관리자</small></header>
       <p class="growth-os-note">연결 채널과 게시 작업은 해당 사이트에 명시적으로 연결된 원장만 집계합니다. 공개 URL 등록은 실제 검색 색인·노출이 아닙니다. 미연동은 0건이 아닙니다.</p>
       <div class="growth-os-automation-scroll"><table class="growth-os-automation-table"><thead><tr>
@@ -98,14 +98,14 @@
       statusCard('공개 검색 원장',registered ? registered.size : '미연동','공개 경로만 포함 · 비공개 조직 제외'),
       statusCard('실측 조직 종합평가','미연동','인증된 목적·운영·재무·참여 증거 필요'),
     ].join('');
-    panel.innerHTML=`<header class="growth-os-head"><div><small>EKODI GROWTH INTELLIGENCE CORE · PRIVATE</small>
+    panel.innerHTML=`<header class="growth-os-head" data-ekodi-tab-pin><div><small>EKODI GROWTH INTELLIGENCE CORE · PRIVATE</small>
       <h2 id="ekodiGrowthOsTitle">통합 성장·지속가능성</h2>
       <p>각 조직의 목적을 중심으로 사람·운영·재정·접근성·신뢰·학습을 판단하는 공통 관제입니다. 성장 OS는 판단·제안을 담당하고 실행은 에코디 오케스트레이터의 권한·정책을 따릅니다.</p></div>
       <button class="secondary" type="button" data-growth-reload ${loading?'disabled':''}>${loading?'확인 중':'등록 현황 갱신'}</button></header>
-      ${loadError?'<p class="growth-os-warning" role="status">'+esc(loadError)+'</p>':''}
-      <div class="growth-os-stats">${stats}</div>
+      ${loadError?'<p class="growth-os-warning" role="status" data-ekodi-tab-pin>'+esc(loadError)+'</p>':''}
+      <div class="growth-os-stats" data-ekodi-tab-pin aria-label="성장 OS 핵심 지표">${stats}</div>
       ${automationTable}
-      <div class="growth-os-work">
+      <div class="growth-os-work" data-ekodi-tab-label="대상별 진단">
         <section class="growth-os-card">
           <header><h3>대상 선택</h3><small>공통 서비스 카탈로그를 기반으로 검색</small></header>
           <label>검색<input type="search" data-growth-search placeholder="조직·기관·서비스 검색" value="${esc(search)}" maxlength="80"></label>
@@ -123,7 +123,7 @@
           '<p class="growth-os-empty">등록 대상과 조직 목적을 확인하면 개별 성장 진단 계약을 단계적으로 연결합니다.</p>'}
         </section>
       </div>
-      <section class="growth-os-card"><header><h3>공통 엔진 운영 체계</h3><small>진단과 실행의 권한 분리</small></header>
+      <section class="growth-os-card" data-ekodi-tab-label="공통 엔진"><header><h3>공통 엔진 운영 체계</h3><small>진단과 실행의 권한 분리</small></header>
       <div class="growth-os-lifecycle"><span>목적·권한 확인</span><b>→</b><span>승인된 증거 수집</span><b>→</b><span>분야별 판단</span><b>→</b><span>개선안 검토</span><b>→</b><span>오케스트레이터 실행·실증</span></div>
       <p class="growth-os-note">실제 사업 성과·건강한 공동체·재정 지속가능성은 각각 별도의 검증된 원장이 연결되어야 판단할 수 있습니다. 단일 성장 점수나 조직 간 서열을 생성하지 않습니다.</p>
       <div class="growth-os-links"><a href="/admin/ai/aiops">EKODI 오케스트레이터</a><a href="/admin/services/engine-common">공통 엔진</a><a href="/admin/services/marketing-ai">마케팅 전문 실행</a></div></section>`;
