@@ -134,7 +134,9 @@ jobs:
 
   runtime-smoke:
     needs: contract
-    runs-on: ubuntu-latest
+    # Playwright 1.55.0 Chromium does not install on ubuntu-26.04 (ubuntu-latest).
+    # Keep the browser runtime on the supported LTS image; never skip verification.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout current platform revision
