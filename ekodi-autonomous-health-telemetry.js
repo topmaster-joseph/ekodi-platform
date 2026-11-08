@@ -160,6 +160,27 @@ export async function recordAutonomousHealthSnapshot(input, options = {}) {
     ).run();
   const snapshotId = Number(result?.meta?.last_row_id || result?.lastRowId || 0) || null;
   for (const action of report.guardrailDecisions || []) {
+    // Record a transition, not a repetition.
+    //
+    // This loop never ran until AUTONOMIC-STATE-FROM-OBSERVED-PRESSURE-001,
+    // because the level was always UNKNOWN and nothing was ever proposed. Once
+    // observed pressure can raise the level, a standing condition proposes the
+    // same actions on every pass — and this runs every ten minutes. Production
+    // on 2026-11-08 has 8 of 33 production endpoint checks above the 1,200ms
+    // threshold, with p95 at 2,048ms, so that condition is not hypothetical: it
+    // would have written roughly 288 rows a day, forever, all saying the same
+    // thing. "Never says anything" would have become "always says the same
+    // thing", which is the same disease.
+    //
+    // While an identical plan is still open, the repeat is skipped. A change in
+    // the action's reason — which carries the level, as traffic_elevated or
+    // traffic_high — is a different plan and is recorded. Nothing is lost: the
+    // snapshot row is written every pass regardless, so the history of the
+    // condition stays complete; only the duplicate plans go.
+    const openPlan = await db.prepare(`SELECT reason FROM autonomous_health_actions
+      WHERE action_id = ? AND state = 'planned'
+      ORDER BY created_at DESC, id DESC LIMIT 1`).bind(text(action.id, 100)).first();
+    if (openPlan && String(openPlan.reason || '') === text(action.reason, 200)) continue;
     await db.prepare(`INSERT INTO autonomous_health_actions
       (snapshot_id, action_id, decision, state, reason, before_json, created_at)
       VALUES (?, ?, ?, 'planned', ?, ?, ?)`).bind(
