@@ -38,3 +38,24 @@
  .mall-header .mall-global-search button{height:33px}
 }
 @media(max-width:350px){.mall-header .mall-account-id{max-width:73px}}
+
+/* Legacy Mall pages mount the same verified controls next to, not inside, nav.
+   Their mobile nav is hidden at 760px, but the account must remain visible. */
+.header:not(.mall-header)>.mall-account{display:inline-flex;align-items:center;flex:0 0 auto;margin-left:auto;gap:6px}
+.header:not(.mall-header) .mall-account-signed{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.header:not(.mall-header) .mall-account-id{display:inline-block;max-width:150px;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#263e56;font-size:12px;font-weight:750}
+.header:not(.mall-header) .mall-account-login,.header:not(.mall-header) [data-mall-logout]{
+ display:inline-flex;align-items:center;justify-content:center;min-height:34px;
+ padding:7px 12px;border:1px solid #cad5df;border-radius:999px;
+ background:#fff;color:#102848;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap
+}
+.header:not(.mall-header) .mall-account [hidden]{display:none!important}
+.header:not(.mall-header) .mall-account-login:focus-visible,
+.header:not(.mall-header) [data-mall-logout]:focus-visible{outline:3px solid #37699c;outline-offset:3px}
+@media(max-width:760px){
+ .header:not(.mall-header) .mall-account-id{max-width:105px;font-size:10px}
+ .header:not(.mall-header) .mall-account-login,
+ .header:not(.mall-header) [data-mall-logout]{min-height:31px;padding:6px 8px;font-size:11px}
+}
+@media(max-width:350px){.header:not(.mall-header) .mall-account-id{max-width:70px}}
