@@ -10,7 +10,7 @@ const env={
  AGODA_AFFILIATE_CITIES_JSON:'[{"id":9395,"name":"Official Partner City"}]'
 };
 const now=new Date('2026-11-08T12:00:00Z');
-const url='https://mall-api.ekodi.kr/api/public/agoda/search?cityId=9395&checkInDate=2026-11-15&checkOutDate=2026-11-16&adults=2';
+const url='https://ekodi.kr/api/public/agoda/search?cityId=9395&checkInDate=2026-11-15&checkOutDate=2026-11-16&adults=2';
 const req=(u=url,method='GET')=>new Request(u,{method});
 test('public API disabled until every partner certificate, secret, and region allowlist are present',async()=>{
  assert.equal(agodaPublicReady(env),true);
@@ -25,11 +25,11 @@ test('public API disabled until every partner certificate, secret, and region al
  assert.equal(JSON.stringify(result).includes('fake-test-key'),false);
 });
 test('status exposes public region options only when ready, never provider secret',async()=>{
- const active=await handleAgodaPublicRequest(req('https://mall-api.ekodi.kr/api/public/agoda/status'),env,null,{now});
+ const active=await handleAgodaPublicRequest(req('https://ekodi.kr/api/public/agoda/status'),env,null,{now});
  assert.equal(active.status,200);assert.equal(active.body.available,true);
  assert.deepEqual(active.body.cities,[{id:9395,name:'Official Partner City'}]);
  assert.equal(JSON.stringify(active.body).includes('fake-test-key'),false);
- const absent=await handleAgodaPublicRequest(req('https://mall-api.ekodi.kr/api/public/agoda/status'),{...env,AGODA_AFFILIATE_API_KEY:''},null,{now});
+ const absent=await handleAgodaPublicRequest(req('https://ekodi.kr/api/public/agoda/status'),{...env,AGODA_AFFILIATE_API_KEY:''},null,{now});
  assert.equal(absent.body.available,false);assert.deepEqual(absent.body.cities,[]);
 });
 test('reject unsupported region, duplicate params, unrecognized params, invalid date and method',async()=>{
