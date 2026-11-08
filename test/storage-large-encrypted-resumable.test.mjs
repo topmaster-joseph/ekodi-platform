@@ -42,6 +42,12 @@ function mockFetch(){
     const url=String(input);calls.push({url,init});
     if(url==='https://oauth2.googleapis.com/token')
       return Response.json({access_token:'fixture-only-access'});
+    // Canonical Drive route parent lookup: no real Google call or folder
+    // mutation in these upload-method-only tests.
+    if(url.startsWith('https://www.googleapis.com/drive/v3/files?')){
+      assert.equal(init.headers.get('authorization'),'Bearer fixture-only-access');
+      return Response.json({files:[{id:'fixture-existing-verified-folder'}]});
+    }
     if(url.startsWith('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart')){
       assert.match(init.headers['content-type'],/multipart\/related/);
       return Response.json({id:'fixture-multipart-file'});
