@@ -43,7 +43,13 @@ test('native desktop, mobile and Admin remain genuine independent read-only veri
 
 test('quota or any failed predecessor blocks later verifiers with an explicit receipt-only job',()=>{
   const receipt=part('post_promotion_browser_verification_receipt');
-  assert.match(receipt,/needs: \[deploy, native_surface_verification_desktop, native_surface_verification_mobile,/);
+  // RECEIPT-SKIPPED-TRUTH-001 added scheduled_release_gate to the dependency set
+  // so the receipt can tell a release that was never attempted (a scheduled retry
+  // where the previous release already succeeded) from one that was blocked. The
+  // intent of this assertion — the receipt observes deploy and every verifier —
+  // is unchanged, and the gate is pinned alongside them rather than loosening it.
+  assert.match(receipt,/needs: \[scheduled_release_gate, deploy, native_surface_verification_desktop, native_surface_verification_mobile,/);
+  assert.match(receipt,/native_research_verification_desktop, native_research_verification_mobile, authenticated_admin_surface_verification\]/);
   assert.match(receipt,/if: \$\{\{ always\(\) \}\}/);
   assert.match(receipt,/policyId:'CF-QUOTA-001'/);
   assert.match(receipt,/verification:state==='success'\?'verified':state==='skipped'\?'blocked':'failed'/);
