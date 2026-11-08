@@ -166,7 +166,7 @@ test('book cards use concise copy and verified prices or an explicit unknown-pri
   assert.match(books, /setBuyState\(card, state, quote\)/);
   assert.match(books, /readyQuote\(quote, bookId\)/);
   assert.match(books, /구매 상태 확인 필요/);
-  assert.match(books, /const quote = await quoteFor\(book\.bookId\)/);
+  assert.match(books, /quote = await quoteFor\(bookId\)/);
   assert.match(css, /\.card\[data-category="book"\] \.card-summary/);
   assert.match(css, /-webkit-line-clamp:2/);
 });
@@ -255,7 +255,7 @@ test('Toss merchant-review first fold shows sale catalog before full policy disc
   assert.match(template, /회원가입 없이 비회원 카드결제를 이용할 수 있습니다/);
   assert.match(template, /에코디서점 전자책은 로그인 후 구매/);
   assert.match(template, /로그인 회원의 결제가 실제 확인되면 결제금액의 1%/);
-  assert.match(template, /상품별로 확인할 수 있습니다/);
+  assert.match(template, /판매 가능한 상품과 공개된 전자책 정보를 함께 보여드립니다/);
   const cssSource = readFileSync(new URL('../assets/styles.css', import.meta.url), 'utf8');
   assert.match(cssSource, /TOSS-MALL-FIRSTFOLD-20261108/);
   assert.match(cssSource, /#shop \.card \.thumb\.book/);
