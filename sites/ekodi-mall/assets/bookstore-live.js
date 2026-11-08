@@ -92,55 +92,104 @@
     article.append(thumb, body);
     return article;
   }
+  // Keep already-verified public book identities stable when a read-only API
+  // times out. This is *never* an authorization to offer an unverified sale.
+  let catalogRefresh = 0;
+  const catalogCard = book => grid.querySelector('[data-product="' +
+    safe(book.id).replace(/[^a-zA-Z0-9_-]/g, '') + '"]');
+  const quoteLabel = card => card?.querySelector('.meta .status');
+  const keepInformational = card => {
+    if (!card) return;
+    // Never turn a static, never-verified preparation row into a visible offer.
+    if (card.dataset.bookstoreQuotePending === 'true' &&
+        card.dataset.bookstoreInformational !== 'true') return;
+    card.dataset.bookstoreQuotePending = 'true';
+    card.dataset.bookstoreInformational = 'true';
+    card.dataset.saleReady = 'false';
+    card.dataset.status = '판매 상태 확인 중';
+    const label = quoteLabel(card);
+    if (label) label.textContent = '판매 상태 확인 중 · 자세히 보기';
+  };
+  const markUnready = card => {
+    if (!card) return;
+    card.dataset.bookstoreQuotePending = 'true';
+    card.dataset.bookstoreInformational = 'false';
+    card.dataset.saleReady = 'false';
+    card.dataset.status = '판매 상태 확인 필요';
+    const label = quoteLabel(card);
+    if (label) label.textContent = '가격 확인 · 판매 상태 확인 필요';
+  };
+  function announceCatalog(degraded = false) {
+    // Count only live-quoted sale cards, not informational fallback entries.
+    const ready = grid.querySelectorAll('.card:not([data-bookstore-quote-pending="true"])').length;
+    const count = document.querySelector('[data-bookstore-public-count]');
+    if (count) count.textContent = ready + '개';
+    const state = document.querySelector('[data-bookstore-store-status]');
+    if (state) state.textContent = ready ? '도서 판매 중' : '판매 준비 중';
+    window.dispatchEvent(new CustomEvent('ekodi:marketplace-products-loaded', {
+      detail: { category: 'book', count: ready, source: 'books-approval', degraded }
+    }));
+  }
   async function syncCatalog() {
     if (!grid) return;
-    let released = new Map();
+    const version = ++catalogRefresh;
+    let candidates;
     try {
       const [mirror, approvals] = await Promise.all([get(mirrorUrl), get(BOOKS_API + '/public/approvals')]);
-      const approved = new Set((Array.isArray(approvals?.approvals) ? approvals.approvals : [])
-        .map(record => record.bookId).filter(validId));
-      const candidates = (Array.isArray(mirror?.products) ? mirror.products : [])
-        .filter(book => validId(book?.bookId) &&
-          (book.saleReady === true || approved.has(book.bookId)) &&
-          /^book-[a-z0-9-]+$/.test(safe(book.slug)));
-      await Promise.all(candidates.map(async book => {
-        // A static bookstore card may predate the quote price; refresh its label
-        // from the same live file- and checkout-ready quote used for purchase.
-        const existing = grid.querySelector('[data-product="' +
-          safe(book.id).replace(/[^a-zA-Z0-9_-]/g, '') + '"]');
-        const label = existing?.querySelector('.meta .status');
-        try {
-          const quote = await quoteFor(book.bookId);
-          if (!readyQuote(quote, book.bookId)) {
-            if (existing) existing.dataset.bookstoreQuotePending = 'true';
-            if (label) label.textContent = '가격 확인 · 판매 상태 확인 필요';
-            return;
-          }
-          const verifiedAmount = Number(quote.price.amount);
-          if (existing) existing.dataset.bookstoreQuotePending = 'false';
-          if (label) label.textContent = new Intl.NumberFormat('ko-KR').format(verifiedAmount) + '원 · 판매 중';
-          if (!existing) {
-            released.set(book.bookId, { ...book, price: verifiedAmount });
-          }
-        } catch {
-          if (existing) existing.dataset.bookstoreQuotePending = 'true';
-          if (label) label.textContent = '가격 확인 · 판매 상태 확인 필요';
-        }
-      }));
-    } catch { released = new Map(); } // Fail closed on transient source errors.
-    grid.querySelectorAll('[data-bookstore-runtime-id]').forEach(card => card.remove());
-    for (const book of released.values()) {
-      if (grid.querySelector('[data-product="' + safe(book.id).replace(/[^a-zA-Z0-9_-]/g,'') + '"]')) continue;
-      const card = productCard(book);
-      if (card) grid.append(card);
+      if (!Array.isArray(mirror?.products) || !Array.isArray(approvals?.approvals)) {
+        throw new Error('bookstore catalog response incomplete');
+      }
+      const approved = new Set(approvals.approvals.map(record => record.bookId).filter(validId));
+      candidates = mirror.products.filter(book =>
+        validId(book?.bookId) && (book.saleReady === true || approved.has(book.bookId)) &&
+        /^book-[a-z0-9-]+$/.test(safe(book.slug)));
+    } catch {
+      if (version !== catalogRefresh) return;
+      grid.querySelectorAll('[data-bookstore-runtime-id]').forEach(keepInformational);
+      grid.querySelectorAll('[data-bookstore-quote-pending="false"]').forEach(keepInformational);
+      announceCatalog(true);
+      return;
     }
-    // Dedicated EKODI Books storefront is the same public sale collection,
-    // not a frozen build-time projection of the publisher's live approvals.
-    const count = document.querySelector('[data-bookstore-public-count]');
-    if (count) count.textContent = grid.querySelectorAll('.card:not([data-bookstore-quote-pending="true"])').length + '개';
-    const state = document.querySelector('[data-bookstore-store-status]');
-    if (state) state.textContent = grid.querySelector('.card:not([data-bookstore-quote-pending="true"])') ? '도서 판매 중' : '판매 준비 중';
-    window.dispatchEvent(new CustomEvent('ekodi:marketplace-products-loaded', { detail: { category: 'book', count: released.size, source: 'books-approval' } }));
+    // Gather results before touching the DOM: a stale, overlapping refresh
+    // must not delete a card revalidated by a newer refresh.
+    const results = await Promise.all(candidates.map(async book => {
+      try {
+        const quote = await quoteFor(book.bookId);
+        return { book, ready: readyQuote(quote, book.bookId), price: Number(quote?.price?.amount) };
+      } catch {
+        return { book, unavailable: true };
+      }
+    }));
+    if (version !== catalogRefresh) return;
+    const eligible = new Set(candidates.map(book => book.bookId));
+    for (const result of results) {
+      const existing = catalogCard(result.book);
+      if (result.unavailable) {
+        keepInformational(existing);
+        continue;
+      }
+      if (!result.ready) {
+        // A real negative quote is different from a temporary transport error.
+        if (existing?.dataset.bookstoreRuntimeId) existing.remove();
+        else markUnready(existing);
+        continue;
+      }
+      const card = existing || productCard({ ...result.book, price: result.price });
+      if (!card) continue;
+      card.dataset.bookstoreQuotePending = 'false';
+      card.dataset.bookstoreInformational = 'false';
+      card.dataset.saleReady = 'true';
+      card.dataset.status = '판매 중';
+      const label = quoteLabel(card);
+      if (label) label.textContent = new Intl.NumberFormat('ko-KR').format(result.price) + '원 · 판매 중';
+      if (!existing) grid.append(card);
+    }
+    // An authoritative, complete approval list may legitimately revoke a
+    // dynamic card; only *transport* failures retain informational identity.
+    grid.querySelectorAll('[data-bookstore-runtime-id]').forEach(card => {
+      if (!eligible.has(card.dataset.bookstoreRuntimeId)) card.remove();
+    });
+    announceCatalog(results.some(result => result.unavailable));
   }
   let detailRefresh = 0;
   async function syncDetail() {
