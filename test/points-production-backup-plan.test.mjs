@@ -17,7 +17,8 @@ test('exact 21 source-controlled migrations have independently verified sha256 d
   assert.match(result.manifest_sha256,/^[a-f0-9]{64}$/);
   assert.equal(new Set(result.files.map(x=>x.filename)).size,21);
   assert.ok(result.files[0].filename.includes('site_activity_points_foundation'));
-  assert.ok(result.files.at(-1).filename.includes('recognition_goals_person_idx'));
+  assert.ok(result.files.at(-2).filename.includes('recognition_goals_person_idx'));
+  assert.ok(result.files.at(-1).filename.includes('nonverified_reward_guard'));
   assert.ok(result.files.every(x=>/^[a-f0-9]{64}$/.test(x.sha256)&&x.bytes>0));
   assert.ok(result.files.some(x=>x.risk_tags.includes('trigger_replacement')));
   assert.ok(result.files.some(x=>x.risk_tags.includes('security_definer')));
