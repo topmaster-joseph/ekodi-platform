@@ -61,7 +61,7 @@ const SINGLES_CHOOSE_ACCOUNT=site==='singles'&&params.get('select_account')==='1
 // Platform admin tools (/admin/site-admins, /admin/people) let the operator pick the
 // Google account explicitly instead of reusing whatever provider session is stored.
 const ADMIN_TOOL_CHOOSE_ACCOUNT=site==='portal'&&params.get('select_account')==='1';
-const PREOPENED_BRIDGE=DIRECT_LOGIN&&!CHOOSE_ACCOUNT&&!SPACE_CHOOSE_ACCOUNT&&params.get('bridge')==='preopened';
+const PREOPENED_BRIDGE=DIRECT_LOGIN&&!CHOOSE_ACCOUNT&&params.get('bridge')==='preopened'&&!SPACE_CHOOSE_ACCOUNT;
 const GOOGLE_BRIDGE_ORIGIN=location.origin;
 if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='1';
 const EXPECTED_ACCOUNT=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(params.get('expected_account')||'').trim())?String(params.get('expected_account')).trim().toLowerCase():'';
@@ -433,7 +433,8 @@ $('logout')?.addEventListener('click',async()=>{
 
 await prepare();
 sb.auth.onAuthStateChange((event,s)=>{
-  if((SINGLES_CHOOSE_ACCOUNT||SPACE_CHOOSE_ACCOUNT)&&event!=='SIGNED_OUT')return;
-  if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&s&&!routing&&!handlingCredential&&!CHOOSE_ACCOUNT&&!CHURCH_CHOOSE_ACCOUNT&&!SPACE_CHOOSE_ACCOUNT)queueMicrotask(()=>void handoffExistingSession(s));
+  if(SINGLES_CHOOSE_ACCOUNT&&event!=='SIGNED_OUT')return;
+  if(SPACE_CHOOSE_ACCOUNT&&event!=='SIGNED_OUT')return;
+  if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&s&&!routing&&!handlingCredential&&!CHOOSE_ACCOUNT&&!CHURCH_CHOOSE_ACCOUNT)queueMicrotask(()=>void handoffExistingSession(s));
   if(event==='SIGNED_OUT'){routing=false;}
 });
