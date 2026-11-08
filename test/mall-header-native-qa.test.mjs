@@ -44,6 +44,10 @@ test('browser evidence artifact records synthetic scope without user secret leak
   assert.match(workflow, /retention-days: 7/);
   assert.match(browser, /releaseCandidateSha/);
   assert.match(browser, /credentialMode: 'browser-local-synthetic-only'/);
+  assert.match(browser, /candidateCssInjected: process\.env\.GITHUB_EVENT_NAME === 'pull_request'/);
+  assert.match(browser, /liveCssValidated: process\.env\.GITHUB_EVENT_NAME !== 'pull_request'/);
+  assert.match(browser, /page\.addStyleTag\(\{ content: candidateCss \}\)/);
+  assert.match(browser, /new URL\('\.\.\/assets\/mall-account-header\.css', import\.meta\.url\)/);
   assert.match(browser, /writeFile\(outDir \+ '\/evidence\.json'/);
   assert.doesNotMatch(browser, /process\.env\.(?:TOKEN|SECRET|PASSWORD|API_KEY)/);
 });
