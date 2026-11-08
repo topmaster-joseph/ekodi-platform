@@ -27,7 +27,6 @@ on:
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
       - '.github/workflows/deploy-support-opportunity.yml'
-      - 'footer-traffic-guarantee.js'
   push:
     branches: [main]
     paths:
@@ -45,7 +44,6 @@ on:
       - 'wrangler.support.staging.toml'
       - 'deploy/manifests/support.worker.json'
       - '.github/workflows/deploy-support-opportunity.yml'
-      - 'footer-traffic-guarantee.js'
 
 permissions:
   contents: read

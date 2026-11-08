@@ -23,7 +23,6 @@ on:
       - 'wrangler.delivery.staging.toml'
       - 'deploy/manifests/delivery.worker.json'
       - '.github/workflows/deploy-delivery-hub-ai.yml'
-      - 'footer-traffic-guarantee.js'
   push:
     branches: [main]
     paths:
@@ -37,7 +36,6 @@ on:
       - 'wrangler.delivery.staging.toml'
       - 'deploy/manifests/delivery.worker.json'
       - '.github/workflows/deploy-delivery-hub-ai.yml'
-      - 'footer-traffic-guarantee.js'
 
 permissions:
   contents: read

@@ -13,7 +13,6 @@ on:
         type: string
   pull_request:
     paths: &qtin_paths
-      - 'footer-traffic-guarantee.js'
       - 'qtin-order-core.js'
       - 'ekodipay-core.js'
       - 'test/ekodipay-core.test.mjs'

@@ -428,9 +428,6 @@ on:
       - '.github/workflows/deploy-admin-first-paint.yml'
       - '.github/workflows/release-ekodi-mall.yml'
       - '.github/workflows/redeploy-shared-site-on-user-ui-shell.yml'
-      - 'footer-traffic-guarantee.js'
-      - 'scripts/footer-traffic-postbuild.mjs'
-      - 'shell/user-ui-footer.js'
 
 permissions:
   actions: read

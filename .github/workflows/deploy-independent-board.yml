@@ -8,7 +8,6 @@ on:
       - 'wrangler.independent-board.toml'
       - 'sites/seonammedi/public/app.js'
       - '.github/workflows/deploy-independent-board.yml'
-      - 'footer-traffic-guarantee.js'
   workflow_dispatch:
     inputs:
       release_branch_ref:

@@ -20,7 +20,6 @@ on:
       - 'wrangler.ekodibiz-pay-gateway.toml'
       - 'test/ekodibiz-payment-architecture.test.mjs'
       - '.github/workflows/deploy-ekodibiz-payment-gateway.yml'
-      - 'footer-traffic-guarantee.js'
   push:
     branches: [main]
     paths:
@@ -31,7 +30,6 @@ on:
       - 'wrangler.ekodibiz-pay-gateway.toml'
       - 'test/ekodibiz-payment-architecture.test.mjs'
       - '.github/workflows/deploy-ekodibiz-payment-gateway.yml'
-      - 'footer-traffic-guarantee.js'
 
 permissions:
   contents: read

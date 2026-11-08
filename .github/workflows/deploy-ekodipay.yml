@@ -21,7 +21,6 @@ on:
       - 'test/ekodipay-canonical.test.mjs'
       - 'test/ekodipay-demo-flow.test.mjs'
       - '.github/workflows/deploy-ekodipay.yml'
-      - 'footer-traffic-guarantee.js'
   push:
     branches: [main]
     paths:
@@ -34,7 +33,6 @@ on:
       - 'test/ekodipay-canonical.test.mjs'
       - 'test/ekodipay-demo-flow.test.mjs'
       - '.github/workflows/deploy-ekodipay.yml'
-      - 'footer-traffic-guarantee.js'
 permissions:
   contents: read
 concurrency:

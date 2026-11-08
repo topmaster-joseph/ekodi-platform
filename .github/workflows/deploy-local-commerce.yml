@@ -25,7 +25,6 @@ on:
       - 'wrangler.local-commerce.staging.toml'
       - 'deploy/manifests/local-commerce.worker.json'
       - '.github/workflows/deploy-local-commerce.yml'
-      - 'footer-traffic-guarantee.js'
   push:
     branches: [main]
     paths:
@@ -41,7 +40,6 @@ on:
       - 'wrangler.local-commerce.staging.toml'
       - 'deploy/manifests/local-commerce.worker.json'
       - '.github/workflows/deploy-local-commerce.yml'
-      - 'footer-traffic-guarantee.js'
 
 permissions:
   contents: read
