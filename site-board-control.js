@@ -1,5 +1,7 @@
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
 
+const CENTRAL_SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
+const CENTRAL_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const clean=(value,max=4000)=>String(value??'').trim().slice(0,max);
 const lower=value=>clean(value,320).toLowerCase();
 const json=(data,status=200,extraHeaders={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extraHeaders}});
@@ -566,6 +568,24 @@ export function churchSundayWorshipEvents(today=missionKstToday(),config=CHURCH_
       url:'/ekodichurch/#worship',kind:'recurring-worship'};
   });
 }
+// 관리자 '일정'(church.events)에 등록된 공개 가능 일정. 실패해도 주요일정 화면은 계속 보여준다.
+export function churchAdminEventItems(rows){
+  if(!Array.isArray(rows))return [];
+  return rows.map(r=>{
+    const date=String(r?.event_date||''),time=String(r?.event_time||'').slice(0,5)||'00:00',title=clean(r?.title,160);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)||!title)return null;
+    return {id:0,source:'ekodichurch',sourceLabel:'에코디교회',date,time,venue:clean(r?.location,160)||'에코디교회',
+      title,url:'/ekodichurch/schedule/',kind:'church-admin-event'};
+  }).filter(Boolean);
+}
+async function readChurchAdminEvents(){
+  try{
+    const r=await fetch(`${CENTRAL_SUPABASE_URL}/rest/v1/rpc/church_public_events`,{method:'POST',
+      headers:{apikey:CENTRAL_PUBLISHABLE_KEY,authorization:`Bearer ${CENTRAL_PUBLISHABLE_KEY}`,'content-type':'application/json'},
+      body:JSON.stringify({p_church_slug:'ekodi-church',p_limit:30}),cache:'no-store',signal:AbortSignal.timeout(4000)});
+    return r.ok?churchAdminEventItems(await r.json().catch(()=>[])):[];
+  }catch{return [];}
+}
 async function readSharedPublicSchedules(env,instance){
   const today=missionKstToday(),missionId=boardId('ekodimission'),churchId=boardId('ekodichurch');
   const sql=[
@@ -590,7 +610,7 @@ async function readSharedPublicSchedules(env,instance){
       title:String(event.title||'토요 성경토론과 식사'),
       url:'/ekodimission?meeting='+encodeURIComponent(date)+'#saturday',kind:'recurring-meeting'});
   }
-  for(const event of churchKeyEvents(today)){
+  for(const event of [...await readChurchAdminEvents(),...churchKeyEvents(today)]){
     if(!items.some(item=>item.source==='ekodichurch'&&item.date===event.date&&item.title===event.title))items.push(event);
   }
   for(const event of churchSundayWorshipEvents(today)){

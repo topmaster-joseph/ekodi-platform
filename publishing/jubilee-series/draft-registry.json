@@ -32,14 +32,19 @@
       "sourceNotes": {
         "footnoteReferences": 55,
         "verifiedAgainstSources": false,
-        "originalTextRightsVerified": false
+        "originalTextRightsVerified": false,
+        "originalFootnotesReconstructionPending": true,
+        "sourcePdfVersion": "2026-10-author-selected"
       },
       "technicalChecks": {
         "epubStructuralCheck": true,
         "officialEpubCheck": false,
         "screenReaderVerified": false,
         "viewerVerified": false
-      }
+      },
+      "previousManuscriptRevision": "review-9",
+      "continuedHumanWritingStatus": "ai-assisted-author-review-required",
+      "activeEditorialManuscriptRevision": "author-selected-20261108-pdf"
     },
     {
       "reviewId": "EJT-02-REVIEW",
@@ -64,14 +69,22 @@
       "sourceNotes": {
         "fictionalCasesLabeled": true,
         "finalAuthorReadingComplete": false,
-        "originalTextRightsVerified": false
+        "originalTextRightsVerified": false,
+        "sourcePdfVersion": "2026-10-author-selected"
       },
       "technicalChecks": {
         "epubStructuralCheck": true,
         "officialEpubCheck": false,
         "screenReaderVerified": false,
         "viewerVerified": false
-      }
+      },
+      "previousManuscriptRevision": "review-9",
+      "continuedHumanWritingStatus": "ai-assisted-author-review-required",
+      "activeEditorialManuscriptRevision": "author-selected-20261108-pdf"
     }
-  ]
+  ],
+  "activeEditorialBaselineManifest": "author-selected-baseline-20261108.json",
+  "editorialBaselineUpdatedAt": "2026-11-08",
+  "editorialBaselineOrigin": "explicit-author-selection-of-two-attached-PDFs",
+  "priorEditorialBaselinePreserved": "current-intake-20261102.json"
 }

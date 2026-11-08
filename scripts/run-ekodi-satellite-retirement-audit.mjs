@@ -11,6 +11,7 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {inspectCurrentRepositoryRetirements} from './inspect-satellite-repository-retirement.mjs';
 import {auditSatelliteLiveSourceMarkers} from './audit-satellite-live-source-markers.mjs';
+import {auditPublicLegacyWorkflowRisks} from './audit-public-legacy-workflow-risks.mjs';
 import {
   buildSatelliteRetirementWatchReport,
   renderSatelliteRetirementWatchMarkdown
@@ -91,6 +92,13 @@ export function renderEkodiSatelliteAuditSummary(audit) {
       '. Source markers not covered: '+audit.summary.fleet.notCoveredByPublicMarkers+'.',
     '',
     renderSatelliteRetirementWatchMarkdown(audit.report),
+    ...(audit.legacyWorkflow ? [
+      '### Legacy source writers: public workflow text observation only',
+      'Possible remaining legacy publisher/merger workflow files: '+audit.legacyWorkflow.possibleActiveLegacyWriters+'.',
+      'No Cloudflare bindings, provider credentials, webhook activity, private repositories, or actual workflow execution were verified.',
+      ...audit.legacyWorkflow.repositories.map(row=>'- '+row.repository+': '+row.status),
+      ''
+    ] : []),
     '',
     'This read-only workflow neither deploys nor authorizes repo deletion, migration, credential revocation, Cloudflare changes or owner Human Gate.',
     ''
@@ -99,9 +107,35 @@ export function renderEkodiSatelliteAuditSummary(audit) {
 
 export async function runEkodiSatelliteAudit({
   runMode='daily',outputDir='ekodi-satellite-audit',
-  inspect=inspectCurrentRepositoryRetirements,observe=observeFixedPublicMarkers
+  inspect=inspectCurrentRepositoryRetirements,observe=observeFixedPublicMarkers,
+  observeLegacy=auditPublicLegacyWorkflowRisks
 }={}) {
   const audit=await collectEkodiSatelliteAudit({inspect,observe,runMode});
+  const legacy=await observeLegacy();
+  // Static public text must never be conflated with runtime cloud access, or
+  // smuggled into the source-retirement decision as an approval receipt.
+  const legacyRows=Array.isArray(legacy?.repositories)?legacy.repositories:[];
+  const observed=legacyRows.flatMap(row=>Array.isArray(row.observations)?row.observations:[]);
+  const writerCount=observed.filter(entry=>String(entry.status||'').startsWith('possible-active-')).length;
+  const unknownCount=legacyRows.filter(row=>row.status==='unverified-no-runtime-certification').length;
+  if(legacy?.contract!=='ekodi.public-legacy-workflow-risk.v1'||
+     legacy.mode!=='fixed-public-read-only-no-github-provider-production-mutations'||
+     legacy.repositoryDeletionAuthorized!==false||legacy.anyRepositoryDeleted!==false||
+     legacy.providerWorkflowActivationChecked!==false||legacy.privateRepositoryWorkflowsChecked!==false||
+     legacy.cloudflareSourceBindingChecked!==false||legacy.credentialOrWebhookInventoryChecked!==false||
+     legacy.totalRegisteredSatellites!==audit.summary.fleet.registeredSatellites||
+     legacyRows.length!==audit.summary.fleet.registeredSatellites||
+     legacy.possibleActiveLegacyWriters!==writerCount||
+     legacy.unverifiedRepositoryCount!==unknownCount||
+     legacyRows.some((row,i)=>row.repository!==audit.summary.fleet.reportedRepositories[i].repository||
+       row.deletionDecision!=='retain'||
+       (row.status==='review-required-legacy-writer')!==
+         row.observations?.some(entry=>String(entry.status||'').startsWith('possible-active-')))) {
+    throw Error('invalid-legacy-workflow-risk-evidence');
+  }
+  audit.legacyWorkflow=legacy;
+  audit.summary.fleet.possibleActiveLegacyWriterFiles=legacy.possibleActiveLegacyWriters;
+  audit.summary.fleet.unverifiedLegacyWorkflowRepositories=legacy.unverifiedRepositoryCount;
   // Untrusted source evidence is validated by the report builder before any
   // output artifact is created; an invalid registry fails closed.
   const destination=resolve(outputDir);
@@ -110,6 +144,7 @@ export async function runEkodiSatelliteAudit({
     writeFile(resolve(destination,'report.json'),JSON.stringify(audit.summary,null,2)+'\n','utf8'),
     writeFile(resolve(destination,'retirement.json'),JSON.stringify(audit.retirement,null,2)+'\n','utf8'),
     writeFile(resolve(destination,'live-markers.json'),JSON.stringify(audit.markers,null,2)+'\n','utf8'),
+    writeFile(resolve(destination,'legacy-workflow-risks.json'),JSON.stringify(audit.legacyWorkflow,null,2)+'\n','utf8'),
     writeFile(resolve(destination,'full-audit.json'),JSON.stringify(audit.report,null,2)+'\n','utf8'),
     writeFile(resolve(destination,'summary.md'),renderEkodiSatelliteAuditSummary(audit),'utf8')
   ]);

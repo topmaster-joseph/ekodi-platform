@@ -10,7 +10,10 @@ test('My EKODI exposes a private personal finance control surface',async()=>{
   const [html,loader,worker,app]=await Promise.all([read('my/index.html'),read('my/secondary-feature-loader.js'),read('my-worker.js'),read('my/personal-finance.js')]);
   assert.match(html,/id="money"/);
   assert.match(loader,/personal-finance\.js/);
-  assert.match(html,/personal-finance\.css/);
+  // This is an optional member-only tab; its stylesheet is requested by the
+  // authenticated finance-tab loader, not the public render-blocking head.
+  assert.match(loader,/personal-finance\.css/);
+  assert.doesNotMatch(html,/<link[^>]+\/my\/personal-finance\.css/);
   assert.match(worker,/https:\/\/ekodi\.kr\/personal-finance-api/);
   assert.doesNotMatch(worker,/personal-finance-api\.ekodi\.kr/);
   assert.match(worker,/personalFinanceControl:true/);
