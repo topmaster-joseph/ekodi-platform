@@ -29,8 +29,16 @@ BEGIN
   BEGIN INSERT INTO public.ekodi_point_evidence_adapters VALUES('qa-p2','devotion','devotion_self_report','verified',true,true);
   EXCEPTION WHEN check_violation THEN v_err := 'blocked'; END;
   IF v_err IS NULL THEN RAISE EXCEPTION 'self-report accepted as verified'; END IF;
-  -- Low-trust adapter on an over-limit rule cannot award.
-  INSERT INTO public.ekodi_point_evidence_adapters VALUES('qa-p2','devotion','devotion_self_report','low_trust',true,true);
+  -- Devotional self-report cannot be activated for monetary awards.
+  INSERT INTO public.ekodi_point_evidence_adapters VALUES('qa-p2','devotion','devotion_self_report','low_trust',true,false);
+  v_err := NULL;
+  BEGIN
+    UPDATE public.ekodi_point_evidence_adapters SET enabled=true
+      WHERE site_id='qa-p2' AND rule_id='devotion' AND adapter='devotion_self_report';
+  EXCEPTION WHEN check_violation THEN v_err := 'blocked'; END;
+  IF v_err IS NULL THEN RAISE EXCEPTION 'devotion policy became award-eligible'; END IF;
+  -- Generic low-trust ceiling is still tested with a nonreligious adapter.
+  INSERT INTO public.ekodi_point_evidence_adapters VALUES('qa-p2','devotion','operator_confirmed','low_trust',true,true);
 
   -- Members.
   INSERT INTO auth.users(id,created_at,email_confirmed_at) VALUES(gen_random_uuid(),now(),now()) RETURNING id INTO v_auth;
@@ -73,9 +81,14 @@ BEGIN
   IF NOT EXISTS(SELECT 1 FROM public.ekodi_point_anomalies WHERE kind='shared_evidence' AND person_id=v_member2)
   THEN RAISE EXCEPTION 'shared evidence not flagged'; END IF;
 
-  -- Low-trust adapter on a rule above low-trust ceilings refuses to award.
+  -- A disabled devotional adapter can never credit the wallet.
   v_err := NULL;
   BEGIN PERFORM ekodi_points_private.award_evidence('qa-p2','devotion',v_member,'devotion_self_report','qt/2026-11-01','{}');
+  EXCEPTION WHEN raise_exception THEN v_err := SQLERRM; END;
+  IF v_err IS DISTINCT FROM 'EVIDENCE_ADAPTER_DISABLED' THEN RAISE EXCEPTION 'devotion points incorrectly allowed: %',v_err; END IF;
+  -- Generic low-trust ceiling remains enforced for a nonreligious claim.
+  v_err := NULL;
+  BEGIN PERFORM ekodi_points_private.award_evidence('qa-p2','devotion',v_member,'operator_confirmed','qa/over-limit','{}');
   EXCEPTION WHEN raise_exception THEN v_err := SQLERRM; END;
   IF v_err IS DISTINCT FROM 'LOW_TRUST_RULE_LIMIT' THEN RAISE EXCEPTION 'low-trust ceiling: %',v_err; END IF;
 
