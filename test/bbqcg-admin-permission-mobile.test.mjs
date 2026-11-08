@@ -83,3 +83,21 @@ test('BBQ operations handbook is local to approved site work section and print c
   assert.match(css,/data-print-target="all"/);
   assert.doesNotMatch(script,/bbqe-learning\.co\.kr.{0,100}(token|password|비밀번호)/i);
 });
+
+
+test('BBQ-only optional 403 does not deny the authorized operating dashboard and handbook',async()=>{
+  const js=await storeAdminScript().text();
+  assert.match(js,/if\(SLUG==='bbqcg'\)\{/);
+  assert.match(js,/if\(section==='work'\)\{/);
+  assert.match(js,/Promise\.allSettled\(\[/);
+  assert.match(js,/const primarySnapshot=await rpc\('business_os_store_admin_snapshot'/);
+  assert.match(js,/state\.snapshot=primarySnapshot/);
+  assert.match(js,/status==='fulfilled'/);
+  assert.match(js,/state\.connector=available\(0\)\|\|\{connectors:\[\]\}/);
+  assert.match(js,/매장 운영 · 일부 채널 확인 필요/);
+  // The existing shared path and hard store membership gate remain unchanged.
+  assert.match(js,/const menu=await rpc\('store_operating_space_snapshot'/);
+  assert.match(js,/state\.menu=menu;if\(!canSection\(section,role\)\)return permissionPanel\(\)/);
+  assert.match(js,/const \[snapshot,connector,delivery,commerce,smsOrders\]=await Promise\.all\(\[/);
+  assert.doesNotMatch(js,/if\(SLUG==='bbqcg'\)\{[\s\S]*?state\.role='tenant_admin'/);
+});
