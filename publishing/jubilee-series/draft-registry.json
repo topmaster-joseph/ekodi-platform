@@ -34,7 +34,8 @@
         "verifiedAgainstSources": false,
         "originalTextRightsVerified": false,
         "originalFootnotesReconstructionPending": true,
-        "sourcePdfVersion": "2026-10-author-selected"
+        "sourcePdfVersion": "2026-10-author-selected",
+        "unresolvedFootnoteMarkersAtRound2": 56
       },
       "technicalChecks": {
         "epubStructuralCheck": true,
@@ -44,7 +45,9 @@
       },
       "previousManuscriptRevision": "review-9",
       "continuedHumanWritingStatus": "ai-assisted-author-review-required",
-      "activeEditorialManuscriptRevision": "author-selected-20261108-pdf"
+      "activeEditorialManuscriptRevision": "author-selected-20261108-pdf",
+      "currentHumanEditorialRevision": "human-review-round2-20261108",
+      "currentHumanEditorialReviewComplete": false
     },
     {
       "reviewId": "EJT-02-REVIEW",
@@ -80,11 +83,15 @@
       },
       "previousManuscriptRevision": "review-9",
       "continuedHumanWritingStatus": "ai-assisted-author-review-required",
-      "activeEditorialManuscriptRevision": "author-selected-20261108-pdf"
+      "activeEditorialManuscriptRevision": "author-selected-20261108-pdf",
+      "currentHumanEditorialRevision": "human-review-round2-20261108",
+      "currentHumanEditorialReviewComplete": false
     }
   ],
   "activeEditorialBaselineManifest": "author-selected-baseline-20261108.json",
   "editorialBaselineUpdatedAt": "2026-11-08",
   "editorialBaselineOrigin": "explicit-author-selection-of-two-attached-PDFs",
-  "priorEditorialBaselinePreserved": "current-intake-20261102.json"
+  "priorEditorialBaselinePreserved": "current-intake-20261102.json",
+  "currentHumanEditorialReviewManifest": "human-editorial-round2-20261108.json",
+  "currentHumanEditorialReviewStatus": "ai-assisted-review-draft-awaiting-author-citation-and-private-ingest"
 }
