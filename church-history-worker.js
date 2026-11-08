@@ -1,3 +1,4 @@
+import { withFooterTraffic } from './footer-traffic-guarantee.js';
 const PUBLIC_PATH = '/ekodichurch/history';
 const ADMIN_PATH = '/ekodichurch/admin/history';
 const API_PREFIX = '/api/church/admin/history';
@@ -371,7 +372,7 @@ function pathMatches(pathname, base) {
   return cleanPath === base || cleanPath === `${base}/`;
 }
 
-export default {
+const ekodiWorkerEntry={
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
@@ -395,3 +396,5 @@ export default {
     }
   }
 };
+// FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
+export default withFooterTraffic(ekodiWorkerEntry);

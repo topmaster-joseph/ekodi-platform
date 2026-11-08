@@ -2,6 +2,7 @@ import { ensureSiteDiscoveryHead } from './site-discovery-head.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { recommendDelivery, calculateSettlement, buildOperationsBrief } from './delivery/core.js';
 import { discoverStores, storeDiscoveryProviderStatus } from './delivery/store-resolver.js';
+import { withFooterTraffic } from './footer-traffic-guarantee.js';
 
 const FEATURE_PREFIX='/delivery';
 function featurePath(url){
@@ -75,4 +76,6 @@ const searchExposureEntry={async fetch(request,env){
 
 // SEARCH-EXPOSURE-ALL-001: this Worker owns its ekodi.kr route directly, so it
 // applies the shared add-only search head itself (router is bypassed).
-export default {...searchExposureEntry,async fetch(request,env,ctx){const response=await searchExposureEntry.fetch(request,env,ctx);try{return await ensureSiteDiscoveryHead(request,response,{id:'delivery',name:'EKODI 배달'})}catch{return response}}};
+const ekodiWorkerEntry={...searchExposureEntry,async fetch(request,env,ctx){const response=await searchExposureEntry.fetch(request,env,ctx);try{return await ensureSiteDiscoveryHead(request,response,{id:'delivery',name:'EKODI 배달'})}catch{return response}}};
+// FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
+export default withFooterTraffic(ekodiWorkerEntry);

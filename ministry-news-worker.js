@@ -3,6 +3,7 @@
 // Mail: Gmail refresh-token secrets (same pattern as church-reports-control.js); sending stays off until they exist.
 import { createApp, clean, PUBLIC_PATH } from './ministry-news-core.js';
 import { createD1Store } from './ministry-news-d1-store.js';
+import { withFooterTraffic } from './footer-traffic-guarantee.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -92,7 +93,7 @@ export function createGmailMailer(env, fetcher = fetch) {
   };
 }
 
-export default {
+const ekodiWorkerEntry={
   async fetch(request, env) {
     const app = createApp({
       store: createD1Store(env.DB),
@@ -112,3 +113,5 @@ export default {
     }
   },
 };
+// FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
+export default withFooterTraffic(ekodiWorkerEntry);
