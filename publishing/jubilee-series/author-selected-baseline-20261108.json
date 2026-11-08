@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "EKODI-JUBILEE-THEOLOGY",
+  "taskId": "jubilee-human-manuscript-baseline-20261108",
+  "author": "정찬균",
+  "effectiveEditorialBaseline": "2026-11-08",
+  "sourceAuthority": "user-explicit-selection-of-two-attached-pdfs",
+  "previousBaseline": {
+    "source": "current-intake-20261102.json",
+    "handoffId": "EJT-20261102-REVIEW9-10-A11Y-PRIVATE",
+    "retention": "archived-without-delete"
+  },
+  "volumes": [
+    {
+      "number": 1,
+      "title": "희년과 하나님 나라의 회복",
+      "editorialSource": {
+        "format": "pdf",
+        "sha256": "e2a1ee508f1285d8a70de42114dcc50f6ea5d827ae18f84ded0ce83114a1bd59",
+        "bytes": 358372,
+        "pages": 21
+      },
+      "continuedHumanWritingCandidate": {
+        "format": "docx+pdf",
+        "source": "private-author-review",
+        "docxSha256": "558156f26a1547f6dc79d684669fddce647d744d5d08c279bdfb2c30ecb2f828",
+        "pdfSha256": "75a7601a9c94bedefc0d73417078073b79f91e4d3bbfbb6356c8827e2706aaff",
+        "pageCount": 56,
+        "addedSections": 8,
+        "status": "ai-assisted-author-review-draft"
+      },
+      "rightsAndRelease": {
+        "authorApproval": false,
+        "publisherApproval": false,
+        "citationAndRightsVerified": false,
+        "publisherPrivateIngestReadback": false,
+        "publicCatalog": false,
+        "saleAllowed": false
+      }
+    },
+    {
+      "number": 2,
+      "title": "우리는 다시 돌아갈 수 있는가",
+      "editorialSource": {
+        "format": "pdf",
+        "sha256": "3620b7aade0c689e44824c635bffca2c2aebeea1243197f0b094ccd76f31563e",
+        "bytes": 228152,
+        "pages": 14
+      },
+      "continuedHumanWritingCandidate": {
+        "format": "docx+pdf",
+        "source": "private-author-review",
+        "docxSha256": "b43cf4b721dbeb166c672bc30d07eb66edf8db5903612cd148bf8c3bf7307ed5",
+        "pdfSha256": "aa2413650eaa12a3af8de6f76906a0068f3f3ced040e27e778723ee1f9e3ad67",
+        "pageCount": 40,
+        "addedSections": 10,
+        "status": "ai-assisted-author-review-draft"
+      },
+      "rightsAndRelease": {
+        "authorApproval": false,
+        "publisherApproval": false,
+        "citationAndRightsVerified": false,
+        "publisherPrivateIngestReadback": false,
+        "publicCatalog": false,
+        "saleAllowed": false
+      }
+    }
+  ],
+  "doNotOverwrite": [
+    "2026-11-02 review-9/review-10 stored fingerprints",
+    "legacy private ingestion receipts",
+    "signed publication/release artifacts"
+  ],
+  "notice": "This is an editorial-authority metadata ledger only. No manuscript bytes or private URLs stored here. Not evidence of private R2 upload, live D1 revision, human author signature, or publication approval."
+}
