@@ -84,7 +84,7 @@
   .mall-header .brand{grid-area:mall-brand;min-width:0}
   .mall-header .actions{grid-area:mall-account;justify-self:end;gap:6px}
   .mall-header .mall-global-search{
-    grid-area:mall-search;justify-self:center;width:min(100%,320px);max-width:320px;height:36px
+    grid-area:mall-search;justify-self:center;width:min(100%,310px);max-width:310px;height:36px
   }
   .mall-header .mall-global-search button{height:34px}
   .mall-header .mall-account-id{max-width:115px}
