@@ -17,7 +17,7 @@
       "author": "정찬균",
       "genre": "academic-theology",
       "fieldId": "humanities",
-      "manuscriptRevision": "review-9",
+      "manuscriptRevision": "author-selected-20261108-pdf",
       "stage": "citation-and-rights-review",
       "language": "ko",
       "sourceAssetLocation": "private-external-not-linked",
@@ -32,14 +32,18 @@
       "sourceNotes": {
         "footnoteReferences": 55,
         "verifiedAgainstSources": false,
-        "originalTextRightsVerified": false
+        "originalTextRightsVerified": false,
+        "originalFootnotesReconstructionPending": true,
+        "sourcePdfVersion": "2026-10-author-selected"
       },
       "technicalChecks": {
         "epubStructuralCheck": true,
         "officialEpubCheck": false,
         "screenReaderVerified": false,
         "viewerVerified": false
-      }
+      },
+      "previousManuscriptRevision": "review-9",
+      "continuedHumanWritingStatus": "ai-assisted-author-review-required"
     },
     {
       "reviewId": "EJT-02-REVIEW",
@@ -49,7 +53,7 @@
       "author": "정찬균",
       "genre": "general-theology",
       "fieldId": "humanities",
-      "manuscriptRevision": "review-9",
+      "manuscriptRevision": "author-selected-20261108-pdf",
       "stage": "literary-and-rights-review",
       "language": "ko",
       "sourceAssetLocation": "private-external-not-linked",
@@ -64,14 +68,21 @@
       "sourceNotes": {
         "fictionalCasesLabeled": true,
         "finalAuthorReadingComplete": false,
-        "originalTextRightsVerified": false
+        "originalTextRightsVerified": false,
+        "sourcePdfVersion": "2026-10-author-selected"
       },
       "technicalChecks": {
         "epubStructuralCheck": true,
         "officialEpubCheck": false,
         "screenReaderVerified": false,
         "viewerVerified": false
-      }
+      },
+      "previousManuscriptRevision": "review-9",
+      "continuedHumanWritingStatus": "ai-assisted-author-review-required"
     }
-  ]
+  ],
+  "activeEditorialBaselineManifest": "author-selected-baseline-20261108.json",
+  "editorialBaselineUpdatedAt": "2026-11-08",
+  "editorialBaselineOrigin": "explicit-author-selection-of-two-attached-PDFs",
+  "priorEditorialBaselinePreserved": "current-intake-20261102.json"
 }
