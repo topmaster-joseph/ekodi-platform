@@ -69,14 +69,46 @@ export function assessTrafficSurge(signals = {}, policy = DEFAULT_POLICY) {
     ['p95LatencyMs', signals.p95LatencyMs, thresholds.p95LatencyMs],
     ['errorRatePct', signals.errorRatePct, thresholds.errorRatePct]
   ];
+  const measuredPressure = pressureSignals.filter(([, value]) => Number.isFinite(value)).map(([name]) => name);
   const breached = pressureSignals.filter(([, value, limit]) => Number.isFinite(value) && value >= limit).map(([name]) => name);
   if (breached.length >= 2 && (level === 'NORMAL' || level === 'ELEVATED')) level = 'HIGH';
   if (breached.length >= 4) level = 'EXTREME';
+
+  // Observed pressure must be able to raise the level even when the traffic
+  // ratio is unknown.
+  //
+  // baselineRps and currentRps are supplied by nothing in this repository, so
+  // `ratio` has always been null, so `level` fell to UNKNOWN on every pass — and
+  // proposeProtectiveActions returns an empty list for UNKNOWN. The consequence
+  // measured in production on 2026-11-08: 8,434 health snapshots recorded, one
+  // distinct state among them (UNKNOWN), and zero protective actions ever
+  // proposed. The platform looked at itself 8,434 times, never reached a
+  // conclusion, and never acted — while its own evidence carried
+  // breached:['p95LatencyMs'] at 2,048ms against a 1,200ms threshold, and
+  // production shed its own admin verification with 429 reasons=latency_or_error
+  // on 2026-11-02.
+  //
+  // A missing ratio is missing evidence about traffic volume. It is not missing
+  // evidence about pressure: p95 and error rate were measured. Escalating on what
+  // was measured is using evidence, not inventing it.
+  //
+  // The asymmetry is deliberate and matches transparency.fabricatedScoresForbidden:
+  // measured breaches raise the level, but no breach plus no ratio stays UNKNOWN
+  // rather than becoming NORMAL. Claiming health without measuring traffic would
+  // be the fabrication this report forbids, and UNKNOWN costs nothing there
+  // because nothing needs doing.
+  if (!Number.isFinite(ratio) && breached.length) {
+    level = breached.length >= 4 ? 'EXTREME' : breached.length >= 2 ? 'HIGH' : 'ELEVATED';
+  }
 
   return {
     level,
     trafficRatio: Number.isFinite(ratio) ? Math.round(ratio * 100) / 100 : null,
     breached,
+    // What the judgement actually rested on, so a level derived without a ratio
+    // is never mistaken for one derived with it.
+    measuredPressure,
+    levelBasis: Number.isFinite(ratio) ? 'traffic_ratio' : breached.length ? 'observed_pressure' : 'insufficient_evidence',
     evidenceComplete: Number.isFinite(ratio)
   };
 }
