@@ -90,10 +90,20 @@ jobs:
             --profile="$EKODI_RESERVATION_PROFILE" \
             --output=ekodi-native-reservations-evidence.json
       - name: EKODI Orchestrator daily satellite source and independent release audit
-        # Existing EKODI 08:45 KST daily schedule; no second cron and no ChatGPT job.
-        if: always() && (github.event.schedule == '45 23 * * *' || github.event_name == 'workflow_dispatch')
+        # The 08:45 KST daily scheduler remains primary. GitHub may delay/drop cron
+        # deliveries: reuse the EXISTING hourly watch for bounded 09-11 KST recovery.
+        # Never introduce a second scheduled runner, mutation or deletion authority.
+        if: always() && (github.event.schedule == '45 23 * * *' || github.event_name == 'workflow_dispatch' || github.event.schedule == '37 * * * *')
         run: |
           set -euo pipefail
+          if [[ "${{ github.event.schedule || '' }}" == '37 * * * *' ]]; then
+            kst_hour="$(TZ=Asia/Seoul date +%H)"
+            if [[ ! "$kst_hour" =~ ^(09|10|11)$ ]]; then
+              echo 'EKODI satellite audit fallback is outside its 09-11 KST recovery window.'
+              exit 0
+            fi
+            echo "EKODI read-only satellite audit recovery (KST hour $kst_hour; existing hourly schedule)." >> "$GITHUB_STEP_SUMMARY"
+          fi
           node scripts/run-ekodi-satellite-retirement-audit.mjs \
             --mode="$EKODI_SATELLITE_AUDIT_MODE" \
             --output-dir=ekodi-satellite-audit
