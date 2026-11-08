@@ -9,3 +9,7 @@ The read-only ACL proof must still execute against canonical Google Drive `permi
 ## 2026-11-08 recheck after main sync
 
 Authenticated full source CI `42400694703` on `2fecdd76cd88ded5b8e12223ad90d0087b6f9336` succeeded; all relevant security and Storage contracts passed. EKODI synced current main to recovery `fa0d2baf484cb0cfd6da354c61073705c2d82b97`, whose `action_required` records do not represent executed tests. This documentation-only continuation requests fresh latest-head CI, with no permission expansion, production data export, restore claims, migrations or economic activation. EKODI Orchestrator must perform protected merge/release.
+
+## 2026-11-08 10:18 KST protected CI retry after GitHub App core quota reset
+
+Official recovery PR #8854 remained open at head `3e15379a5d15917059237349be257c4d034d91c3` despite its original functionality passing source tests. Inspecting the full logs for runs `42401473683`, `42401473634` and `42401473769` identified GitHub App core API quota exhaustion (403 `primary_rate_limit`, remaining=0) when trying to publish required status and query other PRs; this is not a functional ACL test failure. The protected branch gate must run **again** and succeed at the latest official recovery SHA. This documentation-only recovery checkpoint asks fresh owner-connected checks without altering executable ACL policy, sharing memberships, credentials, backup exports, protected release authority or points behavior. No status is fabricated and no approval is inferred.
