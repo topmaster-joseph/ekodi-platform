@@ -5,36 +5,45 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>EKODI Journal</title>
   <meta name="description" content="에코디의 정신, 실천, 기술, 공동체의 배움을 공개적으로 기록하는 저널">
-  <meta name="theme-color" content="#f6f5ef">
+  <meta name="theme-color" content="#fbf9f4">
   <link rel="canonical" href="https://ekodi.kr/journal/">
   <link rel="alternate" type="application/rss+xml" title="EKODI Journal RSS" href="/journal/feed.xml">
-  <link rel="stylesheet" href="/journal/styles.css?v=20261108-overhaul-1">
+  <link rel="alternate" type="application/feed+json" title="EKODI Journal JSON Feed" href="/journal/feed.json">
+  <link rel="stylesheet" href="/journal/styles.css?v=20261108-masthead-1">
 </head>
 <body>
   <main class="journal-shell" id="journal-app">
-    <section class="journal-hero" aria-labelledby="journal-title">
-      <div class="journal-kicker">EKODI · LIVING RECORD</div>
-      <div class="journal-hero-grid">
-        <div>
-          <h1 id="journal-title"><a href="/journal/">EKODI JOURNAL</a></h1>
-          <p class="journal-intro" data-copy="intro">말씀과 삶, 기술과 공동체 사이에서 무엇을 만들고 왜 그렇게 선택했는지를 기록합니다.</p>
-        </div>
-        <p class="journal-manifesto" data-copy="manifesto">기록은 기억을 넘어 책임이 됩니다. 성공뿐 아니라 질문, 실패, 수정, 검증의 흔적까지 남깁니다.</p>
+    <div class="journal-dateline">
+      <span id="journal-today"></span>
+      <span class="journal-dateline-motto" data-copy="motto">말씀과 삶, 기술과 공동체의 공적 기록</span>
+      <span class="journal-dateline-links"><a href="/journal/feed.xml">RSS</a><a href="#journal-readers" data-copy="lettersLink">독자 편지</a></span>
+    </div>
+
+    <header class="journal-hero" aria-labelledby="journal-title">
+      <h1 id="journal-title"><a href="/journal/"><span class="masthead-latin">The EKODI Journal</span><span class="masthead-ko">에코디저널</span></a></h1>
+      <div class="journal-issue-line">
+        <span id="journal-issue"></span>
+        <span class="journal-issue-motto">Verbum · Vita · Technologia · Communitas</span>
+        <span>2026년 9월 창간</span>
       </div>
-    </section>
+      <p class="journal-intro" data-copy="intro">말씀과 삶, 기술과 공동체 사이에서 무엇을 만들고 왜 그렇게 선택했는지를 기록합니다.</p>
+    </header>
+
     <section class="journal-toolbar" aria-label="Journal controls">
-      <div class="journal-section-title">LATEST</div>
-      <div class="journal-controls">
-        <div class="journal-filters" id="journal-filters" aria-label="Categories"></div>
-        <label class="journal-search">
-          <span class="sr-only" data-copy="searchLabel">저널 검색</span>
-          <input id="journal-search" type="search" autocomplete="off" placeholder="검색" aria-keyshortcuts="/">
-          <span aria-hidden="true">⌕</span>
-        </label>
-      </div>
+      <div class="journal-filters" id="journal-filters" aria-label="Categories"></div>
+      <label class="journal-search">
+        <span class="sr-only" data-copy="searchLabel">저널 검색</span>
+        <input id="journal-search" type="search" autocomplete="off" placeholder="검색" aria-keyshortcuts="/">
+        <span aria-hidden="true">⌕</span>
+      </label>
     </section>
 
     <section id="journal-list-view" class="journal-list-view" aria-live="polite">
+      <div id="journal-front" class="journal-front"></div>
+      <div class="journal-archive-head">
+        <h2 data-copy="archive">모든 기록</h2>
+        <span id="journal-count"></span>
+      </div>
       <div id="journal-list" class="journal-list"></div>
       <p id="journal-empty" class="journal-empty" hidden data-copy="empty">조건에 맞는 글이 없습니다.</p>
     </section>
@@ -44,16 +53,30 @@
       <div id="journal-article"></div>
     </article>
 
+    <section class="journal-readers" id="journal-readers" aria-labelledby="journal-readers-title">
+      <div class="journal-readers-copy">
+        <span class="journal-readers-kicker">The EKODI Journal Letter</span>
+        <h2 id="journal-readers-title" data-copy="readersTitle">독자와 함께 쓰는 기록</h2>
+        <p data-copy="readersBody">새 글은 RSS로 받아 보시고, 의견·질문·정정 요청은 편집부에 보내 주세요. 보내 주신 정정은 글 아래 이력으로 남깁니다.</p>
+      </div>
+      <div class="journal-readers-actions">
+        <a class="journal-readers-button is-primary" id="journal-letter" href="mailto:joseph@ekodi.kr?subject=%5B%EC%97%90%EC%BD%94%EB%94%94%EC%A0%80%EB%84%90%5D%20%EB%8F%85%EC%9E%90%20%ED%8E%B8%EC%A7%80" data-copy="letter">독자 편지 보내기</a>
+        <a class="journal-readers-button" href="/journal/feed.xml" data-copy="rss">RSS 구독</a>
+        <a class="journal-readers-button" href="/community/" data-copy="community">커뮤니티에서 이야기하기</a>
+        <span class="journal-readers-desk">편집부 담당 정찬균 · joseph@ekodi.kr</span>
+      </div>
+    </section>
+
     <section class="journal-closing" aria-label="About EKODI Journal">
       <div>
         <span class="journal-closing-label" data-copy="why">WHY JOURNAL</span>
         <h2 data-copy="closingTitle">생각을 저장하지 않고 흘려보냅니다.</h2>
       </div>
       <p data-copy="closingBody">에코디의 기록은 특정 조직 안에 가두기 위한 지식이 아니라, 다음 사람과 공동체가 더 자유롭게 시작할 수 있도록 건네는 공공의 흔적을 지향합니다.</p>
-      <a href="/journal/feed.xml" class="journal-feed">RSS ↗</a>
+      <p class="journal-closing-policy" data-copy="policy">편집 원칙 — 모든 글은 작성 주체(편집부·AI 협업·저자)를 밝히고, 정정 요청을 받으면 글 아래에 이력을 남깁니다.</p>
     </section>
   </main>
   <noscript>EKODI Journal은 목록과 글 보기를 위해 JavaScript가 필요합니다.</noscript>
-  <script type="module" src="/journal/app.js?v=20261108-overhaul-1"></script>
+  <script type="module" src="/journal/app.js?v=20261108-masthead-1"></script>
 </body>
 </html>
