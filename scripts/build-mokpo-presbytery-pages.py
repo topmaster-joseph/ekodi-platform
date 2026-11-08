@@ -123,7 +123,7 @@ def chrome(title, desc, brand_small, brand, nav, body, base):
 
 def home():
     churches = json.loads((SITE / 'data' / 'churches.json').read_text(encoding='utf-8'))
-    order = ['목포', '목포동', '신안', '신안동부', '함무', '미확인']
+    order = ['목포', '목포동', '신안', '신안동부', '함무', '미분류']
     total = sum(len(v) for v in churches.values())
     sichal = [
         ('목포시찰', '목포', '장로회원 21명', None),
@@ -155,7 +155,7 @@ def home():
         names = churches.get(key, [])
         if not names:
             continue
-        label = f'{key}시찰' if key != '미확인' else '시찰 확인 중'
+        label = f'{key}시찰' if key != '미분류' else '미분류 (확인 후 분류)'
         groups += f'<details{" open" if key == "함무" else ""}><summary>{E(label)}<span>{len(names)}곳</span></summary><ul>' + ''.join(f'<li>{E(c)}교회</li>' if not c.endswith('교회') else f'<li>{E(c)}</li>' for c in names) + '</ul></details>'
     body = f'''<section class="hero"><div class="wrap"><div><span class="kicker">The Presbytery of Mokpo · 135th Session</span>
 <h1>생명의 하나님,<br>우리를 하나 되게 하소서</h1>
@@ -169,7 +169,7 @@ def home():
 <div class="grid"><a class="card" href="http://cafe.daum.net/pckmp" rel="noopener"><span class="pill">공식 출처</span><h3>목포노회 카페</h3><p>노회 공식 공지와 행정 안내</p><span class="go">원문 보기 →</span></a><a class="card" href="https://www.pck.or.kr/" rel="noopener"><span class="pill">공식 출처</span><h3>대한예수교장로회 총회</h3><p>총회 행정·교육·선교 안내</p><span class="go">원문 보기 →</span></a><a class="card" href="/hammu/"><span class="pill on">시찰회</span><h3>함무시찰회 공지</h3><p>시찰회가 직접 등록·관리하는 공지</p><span class="go">공지 보기 →</span></a></div></div></section>
 <section id="sichal"><div class="wrap"><div class="sh"><div><span class="kicker">시찰회</span><h2>다섯 시찰회</h2></div><p>시찰회마다 같은 엔진 위에 독립 공간을 두고, 임원·공지·회계·출석을 각자 관리합니다.</p></div><div class="grid five">{sc_cards}</div></div></section>
 <section id="departments"><div class="wrap"><div class="sh"><div><span class="kicker">부서 · 위원회</span><h2>부서와 위원회</h2></div><p>선교부가 첫 번째로 업무공간을 엽니다. 다른 부서와 위원회는 같은 방식으로 이어서 열 수 있습니다.</p></div><div class="grid">{depts}</div></div></section>
-<section id="churches"><div class="wrap"><div class="sh"><div><span class="kicker">소속 교회</span><h2>함께하는 교회</h2></div><p>제135회 정기회 회원명부의 「산하교회 주소 및 교역자 명단」을 기준으로 시찰별·명부 순서대로 정리했습니다.</p></div><div class="churches">{groups}</div><p class="note">교회 이름만 게시하며 주소·연락처는 게시하지 않습니다. 누락·오기는 노회 서기에게 알려 주십시오.</p></div></section>
+<section id="churches"><div class="wrap"><div class="sh"><div><span class="kicker">소속 교회</span><h2>함께하는 교회</h2></div><p>제135회 정기회 회원명부의 「산하교회 주소 및 교역자 명단」을 기준으로 시찰별·명부 순서대로 정리했습니다.</p></div><div class="churches">{groups}</div><p class="note">교회 이름만 게시하며 주소·연락처는 게시하지 않습니다. 누락·오기는 노회 서기에게 알려 주십시오.</p><p><a class="go" href="/mokpo-presbytery/roster/">회원명부 열람 (관리자 전용 · 2중확인) →</a></p></div></section>
 <section id="schedule"><div class="wrap"><div class="sh"><div><span class="kicker">회의 · 일정</span><h2>노회 일정</h2></div><p>확정된 일정만 게시합니다.</p></div>
 <div class="timeline"><div><b>2026. 10. 20.(화) 제135회 정기회</b><span>양동제일교회당</span></div><div class="next"><b>다음 정기회</b><span>일정 확정 후 게시합니다.</span></div></div></div></section>
 <section id="library"><div class="wrap"><div class="sh"><div><span class="kicker">자료실</span><h2>기준 자료</h2></div><p>공개 가능한 자료의 목록입니다. 원본 파일은 권한 확인 후 제공합니다.</p></div>
@@ -300,6 +300,27 @@ def viewer_page():
     return chrome('로그인 · 목포노회 선교부', '목포노회 선교부 로그인', '목포노회', '선교부', mission_nav('/mokpo-presbytery/mission/'), body, '/mokpo-presbytery/mission/')
 
 
+def roster_page():
+    body = f'''<style>
+.hero-center .wrap{{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center}}.hero-center h1{{margin-inline:auto}}.hero-center p.lead{{margin-inline:auto}}
+.lg-wrap{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;max-width:860px;margin:0 auto}}.lg-wrap.one{{max-width:460px}}
+.lg-card{{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}}.lg-card h2{{margin:0 0 6px;font-size:20px}}
+.lg-card label{{display:block;font-size:14px;font-weight:600;margin:12px 0 5px}}.lg-card input{{width:100%;font:inherit;font-size:22px;letter-spacing:.2em;text-align:center;padding:12px;border:1px solid #c7d1ce;border-radius:9px}}
+.vw-btn{{display:block;width:100%;margin-top:16px;padding:14px;border:0;border-radius:11px;background:var(--sea);color:#fff;font:700 16px/1.4 inherit;cursor:pointer;text-align:center;text-decoration:none}}.vw-btn[disabled]{{opacity:.6}}
+.vw-err{{color:#b23b3b;font-size:14px;margin-top:10px;min-height:1em}}
+.rs-bar{{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}}.rs-bar input{{flex:1 1 240px;font:inherit;padding:10px 12px;border:1px solid #c7d1ce;border-radius:9px}}
+.rs-view details{{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0}}.rs-view summary{{cursor:pointer;padding:14px 18px;font-weight:700;display:flex;justify-content:space-between}}.rs-view summary span{{color:var(--muted);font-weight:500}}
+.rs-table{{overflow-x:auto;padding:0 12px 14px}}.rs-table table{{border-collapse:collapse;width:100%;font-size:13.5px;min-width:860px}}.rs-table th,.rs-table td{{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}}.rs-table th{{background:var(--soft);white-space:nowrap}}
+.rp-link{{background:none;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font:inherit;font-size:13px;cursor:pointer}}.rs-move{{display:inline-flex;gap:6px}}
+</style>
+<section class="hero hero-center"><div class="wrap"><div><span class="kicker">관리자 전용 · 2중확인</span><h1>목포노회 회원명부</h1><p class="lead">제135회 정기회 회원명부 기준입니다. 에코디 로그인 후 이메일 인증코드를 한 번 더 확인해야 열립니다. 확인되지 않은 명단은 미분류로 두고, 확인되면 시찰로 옮깁니다.</p></div></div></section>
+<main><section><div class="wrap"><div id="rosterApp" data-supabase="{SUPABASE_URL}" data-key="{SUPABASE_PUBLISHABLE_KEY}"><noscript><p class="note">이 화면은 자바스크립트가 필요합니다.</p></noscript></div></div></section></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="/mokpo-presbytery/roster/roster.js" defer></script>'''
+    nav = [('노회 홈', '/mokpo-presbytery/', False), ('소속 교회', '/mokpo-presbytery/#churches', False), ('선교부', '/mokpo-presbytery/mission/', False)]
+    return chrome('회원명부 · 목포노회 (관리자 전용)', '목포노회 회원명부 관리자 전용 열람', '대한예수교장로회', '목포노회', nav, body, '/mokpo-presbytery/')
+
+
 if __name__ == '__main__':
     (SITE / 'index.html').write_text(home(), encoding='utf-8')
     (SITE / 'mission' / 'index.html').write_text(mission(), encoding='utf-8')
@@ -307,4 +328,6 @@ if __name__ == '__main__':
     (SITE / 'mission' / 'policy-council-2026' / 'index.html').write_text(policy_council(), encoding='utf-8')
     (SITE / 'mission' / 'viewer').mkdir(parents=True, exist_ok=True)
     (SITE / 'mission' / 'viewer' / 'index.html').write_text(viewer_page(), encoding='utf-8')
+    (SITE / 'roster').mkdir(parents=True, exist_ok=True)
+    (SITE / 'roster' / 'index.html').write_text(roster_page(), encoding='utf-8')
     print('wrote', SITE / 'index.html', SITE / 'mission' / 'index.html')

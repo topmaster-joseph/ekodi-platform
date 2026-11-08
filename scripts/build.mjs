@@ -88,6 +88,9 @@ await cp(`${root}sites/mokpo-presbytery/mission/site.js`, `${output}mokpo-presby
 await mkdir(`${output}mokpo-presbytery/mission/viewer/`, { recursive: true });
 await cp(`${root}sites/mokpo-presbytery/mission/viewer/index.html`, `${output}mokpo-presbytery/mission/viewer/index.html`);
 await cp(`${root}sites/mokpo-presbytery/mission/viewer/viewer.js`, `${output}mokpo-presbytery/mission/viewer/viewer.js`);
+await mkdir(`${output}mokpo-presbytery/roster/`, { recursive: true });
+await cp(`${root}sites/mokpo-presbytery/roster/index.html`, `${output}mokpo-presbytery/roster/index.html`);
+await cp(`${root}sites/mokpo-presbytery/roster/roster.js`, `${output}mokpo-presbytery/roster/roster.js`);
 await cp(`${root}config/capability-registry.json`, `${output}capability-registry.json`);
 await cp(`${root}config/capability-foundry.json`, `${output}capability-foundry.json`);
 

@@ -53,6 +53,7 @@ on:
       - 'supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql'
       - 'supabase/migrations/20261106090000_mokpo_mission_inline_roles.sql'
       - 'supabase/migrations/20261106120000_mokpo_mission_name_login.sql'
+      - 'supabase/migrations/20261109090000_mokpo_mission_department_roster.sql'
       - 'supabase/migrations/20261031210000_organization_budget_lines.sql'
       - 'supabase/migrations/20260909001000_public_storefront.sql'
       - 'supabase/migrations/20260913013000_ekodimall_canonical_path.sql'
@@ -112,6 +113,7 @@ on:
       - 'supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql'
       - 'supabase/migrations/20261106090000_mokpo_mission_inline_roles.sql'
       - 'supabase/migrations/20261106120000_mokpo_mission_name_login.sql'
+      - 'supabase/migrations/20261109090000_mokpo_mission_department_roster.sql'
       - 'supabase/migrations/20261031210000_organization_budget_lines.sql'
       - 'supabase/migrations/20260909001000_public_storefront.sql'
       - 'supabase/migrations/20260913013000_ekodimall_canonical_path.sql'
@@ -149,6 +151,7 @@ env:
   MOKPO_ROSTER_VIEWER_MIGRATION: supabase/migrations/20261105210000_mokpo_mission_roster_pin_viewer.sql
   MOKPO_INLINE_ROLES_MIGRATION: supabase/migrations/20261106090000_mokpo_mission_inline_roles.sql
   MOKPO_NAME_LOGIN_MIGRATION: supabase/migrations/20261106120000_mokpo_mission_name_login.sql
+  MOKPO_DEPT_ROSTER_MIGRATION: supabase/migrations/20261109090000_mokpo_mission_department_roster.sql
   BBQ_WORKSPACE_MIGRATION: supabase/migrations/20261108104500_bbqcg_hard_cutover.sql
   BBQ_WORKSPACE_PINNED_BLOB: 3fb20a5e441b0f68474a2870026dd4085f62df2c
   BBQ_DEV_PROJECT: lxcxwbdwwojjkgybbqii
@@ -364,7 +367,8 @@ jobs:
             to_regprocedure('public.mission_activity_page_update(text,text,text,text,text,date,time without time zone,bigint)') is not null as mission_editor_update,
             to_regprocedure('public.organization_pin_snapshot(text,text)') is not null and to_regprocedure('public.organization_event_roster_public(text,text)') is not null and to_regprocedure('public.organization_pin_viewer_set(text,text,text,text)') is not null as mokpo_roster_viewer,
             to_regprocedure('public.organization_site_context(text)') is not null and to_regprocedure('public.organization_member_snapshot(text)') is not null and to_regprocedure('public.organization_pin_budget_approve(text,text,integer)') is not null as mokpo_inline_roles,
-            to_regprocedure('public.organization_name_login(text,text,text)') is not null and to_regprocedure('public.organization_login_member_set(text,text,text,text)') is not null as mokpo_name_login;"
+            to_regprocedure('public.organization_name_login(text,text,text)') is not null and to_regprocedure('public.organization_login_member_set(text,text,text,text)') is not null as mokpo_name_login,
+            to_regprocedure('public.organization_department_roster(text,text)') is not null and to_regprocedure('public.organization_department_roster_set(text,jsonb)') is not null as mokpo_dept_roster;"
 
           query_sql "$proof_sql" /tmp/space-schema-before.json
 
@@ -392,9 +396,12 @@ jobs:
           if ! grep -Fq '"mokpo_name_login":true' /tmp/space-schema-before.json; then
             apply_migration "$MOKPO_NAME_LOGIN_MIGRATION"
           fi
+          if ! grep -Fq '"mokpo_dept_roster":true' /tmp/space-schema-before.json; then
+            apply_migration "$MOKPO_DEPT_ROSTER_MIGRATION"
+          fi
 
           query_sql "$proof_sql" /tmp/space-schema-after.json
-          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"mokpo_organizations":true' '"organization_budget":true' '"mission_editor_table":true' '"mission_editor_public":true' '"mission_editor_update":true' '"mokpo_roster_viewer":true' '"mokpo_inline_roles":true' '"mokpo_name_login":true'; do
+          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"mokpo_organizations":true' '"organization_budget":true' '"mission_editor_table":true' '"mission_editor_public":true' '"mission_editor_update":true' '"mokpo_roster_viewer":true' '"mokpo_inline_roles":true' '"mokpo_name_login":true' '"mokpo_dept_roster":true'; do
             grep -Fq "$marker" /tmp/space-schema-after.json || { echo "Missing required Space Supabase contract: $marker"; cat /tmp/space-schema-after.json; exit 1; }
           done
 
@@ -667,6 +674,9 @@ jobs:
             member=$(curl -sS -o /tmp/mokpo-member-proof.json -w '%{http_code}' -X POST "$base/organization_member_snapshot" \
               -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H 'Content-Type: application/json' --data '{"p_slug":"mokpo-mission"}')
             case "$member" in 4*) ;; *) echo "organization_member_snapshot served an anonymous caller (HTTP $member)" >&2; exit 1;; esac
+            dept=$(curl -sS -o /tmp/mokpo-dept-proof.json -w '%{http_code}' -X POST "$base/organization_department_roster" \
+              -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H 'Content-Type: application/json' --data '{"p_slug":"mokpo-mission","p_token":"invalid"}')
+            case "$dept" in 4*) ;; *) echo "organization_department_roster served an anonymous caller (HTTP $dept)" >&2; exit 1;; esac
             echo 'Mokpo mission roster/viewer RPCs: masked public roster, refused bad PIN and token, anonymous approval and member reads refused.'
           fi
 
