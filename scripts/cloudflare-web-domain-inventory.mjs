@@ -15,6 +15,17 @@ function add(registry,host,kind,details={}){
   if(details.dnsType&&!rec.dnsTypes.includes(details.dnsType))rec.dnsTypes.push(details.dnsType);
   if(details.service&&!rec.services.includes(details.service))rec.services.push(details.service);
 }
+// Cloudflare Pages project listing can reject a 100-item page request.
+// Use its documented plain first-page GET and conservative 20-item paging
+// rather than treating a 400 as an empty project inventory.
+function inventoryPageRequest(endpoint,page){
+  const pagesProjects=/\/accounts\/[^/]+\/pages\/projects$/.test(endpoint);
+  const perPage=pagesProjects?20:100;
+  if(pagesProjects&&page===1)return{url:endpoint,perPage};
+  const sep=endpoint.includes('?')?'&':'?';
+  return{url:endpoint+sep+'page='+page+'&per_page='+perPage,perPage};
+}
+
 function classify(registry){
   return [...registry.values()].sort((a,b)=>a.host.localeCompare(b.host)).map(row=>{
     row.sources.sort();row.dnsTypes.sort();row.services.sort();
@@ -40,6 +51,14 @@ if(SELF_TEST){
   const rows=classify(test);
   const worker=rows.find(x=>x.host===admin),smtp=rows.find(x=>x.host===mail),star=rows.find(x=>x.host===wildcard);
   if(rows.length!==3||!worker?.hasWorkerBinding||smtp?.emailOrVerificationRecord!==true||!star?.dnsOnlyUnknownPurpose)throw new Error('Inventory classification self-test failed');
+  const projects='/accounts/test-account/pages/projects';
+  const first=inventoryPageRequest(projects,1);
+  const second=inventoryPageRequest(projects,2);
+  const dns=inventoryPageRequest('/zones/test-zone/dns_records',1);
+  if(first.url!==projects||first.perPage!==20||
+     second.url!==projects+'?page=2&per_page=20'||second.perPage!==20||
+     dns.url!=='/zones/test-zone/dns_records?page=1&per_page=100'||dns.perPage!==100)
+    throw new Error('Cloudflare read-only inventory pagination self-test failed');
   console.log('Cloudflare domain inventory self-test OK');
   process.exit(0);
 }
@@ -68,11 +87,14 @@ async function get(endpoint){
 async function pages(endpoint){
   const all=[];
   for(let page=1;page<=30;page++){
-    const sep=endpoint.includes('?')?'&':'?';
-    const data=await get(endpoint+sep+'page='+page+'&per_page=100');
+    const request=inventoryPageRequest(endpoint,page);
+    const data=await get(request.url);
     if(!Array.isArray(data.result))throw new Error('Unexpected Cloudflare list response');
     all.push(...data.result);
-    if(data.result.length<100||page>=(data.result_info?.total_pages||Infinity))return all;
+    const count=Number(data.result_info?.total_pages);
+    const knownPages=Number.isInteger(count)&&count>=1;
+    if(knownPages&&page>=count)return all;
+    if(!knownPages&&data.result.length<request.perPage)return all;
   }
   throw new Error('Inventory pagination exceeded 30 pages');
 }
