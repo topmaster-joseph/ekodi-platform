@@ -167,6 +167,16 @@ Before changing production routing, authentication or privileged AI behavior:
 
 When an incident occurs, find and fix the root cause. Do not push browser workarounds onto users unless evidence shows the browser is actually the cause.
 
+### Local PC site checks are background-only (EKODI-SITE-CHECK-001)
+
+Any AI or automation (Claude, Codex, GPT, EKODI Orchestrator, device agent) checking a site on the owner's local PC must not leave windows or tabs behind.
+
+- Default: run headless with `tools/ekodi-device-agent/windows/ekodi-site-check.ps1 -Url <url> [-Screenshot]` (or the EKODI Background Browser Worker). No window appears.
+- Never open URLs in the user's default browser or profile: no `Start-Process <url>`, `cmd /c start <url>`, `explorer <url>`, `rundll32 url.dll`, and no computer-use clicks that open new tabs in Opera/Chrome/Edge for verification.
+- Only when a human must see the page: `-Visible -AutoCloseSeconds <=600` (default 60). It opens an EKODI-owned temporary-profile window and always closes it and deletes the profile, even on failure.
+- Interactive logins stay under EKODI-INTERACTIVE-AUTH-001 (consent + owned profile + close on completion).
+- `test/ekodi-site-check-background-only.test.mjs` enforces this rule.
+
 ## 14. Current automated safeguards
 
 The repository contains business contract tests, production/revenue gates, platform-boundary validation, security validation, deployment guardrails and AI mission-governance validation. Do not weaken or bypass them to make a deployment green. Fix the underlying defect.
