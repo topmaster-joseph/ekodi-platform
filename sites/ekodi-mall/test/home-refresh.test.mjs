@@ -162,8 +162,8 @@ test('book cards use concise copy and verified prices or an explicit unknown-pri
   assert.match(build, /product\.category === 'book' \? 34 : 46/);
   assert.match(build, /'가격 확인 · '/);
   assert.match(build, /category-availability\.json/);
-  assert.match(books, /const verifiedAmount = Number\(quote\.price\.amount\)/);
-  assert.match(books, /released\.set\(book\.bookId, \{ \.\.\.book, price: verifiedAmount \}\)/);
+  assert.match(books, /price: Number\(quote\?\.price\?\.amount\)/);
+  assert.match(books, /productCard\(\{ \.\.\.result\.book, price: result\.price \}\)/);
   assert.match(books, /readyQuote\(quote, book\.bookId\)/);
   assert.match(books, /가격 확인 · 판매 상태 확인 필요/);
   assert.match(books, /const quote = await quoteFor\(book\.bookId\)/);
@@ -240,8 +240,8 @@ test('unified search does not revive unapproved live-quote bookstore products', 
   assert.match(js, /card\.dataset\.bookstoreQuotePending !== 'true'/);
   assert.match(js, /raw\?\.product\?\.source\?\.system === 'ekodi-bookstore'/);
   assert.match(js, /ekodi:marketplace-products-loaded/);
-  assert.match(books, /existing\.dataset\.bookstoreQuotePending = 'false'/);
-  assert.match(books, /existing\.dataset\.bookstoreQuotePending = 'true'/);
+  assert.match(books, /card\.dataset\.bookstoreQuotePending = 'false'/);
+  assert.match(books, /card\.dataset\.bookstoreQuotePending = 'true'/);
 });
 
 test('Toss merchant-review first fold shows sale catalog before full policy disclosures', () => {
