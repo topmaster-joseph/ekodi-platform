@@ -268,7 +268,18 @@ const productionOrder = await page.evaluate(() => window.EKODIAdminPanels?.visib
 if (productionOrder.length !== menuIds.length) throw new Error(`Production menu count drifted: registry=${menuIds.length}, production=${productionOrder.length}`);
 for (const id of menuIds) if (!productionOrder.includes(id)) throw new Error(`Production menu registry missing ${id}`);
 
+// ADMIN-PANEL-TABS: 관리자 화면 블록이 탭으로 나뉘어 있으면, 조작 전에 해당 탭을 연다.
+async function revealPanelTab(locator, timeout = 10_000) {
+  try {
+    await locator.first().waitFor({ state: 'attached', timeout });
+    await locator.first().evaluate(node => window.EKODIAdminPanelTabs?.reveal?.(node) || false);
+  } catch {
+    // The following visibility wait reports the real failure.
+  }
+}
+
 async function dispatchClick(locator, timeout = 10_000) {
+  await revealPanelTab(locator, timeout);
   await locator.waitFor({ state: 'visible', timeout });
   await locator.evaluate(node => { node.click(); return true; });
 }
@@ -679,12 +690,16 @@ for (const [id, group] of menus) {
     const search=page.locator('#ekodiInfraCosts [data-infra-invoice-search]');
     const status=page.locator('#ekodiInfraCosts [data-infra-invoice-filter]');
     const count=page.locator('#ekodiInfraCosts [data-infra-filter-count]');
+    await revealPanelTab(search);
     await search.fill('TEST-CF-001');
     if((await count.textContent())?.trim()!=='1 / 2건 표시')throw new Error('INFRA_COST_SEARCH_E2E failed');
+    await revealPanelTab(status);
     await status.selectOption('paid');
     if((await count.textContent())?.trim()!=='0 / 2건 표시')throw new Error('INFRA_COST_FILTER_E2E failed');
+    await revealPanelTab(page.locator('#ekodiInfraCosts [data-infra-filter-reset]'));
     await page.locator('#ekodiInfraCosts [data-infra-filter-reset]').click();
     if((await count.textContent())?.trim()!=='2 / 2건 표시')throw new Error('INFRA_COST_FILTER_RESET_E2E failed');
+    await revealPanelTab(page.locator('#ekodiInfraCosts [data-infra-open-invoice]'));
     await page.locator('#ekodiInfraCosts [data-infra-open-invoice]').click();
     if(!(await page.locator('#ekodiInfraCosts [data-infra-invoice-editor]').evaluate(node=>node.open)))
       throw new Error('INFRA_COST_INVOICE_EDITOR_E2E failed');
@@ -851,15 +866,19 @@ for (const [id, group] of menus) {
           const serviceGrid=panel?.querySelector('#structureServiceRegistry .structure-service-grid');
           const platformGrid=panel?.querySelector('#ekodiArchitectureMap .system-map-platform-grid');
           const flow=panel?.querySelector('#structureFlow');
-          const cols=node => node ? getComputedStyle(node).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length : 0;
+          // 탭으로 나뉜 블록은 측정 직전에 그 탭을 연다(ADMIN-PANEL-TABS).
+          const show=node => { if (node) window.EKODIAdminPanelTabs?.reveal?.(node); return node; };
+          const cols=node => node ? getComputedStyle(show(node)).gridTemplateColumns.trim().split(/\s+/).filter(Boolean).length : 0;
+          show(flow);
           const arrows=flow?[...flow.children].filter(el=>el.tagName==='B'):[],arrowWidths=arrows.map(el=>Math.round(el.getBoundingClientRect().width));
+          const arrowVisibleCount=arrows.filter(el=>getComputedStyle(el).display!=='none').length;
           return {
             viewport:innerWidth, panelVisible:Boolean(panel&&!panel.hidden&&!panel.classList.contains('hidden-panel')&&getComputedStyle(panel).display!=='none'),
             layers:cols(layers), services:serviceGrid?cols(serviceGrid):null,
             platform:platformGrid?cols(platformGrid):null,
             layerCards:layers?.querySelectorAll(':scope > article').length||0,
             flowCards:flow?.querySelectorAll(':scope > div').length||0,
-            arrows:arrowWidths, arrowVisible:arrows.filter(el=>getComputedStyle(el).display!=='none').length,
+            arrows:arrowWidths, arrowVisible:arrowVisibleCount,
             documentOverflow:Math.max(0,document.documentElement.scrollWidth-innerWidth),
             layerOverflow:layers?Math.max(0,layers.scrollWidth-layers.clientWidth):0,
             panelWidth:Math.round(panel?.getBoundingClientRect().width||0),
