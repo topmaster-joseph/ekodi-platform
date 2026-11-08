@@ -614,7 +614,7 @@ async function readSharedPublicSchedules(env,instance){
     if(!items.some(item=>item.source==='ekodichurch'&&item.date===event.date&&item.title===event.title))items.push(event);
   }
   for(const event of churchSundayWorshipEvents(today)){
-    if(items.some(item=>item.source==='ekodichurch'&&item.date===event.date&&/주일/.test(item.title)))continue;
+    if(items.some(item=>item.source==='ekodichurch'&&item.date===event.date&&item.kind==='official-post'&&/주일/.test(item.title)))continue;
     items.push(event);
   }
   items.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)||a.source.localeCompare(b.source));
