@@ -164,7 +164,9 @@
   }
   function readerBlocks(body) {
     const nodes = [];
-    for (const block of String(body || '').split(/\n{2,}/)) {
+    // 인용(>) 줄이 문단 안에 붙어 있어도 따로 떼어 인용 상자로 보이게 한다(EPUB 변환과 같은 규칙).
+    const src = String(body || '').replace(/\r/g, '').replace(/([^\n])\n(?=>)/g, '$1\n\n').replace(/(^|\n)(>[^\n]*)\n(?=[^>\n])/g, '$1$2\n\n');
+    for (const block of src.split(/\n{2,}/)) {
       const t = block.trim(); if (!t) continue;
       const lines = t.split('\n');
       if (/^#{1,4}\s/.test(t) && lines.length === 1) { nodes.push(el('h3', { className: 'rd-h' }, ...inline(t.replace(/^#+\s*/, '')))); continue; }
@@ -184,6 +186,14 @@
       nodes.push(el('p', {}, ...inline(lines.join(' '))));
     }
     return nodes;
+  }
+  // 삽화가 깨지면(빈 응답·손상된 데이터) 깨진 그림 대신 그 자리를 숨긴다.
+  function figImg(r, title) {
+    const img = el('img', { alt: `${title} 삽화`, decoding: 'async' });
+    const hide = () => { const f = img.closest('figure'); if (f) f.hidden = true; else img.remove(); };
+    img.addEventListener('error', hide, { once: true });
+    if (r && r.data) img.src = `data:${r.mime || 'image/jpeg'};base64,${r.data}`; else queueMicrotask(hide);
+    return img;
   }
   function ebookReader(d, getChapter, onEdit) {
     const pages = [{ kind: 'cover' }, { kind: 'toc' }, ...d.chapters.map(c => ({ kind: 'ch', number: c.number }))];
@@ -219,7 +229,7 @@
         const c = getChapter(p.number);
         page.append(el('p', { className: 'rd-ch-no', textContent: `${p.number}장` }), el('h2', { className: 'rd-ch-title', textContent: c.title }));
         const fig = el('figure', { className: 'rd-fig' });
-        api(`admin/ai-books/${d.book.id}/images/${p.number}`).then(r => { if (pages[at] === p) fig.append(el('img', { src: `data:${r.mime};base64,${r.data}`, alt: `${c.title} 삽화` })); }).catch(() => {});
+        api(`admin/ai-books/${d.book.id}/images/${p.number}`).then(r => { if (pages[at] === p) fig.append(figImg(r, c.title)); }).catch(() => {});
         page.append(fig, ...(c.body.trim() ? readerBlocks(c.body) : [el('p', { className: 'rd-empty', textContent: '아직 쓰지 않은 장입니다.' })]));
       }
       pos.textContent = p.kind === 'cover' ? '표지' : p.kind === 'toc' ? '차례' : `${p.number} / ${d.chapters.length}장`;
@@ -248,7 +258,7 @@
       const save = el('button', { type: 'button', className: 'button', textContent: `${c.number}장 저장` });
       save.addEventListener('click', async () => { msg.textContent = '저장 중…'; try { await api(`admin/ai-books/${id}/chapters/${c.number}`, { title: title.value, body: body.value }, 'PUT'); msg.textContent = `${c.number}장을 저장했습니다.`; } catch (e) { msg.textContent = '저장하지 못했습니다.'; } });
       const fig = el('figure', { className: 'padmin-ai-fig' });
-      api(`admin/ai-books/${id}/images/${c.number}`).then(r => fig.append(el('img', { src: `data:${r.mime};base64,${r.data}`, alt: `${c.title} 삽화` }))).catch(() => {});
+      api(`admin/ai-books/${id}/images/${c.number}`).then(r => fig.append(figImg(r, c.title))).catch(() => {});
       const sec = el('section', { className: 'padmin-ai-ch', id: `ai-ch-${c.number}` }, el('h3', { textContent: `${c.number}장 · ${({ pending: '아직 안 씀', drafted: 'AI 초안(편집 완료)', edited: '감수 중' })[c.status] || c.status}` }), fig, title, body, save);
       editors.set(c.number, { title, body }); editSections.push(sec);
       body.addEventListener('input', () => reader?.refresh()); title.addEventListener('input', () => reader?.refresh());
