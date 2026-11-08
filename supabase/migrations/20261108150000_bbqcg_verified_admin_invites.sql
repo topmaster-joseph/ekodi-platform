@@ -63,6 +63,10 @@ exception when others then
 end
 $bbq_auth_bridge$;
 
+-- Executed by trusted database triggers/management only, never as an open Data API RPC.
+revoke all on function public.apply_preregistered_access(uuid) from public, anon, authenticated;
+revoke all on function public.handle_auth_user_access() from public, anon, authenticated;
+
 -- An unverified signup is ineligible. Email confirmation updates must re-run
 -- the guard so the pending (site-scoped) role becomes active only after verification.
 drop trigger if exists on_auth_user_access on auth.users;
