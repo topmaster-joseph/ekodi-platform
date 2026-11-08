@@ -48,6 +48,7 @@ main>.muted{font-size:12px;margin:12px 3px;line-height:1.65}
 .admin-tabs button:hover{background:#ecf5ee;color:#17513a}
 .admin-tabs button[aria-selected="true"]{background:linear-gradient(115deg,#1b6143,#104731);color:#fff;box-shadow:0 3px 10px #12472c23}
 .admin-tabs button:focus-visible{outline:3px solid #8bc59e;outline-offset:2px}
+.admin-tabs button:disabled{opacity:.48;cursor:not-allowed;background:#f6f9f6;color:#758578}
 .panel input,.panel textarea,.panel select{background:#fbfdfb;border-color:#d0dfd4;color:#153f2c}
 button:not([role="tab"]){border-color:#1b6040;background:#1b6040}
 button.secondary{background:#fff;color:#285a3c}
@@ -79,8 +80,8 @@ button.secondary{background:#fff;color:#285a3c}
 <section class="panel"><div class="row"><label>업체 관리자 인증키<input id="adminKey" type="password" autocomplete="off" placeholder="서버에 등록된 관리자 키"></label><button id="load">신청 목록 조회</button></div><p id="message" role="status" aria-live="polite"></p></section>
 <nav class="admin-tabs" role="tablist" aria-label="업체 관리자 세부 메뉴">
   <button type="button" role="tab" aria-selected="true" tabindex="0" id="adminTabList" aria-controls="adminApplications" data-admin-tab="list">신청목록</button>
-  <button type="button" role="tab" aria-selected="false" tabindex="-1" id="adminTabReview" aria-controls="detail" data-admin-tab="review">견적·계약검토</button>
-  <button type="button" role="tab" aria-selected="false" tabindex="-1" id="adminTabSettlement" aria-controls="opsDetail" data-admin-tab="settlement">정산·종료관리</button>
+  <button type="button" role="tab" aria-selected="false" tabindex="-1" id="adminTabReview" aria-controls="detail" data-admin-tab="review" disabled aria-disabled="true">견적·계약검토</button>
+  <button type="button" role="tab" aria-selected="false" tabindex="-1" id="adminTabSettlement" aria-controls="opsDetail" data-admin-tab="settlement" disabled aria-disabled="true">정산·종료관리</button>
 </nav>
 <section class="panel" id="adminApplications" role="tabpanel" aria-labelledby="adminTabList" data-admin-panel="list"><h2>접수된 신청</h2><div id="tableWrap"><table><thead><tr><th>신청번호 / 상태</th><th>신청인·기관</th><th>서비스·기간</th><th>견적</th><th>선택</th></tr></thead><tbody id="rows"><tr><td colspan="5">관리자 인증 후 목록을 조회합니다.</td></tr></tbody></table></div></section>
 <section class="panel" id="detail" role="tabpanel" aria-labelledby="adminTabReview" data-admin-panel="review" hidden>

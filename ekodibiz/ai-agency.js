@@ -177,6 +177,10 @@
       if(!receipt||receipt.id!==queried.id||receipt.receiptToken!==queried.receiptToken)return;
       current=null;campusReport=null;checkout=null;widgets=null;loadedKey='';
       $('result').hidden=true;$('campusPanel').hidden=true;$('tossPanel').hidden=true;
+      $('contractEmpty').hidden=false;
+      $('campusCycleDetails').open=false;
+      $('cycleOverview').textContent='조회된 계약의 결제기록을 확인하세요.';
+      $('campusPeriods').replaceChildren();
       message(error.message, true);
     }
   }
@@ -264,18 +268,30 @@
     try {
       checkout = await api('/checkout', receipt);
       if (!checkout.clientKey || !checkout.amount) throw new Error('결제정보가 준비되지 않았습니다.');
+      // Payment methods need a visible, measured container before the SDK renders.
+      // Backend /checkout approval remains mandatory before anything is displayed.
+      $('tossPanel').hidden = false;
+      activateTab('contract');
       await loadToss();
-      if (loadedKey !== checkout.clientKey) {
+      if (loadedKey !== checkout.clientKey || !widgets) {
         widgets = window.TossPayments(checkout.clientKey).widgets({customerKey:'ANONYMOUS'});
         await widgets.setAmount({currency:'KRW',value:checkout.amount});
         await widgets.renderPaymentMethods({selector:'#tossMethods',variantKey:'DEFAULT'});
         await widgets.renderAgreement({selector:'#tossAgreement',variantKey:'AGREEMENT'});
         loadedKey = checkout.clientKey;
+      } else {
+        // Do not leave an earlier contract's amount in a reused widget.
+        await widgets.setAmount({currency:'KRW',value:checkout.amount});
       }
-      $('tossPanel').hidden = false;
-      activateTab('contract');
       message((checkout.mode === 'test' ? '시험결제' : '승인된 실결제') + ' 금액: ' + won(checkout.amount), false);
-    } catch (error) { message(error.message, true); }
+    } catch (error) {
+      // A refused checkout or failed SDK must never reveal stale payment methods.
+      $('tossPanel').hidden = true;
+      checkout = null;
+      loadedKey = '';
+      widgets = null;
+      message(error.message, true);
+    }
     finally { button.disabled = false; }
   });
   $('tossPayBtn').addEventListener('click', async () => {

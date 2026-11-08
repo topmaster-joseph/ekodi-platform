@@ -175,7 +175,19 @@ footer .inner{max-width:1230px}
  .guide-grid{grid-template-columns:1fr}
  .result dl{grid-template-columns:95px minmax(0,1fr)}
 }
-@media(max-width:390px){.agency-tab{font-size:10px}.agency-tabs{overflow-x:auto;display:flex}.agency-tab{flex:1 0 auto;white-space:nowrap;padding:9px 6px} .panel-note{display:none}}
+@media(max-width:440px){
+  /* Keep all five tabs discoverable without horizontal scrolling on narrow phones. */
+  .agency-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;gap:3px}
+  .agency-tab{min-width:0;min-height:43px;padding:8px 3px;font-size:11px;white-space:normal;line-height:1.25}
+  #agencyForm .choice{grid-template-columns:1fr}
+  #agencyForm .choice label{min-height:54px}
+  .panel-note{display:none}
+}
+@media(max-width:340px){
+  .agency-tab{font-size:10px}
+  .agency-hero{padding:15px 12px}
+  .agency-pane.card{padding:15px 11px}
+}
 @media(prefers-reduced-motion:reduce){.agency-tab{transition:none}}
 
 </style>
