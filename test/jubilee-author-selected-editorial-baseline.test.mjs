@@ -25,7 +25,8 @@ test('explicit 2026-11-08 source replacement selects exactly two user-provided P
     assert.match(v.continuedHumanWritingCandidate.docxSha256,hex);
     assert.match(v.continuedHumanWritingCandidate.pdfSha256,hex);
     assert.ok(v.continuedHumanWritingCandidate.addedSections>=8);
-    assert.equal(registry.volumes[i].manuscriptRevision,'author-selected-20261108-pdf');
+    assert.equal(registry.volumes[i].manuscriptRevision,'review-9');
+    assert.equal(registry.volumes[i].activeEditorialManuscriptRevision,'author-selected-20261108-pdf');
     assert.equal(registry.volumes[i].continuedHumanWritingStatus,'ai-assisted-author-review-required');
   }
 });
