@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {auditKnownCloudflarePagesProjectSources} from './classify-cloudflare-pages-source.mjs';
 
 const SELF_TEST = process.argv.includes('--self-test');
 const ROOT = 'ekodi.kr';
@@ -104,6 +105,7 @@ const sourceCounts={workerCustomDomains:0,workerRoutes:0,pagesProjects:0,dnsReco
 const domains=await pages('/accounts/'+account+'/workers/domains');
 for(const domain of domains){sourceCounts.workerCustomDomains++;add(registry,domain.hostname,'worker-custom-domain',{service:domain.service})}
 const projects=await pages('/accounts/'+account+'/pages/projects');
+const pagesSourceEvidence=auditKnownCloudflarePagesProjectSources(projects);
 for(const project of projects){
   sourceCounts.pagesProjects++;
   for(const host of project.domains||[])add(registry,host,'pages-custom-domain',{service:project.name});
@@ -122,7 +124,7 @@ if(scope==='production'){
   }
 }
 const hosts=classify(registry);
-const output={generatedAt:new Date().toISOString(),scope,root:ROOT,sourceCounts,hostCount:hosts.length,hosts,complete:true,destructiveActions:0,warning:'DNS type or known hostname alone never authorizes deletion; verify traffic, callbacks, mail and rollout gates'};
+const output={generatedAt:new Date().toISOString(),scope,root:ROOT,sourceCounts,hostCount:hosts.length,hosts,pagesSourceEvidence,complete:true,destructiveActions:0,warning:'DNS/project Git metadata and a trigger SHA alone never prove actual release ownership, apex routing, rollback or repository deletion authorization'};
 const dest=process.env.EKODI_CF_INVENTORY_OUTPUT||'artifacts/cloudflare-web-domain-inventory-'+scope+'.json';
 fs.mkdirSync(path.dirname(dest),{recursive:true});
 fs.writeFileSync(dest,JSON.stringify(output,null,2)+'\n');
@@ -133,6 +135,8 @@ const md='## Cloudflare web-domain read-only inventory ('+scope+')\n'
   +'- Worker routes: **'+sourceCounts.workerRoutes+'**, DNS records inspected: **'+sourceCounts.dnsRecords+'**\n'
   +'- Hosts with Worker/Pages binding: **'+hosts.filter(x=>x.hasWorkerBinding||x.hasPagesDomain).length+'**\n'
   +'- DNS-only ambiguous hosts: **'+hosts.filter(x=>x.dnsOnlyUnknownPurpose).length+'**\n'
+  +'- Pages projects from approved registry observed in this account: **'+pagesSourceEvidence.observedRegisteredProjects+'/'+pagesSourceEvidence.totalRegisteredProjects+'**\n'
+  +'- Pages source configured vs live publish authority: **unverified**; release receipt and rollback not checked.\n'
   +'- Deletions: **0**. No per-host retirement certified.\n';
 if(summary)fs.appendFileSync(summary,md);
 console.log(JSON.stringify({scope,hostCount:hosts.length,sourceCounts,report:dest,destructiveActions:0}));
