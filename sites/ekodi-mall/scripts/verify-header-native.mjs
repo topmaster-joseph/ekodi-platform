@@ -156,15 +156,22 @@ async function run() {
           const page = await context.newPage();
           await page.goto(canonical, { waitUntil: 'domcontentloaded', timeout: 30000 });
           await page.waitForSelector('[data-mall-account]', { timeout: 15000 });
-          if (candidateCss) await page.addStyleTag({ content: candidateCss });
           await page.waitForFunction(
             isMember => isMember
               ? document.querySelector('[data-mall-id]')?.textContent?.trim() === '비비큐청계점'
               : document.querySelector('[data-mall-login]')?.hidden === false,
             synthetic, { timeout: 16000 }
           );
-          // Allow legacy nav scripts / MutationObserver to settle.
+          // Wait until production stylesheets finish; otherwise a late CSS
+          // network response can override the local PR candidate overlay.
+          await page.waitForLoadState('load', { timeout: 30000 });
           await page.waitForTimeout(350);
+          if (candidateCss) {
+            assert.ok(candidateCss.includes('width:min(100%,310px);max-width:310px'),
+              'candidate stylesheet lost its requested 310px tablet search cap');
+            await page.addStyleTag({ content: candidateCss });
+            await page.evaluate(() => document.documentElement.getBoundingClientRect().width);
+          }
           if (synthetic && width === 1366) {
             // Pure DOM-only test: a late duplicate must be removed without
             // deleting an unrelated category anchor.
