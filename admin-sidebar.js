@@ -868,7 +868,8 @@ const PANEL_TAB_MIN_BLOCKS = 3;
 const PANEL_TAB_MAX_TABS = 8;
 const PANEL_OWN_TABS_SELECTOR = 'nav,[role="tablist"]:not(.admin-panel-tabs),[role="tab"]:not(.admin-panel-tabs [role="tab"]),[data-aiops-stage-tab]';
 const PANEL_TAB_SKIP = 'style,script,template,dialog,link,meta,summary,.admin-panel-tabs,iframe';
-const PANEL_TAB_PINNED = '.device-panel-head,.admin-panel-head,.section-head:first-child,.hero,.device-metrics';
+// [data-ekodi-tab-pin]: 모듈이 '항상 위에 고정할 머리말·요약'을 직접 표시한다(제목만 있는 첫 탭 방지).
+const PANEL_TAB_PINNED = '[data-ekodi-tab-pin],.device-panel-head,.admin-panel-head,.section-head:first-child,.hero,.device-metrics';
 export const ADMIN_PANEL_TAB_PRESETS = Object.freeze({
   devices: Object.freeze([
     { id: 'status', label: '기기 현황', match: '.device-status-tools,.admin-browser-diagnostic', default: true },
@@ -908,12 +909,14 @@ function ensurePanelTabStyle(doc = document) {
 .admin-panel-tabs.admin-panel-subtabs button{font-size:13px;padding:7px 12px}
 .admin-panel-tabs.admin-panel-subtabs button[aria-selected="true"]{background:#2563eb;color:#fff}
 .admin-panel-tabs button small{margin-left:6px;color:#64748b;font-weight:500}
-@media(max-width:760px){.admin-panel-tabs{flex-wrap:nowrap;overflow-x:auto}}`;
+.admin-panel-tabs>button{flex:0 0 auto!important;min-width:max-content!important;max-width:none!important;overflow:visible!important;text-overflow:clip!important}
+@media(max-width:760px){.admin-panel-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}}`;
   doc.head?.append(style);
 }
 function panelBlockLabel(node, index) {
   const pick = selector => node.querySelector?.(selector)?.textContent?.replace(/\s+/g, ' ').trim();
-  const text = node.getAttribute?.('aria-label')
+  // data-ekodi-tab-label: 모듈이 지정한 짧은 탭 이름(모바일 잘림·숫자 라벨 방지)을 최우선한다.
+  const text = node.dataset?.ekodiTabLabel || node.getAttribute?.('aria-label')
     || (node.tagName === 'DETAILS' ? (pick(':scope>summary strong') || pick(':scope>summary')) : '')
     || pick('h2') || pick('h3') || pick(':scope>strong') || pick('strong') || '';
   return text.slice(0, 18);
