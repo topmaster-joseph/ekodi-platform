@@ -2,7 +2,7 @@
 // The "member" is a browser-local synthetic /auth/v1/user response. This test
 // never possesses a production credential, never checks out, and never signs out.
 import assert from 'node:assert/strict';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
 const canonical = 'https://ekodi.kr/ekodimall/?category=book';
@@ -17,6 +17,8 @@ const report = {
   credentialMode: 'browser-local-synthetic-only',
   liveAccountSignInProven: false,
   purchaseOrLogoutPerformed: false,
+  candidateCssInjected: process.env.GITHUB_EVENT_NAME === 'pull_request',
+  liveCssValidated: process.env.GITHUB_EVENT_NAME !== 'pull_request',
   results: [],
 };
 
@@ -121,6 +123,11 @@ function installSyntheticIdentity(context) {
 
 async function run() {
   await mkdir(outDir, { recursive: true });
+  // On PR the real site is still on main: overlay the candidate CSS in this
+  // isolated browser only. After protected deployment, use real production CSS.
+  const candidateCss = report.candidateCssInjected
+    ? await readFile(new URL('../assets/mall-account-header.css', import.meta.url), 'utf8')
+    : null;
   const browser = await chromium.launch({ headless: true });
   try {
     for (const width of widths) {
@@ -136,6 +143,7 @@ async function run() {
           const page = await context.newPage();
           await page.goto(canonical, { waitUntil: 'domcontentloaded', timeout: 30000 });
           await page.waitForSelector('[data-mall-account]', { timeout: 15000 });
+          if (candidateCss) await page.addStyleTag({ content: candidateCss });
           await page.waitForFunction(
             isMember => isMember
               ? document.querySelector('[data-mall-id]')?.textContent?.trim() === '비비큐청계점'
