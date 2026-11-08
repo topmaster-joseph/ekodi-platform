@@ -33,3 +33,38 @@ html[data-ekodi-church-unified-admin="true"] #sectionNav{margin-top:0}
 .acal-actions{display:flex;gap:.4rem;flex-shrink:0}
 .button.danger{color:#b42318;border-color:#fda29b}
 @media (max-width:640px){.acal-cell{min-height:58px}.acal-ev{font-size:.62rem}}
+
+/* 모바일: 왼쪽 메뉴를 가로 스크롤 한 줄로 접고, 본문 표·긴 글이 화면 밖으로 넘치지 않게 */
+@media (max-width:900px){
+  html[data-ekodi-church-unified-admin] .layout{display:block!important}
+  html[data-ekodi-church-unified-admin] .sidebar{position:sticky!important;top:0;z-index:20;width:auto!important;height:auto!important;min-height:0!important;max-height:none!important;padding:6px 10px!important;border-right:0!important;border-bottom:1px solid #e4e7ec;background:#fff;overflow:visible!important}
+  html[data-ekodi-church-unified-admin] .sidebar .scope,
+  html[data-ekodi-church-unified-admin] .sidebar .boundary,
+  html[data-ekodi-church-unified-admin] .sidebar .church-admin-nav-heading,
+  html[data-ekodi-church-unified-admin] .sidebar .admin-nav-heading{display:none!important}
+  html[data-ekodi-church-unified-admin] #adminNav{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0}
+  html[data-ekodi-church-unified-admin] #adminNav::-webkit-scrollbar{display:none}
+  html[data-ekodi-church-unified-admin] #adminNav *{flex-wrap:nowrap}
+  html[data-ekodi-church-unified-admin] #adminNav > *{display:contents}
+  html[data-ekodi-church-unified-admin] #adminNav a{flex:0 0 auto!important;display:inline-flex!important;align-items:center;width:auto!important;min-height:36px!important;padding:6px 12px!important;margin:0!important;border:1px solid #d0d5dd!important;border-radius:999px!important;font-size:.9rem!important;white-space:nowrap;line-height:1.2!important}
+  html[data-ekodi-church-unified-admin] #adminNav a[aria-current],
+  html[data-ekodi-church-unified-admin] #adminNav a.active{background:#eef4ff!important;border-color:#2e90fa!important;font-weight:700}
+  html[data-ekodi-church-unified-admin] .sidebar-footer{display:flex!important;flex-direction:row!important;gap:6px;margin:6px 0 0!important;padding:0!important;border:0!important}
+  html[data-ekodi-church-unified-admin] .sidebar-footer a,
+  html[data-ekodi-church-unified-admin] .sidebar-footer button{flex:1;min-height:32px!important;padding:4px 8px!important;font-size:.85rem!important}
+  html[data-ekodi-church-unified-admin] main{padding:10px!important;min-width:0}
+  html[data-ekodi-church-unified-admin] .heading{padding:10px 4px!important}
+  html[data-ekodi-church-unified-admin] .heading h1{font-size:1.3rem!important}
+  html[data-ekodi-church-unified-admin] .heading #pageCopy{font-size:.85rem}
+  html[data-ekodi-church-unified-admin] #sectionNav{display:flex;flex-wrap:nowrap!important;overflow-x:auto;gap:6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  html[data-ekodi-church-unified-admin] #sectionNav[hidden]{display:none!important}
+  html[data-ekodi-church-unified-admin] #sectionNav a{flex:0 0 auto;white-space:nowrap;padding:8px 12px!important;font-size:.9rem!important}
+  html[data-ekodi-church-unified-admin] .panel{padding:12px!important;min-width:0;overflow-wrap:anywhere}
+  html[data-ekodi-church-unified-admin] .panel h2,
+  html[data-ekodi-church-unified-admin] .panel h3{font-size:1.05rem!important;line-height:1.4;overflow-wrap:anywhere}
+  html[data-ekodi-church-unified-admin] .panel table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  html[data-ekodi-church-unified-admin] .panel th,
+  html[data-ekodi-church-unified-admin] .panel td{font-size:.85rem;padding:8px 6px!important}
+  html[data-ekodi-church-unified-admin] .trade-grid{grid-template-columns:1fr!important}
+  html[data-ekodi-church-unified-admin] .acal-item{flex-direction:column;align-items:stretch}
+}
