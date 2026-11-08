@@ -11,7 +11,7 @@ test('development E2E schedules a protected fallback when bot merges suppress pu
   assert.match(wf,/    environment: development/);
   assert.match(wf,/      DEV_REF: lxcxwbdwwojjkgybbqii/);
   assert.match(wf,/      EKODI_BROWSER_ENVIRONMENT: development/);
-  assert.match(wf,/    cancel-in-progress: false/);
+  assert.match(wf,/^\s*cancel-in-progress:\s*false$/m);
 });
 test('scheduled E2E retains real mobile/desktop proof and always cleans up',()=>{
   assert.match(wf,/verify-points-staging-browser\.mjs/);
