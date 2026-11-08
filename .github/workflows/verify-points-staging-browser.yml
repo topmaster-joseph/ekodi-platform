@@ -6,6 +6,11 @@ name: Verify Points Staging (EKODI Browser)
 # Never targets production: fixed development project ref and staging origins.
 on:
   workflow_dispatch:
+  # Orchestrator merges performed with a GitHub Actions token can suppress
+  # downstream push events. Run a bounded real DEV browser E2E twice daily,
+  # independent of merge event propagation and without production access.
+  schedule:
+    - cron: '17 2,14 * * *'
   # A protected main merge of this workflow or its Points browser/security
   # contract must run the actual DEVELOPMENT screen E2E. No prod credentials,
   # no production database, no member awards.
