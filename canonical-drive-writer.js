@@ -120,7 +120,8 @@ async function driveJson(token, path, init = {}) {
   return data;
 }
 async function ensureSubfolderPath(token, parentId, path = '') {
-  const segments = String(path || '').split('/').map(value=>safeName(value)).filter(Boolean).slice(0,8);
+  // Empty and repeated separators are not named folders: safeName('') is 'record'.
+  const segments = String(path || '').split('/').map(value => value.trim()).filter(Boolean).map(safeName).slice(0, 8);
   let parent = parentId;
   for (const segment of segments) {
     const params = new URLSearchParams({
