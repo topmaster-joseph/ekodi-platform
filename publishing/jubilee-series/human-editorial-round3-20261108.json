@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "taskId": "jubilee-editorial-round3-20261108",
+  "seriesId": "EKODI-JUBILEE-THEOLOGY",
+  "stage": "private-ai-assisted-human-review",
+  "parentBaselineManifest": "human-editorial-round2-20261108.json",
+  "sourceAuthority": "author-selected-20261108-pdfs",
+  "editorialChanges": "mechanical Hebrew Unicode direction fixes, terminology and punctuation cleanup; no invented bibliography",
+  "privateUserPackage": {
+    "fileCount": 18,
+    "sha256": "29d2cea78fc54d52298f2374e6e08ca873a02bde33625a404b18cd7f61ea0dd1"
+  },
+  "books": [
+    {
+      "volume": 1,
+      "title": "희년과 하나님 나라의 회복",
+      "selectedOriginalPdfSha256": "e2a1ee508f1285d8a70de42114dcc50f6ea5d827ae18f84ded0ce83114a1bd59",
+      "revisionFiles": {
+        "docx": {
+          "sha256": "f75c5a850c644ac8bccab8c96deebdf8195afef7377bab06798ee4c7fe7349c1",
+          "bytes": 75294
+        },
+        "pdf": {
+          "sha256": "7ebe242a657459e8f2e6353065b83bf39873a7f982b3257e373717f7ea9ef22f",
+          "bytes": 961953
+        },
+        "epub": {
+          "sha256": "e3fe0df3601d3e7c660295d206f4656fc63893660ec5e1ceeb2efdafe07a829d",
+          "bytes": 61228
+        }
+      },
+      "pdfPages": 58,
+      "pendingFootnotes": 56,
+      "epubCoreStructuralValidation": true,
+      "epubCheckFullValidation": false,
+      "screenReaderDeviceValidation": false
+    },
+    {
+      "volume": 2,
+      "title": "우리는 다시 돌아갈 수 있는가",
+      "selectedOriginalPdfSha256": "3620b7aade0c689e44824c635bffca2c2aebeea1243197f0b094ccd76f31563e",
+      "revisionFiles": {
+        "docx": {
+          "sha256": "9a06a8c507e150f7bb6036b6a5f15c3cba0ad0d2a03dd3b25ce35ba586145436",
+          "bytes": 61297
+        },
+        "pdf": {
+          "sha256": "08a708799361d2d7bfb76dc6e76a665a15e1e1fce19697884ee7b9997cf37207",
+          "bytes": 742862
+        },
+        "epub": {
+          "sha256": "1203af70f305c5c732af0b2ad0ae0db245a826793849486f7ba045991f460ea4",
+          "bytes": 42707
+        }
+      },
+      "pdfPages": 41,
+      "pendingFootnotes": 0,
+      "epubCoreStructuralValidation": true,
+      "epubCheckFullValidation": false,
+      "screenReaderDeviceValidation": false
+    }
+  ],
+  "footnoteStatus": {
+    "recoveredSourceFootnotes": 55,
+    "unresolvedEditorialMarkers": 56,
+    "highContextCandidates": 5,
+    "partialContextCandidates": 13,
+    "unresolved": 38,
+    "autoApproved": 0
+  },
+  "releaseFlags": {
+    "authorApproved": false,
+    "publisherApproved": false,
+    "citationAndRightsVerified": false,
+    "actualProtectedPrivateR2IngestReadback": false,
+    "privateD1ReceiptReadback": false,
+    "isbnIssued": false,
+    "publicCatalog": false,
+    "salesEnabled": false
+  },
+  "notice": "Hash-only editorial evidence. Manuscript bytes/private source URLs remain outside public repo. No proof of real publisher-private R2/D1 ingestion or signed release."
+}
