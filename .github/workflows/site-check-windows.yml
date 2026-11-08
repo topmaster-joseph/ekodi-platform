@@ -1,0 +1,83 @@
+name: Verify EKODI Site Check on Windows
+
+# EKODI-SITE-CHECK-001: 실제 Windows(Windows PowerShell 5.1 + Edge)에서
+# 창 없는 점검과 자동 종료 창이 동작하고, 브라우저·임시 프로필이 남지 않는지 검증한다.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &site_check_paths
+      - 'tools/ekodi-device-agent/windows/ekodi-site-check.ps1'
+      - 'test/ekodi-site-check-background-only.test.mjs'
+      - '.github/workflows/site-check-windows.yml'
+  push:
+    branches: [main]
+    paths: *site_check_paths
+
+permissions:
+  contents: read
+
+jobs:
+  windows-site-check:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Headless DOM check (no window)
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tool = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-site-check.ps1'
+          $raw = & powershell -NoProfile -ExecutionPolicy Bypass -File $tool -Url 'https://ekodi.kr/' -Url 'https://ekodi.kr/ekodimall/' -TimeoutSeconds 45
+          $json = ($raw | Out-String)
+          Write-Host $json
+          $r = $json | ConvertFrom-Json
+          foreach ($item in $r.results) {
+            if ($item.mode -ne 'background') { throw "mode=$($item.mode)" }
+            if (-not $item.httpStatus) { throw "no http status for $($item.url)" }
+            if ($item.domBytes -le 200) { throw "headless render empty for $($item.url)" }
+            if (-not $item.browserClosed -or -not $item.profileRemoved) { throw "cleanup failed for $($item.url)" }
+          }
+          if ($r.userBrowserTouched -ne $false) { throw 'user browser touched' }
+
+      - name: Headless screenshot check
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tool = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-site-check.ps1'
+          $r = (& powershell -NoProfile -ExecutionPolicy Bypass -File $tool -Url 'https://ekodi.kr/ekodimall/' -Screenshot -TimeoutSeconds 45 | Out-String) | ConvertFrom-Json
+          $item = $r.results[0]
+          Write-Host ("status={0} screenshot={1}" -f $item.httpStatus, $item.screenshot)
+          if (-not $item.screenshot -or -not (Test-Path -LiteralPath $item.screenshot)) { throw 'screenshot missing' }
+          if ((Get-Item -LiteralPath $item.screenshot).Length -lt 5000) { throw 'screenshot too small' }
+          New-Item -ItemType Directory -Path site-check-evidence -Force | Out-Null
+          Copy-Item -LiteralPath $item.screenshot -Destination site-check-evidence/ekodimall.png
+
+      - name: Visible window auto-closes
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tool = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-site-check.ps1'
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          $r = (& powershell -NoProfile -ExecutionPolicy Bypass -File $tool -Url 'https://ekodi.kr/' -Visible -AutoCloseSeconds 5 | Out-String) | ConvertFrom-Json
+          $sw.Stop()
+          $item = $r.results[0]
+          Write-Host ("mode={0} closed={1} profileRemoved={2} elapsed={3}s" -f $item.mode, $item.browserClosed, $item.profileRemoved, [int]$sw.Elapsed.TotalSeconds)
+          if ($item.mode -ne 'visible-autoclose' -or -not $item.browserClosed -or -not $item.profileRemoved) { throw 'visible window was not cleaned up' }
+
+      - name: No leftover EKODI browser processes or profiles
+        shell: powershell
+        run: |
+          $root = Join-Path $env:ProgramData 'EKODI\SiteCheck'
+          $left = @(Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('msedge.exe','chrome.exe') -and [string]$_.CommandLine -like "*EKODI\SiteCheck*" })
+          if ($left.Count -gt 0) { throw "leftover browser processes: $($left.Count)" }
+          $profiles = @(Get-ChildItem -LiteralPath $root -Directory -Filter 'profile-*' -ErrorAction SilentlyContinue)
+          if ($profiles.Count -gt 0) { throw "leftover profiles: $($profiles.Count)" }
+          Write-Host 'clean'
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: site-check-evidence
+          path: site-check-evidence
+          if-no-files-found: ignore
