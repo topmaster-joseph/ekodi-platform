@@ -17,7 +17,8 @@
     "resultsEyebrow": "STAY RECOMMENDATIONS",
     "resultsTitle": "아고다 제휴 숙소",
     "resultsIntro": "공개 확인된 아고다 숙소만 표시합니다.",
-    "loadingLabel": "아고다 숙소를 확인하고 있습니다."
+    "loadingLabel": "아고다 숙소를 확인하고 있습니다.",
+    "directReferralUrl": "https://www.agoda.com/partners/partnersearch.aspx?pcs=1&cid=1980072&hl=ko-kr"
   },
   {
     "id": "coupang",
