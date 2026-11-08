@@ -65,7 +65,7 @@ test('premium company admin is a real tabbed view without exposing private acces
   }
   assert.match(js,/showAdminTab\('review'\)/);
   assert.match(js,/showAdminTab\('list'\)/);
-  assert.match(js,/if\(target!=='list'&&!selected\)return/);
+  assert.match(js,/if\(!\['list','readiness'\]\.includes\(target\)&&!selected\)return/);
   assert.match(js,/adminTabs\.forEach|for\(const tab of adminTabs\)/);
   assert.match(js,/x-ekodibiz-agency-admin/);
   assert.doesNotMatch(js,/localStorage\.setItem\(/);
@@ -88,4 +88,17 @@ test('company administrator share buttons keep light background and dark readabl
   assert.match(html,/\.agency-navigation button\[data-share-agency\]\{background:#eef6f0;color:#184b36/);
   assert.match(html,/\.agency-navigation button\[data-share-agency\]:hover\{background:#dfeee4;color:#123d2c/);
   assert.match(html,/button:not\(\[role="tab"\]\)\{border-color:#1b6040;background:#1b6040\}/);
+});
+
+test('protected approval readiness is an independent company admin tab',async()=>{
+  const [html,js]=await Promise.all([
+    read('../ekodibiz/ai-agency-admin.html'),
+    read('../ekodibiz/ai-agency-admin.js')
+  ]);
+  assert.match(html,/id="adminTabReadiness" aria-controls="approvalPanel" data-admin-tab="readiness"/);
+  assert.match(html,/id="approvalPanel" role="tabpanel" aria-labelledby="adminTabReadiness"/);
+  assert.match(html,/id="readinessResults" class="summary" role="status"/);
+  assert.match(js,/call\('\/readiness'\)/);
+  assert.match(js,/\$\('approvalPanel'\)\.hidden=target!=='readiness'/);
+  assert.doesNotMatch(js,/localStorage\.setItem\(/);
 });
