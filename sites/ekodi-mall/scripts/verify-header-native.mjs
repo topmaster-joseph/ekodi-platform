@@ -156,6 +156,7 @@ async function run() {
           const page = await context.newPage();
           await page.goto(canonical, { waitUntil: 'domcontentloaded', timeout: 30000 });
           await page.waitForSelector('[data-mall-account]', { timeout: 15000 });
+          if (candidateCss) await page.addStyleTag({ content: candidateCss });
           await page.waitForFunction(
             isMember => isMember
               ? document.querySelector('[data-mall-id]')?.textContent?.trim() === '비비큐청계점'
