@@ -47,7 +47,9 @@
       "continuedHumanWritingStatus": "ai-assisted-author-review-required",
       "activeEditorialManuscriptRevision": "author-selected-20261108-pdf",
       "currentHumanEditorialRevision": "human-review-round2-20261108",
-      "currentHumanEditorialReviewComplete": false
+      "currentHumanEditorialReviewComplete": false,
+      "latestHumanEditorialCandidateRevision": "human-editorial-round3-20261108",
+      "latestHumanEditorialCandidateApproved": false
     },
     {
       "reviewId": "EJT-02-REVIEW",
@@ -85,7 +87,9 @@
       "continuedHumanWritingStatus": "ai-assisted-author-review-required",
       "activeEditorialManuscriptRevision": "author-selected-20261108-pdf",
       "currentHumanEditorialRevision": "human-review-round2-20261108",
-      "currentHumanEditorialReviewComplete": false
+      "currentHumanEditorialReviewComplete": false,
+      "latestHumanEditorialCandidateRevision": "human-editorial-round3-20261108",
+      "latestHumanEditorialCandidateApproved": false
     }
   ],
   "activeEditorialBaselineManifest": "author-selected-baseline-20261108.json",
@@ -93,5 +97,7 @@
   "editorialBaselineOrigin": "explicit-author-selection-of-two-attached-PDFs",
   "priorEditorialBaselinePreserved": "current-intake-20261102.json",
   "currentHumanEditorialReviewManifest": "human-editorial-round2-20261108.json",
-  "currentHumanEditorialReviewStatus": "ai-assisted-review-draft-awaiting-author-citation-and-private-ingest"
+  "currentHumanEditorialReviewStatus": "ai-assisted-review-draft-awaiting-author-citation-and-private-ingest",
+  "latestHumanEditorialCandidateManifest": "human-editorial-round3-20261108.json",
+  "latestHumanEditorialCandidateStatus": "private-author-review-citation-validation-required"
 }
