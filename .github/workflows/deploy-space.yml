@@ -179,6 +179,7 @@ jobs:
           node --test test/bbqcg-hard-cutover.test.mjs
           node --test test/bbqcg-admin-access.test.mjs
           node --test test/bbqcg-admin-permission-mobile.test.mjs
+          node --test test/bbqcg-public-facts-guard.test.mjs
           node --check mission-activity-editor-api.js
           node --check space/ekodimission-activity-editor.js
           node --test test/ekodimission-activity-editor.test.mjs
