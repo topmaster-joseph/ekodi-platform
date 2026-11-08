@@ -97,3 +97,33 @@
   .affiliate-hub .affiliate-direct-referral{margin:10px 10px 0;flex-direction:column;align-items:stretch;padding:12px 14px}
   .affiliate-direct-referral .btn{text-align:center;width:100%}
 }
+
+
+/* Agoda official Lite API listings: compact, tabbed, mobile-first, no fabricated cards. */
+.affiliate-hub [hidden]{display:none!important}
+.agoda-live{margin:16px;padding:18px;border:1px solid #dce3e9;border-radius:16px;background:#fff;min-width:0}
+.agoda-live-title{display:flex;align-items:start;justify-content:space-between;gap:12px}
+.agoda-live-title small{font-size:10px;letter-spacing:.08em;color:#41648a;font-weight:700}
+.agoda-live-title h2{font:750 clamp(18px,2.7vw,25px)/1.3 system-ui,sans-serif;margin:3px 0 4px}
+.agoda-live-title p{font-size:12px;line-height:1.5;margin:0 0 12px;color:#586b7c}
+.agoda-view-tabs{display:flex;gap:7px;border-bottom:1px solid #dce3e9;margin-bottom:13px;flex-wrap:wrap}
+.agoda-view-tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px 15px;cursor:pointer;font:650 13px/1.4 system-ui,sans-serif;color:#64768a}
+.agoda-view-tabs button[aria-selected=true]{border-color:#285f96;color:#1c4b79}
+.agoda-live-form{display:grid;grid-template-columns:minmax(120px,1.7fr) repeat(2,minmax(115px,1fr)) minmax(85px,.7fr) auto;gap:9px;align-items:end}
+.agoda-live-form label{font-size:12px;color:#476075;display:flex;flex-direction:column;gap:5px;min-width:0}
+.agoda-live-form input,.agoda-live-form select{min-height:41px;padding:0 10px;width:100%;max-width:100%;border:1px solid #cbd8e4;border-radius:9px;background:#fff;font:inherit;font-size:12px}
+.agoda-live-form .btn{min-height:41px;white-space:nowrap;border-radius:9px}
+.agoda-live-status{font-size:12px;line-height:1.5;color:#526579;margin:14px 0}
+.agoda-live-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.agoda-live-card{min-width:0;border:1px solid #dce3e8;border-radius:12px;overflow:hidden;background:#fff}
+.agoda-live-image{width:100%;height:150px;display:grid;place-items:center;background:#f1f5f7;color:#78858c;font-size:12px}
+.agoda-live-image img{width:100%;height:100%;object-fit:cover}
+.agoda-live-copy{padding:12px;display:flex;flex-direction:column;gap:7px}
+.agoda-live-copy small{color:#4b698b;font-size:10px;font-weight:700}
+.agoda-live-copy h3{margin:0;font:700 14px/1.4 system-ui,sans-serif}
+.agoda-live-meta{color:#647686;font-size:12px;margin:0}
+.agoda-live-price{font-weight:750;color:#184a77;font-size:12px;margin:2px 0}
+.agoda-live-copy .btn{font-size:12px;text-align:center;border-radius:8px;padding:9px}
+.agoda-live-note{margin:12px 0 0;color:#6b7c87;font-size:11px;line-height:1.5}
+@media(max-width:900px){.agoda-live-form{grid-template-columns:repeat(2,minmax(0,1fr))}.agoda-live-form label:first-child{grid-column:1/-1}.agoda-live-form .btn{grid-column:1/-1}.agoda-live-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:450px){.agoda-live{margin:10px;padding:12px}.agoda-live-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.agoda-live-form{gap:7px}.agoda-live-image{height:110px}.agoda-live-copy{padding:9px}.agoda-live-copy h3{font-size:12px}.agoda-view-tabs button{padding:9px 10px;font-size:12px}}
