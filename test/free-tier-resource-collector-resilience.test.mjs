@@ -164,8 +164,16 @@ test('a provider outage names the call, not just the provider', async () => {
       return githubFetch(url);
     },
   });
-  assert.match(result.failedProviders[0].error, /actions\/artifacts/, 'the failing call must reach the annotation');
+  // Once the endpoint was named, the artifact walk turned out to be the only
+  // failing call, and GITHUB-TELEMETRY-PERCALL-001 settled GitHub's three calls
+  // separately. So this is no longer a provider outage but a degraded provider:
+  // cache_storage_bytes still lands. The intent of this assertion is unchanged —
+  // the failing call must reach the annotation — only where it is recorded moved.
+  assert.deepEqual(result.failedProviders, [], 'one failing call is not a provider outage');
+  assert.match(result.degradedCalls[0].error, /actions\/artifacts/, 'the failing call must still reach the annotation');
+  assert.equal(result.degradedCalls[0].provider, 'github');
   assert.ok(result.snapshots.some(row => row.provider === 'cloudflare'), 'and the rest still survives');
+  assert.ok(result.snapshots.some(row => row.metric === 'cache_storage_bytes'), 'including the GitHub metric that has a limit');
 });
 
 test('the endpoint carries no query string, because it reaches a public annotation', () => {
