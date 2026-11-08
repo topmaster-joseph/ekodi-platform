@@ -196,10 +196,10 @@ test('Toss underwriting: an unverified bookstore quote cannot expose a sale card
   assert.match(builder, /data-bookstore-quote-pending/);
   assert.match(builder, /product.source\?\.system === 'ekodi-bookstore'/);
   assert.match(app, /card.dataset.bookstoreQuotePending !== 'true'/);
-  assert.match(books, /if \(!readyQuote\(quote, book.bookId\)\)/);
-  assert.match(books, /existing.dataset.bookstoreQuotePending = 'false'/);
-  assert.match(books, /existing.dataset.bookstoreQuotePending = 'true'/);
-  assert.match(css, /\.card\[data-bookstore-quote-pending="true"\]\{display:none!important\}/);
+  assert.match(books, /ready: readyQuote\(quote, book.bookId\)/);
+  assert.match(books, /card.dataset.bookstoreQuotePending = 'false'/);
+  assert.match(books, /card.dataset.bookstoreQuotePending = 'true'/);
+  assert.match(css, /\.card\[data-bookstore-quote-pending="true"\]:not\(\[data-bookstore-informational="true"\]\)\{display:none!important\}/);
 });
 
 test('canonical Mall search groups and card details are rendered in the central content', () => {
