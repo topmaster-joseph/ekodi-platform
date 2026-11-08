@@ -7,3 +7,29 @@ html[data-ekodi-church-unified-admin="true"] #mainPanel{width:100%;text-align:le
 html[data-ekodi-church-unified-admin="true"] #mainPanel>*{margin-left:0;margin-right:auto}
 html[data-ekodi-church-unified-admin="true"] #summaryCards,html[data-ekodi-church-unified-admin="true"] .admin-view-tabs{display:none!important}
 html[data-ekodi-church-unified-admin="true"] #sectionNav{margin-top:0}
+
+/* 관리자 일정 달력 */
+.acal-hint{color:#667085;font-size:.9rem;margin:.2rem 0 .8rem}
+.acal-head{display:flex;align-items:center;gap:.5rem;margin:.5rem 0}
+.acal-head strong{font-size:1.15rem;min-width:7.5rem;text-align:center}
+.acal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;max-width:980px}
+.acal-dow{text-align:center;font-weight:700;font-size:.85rem;padding:.3rem 0;color:#475467}
+.acal-dow:first-child{color:#d92d20}.acal-dow:nth-child(7){color:#1570ef}
+.acal-cell{min-height:86px;border:1px solid #e4e7ec;border-radius:8px;background:#fff;padding:4px 5px;text-align:left;display:flex;flex-direction:column;gap:2px;cursor:pointer;font:inherit;overflow:hidden}
+.acal-cell:hover{border-color:#98a2b3}
+.acal-blank{background:transparent;border:0;cursor:default}
+.acal-num{font-weight:700;font-size:.85rem}
+.acal-sun .acal-num{color:#d92d20}.acal-sat .acal-num{color:#1570ef}
+.acal-today{background:#f0f9ff;border-color:#7cd4fd}
+.acal-sel{outline:2px solid #2e90fa;outline-offset:-1px}
+.acal-ev{display:block;font-size:.72rem;line-height:1.3;padding:1px 4px;border-radius:4px;background:#eef4ff;color:#1d2939;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acal-worship{background:#ecfdf3}.acal-meeting{background:#fef6ee}.acal-ministry{background:#eef4ff}.acal-care{background:#fdf2fa}
+.acal-cancel{text-decoration:line-through;opacity:.6}
+.acal-more{font-size:.7rem;color:#667085}
+.acal-daytitle{margin-top:1.2rem}
+.acal-list{list-style:none;padding:0;margin:.4rem 0 1rem;max-width:980px}
+.acal-item{display:flex;justify-content:space-between;align-items:center;gap:.8rem;border:1px solid #e4e7ec;border-radius:8px;padding:.6rem .8rem;margin-bottom:.4rem;background:#fff}
+.acal-item span{display:block;color:#667085;font-size:.85rem}
+.acal-actions{display:flex;gap:.4rem;flex-shrink:0}
+.button.danger{color:#b42318;border-color:#fda29b}
+@media (max-width:640px){.acal-cell{min-height:58px}.acal-ev{font-size:.62rem}}
