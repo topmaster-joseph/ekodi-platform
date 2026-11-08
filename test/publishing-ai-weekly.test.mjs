@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { aiFactoryTick, aiFactoryAdmin, AI_FACTORY, MODELS } from '../publishing-ai-factory.js';
+import { aiFactoryTick, aiFactoryAdmin, AI_FACTORY, MODELS, jpegCheck, imageCareTick, IMAGE_LEVEL } from '../publishing-ai-factory.js';
 import { execFileSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -23,7 +23,11 @@ function memory() {
   return { sql: db, api: { prepare: s => st(s), batch: async qs => { db.exec('BEGIN'); try { for (const q of qs) await q.run(); db.exec('COMMIT'); } catch (e) { db.exec('ROLLBACK'); throw e; } } } };
 }
 const plan = JSON.stringify({ title: '하루 10분 묵상', subtitle: '바쁜 날의 쉼', keywords: ['묵상'], pitch: '소개', chapters: Array.from({ length: 8 }, (_, i) => ({ title: `${i + 1}장 제목`, summary: '요지' })) });
-const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 0xff, 0xd9]).toString('base64');
+// 구조가 온전한 합성 JPEG(SOI·APP0·SOF0 1024×1024·SOS·데이터·EOI, 20KB 이상)
+const jpegBytes = (w = 1024, h = 1024) => Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0,
+  0xff, 0xc0, 0, 17, 8, h >> 8, h & 255, w >> 8, w & 255, 3, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1,
+  0xff, 0xda, 0, 12, 3, 1, 0, 2, 0x11, 3, 0x11, 0, 0x3f, 0]), Buffer.alloc(24000, 0x55), Buffer.from([0xff, 0xd9])]);
+const JPEG = jpegBytes().toString('base64');
 let fakeSeq = 0; // 부분마다 다른 글(반복 제거에 걸리지 않게)
 function fakeAi(calls) { return { run: async (model, input) => {
   calls.push(model);
@@ -173,4 +177,57 @@ test('author can regenerate one chapter illustration within the free budget; fai
   assert.equal(spent.status, 429);
   assert.equal(db.sql.prepare('SELECT data_b64 FROM publishing_ai_images WHERE book_id=? AND number=3').get(id).data_b64, ok.data.data, 'old image kept when budget is spent');
   assert.equal((await aiFactoryAdmin(db.api, req('POST'), `/api/workflow/admin/ai-books/${id}/images/3`, { userId: 'adminZ' }, 'admin', json, {})).status, 503);
+});
+
+test('jpegCheck rejects truncated, tiny, headerless and frameless images; accepts a whole 1024² JPEG', () => {
+  assert.equal(jpegCheck(JPEG).ok, true); assert.equal(jpegCheck(JPEG).width, 1024);
+  const full = jpegBytes();
+  assert.equal(jpegCheck(full.subarray(0, full.length - 500).toString('base64')).reason, 'no_eoi', 'cut-off download');
+  assert.equal(jpegCheck(Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString('base64')).reason, 'too_small');
+  assert.equal(jpegCheck(Buffer.concat([Buffer.from([0, 0]), full.subarray(2)]).toString('base64')).reason, 'no_soi');
+  assert.equal(jpegCheck(jpegBytes(256, 256).toString('base64')).reason, 'no_frame');
+  assert.equal(jpegCheck('@@@not base64@@@').ok, false);
+  assert.equal(MODELS.image.steps, 8, 'high-quality steps'); assert.ok(MODELS.image.perImage >= 96, 'budget covers 4 tiles + 8 steps');
+});
+
+test('image care: broken or missing images are re-made in high quality; review-stage books are upgraded; on-sale images are left alone', async () => {
+  const db = memory(), env = { PUBLISH_DB: db.api, AI: fakeAi([]), PUBLISHING_AI_FACTORY_ENABLED: 'true', AI_LEDGER_DB: db.api };
+  for (let i = 0; i < 20; i++) { db.sql.exec('DELETE FROM publishing_ai_usage; DELETE FROM ai_provider_daily_budget'); await aiFactoryTick(env, new Date('2026-11-04T00:00:00Z')); }
+  const id = db.sql.prepare('SELECT id FROM publishing_ai_books').get().id;
+  const reset = () => db.sql.exec('DELETE FROM publishing_ai_usage; DELETE FROM ai_provider_daily_budget');
+  assert.equal(db.sql.prepare('SELECT COUNT(*) n FROM publishing_ai_image_meta WHERE level=? AND valid=1').get(IMAGE_LEVEL).n, 8, 'new images are high quality and checked');
+  // 1) 다운로드가 끊긴 것처럼 잘린 삽화 + 검사 기록 없음 → 자동 교체
+  const cut = jpegBytes().subarray(0, 9000).toString('base64');
+  db.sql.prepare('UPDATE publishing_ai_images SET data_b64=? WHERE book_id=? AND number=3').run(cut, id);
+  db.sql.prepare('DELETE FROM publishing_ai_image_meta WHERE book_id=? AND number=3').run(id);
+  db.sql.prepare('DELETE FROM publishing_ai_images WHERE book_id=? AND number=5').run(id);
+  reset(); const r1 = await imageCareTick(env);
+  assert.deepEqual(r1.map(x => [x.chapter, x.need.split(':')[0], x.result]), [[3, 'broken', 'ok'], [5, 'missing', 'ok']]);
+  assert.equal(jpegCheck(db.sql.prepare('SELECT data_b64 FROM publishing_ai_images WHERE book_id=? AND number=3').get(id).data_b64).ok, true);
+  // 2) 감수 중 책의 예전 품질 삽화 → 고품질로 교체
+  db.sql.prepare("UPDATE publishing_ai_books SET status='author_review' WHERE id=?").run(id);
+  db.sql.prepare('UPDATE publishing_ai_image_meta SET level=1 WHERE book_id=? AND number IN (1,2)').run(id);
+  reset(); const r2 = await imageCareTick(env);
+  assert.deepEqual(r2.map(x => [x.chapter, x.need]), [[1, 'upgrade'], [2, 'upgrade']]);
+  // 3) 판매 중(승인) 책의 멀쩡한 예전 품질 삽화는 그대로
+  db.sql.prepare("UPDATE publishing_ai_books SET status='approved' WHERE id=?").run(id);
+  db.sql.prepare('UPDATE publishing_ai_image_meta SET level=1 WHERE book_id=? AND number=4').run(id);
+  reset(); assert.deepEqual(await imageCareTick(env), []);
+  // 4) 무료 한도가 다 차면 멈추고 기존 그림을 지운 채 두지 않는다
+  db.sql.prepare('DELETE FROM publishing_ai_images WHERE book_id=? AND number=6').run(id);
+  db.sql.exec(`INSERT OR REPLACE INTO publishing_ai_usage (day, neurons) VALUES ('${new Date().toISOString().slice(0, 10)}', ${AI_FACTORY.dailyNeuronCap})`);
+  const r4 = await imageCareTick(env); assert.equal(r4[0].result, 'budget_or_failed');
+});
+
+test('binary image route serves whole JPEG bytes and refuses a broken image with 422', async () => {
+  const db = memory(), env = { PUBLISH_DB: db.api, AI: fakeAi([]), PUBLISHING_AI_FACTORY_ENABLED: 'true', AI_LEDGER_DB: db.api };
+  for (let i = 0; i < 20; i++) { db.sql.exec('DELETE FROM publishing_ai_usage; DELETE FROM ai_provider_daily_budget'); await aiFactoryTick(env, new Date('2026-11-04T00:00:00Z')); }
+  const id = db.sql.prepare('SELECT id FROM publishing_ai_books').get().id;
+  const json = (status, data) => ({ status, data });
+  const res = await aiFactoryAdmin(db.api, new Request('https://ekodi.kr/x'), `/api/workflow/admin/ai-books/${id}/images/2.jpg`, { userId: 'adminZ' }, 'admin', json, env);
+  assert.equal(res.headers.get('content-type'), 'image/jpeg');
+  const body = Buffer.from(await res.arrayBuffer()); assert.equal(body.length, Number(res.headers.get('content-length'))); assert.equal(jpegCheck(body.toString('base64')).ok, true);
+  db.sql.prepare('UPDATE publishing_ai_images SET data_b64=? WHERE book_id=? AND number=2').run(jpegBytes().subarray(0, 9000).toString('base64'), id);
+  assert.equal((await aiFactoryAdmin(db.api, new Request('https://ekodi.kr/x'), `/api/workflow/admin/ai-books/${id}/images/2.jpg`, { userId: 'adminZ' }, 'admin', json, env)).status, 422);
+  assert.equal((await aiFactoryAdmin(db.api, new Request('https://ekodi.kr/x'), `/api/workflow/admin/ai-books/${id}/images/2.jpg`, { userId: 'a' }, 'author', json, env)).status, 403);
 });
