@@ -13,6 +13,7 @@ on:
         type: string
   pull_request:
     paths: &ministry_news_paths
+      - 'footer-traffic-guarantee.js'
       - 'ministry-news-core.js'
       - 'ministry-news-d1-store.js'
       - 'ministry-news-memory-store.js'
