@@ -9,11 +9,11 @@
   const adminTabs=Array.from(document.querySelectorAll('[data-admin-tab]'));
   function showAdminTab(target, focus=false){
     for(const tab of adminTabs){
-      const locked=tab.dataset.adminTab!=='list'&&!selected;
+      const locked=!['list','readiness'].includes(tab.dataset.adminTab)&&!selected;
       tab.disabled=locked;
       tab.setAttribute('aria-disabled',locked?'true':'false');
     }
-    if(target!=='list'&&!selected)return;
+    if(!['list','readiness'].includes(target)&&!selected)return;
     for(const tab of adminTabs){
       const active=tab.dataset.adminTab===target;
       tab.setAttribute('aria-selected',active?'true':'false');
@@ -23,6 +23,7 @@
     $('adminApplications').hidden=target!=='list';
     $('detail').hidden=target!=='review';
     $('opsDetail').hidden=target!=='settlement';
+    $('approvalPanel').hidden=target!=='readiness';
     if(target==='settlement'&&selected)void showSettlement().catch(error=>message(error.message,true));
   }
   for(const tab of adminTabs){
@@ -91,6 +92,33 @@
     } catch(e) { message(e.message,true); }
   }
   $('load').addEventListener('click',load);
+  $('readinessBtn').addEventListener('click',async()=>{
+    const btn=$('readinessBtn');
+    btn.disabled=true;
+    const target=$('readinessResults');
+    target.textContent='결제 설정 확인 중입니다.';
+    try {
+      const {readiness:r}=await call('/readiness');
+      const labels=[
+        ['토스 결제 프로필 설정',r.paymentConfigured],
+        ['PG 서비스 범위 등록',r.pgScopeEnabled],
+        ['법적 승인증빙 참조번호',r.legalApprovalReferenceRecorded],
+        ['PG 승인증빙 참조번호',r.pgApprovalReferenceRecorded],
+        ['공급사 대리수납 승인',r.supplierCollectionScopeEnabled],
+        ['공급사 승인증빙 참조번호',r.supplierApprovalReferenceRecorded],
+        ['승인 공급사 허용목록',r.supplierAllowlistConfigured],
+        ['원본 증빙 보관 검증',r.archiveVerified],
+        ['PG 정산 활성상태 검증',r.settlementVerified],
+        ['운영 결제 전환 스위치',r.liveSwitchEnabled]
+      ];
+      target.textContent='결제키 환경: '+(r.mode==='live'?'운영':r.mode==='test'?'시험':'미설정')+
+        '\n위탁료 실결제: '+(r.serviceFeeLiveReady?'서버 설정 충족':'미활성/확인 필요')+
+        '\n공급사 대리수납: '+(r.supplierCollectionLiveReady?'서버 설정 충족(계약별 공급사 재검증 필수)':'미활성/확인 필요')+
+        '\n'+labels.map(([label,ready])=>(ready?'확인':'미등록/확인 필요')+' · '+label).join('\n');
+    } catch(error) {
+      target.textContent='서버 설정을 확인하지 못했습니다. '+error.message;
+    } finally {btn.disabled=false;}
+  });
   $('quoteForm').addEventListener('submit',async(event)=>{
     event.preventDefault();
     if(!selected) return;
