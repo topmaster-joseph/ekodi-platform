@@ -157,6 +157,7 @@ async function run() {
             });
             await page.waitForFunction(
               () => !document.querySelector('[data-e2e-synthetic-duplicate]'),
+              null,
               { timeout: 5000 }
             );
           }
