@@ -31,13 +31,32 @@ function adminAuthorized(request, env) {
   const header = text(request.headers.get('x-ekodibiz-agency-admin'), 500);
   return key.length >= 32 && constantTimeEqual(key, header);
 }
+// These are references to records held in the approved private archive, never the contents of approval letters.
+function approvalRefPresent(value) {
+  return typeof value==='string' && /^[A-Za-z0-9][A-Za-z0-9._:/#-]{5,199}$/.test(value);
+}
+function approvalEvidence(env, totalSupplier) {
+  return {
+    legalReference:approvalRefPresent(env.AGENCY_LEGAL_APPROVAL_REF),
+    pgReference:approvalRefPresent(env.AGENCY_PG_APPROVAL_REF),
+    supplierReference:totalSupplier===0 || approvalRefPresent(env.AGENCY_SUPPLIER_APPROVAL_REF),
+    archiveVerified:env.AGENCY_ARCHIVE_VERIFIED==='true',
+    settlementVerified:env.AGENCY_SETTLEMENT_ACTIVE_VERIFIED==='true'
+  };
+}
 function gates(env, totalSupplier) {
   const profile = activeProfileId(env);
   const pg = readiness(env, { profileId: profile });
   const mode = pg.mode;
   const scopeApproved = env.AGENCY_PG_SCOPE_VERIFIED === 'true';
   const supplierApproved = totalSupplier === 0 || env.AGENCY_SUPPLIER_COLLECTION_VERIFIED === 'true';
-  return { ok: pg.ready && pg.widget && scopeApproved && supplierApproved && (mode === 'test' || (mode === 'live' && env.AGENCY_LIVE_ENABLED === 'true')), mode, profile, pg, clientKey: merchantKeys(env, profile).clientKey };
+  const evidence=approvalEvidence(env,totalSupplier);
+  // A claim of approval is not an archived, scope-matched operational record.
+  // Staging test keys remain usable; *live* never bypasses the evidence/settlement gate.
+  const liveEvidenceReady=Object.values(evidence).every(Boolean);
+  const liveEnabled=mode==='live' && env.AGENCY_LIVE_ENABLED==='true' && liveEvidenceReady;
+  return { ok: pg.ready && pg.widget && scopeApproved && supplierApproved && (mode === 'test' || liveEnabled),
+    mode, profile, pg, evidence, liveEnabled, clientKey: merchantKeys(env, profile).clientKey };
 }
 async function store(env, pathname, body) {
   if (!env.REVENUE_STORE) throw new Error('store_unavailable');
@@ -173,9 +192,27 @@ export async function agencyApi(request, url, env) {
         return reply({ ok:true, record:publicRecord(saved.record) });
       }
     }
-    if (['/api/agency/admin/list','/api/agency/admin/quote','/api/agency/admin/activate',
+    if (['/api/agency/admin/readiness','/api/agency/admin/list','/api/agency/admin/quote','/api/agency/admin/activate',
       '/api/agency/admin/record-cycle','/api/agency/admin/stop-renewal','/api/agency/admin/settlement'].includes(path)) {
       if (!adminAuthorized(request, env)) return fault('admin_access_denied', 403);
+      if (path === '/api/agency/admin/readiness') {
+        const own=gates(env,0);
+        const supplier=gates(env,1);
+        return reply({ok:true,readiness:{
+          mode:own.mode,
+          paymentConfigured:own.pg.ready && own.pg.widget,
+          pgScopeEnabled:env.AGENCY_PG_SCOPE_VERIFIED==='true',
+          supplierCollectionScopeEnabled:env.AGENCY_SUPPLIER_COLLECTION_VERIFIED==='true',
+          liveSwitchEnabled:env.AGENCY_LIVE_ENABLED==='true',
+          legalApprovalReferenceRecorded:own.evidence.legalReference,
+          pgApprovalReferenceRecorded:own.evidence.pgReference,
+          supplierApprovalReferenceRecorded:supplier.evidence.supplierReference,
+          archiveVerified:own.evidence.archiveVerified,
+          settlementVerified:own.evidence.settlementVerified,
+          serviceFeeLiveReady:own.mode==='live' && own.ok,
+          supplierCollectionLiveReady:supplier.mode==='live' && supplier.ok
+        }});
+      }
       if (path === '/api/agency/admin/list') return reply({ ok:true, ...(await store(env, '/agency/admin/list', {})) });
       if (['/api/agency/admin/record-cycle','/api/agency/admin/stop-renewal','/api/agency/admin/settlement'].includes(path)) {
         const id = text(body.id,64);
