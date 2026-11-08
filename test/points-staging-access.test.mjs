@@ -41,6 +41,10 @@ globalThis.fetch=async (input,init={})=>{
   if(url.endsWith('/api/session'))return new Response(null,{status:200});
   if(url.includes('/access/apps?per_page=200'))
     return json([{id:'app1',name:'staging-only',domain:'ekodi-admin-staging.ekodi-development.workers.dev'}]);
+  if(url.endsWith('/access/service_tokens')&&method==='POST'&&process.env.TEST_ACCESS_DENY_TOKEN_CREATE==='1')
+    return new Response(JSON.stringify({success:false,errors:[{code:1010,error:'auth.forbidden'}]}),{
+      status:403,headers:{'content-type':'application/json'}
+    });
   if(url.endsWith('/access/apps/app1/policies')&&method==='POST'){
     actions.push({method,url,body:JSON.parse(init.body)});
     return json({id:'created-policy'});
@@ -106,4 +110,19 @@ test('workflow cannot use a static Access credential without its exact token ID'
   assert.doesNotMatch(script,/any_valid_service_token:\s*\{\}/);
   assert.match(script,/String\(p\.name\|\|''\)===name/);
   assert.match(script,/String\(t\.name\|\|''\)===name/);
+});
+
+test('403 while minting a development token stops before Access policy mutation',()=>{
+  const result=runMockAccess('open',{TEST_ACCESS_DENY_TOKEN_CREATE:'1'});
+  assert.notEqual(result.status,0);
+  assert.match(result.stdout+result.stderr,/POINTS_E2E_SERVICE_TOKEN_CREATION_DENIED/);
+  assert.match(result.stdout+result.stderr,/403/);
+  assert.doesNotMatch(result.stdout,/ACCESS_PROBE=/);
+});
+test('workflow rejects a partial static Access identity instead of implicit fallback',()=>{
+  assert.match(wf,/configured_static_fields=0/);
+  assert.match(wf,/for name in STATIC_ACCESS_ID STATIC_ACCESS_SECRET STATIC_ACCESS_SERVICE_TOKEN_ID; do/);
+  assert.match(wf,/configured_static_fields.*-ne 0.*-ne 3/);
+  assert.match(wf,/Incomplete Points staging Access identity/);
+  assert.match(wf,/exit 2\n\s+fi\n\s+# Never authorize any valid token/);
 });
