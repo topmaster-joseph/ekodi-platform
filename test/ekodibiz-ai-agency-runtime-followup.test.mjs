@@ -106,6 +106,8 @@ test('a verified contract followed by an invalid secret clears the old settlemen
   };
   const env=contextFor(document,fetcher,'/ekodibiz/ai-agency/individual');
   runInNewContext(await read('../ekodibiz/ai-agency.js'),env);
+  // Let initial page hydration finish before simulating a human click.
+  await Promise.resolve();
   get('lookupId').value='R1';
   get('lookupToken').value='correct';
   await get('lookupBtn').events.click();
@@ -147,6 +149,8 @@ test('approved checkout renders Toss only after visible contract panel and never
     async renderAgreement(){observed.push(['agreement']);}
   })});
   runInNewContext(await read('../ekodibiz/ai-agency.js'),env);
+  // Let initial page hydration finish before simulating a human click.
+  await Promise.resolve();
   get('lookupId').value='R1';get('lookupToken').value='secret';
   await get('lookupBtn').events.click();
   await get('paymentBtn').events.click();
