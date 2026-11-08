@@ -64,3 +64,15 @@ test('reader channels name the editorial desk contact and avoid external font lo
   const css = fs.readFileSync(new URL('../journal/styles.css', import.meta.url), 'utf8');
   assert.doesNotMatch(css + html, /fonts\.googleapis|@import/);
 });
+
+test('stray service paths under /journal redirect to the real service instead of 404', async () => {
+  const r = await worker.fetch(new Request('https://ekodi.kr/community/'), env);
+  assert.equal(r.status, 301);
+  assert.equal(r.headers.get('location'), 'https://ekodi.kr/community/');
+  const b = await worker.fetch(new Request('https://ekodi.kr/books/book/?id=X'), env);
+  assert.equal(b.headers.get('location'), 'https://ekodi.kr/books/book/?id=X');
+  for (const own of ['/', '/api/posts', '/feed.json', '/health']) {
+    assert.notEqual((await worker.fetch(new Request(`https://ekodi.kr${own}`), env)).status, 301, own);
+  }
+  assert.doesNotMatch(shellHtml, /href="\/community\/"/);
+});
