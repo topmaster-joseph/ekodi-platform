@@ -151,11 +151,12 @@ export async function translateSegment(env,text,sourceLang,targets){
         return normalizeCaptionText(result?.translated_text??result?.response??'');
       }finally{clearTimeout(timer)}
     };
-    try{
-      let out=await attempt(sourceLang,target);
-      if(!out)out=await attempt(LIVE_LANGUAGES[sourceLang].name,LIVE_LANGUAGES[target].name);
-      return out?{lang:target,text:out,status:'ok'}:{lang:target,text,status:'failed'};
-    }catch{return {lang:target,text,status:'failed'}}
+    // One retry: production (2026-11-04, 390 segments x 5 languages) lost ~7%
+    // of translations to a single timeout or transient model error.
+    const once=async(...args)=>{try{return await attempt(...args)}catch{return ''}};
+    let out=await once(sourceLang,target);
+    if(!out)out=await once(LIVE_LANGUAGES[sourceLang].name,LIVE_LANGUAGES[target].name);
+    return out?{lang:target,text:out,status:'ok'}:{lang:target,text,status:'failed'};
   }));
   return settled;
 }
