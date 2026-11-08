@@ -7,7 +7,7 @@
   var root=document.getElementById('roleBar');if(!root)return;
   var CFG={url:root.getAttribute('data-supabase'),key:root.getAttribute('data-key'),slug:root.getAttribute('data-slug')||'mokpo-mission'};
   var PIN_KEY='ekodi.mokpoMission.viewerToken';
-  var sb=null,token='',pinToken='',viaPin=false,loginPeople=null,role=null,ctx={},data=null,admin=null,budgetSnap={},rosterAdmin=null;
+  var sb=null,token='',pinToken='',viaPin=false,loginPeople=null,role=null,ctx={},data=null,admin=null,budgetSnap={},rosterAdmin=null,dept=null;
   var year=new Date().getFullYear()+(new Date().getMonth()>=9?1:0);
 
   // ---------- tiny safe DOM builder (textContent only, never HTML strings) ----------
@@ -40,7 +40,7 @@
   function explain(err){var m=String(err&&err.message||err||'');
     var map={budget_exceeds_target:'편성 합계가 목표 예산을 넘어 승인할 수 없습니다.',budget_approver_required:'예산 승인은 부장만 할 수 있습니다.',approved_line_locked:'승인된 항목은 삭제할 수 없습니다.',
       budget_line_has_expenses:'집행 내역이 있는 항목은 삭제할 수 없습니다.',organization_manage_required:'수정 권한이 없습니다.',pin_session_required:'로그인이 만료되었습니다. 다시 로그인해 주세요.',
-      phone_invalid:'휴대폰번호를 확인해 주세요.',name_taken:'같은 이름이 이미 등록되어 있습니다. 이름 뒤에 교회명을 붙여 구분해 주세요.',name_invalid:'이름을 확인해 주세요.',pin_invalid:'비밀번호는 숫자 4자리입니다.'};
+      phone_invalid:'휴대폰번호를 확인해 주세요.',name_taken:'같은 이름이 이미 등록되어 있습니다. 이름 뒤에 교회명을 붙여 구분해 주세요.',name_invalid:'이름을 확인해 주세요.',pin_invalid:'비밀번호는 숫자 4자리입니다.',department_roster_access_required:'부서 명단을 볼 권한이 없습니다.',name_required:'성명을 입력해 주세요.'};
     for(var k in map)if(m.indexOf(k)>=0)return map[k];return m||'처리하지 못했습니다.';}
 
   // ---------- server ----------
@@ -86,11 +86,15 @@
       });
     });
   }
+  // 부서 명단: 부장·서기는 전체(연락처 포함), 부원은 이름만. 범위는 서버가 정한다.
+  function loadDept(){
+    if(!role||role==='outsider'){dept=null;return Promise.resolve();}
+    return rpc('organization_department_roster',{p_slug:CFG.slug,p_token:pinToken||null},token||null).then(function(d){dept=d;}).catch(function(){dept=null;});}
   function loadPeople(){return authed('organization_login_members',{p_slug:CFG.slug}).then(function(s){loginPeople=s;}).catch(function(){loginPeople=[];});}
   function loadBudget(){return authed('organization_budget_snapshot',{p_slug:CFG.slug,p_year:year}).then(function(s){budgetSnap[year]=s;});}
   function refresh(){
-    if(viaPin)return rpc('organization_pin_snapshot',{p_slug:CFG.slug,p_token:pinToken}).then(function(d){data=d;render();});
-    var jobs=[authed('organization_member_snapshot',{p_slug:CFG.slug}).then(function(s){data=s;}).catch(function(){})];
+    if(viaPin)return Promise.all([rpc('organization_pin_snapshot',{p_slug:CFG.slug,p_token:pinToken}).then(function(d){data=d;}),loadDept()]).then(render);
+    var jobs=[authed('organization_member_snapshot',{p_slug:CFG.slug}).then(function(s){data=s;}).catch(function(){}),loadDept()];
     if(role==='manager')jobs.push(loadBudget(),loadPeople(),authed('organization_event_roster_admin',{p_slug:CFG.slug,p_event:'pck-policy-2026'}).then(function(s){rosterAdmin=s;}).catch(function(){}));
     return Promise.all(jobs).then(render);
   }
@@ -139,8 +143,21 @@
       kids.push(form('부장·부원 로그인 등록 (비밀번호는 휴대폰 끝 4자리로 자동 설정)',[field('이름',input('name',{required:true,maxlength:40})),field('휴대폰번호',input('phone',{inputmode:'numeric',maxlength:13,required:true,placeholder:'010-0000-0000'})),field('구분',select('role',[['member','부원(열람)'],['chair','부장(열람·예산 승인)']]))],'등록',function(d){
         return authed('organization_login_member_set',{p_slug:CFG.slug,p_name:d.name,p_phone:d.phone,p_role:d.role}).then(refresh);}));
     }
+    kids.push.apply(kids,deptRoster());
     panel('intro','선교부 임원 (현재 회기'+((data&&data.currentTerm&&' · '+data.currentTerm.label)||'')+')',kids);
   }
+  function deptRoster(){
+    if(!dept)return [];
+    var people=dept.people||[],full=dept.scope==='full',out=[h('h4',{text:full?'선교부 부서 명단 (부장·서기 전체 열람)':'선교부 부서 명단 (이름)'})];
+    if(full)out.push(table(['직책','성명','교직','교회','휴대폰','이메일','주소',''].slice(0,role==='manager'?8:7),people.map(function(p){
+      var row=[p.office,p.name,p.clergy,p.church,p.phone||'—',p.email||'—',p.address||'—'];
+      if(role==='manager')row.push(h('button',{type:'button',class:'rp-link',text:'삭제',on:{click:function(){if(!safeConfirm(p.name+' 님을 부서 명단에서 뺄까요?'))return;authed('organization_department_roster_remove',{p_slug:CFG.slug,p_id:p.id}).then(function(){flash(p.name+' 님을 명단에서 뺐습니다.');return refresh();}).catch(note);}}}));
+      return row;})));
+    else out.push(table(['직책','성명'],people.map(function(p){return [p.office,p.name];})));
+    if(!people.length)out.push(h('p',{class:'note',text:'등록된 부서원이 없습니다.'}));
+    if(role==='manager')out.push(form('부서 명단 등록·수정 (같은 이름·교회면 고쳐 씁니다)',[field('직책',select('office',[['부원','부원'],['부장','부장'],['서기','서기'],['회계','회계']])),field('성명',input('name',{required:true,maxlength:40})),field('교직',select('clergy',[['목사','목사'],['장로','장로'],['전도사','전도사'],['','—']])),field('교회',input('church',{maxlength:60})),field('휴대폰',input('phone',{inputmode:'numeric',maxlength:20,placeholder:'010-0000-0000'})),field('이메일',input('email',{type:'email',maxlength:120})),field('주소',input('address',{maxlength:200}))],'명단 저장',function(d){
+      return authed('organization_department_roster_set',{p_slug:CFG.slug,p_person:d}).then(function(){flash((d.name||'')+' 님을 부서 명단에 저장했습니다.');return refresh();});}));
+    return out;}
   function plans(){
     panel('plans','사업별 예산과 승인',[h('p',{class:'note',text:'사업계획의 사업별 편성·집행·승인은 예산 메뉴에서 함께 관리합니다.'}),h('a',{class:'rp-btn',href:'#budget',text:'예산 메뉴로 →'})]);
   }
@@ -226,5 +243,5 @@
     intro();plans();budget();meetings();resources();
   }
 
-  load().then(render).catch(function(e){note(e);});
+  load().then(loadDept).then(render).catch(function(e){note(e);});
 })();
