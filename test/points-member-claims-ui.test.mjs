@@ -39,3 +39,15 @@ test('admin staging lane is dispatchable by the orchestrator after token merges 
   assert.match(converge,/'points-governance-admin\.js'/);
   assert.match(converge,/if\(adminStagingTouched\)\{\n    const dispatch=await api\('\/actions\/workflows\/deploy-admin-staging\.yml\/dispatches'/);
 });
+
+
+test('approved evidence never falsely asserts a ledger credit or guaranteed mission payout',()=>{
+  // The approved claim status can be independent of an award under a daily cap.
+  assert.match(app,/approved:'증빙 승인'/);
+  assert.doesNotMatch(app,/approved:'승인·적립'/);
+  assert.match(html,/증빙 승인과 포인트 적립은 다릅니다/);
+  assert.match(html,/‘잔액·내역’ 탭의 거래 기록/);
+  assert.match(app,/정책·일일 한도 충족 시 최대/);
+  assert.doesNotMatch(app,/승인 시 \+'\+expected/);
+  assert.match(app,/function renderRows\(rows\)/);
+});
