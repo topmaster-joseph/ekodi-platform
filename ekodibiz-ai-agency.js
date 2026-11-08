@@ -44,12 +44,21 @@ function approvalEvidence(env, totalSupplier) {
     settlementVerified:env.AGENCY_SETTLEMENT_ACTIVE_VERIFIED==='true'
   };
 }
-function gates(env, totalSupplier) {
+function supplierAllowlisted(env, name) {
+  if(typeof name!=='string'||!name.trim())return false;
+  try {
+    const list=JSON.parse(String(env.AGENCY_APPROVED_SUPPLIER_NAMES||'[]'));
+    return Array.isArray(list) && list.length<=40 &&
+      list.some(value=>typeof value==='string' && value.length<=80 &&
+        value.trim().toLocaleLowerCase('en')===name.trim().toLocaleLowerCase('en'));
+  } catch { return false; }
+}
+function gates(env, totalSupplier, provider='') {
   const profile = activeProfileId(env);
   const pg = readiness(env, { profileId: profile });
   const mode = pg.mode;
   const scopeApproved = env.AGENCY_PG_SCOPE_VERIFIED === 'true';
-  const supplierApproved = totalSupplier === 0 || env.AGENCY_SUPPLIER_COLLECTION_VERIFIED === 'true';
+  const supplierApproved = totalSupplier === 0 || (env.AGENCY_SUPPLIER_COLLECTION_VERIFIED === 'true' && supplierAllowlisted(env,provider));
   const evidence=approvalEvidence(env,totalSupplier);
   // A claim of approval is not an archived, scope-matched operational record.
   // Staging test keys remain usable; *live* never bypasses the evidence/settlement gate.
@@ -168,7 +177,7 @@ export async function agencyApi(request, url, env) {
       }
       if (path === '/api/agency/checkout') {
         if (record.status !== 'accepted') return fault('contract_not_accepted', 409);
-        const gate = gates(env, record.supplierAmount);
+        const gate = gates(env, record.supplierAmount, record.provider);
         if (!gate.ok) return fault('pg_or_supplier_scope_not_enabled', 503);
         const clientKey = gate.clientKey;
         if (!clientKey || !Number.isSafeInteger(record.totalAmount) || record.totalAmount < 100) return fault('price_not_ready', 409);
@@ -179,7 +188,7 @@ export async function agencyApi(request, url, env) {
       if (path === '/api/agency/confirm') {
         if (record.status === 'paid_pending_fulfillment' || record.status === 'active') return reply({ ok:true, record:publicRecord(record) });
         if (record.status !== 'accepted') return fault('contract_not_accepted', 409);
-        const gate = gates(env, record.supplierAmount);
+        const gate = gates(env, record.supplierAmount, record.provider);
         if (!gate.ok) return fault('pg_or_supplier_scope_not_enabled', 503);
         if (body.orderId !== record.id || Number(body.amount) !== record.totalAmount ||
             !/^[A-Za-z0-9_-]{6,200}$/.test(text(body.paymentKey, 210))) return fault('payment_mismatch', 409);
@@ -197,20 +206,21 @@ export async function agencyApi(request, url, env) {
       if (!adminAuthorized(request, env)) return fault('admin_access_denied', 403);
       if (path === '/api/agency/admin/readiness') {
         const own=gates(env,0);
-        const supplier=gates(env,1);
+        const supplierListed=String(env.AGENCY_APPROVED_SUPPLIER_NAMES||'').trim()!=='' && supplierAllowlisted(env,JSON.parse(String(env.AGENCY_APPROVED_SUPPLIER_NAMES||'[]'))?.[0]);
         return reply({ok:true,readiness:{
           mode:own.mode,
           paymentConfigured:own.pg.ready && own.pg.widget,
           pgScopeEnabled:env.AGENCY_PG_SCOPE_VERIFIED==='true',
           supplierCollectionScopeEnabled:env.AGENCY_SUPPLIER_COLLECTION_VERIFIED==='true',
+          supplierAllowlistConfigured:supplierListed,
           liveSwitchEnabled:env.AGENCY_LIVE_ENABLED==='true',
           legalApprovalReferenceRecorded:own.evidence.legalReference,
           pgApprovalReferenceRecorded:own.evidence.pgReference,
-          supplierApprovalReferenceRecorded:supplier.evidence.supplierReference,
+          supplierApprovalReferenceRecorded:approvalEvidence(env,1).supplierReference,
           archiveVerified:own.evidence.archiveVerified,
           settlementVerified:own.evidence.settlementVerified,
           serviceFeeLiveReady:own.mode==='live' && own.ok,
-          supplierCollectionLiveReady:supplier.mode==='live' && supplier.ok
+          supplierCollectionLiveReady:own.mode==='live' && own.ok && env.AGENCY_SUPPLIER_COLLECTION_VERIFIED==='true' && supplierListed && approvalEvidence(env,1).supplierReference
         }});
       }
       if (path === '/api/agency/admin/list') return reply({ ok:true, ...(await store(env, '/agency/admin/list', {})) });
