@@ -209,3 +209,23 @@ test('department roster migration: full for 부장·서기, names for 부원, re
   assert.match(space, /mokpo_dept_roster/);
   assert.match(space, /organization_department_roster served an anonymous caller/);
 });
+
+test('the deployed router reaches the roster API before the /api/* Control API proxy', async () => {
+  const { default: router } = await import('../platform-router-entry-worker.js');
+  const { DB } = d1();
+  const env = {
+    ENVIRONMENT: 'production', DB,
+    CONTROL_API: { fetch: async () => new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'content-type': 'application/json' } }) },
+    ASSETS: { fetch: async () => new Response('asset', { status: 404 }) },
+  };
+  const ctx = { waitUntil() {} };
+  const status = await router.fetch(new Request('https://ekodi.kr/api/mokpo-presbytery/roster/status'), env, ctx);
+  assert.equal(status.status, 200);
+  assert.equal(status.headers.get('x-ekodi-route'), 'mokpo-presbytery-roster');
+  assert.deepEqual(Object.keys(await status.json()).sort(), ['mailReady', 'ok']);
+  const list = await router.fetch(new Request('https://ekodi.kr/api/mokpo-presbytery/roster/'), env, ctx);
+  assert.equal(list.status, 401);
+  assert.equal(list.headers.get('x-ekodi-route'), 'mokpo-presbytery-roster');
+  const other = await router.fetch(new Request('https://ekodi.kr/api/something-else'), env, ctx);
+  assert.notEqual(other.headers.get('x-ekodi-route'), 'mokpo-presbytery-roster');
+});
