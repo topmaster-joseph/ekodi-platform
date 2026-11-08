@@ -257,16 +257,19 @@ const ART = Object.freeze({
   'community-local': 'cozy hand-drawn illustration of a small Korean village street, warm tones',
   'money-basics': 'clean isometric illustration, calm blue and green palette',
 });
-async function chapterIllustration(env, book, meta, ch) {
+async function chapterIllustration(env, book, meta, ch, force = false) {
   const db = env.PUBLISH_DB;
-  const have = await db.prepare("SELECT 1 FROM publishing_ai_images WHERE book_id=? AND number=?").bind(book.id, ch.number).first();
-  if (have) return;
+  if (!force) {
+    const have = await db.prepare("SELECT 1 FROM publishing_ai_images WHERE book_id=? AND number=?").bind(book.id, ch.number).first();
+    if (have) return null;
+  }
   const scene = await writeText(env, 'You write one-sentence English image prompts. Output only the sentence.', `Describe one simple, symbolic scene (no text, no letters, no logos, no real people, no famous characters) for a Korean book chapter titled "${ch.title}" about: ${ch.summary}`, 80, 'edit');
-  if (!scene) return;
+  if (!scene) return null;
   const image = await illustrate(env, `${scene}. ${ART[book.genre] || ART['self-growth']}. no text, no watermark.`);
-  if (!image) return;
+  if (!image) return null;
   await db.prepare('INSERT OR REPLACE INTO publishing_ai_images (book_id, number, mime, data_b64, prompt, created_at) VALUES (?, ?, ?, ?, ?, ?)')
     .bind(book.id, ch.number, 'image/jpeg', image, clean(scene, 400), now()).run();
+  return image;
 }
 
 /** 감수 전(AI 초안 그대로인) 장에 품질 보정을 적용한다. 저자가 고친 장(edited)은 건드리지 않는다. 바뀐 장 수를 돌려준다. */
@@ -349,6 +352,16 @@ export async function aiFactoryAdmin(db, req, path, user, role, json, releaseEnv
   if (m[4] && req.method === 'GET') {
     const img = await db.prepare('SELECT mime, data_b64 FROM publishing_ai_images WHERE book_id=? AND number=?').bind(book.id, Number(m[4])).first();
     return img ? json(200, { ok: true, mime: img.mime, data: img.data_b64 }) : json(404, { ok: false, code: 'NO_IMAGE' });
+  }
+  // 저자가 깨지거나 마음에 들지 않는 삽화를 다시 만든다. 무료 한도 안에서만, 실패하면 기존 삽화를 그대로 둔다.
+  if (m[4] && req.method === 'POST') {
+    const ch = await db.prepare('SELECT number, title, summary, body FROM publishing_ai_chapters WHERE book_id=? AND number=?').bind(book.id, Number(m[4])).first();
+    if (!ch || !String(ch.body || '').trim()) return json(404, { ok: false, code: 'NO_CHAPTER' });
+    if (!releaseEnv?.AI || !releaseEnv?.PUBLISH_DB) return json(503, { ok: false, code: 'AI_UNAVAILABLE' });
+    let image = null;
+    try { image = await chapterIllustration(releaseEnv, book, JSON.parse(book.plan_json || '{}'), ch, true); }
+    catch { return json(502, { ok: false, code: 'IMAGE_FAILED' }); }
+    return image ? json(200, { ok: true, mime: 'image/jpeg', data: image }) : json(429, { ok: false, code: 'FREE_BUDGET_SPENT' });
   }
   if ((m[2] === 'epub' && req.method === 'GET') || (m[2] === 'publish' && req.method === 'POST')) {
     if (book.status !== 'approved') return json(409, { ok: false, code: 'AUTHOR_REVIEW_REQUIRED' });

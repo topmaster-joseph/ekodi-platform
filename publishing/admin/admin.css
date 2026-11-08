@@ -103,3 +103,4 @@ a.padmin-stat-link:hover,a.padmin-stat-link:focus-visible{background:#1f3150;out
 .rd-page h1,.rd-page h2.rd-ch-title{color:#2b2622}
 .rd-page .rd-cover h1{color:#5a2a22}
 .rd-page p.rd-lead{text-indent:0;margin-bottom:.4em;font-weight:700}
+.fig-regen{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:14px;border:1px dashed #c9c2b4;border-radius:8px;margin:6px 0}

@@ -154,3 +154,23 @@ test('publishing stops when the shared pool is full, even with its own share lef
   await aiFactoryTick({ PUBLISH_DB: memory().api, AI: boom, PUBLISHING_AI_FACTORY_ENABLED: 'true', AI_LEDGER_DB: pool2.api }, new Date());
   assert.equal(pool2.sql.prepare('SELECT call_count c FROM ai_provider_daily_budget').get().c, 0, 'failed call reservation refunded');
 });
+
+test('author can regenerate one chapter illustration within the free budget; failure keeps the old image', async () => {
+  const db = memory(), env = { PUBLISH_DB: db.api, AI: fakeAi([]), PUBLISHING_AI_FACTORY_ENABLED: 'true', AI_LEDGER_DB: db.api };
+  for (let i = 0; i < 20; i++) { db.sql.exec('DELETE FROM publishing_ai_usage; DELETE FROM ai_provider_daily_budget'); await aiFactoryTick(env, new Date('2026-11-04T00:00:00Z')); }
+  const id = db.sql.prepare('SELECT id FROM publishing_ai_books').get().id;
+  const json = (status, data) => ({ status, data });
+  const req = method => new Request('https://ekodi.kr/x', { method, body: method === 'POST' ? '{}' : undefined });
+  const path = `/api/workflow/admin/ai-books/${id}/images/3`;
+  db.sql.prepare("UPDATE publishing_ai_images SET data_b64='BROKEN', created_at='old' WHERE book_id=? AND number=3").run(id);
+  assert.equal((await aiFactoryAdmin(db.api, req('POST'), path, { userId: 'a' }, 'author', json, env)).status, 403);
+  db.sql.exec('DELETE FROM publishing_ai_usage; DELETE FROM ai_provider_daily_budget');
+  const ok = await aiFactoryAdmin(db.api, req('POST'), path, { userId: 'adminZ' }, 'admin', json, env);
+  assert.equal(ok.status, 200); assert.ok(ok.data.data && ok.data.data !== 'BROKEN');
+  assert.equal(db.sql.prepare('SELECT data_b64 FROM publishing_ai_images WHERE book_id=? AND number=3').get(id).data_b64, ok.data.data);
+  db.sql.exec(`INSERT OR REPLACE INTO publishing_ai_usage (day, neurons) VALUES ('${new Date().toISOString().slice(0, 10)}', ${AI_FACTORY.dailyNeuronCap})`);
+  const spent = await aiFactoryAdmin(db.api, req('POST'), path, { userId: 'adminZ' }, 'admin', json, env);
+  assert.equal(spent.status, 429);
+  assert.equal(db.sql.prepare('SELECT data_b64 FROM publishing_ai_images WHERE book_id=? AND number=3').get(id).data_b64, ok.data.data, 'old image kept when budget is spent');
+  assert.equal((await aiFactoryAdmin(db.api, req('POST'), `/api/workflow/admin/ai-books/${id}/images/3`, { userId: 'adminZ' }, 'admin', json, {})).status, 503);
+});
