@@ -38,7 +38,7 @@ BEGIN
   EXCEPTION WHEN check_violation THEN v_err := 'blocked'; END;
   IF v_err IS NULL THEN RAISE EXCEPTION 'devotion policy became award-eligible'; END IF;
   -- Generic low-trust ceiling is still tested with a nonreligious adapter.
-  INSERT INTO public.ekodi_point_evidence_adapters VALUES('qa-p2','devotion','operator_confirmed','low_trust',true,true);
+  INSERT INTO public.ekodi_point_evidence_adapters VALUES('qa-p2','devotion','operator_confirmed','low_trust',false,true);
 
   -- Members.
   INSERT INTO auth.users(id,created_at,email_confirmed_at) VALUES(gen_random_uuid(),now(),now()) RETURNING id INTO v_auth;
