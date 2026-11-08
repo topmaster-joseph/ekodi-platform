@@ -13,7 +13,7 @@ const checks = [
   ['assets/category-visibility.js', ['TOSS-MALL-UNDERWRITING-001', 'data-filter-target', 'api/public/products', 'credentials', 'MutationObserver']],
   ['assets/local-commerce.js', ['ekodiMallLocalRegionV1', 'explicit', 'geolocation', '좌표는 저장하지 않습니다', 'ekodi:local-region-change']],
   ['assets/context-curator.js', ['ekodi.kr/api/affiliate/public/products', 'diversified', 'groupOffers', '제휴수수료와 분리합니다', 'data-context-prompt', 'context-detail-button', 'context-offer-dialog', '어디서 살까요?', '판매처에서 구매']],
-  ['travel/stay/index.html', ['여행·레저', '아고다 제휴 숙소', '지역·숙소명 검색', 'data-affiliate-mode="stay"', 'affiliateProductDialog', 'affiliate-hub.js']],
+  ['travel/stay/index.html', ['여행·레저', '아고다 제휴 숙소', '지역·숙소명 검색', 'data-affiliate-mode="stay"', 'affiliateProductDialog', 'affiliate-hub.js', '아고다에서 숙소 찾기', 'rel="noopener noreferrer sponsored"']],
   ['coupang/index.html', ['쿠팡제휴몰', '쿠팡파트너스 제휴상품', '쿠팡 제휴상품 검색', 'data-affiliate-mode="shopping"', '쿠팡 파트너스 활동의 일환', 'affiliateProductDialog', 'affiliate-hub.js']],
   ['assets/affiliate-hub.js', ['affiliate/public/products', 'noopener sponsored', 'affiliate-card-image', 'showDetail', '아고다에서 확인']],
   ['assets/affiliate-share.js', ['shareUrlForProduct', 'prioritizeSharedProduct', 'safeAffiliateHttps', 'affiliateProviderMatches', 'conciseAffiliateDescription', 'https://ekodi.kr', 'product']],
@@ -64,6 +64,14 @@ const checks = [
   ['build-meta.json', ['"platformMode": "marketplace-v2"', paymentsMarker, '"commerceOsVersion": 1', '"paymentProviderAuthority": "server-capability-registry"', '"highImpactExecution": "human-gated"', '"affiliateExternalRouting": true']]
 ];
 const errors = [];
+// Agoda partner search is a disclosed external referral, not a verified hotel product.
+const stayHub = await readFile(path.join(dist, 'travel/stay/index.html'), 'utf8');
+const shoppingHub = await readFile(path.join(dist, 'coupang/index.html'), 'utf8');
+if (!stayHub.includes('https://www.agoda.com/partners/partnersearch.aspx?pcs=1&amp;cid=1980072&amp;hl=ko-kr') ||
+    !stayHub.includes('아고다에서 숙소 찾기')) errors.push('Agoda stay hub missing owner-generated CID referral link');
+if (shoppingHub.includes('cid=1980072') || shoppingHub.includes('아고다에서 숙소 찾기'))
+  errors.push('Agoda referral must not appear in Coupang hub');
+
 for (const [relative, needles] of checks) {
   let content = '';
   try { content = await readFile(path.join(dist, relative), 'utf8'); } catch { errors.push(`${relative} is missing`); continue; }
