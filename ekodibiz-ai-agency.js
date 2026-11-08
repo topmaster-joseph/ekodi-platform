@@ -44,14 +44,17 @@ function approvalEvidence(env, totalSupplier) {
     settlementVerified:env.AGENCY_SETTLEMENT_ACTIVE_VERIFIED==='true'
   };
 }
-function supplierAllowlisted(env, name) {
-  if(typeof name!=='string'||!name.trim())return false;
+function approvedSupplierList(env) {
   try {
     const list=JSON.parse(String(env.AGENCY_APPROVED_SUPPLIER_NAMES||'[]'));
-    return Array.isArray(list) && list.length<=40 &&
-      list.some(value=>typeof value==='string' && value.length<=80 &&
-        value.trim().toLocaleLowerCase('en')===name.trim().toLocaleLowerCase('en'));
-  } catch { return false; }
+    if(!Array.isArray(list)||list.length>40)return [];
+    return list.filter(value=>typeof value==='string' && value.trim().length>0 && value.length<=80);
+  } catch { return []; }
+}
+function supplierAllowlisted(env, name) {
+  if(typeof name!=='string'||!name.trim())return false;
+  return approvedSupplierList(env).some(value=>
+    value.trim().toLocaleLowerCase('en')===name.trim().toLocaleLowerCase('en'));
 }
 function gates(env, totalSupplier, provider='') {
   const profile = activeProfileId(env);
@@ -206,7 +209,7 @@ export async function agencyApi(request, url, env) {
       if (!adminAuthorized(request, env)) return fault('admin_access_denied', 403);
       if (path === '/api/agency/admin/readiness') {
         const own=gates(env,0);
-        const supplierListed=String(env.AGENCY_APPROVED_SUPPLIER_NAMES||'').trim()!=='' && supplierAllowlisted(env,JSON.parse(String(env.AGENCY_APPROVED_SUPPLIER_NAMES||'[]'))?.[0]);
+        const supplierListed=approvedSupplierList(env).length>0;
         return reply({ok:true,readiness:{
           mode:own.mode,
           paymentConfigured:own.pg.ready && own.pg.widget,
