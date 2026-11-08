@@ -22,6 +22,11 @@ const browser=await puppeteer.launch({
 });
 try{
   const page=await browser.newPage();
+  // Register before navigation so an asynchronous canonical shell replacement
+  // cannot be mistaken for a successfully localized standalone page.
+  await page.evaluateOnNewDocument(()=>{
+    window.addEventListener('ekodi:church-shell-synced',()=>{window.__ekodiCalendarShellSynced=true});
+  });
   const jsErrors=[];
   page.on('pageerror',error=>jsErrors.push(String(error)));
   for(const device of devices){
@@ -41,12 +46,9 @@ try{
         const translated=expected==='ko-KR'||(!/[가-힣]/.test(home)&&!/[가-힣]/.test(syncedNav));
         return document.documentElement.lang===expected&&buttons.length>=28&&!waitingForCalendar&&translated;
       },{timeout:25000,polling:150},expectedLang);
-      // Let the async homepage header/footer replacement settle.
-      await page.waitForFunction(()=>{
-        const doc=document.documentElement;
-        const header=document.querySelector('.site-header');
-        return Boolean(header&&doc&&document.querySelector('[data-church-shared-calendar]'));
-      },{timeout:15000});
+      // Wait for the real shared-header fetch and its localization reapply;
+      // loading the initial translated HTML alone is insufficient.
+      await page.waitForFunction(()=>window.__ekodiCalendarShellSynced===true,{timeout:18000,polling:150});
       await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
       const state=await page.evaluate(()=>{
         const t=selector=>document.querySelector(selector)?.textContent?.trim()||'';
