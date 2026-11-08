@@ -67,9 +67,9 @@ const errors = [];
 // Agoda partner search is a disclosed external referral, not a verified hotel product.
 const stayHub = await readFile(path.join(dist, 'travel/stay/index.html'), 'utf8');
 const shoppingHub = await readFile(path.join(dist, 'coupang/index.html'), 'utf8');
-if (!stayHub.includes('https://www.agoda.com/partners/partnersearch.aspx?pcs=1&amp;cid=1980072&amp;hl=ko-kr') ||
+if (!stayHub.includes('https://www.agoda.com/partners/partnersearch.aspx?pcs=1&amp;cid=1980072&amp;hl=ko-kr&amp;tag=ekodi_mall_stay') ||
     !stayHub.includes('아고다에서 숙소 찾기')) errors.push('Agoda stay hub missing owner-generated CID referral link');
-if (shoppingHub.includes('cid=1980072') || shoppingHub.includes('아고다에서 숙소 찾기'))
+if (shoppingHub.includes('cid=1980072') || shoppingHub.includes('tag=ekodi_mall_stay') || shoppingHub.includes('아고다에서 숙소 찾기'))
   errors.push('Agoda referral must not appear in Coupang hub');
 
 for (const [relative, needles] of checks) {

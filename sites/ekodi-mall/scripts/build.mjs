@@ -2,7 +2,7 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderMallHeader } from '../../../mall-shared-header.js';
-import { validatedAgodaPartnerSearch } from '../assets/affiliate-share.js';
+import { trackedAgodaPartnerSearch } from '../assets/affiliate-share.js';
 import { loadBookstoreProducts, mergeBookstoreProducts } from './bookstore-products.mjs';
 import { isPublicStaticSale, isPublicIndexableProduct } from '../api/public-sale-visibility.js';
 
@@ -358,7 +358,7 @@ await write('checkout/index.html', checkoutHtml);
 for (const hub of affiliateHubs) {
   const hubPath = hub.path || hub.id;
   const pageUrl = `${baseUrl}/${hubPath}/`;
-  const referralUrl = hub.mode === 'stay' ? validatedAgodaPartnerSearch(hub.directReferralUrl) : '';
+  const referralUrl = hub.mode === 'stay' ? trackedAgodaPartnerSearch(hub.directReferralUrl, hub.campaignTag) : '';
   const directReferral = referralUrl
     ? `<section class="affiliate-direct-referral" aria-label="아고다 공식 제휴 검색"><div><strong>아고다에서 전체 숙소 검색</strong><p>제공된 아고다 파트너 링크로 이동합니다. 실제 숙소·가격·예약·취소 조건은 아고다에서 확인하세요.</p></div><a class="btn primary" href="${esc(referralUrl)}" target="_blank" rel="noopener noreferrer sponsored">아고다에서 숙소 찾기</a></section>`
     : '';

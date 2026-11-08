@@ -4,7 +4,7 @@
     "name": "여행·레저",
     "eyebrow": "TRAVEL · STAY",
     "title": "여행·레저",
-    "description": "아고다 제휴 숙소를 찾아보세요. 예약·결제 조건은 판매처에서 확인합니다.",
+    "description": "에코디에 등록된 제휴 숙소를 검색하거나 아고다에서 전체 숙소를 찾아보세요. 예약·결제는 아고다에서 진행합니다.",
     "prompt": "예: 제주 가족여행, 서울 호텔",
     "providerKeys": [
       "agoda"
@@ -13,12 +13,13 @@
     "published": true,
     "path": "travel/stay",
     "mode": "stay",
-    "searchLabel": "지역·숙소명 검색",
+    "searchLabel": "공개 숙소 목록 내 검색",
     "resultsEyebrow": "STAY RECOMMENDATIONS",
     "resultsTitle": "아고다 제휴 숙소",
     "resultsIntro": "공개 확인된 아고다 숙소만 표시합니다.",
     "loadingLabel": "아고다 숙소를 확인하고 있습니다.",
-    "directReferralUrl": "https://www.agoda.com/partners/partnersearch.aspx?pcs=1&cid=1980072&hl=ko-kr"
+    "directReferralUrl": "https://www.agoda.com/partners/partnersearch.aspx?pcs=1&cid=1980072&hl=ko-kr",
+    "campaignTag": "ekodi_mall_stay"
   },
   {
     "id": "coupang",
