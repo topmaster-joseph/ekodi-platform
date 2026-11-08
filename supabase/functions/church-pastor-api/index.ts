@@ -49,7 +49,7 @@ const WRITE_FIELDS={
 };
 
 function cors(origin){
-  const h={'access-control-allow-headers':'authorization,content-type,apikey,prefer','access-control-allow-methods':'GET,POST,PATCH,OPTIONS','access-control-expose-headers':'content-range','access-control-max-age':'86400','vary':'Origin'};
+  const h={'access-control-allow-headers':'authorization,content-type,apikey,prefer','access-control-allow-methods':'GET,POST,PATCH,DELETE,OPTIONS','access-control-expose-headers':'content-range','access-control-max-age':'86400','vary':'Origin'};
   if(origin&&ALLOWED_ORIGINS.has(origin))h['access-control-allow-origin']=origin;
   return h;
 }
@@ -169,7 +169,7 @@ Deno.serve(async req=>{
   const origin=req.headers.get('origin')||'';
   if(origin&&!ALLOWED_ORIGINS.has(origin))return json({error:'ORIGIN_NOT_ALLOWED'},403,origin);
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(origin)});
-  if(!['GET','POST','PATCH'].includes(req.method))return json({error:'METHOD_NOT_ALLOWED'},405,origin);
+  if(!['GET','POST','PATCH','DELETE'].includes(req.method))return json({error:'METHOD_NOT_ALLOWED'},405,origin);
   const identity=await centralIdentity(req);if(!identity)return json({error:'AUTH_REQUIRED'},401,origin);
   const url=new URL(req.url);
   let staff=null;try{staff=await staffFor(identity.id,identity.email,{allowRegistryFallback:url.searchParams.get('scope')!=='worship-access'});}catch(error){return json({error:String(error?.message||error)},503,origin);}
@@ -243,8 +243,22 @@ Deno.serve(async req=>{
     return json(rows,200,origin);
   }
   if(!allowed(staff.role,WRITE_ROLES[table]))return json({error:'ROLE_NOT_ALLOWED'},403,origin);
+  // 교회 일정만 수정·삭제를 허용한다(id는 쿼리 ?id=<uuid>).
+  if(req.method==='DELETE'){
+    if(table!=='church_events')return json({error:'DELETE_NOT_ALLOWED'},405,origin);
+    const id=uuidOrNull(url.searchParams.get('id'));if(!id)return json({error:'EVENT_ID_REQUIRED'},400,origin);
+    let removed;try{removed=await rpc('church_event_delete',{p_church_slug:CHURCH_SLUG,p_id:id,p_actor:identity.id});}catch(error){return json({error:String(error?.message||error)},503,origin);}
+    if(!removed.ok)return proxyResponse(removed,origin);
+    return json({ok:true,id},200,origin);
+  }
   let input={};try{input=await req.json();}catch{return json({error:'INVALID_JSON'},400,origin);}
   let payload;try{payload=cleanPayload(table,input);}catch(error){return json({error:String(error?.message||error)},400,origin);}
+  if(req.method==='PATCH'&&table==='church_events'){
+    const id=uuidOrNull(url.searchParams.get('id'));if(!id)return json({error:'EVENT_ID_REQUIRED'},400,origin);
+    let updated;try{updated=await rpc('church_event_update',{p_church_slug:CHURCH_SLUG,p_id:id,p_payload:payload,p_actor:identity.id});}catch(error){return json({error:String(error?.message||error)},503,origin);}
+    if(!updated.ok)return proxyResponse(updated,origin);
+    const row=await updated.json().catch(()=>null);return json(row?[row]:[],200,origin);
+  }
   if(req.method==='PATCH'){
     if(table!=='church_receipt_requests')return json({error:'PATCH_NOT_ALLOWED'},405,origin);
     const id=uuidOrNull(payload.id);if(!id)return json({error:'RECEIPT_ID_REQUIRED'},400,origin);
