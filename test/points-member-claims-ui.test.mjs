@@ -50,4 +50,7 @@ test('approved evidence never falsely asserts a ledger credit or guaranteed miss
   assert.match(app,/정책·일일 한도 충족 시 최대/);
   assert.doesNotMatch(app,/승인 시 \+'\+expected/);
   assert.match(app,/function renderRows\(rows\)/);
+  // Wallet history is rendered from actual ledger row amounts, not a claim's approved flag.
+  assert.match(app,/const value=Number\(row\.amount\)\|\|0;/);
+  assert.match(html,/<h3>최근 거래<\/h3>/);
 });
