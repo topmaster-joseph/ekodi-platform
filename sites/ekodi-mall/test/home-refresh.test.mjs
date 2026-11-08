@@ -243,3 +243,21 @@ test('unified search does not revive unapproved live-quote bookstore products', 
   assert.match(books, /existing\.dataset\.bookstoreQuotePending = 'false'/);
   assert.match(books, /existing\.dataset\.bookstoreQuotePending = 'true'/);
 });
+
+test('Toss merchant-review first fold shows sale catalog before full policy disclosures', () => {
+  const shopStart = template.indexOf('<section class="shop" id="shop">');
+  const grid = template.indexOf('id="grid"', shopStart);
+  const policy = template.indexOf('class="mall-review-disclosures"', shopStart);
+  const hero = template.indexOf('class="context-hero mall-premium-hero"');
+  assert.ok(shopStart >= 0 && grid > shopStart && policy > grid && hero > policy, 'catalog precedes legal disclosure and editorial hero');
+  assert.match(template, /<details class="mall-review-disclosures"><summary>결제·판매처·포인트 안내 자세히 보기<\/summary>/);
+  assert.match(template, /실제 판매 가능한 상품만 목록에 표시합니다/);
+  assert.match(template, /회원가입 없이 비회원 카드결제를 이용할 수 있습니다/);
+  assert.match(template, /에코디서점 전자책은 로그인 후 구매/);
+  assert.match(template, /로그인 회원의 결제가 실제 확인되면 결제금액의 1%/);
+  assert.match(template, /상품별로 확인할 수 있습니다/);
+  const cssSource = readFileSync(new URL('../assets/styles.css', import.meta.url), 'utf8');
+  assert.match(cssSource, /TOSS-MALL-FIRSTFOLD-20261108/);
+  assert.match(cssSource, /#shop \.card \.thumb\.book/);
+  assert.match(cssSource, /#shop \.mall-review-disclosures summary:focus-visible/);
+});
