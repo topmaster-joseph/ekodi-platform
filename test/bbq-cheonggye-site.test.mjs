@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { BBQ_CG_SLUG, bbqCheonggyeCss, renderBbqCheonggyePage } from '../bbq-cheonggye-site.js';
+import { BBQ_CG_SLUG, bbqCheonggyeCss, bbqCheonggyeQrScript, renderBbqCheonggyePage } from '../bbq-cheonggye-site.js';
 
 const source=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const url='https://ekodi.kr/bbqcg';
@@ -57,4 +57,26 @@ test('store provisioning reuses immutable store identity and does not assign rol
   assert.match(migration,/store_user_sites/);
   assert.match(migration,/no role grants/i);
   assert.doesNotMatch(migration,/bbq123456|26110938|password\s*=/i);
+});
+
+test('BBQ store presents its own sticky brand, safe order selection and a local QR asset',async()=>{
+  const html=await (await renderBbqCheonggyePage(new Request(url),{},{})).text();
+  const css=await bbqCheonggyeCss().text();
+  const qr=await bbqCheonggyeQrScript().text();
+  assert.doesNotMatch(html,/LOCAL STORE\s*·\s*EKODI|<small>EKODI<\/small>/);
+  assert.match(html,/id="order"/);
+  assert.match(html,/id="directions"/);
+  assert.match(html,/청계점 전용 주문 링크 확인 중/);
+  assert.match(html,/\/bbqcg\/assets\/order-qr\.js/);
+  assert.match(css,/position:sticky/);
+  assert.match(css,/@media\(max-width:560px\)/);
+  assert.match(qr,/https:\/\/ekodi\.kr\/bbqcg#order/);
+  assert.match(qr,/QRCode/);
+  assert.match(qr,/toDataURL\('image\/png'\)/);
+  assert.doesNotMatch(html,/baemin\.com|yogiyo\.co\.kr|coupangeats\.com/i);
+});
+test('worker serves the BBQ QR JavaScript from its own public route',async()=>{
+  const src=await source('space-worker.js');
+  assert.match(src,/bbqCheonggyeQrScript/);
+  assert.match(src,/\/bbqcg\/assets\/order-qr\.js/);
 });
