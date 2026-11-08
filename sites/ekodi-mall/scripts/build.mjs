@@ -420,6 +420,7 @@ for (const hub of affiliateHubs) {
   const directReferral = referralUrl
     ? `<section class="affiliate-direct-referral" aria-label="아고다 공식 제휴 검색"><div><strong>아고다에서 전체 숙소 검색</strong><p>제공된 아고다 파트너 링크로 이동합니다. 실제 숙소·가격·예약·취소 조건은 아고다에서 확인하세요.</p></div><a class="btn primary" href="${esc(referralUrl)}" target="_blank" rel="noopener noreferrer sponsored">아고다에서 숙소 찾기</a></section>`
     : '';
+  const agodaPanel = hub.mode === 'stay' ? await readFile(new URL('../src/agoda-search-panel.fragment.html', import.meta.url), 'utf8') : '';
   const html = fill(affiliateHubTemplate, {
     MALL_HEADER: renderMallHeader({ home: false, sellerHref: sellerStudioHref }),
     NAME: esc(hub.name),
@@ -437,6 +438,8 @@ for (const hub of affiliateHubs) {
     LOADING_LABEL: esc(hub.loadingLabel || '후보를 불러오고 있습니다.'),
     DISCLOSURE: esc(hub.disclosure),
     DIRECT_REFERRAL: directReferral,
+    AGODA_SEARCH_PANEL: agodaPanel,
+    AGODA_SEARCH_SCRIPT: hub.mode === 'stay' ? '<script src="/assets/agoda-live-search.js" defer></script>' : '',
     PAGE_URL: esc(pageUrl),
     NOTICE: esc(site.notice)
   });
