@@ -42,6 +42,10 @@ main>.muted{font-size:12px;margin:12px 3px;line-height:1.65}
 .agency-navigation{max-width:1200px;gap:5px;margin-top:8px}
 .agency-navigation a,.agency-navigation button{font-size:12px;border:1px solid transparent;background:transparent}
 .agency-navigation [aria-current="page"]{background:#e9f4ec;border-color:#d5e7db;color:#19523a}
+/* Keep share buttons legible: the generic admin action rule paints a dark background. */
+.agency-navigation button[data-share-agency]{background:#eef6f0;color:#184b36;border:1px solid #c5dccb;font-weight:650}
+.agency-navigation button[data-share-agency]:hover{background:#dfeee4;color:#123d2c}
+.agency-navigation button[data-share-agency]:focus-visible{outline:3px solid #8bc59e;outline-offset:2px}
 .agency-share-status{max-width:1200px}
 .admin-tabs{display:flex;align-items:center;gap:5px;padding:5px;margin:16px 0 6px;background:white;border:1px solid #dce7df;border-radius:11px;box-shadow:0 6px 20px #12382409}
 .admin-tabs button{flex:1;min-height:43px;background:transparent;border:0;border-radius:8px;color:#5c7465;font-size:13px}
