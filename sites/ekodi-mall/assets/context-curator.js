@@ -173,13 +173,45 @@
     loading = fetch(API, { method: 'GET', mode: 'cors', credentials: 'omit', headers: { accept: 'application/json' } }).then(async (response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); const body = await response.json(); const offers = Array.isArray(body.products) ? body.products.map(normalizeOffer).filter(Boolean) : []; const identities = Array.isArray(body.productIdentities) ? body.productIdentities.map(normalizeProductIdentity).filter(Boolean) : []; affiliateProducts = identities.length ? identities : groupOffers(offers); if (body.disclosureText && disclosure) disclosure.textContent = `${clean(body.disclosureText)} 추천순위는 제휴수수료와 분리합니다.`; return affiliateProducts; }).catch(() => { affiliateProducts = []; return []; });
     return loading;
   }
+  // This panel is below the Mall's first viewport on typical devices. Keep its
+  // public affiliate feed out of the critical startup waterfall until needed.
+  let defaultLoadStarted = false;
+  let userRequested = false;
+  let previewObserver = null;
+  function warmUp() {
+    if (defaultLoadStarted || userRequested) return;
+    defaultLoadStarted = true;
+    previewObserver?.disconnect();
+    void load().then(() => {
+      // A user recommendation must win over a late default-feed response.
+      if (!userRequested) render(parse(''));
+    });
+  }
   async function recommend(message, focus = true) {
+    userRequested = true;
+    previewObserver?.disconnect();
     const context = parse(message); if (focus) document.querySelector('#recommend')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
     results.replaceChildren(text('article', 'context-loading', '현재 연결 상품과 판매처를 비교하고 있습니다.'));
     await load(); render(context); document.dispatchEvent(new CustomEvent('ekodi:context-recommend', { detail: { context: contextLabel(context), results: Math.min(4, affiliateProducts.length) } }));
   }
   form.addEventListener('submit', (event) => { event.preventDefault(); recommend(input.value); });
+  form.addEventListener('focusin', warmUp, { once: true });
   document.addEventListener('click', (event) => { const button = event.target.closest('[data-context-prompt]'); if (!button) return; const prompt = clean(button.dataset.contextPrompt || button.textContent); input.value = prompt; recommend(prompt); });
   window.EkodiContextCurator = Object.freeze({ recommend });
-  load().then(() => render(parse('')));
+
+  const target = document.querySelector('#recommend') || form;
+  const requestedByHash = () => /^(?:#recommend|#contextForm)$/.test(window.location.hash);
+  if (requestedByHash() || typeof IntersectionObserver !== 'function') {
+    warmUp(); // Deep link and older browser retain immediate, functional results.
+  } else {
+    try {
+      previewObserver = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) warmUp();
+      }, { rootMargin: '320px 0px' });
+      previewObserver.observe(target);
+    } catch {
+      warmUp();
+    }
+  }
+  window.addEventListener('hashchange', () => { if (requestedByHash()) warmUp(); });
 })();
