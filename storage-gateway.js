@@ -1,4 +1,4 @@
-import { canonicalDriveStatus, deleteCanonicalDriveFile, readCanonicalDriveFile, readCanonicalDriveMetadata, writeCanonicalDriveFile, writeCanonicalDriveStream } from './canonical-drive-writer.js';
+import { canonicalDriveStatus, deleteCanonicalDriveFile, readCanonicalDriveFile, readCanonicalDriveMetadata, verifyCanonicalBackupDriveAcl, writeCanonicalDriveFile, writeCanonicalDriveStream } from './canonical-drive-writer.js';
 
 const STORAGE_PREFIX = '/api/storage/v1';
 // The storage control plane is reached privately through the STORAGE service
@@ -255,6 +255,17 @@ export async function handleStorageGateway(request, env = {}) {
       console.error('Storage R2 archive error',error);
       const message=String(error?.message || 'STORAGE_ARCHIVE_ERROR');
       return json({ error:'R2 녹화본을 공유드라이브로 보관하지 못했습니다.', code:message.split(':')[0] },errorStatus(message));
+    }
+  }
+
+  // Owner backup privacy gate: only the existing server-to-server key may
+  // request a read-only inherited-membership audit. Never expose identities.
+  if(request.method==='GET'&&url.pathname===`${STORAGE_PREFIX}/backup-acl`){
+    try{
+      return json(await verifyCanonicalBackupDriveAcl(env));
+    }catch(error){
+      const code=String(error?.message||'CANONICAL_BACKUP_ACL_UNVERIFIED').split(':')[0];
+      return json({ok:false,status:'access_not_verified',code},errorStatus(code));
     }
   }
 

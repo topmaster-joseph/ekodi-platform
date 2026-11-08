@@ -1,0 +1,72 @@
+name: Verify Points Backup Drive Membership (Read Only)
+
+# No PII dump, uploads, restore, migrations, payment or reward activation.
+# Execute only after the existing Storage Control service was deployed.
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Deploy EKODI Storage Control
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: points-production-backup-drive-acl
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+        (github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.head_branch == 'main' &&
+         github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    env:
+      GH_TOKEN: ${{ github.token }}
+      STORAGE_GATEWAY_KEY: ${{ secrets.EKODI_STORAGE_GATEWAY_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Require unchanged protected main and existing server credential
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
+          test "$GITHUB_SHA" = "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          test -n "$STORAGE_GATEWAY_KEY"
+      - name: Independently verify canonical backup Drive membership and folder inheritance
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          proof="$(mktemp)"
+          trap 'rm -f "$proof"' EXIT
+          status="$(curl --silent --show-error --fail --retry 2 \
+            --connect-timeout 5 --max-time 90 --max-redirs 0 \
+            -H "x-ekodi-storage-key: $STORAGE_GATEWAY_KEY" \
+            -o "$proof" -w '%{http_code}' \
+            https://ekodi.kr/api/storage/v1/backup-acl)"
+          test "$status" = 200
+          jq -e '.ok==true and
+            .status=="private_drive_acl_and_backup_folders_verified" and
+            (.approvedMembershipCount|type=="number") and (.approvedMembershipCount>=1) and
+            .publicOrUnknownMembershipAllowed==false and
+            .directExtraFolderGrantsAllowed==false and
+            .backupExportAuthorized==false and
+            .productionSchemaWriteAuthorized==false and
+            .pointsActivationAuthorized==false and
+            (.subfolderIds.ENCRYPTED_DUMPS|type=="string") and
+            (.subfolderIds.MANIFESTS|type=="string") and
+            (.subfolderIds.RESTORE_EVIDENCE|type=="string")' "$proof" >/dev/null
+          test "$GITHUB_SHA" = "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          echo 'Canonical backup Shared Drive owner ACL and exact private folders: VERIFIED (read-only).' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No encrypted dump/restore was created, no finance functions were activated.' >> "$GITHUB_STEP_SUMMARY"

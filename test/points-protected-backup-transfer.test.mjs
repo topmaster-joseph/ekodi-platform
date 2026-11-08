@@ -96,6 +96,14 @@ test('actual ciphertext and manifest are independently read back from canonical 
   assert.equal(manifest.project_ref,'renzehysxirjilvdxacv');
   assert.equal(manifest.independent_restore_verified,false);
   assert.equal(manifest.two_signer_receipt_verified,false);
+  assert.deepEqual(manifest.coverage,{
+    type:'application_logical_only',
+    supabase_managed_auth_included:false,
+    supabase_managed_storage_metadata_included:false,
+    storage_object_bytes_included:false,
+    edge_function_code_included:false,
+    full_instance_recovery_verified:false,
+  });
   assert.equal(manifest.points_activation_authorized,false);
   assert.ok(!JSON.stringify(outcome).includes('fixture-uploaded-file'));
   assert.equal(f.requests.filter(x=>x.method==='POST').length,2);
