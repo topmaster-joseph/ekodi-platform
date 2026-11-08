@@ -160,11 +160,11 @@ test('book cards use concise copy and verified prices or an explicit unknown-pri
   const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
   const books = readFileSync(new URL('../assets/bookstore-live.js', import.meta.url), 'utf8');
   assert.match(build, /product\.category === 'book' \? 34 : 46/);
-  assert.match(build, /'가격 확인 · '/);
+  assert.match(build, /'도서 가격 확인'/);
   assert.match(build, /category-availability\.json/);
-  assert.match(books, /price: Number\(quote\?\.price\?\.amount\)/);
-  assert.match(books, /productCard\(\{ \.\.\.result\.book, price: result\.price \}\)/);
-  assert.match(books, /readyQuote\(quote, book\.bookId\)/);
+  assert.match(books, /Number\(quote.price.amount\)/);
+  assert.match(books, /setBuyState\(card, state, quote\)/);
+  assert.match(books, /readyQuote\(quote, bookId\)/);
   assert.match(books, /가격 확인 · 판매 상태 확인 필요/);
   assert.match(books, /const quote = await quoteFor\(book\.bookId\)/);
   assert.match(css, /\.card\[data-category="book"\] \.card-summary/);
@@ -196,9 +196,9 @@ test('Toss underwriting: an unverified bookstore quote cannot expose a sale card
   assert.match(builder, /data-bookstore-quote-pending/);
   assert.match(builder, /product.source\?\.system === 'ekodi-bookstore'/);
   assert.match(app, /card.dataset.bookstoreQuotePending !== 'true'/);
-  assert.match(books, /ready: readyQuote\(quote, book.bookId\)/);
-  assert.match(books, /card.dataset.bookstoreQuotePending = 'false'/);
-  assert.match(books, /card.dataset.bookstoreQuotePending = 'true'/);
+  assert.match(books, /state = readyQuote\(quote, bookId\) \? 'ready' : 'unavailable'/);
+  assert.match(books, /card.dataset.bookstoreQuotePending = ready \? 'false' : 'true'/);
+  assert.match(books, /button.setAttribute\('aria-disabled', 'true'\)/);
   assert.match(css, /\.card\[data-bookstore-quote-pending="true"\]:not\(\[data-bookstore-informational="true"\]\)\{display:none!important\}/);
 });
 
