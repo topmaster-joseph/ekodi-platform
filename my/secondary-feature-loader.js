@@ -50,20 +50,37 @@ function scheduleAfterLoad(){
   if(document.readyState==='complete')scheduleIdleLoad();
   else window.addEventListener('load',scheduleIdleLoad,{once:true});
 }
+// Personal-finance styling belongs to the optional finance tab, not the public/guest
+// first paint. Keep it browser-managed (versioned immutable asset), never cache data.
+const FINANCE_STYLE='/my/personal-finance.css?v=20260905-personal-finance-1';
+function ensureFinanceStyle(){
+  if(document.querySelector('link[data-my-finance-style]'))return;
+  const link=document.createElement('link');
+  link.rel='stylesheet';
+  link.href=FINANCE_STYLE;
+  link.dataset.myFinanceStyle='on-demand';
+  document.head.append(link);
+}
+function ensureVisibleFinanceStyle(){
+  if(hasVerifiedMySession()&&location.hash==='#money')ensureFinanceStyle();
+}
 function shouldLoadNow(){
   return ['#account','#money','#personal-brand','#recommendations'].includes(location.hash);
 }
-window.addEventListener('hashchange',()=>{if(hasVerifiedMySession()&&shouldLoadNow())void loadMySecondaryFeatures()});
+window.addEventListener('hashchange',()=>{ensureVisibleFinanceStyle();if(hasVerifiedMySession()&&shouldLoadNow())void loadMySecondaryFeatures()});
 document.addEventListener('click',event=>{
   const target=event.target instanceof Element?event.target:null;
+  if(hasVerifiedMySession()&&target?.closest('[data-finance-open],a[href="#money"]'))ensureFinanceStyle();
   if(hasVerifiedMySession()&&target?.closest('[data-finance-open],a[href="#account"],a[href="#money"],a[href="#personal-brand"],a[href="#recommendations"]')){
     void loadMySecondaryFeatures();
   }
 },{capture:true,passive:true});
 window.addEventListener('ekodi:my-session',event=>{
   if(event?.detail?.signedIn!==true||!hasVerifiedMySession())return;
+  ensureVisibleFinanceStyle();
   if(shouldLoadNow())void loadMySecondaryFeatures();
   else scheduleAfterLoad();
 });
+ensureVisibleFinanceStyle();
 if(hasVerifiedMySession()&&shouldLoadNow())void loadMySecondaryFeatures();
 scheduleAfterLoad();
