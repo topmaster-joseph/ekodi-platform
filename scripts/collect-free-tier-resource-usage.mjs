@@ -240,14 +240,66 @@ export async function loadCloudflareQuotaSnapshot(path){
   return {available:true,reason:null,snapshots:snapshotsFromCloudflareQuotaReport(raw),reportState:String(raw.state||'unknown'),plan:String(raw?.plan?.workers||'unknown')};
 }
 
+/**
+ * GitHub's three calls settle one at a time, for the same reason the three
+ * providers do.
+ *
+ * Evidence, not suspicion: once the collector started naming its endpoint, every
+ * nightly run from 2026-11-02 to 2026-11-08 reported the same line —
+ *
+ *   github telemetry unavailable: HTTP_500 (HTTP 500)
+ *     at api.github.com/repos/<repo>/actions/artifacts
+ *
+ * — so the paginated artifact walk is what fails. It was also the one call whose
+ * metric carries no free limit and which evaluate-free-tier-resource-proof.mjs
+ * does not require. `cache_storage_bytes` does have a limit (10 GB) and is
+ * required. An unlimited extra was dragging the limited essential down with it,
+ * and the platform spent a week unable to read its own ceiling over a number
+ * nothing compares against.
+ *
+ * An incomplete walk reports no artifact metric at all rather than a partial
+ * sum: the value would be a floor, and a floor dropped into a series of totals
+ * reads as storage shrinking, which is worse than a gap that says it is a gap.
+ */
+async function settleGitHubCall(label,failures,run,fallback){
+  try{
+    return await run();
+  }catch(error){
+    const detail=describeCollectorError(error);
+    failures.push({call:label,error:detail});
+    console.error(`[free-tier-resource-collector] github ${label} failed: ${detail}`);
+    if(process.env.GITHUB_ACTIONS){
+      console.log(`::warning title=github ${label} unavailable::${detail.replace(/[\r\n]+/g,' ')}`);
+    }
+    return fallback;
+  }
+}
+
 export async function collectGitHub({repository,token='',fetchJson=jsonFetch,observedAt=nowIso()}={}){
   if(!repository||!repository.includes('/'))throw new Error('GITHUB_REPOSITORY_REQUIRED');
   const headers={'x-github-api-version':'2026-03-10','accept':'application/vnd.github+json'};
-  const repo=await fetchJson(`${GITHUB_API}/repos/${repository}`,{token,headers});
-  const cache=await fetchJson(`${GITHUB_API}/repos/${repository}/actions/cache/usage`,{token,headers});
+  const callFailures=[];
+  const repo=await settleGitHubCall('repository',callFailures,
+    ()=>fetchJson(`${GITHUB_API}/repos/${repository}`,{token,headers}),null);
+  const cache=await settleGitHubCall('cache usage',callFailures,
+    ()=>fetchJson(`${GITHUB_API}/repos/${repository}/actions/cache/usage`,{token,headers}),null);
+
   let artifactsBytes=0;
+  let artifactWalkComplete=true;
   for(let page=1;page<=10;page++){
-    const data=await fetchJson(`${GITHUB_API}/repos/${repository}/actions/artifacts?per_page=100&page=${page}`,{token,headers});
+    let data;
+    try{
+      data=await fetchJson(`${GITHUB_API}/repos/${repository}/actions/artifacts?per_page=100&page=${page}`,{token,headers});
+    }catch(error){
+      artifactWalkComplete=false;
+      const detail=describeCollectorError(error);
+      callFailures.push({call:`artifacts page ${page}`,error:detail});
+      console.error(`[free-tier-resource-collector] github artifacts page ${page} failed: ${detail}`);
+      if(process.env.GITHUB_ACTIONS){
+        console.log(`::warning title=github artifact storage unavailable::${detail.replace(/[\r\n]+/g,' ')}`);
+      }
+      break;
+    }
     const artifacts=Array.isArray(data?.artifacts)?data.artifacts:[];
     for(const artifact of artifacts){
       if(artifact?.expired===true)continue;
@@ -256,13 +308,28 @@ export async function collectGitHub({repository,token='',fetchJson=jsonFetch,obs
     }
     if(artifacts.length<100)break;
   }
-  const cacheBytes=Number(cache?.active_caches_size_in_bytes||0);
+
+  const snapshots=[];
+  if(cache){
+    const cacheBytes=Number(cache?.active_caches_size_in_bytes||0);
+    snapshots.push({provider:'github',metric:'cache_storage_bytes',periodStart:periodDay(observedAt),observedValue:Number.isFinite(cacheBytes)?cacheBytes:0,freeLimit:10*GB,source:'github-rest-cache-usage',observedAt});
+  }
+  if(artifactWalkComplete){
+    snapshots.push({provider:'github',metric:'artifact_storage_bytes',periodStart:periodDay(observedAt),observedValue:artifactsBytes,freeLimit:null,source:'github-rest-artifacts',observedAt});
+  }
+  // Degraded means "answered in part". A provider that produced no measurement at
+  // all has not answered, and calling that degraded would hide a total outage
+  // behind a softer word — so it is still a provider failure, as before.
+  if(!snapshots.length){
+    const error=new Error(`GITHUB_TELEMETRY_UNAVAILABLE: ${callFailures.map(item=>`${item.call}=${item.error}`).join('; ')||'no measurement returned'}`);
+    error.endpoint=String(callFailures[0]?.error||'').split(' at ').pop()||'';
+    throw error;
+  }
   return {
     repository:{fullName:repository,visibility:String(repo?.visibility||''),private:Boolean(repo?.private)},
-    snapshots:[
-      {provider:'github',metric:'cache_storage_bytes',periodStart:periodDay(observedAt),observedValue:Number.isFinite(cacheBytes)?cacheBytes:0,freeLimit:10*GB,source:'github-rest-cache-usage',observedAt},
-      {provider:'github',metric:'artifact_storage_bytes',periodStart:periodDay(observedAt),observedValue:artifactsBytes,freeLimit:null,source:'github-rest-artifacts',observedAt},
-    ],
+    callFailures,
+    degraded:callFailures.length>0,
+    snapshots,
   };
 }
 
@@ -346,6 +413,10 @@ export async function collectAll(env=process.env,{
     .map(([provider,result])=>({provider,error:result.error}));
   return {
     observedAt,cloudflare,supabase,github,failedProviders,
+    // A provider that answered in part is neither healthy nor failed, and the
+    // difference decides whether anyone needs to look.
+    degradedCalls:[['supabase',supabase],['github',github],['cloudflare',cloudflare]]
+      .flatMap(([provider,result])=>(result.callFailures||[]).map(item=>({provider,...item}))),
     snapshots:[...cloudflare.snapshots,...supabase.snapshots,...github.snapshots],
   };
 }
@@ -361,6 +432,7 @@ async function main(){
     supabase:{available:result.supabase.available,reason:result.supabase.reason,mode:result.supabase.mode||'management_api',freeOrganizations:(result.supabase.freeOrganizations||[]).length,activeProjects:(result.supabase.activeProjects||[]).length,projects:(result.supabase.projects||[]).length,snapshots:result.supabase.snapshots.length},
     github:{repository:result.github.repository,snapshots:result.github.snapshots.length},
     failedProviders:result.failedProviders,
+    degradedCalls:result.degradedCalls,
   })+'\n');
   // A partial reading is written and kept; a total blackout is still loud here,
   // rather than leaving the lane green over an empty file.

@@ -48,7 +48,11 @@ jobs:
           test "$GITHUB_REF" = refs/heads/main
           test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
           test "$GITHUB_SHA" = "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
-          test -n "$STORAGE_GATEWAY_KEY"
+          if [ -z "$STORAGE_GATEWAY_KEY" ]; then
+            echo '::error title=Protected Points backup credential missing::The production GitHub Actions environment does not expose EKODI_STORAGE_GATEWAY_KEY. Bind the existing approved Gateway credential through owner-controlled secrets; do not paste credentials into logs, code or chat.'
+            echo 'Backup Drive ACL remains UNVERIFIED; no data export, schema promotion or points activation performed.' >> "$GITHUB_STEP_SUMMARY"
+            exit 2
+          fi
       - name: Independently verify canonical backup Drive membership and folder inheritance
         shell: bash
         run: |

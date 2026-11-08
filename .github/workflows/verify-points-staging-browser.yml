@@ -77,6 +77,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Require an all-or-none, independently protected static identity.
+          # Partial configuration must never silently fall back to minting
+          # another service token with potentially broader account authority.
+          configured_static_fields=0
+          for name in STATIC_ACCESS_ID STATIC_ACCESS_SECRET STATIC_ACCESS_SERVICE_TOKEN_ID; do
+            [ -z "${!name:-}" ] || configured_static_fields=$((configured_static_fields+1))
+          done
+          if [ "$configured_static_fields" -ne 0 ] && [ "$configured_static_fields" -ne 3 ]; then
+            echo '::error title=Incomplete Points staging Access identity::Configure the three approved development-environment secrets CF_ACCESS_STAGING_CLIENT_ID, CF_ACCESS_STAGING_CLIENT_SECRET and CF_ACCESS_STAGING_SERVICE_TOKEN_ID together. No fallback to token creation is permitted with a partial identity.'
+            exit 2
+          fi
           # Never authorize any valid token on the development Access app.
           # The static token requires a separately protected exact token ID.
           if [ -n "${STATIC_ACCESS_ID:-}" ] && [ -n "${STATIC_ACCESS_SECRET:-}" ] && [ -n "${STATIC_ACCESS_SERVICE_TOKEN_ID:-}" ]; then

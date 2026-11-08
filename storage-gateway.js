@@ -136,7 +136,9 @@ export async function storeEkodiDurableRecord(env, record = {}, options = {}) {
   const bytes = decodeBody(record);
   let result = null;
   try {
-    result = await writeCanonicalDriveFile(env, {
+    // Prefer the existing resumable Drive writer for encrypted archives above
+    // 4 MiB; preserve the canonical Storage gateway and audit boundaries.
+    const upload = {
       storageRoute: record.storageRoute,
       serviceId: record.serviceId,
       title: record.title || `${record.recordType}-${new Date().toISOString()}.json`,
@@ -148,7 +150,10 @@ export async function storeEkodiDurableRecord(env, record = {}, options = {}) {
       retentionClass: record.retentionClass,
       sourceModuleId: record.sourceModuleId || 'ekodi',
       subfolderPath: record.subfolderPath || '',
-    });
+    };
+    result = bytes.byteLength > 4 * 1024 * 1024
+      ? await writeCanonicalDriveStream(env, { ...upload, body: bytes, size: bytes.byteLength })
+      : await writeCanonicalDriveFile(env, { ...upload, bytes });
     await audit(env, { ...record, storageRoute: result.storageRoute }, requestId, result, 'stored');
     return {
       ok: true,
