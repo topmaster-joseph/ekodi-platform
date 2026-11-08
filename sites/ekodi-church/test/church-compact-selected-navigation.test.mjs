@@ -54,3 +54,16 @@ test('mobile and desktop use the same responsive header with six accessible acti
  assert.match(css,/min-height:44px/);
  assert.match(css,/\[aria-current="page"\]/);
 });
+
+test('320px Church homepage keeps first greeting below the sticky header',()=>{
+  const html=read('index.html');
+  const css=read('church-compact-navigation.css');
+  const page=html.indexOf('<header class="site-header"');
+  const main=html.indexOf('<main>',page);
+  const hero=html.indexOf('<section class="hero"',main);
+  assert.ok(page>=0 && main>page && hero>main,'home header and hero keep normal document order');
+  assert.match(css,/@media\(max-width:360px\)\s*\{\s*\.site-header \+ main > \.hero\s*\{\s*padding-top:48px!important;/);
+  assert.doesNotMatch(css,/position\s*:\s*fixed\s*!important/,'do not hide a header overlap with fixed positioning');
+  // Static regression only: a protected production dispatch must re-run
+  // actual Chromium 320/375/768/desktop before completion is claimed.
+});
