@@ -1378,7 +1378,7 @@ jobs:
   post_promotion_browser_verification_receipt:
     name: EKODI Post-Promotion Browser Verification Receipt
     # Receipt-only job: no calls to production hosts, even after quota circuit opens.
-    needs: [deploy, native_surface_verification_desktop, native_surface_verification_mobile, native_research_verification_desktop, native_research_verification_mobile, authenticated_admin_surface_verification]
+    needs: [scheduled_release_gate, deploy, native_surface_verification_desktop, native_surface_verification_mobile, native_research_verification_desktop, native_research_verification_mobile, authenticated_admin_surface_verification]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -1388,6 +1388,14 @@ jobs:
       - name: Record exact verifier results and blocked predecessors
         shell: bash
         env:
+          # A scheduled run is a retry: the gate reports proceed=false when the
+          # latest meaningful release already deployed successfully, so nothing is
+          # released and every downstream job is skipped by design. Without these
+          # two values the receipt read that healthy path as "blocked" and failed
+          # the lane — red every day from 2026-11-01 to 2026-11-08, precisely when
+          # everything was fine, which teaches everyone to ignore red.
+          GATE_PROCEED: ${{ needs.scheduled_release_gate.outputs.proceed }}
+          GATE_REASON: ${{ needs.scheduled_release_gate.outputs.reason }}
           DEPLOY_RESULT: ${{ needs.deploy.result }}
           NATIVE_DESKTOP_RESULT: ${{ needs.native_surface_verification_desktop.result }}
           NATIVE_MOBILE_RESULT: ${{ needs.native_surface_verification_mobile.result }}
@@ -1407,6 +1415,28 @@ jobs:
             ['native_research_verification_mobile',process.env.RESEARCH_MOBILE_RESULT],
             ['authenticated_admin_surface_verification',process.env.ADMIN_RESULT],
           ];
+          // No release attempted means nothing to verify, which is not the same
+          // as verification having been blocked. The previous run's own receipt
+          // covers the release this one declined to retry, so no coverage is
+          // lost — only the false alarm is. When the gate did say proceed, every
+          // rule below still applies unchanged.
+          const gateProceed=String(process.env.GATE_PROCEED||'');
+          const gateReason=String(process.env.GATE_REASON||'');
+          if(gateProceed==='false'){
+            const receipt={policyId:'CF-QUOTA-001',schemaVersion:1,
+              releaseSha:process.env.GITHUB_SHA,
+              conclusion:'not_attempted',
+              gate:{proceed:gateProceed,reason:gateReason},
+              firstFailure:null,receiptJobProductionRequests:0,
+              evidence:jobs.map(([name,state],index)=>({
+                name,result:state,verification:'not_attempted',
+                reason:gateReason||'no-release-attempted',
+                predecessor:index===0?null:jobs[index-1][0],
+              }))};
+            fs.writeFileSync('artifacts/site-core-postdeploy-browser-verification.json',JSON.stringify(receipt,null,2));
+            console.log('[EKODI][CF-QUOTA-001] no release attempted; verification not required:',JSON.stringify(receipt));
+            process.exit(0);
+          }
           const firstFailure=jobs.find(([name,state])=>state!=='success')?.[0]||null;
           const evidence=jobs.map(([name,state],index)=>({
             name,
