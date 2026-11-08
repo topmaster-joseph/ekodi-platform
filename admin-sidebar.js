@@ -237,7 +237,8 @@ function ensureContainers(nav, root = document) {
 }
 
 function isPlatformSuperAdminSurface(){
-  return /^\/admin(?:\/|$)/.test(String(window.location?.pathname||''));
+  // /work/admin is the canonical address of the platform admin's 구인구직 section (same shell).
+  return /^\/(?:admin|work\/admin)(?:\/|$)/.test(String(window.location?.pathname||''));
 }
 
 function ensureMobilePrimaryNav(root=document){
@@ -916,6 +917,12 @@ function panelBlockLabel(node, index) {
     || pick('h2') || pick('h3') || pick(':scope>strong') || pick('strong') || '';
   return text.slice(0, 18);
 }
+// 숫자·버전·한 글자 같은 값은 탭 이름이 될 수 없다(예: '36', 'v1.0.0').
+function isMeaningfulTabLabel(label) {
+  const text = String(label || '').trim();
+  if (!text || /^[vV]?[\d\s.,:%·/+\-]+$/.test(text)) return false;
+  return (text.match(/[가-힣A-Za-z]/g) || []).length >= 2;
+}
 function panelBlocks(panel) {
   return [...panel.children].filter(node => !node.matches(PANEL_TAB_SKIP));
 }
@@ -937,24 +944,33 @@ function planPanelTabs(panel, blocks) {
       plan.get(id).nodes.push(node);
     }
   } else {
-    if (panel.querySelector(':scope>[role="tablist"]')) return null;
-    const candidates = [];
-    for (const node of blocks) {
-      if (candidates.length === 0 && pinned.size === 0 && node.matches(PANEL_TAB_PINNED)) { pinned.add(node); continue; }
-      candidates.push(node);
-    }
-    if (candidates.length < PANEL_TAB_MIN_BLOCKS) return null;
-    candidates.forEach((node, index) => {
-      if (index >= PANEL_TAB_MAX_TABS - 1 && candidates.length > PANEL_TAB_MAX_TABS) {
-        if (!plan.has('more')) plan.set('more', { id: 'more', label: '더보기', nodes: [] });
-        plan.get('more').nodes.push(node);
+    if (panel.querySelector(':scope>[role="tablist"]:not(.admin-panel-tabs)')) return null;
+    // 머리말과, 첫 탭 앞의 제목 없는 요약(지표 카드 등)은 위에 고정한다.
+    // 첫 탭 이후의 제목 없는 블록은 바로 앞 탭에 붙인다.
+    let last = null;
+    let count = 0;
+    let headPinned = false;
+    blocks.forEach((node, index) => {
+      // 숨겨진 블록(접힌 안내·지연 로딩 자리)은 탭을 만들지 않는다.
+      if (node.hidden) { if (last) last.nodes.push(node); else pinned.add(node); return; }
+      const label = panelBlockLabel(node, index);
+      const meaningful = isMeaningfulTabLabel(label);
+      const isHead = !last && !headPinned && (node.matches(PANEL_TAB_PINNED) || Boolean(node.querySelector?.('h1,h2')));
+      if (isHead) headPinned = true;
+      if (!last && (isHead || node.matches(PANEL_TAB_PINNED) || !meaningful)) { pinned.add(node); return; }
+      if (!meaningful) { last.nodes.push(node); return; }
+      count += 1;
+      if (count > PANEL_TAB_MAX_TABS - 1 && last?.id === 'more') { last.nodes.push(node); return; }
+      if (count > PANEL_TAB_MAX_TABS - 1) {
+        last = { id: 'more', label: '더보기', nodes: [node] };
+        plan.set('more', last);
         return;
       }
       const id = node.id ? `b-${node.id}` : `b-${index}`;
-      plan.set(id, { id, label: panelBlockLabel(node, index), nodes: [node], default: index === 0 });
+      last = { id, label, nodes: [node], default: count === 1 };
+      plan.set(id, last);
     });
-    // 제목을 읽을 수 없는 블록(지표 묶음 등)이 있으면 자동 탭을 만들지 않는다 — 한눈 요약을 숨기지 않기 위함.
-    if ([...plan.values()].some(tab => tab.id !== 'more' && !tab.label)) return null;
+    if (count < PANEL_TAB_MIN_BLOCKS) return null;
   }
   const tabs = [...plan.values()].filter(tab => tab.nodes.length);
   // 숨김 블록만 있는 탭은 버튼을 만들지 않지만, 다시 표시될 때를 대비해 탭 소속은 유지한다.
@@ -962,15 +978,30 @@ function planPanelTabs(panel, blocks) {
   if (visible.length < 2) return null;
   return { tabs, visible, pinned };
 }
+// 화면 모듈이 다시 그리기를 반복하면 탭 전환과 맞물려 화면이 떨릴 수 있다.
+// 짧은 시간에 구조 변경이 반복되면 그 패널은 탭을 끄고 원래 화면으로 되돌린다(자동 차단).
+const PANEL_TAB_CHURN_LIMIT = 8;
+const PANEL_TAB_CHURN_WINDOW_MS = 4000;
+const panelTabChurn = new WeakMap();
+function recordPanelTabChurn(panel) {
+  const now = Date.now();
+  const recent = (panelTabChurn.get(panel) || []).filter(at => now - at < PANEL_TAB_CHURN_WINDOW_MS);
+  recent.push(now);
+  panelTabChurn.set(panel, recent);
+  return recent.length > PANEL_TAB_CHURN_LIMIT;
+}
+function clearPanelTabs(panel) {
+  panel.querySelector(':scope>.admin-panel-tabs')?.remove();
+  delete panel.dataset.ekodiTabbed;
+  for (const node of panel.children) { delete node.dataset.ekodiTabHidden; delete node.dataset.ekodiTabPinned; delete node.dataset.ekodiTabAssigned; }
+}
 function applyPanelTabs(panel, doc = document) {
-  if (panel.dataset.ekodiPanelTabs === 'off') return;
+  if (panel.dataset.ekodiPanelTabs === 'off') { if (panel.dataset.ekodiTabbed) clearPanelTabs(panel); return; }
   const blocks = panelBlocks(panel);
   const plan = planPanelTabs(panel, blocks);
   let strip = panel.querySelector(':scope>.admin-panel-tabs');
   if (!plan) {
-    if (strip) strip.remove();
-    delete panel.dataset.ekodiTabbed;
-    for (const node of blocks) { delete node.dataset.ekodiTabHidden; delete node.dataset.ekodiTabPinned; }
+    if (strip || panel.dataset.ekodiTabbed) clearPanelTabs(panel);
     return;
   }
   const tabbedValue = subtabHostPreset(panel) ? 'sub' : 'true';
@@ -989,11 +1020,21 @@ function applyPanelTabs(panel, doc = document) {
       const button = event.target.closest?.('button[data-ekodi-tab]');
       if (!button) return;
       panel.dataset.ekodiActiveTab = button.dataset.ekodiTab;
+      panel.dataset.ekodiTabUserClick = 'true';
       try { sessionStorage.setItem(panelTabStorageKey(panel), button.dataset.ekodiTab); } catch { /* storage optional */ }
       applyPanelTabs(panel, doc);
     });
   }
   const signature = plan.visible.map(tab => `${tab.id}:${tab.label}:${tab.nodes.length}`).join('|') + `@${active.id}`;
+  const fresh = plan.tabs.some(tab => tab.nodes.some(node => !node.dataset.ekodiTabAssigned)) || [...plan.pinned].some(node => !node.dataset.ekodiTabAssigned);
+  const structural = fresh || strip.dataset.signature !== signature || strip.parentElement !== panel;
+  if (structural && !panel.dataset.ekodiTabUserClick && recordPanelTabChurn(panel)) {
+    panel.dataset.ekodiPanelTabs = 'off';
+    clearPanelTabs(panel);
+    console.warn('[EKODI admin tabs] repeated re-render detected; tabs disabled for', panel.id || panel.dataset.panel);
+    return;
+  }
+  delete panel.dataset.ekodiTabUserClick;
   if (strip.dataset.signature !== signature) {
     strip.dataset.signature = signature;
     strip.replaceChildren(...plan.visible.map(tab => {
@@ -1019,9 +1060,11 @@ function applyPanelTabs(panel, doc = document) {
     if (node.dataset.ekodiTabHidden) delete node.dataset.ekodiTabHidden;
     if (node.dataset.ekodiTabPinned !== 'true') node.dataset.ekodiTabPinned = 'true';
   }
+  for (const node of plan.pinned) node.dataset.ekodiTabAssigned = 'true';
   for (const tab of plan.tabs) {
     const show = tab.id === active.id;
     for (const node of tab.nodes) {
+      node.dataset.ekodiTabAssigned = 'true';
       const value = show ? '' : 'true';
       if ((node.dataset.ekodiTabHidden || '') !== value) {
         if (value) node.dataset.ekodiTabHidden = value; else delete node.dataset.ekodiTabHidden;
