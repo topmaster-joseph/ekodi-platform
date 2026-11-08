@@ -3,181 +3,157 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const script = readFileSync(new URL('../assets/bookstore-live.js', import.meta.url), 'utf8');
-const bookId = 'BOOK-EKODI-000002';
-const product = {
-  id: 'bookstore-' + bookId, bookId, slug: 'book-eb-mono-002',
-  name: 'AI 시대의 진보와 빈곤', description: '인공지능의 풍요를 모두의 몫으로',
-  price: 9900, saleReady: false
-};
+const source = readFileSync(new URL('../assets/bookstore-live.js', import.meta.url), 'utf8');
+const ids = ['BOOK-EKODI-000001','BOOK-EKODI-000003','BOOK-EKODI-000002'];
 
-function createHarness() {
-  let scenario = 'ready';
-  let visibility;
-  let delayedReply;
-  let signal;
-  const loaded = [];
-  const make = (tag, cls = '') => {
-    const el = {
-      tag, className: cls, dataset: {}, textContent: '',
-      children: [], hidden: false, _parent: null,
-      classList: { add() {}, remove() {} },
-      append(...nodes) {
-        for (const node of nodes) { node._parent = this; this.children.push(node); }
-      },
-      remove() {
-        if (this._parent) this._parent.children = this._parent.children.filter(n => n !== this);
-      },
-      setAttribute() {},
-      querySelector(selector) {
-        if (selector === '.meta .status') {
-          const all = [];
-          const visit = x => { all.push(x); for(const child of x.children)visit(child); };
-          visit(this);
-          return all.find(x => x.className === 'status') || null;
-        }
-        return null;
-      },
+function harness(start = {}) {
+  const modes = new Map(ids.map(id => [id,start[id] || 'ready']));
+  const pending = new Map();
+  const calls = [];
+  const events = [];
+  const listeners = {};
+  const cards = ids.map((id,i) => {
+    const btn = {
+      textContent:'구매 상태 확인 중', attributes:{'aria-disabled':'true',tabindex:'-1'},
+      setAttribute(k,v) {this.attributes[k]=v},
+      removeAttribute(k) {delete this.attributes[k];if(k==='href')delete this.href},
     };
-    return el;
-  };
-  const grid = make('div');
-  grid.querySelector = selector => {
-    const matched = selector.match(/^\[data-product="([^"]+)"\]$/);
-    return matched ? grid.children.find(x => x.dataset.product === matched[1]) || null : null;
-  };
-  grid.querySelectorAll = selector => {
-    if (selector === '[data-bookstore-runtime-id]') return grid.children.filter(x => !!x.dataset.bookstoreRuntimeId);
-    if (selector === '[data-bookstore-quote-pending="false"]') return grid.children.filter(x => x.dataset.bookstoreQuotePending === 'false');
-    if (selector === '.card:not([data-bookstore-quote-pending="true"])') return grid.children.filter(x => x.dataset.bookstoreQuotePending !== 'true');
-    return [];
-  };
-  const count = make('span');
-  const status = make('span');
-  const document = {
-    body: { dataset: {} },
-    hidden: false,
-    getElementById: name => name === 'grid' ? grid : null,
-    querySelector: selector => selector === '[data-bookstore-store-grid]' ? null
-      : selector === '[data-bookstore-public-count]' ? count
-      : selector === '[data-bookstore-store-status]' ? status : null,
-    querySelectorAll: () => [],
-    createElement: tag => make(tag),
-    addEventListener(name, callback) { if (name === 'visibilitychange') visibility = callback; },
-  };
-  const quote = ready => ({
-    book: { id: bookId },
-    saleReadiness: { ready },
-    checkout: { open: ready, fileReady: ready, saleReady: ready, mode: 'live' },
-    price: { amount: 9900 },
+    const card = {
+      dataset:{ bookstoreRuntimeId:id, bookstoreQuotePending:'true',
+        bookstoreInformational:'true',saleReady:'false',name:'book '+i},
+      info:{title:'title '+id,cover:'cover '+id,description:'description '+id},
+      querySelector(selector){return selector==='[data-bookstore-buy]' ? btn : null},
+    };
+    card.button=btn;
+    return card;
   });
-  const fetch = async url => {
-    if (url.endsWith('/provider-bookstore.json')) {
-      if (scenario === 'mirror-error') throw new Error('mirror timeout');
-      return { ok: true, json: async () => ({ products: [product] }) };
-    }
-    if (url.endsWith('/public/approvals')) {
-      if (scenario === 'approval-error') throw new Error('approvals timeout');
-      return { ok: true, json: async () => ({ approvals: scenario === 'removed' ? [] : [{ bookId }] }) };
-    }
-    if (url.includes('/quote?book=')) {
-      if (scenario === 'quote-error') throw new Error('quote timeout');
-      if (scenario === 'hold-ready') {
-        return new Promise(resolve => { delayedReply = () => resolve({ ok: true, json: async () => quote(true) }); });
-      }
-      return { ok: true, json: async () => quote(scenario !== 'revoked') };
-    }
-    throw new Error('unexpected URL ' + url);
-  };
-  const window = {
-    location: { origin: 'https://ekodi.kr' },
-    dispatchEvent(event) {
-      if(event.type === 'ekodi:marketplace-products-loaded'){
-        loaded.push(event.detail);
-        signal?.();
-      }
+  const grid = { cards, querySelectorAll(selector){
+    return selector==='[data-bookstore-runtime-id]' ? cards : [];
+  }};
+  const count = {textContent:'0개'};
+  const status = {textContent:''};
+  const document = {
+    body:{dataset:{}},hidden:false,
+    getElementById(key){return key==='grid'?grid:null},
+    querySelector(key){
+      return ({
+        '[data-bookstore-public-count]':count,
+        '[data-bookstore-store-status]':status
+      })[key] || null;
     },
+    addEventListener(k,fn){listeners[k]=fn}
   };
-  class CustomEvent { constructor(type, options) { this.type = type; this.detail = options.detail; } }
-  vm.runInNewContext(script, { document, window, fetch, AbortSignal, URL, Intl, CustomEvent });
-  async function settle() {
-    const before = loaded.length;
-    await new Promise((resolve, reject) => {
-      if (loaded.length > before) return resolve();
-      signal = resolve;
-      const timeout = setTimeout(() => { signal = null; reject(new Error('bookstore sync timed out')); }, 2000);
-      signal = () => { clearTimeout(timeout); signal = null; resolve(); };
+  function quote(id, ready) {
+    return {book:{id},saleReadiness:{ready},checkout:{
+      open:ready,fileReady:ready,saleReady:ready,mode:'live'
+    },price:{amount:9900}};
+  }
+  async function fetch(url) {
+    if(!url.includes('/quote?book='))throw Error('unexpected catalog source: '+url);
+    const id=decodeURIComponent(url.split('book=')[1]);
+    calls.push(id);
+    const mode=modes.get(id);
+    if(mode==='error')throw Error('temporary quote outage');
+    if(mode==='hold') return new Promise(resolve => {
+      pending.set(id,()=>resolve({ok:true,json:async()=>quote(id,true)}));
     });
+    const ready = mode==='ready';
+    const result=quote(id,ready);
+    if(mode==='bad-file'){result.saleReadiness.ready=true;result.checkout.open=true;
+      result.checkout.saleReady=true;result.checkout.fileReady=false;}
+    return {ok:true,json:async()=>result};
   }
-  async function refresh(mode) {
-    scenario = mode;
-    visibility();
-    await settle();
-  }
-  return { grid, count, status, loaded, refresh, settle,
-    holdReady: () => { scenario = 'hold-ready'; visibility(); },
-    releaseHeld: () => delayedReply?.(),
-    card: () => grid.children.find(x => x.dataset.bookstoreRuntimeId === bookId)
+  const window = {
+    location:{origin:'https://ekodi.kr',pathname:'/ekodimall/'},
+    dispatchEvent(event){if(event.type==='ekodi:marketplace-products-loaded'){events.push(event.detail);listeners.loaded?.();}}
   };
+  class CustomEvent {constructor(type,opts){this.type=type;this.detail=opts.detail}}
+  vm.runInNewContext(source,{document,window,fetch,AbortSignal,URL,Intl,CustomEvent});
+  async function until(min) {
+    if(events.length>=min)return;
+    await Promise.race([
+      new Promise(resolve=>listeners.loaded=resolve),
+      new Promise((_,reject)=>setTimeout(()=>reject(Error('catalog did not settle')),1800))
+    ]);
+  }
+  async function refresh() {const before=events.length;listeners.visibilitychange();await until(before+1);}
+  return {cards,calls,modes,events,count,status,refresh,until,release:(id)=>pending.get(id)?.(),
+    startHeld(){listeners.visibilitychange()},card:(id)=>cards.find(c=>c.dataset.bookstoreRuntimeId===id)};
 }
 
-test('a live-verified book survives temporary quote and approvals outages as information only', async () => {
-  const h = createHarness();
-  await h.settle();
-  const card = h.card();
-  assert.ok(card, 'live-approved book appears');
-  assert.equal(card.dataset.bookstoreQuotePending, 'false');
-  assert.equal(card.dataset.saleReady, 'true');
-  assert.match(card.querySelector('.meta .status').textContent, /9,900원 · 판매 중/);
-  await h.refresh('quote-error');
-  assert.equal(h.card(), card, 'same DOM card is retained, not deleted/recreated');
-  assert.equal(card.dataset.bookstoreQuotePending, 'true');
-  assert.equal(card.dataset.bookstoreInformational, 'true');
-  assert.equal(card.dataset.saleReady, 'false');
-  assert.equal(card.querySelector('.meta .status').textContent, '판매 상태 확인 중 · 자세히 보기');
-  assert.equal(h.count.textContent, '0개', 'information-only book is not a sale');
-  await h.refresh('approval-error');
-  assert.equal(h.card(), card);
-  assert.equal(card.dataset.bookstoreInformational, 'true');
-  await h.refresh('mirror-error');
-  assert.equal(h.card(), card);
-  await h.refresh('ready');
-  assert.equal(h.card(), card, 'subsequent successful revalidation reuses existing DOM');
-  assert.equal(card.dataset.bookstoreQuotePending, 'false');
-  assert.equal(card.dataset.bookstoreInformational, 'false');
-  assert.equal(card.dataset.saleReady, 'true');
-  assert.equal(h.count.textContent, '1개');
+test('all three owner-public editions independently verify their purchase buttons', async()=>{
+  const h=harness();
+  await h.until(1);
+  assert.deepEqual([...h.calls].sort(),[...ids].sort());
+  assert.equal(h.cards.length,3);
+  for(const id of ids){
+    const c=h.card(id);
+    assert.match(c.button.textContent,/9,900원 구매하기/);
+    assert.equal(c.button.href,'/ekodimall/checkout/book/?book='+id);
+    assert.equal(c.dataset.saleReady,'true');
+    assert.equal(c.info.title,'title '+id);
+  }
 });
 
-test('authoritative revocation or removal never keeps an old sale card visible', async () => {
-  const h = createHarness();
-  await h.settle();
-  assert.ok(h.card());
-  await h.refresh('revoked');
-  assert.equal(h.card(), undefined, 'negative quote removes the runtime sale');
-  await h.refresh('ready');
-  assert.ok(h.card(), 'new positive quote recovers the approved item');
-  await h.refresh('removed');
-  assert.equal(h.card(), undefined, 'complete approval-list removal withdraws the card');
+test('one edition can be revoked while the other books and all public information stay put',async()=>{
+  const h=harness({ 'BOOK-EKODI-000002':'revoked' });
+  const originals=h.cards.slice();
+  await h.until(1);
+  assert.equal(h.card('BOOK-EKODI-000002').button.href,undefined);
+  assert.equal(h.card('BOOK-EKODI-000002').button.attributes['aria-disabled'],'true');
+  assert.match(h.card('BOOK-EKODI-000001').button.textContent,/구매하기/);
+  h.modes.set('BOOK-EKODI-000003','error');
+  await h.refresh();
+  assert.equal(h.cards.length,3);
+  for(let i=0;i<3;i++)assert.equal(h.cards[i],originals[i],'unchanged card, title, cover and description');
+  assert.equal(h.card('BOOK-EKODI-000003').button.href,undefined);
+  assert.equal(h.card('BOOK-EKODI-000003').info.cover,'cover BOOK-EKODI-000003');
+  h.modes.set('BOOK-EKODI-000002','ready');
+  h.modes.set('BOOK-EKODI-000003','ready');
+  await h.refresh();
+  assert.equal(h.card('BOOK-EKODI-000002').button.href,'/ekodimall/checkout/book/?book=BOOK-EKODI-000002');
+  assert.equal(h.count.textContent,'3개 판매 가능');
 });
 
-test('an older delayed quote cannot reinstate a card after a newer revoked response', async () => {
-  const h = createHarness();
-  await h.settle();
-  h.holdReady();
-  await new Promise(resolve => setImmediate(resolve));
-  await h.refresh('revoked');
-  assert.equal(h.card(), undefined);
-  h.releaseHeld();
-  await new Promise(resolve => setImmediate(resolve));
-  assert.equal(h.card(), undefined, 'stale positive quote must not resurrect a withdrawn card');
+test('missing EPUB or temporary network failure cannot leave a valid checkout link',async()=>{
+  const h=harness();
+  await h.until(1);
+  for(const mode of ['bad-file','error','revoked']){
+    h.modes.set('BOOK-EKODI-000002',mode);
+    await h.refresh();
+    const c=h.card('BOOK-EKODI-000002');
+    assert.equal(c.button.href,undefined,mode);
+    assert.equal(c.dataset.saleReady,'false',mode);
+    assert.equal(c.info.description,'description BOOK-EKODI-000002');
+  }
 });
 
-test('informational fallback remains out of central sale search, but can stay in books catalog', () => {
-  const app = readFileSync(new URL('../assets/app.js', import.meta.url), 'utf8');
-  const css = readFileSync(new URL('../assets/home-refresh.css', import.meta.url), 'utf8');
-  const search = readFileSync(new URL('../assets/home-refresh.js', import.meta.url), 'utf8');
-  assert.match(app, /card\.dataset\.bookstoreInformational === 'true'/);
-  assert.match(css, /\.card\[data-bookstore-quote-pending="true"\]:not\(\[data-bookstore-informational="true"\]\)/);
-  assert.match(search, /\.filter\(card => card\.dataset\.bookstoreQuotePending !== 'true'\)/);
+test('stale positive quote cannot reenable buy after newer negative quote',async()=>{
+  const h=harness();
+  await h.until(1);
+  h.modes.set('BOOK-EKODI-000002','hold');
+  h.startHeld();
+  await new Promise(resolve=>setImmediate(resolve));
+  h.modes.set('BOOK-EKODI-000002','revoked');
+  await h.refresh();
+  assert.equal(h.card('BOOK-EKODI-000002').button.href,undefined);
+  h.release('BOOK-EKODI-000002');
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(h.card('BOOK-EKODI-000002').button.href,undefined);
+});
+
+test('static public book information and sale-only discovery remain separate',()=>{
+  const build=readFileSync(new URL('../scripts/build.mjs',import.meta.url),'utf8');
+  const app=readFileSync(new URL('../assets/app.js',import.meta.url),'utf8');
+  const nav=readFileSync(new URL('../assets/category-visibility.js',import.meta.url),'utf8');
+  const search=readFileSync(new URL('../assets/home-refresh.js',import.meta.url),'utf8');
+  assert.match(build,/catalogProducts = products\.filter/);
+  assert.match(build,/isPublicBookInformation\(product\)/);
+  assert.match(build,/data-bookstore-runtime-id=/);
+  assert.match(build,/data-bookstore-buy/);
+  assert.match(build,/bookstoreActive: store\.id === 'store-ekodi-books'/);
+  assert.match(app,/card\.dataset\.bookstoreInformational === 'true'/);
+  assert.match(nav,/category==='book'&&card\.dataset\.bookstoreInformational==='true'/);
+  assert.match(search,/card\.dataset\.bookstoreQuotePending !== 'true'/);
+  assert.doesNotMatch(source,/grid\.querySelectorAll\('\[data-bookstore-runtime-id\]'\)\.forEach\(card => card\.remove\(\)\)/);
 });
