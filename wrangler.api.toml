@@ -132,6 +132,11 @@ bucket_name = "ekodi-storage"
 binding = "CHURCH_DOCUMENT_FILES"
 bucket_name = "ekodi-storage"
 
+# 사이트 공통 관리자 문서함 원본(workspace/{tenant}/documents/ prefix, private; served only through the workspace-documents API).
+[[r2_buckets]]
+binding = "WORKSPACE_DOCUMENT_FILES"
+bucket_name = "ekodi-storage"
+
 # Dedicated private quarantine: never serve or execute untrusted vendor archives.
 # Provision 'ekodi-pass-vendor-quarantine' before protected Control API deployment.
 [[r2_buckets]]

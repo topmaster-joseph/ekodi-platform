@@ -10,6 +10,7 @@ import { MOTOR_FESTIVAL_API_PATH, handleMotorFestivalApplications, purgeExpiredM
 import { isMokpoPolicyApiPath, handleMokpoMissionPolicyRegistrations, purgeExpiredMokpoMissionRegistrations } from './mokpo-mission-policy-council-api.js';
 import { isBoothApiPath, handleCgmurrcBooth } from './cgmurrc-booth-api.js';
 import { isEdocApiPath, handleCgmaEdocs } from './cgma-edoc-api.js';
+import { isWorkspaceDocumentsPath, handleWorkspaceDocuments } from './workspace-documents-api.js';
 import { handleCustomerMemberDirectory } from './customer-member-directory.js';
 import { handleMembershipBilling, runMembershipBillingSchedule } from './membership-billing.js';
 import { handleAdminGoogleAuth } from './admin-google-auth.js';
@@ -289,6 +290,9 @@ export default {
     }
     if (isEdocApiPath(path)) {
       return handleCgmaEdocs(request, env);
+    }
+    if (isWorkspaceDocumentsPath(path)) {
+      return handleWorkspaceDocuments(request, env);
     }
     if (path.startsWith('/api/cheonggyepass/vendor-intake')) {
       return handleCheonggyePassVendorIntake(request, env);
