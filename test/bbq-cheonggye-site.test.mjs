@@ -80,3 +80,14 @@ test('worker serves the BBQ QR JavaScript from its own public route',async()=>{
   assert.match(src,/bbqCheonggyeQrScript/);
   assert.match(src,/\/bbqcg\/assets\/order-qr\.js/);
 });
+
+
+test('BBQ customer footer omits owner-deleted notices but preserves genuine navigation',async()=>{
+  const html=await (await renderBbqCheonggyePage(new Request(url),{},{})).text();
+  assert.doesNotMatch(html,/매장 자체 안내 페이지입니다\. 제너시스BBQ 본사 및 치킨대학 교육시스템과는 별도 운영됩니다\./);
+  assert.doesNotMatch(html,/교육 원문·조리 지침은 허가 없이 수집하거나 공개하지 않습니다\./);
+  assert.match(html,/<footer class="foot">/);
+  assert.match(html,/BBQ 공식 사이트<\/a>/);
+  assert.match(html,/매장 운영관리<\/a>/);
+  assert.match(html,/<script defer src="\/bbqcg\/assets\/order-qr\.js"><\/script>/);
+});
