@@ -11,7 +11,7 @@ const applied=expected.map((name,i)=>({name:i%2?'20261101020000_'+name:name,vers
 const functions=[{slug:'points-api',status:'ACTIVE',verify_jwt:true}];
 
 test('catalog uses only ordered EKODI points migrations from the source of truth',()=>{
-  assert.equal(expected.length,20);
+  assert.equal(expected.length,21);
   assert.equal(new Set(expected).size,expected.length);
   assert.ok(expected[0].includes('site_activity_points_foundation'));
   assert.ok(expected.at(-1).includes('recognition_goals_person_idx'));
@@ -24,14 +24,14 @@ test('production clean install is reported as not installed, never silently acti
     migrations:[],functions:[],expected});
   assert.equal(r.state,'points_not_installed');
   assert.equal(r.migration_count_recognized,0);
-  assert.equal(r.missing_migrations.length,20);
+  assert.equal(r.missing_migrations.length,21);
   assert.equal(r.prerequisites_ok,true);
   assert.equal(r.points_activation_authorized,false);
 });
 test('partial or insecure schema must never pass release contract',()=>{
   const partial=assess({schema:completeSchema,migrations:applied.slice(0,5),functions,expected});
   assert.equal(partial.state,'points_partially_installed');
-  assert.equal(partial.missing_migrations.length,15);
+  assert.equal(partial.missing_migrations.length,16);
   const insecure=assess({schema:{...completeSchema,anon_goals_denied:false},
     migrations:applied,functions,expected});
   assert.equal(insecure.state,'points_contract_incomplete');
