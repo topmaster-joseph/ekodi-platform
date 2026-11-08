@@ -83,3 +83,22 @@ export function affiliatePriceLabel(item) {
     ? new Intl.NumberFormat('ko-KR').format(amount) + '원'
     : '가격은 판매처에서 확인';
 }
+
+/* Direct Agoda Partner Center text links are referral-only. They never grant
+ * access to the verified product feed, availability, booking, or payouts. */
+export function validatedAgodaPartnerSearch(value) {
+  try {
+    const url = new URL(cleanAffiliateText(value));
+    if (url.protocol !== 'https:' || url.hostname !== 'www.agoda.com' ||
+        url.pathname !== '/partners/partnersearch.aspx' ||
+        url.username || url.password || url.hash ||
+        url.searchParams.size !== 3 ||
+        url.searchParams.getAll('pcs').length !== 1 ||
+        url.searchParams.getAll('cid').length !== 1 ||
+        url.searchParams.getAll('hl').length !== 1 ||
+        url.searchParams.get('pcs') !== '1' ||
+        !/^[0-9]{7}$/.test(url.searchParams.get('cid') || '') ||
+        url.searchParams.get('hl') !== 'ko-kr') return '';
+    return url.href;
+  } catch { return ''; }
+}
