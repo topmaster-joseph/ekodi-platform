@@ -1,0 +1,109 @@
+name: Deploy Ministry News Hub Staging
+
+on:
+  workflow_call:
+    inputs:
+      release_branch_ref:
+        required: false
+        type: string
+        default: ''
+      release_task_id:
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: Orchestrator-issued ai/<agent>/orch_<task-id> branch
+        required: true
+        type: string
+      release_task_id:
+        description: Verified EKODI orchestrator task ID
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ministry-news-staging-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  WRANGLER_VERSION: '4.119.0'
+  # Post-merge dispatches run on main; the orchestrator receipt travels in as inputs.
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEVELOPMENT_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 46aad4738793fbaca88574832a2ccc0f
+      STAGING_URL: https://ekodi-ministry-news-staging.ekodi-development.workers.dev
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Validate isolated staging contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check ministry-news-staging-worker.js
+          grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.ministry-news.staging.toml
+          ! grep -Fq '[[d1_databases]]' wrangler.ministry-news.staging.toml
+          test "$CLOUDFLARE_ACCOUNT_ID" = '46aad4738793fbaca88574832a2ccc0f'
+          test -n "$CLOUDFLARE_API_TOKEN"
+          node --input-type=module <<'NODE'
+          import worker from './ministry-news-staging-worker.js';
+          const pub = await worker.fetch(new Request('https://staging.invalid/sosik'));
+          const body = await pub.text();
+          if (pub.status !== 200 || pub.headers.get('x-ekodi-data-mode') !== 'isolated-staging' || !body.includes('사역소식')) throw new Error('staging public route contract mismatch');
+          if (body.includes('후원자에게만 보이는 예시')) throw new Error('staging public route exposed partner-only item');
+          const admin = await worker.fetch(new Request('https://staging.invalid/sosik/admin'));
+          if (admin.status !== 200 || !(await admin.text()).includes('사역소식 발행관리')) throw new Error('staging admin route contract mismatch');
+          const api = await worker.fetch(new Request('https://staging.invalid/api/sosik/admin/me'));
+          const payload = await api.json();
+          if (api.status !== 401 || payload.error !== 'staging_auth_required' || payload.dataMode !== 'isolated-staging') throw new Error('staging API must fail closed');
+          NODE
+      - name: Deploy isolated Development staging Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.ministry-news.staging.toml 2>&1 | tee /tmp/ministry-news-development-deploy.log
+          grep -Fq "$STAGING_URL" /tmp/ministry-news-development-deploy.log
+      - name: Verify isolated Development staging boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          access_gate() {
+            local code="$1"
+            local headers="$2"
+            [[ "$code" =~ ^(302|303|307|308|403)$ ]] \
+              && { grep -Eiq '^www-authenticate: Cloudflare-Access' "$headers" \
+                || grep -Eiq '^location: https://[^/]+\.cloudflareaccess\.com/' "$headers"; }
+          }
+          for attempt in $(seq 1 12); do
+            public_code=$(curl -sS -D /tmp/mn-public.headers -o /tmp/mn-public.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/sosik" || true)
+            api_code=$(curl -sS -D /tmp/mn-api.headers -o /tmp/mn-api.body -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/api/sosik/admin/me" || true)
+            public_ok=0
+            if [[ "$public_code" == 200 ]] && grep -Eiq '^x-ekodi-data-mode: isolated-staging' /tmp/mn-public.headers && grep -Fq '사역소식' /tmp/mn-public.body; then public_ok=1
+            elif access_gate "$public_code" /tmp/mn-public.headers; then public_ok=1; fi
+            api_ok=0
+            if [[ "$api_code" == 401 ]] && grep -Fq '"error":"staging_auth_required"' /tmp/mn-api.body; then api_ok=1
+            elif access_gate "$api_code" /tmp/mn-api.headers; then api_ok=1; fi
+            if [[ "$public_ok" == 1 && "$api_ok" == 1 ]]; then
+              echo "Ministry news staging boundary verified: public=$public_code api=$api_code."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Staging verification failed: public=$public_code api=$api_code"
+          head -c 800 /tmp/mn-public.body || true
+          exit 1

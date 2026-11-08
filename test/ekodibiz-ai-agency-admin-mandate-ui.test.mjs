@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
 const read=async(path)=>readFile(new URL(path,import.meta.url),'utf8');
-test('existing EKODIBIZ admin page adds one compact 3-month evidence and settlement panel',async()=>{
+test('existing EKODIBIZ admin page adds one compact variable-term evidence and settlement panel',async()=>{
   const html=await read('../ekodibiz/ai-agency-admin.html');
   for(const id of ['opsDetail','settlementSummary','cycleForm','recordCycleBtn','renewalForm','stopRenewalBtn','exportStatement']){
     assert.match(html,new RegExp('id="'+id+'"'));
@@ -36,7 +36,7 @@ test('one existing user-facing site hosts a private university summary without a
   }
   assert.match(html,/신청번호와 보안코드로 확인하는 계약별 조회 화면/);
   assert.match(js,/renderCampus\(data\.campus\)/);
-  assert.match(js,/campusReport=report && report\.months===3/);
+  assert.match(js,/Number\.isSafeInteger\(report\.months\)/);
   assert.match(js,/campusPanel'\)\.hidden = true/);
   assert.match(js,/campusCsvValue/);
   assert.match(js,/\.textContent=/);
@@ -65,4 +65,25 @@ test('individual subpath always selects personal contract even after form restor
   assert.match(js,/organizationGroup'\)\.hidden=true/);
   assert.match(js,/form\.elements\.organization\.required=false/);
   assert.match(js,/개인 AI 구독료 위탁신청/);
+});
+
+
+test('term is entered without preset and operator cycle options follow exact selected months',async()=>{
+  const html=await read('../ekodibiz/ai-agency.html');
+  const js=await read('../ekodibiz/ai-agency.js');
+  const adminHtml=await read('../ekodibiz/ai-agency-admin.html');
+  const adminJs=await read('../ekodibiz/ai-agency-admin.js');
+  assert.match(html,/name="months" type="number" min="1" max="120" step="1" required/);
+  assert.doesNotMatch(html,/name="months"[^>]*value="/);
+  assert.match(js,/months:Number\(form\.elements\.months\.value\)/);
+  assert.match(js,/record\.months\+'개월'/);
+  assert.match(adminHtml,/<select name="cycle" required><\/select>/);
+  assert.match(adminJs,/for\(let i=1;i<=x\.months;i\+\+\)/);
+  assert.match(adminJs,/recorded\.has\(i\)/);
+  for(const surface of [html,adminHtml]){
+    assert.match(surface,/계약 담당자<\/a>/);
+    assert.match(surface,/업체 관리자<\/a>/);
+    assert.doesNotMatch(surface,/대학 계약조회<\/a>/);
+    assert.doesNotMatch(surface,/운영자 관리<\/a>/);
+  }
 });

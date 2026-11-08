@@ -15,7 +15,8 @@
   const findButton=category=>buttons.find(b=>b.dataset.filter===category);
   const findShortcuts=category=>shortcuts.filter(a=>a.dataset.filterTarget===category);
   const localCard=()=>cards().some(card=>Boolean(String(card.dataset.regionIds||'').trim()));
-  const hasCategory=category=>cards().some(card=>card.dataset.category===category&&card.dataset.bookstoreQuotePending!=='true');
+  const hasCategory=category=>cards().some(card=>card.dataset.category===category&&
+    (card.dataset.bookstoreQuotePending!=='true'||(category==='book'&&card.dataset.bookstoreInformational==='true')));
   // Only advertise confirmed sale-ready categories in visible navigation.
   // Direct category URLs remain reachable and show a truthful empty state.
   // An API failure or incomplete inventory is never evidence that a category is empty.

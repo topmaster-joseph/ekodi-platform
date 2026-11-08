@@ -60,5 +60,5 @@ test('real filter handlers record canonical history while existing router restor
     "window.addEventListener('popstate',syncViewFromLocation)",
     "window.addEventListener('hashchange',syncViewFromLocation)",
   ]) assert.ok(app.includes(snippet),snippet);
-  assert.match(html,/app\.js\?v=20261103-committee-news-only-1/);
+  assert.match(html,/app\.js\?v=20261108-home-feed-2/);
 });

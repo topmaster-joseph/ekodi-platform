@@ -15,6 +15,6 @@ test('campaign hero exists on home only and routed views hide it',async()=>{
   const html=await read('index.html'),js=await read('app.js');
   assert.equal((html.match(/class="hero campaign-hero"/g)||[]).length,1);
   assert.match(js,/if\(hero\)hero\.hidden=Boolean\(key\)/);
-  assert.match(html,/id="homeSpotlight"/);
-  assert.match(html,/id="homeLatestList"/);
+  assert.match(html,/id="homePublicFeed"/);assert.doesNotMatch(html,/id="homeSpotlight"/);
+  assert.doesNotMatch(html,/id="homeLatestList"/);
 });

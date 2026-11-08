@@ -139,7 +139,7 @@ export function verifyReviewedChurchStackedSource(m){
   const present=new Map(m.trackedFiles.map(f=>[f.path,f]));
   const fixed=staged.localReconciliations;
   const reconciledPath='test/church-compact-tabs.test.mjs';
-  const reconciledSha='be1a66be3fe7d37a9171930fe00585593d541724';
+  const reconciledSha='c5efe244d669d4d4c8fb9d4475ef404981f1802f';
   const historical=prev.get(reconciledPath);
   const currentTest=present.get(reconciledPath);
   if(!Array.isArray(fixed)||fixed.length!==1||

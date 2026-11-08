@@ -15,15 +15,12 @@
     version:3,
     release:'language-visibility-v1',
     links:Object.freeze([
-      Object.freeze({href:'/ekodimission/devotion',label:'매일묵상'}),
-      Object.freeze({href:'/ekodimission/activities',label:'활동'}),
-      Object.freeze({href:'/ekodimission#saturday',label:'토요모임'}),
       Object.freeze({href:'/ekodimission/history',label:'연혁'}),
-      Object.freeze({href:'/ekodimission/live',label:'라이브'}),
-      Object.freeze({href:'/ekodimission/participate',label:'함께하기'}),
-      Object.freeze({href:'/ekodimission/partners',label:'협력'}),
-      Object.freeze({href:'/ekodimission/stories',label:'소식'}),
-      Object.freeze({href:'/qtin/mission',label:'큐티인 신청'})
+      Object.freeze({href:'/ekodimission#notices',label:'공지'}),
+      Object.freeze({href:'/ekodimission/devotion',label:'묵상'}),
+      Object.freeze({href:'/ekodimission#schedule',label:'일정'}),
+      Object.freeze({href:'/ekodimission/live',label:'방송'}),
+      Object.freeze({href:'/ekodimission/activities',label:'활동'})
     ]),
     language:Object.freeze({
       sourceLocale,
@@ -82,13 +79,15 @@
   function mountNavigation(){
     const nav=document.querySelector('[data-mission-nav]');
     if(!nav)return null;
-    const primaryIndices=new Set([0,1,2,5]);
+    const primaryIndices=new Set([0,1,2,3,4,5]);
     const current=location.pathname.replace(/\/+$/,'')||'/';
     const link=item=>{
       const a=document.createElement('a');
       a.href=item.href;a.textContent=item.label;
-      const target=new URL(a.href,location.origin).pathname.replace(/\/+$/,'')||'/';
-      if((current===target&&!(item.href.endsWith('#saturday')&&location.hash!=='#saturday'))||
+      const targetUrl=new URL(a.href,location.origin);
+      const target=targetUrl.pathname.replace(/\/+$/,'')||'/';
+      const isCurrent=targetUrl.hash?current===target&&targetUrl.hash===location.hash:current===target;
+      if(isCurrent||
          (target==='/ekodimission/activities'&&current.startsWith('/ekodimission/activities/'))){
         a.setAttribute('aria-current','page');
       }
@@ -127,7 +126,7 @@
     select.setAttribute('aria-label','언어 선택');
     select.innerHTML='<option value="ko-KR">한국어</option>';
     language.append(select);
-    nav.replaceChildren(...primary,more,language);
+    nav.replaceChildren(...primary,...(secondary.length?[more]:[]),language);
     nav.insertBefore(mobile,language);
     return {nav,select};
   }
@@ -288,7 +287,7 @@
     const login=document.createElement('a');login.href=MISSION_LOGIN;
     login.className='mission-auth-button';login.textContent='로그인';
     const logout=document.createElement('button');logout.type='button';
-    logout.className='mission-auth-button';logout.hidden=true;logout.textContent='로그아웃';
+    logout.className='mission-auth-button mission-auth-logout';logout.hidden=true;logout.textContent='로그아웃';
     row.append(state,login,logout);
     target.append(row);
     if(devotion)mountDevotionAuthNextToAdmin(row,devotion);
@@ -310,6 +309,7 @@
     if(!missionAuthUi)return;
     const authenticated=status==='in';
     missionAuthUi.state.textContent=authenticated?missionAccountLabel(account):'';
+    missionAuthUi.state.title=authenticated?'로그인 아이디: '+missionAccountLabel(account):'';
     missionAuthUi.state.hidden=!authenticated;
     missionAuthUi.login.hidden=authenticated;
     missionAuthUi.logout.hidden=!authenticated;

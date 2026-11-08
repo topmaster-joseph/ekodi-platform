@@ -8,14 +8,15 @@ const content = '<style>body.board-voices .board-head{display:flex;flex-directio
   '<div class="notice-search"><label for="freshSearch">의견 검색</label><input id="freshSearch" type="search" placeholder="제목·내용 검색"></div>'+
   '<p id="freshStatus" role="status" aria-live="polite"></p>'+
   '<form id="freshForm" hidden><label for="freshTitle">제목</label><input id="freshTitle" type="text" maxlength="160" required placeholder="제목을 입력해 주세요."><label for="freshMessage">시민의견</label><textarea id="freshMessage" maxlength="12000" rows="6" required placeholder="의견을 작성해 주세요."></textarea><div class="admin-actions"><button type="submit">등록</button><button id="freshCancel" type="button" class="secondary">취소</button></div></form>'+
-  '<section id="freshList" aria-label="등록된 시민의견"></section>';
+  '<section id="freshList" aria-label="등록된 시민의견" aria-busy="true"><p class="board-loading" role="status" aria-live="polite"><span class="board-spinner" aria-hidden="true"></span>시민의견 목록을 불러오는 중입니다…</p></section>';
 export const freshVoiceClient = String.raw`
 (async()=>{
   const el=id=>document.getElementById(id),form=el('freshForm'),status=el('freshStatus'),list=el('freshList'),search=el('freshSearch');
   const root=location.pathname.startsWith('/seonammedi/board/')?'/seonammedi/board':'/board';
   const api=root+'/api/voices-fresh',KEY='sb-renzehysxirjilvdxacv-auth-token';
   const storageList=()=>{const items=[];try{items.push(localStorage)}catch{}try{items.push(sessionStorage)}catch{}return items};
-  let posts=[],adminAllowed=false,loggedIn=false;
+  let posts=[],adminAllowed=false,loggedIn=false,listReady=false;
+  const listSettled=()=>{try{list.setAttribute('aria-busy','false')}catch{}};
   const readSessions=()=>{const list=[];for(const st of storageList())try{const d=JSON.parse(st.getItem(KEY)||'null'),s=d?.currentSession||d?.session||d;if(s?.access_token)list.push({s,st})}catch{}return list.sort((a,b)=>Number(b.s.expires_at||0)-Number(a.s.expires_at||0))};
   async function accessToken(){
     const sessions=readSessions(),now=Math.floor(Date.now()/1000);
@@ -165,6 +166,8 @@ export const freshVoiceClient = String.raw`
   }
 
   function render(){
+    if(!listReady)return;
+    listSettled();
     list.replaceChildren();
     const q=search.value.trim().toLowerCase(),shown=posts.filter(p=>!q||p.message.toLowerCase().includes(q)||String(p.title||'').toLowerCase().includes(q));
     if(!shown.length){const p=document.createElement('p');p.textContent='등록된 시민의견이 없습니다.';list.append(p);return}
@@ -209,7 +212,7 @@ export const freshVoiceClient = String.raw`
     const token=await session();
     loggedIn=Boolean(token);
     const d=await request(''+(search.value?'?q='+encodeURIComponent(search.value):''),token?{headers:{authorization:'Bearer '+token}}:{});
-    posts=d.items||[];render();
+    posts=d.items||[];listReady=true;render();
   }
   async function adminCheck(){
     const token=await session();if(!token){adminAllowed=false;render();return}
@@ -288,7 +291,15 @@ export const freshVoiceClient = String.raw`
         if(!autoLoginOnce())message('Google 로그인 상태가 확인되지 않았습니다. 글쓰기 버튼으로 계정을 선택해 주세요.');
       }
     }else if(handoffError)message('Google 로그인 복귀에 실패했습니다: '+handoffError);
-  }catch(e){message('목록을 불러오지 못했습니다: '+e.message)}
+  }catch(e){
+    if(!listReady){
+      listSettled();
+      const p=document.createElement('p');p.className='empty board-load-error';p.textContent='목록을 불러오지 못했습니다. ';
+      const retry=document.createElement('button');retry.type='button';retry.className='secondary';retry.textContent='다시 시도';
+      retry.onclick=()=>location.reload();p.append(retry);list.replaceChildren(p);
+    }
+    message('목록을 불러오지 못했습니다: '+e.message);
+  }
 })();
 `;
 export function renderFreshVoicePage(req,shell){

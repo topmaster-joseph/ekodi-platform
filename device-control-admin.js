@@ -77,6 +77,8 @@
     'computer.auth_session.start': '선택한 PC에 선택한 외부 서비스 공식 로그인 창을 EKODI 전용 임시 브라우저로 엽니다.\n\n• PC 화면에 동의창이 먼저 뜨며, PC 앞의 본인이 [예]를 눌러야 열립니다.\n• 비밀번호·인증번호는 열린 창의 공식 서비스 페이지에만 직접 입력하세요. EKODI·AI·채팅으로 보내지 마세요.\n• 기존 Opera/Chrome/Edge 프로필은 사용하지 않으며 30분 후 자동 종료·삭제됩니다.\n\n진행할까요?',
     'computer.auth_session.verify': '로그인된 외부 서비스 화면에서 허용된 메뉴 표시만 읽기 전용으로 점검합니다.\n파일 업로드·생성·크레딧 소모 작업은 실행하지 않습니다. 진행할까요?',
     'autologon.open': '자동로그인 암호는 클라우드에서 받지 않습니다. 이 PC에서 Microsoft Autologon 창을 열까요?',
+    'file_extensions.show': '선택한 Windows PC의 Agent 실행 계정에서 파일 확장자(.pdf, .jpg, .exe 등)를 항상 표시하도록 변경합니다. 원래 설정을 PC에 백업하고 변경 후 다시 확인합니다. 진행할까요?',
+    'file_extensions.restore': '이 PC에 백업된 EKODI 변경 전 파일 확장자 표시 설정으로 복원합니다. 진행할까요?',
     'power.normal': '현재 Windows 전원 시간을 일반 업무 모드로 변경합니다. 기존 전원 계획을 백업하고, 같은 기기의 원상복구 기능으로 되돌릴 수 있습니다. PC 사용자 동의를 확인했나요?',
     'power.restore': '해당 PC에 보관된 EKODI 전원 계획 백업으로 원상복구합니다. 실행할까요?',
     'maintenance.temp_cleanup': '7일 이상 지난 사용자/Windows 임시 파일만 정리합니다. 진행할까요?',
@@ -103,13 +105,17 @@
   let currentDevices = [];
   const WINDOWS_PERFORMANCE_URL = '/admin/ops/devices/windows-performance';
   const AUTOLOGON_URL = '/admin/ops/devices/autologon';
+  const FILE_EXTENSIONS_URL = '/admin/ops/devices/file-extensions';
+  function fileExtensionsRoute() {
+    return window.location.pathname.replace(/\/$/, '') === FILE_EXTENSIONS_URL;
+  }
   function autologonRoute() {
     return window.location.pathname.replace(/\/$/, '') === AUTOLOGON_URL;
   }
   function windowsPerformanceRoute() {
     return window.location.pathname.replace(/\/$/, '') === WINDOWS_PERFORMANCE_URL;
   }
-  let activeType = windowsPerformanceRoute() || autologonRoute() ? 'pc' : 'all';
+  let activeType = windowsPerformanceRoute() || autologonRoute() || fileExtensionsRoute() ? 'pc' : 'all';
   let rosterStatus = 'all';
   let rosterSearch = '';
   let showRetiredGroups = false;
@@ -151,8 +157,8 @@
       });
       document.querySelectorAll('.sidebar .nav').forEach(item => item.classList.remove('active'));
       document.querySelector('[data-device-control-nav]')?.classList.add('active');
-      setPageTitle(autologonRoute() ? 'PC 자동 로그인' : '로컬컴퓨터·기기');
-      if (location.hash !== '#devices' && !windowsPerformanceRoute() && !autologonRoute()) history.replaceState(null, '', '#devices');
+      setPageTitle(fileExtensionsRoute() ? 'Windows 파일 확장자 표시' : autologonRoute() ? 'PC 자동 로그인' : '로컬컴퓨터·기기');
+      if (location.hash !== '#devices' && !windowsPerformanceRoute() && !autologonRoute() && !fileExtensionsRoute()) history.replaceState(null, '', '#devices');
     }
     document.querySelector('.sidebar')?.classList.remove('open');
     loadDevices();
@@ -173,6 +179,7 @@
     const labels = {
       'power.always_on': '항상 켜짐', 'power.presentation': '프레젠테이션', 'power.normal': '일반 모드', 'power.restore': '원상복구',
       'lock.resume_off': '복귀 잠금 해제', 'lock.resume_on': '복귀 잠금 사용', 'autologon.open': '자동로그인 관리',
+      'file_extensions.status': '확장자 표시 상태 확인', 'file_extensions.show': '파일 확장자 표시', 'file_extensions.restore': '확장자 설정 원상복구',
       'diagnostics.collect': '전체 진단', 'network.diagnose': '네트워크 진단', 'printers.diagnose': '프린터 진단', 'printing.image_preview.status': '인쇄 미리보기 점검', 'printing.image_preview.repair': '인쇄 미리보기 복구', 'printing.image_preview.restore': '인쇄 미리보기 원상복구', 'startup.scan': '시작프로그램 확인',
       'startup.disable': '시작프로그램 해제', 'startup.restore': '시작프로그램 복원', 'maintenance.temp_cleanup': '임시파일 정리',
       'updates.scan': '업데이트 확인', 'updates.install': '업데이트 설치', 'profile.workstation.apply': 'EKODI 업무환경',
@@ -683,6 +690,48 @@
     return panel;
   }
 
+  // EKODI-WINDOWS-FILE-EXTENSIONS-001: EKODI browser dispatches an audited
+  // allowlisted command. Only the signed-in Windows Agent changes local HKCU.
+  function fileExtensionsPanel(device) {
+    if (device.management?.type !== 'pc' || isInventory(device) || device.capabilities?.posAgent === true) return null;
+    const panel = document.createElement('section');
+    panel.className = 'device-autologon-panel';
+    panel.dataset.fileExtensionsPanel = 'v1';
+    const title = document.createElement('h3');
+    title.textContent = 'Windows 파일 확장자 표시';
+    const description = document.createElement('p');
+    description.textContent = '확장자(.pdf, .jpg, .exe 등)를 표시합니다. 이 웹페이지가 직접 컴퓨터를 제어하지 않고, 등록된 Windows Agent가 자기 실행 계정의 설정만 변경합니다.';
+    const commandRows = Array.isArray(device.recentCommands) ? device.recentCommands.filter(row => row.type && row.type.startsWith('file_extensions.')) : [];
+    const pending = commandRows.some(row => ['queued', 'assigned', 'claimed'].includes(row.status));
+    const recent = commandRows[0] || null;
+    const verified = commandRows.find(row => row.status === 'succeeded' && row.result?.fileExtensions) || null;
+    const visibility = verified?.result?.fileExtensions?.visibility;
+    const statusText = {shown:'표시 중 (Agent 검증)',hidden:'숨김 (Agent 검증)',unconfigured:'Windows 기본값 (Agent 검증)',unknown:'확인되지 않음'}[visibility] || '아직 상태를 확인하지 않았습니다.';
+    const canRun = device.status === 'online' && device.management?.remoteCommandLevel === 'managed'
+      && capability(device, 'fileExtensions') && !pending;
+    const actions = document.createElement('div');
+    actions.className = 'device-ops-grid';
+    actions.append(
+      makeActionButton(device, 'file_extensions.status', '현재 상태 확인', 'ghost', {}, !canRun),
+      makeActionButton(device, 'file_extensions.show', '파일 확장자 표시', 'primary', {}, !canRun),
+      makeActionButton(device, 'file_extensions.restore', '원래 설정 복원', 'secondary', {}, !canRun || verified?.result?.fileExtensions?.canRestore !== true),
+    );
+    const state = document.createElement('p');
+    state.className = 'device-performance-proof';
+    state.setAttribute('aria-live', 'polite');
+    state.textContent = '현재 설정: ' + statusText + (verified ? ' · 확인 ' + timeLabel(verified.result.fileExtensions.checkedAt || verified.completedAt) : '')
+      + (recent ? ' · 최근 작업: ' + commandLabel(recent.type) + ' ' + commandStatus(recent.status) : '');
+    const note = document.createElement('p');
+    note.className = 'device-performance-proof';
+    note.textContent = !capability(device, 'fileExtensions')
+      ? '이 PC는 아직 이 기능을 지원하지 않습니다. Agent를 최신 릴리스로 업데이트한 후 상태를 확인하세요.'
+      : device.status !== 'online'
+        ? 'PC가 오프라인입니다. 온라인이 된 후 다시 실행하세요. 오프라인 명령은 예약하지 않습니다.'
+        : '설정은 Agent가 실행 중인 Windows 사용자에게만 적용됩니다. 변경 후 기존 파일 탐색기를 닫았다 다시 열면 화면에 반영됩니다. 사용자 계정·암호는 수집하지 않습니다.';
+    panel.append(title, description, state, actions, note);
+    return panel;
+  }
+
   // EKODI-WINDOWS-PERFORMANCE-001: online Windows optimization uses only
   // the audited Device Control allowlist. This panel never calls the OS.
   function windowsPerformancePanel(device) {
@@ -867,6 +916,7 @@
     const health = document.createElement('div'); health.innerHTML = healthMarkup(device);
     const performance = windowsPerformancePanel(device);
     const autologon = autologonRoute() ? autologonPanel(device) : null;
+    const fileExtensions = fileExtensionsRoute() ? fileExtensionsPanel(device) : null;
     const mainActions = document.createElement('div'); mainActions.className = 'device-ops-grid device-primary-actions';
     mainActions.append(
       makeActionButton(device, 'diagnostics.collect', '전체 진단', 'primary', {}, !capability(device, 'diagnostics')),
@@ -935,6 +985,8 @@
     if (posStatus) {
       values[3].textContent = '상태 보고 전용';
       card.append(head, meta, posAgentSummary(device, posStatus), foot);
+    } else if (fileExtensionsRoute() && fileExtensions) {
+      card.append(head, meta, fileExtensions);
     } else if (autologonRoute() && autologon) {
       card.append(head, meta, autologon);
     } else if (windowsPerformanceRoute() && performance) {
@@ -1037,7 +1089,7 @@
     wrapper.className = 'device-roster-group';
     wrapper.dataset.rosterKey = group.key;
     wrapper.dataset.status = primary.status;
-    wrapper.open = windowsPerformanceRoute() || autologonRoute() || openRosterGroups.has(group.key);
+    wrapper.open = windowsPerformanceRoute() || autologonRoute() || fileExtensionsRoute() || openRosterGroups.has(group.key);
     const heading = document.createElement('summary');
     heading.className = 'device-roster-summary';
     const name = document.createElement('span'); name.className = 'device-roster-name';
@@ -1099,7 +1151,7 @@
   function renderTypeFilters(devices) {
     const host = document.querySelector('#deviceTypeFilters');
     if (!host) return;
-    if (windowsPerformanceRoute() || autologonRoute()) {
+    if (windowsPerformanceRoute() || autologonRoute() || fileExtensionsRoute()) {
       host.replaceChildren();
       return;
     }
@@ -1159,7 +1211,7 @@
     const grouped = groupRosterDevices(currentDevices);
     // A Windows-only deep link must not show POS/Kiosk or count them in its summary.
     const performanceMode = windowsPerformanceRoute();
-    const focusedPcMode = performanceMode || autologonRoute();
+    const focusedPcMode = performanceMode || autologonRoute() || fileExtensionsRoute();
     const current = grouped.filter(group => !group.retired && (!focusedPcMode
       || (group.primary.management?.type === 'pc' && !isInventory(group.primary) && group.primary.capabilities?.posAgent !== true)));
     const counted = focusedPcMode ? current : showRetiredGroups ? grouped : current;
@@ -1257,12 +1309,16 @@
     const panel = document.createElement('section'); panel.id = 'deviceControlPanel'; panel.className = 'section ekodi-device-panel hidden-panel'; panel.dataset.panel = 'devices';
     panel.innerHTML = `
       <div class="device-panel-head">
-        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>${autologonRoute() ? 'PC 자동 로그인' : windowsPerformanceRoute() ? 'Windows 성능 관리' : '로컬컴퓨터·기기'}</h2><p>${autologonRoute() ? '연결된 Windows PC에서 Microsoft Autologon 창을 필요할 때만 엽니다. 설정 변경과 암호 입력은 해당 PC에서 직접 합니다.' : windowsPerformanceRoute() ? '등록된 PC만 표시합니다. 실제 Agent 실측값과 허용된 진단·시작프로그램·업데이트·안전 정리의 실행 영수증을 확인합니다.' : '현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.'}</p></div>
+        <div><p class="kicker">REMOTE WORK & DEVICE MANAGEMENT · LOCAL COMPUTERS · DEVICES</p><h2>${fileExtensionsRoute() ? 'Windows 파일 확장자 표시' : autologonRoute() ? 'PC 자동 로그인' : windowsPerformanceRoute() ? 'Windows 성능 관리' : '로컬컴퓨터·기기'}</h2><p>${fileExtensionsRoute() ? '온라인 Windows PC의 파일 확장자 표시 상태를 확인하고, 승인 후 표시하거나 원래 설정으로 복원합니다.' : autologonRoute() ? '연결된 Windows PC에서 Microsoft Autologon 창을 필요할 때만 엽니다. 설정 변경과 암호 입력은 해당 PC에서 직접 합니다.' : windowsPerformanceRoute() ? '등록된 PC만 표시합니다. 실제 Agent 실측값과 허용된 진단·시작프로그램·업데이트·안전 정리의 실행 영수증을 확인합니다.' : '현재 연결 상태와 이용현황을 먼저 보고, 문제가 있는 기기만 빠르게 찾아 조치합니다. 원격 작업·연결·자동작업·고급 설정은 필요할 때 펼쳐 사용합니다.'}</p></div>
         <div class="device-head-actions"><span id="deviceGeneratedAt">연결 상태 확인 전</span><button type="button" class="secondary" id="refreshDevices">↻ 새로고침</button></div>
       </div>
       <div class="device-performance-entry" aria-label="Windows 성능 관리 전용 링크">
         <div><strong>Windows 성능 관리 전용</strong><p>안전한 진단과 실행 영수증을 기존 EKODI Device Agent로 통합합니다. 설치 없는 브라우저 직접 제어는 허용하지 않습니다.</p></div>
         <a class="button secondary" href="${windowsPerformanceRoute() ? '/admin/ops/devices' : WINDOWS_PERFORMANCE_URL}">${windowsPerformanceRoute() ? '전체 기기로 돌아가기' : 'Windows 성능 전용 화면'}</a>
+      </div>
+      <div class="device-performance-entry device-file-extensions-entry" aria-label="Windows 파일 확장자 표시">
+        <div><strong>파일 확장자 표시</strong><p>실행 인프라에서 연결된 Windows PC의 확장자 표시를 확인·적용·복원합니다. EKODI Agent가 직접 검증합니다.</p></div>
+        <a class="button secondary" href="${fileExtensionsRoute() ? '/admin/ops/devices' : FILE_EXTENSIONS_URL}">${fileExtensionsRoute() ? '전체 기기로 돌아가기' : '파일 확장자 설정'}</a>
       </div>
       <div class="device-performance-entry device-autologon-entry" aria-label="PC 자동 로그인 도구">
         <div><strong>PC 자동 로그인</strong><p>필요할 때 PC에서 Microsoft 설정 창을 엽니다. 온라인 관리형 PC만 실행 가능하며 비밀번호는 서버로 전송하지 않습니다.</p></div>
@@ -1334,7 +1390,7 @@
     const quickSetup = panel.querySelector('.device-setup-tools');
     const statusTools = panel.querySelector('.device-status-tools');
     if (quickSetup && statusTools) statusTools.before(quickSetup);
-    if (windowsPerformanceRoute() || autologonRoute()) {
+    if (windowsPerformanceRoute() || autologonRoute() || fileExtensionsRoute()) {
       if (windowsPerformanceRoute()) panel.dataset.windowsPerformanceMode = 'true';
       if (quickSetup) quickSetup.open = false;
       if (statusTools) statusTools.open = true;
@@ -1360,7 +1416,7 @@
       catch { event.currentTarget.textContent = '코드를 직접 선택해 복사하세요'; }
     });
 
-    if (location.hash === '#devices' || windowsPerformanceRoute() || autologonRoute()) showDevices();
+    if (location.hash === '#devices' || windowsPerformanceRoute() || autologonRoute() || fileExtensionsRoute()) showDevices();
     window.addEventListener('hashchange', () => { if (location.hash === '#devices') showDevices(); });
     timer = window.setInterval(() => { if (!panel.classList.contains('hidden-panel')) loadDevices(); }, 10000);
   }

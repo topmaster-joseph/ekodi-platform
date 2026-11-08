@@ -6,6 +6,8 @@ const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache
 const MAX_BODY = 8192;
 const MAX_FEE = 5000000;
 const MAX_SUPPLIER = 10000000;
+// Customer chooses an integer month term; bounded to protect persistence and API responses.
+const MAX_MONTHS = 120;
 const ALLOWED = new Set(['individual', 'institution']);
 
 function reply(data, status = 200) {
@@ -29,13 +31,44 @@ function adminAuthorized(request, env) {
   const header = text(request.headers.get('x-ekodibiz-agency-admin'), 500);
   return key.length >= 32 && constantTimeEqual(key, header);
 }
-function gates(env, totalSupplier) {
+// These are references to records held in the approved private archive, never the contents of approval letters.
+function approvalRefPresent(value) {
+  return typeof value==='string' && /^[A-Za-z0-9][A-Za-z0-9._:/#-]{5,199}$/.test(value);
+}
+function approvalEvidence(env, totalSupplier) {
+  return {
+    legalReference:approvalRefPresent(env.AGENCY_LEGAL_APPROVAL_REF),
+    pgReference:approvalRefPresent(env.AGENCY_PG_APPROVAL_REF),
+    supplierReference:totalSupplier===0 || approvalRefPresent(env.AGENCY_SUPPLIER_APPROVAL_REF),
+    archiveVerified:env.AGENCY_ARCHIVE_VERIFIED==='true',
+    settlementVerified:env.AGENCY_SETTLEMENT_ACTIVE_VERIFIED==='true'
+  };
+}
+function approvedSupplierList(env) {
+  try {
+    const list=JSON.parse(String(env.AGENCY_APPROVED_SUPPLIER_NAMES||'[]'));
+    if(!Array.isArray(list)||list.length>40)return [];
+    return list.filter(value=>typeof value==='string' && value.trim().length>0 && value.length<=80);
+  } catch { return []; }
+}
+function supplierAllowlisted(env, name) {
+  if(typeof name!=='string'||!name.trim())return false;
+  return approvedSupplierList(env).some(value=>
+    value.trim().toLocaleLowerCase('en')===name.trim().toLocaleLowerCase('en'));
+}
+function gates(env, totalSupplier, provider='') {
   const profile = activeProfileId(env);
   const pg = readiness(env, { profileId: profile });
   const mode = pg.mode;
   const scopeApproved = env.AGENCY_PG_SCOPE_VERIFIED === 'true';
-  const supplierApproved = totalSupplier === 0 || env.AGENCY_SUPPLIER_COLLECTION_VERIFIED === 'true';
-  return { ok: pg.ready && pg.widget && scopeApproved && supplierApproved && (mode === 'test' || (mode === 'live' && env.AGENCY_LIVE_ENABLED === 'true')), mode, profile, pg, clientKey: merchantKeys(env, profile).clientKey };
+  const supplierApproved = totalSupplier === 0 || (env.AGENCY_SUPPLIER_COLLECTION_VERIFIED === 'true' && supplierAllowlisted(env,provider));
+  const evidence=approvalEvidence(env,totalSupplier);
+  // A claim of approval is not an archived, scope-matched operational record.
+  // Staging test keys remain usable; *live* never bypasses the evidence/settlement gate.
+  const liveEvidenceReady=Object.values(evidence).every(Boolean);
+  const liveEnabled=mode==='live' && env.AGENCY_LIVE_ENABLED==='true' && liveEvidenceReady;
+  return { ok: pg.ready && pg.widget && scopeApproved && supplierApproved && (mode === 'test' || liveEnabled),
+    mode, profile, pg, evidence, liveEnabled, clientKey: merchantKeys(env, profile).clientKey };
 }
 async function store(env, pathname, body) {
   if (!env.REVENUE_STORE) throw new Error('store_unavailable');
@@ -63,18 +96,19 @@ function publicRecord(record) {
  * Recorded supplier receipts are operator-entered; this is not bank proof.
  */
 function campusSummary(record) {
-  if (record?.type !== 'institution' || record.months !== 3) return null;
+  if (!ALLOWED.has(record?.type) || !Number.isSafeInteger(record.months) || record.months<1 || record.months>MAX_MONTHS) return null;
   const entries=Array.isArray(record.monthlyRecords)?record.monthlyRecords:[];
   const budget=Number.isSafeInteger(record.supplierAmount)&&record.supplierAmount>=0?record.supplierAmount:null;
   const spent=entries.reduce((sum,item)=>sum+(Number.isSafeInteger(item.amount)&&item.amount>0?item.amount:0),0);
   return {
-    agreementId:record.id, organization:record.organization, months:3,
+    agreementId:record.id, organization:record.organization||null, months:record.months,
     agreementStatus:activeStatus(record),
     feeAmount:Number.isSafeInteger(record.feeAmount)?record.feeAmount:null,
     supplierBudget:budget,
     recordedSupplierSpending:spent,
     unallocatedSupplierBudget:budget===null?null:Math.max(0,budget-spent),
-    periods:[1,2,3].map(cycle=>{
+    periods:Array.from({length:record.months},(_,index)=>{
+      const cycle=index+1;
       const receipt=entries.find(item=>item.cycle===cycle);
       return {cycle,status:receipt?'operator_recorded':'not_recorded',
         amount:receipt?.amount??null, paidOn:receipt?.paidOn??null,
@@ -97,7 +131,7 @@ export async function agencyApi(request, url, env) {
   if (!path.startsWith('/api/agency/')) return null;
   if (path === '/api/agency/health' && request.method === 'GET') {
     return reply({ ok: true, service:'ai-purchase-agency', realPaymentsEnabled: gates(env, 0).ok && gates(env, 0).mode === 'live',
-      agencyScope:'approval-gated', plans:['individual-1-month','institution-3-months'] });
+      agencyScope:'approval-gated', plans:['individual-custom-months','institution-custom-months'], maxMonths:MAX_MONTHS });
   }
   if (request.method !== 'POST') return fault('method_not_allowed', 405);
   if (!(request.headers.get('content-type') || '').includes('application/json')) return fault('content_type_required', 415);
@@ -117,14 +151,15 @@ export async function agencyApi(request, url, env) {
         service = text(body.service, 120), customer = text(body.customer, 80),
         email = text(body.email, 150), organization = text(body.organization, 100),
         description = text(body.description, 600);
-      if (!ALLOWED.has(type) || !provider || !service || !customer ||
+      const months = integer(body.months, MAX_MONTHS);
+      if (!ALLOWED.has(type) || months===null || months<1 || !provider || !service || !customer ||
           !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ||
           (type === 'institution' && !organization) || body.consent !== true || body.terms !== true)
         return fault('application_incomplete', 422);
       if (body.cardNumber || body.password || body.apiKey) return fault('credentials_forbidden', 422);
       const id = 'EBAI-' + crypto.randomUUID().replace(/-/g, '').slice(0, 24).toUpperCase();
       const token = crypto.randomUUID() + crypto.randomUUID();
-      const record = { id, type, months:type==='institution'?3:1, provider, service, customer,
+      const record = { id, type, months, provider, service, customer,
         email, organization, description, tokenHash: await digest(token),
         status:'awaiting_quote', feeAmount:null, supplierAmount:null, totalAmount:null,
         termsVersion:'2026-11-06-v1', issuedAt:new Date().toISOString(),
@@ -145,7 +180,7 @@ export async function agencyApi(request, url, env) {
       }
       if (path === '/api/agency/checkout') {
         if (record.status !== 'accepted') return fault('contract_not_accepted', 409);
-        const gate = gates(env, record.supplierAmount);
+        const gate = gates(env, record.supplierAmount, record.provider);
         if (!gate.ok) return fault('pg_or_supplier_scope_not_enabled', 503);
         const clientKey = gate.clientKey;
         if (!clientKey || !Number.isSafeInteger(record.totalAmount) || record.totalAmount < 100) return fault('price_not_ready', 409);
@@ -156,7 +191,7 @@ export async function agencyApi(request, url, env) {
       if (path === '/api/agency/confirm') {
         if (record.status === 'paid_pending_fulfillment' || record.status === 'active') return reply({ ok:true, record:publicRecord(record) });
         if (record.status !== 'accepted') return fault('contract_not_accepted', 409);
-        const gate = gates(env, record.supplierAmount);
+        const gate = gates(env, record.supplierAmount, record.provider);
         if (!gate.ok) return fault('pg_or_supplier_scope_not_enabled', 503);
         if (body.orderId !== record.id || Number(body.amount) !== record.totalAmount ||
             !/^[A-Za-z0-9_-]{6,200}$/.test(text(body.paymentKey, 210))) return fault('payment_mismatch', 409);
@@ -169,9 +204,28 @@ export async function agencyApi(request, url, env) {
         return reply({ ok:true, record:publicRecord(saved.record) });
       }
     }
-    if (['/api/agency/admin/list','/api/agency/admin/quote','/api/agency/admin/activate',
+    if (['/api/agency/admin/readiness','/api/agency/admin/list','/api/agency/admin/quote','/api/agency/admin/activate',
       '/api/agency/admin/record-cycle','/api/agency/admin/stop-renewal','/api/agency/admin/settlement'].includes(path)) {
       if (!adminAuthorized(request, env)) return fault('admin_access_denied', 403);
+      if (path === '/api/agency/admin/readiness') {
+        const own=gates(env,0);
+        const supplierListed=approvedSupplierList(env).length>0;
+        return reply({ok:true,readiness:{
+          mode:own.mode,
+          paymentConfigured:own.pg.ready && own.pg.widget,
+          pgScopeEnabled:env.AGENCY_PG_SCOPE_VERIFIED==='true',
+          supplierCollectionScopeEnabled:env.AGENCY_SUPPLIER_COLLECTION_VERIFIED==='true',
+          supplierAllowlistConfigured:supplierListed,
+          liveSwitchEnabled:env.AGENCY_LIVE_ENABLED==='true',
+          legalApprovalReferenceRecorded:own.evidence.legalReference,
+          pgApprovalReferenceRecorded:own.evidence.pgReference,
+          supplierApprovalReferenceRecorded:approvalEvidence(env,1).supplierReference,
+          archiveVerified:own.evidence.archiveVerified,
+          settlementVerified:own.evidence.settlementVerified,
+          serviceFeeLiveReady:own.mode==='live' && own.ok,
+          supplierCollectionLiveReady:own.mode==='live' && own.ok && env.AGENCY_SUPPLIER_COLLECTION_VERIFIED==='true' && supplierListed && approvalEvidence(env,1).supplierReference
+        }});
+      }
       if (path === '/api/agency/admin/list') return reply({ ok:true, ...(await store(env, '/agency/admin/list', {})) });
       if (['/api/agency/admin/record-cycle','/api/agency/admin/stop-renewal','/api/agency/admin/settlement'].includes(path)) {
         const id = text(body.id,64);
@@ -184,7 +238,7 @@ export async function agencyApi(request, url, env) {
         }
         if (body.confirmed !== true) return fault('operator_confirmation_required',422);
         if (path === '/api/agency/admin/record-cycle') {
-          const cycle = integer(body.cycle,3), amount = integer(body.amount,MAX_SUPPLIER);
+          const cycle = integer(body.cycle,MAX_MONTHS), amount = integer(body.amount,MAX_SUPPLIER);
           const receiptRef = text(body.receiptRef,80), paidOn = text(body.paidOn,10);
           if (cycle===null || cycle<1 || amount===null || amount<1 ||
               !/^[A-Za-z0-9][A-Za-z0-9._:\/-]{5,79}$/.test(receiptRef) ||
@@ -272,12 +326,12 @@ export async function agencyStore(request, storage) {
   // Read-only operator settlement of already received institutional funds.
   // A handwritten reference is not proof of external payment or cancellation.
   if (url.pathname === '/agency/admin/settlement') {
-    if (r.type !== 'institution' || r.months !== 3) return fault('institution_only',409);
+    if (!ALLOWED.has(r.type) || !Number.isSafeInteger(r.months) || r.months<1 || r.months>MAX_MONTHS) return fault('invalid_contract_term',409);
     const cycleRecords=Array.isArray(r.monthlyRecords)?r.monthlyRecords:[];
     const recordedTotal=cycleRecords.reduce((sum,item)=>sum+item.amount,0);
     const budget=Number.isSafeInteger(r.supplierAmount)?r.supplierAmount:0;
     return reply({ok:true,settlement:{
-      id:r.id,organization:r.organization,months:3,contractStatus:activeStatus(r),
+      id:r.id,organization:r.organization||null,months:r.months,contractStatus:activeStatus(r),
       serviceFee:r.feeAmount,providerBudget:budget,
       recordedSupplierSpending:recordedTotal,unallocatedProviderBudget:budget-recordedTotal,
       cycles:cycleRecords.map(item=>({...item})),
@@ -288,11 +342,11 @@ export async function agencyStore(request, storage) {
     }});
   }
   if (url.pathname === '/agency/admin/record-cycle') {
-    if (r.type !== 'institution' || r.months !== 3) return fault('institution_only',409);
+    if (!ALLOWED.has(r.type) || !Number.isSafeInteger(r.months) || r.months<1 || r.months>MAX_MONTHS) return fault('invalid_contract_term',409);
     if (!['active','expired'].includes(activeStatus(r))) return fault('service_not_active',409);
     if (!Number.isSafeInteger(r.supplierAmount) || r.supplierAmount<=0) return fault('no_provider_budget',409);
     const {cycle,amount,paidOn,receiptRef}=data;
-    if (!Number.isSafeInteger(cycle)||cycle<1||cycle>3||!Number.isSafeInteger(amount)||amount<=0||
+    if (!Number.isSafeInteger(cycle)||cycle<1||cycle>r.months||!Number.isSafeInteger(amount)||amount<=0||
         typeof receiptRef!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:\/-]{5,79}$/.test(receiptRef) ||
         typeof paidOn!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(paidOn) ||
         Number.isNaN(Date.parse(paidOn)) || new Date(paidOn+'T00:00:00Z').toISOString().slice(0,10)!==paidOn ||
@@ -306,7 +360,7 @@ export async function agencyStore(request, storage) {
     r.monthlyRecords=[...cycles,{cycle,amount,paidOn,receiptRef,recordedAt:at}].sort((a,b)=>a.cycle-b.cycle);
     r.audit.push({at,action:'manual_supplier_payment_evidence_recorded',cycle});
   } else if (url.pathname === '/agency/admin/stop-renewal') {
-    if (r.type !== 'institution' || r.months !== 3) return fault('institution_only',409);
+    if (!ALLOWED.has(r.type) || !Number.isSafeInteger(r.months) || r.months<1 || r.months>MAX_MONTHS) return fault('invalid_contract_term',409);
     if (!['active','expired'].includes(activeStatus(r))) return fault('service_not_active',409);
     const ref=data.cancellationRef;
     if (typeof ref!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:\/-]{5,79}$/.test(ref)||
@@ -332,7 +386,7 @@ export async function agencyStore(request, storage) {
     if (r.status === 'paid_pending_fulfillment' || r.status === 'active') return reply({ ok:true, record:r });
     if (r.status!=='accepted' || r.totalAmount!==data.totalAmount) return fault('invalid_state', 409);
     r.paymentKey=data.paymentKey;r.paidAt=new Date().toISOString();
-    // Paid is not supplied: the three/one-month service clock starts on verified activation.
+    // Paid is not supplied: the customer-selected month term starts on verified activation.
     r.status='paid_pending_fulfillment';
     r.audit.push({at:r.paidAt,action:'pg_confirmed'});
   } else if (url.pathname === '/agency/admin/activate') {

@@ -13,6 +13,7 @@ const siteNames = Object.freeze({
   ekodimall: '에코디몰', ekodibooks: '에코디서점',
   seonammedi: '서남권국립의대',
   cgma: '청계상인회', edu: '에코디 교육',
+  journal: '에코디저널',
 });
 const categoryNames = { event: '행사·모임', notice: '소식·이야기', product: '상품' };
 

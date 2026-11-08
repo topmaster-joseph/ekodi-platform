@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {auditKnownCloudflarePagesProjectSources} from './classify-cloudflare-pages-source.mjs';
 
 const SELF_TEST = process.argv.includes('--self-test');
 const ROOT = 'ekodi.kr';
@@ -15,6 +16,17 @@ function add(registry,host,kind,details={}){
   if(details.dnsType&&!rec.dnsTypes.includes(details.dnsType))rec.dnsTypes.push(details.dnsType);
   if(details.service&&!rec.services.includes(details.service))rec.services.push(details.service);
 }
+// Cloudflare Pages project listing can reject a 100-item page request.
+// Use its documented plain first-page GET and conservative 20-item paging
+// rather than treating a 400 as an empty project inventory.
+function inventoryPageRequest(endpoint,page){
+  const pagesProjects=/\/accounts\/[^/]+\/pages\/projects$/.test(endpoint);
+  const perPage=pagesProjects?20:100;
+  if(pagesProjects&&page===1)return{url:endpoint,perPage};
+  const sep=endpoint.includes('?')?'&':'?';
+  return{url:endpoint+sep+'page='+page+'&per_page='+perPage,perPage};
+}
+
 function classify(registry){
   return [...registry.values()].sort((a,b)=>a.host.localeCompare(b.host)).map(row=>{
     row.sources.sort();row.dnsTypes.sort();row.services.sort();
@@ -40,6 +52,14 @@ if(SELF_TEST){
   const rows=classify(test);
   const worker=rows.find(x=>x.host===admin),smtp=rows.find(x=>x.host===mail),star=rows.find(x=>x.host===wildcard);
   if(rows.length!==3||!worker?.hasWorkerBinding||smtp?.emailOrVerificationRecord!==true||!star?.dnsOnlyUnknownPurpose)throw new Error('Inventory classification self-test failed');
+  const projects='/accounts/test-account/pages/projects';
+  const first=inventoryPageRequest(projects,1);
+  const second=inventoryPageRequest(projects,2);
+  const dns=inventoryPageRequest('/zones/test-zone/dns_records',1);
+  if(first.url!==projects||first.perPage!==20||
+     second.url!==projects+'?page=2&per_page=20'||second.perPage!==20||
+     dns.url!=='/zones/test-zone/dns_records?page=1&per_page=100'||dns.perPage!==100)
+    throw new Error('Cloudflare read-only inventory pagination self-test failed');
   console.log('Cloudflare domain inventory self-test OK');
   process.exit(0);
 }
@@ -68,11 +88,14 @@ async function get(endpoint){
 async function pages(endpoint){
   const all=[];
   for(let page=1;page<=30;page++){
-    const sep=endpoint.includes('?')?'&':'?';
-    const data=await get(endpoint+sep+'page='+page+'&per_page=100');
+    const request=inventoryPageRequest(endpoint,page);
+    const data=await get(request.url);
     if(!Array.isArray(data.result))throw new Error('Unexpected Cloudflare list response');
     all.push(...data.result);
-    if(data.result.length<100||page>=(data.result_info?.total_pages||Infinity))return all;
+    const count=Number(data.result_info?.total_pages);
+    const knownPages=Number.isInteger(count)&&count>=1;
+    if(knownPages&&page>=count)return all;
+    if(!knownPages&&data.result.length<request.perPage)return all;
   }
   throw new Error('Inventory pagination exceeded 30 pages');
 }
@@ -82,6 +105,7 @@ const sourceCounts={workerCustomDomains:0,workerRoutes:0,pagesProjects:0,dnsReco
 const domains=await pages('/accounts/'+account+'/workers/domains');
 for(const domain of domains){sourceCounts.workerCustomDomains++;add(registry,domain.hostname,'worker-custom-domain',{service:domain.service})}
 const projects=await pages('/accounts/'+account+'/pages/projects');
+const pagesSourceEvidence=auditKnownCloudflarePagesProjectSources(projects);
 for(const project of projects){
   sourceCounts.pagesProjects++;
   for(const host of project.domains||[])add(registry,host,'pages-custom-domain',{service:project.name});
@@ -100,7 +124,7 @@ if(scope==='production'){
   }
 }
 const hosts=classify(registry);
-const output={generatedAt:new Date().toISOString(),scope,root:ROOT,sourceCounts,hostCount:hosts.length,hosts,complete:true,destructiveActions:0,warning:'DNS type or known hostname alone never authorizes deletion; verify traffic, callbacks, mail and rollout gates'};
+const output={generatedAt:new Date().toISOString(),scope,root:ROOT,sourceCounts,hostCount:hosts.length,hosts,pagesSourceEvidence,complete:true,destructiveActions:0,warning:'DNS/project Git metadata and a trigger SHA alone never prove actual release ownership, apex routing, rollback or repository deletion authorization'};
 const dest=process.env.EKODI_CF_INVENTORY_OUTPUT||'artifacts/cloudflare-web-domain-inventory-'+scope+'.json';
 fs.mkdirSync(path.dirname(dest),{recursive:true});
 fs.writeFileSync(dest,JSON.stringify(output,null,2)+'\n');
@@ -111,6 +135,8 @@ const md='## Cloudflare web-domain read-only inventory ('+scope+')\n'
   +'- Worker routes: **'+sourceCounts.workerRoutes+'**, DNS records inspected: **'+sourceCounts.dnsRecords+'**\n'
   +'- Hosts with Worker/Pages binding: **'+hosts.filter(x=>x.hasWorkerBinding||x.hasPagesDomain).length+'**\n'
   +'- DNS-only ambiguous hosts: **'+hosts.filter(x=>x.dnsOnlyUnknownPurpose).length+'**\n'
+  +'- Pages projects from approved registry observed in this account: **'+pagesSourceEvidence.observedRegisteredProjects+'/'+pagesSourceEvidence.totalRegisteredProjects+'**\n'
+  +'- Pages source configured vs live publish authority: **unverified**; release receipt and rollback not checked.\n'
   +'- Deletions: **0**. No per-host retirement certified.\n';
 if(summary)fs.appendFileSync(summary,md);
 console.log(JSON.stringify({scope,hostCount:hosts.length,sourceCounts,report:dest,destructiveActions:0}));

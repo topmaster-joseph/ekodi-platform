@@ -1,5 +1,6 @@
 import { EKODI_INDEXNOW_KEY_PATH, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
 import { injectVerificationMeta } from './search-engine-verification.js';
+import { withFooterTraffic } from './footer-traffic-guarantee.js';
 
 const ORIGIN = 'https://ekodi.kr';
 const SITE_PREFIX = '/seonammedi';
@@ -235,7 +236,7 @@ export function seonammediDiscoveryResponse(request, incoming) {
   return null;
 }
 
-export default {
+const ekodiWorkerEntry={
   async fetch(request) {
     const incoming = new URL(request.url);
     if (!DOMAIN_HOSTS.has(incoming.hostname.toLowerCase())) {
@@ -285,3 +286,5 @@ export default {
     });
   },
 };
+// FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
+export default withFooterTraffic(ekodiWorkerEntry);

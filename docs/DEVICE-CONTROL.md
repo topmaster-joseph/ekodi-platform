@@ -44,6 +44,16 @@ The first release supports Windows only. Android Enterprise and Apple MDM are de
 
 Before the first power or resume-lock modification, the Agent exports the active Windows power scheme to `%ProgramData%\EKODI\DeviceAgent\power-before-ekodi.pow`.
 
+## Windows file-extension visibility (EKODI native browser + Agent)
+
+The existing platform-super-admin **운영·안정성 → 실행 인프라 → 파일 확장자 설정** detail route is `/admin/ops/devices/file-extensions`. This is a detail within the already-classified `devices` menu, not a new tenant-facing menu. The browser never directly writes registry keys: authenticated Device Control API → fixed command allowlist → one enrolled Windows Agent → bounded verification receipt → audit record.
+
+- The **현재 상태 확인** command reads the Agent's interactive Windows account only. **파일 확장자 표시** sets `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced\\HideFileExt` to `DWORD 0` after saving the original presence/value in local Agent storage. **원래 설정 복원** restores that baseline; no arbitrary command or registry path can be supplied by the caller.
+- The PC must be online, of managed type `pc`, not POS/kiosk, with `fileExtensions` capability from an updated Agent. The backend additionally requires `super_admin`; write operations require explicit confirmation. Requests expire after five minutes, and these commands cannot be automatically assigned to a workstation group.
+- Agent refuses Windows service-account SIDs; an existing per-account backup belonging to another SID is never overwritten or restored. The UI reports only `shown` / `hidden` / `unconfigured`, restore availability and check timestamp. It does not reveal usernames, SIDs or registry paths through the public-facing command receipt.
+- A queued command is not completion. The updated Agent must return a successful post-write readback; then the administrator may reopen File Explorer to observe the visible suffixes. Changing one account does not change other Windows logon accounts. Nothing is installed, launched or changed on the operator's machine merely by opening this admin screen.
+- Releasing the new menu and the new Agent version (2.6.5) follows separate protected PR, CI, central EKODI AI orchestration and verified guarded deployment. Real-machine success is reported only after an approved online Agent actually executes the command and returns its receipt.
+
 ## Transactional Windows Agent install and upgrade
 
 The Windows Agent install/upgrade path is fail-safe and does not couple Agent availability to desktop-only power features.

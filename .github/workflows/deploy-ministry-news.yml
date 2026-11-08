@@ -1,0 +1,133 @@
+name: Deploy Ministry News Hub
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified orchestrator source branch (post-merge dispatch)'
+        required: false
+        type: string
+      release_task_id:
+        description: 'Verified orchestrator task id (post-merge dispatch)'
+        required: false
+        type: string
+  pull_request:
+    paths: &ministry_news_paths
+      - 'ministry-news-core.js'
+      - 'ministry-news-d1-store.js'
+      - 'ministry-news-memory-store.js'
+      - 'ministry-news-worker.js'
+      - 'ministry-news-staging-worker.js'
+      - 'migrations/202611071600_ministry_news_hub.sql'
+      - 'wrangler.ministry-news.toml'
+      - 'wrangler.ministry-news.staging.toml'
+      - 'test/ministry-news-hub.test.mjs'
+      - '.github/workflows/deploy-ministry-news.yml'
+      - '.github/workflows/deploy-ministry-news-staging.yml'
+  push:
+    branches: [main]
+    paths: *ministry_news_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ministry-news-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+env:
+  # WORKER-LANE-GRAPH-001: post-merge dispatches carry the orchestrator receipt.
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate ministry news contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in ministry-news-core.js ministry-news-d1-store.js ministry-news-memory-store.js ministry-news-worker.js ministry-news-staging-worker.js; do node --check "$file"; done
+          node --test test/ministry-news-hub.test.mjs
+          grep -Fq "visibility TEXT NOT NULL DEFAULT 'partners'" migrations/202611071600_ministry_news_hub.sql
+          ! grep -Eiq '\bDROP\b' migrations/202611071600_ministry_news_hub.sql
+          grep -Fq 'ekodi.kr/sosik*' wrangler.ministry-news.toml
+          grep -Fq 'ekodi.kr/api/sosik*' wrangler.ministry-news.toml
+          grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.ministry-news.staging.toml
+          ! grep -Fq '[[d1_databases]]' wrangler.ministry-news.staging.toml
+      - name: Verify platform guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/validate-deployment-guardrails.mjs
+          if [[ -f scripts/validate-zero-subdomain.mjs ]]; then node scripts/validate-zero-subdomain.mjs; fi
+
+  staging_gate:
+    needs: validate
+    uses: ./.github/workflows/deploy-ministry-news-staging.yml
+    with:
+      release_branch_ref: ${{ inputs.release_branch_ref || '' }}
+      release_task_id: ${{ inputs.release_task_id || '' }}
+    secrets: inherit
+
+  release:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [validate, staging_gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify Production Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test "$CLOUDFLARE_ACCOUNT_ID" != '46aad4738793fbaca88574832a2ccc0f'
+      - name: Apply additive ministry news schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.ministry-news.toml --file migrations/202611071600_ministry_news_hub.sql
+      - name: Deploy production worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.ministry-news.toml
+      - name: Verify production public, subscribe, admin and auth boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            public_code=$(curl -L -sS -o /tmp/mn-prod.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/sosik' || true)
+            sub_code=$(curl -L -sS -o /tmp/mn-prod-sub.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/sosik/subscribe' || true)
+            admin_code=$(curl -L -sS -o /tmp/mn-prod-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/sosik/admin' || true)
+            api_code=$(curl -L -sS -o /tmp/mn-prod-api.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/sosik/admin/me' || true)
+            feed_code=$(curl -L -sS -o /tmp/mn-prod-feed.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/sosik/feed' || true)
+            if [[ "$public_code" == 200 && "$sub_code" == 200 && "$admin_code" == 200 && "$api_code" == 401 && "$feed_code" == 200 ]] \
+              && grep -Fq '사역소식' /tmp/mn-prod.html \
+              && grep -Fq '기도동역자' /tmp/mn-prod-sub.html \
+              && grep -Fq '사역소식 발행관리' /tmp/mn-prod-admin.html \
+              && grep -Fq '"items"' /tmp/mn-prod-feed.json; then
+              echo 'Ministry news hub production verified.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Production verification failed: public=$public_code subscribe=$sub_code admin=$admin_code api=$api_code feed=$feed_code"
+          exit 1

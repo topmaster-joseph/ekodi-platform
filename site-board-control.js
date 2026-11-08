@@ -1,5 +1,7 @@
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
 
+const CENTRAL_SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
+const CENTRAL_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const clean=(value,max=4000)=>String(value??'').trim().slice(0,max);
 const lower=value=>clean(value,320).toLowerCase();
 const json=(data,status=200,extraHeaders={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extraHeaders}});
@@ -373,10 +375,21 @@ async function missionEnsureWeeklyDates(env,boardId,today,nextSaturday){
     CASE WHEN meeting_date < ? THEN 'completed' ELSE 'scheduled' END,?
   FROM weekly WHERE meeting_date <= ?`)
     .bind(MISSION_SATURDAY_STARTED,until,boardId,today,now(),until).run();
-  // One-time November 7 exception for rows already registered with the default time.
+  // 2026-11-07 was a one-day 17:00 exception. Every other Saturday defaults
+  // to 11:00 KST. Preserve an older exception row without rewriting history.
   await env.DB.prepare(`UPDATE ekodi_mission_saturday_events SET starts_at='17:00'
-    WHERE board_id=? AND meeting_date='2026-11-07' AND starts_at='11:00'`)
+    WHERE board_id=? AND meeting_date='2026-11-07' AND starts_at='11:00'
+      AND venue='에코디교회' AND title='토요 성경토론과 함께하는 식사'
+      AND status='scheduled'`)
     .bind(boardId).run();
+  // Roll back the earlier mistaken weekly-17:00 auto-conversion, bounded to
+  // upcoming scheduled rows with the unchanged default event metadata.
+  // Explicitly customized venue, title, time and cancelled/history stay intact.
+  await env.DB.prepare(`UPDATE ekodi_mission_saturday_events SET starts_at='11:00'
+    WHERE board_id=? AND meeting_date>'2026-11-07' AND meeting_date>=?
+      AND starts_at='17:00' AND status='scheduled' AND venue='에코디교회'
+      AND title='토요 성경토론과 함께하는 식사'`)
+    .bind(boardId,today).run();
   // A completed calendar day is archived after 00:00 Asia/Seoul.
   // Preserve cancelled/modified statuses; only scheduled dates roll to completed.
   await env.DB.prepare(`UPDATE ekodi_mission_saturday_events
@@ -500,17 +513,78 @@ export function parseEkodiPublicSchedule(row,today=missionKstToday()){
   const source=row.board_id==='site:ekodichurch:main'?'ekodichurch':'ekodimission';
   const expected=source==='ekodichurch'?'schedule':'mission-schedule';
   if(row.category_id!==expected)return null;
-  const lines=String(row.body||'').replace(/\r/g,'').split('\n');
-  const when=lines[0]?.match(/^일정:\s*(\d{4}-\d{2}-\d{2})\s+([01]\d|2[0-3]):([0-5]\d)$/);
-  const place=lines[1]?.match(/^장소:\s*(.{1,160})$/);
-  if(!when||!place||when[1]<today||!place[1].trim())return null;
-  const parsed=new Date(when[1]+'T00:00:00Z');
-  if(Number.isNaN(parsed.getTime())||parsed.toISOString().slice(0,10)!==when[1])return null;
+  // Both boards retain their own write contract: Church's official editor stores
+  // JSON, while Mission's official editor stores the two-line human-readable form.
+  // Never return a whole body/description: only approved public schedule metadata.
+  const raw=String(row.body||'');
+  let date='',time='',venue='';
+  if(raw.trimStart().startsWith('{')){
+    try{
+      const value=JSON.parse(raw);
+      if(value&&typeof value==='object'&&!Array.isArray(value)){
+        date=typeof value.date==='string'?value.date:'';
+        time=typeof value.time==='string'?value.time:'';
+        venue=typeof value.venue==='string'?value.venue.trim():'';
+      }
+    }catch{return null;}
+  }else{
+    const lines=raw.replace(/\r/g,'').split('\n');
+    const when=lines[0]?.match(/^일정:\s*(\d{4}-\d{2}-\d{2})\s+([01]\d|2[0-3]):([0-5]\d)$/);
+    const place=lines[1]?.match(/^장소:\s*(.{1,160})$/);
+    if(!when||!place)return null;
+    date=when[1];time=when[2]+':'+when[3];venue=place[1].trim();
+  }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)||
+    !venue||venue.length>160||date<today)return null;
+  const parsed=new Date(date+'T00:00:00Z');
+  if(Number.isNaN(parsed.getTime())||parsed.toISOString().slice(0,10)!==date)return null;
   const id=Number(row.id),title=clean(row.title,160);
   if(!Number.isSafeInteger(id)||id<=0||!title)return null;
   return {id,source,sourceLabel:source==='ekodichurch'?'에코디교회':'에코디선교회',
-    date:when[1],time:when[2]+':'+when[3],venue:place[1].trim(),title,
-    url:'/'+source+'/board/post/'+id,kind:'official-post'};
+    date,time,venue,title,url:'/'+source+'/board/post/'+id,kind:'official-post'};
+}
+// 에코디교회 주일예배: 매주 일요일 11:00 에코디교회. 특정 주일의 장소 변경은 아래 날짜표에 둔다.
+// 같은 날짜에 '주일'이 들어간 교회 공식 일정 게시글이 있으면 그 게시글이 우선한다.
+export const CHURCH_SUNDAY_WORSHIP=Object.freeze({title:'주일예배',time:'11:00',venue:'에코디교회',weeks:4,
+  venueOverrides:Object.freeze({'2026-11-08':'목포 평화광장'})});
+// 교회 공식 단건 일정(관리자 일정 테이블이 준비되기 전까지 공개 주요일정에 직접 등록).
+export const CHURCH_KEY_EVENTS=Object.freeze([
+  Object.freeze({date:'2026-11-15',time:'12:30',title:'공동의회 (주일예배 후)',venue:'에코디교회'}),
+]);
+export function churchKeyEvents(today=missionKstToday(),events=CHURCH_KEY_EVENTS){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(today)))return [];
+  return events.filter(e=>e.date>=today).map(e=>({id:0,source:'ekodichurch',sourceLabel:'에코디교회',date:e.date,time:e.time,
+    venue:e.venue,title:e.title,url:'/ekodichurch/schedule/',kind:'church-key-event'}));
+}
+export function churchSundayWorshipEvents(today=missionKstToday(),config=CHURCH_SUNDAY_WORSHIP){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(today)))return [];
+  const first=new Date(today+'T00:00:00Z');
+  first.setUTCDate(first.getUTCDate()+(7-first.getUTCDay())%7);
+  return Array.from({length:config.weeks},(_,week)=>{
+    const day=new Date(first);day.setUTCDate(first.getUTCDate()+week*7);
+    const date=day.toISOString().slice(0,10);
+    return {id:0,source:'ekodichurch',sourceLabel:'에코디교회',date,time:config.time,
+      venue:config.venueOverrides[date]||config.venue,title:config.title,
+      url:'/ekodichurch/#worship',kind:'recurring-worship'};
+  });
+}
+// 관리자 '일정'(church.events)에 등록된 공개 가능 일정. 실패해도 주요일정 화면은 계속 보여준다.
+export function churchAdminEventItems(rows){
+  if(!Array.isArray(rows))return [];
+  return rows.map(r=>{
+    const date=String(r?.event_date||''),time=String(r?.event_time||'').slice(0,5)||'00:00',title=clean(r?.title,160);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)||!title)return null;
+    return {id:0,source:'ekodichurch',sourceLabel:'에코디교회',date,time,venue:clean(r?.location,160)||'에코디교회',
+      title,url:'/ekodichurch/schedule/',kind:'church-admin-event'};
+  }).filter(Boolean);
+}
+async function readChurchAdminEvents(){
+  try{
+    const r=await fetch(`${CENTRAL_SUPABASE_URL}/rest/v1/rpc/church_public_events`,{method:'POST',
+      headers:{apikey:CENTRAL_PUBLISHABLE_KEY,authorization:`Bearer ${CENTRAL_PUBLISHABLE_KEY}`,'content-type':'application/json'},
+      body:JSON.stringify({p_church_slug:'ekodi-church',p_limit:30}),cache:'no-store',signal:AbortSignal.timeout(4000)});
+    return r.ok?churchAdminEventItems(await r.json().catch(()=>[])):[];
+  }catch{return [];}
 }
 async function readSharedPublicSchedules(env,instance){
   const today=missionKstToday(),missionId=boardId('ekodimission'),churchId=boardId('ekodichurch');
@@ -535,6 +609,13 @@ async function readSharedPublicSchedules(env,instance){
       time:String(event.starts_at||'11:00'),venue:String(event.venue||'에코디교회'),
       title:String(event.title||'토요 성경토론과 식사'),
       url:'/ekodimission?meeting='+encodeURIComponent(date)+'#saturday',kind:'recurring-meeting'});
+  }
+  for(const event of [...await readChurchAdminEvents(),...churchKeyEvents(today)]){
+    if(!items.some(item=>item.source==='ekodichurch'&&item.date===event.date&&item.title===event.title))items.push(event);
+  }
+  for(const event of churchSundayWorshipEvents(today)){
+    if(items.some(item=>item.source==='ekodichurch'&&item.date===event.date&&item.kind==='official-post'&&/주일/.test(item.title)))continue;
+    items.push(event);
   }
   items.sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)||a.source.localeCompare(b.source));
   return boardJson(instance,{ok:true,mode:'published-read-only',items:items.slice(0,30)});

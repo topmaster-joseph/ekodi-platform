@@ -81,6 +81,7 @@ on:
       - 'config/surface-system-verification-policy.json'
       - 'config/autonomous-execution-fabric-policy.json'
       - 'test/background-browser-worker.test.mjs'
+      - 'test/native-chromium-ubuntu-lts.test.mjs'
       - '.github/workflows/ekodi-background-browser-worker.yml'
       - 'package.json'
   push:
@@ -97,6 +98,7 @@ on:
       - 'config/surface-system-verification-policy.json'
       - 'config/autonomous-execution-fabric-policy.json'
       - 'test/background-browser-worker.test.mjs'
+      - 'test/native-chromium-ubuntu-lts.test.mjs'
       - '.github/workflows/ekodi-background-browser-worker.yml'
       - 'package.json'
 
@@ -130,11 +132,13 @@ jobs:
         run: |
           node --check scripts/ekodi-background-browser-worker.mjs
           node scripts/validate-background-browser-worker.mjs
-          node --test test/background-browser-worker.test.mjs test/ekodi-browser-independence.test.mjs test/ekodi-browser-evidence-redaction.test.mjs
+          node --test test/background-browser-worker.test.mjs test/ekodi-browser-independence.test.mjs test/ekodi-browser-evidence-redaction.test.mjs test/native-chromium-ubuntu-lts.test.mjs
 
   runtime-smoke:
     needs: contract
-    runs-on: ubuntu-latest
+    # Playwright 1.55.0 Chromium does not install on ubuntu-26.04 (ubuntu-latest).
+    # Keep the browser runtime on the supported LTS image; never skip verification.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout current platform revision

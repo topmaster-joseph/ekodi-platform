@@ -2,6 +2,11 @@ name: EKODI Native Operations Watch
 
 on:
   workflow_dispatch:
+  # Read-only failover if GitHub drops this workflow's own daily/hourly cron.
+  # Only a successful scheduled EKODI-owned main run is admitted below.
+  workflow_run:
+    workflows: ['Reconcile EKODI Church Production']
+    types: [completed]
   schedule:
     # Hourly, staggered from the existing DB watch (+07) and orchestrator (+15).
     - cron: '37 * * * *'
@@ -25,6 +30,14 @@ on:
       - 'scripts/ekodi-native-reservations.mjs'
       - 'config/ekodi-native-reservations.json'
       - 'test/ekodi-native-reservations.test.mjs'
+      - 'scripts/run-ekodi-satellite-retirement-audit.mjs'
+      - 'scripts/audit-public-legacy-workflow-risks.mjs'
+      - 'scripts/build-satellite-retirement-watch-report.mjs'
+      - 'scripts/audit-satellite-live-source-markers.mjs'
+      - 'scripts/inspect-satellite-repository-retirement.mjs'
+      - 'test/ekodi-satellite-retirement-audit.test.mjs'
+      - 'test/satellite-retirement-watch-workflow.test.mjs'
+      - '.github/workflows/satellite-retirement-readonly-audit.yml'
 
 permissions:
   contents: read
@@ -49,16 +62,20 @@ jobs:
         run: |
           node --check scripts/ekodi-native-operations-watch.mjs
           node --check scripts/ekodi-native-reservations.mjs
-          node --test test/ekodi-native-operations-watch.test.mjs test/ekodi-native-migration-status.test.mjs test/ekodi-native-workload-preparation.test.mjs test/ekodi-native-reservations.test.mjs
+          node --check scripts/run-ekodi-satellite-retirement-audit.mjs
+          node --check scripts/audit-public-legacy-workflow-risks.mjs
+          node --test test/ekodi-native-operations-watch.test.mjs test/ekodi-native-migration-status.test.mjs test/ekodi-native-workload-preparation.test.mjs test/ekodi-native-reservations.test.mjs test/ekodi-satellite-retirement-audit.test.mjs test/satellite-retirement-watch-workflow.test.mjs
 
   observe:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.event_name != 'workflow_run'
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    # Includes the daily bounded public-source audit (3 fixed GET probes).
+    timeout-minutes: 8
     env:
       GITHUB_TOKEN: ${{ github.token }}
       EKODI_WATCH_MODE: ${{ github.event.schedule == '45 23 * * *' && 'daily' || 'hourly' }}
       EKODI_RESERVATION_PROFILE: ${{ github.event.schedule == '0 23 * * 0' && 'publishing' || github.event.schedule == '26 23 * * 2' && 'worship' || github.event.schedule == '45 23 * * *' && 'daily' || 'hourly' }}
+      EKODI_SATELLITE_AUDIT_MODE: ${{ github.event_name == 'workflow_dispatch' && 'manual' || 'daily' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -77,6 +94,25 @@ jobs:
           node scripts/ekodi-native-reservations.mjs \
             --profile="$EKODI_RESERVATION_PROFILE" \
             --output=ekodi-native-reservations-evidence.json
+      - name: EKODI Orchestrator daily satellite source and independent release audit
+        # The 08:45 KST daily scheduler remains primary. GitHub may delay/drop cron
+        # deliveries: reuse the EXISTING hourly watch for bounded 09-11 KST recovery.
+        # Never introduce a second scheduled runner, mutation or deletion authority.
+        if: always() && (github.event.schedule == '45 23 * * *' || github.event_name == 'workflow_dispatch' || github.event.schedule == '37 * * * *')
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event.schedule || '' }}" == '37 * * * *' ]]; then
+            kst_hour="$(TZ=Asia/Seoul date +%H)"
+            if [[ ! "$kst_hour" =~ ^(09|10|11)$ ]]; then
+              echo 'EKODI satellite audit fallback is outside its 09-11 KST recovery window.'
+              exit 0
+            fi
+            echo "EKODI read-only satellite audit recovery (KST hour $kst_hour; existing hourly schedule)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          node scripts/run-ekodi-satellite-retirement-audit.mjs \
+            --mode="$EKODI_SATELLITE_AUDIT_MODE" \
+            --output-dir=ekodi-satellite-audit
+          cat ekodi-satellite-audit/summary.md >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve privacy-safe evidence, including failures
         if: always()
         uses: actions/upload-artifact@v7
@@ -85,5 +121,51 @@ jobs:
           path: |
             ekodi-native-operations-evidence.json
             ekodi-native-reservations-evidence.json
+            ekodi-satellite-audit/
+          if-no-files-found: warn
+          retention-days: 14
+
+  recover-satellite-audit:
+    # Non-recursive EKODI-owned fallback; never elevate permissions on a
+    # workflow_run event and never trust PR-origin code or external actor data.
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'schedule' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Allow only a bounded 09-11 KST read-only recovery window
+        id: window
+        shell: bash
+        run: |
+          set -euo pipefail
+          kst_hour="$(TZ=Asia/Seoul date +%H)"
+          if [[ "$kst_hour" =~ ^(09|10|11)$ ]]; then
+            echo "eligible=true" >> "$GITHUB_OUTPUT"
+            echo "EKODI satellite recovery KST hour=$kst_hour" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "eligible=false" >> "$GITHUB_OUTPUT"
+            echo "Read-only recovery skipped outside 09-11 KST."
+          fi
+      - uses: actions/checkout@v7
+        if: steps.window.outputs.eligible == 'true'
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        if: steps.window.outputs.eligible == 'true'
+        with:
+          node-version: '24'
+      - name: Run EKODI-owned read-only satellite audit
+        if: steps.window.outputs.eligible == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/run-ekodi-satellite-retirement-audit.mjs --mode=daily --output-dir=ekodi-satellite-audit
+          cat ekodi-satellite-audit/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve bounded source evidence including failures
+        if: always() && steps.window.outputs.eligible == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ekodi-satellite-recovery-${{ github.run_id }}
+          path: ekodi-satellite-audit/
           if-no-files-found: warn
           retention-days: 14

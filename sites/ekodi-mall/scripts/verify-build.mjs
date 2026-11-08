@@ -13,7 +13,7 @@ const checks = [
   ['assets/category-visibility.js', ['TOSS-MALL-UNDERWRITING-001', 'data-filter-target', 'api/public/products', 'credentials', 'MutationObserver']],
   ['assets/local-commerce.js', ['ekodiMallLocalRegionV1', 'explicit', 'geolocation', '좌표는 저장하지 않습니다', 'ekodi:local-region-change']],
   ['assets/context-curator.js', ['ekodi.kr/api/affiliate/public/products', 'diversified', 'groupOffers', '제휴수수료와 분리합니다', 'data-context-prompt', 'context-detail-button', 'context-offer-dialog', '어디서 살까요?', '판매처에서 구매']],
-  ['travel/stay/index.html', ['여행·레저', '아고다 제휴 숙소', '지역·숙소명 검색', 'data-affiliate-mode="stay"', 'affiliateProductDialog', 'affiliate-hub.js']],
+  ['travel/stay/index.html', ['여행·레저', '아고다 제휴 숙소', '공개 숙소 목록 내 검색', 'data-affiliate-mode="stay"', 'affiliateProductDialog', 'affiliate-hub.js', 'agoda-live-search.js', 'agodaLiveForm', 'agodaLiveGrid', '아고다 자동검색', '등록된 제휴 숙소', '아고다에서 숙소 찾기', 'rel="noopener noreferrer sponsored"']],
   ['coupang/index.html', ['쿠팡제휴몰', '쿠팡파트너스 제휴상품', '쿠팡 제휴상품 검색', 'data-affiliate-mode="shopping"', '쿠팡 파트너스 활동의 일환', 'affiliateProductDialog', 'affiliate-hub.js']],
   ['assets/affiliate-hub.js', ['affiliate/public/products', 'noopener sponsored', 'affiliate-card-image', 'showDetail', '아고다에서 확인']],
   ['assets/affiliate-share.js', ['shareUrlForProduct', 'prioritizeSharedProduct', 'safeAffiliateHttps', 'affiliateProviderMatches', 'conciseAffiliateDescription', 'https://ekodi.kr', 'product']],
@@ -64,6 +64,14 @@ const checks = [
   ['build-meta.json', ['"platformMode": "marketplace-v2"', paymentsMarker, '"commerceOsVersion": 1', '"paymentProviderAuthority": "server-capability-registry"', '"highImpactExecution": "human-gated"', '"affiliateExternalRouting": true']]
 ];
 const errors = [];
+// Agoda partner search is a disclosed external referral, not a verified hotel product.
+const stayHub = await readFile(path.join(dist, 'travel/stay/index.html'), 'utf8');
+const shoppingHub = await readFile(path.join(dist, 'coupang/index.html'), 'utf8');
+if (!stayHub.includes('https://www.agoda.com/partners/partnersearch.aspx?pcs=1&amp;cid=1980072&amp;hl=ko-kr&amp;tag=ekodi_mall_stay') ||
+    !stayHub.includes('아고다에서 숙소 찾기')) errors.push('Agoda stay hub missing owner-generated CID referral link');
+if (shoppingHub.includes('agoda-live-search.js') || shoppingHub.includes('agodaLiveForm') || shoppingHub.includes('cid=1980072') || shoppingHub.includes('tag=ekodi_mall_stay') || shoppingHub.includes('아고다에서 숙소 찾기'))
+  errors.push('Agoda referral must not appear in Coupang hub');
+
 for (const [relative, needles] of checks) {
   let content = '';
   try { content = await readFile(path.join(dist, relative), 'utf8'); } catch { errors.push(`${relative} is missing`); continue; }
@@ -115,13 +123,27 @@ if (!approvedBook?.slug || !/^book-[a-z0-9-]+$/.test(approvedBook.slug)) {
     errors.push('Public bookstore page missing live purchase verification anchors');
   }
 }
+// MALL-BOOKS-DIRECT-CHECKOUT-001: 책·배움 직접판매 결제 화면
+for (const [file, marker] of [['checkout/book/index.html','data-book-checkout-mode="checkout"'],['checkout/book/success/index.html','data-book-checkout-mode="success"'],['checkout/book/fail/index.html','data-book-checkout-mode="fail"']]) {
+  const html = await readFile(path.join(dist, ...file.split('/')), 'utf8').catch(() => '');
+  if (!html.includes(marker) || !html.includes('data-books-api-base="/books"') || !html.includes('src="/assets/book-checkout.js"')) errors.push('Mall book checkout page incomplete: ' + file);
+}
 const booksStore = await readFile(path.join(dist, 'stores', 'ekodi-books', 'index.html'), 'utf8');
 for (const marker of ['data-bookstore-store="true"','data-bookstore-store-grid','data-bookstore-public-count','src="/assets/bookstore-live.js"']) {
   if (!booksStore.includes(marker)) errors.push('Bookstore live storefront is missing ' + marker);
 }
 const liveBridge = await readFile(path.join(dist, 'assets', 'bookstore-live.js'), 'utf8');
-for (const marker of ['/books/api/commerce', '/public/approvals', '/quote?book=', 'checkout?.fileReady', "checkout?.mode === 'live'"]) {
-  if (!liveBridge.includes(marker)) errors.push('Bookstore sale bridge lost verification gate: ' + marker);
+// Each public edition is a stable information card, while its *own* live
+// file-bound commerce quote is the exclusive authority for the Buy CTA.
+for (const marker of ['/books/api/commerce', '/quote?book=', 'checkout?.fileReady',
+  "checkout?.mode === 'live'", 'catalogCards()', 'setBuyState(card, state, quote)',
+  "button.removeAttribute('href')", 'data-bookstore-buy']) {
+  if (!liveBridge.includes(marker)) errors.push('Bookstore per-edition purchase gate missing: ' + marker);
+}
+for (const bookId of ['BOOK-EKODI-000001', 'BOOK-EKODI-000003', 'BOOK-EKODI-000002']) {
+  const cardMarker = 'data-bookstore-runtime-id="' + bookId + '"';
+  if (!homepage.includes(cardMarker)) errors.push('Bookstore public information card missing: ' + bookId);
+  if (!booksStore.includes(cardMarker)) errors.push('Bookstore dedicated store card missing: ' + bookId);
 }
 if (!homepage.includes('src="/assets/bookstore-live.js"')) errors.push('Mall homepage missing bookstore approval bridge');
 const publicSitemap = await readFile(path.join(dist, 'sitemap.xml'), 'utf8');

@@ -23,7 +23,9 @@
       <form id="affiliateSearch" class="affiliate-search"><label for="affiliateQuery">{{SEARCH_LABEL}}</label><div><input id="affiliateQuery" type="search" maxlength="180" placeholder="{{PROMPT}}"><button class="btn primary" type="submit">{{SEARCH_BUTTON}}</button></div></form>
     </section>
     <p class="affiliate-disclosure">광고·제휴 안내 · {{DISCLOSURE}} 추천순위는 제휴수수료와 분리합니다.</p>
-    <section class="affiliate-results" aria-labelledby="affiliateResultsTitle">
+    {{DIRECT_REFERRAL}}
+    {{AGODA_SEARCH_PANEL}}
+    <section id="agodaVerifiedPanel" class="affiliate-results" aria-labelledby="affiliateResultsTitle">
       <div class="heading"><div><p class="eyebrow">{{RESULTS_EYEBROW}}</p><h2 id="affiliateResultsTitle">{{RESULTS_TITLE}}</h2><p id="affiliateSummary">{{RESULTS_INTRO}}</p><p id="affiliateShareStatus" class="affiliate-share-status" role="status" aria-live="polite"></p></div></div>
       <div class="grid" id="affiliateGrid" aria-live="polite"><article class="affiliate-empty"><strong>{{LOADING_LABEL}}</strong><span>공개 가능한 제휴링크만 표시합니다.</span></article></div>
     </section>
@@ -38,5 +40,6 @@
   <nav class="mobile buyer-mobile"><a href="/">몰 홈</a><a href="/#shop">쇼핑</a><a href="/travel/stay/">여행</a><a href="/#local">로컬</a><a href="https://ekodi.kr/my/">마이</a></nav>
   <script src="/assets/mall-header-nav.js" defer></script>
   <script type="module" src="/assets/affiliate-hub.js"></script>
+  {{AGODA_SEARCH_SCRIPT}}
 </body>
 </html>

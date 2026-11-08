@@ -5,6 +5,42 @@
   const apiBase=prefix+'/api/agency/admin';
   let selected=null;
   let settlement=null;
+  // Tab panels preserve the existing server-key financial/authorization boundary.
+  const adminTabs=Array.from(document.querySelectorAll('[data-admin-tab]'));
+  function showAdminTab(target, focus=false){
+    for(const tab of adminTabs){
+      const locked=!['list','readiness'].includes(tab.dataset.adminTab)&&!selected;
+      tab.disabled=locked;
+      tab.setAttribute('aria-disabled',locked?'true':'false');
+    }
+    if(!['list','readiness'].includes(target)&&!selected)return;
+    for(const tab of adminTabs){
+      const active=tab.dataset.adminTab===target;
+      tab.setAttribute('aria-selected',active?'true':'false');
+      tab.tabIndex=active?0:-1;
+      if(active&&focus)tab.focus();
+    }
+    $('adminApplications').hidden=target!=='list';
+    $('detail').hidden=target!=='review';
+    $('opsDetail').hidden=target!=='settlement';
+    $('approvalPanel').hidden=target!=='readiness';
+    if(target==='settlement'&&selected)void showSettlement().catch(error=>message(error.message,true));
+  }
+  for(const tab of adminTabs){
+    tab.addEventListener('click',()=>showAdminTab(tab.dataset.adminTab));
+    tab.addEventListener('keydown',event=>{
+      const available=adminTabs.filter(item=>!item.disabled);
+      const index=available.indexOf(tab);
+      if(index<0)return;
+      let next=null;
+      if(event.key==='ArrowRight')next=available[(index+1)%available.length];
+      if(event.key==='ArrowLeft')next=available[(index+available.length-1)%available.length];
+      if(event.key==='Home')next=available[0];
+      if(event.key==='End')next=available[available.length-1];
+      if(next){event.preventDefault();showAdminTab(next.dataset.adminTab,true);}
+    });
+  }
+  showAdminTab('list');
   const statusMap={awaiting_quote:'견적대기',quoted:'견적제시',accepted:'계약동의',paid_pending_fulfillment:'결제확인·공급사 개시대기',active:'서비스 개시',expired:'기간만료'};
   function message(value, error=false) { $('message').textContent=value; $('message').style.color=error?'#9e3728':'#24593b'; }
   async function call(path, body={}) {
@@ -22,7 +58,6 @@
   function cell(tr,value) {const td=document.createElement('td');td.textContent=value;tr.append(td);return td;}
   function pick(item) {
     selected=item;
-    $('detail').hidden=false;
     $('selectedTitle').textContent='신청 검토 · '+item.id;
     $('selectedBody').textContent=(item.customer||'')+' · '+(item.organization||'개인')+' · '+item.email+' · '+item.provider+' / '+item.service+' · '+item.months+'개월';
     $('quoteForm').elements.feeAmount.value=item.feeAmount??'';
@@ -30,13 +65,17 @@
     $('quoteForm').elements.guidance.value=item.guidance||'';
     $('quoteBtn').disabled=!['awaiting_quote','quoted'].includes(item.status);
     $('activateBtn').hidden=item.status!=='paid_pending_fulfillment';
-    $('opsDetail').hidden=item.type!=='institution';
-    if(item.type==='institution') void showSettlement().catch(e=>message(e.message,true));
+    showAdminTab('review');
     $('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
   }
   async function load() {
     try {
       const {items}=await call('/list');
+      if(selected&&!items.some(item=>item.id===selected.id)){
+        selected=null;
+        settlement=null;
+        showAdminTab('list');
+      }
       const tbody=$('rows'); tbody.replaceChildren();
       if(!items.length){ const tr=document.createElement('tr');cell(tr,'아직 신청 내역이 없습니다.');tbody.append(tr);}
       for(const item of items) {
@@ -53,6 +92,33 @@
     } catch(e) { message(e.message,true); }
   }
   $('load').addEventListener('click',load);
+  $('readinessBtn').addEventListener('click',async()=>{
+    const btn=$('readinessBtn');
+    btn.disabled=true;
+    const target=$('readinessResults');
+    target.textContent='결제 설정 확인 중입니다.';
+    try {
+      const {readiness:r}=await call('/readiness');
+      const labels=[
+        ['토스 결제 프로필 설정',r.paymentConfigured],
+        ['PG 서비스 범위 등록',r.pgScopeEnabled],
+        ['법적 승인증빙 참조번호',r.legalApprovalReferenceRecorded],
+        ['PG 승인증빙 참조번호',r.pgApprovalReferenceRecorded],
+        ['공급사 대리수납 승인',r.supplierCollectionScopeEnabled],
+        ['공급사 승인증빙 참조번호',r.supplierApprovalReferenceRecorded],
+        ['승인 공급사 허용목록',r.supplierAllowlistConfigured],
+        ['원본 증빙 보관 검증',r.archiveVerified],
+        ['PG 정산 활성상태 검증',r.settlementVerified],
+        ['운영 결제 전환 스위치',r.liveSwitchEnabled]
+      ];
+      target.textContent='결제키 환경: '+(r.mode==='live'?'운영':r.mode==='test'?'시험':'미설정')+
+        '\n위탁료 실결제: '+(r.serviceFeeLiveReady?'서버 설정 충족':'미활성/확인 필요')+
+        '\n공급사 대리수납: '+(r.supplierCollectionLiveReady?'서버 설정 충족(계약별 공급사 재검증 필수)':'미활성/확인 필요')+
+        '\n'+labels.map(([label,ready])=>(ready?'확인':'미등록/확인 필요')+' · '+label).join('\n');
+    } catch(error) {
+      target.textContent='서버 설정을 확인하지 못했습니다. '+error.message;
+    } finally {btn.disabled=false;}
+  });
   $('quoteForm').addEventListener('submit',async(event)=>{
     event.preventDefault();
     if(!selected) return;
@@ -61,21 +127,23 @@
     if(!Number.isSafeInteger(feeAmount)||!Number.isSafeInteger(supplierAmount)) {message('원 단위 정수 금액을 입력하세요.',true);return;}
     if(!confirm(selected.id+'의 위탁료 '+feeAmount+'원, 공급사 수납 '+supplierAmount+'원을 견적 확정하시겠습니까?')) return;
     $('quoteBtn').disabled=true;
-    try {await call('/quote',{id:selected.id,feeAmount,supplierAmount,guidance:form.guidance.value});await load();message('견적을 확정했습니다. 고객이 조회코드로 확인 후 동의할 수 있습니다.');}
+    try {await call('/quote',{id:selected.id,feeAmount,supplierAmount,guidance:form.guidance.value});selected=null;settlement=null;showAdminTab('list');await load();message('견적을 확정했습니다. 고객이 조회코드로 확인 후 동의할 수 있습니다.');}
     catch(e){message(e.message,true);$('quoteBtn').disabled=false;}
   });
   $('activateBtn').addEventListener('click',async()=>{
     if(!selected||selected.status!=='paid_pending_fulfillment') return;
-    if(!confirm('실제 공급사 계정·이용권의 개시가 확인되었습니까? 확인하면 지금부터 1개월 또는 3개월 관리기간을 계산합니다.')) return;
-    try {await call('/activate',{id:selected.id,confirmed:true});$('detail').hidden=true;await load();message('공급사 이용 개시일과 관리기간이 기록되었습니다.');}
+    if(!confirm('실제 공급사 계정·이용권의 개시가 확인되었습니까? 확인하면 지금부터 '+selected.months+'개월의 관리기간을 계산합니다.')) return;
+    try {await call('/activate',{id:selected.id,confirmed:true});selected=null;showAdminTab('list');await load();message('공급사 이용 개시일과 관리기간이 기록되었습니다.');}
     catch(e){message(e.message,true);}
   });
   function money(value){return Number.isSafeInteger(value)?new Intl.NumberFormat('ko-KR').format(value)+'원':'미확정';}
   async function showSettlement(){
-    if(!selected||selected.type!=='institution')return;
+    if(!selected)return;
     const result=await call('/settlement',{id:selected.id});
     settlement=result.settlement;
     const x=settlement;
+    $('opsTitle').textContent=x.months+'개월 계약 결제·종료·정산';
+    $('renewalTitle').textContent=x.months+'개월 계약 종료 확인';
     const cycles=x.cycles.map(c=>c.cycle+'개월차 · '+money(c.amount)+' · '+c.paidOn+' · '+c.receiptRef);
     $('settlementSummary').textContent=[
       '위탁번호: '+x.id,
@@ -89,7 +157,16 @@
       '※ '+x.limitation
     ].join('\n');
     const mayRecord=['active','expired'].includes(x.contractStatus);
-    $('cycleForm').hidden=!mayRecord||x.providerBudget<=0||x.cycles.length>=3;
+    const cycleSelect=$('cycleForm').elements.cycle;
+    cycleSelect.replaceChildren();
+    const recorded=new Set(x.cycles.map(item=>item.cycle));
+    for(let i=1;i<=x.months;i++){
+      if(recorded.has(i))continue;
+      const option=document.createElement('option');
+      option.value=String(i);option.textContent=i+'개월차';
+      cycleSelect.append(option);
+    }
+    $('cycleForm').hidden=!mayRecord||x.providerBudget<=0||cycleSelect.options.length===0;
     $('renewalForm').hidden=!mayRecord||x.renewalStopRecorded;
     $('exportStatement').disabled=false;
   }
@@ -130,8 +207,8 @@
     if(!selected||!settlement)return;
     const x=settlement;
     const rows=[
-      ['에코디비즈','대학 AI 구독료 결제위탁 정산요약'],
-      ['신청번호',x.id],['위탁기관',x.organization||''],
+      ['에코디비즈','AI 구독료 결제위탁 정산요약'],
+      ['신청번호',x.id],['계약기관·신청구분',x.organization||'개인'],
       ['위탁기간',x.months+'개월'],['계약상태',statusMap[x.contractStatus]||x.contractStatus],
       ['위탁료(원)',x.serviceFee],['공급사 구독료 예산(원)',x.providerBudget],
       ['결제증빙 등록 합계(원)',x.recordedSupplierSpending],

@@ -292,7 +292,7 @@ body[data-mall-view="catalog"] main#main > #filters{padding-inline:16px}
 .mall-premium-hero{margin-top:24px}
 
 /* Approval may be revoked between the static build and the live quote. */
-.card[data-bookstore-quote-pending="true"]{display:none!important}
+.card[data-bookstore-quote-pending="true"]:not([data-bookstore-informational="true"]){display:none!important}
 
 /* Global search is a separate central catalog view and never changes a sale gate. */
 #mallSearchResults[hidden]{display:none!important}

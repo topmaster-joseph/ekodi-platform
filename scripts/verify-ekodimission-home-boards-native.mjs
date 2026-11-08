@@ -19,6 +19,9 @@ if(!browser)throw Error('Chrome/Edge browser required for responsive verificatio
 const dir=await mkdtemp(join(tmpdir(),'ekodi-mission-boards-'));
 const html=join(dir,'fixture.html'),script=join(dir,'saturday.js');
 await writeFile(script,js);
+const todayKst=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const nextDate=new Date(todayKst+'T00:00:00Z');nextDate.setUTCDate(nextDate.getUTCDate()+7);
+const nextKst=nextDate.toISOString().slice(0,10);
 const fixture=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body><main class="mission-home">${body}</main>
 <script>
 window.__notices=[{id:2,title:'<img src=x onerror=alert(1)>',body:'공식 안내',categoryId:'mission-notice',createdAt:'2026-11-05T01:00:00Z'}];
@@ -30,8 +33,8 @@ window.fetch=async(url,options={})=>{
     payload={ok:true,id:99};
   }
   else if(s.includes('posts?category=mission-notice'))payload={items:window.__notices};
-  else if(s.includes('posts?category=mission-schedule'))payload={items:[{id:3,title:'공동 식사 일정',body:'일정: 2026-11-14 14:00\\n장소: 에코디교회\\n이웃과 나눔',categoryId:'mission-schedule'}]};
-  else if(s.endsWith('/saturday'))payload={ok:true,meeting:{date:'2026-11-07',time:'17:00',venue:'에코디교회',title:'토요 성경토론과 함께하는 식사',status:'scheduled'}};
+  else if(s.includes('posts?category=mission-schedule'))payload={items:[{id:3,title:'공동 식사 일정',body:'일정: ${nextKst} 14:00\\n장소: 에코디교회\\n이웃과 나눔',categoryId:'mission-schedule'}]};
+  else if(s.endsWith('/saturday'))payload={ok:true,meeting:{date:'${todayKst}',time:'17:00',venue:'에코디교회',title:'토요 성경토론과 함께하는 식사',status:'scheduled'}};
   else if(s.endsWith('/me'))payload={authenticated:false,manage:false};
   else throw Error('Unexpected fetch '+s);
   return new Response(JSON.stringify(payload),{headers:{'content-type':'application/json'}});
@@ -60,15 +63,31 @@ try{
     await send('Page.navigate',{url:pathToFileURL(html).href});
     let result;
     for(let t=0;t<70;t++){
-      const r=await send('Runtime.evaluate',{expression:`JSON.stringify({width:innerWidth,client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,boards:[...document.querySelectorAll('[data-mission-editorial]')].map(el=>({width:el.getBoundingClientRect().width,items:el.querySelectorAll('ol>li').length,links:[...el.querySelectorAll('ol>li>a')].map(a=>a.textContent),unexpectedImage:!!el.querySelector('ol>li img')}))})`,returnByValue:true});
+      const r=await send('Runtime.evaluate',{expression:`JSON.stringify({width:innerWidth,client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,calendarDays:document.querySelectorAll('[data-mission-calendar-days] button').length,boards:[...document.querySelectorAll('[data-mission-editorial]')].map(el=>({width:el.getBoundingClientRect().width,items:el.querySelectorAll('ol>li').length,links:[...el.querySelectorAll('ol>li>a')].map(a=>a.textContent),unexpectedImage:!!el.querySelector('ol>li img')}))})`,returnByValue:true});
       result=JSON.parse(r.result.value||'{}');
-      if(result.boards?.length===2&&result.boards[0].links.length===1&&result.boards[1].links.length===2)break;
+      if(result.boards?.length===2&&result.boards[0].links.length===1&&result.boards[1].links.length===1)break;
       await pause(75);
     }
-    const pass=result?.width===width&&result.scroll<=result.client&&result.boards?.length===2&&result.boards[0].links.length===1&&result.boards[1].links.length===2&&
-      result.boards.every(b=>b.width<=result.client+1&&!b.unexpectedImage)&&result.boards[1].links[0].includes('토요 성경토론')&&result.boards[1].links[1].includes('공동 식사 일정');
+    const pass=result?.width===width&&result.scroll<=result.client&&result.boards?.length===2&&result.boards[0].links.length===1&&result.boards[1].links.length===1&&
+      result.boards.every(b=>b.width<=result.client+1&&!b.unexpectedImage)&&result.boards[1].links[0].includes('토요 성경토론')&&result.calendarDays>=28;
     console.log(width,pass?'PASS':'FAIL',JSON.stringify(result));
     if(!pass)failed=true;
+    // Date interaction: another day must show only its events, including after month navigation.
+    const click=await send('Runtime.evaluate',{expression:`JSON.stringify((()=>{
+      const c=document.querySelector('[data-mission-editorial=mission-schedule]');
+      if(!c)return {clicked:false};
+      if('${todayKst.slice(0,7)}'!=='${nextKst.slice(0,7)}')c.querySelector('[data-mission-calendar-next]').click();
+      const day=c.querySelector('[data-date="${nextKst}"]');day?.click();
+      const links=[...c.querySelectorAll('ol>li>a')].map(a=>a.textContent);
+      const pressed=c.querySelector('[data-date="${nextKst}"]')?.getAttribute('aria-pressed');
+      c.querySelector('[data-mission-calendar-today]').click();
+      const todayRestored=c.querySelector('[data-date="${todayKst}"]')?.getAttribute('aria-pressed');
+      return {clicked:!!day,pressed,links,todayRestored};
+    })())`,returnByValue:true});
+    const selected=JSON.parse(click.result.value||'{}');
+    const clickPass=selected.clicked&&selected.pressed==='true'&&selected.links.length===1&&selected.links[0].includes('공동 식사 일정')&&selected.todayRestored==='true';
+    console.log(width,clickPass?'DATE_CLICK_PASS':'DATE_CLICK_FAIL',JSON.stringify(selected));
+    if(!clickPass)failed=true;
   }
   // Simulate a board-local manager creating a notice through the real form.
   await send('Emulation.setDeviceMetricsOverride',{width:390,height:950,deviceScaleFactor:1,mobile:true});

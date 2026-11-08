@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ko" data-books-api-base="/books">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173f35">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="에코디몰 책·배움 전자책 바로 구매">
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/platform.css">
+  <link rel="stylesheet" href="/assets/product-detail.css">
+  <link rel="stylesheet" href="/assets/book-checkout.css">
+  <title>{{PAGE_TITLE}} | EKODI MALL</title>
+  <link rel="stylesheet" href="/ekodimall/assets/mall-account-header.css">
+</head>
+<body class="book-checkout-page" data-book-checkout-mode="{{MODE}}">
+  <header class="header"><a class="brand" href="/"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a><nav><a href="/?category=book">책·배움</a><a href="/#shop">MARKET</a><a href="/#stores">STORES</a></nav></header>
+  <main class="detail-main book-checkout-main">
+    <a class="back" href="/?category=book">← 책·배움</a>
+    <section class="bc-card" id="bcRoot">
+      <p class="eyebrow">EKODI MALL · 책·배움 직접판매</p>
+      {{BODY}}
+    </section>
+    <section class="bc-policy">
+      <article><h3>판매·결제</h3><p>에코디몰에서 바로 결제합니다. 판매자는 에코디비즈이며, 도서 정보와 전자책 파일은 에코디서점(출처)의 승인된 판본을 그대로 사용합니다.</p></article>
+      <article><h3>받는 방법</h3><p>결제가 끝나면 같은 EKODI 계정의 내 서재(에코디서점)에 자동으로 담기고, 온라인 리더로 열람합니다.</p></article>
+      <article><h3>환불</h3><p>콘텐츠 제공 개시 전에는 법정 청약철회 기간 내 전액 환불, 제공 개시 후에는 법령에 따라 제한될 수 있으며 하자·제공 불가 시 전액 환불합니다. <a href="https://ekodi.kr/ekodibiz/refund" target="_blank" rel="noopener">에코디비즈 환불정책</a></p></article>
+      <article><h3>판매자 정보</h3><p>에코디비즈 · 대표 정찬균 · 사업자등록번호 213-13-01959 · 통신판매업 2023-전남무안-0153 · 전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층 · ekodibiz@gmail.com</p></article>
+    </section>
+  </main>
+  {{TOSS_SCRIPT}}
+  <script src="https://ekodi.kr/books/buy/commerce-client.js" defer></script>
+  <script src="/assets/book-checkout.js" defer></script>
+  <script defer src="/ekodimall/assets/mall-account-header.js"></script>
+</body>
+</html>

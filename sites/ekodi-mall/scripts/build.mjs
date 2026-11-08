@@ -2,8 +2,9 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderMallHeader } from '../../../mall-shared-header.js';
+import { trackedAgodaPartnerSearch } from '../assets/affiliate-share.js';
 import { loadBookstoreProducts, mergeBookstoreProducts } from './bookstore-products.mjs';
-import { isPublicStaticSale, isPublicIndexableProduct } from '../api/public-sale-visibility.js';
+import { isPublicStaticSale, isPublicBookInformation, isPublicIndexableProduct } from '../api/public-sale-visibility.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
@@ -58,7 +59,9 @@ const publishedStoreIds = new Set(stores.map((store) => store.id));
 const bookstoreMirror = await loadBookstoreProducts(root);
 const products = mergeBookstoreProducts(productsRaw, bookstoreMirror).filter((product) => product.published && publishedStoreIds.has(product.storeId));
 const saleProducts = products.filter(isPublicStaticSale);
-const saleStores = stores.filter((store) => saleProducts.some((product) => product.storeId === store.id));
+// Public, owner-authorized book metadata is stable; only each Buy CTA is live-verified.
+const catalogProducts = products.filter(product => isPublicStaticSale(product) || isPublicBookInformation(product));
+const saleStores = stores.filter((store) => catalogProducts.some((product) => product.storeId === store.id));
 // Keep all published preparation records in the existing seller mirror and stable detail pages.
 const affiliateHubs = affiliateHubsRaw.filter((hub) => hub.published);
 const baseUrl = site.seo.baseUrl.replace(/\/$/, '');
@@ -83,18 +86,27 @@ function productCard(product, options = {}) {
   const store = storeMap.get(product.storeId);
   const region = product.region || {};
   const regionIds = Array.isArray(region.regionIds) ? region.regionIds.filter((id) => regionMap.has(id)) : [];
-  const searchable = `${product.name} ${product.badge} ${product.description} ${product.status} ${store?.name || ''} ${region.label || ''}`.toLowerCase();
-  const data = options.withData === false ? '' : ` data-product="${esc(product.id)}" data-category="${esc(product.category)}" data-region-ids="${esc(regionIds.join(','))}" data-primary-region="${esc(region.primaryRegionId || '')}" data-region-label="${esc(region.label || '')}" data-local-relationship="${esc(region.relationship || '')}" data-region-verified="${region.verified ? 'true' : 'false'}" data-search="${esc(searchable)}" data-name="${esc(product.name)}" data-status="${esc(product.status)}" data-href="${href}"`;
-  // Static bookstore approval is not sufficient to advertise a live purchase;
-  // verify the commerce quote in the browser before exposing the catalog card.
-  const pendingQuote = options.withData !== false && product.source?.system === 'ekodi-bookstore'
-    ? ' data-bookstore-quote-pending="true" hidden' : '';
+  const isBookInfo = isPublicBookInformation(product);
+  const activeBookCard = isBookInfo && (options.withData !== false || options.bookstoreActive === true);
+  const searchable = `${product.name} ${product.badge} ${product.description} ${isBookInfo ? '에코디서점 전자책' : product.status} ${store?.name || ''} ${region.label || ''}`.toLowerCase();
+  const data = options.withData === false ? '' : ` data-product="${esc(product.id)}" data-category="${esc(product.category)}" data-region-ids="${esc(regionIds.join(','))}" data-primary-region="${esc(region.primaryRegionId || '')}" data-region-label="${esc(region.label || '')}" data-local-relationship="${esc(region.relationship || '')}" data-region-verified="${region.verified ? 'true' : 'false'}" data-search="${esc(searchable)}" data-name="${esc(product.name)}" data-status="${esc(isBookInfo ? '전자책 · 판매 상태 확인' : product.status)}" data-href="${href}"`;
+  // Informational book cards are rendered at build time from owner-allowlisted
+  // metadata. The commerce quote authorizes ONLY the matching purchase CTA.
+  const bookData = activeBookCard
+    ? ` data-bookstore-runtime-id="${esc(product.source.bookId)}" data-bookstore-quote-pending="true" data-bookstore-informational="true" data-sale-ready="false"`
+    : '';
   const regionChip = region.label ? `<p class="region-chip">지역 · ${esc(region.label)}${region.verified ? ' · 확인됨' : ''}</p>` : '';
   const heart = options.withHeart === false ? '' : `<button class="heart" data-wish="${esc(product.id)}" aria-label="${esc(product.name)} 관심상품" aria-pressed="false">♡</button>`;
   const storeKicker = store ? `<p class="store-kicker"><a href="/stores/${esc(store.slug)}/">${esc(store.name)}</a></p>` : '';
-  // MALL-LIST-IMAGE-001: 대표이미지(도서 표지·판매자 사진)를 목록에 보이고, 이미지·제목 어디를 눌러도 상세로 간다.
   const image = product.image ? `<img src="${esc(product.image)}" alt="${esc(product.name)}" loading="lazy" decoding="async">` : '';
-  return `<article class="card"${data}${pendingQuote}><div class="thumb ${esc(product.category)}${image ? ' has-image' : ''}"><a class="thumb-link" href="${href}" aria-label="${esc(product.name)} 자세히 보기">${image}</a><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p class="card-summary">${esc(shortSummary(product.description, product.category === 'book' ? 34 : 46))}</p>${regionChip}<div class="meta"><span class="status">${product.category === 'book' ? esc(Number(product.price) > 0 ? formatPrice(Number(product.price)) + ' · ' : '가격 확인 · ') : ''}${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
+  // Catalog price is only bibliographic information, never a live checkout quote.
+  const bookPrice = Number.isSafeInteger(Number(product.price)) && Number(product.price) > 0
+    ? `정가 ${formatPrice(Number(product.price))}` : '도서 가격 확인';
+  const status = isBookInfo ? `${bookPrice} · 에코디서점 발행`
+    : `${product.category === 'book' && Number(product.price) > 0 ? formatPrice(Number(product.price)) + ' · ' : ''}${product.status}`;
+  const buyButton = activeBookCard
+    ? '<a class="smallbtn mall-book-buy" data-bookstore-buy aria-disabled="true" tabindex="-1">구매 상태 확인 중</a>' : '';
+  return `<article class="card"${data}${bookData}><div class="thumb ${esc(product.category)}${image ? ' has-image' : ''}"><a class="thumb-link" href="${href}" aria-label="${esc(product.name)} 자세히 보기">${image}</a><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p class="card-summary">${esc(shortSummary(product.description, product.category === 'book' ? 34 : 46))}</p>${regionChip}<div class="meta"><span class="status">${esc(status)}</span><a class="smallbtn" href="${href}">자세히</a>${buyButton}</div></div></article>`;
 }
 
 function productDetailSections(product, store, requiresLiveQuote) {
@@ -133,11 +145,11 @@ const categoryFilters = site.categories.map((category, index) =>
 ).join('');
 const filters = `${categoryFilters}<button data-filter="local" data-filter-kind="region">${esc(site.local?.filterLabel || '내 로컬')}</button>`;
 
-const productCards = saleProducts.map((product) => productCard(product)).join('');
+const productCards = catalogProducts.map((product) => productCard(product)).join('');
 
 const storeCards = saleStores.map((store) => {
   const href = `/stores/${store.slug}/`;
-  const count = saleProducts.filter((product) => product.storeId === store.id).length;
+  const count = catalogProducts.filter((product) => product.storeId === store.id).length;
   return `<a class="store-card" href="${href}"><div class="store-card-mark">${esc(store.name.slice(0, 1))}</div><div><p class="store-badge">${esc(store.badge || store.kind)}</p><h3>${esc(store.name)}</h3><p>${esc(store.description)}</p><span>${count}개 상품 · ${esc(store.status)}</span></div></a>`;
 }).join('');
 
@@ -207,8 +219,8 @@ await ensureDir(dist);
 await write('index.html', indexHtml);
 await write('category-availability.json', JSON.stringify({
   // Matches the source-of-truth sale-ready projection, not all draft categories.
-  categories: [...new Set(saleProducts.map(product => product.category).filter(Boolean))].sort(),
-  hasLocal: saleProducts.some(product => Array.isArray(product.region?.regionIds) && product.region.regionIds.length > 0)
+  categories: [...new Set(catalogProducts.map(product => product.category).filter(Boolean))].sort(),
+  hasLocal: catalogProducts.some(product => Array.isArray(product.region?.regionIds) && product.region.regionIds.length > 0)
 }));
 
 // Operator Seller Studio displays the same publisher-approved bookstore mirror
@@ -232,7 +244,7 @@ for (const product of products) {
   const isAffiliate = product.saleType === 'affiliate';
   const isBookstoreBook = product.source?.system === 'ekodi-bookstore';
   const isPublisherSale = product.saleType === 'publisher' && product.action?.type === 'external';
-  const isDirectPublisherSale = isPublisherSale && /^https:\/\/ekodi\.kr\/books\/buy\//.test(product.action?.url || '');
+  const isDirectPublisherSale = isPublisherSale && /^https:\/\/ekodi\.kr\/(?:ekodimall\/checkout\/book|books\/buy)\//.test(product.action?.url || '');
   const requiresLiveQuote = isBookstoreBook && (!isPublisherSale || isDirectPublisherSale);
   const related = saleProducts
     .filter((item) => item.id !== product.id)
@@ -244,9 +256,9 @@ for (const product of products) {
     ? `<button class="btn primary" type="button" data-add-basket data-product-id="${esc(product.id)}" data-product-name="${esc(product.name)}" data-store-name="${esc(store.name)}" data-product-status="${esc(product.status)}" data-product-href="/products/${esc(product.slug)}/">${site.commerce.paymentsEnabled && Number.isFinite(product.price) ? '구매목록에 담기' : '상담목록에 담기'}</button>`
     : '';
   const transactionNote = requiresLiveQuote
-    ? '구매 가능 여부를 에코디서점에서 확인할 수 있습니다. 에코디서점에서 구매한 전자책은 로그인 후 내 서재의 온라인 리더에서 열람합니다.'
+    ? '에코디서점(출처)이 출판한 전자책을 에코디몰에서 바로 구매합니다. 구매한 전자책은 로그인 후 내 서재의 온라인 리더에서 열람합니다.'
     : product.saleType === 'publisher'
-    ? (isDirectPublisherSale ? '에코디서점에서 구매한 전자책은 로그인 후 내 서재의 온라인 리더에서 열람합니다.' : isPublisherSale ? '에코디서점 발행 도서입니다. 외부 공식 판매처를 이용하는 경우 결제와 다운로드는 그 판매처에서 처리합니다.' : '에코디서점이 발행한 도서입니다. 판매 준비가 완료되면 구매 버튼이 열립니다. 도서 정보를 먼저 확인할 수 있습니다.')
+    ? (isDirectPublisherSale ? '에코디서점(출처)이 출판한 전자책을 에코디몰에서 바로 구매합니다. 구매한 전자책은 로그인 후 내 서재의 온라인 리더에서 열람합니다.' : isPublisherSale ? '에코디서점 발행 도서입니다. 외부 공식 판매처를 이용하는 경우 결제와 다운로드는 그 판매처에서 처리합니다.' : '에코디서점이 발행한 도서입니다. 판매 준비가 완료되면 구매 버튼이 열립니다. 도서 정보를 먼저 확인할 수 있습니다.')
     : isAffiliate
     ? '이 상품은 외부 제휴 판매처에서 구매합니다. 구매 버튼을 누르면 제휴 링크로 이동하며, 에코디는 제휴 활동을 통해 일정 수수료를 제공받을 수 있습니다. 주문·결제·배송·반품은 해당 판매처에서 처리합니다.'
     : product.saleType === 'direct'
@@ -298,8 +310,8 @@ for (const product of products) {
 
 for (const store of stores) {
   const storeUrl = `${baseUrl}/stores/${store.slug}/`;
-  const storeProducts = saleProducts.filter((product) => product.storeId === store.id);
-  const cards = storeProducts.map((product) => productCard(product, { withData: false, withHeart: false })).join('');
+  const storeProducts = catalogProducts.filter((product) => product.storeId === store.id);
+  const cards = storeProducts.map((product) => productCard(product, { withData: false, withHeart: false, bookstoreActive: store.id === 'store-ekodi-books' })).join('');
   const html = fill(storeTemplate, {
     STORE_NAME: esc(store.name),
     STORE_BOOKS_ATTR: store.id === 'store-ekodi-books' ? 'data-bookstore-store="true"' : '',
@@ -354,9 +366,61 @@ const checkoutHtml = fill(checkoutTemplate, {
 });
 await write('checkout/index.html', checkoutHtml);
 
+// MALL-BOOKS-DIRECT-CHECKOUT-001: 책·배움 전자책은 에코디몰 화면에서 바로 결제한다(출처 표시: 에코디서점).
+const bookCheckoutTemplate = await read('src/book-checkout.template.html');
+const bookCheckoutPages = {
+  'checkout/book/index.html': {
+    MODE: 'checkout', PAGE_TITLE: '전자책 바로 구매',
+    TOSS_SCRIPT: '<script src="https://js.tosspayments.com/v2/standard" defer></script>',
+    BODY: `<div id="bcBody" class="bc-grid">
+        <div class="bc-cover" id="bcCover"></div>
+        <div class="bc-info">
+          <a class="bc-source" id="bcSource" href="https://ekodi.kr/books/" target="_blank" rel="noopener">출처 · 에코디서점 ↗</a>
+          <h1 id="bcTitle">도서를 불러오는 중입니다</h1>
+          <p class="bc-sub" id="bcSubtitle" hidden></p>
+          <p class="bc-author" id="bcAuthor"></p>
+          <p class="bc-small">이 도서는 에코디서점이 출판·승인한 판본을 에코디몰에서 직접 판매합니다. 결제는 에코디몰에서 바로 진행되고, 구매한 전자책은 같은 EKODI 계정의 내 서재에서 열람합니다.</p>
+          <p class="bc-small" id="bcExtras" hidden></p>
+        </div>
+        <aside class="bc-buy" aria-label="구매">
+          <p class="eyebrow">PURCHASE</p>
+          <div class="bc-price"><span id="bcPrice">—</span><del id="bcListPrice"></del></div>
+          <p class="bc-small" id="bcTier"></p>
+          <a class="bc-owned" id="bcOwned" href="https://ekodi.kr/books/library/" hidden>이미 내 서재에 있는 도서입니다 · 내 서재로 가기 →</a>
+          <div id="bcPayArea">
+            <div class="bc-login" id="bcLogin" hidden></div>
+            <p class="bc-small" id="bcSignedIn" hidden><b id="bcBuyer"></b> 계정으로 구매합니다. <button type="button" class="linklike" id="bcSignOut">로그아웃</button></p>
+            <label class="bc-consent"><input type="checkbox" id="bcConsent"><span>전자책은 제공 개시 전 법정 청약철회 기간에 전액 환불할 수 있고, 제공 개시 후에는 법령에 따라 제한될 수 있음을 확인했습니다. 콘텐츠 하자·제공 불가 시 환불받을 수 있습니다.</span></label>
+            <button type="button" class="bc-pay" id="bcPay" disabled>불러오는 중</button>
+            <div id="bcWidget" hidden><div id="bcMethods"></div><div id="bcAgreement"></div><button type="button" class="bc-pay" id="bcWidgetPay" disabled>결제 진행</button></div>
+            <p class="bc-msg" id="bcMsg" role="alert"></p>
+            <p class="bc-small" id="bcNote"></p>
+          </div>
+        </aside>
+      </div>
+      <div id="bcError" hidden><h1>도서를 찾을 수 없습니다</h1><p id="bcErrorText"></p><a class="btn ghost" href="/?category=book">책·배움 보기</a></div>`
+  },
+  'checkout/book/success/index.html': {
+    MODE: 'success', PAGE_TITLE: '결제 확인', TOSS_SCRIPT: '',
+    BODY: `<div class="bc-result"><div class="bc-seal">✓</div><h1 id="bcTitle">결제를 확인하고 있습니다</h1><p id="bcText">잠시만 기다려 주세요. 창을 닫지 마세요.</p>
+      <div class="bc-actions" id="bcActions" hidden><a class="btn primary" id="bcLibrary" href="https://ekodi.kr/books/library/">내 서재에서 읽기</a><a class="btn ghost" href="/?category=book">책·배움 더 보기</a></div></div>`
+  },
+  'checkout/book/fail/index.html': {
+    MODE: 'fail', PAGE_TITLE: '결제 미완료', TOSS_SCRIPT: '',
+    BODY: `<div class="bc-result"><div class="bc-seal">!</div><h1 id="bcTitle">결제가 완료되지 않았습니다</h1><p id="bcText">청구된 금액은 없습니다.</p>
+      <div class="bc-actions"><a class="btn primary" id="bcRetry" href="/?category=book">다시 구매하기</a><a class="btn ghost" href="/?category=book">책·배움 보기</a></div></div>`
+  }
+};
+for (const [file, values] of Object.entries(bookCheckoutPages)) await write(file, fill(bookCheckoutTemplate, values));
+
 for (const hub of affiliateHubs) {
   const hubPath = hub.path || hub.id;
   const pageUrl = `${baseUrl}/${hubPath}/`;
+  const referralUrl = hub.mode === 'stay' ? trackedAgodaPartnerSearch(hub.directReferralUrl, hub.campaignTag) : '';
+  const directReferral = referralUrl
+    ? `<section class="affiliate-direct-referral" aria-label="아고다 공식 제휴 검색"><div><strong>아고다에서 전체 숙소 검색</strong><p>제공된 아고다 파트너 링크로 이동합니다. 실제 숙소·가격·예약·취소 조건은 아고다에서 확인하세요.</p></div><a class="btn primary" href="${esc(referralUrl)}" target="_blank" rel="noopener noreferrer sponsored">아고다에서 숙소 찾기</a></section>`
+    : '';
+  const agodaPanel = hub.mode === 'stay' ? await readFile(new URL('../src/agoda-search-panel.fragment.html', import.meta.url), 'utf8') : '';
   const html = fill(affiliateHubTemplate, {
     MALL_HEADER: renderMallHeader({ home: false, sellerHref: sellerStudioHref }),
     NAME: esc(hub.name),
@@ -373,6 +437,9 @@ for (const hub of affiliateHubs) {
     RESULTS_INTRO: esc(hub.resultsIntro || '현재 연결된 제휴망에서 조건에 맞는 후보를 확인합니다.'),
     LOADING_LABEL: esc(hub.loadingLabel || '후보를 불러오고 있습니다.'),
     DISCLOSURE: esc(hub.disclosure),
+    DIRECT_REFERRAL: directReferral,
+    AGODA_SEARCH_PANEL: agodaPanel,
+    AGODA_SEARCH_SCRIPT: hub.mode === 'stay' ? '<script src="/assets/agoda-live-search.js" defer></script>' : '',
     PAGE_URL: esc(pageUrl),
     NOTICE: esc(site.notice)
   });

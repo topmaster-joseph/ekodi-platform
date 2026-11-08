@@ -66,6 +66,40 @@ export function installSyntheticPaintObservers(){
   }
 }
 
+/** Numeric-only synthetic resource timing: bounded, no URLs or response bodies.
+ * Initiator counts are browser categories, not precise CSS blocking diagnoses.
+ * Captured after the short synthetic settle; never real-user RUM/p75. */
+export function collectSyntheticResourceSummary(){
+  if(typeof performance==='undefined'||typeof performance.getEntriesByType!=='function')return null;
+  let entries;
+  try{entries=performance.getEntriesByType('resource');}catch{return null;}
+  if(!Array.isArray(entries))return null;
+  const limit=500;
+  const counts={script:0,link:0,css:0,img:0,fetch:0,xmlhttprequest:0,other:0};
+  let maxDurationMs=null,observedBytes=0,bytesSamples=0;
+  for(const entry of entries.slice(0,limit)){
+    // Never access resource URLs, response bodies, elements or session state.
+    const type=Object.prototype.hasOwnProperty.call(counts,entry.initiatorType)?entry.initiatorType:'other';
+    counts[type]++;
+    if(Number.isFinite(entry.duration)&&entry.duration>=0){
+      const ms=Math.round(entry.duration);
+      maxDurationMs=maxDurationMs===null?ms:Math.max(maxDurationMs,ms);
+    }
+    if(Number.isFinite(entry.transferSize)&&entry.transferSize>0){
+      observedBytes+=entry.transferSize;
+      bytesSamples++;
+    }
+  }
+  return {
+    observedCount:Math.min(entries.length,limit),
+    truncated:entries.length>limit,
+    initiatorCounts:counts,
+    slowestDurationMs:maxDurationMs,
+    observedTransferKiB:bytesSamples?Math.round(observedBytes/1024):null,
+    transferSizeSamples:bytesSamples,
+  };
+}
+
 /** Synthetic page.goto(domcontentloaded) timing only (excludes pacing/settle); not LCP or real-user p75. */
 export function summarizeNativeNavigationPerformance(samples=[]) {
   const values=samples.map(s=>Number(s.elapsedMs)).filter(n=>Number.isFinite(n)&&n>=0).sort((a,b)=>a-b);
@@ -378,11 +412,14 @@ export async function runTask(rawTask, options={}){
             ?window.__EKODI_SYNTHETIC_PAINT__.layoutShiftSumToSettle:null,
         };
       }).catch(()=>({ttfbMs:null,domContentLoadedMs:null,fcpMs:null,lcpCandidateMs:null,layoutShiftSumToSettle:null}));
+      // Synthetic Chromium only. This Performance API read adds no network
+      // traffic; bounded counts and durations are all that leave the page.
+      const resourceSummary=await page.evaluate(collectSyntheticResourceSummary).catch(()=>null);
       navigationTimings.push({path:canonicalPath,elapsedMs:domContentLoadedElapsedMs,
         pacingWaitMs,settleWaitMs,ttfbMs:browserTiming.ttfbMs,
         domContentLoadedMs:browserTiming.domContentLoadedMs,fcpMs:browserTiming.fcpMs,
         lcpCandidateMs:browserTiming.lcpCandidateMs,layoutShiftSumToSettle:browserTiming.layoutShiftSumToSettle,
-        attempts:attempt+1,status});
+        resourceSummary,attempts:attempt+1,status});
       return {url:page.url(),status};
     }
     fail('BROWSER_NAVIGATION_THROTTLED','Navigation '+canonicalPath+' exhausted attempts');

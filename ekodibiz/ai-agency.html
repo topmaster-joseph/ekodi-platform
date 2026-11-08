@@ -2,7 +2,7 @@
 <html lang="ko" data-ekodi-shell-surface="public" data-ekodi-progressive-home="off">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="index,follow"><meta name="description" content="에코디비즈 AI 서비스 구매·결제 위탁 신청. 대학·기관 3개월, 개인 월별 위탁관리.">
+<meta name="robots" content="index,follow"><meta name="description" content="에코디비즈 AI 서비스 구매·결제 위탁 신청. 기관·개인 모두 계약기간을 개월 단위로 직접 입력하는 위탁관리.">
 <title>AI 서비스 구매·결제 위탁 | 에코디비즈</title>
 <link rel="canonical" href="https://ekodi.kr/ekodibiz/ai-agency/apply">
 <style>
@@ -59,40 +59,181 @@ body[data-agency-view="university"] #statusPanel{margin-top:0!important}
 
 @media(max-width:760px){.layout{grid-template-columns:1fr}.card{padding:17px}main{padding-top:26px}.fields{grid-template-columns:1fr}.wide{grid-column:1}nav{gap:8px;font-size:12px}}
 @media(max-width:340px){.choice{grid-template-columns:1fr}.bar{padding:9px 12px;flex-wrap:wrap}}
+
+/* EKODIBIZ premium tab workspace: no external fonts, images or speculative metrics. */
+:root{--agency-ink:#18342a;--agency-green:#16553d;--agency-deep:#0d382b;--agency-line:#dce7df;--agency-soft:#f2f7f3;--agency-muted:#64756a; color:var(--agency-ink);background:#f5f8f6}
+body{background:linear-gradient(180deg,#f2f7f4 0,#fbfcfb 470px);color:var(--agency-ink)}
+header{background:rgba(255,255,255,.97);border-bottom:1px solid #e2eae3;box-shadow:0 2px 12px #10382708}
+.bar{max-width:1230px;min-height:54px;padding:8px 20px}
+.logo{font-size:18px;color:#154934;letter-spacing:-.025em}
+.agency-navigation{max-width:1230px;padding:0 20px;margin:8px auto 0;gap:6px}
+.agency-navigation a,.agency-navigation button{font-size:12px;border-radius:8px;border:1px solid transparent;background:transparent;min-height:32px;padding:6px 11px;color:#486457}
+.agency-navigation a:hover,.agency-navigation button:hover{background:#edf6f0}
+.agency-navigation [aria-current="page"]{color:#195039;background:#ebf4ed;border-color:#d1e4d6;font-weight:750}
+.agency-share-status{max-width:1230px}
+main.agency-main{max-width:1230px;padding:18px 20px 52px}
+.agency-hero{min-height:144px;display:flex;align-items:center;justify-content:space-between;gap:24px;padding:22px 30px;margin:0 0 12px;background:linear-gradient(110deg,#fff 10%,#f5faf6 65%,#dfeee3);border:1px solid #e2eae4;border-radius:16px;position:relative;overflow:hidden}
+.agency-hero::after{content:"";position:absolute;right:-95px;top:-130px;width:370px;height:370px;border-radius:50%;border:60px solid #94c4a626;pointer-events:none}
+.agency-hero .hero-copy{position:relative;z-index:1;max-width:770px}
+.agency-hero .eyebrow{color:#39745a;font-size:10px;letter-spacing:.13em;margin:0 0 6px}
+.agency-hero .eyebrow span{color:#8ea69b;padding:0 6px}
+.agency-hero h1{font-size:clamp(25px,2.9vw,34px);line-height:1.2;margin:0 0 9px;letter-spacing:-.047em;color:#123d2c}
+.agency-hero .lead{font-size:13px;line-height:1.65;margin:0;color:#52695d}
+.hero-mark{width:145px;min-width:145px;align-self:stretch;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#2b7455;border-left:1px solid #c9dfcf80;position:relative;z-index:1}
+.hero-mark span{font-size:10px;letter-spacing:.22em;font-weight:800}
+.hero-mark strong{font-size:45px;font-weight:850;line-height:1.05;letter-spacing:-.08em}
+.hero-mark small{font-size:9px;letter-spacing:.1em}
+.agency-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));background:#fff;border:1px solid #dce7de;border-radius:13px;padding:5px;gap:4px;box-shadow:0 6px 24px #183e2a0b;margin:0 0 13px}
+.agency-tab{display:flex;justify-content:center;gap:8px;align-items:center;background:transparent;color:#557165;border:0;border-radius:9px;font-size:13px;font-weight:720;padding:12px 9px;min-height:46px;cursor:pointer;transition:background .15s,color .15s}
+.agency-tab .tab-no{font-size:10px;color:#90a99a;font-weight:800}
+.agency-tab:hover{background:#edf4ef;color:#174a34}
+.agency-tab[aria-selected="true"]{color:#fff;background:linear-gradient(115deg,#195a3d,#0f4633);box-shadow:0 4px 10px #12482d26}
+.agency-tab[aria-selected="true"] .tab-no{color:#b8ddc8}
+.agency-tab:focus-visible{outline:3px solid #8dcba4;outline-offset:2px}
+.agency-workspace.layout{display:block;margin:0;max-width:100%}
+.agency-pane.card{padding:24px 30px 28px;border:1px solid #dbe7de;background:#fff;border-radius:16px;box-shadow:0 7px 28px #113b250a}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:15px;margin-bottom:16px;border-bottom:1px solid #ebf0ec}
+.panel-head h2{font-size:21px;letter-spacing:-.035em;margin:2px 0 6px;color:#183e2c}
+.panel-head .eyebrow{font-size:10px;margin:0;letter-spacing:.13em;color:#599073}
+.panel-head .muted{margin:0;line-height:1.6}
+.panel-note{font-size:11px;color:#9d6855;background:#fff5ef;border:1px solid #f3ded1;border-radius:20px;padding:6px 11px;white-space:nowrap}
+#agencyForm{max-width:1000px;margin:auto}
+#agencyForm .choice{margin:0 0 17px;gap:10px}
+#agencyForm .choice label{padding:11px 16px;align-items:center;min-height:60px;border-radius:10px;border:1px solid #d4e2d7;gap:11px}
+#agencyForm .choice strong{font-size:14px}
+#agencyForm .choice small{font-size:11px;margin-top:3px;color:#688174}
+#agencyForm .choice label:has(input:checked){background:#edf8f0;border-color:#6eab82;box-shadow:inset 0 0 0 1px #a4cab0}
+#agencyForm .fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 18px}
+#agencyForm label.field{font-size:12px;font-weight:720;gap:6px;color:#355546}
+#agencyForm input[type=text],#agencyForm input[type=email],#agencyForm input[type=number],#agencyForm textarea,.lookup-fields input{font-size:14px;padding:10px 12px;border:1px solid #cfddd2;border-radius:9px;min-height:43px;background:#fbfdfb;color:#183b2a;box-shadow:none}
+#agencyForm input:focus,#agencyForm textarea:focus,.lookup-fields input:focus{border-color:#4d946e;background:#fff;outline:2px solid #b8dfc6;outline-offset:0}
+#agencyForm textarea{min-height:67px}
+#agencyForm .wide{grid-column:1/-1}
+#agencyForm #monthsGuide{font-size:11px;line-height:1.5;margin-top:1px}
+#agencyForm .consent{font-size:12px;margin:12px 0;line-height:1.55;color:#475b4e}
+#agencyForm .consent input{accent-color:#206846}
+#agencyForm .actions{margin-top:18px}
+#submitBtn{width:100%;max-width:440px;margin:auto;background:linear-gradient(105deg,#1b6947,#0e4933);box-shadow:0 6px 15px #104a3028}
+.button{min-height:43px}
+#message{max-width:100%;margin:0 0 12px;border-radius:10px;font-size:13px}
+#message:empty{display:none}
+#message.ok,#message.error{padding:11px 14px}
+.lookup-fields{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;max-width:650px}
+.lookup-fields >label.field{font-size:13px;font-weight:650}
+.lookup-fields >.actions{margin-top:4px}
+#statusPanel .result{scroll-margin-top:110px}
+.result{background:#f8fbf8;border:1px solid #d6e5d9;margin-top:20px;padding:20px}
+.result dl{grid-template-columns:minmax(90px,140px) minmax(0,1fr);gap:10px 12px}
+.result dt{font-weight:600}
+.result h3{font-size:17px}
+.campus-report{margin:17px 0 0;padding:16px 0 0}
+.campus-report dl{display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:10px 14px;font-size:13px}
+.campus-report dt{font-weight:650;color:#60776a}
+.campus-report dd{margin:0;font-weight:700;overflow-wrap:anywhere}
+.cycle-details,.process-details{margin-top:18px;border:1px solid #d9e6db;border-radius:10px;padding:0;background:#fcfdfc}
+.cycle-details summary,.process-details summary{list-style:revert;padding:13px 17px;cursor:pointer;font-weight:700;color:#225640;font-size:13px}
+.cycle-details summary span{font-weight:500;color:#6c8175;margin-left:9px;font-size:12px}
+.cycle-details .periods{padding:0 16px 16px;max-height:360px;overflow:auto}
+.cycle-details .periods li{font-size:12px;padding:7px 11px}
+.process-details .info-list,.process-details p{margin:0 20px 14px}
+#contractEmpty{margin-bottom:12px}
+.inline-tab-link{border:0;background:none;color:#166c45;font:inherit;font-weight:750;cursor:pointer;text-decoration:underline;padding:0}
+.flow-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.flow-steps>div{padding:22px 16px;min-width:0;border:1px solid #e1eae3;border-radius:12px;background:linear-gradient(170deg,#f6faf7,#fff)}
+.flow-steps strong{display:block;font-size:15px;margin-top:11px;color:#184a35}
+.flow-steps p{color:#60796b;font-size:12px;line-height:1.6;margin:5px 0 0}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:35px;height:35px;border-radius:50%;background:#e1f1e6;color:#1c6645;font-weight:850;font-size:12px}
+.panel-action{margin-top:18px}
+.guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:19px}
+.guide-item{padding:20px;border:1px solid #e2ebe3;border-radius:11px;background:#fbfdfb}
+.guide-item h3{color:#1c553a;margin:0 0 6px;font-size:15px}
+.guide-item p{font-size:13px;color:#60746a;line-height:1.7;margin:0}
+.guide-contact{margin:17px 0 0;font-size:13px;display:flex;align-items:center;gap:9px;color:#285d40}
+footer{padding:19px 20px;background:#fff;color:#63796d}
+footer .inner{max-width:1230px}
+@media(max-width:760px){
+ .bar{padding:8px 14px;min-height:50px}
+ .agency-navigation{padding:0 12px;gap:3px;margin-top:6px}
+ .agency-navigation a,.agency-navigation button{font-size:11px;padding:5px 7px}
+ main.agency-main{padding:12px 12px 35px}
+ .agency-hero{padding:18px 16px;min-height:110px;border-radius:12px}
+ .agency-hero h1{font-size:clamp(22px,5.8vw,30px)}
+ .agency-hero .lead{font-size:12px}
+ .hero-mark{display:none}
+ .agency-tabs{grid-template-columns:repeat(5,minmax(0,1fr));padding:3px;gap:2px}
+ .agency-tab{font-size:11px;min-height:45px;padding:9px 3px;gap:0}
+ .agency-tab .tab-no{display:none}
+ .agency-pane.card{padding:18px 14px 21px;border-radius:12px}
+ .panel-head h2{font-size:19px}
+ .panel-note{font-size:10px;padding:4px 6px}
+ #agencyForm .fields{grid-template-columns:1fr;gap:11px}
+ #agencyForm .wide{grid-column:1}
+ #agencyForm .choice{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ #agencyForm .choice label{padding:10px;min-height:68px}
+ #agencyForm .choice strong{font-size:12px}
+ .flow-steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .guide-grid{grid-template-columns:1fr}
+ .result dl{grid-template-columns:95px minmax(0,1fr)}
+}
+@media(max-width:440px){
+  /* Keep all five tabs discoverable without horizontal scrolling on narrow phones. */
+  .agency-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;gap:3px}
+  .agency-tab{min-width:0;min-height:43px;padding:8px 3px;font-size:11px;white-space:normal;line-height:1.25}
+  #agencyForm .choice{grid-template-columns:1fr}
+  #agencyForm .choice label{min-height:54px}
+  .panel-note{display:none}
+}
+@media(max-width:340px){
+  .agency-tab{font-size:10px}
+  .agency-hero{padding:15px 12px}
+  .agency-pane.card{padding:15px 11px}
+}
+@media(prefers-reduced-motion:reduce){.agency-tab{transition:none}}
+
 </style>
 </head>
 <body>
 <header><div class="bar"><a class="logo" href="https://ekodi.kr/ekodibiz">EKODIBIZ</a><nav aria-label="주요 메뉴"><a href="https://ekodi.kr/ekodibiz">에코디비즈</a></nav></div></header>
 <nav class="agency-navigation" aria-label="AI 위탁 서비스 화면 이동">
   <a data-agency-link="apply" href="/ekodibiz/ai-agency/apply">위탁신청</a>
-  <a data-agency-link="university" href="/ekodibiz/ai-agency/university">대학 계약조회</a>
+  <a data-agency-link="university" href="/ekodibiz/ai-agency/university">계약 담당자</a>
   <a data-agency-link="individual" href="/ekodibiz/ai-agency/individual">개인 신청</a>
-  <a data-agency-link="manage" href="/ekodibiz/ai-agency/manage">운영자 관리</a>
+  <a data-agency-link="manage" href="/ekodibiz/ai-agency/manage">업체 관리자</a>
   <button class="agency-share" data-share-agency="current" type="button">이 화면 공유</button>
-  <button class="agency-share" data-share-agency="university" type="button">대학 조회 링크 공유</button>
+  <button class="agency-share" data-share-agency="university" type="button">계약 조회 링크 공유</button>
 </nav>
 <p class="agency-share-status" id="agencyShareStatus" role="status" aria-live="polite"></p>
-<main>
-<section aria-labelledby="heading">
-<p class="eyebrow">EKODIBIZ · AI PURCHASE AGENCY</p>
-<h1 id="heading">AI 서비스 구매·결제 위탁</h1>
-<p id="campusRouteGuide" class="muted" hidden>대학교 담당자 전용 계약조회입니다. 신청번호와 비밀 조회코드를 입력해야 해당 계약이 표시됩니다.</p>
-<p class="lead">AI 서비스 신청과 계약기간 관리를 에코디비즈가 도와드립니다. 대학·기관은 3개월 계약, 개인은 1개월 단위로 신청하며 에코디비즈 위탁관리 계약은 자동 갱신되지 않으며 공급사의 별도 구독·해지는 해당 공급사 조건을 확인해야 합니다.</p>
-<p class="quiet"><strong>판매·결제 주체를 구분합니다.</strong> 기본 위탁료는 에코디비즈 용역대금입니다. 공급사 구독료는 별도 표시하며 공급사의 수납·재판매 허용 조건이 확인된 건에만 함께 청구할 수 있습니다. 최종 금액은 개별 견적서로 확정합니다.</p>
+
+<main class="agency-main">
+<section class="agency-hero" aria-labelledby="heading">
+  <div class="hero-copy"><p class="eyebrow">EKODIBIZ <span aria-hidden="true">/</span> AI PURCHASE AGENCY</p>
+  <h1 id="heading">AI 서비스 구매·결제 위탁</h1>
+  <p id="campusRouteGuide" class="muted" hidden>계약 담당자 전용 조회입니다. 신청번호와 비밀 조회코드를 입력해야 해당 계약이 표시됩니다.</p>
+  <p class="lead">기관과 개인이 필요한 기간을 직접 정하고 AI 서비스의 계약·결제 위탁을 신청합니다. 상담과 견적은 무료로 요청할 수 있습니다.</p>
+  </div>
+  <div class="hero-mark" aria-hidden="true"><span>EKODI</span><strong>AI</strong><small>AGENCY SERVICE</small></div>
 </section>
-<div class="layout">
-<section class="card" id="apply" aria-labelledby="applyTitle">
-<h2 id="applyTitle">위탁계약 신청</h2>
-<p class="muted">로그인 없이 신청할 수 있습니다. 비밀번호, 카드번호, AI 서비스 계정 비밀번호는 받지 않습니다.</p>
-<form id="agencyForm">
+<nav class="agency-tabs" role="tablist" aria-label="AI 구독 위탁 서비스 메뉴">
+  <button type="button" class="agency-tab" id="agencyTabApply" role="tab" aria-controls="apply" aria-selected="true" tabindex="0" data-agency-tab="apply"><span class="tab-no">01</span><span>위탁신청</span></button>
+  <button type="button" class="agency-tab" id="agencyTabFlow" role="tab" aria-controls="flowPanel" aria-selected="false" tabindex="-1" data-agency-tab="flow"><span class="tab-no">02</span><span>진행절차</span></button>
+  <button type="button" class="agency-tab" id="agencyTabStatus" role="tab" aria-controls="statusPanel" aria-selected="false" tabindex="-1" data-agency-tab="status"><span class="tab-no">03</span><span>신청조회</span></button>
+  <button type="button" class="agency-tab" id="agencyTabContract" role="tab" aria-controls="contractPanel" aria-selected="false" tabindex="-1" data-agency-tab="contract"><span class="tab-no">04</span><span>계약·결제·정산</span></button>
+  <button type="button" class="agency-tab" id="agencyTabGuide" role="tab" aria-controls="guidePanel" aria-selected="false" tabindex="-1" data-agency-tab="guide"><span class="tab-no">05</span><span>이용안내</span></button>
+</nav>
+<div id="message" role="status" aria-live="polite"></div>
+<div class="layout agency-workspace">
+<section class="card agency-pane" id="apply" role="tabpanel" aria-labelledby="agencyTabApply" data-agency-panel="apply">
+  <div class="panel-head"><div><p class="eyebrow">APPLICATION</p><h2 id="applyTitle">AI 구독 위탁신청서</h2><p class="muted">필요한 서비스와 계약 개월 수를 입력해 주세요. 계약은 견적 확인과 별도 동의 후 진행됩니다.</p></div><span class="panel-note">* 필수 입력 항목</span></div>
+  <form id="agencyForm">
 <div class="choice" role="group" aria-label="계약 유형">
-<label><input type="radio" name="type" value="institution"><span><strong>대학·기관</strong><small>3개월 위탁 관리<br>위탁관리 기간 자동 종료</small></span></label>
-<label><input type="radio" name="type" value="individual" checked><span><strong>개인</strong><small>1개월 단위 위탁<br>재신청 시 갱신</small></span></label>
+<label><input type="radio" name="type" value="institution"><span><strong>대학·기관</strong><small>기간 직접 입력<br>위탁관리 기간 자동 종료</small></span></label>
+<label><input type="radio" name="type" value="individual" checked><span><strong>개인</strong><small>기간 직접 입력<br>자동 갱신 없음</small></span></label>
 </div>
 <div class="fields">
 <label class="field">성함 또는 담당자명 <input name="customer" type="text" maxlength="80" required autocomplete="name"></label>
 <label class="field">이메일 <input name="email" type="email" maxlength="150" required autocomplete="email"></label>
 <label class="field wide" id="organizationGroup" hidden>기관명 <input name="organization" type="text" maxlength="100" autocomplete="organization"></label>
+<label class="field wide">계약기간 (개월) <input name="months" type="number" min="1" max="120" step="1" required placeholder="원하는 개월 수 입력" aria-describedby="monthsGuide"><span class="muted" id="monthsGuide">계약기간은 미리 정해져 있지 않습니다. 1~120개월 중 필요한 개월 수를 입력해 주세요. 공급사 구독기간과 자동갱신 여부는 별도 확인합니다.</span></label>
 <label class="field">AI 공급사명 <input name="provider" type="text" maxlength="80" placeholder="예: OpenAI, Anthropic" required></label>
 <label class="field">이용할 서비스 <input name="service" type="text" maxlength="120" placeholder="예: 업무용 AI 구독" required></label>
 <label class="field wide">요청사항 (선택) <textarea name="description" maxlength="600" placeholder="필요 계정 수, 예상 시작일, 문의사항 등. 인증정보는 적지 마세요."></textarea></label>
@@ -101,43 +242,64 @@ body[data-agency-view="university"] #statusPanel{margin-top:0!important}
 <label class="consent"><input name="consent" type="checkbox" required><span>신청 안내와 견적 제공을 위해 이름·이메일·기관명 및 요청사항을 수집·이용하는 데 동의합니다. 자세한 내용은 <a href="https://ekodi.kr/privacy">개인정보처리방침</a>에서 확인합니다.</span></label>
 <div class="actions"><button class="button" id="submitBtn" type="submit">위탁계약 신청하기</button></div>
 </form>
-<div id="message" role="status" aria-live="polite"></div>
-<section class="result" id="result" hidden aria-live="polite">
+</section>
+<section class="card agency-pane" id="flowPanel" role="tabpanel" aria-labelledby="agencyTabFlow" data-agency-panel="flow" hidden>
+  <div class="panel-head"><div><p class="eyebrow">HOW IT WORKS</p><h2 id="flowTitle">신청부터 이용까지</h2><p class="muted">계약별 승인과 개시 여부를 구분하여 투명하게 관리합니다.</p></div></div>
+  <div class="flow-steps">
+    <div><span class="step-num">01</span><strong>위탁신청</strong><p>신청자가 서비스와 계약기간을 선택합니다.</p></div>
+    <div><span class="step-num">02</span><strong>견적 검토</strong><p>업체 관리자가 공급사 승인범위와 요금을 확인합니다.</p></div>
+    <div><span class="step-num">03</span><strong>계약·결제</strong><p>조건 동의 후 허가된 방식으로만 결제합니다.</p></div>
+    <div><span class="step-num">04</span><strong>이용·정산</strong><p>실제 서비스 개시 후 기간과 증빙을 관리합니다.</p></div>
+  </div>
+  <details class="process-details"><summary>전체 진행 단계 및 유의사항 보기</summary><ol class="info-list">
+<li>위탁신청서 작성</li><li>공급사 이용 조건 확인 및 개별 견적</li><li>견적·위탁조건 확인과 동의</li><li>승인된 토스페이먼츠 결제</li><li>이용 신청 대행 및 기간 관리</li><li>신청한 계약기간 경과 시 에코디비즈 위탁관리 종료(공급사 구독 해지 별도 확인)</li>
+</ol><p class="muted">에코디비즈의 위탁기간 종료가 공급사 구독의 해지를 의미하지는 않습니다. 실제 공급사에서 별도 갱신중단 확인이 필요합니다.</p></details>
+  <button class="button alt panel-action" type="button" data-open-agency-tab="apply">위탁신청으로 이동</button>
+</section>
+<section class="card agency-pane" id="statusPanel" role="tabpanel" aria-labelledby="agencyTabStatus" data-agency-panel="status" hidden>
+  <div class="panel-head"><div><p class="eyebrow">CONTRACT LOOKUP</p><h2>신청조회</h2><p class="muted">신청번호와 비밀 조회 보안코드를 입력해야 본인 계약을 확인할 수 있습니다. 이름·이메일만으로는 조회되지 않습니다.</p></div></div>
+  <div class="lookup-fields"><p class="muted">발급받은 조회번호와 보안코드를 입력하세요. 보안코드를 분실했다면 이메일로 문의해 주세요.</p>
+<label class="field">신청번호 <input id="lookupId" type="text" autocomplete="off" placeholder="EBAI-..."></label>
+<label class="field" style="margin-top:8px">조회 보안코드 <input id="lookupToken" type="password" autocomplete="off" placeholder="신청 시 발급된 보안코드"></label>
+<div class="actions"><button class="button alt" type="button" id="lookupBtn">신청 현황 조회</button></div></div>
+  <section class="result" id="result" hidden aria-live="polite">
 <h3>신청·견적 진행 현황</h3>
 <dl><dt>신청번호</dt><dd id="receiptId">—</dd><dt>유형·기간</dt><dd id="receiptType">—</dd><dt>상태</dt><dd id="receiptStatus">—</dd><dt>위탁료</dt><dd id="receiptFee">견적 대기</dd><dt>공급사 비용</dt><dd id="receiptSupplier">별도 확인</dd><dt>합계</dt><dd id="receiptTotal">미확정</dd><dt>관리 종료일</dt><dd id="receiptEnd">공급사 이용 개시 후 확정</dd></dl>
 <p class="muted" id="receiptGuide">견적이 확정되면 조회할 수 있습니다.</p>
 <div class="actions"><button class="button alt" id="refreshBtn" type="button">진행상황 새로고침</button><button class="button alt" id="copyBtn" type="button">신청 조회번호 복사</button><button class="button" id="acceptBtn" type="button" hidden>견적·계약조건 확인 및 동의</button><button class="button" id="paymentBtn" type="button" hidden>결제 진행</button></div>
-<section class="campus-report" id="campusPanel" hidden aria-label="대학 계약·결제·정산 조회">
-<h4>대학 계약·결제·정산</h4>
+ </section>
+</section>
+<section class="card agency-pane" id="contractPanel" role="tabpanel" aria-labelledby="agencyTabContract" data-agency-panel="contract" hidden>
+  <div class="panel-head"><div><p class="eyebrow">CONTRACT & SETTLEMENT</p><h2>계약·결제·정산</h2><p class="muted">조회코드 검증 후 해당 계약의 견적, 수동 지급증빙과 정산요약을 확인할 수 있습니다.</p></div></div>
+  <div class="quiet" id="contractEmpty">계약 정보를 확인하려면 <button type="button" class="inline-tab-link" data-open-agency-tab="status">신청조회</button>에서 신청번호와 보안코드로 먼저 조회하세요.</div>
+  <section class="campus-report" id="campusPanel" hidden aria-label="계약·결제·정산 조회">
+<h4>계약·결제·정산</h4>
 <p class="muted">신청번호와 보안코드로 확인하는 계약별 조회 화면입니다. 개인 이용자의 계정·대화내용은 표시하지 않습니다.</p>
 <dl><dt>위탁료</dt><dd id="campusFee">—</dd><dt>공급사 비용 예산</dt><dd id="campusBudget">—</dd>
 <dt>기록된 지급합계</dt><dd id="campusSpent">—</dd><dt>미배정 예산</dt><dd id="campusRemaining">—</dd>
 <dt>공급사 갱신중단</dt><dd id="campusCancellation">확인 필요</dd></dl>
-<h4>월별 결제기록 (최대 3개월)</h4><ol class="periods" id="campusPeriods"></ol>
+<details class="cycle-details" id="campusCycleDetails"><summary>월별 결제기록 <span id="cycleOverview">조회된 계약의 결제기록을 확인하세요.</span></summary><ol class="periods" id="campusPeriods"></ol></details>
 <p class="campus-note" id="campusLimitation">수동 기재 내역으로 실제 결제·해지·환급의 확정 증빙은 아닙니다.</p>
-<div class="actions"><button class="button alt" id="campusExport" type="button">대학 정산요약 CSV</button></div>
+<div class="actions"><button class="button alt" id="campusExport" type="button">계약 정산요약 CSV</button></div>
 </section>
-<div id="tossPanel" hidden><h3>결제수단 선택</h3><p class="muted">토스페이먼츠가 결제정보를 직접 처리합니다.</p><div id="tossMethods"></div><div id="tossAgreement"></div><button class="button" type="button" id="tossPayBtn">선택한 수단으로 결제하기</button></div>
+
+  <div id="tossPanel" hidden><h3>결제수단 선택</h3><p class="muted">토스페이먼츠가 결제정보를 직접 처리합니다.</p><div id="tossMethods"></div><div id="tossAgreement"></div><button class="button" type="button" id="tossPayBtn">선택한 수단으로 결제하기</button></div>
+
 </section>
+<section class="card agency-pane" id="guidePanel" role="tabpanel" aria-labelledby="agencyTabGuide" data-agency-panel="guide" hidden>
+  <div class="panel-head"><div><p class="eyebrow">SERVICE INFORMATION</p><h2>이용안내</h2><p class="muted">위탁서비스 이용 전 반드시 확인할 내용입니다.</p></div></div>
+  <div class="guide-grid">
+    <section class="guide-item"><h3>계약기간</h3><p>기관·개인 모두 계약기간을 1~120개월 중 원하는 개월 수로 직접 입력합니다. 기간 기본값은 없습니다.</p></section>
+    <section class="guide-item"><h3>요금·정산</h3><p>에코디비즈 위탁료와 공급사 구독료는 별도 견적합니다. 실제 공급사 대리수납은 계약범위가 승인된 경우에만 진행됩니다.</p></section>
+    <section class="guide-item"><h3>개인정보 보호</h3><p>공급사 비밀번호·카드번호·OTP·AI 대화기록을 받지 않으며, 계약정보 조회에는 별도 보안코드가 필요합니다.</p></section>
+    <section class="guide-item"><h3>자동갱신·종료</h3><p>에코디비즈 위탁관리 계약은 자동으로 갱신되지 않습니다. 공급사의 별도 구독·자동결제 종료 여부는 공급사에서 확인해야 합니다.</p></section>
+  </div>
+  <div class="quiet"><strong>판매·결제 주체를 구분합니다.</strong> 기본 위탁료는 에코디비즈 용역대금입니다. 공급사 구독료는 별도 표시하며 공급사의 수납·재판매 허용 조건이 확인된 건에만 함께 청구할 수 있습니다. 최종 금액은 개별 견적서로 확정합니다.</div>
+  <p class="guide-contact"><a href="https://ekodi.kr/ekodibiz/refund">환불정책</a><span aria-hidden="true">·</span><a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com</a></p>
 </section>
-<aside>
-<section class="card" aria-labelledby="flowTitle">
-<h2 id="flowTitle">진행 절차</h2>
-<ol class="info-list">
-<li>위탁신청서 작성</li><li>공급사 이용 조건 확인 및 개별 견적</li><li>견적·위탁조건 확인과 동의</li><li>승인된 토스페이먼츠 결제</li><li>이용 신청 대행 및 기간 관리</li><li>1개월 또는 3개월 경과 시 에코디비즈 위탁관리 종료(공급사 구독 해지 별도 확인)</li>
-</ol>
-<p class="muted">실제 공급사 서비스 개통은 별도로 확인합니다. 에코디비즈가 AI 공급사 공식 판매자라고 표시하지 않습니다.</p>
-</section>
-<section class="card" id="statusPanel" style="margin-top:16px">
-<h2>신청 조회</h2><p class="muted">신청 직후 표시되는 조회번호와 보안코드를 보관하세요. 보안코드를 분실하면 이메일로 문의해 주세요.</p>
-<label class="field">신청번호 <input id="lookupId" type="text" autocomplete="off" placeholder="EBAI-..."></label>
-<label class="field" style="margin-top:8px">조회 보안코드 <input id="lookupToken" type="password" autocomplete="off" placeholder="신청 시 발급된 보안코드"></label>
-<div class="actions"><button class="button alt" type="button" id="lookupBtn">신청 현황 조회</button></div>
-</section>
-<section class="card" style="margin-top:16px"><h3>문의·취소·환불</h3><p class="muted">계약변경, 공급사 이용권, 결제취소·환불은 승인된 계약내용과 관계 법령에 따라 처리합니다.</p><p><a href="https://ekodi.kr/ekodibiz/refund">환불정책</a> · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com</a></p></section>
-</aside>
 </div>
 </main>
+
 <footer><div class="inner">에코디비즈 · 사업자등록번호 213-13-01959 · 고객문의 ekodibiz@gmail.com<br>본 페이지는 위탁 서비스 신청 화면이며 토스페이먼츠와 AI 공급사의 공식 웹사이트가 아닙니다.</div></footer>
 <script src="/ekodibiz/ai-agency.js" defer></script>
 <script src="/ekodibiz/ai-agency-links.js" type="module"></script>

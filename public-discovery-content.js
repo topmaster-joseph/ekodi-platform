@@ -137,8 +137,24 @@ export async function mallProductItems(env){
   }catch{return []}
 }
 
+// JOURNAL-DISCOVERY-20261108: 에코디저널 글을 공개 등록부·사이트맵·추천 보드·IndexNow 대상에 합류(저널 워커 서비스 바인딩, 읽기 전용).
+export async function journalPostItems(env){
+  if(!env?.JOURNAL?.fetch)return [];
+  try{
+    const response=await env.JOURNAL.fetch(new Request('https://journal.internal/api/posts',{headers:{accept:'application/json'}}));
+    if(!response.ok)return [];
+    const body=await response.json().catch(()=>({}));
+    return (Array.isArray(body?.posts)?body.posts:[]).slice(0,500).map(post=>{
+      const slug=String(post?.slug||'');if(!/^[a-z0-9][a-z0-9-]{1,100}$/.test(slug))return null;
+      const path='/journal/p/'+slug;const url=validPublicUrl('https://ekodi.kr'+path);if(!url)return null;
+      return {id:'journal-post:'+slug,type:'article',siteId:'journal',name:String(post.title||'에코디저널').slice(0,160),title:String(post.title||'').slice(0,160),url,path,
+        description:String(post.excerpt||'').slice(0,300),imageUrl:'',source:'ekodi-journal',publishedAt:post.publishedAt||'',updatedAt:post.updatedAt||post.publishedAt||'',changefreq:'weekly',priority:'0.7'};
+    }).filter(Boolean);
+  }catch{return []}
+}
+
 export async function collectPublicDiscoveryItems(env){
-  const groups=await Promise.all([ledgerItems(env),seonamNoticeItems(env),mallProductItems(env)]);
+  const groups=await Promise.all([ledgerItems(env),seonamNoticeItems(env),mallProductItems(env),journalPostItems(env)]);
   const map=new Map();
   for(const item of groups.flat())if(item?.url)map.set(item.url,item);
   return [...map.values()];

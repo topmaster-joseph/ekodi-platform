@@ -1,4 +1,4 @@
-import { canonicalDriveStatus, deleteCanonicalDriveFile, readCanonicalDriveFile, writeCanonicalDriveFile, writeCanonicalDriveStream } from './canonical-drive-writer.js';
+import { canonicalDriveStatus, deleteCanonicalDriveFile, readCanonicalDriveFile, readCanonicalDriveMetadata, verifyCanonicalBackupDriveAcl, writeCanonicalDriveFile, writeCanonicalDriveStream } from './canonical-drive-writer.js';
 
 const STORAGE_PREFIX = '/api/storage/v1';
 // The storage control plane is reached privately through the STORAGE service
@@ -29,12 +29,16 @@ function constantTimeEqual(a, b) {
   return diff === 0;
 }
 
+function sharedKeyAuthorized(request,env) {
+  const expected=String(env.EKODI_STORAGE_GATEWAY_KEY||'').trim();
+  const supplied=String(request.headers.get('x-ekodi-storage-key')||'').trim();
+  return expected && constantTimeEqual(expected,supplied);
+}
 function authorized(request, env) {
-  const url=new URL(request.url);
-  if(url.hostname==='storage.internal')return true;
-  const expected = String(env.EKODI_STORAGE_GATEWAY_KEY || '').trim();
-  const supplied = String(request.headers.get('x-ekodi-storage-key') || '').trim();
-  return expected && constantTimeEqual(expected, supplied);
+  // Only canonical Storage Worker may trust the private service-binding
+  // virtual host. Its public API proxy must independently require a key.
+  if(new URL(request.url).hostname==='storage.internal')return true;
+  return sharedKeyAuthorized(request,env);
 }
 
 function localCanonicalRuntime(env) {
@@ -132,7 +136,9 @@ export async function storeEkodiDurableRecord(env, record = {}, options = {}) {
   const bytes = decodeBody(record);
   let result = null;
   try {
-    result = await writeCanonicalDriveFile(env, {
+    // Prefer the existing resumable Drive writer for encrypted archives above
+    // 4 MiB; preserve the canonical Storage gateway and audit boundaries.
+    const upload = {
       storageRoute: record.storageRoute,
       serviceId: record.serviceId,
       title: record.title || `${record.recordType}-${new Date().toISOString()}.json`,
@@ -144,7 +150,10 @@ export async function storeEkodiDurableRecord(env, record = {}, options = {}) {
       retentionClass: record.retentionClass,
       sourceModuleId: record.sourceModuleId || 'ekodi',
       subfolderPath: record.subfolderPath || '',
-    });
+    };
+    result = bytes.byteLength > 4 * 1024 * 1024
+      ? await writeCanonicalDriveStream(env, { ...upload, body: bytes, size: bytes.byteLength })
+      : await writeCanonicalDriveFile(env, { ...upload, bytes });
     await audit(env, { ...record, storageRoute: result.storageRoute }, requestId, result, 'stored');
     return {
       ok: true,
@@ -200,7 +209,16 @@ export async function handleStorageGateway(request, env = {}) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(STORAGE_PREFIX)) return null;
 
-  if (!localCanonicalRuntime(env)) return proxyToStorageControl(request, env);
+  // The public API Worker has no Google credential material and proxies into
+  // a privileged Storage service binding. Authorize at THIS public boundary
+  // before dispatch: the internal binding intentionally trusts service callers.
+  if (!localCanonicalRuntime(env)) {
+    const publicHealth=request.method==='GET' && url.pathname===`${STORAGE_PREFIX}/health`;
+    if (!publicHealth && !sharedKeyAuthorized(request,env)) {
+      return json({error:'Storage Gateway 인증이 필요합니다.',code:'STORAGE_UNAUTHORIZED'},401);
+    }
+    return proxyToStorageControl(request,env);
+  }
 
   if (request.method === 'GET' && url.pathname === `${STORAGE_PREFIX}/health`) {
     const status = await canonicalDriveStatus(env);
@@ -242,6 +260,29 @@ export async function handleStorageGateway(request, env = {}) {
       console.error('Storage R2 archive error',error);
       const message=String(error?.message || 'STORAGE_ARCHIVE_ERROR');
       return json({ error:'R2 녹화본을 공유드라이브로 보관하지 못했습니다.', code:message.split(':')[0] },errorStatus(message));
+    }
+  }
+
+  // Owner backup privacy gate: only the existing server-to-server key may
+  // request a read-only inherited-membership audit. Never expose identities.
+  if(request.method==='GET'&&url.pathname===`${STORAGE_PREFIX}/backup-acl`){
+    try{
+      return json(await verifyCanonicalBackupDriveAcl(env));
+    }catch(error){
+      const code=String(error?.message||'CANONICAL_BACKUP_ACL_UNVERIFIED').split(':')[0];
+      return json({ok:false,status:'access_not_verified',code},errorStatus(code));
+    }
+  }
+
+  // Same server-only storage credential as /files/:id. Return factual Google
+  // metadata (drive, parent, size), not any caller-supplied receipt assertion.
+  if (request.method === 'GET' && url.pathname.startsWith(`${STORAGE_PREFIX}/file-provenance/`)) {
+    try {
+      const fileId=decodeURIComponent(url.pathname.slice(`${STORAGE_PREFIX}/file-provenance/`.length));
+      return json({ok:true,...await readCanonicalDriveMetadata(env,fileId)});
+    } catch (error) {
+      const message=String(error?.message||'STORAGE_FILE_PROVENANCE_ERROR');
+      return json({error:'공유드라이브 파일의 위치를 검증하지 못했습니다.',code:message.split(':')[0]},errorStatus(message));
     }
   }
 

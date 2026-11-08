@@ -5,9 +5,15 @@ import { tenantAdminMetricsTabsMarkup, tenantAdminMetricsTabsCss, mountTenantAdm
 import { churchPastorAdminPage, churchPastorAdminScript } from '../church-pastor-admin-page.js';
 import { storeAdminPage, storeAdminCss, storeAdminScript } from '../store-admin-engine.js';
 
-test('church and store preserve the same opt-in tabs and authenticated data boundaries', async () => {
+test('church drops the work/metrics tabs for space while store keeps the opt-in tabs', async () => {
+  const churchHtml = await churchPastorAdminPage().text();
+  const churchScript = await churchPastorAdminScript().text();
+  assert.ok(!churchHtml.includes('admin-view-tabs'));
+  assert.match(churchHtml, /id="summaryCards"[^>]*hidden/);
+  assert.match(churchHtml, /id="mainPanel"/);
+  assert.ok(!churchScript.includes('mountTenantAdminMetricsTabs'));
+  assert.doesNotThrow(() => new vm.Script(churchScript, { filename: 'church.js' }));
   const routes = [
-    ['church', await churchPastorAdminPage().text(), await churchPastorAdminScript().text()],
     ['store', await storeAdminPage({ slug: 'jadam', name: '자담치킨' }).text(), await storeAdminScript().text()],
   ];
   for (const [name, html, script] of routes) {

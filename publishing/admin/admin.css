@@ -61,3 +61,45 @@ a.padmin-stat-link:hover,a.padmin-stat-link:focus-visible{background:#1f3150;out
 .padmin-ai-title,.padmin-ai-body,.padmin-form input,.padmin-form select{background:#0e1a2b;color:var(--a-text);border-color:#4a5a78}
 .padmin-ai-body::placeholder,.padmin-form input::placeholder{color:#8f9aab}
 .padmin :focus-visible{outline:2px solid var(--a-accent);outline-offset:2px}
+.padmin-titlecell{display:inline-flex;align-items:center;gap:.75rem;flex-wrap:wrap}
+.padmin-titlecell .button.small{padding:.3rem .7rem;font-size:.82rem;min-height:0}
+/* PUBLISHING-AI-READER-001: 검수용 전자책 보기 — 관리자 화면은 어둡지만 책 면은 실제 전자책처럼 종이색 */
+.rd-tabs{display:flex;gap:6px;margin:14px 0 10px}
+.rd-tab{padding:8px 16px;border:1px solid var(--a-line,#4a5a78);border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}
+.rd-tab[aria-pressed="true"]{background:#a8433a;border-color:#a8433a;color:#fff}
+.rd{margin:0 0 16px}
+.rd-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;max-width:720px;margin:0 auto 8px}
+.rd-gap{flex:1}
+.rd-btn{padding:6px 12px;border:1px solid #4a5a78;border-radius:8px;background:#0e1a2b;color:inherit;font:inherit;font-size:.9rem;cursor:pointer}
+.rd-btn:disabled{opacity:.4;cursor:default}
+.rd-edit{border-color:#a8433a}
+.rd-pos{min-width:6.5em;text-align:center;font-size:.9rem;opacity:.85}
+.rd-flags{font-size:.85rem;opacity:.8}
+.rd-flags-on{color:#ffb4a8;opacity:1;font-weight:600}
+.rd-device{--rd-scale:1;max-width:720px;margin:0 auto;padding:14px;border-radius:22px;background:#1b1b1f;box-shadow:0 18px 40px rgba(0,0,0,.45)}
+.rd-page{color-scheme:light;height:min(78vh,900px);overflow-y:auto;padding:clamp(22px,6vw,56px) clamp(18px,7vw,64px);border-radius:10px;background:#fbf7ee;color:#2b2622;font:calc(17px * var(--rd-scale))/1.95 "Noto Serif KR","Nanum Myeongjo",serif;word-break:keep-all;outline:none}
+.rd-page p{margin:0 0 1.1em;text-indent:1em}
+.rd-page .rd-h{margin:1.8em 0 .6em;font-size:1.08em;font-weight:700;color:#5a2a22}
+.rd-ch-no{text-indent:0!important;margin:0 0 .3em!important;font-size:.82em;letter-spacing:.18em;color:#a8433a}
+.rd-ch-title{margin:0 0 1.4em;font-size:1.55em;line-height:1.4;color:#2b2622}
+.rd-fig{margin:0 0 1.4em}
+.rd-fig img{display:block;max-width:100%;max-height:340px;margin:0 auto;border-radius:4px}
+.rd-list{margin:0 0 1.1em;padding-left:1.4em}
+.rd-note{margin:0 0 1.2em;padding:.8em 1em;border-left:4px solid #c0392b;background:#fbe9e4;font-size:.9em;line-height:1.7}
+.rd-flag{background:#ffd8cf;color:#9b1c10;padding:0 .2em;border-radius:3px;font-weight:700}
+.rd-empty{color:#8a7f72;text-indent:0!important}
+.rd-cover{min-height:100%;display:flex;flex-direction:column;justify-content:center;text-align:center;gap:.4em;padding:2em 0}
+.rd-cover p{text-indent:0;margin:0}
+.rd-cover h1{margin:.4em 0 .2em;font-size:2.1em;line-height:1.3;color:#5a2a22}
+.rd-series{font-size:.78em;letter-spacing:.25em;color:#a8433a}
+.rd-sub{font-size:1.05em;color:#5b524a}
+.rd-author{margin-top:2.4em!important;font-weight:700}
+.rd-disc{margin-top:auto!important;font-size:.78em;color:#8a7f72}
+.rd-toc{list-style:none;padding:0;margin:0}
+.rd-toc li{border-bottom:1px dotted #d7cdbd}
+.rd-toc button{all:unset;display:block;width:100%;padding:.55em 0;cursor:pointer}
+.rd-toc button:hover,.rd-toc button:focus-visible{color:#a8433a}
+@media (max-width:600px){.rd-device{padding:6px;border-radius:14px}.rd-page{height:72vh}}
+.rd-page h1,.rd-page h2.rd-ch-title{color:#2b2622}
+.rd-page .rd-cover h1{color:#5a2a22}
+.rd-page p.rd-lead{text-indent:0;margin-bottom:.4em;font-weight:700}

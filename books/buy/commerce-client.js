@@ -7,7 +7,11 @@
   const IDENTITY = `${SUPABASE_URL}/functions/v1/identity-api`;
   const OWN_KEY = 'ekodi-books-buyer-session';
   const CENTRAL_KEY = 'sb-renzehysxirjilvdxacv-auth-token';
-  const BASE = location.pathname === '/books' || location.pathname.startsWith('/books/') ? '/books' : '';
+  // MALL-BOOKS-DIRECT-CHECKOUT-001: 에코디몰 결제 화면(/ekodimall/checkout/book/)은 서점과 같은 출처에서
+  // 서점 주문 API(/books/api/commerce)를 쓴다. 허용 목록 값만 받아 임의 API 경로 주입을 막는다.
+  const declared = globalThis.document?.documentElement?.dataset?.booksApiBase || '';
+  const onMall = /^\/ekodimall(?:\/|$)/.test(location.pathname);
+  const BASE = declared === '/books' ? '/books' : location.pathname === '/books' || location.pathname.startsWith('/books/') ? '/books' : '';
   const read = (store, key) => { try { return JSON.parse(store.getItem(key) || 'null'); } catch { return null; } };
   const normalize = (d, c = {}) => ({ accessToken: d.access_token || d.accessToken || '', refreshToken: d.refresh_token || d.refreshToken || c.refreshToken || '', expiresAt: Number(d.expires_at || d.expiresAt || 0) || Math.floor(Date.now() / 1000) + Number(d.expires_in || 3600) });
   const save = v => { try { localStorage.setItem(OWN_KEY, JSON.stringify(v)); } catch {} };
@@ -103,7 +107,7 @@
   function centralLoginLink() {
     const a = document.createElement('a');
     const target = new URL('https://ekodi.kr/auth/');
-    target.searchParams.set('site', 'books');
+    target.searchParams.set('site', declared === '/books' && onMall ? 'mall' : 'books');
     target.searchParams.set('return_to', location.href);
     a.href = target.toString();
     a.className = 'central-login-link';

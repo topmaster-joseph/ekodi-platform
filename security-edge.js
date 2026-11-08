@@ -119,7 +119,21 @@ export function applyApiSecurityHeaders(response) {
   secured.headers.set('X-Content-Type-Options', 'nosniff');
   secured.headers.set('X-Frame-Options', 'DENY');
   secured.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
-  if (!secured.headers.has('cache-control')) secured.headers.set('Cache-Control', 'no-store');
+  // Owner-frozen regional data must survive any intermediate no-store-only
+  // normalization before the final Control API response. Never relax the
+  // private publication hold or the guarded candidate's cache policy.
+  const ownerFrozenRegion = secured.status === 404
+    && secured.headers.get('x-ekodi-route') === 'regional-private-hold'
+    && secured.headers.get('x-ekodi-region-publication') === 'private-owner-release-required';
+  if (ownerFrozenRegion) {
+    secured.headers.set('Cache-Control', 'private, no-store, max-age=0');
+    secured.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+    secured.headers.delete('Cloudflare-CDN-Cache-Control');
+    secured.headers.delete('CDN-Cache-Control');
+    secured.headers.delete('Surrogate-Control');
+  } else if (!secured.headers.has('cache-control')) {
+    secured.headers.set('Cache-Control', 'no-store');
+  }
   return secured;
 }
 

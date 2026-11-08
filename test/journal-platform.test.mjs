@@ -22,7 +22,7 @@ test('journal worker exposes health, feed, api and admin handoff', () => {
 test('journal public UI follows shared shell and locale contract', () => {
   const html = read('journal/index.html');
   const app = read('journal/app.js');
-  assert.match(html, /EKODI JOURNAL/);
+  assert.match(html, /The EKODI Journal|EKODI JOURNAL/);
   assert.match(app, /ekodi:locale-change/);
   assert.match(app, /EKODIUserLanguage/);
 });

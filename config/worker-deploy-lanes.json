@@ -32,6 +32,7 @@
     "wrangler.marketing-domains.toml": { "workflow": "deploy-marketing-domain-api.yml" },
     "wrangler.marketing-growth.toml": { "workflow": "deploy-marketing-growth.yml" },
     "wrangler.marketing-publishing.toml": { "workflow": "deploy-marketing-publishing.yml" },
+    "wrangler.ministry-news.toml": { "workflow": "deploy-ministry-news.yml" },
     "wrangler.money.toml": { "workflow": "deploy-money.yml" },
     "wrangler.my.toml": { "workflow": "deploy-my.yml" },
     "wrangler.personal-finance.toml": { "excluded": "Personal finance production promotion requires an explicit promote_production approval (or a [promote-personal-finance] commit) in deploy-personal-finance.yml; never auto-promoted." },

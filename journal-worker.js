@@ -1,6 +1,7 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { JOURNAL_META, getPublishedPosts, toPublicSummary } from './journal-content.js';
 import { bookJournalPosts, mergePosts } from './journal-books.js';
+import { issueOf, docNumber, postType } from './journal/issue.js';
 
 // JOURNAL-BOOKS-001: 기존 글 + 출판된 도서 글(출판 워커 서비스 바인딩).
 async function allPosts(env) { return mergePosts(getPublishedPosts(), await bookJournalPosts(env)); }
@@ -75,6 +76,30 @@ function rss(posts) {
 </channel></rss>`;
 }
 
+// JOURNAL-MASTHEAD-20261108: JSON Feed 1.1 — 피드 리더·추천 서비스가 바로 읽는 형식.
+function jsonFeed(posts) {
+  return {
+    version: 'https://jsonfeed.org/version/1.1',
+    title: 'EKODI Journal',
+    home_page_url: `${JOURNAL_META.canonicalOrigin}/`,
+    feed_url: `${JOURNAL_META.canonicalOrigin}/feed.json`,
+    description: JOURNAL_META.description,
+    language: 'ko-KR',
+    items: posts.map((post) => ({
+      id: `${JOURNAL_META.canonicalOrigin}/p/${encodeURIComponent(post.slug)}`,
+      url: `${JOURNAL_META.canonicalOrigin}/p/${encodeURIComponent(post.slug)}`,
+      title: post.title,
+      summary: post.excerpt,
+      content_text: (post.body || []).map((b) => (b.type === 'list' ? (b.items || []).join('\n') : b.text || '')).filter(Boolean).join('\n\n'),
+      date_published: new Date(post.publishedAt).toISOString(),
+      date_modified: new Date(post.updatedAt || post.publishedAt).toISOString(),
+      tags: [post.categoryLabel, postType(post.category), ...(post.values || [])].filter(Boolean),
+      authors: [{ name: post.author?.name || 'EKODI Editorial' }],
+      _ekodi: { doc: docNumber(post, posts) },
+    })),
+  };
+}
+
 function sitemap(posts) {
   const urls = [
     `<url><loc>${JOURNAL_META.canonicalOrigin}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`,
@@ -84,10 +109,83 @@ function sitemap(posts) {
   ];  return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>`;
 }
 
-async function shellHtml(env, request) {
+// JOURNAL-OVERHAUL-20261108: 글마다 서버에서 제목·설명·OG·구조화 데이터와 본문 요약을 넣어
+// 검색엔진·AI 답변엔진이 JavaScript 없이도 글을 읽을 수 있게 한다(SEO·AEO·GEO).
+function htmlEscape(value) {
+  return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+}
+function jsonLd(data) { return JSON.stringify(data).replaceAll('<', '\\u003c'); }
+
+export function seoFor(post, posts = []) {
+  const origin = JOURNAL_META.canonicalOrigin;
+  if (!post) {
+    return {
+      title: 'EKODI Journal — 에코디 저널', description: JOURNAL_META.description, url: `${origin}/`, type: 'website',
+      ld: { '@context': 'https://schema.org', '@type': 'Blog', name: 'EKODI Journal', alternateName: JOURNAL_META.nameKo, url: `${origin}/`,
+        description: JOURNAL_META.description, inLanguage: 'ko-KR',
+        blogPost: posts.slice(0, 20).map((p) => ({ '@type': 'BlogPosting', headline: p.title, url: `${origin}/p/${encodeURIComponent(p.slug)}`, datePublished: p.publishedAt })) },
+      body: `<h1>EKODI JOURNAL</h1><p>${htmlEscape(JOURNAL_META.description)}</p><ul>${posts.slice(0, 30).map((p) => `<li><a href="/journal/p/${encodeURIComponent(p.slug)}">${htmlEscape(p.title)}</a> — ${htmlEscape(p.excerpt)}</li>`).join('')}</ul>`,
+    };
+  }
+  const url = `${origin}/p/${encodeURIComponent(post.slug)}`;
+  const text = (post.body || []).map((b) => (b.type === 'list' ? (b.items || []).join(' · ') : b.text || '')).filter(Boolean);
+  const issue = issueOf(post.publishedAt);
+  const ld = { '@context': 'https://schema.org', '@type': 'BlogPosting', headline: post.title, description: post.excerpt, url, mainEntityOfPage: url,
+    identifier: docNumber(post, posts), genre: postType(post.category),
+    isPartOf: { '@type': 'PublicationIssue', issueNumber: String(issue.number), datePublished: `${issue.year}-${String(issue.month).padStart(2, '0')}`,
+      isPartOf: { '@type': 'PublicationVolume', volumeNumber: String(issue.volume), isPartOf: { '@type': ['Periodical', 'Blog'], name: 'EKODI Journal', url: `${origin}/` } } },
+    datePublished: post.publishedAt, dateModified: post.updatedAt || post.publishedAt, inLanguage: 'ko-KR',
+    articleSection: post.categoryLabel, keywords: (post.values || []).join(', '),
+    author: { '@type': 'Organization', name: post.author?.name || 'EKODI Editorial' },
+    publisher: { '@type': 'Organization', name: 'EKODI', url: 'https://ekodi.kr/' } };
+  if (post.coverPhoto?.src) ld.image = `https://ekodi.kr${post.coverPhoto.src}`;
+  ld.breadcrumb = { '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'EKODI', item: 'https://ekodi.kr/' },
+    { '@type': 'ListItem', position: 2, name: 'EKODI Journal', item: `${origin}/` },
+    { '@type': 'ListItem', position: 3, name: post.title, item: url },
+  ] };
+  if (post.book?.url) ld.about = { '@type': 'Book', name: post.book.title, url: post.book.url, author: post.book.author || undefined };
+  return {
+    title: `${post.title} | EKODI Journal`, description: post.excerpt, url, type: 'article', ld,
+    body: `<article><p>${htmlEscape(post.categoryLabel)} · ${htmlEscape(String(post.publishedAt).slice(0, 10))}</p><h1>${htmlEscape(post.title)}</h1><p>${htmlEscape(post.excerpt)}</p>${text.slice(0, 40).map((t) => `<p>${htmlEscape(t)}</p>`).join('')}</article>`,
+  };
+}
+
+export function applySeo(html, seo, { noindex = false } = {}) {
+  const head = [
+    `<meta property="og:site_name" content="EKODI Journal">`,
+    `<meta property="og:type" content="${seo.type}">`,
+    `<meta property="og:title" content="${htmlEscape(seo.title)}">`,
+    `<meta property="og:description" content="${htmlEscape(seo.description)}">`,
+    `<meta property="og:url" content="${htmlEscape(seo.url)}">`,
+    `<meta property="og:locale" content="ko_KR">`,
+    `<meta name="twitter:card" content="summary">`,
+    noindex ? '<meta name="robots" content="noindex">' : '<meta name="robots" content="index,follow,max-snippet:-1">',
+    `<script type="application/ld+json">${jsonLd(seo.ld)}</script>`,
+  ].join('\n  ');
+  return html
+    .replace(/<title>[^<]*<\/title>/, `<title>${htmlEscape(seo.title)}</title>`)
+    .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${htmlEscape(seo.description)}">`)
+    .replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${htmlEscape(seo.url)}">\n  ${head}`)
+    .replace(/<noscript>[\s\S]*?<\/noscript>/, `<noscript><div class="journal-shell journal-noscript">${seo.body}</div></noscript>`);
+}
+
+async function shellHtml(env, request, path) {
   const assetUrl = new URL('/', request.url);
   const response = await env.ASSETS.fetch(new Request(assetUrl, request));
-  return injectEkodiShell(withHeaders(response, 'public, max-age=60, stale-while-revalidate=300'), 'journal');
+  let status = response.status;
+  let body = await response.text();
+  try {
+    const posts = await allPosts(env);
+    const slugMatch = path.match(/^\/p\/([^/]+)$/);
+    const post = slugMatch ? posts.find((p) => p.slug === decodeURIComponent(slugMatch[1])) || null : null;
+    if (slugMatch && !post) status = 404;
+    body = applySeo(body, seoFor(post, posts), { noindex: status === 404 });
+  } catch { /* SEO 보강 실패 시에도 기존 화면은 그대로 제공 */ }
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  const page = new Response(body, { status, headers });
+  return injectEkodiShell(withHeaders(page, status === 404 ? 'no-store' : 'public, max-age=60, stale-while-revalidate=300'), 'journal');
 }
 
 export default {
@@ -116,6 +214,7 @@ export default {
       return text(`User-agent: *\nAllow: /\nSitemap: ${JOURNAL_META.canonicalOrigin}/sitemap.xml\n`);
     }
     if (path === '/feed.xml' || path === '/rss.xml') return text(rss(await allPosts(env)), 'application/rss+xml; charset=utf-8');
+    if (path === '/feed.json') return text(JSON.stringify(jsonFeed(await allPosts(env))), 'application/feed+json; charset=utf-8');
     if (path === '/sitemap.xml') return text(sitemap(await allPosts(env)), 'application/xml; charset=utf-8');
 
     if (path === '/api/posts') {
@@ -136,7 +235,7 @@ export default {
       return Response.redirect('https://ekodi.kr/admin/journal', 307);
     }
 
-    if (path === '/' || /^\/p\/[^/]+$/.test(path)) return shellHtml(env, request);
+    if (path === '/' || /^\/p\/[^/]+$/.test(path)) return shellHtml(env, request, path);
 
     const response = await env.ASSETS.fetch(request);
     const contentType = response.headers.get('content-type') || '';

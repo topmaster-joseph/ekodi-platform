@@ -6,6 +6,23 @@ name: Verify Points Staging (EKODI Browser)
 # Never targets production: fixed development project ref and staging origins.
 on:
   workflow_dispatch:
+  # Orchestrator merges performed with a GitHub Actions token can suppress
+  # downstream push events. Run a bounded real DEV browser E2E twice daily,
+  # independent of merge event propagation and without production access.
+  schedule:
+    - cron: '17 2,14 * * *'
+  # A protected main merge of this workflow or its Points browser/security
+  # contract must run the actual DEVELOPMENT screen E2E. No prod credentials,
+  # no production database, no member awards.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-points-staging-browser.yml'
+      - 'scripts/points-staging-access.mjs'
+      - 'scripts/verify-points-staging-browser.mjs'
+      - 'scripts/ekodi-background-browser-worker.mjs'
+      - 'my/points/**'
+      - 'test/points-staging-access.test.mjs'
 
 permissions:
   contents: read
@@ -16,6 +33,7 @@ concurrency:
 
 jobs:
   verify:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: development
@@ -26,6 +44,7 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       STATIC_ACCESS_ID: ${{ secrets.CF_ACCESS_STAGING_CLIENT_ID }}
       STATIC_ACCESS_SECRET: ${{ secrets.CF_ACCESS_STAGING_CLIENT_SECRET }}
+      STATIC_ACCESS_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_STAGING_SERVICE_TOKEN_ID }}
       ADMIN_STAGING: https://ekodi-admin-staging.ekodi-development.workers.dev
       MY_STAGING: https://ekodi-my-staging.ekodi-development.workers.dev
       POINTS_E2E_RUN: ${{ github.run_id }}
@@ -58,7 +77,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -n "${STATIC_ACCESS_ID:-}" ] && [ -n "${STATIC_ACCESS_SECRET:-}" ]; then
+          # Require an all-or-none, independently protected static identity.
+          # Partial configuration must never silently fall back to minting
+          # another service token with potentially broader account authority.
+          configured_static_fields=0
+          for name in STATIC_ACCESS_ID STATIC_ACCESS_SECRET STATIC_ACCESS_SERVICE_TOKEN_ID; do
+            [ -z "${!name:-}" ] || configured_static_fields=$((configured_static_fields+1))
+          done
+          if [ "$configured_static_fields" -ne 0 ] && [ "$configured_static_fields" -ne 3 ]; then
+            echo '::error title=Incomplete Points staging Access identity::Configure the three approved development-environment secrets CF_ACCESS_STAGING_CLIENT_ID, CF_ACCESS_STAGING_CLIENT_SECRET and CF_ACCESS_STAGING_SERVICE_TOKEN_ID together. No fallback to token creation is permitted with a partial identity.'
+            exit 2
+          fi
+          # Never authorize any valid token on the development Access app.
+          # The static token requires a separately protected exact token ID.
+          if [ -n "${STATIC_ACCESS_ID:-}" ] && [ -n "${STATIC_ACCESS_SECRET:-}" ] && [ -n "${STATIC_ACCESS_SERVICE_TOKEN_ID:-}" ]; then
             echo "::add-mask::$STATIC_ACCESS_SECRET"
             { echo "CF_ACCESS_CLIENT_ID=$STATIC_ACCESS_ID"; echo "CF_ACCESS_CLIENT_SECRET=$STATIC_ACCESS_SECRET"; } >> "$GITHUB_ENV"
             echo 'E2E_ACCESS_EPHEMERAL=1' >> "$GITHUB_ENV"

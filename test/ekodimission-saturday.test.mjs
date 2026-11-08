@@ -24,12 +24,22 @@ function fakeDb(){
             for(let time=start.getTime();time<=until.getTime();time+=7*86400000){
               const date=new Date(time).toISOString().slice(0,10);
               const key=a[2]+'|'+date;
-              if(!events.has(key))events.set(key,{meeting_date:date,starts_at:'11:00',venue:'에코디교회',title:'토요 성경토론과 함께하는 식사',status:date<a[3]?'completed':'scheduled'});
+              if(!events.has(key))events.set(key,{meeting_date:date,starts_at:date==='2026-11-07'?'17:00':'11:00',venue:'에코디교회',title:'토요 성경토론과 함께하는 식사',status:date<a[3]?'completed':'scheduled'});
             }
           }
           if(sql.includes("SET starts_at='17:00'")){
             const item=events.get(a[0]+'|2026-11-07');
-            if(item?.starts_at==='11:00')item.starts_at='17:00';
+            if(item?.starts_at==='11:00'&&item.status==='scheduled'&&
+              item.venue==='에코디교회'&&item.title==='토요 성경토론과 함께하는 식사')
+              item.starts_at='17:00';
+          }
+          if(sql.includes("SET starts_at='11:00'")){
+            for(const [key,item] of events){
+              if(key.startsWith(a[0]+'|')&&item.meeting_date>'2026-11-07'&&item.meeting_date>=a[1]&&
+                item.starts_at==='17:00'&&item.status==='scheduled'&&
+                item.venue==='에코디교회'&&item.title==='토요 성경토론과 함께하는 식사')
+                item.starts_at='11:00';
+            }
           }
           if(sql.includes("UPDATE ekodi_mission_saturday_events")&&!sql.includes('SET starts_at')){
             for(const item of events.values())if(item.meeting_date<a[1]&&item.status==='scheduled')item.status='completed';
@@ -306,7 +316,9 @@ test('Mission landing, login state and image remain first-party and without hard
  assert.match(client,/filter\(item=>String\(item\.body\|\|''\)\.trim\(\)\)/);
  assert.match(client,/\bPOST\b|method:'POST'/);
  assert.match(client,/credentials:'same-origin'/);
- assert.match(client,/textContent=String\(reply\.body/);
+  const publicRoster=client.slice(client.indexOf('function renderReplies(items){'),client.indexOf('function mountAttendanceTabs(){'));
+  assert.ok(publicRoster.includes("row.textContent=item.displayName.trim()"));
+  assert.ok(!publicRoster.includes("item.body")&&!publicRoster.includes("createdAt")&&!publicRoster.includes("privateRsvp")&&!publicRoster.includes("innerHTML"));
  assert.match(shell,/\/ekodimission\/board\/api\/me/);
  assert.doesNotMatch(shell,/로그인됨|비로그인|로그인 확인 중/);
  assert.match(shell,/verifiedToken=token;paintMissionAuth\('in',data\.account\)/);
@@ -323,7 +335,8 @@ test('Sunday headline, live rollover, history browser and first-party asset rema
    read('space-worker.js')
  ]);
  assert.doesNotMatch(home,/2024년 2월 3일부터/);
- assert.match(home,/<\/figure><\/section>\s*<section class="activities mission-home-current"/);
+  assert.ok(home.includes('<section class="mission-home-switcher"'));
+  assert.match(home,/<section class="activities mission-home-current"/);
  assert.match(client,/heading\.textContent=day==='Sun'\?'다음 토요모임':'이번 주 토요모임'/);
  assert.match(client,/refreshAfterDayChange/);
  assert.match(history,/data-saturday-history-more/);
@@ -332,19 +345,56 @@ test('Sunday headline, live rollover, history browser and first-party asset rema
  assert.match(worker,/\/ekodimission\/assets\/saturday-history.js/);
 });
 
-test('2026-11-07 meeting uses 17:00 while surrounding weeks retain 11:00',async()=>{
+test('2026-11-07 only meets at 17:00, all prior and subsequent Saturdays at 11:00',async()=>{
   const db=fakeDb();
   await handleSiteBoardRequest(request(),env(db));
   assert.equal(db.events.get('site:ekodimission:main|2026-11-07')?.starts_at,'17:00');
-  assert.equal(db.events.get('site:ekodimission:main|2026-11-14')?.starts_at,'11:00');
+  for(const date of ['2026-11-14','2026-11-21','2026-11-28']){
+    assert.equal(db.events.get('site:ekodimission:main|'+date)?.starts_at,'11:00');
+  }
+  assert.equal(db.events.get('site:ekodimission:main|2026-10-31')?.starts_at,'11:00');
   const canonical=await read('site-board-control.js');
-  assert.match(canonical,/meeting_date='2026-11-07' AND starts_at='11:00'/);
+  assert.match(canonical,/CASE WHEN meeting_date='2026-11-07' THEN '17:00' ELSE '11:00' END/);
+  assert.match(canonical,/meeting_date>'2026-11-07' AND meeting_date>=\?\s+AND starts_at='17:00'/);
   const display=await read('space/ekodimission-saturday.js');
   assert.match(display,/data\.meeting\.time/);
   const history=await read('space/ekodimission-saturday-history.js');
   assert.match(history,/meeting\.time/);
 });
 
+test('existing upcoming defaults are reconciled, custom or cancelled rows and past history are preserved',async()=>{
+  const db=fakeDb(),e=env(db),prefix='site:ekodimission:main|';
+  await handleSiteBoardRequest(request(),e);
+  const next=missionSaturdayFor(missionKstToday());
+  const later=weeks=>{
+    const at=new Date(next+'T00:00:00Z');
+    at.setUTCDate(at.getUTCDate()+weeks*7);
+    return at.toISOString().slice(0,10);
+  };
+  // Seed legacy persisted defaults and independent operator exceptions in upcoming weeks.
+  const oldDefault=db.events.get(prefix+later(1));
+  oldDefault.starts_at='17:00';
+  const customTime=db.events.get(prefix+later(2));
+  customTime.starts_at='15:30';
+  const customVenue=db.events.get(prefix+later(3));
+  customVenue.starts_at='17:00';customVenue.venue='사역지 현장';
+  const customTitle=db.events.get(prefix+later(4));
+  customTitle.starts_at='17:00';customTitle.title='현장 봉사 활동';
+  const cancelled=db.events.get(prefix+later(5));
+  cancelled.starts_at='17:00';cancelled.status='cancelled';
+  const historical=db.events.get(prefix+'2026-10-31');
+  historical.starts_at='11:00';historical.status='completed';
+  await handleSiteBoardRequest(request(),e);
+  assert.equal(oldDefault.starts_at,'11:00','mistaken future 17:00 default is restored');
+  assert.equal(customTime.starts_at,'15:30','custom time is kept');
+  assert.equal(customVenue.starts_at,'17:00','custom venue is not rewritten');
+  assert.equal(customTitle.starts_at,'17:00','custom title is not rewritten');
+  assert.equal(cancelled.starts_at,'17:00','cancelled date is unchanged');
+  assert.equal(historical.starts_at,'11:00','past dates are unchanged');
+  assert.equal(db.events.get(prefix+'2026-11-07')?.starts_at,'17:00','one-day exception remains');
+  await handleSiteBoardRequest(request(),e);
+  assert.equal(oldDefault.starts_at,'11:00','reconciliation is idempotent');
+});
 test('mission public activities have per-activity sharing and a compact navigation',async()=>{
   const shell=await read('space/ekodimission-shell.js');
   for(const term of ['mountMissionShares','mission-activity-row','navigator.share','navigator.clipboard.writeText','mission-nav-more','mission-nav-mobile','meetingDate','meeting=']){

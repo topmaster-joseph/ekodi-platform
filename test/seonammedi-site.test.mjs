@@ -89,8 +89,13 @@ test('Shared Site router serves seonammedi assets before generic workspace routi
 
 test('site hourly monitor is runtime-owned, source-only and media-evidence aware',async()=>{const [monitor,migration,mediaMigration,canonicalMigration,sourceMigration,app,data]=await Promise.all([readFile(new URL('../seonammedi-monitor.js',import.meta.url),'utf8'),readFile(new URL('../migrations/0104_seonam_medi_monitor.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0105_seonam_medi_media_evidence.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0106_seonammedi_canonical_names.sql',import.meta.url),'utf8'),readFile(new URL('../migrations/0107_seonammedi_source_metadata.sql',import.meta.url),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('data.json',root),'utf8')]);assert.match(monitor,/runSeonamMediHourlyCheck/);assert.match(monitor,/aiProvider:false/);assert.match(monitor,/source_only/);assert.match(monitor,/news\.google\.com\/rss\/search/);assert.match(monitor,/www\.bing\.com\/news\/search/);assert.match(monitor,/enrichMedia/);assert.match(monitor,/og:video/);assert.match(monitor,/og:image/);assert.match(monitor,/mediaCandidateCount/);assert.match(monitor,/NAVER_LEGACY='https:\/\/openapi\.naver\.com\/v1\/search\/'/);assert.match(monitor,/naverSearchRequest\(env,'blog',query\.q\)/);assert.match(monitor,/NAVER_CLIENT_ID/);assert.match(monitor,/sourceType:'blog'/);assert.match(migration,/seonam_medi_monitor_runs/);assert.match(migration,/seonam_medi_monitor_items/);assert.match(canonicalMigration,/CREATE TABLE IF NOT EXISTS seonammedi_monitor_runs/);assert.match(canonicalMigration,/CREATE TABLE IF NOT EXISTS seonammedi_monitor_items/);assert.match(canonicalMigration,/INSERT OR IGNORE INTO seonammedi_monitor_runs/);assert.match(canonicalMigration,/INSERT OR IGNORE INTO seonammedi_monitor_items/);assert.doesNotMatch(canonicalMigration,/RENAME TO|DROP TABLE/);assert.match(sourceMigration,/source_type/);assert.match(sourceMigration,/summary_text/);assert.match(mediaMigration,/media_type/);assert.match(mediaMigration,/media_state/);assert.match(app,/attachMonitorMedia/);assert.match(app,/monitorMatches/);assert.match(app,/원문 확인 필요/);const parsed=JSON.parse(data);assert.ok(parsed.timeline.some(row=>Array.isArray(row.monitorKeywords)&&row.monitorKeywords.length));assert.match(parsed.mediaPolicy.autoLinkRule,/근거자료 후보/);assert.ok(Array.isArray(parsed.publicPosts)&&parsed.publicPosts.length>=5);assert.ok(parsed.publicPosts.every(item=>item.date&&item.sourceType&&item.summary&&item.url));assert.match(app,/materialFilters/);});
 
-test('hourly monitor results automatically refresh the public homepage without auto-publishing blogs as facts',async()=>{const [html,app,css]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('app.css',root),'utf8')]);assert.match(html,/id="homeLatestUpdates"/);assert.match(html,/id="homeLatestList"/);assert.match(html,/1시간마다 자동 갱신/);assert.match(app,/function monitorHomeRows/);assert.match(app,/item\.source_type!=='blog'/);assert.match(app,/selected\.some\(prev=>\(url&&prev\.url===url\)\|\|\(date&&prev\.date===date&&timelineTitleSimilarity\(prev\.title,title\)>=0\.72\)\)/);assert.match(app,/자동수집 · 원문 확인/);assert.match(app,/siteReady\.finally\(\(\)=>loadMonitor\(\)\)/);assert.match(app,/15\*60\*1000/);assert.match(app,/EKODI 자동갱신/);assert.match(css,/\.home-latest-list/);assert.match(css,/\.home-latest-card/);});
-
+test('hourly monitor powers 관련소식 without a separate home 최근 업데이트 strip',async()=>{const [html,app,feed]=await Promise.all([readFile(new URL('index.html',root),'utf8'),readFile(new URL('app.js',root),'utf8'),readFile(new URL('home-public-feed.js',root),'utf8')]);
+  // 2026-11-07 owner request: the home strip under the hero is gone; the public feed shows 공지사항·활동이력 then 관련소식·시민의견.
+  assert.ok(!html.includes('id="homeLatestUpdates"'));assert.ok(!html.includes('1시간마다 자동 갱신'));assert.ok(!html.includes('id="homeSpotlight"'));
+  assert.ok(!app.includes('renderHomeMonitorUpdates'));assert.match(app,/siteReady\.finally\(\(\)=>loadMonitor\(\)\)/);assert.match(app,/15\*60\*1000/);
+  for(const label of['공지사항','활동이력','관련소식','시민의견'])assert.ok(feed.includes("section('"+label+"'"),label);
+  assert.match(feed,/section\('활동이력',activities,home\+'\/#committee-activity',true\)/);
+});
 test('public view isolation keeps late activity rendering from reopening timeline over home or channels',async()=>{
   const app=await readFile(new URL('app.js',root),'utf8');
   assert.match(app,/const statusVisible=document\.querySelector\('\[data-view-link="status"\]\[aria-current="page"\]'\)!==null/);
@@ -588,9 +593,9 @@ test('seonammedi notices are an authenticated public board with image and sharin
   ]);
   assert.match(control,/createPublicNotice/);assert.match(control,/principalFromSupabaseRequest\(request\)/);
   assert.match(control,/image_too_large/);assert.match(control,/storeNoticeImageInDrive/);assert.match(control,/binding = "STORAGE"|STORAGE/);assert.match(control,/noticeImageMatch/);
-  assert.match(html,/id="noticeComposeForm"/);assert.match(html,/id="homeSpotlight"/);assert.match(html,/<h2>행사·일정<\/h2>/);/* 2026-10-20 owner-approved: #notices is the calendar's 행사·일정 view; notices are written on the board */
+  assert.match(html,/id="noticeComposeForm"/);assert.match(html,/id="homePublicFeed"/);assert.match(html,/<h2>행사·일정<\/h2>/);/* 2026-10-20 owner-approved: #notices is the calendar's 행사·일정 view; notices are written on the board */
   assert.match(app,/navigator\.share/);assert.match(app,/noticePermalink/);assert.match(app,/FormData\(noticeCompose\)/);assert.match(app,/NOTICE_SESSION_KEY/);
-  assert.match(app,/recent=\[\.\.\.rows\]\.sort/);assert.match(css,/\.home-spotlight/);assert.match(css,/\.notice-detail/);
+  assert.ok(!app.includes('renderFeaturedNotice'));assert.match(css,/\.notice-detail/);
   assert.match(auth,/target\.pathname==='\/seonammedi'/);assert.match(migration,/image_key/);assert.match(apiConfig,/binding = "LIVE_RECORDINGS_BUCKET"/);
 });
 
@@ -677,7 +682,7 @@ test('seonammedi notice detail lets the author edit and delete the clicked post'
   assert.match(control,/async function updatePublicNotice\(request,env,id\)/);
   assert.match(control,/edit_forbidden/);
   assert.match(control,/request\.method==='PUT'/);
-  assert.match(control,/UPDATE seonammedi_notices SET title=\?,body=\?,image_key=\?,image_type=\?,image_keys_json=\?,image_types_json=\?,updated_at=\?/);
+  assert.match(control,/UPDATE seonammedi_notices SET title=\?,body=\?,pinned=\?,image_key=\?,image_type=\?,image_keys_json=\?,image_types_json=\?,updated_at=\?/);
 });
 
 
@@ -868,9 +873,7 @@ test('seonammedi customer-domain navigation stays on seonammedi.kr instead of My
   assert.match(html,/<a href="admin\/">관리<\/a>/);
   assert.match(html,/<div class="site-footer-copy">\s*<strong>서남권국립의대<\/strong>\s*<span>서남권 의대 설립 비상대책위원회 · 자료의 성격과 출처를 구분해 보존합니다.<\/span>\s*<span class="site-footer-credit">사이트 제작 에코디비즈 · 대표 정찬균 · <a href="tel:01035018542">010-3501-8542<\/a> · <a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com<\/a><\/span>\s*<\/div>/);
   assert.ok(!html.includes('id="lastUpdated"'));
-  assert.match(html,/id="homeLatestUpdatedAt"/);
-  assert.ok(app.includes("'마지막 갱신 '+new Date(runAt).toLocaleString"));
-  assert.ok(app.includes("+' · EKODI 자동갱신'"));
+  assert.ok(!html.includes('id="homeLatestUpdatedAt"'));
   assert.ok(!app.includes("latest.textContent='마지막 갱신 '"));
   assert.match(css,/\.site-footer-copy\{display:grid;gap:2px/);
   assert.match(css,/footer>a\{flex:0 0 auto;margin-left:auto/);

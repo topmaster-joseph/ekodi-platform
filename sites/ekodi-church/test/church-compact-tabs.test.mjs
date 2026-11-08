@@ -9,7 +9,7 @@ test('six primary Church tabs preserve every public deep link and member destina
   const css=await read('church-homepage-layout.css');
   const navigation=await read('church-section-nav.js');
   const responsive=await read('church-compact-navigation.css');
-  const grid=html.match(/<div class="overview-grid"[\\s\\S]*?<\\/div>/)?.[0]||'';
+  const grid=html.match(/<div class="overview-grid"[\s\S]*?<\/div>/)?.[0]||'';
   assert.equal((grid.match(/<a href=/g)||[]).length,6,'only six home shortcuts');
   for(const url of ['/ekodichurch/devotion/','/ekodichurch/#worship','/ekodichurch/notices/','/ekodichurch/schedule/','/ekodichurch/#together','/ekodichurch/my/'])
     assert.ok(grid.includes('href="'+url+'"'),'missing six-menu destination '+url);

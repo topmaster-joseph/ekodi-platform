@@ -65,7 +65,7 @@
   const stat = (label, n, section) => { const kids = [el('strong', { textContent: String(n ?? 0) }), el('span', { textContent: label })];
     if (!section) return el('div', { className: 'padmin-stat' }, ...kids);
     const a = el('a', { className: 'padmin-stat padmin-stat-link', href: `${ADMIN}/${section}` }, ...kids); a.dataset.section = section; return a; };
-  const table = (heads, rows) => { const t = el('table'); t.append(el('thead', {}, el('tr', {}, ...heads.map(h => el('th', { scope: 'col', textContent: h }))))); const b = el('tbody'); for (const r of rows) b.append(el('tr', {}, ...r.map(c => el('td', { textContent: c })))); if (!rows.length) b.append(el('tr', {}, el('td', { colSpan: heads.length, className: 'muted', textContent: '기록 없음' }))); t.append(b); return el('div', { className: 'padmin-table' }, t); };
+  const table = (heads, rows) => { const t = el('table'); t.append(el('thead', {}, el('tr', {}, ...heads.map(h => el('th', { scope: 'col', textContent: h }))))); const b = el('tbody'); for (const r of rows) b.append(el('tr', {}, ...r.map(c => c instanceof Node ? el('td', {}, c) : el('td', { textContent: c })))); if (!rows.length) b.append(el('tr', {}, el('td', { colSpan: heads.length, className: 'muted', textContent: '기록 없음' }))); t.append(b); return el('div', { className: 'padmin-table' }, t); };
   const sum = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
   async function getSummary() { summary ??= await api('admin/summary'); who.textContent = `권한: ${L(summary.role)} · 판매 활성화는 Human Gate(자동 개통 없음)`; return summary; }
 
@@ -86,12 +86,17 @@
     async ai() {
       const d = await api('admin/ai-books');
       const out = [el('p', { className: 'muted', textContent: `무료 AI 한도 오늘 사용 ${d.budget.usedToday} / ${d.budget.dailyCap} · 유료 호출 없음 · 모든 책에 'AI 협업 초안 · 저자 감수' 표기` })];
-      out.push(table(['책', '분야', '진행', '상태'], d.books.map(b => [b.title, b.meta?.genre || b.genre, `${b.done}/${b.total}장`, ({ drafting: '초안 쓰는 중', author_review: '저자 감수 대기', approved: '감수 완료', discarded: '보류' })[b.status] || b.status])));
-      for (const b of d.books.filter(x => x.status !== 'drafting' || x.done > 0)) {
-        const open = el('button', { type: 'button', className: 'button', textContent: `「${b.title}」 원고 열기` });
-        open.addEventListener('click', async () => { view.replaceChildren(...await aiBook(b.id)); });
-        out.push(open);
-      }
+      const openable = b => b.status !== 'drafting' || b.done > 0;
+      const titleCell = b => {
+        const cell = el('span', { className: 'padmin-titlecell' }, el('span', { textContent: b.title }));
+        if (openable(b)) {
+          const open = el('button', { type: 'button', className: 'button small', textContent: '원고 열기', ariaLabel: `「${b.title}」 원고 열기` });
+          open.addEventListener('click', async () => { view.replaceChildren(...await aiBook(b.id)); });
+          cell.append(open);
+        }
+        return cell;
+      };
+      out.push(table(['책', '분야', '진행', '상태'], d.books.map(b => [titleCell(b), b.meta?.genre || b.genre, `${b.done}/${b.total}장`, ({ drafting: '초안 쓰는 중', author_review: '저자 감수 대기', approved: '감수 완료', discarded: '보류' })[b.status] || b.status])));
       if (!d.books.length) out.push(el('p', { className: 'muted', textContent: '첫 원고는 다음 예약 시간(매일 새벽 3시 37분)에 기획을 시작합니다.' }));
       return out;
     },
@@ -145,10 +150,98 @@
       el('p', { className: 'muted', textContent: '초대받은 사람이 같은 이메일로 인증된 에코디 계정에 로그인하면 서버가 이메일을 확인한 뒤 권한을 부여합니다. 모든 초대·수락·회수는 감사 기록에 남습니다.' }),
       el('h2', { textContent: '현재 권한자' }), roleTable, el('h2', { textContent: '초대 내역' }), invites];
   }
+  // PUBLISHING-AI-READER-001: 검수 화면을 실제 전자책처럼 — 표지·목차·장 넘김·글자 크기, [확인필요] 표시는 눈에 띄게.
+  const MARK_RE = /(\[확인필요\]|\[본문확인\])/;
+  function inline(text) {
+    const out = [];
+    for (const part of String(text).split(/(\*\*[^*]+\*\*|\[확인필요\]|\[본문확인\])/)) {
+      if (!part) continue;
+      if (MARK_RE.test(part) && /^\[(확인필요|본문확인)\]$/.test(part)) out.push(el('mark', { className: 'rd-flag', textContent: part }));
+      else if (/^\*\*[^*]+\*\*$/.test(part)) out.push(el('strong', { textContent: part.slice(2, -2) }));
+      else out.push(part);
+    }
+    return out;
+  }
+  function readerBlocks(body) {
+    const nodes = [];
+    for (const block of String(body || '').split(/\n{2,}/)) {
+      const t = block.trim(); if (!t) continue;
+      const lines = t.split('\n');
+      if (/^#{1,4}\s/.test(t) && lines.length === 1) { nodes.push(el('h3', { className: 'rd-h' }, ...inline(t.replace(/^#+\s*/, '')))); continue; }
+      if (lines.every(l => /^>\s?/.test(l))) { nodes.push(el('aside', { className: 'rd-note' }, ...inline(lines.map(l => l.replace(/^>\s?/, '')).join(' ')))); continue; }
+      if (lines.every(l => /^\s*([-*•]|\d+[.)])\s+/.test(l))) {
+        const ol = /^\s*\d/.test(lines[0]);
+        nodes.push(el(ol ? 'ol' : 'ul', { className: 'rd-list' }, ...lines.map(l => el('li', {}, ...inline(l.replace(/^\s*([-*•]|\d+[.)])\s+/, ''))))));
+        continue;
+      }
+      const head = lines[0]; const rest = lines.slice(1);
+      if (rest.length && rest.every(l => /^\s*([-*•]|\d+[.)])\s+/.test(l)) && !/^#{1,4}\s/.test(head)) {
+        nodes.push(el('p', { className: 'rd-lead' }, ...inline(head)));
+        nodes.push(el(/^\s*\d/.test(rest[0]) ? 'ol' : 'ul', { className: 'rd-list' }, ...rest.map(l => el('li', {}, ...inline(l.replace(/^\s*([-*•]|\d+[.)])\s+/, ''))))));
+        continue;
+      }
+      if (/^#{1,4}\s/.test(head)) { nodes.push(el('h3', { className: 'rd-h' }, ...inline(head.replace(/^#+\s*/, '')))); if (rest.length) nodes.push(el('p', {}, ...inline(rest.join(' ')))); continue; }
+      nodes.push(el('p', {}, ...inline(lines.join(' '))));
+    }
+    return nodes;
+  }
+  function ebookReader(d, getChapter, onEdit) {
+    const pages = [{ kind: 'cover' }, { kind: 'toc' }, ...d.chapters.map(c => ({ kind: 'ch', number: c.number }))];
+    let at = 0; let size = 1;
+    try { size = Number(localStorage.getItem('padmin-reader-size')) || 1; } catch {}
+    const page = el('article', { className: 'rd-page', tabIndex: 0 });
+    const pos = el('span', { className: 'rd-pos' });
+    const flags = el('span', { className: 'rd-flags' });
+    const prev = el('button', { type: 'button', className: 'rd-btn', textContent: '‹ 이전' });
+    const next = el('button', { type: 'button', className: 'rd-btn', textContent: '다음 ›' });
+    const smaller = el('button', { type: 'button', className: 'rd-btn', textContent: '가-', ariaLabel: '글자 작게' });
+    const bigger = el('button', { type: 'button', className: 'rd-btn', textContent: '가+', ariaLabel: '글자 크게' });
+    const edit = el('button', { type: 'button', className: 'rd-btn rd-edit', textContent: '이 장 고치기' });
+    const device = el('div', { className: 'rd-device' }, page);
+    const bar = el('div', { className: 'rd-bar' }, prev, pos, next, el('span', { className: 'rd-gap' }), flags, smaller, bigger, edit);
+    const countFlags = () => d.chapters.reduce((n, c) => n + ((getChapter(c.number).body.match(/\[확인필요\]|\[본문확인\]/g) || []).length), 0);
+    function draw() {
+      const p = pages[at];
+      device.style.setProperty('--rd-scale', String(size));
+      page.replaceChildren();
+      if (p.kind === 'cover') {
+        page.append(el('div', { className: 'rd-cover' },
+          el('p', { className: 'rd-series', textContent: 'EKODI AI 협업' }),
+          el('h1', { textContent: d.book.title }),
+          el('p', { className: 'rd-sub', textContent: d.book.meta.subtitle || '' }),
+          el('p', { className: 'rd-author', textContent: d.book.meta.author || '' }),
+          el('p', { className: 'rd-disc', textContent: d.book.meta.disclosure || 'AI 협업 초안 · 저자 감수' })));
+      } else if (p.kind === 'toc') {
+        const ol = el('ol', { className: 'rd-toc' });
+        d.chapters.forEach((c, i) => { const a = el('button', { type: 'button', textContent: `${c.number}. ${getChapter(c.number).title}` }); a.addEventListener('click', () => { at = i + 2; draw(); }); ol.append(el('li', {}, a)); });
+        page.append(el('h2', { className: 'rd-ch-title', textContent: '차례' }), ol);
+      } else {
+        const c = getChapter(p.number);
+        page.append(el('p', { className: 'rd-ch-no', textContent: `${p.number}장` }), el('h2', { className: 'rd-ch-title', textContent: c.title }));
+        const fig = el('figure', { className: 'rd-fig' });
+        api(`admin/ai-books/${d.book.id}/images/${p.number}`).then(r => { if (pages[at] === p) fig.append(el('img', { src: `data:${r.mime};base64,${r.data}`, alt: `${c.title} 삽화` })); }).catch(() => {});
+        page.append(fig, ...(c.body.trim() ? readerBlocks(c.body) : [el('p', { className: 'rd-empty', textContent: '아직 쓰지 않은 장입니다.' })]));
+      }
+      pos.textContent = p.kind === 'cover' ? '표지' : p.kind === 'toc' ? '차례' : `${p.number} / ${d.chapters.length}장`;
+      const n = countFlags(); flags.textContent = n ? `확인 표시 ${n}곳` : '확인 표시 없음'; flags.classList.toggle('rd-flags-on', n > 0);
+      prev.disabled = at === 0; next.disabled = at === pages.length - 1; edit.hidden = p.kind !== 'ch';
+      page.scrollTop = 0;
+    }
+    prev.addEventListener('click', () => { if (at > 0) { at--; draw(); } });
+    next.addEventListener('click', () => { if (at < pages.length - 1) { at++; draw(); } });
+    const setSize = v => { size = Math.min(1.4, Math.max(0.85, Math.round(v * 100) / 100)); try { localStorage.setItem('padmin-reader-size', String(size)); } catch {} draw(); };
+    smaller.addEventListener('click', () => setSize(size - 0.1));
+    bigger.addEventListener('click', () => setSize(size + 0.1));
+    edit.addEventListener('click', () => { const p = pages[at]; if (p.kind === 'ch') onEdit(p.number); });
+    page.addEventListener('keydown', e => { if (e.key === 'ArrowRight') next.click(); if (e.key === 'ArrowLeft') prev.click(); });
+    draw();
+    return { node: el('section', { className: 'rd' }, bar, device), refresh: draw, goChapter(n) { const i = pages.findIndex(x => x.number === n); if (i >= 0) { at = i; draw(); } } };
+  }
   async function aiBook(id) {
     const d = await api(`admin/ai-books/${id}`);
     const msg = el('p', { className: 'muted', role: 'status' });
     const parts = [el('h2', { textContent: d.book.title }), el('p', { className: 'muted', textContent: `${d.book.meta.subtitle || ''} · ${d.book.meta.genre || ''} · 저자 ${d.book.meta.author} · ${d.book.meta.disclosure}` })];
+    const editors = new Map(); const editSections = [];
     for (const c of d.chapters) {
       const title = el('input', { type: 'text', value: c.title, className: 'padmin-ai-title' });
       const body = el('textarea', { value: c.body, rows: 14, className: 'padmin-ai-body' });
@@ -156,8 +249,19 @@
       save.addEventListener('click', async () => { msg.textContent = '저장 중…'; try { await api(`admin/ai-books/${id}/chapters/${c.number}`, { title: title.value, body: body.value }, 'PUT'); msg.textContent = `${c.number}장을 저장했습니다.`; } catch (e) { msg.textContent = '저장하지 못했습니다.'; } });
       const fig = el('figure', { className: 'padmin-ai-fig' });
       api(`admin/ai-books/${id}/images/${c.number}`).then(r => fig.append(el('img', { src: `data:${r.mime};base64,${r.data}`, alt: `${c.title} 삽화` }))).catch(() => {});
-      parts.push(el('section', { className: 'padmin-ai-ch' }, el('h3', { textContent: `${c.number}장 · ${({ pending: '아직 안 씀', drafted: 'AI 초안(편집 완료)', edited: '감수 중' })[c.status] || c.status}` }), fig, title, body, save));
+      const sec = el('section', { className: 'padmin-ai-ch', id: `ai-ch-${c.number}` }, el('h3', { textContent: `${c.number}장 · ${({ pending: '아직 안 씀', drafted: 'AI 초안(편집 완료)', edited: '감수 중' })[c.status] || c.status}` }), fig, title, body, save);
+      editors.set(c.number, { title, body }); editSections.push(sec);
+      body.addEventListener('input', () => reader?.refresh()); title.addEventListener('input', () => reader?.refresh());
     }
+    let reader = null;
+    const getChapter = n => { const e = editors.get(n); return { title: e.title.value, body: e.body.value }; };
+    const editWrap = el('div', { className: 'padmin-ai-edit', hidden: true }, ...editSections);
+    const tabRead = el('button', { type: 'button', className: 'rd-tab', textContent: '전자책으로 보기', ariaPressed: 'true' });
+    const tabEdit = el('button', { type: 'button', className: 'rd-tab', textContent: '원고 고치기', ariaPressed: 'false' });
+    const mode = m => { const r = m === 'read'; reader.node.hidden = !r; editWrap.hidden = r; tabRead.setAttribute('aria-pressed', String(r)); tabEdit.setAttribute('aria-pressed', String(!r)); if (r) reader.refresh(); };
+    reader = ebookReader(d, getChapter, n => { mode('edit'); document.getElementById(`ai-ch-${n}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); editors.get(n)?.body.focus({ preventScroll: true }); });
+    tabRead.addEventListener('click', () => mode('read')); tabEdit.addEventListener('click', () => mode('edit'));
+    parts.push(el('div', { className: 'rd-tabs', role: 'group', ariaLabel: '검수 방식' }, tabRead, tabEdit), reader.node, editWrap);
     const approve = el('button', { type: 'button', className: 'button primary', textContent: '감수 완료' });
     approve.addEventListener('click', async () => {
       if (!confirm('모든 장을 읽고 고쳤고, [확인필요]·[본문확인] 표시를 모두 해결했습니까?')) return;

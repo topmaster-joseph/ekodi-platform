@@ -127,6 +127,11 @@ bucket_name = "ekodi-storage"
 binding = "CGMA_EDOC_FILES"
 bucket_name = "ekodi-storage"
 
+# 에코디교회 발급서류 원본(church/ekodichurch/issued/ prefix, private; served only through the church reports API to pastor-admin roles).
+[[r2_buckets]]
+binding = "CHURCH_DOCUMENT_FILES"
+bucket_name = "ekodi-storage"
+
 # Dedicated private quarantine: never serve or execute untrusted vendor archives.
 # Provision 'ekodi-pass-vendor-quarantine' before protected Control API deployment.
 [[r2_buckets]]

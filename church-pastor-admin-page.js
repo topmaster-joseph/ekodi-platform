@@ -1,5 +1,4 @@
 import { TENANT_ADMIN_CAPABILITIES, tenantAdminPolicySnapshot } from './tenant-admin-policy.js';
-import { tenantAdminMetricsTabsMarkup, mountTenantAdminMetricsTabs } from './tenant-admin-metrics-tabs.js';
 import { CHURCH_ADMIN_MENU, mountChurchAdminNavigation } from './church-admin-navigation.js';
 
 const SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
@@ -28,7 +27,8 @@ function pastorClient(POLICY){
   const CHURCH='ekodi-church';
   const SESSION_KEY='ekodi-church-pastor-session';
   const AUTH_URL='https://ekodi.kr/auth/';
-  const section=(location.pathname.replace(/\/+$/,'').match(/^\/ekodichurch\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i)?.[1]||'overview').toLowerCase();
+  const sectionFromPath=()=>(location.pathname.replace(/\/+$/,'').match(/^\/ekodichurch\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i)?.[1]||'overview').toLowerCase();
+  let section=sectionFromPath();
   const base='/ekodichurch/admin';
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -51,7 +51,7 @@ function pastorClient(POLICY){
     accounting:['회계관리','수입·지출 원장과 증빙을 관리합니다. 헌금수입은 헌금관리에서 자동 분개됩니다.'],
     receipts:['기부금영수증','교인의 발급 요청을 확인하고 검토·발급 상태를 관리합니다.'],
     reports:['사역보고','지난 사역과 다음 계획을 실제 교회 기록에 따라 작성·검토·승인·발송합니다.'],
-    documents:['문서보관','노회 제출서류·회의록·결산 등 교회 공식 문서를 인쇄용 웹페이지·한글 파일 링크로 등록하고 보관합니다.'],
+    documents:['문서보관','노회 제출서류·회의록·결산 등 교회 공식 문서와 발급서류(건강보험·소득증명·통장사본 등)를 등록하고 최근서류로 관리합니다.'],
     ai:['AI 목회비서','말씀·예배·돌봄의 반복 업무를 돕되 목회 기밀의 경계를 지킵니다.'],
     chrome:['헤더 · 푸터','교회 사용자 사이트의 헤더와 푸터 기본정보를 관리합니다.'],
     access:['목회자 · 권한','교회 운영공간의 역할과 민감정보 접근 범위를 확인합니다.']
@@ -76,8 +76,7 @@ function pastorClient(POLICY){
     const permitted=roleCapabilities(role);
     // Place contextual tabs immediately after the compact Work/Metrics selector.
     // Route-specific heading remains semantic but no longer wastes visible space.
-    const details=$('sectionNav'),viewTabs=document.querySelector('main .admin-view-tabs');
-    if(viewTabs&&details.previousElementSibling!==viewTabs)viewTabs.after(details);
+    const details=$('sectionNav');
     mountChurchAdminNavigation({
       root:$('adminNav'),tabsRoot:details,groups:CHURCH_ADMIN_MENU,
       activeKey:section,activeOwner:'church',base,showUnavailable:Boolean(role),
@@ -327,7 +326,28 @@ function pastorClient(POLICY){
     const f=$('attendanceForm');if(f)f.onsubmit=async e=>{e.preventDefault();try{state('저장 중');const body=Object.fromEntries(new FormData(f));body.source='manual';await rest('church_attendance','',{method:'POST',body});await attendance();}catch(err){$('formFlash').textContent=`저장 실패: ${err.message}`;state('확인 필요');}};
     state('출결 분석 운영');
   }
-  async function calendar(){state('불러오는 중');const rows=await rest('church_events','church_slug=eq.ekodi-church&select=id,title,event_date,event_time,location,category,status&order=event_date.asc&limit=100');$('summaryCards').innerHTML=[...staffCards(),card('일정',fmt(rows.length),'등록 일정'),card('수정',canWrite()?'가능':'조회만','역할 기반')].join('');const form=canWrite()?`<form id="eventForm" class="trade-form"><div class="trade-grid"><label>일정명<input name="title" required maxlength="160"></label><label>날짜<input name="event_date" type="date" required></label><label>시간<input name="event_time" type="time"></label><label>장소<input name="location" maxlength="180"></label><label>구분<select name="category"><option value="worship">예배</option><option value="ministry">사역</option><option value="meeting">회의</option><option value="care">돌봄</option><option value="other">기타</option></select></label><label>상태<select name="status"><option value="scheduled">예정</option><option value="done">완료</option><option value="cancelled">취소</option></select></label></div><div class="actions"><button class="button primary" type="submit">일정 등록</button></div><p id="formFlash" class="trade-flash"></p></form>`:'';$('mainPanel').innerHTML=`<h2>교회 일정</h2>${rows.length?`<div class="table-wrap"><table><thead><tr><th>날짜</th><th>일정</th><th>구분</th><th>장소</th><th>상태</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.event_date)} ${esc(r.event_time||'')}</td><td><strong>${esc(r.title)}</strong></td><td>${esc(r.category)}</td><td>${esc(r.location||'-')}</td><td><span class="tag ${r.status==='scheduled'?'live':''}">${esc(r.status)}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">등록된 일정이 없습니다.</p>'}${form}`;const f=$('eventForm');if(f)f.onsubmit=async e=>{e.preventDefault();try{state('저장 중');const body=Object.fromEntries(new FormData(f));body.church_slug=CHURCH;if(!body.event_time)delete body.event_time;await rest('church_events','',{method:'POST',body});await calendar();}catch(err){$('formFlash').textContent=`저장 실패: ${err.message}`;state('확인 필요');}};state('운영');}
+  let calMonth='',calDay='',calEdit=null;
+  async function calendar(){state('불러오는 중');const rows=await rest('church_events','church_slug=eq.ekodi-church&select=id,title,event_date,event_time,location,category,status&order=event_date.asc&limit=250');
+    const kst=new Date(Date.now()+9*36e5).toISOString().slice(0,10);if(!calMonth)calMonth=kst.slice(0,7);if(!calDay)calDay=kst;
+    const CAT={worship:'예배',ministry:'사역',meeting:'회의',care:'돌봄',other:'기타'},ST={scheduled:'예정',done:'완료',cancelled:'취소'};
+    const byDay={};for(const r of rows){(byDay[r.event_date]||(byDay[r.event_date]=[])).push(r);}
+    const [y,m]=calMonth.split('-').map(Number);const first=new Date(Date.UTC(y,m-1,1));const lead=first.getUTCDay();const days=new Date(Date.UTC(y,m,0)).getUTCDate();
+    let cells='';for(let i=0;i<lead;i++)cells+='<div class="acal-cell acal-blank"></div>';
+    for(let d=1;d<=days;d++){const key=`${calMonth}-${String(d).padStart(2,'0')}`;const list=byDay[key]||[];const dow=(lead+d-1)%7;
+      cells+=`<button type="button" class="acal-cell${key===kst?' acal-today':''}${key===calDay?' acal-sel':''}${dow===0?' acal-sun':''}${dow===6?' acal-sat':''}" data-day="${key}"><span class="acal-num">${d}</span>${list.slice(0,3).map(r=>`<span class="acal-ev acal-${esc(r.category)}${r.status==='cancelled'?' acal-cancel':''}">${esc((r.event_time||'').slice(0,5))} ${esc(r.title)}</span>`).join('')}${list.length>3?`<span class="acal-more">+${list.length-3}</span>`:''}</button>`;}
+    const dayList=(byDay[calDay]||[]).map(r=>`<li class="acal-item"><div><strong>${esc((r.event_time||'').slice(0,5)||'종일')} ${esc(r.title)}</strong><span>${esc(CAT[r.category]||r.category)} · ${esc(r.location||'장소 미정')} · ${esc(ST[r.status]||r.status)}</span></div>${canWrite()?`<div class="acal-actions"><button type="button" class="button" data-edit="${esc(r.id)}">수정</button><button type="button" class="button danger" data-del="${esc(r.id)}">삭제</button></div>`:''}</li>`).join('');
+    const e=calEdit?rows.find(r=>r.id===calEdit):null;const v=k=>esc(e?(e[k]||''):(k==='event_date'?calDay:''));const opt=(map,cur,def)=>Object.entries(map).map(([k,t])=>`<option value="${k}"${(cur||def)===k?' selected':''}>${t}</option>`).join('');
+    const form=canWrite()?`<form id="eventForm" class="trade-form"><h3>${e?'일정 수정':'일정 등록'}</h3><div class="trade-grid"><label>일정명<input name="title" required maxlength="160" value="${v('title')}"></label><label>날짜<input name="event_date" type="date" required value="${v('event_date')}"></label><label>시간<input name="event_time" type="time" value="${esc(e?(e.event_time||'').slice(0,5):'')}"></label><label>장소<input name="location" maxlength="180" value="${v('location')}"></label><label>구분<select name="category">${opt(CAT,e?.category,'other')}</select></label><label>상태<select name="status">${opt(ST,e?.status,'scheduled')}</select></label></div><div class="actions"><button class="button primary" type="submit">${e?'수정 저장':'일정 등록'}</button>${e?'<button class="button" type="button" id="eventCancel">취소</button>':''}</div><p id="formFlash" class="trade-flash"></p></form>`:'';
+    $('summaryCards').innerHTML=[...staffCards(),card('일정',fmt(rows.length),'등록 일정'),card('수정',canWrite()?'가능':'조회만','역할 기반')].join('');
+    $('mainPanel').innerHTML=`<h2>교회 일정</h2><p class="acal-hint">관리자 일정에 등록한 예정 일정은 홈페이지 주요일정에 함께 표시됩니다(돌봄 제외).</p><div class="acal-head"><button type="button" class="button" data-month="-1">‹</button><strong>${y}년 ${m}월</strong><button type="button" class="button" data-month="1">›</button><button type="button" class="button" data-month="0">오늘</button></div><div class="acal-grid">${['일','월','화','수','목','금','토'].map(t=>`<div class="acal-dow">${t}</div>`).join('')}${cells}</div><h3 class="acal-daytitle">${esc(calDay)} 일정</h3>${dayList?`<ul class="acal-list">${dayList}</ul>`:'<p class="empty">선택한 날짜에 등록된 일정이 없습니다.</p>'}${form}`;
+    const panel=$('mainPanel');
+    panel.querySelectorAll('[data-month]').forEach(b=>b.onclick=()=>{const step=Number(b.dataset.month);if(!step){calMonth=kst.slice(0,7);calDay=kst;}else{const t=new Date(Date.UTC(y,m-1+step,1));calMonth=t.toISOString().slice(0,7);}calendar();});
+    panel.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{calDay=b.dataset.day;calEdit=null;calendar();});
+    panel.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{calEdit=b.dataset.edit;calendar().then(()=>$('eventForm')?.scrollIntoView({behavior:'smooth'}));});
+    panel.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{const r=rows.find(x=>x.id===b.dataset.del);if(!r||!confirm(`'${r.title}' 일정을 삭제할까요?`))return;try{state('삭제 중');await rest('church_events','id='+encodeURIComponent(r.id),{method:'DELETE'});calEdit=null;await calendar();}catch(err){alert(`삭제 실패: ${err.message}`);state('확인 필요');}});
+    const c=$('eventCancel');if(c)c.onclick=()=>{calEdit=null;calendar();};
+    const f=$('eventForm');if(f)f.onsubmit=async ev=>{ev.preventDefault();try{state('저장 중');const body=Object.fromEntries(new FormData(f));if(calEdit){await rest('church_events','id='+encodeURIComponent(calEdit),{method:'PATCH',body});}else{body.church_slug=CHURCH;if(!body.event_time)delete body.event_time;await rest('church_events','',{method:'POST',body});}calDay=body.event_date||calDay;calMonth=calDay.slice(0,7);calEdit=null;await calendar();}catch(err){$('formFlash').textContent=`저장 실패: ${err.message}`;state('확인 필요');}};
+    state('운영');}
   async function ministry(){
     state('조직 · 사역팀 확인 중');
     const currentYear=new Date().getFullYear();
@@ -423,15 +443,30 @@ function pastorClient(POLICY){
   async function access(){const rows=staff.role==='senior_pastor'?await rest('church_staff','church_slug=eq.ekodi-church&select=id,email,display_name,role,active,created_at&order=created_at.asc'):[];$('summaryCards').innerHTML=[...staffCards(),card('권한 원칙','최소권한','교회 로컬'),card('감사','민감 작업 기록','audit-ready')].join('');$('mainPanel').innerHTML=`<h2>목회자 · 권한</h2><p class="empty">플랫폼 최고관리자 권한과 교회 로컬 권한을 분리합니다. 돌봄 데이터와 재정 상세는 각각 허용된 역할에게만 표시합니다.</p>${staff.role==='senior_pastor'?(rows.length?`<div class="table-wrap"><table><thead><tr><th>이름</th><th>이메일</th><th>역할</th><th>상태</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.display_name||'-')}</td><td>${esc(r.email||'-')}</td><td>${esc(roleLabel[r.role]||r.role)}</td><td><span class="tag ${r.active?'live':'warn'}">${r.active?'활성':'중지'}</span></td></tr>`).join('')}</tbody></table></div>`:'<p class="empty">등록된 담당자가 없습니다.</p>'):'<p class="empty">전체 담당자 목록은 담임목회자에게만 표시합니다.</p>'}`;state('권한 확인');}
   async function render(){try{if(!session)return loginPanel();state('권한 확인 중');if(!(await loadStaff()))return deniedPanel();if(!canSection(section))return permissionPanel();if(section==='people')return people();if(section==='attendance')return attendance();if(section==='worship')return worship();if(section==='care')return care();if(section==='calendar')return calendar();if(section==='ministry')return ministry();if(section==='offerings')return offerings();if(section==='banking')return banking();if(section==='accounting')return accounting();if(section==='receipts')return receipts();if(section==='reports')return reports();if(section==='documents')return documents();if(section==='ai')return ai();if(section==='chrome')return chrome();if(section==='access')return access();return overview();}catch(err){if(err.status===401){clear();return loginPanel();}const schemaMissing=['42P01','PGRST205'].includes(err.code)||String(err.message).includes('church_');$('summaryCards').innerHTML=[card('상태','확인 필요','실패를 성공으로 표시하지 않음')].join('');$('mainPanel').innerHTML=`<h2>${schemaMissing?'목회 데이터 기반 준비 필요':'데이터를 불러오지 못했습니다'}</h2><p class="empty">${esc(err.message)}</p>`;state('확인 필요');}}
   async function boot(){setHeader();try{session=await consumeHandoff()||await validSession();}catch{session=null;}await render();}
+  // 교회 전용 화면 전환은 전체 페이지를 다시 불러오지 않는다: 왼쪽 메뉴·상단 탭은 유지하고 오른쪽 패널만 바꾼다.
+  async function go(next){section=next;setHeader();await render();}
+  document.addEventListener('click',event=>{
+    const link=event.target.closest('#adminNav a[href],#sectionNav a[href]');
+    if(!link||event.defaultPrevented||event.button||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+    const match=new URL(link.href,location.origin).pathname.replace(/\/+$/,'').match(/^\/ekodichurch\/admin(?:\/([a-z-]+))?$/);
+    if(!match)return;
+    const next=(match[1]||'overview').toLowerCase();
+    if(!meta[next])return; // 워크스페이스 소유 메뉴는 원래 주소로 이동
+    event.preventDefault();
+    if(next===section)return;
+    history.pushState({churchAdminSection:next},'',base+'/'+next);
+    void go(next);
+  });
+  window.addEventListener('popstate',()=>{const next=sectionFromPath();if(next!==section)void go(next);});
   $('churchLogout')?.addEventListener('click',()=>{clear();location.assign(base)});
   boot();
 }
 
 export function churchPastorAdminScript(){
   const payload=tenantAdminPolicySnapshot();
-  return new Response(`const __name=(target,value)=>Object.defineProperty(target,'name',{value,configurable:true});\n(${mountTenantAdminMetricsTabs.toString()})();\nconst CHURCH_ADMIN_MENU=${JSON.stringify(CHURCH_ADMIN_MENU)};\nconst mountChurchAdminNavigation=${mountChurchAdminNavigation.toString()};\n(${pastorClient.toString()})(${JSON.stringify(payload)});`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+  return new Response(`const __name=(target,value)=>Object.defineProperty(target,'name',{value,configurable:true});\nconst CHURCH_ADMIN_MENU=${JSON.stringify(CHURCH_ADMIN_MENU)};\nconst mountChurchAdminNavigation=${mountChurchAdminNavigation.toString()};\n(${pastorClient.toString()})(${JSON.stringify(payload)});`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 }
 
 export function churchPastorAdminPage(){
-  return new Response(`<!doctype html><html lang="ko" data-ekodi-authority-scope="tenant" data-ekodi-church-unified-admin="true"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow,noarchive"><title>에코디교회 목회자 관리자</title><link rel="stylesheet" href="/workspace-admin.css"><link rel="stylesheet" href="/church-reports-admin.css"></head><body><header class="topbar" data-ekodi-admin-topbar><a class="brand" href="/">EKODI</a><div class="context"><strong>에코디교회</strong><span>목회자 운영</span></div></header><div class="layout"><aside class="sidebar" data-ekodi-admin-sidebar><div class="scope"><span>교회 운영공간</span><strong>에코디교회</strong></div><nav id="adminNav" data-ekodi-admin-nav></nav><p class="boundary">플랫폼 전체 관리는 <a href="https://ekodi.kr/admin/">ekodi.kr/admin</a>에서 별도로 수행합니다.</p><div class="sidebar-footer" data-ekodi-admin-sidebar-footer><a class="public-link" href="/ekodichurch">교회 화면</a><button id="churchLogout" data-ekodi-logout type="button">로그아웃</button></div></aside><main data-ekodi-admin-main><section class="heading"><div><p class="eyebrow">EKODI CHURCH · PASTOR ADMIN</p><h1 id="pageTitle">오늘의 교회</h1><p id="pageCopy">오늘 일정·다음 예배·새가족·돌봄 후속처럼 지금 확인할 일을 한눈에 봅니다.</p></div><span class="state" id="pageState">확인 중</span></section><nav id="sectionNav" class="church-admin-detail-tabs" aria-label="세부 메뉴" hidden></nav>${tenantAdminMetricsTabsMarkup}<section class="cards" id="summaryCards" role="tabpanel" aria-labelledby="adminMetricsTab" hidden></section><section class="panel" id="mainPanel" role="tabpanel" aria-labelledby="adminWorkTab"><p class="loading">목회 운영공간을 확인하고 있습니다.</p></section></main></div><script src="/church-pastor-admin.js?v=20260928-banking1" defer></script><script src="/church-reports-admin.js?v=20261106-docs1" defer></script></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer','content-security-policy':"default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",'x-ekodi-route':'church-pastor-admin','x-ekodi-authority-scope':'tenant'}});
+  return new Response(`<!doctype html><html lang="ko" data-ekodi-authority-scope="tenant" data-ekodi-church-unified-admin="true"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow,noarchive"><title>에코디교회 목회자 관리자</title><link rel="stylesheet" href="/workspace-admin.css"><link rel="stylesheet" href="/church-reports-admin.css?v=20261108-cal1"></head><body><header class="topbar" data-ekodi-admin-topbar><a class="brand" href="/">EKODI</a><div class="context"><strong>에코디교회</strong><span>목회자 운영</span></div></header><div class="layout"><aside class="sidebar" data-ekodi-admin-sidebar><div class="scope"><span>교회 운영공간</span><strong>에코디교회</strong></div><nav id="adminNav" data-ekodi-admin-nav></nav><p class="boundary">플랫폼 전체 관리는 <a href="https://ekodi.kr/admin/">ekodi.kr/admin</a>에서 별도로 수행합니다.</p><div class="sidebar-footer" data-ekodi-admin-sidebar-footer><a class="public-link" href="/ekodichurch">교회 화면</a><button id="churchLogout" data-ekodi-logout type="button">로그아웃</button></div></aside><main data-ekodi-admin-main><section class="heading"><div><p class="eyebrow">EKODI CHURCH · PASTOR ADMIN</p><h1 id="pageTitle">오늘의 교회</h1><p id="pageCopy">오늘 일정·다음 예배·새가족·돌봄 후속처럼 지금 확인할 일을 한눈에 봅니다.</p></div><span class="state" id="pageState">확인 중</span></section><nav id="sectionNav" class="church-admin-detail-tabs" aria-label="세부 메뉴" hidden></nav><section class="cards" id="summaryCards" hidden></section><section class="panel" id="mainPanel"><p class="loading">목회 운영공간을 확인하고 있습니다.</p></section></main></div><script src="/church-pastor-admin.js?v=20261108-cal1" defer></script><script src="/church-reports-admin.js?v=20261107-issued1" defer></script></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'DENY','referrer-policy':'no-referrer','content-security-policy':"default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",'x-ekodi-route':'church-pastor-admin','x-ekodi-authority-scope':'tenant'}});
 }

@@ -26,6 +26,7 @@ export const INDEXNOW_MAX_BATCH = 10000;
 export const INDEXNOW_DEFAULT_BATCH = 1000;
 export const INDEXNOW_MIN_KST_HOUR = 4;
 const MALL_PRODUCTS_URL = 'https://ekodi.kr/ekodimall/api/public/products?limit=48';
+const JOURNAL_POSTS_URL = 'https://ekodi.kr/journal/api/posts';
 const UA = 'EKODI-Public-Discovery/1.0';
 
 const clean = (value, max = 240) => String(value ?? '').trim().slice(0, max);
@@ -56,6 +57,7 @@ async function fingerprint(value) {
 export async function collectIndexCandidates(env, { fetch: fetchImpl = globalThis.fetch, now = Date.now(), registry = buildEkodiPublicRegistry } = {}) {
   const candidates = new Map();
   const errors = [];
+  const optionalErrors = []; // 보조 출처(저널) 실패는 기록만 하고 일일 완료 판정을 막지 않는다.
   const add = async (url, basis, source) => {
     const canonical = canonicalIndexUrl(url);
     if (!canonical || candidates.has(canonical)) return;
@@ -66,6 +68,20 @@ export async function collectIndexCandidates(env, { fetch: fetchImpl = globalThi
     for (const resource of built?.resources || []) await add(resource.url, [resource.updatedAt || resource.publishedAt || 'static', resource.title || ''], 'registry');
   } catch (error) { errors.push(`registry:${clean(error?.message, 120)}`); }
   await add(MALL_PICKS_CANONICAL, ['picks', isoWeekKey(now)], 'picks');
+  // JOURNAL-DISCOVERY-20261108: 에코디저널 글(공개 API) — 제목·수정일이 바뀐 글만 다시 제출된다.
+  try {
+    const source = env?.JOURNAL?.fetch
+      ? await env.JOURNAL.fetch(new Request('https://journal.internal/api/posts', { headers:{ accept:'application/json' } }))
+      : await fetchImpl(JOURNAL_POSTS_URL, { headers:{ 'user-agent':UA, accept:'application/json' } });
+    if (!source.ok) throw new Error(`HTTP ${source.status}`);
+    const body = await source.json();
+    await add('https://ekodi.kr/journal/', ['journal-home', (body?.posts || [])[0]?.updatedAt || ''], 'journal');
+    for (const post of Array.isArray(body?.posts) ? body.posts.slice(0, 500) : []) {
+      const slug = clean(post?.slug, 100);
+      if (!/^[a-z0-9][a-z0-9-]{1,100}$/.test(slug)) continue;
+      await add(`https://ekodi.kr/journal/p/${slug}`, [post.title, post.updatedAt || post.publishedAt || ''], 'journal');
+    }
+  } catch (error) { optionalErrors.push(`journal:${clean(error?.message, 120)}`); }
   try {
     const source = env?.MALL_API?.fetch
       ? await env.MALL_API.fetch(new Request('https://mall-api.internal/api/public/products?limit=48'))
@@ -79,7 +95,7 @@ export async function collectIndexCandidates(env, { fetch: fetchImpl = globalThi
       await add(mallProductCanonicalUrl(code), [p.name, p.price, p.oneLine, p.story, p.saleType, item.updatedAt || item.publishedAt || ''], 'mall_product');
     }
   } catch (error) { errors.push(`mall_products:${clean(error?.message, 120)}`); }
-  return { candidates:[...candidates.values()], errors };
+  return { candidates:[...candidates.values()], errors, optionalErrors };
 }
 
 export async function changedCandidates(env, candidates) {
@@ -117,7 +133,7 @@ export async function submitChangedUrls(env, options = {}) {
   const fetchImpl = options.fetch || globalThis.fetch;
   const nowMs = options.now ?? Date.now();
   const nowIso = new Date(nowMs).toISOString();
-  const { candidates, errors } = await collectIndexCandidates(env, { ...options, fetch:fetchImpl, now:nowMs });
+  const { candidates, errors, optionalErrors = [] } = await collectIndexCandidates(env, { ...options, fetch:fetchImpl, now:nowMs });
   const changed = await changedCandidates(env, candidates);
   // Submission success is meaningful only when every candidate source was read.
   // A transient registry/Mall outage must not mark the KST day complete, since
@@ -125,7 +141,7 @@ export async function submitChangedUrls(env, options = {}) {
   // The historical committed fingerprint represents Naver acceptance; the
   // shared IndexNow endpoint is informational under the existing contract.
   const summary = { ok:true, status:'pending', candidates:candidates.length, changed:changed.length,
-    submitted:0, failedBatches:0, partnerFailures:0, batches:[], sourceErrors:errors };
+    submitted:0, failedBatches:0, partnerFailures:0, batches:[], sourceErrors:errors, optionalSourceErrors:optionalErrors };
   for (const batch of batches(changed, options.batchSize)) {
     const urls = batch.map(item => item.url);
     const results = [];

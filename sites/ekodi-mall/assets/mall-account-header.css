@@ -1,0 +1,105 @@
+/* EKODI Mall shared public header: account display never grants authorization. */
+.mall-header .mall-account{display:inline-flex;align-items:center;justify-content:flex-end;min-width:0;flex:0 0 auto}
+.mall-header .mall-account-signed{display:inline-flex;align-items:center;gap:7px;min-width:0}
+.mall-header .mall-account-login,.mall-header [data-mall-logout]{
+ display:inline-flex;align-items:center;justify-content:center;min-height:34px;
+ padding:7px 11px;border:1px solid #cad5df;border-radius:999px;
+ background:#fff;color:#102848;font-size:12px;font-weight:800;line-height:1.25;
+ cursor:pointer;white-space:nowrap;text-decoration:none
+}
+.mall-header [data-mall-logout]:disabled{opacity:.65;cursor:wait}
+.mall-header .mall-account-id{display:inline-block;max-width:165px;min-width:0;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap;color:#263e56;font-size:11px;font-weight:750}
+.mall-header .mall-account-login:focus-visible,.mall-header [data-mall-logout]:focus-visible{
+ outline:3px solid #37699c;outline-offset:3px
+}
+.mall-header .mall-account [hidden]{display:none!important}
+@media(max-width:1040px){
+ .mall-header .mall-account-id{max-width:110px}
+ .mall-header .mall-header-top{gap:12px}
+ .mall-header .actions{gap:6px}
+}
+@media(max-width:760px){
+ .mall-header .mall-account-login,.mall-header [data-mall-logout]{min-height:31px;padding:6px 8px;font-size:11px}
+ .mall-header .mall-account-id{max-width:105px;font-size:10px}
+}
+@media(max-width:640px){
+ .mall-header .mall-header-top{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  grid-template-areas:"mall-brand mall-account" "mall-search mall-search";
+  height:auto;min-height:86px;gap:7px;padding:8px 0
+ }
+ .mall-header .brand{grid-area:mall-brand;min-width:0}
+ .mall-header .mall-global-search{grid-area:mall-search;min-width:0;width:100%;height:35px}
+ .mall-header .actions{grid-area:mall-account;min-width:0;justify-self:end;display:flex;gap:5px}
+ .mall-header .mall-account-id{max-width:93px}
+ .mall-header .mall-account-signed{gap:5px}
+ .mall-header .mall-global-search input{padding:7px 12px;font-size:12px}
+ .mall-header .mall-global-search button{height:33px}
+}
+@media(max-width:350px){.mall-header .mall-account-id{max-width:73px}}
+
+/* Legacy Mall pages mount the same verified controls next to, not inside, nav.
+   Their mobile nav is hidden at 760px, but the account must remain visible. */
+.header:not(.mall-header)>.mall-account{display:inline-flex;align-items:center;flex:0 0 auto;margin-left:auto;gap:6px}
+.header:not(.mall-header) .mall-account-signed{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.header:not(.mall-header) .mall-account-id{display:inline-block;max-width:150px;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#263e56;font-size:12px;font-weight:750}
+.header:not(.mall-header) .mall-account-login,.header:not(.mall-header) [data-mall-logout]{
+ display:inline-flex;align-items:center;justify-content:center;min-height:34px;
+ padding:7px 12px;border:1px solid #cad5df;border-radius:999px;
+ background:#fff;color:#102848;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap
+}
+.header:not(.mall-header) .mall-account [hidden]{display:none!important}
+.header:not(.mall-header) .mall-account-login:focus-visible,
+.header:not(.mall-header) [data-mall-logout]:focus-visible{outline:3px solid #37699c;outline-offset:3px}
+@media(max-width:760px){
+ .header:not(.mall-header) .mall-account-id{max-width:105px;font-size:10px}
+ .header:not(.mall-header) .mall-account-login,
+ .header:not(.mall-header) [data-mall-logout]{min-height:31px;padding:6px 8px;font-size:11px}
+}
+@media(max-width:350px){.header:not(.mall-header) .mall-account-id{max-width:70px}}
+
+/* MALL-HEADER-COMPACT-9032 — one aligned header row, a shorter search, no account
+   duplication in the category bar; account/logout are never hidden. */
+.mall-header .mall-header-top{
+  grid-template-columns:minmax(150px,1fr) minmax(185px,310px) max-content;
+  column-gap:clamp(10px,1.6vw,20px);
+}
+.mall-header .mall-global-search{width:100%;max-width:310px;justify-self:end}
+.mall-header .actions{
+  display:flex;align-items:center;justify-content:flex-start;
+  justify-self:end;gap:8px;white-space:nowrap;min-width:0
+}
+.mall-header .actions .mall-account{order:0;flex:0 0 auto}
+.mall-header .actions>.icon{order:1;flex:0 0 auto;min-width:40px;min-height:36px}
+.mall-header .actions>.seller-mini{order:2;flex:0 0 auto}
+.mall-header .mall-account-id{max-width:132px;font-size:12px;font-weight:800}
+@media(max-width:900px){
+  .mall-header .mall-header-top{
+    display:grid;grid-template-columns:minmax(0,1fr) auto;
+    grid-template-areas:"mall-brand mall-account" "mall-search mall-search";
+    height:auto;min-height:92px;gap:7px;padding:8px 0
+  }
+  .mall-header .brand{grid-area:mall-brand;min-width:0}
+  .mall-header .actions{grid-area:mall-account;justify-self:end;gap:6px}
+  .mall-header .mall-global-search{
+    grid-area:mall-search;justify-self:center;width:min(100%,310px);max-width:310px;height:36px
+  }
+  .mall-header .mall-global-search button{height:34px}
+  .mall-header .mall-account-id{max-width:115px}
+}
+@media(max-width:640px){
+  .mall-header .mall-header-top{
+    grid-template-areas:"mall-brand mall-account" "mall-search mall-search";
+    grid-template-columns:minmax(0,1fr) auto;
+    height:auto;min-height:88px
+  }
+  .mall-header .actions{gap:5px}
+  .mall-header .mall-account-id{max-width:102px;font-size:11px}
+}
+@media(max-width:390px){
+  .mall-header .actions>.icon{min-width:32px;min-height:32px;padding:6px}
+  .mall-header .mall-account-id{max-width:85px;font-size:10px}
+  .mall-header .mall-account-login,.mall-header [data-mall-logout]{padding:5px 7px}
+}

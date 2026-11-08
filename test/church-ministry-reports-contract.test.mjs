@@ -12,7 +12,7 @@ test('church ministry reports backend is pastor-scoped and keeps approval delive
   for (const marker of [
     '/api/church/admin/reports',
     'CHURCH_PASTOR_API',
-    "table', 'church_staff'",
+    "scope', 'staff-access'",
     "WRITE_ROLES = new Set(['senior_pastor','pastor','staff'])",
     "APPROVE_ROLES = new Set(['senior_pastor','pastor'])",
     'AI_DRAFT',

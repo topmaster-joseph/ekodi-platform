@@ -11,8 +11,8 @@ const origin=String(ARG.origin||'https://ekodi.kr').replace(/\/+$/,'');
 const allowed=new Set(['https://ekodi.kr','https://seonammedi.kr','http://127.0.0.1:8765','http://localhost:8765']);
 if(!allowed.has(origin))throw new Error('Origin is not approved for read-only EKODI hero verification');
 const rootPath=origin==='https://seonammedi.kr'?'/':'/seonammedi/';
-const assetPath='/seonammedi/assets/campaign-reconsideration-20261013.png';
-const expectedSha='3d30b3faa1db1eeb075a4af8b25887000204ebb26c92f6640c5d70be7205c324';
+const assetPath='/seonammedi/assets/campaign-reconsideration-20261107.jpg';
+const expectedSha='f2aaed6182306ac7b8c2d5839f05e071e12ea7a096b6e06e44a77dd94dfd2825';
 const screenshotsPath=path.resolve(String(ARG.out||'artifacts/seonammedi-native-hero'));
 await fs.mkdir(screenshotsPath,{recursive:true});
 const report={
@@ -101,8 +101,7 @@ try {
             return false;
           })(),
           siteHeader:!!document.querySelector('.site-header nav'),
-          latestUpdates:!!document.querySelector('#homeLatestUpdates'),
-          spotlight:!!document.querySelector('#homeSpotlight'),
+          publicFeed:!!document.querySelector('#homePublicFeed'),
           mobileHint:!!document.querySelector('.campaign-hero-mobile-hint'),
           brand:document.querySelector('.brand')?.textContent?.trim().slice(0,100)
         };
@@ -114,13 +113,13 @@ try {
         ?new Set([assetPath,assetPath.replace(/^\/seonammedi/,'')])
         :new Set([assetPath]);
       must(expectedBrowserPath.has(new URL(entry.imageSrc).pathname),'hero_asset_path_changed');
-      must(entry.naturalWidth===1903&&entry.naturalHeight===735,'hero_source_dimensions_mismatch_or_not_loaded');
+      must(entry.naturalWidth===1360&&entry.naturalHeight===459,'hero_source_dimensions_mismatch_or_not_loaded');
       must(entry.alt.includes('국립의대'),'hero_accessibility_alt_missing');
       must(entry.heroDisplay==='block','hero_style_missing');
-      must(Math.abs(entry.displayedWidth/entry.displayedHeight-1903/735)<0.015,'hero_image_is_cropped_or_distorted');
+      must(Math.abs(entry.displayedWidth/entry.displayedHeight-1360/459)<0.015,'hero_image_is_cropped_or_distorted');
       must(entry.displayedWidth>=profile.width*0.90,'hero_not_prominent');
       must(!entry.horizontalOverflow,'viewport_horizontal_overflow');
-      must(entry.siteHeader&&entry.latestUpdates&&entry.spotlight,'homepage_functionality_missing');
+      must(entry.siteHeader&&entry.publicFeed,'homepage_functionality_missing');
       must(!entry.leadingEscapedText,'literal_escaped_newline_visible_above_header');
       must(entry.mobileHint,'mobile_magnification_instruction_missing');
       // The source-only probe additionally asserts the new shell truly mounted.

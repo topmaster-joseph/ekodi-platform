@@ -237,7 +237,8 @@ function ensureContainers(nav, root = document) {
 }
 
 function isPlatformSuperAdminSurface(){
-  return /^\/admin(?:\/|$)/.test(String(window.location?.pathname||''));
+  // /work/admin is the canonical address of the platform admin's 구인구직 section (same shell).
+  return /^\/(?:admin|work\/admin)(?:\/|$)/.test(String(window.location?.pathname||''));
 }
 
 function ensureMobilePrimaryNav(root=document){
@@ -859,6 +860,278 @@ export function syncAdminSidebar(root = document, options = {}) {
   return true;
 }
 
+
+// ADMIN-PANEL-TABS-001 (2026-11-07 소유자 지시): 오른쪽 작업화면을 스크롤 대신 탭으로 한눈에 본다.
+// 패널의 직계 블록을 옮기지 않고(다른 모듈의 삽입 위치 보존) 표시만 전환한다.
+const PANEL_TAB_STYLE_ID = 'ekodiAdminPanelTabsStyle';
+const PANEL_TAB_MIN_BLOCKS = 3;
+const PANEL_TAB_MAX_TABS = 8;
+const PANEL_OWN_TABS_SELECTOR = 'nav,[role="tablist"]:not(.admin-panel-tabs),[role="tab"]:not(.admin-panel-tabs [role="tab"]),[data-aiops-stage-tab]';
+const PANEL_TAB_SKIP = 'style,script,template,dialog,link,meta,summary,.admin-panel-tabs,iframe';
+// [data-ekodi-tab-pin]: 모듈이 '항상 위에 고정할 머리말·요약'을 직접 표시한다(제목만 있는 첫 탭 방지).
+const PANEL_TAB_PINNED = '[data-ekodi-tab-pin],.device-panel-head,.admin-panel-head,.section-head:first-child,.hero,.device-metrics';
+export const ADMIN_PANEL_TAB_PRESETS = Object.freeze({
+  devices: Object.freeze([
+    { id: 'status', label: '기기 현황', match: '.device-status-tools,.admin-browser-diagnostic', default: true },
+    { id: 'connect', label: 'PC 연결', match: '.device-setup-tools' },
+    { id: 'power', label: '원격 전원', match: '.device-wake-control,.remote-power-card,[data-ekodi-remote-power]' },
+    { id: 'tools', label: '전용 도구', match: '.device-performance-entry,.tapo-camera-panel,[data-tapo-camera-panel]' },
+    { id: 'history', label: '변경 이력', match: '.admin-risk-history' },
+  ]),
+  // 기기 현황 안쪽 세부 탭: 핵심 지표는 위에 고정하고, 세부 내용은 지표 바로 아래에서 전환한다.
+  'device-status': Object.freeze([
+    { id: 'list', label: '기기 목록', match: '.device-attention-summary,.device-roster-toolbar,.device-roster-overview,.device-type-filters,#ekodiDeviceList', default: true },
+    { id: 'jobs', label: '작업 관제', match: '#hybridExecutionPanel,.hybrid-execution' },
+    { id: 'browser', label: '브라우저 진단', match: '.admin-browser-diagnostic' },
+    { id: 'wake', label: '전원 복구', match: '.device-wake-control' },
+  ]),
+});
+// 패널 안쪽 묶음에 세부 탭을 적용한다(선택자 → 프리셋).
+const ADMIN_SUBTAB_HOSTS = Object.freeze([{ selector: '.device-status-tools', preset: 'device-status' }]);
+function subtabHostPreset(node) {
+  return ADMIN_SUBTAB_HOSTS.find(host => node.matches?.(host.selector))?.preset || '';
+}
+let panelTabsInstalled = false;
+function ensurePanelTabStyle(doc = document) {
+  if (doc.getElementById(PANEL_TAB_STYLE_ID)) return;
+  const style = doc.createElement('style');
+  style.id = PANEL_TAB_STYLE_ID;
+  style.textContent = `[data-ekodi-tab-hidden="true"]{display:none!important}
+[data-ekodi-tabbed="true"]:not(.hidden-panel):not([hidden]){display:flex;flex-direction:column;align-items:stretch}
+[data-ekodi-tabbed="true"]>*{min-width:0;order:1}
+[data-ekodi-tabbed="true"]>[data-ekodi-tab-pinned="true"]{order:-2}
+[data-ekodi-tabbed="true"]>.admin-panel-tabs{order:-1}
+.admin-panel-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 14px;padding:4px;border:1px solid #d9e1ec;border-radius:12px;background:#f5f8fc;position:sticky;top:0;z-index:5}
+.admin-panel-tabs button{border:0;border-radius:9px;padding:8px 14px;background:transparent;color:#334155;font:inherit;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.admin-panel-tabs button:hover{background:#e8eef7}
+.admin-panel-tabs button[aria-selected="true"]{background:#0f172a;color:#fff;box-shadow:0 1px 3px #0f172a40}
+.admin-panel-tabs.admin-panel-subtabs{position:static;margin:12px 0;background:#fff;border-color:#e2e8f0}
+.admin-panel-tabs.admin-panel-subtabs button{font-size:13px;padding:7px 12px}
+.admin-panel-tabs.admin-panel-subtabs button[aria-selected="true"]{background:#2563eb;color:#fff}
+.admin-panel-tabs button small{margin-left:6px;color:#64748b;font-weight:500}
+.admin-panel-tabs>button{flex:0 0 auto!important;min-width:max-content!important;max-width:none!important;overflow:visible!important;text-overflow:clip!important}
+@media(max-width:760px){.admin-panel-tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}}`;
+  doc.head?.append(style);
+}
+function panelBlockLabel(node, index) {
+  const pick = selector => node.querySelector?.(selector)?.textContent?.replace(/\s+/g, ' ').trim();
+  // data-ekodi-tab-label: 모듈이 지정한 짧은 탭 이름(모바일 잘림·숫자 라벨 방지)을 최우선한다.
+  const text = node.dataset?.ekodiTabLabel || node.getAttribute?.('aria-label')
+    || (node.tagName === 'DETAILS' ? (pick(':scope>summary strong') || pick(':scope>summary')) : '')
+    || pick('h2') || pick('h3') || pick(':scope>strong') || pick('strong') || '';
+  return text.slice(0, 18);
+}
+// 숫자·버전·한 글자 같은 값은 탭 이름이 될 수 없다(예: '36', 'v1.0.0').
+function isMeaningfulTabLabel(label) {
+  const text = String(label || '').trim();
+  if (!text || /^[vV]?[\d\s.,:%·/+\-]+$/.test(text)) return false;
+  return (text.match(/[가-힣A-Za-z]/g) || []).length >= 2;
+}
+function panelBlocks(panel) {
+  return [...panel.children].filter(node => !node.matches(PANEL_TAB_SKIP));
+}
+function panelTabStorageKey(panel) {
+  return `ekodi-admin-panel-tab:${location.pathname}:${panel.id || panel.dataset.panel || ''}:${subtabHostPreset(panel)}`;
+}
+function planPanelTabs(panel, blocks) {
+  const key = subtabHostPreset(panel) || String(panel.dataset.panel || '').split(/\s+/).find(name => ADMIN_PANEL_TAB_PRESETS[name]);
+  const plan = new Map();
+  const pinned = new Set();
+  if (key) {
+    const preset = ADMIN_PANEL_TAB_PRESETS[key];
+    for (const tab of preset) plan.set(tab.id, { id: tab.id, label: tab.label, nodes: [], default: Boolean(tab.default) });
+    for (const node of blocks) {
+      if (node.matches(PANEL_TAB_PINNED)) { pinned.add(node); continue; }
+      const tab = preset.find(item => node.matches(item.match));
+      const id = tab ? tab.id : 'other';
+      if (!plan.has(id)) plan.set(id, { id, label: '기타', nodes: [] });
+      plan.get(id).nodes.push(node);
+    }
+  } else {
+    // 자체 탭을 가진 화면(소셜·AI 운영센터 등)은 탭을 겹쳐 만들지 않는다.
+    if (panel.querySelector(PANEL_OWN_TABS_SELECTOR)) return null;
+    // 머리말과, 첫 탭 앞의 제목 없는 요약(지표 카드 등)은 위에 고정한다.
+    // 첫 탭 이후의 제목 없는 블록은 바로 앞 탭에 붙인다.
+    let last = null;
+    let count = 0;
+    let headPinned = false;
+    blocks.forEach((node, index) => {
+      // 숨겨진 블록(접힌 안내·지연 로딩 자리)은 탭을 만들지 않는다.
+      if (node.hidden) { if (last) last.nodes.push(node); else pinned.add(node); return; }
+      const label = panelBlockLabel(node, index);
+      const meaningful = isMeaningfulTabLabel(label);
+      const isHead = !last && !headPinned && (node.matches(PANEL_TAB_PINNED) || Boolean(node.querySelector?.('h1,h2')));
+      if (isHead) headPinned = true;
+      if (!last && (isHead || node.matches(PANEL_TAB_PINNED) || !meaningful)) { pinned.add(node); return; }
+      if (!meaningful) { last.nodes.push(node); return; }
+      count += 1;
+      if (count > PANEL_TAB_MAX_TABS - 1 && last?.id === 'more') { last.nodes.push(node); return; }
+      if (count > PANEL_TAB_MAX_TABS - 1) {
+        last = { id: 'more', label: '더보기', nodes: [node] };
+        plan.set('more', last);
+        return;
+      }
+      const id = node.id ? `b-${node.id}` : `b-${index}`;
+      last = { id, label, nodes: [node], default: count === 1 };
+      plan.set(id, last);
+    });
+    if (count < PANEL_TAB_MIN_BLOCKS) return null;
+  }
+  const tabs = [...plan.values()].filter(tab => tab.nodes.length);
+  // 숨김 블록만 있는 탭은 버튼을 만들지 않지만, 다시 표시될 때를 대비해 탭 소속은 유지한다.
+  const visible = tabs.filter(tab => tab.nodes.some(node => !node.hidden));
+  if (visible.length < 2) return null;
+  return { tabs, visible, pinned };
+}
+// 화면 모듈이 다시 그리기를 반복하면 탭 전환과 맞물려 화면이 떨릴 수 있다.
+// 짧은 시간에 구조 변경이 반복되면 그 패널은 탭을 끄고 원래 화면으로 되돌린다(자동 차단).
+const PANEL_TAB_CHURN_LIMIT = 8;
+const PANEL_TAB_CHURN_WINDOW_MS = 4000;
+const panelTabChurn = new WeakMap();
+function recordPanelTabChurn(panel) {
+  const now = Date.now();
+  const recent = (panelTabChurn.get(panel) || []).filter(at => now - at < PANEL_TAB_CHURN_WINDOW_MS);
+  recent.push(now);
+  panelTabChurn.set(panel, recent);
+  return recent.length > PANEL_TAB_CHURN_LIMIT;
+}
+function clearPanelTabs(panel) {
+  panel.querySelector(':scope>.admin-panel-tabs')?.remove();
+  delete panel.dataset.ekodiTabbed;
+  for (const node of panel.children) { delete node.dataset.ekodiTabHidden; delete node.dataset.ekodiTabPinned; delete node.dataset.ekodiTabAssigned; delete node.dataset.ekodiTabId; }
+}
+function applyPanelTabs(panel, doc = document) {
+  if (panel.dataset.ekodiPanelTabs === 'off') { if (panel.dataset.ekodiTabbed) clearPanelTabs(panel); return; }
+  const blocks = panelBlocks(panel);
+  const plan = planPanelTabs(panel, blocks);
+  let strip = panel.querySelector(':scope>.admin-panel-tabs');
+  if (!plan) {
+    if (strip || panel.dataset.ekodiTabbed) clearPanelTabs(panel);
+    return;
+  }
+  const tabbedValue = subtabHostPreset(panel) ? 'sub' : 'true';
+  if (panel.dataset.ekodiTabbed !== tabbedValue) panel.dataset.ekodiTabbed = tabbedValue;
+  ensurePanelTabStyle(doc);
+  const stored = (() => { try { return sessionStorage.getItem(panelTabStorageKey(panel)) || ''; } catch { return ''; } })();
+  const requested = panel.dataset.ekodiActiveTab || stored;
+  const active = plan.visible.find(tab => tab.id === requested) || plan.visible.find(tab => tab.default) || plan.visible[0];
+  panel.dataset.ekodiActiveTab = active.id;
+  if (!strip) {
+    strip = doc.createElement('div');
+    strip.className = 'admin-panel-tabs';
+    strip.setAttribute('role', 'tablist');
+    strip.setAttribute('aria-label', '화면 세부 탭');
+    strip.addEventListener('click', event => {
+      const button = event.target.closest?.('button[data-ekodi-tab]');
+      if (!button) return;
+      panel.dataset.ekodiActiveTab = button.dataset.ekodiTab;
+      panel.dataset.ekodiTabUserClick = 'true';
+      try { sessionStorage.setItem(panelTabStorageKey(panel), button.dataset.ekodiTab); } catch { /* storage optional */ }
+      applyPanelTabs(panel, doc);
+    });
+  }
+  const signature = plan.visible.map(tab => `${tab.id}:${tab.label}:${tab.nodes.length}`).join('|') + `@${active.id}`;
+  const fresh = plan.tabs.some(tab => tab.nodes.some(node => !node.dataset.ekodiTabAssigned)) || [...plan.pinned].some(node => !node.dataset.ekodiTabAssigned);
+  const structural = fresh || strip.dataset.signature !== signature || strip.parentElement !== panel;
+  if (structural && !panel.dataset.ekodiTabUserClick && recordPanelTabChurn(panel)) {
+    panel.dataset.ekodiPanelTabs = 'off';
+    clearPanelTabs(panel);
+    console.warn('[EKODI admin tabs] repeated re-render detected; tabs disabled for', panel.id || panel.dataset.panel);
+    return;
+  }
+  delete panel.dataset.ekodiTabUserClick;
+  if (strip.dataset.signature !== signature) {
+    strip.dataset.signature = signature;
+    strip.replaceChildren(...plan.visible.map(tab => {
+      const button = doc.createElement('button');
+      button.type = 'button';
+      button.setAttribute('role', 'tab');
+      button.dataset.ekodiTab = tab.id;
+      button.setAttribute('aria-selected', String(tab.id === active.id));
+      button.textContent = tab.label;
+      return button;
+    }));
+  }
+  const subtab = Boolean(subtabHostPreset(panel));
+  if (subtab) {
+    // details 안에서는 flex 순서를 쓰지 않고, 고정 지표 바로 다음에 세부 탭 줄을 둔다.
+    strip.classList.add('admin-panel-subtabs');
+    const anchor = [...plan.pinned].pop() || panel.querySelector(':scope>summary');
+    if (anchor ? strip.previousElementSibling !== anchor : strip.parentElement !== panel) {
+      if (anchor) anchor.insertAdjacentElement('afterend', strip); else panel.prepend(strip);
+    }
+  } else if (strip.parentElement !== panel) panel.prepend(strip);
+  for (const node of plan.pinned) {
+    if (node.dataset.ekodiTabHidden) delete node.dataset.ekodiTabHidden;
+    if (node.dataset.ekodiTabPinned !== 'true') node.dataset.ekodiTabPinned = 'true';
+  }
+  for (const node of plan.pinned) node.dataset.ekodiTabAssigned = 'true';
+  for (const tab of plan.tabs) {
+    const show = tab.id === active.id;
+    for (const node of tab.nodes) {
+      node.dataset.ekodiTabAssigned = 'true';
+      if (node.dataset.ekodiTabId !== tab.id) node.dataset.ekodiTabId = tab.id;
+      const value = show ? '' : 'true';
+      if ((node.dataset.ekodiTabHidden || '') !== value) {
+        if (value) node.dataset.ekodiTabHidden = value; else delete node.dataset.ekodiTabHidden;
+      }
+      if (show && node.tagName === 'DETAILS' && !node.open && !node.dataset.ekodiTabOpened) { node.dataset.ekodiTabOpened = 'true'; node.open = true; }
+    }
+  }
+}
+// 탭 안에 가려진 요소를 보여 준다(바로가기·자동 점검이 해당 탭을 먼저 연다).
+export function revealAdminPanelTab(target, doc = document) {
+  const node = typeof target === 'string' ? doc.querySelector(target) : target;
+  let changed = false;
+  for (let el = node; el && el !== doc.body; el = el.parentElement) {
+    const host = el.parentElement;
+    if (el.dataset?.ekodiTabHidden === 'true' && el.dataset.ekodiTabId && host) {
+      host.dataset.ekodiActiveTab = el.dataset.ekodiTabId;
+      host.dataset.ekodiTabUserClick = 'true';
+      applyPanelTabs(host, doc);
+      changed = true;
+    }
+  }
+  return changed;
+}
+export function refreshAdminPanelTabs(doc = document) {
+  for (const panel of doc.querySelectorAll('.content [data-panel]')) {
+    if (panel.hidden || panel.classList.contains('hidden-panel')) continue;
+    try {
+      applyPanelTabs(panel, doc);
+      for (const host of ADMIN_SUBTAB_HOSTS) for (const node of panel.querySelectorAll(host.selector)) applyPanelTabs(node, doc);
+    } catch (error) { console.warn('[EKODI admin tabs]', error?.message || error); }
+  }
+}
+export function installAdminPanelTabs(doc = document) {
+  if (panelTabsInstalled || typeof MutationObserver === 'undefined') return false;
+  const content = doc.querySelector('.content');
+  if (!content) return false;
+  panelTabsInstalled = true;
+  let scheduled = false;
+  const watched = new WeakSet();
+  const schedule = () => {
+    if (scheduled) return;
+    scheduled = true;
+    (globalThis.requestAnimationFrame || (fn => setTimeout(fn, 16)))(() => { scheduled = false; watchPanels(); refreshAdminPanelTabs(doc); });
+  };
+  // 하위 트리 전체를 감시하지 않는다(관리자 성능 기준): 패널 자체의 표시 전환과 직계 블록 추가만 본다.
+  const panelObserver = new MutationObserver(schedule);
+  const watchPanels = () => {
+    const hosts = ADMIN_SUBTAB_HOSTS.map(host => host.selector).join(',');
+    for (const panel of content.querySelectorAll(`[data-panel],${hosts}`)) {
+      if (watched.has(panel)) continue;
+      watched.add(panel);
+      panelObserver.observe(panel, { childList: true, attributes: true, attributeFilter: ['class', 'hidden'] });
+    }
+  };
+  new MutationObserver(schedule).observe(content, { childList: true });
+  for (const name of ['hashchange', 'popstate', 'ekodi-admin-ready']) globalThis.addEventListener?.(name, schedule);
+  doc.addEventListener('click', event => { if (event.target?.closest?.('.sidebar, .admin-work-strip')) schedule(); }, true);
+  schedule();
+  return true;
+}
+
 export function mountAdminSidebar(root = document, options = {}) {
   const nav = root.querySelector?.('.sidebar nav');
   if (!nav) return null;
@@ -869,6 +1142,7 @@ export function mountAdminSidebar(root = document, options = {}) {
   }
 
   if (isPlatformSuperAdminSurface()) installAdminRiskGuard();
+  installAdminPanelTabs(document);
   const sidebar = nav.closest('.sidebar');
   const menuButton = root.querySelector?.('#menuButton') || document.querySelector('#menuButton');
   const mobilePrimary = ensureMobilePrimaryNav(root);
@@ -1020,5 +1294,6 @@ if (typeof window !== 'undefined') {
     readLocale: readAdminSidebarLocale,
     renderWorkStrip: renderAdminWorkStrip,
   };
+  window.EKODIAdminPanelTabs = Object.freeze({ refresh: refreshAdminPanelTabs, install: installAdminPanelTabs, reveal: revealAdminPanelTab, presets: ADMIN_PANEL_TAB_PRESETS });
   window.EKODIAdminWorkStrip = Object.freeze({ render: renderAdminWorkStrip });
 }

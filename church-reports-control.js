@@ -39,10 +39,11 @@ async function session(request, env) {
   const identityResponse = await fetch(`${CENTRAL_SUPABASE_URL}/auth/v1/user`, { headers: { apikey: CENTRAL_PUBLISHABLE_KEY, authorization: `Bearer ${token}` }, cache: 'no-store' });
   const identity = identityResponse.ok ? await identityResponse.json().catch(() => null) : null;
   if (!identity?.id || !identity?.email || !identity?.email_confirmed_at) return { response: json({ error: '목회자 인증을 확인할 수 없습니다.' }, 401, request, env) };
-  const staffUrl = new URL(CHURCH_PASTOR_API); staffUrl.searchParams.set('table', 'church_staff'); staffUrl.searchParams.set('user_id', `eq.${identity.id}`); staffUrl.searchParams.set('limit', '1');
+  // staff-access는 church_staff 행과 함께 플랫폼 최고관리자 2명(검증된 Google 계정)을 senior_pastor로 인정한다.
+  const staffUrl = new URL(CHURCH_PASTOR_API); staffUrl.searchParams.set('scope', 'staff-access');
   const staffResponse = await fetch(staffUrl.toString(), { headers: { authorization: `Bearer ${token}`, accept: 'application/json' }, cache: 'no-store' });
-  const staffRows = staffResponse.ok ? await staffResponse.json().catch(() => []) : [];
-  const staff = staffRows?.[0] || null;
+  const staffBody = staffResponse.ok ? await staffResponse.json().catch(() => null) : null;
+  const staff = staffBody?.ok && staffBody.role ? { role: staffBody.role, display_name: staffBody.display_name } : null;
   if (!staff) return { response: json({ error: '에코디교회 목회자 운영권한이 필요합니다.' }, staffResponse.status === 401 ? 401 : 403, request, env) };
   return { data: { email: String(identity.email).toLowerCase(), userId: String(identity.id), role: String(staff.role || ''), displayName: staff.display_name || '' } };
 }
@@ -440,6 +441,91 @@ async function archiveDocumentRow(request, env, sessionData, id) {
   return json({ ok: true }, 200, request, env);
 }
 
+// ── 발급서류(증명서) 보관: 업로드 → 비공개 R2, 종류·대상자별 최근 발급분을 '최근서류'로 관리 ──
+const ISSUED_TYPES = ['건강보험료 납부확인서','소득금액증명','통장사본','고유번호증','가족관계증명서','주민등록등본','재직·경력증명서','기타'];
+const ISSUED_MAX_BYTES = 10 * 1024 * 1024;
+const ISSUED_MIME = new Map([['application/pdf','pdf'],['image/jpeg','jpg'],['image/png','png'],['image/webp','webp']]);
+const ISSUED_PREFIX = 'church/ekodichurch/issued/';
+function issuedMagicOk(bytes, mime) {
+  const b = new Uint8Array(bytes.slice(0, 12));
+  if (mime === 'application/pdf') return b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46;
+  if (mime === 'image/jpeg') return b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff;
+  if (mime === 'image/png') return b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47;
+  if (mime === 'image/webp') return b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50;
+  return false;
+}
+async function sha256Hex(bytes) {
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function issuedRow(row, latestIds) {
+  return { id: row.id, type: row.doc_type, title: row.title, holder: row.holder, issuedOn: row.issued_on, note: row.note,
+    fileName: row.file_name, contentType: row.content_type, size: Number(row.size_bytes || 0), createdAt: row.created_at,
+    uploadedBy: row.uploaded_by, latest: latestIds.has(row.id) };
+}
+export function latestIssuedIds(rows) {
+  const seen = new Map();
+  for (const row of rows) {
+    const key = `${row.doc_type}\u0000${row.holder || ''}`;
+    const prev = seen.get(key);
+    const rank = `${row.issued_on || ''}|${row.created_at || ''}`;
+    if (!prev || rank > prev.rank) seen.set(key, { id: row.id, rank });
+  }
+  return new Set([...seen.values()].map(v => v.id));
+}
+async function listIssued(request, env) {
+  const rows = (await env.DB.prepare("SELECT * FROM church_issued_documents WHERE status='active' ORDER BY doc_type ASC, holder ASC, issued_on DESC, created_at DESC LIMIT 500").all()).results || [];
+  const latest = latestIssuedIds(rows);
+  return json({ types: ISSUED_TYPES, documents: rows.map(row => issuedRow(row, latest)) }, 200, request, env);
+}
+async function uploadIssued(request, env, sessionData) {
+  if (!env.CHURCH_DOCUMENT_FILES) return json({ error: '발급서류 보관소가 아직 연결되지 않았습니다.' }, 503, request, env);
+  const declared = Number(request.headers.get('content-length') || 0);
+  if (declared > ISSUED_MAX_BYTES + 64 * 1024) return json({ error: '파일은 10MB 이하만 올릴 수 있습니다.' }, 413, request, env);
+  let form; try { form = await request.formData(); } catch { return json({ error: '업로드 형식을 확인해 주세요.' }, 400, request, env); }
+  const file = form.get('file');
+  if (!file || typeof file.arrayBuffer !== 'function') return json({ error: '파일을 선택해 주세요.' }, 400, request, env);
+  const mime = String(file.type || '').toLowerCase();
+  if (!ISSUED_MIME.has(mime)) return json({ error: 'PDF, JPG, PNG, WEBP 파일만 올릴 수 있습니다.' }, 415, request, env);
+  if (!file.size || file.size > ISSUED_MAX_BYTES) return json({ error: '파일은 10MB 이하만 올릴 수 있습니다.' }, 413, request, env);
+  const bytes = await file.arrayBuffer();
+  if (!issuedMagicOk(bytes, mime)) return json({ error: '파일 내용이 형식과 맞지 않습니다.' }, 415, request, env);
+  const docType = ISSUED_TYPES.includes(clean(form.get('type'), 40)) ? clean(form.get('type'), 40) : '기타';
+  const issuedOn = /^\d{4}-\d{2}-\d{2}$/.test(clean(form.get('issuedOn'), 10)) ? clean(form.get('issuedOn'), 10) : new Date().toISOString().slice(0, 10);
+  const id = 'cidoc-' + crypto.randomUUID();
+  const key = `${ISSUED_PREFIX}${id}.${ISSUED_MIME.get(mime)}`;
+  const sha256 = await sha256Hex(bytes);
+  const fileName = clean(file.name, 160).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_') || `${docType}.${ISSUED_MIME.get(mime)}`;
+  await env.CHURCH_DOCUMENT_FILES.put(key, bytes, { httpMetadata: { contentType: mime }, customMetadata: { tenant: 'ekodichurch', kind: 'issued-document', sha256 } });
+  const now = new Date().toISOString();
+  try {
+    await env.DB.prepare('INSERT INTO church_issued_documents (id,doc_type,title,holder,issued_on,note,file_key,file_name,content_type,size_bytes,sha256,uploaded_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      .bind(id, docType, clean(form.get('title'), 200) || docType, clean(form.get('holder'), 60), issuedOn, clean(form.get('note'), 500), key, fileName, mime, bytes.byteLength, sha256, sessionData.email, now, now).run();
+  } catch (error) { await env.CHURCH_DOCUMENT_FILES.delete(key).catch(() => {}); throw error; }
+  await audit(env, sessionData.email, 'church.issued.upload', id, `${docType} ${issuedOn}`);
+  return json({ ok: true, id }, 201, request, env);
+}
+async function downloadIssued(request, env, sessionData, id) {
+  const row = await env.DB.prepare("SELECT * FROM church_issued_documents WHERE id=? AND status='active'").bind(id).first();
+  if (!row || !env.CHURCH_DOCUMENT_FILES || !String(row.file_key).startsWith(ISSUED_PREFIX)) return json({ error: '서류를 찾을 수 없습니다.' }, 404, request, env);
+  const object = await env.CHURCH_DOCUMENT_FILES.get(row.file_key);
+  if (!object) return json({ error: '서류 파일을 찾을 수 없습니다.' }, 404, request, env);
+  await audit(env, sessionData.email, 'church.issued.download', id, row.doc_type);
+  const base = json({}, 200, request, env).headers;
+  const headers = new Headers(base);
+  headers.set('content-type', row.content_type);
+  headers.set('cache-control', 'private, no-store, max-age=0');
+  headers.set('content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(row.file_name)}`);
+  headers.set('content-security-policy', "default-src 'none'; sandbox");
+  return new Response(object.body, { status: 200, headers });
+}
+async function archiveIssued(request, env, sessionData, id) {
+  const result = await env.DB.prepare("UPDATE church_issued_documents SET status='archived', updated_at=? WHERE id=? AND status='active'").bind(new Date().toISOString(), id).run();
+  if (!Number(result?.meta?.changes || 0)) return json({ error: '서류를 찾을 수 없습니다.' }, 404, request, env);
+  await audit(env, sessionData.email, 'church.issued.archive', id, '');
+  return json({ ok: true }, 200, request, env);
+}
+
 export async function handleChurchReportsRequest(request, env) {
   const url = new URL(request.url); const path = url.pathname; if (!path.startsWith(PREFIX)) return null;
   if (request.method === 'OPTIONS') return preflight(request, env);
@@ -450,6 +536,19 @@ export async function handleChurchReportsRequest(request, env) {
     if (!roleAllowed(sessionData, DOCUMENT_READ_ROLES)) return json({ error: '문서보관 조회 권한이 없습니다.' }, 403, request, env);
     if (request.method === 'GET') return listDocuments(request, env, sessionData);
     if (request.method === 'POST') { if (!roleAllowed(sessionData, WRITE_ROLES)) return json({ error: '문서 등록 권한이 없습니다.' }, 403, request, env); return createDocument(request, env, sessionData); }
+    return json({ error: '허용되지 않은 요청입니다.' }, 405, request, env);
+  }
+  if (path === `${PREFIX}/documents/issued`) {
+    if (!roleAllowed(sessionData, DOCUMENT_READ_ROLES)) return json({ error: '발급서류 조회 권한이 없습니다.' }, 403, request, env);
+    if (request.method === 'GET') return listIssued(request, env);
+    if (request.method === 'POST') { if (!roleAllowed(sessionData, WRITE_ROLES)) return json({ error: '발급서류 등록 권한이 없습니다.' }, 403, request, env); return uploadIssued(request, env, sessionData); }
+    return json({ error: '허용되지 않은 요청입니다.' }, 405, request, env);
+  }
+  const issuedMatch = path.match(/^\/api\/church\/admin\/reports\/documents\/issued\/(cidoc-[A-Za-z0-9-]{1,80})\/(file|archive)$/);
+  if (issuedMatch) {
+    if (!roleAllowed(sessionData, DOCUMENT_READ_ROLES)) return json({ error: '발급서류 조회 권한이 없습니다.' }, 403, request, env);
+    if (issuedMatch[2] === 'file' && request.method === 'GET') return downloadIssued(request, env, sessionData, issuedMatch[1]);
+    if (issuedMatch[2] === 'archive' && request.method === 'POST') { if (!roleAllowed(sessionData, WRITE_ROLES)) return json({ error: '발급서류 보관해제 권한이 없습니다.' }, 403, request, env); return archiveIssued(request, env, sessionData, issuedMatch[1]); }
     return json({ error: '허용되지 않은 요청입니다.' }, 405, request, env);
   }
   const documentMatch = path.match(/^\/api\/church\/admin\/reports\/documents\/(cdoc-[A-Za-z0-9-]{1,80})\/archive$/);

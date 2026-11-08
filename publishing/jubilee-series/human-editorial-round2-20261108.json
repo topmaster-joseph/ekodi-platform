@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "EKODI-JUBILEE-THEOLOGY",
+  "editorialTaskId": "jubilee-human-review-round2-20261108",
+  "editorialRevision": "human-review-round2-20261108",
+  "sourceAuthority": "author-selected-PDFs-20261108",
+  "previousAuthorityManifest": "author-selected-baseline-20261108.json",
+  "previousReviewManifest": "current-intake-20261102.json",
+  "releaseStatus": "private-draft-review-only",
+  "publicationReady": false,
+  "productionIngested": false,
+  "signedAuthorApproval": false,
+  "publisherApproval": false,
+  "publicCatalog": false,
+  "salesEnabled": false,
+  "unresolvedFootnoteReviewCount": 56,
+  "historicalPdfHashErrata": [
+    {
+      "volume": 1,
+      "previouslyDeclared": "75a7601a9c94bedefc0d73417078073b79f91e4d3bbfbb6356c8827e2706aaff",
+      "actualArchivedFile": "68f0b6e1e6591315a0d6cc39c24a2d55fc39a535fc339a48cdb71e2d1793ca5c",
+      "evidence": "user-private-archive-file-byte-hash",
+      "status": "do-not-overwrite-existing-manifest"
+    },
+    {
+      "volume": 2,
+      "previouslyDeclared": "aa2413650eaa12a3af8de6f76906a0068f3f3ced040e27e778723ee1f9e3ad67",
+      "actualArchivedFile": "4c7de9a341bf1ff94c61258efa173cb108660aaa9f61da20c69de4f7899b1277",
+      "evidence": "user-private-archive-file-byte-hash",
+      "status": "do-not-overwrite-existing-manifest"
+    }
+  ],
+  "volumes": [
+    {
+      "number": 1,
+      "title": "희년과 하나님 나라의 회복",
+      "selectedOriginalPdfSha256": "e2a1ee508f1285d8a70de42114dcc50f6ea5d827ae18f84ded0ce83114a1bd59",
+      "revisionDocxSha256": "cdd39ec16bf88c8ce40e297cd77f756b405e6c2cf16b2ae2bc42e102df3f7f33",
+      "revisionPdfSha256": "cdc3d86e0c1e1447a8609ce607f9f400bf6a9832f4bb767b22cab1dc02b9fa02",
+      "revisionEpubSha256": "e1bc3ce66a41f1b87467a7d3e8720a2bc6a65d49c35c26b09cb9efe07a9c7d2a",
+      "renderedPages": 58,
+      "epubXmlValidated": true,
+      "additionalEditorialContent": "restorative-ministry-criteria-appendix",
+      "footnotesPending": 56,
+      "originalBibliographicVerificationPending": true,
+      "privateFileStorageReadback": false
+    },
+    {
+      "number": 2,
+      "title": "우리는 다시 돌아갈 수 있는가",
+      "selectedOriginalPdfSha256": "3620b7aade0c689e44824c635bffca2c2aebeea1243197f0b094ccd76f31563e",
+      "revisionDocxSha256": "e86650b1a26eb9c065f4fd139b3e75d951a2e66a5e7910ff8a6d4816a208e485",
+      "revisionPdfSha256": "8ce984669f326c3b1af4086084e5f6e233ecec0a8d76ca857b2042d55821ad4f",
+      "revisionEpubSha256": "de9dab3af7c758583e1d6f307205aa72edafec064cb8b3fefaab256bbda18b8b",
+      "renderedPages": 41,
+      "epubXmlValidated": true,
+      "additionalEditorialContent": "connected-fictional-community-kitchen-scene",
+      "footnotesPending": 0,
+      "privateFileStorageReadback": false
+    }
+  ],
+  "safetyNotice": "Metadata-only record. Do not publish manuscript bytes, author identities, manuscript source URLs, secrets or artifact downloads to public GitHub. This evidence is not the R2/D1 ingestion receipt, a human author signature, or a release authorization."
+}

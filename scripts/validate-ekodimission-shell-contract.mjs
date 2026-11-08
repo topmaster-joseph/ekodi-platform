@@ -3,13 +3,21 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-export const REQUIRED_MISSION_LINKS=Object.freeze([
-  '/ekodimission/activities',
-  '/ekodimission/history',
-  '/ekodimission/live',
-  '/ekodimission/participate',
-  '/ekodimission/partners',
-  '/ekodimission/stories',
+export const REQUIRED_MISSION_MENU=Object.freeze([
+  ['/ekodimission/history','연혁'],
+  ['/ekodimission#notices','공지'],
+  ['/ekodimission/devotion','묵상'],
+  ['/ekodimission#schedule','일정'],
+  ['/ekodimission/live','방송'],
+  ['/ekodimission/activities','활동'],
+]);
+export const REQUIRED_MISSION_LINKS=Object.freeze(REQUIRED_MISSION_MENU.map(([href])=>href));
+export const REQUIRED_MISSION_ACTIVITY_TABS=Object.freeze([
+  ['saturday','/ekodimission#saturday'],
+  ['join','/ekodimission/participate'],
+  ['partners','/ekodimission/partners'],
+  ['news','/ekodimission/stories'],
+  ['qtin','/qtin/mission'],
 ]);
 export const REQUIRED_SHELL_MARKERS=Object.freeze([
   'class="mission-site-header"',
@@ -70,26 +78,36 @@ export function validateMissionShellSource(source){
     "language.hidden=true",
     "languageControl.hidden=available.length<=1",
   ])if(!source.includes(marker))errors.push(`missing ${marker}`);
-  // Allow both the legacy flat menu and the bounded compact disclosure,
-  // provided all navigation targets remain projected exactly once.
-  const flatNav=source.includes('nav.replaceChildren(...links,language)');
-  const compactNav=[
-    'const primaryIndices=new Set([0,1,2,5])',
+  // Six visible top-level routes; secondary activity routes remain in a separate tab hub.
+  const sixMenu=REQUIRED_MISSION_MENU.every(([href,label])=>
+    source.includes("Object.freeze({href:'"+href+"',label:'"+label+"'})"));
+  const ordered=REQUIRED_MISSION_MENU.map(([href])=>source.indexOf("href:'"+href+"'"));
+  if(!sixMenu||ordered.some(index=>index<0)||ordered.some((index,i)=>i>0&&index<=ordered[i-1]))
+    errors.push('missing canonical six-link Mission menu order');
+  const tabbedNav=[
+    'const primaryIndices=new Set([0,1,2,3,4,5])',
     'const primary=links.filter((a,index)=>primaryIndices.has(index))',
     'const secondary=links.filter((a,index)=>!primaryIndices.has(index))',
-    "more.className='mission-nav-more'",
-    "summary.setAttribute('aria-label','추가 메뉴 열기')",
-    'popup.append(...secondary)',
-    'more.append(summary,popup)',
-    'nav.replaceChildren(...primary,more,language)',
+    'nav.replaceChildren(...primary,...(secondary.length?[more]:[]),language)',
+    "const mobile=dropdown('mission-nav-mobile','메뉴',contract.links)",
   ].every(marker=>source.includes(marker));
-  if(!flatNav&&!compactNav)errors.push('missing valid flat or compact navigation projection');
-  for(const href of REQUIRED_MISSION_LINKS)if(!source.includes(href))errors.push(`missing navigation target ${href}`);
+  if(!tabbedNav)errors.push('missing valid six-link desktop and mobile navigation projection');
   if(/준비\s*중/.test(source))errors.push('shell must never render preparing language text');
   if(/option\.disabled\s*=\s*!?published/.test(source))errors.push('unpublished locales must be omitted, not disabled');
   const staticOptions=[...source.matchAll(/<option\s+value=["']([^"']+)["'][^>]*>([^<]*)<\/option>/gi)];
   for(const match of staticOptions)if(match[1]!=='ko-KR')errors.push(`hard-coded non-source locale option: ${match[1]}`);
   if(errors.length)throw new Error(`mission shell JS: ${errors.join('; ')}`);
+  return true;
+}
+
+export function validateMissionActivityTabs(source){
+  const errors=[];
+  for(const [tab,href] of REQUIRED_MISSION_ACTIVITY_TABS){
+    if(!source.includes('data-mission-tab="'+tab+'"'))errors.push('missing '+tab+' activity tab');
+    if(!source.includes('data-mission-tab-panel="'+tab+'"'))errors.push('missing '+tab+' activity panel');
+    if(!source.includes('href="'+href+'"'))errors.push('missing '+tab+' details route '+href);
+  }
+  if(errors.length)throw new Error('mission activity tabs: '+errors.join('; '));
   return true;
 }
 
@@ -179,6 +197,8 @@ export async function validateMissionShellContract(root=ROOT){
   }
   validateMissionShellSource(shellJs);
   validateMissionShellCss(shellCss);
+  const activityHub=await readFile(path.join(root,'space','ekodimission-activities.page'),'utf8');
+  validateMissionActivityTabs(activityHub);
   validateMissionLiveTemplate(liveTemplate);
   validateMissionManifest(JSON.parse(manifestRaw),entries);
   validateMissionLiveManifest(JSON.parse(sharedManifestRaw));

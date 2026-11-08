@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko"><head>
+<html lang="ko" data-ekodi-shell-surface="public"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>공지 · 서남권국립의대</title>
 <meta name="description" content="서남권국립의대(서남권 국립의대) 공지 게시판">
@@ -31,4 +31,6 @@ $('writeForm').elements.images.onchange=e=>{files=[...e.target.files].slice(0,5)
 $('list').onclick=e=>{const eb=e.target.closest('[data-edit]'),db=e.target.closest('[data-delete]');if(eb){e.preventDefault();edit(items.find(x=>Number(x.id)===Number(eb.dataset.edit)))}if(db){e.preventDefault();const x=items.find(v=>Number(v.id)===Number(db.dataset.delete));if(x)remove(x)}};
 $('writeForm').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget,id=f.elements.id.value,form=new FormData();form.set('title',f.elements.title.value);form.set('body',f.elements.body.value);for(const file of files)form.append('images',file,file.name);if(id&&!files.length)form.set('keepImageIndexes',JSON.stringify((editing?.imageUrls||[]).map((_,i)=>i)));try{$('formStatus').textContent='저장 중…';const d=await api(id?'/api/seonammedi/notices/'+id:'/api/seonammedi/notices',{method:id?'PUT':'POST',headers:{authorization:'Bearer '+token()},body:form});f.reset();f.hidden=true;editing=null;files=[];$('formStatus').textContent='';await load();const x=items.find(v=>Number(v.id)===Number(d.id));if(x){history.pushState(null,'','/notices/'+x.id);detail(x)}}catch(err){$('formStatus').textContent=err.message}};
 window.onpopstate=()=>load();(async()=>{try{await exchange()}catch{}await load();if(new URLSearchParams(location.search).get('compose')==='1'&&token())edit(null)})()})();
-</script></body></html>
+</script><script src="https://ekodi.kr/shell/native-visit-beacon.js" defer></script>
+<script src="https://ekodi.kr/shell/user-ui-footer.js" defer></script>
+</body></html>
