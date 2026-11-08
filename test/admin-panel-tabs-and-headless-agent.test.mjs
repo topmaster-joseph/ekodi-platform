@@ -62,7 +62,8 @@ test('/work/admin renders the platform admin sidebar and a horizontal tab rail',
 });
 
 test('panels with their own tabs are left alone, and hidden tabs can be revealed for shortcuts/E2E', async () => {
-  assert.match(sidebar, /PANEL_OWN_TABS_SELECTOR = '\[role="tablist"\]:not\(\.admin-panel-tabs\)/);
+  // 자체 바로가기(nav)·탭이 있는 화면(비용·인프라, 시스템 구조, 소셜 등)은 자동 탭 제외.
+  assert.match(sidebar, /PANEL_OWN_TABS_SELECTOR = 'nav,\[role="tablist"\]:not\(\.admin-panel-tabs\)/);
   assert.match(sidebar, /export function revealAdminPanelTab/);
   assert.match(sidebar, /reveal: revealAdminPanelTab/);
   const e2e = await readFile(new URL('../scripts/verify-admin-production-ui-e2e.mjs', import.meta.url), 'utf8');
