@@ -24,7 +24,10 @@ const LEGACY_SITE_ALIASES = Object.freeze({
   'cgma.or.kr': 'cgma',
   'www.cgma.or.kr': 'cgma',
   'seonammedi.kr': 'seonammedi',
-  'www.seonammedi.kr': 'seonammedi'
+  'www.seonammedi.kr': 'seonammedi',
+  // 서남권국립의대.kr — the canonical Korean IDN host of the same site.
+  'xn--3e0b8b58jw4co4mnpll3k.kr': 'seonammedi',
+  'www.xn--3e0b8b58jw4co4mnpll3k.kr': 'seonammedi'
 });
 export function normalizeTrafficHost(value) {
   return String(value || '').trim().toLowerCase().replace(/\.$/, '').slice(0, 253);
