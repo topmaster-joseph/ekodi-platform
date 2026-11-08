@@ -36,7 +36,9 @@ try{
       await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});
       // In the Kachin/Jinghpaw slot an explicit English fallback is visible
       // until a checked language pack exists; do not claim it is Kachin.
-      const expectedLang=locale==='kac'?'en':locale;
+      // The canonical standalone Korean HTML intentionally uses lang="ko";
+      // other standalone locale selections use explicit BCP-47 tags.
+      const expectedLang=locale==='kac'?'en':locale==='ko-KR'?'ko':locale;
       await page.waitForFunction(expected=>{
         const month=document.querySelector('[data-church-calendar-month]')?.textContent?.trim()||'';
         const buttons=document.querySelectorAll('.church-calendar-day');
