@@ -45,5 +45,5 @@ test('missions use only the self-scoped server progress response and never award
 test('claim and ledger date display is pinned to Asia/Seoul independently of browser timezone',()=>{
   assert.ok(js.includes("new Date(row.submitted_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})"));
   assert.ok(js.includes("new Date(row.created_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})"));
-  assert.ok(html.includes('/my/points/app.js?v=20261107-handoff-v2-kst-time'));
+  assert.ok(html.includes('/my/points/app.js?v=20261108-claim-ledger-transparency-v1'));
 });
