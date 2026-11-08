@@ -2,6 +2,14 @@ name: Verify EKODI Mall Header Native
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-ekodi-mall-header-native.yml'
+      - 'sites/ekodi-mall/scripts/verify-header-native.mjs'
+      - 'sites/ekodi-mall/assets/mall-account-header.js'
+      - 'sites/ekodi-mall/assets/mall-account-header.css'
+      - 'mall-shared-header.js'
+      - 'test/mall-header-native-qa.test.mjs'
   push:
     branches: [main]
     paths:
@@ -20,6 +28,7 @@ concurrency:
 
 jobs:
   header-native-readonly:
+    # PR checks are read-only synthetic canaries; they never deploy or sign in.
     # A completed PR validation is not a production deployment. Only promote
     # browser evidence from protected successful main-branch releases.
     if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
