@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'scripts/cloudflare-web-domain-inventory.mjs'
+      - 'scripts/classify-cloudflare-pages-source.mjs'
+      - 'test/cloudflare-web-domain-inventory.test.mjs'
       - '.github/workflows/cloudflare-web-domain-inventory.yml'
   workflow_dispatch:
   schedule:
@@ -23,7 +25,9 @@ jobs:
           node-version: '24'
       - run: |
           node --check scripts/cloudflare-web-domain-inventory.mjs
+          node --check scripts/classify-cloudflare-pages-source.mjs
           node scripts/cloudflare-web-domain-inventory.mjs --self-test
+          node --test test/cloudflare-web-domain-inventory.test.mjs
 
   production:
     if: github.event_name != 'pull_request'
