@@ -12,7 +12,8 @@
         "redirect": "follow",
         "expect": [
           "EKODI JOURNAL",
-          "EKODI · LIVING RECORD"
+          "The EKODI Journal",
+          "에코디저널"
         ],
         "headerExpect": [
           "x-ekodi-shell: v2"
@@ -51,6 +52,17 @@
         "redirect": "manual",
         "headerExpect": [
           "location: https://ekodi.kr/admin/journal"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/journal/feed.json",
+        "statuses": [
+          200
+        ],
+        "redirect": "follow",
+        "expect": [
+          "jsonfeed.org/version/1.1",
+          "EKODI Journal"
         ]
       }
     ],
