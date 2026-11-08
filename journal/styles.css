@@ -8,13 +8,13 @@
   --accent: #335847;
   --accent-soft: #e5ece7;
   --max: 1120px;
-  --serif: Georgia, 'Times New Roman', serif;
+  --serif: Georgia, 'Noto Serif KR', 'Nanum Myeongjo', 'AppleMyungjo', 'Batang', 'Times New Roman', serif;
   --sans: Inter, Pretendard, 'Noto Sans KR', system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }
 html { background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
-body { margin: 0; background: var(--paper); font-family: var(--sans); line-height: 1.6; }
+body { margin: 0; background: var(--paper); font-family: var(--sans); line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 a { color: inherit; }
 button, input { font: inherit; }
 [hidden] { display: none !important; }
@@ -133,3 +133,98 @@ button, input { font: inherit; }
 .article-visual.journal-photo img { height: auto; max-height: 430px; aspect-ratio: 16 / 9; }
 @media (max-width: 800px) { .journal-card-cover { min-height: 118px; } }
 @media (max-width: 560px) { .journal-card-cover { min-height: 170px; } }
+
+/* JOURNAL-OVERHAUL-20261108 ---------------------------------------------------------- */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+::selection { background: var(--accent-soft); color: var(--ink); }
+
+/* 글 보기에서는 큰 표제·필터·마무리 영역을 접어 본문이 첫 화면에 오게 한다. */
+body.journal-is-article .journal-hero { padding: 12px 0 14px; }
+body.journal-is-article .journal-hero-grid { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; }
+body.journal-is-article .journal-kicker { margin-bottom: 8px; }
+body.journal-is-article .journal-hero h1 { font-size: clamp(26px, 3.2vw, 36px); line-height: 1; }
+body.journal-is-article .journal-intro,
+body.journal-is-article .journal-manifesto,
+body.journal-is-article .journal-toolbar,
+body.journal-is-article .journal-closing { display: none; }
+.journal-hero h1 a { text-decoration: none; }
+
+.journal-filter { display: inline-flex; align-items: center; gap: 6px; }
+.journal-filter-count { min-width: 18px; padding: 0 5px; border-radius: 999px; background: rgba(51, 88, 71, .1); color: var(--accent); font-size: 10px; line-height: 16px; text-align: center; }
+.journal-status { padding: 54px 0; text-align: center; color: var(--muted); }
+.journal-retry { margin-top: 10px; padding: 8px 16px; border: 1px solid var(--accent); border-radius: 999px; background: transparent; color: var(--accent); cursor: pointer; }
+
+/* 대표 글: 첫 글을 크게 */
+.journal-card.is-featured { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px; padding: 36px 0 38px; }
+.journal-card.is-featured .journal-thumb, .journal-card.is-featured .journal-card-cover { min-height: 280px; }
+.journal-card.is-featured h2 { font-size: clamp(30px, 4vw, 46px); }
+.journal-card.is-featured .journal-card-excerpt { font-size: 16px; }
+.journal-card h2 { transition: color .18s ease; }
+.journal-card:hover h2 { color: var(--accent); }
+
+/* 도서 표지 카드 */
+.journal-book-cover { display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; padding: 18px 20px; }
+.journal-book-cover::before, .journal-book-cover::after { display: none; }
+.journal-book-cover > * { position: relative; z-index: 1; }
+.journal-book-cover { background: linear-gradient(160deg, #23362c 0%, #335847 55%, #4f7a63 100%); color: #f4f2e8; border-color: #23362c; }
+.journal-book-cover.thumb-2 { background: linear-gradient(160deg, #3b2f22 0%, #6b5132 60%, #957149 100%); }
+.journal-book-cover.thumb-3 { background: linear-gradient(160deg, #1f2a3a 0%, #2f4762 60%, #4d6d8f 100%); }
+.journal-book-cover.thumb-4 { background: linear-gradient(160deg, #3a2430 0%, #63394f 60%, #8a5872 100%); }
+.book-cover-series { font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; opacity: .75; margin-bottom: auto; }
+.book-cover-title { font-family: var(--serif); font-size: clamp(18px, 2.2vw, 26px); font-weight: 500; line-height: 1.25; letter-spacing: -.02em; }
+.book-cover-subtitle { font-size: 12px; opacity: .85; line-height: 1.5; }
+.book-cover-author { font-size: 11px; opacity: .75; margin-top: 4px; }
+.article-visual.journal-book-cover { justify-content: center; align-items: flex-start; padding: clamp(28px, 6vw, 64px); }
+.article-visual.journal-book-cover .book-cover-series { margin-bottom: 18px; }
+.article-visual.journal-book-cover .book-cover-title { font-size: clamp(28px, 4.5vw, 48px); max-width: 640px; }
+
+/* 본문 가독성 */
+.article-title { word-break: keep-all; }
+.article-body p { color: #262922; }
+.article-body a { color: var(--accent); text-underline-offset: 3px; }
+.article-cta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 22px; margin: 44px 0 0; padding: 22px 24px; border: 1px solid var(--accent); background: var(--accent-soft); }
+.article-cta p { margin: 0 !important; font-size: 15px !important; line-height: 1.7 !important; flex: 1 1 280px; }
+.article-cta-button { display: inline-block; padding: 11px 20px; border-radius: 999px; background: var(--accent); color: #fff !important; font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.article-cta-button:hover { background: #24402f; }
+
+.article-actions { max-width: 720px; margin: 28px auto 0; display: flex; align-items: center; gap: 12px; }
+.article-share { padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font-size: 13px; cursor: pointer; }
+.article-share:hover { border-color: var(--accent); color: var(--accent); }
+.article-share-status { color: var(--accent); font-size: 12px; }
+.article-nav { max-width: 720px; margin: 36px auto 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; border-top: 1px solid var(--ink); padding-top: 22px; }
+.article-nav-link { display: grid; gap: 6px; text-decoration: none; }
+.article-nav-link.is-next { text-align: right; }
+.article-nav-link span { color: var(--muted); font-size: 12px; }
+.article-nav-link strong { font-family: var(--serif); font-size: 18px; font-weight: 500; line-height: 1.35; }
+.article-nav-link:hover strong { color: var(--accent); }
+.article-related { max-width: 900px; margin: 64px auto 0; }
+.article-related h2 { margin: 0 0 16px; font-family: var(--serif); font-size: 17px; font-weight: 400; letter-spacing: .06em; padding-bottom: 12px; border-bottom: 1px solid var(--ink); }
+.journal-mini-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.journal-mini { display: grid; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--line); text-decoration: none; }
+.journal-mini span { color: var(--muted); font-size: 11px; }
+.journal-mini strong { font-family: var(--serif); font-size: 18px; font-weight: 500; line-height: 1.35; }
+.journal-mini:hover strong { color: var(--accent); }
+
+.journal-progress { position: fixed; left: 0; right: 0; top: 0; height: 3px; background: var(--accent); transform: scaleX(0); transform-origin: 0 50%; z-index: 9999; pointer-events: none; }
+.journal-noscript { padding: 24px 0; }
+
+@media (max-width: 800px) {
+  .journal-card.is-featured { grid-template-columns: 1fr; gap: 18px; }
+  .journal-card.is-featured .journal-thumb, .journal-card.is-featured .journal-card-cover { min-height: 200px; }
+  .journal-mini-grid { grid-template-columns: 1fr; gap: 0; }
+}
+@media (max-width: 560px) {
+  .article-nav { grid-template-columns: 1fr; }
+  .article-nav-link.is-next { text-align: left; }
+  .article-cta { padding: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .journal-card, .journal-card h2 { transition: none; }
+  .journal-card:hover { transform: none; }
+}
+@media print {
+  .journal-hero, .journal-toolbar, .journal-closing, .journal-back, .article-actions, .article-nav, .article-related, .journal-progress { display: none !important; }
+  html, body { background: #fff; }
+  .article-body p { font-size: 11pt; line-height: 1.7; }
+}
