@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { renderMallHeader } from '../../../mall-shared-header.js';
 import { trackedAgodaPartnerSearch } from '../assets/affiliate-share.js';
 import { loadBookstoreProducts, mergeBookstoreProducts } from './bookstore-products.mjs';
-import { isPublicStaticSale, isPublicIndexableProduct } from '../api/public-sale-visibility.js';
+import { isPublicStaticSale, isPublicBookInformation, isPublicIndexableProduct } from '../api/public-sale-visibility.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
@@ -59,7 +59,9 @@ const publishedStoreIds = new Set(stores.map((store) => store.id));
 const bookstoreMirror = await loadBookstoreProducts(root);
 const products = mergeBookstoreProducts(productsRaw, bookstoreMirror).filter((product) => product.published && publishedStoreIds.has(product.storeId));
 const saleProducts = products.filter(isPublicStaticSale);
-const saleStores = stores.filter((store) => saleProducts.some((product) => product.storeId === store.id));
+// Public, owner-authorized book metadata is stable; only each Buy CTA is live-verified.
+const catalogProducts = products.filter(product => isPublicStaticSale(product) || isPublicBookInformation(product));
+const saleStores = stores.filter((store) => catalogProducts.some((product) => product.storeId === store.id));
 // Keep all published preparation records in the existing seller mirror and stable detail pages.
 const affiliateHubs = affiliateHubsRaw.filter((hub) => hub.published);
 const baseUrl = site.seo.baseUrl.replace(/\/$/, '');
@@ -84,18 +86,27 @@ function productCard(product, options = {}) {
   const store = storeMap.get(product.storeId);
   const region = product.region || {};
   const regionIds = Array.isArray(region.regionIds) ? region.regionIds.filter((id) => regionMap.has(id)) : [];
-  const searchable = `${product.name} ${product.badge} ${product.description} ${product.status} ${store?.name || ''} ${region.label || ''}`.toLowerCase();
-  const data = options.withData === false ? '' : ` data-product="${esc(product.id)}" data-category="${esc(product.category)}" data-region-ids="${esc(regionIds.join(','))}" data-primary-region="${esc(region.primaryRegionId || '')}" data-region-label="${esc(region.label || '')}" data-local-relationship="${esc(region.relationship || '')}" data-region-verified="${region.verified ? 'true' : 'false'}" data-search="${esc(searchable)}" data-name="${esc(product.name)}" data-status="${esc(product.status)}" data-href="${href}"`;
-  // Static bookstore approval is not sufficient to advertise a live purchase;
-  // verify the commerce quote in the browser before exposing the catalog card.
-  const pendingQuote = options.withData !== false && product.source?.system === 'ekodi-bookstore'
-    ? ' data-bookstore-quote-pending="true" hidden' : '';
+  const isBookInfo = isPublicBookInformation(product);
+  const activeBookCard = isBookInfo && (options.withData !== false || options.bookstoreActive === true);
+  const searchable = `${product.name} ${product.badge} ${product.description} ${isBookInfo ? '에코디서점 전자책' : product.status} ${store?.name || ''} ${region.label || ''}`.toLowerCase();
+  const data = options.withData === false ? '' : ` data-product="${esc(product.id)}" data-category="${esc(product.category)}" data-region-ids="${esc(regionIds.join(','))}" data-primary-region="${esc(region.primaryRegionId || '')}" data-region-label="${esc(region.label || '')}" data-local-relationship="${esc(region.relationship || '')}" data-region-verified="${region.verified ? 'true' : 'false'}" data-search="${esc(searchable)}" data-name="${esc(product.name)}" data-status="${esc(isBookInfo ? '전자책 · 판매 상태 확인' : product.status)}" data-href="${href}"`;
+  // Informational book cards are rendered at build time from owner-allowlisted
+  // metadata. The commerce quote authorizes ONLY the matching purchase CTA.
+  const bookData = activeBookCard
+    ? ` data-bookstore-runtime-id="${esc(product.source.bookId)}" data-bookstore-quote-pending="true" data-bookstore-informational="true" data-sale-ready="false"`
+    : '';
   const regionChip = region.label ? `<p class="region-chip">지역 · ${esc(region.label)}${region.verified ? ' · 확인됨' : ''}</p>` : '';
   const heart = options.withHeart === false ? '' : `<button class="heart" data-wish="${esc(product.id)}" aria-label="${esc(product.name)} 관심상품" aria-pressed="false">♡</button>`;
   const storeKicker = store ? `<p class="store-kicker"><a href="/stores/${esc(store.slug)}/">${esc(store.name)}</a></p>` : '';
-  // MALL-LIST-IMAGE-001: 대표이미지(도서 표지·판매자 사진)를 목록에 보이고, 이미지·제목 어디를 눌러도 상세로 간다.
   const image = product.image ? `<img src="${esc(product.image)}" alt="${esc(product.name)}" loading="lazy" decoding="async">` : '';
-  return `<article class="card"${data}${pendingQuote}><div class="thumb ${esc(product.category)}${image ? ' has-image' : ''}"><a class="thumb-link" href="${href}" aria-label="${esc(product.name)} 자세히 보기">${image}</a><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p class="card-summary">${esc(shortSummary(product.description, product.category === 'book' ? 34 : 46))}</p>${regionChip}<div class="meta"><span class="status">${product.category === 'book' ? esc(Number(product.price) > 0 ? formatPrice(Number(product.price)) + ' · ' : '가격 확인 · ') : ''}${esc(product.status)}</span><a class="smallbtn" href="${href}">자세히</a></div></div></article>`;
+  // Catalog price is only bibliographic information, never a live checkout quote.
+  const bookPrice = Number.isSafeInteger(Number(product.price)) && Number(product.price) > 0
+    ? `정가 ${formatPrice(Number(product.price))}` : '도서 가격 확인';
+  const status = isBookInfo ? `${bookPrice} · 에코디서점 발행`
+    : `${product.category === 'book' && Number(product.price) > 0 ? formatPrice(Number(product.price)) + ' · ' : ''}${product.status}`;
+  const buyButton = activeBookCard
+    ? '<a class="smallbtn mall-book-buy" data-bookstore-buy aria-disabled="true" tabindex="-1">구매 상태 확인 중</a>' : '';
+  return `<article class="card"${data}${bookData}><div class="thumb ${esc(product.category)}${image ? ' has-image' : ''}"><a class="thumb-link" href="${href}" aria-label="${esc(product.name)} 자세히 보기">${image}</a><span class="badge">${esc(product.badge)}</span>${heart}</div><div class="card-body">${storeKicker}<h3><a href="${href}">${esc(product.name)}</a></h3><p class="card-summary">${esc(shortSummary(product.description, product.category === 'book' ? 34 : 46))}</p>${regionChip}<div class="meta"><span class="status">${esc(status)}</span><a class="smallbtn" href="${href}">자세히</a>${buyButton}</div></div></article>`;
 }
 
 function productDetailSections(product, store, requiresLiveQuote) {
@@ -134,11 +145,11 @@ const categoryFilters = site.categories.map((category, index) =>
 ).join('');
 const filters = `${categoryFilters}<button data-filter="local" data-filter-kind="region">${esc(site.local?.filterLabel || '내 로컬')}</button>`;
 
-const productCards = saleProducts.map((product) => productCard(product)).join('');
+const productCards = catalogProducts.map((product) => productCard(product)).join('');
 
 const storeCards = saleStores.map((store) => {
   const href = `/stores/${store.slug}/`;
-  const count = saleProducts.filter((product) => product.storeId === store.id).length;
+  const count = catalogProducts.filter((product) => product.storeId === store.id).length;
   return `<a class="store-card" href="${href}"><div class="store-card-mark">${esc(store.name.slice(0, 1))}</div><div><p class="store-badge">${esc(store.badge || store.kind)}</p><h3>${esc(store.name)}</h3><p>${esc(store.description)}</p><span>${count}개 상품 · ${esc(store.status)}</span></div></a>`;
 }).join('');
 
@@ -208,8 +219,8 @@ await ensureDir(dist);
 await write('index.html', indexHtml);
 await write('category-availability.json', JSON.stringify({
   // Matches the source-of-truth sale-ready projection, not all draft categories.
-  categories: [...new Set(saleProducts.map(product => product.category).filter(Boolean))].sort(),
-  hasLocal: saleProducts.some(product => Array.isArray(product.region?.regionIds) && product.region.regionIds.length > 0)
+  categories: [...new Set(catalogProducts.map(product => product.category).filter(Boolean))].sort(),
+  hasLocal: catalogProducts.some(product => Array.isArray(product.region?.regionIds) && product.region.regionIds.length > 0)
 }));
 
 // Operator Seller Studio displays the same publisher-approved bookstore mirror
@@ -299,8 +310,8 @@ for (const product of products) {
 
 for (const store of stores) {
   const storeUrl = `${baseUrl}/stores/${store.slug}/`;
-  const storeProducts = saleProducts.filter((product) => product.storeId === store.id);
-  const cards = storeProducts.map((product) => productCard(product, { withData: false, withHeart: false })).join('');
+  const storeProducts = catalogProducts.filter((product) => product.storeId === store.id);
+  const cards = storeProducts.map((product) => productCard(product, { withData: false, withHeart: false, bookstoreActive: store.id === 'store-ekodi-books' })).join('');
   const html = fill(storeTemplate, {
     STORE_NAME: esc(store.name),
     STORE_BOOKS_ATTR: store.id === 'store-ekodi-books' ? 'data-bookstore-store="true"' : '',

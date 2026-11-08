@@ -160,13 +160,13 @@ test('book cards use concise copy and verified prices or an explicit unknown-pri
   const build = readFileSync(new URL('../scripts/build.mjs', import.meta.url), 'utf8');
   const books = readFileSync(new URL('../assets/bookstore-live.js', import.meta.url), 'utf8');
   assert.match(build, /product\.category === 'book' \? 34 : 46/);
-  assert.match(build, /'가격 확인 · '/);
+  assert.match(build, /'도서 가격 확인'/);
   assert.match(build, /category-availability\.json/);
-  assert.match(books, /price: Number\(quote\?\.price\?\.amount\)/);
-  assert.match(books, /productCard\(\{ \.\.\.result\.book, price: result\.price \}\)/);
-  assert.match(books, /readyQuote\(quote, book\.bookId\)/);
-  assert.match(books, /가격 확인 · 판매 상태 확인 필요/);
-  assert.match(books, /const quote = await quoteFor\(book\.bookId\)/);
+  assert.match(books, /Number\(quote.price.amount\)/);
+  assert.match(books, /setBuyState\(card, state, quote\)/);
+  assert.match(books, /readyQuote\(quote, bookId\)/);
+  assert.match(books, /구매 상태 확인 필요/);
+  assert.match(books, /quote = await quoteFor\(bookId\)/);
   assert.match(css, /\.card\[data-category="book"\] \.card-summary/);
   assert.match(css, /-webkit-line-clamp:2/);
 });
@@ -196,9 +196,9 @@ test('Toss underwriting: an unverified bookstore quote cannot expose a sale card
   assert.match(builder, /data-bookstore-quote-pending/);
   assert.match(builder, /product.source\?\.system === 'ekodi-bookstore'/);
   assert.match(app, /card.dataset.bookstoreQuotePending !== 'true'/);
-  assert.match(books, /ready: readyQuote\(quote, book.bookId\)/);
-  assert.match(books, /card.dataset.bookstoreQuotePending = 'false'/);
-  assert.match(books, /card.dataset.bookstoreQuotePending = 'true'/);
+  assert.match(books, /state = readyQuote\(quote, bookId\) \? 'ready' : 'unavailable'/);
+  assert.match(books, /card.dataset.bookstoreQuotePending = ready \? 'false' : 'true'/);
+  assert.match(books, /button.setAttribute\('aria-disabled', 'true'\)/);
   assert.match(css, /\.card\[data-bookstore-quote-pending="true"\]:not\(\[data-bookstore-informational="true"\]\)\{display:none!important\}/);
 });
 
@@ -240,8 +240,8 @@ test('unified search does not revive unapproved live-quote bookstore products', 
   assert.match(js, /card\.dataset\.bookstoreQuotePending !== 'true'/);
   assert.match(js, /raw\?\.product\?\.source\?\.system === 'ekodi-bookstore'/);
   assert.match(js, /ekodi:marketplace-products-loaded/);
-  assert.match(books, /card\.dataset\.bookstoreQuotePending = 'false'/);
-  assert.match(books, /card\.dataset\.bookstoreQuotePending = 'true'/);
+  assert.match(books, /card\.dataset\.bookstoreQuotePending = ready \? 'false' : 'true'/);
+  assert.match(books, /button\.setAttribute\('aria-disabled', 'true'\)/);
 });
 
 test('Toss merchant-review first fold shows sale catalog before full policy disclosures', () => {
@@ -251,11 +251,11 @@ test('Toss merchant-review first fold shows sale catalog before full policy disc
   const hero = template.indexOf('class="context-hero mall-premium-hero"');
   assert.ok(shopStart >= 0 && grid > shopStart && policy > grid && hero > policy, 'catalog precedes legal disclosure and editorial hero');
   assert.match(template, /<details class="mall-review-disclosures"><summary>결제·판매처·포인트 안내 자세히 보기<\/summary>/);
-  assert.match(template, /실제 판매 가능한 상품만 목록에 표시합니다/);
+  assert.match(template, /실제 판매 가능한 상품과 출판사에서 공개한 전자책 정보카드를 구별해 표시합니다/);
   assert.match(template, /회원가입 없이 비회원 카드결제를 이용할 수 있습니다/);
   assert.match(template, /에코디서점 전자책은 로그인 후 구매/);
   assert.match(template, /로그인 회원의 결제가 실제 확인되면 결제금액의 1%/);
-  assert.match(template, /상품별로 확인할 수 있습니다/);
+  assert.match(template, /판매 가능한 상품과 공개된 전자책 정보를 함께 보여드립니다/);
   const cssSource = readFileSync(new URL('../assets/styles.css', import.meta.url), 'utf8');
   assert.match(cssSource, /TOSS-MALL-FIRSTFOLD-20261108/);
   assert.match(cssSource, /#shop \.card \.thumb\.book/);
