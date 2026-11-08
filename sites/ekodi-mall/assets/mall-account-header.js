@@ -5,6 +5,37 @@
   const authOrigin = 'https://renzehysxirjilvdxacv.supabase.co';
   const publishable = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const hosts = [...document.querySelectorAll('[data-mall-account]')];
+  // Older product/store/seller/checkout templates predate renderMallHeader.
+  // Mount exactly the same account control without creating another header.
+  if (!hosts.length) {
+    const legacy = document.querySelector('header.header');
+    if (legacy) {
+      const host = document.createElement('span');
+      host.className = 'mall-account';
+      host.setAttribute('data-mall-account', '');
+      host.setAttribute('aria-label', '내 계정');
+      const login = document.createElement('a');
+      login.className = 'mall-account-login';
+      login.setAttribute('data-mall-login', '');
+      login.textContent = '로그인';
+      const signed = document.createElement('span');
+      signed.className = 'mall-account-signed';
+      signed.setAttribute('data-mall-signed', '');
+      signed.hidden = true;
+      const account = document.createElement('span');
+      account.className = 'mall-account-id';
+      account.setAttribute('data-mall-id', '');
+      const logout = document.createElement('button');
+      logout.type = 'button';
+      logout.setAttribute('data-mall-logout', '');
+      logout.textContent = '로그아웃';
+      signed.append(account, logout);
+      host.append(login, signed);
+      // Keep visible even when the legacy nav is hidden on mobile.
+      legacy.append(host);
+      hosts.push(host);
+    }
+  }
   if (!hosts.length) return;
   let generation = 0;
   let signingOut = false;
