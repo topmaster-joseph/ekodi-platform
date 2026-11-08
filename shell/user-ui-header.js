@@ -3,7 +3,8 @@
 if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
-const VERSION=7;
+const VERSION=8;
+const ACCOUNTING_NOTICE_SITES=new Set(['ekodibiz','ekodichurch','ekodimission','cgma','seonammedi']);
 const SITE_CHROME_URL='https://ekodi.kr/workspace-api/v1/site-chrome/public';
 // Education has no customer-site chrome configuration; keep the shared fallback.
 const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education']);
@@ -176,6 +177,17 @@ function pruneIndividualSiteGlobalLinks(header){
   if(!header||!isIndividualSite())return;
   for(const anchor of header.querySelectorAll('a[href]'))if(isGlobalPlatformHeaderLink(anchor))anchor.remove();
   header.dataset.ekodiHeaderScope='service-local';
+}
+function ensureAccountingNoticeMenu(header){
+  if(!header||surface()==='admin')return;
+  const site=location.pathname.split('/').filter(Boolean)[0]||'';
+  if(!ACCOUNTING_NOTICE_SITES.has(site))return;
+  const href=`/${site}/accounting`;
+  if([...header.querySelectorAll('a[href]')].some(anchor=>{try{return new URL(anchor.getAttribute('href'),location.href).pathname.replace(/\/+$/,'')===href}catch{return false}}))return;
+  const nav=header.querySelector('nav,[role="navigation"],.header-actions,.nav-actions');if(!nav)return;
+  const anchor=document.createElement('a');anchor.href=href;anchor.textContent='회계공지';anchor.dataset.ekodiAccountingNotice='true';
+  if(location.pathname.replace(/\/+$/,'')===href)anchor.setAttribute('aria-current','page');
+  nav.append(anchor);
 }
 function operatingSpaceTarget(header){
   if(!header)return null;
@@ -396,6 +408,7 @@ function attach(header){
   // Existing service headers retain their brand, navigation, login and role checks.
   // Shared geometry is applied only to a safe native brand/navigation row.
   adoptStandardHeader(header);
+  ensureAccountingNoticeMenu(header);
   if(isIndividualSite()&&!header.hasAttribute(FALLBACK_ATTR)){
     if(activeHeader!==header)detach();
     activeHeader=header;

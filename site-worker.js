@@ -20,6 +20,7 @@ import { decorateMallProductResponse, isMallProductPath } from './mall-product-j
 import { o2oHubPage } from './o2o-hub-page.js';
 import { isEkodibizAgencyPath, proxyEkodibizAgency } from './ekodibiz-agency-route.js';
 import { isO2OIssuedLinkPath, o2oIssuedLinkResponse } from './o2o-issued-links.js';
+import { isPublicAccountingNoticePath, publicAccountingNoticePage } from './public-accounting-notice-page.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -47,6 +48,8 @@ const PUBLIC_ASSETS = new Set([
   '/ekodi-message-ui.js',
   '/tenant-live.css',
   '/tenant-live.js',
+  '/public-accounting-notice.css',
+  '/public-accounting-notice.js',
   '/mall.css',
   '/mall.js',
   '/pizzamaru-mokpodae.css',
@@ -734,6 +737,9 @@ export default {
     }
 
     if (host === PUBLIC_HOST) {
+      if (['GET','HEAD'].includes(request.method) && isPublicAccountingNoticePath(url.pathname)) {
+        return withHostSecurity(publicAccountingNoticePage(url.pathname), PUBLIC_CSP, 'public, max-age=120', 'public-accounting-notice');
+      }
       // All agency routes belong to the EKODIBIZ service binding, not the apex static fallback.
       // Preserve its authentication and payment CSP; do not broaden the general service proxy.
       if (isEkodibizAgencyPath(url.pathname)) return proxyEkodibizAgency(request, env);
