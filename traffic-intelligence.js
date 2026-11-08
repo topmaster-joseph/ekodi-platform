@@ -61,6 +61,15 @@ export const ROOT_PATH_SITE_IDS = Object.freeze({
   management:'management', cafe:'cafe', messenger:'messenger',
   insurance:'insurance', work:'work', space:'space', experience:'experience',
   lab:'lab', pay:'pay', stores:'stores',
+  // FOOTER-TRAFFIC-GUARANTEE (2026-11-09): every public ekodi.kr site prefix is
+  // registered here; test/footer-traffic-site-registry.test.mjs fails when a new
+  // public site ships without an entry (unregistered prefixes return not_site).
+  ekodipay:'pay', mall:'mall', 'ekodi-church':'church', cgmurrc:'cgmurrc',
+  jubilee:'jubilee', open:'open', 'business-coop':'business-coop',
+  sosik:'sosik', qtin:'qtin', pyeonggongmok:'pyeonggongmok',
+  'mokpo-presbytery':'mokpo-presbytery', proposal:'proposal', promotion:'promotion',
+  notifications:'notifications', singles:'singles', learn:'learn', history:'history',
+  'local-commerce':'local-commerce', org:'org', hub:'hub',
   'ekodibiz/trade':'trade', 'ekodibiz/marketing-ai':'marketing',
   'ekodibiz/mall':'mall'
 });
