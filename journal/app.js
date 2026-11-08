@@ -250,7 +250,7 @@ function articleFooterHtml(post) {
       <p>${escapeHtml(ui().readerBody)}</p>
       <div class="article-reader-actions">
         <a class="article-reader-button is-primary" href="${escapeHtml(letterHref(post))}">${escapeHtml(ui().correction)}</a>
-        <a class="article-reader-button" href="/community/">${escapeHtml(ui().talk)}</a>
+        <a class="article-reader-button" href="https://ekodi.kr/community/">${escapeHtml(ui().talk)}</a>
       </div>
       <span class="article-reader-desk">${escapeHtml(JOURNAL_DESK.name)} · ${escapeHtml(JOURNAL_DESK.email)}</span>
     </section>

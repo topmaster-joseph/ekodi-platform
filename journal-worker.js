@@ -2,6 +2,16 @@ import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { JOURNAL_META, getPublishedPosts, toPublicSummary } from './journal-content.js';
 import { bookJournalPosts, mergePosts } from './journal-books.js';
 import { issueOf, docNumber, postType } from './journal/issue.js';
+import { PLATFORM_ROUTE_REGISTRY } from './platform-route-registry.js';
+
+// JOURNAL-COMMUNITY-LINK-20261109: /journal/community/ 같은 다른 서비스 경로가 저널 안으로 들어오면
+// 404 대신 해당 서비스의 정식 주소로 보낸다(휴대폰에서 /journal/community/ 404 발생).
+const OTHER_SERVICE_ROOTS = new Set([...PLATFORM_ROUTE_REGISTRY.platformServices, 'my', 'auth'].filter((root) => root !== 'journal'));
+export function strayServiceRedirect(url) {
+  const first = url.pathname.split('/')[1] || '';
+  if (!OTHER_SERVICE_ROOTS.has(first)) return null;
+  return Response.redirect(`https://ekodi.kr${url.pathname}${url.search}`, 301);
+}
 
 // JOURNAL-BOOKS-001: 기존 글 + 출판된 도서 글(출판 워커 서비스 바인딩).
 async function allPosts(env) { return mergePosts(getPublishedPosts(), await bookJournalPosts(env)); }
@@ -192,6 +202,8 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, '') || '/';
+    const stray = strayServiceRedirect(url);
+    if (stray) return stray;
 
     if (path === '/health') {
       return json({
