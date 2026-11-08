@@ -113,3 +113,13 @@ main.church-section-filtered>section.hero:not(.church-section-active){display:no
 /* Preserve the original two-column notice + schedule layout on the home screen. */
 main.church-section-filtered>section.church-public-panels.church-section-active{display:grid!important}
 @media(max-width:760px){main.church-section-filtered>section.church-public-panels.church-section-active{grid-template-columns:1fr!important}}
+
+/* 320px live Chromium regression (central release run #42424840618):
+   the home greeting was 12px behind the sticky header. Restore the
+   mobile header-to-hero gap without touching shared auth, menu or other views.
+   Keep this override after the older mobile layout styles. */
+@media(max-width:360px){
+  .site-header + main > .hero{
+    padding-top:48px!important;
+  }
+}
