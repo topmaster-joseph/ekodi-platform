@@ -1,6 +1,7 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { JOURNAL_META, getPublishedPosts, toPublicSummary } from './journal-content.js';
 import { bookJournalPosts, mergePosts } from './journal-books.js';
+import { issueOf, docNumber, postType } from './journal/issue.js';
 
 // JOURNAL-BOOKS-001: 기존 글 + 출판된 도서 글(출판 워커 서비스 바인딩).
 async function allPosts(env) { return mergePosts(getPublishedPosts(), await bookJournalPosts(env)); }
@@ -75,6 +76,30 @@ function rss(posts) {
 </channel></rss>`;
 }
 
+// JOURNAL-MASTHEAD-20261108: JSON Feed 1.1 — 피드 리더·추천 서비스가 바로 읽는 형식.
+function jsonFeed(posts) {
+  return {
+    version: 'https://jsonfeed.org/version/1.1',
+    title: 'EKODI Journal',
+    home_page_url: `${JOURNAL_META.canonicalOrigin}/`,
+    feed_url: `${JOURNAL_META.canonicalOrigin}/feed.json`,
+    description: JOURNAL_META.description,
+    language: 'ko-KR',
+    items: posts.map((post) => ({
+      id: `${JOURNAL_META.canonicalOrigin}/p/${encodeURIComponent(post.slug)}`,
+      url: `${JOURNAL_META.canonicalOrigin}/p/${encodeURIComponent(post.slug)}`,
+      title: post.title,
+      summary: post.excerpt,
+      content_text: (post.body || []).map((b) => (b.type === 'list' ? (b.items || []).join('\n') : b.text || '')).filter(Boolean).join('\n\n'),
+      date_published: new Date(post.publishedAt).toISOString(),
+      date_modified: new Date(post.updatedAt || post.publishedAt).toISOString(),
+      tags: [post.categoryLabel, postType(post.category), ...(post.values || [])].filter(Boolean),
+      authors: [{ name: post.author?.name || 'EKODI Editorial' }],
+      _ekodi: { doc: docNumber(post, posts) },
+    })),
+  };
+}
+
 function sitemap(posts) {
   const urls = [
     `<url><loc>${JOURNAL_META.canonicalOrigin}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`,
@@ -104,12 +129,21 @@ export function seoFor(post, posts = []) {
   }
   const url = `${origin}/p/${encodeURIComponent(post.slug)}`;
   const text = (post.body || []).map((b) => (b.type === 'list' ? (b.items || []).join(' · ') : b.text || '')).filter(Boolean);
+  const issue = issueOf(post.publishedAt);
   const ld = { '@context': 'https://schema.org', '@type': 'BlogPosting', headline: post.title, description: post.excerpt, url, mainEntityOfPage: url,
+    identifier: docNumber(post, posts), genre: postType(post.category),
+    isPartOf: { '@type': 'PublicationIssue', issueNumber: String(issue.number), datePublished: `${issue.year}-${String(issue.month).padStart(2, '0')}`,
+      isPartOf: { '@type': 'PublicationVolume', volumeNumber: String(issue.volume), isPartOf: { '@type': ['Periodical', 'Blog'], name: 'EKODI Journal', url: `${origin}/` } } },
     datePublished: post.publishedAt, dateModified: post.updatedAt || post.publishedAt, inLanguage: 'ko-KR',
     articleSection: post.categoryLabel, keywords: (post.values || []).join(', '),
     author: { '@type': 'Organization', name: post.author?.name || 'EKODI Editorial' },
     publisher: { '@type': 'Organization', name: 'EKODI', url: 'https://ekodi.kr/' } };
   if (post.coverPhoto?.src) ld.image = `https://ekodi.kr${post.coverPhoto.src}`;
+  ld.breadcrumb = { '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'EKODI', item: 'https://ekodi.kr/' },
+    { '@type': 'ListItem', position: 2, name: 'EKODI Journal', item: `${origin}/` },
+    { '@type': 'ListItem', position: 3, name: post.title, item: url },
+  ] };
   if (post.book?.url) ld.about = { '@type': 'Book', name: post.book.title, url: post.book.url, author: post.book.author || undefined };
   return {
     title: `${post.title} | EKODI Journal`, description: post.excerpt, url, type: 'article', ld,
@@ -180,6 +214,7 @@ export default {
       return text(`User-agent: *\nAllow: /\nSitemap: ${JOURNAL_META.canonicalOrigin}/sitemap.xml\n`);
     }
     if (path === '/feed.xml' || path === '/rss.xml') return text(rss(await allPosts(env)), 'application/rss+xml; charset=utf-8');
+    if (path === '/feed.json') return text(JSON.stringify(jsonFeed(await allPosts(env))), 'application/feed+json; charset=utf-8');
     if (path === '/sitemap.xml') return text(sitemap(await allPosts(env)), 'application/xml; charset=utf-8');
 
     if (path === '/api/posts') {
