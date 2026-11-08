@@ -12,7 +12,12 @@ const COPY = Object.freeze({
   kac: { intro:'EKODI gaw kam, prat, technology hte community lapran hta hpa galaw ai hte hpa majaw lata ai hpe matsing da ai.', manifesto:'Matsing gaw matsing lamang sha n re, lit laika mung rai nga ai.', search:'Tam', searchLabel:'Journal hta tam', all:'Yawng', empty:'Hkrum ai laika n nga ai.', back:'← Laika yawng', why:'WHY JOURNAL', closingTitle:'Hpaji hpe gawgap da na n re, ginhka ya na.', closingBody:'Ndai matsing ni gaw hpang de wa ai wa ni hte community ni mung shinggyim ai lam hta galaw lu na matu rai nga ai.', min:'min read', original:'Korean original hte English version nga ai.' },
 });
 
-const state = { posts: [], category: 'all', query: '', locale: 'ko-KR' };
+const UI = Object.freeze({
+  'ko-KR': { share:'링크 공유', copied:'링크를 복사했습니다', related:'함께 읽을 글', prev:'이전 글', next:'다음 글', loading:'글을 불러오는 중입니다…', failed:'글 목록을 잠시 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', retry:'다시 시도', book:'에코디서점 도서', toTop:'맨 위로' },
+  en: { share:'Share link', copied:'Link copied', related:'Read next', prev:'Previous', next:'Next', loading:'Loading articles…', failed:'Articles could not be loaded right now. Please try again shortly.', retry:'Retry', book:'EKODI Books', toTop:'Back to top' },
+});
+function ui() { return UI[state.locale] || UI.en; }
+const state = { posts: [], category: 'all', query: '', locale: 'ko-KR', loaded: false, failed: false };
 const listView = document.querySelector('#journal-list-view');
 const articleView = document.querySelector('#journal-article-view');
 const list = document.querySelector('#journal-list');
@@ -68,10 +73,13 @@ function categories() {
   return [...seen.entries()];
 }
 
+function categoryCount(id) {
+  return id === 'all' ? state.posts.length : state.posts.filter((post) => post.category === id).length;
+}
 function renderFilters() {
   const items = [['all', copy().all], ...categories()];
   filters.innerHTML = items.map(([id, label]) => `
-    <button class="journal-filter" type="button" data-category="${escapeHtml(id)}" aria-pressed="${state.category === id}">${escapeHtml(label)}</button>
+    <button class="journal-filter" type="button" data-category="${escapeHtml(id)}" aria-pressed="${state.category === id}">${escapeHtml(label)}<span class="journal-filter-count">${categoryCount(id)}</span></button>
   `).join('');
   filters.querySelectorAll('[data-category]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -98,19 +106,49 @@ function photoHtml(input, className = '') {
   if (!photo) return '';
   return `<figure class="journal-photo ${className}"><img src="${escapeHtml(photo.src)}" alt="${escapeHtml(photo.alt)}" loading="lazy" decoding="async">${photoCaption(photo)}</figure>`;
 }
+// 도서 글은 추상 무늬 대신 책 표지 카드(제목·저자)를 보여준다 — 실제 표지 이미지가 생기면 사진이 우선.
+function bookCoverHtml(post, className = '') {
+  const book = post.book;
+  if (!book?.title) return '';
+  return `<div class="journal-thumb journal-book-cover ${className} thumb-${Number(post.imageVariant) || 1}" role="img" aria-label="${escapeHtml(`『${book.title}』 표지`)}">
+    <span class="book-cover-series">${escapeHtml(ui().book)}</span>
+    <strong class="book-cover-title">${escapeHtml(book.title)}</strong>
+    ${book.subtitle ? `<span class="book-cover-subtitle">${escapeHtml(book.subtitle)}</span>` : ''}
+    <span class="book-cover-author">${escapeHtml(book.author || '')}</span>
+  </div>`;
+}
 function coverHtml(post, className = '') {
   return photoHtml(post.coverPhoto, className)
+    || bookCoverHtml(post, className)
     || `<div class="journal-thumb ${className} thumb-${Number(post.imageVariant) || 1}" aria-hidden="true"></div>`;
 }
+function safeHref(value) {
+  try {
+    const url = new URL(String(value || ''), location.origin);
+    return url.protocol === 'https:' && (url.hostname === 'ekodi.kr' || url.origin === location.origin) ? url.href : '';
+  } catch { return ''; }
+}
 function renderList() {
+  if (!state.loaded) {
+    empty.hidden = true;
+    list.innerHTML = `<p class="journal-status" role="status">${escapeHtml(ui().loading)}</p>`;
+    return;
+  }
+  if (state.failed) {
+    empty.hidden = true;
+    list.innerHTML = `<div class="journal-status" role="alert"><p>${escapeHtml(ui().failed)}</p><button type="button" class="journal-retry">${escapeHtml(ui().retry)}</button></div>`;
+    list.querySelector('.journal-retry')?.addEventListener('click', () => boot());
+    return;
+  }
   const posts = state.posts.filter(matches);
+  const featureFirst = state.category === 'all' && !state.query.trim();
   empty.hidden = posts.length > 0;
-  list.innerHTML = posts.map((post) => {
+  list.innerHTML = posts.map((post, index) => {
     const values = (post.values || []).map((value) => `<span class="journal-value">${escapeHtml(value)}</span>`).join('');
     const title = postText(post, 'title');
     const excerpt = postText(post, 'excerpt');
     const category = isKorean() ? post.categoryLabel : (post.categoryLabelEn || post.categoryLabel);
-    return `<a class="journal-card" href="/journal/p/${encodeURIComponent(post.slug)}">
+    return `<a class="journal-card${featureFirst && index === 0 ? ' is-featured' : ''}" href="/journal/p/${encodeURIComponent(post.slug)}">
       ${coverHtml(post, "journal-card-cover")}
       <div class="journal-card-copy">
         <div class="journal-card-meta"><strong>${escapeHtml(category)}</strong><span>${escapeHtml(dateText(post.publishedAt))}</span><span>${escapeHtml(String(post.readMinutes))} ${escapeHtml(copy().min)}</span></div>
@@ -128,34 +166,89 @@ function bodyHtml(blocks = []) {
     if (block.type === 'heading') return `<h2>${escapeHtml(block.text)}</h2>`;
     if (block.type === 'quote') return `<blockquote>${escapeHtml(block.text)}</blockquote>`;
     if (block.type === 'list') return `<ul>${(block.items || []).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+    if (block.type === 'cta') {
+      const href = safeHref(block.href);
+      const textOnly = String(block.text || '').replace(/:?\s*https?:\/\/\S+\s*$/, '');
+      return href
+        ? `<aside class="article-cta"><p>${escapeHtml(textOnly)}</p><a class="article-cta-button" href="${escapeHtml(href)}">${escapeHtml(block.label || href)} →</a></aside>`
+        : `<p>${escapeHtml(block.text)}</p>`;
+    }
     const cls = block.type === 'lead' ? ' class="lead"' : '';
     return `<p${cls}>${escapeHtml(block.text)}</p>`;
   }).join('');
+}
+function neighbours(post) {
+  const index = state.posts.findIndex((item) => item.slug === post.slug);
+  const related = state.posts.filter((item) => item.slug !== post.slug && item.category === post.category).slice(0, 3);
+  const fill = state.posts.filter((item) => item.slug !== post.slug && !related.includes(item)).slice(0, 3 - related.length);
+  return { newer: index > 0 ? state.posts[index - 1] : null, older: index >= 0 && index < state.posts.length - 1 ? state.posts[index + 1] : null, related: [...related, ...fill] };
+}
+function miniCard(post) {
+  return `<a class="journal-mini" href="/journal/p/${encodeURIComponent(post.slug)}"><span>${escapeHtml(isKorean() ? post.categoryLabel : (post.categoryLabelEn || post.categoryLabel))} · ${escapeHtml(dateText(post.publishedAt))}</span><strong>${escapeHtml(postText(post, 'title'))}</strong></a>`;
+}
+function articleFooterHtml(post) {
+  const { newer, older, related } = neighbours(post);
+  const nav = [
+    older ? `<a class="article-nav-link" href="/journal/p/${encodeURIComponent(older.slug)}"><span>← ${escapeHtml(ui().prev)}</span><strong>${escapeHtml(postText(older, 'title'))}</strong></a>` : '<span></span>',
+    newer ? `<a class="article-nav-link is-next" href="/journal/p/${encodeURIComponent(newer.slug)}"><span>${escapeHtml(ui().next)} →</span><strong>${escapeHtml(postText(newer, 'title'))}</strong></a>` : '<span></span>',
+  ].join('');
+  return `<div class="article-actions"><button type="button" class="article-share">${escapeHtml(ui().share)}</button><span class="article-share-status" role="status" aria-live="polite"></span></div>
+    <nav class="article-nav" aria-label="${escapeHtml(ui().prev)} / ${escapeHtml(ui().next)}">${nav}</nav>
+    ${related.length ? `<section class="article-related"><h2>${escapeHtml(ui().related)}</h2><div class="journal-mini-grid">${related.map(miniCard).join('')}</div></section>` : ''}`;
+}
+function setMeta(selector, attr, value) {
+  const node = document.querySelector(selector);
+  if (node) node.setAttribute(attr, value);
 }
 function renderArticle(post) {
   const title = postText(post, 'title');
   const excerpt = postText(post, 'excerpt');
   const category = isKorean() ? post.categoryLabel : (post.categoryLabelEn || post.categoryLabel);
   const blocks = isKorean() ? post.body : (post.bodyEn || post.body || []);
+  const url = `https://ekodi.kr/journal/p/${encodeURIComponent(post.slug)}`;
   article.innerHTML = `
     <div class="article-meta">${escapeHtml(category)} · ${escapeHtml(dateText(post.publishedAt))}</div>
     <h1 class="article-title">${escapeHtml(title)}</h1>
     <p class="article-deck">${escapeHtml(excerpt)}</p>
-    <div class="article-byline"><span>${escapeHtml(post.author?.name || 'EKODI Editorial')}</span><span>${escapeHtml(String(post.readMinutes))} ${escapeHtml(copy().min)}</span><span>${escapeHtml(copy().original)}</span></div>
+    <div class="article-byline"><span>${escapeHtml(post.author?.name || 'EKODI Editorial')}</span><span>${escapeHtml(String(post.readMinutes))} ${escapeHtml(copy().min)}</span>${post.bodyEn && post.bodyEn !== post.body && post.source !== 'publishing-ai-release' ? `<span>${escapeHtml(copy().original)}</span>` : ''}</div>
     ${coverHtml(post, "article-visual")}
     <div class="article-body">${bodyHtml(blocks)}</div>
-    <p class="article-disclosure">${escapeHtml(post.author?.disclosure || '')}</p>
+    ${post.author?.disclosure ? `<p class="article-disclosure">${escapeHtml(post.author.disclosure)}</p>` : ''}
+    ${articleFooterHtml(post)}
   `;
+  article.querySelector('.article-share')?.addEventListener('click', async () => {
+    const status = article.querySelector('.article-share-status');
+    try {
+      if (navigator.share) { await navigator.share({ title, text: excerpt, url }); return; }
+      await navigator.clipboard.writeText(url);
+      if (status) status.textContent = ui().copied;
+    } catch { /* 사용자가 공유를 취소한 경우 */ }
+  });
   document.title = `${title} | EKODI Journal`;
-  const canonical = document.querySelector('link[rel="canonical"]');
-  if (canonical) canonical.href = `https://ekodi.kr/journal/p/${encodeURIComponent(post.slug)}`;
-  const description = document.querySelector('meta[name="description"]');
-  if (description) description.content = excerpt;
+  setMeta('link[rel="canonical"]', 'href', url);
+  setMeta('meta[name="description"]', 'content', excerpt);
+  setMeta('meta[property="og:title"]', 'content', `${title} | EKODI Journal`);
+  setMeta('meta[property="og:description"]', 'content', excerpt);
+  setMeta('meta[property="og:url"]', 'content', url);
 }
+
+const progress = document.createElement('div');
+progress.className = 'journal-progress';
+progress.setAttribute('aria-hidden', 'true');
+document.body.appendChild(progress);
+function updateProgress() {
+  if (articleView.hidden) { progress.style.transform = 'scaleX(0)'; return; }
+  const rect = article.getBoundingClientRect();
+  const total = Math.max(1, rect.height - window.innerHeight * 0.6);
+  const ratio = Math.min(1, Math.max(0, -rect.top / total));
+  progress.style.transform = `scaleX(${ratio})`;
+}
+window.addEventListener('scroll', updateProgress, { passive: true });
 
 async function showRoute() {
   const match = location.pathname.match(/^\/journal\/p\/([^/]+)\/?$/);
   if (!match) {
+    document.body.classList.remove('journal-is-article');
     articleView.hidden = true;
     listView.hidden = false;
     document.title = 'EKODI Journal';
@@ -169,8 +262,10 @@ async function showRoute() {
     const data = await response.json();
     listView.hidden = true;
     articleView.hidden = false;
+    document.body.classList.add('journal-is-article');
     renderArticle(data.post);
     window.scrollTo({ top: 0, behavior: 'instant' });
+    updateProgress();
   } catch {
     location.replace('/journal/');
   }
@@ -184,17 +279,33 @@ function applyLocale(locale) {
 }
 
 async function boot() {
-  try {
-    const response = await fetch('/journal/api/posts');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    state.posts = Array.isArray(data.posts) ? data.posts : [];
-  } catch {
-    state.posts = [];
+  state.loaded = false;
+  state.failed = false;
+  if (!location.pathname.match(/^\/journal\/p\//)) renderList();
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch('/journal/api/posts');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      state.posts = Array.isArray(data.posts) ? data.posts : [];
+      state.failed = false;
+      break;
+    } catch {
+      state.posts = [];
+      state.failed = true;
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
   }
+  state.loaded = true;
   const shellLocale = window.EKODIUserLanguage?.getLocale?.();
   applyLocale(shellLocale || document.documentElement.lang || navigator.language);
 }
+document.addEventListener('keydown', (event) => {
+  if (event.key !== '/' || event.target.closest('input, textarea, [contenteditable="true"]')) return;
+  if (listView.hidden) return;
+  event.preventDefault();
+  search.focus();
+});
 search.addEventListener('input', () => {
   state.query = search.value;
   renderList();
