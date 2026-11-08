@@ -81,3 +81,24 @@ test('Toss merchant review: purchase and policy delivery copy match the EPUB rea
   assert.doesNotMatch(purchase, /EPUB 파일을 바로 받습니다/);
   assert.doesNotMatch(commerce.policy.delivery, /EPUB 파일을 받습니다/);
 });
+
+test('Toss merchant review: Books consent and checkout use the existing EKODIBIZ refund policy without altering refund processing', () => {
+  const checkoutHtml = readFileSync(new URL('../books/buy/index.html', import.meta.url), 'utf8');
+  const commerce = JSON.parse(readFileSync(new URL('../books/commerce.json', import.meta.url), 'utf8'));
+  const canonicalPolicy = readFileSync(new URL('../ekodibiz-refund-policy-page.js', import.meta.url), 'utf8');
+  const chrome = readFileSync(new URL('../scripts/site-chrome.mjs', import.meta.url), 'utf8');
+  const address = '전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층';
+  assert.match(canonicalPolicy, /다운로드·열람 등 제공이 개시되기 전에는 전액 환불/);
+  assert.match(canonicalPolicy, /콘텐츠 하자나 제공 불가 시에는 전액 환불/);
+  assert.match(checkoutHtml, /콘텐츠 제공이 시작되기 전 법정 청약철회 기간/);
+  assert.match(checkoutHtml, /콘텐츠 하자·제공 불가 시/);
+  assert.match(checkoutHtml, /href="https:\/\/ekodi\.kr\/ekodibiz\/refund"/);
+  assert.match(commerce.policy.refund, /콘텐츠 제공이 시작되기 전 법정 청약철회 기간/);
+  assert.match(commerce.policy.refund, /콘텐츠 하자 또는 제공 불가 시에는 전액 환불/);
+  assert.doesNotMatch(checkoutHtml, /다운로드 후에는 파일 결함 시에만 환불/);
+  assert.doesNotMatch(commerce.policy.refund, /다운로드 후에는 파일 결함이 있을 때만/);
+  assert.ok(checkoutHtml.includes(address), 'buyer-visible merchant identity must match canonical EKODIBIZ');
+  const booksChrome = chrome.split('  books: {')[1].split('  publishing: {')[0];
+  assert.ok(booksChrome.includes(address), 'Books footer seller address must match canonical EKODIBIZ');
+  assert.equal(commerce.policy.seller.includes('213-13-01959'), true);
+});
