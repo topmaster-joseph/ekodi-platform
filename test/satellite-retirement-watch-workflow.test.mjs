@@ -24,7 +24,12 @@ test('EKODI orchestrator native monitor launches bounded read-only runner and re
   assert.match(native,/cat ekodi-satellite-audit\/summary\.md >> "\$GITHUB_STEP_SUMMARY"/);
   assert.match(native,/ekodi-satellite-audit\//);
   assert.match(native,/actions\/upload-artifact@v7/);
-  assert.match(native,/if: always\(\) && \(github\.event\.schedule == '45 23 \* \* \*' \|\| github\.event_name == 'workflow_dispatch'\)/);
+  assert.match(native,/if: always\(\) && \(github\.event\.schedule == '45 23 \* \* \*' \|\| github\.event_name == 'workflow_dispatch' \|\| github\.event\.schedule == '37 \* \* \* \*'\)/);
+  assert.match(native,/kst_hour="\$\(TZ=Asia\/Seoul date \+%H\)"/);
+  assert.match(native,/\^\(09\|10\|11\)\$/);
+  assert.match(native,/outside its 09-11 KST recovery window/);
+  assert.equal((native.match(/cron: '37 \* \* \* \*'/g)||[]).length,1,'recovery must reuse existing hourly cron');
+  assert.equal((native.match(/cron: '45 23 \* \* \*'/g)||[]).length,1,'existing 08:45 daily cron remains sole daily owner');
 });
 
 test('manual recovery audit stays protected main, least privilege, no independent scheduler or mutation',()=>{
