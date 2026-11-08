@@ -583,6 +583,8 @@ async function routePlatform(request,env,ctx){
        url.pathname==='/ekodilab/admin/services'||url.pathname==='/ekodilab/admin/services/')){
       return injectEkodiShell(workspaceAdminPage(url.pathname),'space','admin');
     }
+    // 목포노회 회원명부 API must run before the canonical /api/* -> CONTROL_API proxy, which would otherwise swallow it.
+    if(host===PUBLIC_HOST){const rosterResponse=await handleRosterApi(request,env);if(rosterResponse)return rosterResponse;}
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&(['/control','/control/','/control.css','/control.js'].includes(url.pathname))){
@@ -608,7 +610,6 @@ async function routePlatform(request,env,ctx){
       const investSite=routeInvestSite(request);if(investSite)return injectEkodiShell(investSite,'invest');
       const taxPortal=await routeTaxPortalApex(request,env,ctx);if(taxPortal)return taxPortal;
       const contactResponse=await handleMailContactApi(request,env);if(contactResponse)return contactResponse;
-      const rosterResponse=await handleRosterApi(request,env);if(rosterResponse)return rosterResponse;
       if(request.method==='GET'&&url.pathname==='/mail/contact')return injectEkodiShell(mailContactPage(),'mail');
       if(request.method==='GET'&&isLearningPath(url.pathname)){if(url.pathname==='/learn/assets/style.css')return learningStyles();if(url.pathname==='/learn/assets/app.js')return learningScript();return injectEkodiShell(learningPage(),'learn','public');}
       const previewResponse=handlePreviewRequest(request);if(previewResponse)return previewResponse;
