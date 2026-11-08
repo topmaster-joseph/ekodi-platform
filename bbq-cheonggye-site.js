@@ -37,11 +37,74 @@ export async function renderBbqCheonggyePage(request,env,profile={},fetchImpl=fe
   const publicPhone=escapeHtml(phone||'매장 확인 후 안내');
   const desc=escapeHtml(store.description||'매장 이용 안내를 준비하고 있습니다.');
   const menu=Array.isArray(data?.menu)?data.menu.filter(item=>item&&item.availability!=='hidden').slice(0,12):[];
-  const menuHtml=menu.length?menu.map(item=>`<article class="card menu-card"><span>${escapeHtml(item.category||'메뉴')}</span><strong>${escapeHtml(item.name||'메뉴')}</strong><p>${escapeHtml(item.description||'')}</p>${Number.isFinite(Number(item.base_price))&&item.base_price!==null?`<em>${Number(item.base_price).toLocaleString('ko-KR')}원</em>`:''}</article>`).join(''):`<article class="card"><h3>BBQ 공식 메뉴 보기</h3><p>판매 메뉴와 가격은 본사 최신 안내와 주문 화면에서 확인해 주세요.</p><a class="link" href="${official}" target="_blank" rel="noopener noreferrer">공식 메뉴로 이동</a></article>`;
+  const menuHtml=menu.length?`<section class="verified-menu" aria-labelledby="verified-menu-heading"><h3 id="verified-menu-heading">우리 매장에 등록된 메뉴</h3><div class="verified-menu-grid">${menu.map(item=>`<article class="menu-card"><span>${escapeHtml(item.category||'메뉴')}</span><strong>${escapeHtml(item.name||'메뉴')}</strong><p>${escapeHtml(item.description||'')}</p>${Number.isFinite(Number(item.base_price))&&item.base_price!==null?`<em>${Number(item.base_price).toLocaleString('ko-KR')}원</em>`:''}</article>`).join('')}</div></section>`:'';
   // The tenant is still prelaunch until an authorized operator verifies its public data.
   const hasVerifiedPublicFacts=Boolean(store.address&&store.phone&&hoursLabel(store.business_hours));
   const robots=hasVerifiedPublicFacts?'index,follow':'noindex,nofollow,noarchive';
-  const body=`<!doctype html><html lang="ko" data-store-entity="${BBQ_CG_SLUG}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#171565"><meta name="robots" content="${robots}"><meta name="description" content="BBQ 무안청계점의 매장 정보와 공식 메뉴·주문 안내"><link rel="canonical" href="https://ekodi.kr/${BBQ_CG_SLUG}"><link rel="stylesheet" href="/${BBQ_CG_SLUG}/assets/site.css"><title>${name} | 매장 안내</title></head><body><a class="skip" href="#main">본문으로 이동</a><header class="header"><div class="wrap head"><a class="logo" href="/${BBQ_CG_SLUG}">BBQ 무안청계점<small>우리 동네 BBQ · 무안청계점</small></a><nav class="nav" aria-label="주요 메뉴"><a href="#guide">매장안내</a><a href="#menu">BBQ 메뉴</a><a href="#order">주문하기</a><a href="#notice">매장소식</a><a href="#directions">오시는 길</a></nav></div></header><main id="main"><section class="hero"><div class="wrap hero-inner"><div><div class="eyebrow">BBQ MUAN CHEONGGYE · STORE</div><h1>가까운 곳에서 만나는<br>따뜻한 한 끼</h1><p>${name}의 매장 소식과 이용 정보를 확인하세요. 메뉴와 주문은 BBQ 공식 서비스를 통해 안내합니다.</p><div class="actions"><a class="btn primary" href="#order">주문방법 선택하기</a><a class="btn secondary" href="#guide">매장 이용 안내</a></div></div><div class="hero-side"><div><b>BBQ</b><small>MUAN CHEONGGYE</small></div></div></div></section><section class="wrap stats" id="guide" aria-label="매장 기본 정보"><div class="stat"><small>매장명</small><strong>${name}</strong></div><div class="stat"><small>영업시간</small><strong>${hours}</strong></div><div class="stat"><small>매장 전화</small><strong>${phoneHref?`<a href="${escapeHtml(phoneHref)}">${publicPhone}</a>`:publicPhone}</strong></div></section><section class="wrap section" id="menu"><div class="section-head"><div><h2>메뉴와 주문</h2><p>등록된 매장 메뉴만 표시하며, 최신 판매 여부와 가격은 공식 주문 화면에서 확인해 주세요.</p></div><a href="${official}" target="_blank" rel="noopener noreferrer">BBQ 공식 메뉴</a></div><div class="cards">${menuHtml}</div></section><section class="wrap section" id="order" aria-labelledby="orderHeading"><div class="section-head"><div><h2 id="orderHeading">주문하기</h2><p>원하시는 주문 방법을 선택해 주세요. QR코드는 주문방법 안내로 연결되며 결제나 주문을 직접 접수하지 않습니다.</p></div></div><div class="order-options"><a class="order-action" href="${official}" target="_blank" rel="noopener noreferrer"><strong>BBQ 공식 주문</strong><small>본사에서 무안청계점 선택 후 배달·포장 여부를 확인하세요.</small></a><a class="order-action" href="${phoneHref?escapeHtml(phoneHref):'#guide'}"><strong>매장 전화</strong><small>${publicPhone}</small></a><div class="order-action pending"><strong>배달의민족</strong><small>청계점 전용 주문 링크 확인 중</small></div><div class="order-action pending"><strong>요기요</strong><small>청계점 전용 주문 링크 확인 중</small></div><div class="order-action pending"><strong>쿠팡이츠</strong><small>청계점 전용 주문 링크 확인 중</small></div></div><div class="qr-wrap"><div id="bbqOrderQr" class="qr-visual" aria-label="BBQ 무안청계점 주문방법 안내 QR"></div><div class="qr-actions"><strong>우리 매장 주문 안내 QR</strong><p>매장에 부착할 QR입니다. 스캔하면 현재 페이지의 주문방법으로 이동합니다. QR 자체는 결제 기능이 아닙니다.</p><button type="button" id="bbqQrDownload">QR 이미지 저장</button><a href="/bbqcg#order">주문 안내 링크</a><small id="bbqQrStatus" aria-live="polite">QR 생성 준비 중</small></div></div></section><section class="wrap section" id="notice"><div class="section-head"><div><h2>매장 안내</h2><p>검증된 매장 정보부터 차례로 안내합니다.</p></div></div><div class="cards" id="directions"><article class="card"><span class="num">01 · 찾아오시는 길</span><h3>위치</h3><p>${address}</p></article><article class="card"><span class="num">02 · 매장 소식</span><h3>공지</h3><p>${desc}</p></article><article class="card"><span class="num">03 · 주문</span><h3>공식 주문 안내</h3><p>본사 주문 페이지에서 실제 주문 가능 매장과 배달·포장 여부를 확인합니다.</p><a class="link" href="${official}" target="_blank" rel="noopener noreferrer">공식 사이트로 이동</a></article></div></section></main><footer class="foot"><div class="wrap"><div class="links"><a href="${official}" target="_blank" rel="noopener noreferrer">BBQ 공식 사이트</a><a href="/${BBQ_CG_SLUG}/admin">매장 운영관리</a></div></div></footer><script defer src="/my/vendor/qrcode.min.js"></script><script defer src="/bbqcg/assets/order-qr.js"></script></body></html>`;
+  const body=`<!doctype html>
+<html lang="ko" data-store-entity="bbqcg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111342">
+<meta name="robots" content="${robots}">
+<meta name="description" content="BBQ 무안청계점 매장정보, BBQ 공식 메뉴, 주문방법과 방문 안내">
+<link rel="canonical" href="https://ekodi.kr/bbqcg">
+<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+<link rel="preload" as="image" href="https://images.unsplash.com/photo-1742936401708-dd1b132f06db?auto=format&amp;fit=crop&amp;w=1400&amp;q=78" fetchpriority="high">
+<link rel="stylesheet" href="/bbqcg/assets/site.css">
+<title>${name} | 매장 안내</title>
+</head>
+<body>
+<a class="skip" href="#main">본문으로 이동</a>
+<header class="header"><div class="wrap head">
+<a class="logo" href="/bbqcg" aria-label="BBQ 무안청계점 홈"><span class="logo-mark" aria-hidden="true">BBQ</span><span class="logo-copy">BBQ 무안청계점<small>우리 동네 BBQ · 무안청계점</small></span></a>
+<nav class="nav" aria-label="주요 메뉴"><a href="#guide">매장안내</a><a href="#menu">BBQ 메뉴</a><a href="#order">주문하기</a><a href="#notice">매장소식</a><a href="#directions">오시는 길</a></nav>
+</div></header>
+<main id="main">
+<section class="hero" aria-labelledby="hero-heading">
+<img class="hero-photo" src="https://images.unsplash.com/photo-1742936401708-dd1b132f06db?auto=format&amp;fit=crop&amp;w=1400&amp;q=78" width="1400" height="1000" alt="노릇하게 튀겨진 치킨을 담은 음식 연출 사진" decoding="async" fetchpriority="high">
+<div class="wrap hero-inner"><div class="hero-copy">
+<div class="eyebrow">BBQ MUAN CHEONGGYE</div>
+<h1 id="hero-heading">바삭함의 기준,<br>오늘도 <em>BBQ</em></h1>
+<div class="hero-store">BBQ 무안청계점</div>
+<p class="hero-desc">가까운 곳에서 만나는 따뜻한 한 끼.<br>매장 안내부터 메뉴·주문방법까지 한눈에 확인하세요.</p>
+<div class="actions"><a class="btn primary" href="#order">주문방법 보기 <span aria-hidden="true">›</span></a><a class="btn secondary" href="#guide">매장안내</a></div>
+</div></div></section>
+<div class="stats-bg"><section class="wrap stats" id="guide" aria-label="매장 기본 정보">
+<div class="stat"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 3"/></svg></span><div><small>영업시간</small><strong>${hours}</strong></div></div>
+<div class="stat"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 16.4v3a2 2 0 0 1-2.2 2 18 18 0 0 1-16.2-16A2 2 0 0 1 4.6 3h3a2 2 0 0 1 2 1.7l.5 2.8a2 2 0 0 1-.6 1.8l-1.7 1.5a15 15 0 0 0 5.4 5.4l1.5-1.7a2 2 0 0 1 1.8-.6l2.8.5A2 2 0 0 1 21 16.4Z"/></svg></span><div><small>매장전화</small><strong>${phoneHref?`<a href="${escapeHtml(phoneHref)}">${publicPhone}</a>`:publicPhone}</strong></div></div>
+<div class="stat"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></span><div><small>오시는 길</small><strong class="store-address">${address}</strong></div></div>
+</section></div>
+<section class="wrap section" id="menu" aria-labelledby="menu-heading">
+<div class="showcase">
+<div class="menu-content"><div class="section-head"><div><p class="section-kicker">OUR FAVORITES</p><h2 id="menu-heading">BBQ 대표 메뉴</h2></div><a href="${official}" target="_blank" rel="noopener noreferrer">공식 메뉴 전체보기 ›</a></div>
+<div class="photo-grid">
+<article class="photo-card"><img src="https://images.unsplash.com/photo-1742936401708-dd1b132f06db?auto=format&amp;fit=crop&amp;w=600&amp;q=75" width="400" height="300" loading="lazy" decoding="async" alt="바삭한 후라이드 치킨 연출 사진"><div class="photo-caption"><strong>황금올리브치킨™</strong><small>이미지 예시 · 판매 여부 확인</small></div></article>
+<article class="photo-card"><img src="https://images.unsplash.com/photo-1624153064067-566cae78993d?auto=format&amp;fit=crop&amp;w=600&amp;q=75" width="400" height="300" loading="lazy" decoding="async" alt="양념을 입힌 치킨 연출 사진"><div class="photo-caption"><strong>오리지날 양념치킨</strong><small>이미지 예시 · 판매 여부 확인</small></div></article>
+<article class="photo-card"><img src="https://images.unsplash.com/photo-1766589221324-656419e4c844?auto=format&amp;fit=crop&amp;w=600&amp;q=75" width="400" height="300" loading="lazy" decoding="async" alt="소스와 함께 제공된 튀김치킨 연출 사진"><div class="photo-caption"><strong>BBQ 인기 메뉴</strong><small>이미지 예시 · 판매 여부 확인</small></div></article>
+</div>
+<p class="section-subnote">사진은 메뉴 연출 예시이며 BBQ 본사 제품 사진이 아닙니다. 매장별 판매 메뉴와 가격은 공식 주문 화면에서 확인해 주세요.</p>
+</div>
+<aside class="order-panel" id="order" aria-labelledby="order-heading">
+<p class="section-kicker">EASY ORDER</p><h2 id="order-heading">간편 주문하기</h2>
+<a class="order-option" href="${official}" target="_blank" rel="noopener noreferrer"><span class="order-icon" aria-hidden="true">▤</span><span><strong>BBQ 공식 주문</strong><small>본사에서 무안청계점 선택 후 주문</small></span><span class="arrow" aria-hidden="true">›</span></a>
+<a class="order-option phone" href="${phoneHref?escapeHtml(phoneHref):'#guide'}"><span class="order-icon" aria-hidden="true">☎</span><span><strong>전화 주문</strong><small>${publicPhone}</small></span><span class="arrow" aria-hidden="true">›</span></a>
+<div class="qr-mini"><div id="bbqOrderQr" class="qr-visual" role="img" aria-label="BBQ 무안청계점 주문방법 안내 QR"></div><div><strong>주문 안내 QR</strong><p>스캔하면 주문방법 페이지로 연결됩니다. QR로 직접 결제되지는 않습니다.</p><div class="qr-actions"><button type="button" id="bbqQrDownload">QR 저장</button><a href="/bbqcg#order">안내 링크</a><small id="bbqQrStatus" aria-live="polite">QR 생성 준비 중</small></div></div></div>
+<details class="pending-channels"><summary>배달앱 주문 채널 확인</summary><div class="pending-list"><span>배달의민족<small>청계점 전용 주문 링크 확인 중</small></span><span>요기요<small>청계점 전용 주문 링크 확인 중</small></span><span>쿠팡이츠<small>청계점 전용 주문 링크 확인 중</small></span></div></details>
+</aside></div>
+${menuHtml}
+</section>
+<section class="details-area" id="notice" aria-labelledby="notice-heading"><div class="wrap"><div class="section-head"><div><p class="section-kicker">STORE INFORMATION</p><h2 id="notice-heading">매장 안내</h2></div><p>방문 전 운영 정보를 확인해 주세요.</p></div>
+<div class="info-grid" id="directions">
+<article class="info-card"><span class="num">01 · LOCATION</span><h3>찾아오시는 길</h3><p>${address}</p><a href="https://map.naver.com/p/search/%EB%AC%B4%EC%95%88%EA%B5%B0%20%EC%B2%AD%EA%B3%84%EB%A9%B4%20%EC%8A%B9%EB%8B%AC%EC%82%B0%EA%B8%B8%2037-1" target="_blank" rel="noopener noreferrer">지도에서 찾기 ›</a></article>
+<article class="info-card"><span class="num">02 · NEWS</span><h3>매장 소식</h3><p>${desc}</p></article>
+<article class="info-card"><span class="num">03 · ORDER</span><h3>주문 안내</h3><p>온라인 주문은 BBQ 공식 페이지에서 매장 및 배달·포장 가능 여부를 확인해 주세요.</p><a href="${official}" target="_blank" rel="noopener noreferrer">공식 주문으로 이동 ›</a></article>
+</div></div></section>
+</main>
+<footer class="foot"><div class="wrap foot-inner"><span class="foot-note">BBQ 무안청계점</span><div class="links"><a href="${official}" target="_blank" rel="noopener noreferrer">BBQ 공식 사이트</a><a href="/bbqcg/admin">매장 운영관리</a></div></div></footer>
+<script defer src="/my/vendor/qrcode.min.js"></script><script defer src="/bbqcg/assets/order-qr.js"></script>
+</body></html>`;
   return new Response(request.method==='HEAD'?null:body,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-robots-tag':robots,'x-ekodi-workspace':BBQ_CG_SLUG}});
 }
 
