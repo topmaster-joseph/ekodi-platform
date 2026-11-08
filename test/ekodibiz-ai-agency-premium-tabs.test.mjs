@@ -80,3 +80,12 @@ test('narrow phone layout keeps all tabs visible and stacks long contract choice
   assert.match(html,/#agencyForm \.choice\{grid-template-columns:1fr\}/);
   assert.doesNotMatch(html,/@media\(max-width:390px\)\{[^}]*overflow-x:auto/);
 });
+
+test('company administrator share buttons keep light background and dark readable text',async()=>{
+  const html=await read('../ekodibiz/ai-agency-admin.html');
+  assert.match(html,/data-share-agency="current"/);
+  assert.match(html,/data-share-agency="university"/);
+  assert.match(html,/\.agency-navigation button\[data-share-agency\]\{background:#eef6f0;color:#184b36/);
+  assert.match(html,/\.agency-navigation button\[data-share-agency\]:hover\{background:#dfeee4;color:#123d2c/);
+  assert.match(html,/button:not\(\[role="tab"\]\)\{border-color:#1b6040;background:#1b6040\}/);
+});
