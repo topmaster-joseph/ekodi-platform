@@ -72,6 +72,9 @@ jobs:
   staging_gate:
     needs: validate
     uses: ./.github/workflows/deploy-church-history-staging.yml
+    with:
+      release_branch_ref: ${{ inputs.release_branch_ref || '' }}
+      release_task_id: ${{ inputs.release_task_id || '' }}
     secrets: inherit
 
   release:
