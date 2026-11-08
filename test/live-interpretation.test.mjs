@@ -77,9 +77,10 @@ test('language and caption normalization',()=>{
 
 test('translation is fail-open and retries with language names when codes return nothing',async()=>{
   const seen=[];
-  const env={AI:{run:async(_m,input)=>{seen.push(input.target_lang);if(input.target_lang==='zh')throw new Error('boom');if(input.target_lang==='en')return {translated_text:''};return {translated_text:'ok'}}}};
+  const env={AI:{run:async(_m,input)=>{seen.push(input.target_lang);if(/^(zh|chinese)$/.test(input.target_lang))throw new Error('boom');if(input.target_lang==='en')return {translated_text:''};return {translated_text:'ok'}}}};
   const out=await translateSegment(env,'은혜','ko',['en','zh','ja']);
   assert.deepEqual(out.map(x=>[x.lang,x.status]),[['en','ok'],['zh','failed'],['ja','ok']]);
+  assert.ok(seen.includes('chinese'),'an error is retried once too');
   assert.equal(out[1].text,'은혜');
   assert.ok(seen.includes('english'),'name fallback attempted');
   const none=await translateSegment({},'은혜','ko',['en']);
@@ -316,4 +317,14 @@ test('studio keeps the program alive in the background and captures speech serve
   const console=fs.readFileSync(new URL('../live-interpretation.js',import.meta.url),'utf8');
   assert.match(console,/\/captions\/sessions\/\$\{encodeURIComponent\(st\.session\.id\)\}\/audio/);
   assert.match(console,/createScriptProcessor/);assert.match(console,/'audio-capture'/);
+});
+
+test('a translation that times out or errors once is retried before falling back to the original',async()=>{
+  let calls=0;
+  const env={AI:{run:async(_m,input)=>{calls++;if(calls===1)throw new Error('transient');return {translated_text:`[${input.target_lang}] ${input.text}`}}}};
+  const [zh]=await translateSegment(env,'주님은 나의 목자시니','ko',['zh']);
+  assert.equal(zh.status,'ok');assert.equal(calls,2);
+  const down={AI:{run:async()=>{throw new Error('down')}}};
+  const [en]=await translateSegment(down,'은혜','ko',['en']);
+  assert.deepEqual(en,{lang:'en',text:'은혜',status:'failed'});
 });
