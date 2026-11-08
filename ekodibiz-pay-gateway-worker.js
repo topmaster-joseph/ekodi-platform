@@ -1,3 +1,4 @@
+import { withFooterTraffic } from './footer-traffic-guarantee.js';
 const REVENUE_OS_URL = 'https://ekodi.kr/ekodibiz';
 const PAYMENT_CORE_ORIGIN = 'https://ekodi.kr/ekodipay';
 const CANONICAL_GATEWAY = 'https://ekodi.kr/ekodibiz/pay';
@@ -45,7 +46,7 @@ function approvedCoreCheckout(data) {
   }
 }
 
-export default {
+const ekodiWorkerEntry={
   async fetch(request) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/ekodibiz/pay')) return new Response('Not found', { status: 404, headers: headers('text/plain; charset=utf-8') });
@@ -76,3 +77,5 @@ export default {
 };
 
 export { CANONICAL_GATEWAY, PAYMENT_CORE_ORIGIN };
+// FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
+export default withFooterTraffic(ekodiWorkerEntry);

@@ -1,5 +1,6 @@
 import {handleFreshVoiceApi,FRESH_QUEUE_KIND,consumeFreshVoiceQueue,FRESH_REPLY_QUEUE_KIND,consumeFreshVoiceReplyQueue} from './voices-fresh/api.mjs';
 import {renderFreshVoicePage} from './voices-fresh/page.mjs';
+import { withFooterTraffic } from '../../footer-traffic-guarantee.js';
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extra}});
 const text=v=>String(v??'').trim();
 const now=()=>new Date().toISOString();
@@ -494,7 +495,7 @@ async function noticeDetailPage(req,env,id){
   return response;
 }
 
-export default {async fetch(req,env){
+const ekodiWorkerEntry={async fetch(req,env){
   const authReturn=await boardAuthReturn(req);if(authReturn)return authReturn;
   const url=new URL(req.url),path=pathOf(req);
   if(path==='/ui/central-category.js'&&req.method==='GET')return new Response(BOARD_CATEGORY_CLIENT_JS,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
@@ -579,3 +580,5 @@ async queue(batch,env){
     }
   }
 }};
+// FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
+export default withFooterTraffic(ekodiWorkerEntry);

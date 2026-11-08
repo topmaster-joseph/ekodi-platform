@@ -1,5 +1,6 @@
 import { ensureSiteDiscoveryHead } from './site-discovery-head.js';
 import { PREVIEW_HTML } from './ekodipay-preview.js';
+import { withFooterTraffic } from './footer-traffic-guarantee.js';
 // EKODI Pay public entry and non-financial experience demo.
 // This Worker NEVER makes PG requests, stores transactions, or confirms payment.
 export const CANONICAL_PAYMENT_ROOT = 'https://ekodi.kr/ekodipay';
@@ -259,4 +260,6 @@ const searchExposureEntry= {
 
 // SEARCH-EXPOSURE-ALL-001: this Worker owns its ekodi.kr route directly, so it
 // applies the shared add-only search head itself (router is bypassed).
-export default {...searchExposureEntry,async fetch(request,env,ctx){const response=await searchExposureEntry.fetch(request,env,ctx);try{return await ensureSiteDiscoveryHead(request,response,{id:'pay',name:'EKODI Pay'})}catch{return response}}};
+const ekodiWorkerEntry={...searchExposureEntry,async fetch(request,env,ctx){const response=await searchExposureEntry.fetch(request,env,ctx);try{return await ensureSiteDiscoveryHead(request,response,{id:'pay',name:'EKODI Pay'})}catch{return response}}};
+// FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
+export default withFooterTraffic(ekodiWorkerEntry);
