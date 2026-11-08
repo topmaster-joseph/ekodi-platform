@@ -224,7 +224,8 @@ function footerTrafficScope(){
   const root=segments[0]||'';
   if(['admin','auth','api','my'].includes(root)||['admin','auth','my'].includes(serviceId()))return '';
   // Shared legal pages are public too: they show the EKODI root site summary.
-  const sharedLegal=['privacy','terms'].includes(root);
+  // Root-level files (/hub.html) belong to the EKODI root site, like legal pages.
+  const sharedLegal=['privacy','terms'].includes(root)||root.includes('.');
   const child=root==='ekodibiz'&&['trade','marketing-ai','mall'].includes(segments[1])?'/'+segments[1]:'';
   const url=new URL(TRAFFIC_STATS_URL);
   url.searchParams.set('site_path',sharedLegal?'':root+child);
