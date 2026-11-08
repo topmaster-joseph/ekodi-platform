@@ -6,18 +6,10 @@
 (() => {
   'use strict';
   const BOOKS_API = '/books/api/commerce';
-  const mirrorUrl = '/ekodimall/provider-bookstore.json';
   const grid = document.getElementById('grid') || document.querySelector('[data-bookstore-store-grid]');
   const detailId = document.body?.dataset.bookstoreBookId || '';
   const validId = id => /^BOOK-[A-Z0-9-]{3,40}$/.test(String(id || ''));
   if (!grid && !validId(detailId)) return;
-  const safe = value => String(value ?? '').trim();
-  const element = (tag, cls, text) => {
-    const node = document.createElement(tag);
-    if (cls) node.className = cls;
-    if (text !== undefined) node.textContent = safe(text);
-    return node;
-  };
   const get = async url => {
     const response = await fetch(url, {
       method: 'GET', credentials: 'omit', cache: 'no-store',
@@ -35,161 +27,63 @@
     quote?.checkout?.mode === 'live' &&
     Number(quote?.price?.amount) > 0;
   const quoteFor = bookId => get(BOOKS_API + '/quote?book=' + encodeURIComponent(bookId));
-  const detailHref = slug => /^book-[a-z0-9-]+$/.test(safe(slug))
-    ? '/ekodimall/products/' + encodeURIComponent(slug) + '/' : '';
-  const bookCover = image => {
-    try {
-      const url = new URL(safe(image), window.location.origin);
-      return url.origin === window.location.origin && url.pathname.startsWith('/books/assets/')
-        ? url.href : '';
-    } catch { return ''; }
-  };
-  function productCard(book) {
-    const href = detailHref(book.slug);
-    if (!href) return null;
-    const article = element('article', 'card');
-    article.dataset.product = safe(book.id);
-    article.dataset.bookstoreRuntimeId = safe(book.bookId);
-    article.dataset.category = 'book';
-    article.dataset.name = safe(book.name);
-    article.dataset.status = '판매 중';
-    article.dataset.saleReady = 'true';
-    article.dataset.search = [book.name, book.description, '에코디서점', '전자책', '책·배움'].map(safe).join(' ').toLowerCase();
-    article.dataset.href = href;
-    const thumb = element('div', 'thumb book');
-    const photo = element('a', 'thumb-link');
-    photo.href = href;
-    photo.setAttribute('aria-label', article.dataset.name + ' 자세히 보기');
-    const source = bookCover(book.image);
-    if (source) {
-      const image = element('img');
-      image.src = source; image.alt = article.dataset.name;
-      image.loading = 'lazy'; image.decoding = 'async';
-      photo.append(image); thumb.classList.add('has-image');
-    }
-    const badge = element('span', 'badge', '에코디서점');
-    const heart = element('button', 'heart', '♡');
-    heart.type = 'button'; heart.dataset.wish = article.dataset.product;
-    heart.setAttribute('aria-label', article.dataset.name + ' 관심상품');
-    heart.setAttribute('aria-pressed', 'false');
-    thumb.append(photo, badge, heart);
-    const body = element('div', 'card-body');
-    const store = element('p', 'store-kicker');
-    const storeLink = element('a', '', 'EKODI Books');
-    storeLink.href = '/ekodimall/stores/ekodi-books/';
-    store.append(storeLink);
-    const heading = element('h3');
-    const title = element('a', '', book.name); title.href = href; heading.append(title);
-    const abstract = safe(book.description);
-    const summary = element('p', 'card-summary', abstract.length > 34 ? abstract.slice(0, 33).trimEnd() + '…' : abstract);
-    const meta = element('div', 'meta');
-    const amount = Number(book.price);
-    // Only show the amount returned by a verified live Books quote, never invent a list price.
-    const priceLabel = Number.isFinite(amount) && amount > 0 ? new Intl.NumberFormat('ko-KR').format(amount) + '원' : '가격 확인';
-    const status = element('span', 'status', priceLabel + ' · 판매 중');
-    const more = element('a', 'smallbtn', '자세히'); more.href = href;
-    meta.append(status, more); body.append(store, heading, summary, meta);
-    article.append(thumb, body);
-    return article;
-  }
-  // Keep already-verified public book identities stable when a read-only API
-  // times out. This is *never* an authorization to offer an unverified sale.
+  // Stable cards come from the publishing-owned, allowlisted build projection.
+  // Only the matching Buy CTA is revalidated. Never rebuild/remove a book card.
   let catalogRefresh = 0;
-  const catalogCard = book => grid.querySelector('[data-product="' +
-    safe(book.id).replace(/[^a-zA-Z0-9_-]/g, '') + '"]');
-  const quoteLabel = card => card?.querySelector('.meta .status');
-  const keepInformational = card => {
-    if (!card) return;
-    // Never turn a static, never-verified preparation row into a visible offer.
-    if (card.dataset.bookstoreQuotePending === 'true' &&
-        card.dataset.bookstoreInformational !== 'true') return;
-    card.dataset.bookstoreQuotePending = 'true';
+  const catalogCards = () => [...grid.querySelectorAll('[data-bookstore-runtime-id]')];
+  function setBuyState(card, state, quote) {
+    const button = card.querySelector('[data-bookstore-buy]');
+    if (!button) return;
+    const bookId = card.dataset.bookstoreRuntimeId;
+    const ready = state === 'ready' && readyQuote(quote, bookId);
+    // A link without href cannot trigger a payment or an unapproved checkout.
+    if (ready) {
+      button.href = '/ekodimall/checkout/book/?book=' + encodeURIComponent(bookId);
+      button.removeAttribute('aria-disabled');
+      button.removeAttribute('tabindex');
+      button.textContent = new Intl.NumberFormat('ko-KR').format(Number(quote.price.amount)) + '원 구매하기';
+    } else {
+      button.removeAttribute('href');
+      button.setAttribute('aria-disabled', 'true');
+      button.setAttribute('tabindex', '-1');
+      button.textContent = state === 'checking' ? '구매 확인 중' :
+        state === 'unavailable' ? '구매 준비 중' : '구매 상태 확인 필요';
+    }
+    // Internal state informs sale-only search, never changes the card's book info.
+    card.dataset.bookstoreQuotePending = ready ? 'false' : 'true';
     card.dataset.bookstoreInformational = 'true';
-    card.dataset.saleReady = 'false';
-    card.dataset.status = '판매 상태 확인 중';
-    const label = quoteLabel(card);
-    if (label) label.textContent = '판매 상태 확인 중 · 자세히 보기';
-  };
-  const markUnready = card => {
-    if (!card) return;
-    card.dataset.bookstoreQuotePending = 'true';
-    card.dataset.bookstoreInformational = 'false';
-    card.dataset.saleReady = 'false';
-    card.dataset.status = '판매 상태 확인 필요';
-    const label = quoteLabel(card);
-    if (label) label.textContent = '가격 확인 · 판매 상태 확인 필요';
-  };
-  function announceCatalog(degraded = false) {
-    // Count only live-quoted sale cards, not informational fallback entries.
-    const ready = grid.querySelectorAll('.card:not([data-bookstore-quote-pending="true"])').length;
-    const count = document.querySelector('[data-bookstore-public-count]');
-    if (count) count.textContent = ready + '개';
-    const state = document.querySelector('[data-bookstore-store-status]');
-    if (state) state.textContent = ready ? '도서 판매 중' : '판매 준비 중';
-    window.dispatchEvent(new CustomEvent('ekodi:marketplace-products-loaded', {
-      detail: { category: 'book', count: ready, source: 'books-approval', degraded }
-    }));
+    card.dataset.saleReady = ready ? 'true' : 'false';
   }
   async function syncCatalog() {
     if (!grid) return;
     const version = ++catalogRefresh;
-    let candidates;
-    try {
-      const [mirror, approvals] = await Promise.all([get(mirrorUrl), get(BOOKS_API + '/public/approvals')]);
-      if (!Array.isArray(mirror?.products) || !Array.isArray(approvals?.approvals)) {
-        throw new Error('bookstore catalog response incomplete');
-      }
-      const approved = new Set(approvals.approvals.map(record => record.bookId).filter(validId));
-      candidates = mirror.products.filter(book =>
-        validId(book?.bookId) && (book.saleReady === true || approved.has(book.bookId)) &&
-        /^book-[a-z0-9-]+$/.test(safe(book.slug)));
-    } catch {
-      if (version !== catalogRefresh) return;
-      grid.querySelectorAll('[data-bookstore-runtime-id]').forEach(keepInformational);
-      grid.querySelectorAll('[data-bookstore-quote-pending="false"]').forEach(keepInformational);
-      announceCatalog(true);
-      return;
-    }
-    // Gather results before touching the DOM: a stale, overlapping refresh
-    // must not delete a card revalidated by a newer refresh.
-    const results = await Promise.all(candidates.map(async book => {
+    const cards = catalogCards().filter(card => validId(card.dataset.bookstoreRuntimeId));
+    // Every recognized book is checked independently, even when old static
+    // publication workflow fields say "pending".
+    const checks = cards.map(async card => {
+      const bookId = card.dataset.bookstoreRuntimeId;
+      setBuyState(card, 'checking');
+      let quote = null;
+      let state = 'error';
       try {
-        const quote = await quoteFor(book.bookId);
-        return { book, ready: readyQuote(quote, book.bookId), price: Number(quote?.price?.amount) };
+        quote = await quoteFor(bookId);
+        state = readyQuote(quote, bookId) ? 'ready' : 'unavailable';
       } catch {
-        return { book, unavailable: true };
+        state = 'error';
       }
-    }));
-    if (version !== catalogRefresh) return;
-    const eligible = new Set(candidates.map(book => book.bookId));
-    for (const result of results) {
-      const existing = catalogCard(result.book);
-      if (result.unavailable) {
-        keepInformational(existing);
-        continue;
-      }
-      if (!result.ready) {
-        // A real negative quote is different from a temporary transport error.
-        if (existing?.dataset.bookstoreRuntimeId) existing.remove();
-        else markUnready(existing);
-        continue;
-      }
-      const card = existing || productCard({ ...result.book, price: result.price });
-      if (!card) continue;
-      card.dataset.bookstoreQuotePending = 'false';
-      card.dataset.bookstoreInformational = 'false';
-      card.dataset.saleReady = 'true';
-      card.dataset.status = '판매 중';
-      const label = quoteLabel(card);
-      if (label) label.textContent = new Intl.NumberFormat('ko-KR').format(result.price) + '원 · 판매 중';
-      if (!existing) grid.append(card);
-    }
-    // An authoritative, complete approval list may legitimately revoke a
-    // dynamic card; only *transport* failures retain informational identity.
-    grid.querySelectorAll('[data-bookstore-runtime-id]').forEach(card => {
-      if (!eligible.has(card.dataset.bookstoreRuntimeId)) card.remove();
+      if (version !== catalogRefresh) return;
+      setBuyState(card, state, quote);
     });
-    announceCatalog(results.some(result => result.unavailable));
+    await Promise.all(checks);
+    if (version !== catalogRefresh) return;
+    const count = document.querySelector('[data-bookstore-public-count]');
+    const ready = cards.filter(card => card.dataset.saleReady === 'true').length;
+    if (count) count.textContent = ready + '개 판매 가능';
+    const status = document.querySelector('[data-bookstore-store-status]');
+    if (status) status.textContent = ready ? '전자책 구매 가능' : '구매 가능 여부 확인 필요';
+    window.dispatchEvent(new CustomEvent('ekodi:marketplace-products-loaded', {
+      detail: { category: 'book', count: ready, source: 'books-quote', total: cards.length }
+    }));
   }
   let detailRefresh = 0;
   async function syncDetail() {

@@ -3,7 +3,7 @@ import { handleMissionActivityEditor, MISSION_ACTIVITY_EDITOR_PATH } from './mis
 import { tenantLivePage } from './tenant-live-page.js';
 import { isPublicWorkspacePath, workspaceRouteFromPublicPath, workspaceSlugFromPublicPath } from './workspace-route-policy.js';
 import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
-import { renderBbqCheonggyePage, bbqCheonggyeCss } from './bbq-cheonggye-site.js';
+import { renderBbqCheonggyePage, bbqCheonggyeCss, bbqCheonggyeQrScript } from './bbq-cheonggye-site.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
 import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
@@ -547,6 +547,7 @@ export default{
       return data?json(env,data):json(env,{error:'storefront_unavailable'},503);
     }
     if(url.pathname==='/bbqcg/assets/site.css')return withHeaders(env,bbqCheonggyeCss(),'bbqcg-asset');
+    if(url.pathname==='/bbqcg/assets/order-qr.js')return withHeaders(env,bbqCheonggyeQrScript(),'bbqcg-asset');
     if(url.pathname==='/storefront.css'||url.pathname==='/_ekodi/space/storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/jadam-storefront.css'||url.pathname==='/_ekodi/space/jadam-storefront.css')return withHeaders(env,jadamStorefrontCss(),'storefront-asset');
     if(url.pathname==='/restaurant-storefront.css'||url.pathname==='/_ekodi/space/restaurant-storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
