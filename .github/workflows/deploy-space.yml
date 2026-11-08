@@ -149,7 +149,7 @@ env:
   BBQ_WORKSPACE_PINNED_BLOB: 3fb20a5e441b0f68474a2870026dd4085f62df2c
   BBQ_DEV_PROJECT: lxcxwbdwwojjkgybbqii
   BBQ_ADMIN_MIGRATION: supabase/migrations/20261108150000_bbqcg_verified_admin_invites.sql
-  BBQ_ADMIN_PINNED_BLOB: 5c56e6906734c797193481c760ed5740141ba252
+  BBQ_ADMIN_PINNED_BLOB: bd35a8df1f002374d93e54ff2d09ee26fcb169c2
 
 jobs:
   validate:
