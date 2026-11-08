@@ -11,6 +11,7 @@ export function renderMallHeader({publicPrefix='',home=false,sellerHref}={}) {
  '<div class="actions">'+
  '<span class="mall-account" data-mall-account aria-label="내 계정"><a class="mall-account-login" data-mall-login href="/auth/?site=mall">로그인</a>'+
  '<span class="mall-account-signed" data-mall-signed hidden><span class="mall-account-id" data-mall-id></span><button type="button" data-mall-logout>로그아웃</button></span></span>'+
+ (home?'<button class="icon mall-search-mobile" id="searchBtn" aria-label="상품 검색">⌕</button>':'<a class="icon mall-search-mobile" href="'+href('#shop')+'" aria-label="상품 검색">⌕</a>')+
  (home?'<button class="icon" id="wishBtn" aria-label="관심상품 보기">♡ <span id="wishCount">0</span></button>':'<a class="icon" href="'+root+'?wishlist=1" aria-label="관심상품 보기">♡ <span id="wishCount">0</span></a>')+
  '<a class="seller-mini" href="'+(sellerHref||root+'seller/')+'">판매하기</a>'+
  '</div></div>'+
