@@ -28,3 +28,8 @@ test('public events RPC exposes only scheduled, non-care, upcoming public fields
   assert.match(sql, /grant execute on function public\.church_public_events\(text, integer\) to anon/);
   assert.doesNotMatch(sql, /created_by|tenant_id\s*,/);
 });
+
+test('a 주일예배 후 meeting does not hide that Sunday worship', () => {
+  const js = readFileSync(new URL('../site-board-control.js', import.meta.url), 'utf8');
+  assert.match(js, /item\.kind==='official-post'&&\/주일\/\.test\(item\.title\)/);
+});
