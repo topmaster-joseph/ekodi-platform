@@ -135,7 +135,7 @@ function sendTrafficBeacon(){
   const route=location.pathname.split('/').filter(Boolean);
   // A user-controlled top-level slug may contain a name or private identifier.
   // Report only canonical EKODI service roots; never transmit arbitrary paths.
-  const trafficKnownRoots=new Set('ai bible books ekodibooks community ekodichurch ekodimission ekodibiz ekodimall ekodilab cgma cheonggye seonammedi pgm jadam pizzamaru yogurt cmpmyi joseph live trade journal publishing invest money social author business delivery edu education energy support life management cafe messenger insurance work space experience lab pay stores'.split(' '));
+  const trafficKnownRoots=new Set('ai bible books ekodibooks community ekodichurch ekodimission ekodibiz ekodimall ekodilab cgma cheonggye seonammedi pgm jadam pizzamaru yogurt cmpmyi joseph live trade journal publishing invest money social author business delivery edu education energy support life management cafe messenger insurance work space experience lab pay stores ekodipay mall ekodi-church cgmurrc jubilee open business-coop sosik qtin pyeonggongmok mokpo-presbytery proposal promotion notifications singles learn history local-commerce org hub'.split(' '));
   const routeRoot=String(route[0]||'').toLowerCase();
   const first=trafficKnownRoots.has(routeRoot)?routeRoot:'';
   const child=first==='ekodibiz'&&['trade','marketing-ai','mall'].includes(String(route[1]||'').toLowerCase())
