@@ -34,3 +34,9 @@ The transfer script limits encrypted archives to **32 MiB** (fail-closed if larg
 - **Economic points activation:** separate human owner, financial, compliance and security approval only.
 
 No assertion that any of these operational receipts exists may be inferred from this document, a passing source CI check, or the presence of an uploaded encrypted artifact.
+
+## 2026-11-08 — explicit scope of the Free-plan logical export
+
+Current Supabase CLI documentation confirms `supabase db dump` intentionally excludes managed `auth`, `storage`, and extension-managed schemas. Even when separate roles/schema/data exports and cipher readback succeed, the archive is **application-logical-only**, not a complete Supabase instance disaster-recovery artifact. The storage SQL dump also does **not** capture Storage object binary bytes or deployed Edge Function code/configuration. Owner and restore custodian must never treat this pending-restore manifest as proof that existing membership identities, sessions, all Auth tables, object storage, or API deployments can be rebuilt.
+
+The manifest now explicitly records `coverage.type=application_logical_only`, `supabase_managed_auth_included=false`, `supabase_managed_storage_metadata_included=false`, `storage_object_bytes_included=false`, `edge_function_code_included=false`, and `full_instance_recovery_verified=false`. This cannot be overridden by the encrypted archive's successful SHA-256 readback. Complete instance recovery, if required before approving production changes, needs a separate authorized managed-schema/Storage-object inventory and tested restoration strategy that preserves Supabase-managed privileges and Auth security boundaries. This is not a request to export Auth user data automatically.
