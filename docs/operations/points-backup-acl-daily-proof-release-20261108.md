@@ -1,0 +1,5 @@
+# EKODI private backup ACL scheduled proof — official recovery latest-head CI
+
+2026-11-08 KST. Task `points-backup-acl-scheduled-proof-20261108`, official recovery PR #8901, issue #7778.
+
+Authenticated source CI `42434725855` passed full regression tests and the AI/Constitution/Cloudflare/Supabase security guards for the harmless daily `schedule` fallback. EKODI synced concurrent main to current recovery head `70ce2276933231186e8d88f88dad5778c684d6f4`. Its GitHub `action_required` placeholders do not represent real checks. This documentation-only commit requests freshly connected CI and does not modify the existing protected main-only production-environment, **GET-only** canonical Drive ACL audit. Source functions still return `backupExportAuthorized=false`, `productionSchemaWriteAuthorized=false` and `pointsActivationAuthorized=false`. No archive has been exported, no credential/key shared, no data restored, and no points/financial behavior activated. Official EKODI Orchestrator owns merge/deployment.
