@@ -32,7 +32,7 @@ test('new customer HTML is exclusively new locator, including canonical and oper
   assert.match(html,/data-store-entity="bbqcg"/);
   assert.match(html,/href="\/bbqcg\/admin"/);
   assert.match(html,/href="https:\/\/ekodi\.kr\/bbqcg"/);
-  assert.match(html,/href="\/bbqcg\/assets\/site\.css"/);
+  assert.match(html,/href="\/bbqcg\/assets\/site\.css(?:\?v=[a-f0-9]{12,40})?"/);
   assert.doesNotMatch(html,/bbqcheonggye/);
   assert.equal(response.headers.get('x-robots-tag'),'noindex,nofollow,noarchive');
 });
