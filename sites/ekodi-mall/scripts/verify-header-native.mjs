@@ -71,6 +71,19 @@ async function examine(page, width, synthetic) {
       ).length,
     };
   });
+  // Numeric-only CSS evidence is emitted before assertions so failures identify
+  // the exact computed width and cascade without logging URLs or credentials.
+  const searchStyle = await page.evaluate(() => {
+    const el = document.querySelector('#mallGlobalSearch');
+    if (!el) return null;
+    const css = getComputedStyle(el);
+    return { width: css.width, minWidth: css.minWidth, maxWidth: css.maxWidth,
+      display: css.display, gridArea: css.gridArea };
+  });
+  console.log('[MALL-HEADER-NATIVE] geometry ' + JSON.stringify({
+    viewport: width, synthetic, candidateCssInjected: report.candidateCssInjected,
+    search: result.search, account: result.account, style: searchStyle,
+  }));
   assert.ok(result.top && result.search && result.account, 'canonical Mall header missing');
   assert.ok(result.originalMobileSearchPreserved, 'original mobile search control lost');
   assert.ok(result.wishlistPreserved && result.sellerPreserved, 'seller or wishlist navigation lost');
