@@ -34,3 +34,9 @@ The transfer script limits encrypted archives to **32 MiB** (fail-closed if larg
 - **Economic points activation:** separate human owner, financial, compliance and security approval only.
 
 No assertion that any of these operational receipts exists may be inferred from this document, a passing source CI check, or the presence of an uploaded encrypted artifact.
+
+## 2026-11-08 — Drive large encrypted file transfer
+
+Google's official Drive v3 upload guide documents `uploadType=multipart` for small files up to 5 MB, and `uploadType=resumable` for files larger than 5 MB. The existing canonical Storage Gateway `POST /api/storage/v1/records` previously always selected multipart, even when the pending encrypted backup could reach 32 MiB. To avoid first-live archive failure or insecure direct Drive upload workarounds, the common gateway now selects the **existing `writeCanonicalDriveStream` resumable helper** for any decoded record greater than 4 MiB, and retains the existing multipart path for smaller records. The server-side canonical Drive OAuth credential remains exclusively in `drive.ekodi.kr`, and the existing Storage Gateway server key remains mandatory. No client receives a Google refresh token or upload session URL.
+
+The current helper uploads the data in a single resumable PUT session; it does not yet implement interrupted-session chunk resumption. Failure must stay fail-closed, without claiming a stored archive. Independently re-download and SHA-256-verify the ciphertext before any pending-restore manifest is accepted. This remains a source fix until authenticated CI, EKODI protected merge, Storage Worker deployment and real production path validation have succeeded.

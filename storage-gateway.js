@@ -136,19 +136,26 @@ export async function storeEkodiDurableRecord(env, record = {}, options = {}) {
   const bytes = decodeBody(record);
   let result = null;
   try {
-    result = await writeCanonicalDriveFile(env, {
+    const options = {
       storageRoute: record.storageRoute,
       serviceId: record.serviceId,
       title: record.title || `${record.recordType}-${new Date().toISOString()}.json`,
       mimeType: record.mimeType || 'application/octet-stream',
-      bytes,
       spaceId: record.spaceId,
       recordType: record.recordType,
       createdBy: record.createdBy,
       retentionClass: record.retentionClass,
       sourceModuleId: record.sourceModuleId || 'ekodi',
       subfolderPath: record.subfolderPath || '',
-    });
+    };
+    // Google Drive documents multipart for <=5 MB; encrypted production
+    // logical backups can be larger. Keep all privileged OAuth inside the
+    // canonical Storage control plane, using its existing resumable helper.
+    result = bytes.byteLength > (4 * 1024 * 1024)
+      ? await writeCanonicalDriveStream(env, {
+          ...options, body: bytes, size: bytes.byteLength,
+        })
+      : await writeCanonicalDriveFile(env, { ...options, bytes });
     await audit(env, { ...record, storageRoute: result.storageRoute }, requestId, result, 'stored');
     return {
       ok: true,
