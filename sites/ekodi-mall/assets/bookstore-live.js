@@ -6,18 +6,10 @@
 (() => {
   'use strict';
   const BOOKS_API = '/books/api/commerce';
-  const mirrorUrl = '/ekodimall/provider-bookstore.json';
   const grid = document.getElementById('grid') || document.querySelector('[data-bookstore-store-grid]');
   const detailId = document.body?.dataset.bookstoreBookId || '';
   const validId = id => /^BOOK-[A-Z0-9-]{3,40}$/.test(String(id || ''));
   if (!grid && !validId(detailId)) return;
-  const safe = value => String(value ?? '').trim();
-  const element = (tag, cls, text) => {
-    const node = document.createElement(tag);
-    if (cls) node.className = cls;
-    if (text !== undefined) node.textContent = safe(text);
-    return node;
-  };
   const get = async url => {
     const response = await fetch(url, {
       method: 'GET', credentials: 'omit', cache: 'no-store',
@@ -35,63 +27,6 @@
     quote?.checkout?.mode === 'live' &&
     Number(quote?.price?.amount) > 0;
   const quoteFor = bookId => get(BOOKS_API + '/quote?book=' + encodeURIComponent(bookId));
-  const detailHref = slug => /^book-[a-z0-9-]+$/.test(safe(slug))
-    ? '/ekodimall/products/' + encodeURIComponent(slug) + '/' : '';
-  const bookCover = image => {
-    try {
-      const url = new URL(safe(image), window.location.origin);
-      return url.origin === window.location.origin && url.pathname.startsWith('/books/assets/')
-        ? url.href : '';
-    } catch { return ''; }
-  };
-  function productCard(book) {
-    const href = detailHref(book.slug);
-    if (!href) return null;
-    const article = element('article', 'card');
-    article.dataset.product = safe(book.id);
-    article.dataset.bookstoreRuntimeId = safe(book.bookId);
-    article.dataset.category = 'book';
-    article.dataset.name = safe(book.name);
-    article.dataset.status = '판매 중';
-    article.dataset.saleReady = 'true';
-    article.dataset.search = [book.name, book.description, '에코디서점', '전자책', '책·배움'].map(safe).join(' ').toLowerCase();
-    article.dataset.href = href;
-    const thumb = element('div', 'thumb book');
-    const photo = element('a', 'thumb-link');
-    photo.href = href;
-    photo.setAttribute('aria-label', article.dataset.name + ' 자세히 보기');
-    const source = bookCover(book.image);
-    if (source) {
-      const image = element('img');
-      image.src = source; image.alt = article.dataset.name;
-      image.loading = 'lazy'; image.decoding = 'async';
-      photo.append(image); thumb.classList.add('has-image');
-    }
-    const badge = element('span', 'badge', '에코디서점');
-    const heart = element('button', 'heart', '♡');
-    heart.type = 'button'; heart.dataset.wish = article.dataset.product;
-    heart.setAttribute('aria-label', article.dataset.name + ' 관심상품');
-    heart.setAttribute('aria-pressed', 'false');
-    thumb.append(photo, badge, heart);
-    const body = element('div', 'card-body');
-    const store = element('p', 'store-kicker');
-    const storeLink = element('a', '', 'EKODI Books');
-    storeLink.href = '/ekodimall/stores/ekodi-books/';
-    store.append(storeLink);
-    const heading = element('h3');
-    const title = element('a', '', book.name); title.href = href; heading.append(title);
-    const abstract = safe(book.description);
-    const summary = element('p', 'card-summary', abstract.length > 34 ? abstract.slice(0, 33).trimEnd() + '…' : abstract);
-    const meta = element('div', 'meta');
-    const amount = Number(book.price);
-    // Only show the amount returned by a verified live Books quote, never invent a list price.
-    const priceLabel = Number.isFinite(amount) && amount > 0 ? new Intl.NumberFormat('ko-KR').format(amount) + '원' : '가격 확인';
-    const status = element('span', 'status', priceLabel + ' · 판매 중');
-    const more = element('a', 'smallbtn', '자세히'); more.href = href;
-    meta.append(status, more); body.append(store, heading, summary, meta);
-    article.append(thumb, body);
-    return article;
-  }
   // Stable cards come from the publishing-owned, allowlisted build projection.
   // Only the matching Buy CTA is revalidated. Never rebuild/remove a book card.
   let catalogRefresh = 0;
