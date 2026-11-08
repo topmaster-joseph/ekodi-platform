@@ -66,3 +66,20 @@ test('BBQ authorization SQL scope, role and release pin remain closed',async()=>
   assert.match(workflow,/BBQ_STORE_ACCESS_PINNED_BLOB/);
   assert.match(workflow,/Verify BBQ CG canonical host and retired-URL hard block/);
 });
+
+
+test('BBQ operations handbook is local to approved site work section and print cards remain templates',async()=>{
+  const script=await storeAdminScript().text();
+  const css=await storeAdminCss().text();
+  assert.match(script,/if\(SLUG==='bbqcg'\)return bbqCgHandbookPanel\(\)/);
+  for(const tab of ['조리 레시피','위생·안전','법령·의무사항','일일점검','인쇄 관리'])assert.ok(script.includes(tab),tab);
+  assert.match(script,/본사 최신 조리지침 확인 후 승인/);
+  assert.match(script,/본사 원본 확인 후 기입/);
+  assert.match(script,/출력기록은 자동 저장되지 않습니다/);
+  assert.match(script,/https:\/\/www\.law\.go\.kr\//);
+  assert.match(script,/https:\/\/www\.foodsafetykorea\.go\.kr\//);
+  assert.match(css,/@media print/);
+  assert.match(css,/bbqcg-print-mode/);
+  assert.match(css,/data-print-target="all"/);
+  assert.doesNotMatch(script,/bbqe-learning\.co\.kr.{0,100}(token|password|비밀번호)/i);
+});

@@ -12,7 +12,7 @@
 #
 # 사용 예:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File ekodi-site-check.ps1 -Url https://ekodi.kr/ekodimall/
-#   ... -Url https://ekodi.kr/ -Url https://ekodi.kr/books -Screenshot
+#   ... -Url 'https://ekodi.kr/,https://ekodi.kr/books' -Screenshot   (여러 주소는 쉼표로 구분)
 #   ... -Url https://ekodi.kr/admin -Visible -AutoCloseSeconds 45
 # ---------------------------------------------------------------------------
 param(
@@ -158,7 +158,8 @@ $browser = Resolve-EkodiCheckBrowser
 if (-not $browser) { throw 'supported_browser_not_found (Edge 또는 Chrome 필요)' }
 
 $results = @()
-foreach ($u in $Url) {
+$targets = @($Url | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+foreach ($u in $targets) {
   $safe = Assert-SafeHttpUrl $u
   $results += if ($Visible) { Invoke-VisibleCheck $browser $safe } else { Invoke-HeadlessCheck $browser $safe }
 }
