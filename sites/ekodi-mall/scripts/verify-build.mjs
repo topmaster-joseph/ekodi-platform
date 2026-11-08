@@ -123,6 +123,11 @@ if (!approvedBook?.slug || !/^book-[a-z0-9-]+$/.test(approvedBook.slug)) {
     errors.push('Public bookstore page missing live purchase verification anchors');
   }
 }
+// MALL-BOOKS-DIRECT-CHECKOUT-001: 책·배움 직접판매 결제 화면
+for (const [file, marker] of [['checkout/book/index.html','data-book-checkout-mode="checkout"'],['checkout/book/success/index.html','data-book-checkout-mode="success"'],['checkout/book/fail/index.html','data-book-checkout-mode="fail"']]) {
+  const html = await readFile(path.join(dist, ...file.split('/')), 'utf8').catch(() => '');
+  if (!html.includes(marker) || !html.includes('data-books-api-base="/books"') || !html.includes('src="/assets/book-checkout.js"')) errors.push('Mall book checkout page incomplete: ' + file);
+}
 const booksStore = await readFile(path.join(dist, 'stores', 'ekodi-books', 'index.html'), 'utf8');
 for (const marker of ['data-bookstore-store="true"','data-bookstore-store-grid','data-bookstore-public-count','src="/assets/bookstore-live.js"']) {
   if (!booksStore.includes(marker)) errors.push('Bookstore live storefront is missing ' + marker);

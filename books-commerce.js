@@ -182,6 +182,12 @@ export async function quote(env, request, bookId) {
   };
 }
 
+// MALL-BOOKS-DIRECT-CHECKOUT-001: 판매 채널. 에코디몰 책·배움은 같은 도서 정본·같은 결제(에코디비즈)로
+// 에코디몰 화면 안에서 직접 판매한다. 채널은 허용 목록으로만 기록해 관리자 집계를 오염시키지 않는다.
+export const ORDER_CHANNELS = Object.freeze({ bookstore: '에코디서점', mall: '에코디몰' });
+export const orderChannel = value => { const v = clean(value, 30).toLowerCase(); return v === 'mall' || v === 'ekodimall' ? 'mall' : 'bookstore'; };
+const mallBase = env => String(env.MALL_PUBLIC_BASE_URL || 'https://ekodi.kr/ekodimall').replace(/\/$/, '');
+
 export async function createOrder(env, request, body, now = new Date()) {
   const pay = await payments(env);
   if (!pay.ready) return { status: 503, data: { error: '에코디서점 결제 준비 중입니다. 결제가 열리면 바로 구매하실 수 있습니다.', code: 'PAYMENTS_NOT_READY' } };
@@ -210,15 +216,16 @@ export async function createOrder(env, request, body, now = new Date()) {
   const name = clean(body?.name, 40) || buyer.name || buyer.email.split('@')[0];
   await env.DB.prepare(`INSERT INTO books_orders (id, book_id, book_title, buyer_user_id, buyer_email, buyer_name, tier_id, list_price, amount, status, source, expires_at, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'payment_pending', ?, ?, ?, ?)`)
-    .bind(orderId, book.id, book.title, buyer.userId, buyer.email, name, price.tierId, price.listPrice, price.amount, clean(body?.source, 30) || 'bookstore', expiresAt, createdAt, createdAt).run();
-  await audit(env, orderId, buyer.email, 'order.created', { amount: price.amount, tier: price.tierId, mode: pay.mode, languageEditionSource: price.languageEdition?.sourceBookId || undefined });
-  const base = String(env.PUBLIC_BASE_URL || 'https://ekodi.kr/books').replace(/\/$/, '');
+    .bind(orderId, book.id, book.title, buyer.userId, buyer.email, name, price.tierId, price.listPrice, price.amount, orderChannel(body?.source), expiresAt, createdAt, createdAt).run();
+  const channel = orderChannel(body?.source);
+  await audit(env, orderId, buyer.email, 'order.created', { amount: price.amount, tier: price.tierId, mode: pay.mode, channel, languageEditionSource: price.languageEdition?.sourceBookId || undefined });
+  const base = channel === 'mall' ? `${mallBase(env)}/checkout/book` : `${String(env.PUBLIC_BASE_URL || 'https://ekodi.kr/books').replace(/\/$/, '')}/buy`;
   return {
     status: 201,
     data: {
       orderId, amount: price.amount, orderName: `전자책 · ${book.title}`.slice(0, 100), customerName: name, customerEmail: buyer.email,
       clientKey: pay.clientKey, widget: Boolean(pay.widget) || /^(test|live)_gck_/.test(String(pay.clientKey || '')), variantKey: clean(env.TOSS_WIDGET_VARIANT_KEY, 60) || 'qtin', customerKey: `ekb-${crypto.randomUUID()}`,
-      successUrl: `${base}/buy/success/`, failUrl: `${base}/buy/fail/?orderId=${encodeURIComponent(orderId)}`, expiresAt,
+      successUrl: `${base}/success/`, failUrl: `${base}/fail/?orderId=${encodeURIComponent(orderId)}`, expiresAt, channel,
     },
   };
 }
@@ -270,7 +277,7 @@ export async function confirm(env, { paymentKey, orderId, amount }, now = new Da
       .bind(order.buyer_user_id, order.book_id, orderId, order.buyer_email, at),
     env.DB.prepare(`INSERT INTO books_finance_transactions (occurred_on, publication_id, channel_code, transaction_type, quantity, amount_original, currency, fx_rate, amount_krw, settlement_status, external_ref, source, note, created_at, updated_at)
       VALUES (?, ?, 'ekodi-direct', 'sale', 1, ?, 'KRW', 1, ?, 'pending', ?, 'books-direct-commerce', ?, ?, ?)`)
-      .bind(at.slice(0, 10), order.book_id, order.amount, order.amount, orderId, `tier=${order.tier_id}`, at, at),
+      .bind(at.slice(0, 10), order.book_id, order.amount, order.amount, orderId, `tier=${order.tier_id};channel=${orderChannel(order.source)}`, at, at),
   ]);
   await audit(env, orderId, 'payment-provider:toss', 'order.paid', { method: payment.method, amount: payment.totalAmount });
   return { status: 200, data: { ok: true, orderId, bookId: order.book_id, receiptUrl: payment.receipt?.url || '' } };
@@ -399,10 +406,14 @@ export async function adminRoute(env, request, path, url, now = new Date()) {
   const buyer = await buyerIdentity(request);
   if (!buyer || !operatorEmails(env).has(buyer.email)) return { status: 403, data: { error: '운영자만 사용할 수 있습니다.' } };
   if (request.method === 'GET' && path === '/admin/orders') {
-    const rows = await env.DB.prepare(`SELECT id, book_id, book_title, buyer_email, tier_id, amount, status, payment_method, receipt_url, approved_at, created_at, updated_at FROM books_orders ORDER BY created_at DESC LIMIT ?`)
+    const rows = await env.DB.prepare(`SELECT id, book_id, book_title, buyer_email, tier_id, amount, status, source, payment_method, receipt_url, approved_at, created_at, updated_at FROM books_orders ORDER BY created_at DESC LIMIT ?`)
       .bind(Math.min(200, Math.max(1, Number(url.searchParams.get('limit')) || 50))).all();
     const sum = await env.DB.prepare(`SELECT COUNT(*) AS paid, COALESCE(SUM(amount),0) AS revenue FROM books_orders WHERE status='paid'`).first();
-    return { status: 200, data: { orders: rows.results || [], paid: Number(sum?.paid || 0), revenue: Number(sum?.revenue || 0), payments: await payments(env) } };
+    const bySourceRows = await env.DB.prepare(`SELECT source, COUNT(*) AS paid, COALESCE(SUM(amount),0) AS revenue FROM books_orders WHERE status='paid' GROUP BY source`).all();
+    const channels = Object.fromEntries(Object.entries(ORDER_CHANNELS).map(([id, label]) => [id, { id, label, paid: 0, revenue: 0 }]));
+    for (const r of bySourceRows.results || []) { const c = channels[orderChannel(r.source)]; c.paid += Number(r.paid || 0); c.revenue += Number(r.revenue || 0); }
+    const orders = (rows.results || []).map(o => ({ ...o, channel: orderChannel(o.source), channelLabel: ORDER_CHANNELS[orderChannel(o.source)] }));
+    return { status: 200, data: { orders, paid: Number(sum?.paid || 0), revenue: Number(sum?.revenue || 0), channels: Object.values(channels), payments: await payments(env) } };
   }
   // BOOKS-REFUND-SYNC-001: 환불(결제 취소)은 사람이 토스페이먼츠 상점관리자에서 직접 실행한다.
   // 서점은 토스에 그 결제가 실제로 전액 취소됐는지 조회로 확인한 뒤에만 주문을 '환불'로 바꾸고 서재 권한을 회수한다.
