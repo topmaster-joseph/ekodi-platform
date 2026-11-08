@@ -866,7 +866,7 @@ export function syncAdminSidebar(root = document, options = {}) {
 const PANEL_TAB_STYLE_ID = 'ekodiAdminPanelTabsStyle';
 const PANEL_TAB_MIN_BLOCKS = 3;
 const PANEL_TAB_MAX_TABS = 8;
-const PANEL_OWN_TABS_SELECTOR = '[role="tablist"]:not(.admin-panel-tabs),[role="tab"]:not(.admin-panel-tabs [role="tab"]),[data-aiops-stage-tab]';
+const PANEL_OWN_TABS_SELECTOR = 'nav,[role="tablist"]:not(.admin-panel-tabs),[role="tab"]:not(.admin-panel-tabs [role="tab"]),[data-aiops-stage-tab]';
 const PANEL_TAB_SKIP = 'style,script,template,dialog,link,meta,summary,.admin-panel-tabs,iframe';
 const PANEL_TAB_PINNED = '.device-panel-head,.admin-panel-head,.section-head:first-child,.hero,.device-metrics';
 export const ADMIN_PANEL_TAB_PRESETS = Object.freeze({
