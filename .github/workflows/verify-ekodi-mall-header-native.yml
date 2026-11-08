@@ -1,0 +1,69 @@
+name: Verify EKODI Mall Header Native
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-ekodi-mall-header-native.yml'
+      - 'sites/ekodi-mall/scripts/verify-header-native.mjs'
+      - 'sites/ekodi-mall/assets/mall-account-header.js'
+      - 'sites/ekodi-mall/assets/mall-account-header.css'
+      - 'mall-shared-header.js'
+      - 'test/mall-header-native-qa.test.mjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-ekodi-mall-header-native.yml'
+      - 'sites/ekodi-mall/scripts/verify-header-native.mjs'
+  workflow_run:
+    workflows: ['EKODI Mall · Stage and Deploy', 'Deploy EKODI Shared Site Core']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-mall-header-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  header-native-readonly:
+    # PR checks are read-only synthetic canaries; they never deploy or sign in.
+    # A completed PR validation is not a production deployment. Only promote
+    # browser evidence from protected successful main-branch releases.
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - name: Checkout protected Mall browser probe
+        uses: actions/checkout@v7
+
+      - name: Use Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install pinned native Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Verify canonical public Mall guest and synthetic logged-in header
+        shell: bash
+        env:
+          # Synthetic account is browser-local. No user cookies or secrets.
+          EKODI_MALL_HEADER_LANE: synthetic-readonly
+        run: |
+          set -euo pipefail
+          node sites/ekodi-mall/scripts/verify-header-native.mjs
+
+      - name: Archive redacted, synthetic-only browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mall-header-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/mall-header-native/
+          if-no-files-found: warn
+          retention-days: 7

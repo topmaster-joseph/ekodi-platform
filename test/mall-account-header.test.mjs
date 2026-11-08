@@ -8,7 +8,7 @@ const script = readFileSync(new URL('../sites/ekodi-mall/assets/mall-account-hea
 const css = readFileSync(new URL('../sites/ekodi-mall/assets/mall-account-header.css', import.meta.url), 'utf8');
 const centralKey = 'sb-renzehysxirjilvdxacv-auth-token';
 
-function mount(session, user = {id:'verified',email:'buyer@example.com'}) {
+function mount(session, user = {id:'verified',email:'buyer@example.com'}, nav = null) {
   const nodes = {
     login: { hidden:false, href:'' },
     signed: { hidden:true },
@@ -49,6 +49,7 @@ function mount(session, user = {id:'verified',email:'buyer@example.com'}) {
   };
   const document = {
     querySelectorAll: selector => selector === '[data-mall-account]' ? [host] : [],
+    querySelector: selector => selector === '.mall-primary-nav' ? nav : null,
     addEventListener(type,callback) {events[type] = callback},
     hidden:false
   };
@@ -112,4 +113,120 @@ test('mobile account remains displayed even when the seller action is hidden', (
   assert.match(css,/grid-template-areas:"mall-brand mall-account"/);
   assert.match(css,/\.mall-header \.mall-account-id/);
   assert.doesNotMatch(css,/\.mall-account\s*\{display:none/);
+});
+
+
+test('all six legacy Mall page templates load the same shared account controller', () => {
+  const kinds=['product','store','seller','checkout','page','book-checkout'];
+  for(const kind of kinds) {
+    const page=readFileSync(new URL('../sites/ekodi-mall/src/'+kind+'.template.html',import.meta.url),'utf8');
+    assert.match(page,/class="header"/,kind+' missing header');
+    assert.match(page,/\/ekodimall\/assets\/mall-account-header\.js/,kind+' missing login controller');
+    assert.match(page,/\/ekodimall\/assets\/mall-account-header\.css/,kind+' missing account layout');
+  }
+  assert.match(script,/legacy\.append\(host\)/);
+  assert.match(css,/\.header:not\(\.mall-header\)>\.mall-account/);
+});
+
+test('legacy header receives one member ID/logout outside mobile-hidden navigation', async () => {
+  const make = (tag) => ({
+    tag, attrs:{},children:[],hidden:false, textContent:'',
+    setAttribute(name,value){this.attrs[name]=value;},
+    append(...items){this.children.push(...items);},
+    addEventListener(type,listener){if(type==='click')this.click=listener;},
+    querySelector(selector){
+      const attribute=selector.slice(1,-1);
+      const queue=[...this.children];
+      while(queue.length){
+        const node=queue.shift();
+        if(Object.hasOwn(node.attrs,attribute))return node;
+        queue.push(...node.children);
+      }
+      return null;
+    }
+  });
+  const legacy=make('header');
+  const storage=new Map([[centralKey,JSON.stringify({access_token:'valid-session',expires_at:4102444800})]]);
+  const ctx={
+    document:{
+      querySelectorAll(){return [];},
+      querySelector(selector){return selector==='header.header'?legacy:null;},
+      createElement:make,addEventListener(){},hidden:false
+    },
+    localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key)},
+    window:{location:{href:'https://ekodi.kr/ekodimall/products/book-a/',reload(){}},addEventListener(){}},
+    fetch:async url=>({ok:true,json:async()=>({id:'member-1',email:'member@example.com'})}),
+    URL,Date,JSON,AbortController,setTimeout,clearTimeout
+  };
+  vm.runInNewContext(script,ctx);
+  await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(legacy.children.length,1);
+  const account=legacy.children[0];
+  assert.ok(account.attrs['data-mall-account']!==undefined);
+  const id=account.querySelector('[data-mall-id]');
+  const logout=account.querySelector('[data-mall-logout]');
+  assert.equal(id.textContent,'member@example.com');
+  assert.equal(logout.textContent,'로그아웃');
+  assert.equal(account.querySelector('[data-mall-signed]').hidden,false);
+});
+
+
+test('verified BBQ account is shown as 비비큐청계점 beside shortened search and logout', async () => {
+  const session = {access_token:'central-bbq-token', expires_at:4102444800};
+  const h = mount(session, {id:'verified-bbq-identity',email:'bbqmuancg@gmail.com'});
+  await h.idle();
+  assert.equal(h.nodes.id.textContent,'비비큐청계점');
+  assert.equal(h.nodes.signed.hidden,false);
+  assert.equal(h.nodes.logout.textContent,'로그아웃');
+  assert.ok(h.calls.some(c=>c.url.endsWith('/auth/v1/user')));
+  assert.doesNotMatch(h.nodes.id.textContent,/@/);
+
+  const markup = renderMallHeader({home:true});
+  const search = markup.indexOf('id="mallGlobalSearch"');
+  const account = markup.indexOf('data-mall-account');
+  const wish = markup.indexOf('id="wishBtn"');
+  const seller = markup.indexOf('class="seller-mini"');
+  const category = markup.indexOf('class="mall-primary-nav"');
+  assert.ok(search >= 0 && search < account && account < wish &&
+    wish < seller && seller < category, 'search -> account/logout -> wishlist/seller -> categories');
+  assert.match(css,/max-width:310px/);
+  assert.match(css,/@media\(max-width:900px\)/);
+  assert.match(css,/@media\(max-width:390px\)/);
+  assert.doesNotMatch(css,/\.mall-header \.mall-account\s*\{display:none/);
+});
+
+test('only duplicate verified account navigation item is removed; shopping categories remain', async () => {
+  const nav = {children:[]};
+  const item = (text, filterTarget) => ({
+    textContent:text,
+    dataset:filterTarget ? {filterTarget} : {},
+    remove(){nav.children=nav.children.filter(child=>child!==this)}
+  });
+  const dupe = item('비비큐청계점');
+  const book = item('책·배움','book');
+  const giftOverwritten = item('비비큐청계점','gift');
+  const other = item('전체상품','all');
+  nav.children.push(other,book,dupe,giftOverwritten);
+  const h=mount({access_token:'central-bbq-token',expires_at:4102444800},
+    {id:'verified',email:'bbqmuancg@gmail.com'},nav);
+  await h.idle();
+  assert.equal(h.nodes.id.textContent,'비비큐청계점');
+  assert.equal(nav.children.includes(dupe),false,'only injected account entry removed');
+  assert.equal(nav.children.includes(book),true);
+  assert.equal(nav.children.includes(other),true);
+  assert.equal(nav.children.includes(giftOverwritten),true);
+  assert.equal(giftOverwritten.textContent,'선물·기념품','restore genuine category link');
+  assert.match(script,/categoryObserver\.observe\(nav/);
+});
+
+test('other verified identities keep their friendly profile name, without trusting a stored label', async () => {
+  const h=mount({access_token:'central-other',expires_at:4102444800},
+    {id:'identity-2',email:'member@example.com',user_metadata:{display_name:'동네서점'}});
+  await h.idle();
+  assert.equal(h.nodes.id.textContent,'동네서점');
+  assert.equal(h.nodes.logout.textContent,'로그아웃');
+  const guest=mount(null,{id:'verified-bbq-identity',email:'bbqmuancg@gmail.com'});
+  await guest.idle();
+  assert.equal(guest.nodes.signed.hidden,true,'no authenticated verification means no signed-in label');
+  assert.equal(guest.nodes.login.hidden,false);
 });

@@ -25,6 +25,7 @@ import { handleCommerceOperationsRequest } from './commerce-operations.js';
 import { handleOrderOpsRequest } from './order-ops.js';
 import { handleAmazonRequest, amazonRuntimeStatus, amazonCostSchemaReady, amazonConnectionSchemaReady } from './amazon.js';
 import { handleAmazonReadonlyRequest, amazonReadSyncSchemaReady } from './amazon-readonly-sync.js';
+import { handleAgodaPublicRequest } from './agoda-public.js';
 import { handleMarketingOrdersRequest } from './marketing-orders.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
@@ -189,7 +190,7 @@ function paymentKeyMode(rawEnv, profileId) {
 }
 
 export default {
-  async fetch(request, rawEnv) {
+  async fetch(request, rawEnv, ctx) {
     const env = withMerchantKeys(rawEnv, rawEnv?.EKODIPAY_PROFILE || MALL_MERCHANT_PROFILE);
     const origin = request.headers.get('origin') || '';
     if (origin && !origins(env).has(origin)) return reply({ error:'허용되지 않은 요청입니다.' },403,origin,env);
@@ -256,6 +257,10 @@ export default {
       if (!body) return reply({ error:'Invalid JSON' },400,origin,env);
       const result=await firstTouch(env,body); return reply(result.body,result.status,origin,env);
     }
+
+    // Verified, safe public Agoda lookup; remains disabled until Partner Center rights and TLS approval.
+    const agodaPublic = await handleAgodaPublicRequest(request,env,ctx);
+    if (agodaPublic) return reply(agodaPublic.body,agodaPublic.status,origin,env);
 
     // Phase 8: 마케팅 수익 리포트용 내부 주문 조회(읽기 전용, INTERNAL_ATTRIBUTION_TOKEN).
     const marketingOrders = await handleMarketingOrdersRequest(request, env);

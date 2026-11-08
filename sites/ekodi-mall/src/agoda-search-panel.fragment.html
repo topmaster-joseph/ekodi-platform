@@ -1,0 +1,21 @@
+<section id="agodaLiveSearch" class="agoda-live" aria-labelledby="agodaLiveTitle">
+  <div class="agoda-live-title">
+    <div><small>AGODA · OFFICIAL AFFILIATE LITE</small><h2 id="agodaLiveTitle">숙소상품 탐색</h2><p>공식 API 승인 이후 자동으로 갱신되는 숙소목록입니다. 예약과 결제는 아고다에서 진행합니다.</p></div>
+  </div>
+  <div class="agoda-view-tabs" role="tablist" aria-label="숙소 목록 선택">
+    <button type="button" role="tab" data-agoda-view="live" id="agodaLiveTab" aria-controls="agodaLivePanel" aria-selected="true">아고다 자동검색</button>
+    <button type="button" role="tab" data-agoda-view="verified" id="agodaVerifiedTab" aria-controls="agodaVerifiedPanel" aria-selected="false">등록된 제휴 숙소</button>
+  </div>
+  <div id="agodaLivePanel" role="tabpanel" aria-labelledby="agodaLiveTab">
+    <form class="agoda-live-form" id="agodaLiveForm">
+      <label>지역 <select id="agodaCity" aria-label="아고다 지역" disabled><option value="">공식 데이터 연결 확인 중</option></select></label>
+      <label>체크인 <input type="date" id="agodaCheckIn" aria-label="체크인 날짜" required disabled></label>
+      <label>체크아웃 <input type="date" id="agodaCheckOut" aria-label="체크아웃 날짜" required disabled></label>
+      <label>성인 <select id="agodaAdults" aria-label="성인 수" disabled><option value="1">1명</option><option value="2" selected>2명</option><option value="3">3명</option><option value="4">4명</option><option value="5">5명</option><option value="6">6명</option></select></label>
+      <button type="submit" class="btn primary" disabled>숙소 조회</button>
+    </form>
+    <p id="agodaLiveStatus" class="agoda-live-status" role="status" aria-live="polite">공식 API 연결 상태를 확인하고 있습니다.</p>
+    <div id="agodaLiveGrid" class="agoda-live-grid" aria-live="polite"></div>
+    <p class="agoda-live-note">요금과 예약 가능 여부는 검색 시점 기준이며 변경될 수 있습니다. 아고다 최종 화면에서 확인하세요.</p>
+  </div>
+</section>

@@ -5,6 +5,37 @@
   const authOrigin = 'https://renzehysxirjilvdxacv.supabase.co';
   const publishable = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const hosts = [...document.querySelectorAll('[data-mall-account]')];
+  // Older product/store/seller/checkout templates predate renderMallHeader.
+  // Mount exactly the same account control without creating another header.
+  if (!hosts.length) {
+    const legacy = document.querySelector('header.header');
+    if (legacy) {
+      const host = document.createElement('span');
+      host.className = 'mall-account';
+      host.setAttribute('data-mall-account', '');
+      host.setAttribute('aria-label', '내 계정');
+      const login = document.createElement('a');
+      login.className = 'mall-account-login';
+      login.setAttribute('data-mall-login', '');
+      login.textContent = '로그인';
+      const signed = document.createElement('span');
+      signed.className = 'mall-account-signed';
+      signed.setAttribute('data-mall-signed', '');
+      signed.hidden = true;
+      const account = document.createElement('span');
+      account.className = 'mall-account-id';
+      account.setAttribute('data-mall-id', '');
+      const logout = document.createElement('button');
+      logout.type = 'button';
+      logout.setAttribute('data-mall-logout', '');
+      logout.textContent = '로그아웃';
+      signed.append(account, logout);
+      host.append(login, signed);
+      // Keep visible even when the legacy nav is hidden on mobile.
+      legacy.append(host);
+      hosts.push(host);
+    }
+  }
   if (!hosts.length) return;
   let generation = 0;
   let signingOut = false;
@@ -26,6 +57,8 @@
     return auth.href;
   };
   function showGuest() {
+    displayedAccount = '';
+    displayedAccountEmail = '';
     for (const host of hosts) {
       host.querySelector('[data-mall-login]').hidden = false;
       host.querySelector('[data-mall-signed]').hidden = true;
@@ -34,6 +67,12 @@
   }
   function userLabel(user) {
     const email = String(user?.email || '').trim();
+    // UI-only alias for this verified merchant identity; never a permission grant.
+    if (email.toLowerCase() === 'bbqmuancg@gmail.com') return '비비큐청계점';
+    const friendly = String(user?.user_metadata?.store_name ||
+      user?.user_metadata?.display_name || user?.user_metadata?.full_name ||
+      user?.user_metadata?.name || '').trim();
+    if (friendly && friendly.length <= 32 && !friendly.includes('@')) return friendly;
     const linked = /^identity\+([a-z0-9_-]+)\.[^@]+@ekodi\.kr$/i.exec(email);
     if (linked) {
       const name = { kakao:'카카오', naver:'네이버', google:'구글', apple:'Apple', daum:'다음' }[linked[1].toLowerCase()];
@@ -41,13 +80,45 @@
     }
     return email || String(user?.user_metadata?.user_name || user?.user_metadata?.preferred_username || '로그인 회원');
   }
+  let displayedAccount = '';
+  let displayedAccountEmail = '';
+  let categoryObserver = null;
+  // Only remove a duplicate signed-in account badge accidentally inserted into
+  // the category nav; never remove a genuine product-category link.
+  function tidyCategoryAccount() {
+    if (!displayedAccount) return;
+    const nav = document.querySelector?.('.mall-primary-nav');
+    if (!nav?.children) return;
+    const categories = {
+      all:'전체상품', local:'로컬·특산물', general:'식품·건강',
+      living:'생활·가전', book:'책·배움', gift:'선물·기념품'
+    };
+    for (const item of [...nav.children]) {
+      const label = String(item.textContent || '').trim();
+      if (label !== displayedAccount && label !== displayedAccountEmail) continue;
+      const category = item.dataset?.filterTarget;
+      if (Object.prototype.hasOwnProperty.call(categories, category)) {
+        item.textContent = categories[category];
+      } else {
+        item.remove();
+      }
+    }
+  }
   function showMember(user) {
     const id = userLabel(user);
+    displayedAccount = id;
+    displayedAccountEmail = String(user?.email || '').trim();
     for (const host of hosts) {
       host.querySelector('[data-mall-id]').textContent = id;
       host.querySelector('[data-mall-id]').title = id;
       host.querySelector('[data-mall-login]').hidden = true;
       host.querySelector('[data-mall-signed]').hidden = false;
+    }
+    tidyCategoryAccount();
+    const nav = document.querySelector?.('.mall-primary-nav');
+    if (nav && !categoryObserver && typeof MutationObserver === 'function') {
+      categoryObserver = new MutationObserver(tidyCategoryAccount);
+      categoryObserver.observe(nav, { childList:true, subtree:true, characterData:true });
     }
   }
   async function request(url, options = {}) {

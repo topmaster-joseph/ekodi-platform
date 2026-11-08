@@ -12,6 +12,7 @@ import {
   assessConfirmation, maskName, csvEscape, absoluteQtmUrl, SHIPPING_FEE, DELIVERY_METHODS, CHURCH_PICKUP_ADDRESS,
 } from './qtin-order-core.js';
 import * as ekodipay from './ekodipay-core.js';
+import { withFooterTraffic } from './footer-traffic-guarantee.js';
 
 const BASE = '/qtin';
 const API = '/qtin/api';
@@ -1431,7 +1432,7 @@ export function widgetVariantKey(env) {
   return /^[A-Za-z0-9_-]{1,50}$/.test(v) ? v : 'qtin';
 }
 
-export default {
+const ekodiWorkerEntry={
   async fetch(request, env) {
     try {
       return await handleRequest(request, env);
@@ -1444,3 +1445,5 @@ export default {
     ctx.waitUntil(runScheduled(env, new Date(event.scheduledTime || Date.now())).then(report => console.log('qtin scheduled', JSON.stringify(report))).catch(error => console.error('qtin scheduled', error)));
   },
 };
+// FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
+export default withFooterTraffic(ekodiWorkerEntry);
