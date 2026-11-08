@@ -8,11 +8,13 @@ export function renderMallHeader({publicPrefix='',home=false,sellerHref}={}) {
  '<div class="mall-header-top">'+
  '<a class="brand" href="'+href('#top')+'" aria-label="에코디몰 홈"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>'+
  '<form id="mallGlobalSearch" class="mall-global-search" role="search" action="/ekodimall/" method="get"><label for="mallGlobalQuery" class="sr-only">상품검색</label><input id="mallGlobalQuery" name="q" type="search" maxlength="120" placeholder="무엇을 찾고 계세요?" autocomplete="off"><button type="submit" aria-label="상품 검색하기">⌕</button></form>'+
- '<div class="actions">'+(home?'<button class="icon mall-search-mobile" id="searchBtn" aria-label="상품 검색">⌕</button>':'<a class="icon mall-search-mobile" href="'+href('#shop')+'" aria-label="상품 검색">⌕</a>')+
+ '<div class="actions">'+
+ '<span class="mall-account" data-mall-account aria-label="내 계정"><a class="mall-account-login" data-mall-login href="/auth/?site=mall">로그인</a>'+
+ '<span class="mall-account-signed" data-mall-signed hidden><span class="mall-account-id" data-mall-id></span><button type="button" data-mall-logout>로그아웃</button></span></span>'+
+ (home?'<button class="icon mall-search-mobile" id="searchBtn" aria-label="상품 검색">⌕</button>':'<a class="icon mall-search-mobile" href="'+href('#shop')+'" aria-label="상품 검색">⌕</a>')+
  (home?'<button class="icon" id="wishBtn" aria-label="관심상품 보기">♡ <span id="wishCount">0</span></button>':'<a class="icon" href="'+root+'?wishlist=1" aria-label="관심상품 보기">♡ <span id="wishCount">0</span></a>')+
  '<a class="seller-mini" href="'+(sellerHref||root+'seller/')+'">판매하기</a>'+
- '<span class="mall-account" data-mall-account aria-label="내 계정"><a class="mall-account-login" data-mall-login href="/auth/?site=mall">로그인</a>'+
- '<span class="mall-account-signed" data-mall-signed hidden><span class="mall-account-id" data-mall-id></span><button type="button" data-mall-logout>로그아웃</button></span></span></div></div>'+
+ '</div></div>'+
  '<nav class="mall-primary-nav" aria-label="쇼핑 카테고리">'+
  link('#shop','전체상품','all')+'<a href="'+prefix+'/picks">이번 주 추천</a>'+'<a href="'+prefix+'/coupang/">쿠팡제휴몰</a>'+'<a href="'+prefix+'/travel/stay/">여행·레저</a>'+
  link('#shop','로컬·특산물','local')+link('#shop','식품·건강','general')+
