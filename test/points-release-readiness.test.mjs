@@ -14,7 +14,8 @@ test('catalog uses only ordered EKODI points migrations from the source of truth
   assert.equal(expected.length,21);
   assert.equal(new Set(expected).size,expected.length);
   assert.ok(expected[0].includes('site_activity_points_foundation'));
-  assert.ok(expected.at(-1).includes('recognition_goals_person_idx'));
+  assert.ok(expected.at(-2).includes('recognition_goals_person_idx'));
+  assert.ok(expected.at(-1).includes('nonverified_reward_guard'));
   assert.equal(migrationName({name:'20261101020000_ekodi_points_member_claims_view'}),'ekodi_points_member_claims_view');
   assert.ok(!expected.some(name=>name.includes('/')));
 });
