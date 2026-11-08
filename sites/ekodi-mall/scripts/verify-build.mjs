@@ -133,8 +133,17 @@ for (const marker of ['data-bookstore-store="true"','data-bookstore-store-grid',
   if (!booksStore.includes(marker)) errors.push('Bookstore live storefront is missing ' + marker);
 }
 const liveBridge = await readFile(path.join(dist, 'assets', 'bookstore-live.js'), 'utf8');
-for (const marker of ['/books/api/commerce', '/public/approvals', '/quote?book=', 'checkout?.fileReady', "checkout?.mode === 'live'"]) {
-  if (!liveBridge.includes(marker)) errors.push('Bookstore sale bridge lost verification gate: ' + marker);
+// Each public edition is a stable information card, while its *own* live
+// file-bound commerce quote is the exclusive authority for the Buy CTA.
+for (const marker of ['/books/api/commerce', '/quote?book=', 'checkout?.fileReady',
+  "checkout?.mode === 'live'", 'catalogCards()', 'setBuyState(card, state, quote)',
+  "button.removeAttribute('href')", 'data-bookstore-buy']) {
+  if (!liveBridge.includes(marker)) errors.push('Bookstore per-edition purchase gate missing: ' + marker);
+}
+for (const bookId of ['BOOK-EKODI-000001', 'BOOK-EKODI-000003', 'BOOK-EKODI-000002']) {
+  const cardMarker = 'data-bookstore-runtime-id="' + bookId + '"';
+  if (!homepage.includes(cardMarker)) errors.push('Bookstore public information card missing: ' + bookId);
+  if (!booksStore.includes(cardMarker)) errors.push('Bookstore dedicated store card missing: ' + bookId);
 }
 if (!homepage.includes('src="/assets/bookstore-live.js"')) errors.push('Mall homepage missing bookstore approval bridge');
 const publicSitemap = await readFile(path.join(dist, 'sitemap.xml'), 'utf8');
