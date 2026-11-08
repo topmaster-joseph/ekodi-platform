@@ -138,3 +138,14 @@ test('premium layout still renders only authorized verified local menu and safe 
   assert.doesNotMatch(html,/비공개 메뉴/);
   assert.doesNotMatch(html,/[\s\S]*<\/script><script>alert/);
 });
+
+
+test('premium storefront HTML uses a fingerprinted same-origin stylesheet to avoid pre-release CSS cache',async()=>{
+  const response=await renderBbqCheonggyePage(new Request(url),{},{});
+  const html=await response.text();
+  assert.match(html,/href="\/bbqcg\/assets\/site\.css\?v=f5039d1882912cbd"/);
+  assert.doesNotMatch(html,/href="\/bbqcg\/assets\/site\.css"/);
+  assert.match(html,/class="hero-photo"/);
+  const css=await bbqCheonggyeCss().text();
+  assert.match(css,/\.hero-photo/);
+});
