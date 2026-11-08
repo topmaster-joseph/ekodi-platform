@@ -28,7 +28,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $tool = Join-Path $PWD 'tools/ekodi-device-agent/windows/ekodi-site-check.ps1'
-          $raw = & powershell -NoProfile -ExecutionPolicy Bypass -File $tool -Url 'https://ekodi.kr/' -Url 'https://ekodi.kr/ekodimall/' -TimeoutSeconds 45
+          $raw = & powershell -NoProfile -ExecutionPolicy Bypass -File $tool -Url 'https://ekodi.kr/,https://ekodi.kr/ekodimall/' -TimeoutSeconds 45
           $json = ($raw | Out-String)
           Write-Host $json
           $r = $json | ConvertFrom-Json
