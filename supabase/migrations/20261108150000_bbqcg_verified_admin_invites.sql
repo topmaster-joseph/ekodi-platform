@@ -46,6 +46,23 @@ exception when others then
 end
 $bbq_prereg_guard$;
 
+-- Some DEV schema snapshots do not yet contain this historical auth trigger helper.
+-- Install the same guarded, existing forwarding contract in both projects.
+create or replace function public.handle_auth_user_access()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, auth
+as $bbq_auth_bridge$
+begin
+  perform public.apply_preregistered_access(new.id);
+  return new;
+exception when others then
+  raise warning 'handle_auth_user_access failed for %: %',new.id,sqlerrm;
+  return new;
+end
+$bbq_auth_bridge$;
+
 -- An unverified signup is ineligible. Email confirmation updates must re-run
 -- the guard so the pending (site-scoped) role becomes active only after verification.
 drop trigger if exists on_auth_user_access on auth.users;
@@ -74,11 +91,13 @@ begin
   if v_tenant is null or v_store is null or v_owner <> 'customer' then
     raise exception 'BBQCG identity or owner mismatch: refuse access mutation';
   end if;
-  if exists(
-    select 1 from private.admin_bootstrap_allowlist a
-     where lower(a.email)='bbqmuancg@gmail.com'
-  ) then
-    raise exception 'BBQCG email already in legacy unverified bootstrap allowlist';
+  if to_regclass('private.admin_bootstrap_allowlist') is not null then
+    if exists(
+      select 1 from private.admin_bootstrap_allowlist a
+       where lower(a.email)='bbqmuancg@gmail.com'
+    ) then
+      raise exception 'BBQCG email already in legacy unverified bootstrap allowlist';
+    end if;
   end if;
   if exists(
     select 1 from public.site_access_registry r
