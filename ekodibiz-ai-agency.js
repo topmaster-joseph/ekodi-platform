@@ -31,13 +31,44 @@ function adminAuthorized(request, env) {
   const header = text(request.headers.get('x-ekodibiz-agency-admin'), 500);
   return key.length >= 32 && constantTimeEqual(key, header);
 }
-function gates(env, totalSupplier) {
+// These are references to records held in the approved private archive, never the contents of approval letters.
+function approvalRefPresent(value) {
+  return typeof value==='string' && /^[A-Za-z0-9][A-Za-z0-9._:/#-]{5,199}$/.test(value);
+}
+function approvalEvidence(env, totalSupplier) {
+  return {
+    legalReference:approvalRefPresent(env.AGENCY_LEGAL_APPROVAL_REF),
+    pgReference:approvalRefPresent(env.AGENCY_PG_APPROVAL_REF),
+    supplierReference:totalSupplier===0 || approvalRefPresent(env.AGENCY_SUPPLIER_APPROVAL_REF),
+    archiveVerified:env.AGENCY_ARCHIVE_VERIFIED==='true',
+    settlementVerified:env.AGENCY_SETTLEMENT_ACTIVE_VERIFIED==='true'
+  };
+}
+function approvedSupplierList(env) {
+  try {
+    const list=JSON.parse(String(env.AGENCY_APPROVED_SUPPLIER_NAMES||'[]'));
+    if(!Array.isArray(list)||list.length>40)return [];
+    return list.filter(value=>typeof value==='string' && value.trim().length>0 && value.length<=80);
+  } catch { return []; }
+}
+function supplierAllowlisted(env, name) {
+  if(typeof name!=='string'||!name.trim())return false;
+  return approvedSupplierList(env).some(value=>
+    value.trim().toLocaleLowerCase('en')===name.trim().toLocaleLowerCase('en'));
+}
+function gates(env, totalSupplier, provider='') {
   const profile = activeProfileId(env);
   const pg = readiness(env, { profileId: profile });
   const mode = pg.mode;
   const scopeApproved = env.AGENCY_PG_SCOPE_VERIFIED === 'true';
-  const supplierApproved = totalSupplier === 0 || env.AGENCY_SUPPLIER_COLLECTION_VERIFIED === 'true';
-  return { ok: pg.ready && pg.widget && scopeApproved && supplierApproved && (mode === 'test' || (mode === 'live' && env.AGENCY_LIVE_ENABLED === 'true')), mode, profile, pg, clientKey: merchantKeys(env, profile).clientKey };
+  const supplierApproved = totalSupplier === 0 || (env.AGENCY_SUPPLIER_COLLECTION_VERIFIED === 'true' && supplierAllowlisted(env,provider));
+  const evidence=approvalEvidence(env,totalSupplier);
+  // A claim of approval is not an archived, scope-matched operational record.
+  // Staging test keys remain usable; *live* never bypasses the evidence/settlement gate.
+  const liveEvidenceReady=Object.values(evidence).every(Boolean);
+  const liveEnabled=mode==='live' && env.AGENCY_LIVE_ENABLED==='true' && liveEvidenceReady;
+  return { ok: pg.ready && pg.widget && scopeApproved && supplierApproved && (mode === 'test' || liveEnabled),
+    mode, profile, pg, evidence, liveEnabled, clientKey: merchantKeys(env, profile).clientKey };
 }
 async function store(env, pathname, body) {
   if (!env.REVENUE_STORE) throw new Error('store_unavailable');
@@ -149,7 +180,7 @@ export async function agencyApi(request, url, env) {
       }
       if (path === '/api/agency/checkout') {
         if (record.status !== 'accepted') return fault('contract_not_accepted', 409);
-        const gate = gates(env, record.supplierAmount);
+        const gate = gates(env, record.supplierAmount, record.provider);
         if (!gate.ok) return fault('pg_or_supplier_scope_not_enabled', 503);
         const clientKey = gate.clientKey;
         if (!clientKey || !Number.isSafeInteger(record.totalAmount) || record.totalAmount < 100) return fault('price_not_ready', 409);
@@ -160,7 +191,7 @@ export async function agencyApi(request, url, env) {
       if (path === '/api/agency/confirm') {
         if (record.status === 'paid_pending_fulfillment' || record.status === 'active') return reply({ ok:true, record:publicRecord(record) });
         if (record.status !== 'accepted') return fault('contract_not_accepted', 409);
-        const gate = gates(env, record.supplierAmount);
+        const gate = gates(env, record.supplierAmount, record.provider);
         if (!gate.ok) return fault('pg_or_supplier_scope_not_enabled', 503);
         if (body.orderId !== record.id || Number(body.amount) !== record.totalAmount ||
             !/^[A-Za-z0-9_-]{6,200}$/.test(text(body.paymentKey, 210))) return fault('payment_mismatch', 409);
@@ -173,9 +204,28 @@ export async function agencyApi(request, url, env) {
         return reply({ ok:true, record:publicRecord(saved.record) });
       }
     }
-    if (['/api/agency/admin/list','/api/agency/admin/quote','/api/agency/admin/activate',
+    if (['/api/agency/admin/readiness','/api/agency/admin/list','/api/agency/admin/quote','/api/agency/admin/activate',
       '/api/agency/admin/record-cycle','/api/agency/admin/stop-renewal','/api/agency/admin/settlement'].includes(path)) {
       if (!adminAuthorized(request, env)) return fault('admin_access_denied', 403);
+      if (path === '/api/agency/admin/readiness') {
+        const own=gates(env,0);
+        const supplierListed=approvedSupplierList(env).length>0;
+        return reply({ok:true,readiness:{
+          mode:own.mode,
+          paymentConfigured:own.pg.ready && own.pg.widget,
+          pgScopeEnabled:env.AGENCY_PG_SCOPE_VERIFIED==='true',
+          supplierCollectionScopeEnabled:env.AGENCY_SUPPLIER_COLLECTION_VERIFIED==='true',
+          supplierAllowlistConfigured:supplierListed,
+          liveSwitchEnabled:env.AGENCY_LIVE_ENABLED==='true',
+          legalApprovalReferenceRecorded:own.evidence.legalReference,
+          pgApprovalReferenceRecorded:own.evidence.pgReference,
+          supplierApprovalReferenceRecorded:approvalEvidence(env,1).supplierReference,
+          archiveVerified:own.evidence.archiveVerified,
+          settlementVerified:own.evidence.settlementVerified,
+          serviceFeeLiveReady:own.mode==='live' && own.ok,
+          supplierCollectionLiveReady:own.mode==='live' && own.ok && env.AGENCY_SUPPLIER_COLLECTION_VERIFIED==='true' && supplierListed && approvalEvidence(env,1).supplierReference
+        }});
+      }
       if (path === '/api/agency/admin/list') return reply({ ok:true, ...(await store(env, '/agency/admin/list', {})) });
       if (['/api/agency/admin/record-cycle','/api/agency/admin/stop-renewal','/api/agency/admin/settlement'].includes(path)) {
         const id = text(body.id,64);
