@@ -23,6 +23,9 @@ async function api(path,init={}){
     headers:{authorization:`Bearer ${token}`,'content-type':'application/json',...(init.headers||{})}});
   const body=await res.json().catch(()=>({}));
   if(!res.ok||body.success===false){
+    if(res.status===403&&init.method==='POST'&&path==='/access/service_tokens'){
+      throw new Error('POINTS_E2E_SERVICE_TOKEN_CREATION_DENIED: Cloudflare rejected development service-token creation (403). Use the approved exact static Access token ID/client credentials in the development GitHub environment, or have the account owner grant narrowly scoped creation and cleanup authority. Do not broaden staging Access policies.');
+    }
     const msg=`HTTP ${res.status} ${JSON.stringify(body.errors||body.messages||body).slice(0,300)}`;
     const e=new Error(`Cloudflare ${init.method||'GET'} ${path.split('?')[0]} failed: ${msg}`);e.status=res.status;throw e;
   }
