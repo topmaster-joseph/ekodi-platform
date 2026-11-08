@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validAffiliateProductId, sharedProductId, shareUrlForProduct, prioritizeSharedProduct} from '../assets/affiliate-share.js';
+import {validAffiliateProductId, sharedProductId, shareUrlForProduct, prioritizeSharedProduct, validatedAgodaPartnerSearch} from '../assets/affiliate-share.js';
 
 test('canonical Mall share URLs contain only a validated product ID', () => {
   assert.equal(shareUrlForProduct('https://ekodi.kr/ekodimall/coupang/?foo=secret#section', 5277), 'https://ekodi.kr/ekodimall/coupang/?product=5277');
@@ -30,4 +30,21 @@ test('deep link prioritizes an existing item and never substitutes unavailable i
   const missing = prioritizeSharedProduct(products, '999');
   assert.equal(missing.matched, false);
   assert.deepEqual(missing.products, products);
+});
+
+test('owner generated Agoda search link is strictly scoped and does not authorize a product catalog', () => {
+  const link = 'https://www.agoda.com/partners/partnersearch.aspx?pcs=1&cid=1980072&hl=ko-kr';
+  assert.equal(validatedAgodaPartnerSearch(link), link);
+  for (const bad of [
+    'http://www.agoda.com/partners/partnersearch.aspx?pcs=1&cid=1980072&hl=ko-kr',
+    'https://www.agoda.com.evil.example/partners/partnersearch.aspx?pcs=1&cid=1980072&hl=ko-kr',
+    'https://user:pass@www.agoda.com/partners/partnersearch.aspx?pcs=1&cid=1980072&hl=ko-kr',
+    'https://www.agoda.com/partners/partnersearch.aspx?pcs=1&cid=1980072&hl=ko-kr&redirect=https://evil.example',
+    'https://www.agoda.com/partners/partnersearch.aspx?pcs=1&cid=1980072&cid=1980073&hl=ko-kr',
+    'https://www.agoda.com/partners/partnersearch.aspx?pcs=1&cid=not-a-cid&hl=ko-kr',
+    'https://www.agoda.com/partners/partnersearch.aspx?pcs=0&cid=1980072&hl=ko-kr',
+    'https://www.agoda.com/partners/partnersearch.aspx?pcs=1&cid=1980072&hl=en-us',
+    'javascript:alert(1)',
+    ''
+  ]) assert.equal(validatedAgodaPartnerSearch(bad), '', bad);
 });
