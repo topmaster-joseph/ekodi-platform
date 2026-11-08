@@ -55,3 +55,24 @@ test('native registry owns audit and disclaims unverified runtime or repo-deleti
   assert.equal(registry.guardrails.noAutomaticReleaseWithoutHumanGate,true);
   assert.doesNotMatch(JSON.stringify(handoff),/\.github\/workflows\/satellite-retirement-readonly-audit\.yml/);
 });
+
+test('missed cron recovers from a trusted EKODI main schedule without another scheduler or privilege',()=>{
+  assert.ok(native.includes("workflow_run:\n    workflows: ['Reconcile EKODI Church Production']\n    types: [completed]"));
+  assert.ok(native.includes("if: github.event_name != 'pull_request' && github.event_name != 'workflow_run'"));
+  const block=native.slice(native.indexOf('  recover-satellite-audit:'));
+  assert.ok(block.startsWith('  recover-satellite-audit:'),'trusted recovery job is required');
+  for(const guard of [
+    "github.event.workflow_run.event == 'schedule'",
+    "github.event.workflow_run.conclusion == 'success'",
+    "github.event.workflow_run.head_branch == 'main'",
+    "TZ=Asia/Seoul date +%H",
+    "^(09|10|11)$",
+    "steps.window.outputs.eligible == 'true'",
+    "persist-credentials: false",
+    "node scripts/run-ekodi-satellite-retirement-audit.mjs --mode=daily --output-dir=ekodi-satellite-audit",
+    "ekodi-satellite-recovery-",
+    "retention-days: 14"
+  ])assert.ok(block.includes(guard),'missing read-only recovery gate '+guard);
+  assert.doesNotMatch(block,/secrets\.|wrangler|gh api -X|github\.rest\.pulls\.merge|contents: write|pull-requests: write|id-token: write/);
+  assert.equal((native.match(/cron: '/g)||[]).length,4,'preserve existing 4 cron registrations; add zero');
+});
