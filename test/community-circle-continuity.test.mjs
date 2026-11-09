@@ -21,7 +21,7 @@ test('Circle participation is reviewed before the membership write', () => {
   assert.match(page, /이 확인 단계에서는 연락처나 추가 개인정보를 보내지 않습니다/);
   assert.match(app, /openCircleJoinReview/);
   assert.match(app, /circleJoinConfirm.*addEventListener\('click',\(\)=>joinCircle\(\)\)/);
-  assert.match(app, /\/circles\/'\+circle\.id\+'\/join'/);
+  assert.match(app, /api\(`circles\/\$\{circle\.id\}\/join`/); // COMMUNITY-API-PATH-20261109: no root literal (router prefixes '/…')
   assert.match(app, /body:'\{\}'/);
 });
 

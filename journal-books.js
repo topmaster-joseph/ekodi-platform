@@ -19,8 +19,24 @@ export function splitParagraphs(raw, perPara = 3) {
   return out;
 }
 
+// JOURNAL-READER-LETTERS-20261109: 본문 끝의 판매 안내·AI 협업 표기는 CTA 상자·편집 노트와 겹치므로 본문에서 뺀다.
+// 요약(deck)과 같은 첫 문단도 반복이므로 뺀다. AI 원고에 섞인 한자 표기는 한글로 고친다.
+const HANJA_FIXES = Object.freeze({ '介绍': '소개', '介紹': '소개', '方法': '방법', '使用': '사용' });
+const DUPLICATE_TAIL = /(에코디서점|에코디몰).{0,40}(판매|만나|구입|구매)|AI\s*협업\s*초안|저자\s*감수\s*(도서|표기)/;
+function fixHanja(text) { return Object.entries(HANJA_FIXES).reduce((out, [from, to]) => out.split(from).join(to), String(text || '')); }
+function norm(text) { return String(text || '').replace(/[\s『』「」"'·.,—-]/g, ''); }
+export function dedupeBookParagraphs(paras, summary = '') {
+  const cleaned = paras.map((p) => {
+    const sentences = p.split(/(?<=[.!?。])\s+/);
+    return sentences.filter((sentence) => !DUPLICATE_TAIL.test(sentence)).join(' ').trim();
+  }).filter(Boolean);
+  const deck = norm(summary).slice(0, 40);
+  if (deck.length >= 20 && cleaned.length > 1 && norm(cleaned[0]).startsWith(deck)) cleaned.shift();
+  return cleaned;
+}
+
 export function toJournalPost(row, book) {
-  const paras = splitParagraphs(row.body);
+  const paras = dedupeBookParagraphs(splitParagraphs(fixHanja(row.body)), fixHanja(row.summary));
   const bookUrl = book ? `https://ekodi.kr/books/book/?id=${encodeURIComponent(book.id)}` : '';
   const store = book ? `에코디서점에서 『${book.title}』(${book.listPrice?.label || ''})을 만나실 수 있습니다: ${bookUrl}` : '';
   const body = [
@@ -32,7 +48,7 @@ export function toJournalPost(row, book) {
     author: clean(book.author, 80), price: clean(book.listPrice?.label, 40), url: bookUrl }) : null;
   const hash = [...row.slug].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
   return Object.freeze({
-    slug: row.slug, title: clean(row.title, 140), titleEn: clean(row.title, 140), excerpt: clean(row.summary, 240), excerptEn: clean(row.summary, 240),
+    slug: row.slug, title: fixHanja(clean(row.title, 140)), titleEn: fixHanja(clean(row.title, 140)), excerpt: fixHanja(clean(row.summary, 240)), excerptEn: fixHanja(clean(row.summary, 240)),
     publishedAt: row.published_at, updatedAt: row.published_at, category: 'books', categoryLabel: '출판', categoryLabelEn: 'EKODI Books',
     values: [], author, readMinutes: Math.max(2, Math.round(clean(row.body, 8000).length / 600)), featured: false, imageVariant: 1 + (hash % 4),
     body, bodyEn: body, book: bookInfo, source: 'publishing-ai-release',
