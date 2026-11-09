@@ -20,7 +20,7 @@
 import { resolveTenantAccessAuthority } from './tenant-access-authority.js';
 
 export const WORKSPACE_DOCUMENTS_PREFIX = '/api/workspace-documents';
-export const WORKSPACE_DOCUMENT_TYPES = Object.freeze(['통장사본', '고유번호증', '사업자등록증', '정관·규약', '회의록', '인감·직인', '증명서', '계약·협약', '기타']);
+export const WORKSPACE_DOCUMENT_TYPES = Object.freeze(['통장사본', '고유번호증', '사업자등록증', '신분증', '이력서', '정관·규약', '회의록', '인감·직인', '증명서', '계약·협약', '기타']);
 export const WORKSPACE_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
 const MIME = new Map([['application/pdf', 'pdf'], ['image/jpeg', 'jpg'], ['image/png', 'png'], ['image/webp', 'webp']]);
 const ALLOWED_ORIGIN = 'https://ekodi.kr';
@@ -29,7 +29,20 @@ const ID_RE = /^wdoc-[0-9a-f-]{36}$/;
 const TOKEN_RE = /^[A-Za-z0-9_-]{32,64}$/;
 export const SHARE_DEFAULT_DAYS = 7;
 export const SHARE_MAX_DAYS = 30;
-const RESERVED_TENANTS = new Set(['shared']);
+// 신분증처럼 개인 식별정보가 담긴 서류는 공유 링크를 최대 1일로 제한합니다.
+export const SENSITIVE_SHARE_TYPES = Object.freeze(new Set(['신분증']));
+// 관리자 주소의 사이트 경로 ↔ customer_tenants.slug (문서는 항상 정본 slug로 저장).
+export const PATH_TENANT_ALIASES = Object.freeze({ ekodibiz: 'ekodi-biz', ekodichurch: 'ekodi-church', ekodilab: 'ekodi-lab' });
+export const canonicalTenant = value => PATH_TENANT_ALIASES[value] || value;
+export const tenantAdminPath = slug => `/${(Object.entries(PATH_TENANT_ALIASES).find(([, v]) => v === slug)?.[0]) || slug}/admin${slug === 'ekodi-church' ? '' : '/documents'}`;
+const RESERVED_TENANTS = new Set(['shared', 'overview']);
+// 최고관리자 현황판에서 사이트마다 갖춰졌는지 확인하는 기본 서류 묶음.
+export const OVERVIEW_REQUIRED = Object.freeze([
+  ['bank', '통장사본', ['통장사본']],
+  ['registration', '고유번호·사업자등록', ['고유번호증', '사업자등록증']],
+  ['id', '대표자 신분증', ['신분증']],
+  ['resume', '대표자 이력서', ['이력서']],
+]);
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: {
@@ -172,7 +185,8 @@ async function archiveDocument(env, tenant, id, actor) {
   return json({ ok: true });
 }
 
-export function shareDays(value) {
+export function shareDays(value, docType = '') {
+  if (SENSITIVE_SHARE_TYPES.has(docType)) return 1;
   const days = Math.floor(Number(value));
   if (!Number.isFinite(days) || days < 1) return SHARE_DEFAULT_DAYS;
   return Math.min(days, SHARE_MAX_DAYS);
@@ -188,7 +202,7 @@ async function shareDocument(request, env, tenant, id, actor) {
   if (!row) return fail('NOT_FOUND', '문서를 찾을 수 없습니다.', 404);
   if (!row.file_key && !row.source_url) return fail('NOTHING_TO_SHARE', '공유할 파일이나 링크가 없습니다.', 409);
   let body = {}; try { body = await request.json(); } catch { body = {}; }
-  const days = shareDays(body?.days);
+  const days = shareDays(body?.days, row.doc_type);
   const token = randomToken();
   const now = new Date(); const expires = new Date(now.getTime() + days * 86400000);
   await env.DB.prepare('INSERT INTO workspace_document_shares (id,tenant_slug,document_id,token_hash,expires_at,revoked_at,created_by,created_at,access_count) VALUES (?,?,?,?,?,?,?,?,0)')
@@ -231,6 +245,34 @@ async function openShared(request, env, token) {
   } });
 }
 
+// 최고관리자 전용: 모든 운영공간의 문서함 현황(파일 내용·링크 없이 개수·갖춤 여부·최근 이력만).
+export function buildOverview(tenants, docs, shares, events, church = null) {
+  const now = new Date().toISOString();
+  const byTenant = new Map(tenants.map(t => [t.slug, { slug: t.slug, name: t.name, adminPath: tenantAdminPath(t.slug), total: 0, types: {}, lastAt: '', activeShares: 0, required: {} }]));
+  for (const d of docs) {
+    const row = byTenant.get(d.tenant_slug); if (!row) continue;
+    row.total += 1; row.types[d.doc_type] = (row.types[d.doc_type] || 0) + 1;
+    if (String(d.created_at) > row.lastAt) row.lastAt = d.created_at;
+  }
+  for (const x of shares) { const row = byTenant.get(x.tenant_slug); if (row && !x.revoked_at && String(x.expires_at) > now) row.activeShares += 1; }
+  for (const row of byTenant.values()) for (const [key, , types] of OVERVIEW_REQUIRED) row.required[key] = types.some(t => row.types[t] > 0);
+  const sites = [...byTenant.values()];
+  if (church) { const c = sites.find(s => s.slug === 'ekodi-church'); if (c) { c.separateArchive = church; } }
+  const complete = sites.filter(s => OVERVIEW_REQUIRED.every(([k]) => s.required[k])).length;
+  return { sites, required: OVERVIEW_REQUIRED.map(([key, label]) => ({ key, label })), totals: { sites: sites.length, documents: docs.length, complete, activeShares: sites.reduce((n, s) => n + s.activeShares, 0) },
+    recent: events.map(e => ({ tenant: e.tenant_slug, action: e.action, actor: e.actor, detail: e.detail, at: e.created_at })) };
+}
+
+async function overview(env) {
+  const tenants = (await env.DB.prepare("SELECT slug, name FROM customer_tenants WHERE status='active' ORDER BY name").all())?.results || [];
+  const docs = (await env.DB.prepare("SELECT tenant_slug, doc_type, created_at FROM workspace_documents WHERE status='active'").all())?.results || [];
+  const shares = (await env.DB.prepare('SELECT tenant_slug, expires_at, revoked_at FROM workspace_document_shares WHERE revoked_at IS NULL').all())?.results || [];
+  const events = (await env.DB.prepare('SELECT tenant_slug, action, actor, detail, created_at FROM workspace_document_events ORDER BY created_at DESC LIMIT 30').all())?.results || [];
+  let church = null;
+  try { const c = await env.DB.prepare("SELECT count(*) AS n FROM church_documents WHERE status='active'").first(); church = { documents: Number(c?.n || 0), path: '/ekodichurch/admin' }; } catch { church = null; }
+  return json({ ok: true, ...buildOverview(tenants, docs, shares, events, church) });
+}
+
 export async function handleWorkspaceDocuments(request, env, options = {}) {
   const url = new URL(request.url);
   if (!isWorkspaceDocumentsPath(url.pathname)) return null;
@@ -241,7 +283,16 @@ export async function handleWorkspaceDocuments(request, env, options = {}) {
     try { return await openShared(request, env, parts[1]); }
     catch (error) { console.error('[workspace-documents] shared open failed', error?.name || 'Error'); return fail('UNAVAILABLE', '일시적인 오류입니다.', 503); }
   }
-  const tenant = String(parts[0] || '').toLowerCase();
+  if (parts[0] === 'overview') {
+    if (request.method !== 'GET' || parts.length !== 1) return fail('METHOD_NOT_ALLOWED', '허용되지 않은 요청입니다.', 405);
+    try {
+      const resolve = options.resolveAuthority || resolveTenantAccessAuthority;
+      const authority = await resolve(request, env, { tenantSlug: '' });
+      if (!authority?.ok || authority.scope !== 'platform') return fail(authority?.status === 401 ? 'ADMIN_LOGIN_REQUIRED' : 'PLATFORM_ADMIN_REQUIRED', '최고관리자만 전체 현황을 볼 수 있습니다.', authority?.status === 401 ? 401 : 403);
+      return await overview(env);
+    } catch (error) { console.error('[workspace-documents] overview failed', error?.name || 'Error'); return fail('UNAVAILABLE', '일시적인 오류입니다.', 503); }
+  }
+  const tenant = canonicalTenant(String(parts[0] || '').toLowerCase());
   if (!TENANT_RE.test(tenant) || RESERVED_TENANTS.has(tenant)) return fail('TENANT_REQUIRED', '사이트를 확인해 주세요.', 404);
   const method = request.method;
   try {
