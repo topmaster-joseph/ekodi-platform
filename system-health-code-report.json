@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-02T05:50:46.855Z",
-  "startedAt": "2026-11-02T05:49:36.211Z",
+  "generatedAt": "2026-11-09T06:04:31.648Z",
+  "startedAt": "2026-11-09T06:03:15.028Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "98f9cbda21e020fdd2a0c7ae322ad9f6cd13fb79",
-  "overallScore": 83.8,
+  "head": "b63bf8492aad5f09edc0d331d3929698e522b8f8",
+  "overallScore": 82.5,
   "status": "watch",
   "thresholds": {
     "healthy": 90,
@@ -18,19 +18,19 @@
       "weight": 25,
       "score": 25,
       "status": "ok",
-      "detail": "1433개 테스트 파일 · 전체 테스트 통과"
+      "detail": "1722개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
       "score": 1.5,
       "status": "error",
-      "detail": "교차 파일 중복 군집 30개 · 겹침 창 173개 정규화"
+      "detail": "교차 파일 중복 군집 30개 · 겹침 창 308개 정규화"
     },
     "complexity": {
       "weight": 15,
-      "score": 12.3,
+      "score": 11,
       "status": "ok",
-      "detail": "대형 파일 4개 · 매우 큰 파일 0개 · TODO/FIXME 39건"
+      "detail": "대형 파일 5개 · 매우 큰 파일 0개 · TODO/FIXME 55건"
     },
     "security": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "294개 Workflow · 배포 가드 검증 통과"
+      "detail": "320개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,15 +58,15 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 1376,
-    "runtimeLines": 237560,
-    "testFiles": 1433,
-    "workflows": 294,
-    "largeFiles": 4,
+    "runtimeFiles": 1656,
+    "runtimeLines": 278030,
+    "testFiles": 1722,
+    "workflows": 320,
+    "largeFiles": 5,
     "veryLargeFiles": 0,
-    "todoMarkers": 39,
+    "todoMarkers": 55,
     "duplicateGroups": 30,
-    "duplicateWindows": 173
+    "duplicateWindows": 308
   },
   "technicalDebt": [
     {
@@ -74,12 +74,14 @@
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
-      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "detail": "5개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "channel-credential-vault.js:1",
-        "mail-credential-vault.js:1",
-        "sites/ekodi-mall/api/amazon-credential-vault.js:1"
+        "sites/ekodi-church/worship/2026-10-11/prayer/prayer.js:8",
+        "sites/ekodi-church/worship/2026-10-18/prayer/prayer.js:8",
+        "sites/ekodi-church/worship/2026-10-25/prayer/prayer.js:8",
+        "sites/ekodi-church/worship/2026-11-01/prayer/prayer.js:8",
+        "sites/ekodi-church/worship/2026-11-08/prayer/prayer.js:8"
       ]
     },
     {
@@ -87,12 +89,14 @@
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
-      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "detail": "5개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "customer-federated-auth.js:47",
-        "customer-member-directory.js:34",
-        "membership-billing.js:52"
+        "sites/ekodi-church/worship/2026-10-11/prayer/prayer.js:46",
+        "sites/ekodi-church/worship/2026-10-18/prayer/prayer.js:46",
+        "sites/ekodi-church/worship/2026-10-25/prayer/prayer.js:46",
+        "sites/ekodi-church/worship/2026-11-01/prayer/prayer.js:46",
+        "sites/ekodi-church/worship/2026-11-08/prayer/prayer.js:46"
       ]
     },
     {
@@ -100,12 +104,14 @@
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
-      "detail": "3개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "detail": "5개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "tax-invoice-free-first-worker.js:21",
-        "tax-invoice-worker.js:19",
-        "tax-service-worker.js:18"
+        "sites/ekodi-church/worship/2026-10-11/prayer/prayer.js:67",
+        "sites/ekodi-church/worship/2026-10-18/prayer/prayer.js:67",
+        "sites/ekodi-church/worship/2026-10-25/prayer/prayer.js:67",
+        "sites/ekodi-church/worship/2026-11-01/prayer/prayer.js:67",
+        "sites/ekodi-church/worship/2026-11-08/prayer/prayer.js:67"
       ]
     },
     {
@@ -113,11 +119,14 @@
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
-      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "detail": "5개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "affiliate-control.js:94",
-        "device-control.js:358"
+        "sites/ekodi-church/worship/2026-10-11/prayer/prayer.js:88",
+        "sites/ekodi-church/worship/2026-10-18/prayer/prayer.js:88",
+        "sites/ekodi-church/worship/2026-10-25/prayer/prayer.js:88",
+        "sites/ekodi-church/worship/2026-11-01/prayer/prayer.js:88",
+        "sites/ekodi-church/worship/2026-11-08/prayer/prayer.js:88"
       ]
     },
     {
@@ -125,11 +134,14 @@
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
-      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "detail": "5개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "api-cost-control.js:16",
-        "common-scripture-control.js:16"
+        "sites/ekodi-church/worship/2026-10-11/prayer/prayer.js:126",
+        "sites/ekodi-church/worship/2026-10-18/prayer/prayer.js:126",
+        "sites/ekodi-church/worship/2026-10-25/prayer/prayer.js:126",
+        "sites/ekodi-church/worship/2026-11-01/prayer/prayer.js:126",
+        "sites/ekodi-church/worship/2026-11-08/prayer/prayer.js:126"
       ]
     },
     {
@@ -137,11 +149,14 @@
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
-      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "detail": "5개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "author-billing-control.js:17",
-        "customer-google-prereg.js:96"
+        "sites/ekodi-church/worship/2026-10-11/prayer/prayer.js:148",
+        "sites/ekodi-church/worship/2026-10-18/prayer/prayer.js:148",
+        "sites/ekodi-church/worship/2026-10-25/prayer/prayer.js:148",
+        "sites/ekodi-church/worship/2026-11-01/prayer/prayer.js:148",
+        "sites/ekodi-church/worship/2026-11-08/prayer/prayer.js:148"
       ]
     },
     {
@@ -149,11 +164,14 @@
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
-      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "detail": "5개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "books-control.js:11",
-        "books-pipeline-control.js:11"
+        "sites/ekodi-church/worship/2026-10-11/prayer/prayer.js:172",
+        "sites/ekodi-church/worship/2026-10-18/prayer/prayer.js:172",
+        "sites/ekodi-church/worship/2026-10-25/prayer/prayer.js:172",
+        "sites/ekodi-church/worship/2026-11-01/prayer/prayer.js:172",
+        "sites/ekodi-church/worship/2026-11-08/prayer/prayer.js:172"
       ]
     },
     {
@@ -161,11 +179,14 @@
       "severity": "medium",
       "category": "duplication",
       "title": "교차 파일 중복 로직 후보",
-      "detail": "2개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
+      "detail": "5개 파일에서 동일한 코드 블록 후보가 반복됩니다.",
       "recommendation": "공통 Core로 승격 가능한지 영향 범위를 분석한 뒤, 테스트가 있는 경우에만 통합하세요.",
       "evidence": [
-        "books-control.js:55",
-        "books-distribution-control.js:67"
+        "sites/ekodi-church/worship/2026-10-11/prayer/prayer.js:193",
+        "sites/ekodi-church/worship/2026-10-18/prayer/prayer.js:193",
+        "sites/ekodi-church/worship/2026-10-25/prayer/prayer.js:193",
+        "sites/ekodi-church/worship/2026-11-01/prayer/prayer.js:193",
+        "sites/ekodi-church/worship/2026-11-08/prayer/prayer.js:193"
       ]
     },
     {
@@ -173,17 +194,17 @@
       "severity": "low",
       "category": "complexity",
       "title": "임시 작업 표식 누적",
-      "detail": "TODO/FIXME/HACK/TEMP 표식이 39건입니다.",
+      "detail": "TODO/FIXME/HACK/TEMP 표식이 55건입니다.",
       "recommendation": "오래된 항목부터 제거 조건과 책임 영역을 정리하세요.",
       "evidence": [
-        "admin-sidebar.js:978",
-        "auth-site/email-password.js:51",
-        "auth-site/email-password.js:201",
-        "cooperative-progress.js:336",
-        "cooperative-progress.js:337",
-        "device-control-admin.js:217",
-        "device-control-admin.js:1219",
-        "education/study/live/lab.js:100"
+        "admin-sidebar.js:1252",
+        "auth-site/email-password.js:52",
+        "auth-site/email-password.js:206",
+        "community/reading/app.js:112",
+        "community/reading/app.js:113",
+        "community/reading/app.js:114",
+        "community/reading/app.js:115",
+        "community/reading/app.js:116"
       ]
     }
   ],
@@ -192,7 +213,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "✔ fresh citizen opinions keep independent queue-first storage and never direct-write from public handler (5.890786ms)\n✔ explicit Brand Account OAuth requires an authenticated single YouTube channel and registry identity (1.324678ms)\n✔ Brand Account opt-in is scoped and never disables signed OAuth, code exchange or email-based standard mode (7.078176ms)\n✔ account linked banner uses registry ID or explicit connection IDs, never coincident email (3.564395ms)\nℹ tests 7363\nℹ suites 0\nℹ pass 7361\nℹ fail 0\nℹ cancelled 0\nℹ skipped 2\nℹ todo 0\nℹ duration_ms 68638.774496"
+      "summary": "✔ fresh citizen opinions keep independent queue-first storage and never direct-write from public handler (6.857458ms)\n✔ explicit Brand Account OAuth requires an authenticated single YouTube channel and registry identity (1.081823ms)\n✔ Brand Account opt-in is scoped and never disables signed OAuth, code exchange or email-based standard mode (5.806224ms)\n✔ account linked banner uses registry ID or explicit connection IDs, never coincident email (3.269648ms)\nℹ tests 8779\nℹ suites 0\nℹ pass 8775\nℹ fail 0\nℹ cancelled 0\nℹ skipped 4\nℹ todo 0\nℹ duration_ms 74710.254278"
     },
     "security": {
       "ok": true,
@@ -204,7 +225,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "> ekodi-platform@4.3.1 validate:boundaries\n> node scripts/validate-platform-boundaries.mjs && node scripts/validate-service-layer-boundaries.mjs\n\nPlatform boundaries OK: 32 platform/service boundaries\nService layer boundaries OK: 1 professional services, 10 workspace kinds"
+      "summary": "> ekodi-platform@4.3.1 validate:boundaries\n> node scripts/validate-platform-boundaries.mjs && node scripts/validate-service-layer-boundaries.mjs\n\nPlatform boundaries OK: 33 platform/service boundaries\nService layer boundaries OK: 1 professional services, 10 workspace kinds"
     },
     "deployment": {
       "ok": true,
