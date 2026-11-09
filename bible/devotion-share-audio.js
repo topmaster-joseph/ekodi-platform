@@ -48,7 +48,8 @@ export function formatDevotionShareMessage({date, title, excerpt, url}) {
   }
   return [
     `${Number(y)}년 ${Number(m)}월 ${Number(d)}일 ${day}요일`,
-    headline,
+    '에코디언의 묵상나눔',
+    headline === '에코디언의 묵상나눔' ? '' : headline,
     body,
     cleanUrl.href,
   ].filter(Boolean).join('\n');
@@ -74,15 +75,16 @@ export function devotionSectionShareDetails(data,kind){
 }
 export function formatDevotionSectionShareMessage({date,title,content,url}){
   // Keep one canonical validation point for actual dates and ekodi.kr-only public deep links.
-  const dateLine=formatDevotionShareMessage({date,title,excerpt:'',url}).split('\n')[0];
+  const dateLine=formatDevotionShareMessage({date,title:'',excerpt:'',url}).split('\n')[0];
   const validatedUrl=new URL(url).href;
   const fullContent=String(content??'').replace(/\r\n?/gu,'\n').trim();
   return [
-    '일자: '+dateLine,
-    '제목: '+compact(title),
-    '내용: '+(fullContent||'등록된 내용이 없습니다.'),
-    '링크: '+validatedUrl,
-  ].join('\n');
+    '에코디언의 묵상나눔',
+    dateLine,
+    compact(title).replace(/^.*?오늘의 매일묵상\s*·\s*/u, '').replace(/^묵상 (?:시|노래)\s*·\s*/u, ''),
+    fullContent||'등록된 내용이 없습니다.',
+    validatedUrl,
+  ].filter(Boolean).join('\n');
 }
 // Speak chapter/verse citations as Korean book references, not punctuation.
 // Keep the published on-screen reference intact; only the TTS script changes.
