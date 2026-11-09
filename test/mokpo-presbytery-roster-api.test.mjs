@@ -164,6 +164,7 @@ test('mail failure removes the pending code and real sender fails closed without
   const r = await handleRosterApi(new Request('https://ekodi.kr' + ROSTER_API_PREFIX + '/code', { method: 'POST', headers: { origin: 'https://ekodi.kr', authorization: 'Bearer x' } }),
     t.env, { principal: async () => ({ email: 'owner@ekodi.test' }), sendMail: async () => { throw new Error('boom'); } });
   assert.equal(r.status, 502);
+  assert.equal((await r.json()).reason, 'boom');
   assert.equal(t.db.prepare('SELECT COUNT(*) AS n FROM mokpo_presbytery_roster_codes').get().n, 0);
   const n = await handleRosterApi(new Request('https://ekodi.kr' + ROSTER_API_PREFIX + '/code', { method: 'POST', headers: { origin: 'https://ekodi.kr', authorization: 'Bearer x' } }),
     t.env, { principal: async () => ({ email: 'owner@ekodi.test' }) });
@@ -228,4 +229,12 @@ test('the deployed router reaches the roster API before the /api/* Control API p
   assert.equal(list.headers.get('x-ekodi-route'), 'mokpo-presbytery-roster');
   const other = await router.fetch(new Request('https://ekodi.kr/api/something-else'), env, ctx);
   assert.notEqual(other.headers.get('x-ekodi-route'), 'mokpo-presbytery-roster');
+});
+
+test('mail failure reasons are categorized without secrets', async () => {
+  const { mailFailureReason } = await import('../mokpo-presbytery-roster-api.js');
+  const t = Object.assign(new Error('Client is unauthorized to retrieve access tokens'), { code: 'GOOGLE_TOKEN_EXCHANGE_FAILED' });
+  assert.equal(mailFailureReason(t), 'google_token: Client is unauthorized to retrieve access tokens');
+  assert.equal(mailFailureReason(Object.assign(new Error('Precondition check failed.'), { status: 400 })), 'gmail_400: Precondition check failed.');
+  assert.equal(mailFailureReason({}), 'mail_error');
 });
