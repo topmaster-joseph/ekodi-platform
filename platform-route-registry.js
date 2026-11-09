@@ -29,7 +29,7 @@ export const PLATFORM_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'experience',prefix:'/experience',binding:'EXPERIENCE',virtualHost:platformHost('exp')}),
   Object.freeze({id:'developer',prefix:'/developer',binding:'EXPERIENCE',virtualHost:platformHost('dev')}),
   Object.freeze({id:'finance-api',prefix:'/finance-api',binding:'FINANCE',virtualHost:platformHost('finance-api'),basePathAware:true}),
-  Object.freeze({id:'journal',prefix:'/journal',binding:'JOURNAL',virtualHost:platformHost('journal')}),
+  Object.freeze({id:'journal',prefix:'/journal',binding:'JOURNAL',virtualHost:platformHost('journal'),basePathAware:true}),
   Object.freeze({id:'life',prefix:'/life',binding:'LIFE',virtualHost:platformHost('life')}),
   Object.freeze({id:'management',prefix:'/management',binding:'MANAGEMENT',virtualHost:platformHost('management')}),
   Object.freeze({id:'money',prefix:'/money',binding:'MONEY',virtualHost:PLATFORM_CANONICAL_HOST}),

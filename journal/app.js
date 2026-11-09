@@ -15,8 +15,8 @@ const COPY = Object.freeze({
 
 // JOURNAL-MASTHEAD-20261108: 정론지(A) 틀 + 학술지(C) 문서번호·초록·인용 + 매거진(B) 번호 목록.
 const UI = Object.freeze({
-  'ko-KR': { share:'링크 공유', copied:'링크를 복사했습니다', cite:'인용하기', citeCopied:'인용 형식을 복사했습니다', print:'인쇄', related:'함께 읽을 글', prev:'이전 글', next:'다음 글', loading:'글을 불러오는 중입니다…', failed:'글 목록을 잠시 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', retry:'다시 시도', book:'에코디서점 도서', picks:'편집부 추천', editor:'편집자의 말', editorBody:'기록은 기억을 넘어 책임이 됩니다. 성공뿐 아니라 질문, 실패, 수정, 검증의 흔적까지 남깁니다.', latest:'최신 기록', abstract:'요약', note:'편집 노트', correction:'정정·의견 보내기', talk:'커뮤니티에서 이야기하기', readerTitle:'이 글에 대해 이야기해 주세요', readerBody:'질문, 반론, 정정 요청 모두 환영합니다. 편집부가 읽고 필요한 내용은 글에 반영합니다.', count:(n) => `${n}편`, by:'글', archive:'모든 기록', motto:'말씀과 삶, 기술과 공동체의 공적 기록', lettersLink:'독자 편지', readersTitle:'독자와 함께 쓰는 기록', readersBody:'새 글은 RSS로 받아 보시고, 의견·질문·정정 요청은 편집부에 보내 주세요. 보내 주신 정정은 글 아래 이력으로 남깁니다.', letter:'독자 편지 보내기', rss:'RSS 구독', community:'커뮤니티에서 이야기하기', policy:'편집 원칙 — 모든 글은 작성 주체(편집부·AI 협업·저자)를 밝히고, 정정 요청을 받으면 글 아래에 이력을 남깁니다.' },
-  en: { share:'Share link', copied:'Link copied', cite:'Cite', citeCopied:'Citation copied', print:'Print', related:'Read next', prev:'Previous', next:'Next', loading:'Loading articles…', failed:'Articles could not be loaded right now. Please try again shortly.', retry:'Retry', book:'EKODI Books', picks:'Editors’ picks', editor:'From the editors', editorBody:'A record is more than memory. It becomes accountability, including questions, failures, corrections, and verification.', latest:'Latest', abstract:'Summary', note:'Editorial note', correction:'Send a correction or comment', talk:'Discuss in the community', readerTitle:'Tell us what you think', readerBody:'Questions, objections and corrections are welcome. The editors read every letter and update the record when needed.', count:(n) => `${n}`, by:'By', archive:'All records', motto:'A public record of faith, life, technology and community', lettersLink:'Letters', readersTitle:'A record written with readers', readersBody:'Follow new articles by RSS and send comments, questions or corrections to the editors. Corrections are kept below each article.', letter:'Write to the editors', rss:'RSS', community:'Talk in the EKODI community', policy:'Editorial policy — every article names who wrote it (editors, AI-assisted, author) and keeps its correction history.' },
+  'ko-KR': { leadLabel:'이번 호 머리기사', formTitle:'편집부에 보내기', formKind:'종류', kindComment:'의견', kindQuestion:'질문', kindCorrection:'정정 요청', formName:'이름 (선택)', formEmail:'답장 받을 이메일', formMessage:'내용', formSend:'보내기', formSending:'보내는 중…', formDone:'편집부에 잘 전달되었습니다. 답장은 적어 주신 이메일로 드립니다.', formFail:'지금은 전송이 되지 않았습니다. 아래 메일 주소로 직접 보내 주세요.', formClose:'닫기', share:'링크 공유', copied:'링크를 복사했습니다', cite:'인용하기', citeCopied:'인용 형식을 복사했습니다', print:'인쇄', related:'함께 읽을 글', prev:'이전 글', next:'다음 글', loading:'글을 불러오는 중입니다…', failed:'글 목록을 잠시 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', retry:'다시 시도', book:'에코디서점 도서', picks:'편집부 추천', editor:'편집자의 말', editorBody:'기록은 기억을 넘어 책임이 됩니다. 성공뿐 아니라 질문, 실패, 수정, 검증의 흔적까지 남깁니다.', latest:'최신 기록', abstract:'요약', note:'편집 노트', correction:'정정·의견 보내기', talk:'커뮤니티에서 이야기하기', readerTitle:'이 글에 대해 이야기해 주세요', readerBody:'질문, 반론, 정정 요청 모두 환영합니다. 편집부가 읽고 필요한 내용은 글에 반영합니다.', count:(n) => `${n}편`, by:'글', archive:'모든 기록', motto:'말씀과 삶, 기술과 공동체의 공적 기록', lettersLink:'독자 편지', readersTitle:'독자와 함께 쓰는 기록', readersBody:'새 글은 RSS로 받아 보시고, 의견·질문·정정 요청은 편집부에 보내 주세요. 보내 주신 정정은 글 아래 이력으로 남깁니다.', letter:'독자 편지 보내기', rss:'RSS 구독', community:'커뮤니티에서 이야기하기', policy:'편집 원칙 — 모든 글은 작성 주체(편집부·AI 협업·저자)를 밝히고, 정정 요청을 받으면 글 아래에 이력을 남깁니다.' },
+  en: { leadLabel:'Lead story', formTitle:'Write to the editors', formKind:'Type', kindComment:'Comment', kindQuestion:'Question', kindCorrection:'Correction', formName:'Name (optional)', formEmail:'Your email for a reply', formMessage:'Message', formSend:'Send', formSending:'Sending…', formDone:'Delivered to the editors. We will reply to your email.', formFail:'Could not send right now. Please email the editors directly below.', formClose:'Close', share:'Share link', copied:'Link copied', cite:'Cite', citeCopied:'Citation copied', print:'Print', related:'Read next', prev:'Previous', next:'Next', loading:'Loading articles…', failed:'Articles could not be loaded right now. Please try again shortly.', retry:'Retry', book:'EKODI Books', picks:'Editors’ picks', editor:'From the editors', editorBody:'A record is more than memory. It becomes accountability, including questions, failures, corrections, and verification.', latest:'Latest', abstract:'Summary', note:'Editorial note', correction:'Send a correction or comment', talk:'Discuss in the community', readerTitle:'Tell us what you think', readerBody:'Questions, objections and corrections are welcome. The editors read every letter and update the record when needed.', count:(n) => `${n}`, by:'By', archive:'All records', motto:'A public record of faith, life, technology and community', lettersLink:'Letters', readersTitle:'A record written with readers', readersBody:'Follow new articles by RSS and send comments, questions or corrections to the editors. Corrections are kept below each article.', letter:'Write to the editors', rss:'RSS', community:'Talk in the EKODI community', policy:'Editorial policy — every article names who wrote it (editors, AI-assisted, author) and keeps its correction history.' },
 });
 function ui() { return UI[state.locale] || UI.en; }
 const state = { posts: [], category: 'all', query: '', locale: 'ko-KR', loaded: false, failed: false };
@@ -136,7 +136,11 @@ function safeHref(value) {
   } catch { return ''; }
 }
 function kicker(post) {
-  return `<span class="kicker-type">${escapeHtml(postType(post.category, isKorean()))}</span><span class="kicker-cat">${escapeHtml(categoryText(post))}</span>`;
+  const type = postType(post.category, isKorean());
+  const cat = categoryText(post);
+  // '서평 · 출판' 옆에 '출판'이 또 붙는 식의 중복 표기를 없앤다.
+  const sameWord = String(type).toLowerCase().includes(String(cat).toLowerCase()) || String(cat).toLowerCase().includes(String(type).toLowerCase());
+  return `<span class="kicker-type">${escapeHtml(type)}</span>${sameWord ? '' : `<span class="kicker-cat">${escapeHtml(cat)}</span>`}`;
 }
 
 // 1면: 머리기사(A) + 편집부 추천 번호 목록(B) + 최신 기록 3단(A).
@@ -146,7 +150,8 @@ function frontHtml() {
   const lead = posts[0];
   const picks = [...posts.filter((p) => p.featured && p.slug !== lead.slug), ...posts.filter((p) => !p.featured && p.slug !== lead.slug)].slice(0, 4);
   const latest = posts.slice(1, 4);
-  return `<section class="front-lead">
+  return `<h2 class="front-section-label"><span>${escapeHtml(ui().leadLabel)}</span></h2>
+    <section class="front-lead">
       <div class="front-lead-main">
         <div class="journal-kicker">${kicker(lead)}</div>
         <a href="${postUrl(lead)}" class="front-lead-link"><h2 class="front-lead-title">${escapeHtml(postText(lead, 'title'))}</h2></a>
@@ -160,7 +165,7 @@ function frontHtml() {
         <div class="front-editor"><span>${escapeHtml(ui().editor)}</span><p>${escapeHtml(ui().editorBody)}</p></div>
       </aside>
     </section>
-    ${latest.length ? `<section class="front-latest" aria-label="${escapeHtml(ui().latest)}">${latest.map((p) => `<a class="front-latest-item" href="${postUrl(p)}">
+    ${latest.length ? `<h2 class="front-section-label"><span>${escapeHtml(ui().latest)}</span></h2><section class="front-latest" aria-label="${escapeHtml(ui().latest)}">${latest.map((p) => `<a class="front-latest-item" href="${postUrl(p)}">
       <div class="journal-kicker">${kicker(p)}</div>
       <h3>${escapeHtml(postText(p, 'title'))}</h3>
       <p>${escapeHtml(postText(p, 'excerpt'))}</p>
@@ -193,7 +198,7 @@ function renderList() {
     return `<a class="journal-card" href="${postUrl(post)}">
       ${coverHtml(post, "journal-card-cover")}
       <div class="journal-card-copy">
-        <div class="journal-card-meta"><strong>${escapeHtml(postType(post.category, isKorean()))}</strong><span>${escapeHtml(categoryText(post))}</span><span>${escapeHtml(dateText(post.publishedAt))}</span><span class="journal-docno">${escapeHtml(docNumber(post, state.posts))}</span></div>
+        <div class="journal-card-meta">${kicker(post).replace('kicker-type', 'kicker-type journal-card-type')}<span>${escapeHtml(dateText(post.publishedAt))}</span><span class="journal-docno">${escapeHtml(docNumber(post, state.posts))}</span></div>
         <h2>${escapeHtml(postText(post, 'title'))}</h2>
         <p class="journal-card-excerpt">${escapeHtml(postText(post, 'excerpt'))}</p>
         <div class="journal-values">${values}<span class="journal-read">${escapeHtml(String(post.readMinutes))} ${escapeHtml(copy().min)}</span></div>
@@ -228,6 +233,61 @@ function neighbours(post) {
 function miniCard(post) {
   return `<a class="journal-mini" href="/journal/p/${encodeURIComponent(post.slug)}"><span>${escapeHtml(categoryText(post))} · ${escapeHtml(dateText(post.publishedAt))}</span><strong>${escapeHtml(postText(post, 'title'))}</strong></a>`;
 }
+// JOURNAL-READER-LETTERS-20261109: 메일 앱 대신 웹 양식으로 편집부(joseph@ekodi.kr)에 바로 보낸다(공용 /api/mail/contact).
+let letterSeq = 0;
+function letterFormHtml(post = null) {
+  const id = `jl${(letterSeq += 1)}`;
+  const t = ui();
+  return `<form class="letter-form" data-letter-form data-slug="${escapeHtml(post?.slug || '')}" novalidate>
+    <fieldset class="letter-kinds"><legend>${escapeHtml(t.formKind)}</legend>
+      <label><input type="radio" name="kind" value="${escapeHtml(t.kindComment)}" checked> ${escapeHtml(t.kindComment)}</label>
+      <label><input type="radio" name="kind" value="${escapeHtml(t.kindQuestion)}"> ${escapeHtml(t.kindQuestion)}</label>
+      <label><input type="radio" name="kind" value="${escapeHtml(t.kindCorrection)}"> ${escapeHtml(t.kindCorrection)}</label>
+    </fieldset>
+    <label for="${id}-name">${escapeHtml(t.formName)}</label>
+    <input id="${id}-name" name="name" type="text" maxlength="80" autocomplete="name">
+    <label for="${id}-email">${escapeHtml(t.formEmail)}</label>
+    <input id="${id}-email" name="email" type="email" maxlength="254" autocomplete="email" required>
+    <label for="${id}-message">${escapeHtml(t.formMessage)}</label>
+    <textarea id="${id}-message" name="message" rows="5" maxlength="4000" required></textarea>
+    <input class="letter-hp" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <div class="letter-actions"><button type="submit" class="letter-send">${escapeHtml(t.formSend)}</button></div>
+    <p class="letter-status" role="status" aria-live="polite"></p>
+  </form>`;
+}
+function bindLetterForms(root) {
+  root.querySelectorAll('[data-letter-form]:not([data-bound])').forEach((form) => {
+    form.dataset.bound = '1';
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const t = ui();
+      const status = form.querySelector('.letter-status');
+      const button = form.querySelector('.letter-send');
+      const data = new FormData(form);
+      const email = String(data.get('email') || '').trim();
+      const message = String(data.get('message') || '').trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { status.textContent = t.formEmail; form.querySelector('[name=email]').focus(); return; }
+      if (!message) { status.textContent = t.formMessage; form.querySelector('[name=message]').focus(); return; }
+      const post = state.posts.find((p) => p.slug === form.dataset.slug);
+      const kind = String(data.get('kind') || t.kindComment);
+      const pageUrl = post ? `https://ekodi.kr${postUrl(post)}` : 'https://ekodi.kr/journal/';
+      button.disabled = true; button.textContent = t.formSending; status.textContent = '';
+      try {
+        const response = await fetch('/api/mail/contact', { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({
+          name: String(data.get('name') || '').trim(), email, website: String(data.get('website') || ''),
+          subject: `[에코디저널] ${kind}${post ? ` · ${docNumber(post, state.posts)} ${post.title}` : ''}`.slice(0, 180),
+          message: `${kind}\n\n${message}`, site: 'EKODI Journal', source: 'journal-reader-letter', sourceUrl: pageUrl }) });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || body.ok !== true) throw new Error(body.code || `HTTP ${response.status}`);
+        form.reset();
+        status.textContent = t.formDone;
+        form.classList.add('is-sent');
+      } catch {
+        status.innerHTML = `${escapeHtml(t.formFail)} <a href="mailto:${JOURNAL_DESK.email}">${JOURNAL_DESK.email}</a>`;
+      } finally { button.disabled = false; button.textContent = t.formSend; }
+    });
+  });
+}
 function letterHref(post) {
   const subject = `[에코디저널] ${docNumber(post, state.posts)} ${post.title}`;
   const body = `글 주소: https://ekodi.kr${postUrl(post)}\n\n의견·질문·정정 요청을 적어 주세요.\n`;
@@ -249,9 +309,10 @@ function articleFooterHtml(post) {
       <h2>${escapeHtml(ui().readerTitle)}</h2>
       <p>${escapeHtml(ui().readerBody)}</p>
       <div class="article-reader-actions">
-        <a class="article-reader-button is-primary" href="${escapeHtml(letterHref(post))}">${escapeHtml(ui().correction)}</a>
+        <button type="button" class="article-reader-button is-primary" data-letter-toggle aria-expanded="false">${escapeHtml(ui().correction)}</button>
         <a class="article-reader-button" href="https://ekodi.kr/community/">${escapeHtml(ui().talk)}</a>
       </div>
+      <div class="article-letter" hidden>${letterFormHtml(post)}</div>
       <span class="article-reader-desk">${escapeHtml(JOURNAL_DESK.name)} · ${escapeHtml(JOURNAL_DESK.email)}</span>
     </section>
     <nav class="article-nav" aria-label="${escapeHtml(ui().prev)} / ${escapeHtml(ui().next)}">${nav}</nav>
@@ -292,12 +353,27 @@ function renderArticle(post) {
   });
   article.querySelector('.article-cite')?.addEventListener('click', () => copyText(citation(post, state.posts.length ? state.posts : [post]), ui().citeCopied));
   article.querySelector('.article-print')?.addEventListener('click', () => window.print());
+  wireLetterToggle(article);
   document.title = `${title} | EKODI Journal`;
   setMeta('link[rel="canonical"]', 'href', url);
   setMeta('meta[name="description"]', 'content', excerpt);
   setMeta('meta[property="og:title"]', 'content', `${title} | EKODI Journal`);
   setMeta('meta[property="og:description"]', 'content', excerpt);
   setMeta('meta[property="og:url"]', 'content', url);
+}
+
+function wireLetterToggle(root) {
+  root.querySelectorAll('[data-letter-toggle]').forEach((button) => {
+    const box = button.closest('section, .journal-readers')?.querySelector('.article-letter, .journal-letter');
+    if (!box) return;
+    button.addEventListener('click', () => {
+      const open = box.hidden;
+      box.hidden = !open;
+      button.setAttribute('aria-expanded', String(open));
+      if (open) box.querySelector('[name=email]')?.focus();
+    });
+  });
+  bindLetterForms(root);
 }
 
 const progress = document.createElement('div');
@@ -365,6 +441,8 @@ async function boot() {
     }
   }
   state.loaded = true;
+  const homeLetter = document.querySelector('#journal-letter-box');
+  if (homeLetter && !homeLetter.dataset.filled) { homeLetter.innerHTML = letterFormHtml(null); homeLetter.dataset.filled = '1'; wireLetterToggle(document.querySelector('#journal-readers')); }
   const shellLocale = window.EKODIUserLanguage?.getLocale?.();
   applyLocale(shellLocale || document.documentElement.lang || navigator.language);
 }

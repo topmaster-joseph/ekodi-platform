@@ -59,7 +59,7 @@ test('journal posts join the public registry, promotion board and IndexNow candi
 test('reader channels name the editorial desk contact and avoid external font loading', () => {
   const html = shellHtml;
   assert.match(html, /mailto:joseph@ekodi\.kr/);
-  assert.match(html, /편집부 담당 정찬균 · joseph@ekodi\.kr/);
+  assert.match(html, /편집부 담당 정찬균 · <a href="mailto:joseph@ekodi\.kr">joseph@ekodi\.kr<\/a>/);
   assert.match(html, /href="\/journal\/feed\.json"/);
   const css = fs.readFileSync(new URL('../journal/styles.css', import.meta.url), 'utf8');
   assert.doesNotMatch(css + html, /fonts\.googleapis|@import/);

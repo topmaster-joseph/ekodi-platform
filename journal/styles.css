@@ -274,3 +274,27 @@ body.journal-is-article .journal-readers { display: none; }
   html, body { background: #fff; }
   .article-body p { font-size: 11pt; line-height: 1.7; }
 }
+
+/* JOURNAL-READER-LETTERS-20261109 — 구획 제목(머리기사·최신 기록)과 웹 편지 양식 */
+.front-section-label { display: flex; align-items: center; gap: 12px; margin: 34px 0 0; font-family: var(--sans); font-size: 12px; font-weight: 700; letter-spacing: .16em; color: var(--accent); }
+.front-section-label::after { content: ''; flex: 1; height: 1px; background: var(--ink); }
+.front-section-label + .front-lead { padding-top: 18px; }
+.front-section-label + .front-latest { padding-top: 18px; }
+.front-lead, .front-latest { border-bottom: 3px double var(--ink); }
+
+.letter-form { display: grid; gap: 8px; margin-top: 16px; padding: 18px; background: var(--paper); color: var(--ink); text-align: left; }
+.letter-form label, .letter-form legend { font-size: 13px; font-weight: 700; color: var(--ink); }
+.letter-form input[type=text], .letter-form input[type=email], .letter-form textarea { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #b9b2a3; background: #fff; color: var(--ink); font-size: 15px; }
+.letter-form textarea { min-height: 120px; resize: vertical; }
+.letter-kinds { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 4px; padding: 0; border: 0; }
+.letter-kinds legend { padding: 0; margin-bottom: 6px; }
+.letter-kinds label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-weight: 400; }
+.letter-hp { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; opacity: 0; }
+.letter-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
+.letter-send { min-height: 44px; padding: 10px 22px; border: 0; background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+.letter-send:disabled { opacity: .6; cursor: progress; }
+.letter-status { margin: 4px 0 0 !important; color: var(--accent) !important; font-size: 13px !important; }
+.letter-form.is-sent .letter-status { color: #2f6b45 !important; font-weight: 700; }
+.article-reader-button { cursor: pointer; font-family: inherit; }
+.journal-letter { flex-basis: 100%; }
+.journal-readers-desk a { color: inherit; }

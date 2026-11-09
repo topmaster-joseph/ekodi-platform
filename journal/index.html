@@ -9,7 +9,7 @@
   <link rel="canonical" href="https://ekodi.kr/journal/">
   <link rel="alternate" type="application/rss+xml" title="EKODI Journal RSS" href="/journal/feed.xml">
   <link rel="alternate" type="application/feed+json" title="EKODI Journal JSON Feed" href="/journal/feed.json">
-  <link rel="stylesheet" href="/journal/styles.css?v=20261109-masthead-3">
+  <link rel="stylesheet" href="/journal/styles.css?v=20261109-letters-1">
 </head>
 <body>
   <main class="journal-shell" id="journal-app">
@@ -60,10 +60,12 @@
         <p data-copy="readersBody">새 글은 RSS로 받아 보시고, 의견·질문·정정 요청은 편집부에 보내 주세요. 보내 주신 정정은 글 아래 이력으로 남깁니다.</p>
       </div>
       <div class="journal-readers-actions">
-        <a class="journal-readers-button is-primary" id="journal-letter" href="mailto:joseph@ekodi.kr?subject=%5B%EC%97%90%EC%BD%94%EB%94%94%EC%A0%80%EB%84%90%5D%20%EB%8F%85%EC%9E%90%20%ED%8E%B8%EC%A7%80" data-copy="letter">독자 편지 보내기</a>
+        <button type="button" class="journal-readers-button is-primary" id="journal-letter" data-letter-toggle aria-expanded="false" data-copy="letter">독자 편지 보내기</button>
         <a class="journal-readers-button" href="/journal/feed.xml" data-copy="rss">RSS 구독</a>
         <a class="journal-readers-button" href="https://ekodi.kr/community/" data-copy="community">커뮤니티에서 이야기하기</a>
-        <span class="journal-readers-desk">편집부 담당 정찬균 · joseph@ekodi.kr</span>
+        <span class="journal-readers-desk">편집부 담당 정찬균 · <a href="mailto:joseph@ekodi.kr">joseph@ekodi.kr</a></span>
+      </div>
+      <div class="journal-letter" id="journal-letter-box" hidden>
       </div>
     </section>
 
@@ -77,6 +79,6 @@
     </section>
   </main>
   <noscript>EKODI Journal은 목록과 글 보기를 위해 JavaScript가 필요합니다.</noscript>
-  <script type="module" src="/journal/app.js?v=20261109-masthead-3"></script>
+  <script type="module" src="/journal/app.js?v=20261109-letters-1"></script>
 </body>
 </html>
