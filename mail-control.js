@@ -399,6 +399,24 @@ async function requireWorkspace(request, env, slug) {
   return { identity };
 }
 
+// Server-side sending for platform flows (e.g. 목포노회 회원명부 인증코드) through an account the owner
+// connected in Mail Hub with the Gmail send scope. The caller decides which addresses are allowed.
+export async function connectedSenderStatus(env, addresses) {
+  const list=(addresses||[]).map(a=>String(a||'').trim().toLowerCase()).filter(Boolean);
+  if(!list.length||!env?.DB?.prepare)return [];
+  const ready=googleMailConfigured(env)&&mailCredentialReady(env);
+  const rows=await env.DB.prepare(`SELECT a.id,lower(a.email_address) AS address,a.connection_status,c.scopes FROM mail_accounts a LEFT JOIN mail_credentials c ON c.account_id=a.id WHERE a.enabled=1 AND a.provider='gmail' AND lower(a.email_address) IN (${list.map(()=>'?').join(',')})`).bind(...list).all().catch(()=>({results:[]}));
+  const byAddress=new Map();
+  for(const r of rows?.results||[]){const ok=ready&&r.connection_status==='connected'&&hasGoogleSendScope(r.scopes||'');const prev=byAddress.get(r.address);if(!prev||ok)byAddress.set(r.address,{id:r.id,ready:ok});}
+  return list.map(address=>({address,ready:Boolean(byAddress.get(address)?.ready),accountId:byAddress.get(address)?.id||null}));
+}
+export async function sendAsConnectedAccount(env, address, message) {
+  const [status]=await connectedSenderStatus(env,[address]);
+  if(!status?.ready)throw Object.assign(new Error('MAIL_SENDER_NOT_CONNECTED'),{code:'MAIL_SENDER_NOT_CONNECTED'});
+  const account=await env.DB.prepare('SELECT * FROM mail_accounts WHERE id=?').bind(status.accountId).first();
+  const auth=await googleAccessForAccount(env,env.DB,account);
+  return sendGoogleMailMessage(auth.accessToken,{...message});
+}
 export async function handleMailControl(request, env) {
   const url = new URL(request.url);
   if (!url.pathname.startsWith(MAIL_PREFIX)) return null;

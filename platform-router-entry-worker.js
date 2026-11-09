@@ -21,7 +21,6 @@ import { isSinglesRoute, routeSinglesSurface } from './singles-surface.js';
 import { investIntroPage, investAnalysisPage, investAnalysisScript } from './invest-access-ui.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage } from './mail-contact.js';
-import { handleRosterApi } from './mokpo-presbytery-roster-api.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 import { businessCenterCss, businessCenterScript } from './ekodibiz-business-center.js';
@@ -583,8 +582,6 @@ async function routePlatform(request,env,ctx){
        url.pathname==='/ekodilab/admin/services'||url.pathname==='/ekodilab/admin/services/')){
       return injectEkodiShell(workspaceAdminPage(url.pathname),'space','admin');
     }
-    // 목포노회 회원명부 API must run before the canonical /api/* -> CONTROL_API proxy, which would otherwise swallow it.
-    if(host===PUBLIC_HOST){const rosterResponse=await handleRosterApi(request,env);if(rosterResponse)return rosterResponse;}
     const canonical=await routeCanonicalSurface(request,env,{legacyFetch:next=>legacyPlatformRouter.fetch(next,env,ctx)});
     if(canonical)return canonical;
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&(['/control','/control/','/control.css','/control.js'].includes(url.pathname))){

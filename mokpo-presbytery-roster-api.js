@@ -1,8 +1,9 @@
 // 목포노회 회원명부(제135회 정기회 기준) — 관리자 전용, 2중확인(에코디 로그인 + 이메일 인증코드).
 //
-// Routes (Shared Site Core router, same origin as ekodi.kr pages):
+// Routes (Control API, reached on ekodi.kr through the canonical /api/* proxy):
 //   GET  /api/mokpo-presbytery/roster/status     public: { mailReady } only, no roster data
-//   POST /api/mokpo-presbytery/roster/code       step 2a: send a 6-digit code to the signed-in admin's own email
+//   GET  /api/mokpo-presbytery/roster/senders    admin: which allowed sender accounts are connected (Mail Hub)
+//   POST /api/mokpo-presbytery/roster/code       step 2a: { sender } send a 6-digit code to the signed-in admin's own email
 //   POST /api/mokpo-presbytery/roster/verify     step 2b: { code } -> short-lived view grant (30 minutes)
 //   GET  /api/mokpo-presbytery/roster            roster, requires Bearer + x-roster-grant
 //   POST /api/mokpo-presbytery/roster/classify   { id, section } move an entry (e.g. 미분류 -> 시찰), requires grant
@@ -18,6 +19,11 @@ import { principalFromSupabaseRequest } from './ekodi-principal.js';
 
 export const ROSTER_API_PREFIX='/api/mokpo-presbytery/roster';
 export const ROSTER_MAIL_FROM='joseph@ekodi.kr';
+// Owner decision 2026-11-09: the sender is chosen from these accounts. Each must be connected in
+// Mail Hub (https://mail.ekodi.kr/admin) with Gmail send permission. The recipient is always the
+// signed-in admin's own verified email, whatever sender is chosen.
+export const ROSTER_SENDERS=Object.freeze(['joseph@ekodi.kr','topmaster.joseph@gmail.com','ekodichurch@gmail.com',
+  'ekodicommunity@gmail.com','ekodimission@gmail.com','ekodibiz@gmail.com','cgma4989@gmail.com']);
 export const SECTIONS=Object.freeze(['목포','목포동','신안','신안동부','함무','기관·전도목사','미분류']);
 export const CODE_TTL_MS=10*60*1000;
 export const GRANT_TTL_MS=30*60*1000;
@@ -80,14 +86,19 @@ export async function rosterAdminEmail(env,email){
   return Boolean(listed);
 }
 
-async function defaultSendMail(env,to,code){
-  const {serviceAccountToken}=await import('./mail-user-page.js');
-  const {sendGoogleMailMessage}=await import('./mail-google-adapter.js');
-  const token=await serviceAccountToken(ROSTER_MAIL_FROM,env,'https://www.googleapis.com/auth/gmail.send');
-  await sendGoogleMailMessage(token,{to,subject:'[목포노회] 회원명부 열람 인증코드',body:
-    `목포노회 회원명부 열람 인증코드: ${code}\n\n10분 안에 화면에 입력해 주세요. 열람은 30분 동안 유지됩니다.\n본인이 요청하지 않았다면 이 메일을 무시하고 노회 서기에게 알려 주십시오.\n\n※ 이 메일에는 명부 내용이 들어 있지 않습니다.`});
+export function codeMessage(to,code){
+  return {to,subject:'[목포노회] 회원명부 열람 인증코드',body:
+    `목포노회 회원명부 열람 인증코드: ${code}\n\n10분 안에 화면에 입력해 주세요. 열람은 30분 동안 유지됩니다.\n본인이 요청하지 않았다면 이 메일을 무시하고 노회 서기에게 알려 주십시오.\n\n※ 이 메일에는 명부 내용이 들어 있지 않습니다.`};
 }
-export function mailReady(env){return Boolean(env?.GOOGLE_SERVICE_ACCOUNT_EMAIL&&env?.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY);}
+async function defaultSenderStatus(env){
+  const {connectedSenderStatus}=await import('./mail-control.js');
+  return connectedSenderStatus(env,ROSTER_SENDERS);
+}
+async function defaultSendMail(env,sender,to,code){
+  const {sendAsConnectedAccount}=await import('./mail-control.js');
+  await sendAsConnectedAccount(env,sender,codeMessage(to,code));
+}
+export function mailReady(){return true;}
 
 async function audit(env,email,action,detail=''){
   await env.DB.prepare('INSERT INTO mokpo_presbytery_roster_audit(email,action,detail,created_at) VALUES (?,?,?,?)')
@@ -121,16 +132,26 @@ export async function handleRosterApi(request,env,opts={}){
   const sub=url.pathname.slice(ROSTER_API_PREFIX.length)||'/';
   if(!env?.DB?.prepare)return fail('ROSTER_STORE_UNAVAILABLE','명부 저장소에 연결할 수 없습니다.',503);
 
-  if(sub==='/status'&&request.method==='GET')return json({ok:true,mailReady:Boolean(opts.sendMail)||mailReady(env)});
+  if(sub==='/status'&&request.method==='GET')return json({ok:true,mailReady:true});
 
   if(request.method==='POST'&&!originAllowed(request,env))return fail('ORIGIN_FORBIDDEN','허용되지 않은 요청입니다.',403);
   const who=await authorize(request,env,opts);
   if(who.error)return who.error;
   const email=who.email;
 
+  const senderStatus=opts.senderStatus||(()=>defaultSenderStatus(env));
+  if(sub==='/senders'&&request.method==='GET'){
+    const list=await senderStatus().catch(()=>ROSTER_SENDERS.map(address=>({address,ready:false})));
+    return json({ok:true,senders:list.map(x=>({address:x.address,ready:Boolean(x.ready)})),connectUrl:'https://mail.ekodi.kr/admin'});
+  }
+
   if(sub==='/code'&&request.method==='POST'){
-    const sendMail=opts.sendMail||((to,code)=>defaultSendMail(env,to,code));
-    if(!opts.sendMail&&!mailReady(env))return fail('MAIL_NOT_CONFIGURED','인증 메일 발송이 아직 설정되지 않았습니다.',503);
+    const body=await readBody(request);
+    const sender=String(body?.sender||'').trim().toLowerCase();
+    if(!ROSTER_SENDERS.includes(sender))return fail('SENDER_INVALID','보내는 계정을 선택해 주세요.',400);
+    const status=(await senderStatus().catch(()=>[])).find(x=>x.address===sender);
+    if(!status?.ready)return fail('SENDER_NOT_CONNECTED',`${sender} 계정이 메일 허브에 발송 권한으로 연결되어 있지 않습니다.`,409);
+    const sendMail=opts.sendMail||((to,code)=>defaultSendMail(env,sender,to,code));
     const recent=await env.DB.prepare('SELECT COUNT(*) AS n FROM mokpo_presbytery_roster_codes WHERE email=? AND created_at>?').bind(email,now-60*60*1000).first();
     if(Number(recent?.n||0)>=CODES_PER_HOUR)return fail('CODE_RATE_LIMITED','인증코드 요청이 너무 많습니다. 1시간 뒤에 다시 시도해 주세요.',429);
     const id=randomHex(16),code=randomCode();
@@ -143,7 +164,7 @@ export async function handleRosterApi(request,env,opts={}){
       // The caller is an authenticated roster admin; the reason carries Google's error text only, never secrets.
       return json({ok:false,code:'MAIL_SEND_FAILED',error:'인증 메일을 보내지 못했습니다.',reason},502);
     }
-    await audit(env,email,'code.sent');
+    await audit(env,email,'code.sent',sender);
     return json({ok:true,sentTo:maskEmail(email),expiresInSeconds:CODE_TTL_MS/1000});
   }
 
