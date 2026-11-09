@@ -8,6 +8,7 @@ import { handleLocalRegionOperations } from './local-region-operations-control.j
 import { handleCheonggyePassVendorIntake } from './cheonggyepass-vendor-intake.js';
 import { MOTOR_FESTIVAL_API_PATH, handleMotorFestivalApplications, purgeExpiredMotorFestivalApplications } from './motor-festival-registration-api.js';
 import { isMokpoPolicyApiPath, handleMokpoMissionPolicyRegistrations, purgeExpiredMokpoMissionRegistrations } from './mokpo-mission-policy-council-api.js';
+import { isRosterApiPath, handleRosterApi } from './mokpo-presbytery-roster-api.js';
 import { isBoothApiPath, handleCgmurrcBooth } from './cgmurrc-booth-api.js';
 import { isEdocApiPath, handleCgmaEdocs } from './cgma-edoc-api.js';
 import { isWorkspaceDocumentsPath, handleWorkspaceDocuments } from './workspace-documents-api.js';
@@ -284,6 +285,9 @@ export default {
     }
     if (isMokpoPolicyApiPath(path)) {
       return handleMokpoMissionPolicyRegistrations(request, env);
+    }
+    if (isRosterApiPath(path)) {
+      return handleRosterApi(request, env);
     }
     if (isBoothApiPath(path)) {
       return handleCgmurrcBooth(request, env);

@@ -228,6 +228,7 @@ const controlApiTouched=changedFiles.some(file=>
   'motor-festival-registration-api.js',
   // Mokpo mission policy council 2026 registrations (Control API, D1 ekodi-auth).
   'mokpo-mission-policy-council-api.js',
+  'mokpo-presbytery-roster-api.js',
   // cgmurrc booth shifts API (Control API, D1 ekodi-auth).
   'cgmurrc-booth-api.js',
   // CGMA e-documents · sequential signing API (Control API, D1 ekodi-auth + private R2).

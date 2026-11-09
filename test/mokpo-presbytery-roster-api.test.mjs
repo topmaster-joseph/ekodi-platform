@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { handleRosterApi, ROSTER_API_PREFIX, SECTIONS, maskEmail, randomCode, CODE_TTL_MS, GRANT_TTL_MS } from '../mokpo-presbytery-roster-api.js';
+import { handleRosterApi, ROSTER_API_PREFIX, ROSTER_SENDERS, SECTIONS, maskEmail, randomCode, CODE_TTL_MS, GRANT_TTL_MS } from '../mokpo-presbytery-roster-api.js';
+const SENDER = 'ekodichurch@gmail.com';
 
 const MIGRATION = readFileSync('migrations/202611091000_mokpo_presbytery_roster.sql', 'utf8');
 
@@ -37,9 +38,11 @@ function setup() {
   const opts = (email) => ({
     principal: async () => (email ? { email } : null),
     sendMail: async (to, code) => { sent.push({ to, code }); },
+    senderStatus: async () => ROSTER_SENDERS.map((address) => ({ address, ready: address === SENDER })),
     now: () => clock,
   });
   const call = (path, { method = 'GET', email = 'owner@ekodi.test', body, grant, origin = 'https://ekodi.kr' } = {}) => {
+    if (path === '/code' && body === undefined) body = { sender: SENDER };
     const headers = { authorization: 'Bearer x', 'content-type': 'application/json' };
     if (origin) headers.origin = origin;
     if (grant) headers['x-roster-grant'] = grant;
@@ -159,17 +162,17 @@ test('미분류 entries can be classified into a 시찰 with a valid grant only'
   assert.ok(t.db.prepare("SELECT 1 FROM mokpo_presbytery_roster_audit WHERE action='roster.classify'").get());
 });
 
-test('mail failure removes the pending code and real sender fails closed without secrets', async () => {
+test('mail failure removes the pending code; an unconnected sender is refused', async () => {
   const t = setup();
-  const r = await handleRosterApi(new Request('https://ekodi.kr' + ROSTER_API_PREFIX + '/code', { method: 'POST', headers: { origin: 'https://ekodi.kr', authorization: 'Bearer x' } }),
-    t.env, { principal: async () => ({ email: 'owner@ekodi.test' }), sendMail: async () => { throw new Error('boom'); } });
+  const r = await handleRosterApi(new Request('https://ekodi.kr' + ROSTER_API_PREFIX + '/code', { method: 'POST', headers: { origin: 'https://ekodi.kr', authorization: 'Bearer x' }, body: JSON.stringify({ sender: SENDER }) }),
+    t.env, { principal: async () => ({ email: 'owner@ekodi.test' }), senderStatus: async () => [{ address: SENDER, ready: true }], sendMail: async () => { throw new Error('boom'); } });
   assert.equal(r.status, 502);
   assert.equal((await r.json()).reason, 'boom');
   assert.equal(t.db.prepare('SELECT COUNT(*) AS n FROM mokpo_presbytery_roster_codes').get().n, 0);
-  const n = await handleRosterApi(new Request('https://ekodi.kr' + ROSTER_API_PREFIX + '/code', { method: 'POST', headers: { origin: 'https://ekodi.kr', authorization: 'Bearer x' } }),
-    t.env, { principal: async () => ({ email: 'owner@ekodi.test' }) });
-  assert.equal(n.status, 503);
-  assert.equal((await n.json()).code, 'MAIL_NOT_CONFIGURED');
+  const n = await handleRosterApi(new Request('https://ekodi.kr' + ROSTER_API_PREFIX + '/code', { method: 'POST', headers: { origin: 'https://ekodi.kr', authorization: 'Bearer x' }, body: JSON.stringify({ sender: SENDER }) }),
+    t.env, { principal: async () => ({ email: 'owner@ekodi.test' }), senderStatus: async () => [{ address: SENDER, ready: false }] });
+  assert.equal(n.status, 409);
+  assert.equal((await n.json()).code, 'SENDER_NOT_CONNECTED');
 });
 
 test('helpers', () => {
@@ -188,7 +191,7 @@ test('repository carries no roster personal data; page and worker are wired', ()
   const roster = readFileSync('sites/mokpo-presbytery/roster/roster.js', 'utf8');
   assert.doesNotMatch(roster, /innerHTML|insertAdjacentHTML|document\.write/);
   const router = readFileSync('platform-router-entry-worker.js', 'utf8');
-  assert.match(router, /handleRosterApi\(request,env\)/);
+  assert.match(readFileSync("customer-entry-worker.js", "utf8"), /if \(isRosterApiPath\(path\)\) \{\n      return handleRosterApi\(request, env\);/);
   assert.match(router, /isRosterScript/);
   const headers = readFileSync('_headers', 'utf8');
   assert.match(headers, /\/mokpo-presbytery\/roster\/\*\n {2}! Content-Security-Policy\n {2}Content-Security-Policy: default-src 'none'; script-src 'self' https:\/\/cdn\.jsdelivr\.net/);
@@ -211,30 +214,43 @@ test('department roster migration: full for 부장·서기, names for 부원, re
   assert.match(space, /organization_department_roster served an anonymous caller/);
 });
 
-test('the deployed router reaches the roster API before the /api/* Control API proxy', async () => {
-  const { default: router } = await import('../platform-router-entry-worker.js');
+test('roster API is served by the Control API (reached through the /api/* proxy), not the router', async () => {
+  const router = readFileSync('platform-router-entry-worker.js', 'utf8');
+  assert.doesNotMatch(router, /handleRosterApi/);
+  assert.match(router, /path\.startsWith\('\/api\/'\)|routeCanonicalSurface/);
+  const { default: control } = await import('../mission-control-entry-worker.js');
   const { DB } = d1();
-  const env = {
-    ENVIRONMENT: 'production', DB,
-    CONTROL_API: { fetch: async () => new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'content-type': 'application/json' } }) },
-    ASSETS: { fetch: async () => new Response('asset', { status: 404 }) },
-  };
-  const ctx = { waitUntil() {} };
-  const status = await router.fetch(new Request('https://ekodi.kr/api/mokpo-presbytery/roster/status'), env, ctx);
-  assert.equal(status.status, 200);
-  assert.equal(status.headers.get('x-ekodi-route'), 'mokpo-presbytery-roster');
-  assert.deepEqual(Object.keys(await status.json()).sort(), ['mailReady', 'ok']);
-  const list = await router.fetch(new Request('https://ekodi.kr/api/mokpo-presbytery/roster/'), env, ctx);
-  assert.equal(list.status, 401);
+  const env = { ENVIRONMENT: 'production', DB };
+  const r = await control.fetch(new Request('https://ekodi.kr/api/mokpo-presbytery/roster/status'), env, { waitUntil() {} });
+  assert.equal(r.headers.get('x-ekodi-route'), 'mokpo-presbytery-roster');
+  assert.equal(r.status, 200);
+  const list = await control.fetch(new Request('https://ekodi.kr/api/mokpo-presbytery/roster/'), env, { waitUntil() {} });
   assert.equal(list.headers.get('x-ekodi-route'), 'mokpo-presbytery-roster');
-  const other = await router.fetch(new Request('https://ekodi.kr/api/something-else'), env, ctx);
-  assert.notEqual(other.headers.get('x-ekodi-route'), 'mokpo-presbytery-roster');
+  assert.equal(list.status, 401);
 });
 
-test('mail failure reasons are categorized without secrets', async () => {
-  const { mailFailureReason } = await import('../mokpo-presbytery-roster-api.js');
-  const t = Object.assign(new Error('Client is unauthorized to retrieve access tokens'), { code: 'GOOGLE_TOKEN_EXCHANGE_FAILED' });
-  assert.equal(mailFailureReason(t), 'google_token: Client is unauthorized to retrieve access tokens');
-  assert.equal(mailFailureReason(Object.assign(new Error('Precondition check failed.'), { status: 400 })), 'gmail_400: Precondition check failed.');
-  assert.equal(mailFailureReason({}), 'mail_error');
+test('sender must be one of the owner-approved accounts and connected', async () => {
+  const t = setup();
+  assert.deepEqual([...ROSTER_SENDERS], ['joseph@ekodi.kr', 'topmaster.joseph@gmail.com', 'ekodichurch@gmail.com', 'ekodicommunity@gmail.com', 'ekodimission@gmail.com', 'ekodibiz@gmail.com', 'cgma4989@gmail.com']);
+  assert.equal((await t.call('/code', { method: 'POST', body: { sender: 'evil@example.com' } })).status, 400);
+  assert.equal((await t.call('/code', { method: 'POST', body: {} })).status, 400);
+  const r = await t.call('/code', { method: 'POST', body: { sender: 'ekodibiz@gmail.com' } });
+  assert.equal(r.status, 409);
+  assert.equal(t.sent.length, 0);
+  const senders = await t.call('/senders');
+  assert.equal(senders.status, 200);
+  const data = await senders.json();
+  assert.equal(data.connectUrl, 'https://mail.ekodi.kr/admin');
+  assert.deepEqual(data.senders.filter((x) => x.ready).map((x) => x.address), [SENDER]);
+  assert.equal((await t.call('/senders', { email: 'member@ekodi.test' })).status, 403);
+  // recipient is still the signed-in admin, never the sender
+  await t.call('/code', { method: 'POST' });
+  assert.equal(t.sent.at(-1).to, 'owner@ekodi.test');
+});
+
+test('mail-control exposes connected-sender helpers that require the Gmail send scope', async () => {
+  const src = readFileSync('mail-control.js', 'utf8');
+  assert.match(src, /export async function connectedSenderStatus\(env, addresses\)/);
+  assert.match(src, /r\.connection_status==='connected'&&hasGoogleSendScope\(r\.scopes\|\|''\)/);
+  assert.match(src, /export async function sendAsConnectedAccount\(env, address, message\)/);
 });
