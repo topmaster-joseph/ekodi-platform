@@ -76,3 +76,10 @@ test('stray service paths under /journal redirect to the real service instead of
   }
   assert.doesNotMatch(shellHtml, /href="\/community\/"/);
 });
+
+test('journal opts out of the shared progressive-home collapse and owns no <header> the shell could adopt', () => {
+  assert.match(shellHtml, /<html lang="ko-KR" data-ekodi-progressive-home="off">/);
+  assert.doesNotMatch(shellHtml, /<header[\s>]/, 'shell selector "body header:first-of-type" would adopt the masthead and inject the member name');
+  const progressive = fs.readFileSync(new URL('../shell/progressive-home.js', import.meta.url), 'utf8');
+  assert.match(progressive, /root\.dataset\.ekodiProgressiveHome==='off'/);
+});
