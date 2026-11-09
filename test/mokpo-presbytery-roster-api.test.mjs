@@ -240,7 +240,7 @@ test('sender must be one of the owner-approved accounts and connected', async ()
   const senders = await t.call('/senders');
   assert.equal(senders.status, 200);
   const data = await senders.json();
-  assert.equal(data.connectUrl, 'https://mail.ekodi.kr/admin');
+  assert.equal(data.connectUrl, 'https://ekodi.kr/mail/admin');
   assert.deepEqual(data.senders.filter((x) => x.ready).map((x) => x.address), [SENDER]);
   assert.equal((await t.call('/senders', { email: 'member@ekodi.test' })).status, 403);
   // recipient is still the signed-in admin, never the sender

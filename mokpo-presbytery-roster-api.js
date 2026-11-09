@@ -20,7 +20,7 @@ import { principalFromSupabaseRequest } from './ekodi-principal.js';
 export const ROSTER_API_PREFIX='/api/mokpo-presbytery/roster';
 export const ROSTER_MAIL_FROM='joseph@ekodi.kr';
 // Owner decision 2026-11-09: the sender is chosen from these accounts. Each must be connected in
-// Mail Hub (https://mail.ekodi.kr/admin) with Gmail send permission. The recipient is always the
+// Mail Hub (https://ekodi.kr/mail/admin) with Gmail send permission. The recipient is always the
 // signed-in admin's own verified email, whatever sender is chosen.
 export const ROSTER_SENDERS=Object.freeze(['joseph@ekodi.kr','topmaster.joseph@gmail.com','ekodichurch@gmail.com',
   'ekodicommunity@gmail.com','ekodimission@gmail.com','ekodibiz@gmail.com','cgma4989@gmail.com']);
@@ -142,7 +142,7 @@ export async function handleRosterApi(request,env,opts={}){
   const senderStatus=opts.senderStatus||(()=>defaultSenderStatus(env));
   if(sub==='/senders'&&request.method==='GET'){
     const list=await senderStatus().catch(()=>ROSTER_SENDERS.map(address=>({address,ready:false})));
-    return json({ok:true,senders:list.map(x=>({address:x.address,ready:Boolean(x.ready)})),connectUrl:'https://mail.ekodi.kr/admin'});
+    return json({ok:true,senders:list.map(x=>({address:x.address,ready:Boolean(x.ready)})),connectUrl:'https://ekodi.kr/mail/admin'});
   }
 
   if(sub==='/code'&&request.method==='POST'){

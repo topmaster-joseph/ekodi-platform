@@ -47,7 +47,7 @@
       var first=(d.senders||[]).filter(function(x){return x.ready;})[0];if(first)pick.value=first.address;
       hint.textContent='';
       hint.appendChild(document.createTextNode(any?'연결 안 된 계정은 ':'아직 발송 연결된 계정이 없습니다. '));
-      hint.appendChild(h('a',{href:d.connectUrl||'https://mail.ekodi.kr/admin',target:'_blank',rel:'noopener',text:'메일 허브'}));
+      hint.appendChild(h('a',{href:d.connectUrl||'https://ekodi.kr/mail/admin',target:'_blank',rel:'noopener',text:'메일 허브'}));
       hint.appendChild(document.createTextNode('에서 계정을 추가하고 \u201c발송 권한 추가\u201d로 연결하면 선택할 수 있습니다.'));
       send.disabled=!any;
     }).catch(function(x){pick.textContent='';pick.appendChild(h('option',{value:'',text:'계정 목록을 불러오지 못했습니다'}));e.textContent=x.message;if(x.status===401&&x.code!=='SECOND_FACTOR_REQUIRED')stepLogin();});
