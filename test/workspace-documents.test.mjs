@@ -2,14 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { handleWorkspaceDocuments, latestDocumentIds, safeSourceUrl, shareDays, magicMatches, isWorkspaceDocumentsPath } from '../workspace-documents-api.js';
+import { handleWorkspaceDocuments, latestDocumentIds, safeSourceUrl, shareDays, magicMatches, isWorkspaceDocumentsPath, canonicalTenant, tenantAdminPath } from '../workspace-documents-api.js';
 
 const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const MIGRATION = 'migrations/202611091100_workspace_documents.sql';
+const IDENTITY = 'migrations/202611091130_workspace_documents_identity.sql';
 
 function d1() {
   const db = new DatabaseSync(':memory:');
   db.exec(read(MIGRATION));
+  db.exec("CREATE TABLE customer_tenants (slug TEXT, name TEXT, status TEXT); INSERT INTO customer_tenants VALUES ('ekodimission','에코디선교회','active'),('cgma','청계면상인회','active'),('ekodi-biz','에코디비즈','active'),('ekodi-lab','에코디연구소','active'),('jadam','자담치킨 목포대점','active'),('ekodi-church','에코디교회','active');");
+  db.exec("CREATE TABLE church_documents (id TEXT PRIMARY KEY,bundle TEXT,bundle_url TEXT,title TEXT,category TEXT,doc_year TEXT,gdoc_url TEXT,hwpx_url TEXT,note TEXT,sort_order INTEGER,status TEXT,created_by TEXT,created_at TEXT,updated_at TEXT);");
+  db.exec(read(IDENTITY));
   const stmt = (sql, binds = []) => ({
     bind: (...b) => stmt(sql, b),
     first: async () => db.prepare(sql).get(...binds) ?? null,
@@ -50,6 +54,7 @@ test('helpers: latest per type+holder, https-only links, bounded share days, mag
 test('seeded bank copies are tenant-isolated and searchable, without account numbers in the repo', async () => {
   const env = { DB: d1(), WORKSPACE_DOCUMENT_FILES: r2() };
   const mission = await (await call(env, '/api/workspace-documents/ekodimission?q=통장사본')).json();
+  assert.equal(mission.documents.every(d => d.type === '통장사본'), true);
   assert.equal(mission.documents.length, 1);
   assert.equal(mission.documents[0].holder, '에코디선교회');
   assert.equal(mission.documents[0].latest, true);
@@ -117,4 +122,47 @@ test('wiring: route, private R2 binding, admin menu on every workspace site', ()
   assert.match(page, /\['finance','재무'\],\['documents','문서함'\]/);
   assert.match(page, /if\(section==='documents'\)return documentsAdmin\(\)/);
   assert.match(page, /\/api\/workspace-documents\//);
+  assert.match(page, /\/api\/workspace-documents\/overview/);
+  assert.match(page, /params\.get\('view'\)==='overview'/);
+});
+
+test('identity seed: representative ID and resumes per site, no ID numbers, ID shares capped at one day', async () => {
+  const env = { DB: d1(), WORKSPACE_DOCUMENT_FILES: r2() };
+  for (const site of ['ekodimission', 'cgma', 'ekodi-biz', 'ekodi-lab']) {
+    const list = await (await call(env, `/api/workspace-documents/${site}`, {}, site)).json();
+    const types = list.documents.map(d => d.type);
+    assert.ok(types.includes('신분증') && types.includes('이력서'), site);
+    assert.equal(list.documents.filter(d => d.type === '이력서' && d.latest).length, 1, 'only newest resume is latest');
+  }
+  assert.doesNotMatch(read(IDENTITY), /\d{6}-\d{7}/, 'no resident registration numbers');
+  assert.equal(env.DB.raw.prepare("SELECT count(*) n FROM church_documents WHERE bundle='대표자(담임목사) 서류'").get().n, 3);
+  const idDoc = env.DB.raw.prepare("SELECT id FROM workspace_documents WHERE tenant_slug='cgma' AND doc_type='신분증'").get().id;
+  const share = await (await call(env, `/api/workspace-documents/cgma/${idDoc}/share`, { method: 'POST', headers: { ...WRITE, 'content-type': 'application/json' }, body: JSON.stringify({ days: 30 }) }, 'cgma')).json();
+  assert.equal(share.days, 1);
+  assert.equal(shareDays(30, '신분증'), 1);
+});
+
+test('admin path aliases map to canonical tenant slugs', async () => {
+  assert.equal(canonicalTenant('ekodibiz'), 'ekodi-biz');
+  assert.equal(tenantAdminPath('ekodi-biz'), '/ekodibiz/admin/documents');
+  assert.equal(tenantAdminPath('cgma'), '/cgma/admin/documents');
+  assert.equal(tenantAdminPath('ekodi-church'), '/ekodichurch/admin');
+  const env = { DB: d1(), WORKSPACE_DOCUMENT_FILES: r2() };
+  const res = await call(env, '/api/workspace-documents/ekodibiz', {}, 'ekodi-biz');
+  assert.equal(res.status, 200);
+  assert.ok((await res.json()).documents.some(d => d.type === '사업자등록증'));
+});
+
+test('super admin overview: platform only, per-site completeness without file links', async () => {
+  const env = { DB: d1(), WORKSPACE_DOCUMENT_FILES: r2() };
+  const denied = await handleWorkspaceDocuments(new Request('https://ekodi.kr/api/workspace-documents/overview'), env, { resolveAuthority: async () => ({ ok: true, scope: 'tenant', email: 'a@x' }) });
+  assert.equal(denied.status, 403);
+  const res = await handleWorkspaceDocuments(new Request('https://ekodi.kr/api/workspace-documents/overview'), env, { resolveAuthority: async () => ({ ok: true, scope: 'platform', email: 'joseph@ekodi.kr' }) });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  const mission = body.sites.find(s => s.slug === 'ekodimission');
+  assert.deepEqual(mission.required, { bank: true, registration: false, id: true, resume: true });
+  assert.equal(body.sites.find(s => s.slug === 'ekodi-biz').required.registration, true);
+  assert.equal(body.sites.find(s => s.slug === 'ekodi-church').separateArchive.documents, 3);
+  assert.doesNotMatch(JSON.stringify(body), /drive\.google\.com|docs\.google\.com/, 'overview carries no file links');
 });
