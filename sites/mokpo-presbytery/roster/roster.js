@@ -20,7 +20,7 @@
     var headers={'content-type':'application/json',authorization:'Bearer '+token};
     var g=readGrant();if(g)headers['x-roster-grant']=g.grant;
     return fetch(CFG.api+path,{method:method||'GET',cache:'no-store',credentials:'same-origin',headers:headers,body:body?JSON.stringify(body):undefined})
-      .then(function(r){return r.json().catch(function(){return {};}).then(function(d){if(!r.ok||d.ok===false){var e=new Error(d.error||('HTTP '+r.status));e.code=d.code;e.status=r.status;throw e;}return d;});});}
+      .then(function(r){return r.json().catch(function(){return {};}).then(function(d){if(!r.ok||d.ok===false){var e=new Error((d.error||('HTTP '+r.status))+(d.reason?' (원인: '+d.reason+')':''));e.code=d.code;e.status=r.status;throw e;}return d;});});}
 
   function session(){
     if(!window.supabase||!window.supabase.createClient)return Promise.resolve('');
