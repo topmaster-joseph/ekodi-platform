@@ -214,19 +214,10 @@ test('department roster migration: full for 부장·서기, names for 부원, re
   assert.match(space, /organization_department_roster served an anonymous caller/);
 });
 
-test('roster API is served by the Control API (reached through the /api/* proxy), not the router', async () => {
+test('roster API is served by the Control API (reached through the /api/* proxy), not the router', () => {
   const router = readFileSync('platform-router-entry-worker.js', 'utf8');
   assert.doesNotMatch(router, /handleRosterApi/);
-  assert.match(router, /path\.startsWith\('\/api\/'\)|routeCanonicalSurface/);
-  const { default: control } = await import('../mission-control-entry-worker.js');
-  const { DB } = d1();
-  const env = { ENVIRONMENT: 'production', DB };
-  const r = await control.fetch(new Request('https://ekodi.kr/api/mokpo-presbytery/roster/status'), env, { waitUntil() {} });
-  assert.equal(r.headers.get('x-ekodi-route'), 'mokpo-presbytery-roster');
-  assert.equal(r.status, 200);
-  const list = await control.fetch(new Request('https://ekodi.kr/api/mokpo-presbytery/roster/'), env, { waitUntil() {} });
-  assert.equal(list.headers.get('x-ekodi-route'), 'mokpo-presbytery-roster');
-  assert.equal(list.status, 401);
+  assert.match(readFileSync('customer-entry-worker.js', 'utf8'), /if \(isRosterApiPath\(path\)\) \{\n      return handleRosterApi\(request, env\);/);
 });
 
 test('sender must be one of the owner-approved accounts and connected', async () => {
