@@ -94,6 +94,12 @@ async function audit(env,email,action,detail=''){
     .bind(email,action,String(detail).slice(0,200),Date.now()).run().catch(()=>{});
 }
 
+export function mailFailureReason(error){
+  const text=String(error?.message||'').replace(/[\r\n]+/g,' ').slice(0,120);
+  if(error?.code==='GOOGLE_TOKEN_EXCHANGE_FAILED')return `google_token: ${text}`;
+  if(error?.status)return `gmail_${error.status}: ${text}`;
+  return text||'mail_error';
+}
 async function authorize(request,env,opts){
   const principal=await (opts.principal||principalFromSupabaseRequest)(request);
   const email=String(principal?.email||'').trim().toLowerCase();
@@ -132,8 +138,10 @@ export async function handleRosterApi(request,env,opts={}){
       .bind(id,email,await sha256(`${id}:${email}:${code}`),now+CODE_TTL_MS,now).run();
     try{await sendMail(email,code);}catch(error){
       await env.DB.prepare('DELETE FROM mokpo_presbytery_roster_codes WHERE id=?').bind(id).run().catch(()=>{});
-      console.error('Mokpo roster code mail failed',String(error?.code||error?.message||'mail_error').slice(0,80));
-      return fail('MAIL_SEND_FAILED','인증 메일을 보내지 못했습니다. 잠시 뒤 다시 시도해 주세요.',502);
+      const reason=mailFailureReason(error);
+      console.error('Mokpo roster code mail failed',reason);
+      // The caller is an authenticated roster admin; the reason carries Google's error text only, never secrets.
+      return json({ok:false,code:'MAIL_SEND_FAILED',error:'인증 메일을 보내지 못했습니다.',reason},502);
     }
     await audit(env,email,'code.sent');
     return json({ok:true,sentTo:maskEmail(email),expiresInSeconds:CODE_TTL_MS/1000});
