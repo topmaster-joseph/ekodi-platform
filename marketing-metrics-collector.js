@@ -333,10 +333,17 @@ export async function markScheduler(env, taskKey, phase, { nowMs = Date.now(), s
     .bind(clean(status || phase, 40), detailJson, nowIso, ...(success ? [nowIso] : []), taskKey).run();
 }
 
+export function vaultCapable(env) {
+  return Boolean(String(env?.META_APP_SECRET || '').trim() || String(env?.THREADS_APP_SECRET || '').trim());
+}
+
 export async function runScheduledMetricsCollection(env, options = {}) {
   const nowMs = options.now ?? Date.now();
   try {
     if (!env?.DB?.prepare) return { ran:false, reason:'DB_UNAVAILABLE' };
+    // PROMO-RECOVERY-20261109: Control API에는 Meta/Threads 금고 복호화 비밀이 배포되지 않아 매번 TOKEN_UNAVAILABLE로
+    // 실행 시각만 차지했다. 비밀이 없는 Worker는 실행·기록을 하지 않고, 비밀을 가진 마케팅 성장 Worker가 수집한다.
+    if (!vaultCapable(env) && !options.allowWithoutVault) return { ran:false, reason:'VAULT_SECRETS_UNAVAILABLE' };
     if (!(await schedulerDue(env, METRICS_TASK_KEY, { nowMs, intervalMs:METRICS_INTERVAL_MS }))) return { ran:false, reason:'NOT_DUE' };
     await markScheduler(env, METRICS_TASK_KEY, 'start', { nowMs });
     const summary = await collectPostMetrics(env, { ...options, now:nowMs });

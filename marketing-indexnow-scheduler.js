@@ -176,7 +176,7 @@ export async function runScheduledIndexNow(env, options = {}) {
     if (!(await schedulerDue(env, INDEXNOW_TASK_KEY, { nowMs, sameKstDay:true, minKstHour:INDEXNOW_MIN_KST_HOUR }))) return { ran:false, reason:'NOT_DUE' };
     await markScheduler(env, INDEXNOW_TASK_KEY, 'start', { nowMs });
     const summary = await submitChangedUrls(env, { ...options, now:nowMs });
-    await markScheduler(env, INDEXNOW_TASK_KEY, summary.ok ? 'success' : 'failure', { nowMs, status:summary.ok ? 'ok' : 'failed', detail:{ ...summary, batches:summary.batches.length, date:kstDate(nowMs) } });
+    await markScheduler(env, INDEXNOW_TASK_KEY, summary.ok ? 'success' : 'failure', { nowMs, status:summary.ok ? 'ok' : 'failed', detail:{ ...summary, batches:summary.batches.length, endpoints:summary.batches.flat().map(r => `${r.endpoint}:${r.status}${r.error ? `:${clean(r.error,60)}` : ''}`).slice(0,10), date:kstDate(nowMs) } });
     return { ran:true, ...summary };
   } catch (error) {
     return { ran:false, ok:false, error:clean(error?.message || 'INDEXNOW_SCHEDULE_FAILED', 200) };

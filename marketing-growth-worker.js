@@ -1,3 +1,4 @@
+import { runScheduledMetricsCollection } from './marketing-metrics-collector.js';
 import { mallPromotionBoard } from './mall-promotion-board.js';
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { runMallAutonomousProfitLoop } from './mall-autonomous-profit-loop.js';
@@ -940,7 +941,9 @@ export class MarketingGrowthPublisher extends WorkerEntrypoint {
     const reason = clean(input?.reason || 'shared-publishing-cron',80);
     const mall = await runMallAutonomousProfitLoop(this.env,{reason,force:Boolean(input?.force)});
     const ownedTenants = await runOwnedTenantAutopostCycle(this.env,{reason});
-    return {...mall,ownedTenants,ok:Boolean(mall?.ok)&&Boolean(ownedTenants?.ok)};
+    // PROMO-RECOVERY-20261109: 게시물 성과 수집은 금고 비밀을 가진 이 Worker에서(6시간 간격은 수집기 내부에서 판정).
+    const metrics = await runScheduledMetricsCollection(this.env).catch(error => ({ ran:false, ok:false, error:clean(error?.message,120) }));
+    return {...mall,ownedTenants,metrics:{ran:Boolean(metrics?.ran),reason:metrics?.reason||'',collected:Number(metrics?.collected||0),skipped:Number(metrics?.skipped||0)},ok:Boolean(mall?.ok)&&Boolean(ownedTenants?.ok)};
   }
 
   async publishFromVault(input = {}) {
