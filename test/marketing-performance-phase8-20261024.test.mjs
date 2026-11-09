@@ -173,11 +173,11 @@ test('collector never throws out of the cron and runs on a 6-hour state cadence'
   const summary = await collectPostMetrics(env, { fetch:throwing, now:NOW });
   assert.equal(summary.failed, 4);
   const { fetchImpl } = providerFetch();
-  const a = await runScheduledMetricsCollection(env, { fetch:fetchImpl, now:NOW });
+  const a = await runScheduledMetricsCollection(env, { fetch:fetchImpl, now:NOW, allowWithoutVault:true });
   assert.equal(a.ran, true);
-  const b = await runScheduledMetricsCollection(env, { fetch:fetchImpl, now:NOW + 3600_000 });
+  const b = await runScheduledMetricsCollection(env, { fetch:fetchImpl, now:NOW + 3600_000, allowWithoutVault:true });
   assert.deepEqual([b.ran, b.reason], [false, 'NOT_DUE']);
-  const c = await runScheduledMetricsCollection(env, { fetch:fetchImpl, now:NOW + 6 * 3600_000 });
+  const c = await runScheduledMetricsCollection(env, { fetch:fetchImpl, now:NOW + 6 * 3600_000, allowWithoutVault:true });
   assert.equal(c.ran, true);
   const state = raw.prepare('SELECT * FROM marketing_scheduler_state WHERE task_key=?').get(METRICS_TASK_KEY);
   assert.equal(state.last_status, 'ok');

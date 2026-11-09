@@ -152,6 +152,7 @@ async function productLearningMetrics(env,productRowId) {
     WHERE p.id=? AND p.account_id=? AND p.storefront_slug=? AND p.status='active' LIMIT 1`).bind(Number(productRowId),ACCOUNT_ID,STOREFRONT).first();
 }
 
+export const DORMANCY_TEST_DAYS=3;
 export function scorePromotionLearning(input={}) {
   const opportunityScore=clamp(input.opportunityScore,0,100);
   const selectionScore=clamp(input.selectionScore,0,100);
@@ -163,6 +164,9 @@ export function scorePromotionLearning(input={}) {
   const commission30d=Math.max(0,Number(input.commission30d||0));
   const posts30d=Math.max(0,Number(input.posts30d||0));
   const recentPosts7d=Math.max(0,Number(input.recentPosts7d||0));
+  // PROMO-RECOVERY-20261109: 외부 수요 신호(네이버쇼핑·KOSIS)가 없으면 모든 상품이 hold/observe로 굳어
+  // '게시 없음 → 데이터 없음 → 게시 없음' 교착이 생긴다(11/03 이후 6일 무게시). 채널이 오래 쉬면 하루 1건 시험 게시를 연다.
+  const daysSinceLastPost=input.daysSinceLastPost==null?null:Math.max(0,Number(input.daysSinceLastPost));
   const funnelRate=visits30d>0?clamp(outboundClicks30d/visits30d,0,2):0;
   const earningsPerClick=productClicks30d>0?commission30d/productClicks30d:0;
   const expectedCommissionPerVisit=funnelRate*earningsPerClick;
@@ -186,7 +190,9 @@ export function scorePromotionLearning(input={}) {
   else if(policyScore>=78&&outboundClicks30d>=3&&earningsPerClick>0) action='scale';
   else if(policyScore>=55) action='test';
   else if(policyScore>=42) action='observe';
-  const reason=coldStart?'cold_start_exploration':cancelRate>=0.5&&orders30d>=2?'high_cancel_rate':fatiguePenalty>=10?'channel_fatigue':expectedCommissionPerVisit>0?'funnel_value_observed':'opportunity_only';
+  const dormant=(daysSinceLastPost===null||daysSinceLastPost>=DORMANCY_TEST_DAYS)&&!(cancelRate>=0.5&&orders30d>=2)&&opportunityScore>0;
+  if(dormant&&(action==='hold'||action==='observe')) action='test';
+  const reason=dormant&&action==='test'&&!coldStart?'dormancy_exploration':coldStart?'cold_start_exploration':cancelRate>=0.5&&orders30d>=2?'high_cancel_rate':fatiguePenalty>=10?'channel_fatigue':expectedCommissionPerVisit>0?'funnel_value_observed':'opportunity_only';
   return {policyScore:Math.round(policyScore*10)/10,action,reason,coldStart,visits30d,outboundClicks30d,funnelRate:Math.round(funnelRate*1000)/1000,productClicks30d,orders30d,cancels30d,commission30d,earningsPerClick:Math.round(earningsPerClick*10)/10,expectedCommissionPerVisit:Math.round(expectedCommissionPerVisit*10)/10,confidenceScore:Math.round(confidenceScore*10)/10,explorationBonus,fatiguePenalty,cancellationPenalty};
 }
 
@@ -211,11 +217,27 @@ async function writePolicySnapshot(env,runDate,product,provider,learning) {
     .bind(runDate,Number(product.id),provider,learning.policyScore,learning.action,learning.visits30d,learning.outboundClicks30d,learning.funnelRate,learning.productClicks30d,learning.orders30d,learning.cancels30d,learning.commission30d,learning.earningsPerClick,learning.expectedCommissionPerVisit,learning.confidenceScore,learning.explorationBonus,learning.fatiguePenalty,safeJson({reason:learning.reason,coldStart:learning.coldStart,source:'direct_funnel_plus_estimated_product_revenue'}),now,now).run();
 }
 
+async function providerDaysSinceLastPost(env,provider) {
+  // 제휴(affiliate)·직접판매(direct) 게시 중 가장 최근 성공 게시일. 기록이 없으면 null(=휴면으로 본다).
+  const dates=[];
+  for(const table of ['affiliate_promotion_runs','mall_direct_promotion_runs']){
+    try{
+      const row=await env.DB.prepare(`SELECT MAX(run_date) AS last FROM ${table} WHERE provider=? AND status='published'`).bind(String(provider)).first();
+      if(row?.last)dates.push(String(row.last));
+    }catch{/* 표가 없으면 건너뜀 */}
+  }
+  if(!dates.length)return null;
+  const last=dates.sort().at(-1);
+  const today=kstParts().date;
+  return Math.max(0,Math.round((Date.parse(`${today}T00:00:00Z`)-Date.parse(`${last}T00:00:00Z`))/86400000));
+}
+
 async function channelPoliciesForProduct(env,runDate,product,connections) {
   const rows=[];
   for(const connection of connections){
     const stats=await promotionLearningStats(env,connection.provider);
-    const learning=scorePromotionLearning({opportunityScore:product.opportunity_score,recommendedAction:product.recommended_action,selectionScore:product.selection_score,productClicks30d:product.clicks_30d,orders30d:product.orders_30d,cancels30d:product.cancels_30d,commission30d:product.commission_30d,...(stats.get(Number(product.id))||{})});
+    const daysSinceLastPost=await providerDaysSinceLastPost(env,connection.provider);
+    const learning=scorePromotionLearning({opportunityScore:product.opportunity_score,recommendedAction:product.recommended_action,selectionScore:product.selection_score,productClicks30d:product.clicks_30d,orders30d:product.orders_30d,cancels30d:product.cancels_30d,commission30d:product.commission_30d,...(stats.get(Number(product.id))||{}),daysSinceLastPost});
     await writePolicySnapshot(env,runDate,product,connection.provider,learning);
     rows.push({connection,learning});
   }
