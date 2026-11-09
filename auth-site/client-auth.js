@@ -283,7 +283,9 @@ function routeTarget(proof){
   target.hash=new URLSearchParams({ekodi_token:proof.tokenHash,ekodi_type:proof.type||'email'}).toString();
   location.assign(target.href);
 }
+let awaitingAccountChoice=false;
 async function handoffExistingSession(s){
+  if(awaitingAccountChoice)return false;
   if(routing)return true;
   routing=true;
   lastHandoffError=null;
@@ -403,6 +405,39 @@ async function prepare(){
   if(ADMIN_TOOL_CHOOSE_ACCOUNT){await renderGoogle();return}
   if(existing){
     if(FORCE_ACCOUNT&&String(existing.user?.email||'').trim().toLowerCase()!==EXPECTED_ACCOUNT){await clearStaleSession();await renderGoogle();return}
+    // Ask before reusing an existing session: continue with this account or sign in with another one.
+    if(!PREOPENED_BRIDGE){askContinueOrSwitch(existing);return}
+    await continueExistingSession(existing);
+    return;
+  }
+  await renderGoogle();
+}
+function askContinueOrSwitch(existing){
+  awaitingAccountChoice=true;
+  const who=String(existing?.user?.email||'').trim();
+  $('serviceBadge').textContent='계정 확인';
+  show('signedOut',false);show('signedIn',true);
+  const email=$('accountEmail');if(email)email.textContent=who||'로그인된 계정';
+  const status=$('accessStatus');
+  if(status){status.textContent=`${who||'현재'} 계정으로 로그인되어 있습니다. 이 계정으로 계속할까요, 다른 계정으로 로그인할까요?`;status.className='notice';}
+  show('accountChoice',true);
+  const go=$('continueSignedIn'),other=$('switchAccount');
+  if(go)go.onclick=async()=>{awaitingAccountChoice=false;show('accountChoice',false);show('signedIn',false);show('signedOut',true);await continueExistingSession(existing)};
+  if(other)other.onclick=async()=>{
+    awaitingAccountChoice=false;
+    show('accountChoice',false);
+    try{await timeout(sb.auth.signOut({scope:'local'}),5000,'switch_account_signout_timeout')}catch(error){console.warn('switch account signout',error);try{localStorage.removeItem('sb-renzehysxirjilvdxacv-auth-token')}catch{}}
+    window.google?.accounts?.id?.disableAutoSelect?.();
+    routing=false;
+    show('signedIn',false);show('signedOut',true);
+    $('serviceBadge').textContent='계정 선택';
+    await renderGoogle();
+    notice('아래 버튼으로 사용할 다른 계정을 선택해 주세요.');
+  };
+  go?.focus?.();
+}
+async function continueExistingSession(existing){
+  {
     if(await handoffExistingSession(existing))return;
     if(recoverableStaleSession(lastHandoffError)){
       $('serviceBadge').textContent='복구 중';
@@ -414,7 +449,6 @@ async function prepare(){
     showRetry('기존 로그인 연결을 완료하지 못했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.');
     return;
   }
-  await renderGoogle();
 }
 
 $('googleRetry')?.addEventListener('click',prepare);
