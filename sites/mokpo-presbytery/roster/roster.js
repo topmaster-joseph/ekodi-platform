@@ -38,11 +38,22 @@
       h('a',{class:'vw-btn',href:'/auth/?site=space&return_to='+encodeURIComponent('https://ekodi.kr/mokpo-presbytery/roster/'),text:'에코디 통합로그인'})])));}
 
   function stepCode(message){
-    var e=err(),codeBox=h('div',{hidden:true}),send,input,ok;
+    var e=err(),codeBox=h('div',{hidden:true}),send,input,ok,pick=h('select',{id:'rsSender','aria-label':'보내는 계정'}),hint=h('p',{class:'note'});
     if(message)e.textContent=message;
-    send=h('button',{type:'button',class:'vw-btn',text:'인증코드 받기',on:{click:function(){
+    pick.appendChild(h('option',{value:'',text:'보내는 계정 확인 중…'}));
+    api('/senders','GET').then(function(d){
+      pick.textContent='';var any=false;
+      (d.senders||[]).forEach(function(x){if(x.ready)any=true;pick.appendChild(h('option',{value:x.address,disabled:!x.ready,text:x.address+(x.ready?'':' (연결 필요)')}));});
+      var first=(d.senders||[]).filter(function(x){return x.ready;})[0];if(first)pick.value=first.address;
+      hint.textContent='';
+      hint.appendChild(document.createTextNode(any?'연결 안 된 계정은 ':'아직 발송 연결된 계정이 없습니다. '));
+      hint.appendChild(h('a',{href:d.connectUrl||'https://ekodi.kr/mail/admin',target:'_blank',rel:'noopener',text:'메일 허브'}));
+      hint.appendChild(document.createTextNode('에서 계정을 추가하고 \u201c발송 권한 추가\u201d로 연결하면 선택할 수 있습니다.'));
+      send.disabled=!any;
+    }).catch(function(x){pick.textContent='';pick.appendChild(h('option',{value:'',text:'계정 목록을 불러오지 못했습니다'}));e.textContent=x.message;if(x.status===401&&x.code!=='SECOND_FACTOR_REQUIRED')stepLogin();});
+    send=h('button',{type:'button',class:'vw-btn',text:'인증코드 받기',disabled:true,on:{click:function(){
       send.disabled=true;e.textContent='';
-      api('/code','POST',{}).then(function(d){codeBox.hidden=false;send.textContent='인증코드 다시 받기';send.disabled=false;e.textContent=d.sentTo+' 로 6자리 코드를 보냈습니다. 10분 안에 입력해 주세요.';input.focus();})
+      api('/code','POST',{sender:pick.value}).then(function(d){codeBox.hidden=false;send.textContent='인증코드 다시 받기';send.disabled=false;e.textContent=d.sentTo+' 로 6자리 코드를 보냈습니다. 10분 안에 입력해 주세요.';input.focus();})
         .catch(function(x){send.disabled=false;e.textContent=x.message;if(x.status===401)stepLogin();});}}});
     input=h('input',{id:'rsCode',type:'text',inputmode:'numeric',autocomplete:'one-time-code',maxlength:6,placeholder:'000000'});
     ok=h('button',{type:'button',class:'vw-btn',text:'확인하고 명부 열기',on:{click:function(){
@@ -51,7 +62,7 @@
         .catch(function(x){ok.disabled=false;e.textContent=x.message;});}}});
     input.addEventListener('keydown',function(ev){if(ev.key==='Enter')ok.click();});
     codeBox.appendChild(h('label',{for:'rsCode',text:'이메일로 받은 인증코드'}));codeBox.appendChild(input);codeBox.appendChild(ok);
-    show(h('div',{class:'lg-wrap one'},card('2단계 · 이메일 인증',[h('p',{class:'note',text:'로그인한 계정의 이메일로 인증코드를 보냅니다. 인증 후 30분 동안 명부를 볼 수 있습니다.'}),send,codeBox,e])));}
+    show(h('div',{class:'lg-wrap one'},card('2단계 · 이메일 인증',[h('p',{class:'note',text:'로그인한 계정의 이메일로 인증코드를 보냅니다. 인증 후 30분 동안 명부를 볼 수 있습니다.'}),h('label',{for:'rsSender',text:'보내는 계정'}),pick,hint,send,codeBox,e])));}
 
   function ministers(list){return (list||[]).map(function(m){return (ROLE[m.role]||m.role||'')+' '+m.name;}).join(', ');}
   function match(x){if(!query)return true;var t=[x.church,ministers(x.ministers),(x.elders||[]).join(' '),x.address,x.note].join(' ');return t.indexOf(query)>=0;}
