@@ -289,8 +289,8 @@ export function devotionCardUrl(devotion) {
 }
 
 export function devotionMetaTags(devotion) {
-  const title = devotion.found ? `에코디언의 묵상나눔` : '에코디언의 묵상나눔';
-  const description = devotion.found ? devotionShareText(devotion).split('\n').slice(1).join(' ') + ' · 시·노래·적용질문·기도' : '에코디 공통본문으로 시·노래·적용질문·기도까지 함께하는 매일묵상';
+  const title = '에코디언의 묵상나눔';
+  const description = '오늘의 말씀을 읽고 삶으로 나누는 에코디언의 묵상나눔';
   const url = devotion.shareUrl || 'https://ekodi.kr/bible/devotion';
   return [
     `<link rel="canonical" href="${escapeHtml(url)}">`,
