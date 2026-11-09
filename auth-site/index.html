@@ -28,6 +28,7 @@
     html[data-seamless-sso="1"] #googleButtonHost{display:flex;justify-content:center}
     html[data-seamless-sso="1"] #authStatus,
     html[data-seamless-sso="1"] #accessStatus{text-align:center}
+    .account-choice{display:grid;gap:10px;margin-top:14px}.account-choice.hide{display:none}
   </style>
 </head>
 <body>
@@ -54,6 +55,7 @@
       <div id="signedIn" class="hide">
         <div class="identity"><div><small>현재 로그인</small><strong id="accountEmail">계정 확인 중</strong></div><div class="identity-actions"><button id="logout" class="quiet" type="button">다른 계정</button><button id="cancelSignedIn" class="quiet" type="button">취소</button></div></div>
         <div id="accessStatus" class="notice">서비스 연결을 확인하고 있습니다.</div>
+        <div id="accountChoice" class="account-choice hide"><button id="continueSignedIn" class="google-btn" type="button">이 계정으로 계속</button><button id="switchAccount" class="cancel-btn" type="button">다른 계정으로 로그인</button></div>
 
         <section id="workspacePanel" class="subpanel hide" aria-label="내 공간 선택">
           <div class="subpanel-head"><div><small>MY SPACES</small><strong>내 공간</strong></div><span id="workspaceCount"></span></div>

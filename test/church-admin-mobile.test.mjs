@@ -9,5 +9,5 @@ test('church admin collapses the sidebar into a scrollable row and contains tabl
   assert.ok(mobile.includes('.sidebar .scope'));
   assert.ok(mobile.includes('.panel table{display:block;max-width:100%;overflow-x:auto'));
   const page = readFileSync(new URL('../church-pastor-admin-page.js', import.meta.url), 'utf8');
-  assert.match(page, /church-reports-admin\.css\?v=20261109-mobile1/);
+  assert.match(page, /church-reports-admin\.css\?v=20261109-tabs1/);
 });

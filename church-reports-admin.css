@@ -68,3 +68,36 @@ html[data-ekodi-church-unified-admin="true"] #sectionNav{margin-top:0}
   html[data-ekodi-church-unified-admin] .trade-grid{grid-template-columns:1fr!important}
   html[data-ekodi-church-unified-admin] .acal-item{flex-direction:column;align-items:stretch}
 }
+
+/* 문서보관: 탭 + 카드 배치 (모바일·웹 공통) */
+#churchDocumentsRoot{min-width:0;max-width:100%}
+.church-doc-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 14px;border-bottom:1px solid #e4e7ec;padding-bottom:10px}
+.church-doc-tab{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:8px 14px;border:1px solid #d0d5dd;border-radius:999px;background:#fff;color:#344054;font:inherit;font-size:.9rem;cursor:pointer;white-space:nowrap}
+.church-doc-tab span{overflow:hidden;text-overflow:ellipsis;max-width:22rem}
+.church-doc-tab b{min-width:1.4rem;padding:1px 6px;border-radius:999px;background:#f2f4f7;font-size:.75rem;text-align:center}
+.church-doc-tab.active{background:#eef4ff;border-color:#2e90fa;color:#1849a9;font-weight:700}
+.church-doc-tab.active b{background:#2e90fa;color:#fff}
+.church-doc-panel[hidden]{display:none!important}
+.church-doc-panel-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin:0 0 10px}
+.church-doc-panel-head strong{font-size:1rem}
+.church-doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin:8px 0 14px}
+.church-doc-card{display:flex;flex-direction:column;gap:6px;min-width:0;padding:12px 14px;border:1px solid #e4e7ec;border-radius:12px;background:#fff}
+.church-doc-card-head{display:flex;justify-content:space-between;gap:8px;font-size:.78rem;color:#667085}
+.church-doc-tag{padding:1px 8px;border-radius:999px;background:#f2f4f7;color:#344054;font-weight:600}
+.church-doc-card h4{margin:0;font-size:.98rem;line-height:1.4;color:#101828;overflow-wrap:anywhere}
+.church-doc-note{margin:0;font-size:.8rem;line-height:1.45;color:#667085;overflow-wrap:anywhere}
+.church-doc-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:4px}
+.church-doc-actions .button{min-height:32px;padding:4px 12px;font-size:.85rem;text-decoration:none}
+.church-doc-actions .button.quiet{margin-left:auto;color:#667085;border-color:#e4e7ec;background:transparent}
+.church-doc-form{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;align-items:end;max-width:900px}
+.church-doc-form label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:#344054}
+.church-doc-form input,.church-doc-form select{min-height:36px;padding:6px 8px;border:1px solid #d0d5dd;border-radius:8px;font:inherit;width:100%;box-sizing:border-box}
+.church-issued-in-tab{padding:0!important;border:0!important;background:none!important}
+@media (max-width:900px){
+  .church-doc-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .church-doc-tabs::-webkit-scrollbar{display:none}
+  .church-doc-tab{flex:0 0 auto}
+  .church-doc-tab span{max-width:14rem}
+  .church-doc-grid{grid-template-columns:1fr}
+  .church-doc-form{grid-template-columns:1fr}
+}
