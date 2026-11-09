@@ -23,7 +23,9 @@ run_worker_first = true
 ENVIRONMENT = "production"
 PUBLIC_BASE_URL = "https://ekodi.kr/books"
 OPERATOR_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodibiz.kr,joseph@ekodi.kr"
-PAYMENTS_ENABLED = "true"
+# TOSS-MALL-UNDERWRITING-002 (2026-11-09 운영자 결정): MID q_ekodib62hb 는 실물 몰 전용으로 심사한다.
+# 전자책(무형)은 무형 전용 상점아이디가 발급될 때까지 결제를 닫는다(fail closed, 열람·무료 안내는 유지).
+PAYMENTS_ENABLED = "false"
 EKODIPAY_PROFILE = "mall"
 
 [[d1_databases]]

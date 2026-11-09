@@ -8,6 +8,7 @@ import { autoOrderEnabled } from './domeggook-order.js';
 import { raiseAlert } from './ops-alerts.js';
 
 const PROVIDER = 'domeggook';
+export const MANUAL_RELEASE = 'manual';
 const ekodianEmails = (env) => new Set(String(env?.MALL_EKODIAN_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean));
 const isoNow = () => new Date().toISOString();
 const APPROVAL_FRESH_MS = 7 * 60 * 60 * 1000;
@@ -48,8 +49,10 @@ export async function applySupplyGate(env, deps, { releaseBatch = 30 } = {}) {
     // 2026-10-31 운영 판단: 도매꾹 구매 API 승인(10/26 메일)은 이미 받았다. 자동발주 OFF·로그인 장애는
     // '결제'만 막아야 할 사유이지 상품 노출을 지울 사유가 아니다. 그래서 승인 상태가 아니면
     // 상품은 공개(검색·사이트맵 유지)하되 checkout_ready=0 으로 '구매 준비 중' 표시만 한다(돈을 받지 않음).
+    // TOSS-MALL-UNDERWRITING-002 (2026-11-09 운영자 승인): supply_release='manual' 은 운영자가 직접 발주하기로
+    // 승인한 엄선 상품(에코디비즈 사업자 상점)이다. 자동발주 OFF 와 무관하게 결제를 유지한다.
     const paused = await env.DB.prepare(`UPDATE products SET checkout_ready=0,supply_release='catalog',updated_at=?
-      WHERE supply_provider=? AND status='published' AND (checkout_ready=1 OR COALESCE(supply_release,'') IN ('','released')) AND seller_id IN (${inList}) RETURNING id`).bind(now, PROVIDER, ...sellers).all();
+      WHERE supply_provider=? AND status='published' AND COALESCE(supply_release,'')<>'${MANUAL_RELEASE}' AND (checkout_ready=1 OR COALESCE(supply_release,'') IN ('','released')) AND seller_id IN (${inList}) RETURNING id`).bind(now, PROVIDER, ...sellers).all();
     const shown = await env.DB.prepare(`UPDATE products SET status='published',published_at=COALESCE(published_at,?),checkout_ready=0,supply_release='catalog',updated_at=?
       WHERE supply_provider=? AND status='draft' AND supply_release='staged' AND COALESCE(stock_quantity,0)>0
         AND images_json IS NOT NULL AND images_json NOT IN ('','[]','null') AND seller_id IN (${inList}) RETURNING id`).bind(now, now, PROVIDER, ...sellers).all();
