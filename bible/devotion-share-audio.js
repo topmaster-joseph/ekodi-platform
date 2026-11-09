@@ -34,7 +34,7 @@ export function formatDevotionShareMessage({date, title, excerpt, url}) {
   const cleanUrl = new URL(url);
   if (cleanUrl.origin !== 'https://ekodi.kr' || !cleanUrl.pathname.startsWith('/')) throw new Error('invalid_devotion_url');
   const heading=compact(title),rawBody=preview(excerpt);
-  const headline=heading.replace(/^(\S+)\s+\1(?=\s|$)/u,'$1');
+  const headline=heading.replace(/^(\S+)\s+\1(?=\s|$)/u,'$1').replace(/^에코디언의 묵상나눔\s*·?\s*/u,'');
   // Avoid repeated titles and labels while keeping any genuinely new prayer or message.
   const normalize=text=>compact(text).replace(/[·:;,.!?。~\-–—()[\]{}]/gu,'').replace(/\s+/gu,'');
   let body=rawBody;
@@ -48,6 +48,7 @@ export function formatDevotionShareMessage({date, title, excerpt, url}) {
   }
   return [
     `${Number(y)}년 ${Number(m)}월 ${Number(d)}일 ${day}요일`,
+    '에코디언의 묵상나눔',
     headline,
     body,
     cleanUrl.href,
@@ -74,15 +75,16 @@ export function devotionSectionShareDetails(data,kind){
 }
 export function formatDevotionSectionShareMessage({date,title,content,url}){
   // Keep one canonical validation point for actual dates and ekodi.kr-only public deep links.
-  const dateLine=formatDevotionShareMessage({date,title,excerpt:'',url}).split('\n')[0];
+  const dateLine=formatDevotionShareMessage({date,title:'',excerpt:'',url}).split('\n')[0];
   const validatedUrl=new URL(url).href;
   const fullContent=String(content??'').replace(/\r\n?/gu,'\n').trim();
   return [
-    '일자: '+dateLine,
-    '제목: '+compact(title),
-    '내용: '+(fullContent||'등록된 내용이 없습니다.'),
-    '링크: '+validatedUrl,
-  ].join('\n');
+    '에코디언의 묵상나눔',
+    dateLine,
+    compact(title).replace(/^.*?오늘의 매일묵상\s*·\s*/u, '').replace(/^묵상 (?:시|노래)\s*·\s*/u, ''),
+    fullContent||'등록된 내용이 없습니다.',
+    validatedUrl,
+  ].filter(Boolean).join('\n');
 }
 // Speak chapter/verse citations as Korean book references, not punctuation.
 // Keep the published on-screen reference intact; only the TTS script changes.
