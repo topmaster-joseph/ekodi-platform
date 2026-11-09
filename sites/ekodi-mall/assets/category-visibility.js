@@ -16,7 +16,9 @@
   const findShortcuts=category=>shortcuts.filter(a=>a.dataset.filterTarget===category);
   const localCard=()=>cards().some(card=>Boolean(String(card.dataset.regionIds||'').trim()));
   const hasCategory=category=>cards().some(card=>card.dataset.category===category&&
-    (card.dataset.bookstoreQuotePending!=='true'||(category==='book'&&card.dataset.bookstoreInformational==='true')));
+    card.dataset.bookstoreQuotePending!=='true');
+  // TOSS-MALL-UNDERWRITING-002: 서점 안내 카드(전자책·무형)는 몰에서 결제되지 않으므로
+  // 카테고리 메뉴를 살리는 근거가 아니다. 직접 URL로는 계속 볼 수 있다.
   // Only advertise confirmed sale-ready categories in visible navigation.
   // Direct category URLs remain reachable and show a truthful empty state.
   // An API failure or incomplete inventory is never evidence that a category is empty.

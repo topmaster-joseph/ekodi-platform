@@ -153,7 +153,9 @@ test('static public book information and sale-only discovery remain separate',()
   assert.match(build,/data-bookstore-buy/);
   assert.match(build,/bookstoreActive: store\.id === 'store-ekodi-books'/);
   assert.match(app,/card\.dataset\.bookstoreInformational === 'true'/);
-  assert.match(nav,/category==='book'&&card\.dataset\.bookstoreInformational==='true'/);
+  // TOSS-MALL-UNDERWRITING-002: informational (intangible) bookstore cards never keep a category menu visible.
+  assert.doesNotMatch(nav,/bookstoreInformational/);
+  assert.match(nav,/card\.dataset\.bookstoreQuotePending!=='true'\);/);
   assert.match(search,/card\.dataset\.bookstoreQuotePending !== 'true'/);
   assert.doesNotMatch(source,/grid\.querySelectorAll\('\[data-bookstore-runtime-id\]'\)\.forEach\(card => card\.remove\(\)\)/);
 });
