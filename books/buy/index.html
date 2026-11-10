@@ -52,7 +52,7 @@
             <div id="payArea">
               <div class="account-box">
                 <div id="signedOut"><p>구매하려면 EKODI 계정(구글)으로 로그인해 주세요.</p><div id="googleButton"></div></div>
-                <div id="signedIn" hidden><p><b id="buyerEmail"></b> 계정으로 구매합니다. <button type="button" id="signOut" class="linklike">로그아웃</button></p></div>
+                <div id="signedIn" hidden><p><b id="buyerEmail"></b> <span id="buyerStatusLabel">계정으로 구매합니다.</span> <button type="button" id="signOut" class="linklike">로그아웃</button></p></div>
                 <p id="accountStatus" class="buy-msg" role="status"></p>
               </div>
               <label class="consent"><input type="checkbox" id="consent" /><span>전자책은 다운로드·온라인 열람 등 제공이 시작되기 전 법정 청약철회 기간에 전액 환불할 수 있고, 제공 개시 후에는 법령에 따라 제한될 수 있음을 확인했습니다. 콘텐츠 하자·제공 불가 시 환불받을 수 있습니다. <a href="https://ekodi.kr/ekodibiz/refund" target="_blank" rel="noopener">에코디비즈 환불정책</a>을 확인했습니다.</span></label>
@@ -72,7 +72,7 @@
     </section>
     <section class="buy-policy">
       <div class="shell policy-grid">
-        <article><h3>받는 방법</h3><p>결제 후 내 서재(ekodi.kr/books/library)에서 EPUB 전자책을 온라인 리더로 열람할 수 있습니다. 구매한 계정으로 다시 로그인하여 이어 읽을 수 있습니다.</p></article>
+        <article><h3>받는 방법</h3><p>결제 후 내 서재(ekodi.kr/books/library)에서 EPUB 전자책을 온라인 리더로 열람할 수 있습니다. 회원은 구매 계정으로, 비회원은 구매 이메일 재인증으로 다시 열람할 수 있습니다.</p></article>
         <article><h3>환불</h3><p>다운로드·온라인 열람 등 콘텐츠 제공이 시작되기 전 법정 청약철회 기간에는 전액 환불합니다. 제공 개시 후 청약철회는 법령에 따라 제한될 수 있으나 콘텐츠 하자·제공 불가 시에는 전액 환불합니다. <a href="https://ekodi.kr/ekodibiz/refund">에코디비즈 환불정책 전문</a>을 확인해 주세요.</p></article>
         <article><h3>판매자</h3><p>에코디비즈 · 대표 정찬균 · 사업자등록번호 213-13-01959 · 통신판매업 2023-전남무안-0153 · 전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층</p></article>
       </div>
@@ -82,6 +82,7 @@
   <script src="https://js.tosspayments.com/v2/standard" defer></script>
   <script src="https://accounts.google.com/gsi/client" async></script>
   <script src="/buy/commerce-client.js" defer></script>
+  <script src="/buy/guest-checkout.js" defer></script>
   <script src="/buy/buy.js" defer></script>
   <script src="/social-links.js" defer></script>
   <script src="/menu.js" defer></script>
