@@ -116,7 +116,7 @@
       }
       window.EkodiLibraryTabs?.render(items,libraryAccount,data.operator === true);
     } catch (e) {
-      if (e.status === 401) { $('libStatus').textContent = '로그인이 필요합니다.'; $('libLogin').hidden = false; C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; }, () => load().then(operatorPanel)); }
+      if (e.status === 401) { $('libStatus').textContent = '로그인이 필요합니다.'; $('libLogin').hidden = false; C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; }, () => load().then(operatorPanel)); void window.EkodiBooksGuestCheckout?.mount($('libLogin')); }
       else $('libStatus').textContent = e.message;
     }
   }
