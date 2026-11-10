@@ -1078,7 +1078,7 @@ function init(){
    event.preventDefault();showTab(TAB_OF[id],{detailId:id,updateUrl:true});
   });
  }
- el('ownerTabs').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;const list=[...document.querySelectorAll('#ownerTabs [data-tab]')];const i=list.findIndex(b=>b.getAttribute('aria-selected')==='true');const n=list[(i+(e.key==='ArrowRight'?1:list.length-1))%list.length];showTab(n.dataset.tab,{focus:true,updateUrl:true});e.preventDefault()});
+ el('ownerTabs').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;const list=[...document.querySelectorAll('#ownerTabs [data-tab]')];if(!list.length)return;const i=list.findIndex(b=>b.getAttribute('aria-selected')==='true');const shift=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;const n=e.key==='Home'?list[0]:e.key==='End'?list[list.length-1]:list[(i+shift+list.length)%list.length];showTab(n.dataset.tab,{focus:true,updateUrl:true});e.preventDefault()});
  if(typeof globalThis.addEventListener==='function')globalThis.addEventListener('hashchange',()=>{if(!el('owner').hidden)routeHash()});
  if(typeof globalThis.addEventListener==='function')globalThis.addEventListener('popstate',()=>{if(!el('owner').hidden)routeHash()});
  el('stepUpButton').addEventListener('click',openStepUp);el('stepUpForm').addEventListener('submit',submitStepUp);el('stepUpCancel').addEventListener('click',()=>el('stepUpDialog').close());
