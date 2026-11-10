@@ -51,7 +51,7 @@ a{color:inherit}
   backdrop-filter:blur(18px) saturate(116%);
 }
 .navbar{display:flex;align-items:center;justify-content:space-between;gap:28px;width:calc(100% - clamp(32px,6vw,112px));margin-inline:auto}
-.brand{display:inline-flex;flex-direction:column;text-decoration:none;line-height:1}
+.brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;line-height:1;min-width:0}.brand-copy{display:flex;flex-direction:column;min-width:0}.brand .ekodi-ci-icon{display:block;width:32px;height:32px;flex:0 0 32px;color:var(--accent-deep)}
 .brand strong{font-size:26px;letter-spacing:.055em;color:#31463a}
 .brand small{margin-top:7px;color:#8d9b93;font-size:11px;letter-spacing:.2em}
 .nav{display:flex;align-items:center;justify-content:flex-end;gap:24px}
@@ -267,7 +267,7 @@ main{padding:46px 0 72px}
 <body>
 <header class="site-header">
   <div class="shell navbar">
-    <a class="brand" href="https://ekodi.kr/" aria-label="EKODI 홈"><strong>EKODI</strong><small>ECOSYSTEM · ekodi.kr</small></a>
+    <a class="brand" href="https://ekodi.kr/" aria-label="EKODI 홈" data-ekodi-ci="master-open-loop"><svg class="ekodi-ci-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="20" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-dasharray="103 23" transform="rotate(-42 32 32)"/></svg><span class="brand-copy"><strong>EKODI</strong><small>ECOSYSTEM · ekodi.kr</small></span></a>
     <nav class="nav" aria-label="주요 메뉴">
       <a href="#about">소개 <span>About</span></a>
       <a href="#services">플랫폼 <span>Platforms</span></a>
