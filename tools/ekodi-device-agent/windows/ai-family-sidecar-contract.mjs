@@ -79,7 +79,10 @@ export function planReadOnlyFamilyInvocation(claim,approval,nowMs=Date.now()){
   // no API key arguments and no consumer-browser session automation.
   const args=claim.provider==='codex-cli'
     ? [scriptPath,'exec','--ignore-user-config','-s','read-only','-C',workspace,'-']
-    : [scriptPath,'-p','--permission-mode','plan','--allowedTools','Read,Grep,Glob',
+    : [scriptPath,'-p','--restricted','--permission-mode','plan',
+       // --allowedTools only auto-approves calls; it does NOT remove Bash,
+       // browser or MCP capabilities. Restrict actual built-ins and MCPs.
+       '--tools','Read,Grep,Glob','--disallowedTools','mcp__*',
        '--max-turns','4','--output-format','text'];
   return Object.freeze({ok:true,executable:nodePath,args:Object.freeze(args),cwd:workspace,
     provider:claim.provider,jobId:claim.jobId,deadlineMs:claim.deadlineMs});
