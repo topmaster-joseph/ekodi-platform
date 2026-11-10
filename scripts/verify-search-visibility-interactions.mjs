@@ -51,7 +51,7 @@ export async function verifySearchVisibilityInteractions(page,artifactsDir,resul
     if(initial<2)throw new Error('Search Visibility public inventory has fewer than two sites');
     if(!(await detail.evaluate(el=>el.hidden)))throw new Error('Site detail shown before Manage selection');
     const headers=(await panel.locator('.sv-table').first().locator('th').allTextContents()).map(s=>s.trim());
-    if(headers.join('|')!=='번호|분류|사이트|주소|SEO|AEO·GEO|검색등록|관리')
+    if(headers.join('|')!=='번호|분류|사이트|주소|SEO|AEO·GEO|검색등록|사이트 자체 보고|자세히')
       throw new Error('Search Visibility compact columns drifted: '+headers.join('|'));
     const groups=await filter.locator('option').evaluateAll(items=>items.map(x=>x.value).filter(Boolean));
     if(!groups.length)throw new Error('Search Visibility category filter options missing');
@@ -73,7 +73,7 @@ export async function verifySearchVisibilityInteractions(page,artifactsDir,resul
     const first=rows.first(),url=await first.locator('.sv-site-url a').getAttribute('href');
     if(!url||await first.locator('button').count()!==1)throw new Error('Site row requires one Manage button and a URL');
     const oneLine=await first.locator('td').evaluateAll(items=>
-      items.length===8 && items.every(td=>getComputedStyle(td).whiteSpace==='nowrap'));
+      items.length===9 && items.every(td=>getComputedStyle(td).whiteSpace==='nowrap'));
     if(!oneLine)throw new Error('Site row contains wrapped or missing cells');
     await first.locator('button').click();
     await page.waitForFunction(expected=>{
