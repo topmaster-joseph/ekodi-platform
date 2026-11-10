@@ -1626,6 +1626,35 @@ function Find-EkodiOwnedProfileBrowsers([string]$Profile) {
     Where-Object { $_.Name -in @('chrome.exe','msedge.exe') -and [regex]::IsMatch([string]$_.CommandLine, $pattern) })
 }
 
+function Read-EkodiOwnedDevToolsPort([string]$PortFile) {
+  $portLines = $null
+  for ($readAttempt = 1; $readAttempt -le 8; $readAttempt++) {
+    try {
+      $portLines = @(Get-Content -LiteralPath $PortFile -Encoding UTF8 -ErrorAction Stop)
+      break
+    } catch {
+      $exception = $_.Exception
+      $sharingViolation = $false
+      while ($null -ne $exception) {
+        if ($exception -is [System.IO.IOException]) {
+          $code = [int]($exception.HResult -band 0xFFFF)
+          if ($code -eq 32 -or $code -eq 33) { $sharingViolation = $true; break }
+        }
+        $exception = $exception.InnerException
+      }
+      if (-not $sharingViolation) { throw 'cdp_port_file_unreadable' }
+      if ($readAttempt -eq 8) { throw 'cdp_port_file_locked' }
+      Start-Sleep -Milliseconds 120
+    }
+  }
+  if ($null -eq $portLines -or $portLines.Count -lt 1) { throw 'cdp_port_invalid' }
+  $port = 0
+  if (-not [int]::TryParse([string]$portLines[0], [ref]$port) -or $port -le 0 -or $port -gt 65535) {
+    throw 'cdp_port_invalid'
+  }
+  return $port
+}
+
 function Invoke-EkodiHeadlessScreenshot(
   [string]$Browser,
   [string]$Target,
@@ -1675,9 +1704,7 @@ function Invoke-EkodiHeadlessScreenshot(
     }
     if (-not (Test-Path -LiteralPath $portFile)) { throw 'cdp_port_file_missing' }
 
-    $portLines = @(Get-Content -LiteralPath $portFile -Encoding UTF8)
-    if ($portLines.Count -lt 1 -or [int]$portLines[0] -le 0) { throw 'cdp_port_invalid' }
-    $port = [int]$portLines[0]
+    $port = Read-EkodiOwnedDevToolsPort $portFile
 
     $targets = Invoke-RestMethod -Uri "http://127.0.0.1:$port/json/list" -Method Get -TimeoutSec 10
     $ownedTabCount = @($targets | Where-Object { $_.type -eq 'page' }).Count
