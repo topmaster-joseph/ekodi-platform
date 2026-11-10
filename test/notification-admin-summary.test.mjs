@@ -47,8 +47,13 @@ test('summary aggregates per-topic data without exposing endpoint, token or priv
   f.raw.prepare('INSERT INTO notification_deliveries (event_id,device_id,status,next_attempt_at) VALUES(?,?,?,?)').run(
     'e1','d1','delivered','2026-11-02T01:00:00Z'
   );
-  // Fixture rows are dated 2026-11-02; pin the clock so the default reporting window keeps covering them.
-  const result=await handleNotificationAdminSummary(request(f.token,'mission'),{DB:f.db},{now:new Date('2026-11-03T00:00:00Z')});
+  // Pin the clock, as the window test below already does. Without it this test
+  // read the real wall clock while its fixture rows stayed at 2026-11-02, so it
+  // passed only while "now" happened to fall inside the default 7-day window and
+  // began failing for good once 2026-11-09 passed — a time bomb that turns every
+  // PR's `test` check red without a line of code changing.
+  const now=new Date('2026-11-02T12:00:00.000Z');
+  const result=await handleNotificationAdminSummary(request(f.token,'mission'),{DB:f.db},{now});
   assert.equal(result.status,200);
   const json=await result.json();
   assert.equal(json.ok,true);assert.equal(json.topics.length,1);
