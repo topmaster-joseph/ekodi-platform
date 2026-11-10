@@ -31,7 +31,7 @@ export function buildSiteSearchPromotionOversight({sites=[],automation={}}={}) {
     } else if (record && jobSource && pending!==null && pending>0) {
       status='review';
       recommendation='사이트의 예약·재시도 작업 결과를 확인하고 보고를 갱신하세요.';
-    } else if (record && jobSource && published!==null && connectionSource) {
+    } else if (record && jobSource && published!==null && published>0 && connectionSource) {
       status='reported';
       recommendation='사이트 자체 실행을 유지하고 검색 공급자 실측 자료와 승인 대기사항을 검토하세요.';
     } else if (record && (jobSource || indexSource || connectionSource)) {
