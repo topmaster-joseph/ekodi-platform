@@ -17,7 +17,7 @@ const sample={
  }
 };
 
-test('Kakao/SMS share string has exactly date, title, single-line body, canonical URL in that order',()=>{
+test('Kakao/SMS share includes common identity, date, body and canonical URL',()=>{
  const message=formatDevotionShareMessage({
   date:sample.date,
   title:'에코디교회 오늘의 매일묵상 · '+sample.passage,
@@ -26,6 +26,7 @@ test('Kakao/SMS share string has exactly date, title, single-line body, canonica
  });
  assert.deepEqual(message.split('\n'),[
   '2026년 11월 2일 월요일',
+  '에코디언의 묵상나눔',
   '에코디교회 오늘의 매일묵상 · 고린도전서 3:10-23',
   sample.activities.keyLine,
   'https://ekodi.kr/ekodichurch/devotion/?date=2026-11-02'
@@ -33,23 +34,23 @@ test('Kakao/SMS share string has exactly date, title, single-line body, canonica
  for(const kind of ['poem','questions','prayer']){
   const excerpt=devotionShareExcerpt(sample,kind);
   assert.ok(!excerpt.includes('\n'));
-  assert.equal(formatDevotionShareMessage({date:sample.date,title:kind,excerpt,url:'https://ekodi.kr/bible/devotion/2026-11-02'}).split('\n').length,4);
+  assert.equal(formatDevotionShareMessage({date:sample.date,title:kind,excerpt,url:'https://ekodi.kr/bible/devotion/2026-11-02'}).split('\n').length,5);
  }
  assert.throws(()=>formatDevotionShareMessage({date:'2026-02-30',title:'x',excerpt:'y',url:'https://ekodi.kr/a'}),/invalid_devotion_date/);
  assert.throws(()=>formatDevotionShareMessage({date:sample.date,title:'x',excerpt:'y',url:'https://evil.test/a'}),/invalid_devotion_url/);
 });
 
-test('share copy omits repeated title or section label without deleting meaningful prayer text',()=>{
+test('share copy omits repeated content without deleting meaningful prayer text',()=>{
  const date='2026-11-03',url='https://ekodi.kr/ekodimission/devotion?date=2026-11-03#prayer';
  const title='에코디선교회 오늘의 매일묵상 · 묵상기도';
  const format=excerpt=>formatDevotionShareMessage({date,title,excerpt,url});
- assert.equal(format(title).split('\n').length,3,'whole repeated headline omitted');
- assert.equal(format('묵상기도').split('\n').length,3,'repeated short title omitted');
+ assert.equal(format(title).split('\n').length,4);
+ assert.equal(format('묵상기도').split('\n').length,4);
  const revised=format('묵상기도: 주님, 오늘 우리를 인도하소서.');
- assert.equal(revised.split('\n').length,4);
- assert.equal(revised.split('\n')[2],'주님, 오늘 우리를 인도하소서.','meaningful prayer text preserved');
- assert.equal(revised.split(url).length,2,'canonical URL occurs once');
- assert.equal(format('서로 돕고 살리는 하루를 주소서.').split('\n').length,4);
+ assert.equal(revised.split('\n').length,5);
+ assert.equal(revised.split('\n')[3],'주님, 오늘 우리를 인도하소서.');
+ assert.equal(revised.split(url).length,2);
+ assert.equal(format('서로 돕고 살리는 하루를 주소서.').split('\n').length,5);
 });
 
 test('speech reading uses passage, Scripture, reflection, question, action and prayer, with bounded chunks',()=>{
@@ -129,11 +130,12 @@ test('devotion share removes repeated title and excerpt without duplicating its 
  const lines=formatDevotionShareMessage(args).split('\n');
  assert.deepEqual(lines,[
    '2026년 11월 3일 화요일',
+   '에코디언의 묵상나눔',
    '에코디교회 오늘의 매일묵상',
    'https://ekodi.kr/ekodichurch/devotion/?date=2026-11-03'
  ]);
  const different=formatDevotionShareMessage({...args,excerpt:'오늘의 말씀을 듣고 살아냅니다.'}).split('\n');
- assert.equal(different.length,4);
- assert.equal(different[2],'오늘의 말씀을 듣고 살아냅니다.');
+ assert.equal(different.length,5);
+ assert.equal(different[3],'오늘의 말씀을 듣고 살아냅니다.');
  assert.equal(different.at(-1),args.url);
 });
