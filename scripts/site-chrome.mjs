@@ -97,6 +97,12 @@ export const SITES = {
 };
 
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const SITE_CI = Object.freeze({
+  books: '<svg width="25" height="25" viewBox="0 0 64 64" fill="none" focusable="false"><path d="M9 15 Q21 10 32 21 Q43 10 55 15 V48 Q43 43 32 53 Q21 43 9 48 Z M32 21 V53" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  publishing: '<svg width="25" height="25" viewBox="0 0 64 64" fill="none" focusable="false"><path d="M17 10 H40 L49 19 V53 H17 Z M40 10 V20 H49 M24 30 H42 M24 39 H39" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+});
+const siteCIMark = siteId => SITE_CI[siteId] || SITES[siteId].mark;
+
 
 export function header(siteId, slot = '') {
   const s = SITES[siteId];
@@ -105,7 +111,7 @@ export function header(siteId, slot = '') {
   return `<header class="ekc-header" data-ekodi-chrome="${siteId}">`
     + `<div class="ekc-network"><div class="ekc-shell"><span class="ekc-network-label">EKODI 출판 생태계</span><nav class="ekc-network-links" aria-label="출판 생태계">${net}</nav></div></div>`
     + `<div class="ekc-shell ekc-masthead">`
-    + `<a class="ekc-brand" href="${s.home}" aria-label="${esc(s.name)} 홈"><span class="ekc-mark" aria-hidden="true">${s.mark}</span><span class="ekc-brand-copy"><b>${esc(s.name)}</b><small>${esc(s.tagline)}</small></span></a>`
+    + `<a class="ekc-brand" href="${s.home}" aria-label="${esc(s.name)} 홈"><span class="ekc-mark" aria-hidden="true">${siteCIMark(siteId)}</span><span class="ekc-brand-copy"><b>${esc(s.name)}</b><small>${esc(s.tagline)}</small></span></a>`
     + `<div class="ekc-actions">${slot}<a class="ekc-cta" href="${s.cta[1]}">${esc(s.cta[0])}</a><button class="menu-button ekc-menu" type="button" aria-expanded="false" aria-controls="site-nav">MENU</button></div>`
     + `<nav id="site-nav" class="ekc-nav" aria-label="${esc(s.name)} 메뉴">${nav}<a class="ekc-nav-cta" href="${s.cta[1]}">${esc(s.cta[0])}</a></nav>`
     + `</div></header>`;
@@ -117,7 +123,7 @@ export function footer(siteId) {
   const network = NETWORK.map(n => [n.label, n.href]).concat([['EKODI', `${ORIGIN}/`]]);
   return `<footer class="ekc-footer" data-ekodi-chrome="${siteId}"><div class="ekc-shell">`
     + `<div class="ekc-foot-grid">`
-    + `<section class="ekc-foot-brand"><p class="ekc-foot-name"><span class="ekc-mark" aria-hidden="true">${s.mark}</span><b>${esc(s.name)}</b></p><p>${esc(s.about)}</p><div class="ekc-social" data-ekodi-social-links data-org="${siteId}" data-variant="plain"></div></section>`
+    + `<section class="ekc-foot-brand"><p class="ekc-foot-name"><span class="ekc-mark" aria-hidden="true">${siteCIMark(siteId)}</span><b>${esc(s.name)}</b></p><p>${esc(s.about)}</p><div class="ekc-social" data-ekodi-social-links data-org="${siteId}" data-variant="plain"></div></section>`
     + `<section><h2>${esc(s.name)}</h2>${list(s.footMenu)}</section>`
     + `<section><h2>출판 생태계</h2>${list(network)}</section>`
     + `<section><h2>${esc(s.infoTitle)}</h2><ul class="ekc-info">${s.info.map(t => `<li>${esc(t)}</li>`).join('')}</ul></section>`
