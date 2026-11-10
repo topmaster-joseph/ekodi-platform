@@ -29,3 +29,14 @@ test('isolated SQL smokes explicitly challenge enabling the forbidden policies',
   assert.match(claim,/EVIDENCE_ADAPTER_DISABLED/);
   assert.match(claim,/LOW_TRUST_RULE_LIMIT/);
 });
+
+test('existing enabled nonverified policies reject migration before any constraint change',()=>{
+  const preflight=guard.indexOf('DO $nonverified_preflight$');
+  const firstAlter=guard.indexOf('ALTER TABLE');
+  assert.ok(preflight>=0&&firstAlter>preflight,'preflight must precede schema changes');
+  assert.match(guard,/ekodi_point_rules[\s\S]*?rule_id='active' AND enabled/);
+  assert.match(guard,/ekodi_point_evidence_adapters[\s\S]*?adapter='devotion_self_report' AND enabled/);
+  assert.match(guard,/RAISE EXCEPTION 'POINTS_NONVERIFIED_REWARD_POLICY_REVIEW_REQUIRED'/);
+  assert.match(guard,/CHECK \(rule_id <> 'active' OR enabled = false\)/);
+  assert.match(guard,/CHECK \(adapter <> 'devotion_self_report' OR enabled = false\)/);
+});
