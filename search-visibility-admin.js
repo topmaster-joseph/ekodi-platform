@@ -382,7 +382,292 @@
       ?(SITE_REPORT_LABELS[report.status]||'보고 미확인')+' · '+report.recommendation
       :'보고 미확인 · 해당 사이트의 자체 실행 근거를 기다리고 있습니다.';
     const ownAdmin=$('[data-sv-own-admin]');
-    const safeAdmin=typeof report?.adminPath==='string'&&/^\\/[a-z0-9/_-]+$/i.test(report.adminPath);
+    const safeAdmin=typeof report?.adminPath==='string'&&new RegExp('^/[a-z0-9/_-]+;
+    ownAdmin.hidden=!safeAdmin;
+    if(safeAdmin)ownAdmin.href=report.adminPath;
+    else ownAdmin.removeAttribute('href');
+    $('[data-sv-manage-name]').textContent=(site.name||site.path||'사이트')+' · '+siteCategory(site);
+    $('[data-sv-manage-path]').textContent=site.url;
+    $('[data-sv-manage-basic]').textContent=crossOrigin?'별도 호스트':result?.basic||'미점검';
+    $('[data-sv-manage-ai]').textContent=crossOrigin?'별도 호스트':result?.ai||'미점검';
+    const improvementDetails=[result?.policyNote,...(result?.improvements||[])].filter(Boolean);
+    $('[data-sv-manage-improve]').textContent=improvementDetails.join(' · ')||(result?'기본 항목 충족':'점검 후 표시');
+    const audit=$('[data-sv-manage-audit]');audit.disabled=state.busy||crossOrigin;
+    audit.title=crossOrigin?'별도 호스트의 브라우저 점검은 지원하지 않습니다.':'';
+    const open=$('[data-sv-manage-open]');open.href=site.url;
+  }
+  function openManage(site) {
+    state.selectedSite=site.url;
+    $('#sv-provider-site').value=site.url;
+    const panel=$('[data-sv-manage-panel]');panel.hidden=false;
+    renderProviderMatrix();fillEvidenceForm();refreshManage();
+    panel.scrollIntoView({block:'start',behavior:'smooth'});
+  }
+
+  const normalize = item => {
+    try {
+      const u = new URL(item.url);
+      if(u.origin !== location.origin || !/^https:$/.test(u.protocol))return null;
+      if(u.pathname.split('/').some(segment => ['admin','auth','api','my','preview'].includes(segment)))return null;
+      return {...item, url:u.href};
+    } catch {return null;}
+  };
+  const fetchBounded = async (url, { parse = 'text', timeout = 6500, withResponse = false } = {}) => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), timeout);
+    try {
+      const response = await fetch(url, {cache:'no-store', credentials:'same-origin', signal:controller.signal});
+      if (!response.ok)throw new Error('HTTP '+response.status);
+      const limit = Number(response.headers.get('content-length') || 0);
+      if (limit > 1_500_000)throw new Error('응답 크기 초과');
+      const text = await response.text();
+      if (text.length > 1_500_000)throw new Error('응답 크기 초과');
+      return withResponse?{text,finalUrl:response.url||url,
+        contentType:response.headers.get('content-type')||'',robotsHeader:response.headers.get('x-robots-tag')||''}
+        :parse==='json'?JSON.parse(text):text;
+    } finally {window.clearTimeout(timer);}
+  };
+  // The rendered page and its HTTP crawler directives must both be checked.
+  // A successful fetch of a redirected sign-in page is not a successful audit
+  // of the registered public site. These checks do not imply search indexing.
+  const noindexDirective = value => String(value||'').toLowerCase()
+    .replaceAll(',',' ').replaceAll(';',' ').replaceAll('\n',' ').replaceAll('\t',' ')
+    .split(' ').some(word=>word.trim()==='noindex'||word.trim()==='none');
+  const validatePublicAuditResponse = (site, receipt) => {
+    const requested=new URL(site.url),final=new URL(receipt.finalUrl||site.url,requested);
+    const publicPath=url=>{
+      let path=url.pathname;
+      while(path.length>1&&path.endsWith('/'))path=path.slice(0,-1);
+      return path||'/';
+    };
+    if(final.origin!==requested.origin||publicPath(final)!==publicPath(requested)||final.search||final.hash)
+      throw new Error('요청한 공개 경로 대신 다른 페이지로 이동했습니다');
+    const type=String(receipt.contentType||'').split(';')[0].trim().toLowerCase();
+    if(!['text/html','application/xhtml+xml'].includes(type))
+      throw new Error('공개 문서가 HTML로 응답하지 않았습니다');
+    return receipt.text;
+  };
+  const checkDocument = (html, {robotsHeader=''} = {}) => {
+    const dom = new DOMParser().parseFromString(html, 'text/html');
+    const metas=[...dom.querySelectorAll('meta[name]')];
+    const meta=name=>metas.find(item=>item.getAttribute('name')?.trim().toLowerCase()===name)
+      ?.getAttribute('content')?.trim()||'';
+    const title = Boolean(dom.querySelector('title')?.textContent?.trim());
+    const description = Boolean(meta('description'));
+    const canonical = dom.querySelector('link[rel="canonical"]')?.getAttribute('href') || '';
+    const noindex = noindexDirective(robotsHeader)||
+      ['robots','googlebot','bingbot','oai-searchbot','gptbot','claude-searchbot']
+        .some(name=>noindexDirective(meta(name)));
+    const headings = Boolean(dom.querySelector('h1')?.textContent?.trim());
+    const schema = Boolean(dom.querySelector('script[type="application/ld+json"]')?.textContent?.trim());
+    return {title, description, canonical, noindex, headings, schema};
+  };
+  // The Korean IDN is the existing approved SeonamMedi canonical for the
+  // exact /seonammedi public mount. Other cross-origin canonicals remain errors.
+  const correctPublicCanonical = (siteUrl, canonicalValue) => {
+    if(!canonicalValue)return false;
+    try{
+      const requested=new URL(siteUrl),observed=new URL(canonicalValue,requested);
+      const path=url=>{
+        let value=url.pathname;
+        while(value.length>1&&value.endsWith('/'))value=value.slice(0,-1);
+        return value||'/';
+      };
+      if(requested.origin!=='https://ekodi.kr'||observed.protocol!=='https:'||
+        observed.username||observed.password||observed.search||observed.hash)return false;
+      if(requested.origin===observed.origin&&path(requested)===path(observed))return true;
+      return path(requested)==='/seonammedi'&&
+        observed.href==='https://xn--3e0b8b58jw4co4mnpll3k.kr/';
+    }catch{return false;}
+  };
+  // /mokdaehumun is an operator-space landing page, not the public
+  // cooperative storefront. Its deliberate noindex must never be presented
+  // as an unconditional instruction to expose this workspace to crawlers.
+  // Never infer the policy for a different tenant from a similar URL.
+  const documentedNoindexPolicy = siteUrl => {
+    try {
+      const u=new URL(siteUrl);
+      return u.origin==='https://ekodi.kr'&&!u.search&&!u.hash&&
+        (u.pathname==='/mokdaehumun'||u.pathname==='/mokdaehumun/');
+    }catch{return false;}
+  };
+  // Export only currently loaded public-site audit results. No private
+  // provider evidence, OAuth credentials or cross-tenant records are included.
+  // An unscanned row remains "미점검"; the export is NOT an indexing report.
+  const technicalAuditCsv = (sites, audited, generatedAt) => {
+    const cell = value => {
+      let text=String(value??'').replace(/[\u0000-\u001f\u007f]/g,' ');
+      if(/^\s*[=+\-@]/.test(text))text="'"+text; // spreadsheet formula injection
+      return '"'+text.replaceAll('"','""')+'"';
+    };
+    const header=['조회시각(KST)','사이트','공개 주소','기술점검 상태','SEO 기술 준비','AEO·GEO 발견 준비','개선 사항','검색 차단','오류'];
+    const rows=sites.map(site=>{
+      const result=audited.get(site.url);
+      const status=!result?'미점검':result.error?'점검 실패':'점검 완료';
+      const blocked=!result?'미점검':result.error?'확인 불가':result.policyNoindex? (result.raw?.noindex===true?'정책상 검색 제외(noindex)':'검색 제외 정책 누락'):result.raw?.noindex===true?'noindex 확인·검토':'차단 지시 없음';
+      return [generatedAt,site.name||site.path||'사이트',site.url,status,
+        result?.error?'':result?.basic||'',result?.error?'':result?.ai||'',
+        Array.isArray(result?.improvements)?result.improvements.join(' / '):'',
+        blocked,result?.error||''];
+    });
+    return [header,...rows].map(row=>row.map(cell).join(',')).join('\r\n')+'\r\n';
+  };
+  const downloadTechnicalAudit = () => {
+    if(state.busy||!state.audited.size||!state.sites.length)return;
+    const now=new Date();
+    const timestamp=now.toLocaleString('ko-KR',{timeZone:'Asia/Seoul',hour12:false});
+    const csv=technicalAuditCsv(state.sites,state.audited,timestamp);
+    const blob=new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'});
+    const href=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=href;
+    link.download='ekodi-search-audit-'+now.toISOString().slice(0,10)+'.csv';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(()=>URL.revokeObjectURL(href),1000);
+    status('기술점검 결과 '+state.audited.size+'건을 내보냈습니다. 미점검 사이트도 별도 표시했으며, 검색엔진 등록·색인 여부는 포함하지 않습니다.');
+  };
+  const siteResult = site => state.audited.get(site.url);
+  function render() {
+    $('[data-sv-sites]').textContent=String(state.sites.length);
+    $('[data-sv-pages]').textContent=String(state.resources.length);
+    const audits=[...state.audited.values()];
+    // Zero checks performed is not a verified zero failures/successes.
+    const started=audits.length>0;
+    $('[data-sv-audited]').textContent=started?String(audits.filter(result=>!result.error).length):'미실행';
+    $('[data-sv-failed]').textContent=started?String(audits.filter(result=>Boolean(result.error)).length):'미실행';
+    const exportButton=$('[data-sv-export]');
+    exportButton.disabled=state.busy||!started;
+    exportButton.title=started?'전체 '+state.sites.length+'개 사이트 중 '+state.audited.size+'개 점검 결과 · 미점검 사이트도 표시':'기술점검 실행 후 결과를 다운로드할 수 있습니다.';
+    const target=$('[data-sv-rows]');target.replaceChildren();
+    const q=$('#sv-search').value.trim().toLowerCase(), group=$('#sv-category-filter').value;
+    const sites=state.sites.filter(site=>(!group||siteCategory(site)===group)&&
+      ((site.name+' '+site.url).toLowerCase().includes(q)));
+    $('[data-sv-count]').textContent=sites.length+' / '+state.sites.length+'개 표시';
+    for(const [index,site] of sites.entries()){
+      const row=document.createElement('tr');
+      const num=document.createElement('td');num.textContent=String(index+1);num.className='sv-num';
+      const category=document.createElement('td');category.textContent=siteCategory(site);category.className='sv-category';
+      const name=document.createElement('td');name.textContent=site.name||site.path||'사이트';
+      name.className='sv-site-name';name.title=name.textContent;
+      const locationCell=document.createElement('td');locationCell.className='sv-site-url';
+      const link=document.createElement('a');link.href=site.url;link.target='_blank';link.rel='noopener noreferrer';
+      link.textContent=new URL(site.url).host+new URL(site.url).pathname;
+      link.title=site.url;locationCell.append(link);
+      const result=siteResult(site), crossOrigin=new URL(site.url).origin!==location.origin;
+      const basic=document.createElement('td');basic.textContent=crossOrigin?'별도 호스트':result?.basic?.split(' · ')[0]||'미점검';
+      const ai=document.createElement('td');ai.textContent=crossOrigin?'별도 호스트':result?.ai?.split(' · ')[0]||'미점검';
+      if(result?.improvements?.length){basic.title='우선 개선: '+result.improvements.join(' / ');ai.title=basic.title;}
+      const providerCell=document.createElement('td');
+      const confirmed=['naver','google','daum','bing'].filter(providerId=>state.ledger?.evidence?.some(x=>
+        x.site_url===site.url&&x.provider_id===providerId&&x.check_type==='registration'
+        &&x.state==='confirmed_manually')).length;
+      providerCell.textContent=state.ledger?'수동확인 '+confirmed+' · 그 외 '+(4-confirmed):'근거 조회 전';
+      providerCell.title='공급자 API의 실제 등록·색인 확정 수치가 아니라 관리자가 저장한 수동 확인 근거입니다.';
+      const report=siteReport(site);
+      const reportCell=document.createElement('td');
+      reportCell.textContent=report?SITE_REPORT_LABELS[report.status]||'보고 미확인':'보고 미확인';
+      reportCell.title=report?.recommendation||'사이트 자체 보고의 근거가 없습니다.';
+      const action=document.createElement('td'),button=document.createElement('button');
+      button.type='button';button.className='secondary';button.textContent='자세히';
+      button.setAttribute('aria-label',(site.name||site.path||'사이트')+' 상세 관리');
+      button.addEventListener('click',()=>openManage(site));action.append(button);
+      row.append(num,category,name,locationCell,basic,ai,providerCell,reportCell,action);target.append(row);
+    }
+    if(!sites.length){const row=document.createElement('tr');const cell=document.createElement('td');
+      cell.colSpan=9;cell.textContent='조건에 맞는 공개 사이트가 없습니다.';row.append(cell);target.append(row);}
+    refreshManage();
+  }
+  async function load() {
+    if(!token())return status('최고관리자 로그인이 필요합니다.',true);
+    status('공개 사이트 원장을 조회하고 있습니다.');
+    try{
+      const data = await fetchBounded('/public-registry.json', {parse:'json'});
+      if(data?.policy!=='EKODI-PUBLIC-DISCOVERY-002'||!Array.isArray(data.resources))throw new Error('공개 레지스트리 형식 확인 필요');
+      state.discovery=data;
+      state.resources=data.resources.map(normalize).filter(Boolean);
+      const byUrl=new Map();
+      for(const resource of state.resources.filter(x=>x.type==='site'))byUrl.set(resource.url,resource);
+      // A route-only installation still deserves visibility in the inventory.
+      if(!byUrl.size)for(const resource of state.resources.filter(x=>x.type==='page'&&/^\/[^/]+\/?$/.test(x.path||'')))byUrl.set(resource.url,resource);
+      state.sites=[...byUrl.values()];
+      state.audited.clear(); // Do not retain results from a previous inventory.
+      renderProviderChoices();renderCategories();
+      const [robots,sitemap]=await Promise.allSettled([fetchBounded('/robots.txt'),fetchBounded('/sitemap.xml')]);
+      const ok=robots.status==='fulfilled' && sitemap.status==='fulfilled' && sitemap.value.includes('<urlset');
+      $('[data-sv-infra]').textContent=ok?'기술파일 응답':'확인 필요';
+      status('공개 레지스트리 '+state.sites.length+'개 사이트 / '+state.resources.length+'개 URL. 기술점검은 버튼을 눌러 실행하며, 검색엔진 등록·색인 확인과 다릅니다.');
+      render();
+      await loadLedger();
+    }catch(error){status('공개 사이트 원장을 불러오지 못했습니다: '+error.message,true);$('[data-sv-infra]').textContent='확인 실패';}
+  }
+  async function auditOne(site,{quiet=false}={}) {
+    try{
+      const receipt=await fetchBounded(site.url,{withResponse:true});
+      const html=validatePublicAuditResponse(site,receipt);
+      const result=checkDocument(html,{robotsHeader:receipt.robotsHeader});
+      const correctCanonical=correctPublicCanonical(site.url,result.canonical);
+      const policyNoindex=documentedNoindexPolicy(site.url);
+      const policyNote=policyNoindex?(result.noindex?'공유 운영 공간 · 검색 제외 정책 유지':'공유 운영 공간 · 검색 제외 정책 누락 확인'):null;
+      const basic=[result.title,result.description,correctCanonical,!result.noindex].filter(Boolean).length;
+      const ai=[result.headings,result.schema,result.description].filter(Boolean).length;
+      const improvements=[!result.title?'고유 페이지 제목 보완':null,
+        !result.description?'검색 설명문 보완':null,
+        !correctCanonical?'정규 URL(canonical) 정비':null,
+        result.noindex&&!policyNoindex?'검색로봇 noindex 지시(메타·HTTP 헤더) 점검':null,
+        policyNoindex&&!result.noindex?'공유 운영 공간 검색 제외 정책 누락 점검':null,
+        !result.headings?'H1 제목 보완':null,
+        !result.schema?'구조화 데이터 검토':null].filter(Boolean);
+      state.audited.set(site.url,{
+        error:null,basic:Math.round(basic/4*100)+'점 ('+basic+'/4) · 기술 준비도',
+        ai:Math.round(ai/3*100)+'점 ('+ai+'/3) · 발견 준비도',
+        improvements,raw:result,policyNoindex,policyNote
+      });
+      if(!quiet)status(site.name+' 기술 점검 완료. '+(policyNote?policyNote+' · ':'')+'우선 개선: '+(state.audited.get(site.url).improvements.join(', ')||'기본 항목 충족')+'. 이는 등록·검색순위·AI 인용 검증이 아닙니다.');
+    }catch(error){state.audited.set(site.url,{basic:'점검 실패',ai:'근거 없음',error:error.message});if(!quiet)status(site.name+': '+error.message,true);}
+    render();
+  }
+  async function auditAll(){
+    if(state.busy||!state.sites.length)return;
+    state.busy=true;render();$('[data-sv-audit-all]').disabled=true;
+    let attempted=0,passed=0,failed=0,skipped=0;
+    // Sequential bounded requests avoid overloading EKODI or the browser.
+    try{
+      for(const site of state.sites) {
+        if(new URL(site.url).origin!==location.origin){skipped++;continue;} // Never browser-fetch arbitrary independent hosts.
+        if(!token())throw new Error('최고관리자 세션 종료');
+        await auditOne(site,{quiet:true});
+        attempted++;
+        if(state.audited.get(site.url)?.error)failed++;else passed++;
+        status('기술점검 '+attempted+' / '+state.sites.length+' · 성공 '+passed+' · 실패 '+failed+' · 별도 호스트 제외 '+skipped);
+      }
+      status('기술점검 종료: 성공 '+passed+' · 실패 '+failed+' · 별도 호스트 제외 '+skipped+'개. 검색엔진 등록·색인은 공급자 근거가 필요합니다.',failed>0);
+    }catch(error){status('점검 중단: '+error.message,true);}
+    finally{state.busy=false;$('[data-sv-audit-all]').disabled=false;render();}
+  }
+  $('[data-sv-google-read]').addEventListener('click',loadGoogleSearch);
+  $('[data-sv-reload]').addEventListener('click',load);
+  // Central bulk crawling is retired: sites own execution; the summary reads receipts.
+  $('[data-sv-audit-all]').disabled=true;
+  $('[data-sv-export]').addEventListener('click',downloadTechnicalAudit);
+  $('#sv-search').addEventListener('input',render);
+  $('#sv-category-filter').addEventListener('change',render);
+  $('[data-sv-manage-close]').addEventListener('click',()=>{$('[data-sv-manage-panel]').hidden=true;});
+  $('[data-sv-manage-audit]').addEventListener('click',()=>{const site=state.sites.find(s=>s.url===state.selectedSite);if(site&&new URL(site.url).origin===location.origin)auditOne(site);});
+  $('#sv-provider-site').addEventListener('change',event=>{state.selectedSite=event.target.value;
+    googleStatus('선택한 사이트의 Google 실측을 확인하려면 조회 버튼을 누르세요.');
+    $('[data-sv-google-summary]').textContent='';
+    renderProviderMatrix();fillEvidenceForm();refreshManage();});
+  setupEvidenceForm();
+  window.addEventListener('ekodi-admin-section-changed',event=>{
+    if(event.detail?.section===SECTION&&!state.discovery)load();
+  });
+  window.addEventListener('ekodi-admin-ready',()=>{
+    if(window.EKODIAdminPanels?.current?.()===SECTION&&!state.discovery)load();
+  });
+  if(window.EKODIAdminPanels?.current?.()===SECTION)queueMicrotask(load);
+})();
+,'i').test(report.adminPath);
     ownAdmin.hidden=!safeAdmin;
     if(safeAdmin)ownAdmin.href=report.adminPath;
     else ownAdmin.removeAttribute('href');
