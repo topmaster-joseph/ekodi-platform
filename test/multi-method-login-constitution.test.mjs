@@ -76,4 +76,6 @@ test('cooperative logins open the multi-method /auth/ choice instead of a Google
   const fn = coop.slice(coop.indexOf('function loginUrl()'), coop.indexOf('async function authRequest'));
   assert.match(fn, /url\.searchParams\.set\('site', 'coop'\)/);
   assert.doesNotMatch(fn, /'direct'/);
+  const page = read('cooperative-page.js');
+  assert.doesNotMatch(page, /Google로 로그인|Google 계정으로 로그인/, 'user-facing login labels must not name a single provider');
 });
