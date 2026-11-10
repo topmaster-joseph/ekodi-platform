@@ -7,8 +7,8 @@ const pathOf = url => {
   try {
     const u = new URL(url);
     if (u.protocol !== 'https:' || u.hostname !== 'ekodi.kr' || u.username || u.password || u.search || u.hash) return null;
-    const path = u.pathname.replace(new RegExp('/+
-    return new RegExp('^/[a-z0-9/_-]* && !path.includes('//') ? path : null;
+    const path = u.pathname.replace(/\/+$/, '') || '/';
+    return /^\/[a-z0-9/_-]*$/i.test(path) && !path.includes('//') ? path : null;
   } catch { return null; }
 };
 export function buildSiteSearchPromotionOversight({sites=[],automation={}}={}) {
