@@ -31,11 +31,11 @@ export function guestConfig(env) {
   const profile = String(env?.EKODIPAY_PROFILE || 'mall');
   const secret = String(env?.BOOKS_GUEST_OTP_SECRET || '');
   const sender = String(env?.BOOKS_GUEST_MAIL_SENDER || '').trim().toLowerCase();
-  const enabled = yes(env?.BOOKS_GUEST_CHECKOUT_ENABLED) &&
-    yes(env?.BOOKS_DIGITAL_MID_APPROVED) && yes(env?.PAYMENTS_ENABLED) &&
-    profile !== 'mall' && secret.length >= 32 && sender === 'ekodibiz@gmail.com' &&
-    env?.DATA_MODE !== 'isolated-staging';
-  return { enabled:Boolean(enabled), secret, sender };
+  const accessEnabled = yes(env?.BOOKS_GUEST_ACCESS_ENABLED) && secret.length >= 32 &&
+    sender === 'ekodibiz@gmail.com' && env?.DATA_MODE !== 'isolated-staging';
+  const enabled = accessEnabled && yes(env?.BOOKS_GUEST_CHECKOUT_ENABLED) &&
+    yes(env?.BOOKS_DIGITAL_MID_APPROVED) && yes(env?.PAYMENTS_ENABLED) && profile !== 'mall';
+  return { enabled:Boolean(enabled), accessEnabled:Boolean(accessEnabled), secret, sender };
 }
 function allowedOrigin(request) {
   const origin = request.headers.get('origin') || '';
@@ -62,7 +62,7 @@ function bearerCookie(request) {
 }
 export async function guestBuyer(env,request,now=Date.now()) {
   const cfg = guestConfig(env);
-  const tok = cfg.enabled && bearerCookie(request);
+  const tok = cfg.accessEnabled && bearerCookie(request);
   if(!tok)return null;
   const row = await env.DB.prepare('SELECT buyer_id,email,expires_at FROM books_guest_sessions WHERE token_hash=? AND expires_at>?')
     .bind(await digest(tok),now).first().catch(()=>null);
@@ -71,7 +71,7 @@ export async function guestBuyer(env,request,now=Date.now()) {
 }
 async function featureReady(env) {
   const cfg = guestConfig(env);
-  if(!cfg.enabled || !env.DB?.prepare)return false;
+  if(!cfg.accessEnabled || !env.DB?.prepare)return false;
   const status = await connectedSenderStatus(env,[cfg.sender]).catch(()=>[]);
   return Boolean(status[0]?.ready);
 }
@@ -84,7 +84,7 @@ export async function guestEndpoint(env,request,path,body={},options={}) {
     const buyer = await guestBuyer(env,request,now);
     return response({ok:true,verified:Boolean(buyer),email:buyer?buyer.email.replace(/^(.{2}).*(@.*)$/,'$1***$2'):''});
   }
-  if(!cfg.enabled)return deny('GUEST_NOT_ENABLED','전자책 비회원 결제는 디지털상품 전용 가맹점 승인 후 개통됩니다.',503);
+  if(!cfg.accessEnabled)return deny('GUEST_NOT_ENABLED','비회원 이메일 인증 기능은 아직 준비 중입니다.',503);
   if(!allowedOrigin(request) || request.headers.get('content-type')?.split(';')[0]!=='application/json')
     return deny('ORIGIN_DENIED','보안상 이 요청은 허용되지 않습니다.',403);
   if(path==='/guest/signout' && request.method==='POST') {
@@ -115,7 +115,7 @@ export async function guestEndpoint(env,request,path,body={},options={}) {
       .bind(id,email,emailHash,ipHash,codeHash,now+CODE_TTL,now).run();
     try {
       const send = options.sendCode || ((to,otp)=>sendAsConnectedAccount(env,cfg.sender,
-        {to,subject:'[에코디서점] 비회원 구매 이메일 인증번호',text:'전자책 구매 인증번호: '+otp+
+        {to,subject:'[에코디서점] 비회원 구매 이메일 인증번호',body:'전자책 구매 인증번호: '+otp+
           '\n10분간 유효합니다. 본인이 요청하지 않았다면 이 메일을 무시하세요.'}));
       await send(email,code);
     } catch {
