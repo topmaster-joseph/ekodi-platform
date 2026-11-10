@@ -28,6 +28,7 @@ function env(db) {
     OPERATOR_EMAILS:'op@ekodi.kr',BOOKS_GUEST_CHECKOUT_ENABLED:'true',BOOKS_DIGITAL_MID_APPROVED:'true',
     PAYMENTS_ENABLED:'true',BOOKS_GUEST_MAIL_SENDER:'ekodibiz@gmail.com',
     BOOKS_GUEST_OTP_SECRET:'a-test-secret-not-for-production-32-characters-long-20261110',
+    BOOKS_GUEST_ACCESS_ENABLED:'true',
     EKODIPAY_PROFILE:'books',PUBLIC_BASE_URL:'https://ekodi.kr/books',
     EKODIPAY:{
       readiness:async()=>({ok:true,data:{ready:true,mode:'live',profile:'books',merchant:'test',mid:'test-digital'}}),
