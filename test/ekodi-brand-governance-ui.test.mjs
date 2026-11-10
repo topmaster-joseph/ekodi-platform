@@ -17,6 +17,9 @@ test('brand governance is in the super-admin site menu and canonical route',asyn
  assert.ok(routes.includes("'brand-governance':'sites'"));
  const loader=await load('admin-demand-loader.js');
  for(const token of ["'brand-governance':","admin-brand-governance.js","admin-brand-governance.css","/admin/sites/brand-governance"])assert.ok(loader.includes(token),token);
+ const layout=await load('admin-menu-layout.js');
+ assert.ok(layout.includes("['brand-governance','brand-governance']"));
+ assert.ok(layout.includes('#brand-governance:brand-governance'));
 });
 test('brand console remains read-only and does not request legal filings or external paid actions',async()=>{
  const src=await load('admin-brand-governance.js');
