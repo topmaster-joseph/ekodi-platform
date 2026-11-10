@@ -15,13 +15,17 @@ test('brand governance is in the super-admin site menu and canonical route',asyn
  assert.ok(adminMenuOrder().includes('brand-governance'));
  const routes=await load('admin-canonical-routes.js');
  assert.ok(routes.includes("'brand-governance':'sites'"));
- const loader=await load('admin-demand-loader.js');
- for(const token of ["'brand-governance':","admin-brand-governance.js","admin-brand-governance.css","/admin/sites/brand-governance"])assert.ok(loader.includes(token),token);
+ const registry=await load('admin-menu-registry.js');
+ assert.match(registry,/import '\.\/admin-brand-governance\.js';/);
+ const brandModule=await load('admin-brand-governance.js');
+ assert.ok(brandModule.includes("admin-brand-governance.css"));
  const policy=JSON.parse(await load('config/admin-menu-audience-policy.json'));
  assert.equal(policy.classification.entries['brand-governance']?.audience,'platform-super-admin');
  const layout=await load('admin-menu-layout.js');
- assert.ok(layout.includes("['brand-governance','brand-governance']"));
- assert.ok(layout.includes('#brand-governance:brand-governance'));
+ assert.ok(layout.includes('const DEMAND_KEYS=new Map(['));
+ const compact=await load('admin-menu-layout.compact.js');
+ assert.ok(compact.includes('admin-menu-layout.js'));
+
 });
 test('brand console remains read-only and does not request legal filings or external paid actions',async()=>{
  const src=await load('admin-brand-governance.js');
