@@ -129,7 +129,7 @@ export async function inspect({environment,token,fetchImpl=fetch,files}){
   if(!ref)throw new Error('invalid_points_environment');
   if(!token)throw new Error('management_credential_required');
   const expected=pointMigrations(files||readdirSync(new URL('../supabase/migrations/',import.meta.url)));
-  if(expected.length<20)throw new Error('points_migration_catalog_incomplete');
+  if(expected.length<21)throw new Error('points_migration_catalog_incomplete');
   const base='https://api.supabase.com/v1/projects/'+ref;
   const [schemaRows,migrationRows,functions]=await Promise.all([
     apiJson(base+'/database/query/read-only',token,{method:'POST',query:SCHEMA_QUERY,fetchImpl}),
