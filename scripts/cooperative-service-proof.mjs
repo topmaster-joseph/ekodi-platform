@@ -243,6 +243,7 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     await member.locator('#myBusinessForm button[type="submit"]').click();
     await member.waitForFunction(() => document.querySelector('#status').textContent.includes('나의 사업정보가 저장'));
     await reload(member); assert.equal(await member.locator('#myBusinessForm [name="business"]').inputValue(), memberBusiness);
+    await tab(member, '함께하는 구성원'); // 2026-11-07: shared roster lives in its own member tab
     for (const width of [320, 390]) {
       await member.setViewportSize({ width, height: 844 });
       const lines = await member.getByRole('cell', { name: '공동유통', exact: true }).evaluate(cell => {
@@ -254,6 +255,7 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     }
     proof(coop, 'mobile-table-preserves-natural-korean-words', { widths: [320, 390] });
     assert.equal((await read(coop)).state.founders[0].business, business);
+    await tab(member, '조합 준비자료'); // charter download lives in the preparation tab
     assert.ok((await download(member, '#charter')).text.includes(coop.name));
     await screenshot(member, coop.slug + '-service-member-390');
     await member.goto(root + '/admin'); await member.waitForSelector('#gate:not([hidden])');
