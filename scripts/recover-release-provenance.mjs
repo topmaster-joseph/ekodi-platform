@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { rateLimitDecision, isIntegrationScopeRefusal, staleWorkflowFiles, staleBaseRemedy } from './lib/recovery-github-errors.mjs';
+import { rateLimitDecision, isIntegrationScopeRefusal, staleWorkflowFiles, staleBaseRemedy, staleBaseAnnouncement, STALE_BASE_LABEL } from './lib/recovery-github-errors.mjs';
 import {findExactHumanGateApproval} from './release-human-gate-evidence.mjs';
 
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
@@ -200,6 +200,36 @@ receiptUrl.searchParams.set('taskId',taskId);receiptUrl.searchParams.set('branch
 const receipt=await request(receiptUrl,{headers:{accept:'application/json','user-agent':'ekodi-release-provenance-recovery'}});
 if(!receipt.response.ok||receipt.data?.authorized!==true)await fail(`recovery receipt not authorized: HTTP ${receipt.response.status} ${JSON.stringify(receipt.data)}`);
 
+// PARKED-RELEASE-VISIBILITY-001: leave exactly one current refusal notice and a
+// findable label. Deliberately githubOnce(), not github(): on a quota refusal
+// github() goes through the recording path and exits, and exiting here would
+// lose the remedy this is about to record. Every write is best effort and may
+// never block the refusal path; the dead letter remains the durable record.
+async function announceStaleBase(remedy){
+  try{
+    const existing=await githubOnce(`/repos/${repo}/issues/${prNumber}/comments?per_page=100`);
+    const plan=staleBaseAnnouncement(existing.response.ok?existing.data:[],{headSha,remedy});
+    const json={'content-type':'application/json'};
+    if(plan.action==='update'){
+      await githubOnce(`/repos/${repo}/issues/comments/${plan.commentId}`,{method:'PATCH',headers:json,body:JSON.stringify({body:plan.body})});
+    }else{
+      await githubOnce(`/repos/${repo}/issues/${prNumber}/comments`,{method:'POST',headers:json,body:JSON.stringify({body:plan.body})});
+    }
+  }catch(error){console.error('[EKODI][RELEASE-PROVENANCE-RECOVERY] stale-base notice failed: '+text(error?.message||error,200))}
+  // Create the label before attaching it: attaching a label the repository does
+  // not define is refused, and this is the first change that uses this one.
+  try{
+    await githubOnce(`/repos/${repo}/labels`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({name:STALE_BASE_LABEL,color:'b60205',
+        description:'릴리스 provenance 복구가 오래된 base로 거부됨 — 현재 main 위에 재발행 필요'})});
+  }catch{}
+  try{
+    const labelled=await githubOnce(`/repos/${repo}/issues/${prNumber}/labels`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({labels:[STALE_BASE_LABEL]})});
+    out('parked_release_label',labelled.response.ok?STALE_BASE_LABEL:'not_applied');
+  }catch(error){console.error('[EKODI][RELEASE-PROVENANCE-RECOVERY] parked-release label failed: '+text(error?.message||error,200))}
+}
+
 // Check an existing exactly approved orchestrator branch before attempting any GitHub write.
 // This also supports delegated owner creation when GITHUB_TOKEN cannot create protected refs.
 const existingRefPath=`/repos/${repo}/git/ref/heads/${branchRef.split('/').map(encodeURIComponent).join('/')}`;
@@ -219,8 +249,7 @@ if(existing.response.ok){
       const files=compare.response.ok?staleWorkflowFiles(compare.data):[];
       if(files.length){
         const remedy=staleBaseRemedy({prNumber,headSha,files});
-        await github(`/repos/${repo}/issues/${prNumber}/comments`,{method:'POST',headers:{'content-type':'application/json'},
-          body:JSON.stringify({body:`EKODI release-provenance recovery could not issue a release branch for \`${headSha}\`.\n\n${remedy}`})});
+        await announceStaleBase(remedy);
         await fail(remedy);
       }
     }
