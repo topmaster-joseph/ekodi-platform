@@ -47,6 +47,12 @@ export function verifyChurchHeaderNavigation(html,nestedScript=''){
     return Object.freeze({contract:'legacy-reviewed',primaryItems:items.length});
   }
   if(!modern)fail('unapproved primary navigation; expected original 예배자료 or exact six-item menu');
+  // In the approved six-link v2 shell, a detached header scripture ticker must
+  // not return. Only the header is checked: devotional body content is retained.
+  const header=html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0]||'';
+  if(/\bclass\s*=\s*["'][^"']*\bdaily-verse\b/.test(header) ||
+     /<script\b[^>]*\bsrc\s*=\s*["'](?:\.\/)?church-daily-verse\.js["']/.test(html))
+    fail('retired header Scripture or verse reinjection returned');
   if(!html.includes('src="church-section-nav.js" defer'))fail('selected-content controller not loaded');
   if(!html.includes('church-compact-navigation.css'))fail('responsive navigation stylesheet missing');
   if(!html.includes('data-church-weekly'))fail('date-scoped worship content missing');
