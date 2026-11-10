@@ -42,8 +42,7 @@ function allowedOrigin(request) {
   const url = new URL(request.url);
   const own = url.origin;
   return origin === 'https://ekodi.kr' ||
-    (origin === own && (url.hostname === 'books.ekodi.kr' ||
-      url.hostname.endsWith('.workers.dev')));
+    (origin === own && url.hostname.endsWith('.workers.dev'));
 }
 function response(data,status=200,cookie='') {
   const headers = new Headers({ 'content-type':'application/json; charset=utf-8',
