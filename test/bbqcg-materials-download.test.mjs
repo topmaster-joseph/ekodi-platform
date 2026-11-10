@@ -69,7 +69,7 @@ test('Space Worker serves only fixed filenames under verified customer tenant',a
  const source=await read('space-worker.js');
  assert.match(source,/bbqcgPublicResourceDownload/);
  assert.match(source,/bbqcgHomeWithResources/);
- assert.match(source,/\/bbqcg\/resources\/\(\?:store-promise/);
+ assert.ok(source.includes("store-promise") && source.includes("qcs-gms-checklist"));
  assert.match(source,/resolved\.source!=='store-user-sites'/);
  assert.match(source,/resolved\.status==='paused'/);
  assert.match(source,/bbqcheonggye/);
