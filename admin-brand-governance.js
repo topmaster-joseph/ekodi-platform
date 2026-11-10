@@ -34,7 +34,7 @@ const LINKS=[
 const escapeHtml=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const plainPath=u=>{try{const x=new URL(u,'https://ekodi.kr');return x.hostname==='ekodi.kr'?x.pathname.replace(/\/$/,'')||'/':null}catch{return null}};
 const safeHref=value=>{try{const url=new URL(value,location.origin);return url.protocol==='https:'?url.href:''}catch{return''}};
-const isAdmin=()=>Boolean(document.querySelector('#app:not([hidden])') && sessionStorage.getItem('ekodi-auth-token'));
+const isAdmin=()=>document.documentElement?.dataset?.ekodiMenuTemplatesAuthorized==='true' && Boolean(document.getElementById('ekodiAdminMenuTemplates'));
 const tabFromLocation=()=>{const value=new URLSearchParams(location.search).get('brandTab')||'principles';return VALID_TABS.has(value)?value:'principles'};
 let tab=tabFromLocation(),items=[],filter='',pending=false,loaded=false;
 function panel(){return document.getElementById(PANEL_ID)}
@@ -101,7 +101,7 @@ async function loadSites(){
    const response=await fetch('/ecosystem-services.json',{cache:'no-store',credentials:'same-origin'});
    const data=response.ok?await response.json():null;
    const services=Array.isArray(data?.services)?data.services.map(x=>({...x,source:'published-service-registry'})):[];
-   if(!window.EKODICampus && window.EKODIAdminDemand?.activate) await window.EKODIAdminDemand.activate('campus');
+   // Never switch the user's active admin section while reading the public brand registry.
    const customerSites=window.EKODICampus?.sitesForSection?.('sites-all')||[];
    const extra=customerSites.map(s=>({id:s.id||s.key,name:s.name,url:s.adminRoot?'https://ekodi.kr'+s.adminRoot.publicPath:s.url||'https://'+s.domain,status:s.lifecycle||'상태 확인 필요',category:s.group==='clients'?'partner':'site',source:'site-directory'}));
    // Registry availability is a declaration; only live HTTP or verified receipt proves production state.
