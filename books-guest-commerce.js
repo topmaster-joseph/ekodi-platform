@@ -94,7 +94,8 @@ export async function guestEndpoint(env,request,path,body={},options={}) {
     return response({ok:true},200,cookieFor('',0));
   }
   if(path==='/guest/start' && request.method==='POST') {
-    if(!await featureReady(env))return deny('MAIL_UNAVAILABLE','이메일 인증을 준비하고 있습니다.',503);
+    // Injected mail readiness exists only for isolated unit tests; production passes no options.
+    if(options.mailReady !== true && !await featureReady(env))return deny('MAIL_UNAVAILABLE','이메일 인증을 준비하고 있습니다.',503);
     const email = cleanEmail(body.email);
     if(!validEmail(email))return deny('EMAIL_INVALID','올바른 이메일을 입력해 주세요.',400);
     const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
