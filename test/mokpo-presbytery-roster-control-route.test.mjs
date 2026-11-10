@@ -1,4 +1,5 @@
 import test from 'node:test';
+import './support-cloudflare-workers-stub.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';

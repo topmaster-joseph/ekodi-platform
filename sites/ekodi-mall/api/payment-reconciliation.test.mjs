@@ -325,7 +325,11 @@ test('reconciliation raises de-duplicated operator alerts and records recovered 
       method: 'POST', body: JSON.stringify({ paymentKey: 'pk_alert', orderId: id, amount: 15000 }),
     }), env);
   } finally { toss.restore(); }
-  const alerts = () => db.db.prepare('SELECT severity,kind,status,occurrences,message FROM mall_ops_alerts WHERE order_id=? ORDER BY id').all(id);
+  // EKODI-OPERATOR-NOTIFY-001: a confirmed payment also records exactly one informational order.paid notice.
+  const paidNotices = db.db.prepare("SELECT severity,message FROM mall_ops_alerts WHERE order_id=? AND kind='order.paid'").all(id);
+  assert.equal(paidNotices.length, 1);
+  assert.equal(paidNotices[0].severity, 'info');
+  const alerts = () => db.db.prepare("SELECT severity,kind,status,occurrences,message FROM mall_ops_alerts WHERE order_id=? AND kind<>'order.paid' ORDER BY id").all(id);
   const original = globalThis.fetch;
   globalThis.fetch = async () => Response.json({ code: 'UNAUTHORIZED_KEY', message: '인증되지 않은 시크릿 키 live_gsk_ABCDEF123' }, { status: 401 });
   try {

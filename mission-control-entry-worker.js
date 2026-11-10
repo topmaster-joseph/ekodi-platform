@@ -151,6 +151,9 @@ async function proxyPersonalFinanceAdminControl(request, env) {
   return applyApiSecurityHeaders(response);
 }
 
+// EKODI-OPERATOR-NOTIFY-001: 내부 Worker 전용 운영자 알림 RPC(named entrypoint, 공개 경로 없음).
+export { OperatorNotifier } from './operator-notify.js';
+
 export default {
   async fetch(request, env, ctx) {
     const incoming = new URL(request.url);
