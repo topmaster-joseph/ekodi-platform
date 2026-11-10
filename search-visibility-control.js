@@ -6,6 +6,7 @@ import { buildEkodiPublicRegistry } from './public-discovery-registry.js';
 import { listSitePublicationSettings } from './site-publication-runtime.js';
 import { googleSearchConsoleReadOnly } from './google-search-console-readonly.js';
 import { ADMIN_SERVICE_CATALOG, canonicalServiceChannelAdminPath } from './admin-service-catalog.js';
+import { buildSiteSearchPromotionOversight } from './site-search-autonomy-summary.js';
 
 export const SEARCH_CONTROL_PATH='/api/control/search-visibility';
 export const SEARCH_PROVIDER_CATALOG=Object.freeze([
@@ -275,7 +276,11 @@ export async function handleSearchVisibilityControl(request,env){
       return json({ok:true,schemaVersion:1,sites,providers:SEARCH_PROVIDER_CATALOG,
         evidence:(evidence.results||[]).filter(x=>sites.some(s=>s.url===x.site_url)),
         evidenceTruncated:(evidence.results||[]).length===6000,
-        audit:history.results||[],indexNow,automation:joinSiteIndexNowSubmissions(automation,indexNow),generatedAt:new Date().toISOString(),
+        audit:history.results||[],indexNow,
+        automation:joinSiteIndexNowSubmissions(automation,indexNow),
+        oversight:buildSiteSearchPromotionOversight({
+          sites,automation:joinSiteIndexNowSubmissions(automation,indexNow),
+        }),generatedAt:new Date().toISOString(),
         policy:'manual_confirmation_not_provider_api_verification'});
     }
     if(!String(request.headers.get('content-type')||'').includes('application/json'))return denied(415,'JSON_REQUIRED');

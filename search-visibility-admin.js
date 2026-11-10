@@ -67,7 +67,7 @@
     <h3>운영 사이트 목록</h3>
     <div class="sv-toolbar">
       <button class="secondary" type="button" data-sv-reload>공개 사이트 목록 갱신</button>
-      <button class="secondary" type="button" data-sv-audit-all>전체 사이트 기술점검</button>
+      <button class="secondary" type="button" data-sv-audit-all hidden aria-hidden="true">전체 사이트 기술점검 (이전 방식)</button>
       <button class="secondary" type="button" data-sv-export disabled title="기술점검 실행 후 결과를 다운로드할 수 있습니다.">점검 결과 CSV</button>
       <label for="sv-category-filter">분류</label><select id="sv-category-filter" aria-label="사이트 분류 필터"><option value="">전체 분류</option></select>
       <label for="sv-search">검색</label><input id="sv-search" type="search" placeholder="사이트명 또는 주소">
@@ -75,8 +75,8 @@
     </div>
     <div class="sv-status" data-sv-status role="status" aria-live="polite">관리자 인증 후 공개 사이트 목록을 불러옵니다.</div>
     <div class="sv-scroll"><table class="sv-table"><thead><tr>
-      <th scope="col">번호</th><th scope="col">분류</th><th scope="col">사이트</th><th scope="col">주소</th><th scope="col">SEO</th><th scope="col">AEO·GEO</th><th scope="col">검색등록</th><th scope="col">관리</th>
-    </tr></thead><tbody data-sv-rows><tr><td colspan="8">목록 조회 전</td></tr></tbody></table></div>
+      <th scope="col">번호</th><th scope="col">분류</th><th scope="col">사이트</th><th scope="col">주소</th><th scope="col">SEO</th><th scope="col">AEO·GEO</th><th scope="col">검색등록</th><th scope="col">사이트 자체 보고</th><th scope="col">자세히</th>
+    </tr></thead><tbody data-sv-rows><tr><td colspan="9">목록 조회 전</td></tr></tbody></table></div>
     <section class="sv-manage" data-sv-manage-panel hidden aria-label="선택한 사이트의 상세 관리">
       <div class="sv-manage-head"><div><small>사이트 상세 관리</small><h3 data-sv-manage-name>사이트를 선택하세요</h3><p data-sv-manage-path></p></div>
         <button type="button" class="secondary" data-sv-manage-close>닫기</button></div>
@@ -84,8 +84,10 @@
         <div><small>SEO 기술 준비</small><strong data-sv-manage-basic>미점검</strong></div>
         <div><small>AEO·GEO 기술 준비</small><strong data-sv-manage-ai>미점검</strong></div>
         <div><small>개선 사항</small><strong data-sv-manage-improve>점검 후 표시</strong></div>
+        <div><small>사이트 자체 보고</small><strong data-sv-site-report>보고 미확인</strong></div>
       </div>
       <div class="sv-toolbar"><button type="button" class="secondary" data-sv-manage-audit>이 사이트 기술점검</button>
+        <a data-sv-own-admin target="_blank" rel="noopener noreferrer" hidden>사이트 자체 운영 상세</a>
         <a data-sv-manage-open target="_blank" rel="noopener noreferrer">사이트 열기</a></div>
       <details class="sv-channel-details"><summary>검색엔진 공식 관리도구</summary>
         <p class="sv-intro">외부 등록·소유권·색인 결과는 실제 공급자 근거로만 확정합니다.</p>
@@ -170,6 +172,8 @@
     needs_action:'조치 필요',not_applicable:'해당 없음'};
   const state = { resources:[], sites:[], audited:new Map(), discovery:null, busy:false, selectedSite:'',
     ledger:null,ledgerBusy:false };
+  const SITE_REPORT_LABELS={reported:'정상 보고',partial:'부분 보고',review:'확인 대기',needs_action:'조치 필요',unreported:'보고 미확인'};
+  const siteReport=site=>state.ledger?.oversight?.find(x=>x.siteUrl===site.url);
   const ledgerStatus=message=>{$('[data-sv-ledger-status]').textContent=message;};
   const evidenceFor=(id,check)=>state.ledger?.evidence?.find(x=>x.site_url===state.selectedSite
     && x.provider_id===id&&x.check_type===check);
@@ -203,7 +207,7 @@
         ' (제출 결과는 색인 증빙이 아닙니다)');
       renderProviderMatrix();
     }catch(error){
-      state.ledger=null;ledgerStatus('서버 확인 원장을 사용할 수 없습니다: '+error.message+
+      state.ledger=null;render();ledgerStatus('서버 확인 원장을 사용할 수 없습니다: '+error.message+
         '. 수동 상태를 저장하거나 확인 완료로 표기할 수 없습니다.');
       renderProviderMatrix();
     }
@@ -373,6 +377,15 @@
     if(!site){panel.hidden=true;return;}
     const crossOrigin=new URL(site.url).origin!==location.origin;
     const result=siteResult(site);
+    const report=siteReport(site);
+    $('[data-sv-site-report]').textContent=report
+      ?(SITE_REPORT_LABELS[report.status]||'보고 미확인')+' · '+report.recommendation
+      :'보고 미확인 · 해당 사이트의 자체 실행 근거를 기다리고 있습니다.';
+    const ownAdmin=$('[data-sv-own-admin]');
+    const safeAdmin=typeof report?.adminPath==='string'&&/^\/[a-z0-9/_-]+$/i.test(report.adminPath);
+    ownAdmin.hidden=!safeAdmin;
+    if(safeAdmin)ownAdmin.href=report.adminPath;
+    else ownAdmin.removeAttribute('href');
     $('[data-sv-manage-name]').textContent=(site.name||site.path||'사이트')+' · '+siteCategory(site);
     $('[data-sv-manage-path]').textContent=site.url;
     $('[data-sv-manage-basic]').textContent=crossOrigin?'별도 호스트':result?.basic||'미점검';
@@ -551,14 +564,18 @@
         &&x.state==='confirmed_manually')).length;
       providerCell.textContent=state.ledger?'수동확인 '+confirmed+' · 그 외 '+(4-confirmed):'근거 조회 전';
       providerCell.title='공급자 API의 실제 등록·색인 확정 수치가 아니라 관리자가 저장한 수동 확인 근거입니다.';
+      const report=siteReport(site);
+      const reportCell=document.createElement('td');
+      reportCell.textContent=report?SITE_REPORT_LABELS[report.status]||'보고 미확인':'보고 미확인';
+      reportCell.title=report?.recommendation||'사이트 자체 보고의 근거가 없습니다.';
       const action=document.createElement('td'),button=document.createElement('button');
-      button.type='button';button.className='secondary';button.textContent='관리';
+      button.type='button';button.className='secondary';button.textContent='자세히';
       button.setAttribute('aria-label',(site.name||site.path||'사이트')+' 상세 관리');
       button.addEventListener('click',()=>openManage(site));action.append(button);
-      row.append(num,category,name,locationCell,basic,ai,providerCell,action);target.append(row);
+      row.append(num,category,name,locationCell,basic,ai,providerCell,reportCell,action);target.append(row);
     }
     if(!sites.length){const row=document.createElement('tr');const cell=document.createElement('td');
-      cell.colSpan=8;cell.textContent='조건에 맞는 공개 사이트가 없습니다.';row.append(cell);target.append(row);}
+      cell.colSpan=9;cell.textContent='조건에 맞는 공개 사이트가 없습니다.';row.append(cell);target.append(row);}
     refreshManage();
   }
   async function load() {
@@ -630,7 +647,8 @@
   }
   $('[data-sv-google-read]').addEventListener('click',loadGoogleSearch);
   $('[data-sv-reload]').addEventListener('click',load);
-  $('[data-sv-audit-all]').addEventListener('click',auditAll);
+  // Central bulk crawling is retired: sites own execution; the summary reads receipts.
+  $('[data-sv-audit-all]').disabled=true;
   $('[data-sv-export]').addEventListener('click',downloadTechnicalAudit);
   $('#sv-search').addEventListener('input',render);
   $('#sv-category-filter').addEventListener('change',render);
