@@ -45,7 +45,7 @@ test('native devotion sharing has no repeated title/date/passage in the message'
   };
   const shareBody=new Function('current','siteLabel','panels',js.slice(begin,end)+'\nreturn shareBody;')(current,'에코디교회',new Map());
   const all=shareBody('page');
-  assert.equal(all.title,'에코디교회 오늘의 매일묵상 · 고린도전서 3:1-9');
+  assert.equal(all.title,'에코디언의 묵상나눔 · 고린도전서 3:1-9');
   assert.equal(all.text,current.activities.keyLine);
   assert.ok(!all.text.includes('11/1'));
   assert.ok(!all.text.includes('고린도전서 3:1-9'));
