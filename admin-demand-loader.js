@@ -56,7 +56,6 @@
       insert: 'after-aiops',
     },
     'site-health':{label:'Site Health',icon:'✓',styles:['site-health-admin.css'],scripts:['site-health-admin.js'],real:'[data-section="site-health"]',ready:'#ekodiGlobalSiteHealth',hashes:['#site-health'],insert:'after-health'},
-    'brand-governance':{label:'Brand & CI',icon:'BI',styles:['admin-brand-governance.css'],scripts:['admin-brand-governance.js'],real:'[data-section="brand-governance"]',ready:'#ekodiBrandGovernance',hashes:['#brand-governance'],paths:['/admin/sites/brand-governance'],insert:'after-campus'},
     'api-cost':{label:'API Cost',icon:'₩',styles:['api-cost-admin.css'],scripts:['api-cost-admin.js'],real:'[data-section="api-cost"]',hashes:['#api-cost'],insert:'after-health'},
     'infra-costs':{label:'비용·인프라 관리',icon:'▤',styles:['infra-cost-admin.css'],scripts:['infra-cost-admin.js'],real:'[data-section="infra-costs"]',hashes:['#infra-costs'],paths:['/admin/finance/infra-costs'],insert:'after-health'},
     storage:{label:'Storage',icon:'▣',styles:['storage-admin.css'],scripts:['storage-admin.js'],real:'[data-section="storage"]',hashes:['#storage'],paths:['/admin/settings/storage','/admin/settings-records/storage','/admin/system/storage'],insert:'after-health'},
