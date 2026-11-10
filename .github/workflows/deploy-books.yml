@@ -17,6 +17,9 @@ on:
       - 'books/**'
       - 'books-worker.js'
       - 'books-commerce.js'
+      - 'books-guest-commerce.js'
+      - 'mail-control.js'
+      - 'migrations/202611101300_books_guest_otp.sql'
       - 'books-ai-releases.js'
       - 'books-audiobook.js'
       - 'books-sale-readiness.js'
@@ -84,12 +87,16 @@ jobs:
           grep -Eq '^PAYMENTS_ENABLED = "(false|true)"$' wrangler.books.toml
           ! grep -Eq '^\s*TOSS_SECRET_KEY\s*=' wrangler.books.toml
           ! grep -Eq 'live_(g?sk)_' wrangler.books.toml
+          grep -Fxq 'BOOKS_GUEST_CHECKOUT_ENABLED = "false"' wrangler.books.toml
+          grep -Fxq 'BOOKS_DIGITAL_MID_APPROVED = "false"' wrangler.books.toml
+          ! grep -Eq '^BOOKS_GUEST_OTP_SECRET\s*=' wrangler.books.toml
       - name: Apply additive books commerce schema (CREATE ... IF NOT EXISTS only)
         run: |
           set -euo pipefail
           npx --yes wrangler@4.119.0 d1 execute ekodi-auth --remote --config wrangler.books.toml --file migrations/202610271400_books_direct_commerce.sql
           npx --yes wrangler@4.119.0 d1 execute ekodi-auth --remote --config wrangler.books.toml --file migrations/202611011800_books_edition_approvals.sql
           npx --yes wrangler@4.119.0 d1 execute ekodi-auth --remote --config wrangler.books.toml --file migrations/202611020300_books_audiobook_approvals.sql
+          npx --yes wrangler@4.119.0 d1 execute ekodi-auth --remote --config wrangler.books.toml --file migrations/202611101300_books_guest_otp.sql
           npx --yes wrangler@4.119.0 r2 bucket list | grep -q 'ekodi-book-files' || npx --yes wrangler@4.119.0 r2 bucket create ekodi-book-files
       - name: Candidate at 0%, verify, promote and auto-rollback on failure
         run: |
