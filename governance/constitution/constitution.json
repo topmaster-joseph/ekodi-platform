@@ -1,6 +1,6 @@
 {
-  "version": "1.27.7",
-  "effectiveDate": "2026-10-28",
+  "version": "1.27.8",
+  "effectiveDate": "2026-11-10",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -45,7 +45,8 @@
     "automatic-execution-background-only-enforced",
     "public-by-default-site-publication-control",
     "native-browser-execution-order-enforced",
-    "canonical-auth-entrypoints-enforced"
+    "canonical-auth-entrypoints-enforced",
+    "multi-method-login-one-ekodi-id"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -1423,5 +1424,53 @@
     "preventCrossTenantDataAndFinanceCoalescing": true,
     "legacyRepositoryDeletionRequiresSeparateOwnerApproval": true,
     "legacyRepositoryRetainedUntilV2ReleaseVerified": true
+  },
+  "multiMethodLoginPolicy": {
+    "id": "multi-method-login-one-ekodi-id",
+    "version": "1.0.0",
+    "effectiveDate": "2026-11-10",
+    "section": "3A-1",
+    "canonicalEntry": "https://ekodi.kr/auth/",
+    "methodSource": {
+      "federated": "public.identity_providers enabled=true AND supports_login=true",
+      "emailPassword": [
+        "EKODI_EMAIL_PASSWORD_ENABLED",
+        "EKODI_AUTH_EMAIL_CONFIRM_VERIFIED",
+        "EKODI_AUTH_SMTP_VERIFIED"
+      ]
+    },
+    "identity": "one EKODI Person per human; login_identities.provider records the path only",
+    "emailPassword": {
+      "ekodiOnlyPassword": true,
+      "providerPasswordCollectionForbidden": true,
+      "anyEmailIncludingGmail": true,
+      "emailOwnershipVerificationRequired": true,
+      "passwordStore": "supabase-auth"
+    },
+    "autoLaunch": {
+      "userFacing": "forbidden",
+      "adminReturnPaths": "google-chooser-allowed"
+    },
+    "siteLocalProviderLogin": "forbidden-for-new-code",
+    "legacySiteLocalProviderLogin": [
+      "books-worker.js",
+      "books/buy/index.html",
+      "books/buy/commerce-client.js",
+      "books/library/index.html",
+      "books/orders/index.html",
+      "books/review/index.html",
+      "books/audio-review/index.html",
+      "qtin-order-worker.js",
+      "site-worker.js",
+      "canonical-surface-router.js",
+      "admin-menu-runtime.js",
+      "google-admin-auth.js",
+      "messenger-operator-page.js"
+    ],
+    "legacyShrinkOnly": true,
+    "enforcement": [
+      "scripts/validate-constitution.mjs",
+      "test/multi-method-login-constitution.test.mjs"
+    ]
   }
 }

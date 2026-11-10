@@ -130,7 +130,8 @@ export async function mountEmailPassword({resetOnly=false}={}){
     secondary.textContent=mode==='reset'?'재설정 메일 보내기':mode==='verify'?'인증메일 다시 보내기':'비밀번호 찾기';
     hint.textContent=mode==='verify'?'받은 메일의 인증코드를 입력하세요. 확인 전에는 로그인할 수 없습니다.':
       mode==='reset'?'인증코드를 받은 뒤 새 비밀번호와 함께 입력하세요.':
-      'EKODI ID는 자동으로 발급됩니다. 이메일과 비밀번호만 준비하세요.';
+      mode==='signup'?'구글·네이버·카카오 비밀번호가 아니라, 에코디에서만 쓸 새 비밀번호(12자 이상)를 정하세요. 구글메일 주소도 사용할 수 있습니다. EKODI ID는 자동으로 발급됩니다.':
+      '에코디 이메일 가입 때 정한 비밀번호를 입력하세요. 구글 계정 비밀번호는 입력하지 마세요.';
     status.textContent='';
   }
   function message(text){status.textContent=text;}

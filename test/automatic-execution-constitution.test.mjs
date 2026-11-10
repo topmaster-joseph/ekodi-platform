@@ -24,7 +24,7 @@ const browser = JSON.parse(browserText);
 const policy = constitution.automaticExecutionLifecyclePolicy;
 
 test('constitution makes automatic execution background-only mandatory and non-waivable', () => {
-  assert.equal(constitution.version, '1.27.7');
+  assert.equal(constitution.version, '1.27.8');
   assert.ok(constitution.principles.includes('automatic-execution-background-only-enforced'));
   assert.equal(policy.id, 'AUTOMATIC-EXECUTION-LIFECYCLE-001');
   assert.equal(policy.status, 'enforced');

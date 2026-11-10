@@ -125,6 +125,9 @@ function safeReturn(raw){
   }catch{return fallback.href}
 }
 const RETURN_TO=safeReturn(params.get('return_to')||params.get('returnTo'));
+// 다중 로그인 규칙(헌법 3A-1, v1.27.8): 일반 사용자 화면에서는 어떤 방식도 자동으로 띄우지 않고
+// 켜진 모든 로그인 방식(Google·카카오·네이버·이메일)을 나란히 보여 준다. 자동 Google 선택창은 관리자 경로만.
+const ADMIN_DIRECT_TARGET=(()=>{try{return /\/admin(?:\/|$)/.test(new URL(RETURN_TO).pathname)}catch{return false}})();
 function cancelledLoginTarget(){
   const target=new URL(RETURN_TO);
   if(CHOOSE_ACCOUNT)target.searchParams.delete('compose');
@@ -380,7 +383,9 @@ async function renderGoogle(){
     if(SPACE_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(SINGLES_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
     if(ADMIN_TOOL_CHOOSE_ACCOUNT)show('cancelSignedOut',true);
-    if(DIRECT_LOGIN){
+    if(DIRECT_LOGIN&&!ADMIN_DIRECT_TARGET){
+      notice('사용하실 로그인 방식을 선택해 주세요. 어떤 방식으로 로그인해도 같은 EKODI ID로 연결됩니다.');
+    }else if(DIRECT_LOGIN){
       notice('Google 계정 선택창을 여는 중입니다.');
       window.google.accounts.id.prompt(notification=>{
         if(notification?.isNotDisplayed?.()||notification?.isSkippedMoment?.())notice('Google 계정 선택창을 바로 열 수 없습니다. 아래 Google 버튼으로 계속해 주세요.');

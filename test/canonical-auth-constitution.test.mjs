@@ -8,7 +8,7 @@ const parse = path => JSON.parse(read(path));
 test('constitutional apex authentication is inherited and non-overridable', () => {
   const constitution = parse('governance/constitution/constitution.json');
   const auth = constitution.canonicalAuthenticationEntryPolicy;
-  assert.equal(constitution.version, '1.27.7');
+  assert.equal(constitution.version, '1.27.8');
   assert.equal(auth.id, 'CANONICAL-AUTH-ENTRY-001');
   assert.equal(auth.status, 'enforced');
   assert.equal(auth.mode, 'mandatory-inherited');
