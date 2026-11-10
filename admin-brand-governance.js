@@ -4,8 +4,8 @@ if(typeof window==='undefined'||typeof document==='undefined'||window.EKODIBrand
 // Admin-only read-only view: brand protection and distributed site identities.
 // The site owns its BI and local AI. This console never grants IP rights,
 // changes brand graphics, or imports cross-tenant private data.
-const SECTION='brand-governance';
-const BASE='/admin/sites/brand-governance';
+const SECTION='menu-templates';
+const BASE='/admin/sites/menu-templates';
 const PANEL_ID='ekodiBrandGovernance';
 const VALID_TABS=new Set(['principles','sites','rights','activity']);
 const LABELS={principles:'브랜드 원칙',sites:'사이트별 BI',rights:'권리·CI 자료',activity:'실행·검증'};
@@ -35,7 +35,7 @@ const escapeHtml=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;
 const plainPath=u=>{try{const x=new URL(u,'https://ekodi.kr');return x.hostname==='ekodi.kr'?x.pathname.replace(/\/$/,'')||'/':null}catch{return null}};
 const safeHref=value=>{try{const url=new URL(value,location.origin);return url.protocol==='https:'?url.href:''}catch{return''}};
 const isAdmin=()=>Boolean(document.querySelector('#app:not([hidden])') && sessionStorage.getItem('ekodi-auth-token'));
-const tabFromLocation=()=>{const value=new URLSearchParams(location.search).get('tab')||'principles';return VALID_TABS.has(value)?value:'principles'};
+const tabFromLocation=()=>{const value=new URLSearchParams(location.search).get('brandTab')||'principles';return VALID_TABS.has(value)?value:'principles'};
 let tab=tabFromLocation(),items=[],filter='',pending=false,loaded=false;
 function panel(){return document.getElementById(PANEL_ID)}
 function ensureStyle(){
@@ -44,14 +44,14 @@ function ensureStyle(){
 }
 function ensurePanel(){
   if(panel())return panel();
-  const host=document.querySelector('#app .content, .content');
+  const host=document.getElementById('ekodiAdminMenuTemplates');
   if(!host)return null;
   const el=document.createElement('section');
-  el.id=PANEL_ID;el.className='section brand-governance hidden-panel';el.dataset.panel=SECTION;el.hidden=true;
+  el.id=PANEL_ID;el.className='brand-governance';
   el.innerHTML=`<div class="brand-g-head"><div><p class="kicker">BRAND · INDEPENDENT SITES</p><h2>브랜드·CI·권리 보호</h2><p>중앙은 요약과 기준을, 사이트는 고유 브랜드와 운영 책임을 맡습니다. 법적 등록·공식 승인으로 오인하지 않습니다.</p></div><a href="/admin/sites/sites-all" class="brand-g-link">전체 사이트</a></div>
   <nav class="brand-g-tabs" aria-label="브랜드 관리 세부메뉴"></nav>
   <div class="brand-g-content" data-brand-content role="region" aria-label="브랜드 관리 내용"></div>`;
-  host.prepend(el);
+  host.append(el);
   const nav=el.querySelector('.brand-g-tabs');
   for(const [key,label] of Object.entries(LABELS)){const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.brandTab=key;button.addEventListener('click',()=>selectTab(key));nav.appendChild(button)}
   el.addEventListener('input',event=>{if(event.target.matches('[data-brand-search]')){filter=event.target.value;renderSites()}});
@@ -65,7 +65,7 @@ function selectTab(key){
   if(!VALID_TABS.has(key))return;
   tab=key;
   const url=new URL(location.href);
-  if(url.pathname===BASE) {url.searchParams.set('tab',tab);history.replaceState(null,'',url.pathname+url.search)}
+  if(url.pathname===BASE) {url.searchParams.set('brandTab',tab);history.replaceState(null,'',url.pathname+url.search)}
   setActive();render();
 }
 function ownerModel(item){
@@ -161,12 +161,10 @@ function render(){
  else renderActivity();
 }
 function install(){
+ if(!isAdmin() || !document.getElementById('ekodiAdminMenuTemplates'))return;
  ensurePanel();
- if(!isAdmin())return;
  ensureStyle();
  render();
- const button=document.querySelector('.sidebar nav [data-section="brand-governance"]');
- if(button&&!button.dataset.brandGovernanceBound){button.dataset.brandGovernanceBound='1';button.addEventListener('click',()=>{window.EKODIAdminPanels?.activate?.(SECTION);render()})}
  if(location.pathname===BASE){tab=tabFromLocation();render()}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
