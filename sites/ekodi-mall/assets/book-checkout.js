@@ -94,9 +94,9 @@
     show('bcPayArea', !quote.owned);
     if (quote.owned) return;
     const login = $('bcLogin');
-    if (login) { login.replaceChildren(); if (!quote.signedIn) login.append(loginLink()); }
+    if (login) { login.replaceChildren(); if (!quote.signedIn) { login.append(loginLink()); void window.EkodiBooksGuestCheckout?.mount(login); } }
     show('bcLogin', !quote.signedIn);
-    show('bcSignedIn', quote.signedIn); text('bcBuyer', quote.buyerEmail || '');
+    show('bcSignedIn', quote.signedIn); text('bcBuyer', quote.guestVerified ? (quote.buyerEmail || '')+' · 비회원 이메일 인증' : quote.buyerEmail || '');
     const c = quote.checkout || {};
     const open = c.open === true && c.saleReady !== false;
     const btn = $('bcPay');
