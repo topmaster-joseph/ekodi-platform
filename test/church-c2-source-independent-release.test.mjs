@@ -19,12 +19,12 @@ const workflow=read('.github/workflows/deploy-ekodi-church-homepage.yml');
 const policy=constitution.churchCanonicalSourceTransferPolicy;
 
 test('C2 owner-approved Church source target is versioned, explicit and separately gated from C3 production',()=>{
-  assert.equal(constitution.version,'1.27.7');
+  assert.equal(constitution.version,'1.27.8');
   assert.equal(amendment.status,'approved');
   assert.equal(amendment.changeClass,'C2');
   assert.equal(amendment.relatedReleaseTopologyClass,'C3');
   assert.equal(amendment.approvedBy,constitution.changeControl.owner);
-  assert.equal(amendment.constitutionVersion,constitution.version);
+  assert.equal(amendment.constitutionVersion,'1.27.7','church amendment is a historical record of the version it introduced');
   assert.equal(serviceCreationEvidence.policyVersion,constitution.version);
   assert.equal(Object.keys(serviceCreationEvidence.records||{}).length,0,'Church source move must not register a new user-facing service');
   assert.equal(policy.canonicalRepository,'topmaster-joseph/ekodi-platform');

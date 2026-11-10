@@ -1,0 +1,17 @@
+{
+  "amendmentId": "MULTI-METHOD-LOGIN-ONE-EKODI-ID-20261110",
+  "constitutionVersion": "1.27.8",
+  "approvedAt": "2026-11-10",
+  "approvedBy": "topmaster-joseph",
+  "status": "approved",
+  "changeClass": "C2",
+  "taskId": "login-methods-rule-20261110",
+  "summary": "Every user-facing EKODI login offers all enabled methods (Google, Kakao, Naver, EKODI email+password) through /auth/, resolving to one EKODI ID; provider passwords are never collected; no auto-launch on user-facing logins; site-local provider-only login UIs frozen as a shrink-only legacy baseline.",
+  "approvalBasis": "Owner instruction 2026-11-10 21:01 KST: '협동조합 이메일+비밀번호 로그인 켜줘 … 현재 에코디의 모든 사이트 로그인 방식은 다양한 방식으로 가능하도록 되어있어. 확인후 검토해서 강제실행규칙으로 정하고 잘 작동하도록 구현해'",
+  "approvalScope": {
+    "constitutionSection": "3A-1",
+    "enablesEmailPasswordInProduction": false,
+    "emailPasswordRequiresOperatorGates": true,
+    "paymentFlowChangesAuthorized": false
+  }
+}

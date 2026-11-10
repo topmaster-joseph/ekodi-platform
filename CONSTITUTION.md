@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.27.7
+# EKODI Platform Constitution v1.27.8
 
 Effective: 2026-10-28
 
@@ -121,6 +121,14 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - Provider groups or accounts may synchronize with EKODI but cannot become the authorization source of truth.
 - Protected requests resolve authentication, tenant, authorization, rate policy and input validity before business logic.
 - `Workspace` is the canonical operating-context term. Legacy `Space` terminology may remain only as a compatibility surface during migration and must not create a second identity, authority or routing model.
+
+## 3A-1. Multi-Method EKODI Login Constitution (v1.27.8, 2026-11-10 — mandatory, inherited)
+- **Every user-facing login on every current and future EKODI site, Workspace and service offers every enabled login method side by side** through the canonical `https://ekodi.kr/auth/` surface: each `public.identity_providers` row with `enabled=true` and `supports_login=true` (currently Google, Kakao, Naver) and the EKODI email + password method whenever its operator readiness gates are open. No user-facing site may narrow its login to a single provider.
+- **One person, one EKODI ID.** Whichever method a person uses — Google, Kakao, Naver, email + password or any future method — authentication resolves to the same EKODI Person (`people` + `login_identities`); the method is only the recorded authentication path, never a separate account.
+- **Email + password is an EKODI credential.** The password is created for EKODI alone and stored only by the identity backend (Supabase Auth); any email address, including a Gmail address, may be used, but EKODI must never ask for, accept or store a Google, Kakao, Naver or other provider password. The sign-up screen must say so. A new email account is created only after email ownership is verified, and the method is shown only while `EKODI_EMAIL_PASSWORD_ENABLED`, `EKODI_AUTH_EMAIL_CONFIRM_VERIFIED` and `EKODI_AUTH_SMTP_VERIFIED` are all true.
+- **No method is auto-launched on user-facing logins.** `direct=1` on a user-facing (non-admin) return target shows the method choice; the automatic Google account chooser is reserved for administrator return paths (`/admin`, `/{site}/admin`), consistent with Section 3A (v1.27.4).
+- **Site-local, provider-only login UIs are forbidden.** Rendering a provider sign-in widget (for example `google.accounts.id.renderButton`/`initialize` or the Google Identity script) outside `auth-site/` is prohibited for new code. Existing surfaces listed in `multiMethodLoginPolicy.legacySiteLocalProviderLogin` are a fixed migration baseline that may only shrink; user-facing entries (Books, QTIN order) must move to the canonical `/auth/` multi-method flow without changing payment behaviour.
+- Enforcement: `validate:constitution`, `test/multi-method-login-constitution.test.mjs` (repository-wide scan + routing assertions) and production system verification. Owner approval: 2026-11-10, "현재 에코디의 모든 사이트 로그인 방식은 다양한 방식으로 가능하도록 … 강제실행규칙으로 정하고 잘 작동하도록 구현해".
 
 ## 3A-0. Universal FREE Identity Constitution
 - A verified first Google sign-in from any registered EKODI user service creates or resolves exactly one canonical EKODI Person and establishes the ecosystem-wide FREE entitlement.
