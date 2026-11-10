@@ -390,7 +390,7 @@ async function renderGoogle(){
       window.google.accounts.id.prompt(notification=>{
         if(notification?.isNotDisplayed?.()||notification?.isSkippedMoment?.())notice('Google 계정 선택창을 바로 열 수 없습니다. 아래 Google 버튼으로 계속해 주세요.');
       });
-    }else notice((CHOOSE_ACCOUNT||CHURCH_CHOOSE_ACCOUNT||SPACE_CHOOSE_ACCOUNT||SINGLES_CHOOSE_ACCOUNT||ADMIN_TOOL_CHOOSE_ACCOUNT)?'아래 Google 버튼을 눌러 사용할 계정을 선택해 주세요. 자동 로그인은 진행하지 않습니다.':'처음 한 번만 Google 계정으로 본인을 확인합니다.');
+    }else notice((CHOOSE_ACCOUNT||CHURCH_CHOOSE_ACCOUNT||SPACE_CHOOSE_ACCOUNT||SINGLES_CHOOSE_ACCOUNT||ADMIN_TOOL_CHOOSE_ACCOUNT)?'사용할 계정의 로그인 버튼을 눌러 주세요. 자동 로그인은 진행하지 않습니다.':'사용하실 로그인 방식을 선택해 주세요. 어떤 방식으로 로그인해도 같은 EKODI ID로 연결됩니다.');
   }catch(error){
     console.error('prepare central identity',error);
     if(PREOPENED_BRIDGE)document.documentElement.dataset.adminDirectBridge='fallback';
