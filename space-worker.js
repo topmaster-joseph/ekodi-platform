@@ -4,6 +4,7 @@ import { tenantLivePage } from './tenant-live-page.js';
 import { isPublicWorkspacePath, workspaceRouteFromPublicPath, workspaceSlugFromPublicPath } from './workspace-route-policy.js';
 import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 import { renderBbqCheonggyePage, bbqCheonggyeCss, bbqCheonggyeQrScript } from './bbq-cheonggye-site.js';
+import { renderBbqcgServiceStandards, bbqcgServiceStandardsCss } from './bbqcg-service-standards.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
 import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
@@ -547,6 +548,15 @@ export default{
       return data?json(env,data):json(env,{error:'storefront_unavailable'},503);
     }
     if(url.pathname==='/bbqcg/assets/site.css')return withHeaders(env,bbqCheonggyeCss(),'bbqcg-asset');
+    if(url.pathname==='/bbqcg/assets/service-standards.css'&&['GET','HEAD'].includes(request.method))return withHeaders(env,bbqcgServiceStandardsCss(),'bbqcg-asset');
+    if(url.pathname==='/bbqcg/service-guide'){
+      if(!['GET','HEAD'].includes(request.method))return withHeaders(env,new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}}),'bbqcg-service-guide');
+      if(legacyAlias)return canonicalRedirect();
+      const resolved=await pageProfile('/bbqcg',env);
+      if(resolved.source!=='store-user-sites'||resolved.status==='paused')return withHeaders(env,new Response('Site unavailable',{status:404,headers:{'cache-control':'no-store'}}),'bbqcg-service-guide');
+      return withHeaders(env,renderBbqcgServiceStandards(request),'bbqcg-service-guide');
+    }
+
     if(url.pathname==='/bbqcg/assets/order-qr.js')return withHeaders(env,bbqCheonggyeQrScript(),'bbqcg-asset');
     if(url.pathname==='/storefront.css'||url.pathname==='/_ekodi/space/storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/jadam-storefront.css'||url.pathname==='/_ekodi/space/jadam-storefront.css')return withHeaders(env,jadamStorefrontCss(),'storefront-asset');
