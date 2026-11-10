@@ -105,6 +105,23 @@ jobs:
                 | sort -u > "$other_files"
             fi
 
+            # "Zero files" is complete evidence of emptiness, not missing evidence.
+            #
+            # A contentless PR cannot overlap with anything, but it used to take the
+            # same path as unavailable evidence and fail the guard. Measured on
+            # 2026-11-08: PR #8652 sat open with changedFiles=0 (14 commits,
+            # 0 additions) after its content was consumed elsewhere — the empty
+            # recovery PR that CLAUDE.md warns about — and every PR sharing its base
+            # commit failed overlap-guard with
+            #   PR #8652 file evidence is missing; refusing to infer independence.
+            # One tombstone blocked the whole base. Independence is still never
+            # inferred without evidence: the check below stays exactly as strict
+            # whenever a PR claims changed files but no list can be obtained.
+            if [[ "$changed" -eq 0 && "$listed" -eq 0 ]]; then
+              echo "PR #${other_pr} reports zero changed files; no overlap is possible." >&2
+              continue
+            fi
+
             if [[ ! -s "$other_files" ]]; then
               echo "PR #${other_pr} file evidence is missing; refusing to infer independence." >&2
               rm -f "$other_files" "$exact_overlap" "$semantic_overlap"
