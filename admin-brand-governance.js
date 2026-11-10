@@ -1,5 +1,6 @@
 (() => {
 'use strict';
+if(typeof window==='undefined'||typeof document==='undefined'||window.EKODIBrandGovernance)return;
 // Admin-only read-only view: brand protection and distributed site identities.
 // The site owns its BI and local AI. This console never grants IP rights,
 // changes brand graphics, or imports cross-tenant private data.
@@ -37,6 +38,10 @@ const isAdmin=()=>Boolean(document.querySelector('#app:not([hidden])') && sessio
 const tabFromLocation=()=>{const value=new URLSearchParams(location.search).get('tab')||'principles';return VALID_TABS.has(value)?value:'principles'};
 let tab=tabFromLocation(),items=[],filter='',pending=false,loaded=false;
 function panel(){return document.getElementById(PANEL_ID)}
+function ensureStyle(){
+ if(document.querySelector('[data-ekodi-demand-style="admin-brand-governance.css"]'))return;
+ const link=document.createElement('link');link.rel='stylesheet';link.href='/admin/admin-brand-governance.css';link.dataset.ekodiDemandStyle='admin-brand-governance.css';document.head.appendChild(link);
+}
 function ensurePanel(){
   if(panel())return panel();
   const host=document.querySelector('#app .content, .content');
@@ -156,8 +161,10 @@ function render(){
  else renderActivity();
 }
 function install(){
+ ensurePanel();
  if(!isAdmin())return;
- if(ensurePanel())render();
+ ensureStyle();
+ render();
  const button=document.querySelector('.sidebar nav [data-section="brand-governance"]');
  if(button&&!button.dataset.brandGovernanceBound){button.dataset.brandGovernanceBound='1';button.addEventListener('click',()=>{window.EKODIAdminPanels?.activate?.(SECTION);render()})}
  if(location.pathname===BASE){tab=tabFromLocation();render()}
