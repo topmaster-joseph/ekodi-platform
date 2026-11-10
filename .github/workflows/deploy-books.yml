@@ -87,6 +87,7 @@ jobs:
           grep -Eq '^PAYMENTS_ENABLED = "(false|true)"$' wrangler.books.toml
           ! grep -Eq '^\s*TOSS_SECRET_KEY\s*=' wrangler.books.toml
           ! grep -Eq 'live_(g?sk)_' wrangler.books.toml
+          grep -Fxq 'BOOKS_GUEST_ACCESS_ENABLED = "false"' wrangler.books.toml
           grep -Fxq 'BOOKS_GUEST_CHECKOUT_ENABLED = "false"' wrangler.books.toml
           grep -Fxq 'BOOKS_DIGITAL_MID_APPROVED = "false"' wrangler.books.toml
           ! grep -Eq '^BOOKS_GUEST_OTP_SECRET\s*=' wrangler.books.toml
