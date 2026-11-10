@@ -18,6 +18,11 @@ test('BBQ Cheonggye uses an EKODI customer workspace path, not a local server',a
   assert.doesNotMatch(html,/http:\/\/127\.0\.0\.1|localhost|8080/);
   assert.doesNotMatch(html,/bbqe-learning.*(?:password|비밀번호)/);
 });
+test('premium stylesheet uses exact local route and a fingerprint for cache coherence',async()=>{
+  const html=await (await renderBbqCheonggyePage(new Request(url),{},{})).text();
+  assert.match(html,/href="\/bbqcg\/assets\/site\.css\?v=[a-f0-9]{12,40}"/);
+  assert.doesNotMatch(html,/href="\/bbqcg\/assets\/site\.css"/);
+});
 test('styles are served from same-origin CSS and support narrow screens',async()=>{
   const css=await bbqCheonggyeCss().text();
   assert.match(css,/@media\(max-width:560px\)/);
