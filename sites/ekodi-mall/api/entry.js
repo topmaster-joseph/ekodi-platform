@@ -23,6 +23,7 @@ import { reconcileMallPayments, inventorySchemaReady } from './payment-reconcili
 import { sweepExpiryWindow } from './shelf-life.js';
 import { handleCommerceOperationsRequest } from './commerce-operations.js';
 import { handleOrderOpsRequest } from './order-ops.js';
+import { deliverOperatorNotices } from './operator-notify.js';
 import { handleAmazonRequest, amazonRuntimeStatus, amazonCostSchemaReady, amazonConnectionSchemaReady } from './amazon.js';
 import { handleAmazonReadonlyRequest, amazonReadSyncSchemaReady } from './amazon-readonly-sync.js';
 import { handleAgodaPublicRequest } from './agoda-public.js';
@@ -340,6 +341,9 @@ export default {
     // EKODI-MALL-SEO-INDEX-001: 공개 상품 변경분을 1시간마다 IndexNow 로 알림.
     const indexNow = env?.DB ? submitProductIndexNow(env).then(r => { if (r.submitted || r.status) console.log('mall indexnow', JSON.stringify(r)); }).catch(e => console.error('mall indexnow failed', e)) : Promise.resolve();
     if (ctx?.waitUntil) ctx.waitUntil(indexNow); else await indexNow;
+    // EKODI-OPERATOR-NOTIFY-001: 내부 자동운영 진행상황을 운영자에게 메시지로 전달(즉시·재알림·일일 요약).
+    const operatorNotice = env?.DB ? deliverOperatorNotices(env).then(r => { if (r.sent || r.failed || r.waiting || r.daily) console.log('mall operator notice', JSON.stringify(r)); }).catch(e => console.error('mall operator notice failed', e?.message)) : Promise.resolve();
+    if (ctx?.waitUntil) ctx.waitUntil(operatorNotice); else await operatorNotice;
     if (!['1','true','yes','on'].includes(String(env.PAYMENTS_ENABLED || '').toLowerCase())) return;
     const run = reconcileMallPayments(env).then(summary => {
       if (summary.checked || summary.errors) console.log('mall payment reconciliation', JSON.stringify(summary));

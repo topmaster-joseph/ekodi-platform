@@ -73,6 +73,12 @@ invocation_logs = true
 [triggers]
 crons = ["*/10 * * * *"]
 
+# EKODI-OPERATOR-NOTIFY-001: 운영자 진행상황 메시지. ekodi-auth-api 의 내부 전용 RPC(공개 경로 없음).
+[[services]]
+binding = "OPERATOR_NOTIFY"
+service = "ekodi-auth-api"
+entrypoint = "OperatorNotifier"
+
 # EKODI-MALL-PRODUCT-PHOTOS-001: seller product photos (prefix ekodimall/products/).
 # Keep this block above [[d1_databases]]: the deploy workflow appends database_id to the end of this file.
 [[r2_buckets]]

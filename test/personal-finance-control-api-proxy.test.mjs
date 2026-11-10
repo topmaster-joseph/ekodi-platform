@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
-import missionControl from '../mission-control-entry-worker.js';
+import './support-cloudflare-workers-stub.mjs';
+const { default: missionControl } = await import('../mission-control-entry-worker.js');
 
 const read=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8');
 
