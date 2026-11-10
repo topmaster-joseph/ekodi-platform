@@ -249,6 +249,18 @@ main{padding:46px 0 72px}
   .footer-note{margin-top:30px}
 }
 @media(max-width:430px){.status-satellite:nth-child(1){left:0}.status-satellite:nth-child(2){right:0}.about-pills{gap:6px}.service-description>span{font-size:11px}}
+.brand-values{margin:0 0 clamp(12px,2.5vw,22px);border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.69);overflow:hidden}
+.brand-values summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;padding:10px clamp(14px,2vw,20px);font-weight:780;cursor:pointer;word-break:keep-all}
+.brand-values summary::after{content:'+';font-size:21px;font-weight:500;color:var(--accent-deep)}
+.brand-values[open] summary::after{content:'−'}
+.brand-values summary:focus-visible{outline:3px solid var(--accent-deep);outline-offset:-3px}
+.brand-values-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0 clamp(14px,2vw,20px) 15px}
+.brand-values-grid article{border:1px solid var(--line);background:#fffdf9;padding:13px;border-radius:10px;min-width:0}
+.brand-values-grid h3{font-size:15px;margin:0 0 5px;line-height:1.42}
+.brand-values-grid p{margin:0;font-size:12px;line-height:1.65;color:var(--muted);word-break:keep-all}
+.brand-values-note{font-size:12px;line-height:1.6;color:var(--muted);margin:0;padding:0 clamp(14px,2vw,20px) 14px;word-break:keep-all}
+@media(max-width:760px){.brand-values-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:390px){.brand-values-grid{grid-template-columns:1fr}.brand-values summary{font-size:13px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}.ekodian-wave{animation:none!important}}
 </style>
 </head>
@@ -274,6 +286,17 @@ main{padding:46px 0 72px}
       <div class="about-pills" aria-label="에코디 핵심 방향"><span>사람 중심 · Human-centered</span><span>독립 플랫폼 · Independent</span><span>필요한 연결 · Connected by choice</span></div>
     </div>
   </section>
+
+  <details class="brand-values section-anchor" id="values">
+    <summary>에코디의 정신과 가치 · 네 가지 삶의 방향</summary>
+    <div class="brand-values-grid">
+      <article><h3>에클레시아 · 모임</h3><p>사람의 존엄을 지키며 함께 부름에 응답하는 공동체</p></article>
+      <article><h3>코이노니아 · 나눔</h3><p>소유보다 환대, 경쟁보다 상생으로 서로를 살리는 연결</p></article>
+      <article><h3>디아스포라 · 삶의 자리</h3><p>각자의 자리에서 독립적으로 책임과 사랑을 실천하는 삶</p></article>
+      <article><h3>희년 · 회복</h3><p>배제와 종속을 줄이고 다시 시작할 기회를 열어 주는 길</p></article>
+    </div>
+    <p class="brand-values-note">이는 EKODI 설립 철학을 설명하는 내용입니다. 각 서비스·교회·단체·고객 매장은 별도의 운영 주체와 고유 브랜드를 유지하며, 특정 가치 표현을 강제하지 않습니다.</p>
+  </details>
 
   <section class="hero" aria-labelledby="hero-title">
     <div class="hero-copy">
