@@ -22,7 +22,7 @@ export function buildSiteSearchPromotionOversight({sites=[],automation={}}={}) {
     const indexSource=automation?.sources?.indexNow === 'ready' && record?.scope==='explicit_subject';
     const failed=jobSource?numberOrNull(record.failedJobs):null;
     const pending=jobSource?numberOrNull(record.pendingJobs):null;
-    const published=jobSource?numberOrNull(record.publishedJobs):null;
+    const published=jobSource?numberOrNull(record.publishedTotal):null;
     const submitted=indexSource?numberOrNull(record.indexNowSubmittedPages):null;
     let status='unreported',recommendation='사이트 자체 운영 보고가 없습니다. 현장 관리 기능과 권한 연결을 점검하세요.';
     if (record && jobSource && failed!==null && failed>0) {
