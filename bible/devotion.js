@@ -870,7 +870,7 @@ function boot(root) {
     const d = current;
     const a = d.activities;
     const [, m, day] = d.date.split('-').map(Number);
-    const head = `[${siteLabel} 오늘의 매일묵상 ${m}/${day}] ${d.passage}`;
+    const head = `[에코디언의 묵상나눔 ${m}/${day}] ${d.passage}`;
     switch (kind) {
       case 'poem': return { title: a.poem.title, text: `${head}\n\n${a.poem.lines.join('\n')}`, hash: 'poem' };
       case 'song': return { title: a.song.title, text: `${head}\n\n${a.song.verse.join('\n')}\n(후렴) ${a.song.refrain.join(' / ')}`, hash: 'song' };
@@ -883,7 +883,7 @@ function boot(root) {
         if (!mine) return null;
         return { title: '나의 묵상기도', text: `${head}\n\n${mine}`, hash: 'records' };
       }
-      default: return { title: `${siteLabel} 오늘의 매일묵상 · ${d.passage}`, text: a.keyLine, hash: '' };
+      default: return { title: `에코디언의 묵상나눔 · ${d.passage}`, text: a.keyLine, hash: '' };
     }
   }
 
@@ -908,8 +908,8 @@ function boot(root) {
     if (copyOnly) { toast(await copy(url) ? '링크를 복사했습니다. 카카오톡 대화방에 붙여 넣어 주세요.' : url); return; }
     const privatePrayer = kind === 'mine' ? panels.get('records').querySelector('textarea[name="prayer"]')?.value.trim() || '' : '';
     const section=devotionSectionShareDetails(current,kind);
-    const title = section ? `${siteLabel} 오늘의 매일묵상 · ${section.title}` :
-      kind === 'page' ? body.title : `${siteLabel} 오늘의 매일묵상 · ${body.title}`;
+    const title = section ? section.title :
+      kind === 'page' ? body.title : body.title;
     const message = section
       ? formatDevotionSectionShareMessage({date:current.date,title,content:section.content,url})
       : formatDevotionShareMessage({
@@ -923,7 +923,7 @@ function boot(root) {
       try { await navigator.share({ text: message }); return; }
       catch (error) { if (error?.name === 'AbortError') return; }
     }
-    toast(await copy(message) ? '날짜·제목·본문·링크를 복사했습니다. 카카오톡에 붙여 넣어 주세요.' : url);
+    toast(await copy(message) ? '묵상나눔을 복사했습니다. 카카오톡에 붙여 넣어 주세요.' : url);
   }
 
   root.addEventListener('click', event => {

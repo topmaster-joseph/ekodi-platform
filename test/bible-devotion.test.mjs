@@ -87,10 +87,10 @@ test('dated share link renders KakaoTalk-ready Open Graph tags without HTML inje
   const response = await worker.fetch(new Request('https://ekodi.kr/bible/devotion/2026-10-25'), assetEnv());
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /<title>에코디 매일묵상 · 오바댜 1:10-16<\/title>/);
-  assert.match(html, /property="og:title" content="에코디 매일묵상 · 오바댜 1:10-16"/);
+  assert.match(html, /<title>에코디언의 묵상나눔<\/title>/);
+  assert.match(html, /property="og:title" content="에코디언의 묵상나눔"/);
   assert.match(html, /property="og:url" content="https:\/\/ekodi\.kr\/bible\/devotion\/2026-10-25"/);
-  assert.match(html, /property="og:description" content="[^"]*멀찍이/);
+  assert.match(html, /property="og:description" content="[^"]*묵상나눔/);
   assert.doesNotMatch(html, /EKODI_DEVOTION_META/);
   assert.match(html, /data-ekodi-devotion data-base="\/bible\/devotion"/);
   assert.match(html, /<h1>오늘의 매일묵상<\/h1>/);
@@ -99,7 +99,7 @@ test('dated share link renders KakaoTalk-ready Open Graph tags without HTML inje
 test('bare devotion route serves today and invalid date paths are 404', async () => {
   const today = await worker.fetch(new Request('https://ekodi.kr/bible/devotion'), assetEnv());
   assert.equal(today.status, 200);
-  assert.match(await today.text(), /에코디 매일묵상/);
+  assert.match(await today.text(), /에코디언의 묵상나눔/);
   const bad = await worker.fetch(new Request('https://ekodi.kr/bible/devotion/%3Cscript%3E'), assetEnv());
   assert.equal(bad.status, 404);
   assert.doesNotMatch(await bad.text(), /<script>alert/);
