@@ -132,7 +132,7 @@ async function renderGoogle(){
     const [challenge]=await Promise.all([identity('/challenge',{method:'POST'}),loadGoogleLibrary()]);
     window.google.accounts.id.initialize({client_id:challenge.clientId,nonce:challenge.nonce,auto_select:false,use_fedcm_for_button:true,button_auto_select:false,callback:r=>void handleGoogleCredential(r,challenge)});
     window.google.accounts.id.renderButton(host,{type:'standard',theme:'outline',size:'large',text:'continue_with',shape:'rectangular',logo_alignment:'left',width:Math.min(390,Math.max(260,host.clientWidth||340)),use_fedcm_for_button:true});
-    notice('authStatus','처음 한 번만 Google 계정으로 본인을 확인합니다.');
+    notice('authStatus','사용하실 로그인 방식을 선택해 주세요. 어떤 방식으로 로그인해도 같은 EKODI ID로 연결됩니다.');
   }catch(error){console.error(error);showRetry('Google 로그인을 준비하지 못했습니다. 다시 시도해 주세요.')}
 }
 async function prepare(){

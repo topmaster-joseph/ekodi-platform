@@ -62,6 +62,13 @@ test('user-facing direct=1 shows the method choice; the Google chooser auto-open
   assert.match(auth, /if\(DIRECT_LOGIN&&!ADMIN_DIRECT_TARGET\)\{\s*notice\('사용하실 로그인 방식을 선택해 주세요/);
 });
 
+test('auth notices never present Google as the only way in', () => {
+  for (const file of ['auth-site/client-auth.js', 'auth-site/business-auth.js']) {
+    const src = read(file);
+    assert.doesNotMatch(src, /처음 한 번만 Google 계정으로 본인을 확인합니다|아래 Google 버튼을 눌러/, file);
+  }
+});
+
 test('email + password is an EKODI-only credential gated by all three operator switches', () => {
   const ui = read('auth-site/email-password.js');
   assert.match(ui, /구글·네이버·카카오 비밀번호가 아니라, 에코디에서만 쓸 새 비밀번호/);
