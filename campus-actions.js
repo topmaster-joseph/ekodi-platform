@@ -578,7 +578,6 @@
     { id: 'ekodibooks', publicPath: '/books', adminPath: '/books/admin', siteType: 'brand' },
     { id: 'cheonggye-local', publicPath: '/cheonggye', adminPath: '/cheonggye/admin', siteType: 'org' },
     { id: 'cgma', publicPath: '/cgma', adminPath: '/cgma/admin', siteType: 'org' },
-    { id: 'bbqcg', publicPath: '/bbqcg', adminPath: '/bbqcg/admin', siteType: 'store' },
     { id: 'cmpmyi', publicPath: '/cmpmyi', adminPath: '/cmpmyi/admin', siteType: 'store' },
     { id: 'jadam', publicPath: '/jadam', adminPath: '/jadam/admin', siteType: 'store' },
     { id: 'pizzamaru', publicPath: '/pizzamaru', adminPath: '/pizzamaru/admin', siteType: 'store' },
