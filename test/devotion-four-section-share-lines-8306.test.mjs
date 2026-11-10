@@ -25,8 +25,8 @@ test('only four explicitly selected tabs receive clean date/title/content/link s
    date:day.date,title:'에코디교회 오늘의 매일묵상 · '+section.title,
    content:section.content,url:urlFor(kind)
   });
-  assert.match(message,/^에코디언의 묵상나눔\\n2026년 11월 5일 목요일\\n/u);
-  assert.ok(message.includes('\\n'+section.content+'\\n'));
+  assert.match(message,/^에코디언의 묵상나눔\n2026년 11월 5일 목요일\n/u);
+  assert.ok(message.includes('\n'+section.content+'\n'));
   assert.ok(message.endsWith(urlFor(kind)));
   assert.doesNotMatch(message,/(?:일자|제목|내용|링크): /u);
   assert.equal(message.split(urlFor(kind)).length,2);
@@ -38,7 +38,7 @@ test('only four explicitly selected tabs receive clean date/title/content/link s
 test('full poem and song preserve embedded line breaks, refrain and empty stanza',()=>{
  const poem=devotionSectionShareDetails(day,'poem');
  const message=formatDevotionSectionShareMessage({date:day.date,title:poem.title,content:poem.content,url:urlFor('poem')});
- assert.ok(message.includes('내용: 첫 번째 시구\n두 번째 시구\n\n마지막 시구\n링크: '));
+ assert.ok(message.includes('첫 번째 시구\n두 번째 시구\n\n마지막 시구\nhttps://ekodi.kr/'));
  const song=devotionSectionShareDetails(day,'song');
  assert.ok(song.content.includes('첫 절\n둘째 절\n후렴: 후렴 하나 / 후렴 둘'));
  assert.equal(song.title,'묵상 노래 · 함께 부르는 찬양');
