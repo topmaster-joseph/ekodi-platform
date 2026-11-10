@@ -7,6 +7,8 @@ const storeSelect=document.querySelector('#storeSelect');
 const storeList=document.querySelector('#storeList');
 const bookList=document.querySelector('#bookList');
 const refreshButton=document.querySelector('#refreshButton');
+const studioLoginUrl=()=>'https://ekodi.kr/auth/?site=publishing&return_to='+encodeURIComponent(location.href);
+function showAuthenticated(on){document.documentElement.classList.toggle('publishing-signed-in',on);workspace.hidden=!on;}
 let snapshot={stores:[],books:[]};
 
 async function api(path,options={}){
@@ -29,11 +31,30 @@ async function load(){
   try{
     snapshot=await api('/api/books/me');
     state.textContent=`${snapshot.account.email} 계정으로 연결되었습니다.`;
-    workspace.hidden=false;render();
+    showAuthenticated(true);render();
   }catch(error){
+    showAuthenticated(false);
     if(error.status===401){
-      const returnTo=encodeURIComponent(location.href);
-      state.innerHTML=`로그인이 필요합니다. <a href="https://ekodi.kr/auth/?site=books&return_to=${returnTo}">EKODI 통합인증으로 로그인</a>`;
+      // The shared site header is not an authorization grant for this studio.
+      // Explicitly distinguish a missing central session from a service handoff mismatch.
+      let centralSession=false;
+      try{
+        const response=await fetch('/api/session',{credentials:'include',cache:'no-store'});
+        const session=await response.json().catch(()=>({}));
+        centralSession=response.ok&&Boolean(session.authenticated);
+      }catch{}
+      state.replaceChildren();
+      const message=document.createElement('span');
+      message.textContent=centralSession
+        ? '에코디 로그인은 확인되지만 출판 스튜디오 연결이 되지 않았습니다. '
+        : '출판 스튜디오 이용을 위해 로그인이 필요합니다. ';
+      const signIn=document.createElement('a');
+      signIn.href=studioLoginUrl();
+      signIn.textContent=centralSession?'계정 연결 다시 확인':'통합 로그인';
+      const retry=document.createElement('button');
+      retry.type='button';retry.className='ghost';retry.textContent='다시 확인';
+      retry.addEventListener('click',load);
+      state.append(message,signIn,document.createTextNode(' '),retry);
     }else state.textContent=`연결 오류: ${error.message}`;
   }
 }
