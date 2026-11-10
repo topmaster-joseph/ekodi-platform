@@ -24,7 +24,7 @@ test('brand governance is in the super-admin site menu and canonical route',asyn
  const layout=await load('admin-menu-layout.js');
  assert.ok(layout.includes('const DEMAND_KEYS=new Map(['));
  const compact=await load('admin-menu-layout.compact.js');
- assert.ok(compact.includes('admin-menu-layout.js'));
+ assert.ok(compact.startsWith('// source-sha256:'));
 
 });
 test('brand console remains read-only and does not request legal filings or external paid actions',async()=>{
