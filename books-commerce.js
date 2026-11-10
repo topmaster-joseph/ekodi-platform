@@ -9,7 +9,7 @@
 //   (books_finance_transactions · ekodi-direct 채널)에 기록한다.
 import { aiReleaseBooks, mergeAiReleases, isVerifiedAiRelease } from './books-ai-releases.js';
 import * as ekodipay from './ekodipay-core.js';
-import { guestBuyer, guestEndpoint } from './books-guest-commerce.js';
+import { guestBuyer, guestEndpoint, guestConfig } from './books-guest-commerce.js';
 import { publisherAuthorizedForChannel } from './publishing/human/storefront-release-guard.js';
 import { saleReadiness } from './books-sale-readiness.js';
 import { effectiveSaleReadiness, approvalRoute, publicApprovals } from './books-edition-approval.js';
@@ -206,6 +206,7 @@ export async function createOrder(env, request, body, now = new Date()) {
   if (!pay.ready) return { status: 503, data: { error: '에코디서점 결제 준비 중입니다. 결제가 열리면 바로 구매하실 수 있습니다.', code: 'PAYMENTS_NOT_READY' } };
   const buyer = await commerceBuyer(env,request);
   if (!buyer) return { status: 401, data: { error: '로그인하거나 비회원 이메일 인증 후 구매해 주세요.', code: 'login_required' } };
+  if (buyer.isGuest && !guestConfig(env).enabled) return {status:503,data:{error:'전자책 비회원 결제는 전용 가맹점 승인 후 개통됩니다.',code:'GUEST_CHECKOUT_NOT_APPROVED'}};
   if (pay.mode !== 'live' && (buyer.isGuest || !operatorEmails(env).has(buyer.email))) return { status: 503, data: { error: '에코디서점 결제 준비 중입니다.', code: 'PAYMENTS_TEST_ONLY' } };
   const [catalog, policy] = await Promise.all([loadCatalog(env), loadPolicy(env)]);
   const book = await authorizedPublicSaleBook(env,catalog,body?.bookId);
