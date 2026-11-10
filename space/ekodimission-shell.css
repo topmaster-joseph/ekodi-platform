@@ -2,6 +2,8 @@
 .mission-site-header{max-width:var(--mission-max);margin:auto;padding:.9rem 1.25rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;color:var(--mission-ink)}
 .mission-site-header .mission-brand{display:flex;align-items:center;gap:.6rem;color:inherit;text-decoration:none;min-width:max-content}
 .mission-site-header .mission-brand-mark{display:grid;place-items:center;width:2.25rem;height:2.25rem;border-radius:50%;background:var(--mission-accent);color:#fff;font-family:Georgia,serif}
+.mission-site-header .mission-brand-mark[data-mission-ci="open-table"] svg{display:block;width:23px;height:23px;max-width:100%;color:inherit}
+@media(max-width:390px){.mission-site-header .mission-brand-mark[data-mission-ci="open-table"] svg{width:19px;height:19px}}
 .mission-site-header .mission-brand strong,.mission-site-header .mission-brand small{display:block}
 .mission-site-header .mission-brand strong{font-size:.95rem}
 .mission-site-header .mission-brand small{font-size:.6rem;letter-spacing:.14em;color:var(--mission-muted)}
