@@ -21,12 +21,24 @@ test('adds missing robots, canonical, description, og tags', async () => {
   assert.match(out, /<meta name="description" content="국립목포대학교 경영동문회 — EKODI/);
   assert.match(out, /<meta property="og:url" content="https:\/\/ekodi.kr\/mnubiz\/">/);
   assert.match(out, /og:site_name/);
+  assert.match(out, /<script type="application\/ld\+json">/);
+  assert.match(out, /"@type":"WebPage","url":"https:\/\/ekodi.kr\/mnubiz\/"/);
   assert.ok(out.indexOf('canonical') < out.indexOf('</head>'));
 });
 
 test('never overrides existing site-specific tags', () => {
   const own = '<html><head><link rel="canonical" href="https://ekodi.kr/x"><meta name="robots" content="index,follow"><meta name="description" content="own"><meta property="og:url" content="u"><meta property="og:site_name" content="S"></head></html>';
   assert.equal(decorateSiteDiscoveryHtml(own, { canonical: 'https://ekodi.kr/y', siteName: 'n' }), own);
+});
+
+test('never duplicates site-owned JSON-LD or mislabels a canonical alias', () => {
+  const ownSchema = '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event"}</script>';
+  const existing = '<html><head>' + ownSchema + '</head></html>';
+  const once = decorateSiteDiscoveryHtml(existing, { canonical: 'https://ekodi.kr/events', siteName: 'Events' });
+  assert.equal(once.split('application/ld+json').length - 1, 1);
+  const alias = '<html><head><link rel="canonical" href="https://ekodi.kr/cheonggyepass"></head></html>';
+  const out = decorateSiteDiscoveryHtml(alias, { canonical: 'https://ekodi.kr/cheonggye/pass', siteName: '청계패스' });
+  assert.doesNotMatch(out, /application\/ld\+json/);
 });
 
 test('respects noindex in meta and header, non-200, non-HTML, HEAD and missing site', async () => {

@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { ADMIN_MENUS, ADMIN_MENU_REGISTRY, getAdminMenuForSection } from '../admin-menu-registry.js';
 
 const read = name => readFileSync(new URL('../'+name,import.meta.url),'utf8');

@@ -42,6 +42,7 @@ const has = {
   description: head => /<meta\b(?=[^>]*\bname=(['"]?)description\1)[^>]*>/i.test(head),
   ogUrl: head => /<meta\b(?=[^>]*\bproperty=(['"]?)og:url\1)[^>]*>/i.test(head),
   ogSiteName: head => /<meta\b(?=[^>]*\bproperty=(['"]?)og:site_name\1)[^>]*>/i.test(head),
+  jsonLd: head => /<script\b(?=[^>]*\btype\s*=\s*(['"])application\/ld\+json\1)[^>]*>/i.test(head),
 };
 
 // Self-referencing canonical on the canonical host only; query/hash dropped.
@@ -60,6 +61,21 @@ export function siteDiscoveryTags(head, { canonical = '', siteName = '' } = {}) 
   if (siteName && !has.description(head)) tags.push(`<meta name="description" content="${escapeAttr(siteName)} — EKODI 플랫폼 공개 사이트">`);
   if (canonical && !has.ogUrl(head)) tags.push(`<meta property="og:url" content="${escapeAttr(canonical)}">`);
   if (!has.ogSiteName(head)) tags.push('<meta property="og:site_name" content="EKODI">');
+  if (canonical && !has.jsonLd(head)) {
+    // Do not claim an alias or customer-domain landing page is the primary URL.
+    const ownCanonicalTag = head.match(/<link\b(?=[^>]*\brel\s*=\s*(['"])canonical\1)[^>]*>/i)?.[0] || '';
+    const declared = ownCanonicalTag.match(/\bhref\s*=\s*(['"])(.*?)\1/i)?.[2] || '';
+    let isPrimary = !declared;
+    if (declared) {
+      try { isPrimary = new URL(declared, canonical).href.replace(/\/$/, '') === canonical.replace(/\/$/, ''); }
+      catch { isPrimary = false; }
+    }
+    if (isPrimary) {
+      // Only factual WebPage metadata: no invented owner, author or ratings.
+      const json = JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebPage', url: canonical }).replace(/</g, '\\u003c');
+      tags.push('<script type="application/ld+json">' + json + '</script>');
+    }
+  }
   return tags;
 }
 
