@@ -30,6 +30,7 @@ EKODIPAY_PROFILE = "mall"
 # BOOKS-GUEST-OTP-001: all gates must be approved before any customer charge.
 # BOOKS_GUEST_OTP_SECRET must be a Worker secret, never committed.
 # Requires a separate digital-goods MID, activated EKODI Mail sender and protected release.
+BOOKS_GUEST_ACCESS_ENABLED = "false"
 BOOKS_GUEST_CHECKOUT_ENABLED = "false"
 BOOKS_DIGITAL_MID_APPROVED = "false"
 BOOKS_GUEST_MAIL_SENDER = "ekodibiz@gmail.com"
