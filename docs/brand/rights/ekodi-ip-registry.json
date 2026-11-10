@@ -1,0 +1,149 @@
+{
+  "version": "2026-11-10",
+  "type": "brand-protection-preparation",
+  "canonicalDomain": "ekodi.kr",
+  "legalStatus": "NOT_TRADED_MARK_CLEARANCE_OR_FILED",
+  "status": "preparatory-not-registered",
+  "ownerDecisionRequired": true,
+  "trademarkDisclaimer": "This registry does not grant, register, certify or clear rights. No registration number or legal owner is inferred.",
+  "marks": [
+    {
+      "id": "ekodi-ko-word",
+      "display": "에코디",
+      "kind": "word",
+      "priority": 1,
+      "classes": [
+        "35",
+        "41",
+        "42"
+      ],
+      "status": "pre-clearance",
+      "holder": null,
+      "application": null
+    },
+    {
+      "id": "ekodi-en-word",
+      "display": "EKODI",
+      "kind": "word",
+      "priority": 1,
+      "classes": [
+        "35",
+        "41",
+        "42"
+      ],
+      "status": "pre-clearance",
+      "holder": null,
+      "application": null
+    },
+    {
+      "id": "ekodi-symbol",
+      "display": "EKODI master emblem",
+      "kind": "device",
+      "priority": 2,
+      "classes": [
+        "35",
+        "41",
+        "42"
+      ],
+      "status": "design-candidate-only",
+      "holder": null,
+      "application": null,
+      "source": "docs/brand/assets/ekodi-symbol.svg",
+      "reviewPr": 9183
+    },
+    {
+      "id": "ekodian-ko-word",
+      "display": "에코디언",
+      "kind": "word",
+      "priority": 3,
+      "classes": [
+        "16",
+        "41"
+      ],
+      "status": "pre-clearance",
+      "holder": null,
+      "application": null
+    },
+    {
+      "id": "ekodian-en-word",
+      "display": "EKODIAN",
+      "kind": "word",
+      "priority": 3,
+      "classes": [
+        "16",
+        "41"
+      ],
+      "status": "pre-clearance",
+      "holder": null,
+      "application": null
+    }
+  ],
+  "classesArePreliminary": true,
+  "possibleAdditionalClasses": [
+    "09 (downloadable software and digital goods, if actually supplied)",
+    "36 (finance/insurance, where applicable and licensed)",
+    "45 (religious/community services when within correct designation)"
+  ],
+  "proof": {
+    "sourceControl": "topmaster-joseph/ekodi-platform",
+    "existingPublicTerms": "https://ekodi.kr/terms",
+    "evidenceEntries": [
+      {
+        "type": "CI development",
+        "location": "docs/brand/EKODI-CI-PROPOSAL-20261110.md",
+        "status": "candidate"
+      },
+      {
+        "type": "CI original vector",
+        "location": "docs/brand/assets/ekodi-symbol.svg",
+        "status": "candidate"
+      },
+      {
+        "type": "research",
+        "location": "docs/brand/EKODI-REBRANDING-AUTONOMOUS-FEDERATION-20261110.md",
+        "status": "strategy"
+      },
+      {
+        "type": "site scope",
+        "location": "docs/brand/EKODI-SITE-BRAND-ROADMAP-20261110.md",
+        "status": "planning"
+      }
+    ]
+  },
+  "registryFields": [
+    "rightsOwnerLegalName",
+    "applicantCustomerNumber",
+    "representativeAuthority",
+    "markRepresentation",
+    "designatedGoodsPerClass",
+    "preclearanceEvidenceDate",
+    "officialApplicationReceipt",
+    "finalRegistrationNo",
+    "renewalDueDate",
+    "humanCreativeEvidence",
+    "licenseScope",
+    "reviewState"
+  ],
+  "governance": {
+    "recordRegistrationOnlyWithOfficialReceipt": true,
+    "noRegisteredSymbolBeforeRegistration": true,
+    "noForcedBrandingForIndependentSites": true,
+    "noFranchiseBrandWithoutOwnerLicense": true,
+    "noPublicPatentsWithoutPriorArtAndCounsel": true,
+    "noAutomaticLegalFilingOrPayment": true,
+    "rightsLedgerIsNotAuthorization": true,
+    "humanApprovalNeeded": [
+      "brand rights holder",
+      "goods/services",
+      "application fees",
+      "franchisor or partner mark usage",
+      "cross-entity license terms",
+      "official filings"
+    ]
+  },
+  "officialResources": [
+    "https://www.kipris.or.kr",
+    "https://www.patent.go.kr",
+    "https://www.copyright.or.kr"
+  ]
+}
