@@ -1,0 +1,28 @@
+{
+  "status": "PROPOSAL_NOT_CLEARED",
+  "version": "2026-11-10",
+  "brand": "에코디 / EKODI",
+  "slogan": {
+    "ko": "모이고 · 나누고 · 흩어져 · 다시 시작하다",
+    "en": "Gather. Share. Go. Begin again."
+  },
+  "values": [
+    "Ecclesia",
+    "Koinonia",
+    "Diaspora",
+    "Jubilee"
+  ],
+  "color": {
+    "deep-navy": "#182E38",
+    "deep-teal": "#167D78",
+    "warm-gold": "#C99D4C",
+    "muted-plum": "#7D526E",
+    "warm-ivory": "#F7F4EC"
+  },
+  "visual": {
+    "symbol": "docs/brand/assets/ekodi-symbol.svg",
+    "minimumPx": 24,
+    "clearSpaceRatio": 0.25
+  },
+  "usage": "Opt-in for independent sites. No rollout or rights claim before approval."
+}
