@@ -32,11 +32,12 @@ test('downloadable store promise is self-contained printable HTML and not privat
 });
 test('blank checklist is Excel-friendly CSV, no captured private data or franchise numbers',async()=>{
  const res=bbqcgPublicResourceDownload(new Request(root+'/resources/qcs-gms-checklist.csv'),'/bbqcg/resources/qcs-gms-checklist.csv');
- const body=await res.text();
+ const bytes=new Uint8Array(await res.arrayBuffer());
+ assert.deepEqual([...bytes.slice(0,3)],[0xef,0xbb,0xbf], 'CSV must include UTF-8 BOM for Excel');
+ const body=new TextDecoder('utf-8').decode(bytes);
  assert.equal(res.status,200);
  assert.match(res.headers.get('content-disposition'),/attachment/);
  assert.match(res.headers.get('content-type'),/text\/csv/);
- assert.ok(body.startsWith('\uFEFF'));
  for(const v of ['점검 항목','QCS·품질','QCS·청결','QCS·서비스','GMS·채널','GMS·개선'])assert.ok(body.includes(v),v);
  assert.doesNotMatch(body,/1\.7%|2% 적립|쿠폰 발행|고객전화|대표자 주민번호|EKODI/);
 });
