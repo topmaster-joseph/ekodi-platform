@@ -548,9 +548,13 @@
       },
       "growth-os": {
         "audience": "platform-super-admin"
+      },
+      "brand-governance": {
+        "audience": "platform-super-admin",
+        "note": "Owner requested platform-level brand/CI oversight, 2026-11-10. View-only; no tenant permission, legal filing or trademark grant. Final classification subject to EKODI Orchestrator protected review."
       }
     },
-    "note": "; Growth OS platform-super-admin only by owner's 2026-10-28 instruction, no tenant privilege expansion."
+    "note": "; Growth OS platform-super-admin only by owner's 2026-10-28 instruction, no tenant privilege expansion.; 2026-11-10 brand-governance added as platform-super-admin read-only proposal, central orchestrator review required"
   },
   "workspaceScopedSiteAdminMenus": {
     "cgma": {
