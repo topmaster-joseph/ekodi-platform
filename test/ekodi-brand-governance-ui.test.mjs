@@ -38,6 +38,9 @@ test('brand module is read-only and exposes only scoped local site admin handoff
  assert.ok(callback.DOMContentLoaded);
  assert.doesNotMatch(src,/fetch\([^)]*method\s*:\s*['"](?:POST|PUT|PATCH|DELETE)/i);
  for(const value of ['각 사이트의 독립 AI','미승인','BBQ 무안청계점','해당 사이트 자세히','권리·CI 자료'])assert.ok(src.includes(value),value);
+ assert.ok(src.includes("ekodiMenuTemplatesAuthorized==='true'"));
+ assert.ok(!src.includes("sessionStorage.getItem('ekodi-auth-token')"));
+ assert.ok(!src.includes("EKODIAdminDemand.activate('campus')"));
  assert.ok(src.includes("return roots.find(x=>x.publicPath===path)?.adminPath"));
  assert.ok(src.includes("path==='/bbqcg'?'/bbqcg/admin':''"));
 });
