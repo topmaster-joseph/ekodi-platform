@@ -38,7 +38,8 @@ export function normalizeSiteAiReport(input,authority,clock=()=>new Date().toISO
   // This contract never accepts credential payloads or arbitrary private message bodies.
   if(Object.keys(input).some(key=>/token|secret|credential|password|private|api_?key/i.test(key)))
     throw new Error('SENSITIVE_FIELD_FORBIDDEN');
-  const providerVerified=input.providerVerified===true && evidence.some(item=>item.kind==='provider_receipt');
+  const verifiedProviderReceipts=new Set(Array.isArray(authority.verifiedProviderReceiptIds)?authority.verifiedProviderReceiptIds:[]);
+  const providerVerified=evidence.some(item=>item.kind==='provider_receipt'&&item.receiptId&&verifiedProviderReceipts.has(item.receiptId));
   const observedAt=clock();
   if(!Number.isFinite(Date.parse(observedAt)))throw new Error('INVALID_OBSERVATION_TIME');
   return Object.freeze({
@@ -65,7 +66,7 @@ export function proposeCentralFollowUp(report,{allowedActions=['recheck','reques
   const requiresHuman=suggestion==='request_human_approval'||suggestion==='escalate';
   return Object.freeze({
     workspaceId:report.workspaceId,siteUrl:report.siteUrl,capability:report.capability,
-    proposedAction:suggestion,executionAuthorized:humanApproved&&requiresHuman?false:false,
+    proposedAction:suggestion,executionAuthorized:false,
     requiresHumanApproval:requiresHuman,
     // Suggested actions are non-executing until tenant-local capability, policy and human gate verify.
     instructionState:'proposal_only',correlationRunId:report.runId,
