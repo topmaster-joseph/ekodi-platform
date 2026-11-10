@@ -15,10 +15,10 @@ test('Mission devotion uses exact Mission home header/footer public shell, no fo
   const devotionHeader=devotion.match(htmlTag('header'))?.[0]||'';
   // Homepage has a site-owned decorative CI, while devotional content retains
   // the same structural header contract and its existing icon.
-  const stripDecorativeMark=html=>html.replace(/<span class="mission-brand-mark"[^>]*>(?:<svg[\\s\\S]*?<\\/svg>|E)<\\/span>/,'<span class="mission-brand-mark">IDENTITY_MARK</span>');
+  const stripDecorativeMark=html=>html.replace(/<span class="mission-brand-mark"[^>]*>[\s\S]*?<\/span>/,'<span class="mission-brand-mark">IDENTITY_MARK</span>');
   assert.equal(stripDecorativeMark(homeHeader),stripDecorativeMark(devotionHeader));
   assert.match(homeHeader,/data-mission-ci="open-table"/);
-  assert.match(devotionHeader,/class="mission-brand-mark">E<\\/span>/);
+  assert.match(devotionHeader,/class="mission-brand-mark">E<\/span>/);
   assert.match(devotion,/<header class="mission-site-header">/);
   assert.match(homepage,/<footer class="site-footer">/);
   assert.match(devotion,/<footer class="site-footer">/);
