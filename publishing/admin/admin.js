@@ -240,24 +240,70 @@
       io.observe(fig);
     } else start();
   }
-  function ebookReader(d, getChapter, onEdit) {
+  // 전자책 화면: 양쪽 가장자리의 희미한 화살표(또는 밀기·방향키)로 넘기고, 본문을 누르면 그 자리에서 고친다.
+  // 고친 내용은 원고 화면의 입력칸과 같은 곳에 들어가므로 두 화면이 늘 같다. 저장은 장별(이 장 수정 완료) 또는 전체(전체 수정 완료).
+  function ebookReader(d, getChapter, ed) {
     const pages = [{ kind: 'cover' }, { kind: 'toc' }, ...d.chapters.map(c => ({ kind: 'ch', number: c.number }))];
-    let at = 0; let size = 1;
+    let at = 0; let size = 1; let editing = false;
     try { size = Number(localStorage.getItem('padmin-reader-size')) || 1; } catch {}
     const page = el('article', { className: 'rd-page', tabIndex: 0 });
     const pos = el('span', { className: 'rd-pos' });
     const flags = el('span', { className: 'rd-flags' });
-    const prev = el('button', { type: 'button', className: 'rd-btn', textContent: '‹ 이전' });
-    const next = el('button', { type: 'button', className: 'rd-btn', textContent: '다음 ›' });
     const smaller = el('button', { type: 'button', className: 'rd-btn', textContent: '가-', ariaLabel: '글자 작게' });
     const bigger = el('button', { type: 'button', className: 'rd-btn', textContent: '가+', ariaLabel: '글자 크게' });
-    const edit = el('button', { type: 'button', className: 'rd-btn rd-edit', textContent: '이 장 고치기' });
-    const device = el('div', { className: 'rd-device' }, page);
-    const bar = el('div', { className: 'rd-bar' }, prev, pos, next, el('span', { className: 'rd-gap' }), flags, smaller, bigger, edit);
+    const saveAll = el('button', { type: 'button', className: 'rd-btn rd-saveall', textContent: '전체 수정 완료' });
+    const note = el('span', { className: 'rd-note-msg', role: 'status' });
+    const prevZone = el('button', { type: 'button', className: 'rd-zone rd-zone-prev', ariaLabel: '이전 쪽', textContent: '‹' });
+    const nextZone = el('button', { type: 'button', className: 'rd-zone rd-zone-next', ariaLabel: '다음 쪽', textContent: '›' });
+    const device = el('div', { className: 'rd-device' }, page, prevZone, nextZone);
+    const top = el('div', { className: 'rd-bar' }, saveAll, note, el('span', { className: 'rd-gap' }), flags);
+    const bar = el('div', { className: 'rd-bar' }, pos, el('span', { className: 'rd-gap' }), smaller, bigger);
     const countFlags = () => d.chapters.reduce((n, c) => n + ((getChapter(c.number).body.match(/\[확인필요\]|\[본문확인\]/g) || []).length), 0);
+    function status() {
+      const n = ed.dirty.size;
+      saveAll.textContent = n ? `전체 수정 완료 (${n}개 장)` : '전체 수정 완료';
+      saveAll.disabled = n === 0; saveAll.classList.toggle('rd-saveall-on', n > 0);
+      const k = countFlags(); flags.textContent = k ? `확인 표시 ${k}곳` : '확인 표시 없음'; flags.classList.toggle('rd-flags-on', k > 0);
+    }
+    const grow = t => { t.style.height = 'auto'; t.style.height = `${t.scrollHeight + 4}px`; };
+    function chapterPage(p) {
+      const c = getChapter(p.number);
+      const changed = ed.dirty.has(p.number);
+      page.append(el('p', { className: 'rd-ch-no', textContent: `${p.number}장${changed ? ' · 고친 내용 저장 전' : ''}` }));
+      const fig = el('figure', { className: 'rd-fig' });
+      const regen = c.body.trim() ? () => api(`admin/ai-books/${d.book.id}/images/${p.number}`, {}, 'POST', 90000) : null;
+      loadFig(fig, `admin/ai-books/${d.book.id}/images/${p.number}`, c.title, regen);
+      const done = el('button', { type: 'button', className: 'rd-done', textContent: '이 장 수정 완료' });
+      const doneMsg = el('span', { className: 'rd-done-msg', role: 'status' });
+      done.addEventListener('click', async () => {
+        done.disabled = true; doneMsg.textContent = '저장 중…';
+        try { await ed.save(p.number); editing = false; draw(); flash(`${p.number}장을 저장했습니다.`); }
+        catch { done.disabled = false; doneMsg.textContent = '저장하지 못했습니다. 다시 눌러 주세요.'; }
+      });
+      if (editing) {
+        const title = el('input', { type: 'text', className: 'rd-in-title', value: c.title, ariaLabel: `${p.number}장 제목` });
+        const body = el('textarea', { className: 'rd-in-body', value: c.body, ariaLabel: `${p.number}장 본문`, spellcheck: false });
+        title.addEventListener('input', () => { ed.setChapter(p.number, { title: title.value }); status(); });
+        body.addEventListener('input', () => { ed.setChapter(p.number, { body: body.value }); grow(body); status(); });
+        const view = el('button', { type: 'button', className: 'rd-view', textContent: '읽기 화면으로' });
+        view.addEventListener('click', () => { editing = false; draw(); });
+        page.append(title, fig, body, el('div', { className: 'rd-actions' }, done, view, doneMsg));
+        requestAnimationFrame(() => grow(body));
+      } else {
+        const h = el('h2', { className: 'rd-ch-title rd-editable', textContent: c.title, title: '눌러서 고치기' });
+        const blocks = c.body.trim() ? readerBlocks(c.body) : [el('p', { className: 'rd-empty', textContent: '아직 쓰지 않은 장입니다. 눌러서 쓰기 시작하세요.' })];
+        const text = el('div', { className: 'rd-text rd-editable', title: '눌러서 고치기' }, ...blocks);
+        const start = focus => () => { if (window.getSelection && String(window.getSelection()).length) return; editing = true; draw(); page.querySelector(focus)?.focus({ preventScroll: true }); };
+        h.addEventListener('click', start('.rd-in-title')); text.addEventListener('click', start('.rd-in-body'));
+        const pen = el('button', { type: 'button', className: 'rd-view', textContent: '✎ 이 장 고치기' });
+        pen.addEventListener('click', start('.rd-in-body'));
+        page.append(h, fig, text, el('div', { className: 'rd-actions' }, ...(changed ? [done] : []), pen, doneMsg));
+      }
+    }
     function draw() {
       const p = pages[at];
       device.style.setProperty('--rd-scale', String(size));
+      device.classList.toggle('rd-editing', editing);
       page.replaceChildren();
       if (p.kind === 'cover') {
         page.append(el('div', { className: 'rd-cover' },
@@ -268,47 +314,55 @@
           el('p', { className: 'rd-disc', textContent: d.book.meta.disclosure || 'AI 협업 초안 · 저자 감수' })));
       } else if (p.kind === 'toc') {
         const ol = el('ol', { className: 'rd-toc' });
-        d.chapters.forEach((c, i) => { const a = el('button', { type: 'button', textContent: `${c.number}. ${getChapter(c.number).title}` }); a.addEventListener('click', () => { at = i + 2; draw(); }); ol.append(el('li', {}, a)); });
+        d.chapters.forEach((c, i) => { const a = el('button', { type: 'button', textContent: `${c.number}. ${getChapter(c.number).title}${ed.dirty.has(c.number) ? ' ●' : ''}` }); a.addEventListener('click', () => go(i + 2)); ol.append(el('li', {}, a)); });
         page.append(el('h2', { className: 'rd-ch-title', textContent: '차례' }), ol);
-      } else {
-        const c = getChapter(p.number);
-        page.append(el('p', { className: 'rd-ch-no', textContent: `${p.number}장` }), el('h2', { className: 'rd-ch-title', textContent: c.title }));
-        const fig = el('figure', { className: 'rd-fig' });
-        const regen = c.body.trim() ? () => api(`admin/ai-books/${d.book.id}/images/${p.number}`, {}, 'POST', 90000) : null;
-        loadFig(fig, `admin/ai-books/${d.book.id}/images/${p.number}`, c.title, regen);
-        page.append(fig, ...(c.body.trim() ? readerBlocks(c.body) : [el('p', { className: 'rd-empty', textContent: '아직 쓰지 않은 장입니다.' })]));
-      }
+      } else chapterPage(p);
       pos.textContent = p.kind === 'cover' ? '표지' : p.kind === 'toc' ? '차례' : `${p.number} / ${d.chapters.length}장`;
-      const n = countFlags(); flags.textContent = n ? `확인 표시 ${n}곳` : '확인 표시 없음'; flags.classList.toggle('rd-flags-on', n > 0);
-      prev.disabled = at === 0; next.disabled = at === pages.length - 1; edit.hidden = p.kind !== 'ch';
+      prevZone.disabled = at === 0; nextZone.disabled = at === pages.length - 1;
+      status();
       page.scrollTop = 0;
     }
-    prev.addEventListener('click', () => { if (at > 0) { at--; draw(); } });
-    next.addEventListener('click', () => { if (at < pages.length - 1) { at++; draw(); } });
+    function go(i) { if (i < 0 || i >= pages.length || i === at) return; at = i; editing = false; draw(); }
+    let flashTimer = 0;
+    function flash(t) { note.textContent = t; clearTimeout(flashTimer); flashTimer = setTimeout(() => { note.textContent = ''; }, 4000); }
+    prevZone.addEventListener('click', () => go(at - 1));
+    nextZone.addEventListener('click', () => go(at + 1));
+    saveAll.addEventListener('click', async () => {
+      saveAll.disabled = true; flash('모두 저장하는 중…');
+      const r = await ed.saveAll(); if (!r.failed.length) editing = false; draw();
+      flash(r.failed.length ? `${r.saved}개 장 저장, ${r.failed.join('·')}장은 저장하지 못했습니다. 다시 눌러 주세요.` : `${r.saved}개 장을 모두 저장했습니다.`);
+    });
     const setSize = v => { size = Math.min(1.4, Math.max(0.85, Math.round(v * 100) / 100)); try { localStorage.setItem('padmin-reader-size', String(size)); } catch {} draw(); };
     smaller.addEventListener('click', () => setSize(size - 0.1));
     bigger.addEventListener('click', () => setSize(size + 0.1));
-    edit.addEventListener('click', () => { const p = pages[at]; if (p.kind === 'ch') onEdit(p.number); });
-    page.addEventListener('keydown', e => { if (e.key === 'ArrowRight') next.click(); if (e.key === 'ArrowLeft') prev.click(); });
+    const typing = e => /^(INPUT|TEXTAREA)$/.test(e.target.tagName);
+    page.addEventListener('keydown', e => { if (typing(e)) return; if (e.key === 'ArrowRight') go(at + 1); if (e.key === 'ArrowLeft') go(at - 1); });
+    // 휴대폰: 읽는 중에는 옆으로 밀어서도 넘긴다(고치는 중에는 끔).
+    let sx = 0, sy = 0;
+    page.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true });
+    page.addEventListener('touchend', e => { if (editing || typing(e)) return; const t = e.changedTouches[0]; const dx = t.clientX - sx, dy = t.clientY - sy; if (Math.abs(dx) > 70 && Math.abs(dy) < 50) go(at + (dx < 0 ? 1 : -1)); }, { passive: true });
     draw();
-    return { node: el('section', { className: 'rd' }, bar, device), refresh: draw, goChapter(n) { const i = pages.findIndex(x => x.number === n); if (i >= 0) { at = i; draw(); } } };
+    return { node: el('section', { className: 'rd' }, top, device, bar), refresh: () => { if (!editing) draw(); else status(); }, status, goChapter(n) { const i = pages.findIndex(x => x.number === n); if (i >= 0) go(i); } };
   }
   async function aiBook(id) {
     const d = await api(`admin/ai-books/${id}`);
     const msg = el('p', { className: 'muted', role: 'status' });
     const parts = [el('h2', { textContent: d.book.title }), el('p', { className: 'muted', textContent: `${d.book.meta.subtitle || ''} · ${d.book.meta.genre || ''} · 저자 ${d.book.meta.author} · ${d.book.meta.disclosure}` })];
-    const editors = new Map(); const editSections = [];
+    const editors = new Map(); const editSections = []; const saves = new Map(); const dirty = new Set();
+    window.addEventListener('beforeunload', e => { if (dirty.size) { e.preventDefault(); e.returnValue = ''; } });
     for (const c of d.chapters) {
       const title = el('input', { type: 'text', value: c.title, className: 'padmin-ai-title' });
       const body = el('textarea', { value: c.body, rows: 14, className: 'padmin-ai-body' });
       const save = el('button', { type: 'button', className: 'button', textContent: `${c.number}장 저장` });
-      save.addEventListener('click', async () => { msg.textContent = '저장 중…'; try { await api(`admin/ai-books/${id}/chapters/${c.number}`, { title: title.value, body: body.value }, 'PUT'); msg.textContent = `${c.number}장을 저장했습니다.`; } catch (e) { msg.textContent = '저장하지 못했습니다.'; } });
+      // 전자책 화면과 원고 화면이 같은 저장 함수를 쓴다(장마다 하나). 저장되면 '고친 장' 표시를 지운다.
+      saves.set(c.number, async () => { await api(`admin/ai-books/${id}/chapters/${c.number}`, { title: title.value, body: body.value }, 'PUT'); dirty.delete(c.number); reader?.status(); });
+      save.addEventListener('click', async () => { msg.textContent = '저장 중…'; try { await saves.get(c.number)(); msg.textContent = `${c.number}장을 저장했습니다.`; } catch (e) { msg.textContent = '저장하지 못했습니다.'; } });
       const fig = el('figure', { className: 'padmin-ai-fig' });
       const regen = c.body.trim() ? () => api(`admin/ai-books/${id}/images/${c.number}`, {}, 'POST', 90000) : null;
       loadFig(fig, `admin/ai-books/${id}/images/${c.number}`, c.title, regen);
       const sec = el('section', { className: 'padmin-ai-ch', id: `ai-ch-${c.number}` }, el('h3', { textContent: `${c.number}장 · ${({ pending: '아직 안 씀', drafted: 'AI 초안(편집 완료)', edited: '감수 중' })[c.status] || c.status}` }), fig, title, body, save);
       editors.set(c.number, { title, body }); editSections.push(sec);
-      body.addEventListener('input', () => reader?.refresh()); title.addEventListener('input', () => reader?.refresh());
+      body.addEventListener('input', () => { dirty.add(c.number); reader?.refresh(); }); title.addEventListener('input', () => { dirty.add(c.number); reader?.refresh(); });
     }
     let reader = null;
     const getChapter = n => { const e = editors.get(n); return { title: e.title.value, body: e.body.value }; };
@@ -316,7 +370,11 @@
     const tabRead = el('button', { type: 'button', className: 'rd-tab', textContent: '전자책으로 보기', ariaPressed: 'true' });
     const tabEdit = el('button', { type: 'button', className: 'rd-tab', textContent: '원고 고치기', ariaPressed: 'false' });
     const mode = m => { const r = m === 'read'; reader.node.hidden = !r; editWrap.hidden = r; tabRead.setAttribute('aria-pressed', String(r)); tabEdit.setAttribute('aria-pressed', String(!r)); if (r) reader.refresh(); };
-    reader = ebookReader(d, getChapter, n => { mode('edit'); document.getElementById(`ai-ch-${n}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); editors.get(n)?.body.focus({ preventScroll: true }); });
+    reader = ebookReader(d, getChapter, {
+      setChapter(n, v) { const e = editors.get(n); if (!e) return; if (v.title !== undefined) e.title.value = v.title; if (v.body !== undefined) e.body.value = v.body; dirty.add(n); },
+      save: n => saves.get(n)(), dirty,
+      async saveAll() { const list = [...dirty].sort((x, y) => x - y); const failed = []; for (const n of list) { try { await saves.get(n)(); } catch { failed.push(n); } } return { saved: list.length - failed.length, failed }; },
+    });
     tabRead.addEventListener('click', () => mode('read')); tabEdit.addEventListener('click', () => mode('edit'));
     parts.push(el('div', { className: 'rd-tabs', role: 'group', ariaLabel: '검수 방식' }, tabRead, tabEdit), reader.node, editWrap);
     const approve = el('button', { type: 'button', className: 'button primary', textContent: '감수 완료' });

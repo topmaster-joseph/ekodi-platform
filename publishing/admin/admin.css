@@ -104,3 +104,27 @@ a.padmin-stat-link:hover,a.padmin-stat-link:focus-visible{background:#1f3150;out
 .rd-page .rd-cover h1{color:#5a2a22}
 .rd-page p.rd-lead{text-indent:0;margin-bottom:.4em;font-weight:700}
 .fig-regen{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:14px;border:1px dashed #c9c2b4;border-radius:8px;margin:6px 0}
+/* PUBLISHING-AI-READER-EDIT-001: 양쪽 희미한 화살표로 넘기기 · 전자책에서 바로 고치기 */
+.rd-device{position:relative}
+.rd-zone{position:absolute;top:14px;bottom:14px;width:clamp(34px,11%,72px);display:flex;align-items:center;border:0;background:transparent;color:#2b2622;font:300 2.6rem/1 system-ui,sans-serif;opacity:.18;cursor:pointer;transition:opacity .2s,background .2s;-webkit-tap-highlight-color:transparent;z-index:2}
+.rd-zone-prev{left:14px;justify-content:flex-start;padding-left:6px;border-radius:10px 0 0 10px}
+.rd-zone-next{right:14px;justify-content:flex-end;padding-right:6px;border-radius:0 10px 10px 0}
+.rd-zone:hover,.rd-zone:focus-visible{opacity:.55;background:linear-gradient(to var(--rd-dir,right),rgba(43,38,34,.07),transparent)}
+.rd-zone-next{--rd-dir:left}
+.rd-zone:active{opacity:.75}
+.rd-zone:disabled{opacity:0;pointer-events:none}
+.rd-editing .rd-zone{opacity:.1;width:28px}
+.rd-editable{cursor:text;border-radius:4px;transition:background .15s}
+.rd-editable:hover{background:rgba(168,67,58,.06)}
+.rd-in-title{display:block;width:100%;box-sizing:border-box;margin:0 0 1em;padding:.2em .3em;border:1px dashed #c9b9a6;border-radius:6px;background:#fffdf8;color:#2b2622;font-family:inherit;font-size:1.45em;font-weight:700;line-height:1.4}
+.rd-in-body{display:block;width:100%;box-sizing:border-box;min-height:12em;margin:0 0 1em;padding:.6em .7em;border:1px dashed #c9b9a6;border-radius:6px;background:#fffdf8;color:#2b2622;font:inherit;line-height:1.85;resize:none;overflow:hidden}
+.rd-in-title:focus,.rd-in-body:focus{outline:2px solid #a8433a;outline-offset:1px;border-color:transparent}
+.rd-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:1.6em 0 .4em;padding-top:1em;border-top:1px dotted #d7cdbd;font-family:system-ui,sans-serif;font-size:.85em}
+.rd-done{padding:.55em 1.1em;border:0;border-radius:999px;background:#a8433a;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.rd-done:disabled{opacity:.6}
+.rd-view{padding:.5em 1em;border:1px solid #c9b9a6;border-radius:999px;background:transparent;color:#5a2a22;font:inherit;cursor:pointer}
+.rd-done-msg{color:#8a5a50}
+.rd-saveall:disabled{opacity:.45}
+.rd-saveall-on{background:#a8433a;border-color:#a8433a;color:#fff;font-weight:700}
+.rd-note-msg{font-size:.85rem;opacity:.9}
+@media (max-width:600px){.rd-zone{top:6px;bottom:6px}.rd-zone-prev{left:6px}.rd-zone-next{right:6px}}
