@@ -1,3 +1,4 @@
+import './admin-brand-governance.js';
 import './platform-maturity-admin.js';
 import './domain-control-admin.js';
 import './admin-menu-templates.js';
@@ -228,7 +229,6 @@ export function adminMenuOrder() {
 
 if (typeof document !== 'undefined') {
   import('./admin-design-engine.js').catch(error => console.warn('[EKODI Admin] design engine bootstrap failed', error));
-  import('./admin-brand-governance.js').catch(error => console.warn('[EKODI Admin] brand governance bootstrap failed', error));
   import('./ai-operations-center-admin.js').catch(error => console.warn('[EKODI Admin] AI operations center bootstrap failed', error));
   import('./devotional-admin.js').catch(error => console.warn('[EKODI Admin] devotional bootstrap failed', error));
   import('./common-scripture-admin.js').catch(error => console.warn('[EKODI Admin] common scripture bootstrap failed', error));
