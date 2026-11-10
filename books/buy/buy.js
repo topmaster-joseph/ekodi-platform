@@ -95,6 +95,7 @@
     $('otherChannels').hidden = channels.length === 0;
     $('signedOut').hidden = quote.signedIn; $('signedIn').hidden = !quote.signedIn;
     $('buyerEmail').textContent = quote.buyerEmail;
+    $('buyerStatusLabel').textContent = quote.guestVerified ? '비회원 이메일 인증 완료 · 구매합니다.' : '계정으로 구매합니다.';
     if (quote.owned) { $('ownedBox').hidden = false; $('payArea').hidden = true; return; }
     $('ownedBox').hidden = true; $('payArea').hidden = false;
     const open = quote.checkout.open;
@@ -151,7 +152,7 @@
     const button = $('signOut');
     if (button.disabled) return;
     button.disabled = true;
-    try { await C.signOut(); window.location.reload(); }
+    try { if (quote?.guestVerified) await C.api('guest/signout',{method:'POST',body:{}}); else await C.signOut(); window.location.reload(); }
     catch { button.disabled = false; $('accountStatus').textContent = '로그아웃을 마치지 못했습니다. 다시 시도해 주세요.'; }
   });
   C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; $('accountStatus').style.color = err ? 'var(--danger)' : ''; }, load);

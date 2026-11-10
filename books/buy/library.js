@@ -62,6 +62,7 @@
       $('libLogin').hidden = true;
       const items = Array.isArray(data.items) ? data.items : [];
       libraryAccount = friendlyAccount(data);
+      if (data.guestVerified) libraryAccount = '비회원 이메일 인증 · ' + libraryAccount;
       if (data.operator === true) {
         $('operatorPanel').hidden = false;
         window.EkodiLibraryTabs?.showOperator();
@@ -71,7 +72,7 @@
       }
       const who = document.createElement('span'); who.className = 'lib-account'; who.textContent = libraryAccount;
       const out = document.createElement('button'); out.type = 'button'; out.className = 'lib-switch'; out.textContent = '로그아웃';
-      out.addEventListener('click', async () => { out.disabled = true; await C.signOut(); location.reload(); });
+      out.addEventListener('click', async () => { out.disabled = true; try { if (data.guestVerified) await C.api('guest/signout',{method:'POST',body:{}}); else await C.signOut(); location.reload(); } catch { out.disabled = false; } });
       $('libStatus').replaceChildren(who, ` · 보유 도서 ${items.length}권 `, out);
       const list = $('libraryList'); list.replaceChildren();
       if (!items.length) {
@@ -115,7 +116,7 @@
       }
       window.EkodiLibraryTabs?.render(items,libraryAccount,data.operator === true);
     } catch (e) {
-      if (e.status === 401) { $('libStatus').textContent = '로그인이 필요합니다.'; $('libLogin').hidden = false; C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; }, () => load().then(operatorPanel)); }
+      if (e.status === 401) { $('libStatus').textContent = '로그인이 필요합니다.'; $('libLogin').hidden = false; C.mountGoogle($('googleButton'), (t, err) => { $('accountStatus').textContent = t || ''; }, () => load().then(operatorPanel)); void window.EkodiBooksGuestCheckout?.mount($('libLogin')); }
       else $('libStatus').textContent = e.message;
     }
   }

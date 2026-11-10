@@ -27,6 +27,13 @@ OPERATOR_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodibiz.kr,joseph@ekodi.kr
 # 전자책(무형)은 무형 전용 상점아이디가 발급될 때까지 결제를 닫는다(fail closed, 열람·무료 안내는 유지).
 PAYMENTS_ENABLED = "false"
 EKODIPAY_PROFILE = "mall"
+# BOOKS-GUEST-OTP-001: all gates must be approved before any customer charge.
+# BOOKS_GUEST_OTP_SECRET must be a Worker secret, never committed.
+# Requires a separate digital-goods MID, activated EKODI Mail sender and protected release.
+BOOKS_GUEST_ACCESS_ENABLED = "false"
+BOOKS_GUEST_CHECKOUT_ENABLED = "false"
+BOOKS_DIGITAL_MID_APPROVED = "false"
+BOOKS_GUEST_MAIL_SENDER = "ekodibiz@gmail.com"
 
 [[d1_databases]]
 binding = "DB"
