@@ -6,18 +6,19 @@ import {migrationManifest,backupInventory,inspectProduction} from '../scripts/po
 const now=new Date('2026-11-04T00:00:00Z');
 const production='renzehysxirjilvdxacv';
 const fixtureReady={project_ref:production,state:'points_not_installed',
-  prerequisites_ok:true,missing_migrations:Array(20).fill('missing'),
-  migration_count_expected:20};
+  prerequisites_ok:true,missing_migrations:Array(21).fill('missing'),
+  migration_count_expected:21};
 const backup={region:'ap-southeast-1',walg_enabled:true,pitr_enabled:false,
   backups:[{id:999,status:'COMPLETED',inserted_at:'2026-11-03T12:00:00Z'}]};
 
-test('exact 20 source-controlled migrations have independently verified sha256 digests',async()=>{
+test('exact 21 source-controlled migrations have independently verified sha256 digests',async()=>{
   const result=await migrationManifest();
-  assert.equal(result.files.length,20);
+  assert.equal(result.files.length,21);
   assert.match(result.manifest_sha256,/^[a-f0-9]{64}$/);
-  assert.equal(new Set(result.files.map(x=>x.filename)).size,20);
+  assert.equal(new Set(result.files.map(x=>x.filename)).size,21);
   assert.ok(result.files[0].filename.includes('site_activity_points_foundation'));
-  assert.ok(result.files.at(-1).filename.includes('recognition_goals_person_idx'));
+  assert.ok(result.files.at(-2).filename.includes('recognition_goals_person_idx'));
+  assert.ok(result.files.at(-1).filename.includes('nonverified_reward_guard'));
   assert.ok(result.files.every(x=>/^[a-f0-9]{64}$/.test(x.sha256)&&x.bytes>0));
   assert.ok(result.files.some(x=>x.risk_tags.includes('trigger_replacement')));
   assert.ok(result.files.some(x=>x.risk_tags.includes('security_definer')));
@@ -48,7 +49,7 @@ test('production plan never emits secret, backup IDs, or authorizes data changes
   const result=await inspectProduction({token:'private-test-token',now,fetchImpl,
     readinessInspect:async()=>fixtureReady,manifestFn:async()=>manifest});
   assert.equal(result.schema_posture,'not_installed');
-  assert.equal(result.missing_migration_count,20);
+  assert.equal(result.missing_migration_count,21);
   assert.equal(result.production_schema_write_authorized,false);
   assert.equal(result.production_points_activation_authorized,false);
   assert.equal(result.backup_restore_owner_approval_required,true);
@@ -76,8 +77,8 @@ test('migration manifest fails closed on missing files and destructive SQL',asyn
   const fakeFile='20261104000000_ekodi_points_foundation.sql';
   await assert.rejects(migrationManifest({list:async()=>[fakeFile],read:async()=> 'select 1;'}),/requires_fresh_review/);
   const real=await migrationManifest();
-  assert.equal(real.files.length,20);
-  const files=Array.from({length:20},(_,i)=>'20261104'+String(i).padStart(6,'0')+'_ekodi_points_'+i+'.sql');
+  assert.equal(real.files.length,21);
+  const files=Array.from({length:21},(_,i)=>'20261104'+String(i).padStart(6,'0')+'_ekodi_points_'+i+'.sql');
   await assert.rejects(migrationManifest({list:async()=>files,read:async()=> 'DROP TABLE public.people;'}),/requires_manual_security_review/);
 });
 
