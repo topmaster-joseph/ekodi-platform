@@ -46,6 +46,45 @@ export function staleWorkflowFiles(compare) {
     .slice(0, 20);
 }
 
+// PARKED-RELEASE-VISIBILITY-001
+//
+// Measured 2026-11-10 in production D1: 46 recoveries refused for a stale base
+// since 2026-10-27, still happening. The refusal was already written down twice —
+// `ekodi_orchestrator_tasks.dead_letter_reason` and a PR comment — and read by
+// nobody, because of how it was said:
+//
+//   #7993 collected SIX identical refusal comments between 14:31:52 and 14:45:25
+//   on 2026-11-03 (one per pushed head) and then said nothing for eight days.
+//   #8430 said it once and then nothing for five days. Neither PR carried a
+//   label, so 46 parked releases could not be found as a set at all.
+//
+// Loudest in the fourteen minutes nobody was watching, silent for the week that
+// mattered. By the time anyone looked, main had been rebuilt past both changes
+// and the work was wasted — #7993's navigation model was replaced (its summary
+// behaviour reversed) and #8430's finance layout was redone with stronger tests.
+//
+// So: keep exactly one notice, always naming the current head, and leave a label
+// behind. The label makes the set findable; the single updated comment stops the
+// one place it is said from becoming noise. Deduplicating per head sha would not
+// have helped — those six comments were six different heads.
+export const STALE_BASE_LABEL = 'release-blocked-stale-base';
+export const STALE_BASE_MARKER = '<!-- EKODI-RELEASE-BLOCKED-STALE-BASE -->';
+
+/**
+ * Decide the single write that leaves one current refusal notice on the PR.
+ * `comments` is the issue's comment list as GitHub returns it.
+ * Returns { action: 'create' | 'update', commentId?, body }.
+ */
+export function staleBaseAnnouncement(comments, { headSha, remedy }) {
+  const body = `${STALE_BASE_MARKER}\n` +
+    `EKODI release-provenance recovery could not issue a release branch for \`${String(headSha).slice(0, 40)}\`.\n\n` +
+    String(remedy);
+  const list = Array.isArray(comments) ? comments : [];
+  const prior = list.find(comment => String(comment?.body || '').includes(STALE_BASE_MARKER));
+  const commentId = Number(prior?.id) || 0;
+  return commentId ? { action: 'update', commentId, body } : { action: 'create', body };
+}
+
 export function staleBaseRemedy({ prNumber, headSha, files }) {
   const list = files.slice(0, 5).map(name => '`' + name + '`').join(', ');
   return 'recovery branch refused (HTTP 403 Resource not accessible by integration): source ' +
