@@ -52,7 +52,7 @@ export async function renderBbqCheonggyePage(request,env,profile={},fetchImpl=fe
 <link rel="canonical" href="https://ekodi.kr/bbqcg">
 <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
 <link rel="preload" as="image" href="https://images.unsplash.com/photo-1742936401708-dd1b132f06db?auto=format&amp;fit=crop&amp;w=1400&amp;q=78" fetchpriority="high">
-<link rel="stylesheet" href="/bbqcg/assets/site.css">
+<link rel="stylesheet" href="/bbqcg/assets/site.css?v=f5039d1882912cbd">
 <title>${name} | 매장 안내</title>
 </head>
 <body>
