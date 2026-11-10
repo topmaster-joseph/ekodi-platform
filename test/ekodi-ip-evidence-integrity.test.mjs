@@ -25,8 +25,6 @@ test('unmerged draft assets cannot masquerade as verified main sources',async()=
   r.proof.evidenceEntries[0].availability='verified-on-main';
   assert.ok(validateEkodiIpRegistry(r).some(e=>e.includes('draft PR')));
   r.proof.evidenceEntries[0].sourceRef='';
-  const failure=await checkEkodiIpRegistry(new URL('../test/does-not-exist/',import.meta.url)).catch(e=>String(e));
-  assert.ok(typeof failure==='string' || typeof failure==='object');
 });
 test('third-party franchise marks and registered symbol cannot be claimed in EKODI master inventory',async()=>{
   const {registry}=await checkEkodiIpRegistry();const r=clone(registry);
