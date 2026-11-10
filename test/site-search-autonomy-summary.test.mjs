@@ -25,3 +25,9 @@ test('unverified alias does not inherit canonical tenant evidence',()=>{
  automation:{sources:{jobs:'ready'},sites:[{basePath:'/ekodimall',scope:'explicit_subject',publishedTotal:100}]}});
  assert.equal(rows[0].status,'unreported');
 });
+
+test('zero publication rows are not proof of an operating site AI',()=>{
+  const rows=summarize({sites:[sites[0]],automation:{sources:{jobs:'ready',connections:'ready'},sites:[{basePath:'/ekodichurch',scope:'explicit_subject',publishedTotal:0,pendingJobs:0,failedJobs:0,activeChannels:0}]}});
+  assert.notEqual(rows[0].status,'reported');
+  assert.equal(rows[0].providerVerified,false);
+});
