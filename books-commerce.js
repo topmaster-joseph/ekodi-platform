@@ -76,6 +76,11 @@ export function paymentState(env) {
 // 없으면(테스트·로컬) 이 Worker 자신의 키 설정을 쓴다.
 export async function payments(env) {
   const staging = String(env?.DATA_MODE || '') === 'isolated-staging';
+  // Digital-goods checkout must not silently reuse a MID currently approved only
+  // for physical Mall goods. Independent of the guest feature flag.
+  if (String(env?.ENVIRONMENT || '') === 'production' &&
+      (!flag(env?.BOOKS_DIGITAL_MID_APPROVED) || ekodipay.activeProfileId(env) === 'mall'))
+    return {ready:false,mode:'none',publicReady:false,widget:false,profile:'',clientKey:'',missing:['digital-mid-not-approved'],via:'digital-mid-guard'};
   if (!env?.EKODIPAY) {
     const r = paymentState(env);
     return { ...r, widget: Boolean(r.widget), clientKey: ekodipay.merchantKeys(env, r.profile).clientKey, via: 'local' };
