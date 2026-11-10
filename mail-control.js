@@ -141,7 +141,7 @@ async function accountAccess(db, actor, accountId) {
   return{row,context,permissions:{read:Boolean(grant?.can_read),send:Boolean(grant?.can_send),manage:Boolean(grant?.can_manage)||Boolean(context.canManage)}};
 }
 async function credentialForAccount(db, accountId){return db.prepare('SELECT * FROM mail_credentials WHERE account_id=?').bind(Number(accountId)).first()}
-async function googleAccessForAccount(env, db, account){
+export async function googleAccessForAccount(env, db, account){
   if(!googleMailConfigured(env)||!mailCredentialReady(env))throw Object.assign(new Error('Google Mail OAuth 구성이 아직 준비되지 않았습니다.'),{code:'MAIL_GOOGLE_NOT_CONFIGURED',status:503});
   const row=await credentialForAccount(db,account.id); if(!row)throw Object.assign(new Error('메일 계정 인증이 필요합니다.'),{code:'MAIL_ACCOUNT_NOT_CONNECTED',status:409});
   const credential=await decryptMailCredential(env,row); if(!credential.refreshToken)throw Object.assign(new Error('메일 계정 재연결이 필요합니다.'),{code:'MAIL_REFRESH_TOKEN_MISSING',status:409});

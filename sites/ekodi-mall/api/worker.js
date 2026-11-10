@@ -10,6 +10,7 @@ import { paymentExecutionBlockers, paymentProviderPublicView, selectedPaymentPro
 import { routeCommerceModel } from './commerce-os.js';
 import { confirmPayment as ekodipayConfirm } from '../../../ekodipay-core.js';
 import { handleTossWebhook } from './payment-reconciliation.js';
+import { raiseAlert } from './ops-alerts.js';
 import { cleanExpiryDate, isInExpiryWindow, expiryWindowMessage, EXPIRY_BLOCKER } from './shelf-life.js';
 
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -794,7 +795,15 @@ export async function recordConfirmedPayment(env, order, payment, provider = 'TO
   // Never grant real balances based only on a browser callback.
   if(paid) statements.push(...paidPurchasePointStatements(env,order,payment,providerName,now));
   await env.DB.batch(statements);
+  if (paid) await notifyOrderPaid(env, order).catch((error) => console.error('mall paid notice', error));
   if (paid) await notifySupplyOrder(env, order).catch((error) => console.error('mall supply order notice', error));
+}
+// EKODI-OPERATOR-NOTIFY-001: 모든 결제완료 주문을 운영자 알림 대상으로 남긴다(구매자 개인정보 제외).
+async function notifyOrderPaid(env, order) {
+  const product = await env.DB.prepare('SELECT name FROM products WHERE id=?').bind(order.product_id).first().catch(() => null);
+  const name = cleanText(product?.name || '상품', 60);
+  await raiseAlert(env, { severity: 'info', kind: 'order.paid', orderId: order.id, productId: order.product_id,
+    message: `${name} × ${order.quantity || 1} · ${Number(order.gross_amount || 0).toLocaleString('ko-KR')}원 결제완료` });
 }
 // P0: 결제 승인 전 서버 기준 주문 상태·만료·금액 검증 (Toss 승인 API 호출 이전에 차단)
 export function assessOrderForConfirmation(order, amount, now = new Date()) {

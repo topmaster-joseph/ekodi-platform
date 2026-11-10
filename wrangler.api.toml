@@ -19,6 +19,10 @@ crons = ["*/10 * * * *"]
 
 [vars]
 ENVIRONMENT = "production"
+# EKODI-OPERATOR-NOTIFY-001: 운영자 진행상황 알림. 발신은 EKODI Mail 에 Gmail 발송 권한으로 연결된 계정만 사용.
+OPERATOR_NOTIFY_ENABLED = "true"
+OPERATOR_NOTIFY_SENDER = "ekodibiz@gmail.com"
+OPERATOR_NOTIFY_RECIPIENTS = "topmaster.joseph@gmail.com"
 # KG Inicis TEST channel is public SDK configuration; do not put MID apikey
 # or the PortOne V2 server API Secret in this file.
 # The sandbox is available only to an authenticated EKODI super_admin and
