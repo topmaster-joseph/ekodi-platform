@@ -314,7 +314,7 @@ export async function library(env, request) {
     if (audiobook.ready) audiobook.voices = await availableVoices(env, book.id, audiobook.tracks.map(t => t.number));
     items.push({ id: book.id, title: book.title, subtitle: book.subtitle || '', author: book.author || '', coverImage: book.coverImage || '', grantedAt: row.granted_at, amount: row.amount, receiptUrl: row.receipt_url || '', downloadReady: ready, audiobook });
   }
-  return { status: 200, data: { email: buyer.email, tier: await tierFor(env, buyer), operator: !buyer.isGuest && operatorEmails(env).has(buyer.email), guestVerified: Boolean(buyer.isGuest), items } };
+  return { status: 200, data: { email: buyer.email, tier: await tierFor(env, buyer), operator: operatorEmails(env).has(buyer.email) && !buyer.isGuest, guestVerified: Boolean(buyer.isGuest), items } };
 }
 
 export async function download(env, request, bookId) {
