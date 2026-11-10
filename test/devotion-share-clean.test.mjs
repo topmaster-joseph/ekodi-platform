@@ -18,12 +18,12 @@ test('devotional share has a common title with no label prefixes', () => {
 
 test('poem share preserves multiline content without redundant section labels', () => {
   const result = formatDevotionSectionShareMessage({
-    date, title: '묵상 시 · 그대로', content: '다른 곳에 가야\n다른 사람이 되어야', url,
+    date, title: '묵상 시 · 그대로', passage: '고린도전서 7:17-28', content: '다른 곳에 가야\n다른 사람이 되어야', url,
   });
   assert.match(result, /^에코디언의 묵상나눔\n/);
-  assert.match(result, /\n그대로\n다른 곳에 가야\n다른 사람이 되어야\n/);
+  assert.match(result, /\n고린도전서 7:17-28\n〈그대로〉 \(묵상시\)\n다른 곳에 가야\n다른 사람이 되어야\n/);
   assert.ok(result.endsWith(url));
-  assert.doesNotMatch(result, /(?:일자|제목|내용|링크):|묵상 시|묵상 노래/);
+  assert.doesNotMatch(result, /(?:일자|제목|내용|링크):|묵상 시 ·|묵상 노래 ·/);
 });
 
 test('sharing rejects external URL', () => {
