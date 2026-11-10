@@ -4,56 +4,55 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {getAdminMenuItem,getAdminMenuForSection,adminMenuOrder} from '../admin-menu-registry.js';
 
-const load=async p=>readFile(new URL('../'+p,import.meta.url),'utf8');
+const load=async path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
-test('brand governance is in the super-admin site menu and canonical route',async()=>{
- const item=getAdminMenuItem('brand-governance');
- assert.ok(item);
- assert.equal(item.group,'sites');
- assert.equal(item.superAdminOnly,true);
- assert.equal(getAdminMenuForSection('brand-governance')?.id,'brand-portfolio');
- assert.ok(adminMenuOrder().includes('brand-governance'));
- const routes=await load('admin-canonical-routes.js');
- assert.ok(routes.includes("'brand-governance':'sites'"));
- const registry=await load('admin-menu-registry.js');
- assert.match(registry,/import '\.\/admin-brand-governance\.js';/);
- const brandModule=await load('admin-brand-governance.js');
- assert.ok(brandModule.includes("admin-brand-governance.css"));
- const policy=JSON.parse(await load('config/admin-menu-audience-policy.json'));
- assert.equal(policy.classification.entries['brand-governance']?.audience,'platform-super-admin');
- const layout=await load('admin-menu-layout.js');
- assert.ok(layout.includes('const DEMAND_KEYS=new Map(['));
+test('brand and CI tabs attach to existing super admin site template rather than expanding fixed navigation',async()=>{
+ const originalMenu=getAdminMenuItem('menu-templates');
+ assert.equal(originalMenu?.group,'sites');
+ assert.equal(originalMenu?.superAdminOnly,true);
+ assert.equal(getAdminMenuForSection('menu-templates')?.id,'menu-templates');
+ assert.ok(adminMenuOrder().includes('menu-templates'));
+ assert.equal(getAdminMenuItem('brand-governance'),null);
+ const template=await load('admin-menu-templates.js');
+ assert.match(template,/if \(session\?\.role !== 'super_admin'\) return deny\(\);/);
+ assert.ok(template.includes("import('./admin-brand-governance.js')"));
+ assert.ok(template.indexOf("session?.role !== 'super_admin'") < template.indexOf("import('./admin-brand-governance.js')"));
+ const src=await load('admin-brand-governance.js');
+ assert.ok(src.includes("document.getElementById('ekodiAdminMenuTemplates')"));
+ assert.ok(!src.includes("el.dataset.panel=SECTION"));
+ const built=await load('scripts/build.mjs');
+ for(const token of ["'admin-brand-governance.js'","'admin-brand-governance.css'"])assert.ok(built.includes(token),token);
+ const canonical=await load('admin-canonical-routes.js');
+ assert.ok(!canonical.includes("'brand-governance':'sites'"));
  const compact=await load('admin-menu-layout.compact.js');
- assert.ok(compact.startsWith('// source-sha256:'));
-
+ assert.match(compact,/^\/\/ source-sha256:[0-9a-f]{64}/);
 });
-test('brand console remains read-only and does not request legal filings or external paid actions',async()=>{
+test('brand module is read-only and exposes only scoped local site admin handoffs',async()=>{
  const src=await load('admin-brand-governance.js');
- const callbacks={};
- const doc={readyState:'loading',addEventListener(name,cb){callbacks[name]=cb}};
+ const callback={};
+ const doc={readyState:'loading',addEventListener:(n,f)=>{callback[n]=f}};
  const win={addEventListener(){},EKODIBrandGovernance:null};
- vm.runInNewContext(src,{document:doc,window:win,URLSearchParams,URL,location:{search:'',origin:'https://ekodi.kr'},sessionStorage:{getItem:()=>''}});
- assert.equal(win.EKODIBrandGovernance.section,'brand-governance');
+ vm.runInNewContext(src,{document:doc,window:win,URLSearchParams,URL,location:{search:'',origin:'https://ekodi.kr'}});
+ assert.equal(win.EKODIBrandGovernance.section,'menu-templates');
  assert.equal(win.EKODIBrandGovernance.legalActionsEnabled,false);
- assert.ok(callbacks.DOMContentLoaded);
+ assert.ok(callback.DOMContentLoaded);
  assert.doesNotMatch(src,/fetch\([^)]*method\s*:\s*['"](?:POST|PUT|PATCH|DELETE)/i);
- assert.ok(src.includes('각 사이트의 독립 AI'));
- assert.ok(src.includes('미승인'));
- assert.ok(src.includes('BBQ 무안청계점'));
- assert.ok(src.includes('해당 사이트 자세히'));
+ for(const value of ['각 사이트의 독립 AI','미승인','BBQ 무안청계점','해당 사이트 자세히','권리·CI 자료'])assert.ok(src.includes(value),value);
+ assert.ok(src.includes("return roots.find(x=>x.publicPath===path)?.adminPath"));
+ assert.ok(src.includes("path==='/bbqcg'?'/bbqcg/admin':''"));
 });
-test('site catalog display relies on registry and never alleges legal ownership',async()=>{
- const src=await load('admin-brand-governance.js');
+test('37-service public catalogue and partner sites are shown as unverified identity summaries',async()=>{
+ const module=await load('admin-brand-governance.js');
  const services=JSON.parse(await load('config/ecosystem-services.json')).services;
  assert.ok(services.length>=37);
- assert.ok(src.includes('/ecosystem-services.json'));
- assert.ok(src.includes("siteAdminRoots"));
- assert.ok(src.includes("candidate")===false || src.includes("심벌"));
- assert.ok(src.includes('noindex')===false);
- const campus=await load('campus-actions.js');
- assert.match(campus,/id: 'bbqcg', publicPath: '\/bbqcg', adminPath: '\/bbqcg\/admin'/);
+ assert.ok(module.includes('/ecosystem-services.json'));
+ assert.ok(module.includes('source:'));
+ assert.ok(module.includes("siteAdminRoots"));
+ assert.ok(module.includes('등록부 기준 확인 필요'));
+ assert.ok(module.includes('KIPRIS 개별 조사·출원은 미완료'));
+ assert.doesNotMatch(module,/상표 등록 완료|등록이 보장|Powered by EKODI/);
 });
-test('root page introduces founding values as optional explanation, not externally owned CI',async()=>{
+test('EKODI portal explains four values without altering independent brands',async()=>{
  const html=await load('index.html');
  for(const value of ['에클레시아 · 모임','코이노니아 · 나눔','디아스포라 · 삶의 자리','희년 · 회복'])assert.ok(html.includes(value));
  assert.match(html,/<details class="brand-values section-anchor" id="values">/);
