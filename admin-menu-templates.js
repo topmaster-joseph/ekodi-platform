@@ -326,6 +326,8 @@ html:not([data-ekodi-menu-templates-authorized="true"]) .sidebar [data-section="
         const session = await response.json();
         if (session?.role !== 'super_admin') return deny();
         authorized = true; root.dataset.ekodiMenuTemplatesAuthorized = 'true'; ensureNav();
+        // Mount read-only site/CI/IP overview only after server-verified super admin authorization.
+        import('./admin-brand-governance.js').catch(error => console.warn('[EKODI Menu Templates] brand summary unavailable',error));
       } catch (error) {
         console.warn('[EKODI Menu Templates] authorization check failed', error);
         deny();
