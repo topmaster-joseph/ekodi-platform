@@ -1,4 +1,3 @@
-import './admin-brand-governance.js';
 import './platform-maturity-admin.js';
 import './domain-control-admin.js';
 import './admin-menu-templates.js';
@@ -37,7 +36,6 @@ export const ADMIN_MENUS = Object.freeze([
   { id: 'site-class-other', group: 'sites', siteClass: true, labels: { ko: '기타', en: 'Other' }, sections: ['sites-other'] },
   { id: 'site-class-preparing', group: 'sites', siteClass: true, labels: { ko: '준비·비공개', en: 'Preparing & Private' }, sections: ['sites-preparing'] },
   { id: 'menu-templates', group: 'sites', labels: { ko: '관리자 메뉴 템플릿', en: 'Admin Menu Templates' }, sections: ['menu-templates'] },
-  { id: 'brand-portfolio', group: 'sites', labels: { ko: '브랜드·CI·권리', en: 'Brand, CI & Rights' }, sections: ['brand-governance'] },
   { id: 'control', group: 'ai', labels: { ko: 'AI 운영센터', en: 'AI Operations Center' }, sections: ['aiops'] },
   // 검색노출·홍보 현황 (owner request 2026-11-03): one menu, four top tabs.
   { id: 'growth-intelligence', group: 'ai', labels: { ko: '검색노출·홍보 현황', en: 'Search & Promotion Status' }, sections: ['search-visibility', 'promotion-autopost', 'promotion-channels', 'growth-os'] },
@@ -84,7 +82,6 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'sites-worklife', group: 'sites', icon: 'W', delegateSection: 'campus', siteGroup: 'worklife', labels: { ko: '업무·생활', en: 'Work & Life' } },
   { id: 'sites-other', group: 'sites', icon: '…', delegateSection: 'campus', siteGroup: 'other', labels: { ko: '기타', en: 'Other' } },
   { id: 'menu-templates', group: 'sites', icon: '☰', labels: { ko: '관리자 메뉴 템플릿', en: 'Admin Menu Templates' }, superAdminOnly: true },
-  { id: 'brand-governance', group: 'sites', icon: 'BI', labels: { ko: '브랜드·CI·권리 보호', en: 'Brand & CI Governance' }, superAdminOnly: true },
   { id: 'sites-preparing', group: 'sites', icon: '◔', delegateSection: 'campus', siteRelation: 'preparing', labels: { ko: '준비·비공개', en: 'Preparing & Private' } },
 
   { id: 'sites-internal', group: 'sites', icon: 'I', delegateSection: 'campus', siteRelation: 'internal', labels: { ko: '내부 사이트', en: 'Internal Sites' }, internal: true },
@@ -182,7 +179,7 @@ const ADMIN_MENU_CATEGORY_ORDER = Object.freeze({
 const ADMIN_MENU_SECTION_CATEGORY = Object.freeze({
   'platform-overview':'overview','command-home':'overview',
   'engine-all':'catalog','engine-core':'catalog','engine-common':'catalog','engine-operations':'catalog','engine-professional':'catalog','engine-ai':'catalog','engine-integration':'catalog','engine-preview':'catalog','service-modules':'catalog',
-  'sites-all':'sites','menu-templates':'sites','brand-governance':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
+  'sites-all':'sites','menu-templates':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',campus:'sites',clients:'sites','site-chrome':'sites',cmpmyi:'sites',organization:'sites',workspace:'sites',
   'users-access':'access',security:'security',admins:'access','social-accounts':'access','ai-membership':'access',
   work:'content',communication:'content',community:'content',books:'content','common-scripture':'content',devotional:'content',social:'content',finance:'finance',tax:'content',
   health:'status','site-health':'status',deployments:'releases',aiops:'releases',devices:'devices','pos-agent':'devices','api-cost':'finance','infra-costs':'finance',architecture:'status',maturity:'status','domain-control':'status',services:'status',
