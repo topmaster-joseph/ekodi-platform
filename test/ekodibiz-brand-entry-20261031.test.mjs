@@ -7,7 +7,8 @@ const read=path=>readFile(new URL('../'+path, import.meta.url),'utf8');
 
 test('top EKODIBIZ brand opens official public business domain, not EKODI platform home',async()=>{
   const html=await read('ekodibiz/index.html');
-  assert.match(html,/<a class="brand" href="https:\/\/ekodibiz\.kr\/" data-i18n-aria="brandHome" aria-label="에코디비즈 첫 화면으로 이동">EKODIBIZ<\/a>/);
+  assert.match(html,/<a class="brand" href="https:\/\/ekodibiz\.kr\/" data-i18n-aria="brandHome" aria-label="에코디비즈 첫 화면으로 이동" data-ekodi-ci="biz-parallel-paths">/);
+  assert.match(html,/<span>EKODIBIZ<\/span><\/a>/);
   assert.doesNotMatch(html,/<a class="brand" href="https:\/\/ekodi\.kr\//);
   // Only the separate footer EKODI control goes to the ecosystem home.
   assert.match(html,/<a href="https:\/\/ekodi\.kr\/">EKODI<\/a>/);
