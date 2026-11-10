@@ -382,7 +382,7 @@
       ?(SITE_REPORT_LABELS[report.status]||'보고 미확인')+' · '+report.recommendation
       :'보고 미확인 · 해당 사이트의 자체 실행 근거를 기다리고 있습니다.';
     const ownAdmin=$('[data-sv-own-admin]');
-    const safeAdmin=typeof report?.adminPath==='string'&&new RegExp('^/[a-z0-9/_-]+;
+    const safeAdmin=typeof report?.adminPath==='string'&&/^\/[a-z0-9/_-]+$/i.test(report.adminPath);
     ownAdmin.hidden=!safeAdmin;
     if(safeAdmin)ownAdmin.href=report.adminPath;
     else ownAdmin.removeAttribute('href');
