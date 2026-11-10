@@ -12,7 +12,7 @@ test('church devotion page is titled 에코디 오늘의 매일묵상 and mounts
   assert.match(page, /data-ekodi-devotion data-base="\/ekodichurch\/devotion\/" data-date-mode="query" data-site-label="에코디교회"/);
   assert.match(page, /<script type="module" src="\/bible\/devotion\.js"><\/script>/);
   assert.match(page, /href="\/bible\/devotion\.css"/);
-  assert.match(page, /property="og:title" content="에코디 오늘의 매일묵상 · 에코디교회"/);
+  assert.match(page, /property="og:title" content="에코디언의 묵상나눔"/);
 });
 
 test('church devotion page uses the church header and footer', () => {
