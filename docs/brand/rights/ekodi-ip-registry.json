@@ -2,7 +2,7 @@
   "version": "2026-11-10",
   "type": "brand-protection-preparation",
   "canonicalDomain": "ekodi.kr",
-  "legalStatus": "NOT_TRADED_MARK_CLEARANCE_OR_FILED",
+  "legalStatus": "NO_VERIFIED_TRADEMARK_CLEARANCE_OR_FILING",
   "status": "preparatory-not-registered",
   "ownerDecisionRequired": true,
   "trademarkDisclaimer": "This registry does not grant, register, certify or clear rights. No registration number or legal owner is inferred.",
@@ -91,24 +91,38 @@
       {
         "type": "CI development",
         "location": "docs/brand/EKODI-CI-PROPOSAL-20261110.md",
-        "status": "candidate"
+        "status": "candidate",
+        "availability": "candidate-pr-not-merged",
+        "sourceRef": "https://github.com/topmaster-joseph/ekodi-platform/pull/9183"
       },
       {
         "type": "CI original vector",
         "location": "docs/brand/assets/ekodi-symbol.svg",
-        "status": "candidate"
+        "status": "candidate",
+        "availability": "candidate-pr-not-merged",
+        "sourceRef": "https://github.com/topmaster-joseph/ekodi-platform/pull/9183"
       },
       {
         "type": "research",
         "location": "docs/brand/EKODI-REBRANDING-AUTONOMOUS-FEDERATION-20261110.md",
-        "status": "strategy"
+        "status": "strategy",
+        "availability": "verified-on-main"
       },
       {
         "type": "site scope",
         "location": "docs/brand/EKODI-SITE-BRAND-ROADMAP-20261110.md",
-        "status": "planning"
+        "status": "planning",
+        "availability": "verified-on-main"
       }
-    ]
+    ],
+    "searchEvidence": {
+      "officialSource": "https://www.kipris.or.kr",
+      "markSpecificSearchCompleted": false,
+      "verifiedAt": null,
+      "searchResults": "not_verified",
+      "officialReceipt": null,
+      "disclaimer": "No official result-specific KIPRIS search record, official filing or rights grant is held in this registry."
+    }
   },
   "registryFields": [
     "rightsOwnerLegalName",
