@@ -6,7 +6,7 @@ export function renderMallHeader({publicPrefix='',home=false,sellerHref}={}) {
  const link=(hash,label,filter)=>'<a href="'+(home?hash:(filter?root+'?category='+encodeURIComponent(filter)+'#shop':root+hash))+'"'+(filter?' data-filter-target="'+filter+'"':'')+'>'+label+'</a>';
  return '<header class="header buyer-header mall-header"><div class="mall-header-inner">'+
  '<div class="mall-header-top">'+
- '<a class="brand" href="'+href('#top')+'" aria-label="에코디몰 홈"><span class="mark">E</span><span>EKODI<small>MALL</small></span></a>'+
+ '<a class="brand" href="'+href('#top')+'" aria-label="에코디몰 홈"><span class="mark" data-mall-ci="opposing-gates" aria-hidden="true"><svg width="25" height="25" viewBox="0 0 64 64" fill="none" focusable="false"><path d="M 8 37 V 21 Q 8 11 18 11 H 38 M 56 27 V 43 Q 56 53 46 53 H 26" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>EKODI<small>MALL</small></span></a>'+
  '<form id="mallGlobalSearch" class="mall-global-search" role="search" action="/ekodimall/" method="get"><label for="mallGlobalQuery" class="sr-only">상품검색</label><input id="mallGlobalQuery" name="q" type="search" maxlength="120" placeholder="무엇을 찾고 계세요?" autocomplete="off"><button type="submit" aria-label="상품 검색하기">⌕</button></form>'+
  '<div class="actions">'+
  '<span class="mall-account" data-mall-account aria-label="내 계정"><a class="mall-account-login" data-mall-login href="/auth/?site=mall">로그인</a>'+
