@@ -6,7 +6,7 @@
 const SECTION_GROUP=Object.freeze({
   'platform-overview':'home','growth-os':'ai','search-visibility':'ai','promotion-autopost':'ai','promotion-channels':'ai',
   'engine-all':'services','engine-core':'services','engine-common':'services','engine-operations':'services','engine-professional':'services','engine-ai':'services','engine-integration':'services','engine-preview':'services',
-  'sites-all':'sites','menu-templates':'sites','brand-governance':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',
+  'sites-all':'sites','menu-templates':'sites','sites-core':'sites','sites-business':'sites','sites-community':'sites','sites-clients':'sites','sites-knowledge':'sites','sites-communication':'sites','sites-worklife':'sites','sites-other':'sites','sites-preparing':'sites','sites-internal':'sites','sites-user':'sites','sites-customer-partner':'sites','sites-independent':'sites',
   campus:'sites',clients:'sites','site-chrome':'sites',organization:'sites',workspace:'sites','cheonggye-members':'sites',
   'common-services':'services','service-modules':'services',points:'services',confirmations:'services','life-ai':'services','personal-finance':'services',invest:'services','marketing-ai':'services',affiliates:'services','supply-network':'services',insurance:'services',capabilities:'services',openai:'services',
   'users-access':'accounts',security:'accounts',admins:'accounts','social-accounts':'accounts','ai-membership':'ai',
