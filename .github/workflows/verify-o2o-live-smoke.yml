@@ -1,0 +1,52 @@
+name: Verify EKODI O2O Live Smoke
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/verify-o2o-live-smoke.yml'
+      - 'scripts/verify-o2o-live-smoke.mjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-o2o-live-smoke.yml'
+      - 'scripts/verify-o2o-live-smoke.mjs'
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-o2o-live-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  public-o2o-live:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify read-only public O2O assets and revoked-token fail-closed path
+        run: |
+          set -euo pipefail
+          node --check scripts/verify-o2o-live-smoke.mjs
+          node scripts/verify-o2o-live-smoke.mjs
+      - name: Record bounded performance evidence
+        if: success()
+        run: |
+          {
+            echo '### O2O public live smoke'
+            echo '- Public O2O HTML route and headers checked'
+            echo '- Four O2O public assets and short cache policy checked'
+            echo '- Synthetic never-issued QR rejected by GET and HEAD with no-store/noindex'
+            echo '- HTTP timings are informational and NOT browser LCP or an operator write verification'
+            echo '- No issue/scan/attendance/points/DB mutation made'
+          } >> "$GITHUB_STEP_SUMMARY"
