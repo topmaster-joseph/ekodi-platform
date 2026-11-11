@@ -32,6 +32,12 @@ const LEGACY_MALL_PREFIX = '/mall';
 const LEGACY_EKODIBIZ_PREFIX = '/org/ekodibiz';
 const MALL_ORIGIN_HOST = 'ekodi-mall.pages.dev';
 const MALL_PROXY_HEADER = 'x-ekodi-canonical-proxy';
+const O2O_PUBLIC_ASSETS = new Set([
+  '/o2o-hub-client.js',
+  '/o2o-link-core.js',
+  '/o2o-hub.css',
+  '/o2o-qr-vendor.js'
+]);
 const PUBLIC_ASSETS = new Set([
   '/promotion.css',
   '/promotion.js',
@@ -960,7 +966,12 @@ export default {
       }
       if (PUBLIC_ASSETS.has(url.pathname)) {
         const response = await env.ASSETS.fetch(request);
-        return withHostSecurity(response, PUBLIC_CSP, 'public, max-age=0, must-revalidate', 'public-asset');
+        // Only anonymous static O2O assets may use the short browser cache.
+        // QR tokens, operator RPCs and the /o2o HTML remain private/no-store.
+        const cachePolicy = O2O_PUBLIC_ASSETS.has(url.pathname)
+          ? 'public, max-age=120, stale-while-revalidate=30'
+          : 'public, max-age=0, must-revalidate';
+        return withHostSecurity(response, PUBLIC_CSP, cachePolicy, 'public-asset');
       }
     }
 
