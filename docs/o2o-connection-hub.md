@@ -57,3 +57,23 @@ Implementation branch: ai/chatgpt/20261104-o2o-tenant-ops-5c21.
 - Tests: new tenant operator routing/API/schema tests plus existing O2O and workspace route tests; synthetic Chrome operator issue/revoke/QR verification at 320, 390, 768, 1366, 1440px.
 - Blocker to declaring feature live: orchestrator-issued PR merge; guarded Shared Site Worker deployment; explicit authorized schema promotion on DEV and PROD; production operator identity tests with tenant-local account; verify issued link before and after revoke; observability receipt.
 - High-risk areas remain excluded: autonomous check-in, activity points, customer/merchant targeting, notifications, voice recording, payment or account identity inference. A QR visit remains navigation only; the canonical activity ledger alone can verify attendance with required audit proof.
+
+
+## 2026-11-11 O2O performance and reliability upgrade (EKODI-O2O-003)
+
+Owner: EKODI Orchestrator. Existing Shared Site Core, public /o2o route and site-operator settings only. No new subdomain, personal analytics, user tracking, database schema, payments or automatic attendance.
+
+### Performance changes
+- **In-flight de-duplication on /o2o/go/{token}:** simultaneously resolving the same token, Supabase connection and publishable-key identity shares one pending read (bounded to 96 distinct concurrent keys per Worker isolate). The map is cleared on completion/failure. No positive, negative, revocation or expiration result is stored or cached. Every subsequent scan makes a new Supabase lookup; operator revoke remains authoritative.
+- **Safe diagnosis:** Server-Timing: o2o-resolve;dur={milliseconds} on completed lookups; never includes a code, destination, user ID or sensitive tenant datum. Strict same-origin validation, private/no-store, noindex, HEAD behavior and existing 4.5-second upstream timeout preserved.
+- **Public static assets only:** four public O2O files use Cache-Control: public, max-age=120, stale-while-revalidate=30. The /o2o HTML, issued QR redirects, authentication and other public assets retain their existing policy. Short propagation window for hotfixes.
+- **First-load parallelism:** preload the bundled QR generator and modulepreload the O2O client in the HTML head. Same-origin vendored assets; no external provider.
+- **Mobile QR rendering:** 256x256 canvas rather than 320x320 (36% fewer rendered pixels). Print/download export retains 768px white background, high-contrast QR and quiet zone. Repeated form submit with unchanged destination reuses the QR canvas.
+- **Editable destination safety:** on an input edit the previously valid QR and href are invalidated immediately; a 220ms debounce avoids per-keystroke redraw. No personal input values are recorded or sent to the backend.
+
+### Verification, rollout and rollback
+- Node tests: test/o2o-performance.test.mjs, test/o2o-hub.test.mjs, test/o2o-routing-reservation.test.mjs, test/o2o-tenant-operator.test.mjs.
+- Tests cover 24 concurrent same-token reads -> one upstream read; a later scan and a revoked response -> fresh DB calls; separate tokens are distinct; errors recover; HEAD error is bodyless; static-only short cache; HTML/token responses stay no-store; editable public link invalidation.
+- Run platform security, architecture, boundary, constitution, mission, UI/design, deployment checks and the release build. Check 320, 390, 768, 1366, 1440px in an authorized browser after deployment. Do not claim real-life LCP or latency improvements without measured production evidence.
+- Orchestrator must handle PR conversion, mandatory checks, protected merge and deployment. Rollback is a protected source revert; no schema rollback.
+- **Previous independent blocker:** PROD may still lack o2o_campaign_links and o2o_public_resolve. This performance change does not activate that schema or authorize bypass; see issue #8568.
