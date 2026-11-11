@@ -1,6 +1,6 @@
-import { buildEpub } from './publishing-ai-epub.js';
-import { QUALITY_RULES, fixForeignScript, polishChapter } from './publishing-ai-quality.js';
-import { releaseBook, journalTick } from './publishing-ai-release.js';
+import { buildEpub, AI_NOTICE } from './publishing-ai-epub.js';
+import { QUALITY_RULES, fixForeignScript, polishChapter, stripReviewMarkers } from './publishing-ai-quality.js';
+import { releaseBook, journalTick, refreshReleaseFiles } from './publishing-ai-release.js';
 // PUBLISHING-AI-WEEKLY-001 — 주 1권 "AI 협업 초안 · 저자 감수" 원고 공장.
 //
 // 원칙
@@ -175,8 +175,8 @@ export function jpegCheck(b64) {
 }
 
 const SYSTEM = `당신은 EKODI BOOKS의 한국어 원고 집필 보조자입니다. 저자 ${AI_FACTORY.author}의 감수를 받을 초안을 씁니다.
-규칙: 사실이 확실하지 않은 수치·인용·인명·출처는 만들지 말고 [확인필요]로 표시합니다. 실존 인물의 말을 지어내지 않습니다.
-성경 인용은 장절만 표기하고 본문은 저자가 확인하도록 [본문확인]을 붙입니다. 의료·법률·투자 조언은 일반 정보로만 씁니다.
+규칙: 사실이 확실하지 않은 수치·인용·인명·출처는 만들지 말고 일반적인 표현으로 씁니다(괄호 표시·확인 표시를 붙이지 않음). 실존 인물의 말을 지어내지 않습니다.
+성경 인용은 장절만 표기합니다. 의료·법률·투자 조언은 일반 정보로만 씁니다.
 과장 광고 문구, 혐오·차별 표현을 쓰지 않습니다. 결과는 요청한 형식만 출력합니다.
 ${QUALITY_RULES}`;
 
@@ -188,7 +188,7 @@ export const CRAFT = `편집 기준(반드시 지킬 것):
 4) 핵심 문장은 한 줄로 따로 떼어 강조한다(> 로 시작).
 5) 각 소제목 끝에 독자가 오늘 해 볼 작은 실천 한 가지.
 6) 장 마지막은 다음 장을 궁금하게 만드는 한두 문장으로 닫는다.
-7) 같은 표현 반복·설교조·과장 금지. [확인필요]·[본문확인] 표시는 지우지 말고 그대로 둔다.`;
+7) 같은 표현 반복·설교조·과장 금지. 대괄호 확인 표시([확인필요] 등)는 쓰지 않는다.`;
 
 function parseJson(text) {
   const t = String(text || '').replace(/```(?:json)?/gi, '');
@@ -321,6 +321,25 @@ async function markImage(db, bookId, number, level, valid, reason = null) {
  * 1) 모든 책: 쓴 장인데 삽화가 없거나 깨졌으면 고품질로 새로 넣는다.
  * 2) 감수 중(판매 전) 책: 예전 품질 삽화를 고품질로 바꾼다. 판매 중인 책의 멀쩡한 삽화는 바꾸지 않는다.
  */
+/** 감수 중·집필 중 원고에서 확인 표시 문구를 지운다(출간된 원고 기록은 손대지 않음). 바뀐 장을 감사 기록에 남긴다. */
+export async function markerCleanupTick(env) {
+  const db = env.PUBLISH_DB;
+  const rows = (await db.prepare(`SELECT c.book_id, c.number, c.body FROM publishing_ai_chapters c JOIN publishing_ai_books b ON b.id=c.book_id
+    WHERE b.status IN ('drafting','author_review') AND (c.body LIKE '%[확인필요]%' OR c.body LIKE '%[본문확인]%')`).all()).results || [];
+  const t = now(); const done = [];
+  for (const r of rows) {
+    const body = stripReviewMarkers(r.body);
+    if (body === r.body) continue;
+    await db.batch([
+      db.prepare('UPDATE publishing_ai_chapters SET body=?, updated_at=? WHERE book_id=? AND number=?').bind(body, t, r.book_id, r.number),
+      db.prepare("INSERT INTO publishing_workflow_audit (id,project_id,actor_user_id,action,from_stage,to_stage,revision,details_json,created_at) VALUES (?, ?, 'system:ai-factory', 'ai_markers_removed', 'author_review', 'author_review', 0, ?, ?)")
+        .bind(crypto.randomUUID(), 'ai:' + r.book_id, JSON.stringify({ chapter: r.number, before: r.body.length, after: body.length }), t),
+    ]);
+    done.push({ book: r.book_id.slice(0, 8), chapter: r.number });
+  }
+  return done;
+}
+
 export async function imageCareTick(env, max = 3) {
   const db = env.PUBLISH_DB; await ensureImageMeta(db);
   const rows = (await db.prepare(`SELECT b.id, b.title, b.genre, b.status, b.plan_json, c.number, c.title AS ctitle, c.summary, c.body,
@@ -389,6 +408,10 @@ export async function aiFactoryTick(env, at = new Date()) {
       if (r.status !== 'drafted') break;
     }
   } catch (e) { steps.push({ status: 'error', message: String(e?.message || e).slice(0, 300) }); } // 실패 원인을 실행 기록에 남긴다
+  try { const cleaned = await markerCleanupTick(env); if (cleaned.length) steps.push({ status: 'markers_removed', chapters: cleaned }); }
+  catch (e) { steps.push({ status: 'markers_error', message: String(e?.message || e).slice(0, 200) }); }
+  try { const files = await refreshReleaseFiles(env, env.PUBLISH_DB, (b, ch) => epubFor(env.PUBLISH_DB, b, ch)); if (files.length) steps.push({ status: 'release_files', files }); }
+  catch (e) { steps.push({ status: 'release_files_error', message: String(e?.message || e).slice(0, 200) }); }
   try { const care = await imageCareTick(env); if (care.length) steps.push({ status: 'images', care }); }
   catch (e) { steps.push({ status: 'images_error', message: String(e?.message || e).slice(0, 200) }); }
   try { const posts = await journalTick(env.PUBLISH_DB, (s, p, n, st) => writeText(env, s, p, n, st)); if (posts.length) steps.push({ status: 'journal', posts }); }
