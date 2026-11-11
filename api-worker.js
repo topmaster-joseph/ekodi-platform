@@ -826,7 +826,7 @@ export default {
         runChecks(env),
         cloudflareAccountSnapshot(env),
         pruneAgeVerification(env),
-        runMailDocumentsSchedule(env)
+        runMailDocumentsSchedule(env).catch(error => { console.error('Mail document schedule failed', error); return null; })
       ]);
       const [evolution] = await Promise.all([
         evolutionSnapshot(env),
