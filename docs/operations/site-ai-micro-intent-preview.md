@@ -16,7 +16,7 @@ Request example (send only from authenticated EKODI Control, not from an externa
 {"siteId":"ekodi-church","scope":"site_specific","action":"repair","capabilityId":"core.automation","codeChange":true}
 ```
 
-This returns only a proposal: site-local ownership, site-native administrator detail path, whether exact Human Gate/release verification is required, and the enforced free-first, Core-fallback and KRW 0 automatic paid budget policy. It does **not** issue task IDs, authenticate tenant mutations, send notifications, pay API fees, deploy code or train model weights. `site.id` is a lookup key and must never replace canonical immutable `workspace_id` for authorization.
+This returns only a proposal: a **candidate site-owner role** (not a registered/assigned Site AI ID), site-native administrator detail path, whether exact Human Gate/release verification is required, and the enforced free-first, Core-fallback and KRW 0 automatic paid budget policy. It does **not** issue task IDs, authenticate tenant mutations, send notifications, pay API fees, deploy code or train model weights. `site.id` is a lookup key and must never replace canonical immutable `workspace_id` for authorization.
 
 The existing `capability-intent-runtime.js` remains the intent-to-capability recommender. This narrower adapter starts *after* a registered capability and site candidate have been selected; it cannot add unknown capabilities. Existing `ai-free-quota.js`, `free-tier-quota-guard.js`, `ekodi-learning-loop.js`, and `notification-control.js` remain the correct implementations for cost, learning, and dispatch.
 
