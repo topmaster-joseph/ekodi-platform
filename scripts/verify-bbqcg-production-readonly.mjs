@@ -23,6 +23,20 @@ const hasNoindex=value=>/noindex/i.test(value||'');
 const is200=status=>status===200;
 const decoder=new TextDecoder('utf-8');
 
+// Match the actual runtime's [id, Korean label, CSS pane selector] tuples,
+// independently of harmless spacing or quote style. Do not accept an arbitrary
+// list of IDs without matching the corresponding visible pane.
+const BBQCG_POS_TUPLES=Object.freeze([
+  /\[\s*['"]programs['"]\s*,\s*['"]프로그램['"]\s*,\s*['"]\.pos-programs['"]\s*\]/,
+  /\[\s*['"]orders['"]\s*,\s*['"]최근 주문['"]\s*,\s*['"]\.pos-orders['"]\s*\]/,
+  /\[\s*['"]channels['"]\s*,\s*['"]배달플랫폼['"]\s*,\s*['"]\.pos-platforms['"]\s*\]/,
+  /\[\s*['"]agent['"]\s*,\s*['"]Agent 관리['"]\s*,\s*['"]\.pos-agent-guide['"]\s*\]/
+]);
+export function hasBbqcgPosTabDefinitions(source){
+  return /function\s+mountBbqPosTabs\s*\(\)/.test(source)
+    && BBQCG_POS_TUPLES.every(tuple=>tuple.test(source));
+}
+
 export async function auditBbqcgProduction({fetchImpl=fetch,origin=BBQCG_CANARY_URL}={}){
   const base=new URL(origin);
   if(base.origin!==new URL(BBQCG_CANARY_URL).origin)throw new Error('BBQCG canary must use canonical production origin');
@@ -66,7 +80,7 @@ export async function auditBbqcgProduction({fetchImpl=fetch,origin=BBQCG_CANARY_
       mark(is200(status)&&/javascript/.test(ctype),'admin-script-http-type');
       mark(body.includes('function mountBbqPosTabs()'),'pos-tabs-function');
       mark(body.includes('data-bbq-pos-tab')&&body.includes('posTab'),'pos-tabs-state');
-      mark(body.includes("['programs'")&&body.includes("['orders'")&&body.includes("['channels'")&&body.includes("['agent'"),'pos-four-tabs');
+      mark(hasBbqcgPosTabDefinitions(body),'pos-four-tabs');
     }else if(id==='admin-styles'){
       mark(is200(status)&&/text\/css/.test(ctype),'admin-css-http-type');
       mark(body.includes('.bbq-pos-subtabs')&&body.includes('@media(max-width:620px)'),'admin-compact-mobile-rules');
