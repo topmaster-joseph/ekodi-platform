@@ -1,0 +1,25 @@
+{
+  "amendmentId": "ATTENDED-BROWSER-RUN-LEVEL-20261111",
+  "constitutionVersion": "1.27.10",
+  "approvedAt": "2026-11-11",
+  "approvedBy": "topmaster-joseph",
+  "status": "approved",
+  "changeClass": "C2",
+  "taskId": "attended-browser-runlevel-20261111",
+  "summary": "Attended operator browser: one run-level operator approval replaces per-step prompts; https://ekodi.kr (EKODI Platform) is an allowed origin for every recipe. Operator-only start, single-use profile, recipe allowlist and in-memory secret handling remain.",
+  "approvalBasis": "Owner instruction 2026-11-11 21:07 KST: '자체 브라우저를 사용하는 동안은 아무런 제약없이 진행하도록 권한 부여해. 추가로 가능한 사이트에 에코디 플랫폼 사이트도 추가하고.'",
+  "approvalScope": {
+    "constitutionSection": "1D-1",
+    "perStepApprovalRemoved": true,
+    "runLevelApprovalRequired": true,
+    "addedOrigin": "https://ekodi.kr",
+    "retainedSafeguards": [
+      "operator-only start",
+      "single-use profile",
+      "recipe allowlist",
+      "secret never logged or persisted"
+    ],
+    "aiMayStartAttendedRuns": false
+  },
+  "rollback": "Restore perStepOperatorApprovalForStateChanges=true and remove the ekodi.kr origin; or withdraw the policy as in v1.27.9."
+}

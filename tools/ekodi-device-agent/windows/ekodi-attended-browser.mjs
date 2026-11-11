@@ -9,7 +9,7 @@
  * - New single-use EKODI profile in a visible window; never the operator's own browser/profile/cookies.
  * - The operator signs in. The runner never asks for, types or stores passwords/OTP.
  * - Only registered recipes run; main-frame navigation is limited to each recipe's origins.
- * - Every state-changing step needs an explicit "y" at the device.
+ * - The operator approves the whole recipe once at start (run-level approval, Constitution v1.27.10).
  * - A secret moves only to the recipe's declared destination, in memory, never logged; profile deleted at exit.
  *
  * Usage (on the operator's PC):  node ekodi-attended-browser.mjs --recipe gmail-operator-notify [--plan]
@@ -43,7 +43,7 @@ export const RECIPES = Object.freeze({
   'gmail-operator-notify': Object.freeze({
     title: '에코디 운영자 알림용 Gmail 연결 준비',
     // Google sign-in may pass through www.google.com / accounts.google.co.kr in the main frame.
-    origins: Object.freeze(['https://console.cloud.google.com', 'https://accounts.google.com', 'https://accounts.google.co.kr', 'https://www.google.com', 'https://github.com']),
+    origins: Object.freeze(['https://ekodi.kr', 'https://console.cloud.google.com', 'https://accounts.google.com', 'https://accounts.google.co.kr', 'https://www.google.com', 'https://github.com']),
     secretDestination: Object.freeze({ kind: 'github-actions-secret', repo: GMAIL.repo, name: GMAIL.secretName }),
     steps: Object.freeze([
       { id: 'google-sign-in', kind: 'sign-in', changesState: false,
@@ -70,7 +70,13 @@ export const RECIPES = Object.freeze({
       { id: 'add-test-user', kind: 'insert-text', changesState: true, optional: true,
         url: `https://console.cloud.google.com/auth/audience?project=${GMAIL.project}`,
         text: GMAIL.testUser, highlight: ['사용자 추가', 'Add users', 'ADD USERS'],
-        say: '앱이 「테스트」 상태라면 「사용자 추가」를 누르고 이메일 칸을 클릭해 두세요(「프로덕션」이면 n을 눌러 건너뜁니다). y를 누르면 ekodibiz@gmail.com을 입력합니다. 입력 후 「저장」은 사장님이 눌러 주세요.' },
+        say: '앱이 「테스트」 상태라면 「사용자 추가」를 누르고 이메일 칸을 클릭해 두세요(「프로덕션」이면 n을 눌러 건너뜁니다). Enter를 누르면 ekodibiz@gmail.com을 입력합니다. 입력 후 「저장」은 사장님이 눌러 주세요.' },
+      { id: 'ekodi-sign-in', kind: 'sign-in', changesState: false,
+        url: 'https://ekodi.kr/mail/admin#accounts', readyOrigin: 'https://ekodi.kr', readyPath: '/mail/admin',
+        say: '에코디 메일 관리 화면입니다. 로그인 화면이 나오면 에코디 계정으로 직접 로그인하세요.' },
+      { id: 'ekodi-connect-gmail', kind: 'click', changesState: true, noNavigate: true,
+        url: 'https://ekodi.kr/mail/admin#accounts', texts: ['Gmail 읽기·발송 연결'], doneTexts: ['연결됨'], awaitDoneOrigin: 'https://ekodi.kr',
+        say: 'ekodibiz@gmail.com 계정의 「Gmail 읽기·발송 연결」을 누릅니다. 이어지는 Google 화면에서 ekodibiz@gmail.com을 선택하고 「허용」은 사장님이 눌러 주세요.' },
     ]),
   }),
 });
@@ -117,7 +123,7 @@ export function extractClientSecret(text) {
 }
 
 export function renderPlan(recipe) {
-  return [`[${POLICY_ID}] ${recipe.title}`, ...recipe.steps.map((s, i) => `${i + 1}. ${s.say}${s.changesState ? '  (승인 필요)' : ''}${s.optional ? '  (선택)' : ''}`),
+  return [`[${POLICY_ID}] ${recipe.title}  — 시작할 때 한 번만 승인`, ...recipe.steps.map((s, i) => `${i + 1}. ${s.say}${s.changesState ? '  (설정 변경)' : ''}${s.optional ? '  (선택)' : ''}`),
     `비밀값 목적지: ${recipe.secretDestination.kind} ${recipe.secretDestination.repo} / ${recipe.secretDestination.name}`].join('\n');
 }
 
@@ -214,7 +220,7 @@ export async function runAttended(recipeId, { ask, say = (m) => console.log(m), 
 
     for (const step of recipe.steps) {
       say(`\n▶ ${step.say}`);
-      await go(step.url);
+      if (!step.noNavigate) await go(step.url);
       if (step.kind === 'sign-in') {
         say('  (로그인을 기다리는 중… 최대 10분)');
         const end = Date.now() + 600000; let done = false;
@@ -223,20 +229,24 @@ export async function runAttended(recipeId, { ask, say = (m) => console.log(m), 
         if (!done) throw new Error('ATTENDED_SIGN_IN_TIMEOUT');
         continue;
       }
-      const answer = (await ask(`  이 단계를 실행할까요? (y=실행 / n=${step.optional ? '건너뛰기' : '중단'}) `)).trim().toLowerCase();
-      if (answer !== 'y') {
-        await audit({ event: 'step', step: step.id, outcome: step.optional ? 'skipped' : 'declined' });
-        if (step.optional) continue; throw new Error('ATTENDED_DECLINED_BY_OPERATOR');
-      }
       if (step.kind === 'click') {
         if (await evalJs(PAGE.hasText(step.doneTexts))) { say('  이미 사용 설정되어 있습니다.'); await audit({ event: 'step', step: step.id, outcome: 'already-done' }); continue; }
         const found = await evalJs(PAGE.findButton(step.texts));
         if (!found) { await ask('  버튼을 찾지 못했습니다. 창에서 직접 눌러 주신 뒤 Enter: '); await audit({ event: 'step', step: step.id, outcome: 'operator-clicked' }); continue; }
         await evalJs(PAGE.clickMarked); await delay(4000);
+        if (step.awaitDoneOrigin) {
+          say('  Google 화면에서 계정을 고르고 「허용」을 눌러 주세요. 연결 완료를 기다립니다(최대 10분).');
+          const end = Date.now() + 600000; let done = false;
+          while (Date.now() < end) { const u = await here().catch(() => null); if (u && u.origin === step.awaitDoneOrigin && await evalJs(PAGE.hasText(step.doneTexts)).catch(() => false)) { done = true; break; } await delay(2000); }
+          await audit({ event: 'step', step: step.id, outcome: done ? 'connected' : 'timeout' });
+          if (!done) throw new Error('ATTENDED_CONNECT_TIMEOUT');
+          continue;
+        }
         await audit({ event: 'step', step: step.id, outcome: 'clicked' });
       } else if (step.kind === 'insert-text') {
         await evalJs(PAGE.findButton(step.highlight));
-        await ask('  안내대로 입력 칸을 클릭해 두셨으면 Enter: ');
+        const skip = (await ask(`  안내대로 입력 칸을 클릭해 두셨으면 Enter${step.optional ? ' (건너뛰려면 n 입력 후 Enter)' : ''}: `)).trim().toLowerCase();
+        if (step.optional && skip === 'n') { await audit({ event: 'step', step: step.id, outcome: 'skipped' }); continue; }
         if (!(await evalJs(PAGE.focusedEditable))) { await ask('  입력 칸이 선택되지 않았습니다. 칸을 클릭한 뒤 Enter: '); }
         if (!(await evalJs(PAGE.focusedEditable))) throw new Error('ATTENDED_NO_FOCUSED_FIELD');
         await s('Input.insertText', { text: step.text });
@@ -286,7 +296,7 @@ async function main(argv = process.argv.slice(2)) {
   assertOperatorStart();
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
-    const go = (await rl.question('\n위 작업을 시작할까요? 에코디 전용 새 브라우저 창이 열립니다. (y/n) ')).trim().toLowerCase();
+    const go = (await rl.question('\n위 작업 전체를 한 번에 승인하고 시작할까요? 에코디 전용 새 브라우저 창이 열리며, 단계별로 다시 묻지 않습니다. 중단하려면 창이나 이 화면을 닫으세요. (y/n) ')).trim().toLowerCase();
     if (go !== 'y') { console.log('취소했습니다.'); return; }
     const r = await runAttended(recipeId, { ask: (q) => rl.question(q) });
     process.exitCode = r.ok ? 0 : 1;
