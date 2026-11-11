@@ -322,3 +322,24 @@ body[data-mall-search="true"] #shop #mallSearchResults{display:block!important}
 @media(max-width:880px){.mall-search-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:680px){.mall-search-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.mall-search-card .mall-search-visual{height:135px}}
 @media(max-width:410px){.mall-search-cards{grid-template-columns:minmax(0,1fr)}.mall-search-card .mall-search-visual{height:190px}}
+
+
+/* EKODI-MALL-TIERED-SEARCH-001: truthful multi-source discovery without sales-gate changes. */
+.mall-search-stage{padding:15px 0 16px;border-bottom:1px solid #e9e5e1;min-width:0}
+.mall-search-stage-title{font-size:clamp(17px,2vw,21px);line-height:1.35;color:#213a57;margin:0 0 6px;font-weight:800}
+.mall-search-stage-note,.mall-search-stage-empty,.mall-search-stage-warning{font-size:13px;line-height:1.6;color:#606b74;margin:5px 0 12px;overflow-wrap:anywhere}
+.mall-search-stage-warning{padding:11px 13px;border-radius:12px;background:#fff4e7;color:#6e563e}
+.mall-search-stage .mall-search-group{padding:12px 0;border-bottom:0}
+.mall-search-stage .mall-search-group h4{font-size:15px;margin:0 0 10px}
+.mall-search-reference{border:1px solid #e0e6ec;border-radius:12px;padding:12px 14px;background:#fff;min-width:0}
+.mall-search-reference-link{display:block;color:#234c79;text-decoration:underline;text-underline-offset:3px;font-size:14px;font-weight:750;overflow-wrap:anywhere}
+.mall-search-reference p{font-size:12px;line-height:1.55;color:#606b74;margin:5px 0 0;overflow-wrap:anywhere}
+.mall-search-provider-results,.mall-search-compare-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:10px}
+.mall-search-ai-link{display:inline-flex;min-height:42px;align-items:center;justify-content:center;border-radius:999px;background:#284f7d;color:#fff;padding:10px 18px;font-size:14px;font-weight:800;text-decoration:none;max-width:100%}
+.mall-search-ai-link:focus-visible,.mall-search-reference-link:focus-visible{outline:3px solid #3e81be;outline-offset:3px}
+@media(max-width:600px){
+  .mall-search-stage{padding:12px 0}
+  .mall-search-provider-results,.mall-search-compare-links{grid-template-columns:minmax(0,1fr)}
+  .mall-search-reference{padding:11px 12px}
+  .mall-search-stage .mall-search-cards{grid-template-columns:minmax(0,1fr)}
+}
