@@ -3,7 +3,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const { normalizeNotice, sendOperatorNotice, operatorNotifyConfig, encodeHeaderWord, OperatorNotifier } = await import('../operator-notify.js');
+const { normalizeNotice, sendOperatorNotice, sendOperatorMail, operatorNotifyConfig, encodeHeaderWord, OperatorNotifier } = await import('../operator-notify.js');
+const mailOf = (env, n, deps) => sendOperatorMail(env, normalizeNotice(n), deps);
 
 const db = (row) => ({ prepare: () => ({ bind: () => ({ first: async () => row }) }) });
 const notice = { source: 'mall', subject: '에코디몰 새 주문 1건', lines: ['커튼 × 1 · 8,500원 결제완료'], link: 'https://ekodi.kr/ekodimall/order-ops' };
@@ -17,16 +18,17 @@ test('only allow-listed sources, no PII, ekodi.kr links only', () => {
 });
 
 test('does not send until the sender Gmail is connected with send scope', async () => {
-  assert.equal((await sendOperatorNotice({ DB: db(null) }, notice)).code, 'SENDER_NOT_CONNECTED');
+  assert.equal((await mailOf({ DB: db(null) }, notice)).code, 'SENDER_NOT_CONNECTED');
+  assert.equal((await sendOperatorNotice({ DB: db(null) }, notice)).code, 'NO_OPERATOR_CHANNEL');
   const acct = { id: 1 };
-  const noScope = await sendOperatorNotice({ DB: db(acct) }, notice, { googleAccess: async () => ({ accessToken: 't', scopes: '' }), hasSendScope: () => false });
+  const noScope = await mailOf({ DB: db(acct) }, notice, { googleAccess: async () => ({ accessToken: 't', scopes: '' }), hasSendScope: () => false });
   assert.equal(noScope.code, 'SENDER_SEND_SCOPE_REQUIRED');
   assert.equal((await sendOperatorNotice({ DB: db(acct), OPERATOR_NOTIFY_ENABLED: 'false' }, notice)).code, 'NOTIFY_DISABLED');
 });
 
 test('sends a plain-text mail with an encoded Korean subject to configured recipients', async () => {
   let mail;
-  const r = await sendOperatorNotice({ DB: db({ id: 1 }), OPERATOR_NOTIFY_RECIPIENTS: 'a@ekodi.kr' }, notice, {
+  const r = await mailOf({ DB: db({ id: 1 }), OPERATOR_NOTIFY_RECIPIENTS: 'a@ekodi.kr' }, notice, {
     googleAccess: async () => ({ accessToken: 't', scopes: 'gmail.send' }), hasSendScope: () => true,
     send: async (_t, m) => { mail = m; return { id: 'm1' }; }
   });
