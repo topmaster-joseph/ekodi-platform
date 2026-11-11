@@ -258,8 +258,9 @@
     const bigger = el('button', { type: 'button', className: 'rd-btn', textContent: '가+', ariaLabel: '글자 크게' });
     const saveAll = el('button', { type: 'button', className: 'rd-btn rd-saveall', textContent: '전체 수정 완료' });
     const note = el('span', { className: 'rd-note-msg', role: 'status' });
-    const prevZone = el('button', { type: 'button', className: 'rd-zone rd-zone-prev', ariaLabel: '이전 쪽', textContent: '‹' });
-    const nextZone = el('button', { type: 'button', className: 'rd-zone rd-zone-next', ariaLabel: '다음 쪽', textContent: '›' });
+    // 화살표는 화면을 따라 내려온다(전자책이 길어 휴대폰 화면 밖으로 밀리지 않게).
+    const prevZone = el('button', { type: 'button', className: 'rd-zone rd-zone-prev', ariaLabel: '이전 쪽' }, el('span', { className: 'rd-zone-glyph', textContent: '‹' }));
+    const nextZone = el('button', { type: 'button', className: 'rd-zone rd-zone-next', ariaLabel: '다음 쪽' }, el('span', { className: 'rd-zone-glyph', textContent: '›' }));
     const device = el('div', { className: 'rd-device' }, page, prevZone, nextZone);
     const top = el('div', { className: 'rd-bar' }, saveAll, note, el('span', { className: 'rd-gap' }), flags);
     const bar = el('div', { className: 'rd-bar' }, pos, el('span', { className: 'rd-gap' }), smaller, bigger);

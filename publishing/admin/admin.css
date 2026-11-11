@@ -141,3 +141,6 @@ a.padmin-stat-link:hover,a.padmin-stat-link:focus-visible{background:#1f3150;out
 .padmin-foot-links a:hover,.padmin-foot-links a:focus-visible{border-color:#a8433a}
 .padmin-foot-links b{display:block;margin-bottom:2px;color:var(--a-link)}
 .padmin-foot-links span{font-size:.84rem;color:var(--a-muted)}
+.rd-zone{display:block;padding-top:min(30vh,40%)}
+.rd-zone-prev{text-align:left}.rd-zone-next{text-align:right}
+.rd-zone-glyph{position:sticky;top:calc(50vh - .5em);display:block;text-shadow:0 0 6px rgba(251,247,238,.9)}

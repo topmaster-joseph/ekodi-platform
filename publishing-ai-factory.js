@@ -321,18 +321,18 @@ async function markImage(db, bookId, number, level, valid, reason = null) {
  * 1) 모든 책: 쓴 장인데 삽화가 없거나 깨졌으면 고품질로 새로 넣는다.
  * 2) 감수 중(판매 전) 책: 예전 품질 삽화를 고품질로 바꾼다. 판매 중인 책의 멀쩡한 삽화는 바꾸지 않는다.
  */
-/** 감수 중·집필 중 원고에서 확인 표시 문구를 지운다(출간된 원고 기록은 손대지 않음). 바뀐 장을 감사 기록에 남긴다. */
-export async function markerCleanupTick(env) {
+/** 모든 AI 원고(판매 중인 책 포함)에서 확인 표시 문구를 지운다. bookId를 주면 그 책만. 바뀐 장을 감사 기록에 남긴다. */
+export async function markerCleanupTick(env, bookId = null) {
   const db = env.PUBLISH_DB;
   const rows = (await db.prepare(`SELECT c.book_id, c.number, c.body FROM publishing_ai_chapters c JOIN publishing_ai_books b ON b.id=c.book_id
-    WHERE b.status IN ('drafting','author_review') AND (c.body LIKE '%[확인필요]%' OR c.body LIKE '%[본문확인]%')`).all()).results || [];
+    WHERE b.status != 'discarded' AND (?1 IS NULL OR c.book_id = ?1) AND (c.body LIKE '%[확인필요]%' OR c.body LIKE '%[본문확인]%' OR c.body LIKE '%이 장은 %')`).bind(bookId).all()).results || [];
   const t = now(); const done = [];
   for (const r of rows) {
     const body = stripReviewMarkers(r.body);
     if (body === r.body) continue;
     await db.batch([
       db.prepare('UPDATE publishing_ai_chapters SET body=?, updated_at=? WHERE book_id=? AND number=?').bind(body, t, r.book_id, r.number),
-      db.prepare("INSERT INTO publishing_workflow_audit (id,project_id,actor_user_id,action,from_stage,to_stage,revision,details_json,created_at) VALUES (?, ?, 'system:ai-factory', 'ai_markers_removed', 'author_review', 'author_review', 0, ?, ?)")
+      db.prepare("INSERT INTO publishing_workflow_audit (id,project_id,actor_user_id,action,from_stage,to_stage,revision,details_json,created_at) VALUES (?, ?, 'system:ai-factory', 'ai_markers_removed', 'manuscript', 'manuscript', 0, ?, ?)")
         .bind(crypto.randomUUID(), 'ai:' + r.book_id, JSON.stringify({ chapter: r.number, before: r.body.length, after: body.length }), t),
     ]);
     done.push({ book: r.book_id.slice(0, 8), chapter: r.number });
@@ -448,6 +448,11 @@ export async function aiFactoryAdmin(db, req, path, user, role, json, releaseEnv
   const book = await db.prepare('SELECT * FROM publishing_ai_books WHERE id=?').bind(m[1]).first();
   if (!book) return json(404, { ok: false, code: 'NOT_FOUND' });
   if (!m[2] && req.method === 'GET') {
+    // 열 때 바로 정리: 확인 표시 삭제, 판매 중이면 서점 파일을 새 판권 고지로(가격·판매 상태 그대로). 실패해도 화면은 연다.
+    if (releaseEnv?.PUBLISH_DB) {
+      try { await markerCleanupTick(releaseEnv, book.id); } catch { /* 다음 예약 실행이 다시 한다 */ }
+      try { await refreshReleaseFiles(releaseEnv, db, (b, ch) => epubFor(db, b, ch), book.id); } catch { /* 다음 예약 실행이 다시 한다 */ }
+    }
     const chapters = (await db.prepare('SELECT number, title, summary, body, status, updated_at FROM publishing_ai_chapters WHERE book_id=? ORDER BY number').bind(book.id).all()).results || [];
     return json(200, { ok: true, book: { id: book.id, title: book.title, status: book.status, meta: JSON.parse(book.plan_json || '{}') }, chapters });
   }
