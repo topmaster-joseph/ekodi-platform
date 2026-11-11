@@ -116,16 +116,32 @@ test('new releases record the new notice, so the daily refresh never loops', asy
   assert.deepEqual(await refreshReleaseFiles(e, db.api, epubFor), []);
 });
 
-test('marker cleanup removes review phrases from books in review only; released manuscripts untouched; audited', async () => {
+test('marker cleanup removes review phrases from every AI manuscript (also on sale); audited; idempotent', async () => {
   const db = memory(); seed(db);
   const SECOND = 'b1111111-2222-4333-8444-555555555555';
   const cols = db.sql.prepare('PRAGMA table_info(publishing_ai_books)').all().map(c => c.name);
   db.sql.prepare(`INSERT INTO publishing_ai_books (${cols.join(',')}) SELECT ${cols.map(c => c === 'id' ? '?' : c === 'status' ? "'approved'" : c).join(',')} FROM publishing_ai_books WHERE id=?`).run(SECOND, BOOK);
   db.sql.prepare("INSERT INTO publishing_ai_chapters (book_id, number, title, summary, body, status, updated_at) VALUES (?, 1, '1장', '', '판매본 원고 [확인필요] 기록', 'edited', 'x')").run(SECOND);
   const r = await markerCleanupTick({ PUBLISH_DB: db.api });
-  assert.ok(r.length >= 1 && r.every(x => x.book === BOOK.slice(0, 8)));
-  assert.equal(db.sql.prepare("SELECT COUNT(*) n FROM publishing_ai_chapters WHERE book_id=? AND (body LIKE '%[확인필요]%' OR body LIKE '%[본문확인]%' OR body LIKE '%이 장은 건강%')").get(BOOK).n, 0);
-  assert.match(db.sql.prepare('SELECT body FROM publishing_ai_chapters WHERE book_id=?').get(SECOND).body, /\[확인필요\]/, 'released record kept');
+  assert.ok(r.some(x => x.book === BOOK.slice(0, 8)) && r.some(x => x.book === SECOND.slice(0, 8)), 'books on sale are cleaned too');
+  assert.equal(db.sql.prepare("SELECT COUNT(*) n FROM publishing_ai_chapters WHERE (body LIKE '%[확인필요]%' OR body LIKE '%[본문확인]%' OR body LIKE '%이 장은 건강%')").get().n, 0);
   assert.equal(db.sql.prepare("SELECT COUNT(*) n FROM publishing_workflow_audit WHERE action='ai_markers_removed'").get().n, r.length);
   assert.deepEqual(await markerCleanupTick({ PUBLISH_DB: db.api }), [], 'idempotent');
+});
+
+test('opening a book in the admin cleans its markers and refreshes its sold file at once (price/status unchanged)', async () => {
+  const db = memory(); seed(db); const e = env();
+  const book = db.sql.prepare('SELECT * FROM publishing_ai_books WHERE id=?').get(BOOK);
+  await releaseBook(e, db.api, book, { userId: 'owner' }, { epubFor });
+  db.sql.prepare("UPDATE publishing_ai_releases SET disclosure='AI 협업 초안 · 저자 감수' WHERE book_id=?").run(BOOK);
+  const price = db.sql.prepare('SELECT price_json, status FROM publishing_ai_releases').get();
+  const json = (status, data) => ({ status, data });
+  const res = await aiFactoryAdmin(db.api, new Request('https://ekodi.kr/x'), `/api/workflow/admin/ai-books/${BOOK}`, { userId: 'adminZ' }, 'admin', json, { ...e, PUBLISH_DB: db.api });
+  assert.equal(res.status, 200);
+  assert.ok(res.data.chapters.every(c => !/\[확인필요\]|\[본문확인\]|이 장은 건강/.test(c.body)), 'reader shows no markers right away');
+  assert.equal(db.sql.prepare('SELECT disclosure FROM publishing_ai_releases').get().disclosure, AI_NOTICE);
+  assert.deepEqual(db.sql.prepare('SELECT price_json, status FROM publishing_ai_releases').get(), price);
+  assert.equal(e.put.length, 2, 'sold file rewritten once');
+  await aiFactoryAdmin(db.api, new Request('https://ekodi.kr/x'), `/api/workflow/admin/ai-books/${BOOK}`, { userId: 'adminZ' }, 'admin', json, { ...e, PUBLISH_DB: db.api });
+  assert.equal(e.put.length, 2, 'not again');
 });

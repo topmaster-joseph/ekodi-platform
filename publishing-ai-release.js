@@ -54,10 +54,10 @@ const abstractFor = meta => clean([meta.pitch, `${AI_NOTICE} — ${meta.author |
  * 판매 중인 책의 서점 파일을 새 판권 고지(AI_NOTICE)로 다시 만든다. 가격(price_json)·판매 상태(status)는 그대로 둔다.
  * 같은 파일 주소(file_key)에 덮어쓰고 지문(sha256)·크기·고지·소개만 갱신, 감사 기록을 남긴다. 이미 새 고지면 건너뛴다.
  */
-export async function refreshReleaseFiles(env, db, epubFor) {
+export async function refreshReleaseFiles(env, db, epubFor, bookId = null) {
   if (!env.BOOK_FILES?.put) return [];
   await ensureReleaseTables(db);
-  const rows = (await db.prepare('SELECT book_id, catalog_id, file_key, epub_sha256, disclosure, sensitive_json FROM publishing_ai_releases WHERE disclosure IS NOT ? ').bind(AI_NOTICE).all()).results || [];
+  const rows = (await db.prepare('SELECT book_id, catalog_id, file_key, epub_sha256, disclosure, sensitive_json FROM publishing_ai_releases WHERE disclosure IS NOT ?1 AND (?2 IS NULL OR book_id = ?2)').bind(AI_NOTICE, bookId).all()).results || [];
   const done = [];
   for (const r of rows) {
     const book = await db.prepare('SELECT * FROM publishing_ai_books WHERE id=?').bind(r.book_id).first();
