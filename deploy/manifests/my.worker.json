@@ -182,7 +182,8 @@
           "id=\"exportPointsHistory\"",
           "20261111-site-ledger-csv-v1",
           "미션·레벨",
-          "회원 초대"
+          "회원 초대",
+          "20261112-csv-owner-binding-v2"
         ],
         "rollbackExpect": [
           "내 활동포인트",
@@ -201,7 +202,9 @@
           "function clearHistoryExport()",
           "snapshot.site!==select.value",
           "snapshot.revision!==viewRevision",
-          "await sb.auth.getSession()"
+          "await sb.auth.getSession()",
+          "function isCurrentHistoryOwner(snapshot,session)",
+          "session?.user?.id===snapshot.ownerId"
         ],
         "rollbackExpect": [
           "function renderRows(rows)",
@@ -250,7 +253,8 @@
           "id=\"exportPointsHistory\"",
           "20261111-site-ledger-csv-v1",
           "미션·레벨",
-          "회원 초대"
+          "회원 초대",
+          "20261112-csv-owner-binding-v2"
         ],
         "rollbackExpect": [
           "내 활동포인트",
@@ -271,7 +275,9 @@
           "function clearHistoryExport()",
           "snapshot.site!==select.value",
           "snapshot.revision!==viewRevision",
-          "await sb.auth.getSession()"
+          "await sb.auth.getSession()",
+          "function isCurrentHistoryOwner(snapshot,session)",
+          "session?.user?.id===snapshot.ownerId"
         ],
         "rollbackExpect": [
           "function renderRows(rows)",
