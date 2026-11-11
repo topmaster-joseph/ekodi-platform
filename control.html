@@ -101,6 +101,12 @@
       <section class="view" id="viewAgents" data-view-panel="agents">
         <div class="panel-head"><div><h2>Agents</h2><p>EKODI가 사용할 AI 실행 대상을 한곳에서 확인합니다.</p></div></div>
         <div class="cards" id="agentCards"></div>
+        <div class="panel-head site-ai-fleet-head">
+          <div><h3>사이트별 독립 AI</h3><p>등록된 사이트와 기존 개선 작업 기록을 구분해 표시합니다. AI 연결·가동은 별도로 검증해야 합니다.</p></div>
+          <button type="button" class="secondary" id="siteAiFleetRefresh">새로고침</button>
+        </div>
+        <p class="composer-note" id="siteAiFleetSummary" role="status" aria-live="polite">사이트별 상태 조회 전</p>
+        <div class="cards" id="siteAiFleetCards"></div>
       </section>
       <section class="view" id="viewWorkers" data-view-panel="workers">
         <div class="panel-head"><div><h2>Workers</h2><p>Cloud · Browser · Local 실행계층 상태를 표시합니다.</p></div></div>
