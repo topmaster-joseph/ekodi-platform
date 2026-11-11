@@ -10,7 +10,8 @@ const NO_AUTH = 'rights-unverified';
 export function supplierSearchReady(env = {}) {
   return enabled(env.DOMEGGOOK_PUBLIC_CATALOG_RIGHTS_APPROVED)
     && enabled(env.DOMEGGOOK_PUBLIC_SEARCH_RATE_GUARD_APPROVED)
-    && enabled(env.DOMEMAE_LOOKUP_ENABLED) && Boolean(env.DOMEMAE_API_KEY);
+    && enabled(env.DOMEMAE_LOOKUP_ENABLED) && Boolean(env.DOMEMAE_API_KEY)
+    && typeof env?.MALL_SUPPLIER_SEARCH_LIMITER?.limit === 'function';
 }
 export function normalizeSupplierSearch(payload) {
   const root = payload?.domeggook || payload || {};
@@ -43,6 +44,18 @@ export async function handlePublicSupplierSearch(request, env, fetchImpl = fetch
   }
   if (!supplierSearchReady(env)) {
     return {status:200,body:{enabled:false,state:NO_AUTH,items:[],checkoutReady:false}};
+  }
+  // Enforce an actual Cloudflare per-client rate-limit binding, not a boolean
+  // readiness label. No client identifier is logged or stored in Mall D1.
+  let budget;
+  try {
+    const key = clean(request.headers.get('cf-connecting-ip') || 'anonymous', 80);
+    budget = await env.MALL_SUPPLIER_SEARCH_LIMITER.limit({key});
+  } catch {
+    return {status:503,body:{enabled:false,state:'rate-limit-unavailable',items:[],checkoutReady:false}};
+  }
+  if (!budget?.success) {
+    return {status:429,body:{enabled:true,state:'rate-limited',items:[],checkoutReady:false}};
   }
   const upstream = new URL(ENDPOINT);
   const params = {ver:'4.1',mode:'getItemList',aid:env.DOMEMAE_API_KEY,
