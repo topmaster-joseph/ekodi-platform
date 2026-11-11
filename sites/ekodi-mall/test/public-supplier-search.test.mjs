@@ -4,7 +4,7 @@ import {handlePublicSupplierSearch, normalizeSupplierSearch, supplierSearchReady
 
 const url = q => 'https://ekodi.kr/api/public/supplier/search?q=' + encodeURIComponent(q);
 const req = q => new Request(url(q));
-const ready = {DOMEGGOOK_PUBLIC_CATALOG_RIGHTS_APPROVED:'true',DOMEGGOOK_PUBLIC_SEARCH_RATE_GUARD_APPROVED:'true',DOMEMAE_LOOKUP_ENABLED:'true',DOMEMAE_API_KEY:'unit-test-only'};
+const ready = {DOMEGGOOK_PUBLIC_CATALOG_RIGHTS_APPROVED:'true',DOMEGGOOK_PUBLIC_SEARCH_RATE_GUARD_APPROVED:'true',DOMEMAE_LOOKUP_ENABLED:'true',DOMEMAE_API_KEY:'unit-test-only',MALL_SUPPLIER_SEARCH_LIMITER:{limit:async()=>({success:true})}};
 
 test('supplier reference search remains disabled until all explicit gates are configured', async () => {
   for (const [key,val] of Object.entries(ready)) {
@@ -43,6 +43,13 @@ test('supplier lookup is read-only and redacts provider failures', async () => {
   const failure=await handlePublicSupplierSearch(req('자동 릴 호스'),ready,async()=>{throw Error('key leaked');});
   assert.deepEqual(failure.body.items,[]);
   assert.doesNotMatch(JSON.stringify(failure),/key leaked|unit-test-only/);
+});
+test('supplier public search requires a real rate limiter and blocks exhausted quotas', async () => {
+  const missing = await handlePublicSupplierSearch(req('자동 릴 호스'),{...ready,MALL_SUPPLIER_SEARCH_LIMITER:null});
+  assert.equal(missing.body.enabled,false);
+  const limited = await handlePublicSupplierSearch(req('자동 릴 호스'),{...ready,MALL_SUPPLIER_SEARCH_LIMITER:{limit:async()=>({success:false})}});
+  assert.equal(limited.status,429);
+  assert.equal(limited.body.checkoutReady,false);
 });
 test('supplier public search rejects unbounded or non-GET input before any vendor call', async () => {
   assert.equal((await handlePublicSupplierSearch(req('x'),ready)).status,400);
