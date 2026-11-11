@@ -81,3 +81,12 @@ body[data-points-tab="progress"] #referralConfirmSection{display:none!important}
 .points-goal-actions button:disabled{opacity:.6;cursor:wait}
 #pointsGoalStatus{font-size:13px;line-height:1.6;color:#52665a}
 @media(max-width:620px){.points-goal-form{grid-template-columns:minmax(0,1fr)}.points-weekly,.points-goals{padding:12px}.points-week-days{gap:4px}}
+
+/* Private per-site ledger export: unobtrusive, keyboard-accessible and narrow-screen safe. */
+.points-history-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 8px}
+.points-history-heading h3{margin:0}
+.points-export{font:inherit;font-size:13px;font-weight:700;padding:10px 12px;min-height:44px;border:1px solid #b0c8b6;border-radius:9px;background:#fff;color:#205b39;cursor:pointer}
+.points-export[hidden]{display:none!important}
+.points-export:disabled{opacity:.6;cursor:default}
+.points-export:focus-visible{outline:3px solid #81b7df;outline-offset:2px}
+.points-history-note{font-size:12px;line-height:1.6;color:#60766b;margin:0 0 10px;word-break:keep-all}

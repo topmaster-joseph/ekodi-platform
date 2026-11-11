@@ -39,7 +39,67 @@ const login=document.getElementById('loginLink');
 const view=document.getElementById('balanceView');
 const balance=document.getElementById('balance');
 const historyList=document.getElementById('history');
+const exportButton=document.getElementById('exportPointsHistory');
+let exportSnapshot=null;
 let viewRevision=0;
+// POINTS_MEMBER_EXPORT_BEGIN: pure, server-history-only CSV serializer.
+const HISTORY_EVENT_NAMES=Object.freeze({earn:'적립',spend:'사용',transfer_in:'전환 받음',
+  transfer_out:'전환 보냄',donation:'포인트 기부',admin_adjustment:'운영 조정',reversal:'적립 취소'});
+function csvCell(value){
+  const raw=String(value??'');
+  // Guard text cells against spreadsheet formula injection.
+  const safe=/^\s*[=+@-]/.test(raw)?"'"+raw:raw;
+  return '"'+safe.replace(/"/g,'""')+'"';
+}
+function buildHistoryCsv(rows){
+  const lines=[['일시 (한국시간)','거래 종류','포인트 변동'].map(csvCell).join(',')];
+  for(const row of rows){
+    const amount=Number(row?.amount),date=new Date(row?.created_at);
+    if(!Number.isSafeInteger(amount)||!Number.isFinite(date.getTime()))continue;
+    const dateText=date.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
+    const kind=HISTORY_EVENT_NAMES[row.event_kind]||'기타 거래';
+    // Numeric amount is a verified integer, never an untrusted formula.
+    lines.push([csvCell(dateText),csvCell(kind),String(amount)].join(','));
+  }
+  return '\uFEFF'+lines.join('\r\n')+'\r\n';
+}
+// POINTS_MEMBER_EXPORT_END
+function clearHistoryExport(){
+  exportSnapshot=null;
+  exportButton.disabled=true;
+  exportButton.hidden=true;
+}
+function setHistoryExport(rows,site,revision){
+  clearHistoryExport();
+  if(!enabled||!Array.isArray(rows)||!rows.length)return;
+  const safe=rows.filter(row=>Number.isSafeInteger(Number(row?.amount))&&
+    Number.isFinite(new Date(row?.created_at).getTime())).map(row=>({
+    event_kind:String(row.event_kind||''),created_at:String(row.created_at),amount:Number(row.amount)
+  }));
+  if(!safe.length)return;
+  exportSnapshot=Object.freeze({site,revision,rows:Object.freeze(safe)});
+  exportButton.hidden=false;
+  exportButton.disabled=false;
+}
+exportButton.addEventListener('click',async()=>{
+  const snapshot=exportSnapshot;
+  if(!enabled||!sb||!snapshot||snapshot.site!==select.value||
+    snapshot.revision!==viewRevision||view.hidden)return;
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.access_token||snapshot!==exportSnapshot||
+    snapshot.site!==select.value||snapshot.revision!==viewRevision||view.hidden)return;
+  const blob=new Blob([buildHistoryCsv(snapshot.rows)],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  try{
+    const link=document.createElement('a');
+    link.href=url;
+    link.download='ekodi-points-'+snapshot.site+'-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.append(link);link.click();link.remove();
+  }finally{
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+  }
+});
+
 const referralSection=document.getElementById('referralSection');
 const referralConfirmSection=document.getElementById('referralConfirmSection');
 const referralLink=document.getElementById('referralLink');
@@ -306,6 +366,7 @@ function clearPrivateView(message){
   view.hidden=true;
   balance.textContent='0';
   historyList.replaceChildren();
+  clearHistoryExport();
   select.disabled=true;
   select.replaceChildren(new Option('사이트 선택',''));
   login.hidden=false;
@@ -388,11 +449,10 @@ async function request(path,token){
 function renderRows(rows){
   historyList.replaceChildren();
   if(!Array.isArray(rows)||!rows.length){historyList.textContent='아직 거래 내역이 없습니다.';return;}
-  const names={earn:'적립',spend:'사용',transfer_in:'전환 받음',transfer_out:'전환 보냄',donation:'포인트 기부',admin_adjustment:'운영 조정',reversal:'적립 취소'};
   for(const row of rows){
     const div=document.createElement('div');div.className='record';
     const summary=document.createElement('div');const label=document.createElement('strong');
-    label.textContent=names[row.event_kind]||'포인트 거래';const date=document.createElement('small');
+    label.textContent=HISTORY_EVENT_NAMES[row.event_kind]||'포인트 거래';const date=document.createElement('small');
     date.textContent=row.created_at?new Date(row.created_at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'';
     summary.append(label,date);
     const amount=document.createElement('strong');const value=Number(row.amount)||0;
@@ -467,13 +527,16 @@ async function loadWallet(token,site,revision){
   try{
     showMessage('포인트 내역을 불러오고 있습니다.');
     const data=await request('/me?site='+encodeURIComponent(site),token);
-    if(revision!==viewRevision)return;
+    if(revision!==viewRevision||select.value!==site)return;
     balance.textContent=Number(data.balance||0).toLocaleString('ko-KR');
-    renderRows(data.history);notice.textContent='';view.hidden=false;
+    renderRows(data.history);
+    setHistoryExport(data.history,site,revision);
+    notice.textContent='';view.hidden=false;
   }catch(e){if(revision===viewRevision)showMessage('포인트 내역을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');}
 }
 async function start(){
   const revision=++viewRevision;
+  clearHistoryExport();view.hidden=true;historyList.replaceChildren();
   clearProgress();
   try{await handoff();}
   catch{showMessage('로그인 인계에 실패했습니다. 로그인 후 다시 시도해 주세요.');login.hidden=false;return;}
@@ -493,7 +556,7 @@ async function start(){
     const wanted=new URLSearchParams(location.search).get('site');
     if(wanted&&sites.some(site=>site.id===wanted))select.value=wanted;
     select.disabled=false;
-    select.onchange=()=>{const next=++viewRevision;clearProgress();showReferralControls(select.value,true);void loadWallet(session.access_token,select.value,next);void loadClaims(select.value,next);void loadProgress(session.access_token,select.value,next);};
+    select.onchange=()=>{const next=++viewRevision;clearHistoryExport();view.hidden=true;historyList.replaceChildren();clearProgress();showReferralControls(select.value,true);void loadWallet(session.access_token,select.value,next);void loadClaims(select.value,next);void loadProgress(session.access_token,select.value,next);};
     showReferralControls(select.value,true);
     void loadClaims(select.value,revision);
     void loadProgress(session.access_token,select.value,revision);

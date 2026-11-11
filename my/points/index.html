@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="/my/user-ui.css?v=20260822-user-ai-1">
   <link rel="stylesheet" href="/my/comfort-ui.css?v=20260906-context-home-v1">
   <link rel="stylesheet" href="/my/hub-shell.css?v=20261102-one-glance-v1">
-  <link rel="stylesheet" href="/my/points/styles.css?v=20261103-goals-week-v1">
+  <link rel="stylesheet" href="/my/points/styles.css?v=20261111-site-ledger-csv-v1">
 </head>
 <body data-ekodi-ui="USER" data-auth-state="member" data-active-tab="activity" class="my-subpage" data-points-tab="wallet">
   <header class="topbar my-comfort-header">
@@ -35,7 +35,9 @@
       <p id="notice" role="status" aria-live="polite">로그인 상태를 확인하고 있습니다.</p>
       <a id="loginLink" class="login" hidden href="#">로그인</a>
       <div id="balanceView" hidden><div class="balance"><span>사용 가능한 포인트</span><strong><span id="balance">0</span> P</strong></div>
-        <h3>최근 거래</h3><div id="history" class="history" aria-live="polite"></div>
+        <div class="points-history-heading"><h3>최근 거래</h3><button type="button" id="exportPointsHistory" class="points-export" hidden disabled>표시된 내역 CSV</button></div>
+        <p class="points-history-note">현재 사이트에서 조회된 최근 거래만 내려받습니다. 전체 거래 증명서나 실시간 잔액 확인서를 대신하지 않습니다.</p>
+        <div id="history" class="history" aria-live="polite"></div>
       </div>
     </section>
     <section class="panel invite-panel points-progress" id="pointsProgressSection" role="tabpanel" aria-labelledby="pointsTabProgress" hidden>
@@ -122,5 +124,5 @@
     </div>
     <div class="my-footer-credo"><strong>&#54632;&#44760;&#54616;&#51648;&#47564;, &#45824;&#49888; &#44208;&#51221;&#54616;&#51648; &#50506;&#49845;&#45768;&#45796;.</strong><span>My EKODI&#45716; &#45817;&#49888;&#51032; &#49440;&#53469;&#51012; &#51473;&#49900;&#50640; &#46160;&#44256; &#54596;&#50836;&#54620; &#51221;&#48372;&#50752; &#45796;&#51020; &#54665;&#46041;&#51012; &#50672;&#44208;&#54633;&#45768;&#45796;.</span><small class="my-footer-copyright">© EKODI (에코디). All rights reserved.</small></div>
   </footer>
-  <script src="/my/config.js"></script><script type="module" src="/my/points/app.js?v=20261108-claim-ledger-transparency-v1"></script>
+  <script src="/my/config.js"></script><script type="module" src="/my/points/app.js?v=20261111-site-ledger-csv-v1"></script>
 </body></html>
