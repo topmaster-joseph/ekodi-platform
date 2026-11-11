@@ -107,7 +107,7 @@ for n in names:
     if n.endswith(('.xhtml', '.opf', '.xml')): ET.fromstring(z.read(n))
 print(json.dumps({'first': first.filename, 'stored': first.compress_type == 0, 'mimetype': z.read('mimetype').decode(),
   'chapters': len([n for n in names if n.startswith('OEBPS/ch')]), 'images': len([n for n in names if n.endswith('.jpg')]),
-  'nav': 'OEBPS/nav.xhtml' in names, 'disclosure': 'AI 협업 초안 · 저자 감수' in z.read('OEBPS/colophon.xhtml').decode(),
+  'nav': 'OEBPS/nav.xhtml' in names, 'disclosure': 'AI 도구를 활용해 집필·저자 감수 · 삽화 AI 생성' in z.read('OEBPS/colophon.xhtml').decode() and 'name="ai-generated"' in z.read('OEBPS/content.opf').decode(),
   'crc': z.testzip() is None}))
 `, file], { encoding: 'utf8' }));
   assert.deepEqual(report, { first: 'mimetype', stored: true, mimetype: 'application/epub+zip', chapters: 8, images: 8, nav: true, disclosure: true, crc: true });
