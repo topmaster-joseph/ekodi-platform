@@ -23,7 +23,7 @@ export default {
     if(url.pathname==='/health')return json({
       ok:true,
       service:'ekodi-publishing',
-      publicName:'출판',
+      publicName:'에코디출판',
       professionalService:true,
       independentPlatform:true,
       modules:['consultation','production','distribution','studio','upaper'],
