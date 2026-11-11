@@ -96,6 +96,11 @@
           open.addEventListener('click', async () => { view.replaceChildren(...await aiBook(b.id)); });
           cell.append(open);
         }
+        if (b.status === 'approved') {
+          const dl = el('button', { type: 'button', className: 'button small', textContent: 'EPUB 내려받기', ariaLabel: `「${b.title}」 EPUB 내려받기` });
+          dl.addEventListener('click', () => downloadEpub(b.id, b.title, dl));
+          cell.append(dl);
+        }
         return cell;
       };
       out.push(table(['책', '분야', '진행', '상태'], d.books.map(b => [titleCell(b), b.meta?.genre || b.genre, `${b.done}/${b.total}장`, ({ drafting: '초안 쓰는 중', author_review: '저자 감수 대기', approved: '감수 완료', discarded: '보류' })[b.status] || b.status])));
@@ -307,11 +312,10 @@
       page.replaceChildren();
       if (p.kind === 'cover') {
         page.append(el('div', { className: 'rd-cover' },
-          el('p', { className: 'rd-series', textContent: 'EKODI AI 협업' }),
           el('h1', { textContent: d.book.title }),
           el('p', { className: 'rd-sub', textContent: d.book.meta.subtitle || '' }),
           el('p', { className: 'rd-author', textContent: d.book.meta.author || '' }),
-          el('p', { className: 'rd-disc', textContent: d.book.meta.disclosure || 'AI 협업 초안 · 저자 감수' })));
+          el('p', { className: 'rd-imprint', textContent: '에코디비즈[출판]' })));
       } else if (p.kind === 'toc') {
         const ol = el('ol', { className: 'rd-toc' });
         d.chapters.forEach((c, i) => { const a = el('button', { type: 'button', textContent: `${c.number}. ${getChapter(c.number).title}${ed.dirty.has(c.number) ? ' ●' : ''}` }); a.addEventListener('click', () => go(i + 2)); ol.append(el('li', {}, a)); });
@@ -342,12 +346,23 @@
     page.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true });
     page.addEventListener('touchend', e => { if (editing || typing(e)) return; const t = e.changedTouches[0]; const dx = t.clientX - sx, dy = t.clientY - sy; if (Math.abs(dx) > 70 && Math.abs(dy) < 50) go(at + (dx < 0 ? 1 : -1)); }, { passive: true });
     draw();
-    return { node: el('section', { className: 'rd' }, top, device, bar), refresh: () => { if (!editing) draw(); else status(); }, status, goChapter(n) { const i = pages.findIndex(x => x.number === n); if (i >= 0) go(i); } };
+    return { unsaved: () => ed.dirty.size > 0, node: el('section', { className: 'rd' }, top, device, bar), refresh: () => { if (!editing) draw(); else status(); }, status, goChapter(n) { const i = pages.findIndex(x => x.number === n); if (i >= 0) go(i); } };
+  }
+  // 검수 목록의 EPUB 내려받기(감수·출판을 마친 책만 — 서버도 같은 규칙).
+  async function downloadEpub(id, title, btn) {
+    const label = btn.textContent; btn.disabled = true; btn.textContent = '만드는 중…';
+    try {
+      const r = await fetch(`${API}/admin/ai-books/${id}/epub`, { headers: { authorization: `Bearer ${token()}` }, cache: 'no-store' });
+      if (!r.ok) throw new Error();
+      const url = URL.createObjectURL(await r.blob()); const a = el('a', { href: url, download: `${title}.epub` }); document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000); btn.textContent = '받았습니다';
+    } catch { btn.textContent = '다시 시도'; }
+    finally { btn.disabled = false; setTimeout(() => { btn.textContent = label; }, 4000); }
   }
   async function aiBook(id) {
     const d = await api(`admin/ai-books/${id}`);
     const msg = el('p', { className: 'muted', role: 'status' });
-    const parts = [el('h2', { textContent: d.book.title }), el('p', { className: 'muted', textContent: `${d.book.meta.subtitle || ''} · ${d.book.meta.genre || ''} · 저자 ${d.book.meta.author} · ${d.book.meta.disclosure}` })];
+    const parts = [el('h2', { textContent: d.book.title }), el('p', { className: 'muted', textContent: `${d.book.meta.subtitle || ''} · ${d.book.meta.genre || ''} · 저자 ${d.book.meta.author} · 에코디비즈[출판]` })];
     const editors = new Map(); const editSections = []; const saves = new Map(); const dirty = new Set();
     window.addEventListener('beforeunload', e => { if (dirty.size) { e.preventDefault(); e.returnValue = ''; } });
     for (const c of d.chapters) {
@@ -377,38 +392,21 @@
     });
     tabRead.addEventListener('click', () => mode('read')); tabEdit.addEventListener('click', () => mode('edit'));
     parts.push(el('div', { className: 'rd-tabs', role: 'group', ariaLabel: '검수 방식' }, tabRead, tabEdit), reader.node, editWrap);
-    const approve = el('button', { type: 'button', className: 'button primary', textContent: '감수 완료' });
-    approve.addEventListener('click', async () => {
-      if (!confirm('모든 장을 읽고 고쳤고, [확인필요]·[본문확인] 표시를 모두 해결했습니까?')) return;
-      try { const r = await api(`admin/ai-books/${id}/approve`, {}); msg.textContent = r.next; }
-      catch (e) { msg.textContent = e.code === 'UNRESOLVED_MARKERS' ? '[확인필요]·[본문확인] 표시가 남아 있습니다. 확인 후 지워 주세요.' : e.code === 'CHAPTERS_INCOMPLETE' ? '아직 쓰지 않은 장이 있습니다.' : '처리하지 못했습니다.'; }
-    });
-    parts.push(approve);
-    // PUBLISHING-AI-RELEASE-001: 최고관리자는 최종 검수 확인 한 번으로 출판(EPUB·서점 판매·자동 가격·저널 첫 글).
-    const release = el('button', { type: 'button', className: 'button primary', textContent: '최종 검수 확인 · 출판' });
+    // 책 화면에는 두 버튼만: 최종 검수 및 출판 완료 · 서점 판매로 넘기기. (EPUB 내려받기는 검수 목록에서)
+    const release = el('button', { type: 'button', className: 'button primary', textContent: '최종 검수 및 출판 완료' });
     release.addEventListener('click', async () => {
-      if (!confirm('최종 검수를 확인하고 출판합니다.\n· 감수 안내 줄과 [확인필요] 표시는 출간본에서 빠집니다(원고 기록은 보존).\n· 가격은 분량·분야에 맞춰 자동으로 정해집니다.\n· 에코디서점 판매와 에코디저널 소개 글이 바로 시작됩니다.')) return;
+      if (!confirm('최종 검수를 확인하고 출판합니다.\n· [확인필요] 표시와 감수 안내 줄은 출간본에서 빠집니다(원고 기록은 보존).\n· 가격은 분량·분야에 맞춰 자동으로 정해집니다.\n· 에코디서점 판매와 에코디저널 소개 글이 바로 시작됩니다.')) return;
+      if (reader && reader.unsaved && reader.unsaved()) { msg.textContent = '저장하지 않은 장이 있습니다. 위의 \'전체 수정 완료\'를 먼저 눌러 주세요.'; return; }
       msg.textContent = '출판하는 중…';
       try { const r = await api(`admin/ai-books/${id}/release`, {}); msg.textContent = `출판 완료 · 판매가 ${r.price?.label || ''} · 에코디서점: ${r.storeUrl || ''}`; }
-      catch (e) { msg.textContent = e.code === 'SUPER_ADMIN_ONLY' ? '최고관리자만 바로 출판할 수 있습니다. 감수 완료 후 출판 관리자에게 요청하세요.' : e.code === 'CHAPTERS_INCOMPLETE' ? '아직 쓰지 않은 장이 있습니다.' : '출판하지 못했습니다. 잠시 후 다시 시도해 주세요.'; }
+      catch (e) { msg.textContent = e.code === 'SUPER_ADMIN_ONLY' ? '최고관리자만 출판할 수 있습니다.' : e.code === 'CHAPTERS_INCOMPLETE' ? '아직 쓰지 않은 장이 있습니다.' : e.code === 'UNRESOLVED_MARKERS' ? '[확인필요]·[본문확인] 표시가 남아 있습니다. 확인 후 지워 주세요.' : '출판하지 못했습니다. 잠시 후 다시 시도해 주세요.'; }
     });
-    parts.push(release);
-    if (d.book.status === 'approved') {
-      // PUBLISHING-AI-EPUB-001: 감수 완료 → EPUB 내려받기 · 서점 출판 인계(판매는 서점 확정 전까지 닫힘)
-      const dl = el('button', { type: 'button', className: 'button', textContent: 'EPUB 내려받기' });
-      dl.addEventListener('click', async () => {
-        msg.textContent = 'EPUB 만드는 중…';
-        try {
-          const r = await fetch(`${API}/admin/ai-books/${id}/epub`, { headers: { authorization: `Bearer ${token()}` }, cache: 'no-store' });
-          if (!r.ok) throw new Error();
-          const url = URL.createObjectURL(await r.blob()); const a = el('a', { href: url, download: `${d.book.title}.epub` }); document.body.append(a); a.click(); a.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 30000); msg.textContent = 'EPUB을 내려받았습니다.';
-        } catch { msg.textContent = 'EPUB을 만들지 못했습니다.'; }
-      });
-      const pub = el('button', { type: 'button', className: 'button primary', textContent: '서점 출판으로 넘기기' });
-      pub.addEventListener('click', async () => { try { const r = await api(`admin/ai-books/${id}/publish`, {}); msg.textContent = r.next; } catch { msg.textContent = '넘기지 못했습니다.'; } });
-      parts.push(dl, pub);
-    }
+    const pub = el('button', { type: 'button', className: 'button', textContent: '서점 판매로 넘기기' });
+    pub.addEventListener('click', async () => {
+      try { const r = await api(`admin/ai-books/${id}/publish`, {}); msg.textContent = r.next; }
+      catch (e) { msg.textContent = e.code === 'AUTHOR_REVIEW_REQUIRED' ? '먼저 \'최종 검수 및 출판 완료\'를 눌러 주세요.' : '넘기지 못했습니다.'; }
+    });
+    parts.push(el('div', { className: 'padmin-ai-actions' }, release, pub));
     parts.push(msg);
     return parts;
   }

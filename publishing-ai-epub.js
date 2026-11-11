@@ -48,7 +48,7 @@ export function bodyToXhtml(text) {
 }
 
 const page = (title, body, lang) => `<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="${lang}" xml:lang="${lang}"><head><meta charset="utf-8"/><title>${esc(title)}</title><link rel="stylesheet" href="style.css"/></head><body>${body}</body></html>`;
-const CSS = `body{font-family:serif;line-height:1.8;margin:0 1em;word-break:keep-all}h1{font-size:1.6em;margin:2em 0 .3em}h2{font-size:1.3em;margin:1.5em 0 .8em}h3{font-size:1.1em;margin:1.6em 0 .6em}blockquote{margin:1.2em 0;padding:.4em 1em;border-left:3px solid #8a6d3b;font-weight:bold}figure{margin:1em 0;text-align:center}figure img{max-width:100%}.colophon{font-size:.85em;line-height:1.7}.title{text-align:center;margin-top:30%}`;
+const CSS = `body{font-family:serif;line-height:1.8;margin:0 1em;word-break:keep-all}h1{font-size:1.6em;margin:2em 0 .3em}h2{font-size:1.3em;margin:1.5em 0 .8em}h3{font-size:1.1em;margin:1.6em 0 .6em}blockquote{margin:1.2em 0;padding:.4em 1em;border-left:3px solid #8a6d3b;font-weight:bold}figure{margin:1em 0;text-align:center}figure img{max-width:100%}.colophon{font-size:.85em;line-height:1.7}.title{text-align:center;margin-top:30%}.title .imprint{margin-top:40%;letter-spacing:.1em}figure img{border-radius:8px}`;
 
 /** Build an EPUB 3. book: {id,title,subtitle,author,publisher,disclosure,lang,keywords,pitch}, chapters: [{number,title,body}], images: Map<number,{mime,b64}> */
 export function buildEpub(book, chapters, images = new Map(), modified = new Date()) {
@@ -57,7 +57,7 @@ export function buildEpub(book, chapters, images = new Map(), modified = new Dat
   files.push(['OEBPS/style.css', CSS]);
   const manifest = ['<item id="css" href="style.css" media-type="text/css"/>', '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>', '<item id="title" href="title.xhtml" media-type="application/xhtml+xml"/>'];
   const spine = ['<itemref idref="title"/>'], toc = [];
-  files.push(['OEBPS/title.xhtml', page(book.title, `<section class="title"><h1>${esc(book.title)}</h1>${book.subtitle ? `<p>${esc(book.subtitle)}</p>` : ''}<p>${esc(book.author)}</p></section>`, lang)]);
+  files.push(['OEBPS/title.xhtml', page(book.title, `<section class="title"><h1>${esc(book.title)}</h1>${book.subtitle ? `<p>${esc(book.subtitle)}</p>` : ''}<p>${esc(book.author)}</p><p class="imprint">에코디비즈[출판]</p></section>`, lang)]);
   for (const c of chapters) {
     const n = String(c.number).padStart(2, '0'), img = images.get(c.number);
     let fig = '';
