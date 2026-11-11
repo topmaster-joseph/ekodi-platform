@@ -317,6 +317,8 @@ const sharedSiteTouched=sourceFiles.some(file=>
   // Source-pinned immediate recovery must dispatch the release even when a
   // GITHUB_TOKEN merge does not emit an ordinary main push workflow event.
   ['scripts/verify-admin-production-ui-e2e.mjs',
+   'scripts/verify-bbqcg-production-readonly.mjs',
+   '.github/workflows/verify-admin-production-ui-e2e.yml',
    'scripts/admin-production-ui-coverage.mjs',
    'scripts/ekodi-background-browser-worker.mjs',
    'scripts/verify-independent-board-live.mjs'].includes(file)||
