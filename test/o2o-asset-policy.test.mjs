@@ -80,3 +80,13 @@ test('post-deploy smoke is not a blocking pre-deployment HTTP test', () => {
   assert.doesNotMatch(workflow, /^  push:/m);
   assert.match(workflow, /node --test test\/o2o-asset-policy\.test\.mjs/);
 });
+
+
+test('synthetic live smoke only checks never-issued tokens without write methods', () => {
+  const live = readFileSync(new URL('../scripts/verify-o2o-live-smoke.mjs', import.meta.url), 'utf8');
+  assert.match(live, /syntheticNeverIssuedCode = 'f'\.repeat\(48\)/);
+  assert.match(live, /redirect: 'manual'/);
+  assert.match(live, /cache: 'no-store'/);
+  assert.doesNotMatch(live, /\bmethod:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/i);
+  assert.doesNotMatch(live, /\/rest\/v1\/rpc\/o2o_operator_(?:issue|revoke)/);
+});
