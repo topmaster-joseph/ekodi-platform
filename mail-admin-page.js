@@ -122,7 +122,7 @@ export function mailAdminPage(){
       d.append(docText('p','거래처: '+(r.counterparty||'미확인')+' · 공급가액/매출액 '+Number(r.sale_amount||0).toLocaleString('ko-KR')+'원 · 증빙: '+(r.evidence_reference||'미입력'),'note'));
       if(r.status==='REVIEW')d.append(docButton('증빙 검토·승인',()=>docApproveForm(d,r),'primary'));
       if(r.status==='APPROVED'&&r.document_type==='sales_certificate')d.append(docButton('매출확인서 발행',async()=>{if(!confirm('실제 거래와 증빙을 확인했고, 매출확인서를 발행하시겠습니까?'))return;try{await api('/documents/requests/'+r.id+'/issue',{method:'POST',body:JSON.stringify({workspace:current.slug})});await loadDocuments()}catch(e){docNotice(e.message)}},'primary'));
-      if(r.status==='APPROVED'&&r.document_type==='tax_invoice')d.append(docButton('세금계산서 발행정보 복사',async()=>{const summary=['문서종류: 전자세금계산서(발행 전)','거래처: '+r.counterparty,'공급자: '+r.issuer_name,'매출기간: '+r.sale_period,'공급가액/매출액: '+r.sale_amount,'세액: '+r.tax_amount,'증빙: '+r.evidence_reference].join('\n');await navigator.clipboard.writeText(summary);docNotice('발행용 정보가 복사되었습니다. 에코디 Finance에서 별도 승인·최종발행을 진행하세요.')}));
+      if(r.status==='APPROVED'&&r.document_type==='tax_invoice')d.append(docButton('세금계산서 발행정보 복사',async()=>{const summary=['문서종류: 전자세금계산서(발행 전)','거래처: '+r.counterparty,'공급자: '+r.issuer_name,'매출기간: '+r.sale_period,'공급가액/매출액: '+r.sale_amount,'세액: '+r.tax_amount,'증빙: '+r.evidence_reference].join('\\n');await navigator.clipboard.writeText(summary);docNotice('발행용 정보가 복사되었습니다. 에코디 Finance에서 별도 승인·최종발행을 진행하세요.')}));
       if(r.status==='ISSUED'&&r.document_type==='sales_certificate')d.append(docButton('매출확인서 보기·인쇄',()=>docPrint(r)));
       caseBox.append(d);
     }
