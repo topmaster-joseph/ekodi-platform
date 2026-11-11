@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { auditBbqcgProduction } from '../scripts/verify-bbqcg-production-readonly.mjs';
+import { auditBbqcgProduction, hasBbqcgPosTabDefinitions } from '../scripts/verify-bbqcg-production-readonly.mjs';
+import { storeAdminScript } from '../store-admin-engine.js';
 
 const noindex={'x-robots-tag':'noindex,nofollow,noarchive'};
 const html={...noindex,'content-type':'text/html; charset=utf-8'};
@@ -13,7 +14,7 @@ const responses={
   '/bbqcg/resources/qcs-gms-checklist.csv':method=>response(method==='HEAD'?null:'\uFEFF"구분","단계","점검 항목","확인 여부","조치 사항"\r\n',200,attachment('bbqcg-qcs-gms-checklist.csv','text/csv; charset=utf-8')),
   '/bbqcheonggye':()=>response('gone',410,noindex),
   '/bbqcg/admin/pos':()=>response('<!doctype html><html data-ekodi-store-brand="bbqcg"><meta name="robots" content="noindex,nofollow">BBQ 무안청계점</html>'),
-  '/store-admin.js':()=>response("function mountBbqPosTabs(){const options=[['programs','프로그램'],['orders','최근 주문'],['channels','배달플랫폼'],['agent','Agent 관리']];const key='data-bbq-pos-tab';const tab='posTab'}",200,{'content-type':'text/javascript; charset=utf-8'}),
+  '/store-admin.js':()=>response("function mountBbqPosTabs(){const options=[['programs','프로그램','.pos-programs'],['orders','최근 주문','.pos-orders'],['channels','배달플랫폼','.pos-platforms'],['agent','Agent 관리','.pos-agent-guide']];const key='data-bbq-pos-tab';const tab='posTab'}",200,{'content-type':'text/javascript; charset=utf-8'}),
   '/store-admin.css':()=>response('.bbq-pos-subtabs{display:flex}@media(max-width:620px){.bbq-pos-subtabs{overflow-x:auto}}',200,{'content-type':'text/css; charset=utf-8'})
 };
 function stub(overrides={}){
@@ -63,4 +64,18 @@ test('rate-limit response opens circuit breaker instead of continuing requests',
   assert.equal(report.ok,false);
   assert.equal(report.circuitOpen,true);
   assert.equal(calls.length,2);
+});
+
+test('production canary accepts the actual generated store-admin.js, not only hand-built fixtures',async()=>{
+  const script=await (await storeAdminScript()).text();
+  assert.equal(hasBbqcgPosTabDefinitions(script),true,'all 4 ID/label/pane tuples must be present in shipped JS');
+  const {fetchImpl}=stub({'/store-admin.js':()=>response(script,200,{'content-type':'text/javascript; charset=utf-8'})});
+  const report=await auditBbqcgProduction({fetchImpl});
+  assert.equal(report.ok,true,JSON.stringify(report.records.filter(x=>x.errors.length)));
+});
+test('four-tab verifier tolerates quote/whitespace changes but rejects a missing or wrong pane',()=>{
+  const valid='function mountBbqPosTabs(){ const options = [ ["programs", "프로그램", ".pos-programs"], ["orders","최근 주문",".pos-orders"], ["channels","배달플랫폼",".pos-platforms"], ["agent","Agent 관리",".pos-agent-guide"] ]; }';
+  assert.equal(hasBbqcgPosTabDefinitions(valid),true);
+  assert.equal(hasBbqcgPosTabDefinitions(valid.replace('["agent","Agent 관리",".pos-agent-guide"]','')),false);
+  assert.equal(hasBbqcgPosTabDefinitions(valid.replace('".pos-orders"','".other-pane"')),false);
 });
