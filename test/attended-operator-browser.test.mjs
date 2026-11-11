@@ -15,7 +15,7 @@ const policy = constitution.attendedOperatorBrowserPolicy;
 const FAKE = 'GOCSPX-' + 'a1B2c3D4e5F6g7H8i9J0kLmN';
 
 test('constitution v1.27.9 records a bounded, owner-approved attended mode that is not automatic execution', () => {
-  assert.equal(constitution.version, '1.27.9');
+  assert.equal(constitution.version, '1.27.10');
   assert.ok(constitution.principles.includes('attended-operator-browser-bounded'));
   assert.equal(policy.id, POLICY_ID);
   assert.equal(policy.isAutomaticExecution, false);
@@ -24,16 +24,20 @@ test('constitution v1.27.9 records a bounded, owner-approved attended mode that 
   assert.equal(policy.reuseUserBrowserProfile, false);
   assert.equal(policy.profileDeletedOnExit, true);
   assert.equal(policy.runnerHandlesPasswordsOrOtp, false);
-  assert.equal(policy.perStepOperatorApprovalForStateChanges, true);
+  assert.equal(policy.perStepOperatorApprovalForStateChanges, false);
+  assert.equal(policy.runLevelOperatorApproval, true);
+  assert.equal(policy.ekodiPlatformOriginAlwaysAllowed, 'https://ekodi.kr');
   assert.equal(policy.secretTransfer.persistToDisk, false);
   assert.equal(policy.secretTransfer.sendToEkodiServicesOrChat, false);
   assert.ok(policy.forbiddenInitiators.includes('orchestrator'));
-  const amendment = JSON.parse(read(policy.amendmentRecord));
+  const amendment = JSON.parse(read(policy.amendmentRecords[0]));
+  const runLevel = JSON.parse(read(policy.amendmentRecords[1]));
+  assert.equal(runLevel.status, 'approved'); assert.equal(runLevel.constitutionVersion, '1.27.10'); assert.equal(runLevel.approvalScope.aiMayStartAttendedRuns, false);
   assert.equal(amendment.status, 'approved');
   assert.equal(amendment.approvedBy, 'topmaster-joseph');
   assert.equal(amendment.approvalScope.aiMayStartAttendedRuns, false);
   assert.equal(amendment.approvalScope.automaticExecutionWeakened, false);
-  assert.match(read('CONSTITUTION.md'), /## 1D-1\. Attended Operator Browser Constitution \(v1\.27\.9/);
+  assert.match(read('CONSTITUTION.md'), /## 1D-1\. Attended Operator Browser Constitution \(v1\.27\.9, amended v1\.27\.10/);
 });
 
 test('only an interactive operator may start it; agents, CI, schedulers and remote jobs are refused', () => {
@@ -45,7 +49,7 @@ test('only an interactive operator may start it; agents, CI, schedulers and remo
 
 test('no other EKODI code imports, spawns or schedules the attended runner', () => {
   const allowed = new Set(['tools/ekodi-device-agent/windows/ekodi-attended-browser.mjs', 'tools/ekodi-device-agent/windows/ekodi-attended-gmail-notify.cmd',
-    'test/attended-operator-browser.test.mjs', 'CONSTITUTION.md', 'governance/constitution/constitution.json', 'governance/amendments/2026-11-11-attended-operator-browser-v1.27.9.json']);
+    'test/attended-operator-browser.test.mjs', 'CONSTITUTION.md', 'governance/constitution/constitution.json', 'governance/amendments/2026-11-11-attended-operator-browser-v1.27.9.json', 'governance/amendments/2026-11-11-attended-browser-run-level-v1.27.10.json']);
   const skip = new Set(['node_modules', '.git', 'dist', 'generated', '.wrangler', 'artifacts']);
   const offenders = [];
   const walk = (dir) => {
@@ -62,10 +66,11 @@ test('no other EKODI code imports, spawns or schedules the attended runner', () 
   assert.deepEqual(offenders, []);
 });
 
-test('recipes are registered, https-only, and every state change requires approval', () => {
+test('recipes are registered, https-only, include the EKODI Platform origin, and are approved once per run', () => {
   assert.throws(() => getRecipe('anything-else'), /ATTENDED_RECIPE_NOT_REGISTERED/);
   assert.throws(() => getRecipe('__proto__'), /ATTENDED_RECIPE_NOT_REGISTERED/);
   for (const [id, recipe] of Object.entries(RECIPES)) {
+    assert.ok(recipe.origins.includes('https://ekodi.kr'), id + ' must allow the EKODI Platform');
     assert.ok(Object.isFrozen(recipe) && Object.isFrozen(recipe.steps) && Object.isFrozen(recipe.origins), id);
     for (const o of recipe.origins) assert.match(o, /^https:\/\/[a-z0-9.-]+$/);
     const ids = recipe.steps.map((s) => s.id); assert.equal(new Set(ids).size, ids.length);
@@ -77,7 +82,11 @@ test('recipes are registered, https-only, and every state change requires approv
   const gmail = getRecipe('gmail-operator-notify');
   assert.deepEqual({ ...gmail.secretDestination }, { kind: 'github-actions-secret', repo: 'topmaster-joseph/ekodi-platform', name: 'MAIL_GOOGLE_CLIENT_SECRET' });
   assert.ok(gmail.steps.findIndex((s) => s.kind === 'capture-secret') < gmail.steps.findIndex((s) => s.kind === 'store-secret'));
-  assert.match(renderPlan(gmail), /승인 필요/);
+  assert.match(renderPlan(gmail), /시작할 때 한 번만 승인/);
+  const src = read('tools/ekodi-device-agent/windows/ekodi-attended-browser.mjs');
+  assert.doesNotMatch(src, /이 단계를 실행할까요/);
+  assert.match(src, /위 작업 전체를 한 번에 승인하고 시작할까요/);
+  assert.equal(gmail.steps.at(-1).id, 'ekodi-connect-gmail');
 });
 
 test('main-frame navigation is confined to recipe origins', () => {
