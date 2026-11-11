@@ -3,7 +3,7 @@
 // - 기존 서점 책은 건드리지 않는다. AI 협업 책은 출간 기록(D1)으로만 서점·저널에 합류한다.
 // - 'AI 협업 초안 · 저자 감수' 표기, 건강·금융 일반정보 안내는 출간본에 남긴다.
 // - 가격은 국내 전자책 시장 가격대(입문 4,900~9,900원, 2026)와 분량으로 자동 산정한다. 수동 변경은 출간 기록에서만.
-import { buildEpub } from './publishing-ai-epub.js';
+import { buildEpub, AI_NOTICE } from './publishing-ai-epub.js';
 import { sensitiveKinds } from './publishing-ai-quality.js';
 
 export const RELEASE_POLICY = Object.freeze({
@@ -41,6 +41,41 @@ export async function ensureReleaseTables(db) {
 }
 
 /** 최종 검수 확인 → 출판. 최고관리자(admin)만. 같은 책은 한 번만 출간된다. */
+/** 출간본 장 구성(본문의 확인 표시 제거 + 민감 분야면 '읽기 전에 알아 두실 것'). 처음 출간과 판매 파일 갱신이 같은 규칙을 쓴다. */
+export function finalChaptersFor(chapters, kinds) {
+  const out = chapters.map(c => ({ number: c.number, title: c.title, body: releaseText(c.body) }));
+  if (kinds.length) out.push({ number: out.length + 1, title: '읽기 전에 알아 두실 것',
+    body: `이 책의 ${kinds.join('·')} 내용은 일반 정보입니다. 개인의 상황에 맞는 판단은 전문가와 상의해 주세요. 이 책은 AI 도구를 활용해 집필하고 저자가 감수해 펴냈습니다.` });
+  return out;
+}
+const abstractFor = meta => clean([meta.pitch, `${AI_NOTICE} — ${meta.author || '정찬균'} 감수.`].filter(Boolean).join(' '), 600);
+
+/**
+ * 판매 중인 책의 서점 파일을 새 판권 고지(AI_NOTICE)로 다시 만든다. 가격(price_json)·판매 상태(status)는 그대로 둔다.
+ * 같은 파일 주소(file_key)에 덮어쓰고 지문(sha256)·크기·고지·소개만 갱신, 감사 기록을 남긴다. 이미 새 고지면 건너뛴다.
+ */
+export async function refreshReleaseFiles(env, db, epubFor) {
+  if (!env.BOOK_FILES?.put) return [];
+  await ensureReleaseTables(db);
+  const rows = (await db.prepare('SELECT book_id, catalog_id, file_key, epub_sha256, disclosure, sensitive_json FROM publishing_ai_releases WHERE disclosure IS NOT ? ').bind(AI_NOTICE).all()).results || [];
+  const done = [];
+  for (const r of rows) {
+    const book = await db.prepare('SELECT * FROM publishing_ai_books WHERE id=?').bind(r.book_id).first();
+    if (!book) continue;
+    const chapters = (await db.prepare('SELECT number, title, summary, body FROM publishing_ai_chapters WHERE book_id=? ORDER BY number').bind(r.book_id).all()).results || [];
+    const { bytes, digest } = await epubFor({ ...book }, finalChaptersFor(chapters, JSON.parse(r.sensitive_json || '[]')));
+    await env.BOOK_FILES.put(r.file_key, bytes, { httpMetadata: { contentType: 'application/epub+zip' }, customMetadata: { sha256: digest, source: 'ekodi-ai-factory', refreshed: 'ai-notice' } });
+    const t = now();
+    await db.batch([
+      db.prepare('UPDATE publishing_ai_releases SET epub_sha256=?, epub_bytes=?, disclosure=?, abstract=? WHERE book_id=?').bind(digest, bytes.length, AI_NOTICE, abstractFor(JSON.parse(book.plan_json || '{}')), r.book_id),
+      db.prepare("INSERT INTO publishing_workflow_audit (id,project_id,actor_user_id,action,from_stage,to_stage,revision,details_json,created_at) VALUES (?, ?, 'system:ai-factory', 'ai_release_file_refreshed', 'released', 'released', 0, ?, ?)")
+        .bind(crypto.randomUUID(), 'ai:' + r.book_id, JSON.stringify({ catalogId: r.catalog_id, before: r.epub_sha256, after: digest, reason: 'ai-notice' }), t),
+    ]);
+    done.push({ catalogId: r.catalog_id, bytes: bytes.length });
+  }
+  return done;
+}
+
 export async function releaseBook(env, db, book, user, { writeText, epubFor } = {}) {
   if (!env.BOOK_FILES?.put) return { status: 503, data: { ok: false, code: 'BOOK_FILES_NOT_CONFIGURED' } };
   await ensureReleaseTables(db);
@@ -55,20 +90,18 @@ export async function releaseBook(env, db, book, user, { writeText, epubFor } = 
     await db.prepare("UPDATE publishing_ai_books SET status='approved', approved_by=?, approved_at=?, updated_at=? WHERE id=?").bind(user.userId, t, t, book.id).run();
     book = { ...book, status: 'approved', approved_at: t };
   }
-  const finalChapters = chapters.map(c => ({ number: c.number, title: c.title, body: releaseText(c.body) }));
-  if (kinds.length) finalChapters.push({ number: finalChapters.length + 1, title: '읽기 전에 알아 두실 것',
-    body: `이 책의 ${kinds.join('·')} 내용은 일반 정보입니다. 개인의 상황에 맞는 판단은 전문가와 상의해 주세요. 이 책은 AI 협업 초안을 저자가 감수해 펴냈습니다.` });
+  const finalChapters = finalChaptersFor(chapters, kinds);
   const { bytes, digest } = await epubFor({ ...book }, finalChapters);
   const catalogId = RELEASE_POLICY.catalogPrefix + book.id.slice(0, 8).toUpperCase();
   const fileKey = `${catalogId}/ebook.epub`;
   await env.BOOK_FILES.put(fileKey, bytes, { httpMetadata: { contentType: 'application/epub+zip' }, customMetadata: { sha256: digest, source: 'ekodi-ai-factory' } });
   const chars = finalChapters.reduce((s, c) => s + c.body.length, 0);
   const price = recommendPrice({ chars, genre: book.genre });
-  const abstract = clean([meta.pitch, `${meta.disclosure || 'AI 협업 초안 · 저자 감수'} — ${meta.author || '정찬균'}이 감수한 EKODI AI 협업 도서입니다.`].filter(Boolean).join(' '), 600);
+  const abstract = abstractFor(meta);
   await db.batch([
     db.prepare(`INSERT OR IGNORE INTO publishing_ai_releases (book_id,catalog_id,title,subtitle,author,genre,abstract,toc_json,price_json,file_key,epub_sha256,epub_bytes,disclosure,sensitive_json,released_by,released_at,status)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'on_sale')`).bind(book.id, catalogId, book.title, clean(meta.subtitle, 160), clean(meta.author || '정찬균', 60), book.genre, abstract,
-      JSON.stringify(chapters.map(c => c.title)), JSON.stringify(price), fileKey, digest, bytes.length, clean(meta.disclosure || 'AI 협업 초안 · 저자 감수', 80), JSON.stringify(kinds), user.userId, t),
+      JSON.stringify(chapters.map(c => c.title)), JSON.stringify(price), fileKey, digest, bytes.length, AI_NOTICE, JSON.stringify(kinds), user.userId, t),
     db.prepare("INSERT INTO publishing_workflow_audit (id,project_id,actor_user_id,action,from_stage,to_stage,revision,details_json,created_at) VALUES (?, ?, ?, 'ai_book_released', 'approved', 'released', 0, ?, ?)")
       .bind(crypto.randomUUID(), 'ai:' + book.id, user.userId, JSON.stringify({ catalogId, price: price.amount, digest }), t),
   ]);

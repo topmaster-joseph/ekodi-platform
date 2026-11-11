@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { recommendPrice, releaseText, releaseBook, publicReleases, journalTick, releaseToCatalogEntry } from '../publishing-ai-release.js';
-import { aiFactoryAdmin } from '../publishing-ai-factory.js';
+import { recommendPrice, releaseText, releaseBook, publicReleases, journalTick, releaseToCatalogEntry, refreshReleaseFiles } from '../publishing-ai-release.js';
+import { aiFactoryAdmin, markerCleanupTick } from '../publishing-ai-factory.js';
+import { AI_NOTICE } from '../publishing-ai-epub.js';
 
 function memory() {
   const db = new DatabaseSync(':memory:');
@@ -84,4 +85,47 @@ test('only the super admin can release in one step; incomplete books are refused
   const book = db.sql.prepare('SELECT * FROM publishing_ai_books WHERE id=?').get(BOOK);
   assert.equal((await releaseBook(env(), db.api, book, { userId: 'owner' }, { epubFor })).data.code, 'CHAPTERS_INCOMPLETE');
   assert.equal((await releaseBook({}, db.api, book, { userId: 'owner' }, { epubFor })).data.code, 'BOOK_FILES_NOT_CONFIGURED');
+});
+
+test('sold file is rebuilt with the new AI notice in place; price and sale status unchanged; runs once', async () => {
+  const db = memory(); seed(db); const e = env();
+  const book = db.sql.prepare('SELECT * FROM publishing_ai_books WHERE id=?').get(BOOK);
+  await releaseBook(e, db.api, book, { userId: 'owner' }, { epubFor });
+  // 예전 판(긴 고지)으로 팔리던 상태를 재현
+  db.sql.prepare("UPDATE publishing_ai_releases SET disclosure='AI 협업 초안 · 저자 감수', epub_sha256=? WHERE book_id=?").run('0'.repeat(64), BOOK);
+  const before = db.sql.prepare('SELECT price_json, status, file_key FROM publishing_ai_releases WHERE book_id=?').get(BOOK);
+  let seen = null; const newEpub = async (b, ch) => { seen = ch; return { bytes: new Uint8Array(1234), digest: 'a'.repeat(64) }; };
+  const r = await refreshReleaseFiles(e, db.api, newEpub);
+  assert.deepEqual(r, [{ catalogId: 'BOOK-EKODI-AI-A2950CFC', bytes: 1234 }]);
+  assert.equal(e.put.at(-1).k, before.file_key, 'same store file address');
+  const after = db.sql.prepare('SELECT price_json, status, epub_sha256, epub_bytes, disclosure, abstract FROM publishing_ai_releases WHERE book_id=?').get(BOOK);
+  assert.equal(after.price_json, before.price_json); assert.equal(after.status, before.status);
+  assert.equal(after.epub_sha256, 'a'.repeat(64)); assert.equal(after.epub_bytes, 1234); assert.equal(after.disclosure, AI_NOTICE);
+  assert.match(after.abstract, /AI 도구를 활용해 집필·저자 감수/); assert.doesNotMatch(after.abstract, /AI 협업 초안/);
+  assert.ok(seen.every(c => !/\[확인필요\]|이 장은 건강/.test(c.body)), 'sold text has no markers');
+  assert.match(seen.at(-1).body, /AI 도구를 활용해 집필하고 저자가 감수/);
+  assert.equal(db.sql.prepare("SELECT COUNT(*) n FROM publishing_workflow_audit WHERE action='ai_release_file_refreshed'").get().n, 1);
+  assert.deepEqual(await refreshReleaseFiles(e, db.api, newEpub), [], 'idempotent');
+  assert.deepEqual(await refreshReleaseFiles({}, db.api, newEpub), [], 'no file store → nothing');
+});
+
+test('new releases record the new notice, so the daily refresh never loops', async () => {
+  const db = memory(); seed(db); const e = env();
+  await releaseBook(e, db.api, db.sql.prepare('SELECT * FROM publishing_ai_books WHERE id=?').get(BOOK), { userId: 'owner' }, { epubFor });
+  assert.equal(db.sql.prepare('SELECT disclosure FROM publishing_ai_releases').get().disclosure, AI_NOTICE);
+  assert.deepEqual(await refreshReleaseFiles(e, db.api, epubFor), []);
+});
+
+test('marker cleanup removes review phrases from books in review only; released manuscripts untouched; audited', async () => {
+  const db = memory(); seed(db);
+  const SECOND = 'b1111111-2222-4333-8444-555555555555';
+  const cols = db.sql.prepare('PRAGMA table_info(publishing_ai_books)').all().map(c => c.name);
+  db.sql.prepare(`INSERT INTO publishing_ai_books (${cols.join(',')}) SELECT ${cols.map(c => c === 'id' ? '?' : c === 'status' ? "'approved'" : c).join(',')} FROM publishing_ai_books WHERE id=?`).run(SECOND, BOOK);
+  db.sql.prepare("INSERT INTO publishing_ai_chapters (book_id, number, title, summary, body, status, updated_at) VALUES (?, 1, '1장', '', '판매본 원고 [확인필요] 기록', 'edited', 'x')").run(SECOND);
+  const r = await markerCleanupTick({ PUBLISH_DB: db.api });
+  assert.ok(r.length >= 1 && r.every(x => x.book === BOOK.slice(0, 8)));
+  assert.equal(db.sql.prepare("SELECT COUNT(*) n FROM publishing_ai_chapters WHERE book_id=? AND (body LIKE '%[확인필요]%' OR body LIKE '%[본문확인]%' OR body LIKE '%이 장은 건강%')").get(BOOK).n, 0);
+  assert.match(db.sql.prepare('SELECT body FROM publishing_ai_chapters WHERE book_id=?').get(SECOND).body, /\[확인필요\]/, 'released record kept');
+  assert.equal(db.sql.prepare("SELECT COUNT(*) n FROM publishing_workflow_audit WHERE action='ai_markers_removed'").get().n, r.length);
+  assert.deepEqual(await markerCleanupTick({ PUBLISH_DB: db.api }), [], 'idempotent');
 });

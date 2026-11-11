@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { fixForeignScript, countForeign, removeRepetition, ensureSensitiveNotice, polishChapter, sensitiveKinds } from '../publishing-ai-quality.js';
+import { fixForeignScript, countForeign, removeRepetition, ensureSensitiveNotice, polishChapter, sensitiveKinds, stripReviewMarkers } from '../publishing-ai-quality.js';
 import { mondayWeek, writeText } from '../publishing-ai-factory.js';
 import { writeForPublishing, PUBLISHING_WRITER_POLICY } from '../ai-control-publishing-writer.js';
 
@@ -19,8 +19,18 @@ test('proper nouns and acronyms are kept', () => {
   assert.equal(fixForeignScript(s), s);
 });
 
-test('unknown foreign runs become an approval-blocking marker', () => {
-  assert.equal(fixForeignScript('이것은 未知語 입니다'), '이것은 [확인필요] 입니다');
+test('unknown foreign runs are removed without leaving a [확인필요] marker', () => {
+  assert.equal(fixForeignScript('이것은 未知語 입니다'), '이것은 입니다');
+});
+
+test('writing process leaves no review markers: notice line, [확인필요], [본문확인] are stripped (idempotent)', () => {
+  const body = '> [확인필요] 이 장은 건강·의료 정보를 다룹니다. 확인한 뒤 지우세요.\n\n수면은 7시간 [확인필요] 권장됩니다.\n\n요한복음 3:16 [본문확인]\n\n### 실천\n오늘 해 볼 일.';
+  const out = stripReviewMarkers(body);
+  assert.doesNotMatch(out, /확인필요|본문확인|이 장은 건강/);
+  assert.match(out, /^수면은 7시간 권장됩니다\.\n\n요한복음 3:16\n\n### 실천/);
+  assert.equal(stripReviewMarkers(out), out);
+  const p = polishChapter('맞춤형 약물 치료 [확인필요] 정보를介绍합니다.', { title: 'AI와 건강', summary: '건강 관리' });
+  assert.doesNotMatch(p, /\[확인필요\]|이 장은/, 'sensitive chapters get no in-body notice any more');
 });
 
 test('repeated sections, paragraphs and mid-chapter question blocks are removed', () => {

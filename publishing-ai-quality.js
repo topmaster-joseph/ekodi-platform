@@ -18,8 +18,15 @@ const MARK = '[확인필요]';
 export function fixForeignScript(text) {
   let out = String(text ?? '');
   for (const [re, to] of FIXES) out = out.replace(re, to);
-  out = out.replace(FOREIGN_RUN, MARK).replace(GLUED_LATIN, (_, pre) => `${pre}${MARK}`);
-  return out.replace(/(\[확인필요\]\s*){2,}/g, `${MARK} `);
+  // 외국 문자 조각은 표시 없이 지운다(집필 과정에 [확인필요] 문구를 남기지 않는다).
+  out = out.replace(FOREIGN_RUN, '').replace(GLUED_LATIN, (_, pre) => pre);
+  return out.replace(/[ \t]{2,}/g, ' ').replace(/ +([.,!?])/g, '$1');
+}
+
+/** 집필 과정의 확인 표시를 모두 지운다: 감수 안내 줄('> [확인필요] 이 장은 …')과 [확인필요]·[본문확인]. 최종 검수 절차는 그대로. */
+export function stripReviewMarkers(body) {
+  return String(body ?? '').replace(/^>\s*\[확인필요\] 이 장은[^\n]*\n*/gm, '').replace(/[ \t]*\[(확인필요|본문확인)\]/g, '')
+    .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 export function countForeign(text) {
@@ -100,7 +107,8 @@ export function ensureSensitiveNotice(body, chapter = {}) {
 
 /** 저장 직전 한 번에 적용하는 보정(멱등). */
 export function polishChapter(body, chapter = {}) {
-  return ensureSensitiveNotice(removeRepetition(fixForeignScript(body)), chapter);
+  void chapter; // 민감 분야는 출간 때 '읽기 전에 알아 두실 것'으로만 알린다(본문에 확인 표시를 넣지 않음).
+  return stripReviewMarkers(removeRepetition(fixForeignScript(body)));
 }
 
 /** 집필·편집 지시문에 덧붙이는 규칙. */

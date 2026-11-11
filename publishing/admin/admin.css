@@ -19,7 +19,7 @@
 .padmin-empty p{margin:0 0 14px}
 .padmin .button{display:inline-block;margin-top:8px;padding:9px 16px;border:1px solid var(--navy);color:var(--navy);text-decoration:none;background:transparent;font:600 .82rem Arial,"Apple SD Gothic Neo",sans-serif;cursor:pointer}
 .padmin .button.primary{background:var(--navy);color:#fffdf8}
-.padmin-foot{margin-top:30px;font-size:.84rem;color:var(--muted)}
+.padmin-foot{margin-top:36px;padding-top:18px;border-top:1px solid var(--a-line,#2c3a52)}
 .padmin .kicker{margin:0;font:700 .66rem Arial,sans-serif;letter-spacing:.16em;color:var(--burgundy)}
 .padmin-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
 .padmin-form input{flex:1 1 220px;min-height:40px;padding:0 10px;border:1px solid #ccd;border-radius:8px;font:inherit}
@@ -106,14 +106,14 @@ a.padmin-stat-link:hover,a.padmin-stat-link:focus-visible{background:#1f3150;out
 .fig-regen{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:14px;border:1px dashed #c9c2b4;border-radius:8px;margin:6px 0}
 /* PUBLISHING-AI-READER-EDIT-001: 양쪽 희미한 화살표로 넘기기 · 전자책에서 바로 고치기 */
 .rd-device{position:relative}
-.rd-zone{position:absolute;top:14px;bottom:14px;width:clamp(44px,13%,88px);display:flex;align-items:center;border:0;background:transparent;color:#2b2622;font:200 4.2rem/1 system-ui,sans-serif;opacity:.28;cursor:pointer;transition:opacity .2s,background .2s;-webkit-tap-highlight-color:transparent;z-index:2}
+.rd-zone{position:absolute;top:14px;bottom:14px;width:clamp(52px,14%,96px);display:flex;align-items:center;border:0;background:transparent;color:#2b2622;font:300 5.6rem/1 system-ui,sans-serif;opacity:.48;cursor:pointer;transition:opacity .2s,background .2s;-webkit-tap-highlight-color:transparent;z-index:2}
 .rd-zone-prev{left:14px;justify-content:flex-start;padding-left:6px;border-radius:10px 0 0 10px}
 .rd-zone-next{right:14px;justify-content:flex-end;padding-right:6px;border-radius:0 10px 10px 0}
-.rd-zone:hover,.rd-zone:focus-visible{opacity:.55;background:linear-gradient(to var(--rd-dir,right),rgba(43,38,34,.07),transparent)}
+.rd-zone:hover,.rd-zone:focus-visible{opacity:.8;background:linear-gradient(to var(--rd-dir,right),rgba(43,38,34,.07),transparent)}
 .rd-zone-next{--rd-dir:left}
 .rd-zone:active{opacity:.75}
 .rd-zone:disabled{opacity:0;pointer-events:none}
-.rd-editing .rd-zone{opacity:.14;width:34px}
+.rd-editing .rd-zone{opacity:.25;width:40px}
 .rd-editable{cursor:text;border-radius:4px;transition:background .15s}
 .rd-editable:hover{background:rgba(168,67,58,.06)}
 .rd-in-title{display:block;width:100%;box-sizing:border-box;margin:0 0 1em;padding:.2em .3em;border:1px dashed #c9b9a6;border-radius:6px;background:#fffdf8;color:#2b2622;font-family:inherit;font-size:1.45em;font-weight:700;line-height:1.4}
@@ -134,3 +134,10 @@ a.padmin-stat-link:hover,a.padmin-stat-link:focus-visible{background:#1f3150;out
 .padmin-ai-actions{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 6px}
 .padmin-titlecell .button.small+.button.small{margin-left:6px}
 .rd-cover{box-sizing:border-box}
+/* 하단 바로가기: 이 화면에서 하지 않는 일을 어디서 하는지 알려 준다 */
+.padmin-foot h2{margin:0 0 10px;font-size:.95rem;font-weight:700;color:var(--a-muted)}
+.padmin-foot-links{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:0;padding:0;list-style:none}
+.padmin-foot-links a{display:block;padding:12px 14px;border:1px solid var(--a-line,#2c3a52);border-radius:10px;text-decoration:none;color:inherit}
+.padmin-foot-links a:hover,.padmin-foot-links a:focus-visible{border-color:#a8433a}
+.padmin-foot-links b{display:block;margin-bottom:2px;color:var(--a-link)}
+.padmin-foot-links span{font-size:.84rem;color:var(--a-muted)}
