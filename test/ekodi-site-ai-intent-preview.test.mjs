@@ -7,12 +7,12 @@ const catalog={sites:{existingWorkspaceSites:[
  capabilities:{capabilities:[{id:'core.automation',actionTier:'execute_reversible'},{id:'core.documents',actionTier:'assist'},{id:'secret',actionTier:'forbidden'}]}};
 const make=(patch={})=>previewSiteAiMicroIntent({siteId:'church',scope:'site_specific',action:'repair',capabilityId:'core.automation',...patch},catalog);
 test('site-local repair stays in registered site AI, never authorizes execution',()=>{
- const p=make({codeChange:true});assert.equal(p.ownerAgent,'site-ai:church');assert.equal(p.detailPath,'/ekodichurch/admin');
+ const p=make({codeChange:true});assert.equal(p.proposedOwnerRole,'site_ai');assert.equal(p.ownerAgentId,null);assert.equal(p.siteAiRegistrationVerified,false);assert.equal(p.detailPath,'/ekodichurch/admin');
  assert.equal(p.workspaceIdentityVerified,false);assert.equal(p.executionAuthorized,false);assert.equal(p.deploymentAuthorized,false);
- assert.equal(p.releaseRequired,true);assert.equal(p.automaticPaidBudgetKrw,0);
+ assert.equal(p.releaseRequired,true);assert.equal(p.releaseClassificationVerified,false);assert.equal(p.finalHumanGateDeterminedByOrchestrator,true);assert.equal(p.automaticPaidBudgetKrw,0);
 });
 test('shared capability is central-owned with no implicit site authority',()=>{
- const p=make({scope:'platform_common',siteId:'',action:'repair'});assert.equal(p.ownerAgent,'ekodi-orchestrator');
+ const p=make({scope:'platform_common',siteId:'',action:'repair'});assert.equal(p.proposedOwnerRole,'ekodi_orchestrator');assert.equal(p.ownerAgentId,null);
  assert.equal(p.workspaceId,null);assert.equal(p.detailPath,'/admin');
 });
 test('deletion demands exact human gate and its receipt',()=>{
