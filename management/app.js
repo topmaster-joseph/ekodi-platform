@@ -56,7 +56,8 @@ function setManagementView(key){
     const active=view.key===selected,tab=$(view.tab),panel=$(view.panel);
     if(panel)panel.hidden=!active;
     if(tab){
-      tab.setAttribute('aria-selected',active?'true':'false');
+      // The real HTML tab is an Element; tolerate minimal legacy DOM test doubles.
+      if(typeof tab.setAttribute==='function')tab.setAttribute('aria-selected',active?'true':'false');
       tab.tabIndex=active?0:-1;
     }
   }
