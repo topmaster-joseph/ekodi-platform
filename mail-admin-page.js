@@ -112,6 +112,7 @@ export function mailAdminPage(){
       d.append(docText('p',r.search_query+' · 매월 '+r.day_from+'~'+r.day_to+'일 · '+(r.active?'점검 설정':'중단'),'note'));
       d.append(docText('p','최근 점검: '+(r.last_checked_at||'없음')+(r.last_error?' · 오류: '+r.last_error:''),'note'));
       d.append(docButton('지금 메일 확인',async()=>{try{docNotice('메일 확인 중');const x=await api('/documents/rules/'+r.id+'/sync',{method:'POST',body:JSON.stringify({workspace:current.slug})});docNotice('조회 '+x.scanned+'건 · 신규 요청 '+x.inserted+'건');await loadDocuments()}catch(e){docNotice(e.message)}},'primary'));
+      if(r.active)d.append(docButton('규칙 중단',async()=>{if(!confirm('이 사이트의 해당 메일 자동점검을 중단할까요? 기존 요청과 발행 기록은 유지됩니다.'))return;try{await api('/documents/rules/'+r.id+'/disable',{method:'POST',body:JSON.stringify({workspace:current.slug})});await loadDocuments()}catch(e){docNotice(e.message)}},'danger'));
       ruleBox.append(d);
     }
     if(!ruleBox.childNodes.length)ruleBox.append(docText('p','등록된 점검 규칙이 없습니다. 사이트 메일 연결 후 위에서 등록하세요.','note'));
