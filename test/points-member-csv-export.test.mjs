@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const app=read('my/points/app.js'),html=read('my/points/index.html'),css=read('my/points/styles.css');
-const helpers=app.split('// POINTS_MEMBER_EXPORT_BEGIN:')[1]?.split('// POINTS_MEMBER_EXPORT_END')[0];
+const helpers=app.split('// POINTS_MEMBER_EXPORT_BEGIN:')[1]?.replace(/^[^\n]*\n/,'').split('// POINTS_MEMBER_EXPORT_END')[0];
 assert.ok(helpers,'Pure CSV helper contract must exist');
 const {csvCell,buildHistoryCsv}=runInNewContext(helpers+'\n({csvCell,buildHistoryCsv})');
 
