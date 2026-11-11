@@ -63,21 +63,27 @@ function buildHistoryCsv(rows){
   }
   return '\uFEFF'+lines.join('\r\n')+'\r\n';
 }
+// Recheck the authenticated Person owner at click time: site and revision alone
+// cannot detect a missed asynchronous account transition.
+function isCurrentHistoryOwner(snapshot,session){
+  return Boolean(snapshot?.ownerId && session?.access_token &&
+    session?.user?.id===snapshot.ownerId);
+}
 // POINTS_MEMBER_EXPORT_END
 function clearHistoryExport(){
   exportSnapshot=null;
   exportButton.disabled=true;
   exportButton.hidden=true;
 }
-function setHistoryExport(rows,site,revision){
+function setHistoryExport(rows,site,revision,ownerId){
   clearHistoryExport();
-  if(!enabled||!Array.isArray(rows)||!rows.length)return;
+  if(!enabled||!ownerId||!Array.isArray(rows)||!rows.length)return;
   const safe=rows.filter(row=>Number.isSafeInteger(Number(row?.amount))&&
     Number.isFinite(new Date(row?.created_at).getTime())).map(row=>({
     event_kind:String(row.event_kind||''),created_at:String(row.created_at),amount:Number(row.amount)
   }));
   if(!safe.length)return;
-  exportSnapshot=Object.freeze({site,revision,rows:Object.freeze(safe)});
+  exportSnapshot=Object.freeze({site,revision,ownerId,rows:Object.freeze(safe)});
   exportButton.hidden=false;
   exportButton.disabled=false;
 }
@@ -86,7 +92,7 @@ exportButton.addEventListener('click',async()=>{
   if(!enabled||!sb||!snapshot||snapshot.site!==select.value||
     snapshot.revision!==viewRevision||view.hidden)return;
   const {data:{session}}=await sb.auth.getSession();
-  if(!session?.access_token||snapshot!==exportSnapshot||
+  if(!isCurrentHistoryOwner(snapshot,session)||snapshot!==exportSnapshot||
     snapshot.site!==select.value||snapshot.revision!==viewRevision||view.hidden)return;
   const blob=new Blob([buildHistoryCsv(snapshot.rows)],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
@@ -522,7 +528,7 @@ async function loadProgress(token,site,revision){
     refreshPointTabState();
   }
 }
-async function loadWallet(token,site,revision){
+async function loadWallet(token,site,revision,ownerId){
   if(!/^[a-z0-9_-]{2,64}$/.test(site))return;
   try{
     showMessage('포인트 내역을 불러오고 있습니다.');
@@ -530,7 +536,7 @@ async function loadWallet(token,site,revision){
     if(revision!==viewRevision||select.value!==site)return;
     balance.textContent=Number(data.balance||0).toLocaleString('ko-KR');
     renderRows(data.history);
-    setHistoryExport(data.history,site,revision);
+    setHistoryExport(data.history,site,revision,ownerId);
     notice.textContent='';view.hidden=false;
   }catch(e){if(revision===viewRevision)showMessage('포인트 내역을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');}
 }
@@ -544,7 +550,7 @@ async function start(){
   if(!enabled){showMessage('포인트 조회 서비스 준비 중입니다.');return;}
   const {data:{session}}=await sb.auth.getSession();
   if(revision!==viewRevision)return;
-  if(!session?.access_token){showMessage('로그인하면 사이트별 활동포인트를 확인할 수 있습니다.');login.hidden=false;return;}
+  if(!session?.access_token||!session.user?.id){showMessage('로그인하면 사이트별 활동포인트를 확인할 수 있습니다.');login.hidden=false;return;}
   login.hidden=true;
   try{
     const data=await request('/sites',session.access_token);
@@ -556,11 +562,11 @@ async function start(){
     const wanted=new URLSearchParams(location.search).get('site');
     if(wanted&&sites.some(site=>site.id===wanted))select.value=wanted;
     select.disabled=false;
-    select.onchange=()=>{const next=++viewRevision;clearHistoryExport();view.hidden=true;historyList.replaceChildren();clearProgress();showReferralControls(select.value,true);void loadWallet(session.access_token,select.value,next);void loadClaims(select.value,next);void loadProgress(session.access_token,select.value,next);};
+    select.onchange=()=>{const next=++viewRevision;clearHistoryExport();view.hidden=true;historyList.replaceChildren();clearProgress();showReferralControls(select.value,true);void loadWallet(session.access_token,select.value,next,session.user.id);void loadClaims(select.value,next);void loadProgress(session.access_token,select.value,next);};
     showReferralControls(select.value,true);
     void loadClaims(select.value,revision);
     void loadProgress(session.access_token,select.value,revision);
-    await loadWallet(session.access_token,select.value,revision);
+    await loadWallet(session.access_token,select.value,revision,session.user.id);
   }catch(e){if(revision===viewRevision)showMessage('포인트 목록을 확인할 수 없습니다. 연결 상태를 확인해 주세요.');}
 }
 if(sb){

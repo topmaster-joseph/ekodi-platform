@@ -50,6 +50,9 @@ test('rollback guard accepts only pre-existing safe points experience, never dem
       s.includes('POINTS_MEMBER_EXPORT_BEGIN')||s.includes('20261111-site-ledger-csv-v1')));
   }
   assert.ok(byUrl(canonical+'/points/').expect.includes('id="exportPointsHistory"'));
+  assert.ok(byUrl(canonical+'/points/').expect.includes('20261112-csv-owner-binding-v2'));
+  assert.ok(byUrl(internal+'/points/app.js').expect.includes('function isCurrentHistoryOwner(snapshot,session)'));
+  assert.ok(byUrl(canonical+'/points/app.js').expect.includes('session?.user?.id===snapshot.ownerId'));
   assert.match(app,/snapshot\.site!==select\.value/);
   assert.match(app,/snapshot\.revision!==viewRevision/);
   assert.match(app,/await sb\.auth\.getSession\(\)/);
