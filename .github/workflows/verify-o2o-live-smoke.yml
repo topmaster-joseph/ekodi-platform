@@ -5,11 +5,9 @@ on:
     paths:
       - '.github/workflows/verify-o2o-live-smoke.yml'
       - 'scripts/verify-o2o-live-smoke.mjs'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/verify-o2o-live-smoke.yml'
-      - 'scripts/verify-o2o-live-smoke.mjs'
+      - '_headers'
+      - 'test/o2o-asset-policy.test.mjs'
+      - 'wrangler.site.toml'
   workflow_run:
     workflows: ['Deploy EKODI Shared Site Core']
     types: [completed]
@@ -23,8 +21,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  asset-header-contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Prove O2O asset-first headers and no sensitive caching
+        run: |
+          set -euo pipefail
+          node --check scripts/verify-o2o-live-smoke.mjs
+          node --test test/o2o-asset-policy.test.mjs
+
   public-o2o-live:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+    # PRs must validate configuration only: production may not yet have the
+    # proposed assets. Run HTTP smoke only after a successful protected deploy.
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
@@ -34,6 +51,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Verify static asset-first header contract before HTTP checks
+        run: |
+          set -euo pipefail
+          node --test test/o2o-asset-policy.test.mjs
       - name: Verify read-only public O2O assets and revoked-token fail-closed path
         run: |
           set -euo pipefail
@@ -45,8 +66,8 @@ jobs:
           {
             echo '### O2O public live smoke'
             echo '- Public O2O HTML route and headers checked'
-            echo '- Four O2O public assets and short cache policy checked'
+            echo '- Four asset-first O2O public assets and short cache policy checked'
             echo '- Synthetic never-issued QR rejected by GET and HEAD with no-store/noindex'
-            echo '- HTTP timings are informational and NOT browser LCP or an operator write verification'
+            echo '- HTTP timings are informational and NOT browser LCP or operator write verification'
             echo '- No issue/scan/attendance/points/DB mutation made'
           } >> "$GITHUB_STEP_SUMMARY"
