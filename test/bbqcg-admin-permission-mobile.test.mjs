@@ -85,6 +85,41 @@ test('BBQ operations handbook is local to approved site work section and print c
 });
 
 
+test('BBQ left-nav content is direct, without redundant right-side heading and work/metrics switches',async()=>{
+  const bbq=await storeAdminPage({slug:'bbqcg',name:'BBQ 무안청계점',pathname:'/bbqcg/admin/pos'}).text();
+  const other=await storeAdminPage({slug:'jadam',name:'자담치킨',pathname:'/jadam/admin/pos'}).text();
+  const css=await storeAdminCss().text();
+  assert.match(bbq,/id="mainPanel" role="region" aria-label="매장 관리 화면"/);
+  assert.doesNotMatch(bbq,/class="admin-view-tabs"/);
+  assert.match(other,/class="admin-view-tabs"/);
+  assert.match(other,/id="mainPanel" role="tabpanel" aria-labelledby="adminWorkTab"/);
+  assert.match(css,/:root\[data-ekodi-store-brand="bbqcg"\]:not\(\[data-ekodi-store-portfolio\]\) \.layout main>\.heading/);
+  assert.match(css,/:root\[data-ekodi-store-brand="bbqcg"\]:not\(\[data-ekodi-store-portfolio\]\) \.layout main>#summaryCards\{display:none!important\}/);
+  assert.match(css,/#bbqcgHandbook \.bbqcg-handbook-tabs\{order:-1;justify-content:flex-end/);
+});
+test('BBQ-only POS tabs are upper-right, keyboard navigable and restore selected content on refresh',async()=>{
+  const script=await storeAdminScript().text();
+  const css=await storeAdminCss().text();
+  assert.match(script,/function mountBbqPosTabs\(\)/);
+  for(const key of ['programs','orders','channels','agent'])assert.ok(script.includes("['"+key+"'"),key);
+  assert.match(script,/if\(SLUG==='bbqcg'&&!IS_PORTFOLIO\)mountBbqPosTabs\(\)/);
+  assert.match(script,/aria-selected/);
+  assert.match(script,/ArrowLeft/);
+  assert.match(script,/ArrowRight/);
+  assert.match(script,/url\.searchParams\.set\('posTab',id\)/);
+  assert.match(script,/history\.replaceState\(history\.state/);
+  assert.match(script,/state\.posSubTab=id/);
+  assert.match(script,/if\(SLUG==='bbqcg'&&!IS_PORTFOLIO\)\{\s*\/\/ Draw the local store's selected workspace immediately\./);
+  assert.match(script,/renderPosConsole\(\);\s*await probePosAgent\(\);\s*if\(section==='pos'\)renderPosConsole\(\)/);
+  assert.match(css,/\.bbq-pos-subtabs\{display:flex;align-items:center;justify-content:flex-end/);
+  assert.match(css,/\[data-bbq-pos-pane\]\[hidden\]/);
+  assert.match(css,/@media\(max-width:620px\)/);
+  // No changes to POS bridge permissions or machine-application launch behavior.
+  assert.match(script,/await posAgent\('\/v1\/focus'/);
+  assert.match(script,/button\.onclick=async/);
+});
+
+
 test('BBQ-only optional 403 does not deny the authorized operating dashboard and handbook',async()=>{
   const js=await storeAdminScript().text();
   assert.match(js,/if\(SLUG==='bbqcg'\)\{/);
