@@ -23,14 +23,14 @@ function scan(dir, out = []) {
 }
 
 test('3A-1 is versioned in the constitution, its JSON policy and an approved owner amendment', () => {
-  assert.equal(constitution.version, '1.27.9');
+  assert.equal(constitution.version, '1.27.10');
   assert.ok(constitution.principles.includes('multi-method-login-one-ekodi-id'));
   assert.equal(policy.canonicalEntry, 'https://ekodi.kr/auth/');
   assert.equal(policy.emailPassword.providerPasswordCollectionForbidden, true);
   assert.equal(policy.autoLaunch.userFacing, 'forbidden');
   assert.equal(policy.legacyShrinkOnly, true);
   const doc = read('CONSTITUTION.md');
-  assert.match(doc, /^# EKODI Platform Constitution v1\.27\.9/m);
+  assert.match(doc, /^# EKODI Platform Constitution v1\.27\.10/m);
   assert.match(doc, /## 3A-1\. Multi-Method EKODI Login Constitution/);
   const amendment = JSON.parse(read('governance/amendments/2026-11-10-multi-method-login-v1.27.8.json'));
   assert.equal(amendment.status, 'approved');
