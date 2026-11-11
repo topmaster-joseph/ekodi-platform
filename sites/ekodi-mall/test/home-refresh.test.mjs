@@ -261,3 +261,26 @@ test('Toss merchant-review first fold shows sale catalog before full policy disc
   assert.match(cssSource, /#shop \.card \.thumb\.book/);
   assert.match(cssSource, /#shop \.mall-review-disclosures summary:focus-visible/);
 });
+
+
+test('tiered discovery never mistakes a supplier reference or external comparison for a Mall purchase', () => {
+  for(const marker of [
+    "EKODI-MALL-TIERED-SEARCH-001",
+    "stage('1','에코디몰 자체상품'",
+    "stage('2','도매꾹·도매매 등 공급처'",
+    "stage('3','제휴상품·외부 쇼핑 비교'",
+    "stage('4','AI 대체상품·소싱 상담'",
+    "supplierRows(query)",
+    "api/public/supplier/search?q=",
+    "purchaseMode==='external-reference-only'",
+    "'네이버쇼핑에서 비교'",
+    "'구글쇼핑에서 비교'",
+    "ai.href='#recommend'",
+  ]) assert.ok(js.includes(marker),'missing staged search contract: '+marker);
+  assert.match(js,/supplier\.state==='unavailable'[^?]*\?/);
+  assert.match(js,/if\(version!==generation\)return/);
+  assert.doesNotMatch(js, /setOrder|BUYER_PII_RELEASE_ENABLED|DOMEGGOOK_AUTO_ORDER_ENABLED/);
+  assert.match(css,/\.mall-search-stage\{/);
+  assert.match(css,/@media\(max-width:600px\)/);
+  assert.match(css,/\.mall-search-provider-results,\.mall-search-compare-links\{grid-template-columns:minmax\(0,1fr\)\}/);
+});
