@@ -23,8 +23,8 @@ test('CSV contains only validated server-history projection, signed amounts and 
   ]);
   assert.ok(csv.startsWith('\uFEFF'));
   assert.match(csv,/거래 종류/);
-  assert.match(csv,/적립,25\r\n/);
-  assert.match(csv,/사용,-10\r\n/);
+  assert.match(csv,/"적립",25\r\n/);
+  assert.match(csv,/"사용",-10\r\n/);
   assert.doesNotMatch(csv,/77|HYPERLINK/);
   assert.match(csv,/2026/);
   assert.ok(csv.endsWith('\r\n'));
