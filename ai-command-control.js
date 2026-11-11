@@ -4,6 +4,9 @@ import { providerStatus } from './ai-control-provider-router.js';
 import { findReusableComposition } from './ekodi-capability-ecosystem.js';
 import { isSameOriginAdminMutation, prepareAdminOrchestratorSubmission, evaluateAdminOrchestratorSubmission } from './ekodi-ai-orchestrator-admin-handoff.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
+import { previewSiteAiMicroIntent } from './ekodi-site-ai-intent-preview.js';
+import siteAiCapabilityRegistry from './config/capability-registry.json' with { type: 'json' };
+import siteAiLifecycleRegistry from './config/site-lifecycle-registry.json' with { type: 'json' };
 import { adminAuthorityForRole, hasEkodiCapability } from './ekodi-authorization.js';
 import {
   getAiCollaborationAdminSnapshot,
@@ -165,6 +168,31 @@ export async function handleEkodiV8CommandControl(request, env) {
     if (!sessionCapabilityGranted(auth.session, requiredCapability)) return json(request, env, { error:'capability_required', capability:requiredCapability }, 403);
     return null;
   };
+
+  // EKODI site-AI advisory-only intent preview. This never allocates authority or tasks.
+  // Caller-supplied site ID is a registry locator, not a verified workspace identity.
+  if (request.method === 'POST' && url.pathname === `${PREFIX}/site-ai/intent-preview`) {
+    const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
+    if (!isSameOriginAdminMutation(request)) {
+      return json(request, env, { ok:false, code:'SITE_AI_PREVIEW_SAME_ORIGIN_REQUIRED' }, 403);
+    }
+    if (!(request.headers.get('content-type') || '').toLowerCase().startsWith('application/json')) {
+      return json(request, env, { ok:false, code:'JSON_CONTENT_TYPE_REQUIRED' }, 415);
+    }
+    const input = await readJson(request);
+    try {
+      const plan = previewSiteAiMicroIntent(input, {
+        capabilities:siteAiCapabilityRegistry,
+        sites:siteAiLifecycleRegistry,
+      });
+      return json(request, env, { ok:true, previewOnly:true, executionAuthorized:false, plan });
+    } catch (error) {
+      return json(request, env, {
+        ok:false, code:text(error?.message || 'INVALID_SITE_AI_INTENT', 80),
+        executionAuthorized:false,
+      }, 400);
+    }
+  }
 
   // Super-admin only: the explicit probe is a bounded READ-ONLY GitHub API
   // measurement, not a GitHub write, dispatch or release. Browser cannot
@@ -478,5 +506,5 @@ export async function handleEkodiV8CommandControl(request, env) {
 export const EKODI_V8_COMMAND_CONTROL = Object.freeze({
   version: '1.3.0',
   prefix: PREFIX,
-  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'orchestrator/human-gates', 'orchestrator/tasks/:taskId', 'orchestrator/tasks/:taskId/approve', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit', 'sovereignty/preview', 'orchestrator/submit']),
+  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'orchestrator/human-gates', 'orchestrator/tasks/:taskId', 'orchestrator/tasks/:taskId/approve', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit', 'sovereignty/preview', 'orchestrator/submit', 'site-ai/intent-preview']),
 });
