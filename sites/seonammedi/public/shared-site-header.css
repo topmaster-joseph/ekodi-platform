@@ -190,3 +190,6 @@ footer.site-footer .site-footer-copy .site-footer-credit a{display:inline-block;
   footer.site-footer:has(>a[hidden]) .site-footer-copy,footer.site-footer:not(:has(>a)) .site-footer-copy{max-width:100%}
   footer.site-footer>a{min-height:32px;padding:5px 10px;font-size:13px}
 }
+
+/* Independent civic organization's local CI candidate only. */
+.site-header>.brand .civic-ci[data-site-ci="civic-dialogue"]{display:inline-flex;align-items:center;justify-content:center;width:27px;height:27px;margin-right:6px;vertical-align:middle;color:#174d73}.site-header>.brand .civic-ci svg{display:block;width:23px;height:23px}@media(max-width:360px){.site-header>.brand .civic-ci{width:23px;height:23px;margin-right:4px}}
