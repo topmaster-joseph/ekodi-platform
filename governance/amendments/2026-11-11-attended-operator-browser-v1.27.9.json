@@ -1,0 +1,20 @@
+{
+  "amendmentId": "ATTENDED-OPERATOR-BROWSER-20261111",
+  "constitutionVersion": "1.27.9",
+  "approvedAt": "2026-11-11",
+  "approvedBy": "topmaster-joseph",
+  "status": "approved",
+  "changeClass": "C2",
+  "taskId": "attended-browser-20261111",
+  "summary": "Adds a bounded, operator-initiated attended browser mode (single-use EKODI profile, operator sign-in, recipe allowlist, per-step approval, in-memory secret transfer, value-free audit). Automatic execution remains background-only and cannot start it.",
+  "approvalBasis": "Owner instruction 2026-11-11 20:46 KST: '에코디 브라우저 기능 고도화를 통해 가능하게 해', then selected '입회형으로 설계·구축 (추천)' after being told it requires a constitutional change.",
+  "approvalScope": {
+    "constitutionSection": "1D-1",
+    "automaticExecutionWeakened": false,
+    "aiMayStartAttendedRuns": false,
+    "initialRecipes": [
+      "gmail-operator-notify"
+    ]
+  },
+  "rollback": "Delete tools/ekodi-device-agent/windows/ekodi-attended-browser.mjs and its recipe registry; set attendedOperatorBrowserPolicy.status to withdrawn."
+}

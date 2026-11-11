@@ -1,6 +1,6 @@
 {
-  "version": "1.27.8",
-  "effectiveDate": "2026-11-10",
+  "version": "1.27.9",
+  "effectiveDate": "2026-11-11",
   "status": "active",
   "title": "EKODI Platform Constitution",
   "principles": [
@@ -46,7 +46,8 @@
     "public-by-default-site-publication-control",
     "native-browser-execution-order-enforced",
     "canonical-auth-entrypoints-enforced",
-    "multi-method-login-one-ekodi-id"
+    "multi-method-login-one-ekodi-id",
+    "attended-operator-browser-bounded"
   ],
   "architectureModel": {
     "registry": "governance/architecture/ekodi-os-architecture.json",
@@ -1472,5 +1473,48 @@
       "scripts/validate-constitution.mjs",
       "test/multi-method-login-constitution.test.mjs"
     ]
+  },
+  "attendedOperatorBrowserPolicy": {
+    "id": "ATTENDED-OPERATOR-BROWSER-001",
+    "status": "enforced",
+    "version": "1.27.9",
+    "adoptedAt": "2026-11-11",
+    "amendmentRecord": "governance/amendments/2026-11-11-attended-operator-browser-v1.27.9.json",
+    "isAutomaticExecution": false,
+    "automaticExecutionLifecycleUnchanged": "AUTOMATIC-EXECUTION-LIFECYCLE-001",
+    "startAuthority": "platform-super-administrator-present-at-device",
+    "startMethod": "local-command-only",
+    "forbiddenInitiators": [
+      "ai-agent",
+      "orchestrator",
+      "learning-loop",
+      "scheduler",
+      "device-control",
+      "hybrid-execution",
+      "remote-computer-provider"
+    ],
+    "profile": "ekodi-owned-single-use",
+    "reuseUserBrowserProfile": false,
+    "readUserCookiesOrPasswords": false,
+    "profileDeletedOnExit": true,
+    "operatorPerformsSignIn": true,
+    "runnerHandlesPasswordsOrOtp": false,
+    "recipeAllowlistOnly": true,
+    "perStepOperatorApprovalForStateChanges": true,
+    "topLevelNavigationRestrictedToRecipeOrigins": true,
+    "secretTransfer": {
+      "allowed": "recipe-declared-destination-only",
+      "persistToDisk": false,
+      "logOrScreenshot": false,
+      "sendToEkodiServicesOrChat": false,
+      "clearAfterUse": true
+    },
+    "audit": {
+      "local": true,
+      "valueFree": true
+    },
+    "recipeChangesRequireGovernedCodeChange": true,
+    "runner": "tools/ekodi-device-agent/windows/ekodi-attended-browser.mjs",
+    "rollback": "Remove the attended runner and recipe registry and set status to withdrawn."
   }
 }

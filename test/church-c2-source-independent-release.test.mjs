@@ -19,7 +19,7 @@ const workflow=read('.github/workflows/deploy-ekodi-church-homepage.yml');
 const policy=constitution.churchCanonicalSourceTransferPolicy;
 
 test('C2 owner-approved Church source target is versioned, explicit and separately gated from C3 production',()=>{
-  assert.equal(constitution.version,'1.27.8');
+  assert.equal(constitution.version,'1.27.9');
   assert.equal(amendment.status,'approved');
   assert.equal(amendment.changeClass,'C2');
   assert.equal(amendment.relatedReleaseTopologyClass,'C3');
