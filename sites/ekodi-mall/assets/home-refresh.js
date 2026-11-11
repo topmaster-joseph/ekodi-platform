@@ -81,6 +81,7 @@
     }
     const urlSearch = new URLSearchParams(window.location.search).get('q') || '';
     if (query) query.value = urlSearch;
+    if (aiInput && urlSearch) aiInput.value = urlSearch;
     if (search && search.value !== urlSearch) {
       search.value = urlSearch;
       search.dispatchEvent(new Event('input', { bubbles:true }));
@@ -234,48 +235,110 @@
       search:[name,raw.category,raw.brand,raw.model,raw.providerName,headings.get(category)].map(clean).join(' ').toLocaleLowerCase('ko-KR')};
   }
   let generation=0;
-  function render(query, allRows, warnings=[], loading=false) {
-    const tokens=tokensOf(query);
-    const dedup=new Map();
-    for(const item of allRows)if(item && item.href && matches(item,tokens))dedup.set(item.key,item);
+  // EKODI-MALL-TIERED-SEARCH-001: Mall first, approved provider references
+  // second, external comparisons third, assisted discovery fourth. A reference
+  // is never relabeled as an EKODI checkout or automatically purchased.
+  const stage = (number,label,description) => {
+    const box=element('section','mall-search-stage');
+    const title=element('h3','mall-search-stage-title',number+'차 · '+label);
+    box.append(title,element('p','mall-search-stage-note',description));
+    groupsHost.append(box);
+    return box;
+  };
+  const officialLink = (parent,href,label,note) => {
+    const card=element('div','mall-search-reference');
+    const anchor=element('a','mall-search-reference-link',label);
+    anchor.href=href;
+    anchor.target='_blank';
+    anchor.rel='noopener noreferrer';
+    card.append(anchor,element('p','',note));
+    parent.append(card);
+  };
+  function cardsFor(parent,rows) {
     const byCategory = new Map();
-    for (const row of dedup.values()) {
-      if (!byCategory.has(row.category)) byCategory.set(row.category,[]);
+    for (const row of rows) {
+      if(!byCategory.has(row.category))byCategory.set(row.category,[]);
       byCategory.get(row.category).push(row);
     }
-    groupsHost.replaceChildren();
-    for(const [id,label] of headings){
-      const items=byCategory.get(id);
-      if(!items?.length)continue;
-      const block=element('section','mall-search-group');
-      const header=element('h3','',label);
-      header.append(element('small','',items.length+'개'));
+    for (const [id,label] of headings) {
+      const listRows=byCategory.get(id);
+      if(!listRows?.length)continue;
+      const block=element('div','mall-search-group');
+      const header=element('h4','',label+' · '+listRows.length+'개');
       const list=element('div','mall-search-cards');
-      for (const item of items) {
+      for (const item of listRows.slice(0,12)) {
         const card=element('article','mall-search-card');
         const visual=element('a','mall-search-visual');
         visual.href=item.href;
-        if(item.category==='other') {visual.target='_blank';visual.rel='noopener sponsored';}
+        const affiliate=item.key.startsWith('affiliate:') || item.source==='affiliate';
+        if(affiliate && !item.href.startsWith(window.location.origin)){visual.target='_blank';visual.rel='noopener sponsored';}
         if(item.image){
           const img=element('img');
           img.src=item.image;img.alt=item.name;img.loading='lazy';img.decoding='async';
-          img.addEventListener('error',()=>visual.replaceChildren(element('span','','이미지 준비 중')), {once:true});
+          img.addEventListener('error',()=>visual.replaceChildren(element('span','','이미지 준비 중')),{once:true});
           visual.append(img);
         }else visual.append(element('span','','이미지 준비 중'));
         const body=element('div','mall-search-card-body');
-        const h4=element('h4');
+        const h4=element('h5');
         const link=element('a','',item.name);link.href=item.href;
-        if(item.category==='other'){link.target='_blank';link.rel='noopener sponsored';}
+        if(affiliate && !item.href.startsWith(window.location.origin)){link.target='_blank';link.rel='noopener sponsored';}
         h4.append(link);body.append(h4);
-        if(item.summary)body.append(element('p','',item.summary.length>70?item.summary.slice(0,69)+'…':item.summary));
+        if(item.summary)body.append(element('p','',item.summary.slice(0,70)));
         if(item.shownPrice)body.append(element('p','mall-search-price',item.shownPrice));
         card.append(visual,body);list.append(card);
       }
-      block.append(header,list);groupsHost.append(block);
+      block.append(header,list);
+      parent.append(block);
     }
-    if (!dedup.size)groupsHost.append(element('p','mall-search-empty',loading?'전체 카테고리에서 관련 상품을 찾고 있습니다.':'현재 공개된 판매상품 중 조건에 맞는 결과가 없습니다.'));
-    const extra=warnings.length?' · 일부 제휴·판매처 조회가 실패했습니다.':'';
-    status.textContent='“'+query+'” 검색: '+dedup.size+'개 상품 · '+byCategory.size+'개 카테고리'+(loading?' · 추가 확인 중':'')+extra;
+  }
+  function render(query,allRows,warnings=[],loading=false,supplier={state:'checking',items:[]}) {
+    const tokens=tokensOf(query);
+    const dedup=new Map();
+    for(const item of allRows)if(item&&item.href&&matches(item,tokens))dedup.set(item.key,item);
+    const mall=[],affiliates=[];
+    for(const item of dedup.values()){
+      if(item.key.startsWith('affiliate:')||item.source==='affiliate')affiliates.push(item);
+      else mall.push(item);
+    }
+    const validSupplier=(Array.isArray(supplier.items)?supplier.items:[]).filter(item=>
+      /^\d{4,15}$/.test(String(item.itemNo||'')) && clean(item.title) &&
+      item.purchaseMode==='external-reference-only' &&
+      item.url==='https://www.domeggook.com/'+item.itemNo);
+    groupsHost.replaceChildren();
+
+    const first=stage('1','에코디몰 자체상품','판매 승인과 실시간 도서 견적 검증을 통과한 등록상품을 먼저 보여드립니다.');
+    if(mall.length)cardsFor(first,mall);
+    else first.append(element('p','mall-search-stage-empty',loading?'에코디몰 상품을 확인하고 있습니다.':'현재 등록된 판매 가능 상품에 일치하는 결과가 없습니다.'));
+
+    const second=stage('2','도매꾹·도매매 등 공급처','공식 공급처의 상품은 참고 조회이며, 에코디몰 자동구매나 결제 가능 상태를 뜻하지 않습니다.');
+    if(validSupplier.length){
+      const listing=element('div','mall-search-provider-results');
+      for(const item of validSupplier){
+        officialLink(listing,item.url,item.title,'공식 공급처에서 확인 · 최소주문수량 '+(item.minimumQuantity||'확인 필요')+' · 가격·배송비 별도 재검증');
+      }
+      second.append(listing);
+    }else second.append(element('p','mall-search-stage-empty',
+      loading||supplier.state==='checking'?'공급처 조회 가능 여부를 확인하고 있습니다.':
+      supplier.state==='reference-only'?'검색어와 일치하는 승인 공개 공급처 상품이 없습니다.':
+      supplier.state==='unavailable'?'공급처 조회에 실패했습니다. 상품이 없다는 뜻은 아닙니다.':
+      '공급처 공개연동은 권한·호출한도 검증 후 열립니다. 아래 공식 검색을 이용할 수 있습니다.'));
+    const providerUrl='https://www.domeggook.com/main/item/itemList.php?sw='+encodeURIComponent(query)+'&sf=ttl';
+    officialLink(second,providerUrl,'도매꾹 공식 사이트에서 검색','외부 사이트의 주문·배송·결제는 해당 판매처 정책을 따릅니다.');
+
+    const third=stage('3','제휴상품·외부 쇼핑 비교','에코디 제휴상품은 승인된 링크만 노출합니다. 외부 쇼핑은 비교 링크이며 가격·재고는 해당 사이트에서 확인합니다.');
+    if(affiliates.length)cardsFor(third,affiliates);
+    else third.append(element('p','mall-search-stage-empty',loading?'제휴상품 조회 중입니다.':'일치하는 승인 제휴상품이 없습니다.'));
+    const comparisons=element('div','mall-search-compare-links');
+    officialLink(comparisons,'https://search.shopping.naver.com/search/all?query='+encodeURIComponent(query),'네이버쇼핑에서 비교','외부 검색 결과 · 에코디몰 직접판매 아님');
+    officialLink(comparisons,'https://www.google.com/search?tbm=shop&q='+encodeURIComponent(query),'구글쇼핑에서 비교','외부 검색 결과 · 에코디몰 직접판매 아님');
+    third.append(comparisons);
+
+    const fourth=stage('4','AI 대체상품·소싱 상담','검색 결과가 부족하면 용도·규격·예산을 입력해 유사 상품을 찾아보세요. 주문은 별도 확인이 필요합니다.');
+    const ai=element('a','mall-search-ai-link','AI로 대체상품 찾기');
+    ai.href='#recommend';fourth.append(ai);
+    if(warnings.length)groupsHost.append(element('p','mall-search-stage-warning','일부 에코디몰·제휴 검색 연결을 확인하지 못했습니다. 조회 실패는 상품 없음으로 간주하지 않습니다.'));
+    const total=mall.length+affiliates.length+validSupplier.length;
+    status.textContent='“'+query+'” 검색 · 에코디몰 '+mall.length+'개 · 공급처 참조 '+validSupplier.length+'개 · 제휴 '+affiliates.length+'개'+(loading?' · 추가 조회 중':'')+(warnings.length?' · 일부 조회 실패':'');
   }
   async function affiliateRows() {
     const response=await fetch('/api/affiliate/public/products?storefront=ekodi-mall&limit=100',
@@ -299,15 +362,23 @@
     }
     return rows;
   }
+  async function supplierRows(query) {
+    const response=await fetch('/ekodimall/api/api/public/supplier/search?q='+encodeURIComponent(query),
+      {method:'GET',credentials:'omit',cache:'no-store',headers:{accept:'application/json'},signal:AbortSignal.timeout(6500)});
+    const body=await response.json().catch(()=>({state:'unavailable',items:[]}));
+    if(!response.ok)throw Error('supplier unavailable');
+    return body;
+  }
   async function runSearch(query,version) {
     const local=localRows();
-    render(query,local,[],true);
-    const [market,affiliate]=await Promise.allSettled([marketRows(version),affiliateRows()]);
+    render(query,local,[],true,{state:'checking',items:[]});
+    const [market,affiliate,supplier]=await Promise.allSettled([marketRows(version),affiliateRows(),supplierRows(query)]);
     if(version!==generation)return;
     const warnings=[];
     if(market.status!=='fulfilled')warnings.push('market');
     if(affiliate.status!=='fulfilled')warnings.push('affiliate');
-    render(query,[...local,...(market.status==='fulfilled'?market.value:[]),...(affiliate.status==='fulfilled'?affiliate.value:[])],warnings,false);
+    render(query,[...local,...(market.status==='fulfilled'?market.value:[]),...(affiliate.status==='fulfilled'?affiliate.value:[])],
+      warnings,false,supplier.status==='fulfilled'?supplier.value:{state:'unavailable',items:[]});
   }
   let lastQuery='';
   function onRoute(){
