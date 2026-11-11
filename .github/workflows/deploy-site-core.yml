@@ -379,6 +379,7 @@ on:
       - 'scripts/admin-authenticated-e2e-retry.mjs'
       - 'scripts/admin-authenticated-e2e-menu-worker.mjs'
       - 'scripts/verify-admin-production-ui-e2e.mjs'
+      - 'scripts/verify-bbqcg-production-readonly.mjs'
       - 'scripts/admin-production-ui-coverage.mjs'
       - 'scripts/ekodi-background-browser-worker.mjs'
       - 'scripts/validate-background-browser-worker.mjs'
