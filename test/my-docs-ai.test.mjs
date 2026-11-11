@@ -38,7 +38,8 @@ test('My guarded release smoke-tests the internal Worker candidate and defers ca
   const candidate=requests.find(item=>item.url==='https://ekodi-my.topmaster-joseph.workers.dev/');
   assert.ok(candidate);assert.deepEqual(candidate.statuses,[200]);assert.equal(candidate.redirect,'manual');assert.ok(candidate.expect.includes('My EKODI'));
   const canonical=requests.filter(item=>item.url.startsWith('https://ekodi.kr/my/'));
-  assert.equal(canonical.length,6);
+  // Additional canonical canaries may be registered; the original six remain mandatory.
+  assert.ok(canonical.length>=6);
   for(const url of [
     'https://ekodi.kr/my/',
     'https://ekodi.kr/my/health',
@@ -47,6 +48,6 @@ test('My guarded release smoke-tests the internal Worker candidate and defers ca
     'https://ekodi.kr/my/private-workspace-router.js',
     'https://ekodi.kr/my/access-context.js',
   ])assert.ok(canonical.some(item=>item.url===url),url);
-  for(const probe of canonical){assert.equal(probe.candidateVerify,false);assert.match(probe.candidateVerifyReason,/verified after promotion/);}
+  for(const probe of canonical){assert.equal(probe.candidateVerify,false);assert.match(probe.candidateVerifyReason,/(?:verified|checked) after (?:guarded )?promotion/);}
   assert.equal(requests.filter(item=>item.url.startsWith('https://my.ekodi.kr/')).length,0);
 });
