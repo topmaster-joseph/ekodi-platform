@@ -1,0 +1,79 @@
+name: Validate EKODI O2O Performance
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/validate-o2o-performance.yml'
+      - 'o2o-hub-client.js'
+      - 'o2o-hub-page.js'
+      - 'o2o-issued-links.js'
+      - 'o2o-link-core.js'
+      - 'o2o-hub.css'
+      - 'tenant-o2o-manager.js'
+      - 'site-worker.js'
+      - 'test/o2o-performance.test.mjs'
+      - 'test/o2o-hub.test.mjs'
+      - 'test/o2o-routing-reservation.test.mjs'
+      - 'test/o2o-tenant-operator.test.mjs'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/validate-o2o-performance.yml'
+      - 'o2o-hub-client.js'
+      - 'o2o-hub-page.js'
+      - 'o2o-issued-links.js'
+      - 'o2o-link-core.js'
+      - 'o2o-hub.css'
+      - 'site-worker.js'
+      - 'test/o2o-performance.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-o2o-perf-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: O2O Performance and Safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate O2O script syntax
+        run: |
+          set -euo pipefail
+          node --check o2o-issued-links.js
+          node --check o2o-hub-client.js
+          node --check o2o-hub-page.js
+          node --check tenant-o2o-manager.js
+          node --check site-worker.js
+      - name: Prove QR freshness and performance contracts
+        run: |
+          set -euo pipefail
+          node --test \
+            test/o2o-performance.test.mjs \
+            test/o2o-hub.test.mjs \
+            test/o2o-routing-reservation.test.mjs \
+            test/o2o-tenant-operator.test.mjs
+      - name: Verify policy and release asset build
+        run: |
+          set -euo pipefail
+          node scripts/validate-supabase-public-grants.mjs
+          node scripts/build.mjs
+      - name: Summarize reproducible acceptance criteria
+        if: always()
+        run: |
+          {
+            echo '### EKODI O2O performance safety'
+            echo '- No persistent cache for issued QR resolve; revoked URLs always re-read from DB'
+            echo '- Concurrent same-token requests coalesced only while upstream read is pending'
+            echo '- Four anonymous public JS/CSS assets use 120-second cache; HTML and tokens stay no-store'
+            echo '- URL edits invalidate prior QR immediately and debounce rendering'
+            echo '- Live latency/real operator activation require separate authorized production evidence'
+          } >> "$GITHUB_STEP_SUMMARY"
