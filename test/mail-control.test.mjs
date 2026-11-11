@@ -109,4 +109,7 @@ test('mail admin page calls the apex control API, never an EKODI API subdomain',
   const connect = admin.match(/connect-src ([^;"]+)/)?.[1] || '';
   assert.ok(connect.includes("'self'"));
   assert.doesNotMatch(connect, /https:\/\/[a-z0-9-]+\.ekodi\.kr/);
+  // The sign-in redirect must use the apex auth path (the auth subdomain no longer resolves: NXDOMAIN).
+  assert.match(admin, /location\.replace\('https:\/\/ekodi\.kr\/auth\/\?site=mail&return_to='/);
+  assert.doesNotMatch(admin, /location\.replace\('https:\/\/[a-z0-9-]+\.ekodi\.kr/);
 });
