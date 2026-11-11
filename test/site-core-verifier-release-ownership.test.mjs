@@ -8,6 +8,8 @@ const recovery=text('scripts/recover-release-provenance.mjs');
 const siteWorkflow=text('.github/workflows/deploy-site-core.yml');
 const verifierPaths=[
   'scripts/verify-admin-production-ui-e2e.mjs',
+  'scripts/verify-bbqcg-production-readonly.mjs',
+  '.github/workflows/verify-admin-production-ui-e2e.yml',
   'scripts/admin-production-ui-coverage.mjs',
   'scripts/ekodi-background-browser-worker.mjs'
 ];
