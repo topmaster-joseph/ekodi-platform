@@ -12,7 +12,7 @@ const IMMEDIATE_PREFIXES = ['payment.'];
 const REMIND_KINDS = ['supply.order_needed'];
 const REMIND_AFTER_MS = 12 * 3600 * 1000;
 const MAX_ATTEMPTS = 6;
-const WAITING_CODES = new Set(['SENDER_NOT_CONNECTED', 'SENDER_SEND_SCOPE_REQUIRED', 'NOTIFY_DISABLED', 'MAIL_GOOGLE_NOT_CONFIGURED', 'BINDING_UNAVAILABLE']);
+const WAITING_CODES = new Set(['NO_OPERATOR_CHANNEL', 'OPERATOR_PUSH_NO_DEVICE', 'OPERATOR_PUSH_NOT_CONFIGURED', 'SENDER_NOT_CONNECTED', 'SENDER_SEND_SCOPE_REQUIRED', 'NOTIFY_DISABLED', 'MAIL_GOOGLE_NOT_CONFIGURED', 'BINDING_UNAVAILABLE']);
 const KIND_LABEL = {
   'order.paid': '새 주문 결제완료', 'supply.order_needed': '발주 필요', 'supply.auto_order_failed': '자동발주 실패',
   'supply.auto_order_unknown': '자동발주 확인 필요', 'supply.unavailable': '공급처 품절·판매중지', 'supply.sync_failed': '공급처 동기화 실패',

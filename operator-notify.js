@@ -6,6 +6,7 @@
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { googleAccessForAccount } from './mail-control.js';
 import { hasGoogleSendScope, sendGoogleMailMessage } from './mail-google-adapter.js';
+import { sendOperatorPush } from './operator-push.js';
 
 export const OPERATOR_NOTIFY_SOURCES = Object.freeze(['mall']);
 const DEFAULT_SENDER = 'ekodibiz@gmail.com';
@@ -49,12 +50,9 @@ export function renderNotice(notice) {
   return { subject: encodeHeaderWord(`[에코디] ${notice.subject}`), body: body.join('\n') };
 }
 
-/** 실제 발송. deps 로 DB 조회·토큰·발송을 바꿔 끼울 수 있다(테스트). */
-export async function sendOperatorNotice(env, input, deps = {}) {
+/** Gmail 발송 채널. deps 로 DB 조회·토큰·발송을 바꿔 끼울 수 있다(테스트). */
+export async function sendOperatorMail(env, notice, deps = {}) {
   const config = operatorNotifyConfig(env);
-  if (!config.enabled) return { ok: false, code: 'NOTIFY_DISABLED' };
-  const notice = normalizeNotice(input);
-  if (notice.error) return { ok: false, code: notice.error };
   if (!env?.DB) return { ok: false, code: 'DB_UNAVAILABLE' };
   const account = await env.DB.prepare(`SELECT * FROM mail_accounts WHERE provider='gmail' AND lower(email_address)=? AND connection_status='connected' AND enabled=1 ORDER BY updated_at DESC LIMIT 1`)
     .bind(config.sender).first().catch(() => null);
@@ -66,6 +64,22 @@ export async function sendOperatorNotice(env, input, deps = {}) {
   const sent = await (deps.send || sendGoogleMailMessage)(access.accessToken, { to: config.recipients.join(','), cc: '', bcc: '', subject, body }).catch((error) => ({ error }));
   if (sent?.error) return { ok: false, code: clean(sent.error.code || 'SEND_FAILED', 60) };
   return { ok: true, id: sent?.id || null };
+}
+
+const WAITING = new Set(['SENDER_NOT_CONNECTED', 'SENDER_SEND_SCOPE_REQUIRED', 'MAIL_GOOGLE_NOT_CONFIGURED', 'OPERATOR_PUSH_NO_DEVICE', 'OPERATOR_PUSH_NOT_CONFIGURED']);
+
+/** 실제 발송: 운영자 웹 푸시(휴대폰) + Gmail. 하나라도 성공하면 ok. */
+export async function sendOperatorNotice(env, input, deps = {}) {
+  const config = operatorNotifyConfig(env);
+  if (!config.enabled) return { ok: false, code: 'NOTIFY_DISABLED' };
+  const notice = normalizeNotice(input);
+  if (notice.error) return { ok: false, code: notice.error };
+  const targetPath = notice.link ? new URL(notice.link).pathname : '/';
+  const push = await (deps.push || sendOperatorPush)(env, { title: `[에코디] ${notice.subject}`, body: notice.lines.slice(0, 3).join(' · '), targetPath }, deps).catch(() => ({ ok: false, code: 'OPERATOR_PUSH_FAILED' }));
+  const mail = await sendOperatorMail(env, notice, deps).catch(() => ({ ok: false, code: 'SEND_FAILED' }));
+  if (push.ok || mail.ok) return { ok: true, push: Boolean(push.ok), mail: Boolean(mail.ok), id: mail.id || null };
+  if (WAITING.has(push.code) && WAITING.has(mail.code)) return { ok: false, code: 'NO_OPERATOR_CHANNEL', push: push.code, mail: mail.code };
+  return { ok: false, code: WAITING.has(mail.code) ? push.code : mail.code, push: push.code, mail: mail.code };
 }
 
 /** 서비스 바인딩 전용 RPC. 공개 fetch 경로는 없다. */

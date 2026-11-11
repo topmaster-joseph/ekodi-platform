@@ -1,4 +1,4 @@
-# EKODI Platform Constitution v1.27.9
+# EKODI Platform Constitution v1.27.10
 
 Effective: 2026-11-11
 
@@ -68,16 +68,16 @@ This constitution is the highest architecture and operations rule for EKODI Plat
 - The rule binds `config/remote-computer-execution-policy.json`, `config/autonomous-execution-fabric-policy.json`, `config/virtualization-routing-policy.json`, the background-browser policy, Hybrid Execution, Remote Computer Provider, Virtualization Router, Device Control and the EKODI Windows Agent.
 - Changes that weaken or waive this rule are constitutional changes and require the EKODI Platform Super Administrator's explicit approval, an amendment record, a version bump, rollback definition and governed promotion.
 
-## 1D-1. Attended Operator Browser Constitution (v1.27.9, 2026-11-11 — owner-approved, bounded)
+## 1D-1. Attended Operator Browser Constitution (v1.27.9, amended v1.27.10, 2026-11-11 — owner-approved, bounded)
 - **ATTENDED-OPERATOR-BROWSER-001** defines a narrow, operator-initiated browser mode for administrative console steps that require the operator's own provider sign-in (for example creating an OAuth client secret in Google Cloud and storing it as a GitHub Actions secret). It is **not automatic execution**: AUTOMATIC-EXECUTION-LIFECYCLE-001 is unchanged and keeps binding every AI, orchestrator, scheduler and agent path.
 - Start authority: only the EKODI Platform Super Administrator, physically present at the device, may start it by a local command. AI agents, the Orchestrator, Learning Loop, schedulers, Device Control, Hybrid Execution and remote-computer providers must never start, queue or resume it.
 - Surface: an EKODI-owned, newly created, single-use browser profile in a visible window. It never attaches to, reuses or reads the operator's existing browser, profile, cookies or password store. The profile is deleted when the run ends for any reason.
 - Sign-in is performed only by the operator inside that window. The runner never asks for, types, stores or transmits a password, OTP or recovery code.
-- Scope: only versioned recipes in the attended recipe registry run. Each recipe declares its allowed document origins; any other top-level navigation is blocked. Every state-changing step requires an explicit per-step operator approval at the device; declining stops the run.
+- Scope: only versioned recipes in the attended recipe registry run. Each recipe declares its allowed document origins (EKODI Platform `https://ekodi.kr` is an allowed origin for every recipe); any other top-level navigation is blocked. Since v1.27.10 the operator approves the whole recipe once at start (run-level approval) and the run then proceeds without per-step prompts; the operator can stop it at any time by closing the window or the console.
 - Secrets: a secret created in one console may be moved only to the destination the recipe declares (e.g. one named GitHub Actions secret). The value stays in runner memory, is never written to disk, logs, screenshots, chat or EKODI services, and is cleared after use.
 - Audit: each run writes a local value-free audit record (recipe id, step ids, approvals, outcomes, timestamps). Adding a recipe or widening an origin list is a governed code change with tests; it cannot be done at runtime.
 - Rollback: delete the attended runner and recipe registry and set `attendedOperatorBrowserPolicy.status` to `withdrawn`; no other policy depends on it.
-- Machine-readable authority: `governance/constitution/constitution.json` → `attendedOperatorBrowserPolicy`. Amendment record: `governance/amendments/2026-11-11-attended-operator-browser-v1.27.9.json`. Runner: `tools/ekodi-device-agent/windows/ekodi-attended-browser.mjs`.
+- Machine-readable authority: `governance/constitution/constitution.json` → `attendedOperatorBrowserPolicy`. Amendment records: `governance/amendments/2026-11-11-attended-operator-browser-v1.27.9.json`, `governance/amendments/2026-11-11-attended-browser-run-level-v1.27.10.json`. Runner: `tools/ekodi-device-agent/windows/ekodi-attended-browser.mjs`.
 
 ## 1E. Mandatory EKODI-Native Browser Execution Order
 - **NATIVE-BROWSER-EXECUTION-ORDER-001** is mandatory for browser UI validation, synthetic surface verification, and isolated browser execution.
