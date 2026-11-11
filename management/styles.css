@@ -224,3 +224,19 @@
 
 /* Scoped service CI; other site brands unaffected. */
 .topbar .brand[data-site-ci="management-columns"]{display:inline-flex;align-items:center;gap:8px;min-width:0}.topbar .brand[data-site-ci="management-columns"] .management-ci-mark{display:inline-flex;align-items:center;flex:0 0 26px;width:26px;height:26px}.topbar .brand[data-site-ci="management-columns"] svg{display:block;width:23px;height:23px}
+
+/* Verified-workspace growth journey: responsive and unavailable-data-first. */
+.growth-management{margin:22px 0;padding:clamp(16px,3vw,26px);border:1px solid #dce4ec;border-radius:18px;background:#fff;min-width:0}
+.growth-management .section-head{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.growth-management .section-head h2{margin:0;font-size:clamp(1.25rem,2.6vw,1.7rem)}
+.growth-management .section-head>p{margin:0;max-width:510px;color:#596777}
+.growth-management #growthWorkspaceStatus{padding:10px 0;font-weight:650;overflow-wrap:normal;word-break:keep-all}
+.growth-workflow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,205px),1fr));gap:10px;margin:12px 0 18px}
+.growth-workflow>div{padding:13px;border:1px solid #e0e6ee;border-radius:12px;background:#f8fafc;min-width:0}
+.growth-workflow strong,.growth-workflow span{display:block}
+.growth-workflow strong{font-size:.94rem}.growth-workflow span{margin-top:4px;font-size:.85rem;color:#5b6878;word-break:keep-all}
+.growth-state-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:10px;margin:12px 0}
+.growth-state-list>div{padding:12px;border:1px solid #e6eaf0;border-radius:10px;min-width:0}
+.growth-state-list dt{font-weight:750}.growth-state-list dd{margin:4px 0 0;color:#5b6878;word-break:keep-all}
+.growth-workspace-details .module-launch{margin-top:12px}
+@media(max-width:390px){.growth-management{padding:14px}.growth-workflow,.growth-state-list{grid-template-columns:minmax(0,1fr)}}
