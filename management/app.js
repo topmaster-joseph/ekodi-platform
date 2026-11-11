@@ -2,7 +2,7 @@ const cfg=window.EKODI_MANAGEMENT_CONFIG||{};
 const SESSION_KEY='ekodi-management-session';
 const SELECTION_KEY='ekodi-management-selection-v1';
 const $=id=>document.getElementById(id);
-const state={session:null,catalog:[],selection:null,spaces:[],spacesRequest:0,selectedWorkspace:null};
+const state={session:null,catalog:[],selection:null,spaces:[],spacesRequest:0,selectedWorkspace:null,managementView:'spaces'};
 
 function storedSession(){
   try{
@@ -14,8 +14,8 @@ function storedSession(){
 }
 function activeSession(){return Boolean(state.session?.accessToken&&state.session?.user?.id&&Number(state.session?.expiresAt||0)>Math.floor(Date.now()/1000)+30)}
 function selectionKey(){return activeSession()?`${SELECTION_KEY}:${state.session.user.id}`:null}
-function saveSession(value){clearSpaces();resetRequestRouting();state.session=value;state.selection=null;sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));renderIdentity();if(state.catalog.length)renderMemberPicker()}
-function clearSession(){state.session=null;state.selection=null;clearSpaces();resetRequestRouting();$('memberModuleLinks').replaceChildren();sessionStorage.removeItem(SESSION_KEY);renderIdentity()}
+function saveSession(value){clearSpaces();resetRequestRouting();state.session=value;state.selection=null;state.managementView='spaces';sessionStorage.setItem(SESSION_KEY,JSON.stringify(value));renderIdentity();if(state.catalog.length)renderMemberPicker()}
+function clearSession(){state.session=null;state.selection=null;state.managementView='spaces';clearSpaces();resetRequestRouting();$('memberModuleLinks').replaceChildren();sessionStorage.removeItem(SESSION_KEY);renderIdentity()}
 function storedSelection(){
   const fallback={workspaceKind:'person',modules:['chief','marketing']};
   const key=selectionKey();
@@ -39,16 +39,55 @@ function authUrl(){
   canonical.searchParams.set('return_to',valid?source.href:'https://ekodi.kr/management/');
   return canonical.href;
 }
+// Workbench views are presentation-only. No workspace, subscription or authorization is mutated.
+const MANAGEMENT_VIEWS=Object.freeze([
+  {key:'spaces',tab:'viewSpaces',panel:'memberSpacePanel'},
+  {key:'ai',tab:'viewAi',panel:'memberAiPanel'},
+  {key:'growth',tab:'viewGrowth',panel:'growthManagement'},
+  {key:'assistant',tab:'viewAssistant',panel:'chiefCard'}
+]);
+function setManagementView(key){
+  if(!activeSession())return;
+  const selected=MANAGEMENT_VIEWS.some(view=>view.key===key)?key:'spaces';
+  state.managementView=selected;
+  const grid=$('memberPanelGrid');
+  if(grid)grid.hidden=selected!=='spaces'&&selected!=='ai';
+  for(const view of MANAGEMENT_VIEWS){
+    const active=view.key===selected,tab=$(view.tab),panel=$(view.panel);
+    if(panel)panel.hidden=!active;
+    if(tab){
+      tab.setAttribute('aria-selected',active?'true':'false');
+      tab.tabIndex=active?0:-1;
+    }
+  }
+}
+function moveManagementView(event,key){
+  const index=MANAGEMENT_VIEWS.findIndex(view=>view.key===key);
+  if(index<0)return;
+  let next=index;
+  if(event.key==='ArrowRight')next=(index+1)%MANAGEMENT_VIEWS.length;
+  else if(event.key==='ArrowLeft')next=(index+MANAGEMENT_VIEWS.length-1)%MANAGEMENT_VIEWS.length;
+  else if(event.key==='Home')next=0;
+  else if(event.key==='End')next=MANAGEMENT_VIEWS.length-1;
+  else return;
+  event.preventDefault();
+  setManagementView(MANAGEMENT_VIEWS[next].key);
+  $(MANAGEMENT_VIEWS[next].tab).focus?.();
+}
 function renderIdentity(){
   const member=activeSession();document.body.dataset.member=member?'1':'0';$('memberApp').hidden=!member;
   // EKODI common Shell owns header account actions; member body owns logout.
   const start=document.querySelector('.cta-row .button');if(start)start.href=authUrl();
-  if(member)$('memberMeta').textContent=`무료등급 · ${state.session?.user?.email||'회원'} · 기능 선택형`;
+  if(member){
+    $('memberMeta').textContent=`무료등급 · ${state.session?.user?.email||'회원'} · 기능 선택형`;
+    setManagementView(state.managementView);
+  }else if($('workbenchScope'))$('workbenchScope').textContent='현재 공간 미선택';
 }
 function clearSpaces(){
   state.spacesRequest+=1;
   state.spaces=[];
   state.selectedWorkspace=null;
+  if($('workbenchScope'))$('workbenchScope').textContent='현재 공간 미선택';
   $('verifiedSpacesList').replaceChildren();
   $('selectedWorkspaceStatus').textContent='현재 작업 공간을 선택하지 않았습니다.';
   $('spacesStatus').textContent='로그인 후 내 운영 공간을 확인할 수 있습니다.';
@@ -351,6 +390,7 @@ function renderGrowthWorkspace(){
 }
 function renderSelectedWorkspace(){
   const space=selectedVerifiedWorkspace();
+  if($('workbenchScope'))$('workbenchScope').textContent=space?`현재 공간 · ${space.name}`:'현재 공간 미선택';
   $('selectedWorkspaceStatus').textContent=space
     ?`현재 작업 공간: ${space.name} · ${space.role||'member'}`
     :'현재 작업 공간을 선택하지 않았습니다.';
@@ -548,6 +588,12 @@ async function boot(){
   if(activeSession())await loadVerifiedSpaces();
 }
 
+for(const view of MANAGEMENT_VIEWS){
+  const tab=$(view.tab);
+  if(!tab)continue;
+  tab.addEventListener('click',()=>setManagementView(view.key));
+  tab.addEventListener('keydown',event=>moveManagementView(event,view.key));
+}
 $('routeRequest').addEventListener('click',routeManagementRequest);
 $('exampleSales').addEventListener('click',()=>useRequestExample('매출을 늘리고 싶어요'));
 $('exampleMenu').addEventListener('click',()=>useRequestExample('배달앱 메뉴를 한 번에 관리하고 싶어요'));
