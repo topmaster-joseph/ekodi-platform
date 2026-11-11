@@ -19,7 +19,7 @@ test('admin script writes only role changes and AI-manuscript review, uses centr
   assert.doesNotMatch(js, /(["'`])\/(?!\/)/);
   // PUBLISHING-ROLES-001 + PUBLISHING-AI-WEEKLY-001: writes go only to server-checked role and AI-review endpoints.
   const writes = [...js.matchAll(/api\(([`'])(admin\/[^`']+)\1, (?!\))/g)].map(m => m[2]);
-  assert.deepEqual([...new Set(writes)].sort(), ['admin/ai-books/${d.book.id}/images/${p.number}', 'admin/ai-books/${id}/approve', 'admin/ai-books/${id}/chapters/${c.number}', 'admin/ai-books/${id}/images/${c.number}', 'admin/ai-books/${id}/publish', 'admin/ai-books/${id}/release', 'admin/roles'].sort());
+  assert.deepEqual([...new Set(writes)].sort(), ['admin/ai-books/${d.book.id}/images/${p.number}', 'admin/ai-books/${id}/chapters/${c.number}', 'admin/ai-books/${id}/images/${c.number}', 'admin/ai-books/${id}/publish', 'admin/ai-books/${id}/release', 'admin/roles'].sort());
   assert.doesNotMatch(js, /method:\s*'(PATCH|DELETE)'/);
   assert.match(js, /searchParams\.set\('return_to', location\.href\)/);
   assert.doesNotMatch(js, /@ekodi|topmaster|OPERATOR_EMAILS/, 'no email-string authorization');
