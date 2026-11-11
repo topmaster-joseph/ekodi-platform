@@ -223,3 +223,6 @@ footer{padding:26px 16px 40px;text-align:center;color:#637c89;font-size:10px;bor
 @media(prefers-reduced-motion:reduce){
   *,*:before,*:after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
+
+/* Scoped service CI; other site brands unaffected. */
+.topbar .brand-mark[data-site-ci="energy-sun"] svg{display:block;width:23px;height:23px;max-width:100%;color:inherit}

@@ -61,3 +61,6 @@ input::placeholder,textarea::placeholder{color:#a0a0a0}textarea{resize:vertical;
 .analysis-list{margin:9px 0;padding-left:20px}
 .analysis-list li{font-size:12px;margin:5px 0;overflow-wrap:anywhere}
 @media(max-width:750px){.toolline button{flex:1;white-space:normal;font-size:12px;padding:8px}}
+
+/* Site-owned CI icon, no workflow effect. */
+.header .brand[data-site-ci="proposal-sheet"]{display:inline-flex;align-items:center;gap:7px}.header .brand .proposal-ci{display:inline-flex;align-items:center;width:25px;height:25px}.header .brand .proposal-ci svg{display:block;width:23px;height:23px}

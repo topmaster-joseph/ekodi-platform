@@ -12,6 +12,29 @@
   Cache-Control: no-store
   Access-Control-Allow-Origin: *
 
+# EKODI-O2O-003: Workers static assets are asset-first and bypass site-worker.js.
+# Scope short caching to only the 4 anonymous QR JS/CSS files. No HTML,
+# issued QR tokens, auth/session responses or tenant/operator APIs are cached.
+/o2o-hub-client.js
+  ! Cache-Control
+  Cache-Control: public, max-age=120, stale-while-revalidate=30
+  X-EKODI-Route: public-asset
+
+/o2o-link-core.js
+  ! Cache-Control
+  Cache-Control: public, max-age=120, stale-while-revalidate=30
+  X-EKODI-Route: public-asset
+
+/o2o-hub.css
+  ! Cache-Control
+  Cache-Control: public, max-age=120, stale-while-revalidate=30
+  X-EKODI-Route: public-asset
+
+/o2o-qr-vendor.js
+  ! Cache-Control
+  Cache-Control: public, max-age=120, stale-while-revalidate=30
+  X-EKODI-Route: public-asset
+
 # 목포노회 선교부 정책협의회 참석 신청: same-origin app.js and Control API intake only.
 # The global CSP (script-src 'none') would otherwise block the form script.
 /mokpo-presbytery/mission/policy-council-2026/
