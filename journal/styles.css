@@ -298,3 +298,8 @@ body.journal-is-article .journal-readers { display: none; }
 .article-reader-button { cursor: pointer; font-family: inherit; }
 .journal-letter { flex-basis: 100%; }
 .journal-readers-desk a { color: inherit; }
+
+/* Editorial masthead symbol; typography remains the site's own. */
+.journal-hero .journal-ci[data-site-ci="journal-record"]{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;margin-right:10px;vertical-align:middle;color:var(--accent)}
+.journal-hero .journal-ci svg{display:block;max-width:100%;width:26px;height:26px}
+@media(max-width:480px){.journal-hero .journal-ci{width:26px;height:26px;margin-right:6px}.journal-hero .journal-ci svg{width:23px;height:23px}}
