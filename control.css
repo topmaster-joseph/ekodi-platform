@@ -520,3 +520,11 @@ html[data-ekodi-control="v2"][data-ekodi-control-design="premium"][data-ekodi-co
   margin-left:0!important;
   margin-right:auto!important;
 }
+
+/* Site AI fleet view is a read-only, mobile-first sub-panel. */
+.site-ai-fleet-head{flex-wrap:wrap;align-items:flex-start}
+.site-ai-fleet-head>div{flex:1 1 200px;min-width:0}
+.site-ai-fleet-head h3{font-size:16px;line-height:1.35;margin:0 0 6px}
+#siteAiFleetSummary{padding:0 16px;overflow-wrap:anywhere}
+#siteAiFleetCards .card-head{flex-wrap:wrap;overflow-wrap:anywhere}
+#siteAiFleetCards a{display:inline-block;padding:8px 0;min-height:36px}
