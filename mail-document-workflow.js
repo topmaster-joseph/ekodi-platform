@@ -96,7 +96,8 @@ export async function runMailDocumentsSchedule(env) {
   if (!env?.DB) return {scannedRules:0,reason:'DB_UNAVAILABLE'};
   await schema(env.DB);
   const today=siteDay();
-  const rules=await env.DB.prepare("SELECT * FROM mail_document_rules WHERE active=1 AND (last_checked_kst_day IS NULL OR last_checked_kst_day<>?) ORDER BY id LIMIT 25").bind(today).all();
+  const activeDay=Number(today.slice(-2));
+  const rules=await env.DB.prepare("SELECT * FROM mail_document_rules WHERE active=1 AND day_from<=? AND day_to>=? AND (last_checked_kst_day IS NULL OR last_checked_kst_day<>?) ORDER BY id LIMIT 25").bind(activeDay,activeDay,today).all();
   let scannedRules=0,inserted=0,failed=0;
   for(const rule of rules.results||[]) {
     if (!inCollectionWindow(rule.day_from,rule.day_to)) continue;
@@ -161,6 +162,15 @@ export async function handleMailDocuments(request,env) {
       const access=await accountAccess(env.DB,actor,rule.account_id);
       if(!access||!access.permissions.read||!access.permissions.manage) failure('ACCOUNT_PERMISSION_REQUIRED',403);
       return json({ok:true,...await syncRule(env.DB,env,rule)},200,origin);
+    }
+    const disable=url.pathname.match(/^\/api\/mail\/control\/documents\/rules\/(\d+)\/disable$/);
+    if(disable&&request.method==='POST') {
+      const rule=await ruleFor(env.DB,Number(disable[1]),site);
+      const access=await accountAccess(env.DB,actor,rule.account_id);
+      if(!access||!access.permissions.manage) failure('ACCOUNT_PERMISSION_REQUIRED',403);
+      await env.DB.prepare('UPDATE mail_document_rules SET active=0,updated_at=? WHERE id=? AND workspace_id=?')
+        .bind(new Date().toISOString(),rule.id,site.workspaceId).run();
+      return json({ok:true,active:false},200,origin);
     }
     if(url.pathname===PREFIX+'/requests'&&request.method==='POST') {
       const type=txt(body.documentType,40);
