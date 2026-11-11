@@ -23,7 +23,8 @@ test('6 system/utility homepages keep their own small CI without changing core c
 });
 test('auth and notification consent remains authentic',()=>{
  const auth=read('auth-site/index.html');
- assert.match(auth,/return_to/);
+ assert.match(auth,/auth-bootstrap\.js/);
+ assert.match(auth,/id="serviceName"/);
  assert.match(auth,/data-seamless-sso/);
  const note=read('notifications/index.html');
  assert.match(note,/구독 해지/);
