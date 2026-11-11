@@ -1,5 +1,5 @@
 // PUBLISHING-AI-EPUB-001 — 감수 완료된 AI 협업 원고 → EPUB 3 (외부 라이브러리 없음, 워커에서 바로 생성).
-// 판권면에 'AI 협업 초안 · 저자 감수'를 반드시 넣는다. 삽화는 장 첫머리에 넣고 대체텍스트를 단다.
+// 판권면에 AI 활용 고지(AI_NOTICE)와 OPF 기계 판독 표시(ai-generated)를 반드시 넣는다. 삽화는 장 첫머리에 넣고 대체텍스트를 단다.
 
 const enc = new TextEncoder();
 const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
@@ -48,7 +48,10 @@ export function bodyToXhtml(text) {
 }
 
 const page = (title, body, lang) => `<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="${lang}" xml:lang="${lang}"><head><meta charset="utf-8"/><title>${esc(title)}</title><link rel="stylesheet" href="style.css"/></head><body>${body}</body></html>`;
-const CSS = `body{font-family:serif;line-height:1.8;margin:0 1em;word-break:keep-all}h1{font-size:1.6em;margin:2em 0 .3em}h2{font-size:1.3em;margin:1.5em 0 .8em}h3{font-size:1.1em;margin:1.6em 0 .6em}blockquote{margin:1.2em 0;padding:.4em 1em;border-left:3px solid #8a6d3b;font-weight:bold}figure{margin:1em 0;text-align:center}figure img{max-width:100%}.colophon{font-size:.85em;line-height:1.7}.title{text-align:center;margin-top:30%}.title .imprint{margin-top:40%;letter-spacing:.1em}figure img{border-radius:8px}`;
+// AI 기본법 제31조(생성형 AI 결과물 표시, 2026.1.22 시행) 기준: 사람이 알아볼 수 있는 표시(판권면) + 기계가 읽는 표시(OPF 메타) 둘 다 둔다.
+export const AI_NOTICE = 'AI 도구를 활용해 집필·저자 감수 · 삽화 AI 생성';
+const AI_META = 'text: AI-assisted, author-reviewed; illustrations: AI-generated';
+const CSS = `body{font-family:serif;line-height:1.8;margin:0 1em;word-break:keep-all}h1{font-size:1.6em;margin:2em 0 .3em}h2{font-size:1.3em;margin:1.5em 0 .8em}h3{font-size:1.1em;margin:1.6em 0 .6em}blockquote{margin:1.2em 0;padding:.4em 1em;border-left:3px solid #8a6d3b;font-weight:bold}figure{margin:1em 0;text-align:center}figure img{max-width:100%}.colophon{font-size:.85em;line-height:1.7}.ai-notice{font-size:.9em;color:#555}.title{text-align:center;margin-top:30%}.title .imprint{margin-top:40%;letter-spacing:.1em}figure img{border-radius:8px}`;
 
 /** Build an EPUB 3. book: {id,title,subtitle,author,publisher,disclosure,lang,keywords,pitch}, chapters: [{number,title,body}], images: Map<number,{mime,b64}> */
 export function buildEpub(book, chapters, images = new Map(), modified = new Date()) {
@@ -71,10 +74,10 @@ export function buildEpub(book, chapters, images = new Map(), modified = new Dat
     toc.push(`<li><a href="ch${n}.xhtml">${esc(c.title)}</a></li>`);
   }
   const year = modified.getUTCFullYear();
-  files.push(['OEBPS/colophon.xhtml', page('판권', `<section class="colophon" epub:type="copyright-page"><h2>판권</h2><p>${esc(book.title)}${book.subtitle ? ` — ${esc(book.subtitle)}` : ''}</p><p>지은이 ${esc(book.author)}</p><p>펴낸곳 ${esc(book.publisher)}</p><p>${esc(book.disclosure)}: 이 책의 초안은 AI와 협업해 작성했고, 저자가 모든 내용을 읽고 고쳐 감수했습니다. 삽화는 AI로 생성했습니다.</p><p>전자책 초판 ${year}</p><p>© ${year} ${esc(book.author)}. 이 책의 무단 전재와 복제를 금합니다.</p></section>`, lang)]);
+  files.push(['OEBPS/colophon.xhtml', page('판권', `<section class="colophon" epub:type="copyright-page"><h2>판권</h2><p>${esc(book.title)}${book.subtitle ? ` — ${esc(book.subtitle)}` : ''}</p><p>지은이 ${esc(book.author)}</p><p>펴낸곳 ${esc(book.publisher)}</p><p class="ai-notice">${AI_NOTICE}</p><p>전자책 초판 ${year}</p><p>© ${year} ${esc(book.author)}. 이 책의 무단 전재와 복제를 금합니다.</p></section>`, lang)]);
   manifest.push('<item id="colophon" href="colophon.xhtml" media-type="application/xhtml+xml"/>'); spine.push('<itemref idref="colophon"/>');
   files.push(['OEBPS/nav.xhtml', page('차례', `<nav epub:type="toc" id="toc"><h2>차례</h2><ol>${toc.join('')}<li><a href="colophon.xhtml">판권</a></li></ol></nav>`, lang)]);
   const stamp = modified.toISOString().replace(/\.\d+Z$/, 'Z');
-  files.push(['OEBPS/content.opf', `<?xml version="1.0" encoding="utf-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="${lang}"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="bookid">${id}</dc:identifier><dc:title>${esc(book.title)}</dc:title><dc:creator>${esc(book.author)}</dc:creator><dc:publisher>${esc(book.publisher)}</dc:publisher><dc:language>${lang}</dc:language>${book.pitch ? `<dc:description>${esc(book.pitch)}</dc:description>` : ''}${(book.keywords || []).map(k => `<dc:subject>${esc(k)}</dc:subject>`).join('')}<meta property="dcterms:modified">${stamp}</meta></metadata><manifest>${manifest.join('')}</manifest><spine>${spine.join('')}</spine></package>`]);
+  files.push(['OEBPS/content.opf', `<?xml version="1.0" encoding="utf-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" xml:lang="${lang}"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="bookid">${id}</dc:identifier><dc:title>${esc(book.title)}</dc:title><dc:creator>${esc(book.author)}</dc:creator><dc:publisher>${esc(book.publisher)}</dc:publisher><dc:language>${lang}</dc:language>${book.pitch ? `<dc:description>${esc(book.pitch)}</dc:description>` : ''}${(book.keywords || []).map(k => `<dc:subject>${esc(k)}</dc:subject>`).join('')}<meta property="dcterms:modified">${stamp}</meta><meta name="ai-generated" content="${AI_META}"/></metadata><manifest>${manifest.join('')}</manifest><spine>${spine.join('')}</spine></package>`]);
   return zipStore(files);
 }
