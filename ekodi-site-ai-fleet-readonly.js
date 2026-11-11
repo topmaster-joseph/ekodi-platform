@@ -55,7 +55,7 @@ export function projectSiteAiFleet(registry={},rows=[],{ledgerAvailable=false}={
   return Object.freeze({
     contract:'ekodi.site-ai.fleet-readonly.v1',
     integration:'observation_only',
-    verifiedLiveAgents:0,
+    verifiedLiveAgents:null,
     verifiedLiveAgentsAvailable:false,
     workspaceAuthorizationVerified:false,
     ledgerAvailable:ledgerAvailable===true,
