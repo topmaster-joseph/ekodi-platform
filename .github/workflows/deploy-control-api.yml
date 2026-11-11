@@ -854,6 +854,25 @@ jobs:
             node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))" | npx --yes wrangler@${WRANGLER_VERSION} secret put MAIL_CREDENTIAL_KEY --config wrangler.api.toml >/dev/null
             echo 'Generated a persistent Mail credential-encryption key in Cloudflare Worker secrets.' >> "$GITHUB_STEP_SUMMARY"
           fi
+          # EKODI-OPERATOR-PUSH-001: VAPID keys for operator phone alerts. Generate only when an authoritative
+          # listing proves both are absent; never rotate (rotation silently breaks every registered device).
+          if vapid_names=$(npx --yes wrangler@${WRANGLER_VERSION} secret list --config wrangler.api.toml); then
+            has_pub=0; has_priv=0
+            printf '%s' "$vapid_names" | grep -Fq 'NOTIFICATION_VAPID_PUBLIC_KEY' && has_pub=1
+            printf '%s' "$vapid_names" | grep -Fq 'NOTIFICATION_VAPID_PRIVATE_JWK' && has_priv=1
+            if [ "$has_pub" = 0 ] && [ "$has_priv" = 0 ]; then
+              vapid_dir=$(mktemp -d)
+              node -e "(async()=>{const fs=require('node:fs');const k=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);fs.writeFileSync(process.argv[1]+'/pub',Buffer.from(await crypto.subtle.exportKey('raw',k.publicKey)).toString('base64url'));fs.writeFileSync(process.argv[1]+'/priv',JSON.stringify(await crypto.subtle.exportKey('jwk',k.privateKey)))})()" "$vapid_dir"
+              npx --yes wrangler@${WRANGLER_VERSION} secret put NOTIFICATION_VAPID_PRIVATE_JWK --config wrangler.api.toml < "$vapid_dir/priv" >/dev/null
+              npx --yes wrangler@${WRANGLER_VERSION} secret put NOTIFICATION_VAPID_PUBLIC_KEY --config wrangler.api.toml < "$vapid_dir/pub" >/dev/null
+              rm -rf "$vapid_dir"
+              echo 'Generated persistent operator-push VAPID keys in Cloudflare Worker secrets.' >> "$GITHUB_STEP_SUMMARY"
+            elif [ "$has_pub" != "$has_priv" ]; then
+              echo 'Only one VAPID secret exists; refusing to rotate. Operator push stays unavailable until repaired.' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo 'Cannot list Control API secrets; leaving VAPID keys untouched.' >> "$GITHUB_STEP_SUMMARY"
+          fi
           # MOTOR_FESTIVAL_PII_KEY must never be replaced: a new key makes every stored application unreadable.
           # Generate it only when an authoritative (successful, non-empty) secret listing proves it is absent.
           if ! mf_names=$(npx --yes wrangler@${WRANGLER_VERSION} secret list --config wrangler.api.toml); then

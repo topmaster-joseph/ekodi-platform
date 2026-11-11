@@ -1,3 +1,4 @@
+import { operatorPushEmails, operatorPushReady, operatorDeviceCount, registerOperatorDevice, validOperatorSubscription } from './operator-push.js';
 import { decryptMailCredential, encryptMailCredential, mailCredentialReady, mailNonceHash, readMailState, signMailState } from './mail-credential-vault.js';
 import { exchangeGoogleMailCode, getGoogleMailMessage, googleMailAuthorizeUrl, googleMailConfigured, googleMailProfile, hasGoogleReadScope, hasGoogleSendScope, listGoogleMailMessages, refreshGoogleMailToken, sendGoogleMailMessage } from './mail-google-adapter.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
@@ -425,6 +426,17 @@ export async function handleMailControl(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
   if (!env.DB) return json({ error: '메일 관리 데이터베이스가 연결되지 않았습니다.', code: 'DB_UNAVAILABLE' }, 503, request);
   await ensureSchema(env.DB);
+
+  // EKODI-OPERATOR-PUSH-001: 운영자 전용 휴대폰 알림 등록(로그인한 운영자 계정만).
+  if(url.pathname==='/api/mail/control/operator-push'){
+    const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    const isOperator=operatorPushEmails(env).includes(actor.email);const ready=operatorPushReady(env);
+    if(request.method==='GET')return json({available:ready,publicKey:ready?String(env.NOTIFICATION_VAPID_PUBLIC_KEY):null,isOperator,devices:isOperator?await operatorDeviceCount(env.DB,actor.email):0},200,request);
+    if(!isOperator)return json({error:'운영자 계정만 등록할 수 있습니다.',code:'OPERATOR_ONLY'},403,request);
+    if(request.method==='POST'){if(!ready)return json({error:'운영 알림 암호키가 아직 준비되지 않았습니다.',code:'OPERATOR_PUSH_NOT_CONFIGURED'},503,request);const body=await readJson(request);if(!validOperatorSubscription(body?.subscription))return json({error:'알림 구독 정보가 올바르지 않습니다.',code:'INVALID_SUBSCRIPTION'},400,request);await registerOperatorDevice(env.DB,actor.email,body.subscription);return json({ok:true,devices:await operatorDeviceCount(env.DB,actor.email)},201,request)}
+    if(request.method==='DELETE'){await env.DB.prepare('UPDATE operator_push_devices SET disabled_at=? WHERE owner_email=? AND disabled_at IS NULL').bind(new Date().toISOString(),actor.email).run();return json({ok:true,devices:0},200,request)}
+    return json({error:'허용되지 않은 요청입니다.',code:'METHOD_NOT_ALLOWED'},405,request);
+  }
 
   const googleConnectMatch=url.pathname.match(/^\/api\/mail\/control\/accounts\/(\d+)\/connect\/google$/);
   if(googleConnectMatch&&request.method==='POST'){
