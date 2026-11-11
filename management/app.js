@@ -539,7 +539,7 @@ function useRequestExample(value){
 }
 function saveSelection(){
   if(!activeSession()){location.assign(authUrl());return}
-  const modules=[...document.querySelectorAll('#memberModuleGrid input:checked')].map(input=>input.value);state.selection={workspaceKind:$('workspaceKind').value,modules};localStorage.setItem(selectionKey(),JSON.stringify(state.selection));$('saveStatus').textContent=`이 브라우저에 저장됨 · ${modules.length}개 AI 선택 · 이용권한은 각 서비스가 별도로 확인합니다.`;renderModuleLaunches();
+  const modules=[...document.querySelectorAll('#memberModuleGrid input:checked')].map(input=>input.value);state.selection={workspaceKind:$('workspaceKind').value,modules};localStorage.setItem(selectionKey(),JSON.stringify(state.selection));$('saveStatus').textContent=`이 브라우저에 저장됨 · ${modules.length}개 AI 선택 · 이용권한은 각 서비스가 별도로 확인합니다.`;renderModuleLaunches();renderGrowthWorkspace();
 }
 function logout(){clearSession();location.hash='';$('saveStatus').textContent='로그아웃했습니다. 기능을 이용하려면 다시 로그인해야 합니다.'}
 async function boot(){
