@@ -13,7 +13,7 @@ const responses={
   '/bbqcg/resources/qcs-gms-checklist.csv':method=>response(method==='HEAD'?null:'\uFEFF"구분","단계","점검 항목","확인 여부","조치 사항"\r\n',200,attachment('bbqcg-qcs-gms-checklist.csv','text/csv; charset=utf-8')),
   '/bbqcheonggye':()=>response('gone',410,noindex),
   '/bbqcg/admin/pos':()=>response('<!doctype html><html data-ekodi-store-brand="bbqcg"><meta name="robots" content="noindex,nofollow">BBQ 무안청계점</html>'),
-  '/store-admin.js':()=>response('function mountBbqPosTabs(){const options=[["unused"],['+'\x27programs\x27,\x27orders\x27,\x27channels\x27,\x27agent\x27'+'];const key="data-bbq-pos-tab";const tab="posTab"}',200,{'content-type':'text/javascript; charset=utf-8'}),
+  '/store-admin.js':()=>response("function mountBbqPosTabs(){const options=[['programs','프로그램'],['orders','최근 주문'],['channels','배달플랫폼'],['agent','Agent 관리']];const key='data-bbq-pos-tab';const tab='posTab'}",200,{'content-type':'text/javascript; charset=utf-8'}),
   '/store-admin.css':()=>response('.bbq-pos-subtabs{display:flex}@media(max-width:620px){.bbq-pos-subtabs{overflow-x:auto}}',200,{'content-type':'text/css; charset=utf-8'})
 };
 function stub(overrides={}){
