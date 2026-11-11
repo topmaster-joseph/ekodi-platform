@@ -9,33 +9,62 @@ if (form) {
   const link = document.getElementById('o2o-link');
   const open = document.getElementById('o2o-open');
   let current = null;
+  let lastRenderedUrl = '';
+  let editTimer = null;
   const say = (message) => { status.textContent = message; };
+  function invalidatePreview() {
+    current = null;
+    lastRenderedUrl = '';
+    qrRoot.replaceChildren();
+    link.textContent = '주소 입력을 확인하고 있습니다.';
+    open.removeAttribute('href');
+  }
+  // Typing must never leave a stale QR/active link in the preview. Debounce the
+  // expensive QR canvas work, but invalidate unsafe/old links immediately.
+  function scheduleRender() {
+    if (editTimer !== null) window.clearTimeout(editTimer);
+    invalidatePreview();
+    editTimer = window.setTimeout(() => {
+      editTimer = null;
+      render();
+    }, 220);
+  }
   function render() {
+    if (editTimer !== null) {
+      window.clearTimeout(editTimer);
+      editTimer = null;
+    }
     let item;
     try {
       item = resolveO2OTarget({ siteId: siteInput.value, targetPath: targetInput.value });
     } catch {
-      current = null;
-      qrRoot.replaceChildren();
+      invalidatePreview();
       link.textContent = '공개 주소를 확인해 주세요.';
-      open.removeAttribute('href');
       say('선택한 사이트의 공개 주소만 연결할 수 있습니다. 로그인·관리자·비공개 주소는 제외해 주세요.');
+      return;
+    }
+    // Repeated submit of an unchanged destination is O(1): no new QR canvas.
+    if (current?.url === item.url && lastRenderedUrl === item.url &&
+        qrRoot.querySelector('canvas, img')) {
+      say('기존 QR을 그대로 사용합니다. 다시 생성할 필요가 없습니다.');
       return;
     }
     current = item;
     link.textContent = item.url;
     open.href = item.url;
     qrRoot.replaceChildren();
+    lastRenderedUrl = '';
     if (typeof window.QRCode !== 'function') {
       say('연결 링크는 준비되었습니다. QR을 생성할 수 없는 환경에서는 링크를 사용해 주세요.');
       return;
     }
     try {
       new window.QRCode(qrRoot, {
-        text: item.url, width: 320, height: 320,
+        text: item.url, width: 256, height: 256,
         colorDark: '#14241a', colorLight: '#ffffff',
         correctLevel: window.QRCode.CorrectLevel.M
       });
+      lastRenderedUrl = item.url;
       say('QR이 준비되었습니다. 화면 공유·인쇄에 사용할 수 있습니다.');
     } catch {
       say('링크는 준비되었지만 QR 이미지 생성에 실패했습니다.');
@@ -54,6 +83,7 @@ if (form) {
     nameInput.value = '현장 활동';
     render();
   });
+  targetInput.addEventListener('input', scheduleRender);
   form.addEventListener('submit', (event) => { event.preventDefault(); render(); });
   document.getElementById('o2o-copy').addEventListener('click', async () => {
     if (!current) return say('먼저 유효한 공개 주소로 QR을 만들어 주세요.');
