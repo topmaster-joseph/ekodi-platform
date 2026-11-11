@@ -217,7 +217,7 @@
     const category = bucketOf({category:p.category,regionIds:(p.region?.regionIds || []).join(',')});
     if (!name || !href) return null;
     const summary = clean(p.oneLine || p.audience);
-    return {key:'mall:'+href,category,name,summary,href,image:safeUrl(raw.image),
+    return {key:'mall:'+href,source:p.saleType==='affiliate'?'affiliate':'mall',category,name,summary,href,image:safeUrl(raw.image),
       shownPrice:Number(p.price)>0?price(p.price):'',
       search:[name,summary,clean(raw.store?.name),clean(raw.seller?.displayName),headings.get(category)].join(' ').toLocaleLowerCase('ko-KR')};
   }
@@ -292,6 +292,7 @@
     }
   }
   function render(query,allRows,warnings=[],loading=false,supplier={state:'checking',items:[]}) {
+    if(!supplier || typeof supplier!=='object')supplier={state:'unavailable',items:[]};
     const tokens=tokensOf(query);
     const dedup=new Map();
     for(const item of allRows)if(item&&item.href&&matches(item,tokens))dedup.set(item.key,item);
@@ -367,7 +368,7 @@
       {method:'GET',credentials:'omit',cache:'no-store',headers:{accept:'application/json'},signal:AbortSignal.timeout(6500)});
     const body=await response.json().catch(()=>({state:'unavailable',items:[]}));
     if(!response.ok)throw Error('supplier unavailable');
-    return body;
+    return body && typeof body==='object' ? body : {state:'unavailable',items:[]};
   }
   async function runSearch(query,version) {
     const local=localRows();
