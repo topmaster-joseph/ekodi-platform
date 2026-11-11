@@ -19,6 +19,7 @@ on:
       - 'config/management-platform.json'
       - 'wrangler.management*.toml'
       - 'test/management-platform-foundation.test.mjs'
+      - 'test/management-responsive-layout.test.mjs'
       - 'deploy/manifests/management.worker.json'
       - 'ekodi-service-manifest.js'
       - 'ekodi-shell-injector.js'
@@ -33,6 +34,7 @@ on:
       - 'config/management-platform.json'
       - 'wrangler.management*.toml'
       - 'test/management-platform-foundation.test.mjs'
+      - 'test/management-responsive-layout.test.mjs'
       - 'deploy/manifests/management.worker.json'
       - 'ekodi-service-manifest.js'
       - 'ekodi-shell-injector.js'
@@ -66,7 +68,7 @@ jobs:
           node --check management-platform.js
           node --check management-worker.js
           node --check management/app.js
-          node --test test/management-platform-foundation.test.mjs
+          node --test test/management-platform-foundation.test.mjs test/management-responsive-layout.test.mjs
           npm run validate:boundaries
           npm run validate:shell
           npm run validate:mission
