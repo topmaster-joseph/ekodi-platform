@@ -113,3 +113,16 @@ test('mail admin page calls the apex control API, never an EKODI API subdomain',
   assert.match(admin, /location\.replace\('https:\/\/ekodi\.kr\/auth\/\?site=mail&return_to='/);
   assert.doesNotMatch(admin, /location\.replace\('https:\/\/[a-z0-9-]+\.ekodi\.kr/);
 });
+
+// 2026-11-11 운영자 요청: 모바일·웹 탭 방식, 셸 다크 테마에서도 읽히는 명시적 색상.
+test('mail admin page is a readable tabbed layout with an explicit Gmail read+send connect', async () => {
+  const { mailAdminPage } = await import('../mail-admin-page.js');
+  const html = await mailAdminPage().text();
+  for (const id of ['tab-accounts', 'tab-add', 'tab-help', 'panel-accounts', 'panel-add', 'panel-help', 'scopeSelect']) assert.match(html, new RegExp(`id="${id}"`));
+  assert.match(html, /role="tablist"/);
+  assert.match(html, /color-scheme:light/);
+  assert.match(html, /Gmail 읽기·발송 연결/);
+  assert.match(html, /connectGoogle\(a,'read_send'\),'primary'/);
+  assert.match(html, /pending_oauth:\['Google 연결 대기'/);
+  assert.match(html, /@media\(max-width:780px\)/);
+});
