@@ -48,9 +48,9 @@ export function formatDevotionShareMessage({date, title, excerpt, url, passage =
   }
   return [
     `${Number(y)}년 ${Number(m)}월 ${Number(d)}일 ${day}요일`,
-    '에코디언의 묵상나눔',
-    headline === compact(passage) ? '' : headline,
     compact(passage),
+    '에코디 묵상나눔',
+    headline === compact(passage) ? '' : headline,
     body,
     cleanUrl.href,
   ].filter(Boolean).join('\n');
@@ -81,21 +81,18 @@ export function formatDevotionSectionShareMessage({date,title,content,url,passag
   const originalTitle=compact(title).replace(/^.*?오늘의 매일묵상\s*·\s*/u,'');
   const poem=/^묵상\s*시(?:\s*·\s*(.*))?$/u.exec(originalTitle);
   const song=/^묵상\s*노래(?:\s*·\s*(.*))?$/u.exec(originalTitle);
-  const sectionTitle=poem
-    ? [poem[1] ? '〈'+poem[1]+'〉' : '', '(묵상시)'].filter(Boolean).join(' ')
-    : song
-      ? [song[1] ? '〈'+song[1]+'〉' : '', '(묵상노래)'].filter(Boolean).join(' ')
-      : originalTitle === '묵상기도' ? '(묵상기도)'
-        : originalTitle === '질문 / 실천' ? '(질문·실천)'
-          : originalTitle ? '〈'+originalTitle+'〉' : '';
+  const sectionLabel=poem ? '묵상시' : song ? '묵상노래'
+    : originalTitle === '묵상기도' ? '묵상기도'
+      : originalTitle === '질문 / 실천' ? '질문·실천' : originalTitle;
+  const workTitle=poem?.[1] || song?.[1] || '';
   // Preserve stanza spacing while putting the refrain on its own following lines.
   const fullContent=String(content??'').replace(/\r\n?/gu,'\n')
     .replace(/(^|\n)후렴[:：]\s*/gu,'$1후렴\n').trim();
   return [
-    '에코디언의 묵상나눔',
     dateLine,
     compact(passage),
-    sectionTitle,
+    `에코디 묵상나눔(${sectionLabel})`,
+    workTitle ? '〈'+workTitle+'〉' : '',
     fullContent||'등록된 내용이 없습니다.',
     validatedUrl,
   ].filter(Boolean).join('\n');
