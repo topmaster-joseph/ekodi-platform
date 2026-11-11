@@ -3,6 +3,7 @@ import { handleAgeVerificationRequest, pruneAgeVerification, ageVerificationAdmi
 import { sandboxConfiguration, startInicisSandbox, finishInicisSandbox } from './age-verification-sandbox.js';
 import { handlePointsControl } from './points-control.js';
 import { handleMailControl } from './mail-control.js';
+import { handleMailDocuments, runMailDocumentsSchedule } from './mail-document-workflow.js';
 import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { handleLanguageAutomationPublic, handleLanguageTenantAdmin, languageStatusForAdmin, runLanguageAutomation, setLanguagePublication } from './language-automation.js';
 import { remotePowerSnapshot, requestRemoteWake } from './remote-power-control.js';
@@ -792,6 +793,9 @@ export default {
     if (languageResponse) return languageResponse;
     const learningResponse = await handleLearningControl(request, env);
     if (learningResponse) return learningResponse;
+    if (url.pathname.startsWith('/api/mail/control/documents')) {
+      return handleMailDocuments(request, env);
+    }
     if (url.pathname.startsWith('/api/mail/control')) {
       try {
         const response = await handleMailControl(request, env);
@@ -821,7 +825,8 @@ export default {
       await Promise.all([
         runChecks(env),
         cloudflareAccountSnapshot(env),
-        pruneAgeVerification(env)
+        pruneAgeVerification(env),
+        runMailDocumentsSchedule(env).catch(error => { console.error('Mail document schedule failed', error); return null; })
       ]);
       const [evolution] = await Promise.all([
         evolutionSnapshot(env),

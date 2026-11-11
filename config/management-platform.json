@@ -37,6 +37,7 @@
   "modules": [
     {"id":"chief","name":"경영비서AI","role":"orchestrator","phase":1,"state":"foundation","capabilities":["brief","recommend","orchestrate","approval-gate"]},
     {"id":"marketing","name":"마케팅AI","role":"specialist","phase":1,"state":"existing","url":"https://ekodi.kr/ekodibiz/marketing-ai","reuseExisting":true,"capabilities":["content","campaigns","channels","analytics"]},
+    {"id":"growth","name":"AI 성장·홍보 관리","role":"specialist","phase":1,"state":"foundation","capabilities":["site-owned-search-status","promotion-workflow","conversion-funnel-readiness","workspace-scoped-reporting"],"dataPolicy":"verified-workspace-only","statusPolicy":"unconnected-is-unknown-not-zero","implementation":"readiness-guide-no-automatic-publication"},
     {"id":"menu","name":"메뉴AI","role":"specialist","phase":1,"state":"foundation","capabilities":["canonical-menu","channel-mapping","pricing","options","availability"]},
     {"id":"order","name":"주문AI","role":"specialist","phase":1,"state":"foundation","capabilities":["qr-order","pickup","channel-orders","order-status","pos-kds-handoff"]},
     {"id":"review","name":"리뷰AI","role":"specialist","phase":1,"state":"foundation","capabilities":["review-inbox","classification","reply-draft","issue-trends","insight-handoff"]},

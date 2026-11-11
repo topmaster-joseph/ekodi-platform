@@ -12,6 +12,7 @@ export const MANAGEMENT_TIERS=Object.freeze(['free','basic','pro','business']);
 const MODULES=[
   {id:'chief',name:'경영비서AI',phase:1,state:'foundation',role:'orchestrator'},
   {id:'marketing',name:'마케팅AI',phase:1,state:'existing',role:'specialist',url:'https://ekodi.kr/ekodibiz/marketing-ai',reuseExisting:true},
+  {id:'growth',name:'AI 성장·홍보 관리',phase:1,state:'foundation',role:'specialist'},
   {id:'menu',name:'메뉴AI',phase:1,state:'foundation',role:'specialist'},
   {id:'order',name:'주문AI',phase:1,state:'foundation',role:'specialist'},
   {id:'review',name:'리뷰AI',phase:1,state:'foundation',role:'specialist'},

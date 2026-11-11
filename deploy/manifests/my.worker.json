@@ -172,6 +172,152 @@
         ]
       },
       {
+        "url": "https://ekodi-my.topmaster-joseph.workers.dev/points/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "내 활동포인트",
+          "id=\"exportPointsHistory\"",
+          "20261111-site-ledger-csv-v1",
+          "미션·레벨",
+          "회원 초대",
+          "20261112-csv-owner-binding-v2"
+        ],
+        "rollbackExpect": [
+          "내 활동포인트",
+          "잔액·내역",
+          "미션·레벨"
+        ]
+      },
+      {
+        "url": "https://ekodi-my.topmaster-joseph.workers.dev/points/app.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "POINTS_MEMBER_EXPORT_BEGIN",
+          "function clearHistoryExport()",
+          "snapshot.site!==select.value",
+          "snapshot.revision!==viewRevision",
+          "await sb.auth.getSession()",
+          "function isCurrentHistoryOwner(snapshot,session)",
+          "session?.user?.id===snapshot.ownerId"
+        ],
+        "rollbackExpect": [
+          "function renderRows(rows)",
+          "async function loadWallet("
+        ]
+      },
+      {
+        "url": "https://ekodi-my.topmaster-joseph.workers.dev/points/styles.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          ".points-export[hidden]",
+          ".points-tabs button",
+          "@media(max-width:620px)"
+        ],
+        "rollbackExpect": [
+          ".points-tabs button"
+        ]
+      },
+      {
+        "url": "https://ekodi-my.topmaster-joseph.workers.dev/config.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"pointsEnabled\":false",
+          "\"dataMode\":\"production\""
+        ],
+        "rollbackExpect": [
+          "\"pointsEnabled\":false"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/my/points/",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical /my subpath is checked after guarded promotion; internal /points/ asset is checked in the candidate.",
+        "expect": [
+          "내 활동포인트",
+          "id=\"exportPointsHistory\"",
+          "20261111-site-ledger-csv-v1",
+          "미션·레벨",
+          "회원 초대",
+          "20261112-csv-owner-binding-v2"
+        ],
+        "rollbackExpect": [
+          "내 활동포인트",
+          "잔액·내역",
+          "미션·레벨"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/my/points/app.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical /my asset binding is checked after guarded promotion; the internal /points/app.js asset is checked in the candidate.",
+        "expect": [
+          "POINTS_MEMBER_EXPORT_BEGIN",
+          "function clearHistoryExport()",
+          "snapshot.site!==select.value",
+          "snapshot.revision!==viewRevision",
+          "await sb.auth.getSession()",
+          "function isCurrentHistoryOwner(snapshot,session)",
+          "session?.user?.id===snapshot.ownerId"
+        ],
+        "rollbackExpect": [
+          "function renderRows(rows)",
+          "async function loadWallet("
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/my/points/styles.css",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical /my asset binding is checked after guarded promotion; the internal /points/styles.css asset is checked in the candidate.",
+        "expect": [
+          ".points-export[hidden]",
+          ".points-tabs button",
+          "@media(max-width:620px)"
+        ],
+        "rollbackExpect": [
+          ".points-tabs button"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/my/config.js",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "candidateVerify": false,
+        "candidateVerifyReason": "Canonical /my runtime config is checked after guarded promotion; internal /config.js is checked in the candidate.",
+        "expect": [
+          "\"pointsEnabled\":false",
+          "\"dataMode\":\"production\""
+        ],
+        "rollbackExpect": [
+          "\"pointsEnabled\":false"
+        ]
+      },
+      {
         "url": "https://ekodi-my.topmaster-joseph.workers.dev/ekodi-card-probe/card",
         "statuses": [
           404

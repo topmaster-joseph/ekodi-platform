@@ -27,6 +27,7 @@ import { deliverOperatorNotices } from './operator-notify.js';
 import { handleAmazonRequest, amazonRuntimeStatus, amazonCostSchemaReady, amazonConnectionSchemaReady } from './amazon.js';
 import { handleAmazonReadonlyRequest, amazonReadSyncSchemaReady } from './amazon-readonly-sync.js';
 import { handleAgodaPublicRequest } from './agoda-public.js';
+import { handlePublicSupplierSearch } from './public-supplier-search.js';
 import { handleMarketingOrdersRequest } from './marketing-orders.js';
 
 const FEE_RATES = Object.freeze({ direct: 7, marketplace: 8, ai: 9 });
@@ -258,6 +259,11 @@ export default {
       if (!body) return reply({ error:'Invalid JSON' },400,origin,env);
       const result=await firstTouch(env,body); return reply(result.body,result.status,origin,env);
     }
+
+    // EKODI-MALL-SUPPLIER-SEARCH-001: provider-owned read-only catalog reference.
+    // Disabled unless rights, query quota guard and official API key are approved.
+    const publicSupplierSearch = await handlePublicSupplierSearch(request,env);
+    if (publicSupplierSearch) return reply(publicSupplierSearch.body, publicSupplierSearch.status, origin, env);
 
     // Verified, safe public Agoda lookup; remains disabled until Partner Center rights and TLS approval.
     const agodaPublic = await handleAgodaPublicRequest(request,env,ctx);

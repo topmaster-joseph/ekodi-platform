@@ -122,7 +122,7 @@ async function workspaceIdentity(request, env, slug) {
   }
 }
 
-async function mailActor(request, env) {
+export async function mailActor(request, env) {
   const token=bearer(request); if(!token)return null;
   try{const [user,raw]=await Promise.all([supabaseJson('/auth/v1/user',token,env),supabaseJson('/rest/v1/rpc/current_site_activity_contexts',token,env,{method:'POST',body:'{}'})]);
     if(!user?.id||!user?.email)return null; const contexts=(Array.isArray(raw)?raw:[]).map(item=>({workspaceId:String(item?.tenant_id||''),workspaceKey:String(item?.workspace_key||''),workspaceSlug:String(item?.tenant||'').toLowerCase(),workspaceName:String(item?.workspace_name||item?.tenant||''),workspaceKind:String(item?.workspace_kind||'organization'),authorizationRole:String(item?.authorization_role||''),activityRole:String(item?.activity_role||''),activityRoleLabel:String(item?.activity_role_label||''),canManage:WRITE_ROLES.has(String(item?.authorization_role||''))})).filter(x=>x.workspaceId&&x.workspaceSlug);
@@ -133,7 +133,7 @@ function publicAccount(r){return{id:Number(r.id),ownerType:r.owner_type,ownerKey
 async function accountsForActor(db,actor){const personal=await db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='person' AND owner_key=? ORDER BY display_name,email_address`).bind(actor.userId).all();const work=await Promise.all(actor.contexts.map(c=>db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='workspace' AND owner_key=? ORDER BY display_name,email_address`).bind(c.workspaceId).all()));return[...personal.results.map(r=>({...publicAccount(r),ownerLabel:'개인'})),...work.flatMap((x,i)=>x.results.map(r=>({...publicAccount(r),ownerLabel:actor.contexts[i].workspaceName})))]}
 
 async function accountsVisibleForActor(db,actor){const rows=await accountsForActor(db,actor);return Promise.all(rows.map(async a=>{if(a.ownerType==='person')return{...a,permissions:{read:true,send:true,manage:true}};const grant=await db.prepare(`SELECT can_read,can_send,can_manage FROM mail_account_grants WHERE account_id=? AND principal_type='person' AND principal_key=?`).bind(a.id,actor.userId).first();const context=actor.contexts.find(c=>c.workspaceId===a.ownerKey);return{...a,permissions:{read:Boolean(grant?.can_read),send:Boolean(grant?.can_send),manage:Boolean(grant?.can_manage)||Boolean(context?.canManage)}}}))}
-async function accountAccess(db, actor, accountId) {
+export async function accountAccess(db, actor, accountId) {
   const id=Number(accountId||0); if(!Number.isInteger(id)||id<1)return null;
   const row=await db.prepare('SELECT * FROM mail_accounts WHERE id=? AND enabled=1').bind(id).first(); if(!row)return null;
   if(row.owner_type==='person'){if(row.owner_key!==actor.userId)return null;return{row,permissions:{read:true,send:true,manage:true}}}

@@ -10,3 +10,6 @@ body{background:#f8fafc;color:#15211b}.app-header{position:sticky;top:0;z-index:
 
 @media(max-width:980px){.main-nav{display:none}.hero-stage{grid-template-columns:1fr;padding:46px 28px}.resolver-visual{min-height:360px}.resolver-form{grid-template-columns:1fr 1fr}.resolver-form .primary{width:100%}.resolver-results{grid-template-columns:1fr}}
 @media(max-width:620px){main{width:min(100% - 20px,1180px)}.app-header{padding:8px 10px}.brand span:last-child{display:grid}.brand small{display:none}.reference-hero{margin-top:6px}.hero-stage{padding:34px 20px 26px;border-radius:24px}.reference-hero h1{font-size:43px}.reference-hero .lead{font-size:15px}.platform-strip{gap:5px}.platform-strip span{font-size:9px}.resolver-visual{min-height:315px}.visual-store{width:76%;padding:20px}.visual-store strong{font-size:20px}.visual-platform{min-width:92px;padding:10px}.vp1{left:0}.vp2{right:0}.vp3{left:0}.vp4{right:0}.resolver-form{grid-template-columns:1fr}.resolver-panel{padding:18px}.resolver-results{grid-template-columns:1fr}.feature-grid{margin-top:20px}}
+
+/* Delivery hub brand, independent from franchise marks. */
+.app-header .brand-mark[data-site-ci="delivery-routes"] svg{display:block;width:23px;height:23px;max-width:100%;color:inherit}
