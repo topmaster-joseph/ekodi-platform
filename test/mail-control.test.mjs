@@ -99,3 +99,12 @@ test('Custom-domain aliases remain identities under source inboxes instead of du
   assert.match(control,/lower\(r\.destination_email\)=lower\(\?\)/);assert.match(control,/aliases/);
   assert.match(user,/연결 주소/);assert.doesNotMatch(user,/joseph@ekodichurch\.kr.*tab/i);
 });
+
+// EKODI-OPERATOR-NOTIFY-001 follow-up (2026-11-11): the admin page showed "Failed to fetch" because it still
+// called the retired api.ekodi.kr subdomain. It must use the same apex path as the mailbox page and OAuth callback.
+test('mail admin page calls the apex control API, never the retired api subdomain', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const admin = await readFile(new URL('../mail-admin-page.js', import.meta.url), 'utf8');
+  assert.match(admin, /CONTROL='https:\/\/ekodi\.kr\/api\/mail\/control'/);
+  assert.doesNotMatch(admin, /api\.ekodi\.kr/);
+});
