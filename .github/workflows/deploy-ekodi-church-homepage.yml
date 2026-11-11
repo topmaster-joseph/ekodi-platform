@@ -626,6 +626,21 @@ jobs:
             console.log('EKODI_CHURCH_APPROVED_LAYOUT_PROOF='+JSON.stringify({release,results:proof,pageErrors:failures}));
           }finally{await browser.close()}
           NODE
+      - name: Verify standalone shared calendar with native Chromium after locale-capable source ships
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Older approved legacy source must remain shippable until its own
+          # reviewed locale asset exists. A referenced-but-missing asset fails.
+          if ! grep -Fq 'church-schedule-page-i18n.js' church/schedule/index.html; then
+            echo 'Reviewed standalone locale module not yet linked; preserve existing homepage and privacy release gates.'
+            exit 0
+          fi
+          test -s church/church-schedule-page-i18n.js
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$CHROME_BIN"
+          CHROME_BIN="$CHROME_BIN" node .ekodi-control/scripts/verify-church-standalone-calendar-native.mjs
+
       - name: Upload approved layout Chromium evidence
         if: always()
         uses: actions/upload-artifact@v4
