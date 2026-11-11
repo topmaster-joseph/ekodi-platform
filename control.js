@@ -56,7 +56,7 @@
     const s=ensureSession(text);s.messages=s.messages||[];s.messages.push({role,text:String(text||'').slice(0,12000),at:now(),...extra});s.updatedAt=now();if(extra.status)s.status=extra.status;
     state.sessions=[s,...state.sessions.filter(x=>x.id!==s.id)].slice(0,24);saveHistory();renderRecent();renderMessages({scrollToEnd:true});
   }
-  function setView(view){state.view=view;$$('[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===view));$$('[data-view-panel]').forEach(n=>n.classList.toggle('active',n.dataset.viewPanel===view));if(view!=='chat')renderPanels();if(view==='github')void refreshGitHubOperations();closeRail()}
+  function setView(view){state.view=view;$$('[data-view]').forEach(n=>n.classList.toggle('active',n.dataset.view===view));$$('[data-view-panel]').forEach(n=>n.classList.toggle('active',n.dataset.viewPanel===view));if(view!=='chat')renderPanels();if(view==='github')void refreshGitHubOperations();if(view==='agents')void refreshSiteAiFleet();closeRail()}
   function renderRecent(){const root=$('#recentTasks');const items=state.sessions.slice(0,14);root.innerHTML=items.length?items.map(s=>'<button type="button" class="recent-item" data-session="'+esc(s.id)+'">'+esc(s.title||'새 작업')+'</button>').join(''):'<div class="section-title">아직 작업이 없습니다.</div>';root.querySelectorAll('[data-session]').forEach(b=>b.onclick=()=>{state.activeId=b.dataset.session;setView('chat');renderMessages({scrollToEnd:true})})}
   function renderMessages({scrollToEnd=false}={}){const s=state.sessions.find(x=>x.id===state.activeId);const messages=s?.messages||[];$('#emptyState').hidden=messages.length>0;$('#messages').innerHTML=messages.map(m=>{
     const meta=[m.provider,m.target,m.status&&statusLabel(m.status)].filter(Boolean).join(' · ');
@@ -293,6 +293,46 @@
     $('#workerCards').innerHTML=WORKERS.map(([id,name])=>card(name,'상태는 실행 시 확인',id+' 실행계층')).join('');
     $('#resultCards').innerHTML=state.results.length?state.results.map(r=>card(r.title,statusLabel(r.status),(r.provider||'EKODI')+(r.taskId?' · '+r.taskId:r.actionId?' · Action #'+r.actionId:'')+'\n'+r.summary)).join(''):card('아직 결과가 없습니다','대기','명령 처리 후 검증된 결과가 이곳에 누적됩니다.');
   }
+  // EKODI Site AI fleet: registered sites are not verified running agents.
+  // This view is read-only; no user/tenant secrets or arbitrary HTML are rendered.
+  async function refreshSiteAiFleet(){
+    const summary=$('#siteAiFleetSummary'),root=$('#siteAiFleetCards');
+    if(!summary||!root)return;
+    summary.textContent='사이트별 작업 이력을 확인하는 중입니다.';
+    root.replaceChildren();
+    try{
+      const data=await api('/api/control/ai/v8/site-ai/fleet');
+      if(data?.ok!==true||data?.contract!=='ekodi.site-ai.fleet-readonly.v1'
+        ||data?.integration!=='observation_only'||!Array.isArray(data.entries))
+        throw new Error('사이트 AI 관측 계약 불일치');
+      summary.textContent='사이트 '+data.siteCount+'곳 · 독립 AI 등록·가동 실증 미확인 · 개선 이력 '
+        +(data.ledgerAvailable?'조회 가능':'연결 미확인')+' · 관측 전용';
+      for(const item of data.entries.slice(0,100)){
+        const article=document.createElement('article'); article.className='card';
+        const head=document.createElement('div');head.className='card-head';
+        const title=document.createElement('strong');title.textContent=String(item.name||item.siteId||'사이트');
+        const badge=document.createElement('span');badge.className='badge';badge.textContent='AI 가동 미검증';
+        head.append(title,badge);article.append(head);
+        const desc=document.createElement('p');
+        const run=item.lastImprovement;
+        desc.textContent=run?
+          '최근 개선 작업 '+String(run.runDay||'')+' · '+String(run.state||'unknown')+' · 운영 결과 별도 검증 필요':
+          '최근 개선 작업 기록 '+(data.ledgerAvailable?'없음':'확인 불가');
+        article.append(desc);
+        const path=String(item.detailPath||'');
+        if(/^\/[a-z0-9-]+\/admin\/services$/i.test(path)){
+          const link=document.createElement('a');link.href=path;link.textContent='자세히';
+          link.setAttribute('aria-label',title.textContent+' 사이트 관리자 자세히');
+          article.append(link);
+        }
+        root.append(article);
+      }
+    }catch(error){
+      summary.textContent=error?.auth?'최고관리자 재로그인 필요':'사이트 AI 상태를 확인할 수 없습니다.';
+      root.replaceChildren();
+    }
+  }
+
   // GitHub observations are read-only and require the existing super-admin
   // authorization; no GitHub token is used by this browser UI.
   async function refreshGitHubOperations(){
@@ -456,6 +496,7 @@
     $('#commandInput').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('#commandForm').requestSubmit()}});
     $$('[data-prompt]').forEach(b=>b.onclick=()=>{$('#commandInput').value=b.dataset.prompt;resizeInput();$('#commandInput').focus({preventScroll:true})});
     $$('[data-refresh]').forEach(b=>b.onclick=()=>{refreshOrchestratorTasks().catch(()=>toast('오케스트레이터 상태 갱신 실패'))});
+    $('#siteAiFleetRefresh').addEventListener('click',()=>void refreshSiteAiFleet());
     $('#githubOperationsRefresh').addEventListener('click',()=>void refreshGitHubOperations());
     $('#githubProbeRun').addEventListener('click',async()=>{
       const button=$('#githubProbeRun');
