@@ -57,13 +57,14 @@ export function previewSiteAiMicroIntent(input={},catalog={}){
   });
 }
 
-export function proposeMicroIntentOwnerNotice(plan,{kind="approval_required",paidChannelReceiptVerified=false,kakaoTemplateVerified=false}={}){
+export function proposeMicroIntentOwnerNotice(plan,{kind="approval_required",paidChannelReceiptVerified=false,channelConsentVerified=false,webPushConsentVerified=false,kakaoTemplateVerified=false}={}){
   if(!plan||plan.contract!=="ekodi.site-ai.micro-intent-preview.v1")throw new Error("INVALID_PLAN");
   if(!["approval_required","failed_verified","completed_verified"].includes(kind))throw new Error("INVALID_NOTICE_KIND");
   if(kind==="approval_required"&&!plan.humanApprovalRequired)throw new Error("NO_HUMAN_APPROVAL_REQUIRED");
   return Object.freeze({
     channel:"ekodi_inbox",
-    optionalChannels:paidChannelReceiptVerified===true?["webpush","sms",...(kakaoTemplateVerified===true?["kakao_eligible_only"]:[])]:["webpush"],
+    optionalChannels:[...(webPushConsentVerified===true?["webpush"]:[]),
+      ...(paidChannelReceiptVerified===true&&channelConsentVerified===true?["sms",...(kakaoTemplateVerified===true?["kakao_eligible_only"]:[])]:[])],
     title:kind==="approval_required"?"중요 변경 승인 필요":kind==="completed_verified"?"검증된 작업 결과":"작업 오류 확인",
     body:"자세한 내용은 EKODI 로그인 후 확인해 주세요.",
     detailPath:plan.detailPath,
