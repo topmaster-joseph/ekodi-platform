@@ -525,6 +525,80 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
     const label={new:'신규',pending_customer:'고객확인 대기',in_progress:'처리 중',in_delivery:'배달 중',completed:'완료',cancelled:'취소',unknown:'확인필요'};
     return `<div class="table-wrap"><table><thead><tr><th>채널</th><th>주문</th><th>상태</th><th>금액</th><th>시각</th></tr></thead><tbody>${rows.map(o=>`<tr class="${o.status==='new'?'pos-order-new':''}"><td>${esc(o.provider_label)}</td><td>${esc(o.provider_order_id||'—')}</td><td>${esc(label[o.status]||o.status)}</td><td>${o.total==null?'—':won(o.total)}</td><td>${esc(o.ordered_at?new Date(o.ordered_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Seoul'}):'—')}</td></tr>`).join('')}</tbody></table></div>`;
   }
+  function mountBbqPosTabs(){
+    const root=$('mainPanel');
+    if(!root)return;
+    const options=[
+      ['programs','프로그램','.pos-programs'],
+      ['orders','최근 주문','.pos-orders'],
+      ['channels','배달플랫폼','.pos-platforms'],
+      ['agent','Agent 관리','.pos-agent-guide']
+    ];
+    const panes=options.map(([id,label,selector])=>({id,label,node:root.querySelector(selector)}))
+      .filter(item=>item.node);
+    if(panes.length<2)return;
+    const nav=document.createElement('nav');
+    nav.className='bbq-pos-subtabs';
+    nav.setAttribute('role','tablist');
+    nav.setAttribute('aria-label','POS 세부 기능');
+    for(const item of panes){
+      item.node.dataset.bbqPosPane=item.id;
+      item.node.id='bbqPosPane-'+item.id;
+      item.node.setAttribute('role','tabpanel');
+      item.node.setAttribute('aria-labelledby','bbqPosTab-'+item.id);
+      const button=document.createElement('button');
+      button.type='button';
+      button.id='bbqPosTab-'+item.id;
+      button.dataset.bbqPosTab=item.id;
+      button.setAttribute('role','tab');
+      button.setAttribute('aria-controls',item.node.id);
+      button.textContent=item.label;
+      nav.append(button);
+    }
+    root.prepend(nav);
+    const agentLine=root.querySelector('.pos-agent-line');
+    const fromUrl=new URLSearchParams(location.search).get('posTab');
+    const chosen=panes.some(item=>item.id===state.posSubTab)?state.posSubTab
+      :panes.some(item=>item.id===fromUrl)?fromUrl:'programs';
+    const activate=(id,updateUrl=false)=>{
+      if(!panes.some(item=>item.id===id))return;
+      state.posSubTab=id;
+      for(const item of panes)item.node.hidden=item.id!==id;
+      if(agentLine)agentLine.hidden=id!=='programs'&&id!=='agent';
+      if(id==='agent'){
+        const details=panes.find(item=>item.id==='agent')?.node;
+        if(details)details.open=true;
+      }
+      for(const button of nav.querySelectorAll('[data-bbq-pos-tab]')){
+        const active=button.dataset.bbqPosTab===id;
+        button.setAttribute('aria-selected',String(active));
+        button.tabIndex=active?0:-1;
+      }
+      if(updateUrl){
+        const url=new URL(location.href);
+        if(id==='programs')url.searchParams.delete('posTab');
+        else url.searchParams.set('posTab',id);
+        url.searchParams.delete('adminView');
+        history.replaceState(history.state,'',url.pathname+url.search+url.hash);
+      }
+    };
+    nav.addEventListener('click',event=>{
+      const button=event.target.closest('[data-bbq-pos-tab]');
+      if(button&&nav.contains(button))activate(button.dataset.bbqPosTab,true);
+    });
+    nav.addEventListener('keydown',event=>{
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+      const buttons=[...nav.querySelectorAll('[data-bbq-pos-tab]')];
+      const index=buttons.indexOf(document.activeElement);
+      if(index<0)return;
+      event.preventDefault();
+      const next=event.key==='Home'?0:event.key==='End'?buttons.length-1
+        :(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length;
+      buttons[next]?.focus();
+      buttons[next]?.click();
+    });
+    activate(chosen);
+  }
   function renderPosConsole(){
     const agent=state.localAgent,agentOnline=Boolean(agent?.ok);
     const agentTargets=new Map((Array.isArray(agent?.targets)?agent.targets:[]).map(row=>[String(row.id||''),row]));
@@ -539,6 +613,7 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
       :`<div class="pos-agent-line" data-state="offline"><b>○ 이 PC의 POS Agent가 연결되지 않았습니다.</b><span>웹 사용 가능 · 주문·배달·메뉴·매출 등 EKODI 웹 기능은 그대로 사용할 수 있습니다. Windows 프로그램 바로 전환만 Agent가 필요합니다. Agent가 켜져 있는데도 연결되지 않으면 브라우저 주소창의 ‘로컬 네트워크 액세스’ 요청을 허용하세요.</span><button class="button" id="refreshPosAgent" type="button">Agent 상태 확인</button></div>`;
     const alert=state.posLive?.newOrderAlert?`<div class="pos-new-order" role="status">신규 주문 ${num(state.posLive.newOrderAlert)}건이 들어왔습니다. 화면은 자동으로 전환되지 않습니다.</div>`:'';
     $('mainPanel').innerHTML=`<div class="commerce-toolbar"><div><h2>EKODI Store Console</h2><p class="panel-lead">이 화면을 매장 운영의 기본 화면으로 사용합니다. 주문·배달·연결 등 EKODI 웹 기능은 Agent 없이 사용할 수 있고, VPOS·먹깨비 등 이 PC에 설치된 Windows 프로그램을 앞으로 가져오는 기능만 <strong>EKODI POS Agent</strong>가 담당합니다. Agent 창을 별도로 열어 둘 필요는 없습니다.</p></div></div>${alert}${agentLine}<section class="pos-programs" aria-label="주문 · POS 프로그램"><h2>주문 · POS 프로그램</h2><div class="pos-rows">${rows}</div><p class="pos-hint">바로 전환은 직원이 직접 누를 때만 동작합니다. 새 주문이 와도 다른 창을 자동으로 앞으로 가져오지 않습니다. 공식 API가 없는 주문앱은 “Windows 앱 전환 방식” 또는 “미연결”로 표시합니다.</p></section><section class="pos-orders"><h2>최근 주문</h2>${posRecentOrders()}<div class="actions"><a class="button" href="${ADMIN_BASE}/orders">웹 주문관리</a><a class="button" href="${ADMIN_BASE}/delivery">웹 배달관리</a><a class="button" href="${ADMIN_BASE}/connections">연결관리</a></div></section><section class="pos-platforms"><h2>배달플랫폼 연결 상태</h2><div class="pos-platform-tags">${platformTags}</div></section><details class="pos-agent-guide"${guideOpen?' open':''}><summary>Agent 실행 · 중지 안내 · 설치 · 진단 (관리자용)</summary><div class="pos-agent-guide-body"><div class="service-list"><div class="service-row"><div><strong>처음 설치</strong><p><strong>명령어를 직접 입력하지 마세요.</strong> 원클릭 설치 파일을 내려받아 저장한 뒤 우클릭 → 관리자 권한으로 실행합니다. 필요한 Agent 구성파일을 공식 저장소에서 함께 받아 설치하며, 설치 후에는 Windows 로그인 시 자동 시작됩니다. 브라우저는 내려받은 파일을 자동 실행하지 않으므로 이 POS PC에서 한 번 직접 실행해야 합니다.</p></div><div class="actions"><a class="button primary" href="${POS_AGENT_FILES.setup}" target="_blank" rel="noopener">원클릭 설치 (.cmd)</a><a class="button" href="${POS_AGENT_FILES.compatSetup}" target="_blank" rel="noopener">호환 설치 · XML 오류용 (.cmd)</a><a class="button" href="${POS_AGENT_FILES.advancedInstall}" target="_blank" rel="noopener">고급 설치 (.ps1)</a></div></div><div class="service-row"><div><strong>즉시 실행</strong><p>이미 설치된 PC에서 Agent가 꺼져 있을 때 실행 파일을 저장한 뒤 실행합니다. 권한 거부 시 관리자 권한으로 실행합니다.</p></div><a class="button primary" href="${POS_AGENT_FILES.start}" target="_blank" rel="noopener">실행 파일 (.cmd)</a></div><div class="service-row"><div><strong>현재 Agent 중지</strong><p>중지 파일은 현재 실행만 멈춥니다. 웹 POS 통합화면은 계속 사용할 수 있고 다음 Windows 로그인 시 자동 시작됩니다.</p></div><a class="button" href="${POS_AGENT_FILES.stop}" target="_blank" rel="noopener">중지 파일 (.cmd)</a></div><div class="service-row"><div><strong>프로그램 진단 (읽기 전용)</strong><p>이 PC에서 실행 중인 프로그램의 프로세스 이름과 창 제목만 확인합니다. 어떤 프로그램도 실행·종료·전환하지 않으며, 결과를 확인한 뒤 설정에 반영합니다.</p></div><a class="button" href="${POS_AGENT_FILES.diagnose}" target="_blank" rel="noopener">진단 파일 (.ps1)</a></div><div class="service-row"><div><strong>설치 · 삭제 · 여러 POS PC 관리</strong><p>업그레이드, 완전 삭제(remove-pos-agent.cmd), 중앙 상태 등록은 CMPMYI POS Agent 관리 화면에서 진행합니다.</p></div><a class="button" href="/cmpmyi/admin/agent" target="_blank" rel="noopener">POS Agent 관리</a></div></div><div class="note">현재 PowerShell 위치가 <span class="tech">C:\\Users\\...</span>처럼 설치 파일이 없는 폴더라면 <span class="tech">-File .\\install-pos-agent.ps1</span> 명령은 실패합니다. 기본 설치는 명령어 대신 <strong>원클릭 설치 (.cmd)</strong>를 사용하세요. <strong>0x80041318 / 작업 XML 범위 오류가 반복되면 호환 설치 · XML 오류용 (.cmd)</strong>을 사용하면 작업 스케줄러를 우회합니다. <strong>0x80041318 / 작업 XML 범위 오류는 최신 설치기가 1분 재시작 간격과 호환 설정으로 자동 보정합니다.</strong> 같은 오류가 보인 기존 설치 창은 닫고 원클릭 설치 파일을 새로 내려받아 다시 실행하세요. 완전 제거는 CMPMYI POS Agent 관리 화면의 원클릭 삭제(remove-pos-agent.cmd)를 사용합니다.${agentOnline?'':' 현재 Agent 상태: '+esc(state.localAgentError||'')+'.'}</div><div class="actions"><a class="button" href="${POS_AGENT_FILES.guide}" target="_blank" rel="noopener">전체 Agent 안내</a></div></div></details>`;
+    if(SLUG==='bbqcg'&&!IS_PORTFOLIO)mountBbqPosTabs();
     const refresh=$('refreshPosAgent');if(refresh)refresh.onclick=()=>posPanel();
     document.querySelectorAll('[data-pos-target]').forEach(button=>button.onclick=async()=>{
       button.disabled=true;const original=button.textContent;button.textContent='전환 중';
@@ -552,6 +627,14 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
   }
   async function posPanel(){
     setState('POS 통합화면 확인 중');
+    if(SLUG==='bbqcg'&&!IS_PORTFOLIO){
+      // Draw the local store's selected workspace immediately. Optional Windows
+      // Agent probing must never hold up the left-navigation content switch.
+      renderPosConsole();
+      await probePosAgent();
+      if(section==='pos')renderPosConsole();
+      return;
+    }
     await probePosAgent();
     renderPosConsole();
   }
@@ -914,14 +997,91 @@ const STORE_SECTIONS='overview|pos|site|members|chrome|delivery|menu|orders|cust
 
 const BOOTSTRAP_STORE_PROFILES=Object.freeze({jadam:{slug:'jadam',name:'자담치킨 목포대점',id:'4b1e5933-b9ae-4cb9-9d31-dcbb0a5b25aa',mark:'JD',brand:'JADAM CHICKEN'},pizzamaru:{slug:'pizzamaru',name:'피자마루 목포대점',id:'6b1b6ae0-8641-4ee1-8e6a-7cb6019fab27',mark:'PM',brand:'PIZZAMARU'},yogurt:{slug:'yogurt',name:'요거트퍼플 목포대점',id:'43ef7c9c-5932-46b9-b31e-4ab4ee6a60ce',mark:'YP',brand:'YOGURT PURPLE'}});
 const ROUTE_CACHE=new Map();
-export function storeAdminSlug(pathname){const m=new RegExp('^/([^/]+)/admin(?:/(?:'+STORE_SECTIONS+')(?:/[^/]+)*)?/?$','i').exec(String(pathname||''));if(!m)return'';const slug=m[1].toLowerCase();return ['cmpmyi','stores'].includes(slug)?'':slug}
+export function storeAdminSlug(pathname){const m=new RegExp('^/([^/]+)/admin(?:/(?:'+STORE_SECTIONS+')(?:/[^/]+)*)?/?
+export const STORE_ADMIN_NAME_PRELUDE='(()=>{const __name=(target,value)=>Object.defineProperty(target,"name",{value,configurable:true});\n';
+export function storeAdminScript(){const payload=tenantAdminPolicySnapshot();return new Response(`${STORE_ADMIN_NAME_PRELUDE}(${mountTenantAdminMetricsTabs.toString()})();\n(${clientMain.toString()})(${JSON.stringify(payload)},${JSON.stringify(channelTargetOptions())},(${createStoreOrderModel.toString()})(),(${createTerminalBridge.toString()})(),(${tenantAutomationOverviewModel.toString()}),(${tenantAutomationOverviewHtml.toString()}),(${bindTenantAutomationOverview.toString()}));})();`,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}})}
+export function storeAdminPage(profile){const p=profile||{slug:'store',name:'점포 운영공간',mark:'ST',brand:'STORE OPERATIONS'};const e=v=>String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const slug=e(p.slug),name=e(p.name),mark=e(p.mark||'ST'),brand=e(p.brand||'STORE OPERATIONS'),adminBase=e(p.adminBase||`/${p.slug}/admin`),userBase=p.portfolio?'/cmpmyi':`/${slug}`,embedded=p.embed===true;const requestParts=String(p.pathname||'').split('/').filter(Boolean);const requestedSection=(p.portfolio?requestParts[3]:requestParts[2])?.toLowerCase()||'overview';const initialMetaMap={
+  overview:['운영 홈','오늘 매장의 주문·매출·고객 상태와 다음 행동을 한눈에 봅니다.'],
+  mobile:['모바일 주문','휴대폰·태블릿으로 매장 어디서나 오늘 주문을 확인합니다. 결제는 휴대용 카드단말기로 받습니다.'],
+  pos:['POS 통합화면','웹 주문·배달 운영 화면은 Agent 없이 사용하고, 필요할 때만 이 PC의 Windows 프로그램을 Agent로 전환합니다.'],
+  delivery:['배달플랫폼','플랫폼별 매장·메뉴·주문·매출·정산·리뷰를 하나의 운영 흐름으로 관리합니다.'],
+  menu:['메뉴 · 가격','배달앱·POS에서 들어온 실제 메뉴와 가격 차이를 비교합니다.'],
+  orders:['주문 · 채널','오늘 주문과 채널별 매출 흐름을 집계값으로 확인합니다.'],
+  sales:['매출','오늘 매출·객단가·비교 신호를 확인합니다.'],
+  inventory:['재고','메뉴 품절 신호와 향후 재고 연동 상태를 확인합니다.'],
+  customers:['고객','개인정보 원문 없이 신규·재방문 흐름만 확인합니다.'],
+  reviews:['리뷰','연결된 마케팅 원장에서 미응답 리뷰와 대응 상태를 확인합니다.'],
+  marketing:['마케팅 AI','이 점포 전용 Marketing AI 운영공간으로 연결합니다.'],
+  publishing:['채널·자동게시','이 점포의 SNS 게시계정을 등록하고 계정별 OAuth 인증·예약게시·자동게시 상태를 관리합니다.'],
+  work:['매장업무','점포 운영업무와 승인 필요 행동을 관리합니다.'],
+  finance:['비용 · 정산','비용·광고비·마진 집계 연결 상태를 확인합니다.'],
+  connections:['연결관리','POS·배달플랫폼·EKODI Orders 연결 상태를 관리합니다.'],
+  site:['사용자 사이트','이 점포의 사용자 사이트 생성 상태·주소·표현·별칭을 관리합니다.'],
+  members:['사용자 · 권한','이 점포 사이트의 관리자와 사용자 권한을 같은 원장에서 관리합니다.'],
+  chrome:['헤더 · 푸터','이 매장 사이트의 헤더와 푸터를 관리합니다. 저장한 값은 이 사이트에만 반영됩니다.']
+};
+if(['jadam','pizzamaru','yogurt'].includes(p.slug)&&!p.portfolio)Object.assign(initialMetaMap,{
+  overview:['오늘 운영',`${p.name}의 주문·매출·배달플랫폼 상태와 필요한 조치를 한눈에 확인합니다.`],
+  mobile:['모바일 주문','휴대폰·태블릿으로 매장 어디서나 오늘 주문을 확인합니다. 결제는 휴대용 카드단말기로 받습니다.'],
+  pos:['POS 통합화면',`${p.name}의 웹 주문·배달 운영 화면을 기본으로 사용하고, 필요할 때만 이 PC의 Windows 프로그램을 Agent로 전환합니다.`],
+  delivery:['배달플랫폼','배달플랫폼별 메뉴·주문·매출·정산·리뷰를 한곳에서 관리합니다.'],
+  orders:['주문 · 채널','배달앱과 매장 주문을 채널별로 확인하고 처리 상태를 관리합니다.'],
+  menu:['메뉴 · 가격',`${p.name}의 메뉴·옵션·판매가와 배달플랫폼별 차이를 비교합니다.`],
+  inventory:['재고','품절 상태와 재고 신호를 확인합니다.'],
+  sales:['매출','오늘과 기간별 매출·주문 흐름을 확인합니다.'],
+  finance:['비용 · 정산','배달 수수료·광고비·정산·마진 집계 상태를 확인합니다.'],
+  reviews:['리뷰','배달플랫폼 리뷰와 미응답 상태를 확인하고 답글 흐름을 관리합니다.'],
+  customers:['고객','개인정보 원문 없이 신규·재방문 고객 흐름을 확인합니다.'],
+  marketing:['Marketing AI',`${p.name} 전용 홍보·콘텐츠 작업을 관리합니다.`],
+  publishing:['채널 · 자동게시',`${p.name}의 SNS 계정·예약게시·자동게시 상태를 관리합니다.`],
+  work:['매장업무','영업 준비·마감·확인 업무와 승인 필요 행동을 관리합니다.'],
+  connections:['연결관리','배달플랫폼·POS·EKODI Orders 연결 상태를 관리합니다.'],
+  site:['사용자 사이트',`${p.name} 사용자 사이트의 주소·표현·공개 상태를 관리합니다.`],
+  members:['권한 · 구성원',`${p.name} 관리자와 직원의 접근 권한을 관리합니다.`],
+  chrome:['헤더 · 푸터',`${p.name} 사용자 사이트의 헤더와 푸터를 관리합니다.`]
+});
+const firstStoreLabel=({jadam:'자담치킨',pizzamaru:'피자마루',yogurt:'요거트퍼플'})[p.slug]||'';const initialMeta=initialMetaMap[requestedSection]||['운영 홈','점포 운영 데이터를 확인합니다.'];const initialTitle=e(initialMeta[0]),initialCopy=e(initialMeta[1]);const initialSummary=requestedSection==='publishing'?['연결 채널','자동게시 활성','예약 · 대기','오류 · 복구'].map(label=>`<article class="card"><small>${label}</small><strong>…</strong><span>상태 확인 중</span></article>`).join(''):'';const initialPosPanel=`<div class="commerce-toolbar"><div><h2>EKODI POS Agent 준비</h2><p class="panel-lead">권한·운영 데이터 확인이 지연되어도 Agent 설치와 실행 안내는 바로 사용할 수 있습니다.</p></div></div><div class="service-list"><div class="service-row"><div><strong>처음 설치</strong><p>명령어를 직접 입력하지 말고 원클릭 설치 파일을 내려받아 저장한 뒤 우클릭 → 관리자 권한으로 실행합니다.</p></div><a class="button primary" href="/cmpmyi/admin/agent/download/setup-pos-agent.cmd" target="_blank" rel="noopener">원클릭 설치 (.cmd)</a></div><div class="service-row"><div><strong>이미 설치됨</strong><p>Agent가 꺼져 있으면 실행 파일을 사용합니다. 현재 실행만 멈추려면 중지 파일을 사용합니다.</p></div><div class="actions"><a class="button primary" href="/cmpmyi/admin/agent/download/start-pos-agent.cmd" target="_blank" rel="noopener">실행 파일 (.cmd)</a><a class="button" href="/cmpmyi/admin/agent/download/stop-pos-agent.cmd" target="_blank" rel="noopener">중지 파일 (.cmd)</a></div></div></div><div class="note"><strong>현재 화면이 '운영 데이터를 불러오고 있습니다'에 머물러도 위 설치 버튼은 사용할 수 있습니다.</strong> 설치 후 이 페이지의 새로고침 또는 Agent 상태 확인을 사용하세요.</div>`;const initialPanel=requestedSection==='publishing'?'<div class="publishing-health"><div><strong>채널 운영 상태를 확인하고 있습니다.</strong><span>계정 · OAuth · 자동게시 · 게시 작업을 최대 8초 안에 확인합니다.</span></div></div><div class="empty"><strong>확인된 데이터부터 표시합니다.</strong>일부 서비스가 느려도 전체 화면을 비우지 않습니다.</div>':requestedSection==='pos'?initialPosPanel:'<div class="empty"><strong>운영 데이터를 불러오고 있습니다.</strong>점포 권한과 실제 연결 상태를 확인합니다.</div>';const portfolioSwitch=p.portfolio?`<div class="portfolio-switch" aria-label="통합 매장 선택"><a href="/cmpmyi/admin/overview">통합 현황</a>${Object.values(BOOTSTRAP_STORE_PROFILES).map(store=>`<a class="${store.slug===p.slug?'active':''}" href="/cmpmyi/admin/${e(store.slug)}">${e(store.name)}</a>`).join('')}</div>`:'';const portfolioEntry=p.portfolio?'':'<a class="portfolio-entry" href="/cmpmyi/admin" aria-label="자담치킨 피자마루 요거트퍼플 통합 매장관리">통합 매장관리</a>';const portfolioAction=p.portfolio?'<a href="/cmpmyi/admin/overview">통합 현황</a>':'';const html=`<!doctype html><html lang="ko" data-store-name="${name}" data-ekodi-store-site-admin="true" data-ekodi-authority-scope="tenant" data-ekodi-admin-layout="two-level" data-ekodi-admin-theme="light" data-ekodi-store-brand="${e(p.slug)}"${p.portfolio?' data-ekodi-store-portfolio="cmpmyi"':''}${embedded?' data-ekodi-embedded-admin="true"':''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>${initialTitle} · ${name}</title><link rel="stylesheet" href="/store-admin.css?v=20261028-today-board-v1"></head><body${requestedSection==='mobile'?' class="store-mobile"':''}><header class="topbar" data-ekodi-admin-topbar><a class="brand" href="${adminBase}"><span class="mark">${mark}</span><span class="brand-copy"><strong id="storeName">${name}</strong><small>${p.portfolio?'CMPMYI 통합 운영':firstStoreLabel?firstStoreLabel+' 전용 관리자':'점포 운영관리'}</small></span></a><div class="top-actions">${portfolioAction}<a href="${userBase}" target="_blank" rel="noopener">사용자페이지</a></div></header><div class="layout"><aside class="sidebar" data-ekodi-admin-sidebar><div class="scope"><small>${p.portfolio?'통합 관리자':firstStoreLabel?firstStoreLabel+' 매장 관리자':'매장 관리자'}</small><strong id="scopeStoreName">${name}</strong><span>${brand}</span></div>${portfolioSwitch}<div class="admin-nav-head"><strong>${firstStoreLabel&&!p.portfolio?firstStoreLabel+' 관리':'관리 메뉴'}</strong><small>${firstStoreLabel&&!p.portfolio?'매장 전용':'권한별 표시'}</small></div><nav id="adminNav" data-ekodi-admin-nav data-ekodi-admin-nav-mode="primary"></nav>${portfolioEntry}<p class="boundary">데이터와 권한은 브랜드별로 분리됩니다.</p><div class="admin-footer" data-ekodi-admin-sidebar-footer><small id="roleStatus">권한 확인 중</small><button id="logout" data-ekodi-logout type="button">로그아웃</button></div></aside><main data-ekodi-admin-main><nav id="sectionNav" class="section-nav" data-ekodi-admin-subnav aria-label="세부 메뉴" hidden></nav><section class="heading" data-ekodi-admin-page-heading><div><p class="eyebrow">${name} · 운영관리</p><h1 id="pageTitle">${initialTitle}</h1><p id="pageCopy">${initialCopy}</p></div><div class="heading-actions"><span class="state" id="pageState">확인 중</span><button id="refreshData" type="button">새로고침</button></div></section>${p.slug==='bbqcg'&&!p.portfolio?'':tenantAdminMetricsTabsMarkup}<section class="cards" id="summaryCards" role="tabpanel" aria-labelledby="adminMetricsTab" hidden>${initialSummary}</section><section class="panel" id="mainPanel" ${p.slug==='bbqcg'&&!p.portfolio?'role="region" aria-label="매장 관리 화면"':'role="tabpanel" aria-labelledby="adminWorkTab"'}>${initialPanel}</section></main></div><script src="/store-admin.js?v=${p.portfolio?'20261028-today-board-v1':'20261028-today-board-v1'}" defer></script></body></html>`;const scopedHtml=p.slug==='bbqcg'
+    ? html.replace('store-admin.css?v=20261028-today-board-v1','store-admin.css?v=20261108-bbqcg-compact-v1')
+          .replace('store-admin.js?v=20261028-today-board-v1','store-admin.js?v=20261108-bbqcg-compact-v1')
+    : html;
+  return new Response(scopedHtml,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':embedded?'SAMEORIGIN':'DENY','referrer-policy':'strict-origin-when-cross-origin','content-security-policy':embedded?"default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co http://127.0.0.1:17831 http://localhost:17831; frame-ancestors 'self'; base-uri 'self'; form-action 'self'":"default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co http://127.0.0.1:17831 http://localhost:17831; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",'x-ekodi-embedded-admin':embedded?'cmpmyi':'none','x-ekodi-route':p.portfolio?'cmpmyi-'+p.slug+'-store-admin':p.slug+'-store-admin','x-ekodi-store-scope':p.id||p.slug,'x-ekodi-authority-scope':'tenant'}})}
+
+,'i').exec(String(pathname||''));if(!m)return'';const slug=m[1].toLowerCase();return ['cmpmyi','stores'].includes(slug)?'':slug}
 export function isStoreAdminPathShape(pathname){return Boolean(storeAdminSlug(pathname))}
 export async function resolveStoreAdminRoute(pathname,fetchImpl=fetch){const slug=storeAdminSlug(pathname);if(!slug)return null;if(BOOTSTRAP_STORE_PROFILES[slug])return BOOTSTRAP_STORE_PROFILES[slug];const cached=ROUTE_CACHE.get(slug);if(cached&&cached.expires>Date.now())return cached.value;try{const r=await fetchImpl('https://renzehysxirjilvdxacv.supabase.co/rest/v1/rpc/store_admin_route_profile',{method:'POST',headers:{apikey:'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_','content-type':'application/json'},body:JSON.stringify({p_operating_slug:slug}),cache:'no-store'});if(!r.ok)return null;const value=await r.json();if(!value?.slug)return null;const profile={slug:String(value.slug),name:String(value.name||value.slug),mark:'ST',brand:'STORE OPERATIONS'};ROUTE_CACHE.set(slug,{value:profile,expires:Date.now()+300000});return profile}catch{return null}}
+const BBQCG_COMPACT_ADMIN_CSS=`
+/* Only the BBQCG tenant: sidebar selection opens the work surface immediately. */
+:root[data-ekodi-store-brand="bbqcg"]:not([data-ekodi-store-portfolio]) .layout main>.heading,
+:root[data-ekodi-store-brand="bbqcg"]:not([data-ekodi-store-portfolio]) .layout main>.admin-view-tabs,
+:root[data-ekodi-store-brand="bbqcg"]:not([data-ekodi-store-portfolio]) .layout main>#summaryCards{display:none!important}
+:root[data-ekodi-store-brand="bbqcg"]:not([data-ekodi-store-portfolio]) .layout main{padding-top:9px!important}
+:root[data-ekodi-store-brand="bbqcg"]:not([data-ekodi-store-portfolio]) .layout main>#mainPanel{min-height:0!important;margin-top:0!important;padding:13px!important}
+:root[data-ekodi-store-brand="bbqcg"]:not([data-ekodi-store-portfolio]) #mainPanel>.commerce-toolbar,
+:root[data-ekodi-store-brand="bbqcg"]:not([data-ekodi-store-portfolio]) #mainPanel>h2:first-child{display:none!important}
+:root[data-ekodi-store-brand="bbqcg"] .bbq-pos-subtabs{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin:0 0 12px;padding:0 0 10px;border-bottom:1px solid #e2e9e3}
+:root[data-ekodi-store-brand="bbqcg"] .bbq-pos-subtabs button{min-height:37px;padding:7px 12px;background:#fff;border:1px solid #d8e3d9;border-radius:9px;color:#43594a;font-size:12px;font-weight:750;white-space:nowrap;cursor:pointer}
+:root[data-ekodi-store-brand="bbqcg"] .bbq-pos-subtabs button[aria-selected="true"]{background:#205b38;color:#fff;border-color:#205b38}
+:root[data-ekodi-store-brand="bbqcg"] .bbq-pos-subtabs button:focus-visible{outline:3px solid #bd9e56;outline-offset:2px}
+:root[data-ekodi-store-brand="bbqcg"] #mainPanel [data-bbq-pos-pane][hidden],
+:root[data-ekodi-store-brand="bbqcg"] #mainPanel .pos-agent-line[hidden]{display:none!important}
+:root[data-ekodi-store-brand="bbqcg"] #mainPanel .pos-programs h2,
+:root[data-ekodi-store-brand="bbqcg"] #mainPanel .pos-orders h2,
+:root[data-ekodi-store-brand="bbqcg"] #mainPanel .pos-platforms h2{display:none!important}
+:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook{display:flex;flex-direction:column}
+:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook>h2{display:none!important}
+:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-handbook-tabs{order:-1;justify-content:flex-end;margin:0 0 10px!important;padding-bottom:9px;border-bottom:1px solid #e3eae5}
+:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .panel-lead{margin:0 0 12px!important;line-height:1.55}
+@media(max-width:620px){
+ :root[data-ekodi-store-brand="bbqcg"] .bbq-pos-subtabs{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+ :root[data-ekodi-store-brand="bbqcg"] .bbq-pos-subtabs button{min-height:40px;flex:0 0 auto}
+ :root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-handbook-tabs{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
+}
+`;
 const BBQCG_PRINT_CSS=`
 .bbqcg-handbook{max-width:100%;color:#14241b}.bbqcg-handbook-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}.bbqcg-handbook-tabs button,.bbqcg-print-controls button,.bbqcg-card-actions button{min-height:40px;background:#fff;border:1px solid #cdd9d2;border-radius:9px;padding:8px 13px;color:#1e4b31;cursor:pointer;font-weight:750}.bbqcg-handbook-tabs button[aria-selected="true"]{background:#1b5a37;color:#fff}.bbqcg-card-set{max-width:850px}.bbqcg-paper-card{padding:26px;border:1px solid #cfdbd4;border-radius:12px;background:#fff;line-height:1.7}.bbqcg-paper-card[hidden]{display:none}.bbqcg-paper-card header small{color:#52635a}.bbqcg-paper-card h3{font-size:23px;margin:5px 0 10px}.bbqcg-paper-card p{margin:4px 0;font-size:13px}.bbqcg-paper-card ol{padding-left:25px;margin:24px 0}.bbqcg-paper-card li{margin:10px 0}.bbqcg-paper-card footer{display:flex;flex-wrap:wrap;gap:16px;margin-top:25px;border-top:1px solid #dbe4df;padding-top:14px;font-size:13px}.bbqcg-card-actions{margin-top:20px}.bbqcg-print-controls{display:grid;justify-items:start;gap:8px;margin-top:18px}.bbqcg-print-controls small{line-height:1.5}
 @media print{@page{margin:12mm}body.bbqcg-print-mode *{visibility:hidden!important}body.bbqcg-print-mode #bbqcgHandbook,body.bbqcg-print-mode #bbqcgHandbook .bbqcg-paper-card,body.bbqcg-print-mode #bbqcgHandbook .bbqcg-paper-card *{visibility:visible!important}body.bbqcg-print-mode #bbqcgHandbook{position:absolute!important;left:0!important;top:0!important;width:100%!important;margin:0!important;padding:0!important}body.bbqcg-print-mode #bbqcgHandbook>h2,body.bbqcg-print-mode #bbqcgHandbook>.panel-lead,body.bbqcg-print-mode #bbqcgHandbook .bbqcg-handbook-tabs,body.bbqcg-print-mode #bbqcgHandbook .bbqcg-print-controls,body.bbqcg-print-mode #bbqcgHandbook .bbqcg-card-actions{display:none!important}body.bbqcg-print-mode #bbqcgHandbook .bbqcg-paper-card{display:none!important;border-radius:0;break-after:page;box-shadow:none!important}body.bbqcg-print-mode #bbqcgHandbook[data-print-target="all"] .bbqcg-paper-card{display:block!important}body.bbqcg-print-mode #bbqcgHandbook[data-print-target="recipe"] .bbqcg-paper-card[data-bbq-card="recipe"],body.bbqcg-print-mode #bbqcgHandbook[data-print-target="hygiene"] .bbqcg-paper-card[data-bbq-card="hygiene"],body.bbqcg-print-mode #bbqcgHandbook[data-print-target="law"] .bbqcg-paper-card[data-bbq-card="law"],body.bbqcg-print-mode #bbqcgHandbook[data-print-target="daily"] .bbqcg-paper-card[data-bbq-card="daily"],body.bbqcg-print-mode #bbqcgHandbook[data-print-target="print"] .bbqcg-paper-card[data-bbq-card="print"]{display:block!important}}
 `;
-export function storeAdminCss(){return new Response(CSS+tenantAdminMetricsTabsCss+TENANT_AUTOMATION_CSS+BBQCG_PRINT_CSS,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
+export function storeAdminCss(){return new Response(CSS+tenantAdminMetricsTabsCss+TENANT_AUTOMATION_CSS+BBQCG_PRINT_CSS+BBQCG_COMPACT_ADMIN_CSS,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
 // Wrangler bundles with esbuild keepNames, which inserts __name(fn,"name") calls into
 // nested functions. They survive Function.prototype.toString(), so the serialised
 // browser script carries a private helper in its own IIFE (repo convention).
@@ -967,7 +1127,7 @@ if(['jadam','pizzamaru','yogurt'].includes(p.slug)&&!p.portfolio)Object.assign(i
   members:['권한 · 구성원',`${p.name} 관리자와 직원의 접근 권한을 관리합니다.`],
   chrome:['헤더 · 푸터',`${p.name} 사용자 사이트의 헤더와 푸터를 관리합니다.`]
 });
-const firstStoreLabel=({jadam:'자담치킨',pizzamaru:'피자마루',yogurt:'요거트퍼플'})[p.slug]||'';const initialMeta=initialMetaMap[requestedSection]||['운영 홈','점포 운영 데이터를 확인합니다.'];const initialTitle=e(initialMeta[0]),initialCopy=e(initialMeta[1]);const initialSummary=requestedSection==='publishing'?['연결 채널','자동게시 활성','예약 · 대기','오류 · 복구'].map(label=>`<article class="card"><small>${label}</small><strong>…</strong><span>상태 확인 중</span></article>`).join(''):'';const initialPosPanel=`<div class="commerce-toolbar"><div><h2>EKODI POS Agent 준비</h2><p class="panel-lead">권한·운영 데이터 확인이 지연되어도 Agent 설치와 실행 안내는 바로 사용할 수 있습니다.</p></div></div><div class="service-list"><div class="service-row"><div><strong>처음 설치</strong><p>명령어를 직접 입력하지 말고 원클릭 설치 파일을 내려받아 저장한 뒤 우클릭 → 관리자 권한으로 실행합니다.</p></div><a class="button primary" href="/cmpmyi/admin/agent/download/setup-pos-agent.cmd" target="_blank" rel="noopener">원클릭 설치 (.cmd)</a></div><div class="service-row"><div><strong>이미 설치됨</strong><p>Agent가 꺼져 있으면 실행 파일을 사용합니다. 현재 실행만 멈추려면 중지 파일을 사용합니다.</p></div><div class="actions"><a class="button primary" href="/cmpmyi/admin/agent/download/start-pos-agent.cmd" target="_blank" rel="noopener">실행 파일 (.cmd)</a><a class="button" href="/cmpmyi/admin/agent/download/stop-pos-agent.cmd" target="_blank" rel="noopener">중지 파일 (.cmd)</a></div></div></div><div class="note"><strong>현재 화면이 '운영 데이터를 불러오고 있습니다'에 머물러도 위 설치 버튼은 사용할 수 있습니다.</strong> 설치 후 이 페이지의 새로고침 또는 Agent 상태 확인을 사용하세요.</div>`;const initialPanel=requestedSection==='publishing'?'<div class="publishing-health"><div><strong>채널 운영 상태를 확인하고 있습니다.</strong><span>계정 · OAuth · 자동게시 · 게시 작업을 최대 8초 안에 확인합니다.</span></div></div><div class="empty"><strong>확인된 데이터부터 표시합니다.</strong>일부 서비스가 느려도 전체 화면을 비우지 않습니다.</div>':requestedSection==='pos'?initialPosPanel:'<div class="empty"><strong>운영 데이터를 불러오고 있습니다.</strong>점포 권한과 실제 연결 상태를 확인합니다.</div>';const portfolioSwitch=p.portfolio?`<div class="portfolio-switch" aria-label="통합 매장 선택"><a href="/cmpmyi/admin/overview">통합 현황</a>${Object.values(BOOTSTRAP_STORE_PROFILES).map(store=>`<a class="${store.slug===p.slug?'active':''}" href="/cmpmyi/admin/${e(store.slug)}">${e(store.name)}</a>`).join('')}</div>`:'';const portfolioEntry=p.portfolio?'':'<a class="portfolio-entry" href="/cmpmyi/admin" aria-label="자담치킨 피자마루 요거트퍼플 통합 매장관리">통합 매장관리</a>';const portfolioAction=p.portfolio?'<a href="/cmpmyi/admin/overview">통합 현황</a>':'';const html=`<!doctype html><html lang="ko" data-store-name="${name}" data-ekodi-store-site-admin="true" data-ekodi-authority-scope="tenant" data-ekodi-admin-layout="two-level" data-ekodi-admin-theme="light" data-ekodi-store-brand="${e(p.slug)}"${p.portfolio?' data-ekodi-store-portfolio="cmpmyi"':''}${embedded?' data-ekodi-embedded-admin="true"':''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>${initialTitle} · ${name}</title><link rel="stylesheet" href="/store-admin.css?v=20261028-today-board-v1"></head><body${requestedSection==='mobile'?' class="store-mobile"':''}><header class="topbar" data-ekodi-admin-topbar><a class="brand" href="${adminBase}"><span class="mark">${mark}</span><span class="brand-copy"><strong id="storeName">${name}</strong><small>${p.portfolio?'CMPMYI 통합 운영':firstStoreLabel?firstStoreLabel+' 전용 관리자':'점포 운영관리'}</small></span></a><div class="top-actions">${portfolioAction}<a href="${userBase}" target="_blank" rel="noopener">사용자페이지</a></div></header><div class="layout"><aside class="sidebar" data-ekodi-admin-sidebar><div class="scope"><small>${p.portfolio?'통합 관리자':firstStoreLabel?firstStoreLabel+' 매장 관리자':'매장 관리자'}</small><strong id="scopeStoreName">${name}</strong><span>${brand}</span></div>${portfolioSwitch}<div class="admin-nav-head"><strong>${firstStoreLabel&&!p.portfolio?firstStoreLabel+' 관리':'관리 메뉴'}</strong><small>${firstStoreLabel&&!p.portfolio?'매장 전용':'권한별 표시'}</small></div><nav id="adminNav" data-ekodi-admin-nav data-ekodi-admin-nav-mode="primary"></nav>${portfolioEntry}<p class="boundary">데이터와 권한은 브랜드별로 분리됩니다.</p><div class="admin-footer" data-ekodi-admin-sidebar-footer><small id="roleStatus">권한 확인 중</small><button id="logout" data-ekodi-logout type="button">로그아웃</button></div></aside><main data-ekodi-admin-main><nav id="sectionNav" class="section-nav" data-ekodi-admin-subnav aria-label="세부 메뉴" hidden></nav><section class="heading" data-ekodi-admin-page-heading><div><p class="eyebrow">${name} · 운영관리</p><h1 id="pageTitle">${initialTitle}</h1><p id="pageCopy">${initialCopy}</p></div><div class="heading-actions"><span class="state" id="pageState">확인 중</span><button id="refreshData" type="button">새로고침</button></div></section>${tenantAdminMetricsTabsMarkup}<section class="cards" id="summaryCards" role="tabpanel" aria-labelledby="adminMetricsTab" hidden>${initialSummary}</section><section class="panel" id="mainPanel" role="tabpanel" aria-labelledby="adminWorkTab">${initialPanel}</section></main></div><script src="/store-admin.js?v=${p.portfolio?'20261028-today-board-v1':'20261028-today-board-v1'}" defer></script></body></html>`;const scopedHtml=p.slug==='bbqcg'
+const firstStoreLabel=({jadam:'자담치킨',pizzamaru:'피자마루',yogurt:'요거트퍼플'})[p.slug]||'';const initialMeta=initialMetaMap[requestedSection]||['운영 홈','점포 운영 데이터를 확인합니다.'];const initialTitle=e(initialMeta[0]),initialCopy=e(initialMeta[1]);const initialSummary=requestedSection==='publishing'?['연결 채널','자동게시 활성','예약 · 대기','오류 · 복구'].map(label=>`<article class="card"><small>${label}</small><strong>…</strong><span>상태 확인 중</span></article>`).join(''):'';const initialPosPanel=`<div class="commerce-toolbar"><div><h2>EKODI POS Agent 준비</h2><p class="panel-lead">권한·운영 데이터 확인이 지연되어도 Agent 설치와 실행 안내는 바로 사용할 수 있습니다.</p></div></div><div class="service-list"><div class="service-row"><div><strong>처음 설치</strong><p>명령어를 직접 입력하지 말고 원클릭 설치 파일을 내려받아 저장한 뒤 우클릭 → 관리자 권한으로 실행합니다.</p></div><a class="button primary" href="/cmpmyi/admin/agent/download/setup-pos-agent.cmd" target="_blank" rel="noopener">원클릭 설치 (.cmd)</a></div><div class="service-row"><div><strong>이미 설치됨</strong><p>Agent가 꺼져 있으면 실행 파일을 사용합니다. 현재 실행만 멈추려면 중지 파일을 사용합니다.</p></div><div class="actions"><a class="button primary" href="/cmpmyi/admin/agent/download/start-pos-agent.cmd" target="_blank" rel="noopener">실행 파일 (.cmd)</a><a class="button" href="/cmpmyi/admin/agent/download/stop-pos-agent.cmd" target="_blank" rel="noopener">중지 파일 (.cmd)</a></div></div></div><div class="note"><strong>현재 화면이 '운영 데이터를 불러오고 있습니다'에 머물러도 위 설치 버튼은 사용할 수 있습니다.</strong> 설치 후 이 페이지의 새로고침 또는 Agent 상태 확인을 사용하세요.</div>`;const initialPanel=requestedSection==='publishing'?'<div class="publishing-health"><div><strong>채널 운영 상태를 확인하고 있습니다.</strong><span>계정 · OAuth · 자동게시 · 게시 작업을 최대 8초 안에 확인합니다.</span></div></div><div class="empty"><strong>확인된 데이터부터 표시합니다.</strong>일부 서비스가 느려도 전체 화면을 비우지 않습니다.</div>':requestedSection==='pos'?initialPosPanel:'<div class="empty"><strong>운영 데이터를 불러오고 있습니다.</strong>점포 권한과 실제 연결 상태를 확인합니다.</div>';const portfolioSwitch=p.portfolio?`<div class="portfolio-switch" aria-label="통합 매장 선택"><a href="/cmpmyi/admin/overview">통합 현황</a>${Object.values(BOOTSTRAP_STORE_PROFILES).map(store=>`<a class="${store.slug===p.slug?'active':''}" href="/cmpmyi/admin/${e(store.slug)}">${e(store.name)}</a>`).join('')}</div>`:'';const portfolioEntry=p.portfolio?'':'<a class="portfolio-entry" href="/cmpmyi/admin" aria-label="자담치킨 피자마루 요거트퍼플 통합 매장관리">통합 매장관리</a>';const portfolioAction=p.portfolio?'<a href="/cmpmyi/admin/overview">통합 현황</a>':'';const html=`<!doctype html><html lang="ko" data-store-name="${name}" data-ekodi-store-site-admin="true" data-ekodi-authority-scope="tenant" data-ekodi-admin-layout="two-level" data-ekodi-admin-theme="light" data-ekodi-store-brand="${e(p.slug)}"${p.portfolio?' data-ekodi-store-portfolio="cmpmyi"':''}${embedded?' data-ekodi-embedded-admin="true"':''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow"><title>${initialTitle} · ${name}</title><link rel="stylesheet" href="/store-admin.css?v=20261028-today-board-v1"></head><body${requestedSection==='mobile'?' class="store-mobile"':''}><header class="topbar" data-ekodi-admin-topbar><a class="brand" href="${adminBase}"><span class="mark">${mark}</span><span class="brand-copy"><strong id="storeName">${name}</strong><small>${p.portfolio?'CMPMYI 통합 운영':firstStoreLabel?firstStoreLabel+' 전용 관리자':'점포 운영관리'}</small></span></a><div class="top-actions">${portfolioAction}<a href="${userBase}" target="_blank" rel="noopener">사용자페이지</a></div></header><div class="layout"><aside class="sidebar" data-ekodi-admin-sidebar><div class="scope"><small>${p.portfolio?'통합 관리자':firstStoreLabel?firstStoreLabel+' 매장 관리자':'매장 관리자'}</small><strong id="scopeStoreName">${name}</strong><span>${brand}</span></div>${portfolioSwitch}<div class="admin-nav-head"><strong>${firstStoreLabel&&!p.portfolio?firstStoreLabel+' 관리':'관리 메뉴'}</strong><small>${firstStoreLabel&&!p.portfolio?'매장 전용':'권한별 표시'}</small></div><nav id="adminNav" data-ekodi-admin-nav data-ekodi-admin-nav-mode="primary"></nav>${portfolioEntry}<p class="boundary">데이터와 권한은 브랜드별로 분리됩니다.</p><div class="admin-footer" data-ekodi-admin-sidebar-footer><small id="roleStatus">권한 확인 중</small><button id="logout" data-ekodi-logout type="button">로그아웃</button></div></aside><main data-ekodi-admin-main><nav id="sectionNav" class="section-nav" data-ekodi-admin-subnav aria-label="세부 메뉴" hidden></nav><section class="heading" data-ekodi-admin-page-heading><div><p class="eyebrow">${name} · 운영관리</p><h1 id="pageTitle">${initialTitle}</h1><p id="pageCopy">${initialCopy}</p></div><div class="heading-actions"><span class="state" id="pageState">확인 중</span><button id="refreshData" type="button">새로고침</button></div></section>${p.slug==='bbqcg'&&!p.portfolio?'':tenantAdminMetricsTabsMarkup}<section class="cards" id="summaryCards" role="tabpanel" aria-labelledby="adminMetricsTab" hidden>${initialSummary}</section><section class="panel" id="mainPanel" ${p.slug==='bbqcg'&&!p.portfolio?'role="region" aria-label="매장 관리 화면"':'role="tabpanel" aria-labelledby="adminWorkTab"'}>${initialPanel}</section></main></div><script src="/store-admin.js?v=${p.portfolio?'20261028-today-board-v1':'20261028-today-board-v1'}" defer></script></body></html>`;const scopedHtml=p.slug==='bbqcg'
     ? html.replace('store-admin.css?v=20261028-today-board-v1','store-admin.css?v=20261108-bbqcg-compact-v1')
           .replace('store-admin.js?v=20261028-today-board-v1','store-admin.js?v=20261108-bbqcg-compact-v1')
     : html;
