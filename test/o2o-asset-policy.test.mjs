@@ -77,6 +77,6 @@ test('post-deploy smoke is not a blocking pre-deployment HTTP test', () => {
   assert.match(workflow, /if: github\.event_name == 'pull_request'/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(workflow, /github\.event\.workflow_run\.head_branch == 'main'/);
-  assert.doesNotMatch(workflow, /(?m)^  push:/);
+  assert.doesNotMatch(workflow, /^  push:/m);
   assert.match(workflow, /node --test test\/o2o-asset-policy\.test\.mjs/);
 });
