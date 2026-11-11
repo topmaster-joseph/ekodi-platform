@@ -36,9 +36,12 @@ test('unrecognized actions and scope fail closed',()=>{
 });
 test('notice is a safe proposal only; paid channels require receipt',()=>{
  const p=make({action:'change_permissions'});const n=proposeMicroIntentOwnerNotice(p);
- assert.equal(n.channel,'ekodi_inbox');assert.deepEqual(n.optionalChannels,['webpush']);
+ assert.equal(n.channel,'ekodi_inbox');assert.deepEqual(n.optionalChannels,[]);
  assert.equal(n.dispatchAuthorized,false);assert.equal(n.grantsApproval,false);
- const paid=proposeMicroIntentOwnerNotice(p,{paidChannelReceiptVerified:true,kakaoTemplateVerified:true});
+ const noConsent=proposeMicroIntentOwnerNotice(p,{paidChannelReceiptVerified:true,kakaoTemplateVerified:true});
+ assert.deepEqual(noConsent.optionalChannels,[]);
+ const free=proposeMicroIntentOwnerNotice(p,{webPushConsentVerified:true});assert.deepEqual(free.optionalChannels,['webpush']);
+ const paid=proposeMicroIntentOwnerNotice(p,{webPushConsentVerified:true,paidChannelReceiptVerified:true,channelConsentVerified:true,kakaoTemplateVerified:true});
  assert.deepEqual(paid.optionalChannels,['webpush','sms','kakao_eligible_only']);
 });
 test('learning and completion require authoritative evidence not generated prose',()=>{
