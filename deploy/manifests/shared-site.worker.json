@@ -341,18 +341,13 @@
       {
         "url": "https://ekodi.kr/cmpmyi",
         "statuses": [
-          200
+          308
         ],
         "redirect": "manual",
-        "expect": [
-          "THREE STORES · ONE GATE",
-          "자담치킨",
-          "피자마루",
-          "요거트퍼플"
-        ],
         "headerExpect": [
-          "x-ekodi-route: store-gateway",
-          "x-content-type-options: nosniff"
+          "location: https://ekodi.kr/bbqcg",
+          "x-ekodi-route: bbqcg-former-store-gateway",
+          "cache-control: no-store"
         ],
         "rollbackVerify": false
       },
@@ -363,7 +358,7 @@
         ],
         "redirect": "manual",
         "headerExpect": [
-          "location: https://ekodi.kr/cmpmyi",
+          "location: https://ekodi.kr/bbqcg",
           "x-ekodi-legacy-surface: stores"
         ],
         "rollbackVerify": false
