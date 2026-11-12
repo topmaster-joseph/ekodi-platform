@@ -24,7 +24,7 @@ export function devotionShareExcerpt(data, kind = 'page', personalText = '') {
     default: return preview(a.keyLine || a.theme);
   }
 }
-export function formatDevotionShareMessage({date, title, excerpt, url}) {
+export function formatDevotionShareMessage({date, title, excerpt, url, passage = ''}) {
   const valid = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(date || ''));
   if (!valid) throw new Error('invalid_devotion_date');
   const [, y, m, d] = valid;
@@ -49,7 +49,8 @@ export function formatDevotionShareMessage({date, title, excerpt, url}) {
   return [
     `${Number(y)}년 ${Number(m)}월 ${Number(d)}일 ${day}요일`,
     '에코디언의 묵상나눔',
-    headline,
+    headline === compact(passage) ? '' : headline,
+    compact(passage),
     body,
     cleanUrl.href,
   ].filter(Boolean).join('\n');
@@ -64,7 +65,7 @@ export function devotionSectionShareDetails(data,kind){
   };
   if(kind==='song')return {
     title:['묵상 노래',a.song?.title].filter(Boolean).join(' · '),
-    content:[...(a.song?.verse||[]),...(a.song?.refrain?.length?['후렴: '+a.song.refrain.join(' / ')]:[])].join('\n'),
+    content:[...(a.song?.verse||[]),...(a.song?.refrain?.length?['후렴\n'+a.song.refrain.join('\n')]:[])].join('\n'),
   };
   if(kind==='prayer')return {title:'묵상기도',content:a.prayer||''};
   if(kind==='questions')return {
@@ -73,15 +74,28 @@ export function devotionSectionShareDetails(data,kind){
   };
   return null;
 }
-export function formatDevotionSectionShareMessage({date,title,content,url}){
-  // Keep one canonical validation point for actual dates and ekodi.kr-only public deep links.
+export function formatDevotionSectionShareMessage({date,title,content,url,passage=''}) {
+  // Validate the original date and site-scoped deep link with the common validator.
   const dateLine=formatDevotionShareMessage({date,title:'',excerpt:'',url}).split('\n')[0];
   const validatedUrl=new URL(url).href;
-  const fullContent=String(content??'').replace(/\r\n?/gu,'\n').trim();
+  const originalTitle=compact(title).replace(/^.*?오늘의 매일묵상\s*·\s*/u,'');
+  const poem=/^묵상\s*시(?:\s*·\s*(.*))?$/u.exec(originalTitle);
+  const song=/^묵상\s*노래(?:\s*·\s*(.*))?$/u.exec(originalTitle);
+  const sectionTitle=poem
+    ? [poem[1] ? '〈'+poem[1]+'〉' : '', '(묵상시)'].filter(Boolean).join(' ')
+    : song
+      ? [song[1] ? '〈'+song[1]+'〉' : '', '(묵상노래)'].filter(Boolean).join(' ')
+      : originalTitle === '묵상기도' ? '(묵상기도)'
+        : originalTitle === '질문 / 실천' ? '(질문·실천)'
+          : originalTitle ? '〈'+originalTitle+'〉' : '';
+  // Preserve stanza spacing while putting the refrain on its own following lines.
+  const fullContent=String(content??'').replace(/\r\n?/gu,'\n')
+    .replace(/(^|\n)후렴[:：]\s*/gu,'$1후렴\n').trim();
   return [
     '에코디언의 묵상나눔',
     dateLine,
-    compact(title).replace(/^.*?오늘의 매일묵상\s*·\s*/u, '').replace(/^묵상 (?:시|노래)\s*·\s*/u, ''),
+    compact(passage),
+    sectionTitle,
     fullContent||'등록된 내용이 없습니다.',
     validatedUrl,
   ].filter(Boolean).join('\n');
