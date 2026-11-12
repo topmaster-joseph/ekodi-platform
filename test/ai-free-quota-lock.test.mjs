@@ -59,3 +59,14 @@ test('delayed success write cannot override an unexpired exhausted or throttled 
  assert.match(upsert.sql,/ai_provider_quota_state\.state IN \('exhausted','throttled'\)/);
  assert.match(upsert.sql,/strftime\('%s',ai_provider_quota_state\.reset_at\) IS NULL/);
 });
+
+test('provider reset is normalized to comparable UTC before storing lock',async()=>{
+ const d=db();
+ const error=new Error('daily free quota exhausted');
+ error.status=429;
+ error.quota={state:'exhausted',remainingRequests:0,resetAt:'2035-11-12T09:00:00+09:00'};
+ await recordFreeProviderOutcome({DB:d.DB},'groq-free',{ok:false,error});
+ const write=d.calls.find(x=>x.sql.includes('ON CONFLICT(provider_id)'));
+ assert.ok(write);
+ assert.equal(write.params[5],'2035-11-12T00:00:00.000Z');
+});
