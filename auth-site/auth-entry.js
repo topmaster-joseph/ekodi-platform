@@ -40,6 +40,7 @@ if (repeated) {
   const retry = document.getElementById('googleRetry');
   const cancel = document.getElementById('cancelSignedOut');
 
+  document.querySelectorAll('[data-login-skeleton]').forEach(node => node.remove());
   if (badge) badge.textContent = '반복 이동 차단';
   if (status) {
     status.textContent = '로그인과 서비스 화면이 반복 이동하는 것을 감지해 자동 이동을 중단했습니다. 다시 시도하면 새 인증 흐름으로 시작합니다.';
