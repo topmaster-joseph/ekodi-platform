@@ -49,7 +49,7 @@ export function formatDevotionShareMessage({date, title, excerpt, url, passage =
   return [
     `${Number(y)}년 ${Number(m)}월 ${Number(d)}일 ${day}요일`,
     compact(passage),
-    '에코디',
+    '에코디 묵상나눔',
     headline === compact(passage) ? '' : headline,
     body,
     cleanUrl.href,
@@ -70,7 +70,7 @@ export function devotionSectionShareDetails(data,kind){
   if(kind==='prayer')return {title:'묵상기도',content:a.prayer||''};
   if(kind==='questions')return {
     title:'질문 / 실천',
-    content:[...(a.questions||[]).map((q,i)=>(i+1)+'. ['+(q.kind||'적용')+'] '+(q.text||'')),...(a.action?['오늘의 실천: '+a.action]:[])].join('\n'),
+    content:[...(a.questions||[]).map((q,i)=>(i+1)+'. ['+(q.kind||'적용')+'] '+(q.text||'')),...(a.action?['오늘의 실천\n'+a.action]:[])].join('\n'),
   };
   return null;
 }
