@@ -242,8 +242,11 @@
   // The vendor's legacy search page decodes Korean query bytes as CP949/EUC-KR,
   // not UTF-8. Browser TextDecoder provides its official decoder mapping; invert
   // only the requested characters. Never scrape or replicate vendor catalog data.
+  const legacyVendorQueryCache=new Map();
   function encodeLegacyVendorQuery(input) {
-    const chars=[...clean(input).slice(0,70)];
+    const text=clean(input).slice(0,70);
+    if(legacyVendorQueryCache.has(text))return legacyVendorQueryCache.get(text);
+    const chars=[...text];
     const remaining=new Set(chars.filter(ch=>ch.codePointAt(0)>127));
     const encoded=new Map();
     if(remaining.size){
@@ -267,7 +270,11 @@
       }catch{return '';}
     }
     if(remaining.size)return '';
-    return chars.map(ch=>ch.codePointAt(0)<128?encodeURIComponent(ch):encoded.get(ch)).join('');
+    const result=chars.map(ch=>ch.codePointAt(0)<128?encodeURIComponent(ch):encoded.get(ch)).join('');
+    // Repeated catalog rerenders must not rescan the full legacy character table.
+    if(legacyVendorQueryCache.size>=16)legacyVendorQueryCache.clear();
+    legacyVendorQueryCache.set(text,result);
+    return result;
   }
   function hoseSearchAlternative(query) {
     // Search assistance only: never replace the user's query silently.
