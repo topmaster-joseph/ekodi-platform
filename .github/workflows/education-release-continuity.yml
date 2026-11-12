@@ -44,7 +44,7 @@ jobs:
        github.actor == 'topmaster-joseph' &&
        github.event.issue.pull_request == null &&
        github.event.comment.body == 'EKODI-EDUCATION-RECONCILE')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 13
     steps:
       - uses: actions/checkout@v7
@@ -106,7 +106,7 @@ jobs:
         github.event.comment.body == 'EKODI-EDUCATION-RECONCILE')) &&
       github.repository == 'topmaster-joseph/ekodi-platform'
     needs: contract
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Checkout trusted EKODI main
