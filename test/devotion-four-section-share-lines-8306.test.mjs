@@ -25,7 +25,7 @@ test('only four explicitly selected tabs receive clean date/title/content/link s
    date:day.date,title:'에코디교회 오늘의 매일묵상 · '+section.title,
    content:section.content,url:urlFor(kind),passage:day.passage
   });
-  assert.match(message,/^에코디언의 묵상나눔\n2026년 11월 5일 목요일\n/u);
+  assert.match(message,/^2026년 11월 5일 목요일\n고린도전서 5:1-13\n에코디 </u);
   assert.ok(message.includes('\n'+day.passage+'\n'));
   assert.ok(message.includes('\n'+section.content.replace(/후렴: /u,'후렴\n')+'\n'));
   assert.ok(message.endsWith(urlFor(kind)));
@@ -44,7 +44,7 @@ test('full poem and song preserve embedded line breaks, refrain and empty stanza
  assert.ok(song.content.includes('첫 절\n둘째 절\n후렴\n후렴 하나\n후렴 둘'));
  assert.equal(song.title,'묵상 노래 · 함께 부르는 찬양');
  const songMessage=formatDevotionSectionShareMessage({date:day.date,title:song.title,content:song.content,url:urlFor('song'),passage:day.passage});
- assert.match(songMessage,/〈함께 부르는 찬양〉 \(묵상노래\)/u);
+ assert.match(songMessage,/에코디 <묵상노래>\n〈함께 부르는 찬양〉/u);
  assert.match(songMessage,/후렴\n후렴 하나\n후렴 둘/u);
 });
 
@@ -70,9 +70,6 @@ test('invalid dates and foreign domains rejected for the four special tab shares
 test('shared Church, Mission and Bible renderer branches only for selected sections',async()=>{
  const code=await readFile(new URL('../bible/devotion.js',import.meta.url),'utf8');
  assert.match(code,/const section=devotionSectionShareDetails\(current,kind\)/);
- // REISSUE-DEVOTION-SHARE-LINES-001: 호출에 passage 가 더해졌다. 이 핀의 의도는
- // '렌더러가 선택된 섹션 경로로 공유한다'이고 그 의도는 그대로다 — 날짜·제목·
- // 섹션 본문은 계속 고정하고, 거기에 성경본문을 함께 넘기는 것만 반영한다.
  assert.match(code,/formatDevotionSectionShareMessage\(\{date:current.date,title,content:section.content,url,passage:current.passage\}\)/);
  assert.match(code,/navigator\.share\(\{ text: message \}\)/);
  assert.match(code,/devotionShareExcerpt\(current, kind, privatePrayer\)/);
