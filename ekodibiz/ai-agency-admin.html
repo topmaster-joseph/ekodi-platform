@@ -95,7 +95,11 @@ button.secondary{background:#fff;color:#285a3c}
 <div id="readinessResults" class="summary" role="status" aria-live="polite">업체 관리자 인증 후 상태를 조회할 수 있습니다. 설정값 조회는 결제나 공급사 구매를 실행하지 않습니다.</div>
 <p class="note">기관·개인의 결제대금 수납은 적용 공급사와 MID 및 정산·환불 범위가 일치할 때만 가능합니다. 실제 결제 테스트는 별도의 승인된 시험환경에서 진행합니다.</p>
 </section>
-<section class="panel" id="adminApplications" role="tabpanel" aria-labelledby="adminTabList" data-admin-panel="list"><h2>접수된 신청</h2><div id="tableWrap"><table><thead><tr><th>신청번호 / 상태</th><th>신청인·기관</th><th>서비스·기간</th><th>견적</th><th>선택</th></tr></thead><tbody id="rows"><tr><td colspan="5">관리자 인증 후 목록을 조회합니다.</td></tr></tbody></table></div></section>
+<section class="panel" id="adminApplications" role="tabpanel" aria-labelledby="adminTabList" data-admin-panel="list"><h2>접수된 신청</h2>
+<form id="findForm" class="row" autocomplete="off"><label>신청번호 직접 조회 (이전 계약 포함)<input id="findId" type="text" maxlength="29" placeholder="EBAI-..." aria-label="조회할 계약 신청번호" required></label>
+<button type="submit" id="findBtn" class="secondary">계약 찾기</button></form>
+<p class="muted">아래 목록은 최근 100건입니다. 이전 계약은 발급된 신청번호로 직접 조회할 수 있습니다. 계약 조회에는 업체 관리자 인증키가 필요합니다.</p>
+<div id="tableWrap"><table><thead><tr><th>신청번호 / 상태</th><th>신청인·기관</th><th>서비스·기간</th><th>견적</th><th>선택</th></tr></thead><tbody id="rows"><tr><td colspan="5">관리자 인증 후 목록을 조회합니다.</td></tr></tbody></table></div></section>
 <section class="panel" id="detail" role="tabpanel" aria-labelledby="adminTabReview" data-admin-panel="review" hidden>
 <h2 id="selectedTitle">신청 검토</h2>
 <p id="selectedBody" class="muted"></p>

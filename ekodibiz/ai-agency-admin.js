@@ -71,11 +71,10 @@
   async function load() {
     try {
       const {items}=await call('/list');
-      if(selected&&!items.some(item=>item.id===selected.id)){
-        selected=null;
-        settlement=null;
-        showAdminTab('list');
-      }
+      // A manually found older contract may be outside the latest-100 list.
+      // Do not discard its selected record merely because it was not listed here.
+      const refreshed=selected&&items.find(item=>item.id===selected.id);
+      if(refreshed)selected=refreshed;
       const tbody=$('rows'); tbody.replaceChildren();
       if(!items.length){ const tr=document.createElement('tr');cell(tr,'아직 신청 내역이 없습니다.');tbody.append(tr);}
       for(const item of items) {
@@ -92,6 +91,19 @@
     } catch(e) { message(e.message,true); }
   }
   $('load').addEventListener('click',load);
+  $('findForm').addEventListener('submit',async event=>{
+    event.preventDefault();
+    const id=$('findId').value.trim().toUpperCase();
+    if(!/^EBAI-[A-Z0-9]{24}$/.test(id)){message('올바른 신청번호를 입력해 주세요.',true);return;}
+    const btn=$('findBtn');btn.disabled=true;
+    try{
+      const {record}=await call('/find',{id});
+      settlement=null;
+      pick(record);
+      message('선택한 계약을 조회했습니다. 세부 검토와 정산 기능은 기존 권한으로 보호됩니다.');
+    }catch(error){message(error.message,true);}
+    finally{btn.disabled=false;}
+  });
   $('readinessBtn').addEventListener('click',async()=>{
     const btn=$('readinessBtn');
     btn.disabled=true;
@@ -170,7 +182,8 @@
     $('renewalForm').hidden=!mayRecord||x.renewalStopRecorded;
     $('exportStatement').disabled=false;
   }
-  $('cycleForm').elements.paidOn.value=new Date().toISOString().slice(0,10);
+  // Default to the EKODIBIZ business date in Korea, not the UTC date.
+  $('cycleForm').elements.paidOn.value=new Date(Date.now()+9*60*60*1000).toISOString().slice(0,10);
   $('cycleForm').addEventListener('submit',async event=>{
     event.preventDefault();
     if(!selected||!settlement)return;

@@ -29,10 +29,20 @@
     </section>
 
     <section id="memberApp" class="shell member-app" hidden>
-      <div class="member-head"><div><p class="eyebrow">MY MANAGEMENT</p><h1>내 경영AI</h1><p id="memberMeta">무료등급 · 기능 선택형</p></div><button id="logoutButton" class="secondary" type="button">로그아웃</button></div>
-      <div class="panel-grid">
-        <article class="panel">
-          <h2>1. 사용할 공간</h2>
+      <div class="member-head"><div><p class="eyebrow">EKODI / MANAGEMENT</p><h1>나의 경영 상황실</h1><p id="memberMeta">무료등급 · 기능 선택형</p></div><button id="logoutButton" class="secondary" type="button">로그아웃</button></div>
+      <div class="workbench-intro" aria-label="경영 상황실 안내">
+        <div><p class="workbench-kicker">ONE WORKSPACE · CLEAR DECISIONS</p><p class="workbench-intro-title">필요한 정보를 먼저 보고, 다음 행동을 선택하세요.</p><p class="workbench-intro-caption">검증된 운영 정보와 전문 도구를 공간별로 구분합니다.</p></div>
+        <p id="workbenchScope" class="workbench-scope" role="status" aria-live="polite">현재 공간 미선택</p>
+      </div>
+      <nav id="managementViewNav" class="management-view-nav" role="tablist" aria-label="경영 상황실 화면 선택">
+        <button id="viewSpaces" type="button" role="tab" aria-controls="memberSpacePanel" aria-selected="true" tabindex="0">운영 공간</button>
+        <button id="viewAi" type="button" role="tab" aria-controls="memberAiPanel" aria-selected="false" tabindex="-1">전문 AI</button>
+        <button id="viewGrowth" type="button" role="tab" aria-controls="growthManagement" aria-selected="false" tabindex="-1">성장 흐름</button>
+        <button id="viewAssistant" type="button" role="tab" aria-controls="chiefCard" aria-selected="false" tabindex="-1">경영비서</button>
+      </nav>
+      <div id="memberPanelGrid" class="panel-grid">
+        <article id="memberSpacePanel" class="panel" role="tabpanel" aria-labelledby="viewSpaces">
+          <h2>운영 공간</h2>
           <p>공간 유형은 이 브라우저에서만 선택합니다. 실제 운영 공간은 아래의 중앙 회원 권한 확인 결과를 이용합니다.</p>
           <label for="workspaceKind">공간 유형</label>
           <select id="workspaceKind">
@@ -55,8 +65,8 @@
             <p class="note">중앙 EKODI의 실제 소속·역할 확인 결과만 표시합니다. 선택만으로 권한이 변경되지 않습니다.</p>
           </div>
         </article>
-        <article class="panel">
-          <h2>2. 필요한 AI 선택</h2>
+        <article id="memberAiPanel" class="panel" role="tabpanel" aria-labelledby="viewAi" hidden>
+          <h2>필요한 AI 선택</h2>
           <p>회원등급은 사용량과 깊이를 정하고, 사용할 AI는 별도로 선택합니다.</p>
           <div id="memberModuleGrid" class="module-picker"></div>
           <button id="saveSelection" class="button" type="button">선택 저장</button>
@@ -64,7 +74,7 @@
           <div id="memberModuleLinks" class="module-links" aria-label="현재 연결 가능한 전문 AI" aria-live="polite"></div>
         </article>
       </div>
-      <section id="growthManagement" class="growth-management" aria-labelledby="growthManagementTitle">
+      <section id="growthManagement" class="growth-management" role="tabpanel" aria-labelledby="viewGrowth" hidden>
         <div class="section-head"><div><p class="eyebrow">WORKSPACE GROWTH</p><h2 id="growthManagementTitle">AI 성장·홍보 관리</h2></div><p>내가 권한을 가진 운영 공간을 선택하면 해당 공간의 검색노출·홍보·성과 연결 준비 상태를 확인합니다.</p></div>
         <p id="growthWorkspaceStatus" role="status" aria-live="polite">먼저 내 운영 공간을 선택해 주세요.</p>
         <div class="growth-workflow" aria-label="검색노출부터 매출까지 성장 연결 단계">
@@ -76,7 +86,7 @@
         <div id="growthWorkspaceDetails" class="growth-workspace-details" aria-live="polite"></div>
         <p class="note">실제 수치는 본인에게 권한이 있는 공식 데이터가 연결된 경우에만 표시합니다. 미연결·미확인은 0건이나 정상 운영을 의미하지 않습니다. 자동 게시와 비용 발생 작업은 여기서 실행하지 않습니다.</p>
       </section>
-      <article class="chief-card">
+      <article id="chiefCard" class="chief-card" role="tabpanel" aria-labelledby="viewAssistant" hidden>
         <p class="eyebrow">경영비서AI · 업무 길잡이</p>
         <h2>무엇을 해결하고 싶은지 말씀해 주세요.</h2>
         <p>요청에 맞는 전문 AI를 찾아 현재 연결 상태를 안내합니다.</p>
