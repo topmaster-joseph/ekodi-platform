@@ -670,3 +670,6 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 @media print{.lv.doc-view-body .btn-row{display:none}}
 .lv .docs-grid>.panel,.lv .docs-page>.panel{margin:0}
 .lv .ho-instructor{font-size:.8125rem;font-weight:650}
+/* Presenter demo library picker: long demo titles must never widen the presenter on small phones. */
+.lv #aiDemo{flex:1 1 100%;width:100%;max-width:100%;min-width:0;text-overflow:ellipsis}
+.lv #aiHandoff{overflow-wrap:anywhere}
