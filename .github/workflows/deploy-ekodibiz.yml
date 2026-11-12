@@ -15,6 +15,8 @@ on:
     paths:
       - 'ekodibiz/**'
       - 'ekodibiz-worker.js'
+      - 'ekodibiz-ai-agency.js'
+      - 'test/ekodibiz-ai-agency*.test.mjs'
       - 'wrangler.ekodibiz*.toml'
       - 'test/ekodibiz-revenue-os.test.mjs'
       - 'test/ekodibiz-trade-partner.test.mjs'
@@ -25,6 +27,8 @@ on:
     paths:
       - 'ekodibiz/**'
       - 'ekodibiz-worker.js'
+      - 'ekodibiz-ai-agency.js'
+      - 'test/ekodibiz-ai-agency*.test.mjs'
       - 'wrangler.ekodibiz*.toml'
       - 'test/ekodibiz-revenue-os.test.mjs'
       - 'test/ekodibiz-trade-partner.test.mjs'
@@ -61,6 +65,11 @@ jobs:
           node --check ekodibiz/app.js
           node --test test/ekodibiz-revenue-os.test.mjs
           node --test test/ekodibiz-trade-partner.test.mjs
+          node --check ekodibiz-ai-agency.js
+          node --check ekodibiz/ai-agency.js
+          node --check ekodibiz/ai-agency-admin.js
+          node --test test/ekodibiz-ai-agency*.test.mjs
+          node --test test/ekodibiz-agency-deploy-trigger-contract.test.mjs
           npm run validate:boundaries
           npm run validate:ui-dna
           npm run validate:mission
