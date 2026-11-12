@@ -3,8 +3,8 @@
   "updatedAt": "2026-08-27",
   "platform": {
     "id": "management",
-    "name": "경영플랫폼",
-    "userFacingName": "에코디 경영AI",
+    "name": "에코디경영",
+    "userFacingName": "에코디경영",
     "canonicalUrl": "https://ekodi.kr/management/",
     "compatibilityService": "business",
     "identityModel": "person-space-role-capability",

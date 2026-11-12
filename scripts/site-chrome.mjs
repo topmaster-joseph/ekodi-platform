@@ -14,7 +14,7 @@ const ORIGIN = 'https://ekodi.kr';
 const YEAR = '2026';
 
 const NETWORK = [
-  { id: 'publishing', label: '출판', note: '책을 만들다', href: `${ORIGIN}/publishing/` },
+  { id: 'publishing', label: '에코디출판', note: '책을 만들다', href: `${ORIGIN}/publishing/` },
   { id: 'books', label: '에코디서점', note: '책을 만나다', href: `${ORIGIN}/books/` },
   { id: 'mall', label: '에코디몰 책·배움', note: '함께 나누다', href: `${ORIGIN}/ekodimall/?category=book` },
   { id: 'journal', label: '에코디저널', note: '기록을 나누다', href: `${ORIGIN}/journal/` },
@@ -59,7 +59,7 @@ export const SITES = {
   },
   publishing: {
     mark: 'EP',
-    name: '출판',
+    name: '에코디출판',
     tagline: 'Publishing · Production · Distribution',
     home: `${ORIGIN}/publishing/`,
     nav: [

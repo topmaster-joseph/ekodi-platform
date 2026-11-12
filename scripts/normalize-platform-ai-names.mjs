@@ -16,15 +16,7 @@ const replacements = new Map([
   ['에코디 쇼핑플랫폼', '쇼핑플랫폼'],
   ['EKODI Shop Platform', 'Shop Platform'],
   ['EKODI SHOP PLATFORM', 'SHOP PLATFORM'],
-  ['에코디커뮤니티', '커뮤니티'],
-  ['에코디 커뮤니티', '커뮤니티'],
-  ['EKODI COMMUNITY', 'COMMUNITY'],
-  ['EKODI Community', 'Community'],
   ['<span><strong>EKODI</strong><small>COMMUNITY</small></span>', '<span><strong>COMMUNITY</strong></span>'],
-  ['에코디출판', '출판'],
-  ['에코디 출판', '출판'],
-  ['EKODI Publishing', 'Publishing'],
-  ['EKODI PUBLISHING', 'PUBLISHING'],
   ['에코디 마케팅 AI', '마케팅 AI'],
   ['EKODI Marketing AI', 'Marketing AI'],
   ['EKODI MARKETING AI', 'MARKETING AI'],
@@ -86,8 +78,6 @@ const displayNames = [
   'Business OS',
   'Management Platform',
   'Shop Platform',
-  'Community',
-  'Publishing',
   'Marketing AI',
   'Support Opportunity AI',
   'Creator AI',
@@ -114,12 +104,12 @@ const adminScopeEntries = [
   "    { domain:'bible.ekodi.kr', name:'에코디 말씀대화', group:'Community', role:'말씀·묵상·실천 대화', aliases:['말씀대화','성경대화','bible'] },",
   "    { domain:'cafe.ekodi.kr', name:'에코디 카페', group:'Community', role:'카페·모임·커뮤니티 준비 공간', aliases:['카페','cafe'] },",
   "    { domain:'business.ekodi.kr', name:'비즈니스 OS', group:'Business & Commerce', role:'AI 기반 공통 사업 운영', aliases:['비즈니스 os','business os','business'] },",
-  "    { domain:'management.ekodi.kr', name:'경영플랫폼', group:'Business & Commerce', role:'전문 경영AI 선택·연결', aliases:['경영플랫폼','경영 플랫폼','management'] },",
+  "    { domain:'management.ekodi.kr', name:'에코디경영', group:'Business & Commerce', role:'전문 경영AI 선택·연결', aliases:['경영플랫폼','경영 플랫폼','management'] },",
   "    { domain:'shop.ekodi.kr', name:'쇼핑플랫폼', group:'Business & Commerce', role:'독립 쇼핑몰 생성·운영', aliases:['쇼핑플랫폼','쇼핑 플랫폼','shop'] },",
   "    { domain:'invest.ekodi.kr', name:'에코디 투자', group:'Business & Commerce', role:'투자 검토·실사·연결', aliases:['투자','invest'] },",
   "    { domain:'ekodi.kr/support', name:'지원사업 AI', group:'Business & Commerce', role:'지원사업 탐색·신청·정산', aliases:['지원사업 ai','지원사업','support'] },",
   "    { domain:'ekodi.kr/money', url:'https://ekodi.kr/money', name:'에코디 머니', group:'Business & Commerce', role:'계좌·자동이체 금융정리 안내', aliases:['머니','money'] },",
-  "    { domain:'publishing.ekodi.kr', name:'출판', group:'Knowledge & Content', role:'출판상담·제작·대행·유통', aliases:['출판','publishing'] },",
+  "    { domain:'publishing.ekodi.kr', name:'에코디출판', group:'Knowledge & Content', role:'출판상담·제작·대행·유통', aliases:['출판','publishing'] },",
   "    { domain:'author.ekodi.kr', name:'크리에이터 AI', group:'Knowledge & Content', role:'글·창작 전반 AI 지원', aliases:['크리에이터 ai','작가ai','creator ai','author'] },",
   "    { domain:'my.ekodi.kr', name:'마이 에코디', group:'Work & Life', role:'개인 활동·서비스 허브', aliases:['마이 에코디','my ekodi','my'] },",
   "    { domain:'ekodi.kr/work', name:'에코디 워크', group:'Work & Life', role:'업무·프로젝트 실행 공간', aliases:['워크','업무','work'] },",
@@ -202,7 +192,7 @@ const adminChecks = {
     "name: '비즈니스 OS'", "name: '에코디서점'", "name: '크리에이터 AI'", "name: '마케팅 AI'", "name: '에너지 AI'"
   ],
   'admin-lazy-features.js': [
-    "domain:'business.ekodi.kr'", "name:'비즈니스 OS'", "domain:'management.ekodi.kr'", "name:'경영플랫폼'",
+    "domain:'business.ekodi.kr'", "name:'비즈니스 OS'", "domain:'management.ekodi.kr'", "name:'에코디경영'",
     "domain:'shop.ekodi.kr'", "name:'쇼핑플랫폼'", "domain:'ekodi.kr/support'", "name:'지원사업 AI'",
     "domain:'author.ekodi.kr'", "name:'크리에이터 AI'", "domain:'energy.ekodi.kr'", "name:'에너지 AI'"
   ],
@@ -221,10 +211,32 @@ for (const [relative, required] of Object.entries(adminChecks)) {
   }
 }
 
+
+/* Official EKODI-owned customer site brands are distinct from generic specialist
+   module labels. Preserve correct site names without weakening the generic
+   prefix-free module/content rule or imposing names on partner tenants. */
+const registry=JSON.parse(fs.readFileSync(path.join(root,'config/ecosystem-services.json'),'utf8'));
+const officialFirstParty=Object.freeze({
+  publishing:'에코디출판',
+  management:'에코디경영',
+  community:'에코디커뮤니티'
+});
+for(const [id,name] of Object.entries(officialFirstParty)){
+  const site=registry.services.find(service=>service.id===id);
+  if(!site||site.name!==name||!String(site.url).startsWith('https://ekodi.kr/'))
+    remaining.push(`config/ecosystem-services.json: ${id} must use own official EKODI site identity`);
+}
+const publisherSource=fs.readFileSync(path.join(root,'scripts/site-chrome.mjs'),'utf8');
+if(!publisherSource.includes("name: '에코디출판'"))
+  remaining.push('scripts/site-chrome.mjs: publisher official identity missing');
+const managerSource=fs.readFileSync(path.join(root,'config/management-platform.json'),'utf8');
+if(JSON.parse(managerSource).platform.name!=='에코디경영')
+  remaining.push('config/management-platform.json: EKODI management official identity missing');
+
 for (const relative of changed) remaining.push(`${relative}: source requires canonical display-name normalization`);
 if (remaining.length) {
-  console.error('Prefix-free display-name validation failed:');
+  console.error('EKODI site-brand and specialist display-name validation failed:');
   for (const item of [...new Set(remaining)]) console.error(`- ${item}`);
   process.exit(1);
 }
-console.log('Platform, specialist AI and admin display names follow the canonical prefix-free policy.');
+console.log('EKODI-owned official site identities and generic specialist display names verified.');
