@@ -196,6 +196,28 @@ Deno.serve(async(req)=>{
       if(data?.error)return json(req,{error:data.error},data.error==="workspace_admin_required"?403:400);
       return json(req,{result:data,workspace:workspaceSlug},200);
     }
+    if(req.method==="GET"&&path==="/trade/commercial"){
+      const workspaceSlug=clip(url.searchParams.get("workspace"),100).toLowerCase()||"ekoditrade";
+      const {data,error}=await auth.db.rpc("trade_commercial_snapshot",{p_workspace_slug:workspaceSlug});
+      if(error)throw error;if(data?.error)return json(req,{error:data.error},403);return json(req,{...data,workspace:workspaceSlug});
+    }
+    if(req.method==="POST"&&path==="/trade/buyers"){
+      const p=await req.json().catch(()=>null);if(!p)return json(req,{error:"invalid_json"},400);
+      const {data,error}=await auth.db.rpc("trade_upsert_buyer",{p_workspace_slug:clip(p.workspace,100).toLowerCase()||"ekoditrade",p_id:p.id||null,p_company_name:clip(p.companyName,240),p_country_code:clip(p.countryCode,8),p_contact_name:clip(p.contactName,160),p_wechat:clip(p.wechat,160),p_email:clip(p.email,254),p_status:clip(p.status,20)||"active"});
+      if(error)throw error;if(data?.error)return json(req,{error:data.error},data.error.includes("forbidden")?403:400);return json(req,{result:data},p.id?200:201);
+    }
+    if(req.method==="POST"&&path==="/trade/quotations"){
+      const p=await req.json().catch(()=>null);if(!p)return json(req,{error:"invalid_json"},400);
+      const n=(value:unknown)=>Number.isFinite(Number(value))?Number(value):0;
+      const {data,error}=await auth.db.rpc("trade_create_quotation",{p_workspace_slug:clip(p.workspace,100).toLowerCase()||"ekoditrade",p_buyer_id:p.buyerId,p_engagement_id:p.engagementId||null,p_supplier_id:p.supplierId||null,p_currency:clip(p.currency,8)||"USD",p_quantity:n(p.quantity)||1,p_unit_price:n(p.unitPrice),p_purchase:n(p.purchase),p_shipping:n(p.shipping),p_inspection:n(p.inspection),p_packing:n(p.packing),p_insurance:n(p.insurance),p_other:n(p.other),p_valid_until:p.validUntil||null,p_status:clip(p.status,20)||"draft",p_notes:clip(p.notes,6000)});
+      if(error)throw error;if(data?.error)return json(req,{error:data.error},data.error.includes("forbidden")?403:400);return json(req,{result:data},201);
+    }
+    if(req.method==="POST"&&path==="/trade/contracts"){
+      const p=await req.json().catch(()=>null);if(!p)return json(req,{error:"invalid_json"},400);
+      const n=(value:unknown)=>Number.isFinite(Number(value))?Number(value):0;
+      const {data,error}=await auth.db.rpc("trade_create_contract",{p_workspace_slug:clip(p.workspace,100).toLowerCase()||"ekoditrade",p_quotation_id:p.quotationId,p_status:clip(p.status,30)||"preparing",p_deposit:n(p.deposit),p_balance:n(p.balance),p_delivery_date:p.deliveryDate||null,p_notes:clip(p.notes,6000)});
+      if(error)throw error;if(data?.error)return json(req,{error:data.error},data.error.includes("forbidden")?403:400);return json(req,{result:data},201);
+    }
     if(req.method==="POST"&&path==="/trade/partner/claim"){
       const payload=await req.json().catch(()=>({}));const workspaceSlug=clip(payload.workspace,100).toLowerCase()||"ekoditrade";
       const {data,error}=await auth.db.rpc("trade_claim_company_memberships",{p_workspace_slug:workspaceSlug});
