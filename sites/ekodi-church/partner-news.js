@@ -56,6 +56,8 @@
       </div>
     </article>`;
   }
+  // 공개 전(404·410)과 일시적 장애(5xx·네트워크)를 구분하기 위한 표시.
+  class NotPublishedYet extends Error{constructor(){super('partner news not published yet');this.name='NotPublishedYet'}}
   function setStatus(message,visible=true){
     if(!status)return;
     status.textContent=message||'';
@@ -80,6 +82,11 @@
   async function load(){
     try{
       const response=await fetch(endpoint,{headers:{accept:'application/json'},cache:'no-store',credentials:'omit'});
+      // 404·410 은 일시적 장애가 아니라 "아직 공개되지 않았다" 는 뜻이다. 그런데도
+      // '잠시 후 다시 확인해 주세요' 를 보여주면 방문자에게 거짓을 말하게 된다.
+      // 2026-11-12 운영 측정: /api/partner-news/public 이 404 이고, 교회 홈을 처음
+      // 방문하는 모든 사람이 그 오류 문구를 봤다(실행 43225492451 의 liveRequests).
+      if(response.status===404||response.status===410)throw new NotPublishedYet();
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const data=await response.json();
       if(data?.contract?.publicState!=='PUBLISHED')throw new Error('publication contract mismatch');
@@ -91,6 +98,11 @@
       if(cached?.length){
         render(cached);
         setStatus('',false);
+      }else if(error instanceof NotPublishedYet){
+        // 준비 중임을 그대로 말한다. 구역을 숨기지 않는 것은 설계된 자리를
+        // 남겨두기 위한 것이고, 내용을 꾸며내지도 않는다.
+        host.innerHTML=`<p class="partner-news-empty" role="status">${copy.empty}</p>`;
+        setStatus(copy.empty);
       }else{
         host.innerHTML=`<p class="partner-news-empty" role="status">${copy.error}</p>`;
         setStatus('',false);
