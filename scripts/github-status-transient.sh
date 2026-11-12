@@ -18,8 +18,38 @@ ekodi_github_status_note() {
       "$kind" "$code" "$attempts" >> "$GITHUB_STEP_SUMMARY" || :
   fi
 }
+# EKODI-STATUS-RATE-WAIT-001
+# Measured 2026-11-12 on the orchestration gate of a recovery PR:
+#   [EKODI GitHub] {"status":403,"classification":"primary_rate_limit",
+#                   "resource":"core","remaining":0,"limit":5000,"resetAt":...}
+#   [EKODI GitHub] fail closed: HTTP 403, curl rc=22
+# Every test had passed; only this status publication failed, and it failed with
+# the reset time in hand. The release parked.
+#
+# So: wait once, but ONLY when the response itself says when to come back
+# (retry-after, or x-ratelimit-reset), and only when that is inside the cap.
+# No header means no wait — guessing a delay would turn a definite refusal into
+# a silent stall, and a permission 403 must never wait at all.
+ekodi_github_status_wait_seconds() {
+  local headers="${1:-}" cap="${2:-150}" reset='' retry='' now wait
+  [[ -f "$headers" ]] || return 0
+  [[ "$cap" =~ ^[0-9]{1,4}$ ]] || cap=150
+  retry=$(grep -Eio '^retry-after:[[:space:]]*[0-9]+' "$headers" 2>/dev/null | grep -Eo '[0-9]+$' | head -1)
+  reset=$(grep -Eio '^x-ratelimit-reset:[[:space:]]*[0-9]+' "$headers" 2>/dev/null | grep -Eo '[0-9]+$' | head -1)
+  now=$(date -u +%s)
+  if [[ -n "$retry" ]]; then
+    wait="$retry"
+  elif [[ -n "$reset" ]]; then
+    wait=$((reset - now + 2))
+  else
+    return 0
+  fi
+  [[ "$wait" -le 0 ]] && wait=1
+  [[ "$wait" -gt "$cap" ]] && return 0
+  printf '%s' "$wait"
+}
 github_status_curl() {
-  local body headers http rc attempt=0 marker=''
+  local body headers http rc attempt=0 marker='' waited=0
   # Block further status calls in this exact job after measured quota exhaustion.
   # GitHub permissions 403 is not automatically a quota error.
   if [[ -n "${RUNNER_TEMP:-}" && -d "${RUNNER_TEMP:-}" &&
@@ -79,6 +109,20 @@ github_status_curl() {
       status_kind='transient_exhausted'
     elif [[ "$rc" -ne 0 ]]; then
       status_kind='transport_error'
+    fi
+    # Wait once for a measured quota reset, then one retry. Only quota-classified
+    # refusals qualify: permission_denied, authentication_denied and
+    # validation_denied fall straight through to fail closed as before.
+    if [[ "$waited" -eq 0 ]] &&
+       [[ "$status_kind" == 'quota_primary' || "$status_kind" == 'quota_secondary' || "$status_kind" == 'rate_limited_429' ]]; then
+      local wait_s
+      wait_s=$(ekodi_github_status_wait_seconds "$headers" "${EKODI_STATUS_RATE_WAIT_CAP_S:-150}")
+      if [[ -n "$wait_s" ]]; then
+        waited=1
+        printf '[EKODI GitHub] %s resets in %ss; waiting once then retrying once\n' "$status_kind" "$wait_s" >&2
+        sleep "$wait_s"
+        continue
+      fi
     fi
     ekodi_github_status_note "$status_kind" "$http" "$attempt"
     # Record only quota-classified responses; no tokens or response data stored.
