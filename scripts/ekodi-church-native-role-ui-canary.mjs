@@ -93,6 +93,16 @@ try{
   assert.equal(landing?.status(),200,'live Church public homepage must respond 200');
   assert.equal(new URL(page.url()).origin,ORIGIN,'must remain at canonical EKODI origin');
   await page.waitForFunction(()=>document.readyState==='complete',null,{timeout:15000});
+  // 주보·PPT 구역([data-church-weekly] = section.church-weekly-focus#weekly-worship)은
+  // 교회 홈의 압축 내비게이션 때문에 열기 전에는 display:none 이다
+  // (church-section-nav.js 가 해시를 보고 church-section-active 를 토글하고,
+  // church-compact-navigation.css 가 나머지 구역을 display:none!important 로 둔다).
+  // 열지 않고 그 안의 날짜 선택을 조작하면 "element is not visible" 로 30초 뒤
+  // 시간초과한다 — 실행 43219675210 에서 실제로 그랬다. 운영 결함이 아니라 검사가
+  // 틀린 화면 상태를 본 것이므로, 방문자와 같은 방식으로 구역을 먼저 연다.
+  await page.evaluate(()=>{location.hash='#weekly-worship';});
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('#weekly-worship')).display!=='none',
+    null,{timeout:12000});
   // Read-only real production checks: dated packet switching and responsive UI.
   // No synthetic bearer is present until after these checks finish.
   const weekly=page.locator('[data-church-weekly]');
