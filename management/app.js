@@ -376,6 +376,55 @@ function renderGrowthWorkspace(){
     item.append(name,value);list.append(item);
   }
   host.append(list);
+  // Only the already-authorized store snapshot may supply readiness metrics.
+  // SEO impressions, attribution and external platform sales remain unknown.
+  if(space.kind==='store'&&validSpaceUrl(space.slug)){
+    const probe=document.createElement('button');probe.type='button';
+    probe.className='secondary';probe.textContent='공식 매장 운영지표 조회';
+    const output=document.createElement('div');output.className='growth-store-readiness';
+    output.setAttribute('role','status');output.setAttribute('aria-live','polite');
+    probe.addEventListener('click',async()=>{
+      if(!activeSession()||selectedVerifiedWorkspace()?.id!==space.id
+        ||selectedVerifiedWorkspace()?.slug!==space.slug)return;
+      const token=state.session.accessToken,actor=state.session.user.id,epoch=state.spacesRequest;
+      const isCurrent=()=>activeSession()&&state.session.accessToken===token
+        &&state.session.user.id===actor&&state.spacesRequest===epoch
+        &&selectedVerifiedWorkspace()?.id===space.id
+        &&selectedVerifiedWorkspace()?.slug===space.slug
+        &&new Set(state.selection?.modules||[]).has('growth')
+        &&output.isConnected;
+      probe.disabled=true;output.replaceChildren();
+      output.textContent='해당 매장의 공식 운영 정보를 확인하고 있습니다.';
+      try{
+        const response=await fetch('/api/store-summary?slug='+encodeURIComponent(space.slug),{
+          method:'GET',headers:{authorization:'Bearer '+token,accept:'application/json'},cache:'no-store'
+        });
+        if(!isCurrent())return;
+        if(response.status===401){clearSession();return}
+        if(!response.ok)throw new Error('readiness_unavailable');
+        const data=await response.json();
+        if(!isCurrent())return;
+        if(!storeSummaryIsValid(data,space))throw new Error('readiness_contract_mismatch');
+        const source=document.createElement('p');source.className='note';
+        source.textContent='공식 EKODI 매장 원본 · 현재 공간 전용 · 읽기 전용';
+        const summary=document.createElement('dl');summary.className='store-kpi-grid';
+        summary.append(
+          storeKpiRow('메뉴 원본',data.summary.canonicalMenuCount),
+          storeKpiRow('판매채널 등록',data.summary.platformListingCount),
+          storeKpiRow('연결 채널',data.summary.connectedChannelCount),
+          storeKpiRow('주문 설정',data.summary.orderEnabled?'활성':'비활성')
+        );
+        const caveat=document.createElement('p');caveat.className='note';
+        caveat.textContent='이는 매장 운영 준비 지표이며 검색노출·광고 효과·전체 주문액·매출 성과가 아닙니다.';
+        output.replaceChildren(source,summary,caveat);
+      }catch(error){
+        if(!isCurrent())return;
+        output.textContent='공식 운영지표를 확인할 수 없습니다. 미연결 상태로 유지합니다.';
+        console.error('management growth verified store readiness',error);
+      }finally{if(isCurrent())probe.disabled=false}
+    });
+    host.append(probe,output);
+  }
   const isManager=['owner','admin','workspace_admin','tenant_admin','store_owner','platform_admin','manager'].includes(String(space.role||'').toLowerCase());
   const note=document.createElement('p');note.className='note';
   note.textContent=isManager
