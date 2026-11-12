@@ -469,3 +469,11 @@ body:has(.hero-split) .mission-site-header nav a{font-size:clamp(.81rem,.9vw,.89
 .mission-calendar-legend span{display:inline-flex;gap:.32rem;align-items:center}
 .mission-calendar-legend span::before{content:"";display:inline-block;width:.43rem;height:.43rem;border-radius:50%;background:#ae8438}
 .mission-calendar-legend span[data-mission-calendar-origin="ekodimission"]::before{background:#27765b}
+/* 연혁 공통 표기: 연도 + (월·일) 개조식 */
+.history-items{list-style:none;margin:0;padding:0;display:grid;gap:.4rem}
+.history-items li{display:grid;grid-template-columns:6.6rem minmax(0,1fr);gap:.6rem;align-items:baseline;line-height:1.5}
+.history-items .history-day{font-variant-numeric:tabular-nums;font-weight:750;color:var(--accent);font-size:.92rem;white-space:nowrap}
+.history-items li>span:last-child{position:relative;padding-left:.9rem;word-break:keep-all;overflow-wrap:anywhere}
+.history-items li>span:last-child::before{content:"·";position:absolute;left:0;font-weight:800;color:var(--muted)}
+.mission-history-entry.history-year{align-items:baseline}
+@media(max-width:620px){.mission-history-entry.history-year{grid-template-columns:52px minmax(0,1fr);gap:.6rem}.history-items li{grid-template-columns:5.6rem minmax(0,1fr);gap:.4rem}.history-items .history-day{font-size:.84rem}.history-items li>span:last-child{font-size:.95rem}}

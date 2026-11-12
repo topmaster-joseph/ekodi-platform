@@ -30,8 +30,9 @@ const sample = {
 test('public history renders verified timeline without private source metadata', () => {
   const html = renderPublicHistory([sample]);
   assert.match(html, /지나온 길/);
-  assert.match(html, /2018년 3월 14일/);
-  assert.match(html, /문서 확인/);
+  assert.match(html, /<time class="history-day">03\.14<\/time>/);
+  assert.match(html, /id="history-2018"/);
+  assert.doesNotMatch(html, /문서 확인|역사 아카이브|사역의 흐름/);
   assert.match(html, /한국외국인선교회 무안지부/);
   assert.doesNotMatch(html, /secret-internal-reference/);
   assert.doesNotMatch(html, /내부 검증 메모/);
