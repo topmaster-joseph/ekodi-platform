@@ -172,3 +172,18 @@ test('BBQ operator cards remain private templates; no default quantity or unauth
   assert.match(script,/미승인 초안/);
   assert.match(script,/현재 매장 기준메뉴 원장이 없습니다/);
 });
+
+test('BBQ typed recipe text prints in full without HTML injection or textarea clipping',async()=>{
+  const script=await storeAdminScript().text();
+  const css=await storeAdminCss().text();
+  assert.match(script,/data-bbq-print-value/);
+  assert.match(script,/input\.closest\('\.bbqcg-card-field'\)/);
+  assert.match(script,/preview\.textContent=String\(value\|\|''\)\.trim\(\)\|\|'미입력'/);
+  assert.match(script,/미입력/);
+  assert.match(css,/\.bbqcg-print-value\{display:none\}/);
+  assert.match(css,/@media print/);
+  assert.match(css,/\.bbqcg-card-field textarea,?/);
+  assert.match(css,/\.bbqcg-card-field \.bbqcg-print-value\{display:block!important;white-space:pre-wrap/);
+  assert.doesNotMatch(script,/preview\.innerHTML=/);
+  assert.doesNotThrow(()=>new Function(script));
+});

@@ -887,7 +887,7 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
     const noMenu='<p class="bbqcg-card-warning">'+(canonicalMenus.length?'':'현재 매장 기준메뉴 원장이 없습니다. 실제 메뉴 등록 후 작성하세요.')+'</p>';
     const editorField=(label,key,kind='input',type='text')=>'<label class="bbqcg-card-field">'+label+(kind==='textarea'
       ?'<textarea data-bbq-field="'+key+'" rows="3" maxlength="1200" placeholder="본사 승인 자료 확인 후 입력"></textarea>'
-      :'<input data-bbq-field="'+key+'" type="'+type+'" '+(type==='number'?'min="0" max="100000" step="0.1" ':'')+'maxlength="240" placeholder="확인 후 입력">')+'</label>';
+      :'<input data-bbq-field="'+key+'" type="'+type+'" '+(type==='number'?'min="0" max="100000" step="0.1" ':'')+'maxlength="240" placeholder="확인 후 입력">')+'<span class="bbqcg-print-value" data-bbq-print-value="'+key+'">미입력</span></label>';
     const tabs=[...sections,{id:'menuRecipe',label:'메뉴별 레시피'},{id:'portion',label:'정량·용량표시'}];
     const recipeFields=editorField('공식 문서번호·출처','source')
       +editorField('승인 버전·확인일','revision')
@@ -923,6 +923,14 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
       const update=()=>{
         const chosen=selectedMenuNames.get(select.value)||'미확인';
         card.querySelector('[data-bbq-selected-menu]').textContent=chosen;
+        for(const input of fields){
+          const preview=input.closest('.bbqcg-card-field')?.querySelector('[data-bbq-print-value]');
+          if(preview){
+            const value=input.tagName==='SELECT'?input.options[input.selectedIndex]?.textContent:String(input.value||'');
+            // Safe DOM text, never execute/parse approved-source recipe notes as HTML.
+            preview.textContent=String(value||'').trim()||'미입력';
+          }
+        }
         if(card.dataset.bbqCard!=='portion')return;
         const positive=name=>{const raw=field(name)?.value||'';const value=Number(raw);return raw!==''&&Number.isFinite(value)&&value>0?value:null};
         const previous=positive('previous'),declared=positive('declared'),measured=positive('measured');
@@ -1101,6 +1109,14 @@ const BBQCG_COMPACT_ADMIN_CSS=`
 }
 `;
 const BBQCG_PRINT_CSS=`
+
+:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-print-value{display:none}
+@media print{
+ body.bbqcg-print-mode #bbqcgHandbook .bbqcg-card-field input,
+ body.bbqcg-print-mode #bbqcgHandbook .bbqcg-card-field textarea,
+ body.bbqcg-print-mode #bbqcgHandbook .bbqcg-card-field select{display:none!important}
+ body.bbqcg-print-mode #bbqcgHandbook .bbqcg-card-field .bbqcg-print-value{display:block!important;white-space:pre-wrap;overflow-wrap:anywhere;padding:6px 0}
+}
 :root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-editor{display:grid;gap:10px}
 :root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 :root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-field{display:grid;gap:5px;font-size:13px;font-weight:700;color:#37513f}
