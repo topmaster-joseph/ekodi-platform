@@ -16,7 +16,7 @@ test('anonymous owner page starts with sidebar hidden, login content visible', (
 test('layout frees hidden sidebar column but keeps authenticated layout unchanged', () => {
   assert.match(html, /\.shell:has\(> #ownerSidebar\[hidden\]\)\{display:block\}/);
   assert.match(html, /\.shell:has\(> #ownerSidebar\[hidden\]\) > \.main\{[^}]*max-width:640px/);
-  assert.doesNotMatch(html, /\.shell\{display:block\}/, 'do not flatten the authenticated shell');
+  assert.match(html, /\.shell\{display:grid;/, 'authenticated shell retains its original grid');
 });
 
 test('anonymous Korean text stays intact across viewports', () => {
