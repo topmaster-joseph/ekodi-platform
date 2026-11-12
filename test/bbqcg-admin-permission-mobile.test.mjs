@@ -148,7 +148,7 @@ test('BBQ menu-specific recipe and shrinkflation portion cards use real tenant m
     assert.ok(script.includes(marker),'missing card field: '+marker);
   assert.match(script,/Number\.isFinite\(value\)\&\&value>0/);
   assert.match(script,/if\(!select\.value\)notes\.push\('메뉴 미선택'\)/);
-  assert.match(script,/if\(kind\&\&declared!==null\&\&measured!==null\&\&stage\&\&\(kind!=='chicken'\|\|stage==='조리 전'\)\)/);
+  assert.ok(script.includes("const comparable=Boolean(kind&&(kind!=='chicken'||(stage==='조리 전'&&unit==='g')))"));
   assert.match(script,/card\.querySelector\('\[data-bbq-portion-result\]'\)\.textContent/);
   assert.match(script,/for\(const input of fields\)\{if\(input\.tagName==='SELECT'\)input\.selectedIndex=0;else input\.value=''\}/);
   assert.match(script,/이 입력은 서버·브라우저 저장소에 저장되지 않습니다/);
@@ -213,10 +213,21 @@ test('BBQ capacity card prints unit/basis/type and suppresses invalid chicken co
   const css=await storeAdminCss().text();
   for(const key of ['kind','unit','stage'])
     assert.match(js,new RegExp('data-bbq-print-value="'+key+'"'),key+' print mirror');
-  assert.match(js,/if\(kind\&\&previous!==null\&\&declared!==null\&\&\(kind!=='chicken'\|\|stage==='조리 전'\)\)/);
-  assert.match(js,/if\(kind\&\&declared!==null\&\&measured!==null\&\&stage\&\&\(kind!=='chicken'\|\|stage==='조리 전'\)\)/);
+  assert.ok(js.includes("if(comparable&&previous!==null&&declared!==null)"));
+  assert.ok(js.includes("if(comparable&&declared!==null&&measured!==null&&stage)"));
   assert.match(js,/preview\.textContent=String\(value\|\|''\)\.trim\(\)\|\|'미입력'/);
   assert.match(css,/\.bbqcg-print-value\{display:none\}/);
   assert.match(css,/\.bbqcg-card-field \.bbqcg-print-value\{display:block!important;white-space:pre-wrap/);
   assert.doesNotThrow(()=>new Function(js));
+});
+
+test('BBQ chicken ho-size range and piece units are recorded without false gram comparisons',async()=>{
+  const script=await storeAdminScript().text();
+  assert.ok(script.includes('<option value="호">호(원료육 중량범위)</option>'));
+  assert.ok(script.includes("if(unit==='호')notes.push('호수별 원료육 g 중량범위·본사 승인 문구 확인 필요')"));
+  assert.ok(script.includes("if(kind==='chicken'&&!comparable)notes.push('치킨 중량의 증감률·실측 차이 계산은 조리 전 g 기준만 지원')"));
+  assert.ok(script.includes("const comparable=Boolean(kind&&(kind!=='chicken'||(stage==='조리 전'&&unit==='g')))"));
+  for(const key of ['kind','unit','stage'])assert.ok(script.includes('data-bbq-print-value="'+key+'"'));
+  assert.match(script,/법령 위반 자동 판정 아님/);
+  assert.doesNotThrow(()=>new Function(script));
 });
