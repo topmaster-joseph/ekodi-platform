@@ -39,7 +39,7 @@ jobs:
           (github.event.workflow_run.name == 'EKODI Orchestrated PR Convergent Merge' && contains(github.event.workflow_run.display_title, 'seasonal'))
         )
       )
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 22
     steps:
       - name: Checkout EKODI native verifier
