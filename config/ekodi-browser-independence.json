@@ -43,5 +43,25 @@
     "redactDiagnostics": true,
     "realCanaryRequired": true,
     "agentAutoUpdateRequiresLocalBootstrapAndApprovedSha256Manifest": true
+  },
+  "publicBrandAudit": {
+    "mode": "native-readonly",
+    "source": "config/ecosystem-services.json",
+    "command": "node scripts/verify-ekodi-official-brands-native.mjs --run",
+    "planCommand": "node scripts/verify-ekodi-official-brands-native.mjs --plan",
+    "canonicalOriginOnly": true,
+    "publicLabelMaxCharacters": 80,
+    "maximumBrowserActions": 30,
+    "perNavigationDOMAssertion": true,
+    "allowPrivateSessionOrCookie": false,
+    "noExternalBrowserFallback": true,
+    "ownerStatusGate": "live-by-default-preparing-only-with-explicit-operator-flag",
+    "profiles": [
+      "compact-mobile",
+      "mobile-portrait",
+      "tablet",
+      "desktop"
+    ],
+    "receipts": "native-worker-sanitized-summary-and-screenshot-artifacts"
   }
 }

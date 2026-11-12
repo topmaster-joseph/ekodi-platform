@@ -29,7 +29,8 @@ export function planEkodiIndependentBrowser(request={},environment={}) {
     batch=planNativeBrowserBatch({
       taskId:request.taskId||'ekodi-native',
       paths:request.paths||[request.path||'/'],deviceProfile:request.deviceProfile||'desktop',
-      screenshots:request.screenshots===true,allowMutation:false,timeoutMs:request.timeoutMs
+      screenshots:request.screenshots===true,allowMutation:false,timeoutMs:request.timeoutMs,
+      expectedTextByPath:request.expectedTextByPath
     });
   } catch {return fail('EKODI_BROWSER_TASK_VALIDATION_FAILED');}
   if(environment.cloudRuntimeReady===false)return fail('EKODI_NATIVE_CLOUD_RUNTIME_REQUIRED');
@@ -53,6 +54,7 @@ export async function executeEkodiIndependentBrowser(request,environment={},opti
         ...selection.plan.task.actions.filter(x=>x.type==='goto').map(x=>x.path)],
       deviceProfile:selection.plan.task.deviceProfile,
       screenshots:selection.plan.screenshotsPlanned>0,
+      expectedTextByPath:selection.plan.expectedTextByPath,
       timeoutMs:selection.plan.task.timeoutMs
     },{...(options.runner?{runner:options.runner}:{}),
       ...(options.artifactRoot?{artifactRoot:options.artifactRoot}:{})});
