@@ -61,6 +61,24 @@ test('증거에는 상한이 있다', () => {
   assert.deepEqual(bound([]), []);
 });
 
+test('겹침 판정이 순서 색인과 같은 요소를 본다', () => {
+  // find() 는 직계자녀 색인이다. 겹침 판정이 문서 전역 querySelector 를 쓰면
+  // 숨겨진 탭 패널 안의 .dv-share-row(2026-10-27 84837a632 이후 존재)를 집고,
+  // 숨겨진 요소의 사각형은 0×0 이므로 판정이 늘 거짓이 된다. 실제로 그렇게 깨졌다.
+  assert.match(SRC, /const notice=el\.querySelector\(':scope > \.dv-notice'\)/);
+  assert.match(SRC, /const share=el\.querySelector\(':scope > \.dv-share-row'\)/);
+  assert.doesNotMatch(SRC, /querySelector\('\.dv-share-row'\)/,
+    '전역 선택자로 돌아가서는 안 된다');
+  assert.doesNotMatch(SRC, /querySelector\('\.dv-notice'\)/,
+    '전역 선택자로 돌아가서는 안 된다');
+});
+
+test('직계자녀 색인 쪽은 그대로다', () => {
+  // 선택자만 좁혔고 순서 판정 방식은 바꾸지 않았다.
+  assert.match(SRC, /const order=\[\.\.\.el\.children\]\.map/);
+  assert.match(SRC, /const find=klass=>order\.findIndex/);
+});
+
 test('순서 증거에 페이지 본문을 쏟지 않는다', () => {
   // body/innerText 는 이미 다른 검사가 상한을 두고 쓴다. 여기 끌어오면 로그가 터진다.
   assert.doesNotMatch(ORDER_CHECK, /body:|innerText|scriptureText/,

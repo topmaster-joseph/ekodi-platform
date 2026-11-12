@@ -54,8 +54,13 @@ try{
            const order=[...el.children].map(n=>Array.from(n.classList||[]).join(' '));
            const find=klass=>order.findIndex(text=>text.split(' ').includes(klass));
            const scripture=el.querySelector('.dv-scripture-section');
-           const notice=el.querySelector('.dv-notice');
-           const share=el.querySelector('.dv-share-row');
+           // 순서 색인(find)은 직계자녀만 본다. 겹침 판정도 같은 요소를 봐야 한다.
+           // 2026-10-27 이후 탭 패널 안에도 .dv-share-row 가 생겼고(84837a632 등),
+           // 그것이 문서순서상 더 앞이라 querySelector 가 숨겨진 패널의 줄을 집었다.
+           // 숨겨진 요소의 사각형은 0×0 이므로 겹침 판정이 늘 거짓이 된다.
+           // 측정된 실패: shareRect {top:0,bottom:0,height:0}, 나머지 세 조건은 참.
+           const notice=el.querySelector(':scope > .dv-notice');
+           const share=el.querySelector(':scope > .dv-share-row');
            const tabs=[...el.querySelectorAll('.dv-tab')].map(n=>({label:n.textContent,hidden:n.hidden}));
            return {
              scriptureText:scripture?.innerText||'',notice:notice?.innerText||'',tabs,
