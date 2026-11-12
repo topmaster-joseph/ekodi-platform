@@ -40,41 +40,61 @@ function responseJson(data, status = 200, method = 'GET') {
   });
 }
 
-function verificationMeta(status) {
-  const map = {
-    documented: ['문서 확인', 'verified'],
-    contextual: ['맥락 기록', 'contextual'],
-    'oral-history': ['구술 기록', 'oral'],
-    'needs-review': ['추가 검토', 'review'],
-  };
-  return map[status] || map['needs-review'];
+function pad2(value) {
+  return String(value).padStart(2, '0');
 }
 
-function publicEntryCard(entry) {
-  const [verificationLabel, verificationClass] = verificationMeta(entry.verification_status);
-  const body = clean(entry.body_text, 20000);
-  return `<article class="history-item${Number(entry.featured) ? ' featured' : ''}">
-    <div class="history-rail" aria-hidden="true"><span></span></div>
-    <div class="history-card">
-      <div class="history-meta">
-        <time>${escapeHtml(entry.date_label || entry.start_date || '')}</time>
-        <span class="era">${escapeHtml(entry.era || '')}</span>
-        <span class="verification ${verificationClass}">${verificationLabel}</span>
-      </div>
-      <h2>${escapeHtml(entry.title)}</h2>
-      <p class="summary">${escapeHtml(entry.summary)}</p>
-      ${body ? `<p class="body-copy">${escapeHtml(body)}</p>` : ''}
-      <div class="detail-row">
-        ${entry.organization ? `<span>${escapeHtml(entry.organization)}</span>` : ''}
-        ${entry.place ? `<span>${escapeHtml(entry.place)}</span>` : ''}
-      </div>
-    </div>
-  </article>`;
+// 연혁 공통 표기: 연도별로 묶고, 확인된 월·일만 옆에 표시한 뒤 제목을 개조식으로 나열한다.
+export function historyDayLabel(entry = {}) {
+  const label = clean(entry.date_label, 120);
+  const start = clean(entry.start_date, 20);
+  const end = clean(entry.end_date, 20);
+  if (label === '현재') return '현재';
+  const since = /부터\s*$/.test(label) ? '~' : '';
+  const day = label.match(/\d{4}년\s*(\d{1,2})월\s*(\d{1,2})일/);
+  const month = label.match(/\d{4}년\s*(\d{1,2})월(?!\s*\d)/);
+  const term = label.match(/\d{4}년\s*(\d)학기/);
+  let text = '';
+  if (day) text = `${pad2(day[1])}.${pad2(day[2])}`;
+  else if (month) text = `${Number(month[1])}월`;
+  else if (term) text = `${term[1]}학기`;
+  else if (!label && /^\d{4}-\d{2}-\d{2}$/.test(start)) text = `${start.slice(5, 7)}.${start.slice(8, 10)}`;
+  else if (!label && /^\d{4}-\d{2}$/.test(start)) text = `${Number(start.slice(5, 7))}월`;
+  if (text && day && /^\d{4}-\d{2}-\d{2}$/.test(end) && end > start) {
+    text += '–' + (end.slice(0, 7) === start.slice(0, 7) ? end.slice(8, 10) : `${end.slice(5, 7)}.${end.slice(8, 10)}`);
+  }
+  return text ? text + since : '';
+}
+
+function historyYear(entry = {}) {
+  const match = clean(entry.start_date, 20).match(/^(\d{4})/) || clean(entry.date_label, 120).match(/(\d{4})년/);
+  return match ? match[1] : '';
+}
+
+export function groupHistoryByYear(entries = []) {
+  const groups = new Map();
+  const sorted = [...entries].sort((a, b) => clean(b.start_date).localeCompare(clean(a.start_date)) || Number(a.sort_order || 0) - Number(b.sort_order || 0));
+  for (const entry of sorted) {
+    const year = historyYear(entry) || '기타';
+    if (!groups.has(year)) groups.set(year, []);
+    groups.get(year).push(entry);
+  }
+  for (const list of groups.values()) list.sort((a, b) => clean(a.start_date).localeCompare(clean(b.start_date)) || Number(a.sort_order || 0) - Number(b.sort_order || 0));
+  return [...groups.entries()];
+}
+
+function publicYearGroup([year, list]) {
+  const items = list.map(entry => {
+    const day = historyDayLabel(entry);
+    const dayHtml = day ? `<time class="history-day">${escapeHtml(day)}</time>` : '<span class="history-day" aria-hidden="true"></span>';
+    return `<li>${dayHtml}<span>${escapeHtml(entry.title)}</span></li>`;
+  }).join('');
+  const anchor = /^\d{4}$/.test(year) ? ` id="history-${year}"` : '';
+  return `<li class="history-year"${anchor}><div class="history-year-label"><time${/^\d{4}$/.test(year) ? ` datetime="${year}"` : ''}>${escapeHtml(year)}</time></div><ul class="history-items">${items}</ul></li>`;
 }
 
 export function renderPublicHistory(entries = []) {
-  const cards = entries.map(publicEntryCard).join('');
-  const count = entries.length;
+  const cards = groupHistoryByYear(entries).map(publicYearGroup).join('');
   return `<!doctype html>
 <html lang="ko">
 <head>
@@ -84,7 +104,7 @@ export function renderPublicHistory(entries = []) {
 <meta name="description" content="한 사람의 부르심에서 대학과 지역교회, 선교 공동체와 에코디교회로 이어진 사역의 길을 기록합니다.">
 <link rel="canonical" href="https://ekodi.kr/ekodichurch/history">
 <style>
-:root{--ink:#15231d;--muted:#637068;--line:#dfe7e2;--paper:#f8faf8;--card:#fff;--green:#1f6a4b;--green-soft:#eaf4ee;--amber:#855b11;--amber-soft:#fff6df;--blue:#355d85;--blue-soft:#eef5fb;--radius:22px}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(180deg,#f4f8f5 0,#fff 30%,#f7f8f4 100%);color:var(--ink);font-family:Pretendard,"Noto Sans KR",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.72}.shell{width:min(980px,calc(100% - 32px));margin:0 auto}.topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0 10px;gap:16px}.brand{text-decoration:none;color:var(--ink);font-weight:800;letter-spacing:-.03em}.back{text-decoration:none;color:var(--muted);font-size:14px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:#fff}.hero{padding:72px 0 56px}.eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--green);font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.eyebrow:before{content:"";width:28px;height:1px;background:currentColor}.hero h1{font-size:clamp(42px,8vw,76px);line-height:1.03;letter-spacing:-.065em;margin:18px 0 24px}.hero p{font-size:clamp(17px,2.5vw,21px);max-width:720px;margin:0;color:#3e4b44;letter-spacing:-.025em}.principle{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:30px 0 0}.principle div{padding:18px 19px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.78)}.principle strong{display:block;font-size:13px;margin-bottom:4px}.principle span{font-size:13px;color:var(--muted)}.intro{padding:34px;border-radius:var(--radius);background:#173e2e;color:#f4fbf6;margin-bottom:60px;box-shadow:0 20px 55px rgba(23,62,46,.12)}.intro p{margin:0;font-size:18px;letter-spacing:-.02em}.intro p+p{margin-top:14px;color:#d6e7dd;font-size:15px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin:0 0 28px}.section-head h2{font-size:28px;letter-spacing:-.045em;margin:0}.section-head p{margin:0;color:var(--muted);font-size:14px}.timeline{position:relative;padding-bottom:30px}.history-item{display:grid;grid-template-columns:34px 1fr;gap:18px;position:relative}.history-rail{position:relative;display:flex;justify-content:center}.history-rail:after{content:"";position:absolute;top:16px;bottom:-16px;width:1px;background:var(--line)}.history-item:last-child .history-rail:after{display:none}.history-rail span{position:relative;z-index:1;width:13px;height:13px;margin-top:25px;border-radius:50%;background:#fff;border:3px solid #8aa596;box-shadow:0 0 0 5px #f7faf8}.history-item.featured .history-rail span{border-color:var(--green);background:var(--green)}.history-card{padding:22px 24px 25px;margin:0 0 19px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 8px 28px rgba(24,45,34,.045)}.history-item.featured .history-card{border-color:#c9ddd1}.history-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:9px}.history-meta time{font-weight:800;font-size:14px}.era,.verification{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750}.era{background:#f0f3f1;color:#5b685f}.verification.verified{background:var(--green-soft);color:var(--green)}.verification.contextual{background:var(--blue-soft);color:var(--blue)}.verification.oral{background:#f4effa;color:#68448c}.verification.review{background:var(--amber-soft);color:var(--amber)}.history-card h2{font-size:22px;line-height:1.3;letter-spacing:-.04em;margin:0 0 10px}.summary{font-size:16px;margin:0;color:#34433b}.body-copy{font-size:14px;color:var(--muted);margin:12px 0 0;padding-top:12px;border-top:1px solid #eef1ef}.detail-row{display:flex;flex-wrap:wrap;gap:8px 15px;margin-top:15px;color:#758078;font-size:12px}.detail-row span:before{content:"·";margin-right:6px}.empty{padding:42px;text-align:center;border:1px dashed var(--line);border-radius:20px;color:var(--muted)}.footer{margin:60px 0 28px;padding:28px 0;border-top:1px solid var(--line);color:var(--muted);font-size:13px}.footer strong{color:var(--ink)}@media(max-width:700px){.shell{width:min(100% - 22px,980px)}.topbar{padding-top:14px}.hero{padding:52px 4px 40px}.principle{grid-template-columns:1fr}.intro{padding:24px;margin-bottom:46px}.history-item{grid-template-columns:23px 1fr;gap:9px}.history-card{padding:19px 18px}.section-head{display:block}.section-head p{margin-top:6px}.detail-row{display:block}.detail-row span{display:block;margin-top:3px}}
+:root{--ink:#15231d;--muted:#637068;--line:#dfe7e2;--paper:#f8faf8;--card:#fff;--green:#1f6a4b;--green-soft:#eaf4ee;--amber:#855b11;--amber-soft:#fff6df;--blue:#355d85;--blue-soft:#eef5fb;--radius:22px}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(180deg,#f4f8f5 0,#fff 30%,#f7f8f4 100%);color:var(--ink);font-family:Pretendard,"Noto Sans KR",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.72}.shell{width:min(980px,calc(100% - 32px));margin:0 auto}.topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0 10px;gap:16px}.brand{text-decoration:none;color:var(--ink);font-weight:800;letter-spacing:-.03em}.back{text-decoration:none;color:var(--muted);font-size:14px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:#fff}.hero{padding:72px 0 56px}.eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--green);font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.eyebrow:before{content:"";width:28px;height:1px;background:currentColor}.hero h1{font-size:clamp(42px,8vw,76px);line-height:1.03;letter-spacing:-.065em;margin:18px 0 24px}.hero p{font-size:clamp(17px,2.5vw,21px);max-width:720px;margin:0;color:#3e4b44;letter-spacing:-.025em}.principle{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:30px 0 0}.principle div{padding:18px 19px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.78)}.principle strong{display:block;font-size:13px;margin-bottom:4px}.principle span{font-size:13px;color:var(--muted)}.intro{padding:34px;border-radius:var(--radius);background:#173e2e;color:#f4fbf6;margin-bottom:60px;box-shadow:0 20px 55px rgba(23,62,46,.12)}.intro p{margin:0;font-size:18px;letter-spacing:-.02em}.intro p+p{margin-top:14px;color:#d6e7dd;font-size:15px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin:0 0 28px}.section-head h2{font-size:28px;letter-spacing:-.045em;margin:0}.section-head p{margin:0;color:var(--muted);font-size:14px}.timeline{position:relative;padding-bottom:30px}.history-item{display:grid;grid-template-columns:34px 1fr;gap:18px;position:relative}.history-rail{position:relative;display:flex;justify-content:center}.history-rail:after{content:"";position:absolute;top:16px;bottom:-16px;width:1px;background:var(--line)}.history-item:last-child .history-rail:after{display:none}.history-rail span{position:relative;z-index:1;width:13px;height:13px;margin-top:25px;border-radius:50%;background:#fff;border:3px solid #8aa596;box-shadow:0 0 0 5px #f7faf8}.history-item.featured .history-rail span{border-color:var(--green);background:var(--green)}.history-card{padding:22px 24px 25px;margin:0 0 19px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 8px 28px rgba(24,45,34,.045)}.history-item.featured .history-card{border-color:#c9ddd1}.history-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:9px}.history-meta time{font-weight:800;font-size:14px}.era,.verification{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750}.era{background:#f0f3f1;color:#5b685f}.verification.verified{background:var(--green-soft);color:var(--green)}.verification.contextual{background:var(--blue-soft);color:var(--blue)}.verification.oral{background:#f4effa;color:#68448c}.verification.review{background:var(--amber-soft);color:var(--amber)}.history-card h2{font-size:22px;line-height:1.3;letter-spacing:-.04em;margin:0 0 10px}.summary{font-size:16px;margin:0;color:#34433b}.body-copy{font-size:14px;color:var(--muted);margin:12px 0 0;padding-top:12px;border-top:1px solid #eef1ef}.detail-row{display:flex;flex-wrap:wrap;gap:8px 15px;margin-top:15px;color:#758078;font-size:12px}.detail-row span:before{content:"·";margin-right:6px}.history-years{list-style:none;margin:0 0 30px;padding:0;border-top:1px solid var(--line)}.history-year{display:grid;grid-template-columns:minmax(90px,150px) minmax(0,1fr);gap:18px;align-items:baseline;padding:20px 0;border-bottom:1px solid var(--line);scroll-margin-top:24px}.history-year-label time{font-size:clamp(20px,3vw,28px);font-weight:850;color:var(--green);letter-spacing:-.03em}.history-items{list-style:none;margin:0;padding:0;display:grid;gap:7px}.history-items li{display:grid;grid-template-columns:6.6rem minmax(0,1fr);gap:10px;align-items:baseline;line-height:1.5}.history-items .history-day{font-variant-numeric:tabular-nums;font-weight:750;color:var(--green);font-size:14px;white-space:nowrap}.history-items li>span:last-child{position:relative;padding-left:14px;font-size:16px;word-break:keep-all;overflow-wrap:anywhere}.history-items li>span:last-child:before{content:"·";position:absolute;left:0;font-weight:800;color:var(--muted)}.empty{padding:42px;text-align:center;border:1px dashed var(--line);border-radius:20px;color:var(--muted)}.footer{margin:60px 0 28px;padding:28px 0;border-top:1px solid var(--line);color:var(--muted);font-size:13px}.footer strong{color:var(--ink)}@media(max-width:700px){.history-year{grid-template-columns:52px minmax(0,1fr);gap:10px;padding:16px 0}.history-year-label time{font-size:20px}.history-items li{grid-template-columns:4.9rem minmax(0,1fr);gap:7px}.history-items .history-day{font-size:13px}.history-items li>span:last-child{font-size:15px}.shell{width:min(100% - 22px,980px)}.topbar{padding-top:14px}.hero{padding:52px 4px 40px}.principle{grid-template-columns:1fr}.intro{padding:24px;margin-bottom:46px}.history-item{grid-template-columns:23px 1fr;gap:9px}.history-card{padding:19px 18px}.section-head{display:block}.section-head p{margin-top:6px}.detail-row{display:block}.detail-row span{display:block;margin-top:3px}}
 </style>
 </head>
 <body>
@@ -105,12 +125,11 @@ export function renderPublicHistory(entries = []) {
       <p>에코디교회의 이야기는 교회의 이름이 생긴 날부터 시작되지 않습니다. 목포대학교에서 세계 여러 나라의 학생들을 만나고, 지역교회와 함께 외국인 유학생을 섬기고, 대학과 교회와 선교단체가 협력하면서 한 공동체의 길이 열렸습니다.</p>
       <p>한국외국인선교회 무안지부와 에코디선교회, 목포대학교 글로벌비전센터의 사역은 서로 지워지는 이름이 아니라 오늘의 에코디교회를 이해하게 하는 역사적 층위로 함께 기록됩니다.</p>
     </section>
-    <section aria-labelledby="timeline-title">
-      <div class="section-head"><div><h2 id="timeline-title">사역의 흐름</h2><p>개인의 삶 · 지역교회 · 연합선교 · 선교회 · 글로벌비전센터 · 에코디교회</p></div><p>${count ? `${count}개의 확인·관리 기록` : '기록 준비 중'}</p></div>
-      <div class="timeline">${cards || '<div class="empty">공개 승인된 역사 기록을 준비하고 있습니다.</div>'}</div>
+    <section class="history-list-section" aria-label="연도별 기록">
+      ${cards ? `<ol class="history-years">${cards}</ol>` : '<div class="empty">공개 승인된 기록을 준비하고 있습니다.</div>'}
     </section>
   </main>
-  <footer class="footer"><strong>에코디교회 역사 아카이브</strong><br>이 기록은 새로운 자료와 증언이 확인될 때 수정·보완됩니다. 서로 다른 창립·전환 기록은 의미가 확인될 때까지 각각 보존합니다.</footer>
+  <footer class="footer">이 기록은 새로운 자료와 증언이 확인될 때 수정·보완됩니다. 서로 다른 창립·전환 기록은 의미가 확인될 때까지 각각 보존합니다.</footer>
 </div>
 </body>
 </html>`;

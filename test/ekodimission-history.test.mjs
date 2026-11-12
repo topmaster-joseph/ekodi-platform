@@ -20,13 +20,14 @@ test('mission history is a first-class public route and slash variants agree',as
  assert.match(html,/data-mission-nav/);
  assert.match(html,/id="history-2018"/);
  assert.match(html,/id="history-2026"/);
- assert.match(html,/설립 월·일이 달라/);
+ assert.match(html,/<time class="history-day" datetime="2026-08-21">08\.21–23<\/time><span>제주 여름캠프<\/span>/);
+ assert.doesNotMatch(html,/선교회 연혁|MISSION HISTORY/);
  assert.doesNotMatch(html,/student\.phone|account_password|생년월일|주민등록번호/);
 });
 
 test('history timeline is ordered most recent to oldest with unique anchors and no fabricated foundation date',async()=>{
  const page=await read('ekodimission-history.page');
- const years=[...page.matchAll(/<li class="mission-history-entry" id="history-(\d{4})">/g)].map(m=>Number(m[1]));
+ const years=[...page.matchAll(/<li class="mission-history-entry history-year" id="history-(\d{4})">/g)].map(m=>Number(m[1]));
  assert.deepEqual(years,[2026,2025,2024,2023,2022,2021,2018]);
  assert.equal(new Set(years).size,years.length);
  assert.match(page,/<time datetime="2018">2018<\/time>/);
