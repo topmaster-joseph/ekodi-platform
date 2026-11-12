@@ -148,7 +148,7 @@ test('BBQ menu-specific recipe and shrinkflation portion cards use real tenant m
     assert.ok(script.includes(marker),'missing card field: '+marker);
   assert.match(script,/Number\.isFinite\(value\)\&\&value>0/);
   assert.match(script,/if\(!select\.value\)notes\.push\('메뉴 미선택'\)/);
-  assert.match(script,/if\(declared!==null\&\&measured!==null\&\&stage\)/);
+  assert.match(script,/if\(kind\&\&declared!==null\&\&measured!==null\&\&stage\&\&\(kind!=='chicken'\|\|stage==='조리 전'\)\)/);
   assert.match(script,/card\.querySelector\('\[data-bbq-portion-result\]'\)\.textContent/);
   assert.match(script,/for\(const input of fields\)\{if\(input\.tagName==='SELECT'\)input\.selectedIndex=0;else input\.value=''\}/);
   assert.match(script,/이 입력은 서버·브라우저 저장소에 저장되지 않습니다/);
@@ -171,4 +171,52 @@ test('BBQ operator cards remain private templates; no default quantity or unauth
   assert.doesNotMatch(script,/fetch\([^)]*bbqcg-card/i);
   assert.match(script,/미승인 초안/);
   assert.match(script,/현재 매장 기준메뉴 원장이 없습니다/);
+});
+
+test('BBQ typed recipe text prints in full without HTML injection or textarea clipping',async()=>{
+  const script=await storeAdminScript().text();
+  const css=await storeAdminCss().text();
+  assert.match(script,/data-bbq-print-value/);
+  assert.match(script,/input\.closest\('\.bbqcg-card-field'\)/);
+  assert.match(script,/preview\.textContent=String\(value\|\|''\)\.trim\(\)\|\|'미입력'/);
+  assert.match(script,/미입력/);
+  assert.match(css,/\.bbqcg-print-value\{display:none\}/);
+  assert.match(css,/@media print/);
+  assert.match(css,/\.bbqcg-card-field textarea,?/);
+  assert.match(css,/\.bbqcg-card-field \.bbqcg-print-value\{display:block!important;white-space:pre-wrap/);
+  assert.doesNotMatch(script,/preview\.innerHTML=/);
+  assert.doesNotThrow(()=>new Function(script));
+});
+
+test('BBQ 2026 chicken mandatory pre-cook weight guidance stays private and evidence-first',async()=>{
+  const js=await storeAdminScript().text();
+  const css=await storeAdminCss().text();
+  assert.match(js,/치킨 중량표시제: BBQ 등 적용 브랜드는 조리 전 원료육 중량/);
+  assert.match(js,/시행 2025-12-15, 계도종료 2026-06-30/);
+  assert.match(js,/korea\.kr\/news\/policyNewsView\.do\?newsId=148955694/);
+  for(const label of ['표시 대상 분류','치킨·닭고기 메뉴','사이드·음료·기타','메뉴판·배달앱 표시 문구(g/호수 등)','표시 확인 위치(매장·배달앱·온라인)','조리 전 원료육·입고 확인 근거'])
+    assert.ok(js.includes(label),label);
+  assert.match(js,/if\(kind==='chicken'\)\{/);
+  assert.match(js,/if\(stage!=='조리 전'\)notes\.push/);
+  assert.match(js,/if\(unit==='mL'\)notes\.push/);
+  assert.match(js,/if\(unit==='개'\)notes\.push/);
+  assert.match(js,/고객 표시 문구 미확인/);
+  assert.match(js,/매장·배달앱·온라인 표시 확인 필요/);
+  assert.match(js,/법령 위반 자동 판정 아님/);
+  assert.match(css,/\.bbqcg-card-policy\{padding:/);
+  assert.doesNotMatch(js,/2000g 이상 반드시|10호만 사용/i);
+  assert.doesNotThrow(()=>new Function(js));
+});
+
+test('BBQ capacity card prints unit/basis/type and suppresses invalid chicken comparisons',async()=>{
+  const js=await storeAdminScript().text();
+  const css=await storeAdminCss().text();
+  for(const key of ['kind','unit','stage'])
+    assert.match(js,new RegExp('data-bbq-print-value="'+key+'"'),key+' print mirror');
+  assert.match(js,/if\(kind\&\&previous!==null\&\&declared!==null\&\&\(kind!=='chicken'\|\|stage==='조리 전'\)\)/);
+  assert.match(js,/if\(kind\&\&declared!==null\&\&measured!==null\&\&stage\&\&\(kind!=='chicken'\|\|stage==='조리 전'\)\)/);
+  assert.match(js,/preview\.textContent=String\(value\|\|''\)\.trim\(\)\|\|'미입력'/);
+  assert.match(css,/\.bbqcg-print-value\{display:none\}/);
+  assert.match(css,/\.bbqcg-card-field \.bbqcg-print-value\{display:block!important;white-space:pre-wrap/);
+  assert.doesNotThrow(()=>new Function(js));
 });

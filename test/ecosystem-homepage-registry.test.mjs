@@ -33,7 +33,7 @@ test('homepage registry exposes only production-verified live bilingual services
   assert.ok(services.every(service => categoryIds.has(service.category)), 'every homepage service must use a supported category');
 
   const community = services.find(service => service.id === 'community');
-  assert.equal(community?.name, '커뮤니티');
+  assert.equal(community?.name, '에코디커뮤니티');
   assert.equal(community?.nameEn, 'Community');
   assert.equal(community?.url, 'https://ekodi.kr/community');
   assert.equal(community?.category, 'community-ministry');
