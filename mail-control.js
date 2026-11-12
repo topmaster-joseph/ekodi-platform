@@ -1,6 +1,7 @@
+import { GOOGLE_SECRET_PATTERN, clearGoogleSecret, saveGoogleSecret, storedGoogleSecretStatus, withStoredGoogleSecret } from './mail-google-secret-store.js';
 import { operatorPushEmails, operatorPushReady, operatorDeviceCount, registerOperatorDevice, validOperatorSubscription } from './operator-push.js';
 import { decryptMailCredential, encryptMailCredential, mailCredentialReady, mailNonceHash, readMailState, signMailState } from './mail-credential-vault.js';
-import { exchangeGoogleMailCode, getGoogleMailMessage, googleMailAuthorizeUrl, googleMailConfigured, googleMailProfile, hasGoogleReadScope, hasGoogleSendScope, listGoogleMailMessages, refreshGoogleMailToken, sendGoogleMailMessage } from './mail-google-adapter.js';
+import { MAIL_GOOGLE_REDIRECT_URI, googleMailClientId, exchangeGoogleMailCode, getGoogleMailMessage, googleMailAuthorizeUrl, googleMailConfigured, googleMailProfile, hasGoogleReadScope, hasGoogleSendScope, listGoogleMailMessages, refreshGoogleMailToken, sendGoogleMailMessage } from './mail-google-adapter.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const MAIL_PREFIX = '/api/mail/control';
@@ -143,6 +144,7 @@ export async function accountAccess(db, actor, accountId) {
 }
 async function credentialForAccount(db, accountId){return db.prepare('SELECT * FROM mail_credentials WHERE account_id=?').bind(Number(accountId)).first()}
 export async function googleAccessForAccount(env, db, account){
+  env = await withStoredGoogleSecret(env);
   if(!googleMailConfigured(env)||!mailCredentialReady(env))throw Object.assign(new Error('Google Mail OAuth 구성이 아직 준비되지 않았습니다.'),{code:'MAIL_GOOGLE_NOT_CONFIGURED',status:503});
   const row=await credentialForAccount(db,account.id); if(!row)throw Object.assign(new Error('메일 계정 인증이 필요합니다.'),{code:'MAIL_ACCOUNT_NOT_CONNECTED',status:409});
   const credential=await decryptMailCredential(env,row); if(!credential.refreshToken)throw Object.assign(new Error('메일 계정 재연결이 필요합니다.'),{code:'MAIL_REFRESH_TOKEN_MISSING',status:409});
@@ -426,6 +428,19 @@ export async function handleMailControl(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
   if (!env.DB) return json({ error: '메일 관리 데이터베이스가 연결되지 않았습니다.', code: 'DB_UNAVAILABLE' }, 503, request);
   await ensureSchema(env.DB);
+  // EKODI-MAIL-GOOGLE-SECRET-MOBILE-001: Worker secret 이 없으면 운영자가 화면에서 저장한 암호화 보관값을 사용.
+  env = await withStoredGoogleSecret(env);
+
+  // EKODI-MAIL-GOOGLE-SECRET-MOBILE-001: 운영자 전용 Gmail 연결 설정(모바일에서 보안 비밀번호 붙여넣기).
+  if(url.pathname==='/api/mail/control/google-oauth-setup'){
+    const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    const isOperator=operatorPushEmails(env).includes(actor.email);
+    if(!isOperator)return json({error:'운영자 계정만 설정할 수 있습니다.',code:'OPERATOR_ONLY'},403,request);
+    if(request.method==='GET'){const st=await storedGoogleSecretStatus(env);return json({...st,isOperator,clientId:googleMailClientId(env),redirectUri:MAIL_GOOGLE_REDIRECT_URI,credentialKeyReady:mailCredentialReady(env)},200,request)}
+    if(request.method==='POST'){const body=await readJson(request);const secret=String(body?.secret||'').trim();if(!GOOGLE_SECRET_PATTERN.test(secret))return json({error:'Google 클라이언트 보안 비밀번호(GOCSPX-로 시작)를 그대로 붙여넣어 주세요.',code:'INVALID_GOOGLE_SECRET'},400,request);try{const r=await saveGoogleSecret(env,secret,actor.email);return json({ok:true,...r},201,request)}catch(e){return json({error:e.message,code:e.code||'SAVE_FAILED'},e.status||500,request)}}
+    if(request.method==='DELETE'){await clearGoogleSecret(env);return json({ok:true,configured:false},200,request)}
+    return json({error:'허용되지 않은 요청입니다.',code:'METHOD_NOT_ALLOWED'},405,request);
+  }
 
   // EKODI-OPERATOR-PUSH-001: 운영자 전용 휴대폰 알림 등록(로그인한 운영자 계정만).
   if(url.pathname==='/api/mail/control/operator-push'){
