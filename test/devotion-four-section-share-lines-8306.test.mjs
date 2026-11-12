@@ -57,7 +57,8 @@ test('full prayer, all questions and action remain intact, not first-line 180-ch
  const questions=devotionSectionShareDetails(day,'questions').content;
  assert.match(questions,/1\. \[해석\] 무엇을 바라보는가\?/u);
  assert.match(questions,/2\. \[실천\] 누구에게 나아갈 것인가\?/u);
- assert.match(questions,/오늘의 실천: 이웃에게 먼저 연락하기/u);
+ assert.match(questions,/오늘의 실천\n이웃에게 먼저 연락하기/u);
+ assert.doesNotMatch(questions,/오늘의 실천: 이웃에게/u);
 });
 
 test('invalid dates and foreign domains rejected for the four special tab shares',()=>{
@@ -72,6 +73,8 @@ test('shared Church, Mission and Bible renderer branches only for selected secti
  assert.match(code,/const section=devotionSectionShareDetails\(current,kind\)/);
  assert.match(code,/formatDevotionSectionShareMessage\(\{date:current.date,title,content:section.content,url,passage:current.passage\}\)/);
  assert.match(code,/navigator\.share\(\{ text: message \}\)/);
+ assert.match(code,/나의 묵상기록 공유/u);
+ assert.doesNotMatch(code,/나의 기도 공유/u);
  assert.match(code,/devotionShareExcerpt\(current, kind, privatePrayer\)/);
  for(const site of ['ekodichurch','ekodimission','bible']){
   const dir=site==='bible'?'bible/devotion.html':site==='ekodichurch'?'sites/ekodi-church/devotion/index.html':'space/ekodimission-devotion.page';
