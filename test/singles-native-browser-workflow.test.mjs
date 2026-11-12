@@ -49,3 +49,16 @@ test('native acceptance is read-only and preserves login, payment, age and PII b
   assert.doesNotMatch(yml, /SUPABASE_SERVICE_ROLE_KEY|CLOUDFLARE_API_TOKEN|SINGLES_M1_ENABLED:\s*true|SINGLES_PAID_ACTIONS_ENABLED:\s*true/);
   assert.ok(!/\b(secrets:|write-all|POST|DELETE|PATCH|PUT)\b/i.test(yml), 'no live mutation or privileged secret injection');
 });
+
+
+test('a Singles native browser workflow-only update dispatches the guarded Site Core release first', async () => {
+  const release = await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs', import.meta.url), 'utf8');
+  const match = release.match(/const sharedSiteTouched=changedFiles\.some\(file=>([\s\S]*?)\n\);/);
+  assert.ok(match, 'guarded release change classifier must remain present');
+  assert.ok(match[1].includes("file==='.github/workflows/verify-singles-native-browser.yml'||"),
+    'a workflow-only browser verification fix must not become an unverified merge');
+  assert.match(release, /if\(sharedSiteTouched\)\{\s*const dispatch=await api\('\/actions\/workflows\/deploy-site-core\.yml\/dispatches'/);
+  assert.match(yml, /workflow_run:\s*\n\s*workflows: \["Deploy EKODI Shared Site Core"\]/,
+    'Singles acceptance can only follow the guarded production release');
+  assert.match(yml, /github\.event\.workflow_run\.conclusion == 'success'/);
+});
