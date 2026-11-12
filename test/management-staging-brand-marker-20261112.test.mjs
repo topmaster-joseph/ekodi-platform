@@ -17,7 +17,7 @@ test('staging retains access shield, local isolated fallback, guest-only and no 
   for(const marker of ['Cloudflare Access','wrangler.management.staging.toml',
     'isolated-staging','\"executionEnabled\":false',
     'identity_integration_disabled','\"guestMode\":\"guide-only\"',
-    'POST','"503"','deploy-production']){
+    'auth_code=$(curl','"503"','deploy-production']){
     assert.ok(workflow.includes(marker),'missing invariant: '+marker);
   }
   assert.match(workflow,/remote_protected=1/);
