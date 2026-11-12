@@ -48,3 +48,4 @@ jobs:
       surface_paths: '/singles/privacy,/singles/terms,/singles/verify'
       device_profile: ${{ matrix.device_profile }}
       verification_lane: singles-legal
+      expected_visible_selector: '#verifyStatus + a.primary[href*="/auth/"]'

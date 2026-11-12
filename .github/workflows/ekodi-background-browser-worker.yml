@@ -28,6 +28,11 @@ on:
         required: false
         type: string
         default: generic
+      expected_visible_selector:
+        description: Optional read-only readiness assertion after the final inspected route
+        required: false
+        type: string
+        default: ''
       church_locale_diagnostic:
         description: Run independent Church nine-language Chromium diagnostics
         required: false
@@ -67,6 +72,11 @@ on:
         description: Stable lane (e.g. site-core or research)
         required: false
         default: generic
+      expected_visible_selector:
+        description: Optional read-only readiness assertion after the final inspected route
+        required: false
+        type: string
+        default: ''
   pull_request:
     paths:
       - 'scripts/ekodi-background-browser-worker.mjs'
@@ -184,6 +194,7 @@ jobs:
           INPUT_PATHS: ${{ inputs.surface_paths || (github.event_name == 'pull_request' && '/,/my/,/admin/' || '') }}
           INPUT_REGISTRY: ${{ inputs.surface_registry || (github.event_name == 'pull_request' && 'config/board-surface-verification.json' || '') }}
           INPUT_DEVICE: ${{ inputs.device_profile || 'desktop' }}
+          INPUT_EXPECT_VISIBLE: ${{ inputs.expected_visible_selector || '' }}
         run: |
           node - <<'NODE'
           const fs=require('fs');
@@ -228,7 +239,9 @@ jobs:
           };
           // Keep every registered surface snapshot while respecting the native 30-action cap.
           // Prioritize the homepage and the first board routes (including notice and voice).
-          const screenshotBudget=Math.max(0,30-(2*paths.length-1));
+          const expectedVisible=String(process.env.INPUT_EXPECT_VISIBLE||'').trim();
+          if(expectedVisible.length>240) throw new Error('expected visible selector exceeds the bounded browser selector limit');
+          const screenshotBudget=Math.max(0,30-(2*paths.length-1)-(expectedVisible?2:0));
           let screenshots=0;
           const actions=[];
           paths.forEach((p,index)=>{
@@ -239,6 +252,12 @@ jobs:
               screenshots++;
             }
           });
+          // Independent, non-mutating readiness proof: an HTTP 200 shell alone cannot
+          // establish that deferred authentication/identity JavaScript initialized.
+          if(expectedVisible){
+            actions.push({type:'waitFor',selector:expectedVisible,timeoutMs:12000});
+            actions.push({type:'snapshot'});
+          }
           if(actions.length>30) throw new Error('browser task exceeds native maxActions=30');
           console.log('[EKODI][NATIVE-BROWSER] paths='+paths.length+' screenshots='+screenshots+' actions='+actions.length+'/30');
           fs.mkdirSync('artifacts',{recursive:true});
