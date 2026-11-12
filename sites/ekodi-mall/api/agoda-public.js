@@ -24,7 +24,13 @@ export function agodaPublicCities(env={}){
 export function agodaPublicReady(env={}){
   const cities=agodaPublicCities(env);
   const certified=String(env.AGODA_AFFILIATE_SITE_ID||'')==='1980072';
-  return ON(env.AGODA_AFFILIATE_PUBLIC_SEARCH_ENABLED)&&agodaLiteReadiness(env).ready&&certified&&cities.length>0;
+  // The provider can disable the affiliate account or this CID independently of
+  // the API credential. Never infer partner approval from an issued/installed key.
+  // These must be verified from the authenticated Partner Center and deliberately
+  // set by EKODI's authorized release controller, not inferred by a user query.
+  const accountApproved=ON(env.AGODA_AFFILIATE_ACCOUNT_APPROVED_CONFIRMED);
+  const cidActive=ON(env.AGODA_AFFILIATE_CID_ACTIVE_CONFIRMED);
+  return ON(env.AGODA_AFFILIATE_PUBLIC_SEARCH_ENABLED)&&agodaLiteReadiness(env).ready&&certified&&accountApproved&&cidActive&&cities.length>0;
 }
 function searchInput(url,cities,now){
  const qs=url.searchParams;
