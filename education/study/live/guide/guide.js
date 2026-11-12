@@ -83,7 +83,7 @@ function renderSession(){
   $('#gSession').innerHTML='<section class="g-card g-head"><p class="g-eyebrow">'+s.no+'차 · '+esc(s.date)+'('+s.day+') '+s.start+'~'+s.end+' · '+s.count+'명</p>'+
     '<p class="g-profile">'+esc(s.profile)+'</p>'+mixBar(s)+
     '<p class="g-lead">메인 분야: '+s.lead.map(id=>'<span class="g-chip g-f-'+id+'">'+esc(fieldLabel(id))+'</span>').join(' ')+'</p></section>'+
-    '<section class="g-card"><h2>이 차수 맞춤 운영</h2>'+list(s.focus)+(s.watch?.length?'<h3>주의·확인필요</h3>'+list(s.watch,'g-warn'):'')+'</section>'+
+    '<section class="g-card"><h2>이 차수 맞춤 운영</h2>'+list(s.focus)+(s.watch?.length?'<h3>주의</h3>'+list(s.watch,'g-warn'):'')+'</section>'+
     '<section class="g-card"><h2>차시별 강의안 <small>'+s.start+' 시작</small></h2><ol class="g-flow">'+FLOW.map(f=>{
       const extra=s.notes?.[f.id];
       const picker=SESSION_PICKS[current]?.[f.id]?demoPicker(f.id):'';

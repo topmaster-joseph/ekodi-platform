@@ -95,3 +95,8 @@ test('credit notices: every demo/practice feature has an official rule, estimate
   assert.match(CREDIT.minutes.rule,/1분당 약 6크레딧/);assert.match(CREDIT.ppt.rule,/1장당 약 50크레딧/);
   assert.match(CREDIT_OPENING,/기관 계정 크레딧/);
 });
+
+test('no roster/attendance notes: sessions reflect only department mix and counts',()=>{
+  const text=JSON.stringify(SESSIONS);
+  assert.doesNotMatch(text,/동명이인|중복 배정|명단 확인|출석/);
+});
