@@ -62,3 +62,37 @@ test('a Singles native browser workflow-only update dispatches the guarded Site 
     'Singles acceptance can only follow the guarded production release');
   assert.match(yml, /github\.event\.workflow_run\.conclusion == 'success'/);
 });
+
+
+test('guarded Site Core runs four sequential native Singles checks and requires each in final receipt', async () => {
+  const site = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
+  const cases = [
+    ['singles_native_member_desktop', 'authenticated_admin_surface_verification', 'desktop', 'singles-member', batches[0]],
+    ['singles_native_member_mobile', 'singles_native_member_desktop', 'mobile-portrait', 'singles-member', batches[0]],
+    ['singles_native_legal_desktop', 'singles_native_member_mobile', 'desktop', 'singles-legal', batches[1]],
+    ['singles_native_legal_mobile', 'singles_native_legal_desktop', 'mobile-portrait', 'singles-legal', batches[1]],
+  ];
+  assert.equal(cases.length, 4);
+  assert.equal(batches[0].length + batches[1].length, 13);
+  for (const [name, prev, profile, lane, routes] of cases) {
+    const section = site.split('\n  ' + name + ':\n')[1]?.split(/\n  [a-z][a-z0-9_]*:\n/)[0];
+    assert.ok(section, 'missing browser job: ' + name);
+    assert.ok(section.includes('needs: [deploy, ' + prev + ']'), 'ordered release-success dependency missing: ' + name);
+    assert.ok(section.includes('uses: ./.github/workflows/ekodi-background-browser-worker.yml'), 'must use first-party Chromium');
+    assert.ok(section.includes('verification_lane: ' + lane), 'must retain isolated cancellation group');
+    assert.ok(section.includes('device_profile: ' + profile), 'wrong device');
+    assert.ok(section.includes("surface_paths: '" + routes.join(',') + "'"), 'native routes drifted: ' + name);
+    assert.ok(routes.length <= 12, 'browser worker path budget violated');
+    const varName = name.toUpperCase() + '_RESULT';
+    assert.ok(site.includes(varName + ': $' + '{{ needs.' + name + '.result }}'), 'required outcome missing from receipt env');
+    assert.ok(site.includes("['" + name + "',process.env." + varName + "]"), 'result missing from receipt evaluation');
+  }
+  const receipt = site.split('\n  post_promotion_browser_verification_receipt:\n')[1];
+  assert.ok(receipt, 'postpromotion receipt job missing');
+  const needs = receipt.match(/^\s*needs: \[([^\]]+)\]/m)?.[1].split(',').map(v => v.trim());
+  assert.ok(needs?.includes('scheduled_release_gate'));
+  for (const [name] of cases) assert.ok(needs.includes(name), 'release receipt cannot skip: ' + name);
+  assert.match(receipt, /const firstFailure=jobs\.find\(\(\[name,state\]\)=>state!=='success'\)/,
+    'a failed or skipped Singles browser job must block the verified receipt');
+  assert.match(receipt, /if\(gateProceed==='false'\)/, 'scheduled no-op must not falsely fail');
+});
