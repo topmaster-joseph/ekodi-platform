@@ -32,7 +32,7 @@ const PROFILE = Object.freeze({
   tablet: { width:768, height:1024, isMobile:false, hasTouch:true },
   desktop: { width:1440, height:900, isMobile:false, hasTouch:false },
 });
-const ACTIONS = new Set(['goto','click','fill','press','waitFor','assertText','snapshot','screenshot']);
+const ACTIONS = new Set(['goto','click','fill','press','waitFor','assertText','assertHidden','assertDisabled','snapshot','screenshot']);
 const SAFE_KEYS = new Set(['Enter','Tab','Escape','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End','PageUp','PageDown','Space']);
 
 const clean=(value,max=300)=>String(value??'').trim().slice(0,max);
@@ -205,6 +205,7 @@ export function normalizeTask(raw={}){
       return {type,selector:selector(item.selector),key};
     }
     if(type==='waitFor') return {type,selector:selector(item.selector),timeoutMs:Math.min(Math.max(Number(item.timeoutMs)||5000,100),15000)};
+    if(type==='assertHidden'||type==='assertDisabled') return {type,selector:selector(item.selector)};
     if(type==='assertText') {
       const value=textValue(item.text,500);
       if(!value) fail('BROWSER_ASSERT_TEXT_REQUIRED','assertText requires text');
@@ -451,6 +452,16 @@ export async function runTask(rawTask, options={}){
       if(action.type==='waitFor'){
         await page.locator(action.selector).first().waitFor({state:'visible',timeout:Math.min(action.timeoutMs,remaining())});
         results.push({type:'waitFor',selector:action.selector,visible:true}); continue;
+      }
+      if(action.type==='assertHidden'||action.type==='assertDisabled'){
+        // No hidden-or-disabled assertion may silently pass for a missing
+        // control. These checks read DOM state only and cannot click, mutate,
+        // navigate or download member data.
+        const target=page.locator(action.selector).first();
+        if(await target.count()!==1)fail('BROWSER_ASSERT_CONTROL_MISSING','Required control missing: '+action.selector);
+        const passed=action.type==='assertHidden'?await target.isHidden():await target.isDisabled();
+        if(!passed)fail('BROWSER_ASSERT_CONTROL_STATE_FAILED','Control is not '+(action.type==='assertHidden'?'hidden: ':'disabled: ')+action.selector);
+        results.push({type:action.type,selector:action.selector,passed:true});continue;
       }
       if(action.type==='assertText'){
         const body=(await page.locator('body').innerText({timeout:Math.min(10000,remaining())})).slice(0,100000);
