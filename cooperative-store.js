@@ -30,6 +30,23 @@ export function coopBusinessNumber(value) {
   return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
 }
 
+// 출자금 납입 상태: unpaid(확인 전) → reported(조합원이 입금 알림) → confirmed(운영진이 통장 대조 후 확인).
+// 확인일은 운영진이 confirmed로 바꾸는 순간 서버가 기록한다. 결제를 처리하지 않고 상태만 기록한다.
+export const COOP_PAYMENT_STATES = ['unpaid', 'reported', 'confirmed'];
+export function coopPayment(value, old = {}) {
+  const payment = choice(value || 'unpaid', COOP_PAYMENT_STATES);
+  const paymentConfirmedAt = payment === 'confirmed' ? (old.payment === 'confirmed' && old.paymentConfirmedAt ? old.paymentConfirmedAt : new Date().toISOString().slice(0, 10)) : null;
+  return { payment, paymentConfirmedAt };
+}
+export function coopShareAccount(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail('COOP_SHARE_ACCOUNT_INVALID');
+  const bank = text(value.bank, 40), holder = text(value.holder, 60);
+  const number = text(value.number, 40).replace(/\s+/g, '');
+  if (number && !/^[0-9][0-9-]{4,38}[0-9]$/.test(number)) fail('COOP_SHARE_ACCOUNT_INVALID');
+  if (number && (!bank || !holder)) fail('COOP_SHARE_ACCOUNT_INCOMPLETE');
+  return { bank, number, holder };
+}
+
 export function normalizeCooperativeState(input, coop, previous = cooperativeInitialState(coop)) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) fail('COOP_INVALID_STATE');
   // Reject tenant/identity fields rather than allowing a client to move a record.
@@ -47,6 +64,7 @@ export function normalizeCooperativeState(input, coop, previous = cooperativeIni
     if ('officeConfirmed' in p) state.profile.officeConfirmed = p.officeConfirmed === true;
     if ('shareUnit' in p) state.profile.shareUnit = integer(p.shareUnit, 1, 1000000000);
     if ('firstYearBudget' in p) state.profile.firstYearBudget = integer(p.firstYearBudget, 0, 1000000000000, true);
+    if ('shareAccount' in p) state.profile.shareAccount = coopShareAccount(p.shareAccount);
   }
   if ('founders' in input) {
     if (!Array.isArray(input.founders) || input.founders.length !== previous.founders.length) fail('COOP_FOUNDER_IDENTITY_REQUIRED');
@@ -61,6 +79,7 @@ export function normalizeCooperativeState(input, coop, previous = cooperativeIni
         business: text(f.business, 160) || null, industry: text(f.industry, 160) || null,
         shares: integer(f.shares ?? null, 1, 100000000, true),
         consent: choice(f.consent || 'pending', ['pending', 'confirmed']), accountEmail: email || null,
+        ...coopPayment(f.payment ?? old.payment, old),
         ...('phone' in f ? { phone: (v => v === null ? fail('COOP_PHONE_INVALID') : v || null)(coopPhone(f.phone)) } : {}),
         ...('businessNumber' in f ? { businessNumber: (v => v === null ? fail('COOP_BUSINESS_NUMBER_INVALID') : v || null)(coopBusinessNumber(f.businessNumber)) } : {}) };
     });
