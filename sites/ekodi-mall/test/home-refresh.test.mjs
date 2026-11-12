@@ -288,7 +288,7 @@ test('tiered discovery never mistakes a supplier reference or external compariso
 
 
 test('Domeggook legacy Korean query link preserves the actual Korean search term', () => {
-  const start=js.indexOf('  function encodeLegacyVendorQuery(input) {');
+  const start=js.indexOf('  const legacyVendorQueryCache=new Map();');
   const end=js.indexOf('  const stage = (number,label,description)',start);
   assert.ok(start>=0 && end>start,'missing isolated legacy search encoder');
   const sandbox={TextDecoder,Uint8Array,clean:v=>String(v??'').replace(/\s+/g,' ').trim()};
