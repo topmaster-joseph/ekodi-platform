@@ -173,7 +173,7 @@ test('trade admin uses shared two-level UI and canonical apex auth',async()=>{
   assert.ok(workspaceAdmin.includes('/workspace-trade-admin.js?v=20260909-admin-ui-v8'));
   assert.ok(tradeAdmin.includes("a.dataset.adminGroup=key"));
   assert.ok(tradeAdmin.includes("a.href=sectionHref(key)"));
-  assert.ok(tradeAdmin.includes("[['overview','홈'],['companies','공급사'],['buyers','바이어'],['products','제품'],['quotations','견적·원가'],['contracts','계약'],['reports','보고서'],['pipeline','도입진행'],['publishing','채널 · 게시'],['access','권한']]"));
+  assert.ok(tradeAdmin.includes("[['overview','홈'],['companies','거래처'],['products','제품'],['pipeline','도입진행'],['publishing','채널 · 게시'],['access','권한']]"));
   assert.ok(tradeAdmin.includes('renderSecondaryNav();'));
   assert.ok(tradeAdmin.includes('id="tradeAdminSearch"'));
   assert.ok(tradeAdmin.includes('id="roles"'));
@@ -197,4 +197,6 @@ test('private trade portal uses apex identity and clears proof before asynchrono
   assert.ok(source.includes("const startupWatchdog=setTimeout("));
   assert.ok(source.includes("state('연결 확인 지연')"));
   assert.ok(source.includes("clearTimeout(startupWatchdog)"));
+  assert.ok(source.includes("TRADE_PORTAL_NAME_PRELUDE='(()=>{const __name="));
+  assert.ok(source.includes("'cache-control':'no-store'"),'fixed browser runtime must not remain in a five-minute edge cache');
 });
