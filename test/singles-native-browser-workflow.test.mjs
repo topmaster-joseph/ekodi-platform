@@ -96,3 +96,23 @@ test('guarded Site Core runs four sequential native Singles checks and requires 
     'a failed or skipped Singles browser job must block the verified receipt');
   assert.match(receipt, /if\(gateProceed==='false'\)/, 'scheduled no-op must not falsely fail');
 });
+
+
+test('guest identity page must finish initialization on both protected desktop and mobile browser lanes', async () => {
+  const release = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
+  const workerWorkflow = await readFile(new URL('../.github/workflows/ekodi-background-browser-worker.yml', import.meta.url), 'utf8');
+  const ready = "expected_visible_selector: '#verifyStatus + a.primary[href*=\"/auth/\"]'";
+  for (const name of ['singles_native_legal_desktop', 'singles_native_legal_mobile']) {
+    const section = release.split('\n  ' + name + ':\n')[1]?.split(/\n  [a-z][a-z0-9_]*:\n/)[0];
+    assert.ok(section?.includes(ready), 'guest ready-state must be checked: ' + name);
+    assert.ok(section.includes("surface_paths: '/singles/privacy,/singles/terms,/singles/verify'"));
+  }
+  const legal = yml.split('\n  legal:\n')[1];
+  assert.ok(legal?.includes(ready), 'standalone legal acceptance must await initialized identity UI');
+  assert.match(workerWorkflow, /expected_visible_selector:/);
+  assert.match(workerWorkflow, /type:'waitFor',selector:expectedVisible,timeoutMs:12000/);
+  assert.match(workerWorkflow, /type:'snapshot'/);
+  assert.match(workerWorkflow, /expectedVisible\?2:0/);
+  assert.match(workerWorkflow, /if\(actions\.length>30\) throw new Error\('browser task exceeds native maxActions=30'\)/);
+  assert.doesNotMatch(workerWorkflow, /allowMutation:true|type:'click'.*verifyStart/);
+});
