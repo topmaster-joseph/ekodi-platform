@@ -13,6 +13,17 @@ export function supplierSearchReady(env = {}) {
     && enabled(env.DOMEMAE_LOOKUP_ENABLED) && Boolean(env.DOMEMAE_API_KEY)
     && typeof env?.MALL_SUPPLIER_SEARCH_LIMITER?.limit === 'function';
 }
+// Status inspection deliberately performs no supplier API call and reveals no
+// credentials or account identity. It is not a license grant or purchase approval.
+export function supplierPublicStatus(env = {}) {
+  const ready = supplierSearchReady(env);
+  return {
+    enabled: ready,
+    state: ready ? 'reference-only-ready' : NO_AUTH,
+    checkoutReady: false,
+    autoOrderReady: false
+  };
+}
 export function normalizeSupplierSearch(payload) {
   const root = payload?.domeggook || payload || {};
   const raw = root?.list?.item;
@@ -36,6 +47,10 @@ export function normalizeSupplierSearch(payload) {
 }
 export async function handlePublicSupplierSearch(request, env, fetchImpl = fetch) {
   const url = new URL(request.url);
+  if (url.pathname === '/api/public/supplier/status') {
+    if (request.method !== 'GET') return {status:405,body:{error:'METHOD_NOT_ALLOWED'}};
+    return {status:200,body:supplierPublicStatus(env)};
+  }
   if (url.pathname !== '/api/public/supplier/search') return null;
   if (request.method !== 'GET') return {status:405,body:{error:'METHOD_NOT_ALLOWED'}};
   const query = clean(url.searchParams.get('q'), 120);

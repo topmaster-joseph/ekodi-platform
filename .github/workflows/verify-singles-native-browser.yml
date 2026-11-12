@@ -1,37 +1,43 @@
 # EKODI-owned isolated Chromium verification for Donghaeng public/user/admin shells.
+# On-demand diagnostic only: the guarded Site Core release is the authoritative
+# postpromotion owner of the same four Singles lanes and its verification receipt.
+# A successful scheduled no-op release must not fan out additional browser traffic.
 # Does not automate a real Google account picker or mutate member/payment records.
 name: EKODI Singles Native Browser Acceptance
 
 on:
-  workflow_run:
-    workflows: ["Deploy EKODI Shared Site Core"]
-    types: [completed]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ekodi-singles-native-browser-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.sha }}
+  group: ekodi-singles-native-browser-manual-${{ github.sha }}
   cancel-in-progress: false
 
+# Split by bounded execution lane: each underlying browser worker allows at most 12 paths.
+# Distinct verification_lane values prevent the worker's cancel-in-progress group from
+# cancelling a concurrent matrix job on the same device profile.
 jobs:
-  desktop:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
+  member:
+    strategy:
+      fail-fast: false
+      matrix:
+        device_profile: [desktop, mobile-portrait]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: '/singles,/singles/my,/singles/groups,/singles/events,/singles/discover,/singles/messages,/singles/subscribe,/singles/admin,/singles/privacy,/singles/terms,/singles/verify,/singles/api/status,/auth/?site=singles&return_to=https%3A%2F%2Fekodi.kr%2Fsingles%2Fmy'
-      device_profile: desktop
+      surface_paths: '/singles,/singles/my,/singles/groups,/singles/events,/singles/discover,/singles/messages,/singles/subscribe,/singles/admin,/singles/api/status,/auth/?site=singles&return_to=https%3A%2F%2Fekodi.kr%2Fsingles%2Fmy'
+      device_profile: ${{ matrix.device_profile }}
+      verification_lane: singles-member
 
-  mobile:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
+  legal:
+    strategy:
+      fail-fast: false
+      matrix:
+        device_profile: [desktop, mobile-portrait]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: '/singles,/singles/my,/singles/groups,/singles/events,/singles/discover,/singles/messages,/singles/subscribe,/singles/admin,/singles/privacy,/singles/terms,/singles/verify,/singles/api/status,/auth/?site=singles&return_to=https%3A%2F%2Fekodi.kr%2Fsingles%2Fmy'
-      device_profile: mobile-portrait
+      surface_paths: '/singles/privacy,/singles/terms,/singles/verify'
+      device_profile: ${{ matrix.device_profile }}
+      verification_lane: singles-legal
+      expected_visible_selector: '#verifyStatus + a.primary[href*="/auth/"]'

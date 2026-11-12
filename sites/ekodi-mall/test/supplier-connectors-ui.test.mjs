@@ -43,3 +43,18 @@ test('status is concise and never exposes the actor email, and login is canonica
   assert.match(css,/\.connector-page \.connector-actions button\[hidden\]\{display:none!important\}/);
   assert.match(js,/login\.hidden=signed;logout\.hidden=!signed/);
 });
+
+test('supplier console separates private operator lookup from public display rights',()=>{
+  assert.match(html, /id="publicCatalogGate"[^>]*>권한 확인 전/);
+  assert.match(html, /id="publicCatalogGateDetail"/);
+  assert.match(html, /운영자 전용 상품조회/);
+  assert.match(html, /에코디몰 공개 카탈로그/);
+  assert.match(html, /방문자 공개권한과 별개/);
+  assert.match(html, /출처·이미지 사용권/);
+  assert.match(js, /async function refreshPublicCatalog\(\)/);
+  assert.match(js, /\/api\/public\/supplier\/status/);
+  assert.match(js, /state\?\.checkoutReady===false&&state\?\.autoOrderReady===false/);
+  assert.match(js, /credentials:'omit'/);
+  assert.doesNotMatch(html, /name="aid"|name="sId"|name="supplierPassword"/);
+  assert.match(css, /\.connector-overview-strip\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+});
