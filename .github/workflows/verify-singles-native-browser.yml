@@ -15,23 +15,36 @@ concurrency:
   group: ekodi-singles-native-browser-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: false
 
+# Split by bounded execution lane: each underlying browser worker allows at most 12 paths.
+# Distinct verification_lane values prevent the worker's cancel-in-progress group from
+# cancelling a concurrent matrix job on the same device profile.
 jobs:
-  desktop:
+  member:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
+    strategy:
+      fail-fast: false
+      matrix:
+        device_profile: [desktop, mobile-portrait]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: '/singles,/singles/my,/singles/groups,/singles/events,/singles/discover,/singles/messages,/singles/subscribe,/singles/admin,/singles/privacy,/singles/terms,/singles/verify,/singles/api/status,/auth/?site=singles&return_to=https%3A%2F%2Fekodi.kr%2Fsingles%2Fmy'
-      device_profile: desktop
+      surface_paths: '/singles,/singles/my,/singles/groups,/singles/events,/singles/discover,/singles/messages,/singles/subscribe,/singles/admin,/singles/api/status,/auth/?site=singles&return_to=https%3A%2F%2Fekodi.kr%2Fsingles%2Fmy'
+      device_profile: ${{ matrix.device_profile }}
+      verification_lane: singles-member
 
-  mobile:
+  legal:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
+    strategy:
+      fail-fast: false
+      matrix:
+        device_profile: [desktop, mobile-portrait]
     uses: ./.github/workflows/ekodi-background-browser-worker.yml
     with:
-      surface_paths: '/singles,/singles/my,/singles/groups,/singles/events,/singles/discover,/singles/messages,/singles/subscribe,/singles/admin,/singles/privacy,/singles/terms,/singles/verify,/singles/api/status,/auth/?site=singles&return_to=https%3A%2F%2Fekodi.kr%2Fsingles%2Fmy'
-      device_profile: mobile-portrait
+      surface_paths: '/singles/privacy,/singles/terms,/singles/verify'
+      device_profile: ${{ matrix.device_profile }}
+      verification_lane: singles-legal
