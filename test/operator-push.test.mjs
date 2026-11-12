@@ -45,6 +45,9 @@ test('routes, UI and deploy provisioning are wired without rotating existing key
   const page = readFileSync(new URL('../mail-admin-page.js', import.meta.url), 'utf8');
   assert.match(page, /id="opPush" hidden/);
   assert.match(page, /pushManager\.subscribe\(\{userVisibleOnly:true/);
+  // navigator.serviceWorker.ready never resolves on /mail/admin (outside the /notifications/ scope) → must wait on the registration itself.
+  assert.doesNotMatch(page, /navigator\.serviceWorker\.ready/);
+  assert.match(page, /await swActive\(reg\)/);
   const wf = readFileSync(new URL('../.github/workflows/deploy-control-api.yml', import.meta.url), 'utf8');
   assert.match(wf, /if \[ "\$has_pub" = 0 \] && \[ "\$has_priv" = 0 \]; then/);
   assert.match(wf, /refusing to rotate/);
