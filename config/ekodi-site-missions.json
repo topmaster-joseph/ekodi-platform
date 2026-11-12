@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-SITE-MISSION-DECLARATION-001",
+  "appliesTo": "EKODI-operated first-party services only",
+  "introLabel": "우리가 존재하는 이유",
+  "governance": {
+    "orchestrator": "EKODI Orchestrator",
+    "independentSiteOwnership": true,
+    "rendering": "site-owner-intro/about section only",
+    "noGlobalForcedOverlay": true,
+    "noExternalBrandInjection": true,
+    "noChangeToLegalEntity": true,
+    "publicationRequiresProtectedRelease": true,
+    "notEvidenceOfProductionPublication": true
+  },
+  "sites": [
+    {
+      "id": "church",
+      "officialName": "에코디교회",
+      "mission": "우리는 말씀 안에서 서로의 삶을 돌보고, 흩어진 자리마다 하나님 나라의 사랑을 살아내는 공동체를 세운다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "mission",
+      "officialName": "에코디선교회",
+      "mission": "우리는 식탁의 환대와 연대로 이웃의 존엄을 지키며, 삶의 현장에서 복음의 사랑과 회복을 나눈다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "bible",
+      "officialName": "에코디말씀대화",
+      "mission": "우리는 성경의 말씀을 삶의 질문과 함께 읽고 나누며, 깨달음이 사랑과 실천으로 이어지도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "community",
+      "officialName": "에코디커뮤니티",
+      "mission": "우리는 서로 다른 사람이 자기 자리에서 목소리를 내고, 작은 만남이 지속 가능한 돌봄과 참여로 자라도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "social",
+      "officialName": "에코디소셜",
+      "mission": "우리는 중요한 소식이 소음에 묻히지 않도록 신뢰할 수 있는 이야기와 사람을 연결해 관계의 길을 넓힌다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "cafe",
+      "officialName": "에코디카페",
+      "mission": "우리는 한 잔의 소비보다 한 사람이 머물 자리를 먼저 생각하며, 마주 앉은 만남이 지역의 내일로 이어지게 한다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "biz",
+      "officialName": "에코디비즈",
+      "mission": "우리는 필요한 사업의 길을 함께 찾아 사람과 현장과 기술을 정직하게 연결하고, 그 성과가 지역으로 돌아가게 한다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "business",
+      "officialName": "에코디비즈니스OS",
+      "mission": "우리는 사업의 규모와 상관없이 현장의 문제를 먼저 듣고, 필요한 기술과 사람과 실행을 맞춤형으로 연결한다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "management",
+      "officialName": "에코디경영",
+      "mission": "우리는 작은 사업장과 공동체도 자기 판단을 지킬 수 있도록 복잡한 경영을 이해 가능한 선택과 실행으로 바꾼다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "mall",
+      "officialName": "에코디몰",
+      "mission": "우리는 물건을 파는 일을 넘어 생산자의 수고와 구매자의 필요를 정직하게 잇고, 신뢰할 수 있는 거래를 넓힌다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "shop",
+      "officialName": "에코디상점",
+      "mission": "우리는 가게마다 지닌 가치를 드러내고, 이웃의 선택이 지역의 지속 가능한 일자리와 관계를 살리도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "delivery",
+      "officialName": "에코디배달허브",
+      "mission": "우리는 매장의 정직한 정보와 이용자의 선택을 잇고, 주문과 배달의 과정에서 소상공인의 자율성과 신뢰를 지킨다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "local-commerce",
+      "officialName": "에코디지역상권상품권",
+      "mission": "우리는 지역에서 만들어진 가치가 지역 안에서 다시 순환하도록 상인과 주민의 선택권을 연결한다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "marketing",
+      "officialName": "에코디마케팅AI",
+      "mission": "우리는 작은 가게도 과장 없이 자신을 알릴 수 있도록 사실에 기반한 소통과 지속 가능한 관계를 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "trade",
+      "officialName": "에코디무역",
+      "mission": "우리는 국경과 언어를 넘어 서로의 약속을 분명히 하고, 작은 사업자도 신뢰 속에 공정한 거래를 시작하도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "invest",
+      "officialName": "에코디투자",
+      "mission": "우리는 빠른 수익을 약속하기보다 투자자가 위험과 근거를 이해하고 자신의 판단을 지킬 수 있도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "support",
+      "officialName": "에코디기회AI",
+      "mission": "우리는 지원 정보의 격차가 기회의 격차가 되지 않도록 필요한 제도와 사람을 정확하게 이어준다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "money",
+      "officialName": "에코디머니",
+      "mission": "우리는 돈이 사람을 지배하지 않도록 누구나 자신의 금융생활을 이해하고 스스로 결정할 수 있게 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "pay",
+      "officialName": "에코디페이",
+      "mission": "우리는 눈에 보이지 않는 결제 과정까지 투명하고 안전하게 연결해 누구나 안심하고 거래하도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "books",
+      "officialName": "에코디서점",
+      "mission": "우리는 읽는 이와 쓰는 이를 잇고, 삶의 현장에서 나온 지혜가 다음 사람의 사유와 실천으로 이어지게 한다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "publishing",
+      "officialName": "에코디출판",
+      "mission": "우리는 이름 없는 경험과 연구가 저자의 목소리를 잃지 않고 한 권의 기록이 되어 오래도록 읽히도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "journal",
+      "officialName": "에코디저널",
+      "mission": "우리는 빠르게 소비되는 소식 뒤에 남겨야 할 사실과 사람의 목소리를 기록해 공적인 기억으로 잇는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "author",
+      "officialName": "에코디창작AI",
+      "mission": "우리는 누구의 삶에도 기록할 가치가 있음을 믿고, 경험과 생각이 스스로의 이름으로 세상에 닿도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "lab",
+      "officialName": "에코디연구소",
+      "mission": "우리는 현장의 질문을 연구로 검증하고, 얻은 지식을 다시 지역과 공동체가 사용할 수 있는 변화로 돌려준다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "edu",
+      "officialName": "에코디교육",
+      "mission": "우리는 배움의 기회가 나이와 형편과 지역에 가로막히지 않도록 누구나 배우고 가르치며 성장하는 길을 연다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "learn",
+      "officialName": "에코디학습",
+      "mission": "우리는 배우는 속도와 방식이 달라도 누구나 자신의 질문에서 출발해 삶에 필요한 지식을 익히도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "life",
+      "officialName": "에코디인생AI",
+      "mission": "우리는 정답을 강요하지 않고 한 사람의 질문에 귀 기울이며, 오늘을 이해하고 내일을 선택하는 힘을 키운다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "my",
+      "officialName": "마이 에코디",
+      "mission": "우리는 각자가 자신의 정보와 참여를 스스로 선택하고 관리하며, 필요한 공동체와 서비스를 자유롭게 연결하도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "space",
+      "officialName": "에코디운영공간",
+      "mission": "우리는 공간을 가진 사람이 운영의 주인이 되도록 권한과 책임을 분명히 하고, 필요한 협력만 안전하게 연결한다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "work",
+      "officialName": "에코디워크",
+      "mission": "우리는 일하는 사람과 사람을 찾는 곳이 조건을 넘어 서로의 가능성을 알아보고 공정하게 연결되도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "energy",
+      "officialName": "에코디에너지AI",
+      "mission": "우리는 에너지의 흐름을 투명하게 읽고, 비용 절감과 지속 가능성을 누구나 실천할 수 있도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "insurance",
+      "officialName": "에코디보험",
+      "mission": "우리는 보험 가입을 재촉하기보다 한 사람이 자신의 보장과 권리를 이해하고 필요한 순간에 제대로 도움받도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "messenger",
+      "officialName": "에코디메신저",
+      "mission": "우리는 멀리 있는 사람도 대화의 주도권을 지키며 안전하게 소식을 나누고 협력할 수 있도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "mail",
+      "officialName": "에코디메일",
+      "mission": "우리는 중요한 소통이 흩어지지 않도록 메시지의 맥락과 책임을 지키고 필요한 일을 이어가도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "live",
+      "officialName": "에코디라이브",
+      "mission": "우리는 멀리 떨어져 있어도 함께 듣고 보고 참여할 수 있는 열린 만남의 자리를 만든다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "cloud",
+      "officialName": "에코디클라우드",
+      "mission": "우리는 기록과 자료를 맡긴 사람이 소유권을 잃지 않도록 안전하게 보관하고 필요한 이들과만 나누도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    },
+    {
+      "id": "media",
+      "officialName": "에코디미디어",
+      "mission": "우리는 흩어진 목소리와 현장의 이야기를 왜곡 없이 전하고, 보는 일이 이해와 참여로 이어지도록 돕는다.",
+      "ownerScope": "ekodi-first-party",
+      "publication": "requires-site-owned-release"
+    }
+  ]
+}
