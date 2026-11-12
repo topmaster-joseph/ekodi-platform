@@ -13,7 +13,7 @@ test('EKODIBIZ mission appears in public hero and translates with all six suppor
  assert.match(js,/missionStatement:'We connect people, real work and technology with integrity/);
  assert.match(css,/\.ekodi-mission-statement/);
  assert.match(html,/href="https:\/\/ekodi\.kr\/ekodibiz\/ai-agency\/apply"/);
- assert.match(js,/customerTelephone/);
+ assert.equal((js.match(/href="tel:/g)||[]).length,6,'all six legal customer telephone footers remain');
 });
 test('canonical Mall builder template, not stale mall.html, owns visible purpose',()=>{
  const html=read('sites/ekodi-mall/src/index.template.html');
