@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { auditBbqcgProduction, hasBbqcgPosTabDefinitions } from '../scripts/verify-bbqcg-production-readonly.mjs';
+import { auditBbqcgProduction, hasBbqcgPosTabDefinitions, normalizeJsUnicodeEscapes } from '../scripts/verify-bbqcg-production-readonly.mjs';
 import { storeAdminScript } from '../store-admin-engine.js';
 
 const noindex={'x-robots-tag':'noindex,nofollow,noarchive'};
@@ -78,4 +78,21 @@ test('four-tab verifier tolerates quote/whitespace changes but rejects a missing
   assert.equal(hasBbqcgPosTabDefinitions(valid),true);
   assert.equal(hasBbqcgPosTabDefinitions(valid.replace('["agent","Agent 관리",".pos-agent-guide"]','')),false);
   assert.equal(hasBbqcgPosTabDefinitions(valid.replace('".pos-orders"','".other-pane"')),false);
+});
+
+test('ASCII-escaped production bundler labels preserve actual four-tab contract',async()=>{
+  const actual=await (await storeAdminScript()).text();
+  const escaped=actual.replace(/[^\x00-\x7F]/g,char=>'\\u'+char.charCodeAt(0).toString(16).padStart(4,'0'));
+  assert.notEqual(escaped,actual,'fixture must introduce actual Unicode escapes');
+  assert.match(escaped,/\\u[0-9a-fA-F]{4}/);
+  assert.equal(hasBbqcgPosTabDefinitions(escaped),true,'bundled \\uXXXX labels should decode as data');
+  const {fetchImpl}=stub({'/store-admin.js':()=>response(escaped,200,{'content-type':'text/javascript; charset=utf-8'})});
+  const report=await auditBbqcgProduction({fetchImpl});
+  assert.equal(report.ok,true,JSON.stringify(report.records.filter(row=>row.errors.length)));
+});
+test('Unicode escape normalization is data-only and handles braced/code-unit notation',()=>{
+  const src='\\uD504\\uB85C\\uADF8\\uB7A8 \\u{0041} \\x42';
+  assert.equal(normalizeJsUnicodeEscapes(src),'프로그램 A B');
+  const oversized='\\u{110000}';
+  assert.equal(normalizeJsUnicodeEscapes(oversized),oversized);
 });

@@ -32,9 +32,20 @@ const BBQCG_POS_TUPLES=Object.freeze([
   /\[\s*['"]channels['"]\s*,\s*['"]배달플랫폼['"]\s*,\s*['"]\.pos-platforms['"]\s*\]/,
   /\[\s*['"]agent['"]\s*,\s*['"]Agent 관리['"]\s*,\s*['"]\.pos-agent-guide['"]\s*\]/
 ]);
+// The production Worker bundles clientMain before Function#toString serializes
+// the browser source. Its ASCII output may encode Korean tab labels as \uXXXX.
+// Normalize only JS string escape spellings; never execute or evaluate source.
+export function normalizeJsUnicodeEscapes(source){
+  return String(source||'').replace(/\\u\{([0-9a-fA-F]{1,6})\}|\\u([0-9a-fA-F]{4})|\\x([0-9a-fA-F]{2})/g,
+    (literal,point,bmp,byte)=>{
+      const n=Number.parseInt(point||bmp||byte,16);
+      return point&&n>0x10FFFF?literal:point?String.fromCodePoint(n):String.fromCharCode(n);
+    });
+}
 export function hasBbqcgPosTabDefinitions(source){
-  return /function\s+mountBbqPosTabs\s*\(\)/.test(source)
-    && BBQCG_POS_TUPLES.every(tuple=>tuple.test(source));
+  const normalized=normalizeJsUnicodeEscapes(source);
+  return /function\s+mountBbqPosTabs\s*\(\)/.test(normalized)
+    && BBQCG_POS_TUPLES.every(tuple=>tuple.test(normalized));
 }
 
 export async function auditBbqcgProduction({fetchImpl=fetch,origin=BBQCG_CANARY_URL}={}){
@@ -80,7 +91,20 @@ export async function auditBbqcgProduction({fetchImpl=fetch,origin=BBQCG_CANARY_
       mark(is200(status)&&/javascript/.test(ctype),'admin-script-http-type');
       mark(body.includes('function mountBbqPosTabs()'),'pos-tabs-function');
       mark(body.includes('data-bbq-pos-tab')&&body.includes('posTab'),'pos-tabs-state');
-      mark(hasBbqcgPosTabDefinitions(body),'pos-four-tabs');
+      const fourTabs=hasBbqcgPosTabDefinitions(body);
+      mark(fourTabs,'pos-four-tabs');
+      if(!fourTabs){
+        // Boolean-only diagnostics: no response body, credentials, or private data.
+        const normalized=normalizeJsUnicodeEscapes(body);
+        record.diagnostics={
+          unicodeEscapesPresent:/\\u[0-9a-fA-F]{4}/.test(body),
+          tabs:['programs','orders','channels','agent'].map(id=>({
+            id,
+            idSeen:normalized.includes(id),
+            paneSeen:normalized.includes(({programs:'.pos-programs',orders:'.pos-orders',channels:'.pos-platforms',agent:'.pos-agent-guide'})[id])
+          }))
+        };
+      }
     }else if(id==='admin-styles'){
       mark(is200(status)&&/text\/css/.test(ctype),'admin-css-http-type');
       mark(body.includes('.bbq-pos-subtabs')&&body.includes('@media(max-width:620px)'),'admin-compact-mobile-rules');
