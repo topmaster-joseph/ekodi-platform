@@ -126,3 +126,11 @@ test('mail admin page is a readable tabbed layout with an explicit Gmail read+se
   assert.match(html, /pending_oauth:\['Google 연결 대기'/);
   assert.match(html, /@media\(max-width:780px\)/);
 });
+
+// 2026-11-12 운영자 요청: 메일 관리 화면에서 로그인 계정을 바꿀 수 있어야 한다.
+test('mail admin page offers an account switch that signs out and returns via apex auth', async () => {
+  const { mailAdminPage } = await import('../mail-admin-page.js');
+  const html = await mailAdminPage().text();
+  assert.match(html, /id="switchAccount"[^>]*>계정 바꾸기</);
+  assert.match(html, /\$\('switchAccount'\)\.onclick=async\(\)=>\{if\(!confirm\([^)]*\)\)return;try\{await sb\.auth\.signOut\(\)\}catch\{\}location\.replace\('https:\/\/ekodi\.kr\/auth\/\?site=mail&return_to='/);
+});
