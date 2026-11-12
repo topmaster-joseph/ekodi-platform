@@ -66,6 +66,13 @@ try{
              const n=notice?.getBoundingClientRect(),sh=share?.getBoundingClientRect();
              return Boolean(n&&sh&&sh.top>=n.bottom-1);
            })(),
+             // 순서 검사는 네 조건의 논리곱이었고 증거를 남기지 않았다. 2026-11-12
+             // 실행에서 desktop-church-order 가 `{}` 만 남기고 깨졌고, 그래서 어느
+             // 조건이 왜 깨졌는지 알 수 없었다. 운영 페이지를 다시 열지 않고도
+             // 판정할 수 있도록 실제 자녀 순서와 두 사각형을 함께 기록한다.
+             childOrder:order.slice(0,24).map(text=>String(text).slice(0,80)),
+             noticeRect:(()=>{const r=notice?.getBoundingClientRect();return r?{top:Math.round(r.top),bottom:Math.round(r.bottom),height:Math.round(r.height)}:null;})(),
+             shareRect:(()=>{const r=share?.getBoundingClientRect();return r?{top:Math.round(r.top),bottom:Math.round(r.bottom),height:Math.round(r.height)}:null;})(),
              nextHidden:el.querySelector('.dv-datebar a:last-child')?.hidden,
              adminHidden:el.querySelector('.dv-admin')?.hidden,
              overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+2,
@@ -77,7 +84,10 @@ try{
          });
          check(device.name+'-'+surface.name+'-scripture',state.scriptureDisplayed&&state.scriptureText.includes('오바댜 1:17-21')&&state.scriptureText.length>120,{excerpt:state.scriptureText.slice(0,100)});
          check(device.name+'-'+surface.name+'-attribution',state.notice.includes(NOTICE));
-         check(device.name+'-'+surface.name+'-order',state.scriptureBeforeTabs&&state.scriptureBeforeNotice&&state.shareAfterNotice&&state.noticeShareNonoverlap);
+         check(device.name+'-'+surface.name+'-order',state.scriptureBeforeTabs&&state.scriptureBeforeNotice&&state.shareAfterNotice&&state.noticeShareNonoverlap,
+           {scriptureBeforeTabs:state.scriptureBeforeTabs,scriptureBeforeNotice:state.scriptureBeforeNotice,
+            shareAfterNotice:state.shareAfterNotice,noticeShareNonoverlap:state.noticeShareNonoverlap,
+            childOrder:state.childOrder,noticeRect:state.noticeRect,shareRect:state.shareRect});
          check(device.name+'-'+surface.name+'-future-link',state.nextHidden===true,{nextHidden:state.nextHidden});
          check(device.name+'-'+surface.name+'-guest-admin-closed',state.adminHidden===true);
          check(device.name+'-'+surface.name+'-tabs',[
