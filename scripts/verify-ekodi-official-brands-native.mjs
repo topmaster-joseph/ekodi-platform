@@ -10,6 +10,14 @@ import path from 'node:path';
 import {planEkodiIndependentBrowser,executeEkodiIndependentBrowser} from './ekodi-independent-browser.mjs';
 
 export const OFFICIAL_BRAND_AUDIT_IDS=Object.freeze(['publishing','books','management']);
+/* Exact expected public brand labels, deliberately independent from the
+   migration status of the service registry. An outdated registry must never
+   turn an old label into a successful "official" browser assertion. */
+export const OFFICIAL_BRAND_AUDIT_NAMES=Object.freeze({
+  publishing:'에코디출판',
+  books:'에코디서점',
+  management:'에코디경영'
+});
 export const OFFICIAL_BRAND_AUDIT_PROFILES=Object.freeze([
   'compact-mobile','mobile-portrait','tablet','desktop'
 ]);
@@ -23,14 +31,17 @@ export function planOfficialBrandAudit(registry,options={}){
   if(!sites.length)throw Error('EKODI_BRAND_NO_PUBLIC_SURFACES');
   const expectedTextByPath={};
   const paths=[];
+  const sourcePendingIds=[];
   for(const site of sites){
     const u=new URL(site.url);
     if(u.origin!=='https://ekodi.kr'||u.search||u.hash||
-      typeof site.name!=='string'||!site.name.startsWith('에코디'))
+      typeof site.name!=='string'||!OFFICIAL_BRAND_AUDIT_NAMES[site.id])
       throw Error('EKODI_BRAND_REGISTRY_UNSAFE');
     const p=u.pathname.endsWith('/')?u.pathname:u.pathname+'/';
     paths.push(p);
-    expectedTextByPath[p]=site.name;
+    const expected=OFFICIAL_BRAND_AUDIT_NAMES[site.id];
+    if(site.name!==expected)sourcePendingIds.push(site.id);
+    expectedTextByPath[p]=expected;
   }
   const jobs=[];
   for(const profile of profiles){
@@ -45,16 +56,24 @@ export function planOfficialBrandAudit(registry,options={}){
       screenshots:plan.plan.screenshotsPlanned});
   }
   return {siteIds:sites.map(x=>x.id),paths,expectedTextByPath,jobs,
+    sourceAligned:sourcePendingIds.length===0,sourcePendingIds,
     provider:'ekodi-background-browser-worker',externalBrowserCalls:0};
 }
 
 export async function runOfficialBrandAudit(registry,options={}){
   const plan=planOfficialBrandAudit(registry,options);
   if(options.planOnly===true)return {ok:true,mode:'plan-only',
+    sourceAligned:plan.sourceAligned,sourcePendingIds:plan.sourcePendingIds,
     siteIds:plan.siteIds,paths:plan.paths,
     jobs:plan.jobs.map(({profile,actions,assertions,screenshots})=>
       ({profile,actions,assertions,screenshots})),
     provider:plan.provider,externalBrowserCalls:0};
+  // A source registry still using pre-migration names must not be presented
+  // as a successful released-brand audit. This is a guarded readiness state.
+  if(!plan.sourceAligned)return {
+    ok:false,code:'EKODI_BRAND_SOURCE_NOT_ALIGNED',mode:'native-readonly',
+    sourcePendingIds:plan.sourcePendingIds,externalBrowserCalls:0
+  };
   const receipts=[];
   for(const job of plan.jobs){
     const result=await executeEkodiIndependentBrowser(job.request,
