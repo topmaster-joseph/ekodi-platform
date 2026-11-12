@@ -911,9 +911,9 @@ function boot(root) {
     const title = section ? section.title :
       kind === 'page' ? body.title : body.title;
     const message = section
-      ? formatDevotionSectionShareMessage({date:current.date,title,content:section.content,url})
+      ? formatDevotionSectionShareMessage({date:current.date,title,content:section.content,url,passage:current.passage})
       : formatDevotionShareMessage({
-        date: current.date, title,
+        date: current.date, title, passage: current.passage,
         excerpt: devotionShareExcerpt(current, kind, privatePrayer),
         url,
       });
