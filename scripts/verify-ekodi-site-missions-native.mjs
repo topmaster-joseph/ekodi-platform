@@ -36,7 +36,7 @@ export function planSiteMissionAudit(registry,missions,options={}){
     const site=current.get(id),mission=declared.get(id);
     if(!site||!mission||site.name!==mission.officialName ||
        mission.ownerScope!=='ekodi-first-party')throw Error('EKODI_MISSION_AUDIT_SITE_IDENTITY_DRIFT');
-    if(site.status!=='live' && options.includePreparing!==true){
+    if(site.status!=='live' && !(options.includePreparing===true && (site.status==='beta'||site.status==='preparing'))){
       deferred.push(id);continue;
     }
     const address=new URL(site.url);
