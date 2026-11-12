@@ -49,7 +49,7 @@ export function formatDevotionShareMessage({date, title, excerpt, url, passage =
   return [
     `${Number(y)}년 ${Number(m)}월 ${Number(d)}일 ${day}요일`,
     compact(passage),
-    '에코디 묵상나눔',
+    '에코디',
     headline === compact(passage) ? '' : headline,
     body,
     cleanUrl.href,
@@ -91,7 +91,7 @@ export function formatDevotionSectionShareMessage({date,title,content,url,passag
   return [
     dateLine,
     compact(passage),
-    `에코디 묵상나눔(${sectionLabel})`,
+    `에코디 <${sectionLabel}>`,
     workTitle ? '〈'+workTitle+'〉' : '',
     fullContent||'등록된 내용이 없습니다.',
     validatedUrl,
