@@ -87,3 +87,11 @@ test('practice matches how each FactChat feature actually works (official docs, 
   }
   assert.doesNotMatch(FLOW.find(f=>f.id==='p2').talk.join(' '),/대본\(가상\)을 넣고/,'meeting notes are recorded, not pasted');
 });
+
+test('credit notices: every demo/practice feature has an official rule, estimate and a line to say in class',async()=>{
+  const {CREDIT,CREDIT_OPENING}=await import('../education/study/live/guide/demos.js');
+  for(const d of DEMOS)assert.ok(CREDIT[d.mission]?.rule&&CREDIT[d.mission].estimate&&CREDIT[d.mission].say,d.id);
+  for(const f of FLOW)if(f.mission)assert.ok(CREDIT[f.mission],f.id);
+  assert.match(CREDIT.minutes.rule,/1분당 약 6크레딧/);assert.match(CREDIT.ppt.rule,/1장당 약 50크레딧/);
+  assert.match(CREDIT_OPENING,/기관 계정 크레딧/);
+});

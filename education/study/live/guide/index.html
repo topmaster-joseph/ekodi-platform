@@ -19,11 +19,12 @@
     <span class="g-clock num" id="gClock">--:--</span>
     <a class="btn btn-small" href="./?gate=logout">잠그기</a>
   </div>
-  <div class="g-now-row"><span id="gNow" role="status">불러오는 중…</span><button type="button" class="btn btn-small" id="gJump">지금 구간</button></div>
+  <div class="g-now-row"><span id="gNow" role="status">불러오는 중…</span><span><a class="btn btn-small" href="#gCreditCard">크레딧</a> <button type="button" class="btn btn-small" id="gJump">지금 구간</button></span></div>
   <nav class="g-tabs" id="gTabs" role="tablist" aria-label="차수"></nav>
 </header>
 <main class="g-main">
   <section class="g-card"><h2>수강생 분야 <small>실습 프롬프트 기준</small></h2><div class="g-fields" id="gFields"></div><p class="meta" id="gFieldInfo"></p></section>
+  <section class="g-card" id="gCreditCard"><h2>크레딧 안내 <small>강의 중 공지용</small></h2><div id="gCredit"></div></section>
   <div id="gSession"></div>
   <section class="g-card"><h2>시연 뒤 집중 실습 원칙</h2><div id="gFocus"></div></section>
   <section class="g-card"><h2>보안 3원칙</h2><div id="gSafety"></div></section>

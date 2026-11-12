@@ -2,7 +2,7 @@
 // 차수 탭 → 차시별 진행표. Each demo/practice 차시 lets the instructor pick a demo (추천 + 전체 분야),
 // shows the demo material, and the hand-over line that sends learners into focused individual practice.
 import {FIELDS,FLOW,PROMPTS,FREE_PROMPT,SAFETY,SESSIONS,PREP,FOCUS_RULES,LEARNER_LABEL} from './data.js';
-import {DEMOS,MISSIONS,SESSION_PICKS,FEATURE_STEPS,INPUT_LABEL,PPT_SETTINGS,demoById,demoPrompt,featureInput} from './demos.js';
+import {DEMOS,MISSIONS,SESSION_PICKS,FEATURE_STEPS,INPUT_LABEL,PPT_SETTINGS,CREDIT,CREDIT_OPENING,CREDIT_AS_OF,demoById,demoPrompt,featureInput} from './demos.js';
 
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -52,11 +52,16 @@ function demoCard(d){
     (m==='ppt'?'<p class="g-setting">화면 설정: '+esc(PPT_SETTINGS)+'</p>':'')+
     (isMin?'<details class="g-prompt"><summary>녹음이 안 될 때 · 채팅 대체 프롬프트</summary><p class="g-pre">'+esc(demoPrompt(d))+'</p></details>':'')+
     '<div class="g-two"><div><p class="g-sub">보여줄 포인트</p>'+list(d.points)+'</div><div><p class="g-sub">나올 수 있는 오류</p>'+list(d.pitfalls,'g-warn')+'</div></div>'+
+    (CREDIT[m]?'<p class="g-credit-line">크레딧: '+esc(CREDIT[m].rule)+' · 예상 '+esc(CREDIT[m].estimate)+'</p>':'')+
     '<p class="g-handoff"><b>넘김 멘트</b> '+esc(d.handoff)+'</p>'+
     '<div class="g-actions"><button type="button" class="btn btn-small btn-primary" data-copy-input="'+d.id+'">'+(isMin?'대본 복사':'입력 글 복사')+'</button>'+
     (hasSample&&m==='hwp'?'<button type="button" class="btn btn-small" data-copy-sample="'+d.id+'">자료 복사</button>':'')+
     '<a class="btn btn-small" href="'+present+'">발표 화면에 불러오기</a></div>'+
     '<p class="meta">발표 화면의 AI 시연은 채팅으로 실행됩니다. HWP·회의록·프레젠테이션 기능은 「FactChat 화면」 버튼으로 실제 화면을 띄워 시연하세요.</p></article>';
+}
+function creditBox(m){
+  const c=CREDIT[m];if(!c)return '';
+  return '<div class="g-credit"><p class="g-credit-title">크레딧 · 각자 기관 계정에서 차감</p><p>'+esc(c.rule)+'</p><p>1인 예상: <b>'+esc(c.estimate)+'</b></p><p class="g-say"><b>공지 멘트</b> 「'+esc(c.say)+'」</p></div>';
 }
 function phaseBar(f){
   if(!f.phases)return '';
@@ -84,6 +89,9 @@ function renderSession(){
       const picker=SESSION_PICKS[current]?.[f.id]?demoPicker(f.id):'';
       return '<li class="g-step g-k-'+esc(f.kind)+'" data-a="'+(base+f.start)+'" data-b="'+(base+f.end)+'"><div class="g-time"><b>'+clock(base+f.start)+'</b><small>'+(f.end-f.start)+'분</small></div><div class="g-body">'+
         '<p class="g-kind">'+esc(f.kind)+'</p><h3>'+esc(f.title)+'</h3>'+phaseBar(f)+
+        (f.id==='intro'?'<div class="g-credit"><p class="g-credit-title">크레딧 공지 (시작할 때 읽기)</p><p class="g-say">「'+esc(CREDIT_OPENING)+'」</p></div>':'')+
+        (f.id==='demo'?'<div class="g-credit"><p class="g-credit-title">크레딧</p><p>강사 시연은 강사 계정 크레딧을 씁니다. 회의록 30초·발표자료 5장 기준 약 260크레딧 + 채팅·HWP 요청분.</p></div>':'')+
+        (f.mission?creditBox(f.mission):'')+
         (extra?.length?'<div class="g-session-note"><p class="g-sub">'+s.no+'차 강의자료</p>'+list(extra)+'</div>':'')+
         list(f.talk,'g-talk')+(f.demo?.length?'<p class="g-sub">기본 시연 순서</p>'+list(f.demo):'')+
         picker+learnerPrompt(f)+(f.cues?.length?'<p class="g-sub">운영 신호</p>'+list(f.cues,'g-cue'):'')+'</div></li>';
@@ -96,7 +104,14 @@ function renderField(){
   const f=FIELDS.find(x=>x.id===field);
   $('#gFieldInfo').textContent=f?'해당 부서: '+f.depts:'';
 }
+function renderCredit(){
+  const names={hwp:'HWP 편집기',minutes:'회의록',ppt:'프레젠테이션',chat:'채팅',research:'Deep Research'};
+  $('#gCredit').innerHTML='<p class="g-say">「'+esc(CREDIT_OPENING)+'」</p><table class="g-table"><thead><tr><th>기능</th><th>차감 기준</th><th>1인 예상</th></tr></thead><tbody>'+
+    Object.entries(names).map(([k,n])=>'<tr><th>'+n+'</th><td>'+esc(CREDIT[k].rule)+'</td><td>'+esc(CREDIT[k].estimate)+'</td></tr>').join('')+'</tbody></table>'+
+    '<p class="meta">출처: Mindlogic BAZE(FactChat) 공식 문서, '+CREDIT_AS_OF+' 확인. 기관별 한도·잔여 크레딧 확인 위치는 확인필요.</p>';
+}
 function renderStatic(){
+  renderCredit();
   $('#gFocus').innerHTML=list(FOCUS_RULES);
   $('#gSafety').innerHTML=list(SAFETY);
   const done=store.get('prep')||{};

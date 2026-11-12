@@ -190,6 +190,19 @@ export const DEMOS=Object.freeze([
     '「여러분 템플릿을 완성해 공유 게시판에 올리면 오늘 실습 완료입니다.」')
 ]);
 
+// Credits: each learner's practice uses the institutional credits of their own FactChat account.
+// Official Mindlogic BAZE docs, checked 2026-11-13. Institution limits/balance location: 확인필요.
+export const CREDIT_AS_OF='2026-11-13';
+export const CREDIT=Object.freeze({
+  hwp:{rule:'요청 1건마다 쓴 만큼 차감 · 답변 아래에 사용량 표시',estimate:'편집 요청 3~5회분(정확한 양은 답변 아래 표시로 확인)',say:'HWP 편집은 요청할 때마다 각자 계정 크레딧이 차감됩니다. 답변 아래 숫자를 한 번 확인해 보세요.'},
+  minutes:{rule:'녹음·업로드 1분당 약 6크레딧 · 마이페이지 「오디오 크레딧」에 집계',estimate:'1분 녹음 약 6크레딧(녹음한 사람 계정)',say:'회의록은 녹음 1분에 약 6크레딧입니다. 1분을 넘기지 말고, 짝과 번갈아 1번씩만 녹음하세요.'},
+  ppt:{rule:'슬라이드 1장당 약 50크레딧(분량·참고 자료에 따라 변동) · 재생성·편집 차감 여부 확인필요',estimate:'5장 약 250크레딧 · 다시 만들면 그만큼 추가',say:'발표자료는 1장에 약 50크레딧, 5장이면 약 250크레딧입니다. 슬라이드 수는 5장으로, 다시 만들기는 1번까지만 해 주세요.'},
+  chat:{rule:'모델별 단가 적용(기관 정책 확인필요)',estimate:'3~5회 질문분 · 가벼운 모델 우선',say:'채팅도 모델마다 크레딧이 다릅니다. 연습은 가벼운 모델로 하세요.'},
+  research:{rule:'일반 채팅보다 많이 사용(정확한 단가 확인필요)',estimate:'강사 시연 권장 · 수강생은 선택',say:'Deep Research는 크레딧을 많이 씁니다. 오늘은 시연만 보고, 필요할 때 업무에서 쓰세요.'},
+  free:{rule:'채팅과 같음(모델별 단가)',estimate:'2~3회 질문분',say:'자유 실습은 채팅이라 질문 수만큼 차감됩니다.'}
+});
+export const CREDIT_OPENING='실습은 여러분 각자에게 지급된 기관 계정 크레딧을 사용합니다. 오늘 실습 전체 예상은 1인당 약 260크레딧 + 채팅·HWP 요청분입니다. 회의록 사용량은 마이페이지 「오디오 크레딧」에서 볼 수 있고, 개인 한도는 학교 안내를 따릅니다.';
+
 // Presentation settings are chosen on screen, not typed into the prompt.
 export const PPT_SETTINGS='슬라이드 수 직접 입력 5장 · 화면 비율 16:9 · 템플릿 자동 추천';
 // Text actually entered into the feature (HWP: edit instruction; 회의록: nothing — the script is read aloud).
