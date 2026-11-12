@@ -148,7 +148,7 @@ test('BBQ menu-specific recipe and shrinkflation portion cards use real tenant m
     assert.ok(script.includes(marker),'missing card field: '+marker);
   assert.match(script,/Number\.isFinite\(value\)\&\&value>0/);
   assert.match(script,/if\(!select\.value\)notes\.push\('메뉴 미선택'\)/);
-  assert.match(script,/if\(kind\&\&declared!==null\&\&measured!==null\&\&stage\&\(kind!=='chicken'\|\|stage==='조리 전'\)\)/);
+  assert.match(script,/if\(kind\&\&declared!==null\&\&measured!==null\&\&stage\&\&\(kind!=='chicken'\|\|stage==='조리 전'\)\)/);
   assert.match(script,/card\.querySelector\('\[data-bbq-portion-result\]'\)\.textContent/);
   assert.match(script,/for\(const input of fields\)\{if\(input\.tagName==='SELECT'\)input\.selectedIndex=0;else input\.value=''\}/);
   assert.match(script,/이 입력은 서버·브라우저 저장소에 저장되지 않습니다/);
