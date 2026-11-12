@@ -21,15 +21,39 @@ export function planNativeBrowserBatch(raw={}) {
     const p=normalizeTask({path:value,actions:[]}).path;
     if(!paths.includes(p))paths.push(p);
   }
+  // Optional public-brand assertions are read-only and run in the actual
+  // owned Chromium DOM after each corresponding navigation. Never accept an
+  // assertion for an unrequested path or a value that could carry credentials.
+  const assertionInput=raw.expectedTextByPath;
+  if(assertionInput!==undefined && (!assertionInput || typeof assertionInput!=='object' || Array.isArray(assertionInput)))
+    throw Error('NATIVE_BATCH_ASSERTIONS_INVALID');
+  const assertions=new Map();
+  for(const [requestedPath,label] of Object.entries(assertionInput||{})){
+    if(typeof requestedPath!=='string' || !requestedPath.startsWith('/'))
+      throw Error('NATIVE_BATCH_ASSERTION_PATH_INVALID');
+    const normalized=normalizeTask({path:requestedPath,actions:[]}).path;
+    if(normalized!==requestedPath || !paths.includes(normalized))
+      throw Error('NATIVE_BATCH_ASSERTION_PATH_UNREQUESTED');
+    if(typeof label!=='string'||label!==label.trim()||
+      !/^[\p{L}\p{N} .·&()_-]{2,80}$/u.test(label) ||
+      /(?:password|bearer|token|secret|cookie|authkey)/i.test(label))
+      throw Error('NATIVE_BATCH_ASSERTION_TEXT_INVALID');
+    assertions.set(normalized,label);
+  }
   const profile=String(raw.deviceProfile||'desktop');
   // Validate profile through the same centrally enforced task contract.
   normalizeTask({path:'/',deviceProfile:profile,actions:[]});
-  const screenshotBudget=raw.screenshots===true?Math.min(paths.length,30-(2*paths.length-1)):0;
+  // Existing task protocol allows at most 30 actions. Keep every snapshot
+  // and every requested text assertion; only screenshots can be budgeted down.
+  const actionBase=(2*paths.length-1)+assertions.size;
+  if(actionBase>30)throw Error('NATIVE_BATCH_ACTION_BUDGET_EXCEEDED');
+  const screenshotBudget=raw.screenshots===true?Math.min(paths.length,30-actionBase):0;
   let remaining=screenshotBudget;
   const actions=[];
   paths.forEach((p,i)=>{
     if(i>0)actions.push({type:'goto',path:p});
     actions.push({type:'snapshot'});
+    if(assertions.has(p))actions.push({type:'assertText',text:assertions.get(p)});
     if(remaining>0){actions.push({type:'screenshot',name:'surface-'+i,fullPage:true});remaining--;}
   });
   const task=normalizeTask({
@@ -37,7 +61,9 @@ export function planNativeBrowserBatch(raw={}) {
     allowMutation:false,actions,timeoutMs:Math.min(Number(raw.timeoutMs)||120000,120000)
   });
   return Object.freeze({task,requestedPaths:entries.length,uniquePaths:paths.length,
-    screenshotsPlanned:screenshotBudget,chromiumLaunches:1,externalBrowserCalls:0});
+    expectedTextByPath:Object.freeze(Object.fromEntries(assertions)),
+    assertionsPlanned:assertions.size,screenshotsPlanned:screenshotBudget,
+    chromiumLaunches:1,externalBrowserCalls:0});
 }
 
 export async function runNativeBrowserBatch(raw, options={}){
@@ -51,6 +77,7 @@ export async function runNativeBrowserBatch(raw, options={}){
     ok:true,taskId:plan.task.taskId,provider:'ekodi-background-browser-worker',
     performance:report.performance||null,elapsedMs:Date.now()-started,
     pathsChecked:plan.uniquePaths,chromiumLaunches:1,externalBrowserCalls:0,
+    assertionsPlanned:plan.assertionsPlanned,
     screenshotsPlanned:plan.screenshotsPlanned,workerReport:report
   };
 }
