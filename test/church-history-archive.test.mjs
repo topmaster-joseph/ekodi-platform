@@ -67,3 +67,12 @@ test('worker routes stay on canonical ekodi.kr path hierarchy', async () => {
   assert.match(config, /ekodi\.kr\/api\/church\/admin\/history\*/);
   assert.doesNotMatch(config, /history\.ekodi\.kr/);
 });
+
+test('public history lists months and days in descending order within a year', () => {
+  const html = renderPublicHistory([
+    { start_date: '2018-03-14', date_label: '2018년 3월 14일', title: '삼월' },
+    { start_date: '2018-08-13', date_label: '2018년 8월 13일', title: '팔월' },
+    { start_date: '2018-10-09', date_label: '2018년 10월 9일', title: '시월' },
+  ]);
+  assert.ok(html.indexOf('시월') < html.indexOf('팔월') && html.indexOf('팔월') < html.indexOf('삼월'));
+});

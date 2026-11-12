@@ -79,7 +79,8 @@ export function groupHistoryByYear(entries = []) {
     if (!groups.has(year)) groups.set(year, []);
     groups.get(year).push(entry);
   }
-  for (const list of groups.values()) list.sort((a, b) => clean(a.start_date).localeCompare(clean(b.start_date)) || Number(a.sort_order || 0) - Number(b.sort_order || 0));
+  // 연도 안에서도 월·일 내림차순(최신 → 과거)
+  for (const list of groups.values()) list.sort((a, b) => clean(b.start_date).localeCompare(clean(a.start_date)) || Number(a.sort_order || 0) - Number(b.sort_order || 0));
   return [...groups.entries()];
 }
 
