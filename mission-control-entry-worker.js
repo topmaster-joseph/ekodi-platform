@@ -153,6 +153,7 @@ async function proxyPersonalFinanceAdminControl(request, env) {
 
 // EKODI-OPERATOR-NOTIFY-001: 내부 Worker 전용 운영자 알림 RPC(named entrypoint, 공개 경로 없음).
 export { OperatorNotifier } from './operator-notify.js';
+import { runMailPushWatch } from './mail-push-watch.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -448,6 +449,9 @@ export default {
     // Never dispatch GitHub commands from the webhook observation queue.
     try { await drainGitHubObservations(env, { limit: 10 }); }
     catch (error) { console.error('EKODI GitHub observations unavailable', error?.message); }
+    // EKODI-MAIL-PUSH-ALL-001: 연결된 모든 Gmail 새 메일 → 최고관리자 휴대폰 알림(본문 제외).
+    const mailPush = runMailPushWatch(env).then(r => { if (r?.notified || r?.errors) console.log('mail push watch', JSON.stringify(r)); }).catch(error => console.error('mail push watch failed', error?.message));
+    if (ctx?.waitUntil) ctx.waitUntil(mailPush); else await mailPush;
 
     const customerSchedule = typeof customerEntryWorker.scheduled === 'function'
       ? await customerEntryWorker.scheduled(controller, env, ctx)
