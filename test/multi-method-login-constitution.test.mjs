@@ -69,6 +69,14 @@ test('auth notices never present Google as the only way in', () => {
   }
 });
 
+test('account switching re-renders every enabled login method', () => {
+  assert.match(read('auth-site/client-auth.js'), /window\.dispatchEvent\(new CustomEvent\('ekodi:auth-signed-out'\)\)/);
+  assert.match(read('auth-site/auth-router.js'), /addEventListener\('ekodi:auth-signed-out',\(\)=>federated\.renderLoginButtons\(\)/);
+  const ui = read('auth-site/email-password.js');
+  assert.match(ui, /가입에 사용할 이메일 \(에코디 아이디\)/);
+  assert.match(ui, /가입에 사용할 에코디 비밀번호 \(12자 이상\)/);
+});
+
 test('email + password is an EKODI-only credential gated by all three operator switches', () => {
   const ui = read('auth-site/email-password.js');
   assert.match(ui, /구글·네이버·카카오 비밀번호가 아니라, 에코디에서만 쓸 새 비밀번호/);
