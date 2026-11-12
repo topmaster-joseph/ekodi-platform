@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   syntax-contract:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v7
@@ -36,7 +36,7 @@ jobs:
           node --check scripts/ekodi-background-browser-worker.mjs
   home-browser:
     if: github.event_name != 'pull_request' && (github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch'))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
