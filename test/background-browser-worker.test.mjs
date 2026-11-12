@@ -105,7 +105,7 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.equal((sharedRelease.match(/surface_registry:\s*config\/board-surface-verification\.json/g)||[]).length,2);
   assert.equal(boardRegistry.policyId,'EKODI-BOARD-NATIVE-VERIFY-001');
   assert.equal(policy.taskProtocol.maxActions,30);
-  assert.ok(workerWorkflow.includes('const screenshotBudget=Math.max(0,30-(2*paths.length-1))'),'real board screenshots must respect the 30-action limit');
+  assert.ok(workerWorkflow.includes('const screenshotBudget=Math.max(0,30-(2*paths.length-1)-(expectedVisible?2:0))'),'real board screenshots must respect the 30-action limit');
   assert.ok(workerWorkflow.includes('screenshots<screenshotBudget'),'snapshot coverage must remain complete under budget');
   for(const count of [1,4,10,12]){
     const baseActions=2*count-1;
