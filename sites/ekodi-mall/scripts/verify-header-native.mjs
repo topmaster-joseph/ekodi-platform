@@ -71,6 +71,19 @@ async function examine(page, width, synthetic) {
       ).length,
     };
   });
+  // Numeric-only CSS evidence is emitted before assertions so failures identify
+  // the exact computed width and cascade without logging URLs or credentials.
+  const searchStyle = await page.evaluate(() => {
+    const el = document.querySelector('#mallGlobalSearch');
+    if (!el) return null;
+    const css = getComputedStyle(el);
+    return { width: css.width, minWidth: css.minWidth, maxWidth: css.maxWidth,
+      display: css.display, gridArea: css.gridArea };
+  });
+  console.log('[MALL-HEADER-NATIVE] geometry ' + JSON.stringify({
+    viewport: width, synthetic, candidateCssInjected: report.candidateCssInjected,
+    search: result.search, account: result.account, style: searchStyle,
+  }));
   assert.ok(result.top && result.search && result.account, 'canonical Mall header missing');
   assert.ok(result.originalMobileSearchPreserved, 'original mobile search control lost');
   assert.ok(result.wishlistPreserved && result.sellerPreserved, 'seller or wishlist navigation lost');
@@ -150,8 +163,16 @@ async function run() {
               : document.querySelector('[data-mall-login]')?.hidden === false,
             synthetic, { timeout: 16000 }
           );
-          // Allow legacy nav scripts / MutationObserver to settle.
+          // Wait until production stylesheets finish; otherwise a late CSS
+          // network response can override the local PR candidate overlay.
+          await page.waitForLoadState('load', { timeout: 30000 });
           await page.waitForTimeout(350);
+          if (candidateCss) {
+            assert.ok(candidateCss.includes('width:min(100%,310px);max-width:310px'),
+              'candidate stylesheet lost its requested 310px tablet search cap');
+            await page.addStyleTag({ content: candidateCss });
+            await page.evaluate(() => document.documentElement.getBoundingClientRect().width);
+          }
           if (synthetic && width === 1366) {
             // Pure DOM-only test: a late duplicate must be removed without
             // deleting an unrelated category anchor.
