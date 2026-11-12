@@ -16,6 +16,7 @@ on:
       - 'ekodi-orchestrator-task-adapter.js'
       - 'core-ai-gateway.js'
       - 'ai-command-control.js'
+      - 'scripts/verify-ekodi-site-ai-live.mjs'
 
 permissions:
   contents: read
@@ -240,6 +241,16 @@ jobs:
           # from the paid AI proof budget; no additional AI calls are made.
           test -n "${E2E_ADMIN_TOKEN:-}"
           node scripts/verify-ekodi-fleet-live.mjs >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify EKODI Site AI scoped preview and fleet on real host (read only)
+        if: steps.budget.outputs.allowed == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${E2E_ADMIN_TOKEN:-}"
+          # No provider API usage; reuse the already-provisioned short-lived admin session.
+          # The script checks guest denial, same-origin, false authority and zero auto-pay.
+          node scripts/verify-ekodi-site-ai-live.mjs >> "$GITHUB_STEP_SUMMARY"
 
       - name: Submit and execute read-only orchestration proof
         if: steps.budget.outputs.allowed == 'true'
