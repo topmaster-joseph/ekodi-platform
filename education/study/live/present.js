@@ -171,7 +171,7 @@ async function setupDemoLibrary(){
     const d=lib.demoById(sel.value);if(!d)return;
     $('#aiInput').value=lib.demoPrompt(d);
     if(course.tracks.some(t=>t.id===d.field))$('#aiTrack').value=d.field;
-    $('#aiHandoff').hidden=false;$('#aiHandoff').textContent='실제 기능: FactChat '+(lib.MISSIONS[d.mission]||'채팅')+' · 넘김 멘트: '+d.handoff;
+    $('#aiHandoff').hidden=false;$('#aiHandoff').textContent='실제 기능: FactChat '+(lib.MISSIONS[d.mission]||'채팅')+(lib.CREDIT?.[d.mission]?' · 크레딧(각자 기관 계정): '+lib.CREDIT[d.mission].estimate:'')+' · 넘김 멘트: '+d.handoff;
     toast('시연 「'+d.title+'」을 불러왔습니다.');
   });
   const want=params.get('demo');

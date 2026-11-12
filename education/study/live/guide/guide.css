@@ -68,3 +68,11 @@
 @media(max-width:600px){.g-step{grid-template-columns:1fr;gap:4px}.g-time{display:flex;gap:8px;align-items:baseline}.g-main{padding:8px}}
 .g-steps{list-style:decimal}
 .g-setting{font-size:.84rem;background:#eef3fd;border-radius:8px;padding:6px 8px;margin:4px 0}
+.g-credit{background:#fff6e0;border:1px solid #f2c94c;border-radius:10px;padding:8px 10px;margin:6px 0;font-size:.88rem;line-height:1.5}
+.g-credit p{margin:2px 0}.g-credit-title{font-weight:700;color:#8a5a00}
+.g-say{font-weight:600}
+.g-credit-line{font-size:.84rem;color:#8a5a00;margin:6px 0}
+.g-table{width:100%;border-collapse:collapse;font-size:.86rem;margin:8px 0}
+.g-table th,.g-table td{border-bottom:1px solid var(--line-2);padding:6px 4px;text-align:left;vertical-align:top}
+.g-table thead th{color:var(--muted);font-size:.78rem}
+#gCreditCard{scroll-margin-top:150px}
