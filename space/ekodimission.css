@@ -480,3 +480,4 @@ body:has(.hero-split) .mission-site-header nav a{font-size:clamp(.81rem,.9vw,.89
 .subpage.mission-history-page{padding-top:.35rem}.mission-history-page .sub-hero{padding-top:.75rem}
 @media(max-width:620px){.subpage.mission-history-page{padding-top:.2rem}.mission-history-page .sub-hero{padding-top:.4rem}}
 .mission-history-section.history-list-section{padding-top:0;border-top:0}
+.history-items li.history-recurring{grid-template-columns:auto minmax(0,1fr)}.history-items li.history-recurring .history-day{min-width:5.6rem;padding-right:.2rem}

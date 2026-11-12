@@ -76,3 +76,12 @@ test('public history lists months and days in descending order within a year', (
   ]);
   assert.ok(html.indexOf('시월') < html.indexOf('팔월') && html.indexOf('팔월') < html.indexOf('삼월'));
 });
+
+test('weekly recurring schedules sit at the top of their year as "M월 ~ 현재"', () => {
+  const html = renderPublicHistory([
+    { start_date: '2024-10-05', date_label: '2024년 10월 5일', title: '가을행사' },
+    { start_date: '2024-01-06', date_label: '2024년 1월부터 현재', kind: 'weekly', title: '토요모임' },
+  ]);
+  assert.match(html, /<li class="history-recurring"><time class="history-day">1월 ~ 현재<\/time><span>토요모임<\/span><\/li>/);
+  assert.ok(html.indexOf('토요모임') < html.indexOf('가을행사'));
+});
