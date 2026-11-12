@@ -238,6 +238,43 @@
   // EKODI-MALL-TIERED-SEARCH-001: Mall first, approved provider references
   // second, external comparisons third, assisted discovery fourth. A reference
   // is never relabeled as an EKODI checkout or automatically purchased.
+  // EKODI-MALL-DOMEGGOOK-LEGACY-ENCODING-001:
+  // The vendor's legacy search page decodes Korean query bytes as CP949/EUC-KR,
+  // not UTF-8. Browser TextDecoder provides its official decoder mapping; invert
+  // only the requested characters. Never scrape or replicate vendor catalog data.
+  function encodeLegacyVendorQuery(input) {
+    const chars=[...clean(input).slice(0,70)];
+    const remaining=new Set(chars.filter(ch=>ch.codePointAt(0)>127));
+    const encoded=new Map();
+    if(remaining.size){
+      try {
+        const decoder=new TextDecoder('euc-kr',{fatal:true});
+        const pair=new Uint8Array(2);
+        for(let high=0x81;high<=0xfe&&remaining.size;high++){
+          pair[0]=high;
+          for(let low=0x41;low<=0xfe&&remaining.size;low++){
+            if(low===0x7f)continue;
+            pair[1]=low;
+            let decoded;
+            try{decoded=decoder.decode(pair);}catch{continue;}
+            if(remaining.has(decoded)){
+              encoded.set(decoded,'%'+high.toString(16).padStart(2,'0').toUpperCase()+
+                '%'+low.toString(16).padStart(2,'0').toUpperCase());
+              remaining.delete(decoded);
+            }
+          }
+        }
+      }catch{return '';}
+    }
+    if(remaining.size)return '';
+    return chars.map(ch=>ch.codePointAt(0)<128?encodeURIComponent(ch):encoded.get(ch)).join('');
+  }
+  function hoseSearchAlternative(query) {
+    // Search assistance only: never replace the user's query silently.
+    const text=clean(query);
+    if(!text.includes('호수')||!/(릴|수도|세차|정원|물호|에어)/.test(text))return '';
+    return text.replaceAll('호수','호스');
+  }
   const stage = (number,label,description) => {
     const box=element('section','mall-search-stage');
     const title=element('h3','mall-search-stage-title',number+'차 · '+label);
@@ -323,8 +360,21 @@
       supplier.state==='reference-only'?'검색어와 일치하는 승인 공개 공급처 상품이 없습니다.':
       supplier.state==='unavailable'?'공급처 조회에 실패했습니다. 상품이 없다는 뜻은 아닙니다.':
       '공급처 공개연동은 권한·호출한도 검증 후 열립니다. 아래 공식 검색을 이용할 수 있습니다.'));
-    const providerUrl='https://www.domeggook.com/main/item/itemList.php?sw='+encodeURIComponent(query)+'&sf=ttl';
-    officialLink(second,providerUrl,'도매꾹 공식 사이트에서 검색','외부 사이트의 주문·배송·결제는 해당 판매처 정책을 따릅니다.');
+    const vendorTerm=encodeLegacyVendorQuery(query);
+    const providerUrl=vendorTerm
+      ? 'https://www.domeggook.com/main/item/itemList.php?sw='+vendorTerm+'&sf=ttl'
+      : 'https://www.domeggook.com/main/';
+    officialLink(second,providerUrl,vendorTerm?'도매꾹 공식 사이트에서 검색':'도매꾹에서 검색어 직접 입력',
+      vendorTerm?'외부 사이트의 주문·배송·결제는 해당 판매처 정책을 따릅니다.':
+        '검색어의 일부 문자는 공급처 시스템에서 표현할 수 없어 검색 홈페이지로 연결합니다.');
+    const alternative=hoseSearchAlternative(query);
+    if(alternative){
+      const hint=element('div','mall-search-stage-hint');
+      const suggestion=element('a','','‘'+alternative+'’로 다시 검색');
+      suggestion.href='?q='+encodeURIComponent(alternative)+'#shop';
+      hint.append(element('span','','찾으시는 상품이 물호스라면: '),suggestion);
+      second.append(hint);
+    }
 
     const third=stage('3','제휴상품·외부 쇼핑 비교','에코디 제휴상품은 승인된 링크만 노출합니다. 외부 쇼핑은 비교 링크이며 가격·재고는 해당 사이트에서 확인합니다.');
     if(affiliates.length)cardsFor(third,affiliates);
