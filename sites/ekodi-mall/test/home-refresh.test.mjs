@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { renderMallHeader } from '../../../mall-shared-header.js';
 
 const template = readFileSync(new URL('../src/index.template.html', import.meta.url), 'utf8');
@@ -283,4 +284,23 @@ test('tiered discovery never mistakes a supplier reference or external compariso
   assert.match(css,/\.mall-search-stage\{/);
   assert.match(css,/@media\(max-width:600px\)/);
   assert.match(css,/\.mall-search-provider-results,\.mall-search-compare-links\{grid-template-columns:minmax\(0,1fr\)\}/);
+});
+
+
+test('Domeggook legacy Korean query link preserves the actual Korean search term', () => {
+  const start=js.indexOf('  const legacyVendorQueryCache=new Map();');
+  const end=js.indexOf('  const stage = (number,label,description)',start);
+  assert.ok(start>=0 && end>start,'missing isolated legacy search encoder');
+  const sandbox={TextDecoder,Uint8Array,clean:v=>String(v??'').replace(/\s+/g,' ').trim()};
+  const helpers=runInNewContext(js.slice(start,end)+'\n;({encodeLegacyVendorQuery,hoseSearchAlternative})',sandbox);
+  assert.equal(helpers.encodeLegacyVendorQuery('자동 릴 호스'),'%C0%DA%B5%BF%20%B8%B1%20%C8%A3%BD%BA');
+  assert.equal(helpers.encodeLegacyVendorQuery('자동 릴 호수'),'%C0%DA%B5%BF%20%B8%B1%20%C8%A3%BC%F6');
+  assert.equal(helpers.encodeLegacyVendorQuery('USB-C 1.5m'),'USB-C%201.5m');
+  assert.equal(helpers.encodeLegacyVendorQuery('🔌'),'','unsupported emoji must fail safely');
+  assert.equal(helpers.hoseSearchAlternative('자동 릴 호수'),'자동 릴 호스');
+  assert.equal(helpers.hoseSearchAlternative('경치 좋은 호수'),'','no silent conversion of a lake');
+  assert.match(js,/const vendorTerm=encodeLegacyVendorQuery\(query\)/);
+  assert.match(js,/'https:\/\/www\.domeggook\.com\/main\/item\/itemList\.php\?sw='\+vendorTerm\+'&sf=ttl'/);
+  assert.doesNotMatch(js,/itemList\.php\?sw='\+encodeURIComponent\(query\)/);
+  assert.match(js,/vendorTerm\?'도매꾹 공식 사이트에서 검색':'도매꾹에서 검색어 직접 입력'/);
 });
