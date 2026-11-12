@@ -80,7 +80,7 @@ test('management auth URLs are canonical and login return is limited to manageme
   assert.ok(!index.includes('https://'+host));
   assert.ok(!app.includes('https://'+host));
   assert.ok(index.includes('https://ekodi.kr/auth/?site=management'));
-  assert.ok(authClient.includes("management:{name:'EKODI 경영플랫폼',returnTo:'https://ekodi.kr/management/'"));
+  assert.ok(authClient.includes("management:{name:'에코디경영',returnTo:'https://ekodi.kr/management/'"));
   assert.match(authRouter,/firstPartyClientSites=new Set\(\[[^\]]*'management'/);
   const start=app.indexOf('function authUrl(){');
   const end=app.indexOf('\n}',start);

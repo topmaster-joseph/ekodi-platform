@@ -148,7 +148,7 @@ test('AI and registered independent-domain sites are canonical first-party clien
   assert.match(clientAuth,/singles:\{name:'EKODI 동행',returnTo:'https:\/\/ekodi\.kr\/singles\/'/);
   const clientSites=authRouter.match(/firstPartyClientSites=new Set\(\[([^\]]+)\]\)/)?.[1]||'';
   for (const site of ['ai','seonammedi','singles','management']) assert.ok(clientSites.includes("'"+site+"'"),site+' must remain a first-party client realm');
-  assert.match(clientAuth,/management:\{name:'EKODI 경영플랫폼',returnTo:'https:\/\/ekodi\.kr\/management\/'/);
+  assert.match(clientAuth,/management:\{name:'에코디경영',returnTo:'https:\/\/ekodi\.kr\/management\/'/);
   assert.match(authRouter,/firstPartyClientSites\.has\(site\)/);
 });
 
