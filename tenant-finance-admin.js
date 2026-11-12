@@ -23,12 +23,14 @@ const csvCellLocal=value=>{let text=String(value??'');if(/^[=+\-@\t\r]/.test(tex
 const csvTemplateHref='data:text/csv;charset=utf-8,'+encodeURIComponent('\uFEFF거래일시,구분,금액,잔액,적요,거래처,분류,거래번호\n2026-01-02 09:30,입금,100000,350000,후원금,홍길동,후원,example-001\n');
 const tag=value=>`<span class="tag ${['active','completed','approved'].includes(value)?'live':['failed','error','rejected'].includes(value)?'warn':''}">${esc(statusLabel(value))}</span>`;
 const ACCOUNTING_PROFILES=Object.freeze({
-  business:{label:'사업자 회계보고',purpose:'사업 운영·세무 증빙용',income:['매출','판매','용역','기타수입'],expense:['매입','인건비','임차료','수수료','세금·공과','마케팅','기타지출']},
-  church:{label:'교회 재정보고',purpose:'공동의회·운영위원회 보고용',income:['헌금','감사헌금','십일조','후원','기타수입'],expense:['예배·교육','선교','구제','목회운영','시설','기타지출']},
-  mission:{label:'비영리단체 회계보고',purpose:'후원자·운영위원회 보고용',income:['후원금','지정후원','회비','보조금','기타수입'],expense:['지정사업','사역비','구제·지원','행사비','운영비','기타지출']},
-  association:{label:'상인회·협회 정산보고',purpose:'회원·총회·보조사업 정산용',income:['회비','보조금','협찬','행사수입','기타수입'],expense:['사업비','행사비','홍보비','회의비','운영비','기타지출']},
-  organization:{label:'조직 회계보고',purpose:'운영책임자·구성원 보고용',income:['수입','후원','회비','보조금','기타수입'],expense:['사업비','인건비','운영비','행사비','기타지출']}
+  business:{label:'사업자 회계보고',purpose:'사업 운영·세무 증빙용',basis:'매출·매입과 운영비를 중심으로 손익을 확인합니다.',income:['매출','판매','용역','기타수입'],expense:['매입','인건비','임차료','수수료','세금·공과','마케팅','기타지출']},
+  church:{label:'교회 재정보고',purpose:'공동의회·운영위원회 보고용',basis:'헌금과 예배·교육·선교·구제 사역의 사용을 구분합니다.',income:['헌금','감사헌금','십일조','후원','기타수입'],expense:['예배·교육','선교','구제','목회운영','시설','기타지출']},
+  mission:{label:'비영리단체 회계보고',purpose:'후원자·운영위원회 보고용',basis:'일반후원과 지정후원, 목적사업과 운영비를 구분합니다.',income:['후원금','지정후원','회비','보조금','기타수입'],expense:['지정사업','사역비','구제·지원','행사비','운영비','기타지출']},
+  association:{label:'상인회·협회 정산보고',purpose:'회원·총회·보조사업 정산용',basis:'회비·보조금·협찬과 사업·행사 집행을 구분합니다.',income:['회비','보조금','협찬','행사수입','기타수입'],expense:['사업비','행사비','홍보비','회의비','운영비','기타지출']},
+  organization:{label:'조직 회계보고',purpose:'운영책임자·구성원 보고용',basis:'조직 목적사업과 공통 운영비를 구분합니다.',income:['수입','후원','회비','보조금','기타수입'],expense:['사업비','인건비','운영비','행사비','기타지출']}
 });
+const PUBLIC_ACCOUNTING_SCOPES=new Set(['ekodibiz','ekodichurch','ekodimission','cgma','seonammedi']);
+const publicAccountingHref=scope=>PUBLIC_ACCOUNTING_SCOPES.has(String(scope||'').toLowerCase())?`/${String(scope).toLowerCase()}/accounting`:'';
 const accountingProfile=(scope,mode)=>{const key=String(scope||'').toLowerCase();if(mode==='church'||/church/.test(key))return ACCOUNTING_PROFILES.church;if(/mission/.test(key))return ACCOUNTING_PROFILES.mission;if(/cgma|cheonggye|association|merchant/.test(key))return ACCOUNTING_PROFILES.association;if(/biz|mall|trade|cafe|store/.test(key))return ACCOUNTING_PROFILES.business;return ACCOUNTING_PROFILES.organization;};
 const categoryName=(transaction,profile)=>{const value=String(transaction.category||'').trim();if(value)return value;const haystack=`${transaction.description||''} ${transaction.counterpartyName||''}`.toLowerCase();const list=transaction.direction==='in'?profile.income:profile.expense;return list.find(label=>haystack.includes(label.replace(/·/g,'').toLowerCase()))||list.at(-1);};
 const groupTransactions=(rows,profile)=>{const map=new Map();for(const row of rows){const direction=row.direction==='in'?'in':'out',category=categoryName(row,profile),key=`${direction}:${category}`;const item=map.get(key)||{direction,category,count:0,amount:0};item.count++;item.amount+=Number(row.amount)||0;map.set(key,item);}return[...map.values()].sort((a,b)=>a.direction.localeCompare(b.direction)||b.amount-a.amount);};
@@ -203,9 +205,9 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
       <div class="actions"><button class="button" type="button" data-bank-more hidden>더 보기</button></div>
     </section>`;
 
-    const profile=accountingProfile(scope,mode),period=reportPeriodDefaults();
+    const profile=accountingProfile(scope,mode),period=reportPeriodDefaults(),noticeHref=publicAccountingHref(scope);
     const reportPanel=`<form id="bankReportForm" class="trade-form">
-      <div class="panel-head"><div><h3>${esc(profile.label)}</h3><p class="empty">${esc(profile.purpose)} · 실제 연결 장부에서 선택 기간의 수입·지출을 집계합니다.</p></div><span class="tag live">조직별 양식</span></div>
+      <div class="panel-head"><div><h3>${esc(profile.label)}</h3><p class="empty">${esc(profile.purpose)} · ${esc(profile.basis)}</p></div><span class="tag live">조직별 전용 양식</span></div>
       <div class="trade-grid">
         <label>보고서 제목<input name="title" maxlength="120" value="${esc(profile.label)}" required></label>
         <label>보고 대상<input name="audience" maxlength="120" value="${esc(profile.purpose)}"></label>
@@ -215,7 +217,7 @@ export async function mountTenantBankingAdmin({root,summaryRoot,getToken,workspa
         <label>작성자<input name="preparer" maxlength="80" placeholder="예: 회계 담당자"></label>
       </div>
       <label style="display:grid;gap:5px;margin-top:10px">보고 메모<textarea name="memo" rows="3" maxlength="500" placeholder="주요 사업, 지정후원, 특이 지출 등 보고에 필요한 설명"></textarea></label>
-      <div class="actions"><button class="button primary" type="submit">보고서 작성</button><button class="button" type="button" data-report-print disabled>인쇄 · PDF 저장</button><button class="button" type="button" data-report-export disabled>요약 CSV</button></div>
+      <div class="actions"><button class="button primary" type="submit">보고서 작성</button><button class="button" type="button" data-report-print disabled>인쇄 · PDF 저장</button><button class="button" type="button" data-report-export disabled>요약 CSV</button>${noticeHref?`<a class="button" href="${esc(noticeHref)}" target="_blank" rel="noopener">사용자 회계공지 보기</a>`:''}</div>
     </form>
     <p class="empty" data-report-scope-note>보고서에는 전체 계좌번호를 표시하지 않습니다. 미분류 거래는 조직 유형에 맞는 기타 항목으로 묶이며, 원장 분류를 보완하면 더 정확해집니다.</p>
     <section data-accounting-report aria-live="polite"><p class="empty">기간과 보고 대상을 확인한 뒤 ‘보고서 작성’을 누르세요.</p></section>`;

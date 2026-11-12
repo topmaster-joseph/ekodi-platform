@@ -114,8 +114,8 @@ test('pre-approval ledger: filters, monthly summary, export, import report and r
   assert.match(tenantUi,/파일연동 운영/);
   assert.match(tenantUi,/조회 전용 연결/);
   assert.match(tenantUi,/이미 있던 거래/);
-  assert.match(workspace,/tenant-finance-admin\.js\?v=e6f7c5d4e37d/);
-  assert.match(church,/tenant-finance-admin\.js\?v=e6f7c5d4e37d/);
+  assert.match(workspace,/tenant-finance-admin\.js\?v=867b047d1ea7/);
+  assert.match(church,/tenant-finance-admin\.js\?v=867b047d1ea7/);
 });
 
 test('finance admin is tabbed, keeps policy copy in a collapsible help and degrades gracefully before API promotion',()=>{

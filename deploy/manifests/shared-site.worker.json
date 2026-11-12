@@ -1,9 +1,17 @@
 {
-  "version": 119,
+  "version": 120,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
     "requests": [
+      {
+        "url": "https://ekodi.kr/ekodibiz/accounting",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": ["회계공지", "연도 선택", "연간 총괄", "월별 소계", "public-accounting-notice.js"],
+        "headerExpect": ["x-ekodi-route: public-accounting-notice", "x-content-type-options: nosniff"],
+        "rollbackVerify": false
+      },
       {
         "url": "https://ekodi.kr/admin/search-visibility-admin.js?growth-search=release-canary-001",
         "statuses": [
