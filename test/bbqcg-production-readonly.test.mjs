@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { auditBbqcgProduction, hasBbqcgPosTabDefinitions, normalizeJsUnicodeEscapes } from '../scripts/verify-bbqcg-production-readonly.mjs';
+import { auditBbqcgProduction, hasBbqcgPosTabDefinitions, hasBbqcgMenuCardDefinitions, normalizeJsUnicodeEscapes } from '../scripts/verify-bbqcg-production-readonly.mjs';
 import { storeAdminScript } from '../store-admin-engine.js';
 
 const noindex={'x-robots-tag':'noindex,nofollow,noarchive'};
 const html={...noindex,'content-type':'text/html; charset=utf-8'};
 const attachment=(filename,type)=>({...noindex,'content-type':type,'content-disposition':'attachment; filename="'+filename+'"','cache-control':'no-store'});
 const response=(body,status=200,headers=html)=>new Response(body,{status,headers});
+const cardContractFixture="const tabs=[{id:'menuRecipe'},{id:'portion'}];extraCard('menuRecipe', '레시피', '설명','필드');extraCard('portion','정량','설명','필드');data-bbq-card-menu data-bbq-print-value=\"kind\" data-bbq-print-value=\"unit\" data-bbq-print-value=\"stage\" 이전 고객 표시량 현재 고객 표시량 실제 계량 제공량 법령 위반 자동 판정 아님";
 const responses={
   '/bbqcg':()=>response('<html data-store-entity="bbqcg"><link href="/bbqcg/assets/site.css?v=f5039d1882912cbd">우리 매장의 약속과 자료실 <a href="/bbqcg/service-guide">자료</a></html>'),
   '/bbqcg/service-guide':()=>response('매장 소개 · 자료 다운로드 <a href="/bbqcg/resources/store-promise.html">안내문</a><a href="/bbqcg/resources/qcs-gms-checklist.csv">점검표</a>'),
@@ -14,8 +15,8 @@ const responses={
   '/bbqcg/resources/qcs-gms-checklist.csv':method=>response(method==='HEAD'?null:'\uFEFF"구분","단계","점검 항목","확인 여부","조치 사항"\r\n',200,attachment('bbqcg-qcs-gms-checklist.csv','text/csv; charset=utf-8')),
   '/bbqcheonggye':()=>response('gone',410,noindex),
   '/bbqcg/admin/pos':()=>response('<!doctype html><html data-ekodi-store-brand="bbqcg"><meta name="robots" content="noindex,nofollow">BBQ 무안청계점</html>'),
-  '/store-admin.js':()=>response("function mountBbqPosTabs(){const options=[['programs','프로그램','.pos-programs'],['orders','최근 주문','.pos-orders'],['channels','배달플랫폼','.pos-platforms'],['agent','Agent 관리','.pos-agent-guide']];const key='data-bbq-pos-tab';const tab='posTab'}",200,{'content-type':'text/javascript; charset=utf-8'}),
-  '/store-admin.css':()=>response('.bbq-pos-subtabs{display:flex}@media(max-width:620px){.bbq-pos-subtabs{overflow-x:auto}}',200,{'content-type':'text/css; charset=utf-8'})
+  '/store-admin.js':()=>response("function mountBbqPosTabs(){const options=[['programs','프로그램','.pos-programs'],['orders','최근 주문','.pos-orders'],['channels','배달플랫폼','.pos-platforms'],['agent','Agent 관리','.pos-agent-guide']];const key='data-bbq-pos-tab';const tab='posTab'}"+cardContractFixture,200,{'content-type':'text/javascript; charset=utf-8'}),
+  '/store-admin.css':()=>response('.bbq-pos-subtabs{display:flex}@media(max-width:620px){.bbq-pos-subtabs{overflow-x:auto}}.bbqcg-print-value{display:none} .bbqcg-card-policy{padding:8px} @media print {.bbqcg-print-value{white-space:pre-wrap}}',200,{'content-type':'text/css; charset=utf-8'})
 };
 function stub(overrides={}){
   const calls=[];
@@ -95,4 +96,28 @@ test('Unicode escape normalization is data-only and handles braced/code-unit not
   assert.equal(normalizeJsUnicodeEscapes(src),'프로그램 A B');
   const oversized='\\u{110000}';
   assert.equal(normalizeJsUnicodeEscapes(oversized),oversized);
+});
+
+test('BBQ live canary requires deployed recipe, portion, weight basis and print assets from real generated script',async()=>{
+  const actual=(await storeAdminScript()).text();
+  const code=await actual;
+  assert.equal(hasBbqcgMenuCardDefinitions(code),true,'shipped script must include both tenant-private print cards');
+  const {fetchImpl}=stub({'/store-admin.js':()=>response(code,200,{'content-type':'text/javascript; charset=utf-8'})});
+  const report=await auditBbqcgProduction({fetchImpl});
+  assert.equal(report.ok,true,JSON.stringify(report.records.filter(x=>x.errors.length)));
+  assert.ok(report.records.find(r=>r.id==='admin-script').checks.some(c=>c.key==='bbq-private-card-assets-delivered'&&c.passed));
+  assert.equal(report.authenticatedTenantInteractionVerified,false);
+});
+test('menu card canary fails closed on missing unit print mirror or missing recipe template',async()=>{
+  const real=await (await storeAdminScript()).text();
+  const missingUnit=real.replace('data-bbq-print-value="unit"','data-bbq-print-value="missing-unit"');
+  assert.notEqual(real,missingUnit,'fixture must remove one real marker');
+  assert.equal(hasBbqcgMenuCardDefinitions(missingUnit),false);
+  const missingRecipe=real.replace("extraCard('menuRecipe'","extraCard('disabledRecipe'");
+  assert.notEqual(real,missingRecipe);
+  assert.equal(hasBbqcgMenuCardDefinitions(missingRecipe),false);
+  const {fetchImpl}=stub({'/store-admin.js':()=>response(missingUnit,200,{'content-type':'text/javascript; charset=utf-8'})});
+  const report=await auditBbqcgProduction({fetchImpl});
+  assert.equal(report.ok,false);
+  assert.ok(report.records.find(r=>r.id==='admin-script').errors.includes('bbq-private-card-assets-delivered'));
 });
