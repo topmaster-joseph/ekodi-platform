@@ -66,3 +66,5 @@
 .g-pre{overflow-wrap:anywhere}
 .g-main{overflow-x:hidden}
 @media(max-width:600px){.g-step{grid-template-columns:1fr;gap:4px}.g-time{display:flex;gap:8px;align-items:baseline}.g-main{padding:8px}}
+.g-steps{list-style:decimal}
+.g-setting{font-size:.84rem;background:#eef3fd;border-radius:8px;padding:6px 8px;margin:4px 0}

@@ -4,7 +4,7 @@ globalThis.HTMLRewriter??=class{on(){return this;}onDocument(){return this;}tran
 const {default:worker}=await import('../education-worker.js');
 import { createVerifier, mintGateToken, isGatedPath, isStrictPath, GATE_COOKIE } from '../education-instructor-gate.js';
 import { FLOW, SESSIONS, FIELDS, PROMPTS } from '../education/study/live/guide/data.js';
-import { DEMOS, SESSION_PICKS, demoById, demoPrompt } from '../education/study/live/guide/demos.js';
+import { DEMOS, SESSION_PICKS, FEATURE_STEPS, INPUT_LABEL, demoById, demoPrompt, featureInput } from '../education/study/live/guide/demos.js';
 
 const KEY='k'.repeat(48);
 const VERIFIER=await createVerifier('test-only-pass-7k2m-9qxz',{iterations:10000});
@@ -64,4 +64,26 @@ test('lecture content: 6 sessions × 180 minutes, consistent counts, valid demo 
   for(const f of FIELDS)for(const m of ['hwp','minutes','ppt'])assert.ok(PROMPTS[f.id]?.[m],f.id+' '+m);
   for(const d of DEMOS){assert.ok(d.handoff&&d.points.length&&d.task,d.id);assert.ok(demoPrompt(d).length>20,d.id);}
   assert.equal(new Set(DEMOS.map(d=>d.id)).size,DEMOS.length,'unique demo ids');
+});
+
+test('practice matches how each FactChat feature actually works (official docs, 2026-11-13)',()=>{
+  // 차시 slots use demos of the matching feature: p1 HWP editor, p2 meeting notes (recording), p3 presentation.
+  const slot={p1:'hwp',p2:'minutes',p3:'ppt'};
+  for(const [no,picks] of Object.entries(SESSION_PICKS))for(const [seg,mission] of Object.entries(slot))
+    for(const id of picks[seg])assert.equal(demoById(id).mission,mission,no+'차 '+seg+' '+id);
+  for(const d of DEMOS){
+    assert.ok(FEATURE_STEPS[d.mission]&&INPUT_LABEL[d.mission],d.id);
+    // HWP: the instruction refers to the open document, the sample is pasted into the document body.
+    if(d.mission==='hwp'){assert.match(d.task,/이 문서/,d.id);assert.doesNotMatch(demoPrompt(d),/이 문서/,'chat version names the pasted material '+d.id);}
+    // Presentation: slide count is chosen on screen, never typed into the prompt.
+    if(d.mission==='ppt')assert.doesNotMatch(d.task,/\d+장 (발표|슬라이드)|구성안/,d.id);
+    // Meeting notes: no text prompt — the input is a script read aloud while recording.
+    if(d.mission==='minutes')assert.equal(featureInput(d),d.sample,d.id);
+  }
+  for(const f of FIELDS){
+    assert.match(PROMPTS[f.id].minutes,/^\[1분 대본\]/,f.id+' minutes is a script to read aloud');
+    assert.doesNotMatch(PROMPTS[f.id].ppt,/\d+장 (발표|슬라이드)|구성안/,f.id+' ppt has no slide count in text');
+    assert.match(PROMPTS[f.id].hwp,/이 문서/,f.id+' hwp edits the open document');
+  }
+  assert.doesNotMatch(FLOW.find(f=>f.id==='p2').talk.join(' '),/대본\(가상\)을 넣고/,'meeting notes are recorded, not pasted');
 });
