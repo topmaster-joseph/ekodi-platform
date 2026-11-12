@@ -120,6 +120,10 @@ export async function quotaCapabilities(env={},providerIds=FREE_PROVIDER_IDS,now
 async function writeQuotaState(env,providerId,{state,remainingRequests=null,remainingTokens=null,resetAt='',lastError='',statusCode=0}){
   if(!env.DB?.prepare||!isFreeAiProvider(providerId))return;
   const stamp=new Date().toISOString();
+  // Canonical UTC text keeps SQLite conflict-time checks comparable even when a
+  // provider supplies an offset or a malformed reset timestamp.
+  const parsedReset=Date.parse(resetAt);
+  const safeReset=Number.isFinite(parsedReset)?new Date(parsedReset).toISOString():null;
   await env.DB.prepare(`INSERT INTO ai_provider_quota_state
     (provider_id,cost_class,state,remaining_requests,remaining_tokens,reset_at,last_status_code,last_error,last_observed_at,updated_at)
     VALUES (?,?,?,?,?,?,?,?,?,?)
@@ -134,7 +138,7 @@ async function writeQuotaState(env,providerId,{state,remainingRequests=null,rema
         OR strftime('%s',ai_provider_quota_state.reset_at) IS NULL
         OR ai_provider_quota_state.reset_at > excluded.updated_at)
     )`)
-    .bind(providerId,'free-preferred',state,remainingRequests,remainingTokens,resetAt||null,Number(statusCode)||0,clean(lastError).slice(0,240),stamp,stamp).run();
+    .bind(providerId,'free-preferred',state,remainingRequests,remainingTokens,safeReset,Number(statusCode)||0,clean(lastError).slice(0,240),stamp,stamp).run();
 }
 
 export async function recordFreeProviderOutcome(env={},providerId,{ok=false,error=null,quota=null}={}){
