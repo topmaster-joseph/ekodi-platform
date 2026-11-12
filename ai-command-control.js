@@ -5,6 +5,7 @@ import { findReusableComposition } from './ekodi-capability-ecosystem.js';
 import { isSameOriginAdminMutation, prepareAdminOrchestratorSubmission, evaluateAdminOrchestratorSubmission } from './ekodi-ai-orchestrator-admin-handoff.js';
 import { getCoreAiGatewayStatus } from './core-ai-gateway.js';
 import { previewSiteAiMicroIntent } from './ekodi-site-ai-intent-preview.js';
+import { readSiteAiFleet } from './ekodi-site-ai-fleet-readonly.js';
 import siteAiCapabilityRegistry from './config/capability-registry.json' with { type: 'json' };
 import siteAiLifecycleRegistry from './config/site-lifecycle-registry.json' with { type: 'json' };
 import { adminAuthorityForRole, hasEkodiCapability } from './ekodi-authorization.js';
@@ -168,6 +169,15 @@ export async function handleEkodiV8CommandControl(request, env) {
     if (!sessionCapabilityGranted(auth.session, requiredCapability)) return json(request, env, { error:'capability_required', capability:requiredCapability }, 403);
     return null;
   };
+
+  // Super-admin-only read of site improvement history; no claim of live Site AI agents.
+  if (url.pathname === `${PREFIX}/site-ai/fleet`) {
+    const denied = requirePlatformSuperAdmin('ai:read'); if (denied) return denied;
+    if (request.method !== 'GET')
+      return json(request, env, { ok:false,code:'SITE_AI_FLEET_READ_ONLY' }, 405);
+    const snapshot = await readSiteAiFleet(env, siteAiLifecycleRegistry);
+    return json(request, env, { ok:true, ...snapshot });
+  }
 
   // EKODI site-AI advisory-only intent preview. This never allocates authority or tasks.
   // Caller-supplied site ID is a registry locator, not a verified workspace identity.
@@ -506,5 +516,5 @@ export async function handleEkodiV8CommandControl(request, env) {
 export const EKODI_V8_COMMAND_CONTROL = Object.freeze({
   version: '1.3.0',
   prefix: PREFIX,
-  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'orchestrator/human-gates', 'orchestrator/tasks/:taskId', 'orchestrator/tasks/:taskId/approve', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit', 'sovereignty/preview', 'orchestrator/submit', 'site-ai/intent-preview']),
+  surfaces: Object.freeze(['status', 'tasks', 'tasks/:taskId/consultation', 'orchestrator/human-gates', 'orchestrator/tasks/:taskId', 'orchestrator/tasks/:taskId/approve', 'pulse', 'drain', 'collaboration-settings', 'collaboration-settings/audit', 'sovereignty/preview', 'orchestrator/submit', 'site-ai/intent-preview', 'site-ai/fleet']),
 });
