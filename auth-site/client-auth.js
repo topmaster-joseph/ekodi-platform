@@ -202,7 +202,7 @@ let lastHandoffError=null;
 
 $('serviceName').textContent=config.name;
 $('serviceBadge').textContent='EKODI';
-$('signedOutCopy').textContent=commonServiceEntry?`${config.name}의 실제 기능은 Google 로그인한 무료회원 이상에게 제공됩니다. 로그인 후 원래 이용하던 서비스 위치로 돌아갑니다.`:'EKODI에서 Google 본인확인을 한 번 마치면 다른 EKODI 서비스에서도 같은 로그인 상태를 사용합니다.';
+$('signedOutCopy').textContent=commonServiceEntry?`${config.name}의 실제 기능은 로그인한 무료회원 이상에게 제공됩니다. 로그인 후 원래 이용하던 서비스 위치로 돌아갑니다.`:'EKODI에서 한 번 로그인하면 다른 EKODI 서비스에서도 같은 로그인 상태를 사용합니다.';
 show('signedOut',true);show('signedIn',false);show('reviewConsole',false);show('membershipPanel',false);show('identityPanel',false);show('workspacePanel',false);show('requestActions',false);show('freeActions',false);show('approvedActions',false);
 
 async function session(){
@@ -437,7 +437,9 @@ function askContinueOrSwitch(existing){
     show('signedIn',false);show('signedOut',true);
     $('serviceBadge').textContent='계정 선택';
     await renderGoogle();
-    notice('아래 버튼으로 사용할 다른 계정을 선택해 주세요.');
+    // 3A-1: 계정 전환 뒤에도 켜진 모든 로그인 방식(카카오·네이버·이메일 등)을 다시 보여 준다.
+    window.dispatchEvent(new CustomEvent('ekodi:auth-signed-out'));
+    notice('아래에서 사용할 다른 계정의 로그인 방식을 선택해 주세요. 어떤 방식이든 같은 EKODI ID로 연결됩니다.');
   };
   go?.focus?.();
 }
