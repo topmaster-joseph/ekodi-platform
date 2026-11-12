@@ -1235,17 +1235,22 @@ jobs:
           for attempt in $(seq 1 12); do
             : > /tmp/store-gateway.headers
             : > /tmp/store-gateway.body
-            if [ "$(curl -sS -D /tmp/store-gateway.headers -o /dev/null -w '%{http_code}' --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/cmpmyi')" = '308' ] \
-              && grep -Fiq 'location: https://ekodi.kr/bbqcg' /tmp/store-gateway.headers \
-              && grep -Fiq 'x-ekodi-route: bbqcg-former-store-gateway' /tmp/store-gateway.headers \
+            if [ "$(curl -sS -D /tmp/store-gateway.headers -o /tmp/store-gateway.body -w '%{http_code}' --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/cmpmyi')" = '200' ] \
+              && grep -Fiq 'x-ekodi-route: cmpmyi-three-store-guide' /tmp/store-gateway.headers \
+              && grep -Fq 'data-store-guide="three-independent-stores"' /tmp/store-gateway.body \
+              && grep -Fq 'BBQ 무안청계점' /tmp/store-gateway.body \
+              && grep -Fq '피자마루 목포대점' /tmp/store-gateway.body \
+              && grep -Fq '요거트퍼플 목포대점' /tmp/store-gateway.body \
+              && [ "$(curl -sS -D /tmp/stores-redirect.headers -o /dev/null -w '%{http_code}' --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/stores')" = '308' ] \
+              && grep -Fiq 'location: https://ekodi.kr/cmpmyi' /tmp/stores-redirect.headers \
               && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/robots.txt' -o /tmp/store-gateway-robots.txt \
               && grep -Fq 'OAI-SearchBot' /tmp/store-gateway-robots.txt \
               && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/sitemap.xml' -o /tmp/store-gateway-sitemap.xml \
               && grep -Fq '<loc>https://ekodi.kr/bbqcg</loc>' /tmp/store-gateway-sitemap.xml \
-              && ! grep -Fq '<loc>https://ekodi.kr/cmpmyi</loc>' /tmp/store-gateway-sitemap.xml \
+              && grep -Fq '<loc>https://ekodi.kr/cmpmyi</loc>' /tmp/store-gateway-sitemap.xml \
               && curl -fsS --retry 2 --retry-delay 1 --connect-timeout 5 --max-time 15 'https://ekodi.kr/llms.txt' -o /tmp/store-gateway-llms.txt \
-              && grep -Fq 'https://ekodi.kr/bbqcg' /tmp/store-gateway-llms.txt; then
-              echo 'BBQ legacy handoff and Discovery Layer production endpoints verified.'
+              && grep -Fq 'https://ekodi.kr/cmpmyi' /tmp/store-gateway-llms.txt; then
+              echo 'Three independent stores public guide and Discovery Layer production endpoints verified.'
               break
             fi
             if [ "$attempt" -eq 12 ]; then failed=1; fi
