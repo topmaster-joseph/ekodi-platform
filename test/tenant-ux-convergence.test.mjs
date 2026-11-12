@@ -98,14 +98,14 @@ test('independent public tenant sites inherit readability without platform chrom
   assert.doesNotMatch(injector,/data-ekodi-tenant-readability[^\n]+My EKODI/);
 });
 
-test('multi-store public gateway avoids duplicate same-destination actions',async()=>{
+test('former multi-store gateway has one canonical BBQ destination',async()=>{
   const source=await read('store-gateway-page.js');
-  assert.match(source,/매장 보기/);
-  assert.match(source,/메뉴 · 가격 바로가기/);
-  assert.match(source,/\$\{store\.slug\}#menu/);
-  assert.doesNotMatch(source,/매장 정보 · 주문 · 배달/);
+  assert.match(source,/BBQ_PUBLIC_PATH = '\/bbqcg'/);
+  assert.match(source,/status: 308/);
+  assert.match(source,/target\.search = previous\.search/);
+  assert.doesNotMatch(source,/store\.slug/);
+  assert.doesNotMatch(source,/pizzamaru|yogurt|jadam/);
 });
-
 
 test('delegated admin navigation never requires a category click before reaching a task',async()=>{
   const [workspace,store,church,trade]=await Promise.all([
