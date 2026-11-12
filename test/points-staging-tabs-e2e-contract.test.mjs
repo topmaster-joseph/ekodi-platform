@@ -40,3 +40,23 @@ test('development E2E remains ephemeral and cannot target production',()=>{
   assert.match(browser,/\['desktop','desktop'\],\['mobile','mobile-portrait'\]/);
   assert.doesNotMatch(workflow,/renzehysxirjilvdxacv/);
 });
+
+test('fresh synthetic Points wallet and pending claim never expose a CSV download control',()=>{
+  const first=browser.indexOf("{type:'waitFor',selector:'#balanceView:not([hidden])'");
+  const hidden=browser.indexOf("{type:'assertHidden',selector:'#exportPointsHistory'}");
+  const disabled=browser.indexOf("{type:'assertDisabled',selector:'#exportPointsHistory'}");
+  const claim=browser.indexOf("{type:'click',selector:'#claimSubmit'}");
+  const wallet=browser.indexOf("{type:'click',selector:'#pointsTabWallet'}");
+  const lastHidden=browser.lastIndexOf("{type:'assertHidden',selector:'#exportPointsHistory'}");
+  const noHistory=browser.lastIndexOf("{type:'assertText',text:'아직 거래 내역이 없습니다.'}");
+  assert.ok(first>=0&&first<hidden&&hidden<disabled&&disabled<claim);
+  assert.ok(claim<wallet&&wallet<lastHidden&&lastHidden<noHistory);
+  assert.equal((browser.split("{type:'assertHidden',selector:'#exportPointsHistory'}").length-1),2);
+  assert.equal((browser.split("{type:'assertDisabled',selector:'#exportPointsHistory'}").length-1),2);
+  assert.match(app,/if\(!Array\.isArray\(rows\)\|\|!rows\.length\)\{historyList\.textContent='아직 거래 내역이 없습니다.'/);
+  assert.match(app,/if\(!enabled\|\|!ownerId\|\|!Array\.isArray\(rows\)\|\|!rows\.length\)return;/);
+  const actions=browser.split("if(target==='member'){")[1].split("}else{")[0].match(/\{type:'/g)||[];
+  assert.ok(actions.length<=30,'EKODI browser runner caps tasks at 30 actions');
+  assert.match(source('scripts/ekodi-background-browser-worker.mjs'),/BROWSER_ASSERT_CONTROL_MISSING/);
+  assert.match(source('scripts/ekodi-background-browser-worker.mjs'),/BROWSER_ASSERT_CONTROL_STATE_FAILED/);
+});

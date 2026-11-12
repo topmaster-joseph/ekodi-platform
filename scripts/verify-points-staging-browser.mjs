@@ -58,6 +58,13 @@ try{
         actions:[
           // The member surface uses accessible tabs; a hidden claim panel is
           // not a browser-visible affordance until the member selects it.
+          // A fresh synthetic member has no verified ledger entry. Merely
+          // viewing the page or submitting a pending evidence claim must
+          // never expose a downloadable economic transaction history.
+          {type:'waitFor',selector:'#balanceView:not([hidden])',timeoutMs:15000},
+          {type:'assertHidden',selector:'#exportPointsHistory'},
+          {type:'assertDisabled',selector:'#exportPointsHistory'},
+          {type:'assertText',text:'아직 거래 내역이 없습니다.'},
           {type:'waitFor',selector:'#pointsTabProgress',timeoutMs:15000},
           {type:'click',selector:'#pointsTabProgress'},
           {type:'waitFor',selector:'#pointsProgressContent:not([hidden])',timeoutMs:15000},
@@ -80,6 +87,10 @@ try{
           {type:'waitFor',selector:'#pointsMissionList .record strong:has-text("승인 대기")',timeoutMs:15000},
           {type:'assertText',text:'승인 대기'},
           {type:'screenshot',name:`member-${name}`},
+          {type:'click',selector:'#pointsTabWallet'},
+          {type:'assertHidden',selector:'#exportPointsHistory'},
+          {type:'assertDisabled',selector:'#exportPointsHistory'},
+          {type:'assertText',text:'아직 거래 내역이 없습니다.'},
         ],
       },{artifactRoot:dir});
       check(`member-${name}-claim-submitted`,result,{ref});
