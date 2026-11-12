@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {ITEMS,CHANGE_IDS,blankRecord,sanitizeRecord,evaluate,csvForRecord} from '../management/daily-check/model.js';
 test('daily compliance checklist separates self-check from legal filing',()=>{
   assert.ok(ITEMS.length>=12);
@@ -29,3 +30,19 @@ test('CSV export protects spreadsheet formula injection',()=>{
   assert.match(csv,/"'=1\+1"/);
   assert.ok(csv.startsWith('\uFEFF'));
 });
+
+test('checklist HTML uses external scripts and is linked from the management member surface',()=>{
+  const fs=requireRead();
+  const page=fs('management/daily-check/index.html');
+  const app=fs('management/daily-check/app.js');
+  const management=fs('management/index.html');
+  assert.match(page,/type="module" src="\.\/app\.js"/);
+  assert.match(page,/자체 점검표이며 공식 행정신고/);
+  assert.match(page,/브라우저에만 저장/);
+  assert.match(app,/localStorage\.setItem/);
+  assert.match(app,/evaluate\(record\)/);
+  assert.match(management,/href="\/management\/daily-check\/"/);
+});
+function requireRead(){
+  return path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+}
