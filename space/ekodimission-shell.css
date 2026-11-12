@@ -301,3 +301,6 @@ main.subpage .sub-hero{padding-top:.7rem;padding-bottom:1.35rem}
   .mission-site-header .mission-auth-state{max-width:62px;font-size:.66rem}
   .mission-site-header .mission-auth-logout{font-size:.67rem;padding:.27rem}
 }
+
+/* Mission-owned purpose appears only on Mission home; all subpages are independent. */
+.mission-home .mission-purpose-statement{margin:1.05rem 0 1.3rem;padding:.78rem 1rem;max-width:65ch;border:1px solid rgba(111,129,137,.17);border-left:3px solid var(--mission-accent);border-radius:0 12px 12px 0;background:rgba(111,129,137,.055);text-align:left}.mission-home .mission-purpose-statement span{display:block;margin-bottom:.35rem;font-size:.7rem;letter-spacing:.095em;line-height:1.4;font-weight:800;opacity:.73}.mission-home .mission-purpose-statement p{margin:0;line-height:1.72;font-size:clamp(.88rem,1.4vw,1rem);word-break:keep-all}@media(max-width:390px){.mission-home .mission-purpose-statement{padding:.7rem .8rem;margin:.85rem 0 1.05rem}}
