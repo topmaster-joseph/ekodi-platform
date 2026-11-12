@@ -540,6 +540,10 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='.github/workflows/verify-admin-production-ui-e2e.yml'||
   file==='scripts/admin-production-ui-coverage.mjs'||
   file==='scripts/ekodi-background-browser-worker.mjs'||
+  // An EKODI Singles read-only browser workflow update must be verified in production.
+  // GitHub-token protected merges suppress main push; explicitly send it through the
+  // guarded Shared Site Core release, then the success-only workflow_run acceptance.
+  file==='.github/workflows/verify-singles-native-browser.yml'||
   // Hybrid native browser admin page shares the guarded Site Core release boundary.
   file==='hybrid-execution-admin.js'||
   file==='device-control-admin.js'||
