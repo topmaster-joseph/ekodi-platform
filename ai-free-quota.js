@@ -126,7 +126,14 @@ async function writeQuotaState(env,providerId,{state,remainingRequests=null,rema
     ON CONFLICT(provider_id) DO UPDATE SET
       state=excluded.state,remaining_requests=excluded.remaining_requests,remaining_tokens=excluded.remaining_tokens,
       reset_at=excluded.reset_at,last_status_code=excluded.last_status_code,last_error=excluded.last_error,
-      last_observed_at=excluded.last_observed_at,updated_at=excluded.updated_at`)
+      last_observed_at=excluded.last_observed_at,updated_at=excluded.updated_at
+    WHERE NOT (
+      excluded.state='available'
+      AND ai_provider_quota_state.state IN ('exhausted','throttled')
+      AND (ai_provider_quota_state.reset_at IS NULL
+        OR strftime('%s',ai_provider_quota_state.reset_at) IS NULL
+        OR ai_provider_quota_state.reset_at > excluded.updated_at)
+    )`)
     .bind(providerId,'free-preferred',state,remainingRequests,remainingTokens,resetAt||null,Number(statusCode)||0,clean(lastError).slice(0,240),stamp,stamp).run();
 }
 
@@ -145,6 +152,36 @@ export async function recordFreeProviderOutcome(env={},providerId,{ok=false,erro
   await writeQuotaState(env,id,{...classified,lastError:clean(error?.message||error),statusCode:Number(error?.status||0)});
 }
 
+// Every official free adapter must honor a provider 429/quota lock BEFORE
+// reserving a new daily request. Unavailable production D1 fails closed.
+// The reset time releases only the *cooldown*; the per-day atomic ledger remains
+// the independent hard limit against paid overage and request storms.
+export async function assertFreeProviderUnlocked(env={},providerId,nowMs=Date.now()){
+  const id=clean(providerId).toLowerCase();
+  if(!isFreeAiProvider(id))throw new Error('invalid_free_provider');
+  const production=clean(env.ENVIRONMENT).toLowerCase()==='production';
+  if(!env.DB?.prepare){
+    if(production)throw new Error('FREE_QUOTA_DB_UNAVAILABLE');
+    return Object.freeze({state:'unverified',providerId:id});
+  }
+  let raw;
+  try{
+    raw=await env.DB.prepare('SELECT state,reset_at FROM ai_provider_quota_state WHERE provider_id=?')
+      .bind(id).first();
+  }catch{
+    if(production)throw new Error('FREE_QUOTA_STATE_UNAVAILABLE');
+    return Object.freeze({state:'unverified',providerId:id});
+  }
+  const state=activeState(raw,nowMs);
+  if(['exhausted','throttled'].includes(state.state)){
+    const error=new Error('FREE_PROVIDER_QUOTA_LOCKED');
+    error.status=429;
+    error.quota={state:state.state,resetAt:state.resetAt||'',remainingRequests:0};
+    throw error;
+  }
+  return Object.freeze({state:state.state,providerId:id});
+}
+
 export async function reserveFreeDailyRequest(env={},providerId,limit){
   const id=clean(providerId).toLowerCase(),cap=Math.max(1,Math.floor(Number(limit)||1));
   if(!isFreeAiProvider(id))throw new Error('invalid_free_provider');
@@ -152,6 +189,7 @@ export async function reserveFreeDailyRequest(env={},providerId,limit){
     if(clean(env.ENVIRONMENT).toLowerCase()==='production')throw new Error('FREE_QUOTA_DB_UNAVAILABLE');
     return Object.freeze({used:null,limit:cap,remaining:null});
   }
+  await assertFreeProviderUnlocked(env,id);
   const day=new Date().toISOString().slice(0,10),stamp=new Date().toISOString();
   await env.DB.prepare('INSERT OR IGNORE INTO ai_provider_daily_budget (provider_id,usage_date,call_count,updated_at) VALUES (?,?,0,?)').bind(id,day,stamp).run();
   const update=await env.DB.prepare('UPDATE ai_provider_daily_budget SET call_count=call_count+1,updated_at=? WHERE provider_id=? AND usage_date=? AND call_count<?').bind(stamp,id,day,cap).run();
