@@ -120,8 +120,8 @@ jobs:
             if [[ "$public_code" == 200 && "$admin_code" == 200 && "$api_code" == 401 ]] \
               && grep -Fq '지나온 길' /tmp/history-prod.html \
               && grep -Fq '교회의 이름이 생긴 날보다 먼저' /tmp/history-prod.html \
-              && grep -Fq '2018년 3월 14일' /tmp/history-prod.html \
-              && grep -Fq '2018년 8월 13일' /tmp/history-prod.html \
+              && grep -Fq '<time class="history-day">03.14</time>' /tmp/history-prod.html \
+              && grep -Fq '<time class="history-day">08.13</time>' /tmp/history-prod.html \
               && ! grep -Fq 'source_ref' /tmp/history-prod.html \
               && ! grep -Fq 'verification_notes' /tmp/history-prod.html \
               && grep -Fq '지나온 길 기록관리' /tmp/history-prod-admin.html; then
