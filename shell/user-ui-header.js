@@ -3,7 +3,8 @@
 if(window.__EKODI_USER_UI_HEADER_BOOTED)return;
 window.__EKODI_USER_UI_HEADER_BOOTED=true;
 
-const VERSION=7;
+const VERSION=8;
+const ACCOUNTING_NOTICE_SITES=new Set(['ekodibiz','ekodichurch','ekodimission','cgma','seonammedi']);
 const SITE_CHROME_URL='https://ekodi.kr/workspace-api/v1/site-chrome/public';
 // Education has no customer-site chrome configuration; keep the shared fallback.
 const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education']);
@@ -176,6 +177,25 @@ function pruneIndividualSiteGlobalLinks(header){
   if(!header||!isIndividualSite())return;
   for(const anchor of header.querySelectorAll('a[href]'))if(isGlobalPlatformHeaderLink(anchor))anchor.remove();
   header.dataset.ekodiHeaderScope='service-local';
+}
+// 회계공지 메뉴는 site-chrome 의 accountingNotice 를 따른다. 원칙은 모든 사용자
+// 사이트에 공지하는 것이므로 서버 기본값이 켜짐이고(config/site-chrome-defaults.js),
+// 사이트관리자와 최고관리자가 끌 수 있다.
+//
+// 확인되지 않으면 넣지 않는다. 설정을 못 읽은 상태에서 메뉴를 띄우면 관리자가
+// '숨김'으로 둔 결정을 덮어쓰게 된다. 링크를 보류해도 페이지 자체는 주소로
+// 접근할 수 있고, 다음 적재에서 다시 나타난다.
+function ensureAccountingNoticeMenu(header,chrome){
+  if(!header||surface()==='admin')return;
+  if(chrome?.header?.accountingNotice!==true)return;
+  const site=location.pathname.split('/').filter(Boolean)[0]||'';
+  if(!ACCOUNTING_NOTICE_SITES.has(site))return;
+  const href=`/${site}/accounting`;
+  if([...header.querySelectorAll('a[href]')].some(anchor=>{try{return new URL(anchor.getAttribute('href'),location.href).pathname.replace(/\/+$/,'')===href}catch{return false}}))return;
+  const nav=header.querySelector('nav,[role="navigation"],.header-actions,.nav-actions');if(!nav)return;
+  const anchor=document.createElement('a');anchor.href=href;anchor.textContent='회계공지';anchor.dataset.ekodiAccountingNotice='true';
+  if(location.pathname.replace(/\/+$/,'')===href)anchor.setAttribute('aria-current','page');
+  nav.append(anchor);
 }
 function operatingSpaceTarget(header){
   if(!header)return null;
@@ -402,14 +422,14 @@ function attach(header){
     header.dataset.ekodiHeaderScope='service-local';
     pruneIndividualSiteGlobalLinks(header);
     bindHomeAnchor(header);
-    void siteChrome().then(chrome=>applySiteChromeHeader(header,chrome));
+    void siteChrome().then(chrome=>{applySiteChromeHeader(header,chrome);ensureAccountingNoticeMenu(header,chrome)});
     window.dispatchEvent(new CustomEvent('ekodi:user-header-ready',{detail:{version:VERSION,surface:surface(),native:true,fallback:false}}));
     return;
   }
   pruneIndividualSiteGlobalLinks(header);
   bindHomeAnchor(header);
   ensureOperatingSpaceLabel(header);
-  void siteChrome().then(chrome=>applySiteChromeHeader(header,chrome));
+  void siteChrome().then(chrome=>{applySiteChromeHeader(header,chrome);ensureAccountingNoticeMenu(header,chrome)});
   if(activeHeader===header&&spacer?.isConnected){
     const nextCenter=findCenter(header);
     if(nextCenter!==activeCenter){

@@ -1469,7 +1469,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
     }catch(e){if(e.status===401)return loginPanel('사용자·권한 관리에는 운영공간 로그인이 필요합니다.');$('summaryCards').hidden=true;$('mainPanel').innerHTML='<h2>사용자 · 관리자 · 권한</h2><p class="empty">'+ae(e.message)+'</p>';state('확인 필요')}
   }
 
-  async function financeAdmin(){const moduleUrl=new URL('/tenant-finance-admin.js?v=e6f7c5d4e37d',location.origin).href;const module=await import(moduleUrl);return module.mountTenantBankingAdmin({root:$('mainPanel'),summaryRoot:$('summaryCards'),getToken:accessToken,workspace,state,mode:'workspace'});}
+  async function financeAdmin(){const moduleUrl=new URL('/tenant-finance-admin.js?v=867b047d1ea7',location.origin).href;const module=await import(moduleUrl);return module.mountTenantBankingAdmin({root:$('mainPanel'),summaryRoot:$('summaryCards'),getToken:accessToken,workspace,state,mode:'workspace'});}
   async function cgmaEmbeddedAdmin(key){
     if(workspace!=='cgma')return permissionPanel();
     const panel=CGMA_EMBEDDED_PANELS[key];
