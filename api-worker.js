@@ -31,7 +31,7 @@ const SERVICE_CATALOG = [
   { id: 'pay', name: '에코디결제', domain: 'ekodi.kr/ekodipay', url: 'https://ekodi.kr/ekodipay', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'insurance', name: '에코디보험', domain: 'ekodi.kr/insurance', url: 'https://ekodi.kr/insurance', group: 'business', defaultState: 'planned', defaultMonitor: false },
   { id: 'books', name: '에코디북스', domain: 'books.ekodi.kr', url: 'https://ekodi.kr/books', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
-  { id: 'lab', name: '에코디연구소', domain: 'lab.ekodi.kr', url: 'https://lab.ekodi.kr', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
+  { id: 'lab', name: '에코디연구소', domain: 'ekodi.kr/ekodilab', url: 'https://ekodi.kr/ekodilab', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
   { id: 'edu', name: 'EKODI Education', domain: 'edu.ekodi.kr', url: 'https://ekodi.kr/education', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
   { id: 'learn', name: 'EKODI Learning Fabric', domain: 'ekodi.kr/learn', url: 'https://ekodi.kr/learn', group: 'knowledge', defaultState: 'active', defaultMonitor: true },
   { id: 'media', name: '에코디미디어', domain: 'media.ekodi.kr', url: 'https://media.ekodi.kr', group: 'knowledge', defaultState: 'planned', defaultMonitor: false },
