@@ -343,3 +343,9 @@ body[data-mall-search="true"] #shop #mallSearchResults{display:block!important}
   .mall-search-reference{padding:11px 12px}
   .mall-search-stage .mall-search-cards{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* Verified vendor search fallback: make the corrected hose keyword visible on mobile. */
+.mall-search-stage-hint{margin-top:10px;padding:10px 12px;border:1px solid #d7e2ee;border-radius:10px;background:#f3f7fb;font-size:13px;line-height:1.6;color:#3c556d}
+.mall-search-stage-hint a{font-weight:800;text-underline-offset:3px;color:#234c79;overflow-wrap:anywhere}
+.mall-search-stage-hint a:focus-visible{outline:3px solid #3e81be;outline-offset:3px}
