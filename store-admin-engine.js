@@ -895,12 +895,12 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
       +editorField('조리 단계 (승인 내용만)','steps','textarea')
       +editorField('안전·알레르기 주의사항','safety','textarea')
       +editorField('확인자·승인자','approver');
-    const portionFields='<label class="bbqcg-card-field">표시 대상 분류<select data-bbq-field="kind"><option value="">대상 확인 필요</option><option value="chicken">치킨·닭고기 메뉴</option><option value="side">사이드·음료·기타</option></select></label>'
+    const portionFields='<label class="bbqcg-card-field">표시 대상 분류<select data-bbq-field="kind"><option value="">대상 확인 필요</option><option value="chicken">치킨·닭고기 메뉴</option><option value="side">사이드·음료·기타</option></select><span class="bbqcg-print-value" data-bbq-print-value="kind">미입력</span></label>'
       +editorField('이전 고객 표시량','previous','input','number')
       +editorField('현재 고객 표시량','declared','input','number')
       +editorField('실제 계량 제공량','measured','input','number')
-      +'<label class="bbqcg-card-field">단위<select data-bbq-field="unit"><option value="g">g</option><option value="mL">mL</option><option value="개">개</option></select></label>'
-      +'<label class="bbqcg-card-field">계량 기준<select data-bbq-field="stage"><option value="">단계 확인 필요</option><option value="조리 전">조리 전</option><option value="조리 후">조리 후</option><option value="포장 후">포장 후</option></select></label>'
+      +'<label class="bbqcg-card-field">단위<select data-bbq-field="unit"><option value="g">g</option><option value="mL">mL</option><option value="개">개</option></select><span class="bbqcg-print-value" data-bbq-print-value="unit">미입력</span></label>'
+      +'<label class="bbqcg-card-field">계량 기준<select data-bbq-field="stage"><option value="">단계 확인 필요</option><option value="조리 전">조리 전</option><option value="조리 후">조리 후</option><option value="포장 후">포장 후</option></select><span class="bbqcg-print-value" data-bbq-print-value="stage">미입력</span></label>'
       +editorField('메뉴판·배달앱 표시 문구(g/호수 등)','displayCopy')
       +editorField('표시 확인 위치(매장·배달앱·온라인)','displayScope')
       +editorField('조리 전 원료육·입고 확인 근거','weightSource')
@@ -949,11 +949,11 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
           if(!String(field('displayCopy').value||'').trim())notes.push('고객 표시 문구 미확인');
           if(!String(field('displayScope').value||'').trim())notes.push('매장·배달앱·온라인 표시 확인 필요');
         }else if(!kind)notes.push('치킨 중량표시 적용 대상 여부 확인 필요');
-        if(previous!==null&&declared!==null){
+        if(kind&&previous!==null&&declared!==null&&(kind!=='chicken'||stage==='조리 전')){
           const rate=(100*(declared-previous)/previous).toFixed(1);
           notes.push('이전 표시량 대비 '+(declared<previous?'감소 · 승인·고지 확인 필요':declared>previous?'증가':'동일')+' ('+rate+'%)');
         }else notes.push('이전·현재 표시량 비교 미확인');
-        if(declared!==null&&measured!==null&&stage){
+        if(kind&&declared!==null&&measured!==null&&stage&&(kind!=='chicken'||stage==='조리 전')){
           notes.push('현재 표시 대비 실제 계량 '+(measured-declared).toFixed(1)+unit+' · '+stage+' · '+(measured<declared?'차이 확인 필요':'계량 기록 확인'));
         }else notes.push('동일 기준의 실측·표시 대조 미확인');
         notes.push('법령 위반 자동 판정 아님');
