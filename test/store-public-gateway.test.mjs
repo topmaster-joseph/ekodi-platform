@@ -49,7 +49,8 @@ test('compatibility /stores redirects to guide while old protected admin and ind
   for(const slug of ['cmpmyi','stores']){assert.ok(RESERVED_WORKSPACE_SLUGS.has(slug));assert.equal(isWorkspaceSlug(slug),false)}
   assert.ok(router.includes("import { storeGatewayPage } from './store-gateway-page.js'"));
   assert.ok(router.includes('STORE_GATEWAY_PATHS.has(url.pathname))return storeGatewayPage(request)'));
-  assert.ok(router.includes('legacyStoreGatewayRedirect(request)'));
+  assert.ok(router.includes('legacyStoreGatewayRedirect(request,env)'));
+  assert.ok(router.includes('if(resolvedHost(request,env)!==PUBLIC_HOST'));
   assert.ok(router.includes("target.pathname=/^\\/stores\\/?$/i.test(url.pathname)?'/cmpmyi'"));
   assert.ok(router.includes("url.pathname==='/cmpmyi/admin'"));
   assert.ok(router.includes("url.pathname==='/cmpmyi/admin/agent'"));
