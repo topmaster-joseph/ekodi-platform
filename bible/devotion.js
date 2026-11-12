@@ -625,7 +625,7 @@ function boot(root) {
     const actions = el('div', 'dv-share-row');
     const save = el('button', 'dv-btn dv-btn-primary', session ? '기록 저장' : '이 기기에 임시 저장');
     save.type = 'submit';
-    const sharePrayer = el('button', 'dv-mini', '나의 기도 공유');
+    const sharePrayer = el('button', 'dv-mini', '나의 묵상기록 공유');
     sharePrayer.type = 'button'; sharePrayer.dataset.share = 'mine';
     actions.append(save, sharePrayer);
     const note = el('p', 'dv-meta');
@@ -874,14 +874,14 @@ function boot(root) {
     switch (kind) {
       case 'poem': return { title: a.poem.title, text: `${head}\n\n${a.poem.lines.join('\n')}`, hash: 'poem' };
       case 'song': return { title: a.song.title, text: `${head}\n\n${a.song.verse.join('\n')}\n(후렴) ${a.song.refrain.join(' / ')}`, hash: 'song' };
-      case 'questions': return { title: '질문 / 실천', text: `${head}\n\n${a.questions.map((q, i) => `${i + 1}. [${q.kind}] ${q.text}`).join('\n')}\n오늘의 실천: ${a.action}`, hash: 'questions' };
+      case 'questions': return { title: '질문 / 실천', text: `${head}\n\n${a.questions.map((q, i) => `${i + 1}. [${q.kind}] ${q.text}`).join('\n')}\n오늘의 실천\n${a.action}`, hash: 'questions' };
       case 'family': return { title: '가정·어린이 질문', text: `${head}\n\n👨‍👩‍👧 ${a.family}`, hash: 'family' };
       case 'action': return { title: '오늘의 실천', text: `${head}\n\n✔ 오늘의 실천: ${a.action}`, hash: 'action' };
       case 'prayer': return { title: '묵상기도', text: `${head}\n\n🙏 ${a.prayer}`, hash: 'prayer' };
       case 'mine': {
         const mine = panels.get('records').querySelector('textarea[name="prayer"]')?.value.trim();
         if (!mine) return null;
-        return { title: '나의 묵상기도', text: `${head}\n\n${mine}`, hash: 'records' };
+        return { title: '나의 묵상기록', text: `${head}\n\n${mine}`, hash: 'records' };
       }
       default: return { title: `에코디언의 묵상나눔 · ${d.passage}`, text: a.keyLine, hash: '' };
     }
