@@ -9,7 +9,7 @@ const section=(a,b)=>html.slice(html.indexOf(a),html.indexOf(b)+b.length);
 
 test('local header preserves brand but delegates authentication to the shared Shell exactly once',()=>{
   const header=section('<header class="topbar">','</header>');
-  assert.match(header,/EKODI <strong>경영플랫폼<\/strong>/);
+  assert.match(header,/<strong>에코디경영<\/strong><small class="management-brand-en">EKODI MANAGEMENT<\/small>/);
   assert.match(header,/<nav aria-label="EKODI 공통 계정 메뉴"><\/nav>/);
   assert.doesNotMatch(header,/authLink|로그인|로그아웃|My EKODI|href="https:\/\/ekodi\.kr\/my\//);
   assert.doesNotMatch(source,/authLink/);

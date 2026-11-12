@@ -124,8 +124,21 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    outputs:
+      validated_sha: ${{ steps.source.outputs.sha }}
     steps:
+      # A workflow_dispatch event can snapshot an older main for seconds after an
+      # orchestrator merge. Always validate the current protected branch, not the
+      # queued event SHA. PR validation keeps GitHub's exact test-merge SHA.
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.sha || 'main' }}
+      - name: Record exact validated My source
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -322,9 +335,26 @@ jobs:
       TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate.outputs.validated_sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+      - name: Refuse stale or unvalidated My production checkout
+        shell: bash
+        env:
+          EKODI_VALIDATED_SHA: ${{ needs.validate.outputs.validated_sha }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = 'refs/heads/main'
+          [[ "$EKODI_VALIDATED_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EKODI_VALIDATED_SHA"
+          current_main="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')"
+          if [ "$current_main" != "$EKODI_VALIDATED_SHA" ]; then
+            echo '::error title=Stale My release source::Main advanced or workflow selected an older source; reject before any production mutation or deploy.'
+            exit 1
+          fi
+          echo "My protected production source verified: $EKODI_VALIDATED_SHA"
       - name: EKODI AI Orchestration Gate
         run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
       - name: Ensure digital card contact-exchange schema
@@ -541,6 +571,18 @@ jobs:
             exit 1
           fi
           echo 'Public person projection schema is reachable and RLS-protected.'
+      - name: Recheck My release source before Cloudflare promotion
+        shell: bash
+        env:
+          EKODI_VALIDATED_SHA: ${{ needs.validate.outputs.validated_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EKODI_VALIDATED_SHA"
+          current_main="$(git ls-remote --exit-code origin refs/heads/main | awk '{print $1}')"
+          if [ "$current_main" != "$EKODI_VALIDATED_SHA" ]; then
+            echo '::error title=My main moved during preflight::Do not promote a stale candidate; revalidate a fresh protected main release.'
+            exit 1
+          fi
       - name: Bootstrap, migrate legacy page, or run guarded release
         shell: bash
         run: |
@@ -637,6 +679,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           JOB_STATUS: ${{ job.status }}
+          EKODI_VALIDATED_SHA: ${{ needs.validate.outputs.validated_sha }}
         run: |
           set -euo pipefail
           case "$JOB_STATUS" in
@@ -656,5 +699,5 @@ jobs:
             -H "Authorization: Bearer $GH_TOKEN" \
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${EKODI_VALIDATED_SHA}" \
             -d "$payload"
