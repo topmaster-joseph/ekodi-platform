@@ -17,7 +17,7 @@ test('mission and Bible public social preview no longer contain old sharing titl
  assert.match(mission,/<meta property="og:title" content="에코디">/u);
  assert.match(mission,/<meta property="og:site_name" content="에코디">/u);
  assert.match(bible,/<title>에코디<\/title>/u);
- assert.match(worker,/<meta property=\\"og:site_name\\" content=\\"에코디\\"/u);
+ assert.match(worker,/<meta property="og:site_name" content="에코디"/u);
 });
 
 test('Bible staging and production smoke gates expect new exact OG title',async()=>{
