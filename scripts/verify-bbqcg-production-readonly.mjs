@@ -42,6 +42,27 @@ export function normalizeJsUnicodeEscapes(source){
       return point&&n>0x10FFFF?literal:point?String.fromCodePoint(n):String.fromCharCode(n);
     });
 }
+// Check the deployed, guest-readable bundle for presence of the tenant-only
+// admin cards. This is source delivery evidence, NOT an authenticated card click,
+// a confirmed printed page, a real measurement, or statutory compliance.
+export function hasBbqcgMenuCardDefinitions(source){
+  const code=normalizeJsUnicodeEscapes(source);
+  return [
+    /\bid\s*:\s*['"]menuRecipe['"]/,
+    /\bid\s*:\s*['"]portion['"]/,
+    /extraCard\(\s*['"]menuRecipe['"]/,
+    /extraCard\(\s*['"]portion['"]/,
+    /data-bbq-card-menu/,
+    /data-bbq-print-value=['"]kind['"]/,
+    /data-bbq-print-value=['"]unit['"]/,
+    /data-bbq-print-value=['"]stage['"]/,
+    /이전 고객 표시량/,
+    /현재 고객 표시량/,
+    /실제 계량 제공량/,
+    /법령 위반 자동 판정 아님/
+  ].every(pattern=>pattern.test(code));
+}
+
 export function hasBbqcgPosTabDefinitions(source){
   const normalized=normalizeJsUnicodeEscapes(source);
   return /function\s+mountBbqPosTabs\s*\(\)/.test(normalized)
@@ -93,6 +114,7 @@ export async function auditBbqcgProduction({fetchImpl=fetch,origin=BBQCG_CANARY_
       mark(body.includes('data-bbq-pos-tab')&&body.includes('posTab'),'pos-tabs-state');
       const fourTabs=hasBbqcgPosTabDefinitions(body);
       mark(fourTabs,'pos-four-tabs');
+      mark(hasBbqcgMenuCardDefinitions(body),'bbq-private-card-assets-delivered');
       if(!fourTabs){
         // Boolean-only diagnostics: no response body, credentials, or private data.
         const normalized=normalizeJsUnicodeEscapes(body);
@@ -108,6 +130,7 @@ export async function auditBbqcgProduction({fetchImpl=fetch,origin=BBQCG_CANARY_
     }else if(id==='admin-styles'){
       mark(is200(status)&&/text\/css/.test(ctype),'admin-css-http-type');
       mark(body.includes('.bbq-pos-subtabs')&&body.includes('@media(max-width:620px)'),'admin-compact-mobile-rules');
+      mark(body.includes('.bbqcg-print-value')&&body.includes('white-space:pre-wrap')&&body.includes('.bbqcg-card-policy'),'bbq-card-print-css-delivered');
     }else if(id==='storefront'){
       mark(is200(status)&&/text\/html/.test(ctype),'storefront-200-html');
       mark(body.includes('data-store-entity="bbqcg"'),'storefront-tenant-marker');
