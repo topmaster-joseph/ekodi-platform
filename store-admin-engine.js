@@ -874,9 +874,81 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
       {id:'daily',label:'일일점검',title:'개점·마감 일일점검',status:'직원 확인용 양식',source:'매장 자체 운영 체크리스트',lines:['개점 전 시설·도구 및 청결 확인','원재료 입고·보관·유통기한 확인','주문·배달앱 및 연락수단 작동 확인','마감 시 설비·화기·전기 안전 확인','이상사항·조치자·확인자 기록']},
       {id:'print',label:'인쇄 관리',title:'출력·부착 관리',status:'출력 양식 · 이력 자동저장 아님',source:'BBQ 무안청계점 내부 기록용',lines:['문서 버전과 승인 상태 확인','브라우저 인쇄에서 A4 또는 A5 선택','표지·카드에 수정일과 담당자 기입','법령·본사 지침 변경 시 최신판으로 교체','교체일·부착 위치·기존 인쇄물 회수 기록']}
     ];
+
+    // The menu names are from this authenticated store's existing canonical menu RPC.
+    // Never invent products, recipes or legal portion thresholds.
+    const canonicalMenus=(Array.isArray(state.menu?.menu)?state.menu.menu:[])
+      .filter(item=>String(item?.id||'').trim()&&String(item?.name||'').trim())
+      .map(item=>({id:String(item.id),name:String(item.name),category:String(item.category||'')}));
+    const selectedMenuNames=new Map(canonicalMenus.map(item=>[item.id,item.name]));
+    const menuSelector='<label class="bbqcg-card-field">실제 등록된 메뉴 선택<select data-bbq-card-menu aria-label="실제 등록된 메뉴 선택"><option value="">메뉴 선택 · 미확인</option>'
+      +canonicalMenus.map(item=>'<option value="'+esc(item.id)+'">'+esc(item.name)+(item.category?' · '+esc(item.category):'')+'</option>').join('')
+      +'</select></label>';
+    const noMenu='<p class="bbqcg-card-warning">'+(canonicalMenus.length?'':'현재 매장 기준메뉴 원장이 없습니다. 실제 메뉴 등록 후 작성하세요.')+'</p>';
+    const editorField=(label,key,kind='input',type='text')=>'<label class="bbqcg-card-field">'+label+(kind==='textarea'
+      ?'<textarea data-bbq-field="'+key+'" rows="3" maxlength="1200" placeholder="본사 승인 자료 확인 후 입력"></textarea>'
+      :'<input data-bbq-field="'+key+'" type="'+type+'" '+(type==='number'?'min="0" max="100000" step="0.1" ':'')+'maxlength="240" placeholder="확인 후 입력">')+'</label>';
+    const tabs=[...sections,{id:'menuRecipe',label:'메뉴별 레시피'},{id:'portion',label:'정량·용량표시'}];
+    const recipeFields=editorField('공식 문서번호·출처','source')
+      +editorField('승인 버전·확인일','revision')
+      +editorField('재료·준비사항 (승인 내용만)','ingredients','textarea')
+      +editorField('조리 단계 (승인 내용만)','steps','textarea')
+      +editorField('안전·알레르기 주의사항','safety','textarea')
+      +editorField('확인자·승인자','approver');
+    const portionFields=editorField('이전 고객 표시량','previous','input','number')
+      +editorField('현재 고객 표시량','declared','input','number')
+      +editorField('실제 계량 제공량','measured','input','number')
+      +'<label class="bbqcg-card-field">단위<select data-bbq-field="unit"><option value="g">g</option><option value="mL">mL</option><option value="개">개</option></select></label>'
+      +'<label class="bbqcg-card-field">계량 기준<select data-bbq-field="stage"><option value="">단계 확인 필요</option><option value="조리 전">조리 전</option><option value="조리 후">조리 후</option><option value="포장 후">포장 후</option></select></label>'
+      +editorField('계량일·측정자','checker')+editorField('본사·매장 승인 근거','approval');
+    const extraCard=(id,title,lead,fields)=>'<article class="bbqcg-paper-card" data-bbq-card="'+id+'" role="tabpanel" id="bbqcg-tab-'+id+'">'
+      +'<header><small>BBQ 무안청계점 · 관리자 전용 · 미승인 초안</small><h3>'+title+'</h3><p>'+lead+'</p></header>'
+      +'<div class="bbqcg-card-editor">'+menuSelector+noMenu+'<p><strong>선택 메뉴:</strong> <span data-bbq-selected-menu>미확인</span></p>'
+      +'<div class="bbqcg-card-fields">'+fields+'</div>'
+      +(id==='portion'?'<p class="bbqcg-card-result" data-bbq-portion-result role="status" aria-live="polite">기준량·계량량 미확인 · 자동 법령판정 없음</p>':'')
+      +'<p class="bbqcg-card-warning">이 입력은 서버·브라우저 저장소에 저장되지 않습니다. 다른 메뉴 선택·화면 이동·새로고침 전에 인쇄하세요. 본사 비공개 원문을 무단 공개하지 마세요.</p></div>'
+      +'<footer><span>실측·원본 확인 후 매장 책임자 승인</span></footer>'
+      +'<div class="bbqcg-card-actions"><button type="button" data-bbq-print="'+id+'">이 카드 인쇄</button></div></article>';
+    const extraCards=extraCard('menuRecipe','메뉴별 레시피 확인카드','본사 승인된 최신 조리지침을 기준으로 작성하며 임의 조리값을 제시하지 않습니다.',recipeFields)
+      +extraCard('portion','정량·용량표시 점검카드','슈링크플레이션 예방을 위한 내부 비교표입니다. 공개 표시량·계량 단계·단위가 일치하는지 확인하고 변경 시 별도 승인·고지를 검토하세요.',portionFields);
+
     const baseDate=new Date().toLocaleDateString('ko-KR');
     const cards=sections.map(x=>`<article class="bbqcg-paper-card" data-bbq-card="${esc(x.id)}" role="tabpanel" id="bbqcg-tab-${esc(x.id)}"><header><small>BBQ 무안청계점 · 관리자 전용</small><h3>${esc(x.title)}</h3><p><strong>상태</strong> ${esc(x.status)}</p><p><strong>출처</strong> ${esc(x.source)}</p><p><strong>버전</strong> 초안 v0.1 · <strong>출력일</strong> ${esc(baseDate)}</p></header><ol>${x.lines.map(line=>`<li>${esc(line)}</li>`).join('')}</ol><footer><span>확인 직원: __________________</span><span>책임자 승인: __________________</span></footer><div class="bbqcg-card-actions"><button type="button" data-bbq-print="${esc(x.id)}">이 카드 인쇄</button></div></article>`).join('');
-    $('mainPanel').innerHTML=`<div id="bbqcgHandbook" class="bbqcg-handbook"><h2>매장업무 · 인쇄카드</h2><p class="panel-lead">본사 교육자료의 조리법은 허락 없이 복제하지 않습니다. 승인 전 카드에는 비공개 상세 조리법·시간·온도를 기재하지 않으며 일반 양식만 제공합니다.</p><div class="bbqcg-handbook-tabs" role="tablist" aria-label="업무카드 구분">${sections.map((x,i)=>`<button type="button" role="tab" data-bbq-tab="${esc(x.id)}" aria-controls="bbqcg-tab-${esc(x.id)}" aria-selected="${i===0?'true':'false'}">${esc(x.label)}</button>`).join('')}</div><div class="bbqcg-card-set">${cards}</div><div class="bbqcg-print-controls"><button id="bbqcgPrintAll" type="button">전체 카드 인쇄</button><small>용지 A4/A5는 브라우저 인쇄 설정에서 선택하세요. 출력기록은 자동 저장되지 않습니다.</small><p>규정 확인: <a href="https://www.foodsafetykorea.go.kr/" target="_blank" rel="noopener noreferrer">식품안전나라</a> · <a href="https://www.law.go.kr/" target="_blank" rel="noopener noreferrer">국가법령정보센터</a></p></div></div>`;
+    $('mainPanel').innerHTML=`<div id="bbqcgHandbook" class="bbqcg-handbook"><h2>매장업무 · 인쇄카드</h2><p class="panel-lead">본사 교육자료의 조리법은 허락 없이 복제하지 않습니다. 승인 전 카드에는 비공개 상세 조리법·시간·온도를 기재하지 않으며 일반 양식만 제공합니다.</p><div class="bbqcg-handbook-tabs" role="tablist" aria-label="업무카드 구분">${tabs.map((x,i)=>`<button type="button" role="tab" data-bbq-tab="${esc(x.id)}" aria-controls="bbqcg-tab-${esc(x.id)}" aria-selected="${i===0?'true':'false'}">${esc(x.label)}</button>`).join('')}</div><div class="bbqcg-card-set">${cards}${extraCards}</div><div class="bbqcg-print-controls"><button id="bbqcgPrintAll" type="button">전체 카드 인쇄</button><small>용지 A4/A5는 브라우저 인쇄 설정에서 선택하세요. 출력기록은 자동 저장되지 않습니다.</small><p>규정 확인: <a href="https://www.foodsafetykorea.go.kr/" target="_blank" rel="noopener noreferrer">식품안전나라</a> · <a href="https://www.law.go.kr/" target="_blank" rel="noopener noreferrer">국가법령정보센터</a></p></div></div>`;
+
+    for(const select of root.querySelectorAll('[data-bbq-card-menu]')){
+      const card=select.closest('[data-bbq-card]');
+      const fields=[...card.querySelectorAll('[data-bbq-field]')];
+      const field=name=>card.querySelector('[data-bbq-field="'+name+'"]');
+      const update=()=>{
+        const chosen=selectedMenuNames.get(select.value)||'미확인';
+        card.querySelector('[data-bbq-selected-menu]').textContent=chosen;
+        if(card.dataset.bbqCard!=='portion')return;
+        const positive=name=>{const raw=field(name)?.value||'';const value=Number(raw);return raw!==''&&Number.isFinite(value)&&value>0?value:null};
+        const previous=positive('previous'),declared=positive('declared'),measured=positive('measured');
+        const unit=field('unit').value,stage=field('stage').value;
+        const notes=[];
+        if(!select.value)notes.push('메뉴 미선택');
+        if(previous!==null&&declared!==null){
+          const rate=(100*(declared-previous)/previous).toFixed(1);
+          notes.push('이전 표시량 대비 '+(declared<previous?'감소 · 승인·고지 확인 필요':declared>previous?'증가':'동일')+' ('+rate+'%)');
+        }else notes.push('이전·현재 표시량 비교 미확인');
+        if(declared!==null&&measured!==null&&stage){
+          notes.push('현재 표시 대비 실제 계량 '+(measured-declared).toFixed(1)+unit+' · '+stage+' · '+(measured<declared?'차이 확인 필요':'계량 기록 확인'));
+        }else notes.push('동일 기준의 실측·표시 대조 미확인');
+        notes.push('법령 위반 자동 판정 아님');
+        card.querySelector('[data-bbq-portion-result]').textContent=notes.join(' / ');
+      };
+      select.addEventListener('change',()=>{
+        // Prevent previous menu's private draft from appearing on a different menu.
+        for(const input of fields){if(input.tagName==='SELECT')input.selectedIndex=0;else input.value=''}
+        update();
+      });
+      card.addEventListener('input',update);
+      card.addEventListener('change',update);
+      update();
+    }
+
     const root=$('bbqcgHandbook');
     const selectTab=id=>{root.querySelectorAll('[data-bbq-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.bbqTab===id?'true':'false'));root.querySelectorAll('[data-bbq-card]').forEach(c=>{c.hidden=c.dataset.bbqCard!==id})};
     root.querySelectorAll('[data-bbq-tab]').forEach(b=>b.addEventListener('click',()=>selectTab(b.dataset.bbqTab)));
@@ -1029,9 +1101,18 @@ const BBQCG_COMPACT_ADMIN_CSS=`
 }
 `;
 const BBQCG_PRINT_CSS=`
+:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-editor{display:grid;gap:10px}
+:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-field{display:grid;gap:5px;font-size:13px;font-weight:700;color:#37513f}
+:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-field input,:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-field select,:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-field textarea{width:100%;min-width:0;min-height:40px;padding:8px 10px;border:1px solid #c5d3ca;border-radius:8px;background:#fff;color:#17251c;font:inherit}
+:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-result{padding:10px;background:#eef5f0;border-radius:8px;font-size:13px}
+:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-warning{font-size:12px;color:#704e14}
+@media(max-width:620px){:root[data-ekodi-store-brand="bbqcg"] #bbqcgHandbook .bbqcg-card-fields{grid-template-columns:1fr}}
+
 .bbqcg-handbook{max-width:100%;color:#14241b}.bbqcg-handbook-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}.bbqcg-handbook-tabs button,.bbqcg-print-controls button,.bbqcg-card-actions button{min-height:40px;background:#fff;border:1px solid #cdd9d2;border-radius:9px;padding:8px 13px;color:#1e4b31;cursor:pointer;font-weight:750}.bbqcg-handbook-tabs button[aria-selected="true"]{background:#1b5a37;color:#fff}.bbqcg-card-set{max-width:850px}.bbqcg-paper-card{padding:26px;border:1px solid #cfdbd4;border-radius:12px;background:#fff;line-height:1.7}.bbqcg-paper-card[hidden]{display:none}.bbqcg-paper-card header small{color:#52635a}.bbqcg-paper-card h3{font-size:23px;margin:5px 0 10px}.bbqcg-paper-card p{margin:4px 0;font-size:13px}.bbqcg-paper-card ol{padding-left:25px;margin:24px 0}.bbqcg-paper-card li{margin:10px 0}.bbqcg-paper-card footer{display:flex;flex-wrap:wrap;gap:16px;margin-top:25px;border-top:1px solid #dbe4df;padding-top:14px;font-size:13px}.bbqcg-card-actions{margin-top:20px}.bbqcg-print-controls{display:grid;justify-items:start;gap:8px;margin-top:18px}.bbqcg-print-controls small{line-height:1.5}
 @media print{@page{margin:12mm}body.bbqcg-print-mode *{visibility:hidden!important}body.bbqcg-print-mode #bbqcgHandbook,body.bbqcg-print-mode #bbqcgHandbook .bbqcg-paper-card,body.bbqcg-print-mode #bbqcgHandbook .bbqcg-paper-card *{visibility:visible!important}body.bbqcg-print-mode #bbqcgHandbook{position:absolute!important;left:0!important;top:0!important;width:100%!important;margin:0!important;padding:0!important}body.bbqcg-print-mode #bbqcgHandbook>h2,body.bbqcg-print-mode #bbqcgHandbook>.panel-lead,body.bbqcg-print-mode #bbqcgHandbook .bbqcg-handbook-tabs,body.bbqcg-print-mode #bbqcgHandbook .bbqcg-print-controls,body.bbqcg-print-mode #bbqcgHandbook .bbqcg-card-actions{display:none!important}body.bbqcg-print-mode #bbqcgHandbook .bbqcg-paper-card{display:none!important;border-radius:0;break-after:page;box-shadow:none!important}body.bbqcg-print-mode #bbqcgHandbook[data-print-target="all"] .bbqcg-paper-card{display:block!important}body.bbqcg-print-mode #bbqcgHandbook[data-print-target="recipe"] .bbqcg-paper-card[data-bbq-card="recipe"],body.bbqcg-print-mode #bbqcgHandbook[data-print-target="hygiene"] .bbqcg-paper-card[data-bbq-card="hygiene"],body.bbqcg-print-mode #bbqcgHandbook[data-print-target="law"] .bbqcg-paper-card[data-bbq-card="law"],body.bbqcg-print-mode #bbqcgHandbook[data-print-target="daily"] .bbqcg-paper-card[data-bbq-card="daily"],body.bbqcg-print-mode #bbqcgHandbook[data-print-target="print"] .bbqcg-paper-card[data-bbq-card="print"]{display:block!important}}
 `;
+@media print{body.bbqcg-print-mode #bbqcgHandbook[data-print-target="menuRecipe"] .bbqcg-paper-card[data-bbq-card="menuRecipe"],body.bbqcg-print-mode #bbqcgHandbook[data-print-target="portion"] .bbqcg-paper-card[data-bbq-card="portion"]{display:block!important}body.bbqcg-print-mode #bbqcgHandbook .bbqcg-card-warning{display:none!important}}
 export function storeAdminCss(){return new Response(CSS+tenantAdminMetricsTabsCss+TENANT_AUTOMATION_CSS+BBQCG_PRINT_CSS+BBQCG_COMPACT_ADMIN_CSS,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}})}
 // Wrangler bundles with esbuild keepNames, which inserts __name(fn,"name") calls into
 // nested functions. They survive Function.prototype.toString(), so the serialised
