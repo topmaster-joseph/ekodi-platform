@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { auditBbqcgProduction, hasBbqcgPosTabDefinitions, hasBbqcgMenuCardDefinitions, normalizeJsUnicodeEscapes, bbqIndexingProof } from '../scripts/verify-bbqcg-production-readonly.mjs';
+import { readFileSync } from 'node:fs';
+import { auditBbqcgProduction, hasBbqcgPosTabDefinitions, hasBbqcgMenuCardDefinitions, normalizeJsUnicodeEscapes, bbqIndexingProof, bbqIndexingSignals } from '../scripts/verify-bbqcg-production-readonly.mjs';
 import { storeAdminScript } from '../store-admin-engine.js';
 
 const noindex={'x-robots-tag':'noindex,nofollow,noarchive'};
@@ -158,4 +159,27 @@ test('unverified BBQ must remain noindex; missing meta or advertised index fails
   assert.equal(bbqIndexingProof(unverified,'noindex, nofollow, noarchive'),true);
   assert.equal(bbqIndexingProof(unverified.replace(/<meta[^>]+>/,''),'noindex, nofollow, noarchive'),false);
   assert.equal(bbqIndexingProof(unverified,'index, follow'),false);
+});
+
+test('BBQ public index evidence exposes Boolean-only diagnostics without relaxing restrictions',()=>{
+  const good='<meta name="robots" content="index,follow"><small>영업시간</small><strong>매일 11:00 ~ 23:00</strong>'
+    +'<small>매장전화</small><strong><a href="tel:0614538295">061-453-8295</a></strong>'
+    +'<small>오시는 길</small><strong class="store-address">전남 무안군 청계면 승달산길 37-1, 건물 1층</strong>';
+  const flags=bbqIndexingSignals(good,'index, follow');
+  assert.deepEqual(Object.values(flags).map(Boolean),[false,false,true,true,true,true,true]);
+  assert.equal(bbqIndexingProof(good,'index, follow'),true);
+  const noindexMeta='<meta name="robots" content="noindex,nofollow,noarchive">';
+  assert.equal(bbqIndexingProof(noindexMeta,'noindex, nofollow, noarchive'),true);
+  assert.equal(bbqIndexingProof(noindexMeta,'index, follow'),false);
+  assert.equal(bbqIndexingProof(good,'noindex, nofollow, noarchive'),false);
+  assert.equal(Object.keys(flags).some(key=>/phonevalue|addressvalue|body|html/i.test(key)),false);
+});
+
+test('Operating Space guarded release uses the same fail-closed BBQ robots/public facts proof',()=>{
+  const workflow=readFileSync(new URL('../.github/workflows/deploy-space.yml',import.meta.url),'utf8');
+  assert.match(workflow,/bbqIndexingProof\(body,robots\)/);
+  assert.match(workflow,/bbqIndexingSignals\(body,robots\)/);
+  assert.match(workflow,/x-robots-tag:/);
+  assert.doesNotMatch(workflow,/Unverified BBQ store data must remain noindex/);
+  assert.match(workflow,/Retired BBQ path must remain noindex/);
 });
