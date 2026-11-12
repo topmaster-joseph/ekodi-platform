@@ -29,5 +29,5 @@ test('commercial operations inherit existing trade authority and audit every mut
   assert.ok(sql.includes("v_access->>'can_write'"));
   assert.ok(sql.includes('public.trade_access_audit_log'));
   assert.ok(sql.includes('enable row level security'));
-  assert.ok(sql.includes('revoke all on table public.trade_buyers'));
+  assert.ok(sql.includes('revoke all on table public.trade_buyers, public.trade_quotations, public.trade_contracts from anon, authenticated, service_role'));
 });

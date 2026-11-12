@@ -63,7 +63,7 @@ create index if not exists trade_contracts_workspace_idx on public.trade_contrac
 alter table public.trade_buyers enable row level security;
 alter table public.trade_quotations enable row level security;
 alter table public.trade_contracts enable row level security;
-revoke all on table public.trade_buyers, public.trade_quotations, public.trade_contracts from anon, authenticated;
+revoke all on table public.trade_buyers, public.trade_quotations, public.trade_contracts from anon, authenticated, service_role;
 
 create or replace function public.trade_commercial_snapshot(p_workspace_slug text default 'ekoditrade')
 returns jsonb language plpgsql stable security definer set search_path=public,auth as $$
