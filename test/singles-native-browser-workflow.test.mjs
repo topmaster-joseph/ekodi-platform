@@ -13,12 +13,19 @@ const routes = [
   '/singles/privacy', '/singles/terms', '/singles/verify',
 ];
 
-test('Donghaeng acceptance only runs after a successful guarded Site Core release, or an explicit dispatch', () => {
-  assert.match(yml, /workflow_run:\s*\n\s*workflows: \["Deploy EKODI Shared Site Core"\]/);
-  assert.equal((yml.match(/github\.event\.workflow_run\.conclusion == 'success'/g) || []).length, 2);
-  assert.equal((yml.match(/github\.event\.workflow_run\.head_repository\.full_name == github\.repository/g) || []).length, 2);
-  assert.match(yml, /workflow_dispatch:/);
+test('standalone acceptance is manual-only; guarded Site Core owns automatic postpromotion checks', async () => {
+  assert.match(yml, /on:\s*\n\s*workflow_dispatch:/);
+  assert.doesNotMatch(yml, /^\s*(?:workflow_run|push|schedule|pull_request):/m,
+    'an automatic trigger on a successful scheduled no-op release would waste Cloudflare quota');
+  assert.doesNotMatch(yml, /github\.event\.workflow_run/);
+  assert.match(yml, /contents: read/);
   assert.match(yml, /cancel-in-progress: false/);
+  const site = await readFile(new URL('../.github/workflows/deploy-site-core.yml', import.meta.url), 'utf8');
+  assert.match(site, /post_promotion_browser_verification_receipt:/);
+  assert.match(site, /singles_native_member_desktop:/);
+  assert.match(site, /singles_native_member_mobile:/);
+  assert.match(site, /singles_native_legal_desktop:/);
+  assert.match(site, /singles_native_legal_mobile:/);
 });
 
 test('two browser lanes cover all thirteen distinct routes while preserving the native worker twelve-path cap', () => {
@@ -58,9 +65,9 @@ test('a Singles native browser workflow-only update dispatches the guarded Site 
   assert.ok(match[1].includes("file==='.github/workflows/verify-singles-native-browser.yml'||"),
     'a workflow-only browser verification fix must not become an unverified merge');
   assert.match(release, /if\(sharedSiteTouched\)\{\s*const dispatch=await api\('\/actions\/workflows\/deploy-site-core\.yml\/dispatches'/);
-  assert.match(yml, /workflow_run:\s*\n\s*workflows: \["Deploy EKODI Shared Site Core"\]/,
-    'Singles acceptance can only follow the guarded production release');
-  assert.match(yml, /github\.event\.workflow_run\.conclusion == 'success'/);
+  assert.match(yml, /on:\s*\n\s*workflow_dispatch:/,
+    'manual diagnostic remains available without autonomous duplicate fanout');
+  assert.doesNotMatch(yml, /workflow_run:/, 'the guarded Site Core is the only automatic verification owner');
 });
 
 

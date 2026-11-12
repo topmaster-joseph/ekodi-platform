@@ -1,18 +1,18 @@
 # EKODI-owned isolated Chromium verification for Donghaeng public/user/admin shells.
+# On-demand diagnostic only: the guarded Site Core release is the authoritative
+# postpromotion owner of the same four Singles lanes and its verification receipt.
+# A successful scheduled no-op release must not fan out additional browser traffic.
 # Does not automate a real Google account picker or mutate member/payment records.
 name: EKODI Singles Native Browser Acceptance
 
 on:
-  workflow_run:
-    workflows: ["Deploy EKODI Shared Site Core"]
-    types: [completed]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ekodi-singles-native-browser-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.sha }}
+  group: ekodi-singles-native-browser-manual-${{ github.sha }}
   cancel-in-progress: false
 
 # Split by bounded execution lane: each underlying browser worker allows at most 12 paths.
@@ -20,10 +20,6 @@ concurrency:
 # cancelling a concurrent matrix job on the same device profile.
 jobs:
   member:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
     strategy:
       fail-fast: false
       matrix:
@@ -35,10 +31,6 @@ jobs:
       verification_lane: singles-member
 
   legal:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
     strategy:
       fail-fast: false
       matrix:
