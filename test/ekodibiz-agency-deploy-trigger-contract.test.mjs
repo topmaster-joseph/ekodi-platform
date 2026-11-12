@@ -5,11 +5,13 @@ import { readFile } from 'node:fs/promises';
 const read = async path => readFile(new URL(path, import.meta.url), 'utf8');
 
 function workflowPaths(yaml, trigger) {
-  const eventBlock = yaml.match(new RegExp('^  '+trigger+':\\s*\\n([\\s\\S]*?)(?=^  (?:workflow_dispatch|pull_request|push|schedule):|^permissions:|^concurrency:|^env:|$)', 'm'));
-  assert.ok(eventBlock, 'Expected '+trigger+' event');
-  return eventBlock[1];
+  const lines = yaml.split('\n');
+  const start=lines.findIndex(line=>line==='  '+trigger+':');
+  assert.ok(start>=0,'Expected '+trigger+' event');
+  const end=lines.findIndex((line,index)=>index>start &&
+    (/^  (?:schedule|workflow_dispatch|pull_request|push):/.test(line) || /^[a-z][\w-]*:/.test(line)));
+  return lines.slice(start+1,end<0?lines.length:end).join('\n');
 }
-
 test('EKODIBIZ worker changes and scoped AI-agency tests trigger release validation on PR and main', async () => {
   const workflow = await read('../.github/workflows/deploy-ekodibiz.yml');
   for (const event of ['pull_request', 'push']) {
