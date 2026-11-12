@@ -1,8 +1,8 @@
 // 강사용 세부 강의안 — mobile-first instructor view (no network calls, nothing sent anywhere).
 // 차수 탭 → 차시별 진행표. Each demo/practice 차시 lets the instructor pick a demo (추천 + 전체 분야),
 // shows the demo material, and the hand-over line that sends learners into focused individual practice.
-import {FIELDS,FLOW,PROMPTS,FREE_PROMPT,SAFETY,SESSIONS,PREP,FOCUS_RULES} from './data.js';
-import {DEMOS,MISSIONS,SESSION_PICKS,demoById,demoPrompt} from './demos.js';
+import {FIELDS,FLOW,PROMPTS,FREE_PROMPT,SAFETY,SESSIONS,PREP,FOCUS_RULES,LEARNER_LABEL} from './data.js';
+import {DEMOS,MISSIONS,SESSION_PICKS,FEATURE_STEPS,INPUT_LABEL,PPT_SETTINGS,demoById,demoPrompt,featureInput} from './demos.js';
 
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -43,12 +43,20 @@ function demoPicker(seg){
 }
 function demoCard(d){
   const present='../present/?c='+COURSE+'&g='+current+'&demo='+encodeURIComponent(d.id);
-  return '<article class="g-demo-card"><p class="g-kind">'+esc(fieldLabel(d.field))+' · '+esc(MISSIONS[d.mission])+'</p><h4>'+esc(d.title)+'</h4>'+
-    (d.sample&&!/^\(/.test(d.sample)?'<p class="g-sub">시연 자료(가상)</p><p class="g-pre">'+esc(d.sample)+'</p>':'')+
-    '<details class="g-prompt"><summary>시연 프롬프트</summary><p class="g-pre">'+esc(d.task)+'</p></details>'+
+  const m=d.mission,isMin=m==='minutes',hasSample=d.sample&&!/^\(/.test(d.sample);
+  const sampleLabel=m==='hwp'?'문서 본문에 붙여 넣을 자료(가상)':isMin?'':'시연 자료(가상)';
+  return '<article class="g-demo-card"><p class="g-kind">'+esc(fieldLabel(d.field))+' · FactChat '+esc(MISSIONS[m])+'</p><h4>'+esc(d.title)+'</h4>'+
+    '<p class="g-sub">화면 조작 순서</p><ol class="g-list g-steps">'+(FEATURE_STEPS[m]||[]).map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol>'+
+    (hasSample&&!isMin?'<p class="g-sub">'+sampleLabel+'</p><p class="g-pre">'+esc(d.sample)+'</p>':'')+
+    '<p class="g-sub">'+esc(INPUT_LABEL[m]||'입력')+'</p><p class="g-pre">'+esc(featureInput(d))+'</p>'+
+    (m==='ppt'?'<p class="g-setting">화면 설정: '+esc(PPT_SETTINGS)+'</p>':'')+
+    (isMin?'<details class="g-prompt"><summary>녹음이 안 될 때 · 채팅 대체 프롬프트</summary><p class="g-pre">'+esc(demoPrompt(d))+'</p></details>':'')+
     '<div class="g-two"><div><p class="g-sub">보여줄 포인트</p>'+list(d.points)+'</div><div><p class="g-sub">나올 수 있는 오류</p>'+list(d.pitfalls,'g-warn')+'</div></div>'+
     '<p class="g-handoff"><b>넘김 멘트</b> '+esc(d.handoff)+'</p>'+
-    '<div class="g-actions"><button type="button" class="btn btn-small btn-primary" data-copy-demo="'+d.id+'">프롬프트+자료 복사</button><a class="btn btn-small" href="'+present+'">발표 화면에 불러오기</a></div></article>';
+    '<div class="g-actions"><button type="button" class="btn btn-small btn-primary" data-copy-input="'+d.id+'">'+(isMin?'대본 복사':'입력 글 복사')+'</button>'+
+    (hasSample&&m==='hwp'?'<button type="button" class="btn btn-small" data-copy-sample="'+d.id+'">자료 복사</button>':'')+
+    '<a class="btn btn-small" href="'+present+'">발표 화면에 불러오기</a></div>'+
+    '<p class="meta">발표 화면의 AI 시연은 채팅으로 실행됩니다. HWP·회의록·프레젠테이션 기능은 「FactChat 화면」 버튼으로 실제 화면을 띄워 시연하세요.</p></article>';
 }
 function phaseBar(f){
   if(!f.phases)return '';
@@ -58,7 +66,7 @@ function phaseBar(f){
 function learnerPrompt(f){
   if(f.mission==='free')return '<details class="g-prompt"><summary>수강생 실습 프롬프트 · 재사용 템플릿</summary><p class="g-pre">'+esc(FREE_PROMPT)+'</p><button type="button" class="btn btn-small" data-copy="free">복사</button></details>';
   if(!f.mission||!PROMPTS[field]?.[f.mission])return '';
-  return '<details class="g-prompt"><summary>수강생 실습 프롬프트 · '+esc(fieldLabel(field))+' · '+esc(MISSION[f.mission])+'</summary><p class="g-pre">'+esc(PROMPTS[field][f.mission])+'</p><button type="button" class="btn btn-small" data-copy="'+f.mission+'">복사</button></details>';
+  return '<details class="g-prompt"><summary>수강생 실습 · '+esc(fieldLabel(field))+' · '+esc(LEARNER_LABEL[f.mission]||MISSION[f.mission])+'</summary><ol class="g-list g-steps">'+(FEATURE_STEPS[f.mission]||[]).map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol><p class="g-pre">'+esc(PROMPTS[field][f.mission])+'</p>'+(f.mission==='ppt'?'<p class="g-setting">화면 설정: '+esc(PPT_SETTINGS)+'</p>':'')+'<button type="button" class="btn btn-small" data-copy="'+f.mission+'">복사</button></details>';
 }
 
 function renderTabs(){
@@ -115,7 +123,8 @@ document.addEventListener('click',e=>{
   const tab=e.target.closest('[data-s]');if(tab){current=+tab.dataset.s;try{history.replaceState(null,'','?s='+current)}catch{}renderTabs();renderSession();return;}
   const fb=e.target.closest('[data-f]');if(fb){field=fb.dataset.f;store.set('field',field);renderField();renderSession();return;}
   const pk=e.target.closest('[data-pick]');if(pk){setPick(pk.dataset.pick,pk.dataset.id);return;}
-  const cd=e.target.closest('[data-copy-demo]');if(cd){copy(demoPrompt(demoById(cd.dataset.copyDemo)));return;}
+  const ci=e.target.closest('[data-copy-input]');if(ci){copy(featureInput(demoById(ci.dataset.copyInput)));return;}
+  const cs=e.target.closest('[data-copy-sample]');if(cs){copy(demoById(cs.dataset.copySample)?.sample||'');return;}
   const cp=e.target.closest('[data-copy]');if(cp){const k=cp.dataset.copy;copy(k==='free'?FREE_PROMPT:PROMPTS[field][k]);return;}
   if(e.target.closest('#gJump'))document.querySelector('.g-step.is-now')?.scrollIntoView({behavior:'smooth',block:'start'});
 });
