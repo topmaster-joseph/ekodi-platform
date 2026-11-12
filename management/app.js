@@ -425,6 +425,60 @@ function renderGrowthWorkspace(){
     });
     host.append(probe,output);
   }
+  // Financial outcomes are not inferred from campaign/job counts: read an existing
+  // owner-authorized aggregate and retain its explicit source/coverage caveat.
+  if(space.kind==='store'&&FINANCIAL_READ_ROLES.has(space.role)&&validSpaceUrl(space.slug)){
+    const action=document.createElement('button');action.type='button';
+    action.className='secondary';action.textContent='공식 완료 주문·매출 조회';
+    const panel=document.createElement('div');panel.className='growth-store-outcomes';
+    panel.setAttribute('role','status');panel.setAttribute('aria-live','polite');
+    action.addEventListener('click',async()=>{
+      const current=selectedVerifiedWorkspace();
+      if(!activeSession()||current?.id!==space.id||current?.slug!==space.slug
+        ||current?.role!==space.role||!FINANCIAL_READ_ROLES.has(current.role))return;
+      const token=state.session.accessToken,actor=state.session.user.id,epoch=state.spacesRequest;
+      const stillCurrent=()=>{
+        const now=selectedVerifiedWorkspace();
+        return activeSession()&&state.session.accessToken===token
+          &&state.session.user.id===actor&&state.spacesRequest===epoch
+          &&now?.id===space.id&&now?.slug===space.slug&&now?.role===space.role
+          &&FINANCIAL_READ_ROLES.has(now.role)
+          &&new Set(state.selection?.modules||[]).has('growth')
+          &&panel.isConnected;
+      };
+      action.disabled=true;panel.replaceChildren();
+      panel.textContent='공식 완료 주문·매출 집계를 확인하고 있습니다.';
+      try{
+        const response=await fetch('/api/store-business-summary?slug='+encodeURIComponent(space.slug),{
+          method:'GET',headers:{authorization:'Bearer '+token,accept:'application/json'},cache:'no-store'
+        });
+        if(!stillCurrent())return;
+        if(response.status===401){clearSession();return}
+        if(response.status===403){panel.textContent='현재 계정에는 매장 실적 조회 권한이 없습니다.';return}
+        if(!response.ok)throw new Error('growth_store_outcomes_unavailable');
+        const data=await response.json();
+        if(!stillCurrent())return;
+        if(!validBusinessAggregate(data,space))throw new Error('growth_store_outcomes_invalid');
+        const heading=document.createElement('strong');
+        heading.textContent='에코디 기록 기반 매장 실적 · '+new Date(data.asOf).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'});
+        const grid=document.createElement('dl');grid.className='store-kpi-grid';
+        grid.append(
+          storeKpiRow('완료 주문',data.orders.completedCount+'건'),
+          storeKpiRow('기록된 완료 주문액',data.sales.recordedCompletedSales.toLocaleString('ko-KR')+'원'),
+          storeKpiRow('식별된 주문 고객',data.customers.identifiedToday+'명'),
+          storeKpiRow('첫 주문 기록 고객',data.customers.newFromBaseOrders+'명')
+        );
+        const disclaimer=document.createElement('p');disclaimer.className='note';
+        disclaimer.textContent='출처: '+data.source+' · 에코디에 기록된 완료 주문만 포함하며 POS·배달앱·은행의 전체 매출 또는 홍보 전환 성과가 아닙니다.';
+        panel.replaceChildren(heading,grid,disclaimer);
+      }catch(error){
+        if(!stillCurrent())return;
+        panel.textContent='공식 매장 실적을 확인할 수 없습니다. 미연결 상태로 유지합니다.';
+        console.error('management growth verified store outcomes',error);
+      }finally{if(stillCurrent())action.disabled=false}
+    });
+    host.append(action,panel);
+  }
   const isManager=['owner','admin','workspace_admin','tenant_admin','store_owner','platform_admin','manager'].includes(String(space.role||'').toLowerCase());
   const note=document.createElement('p');note.className='note';
   note.textContent=isManager
