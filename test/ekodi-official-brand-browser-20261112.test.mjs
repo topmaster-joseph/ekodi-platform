@@ -4,6 +4,9 @@ import {readFileSync} from 'node:fs';
 import {planOfficialBrandAudit,runOfficialBrandAudit,
   OFFICIAL_BRAND_AUDIT_PROFILES} from '../scripts/verify-ekodi-official-brands-native.mjs';
 const manifest=JSON.parse(readFileSync(new URL('../config/ecosystem-services.json',import.meta.url),'utf8'));
+const aligned=structuredClone(manifest);
+for(const [id,name] of [['publishing','에코디출판'],['books','에코디서점'],['management','에코디경영']])
+  aligned.services.find(x=>x.id===id).name=name;
 
 test('official EKODI audit plans 4 viewports and only published customer-facing brands by default',()=>{
   const plan=planOfficialBrandAudit(manifest);
@@ -26,7 +29,7 @@ test('management preparing status requires explicit inclusion and cannot be prom
 });
 test('native runtime reports only sanitized bounded summaries and fails closed on an unverified worker',async()=>{
   let calls=0;
-  const r=await runOfficialBrandAudit(manifest,{runOptions:{runner:async task=>{
+  const r=await runOfficialBrandAudit(aligned,{runOptions:{runner:async task=>{
     calls++;
     assert.equal(task.allowMutation,false);
     assert.equal(task.actions.filter(x=>x.type==='assertText').length,2);
@@ -38,7 +41,7 @@ test('native runtime reports only sanitized bounded summaries and fails closed o
   assert.equal(r.receipts.length,4);
   assert.ok(r.receipts.every(x=>x.externalBrowserCalls===0&&x.assertions===2));
   assert.ok(!JSON.stringify(r).includes('bodyText'));
-  const bad=await runOfficialBrandAudit(manifest,{runOptions:{runner:async()=>{
+  const bad=await runOfficialBrandAudit(aligned,{runOptions:{runner:async()=>{
     return {ok:true,virtualizationProvider:'external-browser'};
   }}});
   assert.equal(bad.ok,false);
@@ -49,7 +52,22 @@ test('site branding audit refuses noncanonical host or removed official ownershi
   const mal=structuredClone(manifest);
   mal.services.find(x=>x.id==='publishing').url='https://other.example/publishing/';
   assert.throws(()=>planOfficialBrandAudit(mal),/EKODI_BRAND_REGISTRY_UNSAFE/);
-  const noBrand=structuredClone(manifest);
-  noBrand.services.find(x=>x.id==='publishing').name='출판';
-  assert.throws(()=>planOfficialBrandAudit(noBrand),/EKODI_BRAND_REGISTRY_UNSAFE/);
+  const stale=structuredClone(aligned);
+  stale.services.find(x=>x.id==='publishing').name='출판';
+  const plan=planOfficialBrandAudit(stale);
+  assert.equal(plan.sourceAligned,false);
+  assert.deepEqual(plan.sourcePendingIds,['publishing']);
+  assert.equal(plan.expectedTextByPath['/publishing/'],'에코디출판');
+});
+
+test('unmigrated first-party registry fails closed before any public browser invocation',async()=>{
+  const stale=structuredClone(aligned);
+  stale.services.find(x=>x.id==='publishing').name='출판';
+  let calls=0;
+  const result=await runOfficialBrandAudit(stale,{runOptions:{runner:async()=>{calls++;return {ok:true,virtualizationProvider:'ekodi-background-browser-worker'}}}});
+  assert.equal(calls,0);
+  assert.equal(result.ok,false);
+  assert.equal(result.code,'EKODI_BRAND_SOURCE_NOT_ALIGNED');
+  assert.deepEqual(result.sourcePendingIds,['publishing']);
+  assert.equal(result.externalBrowserCalls,0);
 });
