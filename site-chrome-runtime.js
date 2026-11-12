@@ -43,6 +43,14 @@ function safeHref(value,{mail=false}={}){
   try{const url=new URL(raw);if(['https:','http:'].includes(url.protocol))return url.href;if(mail&&url.protocol==='mailto:')return raw}catch{}
   return'';
 }
+// 체크박스는 'true'/'false' 문자열로도, JSON은 불리언으로도 온다. 둘만 받고
+// 나머지는 기본값으로 떨어뜨린다 — 빈 문자열이나 null 이 조용히 '끔'이 되면
+// 설정을 저장할 때마다 메뉴가 사라진다.
+function bool(value,fallback){
+  if(value===true||value==='true'||value===1||value==='1')return true;
+  if(value===false||value==='false'||value===0||value==='0')return false;
+  return fallback;
+}
 function normalizeHeader(value,tenant){
   const defaults=siteChromeDefaults(siteName(tenant),canonicalUrl(tenant.slug)).header;
   const input=value&&typeof value==='object'?value:{};
@@ -51,6 +59,7 @@ function normalizeHeader(value,tenant){
     tagline:clean(input.tagline,180),
     homeLabel:clean(input.homeLabel,40)||defaults.homeLabel,
     homeUrl:safeHref(input.homeUrl)||defaults.homeUrl,
+    accountingNotice:bool(input.accountingNotice,defaults.accountingNotice),
   };
 }
 function normalizeFooter(value,tenant){

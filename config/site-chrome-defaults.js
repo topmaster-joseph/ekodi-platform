@@ -8,6 +8,11 @@ export const EKODI_SITE_CHROME_DEFAULTS=freeze({
     tagline:'',
     homeLabel:'홈',
     homeUrl:'',
+    // 회계공지 메뉴의 노출 여부. 원칙은 각 사용자 사이트에 모두 공지하는 것이므로
+    // 기본값은 켜짐이고, 사이트관리자(자기 사이트 폼)와 최고관리자(PUT
+    // /api/control/site-chrome/<slug>)가 끌 수 있다. 끄는 것은 메뉴 노출만
+    // 가리는 것이고, 공개 집계 API 자체의 권한 경계와는 별개다.
+    accountingNotice:true,
   }),
   footer:freeze({
     ...EKODI_USER_FOOTER,
