@@ -20,7 +20,7 @@ jobs:
   proposal_native:
     if: github.repository == 'topmaster-joseph/ekodi-platform'
     name: EKODI-owned Chromium live proposal, 1440px and 390px
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout current source
