@@ -136,3 +136,39 @@ test('BBQ-only optional 403 does not deny the authorized operating dashboard and
   assert.match(js,/const \[snapshot,connector,delivery,commerce,smsOrders\]=await Promise\.all\(\[/);
   assert.doesNotMatch(js,/if\(SLUG==='bbqcg'\)\{[\s\S]*?state\.role='tenant_admin'/);
 });
+
+test('BBQ menu-specific recipe and shrinkflation portion cards use real tenant menu only',async()=>{
+  const script=await storeAdminScript().text();
+  const css=await storeAdminCss().text();
+  const html=await storeAdminPage({slug:'bbqcg',name:'BBQ 무안청계점',pathname:'/bbqcg/admin/work'}).text();
+  assert.match(script,/const canonicalMenus=\(Array\.isArray\(state\.menu\?\.menu\)\?state\.menu\.menu:\[\]\)/);
+  assert.match(script,/const selectedMenuNames=new Map\(canonicalMenus\.map/);
+  assert.match(script,/const tabs=\[\.\.\.sections,\{id:'menuRecipe',label:'메뉴별 레시피'\},\{id:'portion',label:'정량·용량표시'\}\]/);
+  for(const marker of ['공식 문서번호·출처','승인 버전·확인일','본사 승인 자료','이전 고객 표시량','현재 고객 표시량','실제 계량 제공량','계량 기준','측정자','data-bbq-portion-result'])
+    assert.ok(script.includes(marker),'missing card field: '+marker);
+  assert.match(script,/Number\.isFinite\(value\)\&\&value>0/);
+  assert.match(script,/if\(!select\.value\)notes\.push\('메뉴 미선택'\)/);
+  assert.match(script,/if\(declared!==null\&\&measured!==null\&\&stage\)/);
+  assert.match(script,/card\.querySelector\('\[data-bbq-portion-result\]'\)\.textContent/);
+  assert.match(script,/for\(const input of fields\)\{if\(input\.tagName==='SELECT'\)input\.selectedIndex=0;else input\.value=''\}/);
+  assert.match(script,/이 입력은 서버·브라우저 저장소에 저장되지 않습니다/);
+  assert.match(script,/법령 위반 자동 판정 아님/);
+  assert.match(css,/data-print-target="menuRecipe"/);
+  assert.match(css,/data-print-target="portion"/);
+  assert.match(css,/#bbqcgHandbook \.bbqcg-card-fields\{display:grid/);
+  assert.match(css,/@media\(max-width:620px\)/);
+  assert.match(html,/data-ekodi-store-brand="bbqcg"/);
+  assert.doesNotThrow(()=>new Function(script),'browser payload must remain valid JavaScript');
+});
+test('BBQ operator cards remain private templates; no default quantity or unauthorized publishing',async()=>{
+  const script=await storeAdminScript().text();
+  const publicHtml=await storeAdminPage({slug:'jadam',name:'자담치킨',pathname:'/jadam/admin/work'}).text();
+  assert.ok(!publicHtml.includes('data-ekodi-store-brand="bbqcg"'));
+  assert.match(script,/if\(SLUG==='bbqcg'\)return bbqCgHandbookPanel\(\)/);
+  assert.match(script,/if\(!roleCapabilities\(role\)\.length\)throw/);
+  assert.match(script,/state\.menu=menu;if\(!canSection\(section,role\)\)return permissionPanel\(\)/);
+  assert.doesNotMatch(script,/localStorage\.setItem\([^)]*bbqcg-card/i);
+  assert.doesNotMatch(script,/fetch\([^)]*bbqcg-card/i);
+  assert.match(script,/미승인 초안/);
+  assert.match(script,/현재 매장 기준메뉴 원장이 없습니다/);
+});
