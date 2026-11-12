@@ -7,6 +7,7 @@ const env={
  AGODA_AFFILIATE_API_ENDPOINT:'https://affiliateapi7643.agoda.com/affiliateservice/lt_v1',
  AGODA_AFFILIATE_HTTPS_CONFIRMED:'true',AGODA_AFFILIATE_CONTENT_RIGHTS_APPROVED:'true',
  AGODA_AFFILIATE_REQUEST_PROFILE:'header-only',AGODA_AFFILIATE_PUBLIC_SEARCH_ENABLED:'true',
+ AGODA_AFFILIATE_ACCOUNT_APPROVED_CONFIRMED:'true',AGODA_AFFILIATE_CID_ACTIVE_CONFIRMED:'true',
  AGODA_AFFILIATE_CITIES_JSON:'[{"id":9395,"name":"Official Partner City"}]'
 };
 const now=new Date('2026-11-08T12:00:00Z');
@@ -16,6 +17,10 @@ test('public API disabled until every partner certificate, secret, and region al
  assert.equal(agodaPublicReady(env),true);
  assert.equal(agodaPublicReady({...env,AGODA_AFFILIATE_PUBLIC_SEARCH_ENABLED:'false'}),false);
  assert.equal(agodaPublicReady({...env,AGODA_AFFILIATE_CONTENT_RIGHTS_APPROVED:'false'}),false);
+ assert.equal(agodaPublicReady({...env,AGODA_AFFILIATE_ACCOUNT_APPROVED_CONFIRMED:'false'}),false);
+ assert.equal(agodaPublicReady({...env,AGODA_AFFILIATE_CID_ACTIVE_CONFIRMED:'false'}),false);
+ assert.equal(agodaPublicReady({...env,AGODA_AFFILIATE_ACCOUNT_APPROVED_CONFIRMED:undefined}),false);
+ assert.equal(agodaPublicReady({...env,AGODA_AFFILIATE_CID_ACTIVE_CONFIRMED:undefined}),false);
  assert.equal(agodaPublicReady({...env,AGODA_AFFILIATE_API_KEY:''}),false);
  assert.equal(agodaPublicReady({...env,AGODA_AFFILIATE_CITIES_JSON:'[]'}),false);
  assert.equal(agodaPublicReady({...env,AGODA_AFFILIATE_SITE_ID:'1111111'}),false);
@@ -70,6 +75,19 @@ test('bounded authorized provider call and edge cache reuse; no repeat call when
  const b=await handleAgodaPublicRequest(req(),env,null,{now,fetchImpl,cache});
  assert.equal(b.status,200);assert.equal(count,1);
  assert.equal(JSON.stringify(b.body).includes('fake-test-key'),false);
+});
+
+test('pending Agoda account or deactivated CID fail closed even with installed API key and cached hotel response',async()=>{
+ for(const changed of [{AGODA_AFFILIATE_ACCOUNT_APPROVED_CONFIRMED:'false'}, {AGODA_AFFILIATE_CID_ACTIVE_CONFIRMED:'false'}]){
+  let calls=0,cacheReads=0;
+  const blocked={...env,...changed};
+  const status=await handleAgodaPublicRequest(req('https://ekodi.kr/api/public/agoda/status'),blocked,null,{now});
+  assert.equal(status.status,200);assert.equal(status.body.available,false);assert.deepEqual(status.body.cities,[]);
+  const search=await handleAgodaPublicRequest(req(),blocked,null,{now,fetchImpl:()=>{calls++;throw Error('unexpected network')},cache:{match:async()=>{cacheReads++;throw Error('must not reuse cached approved results')}}});
+  assert.equal(search.status,503);assert.deepEqual(search.body.hotels,[]);
+  assert.equal(calls,0);assert.equal(cacheReads,0);
+  assert.equal(JSON.stringify(search.body).includes('fake-test-key'),false);
+ }
 });
 test('empty and invalid city catalogs never activate API',()=>{
  assert.deepEqual(agodaPublicCities({...env,AGODA_AFFILIATE_CITIES_JSON:'not JSON'}),[]);
