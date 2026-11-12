@@ -35,7 +35,7 @@ export function planNativeBrowserBatch(raw={}) {
     if(normalized!==requestedPath || !paths.includes(normalized))
       throw Error('NATIVE_BATCH_ASSERTION_PATH_UNREQUESTED');
     if(typeof label!=='string'||label!==label.trim()||
-      !/^[\\p{L}\\p{N} .·&()_-]{2,80}$/u.test(label) ||
+      !/^[\p{L}\p{N} .·&()_-]{2,80}$/u.test(label) ||
       /(?:password|bearer|token|secret|cookie|authkey)/i.test(label))
       throw Error('NATIVE_BATCH_ASSERTION_TEXT_INVALID');
     assertions.set(normalized,label);
