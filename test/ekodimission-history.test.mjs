@@ -33,6 +33,11 @@ test('history timeline is ordered most recent to oldest with unique anchors and 
  assert.match(page,/<time datetime="2018">2018<\/time>/);
  assert.doesNotMatch(page,/datetime="2018-(?:03|08)-13"/);
  assert.ok(page.includes('제주 여름캠프'));
+ assert.doesNotMatch(page,/← 에코디선교회/);
+ for(const block of page.matchAll(/<ul class="history-items">(.*?)<\/ul>/g)){
+   const dates=[...block[1].matchAll(/class="history-day" datetime="([^"]+)"/g)].map(m=>m[1]);
+   assert.deepEqual(dates,[...dates].sort().reverse(),'월·일 내림차순');
+ }
  assert.ok(page.includes('서울 공동체 여행'));
 });
 

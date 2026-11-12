@@ -477,3 +477,6 @@ body:has(.hero-split) .mission-site-header nav a{font-size:clamp(.81rem,.9vw,.89
 .history-items li>span:last-child::before{content:"·";position:absolute;left:0;font-weight:800;color:var(--muted)}
 .mission-history-entry.history-year{align-items:baseline}
 @media(max-width:620px){.mission-history-entry.history-year{grid-template-columns:52px minmax(0,1fr);gap:.6rem}.history-items li{grid-template-columns:5.6rem minmax(0,1fr);gap:.4rem}.history-items .history-day{font-size:.84rem}.history-items li>span:last-child{font-size:.95rem}}
+.subpage.mission-history-page{padding-top:.35rem}.mission-history-page .sub-hero{padding-top:.75rem}
+@media(max-width:620px){.subpage.mission-history-page{padding-top:.2rem}.mission-history-page .sub-hero{padding-top:.4rem}}
+.mission-history-section.history-list-section{padding-top:0;border-top:0}
