@@ -262,6 +262,13 @@ main{padding:46px 0 72px}
 @media(max-width:760px){.brand-values-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:390px){.brand-values-grid{grid-template-columns:1fr}.brand-values summary{font-size:13px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}.ekodian-wave{animation:none!important}}
+
+/* EKODI site-owned mission: quiet introduction, never a sales CTA or global overlay. */
+.ekodi-mission-statement{display:block;max-width:65ch;margin:1.05rem 0 1.3rem;padding:.78rem 1rem;border:1px solid rgba(111,129,137,.16);border-left:3px solid currentColor;border-radius:0 12px 12px 0;background:rgba(111,129,137,.055);color:inherit;text-align:left}
+.ekodi-mission-statement .ekodi-mission-label{display:block;margin-bottom:.35rem;font-size:.69rem;line-height:1.4;letter-spacing:.095em;font-weight:850;opacity:.7}
+.ekodi-mission-statement p,.ekodi-mission-statement .ekodi-mission-copy{display:block;margin:0;font-size:clamp(.87rem,1.3vw,.98rem);line-height:1.72;font-weight:500;letter-spacing:normal;word-break:keep-all;color:inherit}
+@media(max-width:480px){.ekodi-mission-statement{padding:.72rem .84rem;margin:.9rem 0 1.1rem}}
+
 </style>
 </head>
 <body>
@@ -282,7 +289,7 @@ main{padding:46px 0 72px}
 <main id="platform" class="shell" data-build="WARM LIVE ECOSYSTEM">
   <section id="about" class="about-strip section-anchor" aria-label="에코디 소개">
     <div class="about-grid">
-      <p><strong>EKODI</strong>는 사람의 선택과 독립성을 지키면서 공동체, 사역, 비즈니스, 창작과 생활을 연결하는 플랫폼 생태계입니다.<span>EKODI connects community, ministry, business, creativity, and everyday life while keeping each person and platform free to stand on its own.</span></p>
+      <p><strong>EKODI</strong>는 사람의 선택과 독립성을 지키면서 공동체, 사역, 비즈니스, 창작과 생활을 연결하는 플랫폼 생태계입니다.<span>EKODI connects community, ministry, business, creativity, and everyday life while keeping each person and platform free to stand on its own.</span><span class="ekodi-mission-statement" data-ekodi-mission="platform"><span class="ekodi-mission-label">우리가 존재하는 이유</span><span class="ekodi-mission-copy">우리는 각자의 자유와 존엄을 지키며, 흩어진 사람과 일과 지식을 연결해 함께 살아나는 길을 만든다.</span></span></p>
       <div class="about-pills" aria-label="에코디 핵심 방향"><span>사람 중심 · Human-centered</span><span>독립 플랫폼 · Independent</span><span>필요한 연결 · Connected by choice</span></div>
     </div>
   </section>
