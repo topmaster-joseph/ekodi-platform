@@ -33,7 +33,8 @@
 
     <section class="connector-overview-strip" aria-label="주요 연결 상태">
       <article><small>공급처 설정</small><strong id="providerReady">확인 전</strong></article>
-      <article><small>상품조회</small><strong id="lookupGate">확인 전</strong></article>
+      <article><small>운영자 상품조회</small><strong id="lookupGate">확인 전</strong></article>
+      <article><small>공개 카탈로그</small><strong id="publicCatalogGate" class="connector-off">권한 확인 전</strong></article>
       <article><small>실주문</small><strong class="connector-off">차단</strong></article>
       <article><small>고객정보 · 자동발주</small><strong class="connector-off">차단</strong></article>
     </section>
@@ -79,10 +80,11 @@
     </section>
 
     <section class="connector-panel" id="connector-panel-gates" data-connector-panel="gates" role="tabpanel" aria-labelledby="connector-tab-gates" hidden>
-      <div class="connector-panel-head"><div><p class="eyebrow">04 · RELEASE GATES</p><h2>기능 개방 조건</h2><p>승인 전에는 유상 주문과 구매자 정보 전달을 활성화하지 않습니다.</p></div></div>
+      <div class="connector-panel-head"><div><p class="eyebrow">04 · RELEASE GATES</p><h2>기능 개방 조건</h2><p>운영자 조회 권한만으로 에코디몰의 공개 카탈로그·판매·유상 주문이 허용되는 것은 아닙니다. 공급처 계약과 공개 표시 권한을 확인하기 전에는 차단합니다.</p></div></div>
       <div class="ops-table-wrap connector-table-wrap">
         <table class="ops-table"><thead><tr><th scope="col">기능</th><th scope="col">현재</th><th scope="col">개방 조건</th></tr></thead><tbody>
-          <tr><td>상품조회</td><td>기본 OFF</td><td>공식 API KEY Secret 및 staging 조회검증</td></tr>
+          <tr><td>운영자 전용 상품조회</td><td>기본 OFF</td><td>공식 API KEY Secret 및 staging 조회검증 · 방문자 공개권한과 별개</td></tr>
+          <tr><td>에코디몰 공개 카탈로그</td><td id="publicCatalogGateDetail">공개 승인 확인 전 · OFF</td><td>공급처의 상품명·가격·사진 등 제3자 표시 허용범위 확인, 출처·이미지 사용권, 호출량 제한 및 서버 속도제한 검증</td></tr>
           <tr><td>주문준비</td><td>Dry-run</td><td>계정 ID · 세션 lifecycle · Private API 권한</td></tr>
           <tr><td>실주문</td><td>OFF</td><td>계약·인증·개인정보 검증 및 별도 승인된 파일럿</td></tr>
           <tr><td>구매자 정보</td><td>OFF</td><td>PII Vault · 처리위탁 범위 · 최소정보 제공 승인</td></tr>
