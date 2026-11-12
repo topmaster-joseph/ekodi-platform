@@ -792,9 +792,21 @@ jobs:
             echo "BBQ apex storefront failed: html=$html_status css=$css_status marker, route header and responsive CSS required."
             exit 1
           fi
-          grep -Eiq '^x-robots-tag:[[:space:]]*noindex' /tmp/bbq-live.headers || {
-            echo 'Unverified BBQ store data must remain noindex'; exit 1;
-          }
+          # Read-only: match the exact public-facts + robots policy already used by
+          # the independent BBQ production canary. Never force index or disable noindex.
+          node --input-type=module <<'BBQ_INDEX_PROOF'
+          import { readFileSync } from 'node:fs';
+          import { bbqIndexingProof, bbqIndexingSignals } from './scripts/verify-bbqcg-production-readonly.mjs';
+          const body=readFileSync('/tmp/bbq-live.html','utf8');
+          const headers=readFileSync('/tmp/bbq-live.headers','utf8');
+          const directives=[...headers.matchAll(/^x-robots-tag:\s*([^\r\n]*)/gim)];
+          const robots=directives.at(-1)?.[1]?.trim()||'';
+          const signals=bbqIndexingSignals(body,robots);
+          if(!bbqIndexingProof(body,robots)){
+            console.error('BBQ public indexing evidence mismatch (booleans only):',JSON.stringify(signals));
+            process.exitCode=1;
+          }else console.log('BBQ public indexing evidence matches visible verified facts and robots directives');
+          BBQ_INDEX_PROOF
           admin_status=$(curl -sS --connect-timeout 5 --max-time 20 -D /tmp/bbq-admin.headers -o /tmp/bbq-admin.html -w '%{http_code}' "$admin_url" || true)
           case "$admin_status" in
             200)
@@ -828,7 +840,7 @@ jobs:
               echo "Retired BBQ path must remain noindex: $former_path"; exit 1;
             }
           done
-          echo 'BBQ CG actual apex, mobile CSS, unverified noindex, guest admin boundary and old-path 410 PASS.'
+          echo 'BBQ CG actual apex, mobile CSS, truthful robots/public-facts policy, guest admin boundary and old-path 410 PASS.'
       - name: Verify EKODI Mission production shell contract
         env:
           EKODI_MISSION_VERIFY_SCOPE: space
