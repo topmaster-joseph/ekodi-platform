@@ -62,7 +62,7 @@ test('publishing login links name the publishing site so the central login retur
     assert.match(src, /searchParams\.set\(\s*'site'\s*,\s*'publishing'\s*\)/, f);
   }
   const auth = await readFile(new URL('../auth-site/client-auth.js', import.meta.url), 'utf8');
-  assert.match(auth, /publishing:\{name:'Publishing',returnTo:'https:\/\/ekodi\.kr\/publishing\/'/, 'login has a publishing return scope covering /publishing/admin/*');
+  assert.match(auth, /publishing:\{name:'에코디출판',returnTo:'https:\/\/ekodi\.kr\/publishing\/'/, 'login has a publishing return scope covering /publishing/admin/*');
 });
 
 test('the role line is filled on every tab, not only the overview', async () => {
