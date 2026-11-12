@@ -120,6 +120,13 @@ function campusSummary(record) {
     limitation:'기재된 내역은 에코디비즈의 수동 증빙기록이며 공급사 결제·해지 및 환급액의 독립 검증 결과가 아닙니다.'
   };
 }
+// Payment evidence uses Korea's calendar day (UTC+09:00, no DST), not UTC midnight.
+function validPaidOn(paidOn) {
+  if (typeof paidOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) return false;
+  const parsed = new Date(paidOn + 'T00:00:00Z');
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0,10) === paidOn &&
+    paidOn <= new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0,10);
+}
 function activeStatus(record) {
   if (record.status === 'paid_pending_fulfillment' || record.status === 'active') {
     if (record.expiresAt && Date.parse(record.expiresAt) <= Date.now()) return 'expired';
@@ -204,7 +211,7 @@ export async function agencyApi(request, url, env) {
         return reply({ ok:true, record:publicRecord(saved.record) });
       }
     }
-    if (['/api/agency/admin/readiness','/api/agency/admin/list','/api/agency/admin/quote','/api/agency/admin/activate',
+    if (['/api/agency/admin/readiness','/api/agency/admin/list','/api/agency/admin/find','/api/agency/admin/quote','/api/agency/admin/activate',
       '/api/agency/admin/record-cycle','/api/agency/admin/stop-renewal','/api/agency/admin/settlement'].includes(path)) {
       if (!adminAuthorized(request, env)) return fault('admin_access_denied', 403);
       if (path === '/api/agency/admin/readiness') {
@@ -227,6 +234,11 @@ export async function agencyApi(request, url, env) {
         }});
       }
       if (path === '/api/agency/admin/list') return reply({ ok:true, ...(await store(env, '/agency/admin/list', {})) });
+      if (path === '/api/agency/admin/find') {
+        const id = text(body.id,64);
+        if (!/^EBAI-[A-Z0-9]{24}$/.test(id)) return fault('invalid_receipt',404);
+        return reply({ok:true,...(await store(env,'/agency/admin/find',{id}))});
+      }
       if (['/api/agency/admin/record-cycle','/api/agency/admin/stop-renewal','/api/agency/admin/settlement'].includes(path)) {
         const id = text(body.id,64);
         if (!/^EBAI-[A-Z0-9]{24}$/.test(id)) return fault('invalid_receipt',404);
@@ -242,9 +254,7 @@ export async function agencyApi(request, url, env) {
           const receiptRef = text(body.receiptRef,80), paidOn = text(body.paidOn,10);
           if (cycle===null || cycle<1 || amount===null || amount<1 ||
               !/^[A-Za-z0-9][A-Za-z0-9._:\/-]{5,79}$/.test(receiptRef) ||
-              !/^\d{4}-\d{2}-\d{2}$/.test(paidOn) || Number.isNaN(Date.parse(paidOn)) ||
-              new Date(paidOn+'T00:00:00Z').toISOString().slice(0,10)!==paidOn ||
-              Date.parse(paidOn+'T00:00:00Z')>Date.now())
+              !validPaidOn(paidOn))
             return fault('cycle_evidence_invalid',422);
           return reply({ok:true,...(await store(env,'/agency/admin/record-cycle',
             {id,cycle,amount,paidOn,receiptRef}))});
@@ -317,6 +327,15 @@ export async function agencyStore(request, storage) {
       .map(r=>({ ...publicRecord({ ...r, status:activeStatus(r) }), customer:r.customer, email:r.email, organization:r.organization }));
     return reply({ ok:true, items });
   }
+  if (url.pathname === '/agency/admin/find') {
+    const id=text(data.id,64);
+    if (!/^EBAI-[A-Z0-9]{24}$/.test(id)) return fault('invalid_receipt',404);
+    const record=await storage.get('agency:'+id);
+    if (!record) return fault('not_found',404);
+    // Identical to the authorized list projection: never return receipt secrets, payment keys or audit.
+    return reply({ok:true,record:{...publicRecord({...record,status:activeStatus(record)}),
+      customer:record.customer,email:record.email,organization:record.organization}});
+  }
   const r = await storage.get('agency:' + text(data.id, 64));
   if (!r) return fault('not_found', 404);
   if (url.pathname === '/agency/load') {
@@ -348,9 +367,7 @@ export async function agencyStore(request, storage) {
     const {cycle,amount,paidOn,receiptRef}=data;
     if (!Number.isSafeInteger(cycle)||cycle<1||cycle>r.months||!Number.isSafeInteger(amount)||amount<=0||
         typeof receiptRef!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._:\/-]{5,79}$/.test(receiptRef) ||
-        typeof paidOn!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(paidOn) ||
-        Number.isNaN(Date.parse(paidOn)) || new Date(paidOn+'T00:00:00Z').toISOString().slice(0,10)!==paidOn ||
-        Date.parse(paidOn+'T00:00:00Z')>Date.now()) return fault('cycle_evidence_invalid',422);
+        !validPaidOn(paidOn)) return fault('cycle_evidence_invalid',422);
     const cycles=Array.isArray(r.monthlyRecords)?r.monthlyRecords:[];
     if (cycles.some(item=>item.cycle===cycle || item.receiptRef===receiptRef))
       return fault('cycle_already_recorded',409);
