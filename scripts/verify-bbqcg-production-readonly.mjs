@@ -26,13 +26,36 @@ const is200=status=>status===200;
 // three non-placeholder public facts. Match the visible three facts and robots
 // contract; never infer publication authority from HTTP 200 alone.
 // Boolean-only evidence: never log tenant details or public page contents.
+// Inspect only robots meta instructions, not arbitrary page content. Attribute order,
+// whitespace, and harmless extra preview directives may vary between HTML decorators.
+function pageRobotsDirectives(text){
+  const directives=[],tags=String(text||'').match(/<meta\b[^>]*>/gi)||[];
+  for(const tag of tags){
+    const attributes=Object.create(null);
+    const re=/\b(name|content)\s*=\s*(["'])(.*?)\2/gi;
+    for(const match of tag.matchAll(re))attributes[match[1].toLowerCase()]=match[3];
+    if(String(attributes.name||'').toLowerCase()!=='robots')continue;
+    directives.push(...String(attributes.content||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean));
+  }
+  return Object.freeze(directives);
+}
+
+// Boolean-only evidence: never log tenant facts or the original HTML.
 export function bbqIndexingSignals(body,robots){
   const text=String(body||''),header=String(robots||'').trim();
+  const tokens=pageRobotsDirectives(text);
+  const has=x=>tokens.includes(x);
+  const conflicting=has('noindex')||has('none')||has('nofollow');
   return Object.freeze({
     noindexHeader:/^noindex(?:,\s*nofollow)?(?:,\s*noarchive)?$/i.test(header),
-    noindexMeta:/<meta\s+name="robots"\s+content="noindex,nofollow,noarchive"/i.test(text),
+    noindexMeta:has('noindex')&&has('nofollow')&&has('noarchive'),
     indexHeader:/^index,\s*follow$/i.test(header),
-    indexMeta:/<meta\s+name="robots"\s+content="index,follow"/i.test(text),
+    indexMeta:has('index')&&has('follow')&&!conflicting,
+    metaSeen:tokens.length>0,
+    metaHasIndex:has('index'),
+    metaHasFollow:has('follow'),
+    metaHasNoindex:has('noindex')||has('none'),
+    metaHasNofollow:has('nofollow'),
     hours:/<small>영업시간<\/small><strong>(?!매장 확인 후 안내)[^<]{1,120}<\/strong>/.test(text),
     phone:/<small>매장전화<\/small><strong><a href="tel:\+?[0-9]{8,16}">[^<]+<\/a><\/strong>/.test(text),
     address:/<small>오시는 길<\/small><strong class="store-address">(?!매장 확인 후 안내)[^<]{2,200}<\/strong>/.test(text)
