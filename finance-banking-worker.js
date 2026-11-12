@@ -11,7 +11,15 @@ const WORKSPACE_ALIASES=Object.freeze({
   'ekodi-trade':'ekoditrade','ekoditrade':'ekoditrade',
   'cheonggye':'cgma','cgma':'cgma',
   'ekodi-mission':'ekodimission','ekodimission':'ekodimission',
-  'ekodi-lab':'ekodilab','ekodilab':'ekodilab','ekodimall':'ekodimall'
+  'ekodi-lab':'ekodilab','ekodilab':'ekodilab','ekodimall':'ekodimall',
+  'seonam-medi':'seonammedi','seonammedi':'seonammedi'
+});
+const PUBLIC_ACCOUNTING_WORKSPACES=Object.freeze({
+  ekodibiz:{name:'에코디비즈',profile:'business'},
+  ekodichurch:{name:'에코디교회',profile:'church'},
+  ekodimission:{name:'에코디선교회',profile:'mission'},
+  cgma:{name:'청계면상인회',profile:'association'},
+  seonammedi:{name:'서남권 국립의대 소통센터',profile:'civic'}
 });
 const nowIso=()=>new Date().toISOString();
 const clean=(value,max=240)=>String(value??'').trim().slice(0,max);
@@ -37,6 +45,12 @@ function json(data,status=200,origin='',baseHeaders=null){
   headers.set('referrer-policy','no-referrer');
   for(const [key,value] of cors(origin).entries())headers.set(key,value);
   return new Response(JSON.stringify(data),{status,headers});
+}
+function publicJson(data,status=200,origin=''){
+  const response=json(data,status,origin);
+  response.headers.set('cache-control',status===200?'public, max-age=120, s-maxage=300, stale-while-revalidate=600':'no-store');
+  response.headers.set('access-control-allow-origin','*');
+  return response;
 }
 async function body(request){try{return await request.json()}catch{return null}}
 
@@ -91,6 +105,34 @@ async function organizationForWorkspace(env,key){
   const row=await env.DB.prepare(`SELECT organization_id AS organizationId
     FROM workspace_organization_links WHERE workspace_key=? AND active=1`).bind(normalized).first();
   return row?{workspace:normalized,organizationId:String(row.organizationId)}:null;
+}
+async function publicAccountingSummary(env,params){
+  const workspace=workspaceKey(params.get('workspace'));
+  const publication=PUBLIC_ACCOUNTING_WORKSPACES[workspace];
+  if(!publication)throw Object.assign(new Error('PUBLIC_ACCOUNTING_WORKSPACE_NOT_FOUND'),{status:404});
+  const scope=await organizationForWorkspace(env,workspace);
+  if(!scope)throw Object.assign(new Error('PUBLIC_ACCOUNTING_NOT_READY'),{status:404});
+  const yearsResult=await env.DB.prepare(`SELECT DISTINCT substr(booked_at,1,4) AS year FROM bank_transactions
+    WHERE organization_id=? AND booked_at GLOB '[0-9][0-9][0-9][0-9]-*' ORDER BY year DESC LIMIT 12`)
+    .bind(scope.organizationId).all();
+  const years=(yearsResult.results||[]).map(row=>String(row.year||'')).filter(value=>/^20\d{2}$/.test(value));
+  const requested=String(params.get('year')||'');
+  const current=String(new Date().getUTCFullYear());
+  const year=/^20\d{2}$/.test(requested)?requested:(years[0]||current);
+  const rows=await env.DB.prepare(`SELECT substr(booked_at,1,7) AS month,
+    COUNT(*) AS count,
+    SUM(CASE WHEN direction='in' THEN amount ELSE 0 END) AS income,
+    SUM(CASE WHEN direction='out' THEN amount ELSE 0 END) AS expense
+    FROM bank_transactions WHERE organization_id=? AND substr(booked_at,1,4)=?
+    GROUP BY substr(booked_at,1,7) ORDER BY month`).bind(scope.organizationId,year).all();
+  const byMonth=new Map((rows.results||[]).map(row=>[String(row.month),row]));
+  const months=Array.from({length:12},(_,index)=>{
+    const month=`${year}-${String(index+1).padStart(2,'0')}`,row=byMonth.get(month)||{};
+    const income=Number(row.income||0),expense=Number(row.expense||0);
+    return{month,count:Number(row.count||0),income,expense,balance:income-expense};
+  });
+  const total=months.reduce((sum,row)=>({count:sum.count+row.count,income:sum.income+row.income,expense:sum.expense+row.expense,balance:sum.balance+row.balance}),{count:0,income:0,expense:0,balance:0});
+  return{ok:true,workspace,organization:publication.name,profile:publication.profile,year,years:years.includes(year)?years:[year,...years],total,months,scope:'annual-minimum-summary',detailDisclosure:false,generatedAt:nowIso()};
 }
 async function resolveActor(request,env,url){
   const platform=await platformSession(request,env);
@@ -504,6 +546,10 @@ export default{
         transferExecutionEnabled:String(env.BANKING_TRANSFER_ENABLED||'').toLowerCase()==='true'},200,origin);
     }
     if(!env.DB)return json({error:'DATABASE_UNAVAILABLE'},503,origin);
+    if(request.method==='GET'&&url.pathname==='/api/finance/banking/public-summary'){
+      try{return publicJson(await publicAccountingSummary(env,url.searchParams),200,origin)}
+      catch(error){return publicJson({ok:false,error:clean(error?.message||'PUBLIC_ACCOUNTING_UNAVAILABLE',120)},Number(error?.status)||500,origin)}
+    }
     const actor=await resolveActor(request,env,url);
     if(!actor)return json({error:'FINANCE_ACCESS_REQUIRED'},401,origin);
     if(!actor.canRead)return json({error:'FINANCE_READ_REQUIRED'},403,origin);

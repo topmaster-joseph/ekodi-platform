@@ -23,7 +23,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
     read('config/user-ui-shell.json')
   ]);
 
-  assert.match(header,/const VERSION=7/);
+  // 회계공지 메뉴가 site-chrome 설정을 따르게 되어 공용 헤더 모듈이 8로 올랐다.
+  // 푸터 모듈은 바뀌지 않았으므로 아래 핀은 7 그대로다.
+  assert.match(header,/const VERSION=8/);
   assert.match(header,/https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome\/public/);
   assert.match(header,/async function siteChrome\(\)/);
   assert.match(header,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
