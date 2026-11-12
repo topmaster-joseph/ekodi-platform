@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { auditBbqcgProduction, hasBbqcgPosTabDefinitions, hasBbqcgMenuCardDefinitions, normalizeJsUnicodeEscapes } from '../scripts/verify-bbqcg-production-readonly.mjs';
+import { auditBbqcgProduction, hasBbqcgPosTabDefinitions, hasBbqcgMenuCardDefinitions, normalizeJsUnicodeEscapes, bbqIndexingProof } from '../scripts/verify-bbqcg-production-readonly.mjs';
 import { storeAdminScript } from '../store-admin-engine.js';
 
 const noindex={'x-robots-tag':'noindex,nofollow,noarchive'};
@@ -9,7 +9,7 @@ const attachment=(filename,type)=>({...noindex,'content-type':type,'content-disp
 const response=(body,status=200,headers=html)=>new Response(body,{status,headers});
 const cardContractFixture="const tabs=[{id:'menuRecipe'},{id:'portion'}];extraCard('menuRecipe', '레시피', '설명','필드');extraCard('portion','정량','설명','필드');data-bbq-card-menu data-bbq-print-value=\"kind\" data-bbq-print-value=\"unit\" data-bbq-print-value=\"stage\" 이전 고객 표시량 현재 고객 표시량 실제 계량 제공량 법령 위반 자동 판정 아님";
 const responses={
-  '/bbqcg':()=>response('<html data-store-entity="bbqcg"><link href="/bbqcg/assets/site.css?v=f5039d1882912cbd">우리 매장의 약속과 자료실 <a href="/bbqcg/service-guide">자료</a></html>'),
+  '/bbqcg':()=>response('<html data-store-entity="bbqcg"><meta name="robots" content="noindex,nofollow,noarchive"><link href="/bbqcg/assets/site.css?v=f5039d1882912cbd">우리 매장의 약속과 자료실 <a href="/bbqcg/service-guide">자료</a></html>'),
   '/bbqcg/service-guide':()=>response('매장 소개 · 자료 다운로드 <a href="/bbqcg/resources/store-promise.html">안내문</a><a href="/bbqcg/resources/qcs-gms-checklist.csv">점검표</a>'),
   '/bbqcg/resources/store-promise.html':method=>response(method==='HEAD'?null:'BBQ 무안청계점 좋은 한 끼를 위한 세 가지 약속',200,attachment('bbqcg-store-promise.html','text/html; charset=utf-8')),
   '/bbqcg/resources/qcs-gms-checklist.csv':method=>response(method==='HEAD'?null:'\uFEFF"구분","단계","점검 항목","확인 여부","조치 사항"\r\n',200,attachment('bbqcg-qcs-gms-checklist.csv','text/csv; charset=utf-8')),
@@ -120,4 +120,42 @@ test('menu card canary fails closed on missing unit print mirror or missing reci
   const report=await auditBbqcgProduction({fetchImpl});
   assert.equal(report.ok,false);
   assert.ok(report.records.find(r=>r.id==='admin-script').errors.includes('bbq-private-card-assets-delivered'));
+});
+
+
+test('BBQ public indexing requires three visible verified facts and matching robots meta',async()=>{
+  const base='<html data-store-entity="bbqcg"><meta name="robots" content="index,follow"><link href="/bbqcg/assets/site.css?v=f5039d1882912cbd">우리 매장의 약속과 자료실 <a href="/bbqcg/service-guide">자료</a>';
+  const facts='<div class="stats-bg"><section class="stats" id="guide">'
+    +'<small>영업시간</small><strong>11:00 ~ 23:00</strong>'
+    +'<small>매장전화</small><strong><a href="tel:0611234567">061-123-4567</a></strong>'
+    +'<small>오시는 길</small><strong class="store-address">전남 무안군 청계면 시험로 1</strong>'
+    +'</section></div>';
+  const verified=base+facts+'</html>';
+  assert.equal(bbqIndexingProof(verified,'index, follow'),true);
+  const {fetchImpl}=stub({'/bbqcg':()=>response(verified,200,{
+    'content-type':'text/html; charset=utf-8','x-robots-tag':'index, follow'
+  })});
+  const report=await auditBbqcgProduction({fetchImpl});
+  assert.equal(report.ok,true,JSON.stringify(report.records.filter(x=>x.errors.length)));
+  assert.ok(report.records.find(x=>x.id==='storefront').checks
+    .some(x=>x.key==='storefront-robots-match-verified-facts'&&x.passed));
+  // An indexable page that omits one public fact or has conflicting robots
+  // MUST still fail even if the other public HTTP checks happen to succeed.
+  for(const body of [
+    verified.replace('11:00 ~ 23:00','매장 확인 후 안내'),
+    verified.replace('tel:0611234567','#call'),
+    verified.replace('전남 무안군 청계면 시험로 1','매장 확인 후 안내'),
+    verified.replace('content="index,follow"','content="noindex,nofollow,noarchive"')
+  ]){
+    assert.equal(bbqIndexingProof(body,'index, follow'),false);
+  }
+  assert.equal(bbqIndexingProof(verified,'noindex, nofollow, noarchive'),false);
+  assert.equal(bbqIndexingProof(verified,'index, nofollow'),false);
+});
+
+test('unverified BBQ must remain noindex; missing meta or advertised index fails closed',()=>{
+  const unverified='<html><meta name="robots" content="noindex,nofollow,noarchive"><p>매장 확인 후 안내</p></html>';
+  assert.equal(bbqIndexingProof(unverified,'noindex, nofollow, noarchive'),true);
+  assert.equal(bbqIndexingProof(unverified.replace(/<meta[^>]+>/,''),'noindex, nofollow, noarchive'),false);
+  assert.equal(bbqIndexingProof(unverified,'index, follow'),false);
 });
