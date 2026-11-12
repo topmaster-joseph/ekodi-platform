@@ -44,3 +44,10 @@
   #shop .card .thumb.book{aspect-ratio:1.6/1}
   #shop .mall-review-disclosures{padding:10px 12px;margin-top:12px}
 }
+
+
+/* Local editorial purpose: deliberately not an offer banner or global tenant branding. */
+.ekodi-mission-statement{display:block;max-width:65ch;margin:1.05rem 0 1.3rem;padding:.78rem 1rem;border:1px solid rgba(111,129,137,.16);border-left:3px solid currentColor;border-radius:0 12px 12px 0;background:rgba(111,129,137,.055);color:inherit;text-align:left}
+.ekodi-mission-statement .ekodi-mission-label{display:block;margin-bottom:.35rem;font-size:.69rem;line-height:1.4;letter-spacing:.095em;font-weight:850;opacity:.7}
+.ekodi-mission-statement p{margin:0;font-size:clamp(.87rem,1.3vw,.98rem);line-height:1.72;font-weight:500;letter-spacing:normal;word-break:keep-all;color:inherit}
+@media(max-width:480px){.ekodi-mission-statement{padding:.72rem .84rem;margin:.9rem 0 1.1rem}}
