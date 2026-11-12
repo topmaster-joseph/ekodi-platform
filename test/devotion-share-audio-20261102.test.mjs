@@ -26,7 +26,7 @@ test('Kakao/SMS share includes common identity, date, body and canonical URL',()
  });
  assert.deepEqual(message.split('\n'),[
   '2026년 11월 2일 월요일',
-  '에코디언의 묵상나눔',
+  '에코디',
   '에코디교회 오늘의 매일묵상 · 고린도전서 3:10-23',
   sample.activities.keyLine,
   'https://ekodi.kr/ekodichurch/devotion/?date=2026-11-02'
