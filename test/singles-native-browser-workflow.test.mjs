@@ -25,7 +25,7 @@ test('native acceptance is read-only and preserves login, payment, age and PII b
 });
 
 test('terms and verification entry are smoke-checked on both profiles', () => {
-  const lines=yml.split('\\n').filter(line=>line.trim().startsWith('surface_paths:'));
+  const lines=yml.split('\n').filter(line=>line.trim().startsWith('surface_paths:'));
   assert.equal(lines.length,2);
   for(const line of lines){
     for(const route of ['/singles/privacy','/singles/terms','/singles/verify'])
