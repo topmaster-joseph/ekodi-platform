@@ -207,3 +207,16 @@ test('BBQ 2026 chicken mandatory pre-cook weight guidance stays private and evid
   assert.doesNotMatch(js,/2000g 이상 반드시|10호만 사용/i);
   assert.doesNotThrow(()=>new Function(js));
 });
+
+test('BBQ capacity card prints unit/basis/type and suppresses invalid chicken comparisons',async()=>{
+  const js=await storeAdminScript().text();
+  const css=await storeAdminCss().text();
+  for(const key of ['kind','unit','stage'])
+    assert.match(js,new RegExp('data-bbq-print-value="'+key+'"'),key+' print mirror');
+  assert.match(js,/if\(kind\&\&previous!==null\&\&declared!==null\&\&\(kind!=='chicken'\|\|stage==='조리 전'\)\)/);
+  assert.match(js,/if\(kind\&\&declared!==null\&\&measured!==null\&\&stage\&\&\(kind!=='chicken'\|\|stage==='조리 전'\)\)/);
+  assert.match(js,/preview\.textContent=String\(value\|\|''\)\.trim\(\)\|\|'미입력'/);
+  assert.match(css,/\.bbqcg-print-value\{display:none\}/);
+  assert.match(css,/\.bbqcg-card-field \.bbqcg-print-value\{display:block!important;white-space:pre-wrap/);
+  assert.doesNotThrow(()=>new Function(js));
+});
