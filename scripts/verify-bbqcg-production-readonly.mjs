@@ -21,6 +21,22 @@ const check=(ok,why,failures)=>{if(!ok)failures.push(why);};
 const safeHeader=(response,name)=>response.headers.get(name)||'';
 const hasNoindex=value=>/noindex/i.test(value||'');
 const is200=status=>status===200;
+
+// Public BBQ site may become indexable only when the canonical renderer has all
+// three non-placeholder public facts. Match the visible three facts and robots
+// contract; never infer publication authority from HTTP 200 alone.
+export function bbqIndexingProof(body,robots){
+  const text=String(body||''),header=String(robots||'').trim();
+  const unverified=/^noindex(?:,\s*nofollow)?(?:,\s*noarchive)?$/i.test(header);
+  if(unverified)return /<meta\s+name="robots"\s+content="noindex,nofollow,noarchive"/i.test(text);
+  if(!/^index,\s*follow$/i.test(header))return false;
+  if(!/<meta\s+name="robots"\s+content="index,follow"/i.test(text))return false;
+  return [
+    /<small>영업시간<\/small><strong>(?!매장 확인 후 안내)[^<]{1,120}<\/strong>/,
+    /<small>매장전화<\/small><strong><a href="tel:\+?[0-9]{8,16}">[^<]+<\/a><\/strong>/,
+    /<small>오시는 길<\/small><strong class="store-address">(?!매장 확인 후 안내)[^<]{2,200}<\/strong>/
+  ].every(pattern=>pattern.test(text));
+}
 const decoder=new TextDecoder('utf-8');
 
 // Match the actual runtime's [id, Korean label, CSS pane selector] tuples,
@@ -136,7 +152,7 @@ export async function auditBbqcgProduction({fetchImpl=fetch,origin=BBQCG_CANARY_
       mark(body.includes('data-store-entity="bbqcg"'),'storefront-tenant-marker');
       mark(body.includes('우리 매장의 약속과 자료실')&&body.includes('/bbqcg/service-guide'),'storefront-resources-entry');
       mark(/\/bbqcg\/assets\/site\.css\?v=[a-f0-9]{12,40}/.test(body),'storefront-fingerprinted-css');
-      mark(hasNoindex(robots),'storefront-unverified-noindex');
+      mark(bbqIndexingProof(body,robots),'storefront-robots-match-verified-facts');
     }else if(id==='standards'){
       mark(is200(status)&&/text\/html/.test(ctype),'service-guide-200-html');
       mark(body.includes('매장 소개 · 자료 다운로드'),'service-guide-resources');
