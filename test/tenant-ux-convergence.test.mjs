@@ -44,7 +44,9 @@ test('delegated admins use task-first navigation without changing authority',asy
   assert.match(churchNav,/link\.href=href\(first\)/);
 
   assert.match(trade,/\['overview','홈'\]/);
-  assert.match(trade,/\['companies','거래처'\]/);
+  assert.match(trade,/\['companies','공급사'\]/);
+  assert.match(trade,/\['buyers','바이어'\]/);
+  assert.match(trade,/\['quotations','견적·원가'\]/);
   assert.match(trade,/\['access','권한'\]/);
   assert.match(trade,/const a=document\.createElement\('a'\);a\.href=sectionHref\(key\)/);
   assert.match(trade,/sub\.hidden=true/);
