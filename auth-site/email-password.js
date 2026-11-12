@@ -121,6 +121,11 @@ export async function mountEmailPassword({resetOnly=false}={}){
     tabs.hidden=resetOnly;
     passwordField.hidden=mode==='verify';
     codeField.hidden=!['verify','reset'].includes(mode);
+    // 가입·로그인 모두 '이메일 = 에코디 아이디', 비밀번호는 에코디 전용임을 칸 이름에 표기(2026-11-12 소유자 요청).
+    emailField.firstChild.textContent={signup:'가입에 사용할 이메일 (에코디 아이디)',login:'이메일 아이디',verify:'가입한 이메일 아이디',reset:'가입한 이메일 아이디'}[mode];
+    passwordField.firstChild.textContent={signup:'가입에 사용할 에코디 비밀번호 (12자 이상)',login:'에코디 비밀번호',reset:'새 에코디 비밀번호 (12자 이상)'}[mode]||'에코디 비밀번호';
+    email.placeholder=mode==='signup'?'예) name@gmail.com — 구글메일도 가능':'가입한 이메일 주소';
+    password.placeholder=mode==='login'?'이메일 가입 때 정한 비밀번호':'구글 비밀번호 말고 새 비밀번호 (12자 이상)';
     if(mode==='reset')password.autocomplete='new-password';
     else password.autocomplete=mode==='signup'?'new-password':'current-password';
     loginTab.setAttribute('aria-pressed',String(mode==='login'));

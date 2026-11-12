@@ -73,6 +73,19 @@ async function loadClientAuth(){
   catch(error){console.warn('Versioned universal identity auth load failed; retrying canonical asset.',error);return await import('./client-auth.js')}
 }
 
+// Login screen paints immediately with a skeleton + spinner (index.html). These helpers
+// retire the placeholder once a flow has rendered, and turn a stalled load into a clear message.
+function clearLoginSkeleton(){
+  document.querySelectorAll('[data-login-skeleton]').forEach(node=>node.remove());
+  document.getElementById('authStatus')?.classList.remove('loading');
+}
+const loginSlowTimer=setTimeout(()=>{
+  const status=document.getElementById('authStatus');
+  if(status?.classList.contains('loading'))status.textContent='연결이 평소보다 늦어지고 있습니다. 잠시만 더 기다려 주세요…';
+},8000);
+// Warm the optional email/password module in parallel; the later import() reuses this same module instance.
+const emailPasswordPreload=(site!=='admin'&&params.get('ekodi_email_action')!=='reset')?import('./email-password.js?v=20261107-login-lock-1').catch(error=>{console.warn('email auth module unavailable',error);return null}):null;
+
 // Naver/Kakao callbacks return here without site/return_to; the federated module restores them.
 // Dormant providers never issue a callback, so this is a no-op until an operator enables one.
 let federated=null;
@@ -85,7 +98,7 @@ else if(site!=='admin'&&params.get('ekodi_email_action')==='reset'){
   const mounted=await import('./email-password.js?v=20261107-login-lock-1').then(m=>m.mountEmailPassword({resetOnly:true})).catch(()=>false);
   if(!mounted){
     const status=document.getElementById('authStatus');
-    if(status)status.textContent='이메일 비밀번호 재설정은 현재 준비 중입니다. 기존 로그인 방식을 사용해 주세요.';
+    if(status){status.textContent='이메일 비밀번호 재설정은 현재 준비 중입니다. 기존 로그인 방식을 사용해 주세요.';status.className='notice warn'}
     const back=document.getElementById('cancelSignedOut');
     if(back){back.classList.remove('hide');back.addEventListener('click',()=>location.replace('/auth/'));}
   }
@@ -112,9 +125,14 @@ else{
 
 // Additional sign-in paths for EKODI accounts (shown only when enabled; never on the admin console).
 if(!federatedHandled&&federated&&site!=='admin'&&params.get('ekodi_email_action')!=='reset')federated.renderLoginButtons().catch(error=>console.warn('federated buttons',error));
+if(!federatedHandled&&federated&&site!=='admin')window.addEventListener('ekodi:auth-signed-out',()=>federated.renderLoginButtons().catch(error=>console.warn('federated buttons',error)));
 
 // Optional EKODI Mail/password entry stays hidden until the identity backend
 // confirms BOTH email ownership enforcement and EKODI Mail sender readiness.
 if(!federatedHandled&&site!=='admin'&&params.get('ekodi_email_action')!=='reset'){
   import('./email-password.js?v=20261107-login-lock-1').then(m=>m.mountEmailPassword()).catch(error=>console.warn('email auth module unavailable',error));
 }
+
+clearTimeout(loginSlowTimer);
+clearLoginSkeleton();
+

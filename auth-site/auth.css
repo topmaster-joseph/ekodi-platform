@@ -22,3 +22,8 @@ html[data-ekodi-login-busy] #googleButtonHost,html[data-ekodi-login-busy] #feder
 
 /* Site-owned decorative CI; controls and auth semantics unchanged. */
 .topbar .brand[data-site-ci="identity-open-loop"]{display:inline-flex;align-items:center;gap:7px}.topbar .brand .identity-ci{display:inline-flex;align-items:center;justify-content:center;width:25px;height:25px}.topbar .brand .identity-ci svg{display:block;width:23px;height:23px}
+
+.notice.loading{display:flex;align-items:center;gap:10px;font-weight:700}.notice.loading::before{content:"";flex:0 0 16px;width:16px;height:16px;border-radius:50%;border:2px solid #b9d2c0;border-top-color:var(--green);animation:ekodi-spin .8s linear infinite}
+.login-skeleton{width:100%;display:grid;gap:8px}.login-skeleton span{display:block;height:44px;border-radius:10px;background:linear-gradient(90deg,#eef1ee 0,#f7f8f6 40%,#eef1ee 80%);background-size:200% 100%;animation:ekodi-shimmer 1.2s ease-in-out infinite}.login-skeleton span:nth-child(2){opacity:.75}.login-skeleton span:nth-child(3){opacity:.5}
+@keyframes ekodi-spin{to{transform:rotate(360deg)}}@keyframes ekodi-shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+@media(prefers-reduced-motion:reduce){.notice.loading::before,.login-skeleton span{animation:none}}

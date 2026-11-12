@@ -6,6 +6,9 @@
   <meta name="robots" content="noindex,nofollow,noarchive" />
   <meta name="description" content="EKODI 서비스 공통 통합 인증 및 고유 EKODI ID" />
   <title>EKODI 로그인</title>
+  <link rel="preconnect" href="https://renzehysxirjilvdxacv.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://accounts.google.com" />
   <script src="/auth-bootstrap.js?v=20260923-return-continuity-1"></script>
   <link rel="stylesheet" href="/auth.css?v=20261107-login-lock-1" />
   <link rel="stylesheet" href="/auth-workspaces.css?v=20260817-workspace-label-1" />
@@ -44,12 +47,12 @@
       <div class="service-line"><div><small>접속 서비스</small><strong id="serviceName">EKODI</strong></div><span id="serviceBadge">인증 필요</span></div>
 
       <div id="signedOut">
-        <div id="googleButtonHost" class="google-button-host" aria-label="현재 사용 가능한 로그인 수단"></div>
+        <div id="googleButtonHost" class="google-button-host" aria-label="현재 사용 가능한 로그인 수단"><div class="login-skeleton" data-login-skeleton aria-hidden="true"><span></span><span></span><span></span></div></div>
         <div id="federatedButtonHost" class="federated-button-host hide" aria-label="추가 로그인 수단"></div>
         <button id="googleRetry" class="google-btn hide" type="button"><span class="gmark">G</span><span>다시 시도</span></button>
         <button id="cancelSignedOut" class="cancel-btn hide" type="button">취소하고 돌아가기</button>
         <p class="micro" id="signedOutCopy">현재 활성화된 로그인 수단으로 본인을 확인하면 고유 EKODI ID와 연결되고, 이후에는 통합 로그인 상태를 재사용합니다.</p>
-        <div id="authStatus" class="notice">로그인 상태를 확인하고 있습니다.</div>
+        <div id="authStatus" class="notice loading" role="status" aria-live="polite">로그인 화면을 불러오는 중입니다… 잠시만 기다려 주세요.</div>
       </div>
 
       <div id="signedIn" class="hide">
