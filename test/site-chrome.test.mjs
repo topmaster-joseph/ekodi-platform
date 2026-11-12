@@ -16,7 +16,7 @@ test('both sites share one structure and differ only in identity', () => {
     const h = header(id), f = footer(id);
     for (const part of ['ekc-network', 'ekc-masthead', 'ekc-brand', 'id="site-nav"', 'menu-button', 'ekc-cta']) assert.ok(h.includes(part), `${id} header ${part}`);
     for (const part of ['ekc-foot-grid', '출판 생태계', 'ekc-foot-base', 'id="year"', 'data-ekodi-social-links']) assert.ok(f.includes(part), `${id} footer ${part}`);
-    assert.match(h, new RegExp(`aria-current="true"><b>${id === 'books' ? '에코디서점' : '출판'}</b>`));
+    assert.match(h, new RegExp(`aria-current="true"><b>${id === 'books' ? '에코디서점' : '에코디출판'}</b>`));
   }
   assert.notEqual(header('books'), header('publishing'));
   assert.match(footer('books'), /통신판매업 2023-전남무안-0153/, 'bookstore footer shows seller disclosure');
@@ -26,6 +26,6 @@ test('chrome links are canonical and never root literals the gateway would re-pr
   for (const id of Object.keys(SITES)) {
     const html = header(id) + footer(id);
     assert.doesNotMatch(html, /href="\/(?!\/)/);
-    assert.ok(!html.includes(['에코디', '출판'].join('')), 'display-name policy: prefix-free 출판');
+    assert.match(html,/에코디출판/,'first-party publisher must use its official EKODI identity');
   }
 });

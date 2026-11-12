@@ -11,7 +11,7 @@
         ],
         "redirect": "follow",
         "expect": [
-          "경영플랫폼",
+          "에코디경영",
           "https://ekodi.kr/auth/?site=management"
         ],
         "headerExpect": [
