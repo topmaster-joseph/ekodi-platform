@@ -55,6 +55,26 @@ export function toJournalPost(row, book) {
   });
 }
 
+// JOURNAL-ESSAYS-20261113: 게재된 에코디언 주간 에세이 → 저널 글.
+const ESSAY_SLUG = /^ekodian-\d{8}-[a-z0-9-]{2,60}$/;
+const ESSAY_CATEGORIES = Object.freeze({
+  ekodi: ['EKODI 생각', 'EKODI Thinking'], ai: ['AI & Technology', 'AI & Technology'],
+  build: ['Build in Public', 'Build in Public'], principles: ['원칙과 가치', 'Principles'], books: ['출판', 'EKODI Books'],
+});
+export function toEssayPost(row) {
+  const paras = splitParagraphs(fixHanja(row.body));
+  const body = paras.map((text, i) => (/^#+\s/.test(text) ? { type: 'heading', text: text.replace(/^#+\s*/, '') } : { type: i === 0 ? 'lead' : 'p', text }));
+  const [label, labelEn] = ESSAY_CATEGORIES[row.category] || ESSAY_CATEGORIES.ekodi;
+  const hash = [...row.slug].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
+  return Object.freeze({
+    slug: row.slug, title: fixHanja(clean(row.title, 140)), titleEn: fixHanja(clean(row.title, 140)), excerpt: fixHanja(clean(row.summary, 240)), excerptEn: fixHanja(clean(row.summary, 240)),
+    publishedAt: row.published_at, updatedAt: row.published_at, category: ESSAY_CATEGORIES[row.category] ? row.category : 'ekodi', categoryLabel: label, categoryLabelEn: labelEn,
+    values: [], author: Object.freeze({ name: '에코디언', disclosure: '에코디언 이름으로 AI가 초안을 쓰고 편집부가 검토 기간을 거쳐 게재한 글입니다(AI 협업 초안 · 편집부 검토).' }),
+    readMinutes: Math.max(2, Math.round(clean(row.body, 9000).length / 600)), featured: false, imageVariant: 1 + (hash % 5),
+    body, bodyEn: body, book: null, source: 'journal-essay-weekly',
+  });
+}
+
 export async function bookJournalPosts(env, now = Date.now()) {
   if (typeof env?.PUBLISHING?.fetch !== 'function') return [];
   if (now - cache.at < TTL_MS) return cache.posts;
@@ -65,6 +85,8 @@ export async function bookJournalPosts(env, now = Date.now()) {
     const books = new Map((data?.books || []).map(b => [b.id, b]));
     const posts = (data?.journal || []).filter(p => SLUG.test(p?.slug || '') && p.title && p.body && Number.isFinite(Date.parse(p.published_at)))
       .map(p => toJournalPost(p, books.get(p.catalog_id)));
+    const essays = (data?.essays || []).filter(e => ESSAY_SLUG.test(e?.slug || '') && e.title && e.body && Number.isFinite(Date.parse(e.published_at))).map(toEssayPost);
+    posts.push(...essays);
     cache = { at: now, posts };
   } catch { cache = { at: now - TTL_MS + 10_000, posts: cache.posts }; }
   return cache.posts;

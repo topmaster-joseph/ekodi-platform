@@ -310,3 +310,27 @@ body.journal-is-article .journal-readers { display: none; }
 .ekodi-mission-statement .ekodi-mission-label{display:block;margin-bottom:.35rem;font-size:.69rem;line-height:1.4;letter-spacing:.095em;font-weight:850;opacity:.7}
 .ekodi-mission-statement p{margin:0;font-size:clamp(.87rem,1.3vw,.98rem);line-height:1.72;font-weight:500;letter-spacing:normal;word-break:keep-all;color:inherit}
 @media(max-width:480px){.ekodi-mission-statement{padding:.72rem .84rem;margin:.9rem 0 1.1rem}}
+
+/* JOURNAL-SUBMISSIONS-20261113 — 투고 안내 */
+.journal-submit-view { max-width: 1040px; margin: 0 auto; padding: 30px 0 10px; }
+.submit-head { max-width: 760px; margin: 0 auto 30px; text-align: center; }
+.submit-head h1 { margin: 12px 0 14px; font-family: var(--serif); font-size: clamp(30px, 4.2vw, 46px); font-weight: 700; line-height: 1.25; }
+.submit-head p { margin: 0; color: #4a4741; font-family: var(--serif); font-size: 17px; line-height: 1.8; }
+.submit-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr); gap: 40px; border-top: 3px double var(--ink); padding-top: 26px; }
+.submit-guide h2, .submit-form h2 { margin: 0 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--ink); font-family: var(--serif); font-size: 19px; font-weight: 700; }
+.submit-guide h2 + ul, .submit-guide h2 + ol { margin-bottom: 26px; }
+.submit-guide ul, .submit-guide ol { padding-left: 20px; font-size: 15px; line-height: 1.85; color: var(--body); }
+.submit-form { display: grid; gap: 8px; align-content: start; padding: 22px; background: var(--paper-strong); border-top: 3px solid var(--ink); }
+.submit-form label { font-size: 13px; font-weight: 700; }
+.submit-form input[type=text], .submit-form input[type=email], .submit-form select, .submit-form textarea, .submit-form input[type=file] { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #b9b2a3; background: #fff; color: var(--ink); font-size: 15px; }
+.submit-form textarea { min-height: 110px; resize: vertical; }
+.submit-agree { display: flex !important; gap: 8px; align-items: flex-start; margin-top: 6px; font-weight: 400 !important; line-height: 1.6; }
+.submit-agree input { margin-top: 4px; }
+.submit-send { min-height: 48px; margin-top: 8px; border: 0; background: var(--ink); color: var(--paper); font-size: 16px; font-weight: 700; cursor: pointer; }
+.submit-send:hover { background: var(--accent); }
+.submit-send:disabled { opacity: .6; cursor: progress; }
+.submit-status { margin: 4px 0 0; color: var(--accent); font-size: 14px; line-height: 1.6; }
+.submit-form.is-sent .submit-status { color: #2f6b45; font-weight: 700; }
+.submit-desk { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+body.journal-is-article .journal-submit-view ~ .journal-readers { display: none; }
+@media (max-width: 860px) { .submit-grid { grid-template-columns: 1fr; } }

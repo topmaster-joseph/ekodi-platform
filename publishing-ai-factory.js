@@ -1,6 +1,7 @@
 import { buildEpub, AI_NOTICE } from './publishing-ai-epub.js';
 import { QUALITY_RULES, fixForeignScript, polishChapter, stripReviewMarkers } from './publishing-ai-quality.js';
 import { releaseBook, journalTick, refreshReleaseFiles } from './publishing-ai-release.js';
+import { essayTick, deskNotifier } from './publishing-journal-essays.js';
 // PUBLISHING-AI-WEEKLY-001 — 주 1권 "AI 협업 초안 · 저자 감수" 원고 공장.
 //
 // 원칙
@@ -416,6 +417,8 @@ export async function aiFactoryTick(env, at = new Date()) {
   catch (e) { steps.push({ status: 'images_error', message: String(e?.message || e).slice(0, 200) }); }
   try { const posts = await journalTick(env.PUBLISH_DB, (s, p, n, st) => writeText(env, s, p, n, st)); if (posts.length) steps.push({ status: 'journal', posts }); }
   catch (e) { steps.push({ status: 'journal_error', message: String(e?.message || e).slice(0, 200) }); }
+  try { const essay = await essayTick(env.PUBLISH_DB, (s, p, n, st) => writeText(env, s, p, n, st), { notify: env.JOURNAL_ESSAY_DESK_NOTIFY === 'true' ? deskNotifier() : null }); if (essay.submitted || essay.published.length) steps.push({ status: 'journal_essay', ...essay }); }
+  catch (e) { steps.push({ status: 'journal_essay_error', message: String(e?.message || e).slice(0, 200) }); }
   steps.push({ status: 'providers', calls: tally });
   if (breaker.off) steps.push({ status: 'control_disconnected', reason: breaker.reason, fallback: 'workers-ai-only' });
   await env.PUBLISH_DB.prepare('INSERT INTO publishing_ai_runs (at, result_json) VALUES (?, ?)').bind(now(), JSON.stringify(steps).slice(0, 2000)).run().catch(() => null);

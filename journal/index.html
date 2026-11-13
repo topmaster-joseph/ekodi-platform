@@ -9,14 +9,14 @@
   <link rel="canonical" href="https://ekodi.kr/journal/">
   <link rel="alternate" type="application/rss+xml" title="EKODI Journal RSS" href="/journal/feed.xml">
   <link rel="alternate" type="application/feed+json" title="EKODI Journal JSON Feed" href="/journal/feed.json">
-  <link rel="stylesheet" href="/journal/styles.css?v=20261109-letters-1">
+  <link rel="stylesheet" href="/journal/styles.css?v=20261113-submit-1">
 </head>
 <body>
   <main class="journal-shell" id="journal-app">
     <div class="journal-dateline">
       <span id="journal-today"></span>
       <span class="journal-dateline-motto" data-copy="motto">말씀과 삶, 기술과 공동체의 공적 기록</span>
-      <span class="journal-dateline-links"><a href="/journal/feed.xml">RSS</a><a href="#journal-readers" data-copy="lettersLink">독자 편지</a></span>
+      <span class="journal-dateline-links"><a href="/journal/submit" data-copy="submitLink">투고 안내</a><a href="/journal/feed.xml">RSS</a><a href="#journal-readers" data-copy="lettersLink">독자 편지</a></span>
     </div>
 
     <div class="journal-hero" role="group" aria-labelledby="journal-title">
@@ -46,6 +46,68 @@
       </div>
       <div id="journal-list" class="journal-list"></div>
       <p id="journal-empty" class="journal-empty" hidden data-copy="empty">조건에 맞는 글이 없습니다.</p>
+    </section>
+
+    <section id="journal-submit-view" class="journal-submit-view" hidden aria-labelledby="journal-submit-title">
+      <a href="/journal/" class="journal-back" data-copy="back">← 모든 글</a>
+      <div class="submit-head">
+        <span class="kicker-type">투고 안내</span>
+        <h1 id="journal-submit-title">에코디저널에 원고를 보내 주세요</h1>
+        <p>말씀과 삶, 기술과 공동체 사이에서 길어 올린 생각과 실천의 기록을 기다립니다. 보내 주신 원고는 편집부가 읽고 적어 주신 이메일로 회신합니다.</p>
+      </div>
+      <div class="submit-grid">
+        <div class="submit-guide">
+          <h2>원고 분야</h2>
+          <ul>
+            <li><strong>에세이</strong> — 신앙과 삶, 공동체, 희년과 경제에 관한 생각</li>
+            <li><strong>현장 기록</strong> — 교회·지역·상권·선교 현장에서 해 본 일과 배운 점</li>
+            <li><strong>기술과 AI</strong> — 기술을 사람과 공동체를 돕는 쪽으로 쓴 경험</li>
+            <li><strong>서평</strong> — 함께 읽고 싶은 책 소개와 비평</li>
+          </ul>
+          <h2>분량과 형식</h2>
+          <ul>
+            <li>에세이·현장 기록 2,000~6,000자, 서평 1,500~4,000자(공백 포함)</li>
+            <li>파일: 한글(hwp·hwpx), 워드(doc·docx), PDF, 텍스트(txt·md) — 5MB 이하 1개</li>
+            <li>사진을 넣을 때는 직접 찍었거나 사용 허락을 받은 것만, 출처를 밝혀 주세요</li>
+          </ul>
+          <h2>진행 순서</h2>
+          <ol>
+            <li>투고 접수 — 접수 즉시 편집부 메일로 전달됩니다</li>
+            <li>편집 검토 — 보통 2주 안에 게재 여부를 회신합니다</li>
+            <li>다듬기 — 필요하면 필자와 함께 문장과 사실을 확인합니다</li>
+            <li>게재 — 매주 새 글로 싣고, 그달 호에 묶입니다</li>
+          </ol>
+          <h2>편집 원칙</h2>
+          <ul>
+            <li>다른 매체에 실리지 않은 원고를 우선합니다(이미 실렸다면 출처를 적어 주세요)</li>
+            <li>AI 도구를 썼다면 어떻게 썼는지 메모에 밝혀 주세요. 게재 시 함께 표기합니다</li>
+            <li>저작권은 필자에게 있으며, 게재와 재게시(뉴스레터·SNS 소개)에 대한 허락만 받습니다</li>
+            <li>사실 오류는 정정 이력을 남겨 바로잡습니다</li>
+          </ul>
+        </div>
+        <form class="submit-form" id="journal-submit-form" novalidate>
+          <h2>원고 접수</h2>
+          <label for="js-name">이름 (필명 가능)</label>
+          <input id="js-name" name="name" type="text" maxlength="80" autocomplete="name" required>
+          <label for="js-email">답장 받을 이메일</label>
+          <input id="js-email" name="email" type="email" maxlength="254" autocomplete="email" required>
+          <label for="js-title">원고 제목</label>
+          <input id="js-title" name="title" type="text" maxlength="180" required>
+          <label for="js-category">분야</label>
+          <select id="js-category" name="category">
+            <option>에세이</option><option>현장 기록</option><option>기술과 AI</option><option>서평</option><option>기타</option>
+          </select>
+          <label for="js-file">원고 첨부 (5MB 이하)</label>
+          <input id="js-file" name="manuscript" type="file" accept=".hwp,.hwpx,.doc,.docx,.pdf,.txt,.md,.odt,.rtf" required>
+          <label for="js-message">편집부에 남길 말 (선택)</label>
+          <textarea id="js-message" name="message" rows="4" maxlength="4000" placeholder="원고 소개, AI 도구 사용 여부, 연락 가능한 시간 등"></textarea>
+          <input class="letter-hp" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <label class="submit-agree"><input type="checkbox" name="agree" required> 위 편집 원칙을 읽었고, 게재가 결정되면 에코디저널에 싣는 데 동의합니다.</label>
+          <button type="submit" class="submit-send">투고하기</button>
+          <p class="submit-status" role="status" aria-live="polite"></p>
+          <p class="submit-desk">편집부 담당 정찬균 · <a href="mailto:joseph@ekodi.kr">joseph@ekodi.kr</a></p>
+        </form>
+      </div>
     </section>
 
     <article id="journal-article-view" class="journal-article-view" hidden>
@@ -79,6 +141,6 @@
     </section>
   </main>
   <noscript>EKODI Journal은 목록과 글 보기를 위해 JavaScript가 필요합니다.</noscript>
-  <script type="module" src="/journal/app.js?v=20261109-letters-1"></script>
+  <script type="module" src="/journal/app.js?v=20261113-submit-1"></script>
 </body>
 </html>
