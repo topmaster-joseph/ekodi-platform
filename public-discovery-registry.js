@@ -30,8 +30,8 @@ export const PAGE_OWNED_NOINDEX_PATHS=Object.freeze(new Set(['/ekodibiz/trade',
 // Sites whose live entry 308s from /<site> to /<site>/ (audit run 39241336747).
 // The sitemap lists the final URL so crawlers get no redirect hop.
 export const TRAILING_SLASH_CANONICAL_PATHS=Object.freeze(new Set([
-  '/bible','/books','/cafe','/community','/ekodichurch','/ekodilab','/ekodipay',
-  '/journal','/jubilee','/life','/live','/open','/publishing','/pyeonggongmok','/work',
+  '/bible','/books','/cafe','/community','/edu','/ekodichurch','/ekodilab','/ekodipay',
+  '/journal','/jubilee','/life','/live','/management','/open','/publishing','/pyeonggongmok','/work',
 ]));
 
 export function isPublicDiscoveryPath(pathname='/'){
