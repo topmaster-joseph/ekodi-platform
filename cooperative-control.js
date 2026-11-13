@@ -79,14 +79,15 @@ async function join(request, env, coop) {
   // 등록 화면에 "지금 로그인된 이메일"을 보여 주기 위한 본인 확인(본인 이메일만 반환).
   if (request.method === 'GET') {
     // 등록 전에 출자 1좌 금액과 출자금 입금 계좌를 안내한다(운영진이 등록한 경우에만).
+    // 등록 전에는 1좌 금액과 납입 의무만 안내하고, 입금 계좌는 등록 후 조합원 공간에서 안내한다.
     const { state } = await loadCooperativeProject(env.DB, coop);
-    const account = state.profile.shareAccount?.number ? state.profile.shareAccount : null;
-    return json({ ok: true, email: String(identity.email).trim().toLowerCase(), shareUnit: state.profile.shareUnit, shareAccount: account });
+    return json({ ok: true, email: String(identity.email).trim().toLowerCase(), shareUnit: state.profile.shareUnit });
   }
   if (request.method !== 'POST') return json({ ok: false, code: 'METHOD_NOT_ALLOWED' }, 405);
   const body = await inputJson(request);
-  if (Object.keys(body).some(key => !['consent', 'representative', 'business', 'phone', 'businessNumber', 'depositReported'].includes(key))) return json({ ok: false, code: 'COOP_SELF_FIELDS_ONLY' }, 400);
+  if (Object.keys(body).some(key => !['consent', 'representative', 'business', 'phone', 'businessNumber', 'depositAgreement'].includes(key))) return json({ ok: false, code: 'COOP_SELF_FIELDS_ONLY' }, 400);
   if (body.consent !== true) return json({ ok: false, code: 'COOP_JOIN_CONSENT_REQUIRED' }, 400);
+  if (body.depositAgreement !== true) return json({ ok: false, code: 'COOP_DEPOSIT_AGREEMENT_REQUIRED' }, 400);
   const representative = trim(body.representative, 80);
   if (!representative) return json({ ok: false, code: 'COOP_REPRESENTATIVE_REQUIRED' }, 400);
   const phone = coopPhone(body.phone);
@@ -113,11 +114,10 @@ async function join(request, env, coop) {
     const state = project.state;
     if (!state.founders.some(f => f.accountEmail === email)) {
       const unlinked = state.founders.filter(f => !f.accountEmail && f.representative === representative);
-      if (unlinked.length === 1) Object.assign(unlinked[0], { accountEmail: email, phone, ...(businessNumber ? { businessNumber } : {}), ...(business ? { business } : {}),
-        ...(body.depositReported === true && (unlinked[0].payment || 'unpaid') === 'unpaid' ? { payment: 'reported' } : {}) });
+      if (unlinked.length === 1) Object.assign(unlinked[0], { accountEmail: email, phone, ...(businessNumber ? { businessNumber } : {}), ...(business ? { business } : {}), });
       else state.founders.push({ id: `${coop.workspaceId}:member:${crypto.randomUUID()}`, representative, position: 'member',
         business, businessNumber: businessNumber || null, phone, industry: null, shares: null, consent: 'pending', accountEmail: email,
-        payment: body.depositReported === true ? 'reported' : 'unpaid', paymentConfirmedAt: null });
+        payment: 'unpaid', paymentConfirmedAt: null });
       try {
         await saveCooperativeProject(env.DB, coop, state, project.revision, { identity, scope: 'self-join', role: 'member' });
       } catch (error) { if (error.status === 409 && attempt < 2) continue; throw error; }
