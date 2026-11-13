@@ -88,8 +88,9 @@ function messageBody(message) {
     filename: p.filename, mimeType: p.mimeType || 'application/octet-stream', size: Number(p.body?.size || 0), attachmentId: p.body.attachmentId,
   }));
 }
-export async function listGoogleMailMessages(accessToken, { q = '', pageToken = '', maxResults = 30 } = {}) {
-  const params = new URLSearchParams({ maxResults: String(Math.max(1, Math.min(50, Number(maxResults) || 30))), labelIds: 'INBOX' });
+export async function listGoogleMailMessages(accessToken, { q = '', pageToken = '', maxResults = 30, inboxOnly = true } = {}) {
+  const params = new URLSearchParams({ maxResults: String(Math.max(1, Math.min(50, Number(maxResults) || 30))) });
+  if (inboxOnly) params.set('labelIds', 'INBOX');
   if (q) params.set('q', String(q).slice(0, 200)); if (pageToken) params.set('pageToken', String(pageToken).slice(0, 512));
   const list = await gmailFetch(accessToken, `/messages?${params}`);
   const details = await Promise.all((list.messages || []).map(item => gmailFetch(accessToken, `/messages/${encodeURIComponent(item.id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`).then(summarize)));
