@@ -17,6 +17,8 @@ on:
       - 'ekodibiz-worker.js'
       - 'ekodibiz-ai-agency.js'
       - 'test/ekodibiz-ai-agency*.test.mjs'
+      - 'scripts/verify-ekodibiz-ai-agency-live.mjs'
+      - 'test/ekodibiz-agency-live-canary.test.mjs'
       - 'wrangler.ekodibiz*.toml'
       - 'test/ekodibiz-revenue-os.test.mjs'
       - 'test/ekodibiz-trade-partner.test.mjs'
@@ -29,6 +31,8 @@ on:
       - 'ekodibiz-worker.js'
       - 'ekodibiz-ai-agency.js'
       - 'test/ekodibiz-ai-agency*.test.mjs'
+      - 'scripts/verify-ekodibiz-ai-agency-live.mjs'
+      - 'test/ekodibiz-agency-live-canary.test.mjs'
       - 'wrangler.ekodibiz*.toml'
       - 'test/ekodibiz-revenue-os.test.mjs'
       - 'test/ekodibiz-trade-partner.test.mjs'
@@ -70,6 +74,8 @@ jobs:
           node --check ekodibiz/ai-agency-admin.js
           node --test test/ekodibiz-ai-agency*.test.mjs
           node --test test/ekodibiz-agency-deploy-trigger-contract.test.mjs
+          node --check scripts/verify-ekodibiz-ai-agency-live.mjs
+          node --test test/ekodibiz-agency-live-canary.test.mjs
           npm run validate:boundaries
           npm run validate:ui-dna
           npm run validate:mission
@@ -223,3 +229,5 @@ jobs:
             sleep 5
           done
           exit 1
+      - name: Verify AI agency canonical routes and anonymous access boundary
+        run: node scripts/verify-ekodibiz-ai-agency-live.mjs
