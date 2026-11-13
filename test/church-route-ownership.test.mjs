@@ -27,12 +27,20 @@ test('all five exact accounting routes are explicitly registered before the 0% c
  for(const route of expected)assert.ok(config.includes('pattern = "'+route+'"'));
  const source=await readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8');
  const register=source.indexOf('for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes){\n    const current=routes.find');
- const verify=source.indexOf('for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes)await verifyAccountingNotice');
- assert.ok(register>0&&verify>register,'route registration and live verification precede guarded promotion');
+ assert.ok(register>0,'Cloudflare route registration happens before candidate deployment');
  assert.match(source,/operator review required/);
- assert.match(source,/route==='public-accounting-notice'/);
- assert.match(source,/body.includes\('회계공지'\)/);
- assert.match(source,/body.includes\('public-accounting-notice.js'\)/);
+ assert.match(source,/Accounting notice Shared Site route missing/);
+ assert.doesNotMatch(source,/await verifyAccountingNotice\(/,
+  'previous Worker HTML is not a valid pre-candidate acceptance criterion');
+ assert.match(source,/HTML receipt deferred to protected 0% candidate/);
+ const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+ for(const route of expected){
+  const entry=manifest.worker.requests.find(item=>item.url==='https://'+route);
+  assert.ok(entry,'post-candidate release-blocking proof must cover '+route);
+  assert.ok(entry.expect?.includes('회계공지'));
+  assert.ok(entry.expect?.includes('public-accounting-notice.js'));
+  assert.ok(entry.headerExpect?.includes('x-ekodi-route: public-accounting-notice'));
+ }
  assert.match(source,/CF-QUOTA-001 circuit open/);
 });
 
