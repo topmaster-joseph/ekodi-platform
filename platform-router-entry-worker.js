@@ -430,7 +430,7 @@ async function ensureLegacyOperatingSpaceMarker(response,includeBody=true){
 const LEGACY_ADMIN_HOSTS=new Set(['admin.ekodi.kr','admin.biz.ekodi.kr','admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr']);
 const LEGACY_ADMIN_PATHS=Object.freeze({books:'books',community:'community',work:'work',business:'organization',publishing:'books',energy:'life-ai',journal:'common-services',experience:'campus'});
 function legacySurfaceRedirect(request){const url=new URL(request.url),host=url.hostname.toLowerCase();if(!['GET','HEAD'].includes(request.method))return null;if(!LEGACY_ADMIN_HOSTS.has(host))return null;const target=new URL(request.url);target.hostname='ekodi.kr';const key=url.pathname.split('/').filter(Boolean)[0]||'';if(url.pathname==='/'||url.pathname==='/admin'||url.pathname==='/admin/')target.pathname='/admin/';else if(/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i.test(url.pathname)||url.pathname.startsWith('/api/')||url.pathname==='/auth/start')target.pathname=`/admin${url.pathname}`;else{target.pathname='/admin/';if(!target.searchParams.has('route')&&LEGACY_ADMIN_PATHS[key])target.searchParams.set('route',LEGACY_ADMIN_PATHS[key])}target.searchParams.set('source',host);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':host}})}
-function legacyStoreGatewayRedirect(request){const url=new URL(request.url);if(url.hostname.toLowerCase()!==PUBLIC_HOST||!['GET','HEAD'].includes(request.method)||!/^\/stores(?:\/|$)/i.test(url.pathname))return null;const target=new URL(request.url);target.pathname=/^\/stores\/?$/i.test(url.pathname)?'/bbqcg':url.pathname.replace(/^\/stores(?=\/|$)/i,'/cmpmyi');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':'stores'}})}
+function legacyStoreGatewayRedirect(request,env){const url=new URL(request.url);if(resolvedHost(request,env)!==PUBLIC_HOST||!['GET','HEAD'].includes(request.method)||!/^\/stores(?:\/|$)/i.test(url.pathname))return null;const target=new URL(request.url);target.pathname=/^\/stores\/?$/i.test(url.pathname)?'/cmpmyi':url.pathname.replace(/^\/stores(?=\/|$)/i,'/cmpmyi');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':'stores'}})}
 
 async function livePublicStatus(env,tenant){
   if(!env?.DB?.prepare)return'public';
@@ -514,7 +514,7 @@ async function routePlatform(request,env,ctx){
     }
     if(host===PUBLIC_HOST){const cooperative=await routeCooperative(request,env);if(cooperative)return cooperative;}
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
-    const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
+    const legacyStores=legacyStoreGatewayRedirect(request,env);if(legacyStores)return legacyStores;
     const seonamBoard=legacySeonamBoardRedirect(request);if(seonamBoard)return seonamBoard;
     if(host===PUBLIC_HOST&&isSinglesRoute(url.pathname))return routeSinglesSurface(request,env);
     const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
