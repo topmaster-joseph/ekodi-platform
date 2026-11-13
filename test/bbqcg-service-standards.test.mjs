@@ -58,7 +58,7 @@ test('storefront footer follows main centered 1300px content width',async()=>{
  const {bbqCheonggyeCss,renderBbqCheonggyePage}=await import('../bbq-cheonggye-site.js');
  const css=await bbqCheonggyeCss().text();
  assert.match(css,/\.foot \.wrap\{width:min\(1300px,calc\(100% - 48px\)\);margin-inline:auto\}/);
- assert.match(css,/\.foot-inner\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+ assert.match(css,/\.foot-inner\{display:grid;grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\) minmax\(0,1fr\)/);
  assert.match(css,/\.foot-brand\{/);
  assert.match(css,/\.foot \.links\{display:flex;align-items:center;justify-content:flex-end/);
  assert.match(css,/@media\(max-width:720px\)/);
