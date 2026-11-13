@@ -38,17 +38,6 @@ body{
 }
 a{color:inherit}
 button,summary{font:inherit}
-.site-header{
-  position:sticky;top:0;z-index:100;min-height:var(--header-h);display:flex;align-items:center;
-  padding-top:env(safe-area-inset-top);
-  border-bottom:1px solid rgba(175,216,192,.1);
-  background:rgba(6,14,12,.82);backdrop-filter:blur(18px) saturate(120%);
-}
-.header-inner{width:min(1540px,calc(100% - 44px));margin:auto;display:flex;align-items:center;justify-content:space-between;gap:20px}
-.brand{display:flex;align-items:baseline;gap:10px;text-decoration:none}
-.brand strong{font-size:23px;letter-spacing:.09em}.brand span{font-size:10px;letter-spacing:.2em;color:var(--quiet)}
-.nav{display:flex;align-items:center;gap:18px}.nav a{text-decoration:none;color:#a4b6ad;font-size:12px;font-weight:700;letter-spacing:.02em}
-.nav a:hover,.nav a:focus-visible{color:#fff;outline:none}.nav .home{padding:9px 12px;border:1px solid var(--line);border-radius:999px}
 main{padding-bottom:72px}
 .hero{width:min(1540px,calc(100% - 44px));margin:auto;padding:72px 0 54px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.55fr);gap:48px;align-items:end}
 .kicker{margin:0 0 18px;color:#8fb6a0;font-size:11px;font-weight:850;letter-spacing:.3em}
@@ -85,25 +74,58 @@ details{margin-top:12px;border-top:1px solid rgba(143,182,160,.09);padding-top:9
 .next .card{border-style:dashed;background:rgba(12,25,21,.46)}.next .year strong{font-size:20px;letter-spacing:.06em}.next .card h2{color:#a5b8ae}
 .history-note{width:min(1100px,calc(100% - 44px));margin:48px auto 0;padding:22px 24px;border:1px solid rgba(146,184,163,.11);border-radius:18px;background:rgba(12,26,22,.6);display:grid;grid-template-columns:1fr auto;gap:28px;align-items:center}
 .history-note strong{display:block;color:#d7e6de;font-size:14px}.history-note p{margin:6px 0 0;color:#7d9287;font-size:12px;line-height:1.65}.history-note a{white-space:nowrap;text-decoration:none;padding:10px 13px;border:1px solid var(--line);border-radius:999px;color:#a6bbb0;font-size:11px;font-weight:800}
-footer{width:min(1540px,calc(100% - 44px));margin:46px auto 0;padding-top:20px;border-top:1px solid rgba(150,184,165,.08);display:flex;justify-content:space-between;gap:20px;color:#53685d;font-size:10px}.future-line{letter-spacing:.16em}
 @media(max-width:760px){
-  :root{--header-h:66px}.header-inner{width:min(100% - 24px,620px)}.site-header{min-height:66px}.brand strong{font-size:20px}.brand span{display:none}.nav{gap:8px}.nav a:not(.home){display:none}.nav .home{font-size:11px}
+  :root{--header-h:66px}
   .hero{width:min(100% - 28px,620px);padding:42px 0 32px;display:block}.hero-note{margin-top:28px;padding:14px 16px}.legend{width:min(100% - 28px,620px);margin-bottom:22px}.legend-label{width:100%;margin-bottom:2px}
   .timeline-shell{overflow:visible}.timeline-scroll{overflow:visible}.timeline{min-width:0;width:min(100% - 28px,620px);height:auto;margin:auto;padding:28px 0 12px}.timeline-shell::before{background-size:100% 118px;background-image:linear-gradient(rgba(132,169,148,.035) 1px,transparent 1px)}
   .axis{left:19px;right:auto;top:30px;bottom:30px;width:2px;height:auto;background:linear-gradient(180deg,rgba(146,185,164,.14),rgba(146,185,164,.62),rgba(146,185,164,.14))}.axis::after{right:-3px;top:auto;bottom:0}
   .lane-label{position:relative;left:auto;top:auto!important;bottom:auto!important;margin:0 0 18px 44px;font-size:9px}.lane-label.bottom{margin-top:28px}
   .moment,.moment.top,.moment.bottom,.moment:nth-of-type(1),.moment:nth-of-type(2),.moment:nth-of-type(3),.moment:nth-of-type(4),.moment:nth-of-type(5){position:relative;left:auto;top:auto;width:auto;margin:0 0 24px 44px}
   .moment::before,.moment.top::before,.moment.bottom::before{left:-25px;top:13px;width:25px;height:1px;background:linear-gradient(90deg,var(--line-strong),transparent)}.moment::after,.moment.top::after,.moment.bottom::after{left:-30px;top:8px}
-  .year strong{font-size:22px}.card{padding:15px}.archive-window{height:64px}.history-note{width:min(100% - 28px,620px);grid-template-columns:1fr;padding:18px}.history-note a{width:max-content}footer{width:min(100% - 28px,620px);display:block}footer span{display:block;margin-top:6px}
+  .year strong{font-size:22px}.card{padding:15px}.archive-window{height:64px}.history-note{width:min(100% - 28px,620px);grid-template-columns:1fr;padding:18px}.history-note a{width:max-content}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+header.ekodi-home-header{--bg:#fffaf2;--bg2:#f7fbf4;--panel:rgba(255,255,255,.78);--panel-strong:#fffdf8;--text:#2e3a33;--muted:#728079;--accent:#5d8f74;--accent-deep:#376f56;--sky:#7aa9c4;--peach:#e8b894;--lavender:#a99acb;--line:rgba(72,92,80,.12);--shadow:0 18px 50px rgba(90,105,93,.09);--live:#4f9270;--beta:#8c78b8;--ekodi-home-header-height:108px;color:var(--text);font-family:inherit}
+header.ekodi-home-header .shell{width:min(1240px,calc(100% - 56px));margin:auto}
+header.ekodi-home-header{position:sticky;top:0;z-index:20;min-height:82px;display:flex;align-items:center;
+  border-bottom:1px solid rgba(75,95,83,.09);
+  background:rgba(255,251,244,.78);
+  backdrop-filter:blur(18px) saturate(116%);}
+header.ekodi-home-header .navbar{display:flex;align-items:center;justify-content:space-between;gap:28px;width:calc(100% - clamp(32px,6vw,112px));margin-inline:auto}
+header.ekodi-home-header .brand{display:inline-flex;align-items:center;gap:10px;text-decoration:none;line-height:1;min-width:0}
+header.ekodi-home-header .brand-copy{display:flex;flex-direction:column;min-width:0}
+header.ekodi-home-header .brand .ekodi-ci-icon{display:block;width:32px;height:32px;flex:0 0 32px;color:var(--accent-deep)}
+header.ekodi-home-header .brand strong{font-size:26px;letter-spacing:.055em;color:#31463a}
+header.ekodi-home-header .brand small{margin-top:7px;color:#8d9b93;font-size:11px;letter-spacing:.2em}
+header.ekodi-home-header .nav{display:flex;align-items:center;justify-content:flex-end;gap:24px}
+header.ekodi-home-header .nav a{text-decoration:none;color:#5f6d65;font-size:14px;font-weight:760}
+header.ekodi-home-header .nav a span{margin-left:4px;color:#98a49d;font-size:11px;font-weight:650}
+header.ekodi-home-header .nav a:hover,header.ekodi-home-header .nav a:focus-visible{color:var(--accent-deep);outline:0}
+header.ekodi-home-header .login{display:inline-flex!important;align-items:center;gap:8px;padding:10px 17px;
+  border:1px solid rgba(87,130,105,.22);border-radius:999px;color:#426953!important;
+  background:rgba(255,255,255,.68);box-shadow:0 7px 22px rgba(95,115,101,.06);}
+header.ekodi-home-header .login svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7}
+@media(max-width:820px){header.ekodi-home-header .shell{width:min(100% - 34px,720px)}header.ekodi-home-header .nav{gap:14px}header.ekodi-home-header .nav a span{display:none}}
+@media(max-width:640px){header.ekodi-home-header .shell{width:min(100% - 24px,520px)}header.ekodi-home-header{position:fixed;top:0;left:0;right:0;width:100%;height:calc(var(--ekodi-home-header-height) + env(safe-area-inset-top,0px));min-height:0;z-index:2147482000;padding:calc(10px + env(safe-area-inset-top,0px)) 0 8px;align-items:flex-start}header.ekodi-home-header .navbar{display:block;width:calc(100% - 24px);margin-inline:auto}header.ekodi-home-header .brand strong{font-size:21px}header.ekodi-home-header .brand small{font-size:9px}header.ekodi-home-header .nav{margin-top:9px;max-width:none;justify-content:flex-start;gap:8px 13px;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:2px}header.ekodi-home-header .nav::-webkit-scrollbar{display:none}header.ekodi-home-header .nav a{font-size:12px;white-space:nowrap;flex:0 0 auto}header.ekodi-home-header .login{padding:8px 11px}header.ekodi-home-header .login svg{width:14px;height:14px}}
+.ekodi-user-ui-footer{margin-top:46px}
+header.ekodi-home-header{background:#fffaf2;backdrop-filter:none}
 </style>
+<link rel="stylesheet" href="/shell/user-ui-shell.css?v=7">
 </head>
 <body>
-<header class="site-header">
-  <div class="header-inner">
-    <a class="brand" href="https://ekodi.kr/" aria-label="EKODI 홈으로"><strong>EKODI</strong><span>HISTORY ARCHIVE</span></a>
-    <nav class="nav" aria-label="역사 페이지 메뉴"><a href="#timeline">연혁</a><a href="#values">가치</a><a class="home" href="https://ekodi.kr/">생태계로 돌아가기</a></nav>
+<header class="site-header ekodi-home-header" data-ekodi-home-header="v1">
+  <div class="shell navbar">
+    <a class="brand" href="https://ekodi.kr/" aria-label="EKODI 홈" data-ekodi-ci="master-open-loop"><svg class="ekodi-ci-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="20" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-dasharray="103 23" transform="rotate(-42 32 32)"/></svg><span class="brand-copy"><strong>EKODI</strong><small>ECOSYSTEM · ekodi.kr</small></span></a>
+    <nav class="nav" aria-label="주요 메뉴">
+      <a href="https://ekodi.kr/#about">소개 <span>About</span></a>
+      <a href="https://ekodi.kr/#services">플랫폼 <span>Platforms</span></a>
+      <a href="https://ekodi.kr/#connect">연결 <span>Connect</span></a>
+      <a href="https://ekodi.kr/#contact">문의 <span>Contact</span></a>
+      <a class="login" href="https://ekodi.kr/auth/?site=portal&amp;return_to=https%3A%2F%2Fekodi.kr%2Fhistory" aria-label="EKODI 로그인" data-ekodi-home-login>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c.7-4.3 3.4-6.5 8-6.5S19.3 16.7 20 21"></path></svg>로그인 <span>Sign in</span>
+      </a>
+    </nav>
   </div>
 </header>
 <main>
@@ -186,7 +208,7 @@ footer{width:min(1540px,calc(100% - 44px));margin:46px auto 0;padding-top:20px;b
     <a href="https://ekodi.kr/">EKODI 생태계 보기</a>
   </section>
 
-  <footer><strong>EKODI HISTORY</strong><span class="future-line">PAST · PRESENT · NEXT</span></footer>
+  <footer class="ekodi-user-ui-footer" data-ekodi-user-footer="v3" data-ekodi-legal-footer="user-shell-v2" aria-label="사이트 운영 및 법적 고지"><div class="ekodi-user-ui-footer__inner"><div class="ekodi-user-ui-footer__copy"><strong class="ekodi-user-ui-footer__brand">EKODI</strong><div class="ekodi-user-ui-footer__business"></div><div class="ekodi-user-ui-footer__address"></div><div class="ekodi-user-ui-footer__copyright">© 2026 EKODI (에코디). All rights reserved.</div><div class="ekodi-user-ui-footer__scope">사이트 운영정보 및 별도 정책은 해당 사이트의 운영주체를 기준으로 합니다.</div></div><nav class="ekodi-user-ui-footer__links" aria-label="법적 고지"><a href="https://ekodi.kr/privacy" data-ekodi-i18n="privacy">개인정보처리방침</a><a href="https://ekodi.kr/terms" data-ekodi-i18n="terms">이용약관</a><a href="https://ekodi.kr/ekodibiz/refund" data-ekodi-i18n="refund">환불정책</a><a href="mailto:ekodibiz@gmail.com" data-ekodi-i18n="contact">문의</a></nav></div></footer>
 </main>
 </body>
 </html>
