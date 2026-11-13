@@ -304,3 +304,17 @@ test('Domeggook legacy Korean query link preserves the actual Korean search term
   assert.doesNotMatch(js,/itemList\.php\?sw='\+encodeURIComponent\(query\)/);
   assert.match(js,/vendorTerm\?'도매꾹 공식 사이트에서 검색':'도매꾹에서 검색어 직접 입력'/);
 });
+
+
+test('public four-stage search is shopper-facing and remains separated from operator controls',()=>{
+  assert.match(css, /#mallSearchGroups\{counter-reset:mall-search-stage;/);
+  assert.match(css, /#mallSearchGroups \.mall-search-stage\{/);
+  assert.match(css, /counter-increment:mall-search-stage/);
+  assert.match(css, /#mallSearchGroups \.mall-search-stage \.mall-search-ai-link/);
+  assert.match(css, /@media\(max-width:700px\)/);
+  assert.match(css, /@media\(max-width:390px\)/);
+  for(const label of ["stage('1','에코디몰 자체상품'","stage('2','도매꾹·도매매 등 공급처'","stage('3','제휴상품·외부 쇼핑 비교'","stage('4','AI 대체상품·소싱 상담'"])
+    assert.ok(js.includes(label),label);
+  assert.doesNotMatch(js,/window\.location\.href\s*=\s*['"]\/ekodimall\/supplier-(ops|connectors)/);
+  assert.match(js,/purchaseMode==='external-reference-only'/);
+});
