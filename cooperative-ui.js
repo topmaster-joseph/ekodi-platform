@@ -34,6 +34,7 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
     COOP_JOIN_CONSENT_REQUIRED: '조합원 등록에 동의 체크가 필요합니다.',
     COOP_SHARE_ACCOUNT_INVALID: '계좌번호는 숫자와 하이픈(-)으로 입력해 주세요.',
     COOP_SHARE_ACCOUNT_INCOMPLETE: '계좌번호를 등록할 때는 은행과 예금주도 함께 입력해 주세요.',
+    COOP_DEPOSIT_AGREEMENT_REQUIRED: '출자금 납입 안내를 확인하고 동의에 체크해 주세요.',
     COOP_JOIN_BLOCKED: '이 계정은 조합 관리자가 이용을 제한했습니다. 조합 관리자에게 문의해 주세요.',
     COOP_REPRESENTATIVE_REQUIRED: '대표자명(성함)을 입력해 주세요.',
     COOP_PHONE_REQUIRED: '연락처를 입력해 주세요.',
@@ -425,7 +426,7 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
       event.preventDefault();
       const form = event.target;
       const button = form.querySelector('button'); button.disabled = true;
-      try { const values = Object.fromEntries(new FormData(form)); await request('/join', { method: 'POST', body: JSON.stringify({ representative: values.representative, phone: values.phone, business: values.business, businessNumber: values.businessNumber, consent: form.elements.consent.checked, depositReported: form.elements.depositReported?.checked === true }) }); $('#applicationResult').textContent = '조합원으로 등록되었습니다. 조합원 공간으로 이동합니다.'; setTimeout(() => location.assign(base + '/members'), 900); }
+      try { const values = Object.fromEntries(new FormData(form)); await request('/join', { method: 'POST', body: JSON.stringify({ representative: values.representative, phone: values.phone, business: values.business, businessNumber: values.businessNumber, consent: form.elements.consent.checked, depositAgreement: form.elements.depositAgreement?.checked === true }) }); $('#applicationResult').textContent = '조합원으로 등록되었습니다. 조합원 공간으로 이동합니다.'; setTimeout(() => location.assign(base + '/members'), 900); }
       catch (error) { $('#applicationResult').textContent = error.message; }
       finally { button.disabled = false; }
     });
@@ -457,7 +458,7 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
         $('#gateTitle').textContent = hub ? '협동조합 관리 권한을 확인해 주세요' : surface === 'admin' ? '이 조합의 관리자 권한을 확인해 주세요' : '조합원 등록 확인이 필요합니다';
         $('#gateMessage').textContent = '로그인 계정과 이 조합의 접근권한은 별도로 확인합니다. 이름만으로 권한이 부여되지는 않습니다.';
         $('#loginLink').hidden = true;
-        if (!platform && !hub && error.code !== 'COOP_JOIN_BLOCKED') { $('#application').hidden = false; $('#gate').hidden = surface !== 'admin'; request('/join').then(r => { if (r?.email) { $('#joinEmail').textContent = r.email; $('#joinEmailConsent').textContent = r.email; } if (r?.shareUnit) $('#joinShareUnit').textContent = won(r.shareUnit); $('#joinAccount').innerHTML = r?.shareAccount ? accountLine(r.shareAccount) : '입금 계좌는 운영진이 등록하는 대로 안내합니다. 먼저 등록하시고, 조합원 공간에서 계좌를 확인해 주세요.'; }).catch(() => { $('#joinEmail').textContent = '확인되지 않음 · 다시 로그인해 주세요'; }); $('#gateTitle').textContent = '이 조합의 관리자 권한이 없습니다'; }
+        if (!platform && !hub && error.code !== 'COOP_JOIN_BLOCKED') { $('#application').hidden = false; $('#gate').hidden = surface !== 'admin'; request('/join').then(r => { if (r?.email) { $('#joinEmail').textContent = r.email; $('#joinEmailConsent').textContent = r.email; } if (r?.shareUnit) $('#joinShareUnit').textContent = won(r.shareUnit); }).catch(() => { $('#joinEmail').textContent = '확인되지 않음 · 다시 로그인해 주세요'; }); $('#gateTitle').textContent = '이 조합의 관리자 권한이 없습니다'; }
         setStatus(!platform && !hub && surface === 'members' ? '아직 이 조합의 조합원으로 등록되지 않은 계정입니다. 아래에서 바로 등록할 수 있습니다.' : '이 계정에 등록된 조합별 권한이 없습니다.');
       } else setStatus(errors[error.code] || error.message || '접근을 확인하지 못했습니다. 다시 시도해 주세요.', true);
     }

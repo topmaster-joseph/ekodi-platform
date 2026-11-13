@@ -22,29 +22,35 @@ async function setAccount(f, coop, shareAccount) {
   return call(f, coop, '/project', 'chair', 'PUT', { revision: p.revision, state: { profile: { ...p.state.profile, shareAccount } } });
 }
 
-test('admin registers the share account; join GET shows it before registration', async t => {
+test('admin registers the share account; it is shown only after registration', async t => {
   const f = fixture(); t.after(() => f.sqlite.close());
   t.mock.method(globalThis, 'fetch', authFetch({ chair: 'chair@example.test', a: 'new@example.test' }));
   f.grant(jubilee, 'chair@example.test', 'admin', { capabilities: ['tenant.site.manage'] });
   let before = await (await call(f, jubilee, '/join', 'a')).json();
-  assert.equal(before.shareAccount, null); assert.equal(before.shareUnit, 10000);
+  assert.equal(before.shareAccount, undefined); assert.equal(before.shareUnit, 10000);
   assert.equal((await (await setAccount(f, jubilee, { bank: '농협', number: '12-34', holder: '' })).json()).code, 'COOP_SHARE_ACCOUNT_INVALID');
   assert.equal((await (await setAccount(f, jubilee, { bank: '', number: '301-1234-5678-91', holder: '정찬균' })).json()).code, 'COOP_SHARE_ACCOUNT_INCOMPLETE');
   assert.equal((await setAccount(f, jubilee, { bank: '농협', number: '301-1234-5678-91', holder: '희년세상협동조합 발기인 정찬균' })).status, 200);
   before = await (await call(f, jubilee, '/join', 'a')).json();
-  assert.deepEqual(before.shareAccount, { bank: '농협', number: '301-1234-5678-91', holder: '희년세상협동조합 발기인 정찬균' });
-  assert.equal((await (await call(f, open, '/join', 'a')).json()).shareAccount, null, 'other cooperative untouched');
+  assert.equal(before.shareAccount, undefined, 'account is shown only after registration');
+  assert.equal((await call(f, jubilee, '/join', 'a', 'POST', { representative: '갑', phone: '01012345678', consent: true })).status, 400, 'deposit agreement required');
+  const joined = await call(f, jubilee, '/join', 'a', 'POST', { representative: '갑', phone: '01012345678', consent: true, depositAgreement: true });
+  assert.equal(joined.status, 200);
+  const me = await (await call(f, jubilee, '/me', 'a')).json();
+  assert.deepEqual(me.profile.shareAccount, { bank: '농협', number: '301-1234-5678-91', holder: '희년세상협동조합 발기인 정찬균' });
+  assert.equal(me.me.founder.payment, 'unpaid');
 });
 
 test('payment state: member can only report, admin confirms and the server stamps the date', async t => {
   const f = fixture(); t.after(() => f.sqlite.close());
   t.mock.method(globalThis, 'fetch', authFetch({ chair: 'chair@example.test', a: 'm1@example.test', b: 'm2@example.test' }));
   f.grant(open, 'chair@example.test', 'admin', { capabilities: ['tenant.site.manage'] });
-  assert.equal((await call(f, open, '/join', 'a', 'POST', { representative: '갑', phone: '01012345678', consent: true })).status, 200);
-  assert.equal((await call(f, open, '/join', 'b', 'POST', { representative: '을', phone: '01022223333', consent: true, depositReported: true })).status, 200);
+  assert.equal((await call(f, open, '/join', 'a', 'POST', { representative: '갑', phone: '01012345678', consent: true, depositAgreement: true })).status, 200);
+  assert.equal((await call(f, open, '/join', 'b', 'POST', { representative: '을', phone: '01022223333', consent: true, depositAgreement: true, depositReported: true })).status, 400, 'no deposit report at join');
+  assert.equal((await call(f, open, '/join', 'b', 'POST', { representative: '을', phone: '01022223333', consent: true, depositAgreement: true })).status, 200);
   let a = await (await call(f, open, '/me', 'a')).json();
   assert.equal(a.me.founder.payment, 'unpaid');
-  assert.equal((await (await call(f, open, '/me', 'b')).json()).me.founder.payment, 'reported');
+  assert.equal((await (await call(f, open, '/me', 'b')).json()).me.founder.payment, 'unpaid');
   // member cannot self-confirm through my-business
   assert.equal((await call(f, open, '/my-business', 'a', 'PUT', { payment: 'confirmed', revision: a.revision })).status, 400);
   const reported = await call(f, open, '/my-business', 'a', 'PUT', { depositReported: true, revision: a.revision });
@@ -68,8 +74,10 @@ test('join form explains the deposit before consent; member space shows status; 
   const html = cooperativePage(jubilee, 'members');
   const guide = html.indexOf('출자금 납입 안내'), consent = html.indexOf('name="consent"');
   assert.ok(guide > 0 && guide < consent, 'deposit guide precedes consent');
-  assert.match(html, /name="depositReported"/);
+  assert.match(html, /name="depositAgreement" required/);
+  assert.doesNotMatch(html, /depositReported|joinAccount/);
+  assert.match(html, /지금 입금하지 않으셔도 됩니다/);
   const js = cooperativeScript();
-  for (const s of ['입금 전', '입금 알림 · 운영진 확인 중', '입금 확인 완료', 'id="reportDeposit"', 'shareAccountNumber', 'data-key="payment"', 'depositReported: form.elements.depositReported']) assert.ok(js.includes(s), s);
+  for (const s of ['입금 전', '입금 알림 · 운영진 확인 중', '입금 확인 완료', 'id="reportDeposit"', 'shareAccountNumber', 'data-key="payment"', 'depositAgreement: form.elements.depositAgreement']) assert.ok(js.includes(s), s);
   assert.match(cooperativeCss(), /word-break:keep-all/); assert.match(cooperativeCss(), /\.pay-badge\.confirmed/);
 });
