@@ -101,3 +101,20 @@ html[data-ekodi-church-unified-admin="true"] #sectionNav{margin-top:0}
   .church-doc-grid{grid-template-columns:1fr}
   .church-doc-form{grid-template-columns:1fr}
 }
+
+/* 문서보관 압축 배치: 탭은 줄바꿈으로 모두 보이게, 카드·버튼은 작게 */
+#churchDocumentsRoot .church-doc-tabs{flex-wrap:wrap!important;overflow:visible!important;gap:6px;margin:8px 0 10px;padding-bottom:8px}
+#churchDocumentsRoot .church-doc-tab{flex:0 0 auto;padding:5px 11px!important;font-size:.85rem!important;line-height:1.3!important;min-height:0!important}
+#churchDocumentsRoot .church-doc-tab span{max-width:12rem}
+#churchDocumentsRoot .church-doc-panel-head{margin:0 0 6px}
+#churchDocumentsRoot .church-doc-panel-head strong{font-size:.95rem}
+#churchDocumentsRoot .church-doc-grid{gap:8px;margin:4px 0 10px}
+#churchDocumentsRoot .church-doc-card{gap:4px;padding:10px 12px;border-radius:10px}
+#churchDocumentsRoot .church-doc-card h4{font-size:.92rem!important;line-height:1.35}
+#churchDocumentsRoot .church-doc-card-head{font-size:.72rem}
+#churchDocumentsRoot .church-doc-note{font-size:.76rem;line-height:1.4}
+#churchDocumentsRoot .church-doc-actions{gap:6px;padding-top:2px}
+#churchDocumentsRoot .church-doc-actions .button{display:inline-flex!important;align-items:center;justify-content:center;width:auto!important;min-height:30px!important;height:30px;padding:0 12px!important;font-size:.8rem!important;line-height:1!important;border-radius:8px}
+#churchDocumentsRoot > h2{margin:0 0 4px}
+#churchDocumentsRoot > p.empty{font-size:.8rem;margin:0 0 4px}
+@media (max-width:900px){#churchDocumentsRoot .church-doc-grid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))!important}}
