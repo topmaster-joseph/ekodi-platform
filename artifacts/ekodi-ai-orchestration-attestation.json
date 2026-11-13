@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
   "policyId": "AI-ORCHESTRATE-001",
-  "orchestrationId": "ekoai-6e345ccb317e7b8a1d3d",
+  "orchestrationId": "ekoai-0f4c46196cd1f7338028",
   "controlPlane": "EKODI AI",
   "orchestrator": "ekodi-ai-orchestrator",
-  "source": "protected-development-pr-merge",
+  "source": "protected-main-pr-merge",
   "actor": "topmaster-joseph",
-  "branch": "ai/gpt-5-6-sol/orch_00000000-0000-4000-8000-000000000001",
-  "sha": "1111111111111111111111111111111111111111",
+  "branch": "ai/chatgpt/orch_00000000-0000-4000-8000-000000000001",
+  "sha": "366d26701c90eec66acdf7c51d4a2672059f58ff",
   "taskClasses": [
-    "platform-code"
+    "experience"
   ],
   "roles": [
     "architect",
@@ -53,5 +53,5 @@
   },
   "releaseMode": true,
   "releaseModeRequested": true,
-  "timestamp": "2026-11-10T12:06:28.629Z"
+  "timestamp": "2026-11-13T11:11:32.992Z"
 }

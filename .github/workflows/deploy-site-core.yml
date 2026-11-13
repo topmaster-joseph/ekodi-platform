@@ -238,6 +238,7 @@ on:
       - 'tax-service-worker.js'
       - 'finance-entry-worker.js'
       - 'index.html'
+      - 'history.html'
       - 'discovery-layer.js'
       - 'site-discovery-head.js'
       - 'public-discovery-registry.js'
