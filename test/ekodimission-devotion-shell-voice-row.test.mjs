@@ -13,12 +13,9 @@ test('Mission devotion uses exact Mission home header/footer public shell, no fo
   const htmlTag=tag=>new RegExp('<'+tag+'\\b[^>]*class="(?:mission-site-header|site-footer)"[\\s\\S]*?<\\/'+tag+'>');
   const homeHeader=homepage.match(htmlTag('header'))?.[0]||'';
   const devotionHeader=devotion.match(htmlTag('header'))?.[0]||'';
-  // Homepage has a site-owned decorative CI, while devotional content retains
-  // the same structural header contract and its existing icon.
-  const stripDecorativeMark=html=>html.replace(/<span class="mission-brand-mark"[^>]*>[\s\S]*?<\/span>/,'<span class="mission-brand-mark">IDENTITY_MARK</span>');
-  assert.equal(stripDecorativeMark(homeHeader),stripDecorativeMark(devotionHeader));
+  // 모든 하위 화면은 홈과 같은 헤더(같은 CI 표식 포함)를 쓴다.
+  assert.equal(devotionHeader,homeHeader);
   assert.match(homeHeader,/data-mission-ci="open-table"/);
-  assert.match(devotionHeader,/class="mission-brand-mark">E<\/span>/);
   assert.match(devotion,/<header class="mission-site-header">/);
   assert.match(homepage,/<footer class="site-footer">/);
   assert.match(devotion,/<footer class="site-footer">/);
