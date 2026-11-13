@@ -16,7 +16,7 @@ const reply=(body,status=200,extra={})=>new Response(body,{status,headers:{
 test('inventory rejects external/private/query URLs, counts duplicates and XML escapes without fetching them',()=>{
   const raw=xml('https://ekodi.kr/','https://ekodi.kr/books/','https://ekodi.kr/books/',
     'https://other.example/a','https://ekodi.kr/admin','https://ekodi.kr/a?secret=1',
-    'https://ekodi.kr/foo&amp;bar');
+    'https://ekodi.kr/a?x=1&amp;y=2');
   const inv=extractEkodiSitemapUrls(raw);
   assert.equal(inv.error,null);
   assert.equal(inv.total,7);
@@ -79,7 +79,7 @@ test('rate/service limit trips next-batch circuit without hiding evidence',async
   let calls=0;
   const report=await auditEkodiSitemapTargets({
     xml:xml(...urls),
-    fetchImpl:async(url)=>{calls++;return url.endsWith('/0')?reply('limited',429):reply(page(url));},
+    fetchImpl:async(url)=>{calls++;return calls===1?reply('limited',429):reply(page(url));},
     now:'2026-11-13T00:00:00Z'
   });
   assert.equal(report.circuitOpen,true);
