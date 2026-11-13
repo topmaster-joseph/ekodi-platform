@@ -407,7 +407,9 @@ async function requireWorkspace(request, env, slug) {
 export async function connectedSenderStatus(env, addresses) {
   const list=(addresses||[]).map(a=>String(a||'').trim().toLowerCase()).filter(Boolean);
   if(!list.length||!env?.DB?.prepare)return [];
-  const ready=googleMailConfigured(env)&&mailCredentialReady(env);
+  // The Gmail OAuth client secret may be stored in D1 (Mail Hub phone setup), not only in worker env.
+  const runtimeEnv=await withStoredGoogleSecret(env).catch(()=>env);
+  const ready=googleMailConfigured(runtimeEnv)&&mailCredentialReady(runtimeEnv);
   const rows=await env.DB.prepare(`SELECT a.id,lower(a.email_address) AS address,a.connection_status,c.scopes FROM mail_accounts a LEFT JOIN mail_credentials c ON c.account_id=a.id WHERE a.enabled=1 AND a.provider='gmail' AND lower(a.email_address) IN (${list.map(()=>'?').join(',')})`).bind(...list).all().catch(()=>({results:[]}));
   const byAddress=new Map();
   for(const r of rows?.results||[]){const ok=ready&&r.connection_status==='connected'&&hasGoogleSendScope(r.scopes||'');const prev=byAddress.get(r.address);if(!prev||ok)byAddress.set(r.address,{id:r.id,ready:ok});}

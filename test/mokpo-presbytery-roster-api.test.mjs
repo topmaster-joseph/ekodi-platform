@@ -243,5 +243,26 @@ test('mail-control exposes connected-sender helpers that require the Gmail send 
   const src = readFileSync('mail-control.js', 'utf8');
   assert.match(src, /export async function connectedSenderStatus\(env, addresses\)/);
   assert.match(src, /r\.connection_status==='connected'&&hasGoogleSendScope\(r\.scopes\|\|''\)/);
+  // regression: the OAuth secret saved through Mail Hub lives in D1; readiness must load it like googleAccessForAccount does
+  const fn = src.slice(src.indexOf('export async function connectedSenderStatus'), src.indexOf('export async function sendAsConnectedAccount'));
+  assert.match(fn, /const runtimeEnv=await withStoredGoogleSecret\(env\)/);
+  assert.match(fn, /googleMailConfigured\(runtimeEnv\)&&mailCredentialReady\(runtimeEnv\)/);
   assert.match(src, /export async function sendAsConnectedAccount\(env, address, message\)/);
+});
+
+test('connected sender is ready when the Gmail OAuth secret is stored in D1 (not env)', async () => {
+  const { saveGoogleSecret } = await import('../mail-google-secret-store.js');
+  const { connectedSenderStatus } = await import('../mail-control.js');
+  const db = new DatabaseSync(':memory:');
+  db.exec(`CREATE TABLE mail_accounts(id TEXT, email_address TEXT, provider TEXT, enabled INTEGER, connection_status TEXT);
+    CREATE TABLE mail_credentials(account_id TEXT, scopes TEXT);`);
+  db.prepare("INSERT INTO mail_accounts VALUES ('a1','EkodiBiz@gmail.com','gmail',1,'connected')").run();
+  db.prepare("INSERT INTO mail_credentials VALUES ('a1','openid https://www.googleapis.com/auth/gmail.send')").run();
+  const wrap = (sql) => { let args = []; const st = { bind: (...a) => { args = a; return st; }, first: async () => db.prepare(sql).get(...args) ?? null, all: async () => ({ results: db.prepare(sql).all(...args) }), run: async () => { db.prepare(sql).run(...args); return { meta: {} }; } }; return st; };
+  const env = { DB: { prepare: wrap, exec: async (q) => db.exec(q), batch: async (list) => Promise.all(list.map((x) => x.run())) }, MAIL_GOOGLE_CLIENT_ID: 'cid.apps.googleusercontent.com', MAIL_CREDENTIAL_KEY: 'k'.repeat(48) };
+  const before = await connectedSenderStatus(env, ['ekodibiz@gmail.com']);
+  assert.equal(before[0].ready, false);
+  await saveGoogleSecret(env, 'GOCSPX-' + 'x'.repeat(28), 'test');
+  const after = await connectedSenderStatus(env, ['ekodibiz@gmail.com', 'ekodimission@gmail.com']);
+  assert.deepEqual(after.map((x) => [x.address, x.ready]), [['ekodibiz@gmail.com', true], ['ekodimission@gmail.com', false]]);
 });
