@@ -24,6 +24,18 @@ test('all five public accounting notice URLs are release-blocking canaries',()=>
   assert.match(workflow,/deploy\/manifests\/shared-site\.worker\.json/);
 });
 
+
+test('public accounting pages outrank independent tenant and Church wildcard gateways',()=>{
+  const config=read('wrangler.site.toml');
+  const routes=[...config.matchAll(/^pattern = "([^\"]+)"$/gm)].map(match=>match[1]);
+  for(const key of keys){
+    const path=`ekodi.kr/${key}/accounting`;
+    assert.equal(routes.filter(route=>route===path).length,1,`explicit Shared Site route required: ${path}`);
+  }
+  assert.match(config,/pattern = "ekodi\.kr\/ekodichurch\/admin\*"/);
+  assert.match(config,/pattern = "ekodi\.kr\/ekodichurch\/board\*"/);
+});
+
 test('Finance release remains separately guarded; a public notice does not authorize payments',()=>{
   const finance=read('.github/workflows/deploy-finance.yml');
   assert.match(finance,/^\s*promote_production:\s*$/m);

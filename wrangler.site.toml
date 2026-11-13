@@ -58,6 +58,29 @@ zone_name = "ekodi.kr"
 pattern = "ekodi.kr/ekodichurch/admin*"
 zone_name = "ekodi.kr"
 
+# Release-blocking public accounting notice is owned by Shared Site on exact subpaths.
+# Site-specific wildcard gateways (e.g. /ekodichurch/*) must not capture these
+# pages and return a 200 site homepage instead of the finance disclosure.
+[[routes]]
+pattern = "ekodi.kr/ekodibiz/accounting"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/ekodichurch/accounting"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/ekodimission/accounting"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/cgma/accounting"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/seonammedi/accounting"
+zone_name = "ekodi.kr"
+
 # Canonical Church board must outrank the public /ekodichurch/* path gateway.
 [[routes]]
 pattern = "ekodi.kr/ekodichurch/board*"
