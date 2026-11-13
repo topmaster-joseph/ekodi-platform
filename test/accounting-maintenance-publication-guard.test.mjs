@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { sitePublicationGuard } from '../site-publication-runtime.js';
 import worker from '../platform-router-entry-worker.js';
+import siteWorker from '../site-worker.js';
+import { readFile } from 'node:fs/promises';
 
 const paths=['/ekodibiz/accounting','/ekodichurch/accounting','/ekodimission/accounting','/cgma/accounting','/seonammedi/accounting'];
 const control=(status='maintenance',displayType='default',redirectMode='button')=>({
@@ -49,8 +51,12 @@ test('nearby sites and redirecting maintenance pages remain protected',async()=>
   assert.equal((await sitePublicationGuard(req('/cgma/accounting',{method:'POST'}),maintenance)),null,'POST is handled by existing method guards, not publication bypass');
 });
 
-test('CGMA maintenance accounting renders exact public summary through entry Worker',async()=>{
-  const response=await worker.fetch(req('/cgma/accounting'),control('maintenance'),ctx);
+test('CGMA maintenance accounting routes to exact public summary without simulating Cloudflare HTMLRewriter',async()=>{
+  assert.equal(await sitePublicationGuard(req('/cgma/accounting'),control('maintenance')),null);
+  const entry=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  assert.ok(entry.indexOf('const publicationGuard=await sitePublicationGuard(request,env)')>0);
+  assert.ok(entry.indexOf('isPublicAccountingNoticePath(url.pathname)')>0);
+  const response=await siteWorker.fetch(req('/cgma/accounting'),control('maintenance'),ctx);
   assert.equal(response.status,200);
   assert.equal(response.headers.get('x-ekodi-route'),'public-accounting-notice');
   assert.equal(response.headers.get('x-ekodi-site-publication'),null);
