@@ -349,3 +349,58 @@ body[data-mall-search="true"] #shop #mallSearchResults{display:block!important}
 .mall-search-stage-hint{margin-top:10px;padding:10px 12px;border:1px solid #d7e2ee;border-radius:10px;background:#f3f7fb;font-size:13px;line-height:1.6;color:#3c556d}
 .mall-search-stage-hint a{font-weight:800;text-underline-offset:3px;color:#234c79;overflow-wrap:anywhere}
 .mall-search-stage-hint a:focus-visible{outline:3px solid #3e81be;outline-offset:3px}
+
+
+/* EKODI-MALL-ROLE-AWARE-UI-9709
+ * Customer search result cards—not admin cards. Keep supplier reference-only gates.
+ * Existing approved Mall theme and merchant brand remain unchanged. */
+#mallSearchGroups{counter-reset:mall-search-stage;display:grid;gap:13px;margin-top:15px;min-width:0}
+#mallSearchGroups .mall-search-stage{
+  counter-increment:mall-search-stage;
+  position:relative;
+  min-width:0;
+  background:linear-gradient(125deg,#fff 0%,#fff 75%,#f8fcf9 100%);
+  border:1px solid #dfe8e3;
+  border-radius:18px;
+  padding:20px 22px 20px 82px;
+  box-shadow:0 6px 20px rgba(25,48,40,.045);
+  margin:0;
+}
+#mallSearchGroups .mall-search-stage:before{
+  content:counter(mall-search-stage,decimal-leading-zero);
+  position:absolute;left:21px;top:23px;
+  display:grid;place-items:center;
+  width:44px;height:44px;border-radius:13px;
+  color:#1b654b;background:linear-gradient(145deg,#e9f6ec,#d9eddf);
+  font-size:14px;font-weight:900;letter-spacing:.04em;
+}
+#mallSearchGroups .mall-search-stage-title{font-size:clamp(18px,1.55vw,23px);font-weight:850;color:#182e37;letter-spacing:-.035em;margin:1px 0 8px;line-height:1.35}
+#mallSearchGroups .mall-search-stage-note{font-size:13px;line-height:1.7;color:#5b6b6e;margin:0 0 8px;max-width:920px}
+#mallSearchGroups .mall-search-stage-empty{font-size:13px;color:#657572;line-height:1.65;margin:5px 0 8px}
+#mallSearchGroups .mall-search-stage .mall-search-reference{background:#fbfdfb;border:1px solid #dbe7df;border-radius:12px;padding:13px 16px}
+#mallSearchGroups .mall-search-stage .mall-search-reference-link{color:#195941;font-size:14px;font-weight:800;text-decoration:none}
+#mallSearchGroups .mall-search-stage .mall-search-reference-link:hover{text-decoration:underline;text-underline-offset:3px}
+#mallSearchGroups .mall-search-stage .mall-search-reference p{font-size:12px;margin-top:4px;color:#5f726a}
+#mallSearchGroups .mall-search-stage .mall-search-compare-links{margin-top:10px}
+#mallSearchGroups .mall-search-stage .mall-search-provider-results{margin-top:10px}
+#mallSearchGroups .mall-search-stage .mall-search-ai-link{min-height:46px;background:#165740;color:#fff;border-radius:12px;padding:11px 19px;box-shadow:0 4px 12px rgba(22,87,64,.14)}
+#mallSearchGroups .mall-search-stage .mall-search-ai-link:hover{background:#0c4633}
+#mallSearchGroups .mall-search-stage .mall-search-stage-hint{border-radius:12px;border-color:#dbe8df;background:#f3f9f4;color:#446153}
+#mallSearchGroups .mall-search-stage .mall-search-cards{margin-top:12px}
+#mallSearchGroups .mall-search-stage .mall-search-card{border-radius:13px;box-shadow:0 2px 12px rgba(22,51,41,.045)}
+#mallSearchGroups .mall-search-stage-warning{margin:0;border-radius:13px;padding:12px 15px}
+@media(max-width:700px){
+  #mallSearchGroups{gap:10px}
+  #mallSearchGroups .mall-search-stage{padding:16px 14px 16px 65px;border-radius:15px}
+  #mallSearchGroups .mall-search-stage:before{left:14px;top:18px;width:36px;height:36px;font-size:12px;border-radius:11px}
+  #mallSearchGroups .mall-search-stage-title{font-size:18px}
+  #mallSearchGroups .mall-search-stage-note{font-size:12px;line-height:1.65}
+  #mallSearchGroups .mall-search-stage .mall-search-provider-results,
+  #mallSearchGroups .mall-search-stage .mall-search-compare-links{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:390px){
+  #mallSearchGroups .mall-search-stage{padding:13px 12px}
+  #mallSearchGroups .mall-search-stage:before{position:static;float:left;margin:0 10px 7px 0;width:32px;height:32px}
+  #mallSearchGroups .mall-search-stage-title{font-size:16px;min-height:32px;display:flex;align-items:center}
+  #mallSearchGroups .mall-search-stage-note{clear:both}
+}

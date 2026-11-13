@@ -77,3 +77,59 @@
   .connector-form input,.connector-form button{width:100%;flex:auto}
   .connector-form input[name="quantity"]{flex:auto}
 }
+
+
+/* EKODI-MALL-ROLE-AWARE-UI-9709 — visual polish, no access-control or commerce gate change. */
+.mall-admin-breadcrumb{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12px;line-height:1.5;color:#68796f;margin:0 0 16px}
+.mall-admin-breadcrumb a{color:#1b604b;text-decoration:none;font-weight:750}
+.mall-admin-breadcrumb a:hover{text-decoration:underline;text-underline-offset:3px}
+.mall-admin-breadcrumb strong{color:#253a31;font-weight:760}
+.mall-admin-role{display:flex;align-items:center;flex-wrap:wrap;gap:9px;font-size:12px!important;line-height:1.5;color:#576d62!important;margin:8px 0 0!important}
+.mall-role-chip{display:inline-flex;align-items:center;border:1px solid #c6ded3;border-radius:999px;padding:3px 10px;background:#edf6f0;color:#195d46;font-weight:850;white-space:nowrap;letter-spacing:0}
+.mall-admin-breadcrumb a:focus-visible,.mall-admin-role a:focus-visible{outline:3px solid #2f916f;outline-offset:3px}
+@media(max-width:580px){.mall-admin-breadcrumb{gap:6px;font-size:11px;margin-bottom:10px}.mall-admin-role{gap:7px;font-size:11px!important}}
+
+/* Supplier connector dashboard design: statuses represent rights, not privileges. */
+.connector-page{background:radial-gradient(ellipse 68% 25% at 98% 1%,rgba(203,228,213,.52),transparent 76%),#f8faf9;color:#1d3030}
+.connector-page .connector-header{max-width:1400px;border-bottom:1px solid #e5eee8;background:rgba(255,255,255,.92)}
+.connector-page .connector-main{max-width:1400px;padding:25px 27px 76px}
+.connector-page .connector-heading{align-items:center;margin-bottom:18px}
+.connector-page .connector-heading h1{font-size:clamp(27px,2.8vw,39px);letter-spacing:-.045em;color:#152b2c}
+.connector-page .connector-heading .eyebrow,.connector-page .connector-panel .eyebrow{color:#256a50}
+.connector-page .connector-intro{font-size:13px;color:#65766f;line-height:1.6}
+.connector-page .connector-actions{gap:9px}
+.connector-page .connector-actions button{min-height:42px;border-radius:999px;padding-inline:18px;box-shadow:0 3px 11px rgba(18,43,33,.06)}
+.connector-page .connector-provider-switch{margin:0 0 17px;gap:9px}
+.connector-page .connector-provider-current,.connector-page .connector-provider-link{border-radius:999px;padding:10px 16px;min-height:40px;font-size:13px}
+.connector-page .connector-overview-strip{gap:12px;margin-bottom:17px}
+.connector-page .connector-overview-strip article{padding:16px 18px;border-radius:17px;background:#fff;border:1px solid #e0e9e4;box-shadow:0 6px 22px rgba(25,53,40,.045);min-height:88px}
+.connector-page .connector-overview-strip small{font-size:12px;color:#596d62;font-weight:770;margin-bottom:11px}
+.connector-page .connector-overview-strip strong{font-size:13px;color:#52625b;display:inline-flex;align-items:center;line-height:1.5;border-radius:999px;padding:4px 10px;background:#edf1ef;font-weight:800}
+.connector-page .connector-overview-strip strong.connector-off{background:#fff0e5;color:#994d27}
+.connector-page .connector-overview-strip article:nth-child(4) strong.connector-off,.connector-page .connector-overview-strip article:nth-child(5) strong.connector-off{background:#fdebe8;color:#ae3f31}
+.connector-page .connector-status{border:1px solid #cbded2;border-radius:13px;background:#eef7f1;color:#2b6146;padding:13px 17px;font-size:13px;margin-bottom:20px}
+.connector-page .connector-status[data-state=error]{border-color:#f2d9cb;background:#fdf1e9;color:#9c3c27}
+.connector-page .connector-tablist{gap:7px;margin-bottom:20px}
+.connector-page .connector-tablist button{border-radius:12px 12px 0 0;min-height:49px;font-weight:790;font-size:13px}
+.connector-page .connector-tablist button[aria-selected=true]{background:#eaf3ec;color:#14543e}
+.connector-page .connector-tablist button[aria-selected=true]:after{height:3px;background:#126548}
+.connector-page .connector-panel{padding:26px 27px;min-height:265px;border-radius:19px;border:1px solid #dce8df;background:#fff;box-shadow:0 10px 30px rgba(19,44,36,.055)}
+.connector-page .connector-panel-head h2{font-size:22px;font-weight:850;letter-spacing:-.035em;color:#1a3031}
+.connector-page .connector-table-wrap{border:1px solid #e0e8e2;border-radius:13px;overflow-x:auto}
+.connector-page .connector-table-wrap .ops-table{min-width:610px}
+.connector-page .connector-table-wrap .ops-table th{background:#f0f6f1;color:#3f5e4b;font-weight:800}
+.connector-page .connector-table-wrap .ops-table td{vertical-align:middle}
+.connector-page .connector-credentials article{border-radius:13px;background:#f6faf7}
+.connector-page .connector-form input{border-color:#d4e0d7;border-radius:12px}
+.connector-page .connector-form input:focus-visible{outline:2px solid #228465;outline-offset:1px}
+@media(max-width:900px){.connector-page .connector-main{padding:20px 17px 65px}}
+@media(max-width:520px){
+ .connector-page .connector-main{padding:15px 12px 55px}
+ .connector-page .connector-overview-strip{gap:8px}
+ .connector-page .connector-overview-strip article{padding:12px;min-height:77px}
+ .connector-page .connector-overview-strip small{margin-bottom:7px;font-size:11px}
+ .connector-page .connector-overview-strip strong{padding:4px 8px;font-size:11px}
+ .connector-page .connector-panel{padding:17px 14px;border-radius:15px}
+ .connector-page .connector-tablist button{padding:12px 13px;font-size:12px}
+ .connector-page .connector-provider-switch{justify-content:flex-start}
+}
