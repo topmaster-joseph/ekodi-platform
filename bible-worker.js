@@ -289,13 +289,13 @@ export function devotionCardUrl(devotion) {
 }
 
 export function devotionMetaTags(devotion) {
-  const title = '에코디언의 묵상나눔';
-  const description = '오늘의 말씀을 읽고 삶으로 나누는 에코디언의 묵상나눔';
+  const title = '에코디 묵상나눔';
+  const description = '오늘의 말씀과 묵상을 함께 나눕니다.';
   const url = devotion.shareUrl || 'https://ekodi.kr/bible/devotion';
   return [
     `<link rel="canonical" href="${escapeHtml(url)}">`,
     '<meta property="og:type" content="article">',
-    '<meta property="og:site_name" content="에코디언의 묵상나눔">',
+    '<meta property="og:site_name" content="에코디">',
     `<meta property="og:title" content="${escapeHtml(title)}">`,
     `<meta property="og:description" content="${escapeHtml(description)}">`,
     `<meta property="og:url" content="${escapeHtml(url)}">`,
@@ -304,7 +304,7 @@ export function devotionMetaTags(devotion) {
     '<meta property="og:image:type" content="image/jpeg">',
     '<meta property="og:image:width" content="1200">',
     '<meta property="og:image:height" content="630">',
-    `<meta property="og:image:alt" content="${escapeHtml(devotion.found ? `에코디언의 묵상나눔 ${devotion.passage}` : '에코디언의 묵상나눔')}">`,
+    `<meta property="og:image:alt" content="${escapeHtml(devotion.found ? `에코디 묵상나눔 ${devotion.passage}` : '에코디 묵상나눔')}">`,
     '<meta name="twitter:card" content="summary_large_image">',
     `<meta name="twitter:image" content="${escapeHtml(devotionCardUrl(devotion))}">`,
     `<meta name="twitter:title" content="${escapeHtml(title)}">`,
@@ -321,9 +321,9 @@ async function devotionPage(request, env, dateValue) {
   let asset = await assetFor(request, env, '/devotion');
   if (!asset.ok) asset = await assetFor(request, env, '/devotion.html');
   if (!asset.ok) return asset;
-  const title = devotion.found ? `에코디언의 묵상나눔` : '에코디언의 묵상나눔';
+  const title = '에코디 묵상나눔';
   const html = (await asset.text())
-    .replace('<title>에코디언의 묵상나눔</title>', `<title>${escapeHtml(title)}</title>`)
+    .replace('<title>에코디 묵상나눔</title>', `<title>${escapeHtml(title)}</title>`)
     .replace('<!--EKODI_DEVOTION_META-->', devotionMetaTags(devotion));
   const headers = new Headers(asset.headers);
   headers.set('content-type', 'text/html; charset=utf-8');

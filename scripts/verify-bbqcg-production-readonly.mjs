@@ -25,17 +25,46 @@ const is200=status=>status===200;
 // Public BBQ site may become indexable only when the canonical renderer has all
 // three non-placeholder public facts. Match the visible three facts and robots
 // contract; never infer publication authority from HTTP 200 alone.
-export function bbqIndexingProof(body,robots){
+// Boolean-only evidence: never log tenant details or public page contents.
+// Inspect only robots meta instructions, not arbitrary page content. Attribute order,
+// whitespace, and harmless extra preview directives may vary between HTML decorators.
+function pageRobotsDirectives(text){
+  const directives=[],tags=String(text||'').match(/<meta\b[^>]*>/gi)||[];
+  for(const tag of tags){
+    const attributes=Object.create(null);
+    const re=/\b(name|content)\s*=\s*(["'])(.*?)\2/gi;
+    for(const match of tag.matchAll(re))attributes[match[1].toLowerCase()]=match[3];
+    if(String(attributes.name||'').toLowerCase()!=='robots')continue;
+    directives.push(...String(attributes.content||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean));
+  }
+  return Object.freeze(directives);
+}
+
+// Boolean-only evidence: never log tenant facts or the original HTML.
+export function bbqIndexingSignals(body,robots){
   const text=String(body||''),header=String(robots||'').trim();
-  const unverified=/^noindex(?:,\s*nofollow)?(?:,\s*noarchive)?$/i.test(header);
-  if(unverified)return /<meta\s+name="robots"\s+content="noindex,nofollow,noarchive"/i.test(text);
-  if(!/^index,\s*follow$/i.test(header))return false;
-  if(!/<meta\s+name="robots"\s+content="index,follow"/i.test(text))return false;
-  return [
-    /<small>영업시간<\/small><strong>(?!매장 확인 후 안내)[^<]{1,120}<\/strong>/,
-    /<small>매장전화<\/small><strong><a href="tel:\+?[0-9]{8,16}">[^<]+<\/a><\/strong>/,
-    /<small>오시는 길<\/small><strong class="store-address">(?!매장 확인 후 안내)[^<]{2,200}<\/strong>/
-  ].every(pattern=>pattern.test(text));
+  const tokens=pageRobotsDirectives(text);
+  const has=x=>tokens.includes(x);
+  const conflicting=has('noindex')||has('none')||has('nofollow');
+  return Object.freeze({
+    noindexHeader:/^noindex(?:,\s*nofollow)?(?:,\s*noarchive)?$/i.test(header),
+    noindexMeta:has('noindex')&&has('nofollow')&&has('noarchive'),
+    indexHeader:/^index,\s*follow$/i.test(header),
+    indexMeta:has('index')&&has('follow')&&!conflicting,
+    metaSeen:tokens.length>0,
+    metaHasIndex:has('index'),
+    metaHasFollow:has('follow'),
+    metaHasNoindex:has('noindex')||has('none'),
+    metaHasNofollow:has('nofollow'),
+    hours:/<small>영업시간<\/small><strong>(?!매장 확인 후 안내)[^<]{1,120}<\/strong>/.test(text),
+    phone:/<small>매장전화<\/small><strong><a href="tel:\+?[0-9]{8,16}">[^<]+<\/a><\/strong>/.test(text),
+    address:/<small>오시는 길<\/small><strong class="store-address">(?!매장 확인 후 안내)[^<]{2,200}<\/strong>/.test(text)
+  });
+}
+export function bbqIndexingProof(body,robots){
+  const signals=bbqIndexingSignals(body,robots);
+  return (signals.noindexHeader&&signals.noindexMeta)
+    ||(signals.indexHeader&&signals.indexMeta&&signals.hours&&signals.phone&&signals.address);
 }
 const decoder=new TextDecoder('utf-8');
 
@@ -153,6 +182,8 @@ export async function auditBbqcgProduction({fetchImpl=fetch,origin=BBQCG_CANARY_
       mark(body.includes('우리 매장의 약속과 자료실')&&body.includes('/bbqcg/service-guide'),'storefront-resources-entry');
       mark(/\/bbqcg\/assets\/site\.css\?v=[a-f0-9]{12,40}/.test(body),'storefront-fingerprinted-css');
       mark(bbqIndexingProof(body,robots),'storefront-robots-match-verified-facts');
+      if(record.errors.includes('storefront-robots-match-verified-facts'))
+        record.indexingSignals=bbqIndexingSignals(body,robots); // evidence flags only
     }else if(id==='standards'){
       mark(is200(status)&&/text\/html/.test(ctype),'service-guide-200-html');
       mark(body.includes('매장 소개 · 자료 다운로드'),'service-guide-resources');

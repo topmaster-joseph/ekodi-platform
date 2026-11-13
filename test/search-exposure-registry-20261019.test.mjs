@@ -29,3 +29,17 @@ test('legacy church live studio is not advertised', () => {
   assert.equal(isPublicDiscoveryPath('/ekodichurch/live'), false);
   assert.equal(isPublicDiscoveryPath('/live/church'), true);
 });
+
+test('documented operator-space noindex landing is absent from public sitemap inventory', () => {
+  // /mokdaehumun is an operator landing, not the public tenant home.
+  // Preserve its noindex and access; do not hide distinct tenant content.
+  assert.equal(isPublicDiscoveryPath('/mokdaehumun'), false);
+  assert.equal(isPublicDiscoveryPath('/mokdaehumun/'), false);
+  assert.equal(isPublicDiscoveryPath('/mokdaehumun?tracking=1'), false);
+  assert.equal(isPublicDiscoveryPath('/mokdaehumun/live/'), true);
+  assert.equal(isPublicDiscoveryPath('/mokdaehumun/live'), true);
+  assert.equal(isPublicDiscoveryPath('/cgmurrc'), true,
+    'other tenant discovery must not inherit an unapproved policy exclusion');
+  assert.equal(isPublicDiscoveryPath('/cgma'), true);
+  assert.equal(isPublicDiscoveryPath('/ekodibiz/trade'), false);
+});

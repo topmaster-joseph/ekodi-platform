@@ -56,3 +56,8 @@ test('setup API is operator-only, never echoes the secret, and the admin page of
   assert.match(page, /\$\('gSecret'\)\.value='';/);
   assert.match(page, /gmail\.googleapis\.com\?project=ekodi-platform/);
 });
+
+test('secret input uses the explicit light input style (not the dark shell theme)', () => {
+  const page = readFileSync(new URL('../mail-admin-page.js', import.meta.url), 'utf8');
+  assert.match(page, /\.ma input\[type=password\]\{[^}]*background:#fff!important/);
+});

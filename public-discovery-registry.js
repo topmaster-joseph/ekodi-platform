@@ -18,11 +18,14 @@ function normalizePath(value='/'){
   return path==='/'?'/':path.replace(/\/$/,'');
 }
 
-// Public surfaces whose page deliberately ships `noindex` (partner login portal).
-// Listing them in the sitemap sends crawlers a contradictory signal.
+// Pages that deliberately ship `noindex` must not be offered for indexing.
+// Keep these page-level exclusions separate from tenant publication and permissions.
 export const PAGE_OWNED_NOINDEX_PATHS=Object.freeze(new Set(['/ekodibiz/trade',
   // Legacy Pages studio; the canonical church live entry is /live/church/.
-  '/ekodichurch/live']));
+  '/ekodichurch/live',
+  // Shared operator-space landing is intentionally noindex, not a tenant storefront.
+  // Its independent /mokdaehumun/live/ tenant route remains unchanged.
+  '/mokdaehumun']));
 
 // Sites whose live entry 308s from /<site> to /<site>/ (audit run 39241336747).
 // The sitemap lists the final URL so crawlers get no redirect hop.

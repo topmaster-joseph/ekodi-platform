@@ -10,7 +10,7 @@ test('devotional share has a common title with no label prefixes', () => {
     date, title: '에코디언의 묵상나눔 · 로마서 12:1', excerpt: '그대로 살아냅니다', url,
   });
   assert.equal(result.split('\n')[0], '2026년 11월 10일 화요일');
-  assert.equal(result.split('\n')[1], '에코디');
+  assert.equal(result.split('\n')[1], '에코디 묵상나눔');
   assert.match(result, /로마서 12:1/);
   assert.match(result, /그대로 살아냅니다/);
   assert.ok(result.endsWith(url));

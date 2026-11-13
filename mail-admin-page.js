@@ -16,7 +16,7 @@ export function mailAdminPage(){
   .ma .badge{flex:none;font-size:13px;font-weight:600;border:1px solid #c9d3e3;background:#fff;color:#14306e!important;border-radius:999px;padding:6px 12px}
   .ma .scopebar{background:#fff;border:1px solid #e3e8f0;border-radius:14px;padding:12px 14px;margin-bottom:12px}
   .ma .scopebar label{display:block;font-size:13px;font-weight:700;color:#4b5565!important;margin-bottom:6px}
-  .ma select,.ma input[type=text],.ma input[type=email]{width:100%;border:1px solid #c9d3e3;border-radius:10px;padding:12px;font:inherit;font-size:16px;color:#0f1b33!important;background:#fff!important}
+  .ma select,.ma input[type=text],.ma input[type=email],.ma input[type=password]{width:100%;border:1px solid #c9d3e3;border-radius:10px;padding:12px;font:inherit;font-size:16px;color:#0f1b33!important;background:#fff!important}
   .ma .scopehint{margin:6px 0 0;font-size:13px;color:#5b6577!important}
   .ma .tabs{display:flex;gap:6px;background:#e7ecf5;border-radius:12px;padding:4px;margin-bottom:12px}
   .ma .tabs button{flex:1;border:0;background:transparent;color:#36425a!important;font:inherit;font-size:15px;font-weight:700;padding:11px 8px;border-radius:9px;cursor:pointer}

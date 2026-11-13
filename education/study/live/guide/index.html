@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="ekodi-ui-type" content="USER">
+  <title>강사용 세부 강의안 · 목포대 FactChat 교육</title>
+  <link rel="stylesheet" href="../../../fonts/pretendard/pretendardvariable-dynamic-subset.css">
+  <link rel="stylesheet" href="../live.css">
+  <link rel="stylesheet" href="./guide.css">
+</head>
+<body class="lv g-body" data-ekodi-ui="USER" data-live-surface="lecture-guide">
+<header class="g-top" data-ekodi-fixed-header>
+  <div class="g-top-row">
+    <a class="lv-brand" href="../?c=mnu-factchat-2026"><span class="lv-brand-mark" aria-hidden="true">E</span><span><strong>강사용 세부 강의안</strong><small>목포대 FactChat · 강사 전용</small></span></a>
+    <span class="grow"></span>
+    <span class="g-clock num" id="gClock">--:--</span>
+    <a class="btn btn-small" href="./?gate=logout">잠그기</a>
+  </div>
+  <div class="g-now-row"><span id="gNow" role="status">불러오는 중…</span><span><a class="btn btn-small" href="#gCreditCard">크레딧</a> <button type="button" class="btn btn-small" id="gJump">지금 구간</button></span></div>
+  <nav class="g-tabs" id="gTabs" role="tablist" aria-label="차수"></nav>
+</header>
+<main class="g-main">
+  <section class="g-card"><h2>수강생 분야 <small>실습 프롬프트 기준</small></h2><div class="g-fields" id="gFields"></div><p class="meta" id="gFieldInfo"></p></section>
+  <section class="g-card" id="gCreditCard"><h2>크레딧 안내 <small>강의 중 공지용</small></h2><div id="gCredit"></div></section>
+  <div id="gSession"></div>
+  <section class="g-card"><h2>시연 뒤 집중 실습 원칙</h2><div id="gFocus"></div></section>
+  <section class="g-card"><h2>보안 3원칙</h2><div id="gSafety"></div></section>
+  <section class="g-card"><h2>준비 체크리스트 <small>이 기기에만 저장</small></h2><div id="gPrep"></div></section>
+  <section class="g-card g-links"><h2>강의 화면 바로가기</h2>
+    <p><a class="btn btn-small" href="../?c=mnu-factchat-2026">강사 스튜디오</a> <a class="btn btn-small" href="../present/?c=mnu-factchat-2026">발표 화면</a> <a class="btn btn-small" href="../lab/?c=mnu-factchat-2026">수강생 실습실</a></p>
+    <p class="meta">이 강의안에는 참가자 개인정보가 없습니다(부서별 인원만). 시연 자료는 모두 가상 예시입니다.</p></section>
+</main>
+<div class="toast" id="toast" role="status" aria-live="assertive" hidden></div>
+<script type="module" src="./guide.js"></script>
+</body>
+</html>

@@ -100,6 +100,8 @@ on:
       - 'invest-admin.js'
       - 'invest-admin.css'
       - 'platform-router-entry-worker.js'
+      - 'ekodibiz-agency-route.js'
+      - 'test/ekodibiz-ai-agency-canonical-route.test.mjs'
       - 'ekodibiz-refund-policy-page.js'
       - 'test/ekodibiz-refund-policy.test.mjs'
       - 'cgma-motor-festival-route.js'
