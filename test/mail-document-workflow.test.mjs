@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {inCollectionWindow,escapeDocumentHtml,verifyCaseEvidence} from '../mail-document-workflow.js';
+import {inCollectionWindow,escapeDocumentHtml,verifyCaseEvidence,collectDocumentMailPages} from '../mail-document-workflow.js';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
 test('EKODI solar 20-25 KST mailbox window is exact',()=>{
@@ -32,4 +32,36 @@ test('cron/UI/schema declare bounded, consented inbox-to-document workflow',asyn
   assert.match(ui,/전자세금계산서 발행 관리/);assert.match(ui,/Gmail 읽기·발송 연결/);
   assert.match(migration,/UNIQUE\(workspace_id,account_id,source_message_id,document_type\)/);
   assert.match(mail,/export async function mailActor/);assert.match(mail,/export async function accountAccess/);
+});
+
+test('document scan follows Gmail pagination including archived matches',async()=>{
+  const calls=[];
+  const messages=await collectDocumentMailPages(async opts=>{
+    calls.push(opts);
+    return calls.length===1
+      ? {messages:Array.from({length:50},(_,i)=>({id:'message-'+i})),nextPageToken:'page2'}
+      : {messages:[{id:'message-50'}],nextPageToken:null};
+  },'"한국전력" "세금계산서"');
+  assert.equal(calls.length,2);
+  assert.equal(calls[0].inboxOnly,false);
+  assert.equal(calls[1].pageToken,'page2');
+  assert.equal(messages.length,51);
+});
+test('a large/looping mailbox cannot be silently marked as a completed scan',async()=>{
+  await assert.rejects(
+    collectDocumentMailPages(async ({pageToken})=>({messages:[{id:'example'}],nextPageToken:'next-'+pageToken}), 'mail', {maxPages:3}),
+    /MAIL_SCAN_LIMIT_REACHED/
+  );
+  await assert.rejects(
+    collectDocumentMailPages(async()=>({messages:[],nextPageToken:'same'}), 'mail'),
+    /MAIL_PAGE_CURSOR_LOOP/
+  );
+});
+test('read-only login boundary, disabled-rule guard, and manual tax request exist',async()=>{
+  const [workflow,ui,adapter]=await Promise.all(['mail-document-workflow.js','mail-admin-page.js','mail-google-adapter.js'].map(read));
+  assert.ok(workflow.indexOf('await workspaceFor(request,env,slug)')<workflow.indexOf('await schema(env.DB);',workflow.indexOf('export async function handleMailDocuments')));
+  assert.match(workflow,/RULE_DISABLED/);
+  assert.match(ui,/docManualTax/);
+  assert.match(ui,/createDocumentRequest\('tax_invoice'\)/);
+  assert.match(adapter,/inboxOnly = true/);
 });
