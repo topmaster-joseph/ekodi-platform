@@ -23,3 +23,7 @@ Release only after exact current SHA passes required Mall + root + orchestration
 ## Financial safety
 
 Do not enable vendor public catalog search (current `rights-unverified`), payment expansion, buyer PII transfer, actual order, automatic fulfillment or e-money consumption. The external support email is an already-sent read-only licensing inquiry, not permission to sell.
+
+## Owner-connected second authentic CI request after protected-base refresh
+
+The EKODI orchestrator refreshed protected base to `39aae6c23e8db8e3ed4b0b2c2bddec52df040274` and recovery head to `c582df0f3b4c19f6554ab68c41afdad5240d8fd0` with zero behind commits. Previous human-connected recovery commit `6889f9310d747d89961c72e1c0e3e1686d2eb78e` passed real Mall validate 43485287166 and full root CI 43485287031 (both success), plus orchestration and conflict guard. The newly bot-authored refresh has `action_required` check placeholders and requires **new authentic checks on this exact head**. This non-functional documentation note is another owner-connected PR event solely to request real CI; it neither changes authorization nor substitutes previous green results. No store or admin backend changes were made. Complete protected merge only after exact new head passes the gates and actual Mall stage/production verification.
