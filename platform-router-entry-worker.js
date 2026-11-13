@@ -18,6 +18,7 @@ import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
 import { routeInvestSite } from './invest-site-system.js';
 import { isSinglesRoute, routeSinglesSurface } from './singles-surface.js';
+import { isPublicAccountingNoticePath } from './public-accounting-notice-page.js';
 import { investIntroPage, investAnalysisPage, investAnalysisScript } from './invest-access-ui.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage, runJournalDigest } from './mail-contact.js';
@@ -512,6 +513,10 @@ async function routePlatform(request,env,ctx){
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'legacy-service-canonical'}});
       }
     }
+    // Exact tenant accounting notices are owned by Shared Site, not the generic
+    // SPACE workspace fallback. Match before Church/Mission/CGMA/SeonamMedi routing.
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isPublicAccountingNoticePath(url.pathname))
+      return legacyPlatformRouter.fetch(request,env,ctx);
     if(host===PUBLIC_HOST){const cooperative=await routeCooperative(request,env);if(cooperative)return cooperative;}
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request,env);if(legacyStores)return legacyStores;
