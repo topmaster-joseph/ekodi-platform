@@ -70,23 +70,13 @@ async function caseFor(db, id, site) {
   if (!row) failure('DOCUMENT_NOT_FOUND',404);
   return row;
 }
-// Do not silently mark a day complete if a mailbox has more matching messages than
-// can be inspected safely during one bounded run. Operators can narrow the rule query.
-export async function collectDocumentMailPages(readPage, query, { maxPages = 8, pageSize = 50 } = {}) {
-  const messages = [];
-  const cursors = new Set();
-  let pageToken = '';
-  for (let index = 0; index < maxPages; index++) {
-    const page = await readPage({ q: query, maxResults: pageSize, pageToken, inboxOnly: false });
-    if (!Array.isArray(page?.messages)) failure('MAIL_RESPONSE_INVALID', 502);
-    messages.push(...page.messages);
-    const next = String(page.nextPageToken || '');
-    if (!next) return messages;
-    if (next === pageToken || cursors.has(next)) failure('MAIL_PAGE_CURSOR_LOOP', 502);
-    cursors.add(next);
-    pageToken = next;
-  }
-  failure('MAIL_SCAN_LIMIT_REACHED', 409);
+// One bounded, resumable page per invocation; no scanning across a large unread backlog.
+export async function fetchDocumentMailPage(readPage, query, pageToken = '') {
+  const page = await readPage({ q: query, maxResults: 12, pageToken, inboxOnly: false });
+  if (!Array.isArray(page?.messages)) failure('MAIL_RESPONSE_INVALID', 502);
+  const nextPageToken = String(page.nextPageToken || '');
+  if (nextPageToken && nextPageToken === pageToken) failure('MAIL_PAGE_CURSOR_LOOP', 502);
+  return { messages: page.messages, nextPageToken, hasMore: Boolean(nextPageToken) };
 }
 async function syncRule(db, env, rule) {
   const account=await db.prepare("SELECT * FROM mail_accounts WHERE id=? AND owner_type='workspace' AND owner_key=? AND enabled=1").bind(rule.account_id,rule.workspace_id).first();
@@ -99,10 +89,8 @@ async function syncRule(db, env, rule) {
   const cursor=await db.prepare('SELECT page_token FROM mail_document_scan_cursors WHERE workspace_id=? AND rule_id=?')
     .bind(rule.workspace_id,rule.id).first();
   const pageToken=String(cursor?.page_token||'');
-  const page=await listGoogleMailMessages(oauth.accessToken,{q:rule.search_query,maxResults:12,pageToken,inboxOnly:false});
-  if(!Array.isArray(page?.messages)) failure('MAIL_RESPONSE_INVALID',502);
-  const nextPageToken=String(page.nextPageToken||'');
-  if(nextPageToken && nextPageToken===pageToken) failure('MAIL_PAGE_CURSOR_LOOP',502);
+  const page=await fetchDocumentMailPage(options => listGoogleMailMessages(oauth.accessToken,options),rule.search_query,pageToken);
+  const nextPageToken=page.nextPageToken;
   let inserted=0;
   const now=new Date().toISOString();
   for(const message of page.messages) {
