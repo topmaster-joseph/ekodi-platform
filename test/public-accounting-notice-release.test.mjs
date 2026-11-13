@@ -26,7 +26,7 @@ test('all five public accounting notice URLs are release-blocking canaries',()=>
 
 test('Finance release remains separately guarded; a public notice does not authorize payments',()=>{
   const finance=read('.github/workflows/deploy-finance.yml');
-  assert.match(finance,/promote_production: /);
+  assert.match(finance,/^\s*promote_production:\s*$/m);
   assert.match(finance,/needs: \[validate, staging\]/);
   assert.match(finance,/EKODI AI Orchestration Gate/);
   assert.match(finance,/guarded-worker-release/);
