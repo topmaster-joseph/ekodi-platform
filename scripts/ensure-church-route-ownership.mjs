@@ -123,26 +123,6 @@ async function verifyMemberPage(url,marker){
   }
   throw new Error(`Church member page verification failed for ${url}: ${last}`);
 }
-async function verifyAccountingNotice(pattern){
- const url='https://'+pattern;
- let last='';
- for(let attempt=1;attempt<=3;attempt++){
-  try{
-   const response=await fetch(url,{redirect:'manual',cache:'no-store'});
-   const route=response.headers.get('x-ekodi-route')||'';
-   const body=await response.text().catch(()=>'');
-   last=`HTTP ${response.status}, x-ekodi-route=${route||'missing'}`;
-   if(isQuotaCircuitBreak({status:response.status,body,config:quotaConfig.circuitBreaker}))
-    throw new Error(`CF-QUOTA-001 circuit open for ${url}: ${last}; no retry`);
-   if(response.status===200&&route==='public-accounting-notice'&&body.includes('회계공지')&&body.includes('public-accounting-notice.js'))return;
-  }catch(error){
-   last=error?.message||String(error);
-   if(last.includes('CF-QUOTA-001 circuit open'))throw error;
-  }
-  if(attempt<3)await new Promise(resolve=>setTimeout(resolve,1000));
- }
- throw new Error(`Public accounting route not ready before 0% candidate: ${url}: ${last}`);
-}
 export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_API_TOKEN}={}){
   if(!token)throw new Error('Missing CLOUDFLARE_API_TOKEN');
   const zones=await cf('/zones?name=ekodi.kr&status=active',token);
@@ -225,8 +205,11 @@ export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_A
   console.log('Church member canonical redirect response verification deferred to guarded candidate deployment.');
   for(const page of CHURCH_ROUTE_CONTRACT.memberDeepPages)await verifyMemberPage(page.url,page.marker);
   await verifyLive(CHURCH_ROUTE_CONTRACT.adminUrl,CHURCH_ROUTE_CONTRACT.adminRoute);
-  for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes)await verifyAccountingNotice(pattern);
-  console.log('Church public/admin/board and five exact accounting routes verified before candidate promotion.');
+  // Exact Cloudflare route ownership is verified above. The *previous* Worker version
+  // can still serve its old generic page until the protected 0% candidate is uploaded.
+  // Prove new accounting HTML only against the candidate, via the release-blocking
+  // five-route manifest; checking it here would deadlock every guarded migration.
+  console.log('Church public/admin/board and five exact accounting route owners verified; HTML receipt deferred to protected 0% candidate.');
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   ensureChurchRouteOwnership().catch(error=>{console.error(error.message);process.exitCode=1});
