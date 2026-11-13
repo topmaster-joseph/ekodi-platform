@@ -113,6 +113,33 @@ test('pre-candidate Church route repair defers exact member response verificatio
 });
 
 
+test('five accounting notices have real Cloudflare route ownership before candidate promotion',async()=>{
+ const sites=['ekodibiz','ekodichurch','ekodimission','cgma','seonammedi'];
+ const paths=sites.map(site=>'ekodi.kr/'+site+'/accounting');
+ assert.deepEqual(CHURCH_ROUTE_CONTRACT.accountingSharedRoutes,paths);
+ assert.equal(CHURCH_ROUTE_CONTRACT.accountingRoute,'public-accounting-notice');
+ const [source,wrangler,manifestText]=await Promise.all([
+  readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8'),
+  readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8'),
+  readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8')
+ ]);
+ const manifest=JSON.parse(manifestText);
+ for(const path of paths){
+  assert.ok(wrangler.includes('pattern = "'+path+'"'),'exact route in config: '+path);
+  const probe=manifest.worker.requests.find(x=>x.url==='https://'+path);
+  assert.ok(probe,'live canary: '+path);
+  assert.ok(probe.headerExpect?.includes('x-ekodi-route: public-accounting-notice'));
+  assert.ok(probe.expect?.includes('회계공지'));
+ }
+ assert.match(source,/for\(const pattern of CHURCH_ROUTE_CONTRACT\.accountingSharedRoutes\)/);
+ assert.match(source,/await createRoute\(zone,token,pattern,CHURCH_ROUTE_CONTRACT\.sharedSite\)/);
+ assert.match(source,/refusing unapproved ownership transfer/);
+ assert.match(source,/Public accounting exact route missing after repair/);
+ assert.match(source,/await verifyAccountingNotice\('https:\/\/'\+pattern,site\)/);
+ assert.match(source,/data-accounting-workspace/);
+ assert.match(source,/CF-QUOTA-001 circuit open/);
+});
+
 test('Church board carve-out stays on Shared Site and guarded candidate verifies board identity',async()=>{
   assert.deepEqual(CHURCH_ROUTE_CONTRACT.boardSharedRoutes,['ekodi.kr/ekodichurch/board*']);
   assert.equal(CHURCH_ROUTE_CONTRACT.boardUrl,'https://ekodi.kr/ekodichurch/board');
