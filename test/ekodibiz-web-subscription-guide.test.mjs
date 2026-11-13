@@ -36,7 +36,8 @@ test('all five proposed managed-site plans have grounded scope, an initial fee a
 
 test('informational prices cannot directly initiate checkout and quote links are accessible', async () => {
   const section = pricing(await read('ekodibiz/index.html'));
-  assert.equal((section.match(/href="mailto:ekodibiz@gmail\.com\?subject=/g) || []).length, 6);
+  assert.equal((section.match(/href="https:\/\/mail\.google\.com\/mail\/\?view=cm&amp;fs=1&amp;to=ekodibiz%40gmail\.com&amp;su=/g) || []).length, 6);
+  assert.doesNotMatch(section, /mailto:/);
   assert.doesNotMatch(section, /<form\b|data-checkout|checkout-intent|<button\b/i);
   assert.match(section, /aria-label="라이트 구독형 홈페이지 견적 문의"/);
   assert.match(section, /noopener noreferrer/);
