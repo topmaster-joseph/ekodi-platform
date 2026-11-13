@@ -694,7 +694,7 @@ jobs:
             if [[ "$fail_count" -eq 0 ]]; then
               # Report names of failing public invariants only: never print response bodies or credentials.
               require 'guest.mime' grep -Eiq '^content-type:[[:space:]]*text/html' /tmp/ekodi-invest-guest.headers
-              require 'guest.no-store' grep -Eiq '^cache-control:.*no-store' /tmp/ekodi-invest-guest.headers
+              require 'guest.no-store' grep -Eiq '^cache-control:[[:space:]]*private, no-store' /tmp/ekodi-invest-guest.headers
               require 'guest.noindex' grep -Eiq '^x-robots-tag:.*noindex' /tmp/ekodi-invest-guest.headers
               require 'guest.hidden-sidebar' grep -Eq 'id="ownerSidebar"[^>]*hidden' /tmp/ekodi-invest-guest.html
               require 'guest.login-intro' grep -Fq 'id="investAuthIntro"' /tmp/ekodi-invest-guest.html
