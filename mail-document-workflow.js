@@ -177,7 +177,7 @@ export async function handleMailDocuments(request,env) {
           !access.permissions.manage || !access.permissions.read) failure('ACCOUNT_PERMISSION_REQUIRED',403);
       if(access.row.provider!=='gmail') failure('MAIL_ADAPTER_NOT_AVAILABLE',409);
       const now=new Date().toISOString();
-      await env.DB.prepare('INSERT INTO mail_document_rules(workspace_id,account_id,document_type,search_query,day_from,day_to,active,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,1,?,?,?) ON CONFLICT(workspace_id,account_id,document_type,search_query) DO UPDATE SET day_from=excluded.day_from,day_to=excluded.day_to,active=1,last_checked_kst_day=NULL,last_error='',updated_at=excluded.updated_at')
+      await env.DB.prepare('INSERT INTO mail_document_rules(workspace_id,account_id,document_type,search_query,day_from,day_to,active,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,1,?,?,?) ON CONFLICT(workspace_id,account_id,document_type,search_query) DO UPDATE SET day_from=excluded.day_from,day_to=excluded.day_to,active=1,last_checked_kst_day=NULL,last_error=excluded.last_error,updated_at=excluded.updated_at')
         .bind(site.workspaceId,access.row.id,type,q,from,to,actor.email,now,now).run();
       const current=await env.DB.prepare('SELECT id FROM mail_document_rules WHERE workspace_id=? AND account_id=? AND document_type=? AND search_query=?')
         .bind(site.workspaceId,access.row.id,type,q).first();
