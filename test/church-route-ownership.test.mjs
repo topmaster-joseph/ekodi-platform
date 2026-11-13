@@ -20,10 +20,11 @@ test('Church route contract avoids the ambiguous no-slash wildcard and verifies 
   assert.equal(CHURCH_ROUTE_CONTRACT.adminRoute,'church-pastor-admin');
 });
 
-test('pre-candidate Cloudflare route ownership is checked while five accounting UI receipts remain mandatory on 0% candidate',async()=>{
+test('pre-candidate Shared Site route ownership is checked while four accounting UI receipts remain mandatory on 0% candidate',async()=>{
  const config=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
- const expected=['ekodibiz','ekodichurch','ekodimission','cgma','seonammedi'].map(x=>'ekodi.kr/'+x+'/accounting');
+ const expected=['ekodibiz','ekodichurch','ekodimission','seonammedi'].map(x=>'ekodi.kr/'+x+'/accounting');
  assert.deepEqual(CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes,expected);
+ assert.ok(!CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes.includes('ekodi.kr/cgma/accounting'),'CGMA independent gateway must not be registered by Shared Site');
  for(const route of expected)assert.ok(config.includes('pattern = "'+route+'"'));
  const source=await readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8');
  const register=source.indexOf('for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes){\n    const current=routes.find');
