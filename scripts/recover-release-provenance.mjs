@@ -321,7 +321,8 @@ const sharedSiteTouched=sourceFiles.some(file=>
    '.github/workflows/verify-admin-production-ui-e2e.yml',
    'scripts/admin-production-ui-coverage.mjs',
    'scripts/ekodi-background-browser-worker.mjs',
-   'scripts/verify-independent-board-live.mjs'].includes(file)||
+   'scripts/verify-independent-board-live.mjs',
+   'scripts/ensure-church-route-ownership.mjs'].includes(file)||
   // Public Invest education / member-entry markup lives in the shared Site Core worker.
   file==='invest-access-ui.js'||
   // A Site Core manifest canary update must deploy even if recovery merges immediately.
