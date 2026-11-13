@@ -9,6 +9,9 @@ export const CHURCH_ROUTE_CONTRACT=Object.freeze({
   desiredGateway:['ekodi.kr/ekodichurch','ekodi.kr/ekodichurch/*'],
   memberRedirectRoutes:['ekodi.kr/ekodichurch/my'],
   boardSharedRoutes:['ekodi.kr/ekodichurch/board*'],
+  // Exact shared accounting routes must exist before candidate override probes.
+  // Wrangler's post-promotion triggers deploy is too late for the 0% canary.
+  accountingNoticeRoutes:['ekodi.kr/ekodibiz/accounting','ekodi.kr/ekodichurch/accounting','ekodi.kr/ekodimission/accounting','ekodi.kr/cgma/accounting','ekodi.kr/seonammedi/accounting'],
   retiredMemberRoutes:['ekodi.kr/ekodichurch/my/*'],
   retiredGateway:'ekodi.kr/ekodichurch*',
   publicUrl:'https://ekodi.kr/ekodichurch/',
@@ -120,6 +123,26 @@ async function verifyMemberPage(url,marker){
   }
   throw new Error(`Church member page verification failed for ${url}: ${last}`);
 }
+async function verifyAccountingNotice(pattern){
+ const url='https://'+pattern;
+ let last='';
+ for(let attempt=1;attempt<=3;attempt++){
+  try{
+   const response=await fetch(url,{redirect:'manual',cache:'no-store'});
+   const route=response.headers.get('x-ekodi-route')||'';
+   const body=await response.text().catch(()=>'');
+   last=`HTTP ${response.status}, x-ekodi-route=${route||'missing'}`;
+   if(isQuotaCircuitBreak({status:response.status,body,config:quotaConfig.circuitBreaker}))
+    throw new Error(`CF-QUOTA-001 circuit open for ${url}: ${last}; no retry`);
+   if(response.status===200&&route==='public-accounting-notice'&&body.includes('회계공지')&&body.includes('public-accounting-notice.js'))return;
+  }catch(error){
+   last=error?.message||String(error);
+   if(last.includes('CF-QUOTA-001 circuit open'))throw error;
+  }
+  if(attempt<3)await new Promise(resolve=>setTimeout(resolve,1000));
+ }
+ throw new Error(`Public accounting route not ready before 0% candidate: ${url}: ${last}`);
+}
 export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_API_TOKEN}={}){
   if(!token)throw new Error('Missing CLOUDFLARE_API_TOKEN');
   const zones=await cf('/zones?name=ekodi.kr&status=active',token);
@@ -155,6 +178,17 @@ export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_A
     await createRoute(zone,token,pattern,CHURCH_ROUTE_CONTRACT.sharedSite);
     routes=(await cf(`/zones/${zone}/workers/routes`,token)).result||[];
   }
+  // First refuse any exact route explicitly owned by another Worker: never silently steal it.
+  for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes){
+    const current=routes.find(row=>row.pattern===pattern);
+    if(current&&current.script!==CHURCH_ROUTE_CONTRACT.sharedSite)
+      throw new Error(`Accounting notice route ${pattern} belongs to ${current.script||'none'}; operator review required`);
+  }
+  for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes){
+    if(routes.some(row=>row.pattern===pattern))continue;
+    await createRoute(zone,token,pattern,CHURCH_ROUTE_CONTRACT.sharedSite);
+    routes=(await cf(`/zones/${zone}/workers/routes`,token)).result||[];
+  }
   for(const pattern of CHURCH_ROUTE_CONTRACT.retiredMemberRoutes){
     const current=routes.find(row=>row.pattern===pattern);
     if(!current)continue;
@@ -175,6 +209,10 @@ export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_A
     const row=routes.find(item=>item.pattern===pattern);
     if(row?.script!==CHURCH_ROUTE_CONTRACT.sharedSite)throw new Error(`Church board Shared Site route missing after repair: ${pattern}`);
   }
+  for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes){
+    const row=routes.find(item=>item.pattern===pattern);
+    if(row?.script!==CHURCH_ROUTE_CONTRACT.sharedSite)throw new Error(`Accounting notice Shared Site route missing: ${pattern}`);
+  }
   for(const pattern of CHURCH_ROUTE_CONTRACT.retiredMemberRoutes){
     if(routes.some(row=>row.pattern===pattern))throw new Error(`Church member descendant route must stay with the generic Pages gateway: ${pattern}`);
   }
@@ -187,7 +225,8 @@ export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_A
   console.log('Church member canonical redirect response verification deferred to guarded candidate deployment.');
   for(const page of CHURCH_ROUTE_CONTRACT.memberDeepPages)await verifyMemberPage(page.url,page.marker);
   await verifyLive(CHURCH_ROUTE_CONTRACT.adminUrl,CHURCH_ROUTE_CONTRACT.adminRoute);
-  console.log('Church public/admin/board boundaries and Pages-owned member descendants verified before candidate promotion.');
+  for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes)await verifyAccountingNotice(pattern);
+  console.log('Church public/admin/board and five exact accounting routes verified before candidate promotion.');
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   ensureChurchRouteOwnership().catch(error=>{console.error(error.message);process.exitCode=1});
