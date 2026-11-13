@@ -20,20 +20,28 @@ test('Church route contract avoids the ambiguous no-slash wildcard and verifies 
   assert.equal(CHURCH_ROUTE_CONTRACT.adminRoute,'church-pastor-admin');
 });
 
-test('all five exact accounting routes are explicitly registered before the 0% candidate, without stealing foreign routes',async()=>{
+test('pre-candidate Cloudflare route ownership is checked while five accounting UI receipts remain mandatory on 0% candidate',async()=>{
  const config=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
  const expected=['ekodibiz','ekodichurch','ekodimission','cgma','seonammedi'].map(x=>'ekodi.kr/'+x+'/accounting');
  assert.deepEqual(CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes,expected);
  for(const route of expected)assert.ok(config.includes('pattern = "'+route+'"'));
  const source=await readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8');
  const register=source.indexOf('for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes){\n    const current=routes.find');
- const verify=source.indexOf('for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes)await verifyAccountingNotice');
- assert.ok(register>0&&verify>register,'route registration and live verification precede guarded promotion');
+ const verifyOwnership=source.indexOf('Accounting notice Shared Site route missing:');
+ assert.ok(register>0&&verifyOwnership>register,'missing exact registration or API re-query');
  assert.match(source,/operator review required/);
- assert.match(source,/route==='public-accounting-notice'/);
- assert.match(source,/body.includes\('회계공지'\)/);
- assert.match(source,/body.includes\('public-accounting-notice.js'\)/);
- assert.match(source,/CF-QUOTA-001 circuit open/);
+ assert.match(source,/accounting HTML receipt deferred to guarded 0% candidate/);
+ assert.doesNotMatch(source,/await verifyAccountingNotice\(/,'no premature demand for not-yet-deployed UI');
+ const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+ for(const route of expected){
+  const item=manifest.worker.requests.find(x=>x.url==='https://'+route);
+  assert.deepEqual(item?.statuses,[200],route);
+  for(const marker of ['회계공지','연도 선택','연간 총괄','월별 소계','public-accounting-notice.js'])assert.ok(item?.expect?.includes(marker),route);
+  assert.ok(item?.headerExpect?.includes('x-ekodi-route: public-accounting-notice'),route);
+ }
+ const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+ assert.ok(workflow.indexOf('Enforce canonical Church route ownership')<workflow.indexOf('Candidate at 0%, verify routes, promote and auto-rollback on failure'));
+ assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
 });
 
 test('Shared Site production workflow repairs Church route ownership before guarded promotion',async()=>{
