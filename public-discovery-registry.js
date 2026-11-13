@@ -30,8 +30,8 @@ export const PAGE_OWNED_NOINDEX_PATHS=Object.freeze(new Set(['/ekodibiz/trade',
 // Sites whose live entry 308s from /<site> to /<site>/ (audit run 39241336747).
 // The sitemap lists the final URL so crawlers get no redirect hop.
 export const TRAILING_SLASH_CANONICAL_PATHS=Object.freeze(new Set([
-  '/bible','/books','/cafe','/community','/ekodichurch','/ekodilab','/ekodipay',
-  '/journal','/jubilee','/life','/live','/open','/publishing','/pyeonggongmok','/work',
+  '/bible','/books','/cafe','/community','/edu','/ekodichurch','/ekodilab','/ekodipay',
+  '/journal','/jubilee','/life','/live','/management','/open','/publishing','/pyeonggongmok','/work',
 ]));
 
 export function isPublicDiscoveryPath(pathname='/'){
@@ -43,7 +43,7 @@ export function isPublicDiscoveryPath(pathname='/'){
   return true;
 }
 
-function normalizeCanonical(value,pathFallback='/'){
+export function normalizeCanonical(value,pathFallback='/'){
   try{
     const url=new URL(String(value||canonicalUrl(pathFallback,DISCOVERY_ORIGIN)));
     if(url.protocol!=='https:'||url.hostname!=='ekodi.kr')return null;
