@@ -23,6 +23,17 @@ export function inCollectionWindow(start, end, date = new Date()) {
   const d = Number(siteDay(date).slice(-2));
   return d >= day(start, 20) && d <= day(end, 25);
 }
+/**
+ * Resume an already-started bounded mailbox scan even after its configured
+ * collection period closes. This prevents 25th-of-month pages from becoming
+ * stranded on the 26th or across a KST month boundary.
+ * Only the persisted, workspace-scoped cursor can authorize an out-of-window
+ * continuation. A disabled rule is never scanned.
+ */
+export function shouldProcessDocumentRule(rule, date = new Date()) {
+  return Boolean(rule?.active) &&
+    (Boolean(Number(rule?.cursor_pending)) || inCollectionWindow(rule.day_from,rule.day_to,date));
+}
 export function escapeDocumentHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[ch]));
 }
@@ -121,10 +132,21 @@ export async function runMailDocumentsSchedule(env) {
   await schema(env.DB);
   const today=siteDay();
   const activeDay=Number(today.slice(-2));
-  const rules=await env.DB.prepare("SELECT * FROM mail_document_rules WHERE active=1 AND day_from<=? AND day_to>=? AND (last_checked_kst_day IS NULL OR last_checked_kst_day<>?) ORDER BY COALESCE(last_checked_at,created_at) ASC,id LIMIT 1").bind(activeDay,activeDay,today).all();
+  // A pending cursor takes precedence over the day window: finish the prior
+  // intake batch first, including on the 26th or after a KST month rollover.
+  // The LEFT JOIN is scoped by BOTH workspace and rule IDs.
+  const rules=await env.DB.prepare(
+    "SELECT r.*, CASE WHEN c.rule_id IS NULL THEN 0 ELSE 1 END AS cursor_pending " +
+    "FROM mail_document_rules r LEFT JOIN mail_document_scan_cursors c " +
+    "ON c.workspace_id=r.workspace_id AND c.rule_id=r.id " +
+    "WHERE r.active=1 AND (c.rule_id IS NOT NULL OR " +
+    "(r.day_from<=? AND r.day_to>=? AND " +
+    "(r.last_checked_kst_day IS NULL OR r.last_checked_kst_day<>?))) " +
+    "ORDER BY COALESCE(r.last_checked_at,r.created_at) ASC,r.id LIMIT 1"
+  ).bind(activeDay,activeDay,today).all();
   let scannedRules=0,inserted=0,failed=0;
   for(const rule of rules.results||[]) {
-    if (!inCollectionWindow(rule.day_from,rule.day_to)) continue;
+    if (!shouldProcessDocumentRule(rule)) continue;
     try { const result=await syncRule(env.DB,env,rule); scannedRules++; inserted+=result.inserted; }
     catch(error) {
       failed++;
