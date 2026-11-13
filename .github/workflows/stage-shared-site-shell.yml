@@ -271,9 +271,13 @@ jobs:
               && verify_public_path '/ekodibiz/trade' 'PRIVATE TRADE WORKSPACE' 'x-ekodi-route: trade-partner-workspace' \
               && verify_public_path '/messenger' 'EKODI Messenger' 'x-ekodi-shell: v2' \
               && verify_public_path '/invest' 'EKODI Invest' 'x-ekodi-shell: v2' \
-              && [[ "$(curl -sS -D /tmp/bbq-handoff.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'x-ekodi-staging-host: ekodi.kr' "$STAGING_URL/cmpmyi")" == '308' ]] \
-              && grep -Fiq 'location: https://ekodi.kr/bbqcg' /tmp/bbq-handoff.headers \
-              && grep -Fiq 'x-ekodi-route: bbqcg-former-store-gateway' /tmp/bbq-handoff.headers \
+              && [[ "$(curl -sS -D /tmp/store-guide.headers -o /tmp/store-guide.body -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'x-ekodi-staging-host: ekodi.kr' "$STAGING_URL/cmpmyi")" == '200' ]] \
+              && grep -Fiq 'x-ekodi-route: cmpmyi-three-store-guide' /tmp/store-guide.headers \
+              && grep -Fq 'BBQ 무안청계점' /tmp/store-guide.body \
+              && grep -Fq '피자마루 목포대점' /tmp/store-guide.body \
+              && grep -Fq '요거트퍼플 목포대점' /tmp/store-guide.body \
+              && [[ "$(curl -sS -D /tmp/stores-redirect.headers -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 -H 'x-ekodi-staging-host: ekodi.kr' "$STAGING_URL/stores")" == '308' ]] \
+              && grep -Fiq 'location: https://ekodi.kr/cmpmyi' /tmp/stores-redirect.headers \
               && verify_public_path '/deployment-probe' 'OPERATING SPACE' 'x-ekodi-workspace-gateway: space-service-binding' \
               && verify_public_path '/ekodibiz' 'EKODIBIZ' 'x-ekodi-workspace-gateway: ekodibiz-service-binding' \
               && verify_public_path '/insurance' '보험을 파는 AI가 아니라, 내 보험을 챙겨주는 AI' 'x-ekodi-route: public-insurance' \

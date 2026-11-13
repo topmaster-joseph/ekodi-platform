@@ -98,13 +98,14 @@ test('independent public tenant sites inherit readability without platform chrom
   assert.doesNotMatch(injector,/data-ekodi-tenant-readability[^\n]+My EKODI/);
 });
 
-test('former multi-store gateway has one canonical BBQ destination',async()=>{
+test('public store guide lists the 3 independent store homepages without creating shared ownership',async()=>{
   const source=await read('store-gateway-page.js');
-  assert.match(source,/BBQ_PUBLIC_PATH = '\/bbqcg'/);
-  assert.match(source,/status: 308/);
-  assert.match(source,/target\.search = previous\.search/);
-  assert.doesNotMatch(source,/store\.slug/);
-  assert.doesNotMatch(source,/pizzamaru|yogurt|jadam/);
+  assert.match(source,/STORE_GUIDE_PATH = '\/cmpmyi'/);
+  assert.match(source,/path: '\/bbqcg'/);
+  assert.match(source,/path: '\/pizzamaru'/);
+  assert.match(source,/path: '\/yogurt'/);
+  assert.match(source,/cmpmyi-three-store-guide/);
+  assert.doesNotMatch(source,/status: 308|href="\/jadam"/);
 });
 
 test('delegated admin navigation never requires a category click before reaching a task',async()=>{
