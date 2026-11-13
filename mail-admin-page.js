@@ -78,7 +78,7 @@ export function mailAdminPage(){
       <div class="field"><label for="docTo">매월 종료일</label><input id="docTo" type="number" min="1" max="31" value="25"></div>
       <button class="btn primary submit" type="submit">메일 자동점검 규칙 저장</button>
     </form>
-    <div class="actions" style="margin:14px 0"><button id="docManual" class="btn" type="button">＋ 매출확인서 요청 직접 등록</button><button id="docReload" class="btn" type="button">새로고침</button><a class="btn" href="https://ekodi.kr/admin?route=finance">전자세금계산서 발행 관리</a></div>
+    <div class="actions" style="margin:14px 0"><button id="docManual" class="btn" type="button">＋ 매출확인서 요청 직접 등록</button><button id="docManualTax" class="btn" type="button">＋ 세금계산서 요청 직접 등록</button><button id="docReload" class="btn" type="button">새로고침</button><a class="btn" href="https://ekodi.kr/admin?route=finance">전자세금계산서 발행 관리</a></div>
     <p id="docNotice" class="note" aria-live="polite"></p>
     <h3 class="panel-title">자동점검 규칙</h3><div id="docRules" class="accounts"></div>
     <h3 class="panel-title">발행 요청 및 문서 대장</h3><div id="docCases" class="accounts"></div>
@@ -124,7 +124,7 @@ export function mailAdminPage(){
       const d=document.createElement('article');d.className='account';d.append(docText('strong',r.document_type==='tax_invoice'?'전자세금계산서 요청':'매출확인서 요청'));
       d.append(docText('p',r.search_query+' · 매월 '+r.day_from+'~'+r.day_to+'일 · '+(r.active?'점검 설정':'중단'),'note'));
       d.append(docText('p','최근 점검: '+(r.last_checked_at||'없음')+(r.last_error?' · 오류: '+r.last_error:''),'note'));
-      d.append(docButton('지금 메일 확인',async()=>{try{docNotice('메일 확인 중');const x=await api('/documents/rules/'+r.id+'/sync',{method:'POST',body:JSON.stringify({workspace:current.slug})});docNotice('조회 '+x.scanned+'건 · 신규 요청 '+x.inserted+'건');await loadDocuments()}catch(e){docNotice(e.message)}},'primary'));
+      d.append(docButton('지금 메일 확인',async()=>{try{docNotice('메일 확인 중');const x=await api('/documents/rules/'+r.id+'/sync',{method:'POST',body:JSON.stringify({workspace:current.slug})});docNotice('조회 '+x.scanned+'건 · 신규 요청 '+x.inserted+'건');await loadDocuments()}catch(e){docNotice(e.code==='MAIL_SCAN_LIMIT_REACHED'?'메일 검색결과가 400건을 초과합니다. 검색 조건에 발신자 또는 최근 날짜를 추가한 뒤 다시 시도하세요.':e.message)}},'primary'));
       if(r.active)d.append(docButton('규칙 중단',async()=>{if(!confirm('이 사이트의 해당 메일 자동점검을 중단할까요? 기존 요청과 발행 기록은 유지됩니다.'))return;try{await api('/documents/rules/'+r.id+'/disable',{method:'POST',body:JSON.stringify({workspace:current.slug})});await loadDocuments()}catch(e){docNotice(e.message)}},'danger'));
       ruleBox.append(d);
     }
@@ -159,7 +159,9 @@ export function mailAdminPage(){
     catch(e){win.close();docNotice(e.message)}
   }
   $('documentRuleForm').onsubmit=async e=>{e.preventDefault();if(current?.type!=='workspace'){docNotice('사이트를 선택하세요.');return}try{await api('/documents/rules',{method:'POST',body:JSON.stringify({workspace:current.slug,accountId:Number($('docAccount').value),documentType:$('docKind').value,searchQuery:$('docQuery').value,dayFrom:Number($('docFrom').value),dayTo:Number($('docTo').value)})});await loadDocuments()}catch(e){docNotice(e.message)}};
-  $('docManual').onclick=async()=>{if(current?.type!=='workspace')return;try{await api('/documents/requests',{method:'POST',body:JSON.stringify({workspace:current.slug,documentType:'sales_certificate'})});await loadDocuments()}catch(e){docNotice(e.message)}};
+  async function createDocumentRequest(kind){if(current?.type!=='workspace')return;try{await api('/documents/requests',{method:'POST',body:JSON.stringify({workspace:current.slug,documentType:kind})});await loadDocuments()}catch(e){docNotice(e.message)}};
+  $('docManual').onclick=()=>createDocumentRequest('sales_certificate');
+  $('docManualTax').onclick=()=>createDocumentRequest('tax_invoice');
   $('docReload').onclick=()=>loadDocuments();
 
   function keyBytes(b){const p='='.repeat((4-b.length%4)%4),r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(r,c=>c.charCodeAt(0))}

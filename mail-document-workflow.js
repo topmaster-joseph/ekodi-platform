@@ -69,16 +69,34 @@ async function caseFor(db, id, site) {
   if (!row) failure('DOCUMENT_NOT_FOUND',404);
   return row;
 }
+// Do not silently mark a day complete if a mailbox has more matching messages than
+// can be inspected safely during one bounded run. Operators can narrow the rule query.
+export async function collectDocumentMailPages(readPage, query, { maxPages = 8, pageSize = 50 } = {}) {
+  const messages = [];
+  const cursors = new Set();
+  let pageToken = '';
+  for (let index = 0; index < maxPages; index++) {
+    const page = await readPage({ q: query, maxResults: pageSize, pageToken, inboxOnly: false });
+    if (!Array.isArray(page?.messages)) failure('MAIL_RESPONSE_INVALID', 502);
+    messages.push(...page.messages);
+    const next = String(page.nextPageToken || '');
+    if (!next) return messages;
+    if (next === pageToken || cursors.has(next)) failure('MAIL_PAGE_CURSOR_LOOP', 502);
+    cursors.add(next);
+    pageToken = next;
+  }
+  failure('MAIL_SCAN_LIMIT_REACHED', 409);
+}
 async function syncRule(db, env, rule) {
   const account=await db.prepare("SELECT * FROM mail_accounts WHERE id=? AND owner_type='workspace' AND owner_key=? AND enabled=1").bind(rule.account_id,rule.workspace_id).first();
   if (!account || account.provider!=='gmail' || account.connection_status!=='connected') failure('GMAIL_NOT_CONNECTED',409);
   const oauth=await googleAccessForAccount(env,db,account);
   if (!hasGoogleReadScope(oauth.scopes)) failure('MAIL_READ_SCOPE_REQUIRED',409);
   // Gmail results are untrusted requests, never a trigger for automatic financial issuance.
-  const messages=await listGoogleMailMessages(oauth.accessToken,{q:rule.search_query,maxResults:30});
+  const messages=await collectDocumentMailPages(options => listGoogleMailMessages(oauth.accessToken, options), rule.search_query);
   let inserted=0;
   const now=new Date().toISOString();
-  for(const message of messages.messages || []) {
+  for(const message of messages) {
     if (!/^[A-Za-z0-9_-]{5,128}$/.test(String(message.id||''))) continue;
     const id=crypto.randomUUID();
     const result=await db.prepare("INSERT OR IGNORE INTO mail_document_cases(id,workspace_id,account_id,rule_id,document_type,source_type,source_message_id,source_from,source_subject,source_date,status,created_by,created_at,updated_at) VALUES(?,?,?,?,?,'mail',?,?,?,?,'REVIEW','ekodi-mail-scheduler',?,?)")
@@ -90,7 +108,7 @@ async function syncRule(db, env, rule) {
   }
   await db.prepare("UPDATE mail_document_rules SET last_checked_at=?,last_checked_kst_day=?,last_error='',updated_at=? WHERE id=? AND workspace_id=?")
     .bind(now,siteDay(),now,rule.id,rule.workspace_id).run();
-  return {scanned:(messages.messages||[]).length,inserted};
+  return {scanned:messages.length,inserted};
 }
 export async function runMailDocumentsSchedule(env) {
   if (!env?.DB) return {scannedRules:0,reason:'DB_UNAVAILABLE'};
@@ -130,11 +148,11 @@ export async function handleMailDocuments(request,env) {
   }
   if(!env?.DB) return json({code:'DB_UNAVAILABLE'},503,origin);
   try {
-    await schema(env.DB);
     const body=request.method==='POST'?await input(request):{};
     const slug=txt(request.method==='GET'?url.searchParams.get('workspace'):body.workspace,90).toLowerCase();
     if(!/^[a-z0-9][a-z0-9-]{0,89}$/.test(slug)) failure('WORKSPACE_REQUIRED');
     const {actor,site}=await workspaceFor(request,env,slug);
+    await schema(env.DB);
     if (url.pathname===PREFIX+'/overview'&&request.method==='GET') {
       const [rules,cases]=await Promise.all([
         env.DB.prepare('SELECT * FROM mail_document_rules WHERE workspace_id=? ORDER BY id DESC').bind(site.workspaceId).all(),
@@ -159,6 +177,7 @@ export async function handleMailDocuments(request,env) {
     const sync=url.pathname.match(/^\/api\/mail\/control\/documents\/rules\/(\d+)\/sync$/);
     if(sync&&request.method==='POST') {
       const rule=await ruleFor(env.DB,Number(sync[1]),site);
+      if (!rule.active) failure('RULE_DISABLED',409);
       const access=await accountAccess(env.DB,actor,rule.account_id);
       if(!access||!access.permissions.read||!access.permissions.manage) failure('ACCOUNT_PERMISSION_REQUIRED',403);
       return json({ok:true,...await syncRule(env.DB,env,rule)},200,origin);
