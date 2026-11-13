@@ -1,15 +1,102 @@
 {
-  "version": 120,
+  "version": 121,
   "worker": {
     "name": "shy-thunder-39a4",
     "config": "wrangler.site.toml",
     "requests": [
       {
         "url": "https://ekodi.kr/ekodibiz/accounting",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
-        "expect": ["회계공지", "연도 선택", "연간 총괄", "월별 소계", "public-accounting-notice.js"],
-        "headerExpect": ["x-ekodi-route: public-accounting-notice", "x-content-type-options: nosniff"],
+        "expect": [
+          "회계공지",
+          "연도 선택",
+          "연간 총괄",
+          "월별 소계",
+          "public-accounting-notice.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: public-accounting-notice",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodichurch/accounting",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "회계공지",
+          "연도 선택",
+          "연간 총괄",
+          "월별 소계",
+          "public-accounting-notice.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: public-accounting-notice",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/ekodimission/accounting",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "회계공지",
+          "연도 선택",
+          "연간 총괄",
+          "월별 소계",
+          "public-accounting-notice.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: public-accounting-notice",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/cgma/accounting",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "회계공지",
+          "연도 선택",
+          "연간 총괄",
+          "월별 소계",
+          "public-accounting-notice.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: public-accounting-notice",
+          "x-content-type-options: nosniff"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/seonammedi/accounting",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "회계공지",
+          "연도 선택",
+          "연간 총괄",
+          "월별 소계",
+          "public-accounting-notice.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: public-accounting-notice",
+          "x-content-type-options: nosniff"
+        ],
         "rollbackVerify": false
       },
       {
@@ -340,7 +427,9 @@
       },
       {
         "url": "https://ekodi.kr/cmpmyi",
-        "statuses": [200],
+        "statuses": [
+          200
+        ],
         "redirect": "manual",
         "expect": [
           "data-store-guide=\"three-independent-stores\"",
@@ -356,7 +445,9 @@
       },
       {
         "url": "https://ekodi.kr/stores",
-        "statuses": [308],
+        "statuses": [
+          308
+        ],
         "redirect": "manual",
         "headerExpect": [
           "location: https://ekodi.kr/cmpmyi",
