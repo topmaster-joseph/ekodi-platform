@@ -36,6 +36,25 @@ test('public accounting pages outrank independent tenant and Church wildcard gat
   assert.match(config,/pattern = "ekodi\.kr\/ekodichurch\/board\*"/);
 });
 
+test('entry gateway serves five exact accounting notices before tenant SPACE fallback',async()=>{
+  const {default:router}=await import('../platform-router-entry-worker.js');
+  const paths=['ekodibiz','ekodichurch','ekodimission','cgma','seonammedi'];
+  const entry=read('platform-router-entry-worker.js');
+  const exact=entry.indexOf('isPublicAccountingNoticePath(url.pathname)');
+  const churchSpace=entry.indexOf('isEkodiMissionSpacePath(url.pathname)');
+  const tenantFallback=entry.indexOf('isPublicWorkspacePath(url.pathname)&&!isEkodiBizOwnedPath(url.pathname)');
+  const seonam=entry.indexOf('isSeonamMediPath(url.pathname)');
+  assert.ok(exact>0&&exact<churchSpace&&exact<tenantFallback&&exact<seonam);
+  for(const site of paths){
+    const url='https://ekodi.kr/'+site+'/accounting';
+    const response=await router.fetch(new Request(url),{},{});
+    assert.equal(response.status,200,url);
+    assert.equal(response.headers.get('x-ekodi-route'),'public-accounting-notice',url);
+    const html=await response.text();
+    for(const marker of ['회계공지','연도 선택','연간 총괄','월별 소계','public-accounting-notice.js'])assert.ok(html.includes(marker),url+' missing '+marker);
+  }
+});
+
 test('Finance release remains separately guarded; a public notice does not authorize payments',()=>{
   const finance=read('.github/workflows/deploy-finance.yml');
   assert.match(finance,/^\s*promote_production:\s*$/m);
