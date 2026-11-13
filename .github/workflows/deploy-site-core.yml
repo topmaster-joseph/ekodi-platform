@@ -102,6 +102,8 @@ on:
       - 'platform-router-entry-worker.js'
       - 'ekodibiz-agency-route.js'
       - 'test/ekodibiz-ai-agency-canonical-route.test.mjs'
+      - 'scripts/verify-ekodibiz-agency-admin-alias-live.mjs'
+      - 'test/ekodibiz-ai-agency-legacy-live.test.mjs'
       - 'ekodibiz-refund-policy-page.js'
       - 'test/ekodibiz-refund-policy.test.mjs'
       - 'cgma-motor-festival-route.js'
@@ -967,11 +969,19 @@ jobs:
       - name: Enforce canonical Church route ownership
         run: node scripts/ensure-church-route-ownership.mjs
 
+      - name: Verify AI agency legacy admin alias regression offline
+        run: node --test test/ekodibiz-ai-agency-canonical-route.test.mjs test/ekodibiz-ai-agency-legacy-live.test.mjs
+
       - name: Candidate at 0%, verify routes, promote and auto-rollback on failure
         id: promote
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/guarded-worker-release.mjs --manifest deploy/manifests/shared-site.worker.json
+
+      - name: Verify AI agency legacy admin alias on production host
+        id: v_ekodibiz_agency_legacy
+        if: ${{ !cancelled() && steps.promote.outcome == 'success' }}
+        run: node scripts/verify-ekodibiz-agency-admin-alias-live.mjs
 
       - name: Verify SeonamMedi live release convergence
         id: v_seonammedi_release
@@ -1334,7 +1344,7 @@ jobs:
         shell: bash
         env:
           RELEASE_SHA: ${{ github.sha }}
-        run: node scripts/record-post-promotion-verification.mjs --out=artifacts/post-promotion-verification.json -- 'seonammedi-kr|release-convergence|v_seonammedi_release|${{ steps.v_seonammedi_release.outcome }}' 'seonammedi-ekodi-subpath|release-convergence|v_seonammedi_release_subpath|${{ steps.v_seonammedi_release_subpath.outcome }}' 'seonammedi|public-finance-boundary|v_seonammedi_finance|${{ steps.v_seonammedi_finance.outcome }}' 'seonammedi|board-url-canonical|v_seonammedi_board_urls|${{ steps.v_seonammedi_board_urls.outcome }}' 'shared-site|durable-write-queue|v_write_queue_consumer|${{ steps.v_write_queue_consumer.outcome }}' 'seonammedi|edge-cache|v_seonammedi_edge_cache|${{ steps.v_seonammedi_edge_cache.outcome }}' 'shared-site|turnstile-readiness|v_turnstile|${{ steps.v_turnstile.outcome }}' 'ekodimission|live-shell|v_mission|${{ steps.v_mission.outcome }}' 'ekodimall|canonical-address|v_mall|${{ steps.v_mall.outcome }}' 'admin|route-ownership|v_admin_route|${{ steps.v_admin_route.outcome }}' 'device-admin|artifact-parity|v_device_admin|${{ steps.v_device_admin.outcome }}' 'ai-provider-control|production-surface|v_ai_provider|${{ steps.v_ai_provider.outcome }}' 'independent-board|subpages-gated|v_independent_board|${{ steps.v_independent_board.outcome }}' 'all-services|link-audit|v_service_links|${{ steps.v_service_links.outcome }}'
+        run: node scripts/record-post-promotion-verification.mjs --out=artifacts/post-promotion-verification.json -- 'seonammedi-kr|release-convergence|v_seonammedi_release|${{ steps.v_seonammedi_release.outcome }}' 'seonammedi-ekodi-subpath|release-convergence|v_seonammedi_release_subpath|${{ steps.v_seonammedi_release_subpath.outcome }}' 'ekodibiz|agency-admin-legacy-route|v_ekodibiz_agency_legacy|${{ steps.v_ekodibiz_agency_legacy.outcome }}' 'seonammedi|public-finance-boundary|v_seonammedi_finance|${{ steps.v_seonammedi_finance.outcome }}' 'seonammedi|board-url-canonical|v_seonammedi_board_urls|${{ steps.v_seonammedi_board_urls.outcome }}' 'shared-site|durable-write-queue|v_write_queue_consumer|${{ steps.v_write_queue_consumer.outcome }}' 'seonammedi|edge-cache|v_seonammedi_edge_cache|${{ steps.v_seonammedi_edge_cache.outcome }}' 'shared-site|turnstile-readiness|v_turnstile|${{ steps.v_turnstile.outcome }}' 'ekodimission|live-shell|v_mission|${{ steps.v_mission.outcome }}' 'ekodimall|canonical-address|v_mall|${{ steps.v_mall.outcome }}' 'admin|route-ownership|v_admin_route|${{ steps.v_admin_route.outcome }}' 'device-admin|artifact-parity|v_device_admin|${{ steps.v_device_admin.outcome }}' 'ai-provider-control|production-surface|v_ai_provider|${{ steps.v_ai_provider.outcome }}' 'independent-board|subpages-gated|v_independent_board|${{ steps.v_independent_board.outcome }}' 'all-services|link-audit|v_service_links|${{ steps.v_service_links.outcome }}'
 
       - name: Persist per-site post-promotion verification evidence
         if: ${{ always() && steps.verification_ledger.outcome != 'skipped' }}
