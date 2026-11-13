@@ -23,6 +23,8 @@ ENVIRONMENT = "production"
 OPERATOR_NOTIFY_ENABLED = "true"
 OPERATOR_NOTIFY_SENDER = "ekodibiz@gmail.com"
 OPERATOR_NOTIFY_RECIPIENTS = "topmaster.joseph@gmail.com"
+# 2026-11-13 운영자 결정: 운영 알림은 휴대폰 푸시(링크 포함)만, 메일 발송 끔.
+OPERATOR_NOTIFY_MAIL_ENABLED = "false"
 # EKODI-MAIL-PUSH-ALL-001: 연결된 모든 메일의 새 메일을 최고관리자 휴대폰으로 알림(끄려면 "false").
 OPERATOR_MAIL_PUSH_ENABLED = "true"
 # KG Inicis TEST channel is public SDK configuration; do not put MID apikey

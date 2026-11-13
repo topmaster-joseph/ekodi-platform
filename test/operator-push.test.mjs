@@ -34,6 +34,10 @@ test('a notice succeeds when either phone push or Gmail delivers; waits when nei
   let pushed;
   const viaPush = await sendOperatorNotice({ DB: fakeDb() }, notice, { push: async (_e, p) => { pushed = p; return { ok: true, sent: 1 }; } });
   assert.equal(viaPush.ok, true); assert.equal(viaPush.push, true); assert.equal(pushed.targetPath, '/ekodimall/order-ops');
+  let mailCalled = false;
+  const pushOnly = await sendOperatorNotice({ DB: fakeDb() }, notice, { push: async () => ({ ok: true, sent: 1 }), send: async () => { mailCalled = true; return { id: 'm' }; } });
+  assert.equal(pushOnly.ok, true); assert.equal(pushOnly.mail, false); assert.equal(mailCalled, false, 'mail is off by default');
+  assert.match(readFileSync(new URL('../wrangler.api.toml', import.meta.url), 'utf8'), /OPERATOR_NOTIFY_MAIL_ENABLED = "false"/);
   const none = await sendOperatorNotice({ DB: fakeDb() }, notice, { push: async () => ({ ok: false, code: 'OPERATOR_PUSH_NO_DEVICE' }) });
   assert.equal(none.code, 'NO_OPERATOR_CHANNEL');
 });
