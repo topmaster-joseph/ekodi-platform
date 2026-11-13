@@ -13,7 +13,7 @@ test('documents view uses tabs and cards instead of wide tables', () => {
   assert.ok(body.includes("key:'issued'"));
   assert.ok(!body.includes('<table>'));
   assert.ok(read('church-reports-admin.css').includes('.church-doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))'));
-  assert.match(read('church-pastor-admin-page.js'), /church-reports-admin\.js\?v=20261109-tabs1/);
+  assert.match(read('church-pastor-admin-page.js'), /church-reports-admin\.js\?v=20261113-compact1/);
 });
 
 test('login page asks to continue or switch when a session already exists', () => {
