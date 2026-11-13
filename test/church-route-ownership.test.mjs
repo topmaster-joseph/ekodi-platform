@@ -20,6 +20,22 @@ test('Church route contract avoids the ambiguous no-slash wildcard and verifies 
   assert.equal(CHURCH_ROUTE_CONTRACT.adminRoute,'church-pastor-admin');
 });
 
+test('all five exact accounting routes are explicitly registered before the 0% candidate, without stealing foreign routes',async()=>{
+ const config=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+ const expected=['ekodibiz','ekodichurch','ekodimission','cgma','seonammedi'].map(x=>'ekodi.kr/'+x+'/accounting');
+ assert.deepEqual(CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes,expected);
+ for(const route of expected)assert.ok(config.includes('pattern = "'+route+'"'));
+ const source=await readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8');
+ const register=source.indexOf('for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes){\n    const current=routes.find');
+ const verify=source.indexOf('for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes)await verifyAccountingNotice');
+ assert.ok(register>0&&verify>register,'route registration and live verification precede guarded promotion');
+ assert.match(source,/operator review required/);
+ assert.match(source,/route==='public-accounting-notice'/);
+ assert.match(source,/body.includes\('회계공지'\)/);
+ assert.match(source,/body.includes\('public-accounting-notice.js'\)/);
+ assert.match(source,/CF-QUOTA-001 circuit open/);
+});
+
 test('Shared Site production workflow repairs Church route ownership before guarded promotion',async()=>{
   const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
   const repair=workflow.indexOf('Enforce canonical Church route ownership');
