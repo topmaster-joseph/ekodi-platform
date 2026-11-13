@@ -15,13 +15,14 @@ const COPY = Object.freeze({
 
 // JOURNAL-MASTHEAD-20261108: 정론지(A) 틀 + 학술지(C) 문서번호·초록·인용 + 매거진(B) 번호 목록.
 const UI = Object.freeze({
-  'ko-KR': { leadLabel:'이번 호 머리기사', formTitle:'편집부에 보내기', formKind:'종류', kindComment:'의견', kindQuestion:'질문', kindCorrection:'정정 요청', formName:'이름 (선택)', formEmail:'답장 받을 이메일', formMessage:'내용', formSend:'보내기', formSending:'보내는 중…', formDone:'편집부에 잘 전달되었습니다. 답장은 적어 주신 이메일로 드립니다.', formFail:'지금은 전송이 되지 않았습니다. 아래 메일 주소로 직접 보내 주세요.', formClose:'닫기', share:'링크 공유', copied:'링크를 복사했습니다', cite:'인용하기', citeCopied:'인용 형식을 복사했습니다', print:'인쇄', related:'함께 읽을 글', prev:'이전 글', next:'다음 글', loading:'글을 불러오는 중입니다…', failed:'글 목록을 잠시 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', retry:'다시 시도', book:'에코디서점 도서', picks:'편집부 추천', editor:'편집자의 말', editorBody:'기록은 기억을 넘어 책임이 됩니다. 성공뿐 아니라 질문, 실패, 수정, 검증의 흔적까지 남깁니다.', latest:'최신 기록', abstract:'요약', note:'편집 노트', correction:'정정·의견 보내기', talk:'커뮤니티에서 이야기하기', readerTitle:'이 글에 대해 이야기해 주세요', readerBody:'질문, 반론, 정정 요청 모두 환영합니다. 편집부가 읽고 필요한 내용은 글에 반영합니다.', count:(n) => `${n}편`, by:'글', archive:'모든 기록', motto:'말씀과 삶, 기술과 공동체의 공적 기록', lettersLink:'독자 편지', readersTitle:'독자와 함께 쓰는 기록', readersBody:'새 글은 RSS로 받아 보시고, 의견·질문·정정 요청은 편집부에 보내 주세요. 보내 주신 정정은 글 아래 이력으로 남깁니다.', letter:'독자 편지 보내기', rss:'RSS 구독', community:'커뮤니티에서 이야기하기', policy:'편집 원칙 — 모든 글은 작성 주체(편집부·AI 협업·저자)를 밝히고, 정정 요청을 받으면 글 아래에 이력을 남깁니다.' },
-  en: { leadLabel:'Lead story', formTitle:'Write to the editors', formKind:'Type', kindComment:'Comment', kindQuestion:'Question', kindCorrection:'Correction', formName:'Name (optional)', formEmail:'Your email for a reply', formMessage:'Message', formSend:'Send', formSending:'Sending…', formDone:'Delivered to the editors. We will reply to your email.', formFail:'Could not send right now. Please email the editors directly below.', formClose:'Close', share:'Share link', copied:'Link copied', cite:'Cite', citeCopied:'Citation copied', print:'Print', related:'Read next', prev:'Previous', next:'Next', loading:'Loading articles…', failed:'Articles could not be loaded right now. Please try again shortly.', retry:'Retry', book:'EKODI Books', picks:'Editors’ picks', editor:'From the editors', editorBody:'A record is more than memory. It becomes accountability, including questions, failures, corrections, and verification.', latest:'Latest', abstract:'Summary', note:'Editorial note', correction:'Send a correction or comment', talk:'Discuss in the community', readerTitle:'Tell us what you think', readerBody:'Questions, objections and corrections are welcome. The editors read every letter and update the record when needed.', count:(n) => `${n}`, by:'By', archive:'All records', motto:'A public record of faith, life, technology and community', lettersLink:'Letters', readersTitle:'A record written with readers', readersBody:'Follow new articles by RSS and send comments, questions or corrections to the editors. Corrections are kept below each article.', letter:'Write to the editors', rss:'RSS', community:'Talk in the EKODI community', policy:'Editorial policy — every article names who wrote it (editors, AI-assisted, author) and keeps its correction history.' },
+  'ko-KR': { submitLink:'투고 안내', leadLabel:'이번 호 머리기사', formTitle:'편집부에 보내기', formKind:'종류', kindComment:'의견', kindQuestion:'질문', kindCorrection:'정정 요청', formName:'이름 (선택)', formEmail:'답장 받을 이메일', formMessage:'내용', formSend:'보내기', formSending:'보내는 중…', formDone:'편집부에 잘 전달되었습니다. 답장은 적어 주신 이메일로 드립니다.', formFail:'지금은 전송이 되지 않았습니다. 아래 메일 주소로 직접 보내 주세요.', formClose:'닫기', share:'링크 공유', copied:'링크를 복사했습니다', cite:'인용하기', citeCopied:'인용 형식을 복사했습니다', print:'인쇄', related:'함께 읽을 글', prev:'이전 글', next:'다음 글', loading:'글을 불러오는 중입니다…', failed:'글 목록을 잠시 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', retry:'다시 시도', book:'에코디서점 도서', picks:'편집부 추천', editor:'편집자의 말', editorBody:'기록은 기억을 넘어 책임이 됩니다. 성공뿐 아니라 질문, 실패, 수정, 검증의 흔적까지 남깁니다.', latest:'최신 기록', abstract:'요약', note:'편집 노트', correction:'정정·의견 보내기', talk:'커뮤니티에서 이야기하기', readerTitle:'이 글에 대해 이야기해 주세요', readerBody:'질문, 반론, 정정 요청 모두 환영합니다. 편집부가 읽고 필요한 내용은 글에 반영합니다.', count:(n) => `${n}편`, by:'글', archive:'모든 기록', motto:'말씀과 삶, 기술과 공동체의 공적 기록', lettersLink:'독자 편지', readersTitle:'독자와 함께 쓰는 기록', readersBody:'새 글은 RSS로 받아 보시고, 의견·질문·정정 요청은 편집부에 보내 주세요. 보내 주신 정정은 글 아래 이력으로 남깁니다.', letter:'독자 편지 보내기', rss:'RSS 구독', community:'커뮤니티에서 이야기하기', policy:'편집 원칙 — 모든 글은 작성 주체(편집부·AI 협업·저자)를 밝히고, 정정 요청을 받으면 글 아래에 이력을 남깁니다.' },
+  en: { submitLink:'Submissions', leadLabel:'Lead story', formTitle:'Write to the editors', formKind:'Type', kindComment:'Comment', kindQuestion:'Question', kindCorrection:'Correction', formName:'Name (optional)', formEmail:'Your email for a reply', formMessage:'Message', formSend:'Send', formSending:'Sending…', formDone:'Delivered to the editors. We will reply to your email.', formFail:'Could not send right now. Please email the editors directly below.', formClose:'Close', share:'Share link', copied:'Link copied', cite:'Cite', citeCopied:'Citation copied', print:'Print', related:'Read next', prev:'Previous', next:'Next', loading:'Loading articles…', failed:'Articles could not be loaded right now. Please try again shortly.', retry:'Retry', book:'EKODI Books', picks:'Editors’ picks', editor:'From the editors', editorBody:'A record is more than memory. It becomes accountability, including questions, failures, corrections, and verification.', latest:'Latest', abstract:'Summary', note:'Editorial note', correction:'Send a correction or comment', talk:'Discuss in the community', readerTitle:'Tell us what you think', readerBody:'Questions, objections and corrections are welcome. The editors read every letter and update the record when needed.', count:(n) => `${n}`, by:'By', archive:'All records', motto:'A public record of faith, life, technology and community', lettersLink:'Letters', readersTitle:'A record written with readers', readersBody:'Follow new articles by RSS and send comments, questions or corrections to the editors. Corrections are kept below each article.', letter:'Write to the editors', rss:'RSS', community:'Talk in the EKODI community', policy:'Editorial policy — every article names who wrote it (editors, AI-assisted, author) and keeps its correction history.' },
 });
 function ui() { return UI[state.locale] || UI.en; }
 const state = { posts: [], category: 'all', query: '', locale: 'ko-KR', loaded: false, failed: false };
 const listView = document.querySelector('#journal-list-view');
 const articleView = document.querySelector('#journal-article-view');
+const submitView = document.querySelector('#journal-submit-view');
 const front = document.querySelector('#journal-front');
 const list = document.querySelector('#journal-list');
 const count = document.querySelector('#journal-count');
@@ -389,7 +390,53 @@ function updateProgress() {
 }
 window.addEventListener('scroll', updateProgress, { passive: true });
 
+// JOURNAL-SUBMISSIONS-20261113: /journal/submit — 투고 안내와 원고 접수.
+function showSubmit() {
+  document.body.classList.add('journal-is-article');
+  listView.hidden = true;
+  articleView.hidden = true;
+  if (submitView) submitView.hidden = false;
+  document.title = '투고 안내 | EKODI Journal';
+  bindSubmitForm();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+function bindSubmitForm() {
+  const form = document.querySelector('#journal-submit-form');
+  if (!form || form.dataset.bound) return;
+  form.dataset.bound = '1';
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const status = form.querySelector('.submit-status');
+    const button = form.querySelector('.submit-send');
+    const need = [['name', '이름을 입력해 주세요.'], ['email', '답장 받을 이메일을 확인해 주세요.'], ['title', '원고 제목을 입력해 주세요.']];
+    for (const [field, msg] of need) {
+      const input = form.elements[field];
+      if (!String(input.value || '').trim() || (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value.trim()))) { status.textContent = msg; input.focus(); return; }
+    }
+    const file = form.elements.manuscript.files?.[0];
+    if (!file) { status.textContent = '원고 파일을 첨부해 주세요.'; form.elements.manuscript.focus(); return; }
+    if (file.size > 5 * 1024 * 1024) { status.textContent = '원고 파일은 5MB까지 보낼 수 있습니다.'; return; }
+    if (!form.elements.agree.checked) { status.textContent = '편집 원칙 동의에 표시해 주세요.'; form.elements.agree.focus(); return; }
+    const data = new FormData(form);
+    data.set('sourceUrl', location.href);
+    data.delete('agree');
+    button.disabled = true; button.textContent = '보내는 중…'; status.textContent = '';
+    try {
+      const response = await fetch('/api/mail/journal-submission', { method: 'POST', body: data });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body.ok !== true) throw new Error(body.error || '투고 전송에 실패했습니다.');
+      form.reset();
+      form.classList.add('is-sent');
+      status.textContent = body.message || '투고가 편집부에 접수되었습니다.';
+    } catch (error) {
+      status.innerHTML = `${escapeHtml(error.message || '투고 전송에 실패했습니다.')} <a href="mailto:${JOURNAL_DESK.email}">${JOURNAL_DESK.email}</a>`;
+    } finally { button.disabled = false; button.textContent = '투고하기'; }
+  });
+}
+
 async function showRoute() {
+  if (/^\/journal\/submit\/?$/.test(location.pathname)) { showSubmit(); return; }
+  if (submitView) submitView.hidden = true;
   const match = location.pathname.match(/^\/journal\/p\/([^/]+)\/?$/);
   if (!match) {
     document.body.classList.remove('journal-is-article');
@@ -425,7 +472,7 @@ function applyLocale(locale) {
 async function boot() {
   state.loaded = false;
   state.failed = false;
-  if (!location.pathname.match(/^\/journal\/p\//)) renderList();
+  if (!location.pathname.match(/^\/journal\/(p\/|submit)/)) renderList();
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       const response = await fetch('/journal/api/posts');

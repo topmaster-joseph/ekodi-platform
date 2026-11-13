@@ -52,3 +52,5 @@ database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 
 [vars]
 PUBLISHING_AI_FACTORY_ENABLED = "true"
+# JOURNAL-ESSAYS-20261113: 에코디언 주간 에세이 투고를 편집부 메일로 알림(운영만, 스테이징은 끔)
+JOURNAL_ESSAY_DESK_NOTIFY = "true"

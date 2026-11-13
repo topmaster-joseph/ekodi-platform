@@ -56,6 +56,7 @@ function contactSender() { return MAIL_CONTACT_RECIPIENT; }
 function contactRecipient() { return MAIL_CONTACT_RECIPIENT; }
 export async function handleMailContactApi(request,env={}) {
   const url=new URL(request.url);
+  if(url.pathname==='/api/mail/journal-submission') return handleJournalSubmission(request,env);
   if(!['/api/mail/contact','/mail/api/contact'].includes(url.pathname)) return null;
   if(request.method==='OPTIONS') return new Response(null,{status:204,headers:secureHeaders()});
   if(request.method!=='POST') return json({error:'허용되지 않은 요청입니다.',code:'METHOD_NOT_ALLOWED'},405,{allow:'POST, OPTIONS'});
@@ -116,4 +117,71 @@ export function mailContactPage() {
   headers['content-security-policy']="default-src 'self'; style-src 'self' 'unsafe-inline' https://ekodi.kr; script-src 'self' 'unsafe-inline' https://ekodi.kr; connect-src 'self' https://ekodi.kr; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'";
   headers['x-ekodi-route']='mail-contact';
   return new Response(html+script,{headers});
+}
+
+
+// JOURNAL-SUBMISSIONS-20261113: 에코디저널 투고 접수 — 원고 파일 1개를 첨부해 편집부(joseph@ekodi.kr)로 보낸다.
+// 저장소에 원고를 남기지 않는다(메일이 원본). 속도 제한·출처 확인·스팸 함정은 문의와 같다.
+export const JOURNAL_SUBMISSION_MAX_FILE_BYTES = 5 * 1024 * 1024;
+const JOURNAL_SUBMISSION_TYPES = Object.freeze({
+  hwp:'application/x-hwp', hwpx:'application/hwp+zip', doc:'application/msword',
+  docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  pdf:'application/pdf', txt:'text/plain', md:'text/markdown', odt:'application/vnd.oasis.opendocument.text', rtf:'application/rtf',
+});
+function bytesToBase64(bytes) {
+  let binary=''; const chunk=0x8000;
+  for(let i=0;i<bytes.length;i+=chunk) binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+chunk));
+  return btoa(binary);
+}
+export function journalSubmissionText({name,email,title,category,message,fileName,fileBytes,sourceUrl,receivedAt}) {
+  return [
+    '에코디저널 투고 원고가 접수되었습니다.','',
+    `투고자: ${name}`,
+    `답장 받을 이메일: ${email}`,
+    `원고 제목: ${title}`,
+    `원고 분야: ${category||'-'}`,
+    `첨부 원고: ${fileName} (${Math.ceil(fileBytes/1024)}KB)`,
+    `접수 주소: ${sourceUrl||'https://ekodi.kr/journal/submit'}`,
+    `접수 시각: ${receivedAt}`,'',
+    '투고자 메모','--------------------',message||'(없음)','',
+    '이 메일에 답장하면 투고자에게 전달됩니다. 게재 여부와 일정은 편집 원칙에 따라 회신해 주세요.',
+  ].join('\n');
+}
+async function handleJournalSubmission(request,env) {
+  if(request.method==='OPTIONS') return new Response(null,{status:204,headers:secureHeaders()});
+  if(request.method!=='POST') return json({error:'허용되지 않은 요청입니다.',code:'METHOD_NOT_ALLOWED'},405,{allow:'POST, OPTIONS'});
+  if(!contactOriginAllowed(request,env)) return json({error:'허용되지 않은 요청 출처입니다.',code:'ORIGIN_FORBIDDEN'},403);
+  const declared=Number(request.headers.get('content-length')||0);
+  if(Number.isFinite(declared)&&declared>JOURNAL_SUBMISSION_MAX_FILE_BYTES+64*1024) return json({error:'원고 파일은 5MB까지 보낼 수 있습니다.',code:'REQUEST_TOO_LARGE'},413);
+  const limit=await contactRateLimit(request,env);
+  if(!limit.available) return json({error:'보호 장치가 잠시 응답하지 않습니다. 잠시 후 다시 시도해 주세요.',code:'RATE_LIMITER_UNAVAILABLE'},503,{'retry-after':'30'});
+  if(!limit.allowed) return json({error:'요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',code:'CONTACT_RATE_LIMITED'},429,{'retry-after':'60'});
+  let form;
+  try { form=await request.formData(); } catch { return json({error:'투고 양식을 읽을 수 없습니다.',code:'INVALID_FORM'},400); }
+  if(clean(form.get('website'),120)) return json({ok:true,message:'투고가 접수되었습니다.'});
+  const name=clean(form.get('name'),80),email=clean(form.get('email'),254).toLowerCase(),title=clean(form.get('title'),180);
+  const category=clean(form.get('category'),40),message=clean(form.get('message'),4000),sourceUrl=clean(form.get('sourceUrl'),1000);
+  if(!name) return json({error:'이름을 입력해 주세요.',code:'NAME_REQUIRED'},400);
+  if(!validEmail(email)) return json({error:'답장 받을 이메일 주소를 확인해 주세요.',code:'INVALID_EMAIL'},400);
+  if(!title) return json({error:'원고 제목을 입력해 주세요.',code:'TITLE_REQUIRED'},400);
+  const file=form.get('manuscript');
+  if(!file||typeof file==='string'||!file.size) return json({error:'원고 파일을 첨부해 주세요.',code:'FILE_REQUIRED'},400);
+  if(file.size>JOURNAL_SUBMISSION_MAX_FILE_BYTES) return json({error:'원고 파일은 5MB까지 보낼 수 있습니다.',code:'FILE_TOO_LARGE'},413);
+  const fileName=clean(String(file.name||'manuscript').replace(/[\\/\r\n"]/g,'_'),140);
+  const ext=(fileName.match(/\.([a-z0-9]{2,5})$/i)?.[1]||'').toLowerCase();
+  const contentType=JOURNAL_SUBMISSION_TYPES[ext];
+  if(!contentType) return json({error:'한글(hwp·hwpx), 워드(doc·docx), PDF, 텍스트(txt·md), odt·rtf 파일만 받을 수 있습니다.',code:'FILE_TYPE_NOT_ALLOWED'},415);
+  const bytes=new Uint8Array(await file.arrayBuffer());
+  const receivedAt=new Date().toISOString(),recipient=contactRecipient(),sender=contactSender();
+  try {
+    const token=await serviceAccountToken(sender,env,GMAIL_SEND_SCOPE);
+    const sent=await sendGoogleMailMessage(token,{to:recipient,replyTo:email,subject:`[에코디저널 투고] ${title} — ${name}`,
+      body:journalSubmissionText({name,email,title,category,message,fileName,fileBytes:bytes.length,sourceUrl,receivedAt}),
+      attachments:[{filename:fileName,contentType,base64:bytesToBase64(bytes)}]});
+    console.log('EKODI journal submission sent',{messageId:sent?.id||'',bytes:bytes.length,ray:request.headers.get('cf-ray')||''});
+    return json({ok:true,message:'투고가 편집부에 접수되었습니다. 검토 결과는 적어 주신 이메일로 알려 드립니다.'});
+  } catch(error) {
+    console.error('EKODI journal submission failed',{code:String(error?.code||error?.message||'JOURNAL_SUBMISSION_SEND_FAILED'),ray:request.headers.get('cf-ray')||''});
+    return json({error:'투고 전송에 실패했습니다. 잠시 후 다시 시도하시거나 joseph@ekodi.kr로 보내 주세요.',code:'JOURNAL_SUBMISSION_SEND_FAILED'},502);
+  }
 }

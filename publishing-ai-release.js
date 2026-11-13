@@ -1,3 +1,4 @@
+import { publishedEssays } from './publishing-journal-essays.js';
 // PUBLISHING-AI-RELEASE-001 — 최고관리자 '최종 검수 확인' 한 번으로 출판까지.
 // 확인 → (감수 완료 처리) → 출간본 정리 → EPUB → 서점 파일 보관(R2) → 자동 가격 → 출간 기록 → 첫 저널 글.
 // - 기존 서점 책은 건드리지 않는다. AI 협업 책은 출간 기록(D1)으로만 서점·저널에 합류한다.
@@ -133,7 +134,10 @@ export async function publicReleases(db) {
   await ensureReleaseTables(db);
   const rows = (await db.prepare("SELECT * FROM publishing_ai_releases WHERE status='on_sale' ORDER BY released_at DESC LIMIT 200").all()).results || [];
   const posts = (await db.prepare('SELECT slug, catalog_id, title, summary, body, theme, published_at FROM publishing_book_journal ORDER BY published_at DESC LIMIT 100').all()).results || [];
-  return { ok: true, books: rows.map(releaseToCatalogEntry), journal: posts };
+  // JOURNAL-ESSAYS-20261113: 검토 기간을 지나 게재된 에코디언 에세이도 함께 내보낸다.
+  let essays = [];
+  try { essays = await publishedEssays(db); } catch { essays = []; }
+  return { ok: true, books: rows.map(releaseToCatalogEntry), journal: posts, essays };
 }
 
 // ---- 출간 도서 저널 글(무료 AI, 주기적) ----------------------------------------------
