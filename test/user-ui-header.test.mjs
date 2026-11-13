@@ -246,3 +246,21 @@ test('site-owned chrome takes precedence over shell-generated layout',async()=>{
   assert.match(footer,/EKODI \(에코디\)\. All rights reserved/);
   assert.match(footer,/if\(config\.operator\?\.businessRegistrationNumber\)/);
 });
+
+test('BBQ native footer keeps mandatory copyright and visit metrics inside its centered grid',async()=>{
+ const footer=await read('shell/user-ui-footer.js');
+ assert.match(footer,/function bbqCenteredFooterHost\(footer\)/);
+ assert.match(footer,/location\.pathname/);
+ assert.match(footer,/footer\.matches\('\.foot,\.promise-footer'\)/);
+ assert.match(footer,/footer\.querySelector\('\.foot-inner,\.promise-footer-inner'\)/);
+ assert.match(footer,/host\?\.querySelector\('\.foot-copy,\.footer-copy'\)\|\|footer/);
+ assert.match(footer,/appendText\(bbqCenteredFooterHost\(footer\)\|\|footer\.querySelector/);
+ assert.match(footer,/footer\.foot \.foot-inner > \.ekodi-footer-traffic/);
+ assert.match(footer,/footer\.promise-footer \.promise-footer-inner > \.ekodi-footer-traffic/);
+ assert.match(footer,/grid-column:1\/-1!important/);
+ assert.match(footer,/footer\.foot \.foot-copy > \[data-ekodi-copyright-credit\]/);
+ assert.match(footer,/EKODI \(에코디\)\. All rights reserved/);
+ // No blanket service exception or removal of the licensed copyright.
+ assert.match(footer,/SERVICE_OWNED_FOOTER_SERVICES=new Set\(\)/);
+ assert.doesNotMatch(footer,/SITE_COPYRIGHT_ATTR=null/);
+});
