@@ -11,7 +11,7 @@
 // 배치: 요청당 최대 10,000 URL(IndexNow 규격) — 기본 1,000개씩 나눠 보낸다. 실패한 배치의 URL은 상태를 갱신하지 않아 다음날 재시도된다.
 
 import { EKODI_INDEXNOW_KEY, EKODI_INDEXNOW_KEY_URL } from './platform-indexnow.js';
-import { buildEkodiPublicRegistry } from './public-discovery-registry.js';
+import { buildEkodiPublicRegistry, isApexSearchSubmissionUrl } from './public-discovery-registry.js';
 import { MALL_PICKS_CANONICAL } from './mall-weekly-picks-page.js';
 import { mallProductCanonicalUrl } from './mall-product-jsonld.js';
 import { kstDate, markScheduler, schedulerDue } from './marketing-metrics-collector.js';
@@ -65,7 +65,10 @@ export async function collectIndexCandidates(env, { fetch: fetchImpl = globalThi
   };
   try {
     const built = await registry(env);
-    for (const resource of built?.resources || []) await add(resource.url, [resource.updatedAt || resource.publishedAt || 'static', resource.title || ''], 'registry');
+    for (const resource of built?.resources || []) {
+      if (!isApexSearchSubmissionUrl(resource.url)) continue;
+      await add(resource.url, [resource.updatedAt || resource.publishedAt || 'static', resource.title || ''], 'registry');
+    }
   } catch (error) { errors.push(`registry:${clean(error?.message, 120)}`); }
   await add(MALL_PICKS_CANONICAL, ['picks', isoWeekKey(now)], 'picks');
   // JOURNAL-DISCOVERY-20261108: 에코디저널 글(공개 API) — 제목·수정일이 바뀐 글만 다시 제출된다.
