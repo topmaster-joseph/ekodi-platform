@@ -6,10 +6,10 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const manifest=JSON.parse(read('deploy/manifests/shared-site.worker.json'));
 const site=read('site-worker.js');
 const workflow=read('.github/workflows/deploy-site-core.yml');
-const keys=['ekodibiz','ekodichurch','ekodimission','cgma','seonammedi'];
+const sharedKeys=['ekodibiz','ekodichurch','ekodimission','seonammedi'];
 
-test('all five public accounting notice URLs are release-blocking canaries',()=>{
-  for(const key of keys){
+test('four Shared Site accounting notice URLs remain release-blocking candidate canaries',()=>{
+  for(const key of sharedKeys){
     const url='https://ekodi.kr/'+key+'/accounting';
     const matches=manifest.worker.requests.filter(item=>item.url===url);
     assert.equal(matches.length,1,url);
@@ -20,18 +20,20 @@ test('all five public accounting notice URLs are release-blocking canaries',()=>
     assert.ok(entry.expect.includes('public-accounting-notice.js'));
     assert.ok(entry.headerExpect.includes('x-ekodi-route: public-accounting-notice'));
   }
+  assert.ok(!manifest.worker.requests.some(r=>r.url==='https://ekodi.kr/cgma/accounting'),'CGMA gateway has its own release gate');
   assert.match(site,/isPublicAccountingNoticePath\(url\.pathname\)/);
   assert.match(workflow,/deploy\/manifests\/shared-site\.worker\.json/);
 });
 
 
-test('public accounting pages outrank independent tenant and Church wildcard gateways',()=>{
+test('Shared Site accounting canaries exclude CGMA, which has an independent gateway',()=>{
   const config=read('wrangler.site.toml');
   const routes=[...config.matchAll(/^pattern = "([^\"]+)"$/gm)].map(match=>match[1]);
-  for(const key of keys){
+  for(const key of sharedKeys){
     const path=`ekodi.kr/${key}/accounting`;
     assert.equal(routes.filter(route=>route===path).length,1,`explicit Shared Site route required: ${path}`);
   }
+  assert.ok(!routes.includes('ekodi.kr/cgma/accounting'),'do not override CGMA root gateway');
   assert.match(config,/pattern = "ekodi\.kr\/ekodichurch\/admin\*"/);
   assert.match(config,/pattern = "ekodi\.kr\/ekodichurch\/board\*"/);
 });
