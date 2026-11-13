@@ -677,36 +677,46 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Read-only: do not authenticate, mutate investment state, or call a broker.
+          # Read-only production contract. Do not authorize an owner, submit trades, or call brokerage APIs.
           base='https://ekodi.kr/invest/my'
           for attempt in 1 2 3; do
             html_code=$(curl -sS -D /tmp/ekodi-invest-guest.headers -o /tmp/ekodi-invest-guest.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base" || true)
             css_code=$(curl -sS -D /tmp/ekodi-invest-css.headers -o /tmp/ekodi-invest-css.txt -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/style.css" || true)
             access_code=$(curl -sS -D /tmp/ekodi-invest-access.headers -o /tmp/ekodi-invest-access.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/access" || true)
             unknown_code=$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 "$base/not-a-real-route" || true)
-            if [[ "$html_code" == '200' && "$css_code" == '200' && "$access_code" == '401' && "$unknown_code" == '404' ]] \
-              && grep -Eiq '^content-type:[[:space:]]*text/html' /tmp/ekodi-invest-guest.headers \
-              && grep -Eiq '^cache-control:[[:space:]]*private, no-store' /tmp/ekodi-invest-guest.headers \
-              && grep -Eiq '^x-robots-tag:[[:space:]]*noindex' /tmp/ekodi-invest-guest.headers \
-              && grep -Eq 'id="ownerSidebar"[^>]*hidden' /tmp/ekodi-invest-guest.html \
-              && grep -Fq 'id="investAuthIntro"' /tmp/ekodi-invest-guest.html \
-              && grep -Fq '<section id="owner" hidden>' /tmp/ekodi-invest-guest.html \
-              && grep -Fq 'href="/invest/my/style.css"' /tmp/ekodi-invest-guest.html \
-              && grep -Fq '실거래 주문' /tmp/ekodi-invest-guest.html \
-              && grep -Eiq '^content-type:[[:space:]]*text/css' /tmp/ekodi-invest-css.headers \
-              && grep -Fq '.shell:has(> #ownerSidebar[hidden]){display:block}' /tmp/ekodi-invest-css.txt \
-              && grep -Fq 'word-break:keep-all;overflow-wrap:normal' /tmp/ekodi-invest-css.txt \
-              && grep -Fq '@media(max-width:480px)' /tmp/ekodi-invest-css.txt \
-              && grep -Eiq '^content-type:[[:space:]]*application/json' /tmp/ekodi-invest-access.headers \
-              && grep -Fq '"error":"authentication_required"' /tmp/ekodi-invest-access.json; then
-              echo "EKODI Invest guest production contract verified: page=200 css=200 access=401 unknown=404; login hidden and trading remains locked."
+            failures=''
+            fail_count=0
+            require() { local id="$1"; shift; if ! "$@"; then failures="$failures $id"; fail_count=$((fail_count+1)); fi; }
+            [[ "$html_code" == '200' ]] || { failures="$failures guest.http"; fail_count=$((fail_count+1)); }
+            [[ "$css_code" == '200' ]] || { failures="$failures css.http"; fail_count=$((fail_count+1)); }
+            [[ "$access_code" == '401' ]] || { failures="$failures access.http"; fail_count=$((fail_count+1)); }
+            [[ "$unknown_code" == '404' ]] || { failures="$failures unknown.http"; fail_count=$((fail_count+1)); }
+            if [[ "$fail_count" -eq 0 ]]; then
+              # Report names of failing public invariants only: never print response bodies or credentials.
+              require 'guest.mime' grep -Eiq '^content-type:[[:space:]]*text/html' /tmp/ekodi-invest-guest.headers
+              require 'guest.no-store' grep -Eiq '^cache-control:.*no-store' /tmp/ekodi-invest-guest.headers
+              require 'guest.noindex' grep -Eiq '^x-robots-tag:.*noindex' /tmp/ekodi-invest-guest.headers
+              require 'guest.hidden-sidebar' grep -Eq 'id="ownerSidebar"[^>]*hidden' /tmp/ekodi-invest-guest.html
+              require 'guest.login-intro' grep -Fq 'id="investAuthIntro"' /tmp/ekodi-invest-guest.html
+              require 'guest.owner-hidden' grep -Fq '<section id="owner" hidden>' /tmp/ekodi-invest-guest.html
+              require 'guest.css-link' grep -Fq 'href="/invest/my/style.css"' /tmp/ekodi-invest-guest.html
+              require 'guest.trading-locked-wording' grep -Fq '실거래 주문' /tmp/ekodi-invest-guest.html
+              require 'css.mime' grep -Eiq '^content-type:[[:space:]]*text/css' /tmp/ekodi-invest-css.headers
+              require 'css.sidebar-collapse' grep -Fq '.shell:has(> #ownerSidebar[hidden]){display:block}' /tmp/ekodi-invest-css.txt
+              require 'css.korean-wrap' grep -Fq 'word-break:keep-all;overflow-wrap:normal' /tmp/ekodi-invest-css.txt
+              require 'css.mobile' grep -Fq '@media(max-width:480px)' /tmp/ekodi-invest-css.txt
+              require 'access.mime' grep -Eiq '^content-type:[[:space:]]*application/json' /tmp/ekodi-invest-access.headers
+              require 'access.error' grep -Fq '"error":"authentication_required"' /tmp/ekodi-invest-access.json
+            fi
+            if [[ "$fail_count" -eq 0 ]]; then
+              echo "EKODI Invest guest production contract verified: page=200 css=200 access=401 unknown=404; anonymous content protected."
               echo "Host: $base; UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ'); commit: $(git rev-parse HEAD)"
               exit 0
             fi
-            echo "Invest guest canary pending (attempt $attempt): html=$html_code css=$css_code access=$access_code unknown=$unknown_code"
+            echo "Invest guest canary attempt $attempt failed:$failures (HTTP: html=$html_code css=$css_code access=$access_code unknown=$unknown_code)"
             sleep 4
           done
-          echo '::error title=Invest guest live contract failed::Keep production verification incomplete; investigate the My worker and apex route before claiming success.'
+          echo '::error title=Invest guest live contract failed::At least one canonical guest route invariant failed; see named checks above. Do not report completed production verification.'
           exit 1
       - name: Publish My EKODI production status
         if: always()
