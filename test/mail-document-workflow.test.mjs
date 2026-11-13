@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {inCollectionWindow,escapeDocumentHtml,verifyCaseEvidence,fetchDocumentMailPage} from '../mail-document-workflow.js';
+import {inCollectionWindow,shouldProcessDocumentRule,escapeDocumentHtml,verifyCaseEvidence,fetchDocumentMailPage} from '../mail-document-workflow.js';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
 test('EKODI solar 20-25 KST mailbox window is exact',()=>{
@@ -59,7 +59,7 @@ test('cursor loops and malformed Gmail API payload fail closed',async()=>{
 });
 test('cron only processes one site rule per tick, resuming by oldest attempt',async()=>{
   const [source,migration,ui]=await Promise.all(['mail-document-workflow.js','migrations/202611130930_mail_document_scan_cursors.sql','mail-admin-page.js'].map(read));
-  assert.match(source,/ORDER BY COALESCE\(last_checked_at,created_at\) ASC,id LIMIT 1/);
+  assert.match(source,/ORDER BY COALESCE\(r\.last_checked_at,r\.created_at\) ASC,r\.id LIMIT 1/);
   assert.match(source,/maxResults: 12/);
   assert.match(source,/mail_document_scan_cursors/);
   assert.match(source,/last_checked_kst_day=\?/);
@@ -77,4 +77,24 @@ test('read-only login boundary, disabled-rule guard, and manual tax request exis
   assert.match(ui,/docManualTax/);
   assert.match(ui,/createDocumentRequest\('tax_invoice'\)/);
   assert.match(adapter,/inboxOnly = true/);
+});
+
+test('continue a KST 25th mailbox backlog after the window closes, without starting a new scan',()=>{
+  const normal={active:1,day_from:20,day_to:25,cursor_pending:0};
+  const unfinished={...normal,cursor_pending:1};
+  assert.equal(shouldProcessDocumentRule(normal,new Date('2026-11-25T14:59:00Z')),true);
+  assert.equal(shouldProcessDocumentRule(normal,new Date('2026-11-25T15:01:00Z')),false);
+  assert.equal(shouldProcessDocumentRule(unfinished,new Date('2026-11-25T15:01:00Z')),true);
+  assert.equal(shouldProcessDocumentRule(unfinished,new Date('2026-12-01T12:00:00Z')),true);
+  assert.equal(shouldProcessDocumentRule({...unfinished,active:0},new Date('2026-11-25T16:00:00Z')),false);
+  assert.equal(shouldProcessDocumentRule({...unfinished,cursor_pending:0},new Date('2026-11-25T16:00:00Z')),false);
+});
+test('scheduled SQL uses workspace AND rule ID for pending cursor, including outside intake window',async()=>{
+  const source=await read('mail-document-workflow.js');
+  assert.match(source,/LEFT JOIN mail_document_scan_cursors c/);
+  assert.match(source,/c\.workspace_id=r\.workspace_id AND c\.rule_id=r\.id/);
+  assert.match(source,/r\.active=1 AND \(c\.rule_id IS NOT NULL OR/);
+  assert.match(source,/if \(!shouldProcessDocumentRule\(rule\)\) continue/);
+  assert.match(source,/r\.last_checked_kst_day IS NULL OR r\.last_checked_kst_day<>\?/);
+  assert.match(source,/r\.day_from<=\? AND r\.day_to>=\?/);
 });
