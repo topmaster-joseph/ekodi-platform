@@ -27,6 +27,13 @@ function nativeFooter(){
       node.parentElement?.tagName==='MAIN'&&node.classList.contains('site-footer'))
   )||null;
 }
+// A few store-owned footer layouts use a centered content grid. Keep platform
+// attribution and public traffic evidence inside that grid, never at page edge.
+// Scope the override to the BBQ customer route; other tenants remain unchanged.
+function bbqCenteredFooterHost(footer){
+  if(!/^\/bbqcg(?:\/|$)/.test(location.pathname)||!footer.matches('.foot,.promise-footer'))return null;
+  return footer.querySelector('.foot-inner,.promise-footer-inner');
+}
 function creditNativeFooter(){
   const footer=nativeFooter();if(!footer)return false;
   footer.dataset.ekodiServiceFooter='true';
@@ -36,7 +43,7 @@ function creditNativeFooter(){
   const text=String(footer.textContent||'');
   if(!/(?:©|ⓒ|copyright|저작권)[^\n]{0,100}(?:EKODI|에코디)/i.test(text)){
     let node=footer.querySelector(`[${SITE_COPYRIGHT_ATTR}]`);
-    if(!node){node=document.createElement('small');node.setAttribute(SITE_COPYRIGHT_ATTR,'v1');footer.append(node);}
+    if(!node){node=document.createElement('small');node.setAttribute(SITE_COPYRIGHT_ATTR,'v1');const host=bbqCenteredFooterHost(footer);(host?.querySelector('.foot-copy,.footer-copy')||footer).append(node);}
     node.textContent=ekodiCopyright();
   }
   return true;
@@ -101,7 +108,7 @@ function installStyle(){
     .ekodi-user-ui-footer__links{display:flex!important;justify-content:center!important;align-items:center!important;gap:7px 18px!important;flex-wrap:wrap!important;white-space:normal!important}.ekodi-user-ui-footer a{color:var(--ekodi-user-footer-safe-link,#fff)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-link,#fff)!important;font-weight:700!important;text-decoration:none!important;text-underline-offset:3px!important}.ekodi-user-ui-footer a:hover,.ekodi-user-ui-footer a:focus-visible{text-decoration:underline!important}.ekodi-user-ui-footer a:focus-visible{outline:2px solid currentColor!important;outline-offset:3px!important}
     .ekodi-user-ui-footer__copyright,.ekodi-user-ui-footer__scope{color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;opacity:1!important}.ekodi-user-ui-footer__scope{max-width:800px!important;font-size:13px!important;line-height:1.7!important}
     [data-ekodi-legacy-common-footer-hidden]:not([data-ekodi-service-footer]){display:none!important}
-    .ekodi-footer-traffic{box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-wrap:wrap!important;column-gap:28px!important;row-gap:10px!important;width:fit-content!important;max-width:100%!important;margin:8px auto 0!important;padding:9px 6px 0!important;border-top:1px solid currentColor!important;color:inherit!important;font:inherit!important;font-size:12px!important;font-weight:400!important;line-height:1.6!important;word-break:keep-all!important;opacity:.86!important;text-align:center!important}
+    footer.foot .foot-inner > .ekodi-footer-traffic,footer.promise-footer .promise-footer-inner > .ekodi-footer-traffic{grid-column:1/-1!important;justify-self:center!important}\n    footer.foot .foot-copy > [data-ekodi-copyright-credit],footer.promise-footer .footer-copy > [data-ekodi-copyright-credit]{display:block!important;margin-top:4px!important;color:#bdc2d9!important;font-size:11px!important;line-height:1.5!important}\n    .ekodi-footer-traffic{box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-wrap:wrap!important;column-gap:28px!important;row-gap:10px!important;width:fit-content!important;max-width:100%!important;margin:8px auto 0!important;padding:9px 6px 0!important;border-top:1px solid currentColor!important;color:inherit!important;font:inherit!important;font-size:12px!important;font-weight:400!important;line-height:1.6!important;word-break:keep-all!important;opacity:.86!important;text-align:center!important}
     .ekodi-footer-traffic__metric{display:inline-flex!important;align-items:baseline!important;gap:6px!important;white-space:nowrap!important}
     .ekodi-footer-traffic__metric strong{font-weight:750!important;color:inherit!important}
     .ekodi-footer-traffic__note{flex-basis:100%!important;margin-top:3px!important;text-align:center!important;font-size:11px!important;opacity:.8!important;white-space:normal!important}
@@ -244,7 +251,7 @@ function attachFooterTraffic(footer){
   if(!scope){node?.remove();return;}
   installStyle();
   if(!node){
-    node=appendText(footer.querySelector('.ekodi-user-ui-footer__inner')||footer,'div','','ekodi-footer-traffic');
+    node=appendText(bbqCenteredFooterHost(footer)||footer.querySelector('.ekodi-user-ui-footer__inner')||footer,'div','','ekodi-footer-traffic');
     node.setAttribute(TRAFFIC_STATS_ATTR,'v1');
     node.setAttribute('role','group');
   }
