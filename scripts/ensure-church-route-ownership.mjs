@@ -9,9 +9,11 @@ export const CHURCH_ROUTE_CONTRACT=Object.freeze({
   desiredGateway:['ekodi.kr/ekodichurch','ekodi.kr/ekodichurch/*'],
   memberRedirectRoutes:['ekodi.kr/ekodichurch/my'],
   boardSharedRoutes:['ekodi.kr/ekodichurch/board*'],
+  // Only Shared Site owned accounting routes are registered here. The CGMA path
+  // is independently owned by the cheonggye-market cgma-root-gateway Worker.
   // Exact shared accounting routes must exist before candidate override probes.
   // Wrangler's post-promotion triggers deploy is too late for the 0% canary.
-  accountingNoticeRoutes:['ekodi.kr/ekodibiz/accounting','ekodi.kr/ekodichurch/accounting','ekodi.kr/ekodimission/accounting','ekodi.kr/cgma/accounting','ekodi.kr/seonammedi/accounting'],
+  accountingNoticeRoutes:['ekodi.kr/ekodibiz/accounting','ekodi.kr/ekodichurch/accounting','ekodi.kr/ekodimission/accounting','ekodi.kr/seonammedi/accounting'],
   retiredMemberRoutes:['ekodi.kr/ekodichurch/my/*'],
   retiredGateway:'ekodi.kr/ekodichurch*',
   publicUrl:'https://ekodi.kr/ekodichurch/',
@@ -210,7 +212,7 @@ export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_A
   // Do NOT require new accounting UI content on that previous production build.
   // All five HTML markers and x-ekodi-route are mandatory in the guarded
   // 0% candidate manifest before production promotion; no canary is relaxed.
-  console.log('Church routes and five accounting ownership bindings verified; accounting HTML receipt deferred to guarded 0% candidate.');
+  console.log('Church routes and four Shared Site accounting ownership bindings verified; accounting HTML receipt deferred to guarded 0% candidate.');
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   ensureChurchRouteOwnership().catch(error=>{console.error(error.message);process.exitCode=1});
