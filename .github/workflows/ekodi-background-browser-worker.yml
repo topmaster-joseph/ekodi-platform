@@ -168,7 +168,7 @@ jobs:
       # No paid browser provider, imported profile or untrusted executable URL.
       - name: Restore cached Chromium binaries
         id: chromium-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: ekodi-native-chromium-${{ runner.os }}-${{ runner.arch }}-playwright-1.55.0-v1
