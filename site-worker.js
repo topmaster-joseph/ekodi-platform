@@ -18,7 +18,7 @@ import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from '
 import { isMallPicksPath, mallPicksResponse } from './mall-weekly-picks-page.js';
 import { decorateMallProductResponse, isMallProductPath } from './mall-product-jsonld.js';
 import { o2oHubPage } from './o2o-hub-page.js';
-import { isEkodibizAgencyPath, proxyEkodibizAgency } from './ekodibiz-agency-route.js';
+import { isEkodibizAgencyPath, proxyEkodibizAgency, legacyAgencyAdminRedirect } from './ekodibiz-agency-route.js';
 import { isO2OIssuedLinkPath, o2oIssuedLinkResponse } from './o2o-issued-links.js';
 import { isPublicAccountingNoticePath, publicAccountingNoticePage } from './public-accounting-notice-page.js';
 
@@ -749,6 +749,8 @@ export default {
       }
       // All agency routes belong to the EKODIBIZ service binding, not the apex static fallback.
       // Preserve its authentication and payment CSP; do not broaden the general service proxy.
+      const agencyAdminLegacy=legacyAgencyAdminRedirect(request);
+      if (agencyAdminLegacy) return agencyAdminLegacy;
       if (isEkodibizAgencyPath(url.pathname)) return proxyEkodibizAgency(request, env);
       // Host the same-origin age verification UX without a separate Worker or client secret.
       if (url.pathname === '/verify/adult' || url.pathname.startsWith('/verify/adult/')) {
