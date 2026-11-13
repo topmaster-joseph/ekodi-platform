@@ -66,7 +66,7 @@ export async function sendOperatorMail(env, notice, deps = {}) {
   return { ok: true, id: sent?.id || null };
 }
 
-const WAITING = new Set(['SENDER_NOT_CONNECTED', 'SENDER_SEND_SCOPE_REQUIRED', 'MAIL_GOOGLE_NOT_CONFIGURED', 'OPERATOR_PUSH_NO_DEVICE', 'OPERATOR_PUSH_NOT_CONFIGURED']);
+const WAITING = new Set(['MAIL_DISABLED', 'SENDER_NOT_CONNECTED', 'SENDER_SEND_SCOPE_REQUIRED', 'MAIL_GOOGLE_NOT_CONFIGURED', 'OPERATOR_PUSH_NO_DEVICE', 'OPERATOR_PUSH_NOT_CONFIGURED']);
 
 /** 실제 발송: 운영자 웹 푸시(휴대폰) + Gmail. 하나라도 성공하면 ok. */
 export async function sendOperatorNotice(env, input, deps = {}) {
@@ -76,7 +76,9 @@ export async function sendOperatorNotice(env, input, deps = {}) {
   if (notice.error) return { ok: false, code: notice.error };
   const targetPath = notice.link ? new URL(notice.link).pathname : '/';
   const push = await (deps.push || sendOperatorPush)(env, { title: `[에코디] ${notice.subject}`, body: notice.lines.slice(0, 3).join(' · '), targetPath }, deps).catch(() => ({ ok: false, code: 'OPERATOR_PUSH_FAILED' }));
-  const mail = await sendOperatorMail(env, notice, deps).catch(() => ({ ok: false, code: 'SEND_FAILED' }));
+  // 2026-11-13 운영자 결정: 최고관리자에게는 휴대폰 알림(링크 포함)만. 메일은 OPERATOR_NOTIFY_MAIL_ENABLED="true"일 때만.
+  const mailEnabled = String(env.OPERATOR_NOTIFY_MAIL_ENABLED ?? 'false').toLowerCase() === 'true';
+  const mail = mailEnabled ? await sendOperatorMail(env, notice, deps).catch(() => ({ ok: false, code: 'SEND_FAILED' })) : { ok: false, code: 'MAIL_DISABLED' };
   if (push.ok || mail.ok) return { ok: true, push: Boolean(push.ok), mail: Boolean(mail.ok), id: mail.id || null };
   if (WAITING.has(push.code) && WAITING.has(mail.code)) return { ok: false, code: 'NO_OPERATOR_CHANNEL', push: push.code, mail: mail.code };
   return { ok: false, code: WAITING.has(mail.code) ? push.code : mail.code, push: push.code, mail: mail.code };
