@@ -23,18 +23,19 @@ const longBody = ['## 멈춤의 자리', '하루를 멈추고 숨을 고르는 �
 const draft = (title = '쉼을 배우는 한 주') => `${title}\n바쁜 날들 사이에서 안식을 회복하는 작은 길을 나눕니다.\n\n${longBody}`;
 const DAY = 864e5;
 
-test('weekly essay: writes once per 7 days, submits to the desk, publishes after the 48h review window', async () => {
+test('weekly essay: writes once per 7 days, submits to the desk, publishes after the 24h review window', async () => {
   const db = createD1(new DatabaseSync(':memory:'));
   const sent = [];
   const t0 = Date.parse('2026-11-14T00:40:00Z');
   const r1 = await essayTick(db, async () => draft(), { notify: async (e) => { sent.push(e); return true; }, now: t0 });
   assert.match(r1.submitted, /^ekodian-20261114-sabbath$/);
   assert.equal(sent.length, 1);
-  assert.match(deskMessage(sent[0]), /48시간 검토 기간/);
+  assert.match(deskMessage(sent[0]), /24시간 뒤 자동 게재/);
   assert.deepEqual(await publishedEssays(db), [], 'not public during review');
-  const r2 = await essayTick(db, async () => draft('두 번째'), { now: t0 + DAY });
+  const r2 = await essayTick(db, async () => draft('두 번째'), { now: t0 + DAY - 2 * 3600_000 });
+  assert.deepEqual(r2.published, [], 'still in review');
   assert.equal(r2.skipped, 'not_due');
-  const r3 = await essayTick(db, async () => draft('두 번째'), { now: t0 + 2 * DAY + 60_000 });
+  const r3 = await essayTick(db, async () => draft('두 번째'), { now: t0 + DAY + 60_000 });
   assert.deepEqual(r3.published, ['ekodian-20261114-sabbath']);
   assert.equal((await publishedEssays(db)).length, 1);
   const r4 = await essayTick(db, async () => draft('일과 AI'), { now: t0 + 7 * DAY });
