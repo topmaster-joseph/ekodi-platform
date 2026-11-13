@@ -40,6 +40,9 @@ export function mailAdminPage(){
   .ma input[type=checkbox]{width:20px;height:20px;accent-color:#1f3c88}
   .ma .form{display:grid;gap:12px}.ma .field label{display:block;font-size:14px;font-weight:700;margin-bottom:5px;color:#36425a!important}
   .ma .checks{display:flex;flex-wrap:wrap;gap:16px}
+  .ma .mail-original{margin-top:12px;border-top:1px solid #dfe5ee;padding-top:12px;min-width:0}
+  .ma .mail-original h4{margin:0 0 6px;font-size:15px}
+  .ma .mail-source-body{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:340px;overflow:auto;font:13px/1.6 ui-monospace,monospace;background:#f3f6fb;border:1px solid #e2e8f0;border-radius:9px;padding:10px}
   .ma .note{font-size:14px;line-height:1.7;color:#36425a!important;margin:0}.ma .note li{margin-bottom:6px}
   .ma .empty{padding:20px 6px;font-size:15px;color:#4b5565!important}
   .ma .links{margin-top:12px}.ma .links a{font-size:14px;font-weight:700;color:#1f3c88!important}
@@ -135,6 +138,7 @@ export function mailAdminPage(){
       d.append(docText('strong',(r.document_type==='tax_invoice'?'세금계산서':'매출확인서')+' · '+r.status));
       d.append(docText('p',(r.source_subject||'직접 등록')+' · '+(r.source_from||'관리자 등록'),'note'));
       d.append(docText('p','거래처: '+(r.counterparty||'미확인')+' · 공급가액/매출액 '+Number(r.sale_amount||0).toLocaleString('ko-KR')+'원 · 증빙: '+(r.evidence_reference||'미입력'),'note'));
+      if(r.source_type==='mail'&&Number.isSafeInteger(Number(r.account_id))&&Number(r.account_id)>0&&/^[A-Za-z0-9_-]{5,128}$/.test(String(r.source_message_id||'')))d.append(docButton('원본 요청 메일 확인',()=>docShowOriginal(d,r)));
       if(r.status==='REVIEW')d.append(docButton('증빙 검토·승인',()=>docApproveForm(d,r),'primary'));
       if(r.status==='APPROVED'&&r.document_type==='sales_certificate')d.append(docButton('매출확인서 발행',async()=>{if(!confirm('실제 거래와 증빙을 확인했고, 매출확인서를 발행하시겠습니까?'))return;try{await api('/documents/requests/'+r.id+'/issue',{method:'POST',body:JSON.stringify({workspace:current.slug})});await loadDocuments()}catch(e){docNotice(e.message)}},'primary'));
       if(r.status==='APPROVED'&&r.document_type==='tax_invoice')d.append(docButton('세금계산서 발행정보 복사',async()=>{const summary=['문서종류: 전자세금계산서(발행 전)','거래처: '+r.counterparty,'공급자: '+r.issuer_name,'매출기간: '+r.sale_period,'공급가액/매출액: '+r.sale_amount,'세액: '+r.tax_amount,'증빙: '+r.evidence_reference].join('\\n');await navigator.clipboard.writeText(summary);docNotice('발행용 정보가 복사되었습니다. 에코디 Finance에서 별도 승인·최종발행을 진행하세요.')}));
@@ -142,6 +146,26 @@ export function mailAdminPage(){
       caseBox.append(d);
     }
     if(!caseBox.childNodes.length)caseBox.append(docText('p','검토할 요청이 없습니다. 메일 확인 또는 직접 등록으로 시작할 수 있습니다.','note'));
+  }
+  async function docShowOriginal(box,record){
+    // Reuse the mail account's authoritative read permission checks.
+    // Source bodies and attachment metadata are displayed only on demand
+    // and are never copied into the site document ledger.
+    const existing=box.querySelector('[data-original-mail-view]');
+    if(existing){existing.hidden=!existing.hidden;return}
+    const view=document.createElement('section');view.className='mail-original';view.dataset.originalMailView='true';
+    view.append(docText('p','원본 Gmail 메일을 권한 확인 후 불러오는 중입니다.','note'));box.append(view);
+    try{
+      const response=await api('/accounts/'+Number(record.account_id)+'/messages/'+encodeURIComponent(record.source_message_id));
+      const mail=response.message||{};
+      const metadata=docText('p','보낸 사람: '+String(mail.from||'확인 필요')+' · 날짜: '+String(mail.date||'확인 필요')+' · 제목: '+String(mail.subject||'제목 없음'),'note');
+      const body=document.createElement('pre');body.className='mail-source-body';
+      // Never use innerHTML: message bodies are untrusted third-party input.
+      body.textContent=String(mail.body||mail.snippet||'(본문 없음)').slice(0,20000);
+      const parts=Array.isArray(mail.attachments)?mail.attachments:[];
+      const attachmentText=parts.length?parts.map(p=>String(p.filename||'첨부파일').slice(0,180)).join(', '):'목록 없음';
+      view.replaceChildren(docText('h4','원본 메일 · 읽기 전용'),metadata,body,docText('p','첨부파일: '+attachmentText,'note'),docText('p','발행 전에 실제 공급자·금액·거래기간과 첨부 증빙을 따로 확인하세요. 이 화면은 세금계산서를 발행하지 않습니다.','note'));
+    }catch(error){view.replaceChildren(docText('p','원본 메일을 불러올 수 없습니다: '+error.message,'note'))}
   }
   function docApproveForm(box,record){
     if(box.querySelector('form'))return;
