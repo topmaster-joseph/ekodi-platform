@@ -399,7 +399,7 @@ export async function handleSinglesSocial(req:Request,p:string,admin:Admin,userI
   const iv=result.data;
   if(iv?.status!=='VERIFIED'||iv?.id!==id)return reply(req,{error:'identity_not_verified'},409);
   // 테스트 채널 결과는 실제 본인확인이 아니므로 성인 확인으로 쓰지 않는다(실연동 채널만 인정).
-  if(iv?.channel?.type!=='LIVE'&&Deno.env.get('SINGLES_IDENTITY_ALLOW_TEST')!=='true'){
+  if(iv?.channel?.type!=='LIVE'){
    await admin.from('singles_identity_verifications').update({status:'failed'}).eq('id',id).eq('user_id',userId);
    return reply(req,{error:'identity_test_channel'},409);
   }
