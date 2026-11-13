@@ -25,6 +25,21 @@ const parse=(text,fallback)=>{try{const v=JSON.parse(text||'');return v??fallbac
 async function body(request){try{return await request.json()}catch{return null}}
 const FILLED=['FILLED','PARTIALLY_FILLED','PARTIALLY_FILLED_CANCELLED'];
 
+/**
+ * Idempotent paper-order responses must preserve the recorded risk decision.
+ * Replaying a rejected attempt must never be reported as a successful order.
+ */
+function replayPaperOrder(request,env,row){
+ const allowed=Number(row?.risk_allowed)===1&&row.status!=='RISK_BLOCKED';
+ const order={idempotency_key:row.idempotency_key,status:row.status,filled_qty:row.filled_qty,avg_price:row.avg_price};
+ return json(request,env,{
+  ok:allowed,allowed,duplicate:true,order,
+  ...(allowed?{}:{reasons:parse(row.risk_reasons_json,[])}),
+  executionPerformed:false
+ },allowed?200:422);
+}
+
+
 async function ownerContext(request,env,write){
  const ctx=await resolveWorkspacePrincipal(request,env,{write});
  if(ctx.error)return ctx;
@@ -406,8 +421,8 @@ async function paperOrder(request,env,ctx){
  const intent={idempotencyKey:clean(data.idempotencyKey,120),symbol:clean(data.symbol,20).toUpperCase(),market:clean(data.market,8).toUpperCase(),assetType:clean(data.assetType,20).toUpperCase(),
   side:clean(data.side,4).toUpperCase(),qty:Number(data.qty),limitPrice:Number(data.limitPrice),orderType:clean(data.orderType,10).toUpperCase()||'LIMIT',
   leverage:data.leverage,margin:data.margin,derivative:data.derivative,creditOrder:data.creditOrder};
- const existing=intent.idempotencyKey?await env.DB.prepare(`SELECT idempotency_key,status,filled_qty,avg_price FROM investment_autopilot_orders WHERE subject_type=? AND subject_key=? AND idempotency_key=?`).bind(ctx.subject.type,ctx.subject.key,intent.idempotencyKey).first():null;
- if(existing)return json(request,env,{ok:true,duplicate:true,order:existing});
+ const existing=intent.idempotencyKey?await env.DB.prepare(`SELECT idempotency_key,status,filled_qty,avg_price,risk_allowed,risk_reasons_json FROM investment_autopilot_orders WHERE subject_type=? AND subject_key=? AND idempotency_key=?`).bind(ctx.subject.type,ctx.subject.key,intent.idempotencyKey).first():null;
+ if(existing)return replayPaperOrder(request,env,existing);
  const account=await loadAccount(env,ctx);
  const view=ledgerView(account.ledger,now);
  const stats=await dayStats(env,ctx,day);
@@ -430,8 +445,8 @@ async function paperOrder(request,env,ctx){
  // Claim the idempotency key first: a concurrent duplicate gets changes=0 and must not touch the ledger.
  const claimed=await env.DB.prepare(insert).bind(...base,order.status,order.filledQty||0,order.avgPrice||0,order.fee||0,1,'[]',...meta).run();
  if(Number(claimed?.meta?.changes)!==1){
-  const dup=await env.DB.prepare(`SELECT idempotency_key,status,filled_qty,avg_price FROM investment_autopilot_orders WHERE subject_type=? AND subject_key=? AND idempotency_key=?`).bind(ctx.subject.type,ctx.subject.key,intent.idempotencyKey).first();
-  return json(request,env,{ok:true,duplicate:true,order:dup},200);
+  const dup=await env.DB.prepare(`SELECT idempotency_key,status,filled_qty,avg_price,risk_allowed,risk_reasons_json FROM investment_autopilot_orders WHERE subject_type=? AND subject_key=? AND idempotency_key=?`).bind(ctx.subject.type,ctx.subject.key,intent.idempotencyKey).first();
+  return replayPaperOrder(request,env,dup);
  }
  // Compare-and-swap on the exact ledger this order was evaluated against, so two concurrent orders
  // cannot both pass the budget check and overwrite each other.
