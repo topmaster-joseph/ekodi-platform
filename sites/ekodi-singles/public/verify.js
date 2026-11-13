@@ -5,7 +5,6 @@ const $=id=>document.getElementById(id);
 const say=(t,error=false)=>{const n=$('verifyStatus');n.textContent=t;n.className=error?'notice error':'notice'};
 const ERR={
  identity_provider_not_configured:'본인인증 연동을 준비하고 있습니다. 잠시 후 다시 이용해 주세요.',
- pilot_only:'현재는 초대받은 회원만 본인인증을 진행할 수 있습니다.',
  member_not_found:'회원 참여 동의가 없습니다. 먼저 내 프로필에서 가입을 진행해 주세요.',
  singles_enrollment_not_launched:'현재 회원가입을 준비 중입니다.',
  server_unavailable:'회원 상태를 확인하지 못했습니다. 잠시 후 다시 이용해 주세요.',
@@ -18,7 +17,7 @@ const ERR={
  identity_key_missing:'이 인증 수단으로는 중복 가입 확인이 되지 않습니다. 휴대폰(통신사) 인증으로 다시 시도해 주세요.',
  identity_already_completed:'이미 처리된 인증입니다. 동행 안내·가입 화면에서 상태를 확인해 주세요.',
  identity_test_channel:'본인인증이 아직 시험 연결 상태라 성인 확인으로 인정되지 않습니다. 동행 안내·가입 화면의 "운영자 확인으로 요청하기"를 이용해 주세요.',
- pilot_only:'지금은 시범 운영 중이라 지정된 계정만 이용할 수 있습니다.'
+ pilot_only:'현재는 초대받은 회원만 본인인증을 진행할 수 있습니다.'
 };
 let client=null;
 async function token(){const {data}=await client.auth.getSession();if(!data?.session?.access_token)throw Error('login_required');return data.session.access_token}
