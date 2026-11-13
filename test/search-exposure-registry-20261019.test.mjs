@@ -43,3 +43,22 @@ test('documented operator-space noindex landing is absent from public sitemap in
   assert.equal(isPublicDiscoveryPath('/cgma'), true);
   assert.equal(isPublicDiscoveryPath('/ekodibiz/trade'), false);
 });
+
+test('public sitemap advertises final /edu/ and /management/ canonical URLs, not 308 entry URLs', async () => {
+  for (const path of ['/edu', '/management']) {
+    assert.equal(TRAILING_SLASH_CANONICAL_PATHS.has(path), true, path);
+    assert.equal(isPublicDiscoveryPath(path), true, path);
+  }
+  const {buildEkodiPublicRegistry, ekodiDynamicSitemapResponse} = await import('../public-discovery-registry.js');
+  const registry=await buildEkodiPublicRegistry({});
+  const expected=['https://ekodi.kr/edu/','https://ekodi.kr/management/'];
+  for(const canonical of expected) {
+    assert.ok(registry.urls.includes(canonical),'missing final canonical '+canonical);
+    assert.ok(!registry.urls.includes(canonical.slice(0,-1)),'must omit the 308 source '+canonical);
+  }
+  const sitemap=await (await ekodiDynamicSitemapResponse({})).text();
+  for(const canonical of expected) {
+    assert.ok(sitemap.includes('<loc>'+canonical+'</loc>'),canonical);
+    assert.ok(!sitemap.includes('<loc>'+canonical.slice(0,-1)+'</loc>'),'redirect source in sitemap');
+  }
+});
