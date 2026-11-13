@@ -87,7 +87,7 @@
     // PUBLISHING-AI-WEEKLY-001: 주 1권 AI 협업 초안 — 읽고 고친 뒤 '감수 완료'. [확인필요]·[본문확인] 표시가 남아 있으면 완료되지 않는다.
     async ai() {
       const d = await api('admin/ai-books');
-      const out = [el('p', { className: 'muted', textContent: `무료 AI 한도 오늘 사용 ${d.budget.usedToday} / ${d.budget.dailyCap} · 유료 호출 없음 · 모든 책에 'AI 협업 초안 · 저자 감수' 표기` })];
+      const out = [el('p', { className: 'muted', textContent: `무료 AI 한도 오늘 사용 ${d.budget.usedToday} / ${d.budget.dailyCap} · 유료 호출 없음 · 판권면에 'AI 도구를 활용해 집필·저자 감수 · 삽화 AI 생성' 표기 · EPUB 내려받기는 에코디서점 내서재(운영자)` })];
       const openable = b => b.status !== 'drafting' || b.done > 0;
       const titleCell = b => {
         const cell = el('span', { className: 'padmin-titlecell' }, el('span', { textContent: b.title }));
@@ -95,11 +95,6 @@
           const open = el('button', { type: 'button', className: 'button small', textContent: '원고 열기', ariaLabel: `「${b.title}」 원고 열기` });
           open.addEventListener('click', async () => { view.replaceChildren(...await aiBook(b.id)); });
           cell.append(open);
-        }
-        if (b.status === 'approved') {
-          const dl = el('button', { type: 'button', className: 'button small', textContent: 'EPUB 내려받기', ariaLabel: `「${b.title}」 EPUB 내려받기` });
-          dl.addEventListener('click', () => downloadEpub(b.id, b.title, dl));
-          cell.append(dl);
         }
         return cell;
       };
@@ -348,17 +343,6 @@
     page.addEventListener('touchend', e => { if (editing || typing(e)) return; const t = e.changedTouches[0]; const dx = t.clientX - sx, dy = t.clientY - sy; if (Math.abs(dx) > 70 && Math.abs(dy) < 50) go(at + (dx < 0 ? 1 : -1)); }, { passive: true });
     draw();
     return { unsaved: () => ed.dirty.size > 0, node: el('section', { className: 'rd' }, top, device, bar), refresh: () => { if (!editing) draw(); else status(); }, status, goChapter(n) { const i = pages.findIndex(x => x.number === n); if (i >= 0) go(i); } };
-  }
-  // 검수 목록의 EPUB 내려받기(감수·출판을 마친 책만 — 서버도 같은 규칙).
-  async function downloadEpub(id, title, btn) {
-    const label = btn.textContent; btn.disabled = true; btn.textContent = '만드는 중…';
-    try {
-      const r = await fetch(`${API}/admin/ai-books/${id}/epub`, { headers: { authorization: `Bearer ${token()}` }, cache: 'no-store' });
-      if (!r.ok) throw new Error();
-      const url = URL.createObjectURL(await r.blob()); const a = el('a', { href: url, download: `${title}.epub` }); document.body.append(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 30000); btn.textContent = '받았습니다';
-    } catch { btn.textContent = '다시 시도'; }
-    finally { btn.disabled = false; setTimeout(() => { btn.textContent = label; }, 4000); }
   }
   async function aiBook(id) {
     const d = await api(`admin/ai-books/${id}`);
