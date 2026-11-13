@@ -3,7 +3,7 @@
 <meta name="description" content="2018년부터 2026년까지 말씀과 식탁, 유학생 돌봄과 장학, 공동체 교제 및 봉사로 이어온 에코디선교회 사역 연혁입니다."><link rel="canonical" href="https://ekodi.kr/ekodimission/history">
 <link rel="stylesheet" href="/ekodimission/assets/site.css"><link rel="stylesheet" href="/ekodimission/assets/shell.css"><script src="/ekodimission/assets/shell.js" defer></script></head><body>
 <div class="review-banner"><strong>PREVIEW</strong><span>공개 가능한 기록만 게시합니다.</span></div>
-<header class="mission-site-header"><a class="mission-brand" href="/ekodimission"><span class="mission-brand-mark">E</span><span><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header>
+<header class="mission-site-header"><a class="mission-brand" href="/ekodimission"><span class="mission-brand-mark" data-mission-ci="open-table" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" focusable="false"><path d="M10 25 H54 M20 25 V46 M44 25 V46 M13 48 Q32 57 51 48" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header>
 <main class="subpage mission-history-page">
 <section class="sub-hero"><p class="eyebrow">OUR JOURNEY · 2018–2026</p><h1>말씀대로 살아내고<br>살려낸 발자취.</h1><p>한 번의 행사가 아니라, 사람과 사람이 이어진 시간을 기록합니다. 설립·명칭·사역의 중요한 변화와 확인된 공동체 활동을 연도별로 구분했습니다.</p>
 <div class="actions"><a class="button primary" href="/ekodimission/activities">활동 목록 보기</a><a class="button secondary" href="/ekodimission/stories">최근 소식 보기</a></div></section>
@@ -17,4 +17,4 @@
 <li class="mission-history-entry history-year" id="history-2018"><div class="mission-history-date"><time datetime="2018">2018</time></div><ul class="history-items"><li><span class="history-day" aria-hidden="true"></span><span>한국외국인선교회 무안지부 설립</span></li></ul></li>
 </ol></section>
 <section class="callout"><p class="eyebrow">KEEP THE STORY</p><h2>사람을 기억하는 기록.</h2><p>연혁은 기관의 성과를 나열하기보다, 말씀과 식탁에서 만나 서로를 살려 온 관계를 담습니다. 최근 행사·사진·참여 기록은 활동과 소식 메뉴에서 구분해 확인할 수 있습니다.</p><div class="actions"><a class="button primary" href="/ekodimission/activities">활동 보기</a><a class="button secondary" href="/ekodimission/stories">소식 보기</a></div></section></main>
-<footer class="site-footer"><div><strong>에코디선교회</strong><p>말씀대로 살아내고 살려낸 발자취.</p></div><p class="footnote">ekodi.kr/ekodimission/history</p></footer></body></html>
+<footer class="site-footer"><div><strong>에코디선교회</strong><p>말씀대로 살아내고, 곁을 내어주며, 사람과 공동체를 살려내는 선교.</p></div><p class="footnote">EKODI MISSION · ekodi.kr/ekodimission</p></footer></body></html>

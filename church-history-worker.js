@@ -109,41 +109,81 @@ function publicYearGroup([year, list]) {
 export function renderPublicHistory(entries = []) {
   const cards = groupHistoryByYear(entries).map(publicYearGroup).join('');
   return `<!doctype html>
-<html lang="ko">
+<html lang="ko" data-ekodi-character-context="church" data-ekodi-home-anchor="#top">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>지나온 길 · 에코디교회</title>
 <meta name="description" content="한 사람의 부르심에서 대학과 지역교회, 선교 공동체와 에코디교회로 이어진 사역의 길을 기록합니다.">
 <link rel="canonical" href="https://ekodi.kr/ekodichurch/history">
+<link rel="stylesheet" href="/ekodichurch/styles.css">
+<link rel="stylesheet" href="/ekodichurch/church-refresh.css">
+<link rel="stylesheet" href="/ekodichurch/responsive.css">
+<link rel="stylesheet" href="/ekodichurch/church-footer.css">
+<link rel="stylesheet" href="/ekodichurch/church-homepage-layout.css">
+<link rel="stylesheet" href="/ekodichurch/church-compact-navigation.css">
 <style>
-:root{--ink:#15231d;--muted:#637068;--line:#dfe7e2;--paper:#f8faf8;--card:#fff;--green:#1f6a4b;--green-soft:#eaf4ee;--amber:#855b11;--amber-soft:#fff6df;--blue:#355d85;--blue-soft:#eef5fb;--radius:22px}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(180deg,#f4f8f5 0,#fff 30%,#f7f8f4 100%);color:var(--ink);font-family:Pretendard,"Noto Sans KR",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.72}.shell{width:min(980px,calc(100% - 32px));margin:0 auto}.topbar{display:flex;align-items:center;justify-content:space-between;padding:22px 0 10px;gap:16px}.brand{text-decoration:none;color:var(--ink);font-weight:800;letter-spacing:-.03em}.back{text-decoration:none;color:var(--muted);font-size:14px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:#fff}.hero{padding:72px 0 56px}.eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--green);font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.eyebrow:before{content:"";width:28px;height:1px;background:currentColor}.hero h1{font-size:clamp(42px,8vw,76px);line-height:1.03;letter-spacing:-.065em;margin:18px 0 24px}.hero p{font-size:clamp(17px,2.5vw,21px);max-width:720px;margin:0;color:#3e4b44;letter-spacing:-.025em}.principle{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:30px 0 0}.principle div{padding:18px 19px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.78)}.principle strong{display:block;font-size:13px;margin-bottom:4px}.principle span{font-size:13px;color:var(--muted)}.intro{padding:34px;border-radius:var(--radius);background:#173e2e;color:#f4fbf6;margin-bottom:60px;box-shadow:0 20px 55px rgba(23,62,46,.12)}.intro p{margin:0;font-size:18px;letter-spacing:-.02em}.intro p+p{margin-top:14px;color:#d6e7dd;font-size:15px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin:0 0 28px}.section-head h2{font-size:28px;letter-spacing:-.045em;margin:0}.section-head p{margin:0;color:var(--muted);font-size:14px}.timeline{position:relative;padding-bottom:30px}.history-item{display:grid;grid-template-columns:34px 1fr;gap:18px;position:relative}.history-rail{position:relative;display:flex;justify-content:center}.history-rail:after{content:"";position:absolute;top:16px;bottom:-16px;width:1px;background:var(--line)}.history-item:last-child .history-rail:after{display:none}.history-rail span{position:relative;z-index:1;width:13px;height:13px;margin-top:25px;border-radius:50%;background:#fff;border:3px solid #8aa596;box-shadow:0 0 0 5px #f7faf8}.history-item.featured .history-rail span{border-color:var(--green);background:var(--green)}.history-card{padding:22px 24px 25px;margin:0 0 19px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 8px 28px rgba(24,45,34,.045)}.history-item.featured .history-card{border-color:#c9ddd1}.history-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:9px}.history-meta time{font-weight:800;font-size:14px}.era,.verification{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750}.era{background:#f0f3f1;color:#5b685f}.verification.verified{background:var(--green-soft);color:var(--green)}.verification.contextual{background:var(--blue-soft);color:var(--blue)}.verification.oral{background:#f4effa;color:#68448c}.verification.review{background:var(--amber-soft);color:var(--amber)}.history-card h2{font-size:22px;line-height:1.3;letter-spacing:-.04em;margin:0 0 10px}.summary{font-size:16px;margin:0;color:#34433b}.body-copy{font-size:14px;color:var(--muted);margin:12px 0 0;padding-top:12px;border-top:1px solid #eef1ef}.detail-row{display:flex;flex-wrap:wrap;gap:8px 15px;margin-top:15px;color:#758078;font-size:12px}.detail-row span:before{content:"·";margin-right:6px}.history-years{list-style:none;margin:0 0 30px;padding:0;border-top:1px solid var(--line)}.history-year{display:grid;grid-template-columns:minmax(90px,150px) minmax(0,1fr);gap:18px;align-items:baseline;padding:20px 0;border-bottom:1px solid var(--line);scroll-margin-top:24px}.history-year-label time{font-size:clamp(20px,3vw,28px);font-weight:850;color:var(--green);letter-spacing:-.03em}.history-items{list-style:none;margin:0;padding:0;display:grid;gap:7px}.history-items li{display:grid;grid-template-columns:6.6rem minmax(0,1fr);gap:10px;align-items:baseline;line-height:1.5}.history-items .history-day{font-variant-numeric:tabular-nums;font-weight:750;color:var(--green);font-size:14px;white-space:nowrap}.history-items li.history-recurring{grid-template-columns:auto minmax(0,1fr)}.history-items li.history-recurring .history-day{min-width:6.6rem}.history-items li>span:last-child{position:relative;padding-left:14px;font-size:16px;word-break:keep-all;overflow-wrap:anywhere}.history-items li>span:last-child:before{content:"·";position:absolute;left:0;font-weight:800;color:var(--muted)}.empty{padding:42px;text-align:center;border:1px dashed var(--line);border-radius:20px;color:var(--muted)}.footer{margin:60px 0 28px;padding:28px 0;border-top:1px solid var(--line);color:var(--muted);font-size:13px}.footer strong{color:var(--ink)}@media(max-width:700px){.history-year{grid-template-columns:52px minmax(0,1fr);gap:10px;padding:16px 0}.history-year-label time{font-size:20px}.history-items li{grid-template-columns:4.9rem minmax(0,1fr);gap:7px}.history-items .history-day{font-size:13px}.history-items li>span:last-child{font-size:15px}.shell{width:min(100% - 22px,980px)}.topbar{padding-top:14px}.hero{padding:52px 4px 40px}.principle{grid-template-columns:1fr}.intro{padding:24px;margin-bottom:46px}.history-item{grid-template-columns:23px 1fr;gap:9px}.history-card{padding:19px 18px}.section-head{display:block}.section-head p{margin-top:6px}.detail-row{display:block}.detail-row span{display:block;margin-top:3px}}
+:root{--ink:#15231d;--muted:#637068;--line:#dfe7e2;--paper:#f8faf8;--card:#fff;--green:#1f6a4b;--green-soft:#eaf4ee;--amber:#855b11;--amber-soft:#fff6df;--blue:#355d85;--blue-soft:#eef5fb;--radius:22px}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(180deg,#f4f8f5 0,#fff 30%,#f7f8f4 100%);color:var(--ink);font-family:Pretendard,"Noto Sans KR",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.72}.shell{width:min(980px,calc(100% - 32px));margin:0 auto}.brand{text-decoration:none;color:var(--ink);font-weight:800;letter-spacing:-.03em}.back{text-decoration:none;color:var(--muted);font-size:14px;padding:9px 13px;border:1px solid var(--line);border-radius:999px;background:#fff}.history-hero{padding:72px 0 56px}.history-eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--green);font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.history-eyebrow:before{content:"";width:28px;height:1px;background:currentColor}.history-hero h1{font-size:clamp(42px,8vw,76px);line-height:1.03;letter-spacing:-.065em;margin:18px 0 24px}.history-hero p{font-size:clamp(17px,2.5vw,21px);max-width:720px;margin:0;color:#3e4b44;letter-spacing:-.025em}.history-principle{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:30px 0 0}.history-principle div{padding:18px 19px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.78)}.history-principle strong{display:block;font-size:13px;margin-bottom:4px}.history-principle span{font-size:13px;color:var(--muted)}.history-intro{padding:34px;border-radius:var(--radius);background:#173e2e;color:#f4fbf6;margin-bottom:60px;box-shadow:0 20px 55px rgba(23,62,46,.12)}.history-intro p{margin:0;font-size:18px;letter-spacing:-.02em}.history-intro p+p{margin-top:14px;color:#d6e7dd;font-size:15px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin:0 0 28px}.section-head h2{font-size:28px;letter-spacing:-.045em;margin:0}.section-head p{margin:0;color:var(--muted);font-size:14px}.timeline{position:relative;padding-bottom:30px}.history-item{display:grid;grid-template-columns:34px 1fr;gap:18px;position:relative}.history-rail{position:relative;display:flex;justify-content:center}.history-rail:after{content:"";position:absolute;top:16px;bottom:-16px;width:1px;background:var(--line)}.history-item:last-child .history-rail:after{display:none}.history-rail span{position:relative;z-index:1;width:13px;height:13px;margin-top:25px;border-radius:50%;background:#fff;border:3px solid #8aa596;box-shadow:0 0 0 5px #f7faf8}.history-item.featured .history-rail span{border-color:var(--green);background:var(--green)}.history-card{padding:22px 24px 25px;margin:0 0 19px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 8px 28px rgba(24,45,34,.045)}.history-item.featured .history-card{border-color:#c9ddd1}.history-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:9px}.history-meta time{font-weight:800;font-size:14px}.era,.verification{display:inline-flex;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:750}.era{background:#f0f3f1;color:#5b685f}.verification.verified{background:var(--green-soft);color:var(--green)}.verification.contextual{background:var(--blue-soft);color:var(--blue)}.verification.oral{background:#f4effa;color:#68448c}.verification.review{background:var(--amber-soft);color:var(--amber)}.history-card h2{font-size:22px;line-height:1.3;letter-spacing:-.04em;margin:0 0 10px}.summary{font-size:16px;margin:0;color:#34433b}.body-copy{font-size:14px;color:var(--muted);margin:12px 0 0;padding-top:12px;border-top:1px solid #eef1ef}.detail-row{display:flex;flex-wrap:wrap;gap:8px 15px;margin-top:15px;color:#758078;font-size:12px}.detail-row span:before{content:"·";margin-right:6px}.history-years{list-style:none;margin:0 0 30px;padding:0;border-top:1px solid var(--line)}.history-year{display:grid;grid-template-columns:minmax(90px,150px) minmax(0,1fr);gap:18px;align-items:baseline;padding:20px 0;border-bottom:1px solid var(--line);scroll-margin-top:24px}.history-year-label time{font-size:clamp(20px,3vw,28px);font-weight:850;color:var(--green);letter-spacing:-.03em}.history-items{list-style:none;margin:0;padding:0;display:grid;gap:7px}.history-items li{display:grid;grid-template-columns:6.6rem minmax(0,1fr);gap:10px;align-items:baseline;line-height:1.5}.history-items .history-day{font-variant-numeric:tabular-nums;font-weight:750;color:var(--green);font-size:14px;white-space:nowrap}.history-items li.history-recurring{grid-template-columns:auto minmax(0,1fr)}.history-items li.history-recurring .history-day{min-width:6.6rem}.history-items li>span:last-child{position:relative;padding-left:14px;font-size:16px;word-break:keep-all;overflow-wrap:anywhere}.history-items li>span:last-child:before{content:"·";position:absolute;left:0;font-weight:800;color:var(--muted)}.history-empty{padding:42px;text-align:center;border:1px dashed var(--line);border-radius:20px;color:var(--muted)}.history-note{margin:60px 0 28px;padding:28px 0;border-top:1px solid var(--line);color:var(--muted);font-size:13px}.footer strong{color:var(--ink)}@media(max-width:700px){.history-year{grid-template-columns:52px minmax(0,1fr);gap:10px;padding:16px 0}.history-year-label time{font-size:20px}.history-items li{grid-template-columns:4.9rem minmax(0,1fr);gap:7px}.history-items .history-day{font-size:13px}.history-items li>span:last-child{font-size:15px}.shell{width:min(100% - 22px,980px)}.topbar{padding-top:14px}.history-hero{padding:52px 4px 40px}.history-principle{grid-template-columns:1fr}.history-intro{padding:24px;margin-bottom:46px}.history-item{grid-template-columns:23px 1fr;gap:9px}.history-card{padding:19px 18px}.section-head{display:block}.section-head p{margin-top:6px}.detail-row{display:block}.detail-row span{display:block;margin-top:3px}}
 </style>
 </head>
-<body>
-<div class="shell">
-  <header class="topbar"><a class="brand" href="/ekodichurch">에코디교회</a><a class="back" href="/ekodichurch">교회 홈으로</a></header>
+<body data-ekodi-footer-mode="service" data-church-public-page="history">
+  <header class="site-header church-devotion-header" id="top">
+    <a class="brand" href="/ekodichurch/" aria-label="에코디교회 홈">
+      <span class="brand-mark" aria-hidden="true">E</span>
+      <span><strong>에코디교회</strong><small>EKODI CHURCH</small></span>
+    </a>
+    <button class="menu-button" aria-expanded="false" aria-controls="main-nav" aria-label="메뉴 열기"><span></span><span></span></button>
+    <nav id="main-nav" aria-label="주요 메뉴">
+      <a href="/ekodichurch/devotion/">매일묵상</a>
+      <a href="/ekodichurch/#worship">예배·방송</a>
+      <a href="/ekodichurch/notices/">공지사항</a>
+      <a href="/ekodichurch/schedule/">주요일정</a>
+      <a href="/ekodichurch/#together">함께하기</a>
+      <a class="shell-my" href="/ekodichurch/my/">마이페이지</a>
+    </nav>
+  </header>
+<div class="shell church-history-shell">
   <main>
-    <section class="hero">
-      <span class="eyebrow">Our Story</span>
+    <section class="history-hero">
+      <span class="history-eyebrow">Our Story</span>
       <h1>지나온 길</h1>
       <p>교회의 이름이 생긴 날보다 먼저 시작된 만남과 섬김을 기억합니다. 한 사람의 삶에서 시작해 대학과 지역교회, 선교 공동체와 교회로 이어진 길을 사실과 기억을 구분하며 기록합니다.</p>
-      <div class="principle">
+      <div class="history-principle">
         <div><strong>사실은 사실대로</strong><span>문서로 확인된 기록을 근거와 함께 보존합니다.</span></div>
         <div><strong>기억은 기억대로</strong><span>구술과 회고는 문서 기록과 구분해 남깁니다.</span></div>
         <div><strong>빈칸도 역사로</strong><span>아직 확인되지 않은 시기는 억지로 채우지 않습니다.</span></div>
       </div>
     </section>
-    <section class="intro">
+    <section class="history-intro">
       <p>에코디교회의 이야기는 교회의 이름이 생긴 날부터 시작되지 않습니다. 목포대학교에서 세계 여러 나라의 학생들을 만나고, 지역교회와 함께 외국인 유학생을 섬기고, 대학과 교회와 선교단체가 협력하면서 한 공동체의 길이 열렸습니다.</p>
       <p>한국외국인선교회 무안지부와 에코디선교회, 목포대학교 글로벌비전센터의 사역은 서로 지워지는 이름이 아니라 오늘의 에코디교회를 이해하게 하는 역사적 층위로 함께 기록됩니다.</p>
     </section>
     <section class="history-list-section" aria-label="연도별 기록">
-      ${cards ? `<ol class="history-years">${cards}</ol>` : '<div class="empty">공개 승인된 기록을 준비하고 있습니다.</div>'}
+      ${cards ? `<ol class="history-years">${cards}</ol>` : '<div class="history-empty">공개 승인된 기록을 준비하고 있습니다.</div>'}
     </section>
   </main>
-  <footer class="footer">이 기록은 새로운 자료와 증언이 확인될 때 수정·보완됩니다. 서로 다른 창립·전환 기록은 의미가 확인될 때까지 각각 보존합니다.</footer>
+  <p class="history-note">이 기록은 새로운 자료와 증언이 확인될 때 수정·보완됩니다. 서로 다른 창립·전환 기록은 의미가 확인될 때까지 각각 보존합니다.</p>
 </div>
+  <footer class="site-footer church-footer" data-ekodi-service-footer>
+    <div class="church-footer-inner">
+      <strong class="church-footer-brand">EKODI CHURCH</strong>
+      <div class="church-footer-info" aria-label="에코디교회 운영 정보">
+        <span>사업자 소재지 전남 무안군 청계면 백련동1길 17-4, 1층</span>
+        <span>운영주체 에코디교회</span>
+        <span>대표 정찬균</span>
+        <span>고유번호 307-82-82097</span>
+        <a href="mailto:ekodichurch@gmail.com">ekodichurch@gmail.com</a>
+      </div>
+      <nav class="church-footer-legal" aria-label="법적 고지">
+        <a href="https://ekodi.kr/privacy">개인정보처리방침</a>
+        <a href="https://ekodi.kr/terms">이용약관</a>
+        <a href="mailto:ekodibiz@gmail.com">문의</a>
+      </nav>
+      <div class="church-footer-bottom"><span>© 2026 EKODI CHURCH</span><a href="#top">맨 위로 ↑</a></div>
+    </div>
+  </footer>
+  <script src="/ekodichurch/devotion/devotion-page.js" defer></script>
+  <script src="/ekodichurch/church-shell.js?v=20261101" defer></script>
 </body>
 </html>`;
 }
@@ -174,7 +214,7 @@ function adminClient() {
     const query = $('filter').value.trim().toLowerCase();
     const filtered = rows.filter(row => !query || [row.dateLabel,row.era,row.organization,row.title,row.summary,row.verificationStatus].join(' ').toLowerCase().includes(query));
     $('count').textContent = filtered.length + ' / ' + rows.length + '개';
-    $('records').innerHTML = filtered.map(row => '<article class="record" data-id="' + esc(row.id) + '"><div class="record-head"><div><span class="date">' + esc(row.dateLabel || row.startDate) + '</span> ' + badge(row.verificationStatus) + (row.visibility === 'private' ? ' <span class="badge private">비공개</span>' : '') + '</div><div class="record-actions"><button type="button" data-edit="' + esc(row.id) + '">수정</button><button type="button" class="danger" data-delete="' + esc(row.id) + '">삭제</button></div></div><h3>' + esc(row.title) + '</h3><p>' + esc(row.summary) + '</p><small>' + esc(row.era) + (row.organization ? ' · ' + esc(row.organization) : '') + '</small></article>').join('') || '<div class="empty">조건에 맞는 기록이 없습니다.</div>';
+    $('records').innerHTML = filtered.map(row => '<article class="record" data-id="' + esc(row.id) + '"><div class="record-head"><div><span class="date">' + esc(row.dateLabel || row.startDate) + '</span> ' + badge(row.verificationStatus) + (row.visibility === 'private' ? ' <span class="badge private">비공개</span>' : '') + '</div><div class="record-actions"><button type="button" data-edit="' + esc(row.id) + '">수정</button><button type="button" class="danger" data-delete="' + esc(row.id) + '">삭제</button></div></div><h3>' + esc(row.title) + '</h3><p>' + esc(row.summary) + '</p><small>' + esc(row.era) + (row.organization ? ' · ' + esc(row.organization) : '') + '</small></article>').join('') || '<div class="history-empty">조건에 맞는 기록이 없습니다.</div>';
     document.querySelectorAll('[data-edit]').forEach(button => button.onclick = () => edit(button.dataset.edit));
     document.querySelectorAll('[data-delete]').forEach(button => button.onclick = () => remove(button.dataset.delete));
   }
@@ -196,9 +236,9 @@ export function renderAdminHistory() {
 </style></head><body>
 <div class="wrap">
 <header class="top"><a href="/ekodichurch/admin/overview"><h1>에코디교회 관리자 · 역사 아카이브</h1></a><div class="top-actions"><a class="button" href="/ekodichurch/history" target="_blank" rel="noopener">공개 화면</a><a class="button" href="/ekodichurch/admin/overview">관리자 홈</a><button id="logout" type="button">로그아웃</button></div></header>
-<section class="hero"><div><h2>지나온 길 기록관리</h2><p>사실·맥락·구술·검토 필요 기록을 구분하고, 공개 여부를 기록 단위로 관리합니다.</p></div><div class="hero-meta"><span id="role">권한 확인 중</span><span id="writeMode">확인 중</span></div></section>
+<section class="history-hero"><div><h2>지나온 길 기록관리</h2><p>사실·맥락·구술·검토 필요 기록을 구분하고, 공개 여부를 기록 단위로 관리합니다.</p></div><div class="hero-meta"><span id="role">권한 확인 중</span><span id="writeMode">확인 중</span></div></section>
 <div class="toolbar"><input id="filter" type="search" placeholder="연도·조직·제목·검증상태 검색"><small id="count">0개</small><button id="newButton" class="primary" type="button">새 기록</button></div>
-<div class="layout"><section class="panel"><div id="records" class="records"><div class="empty">기록을 불러오는 중입니다.</div></div></section>
+<div class="layout"><section class="panel"><div id="records" class="records"><div class="history-empty">기록을 불러오는 중입니다.</div></div></section>
 <aside class="panel editor"><h2 id="editorTitle">새 기록</h2><form id="editor">
 <input id="entryId" name="entryId" type="hidden">
 <div class="grid">
