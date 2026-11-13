@@ -269,6 +269,21 @@ main{padding:46px 0 72px}
 .ekodi-mission-statement p,.ekodi-mission-statement .ekodi-mission-copy{display:block;margin:0;font-size:clamp(.87rem,1.3vw,.98rem);line-height:1.72;font-weight:500;letter-spacing:normal;word-break:keep-all;color:inherit}
 @media(max-width:480px){.ekodi-mission-statement{padding:.72rem .84rem;margin:.9rem 0 1.1rem}}
 
+
+/* PG review: visible, crawlable legal operator facts on the canonical EKODI entry. */
+.ekodi-home-merchant-disclosure{margin-top:56px;border-top:1px solid var(--line);background:rgba(255,255,255,.78);color:var(--text);font-size:.83rem;line-height:1.65}
+.ekodi-home-merchant-disclosure__inner{max-width:1240px;margin:0 auto;padding:28px 28px 32px}
+.ekodi-home-merchant-disclosure__heading{margin:0 0 4px;font-size:1rem;letter-spacing:-.015em}
+.ekodi-home-merchant-disclosure__context{margin:0 0 18px;color:var(--muted);font-size:.79rem}
+.ekodi-home-merchant-disclosure__facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 24px;margin:0}
+.ekodi-home-merchant-disclosure__facts>div{min-width:0}
+.ekodi-home-merchant-disclosure__facts dt{font-size:.72rem;color:var(--muted);margin-bottom:2px}
+.ekodi-home-merchant-disclosure__facts dd{margin:0;overflow-wrap:anywhere;font-weight:500}
+.ekodi-home-merchant-disclosure a{color:var(--accent-deep);text-underline-offset:3px}
+.ekodi-home-merchant-disclosure__links{display:flex;flex-wrap:wrap;gap:10px 20px;margin:20px 0 0;padding-top:15px;border-top:1px solid var(--line)}
+.ekodi-home-merchant-disclosure__fine{margin:12px 0 0;font-size:.72rem;color:var(--muted)}
+@media(max-width:760px){.ekodi-home-merchant-disclosure{margin-top:28px}.ekodi-home-merchant-disclosure__inner{padding:22px 18px 28px}.ekodi-home-merchant-disclosure__facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}.ekodi-home-merchant-disclosure__facts>div:nth-child(5){grid-column:1/-1}}
+@media(max-width:410px){.ekodi-home-merchant-disclosure__facts{grid-template-columns:1fr}.ekodi-home-merchant-disclosure__facts>div:nth-child(5){grid-column:auto}}
 </style>
 </head>
 <body>
@@ -371,5 +386,29 @@ main{padding:46px 0 72px}
     </section>
   </div>
 </main>
+
+<!-- Public business disclosure is intentionally static so PG prechecks/crawlers see it without JavaScript. -->
+<footer class="ekodi-home-merchant-disclosure" data-ekodi-service-footer="true" aria-labelledby="ekodi-home-merchant-title">
+  <div class="ekodi-home-merchant-disclosure__inner">
+    <h2 class="ekodi-home-merchant-disclosure__heading" id="ekodi-home-merchant-title">사업자 정보 · 운영 주체</h2>
+    <p class="ekodi-home-merchant-disclosure__context">에코디비즈가 제공하는 서비스의 사업자 고지입니다. 개별 서비스·기관·단체의 운영 주체가 다른 경우 해당 서비스의 별도 고지가 우선합니다.</p>
+    <dl class="ekodi-home-merchant-disclosure__facts">
+      <div><dt>상호</dt><dd>에코디비즈</dd></div>
+      <div><dt>대표자명</dt><dd>정찬균</dd></div>
+      <div><dt>사업자등록번호</dt><dd>213-13-01959</dd></div>
+      <div><dt>통신판매업신고번호</dt><dd>2023-전남무안-0153</dd></div>
+      <div><dt>사업장 주소</dt><dd>전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층</dd></div>
+      <div><dt>고객 문의 전화</dt><dd><a href="tel:+821035018542">010-3501-8542</a></dd></div>
+      <div><dt>이메일</dt><dd><a href="mailto:ekodibiz@gmail.com">ekodibiz@gmail.com</a></dd></div>
+    </dl>
+    <nav class="ekodi-home-merchant-disclosure__links" aria-label="계약 및 개인정보 법적 고지">
+      <a href="https://ekodi.kr/terms">이용약관</a>
+      <a href="https://ekodi.kr/privacy">개인정보처리방침</a>
+      <a href="https://ekodi.kr/ekodibiz/refund">환불정책</a>
+      <a href="https://ekodi.kr/ekodibiz">에코디비즈</a>
+    </nav>
+    <p class="ekodi-home-merchant-disclosure__fine">대표 홈페이지에서 제공되는 각 서비스의 상품·환불·책임 주체는 해당 서비스의 고지를 확인해 주세요.</p>
+  </div>
+</footer>
 </body>
 </html>
