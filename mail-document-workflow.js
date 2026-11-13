@@ -45,7 +45,8 @@ async function schema(db) {
     db.prepare("CREATE TABLE IF NOT EXISTS mail_document_cases (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, account_id INTEGER, rule_id INTEGER, document_type TEXT NOT NULL CHECK(document_type IN ('tax_invoice','sales_certificate')), source_type TEXT NOT NULL CHECK(source_type IN ('mail','manual')), source_message_id TEXT NOT NULL, source_from TEXT NOT NULL DEFAULT '', source_subject TEXT NOT NULL DEFAULT '', source_date TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'REVIEW' CHECK(status IN ('REVIEW','APPROVED','ISSUED')), counterparty TEXT NOT NULL DEFAULT '', issuer_name TEXT NOT NULL DEFAULT '', sale_period TEXT NOT NULL DEFAULT '', sale_amount INTEGER NOT NULL DEFAULT 0, tax_amount INTEGER NOT NULL DEFAULT 0, evidence_reference TEXT NOT NULL DEFAULT '', document_no TEXT UNIQUE, approved_by TEXT, approved_at TEXT, issued_by TEXT, issued_at TEXT, created_by TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE(workspace_id,account_id,source_message_id,document_type))"),
     db.prepare("CREATE TABLE IF NOT EXISTS mail_document_events (id INTEGER PRIMARY KEY AUTOINCREMENT, case_id TEXT NOT NULL, workspace_id TEXT NOT NULL, action TEXT NOT NULL, actor_email TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL)"),
     db.prepare("CREATE INDEX IF NOT EXISTS idx_mail_docs_scope ON mail_document_cases(workspace_id,created_at DESC)"),
-    db.prepare("CREATE INDEX IF NOT EXISTS idx_mail_rules_window ON mail_document_rules(active,day_from,day_to)")
+    db.prepare("CREATE INDEX IF NOT EXISTS idx_mail_rules_window ON mail_document_rules(active,day_from,day_to)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS mail_document_scan_cursors(workspace_id TEXT NOT NULL,rule_id INTEGER NOT NULL,page_token TEXT NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(workspace_id,rule_id))")
   ]);
 }
 async function event(db, row, action, actorEmail, detail = '') {
@@ -93,10 +94,18 @@ async function syncRule(db, env, rule) {
   const oauth=await googleAccessForAccount(env,db,account);
   if (!hasGoogleReadScope(oauth.scopes)) failure('MAIL_READ_SCOPE_REQUIRED',409);
   // Gmail results are untrusted requests, never a trigger for automatic financial issuance.
-  const messages=await collectDocumentMailPages(options => listGoogleMailMessages(oauth.accessToken, options), rule.search_query);
+  // One bounded Gmail page per run: protects the global EKODI Cron external-fetch budget.
+  // Durable cursor means incomplete page sequences never masquerade as a completed day.
+  const cursor=await db.prepare('SELECT page_token FROM mail_document_scan_cursors WHERE workspace_id=? AND rule_id=?')
+    .bind(rule.workspace_id,rule.id).first();
+  const pageToken=String(cursor?.page_token||'');
+  const page=await listGoogleMailMessages(oauth.accessToken,{q:rule.search_query,maxResults:12,pageToken,inboxOnly:false});
+  if(!Array.isArray(page?.messages)) failure('MAIL_RESPONSE_INVALID',502);
+  const nextPageToken=String(page.nextPageToken||'');
+  if(nextPageToken && nextPageToken===pageToken) failure('MAIL_PAGE_CURSOR_LOOP',502);
   let inserted=0;
   const now=new Date().toISOString();
-  for(const message of messages) {
+  for(const message of page.messages) {
     if (!/^[A-Za-z0-9_-]{5,128}$/.test(String(message.id||''))) continue;
     const id=crypto.randomUUID();
     const result=await db.prepare("INSERT OR IGNORE INTO mail_document_cases(id,workspace_id,account_id,rule_id,document_type,source_type,source_message_id,source_from,source_subject,source_date,status,created_by,created_at,updated_at) VALUES(?,?,?,?,?,'mail',?,?,?,?,'REVIEW','ekodi-mail-scheduler',?,?)")
@@ -106,24 +115,34 @@ async function syncRule(db, env, rule) {
       await event(db,{id,workspace_id:rule.workspace_id},'mail.request.detected','ekodi-mail-scheduler','sender-verification-and-evidence-review-required');
     }
   }
-  await db.prepare("UPDATE mail_document_rules SET last_checked_at=?,last_checked_kst_day=?,last_error='',updated_at=? WHERE id=? AND workspace_id=?")
-    .bind(now,siteDay(),now,rule.id,rule.workspace_id).run();
-  return {scanned:messages.length,inserted};
+  if(nextPageToken) {
+    await db.prepare('INSERT INTO mail_document_scan_cursors(workspace_id,rule_id,page_token,updated_at) VALUES(?,?,?,?) ON CONFLICT(workspace_id,rule_id) DO UPDATE SET page_token=excluded.page_token,updated_at=excluded.updated_at')
+      .bind(rule.workspace_id,rule.id,nextPageToken,now).run();
+    await db.prepare("UPDATE mail_document_rules SET last_checked_at=?,last_error='',updated_at=? WHERE id=? AND workspace_id=?")
+      .bind(now,now,rule.id,rule.workspace_id).run();
+  } else {
+    await db.prepare('DELETE FROM mail_document_scan_cursors WHERE workspace_id=? AND rule_id=?')
+      .bind(rule.workspace_id,rule.id).run();
+    await db.prepare("UPDATE mail_document_rules SET last_checked_at=?,last_checked_kst_day=?,last_error='',updated_at=? WHERE id=? AND workspace_id=?")
+      .bind(now,siteDay(),now,rule.id,rule.workspace_id).run();
+  }
+  return {scanned:page.messages.length,inserted,hasMore:Boolean(nextPageToken)};
 }
 export async function runMailDocumentsSchedule(env) {
   if (!env?.DB) return {scannedRules:0,reason:'DB_UNAVAILABLE'};
   await schema(env.DB);
   const today=siteDay();
   const activeDay=Number(today.slice(-2));
-  const rules=await env.DB.prepare("SELECT * FROM mail_document_rules WHERE active=1 AND day_from<=? AND day_to>=? AND (last_checked_kst_day IS NULL OR last_checked_kst_day<>?) ORDER BY id LIMIT 25").bind(activeDay,activeDay,today).all();
+  const rules=await env.DB.prepare("SELECT * FROM mail_document_rules WHERE active=1 AND day_from<=? AND day_to>=? AND (last_checked_kst_day IS NULL OR last_checked_kst_day<>?) ORDER BY COALESCE(last_checked_at,created_at) ASC,id LIMIT 1").bind(activeDay,activeDay,today).all();
   let scannedRules=0,inserted=0,failed=0;
   for(const rule of rules.results||[]) {
     if (!inCollectionWindow(rule.day_from,rule.day_to)) continue;
     try { const result=await syncRule(env.DB,env,rule); scannedRules++; inserted+=result.inserted; }
     catch(error) {
       failed++;
-      await env.DB.prepare('UPDATE mail_document_rules SET last_error=?,updated_at=? WHERE id=?')
-        .bind(txt(error.code||'SYNC_FAILED',100),new Date().toISOString(),rule.id).run();
+      const now=new Date().toISOString();
+      await env.DB.prepare('UPDATE mail_document_rules SET last_error=?,last_checked_at=?,updated_at=? WHERE id=?')
+        .bind(txt(error.code||'SYNC_FAILED',100),now,now,rule.id).run();
     }
   }
   return {scannedRules,inserted,failed};
@@ -170,8 +189,11 @@ export async function handleMailDocuments(request,env) {
           !access.permissions.manage || !access.permissions.read) failure('ACCOUNT_PERMISSION_REQUIRED',403);
       if(access.row.provider!=='gmail') failure('MAIL_ADAPTER_NOT_AVAILABLE',409);
       const now=new Date().toISOString();
-      await env.DB.prepare('INSERT INTO mail_document_rules(workspace_id,account_id,document_type,search_query,day_from,day_to,active,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,1,?,?,?) ON CONFLICT(workspace_id,account_id,document_type,search_query) DO UPDATE SET day_from=excluded.day_from,day_to=excluded.day_to,active=1,updated_at=excluded.updated_at')
+      await env.DB.prepare('INSERT INTO mail_document_rules(workspace_id,account_id,document_type,search_query,day_from,day_to,active,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,1,?,?,?) ON CONFLICT(workspace_id,account_id,document_type,search_query) DO UPDATE SET day_from=excluded.day_from,day_to=excluded.day_to,active=1,last_checked_kst_day=NULL,last_error='',updated_at=excluded.updated_at')
         .bind(site.workspaceId,access.row.id,type,q,from,to,actor.email,now,now).run();
+      const current=await env.DB.prepare('SELECT id FROM mail_document_rules WHERE workspace_id=? AND account_id=? AND document_type=? AND search_query=?')
+        .bind(site.workspaceId,access.row.id,type,q).first();
+      if(current) await env.DB.prepare('DELETE FROM mail_document_scan_cursors WHERE workspace_id=? AND rule_id=?').bind(site.workspaceId,current.id).run();
       return json({ok:true},201,origin);
     }
     const sync=url.pathname.match(/^\/api\/mail\/control\/documents\/rules\/(\d+)\/sync$/);
@@ -182,11 +204,22 @@ export async function handleMailDocuments(request,env) {
       if(!access||!access.permissions.read||!access.permissions.manage) failure('ACCOUNT_PERMISSION_REQUIRED',403);
       return json({ok:true,...await syncRule(env.DB,env,rule)},200,origin);
     }
+    const reset=url.pathname.match(/^\/api\/mail\/control\/documents\/rules\/(\d+)\/reset$/);
+    if(reset&&request.method==='POST') {
+      const rule=await ruleFor(env.DB,Number(reset[1]),site);
+      const access=await accountAccess(env.DB,actor,rule.account_id);
+      if(!access||!access.permissions.manage) failure('ACCOUNT_PERMISSION_REQUIRED',403);
+      await env.DB.prepare('DELETE FROM mail_document_scan_cursors WHERE workspace_id=? AND rule_id=?').bind(site.workspaceId,rule.id).run();
+      await env.DB.prepare("UPDATE mail_document_rules SET last_checked_kst_day=NULL,last_error='',updated_at=? WHERE id=? AND workspace_id=?")
+        .bind(new Date().toISOString(),rule.id,site.workspaceId).run();
+      return json({ok:true,cursorReset:true},200,origin);
+    }
     const disable=url.pathname.match(/^\/api\/mail\/control\/documents\/rules\/(\d+)\/disable$/);
     if(disable&&request.method==='POST') {
       const rule=await ruleFor(env.DB,Number(disable[1]),site);
       const access=await accountAccess(env.DB,actor,rule.account_id);
       if(!access||!access.permissions.manage) failure('ACCOUNT_PERMISSION_REQUIRED',403);
+      await env.DB.prepare('DELETE FROM mail_document_scan_cursors WHERE workspace_id=? AND rule_id=?').bind(site.workspaceId,rule.id).run();
       await env.DB.prepare('UPDATE mail_document_rules SET active=0,updated_at=? WHERE id=? AND workspace_id=?')
         .bind(new Date().toISOString(),rule.id,site.workspaceId).run();
       return json({ok:true,active:false},200,origin);
