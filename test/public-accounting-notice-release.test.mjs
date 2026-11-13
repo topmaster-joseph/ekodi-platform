@@ -37,6 +37,11 @@ test('public accounting pages outrank independent tenant and Church wildcard gat
 });
 
 test('entry gateway serves five exact accounting notices before tenant SPACE fallback',async()=>{
+  const priorRewriter=globalThis.HTMLRewriter;
+  // Node's test runner does not provide Cloudflare's native HTMLRewriter.
+  // This pass-through leaves response status, headers and accounting HTML intact.
+  globalThis.HTMLRewriter=class { on(){return this} onDocument(){return this} transform(response){return response} };
+  try{
   const {default:router}=await import('../platform-router-entry-worker.js');
   const paths=['ekodibiz','ekodichurch','ekodimission','cgma','seonammedi'];
   const entry=read('platform-router-entry-worker.js');
@@ -53,6 +58,7 @@ test('entry gateway serves five exact accounting notices before tenant SPACE fal
     const html=await response.text();
     for(const marker of ['회계공지','연도 선택','연간 총괄','월별 소계','public-accounting-notice.js'])assert.ok(html.includes(marker),url+' missing '+marker);
   }
+  }finally{if(priorRewriter===undefined)delete globalThis.HTMLRewriter;else globalThis.HTMLRewriter=priorRewriter}
 });
 
 test('Finance release remains separately guarded; a public notice does not authorize payments',()=>{
