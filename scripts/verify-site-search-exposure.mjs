@@ -1,3 +1,4 @@
+import { auditEkodiSitemapTargets } from './search-sitemap-consistency.mjs';
 // SEARCH-EXPOSURE-ALL-001 live audit: every public site in the EKODI public
 // registry must be crawlable (HTTP 200, no noindex) and carry a canonical and
 // an index-allowing robots signal. Read-only; prints a JSON evidence report.
@@ -52,19 +53,38 @@ async function main() {
   // regression: surface it as a warning so it stays visible without paging.
   const ownerNoindex = results.filter(r => !r.ok && r.problems.every(p => ['x_robots_noindex', 'meta_noindex', 'canonical_missing'].includes(p)) && r.problems.some(p => p.endsWith('noindex')));
   const failed = results.filter(result => !result.ok && !ownerNoindex.includes(result));
+  // Independent sitemap inventory evidence: bounded same-origin GET, no redirects,
+  // no credentials, no Search Console assertions. Advisory until owner reviewed.
+  const sitemapTargets = await auditEkodiSitemapTargets({ xml:sitemap.text, resources:registry.resources });
   const report = {
     policy: 'EKODI-SEARCH-EXPOSURE-ALL-001', checkedAt: new Date().toISOString(),
     robots: { status: robots.status, ok: robotsOk }, sitemap: { status: sitemap.status, urls: (sitemap.text.match(/<loc>/g) || []).length },
-    registryCount: registry.count, auditedSites: results.length, passed: results.length - failed.length - ownerNoindex.length, ownerNoindex: ownerNoindex.map(r => r.url), failed,
+    registryCount: registry.count, auditedSites: results.length, passed: results.length - failed.length - ownerNoindex.length, ownerNoindex: ownerNoindex.map(r => r.url), failed, sitemapTargets,
   };
   console.log(JSON.stringify(report, null, 2));
   // Annotations are readable through the checks API even when raw logs are not.
   console.log(`::notice title=SEARCH-EXPOSURE-ALL-001::robots=${robotsOk ? 'ok' : 'fail'} sitemap=${sitemap.status}/${report.sitemap.urls} passed=${report.passed}/${report.auditedSites}`);
+  console.log('::notice title=SEARCH-SITEMAP-TARGET-EVIDENCE-001::' +
+    'sampled=' + sitemapTargets.sampled + '/' + sitemapTargets.uniquePublicUrls +
+    ' flagged=' + sitemapTargets.flagged + ' invalid=' + sitemapTargets.invalidLocs +
+    ' duplicate=' + sitemapTargets.duplicates +
+    (sitemapTargets.partial ? ' partial_sample=true' : ' partial_sample=false'));
+  if (sitemapTargets.flagged || sitemapTargets.invalidLocs || sitemapTargets.inventoryError) {
+    const issues=sitemapTargets.issues.map(row=>row.path+' ['+row.issues.join(',')+']').join(' | ');
+    console.log('::warning title=SEARCH-SITEMAP-TARGET-EVIDENCE-001::' +
+      (sitemapTargets.inventoryError||'') + ' invalid=' + sitemapTargets.invalidLocs +
+      ' ' + issues.slice(0,2500));
+  }
   if (ownerNoindex.length) console.log(`::warning title=owner-noindex (${ownerNoindex.length})::${ownerNoindex.map(r => r.url).join(' | ')} — 사이트 공개 상태는 public이나 페이지가 스스로 noindex. 소유자 확인 필요`);
   if (failed.length) console.log(`::error title=search-exposure (${failed.length})::${failed.map(item => `${item.url} [${item.problems.join(',')}]${item.hops?.length ? ' ' + item.hops.join(' ') : ''}`).join(' | ')}`);
   if (process.env.GITHUB_STEP_SUMMARY) {
     const { appendFile } = await import('node:fs/promises');
     const rows = results.map(r => `| ${r.url} | ${r.ok ? '✅' : '❌ ' + r.problems.join(',')} | ${r.robots || ''} |`).join('\n');
+    await appendFile(process.env.GITHUB_STEP_SUMMARY,
+      '### 사이트맵 URL 표본 실응답 검증 (Google 색인 판정 아님)\n' +
+      '표본 '+sitemapTargets.sampled+'/'+sitemapTargets.uniquePublicUrls+
+      ' · 정합성 검토 '+sitemapTargets.flagged+' · 잘못된 주소 '+sitemapTargets.invalidLocs+
+      (sitemapTargets.partial?' · 전체 URL 검사는 아님':'')+'\n\n');
     await appendFile(process.env.GITHUB_STEP_SUMMARY, `## 사용자 사이트 검색 노출 점검\n\nrobots ${robotsOk ? '✅' : '❌'} · sitemap URL ${report.sitemap.urls} · 통과 ${report.passed}/${report.auditedSites}\n\n| URL | 결과 | robots |\n|---|---|---|\n${rows}\n`);
   }
   if (!robotsOk || sitemap.status !== 200 || failed.length) process.exit(1);
