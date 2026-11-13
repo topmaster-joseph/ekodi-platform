@@ -98,3 +98,15 @@ test('scheduled SQL uses workspace AND rule ID for pending cursor, including out
   assert.match(source,/r\.last_checked_kst_day IS NULL OR r\.last_checked_kst_day<>\?/);
   assert.match(source,/r\.day_from<=\? AND r\.day_to>=\?/);
 });
+
+test('original Gmail evidence view stays on-demand, tenant-authorized and HTML-safe',async()=>{
+  const [ui,api]=await Promise.all(['mail-admin-page.js','mail-control.js'].map(read));
+  assert.match(ui,/r\.source_type==='mail'/);
+  assert.match(ui,/docShowOriginal\(d,r\)/);
+  assert.match(ui,/api\('\/accounts\/'\+Number\(record\.account_id\)\+'\/messages\/'/);
+  assert.match(ui,/body\.textContent=String\(mail\.body\|\|mail\.snippet/);
+  assert.match(ui,/view\.replaceChildren/);
+  assert.doesNotMatch(ui,/body\.innerHTML\s*=/);
+  assert.match(api,/if\(!access\.permissions\.read\)return json\(\{error:'이 계정의 메일을 읽을 권한이 없습니다.'/);
+  assert.match(api,/await getGoogleMailMessage\(auth\.accessToken,messageMatch\[2\]\)/);
+});
