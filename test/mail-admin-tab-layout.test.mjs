@@ -31,7 +31,7 @@ test('mail admin five tabs have accessible controls, keyboard navigation and nar
     assert.match(html, new RegExp('id="panel-' + tab + '"'));
   }
   assert.match(html, /\.ma \.tabs\{[^}]*overflow-x:auto/);
-  assert.match(html, /@media\(max-width:780px\)\{[^}]*\.ma \.tabs button\{flex:0 0 auto/);
+  assert.match(html, /@media\(max-width:780px\)[^\n]*\.ma \.tabs button\{flex:0 0 auto/);
   assert.match(html, /ArrowRight/);
   assert.match(html, /ArrowLeft/);
   assert.match(html, /e\.key==='Home'/);
