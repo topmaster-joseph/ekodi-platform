@@ -24,6 +24,7 @@ import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
 import { handleMailContactApi, mailContactPage, runJournalDigest } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { legacyAgencyAdminRedirect } from './ekodibiz-agency-route.js';
 import { businessCenterCss, businessCenterScript } from './ekodibiz-business-center.js';
 import { isOrganizationAdminPath, organizationAdminPage, organizationAdminCss, organizationAdminScript } from './organization-admin-page.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
@@ -602,6 +603,9 @@ async function routePlatform(request,env,ctx){
     if(CGMA_HOSTS.has(host))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
+      // Dedicated AI-agency /admin alias is not a generic workspace administrator.
+      const agencyAdminLegacy=legacyAgencyAdminRedirect(request);
+      if(agencyAdminLegacy)return agencyAdminLegacy;
       if(isSeasonalOperationsPath(url.pathname))return seasonalOperationsResponse(request,env);
       if(isSeasonalPortalPath(url.pathname))return seasonalPortalResponse(request);
       if(['GET','HEAD'].includes(request.method)&&isStorePosAgentDownloadPath(url.pathname))return storePosAgentDownload(request);

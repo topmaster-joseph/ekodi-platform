@@ -411,7 +411,9 @@ export default {
       '/ai-agency':'/ai-agency/apply',
       '/ai-agency/':'/ai-agency/apply',
       '/ai-agency-admin':'/ai-agency/manage',
-      '/ai-agency-admin/':'/ai-agency/manage'
+      '/ai-agency-admin/':'/ai-agency/manage',
+      '/ai-agency/admin':'/ai-agency/manage',
+      '/ai-agency/admin/':'/ai-agency/manage'
     };
     if (Object.hasOwn(agencyLegacy, path)) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return json({error:'method_not_allowed'},405);

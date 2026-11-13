@@ -38,13 +38,15 @@ test('autopilot client talks only to the owner API with DOM-safe rendering',asyn
 });
 
 
-test('My Invest keeps every private function directly accessible from a readable left sidebar',async()=>{
+test('My Invest keeps the essential private links in a readable left sidebar with other functions in contextual tabs',async()=>{
  const html=await (await investMyRoute(get('/invest/my'),{})).text();
  const owner=html.indexOf('<section id="owner" hidden>');
  const menu=html.match(/<nav id="ownerSidebar"[^>]*>([\s\S]*?)<\/nav>/)?.[1]||'';
  assert.ok(owner>0,'owner authentication gate must remain');
  assert.ok(menu.includes('id="stepUpButton"'),'identity button must live above left sidebar menus');
- assert.equal([...menu.matchAll(/<a /g)].length,14);
+ assert.equal([...menu.matchAll(/<a /g)].length,11);
+ for(const hidden of ['live','design','scenario'])assert.doesNotMatch(menu,new RegExp('href="/invest/my/'+hidden+'"'));
+ for(const main of ['투자 현황','직접투자','AI 모의투자','투자 분석','기록·보고'])assert.match(menu,new RegExp(main));
  assert.match(html,/id="detailTabs" class="detail-tabs" hidden role="tablist"/);
  assert.doesNotMatch(html,/<header class="top"|id="detailCrumb"|href="\/my">내 계정/);
  assert.match(html,/id="investAuthIntro"/);
@@ -53,6 +55,7 @@ test('My Invest keeps every private function directly accessible from a readable
   assert.match(js,new RegExp(id+':'));
  }
  assert.match(js,/const INVEST_DETAIL_PATHS=/);
+ assert.match(js,/root\.hidden=!\(group==='auto'\|\|group==='research'\)/);
  assert.match(js,/a\.dataset\.investDetail===selected/);
  assert.match(js,/history\.pushState/);
  assert.match(js,/addEventListener\('popstate'/);
