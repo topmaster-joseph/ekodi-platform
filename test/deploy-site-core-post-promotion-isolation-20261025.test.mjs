@@ -26,7 +26,9 @@ test('promotion step carries an id so later checks gate on it',()=>{
 
 test('every post-promotion check is gated on promotion only, not on earlier checks',()=>{
   const checks=deploySteps().filter(s=>s.id&&s.id.startsWith('v_'));
-  assert.equal(checks.length,14);
+  // A new required AI-agency canonical alias verification is included in the full ledger.
+  assert.equal(checks.length,15);
+  assert.ok(checks.some(s=>s.id==='v_ekodibiz_agency_legacy'),'agency legacy redirect must be verified after promotion');
   for(const s of checks){
     assert.ok(s.cond.includes(GATE),`${s.name} must run when promotion succeeded even if a sibling check failed`);
     assert.doesNotMatch(s.cond,/always\(\)/,`${s.name} must not run after cancellation or failed promotion`);
@@ -39,7 +41,7 @@ test('quota guard is preserved on the checks that had it',()=>{
   for(const id of ['v_seonammedi_release','v_seonammedi_release_subpath','v_seonammedi_edge_cache','v_turnstile','v_mission','v_mall','v_admin_route','v_device_admin','v_ai_provider','v_independent_board','v_service_links']){
     assert.match(byId[id],/steps\.quota\.outputs\.skip_nonessential != 'true'/,id);
   }
-  for(const id of ['v_seonammedi_finance','v_seonammedi_board_urls','v_write_queue_consumer']){
+  for(const id of ['v_seonammedi_finance','v_seonammedi_board_urls','v_write_queue_consumer','v_ekodibiz_agency_legacy']){
     assert.doesNotMatch(byId[id],/skip_nonessential/,`${id} is a required boundary and must never be quota-skipped`);
   }
 });
