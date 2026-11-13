@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {inCollectionWindow,escapeDocumentHtml,verifyCaseEvidence,collectDocumentMailPages} from '../mail-document-workflow.js';
+import {inCollectionWindow,escapeDocumentHtml,verifyCaseEvidence,fetchDocumentMailPage} from '../mail-document-workflow.js';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
 test('EKODI solar 20-25 KST mailbox window is exact',()=>{
@@ -34,28 +34,41 @@ test('cron/UI/schema declare bounded, consented inbox-to-document workflow',asyn
   assert.match(mail,/export async function mailActor/);assert.match(mail,/export async function accountAccess/);
 });
 
-test('document scan follows Gmail pagination including archived matches',async()=>{
+test('bounded single-page scan continues archived Gmail messages with durable page tokens',async()=>{
   const calls=[];
-  const messages=await collectDocumentMailPages(async opts=>{
-    calls.push(opts);
-    return calls.length===1
-      ? {messages:Array.from({length:50},(_,i)=>({id:'message-'+i})),nextPageToken:'page2'}
-      : {messages:[{id:'message-50'}],nextPageToken:null};
-  },'"한국전력" "세금계산서"');
+  const readPage=async args=>{
+    calls.push(args);
+    return args.pageToken
+      ? {messages:[{id:'message-13'}],nextPageToken:null}
+      : {messages:Array.from({length:12},(_,i)=>({id:'message-'+i})),nextPageToken:'next-page'};
+  };
+  const first=await fetchDocumentMailPage(readPage,'"한국전력" "세금계산서"');
+  assert.equal(first.messages.length,12);
+  assert.equal(first.hasMore,true);
+  assert.equal(first.nextPageToken,'next-page');
+  const second=await fetchDocumentMailPage(readPage,'"한국전력" "세금계산서"',first.nextPageToken);
+  assert.equal(second.hasMore,false);
+  assert.equal(second.messages.length,1);
   assert.equal(calls.length,2);
-  assert.equal(calls[0].inboxOnly,false);
-  assert.equal(calls[1].pageToken,'page2');
-  assert.equal(messages.length,51);
+  for(const call of calls){ assert.equal(call.maxResults,12);assert.equal(call.inboxOnly,false); }
+  assert.equal(calls[1].pageToken,'next-page');
 });
-test('a large/looping mailbox cannot be silently marked as a completed scan',async()=>{
-  await assert.rejects(
-    collectDocumentMailPages(async ({pageToken})=>({messages:[{id:'example'}],nextPageToken:'next-'+pageToken}), 'mail', {maxPages:3}),
-    /MAIL_SCAN_LIMIT_REACHED/
-  );
-  await assert.rejects(
-    collectDocumentMailPages(async()=>({messages:[],nextPageToken:'same'}), 'mail'),
-    /MAIL_PAGE_CURSOR_LOOP/
-  );
+test('cursor loops and malformed Gmail API payload fail closed',async()=>{
+  await assert.rejects(fetchDocumentMailPage(async()=>({messages:[],nextPageToken:'repeat'}),'mail','repeat'),/MAIL_PAGE_CURSOR_LOOP/);
+  await assert.rejects(fetchDocumentMailPage(async()=>({nextPageToken:''}),'mail'),/MAIL_RESPONSE_INVALID/);
+});
+test('cron only processes one site rule per tick, resuming by oldest attempt',async()=>{
+  const [source,migration,ui]=await Promise.all(['mail-document-workflow.js','migrations/202611130930_mail_document_scan_cursors.sql','mail-admin-page.js'].map(read));
+  assert.match(source,/ORDER BY COALESCE\(last_checked_at,created_at\) ASC,id LIMIT 1/);
+  assert.match(source,/maxResults: 12/);
+  assert.match(source,/mail_document_scan_cursors/);
+  assert.match(source,/last_checked_kst_day=\?/);
+  assert.match(source,/MAIL_PAGE_CURSOR_LOOP/);
+  assert.match(source,/cursorReset:true/);
+  assert.match(source,/if \(!rule.active\) failure\('RULE_DISABLED',409\)/);
+  assert.match(migration,/PRIMARY KEY\(workspace_id,rule_id\)/);
+  assert.match(ui,/다음 페이지가 남아 있습니다/);
+  assert.match(ui,/처음부터 다시 점검/);
 });
 test('read-only login boundary, disabled-rule guard, and manual tax request exist',async()=>{
   const [workflow,ui,adapter]=await Promise.all(['mail-document-workflow.js','mail-admin-page.js','mail-google-adapter.js'].map(read));

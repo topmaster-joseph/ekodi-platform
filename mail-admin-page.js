@@ -123,8 +123,9 @@ export function mailAdminPage(){
     for(const r of documentModel.rules||[]){
       const d=document.createElement('article');d.className='account';d.append(docText('strong',r.document_type==='tax_invoice'?'전자세금계산서 요청':'매출확인서 요청'));
       d.append(docText('p',r.search_query+' · 매월 '+r.day_from+'~'+r.day_to+'일 · '+(r.active?'점검 설정':'중단'),'note'));
-      d.append(docText('p','최근 점검: '+(r.last_checked_at||'없음')+(r.last_error?' · 오류: '+r.last_error:''),'note'));
-      d.append(docButton('지금 메일 확인',async()=>{try{docNotice('메일 확인 중');const x=await api('/documents/rules/'+r.id+'/sync',{method:'POST',body:JSON.stringify({workspace:current.slug})});docNotice('조회 '+x.scanned+'건 · 신규 요청 '+x.inserted+'건');await loadDocuments()}catch(e){docNotice(e.code==='MAIL_SCAN_LIMIT_REACHED'?'메일 검색결과가 400건을 초과합니다. 검색 조건에 발신자 또는 최근 날짜를 추가한 뒤 다시 시도하세요.':e.message)}},'primary'));
+      d.append(docText('p','마지막 전체 점검 완료: '+(r.last_checked_kst_day||'없음')+' · 최근 페이지 확인: '+(r.last_checked_at||'없음')+(r.last_error?' · 오류: '+r.last_error:''),'note'));
+      d.append(docButton('지금 메일 확인',async()=>{try{docNotice('메일 확인 중');const x=await api('/documents/rules/'+r.id+'/sync',{method:'POST',body:JSON.stringify({workspace:current.slug})});await loadDocuments();docNotice('이번 페이지 조회 '+x.scanned+'건 · 신규 요청 '+x.inserted+'건'+(x.hasMore?' · 다음 페이지가 남아 있습니다. 자동 점검 또는 이 버튼으로 계속 진행합니다.':' · 이번 검색 전체 확인 완료'))}catch(e){docNotice(e.code==='MAIL_PAGE_CURSOR_LOOP'?'메일 제공자의 이어받기 위치가 만료되었을 수 있습니다. 「처음부터 다시 점검」을 눌러주세요.':e.message)}},'primary'));
+      if(r.active)d.append(docButton('처음부터 다시 점검',async()=>{if(!confirm('현재 점검 위치만 초기화합니다. 접수된 요청과 승인 기록은 보존됩니다. 진행할까요?'))return;try{await api('/documents/rules/'+r.id+'/reset',{method:'POST',body:JSON.stringify({workspace:current.slug})});await loadDocuments();docNotice('검색 위치를 초기화했습니다. 다음 점검에서 첫 페이지부터 중복 없이 확인합니다.')}catch(e){docNotice(e.message)}}));
       if(r.active)d.append(docButton('규칙 중단',async()=>{if(!confirm('이 사이트의 해당 메일 자동점검을 중단할까요? 기존 요청과 발행 기록은 유지됩니다.'))return;try{await api('/documents/rules/'+r.id+'/disable',{method:'POST',body:JSON.stringify({workspace:current.slug})});await loadDocuments()}catch(e){docNotice(e.message)}},'danger'));
       ruleBox.append(d);
     }
