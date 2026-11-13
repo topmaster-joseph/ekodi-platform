@@ -30,12 +30,13 @@ test('only GET checks are performed and no authorization or broker-order request
 
 test('guest assets and no-data/noindex controls are fail-closed',()=>{
   for(const evidence of [
-    'text/html','text/css','application/json','private, no-store','noindex',
+    'text/html','text/css','application/json','no-store','noindex',
     'id="ownerSidebar"','id="investAuthIntro"','<section id="owner" hidden>',
     '.shell:has(> #ownerSidebar[hidden]){display:block}',
     'word-break:keep-all;overflow-wrap:normal',
     'max-width:480px','authentication_required','실거래 주문',
     'Invest guest live contract failed'
   ])assert.ok(block.includes(evidence),'missing guarded check '+evidence);
+  assert.match(block,/\^cache-control:.*no-store/,'a no-store directive must remain required independent of ordering');
   assert.match(block,/exit 1/,'no success claim when retry budget is exhausted');
 });

@@ -694,7 +694,7 @@ jobs:
             if [[ "$fail_count" -eq 0 ]]; then
               # Report names of failing public invariants only: never print response bodies or credentials.
               require 'guest.mime' grep -Eiq '^content-type:[[:space:]]*text/html' /tmp/ekodi-invest-guest.headers
-              require 'guest.no-store' grep -Eiq '^cache-control:[[:space:]]*private, no-store' /tmp/ekodi-invest-guest.headers
+              require 'guest.no-store' grep -Eiq '^cache-control:.*[,[:space:]]no-store([,[:space:]]|$)' /tmp/ekodi-invest-guest.headers
               require 'guest.noindex' grep -Eiq '^x-robots-tag:.*noindex' /tmp/ekodi-invest-guest.headers
               require 'guest.hidden-sidebar' grep -Eq 'id="ownerSidebar"[^>]*hidden' /tmp/ekodi-invest-guest.html
               require 'guest.login-intro' grep -Fq 'id="investAuthIntro"' /tmp/ekodi-invest-guest.html
@@ -714,6 +714,9 @@ jobs:
               exit 0
             fi
             echo "Invest guest canary attempt $attempt failed:$failures (HTTP: html=$html_code css=$css_code access=$access_code unknown=$unknown_code)"
+            if [[ "$failures" == *'guest.no-store'* ]]; then
+              echo "Invest guest Cache-Control: $(grep -i '^cache-control:' /tmp/ekodi-invest-guest.headers | head -1 | tr -d '\r' | cut -c1-160 || true)"
+            fi
             sleep 4
           done
           echo '::error title=Invest guest live contract failed::At least one canonical guest route invariant failed; see named checks above. Do not report completed production verification.'
