@@ -527,6 +527,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='seonammedi-monitor.js'||
   file==='seonammedi-relevance.js'||
   file==='wrangler.site.toml'||
+  // Pre-candidate route registration is a production Site Core dependency.
+  // Protected bot merges suppress push; dispatch the guarded release explicitly.
+  file==='scripts/ensure-church-route-ownership.mjs'||
   // Invest's canonical public landing and member gate are shipped by Site Core.
   file==='invest-access-ui.js'||
   file==='platform-router-entry-worker.js'||
