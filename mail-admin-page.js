@@ -5,12 +5,12 @@ export function mailAdminPage(){
   const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>EKODI Mail Admin</title><style>
   :root{color-scheme:light;font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif}*{box-sizing:border-box}
   body{margin:0;background:#f3f6fb!important;color:#172033!important}
-  .ma,.ma *{color:inherit}.ma{color:#172033;background:#f3f6fb;min-height:100vh;font-size:15px;line-height:1.5}
-  .ma .top{height:58px;display:flex;align-items:center;gap:10px;padding:0 18px;background:#fff;border-bottom:1px solid #e3e8f0}
+  .ma,.ma *{color:inherit}.ma{--mail-admin-column-width:880px;color:#172033;background:#f3f6fb;min-height:100vh;font-size:15px;line-height:1.5}
+  .ma .top{width:100%;max-width:var(--mail-admin-column-width);margin-inline:auto;min-height:58px;display:flex;align-items:center;gap:10px;padding:8px 18px;background:#fff;border:1px solid #e3e8f0;border-top:0;border-radius:0 0 12px 12px;flex-wrap:wrap}
   .ma .top strong{font-size:16px;color:#14306e}.ma .top span{font-size:13px;color:#5b6577}
   .ma .top a{margin-left:auto;color:#14306e;text-decoration:none;border:1px solid #c9d3e3;border-radius:10px;padding:8px 12px;font-size:14px;font-weight:600;background:#fff}
   .ma .top .switch{border:1px solid #1f3c88;background:#1f3c88;color:#fff!important;border-radius:10px;padding:8px 12px;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
-  .ma .wrap{max-width:880px;margin:0 auto;padding:18px}
+  .ma .wrap{width:100%;max-width:var(--mail-admin-column-width);margin-inline:auto;padding:18px}
   .ma .intro{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
   .ma .intro h1{font-size:24px;margin:0;color:#0f1b33!important}.ma .intro p{margin:4px 0 0;color:#4b5565!important;font-size:14px}
   .ma .badge{flex:none;font-size:13px;font-weight:600;border:1px solid #c9d3e3;background:#fff;color:#14306e!important;border-radius:999px;padding:6px 12px}
@@ -58,7 +58,7 @@ export function mailAdminPage(){
   .ma .gsetup input{width:100%;margin-top:6px}.ma .gsetup .ok{font-weight:700;color:#1d6b3a!important}
   @media(min-width:781px){.ma .form{grid-template-columns:1fr 1fr 180px}.ma .form .checks,.ma .form .submit{grid-column:1/-1}.ma .form .submit{justify-self:start;min-width:200px}}
   @media(max-width:780px){.ma .wrap{padding:12px}.ma .intro{align-items:flex-start}.ma .intro h1{font-size:22px}.ma .actions .btn{flex:1 1 100%}.ma .form .submit{width:100%}.ma .tabs button{flex:0 0 auto;min-width:108px}.ma .tabs{gap:4px}}
-  @media(max-width:380px){.ma .intro{flex-wrap:wrap}.ma .panel-head .btn{width:100%}}
+  @media(max-width:380px){.ma .top{gap:6px}.ma .top strong{font-size:14px}.ma .top span{display:none}.ma .top a,.ma .top .switch{padding:7px 8px;font-size:12px}.ma .intro{flex-wrap:wrap}.ma .panel-head .btn{width:100%}}
   </style></head><body><div class="ma"><header class="top"><strong>EKODI Mail</strong><span>통합 메일 관리</span><a href="/">메일함</a><button type="button" class="switch" id="switchAccount" title="다른 에코디 계정으로 로그인">계정 바꾸기</button></header><main class="wrap">
   <section class="intro"><div><h1>메일 관리</h1><p>기관마다 권한은 그대로 분리해서 관리합니다.</p></div><span class="badge" id="state">인증 확인 중</span></section>
   <section class="scopebar"><label for="scopeSelect">관리 범위</label><select id="scopeSelect" aria-label="관리 범위 선택"></select><p class="scopehint" id="scopeHint"></p></section>
