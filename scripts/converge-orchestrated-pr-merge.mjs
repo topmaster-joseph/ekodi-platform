@@ -260,6 +260,9 @@ const controlApiTouched=changedFiles.some(file=>
   'notification-webpush.js',
   // Search Visibility evidence D1 API is part of Control API deployment ownership.
   'search-visibility-control.js',
+  // JOURNAL-EDITOR-ALERTS-20261113: 저널 편집부 알림 API(최고관리자 전용)는 Control API에 묶인다.
+  'journal-editor-inbox-control.js',
+  'journal-editor-inbox.js',
   // Read-only first-party Search Console reporter is imported by Search Visibility Control API.
   'google-search-console-readonly.js',
   // Church Live host authority and runtime tenant mapping execute in Control API.
@@ -471,7 +474,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   // Static asset response headers (CSP, caching) ship with the Site Core build.
   file==='_headers'||
   // Control is a first-party Site Core surface, never a separate public Shell release.
-  ['control.html','control.css','control.js','admin-control-home.js','admin-control-home.css'].includes(file)||
+  ['control.html','control.css','control.js','admin-control-home.js','admin-control-home.css','admin-journal-inbox.js','journal-editor-inbox.js','mail-contact.js'].includes(file)||
   // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
   // Public Site publication controls are a Site Core admin bundle asset. This must
   // dispatch the guarded release after token-mediated protected merges (issue #6508).

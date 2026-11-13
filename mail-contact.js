@@ -1,5 +1,6 @@
 import { serviceAccountToken } from './mail-user-page.js';
 import { sendGoogleMailMessage } from './mail-google-adapter.js';
+import { recordJournalInbox, maybeSendJournalDigest } from './journal-editor-inbox.js';
 
 export const MAIL_CONTACT_RECIPIENT = 'joseph@ekodi.kr';
 const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
@@ -79,9 +80,15 @@ export async function handleMailContactApi(request,env={}) {
   if(!subject) return json({error:'제목을 입력해 주세요.',code:'SUBJECT_REQUIRED'},400);
   if(!message) return json({error:'문의 내용을 입력해 주세요.',code:'MESSAGE_REQUIRED'},400);
   const recipient=contactRecipient(),sender=contactSender(),receivedAt=new Date().toISOString();
+  // JOURNAL-EDITOR-ALERTS-20261113: 저널 독자 편지는 바로 메일하지 않고 편집부 알림함에 모아 저녁 6시 하루 요약으로 보낸다.
+  // 기록이 안 되면(DB 없음·오류) 예전처럼 바로 메일로 보낸다 — 편지가 사라지지 않게.
+  if(source==='journal-reader-letter'&&await recordJournalInbox(env,{kind:'letter',title:subject,senderName:name,senderEmail:email,message,link:sourceUrl})){
+    return json({ok:true,message:'편집부에 전달되었습니다. 편집부가 매일 저녁 모아 읽고 답장드립니다.'});
+  }
   try {
     const token=await serviceAccountToken(sender,env,GMAIL_SEND_SCOPE);
     const sent=await sendGoogleMailMessage(token,{to:recipient,replyTo:email,subject:`[EKODI 문의] ${subject}`,body:contactText({name,email,message,site,source,sourceUrl,receivedAt})});
+    if(source==='journal-essay-weekly') await recordJournalInbox(env,{kind:'essay',title:subject.replace(/^에코디저널 투고 · /,''),senderName:'에코디언',detail:'24시간 뒤 게재',link:sourceUrl});
     console.log('EKODI contact sent',{messageId:sent?.id||'',source:source||site||'public',ray:request.headers.get('cf-ray')||''});
     return json({ok:true,message:'문의가 에코디에 전달되었습니다.'});
   } catch(error) {
@@ -179,9 +186,18 @@ async function handleJournalSubmission(request,env) {
       body:journalSubmissionText({name,email,title,category,message,fileName,fileBytes:bytes.length,sourceUrl,receivedAt}),
       attachments:[{filename:fileName,contentType,base64:bytesToBase64(bytes)}]});
     console.log('EKODI journal submission sent',{messageId:sent?.id||'',bytes:bytes.length,ray:request.headers.get('cf-ray')||''});
+    await recordJournalInbox(env,{kind:'submission',title,senderName:name,senderEmail:email,detail:`${category||'-'} · ${fileName}`,link:sourceUrl});
     return json({ok:true,message:'투고가 편집부에 접수되었습니다. 검토 결과는 적어 주신 이메일로 알려 드립니다.'});
   } catch(error) {
     console.error('EKODI journal submission failed',{code:String(error?.code||error?.message||'JOURNAL_SUBMISSION_SEND_FAILED'),ray:request.headers.get('cf-ray')||''});
     return json({error:'투고 전송에 실패했습니다. 잠시 후 다시 시도하시거나 joseph@ekodi.kr로 보내 주세요.',code:'JOURNAL_SUBMISSION_SEND_FAILED'},502);
   }
+}
+
+/** 라우터에서 waitUntil로 부른다: 저녁 6시 이후 하루 한 번 편집부 요약 메일. */
+export function runJournalDigest(env) {
+  return maybeSendJournalDigest(env,{send:async({subject,body})=>{
+    const token=await serviceAccountToken(contactSender(),env,GMAIL_SEND_SCOPE);
+    return sendGoogleMailMessage(token,{to:contactRecipient(),subject,body});
+  }}).catch(error=>{console.error('journal digest failed',String(error?.message||error).slice(0,120));return {sent:false};});
 }

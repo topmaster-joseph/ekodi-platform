@@ -20,7 +20,7 @@ import { routeInvestSite } from './invest-site-system.js';
 import { isSinglesRoute, routeSinglesSurface } from './singles-surface.js';
 import { investIntroPage, investAnalysisPage, investAnalysisScript } from './invest-access-ui.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
-import { handleMailContactApi, mailContactPage } from './mail-contact.js';
+import { handleMailContactApi, mailContactPage, runJournalDigest } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
 import { businessCenterCss, businessCenterScript } from './ekodibiz-business-center.js';
@@ -759,6 +759,8 @@ export default {
     const traffic=await assessTrafficTier(request,env);
     const trafficGuard=trafficRequestGuard(request,traffic);
     if(trafficGuard)return applyPlatformSecurityHeaders(trafficGuard,request);
+    // JOURNAL-EDITOR-ALERTS-20261113: 저녁 6시(KST) 이후 첫 요청 때 하루 한 번 저널 편집부 요약 메일(자체 5분 간격·일 1회 잠금).
+    if(ctx?.waitUntil)ctx.waitUntil(runJournalDigest(env));
     if(['GET','HEAD'].includes(request.method)){const verificationFile=searchVerificationFileResponse(new URL(request.url).pathname,{head:request.method==='HEAD'});if(verificationFile)return applyPlatformSecurityHeaders(verificationFile,request);}
     let trafficRecorded=false;
     const record=status=>{if(trafficRecorded)return;trafficRecorded=true;recordTrafficOutcome({durationMs:Date.now()-trafficStartedAt,status})};

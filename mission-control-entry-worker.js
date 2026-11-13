@@ -27,6 +27,7 @@ import { handleMarketingOrderConnectors } from './marketing-order-connectors.js'
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
 import { handleSearchVisibilityControl } from './search-visibility-control.js';
+import { handleJournalInboxControl, JOURNAL_INBOX_PATH } from './journal-editor-inbox-control.js';
 import { handleTrafficIntelligence } from './traffic-intelligence-control.js';
 import { handleApiCostControl } from './api-cost-control.js';
 import { handleAiEvalSummary } from './ai-eval-control.js';
@@ -332,6 +333,10 @@ export default {
       catch (error) { console.error('Traffic Intelligence control error', error); return errorResponse('Traffic Intelligence 처리 중 오류가 발생했습니다.', 'TRAFFIC_INTELLIGENCE_CONTROL_ERROR'); }
     }
 
+    if (path === JOURNAL_INBOX_PATH) {
+      try { const response = await handleJournalInboxControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Journal inbox control error', error); return errorResponse('저널 새 소식 처리 중 오류가 발생했습니다.', 'JOURNAL_INBOX_CONTROL_ERROR'); }
+    }
     if (path === '/api/control/search-visibility') {
       try { const response = await handleSearchVisibilityControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Search Visibility control error', error); return errorResponse('검색노출 통합관리 처리 중 오류가 발생했습니다.', 'SEARCH_VISIBILITY_CONTROL_ERROR'); }

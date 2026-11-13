@@ -229,6 +229,8 @@ on:
       - 'workspace-trade-portal.js'
       - 'mail-user-page.js'
       - 'mail-contact.js'
+      - 'journal-editor-inbox.js'
+      - 'admin-journal-inbox.js'
       - 'test/mail-contact.test.mjs'
       - 'mail-admin-page.js'
       - 'tax-portal-worker.js'

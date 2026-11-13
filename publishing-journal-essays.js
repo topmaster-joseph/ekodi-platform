@@ -1,13 +1,14 @@
-// JOURNAL-ESSAYS-20261113 — 에코디언 주간 에세이(무료 AI 집필 → 편집부 투고 → 48시간 검토 뒤 게재).
+// JOURNAL-ESSAYS-20261113 — 에코디언 주간 에세이(무료 AI 집필 → 편집부 투고 → 24시간 검토 뒤 게재).
+// JOURNAL-EDITOR-ALERTS-20261113: 투고 메일이 곧 '게재 24시간 전 알림'이다(알림을 줄이기 위해 별도 알림을 두지 않음).
 //
 // 원칙
 // - 매주 1편, 주제는 16개 분야를 돌아가며(같은 분야가 연달아 오지 않음).
 // - 집필은 출판 공장과 같은 무료 AI 경로(writeText)만 쓴다. 유료 호출 없음.
-// - 쓰면 바로 싣지 않고 '투고'한다: 편집부(joseph@ekodi.kr)에 원고 전문을 보내고 48시간 검토 기간을 둔다.
-//   보류(hold)되지 않으면 48시간 뒤 저널에 게재된다. 게재 글에는 'AI 협업 초안'임을 밝힌다.
+// - 쓰면 바로 싣지 않고 '투고'한다: 편집부(joseph@ekodi.kr)에 원고 전문을 보내고 24시간 검토 기간을 둔다.
+//   보류(hold)되지 않으면 24시간 뒤 저널에 게재된다. 게재 글에는 'AI 협업 초안'임을 밝힌다.
 // - 지어낸 통계·인용·인물·후기는 쓰지 않는다(프롬프트 규칙 + 한자 정리).
 
-export const ESSAY_POLICY = Object.freeze({ everyDays: 7, reviewHours: 48, minChars: 900 });
+export const ESSAY_POLICY = Object.freeze({ everyDays: 7, reviewHours: 24, minChars: 900 });
 export const ESSAY_AUTHOR = Object.freeze({
   name: '에코디언',
   disclosure: '에코디언 이름으로 AI가 초안을 쓰고 편집부가 검토 기간을 거쳐 게재한 글입니다(AI 협업 초안 · 편집부 검토).',
@@ -73,7 +74,7 @@ export function essaySlug(createdMs, topicKey) {
 export function deskMessage(essay) {
   return [
     '에코디언 주간 에세이 투고입니다(AI 협업 초안).',
-    `게재 예정: ${essay.publish_at} (48시간 검토 기간 뒤 자동 게재)`,
+    `게재 예정: ${essay.publish_at} (24시간 뒤 자동 게재 — 이 메일이 게재 전 알림입니다)`,
     '게재를 미루거나 내리려면 에코디 관리자 또는 Claude에게 "이 글 보류"라고 요청해 주세요.',
     '',
     `제목: ${essay.title}`,
