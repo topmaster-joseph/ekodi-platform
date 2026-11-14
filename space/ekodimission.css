@@ -481,3 +481,8 @@ body:has(.hero-split) .mission-site-header nav a{font-size:clamp(.81rem,.9vw,.89
 @media(max-width:620px){.subpage.mission-history-page{padding-top:.2rem}.mission-history-page .sub-hero{padding-top:.4rem}}
 .mission-history-section.history-list-section{padding-top:0;border-top:0}
 .history-items li.history-recurring{grid-template-columns:auto minmax(0,1fr)}.history-items li.history-recurring .history-day{min-width:5.6rem;padding-right:.2rem}
+.ekodi-history-tabs{display:flex;gap:4px;width:max-content;max-width:100%;margin:.4rem 0 .2rem;padding:4px;border:1px solid var(--line);border-radius:999px;background:var(--surface,#fff);overflow-x:auto;scrollbar-width:none}
+.ekodi-history-tabs a{display:inline-flex;align-items:baseline;gap:6px;padding:8px 15px;border-radius:999px;color:var(--muted);text-decoration:none;font-size:.92rem;font-weight:650;white-space:nowrap}
+.ekodi-history-tabs a small{font-size:.66rem;letter-spacing:.12em;opacity:.75}
+.ekodi-history-tabs a[aria-current="page"]{background:var(--accent);color:#fff}
+@media(max-width:620px){.ekodi-history-tabs a{padding:7px 11px;font-size:.86rem}.ekodi-history-tabs a small{display:none}}
