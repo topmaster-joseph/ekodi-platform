@@ -12,6 +12,7 @@ const MAX_BYTES=180000;
 const ALLOWED_SITE=/^https:\/\/ekodi\.kr\/[a-z0-9-]+\/?$/;
 const fail=code=>{throw new Error(code)};
 const eligible=(site)=>site?.class==='workspace_user_site'
+  && site.lifecycleState!=='retired' && site.visibility!=='archive-only'
   && ALLOWED_SITE.test(String(site?.canonicalUrl||''))
   && !/planned|preparing|pending/i.test(String(site?.migrationState||''));
 const site=sites.existingWorkspaceSites.find(eligible);
