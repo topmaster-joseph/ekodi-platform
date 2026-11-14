@@ -134,3 +134,11 @@ test('mail admin page offers an account switch that signs out and returns via ap
   assert.match(html, /id="switchAccount"[^>]*>계정 바꾸기</);
   assert.match(html, /\$\('switchAccount'\)\.onclick=async\(\)=>\{if\(!confirm\([^)]*\)\)return;try\{await sb\.auth\.signOut\(\)\}catch\{\}location\.replace\('https:\/\/ekodi\.kr\/auth\/\?site=mail&return_to='/);
 });
+
+test('mail admin shows Korean labels for pending account states instead of raw codes', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const src = await readFile(new URL('../mail-admin-page.js', import.meta.url), 'utf8');
+  assert.match(src, /pending_connection:\['연결 대기'/);
+  assert.match(src, /pending_service_connection:\['위임 연결 대기'/);
+  assert.doesNotMatch(src, /\|\|\[a\.connectionStatus,''\]/);
+});
