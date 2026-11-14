@@ -13,7 +13,10 @@ const registry = await readFile(new URL('../admin-menu-registry.js', import.meta
 test('Campus first screen renders the full site catalog with direct operational actions', () => {
   assert.match(js, /사이트 관리 ·/);
   assert.match(js, /청계면상인회/);
-  assert.match(js, /자담치킨 목포대점/);
+  assert.match(js, /BBQ 무안청계점/);
+  assert.match(js, /url: 'https:\/\/ekodi\.kr\/bbqcg'/);
+  const activeRoster = js.slice(js.indexOf('const ALL_SITES'), js.indexOf('const SITE_GROUPS'));
+  assert.doesNotMatch(activeRoster, /자담치킨 목포대점|jadam\.ekodi\.kr/);
   assert.match(js, /피자마루 목포대점/);
   assert.match(js, /요거트퍼플 목포대점/);
   assert.match(js, /makeButton\('Manage'/);
