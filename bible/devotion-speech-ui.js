@@ -151,7 +151,7 @@ export function createDevotionSpeechUI(win = window, doc = document) {
       pause.disabled=true;repeat.disabled=true;stopButton.disabled=true;
       return;
     }
-    loopButton.disabled = !supported || !data?.found;
+    loopButton.disabled = (!supported && !ekodi.ready) || !data?.found;
     play.textContent='본문 듣기';
     play.disabled = (!supported && !ekodi.ready) || !data?.found || playing;
     pause.disabled = !playing;
