@@ -264,3 +264,9 @@ test('BBQ native footer keeps mandatory copyright and visit metrics inside its c
  assert.match(footer,/SERVICE_OWNED_FOOTER_SERVICES=new Set\(\)/);
  assert.doesNotMatch(footer,/SITE_COPYRIGHT_ATTR=null/);
 });
+
+test('EKODI platform history page keeps links to the ekodi.kr home in its header', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const header = await readFile(new URL('../shell/user-ui-header.js', import.meta.url), 'utf8');
+  assert.match(header, /new Set\(\['my','auth','admin','privacy','terms','api','shell','history'\]\)/);
+});
