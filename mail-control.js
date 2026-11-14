@@ -475,6 +475,14 @@ export async function handleMailControl(request, env) {
   if(request.method==='GET'&&url.pathname===`${MAIL_PREFIX}/oauth/google/callback`){
     if(!googleMailConfigured(env)||!mailCredentialReady(env))return callbackHtml('Google Mail OAuth 환경설정이 아직 준비되지 않았습니다.');
     const state=await readMailState(env,url.searchParams.get('state'));const code=String(url.searchParams.get('code')||'');
+    const googleError=String(url.searchParams.get('error')||'').replace(/[^a-z_]/gi,'').slice(0,60);
+    if(googleError){
+      const deniedId=Number(state?.accountId||0);
+      if(deniedId>0)await env.DB.prepare("UPDATE mail_accounts SET last_error=?,updated_at=? WHERE id=? AND connection_status<>'connected'").bind('google_'+googleError,new Date().toISOString(),deniedId).run();
+      return callbackHtml(googleError==='access_denied'
+        ?'Google에서 연결이 거부되었습니다. 권한 허용을 취소했거나, 이 Gmail이 EKODI Mail 앱의 테스트 사용자로 등록되지 않았을 수 있습니다. 관리자에게 테스트 사용자 등록을 요청한 뒤 다시 연결해 주세요.'
+        :`Google 연결이 완료되지 않았습니다(${googleError}). 다시 연결해 주세요.`);
+    }
     if(!state||!code||Number(state.exp||0)<Date.now())return callbackHtml('연결 요청이 만료되었거나 올바르지 않습니다.');
     const stateRow=await env.DB.prepare('SELECT * FROM mail_oauth_states WHERE nonce_hash=? AND account_id=? AND actor_user_id=? AND expires_at>?').bind(await mailNonceHash(state.nonce),Number(state.accountId),String(state.actorUserId),new Date().toISOString()).first();
     if(!stateRow)return callbackHtml('이미 사용되었거나 만료된 연결 요청입니다.');
