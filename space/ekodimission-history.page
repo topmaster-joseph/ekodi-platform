@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="/ekodimission/assets/site.css"><link rel="stylesheet" href="/ekodimission/assets/shell.css"><script src="/ekodimission/assets/shell.js" defer></script></head><body>
 <div class="review-banner"><strong>PREVIEW</strong><span>공개 가능한 기록만 게시합니다.</span></div>
 <header class="mission-site-header"><a class="mission-brand" href="/ekodimission"><span class="mission-brand-mark" data-mission-ci="open-table" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" focusable="false"><path d="M10 25 H54 M20 25 V46 M44 25 V46 M13 48 Q32 57 51 48" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header>
-<main class="subpage mission-history-page">
+<main class="subpage mission-history-page"><nav class="ekodi-history-tabs" aria-label="에코디 연혁 바로가기"><a href="/history">에코디 전체<small>EKODI</small></a><a href="/ekodichurch/history">에코디교회<small>Church</small></a><a href="/ekodimission/history" aria-current="page">에코디선교회<small>Mission</small></a></nav>
 <section class="sub-hero"><p class="eyebrow">OUR JOURNEY · 2018–2026</p><h1>말씀대로 살아내고<br>살려낸 발자취.</h1><p>한 번의 행사가 아니라, 사람과 사람이 이어진 시간을 기록합니다. 설립·명칭·사역의 중요한 변화와 확인된 공동체 활동을 연도별로 구분했습니다.</p>
 <div class="actions"><a class="button primary" href="/ekodimission/activities">활동 목록 보기</a><a class="button secondary" href="/ekodimission/stories">최근 소식 보기</a></div></section>
 <section class="mission-history-section history-list-section" aria-label="연도별 기록"><ol class="mission-history-timeline history-years">
