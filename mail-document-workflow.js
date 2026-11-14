@@ -1,7 +1,7 @@
 // EKODI Site Mail Documents: tenant-isolated request intake and human-gated evidence documents.
 // Email metadata is never legal proof of a sale. Tax invoice transmission stays in EKODI Finance.
 import { mailActor, accountAccess, googleAccessForAccount } from './mail-control.js';
-import { hasGoogleReadScope, listGoogleMailMessages } from './mail-google-adapter.js';
+import { hasGoogleReadScope, listGoogleMailMessages, getGoogleMailMessageMetadata } from './mail-google-adapter.js';
 
 const PREFIX = '/api/mail/control/documents';
 const ORIGINS = new Set(['https://ekodi.kr']);
@@ -88,6 +88,36 @@ export async function fetchDocumentMailPage(readPage, query, pageToken = '') {
   const nextPageToken = String(page.nextPageToken || '');
   if (nextPageToken && nextPageToken === pageToken) failure('MAIL_PAGE_CURSOR_LOOP', 502);
   return { messages: page.messages, nextPageToken, hasMore: Boolean(nextPageToken) };
+}
+// A mail-derived request is only approvable while its original message still
+// exists in its owning Gmail account, under the actor's specific read grant.
+// This cannot independently prove the sender's legal identity; the manager
+// must still verify business identity and financial evidence before approval.
+export function assertDocumentSourceMatches(record, source) {
+  const normalize=(value,size)=>txt(value,size);
+  if(!record||!source||
+      normalize(source.id,128)!==normalize(record.source_message_id,128)||
+      normalize(source.from,250)!==normalize(record.source_from,250)||
+      normalize(source.subject,350)!==normalize(record.source_subject,350)||
+      normalize(source.date,100)!==normalize(record.source_date,100)) {
+    failure('SOURCE_MAIL_CHANGED',409);
+  }
+  return true;
+}
+async function verifyOriginalBeforeApproval(db, env, record, actor, site) {
+  if(record.source_type==='manual') return false;
+  if(record.source_type!=='mail'||!record.account_id) failure('SOURCE_MAIL_INVALID',409);
+  const access=await accountAccess(db,actor,record.account_id);
+  if(!access||!access.context||access.row.owner_type!=='workspace'||
+      access.row.owner_key!==site.workspaceId||!access.permissions.read) {
+    failure('SOURCE_MAIL_READ_FORBIDDEN',403);
+  }
+  if(access.row.provider!=='gmail'||access.row.connection_status!=='connected') failure('SOURCE_MAIL_NOT_CONNECTED',409);
+  const oauth=await googleAccessForAccount(env,db,access.row);
+  if(!hasGoogleReadScope(oauth.scopes)) failure('MAIL_READ_SCOPE_REQUIRED',409);
+  const source=await getGoogleMailMessageMetadata(oauth.accessToken,record.source_message_id);
+  assertDocumentSourceMatches(record,source);
+  return true;
 }
 async function syncRule(db, env, rule) {
   const account=await db.prepare("SELECT * FROM mail_accounts WHERE id=? AND owner_type='workspace' AND owner_key=? AND enabled=1").bind(rule.account_id,rule.workspace_id).first();
@@ -248,12 +278,13 @@ export async function handleMailDocuments(request,env) {
       const record=await caseFor(env.DB,approve[1],site);
       if(record.status!=='REVIEW') failure('CASE_NOT_REVIEWABLE',409);
       const value=verifyCaseEvidence(body);
+      const originalRechecked=await verifyOriginalBeforeApproval(env.DB,env,record,actor,site);
       const now=new Date().toISOString();
       const updated=await env.DB.prepare("UPDATE mail_document_cases SET status='APPROVED',counterparty=?,issuer_name=?,sale_period=?,sale_amount=?,tax_amount=?,evidence_reference=?,approved_by=?,approved_at=?,updated_at=? WHERE id=? AND workspace_id=? AND status='REVIEW'")
         .bind(value.counterparty,value.issuerName,value.period,value.saleAmount,value.taxAmount,value.evidence,actor.email,now,now,record.id,site.workspaceId).run();
       if(Number(updated.meta?.changes||0)!==1) failure('CASE_STATE_CHANGED',409);
-      await event(env.DB,record,'document.approved',actor.email,'human evidence review');
-      return json({ok:true,status:'APPROVED',nextAction:record.document_type==='tax_invoice'?'OPEN_EKODI_FINANCE_TAX_INVOICE':'ISSUE_SALES_CERTIFICATE'},200,origin);
+      await event(env.DB,record,'document.approved',actor.email,originalRechecked?'human evidence review; original Gmail metadata rechecked':'human evidence review; manual request');
+      return json({ok:true,status:'APPROVED',sourceRechecked:originalRechecked,nextAction:record.document_type==='tax_invoice'?'OPEN_EKODI_FINANCE_TAX_INVOICE':'ISSUE_SALES_CERTIFICATE'},200,origin);
     }
     const issue=url.pathname.match(/^\/api\/mail\/control\/documents\/requests\/([a-f0-9-]{36})\/issue$/);
     if(issue&&request.method==='POST') {
