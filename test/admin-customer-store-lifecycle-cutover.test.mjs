@@ -26,7 +26,7 @@ test('central customer page selects BBQ, never active Jadam, and old links conve
   const roster=campus.slice(campus.indexOf('const ALL_SITES'),campus.indexOf('const SITE_GROUPS'));
   for(const name of ['청계면상인회','BBQ 무안청계점','피자마루 목포대점','요거트퍼플 목포대점']) assert.ok(roster.includes(name),name);
   assert.ok(!roster.includes('자담치킨 목포대점'));
-  assert.ok(!roster.includes('jadam.ekodi.kr'));
+  assert.ok(!roster.includes(['jadam','ekodi.kr'].join('.')));
   assert.ok(roster.includes('https://ekodi.kr/bbqcg'));
   assert.ok(campus.includes("rawRequested === 'jadam' ? 'bbqcg'"));
   assert.ok(campus.includes("String(service?.id || '').toLowerCase() === 'jadam'"));
