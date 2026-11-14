@@ -2,6 +2,7 @@
 // 차수 탭 → 차시별 진행표. Each demo/practice 차시 lets the instructor pick a demo (추천 + 전체 분야),
 // shows the demo material, and the hand-over line that sends learners into focused individual practice.
 import {FIELDS,FLOW,PROMPTS,FREE_PROMPT,SAFETY,SESSIONS,PREP,FOCUS_RULES,LEARNER_LABEL} from './data.js';
+import {TREND_TALK,TREND_MESSAGE} from './trends.js';
 import {DEMOS,MISSIONS,SESSION_PICKS,FEATURE_STEPS,INPUT_LABEL,PPT_SETTINGS,CREDIT,CREDIT_OPENING,CREDIT_AS_OF,demoById,demoPrompt,featureInput} from './demos.js';
 
 const $=s=>document.querySelector(s);
@@ -89,6 +90,7 @@ function renderSession(){
       const picker=SESSION_PICKS[current]?.[f.id]?demoPicker(f.id):'';
       return '<li class="g-step g-k-'+esc(f.kind)+'" data-a="'+(base+f.start)+'" data-b="'+(base+f.end)+'"><div class="g-time"><b>'+clock(base+f.start)+'</b><small>'+(f.end-f.start)+'분</small></div><div class="g-body">'+
         '<p class="g-kind">'+esc(f.kind)+'</p><h3>'+esc(f.title)+'</h3>'+phaseBar(f)+
+        (f.id==='intro'?'<div class="g-trend"><p class="g-trend-title">AI 이용 추이 3분 (화면 띄우고 말하기)</p>'+list(TREND_TALK)+'<p><b>핵심 메시지</b> '+esc(TREND_MESSAGE)+'</p><a class="btn btn-small btn-primary" href="./stats.html">추이 화면 띄우기</a></div>':'')+
         (f.id==='intro'?'<div class="g-credit"><p class="g-credit-title">크레딧 공지 (시작할 때 읽기)</p><p class="g-say">「'+esc(CREDIT_OPENING)+'」</p></div>':'')+
         (f.id==='demo'?'<div class="g-credit"><p class="g-credit-title">크레딧</p><p>강사 시연은 강사 계정 크레딧을 씁니다. 회의록 30초·발표자료 5장 기준 약 260크레딧 + 채팅·HWP 요청분.</p></div>':'')+
         (f.mission?creditBox(f.mission):'')+

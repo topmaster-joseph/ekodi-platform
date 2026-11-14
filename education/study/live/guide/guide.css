@@ -76,3 +76,27 @@
 .g-table th,.g-table td{border-bottom:1px solid var(--line-2);padding:6px 4px;text-align:left;vertical-align:top}
 .g-table thead th{color:var(--muted);font-size:.78rem}
 #gCreditCard{scroll-margin-top:150px}
+/* AI 이용 추이 (투사 화면) */
+.t-body{background:#0f2340;color:#fff}
+.t-main{max-width:1280px;margin:0 auto;padding:20px 16px 32px}
+.t-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:14px}
+.t-head h1{font-size:clamp(1.5rem,3.2vw,2.4rem);margin:0;flex:1 1 auto}.t-head .g-eyebrow{color:#7fd8c8;width:100%}
+.t-grid{display:grid;gap:14px}
+.t-card{background:#16305a;border-radius:14px;padding:14px 16px}
+.t-card h2{font-size:clamp(1rem,1.8vw,1.3rem);margin:0 0 10px;color:#fff}
+.t-bars{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.t-bars li{display:grid;grid-template-columns:72px 1fr auto;gap:8px;align-items:center;font-size:clamp(.85rem,1.4vw,1.05rem)}
+.t-track{background:rgba(255,255,255,.12);border-radius:6px;height:22px;overflow:hidden}
+.t-bar{display:block;height:100%;background:#4f86f7;border-radius:6px}.t-bar.is-last{background:#f2b705}
+.t-val{min-width:64px;text-align:right;font-variant-numeric:tabular-nums}
+.t-note{margin:10px 0 2px;font-weight:600;color:#ffe08a}
+.t-src{font-size:.78rem;color:#b9c7dd;margin:0}
+.t-facts{display:grid;gap:10px;margin-top:14px}
+.t-fact{background:#16305a;border-radius:14px;padding:12px 16px;display:grid;gap:2px}
+.t-fact b{font-size:clamp(1.6rem,3vw,2.2rem);color:#f2b705}.t-fact small{color:#b9c7dd}
+.t-message{margin:18px 0 6px;font-size:clamp(1.05rem,2vw,1.5rem);font-weight:700;background:#0b8a7f;border-radius:14px;padding:14px 16px}
+.t-body .meta{color:#b9c7dd}
+@media(min-width:900px){.t-grid{grid-template-columns:1fr 1fr}.t-facts{grid-template-columns:1fr 1fr}}
+.g-trend{background:#eef3fd;border:1px solid #c9d8f7;border-radius:10px;padding:8px 10px;margin:6px 0;font-size:.88rem}
+.g-trend-title{font-weight:700;color:#1d3f8f}
+.t-head h1{color:#fff}

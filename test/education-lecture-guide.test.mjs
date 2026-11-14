@@ -100,3 +100,13 @@ test('no roster/attendance notes: sessions reflect only department mix and count
   const text=JSON.stringify(SESSIONS);
   assert.doesNotMatch(text,/동명이인|중복 배정|명단 확인|출석/);
 });
+
+test('AI usage trends: strict-gated projection screen with sourced, dated figures',async()=>{
+  for(const p of ['/study/live/guide/stats.html','/study/live/guide/stats.js','/study/live/guide/trends.js'])assert.ok(isStrictPath(p),p);
+  const r=await get('/study/live/guide/trends.js',{},env({EDU_INSTRUCTOR_GATE_MODE:'open'}));assert.equal(r.status,401);
+  const {TRENDS,TREND_FACTS,TRENDS_AS_OF}=await import('../education/study/live/guide/trends.js');
+  assert.match(TRENDS_AS_OF,/^\d{4}-\d{2}-\d{2}$/);
+  for(const t of TRENDS){assert.ok(t.source&&t.note&&t.points.length>=2,t.id);for(const [,v] of t.points)assert.ok(v>0&&v<=t.max,t.id+' '+v);}
+  for(const f of TREND_FACTS)assert.ok(f.source,f.k);
+  assert.deepEqual(TRENDS.find(t=>t.id==='chatgpt').points.at(-1),['2026.9',12]);
+});
