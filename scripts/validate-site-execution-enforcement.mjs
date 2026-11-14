@@ -115,6 +115,8 @@ let canonicalCount=0;
 for(const site of sites){
   if(site?.class!=='workspace_user_site')continue;
   if(site?.enforcementOptOut===true)fail(`${site.id}: per-site enforcement opt-out is forbidden`);
+  // Retired customer workspaces retain identity and policies but are not live public-header canary targets.
+  if(site?.lifecycleState==='retired'||site?.visibility==='archive-only')continue;
   const canonical=String(site?.canonicalUrl||'').trim();
   if(canonical){
     canonicalCount+=1;
