@@ -101,7 +101,8 @@ test('account choices stay two-column and readable below 460px',()=>{
 });
 
 test('mobile account stylesheet cache key changes with compact layout',()=>{
- assert.match(html,/hub-shell\.css\?v=20261103-public-pane-hidden-v1/);
+ assert.match(html,/hub-shell\.css\?v=20261114-unified-my-width-v1/);
+  assert.match(css,/--my-content-max:1180px/);
 });
 
 test('sharing and identity detail panels cannot both appear when one is hidden',()=>{
