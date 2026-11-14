@@ -62,7 +62,7 @@ test('site channel directory resolves to each canonical local administrator inst
     ['cheonggye-local','/cheonggye/admin/publishing'],
     ['cmpmyi','/cmpmyi/admin/panel/publishing'],
     ['cgma','/cgma/admin/publishing'],
-    ['jadam','/jadam/admin/publishing'],
+    ['bbqcg','/bbqcg/admin/publishing'],
     ['pizzamaru','/pizzamaru/admin/publishing'],
     ['yogurt','/yogurt/admin/publishing'],
   ]);

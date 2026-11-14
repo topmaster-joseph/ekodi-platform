@@ -16,7 +16,7 @@ export function previewSiteAiMicroIntent(input={},catalog={}){
   const siteId=clean(input.siteId,100);
   if(scope==="site_specific"&&!siteId)throw new Error("SITE_REQUIRED");
   const site=siteId?(catalog.sites?.existingWorkspaceSites||[]).find(item=>item.id===siteId):null;
-  if(siteId&&(!site||site.class!=="workspace_user_site"||/planned|preparing|pending/i.test(clean(site.migrationState))))throw new Error("UNREGISTERED_OR_UNAVAILABLE_SITE");
+  if(siteId&&(!site||site.class!=="workspace_user_site"||site.lifecycleState==="retired"||site.visibility==="archive-only"||/planned|preparing|pending/i.test(clean(site.migrationState))))throw new Error("UNREGISTERED_OR_UNAVAILABLE_SITE");
   if(scope==="site_specific"&&!site)throw new Error("SITE_REQUIRED");
   const canonical=site?clean(site.canonicalUrl,240):"";
   if(site&&!/^https:\/\/ekodi\.kr\/[a-z0-9-]+\/?$/i.test(canonical))throw new Error("CANONICAL_SITE_ROUTE_REQUIRED");

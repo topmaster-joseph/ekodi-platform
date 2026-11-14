@@ -80,7 +80,7 @@ async function audit(){
     ['business','https://ekodi.kr/business',false],
     ['trade','https://ekodi.kr/ekoditrade',true],
     ['cafe','https://ekodi.kr/ekodicafe',true],
-    ['jadam-registry','https://ekodi.kr/jadam',true],
+    ['bbqcg-registry','https://ekodi.kr/bbqcg',true],
     ['pizzamaru-registry','https://ekodi.kr/pizzamaru',true],
     ['yogurt-registry','https://ekodi.kr/yogurt',true],
     ['cheonggye-registry','https://ekodi.kr/cheonggye',true],
@@ -104,7 +104,7 @@ async function audit(){
   }
 
   const tenants=[
-    ['jadam','https://ekodi.kr/jadam','자담치킨 목포대점'],
+    ['bbqcg','https://ekodi.kr/bbqcg','BBQ 무안청계점'],
     ['pizzamaru','https://ekodi.kr/pizzamaru','피자마루 목포대점'],
     ['yogurt','https://ekodi.kr/yogurt','요거트퍼플 목포대점'],
   ];

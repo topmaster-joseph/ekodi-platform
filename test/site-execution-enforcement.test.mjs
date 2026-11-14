@@ -16,7 +16,7 @@ test('all canonical workspace sites inherit one recursive execution policy',()=>
   assert.equal(policy.inheritance.mode,'mandatory-recursive');
   assert.equal(registry.enforcement.policy,'config/site-execution-enforcement.json');
   const pending=new Set(policy.exceptions.pendingCanonicalStates);
-  const canonical=registry.existingWorkspaceSites.filter(site=>site.class==='workspace_user_site'&&site.canonicalUrl);
+  const canonical=registry.existingWorkspaceSites.filter(site=>site.class==='workspace_user_site'&&site.canonicalUrl&&site.lifecycleState!=='retired'&&site.visibility!=='archive-only');
   const liveVerifier=read('scripts/verify-mobile-fixed-headers-live.mjs');
   assert.ok(canonical.length>=8);
   assert.match(liveVerifier,/PUBLIC_HEADER_FORBIDDEN/);

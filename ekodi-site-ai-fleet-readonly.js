@@ -4,7 +4,7 @@ const DAY=/^\d{4}-\d{2}-\d{2}$/;
 const SHA=/^[0-9a-f]{40}$/i;
 const STATES=new Set(['claimed','queued','running','cloud_dispatched','completed','failed','blocked','no_change','production_verified','staging','merged','awaiting_release']);
 function eligibleSite(site){
-  if(!site||site.class!=='workspace_user_site'||/^(planned|preparing|pending)/i.test(clean(site.migrationState,40)))return false;
+  if(!site||site.class!=='workspace_user_site'||site.lifecycleState==='retired'||site.visibility==='archive-only'||/^(planned|preparing|pending)/i.test(clean(site.migrationState,40)))return false;
   try{
     const url=new URL(site.canonicalUrl);
     return url.origin==='https://ekodi.kr'&&!url.search&&!url.hash&&!url.username&&!url.password&&/^\/[a-z0-9-]+\/?$/i.test(url.pathname);
