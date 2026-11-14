@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isKoreanVoice,knownKoreanVoiceGender,koreanVoices,chooseKoreanVoice } from '../bible/devotion-voice-catalog.js';
+import { isKoreanVoice,knownKoreanVoiceGender,koreanVoices,chooseKoreanVoice,preferredKoreanDeviceVoice } from '../bible/devotion-voice-catalog.js';
 import { createDevotionSpeechUI } from '../bible/devotion-speech-ui.js';
+import { devotionSpeechSegments } from '../bible/devotion-share-audio.js';
 
 const male={lang:'ko-KR',name:'Microsoft InJoon Online (Natural) - Korean (Korea)',voiceURI:'ko-Microsoft-InJoon',localService:false};
 const female={lang:'ko-KR',name:'Microsoft SunHi Online (Natural) - Korean (Korea)',voiceURI:'ko-Microsoft-SunHi',localService:false};
@@ -20,6 +21,9 @@ test('male and female are recognized only from documented Korean speaker names',
  assert.equal(chooseKoreanVoice([unknown,english], 'male'), null);
  assert.equal(chooseKoreanVoice([unknown,female,male]),female,'prefer known natural voice over generic default');
  assert.deepEqual(koreanVoices([english]),[]);
+ assert.equal(preferredKoreanDeviceVoice([male,female,unknown]),unknown,'prefer actual Google Korean on Chrome');
+ assert.equal(preferredKoreanDeviceVoice([male,female]),female,'fallback to best available Korean voice');
+ assert.equal(preferredKoreanDeviceVoice([english]),null,'never select an English device voice');
 });
 
 class E {
@@ -104,4 +108,46 @@ test('later-loaded voice list refreshes list without autoplay or confusing langu
  assert.equal(h.voice.children.length,4);
  assert.equal(h.spoken.length,0);
  assert.ok(h.voice.children.some(item=>item.textContent.includes('남성')));
+});
+
+test('installed Google Korean voice is the visible initial device selection, without autoplay',()=>{
+ const h=harness([female,unknown,male,english]);
+ assert.equal(h.voice.value,'google-ko');
+ assert.equal(h.spoken.length,0);
+ h.play.click();
+ assert.equal(h.spoken[0].voice.voiceURI,'google-ko');
+ h.stop.click();
+});
+
+test('repeat listening loops only after explicit opt-in and stops with the stop button',()=>{
+ const h=harness([unknown,male]);
+ const loop=h.ui.element.children.find(el=>el.dataset?.speechAction==='loop');
+ const segmentCount=devotionSpeechSegments(sample).length;
+ assert.ok(segmentCount>1);
+ assert.equal(loop.attrs['aria-pressed'],'false');
+ loop.click();
+ assert.equal(loop.attrs['aria-pressed'],'true');
+ assert.equal(h.spoken.length,0,'toggling loop must never auto-play');
+ h.play.click();
+ const first=h.spoken[0].text;
+ for(let index=0;index<segmentCount;index++)h.spoken.at(-1).onend();
+ assert.equal(h.spoken.length,segmentCount+1,'completion queues the first segment again');
+ assert.equal(h.spoken.at(-1).text,first);
+ h.stop.click();
+ assert.equal(loop.attrs['aria-pressed'],'false','stop clears looping');
+ const prior=h.spoken.length;
+ h.play.click();
+ for(let index=0;index<segmentCount;index++)h.spoken.at(-1).onend();
+ assert.equal(h.spoken.length,prior+segmentCount,'one-shot mode ends without looping');
+ assert.match(h.status.textContent,/끝났습니다/);
+});
+
+test('voice appears after asynchronous browser voice loading, keeping device mode',()=>{
+ const voices=[];
+ const h=harness(voices);
+ assert.equal(h.voice.value,'');
+ voices.push(unknown);
+ h.synthListeners.voiceschanged();
+ assert.equal(h.voice.value,'google-ko');
+ assert.equal(h.spoken.length,0);
 });
