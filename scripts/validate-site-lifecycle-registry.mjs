@@ -37,9 +37,11 @@ for(const site of sites){
   assert(!String(site.action||'').includes('rebuild'),`${site.id} must not be rebuilt as a new app`);
 }
 
-const required=['jadam','pizzamaru','yogurt','cgma','ekodi-church','ekodi-biz','ekodi-lab','ekodi-trade','ekodi-cafe'];
+const required=['jadam','bbqcg','pizzamaru','yogurt','cgma','ekodi-church','ekodi-biz','ekodi-lab','ekodi-trade','ekodi-cafe'];
 for(const id of required)assert(ids.has(id),`existing site ${id} is missing from the migration inventory`);
 const byId=Object.fromEntries(sites.map(site=>[site.id,site]));
+assert(byId.jadam.lifecycleState==='retired'&&byId.jadam.visibility==='archive-only','Jadam must be historical only, never an active customer entry');
+assert(byId.bbqcg.lifecycleState==='active'&&byId.bbqcg.canonicalUrl==='https://ekodi.kr/bbqcg','BBQ must be the active canonical customer store');
 
 for(const tenant of marketing.tenants||[]){
   if(!['jadam','pizzamaru','yogurt','cgma'].includes(tenant.tenant))continue;
@@ -75,7 +77,7 @@ for(const service of ecosystem.services||[]){
 
 const actions=sites.reduce((acc,site)=>{acc[site.action]=(acc[site.action]||0)+1;return acc;},{});
 console.log(`EKODI site lifecycle registry OK: ${sites.length} existing workspace sites classified.`);
-console.log(`- promoted store sites: ${['jadam','pizzamaru','yogurt'].filter(id=>byId[id]?.migrationState==='promoted').length}`);
+console.log(`- promoted store sites: ${['bbqcg','pizzamaru','yogurt'].filter(id=>byId[id]?.migrationState==='promoted'&&byId[id]?.lifecycleState!=='retired').length}`);
 console.log(`- retain/link actions: ${Object.entries(actions).map(([key,value])=>`${key}=${value}`).join(', ')}`);
 console.log(`- provider services remain independently governed: ${(ecosystem.services||[]).length}`);
 console.log('- generation: identity -> workspace -> canonical slug auto-site -> JIT services');
