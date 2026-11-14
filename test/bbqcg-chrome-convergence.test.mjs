@@ -7,7 +7,7 @@ import { BBQCG_CHROME_VERSION, BBQCG_PUBLIC_NAV, renderBbqcgHeader, renderBbqcgF
 
 const base='https://ekodi.kr/bbqcg';
 const matchOne=(html,tag,cls)=>{
-  const re=new RegExp('<'+tag+' class="'+cls+'">[\\s\\S]*?<\\/'+tag+'>','g');
+  const re=new RegExp('<'+tag+' class="'+cls+'"[^>]*>[\\s\\S]*?<\\/'+tag+'>','g');
   const found=[...html.matchAll(re)];
   assert.equal(found.length,1,tag+' '+cls+' must occur exactly once');
   return found[0][0];
@@ -43,6 +43,9 @@ test('canonical six-link site navigation never becomes a page-specific or duplic
    '/bbqcg/service-guide','/bbqcg#directions'
  ]);
  const header=renderBbqcgHeader();
+ assert.match(header,/<header class="header" data-ekodi-user-header-root="bbqcg-v1">/);
+ assert.match(header,/data-ekodi-header-actions aria-label="회원 계정"/);
+ assert.equal((header.match(/data-ekodi-header-actions/g)||[]).length,1);
  assert.equal((header.match(/<nav class="nav"/g)||[]).length,1);
  for(const item of BBQCG_PUBLIC_NAV){
    assert.equal(header.split('href="'+item.href+'"').length-1,1,item.label);
@@ -68,6 +71,7 @@ test('both independently served stylesheets append the same immutable chrome rul
  }
  assert.match(css,/body \.header \.wrap,body \.foot \.wrap\{width:min\(1300px/);
  assert.match(css,/body \.header \.nav/);
+ assert.match(css,/body \.header \.bbqcg-account-slot\{display:inline-flex!important/);
  assert.match(css,/body \.foot \.foot-inner/);
  assert.match(css,/@media\(max-width:820px\)/);
  assert.match(css,/overflow-x:auto!important/);
