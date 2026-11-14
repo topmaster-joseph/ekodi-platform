@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {inCollectionWindow,shouldProcessDocumentRule,escapeDocumentHtml,verifyCaseEvidence,fetchDocumentMailPage} from '../mail-document-workflow.js';
+import {inCollectionWindow,shouldProcessDocumentRule,escapeDocumentHtml,verifyCaseEvidence,fetchDocumentMailPage,assertDocumentSourceMatches} from '../mail-document-workflow.js';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 
 test('EKODI solar 20-25 KST mailbox window is exact',()=>{
@@ -109,4 +109,27 @@ test('original Gmail evidence view stays on-demand, tenant-authorized and HTML-s
   assert.doesNotMatch(ui,/body\.innerHTML\s*=/);
   assert.match(api,/if\(!access\.permissions\.read\)return json\(\{error:'이 계정의 메일을 읽을 권한이 없습니다.'/);
   assert.match(api,/await getGoogleMailMessage\(auth\.accessToken,messageMatch\[2\]\)/);
+});
+
+test('financial mail approval requires the exact original Gmail source identity',()=>{
+  const record={source_message_id:'19abcX_2',source_from:'한국전력 <invoices@example.org>',source_subject:'세금계산서 발행 요청',source_date:'Wed, 11 Nov 2026 12:00:00 +0900'};
+  const source={id:record.source_message_id,from:record.source_from,subject:record.source_subject,date:record.source_date};
+  assert.equal(assertDocumentSourceMatches(record,source),true);
+  for(const [key,value] of Object.entries({id:'other_msg',from:'Unverified <spoofed@invalid.org>',subject:'수정된 거래내역',date:'Thu, 12 Nov 2026 12:00:00 +0900'})){
+    assert.throws(()=>assertDocumentSourceMatches(record,{...source,[key]:value}),/SOURCE_MAIL_CHANGED/,key);
+  }
+  assert.throws(()=>assertDocumentSourceMatches(record,null),/SOURCE_MAIL_CHANGED/);
+});
+test('source approval rechecks owner-scoped Gmail permissions and metadata before status transition',async()=>{
+  const [src,adapter]=await Promise.all(['mail-document-workflow.js','mail-google-adapter.js'].map(read));
+  assert.match(src,/record\.source_type==='manual'/);
+  assert.match(src,/access\.row\.owner_key!==site\.workspaceId/);
+  assert.match(src,/access\.row\.owner_type!=='workspace'/);
+  assert.match(src,/!access\.permissions\.read/);
+  assert.match(src,/SOURCE_MAIL_NOT_CONNECTED/);
+  assert.match(src,/await getGoogleMailMessageMetadata\(oauth\.accessToken,record\.source_message_id\)/);
+  const approval=src.slice(src.indexOf("const approve=url.pathname.match("));
+  assert.ok(approval.indexOf('await verifyOriginalBeforeApproval(')<approval.indexOf("UPDATE mail_document_cases SET status='APPROVED'"));
+  assert.match(adapter,/export async function getGoogleMailMessageMetadata/);
+  assert.match(adapter,/format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date/);
 });
