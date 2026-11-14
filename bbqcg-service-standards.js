@@ -1,3 +1,4 @@
+import {renderBbqcgHeader,renderBbqcgFooter,bbqcgSharedChromeCss} from './bbqcg-shared-chrome.js';
 // BBQ Muan Cheonggye service promise — public, read-only, customer-owned.
 // Separate from Genesis BBQ training/recipe material and platform branding.
 // The operator checklist lives in the accompanying local operations runbook.
@@ -15,15 +16,15 @@ body.bbqcg-service-page{margin:0!important;background:var(--paper)!important;col
 body.bbqcg-service-page a{color:inherit;text-decoration:none}body.bbqcg-service-page a:focus-visible{outline:3px solid #bd1732;outline-offset:4px;border-radius:6px}
 body.bbqcg-service-page .skip{position:absolute;left:-9999px;top:auto}body.bbqcg-service-page .skip:focus{left:14px;top:14px;z-index:100;background:#fff;color:var(--ink);padding:11px 16px}
 body.bbqcg-service-page .shell{width:min(1300px,calc(100% - 48px));margin-inline:auto;min-width:0}
-body.bbqcg-service-page .promise-header{background:#fff!important;border-bottom:3px solid var(--gold)!important}
-body.bbqcg-service-page .head{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:82px;padding:12px 0}
-body.bbqcg-service-page .promise-brand{display:flex;align-items:center;gap:16px;min-width:0}
-body.bbqcg-service-page .promise-mark{font:900 34px/1 Arial,sans-serif;letter-spacing:-.08em;color:var(--red)!important}
-body.bbqcg-service-page .promise-brand strong{display:block;color:var(--navy)!important;font-weight:850;font-size:20px;line-height:1.4;letter-spacing:-.035em}
-body.bbqcg-service-page .promise-brand small{display:block;color:#5b6474!important;font-size:11px;font-weight:650;letter-spacing:.01em}
-body.bbqcg-service-page .home-link{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:9px 18px;border:1px solid #e8d7d9;border-radius:999px;font-size:13px;color:var(--red-deep)!important;font-weight:800;white-space:nowrap;background:#fff9f8}
-body.bbqcg-service-page .home-link:hover{background:#fff0f1}
-body.bbqcg-service-page main#main{padding:34px 0 64px!important;background:transparent!important;color:var(--ink)!important}
+
+
+
+
+
+
+
+
+body.bbqcg-service-page main#main{padding:34px 0 64px!important;background:var(--paper)!important;color:var(--ink)!important}
 body.bbqcg-service-page .promise-hero{position:relative;isolation:isolate;overflow:hidden;border-radius:24px;background:linear-gradient(115deg,#171942 0%,#10142d 67%,#31223d 100%)!important;padding:clamp(30px,5vw,66px);box-shadow:0 18px 46px #15183d1c;color:#fff!important}
 body.bbqcg-service-page .promise-hero:after{content:"";position:absolute;width:270px;height:270px;border:1px solid #f4cc8f63;border-radius:50%;right:-55px;top:-95px;z-index:-1;box-shadow:0 0 0 45px #f4cc8f09,0 0 0 105px #f4cc8f05}
 body.bbqcg-service-page .eyebrow{margin:0 0 10px;color:var(--red)!important;font-size:11px;letter-spacing:.14em;font-weight:900}
@@ -57,26 +58,26 @@ body.bbqcg-service-page .download-card{display:flex;flex-direction:column;align-
 body.bbqcg-service-page .download-card strong{font-size:19px;letter-spacing:-.025em;color:var(--navy)!important}
 body.bbqcg-service-page .download-card p{margin:0;color:#515a6d!important;font-size:14px;line-height:1.8}
 body.bbqcg-service-page .download-card a{display:inline-flex;margin-top:auto;padding-top:13px;color:#9d142b!important;font-size:14px;font-weight:900;text-decoration:underline;text-underline-offset:4px}
-body.bbqcg-service-page .promise-footer{background:var(--navy)!important;color:#eef0f8!important;padding:28px 0}
-body.bbqcg-service-page .promise-footer-inner{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:center;gap:26px}
-body.bbqcg-service-page .footer-brand{display:block;color:#fff!important;font-size:15px;font-weight:850}
-body.bbqcg-service-page .footer-sub{display:block;font-size:12px;color:#c5cbdf!important;margin-top:3px}
-body.bbqcg-service-page .footer-copy{color:#c5cbdf!important;font-size:12px}
-body.bbqcg-service-page .footer-links{display:flex;flex-wrap:wrap;gap:18px}
-body.bbqcg-service-page .footer-links a{font-size:12px;font-weight:800;color:#fff!important;text-decoration:underline;text-underline-offset:4px}
-@media(max-width:820px){body.bbqcg-service-page .grid{grid-template-columns:1fr}body.bbqcg-service-page .promise-card{padding:23px}body.bbqcg-service-page .standards-section{margin-top:32px}body.bbqcg-service-page .promise-footer-inner{grid-template-columns:1fr auto}body.bbqcg-service-page .footer-copy{grid-column:1/-1;grid-row:2}body.bbqcg-service-page main#main{padding-top:20px!important}}
-@media(max-width:600px){body.bbqcg-service-page .shell{width:calc(100% - 32px)}body.bbqcg-service-page .head{gap:10px;min-height:70px}body.bbqcg-service-page .promise-mark{font-size:29px}body.bbqcg-service-page .promise-brand{gap:10px}body.bbqcg-service-page .promise-brand strong{font-size:16px}body.bbqcg-service-page .promise-brand small{font-size:10px}body.bbqcg-service-page .home-link{padding:8px 12px;font-size:12px}body.bbqcg-service-page .promise-hero{border-radius:17px;padding:30px 23px}body.bbqcg-service-page .promise-hero:after{width:170px;height:170px}body.bbqcg-service-page .downloads-grid{grid-template-columns:1fr}body.bbqcg-service-page .promise-footer-inner{grid-template-columns:1fr;gap:14px}body.bbqcg-service-page .footer-copy{grid-column:auto;grid-row:auto}body.bbqcg-service-page .footer-links{gap:18px}}
-@media print{body.bbqcg-service-page{background:#fff!important}body.bbqcg-service-page .promise-hero{box-shadow:none;background:#fff!important;color:#111!important;border:1px solid #ddd}body.bbqcg-service-page .promise-hero h1,body.bbqcg-service-page .promise-hero .eyebrow,body.bbqcg-service-page .promise-hero .lead{color:#111!important}body.bbqcg-service-page .promise-card,body.bbqcg-service-page .download-card{box-shadow:none;break-inside:avoid}body.bbqcg-service-page .home-link,body.bbqcg-service-page .buttons,body.bbqcg-service-page .download-card a,body.bbqcg-service-page .promise-footer{display:none!important}body.bbqcg-service-page .downloads{break-before:page}}
+
+
+
+
+
+
+
+@media(max-width:820px){body.bbqcg-service-page .grid{grid-template-columns:1fr}body.bbqcg-service-page .promise-card{padding:23px}body.bbqcg-service-page .standards-section{margin-top:32px}body.bbqcg-service-page main#main{padding-top:20px!important}}
+@media(max-width:600px){body.bbqcg-service-page .shell{width:calc(100% - 32px)}body.bbqcg-service-page .promise-hero{border-radius:17px;padding:30px 23px}body.bbqcg-service-page .promise-hero:after{width:170px;height:170px}body.bbqcg-service-page .downloads-grid{grid-template-columns:1fr}}
+@media print{body.bbqcg-service-page{background:#fff!important}body.bbqcg-service-page .promise-hero{box-shadow:none;background:#fff!important;color:#111!important;border:1px solid #ddd}body.bbqcg-service-page .promise-hero h1,body.bbqcg-service-page .promise-hero .eyebrow,body.bbqcg-service-page .promise-hero .lead{color:#111!important}body.bbqcg-service-page .promise-card,body.bbqcg-service-page .download-card{box-shadow:none;break-inside:avoid}body.bbqcg-service-page .buttons,body.bbqcg-service-page .download-card a{display:none!important}body.bbqcg-service-page .downloads{break-before:page}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-`,{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}});
+`+bbqcgSharedChromeCss(),{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}});
 }
 export function renderBbqcgServiceStandards(request){
   if(!['GET','HEAD'].includes(request.method))return new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}});
   const cards=GROUPS.map((group,index)=>`<article class="promise-card" aria-labelledby="qcs-${group.key}"><div class="card-top"><span class="tag">${esc(group.en)}</span><span class="card-num" aria-hidden="true">0${index+1}</span></div><h2 id="qcs-${group.key}">${esc(group.name)}</h2><p>${esc(group.intro)}</p><ul>${group.items.map(item=>`<li>${esc(item)}</li>`).join('')}</ul></article>`).join('');
   const downloads='<section class="downloads" id="materials" aria-labelledby="materials-title"><p class="eyebrow">STORE RESOURCES</p><h2 id="materials-title">매장 소개 · 자료 다운로드</h2><p class="small">고객 안내와 빈 점검 양식을 확인하고 내려받을 수 있습니다. 공식 레시피와 본사 교육자료는 제공하지 않습니다.</p><div class="downloads-grid"><div class="download-card"><strong>매장 서비스 약속 안내문</strong><p>품질·청결·서비스 원칙을 한 장으로 정리한 인쇄용 자료입니다. 내려받은 HTML 파일을 열어 인쇄하거나 PDF로 저장할 수 있습니다.</p><a href="/bbqcg/resources/store-promise.html">안내문 다운로드 (.html)</a></div><div class="download-card"><strong>QCS·GMS 빈 점검표</strong><p>개점·영업·마감 체크와 고객 소통·마케팅 확인 항목을 정리한 표준 CSV 양식입니다. 실제 기록은 매장 내부에서 관리하세요.</p><a href="/bbqcg/resources/qcs-gms-checklist.csv">빈 점검표 다운로드 (.csv)</a></div></div><p class="small">이 자료는 매장 운영을 위한 자체 참고양식입니다. BBQ 본사의 공식 품질·위생·조리 기준이나 교육자료를 대신하지 않습니다.</p></section>';
-  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="theme-color" content="#b71d30"><title>우리 매장의 약속 | BBQ 무안청계점</title><link rel="stylesheet" href="/bbqcg/assets/service-standards.css?v=20261114a"></head>
+  const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><meta name="theme-color" content="#b71d30"><title>우리 매장의 약속 | BBQ 무안청계점</title><link rel="stylesheet" href="/bbqcg/assets/service-standards.css?v=20261114b"></head>
 <body class="bbqcg-service-page"><a class="skip" href="#main">본문 바로가기</a>
-<header class="promise-header"><div class="shell head"><a class="promise-brand" href="/bbqcg" aria-label="BBQ 무안청계점 매장 홈"><span class="promise-mark" aria-hidden="true">BBQ</span><span><strong>BBQ 무안청계점</strong><small>우리 매장의 품질·청결·서비스 약속</small></span></a><a class="home-link" href="/bbqcg">매장 홈 <span aria-hidden="true">↗</span></a></div></header>
+${renderBbqcgHeader()}
 <main id="main" class="shell"><section class="promise-hero" aria-labelledby="promise-title"><p class="eyebrow">OUR SERVICE PROMISE</p><h1 id="promise-title">좋은 한 끼를 위한 세 가지 약속</h1>
 <p class="lead">품질, 청결, 서비스를 우리 매장의 기본 원칙으로 삼습니다. 약속이 말에 그치지 않도록, 운영자가 직접 점검하고 개선합니다.</p></section>
 <section class="standards-section" aria-labelledby="standards-title"><div class="section-head"><p class="eyebrow">OUR PRINCIPLES</p><h2 id="standards-title">매일 지키는 세 가지 기준</h2></div><div class="grid" aria-label="QCS 운영 원칙">${cards}</div></section>
@@ -84,7 +85,7 @@ export function renderBbqcgServiceStandards(request){
 <p>BBQ 공식 메뉴·주문·멤버십 혜택은 실제 주문 시점의 공식 안내를 기준으로 확인해 주세요. 매장별 판매 메뉴, 가격, 주문 가능 시간과 혜택은 다를 수 있습니다.</p>
 <p class="small">이 페이지는 무안청계점의 운영 원칙 안내이며, 본사의 조리법·공식 매뉴얼 또는 가맹 정책을 대체하지 않습니다. 고객 정보·내부 실적·교육자료 원문은 공개하지 않습니다.</p>
 <div class="buttons"><a href="https://bbq.co.kr/" target="_blank" rel="noopener noreferrer">BBQ 공식 주문·메뉴</a><a class="secondary" href="/bbqcg">매장으로 돌아가기</a></div></section></main>
-<footer class="promise-footer"><div class="shell promise-footer-inner"><div><strong class="footer-brand">BBQ 무안청계점</strong><span class="footer-sub">고객을 위한 매장 운영 약속</span></div><div class="footer-copy">© 2026 BBQ 무안청계점 · 고객 안내</div><nav class="footer-links" aria-label="매장 안내 링크"><a href="/bbqcg">매장 홈</a><a href="https://bbq.co.kr/" target="_blank" rel="noopener noreferrer">BBQ 공식 사이트</a></nav></div></footer></body></html>`;
+${renderBbqcgFooter()}</body></html>`;
   const enriched=html.replace('</main>',downloads+'</main>');
   return new Response(request.method==='HEAD'?null:enriched,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-robots-tag':'noindex,nofollow,noarchive'}});
 }
@@ -137,8 +138,8 @@ export function bbqcgPublicResourceDownload(request, pathname){
 export async function bbqcgHomeWithResources(response){
   if(response.status!==200 || !String(response.headers.get('content-type')||'').includes('text/html') || !response.body)return response;
   const original=await response.text();
-  const navEnd='<a href="#directions">오시는 길</a></nav>';
-  const nav=original.includes(navEnd)?original.replace(navEnd,'<a href="/bbqcg/service-guide">품질약속·자료실</a>'+navEnd):original;
+  // The canonical shared header already includes the service-guide entry once.
+  const nav=original;
   const block='<section class="wrap section" aria-labelledby="bbqcg-promise-heading"><div class="section-head"><div><p class="section-kicker">SERVICE PROMISE · MATERIALS</p><h2 id="bbqcg-promise-heading">우리 매장의 약속과 자료실</h2><p>품질·청결·서비스의 운영 원칙과 고객 안내문, 빈 점검표를 확인할 수 있습니다.</p></div><a href="/bbqcg/service-guide">소개·자료 다운로드 ›</a></div></section>';
   const composed=nav.includes('</main>')?nav.replace('</main>',block+'</main>'):nav;
   const headers=new Headers(response.headers);

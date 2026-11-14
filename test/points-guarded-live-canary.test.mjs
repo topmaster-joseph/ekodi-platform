@@ -34,6 +34,11 @@ test('points canaries reflect real safe assets, not member or economic mutations
   for(const [request,source] of targets)for(const marker of request.expect){
     assert.ok(source.includes(marker),request.url+' lacks '+marker);
   }
+  for(const host of [internal,canonical]){
+    assert.ok(byUrl(host+'/points/').expect.includes('20261114-unified-content-width-v1'));
+  }
+  assert.ok(css.includes('body.my-subpage main{width:var(--my-content-width);max-width:none;padding-inline:0}'));
+  assert.ok(html.includes('/my/hub-shell.css?v=20261114-unified-my-width-v1'));
   for(const request of requests.filter(x=>x.url?.includes('/points/'))){
     assert.ok(!('method' in request), 'read-only GET check only');
     assert.ok(!('body' in request), 'no POST body or synthetic member data');
