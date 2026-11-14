@@ -1,5 +1,9 @@
 # EKODI Cloud-First Roadmap
 
+## 현재 정책 우선순위
+
+> **2026-10-23 승인된 C3 헌법이 이 문서의 옛 서브도메인 확장 계획을 대체합니다.** 운영 웹 진입은 `https://ekodi.kr/{path}`만 사용하며, EKODI 웹 서브도메인 신규·보조·리디렉션 도메인을 생성하지 않습니다. 실제 DNS/Worker 제거는 `docs/DOMAIN-NAMING.md`의 보호 절차를 통과한 호스트에만 적용합니다. 이 문서의 과거 구현 단계는 역사적 참고자료일 뿐, 현재 도메인 생성 승인이 아닙니다.
+
 ## Objective
 
 Move the entire EKODI ecosystem to a web/cloud-first operating model:
@@ -8,34 +12,34 @@ Move the entire EKODI ecosystem to a web/cloud-first operating model:
 - Codex Cloud is the primary development surface.
 - Cloudflare provides automated preview and production deployment.
 - `ekodi.kr` is the authenticated internal platform.
-- Public services are exposed as independent `*.ekodi.kr` subdomains.
+- Public services are exposed as independent **paths on `https://ekodi.kr`**, while backend services and tenant security remain isolated.
 - Content-level edits should be possible from a web admin CMS without local tooling.
 
-## Target domain map
+## Canonical web path map (current)
 
-| Service | Domain | Access |
+| Service | Web entry | Access |
 | --- | --- | --- |
-| Platform | `ekodi.kr` | Login required |
-| Church | `church.ekodi.kr` | Public, EKCMS protected |
-| Mission | `mission.ekodi.kr` | Public |
-| Business hub | `biz.ekodi.kr` | Public |
-| Mall | `mall.ekodi.kr` | Public |
-| Trade | `trade.ekodi.kr` | Public, ERP protected |
-| Marketing AI | `marketing.ekodi.kr` | Public, admin protected |
-| Consulting | `consulting.ekodi.kr` | Public |
-| Media | `media.ekodi.kr` | Public |
-| Education | `education.ekodi.kr` | Public |
-| Publishing | `publishing.ekodi.kr` | Public |
-| Solutions | `solution.ekodi.kr` | Public |
-| ERP | `erp.ekodi.kr` | Login required |
-| Lab | `lab.ekodi.kr` | Public |
-| Community | `community.ekodi.kr` | Public |
+| Platform | `https://ekodi.kr/` | Public/platform-specific login |
+| Church | `https://ekodi.kr/ekodichurch/` | Public + protected membership/admin |
+| Mission | `https://ekodi.kr/ekodimission/` | Public + protected roles |
+| Business hub | `https://ekodi.kr/ekodibiz/` | Public + protected roles |
+| Mall | `https://ekodi.kr/ekodimall/` | Public + protected merchant roles |
+| Trade | `https://ekodi.kr/trade/` | Public + ERP protection |
+| Marketing | `https://ekodi.kr/marketing/` | Public + protected admin |
+| Media | `https://ekodi.kr/media/` | Service-specific |
+| Education | `https://ekodi.kr/edu/` | Public + protected roles |
+| Publishing | `https://ekodi.kr/publishing/` | Public + protected roles |
+| Lab | `https://ekodi.kr/ekodilab/` | Public + protected roles |
+| Community | `https://ekodi.kr/community/` | Public + protected roles |
+| Login/Admin | `https://ekodi.kr/auth/`, `/admin/` | Authenticated by role |
+
+Every path must be confirmed in `platform-route-registry.js` and the real upstream before it is advertised as live. Subdomain retirement depends on provider callbacks, cross-site authorization, preserved mail DNS and guarded Cloudflare C3 release.
 
 ## Migration principles
 
 1. Preserve working production behavior before refactoring.
 2. Add cloud automation before moving business logic.
-3. Introduce subdomain apps incrementally instead of a flag-day rewrite.
+3. Introduce independently deployable service modules behind verified apex-path routes, not new browser subdomains.
 4. Keep all secrets outside Git and inject them through Cloudflare/GitHub secrets.
 5. Require CI checks before production promotion.
 6. Prefer preview deployments for every pull request.
@@ -47,7 +51,7 @@ Move the entire EKODI ecosystem to a web/cloud-first operating model:
 
 - Keep current static control center and Worker API operational.
 - Add a deployment workflow that runs validation first.
-- Document the target subdomain map and deployment contract.
+- Document the canonical apex-path map, protected service bindings, and deployment contract.
 - Prepare a repository layout that can grow into a monorepo without breaking current production.
 
 ### Phase 2 - Application split
