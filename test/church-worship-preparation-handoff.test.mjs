@@ -10,4 +10,9 @@ test('authorized Church worship admin receives protected original Google documen
   assert.match(churchPastorAdminScript,/웹 공개는 변경되지 않습니다/);
   assert.doesNotMatch(churchPastorAdminScript,/https:\/\/docs\.google\.com\/document\/d\/1OMawt|https:\/\/docs\.google\.com\/presentation\/d\/1EMoG2/);
   assert.match(churchPastorAdminScript,/if\(!canSection\(section\)\)/);
+  // A handoff is navigation, not an API expansion: all edit mutations still
+  // require the destination's tenant-admin authorization and RLS checks.
+  assert.match(churchPastorAdminScript,/function loginPanel\(/);
+  assert.match(churchPastorAdminScript,/function deniedPanel\(/);
+  assert.doesNotMatch(churchPastorAdminScript,/church_worship_sources.*service_role/);
 });
