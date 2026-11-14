@@ -227,12 +227,40 @@ html[data-ekodi-character="off"] body .ekodi-main-ekodian{
 }
 
 /* 2026-10-28: 헤더·푸터 내용 폭을 본문 카드 폭(min(1180px, 100% - 36px))과 일치 */
-:root{--my-content-width:min(1180px,calc(100% - 36px));--my-content-gutter:max(18px,calc((100% - 1180px)/2))}
-@media(min-width:761px){
-  body[data-ekodi-ui="USER"] .topbar.my-comfort-header{padding-left:var(--my-content-gutter)!important;padding-right:var(--my-content-gutter)!important}
+/* Unified My EKODI visual grid: full-bleed chrome background, 1180px centered content. */
+:root{
+  --my-content-max:1180px;
+  --my-content-width:min(var(--my-content-max),calc(100% - 36px));
+  --my-content-gutter:max(18px,calc((100% - var(--my-content-max))/2));
 }
-body[data-ekodi-ui="USER"] .my-custom-footer .my-footer-inner{width:var(--my-content-width)}
-body[data-ekodi-ui="USER"] .my-custom-footer .my-footer-credo{padding-left:var(--my-content-gutter);padding-right:var(--my-content-gutter)}
+body[data-ekodi-ui="USER"] .topbar.my-comfort-header{
+  box-sizing:border-box;
+  width:100%;
+  padding-inline:var(--my-content-gutter)!important;
+}
+body[data-ekodi-ui="USER"] .my-custom-footer .my-footer-inner{
+  width:var(--my-content-width);
+  max-width:none;
+  box-sizing:border-box;
+}
+body[data-ekodi-ui="USER"] .my-custom-footer .my-footer-credo{
+  padding-inline:var(--my-content-gutter);
+  box-sizing:border-box;
+}
+html[data-ekodi-user-ui] .ekodi-user-ui-footer__inner{
+  width:var(--my-content-width)!important;
+  max-width:none;
+}
+body[data-ekodi-ui="USER"] main#home.my-tab-shell > :is(.section.my-tab-section,.summary.my-tab-section,.services-subtabs.my-tab-section){
+  box-sizing:border-box;
+  width:var(--my-content-width);
+  max-width:none!important;
+  margin-inline:auto!important;
+}
+body[data-ekodi-ui="USER"] main#home.my-tab-shell > :is(.section.my-tab-section:not(.member-context-home):not(.section-wayfinder),.summary.my-tab-section){
+  padding-inline:0;
+}
+/* Keep authored full-bleed welcome/soft sections and padded action cards intact. */
 /* My EKODI is personal: nothing is shown before the session is known, and a
    signed-out visitor is sent to central login (app.js) without a guest flash. */
 body[data-auth-state="guest"]>*,body[data-auth-state="redirect"]>*{visibility:hidden!important}
