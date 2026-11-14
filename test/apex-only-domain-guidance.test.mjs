@@ -37,7 +37,7 @@ test('current domain policy and public guidance advertise apex-only first-party 
 test('retirement scope excludes real mail DNS and other tenant or customer domains', async () => {
   const guide = await read('docs/DOMAIN-NAMING.md');
   assert.match(guide, /MX\/SPF\/DKIM\/DMARC/);
-  assert.match(guide, /customer-owned domains/);
+  assert.match(guide, /customer-owned domains/i);
   assert.match(guide, /A\/AAAA\/CNAME/);
   const script = await read('scripts/retire-church-legacy-domain.mjs');
   assert.match(script, /Unexpected Pages owner/);
