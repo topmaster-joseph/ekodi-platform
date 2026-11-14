@@ -7,7 +7,8 @@ const policy=JSON.parse(await readFile(new URL('../config/social-hub-enforcement
 
 test('every current service inherits Social Hub governance',()=>{
   const managed=socialManagedServices();
-  assert.equal(managed.length,ADMIN_SERVICE_CATALOG.length);
+  assert.equal(managed.length,ADMIN_SERVICE_CATALOG.filter(item=>item.visibility!=='archive-only').length);
+  assert.equal(managed.some(item=>item.visibility==='archive-only'),false);
   assert.ok(managed.length>channelAdminServices().length);
   for(const service of managed){
     assert.equal(service.socialManaged,true,service.id);
