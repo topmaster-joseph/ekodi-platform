@@ -101,13 +101,14 @@ test('shared UI exposes separate EKODI engine and safe OS fallback without synth
  };
  const ui=createDevotionSpeechUI(win,{createElement:t=>new FakeElement(t)});
  const row=ui.element;
- const engine=row.children.at(-2).children[0];
- const gender=row.children.at(-4).children[0];
+ const engine=row.children.find(el=>el.className==='dv-speech-engine').children[0];
+ const gender=row.children.find(el=>el.className==='dv-speech-gender').children[0];
  assert.equal(engine.value,'device');
  ui.setData(sample);
  await new Promise(resolve=>setTimeout(resolve,0));
  assert.equal(engine.children[0].disabled,false);
- assert.equal(engine.value,'ekodi');
+ assert.equal(engine.value,'device','approved EKODI audio must not silently override device voice');
+ engine.change('ekodi');
  gender.change('female');
  row.children[0].click();
  await new Promise(resolve=>setTimeout(resolve,0));
