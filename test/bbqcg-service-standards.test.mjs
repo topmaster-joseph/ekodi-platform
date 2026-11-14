@@ -32,7 +32,7 @@ test('service guide enforces legible BBQ customer theme despite host style colli
  const html=await page.text();
  const css=await bbqcgServiceStandardsCss().text();
  assert.match(html,/<body class="bbqcg-service-page">/);
- assert.match(html,/<header class="header">/);
+ assert.match(html,/<header class="header" data-ekodi-user-header-root="bbqcg-v1">/);
  assert.match(html,/class="promise-hero"/);
  assert.match(html,/aria-labelledby="standards-title"/);
  assert.match(html,/class="promise-card"/);
