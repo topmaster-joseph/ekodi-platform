@@ -93,7 +93,7 @@ test('brand-neutral tenant readability preserves tenant chrome while adding shar
   const origins=[...liveVerifier.matchAll(/https:\/\/[^/'"`]+/g)].map(match=>match[0]);
   assert.ok(origins.length>0);
   assert.ok(origins.every(origin=>origin==='https://ekodi.kr'),`non-canonical verifier origin: ${origins.find(origin=>origin!=='https://ekodi.kr')||'unknown'}`);
-  for(const canonical of ['https://ekodi.kr/jadam','https://ekodi.kr/pizzamaru','https://ekodi.kr/yogurt','https://ekodi.kr/cgma','https://ekodi.kr/admin-shell.css'])assert.ok(liveVerifier.includes(canonical),canonical);
+  for(const canonical of ['https://ekodi.kr/bbqcg','https://ekodi.kr/pizzamaru','https://ekodi.kr/yogurt','https://ekodi.kr/cgma','https://ekodi.kr/admin-shell.css'])assert.ok(liveVerifier.includes(canonical),canonical);
 });
 
 test('canonical root services win before generic workspace slug classification',async()=>{
