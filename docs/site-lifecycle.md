@@ -24,7 +24,8 @@ URL은 신분증이 아니다. 인증과 권한의 기준은 항상 immutable `w
 
 | Workspace | 현재/정식 공개면 | 처리 |
 | --- | --- | --- |
-| 자담치킨 목포대점 | `ekodi.kr/jadam` | 기존 사이트를 Store Workspace에 승격 완료 |
+| BBQ 무안청계점 | `ekodi.kr/bbqcg` | 기존 고객 소유 점포 Workspace에 자동 프로비저닝되어 운영; 중앙 고객 목록에 활성 표시 |
+| 자담치킨 목포대점 (퇴역 이력) | `ekodi.kr/jadam` | 활성 사이트 목록에서는 제외; 과거 매출·주문·인증·회계 기록 및 독립 관리자 경계 보존. 별도 승인 없이 DB 물리 삭제 금지 |
 | 피자마루 목포대점 | `ekodi.kr/pizzamaru` | 기존 사이트를 Store Workspace에 승격 완료 |
 | 요거트퍼플 목포대점 | `ekodi.kr/yogurt` | 승격 완료, `/yogurtpurple`은 별칭 |
 | 청계면상인회 | `ekodi.kr/cgma`, `cgma.or.kr` | 기존 사이트·고객 소유 도메인 유지 후 Core 연결 |
