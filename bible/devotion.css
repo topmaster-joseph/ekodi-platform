@@ -455,7 +455,7 @@
   outline:2px solid var(--dv-accent);
   outline-offset:2px;
 }
-@media (max-width:520px){
+@media screen and (max-width:520px){
   .ekodi-devotion .dv-speech-tools{
     grid-template-columns:minmax(0,1.43fr) minmax(0,1fr) minmax(0,1fr);
     padding:9px 8px;
