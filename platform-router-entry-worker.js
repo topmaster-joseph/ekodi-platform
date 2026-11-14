@@ -308,7 +308,7 @@ function injectCgmaRegionalLinks(response){
 // Bind the exception to the verified SPACE route and exact public pathname:
 // other stores, services and /bbqcg/admin retain their current authority flow.
 export function isBbqcgChromePublicRoute(pathname,upstreamRoute){
-  const path=String(pathname||'').replace(/\\/+$/,'')||'/';
+  const path=String(pathname||'').replace(/\/+$/,'')||'/';
   return (path==='/bbqcg'&&upstreamRoute==='space-storefront')||
     (path==='/bbqcg/service-guide'&&upstreamRoute==='bbqcg-service-guide');
 }
