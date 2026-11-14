@@ -25,7 +25,8 @@ if(policy.accountSecurity?.tokensNeverExposedToBrowserOrPublicApi!==true||policy
 if(policy.publishing?.idempotencyRequired!==true||policy.publishing?.duplicatePublishForbidden!==true||policy.publishing?.retryWithBackoff!==true)fail('publishing idempotency/retry contract drifted');
 
 const all=socialManagedServices();
-if(all.length!==ADMIN_SERVICE_CATALOG.length)fail('social managed service coverage mismatch');
+if(all.length!==ADMIN_SERVICE_CATALOG.filter(item=>item.visibility!=='archive-only').length)fail('social managed active-service coverage mismatch');
+if(all.some(item=>item.visibility==='archive-only'))fail('retired service must not enter active Social Hub choices');
 const ids=new Set();
 for(const service of all){
   if(ids.has(service.id))fail('duplicate service id: '+service.id);
