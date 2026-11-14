@@ -33,3 +33,14 @@ export function chooseKoreanVoice(voices, gender = 'auto', explicitURI = '') {
   }
   return available[0] || null;
 }
+
+/**
+ * Default only: favor a real Korean Google voice when Chrome provides it,
+ * otherwise use the quality-ranked Korean device voice. Never invent a voice.
+ * Explicit user choices and verified speaker-gender selections win in the UI.
+ */
+export function preferredKoreanDeviceVoice(voices = []) {
+  const available = koreanVoices(voices);
+  return available.find(v => /google/i.test(String(v.name || '')) &&
+    /한국어|korean/i.test(String(v.name || ''))) || available[0] || null;
+}

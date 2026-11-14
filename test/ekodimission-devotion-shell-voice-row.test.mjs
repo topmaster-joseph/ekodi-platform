@@ -42,7 +42,7 @@ test('three primary narration controls use one explicit grid row; advanced contr
   }
   assert.match(css,/@media\(max-width:520px\)/);
   assert.match(css,/grid-template-columns:minmax\(0,1\.43fr\) minmax\(0,1fr\) minmax\(0,1fr\)/);
-  assert.match(speech,/row\.append\(play, pause, repeat, stopButton, speedLabel, status, genderLabel, voiceLabel, engineLabel, moreSettings\)/);
+  assert.match(speech,/row\.append\(play, pause, repeat, stopButton, speedLabel, status, genderLabel, voiceLabel, engineLabel, loopButton, moreSettings\)/);
   assert.match(speech,/moreSettings\.setAttribute\('aria-expanded','false'\)/);
   assert.match(speech,/row\.dataset\.advanced='false'/);
 });

@@ -48,6 +48,7 @@ export function createEkodiNarrationPlayer(win = window) {
   let selectedDate = '';
   let generation = 0;
   let player = null;
+  let loopEnabled = false;
   let listeners = new Set();
   let status = '에코디 남성·여성 낭독음원 준비 중';
   const fetchImpl = (...args) => win.fetch(...args);
@@ -95,6 +96,7 @@ export function createEkodiNarrationPlayer(win = window) {
     player = track;
     track.preload = 'auto';
     track.playbackRate = Number(rate) || 1;
+    track.loop = loopEnabled;
     track.onended = () => { if (player === track) {player=null;inform('에코디 낭독 듣기가 끝났습니다.');} };
     track.onerror = () => { if(player===track){player=null;inform('에코디 낭독음원을 재생할 수 없습니다. 기기 낭독을 이용해 주세요.');} };
     try {
@@ -110,8 +112,9 @@ export function createEkodiNarrationPlayer(win = window) {
   function pause() { if(player) {player.pause();inform('에코디 낭독 일시정지');} }
   async function resume() { if(player) {try{await player.play();inform('에코디 낭독 다시 재생 중');return true;}catch{return false;}}return false; }
   function setSpeed(rate){if(player)player.playbackRate=Number(rate)||1;}
+  function setLoop(enabled){loopEnabled=enabled===true;if(player)player.loop=loopEnabled;}
   return {
-    load,play,pause,resume,stop,setSpeed,
+    load,play,pause,resume,stop,setSpeed,setLoop,
     get ready(){return Boolean(manifest);},
     get date(){return selectedDate;},
     get status(){return status;},
