@@ -14,9 +14,9 @@ export const BBQCG_PUBLIC_NAV = Object.freeze([
 
 export function renderBbqcgHeader(){
   const links=BBQCG_PUBLIC_NAV.map(item=>`<a href="${item.href}">${item.label}</a>`).join('');
-  return `<header class="header"><div class="wrap head">
+  return `<header class="header" data-ekodi-user-header-root="bbqcg-v1"><div class="wrap head">
 <a class="logo" href="/bbqcg" aria-label="BBQ 무안청계점 홈"><span class="logo-mark" aria-hidden="true">BBQ</span><span class="logo-copy">BBQ 무안청계점<small>우리 동네 BBQ · 무안청계점</small></span></a>
-<nav class="nav" aria-label="주요 메뉴">${links}</nav>
+<nav class="nav" aria-label="주요 메뉴">${links}<span class="bbqcg-account-slot" data-ekodi-header-actions aria-label="회원 계정"></span></nav>
 </div></header>`;
 }
 
@@ -40,6 +40,7 @@ body .header .logo-copy small{display:block!important;margin-top:2px!important;f
 body .header .nav{display:flex!important;align-items:center!important;justify-content:flex-end!important;flex-wrap:nowrap!important;gap:clamp(10px,1.8vw,30px)!important;font-size:14px!important;font-weight:800!important;white-space:nowrap!important;min-width:0!important;color:#191a3e!important}
 body .header .nav a{display:inline-flex!important;align-items:center!important;min-height:44px!important;padding:9px 0!important;color:#191a3e!important;text-decoration:none!important;white-space:nowrap!important;font-weight:800!important}
 body .header .nav a:hover{color:#a1192d!important}
+body .header .bbqcg-account-slot{display:inline-flex!important;align-items:center!important;justify-content:flex-end!important;min-width:0!important;min-height:44px!important;white-space:nowrap!important}
 body .header .nav a:not(:last-child):after{content:"";display:inline-block;width:1px;height:12px;margin-left:clamp(10px,1.8vw,30px);background:#d8d6dc;vertical-align:middle}
 body .foot{display:block!important;background:#151639!important;color:#e8e8f2!important;padding:25px 0!important;border-top:0!important;font-size:12px!important;line-height:1.7!important;min-height:0!important}
 body .foot .foot-inner{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;align-items:center!important;gap:22px!important}
