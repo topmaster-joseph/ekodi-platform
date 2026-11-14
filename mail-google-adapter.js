@@ -96,6 +96,14 @@ export async function listGoogleMailMessages(accessToken, { q = '', pageToken = 
   const details = await Promise.all((list.messages || []).map(item => gmailFetch(accessToken, `/messages/${encodeURIComponent(item.id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`).then(summarize)));
   return { messages: details, nextPageToken: list.nextPageToken || null, resultSizeEstimate: Number(list.resultSizeEstimate || 0) };
 }
+// Fetch immutable source identity without downloading the message body or attachments.
+// Approval must independently re-read the referenced Gmail message under the same account.
+export async function getGoogleMailMessageMetadata(accessToken, messageId) {
+  const id=String(messageId||'');
+  if(!/^[A-Za-z0-9_-]{5,128}$/.test(id)) throw Object.assign(new Error('INVALID_MESSAGE_ID'),{code:'INVALID_MESSAGE_ID',status:400});
+  const message=await gmailFetch(accessToken,`/messages/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`);
+  return summarize(message);
+}
 export async function getGoogleMailMessage(accessToken, messageId) {
   const message = await gmailFetch(accessToken, `/messages/${encodeURIComponent(messageId)}?format=full`);
   return { ...summarize(message), to: headerValue(message, 'To'), cc: headerValue(message, 'Cc'), body: messageBody(message), attachments: attachments(message) };

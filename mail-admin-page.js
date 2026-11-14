@@ -181,9 +181,9 @@ export function mailAdminPage(){
     const fields=[['counterparty','거래처 / 공급받는 자'],['issuerName','발행 사업자명'],['salePeriod','매출 기간(예: 2026-10)'],['saleAmount','매출액 또는 공급가액(원)'],['taxAmount','부가세액(원)'],['evidenceReference','원본 증빙 번호·거래 명세']];
     const controls={};
     for(const [key,label] of fields){const wrap=document.createElement('label');wrap.className='field';wrap.append(docText('span',label));const el=document.createElement('input');el.required=true;el.type=['saleAmount','taxAmount'].includes(key)?'number':'text';if(el.type==='number'){el.min='0';el.step='1';el.value='0'}else{el.maxLength=key==='evidenceReference'?500:120}wrap.append(el);f.append(wrap);controls[key]=el}
-    f.append(docText('p','승인하기 전에 메일 발신자·공급자·거래증빙과 금액을 확인하세요. 이메일만으로 매출이 입증되지는 않습니다.','note'));
+    f.append(docText('p',record.source_type==='mail'?'승인 시 EKODI가 원본 Gmail의 존재·발신자·제목·날짜를 다시 확인합니다. 먼저 원본 메일을 열어 거래증빙·금액을 독립적으로 확인하세요. 이메일만으로 매출이 입증되지는 않습니다.':'등록된 원본 증빙을 직접 검토하고 거래금액·발행 사업자·기간을 확인하세요.','note'));
     const b=docButton('검토 완료 · 승인',()=>{} ,'primary');b.type='submit';b.onclick=null;f.append(b);
-    f.onsubmit=async e=>{e.preventDefault();const data={workspace:current.slug};for(const [key]of fields)data[key]=controls[key].value;try{await api('/documents/requests/'+record.id+'/approve',{method:'POST',body:JSON.stringify(data)});await loadDocuments()}catch(err){docNotice(err.message)}};
+    f.onsubmit=async e=>{e.preventDefault();const data={workspace:current.slug};for(const [key]of fields)data[key]=controls[key].value;try{await api('/documents/requests/'+record.id+'/approve',{method:'POST',body:JSON.stringify(data)});await loadDocuments()}catch(err){const hints={SOURCE_MAIL_CHANGED:'원본 메일의 발신자·제목·날짜가 접수 기록과 일치하지 않습니다. 승인하지 않았습니다. 관리자에게 확인하세요.',SOURCE_MAIL_READ_FORBIDDEN:'원본 메일을 읽을 계정별 권한이 없어 승인할 수 없습니다.',SOURCE_MAIL_NOT_CONNECTED:'Gmail 연결이 해제됐습니다. 소유자 동의 후 다시 확인하세요.',MAIL_READ_SCOPE_REQUIRED:'원본 메일 읽기 동의가 필요합니다.'};docNotice(hints[err.code]||err.message)}};
     box.append(f);
   }
   async function docPrint(record){
