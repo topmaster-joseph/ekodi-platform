@@ -58,11 +58,24 @@ export function essayPrompt(topic) {
 규칙: 따뜻하고 분명한 문장. 독자가 이번 주에 해 볼 수 있는 작은 실천 하나로 맺기. 지어낸 통계·인용·실존 인물·후기 쓰지 않기. 성경을 인용하면 장절만 밝히고 길게 옮기지 않기. 한자·영어 단어 남발하지 않기. 광고·판매 문구 쓰지 않기.`;
 }
 
+// JOURNAL-ESSAY-PARSE-20261115: 무료 AI는 제목 뒤 빈 줄, '# 제목', '**제목**', '제목:'·'요약:' 같은 머리말을 섞어 낸다.
+// 빈 줄을 건너뛰고 머리말·강조 표시를 걷어 첫 두 의미 있는 줄을 제목·요약으로 쓴다(11/14 첫 원고가 이 때문에 버려짐).
+const stripMark = (line) => String(line || '').replace(/^\s*#+\s*/, '').replace(/\*\*/g, '').replace(/^\s*(제목|title|요약|summary|한 문장 요약)\s*[:：]\s*/i, '').replace(/^["“『「]|["”』」]$/g, '').trim();
 export function parseEssay(text, topic) {
-  const lines = String(text || '').replace(HAN, '').trim().split('\n');
-  const title = clean(String(lines[0] || '').replace(/^#+\s*/, '').replace(/^제목\s*[:：]\s*/, ''), 80);
-  const summary = clean(String(lines[1] || '').replace(/^요약\s*[:：]\s*/, ''), 200);
-  const body = clean(lines.slice(2).join('\n'), 9000);
+  const lines = String(text || '').replace(HAN, '').replace(/\r/g, '').split('\n');
+  const meaningful = [];
+  let i = 0;
+  for (; i < lines.length && meaningful.length < 2; i += 1) {
+    const line = stripMark(lines[i]);
+    if (!line || /^(본문|에세이)\s*[:：]?$/.test(line)) continue;
+    meaningful.push(line);
+  }
+  const title = clean(meaningful[0], 80);
+  let summary = clean(meaningful[1], 200);
+  let body = clean(lines.slice(i).join('\n').replace(/^\s*(본문)\s*[:：]?\s*$/m, '').trim(), 9000);
+  // 요약 줄이 소제목이면 요약이 없는 원고 — 첫 문단 첫 문장을 요약으로 쓴다.
+  if (/^##\s/.test(String(lines[i - 1] || '').trim())) { body = clean(`${lines[i - 1]}\n${body}`, 9000); summary = ''; }
+  if (!summary) summary = clean((body.replace(/^#+.*$/gm, '').trim().split(/(?<=[.!?。])\s/)[0] || ''), 160);
   if (!title || !summary || body.replace(/\s/g, '').length < ESSAY_POLICY.minChars) return null;
   return { title, summary, body, topic_key: topic[0], category: topic[1] };
 }
@@ -101,7 +114,7 @@ export async function essayTick(db, writeText, { notify = null, now = Date.now()
   let text = null;
   try { text = typeof writeText === 'function' ? await writeText('너는 에코디저널의 필자 에코디언이다. 한국어로만 쓴다.', essayPrompt(topic), 2600, 'journal-essay') : null; } catch { text = null; }
   const parsed = parseEssay(text, topic);
-  if (!parsed) { out.skipped = 'draft_unusable'; return out; }   // 다음 날 다시 시도(무료 AI가 비었거나 너무 짧음)
+  if (!parsed) { out.skipped = text ? `draft_unusable:${String(text).replace(/\s/g, '').length}` : 'draft_empty'; return out; }   // 다음 날 다시 시도
   const essay = { id: crypto.randomUUID(), slug: essaySlug(now, topic[0]), ...parsed, created_at: nowIso(now), publish_at: nowIso(now + ESSAY_POLICY.reviewHours * 3600_000) };
   await db.prepare(`INSERT OR IGNORE INTO publishing_journal_essays (id,slug,topic_key,category,title,summary,body,status,created_at,publish_at)
     VALUES (?,?,?,?,?,?,?,'submitted',?,?)`).bind(essay.id, essay.slug, essay.topic_key, essay.category, essay.title, essay.summary, essay.body, essay.created_at, essay.publish_at).run();
