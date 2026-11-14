@@ -32,7 +32,9 @@ export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'tax', name:'세금·증빙', basePath:'/tax', group:'professional' },
   { id:'cheonggye-local', name:'청계잇다', basePath:'/cheonggye', group:'sites', kind:'site', siteRelation:'user', channelAdminSection:'publishing', channelSubjectKey:'cheonggye-local' },
   { id:'cgma', name:'청계면상인회', basePath:'/cgma', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing', channelSubjectKey:'cgma' },
-  { id:'jadam', name:'자담치킨 목포대점', basePath:'/jadam', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing', channelSubjectKey:'jadam' },
+  { id:'bbqcg', name:'BBQ 무안청계점', basePath:'/bbqcg', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing', channelSubjectKey:'bbqcg' },
+  // Historical record only: retain the unique admin data/identity for audit, never a live customer handoff.
+  { id:'jadam', name:'자담치킨 목포대점', basePath:'/jadam', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing', channelSubjectKey:'jadam', visibility:'archive-only' },
   { id:'pizzamaru', name:'피자마루 목포대점', basePath:'/pizzamaru', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing', channelSubjectKey:'pizzamaru' },
   { id:'yogurt', name:'요거트퍼플 목포대점', basePath:'/yogurt', group:'sites', kind:'site', siteRelation:'customer-partner', channelAdminSection:'publishing', channelSubjectKey:'yogurt' },
 ]);
@@ -67,7 +69,7 @@ export function canonicalServiceAdminUrl(basePath){
 }
 
 export function channelAdminServices(){
-  return ADMIN_SERVICE_CATALOG.filter(item=>Boolean(item.channelAdminSection));
+  return ADMIN_SERVICE_CATALOG.filter(item=>Boolean(item.channelAdminSection) && item.visibility!=='archive-only');
 }
 
 function socialSubjectKey(item){
@@ -83,7 +85,7 @@ export function canonicalCentralSocialAdminPath(service){
 }
 
 export function socialManagedServices(){
-  return ADMIN_SERVICE_CATALOG.map(item=>Object.freeze({
+  return ADMIN_SERVICE_CATALOG.filter(item=>item.visibility!=='archive-only').map(item=>Object.freeze({
     ...item,
     socialManaged:true,
     socialSubjectType:'tenant',
