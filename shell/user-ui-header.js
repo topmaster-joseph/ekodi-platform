@@ -160,7 +160,8 @@ function isIndividualSite(){
   const service=serviceId();
   if(service&&!new Set(['ekodi','my','auth','admin']).has(service))return true;
   const first=location.pathname.split('/').filter(Boolean)[0]||'';
-  if(first&&!new Set(['my','auth','admin','privacy','terms','api','shell']).has(first))return true;
+  // EKODI 플랫폼 루트 화면(/history 등)은 개별 사이트가 아니다. 개별 사이트로 보면 ekodi.kr 홈으로 가는 로고·메뉴가 지워진다.
+  if(first&&!new Set(['my','auth','admin','privacy','terms','api','shell','history']).has(first))return true;
   const host=String(location.hostname||'').toLowerCase();
   return Boolean(host&&host!=='ekodi.kr');
 }
