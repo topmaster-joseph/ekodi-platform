@@ -118,3 +118,95 @@ html[data-ekodi-church-unified-admin="true"] #sectionNav{margin-top:0}
 #churchDocumentsRoot > h2{margin:0 0 4px}
 #churchDocumentsRoot > p.empty{font-size:.8rem;margin:0 0 4px}
 @media (max-width:900px){#churchDocumentsRoot .church-doc-grid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))!important}}
+
+/* CHURCH-WORSHIP-LAYOUT-20261114
+ * Sunday ministry: one clear command area, adjacent list/editor on wide screens,
+ * one-column reading order on tablets and phones. No role or publish changes.
+ */
+html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm){
+  display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);
+  align-items:start;gap:14px;min-width:0;width:100%;max-width:none;
+  box-sizing:border-box;word-break:keep-all
+}
+html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>*{
+  min-width:0;max-width:100%;width:100%;box-sizing:border-box;
+  margin-inline:0!important
+}
+html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>.service-row{
+  grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:start;gap:12px;
+  justify-content:space-between
+}
+html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>.service-row:has(#churchAiCommand){
+  display:block;padding:16px 18px!important;margin-bottom:0!important;
+  border-color:#d8e5ef!important;background:#f7fafc!important
+}
+html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm) #churchAiCommand{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px 12px;
+  margin-top:10px
+}
+html[data-ekodi-church-unified-admin="true"] #churchAiCommand>label{
+  grid-column:1/-1;font-size:13px;font-weight:700;line-height:1.4
+}
+html[data-ekodi-church-unified-admin="true"] #churchAiCommand textarea{
+  grid-column:1;min-height:44px!important;height:auto;max-height:130px;
+  margin:0!important;padding:10px 12px!important;resize:vertical;
+  box-sizing:border-box
+}
+html[data-ekodi-church-unified-admin="true"] #churchAiCommand>.actions{
+  grid-column:2;display:flex;flex-wrap:wrap;gap:8px;margin:0
+}
+html[data-ekodi-church-unified-admin="true"] #churchAiCommand .button{min-height:42px;white-space:normal}
+html[data-ekodi-church-unified-admin="true"] #churchAiCommandStatus{margin-top:10px;line-height:1.55}
+html[data-ekodi-church-unified-admin="true"] #churchAiCommandLinks{display:flex;flex-wrap:wrap;gap:8px}
+html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>.table-wrap{
+  grid-column:1;grid-row:3;overflow:auto;max-height:min(68vh,720px);
+  border:1px solid #e0e6ef;border-radius:11px;background:#fff;
+  -webkit-overflow-scrolling:touch
+}
+html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>.table-wrap table{
+  width:100%;min-width:580px;border-collapse:collapse
+}
+html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>.table-wrap th{
+  position:sticky;top:0;z-index:1;background:#eef3f8
+}
+html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>.table-wrap td,
+html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>.table-wrap th{
+  padding:10px 11px;font-size:13px;line-height:1.4
+}
+html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>#worshipForm{
+  grid-column:2;grid-row:3;padding:16px;
+  border:1px solid #e0e6ef;border-radius:11px;background:#fff
+}
+html[data-ekodi-church-unified-admin="true"] #worshipForm .trade-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px
+}
+html[data-ekodi-church-unified-admin="true"] #worshipForm .trade-grid>label{
+  min-width:0;word-break:keep-all;overflow-wrap:normal;font-size:13px
+}
+html[data-ekodi-church-unified-admin="true"] #worshipForm .trade-grid>label:has(textarea){grid-column:1/-1}
+html[data-ekodi-church-unified-admin="true"] #worshipForm :is(input,textarea){
+  width:100%;box-sizing:border-box;min-width:0;font-size:14px
+}
+html[data-ekodi-church-unified-admin="true"] #worshipForm textarea{min-height:76px;resize:vertical}
+html[data-ekodi-church-unified-admin="true"] #worshipForm .actions{
+  display:flex;flex-wrap:wrap;gap:8px;margin-top:12px
+}
+html[data-ekodi-church-unified-admin="true"] #worshipForm .button{min-height:40px}
+@media(max-width:1180px){
+  html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm){grid-template-columns:minmax(0,1fr)}
+  html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>.table-wrap,
+  html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>#worshipForm{
+    grid-column:1;grid-row:auto
+  }
+  html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>.table-wrap{max-height:420px}
+}
+@media(max-width:680px){
+  html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm){gap:10px}
+  html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>.service-row:has(#churchAiCommand){padding:12px!important}
+  html[data-ekodi-church-unified-admin="true"] #churchAiCommand{grid-template-columns:minmax(0,1fr)}
+  html[data-ekodi-church-unified-admin="true"] #churchAiCommand textarea,
+  html[data-ekodi-church-unified-admin="true"] #churchAiCommand>.actions{grid-column:1}
+  html[data-ekodi-church-unified-admin="true"] #worshipForm .trade-grid{grid-template-columns:minmax(0,1fr)}
+  html[data-ekodi-church-unified-admin="true"] #worshipForm .trade-grid>label:has(textarea){grid-column:1}
+  html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>#worshipForm{padding:12px}
+}

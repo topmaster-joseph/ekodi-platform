@@ -104,3 +104,62 @@ body.admin-compact #socialAdmin .social-org-list{min-width:0}
     text-overflow:clip!important;
   }
 }
+
+/* SOCIAL-ADMIN-LAYOUT-20261114
+ * Respect the central admin shell; reclaim unused right-side space and keep
+ * channel-directory cards actionable without the floating AI dock obscuring them.
+ */
+#socialAdmin.social-admin{
+  width:100%!important;max-width:none!important;min-width:0;
+  margin-inline:0!important;box-sizing:border-box;
+  padding-bottom:clamp(96px,12vh,136px);word-break:keep-all
+}
+#socialAdmin.social-admin>*{min-width:0;max-width:100%;box-sizing:border-box}
+body.admin-compact #socialAdmin .social-admin-head{align-items:flex-start!important;flex-wrap:wrap}
+body.admin-compact #socialAdmin .social-admin-head>div:first-child{flex:1 1 460px}
+body.admin-compact #socialAdmin .social-admin-actions{align-self:flex-start;flex:0 1 auto}
+body.admin-compact #socialAdmin .social-overview-metrics{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+body.admin-compact #socialAdmin .social-site-directory-list{
+  width:100%;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:12px
+}
+body.admin-compact #socialAdmin .social-site-directory-card{
+  display:grid;grid-template-columns:minmax(0,1fr);align-content:space-between;gap:12px;
+  min-height:132px;margin:0;padding:14px 16px;text-align:left
+}
+body.admin-compact #socialAdmin .social-site-directory-copy{
+  display:grid;align-content:start;justify-items:start;min-width:0;gap:4px
+}
+body.admin-compact #socialAdmin .social-site-directory-copy :is(small,strong,span){text-align:left;margin:0}
+body.admin-compact #socialAdmin .social-site-directory-copy strong{font-size:15px;line-height:1.35}
+body.admin-compact #socialAdmin .social-site-directory-copy span{
+  max-width:100%;font-size:12px;overflow-wrap:anywhere;word-break:normal
+}
+body.admin-compact #socialAdmin .social-site-directory-actions{
+  display:flex;justify-content:flex-start;align-content:center;align-items:center;gap:7px
+}
+body.admin-compact #socialAdmin .social-site-directory-actions>*{
+  display:inline-flex;align-items:center;justify-content:center;min-height:38px;
+  padding:7px 10px;white-space:normal;word-break:keep-all;line-height:1.35;text-align:center
+}
+body.admin-compact #socialAdmin .social-channel-head{align-items:baseline}
+body.admin-compact #socialAdmin .social-directory-toolbar input{width:min(100%,440px)}
+body.admin-compact #socialAdmin .social-workspace-tabs{scroll-margin-top:12px}
+body.admin-compact #socialAdmin .social-site-directory,
+body.admin-compact #socialAdmin .social-connections,
+body.admin-compact #socialAdmin .social-publishing-registry,
+body.admin-compact #socialAdmin .social-policy-panel{width:100%;max-width:none}
+@media(max-width:1100px){
+  body.admin-compact #socialAdmin .social-overview-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  body.admin-compact #socialAdmin .social-site-directory-list{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:760px){
+  #socialAdmin.social-admin{padding-bottom:110px}
+  body.admin-compact #socialAdmin .social-admin-actions{width:100%;justify-content:flex-start}
+  body.admin-compact #socialAdmin .social-site-directory-card{min-height:0}
+  body.admin-compact #socialAdmin .social-site-directory-actions>*{min-height:44px}
+}
+@media(max-width:390px){
+  body.admin-compact #socialAdmin .social-overview-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  body.admin-compact #socialAdmin .social-site-directory-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  body.admin-compact #socialAdmin .social-site-directory-actions>*{min-width:0}
+}
