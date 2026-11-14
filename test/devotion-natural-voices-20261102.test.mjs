@@ -22,7 +22,7 @@ test('male and female are recognized only from documented Korean speaker names',
  assert.equal(chooseKoreanVoice([unknown,female,male]),female,'prefer known natural voice over generic default');
  assert.deepEqual(koreanVoices([english]),[]);
  assert.equal(preferredKoreanDeviceVoice([male,female,unknown]),unknown,'prefer actual Google Korean on Chrome');
- assert.equal(preferredKoreanDeviceVoice([male,female]),female,'fallback to best available Korean voice');
+ assert.equal(preferredKoreanDeviceVoice([male,female]),male,'equally ranked natural Korean voices preserve stable input order');
  assert.equal(preferredKoreanDeviceVoice([english]),null,'never select an English device voice');
 });
 
