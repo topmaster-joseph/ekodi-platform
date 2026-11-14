@@ -118,6 +118,7 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     loopButton.textContent = loopEnabled ? '반복듣기 켜짐' : '반복듣기';
     loopButton.setAttribute('aria-pressed', String(loopEnabled));
     loopButton.setAttribute('aria-label', loopEnabled ? '반복듣기 끄기' : '반복듣기 켜기');
+    ekodi.setLoop(loopEnabled);
   }
 
   const preferenceKey = 'ekodi-devotion-voice-preference-v1';
@@ -260,7 +261,7 @@ export function createDevotionSpeechUI(win = window, doc = document) {
       }catch{display('공식 사이트 링크를 눌러 주세요.');}
       return;
     }
-    if (!supported || !data?.found) return;
+    if (!data?.found || (!supported && !(engine.value === 'ekodi' && ekodi.ready))) return;
     stop();
     refreshVoices();
     if (engine.value === 'ekodi') {
