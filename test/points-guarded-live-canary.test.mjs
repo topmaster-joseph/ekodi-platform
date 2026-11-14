@@ -35,9 +35,10 @@ test('points canaries reflect real safe assets, not member or economic mutations
     assert.ok(source.includes(marker),request.url+' lacks '+marker);
   }
   for(const host of [internal,canonical]){
-    assert.ok(byUrl(host+'/points/').expect.includes('20261114-unified-content-width-v1'));
+    assert.ok(byUrl(host+'/points/').expect.includes('20261114-unified-content-width-v2'));
   }
   assert.ok(css.includes('body.my-subpage main{width:var(--my-content-width);max-width:none;padding-inline:0}'));
+  assert.ok(css.includes('html[data-ekodi-user-ui] body.my-subpage > main{width:var(--my-content-width)!important;max-width:none!important;padding-inline:0!important}'));
   assert.ok(html.includes('/my/hub-shell.css?v=20261114-unified-my-width-v1'));
   for(const request of requests.filter(x=>x.url?.includes('/points/'))){
     assert.ok(!('method' in request), 'read-only GET check only');
