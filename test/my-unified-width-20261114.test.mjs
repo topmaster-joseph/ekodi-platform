@@ -12,7 +12,7 @@ test('My EKODI home and points use the same versioned centered chrome stylesheet
   const asset = '/my/hub-shell.css?v=20261114-unified-my-width-v1';
   assert.ok(home.includes(asset));
   assert.ok(points.includes(asset));
-  assert.match(points,/\/my\/points\/styles\.css\?v=20261114-unified-content-width-v1/);
+  assert.match(points,/\/my\/points\/styles\.css\?v=20261114-unified-content-width-v2/);
   assert.match(home,/<header class="topbar my-comfort-header">/);
   assert.match(home,/<main id="home" class="my-tab-shell">/);
   assert.match(home,/<footer class="my-custom-footer"/);
@@ -45,6 +45,7 @@ test('responsive envelope remains centered at phone, tablet and desktop referenc
   assert.doesNotMatch(css,/word-break:\s*break-all/);
   assert.match(css,/Keep authored full-bleed welcome\/soft sections and padded action cards intact/);
   assert.match(pointsCss,/body\.my-subpage main\{width:var\(--my-content-width\);max-width:none;padding-inline:0\}/);
+  assert.ok(pointsCss.includes('html[data-ekodi-user-ui] body.my-subpage > main{width:var(--my-content-width)!important;max-width:none!important;padding-inline:0!important}'));
 });
 
 test('signed-out protection, main menu routing and existing footer copy remain intact',()=>{
