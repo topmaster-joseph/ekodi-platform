@@ -1,6 +1,6 @@
 # EKODI Site Lifecycle
 
-EKODI는 기존 사이트의 기능과 데이터를 보존하면서 Workspace/Core로 승격한다. 2026-10-23 승인된 C3 정책에 따라 모든 직접 운영 웹사이트의 공식 주소는 `https://ekodi.kr/{site}` 경로이며, 과거 EKODI 웹 서브도메인 서브도메인은 보조 주소·리디렉션이 아니다.
+EKODI는 기존 사이트의 기능과 데이터를 보존하면서 Workspace/Core로 승격한다. 2026-10-23 승인된 C3 정책에 따라 모든 직접 운영 웹사이트의 공식 주소는 `https://ekodi.kr/{site}` 경로이며, 과거 EKODI 웹 서브도메인은 보조 주소·리디렉션이 아니다.
 
 ## 생성 순서
 
