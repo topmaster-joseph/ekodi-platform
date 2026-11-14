@@ -57,8 +57,8 @@ test('canonical six-link site navigation never becomes a page-specific or duplic
 
 test('both independently served stylesheets append the same immutable chrome rules',async()=>{
  const [storeCss,promiseCss]=await Promise.all([
-   bbqCheonggyeCss().then(r=>r.text()),
-   bbqcgServiceStandardsCss().then(r=>r.text())
+   bbqCheonggyeCss().text(),
+   bbqcgServiceStandardsCss().text()
  ]);
  const css=bbqcgSharedChromeCss();
  const start='/* bbqcg-shared-chrome-v1:';
