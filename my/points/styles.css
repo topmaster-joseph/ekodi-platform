@@ -20,6 +20,8 @@ html:has(body.my-subpage),html:has(body.my-subpage) body.my-subpage[data-ekodi-u
 body.my-subpage .heading h1{color:#183127!important}
 body.my-subpage .heading p,body.my-subpage .footnote{color:#63726b!important}
 body.my-subpage main{width:var(--my-content-width);max-width:none;padding-inline:0}
+/* Override the higher-specificity 1240px shared body > main fallback on this My-only subpage. */
+html[data-ekodi-user-ui] body.my-subpage > main{width:var(--my-content-width)!important;max-width:none!important;padding-inline:0!important}
 body.my-subpage select,body.my-subpage input,body.my-subpage textarea{background:#fff!important;color:#183127!important;border:1px solid #cbdad0!important}
 body.my-subpage .my-footer-brand{text-align:left}
 body.my-subpage .my-desktop-tabs a[aria-current="page"]{background:#eaf2ee;color:#1f5c3d;border-radius:999px}
