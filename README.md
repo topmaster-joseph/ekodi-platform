@@ -135,7 +135,7 @@ For production-impacting work, a successful commit or deploy command alone is no
 
 **Current approved rule (C3, 2026-10-23): every first-party public, member, admin, login and API web entrypoint uses `https://ekodi.kr/<path>`.** New EKODI web subdomains, nested subdomains and legacy web redirects/aliases are forbidden. Church: `https://ekodi.kr/ekodichurch/`; Business: `/ekodibiz/`; Lab: `/ekodilab/`; sign-in: `/auth/`; administration: `/admin/`; mail portal: `/mail/`; church live: `/live/church/`.
 
-Treat historic EKODI web subdomains as HTTP hosts as retirement inventory, not alternate entrances. After provider callbacks, authentication, tenant isolation and apex health are verified, remove their Cloudflare Worker/Pages bindings and **web A/AAAA/CNAME DNS**, under the official protected C3 release. A redirect alone does not count as removal. Preserve email MX/SPF/DKIM/DMARC, domain verification records and independent/customer-owned domains. See `docs/DOMAIN-NAMING.md`, `config/domain-canonical-policy.json` and `docs/operations/apex-only-retirement-readiness.md`.
+Treat historical EKODI web subdomain hosts as retirement inventory, not alternate entrances. After provider callbacks, authentication, tenant isolation and apex health are verified, remove their Cloudflare Worker/Pages bindings and **web A/AAAA/CNAME DNS**, under the official protected C3 release. A redirect alone does not count as removal. Preserve email MX/SPF/DKIM/DMARC, domain verification records and independent/customer-owned domains. See `docs/DOMAIN-NAMING.md`, `config/domain-canonical-policy.json` and `docs/operations/apex-only-retirement-readiness.md`.
 
 ## Security
 
