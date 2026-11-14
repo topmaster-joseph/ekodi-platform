@@ -49,7 +49,7 @@ test('mobile fixed-header workflow validates the live verifier before merge',asy
 test('live mobile verifier checks canonical apex tenant paths only',async()=>{
   const verifier=await read('scripts/verify-mobile-fixed-headers-live.mjs');
   for(const url of [
-    'https://ekodi.kr/jadam',
+    'https://ekodi.kr/bbqcg',
     'https://ekodi.kr/pizzamaru',
     'https://ekodi.kr/yogurt',
     'https://ekodi.kr/cgma',
