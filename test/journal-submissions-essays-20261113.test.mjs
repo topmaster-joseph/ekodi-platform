@@ -44,8 +44,8 @@ test('weekly essay: writes once per 7 days, submits to the desk, publishes after
 
 test('unusable or missing AI drafts are not submitted (retry next day), Hanja is stripped', async () => {
   const db = createD1(new DatabaseSync(':memory:'));
-  assert.equal((await essayTick(db, async () => '짧음', { now: Date.now() })).skipped, 'draft_unusable');
-  assert.equal((await essayTick(db, async () => { throw new Error('no ai'); }, { now: Date.now() })).skipped, 'draft_unusable');
+  assert.match((await essayTick(db, async () => '짧음', { now: Date.now() })).skipped, /^draft_unusable:/);
+  assert.equal((await essayTick(db, async () => { throw new Error('no ai'); }, { now: Date.now() })).skipped, 'draft_empty');
   const parsed = parseEssay(draft('쉼과 安息'), ESSAY_TOPICS[0]);
   assert.equal(parsed.title, '쉼과');
   assert.equal(nextTopic(16)[0], ESSAY_TOPICS[0][0]);
@@ -132,4 +132,23 @@ test('journal has a 투고 안내 page with the manuscript form and it is in the
   assert.equal(page.status, 200);
   assert.match(await page.text(), /<title>투고 안내 \| EKODI Journal<\/title>/);
   assert.match(await (await worker.fetch(new Request('https://ekodi.kr/sitemap.xml'), wenv)).text(), /journal\/submit/);
+});
+
+test('free-AI draft formats with blank lines, markdown headers and labels are still parsed (2026-11-14 first draft was dropped)', () => {
+  const body = '## 멈춤\n' + '하루를 멈추고 숨을 고르는 시간이 필요합니다. '.repeat(50);
+  for (const text of [`# 쉼을 배우는 한 주\n\n요약: 바쁜 날들 사이에서 안식을 회복합니다.\n\n${body}`, `**제목: 쉼을 배우는 한 주**\n\n**바쁜 날들 사이에서 안식을 회복합니다.**\n\n${body}`]) {
+    const r = parseEssay(text, ESSAY_TOPICS[0]);
+    assert.equal(r.title, '쉼을 배우는 한 주');
+    assert.equal(r.summary, '바쁜 날들 사이에서 안식을 회복합니다.');
+    assert.match(r.body, /^## 멈춤/);
+  }
+  const noSummary = parseEssay(`쉼을 배우는 한 주\n\n${body}`, ESSAY_TOPICS[0]);
+  assert.match(noSummary.summary, /^하루를 멈추고/);
+  assert.match(noSummary.body, /^## 멈춤/);
+});
+
+test('skipped essay runs record why (empty vs too short) so the daily run log explains it', async () => {
+  const db = createD1(new DatabaseSync(':memory:'));
+  assert.equal((await essayTick(db, async () => null, { now: Date.now() })).skipped, 'draft_empty');
+  assert.match((await essayTick(db, async () => '짧은 글', { now: Date.now() })).skipped, /^draft_unusable:\d+$/);
 });
