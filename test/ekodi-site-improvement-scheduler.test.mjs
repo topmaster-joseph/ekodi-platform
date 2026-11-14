@@ -15,7 +15,8 @@ test('site improvement targets only canonical apex workspace sites',()=>{
   assert.ok(targets.every(site=>site.canonicalUrl.startsWith('https://ekodi.kr/')));
   assert.equal(targets.some(site=>site.id==='ekodi-trade'),true);
   assert.equal(targets.some(site=>site.id==='ekodi-cafe'),true);
-  assert.equal(targets[0].id,'jadam');
+  assert.equal(targets[0].id,'bbqcg');
+  assert.equal(targets.some(site=>site.id==='jadam'),false,'historical Jadam must not receive active automated work');
 });
 
 test('site improvement prompt requires deep subservice UX review and protected boundaries',()=>{
