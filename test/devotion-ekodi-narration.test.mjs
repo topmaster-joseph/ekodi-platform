@@ -65,6 +65,10 @@ test('both EKODI voices are real approved audio tracks, not browser pitch shifts
  assert.equal(await player.play('female',.94),true);
  assert.equal(FakeAudio.instances.at(-1).src,'/bible/narration/2026-11-02/female.mp3');
  assert.equal(FakeAudio.instances.at(-1).playbackRate,.94);
+ player.setLoop(true);
+ assert.equal(FakeAudio.instances.at(-1).loop,true,'approved audio supports looping without repeated downloads');
+ player.setLoop(false);
+ assert.equal(FakeAudio.instances.at(-1).loop,false,'turning off looping updates playing audio');
  player.pause();assert.equal(FakeAudio.instances.at(-1).paused,true);
  await player.resume();
  assert.equal(FakeAudio.instances.at(-1).playCount,2);
