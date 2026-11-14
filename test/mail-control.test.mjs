@@ -142,3 +142,14 @@ test('mail admin shows Korean labels for pending account states instead of raw c
   assert.match(src, /pending_service_connection:\['위임 연결 대기'/);
   assert.doesNotMatch(src, /\|\|\[a\.connectionStatus,''\]/);
 });
+
+test('Google OAuth denial is explained and recorded instead of looking like an expired request', async () => {
+  const control = await read('mail-control.js');
+  const cb = control.slice(control.indexOf('/oauth/google/callback`)'));
+  const errorAt = cb.indexOf("searchParams.get('error')");
+  assert.ok(errorAt > 0 && errorAt < cb.indexOf('연결 요청이 만료되었거나'), 'error param must be handled before the generic expired message');
+  assert.match(cb, /'google_'\+googleError/);
+  assert.match(cb, /테스트 사용자/);
+  const page = await read('mail-admin-page.js');
+  assert.match(page, /a\.lastError==='google_access_denied'/);
+});
