@@ -40,7 +40,7 @@
     { domain:'live.ekodi.kr', name:'에코디 라이브', group:'Communication & Cloud', role:'라이브·방송·송출', aliases:['에코디라이브','라이브','live'] },
     { domain:'cloud.ekodi.kr', name:'에코디 클라우드', group:'Communication & Cloud', role:'파일·문서·협업 자료', aliases:['에코디클라우드','클라우드','cloud'] },
     { domain:'cgma.ekodi.kr', url:'https://ekodi.kr/cgma/', label:'ekodi.kr/cgma · cgma.or.kr', name:'청계면상인회', group:'Client Sites', role:'상권·회원·고객 운영', aliases:['청계면상인회','청계상권','상인회','cgma'] },
-    { domain:'jadam.ekodi.kr', name:'자담치킨 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['자담치킨','자담','jadam'] },
+    { domain:'ekodi.kr/bbqcg', name:'BBQ 무안청계점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['비비큐','BBQ','무안청계점','bbqcg'] },
     { domain:'pizzamaru.ekodi.kr', name:'피자마루 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['피자마루','pizzamaru'] },
     { domain:'yogurt.ekodi.kr', name:'요거트퍼플 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', aliases:['요거트퍼플','요거트','yogurt'] },
     { domain:'bible.ekodi.kr', url:'https://ekodi.kr/bible', name:'에코디 말씀대화', group:'Community', role:'말씀·묵상·실천 대화', aliases:['말씀대화','성경대화','bible'] },

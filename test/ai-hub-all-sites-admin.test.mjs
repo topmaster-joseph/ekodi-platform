@@ -13,7 +13,7 @@ test('registered workspace sites are represented once plus existing independent 
   const entries=JSON.parse(found[1]);
   assert.equal(entries.length,13);
   assert.equal(new Set(entries.map(item=>item.slug)).size,13);
-  for(const item of lifecycle.existingWorkspaceSites){
+  for(const item of lifecycle.existingWorkspaceSites.filter(site=>site.lifecycleState!=='retired'&&site.visibility!=='archive-only')){
     const canonical=new URL(item.canonicalUrl);
     const slug=canonical.pathname.slice(1);
     const exact=entries.find(entry=>entry.slug===slug);

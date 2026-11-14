@@ -85,6 +85,13 @@
       "navigationProfile": "role-projected-site-admin"
     },
     {
+      "id": "bbqcg",
+      "publicPath": "/bbqcg",
+      "adminPath": "/bbqcg/admin",
+      "parentId": "cmpmyi",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
       "id": "pizzamaru",
       "publicPath": "/pizzamaru",
       "adminPath": "/pizzamaru/admin",

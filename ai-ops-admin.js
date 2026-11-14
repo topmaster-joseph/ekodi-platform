@@ -24,7 +24,7 @@
     { domain:'live.ekodi.kr', name:'에코디 라이브', group:'Communication & Cloud', role:'라이브·방송·송출', manage:'communication' },
     { domain:'cloud.ekodi.kr', name:'에코디 클라우드', group:'Communication & Cloud', role:'파일·문서·협업 자료', manage:'workspace' },
     { domain:'cgma.ekodi.kr', name:'청계면상인회', group:'Client Sites', role:'상권·회원·고객 운영', manage:'clients' },
-    { domain:'jadam.ekodi.kr', name:'자담치킨 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', manage:'clients' },
+    { domain:'ekodi.kr/bbqcg', name:'BBQ 무안청계점', group:'Client Sites', role:'점포·CRM·마케팅 운영', manage:'clients' },
     { domain:'pizzamaru.ekodi.kr', name:'피자마루 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', manage:'clients' },
     { domain:'yogurt.ekodi.kr', name:'요거트퍼플 목포대점', group:'Client Sites', role:'점포·CRM·마케팅 운영', manage:'clients' },
   ];

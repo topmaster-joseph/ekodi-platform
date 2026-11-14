@@ -34,7 +34,7 @@ function publicPath(row) {
   }
 }
 export function buildAdminSiteDirectoryReply({workspaces=workspaceRegistry.existingWorkspaceSites,services=serviceRegistry.services}={}) {
-  const ws = Array.isArray(workspaces) ? workspaces : [];
+  const ws = (Array.isArray(workspaces) ? workspaces : []).filter(site=>site?.lifecycleState!=='retired'&&site?.visibility!=='archive-only');
   const svc = Array.isArray(services) ? services : [];
   const lines = [
     'EKODI 사이트·서비스 등록 목록 (읽기 전용)',
