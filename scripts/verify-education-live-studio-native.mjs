@@ -568,6 +568,46 @@ async function bootcampRegressionProbe(browser){
   }finally{await context.close();}
 }
 
+// Additional, isolated 120-minute FactChat course: smoke the existing generic studio/presenter/lab
+// at phone and desktop widths without replacing the original 240-minute full native suite.
+async function shortCourseProbe(browser){
+  const code='mnu-factchat-120m-2026';
+  const checked=[];
+  for(const profile of [VIEWPORTS[1],VIEWPORTS[3]]){
+    const context=await browser.newContext({viewport:{width:profile.width,height:profile.height},
+      isMobile:profile.mobile,hasTouch:profile.mobile,locale:'ko-KR'});
+    observeCloudflareJsDetections(context);
+    const label='factchat-120m-'+profile.name;
+    await guard(context,label);
+    try{
+      const page=await context.newPage();
+      watch(page,label);
+      const surfaces=[
+        ['studio',PREFIX+'/study/live/?c='+code],
+        ['presenter',PREFIX+'/study/live/present/?c='+code],
+        ['lab',PREFIX+'/study/live/lab/?c='+code+'&s=1&m=hwp'],
+        ['print',PREFIX+'/study/live/handout/?c='+code]
+      ];
+      const row={viewport:profile.name};
+      for(const [surface,route] of surfaces){
+        await open(page,route);
+        row[surface]=await overflow(page,label+' '+surface);
+        const body=await page.locator('body').innerText();
+        if(!body.includes('2시간')&&!body.includes('120분')&&!body.includes('집중 실습'))
+          fail(label+' '+surface+' did not load the 120-minute course');
+        if(surface==='studio'){
+          const cards=await page.locator('.course-card').count();
+          if(cards!==3)fail(label+' studio should list 3 courses while preserving both originals, got '+cards);
+          if(!body.includes('개인 실습 90분'))fail(label+' studio missing 90-minute practice summary');
+        }
+        if(surface==='lab'&&!body.includes('HWP'))fail(label+' learner practice is missing');
+      }
+      checked.push(row);
+    }finally{await context.close();}
+  }
+  report.shortCourse={id:code,minutes:120,practiceMinutes:90,profiles:checked,passed:true};
+}
+
 async function layoutProbe(browser,profile){
   const context=await browser.newContext({viewport:{width:profile.width,height:profile.height},isMobile:profile.mobile,hasTouch:profile.mobile,locale:'ko-KR'});
   observeCloudflareJsDetections(context);
@@ -605,6 +645,7 @@ async function main(){
     await gateProbe(browser);
     await docsProbe(browser);
     await bootcampRegressionProbe(browser);
+    await shortCourseProbe(browser);
     for(const profile of VIEWPORTS){
       if(profile.width>=1366)await instructorFlow(browser,profile);
       if(profile.width===320||profile.width===390||profile.width===1366)await learnerFlow(browser,profile);
