@@ -10,6 +10,10 @@ test('deployed admin layout canary verifies all three live CSS assets without re
  for(const width of [320,390,768,1366,1440])assert.ok(src.includes(String(width)));
  assert.match(src,/guest-safe|Guest-safe|inert synthetic|Inert fixtures/i);
  assert.match(src,/response.status===429/);
+ assert.match(src,/if\(sourceMode==='repo'\)/);
+ assert.ok(src.includes("fs.readFile(new URL('../'+cssFiles[key],import.meta.url)"));
+ assert.match(src,/sourceMode:sourceMode==='repo'\?'repository-offline':'live-css'/);
+
  assert.match(src,/assert\.equal\(response\.status,200/);
  assert.match(src,/assert\.ok\(m\.hostWidth>120&&m\.left>=-2&&m\.right<=width\+2&&m\.overflow<=2/);
  assert.match(src,/evidence\.json/);
@@ -25,4 +29,7 @@ test('protected post-deploy verification workflow executes canary without bypass
  assert.match(workflow,/artifacts\/admin-three-surfaces-layout/);
  assert.match(workflow,/github\.event_name != 'pull_request'/);
  assert.match(workflow,/Verify production Admin menu paths/);
+ assert.match(workflow,/offline-layout-chromium/);
+ assert.match(workflow,/EKODI_LAYOUT_CANARY_SOURCE: repo/);
+ assert.match(workflow,/Run three-screen read-only source fixture at five viewports/);
 });
