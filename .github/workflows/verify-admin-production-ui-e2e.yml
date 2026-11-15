@@ -23,7 +23,7 @@ jobs:
   offline-layout-chromium:
     # PR-time visual proof has no authenticated session and NO calls to the production origin.
     if: ${{ github.event_name == 'pull_request' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
