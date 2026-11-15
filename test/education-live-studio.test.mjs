@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {COURSE} from '../education/study/live/courses/mnu-factchat-2026.js';
+import './education-live-120m.test.mjs'; // Include additive 2-hour course regressions in the existing Education CI lane.
 import {NOTES} from '../education/study/live/courses/mnu-factchat-2026.notes.js';
 import {COURSES} from '../education/study/live/courses/registry.js';
 import {COURSE as BOOTCAMP} from '../education/study/ai-bootcamp/catalog.js';
