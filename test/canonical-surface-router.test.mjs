@@ -463,3 +463,27 @@ test('Publishing Studio execution proxy keeps canonical API calls outside the se
   assert.doesNotMatch(transformed,/\/publishing\/api\/books\/me/);
   assert.equal(new URL('books/me','https://ekodi.kr/api/').pathname,'/api/books/me');
 });
+
+test('bare /study/live paths redirect to the /edu lecture studio, other /study paths are untouched',async()=>{
+  for(const [path,want] of [['/study/live/guide/stats','/edu/study/live/guide/stats'],['/study/live/guide/stats.html?x=1','/edu/study/live/guide/stats.html?x=1'],['/study/live','/edu/study/live']]){
+    const r=await routeCanonicalSurface(new Request('https://ekodi.kr'+path),{});
+    assert.equal(r.status,308,path);assert.equal(r.headers.get('location'),'https://ekodi.kr'+want,path);
+  }
+  const post=await routeCanonicalSurface(new Request('https://ekodi.kr/study/live/x',{method:'POST'}),{});
+  assert.ok(!post||post.status!==308,'POST is not redirected');
+  const other=await routeCanonicalSurface(new Request('https://ekodi.kr/study/notes'),{});
+  assert.ok(!other||other.status!==308,'other /study paths untouched');
+});
+
+test('root-relative upstream redirects keep the /edu mount (ekodi.kr/edu/study/live must not fall out)',async()=>{
+  const education={fetch:async request=>{
+    const u=new URL(request.url);
+    if(u.pathname==='/study/live')return new Response(null,{status:307,headers:{location:'/study/live/'}});
+    if(u.pathname==='/study/live/guide/stats.html')return new Response(null,{status:307,headers:{location:'/study/live/guide/stats?a=1'}});
+    return new Response('ok',{status:200,headers:{'content-type':'text/plain'}});
+  }};
+  const a=await routeCanonicalSurface(new Request('https://ekodi.kr/edu/study/live'),{EDUCATION:education});
+  assert.equal(a.headers.get('location'),'/edu/study/live/');
+  const b=await routeCanonicalSurface(new Request('https://ekodi.kr/edu/study/live/guide/stats.html'),{EDUCATION:education});
+  assert.equal(b.headers.get('location'),'/edu/study/live/guide/stats?a=1');
+});
