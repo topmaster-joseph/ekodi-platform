@@ -33,3 +33,11 @@ test('protected post-deploy verification workflow executes canary without bypass
  assert.match(workflow,/EKODI_LAYOUT_CANARY_SOURCE: repo/);
  assert.match(workflow,/Run three-screen read-only source fixture at five viewports/);
 });
+
+test('social mobile header remains content-sized; oversized blank gap fails Chromium',async()=>{
+ const css=await read('social-admin.css');
+ const browser=await read('scripts/verify-admin-three-surfaces-live-layout.mjs');
+ assert.match(css,/SOCIAL-MOBILE-HEADER-GAP-20261115/);
+ assert.match(css,/body\.admin-compact #socialAdmin \.social-admin-head>div:first-child\{[\s\S]*?flex:0 1 auto/);
+ assert.match(browser,/m\.socialHeaderBlank<=40/);
+});

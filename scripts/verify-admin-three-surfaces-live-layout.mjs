@@ -84,11 +84,15 @@ try{
     const m=await page.evaluate(({selector,grid,table})=>{
      const host=document.querySelector(selector),g=document.querySelector(grid),t=document.querySelector(table);
      const r=host.getBoundingClientRect();
-     return {viewport:innerWidth,overflow:document.documentElement.scrollWidth-innerWidth,left:r.left,right:r.right,hostWidth:r.width,columns:getComputedStyle(g).gridTemplateColumns.split(/\s+/).filter(Boolean).length,tableOverflow:t?t.scrollWidth-t.clientWidth:0};
+     const socialLead=document.querySelector('#socialAdmin .social-admin-head>div:first-child');
+     const copyEnd=socialLead?.lastElementChild;
+     const headerBlank=socialLead&&copyEnd?Math.round(socialLead.getBoundingClientRect().bottom-copyEnd.getBoundingClientRect().bottom):null;
+     return {viewport:innerWidth,overflow:document.documentElement.scrollWidth-innerWidth,left:r.left,right:r.right,hostWidth:r.width,columns:getComputedStyle(g).gridTemplateColumns.split(/\s+/).filter(Boolean).length,tableOverflow:t?t.scrollWidth-t.clientWidth:0,socialHeaderBlank:headerBlank};
     },{selector:fixture.selector,grid:fixture.grid,table:fixture.table});
     assert.ok(m.hostWidth>120&&m.left>=-2&&m.right<=width+2&&m.overflow<=2,fixture.key+'@'+width+' clipping '+JSON.stringify(m));
     const expected=fixture.key==='devotional'?(width>1100?4:2):fixture.key==='social'?(width>1100?2:1):(width>1180?2:1);
     assert.equal(m.columns,expected,fixture.key+'@'+width+' reflow mismatch '+JSON.stringify(m));
+    if(fixture.key==='social'&&width<=760)assert.ok(m.socialHeaderBlank!==null&&m.socialHeaderBlank<=40,'social header wasted vertical space '+JSON.stringify(m));
     evidence.checks.push({kind:'reflow',surface:fixture.key,width,pass:true,metrics:m});
     if(width===390||width===1440)await page.screenshot({path:path.join(dir,fixture.key+'-'+width+'.png'),fullPage:false});
    }

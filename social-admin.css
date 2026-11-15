@@ -163,3 +163,16 @@ body.admin-compact #socialAdmin .social-policy-panel{width:100%;max-width:none}
   body.admin-compact #socialAdmin .social-site-directory-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
   body.admin-compact #socialAdmin .social-site-directory-actions>*{min-width:0}
 }
+
+/* SOCIAL-MOBILE-HEADER-GAP-20261115
+ * flex-basis:460px is a desktop width, not a mobile title height. When the
+ * heading switches to flex-direction:column it becomes an empty 460px row.
+ * Keep the heading content-sized and the actions directly below its copy.
+ */
+@media(max-width:760px){
+  body.admin-compact #socialAdmin .social-admin-head>div:first-child{
+    flex:0 1 auto;
+    width:100%;
+    min-height:0;
+  }
+}
