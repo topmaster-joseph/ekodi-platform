@@ -8,6 +8,9 @@ import {chromium} from 'playwright';
 
 const taskId='admin-3surface-live-canary-20261115';
 const dir=path.resolve('artifacts/admin-three-surfaces-layout');
+const sourceMode=String(process.env.EKODI_LAYOUT_CANARY_SOURCE || '').trim();
+if(sourceMode && sourceMode!=='repo')throw Error('Unrecognized layout source mode');
+const cssFiles={devotional:'devotional-admin.css',social:'social-admin.css',church:'church-reports-admin.css'};
 const widths=[320,390,768,1366,1440];
 const assets={
  devotional:['https://ekodi.kr/devotional-admin.css','DEVOTIONAL-ADMIN-LAYOUT-20261114'],
@@ -50,16 +53,24 @@ const fixtures=[
  {key:'church',html:worship,selector:'#mainPanel',grid:'#mainPanel',table:'#mainPanel > .table-wrap',church:true}
 ];
 await fs.mkdir(dir,{recursive:true});
-const evidence={taskId,scope:'live CSS + synthetic DOM only; no real authenticated user/tenant state',at:new Date().toISOString(),checks:[]};
+const evidence={taskId,scope:sourceMode==='repo'
+  ? 'repository CSS + inert synthetic DOM only (offline, no production requests; NOT live or role-authenticated proof)'
+  : 'live CSS + inert synthetic DOM only; no real authenticated user/tenant state',
+ sourceMode:sourceMode==='repo'?'repository-offline':'live-css',at:new Date().toISOString(),checks:[]};
 const styles={};
 for(const [key,[url,marker]] of Object.entries(assets)){
- const response=await fetch(url,{headers:{'cache-control':'no-cache'}});
- if(response.status===429)throw Error('Cloudflare quota 429, no retry: '+url);
- assert.equal(response.status,200,'live CSS HTTP '+url);
- const css=await response.text();
+ let css;
+ if(sourceMode==='repo'){
+   css=await fs.readFile(new URL('../'+cssFiles[key],import.meta.url),'utf8');
+ }else{
+   const response=await fetch(url,{headers:{'cache-control':'no-cache'}});
+   if(response.status===429)throw Error('Cloudflare quota 429, no retry: '+url);
+   assert.equal(response.status,200,'live CSS HTTP '+url);
+   css=await response.text();
+ }
  assert.ok(css.includes(marker),'live CSS marker missing '+marker);
  styles[key]=css;
- evidence.checks.push({kind:'asset',key,url,marker,sha256:createHash('sha256').update(css).digest('hex'),pass:true});
+ evidence.checks.push({kind:'asset',key,source:sourceMode==='repo'?cssFiles[key]:url,marker,sha256:createHash('sha256').update(css).digest('hex'),pass:true});
 }
 const browser=await chromium.launch({headless:true});
 try{

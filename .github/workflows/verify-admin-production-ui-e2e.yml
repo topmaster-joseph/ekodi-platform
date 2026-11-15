@@ -20,6 +20,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  offline-layout-chromium:
+    # PR-time visual proof has no authenticated session and NO calls to the production origin.
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install isolated Chromium for offline source layout assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Run three-screen read-only source fixture at five viewports
+        shell: bash
+        env:
+          EKODI_LAYOUT_CANARY_SOURCE: repo
+        run: |
+          set -euo pipefail
+          node scripts/verify-admin-three-surfaces-live-layout.mjs
+      - name: Upload offline viewport screenshots and JSON evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-three-surfaces-offline-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/admin-three-surfaces-layout
+          if-no-files-found: warn
+          retention-days: 7
   chromium:
     runs-on: ubuntu-latest
     timeout-minutes: 15
