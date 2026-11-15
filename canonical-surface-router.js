@@ -166,6 +166,15 @@ function rewriteExecutionText(text,spec,type=''){
   return output;
 }
 function canonicalExecutionLocation(value,spec){
+  // EDU-RELATIVE-LOCATION-20261116: upstream asset hosts answer /study/live with a
+  // root-relative redirect (/study/live/, /guide/stats.html -> /guide/stats). Keep the
+  // public mount prefix, otherwise ekodi.kr/edu/... falls out to the workspace fallback.
+  const raw=String(value||'');
+  if(raw.startsWith('/')&&!raw.startsWith('//')&&spec?.prefix&&!spec.preservePrefix&&!spec.basePathAware){
+    const pathOnly=raw.split(/[?#]/)[0];
+    if(pathOnly!==spec.prefix&&!pathOnly.startsWith(spec.prefix+'/'))return spec.prefix+raw;
+    return raw;
+  }
   try{
     const target=new URL(value);
     const canonical=canonicalAbsoluteUrl(target.hostname,target.pathname,target.search,target.hash);
@@ -310,6 +319,13 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     routed.headers.set('x-ekodi-canonical-surface','age-verification-ui');
     routed.headers.set('x-ekodi-canonical-path','/verify/adult');
     return routed;
+  }
+  // EDU-STUDY-LIVE-ALIAS-20261116: the live lecture studio lives under /edu. A bare
+  // /study/live/... (typed without /edu) fell through to the workspace fallback and
+  // showed an unrelated "운영공간" page; send it to the real studio path instead.
+  if(['GET','HEAD'].includes(request.method)&&(path==='/study/live'||path.startsWith('/study/live/'))){
+    const target=new URL(request.url);target.pathname='/edu'+path;
+    return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'edu-study-live-alias','x-robots-tag':'noindex, nofollow'}});
   }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface){
     const rootRedirect=canonicalExecutionRootRedirect(request,executionSurface);if(rootRedirect)return rootRedirect;
