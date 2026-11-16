@@ -9,29 +9,29 @@
 </head><body>
 <header class="top"><a href="../">← Premium Studio</a><strong>EKODI Education · 수강생 화면 공유</strong></header>
 <main>
-<section class="intro"><h1>QR로 연결하고, 한 사람의 화면을 스크린으로</h1>
-<p>강사가 수강생을 선택해도 화면은 자동 전송되지 않습니다. 수강생이 직접 공유를 허용해야 시작됩니다.</p></section>
+<section class="intro"><h1>수강생 PC 화면을 한눈에 보는 실습실</h1>
+<p>수강생에게 웹주소를 보내세요. 각자 컴퓨터에서 접속하고 화면 공유를 허용하면 최대 9개 화면을 동시에 볼 수 있습니다.</p></section>
 <section id="teacher" class="layout">
 <div class="card">
-<h2>강사 제어실</h2><p class="hint">에코디 인증 강사만 수업방을 만들 수 있습니다. QR은 수강생 입장용입니다.</p>
-<a id="login" class="btn secondary" href="../unlock/">강사 로그인</a>
-<button id="createRoom" class="btn primary" type="button">새 수업방 만들기 (4시간)</button>
+<h2>강사 제어실</h2><p class="hint">별도 강사 로그인 없이 수업방을 개설할 수 있습니다. 참가 링크를 수업 관계자에게만 전달하세요.</p>
+
+<button id="createRoom" class="btn primary" type="button">수업방 만들기 · 로그인 불필요</button>
 <p id="teacherStatus" class="status" role="status">대기 중</p>
-<div id="invitePanel" hidden><div id="qr" class="qr"></div>
-<label for="inviteLink">수강생 QR 주소</label><input id="inviteLink" readonly><button type="button" id="copyInvite" class="btn secondary">주소 복사</button>
-<p class="hint">QR을 강의실 화면에 보여 주세요. 최대 30명 입장 가능, 한 번에 한 명 공유.</p></div>
+<div id="invitePanel" hidden>
+<label for="inviteLink">수강생 PC 입장 링크</label><input id="inviteLink" readonly><button type="button" id="copyInvite" class="btn primary">수강생 링크 복사</button><p class="hint">컴퓨터의 Chrome 또는 Edge 주소창에 붙여 넣어 입장합니다. 휴대전화 QR은 선택 사항입니다.</p><details><summary>휴대전화 QR도 보기</summary><div id="qr" class="qr"></div></details>
+<p class="hint">최대 30명 입장 · 동시 화면 최대 9명 · 녹화 없음 · 수업방 4시간 자동 만료</p></div>
 <h3>접속한 수강생 <span id="rosterCount">0</span>명</h3><ul id="roster" class="roster"></ul>
 <button type="button" id="stopSelection" class="btn secondary" disabled>현재 공유 중단</button>
 <button type="button" id="endRoom" class="btn danger" disabled>수업방 종료</button>
 </div>
 <div class="card stage-card"><div class="stage-head"><strong id="stageLabel">화면을 선택해 주세요</strong><button class="btn secondary" type="button" id="fullScreen">전체 화면</button></div>
-<div id="stage" class="stage"><div class="empty" id="stageEmpty">수강생을 선택하면 이곳에 화면이 나타납니다.</div><video id="remoteVideo" autoplay playsinline muted hidden></video><img id="remoteImage" alt="수강생이 직접 제출한 화면 이미지" hidden></div>
+<div id="stage" class="stage grid-stage"><div class="empty" id="stageEmpty">수강생에게 화면 공유를 요청하면 동의한 화면이 이곳에 나타납니다.</div><div id="screenGrid" class="screen-grid" aria-live="polite"></div></div>
 <p class="hint">공유 화면은 실시간으로만 표시하며, 서버에서 녹화·저장하지 않습니다.</p></div>
 </section>
 <section id="learner" class="card learner" hidden>
 <h2>수강생 입장</h2><label for="displayName">화면에 표시할 이름</label><input id="displayName" maxlength="36" autocomplete="nickname" placeholder="예: 김농부" required>
 <button type="button" class="btn primary" id="joinRoom">수업 참여하기</button>
-<p id="learnerStatus" class="status" role="status">강사의 선택을 기다립니다.</p>
+<p id="learnerStatus" class="status" role="status">강사의 공유 요청을 기다립니다.</p>
 <div id="shareControls" hidden><p><strong>강사에게 선택되었습니다.</strong> 아래 버튼을 직접 누를 때만 공유가 시작됩니다.</p>
 <button id="startShare" class="btn primary" type="button">내 실습 화면 공유 시작</button>
 <button id="stopShare" class="btn secondary" type="button">공유 중지</button>
