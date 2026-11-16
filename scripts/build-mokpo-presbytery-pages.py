@@ -172,8 +172,8 @@ def home():
 <section id="churches"><div class="wrap"><div class="sh"><div><span class="kicker">소속 교회</span><h2>함께하는 교회</h2></div><p>제135회 정기회 회원명부의 「산하교회 주소 및 교역자 명단」을 기준으로 시찰별·명부 순서대로 정리했습니다.</p></div><div class="churches">{groups}</div><p class="note">교회 이름만 게시하며 주소·연락처는 게시하지 않습니다. 누락·오기는 노회 서기에게 알려 주십시오.</p><p><a class="go" href="/mokpo-presbytery/roster/">회원명부 열람 (관리자 전용 · 2중확인) →</a></p></div></section>
 <section id="schedule"><div class="wrap"><div class="sh"><div><span class="kicker">회의 · 일정</span><h2>노회 일정</h2></div><p>확정된 일정만 게시합니다.</p></div>
 <div class="timeline"><div><b>2026. 10. 20.(화) 제135회 정기회</b><span>양동제일교회당</span></div><div class="next"><b>다음 정기회</b><span>일정 확정 후 게시합니다.</span></div></div></div></section>
-<section id="library"><div class="wrap"><div class="sh"><div><span class="kicker">자료실</span><h2>기준 자료</h2></div><p>공개 가능한 자료의 목록입니다. 원본 파일은 권한 확인 후 제공합니다.</p></div>
-<div class="grid"><div class="card"><span class="pill">보고서</span><h3>제135회 정기회 보고서</h3><p>위원회·훈련원·유지재단·성서신학원·연합회·시찰회·재정부 보고, 노회 규칙 및 규정, 역대 임원 명단 수록</p><span class="meta">2026. 10. 20.</span></div><div class="card"><span class="pill">규정</span><h3>목포노회 규칙 및 규정</h3><p>정기회 보고서 수록본 기준</p></div></div></div></section>
+<section id="library"><div class="wrap"><div class="sh"><div><span class="kicker">자료실 · 행정 참고</span><h2>신청·보고 기준 자료실</h2></div><p>총회·노회·선교부의 양식과 지침을 한곳에서 찾습니다. 공식 원본과 확인 상태를 함께 표시합니다.</p></div>
+<div class="grid"><a class="card" href="/mokpo-presbytery/library/"><span class="pill on">자료실 열기</span><h3>신청·보고 문서 게시판</h3><p>제출 대상별·업무별 분류, 검색, 원게시글·원첨부 링크, 개정일과 원본 확인 상태</p><span class="go">자료실 바로가기 →</span></a><div class="card"><span class="pill lock">원본 확인 원칙</span><h3>카페 자료를 기준으로</h3><p>노회 공식 카페의 원본문서와 첨부를 확인한 뒤 공개 허가를 받은 자료만 보존합니다. 현재 미확인 항목은 구분합니다.</p><a href="https://cafe.daum.net/pckmp" target="_blank" rel="noopener noreferrer" class="go">목포노회 공식 카페 →</a></div></div></div></section>
 <section id="workspace"><div class="wrap"><div class="sh"><div><span class="kicker">회원 업무공간</span><h2>권한을 받은 분의 업무공간</h2></div><p>EKODI 통합로그인으로 들어가며, 공간마다 부여된 권한만큼만 열립니다.</p></div>
 <div class="grid"><a class="card" href="/mokpo-presbytery/admin"><span class="pill on">로그인</span><h3>노회 운영관리</h3><p>노회 공지·임원·회계·출석 관리</p><span class="go">들어가기 →</span></a><a class="card" href="/mokpo-presbytery/mission/viewer/"><span class="pill on">로그인</span><h3>선교부</h3><p>선교부 화면 안에서 권한별 열람·수정·승인</p><span class="go">로그인 →</span></a><div class="card locked" aria-disabled="true"><span class="pill lock">잠금</span><h3>회원명단</h3><p>최고관리자와 사전에 지정된 명단 관리자만 열람합니다.</p><span class="meta">권한이 없는 계정에서는 선택할 수 없습니다.</span></div></div></div></section>
 </main>'''
@@ -203,8 +203,8 @@ def mission():
 <section id="meetings"><div class="wrap"><div class="sh"><div><span class="kicker">회의 · 일정</span><h2>회의와 일정</h2></div><p>확정된 일정만 게시합니다.</p></div>
 <div class="grid" style="margin-bottom:22px"><a class="card notice-card" href="{POLICY_PATH}"><span class="pill on">총회 제출 명단</span><h3>제111회기 총회 국내선교부 정책협의회</h3><p>2026. 12. 10.(목) 11:00–15:00 · 한국교회100주년기념관 그레이스홀 · 주제 「생명을 살리고, 공동체를 세우는 국내선교」</p><span class="meta">목포노회 참석: 선교부장 · 서기</span><span class="go">안내·일정표·참석자 명단 →</span></a></div>
 <div class="timeline"><div><b>2026. 10. 20.(화) 제135회 정기회</b><span>선교부 구성 · 2026년 사업 보고</span></div><div class="next"><b>2026. 12. 10.(목) 총회 국내선교부 정책협의회</b><span>한국교회100주년기념관 그레이스홀 · <a href="{POLICY_PATH}">참석자 명단</a></span></div><div class="next"><b>선교부 첫 회의</b><span>부원 협의 후 공지합니다.</span></div><div class="next"><b>2027 가을노회</b><span>2027년 사업 결과 보고</span></div></div></div></section>
-<section id="resources"><div class="wrap"><div class="sh"><div><span class="kicker">회의록 · 공문 · 자료실</span><h2>기록과 자료</h2></div><p>공개 가능한 자료만 게시합니다. 회의록과 증빙은 권한자에게만 보입니다.</p></div>
-<div class="grid"><div class="card"><span class="pill">기준 자료</span><h3>제135회 정기회 보고서</h3><p>선교부 사업·회계 보고의 기준 자료</p></div><div class="card locked"><span class="pill lock">권한 필요</span><h3>회의록 · 공문</h3><p>로그인한 선교부 부원에게 이 화면에서 보입니다.</p></div></div></div></section>
+<section id="resources"><div class="wrap"><div class="sh"><div><span class="kicker">회의록 · 공문 · 자료실</span><h2>기록과 기준 양식</h2></div><p>선교부의 총회·노회 신청·보고에 필요한 자료실을 함께 사용합니다. 내부 회의록과 증빙은 권한자에게만 보입니다.</p></div>
+<div class="grid"><a class="card" href="/mokpo-presbytery/library/?scope=선교부"><span class="pill on">공통 자료실</span><h3>선교부 신청·보고 서식</h3><p>총회·노회 제출서류와 양식, 지침, 원문 및 첨부 링크를 찾아볼 수 있습니다.</p><span class="go">선교부 자료만 보기 →</span></a><div class="card locked"><span class="pill lock">권한 필요</span><h3>회의록 · 공문</h3><p>로그인한 선교부 부원에게 이 화면에서 보입니다.</p></div></div></div></section>
 
 </main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
@@ -322,8 +322,28 @@ def roster_page():
     return chrome('회원명부 · 목포노회 (관리자 전용)', '목포노회 회원명부 관리자 전용 열람', '대한예수교장로회', '목포노회', nav, body, '/mokpo-presbytery/')
 
 
+
+# Keep the board on the identical generated header/footer and single-view site chrome.
+BOARD_HTML = "<main class=\"views\"><section id=\"library\"><div class=\"wrap library-board\">\n<div class=\"sh\"><div><span class=\"kicker\">Archive · Mokpo Presbytery</span><h2>신청·보고 기준 자료실</h2></div><p>서류를 제출하기 전, 출처·적용 대상·양식 개정 여부부터 확인하는 공동 자료실입니다.</p></div>\n<div class=\"library-note\"><strong>자료 출처 및 공개 범위</strong>이곳은 EKODI 업무지원 시범 자료실이며 공식 노회 공고를 대체하지 않습니다. 현재 카페의 개별 게시글·첨부파일은 외부에서 확인되지 않아, 기존 사이트에 알려진 제목 2건만 ‘원본 미확인’으로 등록되어 있습니다. 원문·첨부의 복제는 자료 소유자의 공개 허가와 원본 확보 이후에만 진행합니다.</div>\n<div class=\"library-links\"><a href=\"https://cafe.daum.net/pckmp\" target=\"_blank\" rel=\"noopener noreferrer\">목포노회 공식 카페</a><a href=\"https://www.pck.or.kr/\" target=\"_blank\" rel=\"noopener noreferrer\">대한예수교장로회 총회</a><a href=\"/mokpo-presbytery/mission/#resources\">선교부 업무 자료</a></div>\n<div class=\"library-toolbar\"><label for=\"librarySearch\">제목·업무·내용 검색<input id=\"librarySearch\" type=\"search\" placeholder=\"예: 연임, 청원, 보고, 규정\" autocomplete=\"off\"></label><label for=\"libraryCategory\">문서 구분<select id=\"libraryCategory\"><option value=\"전체\">전체 문서</option><option value=\"신청\">신청·청원</option><option value=\"보고\">보고</option><option value=\"양식\">문서양식</option><option value=\"지침\">업무지침</option><option value=\"규정\">규정</option><option value=\"공지\">공지</option></select></label></div>\n<div class=\"library-filters\" aria-label=\"제출 기관별 분류\"><button type=\"button\" data-library-scope=\"전체\" aria-pressed=\"true\">전체</button><button type=\"button\" data-library-scope=\"총회\" aria-pressed=\"false\">총회</button><button type=\"button\" data-library-scope=\"노회\" aria-pressed=\"false\">노회</button><button type=\"button\" data-library-scope=\"선교부\" aria-pressed=\"false\">선교부</button></div>\n<p class=\"library-meta\" id=\"libraryStatus\" role=\"status\">자료 목록을 읽는 중입니다.</p>\n<div class=\"library-table\"><table><thead><tr><th scope=\"col\">주관</th><th scope=\"col\">유형</th><th scope=\"col\">제목 · 원문 및 파일</th><th scope=\"col\">기준일</th><th scope=\"col\">확인</th></tr></thead><tbody id=\"libraryRows\"></tbody></table><p id=\"libraryEmpty\" class=\"no-results\" hidden>조건에 맞는 자료가 없습니다. 카페 원자료를 확인한 뒤 이 목록에 추가합니다.</p></div>\n<p class=\"note\">자료를 제출할 때는 해당 기관의 최신 공고, 시찰회 경유 여부, 제출 기한과 파일 양식을 마지막으로 확인하십시오. 카페 회원 전용 자료는 정상적인 로그인 권한으로만 이용합니다.</p>\n</div></section></main>"
+
+def library_page():
+    page = home()
+    start = page.index('<section class="hero">')
+    end = page.index('</main>', start) + len('</main>')
+    page = page[:start] + BOARD_HTML + page[end:]
+    for name in ('about', 'news', 'sichal', 'departments', 'churches', 'schedule', 'library', 'workspace'):
+        target = '/mokpo-presbytery/library/' if name == 'library' else '/mokpo-presbytery/#' + name
+        suffix = ' aria-current="page"' if name == 'library' else ''
+        page = page.replace('href="#' + name + '"', 'href="' + target + '"' + suffix)
+    page = page.replace('<title>목포노회 · EKODI 업무지원 시범 공간</title>', '<title>신청·보고 기준 자료실 · 목포노회</title>')
+    page = page.replace('</style></head>', '</style><link rel="stylesheet" href="/mokpo-presbytery/library/board.css"></head>')
+    page = page.replace('</body></html>', '<script src="/mokpo-presbytery/library/board.js" defer></script></body></html>')
+    return page
+
 if __name__ == '__main__':
     (SITE / 'index.html').write_text(home(), encoding='utf-8')
+    (SITE / 'library').mkdir(parents=True, exist_ok=True)
+    (SITE / 'library' / 'index.html').write_text(library_page(), encoding='utf-8')
     (SITE / 'mission' / 'index.html').write_text(mission(), encoding='utf-8')
     (SITE / 'mission' / 'policy-council-2026').mkdir(parents=True, exist_ok=True)
     (SITE / 'mission' / 'policy-council-2026' / 'index.html').write_text(policy_council(), encoding='utf-8')
