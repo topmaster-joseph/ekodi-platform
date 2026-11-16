@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {COURSE} from '../education/study/live/courses/mnu-factchat-2026.js';
+import './education-factchat-editable-samples.test.mjs'; // HWPX/PPTX sources, full visible text and Office ZIP/XML roundtrip
 import './education-meeting-transcript-cleanup.test.mjs';
 import {NOTES} from '../education/study/live/courses/mnu-factchat-2026.notes.js';
 import {COURSES} from '../education/study/live/courses/registry.js';

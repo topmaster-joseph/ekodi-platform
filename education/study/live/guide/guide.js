@@ -5,6 +5,7 @@ import {FIELDS,FLOW,PROMPTS,FREE_PROMPT,SAFETY,SESSIONS,PREP,FOCUS_RULES,LEARNER
 import {TREND_TALK,TREND_MESSAGE} from './trends.js';
 import {DEMOS,MISSIONS,SESSION_PICKS,FEATURE_STEPS,INPUT_LABEL,PPT_SETTINGS,CREDIT,CREDIT_OPENING,CREDIT_AS_OF,demoById,demoPrompt,featureInput} from './demos.js';
 import {downloadText} from '../engine/render.js';
+import {downloadPracticeSource} from '../engine/practice-source-export.js';
 
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -49,7 +50,10 @@ function demoCard(d){
   const sampleLabel=m==='hwp'?'문서 본문에 붙여 넣을 자료(가상)':isMin?'':'시연 자료(가상)';
   return '<article class="g-demo-card"><p class="g-kind">'+esc(fieldLabel(d.field))+' · FactChat '+esc(MISSIONS[m])+'</p><h4>'+esc(d.title)+'</h4>'+
     '<p class="g-sub">화면 조작 순서</p><ol class="g-list g-steps">'+(FEATURE_STEPS[m]||[]).map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol>'+
-    (hasSample&&!isMin?'<p class="g-sub">'+sampleLabel+'</p><p class="g-pre">'+esc(d.sample)+'</p>':'')+
+    (hasSample&&!isMin?'<section class="g-sample-material"><p class="g-sub">'+sampleLabel+' · 원문 전체</p><pre class="g-pre">'+esc(d.sample)+'</pre>'+
+      '<div class="g-actions"><button type="button" class="btn btn-small btn-primary" data-copy-sample="'+esc(d.id)+'">샘플 원문 복사</button><button type="button" class="btn btn-small" data-download-demo-txt="'+esc(d.id)+'">TXT 다운로드</button>'+
+      ((m==='hwp'||m==='ppt')?'<button type="button" class="btn btn-small btn-primary" data-download-demo="'+esc(d.id)+'">'+(m==='hwp'?'HWPX':'PPTX')+' 다운로드</button>':'')+'</div>'+
+      ((m==='hwp'||m==='ppt')?'<p class="meta">파일은 위의 가상 원문을 그대로 포함하며, 한글은 HWPX·발표자료는 PPTX 편집 형식입니다. 직접 AI가 만든 완성 보고서는 아닙니다.</p>':'')+'</section>':'')+
     (isMin&&hasSample?'<section class="g-meeting-material"><p class="g-sub">가상 회의 음성 대본 · 전체 텍스트 (실제 녹취 전사 아님)</p><pre class="g-pre">'+esc(d.sample)+'</pre><div class="g-actions"><button type="button" class="btn btn-small btn-primary" data-copy-meeting="'+esc(d.id)+'">회의 대본 복사</button><button type="button" class="btn btn-small" data-download-meeting="'+esc(d.id)+'">TXT 내려받기</button></div><p class="meta">TXT는 FactChat 「일반 채팅」의 파일 첨부로 사용합니다. 전용 「회의록」 메뉴는 음성 녹음·오디오 업로드 방식입니다.</p><p class="g-delete-reminder"><b>필수 · 실습이 끝나면 각자 즉시 삭제!</b> FactChat 회의·채팅 기록, 내려받은 TXT·음성 파일, 에코디 실습실 개인 기록을 각각 지우세요. 에코디에서 FactChat이나 PC 파일을 대신 지울 수 없습니다.</p></section>':'')+
     '<p class="g-sub">'+esc(INPUT_LABEL[m]||'입력')+'</p><p class="g-pre">'+esc(featureInput(d))+'</p>'+
     (m==='ppt'?'<p class="g-setting">화면 설정: '+esc(PPT_SETTINGS)+'</p>':'')+
@@ -58,7 +62,7 @@ function demoCard(d){
     (CREDIT[m]?'<p class="g-credit-line">크레딧: '+esc(CREDIT[m].rule)+' · 예상 '+esc(CREDIT[m].estimate)+'</p>':'')+
     '<p class="g-handoff"><b>넘김 멘트</b> '+esc(d.handoff)+'</p>'+
     '<div class="g-actions"><button type="button" class="btn btn-small btn-primary" data-copy-input="'+d.id+'">'+(isMin?'대본 복사':'입력 글 복사')+'</button>'+
-    (hasSample&&m==='hwp'?'<button type="button" class="btn btn-small" data-copy-sample="'+d.id+'">자료 복사</button>':'')+
+
     '<a class="btn btn-small" href="'+present+'">발표 화면에 불러오기</a></div>'+
     '<p class="meta">발표 화면의 AI 시연은 채팅으로 실행됩니다. HWP·회의록·프레젠테이션 기능은 「FactChat 화면」 버튼으로 실제 화면을 띄워 시연하세요.</p></article>';
 }
@@ -143,6 +147,8 @@ document.addEventListener('click',e=>{
   const tab=e.target.closest('[data-s]');if(tab){current=+tab.dataset.s;try{history.replaceState(null,'','?s='+current)}catch{}renderTabs();renderSession();return;}
   const fb=e.target.closest('[data-f]');if(fb){field=fb.dataset.f;store.set('field',field);renderField();renderSession();return;}
   const pk=e.target.closest('[data-pick]');if(pk){setPick(pk.dataset.pick,pk.dataset.id);return;}
+  const sampleNative=e.target.closest('[data-download-demo]');if(sampleNative){const d=demoById(sampleNative.dataset.downloadDemo);if(d?.sample&&['hwp','ppt'].includes(d.mission))try{const file=downloadPracticeSource(document,{courseId:COURSE,trackId:d.field,kind:d.mission,title:d.title,text:d.sample});toast(file+' 내려받기 · 실습 후 개인 파일 삭제');}catch(error){toast('샘플 파일 생성 실패: '+error.message);}return;}
+  const sampleTxt=e.target.closest('[data-download-demo-txt]');if(sampleTxt){const d=demoById(sampleTxt.dataset.downloadDemoTxt);if(d?.sample){downloadText(document,'mnu-factchat-'+d.id+'-source.txt',d.sample);toast('TXT 다운로드 완료');}return;}
   const download=e.target.closest('[data-download-meeting]');if(download){const d=demoById(download.dataset.downloadMeeting);if(d?.mission==='minutes'&&d.sample){downloadText(document,'mnu-factchat-'+d.id+'-virtual-meeting.txt',d.sample);toast('TXT를 내려받았습니다. 실습 종료 즉시 파일을 삭제하세요.');}return;}
   const meeting=e.target.closest('[data-copy-meeting]');if(meeting){const d=demoById(meeting.dataset.copyMeeting);if(d?.mission==='minutes')copy(d.sample);return;}
   const ci=e.target.closest('[data-copy-input]');if(ci){copy(featureInput(demoById(ci.dataset.copyInput)));return;}

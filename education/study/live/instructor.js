@@ -1,9 +1,10 @@
 // EKODI Education Premium Studio — Instructor Studio (강사 운영실).
 import {COURSES,courseEntry} from './courses/registry.js';
 import {acceptAdminHandoff,readToken,adminInstructorSession,reloadOnce} from './engine/admin-instructor.js';
-import {validateCourse,sessionByNo,sessionSlides,practiceMinutes,practiceModules,totalMinutes,learnerUrl,formatClock,courseMarkdown,KIND_LABELS,missionMaterials,liveBase,livePath,sitePath,SLASH,trackTaskTitle} from './engine/model.js';
+import {validateCourse,sessionByNo,sessionSlides,practiceMinutes,practiceModules,totalMinutes,learnerUrl,formatClock,courseMarkdown,KIND_LABELS,missionMaterials,missionContext,liveBase,livePath,sitePath,SLASH,trackTaskTitle} from './engine/model.js';
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
+import {downloadPracticeSource} from './engine/practice-source-export.js';
 import {esc,list,missionSections,featureCard,readFeatureChecks,writeFeatureCheck,allFeatureIds,moduleLabel,downloadText,copyText,safeStorage,safeChannel,multiline,bindChrome,showFactchatTab,loadNotesSafe,notesUnlockUrl,lockedNotesHtml} from './engine/render.js';
 import {checkOutput} from './engine/checker.js';
 import {FACTCHAT_TOOL} from './tools/factchat.js';
@@ -152,11 +153,18 @@ function viewFeatures(){
 }
 function viewMaterials(){
   const blocks=Object.values(course.missions).sort((a,b)=>a.no-b.no).map(m=>{
-    const files=missionMaterials(course,m.id,prefs.track);
-    return '<div class="panel"><h3>'+esc(m.title)+'</h3>'+(files.length?'<div class="downloads">'+files.map((f,i)=>'<button type="button" class="btn btn-small" data-mat="'+esc(m.id)+':'+i+'">⬇ '+esc(f.label)+'</button>').join('')+'</div>':'<p class="meta">내려받을 원문 없이 수강생 자신의 공개 가능한 업무 자료로 진행합니다.</p>')+'</div>';}).join('');
+    const files=missionMaterials(course,m.id,prefs.track),ctx=missionContext(course,m.id,prefs.track);
+    return '<div class="panel"><h3>'+esc(m.title)+'</h3>'+(files.length?files.map((f,i)=>{
+      const isNative=i===0&&(m.id==='hwp'||m.id==='ppt'),kind=m.id==='hwp'?'HWPX':'PPTX';
+      return '<div class="mat"><p class="mat-label">'+esc(f.label)+'</p>'+
+        '<div class="btn-row"><button type="button" class="btn btn-small" data-mat="'+esc(m.id)+':'+i+'">TXT 다운로드</button>'+
+        '<button type="button" class="btn btn-small" data-mat-copy="'+esc(m.id)+':'+i+'">원문 복사</button>'+
+        (isNative?'<button type="button" class="btn btn-small btn-primary" data-mat-native="'+esc(m.id)+':'+i+'">'+kind+' 다운로드</button>':'')+'</div>'+
+        (isNative?'<details class="sample-source" open><summary>'+kind+' 실습자료 원문 전체보기 · 다운로드 파일과 동일</summary><p class="meta">가상 원문입니다. 실제 학생·인사·예산 자료를 업로드하지 마세요. 실습 종료 후 저장 파일은 각자 삭제합니다.</p><pre class="source-text">'+esc(f.text)+'</pre></details>':'')+'</div>';
+    }).join(''):'<p class="meta">내려받을 원문 없이 수강생 자신의 공개 가능한 업무 자료로 진행합니다.</p>')+'</div>';}).join('');
   return '<div class="panel"><p class="eyebrow">MATERIALS</p><h2>자료·내보내기</h2><p class="meta">모든 원문은 가상(허구) 실습자료입니다. 아래 직무 선택에 따라 내려받는 원문이 바뀝니다.</p>'+trackLevelControls()+
     '<div class="btn-row"><button type="button" class="btn" id="mdExport">전체 강의안 Markdown (강사 노트 포함)</button><button type="button" class="btn" id="mdExportPublic">수강생 배포용 Markdown</button><button type="button" class="btn" id="deckPrint">발표 슬라이드 PDF로 인쇄</button></div>'+
-    '<p class="meta">PDF: 인쇄 대화상자에서 「PDF로 저장」을 선택하세요. PPTX 원본 변환은 제공하지 않습니다(발표는 웹 발표 모드 사용).</p></div>'+blocks;
+    '<p class="meta">한글 실습 원문은 HWPX(한컴오피스 편집 가능), 발표 실습 원문은 PPTX(파워포인트 편집 가능)로 내려받습니다. 이는 강의 발표 화면을 변환한 파일이 아니라 원문 샘플입니다. 발표 화면은 웹 발표 모드를 사용합니다.</p></div>'+blocks;
 }
 function viewResults(){
   return '<div class="panel"><p class="eyebrow">RESULTS & FEEDBACK</p><h2>실습 성과·피드백</h2>'+
@@ -276,6 +284,8 @@ function bind(){
     if(d.featureCheck){writeFeatureCheck(storage,d.featureCheck,d.status);renderView();toast('기능 상태를 이 기기에 기록했습니다.');return;}
     if(d.copy){const el=document.getElementById(d.copy);const r=await copyText(window,el?.textContent||'',el);toast(r==='copied'?'프롬프트를 복사했습니다.':r==='selected'?'텍스트를 선택했습니다. Ctrl+C로 복사하세요.':'복사하지 못했습니다.');return;}
     if(d.download!==undefined){const m=mod();const files=missionMaterials(course,m.missionId,prefs.track);const f=files[Number(d.download)];if(f)downloadText(document,f.name,f.text);return;}
+    if(d.matNative){const [mid,i]=d.matNative.split(':');if((mid==='hwp'||mid==='ppt')&&Number(i)===0){const f=missionMaterials(course,mid,prefs.track)[0],ctx=missionContext(course,mid,prefs.track);if(f)try{const file=downloadPracticeSource(document,{courseId:course.id,trackId:prefs.track,kind:mid,title:ctx.doc||ctx.topic||'가상 실습자료',text:f.text});toast(file+' 다운로드 완료');}catch(error){toast('문서 생성 실패: '+error.message);}}return;}
+    if(d.matCopy){const [mid,i]=d.matCopy.split(':');const f=missionMaterials(course,mid,prefs.track)[Number(i)];if(f){const result=await copyText(window,f.text);toast(result==='copied'?'원문을 복사했습니다.':'복사가 차단되었습니다. 전체보기에서 선택·복사하세요.');}return;}
     if(d.mat){const [mid,i]=d.mat.split(':');const f=missionMaterials(course,mid,prefs.track)[Number(i)];if(f){downloadText(document,f.name,f.text);toast(f.label+' 내려받기');}return;}
     if(t.id==='mdExport'){downloadText(document,course.id+'_lesson-plan_instructor.md',courseMarkdown(course,{notes,tool:FACTCHAT_TOOL}),'text/markdown;charset=utf-8');return;}
     if(t.id==='mdExportPublic'){downloadText(document,course.id+'_lesson-plan_learner.md',courseMarkdown(course,{tool:FACTCHAT_TOOL}),'text/markdown;charset=utf-8');return;}
