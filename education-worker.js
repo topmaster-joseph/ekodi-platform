@@ -3,6 +3,7 @@ import researchWorker from './education/research/worker.js';
 import { instructorGate, isGatedPath, adminUnlock, sessionStatus } from './education-instructor-gate.js';
 import { instructorDocs } from './education-instructor-docs.js';
 import {educationScreenApi} from './education-screen-share-api.js';
+import {educationFeedback} from './education-feedback.js';
 export {EducationScreenRoom} from './education-screen-room.js';
 
 const SECURITY_HEADERS={
@@ -24,6 +25,9 @@ export default{
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/',307);
     const screenShare=await educationScreenApi(request,env,{url});
     if(screenShare)return screenShare;
+    // Lecture feedback survey (anonymous QR answers; instructor-only summary).
+    const feedback=await educationFeedback(request,env,{url});
+    if(feedback)return feedback;
     // EKODI super admin → instructor session (central admin token verified server-side, super_admin only).
     const admin=await adminUnlock(request,env,{url});
     if(admin)return admin;

@@ -114,3 +114,18 @@
 .g-sample-material .g-pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:400px;overflow:auto}
 .g-sample-material .meta{line-height:1.5}
 @media print{.g-sample-material .g-pre{max-height:none;overflow:visible}}
+/* 강의 피드백 (QR + 결과) */
+.f-main{max-width:1100px;margin:0 auto;padding:16px 12px 32px;display:grid;gap:12px}
+.f-body .t-head h1{color:var(--ink)}
+.f-tabs{background:var(--navy);border-radius:12px;padding:6px}
+.f-qr-card{display:grid;grid-template-columns:minmax(180px,320px) 1fr;gap:18px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.f-qr-card:fullscreen{grid-template-columns:1fr;justify-items:center;background:#fff;padding:4vh}
+.f-qr-card:fullscreen .f-qr{width:min(70vh,80vw)}
+.f-qr svg{display:block;width:100%;height:auto}
+.f-qr-title{font-size:clamp(1.1rem,2.4vw,1.6rem);font-weight:800;margin:0 0 6px}
+.f-qr-url{font-size:.82rem;color:var(--muted);overflow-wrap:anywhere}
+.f-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:8px}
+.f-bar{display:grid;grid-template-columns:120px 1fr 64px;gap:8px;align-items:center;font-size:.88rem;margin:4px 0}
+.f-track{background:var(--line-2);border-radius:6px;height:14px;overflow:hidden}.f-fill{display:block;height:100%;background:#2453c2;border-radius:6px}
+.f-result h3{margin:14px 0 6px}
+@media(max-width:600px){.f-qr-card{grid-template-columns:1fr}.f-bar{grid-template-columns:96px 1fr 52px}}
