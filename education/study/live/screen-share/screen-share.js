@@ -7,19 +7,21 @@ const roomId=params.get('r')||'';
 const invite=new URLSearchParams(location.hash.slice(1)).get('k')||params.get('k')||sessionStorage.getItem('screen-invite-'+roomId)||'';
 const guest=/^[a-f0-9]{32}$/.test(roomId)&&/^[a-f0-9]{64}$/.test(invite);
 let room=null,ws=null,pc=null,stream=null,selected='',side=guest?'student':'host';
-const peers=new Map(),cards=new Map();
+const peers=new Map(),cards=new Map(),pendingIce=new Map();
 let activeIds=[];
 const ice=[{urls:'stun:stun.cloudflare.com:3478'}];
 function say(message){const target=side==='host'?$('teacherStatus'):$('learnerStatus');target.textContent=message;}
 function send(value){if(ws?.readyState===WebSocket.OPEN)ws.send(JSON.stringify(value));}
 function removeCard(id){
  const peer=peers.get(id);if(peer){peer.close();peers.delete(id);}
+ pendingIce.delete(id);
  const card=cards.get(id);if(card){card.remove();cards.delete(id);}
  if(side==='host')$('stageEmpty').hidden=cards.size>0;
 }
 function resetMedia(){
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
  if(pc){pc.close();pc=null;}
+ pendingIce.delete('student');
  for(const id of [...cards.keys()])removeCard(id);
 }
 function cardFor(id,name){
@@ -52,6 +54,10 @@ function makePeer(id){
  peer.onconnectionstatechange=()=>{if(peer.connectionState==='failed'){const card=cardFor(id);card.empty.hidden=false;card.empty.textContent='연결이 원활하지 않습니다. 이미지 제출을 이용하세요.';}};
  return peer;
 }
+async function flushIce(id,peer){
+ const queue=pendingIce.get(id)||[];pendingIce.delete(id);
+ for(const candidate of queue)await peer.addIceCandidate(candidate).catch(()=>{});
+}
 async function receiveRtc(m){
  try{
   const id=side==='host'?m.to:'student';
@@ -59,13 +65,14 @@ async function receiveRtc(m){
   if(m.kind==='offer'&&side==='host'){
    if(!activeIds.includes(id))return;
    peer=makePeer(id);await peer.setRemoteDescription(m.payload);
+   await flushIce(id,peer);
    const answer=await peer.createAnswer();await peer.setLocalDescription(answer);
    send({type:'rtc',kind:'answer',to:id,payload:peer.localDescription.toJSON()});
   }else if(m.kind==='answer'&&side==='student'){
-   if(peer)await peer.setRemoteDescription(m.payload);
+   if(peer){await peer.setRemoteDescription(m.payload);await flushIce(id,peer);}
   }else if(m.kind==='ice'&&m.payload){
-   if(!peer&&side==='host')peer=makePeer(id);
-   if(peer)await peer.addIceCandidate(m.payload).catch(()=>{});
+   if(peer?.remoteDescription)await peer.addIceCandidate(m.payload).catch(()=>{});
+   else{const candidates=pendingIce.get(id)||[];if(candidates.length<100)candidates.push(m.payload);pendingIce.set(id,candidates);}
   }
  }catch{say('실시간 화면 연결 협상에 실패했습니다. 이미지 제출 기능을 이용하세요.');}
 }
@@ -90,7 +97,7 @@ function roster(list,active){
 }
 function connect(id,role,credential){
  const proto=role==='host'?'host.'+credential:'student.'+credential.id+'.'+credential.token;
- const url=new URL(BASE+'/'+id+'/ws',location.origin);url.protocol=location.protocol==='https:'?'wss:':'ws:';
+ const url=new URL(`${BASE}/${id}/ws`,location.origin);url.protocol=location.protocol==='https:'?'wss:':'ws:';
  ws=new WebSocket(url.toString(),['ekodi-screen-v1',proto]);
  ws.addEventListener('open',()=>say(role==='host'?'수업방 연결됨 · PC 입장 링크를 수강생에게 전달하세요.':'수업에 연결됐습니다. 강사의 요청을 기다립니다.'));
  ws.addEventListener('close',()=>{if(role==='student')$('shareControls').hidden=true;resetMedia();say('연결이 끊어졌습니다. 페이지를 새로 열어주세요.');});
@@ -161,7 +168,15 @@ async function share(){
   const offer=await peer.createOffer();await peer.setLocalDescription(offer);
   send({type:'rtc',kind:'offer',payload:peer.localDescription.toJSON()});
   send({type:'status',status:'sharing'});say('실시간 화면 공유 중 · 중지 버튼으로 종료할 수 있습니다.');
- }catch{send({type:'status',status:'denied'});say('화면 공유가 허용되지 않았거나 기기가 지원하지 않습니다. 이미지를 제출할 수 있습니다.');}
+ }catch(e){
+  if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;}
+  send({type:'status',status:'denied'});
+  const reason=e?.name==='NotAllowedError'?'공유 권한이 거부되거나 선택이 취소됐습니다.':
+    e?.name==='NotFoundError'?'공유할 화면을 찾지 못했습니다.':
+    e?.name==='NotReadableError'?'선택한 화면을 캡처할 수 없습니다. 다른 창을 골라주세요.':
+    '화면 공유를 시작하지 못했습니다. 브라우저 허용 상태와 네트워크 연결을 확인해 주세요.';
+  say(reason+' 이미지 제출도 가능합니다.');
+ }
 }
 function stop(notify=true){resetMedia();if(notify)send({type:'status',status:'stopped'});if(guest)say('화면 공유가 중지됐습니다.');}
 async function snapshot(){
