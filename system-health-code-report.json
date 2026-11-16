@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-09T06:04:31.648Z",
-  "startedAt": "2026-11-09T06:03:15.028Z",
+  "generatedAt": "2026-11-16T06:11:57.529Z",
+  "startedAt": "2026-11-16T06:10:28.196Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "b63bf8492aad5f09edc0d331d3929698e522b8f8",
+  "head": "bdbdc3da1b5bc3a8be0b44736ac101234942eeb6",
   "overallScore": 82.5,
   "status": "watch",
   "thresholds": {
@@ -18,7 +18,7 @@
       "weight": 25,
       "score": 25,
       "status": "ok",
-      "detail": "1722개 테스트 파일 · 전체 테스트 통과"
+      "detail": "1835개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "320개 Workflow · 배포 가드 검증 통과"
+      "detail": "322개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,10 +58,10 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 1656,
-    "runtimeLines": 278030,
-    "testFiles": 1722,
-    "workflows": 320,
+    "runtimeFiles": 1709,
+    "runtimeLines": 286501,
+    "testFiles": 1835,
+    "workflows": 322,
     "largeFiles": 5,
     "veryLargeFiles": 0,
     "todoMarkers": 55,
@@ -199,7 +199,7 @@
       "evidence": [
         "admin-sidebar.js:1252",
         "auth-site/email-password.js:52",
-        "auth-site/email-password.js:206",
+        "auth-site/email-password.js:212",
         "community/reading/app.js:112",
         "community/reading/app.js:113",
         "community/reading/app.js:114",
@@ -213,7 +213,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "✔ fresh citizen opinions keep independent queue-first storage and never direct-write from public handler (6.857458ms)\n✔ explicit Brand Account OAuth requires an authenticated single YouTube channel and registry identity (1.081823ms)\n✔ Brand Account opt-in is scoped and never disables signed OAuth, code exchange or email-based standard mode (5.806224ms)\n✔ account linked banner uses registry ID or explicit connection IDs, never coincident email (3.269648ms)\nℹ tests 8779\nℹ suites 0\nℹ pass 8775\nℹ fail 0\nℹ cancelled 0\nℹ skipped 4\nℹ todo 0\nℹ duration_ms 74710.254278"
+      "summary": "✔ fresh citizen opinions keep independent queue-first storage and never direct-write from public handler (5.826693ms)\n✔ explicit Brand Account OAuth requires an authenticated single YouTube channel and registry identity (1.323474ms)\n✔ Brand Account opt-in is scoped and never disables signed OAuth, code exchange or email-based standard mode (6.702197ms)\n✔ account linked banner uses registry ID or explicit connection IDs, never coincident email (3.622456ms)\nℹ tests 9328\nℹ suites 0\nℹ pass 9324\nℹ fail 0\nℹ cancelled 0\nℹ skipped 4\nℹ todo 0\nℹ duration_ms 87180.845916"
     },
     "security": {
       "ok": true,
