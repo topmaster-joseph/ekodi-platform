@@ -1,5 +1,5 @@
 import {qrSvg} from '../engine/qr.js';
-import {readToken,acceptAdminHandoff,adminLoginUrl} from '../engine/admin-instructor.js';
+import {readToken,acceptAdminHandoff} from '../engine/admin-instructor.js';
 const $=id=>document.getElementById(id);
 const BASE='/edu/study/live/screen-share/api/rooms';
 const params=new URLSearchParams(location.search);
@@ -7,85 +7,124 @@ const roomId=params.get('r')||'';
 const invite=new URLSearchParams(location.hash.slice(1)).get('k')||params.get('k')||sessionStorage.getItem('screen-invite-'+roomId)||'';
 const guest=/^[a-f0-9]{32}$/.test(roomId)&&/^[a-f0-9]{64}$/.test(invite);
 let room=null,ws=null,pc=null,stream=null,selected='',side=guest?'student':'host';
+const peers=new Map(),cards=new Map();
+let activeIds=[];
 const ice=[{urls:'stun:stun.cloudflare.com:3478'}];
 function say(message){const target=side==='host'?$('teacherStatus'):$('learnerStatus');target.textContent=message;}
 function send(value){if(ws?.readyState===WebSocket.OPEN)ws.send(JSON.stringify(value));}
-function resetMedia(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}if(pc){pc.close();pc=null;}const v=$('remoteVideo');v.srcObject=null;v.hidden=true;$('remoteImage').hidden=true;$('stageEmpty').hidden=false;}
-function makePeer(){
- if(pc)pc.close();
- pc=new RTCPeerConnection({iceServers:ice});
- pc.onicecandidate=event=>{if(event.candidate)send({type:'rtc',kind:'ice',payload:event.candidate.toJSON()});};
- pc.onconnectionstatechange=()=>{
-  if(pc?.connectionState==='failed'){say('기기 간 연결이 실패했습니다. 동일한 Wi-Fi 또는 이미지 제출을 이용해 주세요.');}
- };
- if(side==='host')pc.ontrack=event=>{
-  $('remoteImage').hidden=true;$('stageEmpty').hidden=true;
-  $('remoteVideo').srcObject=event.streams[0]||new MediaStream([event.track]);$('remoteVideo').hidden=false;
-  $('remoteVideo').play().catch(()=>say('영상을 재생하려면 화면을 클릭해 주세요.'));
- };
- return pc;
+function removeCard(id){
+ const peer=peers.get(id);if(peer){peer.close();peers.delete(id);}
+ const card=cards.get(id);if(card){card.remove();cards.delete(id);}
+ if(side==='host')$('stageEmpty').hidden=cards.size>0;
+}
+function resetMedia(){
+ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+ if(pc){pc.close();pc=null;}
+ for(const id of [...cards.keys()])removeCard(id);
+}
+function cardFor(id,name){
+ let entry=cards.get(id);if(entry)return entry;
+ const card=document.createElement('article');card.className='screen-card';card.dataset.participantId=id;
+ const header=document.createElement('div');header.className='screen-card-header';
+ const label=document.createElement('strong');label.textContent=name||'수강생';
+ const zoom=document.createElement('button');zoom.type='button';zoom.className='btn secondary';zoom.textContent='확대';
+ zoom.addEventListener('click',()=>card.classList.toggle('spotlight'));
+ const stopButton=document.createElement('button');stopButton.type='button';stopButton.className='btn secondary';stopButton.textContent='중지';
+ stopButton.addEventListener('click',()=>send({type:'stop_student',id}));
+ header.append(label,zoom,stopButton);
+ const video=document.createElement('video');video.autoplay=true;video.playsInline=true;video.muted=true;
+ const image=document.createElement('img');image.alt=label.textContent+' 화면 캡처';image.hidden=true;
+ const empty=document.createElement('p');empty.className='screen-placeholder';empty.textContent='수강생 동의를 기다립니다.';
+ card.append(header,video,image,empty);$('screenGrid').append(card);
+ entry={root:card,label,video,image,empty};cards.set(id,entry);$('stageEmpty').hidden=true;return entry;
+}
+function makePeer(id){
+ if(side==='student'){if(pc)pc.close();pc=new RTCPeerConnection({iceServers:ice});
+  pc.onicecandidate=e=>{if(e.candidate)send({type:'rtc',kind:'ice',payload:e.candidate.toJSON()});};
+  pc.onconnectionstatechange=()=>{if(pc?.connectionState==='failed')say('연결에 실패했습니다. 다른 Wi-Fi나 이미지 제출을 이용해 주세요.');};
+  return pc;
+ }
+ const old=peers.get(id);if(old)old.close();
+ const peer=new RTCPeerConnection({iceServers:ice});peers.set(id,peer);
+ peer.onicecandidate=e=>{if(e.candidate)send({type:'rtc',kind:'ice',to:id,payload:e.candidate.toJSON()});};
+ peer.ontrack=e=>{const card=cardFor(id);card.image.hidden=true;card.video.hidden=false;card.empty.hidden=true;
+  card.video.srcObject=e.streams[0]||new MediaStream([e.track]);card.video.play().catch(()=>{card.empty.textContent='재생하려면 클릭하세요.';});};
+ peer.onconnectionstatechange=()=>{if(peer.connectionState==='failed'){const card=cardFor(id);card.empty.hidden=false;card.empty.textContent='연결이 원활하지 않습니다. 이미지 제출을 이용하세요.';}};
+ return peer;
 }
 async function receiveRtc(m){
  try{
-  if(!pc&&(side==='host'||stream))makePeer();
-  if(!pc)return;
+  const id=side==='host'?m.to:'student';
+  let peer=side==='host'?peers.get(id):pc;
   if(m.kind==='offer'&&side==='host'){
-   await pc.setRemoteDescription(m.payload);
-   const answer=await pc.createAnswer();await pc.setLocalDescription(answer);
-   send({type:'rtc',kind:'answer',payload:pc.localDescription.toJSON()});
+   if(!activeIds.includes(id))return;
+   peer=makePeer(id);await peer.setRemoteDescription(m.payload);
+   const answer=await peer.createAnswer();await peer.setLocalDescription(answer);
+   send({type:'rtc',kind:'answer',to:id,payload:peer.localDescription.toJSON()});
   }else if(m.kind==='answer'&&side==='student'){
-   await pc.setRemoteDescription(m.payload);
+   if(peer)await peer.setRemoteDescription(m.payload);
   }else if(m.kind==='ice'&&m.payload){
-   await pc.addIceCandidate(m.payload).catch(()=>{});
+   if(!peer&&side==='host')peer=makePeer(id);
+   if(peer)await peer.addIceCandidate(m.payload).catch(()=>{});
   }
- }catch{say('실시간 연결 협상에 실패했습니다. 이미지 제출 기능을 사용할 수 있습니다.');}
+ }catch{say('실시간 화면 연결 협상에 실패했습니다. 이미지 제출 기능을 이용하세요.');}
 }
 function roster(list,active){
+ activeIds=Array.isArray(active)?active:[];
  $('rosterCount').textContent=String(list.length);
+ const entries=new Map(list.map(p=>[p.id,p]));
+ for(const id of [...cards.keys()])if(!activeIds.includes(id)||!entries.has(id))removeCard(id);
  const el=$('roster');el.replaceChildren();
  if(!list.length){const li=document.createElement('li');li.textContent='아직 접속한 수강생이 없습니다.';el.append(li);}
  for(const person of list){
   const li=document.createElement('li'),name=document.createElement('strong'),btn=document.createElement('button');
-  name.textContent=person.name+(person.id===active?' · 선택됨':'');
-  btn.type='button';btn.className='btn secondary';btn.textContent=person.id===active?'선택됨':'스크린에 표시';
-  btn.disabled=person.id===active;
-  btn.addEventListener('click',()=>{resetMedia();selected=person.id;send({type:'select',id:person.id});say(person.name+' 수강생에게 공유 요청을 보냈습니다. 동의를 기다립니다.');$('stageLabel').textContent=person.name+' 수강생';$('stopSelection').disabled=false;});
+  const chosen=activeIds.includes(person.id);
+  name.textContent=person.name+(chosen?' · 공유 요청됨':'');
+  if(chosen)cardFor(person.id,person.name);
+  btn.type='button';btn.className='btn secondary';btn.textContent=chosen?'요청 취소':'화면 요청';
+  btn.addEventListener('click',()=>{if(chosen)send({type:'stop_student',id:person.id});else send({type:'select',id:person.id});});
   li.append(name,btn);el.append(li);
  }
+ $('stopSelection').disabled=!activeIds.length;
+ $('stageLabel').textContent=activeIds.length+'명 화면 요청 중 · 최대 9명 동시 공유';
 }
 function connect(id,role,credential){
  const proto=role==='host'?'host.'+credential:'student.'+credential.id+'.'+credential.token;
- const url=new URL(`${BASE}/${id}/ws`,location.origin);
- url.protocol=location.protocol==='https:'?'wss:':'ws:';
+ const url=new URL(BASE+'/'+id+'/ws',location.origin);url.protocol=location.protocol==='https:'?'wss:':'ws:';
  ws=new WebSocket(url.toString(),['ekodi-screen-v1',proto]);
- ws.addEventListener('open',()=>say(role==='host'?'수업방 연결됨 · 수강생 QR을 보여주세요.':'수업에 연결됐습니다. 강사의 선택을 기다립니다.'));
- ws.addEventListener('close',()=>{if($('learnerStatus')&&role==='student')$('shareControls').hidden=true;resetMedia();say('연결이 끊어졌습니다. 다시 접속하거나 수업방을 새로 만드세요.');});
+ ws.addEventListener('open',()=>say(role==='host'?'수업방 연결됨 · PC 입장 링크를 수강생에게 전달하세요.':'수업에 연결됐습니다. 강사의 요청을 기다립니다.'));
+ ws.addEventListener('close',()=>{if(role==='student')$('shareControls').hidden=true;resetMedia();say('연결이 끊어졌습니다. 페이지를 새로 열어주세요.');});
  ws.addEventListener('message',async event=>{
   let m;try{m=JSON.parse(event.data);}catch{return;}
-  if(m.type==='roster'&&role==='host'){roster(m.participants||[],m.selected);return;}
+  if(m.type==='roster'&&role==='host'){roster(m.participants||[],m.active||[]);return;}
   if(m.type==='selected'){
-   if(role==='student'){$('shareControls').hidden=false;say('강사가 화면 공유를 요청했습니다. 공유를 원하시면 아래 버튼을 누르세요.');}
-   else{$('stopSelection').disabled=false;say('수강생이 선택됐습니다. 본인 동의가 필요한 상태입니다.');}
+   if(role==='student'){$('shareControls').hidden=false;say('강사가 공유를 요청했습니다. 동의할 경우 아래 버튼을 눌러주세요.');}
+   else say('화면 공유 요청을 전송했습니다. 수강생 동의를 기다립니다.');
    return;
   }
   if(m.type==='rtc'){await receiveRtc(m);return;}
-  if(m.type==='snapshot'&&role==='host'&&/^data:image\/(?:jpeg|png);base64,/.test(m.data||'')){
-   resetMedia();$('remoteImage').src=m.data;$('remoteImage').hidden=false;$('stageEmpty').hidden=true;
-   say((m.name||'수강생')+'의 화면 캡처 이미지가 표시됐습니다.');return;
+  if(m.type==='snapshot'&&role==='host'&&activeIds.includes(m.id)&&/^data:image\/(?:jpeg|png);base64,/.test(m.data||'')){
+   const card=cardFor(m.id,m.name);card.video.hidden=true;card.image.src=m.data;card.image.hidden=false;card.empty.hidden=true;
+   say((m.name||'수강생')+'의 이미지가 표시됐습니다.');return;
   }
-  if(m.type==='status'&&role==='host'){say(m.status==='sharing'?'수강생이 실시간 공유를 시작했습니다.':m.status==='denied'?'수강생이 공유를 허용하지 않았습니다.':m.status==='unsupported'?'수강생 기기에서 전체 화면 공유를 지원하지 않습니다.':'수강생 상태: '+m.status);return;}
-  if(m.type==='stopped'||m.type==='stop'){resetMedia();if(role==='student')$('shareControls').hidden=true;else{$('stageLabel').textContent='화면을 선택해 주세요';$('stopSelection').disabled=true;}say('공유가 종료됐습니다.');return;}
-  if(m.type==='room_closed'){resetMedia();say('강사가 수업방을 종료했습니다.');$('shareControls').hidden=true;return;}
-  if(m.type==='error')say('요청 처리 실패: '+m.code);
+  if(m.type==='status'&&role==='host'){
+   const card=cards.get(m.id);if(card){card.root.dataset.status=m.status;
+    if(m.status==='stopped') {card.empty.hidden=false;card.empty.textContent='화면 공유 중지됨';card.video.hidden=true;}
+   }
+   say(m.status==='sharing'?'수강생이 화면 공유를 시작했습니다.':m.status==='denied'?'수강생이 공유를 허용하지 않았습니다.':'수강생 상태: '+m.status);return;
+  }
+  if(m.type==='stopped'){if(role==='host'){if(m.id)removeCard(m.id);else resetMedia();}else{$('shareControls').hidden=true;stop(false);}say('공유가 중지됐습니다.');return;}
+  if(m.type==='stop'&&role==='student'){stop(false);$('shareControls').hidden=true;say('강사가 공유를 종료했습니다.');return;}
+  if(m.type==='room_closed'){resetMedia();if(role==='student')$('shareControls').hidden=true;say('수업방이 종료됐습니다.');return;}
+  if(m.type==='error')say(m.code==='screen_limit'?'동시 화면은 최대 9개입니다. 기존 화면을 중지하고 다시 요청하세요.':'요청 실패: '+m.code);
  });
 }
 async function create(){
- const access=readToken(window);
  $('createRoom').disabled=true;
  try{
-  const r=await fetch(BASE,{method:'POST',headers:access?{authorization:'Bearer '+access}:{},credentials:'same-origin'});
+  const r=await fetch(BASE,{method:'POST',headers:{},credentials:'same-origin'});
   const data=await r.json();
-  if(!r.ok)throw Error(r.status===401?'강사 인증이 필요합니다. 강사 로그인 후 다시 시도해 주세요.':data.code||'create_failed');
+  if(!r.ok)throw Error(data.code==='room_rate_limited'?'수업방 생성 횟수를 초과했습니다. 잠시 후 다시 시도하세요.':data.code||'create_failed');
   room=data;
   $('invitePanel').hidden=false;$('inviteLink').value=data.joinUrl;
   $('qr').innerHTML=qrSvg(data.joinUrl,{label:'수강생 QR 접속'});
@@ -161,7 +200,7 @@ function init(){
   $('learner').hidden=true;$('login').href=adminLoginUrl(window)||'../unlock/';
   $('createRoom').addEventListener('click',create);
   $('copyInvite').addEventListener('click',()=>navigator.clipboard?.writeText($('inviteLink').value).then(()=>say('QR 주소를 복사했습니다.')).catch(()=>say('주소를 직접 복사해 주세요.')));
-  $('stopSelection').addEventListener('click',()=>{send({type:'stop'});resetMedia();selected='';$('stageLabel').textContent='화면을 선택해 주세요';$('stopSelection').disabled=true;});
+  $('stopSelection').addEventListener('click',()=>{send({type:'stop'});resetMedia();selected='';$('stageLabel').textContent='수강생 화면을 기다립니다';$('stopSelection').disabled=true;});
   $('endRoom').addEventListener('click',()=>{send({type:'end'});resetMedia();$('invitePanel').hidden=true;$('endRoom').disabled=true;say('수업방을 종료했습니다.');});
   $('fullScreen').addEventListener('click',()=>$('stage').requestFullscreen?.().catch(()=>{}));
  }
