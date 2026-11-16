@@ -85,7 +85,7 @@ function stepCard(id,s){
     const pc=m.pcOnly?'<p class="notice'+(narrow?' pc-only':'')+'">'+(narrow?'<b>HWP 편집은 PC 전용입니다.</b> 휴대폰에서는 「대체 실습 자료」로 오류 찾기를 하세요.':'HWP 편집은 PC 전용입니다.')+'</p>':'';
     const ideas=id==='free'&&ctx.ideas.length?'<h3>'+esc(ctx.label)+' 추천 과제</h3>'+list(ctx.ideas):'';
     const mats=files.map((f,i)=>'<div class="mat"><p class="mat-label">'+esc(f.label)+(i===0&&(ctx.doc||ctx.meeting||ctx.topic)?' · '+esc(ctx.doc||ctx.meeting||ctx.topic):'')+'</p><p class="mat-preview">'+esc(f.text.replace(/\s+/g,' ').slice(0,110))+'…</p>'+
-      '<div class="btn-row"><button type="button" class="btn btn-small btn-primary" data-view-material="'+i+'">원문 보기·복사</button><button type="button" class="btn btn-small" data-copy-material="'+i+'">바로 복사</button></div></div>').join('');
+      '<div class="btn-row"><button type="button" class="btn btn-small btn-primary" data-view-material="'+i+'">원문 보기·복사</button><button type="button" class="btn btn-small" data-copy-material="'+i+'">바로 복사</button>'+(id==='minutes'&&f.name.endsWith('_meeting-script.txt')?'<button type="button" class="btn btn-small" data-download-material="'+i+'">대본 TXT 내려받기</button>':'')+'</div>'+(id==='minutes'&&f.name.endsWith('_meeting-script.txt')?'<details class="meeting-script" open><summary>가상 회의 녹음 내용 전체 읽기 · 화자별 대본</summary><p class="meta">실제 녹음 전사본이 아닌 수업용 허구 대본입니다. FactChat의 전용 「회의록」 메뉴는 음성 녹음·오디오 업로드만 지원하고, TXT는 일반 채팅의 첨부 아이콘으로 사용하세요.</p><pre class="source-text">'+esc(f.text)+'</pre></details>':'')+'</div>').join('');
     return head('무엇을 만드나요?',m.problem)+pc+'<p class="meta"><b>결과물</b> '+esc(m.deliverable)+'</p>'+(mats?'<div class="mats">'+mats+'</div>':'')+ideas+'<h3>준비물</h3>'+list(m.prepare);
   }
   if(s===1){
@@ -118,7 +118,8 @@ function stepCard(id,s){
   const crit=criteriaFor(m,level).map((c,i)=>{const k=id+':'+level.id+':'+i;return '<label class="check"><input type="checkbox" data-crit="'+esc(k)+'"'+(rec.checked[k]?' checked':'')+'> <span>'+esc(c)+'</span></label>';}).join('');
   const self=rec.self[id]||{};
   const score=[1,2,3,4,5].map(n=>'<label class="check"><input type="radio" name="score-'+esc(id)+'" value="'+n+'" data-self="'+esc(id)+'"'+(Number(self.score)===n?' checked':'')+'> <span>'+n+'</span></label>').join('');
-  return head('완료·적용',m.apply)+'<h3>달성 조건 · '+esc(level.label)+'</h3><div class="checks">'+crit+'</div>'+
+  const cleanup=id==='minutes'?'<section class="meeting-cleanup" aria-label="회의록 실습 후 즉시 삭제"><h3>필수 마무리 · 각자의 회의록 실습자료 즉시 삭제</h3><p class="meta">① FactChat에서 본인이 만든 회의록·녹음 또는 채팅 기록을 직접 삭제합니다(에코디에서 대신 삭제할 수 없음). ② PC 다운로드 폴더에 저장된 TXT·음성·회의록 내보내기 파일을 삭제하고 휴지통도 확인합니다. ③ 아래 버튼으로 현재 과정의 이 기기 회의록 결과·메모를 지웁니다. 삭제 전 필요한 비식별 결과물만 기관 승인 경로에 보관하세요.</p><div class="btn-row"><button type="button" class="btn btn-small btn-danger" data-clear-minutes="1">내 회의록 결과·메모 지금 삭제</button><button type="button" class="btn btn-small" data-clear-course="1">이 과정의 내 실습기록 전체 삭제</button></div><p class="meta">위 삭제 버튼은 FactChat 계정이나 다운로드 폴더까지 자동 삭제하지 않습니다.</p></section>':'';
+  return head('완료·적용',m.apply)+cleanup+'<h3>달성 조건 · '+esc(level.label)+'</h3><div class="checks">'+crit+'</div>'+
     '<h3>자기평가 (1 어려움 · 5 자신 있음)</h3><div class="stars" role="radiogroup" aria-label="자기평가">'+score+'</div>'+
     '<label class="field">실습 메모 · 결과 요약 (개인정보 제외)<textarea data-memo="'+esc(id)+'" aria-label="실습 메모" maxlength="'+MAX_TEXT+'">'+esc(rec.memo[id]||'')+'</textarea></label>'+
     '<label class="field">어려웠던 부분<textarea data-hard="'+esc(id)+'" maxlength="'+MAX_TEXT+'">'+esc(self.hard||'')+'</textarea></label>'+
@@ -401,6 +402,9 @@ function bind(){
     if(d.secGo){goSec(d.secGo);return;}
     if(d.gotoSession){rec.session=Number(d.gotoSession);rec.tab='agenda';save();render();window.scrollTo({top:0});return;}
     if(d.viewMaterial!==undefined){const f=missionMaterials(course,activeMission(),rec.track)[Number(d.viewMaterial)];if(f)openSheet(f);return;}
+    if(d.downloadMaterial!==undefined){const f=missionMaterials(course,activeMission(),rec.track)[Number(d.downloadMaterial)];if(f){downloadText(document,f.name,f.text);toast('가상 회의 대본 TXT를 내려받았습니다. 실습 후 다운로드 폴더에서 삭제하세요.');}return;}
+    if(d.clearMinutes){if(!confirm('현재 과정의 이 기기 회의록 결과·메모·점검 기록만 삭제할까요? FactChat 녹음·대화 및 다운로드 파일은 별도로 직접 삭제해야 합니다.'))return;delete rec.results.minutes;delete rec.memo.minutes;delete rec.self.minutes;delete rec.checks.minutes;delete rec.timers.minutes;for(const k of Object.keys(rec.checked))if(k.startsWith('minutes:'))delete rec.checked[k];save();render();toast('이 기기의 회의록 결과·메모를 삭제했습니다. FactChat과 다운로드 폴더도 각각 확인하세요.');return;}
+    if(d.clearCourse){$('#labClear').click();return;}
     if(d.copyMaterial!==undefined){const f=missionMaterials(course,activeMission(),rec.track)[Number(d.copyMaterial)];if(f)toast(copyNow(f.text)?f.label+' 복사 완료 · FactChat에 붙여 넣으세요.':'「원문 보기·복사」에서 길게 눌러 복사하세요.');return;}
     if(d.copyOpen){copyAndOpen(document.getElementById(d.copyOpen)?.textContent||'');return;}
     if(d.sheetClose){closeSheet();return;}
@@ -448,7 +452,7 @@ function bind(){
   $('#dockPrev').addEventListener('click',()=>{const id=activeMission();if(id)setStep(id,stepOf(id)-1);});
   $('#dockNext').addEventListener('click',()=>{const id=activeMission();if(id)setStep(id,stepOf(id)+1);});
   $('#labClear').addEventListener('click',()=>{
-    if(!confirm('이 기기에 저장된 실습 체크·메모·결과·계획을 모두 삭제할까요? 되돌릴 수 없습니다.'))return;
+    if(!confirm('현재 과정의 이 기기에 저장된 실습 체크·메모·결과·계획을 모두 삭제할까요? 되돌릴 수 없습니다. FactChat 회의·채팅 기록과 다운로드 파일은 별도로 직접 삭제해야 합니다.'))return;
     try{storage?.removeItem(key);}catch{}
     rec=blank();rec.track=course.tracks[0].id;render();toast('내 기록을 삭제했습니다.');
   });
