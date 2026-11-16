@@ -18,7 +18,18 @@ export async function educationScreenApi(request,env,{url=new URL(request.url)}=
  if(request.headers.get('origin')!=='https://ekodi.kr')return response({ok:false,code:'origin_forbidden'},403);
  if(url.pathname===BASE+'rooms'&&request.method==='POST'){
   const token=(request.headers.get('authorization')||'').match(/^Bearer ([^\s]{15,8192})$/i)?.[1];
-  if(!(token&&await ekodiInstructor(token,env))&&!await hasInstructorGate(request,env))return response({ok:false,code:'instructor_login_required'},401);
+  // Classroom facilitator can create an isolated temporary room without identity login.
+  // Never expose privileged administrator APIs or host capability in the learner invite.
+  // Room creation is rate limited by an ephemeral per-network bucket.
+  const authorized=(token&&await ekodiInstructor(token,env))||await hasInstructorGate(request,env);
+  if(!authorized){
+   const ip=request.headers.get('cf-connecting-ip')||'unknown';
+   const bytes=new TextEncoder().encode(ip+'|'+new Date().toISOString().slice(0,10));
+   const digest=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');
+   const bucket=object(env,'guest-limit-'+digest);
+   const quota=await bucket.fetch(new Request('https://room/guest-limit',{method:'POST'}));
+   if(!quota.ok)return response({ok:false,code:'room_rate_limited'},429);
+  }
   const id=crypto.randomUUID().replaceAll('-',''),hostKey=secret(),joinKey=secret();
   const initialized=await object(env,id).fetch(new Request('https://room/init',{
    method:'POST',headers:{'content-type':'application/json'},
