@@ -110,3 +110,11 @@ test('AI usage trends: strict-gated projection screen with sourced, dated figure
   for(const f of TREND_FACTS)assert.ok(f.source,f.k);
   assert.deepEqual(TRENDS.find(t=>t.id==='chatgpt').points.at(-1),['2026.9',12]);
 });
+
+test('guide links the learner screen-share room for 점검·공유, learner button fits PC practice',async()=>{
+  const fs=await import('node:fs');
+  const js=fs.readFileSync('education/study/live/guide/guide.js','utf8'),html=fs.readFileSync('education/study/live/screen-share/index.html','utf8');
+  assert.match(js,/href="\.\.\/screen-share\/">수강생 화면 공유실 열기/);
+  assert.match(html,/내 실습 화면 공유 시작/);assert.match(html,/FactChat이 열린 「탭」 또는 「창」/);
+  assert.ok(FLOW.find(f=>f.id==='share').cues.some(c=>/수강생 화면 공유실/.test(c)));
+});
