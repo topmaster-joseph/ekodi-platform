@@ -78,6 +78,8 @@ await cp(`${root}sites/pyeonggongmok/public`, `${output}pyeonggongmok`, { recurs
 // Mokpo Presbytery internal workspace menu (no member data shipped).
 await mkdir(`${output}mokpo-presbytery/`, { recursive: true });
 await cp(`${root}sites/mokpo-presbytery/index.html`, `${output}mokpo-presbytery/index.html`);
+// Public, source-verified document index. Original files are added only after source permission.
+await cp(`${root}sites/mokpo-presbytery/library`, `${output}mokpo-presbytery/library`, { recursive: true });
 // Mokpo Presbytery mission pilot: isolated public static site.
 await mkdir(`${output}mokpo-presbytery/mission/`, { recursive: true });
 await cp(`${root}sites/mokpo-presbytery/mission/index.html`, `${output}mokpo-presbytery/mission/index.html`);

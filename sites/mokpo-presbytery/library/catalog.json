@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "source_catalog_updated": "2026-11-16",
+  "records": [
+    {
+      "id": "mokpo-135-general-report",
+      "title": "제135회 정기회 보고서",
+      "scope": "노회",
+      "category": "보고",
+      "audiences": [
+        "총회",
+        "노회",
+        "선교부"
+      ],
+      "purposes": [
+        "보고",
+        "행정 참고"
+      ],
+      "issued_on": "2026-10-20",
+      "summary": "현행 목포노회 시범 홈페이지에 안내된 정기회 보고서 항목입니다. 위원회·시찰회·재정부 보고와 규정 등의 수록 안내만 확인되었습니다.",
+      "content": null,
+      "source": {
+        "publisher": "목포노회",
+        "kind": "기존 사이트에 표시된 제목·개요",
+        "listed_url": "https://ekodi.kr/mokpo-presbytery/#library",
+        "cafe_url": "https://cafe.daum.net/pckmp",
+        "post_url": null,
+        "verified_at": null
+      },
+      "attachments": [],
+      "state": "metadata_only"
+    },
+    {
+      "id": "mokpo-rules-overview",
+      "title": "목포노회 규칙 및 규정",
+      "scope": "노회",
+      "category": "규정",
+      "audiences": [
+        "노회",
+        "선교부"
+      ],
+      "purposes": [
+        "규정 확인",
+        "신청·보고 사전 검토"
+      ],
+      "issued_on": null,
+      "summary": "기존 시범 홈페이지에 표시된 규정 목록입니다. 원문과 개정일, 파일은 확인되지 않았습니다.",
+      "content": null,
+      "source": {
+        "publisher": "목포노회",
+        "kind": "기존 사이트에 표시된 제목·개요",
+        "listed_url": "https://ekodi.kr/mokpo-presbytery/#library",
+        "cafe_url": "https://cafe.daum.net/pckmp",
+        "post_url": null,
+        "verified_at": null
+      },
+      "attachments": [],
+      "state": "metadata_only"
+    }
+  ]
+}
