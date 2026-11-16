@@ -16,6 +16,9 @@ export class EducationScreenRoom {
  role(ws){return ws.deserializeAttachment()||{};}
  send(ws,value){try{ws.send(JSON.stringify(value));}catch{}}
  host(){return this.sockets().find(w=>this.role(w).role==='host')||null;}
+ viewers(){return this.sockets().filter(w=>this.role(w).role==='viewer');}
+ // Instructor-side screens (control room + projector windows) receive participant frames.
+ watchers(){return this.sockets().filter(w=>['host','viewer'].includes(this.role(w).role));}
  student(id){return this.sockets().find(w=>this.role(w).role==='student'&&this.role(w).id===id)||null;}
  async config(){return await this.ctx.storage.get('config')||null;}
  async roster(){
@@ -24,8 +27,8 @@ export class EducationScreenRoom {
    const a=this.role(ws);if(a.role!=='student'||seen.has(a.id))continue;
    seen.add(a.id);list.push({id:a.id,name:a.name,connected:true,sharing:!!this.sharing?.get(a.id)});
   }
-  const host=this.host(),selected=await this.ctx.storage.get('selected');
-  if(host)this.send(host,{type:'roster',participants:list,selected:selected||null,max:MAX_LEARNERS});
+  const selected=await this.ctx.storage.get('selected');
+  for(const w of this.watchers())this.send(w,{type:'roster',participants:list,selected:selected||null,max:MAX_LEARNERS});
  }
  async fetch(request){
   const url=new URL(request.url),config=await this.config(),now=Date.now();
@@ -53,11 +56,16 @@ export class EducationScreenRoom {
    if(request.headers.get('upgrade')?.toLowerCase()!=='websocket')return reply({ok:false,code:'upgrade_required'},426);
    const protocols=(request.headers.get('sec-websocket-protocol')||'').split(',').map(x=>x.trim());
    if(!protocols.includes('ekodi-screen-v1'))return reply({ok:false,code:'invalid_protocol'},403);
-   const auth=protocols.find(p=>/^host\.[a-f0-9]{64}$/.test(p)||/^student\.[a-f0-9]{32}\.[a-f0-9]{64}$/.test(p));
+   const auth=protocols.find(p=>/^(?:host|view)\.[a-f0-9]{64}$/.test(p)||/^student\.[a-f0-9]{32}\.[a-f0-9]{64}$/.test(p));
    let identity;
    if(auth?.startsWith('host.')){
     if(await hash(auth.slice(5))!==config.hostHash)return reply({ok:false,code:'invalid_host'},403);
     identity={role:'host',id:'host'};
+   }else if(auth?.startsWith('view.')){
+    // Projector window: same instructor secret, display only (cannot select, stop or end).
+    if(await hash(auth.slice(5))!==config.hostHash)return reply({ok:false,code:'invalid_host'},403);
+    const viewers=this.viewers();if(viewers.length>=3){this.send(viewers[0],{type:'replaced'});viewers[0].close(4000,'replaced');}
+    identity={role:'viewer',id:'view-'+crypto.randomUUID().slice(0,8)};
    }else if(auth?.startsWith('student.')){
     const [,id,token]=auth.split('.'),student=await this.ctx.storage.get('student:'+id);
     if(!student||await hash(token)!==student.tokenHash)return reply({ok:false,code:'invalid_student'},403);
@@ -71,6 +79,7 @@ export class EducationScreenRoom {
    this.ctx.acceptWebSocket(server,['room-client']);
    server.serializeAttachment(identity);
    this.send(server,{type:'connected',role:identity.role,id:identity.id,expiresAt:config.expiresAt});
+   if(identity.role==='viewer'){const sel=await this.ctx.storage.get('selected');const st=sel&&this.student(sel);this.send(server,st?{type:'show',id:sel,name:this.role(st).name}:{type:'grid'});}
    await this.roster();
    return new Response(null,{status:101,webSocket:client,headers:{'sec-websocket-protocol':'ekodi-screen-v1'}});
   }
@@ -94,11 +103,12 @@ export class EducationScreenRoom {
     await this.ctx.storage.put('selected',id);
     this.send(this.student(id),{type:'focus'});
     this.send(ws,{type:'focused',id});
+    for(const v of this.viewers())this.send(v,{type:'show',id,name:this.role(this.student(id)).name});
     return this.roster();
    }
    if(msg.type==='unfocus'){
     const old=await this.ctx.storage.get('selected');if(old&&this.student(old))this.send(this.student(old),{type:'unfocus'});
-    await this.ctx.storage.delete('selected');this.send(ws,{type:'unfocused'});return this.roster();
+    await this.ctx.storage.delete('selected');this.send(ws,{type:'unfocused'});for(const v of this.viewers())this.send(v,{type:'grid'});return this.roster();
    }
    if(msg.type==='stop'){
     const id=validId(msg.id)?msg.id:await this.ctx.storage.get('selected');
@@ -115,17 +125,16 @@ export class EducationScreenRoom {
    return;
   }
   if(from.role!=='student')return;
-  const host=this.host();
   if(msg.type==='frame'&&typeof msg.data==='string'&&msg.data.length<350000&&/^data:image\/(?:jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(msg.data)){
    if(now-(this.last.get(from.id)||0)<500)return; // per-participant rate limit
    this.last.set(from.id,now);
    if(!this.sharing.get(from.id)){this.sharing.set(from.id,true);await this.roster();}
-   if(host)this.send(host,{type:'frame',id:from.id,name:from.name,data:msg.data});
+   for(const w of this.watchers())this.send(w,{type:'frame',id:from.id,name:from.name,data:msg.data});
    return;
   }
   if(msg.type==='status'&&['sharing','stopped','unsupported','denied'].includes(msg.status)){
    if(msg.status==='sharing')this.sharing.set(from.id,true);else this.sharing.delete(from.id);
-   if(host)this.send(host,{type:'status',id:from.id,name:from.name,status:msg.status});
+   for(const w of this.watchers())this.send(w,{type:'status',id:from.id,name:from.name,status:msg.status});
    return this.roster();
   }
  }
@@ -133,12 +142,17 @@ export class EducationScreenRoom {
   const who=this.role(ws),selected=await this.ctx.storage.get('selected');
   this.sharing??=new Map();
   if(who.role==='host'){
-   for(const s of this.sockets()){if(this.role(s).role==='student')this.send(s,{type:'stop',reason:'instructor_disconnected'});}
-   this.sharing.clear();await this.ctx.storage.delete('selected');
+   // A projector window that is still open keeps showing; with nobody watching, participants stop.
+   if(!this.viewers().length){
+    for(const s of this.sockets()){if(this.role(s).role==='student')this.send(s,{type:'stop',reason:'instructor_disconnected'});}
+    this.sharing.clear();await this.ctx.storage.delete('selected');
+   }
+  }else if(who.role==='viewer'){
+   // nothing to clean up
   }else if(who.role==='student'){
    this.sharing.delete(who.id);
    if(selected===who.id)await this.ctx.storage.delete('selected');
-   const host=this.host();if(host)this.send(host,{type:'left',id:who.id});
+   for(const w of this.watchers())if(w!==ws)this.send(w,{type:'left',id:who.id});
   }
   await this.roster();
  }

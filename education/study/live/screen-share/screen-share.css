@@ -7,3 +7,19 @@
 .tile span{padding:6px 8px;font-size:13px;font-weight:700;overflow-wrap:anywhere}
 .stage{position:relative}.stage-close{position:absolute;top:8px;right:8px;margin:0}
 .roster .live{color:#0b8a52;font-size:12px;font-weight:700;margin-left:4px}
+/* 프로젝터 화면 (스크린 투사용) */
+body.is-projector{background:#05080d}body.is-projector .top,body.is-projector .intro,body.is-projector footer,body.is-projector main>*:not(#projector){display:none!important}
+body.is-projector main{max-width:none;padding:0;margin:0}
+.projector{min-height:100vh;display:flex;flex-direction:column;background:#05080d;color:#fff}
+.proj-top{display:flex;align-items:center;gap:12px;padding:8px 14px;font-weight:700;font-size:clamp(14px,1.6vw,22px)}
+.proj-meta{color:#9fb0c3;font-weight:500;flex:1}
+.proj-top .btn{margin:0}.projector:fullscreen .proj-top .btn{display:none}
+.proj-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 10px 10px}
+.proj-stage img{max-width:100%;max-height:calc(100vh - 140px);object-fit:contain;background:#000}
+.proj-name{font-size:clamp(16px,2vw,28px);font-weight:800;margin:8px 0 0;color:#ffe08a}
+.proj-grid{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(30vw,420px),1fr));gap:10px;padding:0 10px 10px;align-content:start}
+.proj-grid figure{margin:0;background:#101926;border-radius:10px;overflow:hidden}
+.proj-grid img{width:100%;aspect-ratio:16/10;object-fit:contain;background:#000;display:block}
+.proj-grid figcaption{padding:6px 10px;font-weight:700;font-size:clamp(13px,1.2vw,18px)}
+.proj-empty{grid-column:1/-1;text-align:center;color:#9fb0c3;padding:12vh 10px;font-size:clamp(16px,2vw,26px)}
+.proj-box{margin-top:12px;padding:10px 12px;border:1px solid #c9d6e3;border-radius:12px;background:#f6f9fc}

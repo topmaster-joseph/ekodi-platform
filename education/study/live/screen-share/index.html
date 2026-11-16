@@ -19,7 +19,9 @@
 <p id="teacherStatus" class="status" role="status">대기 중</p>
 <div id="invitePanel" hidden><div id="qr" class="qr"></div>
 <label for="inviteLink">참여자 QR 주소</label><input id="inviteLink" readonly><button type="button" id="copyInvite" class="btn secondary">주소 복사</button>
-<p class="hint">QR을 강의실 화면에 보여 주세요. 최대 30명 입장, 공유를 시작한 참여자 화면이 오른쪽에 모두 보입니다.</p></div>
+<p class="hint">QR을 강의실 화면에 보여 주세요. 최대 30명 입장, 공유를 시작한 참여자 화면이 오른쪽에 모두 보입니다.</p>
+<div class="proj-box"><strong>프로젝터 화면</strong><p class="hint">스크린(프로젝터)에 연결된 컴퓨터에서 이 화면을 열면, 여기서 고른 참여자 화면이 스크린에 크게 나옵니다. 고르지 않으면 공유 중인 화면 목록이 나옵니다. 이 주소는 강사 전용이니 참여자에게 보여 주지 마세요.</p>
+<button type="button" id="openProjector" class="btn primary">이 컴퓨터에서 프로젝터 화면 열기</button> <button type="button" id="copyProjector" class="btn secondary">프로젝터 주소 복사</button></div></div>
 <h3>접속한 참여자 <span id="rosterCount">0</span>명 · 공유 중 <span id="sharingCount">0</span>명</h3><ul id="roster" class="roster"></ul>
 <button type="button" id="stopSelection" class="btn secondary" disabled>크게 보기 닫기</button>
 <button type="button" id="endRoom" class="btn danger" disabled>수업방 종료</button>
@@ -29,6 +31,11 @@
 <div id="stage" class="stage" hidden><img id="remoteImage" alt="참여자가 직접 공유한 화면" hidden><button type="button" id="closeStage" class="btn secondary stage-close">목록으로</button></div>
 <div id="grid" class="grid"><div class="empty" id="stageEmpty">참여자가 「내 실습 화면 공유 시작」을 누르면 이곳에 화면이 나타납니다.</div></div>
 <p class="hint">화면을 누르면 크게 보입니다. 공유 화면은 약 1~2초 간격으로 갱신되며, 서버에서 녹화·저장하지 않습니다.</p></div>
+</section>
+<section id="projector" class="projector" hidden>
+<div class="proj-top"><span id="pTitle">참여자 실습 화면</span><span class="proj-meta" id="pMeta">연결 중…</span><button type="button" id="pFull" class="btn secondary">전체 화면</button></div>
+<div id="pStage" class="proj-stage" hidden><img id="pImage" alt="참여자가 직접 공유한 실습 화면"><p id="pName" class="proj-name"></p></div>
+<div id="pGrid" class="proj-grid"></div>
 </section>
 <section id="learner" class="card learner" hidden>
 <h2>참여자 입장</h2><label for="displayName">화면에 표시할 이름</label><input id="displayName" maxlength="36" autocomplete="nickname" placeholder="예: 홍길동" required>
