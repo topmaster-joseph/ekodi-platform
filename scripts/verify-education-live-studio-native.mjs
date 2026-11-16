@@ -602,7 +602,8 @@ async function shortCourseProbe(browser){
           await page.locator('.course-card').first().waitFor({timeout:10000}).catch(()=>{});
           const cards=await page.locator('.course-card').count();
           if(cards!==3)fail(label+' studio should list 3 courses while preserving both originals, got '+cards);
-          if(!body.includes('개인 실습 90분'))fail(label+' studio missing 90-minute practice summary');
+          const coursesText=await page.locator('body').innerText();
+          if(!coursesText.includes('개인 실습 90분'))fail(label+' studio missing 90-minute practice summary');
         }
         if(surface==='lab'&&!body.includes('HWP'))fail(label+' learner practice is missing');
       }
