@@ -9,10 +9,12 @@ const BASE='/edu/study/live/screen-share/api/rooms';
 const params=new URLSearchParams(location.search);
 const roomId=params.get('r')||'';
 const invite=new URLSearchParams(location.hash.slice(1)).get('k')||params.get('k')||sessionStorage.getItem('screen-invite-'+roomId)||'';
-const guest=/^[a-f0-9]{32}$/.test(roomId)&&/^[a-f0-9]{64}$/.test(invite);
+const viewKey=new URLSearchParams(location.hash.slice(1)).get('v')||'';
+const projector=/^[a-f0-9]{32}$/.test(roomId)&&/^[a-f0-9]{64}$/.test(viewKey);
+const guest=!projector&&/^[a-f0-9]{32}$/.test(roomId)&&/^[a-f0-9]{64}$/.test(invite);
 let closedByHost=false,room=null,ws=null,stream=null,timer=0,focused=false,side=guest?'student':'host',big='';
 const tiles=new Map(); // host: id -> {name,sharing,src}
-function say(message){const target=side==='host'?$('teacherStatus'):$('learnerStatus');target.textContent=message;}
+function say(message){const target=side==='host'?$('teacherStatus'):side==='projector'?$('pMeta'):$('learnerStatus');target.textContent=message;}
 function send(value){if(ws?.readyState===WebSocket.OPEN)ws.send(JSON.stringify(value));}
 
 // ---------- host ----------
@@ -84,6 +86,44 @@ function hostMessage(m){
  if(m.type==='room_closed'){closeBig();tiles.clear();renderGrid();say('수업방이 종료됐습니다.');return;}
  if(m.type==='error')say('요청 처리 실패: '+m.code);
 }
+
+// ---------- projector (스크린 투사용, display only) ----------
+const pFrames=new Map();let pShow='',pRetry=0;
+function pRender(){
+ const n=[...pFrames.values()].filter(t=>t.src).length;
+ $('pMeta').textContent=pShow?'강사가 고른 화면':('공유 중 '+n+'명');
+ if(pShow&&pFrames.get(pShow)?.src){
+  const t=pFrames.get(pShow);$('pStage').hidden=false;$('pGrid').hidden=true;$('pImage').src=t.src;$('pName').textContent=t.name;$('pTitle').textContent=t.name+' 실습 화면';return;
+ }
+ $('pStage').hidden=true;$('pGrid').hidden=false;$('pTitle').textContent='참여자 실습 화면';
+ const grid=$('pGrid');grid.replaceChildren();
+ const list=[...pFrames.entries()].filter(([,t])=>t.src);
+ if(!list.length){const e=document.createElement('div');e.className='proj-empty';e.textContent='참여자가 「내 실습 화면 공유 시작」을 누르면 이곳에 나타납니다.';grid.append(e);return;}
+ for(const [id,t] of list){const f=document.createElement('figure');f.dataset.id=id;const img=document.createElement('img');img.alt=t.name+' 실습 화면';img.src=t.src;const c=document.createElement('figcaption');c.textContent=t.name;f.append(img,c);grid.append(f);}
+}
+function projectorMessage(m){
+ if(m.type==='frame'&&/^data:image\/(?:jpeg|png);base64,/.test(m.data||'')){
+  const t=pFrames.get(m.id)||{name:m.name||'참여자'};const fresh=!t.src;t.src=m.data;t.name=m.name||t.name;pFrames.set(m.id,t);
+  if(pShow===m.id){$('pImage').src=m.data;if($('pStage').hidden)pRender();return;}
+  if(!pShow){const img=$('pGrid').querySelector('figure[data-id="'+m.id+'"] img');if(img&&!fresh)img.src=m.data;else pRender();}
+  return;
+ }
+ if(m.type==='show'){pShow=m.id;const t=pFrames.get(m.id)||{name:m.name||'참여자',src:''};t.name=m.name||t.name;pFrames.set(m.id,t);pRender();return;}
+ if(m.type==='grid'){pShow='';pRender();return;}
+ if(m.type==='status'&&m.status==='stopped'){pFrames.delete(m.id);if(pShow===m.id)pShow='';pRender();return;}
+ if(m.type==='left'){pFrames.delete(m.id);if(pShow===m.id)pShow='';pRender();return;}
+ if(m.type==='roster'){const ids=new Set((m.participants||[]).map(p=>p.id));for(const id of [...pFrames.keys()])if(!ids.has(id))pFrames.delete(id);pRender();return;}
+ if(m.type==='room_closed'){pFrames.clear();pShow='';pRender();$('pMeta').textContent='수업방이 종료됐습니다.';return;}
+ if(m.type==='replaced'){$('pMeta').textContent='다른 프로젝터 화면이 열려 이 화면은 닫혔습니다.';}
+}
+function connectProjector(){
+ const url=new URL(`${BASE}/${roomId}/ws`,location.origin);url.protocol=location.protocol==='https:'?'wss:':'ws:';
+ ws=new WebSocket(url.toString(),['ekodi-screen-v1','view.'+viewKey]);
+ ws.addEventListener('open',()=>{pRetry=0;$('pMeta').textContent='연결됨 · 공유 대기';});
+ ws.addEventListener('message',e=>{let m;try{m=JSON.parse(e.data);}catch{return;}projectorMessage(m);});
+ ws.addEventListener('close',ev=>{if(ev.code===4001||ev.code===4000)return;$('pMeta').textContent='연결이 끊겨 다시 연결 중…';setTimeout(connectProjector,Math.min(15000,1000*2**(pRetry++)));});
+}
+function projectorUrl(){return room?.id&&room?.hostKey?location.origin+location.pathname+'?r='+room.id+'#v='+room.hostKey:'';}
 
 // ---------- participant ----------
 function stopCapture(){clearTimeout(timer);timer=0;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}const v=$('captureVideo');v.srcObject=null;}
@@ -191,6 +231,12 @@ async function join(){
 }
 function init(){
  acceptAdminHandoff(window);
+ if(projector){
+  side='projector';document.body.classList.add('is-projector');$('teacher').hidden=true;$('learner').hidden=true;$('projector').hidden=false;
+  history.replaceState(null,'',location.pathname+'?r='+roomId+'#v='+viewKey);
+  $('pFull').addEventListener('click',()=>$('projector').requestFullscreen?.().catch(()=>{}));
+  pRender();connectProjector();return;
+ }
  if(guest){
   side='student';$('teacher').hidden=true;$('learner').hidden=false;
   sessionStorage.setItem('screen-invite-'+roomId,invite);
@@ -206,6 +252,8 @@ function init(){
   $('createRoom').addEventListener('click',create);
   $('copyInvite').addEventListener('click',()=>navigator.clipboard?.writeText($('inviteLink').value).then(()=>say('QR 주소를 복사했습니다.')).catch(()=>say('주소를 직접 복사해 주세요.')));
   $('stopSelection').addEventListener('click',closeBig);
+  $('openProjector').addEventListener('click',()=>{const u=projectorUrl();if(u)window.open(u,'ekodi-projector','noopener');});
+  $('copyProjector').addEventListener('click',()=>{const u=projectorUrl();if(u)navigator.clipboard?.writeText(u).then(()=>say('프로젝터 주소를 복사했습니다. 스크린에 연결된 컴퓨터에서 여세요.')).catch(()=>say('주소 복사가 막혔습니다. 「이 컴퓨터에서 프로젝터 화면 열기」를 쓰세요.'));});
   $('closeStage').addEventListener('click',closeBig);
   $('endRoom').addEventListener('click',()=>{send({type:'end'});closeBig();tiles.clear();renderGrid();$('invitePanel').hidden=true;$('endRoom').disabled=true;say('수업방을 종료했습니다.');});
   $('fullScreen').addEventListener('click',()=>{const el=big?$('stage'):$('grid');el.requestFullscreen?.().catch(()=>{});});

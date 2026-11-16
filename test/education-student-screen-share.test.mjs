@@ -168,3 +168,24 @@ test('studio app bar offers the sign-in chip a place inside the collapsible cont
   const auth=await readFile(new URL('../shell/unified-user-auth.js',import.meta.url),'utf8');
   assert.match(auth,/header\.querySelector\('\[data-ekodi-header-actions\]/);
 });
+
+test('projector window: display-only viewer gets frames and follows the instructor selection; cannot control',async()=>{
+ const ctx=createContext(),room=new EducationScreenRoom(ctx,{});
+ await room.fetch(post('/init',{id:'e'.repeat(32),hostKey:key('a'),joinKey:key('b'),createdAt:Date.now()}));
+ const a=await (await room.fetch(post('/join',{joinKey:key('b'),name:'참여자A'}))).json();
+ const host=fake('host','host'),view=fake('viewer','view-1'),pa=fake('student',a.id,'참여자A');
+ ctx.sockets.push(host,view,pa);
+ await room.webSocketMessage(pa,JSON.stringify({type:'frame',data:'data:image/jpeg;base64,AA=='}));
+ assert.equal(view.messages.at(-1).type,'frame','projector receives participant frames');
+ await room.webSocketMessage(host,JSON.stringify({type:'focus',id:a.id}));
+ assert.deepEqual(view.messages.filter(m=>m.type==='show').at(-1),{type:'show',id:a.id,name:'참여자A'});
+ await room.webSocketMessage(host,JSON.stringify({type:'unfocus'}));
+ assert.ok(view.messages.slice(-2).some(m=>m.type==='grid'));
+ await room.webSocketMessage(view,JSON.stringify({type:'end'}));
+ assert.notEqual(ctx.map.get('config').ended,true,'viewer cannot end the room');
+ await room.webSocketMessage(view,JSON.stringify({type:'focus',id:a.id}));
+ assert.equal(ctx.map.get('selected'),undefined,'viewer cannot select');
+ // Instructor phone sleeping must not stop the projected share while a projector is open.
+ await room.webSocketClose(host);
+ assert.ok(!pa.messages.some(m=>m.type==='stop'));
+});
