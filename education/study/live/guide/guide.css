@@ -108,3 +108,9 @@
 .g-meeting-material .g-pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:380px;overflow:auto}
 .g-delete-reminder{font-size:.9rem;line-height:1.55;border:1px solid #dfbca1;border-radius:8px;background:#fff7ee;color:#733b14;padding:10px;margin:10px 0 0}
 @media print{.g-meeting-material .g-pre{max-height:none;overflow:visible}.g-delete-reminder{break-inside:avoid}}
+
+/* Instructor-only sample files for HWP/PPT demonstrations. */
+.g-sample-material{padding:10px;margin:10px 0;border:1px solid #bed9d5;border-radius:10px;background:#f4faf9}
+.g-sample-material .g-pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:400px;overflow:auto}
+.g-sample-material .meta{line-height:1.5}
+@media print{.g-sample-material .g-pre{max-height:none;overflow:visible}}

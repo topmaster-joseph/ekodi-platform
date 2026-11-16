@@ -681,3 +681,11 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .meeting-cleanup{border:1px solid #d8a882;background:#fff8ed;border-radius:12px;padding:12px;margin:12px 0}
 .meeting-cleanup h3{margin:0 0 8px;color:#773d16}.meeting-cleanup .meta{line-height:1.55}
 @media print{.meeting-script .source-text{max-height:none;overflow:visible}.meeting-cleanup{break-inside:avoid}}
+
+/* Editable HWPX/PPTX practice sample cards — same text in preview, copy and download. */
+.sample-source{padding:10px 12px;margin:10px 0 2px;border:1px solid #cbdcda;border-radius:10px;background:#f4faf9}
+.sample-source summary{font-weight:700;cursor:pointer;min-height:36px;color:#164d59}
+.sample-source .source-text{white-space:pre-wrap;overflow-wrap:anywhere;max-height:390px;overflow:auto;margin-top:8px}
+.sample-source .meta{margin:6px 0;color:#486273}
+.mat .btn-row{display:flex;flex-wrap:wrap;gap:6px}
+@media print{.sample-source .source-text{max-height:none;overflow:visible}}
