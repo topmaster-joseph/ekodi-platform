@@ -182,7 +182,7 @@ function pastorClient(POLICY){
     const aiWorshipPanel=canWrite()?`<section class="service-row" style="display:block;padding:16px;border:1px solid #e3e5d9;background:#fbfbf5;border-radius:12px;margin:0 0 16px">
       <h2 style="margin:0 0 8px">에코디AI · 주일모임 준비</h2>
       <p class="empty">한 문장으로 예배 날짜를 인식하고 승인된 공통본문 및 기존 주보·PPT 자료를 불러옵니다. 자료와 유튜브 예약은 검증 결과를 나누어 표시하며 실제 송출을 임의로 시작하지 않습니다.</p>
-      <form id="churchAiCommand" class="trade-form"><label for="churchAiPrompt">예배 준비 명령</label><textarea id="churchAiPrompt" name="command" maxlength="1600" rows="2" style="display:block;width:100%;padding:12px;margin:8px 0" placeholder="2026년 10월 18일 주일모임 예배 및 유튜브 셋팅" required></textarea><div class="actions"><button type="submit" class="button primary">날짜 분석 · 초안 준비</button><a href="/ekodichurch/" class="button">교회 사용자 화면</a></div></form>
+      <form id="churchAiCommand" class="trade-form"><label for="churchAiPrompt">예배 준비 명령</label><textarea id="churchAiPrompt" name="command" maxlength="1600" rows="2" style="display:block;width:100%;padding:12px;margin:8px 0" placeholder="2026년 10월 18일 주일모임 예배 및 유튜브 셋팅" required></textarea><div class="actions"><button type="submit" class="button primary">날짜 분석 · 초안 준비</button><a href="/ekodichurch/mypage/" class="button" target="_blank" rel="noopener noreferrer">예배준비실 · 설교·주보·PPT Google 원본 편집</a><a href="/ekodichurch/" class="button">교회 사용자 화면</a></div></form><p class="empty">예배준비실은 별도로 교회 운영관리자 권한을 검증합니다. Google 원본 수정만으로 주보·PPT·설교의 웹 공개는 변경되지 않습니다.</p>
       <div id="churchAiCommandStatus" role="status" aria-live="polite" class="trade-flash">주보·PPT·방송 자료를 실제로 조회한 뒤 준비 단계를 표시합니다.</div>
       <div id="churchAiCommandLinks" class="actions"></div>
     </section>`:'';
