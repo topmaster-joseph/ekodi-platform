@@ -43,7 +43,7 @@ function cardFor(id,name){
 function makePeer(id){
  if(side==='student'){if(pc)pc.close();pc=new RTCPeerConnection({iceServers:ice});
   pc.onicecandidate=e=>{if(e.candidate)send({type:'rtc',kind:'ice',payload:e.candidate.toJSON()});};
-  pc.onconnectionstatechange=()=>{if(pc?.connectionState==='failed')say('연결에 실패했습니다. 다른 Wi-Fi나 이미지 제출을 이용해 주세요.');};
+  pc.onconnectionstatechange=()=>{if(!pc)return;if(pc.connectionState==='connected'){send({type:'status',status:'sharing'});say('화면이 강사에게 실시간으로 공유되고 있습니다.');}else if(pc.connectionState==='failed'){send({type:'status',status:'denied'});say('화면 전송 연결이 실패했습니다. 같은 Wi-Fi에서 재시도하거나 캡처 이미지를 보내주세요.');}};
   return pc;
  }
  const old=peers.get(id);if(old)old.close();
@@ -167,7 +167,7 @@ async function share(){
   const peer=makePeer();peer.addTrack(track,stream);
   const offer=await peer.createOffer();await peer.setLocalDescription(offer);
   send({type:'rtc',kind:'offer',payload:peer.localDescription.toJSON()});
-  send({type:'status',status:'sharing'});say('실시간 화면 공유 중 · 중지 버튼으로 종료할 수 있습니다.');
+  send({type:'status',status:'connecting'});say('화면 선택 완료 · 강사 컴퓨터와 연결 중입니다.');
  }catch(e){
   if(stream){stream.getTracks().forEach(track=>track.stop());stream=null;}
   send({type:'status',status:'denied'});
