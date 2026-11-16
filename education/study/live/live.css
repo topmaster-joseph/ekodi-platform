@@ -673,3 +673,11 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 /* Presenter demo library picker: long demo titles must never widen the presenter on small phones. */
 .lv #aiDemo{flex:1 1 100%;width:100%;max-width:100%;min-width:0;text-overflow:ellipsis}
 .lv #aiHandoff{overflow-wrap:anywhere}
+
+/* Meeting transcription practice: transcript on-screen and immediate scoped cleanup. */
+.meeting-script{margin:10px 0 0;border-top:1px dashed var(--line,#cfd9e0);padding-top:8px}
+.meeting-script summary{cursor:pointer;font-weight:700;min-height:36px}
+.meeting-script .source-text{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto}
+.meeting-cleanup{border:1px solid #d8a882;background:#fff8ed;border-radius:12px;padding:12px;margin:12px 0}
+.meeting-cleanup h3{margin:0 0 8px;color:#773d16}.meeting-cleanup .meta{line-height:1.55}
+@media print{.meeting-script .source-text{max-height:none;overflow:visible}.meeting-cleanup{break-inside:avoid}}
