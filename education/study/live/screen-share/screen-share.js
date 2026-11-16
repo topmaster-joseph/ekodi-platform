@@ -63,7 +63,7 @@ async function receiveRtc(m){
   const id=side==='host'?m.to:'student';
   let peer=side==='host'?peers.get(id):pc;
   if(m.kind==='offer'&&side==='host'){
-   if(!activeIds.includes(id))return;
+   // The room coordinator already authorizes active senders; roster delivery may lag behind the first offer.
    peer=makePeer(id);await peer.setRemoteDescription(m.payload);
    await flushIce(id,peer);
    const answer=await peer.createAnswer();await peer.setLocalDescription(answer);
