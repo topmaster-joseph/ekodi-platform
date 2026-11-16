@@ -94,7 +94,7 @@ function renderSession(){
         (f.id==='intro'?'<div class="g-credit"><p class="g-credit-title">크레딧 공지 (시작할 때 읽기)</p><p class="g-say">「'+esc(CREDIT_OPENING)+'」</p></div>':'')+
         (f.id==='demo'?'<div class="g-credit"><p class="g-credit-title">크레딧</p><p>강사 시연은 강사 계정 크레딧을 씁니다. 회의록 30초·발표자료 5장 기준 약 260크레딧 + 채팅·HWP 요청분.</p></div>':'')+
         (f.mission?creditBox(f.mission):'')+
-        (f.phases||f.id==='share'?'<div class="g-share"><p class="g-share-title">수강생 실습 화면 보여주기</p><p>'+(f.id==='share'?'발표자 화면을 스크린에 띄웁니다.':'점검 때 대표 1명 화면을 스크린에 띄웁니다.')+' 수강생이 직접 「공유 시작」을 눌러야 보이고, 녹화·저장되지 않습니다.</p><a class="btn btn-small" href="../screen-share/">수강생 화면 공유실 열기</a></div>':'')+
+        (f.phases||f.id==='share'?'<div class="g-share"><p class="g-share-title">참여자 실습 화면 보여주기</p><p>'+(f.id==='share'?'발표자 화면을 눌러 크게 띄웁니다.':'공유를 시작한 참여자 화면이 한눈에 보이고, 누르면 크게 보입니다.')+' 참여자가 직접 「공유 시작」을 눌러야 보이고, 녹화·저장되지 않습니다.</p><a class="btn btn-small" href="../screen-share/">참여자 화면 공유실 열기</a></div>':'')+
         (extra?.length?'<div class="g-session-note"><p class="g-sub">'+s.no+'차 강의자료</p>'+list(extra)+'</div>':'')+
         list(f.talk,'g-talk')+(f.demo?.length?'<p class="g-sub">기본 시연 순서</p>'+list(f.demo):'')+
         picker+learnerPrompt(f)+(f.cues?.length?'<p class="g-sub">운영 신호</p>'+list(f.cues,'g-cue'):'')+'</div></li>';

@@ -58,28 +58,26 @@ async function run(){
   await second.locator('#joinRoom').click();
   await teacher.waitForFunction(()=>document.querySelector('#rosterCount')?.textContent==='2',null,{timeout:15000});
   await accept('live roster shows two people',await teacher.locator('#roster li').count()===2);
-  await accept('no screen shared before learner permission',await teacher.locator('#remoteVideo').isHidden()&&await teacher.locator('#remoteImage').isHidden());
-  await teacher.locator('#roster li').filter({hasText:'학습자 A'}).getByRole('button').click();
+  await accept('no screen shown before participant permission',await teacher.locator('.tile').count()===0&&await teacher.locator('#remoteImage').isHidden());
   await first.locator('#shareControls:not([hidden])').waitFor({timeout:15000});
-  await accept('selected learner receives explicit share button',await first.locator('#startShare').isVisible()&&await teacher.locator('#remoteVideo').isHidden());
-  await accept('unselected learner never receives share controls',await second.locator('#shareControls').isHidden());
-  // A synthetic 1-pixel input is selected by the test, exactly like a learner
+  await accept('joined participant gets an explicit share button',await first.locator('#startShare').isVisible());
+  // A synthetic 1-pixel input is selected by the test, exactly like a participant
   // voluntarily choosing a picture. No phone display is recorded.
   const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR42mOQi1kKAAG7ASA/Ci3kAAAAAElFTkSuQmCC','base64');
   await first.locator('#snapshotFile').setInputFiles({name:'sample.png',mimeType:'image/png',buffer:png});
   await first.locator('#sendSnapshot').click();
+  await teacher.locator('.tile img').first().waitFor({timeout:15000});
+  await accept('instructor grid shows the participant-approved still',(await teacher.locator('.tile img').first().getAttribute('src')||'').startsWith('data:image/jpeg;base64,')&&await teacher.locator('.tile').count()===1);
+  await accept('participant who did not share is not shown',await teacher.locator('.tile').filter({hasText:'학습자 B'}).count()===0);
+  await teacher.locator('.tile').first().click();
   await teacher.locator('#remoteImage:not([hidden])').waitFor({timeout:15000});
-  await accept('instructor sees learner-approved still', (await teacher.locator('#remoteImage').getAttribute('src')||'').startsWith('data:image/jpeg;base64,'));
+  await accept('instructor can enlarge one participant',(await teacher.locator('#remoteImage').getAttribute('src')||'').startsWith('data:image/jpeg;base64,'));
   await teacher.locator('#stopSelection').click();
   await teacher.locator('#remoteImage').waitFor({state:'hidden',timeout:15000});
-  await first.locator('#shareControls').waitFor({state:'hidden',timeout:15000});
-  await accept('instructor can stop and revoke share',await first.locator('#shareControls').isHidden());
-  await teacher.locator('#roster li').filter({hasText:'학습자 B'}).getByRole('button').click();
-  await second.locator('#shareControls:not([hidden])').waitFor({timeout:15000});
-  await accept('instructor can switch chosen student',await first.locator('#shareControls').isHidden()&&await second.locator('#shareControls').isVisible());
+  await accept('instructor can close the enlarged view',await teacher.locator('#grid').isVisible());
   await teacher.locator('#endRoom').click();
   await second.locator('#shareControls').waitFor({state:'hidden',timeout:15000});
-  await accept('classroom closed by host',await second.locator('#shareControls').isHidden());
+  await accept('classroom closed by host',await second.locator('#shareControls').isHidden()&&await first.locator('#shareControls').isHidden());
   report.ok=true;
  }finally{await browser.close();}
 }

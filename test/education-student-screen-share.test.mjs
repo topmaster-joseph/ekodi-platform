@@ -48,41 +48,46 @@ test('QR room creates expiring, capability-scoped learner slots and never return
  conf.expiresAt=Date.now()-1;ctx.map.set('config',conf);
  assert.equal((await room.fetch(post('/join',{joinKey:key('b'),name:'지각생'}))).status,410);
 });
-test('only host selects a learner and only the selected learner signals media or a bounded image',async()=>{
+test('participants share only by their own action; frames go to the instructor only, rate-limited, never between participants',async()=>{
  const ctx=createContext(),room=new EducationScreenRoom(ctx,{});
  await room.fetch(post('/init',{id:'b'.repeat(32),hostKey:key('a'),joinKey:key('b'),createdAt:Date.now()}));
- const a=await (await room.fetch(post('/join',{joinKey:key('b'),name:'수강생A'}))).json();
- const b=await (await room.fetch(post('/join',{joinKey:key('b'),name:'수강생B'}))).json();
- const host=fake('host','host'),personA=fake('student',a.id,'수강생A'),personB=fake('student',b.id,'수강생B');
+ const a=await (await room.fetch(post('/join',{joinKey:key('b'),name:'참여자A'}))).json();
+ const b=await (await room.fetch(post('/join',{joinKey:key('b'),name:'참여자B'}))).json();
+ const host=fake('host','host'),personA=fake('student',a.id,'참여자A'),personB=fake('student',b.id,'참여자B');
  ctx.sockets.push(host,personA,personB);
- await room.webSocketMessage(personB,JSON.stringify({type:'select',id:b.id}));
- assert.equal(ctx.map.get('selected'),undefined,'learner cannot promote themselves');
- await room.webSocketMessage(host,JSON.stringify({type:'select',id:a.id}));
- assert.equal(ctx.map.get('selected'),a.id);
- assert.equal(personA.messages.at(-1).type,'selected');
- const before=host.messages.length;
- await room.webSocketMessage(personB,JSON.stringify({type:'snapshot',data:'data:image/png;base64,AA=='}));
- assert.equal(host.messages.length,before,'unselected learners cannot send even a still image');
- await room.webSocketMessage(personA,JSON.stringify({type:'snapshot',data:'data:image/png;base64,AA=='}));
- assert.equal(host.messages.at(-1).type,'snapshot');
- await room.webSocketMessage(personA,JSON.stringify({type:'rtc',kind:'offer',payload:{type:'offer',sdp:'v=0'}}));
- assert.equal(host.messages.at(-1).kind,'offer');
- await room.webSocketMessage(host,JSON.stringify({type:'select',id:b.id}));
- assert.equal(personA.messages.at(-1).type,'stop','switch stops prior stream');
+ await room.webSocketMessage(personB,JSON.stringify({type:'focus',id:b.id}));
+ assert.equal(ctx.map.get('selected'),undefined,'participant cannot promote themselves');
+ const frame='data:image/jpeg;base64,AA==';
+ await room.webSocketMessage(personA,JSON.stringify({type:'frame',data:frame}));
+ assert.equal(host.messages.at(-1).type,'frame');assert.equal(host.messages.at(-1).id,a.id);assert.equal(host.messages.at(-1).name,'참여자A');
+ assert.ok(!personB.messages.some(m=>m.type==='frame'),'frames never reach other participants');
+ const count=host.messages.filter(m=>m.type==='frame').length;
+ await room.webSocketMessage(personA,JSON.stringify({type:'frame',data:frame}));
+ assert.equal(host.messages.filter(m=>m.type==='frame').length,count,'per-participant rate limit');
+ await room.webSocketMessage(personB,JSON.stringify({type:'frame',data:'javascript:alert(1)'}));
+ assert.ok(!host.messages.some(m=>m.type==='frame'&&m.id===b.id),'only image data URLs are relayed');
+ const roster=host.messages.filter(m=>m.type==='roster').at(-1);
+ assert.equal(roster.participants.find(p=>p.id===a.id).sharing,true);
+ await room.webSocketMessage(host,JSON.stringify({type:'focus',id:a.id}));
+ assert.equal(ctx.map.get('selected'),a.id);assert.equal(personA.messages.at(-1).type,'focus');
+ await room.webSocketMessage(host,JSON.stringify({type:'focus',id:b.id}));
+ assert.equal(personA.messages.at(-1).type,'unfocus','switching focus tells the previous participant');
+ await room.webSocketMessage(host,JSON.stringify({type:'stop',id:b.id}));
+ assert.equal(personB.messages.at(-1).type,'stop','instructor can stop a participant share');
  await room.webSocketMessage(host,JSON.stringify({type:'end'}));
  assert.equal(ctx.map.get('config').ended,true);
  assert.equal(host.messages.at(-1).type,'room_closed');
  assert.equal(personA.messages.at(-1).type,'room_closed');
- // A disconnected instructor must revoke screen selection even if the share is active.
+ // A disconnected instructor stops every participant capture.
  const ctx2=createContext(),room2=new EducationScreenRoom(ctx2,{});
  await room2.fetch(post('/init',{id:'d'.repeat(32),hostKey:key('a'),joinKey:key('b'),createdAt:Date.now()}));
- const joined=await (await room2.fetch(post('/join',{joinKey:key('b'),name:'수강생C'}))).json();
- const h2=fake('host','host'),c2=fake('student',joined.id,'수강생C');
+ const joined=await (await room2.fetch(post('/join',{joinKey:key('b'),name:'참여자C'}))).json();
+ const h2=fake('host','host'),c2=fake('student',joined.id,'참여자C');
  ctx2.sockets.push(h2,c2);
- await room2.webSocketMessage(h2,JSON.stringify({type:'select',id:joined.id}));
+ await room2.webSocketMessage(h2,JSON.stringify({type:'focus',id:joined.id}));
  await room2.webSocketClose(h2);
  assert.equal(ctx2.map.get('selected'),undefined);
- assert.equal(c2.messages.at(-1).type,'stop','host disappearance must stop learner capture');
+ assert.equal(c2.messages.at(-1).type,'stop','host disappearance must stop participant capture');
 });
 test('Education QR sharing pages and gateway respect consent and no-unapproved-host authority',async()=>{
  const [worker,api,html,client,css,prod,stage,studio]=await Promise.all([
@@ -104,13 +109,13 @@ test('Education QR sharing pages and gateway respect consent and no-unapproved-h
  assert.match(api,/instructor_login_required/);
  assert.match(api,/EDU_SCREEN_SHARE_ENABLED!=='true'/);
  assert.match(api,/new Request\('https:\/\/room\/init'/);
- assert.match(html,/강사가 수강생을 선택해도 화면은 자동 전송되지 않습니다/);
+ assert.match(html,/강사가 참여자를 선택해도 화면은 자동 전송되지 않습니다/);assert.match(html,/id="grid"/);
  assert.match(html,/id="roster"/);assert.match(html,/id="qr"/);
  assert.match(client,/getDisplayMedia/);
  assert.match(client,/navigator\.mediaDevices\?\.getDisplayMedia/);
  assert.match(client,/toDataURL\('image\/jpeg'/);
- assert.match(client,/iceServers:ice/);
- assert.match(client,/send\(\{type:'select'/);
+ assert.match(client,/type:'frame'/);assert.match(client,/bufferedAmount<600000/,'backpressure on slow networks');
+ assert.match(client,/send\(\{type:'focus'/);
  assert.match(client,/stream\.getTracks\(\)\.forEach\(t=>t\.stop\(\)\)/);
  assert.match(css,/@media\(max-width:390px\)/);
  for(const manifest of [prod,stage]){
@@ -119,7 +124,7 @@ test('Education QR sharing pages and gateway respect consent and no-unapproved-h
  }
  assert.match(prod,/EDU_SCREEN_SHARE_ENABLED = "true"/);
  assert.match(stage,/EDU_SCREEN_SHARE_ENABLED = "false"/);
- assert.match(studio,/screen-share\/">수강생 QR 화면 공유/);
+ assert.match(studio,/screen-share\/">참여자 QR 화면 공유/);
  assert.doesNotMatch(client,/MediaRecorder|startRecording|captureStream|autoStartScreenShare|eval\(/);
 });
 
