@@ -596,6 +596,10 @@ async function shortCourseProbe(browser){
         if(!body.includes('2시간')&&!body.includes('120분')&&!body.includes('집중 실습'))
           fail(label+' '+surface+' did not load the 120-minute course');
         if(surface==='studio'){
+          // Course cards live in the 「교육과정 관리」 view (not the default dashboard); on phones that
+          // nav item sits inside the collapsible menu, so open the view the same way its button does.
+          await page.evaluate(()=>document.querySelector('[data-view="courses"]')?.click());
+          await page.locator('.course-card').first().waitFor({timeout:10000}).catch(()=>{});
           const cards=await page.locator('.course-card').count();
           if(cards!==3)fail(label+' studio should list 3 courses while preserving both originals, got '+cards);
           if(!body.includes('개인 실습 90분'))fail(label+' studio missing 90-minute practice summary');
