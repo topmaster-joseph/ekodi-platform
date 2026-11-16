@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<meta name="ekodi-ui-type" content="USER">
+<title>강의 피드백 · 목포대 FactChat 교육</title>
+<link rel="stylesheet" href="./feedback.css">
+<script type="module" src="./feedback.js"></script>
+</head><body>
+<main class="fb">
+<header><p class="eyebrow">국립목포대학교 · FactChat 생성형 AI 실무 교육</p><h1>강의 피드백 설문</h1>
+<p class="meta" id="sessionLabel">익명 설문 · 약 1분</p></header>
+<form id="form" novalidate>
+<fieldset><legend>교육 차수</legend><select id="session" required></select></fieldset>
+<fieldset class="scale" data-key="overall"><legend>1. 교육에 전반적으로 만족하셨나요?</legend></fieldset>
+<fieldset class="scale" data-key="practice"><legend>2. 실습이 내 업무에 도움이 되었나요?</legend></fieldset>
+<fieldset class="scale" data-key="clarity"><legend>3. 강사 설명과 시연이 이해하기 쉬웠나요?</legend></fieldset>
+<fieldset class="scale" data-key="apply"><legend>4. 내일부터 업무에 FactChat을 쓸 생각이 있나요?</legend></fieldset>
+<fieldset><legend>5. 내 업무 분야 <small>(선택)</small></legend><select id="field"><option value="other">선택 안 함</option>
+<option value="planning">기획·평가</option><option value="academic">학사·교무</option><option value="student">학생지원·취업</option><option value="research">연구·산학협력</option><option value="admin">총무·회계</option><option value="outreach">홍보·국제·입학</option><option value="facility">시설·도서관·전산</option></select></fieldset>
+<fieldset><legend>6. 가장 유용했던 기능 <small>(여러 개 선택)</small></legend><div class="checks">
+<label><input type="checkbox" name="useful" value="hwp"> HWP 편집기</label><label><input type="checkbox" name="useful" value="minutes"> 회의록</label>
+<label><input type="checkbox" name="useful" value="ppt"> 프레젠테이션</label><label><input type="checkbox" name="useful" value="chat"> 채팅(프롬프트)</label>
+<label><input type="checkbox" name="useful" value="research"> Deep Research</label><label><input type="checkbox" name="useful" value="screen"> 실습 화면 공유·피드백</label></div></fieldset>
+<fieldset><legend>7. 좋았던 점 <small>(선택)</small></legend><textarea id="good" maxlength="300" rows="3"></textarea></fieldset>
+<fieldset><legend>8. 아쉬웠던 점·개선할 점 <small>(선택)</small></legend><textarea id="improve" maxlength="500" rows="3"></textarea></fieldset>
+<fieldset><legend>9. 더 배우고 싶은 주제 <small>(선택)</small></legend><textarea id="next" maxlength="300" rows="2"></textarea></fieldset>
+<p class="hint">이름·연락처는 받지 않습니다. 개인정보는 적지 말아 주세요. 같은 기기로 다시 제출하면 마지막 응답으로 바뀝니다.</p>
+<button type="submit" class="btn" id="submit">제출하기</button>
+<p class="status" id="status" role="status"></p>
+</form>
+<section id="done" class="done" hidden><h2>응답이 정상 접수되었습니다.</h2><p>소중한 의견 감사합니다. 다음 교육에 반영하겠습니다.</p>
+<p class="meta">기타 문의: 담당 강사 정찬균 · joseph@ekodi.kr</p><button type="button" class="btn ghost" id="edit">응답 수정하기</button></section>
+<footer class="meta">기타 문의: 담당 강사 정찬균 · joseph@ekodi.kr</footer>
+</main></body></html>

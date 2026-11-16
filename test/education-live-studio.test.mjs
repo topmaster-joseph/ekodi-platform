@@ -374,7 +374,7 @@ test('presenter AI demo: institutional FactChat through the EKODI server route o
   const src=await readFile(new URL('../education/study/live/engine/factchat-demo.js',import.meta.url),'utf8');
   assert.doesNotMatch(src,/FACTCHAT_MOKPO_API_KEY|mokpo\.factchat\.bot\/api|sk-[A-Za-z0-9]/,'no key or direct provider call in the browser');
   const auth=await readFile(new URL('../auth-site/admin-auth.js',import.meta.url),'utf8');
-  assert.match(auth,/u\.pathname==='\/edu\/study\/live\/'\|\|u\.pathname==='\/edu\/study\/live\/present\/'\|\|u\.pathname==='\/edu\/study\/live\/unlock\/'\|\|u\.pathname==='\/edu\/study\/live\/docs\/'\|\|u\.pathname==='\/edu\/study\/live\/screen-share\/'\|\|u\.pathname==='\/edu\/study\/live\/guide\/'\|\|u\.pathname==='\/edu\/study\/live\/guide\/stats\.html'\)\)return u\.href;/,'exact instructor paths only (studio, presenter, unlock, docs, screen-share room, lecture guide)');
+  assert.match(auth,/u\.pathname==='\/edu\/study\/live\/'\|\|u\.pathname==='\/edu\/study\/live\/present\/'\|\|u\.pathname==='\/edu\/study\/live\/unlock\/'\|\|u\.pathname==='\/edu\/study\/live\/docs\/'\|\|u\.pathname==='\/edu\/study\/live\/screen-share\/'\|\|u\.pathname==='\/edu\/study\/live\/guide\/'\|\|u\.pathname==='\/edu\/study\/live\/guide\/stats\.html'\|\|u\.pathname==='\/edu\/study\/live\/guide\/feedback\.html'\)\)return u\.href;/,'exact instructor paths only (studio, presenter, unlock, docs, screen-share room, lecture guide)');
   assert.doesNotMatch(auth,/pathname\.startsWith\('\/edu/,'no /edu prefix wildcard');
 });
 
