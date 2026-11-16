@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {EducationScreenRoom,ROOM_TTL_MS,MAX_LEARNERS} from '../education-screen-room.js';
+import {EducationScreenRoom,ROOM_TTL_MS,MAX_LEARNERS,MAX_ACTIVE_SCREENS} from '../education-screen-room.js';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const key=x=>x.repeat(64);
 function createContext(){
@@ -68,7 +68,8 @@ test('only host selects a learner and only the selected learner signals media or
  await room.webSocketMessage(personA,JSON.stringify({type:'rtc',kind:'offer',payload:{type:'offer',sdp:'v=0'}}));
  assert.equal(host.messages.at(-1).kind,'offer');
  await room.webSocketMessage(host,JSON.stringify({type:'select',id:b.id}));
- assert.equal(personA.messages.at(-1).type,'stop','switch stops prior stream');
+ assert.ok((ctx.map.get('active')||[]).includes(a.id),'original stream remains');
+ assert.ok((ctx.map.get('active')||[]).includes(b.id),'second stream is active');
  await room.webSocketMessage(host,JSON.stringify({type:'end'}));
  assert.equal(ctx.map.get('config').ended,true);
  assert.equal(host.messages.at(-1).type,'room_closed');
@@ -101,7 +102,8 @@ test('Education QR sharing pages and gateway respect consent and no-unapproved-h
  assert.ok(!api.includes("'&k='"),'do not leak join invitation into HTTP request URL');
  assert.match(client,/location\.hash\.slice\(1\)/,'browser consumes private QR fragment');
  assert.match(client,/history\.replaceState/,'private QR fragment removed after reading');
- assert.match(api,/instructor_login_required/);
+ assert.match(api,/room_rate_limited/);
+ assert.match(api,/guest-limit/);
  assert.match(api,/EDU_SCREEN_SHARE_ENABLED!=='true'/);
  assert.match(api,/new Request\('https:\/\/room\/init'/);
  assert.match(html,/강사가 수강생을 선택해도 화면은 자동 전송되지 않습니다/);
@@ -110,7 +112,10 @@ test('Education QR sharing pages and gateway respect consent and no-unapproved-h
  assert.match(client,/navigator\.mediaDevices\?\.getDisplayMedia/);
  assert.match(client,/toDataURL\('image\/jpeg'/);
  assert.match(client,/iceServers:ice/);
- assert.match(client,/send\(\{type:'select'/);
+ assert.match(client,/type:'select'/);
+ assert.match(client,/const peers=new Map/);
+ assert.match(client,/screenGrid/);
+ assert.match(html,/수강생 PC 입장 링크/);
  assert.match(client,/stream\.getTracks\(\)\.forEach\(t=>t\.stop\(\)\)/);
  assert.match(css,/@media\(max-width:390px\)/);
  for(const manifest of [prod,stage]){
@@ -162,4 +167,28 @@ test('studio app bar offers the sign-in chip a place inside the collapsible cont
   assert.match(html,/<div class="top-controls" id="topControls" data-ekodi-header-actions>/);
   const auth=await readFile(new URL('../shell/unified-user-auth.js',import.meta.url),'utf8');
   assert.match(auth,/header\.querySelector\('\[data-ekodi-header-actions\]/);
+});
+
+test('guest room limit and nine concurrent consent slots enforce owner-only control',async()=>{
+ const ctx=createContext(),room=new EducationScreenRoom(ctx,{});
+ for(let i=0;i<5;i++)assert.equal((await room.fetch(post('/guest-limit',{}))).status,200);
+ assert.equal((await room.fetch(post('/guest-limit',{}))).status,429);
+ assert.equal(MAX_ACTIVE_SCREENS,9);
+ await room.fetch(post('/init',{id:'c'.repeat(32),hostKey:key('a'),joinKey:key('b'),createdAt:Date.now()}));
+ const host=fake('host','host');ctx.sockets.push(host);
+ const students=[];
+ for(let i=0;i<10;i++){
+  const joined=await (await room.fetch(post('/join',{joinKey:key('b'),name:'수강생'+i}))).json();
+  const socket=fake('student',joined.id,'수강생'+i);ctx.sockets.push(socket);students.push(socket);
+ }
+ for(const socket of students.slice(0,9))await room.webSocketMessage(host,JSON.stringify({type:'select',id:socket.deserializeAttachment().id}));
+ assert.equal((ctx.map.get('active')||[]).length,9);
+ await room.webSocketMessage(host,JSON.stringify({type:'select',id:students[9].deserializeAttachment().id}));
+ assert.equal(host.messages.at(-1).code,'screen_limit');
+ const tenth=students[9].deserializeAttachment().id;
+ await room.webSocketMessage(students[9],JSON.stringify({type:'rtc',kind:'offer',payload:{type:'offer',sdp:'v=0'}}));
+ assert.ok(!host.messages.some(x=>x.type==='rtc'&&x.from===tenth));
+ await room.webSocketMessage(host,JSON.stringify({type:'stop_student',id:students[0].deserializeAttachment().id}));
+ await room.webSocketMessage(host,JSON.stringify({type:'select',id:tenth}));
+ assert.equal((ctx.map.get('active')||[]).length,9);
 });
