@@ -43,7 +43,7 @@ test('all six instructor cohorts include a meeting demo with a downloadable fict
   assert.ok(meetings.length>=6);
   for(const d of meetings){
     assert.match(d.sample,/^\[가상 대본\]/);
-    assert.match(d.sample,/팀장:|과장:|기업 측:/);
+    assert.match(d.sample,/팀장:|과장:|기업 측:|주무관A:|주무관B:/);
   }
   for(const n of [1,2,3,4,5,6]){
     const demos=(SESSION_PICKS[n]?.p2||[]).map(id=>DEMOS.find(d=>d.id===id));
