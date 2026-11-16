@@ -1,6 +1,6 @@
-// EKODI Education: consent-only, single-student screen relay coordinator.
-// The Durable Object relays signaling/one-time still images, NEVER video frames.
-// One instructor, at most 30 joined learners and ONE selected WebRTC sender.
+// EKODI Education: consent-only participant screen relay coordinator.
+// Participants who press "share" send low-rate still JPEG frames; the Durable Object relays them in
+// memory to the instructor only (never stored, never recorded). One instructor, at most 30 participants.
 // Short-lived capability tokens are hashed at rest; all state expires after 2 hours.
 const enc=new TextEncoder();
 const reply=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
@@ -22,7 +22,7 @@ export class EducationScreenRoom {
   const seen=new Set(),list=[];
   for(const ws of this.sockets()){
    const a=this.role(ws);if(a.role!=='student'||seen.has(a.id))continue;
-   seen.add(a.id);list.push({id:a.id,name:a.name,connected:true});
+   seen.add(a.id);list.push({id:a.id,name:a.name,connected:true,sharing:!!this.sharing?.get(a.id)});
   }
   const host=this.host(),selected=await this.ctx.storage.get('selected');
   if(host)this.send(host,{type:'roster',participants:list,selected:selected||null,max:MAX_LEARNERS});
@@ -76,55 +76,69 @@ export class EducationScreenRoom {
   }
   return reply({ok:false,code:'not_found'},404);
  }
+ // 2026-11-16 redesign: WebRTC (STUN-only) failed across school Wi-Fi/LTE, so participants now send
+ // low-rate still JPEG frames of the screen they chose to share. Frames are relayed in memory to the
+ // instructor only, never stored or recorded. Sharing still starts only by the participant's own click.
  async webSocketMessage(ws,data){
   if(typeof data!=='string'||data.length>370000){ws.close(1009,'too_large');return}
   let msg;try{msg=JSON.parse(data)}catch{return}
   const from=this.role(ws),conf=await this.config(),now=Date.now();
   if(!conf||conf.ended||now>=conf.expiresAt){this.send(ws,{type:'room_closed'});ws.close(4001,'expired');return}
+  this.sharing??=new Map();this.last??=new Map();
   if(from.role==='host'){
-   if(msg.type==='select'){
+   if(msg.type==='focus'||msg.type==='select'){
     const id=String(msg.id||'');
     if(!validId(id)||!this.student(id))return this.send(ws,{type:'error',code:'participant_offline'});
     const old=await this.ctx.storage.get('selected');
-    if(old&&old!==id){const previous=this.student(old);if(previous)this.send(previous,{type:'stop',reason:'switched'});}
+    if(old&&old!==id){const previous=this.student(old);if(previous)this.send(previous,{type:'unfocus'});}
     await this.ctx.storage.put('selected',id);
-    this.send(this.student(id),{type:'selected'});
-    this.send(ws,{type:'selected',id});
+    this.send(this.student(id),{type:'focus'});
+    this.send(ws,{type:'focused',id});
     return this.roster();
    }
+   if(msg.type==='unfocus'){
+    const old=await this.ctx.storage.get('selected');if(old&&this.student(old))this.send(this.student(old),{type:'unfocus'});
+    await this.ctx.storage.delete('selected');this.send(ws,{type:'unfocused'});return this.roster();
+   }
    if(msg.type==='stop'){
-    const old=await this.ctx.storage.get('selected');if(old&&this.student(old))this.send(this.student(old),{type:'stop',reason:'instructor'});
-    await this.ctx.storage.delete('selected');this.send(ws,{type:'stopped'});return this.roster();
+    const id=validId(msg.id)?msg.id:await this.ctx.storage.get('selected');
+    if(id&&this.student(id))this.send(this.student(id),{type:'stop',reason:'instructor'});
+    if(id)this.sharing.delete(id);
+    if(id&&id===await this.ctx.storage.get('selected'))await this.ctx.storage.delete('selected');
+    this.send(ws,{type:'stopped',id:id||null});return this.roster();
    }
    if(msg.type==='end'){
     conf.ended=true;await this.ctx.storage.put('config',conf);
     for(const s of this.sockets()){this.send(s,{type:'room_closed'});s.close(4001,'ended');}
     return;
    }
+   return;
   }
-  const selected=await this.ctx.storage.get('selected');
-  if(!selected)return;
-  const recipient=from.role==='host'?this.student(selected):(from.role==='student'&&from.id===selected?this.host():null);
-  if(!recipient)return;
-  if(msg.type==='rtc'&&['offer','answer','ice'].includes(msg.kind)&&
-    JSON.stringify(msg.payload||{}).length<28000){
-    this.send(recipient,{type:'rtc',kind:msg.kind,payload:msg.payload,from:from.id});return;
+  if(from.role!=='student')return;
+  const host=this.host();
+  if(msg.type==='frame'&&typeof msg.data==='string'&&msg.data.length<350000&&/^data:image\/(?:jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(msg.data)){
+   if(now-(this.last.get(from.id)||0)<500)return; // per-participant rate limit
+   this.last.set(from.id,now);
+   if(!this.sharing.get(from.id)){this.sharing.set(from.id,true);await this.roster();}
+   if(host)this.send(host,{type:'frame',id:from.id,name:from.name,data:msg.data});
+   return;
   }
-  if(from.role==='student'&&from.id===selected&&msg.type==='snapshot'&&
-    typeof msg.data==='string'&&msg.data.length<350000&&/^data:image\/(?:jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(msg.data)){
-    this.send(recipient,{type:'snapshot',data:msg.data,name:from.name});return;
+  if(msg.type==='status'&&['sharing','stopped','unsupported','denied'].includes(msg.status)){
+   if(msg.status==='sharing')this.sharing.set(from.id,true);else this.sharing.delete(from.id);
+   if(host)this.send(host,{type:'status',id:from.id,name:from.name,status:msg.status});
+   return this.roster();
   }
-  if(from.role==='student'&&from.id===selected&&msg.type==='status'&&['sharing','stopped','unsupported','denied','connecting'].includes(msg.status))
-    this.send(recipient,{type:'status',id:from.id,status:msg.status});
  }
  async webSocketClose(ws){
   const who=this.role(ws),selected=await this.ctx.storage.get('selected');
+  this.sharing??=new Map();
   if(who.role==='host'){
-   if(selected){const student=this.student(selected);if(student)this.send(student,{type:'stop',reason:'instructor_disconnected'});}
-   await this.ctx.storage.delete('selected');
-  }else if(who.role==='student'&&selected===who.id){
-   await this.ctx.storage.delete('selected');const host=this.host();
-   if(host)this.send(host,{type:'stopped'});
+   for(const s of this.sockets()){if(this.role(s).role==='student')this.send(s,{type:'stop',reason:'instructor_disconnected'});}
+   this.sharing.clear();await this.ctx.storage.delete('selected');
+  }else if(who.role==='student'){
+   this.sharing.delete(who.id);
+   if(selected===who.id)await this.ctx.storage.delete('selected');
+   const host=this.host();if(host)this.send(host,{type:'left',id:who.id});
   }
   await this.roster();
  }
