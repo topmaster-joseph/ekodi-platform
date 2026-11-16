@@ -10,6 +10,7 @@ const validId=s=>/^[a-f0-9]{32}$/.test(String(s||''));
 const cleanName=s=>String(s||'').replace(/[<>&"']/g,'').trim().slice(0,36);
 export const ROOM_TTL_MS=4*60*60*1000;
 export const MAX_LEARNERS=30;
+export const MAX_ACTIVE_SCREENS=9;
 export class EducationScreenRoom {
  constructor(ctx,env){this.ctx=ctx;this.env=env;}
  sockets(){return this.ctx.getWebSockets();}
@@ -24,11 +25,19 @@ export class EducationScreenRoom {
    const a=this.role(ws);if(a.role!=='student'||seen.has(a.id))continue;
    seen.add(a.id);list.push({id:a.id,name:a.name,connected:true});
   }
-  const host=this.host(),selected=await this.ctx.storage.get('selected');
-  if(host)this.send(host,{type:'roster',participants:list,selected:selected||null,max:MAX_LEARNERS});
+  const host=this.host(),selected=await this.ctx.storage.get('selected'),active=await this.ctx.storage.get('active')||[];
+  if(host)this.send(host,{type:'roster',participants:list,selected:selected||null,active,max:MAX_LEARNERS,maxActive:MAX_ACTIVE_SCREENS});
  }
  async fetch(request){
   const url=new URL(request.url),config=await this.config(),now=Date.now();
+  if(url.pathname==='/guest-limit'&&request.method==='POST'){
+   const current=await this.ctx.storage.get('guest-rate')||{start:now,count:0};
+   if(now-current.start>=3600000){current.start=now;current.count=0;}
+   if(current.count>=5)return reply({ok:false,code:'room_rate_limited'},429);
+   current.count++;await this.ctx.storage.put('guest-rate',current);
+   await this.ctx.storage.setAlarm(current.start+3600000);
+   return reply({ok:true,remaining:5-current.count});
+  }
   if(url.pathname==='/init'&&request.method==='POST'){
    if(config)return reply({ok:false,code:'room_exists'},409);
    let body;try{body=await request.json()}catch{return reply({ok:false,code:'bad_json'},400)}
@@ -85,46 +94,58 @@ export class EducationScreenRoom {
    if(msg.type==='select'){
     const id=String(msg.id||'');
     if(!validId(id)||!this.student(id))return this.send(ws,{type:'error',code:'participant_offline'});
-    const old=await this.ctx.storage.get('selected');
-    if(old&&old!==id){const previous=this.student(old);if(previous)this.send(previous,{type:'stop',reason:'switched'});}
-    await this.ctx.storage.put('selected',id);
-    this.send(this.student(id),{type:'selected'});
-    this.send(ws,{type:'selected',id});
+    const active=await this.ctx.storage.get('active')||[];
+    if(!active.includes(id)&&active.length>=MAX_ACTIVE_SCREENS)return this.send(ws,{type:'error',code:'screen_limit'});
+    if(!active.includes(id))active.push(id);
+    await this.ctx.storage.put('active',active);await this.ctx.storage.put('selected',id);
+    this.send(this.student(id),{type:'selected'});this.send(ws,{type:'selected',id});
     return this.roster();
    }
+   if(msg.type==='stop_student'){
+    const id=String(msg.id||''),active=await this.ctx.storage.get('active')||[];
+    if(!active.includes(id))return;
+    await this.ctx.storage.put('active',active.filter(x=>x!==id));
+    if((await this.ctx.storage.get('selected'))===id)await this.ctx.storage.delete('selected');
+    const person=this.student(id);if(person)this.send(person,{type:'stop',reason:'instructor'});
+    this.send(ws,{type:'stopped',id});return this.roster();
+   }
    if(msg.type==='stop'){
-    const old=await this.ctx.storage.get('selected');if(old&&this.student(old))this.send(this.student(old),{type:'stop',reason:'instructor'});
-    await this.ctx.storage.delete('selected');this.send(ws,{type:'stopped'});return this.roster();
+    const active=await this.ctx.storage.get('active')||[];
+    for(const id of active){const person=this.student(id);if(person)this.send(person,{type:'stop',reason:'instructor'});}
+    await this.ctx.storage.delete('active');await this.ctx.storage.delete('selected');
+    this.send(ws,{type:'stopped'});return this.roster();
    }
    if(msg.type==='end'){
     conf.ended=true;await this.ctx.storage.put('config',conf);
+    await this.ctx.storage.delete('active');
     for(const s of this.sockets()){this.send(s,{type:'room_closed'});s.close(4001,'ended');}
     return;
    }
   }
-  const selected=await this.ctx.storage.get('selected');
-  if(!selected)return;
-  const recipient=from.role==='host'?this.student(selected):(from.role==='student'&&from.id===selected?this.host():null);
+  const active=await this.ctx.storage.get('active')||[];
+  const studentId=from.role==='student'?from.id:String(msg.to||'');
+  if(!active.includes(studentId))return;
+  const recipient=from.role==='host'?this.student(studentId):this.host();
   if(!recipient)return;
-  if(msg.type==='rtc'&&['offer','answer','ice'].includes(msg.kind)&&
-    JSON.stringify(msg.payload||{}).length<28000){
-    this.send(recipient,{type:'rtc',kind:msg.kind,payload:msg.payload,from:from.id});return;
+  if(msg.type==='rtc'&&['offer','answer','ice'].includes(msg.kind)&&JSON.stringify(msg.payload||{}).length<28000){
+    this.send(recipient,{type:'rtc',kind:msg.kind,payload:msg.payload,from:from.id,to:studentId});return;
   }
-  if(from.role==='student'&&from.id===selected&&msg.type==='snapshot'&&
-    typeof msg.data==='string'&&msg.data.length<350000&&/^data:image\/(?:jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(msg.data)){
-    this.send(recipient,{type:'snapshot',data:msg.data,name:from.name});return;
+  if(from.role==='student'&&msg.type==='snapshot'&&typeof msg.data==='string'&&msg.data.length<350000&&/^data:image\/(?:jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(msg.data)){
+    this.send(recipient,{type:'snapshot',id:studentId,data:msg.data,name:from.name});return;
   }
-  if(from.role==='student'&&from.id===selected&&msg.type==='status'&&['sharing','stopped','unsupported','denied','connecting'].includes(msg.status))
-    this.send(recipient,{type:'status',id:from.id,status:msg.status});
+  if(from.role==='student'&&msg.type==='status'&&['sharing','stopped','unsupported','denied','connecting'].includes(msg.status)){
+    this.send(recipient,{type:'status',id:studentId,status:msg.status});
+  }
  }
  async webSocketClose(ws){
-  const who=this.role(ws),selected=await this.ctx.storage.get('selected');
+  const who=this.role(ws),active=await this.ctx.storage.get('active')||[];
   if(who.role==='host'){
-   if(selected){const student=this.student(selected);if(student)this.send(student,{type:'stop',reason:'instructor_disconnected'});}
-   await this.ctx.storage.delete('selected');
-  }else if(who.role==='student'&&selected===who.id){
-   await this.ctx.storage.delete('selected');const host=this.host();
-   if(host)this.send(host,{type:'stopped'});
+   for(const id of active){const person=this.student(id);if(person)this.send(person,{type:'stop',reason:'instructor_disconnected'});}
+   await this.ctx.storage.delete('selected');await this.ctx.storage.delete('active');
+  }else if(who.role==='student'&&active.includes(who.id)){
+   await this.ctx.storage.put('active',active.filter(x=>x!==who.id));
+   if((await this.ctx.storage.get('selected'))===who.id)await this.ctx.storage.delete('selected');
+   const host=this.host();if(host)this.send(host,{type:'stopped',id:who.id});
   }
   await this.roster();
  }
