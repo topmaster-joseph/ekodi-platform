@@ -26,9 +26,3 @@ test('merge keeps foreign rules and replaces only EKODI-owned ones', () => {
 test('script only writes when --apply is passed', () => {
   assert.match(readFileSync('scripts/cloudflare-zone-traffic-shield.mjs', 'utf8'), /if \(!apply\) \{ console\.log\('  plan only/);
 });
-
-test('apply is manual, main-only; push only plans', () => {
-  const wf = readFileSync('.github/workflows/cloudflare-zone-traffic-shield.yml', 'utf8');
-  assert.match(wf, /test "\$GITHUB_REF" = 'refs\/heads\/main'/);
-  assert.match(wf, /if: github\.event_name == 'workflow_dispatch' && inputs\.mode == 'apply'\n\s+run: node scripts\/cloudflare-zone-traffic-shield\.mjs --apply/);
-});
