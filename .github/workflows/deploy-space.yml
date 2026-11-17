@@ -344,11 +344,11 @@ jobs:
           fi
 
           query_sql() {
-            local sql="$1" out="$2"
+            local sql="$1" out="$2" project="${3:-$SUPABASE_PROJECT_REF}"
             jq -n --arg query "$sql" '{query:$query,read_only:true}' > /tmp/space-schema-query.json
             local code
             code=$(curl -sS -o "$out" -w '%{http_code}' \
-              -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+              -X POST "https://api.supabase.com/v1/projects/$project/database/query" \
               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
               -H 'Content-Type: application/json' \
               --data-binary @/tmp/space-schema-query.json)
@@ -356,12 +356,12 @@ jobs:
           }
 
           apply_migration() {
-            local migration="$1"
+            local migration="$1" project="${2:-$SUPABASE_PROJECT_REF}"
             echo "Applying missing Space schema dependency: $migration"
             jq -Rs '{query:.,read_only:false}' "$migration" > /tmp/space-schema-migration.json
             local code
             code=$(curl -sS -o /tmp/space-schema-migration-result.json -w '%{http_code}' \
-              -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+              -X POST "https://api.supabase.com/v1/projects/$project/database/query" \
               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
               -H 'Content-Type: application/json' \
               --data-binary @/tmp/space-schema-migration.json)
@@ -374,6 +374,8 @@ jobs:
             to_regprocedure('public.store_public_storefront(text)') is not null as storefront_public,
             to_regprocedure('public.store_user_site_public_profile(text)') is not null as user_site_profile,
             to_regprocedure('public.store_user_site_public_snapshot(text)') is not null as user_site_snapshot,
+            to_regprocedure('public.bbqcg_qr_public_catalog(text)') is not null as bbq_qr_public,
+            to_regprocedure('public.bbqcg_qr_menu_owner_submit(text,text,text,text,integer,text,boolean)') is not null and to_regclass('public.bbqcg_qr_menu_approvals') is not null as bbq_qr_owner,
             exists(select 1 from public.tenants where slug='mokpo-mission' and settings->>'organization_engine'='v1') and exists(select 1 from public.tenants where slug='mokpo-presbytery' and settings->>'organization_engine'='v1') as mokpo_organizations,
             to_regprocedure('public.organization_budget_command(text,text,jsonb)') is not null as organization_budget,
             to_regclass('public.mission_activity_page_edits') is not null as mission_editor_table,
@@ -386,6 +388,20 @@ jobs:
 
           query_sql "$proof_sql" /tmp/space-schema-before.json
 
+          # New BBQ QR menu schema: prove DEV first, then allow PROD release.
+          # Only this migration is applied, never a blanket production db push.
+          test -f "$BBQ_QR_MENU_MIGRATION"
+          query_sql "$proof_sql" /tmp/space-qr-dev-before.json "$BBQ_DEV_PROJECT"
+          if ! grep -Fq '"bbq_qr_public":true' /tmp/space-qr-dev-before.json || ! grep -Fq '"bbq_qr_owner":true' /tmp/space-qr-dev-before.json; then
+            apply_migration "$BBQ_QR_MENU_MIGRATION" "$BBQ_DEV_PROJECT"
+          fi
+          query_sql "$proof_sql" /tmp/space-qr-dev-after.json "$BBQ_DEV_PROJECT"
+          grep -Fq '"bbq_qr_public":true' /tmp/space-qr-dev-after.json
+          grep -Fq '"bbq_qr_owner":true' /tmp/space-qr-dev-after.json
+
+          if ! grep -Fq '"bbq_qr_public":true' /tmp/space-schema-before.json || ! grep -Fq '"bbq_qr_owner":true' /tmp/space-schema-before.json; then
+            apply_migration "$BBQ_QR_MENU_MIGRATION"
+          fi
           if ! grep -Fq '"store_route":true' /tmp/space-schema-before.json; then
             apply_migration "$STORE_ROUTE_MIGRATION"
           fi
@@ -415,7 +431,7 @@ jobs:
           fi
 
           query_sql "$proof_sql" /tmp/space-schema-after.json
-          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"mokpo_organizations":true' '"organization_budget":true' '"mission_editor_table":true' '"mission_editor_public":true' '"mission_editor_update":true' '"mokpo_roster_viewer":true' '"mokpo_inline_roles":true' '"mokpo_name_login":true' '"mokpo_dept_roster":true'; do
+          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"bbq_qr_public":true' '"bbq_qr_owner":true' '"mokpo_organizations":true' '"organization_budget":true' '"mission_editor_table":true' '"mission_editor_public":true' '"mission_editor_update":true' '"mokpo_roster_viewer":true' '"mokpo_inline_roles":true' '"mokpo_name_login":true' '"mokpo_dept_roster":true'; do
             grep -Fq "$marker" /tmp/space-schema-after.json || { echo "Missing required Space Supabase contract: $marker"; cat /tmp/space-schema-after.json; exit 1; }
           done
 
