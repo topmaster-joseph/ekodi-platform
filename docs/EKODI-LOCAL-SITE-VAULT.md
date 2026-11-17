@@ -45,3 +45,6 @@
 Windows에서 `powershell -NoProfile -File ekodi-site-vault.ps1`를 실행하면 전용 로컬 관리 창이 열린다. **새 사이트 등록 / 저장된 로그인 열기 / 저장 기록 삭제**를 선택할 수 있다. 사이트 주소는 정확한 공개 HTTPS origin으로 정규화되며, 비밀번호 저장 선택은 기본적으로 꺼져 있다. 버튼은 서버 API가 아니라 현재 Windows 사용자의 직접 실행 작업으로 이어져 매번 현장 동의를 받는다.
 
 이 로컬 화면은 EKODI 관리자 웹페이지나 자동 배정 Agent에 의해 원격으로 켜지지 않는다. 패키징/코드서명/실 PC canary가 검증되기 전까지 일반 사용자에게 정식 설치 기능으로 표시하지 않는다.
+
+## Windows 실행 파일 구성
+로컬 관리용 파일은 `tools/ekodi-device-agent/windows/ekodi-site-vault.ps1`과 동일 폴더의 `ekodi-site-vault.cmd`다. 배포가 승인되어 설치된 뒤에는 `ekodi-site-vault.cmd`를 더블클릭하여 사이트 등록·열기·삭제 화면을 띄운다. 런처는 Windows 실행정책을 우회하거나 관리자 권한을 요청하지 않는다. 공식 서명·배포 패키징이 완료되지 않은 현 단계에서는 사용자 PC에 설치되었다고 주장하지 않는다.
