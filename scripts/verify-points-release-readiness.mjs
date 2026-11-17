@@ -17,6 +17,7 @@ export const POINTS_CONTRACT=Object.freeze([
   'recognition_read_rpc','recognition_write_rpc','anon_goals_denied','direct_goals_denied',
   'points_tables_secure',
   'ledger_append_only_enforced','ledger_idempotency_unique',
+  'unverified_active_credit_denied','devotion_self_report_credit_denied',
 ]);
 
 export const SCHEMA_QUERY=String.raw`select
@@ -65,7 +66,23 @@ export const SCHEMA_QUERY=String.raw`select
     where c.conrelid=to_regclass('public.ekodi_point_ledger')
       and c.contype='u'
       and pg_get_constraintdef(c.oid)='UNIQUE (site_id, user_id, event_key)'
-  ) as ledger_idempotency_unique`;
+  ) as ledger_idempotency_unique,
+  -- Release readiness requires live, validated DB protections, not merely
+  -- a matching migration-history row or a same-name weakened constraint.
+  exists(select 1 from pg_constraint c
+    where c.conrelid=to_regclass('public.ekodi_point_rules')
+      and c.conname='ekodi_points_no_unverified_active_credit'
+      and c.contype='c' and c.convalidated
+      and pg_get_expr(c.conbin,c.conrelid)=
+        '((rule_id <> ''active''::text) OR (enabled = false))'
+  ) as unverified_active_credit_denied,
+  exists(select 1 from pg_constraint c
+    where c.conrelid=to_regclass('public.ekodi_point_evidence_adapters')
+      and c.conname='ekodi_points_no_devotion_self_report_credit'
+      and c.contype='c' and c.convalidated
+      and pg_get_expr(c.conbin,c.conrelid)=
+        '((adapter <> ''devotion_self_report''::text) OR (enabled = false))'
+  ) as devotion_self_report_credit_denied`;
 export const MIGRATION_QUERY=String.raw`select version,name
   from supabase_migrations.schema_migrations
   where name like '%_ekodi_points_%'
