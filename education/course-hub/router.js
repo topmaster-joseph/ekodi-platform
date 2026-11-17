@@ -127,6 +127,7 @@ async function staticPage(req,env,path,status=200){
 // Permitted client-facing paths all resolve to a single reader, never to copies of course material.
 export function isEducationHubPath(pathname){
   const p=String(pathname||'');
+  if(/^\/teach\/(?:access|status|logout|instructors|live-state)\/?$/.test(p))return false;
   return /^\/(?:courses(?:\/[a-z0-9-]+)?|fields\/[a-z0-9-]+|audiences\/[a-z0-9-]+|learn(?:\/[a-z0-9-]+)?|teach(?:\/[a-z0-9-]+)?)\/?$/.test(p);
 }
 export async function courseHubRouter(req,env,{url=new URL(req.url)}={}){
