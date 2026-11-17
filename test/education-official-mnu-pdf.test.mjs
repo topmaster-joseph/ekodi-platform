@@ -47,7 +47,7 @@ test('both learner and instructor material UIs link same first-party PDF with no
   ]);
   assert.match(lab,/officialMnuPracticeCard\(esc\)/);
   assert.match(lab,/id==='hwp'/);
-  assert.match(lab,/data-copy-official-mnu/); // imported and handler via computed data property
+  assert.match(lab,/d\.copyOfficialMnu/); // event handler uses dataset camelCase
   assert.match(instructor,/officialMnuPracticeCard\(esc\)/);
   assert.match(instructor,/copyOfficialMnu/);
   assert.doesNotMatch(lab,/upload.*drive\.google\.com/i);
