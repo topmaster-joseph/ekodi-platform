@@ -98,3 +98,10 @@ test('native manager UI uses only local Windows actions, never a remote browser 
   assert.match(script,/Get-EkodiSite \$siteInput\.Text/);
   assert.doesNotMatch(script,/https:\/\/ekodi\.kr\/api\/|Clipboard|Get-Clipboard/);
 });
+
+test('local launcher never bypasses PowerShell execution policy or starts as SYSTEM',()=>{
+  const launcher=read('tools/ekodi-device-agent/windows/ekodi-site-vault.cmd');
+  assert.match(launcher,/powershell\.exe -NoProfile -File/);
+  assert.match(launcher,/ekodi-site-vault\.ps1/);
+  assert.doesNotMatch(launcher,/ExecutionPolicy\s+Bypass|RunAs|SCHTASKS|/i);
+});
