@@ -31,3 +31,26 @@ test('Central login remains separately scoped to exact auth /edu instructor entr
  assert.match(auth,/location\.replace\(base\+SLASH\+'teach'\+SLASH\)/);
  assert.doesNotMatch(auth,/base\+'\/edu\/teach\/'/);
 });
+
+test('already-prefixed course catalog URLs are not prefixed twice in learner/teacher resource links',async()=>{
+ const source=await read('education/course-hub/hub.js');
+ const functionSource=source.match(/function safeLink\(value\)\{[\s\S]*?\n\}/)?.[0];
+ assert.ok(functionSource,'shared safeLink renderer must be present');
+ const check=base=>{
+  const context={SLASH:'/',base,route:path=>base+path};
+  return vm.runInNewContext(functionSource+'\n({safeLink})',context).safeLink;
+ };
+ const canonical=check('/edu');
+ const upstream='/study/live/?c=mnu-factchat-2026';
+ const alreadyMounted='/edu/study/live/?c=mnu-factchat-2026';
+ assert.equal(canonical(upstream),alreadyMounted);
+ assert.equal(canonical(alreadyMounted),alreadyMounted);
+ assert.equal(canonical('/edu/pizza-experience/'),'/edu/pizza-experience/');
+ assert.equal(canonical('/edu/'),'/edu/');
+ assert.equal(canonical('//other.example/evil'),'');
+ assert.equal(canonical('https://evil.example/attack'),'');
+ const sourceAsSeenByBrowser=prefixRootLiterals(JSON.stringify({studyUrl:upstream,teacherTool:upstream}),'/edu');
+ assert.equal(canonical(JSON.parse(sourceAsSeenByBrowser).studyUrl),alreadyMounted);
+ assert.equal(canonical(JSON.parse(sourceAsSeenByBrowser).teacherTool),alreadyMounted);
+ assert.equal(check('')(upstream),upstream,'staging / unmounted origin remains relative to its root');
+});
