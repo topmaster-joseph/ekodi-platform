@@ -19,7 +19,10 @@ test('ADMIN-PANEL-TABS-001: right workspace panels switch blocks by tabs without
 });
 
 test('Device Agent scheduled task launches through a headless console so no window flashes', () => {
-  assert.match(agent, /\$AgentVersion = '2\.6\.6'/);
+  const versionMatch = agent.match(/\$AgentVersion = '(\d+)\.(\d+)\.(\d+)'/);
+  assert.ok(versionMatch, 'EKODI Agent must declare its semantic version');
+  const versionCode = Number(versionMatch[1])*10000 + Number(versionMatch[2])*100 + Number(versionMatch[3]);
+  assert.ok(versionCode >= 20607, 'Agent must be 2.6.7+ for Korail local sign-in capability');
   assert.match(agent, /function Get-AgentHiddenLaunchSpec/);
   assert.match(agent, /argument = "--headless powershell\.exe \$agentArguments"/);
   assert.match(agent, /Build -ge 17763/);
