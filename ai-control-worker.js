@@ -411,7 +411,7 @@ async function handleCommonsChat(request,env,url){
     if(!providers.length)return json({error:input.mode==='gpt'||input.mode==='claude'?'paid_provider_not_enabled':'provider_unavailable'},503);
     const tier=input.mode==='ollama'?'local':(input.mode==='gpt'||input.mode==='claude'?'paid':'free');
     const usage=await reserveCommonsChatUsage(env,auth.user.id,tier);if(!usage.ok)return json({error:usage.error},usage.status);
-    const prompt=buildCommonsChatPrompt(input.messages);
+    const prompt=buildCommonsChatPrompt(input.messages,{task:input.task});
     if(input.mode==='ollama'){
       const stamp=now(),id=crypto.randomUUID();
       const task={id,title:'EKODI Commons Chat',prompt,requestedProviders:['node:ollama-local'],needsCodeBranch:false,branch:'',
