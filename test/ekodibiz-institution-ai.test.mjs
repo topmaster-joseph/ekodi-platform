@@ -167,3 +167,29 @@ test('tampered audit entries fail closed instead of silently exporting', async (
   assert.equal(read.status, 503);
   assert.equal((await read.json()).code, 'AUDIT_INTEGRITY_FAILURE');
 });
+
+test('portable conversation persists with unique message ids across AI model switches', async () => {
+  const { env, storage } = setup();
+  await call(env, draft());
+  const id = { tenantId: 'campus1', operationId: 'draft0001' };
+  const message = { ...id, messageId: 'message00001', expectedVersion: 1, sender: 'user', text: '이전 AI 대화를 이어가 주세요' };
+  const first = await call(env, message, 'submit', 'campus1', 'message');
+  assert.equal(first.status, 201);
+  assert.equal((await first.json()).job.messageCount, 1);
+  assert.equal((await call(env, message, 'submit', 'campus1', 'message')).status, 200);
+  assert.equal((await call(env, { ...message, text: '교체 공격' }, 'submit', 'campus1', 'message')).status, 409);
+  assert.equal((await call(env, { ...message, messageId: 'message00002', expectedVersion: 1 }, 'submit', 'campus1', 'message')).status, 409);
+  const assistant = { ...message, messageId: 'message00002', expectedVersion: 2, sender: 'assistant', text: '맥락을 보존한 초안입니다.' };
+  assert.equal((await call(env, assistant, 'submit', 'campus1', 'message')).status, 201);
+  const contents = JSON.stringify([...storage.values.values()]);
+  assert.equal(contents.includes('이전 AI 대화를'), false);
+  assert.equal(contents.includes('맥락을 보존한'), false);
+  env.INSTITUTION_AI_ACTIVE_KEY_VERSION = 'v2';
+  const result = await (await call(env, id, 'read', 'campus1', 'export')).json();
+  assert.equal(result.messages.length, 2);
+  assert.equal(result.messages[0].sender, 'user');
+  assert.equal(result.messages[1].text, '맥락을 보존한 초안입니다.');
+  assert.equal(result.job.messageCount, 2);
+  assert.equal(result.audit.length, 3);
+  assert.equal((await call(env, id, 'read', 'campus2', 'export')).status, 403);
+});
