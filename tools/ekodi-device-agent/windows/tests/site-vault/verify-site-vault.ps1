@@ -1,5 +1,8 @@
 # EKODI-LOCAL-SITE-VAULT-001 synthetic-only Windows CurrentUser DPAPI smoke test.
 $ErrorActionPreference='Stop'
+# The harness extracts function definitions, so load the same trusted .NET assemblies as the script entrypoint.
+Add-Type -AssemblyName System.Security
+Add-Type -AssemblyName System.IO.Compression
 $path=Join-Path $PSScriptRoot '..\..\ekodi-site-vault.ps1'
 $tokens=$null;$errors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile((Resolve-Path $path),[ref]$tokens,[ref]$errors)
