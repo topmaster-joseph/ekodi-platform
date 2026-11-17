@@ -88,3 +88,13 @@ test('receipts never echo account hints, password, cookies, or secret material',
   assert.equal(projection.outcome,'allowed');
   assert.doesNotMatch(JSON.stringify(projection),/user@example.com|secret|session=123|deadbeef|1234|card/i);
 });
+
+test('native manager UI uses only local Windows actions, never a remote browser API',()=>{
+  assert.match(script,/function Show-EkodiLocalSiteManager/);
+  assert.match(script,/Windows\.Forms\.Form/);
+  assert.match(script,/\$Action -eq 'manage'/);
+  assert.match(script,/\$remember\.Checked=\$false/);
+  assert.match(script,/Get-EkodiLocalSiteLabels/);
+  assert.match(script,/Get-EkodiSite \$siteInput\.Text/);
+  assert.doesNotMatch(script,/https:\/\/ekodi\.kr\/api\/|Clipboard|Get-Clipboard/);
+});
