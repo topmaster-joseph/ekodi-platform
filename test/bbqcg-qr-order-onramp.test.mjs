@@ -114,5 +114,5 @@ test('mutations are rejected; HEAD and assets preserve the same chrome and respo
   assert.match(space,/if\(url\.pathname==='\/bbqcg\/order'\)/);
   assert.match(space,/resolved\.source!=='store-user-sites'\|\|resolved\.status==='paused'/);
   assert.match(space,/renderBbqcgOrderPortal\(request,env\)/);
-  assert.match(space,/x-ekodi-order-mode/);
+  assert.match(space,/withHeaders\(env,await renderBbqcgOrderPortal\(request,env\),'bbqcg-qr-order'\)/);
 });
