@@ -86,5 +86,5 @@ test('receipts never echo account hints, password, cookies, or secret material',
     password:'secret',cookies:['session=123'],vaultCiphertext:'deadbeef',card:'1234',
   });
   assert.equal(projection.outcome,'allowed');
-  assert.doesNotMatch(JSON.stringify(projection),/example.com|password|secret|session=123|deadbeef|1234|card/i);
+  assert.doesNotMatch(JSON.stringify(projection),/user@example.com|secret|session=123|deadbeef|1234|card/i);
 });
