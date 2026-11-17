@@ -30,3 +30,10 @@ The GitHub Actions bot generated the official recovery branch after source CI ch
 
 ## Scope and data integrity
 This document is release continuity metadata only. It does not authorize GitHub direct main writes, workflow status forgery, access/financial commitments, browser login without the person's action, or a claim of operational completion.
+
+## Latest-main synchronized-head check renewal (2026-11-18)
+- First authenticated release-continuity commit: `b83d74fda6f7f89766ca5b7bf7217c7f2fefb705` — 14/14 GitHub workflow checks succeeded on that commit.
+- The official EKODI converger then synchronized a newer protected-main revision, creating `a3669001cb12194cedfb5af0ea28e29036012d27` (observed official recovery head before this documentation update).
+- The synchronized head's bot-origin workflows returned `action_required`; do not treat them as valid tests or reuse the prior successful SHA's status.
+- This metadata-only change renews authentic GitHub checks on the **current** official recovery branch after synchronization. The immutable Korail login implementation remains in ancestry; no functional code, credentials, payment authority, or security policy is modified here.
+- Only the EKODI Orchestrator convergence workflow with its actual release receipt, latest-main ancestry, protected checks, guarded deploy, and live verification may settle or merge the release.
