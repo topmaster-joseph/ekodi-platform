@@ -86,7 +86,12 @@ test('receipts never echo account hints, password, cookies, or secret material',
     password:'secret',cookies:['session=123'],vaultCiphertext:'deadbeef',card:'1234',
   });
   assert.equal(projection.outcome,'allowed');
-  assert.doesNotMatch(JSON.stringify(projection),/user@example.com|secret|session=123|deadbeef|1234|card/i);
+  const output=JSON.stringify(projection);
+  for(const forbidden of ['user@example.com','"secret"','session=123','deadbeef','1234','"card"','www.korail.com']){
+    assert.equal(output.includes(forbidden),false,'redacted output contained '+forbidden);
+  }
+  assert.equal(projection.secretExported,false);
+  assert.equal(projection.sessionCookieExported,false);
 });
 
 test('native manager UI uses only local Windows actions, never a remote browser API',()=>{
