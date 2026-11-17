@@ -180,6 +180,22 @@ namespace_id = "3912"
 limit = 3000
 period = 10
 
+# EKODI-EDGE-TRAFFIC-SHIELD-001: per-client isolation. One flooding client is answered
+# 429 alone instead of raising the site-wide tier for every visitor.
+[[ratelimits]]
+name = "TRAFFIC_CLIENT_RATE_LIMITER"
+namespace_id = "3913"
+[ratelimits.simple]
+limit = 600
+period = 10
+
+[[ratelimits]]
+name = "TRAFFIC_NETWORK_RATE_LIMITER"
+namespace_id = "3914"
+[ratelimits.simple]
+limit = 2000
+period = 10
+
 
 [[queues.producers]]
 binding = "EKODI_WRITE_QUEUE"

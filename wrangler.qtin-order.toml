@@ -37,3 +37,33 @@ migrations_dir = "migrations"
 [observability.logs]
 enabled = true
 invocation_logs = true
+
+# EKODI-EDGE-TRAFFIC-SHIELD-001 — same namespaces as the Shared Site, so a client's
+# budget is counted once across ekodi.kr no matter which Worker answers the route.
+[[ratelimits]]
+name = "PLATFORM_PUBLIC_WRITE_RATE_LIMITER"
+namespace_id = "3902"
+[ratelimits.simple]
+limit = 300
+period = 60
+
+[[ratelimits]]
+name = "PLATFORM_SENSITIVE_RATE_LIMITER"
+namespace_id = "3903"
+[ratelimits.simple]
+limit = 120
+period = 60
+
+[[ratelimits]]
+name = "TRAFFIC_CLIENT_RATE_LIMITER"
+namespace_id = "3913"
+[ratelimits.simple]
+limit = 600
+period = 10
+
+[[ratelimits]]
+name = "TRAFFIC_NETWORK_RATE_LIMITER"
+namespace_id = "3914"
+[ratelimits.simple]
+limit = 2000
+period = 10

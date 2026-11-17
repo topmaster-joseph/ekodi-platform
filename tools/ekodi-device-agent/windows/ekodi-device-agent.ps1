@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.6.5'
+$AgentVersion = '2.6.6'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -4179,6 +4179,7 @@ function Complete-Command($Config, [string]$CommandId, [bool]$Success, $Result) 
 function Poll-Command($Config) {
   $response = Invoke-RestMethod -Method Get -Uri "$($Config.apiBase)/api/device-agent/commands/next" -TimeoutSec 15 -Headers (Get-AgentHeaders $Config)
   if (-not $response.command) { return }
+  $script:LastPollHadCommand = $true
   $audit = $null
   try {
     if ([string]$response.command.type -in @('computer.browser.canary','computer.browser.execute','computer.browser.pr.observe')) {
@@ -4391,7 +4392,13 @@ function Run-Agent {
     $config = Load-Config
     [void](Repair-AgentTaskHiddenLaunch)
     $lastHeartbeat = [datetime]::MinValue
+    # EKODI-EDGE-TRAFFIC-SHIELD-001: adaptive idle polling. A fixed 10s poll made the
+    # device agents ~41% of all ekodi.kr requests (2026-11-17 zone analytics). Idle
+    # polls back off 10s -> 20s; a received command drops to a 2s follow-up poll and an
+    # interactive sign-in keeps 5s, so command latency stays short when work exists.
+    $pollSeconds = 10
     while ($true) {
+      $script:LastPollHadCommand = $false
       try {
         if (((Get-Date) - $lastHeartbeat).TotalSeconds -ge 60) { Send-Heartbeat $config; Confirm-EkodiAgentAutoUpdateAfterRestart; $lastHeartbeat = Get-Date }
         Reconcile-DesktopCommanderRecovery
@@ -4405,7 +4412,10 @@ function Run-Agent {
       } catch {
         # 네트워크 중단은 다음 주기에 자동 복구합니다. 임의 명령 실행으로 우회하지 않습니다.
       }
-      Start-Sleep -Seconds 10
+      if ($script:LastPollHadCommand) { $pollSeconds = 2 }
+      elseif (Test-Path -LiteralPath $InteractiveAuthStatePath) { $pollSeconds = 5 }
+      else { $pollSeconds = [Math]::Min(20, [Math]::Max(10, $pollSeconds + 5)) }
+      Start-Sleep -Seconds $pollSeconds
     }
   } finally {
     $restart = [bool]$script:RestartAfterCommand

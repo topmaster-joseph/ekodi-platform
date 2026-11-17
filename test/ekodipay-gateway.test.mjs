@@ -50,6 +50,6 @@ test('books worker binds the gateway; keys never live in its config', () => {
   const qtin = fs.readFileSync(new URL('../wrangler.qtin-order.toml', import.meta.url), 'utf8');
   assert.match(qtin, /^main = "qtin-order-entry.js"$/m);
   const entry = fs.readFileSync(new URL('../qtin-order-entry.js', import.meta.url), 'utf8');
-  assert.match(entry, /export default worker;/);
+  assert.match(entry, /export default withEdgeTrafficShield\(worker,\{service:'qtin-order'\}\);/);
   assert.match(entry, /export class EkodiPayGateway extends WorkerEntrypoint/);
 });

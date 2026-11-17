@@ -4,6 +4,7 @@
 import { createApp, clean, PUBLIC_PATH } from './ministry-news-core.js';
 import { createD1Store } from './ministry-news-d1-store.js';
 import { withFooterTraffic } from './footer-traffic-guarantee.js';
+import { withEdgeTrafficShield } from './edge-traffic-shield.js';
 
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -114,4 +115,5 @@ const ekodiWorkerEntry={
   },
 };
 // FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
-export default withFooterTraffic(ekodiWorkerEntry);
+// EKODI-EDGE-TRAFFIC-SHIELD-001: this apex route bypasses the Shared Site guard, so it carries its own.
+export default withEdgeTrafficShield(withFooterTraffic(ekodiWorkerEntry),{service:'ministry-news'});

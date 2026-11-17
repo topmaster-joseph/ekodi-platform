@@ -1,5 +1,6 @@
 import { injectEkodiShell } from './ekodi-shell-injector.js';
 import { withFooterTraffic } from './footer-traffic-guarantee.js';
+import { withEdgeTrafficShield } from './edge-traffic-shield.js';
 const PREFIX='/local-commerce';
 function pathOf(url){if(url.pathname===PREFIX||url.pathname===`${PREFIX}/`)return '/';if(url.pathname.startsWith(`${PREFIX}/`))return url.pathname.slice(PREFIX.length)||'/';return url.pathname}
 function identity(env={}){const prod=(env.DATA_MODE||'isolated-staging')==='production';const supabaseUrl=prod?String(env.SUPABASE_URL||''):'';const publishableKey=prod?String(env.SUPABASE_PUBLISHABLE_KEY||''):'';const enabled=Boolean(prod&&supabaseUrl&&publishableKey);return {enabled,authUrl:'https://ekodi.kr/auth/?site=local-commerce',supabaseUrl:enabled?supabaseUrl:'',publishableKey:enabled?publishableKey:'',profileApi:enabled?`${supabaseUrl.replace(/\/$/,'')}/functions/v1/profile-api`:'',disabledReason:prod?'중앙 로그인이 아직 연결되지 않았습니다.':'격리 스테이징은 실제 회원 데이터를 사용하지 않습니다.'}}
@@ -10,4 +11,5 @@ function json(data,status=200,env={}){return new Response(JSON.stringify(data),{
 async function asset(request,env,pathname){const u=new URL(request.url);u.pathname=pathname;return env.ASSETS.fetch(new Request(u,{method:'GET',headers:request.headers}))}
 const ekodiWorkerEntry={async fetch(request,env){const url=new URL(request.url),pathname=pathOf(url);if(url.hostname==='ekodi.kr'&&!(url.pathname===PREFIX||url.pathname.startsWith(`${PREFIX}/`)))return fetch(request);if(pathname==='/health')return json({ok:true,service:'ekodi-local-commerce',canonicalPath:PREFIX,dataMode:config(env).dataMode,cashCustody:false,storedValueCash:false,automaticMoneyTransfer:false,paymentAdapter:'disabled',ekodiShell:true,characterPresentation:'external-csp-safe-v1'},200,env);if(pathname==='/config.js')return new Response(`window.EKODI_LOCAL_COMMERCE_CONFIG=${JSON.stringify(config(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...security(env)}});if(pathname==='/admin'||pathname==='/admin/')return Response.redirect(`${url.origin}${PREFIX}/?mode=admin`,307);const response=await asset(request,env,pathname);return injectEkodiShell(withHeaders(response,env),'local-commerce')}};
 // FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
-export default withFooterTraffic(ekodiWorkerEntry);
+// EKODI-EDGE-TRAFFIC-SHIELD-001: this apex route bypasses the Shared Site guard, so it carries its own.
+export default withEdgeTrafficShield(withFooterTraffic(ekodiWorkerEntry),{service:'local-commerce'});

@@ -1,6 +1,7 @@
 import {handleFreshVoiceApi,FRESH_QUEUE_KIND,consumeFreshVoiceQueue,FRESH_REPLY_QUEUE_KIND,consumeFreshVoiceReplyQueue} from './voices-fresh/api.mjs';
 import {renderFreshVoicePage} from './voices-fresh/page.mjs';
 import { withFooterTraffic } from '../../footer-traffic-guarantee.js';
+import { withEdgeTrafficShield } from '../../edge-traffic-shield.js';
 const json=(data,status=200,extra={})=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff',...extra}});
 const text=v=>String(v??'').trim();
 const now=()=>new Date().toISOString();
@@ -581,4 +582,5 @@ async queue(batch,env){
   }
 }};
 // FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
-export default withFooterTraffic(ekodiWorkerEntry);
+// EKODI-EDGE-TRAFFIC-SHIELD-001: this apex route bypasses the Shared Site guard, so it carries its own.
+export default withEdgeTrafficShield(withFooterTraffic(ekodiWorkerEntry),{service:'independent-board'});
