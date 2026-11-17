@@ -34,7 +34,7 @@ const publicJob = record => ({
   tenantId: record.tenantId, operationId: record.operationId, taskType: record.taskType,
   classification: record.classification, status: record.status, version: record.version,
   createdAt: record.createdAt, updatedAt: record.updatedAt, auditHead: record.auditHead,
-  encryptionKeyVersion: record.sealed.version, externalExecutionEnabled: false,
+  encryptionKeyVersion: record.sealed.version, messageCount: (record.messages || []).length, externalExecutionEnabled: false,
 });
 
 async function appendEvent(transaction, record, type, role, evidenceRef = '') {
@@ -66,9 +66,36 @@ async function doSubmit(storage, body) {
       tenantId: body.tenantId, operationId: body.operationId, taskType: body.taskType,
       classification: body.classification, sealed: body.sealed, fingerprint: body.fingerprint,
       status: highImpact ? 'awaiting_approval' : 'queued', version: 1,
-      createdAt: at, updatedAt: at, auditHead: '',
+      createdAt: at, updatedAt: at, auditHead: '', messages: [],
     };
     await appendEvent(tx, record, 'submitted', 'submit');
+    await tx.put(key, record);
+    return json({ ok: true, idempotent: false, job: publicJob(record) }, 201);
+  });
+}
+async function doAppendMessage(storage, body) {
+  return storage.transaction(async tx => {
+    const key = keyFor(body.tenantId, body.operationId);
+    const record = await tx.get(key);
+    if (!record) return json({ code: 'NOT_FOUND' }, 404);
+    const messages = record.messages || [];
+    const prior = messages.find(item => item.messageId === body.messageId);
+    if (prior) return prior.fingerprint === body.fingerprint
+      ? json({ ok: true, idempotent: true, job: publicJob(record) })
+      : json({ code: 'MESSAGE_IDEMPOTENCY_CONFLICT' }, 409);
+    if (['completed', 'blocked', 'needs_reconciliation'].includes(record.status)) {
+      return json({ code: 'THREAD_READ_ONLY' }, 409);
+    }
+    if (!Number.isSafeInteger(body.expectedVersion) || body.expectedVersion !== record.version) {
+      return json({ code: 'VERSION_CONFLICT' }, 409);
+    }
+    if (messages.length >= 200) return json({ code: 'THREAD_CAPACITY_REACHED' }, 409);
+    const at = new Date().toISOString();
+    messages.push({ messageId: body.messageId, sealed: body.sealed, fingerprint: body.fingerprint, at });
+    record.messages = messages;
+    record.version += 1;
+    record.updatedAt = at;
+    await appendEvent(tx, record, 'message_appended', 'submit', body.messageId);
     await tx.put(key, record);
     return json({ ok: true, idempotent: false, job: publicJob(record) }, 201);
   });
@@ -133,6 +160,7 @@ export async function institutionAiStore(request, storage) {
   if (path === DO_PREFIX + 'get') return doGet(storage, body.tenantId, body.operationId);
   if (path === DO_PREFIX + 'submit') return doSubmit(storage, body);
   if (path === DO_PREFIX + 'approve') return doTransition(storage, body, 'approve');
+  if (path === DO_PREFIX + 'message') return doAppendMessage(storage, body);
   if (path === DO_PREFIX + 'checkpoint') return doTransition(storage, body, 'checkpoint');
   return json({ code: 'NOT_FOUND' }, 404);
 }
@@ -158,7 +186,7 @@ export async function institutionAiApi(request, url, env) {
     return json({ ok: true, service: 'institution-ai', stage: 'locked-by-default', apiVersion: 1,
       externalExecutionEnabled: false, browserKeysAllowed: false, livePaymentsEnabled: false });
   }
-  if (request.method !== 'POST' || !['submit', 'status', 'approve', 'checkpoint', 'export'].includes(action)) {
+  if (request.method !== 'POST' || !['submit', 'message', 'status', 'approve', 'checkpoint', 'export'].includes(action)) {
     return json({ code: 'NOT_FOUND' }, 404);
   }
   // Internal-only pilot, never expose API keys through web/mobile JavaScript.
@@ -167,7 +195,7 @@ export async function institutionAiApi(request, url, env) {
     activeInstitutionKeyVersion(env); // fail closed before authentication and storage access
     const body = await readInstitutionJson(request);
     validateIdentity(body);
-    const role = { submit: 'submit', status: 'read', approve: 'approve', checkpoint: 'execute', export: 'read' }[action];
+    const role = { submit: 'submit', message: 'submit', status: 'read', approve: 'approve', checkpoint: 'execute', export: 'read' }[action];
     if (!authorizeInstitutionServer(request, env, body.tenantId, role)) return json({ code: 'FORBIDDEN' }, 403);
     if (action === 'submit') {
       validateInstitutionJob(body);
@@ -178,6 +206,20 @@ export async function institutionAiApi(request, url, env) {
         taskType: body.taskType, classification: body.classification, sealed, fingerprint });
       return json(result.payload, result.status);
     }
+    if (action === 'message') {
+      const messageId = String(body.messageId || '');
+      if (!JOB_ID.test(messageId) || !['user', 'assistant'].includes(body.sender) ||
+          typeof body.text !== 'string' || !body.text.trim() || body.text.length > 8000) {
+        return json({ code: 'INVALID_MESSAGE' }, 400);
+      }
+      const message = { sender: body.sender, text: body.text };
+      const sealed = await encryptInstitutionPayload(env, body.tenantId, body.operationId + ':message:' + messageId, message);
+      const fingerprint = await fingerprintInstitutionRequest(env, body.tenantId, body.operationId,
+        'message:' + messageId, body.sender, message);
+      const result = await fetchStore(env, 'message', { tenantId: body.tenantId,
+        operationId: body.operationId, messageId, sealed, fingerprint, expectedVersion: body.expectedVersion });
+      return json(result.payload, result.status);
+    }
     const storageAction = action === 'status' || action === 'export' ? 'get' : action;
     const result = await fetchStore(env, storageAction, body);
     if (result.status !== 200) return json(result.payload, result.status);
@@ -186,10 +228,18 @@ export async function institutionAiApi(request, url, env) {
     if (!await verifyAuditTrail(record, audit)) return json({ code: 'AUDIT_INTEGRITY_FAILURE' }, 503);
     if (record.tenantId !== body.tenantId || record.operationId !== body.operationId) return json({ code: 'SCOPE_MISMATCH' }, 403);
     const payload = await decryptInstitutionPayload(env, body.tenantId, body.operationId, record.sealed);
+    const messages = await Promise.all((record.messages || []).map(async item => {
+      const restored = await decryptInstitutionPayload(env, body.tenantId,
+        body.operationId + ':message:' + item.messageId, item.sealed);
+      if (!['user', 'assistant'].includes(restored?.sender) || typeof restored?.text !== 'string') {
+        throw new Error('INSTITUTION_AI_INVALID_MESSAGE_RECORD');
+      }
+      return { messageId: item.messageId, sender: restored.sender, text: restored.text, at: item.at };
+    }));
     const job = publicJob(record);
     return json(action === 'export'
-      ? { exportVersion: 1, format: 'ekodi.institution-ai.work/v1', job, payload, audit }
-      : { ok: true, job, payload, audit });
+      ? { exportVersion: 1, format: 'ekodi.institution-ai.work/v1', job, payload, messages, audit }
+      : { ok: true, job, payload, messages, audit });
   } catch (error) {
     const code = String(error?.message || '');
     if (code === 'BODY_TOO_LARGE') return json({ code }, 413);
