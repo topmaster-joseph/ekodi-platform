@@ -109,10 +109,14 @@ export async function applyContentProtection(response,request,env={}){
     const {ray,trace}=await traceId(request,env);
     headers.set('x-ekodi-content-guard',CONTENT_PROTECTION_VERSION);
     headers.set('x-ekodi-trace',trace);
-    // Protected documents are never stored by shared caches or the back/forward cache archive.
-    headers.set('Cache-Control','private, no-store, max-age=0');
-    const robots=String(headers.get('X-Robots-Tag')||'');
-    headers.set('X-Robots-Tag',robots.includes('noarchive')?robots:(robots?robots+', ':'')+'noindex, noarchive, nosnippet');
+    // Protected documents are never stored. Keep an existing no-store value verbatim:
+    // release verifiers and owner-frozen holds match the exact upstream directive.
+    if(!String(headers.get('Cache-Control')||'').toLowerCase().includes('no-store'))headers.set('Cache-Control','no-store');
+    const robots=String(headers.get('X-Robots-Tag')||'').split(',').map(v=>v.trim()).filter(Boolean);
+    if(!robots.includes('noarchive')){
+      for(const directive of ['noindex','noarchive','nosnippet'])if(!robots.includes(directive))robots.push(directive);
+      headers.set('X-Robots-Tag',robots.join(', '));
+    }
     const csp=headers.get('content-security-policy');
     if(csp)headers.set('content-security-policy',contentGuardCsp(csp,url.origin));
     console.info('EKODI content guard trace',{trace,ray,path:url.pathname});
