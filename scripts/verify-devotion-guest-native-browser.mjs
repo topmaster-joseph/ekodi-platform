@@ -305,7 +305,7 @@ try {
     await play.click();
     const count=await page.evaluate(()=>{
       const text=document.querySelector('[data-ekodi-devotion] .dv-speech-status')?.textContent||'';
-      return Number(text.match(/\\/([0-9]+)/)?.[1]||0);
+      return Number(text.split('/')[1]||0);
     });
     record('voice-probe-starts-expected-segments',count>1&&count<=100,{segments:count});
     const first=await page.evaluate(()=>window.__ekodiSpeechProbe.spoken[0]?.text||'');
