@@ -1,4 +1,4 @@
-# EKODI-LOCAL-SITE-VAULT-001
+﻿# EKODI-LOCAL-SITE-VAULT-001
 # Windows LOCAL USER ONLY. No EKODI control-plane command may call this as SYSTEM.
 # This keeps site-specific browser state encrypted at rest via DPAPI CurrentUser.
 # Secrets, cookies and browser profiles NEVER enter GitHub, EKODI server, MCP, or AI.
