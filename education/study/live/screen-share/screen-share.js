@@ -202,17 +202,44 @@ function studentMessage(m){
 }
 
 // ---------- connection ----------
+// Connections survive refreshes, sleep and network blips: the room (host) or the participant slot is kept
+// on this device and reconnects with backoff. 4001 = room ended/expired, 4000 = opened in another tab.
+const HOST_KEY='ekodi-screen-host-room',GUEST_KEY='ekodi-screen-guest-';
+let retry=0,retryTimer=0,current=null;
+function saveHost(data){try{localStorage.setItem(HOST_KEY,JSON.stringify({id:data.id,hostKey:data.hostKey,joinUrl:data.joinUrl,expiresAt:data.expiresAt}));}catch{}}
+function loadHost(){try{const d=JSON.parse(localStorage.getItem(HOST_KEY)||'null');if(d&&/^[a-f0-9]{32}$/.test(d.id)&&/^[a-f0-9]{64}$/.test(d.hostKey)&&(!d.expiresAt||d.expiresAt>Date.now()))return d;}catch{}return null;}
+function dropHost(){try{localStorage.removeItem(HOST_KEY);}catch{}}
+function showInvite(data){
+ $('invitePanel').hidden=false;$('inviteLink').value=data.joinUrl;
+ $('qr').innerHTML=qrSvg(data.joinUrl,{label:'참여자 QR 접속'});
+ $('endRoom').disabled=false;
+}
 function connect(id,role,credential){
+ current={id,role,credential};clearTimeout(retryTimer);
  const proto=role==='host'?'host.'+credential:'student.'+credential.id+'.'+credential.token;
  const url=new URL(`${BASE}/${id}/ws`,location.origin);
  url.protocol=location.protocol==='https:'?'wss:':'ws:';
- ws=new WebSocket(url.toString(),['ekodi-screen-v1',proto]);
- ws.addEventListener('open',()=>{
+ const socket=new WebSocket(url.toString(),['ekodi-screen-v1',proto]);ws=socket;
+ socket.addEventListener('open',()=>{
+  retry=0;
   if(role==='host')say('수업방 연결됨 · 참여자 QR을 보여주세요.');
-  else{$('shareControls').hidden=false;say('수업에 연결됐습니다. 「내 실습 화면 공유 시작」을 누르면 강사에게 보입니다.');}
+  else{$('shareControls').hidden=false;say(stream?'다시 연결됐습니다. 화면 공유를 이어갑니다.':'수업에 연결됐습니다. 「내 실습 화면 공유 시작」을 누르면 강사에게 보입니다.');}
  });
- ws.addEventListener('close',()=>{if(role==='student'){stopCapture();$('shareControls').hidden=true;}if(!closedByHost)say('연결이 끊어졌습니다. 다시 접속하거나 수업방을 새로 만드세요.');});
- ws.addEventListener('message',event=>{let m;try{m=JSON.parse(event.data);}catch{return;}(role==='host'?hostMessage:studentMessage)(m);});
+ socket.addEventListener('close',ev=>{
+  if(ws!==socket)return;
+  if(closedByHost||ev.code===4001){
+   if(role==='student'){stopCapture();$('shareControls').hidden=true;try{sessionStorage.removeItem(GUEST_KEY+id);}catch{}}
+   else{dropHost();say('수업방이 종료되었거나 만료됐습니다. 새 수업방을 만드세요.');}
+   return;
+  }
+  if(ev.code===4000){say(role==='host'?'다른 탭에서 이 수업방을 열어 이 화면은 연결을 넘겼습니다.':'다른 탭에서 같은 이름으로 접속해 이 화면은 연결을 넘겼습니다.');return;}
+  if(ev.code===1008||ev.code===4003){say('수업방 인증이 맞지 않습니다. 새로 접속해 주세요.');if(role==='host')dropHost();return;}
+  if(retry>=6){if(role==='host'){dropHost();say('수업방에 다시 연결하지 못했습니다(만료되었을 수 있음). 「새 수업방 만들기」를 눌러 주세요.');}else say('수업방에 다시 연결하지 못했습니다. 강사의 새 QR로 다시 접속해 주세요.');return;}
+  const wait=Math.min(15000,1000*2**retry++);
+  say('연결이 잠시 끊겼습니다. '+Math.round(wait/1000)+'초 뒤 자동으로 다시 연결합니다…');
+  retryTimer=setTimeout(()=>{if(current)connect(current.id,current.role,current.credential);},wait);
+ });
+ socket.addEventListener('message',event=>{let m;try{m=JSON.parse(event.data);}catch{return;}(role==='host'?hostMessage:studentMessage)(m);});
 }
 // Instructor status: the HttpOnly instructor cookie (12h) is what the room API accepts. A central admin login
 // token in this tab is exchanged for it; an expired token is dropped so the button says to log in again.
@@ -237,10 +264,9 @@ async function create(){
   const data=await r.json();
   if(r.status===401){say('강사 로그인이 만료됐습니다. 로그인 화면으로 이동합니다…');const u=adminLoginUrl(window);if(u)setTimeout(()=>{location.href=u;},900);return;}
   if(!r.ok)throw Error(data.code||'create_failed');
-  room=data;
-  $('invitePanel').hidden=false;$('inviteLink').value=data.joinUrl;
-  $('qr').innerHTML=qrSvg(data.joinUrl,{label:'참여자 QR 접속'});
-  $('endRoom').disabled=false;
+  room=data;saveHost(data);showInvite(data);
+  if(ws){current=null;try{ws.close();}catch{}}
+  tiles.clear();renderGrid();
   connect(data.id,'host',data.hostKey);
  }catch(e){say('수업방을 만들지 못했습니다: '+e.message);}finally{$('createRoom').disabled=false;}
 }
@@ -254,6 +280,7 @@ async function join(){
   const data=await r.json();
   if(!r.ok)throw Error(data.code||'join_failed');
   room=data;
+  try{sessionStorage.setItem(GUEST_KEY+roomId,JSON.stringify({id:data.id,token:data.token,name}));}catch{}
   connect(roomId,'student',{id:data.id,token:data.token});
   say('참여가 승인됐습니다. 연결 중…');
  }catch(e){say('수업 참가 실패: '+e.message);$('joinRoom').disabled=false;}
@@ -271,6 +298,8 @@ function init(){
   sessionStorage.setItem('screen-invite-'+roomId,invite);
   history.replaceState(null,'',location.pathname+'?r='+roomId);
   $('joinRoom').addEventListener('click',join);
+  // Rejoin the same slot after a refresh (no new name entry, instructor keeps one entry per person).
+  try{const g=JSON.parse(sessionStorage.getItem(GUEST_KEY+roomId)||'null');if(g?.id&&g?.token){$('displayName').value=g.name||'';$('joinRoom').disabled=true;say('이전 참여를 이어서 연결 중…');connect(roomId,'student',{id:g.id,token:g.token});}}catch{}
   $('startShare').addEventListener('click',share);
   $('stopShare').addEventListener('click',()=>stop(true));
   $('sendSnapshot').addEventListener('click',snapshot);
@@ -279,6 +308,9 @@ function init(){
   $('learner').hidden=true;
   const login=adminLoginUrl(window);$('login').href=login||'../unlock/';
   refreshLogin();
+  // Resume the room this device already created (refresh, sleep, re-login) instead of losing participants.
+  const saved=loadHost();
+  if(saved){room=saved;showInvite(saved);say('이전 수업방에 다시 연결 중…');connect(saved.id,'host',saved.hostKey);}
   $('createRoom').addEventListener('click',create);
   $('createRoom').textContent='새 수업방 만들기 (4시간) · QR 표시';
   $('copyInvite').addEventListener('click',()=>navigator.clipboard?.writeText($('inviteLink').value).then(()=>say('QR 주소를 복사했습니다.')).catch(()=>say('주소를 직접 복사해 주세요.')));
@@ -286,7 +318,7 @@ function init(){
   $('openProjector').addEventListener('click',()=>{const u=projectorUrl();if(u)window.open(u,'ekodi-projector','noopener');});
   $('copyProjector').addEventListener('click',()=>{const u=projectorUrl();if(u)navigator.clipboard?.writeText(u).then(()=>say('프로젝터 주소를 복사했습니다. 스크린에 연결된 컴퓨터에서 여세요.')).catch(()=>say('주소 복사가 막혔습니다. 「이 컴퓨터에서 프로젝터 화면 열기」를 쓰세요.'));});
   $('closeStage').addEventListener('click',closeBig);
-  $('endRoom').addEventListener('click',()=>{send({type:'end'});closeBig();tiles.clear();renderGrid();$('invitePanel').hidden=true;$('endRoom').disabled=true;say('수업방을 종료했습니다.');});
+  $('endRoom').addEventListener('click',()=>{send({type:'end'});dropHost();closeBig();tiles.clear();renderGrid();$('invitePanel').hidden=true;$('endRoom').disabled=true;say('수업방을 종료했습니다.');});
   $('fullScreen').addEventListener('click',()=>{const el=big?$('stage'):$('grid');el.requestFullscreen?.().catch(()=>{});});
  }
  window.addEventListener('pagehide',()=>{stopCapture();ws?.close();});
