@@ -741,6 +741,22 @@ jobs:
           verify_rpc store_public_storefront '{"p_slug":"jadam"}' /tmp/storefront-proof.json
           verify_rpc store_user_site_public_profile '{"p_slug":"jadam"}' /tmp/user-site-profile-proof.json
           verify_rpc store_user_site_public_snapshot '{"p_slug":"jadam"}' /tmp/user-site-snapshot-proof.json
+
+          # BBQ-only owner approved public menu; never project price-unverified or sold-out records.
+          verify_rpc bbqcg_qr_public_catalog '{"p_slug":"bbqcg"}' /tmp/bbqcg-qr-menu-proof.json '"menu"'
+          jq -e '(.store | type == "object") and (.menu | type == "array") and
+            all(.menu[]; (.availability == "available") and (.verified_at != null) and
+              (.base_price | type == "number" and . > 0) and
+              (.source_basis | IN("brand_official","operator_verified","platform_verified","pos_verified")))' /tmp/bbqcg-qr-menu-proof.json >/dev/null
+          verify_rpc bbqcg_qr_public_catalog '{"p_slug":"pizzamaru"}' /tmp/bbqcg-qr-cross-tenant.json
+          jq -e '. == null' /tmp/bbqcg-qr-cross-tenant.json >/dev/null
+          owner_status=$(curl -sS -o /tmp/bbqcg-qr-owner-anon.json -w '%{http_code}' -X POST "$base/bbqcg_qr_menu_owner_submit" \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H 'Content-Type: application/json' \
+            --data '{"p_slug":"bbqcg","p_name":"NO_ANON_WRITES","p_approve":false}')
+          case "$owner_status" in 401|403|404) ;; *)
+            echo "Anonymous BBQ menu admin mutation was not rejected: HTTP $owner_status" >&2; exit 1;;
+          esac
+
           verify_rpc mission_activity_page_public_snapshot '{"p_workspace_slug":"ekodimission"}' /tmp/mission-activity-editor-proof.json
           jq -e '.ok == true and (.items | type == "array")' /tmp/mission-activity-editor-proof.json >/dev/null
 
@@ -798,6 +814,15 @@ jobs:
         run: |
           set -euo pipefail
           public_url='https://ekodi.kr/bbqcg'
+          qr_url='https://ekodi.kr/bbqcg/order'
+          qr_code=$(curl -sS -D /tmp/bbq-qr.headers -o /tmp/bbq-qr.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$qr_url" || true)
+          [ "$qr_code" = 200 ] || { echo "BBQ QR customer menu unavailable HTTP=$qr_code"; exit 1; }
+          grep -Fq 'QR 메뉴·주문 안내' /tmp/bbq-qr.html
+          grep -Fq 'disabled aria-disabled="true"' /tmp/bbq-qr.html
+          grep -Fq 'data-ekodi-user-header-root="bbqcg-v1"' /tmp/bbq-qr.html
+          grep -Fq '<footer class="foot">' /tmp/bbq-qr.html
+          echo 'BBQ QR approved-menu page is live with checkout intentionally locked.'
+
           css_url='https://ekodi.kr/bbqcg/assets/site.css'
           admin_url='https://ekodi.kr/bbqcg/admin'
           ready=false
