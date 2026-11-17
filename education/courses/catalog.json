@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "courses": [
+    {
+      "id": "foreign-worker-cold-safety-2026",
+      "title": "외국인 근로자 한랭질환 예방 안전보건교육",
+      "year": 2026,
+      "publisher": "산업안전상생재단",
+      "category": "산업안전·보건",
+      "audience": "외국인 근로자 및 현장 안전교육 담당자",
+      "slides": 24,
+      "presentationFormat": "Google Slides (PPTX 원본에서 변환)",
+      "sourceFilename": "[산업안전상생재단] 외국인 근로자 안전보건교육_한랭질환.pptx",
+      "googleSlidesId": "18sPXSmL_V7E5NPpcjMhurR_tg6zAnep6ds-F5RgDie4",
+      "presentationUrl": "https://docs.google.com/presentation/d/18sPXSmL_V7E5NPpcjMhurR_tg6zAnep6ds-F5RgDie4/present",
+      "editUrl": "https://docs.google.com/presentation/d/18sPXSmL_V7E5NPpcjMhurR_tg6zAnep6ds-F5RgDie4/edit",
+      "sourceUrl": "https://drive.google.com/file/d/1FSGR7TAnVRN-gUICmVuaIS2PP9bIXd0j/view",
+      "ownerFolderUrl": "https://drive.google.com/drive/folders/1J2eNNFjKu-C50WN_Ta950jxtzTswVyCo",
+      "sourceAccess": "Google Drive 소유자 권한 전용",
+      "publishedToPublic": false,
+      "multilingualContentNote": "마무리 구호에 한국어, 러시아어, 크메르어, 미얀마어가 포함됨. PPT 본문 전체 번역본은 아님.",
+      "syllabus": [
+        "한랭질환의 정의·주요 증상·응급처치",
+        "취약한 작업환경과 한파특보",
+        "예방대책 및 겨울철 개인보호구",
+        "건설현장 작업 전·중 안전점검",
+        "겨울철 재해사례와 안전수칙",
+        "다국어 안전 실천 구호"
+      ],
+      "reviewFlags": [
+        {
+          "slide": 13,
+          "note": "'발 보호' 항목에 손 보호 문구가 반복됨"
+        },
+        {
+          "slide": 20,
+          "note": "재해사례 제목(리프트 끼임)과 본문(추락사고)이 일치하지 않음"
+        },
+        {
+          "slide": 21,
+          "note": "재해사례 제목(크레인 끼임)과 본문(비계 붕괴)이 일치하지 않음"
+        },
+        {
+          "slide": 22,
+          "note": "'5가지'로 소개하지만 표시된 항목은 9개임"
+        }
+      ],
+      "registeredAt": "2026-11-17",
+      "taskId": "edu-cold-safety-20261117",
+      "phase": "owner-private, release-candidate"
+    }
+  ]
+}
