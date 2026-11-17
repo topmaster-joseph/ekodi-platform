@@ -116,6 +116,9 @@ jobs:
             }
             Write-Host "PowerShell parse OK: $path"
           }
+      - name: Verify EKODI Site Vault Windows DPAPI integrity and origin separation
+        shell: powershell
+        run: .\tools\ekodi-device-agent\windows\tests\site-vault\verify-site-vault.ps1
       - name: Test native LocalAI diagnosis paths on Windows PowerShell 5.1 (mock loopback)
         shell: powershell
         run: .\tools\ekodi-device-agent\windows\native-localai-verification.test.ps1
