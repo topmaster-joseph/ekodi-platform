@@ -107,6 +107,10 @@ jobs:
           node --check education/research/planner.js
           node --check education/research/app.js
           node --check education/app.js
+          node --check education/course-hub/router.js
+          node --check education/course-hub/hub.js
+          node --check education/course-hub/auth.js
+          node --test test/education-course-hub.test.mjs
           node --check scripts/verify-education-farm-marketing-native.mjs
           node --check scripts/verify-education-release-snapshot.mjs
           node --check education/study/farm-marketing/app.js
@@ -180,13 +184,20 @@ jobs:
             study=$(curl -L -sS -o /tmp/edu-stage-study.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/study" || true)
             health=$(curl -sS -o /tmp/edu-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             config=$(curl -sS -o /tmp/edu-stage-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
-            if [[ "$root" == '200' && "$admission" == '200' && "$study" == '200' && "$health" == '200' && "$config" == '200' ]] \
+            hub=$(curl -sS -o /tmp/edu-stage-hub.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/courses/" || true)
+            learner=$(curl -sS -o /tmp/edu-stage-learner.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/learn/foreign-worker-cold-safety-2026/" || true)
+            teacher=$(curl -sS -o /tmp/edu-stage-teacher.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/teach/" || true)
+            hub_catalog=$(curl -sS -o /tmp/edu-stage-courses.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/courses/catalog.json" || true)
+            if [[ "$root" == '200' && "$admission" == '200' && "$study" == '200' && "$health" == '200' && "$config" == '200' && "$hub" == '200' && "$learner" == '200' && "$teacher" == '401' && "$hub_catalog" == '200' ]] \
               && grep -Fq 'EKODI Education' /tmp/edu-stage.html \
               && grep -Fq 'ADMISSION · SOURCE FIRST' /tmp/edu-stage-admission.html \
               && grep -Fq 'STUDY · CONTINUITY' /tmp/edu-stage-study.html \
               && grep -Fq '"service":"ekodi-education"' /tmp/edu-stage-health.json \
               && grep -Fq '"submissionExecution":false' /tmp/edu-stage-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/edu-stage-health.json \
+              && grep -Fq 'hubMain' /tmp/edu-stage-hub.html \
+              && grep -Fq 'Verified instructor sign-in' /tmp/edu-stage-teacher.html \
+              && grep -Fq 'foreign-worker-cold-safety-2026' /tmp/edu-stage-courses.json \
               && grep -Fq '"dataEnabled":false' /tmp/edu-stage-config.js \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/edu-stage-headers; then
               echo 'EKODI Education isolated staging verified.'
