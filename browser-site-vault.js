@@ -12,7 +12,7 @@ const ACTIONS = new Set(['register','open','list','delete']);
 export function normalizePublicHttpsSite(value){
   // No fragments, query tokens or embedded basic-auth credentials may ever be
   // copied into a persistent site record or logged as a URL.
-  if(typeof value!=='string'||!value.trim()||value.length>2048||/[\x00-\x20\x7f]/.test(value.trim()))
+  if(typeof value!=='string'||!value.trim()||value!==value.trim()||value.length>2048||/[\x00-\x20\x7f]/.test(value))
     return Object.freeze({ok:false,code:'SITE_VAULT_URL_INVALID'});
   let url;
   try{url=new URL(value.trim())}catch{return Object.freeze({ok:false,code:'SITE_VAULT_URL_INVALID'})}
