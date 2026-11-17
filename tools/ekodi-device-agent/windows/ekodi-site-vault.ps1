@@ -4,7 +4,7 @@
 # Secrets, cookies and browser profiles NEVER enter GitHub, EKODI server, MCP, or AI.
 [CmdletBinding()]
 param(
-  [ValidateSet('list','register','open','delete')][string]$Action='list',
+  [ValidateSet('manage','list','register','open','delete')][string]$Action='manage',
   [string]$Site='',
   [switch]$RememberPasswords
 )
@@ -256,10 +256,119 @@ function Recover-EkodiAbandonedProfiles($Root){
     Remove-EkodiActiveProfile $folder.FullName
   }
 }
+
+function Get-EkodiLocalSiteLabels($Root){
+  $labels=New-Object System.Collections.Generic.List[string]
+  foreach($entry in @(Get-ChildItem -LiteralPath (Join-Path $Root 'sealed') -Filter '*.vault' -File)){
+    $id=[IO.Path]::GetFileNameWithoutExtension($entry.Name)
+    if($id -notmatch '^[a-f0-9]{64}$'){continue}
+    try{
+      $plain=[Security.Cryptography.ProtectedData]::Unprotect([IO.File]::ReadAllBytes($entry.FullName),(Get-EkodiEntropy $id),[Security.Cryptography.DataProtectionScope]::CurrentUser)
+      try{
+        $record=([Text.Encoding]::UTF8.GetString($plain)|ConvertFrom-Json)
+        $origin=Get-EkodiSite $record.origin
+        if($origin.Id -ceq $id){$labels.Add($origin.Origin)}
+      }finally{[Array]::Clear($plain,0,$plain.Length)}
+    }catch{}
+  }
+  return @($labels | Sort-Object)
+}
+function Show-EkodiLocalSiteManager($Root){
+  # Purely local WinForms interface; no browser automation, remote call or
+  # credential input field. Every selected operation starts an independent
+  # human-attended Windows process with the same fail-closed consent prompts.
+  Add-Type -AssemblyName System.Windows.Forms
+  Add-Type -AssemblyName System.Drawing
+  [Windows.Forms.Application]::EnableVisualStyles()
+  $form=New-Object Windows.Forms.Form
+  $form.Text='에코디 브라우저 · 로그인 사이트 보관함'
+  $form.Width=650;$form.Height=520
+  $form.StartPosition='CenterScreen'
+  $form.FormBorderStyle='FixedDialog'
+  $form.MaximizeBox=$false
+
+  $headline=New-Object Windows.Forms.Label
+  $headline.Text='사이트별 로그인 정보를 이 PC의 Windows 계정에 암호화해 저장합니다.'
+  $headline.SetBounds(20,20,600,24)
+  $form.Controls.Add($headline)
+
+  $warning=New-Object Windows.Forms.Label
+  $warning.Text='기본 비밀번호 저장 끔 · AI/서버와 공유 없음 · 사이트에서 직접 로그인'
+  $warning.SetBounds(20,48,600,26)
+  $form.Controls.Add($warning)
+
+  $siteInput=New-Object Windows.Forms.TextBox
+  $siteInput.SetBounds(20,88,594,28)
+  $siteInput.Text='https://'
+  $form.Controls.Add($siteInput)
+
+  $remember=New-Object Windows.Forms.CheckBox
+  $remember.SetBounds(20,126,590,28)
+  $remember.Text='브라우저 자체 비밀번호 저장 허용 (현장 추가 승인 필수)'
+  $remember.Checked=$false
+  $form.Controls.Add($remember)
+
+  $listLabel=New-Object Windows.Forms.Label
+  $listLabel.SetBounds(20,169,400,22)
+  $listLabel.Text='이 Windows 계정에 암호화되어 저장된 사이트'
+  $form.Controls.Add($listLabel)
+
+  $sites=New-Object Windows.Forms.ListBox
+  $sites.SetBounds(20,197,594,168)
+  foreach($label in @(Get-EkodiLocalSiteLabels $Root)){[void]$sites.Items.Add($label)}
+  $sites.Add_SelectedIndexChanged({if($sites.SelectedItem){$siteInput.Text=[string]$sites.SelectedItem}})
+  $form.Controls.Add($sites)
+
+  $buttons=@(
+    @{Label='새 사이트 등록';Action='register';X=20;W=145},
+    @{Label='저장된 로그인 열기';Action='open';X=174;W=145},
+    @{Label='저장 기록 삭제';Action='delete';X=328;W=140}
+  )
+  foreach($spec in $buttons){
+    $btn=New-Object Windows.Forms.Button
+    $btn.SetBounds([int]$spec.X,382,[int]$spec.W,37)
+    $btn.Text=[string]$spec.Label
+    $selectedAction=[string]$spec.Action
+    # Capture the action with a separate scriptblock for each button.
+    switch($selectedAction){
+      'register' {$btn.Add_Click({
+        try{
+          $site=Get-EkodiSite $siteInput.Text
+          $args=@('-NoProfile','-File',('"'+$PSCommandPath+'"'),'-Action','register','-Site',('"'+$site.StartUrl+'"'))
+          if($remember.Checked){$args+='-RememberPasswords'}
+          Start-Process -FilePath 'powershell.exe' -ArgumentList ($args -join ' ')
+          $form.Close()
+        }catch{[Windows.Forms.MessageBox]::Show('공개 HTTPS 사이트의 정확한 주소를 입력하세요.','등록할 수 없음')|Out-Null}
+      })}
+      'open' {$btn.Add_Click({
+        try{
+          $site=Get-EkodiSite $siteInput.Text
+          Start-Process -FilePath 'powershell.exe' -ArgumentList (@('-NoProfile','-File',('"'+$PSCommandPath+'"'),'-Action','open','-Site',('"'+$site.StartUrl+'"')) -join ' ')
+          $form.Close()
+        }catch{[Windows.Forms.MessageBox]::Show('저장된 사이트의 올바른 HTTPS 주소를 선택하세요.','열 수 없음')|Out-Null}
+      })}
+      'delete' {$btn.Add_Click({
+        try{
+          $site=Get-EkodiSite $siteInput.Text
+          Start-Process -FilePath 'powershell.exe' -ArgumentList (@('-NoProfile','-File',('"'+$PSCommandPath+'"'),'-Action','delete','-Site',('"'+$site.StartUrl+'"')) -join ' ')
+          $form.Close()
+        }catch{[Windows.Forms.MessageBox]::Show('삭제할 사이트를 선택하세요.','삭제할 수 없음')|Out-Null}
+      })}
+    }
+    $form.Controls.Add($btn)
+  }
+  $caption=New-Object Windows.Forms.Label
+  $caption.SetBounds(20,431,595,36)
+  $caption.Text='비밀번호·인증번호는 에코디 화면에 입력하지 않습니다. 제공자 로그인 페이지에서만 직접 입력하세요.'
+  $form.Controls.Add($caption)
+  try{[void]$form.ShowDialog()}finally{$form.Dispose()}
+}
+
 function Invoke-EkodiSiteVault {
   Assert-EkodiLocalHuman
   $root=Get-EkodiVaultRoot
   Recover-EkodiAbandonedProfiles $root
+  if($Action -eq 'manage'){Show-EkodiLocalSiteManager $root;return}
   if($Action -eq 'list'){
     foreach($entry in @(Get-ChildItem -LiteralPath (Join-Path $root 'sealed') -Filter '*.vault' -File)){
       $id=[IO.Path]::GetFileNameWithoutExtension($entry.Name)
