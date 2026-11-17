@@ -4,6 +4,7 @@ import { tenantLivePage } from './tenant-live-page.js';
 import { isPublicWorkspacePath, workspaceRouteFromPublicPath, workspaceSlugFromPublicPath } from './workspace-route-policy.js';
 import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
 import { renderBbqCheonggyePage, bbqCheonggyeCss, bbqCheonggyeQrScript } from './bbq-cheonggye-site.js';
+import { renderBbqcgOrderPortal, bbqcgOrderPortalCss, bbqcgOrderClientScript } from './bbqcg-order-portal.js';
 import { renderBbqcgServiceStandards, bbqcgServiceStandardsCss, bbqcgPublicResourceDownload, bbqcgHomeWithResources } from './bbqcg-service-standards.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
@@ -548,6 +549,8 @@ export default{
       return data?json(env,data):json(env,{error:'storefront_unavailable'},503);
     }
     if(url.pathname==='/bbqcg/assets/site.css')return withHeaders(env,bbqCheonggyeCss(),'bbqcg-asset');
+    if(url.pathname==='/bbqcg/assets/order.css'&&['GET','HEAD'].includes(request.method))return withHeaders(env,bbqcgOrderPortalCss(),'bbqcg-asset');
+    if(url.pathname==='/bbqcg/assets/order-client.js'&&['GET','HEAD'].includes(request.method))return withHeaders(env,bbqcgOrderClientScript(),'bbqcg-asset');
     if(url.pathname==='/bbqcg/assets/service-standards.css'&&['GET','HEAD'].includes(request.method))return withHeaders(env,bbqcgServiceStandardsCss(),'bbqcg-asset');
     if(/^\/bbqcg\/resources\/(?:store-promise\.html|qcs-gms-checklist\.csv)$/.test(url.pathname)){
       if(!['GET','HEAD'].includes(request.method))return withHeaders(env,new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}}),'bbqcg-materials');
@@ -555,6 +558,13 @@ export default{
       const resolved=await pageProfile('/bbqcg',env);
       if(resolved.source!=='store-user-sites'||resolved.status==='paused')return withHeaders(env,new Response('Site unavailable',{status:404,headers:{'cache-control':'no-store'}}),'bbqcg-materials');
       return withHeaders(env,bbqcgPublicResourceDownload(request,url.pathname),'bbqcg-materials');
+    }
+    if(url.pathname==='/bbqcg/order'){
+      if(!['GET','HEAD'].includes(request.method))return withHeaders(env,new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}}),'bbqcg-qr-order');
+      if(legacyAlias)return canonicalRedirect();
+      const resolved=await pageProfile('/bbqcg',env);
+      if(resolved.source!=='store-user-sites'||resolved.status==='paused')return withHeaders(env,new Response('Site unavailable',{status:404,headers:{'cache-control':'no-store'}}),'bbqcg-qr-order');
+      return withHeaders(env,await renderBbqcgOrderPortal(request,env),'bbqcg-qr-order');
     }
     if(url.pathname==='/bbqcg/service-guide'){
       if(!['GET','HEAD'].includes(request.method))return withHeaders(env,new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}}),'bbqcg-service-guide');

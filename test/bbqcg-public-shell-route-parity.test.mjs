@@ -4,12 +4,16 @@ import { readFile } from 'node:fs/promises';
 import { isBbqcgChromePublicRoute } from '../platform-router-entry-worker.js';
 import { renderBbqcgHeader } from '../bbqcg-shared-chrome.js';
 
-test('BBQ homepage and guide alone share public Shell auth bootstrap',()=>{
+test('BBQ homepage, guide and QR portal share public Shell auth bootstrap',()=>{
  const fixtures=[
    ['/bbqcg','space-storefront',true],
    ['/bbqcg/','space-storefront',true],
    ['/bbqcg/service-guide','bbqcg-service-guide',true],
    ['/bbqcg/service-guide/','bbqcg-service-guide',true],
+   ['/bbqcg/order','bbqcg-qr-order',true],
+   ['/bbqcg/order/','bbqcg-qr-order',true],
+   ['/bbqcg/order','space-workspace',false],
+   ['/bbqcg/admin','bbqcg-qr-order',false],
    ['/bbqcg','bbqcg-service-guide',false],
    ['/bbqcg/service-guide','space-storefront',false],
    ['/bbqcg/admin','space-storefront',false],
