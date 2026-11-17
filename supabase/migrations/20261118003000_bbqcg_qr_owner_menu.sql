@@ -6,8 +6,8 @@ begin;
 
 create table if not exists public.bbqcg_qr_menu_approvals (
   id uuid primary key default gen_random_uuid(),
-  store_id uuid not null references public.stores(id) on delete cascade,
-  menu_item_id uuid not null references public.store_menu_items(id) on delete cascade,
+  store_id uuid not null references public.stores(id) on delete restrict,
+  menu_item_id uuid not null references public.store_menu_items(id) on delete restrict,
   actor_id uuid not null,
   action text not null check (action in ('draft_saved','owner_approved')),
   approved_price integer,
