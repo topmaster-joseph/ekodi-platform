@@ -24,7 +24,7 @@ export function verifiedBbqcgMenu(snapshot){
     if(!uuid.test(id)||unique.has(id)||!name||!Number.isSafeInteger(price)||price<=0||price>500000)return false;
     if(!['brand_official','platform_verified','operator_verified','pos_verified'].includes(basis))return false;
     if(!row?.verified_at||!Number.isFinite(Date.parse(row.verified_at)))return false;
-    if(!['available','ready','active'].includes(text(row.availability||'available',40).toLowerCase()))return false;
+    if(text(row.availability,40).toLowerCase()!=='available')return false;
     unique.add(id);return true;
   }).slice(0,60).map(row=>Object.freeze({
     id:text(row.id,40),name:text(row.name,80),category:text(row.category||'메뉴',40),
@@ -51,7 +51,7 @@ export function bbqcgOrderReadiness(input={}){
 async function publicSnapshot(env,fetchImpl){
   if(!env?.SUPABASE_URL||!env?.SUPABASE_PUBLISHABLE_KEY)return null;
   try{
-    const response=await fetchImpl(new URL('/rest/v1/rpc/store_user_site_public_snapshot',env.SUPABASE_URL),{
+    const response=await fetchImpl(new URL('/rest/v1/rpc/bbqcg_qr_public_catalog',env.SUPABASE_URL),{
       method:'POST',headers:{apikey:env.SUPABASE_PUBLISHABLE_KEY,'content-type':'application/json','cache-control':'no-store'},
       body:JSON.stringify({p_slug:'bbqcg'})
     });
