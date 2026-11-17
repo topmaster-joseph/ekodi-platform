@@ -41,7 +41,19 @@ export const DOMEGGOOK_FEATURES = Object.freeze([
   { id: 'dg-order-menu', label: '주문 조회 메뉴', keywords: ['주문전체목록', '주문조회'] },
 ]);
 
+export const KORAIL_FEATURES = Object.freeze([]); // Do not inspect tickets, passengers, fares or payment details.
+
 export const INTERACTIVE_AUTH_SERVICES = Object.freeze({
+  'korail-ticket': Object.freeze({
+    id: 'korail-ticket',
+    label: '코레일 · KTX 승차권 (본인 로그인 전용)',
+    entryUrl: 'https://www.korail.com/ticket/login',
+    automationOrigin: 'https://www.korail.com',
+    authenticatedPathPrefixes: Object.freeze(['/ticket/']),
+    officialGuideUrl: 'https://www.korail.com/ticket/reserve/guide/faq',
+    verificationProbe: 'login-status-only-readonly',
+    features: KORAIL_FEATURES,
+  }),
   'domeggook-business': Object.freeze({
     id: 'domeggook-business',
     label: '도매꾹 · 에코디비즈 사업자 주문 사전점검',
@@ -221,7 +233,7 @@ export function projectInteractiveAuthVerification(raw) {
       executionVerified: false,
       status: item.menuVisible === true ? 'menu_visible_execution_unverified' : 'menu_not_found',
     }));
-  const usageLines = service.id === 'domeggook-business' ? [] : (Array.isArray(raw.usageLines) ? raw.usageLines : [])
+  const usageLines = ['domeggook-business', 'korail-ticket'].includes(service.id) ? [] : (Array.isArray(raw.usageLines) ? raw.usageLines : [])
     .map(line => maskSensitive(text(line, 140)))
     .filter(line => /(크레딧|credit|사용량|잔여|한도|토큰|token)/i.test(line))
     .slice(0, 8);
@@ -232,7 +244,7 @@ export function projectInteractiveAuthVerification(raw) {
     checkedAt: iso(raw.checkedAt),
     pageOrigin: raw.pageOrigin === service.automationOrigin ? service.automationOrigin : '',
     authenticated: raw.authenticated === true,
-    menuLabelCount: Math.max(0, Math.min(500, Number(raw.menuLabelCount) || 0)),
+    menuLabelCount: service.id === 'korail-ticket' ? 0 : Math.max(0, Math.min(500, Number(raw.menuLabelCount) || 0)),
     features,
     usageLines,
     mutationPerformed: false,
