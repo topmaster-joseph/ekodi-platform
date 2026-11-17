@@ -52,7 +52,7 @@ function Get-EkodiSite($InputSite){
 function Confirm-EkodiVaultConsent([string]$Message){
   try{
     $shell=New-Object -ComObject WScript.Shell
-    return ($shell.Popup($Message,120,'EKODI 브라우저 · 로컬 로그인 보관함',4+32+4096) -eq 6)
+    return ($shell.Popup($Message,120,'EKODI 브라우저 · 로컬 로그인 보관함',4+32+256+4096) -eq 6)  # No is the default
   }catch{return $false}
 }
 function Assert-EkodiSafeDirectory([string]$Path){
