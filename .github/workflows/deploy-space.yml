@@ -840,10 +840,29 @@ jobs:
           qr_url='https://ekodi.kr/bbqcg/order'
           qr_code=$(curl -sS -D /tmp/bbq-qr.headers -o /tmp/bbq-qr.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$qr_url" || true)
           [ "$qr_code" = 200 ] || { echo "BBQ QR customer menu unavailable HTTP=$qr_code"; exit 1; }
-          grep -Fq 'QR 메뉴·주문 안내' /tmp/bbq-qr.html
-          grep -Fq 'disabled aria-disabled="true"' /tmp/bbq-qr.html
-          grep -Fq 'data-ekodi-user-header-root="bbqcg-v1"' /tmp/bbq-qr.html
-          grep -Fq '<footer class="foot">' /tmp/bbq-qr.html
+          # A customer-readable HTML snapshot is not equivalent to a disabled checkout.
+          # Preserve all launch guards, but produce independent diagnostics for each
+          # assertion. Shell's footer enhancer may add attributes to an existing
+          # <footer> tag; it must not cause a false negative when the footer exists.
+          qr_failed=0
+          check_qr() {
+            local description="$1" expression="$2"
+            if grep -Eq "$expression" /tmp/bbq-qr.html; then
+              echo "BBQ QR smoke PASS: $description"
+            else
+              echo "BBQ QR smoke FAIL: $description" >&2
+              qr_failed=1
+            fi
+          }
+          check_qr 'customer menu title' 'QR 메뉴·주문 안내'
+          check_qr 'checkout button disabled' '<button[^>]*disabled[^>]*>결제·매장 접수 준비 중</button>'
+          check_qr 'BBQ site-owned header' 'data-ekodi-user-header-root="bbqcg-v1"'
+          check_qr 'BBQ site-owned footer' '<footer[^>]*class="foot([[:space:]]|")'
+          if [ "$qr_failed" -ne 0 ]; then
+            echo "BBQ QR smoke evidence: HTTP=$qr_code size=$(wc -c < /tmp/bbq-qr.html), route=$(sed -n 's/^x-ekodi-route:[[:space:]]*//Ip' /tmp/bbq-qr.headers | head -1), content-type=$(sed -n 's/^content-type:[[:space:]]*//Ip' /tmp/bbq-qr.headers | head -1)" >&2
+            echo 'Preserving checkout locked; no order or payment request was issued.' >&2
+            exit 1
+          fi
           echo 'BBQ QR approved-menu page is live with checkout intentionally locked.'
 
           css_url='https://ekodi.kr/bbqcg/assets/site.css'
