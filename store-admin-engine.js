@@ -727,7 +727,7 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
     const own=Array.isArray(state.menu?.menu)?state.menu.menu:[];
     const drafts=own.filter(item=>item.source_basis==='pending').length;
     const declared=own.length-drafts;
-    const canApprove=['store_owner','tenant_admin','platform_admin'].includes(state.role);
+    const canApprove=canSection('menu')&&canSection('members')&&roleCapabilities(state.role).includes('*');
     const form=canApprove?
       '<form id="bbqQrOwnerMenuForm" autocomplete="off"><div class="site-grid">'
       +'<label class="site-field"><strong>판매 메뉴명</strong><input name="name" minlength="2" maxlength="100" placeholder="매장 판매 메뉴명" required></label>'
