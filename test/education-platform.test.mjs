@@ -158,7 +158,7 @@ test('Lifelong-learning home offers truthful local discovery without changing Ad
   assert.match(home,/id="learningEmpty"/);
   assert.match(home,/id="learningClear"/);
   assert.equal((home.match(/class="interest-card"/g)||[]).length,6);
-  assert.equal((home.match(/class="path-card"/g)||[]).length,11);
+  assert.equal((home.match(/class="path-card"/g)||[]).length,12);
   for(const path of ['/admission','/study','/study/academy/','/study/ai-bootcamp/','https://ekodi.kr/learn/','https://ekodi.kr/research/']){
     assert.ok(home.includes('href="' + path + '"'),'preserve route ' + path);
   }
@@ -225,4 +225,34 @@ test('Photo-led lifelong homepage stays accessible, factual and local-search onl
   assert.match(search,/data-audience/);
   assert.doesNotMatch(search,/\bfetch\s*\(|XMLHttpRequest|localStorage|sessionStorage|innerHTML/);
   execFileSync(process.execPath,['--check',fileURLToPath(new URL('../education/lifelong-home.js',import.meta.url))],{stdio:'pipe'});
+});
+
+test('Cold-stress safety training is registered as one owner-private 24-slide Education item',async()=>{
+  const [catalogText,home,study,classroom,style,worker]=await Promise.all([
+    read('education/courses/catalog.json'),
+    read('education/index.html'),
+    read('education/study/index.html'),
+    read('education/study/cold-safety-2026/index.html'),
+    read('education/study/cold-safety-2026/style.css'),
+    read('education-worker.js')
+  ]);
+  const catalog=JSON.parse(catalogText);
+  const course=catalog.courses.find(row=>row.id==='foreign-worker-cold-safety-2026');
+  assert.ok(course);
+  assert.equal(course.slides,24);
+  assert.equal(course.publisher,'산업안전상생재단');
+  assert.equal(course.publishedToPublic,false);
+  assert.ok(course.sourceUrl.startsWith('https://drive.google.com/'));
+  assert.ok(course.editUrl.startsWith('https://docs.google.com/presentation/d/'));
+  assert.equal(course.reviewFlags.length,4);
+  assert.match(home,/href="\/study\/cold-safety-2026\/"/);
+  assert.match(study,/href="\/study\/cold-safety-2026\/"/);
+  assert.match(classroom,/온라인 교안 편집/);
+  assert.match(classroom,/원본 PPTX/);
+  assert.match(classroom,/24장/);
+  assert.match(classroom,/name="robots" content="noindex,follow"/);
+  assert.match(classroom,/docs\.google\.com\/presentation\/d\/18sPXSmL/);
+  assert.doesNotMatch(classroom,/<script(?![^>]*src=)[^>]*>|\sonclick=|<style[\s>]/);
+  assert.match(style,/@media\(max-width:480px\)/);
+  assert.match(worker,/frame-src https:\/\/docs\.google\.com/);
 });
