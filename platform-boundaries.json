@@ -743,9 +743,7 @@
         "cooperative-page.js",
         "cooperative-ui.js",
         "cooperative-control.js",
-        "cooperative-charter.js",
-        "cooperative-documents.js",
-        "cooperative-signatures.js"
+        "cooperative-charter.js"
       ],
       "domains": [
         "ekodi.kr",
@@ -756,7 +754,7 @@
       ],
       "deployWorkflow": ".github/workflows/deploy-site-core.yml",
       "sharedDependencies": [],
-      "database": "ekodi-auth D1 binding: cooperative_projects, cooperative_audit, cooperative_applications and cooperative_signature_requests/events are workspace_id scoped; signed copies live in private R2 ekodi-storage (COOP_SIGNATURE_FILES); identity and access are mediated by cooperative-core-access.js",
+      "database": "ekodi-auth D1 binding: cooperative_projects, cooperative_audit and cooperative_applications are workspace_id scoped; identity and access are mediated by cooperative-core-access.js",
       "note": "Temporary shared Worker. Split by domain family in isolation v2."
     },
     "service-proxy": {
