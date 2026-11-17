@@ -1,0 +1,63 @@
+name: Cloudflare Zone Traffic Shield
+
+# EKODI-EDGE-TRAFFIC-SHIELD-001 zone layer. Push to main only plans (read-only);
+# writing the EKODI-owned rules requires a manual dispatch on main with mode=apply.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/cloudflare-zone-traffic-shield.mjs'
+      - '.github/workflows/cloudflare-zone-traffic-shield.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'plan (read-only) or apply (write ekodi_edge_* rules only)'
+        required: true
+        default: plan
+        type: choice
+        options: [plan, apply]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-zone-traffic-shield
+  cancel-in-progress: false
+
+jobs:
+  shield:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Main only
+        run: test "$GITHUB_REF" = 'refs/heads/main'
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Resolve EKODI zone
+        shell: bash
+        run: |
+          set -euo pipefail
+          domains=$(curl -fsS "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains?service=shy-thunder-39a4" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          zone_id=$(echo "$domains" | jq -r '.result[] | select(.hostname == "ekodi.kr") | .zone_id' | head -n1)
+          test -n "$zone_id" && test "$zone_id" != null
+          echo "ZONE_ID=$zone_id" >> "$GITHUB_ENV"
+      - name: Plan
+        if: github.event_name == 'push' || inputs.mode != 'apply'
+        run: node scripts/cloudflare-zone-traffic-shield.mjs
+      - name: Apply EKODI-owned rules
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'apply'
+        run: node scripts/cloudflare-zone-traffic-shield.mjs --apply
+      - name: Verify live responses after apply
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'apply'
+        shell: bash
+        run: |
+          set -euo pipefail
+          code() { curl -sS -o /dev/null -w '%{http_code}' --max-time 20 "$@" || true; }
+          home=$(code https://ekodi.kr/); echo "home=$home"; test "$home" = 200
+          church=$(code https://ekodi.kr/ekodichurch/); echo "church=$church"; test "$church" = 200
+          probe=$(code https://ekodi.kr/wp-login.php); echo "scanner-probe=$probe"; test "$probe" = 403
