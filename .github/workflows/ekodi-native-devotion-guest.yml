@@ -51,6 +51,16 @@ jobs:
           else
             npx playwright install --with-deps chromium
           fi
+      - name: Install first-party Ubuntu Korean glyph coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends fonts-noto-cjk
+          fc-cache -f
+          fc-match -f '%{family}\n' 'Noto Sans CJK KR:lang=ko' | grep -Fq 'Noto Sans CJK KR'
+          fc-match -f '%{family}\n' 'Noto Serif CJK KR:lang=ko' | grep -Fq 'Noto Serif CJK KR'
+          echo 'Native Chromium CJK Korean font families confirmed.'
       - name: Verify real public future-date lockdown and login labels in desktop/mobile
         env:
           EKODI_EXPECT_AUTO_TODAY: ${{ (github.event_name == 'workflow_run' || github.event_name == 'push' || github.event_name == 'pull_request' || inputs.expect_today_redirect == true) && '1' || '0' }}
