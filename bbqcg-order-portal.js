@@ -64,7 +64,7 @@ function phoneHref(value){
   return digits.length>=8&&digits.length<=16?'tel:'+digits:'';
 }
 export function bbqcgOrderPortalCss(){
-  return new Response(String.raw\`
+  return new Response(String.raw`
 :root{color-scheme:light;--ink:#191a3e;--paper:#fffaf4;--line:#ece6df}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif;line-height:1.6}
 a{color:inherit}.skip{position:absolute;left:-9999px}.skip:focus{left:12px;top:12px;background:#fff;z-index:50}
@@ -94,11 +94,11 @@ a{color:inherit}.skip{position:absolute;left:-9999px}.skip:focus{left:12px;top:1
 .order-body a:focus-visible,.order-body input:focus-visible{outline:3px solid #c7872b;outline-offset:3px}
 @media(max-width:820px){.order-layout{grid-template-columns:1fr}.order-sidebar{order:2}}
 @media(max-width:560px){.wrap{width:calc(100% - 32px)}.order-hero{padding:30px 0}.order-menu article{grid-template-columns:1fr}.order-menu input{width:100%}.order-body{padding-top:20px;padding-bottom:36px}}
-\`+bbqcgSharedChromeCss(),{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}});
+`+bbqcgSharedChromeCss(),{headers:{'content-type':'text/css; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}});
 }
 
 export function bbqcgOrderClientScript(){
-  const script=String.raw\`(()=>{
+  const script=String.raw`(()=>{
   'use strict';
   const form=document.getElementById('bbqcgOrderPreview');
   const output=document.getElementById('bbqcgCartTotal');
@@ -117,7 +117,7 @@ export function bbqcgOrderClientScript(){
   form.addEventListener('input',recalculate);
   form.addEventListener('submit',event=>{event.preventDefault()});
   recalculate();
-})();\`;
+})();`;
   return new Response(script,{headers:{'content-type':'text/javascript; charset=utf-8','cache-control':'public, max-age=300','x-content-type-options':'nosniff'}});
 }
 
@@ -130,22 +130,22 @@ export async function renderBbqcgOrderPortal(request,env={},fetchImpl=fetch){
   const phone=phoneHref(snapshot?.store?.phone);
   const readablePhone=phone?esc(snapshot.store.phone):'';
   const menuMarkup=menu.length?menu.map(row=>
-    \`<article><div><small>\${esc(row.category)}</small><h3>\${esc(row.name)}</h3><p>\${esc(row.description)}</p><span class="price">\${row.price.toLocaleString('ko-KR')}원</span></div><div><label for="q-\${esc(row.id)}">수량</label><input id="q-\${esc(row.id)}" data-item-price="\${row.price}" type="number" inputmode="numeric" value="0" min="0" max="10" step="1" aria-label="\${esc(row.name)} 수량"></div></article>\`
+    `<article><div><small>${esc(row.category)}</small><h3>${esc(row.name)}</h3><p>${esc(row.description)}</p><span class="price">${row.price.toLocaleString('ko-KR')}원</span></div><div><label for="q-${esc(row.id)}">수량</label><input id="q-${esc(row.id)}" data-item-price="${row.price}" type="number" inputmode="numeric" value="0" min="0" max="10" step="1" aria-label="${esc(row.name)} 수량"></div></article>`
   ).join(''):'<div class="order-empty"><strong>판매 메뉴 등록을 준비하고 있습니다.</strong><p>매장 승인 메뉴·실제 판매가격이 확인되면 이 화면에서 상품을 직접 선택할 수 있습니다. 지금은 BBQ 공식 주문 사이트에서 메뉴와 가격을 확인해 주세요.</p></div>';
-  const html=\`<!doctype html><html lang="ko" data-store-entity="bbqcg"><head>
+  const html=`<!doctype html><html lang="ko" data-store-entity="bbqcg"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow,noarchive"><meta name="theme-color" content="#161747">
 <meta name="description" content="BBQ 무안청계점 QR 모바일 메뉴·주문 안내. 공식 판매가격 확인 및 주문 결제 연결 준비 상태를 확인합니다.">
 <link rel="canonical" href="https://ekodi.kr/bbqcg/order">
 <link rel="stylesheet" href="/bbqcg/assets/order.css?v=20261117a">
 <title>QR 메뉴·주문 안내 | BBQ 무안청계점</title></head><body>
-<a class="skip" href="#main">본문으로 이동</a>\${renderBbqcgHeader()}
+<a class="skip" href="#main">본문으로 이동</a>${renderBbqcgHeader()}
 <main id="main"><section class="order-hero"><div class="wrap"><p>BBQ MUAN CHEONGGYE · MOBILE MENU</p><h1>QR 메뉴·주문 안내</h1><p class="lead">매장별로 확인된 메뉴와 가격을 이곳에서 살펴보세요. 주문·결제와 매장 접수는 운영 준비 확인 후 개통됩니다.</p></div></section>
-<div class="wrap order-body"><section class="order-notice" role="status" aria-live="polite"><strong>\${BBQCG_ORDER_APPROVAL_NOTE}</strong><p>현재 이 화면에서 금액을 결제하거나 주문을 매장으로 전송할 수 없습니다. 주문을 원하시면 공식 BBQ 주문 또는 매장 전화로 진행해 주세요.</p></section>
-<div class="order-layout"><section aria-labelledby="catalogTitle"><h2 id="catalogTitle">매장 판매 메뉴</h2><form id="bbqcgOrderPreview" aria-label="메뉴 확인 및 장바구니 미리보기">\${menuMarkup}</form></section>
-<aside class="order-sidebar" aria-label="주문·결제 안내"><h2>선택한 메뉴</h2><p class="help">매장에 승인된 메뉴만 계산됩니다. 아래 합계는 참고용이며 결제가 진행되지 않습니다.</p><div class="total"><span>미리보기 합계</span><strong id="bbqcgCartTotal">0원</strong></div><button type="button" disabled aria-disabled="true">결제·매장 접수 준비 중</button><div class="order-actions"><a href="\${OFFICIAL}" target="_blank" rel="noopener noreferrer">BBQ 공식 메뉴·주문</a>\${phone?\`<a class="phone" href="\${esc(phone)}">매장 전화 \${readablePhone}</a>\`:''}</div><p class="help">결제 승인 전에는 매장 접수, 결제 완료 안내, 주문 알림이 발송되지 않습니다.</p></aside></div>
+<div class="wrap order-body"><section class="order-notice" role="status" aria-live="polite"><strong>${BBQCG_ORDER_APPROVAL_NOTE}</strong><p>현재 이 화면에서 금액을 결제하거나 주문을 매장으로 전송할 수 없습니다. 주문을 원하시면 공식 BBQ 주문 또는 매장 전화로 진행해 주세요.</p></section>
+<div class="order-layout"><section aria-labelledby="catalogTitle"><h2 id="catalogTitle">매장 판매 메뉴</h2><form id="bbqcgOrderPreview" aria-label="메뉴 확인 및 장바구니 미리보기">${menuMarkup}</form></section>
+<aside class="order-sidebar" aria-label="주문·결제 안내"><h2>선택한 메뉴</h2><p class="help">매장에 승인된 메뉴만 계산됩니다. 아래 합계는 참고용이며 결제가 진행되지 않습니다.</p><div class="total"><span>미리보기 합계</span><strong id="bbqcgCartTotal">0원</strong></div><button type="button" disabled aria-disabled="true">결제·매장 접수 준비 중</button><div class="order-actions"><a href="${OFFICIAL}" target="_blank" rel="noopener noreferrer">BBQ 공식 메뉴·주문</a>${phone?`<a class="phone" href="${esc(phone)}">매장 전화 ${readablePhone}</a>`:''}</div><p class="help">결제 승인 전에는 매장 접수, 결제 완료 안내, 주문 알림이 발송되지 않습니다.</p></aside></div>
 <section class="order-steps"><strong>QR 주문 서비스 적용 절차</strong><p>① 매장 메뉴·가격 확정 → ② 독립 결제 가맹점 승인 및 서버 검증 → ③ 주문 접수함·알림 수신 검증 → ④ 실거래 테스트 후 개통</p></section></div></main>
-\${renderBbqcgFooter()}<script defer src="/bbqcg/assets/order-client.js?v=20261117a"></script></body></html>\`;
+${renderBbqcgFooter()}<script defer src="/bbqcg/assets/order-client.js?v=20261117a"></script></body></html>`;
   return new Response(request.method==='HEAD'?null:html,{headers:{
     'content-type':'text/html; charset=utf-8','cache-control':'no-store',
     'x-robots-tag':'noindex,nofollow,noarchive','x-ekodi-workspace':'bbqcg','x-ekodi-order-mode':'read-only-until-verified'
