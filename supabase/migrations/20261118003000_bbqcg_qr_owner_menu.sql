@@ -16,7 +16,7 @@ create table if not exists public.bbqcg_qr_menu_approvals (
 );
 
 alter table public.bbqcg_qr_menu_approvals enable row level security;
-revoke all on public.bbqcg_qr_menu_approvals from public, anon, authenticated;
+revoke all on public.bbqcg_qr_menu_approvals from public, anon, authenticated, service_role;
 
 create or replace function public.bbqcg_qr_menu_owner_submit(
   p_slug text,
