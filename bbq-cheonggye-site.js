@@ -67,7 +67,7 @@ ${renderBbqcgHeader()}
 <h1 id="hero-heading">바삭함의 기준,<br>오늘도 <em>BBQ</em></h1>
 <div class="hero-store">BBQ 무안청계점</div>
 <p class="hero-desc">가까운 곳에서 만나는 따뜻한 한 끼.<br>매장 안내부터 메뉴·주문방법까지 한눈에 확인하세요.</p>
-<div class="actions"><a class="btn primary" href="#order">주문방법 보기 <span aria-hidden="true">›</span></a><a class="btn secondary" href="#guide">매장안내</a></div>
+<div class="actions"><a class="btn primary" href="/bbqcg/order">QR 메뉴·주문 안내 <span aria-hidden="true">›</span></a><a class="btn secondary" href="#guide">매장안내</a></div>
 </div></div></section>
 <div class="stats-bg"><section class="wrap stats" id="guide" aria-label="매장 기본 정보">
 <div class="stat"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 3"/></svg></span><div><small>영업시간</small><strong>${hours}</strong></div></div>
@@ -88,7 +88,7 @@ ${renderBbqcgHeader()}
 <p class="section-kicker">EASY ORDER</p><h2 id="order-heading">간편 주문하기</h2>
 <a class="order-option" href="${official}" target="_blank" rel="noopener noreferrer"><span class="order-icon" aria-hidden="true">▤</span><span><strong>BBQ 공식 주문</strong><small>본사에서 무안청계점 선택 후 주문</small></span><span class="arrow" aria-hidden="true">›</span></a>
 <a class="order-option phone" href="${phoneHref?escapeHtml(phoneHref):'#guide'}"><span class="order-icon" aria-hidden="true">☎</span><span><strong>전화 주문</strong><small>${publicPhone}</small></span><span class="arrow" aria-hidden="true">›</span></a>
-<div class="qr-mini"><div id="bbqOrderQr" class="qr-visual" role="img" aria-label="BBQ 무안청계점 주문방법 안내 QR"></div><div><strong>주문 안내 QR</strong><p>스캔하면 주문방법 페이지로 연결됩니다. QR로 직접 결제되지는 않습니다.</p><div class="qr-actions"><button type="button" id="bbqQrDownload">QR 저장</button><a href="/bbqcg#order">안내 링크</a><small id="bbqQrStatus" aria-live="polite">QR 생성 준비 중</small></div></div></div>
+<div class="qr-mini"><div id="bbqOrderQr" class="qr-visual" role="img" aria-label="BBQ 무안청계점 모바일 메뉴·주문 안내 QR"></div><div><strong>QR 메뉴 확인</strong><p>스캔하면 우리 매장 모바일 메뉴로 연결됩니다. 온라인 결제와 매장 자동 접수는 승인 후 개통됩니다.</p><div class="qr-actions"><button type="button" id="bbqQrDownload">QR 저장</button><a href="/bbqcg/order">QR 메뉴 링크</a><small id="bbqQrStatus" aria-live="polite">QR 생성 준비 중</small></div></div></div>
 <details class="pending-channels"><summary>배달앱 주문 채널 확인</summary><div class="pending-list"><span>배달의민족<small>청계점 전용 주문 링크 확인 중</small></span><span>요기요<small>청계점 전용 주문 링크 확인 중</small></span><span>쿠팡이츠<small>청계점 전용 주문 링크 확인 중</small></span></div></details>
 </aside></div>
 ${menuHtml}
@@ -109,7 +109,7 @@ ${renderBbqcgFooter()}
 export function bbqCheonggyeQrScript(){
   const js=`(()=>{
     'use strict';
-    const target='https://ekodi.kr/bbqcg#order';
+    const target='https://ekodi.kr/bbqcg/order';
     const host=document.getElementById('bbqOrderQr');
     const status=document.getElementById('bbqQrStatus');
     const download=document.getElementById('bbqQrDownload');
@@ -123,7 +123,7 @@ export function bbqCheonggyeQrScript(){
       if(!source){message('QR 이미지 준비 중입니다.');return}
       try{const c=document.createElement('canvas');c.width=360;c.height=360;const ctx=c.getContext('2d');if(!ctx)throw Error('no-canvas');
       ctx.fillStyle='#fff';ctx.fillRect(0,0,360,360);ctx.imageSmoothingEnabled=false;ctx.drawImage(source,60,60,240,240);
-      const link=document.createElement('a');link.href=c.toDataURL('image/png');link.download='BBQ-무안청계점-주문안내-QR.png';link.click();message('QR 이미지 저장 시작')}
+      const link=document.createElement('a');link.href=c.toDataURL('image/png');link.download='BBQ-무안청계점-모바일메뉴-QR.png';link.click();message('QR 이미지 저장 시작')}
       catch{message('이미지 저장을 지원하지 않는 환경입니다.')}
     });
   })();`;

@@ -6,7 +6,7 @@ export const BBQCG_CHROME_VERSION = 'bbqcg-shared-chrome-v1';
 export const BBQCG_PUBLIC_NAV = Object.freeze([
   {label:'매장안내',href:'/bbqcg#guide'},
   {label:'BBQ 메뉴',href:'/bbqcg#menu'},
-  {label:'주문하기',href:'/bbqcg#order'},
+  {label:'주문하기',href:'/bbqcg/order'},
   {label:'매장소식',href:'/bbqcg#notice'},
   {label:'품질약속·자료실',href:'/bbqcg/service-guide'},
   {label:'오시는 길',href:'/bbqcg#directions'}
