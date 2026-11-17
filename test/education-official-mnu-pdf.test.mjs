@@ -12,7 +12,11 @@ test('official MNU 2026 uploaded PDF remains byte-for-byte original, separately 
   const bytes=await readFile(new URL('../education/study/live/materials/mnu-2026-core-competency-points.pdf',import.meta.url));
   assert.equal(bytes.byteLength,178412);
   assert.equal(createHash('sha256').update(bytes).digest('hex'),OFFICIAL_MNU_2026.sha256);
-  assert.equal(bytes.subarray(0,5).toString('ascii'),'%PDF-');
+  // The owner-provided public document is an e-approval PDF: it begins with a
+  // 429-byte Handysoft header before the true PDF signature. Preserve all bytes.
+  const signatureAt=bytes.indexOf(Buffer.from('%PDF-'));
+  assert.ok(signatureAt>=0&&signatureAt<1024,'valid PDF signature in original e-approval wrapper');
+  assert.equal(signatureAt,429,'exact original Handysoft envelope retained');
   assert.ok(bytes.subarray(bytes.length-4096).toString('latin1').includes('%%EOF'));
   assert.equal(OFFICIAL_MNU_2026.pages,2);
   assert.match(OFFICIAL_MNU_2026.fileName,/\.pdf$/);
