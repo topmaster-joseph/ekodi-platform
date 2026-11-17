@@ -39,6 +39,8 @@ test('customer menu never invents prices, approved products, or publishes unveri
   assert.equal(verified[0].price,24000);
   assert.equal(verifiedBbqcgMenu({menu:null}).length,0);
   assert.equal(verifiedBbqcgMenu({menu:[{...sample.menu[0],id:'private-123'}]}).length,0);
+  assert.equal(verifiedBbqcgMenu({menu:[{...sample.menu[0],availability:'sold_out'}]}).length,0);
+  assert.equal(verifiedBbqcgMenu({menu:[{...sample.menu[0],availability:undefined}]}).length,0,'missing availability must fail closed');
   const ready=bbqcgOrderReadiness({snapshot:sample,storePublished:true,orderEnabled:true,merchantVerified:true,notificationVerified:true});
   assert.equal(BBQCG_REAL_PAYMENT_ENABLED,false);
   assert.equal(ready.catalogReady,true);
@@ -64,7 +66,7 @@ test('guest portal can view approved menu but cannot perform a payment or create
   assert.equal(r.headers.get('x-ekodi-order-mode'),'read-only-until-verified');
   assert.equal(observed.length,1);
   assert.equal(observed[0].method,'POST','read-only catalog snapshot RPC');
-  assert.match(observed[0].url,/\/rest\/v1\/rpc\/store_user_site_public_snapshot$/);
+  assert.match(observed[0].url,/\/rest\/v1\/rpc\/bbqcg_qr_public_catalog$/);
   assert.equal(JSON.parse(observed[0].body).p_slug,'bbqcg');
   assert.match(html,/특별한 &lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.doesNotMatch(html,/<script>alert\(1\)<\/script>/);
