@@ -13,9 +13,6 @@ on:
   pull_request:
     paths:
       - 'ekodipay-worker.js'
-      - 'edge-traffic-shield.js'
-      - 'platform-security-policy.js'
-      - 'turnstile-abuse-guard.js'
       - 'site-discovery-head.js'
       - 'ekodipay-preview.js'
       - 'test/ekodipay-preview.test.mjs'
@@ -28,9 +25,6 @@ on:
     branches: [main]
     paths:
       - 'ekodipay-worker.js'
-      - 'edge-traffic-shield.js'
-      - 'platform-security-policy.js'
-      - 'turnstile-abuse-guard.js'
       - 'site-discovery-head.js'
       - 'ekodipay-preview.js'
       - 'test/ekodipay-preview.test.mjs'
