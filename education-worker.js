@@ -4,6 +4,7 @@ import { instructorGate, isGatedPath, adminUnlock, sessionStatus } from './educa
 import { instructorDocs } from './education-instructor-docs.js';
 import {educationScreenApi} from './education-screen-share-api.js';
 import {educationFeedback} from './education-feedback.js';
+import {courseHubRouter} from './education/course-hub/router.js';
 export {EducationScreenRoom} from './education-screen-room.js';
 
 const SECURITY_HEADERS={
@@ -23,6 +24,9 @@ export default{
     if(url.pathname==='/health')return json({ok:true,service:'ekodi-education',surface:'education-platform',areas:['admission','study'],contextModel:'person-space-role',officialSourceRequired:true,submissionExecution:false,sensitiveDocumentStorage:false,instructorDocumentShare:'instructor-own-documents-expiring-links',dataMode:runtimeConfig(env).dataMode,ekodiShell:true});
     if(url.pathname==='/config.js')return new Response(`window.EKODI_EDU_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/',307);
+    // One canonical course registry, public learner view and separately verified instructor authority.
+    const courseHub=await courseHubRouter(request,env,{url});
+    if(courseHub)return injectEkodiShell(withHeaders(courseHub),'edu');
     const screenShare=await educationScreenApi(request,env,{url});
     if(screenShare)return screenShare;
     // Lecture feedback survey (anonymous QR answers; instructor-only summary).
