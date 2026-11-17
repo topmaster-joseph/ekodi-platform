@@ -3,8 +3,8 @@
 //
 // 2026-11-17 diagnosis (cloudflare-production-host-diagnose run 44100312471): the zone had
 // no entrypoint ruleset in http_ratelimit, http_request_firewall_custom or
-// http_request_firewall_managed. Every hostname — including the retired *.ekodi.kr
-// subdomains that receive ~500 scanner requests a day each — reached Workers unfiltered,
+// http_request_firewall_managed. Every hostname — including the retired subdomain
+// hosts that receive ~500 scanner requests a day each — reached Workers unfiltered,
 // and every one of those requests spent Worker quota.
 //
 // This script owns only rules whose ref starts with "ekodi_edge_". Rules written by
