@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { handleWorkspaceDocuments, latestDocumentIds, safeSourceUrl, shareDays, magicMatches, isWorkspaceDocumentsPath, canonicalTenant, tenantAdminPath } from '../workspace-documents-api.js';
+import { handleWorkspaceDocuments, latestDocumentIds, safeSourceUrl, shareDays, magicMatches, isWorkspaceDocumentsPath, canonicalTenant, tenantAdminPath, WORKSPACE_DOCUMENT_TYPES } from '../workspace-documents-api.js';
 
 const read = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const MIGRATION = 'migrations/202611091100_workspace_documents.sql';
@@ -140,6 +140,34 @@ test('identity seed: representative ID and resumes per site, no ID numbers, ID s
   const share = await (await call(env, `/api/workspace-documents/cgma/${idDoc}/share`, { method: 'POST', headers: { ...WRITE, 'content-type': 'application/json' }, body: JSON.stringify({ days: 30 }) }, 'cgma')).json();
   assert.equal(share.days, 1);
   assert.equal(shareDays(30, '신분증'), 1);
+});
+
+test('BBQ facility floorplan is a first-class tenant-private document', async () => {
+  assert.ok(WORKSPACE_DOCUMENT_TYPES.includes('시설·도면'));
+  const env = { DB: d1(), WORKSPACE_DOCUMENT_FILES: r2() };
+  const form = new FormData();
+  form.set('type', '시설·도면');
+  form.set('title', '비비큐 무안청계점 실내 평면도');
+  form.set('holder', 'BBQ 무안청계점');
+  form.set('issuedOn', '2026-11-17');
+  form.set('note', '자료 접수일 · 설계도면 작성일 미확인');
+  form.set('file', new File([JPEG], 'floorplan.jpg', { type: 'image/jpeg' }));
+  const created = await call(env, '/api/workspace-documents/bbqcg',
+    { method: 'POST', headers: WRITE, body: form }, 'bbqcg');
+  assert.equal(created.status, 201);
+  const { id } = await created.json();
+  const list = await (await call(env, '/api/workspace-documents/bbqcg?type=' +
+    encodeURIComponent('시설·도면'), {}, 'bbqcg')).json();
+  assert.equal(list.documents.length, 1);
+  assert.equal(list.documents[0].type, '시설·도면');
+  assert.equal(list.documents[0].holder, 'BBQ 무안청계점');
+  assert.equal(list.documents[0].hasFile, true);
+  assert.equal((await call(env, '/api/workspace-documents/pizzamaru/' + id + '/file',
+    {}, 'pizzamaru')).status, 404, 'another tenant cannot download the floorplan');
+  assert.equal((await call(env, '/api/workspace-documents/bbqcg',
+    {}, 'pizzamaru')).status, 403, 'another tenant cannot list the floorplan');
+  assert.equal(env.DB.raw.prepare('SELECT count(*) AS n FROM workspace_document_shares').get().n, 0,
+    'no share token is created by upload');
 });
 
 test('admin path aliases map to canonical tenant slugs', async () => {
