@@ -250,7 +250,9 @@ export async function handleMediaShieldRequest(request,env={},{resolvePrincipal}
 }
 
 // ---------------------------------------------------------------- viewer (served as text)
-function mediaShieldPlayerClient(){
+// Plain string on purpose: bundlers (wrangler keep_names) inject helpers such as __name()
+// into function bodies, so Function.prototype.toString() would ship code that cannot run in a browser.
+const MEDIA_SHIELD_PLAYER_CLIENT_SOURCE=String.raw`function mediaShieldPlayerClient(){
   'use strict';
   var API='/api/media-shield/';
   function b64(value){var t=String(value).replace(/-/g,'+').replace(/_/g,'/');var s=atob(t+'='.repeat((4-t.length%4)%4));var o=new Uint8Array(s.length);for(var i=0;i<s.length;i++)o[i]=s.charCodeAt(i);return o;}
@@ -349,9 +351,9 @@ function mediaShieldPlayerClient(){
   }
   window.EkodiMediaShield={version:'v1',mount:mount};
   document.querySelectorAll('video[data-ekodi-media][data-ekodi-media-autoload]').forEach(function(video){mount(video).catch(function(error){video.setAttribute('data-ekodi-media-error',error.code||error.message);});});
-}
+}`;
 
-export const MEDIA_SHIELD_PLAYER_SCRIPT=`/* EKODI Media Shield player ${MEDIA_SHIELD_VERSION} */(${mediaShieldPlayerClient.toString()})();`;
+export const MEDIA_SHIELD_PLAYER_SCRIPT=`/* EKODI Media Shield player ${MEDIA_SHIELD_VERSION} */(${MEDIA_SHIELD_PLAYER_CLIENT_SOURCE})();`;
 
 export function mediaShieldPlayerResponse(request){
   const method=String(request.method||'GET').toUpperCase();

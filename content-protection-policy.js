@@ -131,7 +131,9 @@ export async function applyContentProtection(response,request,env={}){
 
 // ---------------------------------------------------------------- client asset
 // Served as text; kept as a real function so `node --check` and tests parse it.
-function contentGuardClient(){
+// Plain string on purpose: bundlers (wrangler keep_names) inject helpers such as __name()
+// into function bodies, so Function.prototype.toString() would ship code that cannot run in a browser.
+const CONTENT_GUARD_CLIENT_SOURCE=String.raw`function contentGuardClient(){
   'use strict';
   var doc=document,root=doc.documentElement;
   if(root.getAttribute('data-ekodi-content-guard-ready'))return;
@@ -204,9 +206,9 @@ function contentGuardClient(){
     try{new MutationObserver(function(){if(!shield||!shield.isConnected)ensureMark();}).observe(doc.body,{childList:true});}catch(e){}
   }
   if(doc.body)start();else doc.addEventListener('DOMContentLoaded',start);
-}
+}`;
 
-export const CONTENT_GUARD_SCRIPT=`/* EKODI content guard ${CONTENT_PROTECTION_VERSION} */(${contentGuardClient.toString()})();`;
+export const CONTENT_GUARD_SCRIPT=`/* EKODI content guard ${CONTENT_PROTECTION_VERSION} */(${CONTENT_GUARD_CLIENT_SOURCE})();`;
 
 export const CONTENT_GUARD_STYLE=`/* EKODI content guard ${CONTENT_PROTECTION_VERSION} */
 html[data-ekodi-content-guard] body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}

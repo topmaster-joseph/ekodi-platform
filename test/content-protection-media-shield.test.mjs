@@ -193,3 +193,18 @@ test('protection layer preserves every Shared Site release header marker',async(
   }finally{console.info=info;}
   assert.deepEqual(regressions,[]);
 });
+
+// Regression guardrail (2026-11-18 post-promotion browser check: "__name is not defined"):
+// wrangler bundles with keep_names, which injects __name() into function bodies. Client
+// scripts must therefore be plain source strings, never Function.prototype.toString().
+test('browser scripts are plain source strings, never bundler-rewritten function text',async()=>{
+  const { readFile }=await import('node:fs/promises');
+  for(const file of ['content-protection-policy.js','ekodi-media-shield.js']){
+    const source=await readFile(new URL(`../${file}`,import.meta.url),'utf8');
+    assert.doesNotMatch(source,/Client\.toString\(\)/,`${file} must not serialize a bundled function`);
+  }
+  for(const script of [CONTENT_GUARD_SCRIPT,MEDIA_SHIELD_PLAYER_SCRIPT]){
+    assert.doesNotMatch(script,/__name\(|__defProp|__export\(/);
+    new vm.Script(script);
+  }
+});
