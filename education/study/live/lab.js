@@ -8,6 +8,7 @@ import {checkOutput} from './engine/checker.js';
 import {detectContentWarnings} from '../ai-bootcamp/material-source.js';
 import {FACTCHAT_TOOL,featureById} from './tools/factchat.js';
 import {downloadPracticeSource} from './engine/practice-source-export.js';
+import {officialMnuPracticeCard,OFFICIAL_MNU_PROMPT} from './materials/official-mnu-2026.js';
 
 const $=s=>document.querySelector(s);
 const entry=courseEntry(new URLSearchParams(location.search).get('c'));
@@ -89,7 +90,7 @@ function stepCard(id,s){
       '<div class="btn-row"><button type="button" class="btn btn-small btn-primary" data-view-material="'+i+'">원문 전체보기</button><button type="button" class="btn btn-small" data-copy-material="'+i+'">원문 복사</button>'+((id==='minutes'||native)?'<button type="button" class="btn btn-small" data-download-material="'+i+'">TXT 다운로드</button>':'')+(native?'<button type="button" class="btn btn-small btn-primary" data-native-source="'+i+'">'+type+' 다운로드</button>':'')+'</div>'+
       (id==='minutes'&&f.name.endsWith('_meeting-script.txt')?'<details class="meeting-script" open><summary>가상 회의 녹음 내용 전체 읽기 · 화자별 대본</summary><p class="meta">실제 녹음 전사본이 아닌 수업용 허구 대본입니다. FactChat의 전용 「회의록」 메뉴는 음성 녹음·오디오 업로드만 지원하고, TXT는 일반 채팅의 첨부 아이콘으로 사용하세요.</p><pre class="source-text">'+esc(f.text)+'</pre></details>':'')+
       (native?'<details class="sample-source" open><summary>'+type+' 실습용 가상 원문 전체 · 화면·복사·파일 동일</summary><p class="meta">'+(id==='hwp'?'한컴오피스에서 수정 가능한 HWPX입니다. 구형 .hwp 파일과 다른 형식입니다.':'PowerPoint에서 수정 가능한 1장짜리 원문 PPTX입니다. AI 생성 결과물이 아닙니다.')+' 다운로드한 파일은 실습 종료 후 개인 PC에서 직접 삭제하세요.</p><pre class="source-text">'+esc(f.text)+'</pre></details>':'')+'</div>';}).join('');
-    return head('무엇을 만드나요?',m.problem)+pc+'<p class="meta"><b>결과물</b> '+esc(m.deliverable)+'</p>'+(mats?'<div class="mats">'+mats+'</div>':'')+ideas+'<h3>준비물</h3>'+list(m.prepare);
+    return head('무엇을 만드나요?',m.problem)+pc+'<p class="meta"><b>결과물</b> '+esc(m.deliverable)+'</p>'+(id==='hwp'?officialMnuPracticeCard(esc):'')+(mats?'<div class="mats">'+mats+'</div>':'')+ideas+'<h3>준비물</h3>'+list(m.prepare);
   }
   if(s===1){
     const feats=m.features.map(fid=>{const f=featureById(fid);return f?'<li><b>'+esc(f.label)+'</b> — '+esc(f.where)+' '+featureBadge(readFeatureChecks(storage),fid)+'</li>':'';}).join('');
@@ -409,6 +410,7 @@ function bind(){
     if(d.downloadMaterial!==undefined){const f=missionMaterials(course,activeMission(),rec.track)[Number(d.downloadMaterial)];if(f){downloadText(document,f.name,f.text);toast('TXT를 내려받았습니다. 실습 종료 후 다운로드 폴더에서 삭제하세요.');}return;}
     if(d.clearMinutes){if(!confirm('현재 과정의 이 기기 회의록 결과·메모·점검 기록만 삭제할까요? FactChat 녹음·대화 및 다운로드 파일은 별도로 직접 삭제해야 합니다.'))return;delete rec.results.minutes;delete rec.memo.minutes;delete rec.self.minutes;delete rec.checks.minutes;delete rec.timers.minutes;for(const k of Object.keys(rec.checked))if(k.startsWith('minutes:'))delete rec.checked[k];save();render();toast('이 기기의 회의록 결과·메모를 삭제했습니다. FactChat과 다운로드 폴더도 각각 확인하세요.');return;}
     if(d.clearCourse){$('#labClear').click();return;}
+    if(d.copyOfficialMnu){const outcome=await copyText(window,OFFICIAL_MNU_PROMPT);toast(outcome==='copied'?'실제 공문 분석 질문을 복사했습니다. FactChat에서 PDF를 첨부한 뒤 실행하세요.':'전체 질문이 선택되었습니다. Ctrl+C로 복사하세요.');return;}
     if(d.copyMaterial!==undefined){const f=missionMaterials(course,activeMission(),rec.track)[Number(d.copyMaterial)];if(f)toast(copyNow(f.text)?f.label+' 복사 완료 · FactChat에 붙여 넣으세요.':'「원문 보기·복사」에서 길게 눌러 복사하세요.');return;}
     if(d.copyOpen){copyAndOpen(document.getElementById(d.copyOpen)?.textContent||'');return;}
     if(d.sheetClose){closeSheet();return;}
