@@ -166,7 +166,7 @@ export async function institutionAiStore(request, storage) {
 }
 async function fetchStore(env, action, body) {
   if (!env.REVENUE_STORE) throw new Error('INSTITUTION_AI_STORE_UNAVAILABLE');
-  const stub = env.REVENUE_STORE.get(env.REVENUE_STORE.idFromName('ekodibiz-global'));
+  const stub = env.REVENUE_STORE.get(env.REVENUE_STORE.idFromName('institution-ai:' + body.tenantId));
   const response = await stub.fetch('https://revenue-store.internal' + DO_PREFIX + action, {
     method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body),
   });
