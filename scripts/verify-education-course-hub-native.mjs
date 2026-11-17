@@ -25,6 +25,21 @@ try{
   if(overflow>4)fail('horizontal overflow at '+width+'px: '+overflow);
   if(errors.length)fail('catalog JS error at '+width+': '+errors.slice(0,3).join(';'));
   if(width===390){
+   // Guard the real defect: the shared canonical proxy already prefixes JSON
+   // course links with /edu and the UI must not produce /edu/edu/... URLs.
+   const overview=await page.goto(base+'/courses/mnu-factchat-2026/',{waitUntil:'domcontentloaded',timeout:30000});
+   if(overview?.status()!==200)fail('FactChat course overview status '+overview?.status());
+   const originalStudy=page.getByRole('link',{name:'기존 과정 안내·학습 페이지'});
+   await originalStudy.waitFor({timeout:12000});
+   const href=await originalStudy.getAttribute('href');
+   const canonical=new URL(href,page.url());
+   if(canonical.origin!=='https://ekodi.kr'||canonical.pathname!=='/edu/study/live/')
+      fail('course original link contains double Education mount: '+canonical.href);
+   const oldLinks=await page.locator('a[href]').evaluateAll(nodes=>nodes.map(n=>n.href).filter(h=>/\/edu\/edu(?:\/|$)/.test(new URL(h).pathname)));
+   if(oldLinks.length)fail('Double prefix remains in course detail: '+oldLinks.join('; '));
+   const studyResponse=await ctx.request.get(canonical.href);
+   if(studyResponse.status()!==200)fail('actual course original study target does not resolve: '+studyResponse.status());
+   evidence.checks.push({courseResourceCanonical:true,originalStudy200:true});
    const filter=await page.goto(base+'/fields/safety/',{waitUntil:'domcontentloaded',timeout:30000});
    if(filter?.status()!==200)fail('safety field status '+filter?.status());
    await page.getByRole('heading',{name:'안전·보건 교육'}).waitFor({timeout:12000});
