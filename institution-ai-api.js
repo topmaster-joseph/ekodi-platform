@@ -209,7 +209,7 @@ export async function institutionAiApi(request, url, env) {
     if (action === 'message') {
       const messageId = String(body.messageId || '');
       if (!JOB_ID.test(messageId) || !['user', 'assistant'].includes(body.sender) ||
-          typeof body.text !== 'string' || !body.text.trim() || body.text.length > 8000) {
+          typeof body.text !== 'string' || !body.text.trim() || body.text.length > 4000) {
         return json({ code: 'INVALID_MESSAGE' }, 400);
       }
       const message = { sender: body.sender, text: body.text };
