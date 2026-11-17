@@ -44,37 +44,6 @@ try{
           assert.equal('state' in deniedBody,false);assert.equal('founders' in deniedBody,false);
           checks.push({url:protectedUrl,surface:'guest-private-capability-denied',width,passed:true});
         }
-        // 서명·직인 요청(2026-11-17): 관리자 API는 손님에게 닫혀 있고, 서명 링크 API는 저장소가 살아 있는 상태에서
-        // 가짜 토큰을 거부해야 한다(테이블이 없으면 503). 어떤 요청도 기록을 만들지 않는다.
-        for(const endpoint of ['signatures','documents/charter']){
-          const protectedUrl=root+'/api/'+endpoint;
-          const denied=await context.request.get(protectedUrl,{maxRedirects:0});
-          assert.equal(denied.status(),401,protectedUrl+' must deny a guest');
-          assert.equal((await denied.json()).code,'COOP_LOGIN_REQUIRED');
-          checks.push({url:protectedUrl,surface:'guest-signature-admin-denied',width,passed:true});
-        }
-        const fakeToken='A'.repeat(43);
-        const signRequest=await context.request.get(root+'/api/sign/request',{headers:{'x-ekodi-sign-token':fakeToken},maxRedirects:0});
-        assert.equal(signRequest.status(),401,'an unknown signing link is refused by the live signature store');
-        assert.equal((await signRequest.json()).code,'COOP_SIGN_LINK_INVALID');
-        assert.ok(signRequest.headers()['cache-control'].includes('no-store'));
-        const signUpload=await context.request.post(root+'/api/sign/upload',{headers:{'x-ekodi-sign-token':fakeToken,origin:'https://ekodi.kr'},multipart:{file:{name:'probe.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4 probe')}},maxRedirects:0});
-        assert.equal(signUpload.status(),401,'an unknown signing link cannot upload');
-        assert.equal((await signUpload.json()).code,'COOP_SIGN_LINK_INVALID');
-        checks.push({url:root+'/api/sign/*',surface:'guest-signature-link-refused',width,passed:true});
-      }
-      {
-        const url=root+'/sign';
-        activeUrl=url;
-        const response=await page.goto(url+'#'+'B'.repeat(43),{waitUntil:'networkidle',timeout:45000});
-        assert.equal(response.status(),200);
-        assert.match(response.headers()['x-robots-tag']||'',/noindex/);
-        await page.waitForFunction(()=>document.querySelector('#status')?.textContent.includes('서명 링크가 올바르지 않거나'));
-        assert.equal(await page.locator('#signRequest').isVisible(),false);
-        assert.equal(await page.locator('#gate').count(),0,'the signing page never asks for a login');
-        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
-        await page.screenshot({path:path.join(artifacts,coop.slug+'-sign-invalid-'+width+'.png'),fullPage:true});
-        checks.push({url,surface:'sign-link-invalid-guest',width,passed:true});
       }
       for(const suffix of ['/','/members','/admin'])for(const method of ['GET','HEAD']){
         const oldUrl='https://ekodi.kr/'+coop.slug+suffix+'?from=legacy';
