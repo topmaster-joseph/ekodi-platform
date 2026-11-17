@@ -48,7 +48,7 @@ test('partial path prefixes and other service hosts remain unchanged',async()=>{
     '/edu/study/',
   ]){
     const res=await routeCanonicalSurface(new Request(root+target),{});
-    assert.notEqual(res.headers.get('x-ekodi-route'),'edu-double-prefix-canonical',target);
+    assert.notEqual(res?.headers?.get('x-ekodi-route'),'edu-double-prefix-canonical',target);
   }
   assert.equal(await routeCanonicalSurface(new Request('https://other.example/edu/edu/study/'),{}),null);
 });
