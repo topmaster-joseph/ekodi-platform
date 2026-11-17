@@ -3,7 +3,7 @@
 // JPEG every 1–2 s over the room WebSocket. The instructor sees every sharing participant in a grid and can
 // enlarge one. No WebRTC (STUN-only peer links failed across school Wi-Fi/LTE), no recording, no storage.
 import {qrSvg} from '../engine/qr.js';
-import {readToken,acceptAdminHandoff,adminLoginUrl} from '../engine/admin-instructor.js';
+import {readToken,acceptAdminHandoff,adminLoginUrl,adminInstructorSession} from '../engine/admin-instructor.js';
 const $=id=>document.getElementById(id);
 const BASE='/edu/study/live/screen-share/api/rooms';
 const params=new URLSearchParams(location.search);
@@ -159,27 +159,40 @@ async function share(){
  }catch{stopCapture();send({type:'status',status:'denied'});say('화면 공유가 허용되지 않았습니다. 다시 누르거나 캡처 이미지를 보낼 수 있습니다.');}
 }
 function stop(notify=true){stopCapture();if(notify)send({type:'status',status:'stopped'});if(guest)say('화면 공유를 멈췄습니다.');}
+// Any phone/PC image is shrunk automatically (size and quality) until it fits the room message limit.
+const SNAP_LIMIT=280000,SNAP_SIDES=[1600,1280,1024,800,640,480],SNAP_QUALITY=[.8,.65,.5,.4];
+async function decodeImage(file){
+ if(typeof createImageBitmap==='function'){try{return await createImageBitmap(file,{imageOrientation:'from-image'});}catch{}}
+ const url=URL.createObjectURL(file);
+ try{return await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(Error('image_decode_failed'));img.src=url;});}
+ finally{setTimeout(()=>URL.revokeObjectURL(url),1000);}
+}
+export function shrinkToDataUrl(bmp,canvasFactory=()=>document.createElement('canvas')){
+ const w=bmp.width,h=bmp.height;
+ for(const side of SNAP_SIDES){
+  const scale=Math.min(1,side/Math.max(w,h)),c=canvasFactory();
+  c.width=Math.max(1,Math.round(w*scale));c.height=Math.max(1,Math.round(h*scale));
+  const ctx=c.getContext('2d');if(!ctx)throw Error('canvas_unavailable');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(bmp,0,0,c.width,c.height);
+  for(const q of SNAP_QUALITY){const src=c.toDataURL('image/jpeg',q);if(src.length<=SNAP_LIMIT)return src;}
+ }
+ return '';
+}
 async function snapshot(){
  if($('shareControls').hidden)return;
- const file=$('snapshotFile').files?.[0];if(!file||!/^image\/(png|jpeg|webp)$/.test(file.type)){say('PNG, JPG 또는 WEBP 이미지 파일을 선택하세요.');return;}
- if(file.size>8_000_000){say('8MB 이하 이미지를 선택하세요.');return;}
+ const file=$('snapshotFile').files?.[0];
+ if(!file){say('보낼 이미지를 먼저 선택하세요.');return;}
+ if(file.type&&!/^image\//.test(file.type)){say('이미지 파일(사진·캡처)을 선택하세요.');return;}
+ if(file.size>40_000_000){say('40MB 이하 이미지를 선택하세요.');return;}
+ say('이미지 크기를 자동으로 줄이는 중…');
  try{
-  let bmp;
-  if(typeof createImageBitmap==='function')bmp=await createImageBitmap(file);
-  else{
-   const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('read_failed'));reader.readAsDataURL(file);});
-   bmp=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(Error('image_decode_failed'));img.src=data;});
-  }
-  const scale=Math.min(1,1280/Math.max(bmp.width,bmp.height));
-  const canvas=document.createElement('canvas');canvas.width=Math.round(bmp.width*scale);canvas.height=Math.round(bmp.height*scale);
-  const context=canvas.getContext('2d');if(!context)throw Error('canvas_unavailable');
-  context.drawImage(bmp,0,0,canvas.width,canvas.height);
+  const bmp=await decodeImage(file);
+  const src=shrinkToDataUrl(bmp);
   if(typeof bmp.close==='function')bmp.close();
-  let quality=.75,src=canvas.toDataURL('image/jpeg',quality);
-  while(src.length>300000&&quality>.3){quality-=.15;src=canvas.toDataURL('image/jpeg',quality);}
-  if(src.length>300000){say('이미지가 너무 큽니다. 크기를 줄인 후 다시 선택하세요.');return;}
-  send({type:'frame',data:src});say('선택한 이미지를 강사 화면으로 보냈습니다.');
- }catch{say('이미지를 처리하지 못했습니다. 다른 파일을 선택하세요.');}
+  if(!src){say('이미지를 줄이지 못했습니다. 다른 캡처로 다시 시도하세요.');return;}
+  send({type:'frame',data:src});
+  say('강사 화면으로 보냈습니다 (원본 '+(file.size/1048576).toFixed(1)+'MB → '+Math.round(src.length*0.75/1024)+'KB로 자동 축소).');
+ }catch{say('이 이미지 형식은 열 수 없습니다. 화면 캡처(PNG·JPG)로 다시 선택하세요.');}
 }
 function studentMessage(m){
  if(m.type==='focus'){focused=true;say('강사가 내 화면을 크게 보고 있습니다.');return;}
@@ -201,13 +214,29 @@ function connect(id,role,credential){
  ws.addEventListener('close',()=>{if(role==='student'){stopCapture();$('shareControls').hidden=true;}if(!closedByHost)say('연결이 끊어졌습니다. 다시 접속하거나 수업방을 새로 만드세요.');});
  ws.addEventListener('message',event=>{let m;try{m=JSON.parse(event.data);}catch{return;}(role==='host'?hostMessage:studentMessage)(m);});
 }
+// Instructor status: the HttpOnly instructor cookie (12h) is what the room API accepts. A central admin login
+// token in this tab is exchanged for it; an expired token is dropped so the button says to log in again.
+async function instructorReady(){
+ try{const r=await fetch('../unlock/session',{credentials:'same-origin',cache:'no-store'});const d=await r.json();if(d.instructor)return true;}catch{}
+ if(readToken(window)){const r=await adminInstructorSession(window);if(r.ok)return true;}
+ return false;
+}
+async function refreshLogin(){
+ const ok=await instructorReady();
+ $('login').textContent=ok?'강사 로그인됨':'강사 로그인';
+ $('login').classList.toggle('primary',!ok);
+ if(!ok)say('먼저 「강사 로그인」을 눌러 로그인하세요. 로그인하면 이 화면으로 돌아옵니다.');
+ return ok;
+}
 async function create(){
+ if(!await instructorReady()){say('강사 로그인이 만료됐습니다. 로그인 화면으로 이동합니다…');const u=adminLoginUrl(window);if(u)setTimeout(()=>{location.href=u;},900);return;}
  const access=readToken(window);
  $('createRoom').disabled=true;
  try{
   const r=await fetch(BASE,{method:'POST',headers:access?{authorization:'Bearer '+access}:{},credentials:'same-origin'});
   const data=await r.json();
-  if(!r.ok)throw Error(r.status===401?'강사 인증이 필요합니다. 강사 로그인 후 다시 시도해 주세요.':data.code||'create_failed');
+  if(r.status===401){say('강사 로그인이 만료됐습니다. 로그인 화면으로 이동합니다…');const u=adminLoginUrl(window);if(u)setTimeout(()=>{location.href=u;},900);return;}
+  if(!r.ok)throw Error(data.code||'create_failed');
   room=data;
   $('invitePanel').hidden=false;$('inviteLink').value=data.joinUrl;
   $('qr').innerHTML=qrSvg(data.joinUrl,{label:'참여자 QR 접속'});
@@ -245,11 +274,13 @@ function init(){
   $('startShare').addEventListener('click',share);
   $('stopShare').addEventListener('click',()=>stop(true));
   $('sendSnapshot').addEventListener('click',snapshot);
+  $('snapshotFile').addEventListener('change',()=>{if($('snapshotFile').files?.[0])snapshot();});
  }else{
   $('learner').hidden=true;
   const login=adminLoginUrl(window);$('login').href=login||'../unlock/';
-  if(readToken(window))$('login').textContent='강사 로그인됨';
+  refreshLogin();
   $('createRoom').addEventListener('click',create);
+  $('createRoom').textContent='새 수업방 만들기 (4시간) · QR 표시';
   $('copyInvite').addEventListener('click',()=>navigator.clipboard?.writeText($('inviteLink').value).then(()=>say('QR 주소를 복사했습니다.')).catch(()=>say('주소를 직접 복사해 주세요.')));
   $('stopSelection').addEventListener('click',closeBig);
   $('openProjector').addEventListener('click',()=>{const u=projectorUrl();if(u)window.open(u,'ekodi-projector','noopener');});
