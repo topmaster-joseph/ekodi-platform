@@ -3,7 +3,12 @@ $ErrorActionPreference='Stop'
 $path=Join-Path $PSScriptRoot '..\..\ekodi-site-vault.ps1'
 $tokens=$null;$errors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile((Resolve-Path $path),[ref]$tokens,[ref]$errors)
-if($errors.Count -gt 0){throw ('SITE_VAULT_PARSE_FAILED: '+$errors.Count)}
+if($errors.Count -gt 0){
+  foreach($err in $errors){
+    Write-Host ('SITE_VAULT_SYNTAX: line '+$err.Extent.StartLineNumber+', col '+$err.Extent.StartColumnNumber+': '+$err.Message)
+  }
+  throw ('SITE_VAULT_PARSE_FAILED: '+$errors.Count)
+}
 foreach($func in $ast.FindAll({param($node)$node -is [Management.Automation.Language.FunctionDefinitionAst]},$false)){
   . ([scriptblock]::Create($func.Extent.Text))
 }
