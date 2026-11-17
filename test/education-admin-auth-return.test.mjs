@@ -27,7 +27,7 @@ test('verified instructor hub uses the EKODI central admin auth endpoint',()=>{
  const page=readFileSync(new URL('../education/course-hub/auth.js',import.meta.url),'utf8');
  assert.match(page,/centralLogin\('admin'\)/);
  assert.match(page,/return_to/);
- assert.match(page,/site','admin'/);
+ assert.match(page,/searchParams\.set\('site',site\)/);
  const router=readFileSync(new URL('../education/course-hub/router.js',import.meta.url),'utf8');
  assert.match(router,/role.*super_admin/);
  assert.match(router,/ADMIN_SESSION_URL/);
