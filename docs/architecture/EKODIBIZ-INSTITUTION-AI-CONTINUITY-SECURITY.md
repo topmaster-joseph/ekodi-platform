@@ -7,7 +7,7 @@ Owner: EKODI Orchestrator · EKODIBIZ (기존 AI 구매·결제 위탁계약과 
 
 기관이 사용하는 AI 모델·공급사가 바뀌어도 **업무 상태·승인·기록은 에코디 기관 경계에 남도록** 한다. 외부 AI 또는 결제 서비스 오류가 무단 재시도나 교차기관 데이터 유출로 이어지지 않아야 한다.
 
-- 이번 단계: **서버 대 서버 전용 보안 API + Durable Object SQLite에 기관별 암호화 기록 + 멱등 처리 + 감사 체인 + 승인 체크포인트 + 단건 표준 내보내기**.
+- 이번 단계: **서버 대 서버 전용 보안 API + Durable Object SQLite에 기관별 암호화 기록과 대화 맥락 + 멱등 처리 + 감사 체인 + 승인 체크포인트 + 단건 표준 내보내기**.
 - 이번 단계에서는 **AI 모델 자동 호출, 외부 메일/결제/전자결재, 사용자 직접 로그인, 공급사 구독 변경, 실결제 활성화가 모두 없음**. 문서의 목표를 현재 실운영 보장이라고 표현하지 않는다.
 - 별도 구성된 서버 측 애플리케이션만 비밀 키를 사용한다. 브라우저, 모바일 앱, QR 링크, 학생/직원 프런트엔드에 키 제공 금지.
 - 기존 /ekodibiz/ai-agency 계약·결제 워크플로 및 안전 플래그는 변경하지 않는다.
@@ -17,6 +17,7 @@ Owner: EKODI Orchestrator · EKODIBIZ (기존 AI 구매·결제 위탁계약과 
 정본 데이터 소유자는 **고객 기관**이며 AI 모델 응답 ID 또는 공급사 기록을 정본으로 삼지 않는다.
 
 - 입력: POST /api/institution-ai/v1/submit (tenantId, operationId, taskType, classification, payload)
+- 대화 누적: POST /api/institution-ai/v1/message (기관 서버가 검증한 user/assistant 메시지, 메시지별 고유 ID와 기대 버전 필수, 최대 200회·메시지당 4,000자)
 - 조회: POST /api/institution-ai/v1/status
 - 승인: POST /api/institution-ai/v1/approve
 - 처리 상태: POST /api/institution-ai/v1/checkpoint
@@ -51,7 +52,7 @@ AI 호출은 후속 단계에서 중앙 `ai-resilience-runtime.js` 및 `ekodi-ai
 
 ## 5. 복구, 실증 및 단계별 가드
 
-**현재 구현된 단건 내보내기**는 공급사와 독립적인 `ekodi.institution-ai.work/v1` 형식으로 작업·이벤트·자료를 반환한다. 전체 기관 일괄 내보내기, 정기 백업, 별도 지역 재해복구, 실제 복원 검증은 후속 운영 조건이다.
+**현재 구현된 단건 대화 포함 내보내기**는 공급사와 독립적인 `ekodi.institution-ai.work/v1` 형식으로 작업·이벤트·자료를 반환한다. 전체 기관 일괄 내보내기, 정기 백업, 별도 지역 재해복구, 실제 복원 검증은 후속 운영 조건이다.
 
 제한적 시범 운영 전에 반드시 아래 검증을 마친다.
 
