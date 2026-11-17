@@ -78,7 +78,7 @@
     "validate:full": "npm run check && npm test",
     "validate:site-execution": "node scripts/validate-site-execution-enforcement.mjs && node --test test/site-execution-enforcement.test.mjs",
     "validate:write-ingress": "node --check write-ingress.js && node scripts/validate-write-ingress-policy.mjs && node --test test/write-ingress-policy.test.mjs",
-    "validate:traffic": "node --check traffic-governor.js && node scripts/validate-concurrent-traffic-policy.mjs && node --test test/concurrent-traffic-runtime.test.mjs",
+    "validate:traffic": "node --check traffic-governor.js && node --check edge-traffic-shield.js && node scripts/validate-concurrent-traffic-policy.mjs && node --test test/concurrent-traffic-runtime.test.mjs test/edge-traffic-shield.test.mjs test/cloudflare-zone-traffic-shield.test.mjs",
     "validate:social-governance": "node scripts/validate-social-hub-enforcement.mjs && node --test test/social-hub-enforcement.test.mjs",
     "validate:asset-inventory": "node scripts/ekodi-asset-inventory.mjs --check --summary > /dev/null && node --test test/ekodi-asset-inventory.test.mjs",
     "validate:interactive-auth": "node scripts/validate-interactive-auth-session.mjs"

@@ -1,6 +1,7 @@
 import { EKODI_INDEXNOW_KEY_PATH, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
 import { injectVerificationMeta } from './search-engine-verification.js';
 import { withFooterTraffic } from './footer-traffic-guarantee.js';
+import { withEdgeTrafficShield } from './edge-traffic-shield.js';
 
 const ORIGIN = 'https://ekodi.kr';
 const SITE_PREFIX = '/seonammedi';
@@ -287,4 +288,5 @@ const ekodiWorkerEntry={
   },
 };
 // FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
-export default withFooterTraffic(ekodiWorkerEntry);
+// EKODI-EDGE-TRAFFIC-SHIELD-001: this apex route bypasses the Shared Site guard, so it carries its own.
+export default withEdgeTrafficShield(withFooterTraffic(ekodiWorkerEntry),{service:'seonammedi-domain'});

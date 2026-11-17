@@ -80,6 +80,8 @@ import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './
 import { ensureFooterTraffic } from './footer-traffic-guarantee.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
 import { applyTrafficResponsePolicy, assessTrafficTier, recordTrafficOutcome, trafficRequestGuard } from './traffic-governor.js';
+// EKODI-EDGE-TRAFFIC-SHIELD-001: fetch() isolates a flooding client before the site-wide tier assessment.
+import { enforceClientTrafficBudget } from './edge-traffic-shield.js';
 import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
 import { handleSeonamMediAdminApi } from './seonammedi-admin-control.js';
 import { handleSeonamMediMonitorApi } from './seonammedi-monitor.js';
@@ -779,13 +781,15 @@ export default {
   async fetch(request,env,ctx){
     const guard=await enforcePlatformRequestSecurity(request,env);
     if(guard)return applyPlatformSecurityHeaders(guard,request);
+    const throttle=await enforceClientTrafficBudget(request,env);
+    if(throttle)return applyPlatformSecurityHeaders(throttle,request);
     const trafficStartedAt=Date.now();
     const traffic=await assessTrafficTier(request,env);
     const trafficGuard=trafficRequestGuard(request,traffic);
     if(trafficGuard)return applyPlatformSecurityHeaders(trafficGuard,request);
+    if(['GET','HEAD'].includes(request.method)){const verificationFile=searchVerificationFileResponse(new URL(request.url).pathname,{head:request.method==='HEAD'});if(verificationFile)return applyPlatformSecurityHeaders(verificationFile,request);}
     // JOURNAL-EDITOR-ALERTS-20261113: 저녁 6시(KST) 이후 첫 요청 때 하루 한 번 저널 편집부 요약 메일(자체 5분 간격·일 1회 잠금).
     if(ctx?.waitUntil)ctx.waitUntil(runJournalDigest(env));
-    if(['GET','HEAD'].includes(request.method)){const verificationFile=searchVerificationFileResponse(new URL(request.url).pathname,{head:request.method==='HEAD'});if(verificationFile)return applyPlatformSecurityHeaders(verificationFile,request);}
     let trafficRecorded=false;
     const record=status=>{if(trafficRecorded)return;trafficRecorded=true;recordTrafficOutcome({durationMs:Date.now()-trafficStartedAt,status})};
     const finalize=response=>{
