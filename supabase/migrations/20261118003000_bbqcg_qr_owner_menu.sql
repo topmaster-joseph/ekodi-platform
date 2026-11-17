@@ -98,7 +98,7 @@ begin
 
   return jsonb_build_object('ok',true,'menu_item_id',v_item_id,'state',
     case when coalesce(p_approve,false) then 'owner_approved' else 'draft_hidden' end,
-    'order_enabled',false);
+    'checkout_activated',false);
 end
 $bbq_menu_submit$;
 
