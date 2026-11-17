@@ -234,6 +234,19 @@ try {
       {waitUntil:'domcontentloaded',timeout:35000});
     const loop=page.locator('[data-ekodi-devotion] [data-speech-action="loop"]');
     await loop.waitFor({state:'visible',timeout:22000});
+    const collapsed=await page.evaluate(()=>{
+      const row=document.querySelector('[data-ekodi-devotion] .dv-speech-tools');
+      const actions=['pause','stop'];
+      return {advanced:row?.dataset.advanced,
+        hiddenDisabled:actions.every(name=>{
+          const button=row.querySelector('[data-speech-action="'+name+'"]');
+          return button?.disabled===true&&getComputedStyle(button).display==='none';
+        }),
+        loopVisible:getComputedStyle(row.querySelector('[data-speech-action="loop"]')).display!=='none'};
+    });
+    record('compact-320-collapsed-control-contract',
+      collapsed.advanced==='false'&&collapsed.hiddenDisabled&&collapsed.loopVisible,collapsed);
+    await page.locator('[data-ekodi-devotion] [data-speech-action="settings"]').click();
     const compactState=await page.evaluate(()=>{
       const row=document.querySelector('[data-ekodi-devotion] .dv-speech-tools');
       const keys=['loop','pause','stop'];
