@@ -218,6 +218,7 @@ function Invoke-EkodiSiteBrowser($Root,$Site,[bool]$FirstVisit,[bool]$PasswordMa
     )
     $proc=Start-Process -FilePath $browser -ArgumentList ($args -join ' ') -PassThru
     Start-Sleep -Seconds 3
+    if(@(Get-EkodiBrowserProcesses $profile).Count -eq 0){throw 'SITE_VAULT_BROWSER_START_NOT_VERIFIED'}
     $start=[DateTime]::UtcNow
     while([DateTime]::UtcNow -lt $start.AddHours($MaxHours)){
       if(@(Get-EkodiBrowserProcesses $profile).Count -eq 0){break}
@@ -245,9 +246,20 @@ function Invoke-EkodiSiteBrowser($Root,$Site,[bool]$FirstVisit,[bool]$PasswordMa
   if(-not $safeToSeal){throw 'SITE_VAULT_SEAL_NOT_VERIFIED'}
   Write-Output ('로컬 암호화 저장 완료: '+$Site.Origin)
 }
+function Recover-EkodiAbandonedProfiles($Root){
+  $activeRoot=Join-Path $Root 'active'
+  foreach($folder in @(Get-ChildItem -LiteralPath $activeRoot -Directory -Force)){
+    if($folder.Name -notmatch '^Session-[a-f0-9]{64}-[a-f0-9]{32}$'){continue}
+    if(($folder.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0){continue}
+    if($folder.CreationTimeUtc -gt [DateTime]::UtcNow.AddMinutes(-3)){continue}
+    if(@(Get-EkodiBrowserProcesses $folder.FullName).Count -gt 0){continue}
+    Remove-EkodiActiveProfile $folder.FullName
+  }
+}
 function Invoke-EkodiSiteVault {
   Assert-EkodiLocalHuman
   $root=Get-EkodiVaultRoot
+  Recover-EkodiAbandonedProfiles $root
   if($Action -eq 'list'){
     foreach($entry in @(Get-ChildItem -LiteralPath (Join-Path $root 'sealed') -Filter '*.vault' -File)){
       $id=[IO.Path]::GetFileNameWithoutExtension($entry.Name)
@@ -265,6 +277,9 @@ function Invoke-EkodiSiteVault {
   }
   $site=Get-EkodiSite $Site
   $file=Get-EkodiVaultPath $root $site
+  $leaseFile=$file+'.lock'
+  $lease=[IO.File]::Open($leaseFile,[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+  try{
   if($Action -eq 'delete'){
     if(-not (Test-Path -LiteralPath $file)){throw 'SITE_VAULT_SITE_NOT_REGISTERED'}
     if(-not (Confirm-EkodiVaultConsent ('사이트 로그인 보관함을 영구 삭제합니까?'+[Environment]::NewLine+$site.Origin))){
@@ -293,9 +308,12 @@ function Invoke-EkodiSiteVault {
     }
   }
   Invoke-EkodiSiteBrowser $root $site ($Action -eq 'register') ([bool]($Action -eq 'register' -and $RememberPasswords))
+  }finally{$lease.Dispose()}
 }
 try{Invoke-EkodiSiteVault}catch{
-  # Never print a URL with query, plaintext secret, browser cookie or exception stack.
-  [Console]::Error.WriteLine('EKODI_SITE_VAULT_ERROR: '+([string]$_.Exception.Message -replace '[^\w-]','_').Substring(0,[Math]::Min(90,([string]$_.Exception.Message).Length)))
+  # Emit only a bounded policy code: never a URL, cookie or exception stack.
+  $code=[string]$_.Exception.Message
+  if($code -notmatch '^SITE_VAULT_[A-Z0-9_]+$'){$code='SITE_VAULT_OPERATION_FAILED'}
+  [Console]::Error.WriteLine('EKODI_SITE_VAULT_ERROR: '+$code)
   exit 1
 }
