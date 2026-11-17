@@ -16,6 +16,18 @@ const checksum = async value => {
   return Array.from(new Uint8Array(digest), x => x.toString(16).padStart(2, '0')).join('');
 };
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
+async function verifyAuditTrail(record, audit) {
+  if (!Array.isArray(audit) || audit.length !== record.version || record.version < 1) return false;
+  let previous = 'genesis';
+  for (let i = 0; i < audit.length; i++) {
+    const event = audit[i];
+    if (event.seq !== i + 1 || event.prevHash !== previous) return false;
+    const { seq, type, role, at, evidenceRef, prevHash } = event;
+    if (event.hash !== await checksum(JSON.stringify({ seq, type, role, at, evidenceRef, prevHash }))) return false;
+    previous = event.hash;
+  }
+  return record.auditHead === previous && record.updatedAt === audit[audit.length - 1]?.at;
+}
 const keyFor = (tenantId, operationId) => 'institution:job:' + tenantId + ':' + operationId;
 const logPrefix = (tenantId, operationId) => 'institution:audit:' + tenantId + ':' + operationId + ':';
 const publicJob = record => ({
@@ -171,6 +183,7 @@ export async function institutionAiApi(request, url, env) {
     if (result.status !== 200) return json(result.payload, result.status);
     if (storageAction !== 'get') return json(result.payload);
     const { record, audit } = result.payload;
+    if (!await verifyAuditTrail(record, audit)) return json({ code: 'AUDIT_INTEGRITY_FAILURE' }, 503);
     if (record.tenantId !== body.tenantId || record.operationId !== body.operationId) return json({ code: 'SCOPE_MISMATCH' }, 403);
     const payload = await decryptInstitutionPayload(env, body.tenantId, body.operationId, record.sealed);
     const job = publicJob(record);
