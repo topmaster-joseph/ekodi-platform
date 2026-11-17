@@ -285,6 +285,22 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   const url=new URL(request.url);
   if(url.hostname.toLowerCase()!==CANONICAL_HOST)return null;
   const path=url.pathname;
+  // Education is mounted exactly once at /edu. Historical browser tabs and
+  // canonical-proxy-transformed JS produced /edu/edu/study/ and similar 404s.
+  // Collapse only repeated *whole* /edu path segments, without forwarding
+  // mutation requests or crossing to another service/host.
+  if(/^\/edu(?:\/edu)+(?=\/|$)/.test(path)){
+    if(request.method!=='GET'&&request.method!=='HEAD')
+      return new Response(null,{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'edu-double-prefix-rejected'}});
+    const target=new URL(request.url);
+    const canonical=path.replace(/^\/edu(?:\/edu)+(?=\/|$)/,'/edu');
+    target.pathname=canonical==='/edu'?'/edu/':canonical;
+    target.hash='';
+    return new Response(null,{status:308,headers:{
+      location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff',
+      'x-ekodi-route':'edu-double-prefix-canonical','x-robots-tag':'noindex, nofollow',
+    }});
+  }
   const contactResponse=await handleMailContactApi(request,env);
   if(contactResponse)return contactResponse;
   if(request.method==='GET'&&path==='/mail/contact'){
