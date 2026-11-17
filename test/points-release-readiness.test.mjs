@@ -41,7 +41,8 @@ test('partial or insecure schema must never pass release contract',()=>{
     migrations:applied,functions,expected});
   assert.equal(exposedTables.state,'points_contract_incomplete');
   assert.deepEqual(exposedTables.missing_contracts,['points_tables_secure']);
-  for (const property of ['ledger_append_only_enforced','ledger_idempotency_unique']) {
+  for (const property of ['ledger_append_only_enforced','ledger_idempotency_unique',
+    'unverified_active_credit_denied','devotion_self_report_credit_denied']) {
     const weakened=assess({schema:{...completeSchema,[property]:false},
       migrations:applied,functions,expected});
     assert.equal(weakened.state,'points_contract_incomplete');
@@ -93,6 +94,15 @@ test('real management requests are read-only, strictly project-scoped, never exp
   assert.match(SCHEMA_QUERY,/t\.tgfoid=to_regprocedure\('ekodi_points_private\.reject_ledger_mutation\(\)'\)/);
   assert.match(SCHEMA_QUERY,/t\.tgtype & 27/);
   assert.match(SCHEMA_QUERY,/pg_get_constraintdef\(c\.oid\)='UNIQUE \(site_id, user_id, event_key\)'/);
+  // An unapplied or NOT VALID economic safeguard must fail readiness.
+  for (const guard of ['ekodi_points_no_unverified_active_credit','ekodi_points_no_devotion_self_report_credit']) {
+    assert.ok(SCHEMA_QUERY.includes("c.conname='"+guard+"'"));
+  }
+  assert.equal((SCHEMA_QUERY.match(/c\.contype='c' and c\.convalidated/g)||[]).length,2);
+  assert.equal((SCHEMA_QUERY.match(/pg_get_expr\(c\.conbin,c\.conrelid\)=/g)||[]).length,2);
+  assert.match(SCHEMA_QUERY,/rule_id <> ''active''::text/);
+  assert.match(SCHEMA_QUERY,/adapter <> ''devotion_self_report''::text/);
+  assert.match(SCHEMA_QUERY,/enabled = false/);
   for(const query of [SCHEMA_QUERY,MIGRATION_QUERY])
     assert.doesNotMatch(query,/^\s*(?:insert|update|delete|drop|truncate|alter|create|grant|revoke|call)\b/im);
 });
