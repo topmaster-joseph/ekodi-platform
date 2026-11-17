@@ -689,3 +689,13 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .sample-source .meta{margin:6px 0;color:#486273}
 .mat .btn-row{display:flex;flex-wrap:wrap;gap:6px}
 @media print{.sample-source .source-text{max-height:none;overflow:visible}}
+
+
+/* Instructor-supplied MNU 2026 notice: additional original PDF, not a converted HWP. */
+.original-pdf-card{border:1px solid #9bbfb9;background:#f5fbf9;margin:12px 0;padding:14px;border-radius:12px}
+.original-pdf-card h3{margin:4px 0 6px}
+.original-pdf-card .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.official-pdf-facts{border-top:1px solid #c4d9d5;padding-top:10px}
+.official-pdf-facts summary{font-weight:700;cursor:pointer;min-height:36px}
+.official-pdf-facts .meta{line-height:1.62;margin:8px 0}
+@media print{.original-pdf-card{break-inside:avoid}}
