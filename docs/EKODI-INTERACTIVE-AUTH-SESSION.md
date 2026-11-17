@@ -65,3 +65,16 @@
 - 이 기능은 상품 주문·결제·공급처 개인정보 전송을 **절대로** 수행하지 않는다. 실제 도매꾹 소액 시험주문은 공식 `setOrder` API와 기존 `BUYER_PII_RELEASE_ENABLED`, `SUPPLIER_FORWARD_ENABLED`, `DOMEGGOOK_PILOT_ORDER_IDS`, `DOMEGGOOK_PILOT_MAX_TOTAL_KRW` 승인 가드를 모두 통과한 후 별도 수행해야 한다.
 - 공급사 사업자 자격은 공식 `setLogin` 반환의 회원등급 등을 공급사 규약으로 확인하며, 단순 브라우저 로그인 성공을 거래 승인으로 승격하지 않는다.
 - 기존 `EKODI-BROWSER-WORKER-001`의 ekodi.kr 출처 제한·자동인증 금지 정책은 변경하지 않는다.
+
+## 코레일 KTX 전용 인증 (2026-11-18 · Issue #9876)
+
+- 사용자 요청: 2026-12-10 목포 07:03 KTX 406 13호차 5D 옆 **5C 1매** 추가 / 용산 16:38 KTX 431 목포행 **나란한 2매**. 이 요청은 **예매·결제·발권 완료를 뜻하지 않는다**.
+- 공식 로그인: `https://www.korail.com/ticket/login`. 공식 안내: `https://www.korail.com/ticket/reserve/guide/faq`.
+- EKODI 관리자 진입: `https://ekodi.kr/admin/ops/devices?externalAuth=korail-ticket` (공식 릴리스 및 Windows Agent 2.6.7+ 배포 후에만 사용 가능).
+- 등록 PC의 `interactiveAuthSession=true` 및 `korailNativeAuth=true`, 온라인 heartbeat, 최고관리자 승인, PC 앞 사람의 현장 동의가 필수다. 전용 임시 Chromium 창에서 **사용자가 직접** 코레일 ID·비밀번호·OTP를 입력하며, EKODI는 읽거나 전달하지 않는다.
+- 서비스 출처 `https://www.korail.com`만 로그인 판정 대상이며, `/ticket/` 경로에 도달했더라도 **보이는 로그아웃 표식과 비밀번호 입력창 부재**가 동시에 확인되어야 한다. 이는 로그인 상태의 보수적 신호이지 예매권한이나 잔여좌석을 증명하지 않는다.
+- 코레일에서는 **로그인 상태만 점검**한다. 메뉴 텍스트, 승객정보, 예약내역, 운임, 결제수단, 좌석 또는 발권정보를 로컬 판독·업로드하지 않는다. AI 입력과 서버 영수증에도 포함하지 않는다.
+- 좌석 조회, 자동 선택, 주문·결제, 승차권 다운로드·조회는 이 기능의 권한 밖이다. 별도 제공자 약관 검토·권한 설계와 명시적 Human Gate를 거치기 전에는 코레일 공식 화면에서 **본인이 직접** 수행한다. CAPTCHA 우회·요청 과부하·차단 회피를 금지한다.
+- 로그인 상태 점검 후 **세션 즉시 종료·삭제**, 미완료 시 30분 자동 만료로 쿠키 포함 임시 프로필 삭제를 확인한다. 기존 인증 워커, 타서비스, 개인 Opera/Chrome/Edge 프로필은 변경하지 않는다.
+- 공식 병합·배포 전 테스트: `node --test test/interactive-auth-session.test.mjs test/ekodi-browser-independence.test.mjs`, `node scripts/validate-interactive-auth-session.mjs`, Agent 모의 E2E, 중앙 오케스트레이터·보안·스테이징·실운영 검증.
+- 코드 브랜치나 PR 생성은 운영 적용을 의미하지 않는다. Windows Agent 업그레이드 후 실제 코레일 로그인, 종료 후 임시 프로필 삭제, 영수증 분리 확인 없이는 기능을 완료로 보고하지 않는다.
