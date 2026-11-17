@@ -118,3 +118,9 @@ test('guide links the learner screen-share room for 점검·공유, learner butt
   assert.match(html,/내 실습 화면 공유 시작/);assert.match(html,/FactChat이 열린 「탭」 또는 「창」/);
   assert.ok(FLOW.find(f=>f.id==='share').cues.some(c=>/참여자 화면 공유실/.test(c)));
 });
+
+test('institutional AI cases: each has who, what, tag and a dated source',async()=>{
+  const {CASES}=await import('../education/study/live/guide/trends.js');
+  assert.ok(CASES.length>=5);
+  for(const c of CASES){assert.ok(c.who&&c.what&&c.tag,c.who);assert.match(c.source,/20\d\d/,c.who);}
+});
