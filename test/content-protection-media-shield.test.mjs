@@ -49,9 +49,18 @@ test('protected HTML gets no-store, trace header and stripped source map headers
   const response=await applyContentProtection(upstream,new Request('https://ekodi.kr/admin/sites',{headers:{'cf-ray':'abc123'}}),{EKODI_CONTENT_TRACE_SECRET:'s'.repeat(40)});
   assert.equal(response.headers.get('x-ekodi-content-guard'),'v1');
   assert.match(response.headers.get('x-ekodi-trace'),/^[0-9A-F]{12}$/);
-  assert.equal(response.headers.get('cache-control'),'private, no-store, max-age=0');
+  assert.equal(response.headers.get('cache-control'),'no-store');
   assert.equal(response.headers.get('sourcemap'),null);
   assert.match(response.headers.get('x-robots-tag'),/noarchive/);
+});
+
+test('existing no-store directives are preserved verbatim for release contracts',async()=>{
+  for(const value of ['no-store','private, no-store']){
+    const upstream=new Response('<html><head></head></html>',{headers:{'content-type':'text/html','cache-control':value,'x-robots-tag':'noindex, nofollow, noarchive'}});
+    const response=await applyContentProtection(upstream,new Request('https://ekodi.kr/mail'),{});
+    assert.equal(response.headers.get('cache-control'),value);
+    assert.match(`x-robots-tag: ${response.headers.get('x-robots-tag')}`,/x-robots-tag: noindex, nofollow, noarchive/);
+  }
 });
 
 test('public HTML keeps caching and is not guarded',async()=>{
@@ -157,4 +166,30 @@ test('media shield HTTP flow: auth, audience, token, manifest, segment, key',asy
 test('player script is served from a fixed path only',()=>{
   assert.equal(mediaShieldPlayerResponse(new Request('https://ekodi.kr/__ekodi/media-shield-player.js')).status,200);
   assert.equal(mediaShieldPlayerResponse(new Request('https://ekodi.kr/__ekodi/other.js')),null);
+});
+
+// Regression guardrail (2026-11-18 rollback): the protection layer must never break a
+// header marker that the Shared Site guarded release verifies in production.
+test('protection layer preserves every Shared Site release header marker',async()=>{
+  const { readFile }=await import('node:fs/promises');
+  const { applyPlatformSecurityHeaders }=await import('../platform-security-policy.js');
+  const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+  const requests=(manifest.worker||manifest).requests||[];
+  const norm=res=>[...res.headers.entries()].map(([k,v])=>`${k}: ${v}`).join('\n').toLowerCase();
+  const info=console.info;console.info=()=>{};
+  const regressions=[];
+  try{
+    for(const entry of requests){
+      const markers=entry.headerExpect||[];
+      if(!markers.length)continue;
+      const base=new Headers({'content-type':/\.js(\?|$)/.test(entry.url)?'text/javascript':/\.css(\?|$)/.test(entry.url)?'text/css':'text/html; charset=utf-8'});
+      for(const marker of markers){const i=marker.indexOf(':');base.append(marker.slice(0,i).trim(),marker.slice(i+1).trim());}
+      const status=markers.some(m=>m.toLowerCase().startsWith('location:'))?302:200;
+      const request=new Request(entry.url,{method:entry.method||'GET'});
+      const before=norm(applyPlatformSecurityHeaders(new Response('<html><head></head></html>',{status,headers:new Headers(base)}),request));
+      const after=norm(applyPlatformSecurityHeaders(await applyContentProtection(new Response('<html><head></head></html>',{status,headers:new Headers(base)}),request,{}),request));
+      for(const marker of markers)if(before.includes(marker.toLowerCase())&&!after.includes(marker.toLowerCase()))regressions.push(`${entry.url} → ${marker}`);
+    }
+  }finally{console.info=info;}
+  assert.deepEqual(regressions,[]);
 });
