@@ -21,7 +21,7 @@ test('QR is a stable customer route, not an anchor or unverified payment channel
   assert.match(homepage,/href="\/bbqcg\/order"/);
   assert.match(homepage,/QR 메뉴 확인/);
   assert.match(homepage,/온라인 결제와 매장 자동 접수는 승인 후 개통/);
-  assert.match(homepage,/BBQ-무안청계점/);
+  assert.match(qr,/BBQ-무안청계점/);
 });
 
 test('customer menu never invents prices, approved products, or publishes unverified catalog rows',()=>{
