@@ -75,7 +75,8 @@ test('BBQ store presents its own sticky brand, safe order selection and a local 
   assert.match(html,/\/bbqcg\/assets\/order-qr\.js/);
   assert.match(css,/position:sticky/);
   assert.match(css,/@media\(max-width:560px\)/);
-  assert.match(qr,/https:\/\/ekodi\.kr\/bbqcg#order/);
+  assert.match(qr,/https:\/\/ekodi\.kr\/bbqcg\/order/);
+  assert.match(html,/href="\/bbqcg\/order"/);
   assert.match(qr,/QRCode/);
   assert.match(qr,/toDataURL\('image\/png'\)/);
   assert.doesNotMatch(html,/baemin\.com|yogiyo\.co\.kr|coupangeats\.com/i);
