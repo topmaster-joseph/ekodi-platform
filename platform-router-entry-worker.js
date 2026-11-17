@@ -77,6 +77,9 @@ import { regionTabsScriptResponse } from './region-tabs-ui.js';
 import { CHEONGGYE_PUBLICATION_HOLD, cheonggyePublicHoldResponse } from './region-publication-hold.js';
 import { cheonggyePassVendorIntakeScript } from './cheonggyepass-vendor-intake-ui.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
+import { applyContentProtection, contentProtectionAssetResponse } from './content-protection-policy.js';
+import { handleMediaShieldRequest, isMediaShieldPath, mediaShieldPlayerResponse } from './ekodi-media-shield.js';
+import { principalFromSupabaseRequest } from './ekodi-principal.js';
 import { ensureFooterTraffic } from './footer-traffic-guarantee.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
 import { applyTrafficResponsePolicy, assessTrafficTier, recordTrafficOutcome, trafficRequestGuard } from './traffic-governor.js';
@@ -788,6 +791,14 @@ export default {
     const trafficGuard=trafficRequestGuard(request,traffic);
     if(trafficGuard)return applyPlatformSecurityHeaders(trafficGuard,request);
     if(['GET','HEAD'].includes(request.method)){const verificationFile=searchVerificationFileResponse(new URL(request.url).pathname,{head:request.method==='HEAD'});if(verificationFile)return applyPlatformSecurityHeaders(verificationFile,request);}
+    // EKODI-CONTENT-PROTECTION-001 / EKODI-MEDIA-SHIELD-001: guard assets, source-map refusal and the
+    // self-hosted DRM API are answered before any tenant routing so no route can bypass them.
+    const protectionAsset=contentProtectionAssetResponse(request)||mediaShieldPlayerResponse(request);
+    if(protectionAsset)return applyPlatformSecurityHeaders(protectionAsset,request);
+    if(isMediaShieldPath(new URL(request.url).pathname)){
+      const shielded=await handleMediaShieldRequest(request,env,{resolvePrincipal:principalFromSupabaseRequest});
+      return applyPlatformSecurityHeaders(shielded,request);
+    }
     // JOURNAL-EDITOR-ALERTS-20261113: 저녁 6시(KST) 이후 첫 요청 때 하루 한 번 저널 편집부 요약 메일(자체 5분 간격·일 1회 잠금).
     if(ctx?.waitUntil)ctx.waitUntil(runJournalDigest(env));
     let trafficRecorded=false;
@@ -797,7 +808,8 @@ export default {
       response=applyTrafficResponsePolicy(response,request,traffic);
       // FOOTER-TRAFFIC-GUARANTEE: every public HTML page leaving the Shared Site shows footer visit stats.
       try{response=ensureFooterTraffic(response,request)}catch(error){console.error('footer traffic guarantee skipped',error)}
-      return applyPlatformSecurityHeaders(response,request);
+      // EKODI-CONTENT-PROTECTION-001: admin·member·reader documents get the copy/capture deterrent + forensic trace.
+      return applyContentProtection(response,request,env).then(response=>applyPlatformSecurityHeaders(response,request));
     };
     const incomingUrl=new URL(request.url);
     const retiredBbq=resolvedHost(request,env)===PUBLIC_HOST?retiredBbqRouteResponse(request):null;
