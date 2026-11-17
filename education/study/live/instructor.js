@@ -5,6 +5,7 @@ import {validateCourse,sessionByNo,sessionSlides,practiceMinutes,practiceModules
 import {createLiveStore,lectureElapsedMs,timerRemainingMs,timerPhase,CHANNEL_NAME} from './engine/live-state.js';
 import {qrSvg} from './engine/qr.js';
 import {downloadPracticeSource} from './engine/practice-source-export.js';
+import {officialMnuPracticeCard,OFFICIAL_MNU_PROMPT} from './materials/official-mnu-2026.js';
 import {esc,list,missionSections,featureCard,readFeatureChecks,writeFeatureCheck,allFeatureIds,moduleLabel,downloadText,copyText,safeStorage,safeChannel,multiline,bindChrome,showFactchatTab,loadNotesSafe,notesUnlockUrl,lockedNotesHtml} from './engine/render.js';
 import {checkOutput} from './engine/checker.js';
 import {FACTCHAT_TOOL} from './tools/factchat.js';
@@ -164,7 +165,7 @@ function viewMaterials(){
     }).join(''):'<p class="meta">내려받을 원문 없이 수강생 자신의 공개 가능한 업무 자료로 진행합니다.</p>')+'</div>';}).join('');
   return '<div class="panel"><p class="eyebrow">MATERIALS</p><h2>자료·내보내기</h2><p class="meta">모든 원문은 가상(허구) 실습자료입니다. 아래 직무 선택에 따라 내려받는 원문이 바뀝니다.</p>'+trackLevelControls()+
     '<div class="btn-row"><button type="button" class="btn" id="mdExport">전체 강의안 Markdown (강사 노트 포함)</button><button type="button" class="btn" id="mdExportPublic">수강생 배포용 Markdown</button><button type="button" class="btn" id="deckPrint">발표 슬라이드 PDF로 인쇄</button></div>'+
-    '<p class="meta">한글 실습 원문은 HWPX(한컴오피스 편집 가능), 발표 실습 원문은 PPTX(파워포인트 편집 가능)로 내려받습니다. 이는 강의 발표 화면을 변환한 파일이 아니라 원문 샘플입니다. 발표 화면은 웹 발표 모드를 사용합니다.</p></div>'+blocks;
+    '<p class="meta">한글 실습 원문은 HWPX(한컴오피스 편집 가능), 발표 실습 원문은 PPTX(파워포인트 편집 가능)로 내려받습니다. 이는 강의 발표 화면을 변환한 파일이 아니라 원문 샘플입니다. 발표 화면은 웹 발표 모드를 사용합니다.</p></div>'+officialMnuPracticeCard(esc)+blocks;
 }
 function viewResults(){
   return '<div class="panel"><p class="eyebrow">RESULTS & FEEDBACK</p><h2>실습 성과·피드백</h2>'+
@@ -284,6 +285,7 @@ function bind(){
     if(d.featureCheck){writeFeatureCheck(storage,d.featureCheck,d.status);renderView();toast('기능 상태를 이 기기에 기록했습니다.');return;}
     if(d.copy){const el=document.getElementById(d.copy);const r=await copyText(window,el?.textContent||'',el);toast(r==='copied'?'프롬프트를 복사했습니다.':r==='selected'?'텍스트를 선택했습니다. Ctrl+C로 복사하세요.':'복사하지 못했습니다.');return;}
     if(d.download!==undefined){const m=mod();const files=missionMaterials(course,m.missionId,prefs.track);const f=files[Number(d.download)];if(f)downloadText(document,f.name,f.text);return;}
+    if(d.copyOfficialMnu){const result=await copyText(window,OFFICIAL_MNU_PROMPT);toast(result==='copied'?'공문 분석 질문 복사 완료':'원문이 선택되었습니다. Ctrl+C로 복사하세요.');return;}
     if(d.matNative){const [mid,i]=d.matNative.split(':');if((mid==='hwp'||mid==='ppt')&&Number(i)===0){const f=missionMaterials(course,mid,prefs.track)[0],ctx=missionContext(course,mid,prefs.track);if(f)try{const file=downloadPracticeSource(document,{courseId:course.id,trackId:prefs.track,kind:mid,title:ctx.doc||ctx.topic||'가상 실습자료',text:f.text});toast(file+' 다운로드 완료');}catch(error){toast('문서 생성 실패: '+error.message);}}return;}
     if(d.matCopy){const [mid,i]=d.matCopy.split(':');const f=missionMaterials(course,mid,prefs.track)[Number(i)];if(f){const result=await copyText(window,f.text);toast(result==='copied'?'원문을 복사했습니다.':'복사가 차단되었습니다. 전체보기에서 선택·복사하세요.');}return;}
     if(d.mat){const [mid,i]=d.mat.split(':');const f=missionMaterials(course,mid,prefs.track)[Number(i)];if(f){downloadText(document,f.name,f.text);toast(f.label+' 내려받기');}return;}
