@@ -6,6 +6,7 @@ import { cooperativeCss, cooperativeScript } from './cooperative-ui.js';
 import { cooperativeCharter } from './cooperative-charter.js';
 import { COOPERATIVE_IMAGE_PATHS } from './cooperative-media.js';
 import { cooperativeLocatorAvailability } from './cooperative-locator.js';
+import { handleSignatureAdmin, handleSignatureSigner } from './cooperative-signatures.js';
 
 const headers = (type = 'application/json; charset=utf-8') => ({
   'content-type': type, 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff',
@@ -31,7 +32,7 @@ export async function cooperativeLocatorGuard(request, env) {
   if (url.hostname !== 'ekodi.kr') return null;
   const route = cooperativeRoute(url.pathname);
   if (!route || route.platformContext) return null;
-  if (route.locator !== route.coop.publicSlug && !['/', '/members', '/admin'].includes(route.path)) return null;
+  if (route.locator !== route.coop.publicSlug && !['/', '/members', '/admin', '/sign'].includes(route.path)) return null;
   const availability = await cooperativeLocatorAvailability(env, route.coop, request);
   return availability.ok ? null : json({ ok: false, code: availability.code }, 503);
 }
@@ -204,7 +205,7 @@ export async function routeCooperative(request, env) {
   if (!route) return null;
   const { coop, locator, path, platformContext } = route;
   try {
-    const humanPage = ['/', '/members', '/admin'].includes(path);
+    const humanPage = ['/', '/members', '/admin', '/sign'].includes(path);
     const canonicalRoot = url.pathname === '/' + coop.publicSlug;
     const locatorGuard = await cooperativeLocatorGuard(request, env);
     if (locatorGuard) return locatorGuard;
@@ -215,7 +216,7 @@ export async function routeCooperative(request, env) {
     if (['GET', 'HEAD'].includes(request.method)) {
       if (path === '/assets/app.css' && !platformContext) return new Response(request.method === 'HEAD' ? null : cooperativeCss(), { headers: headers('text/css; charset=utf-8') });
       if (path === '/assets/app.js' && !platformContext) return new Response(request.method === 'HEAD' ? null : cooperativeScript(), { headers: headers('text/javascript; charset=utf-8') });
-      if (['/', '/members', '/admin'].includes(path)) {
+      if (['/', '/members', '/admin'].includes(path) || (path === '/sign' && !platformContext)) {
         const surface = path === '/' ? 'public' : path.slice(1);
         const h = new Headers(headers('text/html; charset=utf-8'));
         h.set('x-ekodi-route', `cooperative-${surface}`);
@@ -236,10 +237,20 @@ export async function routeCooperative(request, env) {
     if (!env.DB?.prepare) return json({ ok: false, code: 'COOP_DATABASE_UNAVAILABLE' }, 503);
     if (path === '/api/application' && !platformContext) return application(request, env, coop);
     if (path === '/api/join' && !platformContext) return join(request, env, coop);
-    const administrative = path === '/api/project' || path === '/api/export';
+    // 서명·직인 요청 링크(로그인 없음): 링크 토큰이 곧 이 한 사람·한 서류에 대한 권한이다.
+    if (path.startsWith('/api/sign/') && !platformContext) {
+      const signed = await handleSignatureSigner(request, env, coop, path, await loadCooperativeProject(env.DB, coop), { headers });
+      return signed || json({ ok: false, code: 'COOP_ROUTE_NOT_FOUND' }, 404);
+    }
+    const signatureAdmin = path === '/api/signatures' || path.startsWith('/api/signatures/') || path.startsWith('/api/documents/');
+    const administrative = path === '/api/project' || path === '/api/export' || signatureAdmin;
     const access = await resolveCooperativeAccess(request, env, coop, { administrative, platformContext });
     if (!access.allowed) return json({ ok: false, code: access.code }, access.status);
     const project = await loadCooperativeProject(env.DB, coop);
+    if (signatureAdmin) {
+      const handled = await handleSignatureAdmin(request, env, coop, path, project, access, { headers, inputJson });
+      return handled || json({ ok: false, code: 'COOP_ROUTE_NOT_FOUND' }, 404);
+    }
     if (path === '/api/me' && request.method === 'GET') return json({ ok: true, ...cooperativeMemberProjection(coop, project, access) });
     if (path === '/api/project' && request.method === 'GET') {
       const applications = await env.DB.prepare('SELECT person_id, email, representative, business, message, status, updated_at FROM cooperative_applications WHERE workspace_id = ? ORDER BY updated_at DESC LIMIT 100').bind(coop.workspaceId).all();

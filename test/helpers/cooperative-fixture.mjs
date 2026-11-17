@@ -10,6 +10,7 @@ export function fixture() {
     CREATE TABLE admins(id INTEGER PRIMARY KEY, email TEXT, role TEXT);
     CREATE TABLE sessions(token_hash TEXT PRIMARY KEY,admin_id INTEGER,expires_at TEXT,created_at TEXT);`);
   sqlite.exec(fs.readFileSync(new URL('../../migrations/0133_cooperative_distribution_workspaces.sql', import.meta.url), 'utf8'));
+  sqlite.exec(fs.readFileSync(new URL('../../migrations/202611172300_cooperative_signature_requests.sql', import.meta.url), 'utf8'));
   // Behavioral fixtures start at revision 1 with current seed names. The
   // historical, versioned rename migration is tested separately before/after.
   for (const coop of COOPERATIVES) sqlite.prepare('UPDATE cooperative_projects SET snapshot_json=? WHERE workspace_id=?').run(JSON.stringify(cooperativeInitialState(coop)), coop.workspaceId);

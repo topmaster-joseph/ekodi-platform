@@ -113,9 +113,19 @@ export function policyChangeRequiresReapproval(previous={},next={}){
  if(grew('maxOrderAmount')||grew('maxDailyBuyAmount'))reasons.push('order_limit_increase');
  if(grew('maxPositionWeightPct')||grew('maxPositions'))reasons.push('concentration_increase');
  if(grew('dailyLossLimitPct')||grew('totalLossLimitPct'))reasons.push('loss_limit_increase');
- const widened=key=>(next[key]||[]).some(v=>!(previous[key]||[]).includes(v));
+ // Releasing cash reserves or lengthening the trading mandate enlarges risk authority.
+ if(previous.minCashPct!=null&&next.minCashPct!=null&&Number(next.minCashPct)<Number(previous.minCashPct))reasons.push('cash_reserve_reduced');
+ if(grew('maxTradesPerDay'))reasons.push('trade_frequency_increase');
+ if(grew('horizonYears'))reasons.push('investment_horizon_extended');
+ const prevWindow=previous.tradingWindow||{},nextWindow=next.tradingWindow||{};
+ if((prevWindow.start&&nextWindow.start&&nextWindow.start<prevWindow.start)
+   ||(prevWindow.end&&nextWindow.end&&nextWindow.end>prevWindow.end)
+   ||(prevWindow.tz&&nextWindow.tz&&nextWindow.tz!==prevWindow.tz))reasons.push('trading_window_expansion');
+ const widened=key=>(Array.isArray(next[key])?next[key]:[]).some(v=>!(Array.isArray(previous[key])?previous[key]:[]).includes(v));
  if(widened('markets'))reasons.push('market_expansion');
  if(widened('assetTypes'))reasons.push('asset_type_expansion');
+ // Removing an alert channel is not a narrower autonomous mandate.
+ if((Array.isArray(previous.alertChannels)?previous.alertChannels:[]).some(v=>!(Array.isArray(next.alertChannels)?next.alertChannels:[]).includes(v)))reasons.push('alert_coverage_reduced');
  if(previous.riskProfile&&next.riskProfile&&previous.riskProfile!==next.riskProfile)reasons.push('risk_profile_change');
  return {required:reasons.length>0,reasons};
 }

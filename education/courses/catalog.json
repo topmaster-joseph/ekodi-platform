@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "courses": [
     {
       "id": "foreign-worker-cold-safety-2026",
@@ -47,7 +47,190 @@
       ],
       "registeredAt": "2026-11-17",
       "taskId": "edu-cold-safety-20261117",
-      "phase": "owner-private, release-candidate"
+      "phase": "published-private-deck",
+      "fields": [
+        "safety"
+      ],
+      "audiences": [
+        "foreign-workers"
+      ],
+      "summary": "한랭질환 증상·응급처치·겨울철 안전점검과 재해사례를 24장으로 학습합니다.",
+      "studyUrl": "/study/cold-safety-2026/",
+      "teacherTool": "",
+      "learnerTool": "",
+      "publicSlideAccess": false,
+      "delivery": "presentation",
+      "status": "available"
+    },
+    {
+      "id": "mnu-factchat-120m-2026",
+      "title": "교직원 FactChat 2시간 실무교육",
+      "fields": [
+        "ai-digital"
+      ],
+      "audiences": [
+        "staff"
+      ],
+      "summary": "문서 작성, 회의록, 보고자료, 업무 AI 비서를 실제 업무 사례로 실습합니다.",
+      "year": 2026,
+      "delivery": "live-studio",
+      "syllabus": [
+        "HWP 안내문 실습",
+        "회의록 작성·검증",
+        "보고자료·수치 점검",
+        "업무 AI 비서 설계"
+      ],
+      "studyUrl": "/study/live/?c=mnu-factchat-120m-2026",
+      "teacherTool": "/study/live/?c=mnu-factchat-120m-2026",
+      "learnerTool": "/study/live/lab/?c=mnu-factchat-120m-2026",
+      "resources": [
+        {
+          "label": "수강생 자료",
+          "url": "/study/live/handout/?c=mnu-factchat-120m-2026"
+        },
+        {
+          "label": "화면 공유",
+          "url": "/study/live/screen-share/"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "mnu-factchat-2026",
+      "title": "교직원 FactChat 4시간 실무 캠프",
+      "fields": [
+        "ai-digital"
+      ],
+      "audiences": [
+        "staff"
+      ],
+      "summary": "교직원 대상 강의·발표·실습·타이머·QR로 진행하는 4시간 과정입니다.",
+      "year": 2026,
+      "delivery": "live-studio",
+      "syllabus": [
+        "강의·기능 탐색",
+        "분야별 실습 시나리오",
+        "실습 결과 검증",
+        "성과·피드백"
+      ],
+      "studyUrl": "/study/live/?c=mnu-factchat-2026",
+      "teacherTool": "/study/live/?c=mnu-factchat-2026",
+      "learnerTool": "/study/live/lab/?c=mnu-factchat-2026",
+      "resources": [
+        {
+          "label": "수강생 자료",
+          "url": "/study/live/handout/?c=mnu-factchat-2026"
+        },
+        {
+          "label": "화면 공유",
+          "url": "/study/live/screen-share/"
+        }
+      ],
+      "status": "available"
+    },
+    {
+      "id": "mnu-ai-bootcamp-2026",
+      "title": "AI로 바꾸는 대학의 일",
+      "fields": [
+        "ai-digital"
+      ],
+      "audiences": [
+        "staff"
+      ],
+      "summary": "교직원 업무를 위한 문서·데이터·교수학습·연구지원·AI 에이전트 실습 과정입니다.",
+      "year": 2026,
+      "delivery": "classroom",
+      "syllabus": [
+        "AI 기본과 검증",
+        "문서·데이터 실습",
+        "교수학습·연구지원",
+        "업무 개선 설계"
+      ],
+      "studyUrl": "/study/ai-bootcamp/",
+      "teacherTool": "/study/ai-bootcamp/",
+      "learnerTool": "/study/ai-bootcamp/",
+      "status": "available"
+    },
+    {
+      "id": "farm-marketing-2026",
+      "title": "농가 스마트폰 AI 홍보 실습",
+      "fields": [
+        "ai-digital"
+      ],
+      "audiences": [
+        "farmers"
+      ],
+      "summary": "재배 농가 대상 사진·홍보글·포스터·공유를 스마트폰으로 실습하는 3시간 과정입니다.",
+      "year": 2026,
+      "delivery": "classroom",
+      "syllabus": [
+        "현장 사진 준비",
+        "AI 홍보글 작성",
+        "PNG 포스터 제작",
+        "결과 확인·고객 공유"
+      ],
+      "studyUrl": "/study/farm-marketing/",
+      "teacherTool": "/study/farm-marketing/",
+      "learnerTool": "/study/farm-marketing/",
+      "status": "available"
+    },
+    {
+      "id": "pizza-experience-2026",
+      "title": "나만의 피자체험",
+      "fields": [
+        "experience"
+      ],
+      "audiences": [
+        "children"
+      ],
+      "summary": "재료 알아보기, 위생·안전, 피자 만들기, 발표가 이어지는 어린이 현장체험입니다.",
+      "year": 2026,
+      "delivery": "experience",
+      "syllabus": [
+        "피자 이야기·재료",
+        "손 씻기와 안전",
+        "피자 만들기",
+        "완성 발표"
+      ],
+      "studyUrl": "/pizza-experience/",
+      "teacherTool": "/pizza-experience/",
+      "learnerTool": "/pizza-experience/",
+      "status": "available"
+    }
+  ],
+  "fields": [
+    {
+      "id": "ai-digital",
+      "label": "AI·디지털",
+      "description": "업무와 현장에 적용하는 AI·디지털 실습"
+    },
+    {
+      "id": "safety",
+      "label": "안전·보건",
+      "description": "근로자와 현장을 위한 예방·안전교육"
+    },
+    {
+      "id": "experience",
+      "label": "현장·체험",
+      "description": "직접 만들고 참여하는 실습·체험교육"
+    }
+  ],
+  "audiences": [
+    {
+      "id": "staff",
+      "label": "교직원"
+    },
+    {
+      "id": "foreign-workers",
+      "label": "외국인 근로자"
+    },
+    {
+      "id": "farmers",
+      "label": "농업인"
+    },
+    {
+      "id": "children",
+      "label": "어린이·학생"
     }
   ]
 }

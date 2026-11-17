@@ -313,7 +313,8 @@ function injectCgmaRegionalLinks(response){
 export function isBbqcgChromePublicRoute(pathname,upstreamRoute){
   const path=String(pathname||'').replace(/\/+$/,'')||'/';
   return (path==='/bbqcg'&&upstreamRoute==='space-storefront')||
-    (path==='/bbqcg/service-guide'&&upstreamRoute==='bbqcg-service-guide');
+    (path==='/bbqcg/service-guide'&&upstreamRoute==='bbqcg-service-guide')||
+    (path==='/bbqcg/order'&&upstreamRoute==='bbqcg-qr-order');
 }
 async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();

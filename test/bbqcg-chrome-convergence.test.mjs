@@ -39,7 +39,7 @@ test('canonical six-link site navigation never becomes a page-specific or duplic
    '매장안내','BBQ 메뉴','주문하기','매장소식','품질약속·자료실','오시는 길'
  ]);
  assert.deepEqual(BBQCG_PUBLIC_NAV.map(x=>x.href),[
-   '/bbqcg#guide','/bbqcg#menu','/bbqcg#order','/bbqcg#notice',
+   '/bbqcg#guide','/bbqcg#menu','/bbqcg/order','/bbqcg#notice',
    '/bbqcg/service-guide','/bbqcg#directions'
  ]);
  const header=renderBbqcgHeader();

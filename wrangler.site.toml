@@ -138,6 +138,12 @@ database_name = "ekodi-auth"
 database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 migrations_dir = "migrations"
 
+# 협동조합 서명·직인 서명본 원본(workspace/{조합 slug}/documents/coop-signatures/ prefix, private;
+# served only through the cooperative signature API to the cooperative's administrators).
+[[r2_buckets]]
+binding = "COOP_SIGNATURE_FILES"
+bucket_name = "ekodi-storage"
+
 [[ratelimits]]
 name = "MAIL_CONTACT_RATE_LIMITER"
 namespace_id = "3901"
