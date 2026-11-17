@@ -154,3 +154,16 @@ test('oversized submissions and model transfer without policy fail closed', asyn
   assert.equal(institutionExternalModelAllowed('internal', [], 'openai'), false);
   assert.equal(institutionExternalModelAllowed('internal', ['openai'], 'openai'), true);
 });
+
+test('tampered audit entries fail closed instead of silently exporting', async () => {
+  const { env, storage } = setup();
+  await call(env, draft());
+  const id = { tenantId: 'campus1', operationId: 'draft0001' };
+  assert.equal((await call(env, id, 'read', 'campus2', 'status')).status, 403);
+  const auditKey = [...storage.values.keys()].find(key => key.startsWith('institution:audit:'));
+  const entry = storage.values.get(auditKey);
+  storage.values.set(auditKey, { ...entry, role: 'untrusted_modified' });
+  const read = await call(env, id, 'read', 'campus1', 'status');
+  assert.equal(read.status, 503);
+  assert.equal((await read.json()).code, 'AUDIT_INTEGRITY_FAILURE');
+});
