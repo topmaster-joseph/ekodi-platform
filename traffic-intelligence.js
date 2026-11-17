@@ -52,7 +52,7 @@ export const ROOT_PATH_SITE_IDS = Object.freeze({
   ai:'ai', bible:'bible', books:'books', ekodibooks:'books', community:'community',
   ekodichurch:'church', ekodimission:'mission', ekodibiz:'biz',
   ekodimall:'mall', ekodilab:'lab', cgma:'cgma', cheonggye:'cheonggye',
-  seonammedi:'seonammedi', pgm:'pgm', jadam:'jadam',
+  seonammedi:'seonammedi', pgm:'pgm', jadam:'jadam', bbqcg:'bbqcg',
   pizzamaru:'pizzamaru', yogurt:'yogurt', cmpmyi:'cmpmyi',
   joseph:'joseph', live:'live', trade:'trade', journal:'journal',
   publishing:'publishing', invest:'invest', money:'money', social:'social',
