@@ -344,11 +344,11 @@ jobs:
           fi
 
           query_sql() {
-            local sql="$1" out="$2" project="${3:-$SUPABASE_PROJECT_REF}"
+            local sql="$1" out="$2"
             jq -n --arg query "$sql" '{query:$query,read_only:true}' > /tmp/space-schema-query.json
             local code
             code=$(curl -sS -o "$out" -w '%{http_code}' \
-              -X POST "https://api.supabase.com/v1/projects/$project/database/query" \
+              -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
               -H 'Content-Type: application/json' \
               --data-binary @/tmp/space-schema-query.json)
@@ -356,12 +356,12 @@ jobs:
           }
 
           apply_migration() {
-            local migration="$1" project="${2:-$SUPABASE_PROJECT_REF}"
+            local migration="$1"
             echo "Applying missing Space schema dependency: $migration"
             jq -Rs '{query:.,read_only:false}' "$migration" > /tmp/space-schema-migration.json
             local code
             code=$(curl -sS -o /tmp/space-schema-migration-result.json -w '%{http_code}' \
-              -X POST "https://api.supabase.com/v1/projects/$project/database/query" \
+              -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
               -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
               -H 'Content-Type: application/json' \
               --data-binary @/tmp/space-schema-migration.json)
@@ -388,14 +388,37 @@ jobs:
 
           query_sql "$proof_sql" /tmp/space-schema-before.json
 
+          # DEV-only accessors are deliberately isolated: legacy production API
+          # calls keep the explicitly pinned production project path.
+          query_dev_sql() {
+            local sql="$1" out="$2" code
+            jq -n --arg query "$sql" '{query:$query,read_only:true}' > /tmp/space-qr-dev-query.json
+            code=$(curl -sS -o "$out" -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$BBQ_DEV_PROJECT/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data-binary @/tmp/space-qr-dev-query.json)
+            [ "$code" = '201' ] || { echo "BBQ QR DEV proof inaccessible HTTP $code"; cat "$out"; exit 1; }
+          }
+          apply_dev_migration() {
+            local migration="$1" code
+            jq -Rs '{query:.,read_only:false}' "$migration" > /tmp/space-qr-dev-migration.json
+            code=$(curl -sS -o /tmp/space-qr-dev-migration-result.json -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$BBQ_DEV_PROJECT/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data-binary @/tmp/space-qr-dev-migration.json)
+            [ "$code" = '201' ] || { echo "BBQ QR DEV migration refused HTTP $code"; cat /tmp/space-qr-dev-migration-result.json; exit 1; }
+          }
+
           # New BBQ QR menu schema: prove DEV first, then allow PROD release.
           # Only this migration is applied, never a blanket production db push.
           test -f "$BBQ_QR_MENU_MIGRATION"
-          query_sql "$proof_sql" /tmp/space-qr-dev-before.json "$BBQ_DEV_PROJECT"
+          query_dev_sql "$proof_sql" /tmp/space-qr-dev-before.json
           if ! grep -Fq '"bbq_qr_public":true' /tmp/space-qr-dev-before.json || ! grep -Fq '"bbq_qr_owner":true' /tmp/space-qr-dev-before.json; then
-            apply_migration "$BBQ_QR_MENU_MIGRATION" "$BBQ_DEV_PROJECT"
+            apply_dev_migration "$BBQ_QR_MENU_MIGRATION"
           fi
-          query_sql "$proof_sql" /tmp/space-qr-dev-after.json "$BBQ_DEV_PROJECT"
+          query_dev_sql "$proof_sql" /tmp/space-qr-dev-after.json
           grep -Fq '"bbq_qr_public":true' /tmp/space-qr-dev-after.json
           grep -Fq '"bbq_qr_owner":true' /tmp/space-qr-dev-after.json
 
