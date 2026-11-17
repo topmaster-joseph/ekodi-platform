@@ -1,6 +1,7 @@
 /* Central EKODI identity handoff for the independent Education instructor session. */
 (()=>{
 'use strict';
+const SLASH=String.fromCharCode(47);
 const base=location.pathname.startsWith('/edu/')?'/edu':'';
 const authUrl='https://ekodi.kr/auth/';
 const sb='https://renzehysxirjilvdxacv.supabase.co';
@@ -29,7 +30,7 @@ function instructorToken(){
 async function verifyHandoff(hash){
  const tokenHash=hash.get('ekodi_token');
  if(!tokenHash)return '';
- const r=await fetch(sb+'/auth/v1/verify',{method:'POST',headers:{apikey:pub,'content-type':'application/json'},body:JSON.stringify({type:hash.get('ekodi_type')||'email',token_hash:tokenHash})});
+ const r=await fetch(sb+SLASH+'auth/v1/verify',{method:'POST',headers:{apikey:pub,'content-type':'application/json'},body:JSON.stringify({type:hash.get('ekodi_type')||'email',token_hash:tokenHash})});
  const session=await r.json().catch(()=>null);
  if(!r.ok||!session?.access_token)throw Error('에코디 로그인 확인에 실패했습니다.');
  if(!session.expires_at&&session.expires_in)session.expires_at=Math.floor(Date.now()/1000)+Number(session.expires_in);
@@ -42,9 +43,9 @@ async function signIn(mode,token){
  if(mode==='admin')options.headers.authorization='Bearer '+token;
  say('계정과 강사 권한을 서버에서 확인하고 있습니다.');
  try{
-  const r=await fetch(base+'/teach/access',options);
+  const r=await fetch(base+SLASH+'teach/access',options);
   const d=await r.json().catch(()=>({}));
-  if(r.ok&&d.ok){location.replace(base+'/teach/');return;}
+  if(r.ok&&d.ok){location.replace(base+SLASH+'teach'+SLASH);return;}
   say(d.message||'등록된 강사 권한을 확인하지 못했습니다. 최고관리자의 이메일 등록이 필요합니다.');
  }catch{say('인증 서버에 접속하지 못했습니다. 다시 시도해 주세요.');}
 }

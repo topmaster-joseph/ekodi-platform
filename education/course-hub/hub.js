@@ -1,8 +1,9 @@
 /* Unified Education UI. Course content is canonical in /courses/catalog.json. */
 (()=>{
 'use strict';
+const SLASH=String.fromCharCode(47);
 const base=location.pathname.startsWith('/edu/')?'/edu':'';
-const path=location.pathname.replace(/^\/edu(?=\/|$)/,'').split('/').filter(Boolean);
+const path=location.pathname.replace(/^\/edu(?=\/|$)/,'').split(SLASH).filter(Boolean);
 const section=path[0]||'courses',slug=path[1]||'';
 const main=document.getElementById('hubContents');
 const heading=document.getElementById('hubHeading');
@@ -12,7 +13,7 @@ const safe=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 const route=p=>base+p;
 function safeLink(value){
  const v=String(value||'');
- if(v.startsWith('/')&&!v.startsWith('//'))return route(v);
+ if(v.startsWith(SLASH)&&!v.startsWith(SLASH+SLASH))return route(v);
  if(/^https:\/\/(?:docs\.google\.com|drive\.google\.com)\//.test(v))return v;
  return '';
 }
@@ -20,7 +21,7 @@ const link=(href,label,cls='',external=false)=>href?'<a class="'+cls+'" href="'+
 const status=t=>{notice.textContent=String(t||'');};
 function labels(rows,ids){return (ids||[]).map(id=>rows.find(x=>x.id===id)?.label).filter(Boolean);}
 function tags(course,catalog){return '<div class="hub-tags">'+[...labels(catalog.fields,course.fields),...labels(catalog.audiences,course.audiences)].map(x=>'<span>'+safe(x)+'</span>').join('')+'</div>';}
-function courseUrl(id,type='courses'){return route('/'+type+'/'+encodeURIComponent(id)+'/');}
+function courseUrl(id,type='courses'){return route(SLASH+type+SLASH+encodeURIComponent(id)+SLASH);}
 function setHeading(title,desc,eyebrow='COURSE DIRECTORY'){
  heading.innerHTML='<p class="hub-eyebrow">'+safe(eyebrow)+'</p><h1>'+safe(title)+'</h1><p>'+safe(desc)+'</p>';
  document.title=title+' | 에코디교육';
@@ -40,8 +41,8 @@ function card(course,catalog,mode='courses'){
 function filtersHtml(catalog,activeField,activeAudience){
  const fieldLinks=[{id:'',label:'전체 분야'},...catalog.fields];
  const audienceLinks=[{id:'',label:'전체 대상'},...catalog.audiences];
- const field=fieldLinks.map(x=>link(route(x.id?'/fields/'+x.id+'/':'/courses/'),x.label,'hub-chip'+(x.id===activeField?' active':''))).join('');
- const audience=audienceLinks.map(x=>link(route(x.id?'/audiences/'+x.id+'/':'/courses/'),x.label,'hub-chip'+(x.id===activeAudience?' active':''))).join('');
+ const field=fieldLinks.map(x=>link(route(x.id?SLASH+'fields'+SLASH+x.id+SLASH:SLASH+'courses'+SLASH),x.label,'hub-chip'+(x.id===activeField?' active':''))).join('');
+ const audience=audienceLinks.map(x=>link(route(x.id?SLASH+'audiences'+SLASH+x.id+SLASH:SLASH+'courses'+SLASH),x.label,'hub-chip'+(x.id===activeAudience?' active':''))).join('');
  filters.hidden=false;filters.className='hub-filters';
  filters.innerHTML='<div class="filter-row"><strong class="filter-label">교육분야</strong>'+field+'</div><div class="filter-row"><strong class="filter-label">교육대상</strong>'+audience+'</div>';
 }
@@ -56,7 +57,7 @@ function renderDirectory(catalog,mode='courses'){
  const courses=catalog.courses.filter(c=>(!field||c.fields.includes(field.id))&&(!audience||c.audiences.includes(audience.id)));
  main.innerHTML='<section class="hub-section"><div class="hub-section-head"><h2>등록된 강의 '+courses.length+'개</h2><p>교육자료는 강의별 원본 한 곳에서 관리합니다.</p></div><div class="hub-course-grid">'+courses.map(c=>card(c,catalog,mode)).join('')+'</div></section>';
 }
-function notFound(){setHeading('강의를 찾을 수 없습니다.','존재하는 과정 주소를 확인해 주세요.');filters.hidden=true;main.innerHTML=link(route('/courses/'),'교육과정 전체 보기','hub-button primary');}
+function notFound(){setHeading('강의를 찾을 수 없습니다.','존재하는 과정 주소를 확인해 주세요.');filters.hidden=true;main.innerHTML=link(route(SLASH+'courses'+SLASH),'교육과정 전체 보기','hub-button primary');}
 function curriculum(course){return '<ol>'+(course.syllabus||[]).map(x=>'<li>'+safe(x)+'</li>').join('')+'</ol>';}
 function publicResources(course){
  const list=[...(course.resources||[])];
@@ -79,7 +80,7 @@ function liveStage(course,state){
  return '<div class="hub-stage" aria-live="polite"><small id="hubSlideCount">'+(step+1)+' / '+course.syllabus.length+' · '+(state.live?'강사가 공유 중':'학습 대기')+'</small><h2 id="hubSlideTitle">'+safe(stepText(course,step))+'</h2><p id="hubSlideNote">'+safe(state.notice||'강사가 선택한 강의 단계가 여기에 표시됩니다.')+'</p></div>';
 }
 async function liveState(courseId){
- const response=await fetch(route('/courses/live-state?id='+encodeURIComponent(courseId)),{cache:'no-store'});
+ const response=await fetch(route(SLASH+'courses/live-state?id='+encodeURIComponent(courseId)),{cache:'no-store'});
  if(!response.ok)throw Error('강의 상태를 불러오지 못했습니다.');
  const d=await response.json();
  return d.state;
@@ -158,7 +159,7 @@ async function renderTeacher(course,catalog){
  document.getElementById('teacherPublish').addEventListener('click',async()=>{
   const b=document.getElementById('teacherPublish');b.disabled=true;feedback.textContent='공유 상태를 저장하고 있습니다.';
   try{
-   const r=await fetch(route('/teach/live-state'),{method:'PUT',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({courseId:course.id,step:Number(stepEl.value),live:liveEl.checked,notice:noticeEl.value})});
+   const r=await fetch(route(SLASH+'teach/live-state'),{method:'PUT',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({courseId:course.id,step:Number(stepEl.value),live:liveEl.checked,notice:noticeEl.value})});
    const data=await r.json().catch(()=>({}));
    if(!r.ok||!data.ok)throw Error(data.code||'unknown');
    feedback.textContent='공유 완료 · '+new Date(data.state.updatedAt).toLocaleString('ko-KR')+' · 학생 화면을 새로 고치면 반영됩니다.';
@@ -169,7 +170,7 @@ async function renderTeacher(course,catalog){
 function adminToken(){try{return sessionStorage.getItem('ekodi-auth-token')||'';}catch{return '';}}
 function adminLoginLink(){const u=new URL('https://ekodi.kr/auth/');u.searchParams.set('site','admin');u.searchParams.set('direct','1');u.searchParams.set('return_to',location.href.split('#')[0]);return u.href;}
 async function showAdminRegistry(){
- const resp=await fetch(route('/teach/status'),{credentials:'same-origin',cache:'no-store'}).then(r=>r.json()).catch(()=>({}));
+ const resp=await fetch(route(SLASH+'teach/status'),{credentials:'same-origin',cache:'no-store'}).then(r=>r.json()).catch(()=>({}));
  if(resp.role!=='super_admin')return;
  const wrap=document.createElement('section');
  wrap.className='hub-panel hub-section';wrap.innerHTML='<h2>강사 이메일 권한 등록 · 최고관리자 전용</h2>'+
@@ -183,7 +184,7 @@ async function showAdminRegistry(){
  const token=adminToken();
  if(!token){message.textContent='강사 등록을 관리하려면 현재 탭에서 최고관리자로 다시 로그인해야 합니다.';wrap.querySelector('button[type="submit"]').disabled=true;return;}
  async function request(action,email){
-  const r=await fetch(route('/teach/instructors'),{method:action?'POST':'GET',credentials:'same-origin',headers:{authorization:'Bearer '+token,...(action?{'content-type':'application/json'}:{})},...(action?{body:JSON.stringify({action,email})}:{})});
+  const r=await fetch(route(SLASH+'teach/instructors'),{method:action?'POST':'GET',credentials:'same-origin',headers:{authorization:'Bearer '+token,...(action?{'content-type':'application/json'}:{})},...(action?{body:JSON.stringify({action,email})}:{})});
   const data=await r.json().catch(()=>({}));
   if(!r.ok)throw Error(data.code||'권한 확인 실패');
   return data;
@@ -210,7 +211,7 @@ async function showAdminRegistry(){
 }
 async function run(){
  try{
-  const r=await fetch(route('/courses/catalog.json'),{cache:'no-store'});
+  const r=await fetch(route(SLASH+'courses/catalog.json'),{cache:'no-store'});
   if(!r.ok)throw Error('course catalog '+r.status);
   const data=await r.json();
   if(!Array.isArray(data.courses)||!Array.isArray(data.fields)||!Array.isArray(data.audiences))throw Error('invalid course catalog');
@@ -224,7 +225,7 @@ async function run(){
   if(section==='learn'){await renderLearner(course,data);return;}
   if(section==='teach'){await renderTeacher(course,data);return;}
   notFound();
- }catch(e){setHeading('강의 정보를 불러오지 못했습니다.','문제가 지속되면 교육 관리자에게 문의해 주세요.');main.innerHTML='<p class="hub-alert">기존 강의 자료는 학습 강의실에서 계속 이용할 수 있습니다. '+link(route('/study/'),'기존 강의실 열기')+'</p>';status(String(e.message).slice(0,100));}
+ }catch(e){setHeading('강의 정보를 불러오지 못했습니다.','문제가 지속되면 교육 관리자에게 문의해 주세요.');main.innerHTML='<p class="hub-alert">기존 강의 자료는 학습 강의실에서 계속 이용할 수 있습니다. '+link(route(SLASH+'study'+SLASH),'기존 강의실 열기')+'</p>';status(String(e.message).slice(0,100));}
 }
 run();
 })();
