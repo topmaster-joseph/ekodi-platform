@@ -13,6 +13,7 @@ import { fixture, authFetch } from '../test/helpers/cooperative-fixture.mjs';
 import { loadCooperativeProject } from '../cooperative-store.js';
 import { loadBundledCooperativeClient } from './cooperative-bundle-client.mjs';
 import { verifyCooperativeServiceWorkflows } from './cooperative-service-proof.mjs';
+import { verifyCooperativeSignatureFlow } from './cooperative-signature-proof.mjs';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES
@@ -78,7 +79,7 @@ async function contextFor(width, token = '') {
     }
     if (url.origin !== 'https://ekodi.kr') return intercepted.fulfill({ status: 403, body: 'Source QA blocks all external browser requests.' });
     const headers = new Headers(await incoming.allHeaders());
-    const request = new Request(incoming.url(), { method: incoming.method(), headers, ...(!['GET','HEAD'].includes(incoming.method()) ? { body: incoming.postData() } : {}) });
+    const request = new Request(incoming.url(), { method: incoming.method(), headers, ...(!['GET','HEAD'].includes(incoming.method()) ? { body: incoming.postDataBuffer() } : {}) });
     const response = await routeCooperative(request, f.env);
     if (incoming.isNavigationRequest()) navigations.push({ url: incoming.url(), status: response?.status, type: response?.headers.get('content-type') });
     if (!response) return intercepted.fulfill({ status: 404, body: 'Source QA route not found' });
@@ -222,6 +223,7 @@ try {
   await context.close();
   await verifyCooperativeProgress({ contextFor, fixture: f, cooperatives: COOPERATIVES, checks, screenshot });
   await verifyCooperativeServiceWorkflows({ contextFor, fixture: f, cooperatives: COOPERATIVES, checks, screenshot });
+  await verifyCooperativeSignatureFlow({ contextFor, fixture: f, cooperatives: COOPERATIVES, checks, screenshot });
   assert.ok(refreshCount >= 4);
   assert.deepEqual(pageErrors, []);
   assert.deepEqual(responseErrors, []);
