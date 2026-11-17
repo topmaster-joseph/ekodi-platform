@@ -53,6 +53,10 @@ export default{
     if(/^\/pizza-experience\/?$/.test(url.pathname) && String(response.headers.get('content-type')||'').includes('text/html')){
       response.headers.set('content-security-policy',SECURITY_HEADERS['content-security-policy']+'; frame-src https://www.youtube-nocookie.com https://www.youtube.com');
     }
+    // Owner-only Google Slides deck for this course; do not loosen other pages' CSP.
+    if(/^\/study\/cold-safety-2026\/?$/.test(url.pathname) && String(response.headers.get('content-type')||'').includes('text/html')){
+      response.headers.set('content-security-policy',SECURITY_HEADERS['content-security-policy']+'; frame-src https://docs.google.com');
+    }
     if(url.pathname.startsWith('/study/live/screen-share/'))response.headers.set('referrer-policy','no-referrer');
     return injectEkodiShell(response,'edu');
   }
