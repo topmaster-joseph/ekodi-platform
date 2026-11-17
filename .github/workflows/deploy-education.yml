@@ -110,7 +110,7 @@ jobs:
           node --check education/course-hub/router.js
           node --check education/course-hub/hub.js
           node --check education/course-hub/auth.js
-          node --test test/education-course-hub.test.mjs
+          node --test test/education-course-hub.test.mjs test/education-course-hub-canonical-urls.test.mjs
           node --check scripts/verify-education-farm-marketing-native.mjs
           node --check scripts/verify-education-release-snapshot.mjs
           node --check education/study/farm-marketing/app.js
