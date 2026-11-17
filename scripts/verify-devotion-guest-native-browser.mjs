@@ -156,11 +156,192 @@ try {
       }
       record(device.name+'-pageerror-free',failures.length===0,{failures});
       await page.screenshot({path:path.join(DIR,'devotion-guest-'+device.name+'.png'),fullPage:true});
+
+      // Public-site voice UI smoke: real host, real DOM and CSS, no audio output or writes.
+      // This is not the instrumented speech-callback loop test below.
+      const voiceResponse=await page.goto(ORIGIN+'/ekodichurch/devotion/?date='+today,{
+        waitUntil:'domcontentloaded',timeout:35000
+      });
+      record(device.name+'-church-voice-http',voiceResponse?.status()===200,
+        {status:voiceResponse?.status()});
+      const speech=page.locator('[data-ekodi-devotion] .dv-speech-tools');
+      const loop=page.locator('[data-ekodi-devotion] [data-speech-action="loop"]');
+      await loop.waitFor({state:'visible',timeout:22000});
+      const initial=await page.evaluate(()=>{
+        const row=document.querySelector('[data-ekodi-devotion] .dv-speech-tools');
+        const mode=row?.querySelector('.dv-speech-engine select');
+        const loop=row?.querySelector('[data-speech-action="loop"]');
+        const settings=row?.querySelector('[data-speech-action="settings"]');
+        return {engine:mode?.value,engineLabels:[...mode?.options||[]].map(x=>x.textContent.trim()),
+          loopVisible:Boolean(loop&&getComputedStyle(loop).display!=='none'),
+          loopDisabled:loop?.disabled,pressed:loop?.getAttribute('aria-pressed'),
+          settingsExpanded:settings?.getAttribute('aria-expanded')};
+      });
+      record(device.name+'-device-voice-default-and-loop-off',
+        initial.engine==='device' && initial.engineLabels.includes('기기 음성') &&
+        initial.loopVisible && initial.loopDisabled===false &&
+        initial.pressed==='false' && initial.settingsExpanded==='false',initial);
+      await loop.click();
+      record(device.name+'-loop-on-click',
+        await loop.getAttribute('aria-pressed')==='true' &&
+        /켜짐/.test(await loop.innerText()));
+      await loop.click();
+      record(device.name+'-loop-off-click',
+        await loop.getAttribute('aria-pressed')==='false');
+      const settings=page.locator('[data-ekodi-devotion] [data-speech-action="settings"]');
+      await settings.click();
+      record(device.name+'-advanced-device-settings',
+        await settings.getAttribute('aria-expanded')==='true' &&
+        await speech.locator('.dv-speech-engine select').count()===1 &&
+        await speech.locator('.dv-speech-speed select').count()===1);
+      const layout=await page.evaluate(()=>{
+        const row=document.querySelector('[data-ekodi-devotion] .dv-speech-tools');
+        const keys=['loop','pause','stop'];
+        const buttons=keys.map(key=>{
+          const el=row?.querySelector('[data-speech-action="'+key+'"]');
+          const rect=el?.getBoundingClientRect();
+          return {key,visible:Boolean(el&&getComputedStyle(el).display!=='none'),
+            left:Math.round(rect?.left||0),right:Math.round(rect?.right||0),
+            top:Math.round(rect?.top||0),height:Math.round(rect?.height||0)};
+        });
+        const sameRow=buttons.every(b=>Math.abs(b.top-buttons[0].top)<=3);
+        const noOverlap=buttons[0].right<=buttons[1].left+1 &&
+          buttons[1].right<=buttons[2].left+1;
+        return {buttons,sameRow,noOverlap,
+          allWithinViewport:buttons.every(b=>b.left>=-2&&b.right<=innerWidth+2),
+          minTouch44:buttons.every(b=>b.height>=44),
+          overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+2};
+      });
+      record(device.name+'-voice-layout-no-overlap',layout.sameRow&&layout.noOverlap&&
+        layout.allWithinViewport&&layout.minTouch44&&!layout.overflow,layout);
+      await page.screenshot({path:path.join(DIR,'devotion-voice-'+device.name+'.png'),fullPage:true});
+
       report.browsers.push({device:device.name,checks:report.checks.filter(x=>x.name.startsWith(device.name)).length});
     } finally {
       await context.close();
     }
   }
+
+  // 320px public Church check, deliberately separate from Mission guest-auth tests.
+  const compact=await browser.newContext({
+    viewport:{width:320,height:720},isMobile:true,hasTouch:true,acceptDownloads:false
+  });
+  await compact.route('**/*',route=>['GET','HEAD','OPTIONS'].includes(route.request().method())
+    ?route.continue():route.abort('blockedbyclient'));
+  try {
+    const page=await compact.newPage();
+    const response=await page.goto(ORIGIN+'/ekodichurch/devotion/?date='+today,
+      {waitUntil:'domcontentloaded',timeout:35000});
+    const loop=page.locator('[data-ekodi-devotion] [data-speech-action="loop"]');
+    await loop.waitFor({state:'visible',timeout:22000});
+    const compactState=await page.evaluate(()=>{
+      const row=document.querySelector('[data-ekodi-devotion] .dv-speech-tools');
+      const keys=['loop','pause','stop'];
+      const boxes=keys.map(k=>{
+        const r=row.querySelector('[data-speech-action="'+k+'"]').getBoundingClientRect();
+        return {key:k,left:r.left,right:r.right,top:r.top,height:r.height};
+      });
+      return {engine:row.querySelector('.dv-speech-engine select')?.value,
+        overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+2,
+        sameRow:boxes.every(x=>Math.abs(x.top-boxes[0].top)<4),
+        ordered:boxes[0].right<=boxes[1].left+1&&boxes[1].right<=boxes[2].left+1,
+        within:boxes.every(x=>x.left>=-2&&x.right<=innerWidth+2&&x.height>=44),
+        boxes:boxes.map(x=>({key:x.key,left:Math.round(x.left),right:Math.round(x.right),
+          top:Math.round(x.top),height:Math.round(x.height)}))};
+    });
+    record('compact-320-live-church-voice-layout',
+      response?.status()===200&&compactState.engine==='device'&&
+      !compactState.overflow&&compactState.sameRow&&compactState.ordered&&
+      compactState.within,compactState);
+    await page.screenshot({path:path.join(DIR,'devotion-voice-320.png'),fullPage:true});
+  } finally {await compact.close();}
+
+  // Instrumented speech callbacks in a genuine Chromium page against the real
+  // deployed JS. This proves event sequencing; it does NOT claim physical audio.
+  const probe=await browser.newContext({viewport:{width:1440,height:900},
+    acceptDownloads:false});
+  await probe.route('**/*',route=>['GET','HEAD','OPTIONS'].includes(route.request().method())
+    ?route.continue():route.abort('blockedbyclient'));
+  await probe.addInitScript(()=>{
+    const evidence={spoken:[],cancelCount:0};
+    Object.defineProperty(window,'__ekodiSpeechProbe',{configurable:false,value:evidence});
+    const voices=[
+      {lang:'ko-KR',name:'Google 한국어',voiceURI:'probe-google-ko',default:true,localService:true},
+      {lang:'ko-KR',name:'Microsoft SunHi Online (Natural) - Korean (Korea)',
+        voiceURI:'probe-sunhi',localService:false}
+    ];
+    const synth={
+      getVoices:()=>voices,addEventListener:()=>{},
+      speak:utterance=>{evidence.spoken.push(utterance);},
+      cancel:()=>{evidence.cancelCount++;},pause:()=>{},resume:()=>{}
+    };
+    Object.defineProperty(window,'speechSynthesis',{configurable:true,value:synth});
+    Object.defineProperty(window,'SpeechSynthesisUtterance',{
+      configurable:true,value:class {constructor(text){this.text=text;}}
+    });
+  });
+  try{
+    const page=await probe.newPage();
+    await page.goto(ORIGIN+'/ekodichurch/devotion/?date='+today,
+      {waitUntil:'domcontentloaded',timeout:35000});
+    const loop=page.locator('[data-ekodi-devotion] [data-speech-action="loop"]');
+    const play=page.locator('[data-ekodi-devotion] [data-speech-action="play"]');
+    const stop=page.locator('[data-ekodi-devotion] [data-speech-action="stop"]');
+    await loop.waitFor({state:'visible',timeout:22000});
+    const ready=await page.evaluate(()=>{
+      const row=document.querySelector('[data-ekodi-devotion] .dv-speech-tools');
+      return {engine:row.querySelector('.dv-speech-engine select')?.value,
+        voice:row.querySelector('.dv-speech-voice select')?.value,
+        spoken:window.__ekodiSpeechProbe.spoken.length,
+        loopPressed:row.querySelector('[data-speech-action="loop"]')?.getAttribute('aria-pressed')};
+    });
+    record('voice-probe-no-autoplay-google-preferred',
+      ready.engine==='device'&&ready.voice==='probe-google-ko'&&
+      ready.spoken===0&&ready.loopPressed==='false',ready);
+    await loop.click();
+    record('voice-probe-loop-toggle-does-not-autoplay',
+      await loop.getAttribute('aria-pressed')==='true' &&
+      await page.evaluate(()=>window.__ekodiSpeechProbe.spoken.length)===0);
+    await play.click();
+    const count=await page.evaluate(()=>{
+      const text=document.querySelector('[data-ekodi-devotion] .dv-speech-status')?.textContent||'';
+      return Number(text.split('/')[1]||0);
+    });
+    record('voice-probe-starts-expected-segments',count>1&&count<=100,{segments:count});
+    const first=await page.evaluate(()=>window.__ekodiSpeechProbe.spoken[0]?.text||'');
+    for(let n=0;n<count;n++){
+      const before=await page.evaluate(()=>window.__ekodiSpeechProbe.spoken.length);
+      await page.evaluate(()=>window.__ekodiSpeechProbe.spoken.at(-1)?.onend?.());
+      await page.waitForFunction(before=>window.__ekodiSpeechProbe.spoken.length>before,
+        before,{timeout:4000});
+    }
+    const loopState=await page.evaluate(()=>{
+      const spoken=window.__ekodiSpeechProbe.spoken;
+      return {spokenCount:spoken.length,first:spoken[0]?.text||'',
+        restarted:spoken.at(-1)?.text===spoken[0]?.text,
+        selectedVoice:spoken[0]?.voice?.name,
+        aria:document.querySelector('[data-ekodi-devotion] [data-speech-action="loop"]')
+          ?.getAttribute('aria-pressed')};
+    });
+    record('voice-probe-completion-restarts-first-segment',
+      loopState.spokenCount===count+1&&loopState.restarted&&
+      loopState.selectedVoice==='Google 한국어'&&loopState.aria==='true',
+      {spokenCount:loopState.spokenCount,restarted:loopState.restarted,
+        selectedVoice:loopState.selectedVoice,aria:loopState.aria});
+    await stop.click();
+    const afterStop=await page.evaluate(()=>({
+      count:window.__ekodiSpeechProbe.spoken.length,
+      canceled:window.__ekodiSpeechProbe.cancelCount,
+      aria:document.querySelector('[data-ekodi-devotion] [data-speech-action="loop"]')
+        ?.getAttribute('aria-pressed')
+    }));
+    await page.waitForTimeout(650);
+    record('voice-probe-stop-revokes-loop',
+      afterStop.aria==='false'&&afterStop.canceled>0&&
+      await page.evaluate(()=>window.__ekodiSpeechProbe.spoken.length)===afterStop.count,
+      afterStop);
+  }finally{await probe.close();}
+
   report.passed=report.checks.every(check=>check.passed);
 } catch(error) {
   report.error=String(error.stack||error);
