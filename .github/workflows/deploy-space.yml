@@ -17,6 +17,10 @@ on:
       - 'space-worker.js'
       - 'test/space-noindex-preservation.test.mjs'
       - 'bbq-cheonggye-site.js'
+      - 'bbqcg-order-portal.js'
+      - 'test/bbqcg-qr-order-onramp.test.mjs'
+      - 'test/bbqcg-qr-owner-menu.test.mjs'
+      - 'supabase/migrations/20261118003000_bbqcg_qr_owner_menu.sql'
       - 'test/bbq-cheonggye-site.test.mjs'
       - 'test/bbqcg-hard-cutover.test.mjs'
       - 'test/bbqcg-admin-access.test.mjs'
@@ -77,6 +81,10 @@ on:
       - 'space-worker.js'
       - 'test/space-noindex-preservation.test.mjs'
       - 'bbq-cheonggye-site.js'
+      - 'bbqcg-order-portal.js'
+      - 'test/bbqcg-qr-order-onramp.test.mjs'
+      - 'test/bbqcg-qr-owner-menu.test.mjs'
+      - 'supabase/migrations/20261118003000_bbqcg_qr_owner_menu.sql'
       - 'test/bbq-cheonggye-site.test.mjs'
       - 'test/bbqcg-hard-cutover.test.mjs'
       - 'test/bbqcg-admin-access.test.mjs'
@@ -160,6 +168,7 @@ env:
   BBQ_STORE_ACCESS_MIGRATION: supabase/migrations/20261108163500_bbqcg_tenant_admin_store_access.sql
   BBQ_STORE_ACCESS_PINNED_BLOB: 91bd37584bbe5d6e6b5314c56ea019586d5f735f
   BBQ_FACTS_MIGRATION: supabase/migrations/20261108200000_bbqcg_verified_public_store_facts.sql
+  BBQ_QR_MENU_MIGRATION: supabase/migrations/20261118003000_bbqcg_qr_owner_menu.sql
   BBQ_FACTS_PINNED_BLOB: 9aa29f1bf45cd411b4fa09a12cab3eb93ef769d1
 
 jobs:
