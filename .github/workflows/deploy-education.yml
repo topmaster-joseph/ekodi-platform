@@ -419,7 +419,7 @@ jobs:
             artifacts/education-live-native/
             artifacts/education-farm-marketing-native/
             artifacts/education-screen-share-native/
-          artifacts/education-course-hub-native/
+            artifacts/education-course-hub-native/
           retention-days: 7
       - name: Publish Education production status
         if: always()
