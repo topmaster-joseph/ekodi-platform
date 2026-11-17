@@ -25,7 +25,8 @@ test('Education login allowlist does not grant prefix, foreign origin or query b
 });
 test('verified instructor hub uses the EKODI central admin auth endpoint',()=>{
  const page=readFileSync(new URL('../education/course-hub/auth.js',import.meta.url),'utf8');
- assert.match(page,/centralLogin\('admin'\)/);
+ assert.match(page,/signIn\('admin',adminToken\(\)\)/);
+ assert.match(page,/if\(!token\)\{centralLogin\(mode\);return;\}/);
  assert.match(page,/return_to/);
  assert.match(page,/searchParams\.set\('site',site\)/);
  const router=readFileSync(new URL('../education/course-hub/router.js',import.meta.url),'utf8');
