@@ -34,7 +34,7 @@ function setup() {
   return { storage, env };
 }
 function request(body, role = 'submit', keyTenant = 'campus1', path = 'submit', more = {}) {
-  return new Request('https://biz.ekodi.kr/api/institution-ai/v1/' + path, {
+  return new Request('https://ekodi.kr/ekodibiz/api/institution-ai/v1/' + path, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -58,7 +58,7 @@ const external = (operationId = 'payment0001') => ({
 });
 test('locked health has no secrets and no account status', async () => {
   const { env } = setup();
-  const req = new Request('https://biz.ekodi.kr/api/institution-ai/v1/health');
+  const req = new Request('https://ekodi.kr/ekodibiz/api/institution-ai/v1/health');
   const response = await institutionAiApi(req, new URL(req.url), {});
   assert.equal(response.status, 200);
   const result = await response.json();
@@ -70,14 +70,14 @@ test('locked health has no secrets and no account status', async () => {
 });
 test('tenant and role isolation: no origin, no key, no cross-tenant access', async () => {
   const { env } = setup();
-  const noKey = new Request('https://biz.ekodi.kr/api/institution-ai/v1/submit', {
+  const noKey = new Request('https://ekodi.kr/ekodibiz/api/institution-ai/v1/submit', {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(draft()),
   });
   assert.equal((await institutionAiApi(noKey, new URL(noKey.url), env)).status, 403);
   assert.equal((await call(env, draft(), 'submit', 'campus2')).status, 403);
   assert.equal((await call(env, draft(), 'read', 'campus1')).status, 403);
   assert.equal((await call(env, draft(), 'submit', 'campus1', 'submit', { origin: 'https://evil.example' })).status, 403);
-  const badMethod = new Request('https://biz.ekodi.kr/api/institution-ai/v1/status', { method: 'GET' });
+  const badMethod = new Request('https://ekodi.kr/ekodibiz/api/institution-ai/v1/status', { method: 'GET' });
   assert.equal((await institutionAiApi(badMethod, new URL(badMethod.url), env)).status, 404);
 });
 test('idempotent encrypted creation, authorized status, export and rotation', async () => {
