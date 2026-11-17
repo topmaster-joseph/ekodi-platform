@@ -71,6 +71,7 @@ test('Windows implementation uses Windows CurrentUser DPAPI without cookie expor
   assert.match(script,/WindowsIdentity\]::GetCurrent\(\)\.IsSystem/);
   assert.match(script,/Environment\]::UserInteractive/);
   assert.match(script,/SITE_VAULT_LOCAL_CONSENT_DECLINED/);
+  assert.match(script,/4\+32\+256\+4096/,'site vault consent must default to No');
   assert.match(script,/SITE_VAULT_ORIGIN_MISMATCH/);
   assert.match(script,/SITE_VAULT_ARCHIVE_PATH_FORBIDDEN/);
   assert.match(script,/SITE_VAULT_ARCHIVE_TOO_LARGE/);
