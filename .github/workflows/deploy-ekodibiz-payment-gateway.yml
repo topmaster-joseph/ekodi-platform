@@ -15,6 +15,9 @@ on:
     paths:
       - 'ekodibiz-payment-architecture.js'
       - 'ekodibiz-pay-gateway-worker.js'
+      - 'edge-traffic-shield.js'
+      - 'platform-security-policy.js'
+      - 'turnstile-abuse-guard.js'
       - 'wrangler.ekodibiz.toml'
       - 'wrangler.ekodibiz-staging.toml'
       - 'wrangler.ekodibiz-pay-gateway.toml'
@@ -25,6 +28,9 @@ on:
     paths:
       - 'ekodibiz-payment-architecture.js'
       - 'ekodibiz-pay-gateway-worker.js'
+      - 'edge-traffic-shield.js'
+      - 'platform-security-policy.js'
+      - 'turnstile-abuse-guard.js'
       - 'wrangler.ekodibiz.toml'
       - 'wrangler.ekodibiz-staging.toml'
       - 'wrangler.ekodibiz-pay-gateway.toml'

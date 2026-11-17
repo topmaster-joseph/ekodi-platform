@@ -15,6 +15,9 @@ on:
     paths:
       - 'support/**'
       - 'support-worker.js'
+      - 'edge-traffic-shield.js'
+      - 'platform-security-policy.js'
+      - 'turnstile-abuse-guard.js'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
@@ -32,6 +35,9 @@ on:
     paths:
       - 'support/**'
       - 'support-worker.js'
+      - 'edge-traffic-shield.js'
+      - 'platform-security-policy.js'
+      - 'turnstile-abuse-guard.js'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
       - 'test/support-opportunity.test.mjs'
