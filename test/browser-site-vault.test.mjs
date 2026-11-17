@@ -103,5 +103,5 @@ test('local launcher never bypasses PowerShell execution policy or starts as SYS
   const launcher=read('tools/ekodi-device-agent/windows/ekodi-site-vault.cmd');
   assert.match(launcher,/powershell\.exe -NoProfile -File/);
   assert.match(launcher,/ekodi-site-vault\.ps1/);
-  assert.doesNotMatch(launcher,/ExecutionPolicy\s+Bypass|RunAs|SCHTASKS|/i);
+  assert.doesNotMatch(launcher,/ExecutionPolicy\s+Bypass|RunAs|SCHTASKS/i);
 });
