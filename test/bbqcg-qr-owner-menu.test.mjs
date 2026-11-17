@@ -53,7 +53,7 @@ test('existing store admin offers a BBQ-only owner form and never silently enabl
   assert.match(script,/function bbqQrOwnerMenuPanel/);
   assert.match(script,/function bindBbqQrOwnerMenuForm/);
   assert.match(script,/if\(SLUG!=='bbqcg'\)return/);
-  assert.match(script,/\['store_owner','tenant_admin','platform_admin'\]/);
+  assert.match(script,/canSection\('menu'\)&&canSection\('members'\)&&roleCapabilities\(state\.role\)\.includes\('\*'\)/);
   assert.match(script,/bbqQrOwnerMenuForm/);
   assert.match(script,/event\.submitter\?\.value==='approve'/);
   assert.match(script,/data\.get\('owner_confirmation'\)/);
