@@ -27,11 +27,14 @@ function fakeStorage() {
   };
 }
 function setup() {
-  const storage = fakeStorage(), env = secrets();
-  env.REVENUE_STORE = { idFromName: () => 'central', get: () => ({
-    fetch: (url, init) => institutionAiStore(new Request(url, init), storage),
+  const storage = fakeStorage(), env = secrets(), storages = new Map();
+  env.REVENUE_STORE = { idFromName: name => name, get: name => ({
+    fetch: (url, init) => {
+      if (!storages.has(name)) storages.set(name, name === 'institution-ai:campus1' ? storage : fakeStorage());
+      return institutionAiStore(new Request(url, init), storages.get(name));
+    },
   }) };
-  return { storage, env };
+  return { storage, env, storages };
 }
 function request(body, role = 'submit', keyTenant = 'campus1', path = 'submit', more = {}) {
   return new Request('https://ekodi.kr/ekodibiz/api/institution-ai/v1/' + path, {
@@ -192,4 +195,13 @@ test('portable conversation persists with unique message ids across AI model swi
   assert.equal(result.job.messageCount, 2);
   assert.equal(result.audit.length, 3);
   assert.equal((await call(env, id, 'read', 'campus2', 'export')).status, 403);
+});
+
+test('each institution routes to a separate Durable Object instance', async () => {
+  const { env, storages } = setup();
+  await call(env, draft('scoped0001'));
+  await call(env, { ...draft('scoped0002'), tenantId: 'campus2' }, 'submit', 'campus2');
+  assert.equal(storages.has('institution-ai:campus1'), true);
+  assert.equal(storages.has('institution-ai:campus2'), true);
+  assert.notEqual(storages.get('institution-ai:campus1'), storages.get('institution-ai:campus2'));
 });
