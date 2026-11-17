@@ -13,7 +13,12 @@ const safe=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 const route=p=>base+p;
 function safeLink(value){
  const v=String(value||'');
- if(v.startsWith(SLASH)&&!v.startsWith(SLASH+SLASH))return route(v);
+ if(v.startsWith(SLASH)&&!v.startsWith(SLASH+SLASH)){
+  // The shared canonical proxy already prefixes JSON URLs with /edu.
+  // Accept those URLs as-is; prefix only unmounted upstream course links.
+  if(base&&(v===base||v.startsWith(base+SLASH)))return v;
+  return route(v);
+ }
  if(/^https:\/\/(?:docs\.google\.com|drive\.google\.com)\//.test(v))return v;
  return '';
 }
