@@ -15,6 +15,9 @@ on:
     paths:
       - 'delivery/**'
       - 'delivery-worker.js'
+      - 'edge-traffic-shield.js'
+      - 'platform-security-policy.js'
+      - 'turnstile-abuse-guard.js'
       - 'site-discovery-head.js'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
@@ -28,6 +31,9 @@ on:
     paths:
       - 'delivery/**'
       - 'delivery-worker.js'
+      - 'edge-traffic-shield.js'
+      - 'platform-security-policy.js'
+      - 'turnstile-abuse-guard.js'
       - 'site-discovery-head.js'
       - 'ekodi-service-manifest.js'
       - 'platform-boundaries.json'
