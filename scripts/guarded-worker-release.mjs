@@ -211,6 +211,36 @@ function isTransientWranglerTransportError(error) {
   return /fetch failed|network connectivity|econnreset|etimedout|eai_again|enotfound|socket hang up|connection reset/i.test(detail);
 }
 
+// Cloudflare's Versions API can briefly fail to resolve a version returned by
+// the immediately preceding upload (100146). Retry ONLY the exact candidate,
+// only while the previous 100% version remains stable. Other failures stay fatal.
+function isUnpropagatedCandidateVersion(error, candidateVersion) {
+  const detail = `${error?.message || ''}\n${error?.providerOutput || ''}`;
+  return detail.includes(`/versions/${candidateVersion}`)
+    && /\[code:\s*100146\]/i.test(detail);
+}
+
+async function attachCandidateWithPropagationRetry(previousVersion, candidateVersion, message) {
+  const specs = [`${previousVersion}@100%`, `${candidateVersion}@0%`];
+  let lastError = null;
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    try {
+      deployVersions(specs, message);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isUnpropagatedCandidateVersion(error, candidateVersion) || attempt === 4) throw error;
+      const stillStable = await currentSingleVersion();
+      if (stillStable !== previousVersion) {
+        throw new Error('Candidate attach retry refused: previous 100% production version changed.');
+      }
+      console.warn(`Newly uploaded candidate version is not yet visible (100146), safe attach retry ${attempt}/4.`);
+      await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+    }
+  }
+  throw lastError;
+}
+
 async function restoreVersionWithRetry(version, message) {
   const specs = [`${version}@100%`];
   let lastError = null;
@@ -412,10 +442,7 @@ try {
   console.log(`Candidate version: ${candidateVersion}`);
 
   console.log('Phase 1/3: attach candidate at 0% traffic while stable version remains at 100%.');
-  deployVersions([
-    `${previousVersion}@100%`,
-    `${candidateVersion}@0%`,
-  ], `EKODI candidate smoke gate ${tag}`);
+  await attachCandidateWithPropagationRetry(previousVersion, candidateVersion, `EKODI candidate smoke gate ${tag}`);
   candidateAttached = true;
 
   console.log('Phase 2/3: smoke-test the 0% candidate through Cloudflare version overrides.');
