@@ -1,6 +1,7 @@
 // Instructor profile shown before class (presenter opening, learner lab, entry page).
 // Public by design: name, public roles, operated public websites, books and a portrait the instructor cleared
-// for public use (education/study/ai-bootcamp/documents/portrait.js). No phone, e-mail, address or IDs.
+// for public use (education/study/ai-bootcamp/documents/portrait.js). No address or IDs.
+// Contact: phone and e-mail the instructor asked to show on the intro screen (2026-11-18); nothing else.
 // Degree (박사) and the 목사 title were confirmed by the instructor on 2026-10-22.
 // Gallery: stills of the official 청계면상인회 videos registered on cgma.or.kr (cgma_resources, 2026-10-22).
 // They are video thumbnails served by YouTube, labelled as such, and link to the source video.
@@ -20,6 +21,7 @@ export const INSTRUCTOR=Object.freeze({
     '에코디비즈(EKODIBIZ) 대표 — 해외 하드웨어 조달·수출, AI 기반 상권 마케팅',
     '청계면상인회 회장 · 청계면 도시재생 주민협의체 간사'
   ]),
+  contact:Object.freeze({phone:'010-3501-8542',email:'joseph@ekodi.kr'}),
   books:Object.freeze(['에코디언을 찾아서','AI 시대의 진보와 빈곤']),
   sites:Object.freeze([
     {label:'EKODI 플랫폼',url:'https://ekodi.kr/',desc:'교육·연구·출판·비즈니스를 잇는 생태계'},
