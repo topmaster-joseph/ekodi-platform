@@ -330,6 +330,19 @@
           "x-ekodi-surface-context: person-digital-card",
           "x-robots-tag: noindex, nofollow, noarchive"
         ]
+      },
+      {
+        "url": "https://ekodi.kr/invest/my",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "2026년 10월 27일 국내주식 재무분석 API 7종의 종료를 공지했습니다",
+          "해당 API에 의존하지 않습니다",
+          "<strong id=\"kpiLive\">잠금</strong>",
+          "id=\"ownerSidebar\""
+        ]
       }
     ]
   }
