@@ -699,3 +699,6 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 .official-pdf-facts summary{font-weight:700;cursor:pointer;min-height:36px}
 .official-pdf-facts .meta{line-height:1.62;margin:8px 0}
 @media print{.original-pdf-card{break-inside:avoid}}
+.lv .ins-contact,.lv .slide-ins-contact{display:flex;flex-wrap:wrap;gap:8px 16px;margin:2px 0 0}
+.lv .ins-contact a,.lv .slide-ins-contact a{font-weight:700;color:var(--brand,#0b5cab);text-decoration:none;white-space:nowrap}
+.lv .slide-ins-contact{font-size:1.9cqw;gap:.6cqw 2cqw}

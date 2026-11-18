@@ -241,7 +241,10 @@ test('instructor intro: public facts only, portrait asset present, intro and hoo
   const {INSTRUCTOR}=await import('../education/study/live/courses/instructor.js');
   const {stat}=await import('node:fs/promises');
   const src=await read('education/study/live/courses/instructor.js');
-  assert.doesNotMatch(src,/01[016789]-?\d{3,4}-?\d{4}|@[a-z0-9.-]+\.[a-z]{2,}|\d{3}-\d{2}-\d{5}/i,'no phone, e-mail or business ID in public instructor data');
+  const pub=src.replace(/contact:Object\.freeze\(\{[^}]*\}\)/,'');
+  assert.doesNotMatch(pub,/01[016789]-?\d{3,4}-?\d{4}|@[a-z0-9.-]+\.[a-z]{2,}|\d{3}-\d{2}-\d{5}/i,'contact details only in the approved contact field');
+  assert.deepEqual({...INSTRUCTOR.contact},{phone:'010-3501-8542',email:'joseph@ekodi.kr'},'instructor-approved contact (2026-11-18)');
+  assert.match((await import('../education/study/live/engine/render.js')).instructorCard(INSTRUCTOR,''),/href="tel:01035018542"[\s\S]*href="mailto:joseph@ekodi\.kr"/);
   assert.ok((await stat(new URL('../education/study/live/'+INSTRUCTOR.photo,import.meta.url))).size>10000);
   assert.ok(INSTRUCTOR.sites.every(x=>/^https:\/\//.test(x.url)));
   const s1=sessionSlides(COURSE,1),s2=sessionSlides(COURSE,2);
