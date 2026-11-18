@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.6.6'
+$AgentVersion = '2.6.7'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -2035,6 +2035,14 @@ $InteractiveAuthLastPath = Join-Path $Root 'interactive-auth-last.json'
 $InteractiveAuthSessionPattern = '^ias_[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'
 # Local registry: the agent never trusts a URL from the network payload.
 $InteractiveAuthServices = @{
+  'korail-ticket' = @{
+    entryUrl = 'https://www.korail.com/ticket/login'
+    origin = 'https://www.korail.com'
+    host = 'www.korail.com'
+    authPrefixes = @('/ticket/')
+    authMarker = 'logout-visible'
+    label = '코레일 (KTX 승차권, 본인 로그인 전용)'
+  }
   'domeggook-business' = @{
     entryUrl = 'https://www.domeggook.com/main/'
     origin = 'https://www.domeggook.com'
@@ -2397,11 +2405,11 @@ function Invoke-EkodiInteractiveAuthVerify($Payload) {
   $expression = @'
 (() => {
   const vis = e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const labels = [...document.querySelectorAll('a,button,[role=menuitem],[role=tab],nav li,aside li')]
+  const labels = location.origin === 'https://www.korail.com' ? [] : [...document.querySelectorAll('a,button,[role=menuitem],[role=tab],nav li,aside li')]
     .filter(vis)
     .map(e => (e.innerText || e.getAttribute('aria-label') || e.getAttribute('title') || '').trim().replace(/\s+/g, ' ').slice(0, 60))
     .filter(Boolean);
-  const usage = (location.origin === 'https://www.domeggook.com' ? '' : ((document.body && document.body.innerText) || '')).split('\n')
+  const usage = ((location.origin === 'https://www.domeggook.com' || location.origin === 'https://www.korail.com') ? '' : ((document.body && document.body.innerText) || '')).split('\n')
     .map(s => s.trim()).filter(s => s && s.length <= 140 && /(크레딧|credit|사용량|잔여|한도|토큰)/i.test(s)).slice(0, 8);
   return JSON.stringify({
     origin: location.origin,
@@ -2430,7 +2438,7 @@ function Invoke-EkodiInteractiveAuthVerify($Payload) {
     ([string]$_) -replace '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', '[email]'
   })
   # Supplier account balance, buyer identity and other financial text must not leave the browser.
-  if ([string]$state.service -eq 'domeggook-business') { $usageLines = @() }
+  if ([string]$state.service -in @('domeggook-business','korail-ticket')) { $usageLines = @() }
   $state.state = $(if ($authenticated) { 'verified' } else { 'login_required' })
   Save-EkodiInteractiveAuthState $state
   $verification = @{
@@ -4160,6 +4168,7 @@ function Send-Heartbeat($Config) {
       workspaceSlidesAudio = [bool](Get-WorkspaceSlidesAudioState).verified
       interactiveAuthSession = [bool](Resolve-EkodiInteractiveBrowser)
       domeggookNativeAuth = [bool](Resolve-EkodiInteractiveBrowser)
+      korailNativeAuth = [bool](Resolve-EkodiInteractiveBrowser)
       nativeBrowserAutoUpdate = $true
       desktopCapture = $false; desktopInput = $false
       arbitraryShell = $false; screenCapture = $false; credentialCollection = $false

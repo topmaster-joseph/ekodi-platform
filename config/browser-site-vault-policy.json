@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "policyId": "EKODI-LOCAL-SITE-VAULT-001",
+  "status": "preproduction-candidate",
+  "owner": "EKODI AI Orchestrator",
+  "parentIssue": 9905,
+  "purpose": "Use any personally enrolled public HTTPS site in an isolated, encrypted per-origin local browser profile after explicit in-person approval.",
+  "integration": {
+    "personalCredentialVault": "PERSONAL-CREDENTIAL-VAULT-001",
+    "credentialVaultStatus": "design-review",
+    "credentialCopiesToCloud": false,
+    "credentialRefOnlyWhenActivated": true,
+    "existingInteractiveAuthUnaffected": true
+  },
+  "origin": {
+    "protocol": "https:",
+    "publicDnsHostnameRequired": true,
+    "embeddedBasicAuthForbidden": true,
+    "queryAndFragmentForbidden": true,
+    "loopbackAndIpLiteralForbidden": true,
+    "localOrUnqualifiedHostForbidden": true,
+    "defaultPortOnly": true,
+    "limit": 50
+  },
+  "isolation": {
+    "profilePerNormalizedOrigin": true,
+    "otherWindowsBrowserProfilesReused": false,
+    "extensionsDisabled": true,
+    "syncDisabled": true,
+    "remoteDebuggingDisabled": true,
+    "noAutomatedCdpOrInput": true,
+    "encryptedAtRest": "Windows DPAPI CurrentUser",
+    "localUserAccountBound": true,
+    "defaultPasswordManagerEnabled": false,
+    "optionalNativeBrowserPasswordManager": true,
+    "readableWhileBrowserOpen": true,
+    "localFullDiskEncryptionRecommended": true
+  },
+  "authority": {
+    "newSiteRequiresInteractiveWindowsUser": true,
+    "registerAndDeleteRequireLocalConsent": true,
+    "reuseRequiresLocalUnlock": true,
+    "unattendedStartForbidden": true,
+    "cloudCommandMayOpenVault": false,
+    "aiOrMcpMayRetrieveCredentials": false,
+    "rawCredentialsInApiLogs": false,
+    "sessionCookiesInApi": false,
+    "automaticUserInputInjection": false,
+    "providerTermsOverride": true,
+    "passkeysMfaOrCaptchaRequirePerson": true
+  },
+  "sensitiveMutations": {
+    "financialPayment": "separate-human-gate",
+    "ordering": "separate-human-gate",
+    "accountChanges": "separate-human-gate",
+    "massLoginAttemptsForbidden": true
+  },
+  "lifecycle": {
+    "maxSessionHours": 8,
+    "lockAfterBrowserExit": true,
+    "reEncryptBeforeDeletingWorkingProfile": true,
+    "neverDeleteLastGoodVaultOnSaveError": true,
+    "crashRecovery": "next-local-start-attempt-only; requires independent watchdog before production",
+    "sealingVerifiedOnWindows": false,
+    "productionEnabled": false
+  },
+  "observability": {
+    "metadataOnly": true,
+    "neverSendFullUrlOrSecretsToServer": true,
+    "siteNamesLocalOnly": true,
+    "personalCredentialVaultDeploymentSeparate": true
+  }
+}

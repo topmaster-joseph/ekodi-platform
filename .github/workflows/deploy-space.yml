@@ -17,6 +17,10 @@ on:
       - 'space-worker.js'
       - 'test/space-noindex-preservation.test.mjs'
       - 'bbq-cheonggye-site.js'
+      - 'bbqcg-order-portal.js'
+      - 'test/bbqcg-qr-order-onramp.test.mjs'
+      - 'test/bbqcg-qr-owner-menu.test.mjs'
+      - 'supabase/migrations/20261118003000_bbqcg_qr_owner_menu.sql'
       - 'test/bbq-cheonggye-site.test.mjs'
       - 'test/bbqcg-hard-cutover.test.mjs'
       - 'test/bbqcg-admin-access.test.mjs'
@@ -77,6 +81,10 @@ on:
       - 'space-worker.js'
       - 'test/space-noindex-preservation.test.mjs'
       - 'bbq-cheonggye-site.js'
+      - 'bbqcg-order-portal.js'
+      - 'test/bbqcg-qr-order-onramp.test.mjs'
+      - 'test/bbqcg-qr-owner-menu.test.mjs'
+      - 'supabase/migrations/20261118003000_bbqcg_qr_owner_menu.sql'
       - 'test/bbq-cheonggye-site.test.mjs'
       - 'test/bbqcg-hard-cutover.test.mjs'
       - 'test/bbqcg-admin-access.test.mjs'
@@ -160,6 +168,7 @@ env:
   BBQ_STORE_ACCESS_MIGRATION: supabase/migrations/20261108163500_bbqcg_tenant_admin_store_access.sql
   BBQ_STORE_ACCESS_PINNED_BLOB: 91bd37584bbe5d6e6b5314c56ea019586d5f735f
   BBQ_FACTS_MIGRATION: supabase/migrations/20261108200000_bbqcg_verified_public_store_facts.sql
+  BBQ_QR_MENU_MIGRATION: supabase/migrations/20261118003000_bbqcg_qr_owner_menu.sql
   BBQ_FACTS_PINNED_BLOB: 9aa29f1bf45cd411b4fa09a12cab3eb93ef769d1
 
 jobs:
@@ -365,6 +374,8 @@ jobs:
             to_regprocedure('public.store_public_storefront(text)') is not null as storefront_public,
             to_regprocedure('public.store_user_site_public_profile(text)') is not null as user_site_profile,
             to_regprocedure('public.store_user_site_public_snapshot(text)') is not null as user_site_snapshot,
+            to_regprocedure('public.bbqcg_qr_public_catalog(text)') is not null as bbq_qr_public,
+            to_regprocedure('public.bbqcg_qr_menu_owner_submit(text,text,text,text,integer,text,boolean)') is not null and to_regclass('public.bbqcg_qr_menu_approvals') is not null as bbq_qr_owner,
             exists(select 1 from public.tenants where slug='mokpo-mission' and settings->>'organization_engine'='v1') and exists(select 1 from public.tenants where slug='mokpo-presbytery' and settings->>'organization_engine'='v1') as mokpo_organizations,
             to_regprocedure('public.organization_budget_command(text,text,jsonb)') is not null as organization_budget,
             to_regclass('public.mission_activity_page_edits') is not null as mission_editor_table,
@@ -377,6 +388,43 @@ jobs:
 
           query_sql "$proof_sql" /tmp/space-schema-before.json
 
+          # DEV-only accessors are deliberately isolated: legacy production API
+          # calls keep the explicitly pinned production project path.
+          query_dev_sql() {
+            local sql="$1" out="$2" code
+            jq -n --arg query "$sql" '{query:$query,read_only:true}' > /tmp/space-qr-dev-query.json
+            code=$(curl -sS -o "$out" -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$BBQ_DEV_PROJECT/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data-binary @/tmp/space-qr-dev-query.json)
+            [ "$code" = '201' ] || { echo "BBQ QR DEV proof inaccessible HTTP $code"; cat "$out"; exit 1; }
+          }
+          apply_dev_migration() {
+            local migration="$1" code
+            jq -Rs '{query:.,read_only:false}' "$migration" > /tmp/space-qr-dev-migration.json
+            code=$(curl -sS -o /tmp/space-qr-dev-migration-result.json -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$BBQ_DEV_PROJECT/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data-binary @/tmp/space-qr-dev-migration.json)
+            [ "$code" = '201' ] || { echo "BBQ QR DEV migration refused HTTP $code"; cat /tmp/space-qr-dev-migration-result.json; exit 1; }
+          }
+
+          # New BBQ QR menu schema: prove DEV first, then allow PROD release.
+          # Only this migration is applied, never a blanket production db push.
+          test -f "$BBQ_QR_MENU_MIGRATION"
+          query_dev_sql "$proof_sql" /tmp/space-qr-dev-before.json
+          if ! grep -Fq '"bbq_qr_public":true' /tmp/space-qr-dev-before.json || ! grep -Fq '"bbq_qr_owner":true' /tmp/space-qr-dev-before.json; then
+            apply_dev_migration "$BBQ_QR_MENU_MIGRATION"
+          fi
+          query_dev_sql "$proof_sql" /tmp/space-qr-dev-after.json
+          grep -Fq '"bbq_qr_public":true' /tmp/space-qr-dev-after.json
+          grep -Fq '"bbq_qr_owner":true' /tmp/space-qr-dev-after.json
+
+          if ! grep -Fq '"bbq_qr_public":true' /tmp/space-schema-before.json || ! grep -Fq '"bbq_qr_owner":true' /tmp/space-schema-before.json; then
+            apply_migration "$BBQ_QR_MENU_MIGRATION"
+          fi
           if ! grep -Fq '"store_route":true' /tmp/space-schema-before.json; then
             apply_migration "$STORE_ROUTE_MIGRATION"
           fi
@@ -406,7 +454,7 @@ jobs:
           fi
 
           query_sql "$proof_sql" /tmp/space-schema-after.json
-          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"mokpo_organizations":true' '"organization_budget":true' '"mission_editor_table":true' '"mission_editor_public":true' '"mission_editor_update":true' '"mokpo_roster_viewer":true' '"mokpo_inline_roles":true' '"mokpo_name_login":true' '"mokpo_dept_roster":true'; do
+          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"bbq_qr_public":true' '"bbq_qr_owner":true' '"mokpo_organizations":true' '"organization_budget":true' '"mission_editor_table":true' '"mission_editor_public":true' '"mission_editor_update":true' '"mokpo_roster_viewer":true' '"mokpo_inline_roles":true' '"mokpo_name_login":true' '"mokpo_dept_roster":true'; do
             grep -Fq "$marker" /tmp/space-schema-after.json || { echo "Missing required Space Supabase contract: $marker"; cat /tmp/space-schema-after.json; exit 1; }
           done
 
@@ -716,6 +764,22 @@ jobs:
           verify_rpc store_public_storefront '{"p_slug":"jadam"}' /tmp/storefront-proof.json
           verify_rpc store_user_site_public_profile '{"p_slug":"jadam"}' /tmp/user-site-profile-proof.json
           verify_rpc store_user_site_public_snapshot '{"p_slug":"jadam"}' /tmp/user-site-snapshot-proof.json
+
+          # BBQ-only owner approved public menu; never project price-unverified or sold-out records.
+          verify_rpc bbqcg_qr_public_catalog '{"p_slug":"bbqcg"}' /tmp/bbqcg-qr-menu-proof.json '"menu"'
+          jq -e '(.store | type == "object") and (.menu | type == "array") and
+            all(.menu[]; (.availability == "available") and (.verified_at != null) and
+              (.base_price | type == "number" and . > 0) and
+              (.source_basis | IN("brand_official","operator_verified","platform_verified","pos_verified")))' /tmp/bbqcg-qr-menu-proof.json >/dev/null
+          verify_rpc bbqcg_qr_public_catalog '{"p_slug":"pizzamaru"}' /tmp/bbqcg-qr-cross-tenant.json
+          jq -e '. == null' /tmp/bbqcg-qr-cross-tenant.json >/dev/null
+          owner_status=$(curl -sS -o /tmp/bbqcg-qr-owner-anon.json -w '%{http_code}' -X POST "$base/bbqcg_qr_menu_owner_submit" \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H 'Content-Type: application/json' \
+            --data '{"p_slug":"bbqcg","p_name":"NO_ANON_WRITES","p_approve":false}')
+          case "$owner_status" in 401|403|404) ;; *)
+            echo "Anonymous BBQ menu admin mutation was not rejected: HTTP $owner_status" >&2; exit 1;;
+          esac
+
           verify_rpc mission_activity_page_public_snapshot '{"p_workspace_slug":"ekodimission"}' /tmp/mission-activity-editor-proof.json
           jq -e '.ok == true and (.items | type == "array")' /tmp/mission-activity-editor-proof.json >/dev/null
 
@@ -773,6 +837,34 @@ jobs:
         run: |
           set -euo pipefail
           public_url='https://ekodi.kr/bbqcg'
+          qr_url='https://ekodi.kr/bbqcg/order'
+          qr_code=$(curl -sS -D /tmp/bbq-qr.headers -o /tmp/bbq-qr.html -w '%{http_code}' --connect-timeout 5 --max-time 20 "$qr_url" || true)
+          [ "$qr_code" = 200 ] || { echo "BBQ QR customer menu unavailable HTTP=$qr_code"; exit 1; }
+          # A customer-readable HTML snapshot is not equivalent to a disabled checkout.
+          # Preserve all launch guards, but produce independent diagnostics for each
+          # assertion. Shell's footer enhancer may add attributes to an existing
+          # <footer> tag; it must not cause a false negative when the footer exists.
+          qr_failed=0
+          check_qr() {
+            local description="$1" expression="$2"
+            if grep -Eq "$expression" /tmp/bbq-qr.html; then
+              echo "BBQ QR smoke PASS: $description"
+            else
+              echo "BBQ QR smoke FAIL: $description" >&2
+              qr_failed=1
+            fi
+          }
+          check_qr 'customer menu title' 'QR 메뉴·주문 안내'
+          check_qr 'checkout button disabled' '<button[^>]*disabled[^>]*>결제·매장 접수 준비 중</button>'
+          check_qr 'BBQ site-owned header' 'data-ekodi-user-header-root="bbqcg-v1"'
+          check_qr 'BBQ site-owned footer' '<footer[^>]*class="foot([[:space:]]|")'
+          if [ "$qr_failed" -ne 0 ]; then
+            echo "BBQ QR smoke evidence: HTTP=$qr_code size=$(wc -c < /tmp/bbq-qr.html), route=$(sed -n 's/^x-ekodi-route:[[:space:]]*//Ip' /tmp/bbq-qr.headers | head -1), content-type=$(sed -n 's/^content-type:[[:space:]]*//Ip' /tmp/bbq-qr.headers | head -1)" >&2
+            echo 'Preserving checkout locked; no order or payment request was issued.' >&2
+            exit 1
+          fi
+          echo 'BBQ QR approved-menu page is live with checkout intentionally locked.'
+
           css_url='https://ekodi.kr/bbqcg/assets/site.css'
           admin_url='https://ekodi.kr/bbqcg/admin'
           ready=false

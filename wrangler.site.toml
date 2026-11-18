@@ -144,6 +144,11 @@ migrations_dir = "migrations"
 binding = "COOP_SIGNATURE_FILES"
 bucket_name = "ekodi-storage"
 
+# EKODI-MEDIA-SHIELD-001: encrypted media lives under the media-shield/ prefix of the existing bucket.
+[[r2_buckets]]
+binding = "MEDIA_SHIELD_BUCKET"
+bucket_name = "ekodi-storage"
+
 [[ratelimits]]
 name = "MAIL_CONTACT_RATE_LIMITER"
 namespace_id = "3901"

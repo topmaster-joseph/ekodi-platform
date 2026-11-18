@@ -85,7 +85,12 @@ test('only a server-verified super admin can issue instructor session, never a s
  assert.match((await call('/teach/',env,{headers:{cookie}})).headers.get('cache-control'),/no-store/);
  const out=await call('/teach/logout',env,{method:'POST',headers:{...origin,cookie}});
  assert.equal(out.status,200);assert.match(out.headers.get('set-cookie'),/Max-Age=0/);
- const tamper=cookie.replace(/.$/,'X');
+ const parts=cookie.split('.');
+ const signature=parts.pop();
+ assert.match(signature,/^[A-Za-z0-9_-]+$/);
+ parts.push((signature[0]==='A'?'B':'A')+signature.slice(1));
+ const tamper=parts.join('.');
+ assert.notEqual(tamper,cookie,'tampering must change actual HMAC signature bytes');
  assert.equal((await call('/teach/',env,{headers:{cookie:tamper}})).status,401,'modified cookie');
 });
 test('only fresh central super-admin bearer can register or revoke verified instructor emails',async()=>{

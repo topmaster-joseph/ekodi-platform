@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "policyId": "AI-ORCHESTRATE-001",
-  "orchestrationId": "ekoai-0f4c46196cd1f7338028",
+  "orchestrationId": "ekoai-97fd3f4b8415e44b77b1",
   "controlPlane": "EKODI AI",
   "orchestrator": "ekodi-ai-orchestrator",
-  "source": "protected-main-pr-merge",
-  "actor": "topmaster-joseph",
-  "branch": "ai/chatgpt/orch_00000000-0000-4000-8000-000000000001",
-  "sha": "366d26701c90eec66acdf7c51d4a2672059f58ff",
+  "source": "static-policy-validation",
+  "actor": "local",
+  "branch": "main",
+  "sha": "fa95c256f6dc00424bfb8786e335d70ccaf511f3",
   "taskClasses": [
     "experience"
   ],
@@ -38,20 +38,12 @@
   },
   "humanGateRecommended": false,
   "directMutationAllowed": false,
-  "constitutionalControls": [
-    "scripts/validate-constitution.mjs",
-    "scripts/validate-platform-boundaries.mjs",
-    "scripts/validate-ekodi-os-architecture.mjs",
-    "scripts/validate-security-baseline.mjs",
-    "scripts/validate-deployment-guardrails.mjs",
-    "scripts/validate-workflow-orchestration-gates.mjs",
-    "scripts/validate-ai-claim-integrity.mjs"
-  ],
+  "constitutionalControls": [],
   "releaseReceipt": {
     "required": false,
     "verified": false
   },
-  "releaseMode": true,
-  "releaseModeRequested": true,
-  "timestamp": "2026-11-13T11:11:32.992Z"
+  "releaseMode": false,
+  "releaseModeRequested": false,
+  "timestamp": "2026-11-18T07:13:01.078Z"
 }

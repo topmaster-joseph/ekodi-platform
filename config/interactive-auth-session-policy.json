@@ -32,7 +32,8 @@
       "admin-session"
     ],
     "autoAssignedJobsForbidden": true,
-    "oneLiveSessionPerDevice": true
+    "oneLiveSessionPerDevice": true,
+    "korailBookingHumanGateRequired": true
   },
   "session": {
     "defaultTtlMinutes": 30,
@@ -95,6 +96,21 @@
       "verification": "menu-only-readonly",
       "supplierOrderExecution": false,
       "secretOrBuyerDataCollection": false
+    },
+    "korail-ticket": {
+      "entryUrl": "https://www.korail.com/ticket/login",
+      "automationOrigin": "https://www.korail.com",
+      "authenticatedPathPrefixes": [
+        "/ticket/"
+      ],
+      "identityProviderHostsObservedOnly": true,
+      "loginEvidence": "visible-logout-marker-and-no-password-form",
+      "verification": "login-status-only-readonly",
+      "railSeatInventoryRead": false,
+      "orderOrBookingExecution": false,
+      "passengerDataCollected": false,
+      "paymentDataCollected": false,
+      "officialGuide": "https://www.korail.com/ticket/reserve/guide/faq"
     }
   },
   "verification": {
@@ -126,6 +142,17 @@
         "readEmoneyAmount": false,
         "submitOrder": false,
         "sendBuyerPii": false,
+        "retainSessionAfterExpiry": false
+      },
+      "korail-ticket": {
+        "requireVisibleLogoutMarker": true,
+        "readSeatAvailability": false,
+        "readPassengerData": false,
+        "readPaymentData": false,
+        "transmitFareOrTicketData": false,
+        "submitBooking": false,
+        "payForTickets": false,
+        "sendUsageLines": false,
         "retainSessionAfterExpiry": false
       }
     }
