@@ -30,7 +30,9 @@ export const VISIBILITY = Object.freeze({
 const VISIBILITY_RANK = Object.freeze({ public: 0, partners: 1, report: 2, private: 9 });
 // The widest visibility a channel may carry.
 export const CHANNEL_MAX = Object.freeze({ site: 'public', email: 'partners', web_submit: 'report' });
-export const CHANNEL_LABEL = Object.freeze({ site: '사이트 공개', email: '메일 발송', web_submit: '웹 제출' });
+export const CHANNEL_LABEL = Object.freeze({ site: '사이트 공개', email: '메일 발송', web_submit: '기관 보고' });
+export const MAIL_CONNECT_URL = 'https://ekodi.kr/mail/admin';
+export const MAX_ORG_EMAILS = 10;
 export const DISPATCH_KINDS = Object.freeze({ letter: '선교편지', report: '사역보고', prayer: '기도요청' });
 export const DISPATCH_STATUS = Object.freeze({
   DRAFT: '초안', APPROVED: '승인됨', PARTIAL: '일부 발송', SENT: '발송 완료',
@@ -53,6 +55,15 @@ export function escapeHtml(value) {
 }
 export function isEmail(value) {
   return /^[^\s@<>(),;:"]+@[^\s@<>(),;:"]+\.[^\s@<>(),;:"]{2,}$/.test(String(value || ''));
+}
+// Institution addresses (기관 보고 받는 메일): comma / semicolon / newline separated, de-duplicated.
+export function parseEmailList(text) {
+  const out = [];
+  for (const part of String(text ?? '').split(/[\s,;]+/)) {
+    const email = part.trim().toLowerCase();
+    if (email && !out.includes(email)) out.push(email);
+  }
+  return out;
 }
 export function newId(prefix) {
   return `${prefix}-${crypto.randomUUID()}`;
@@ -143,7 +154,7 @@ export function composeDraft({ org, kind, items, periodLabel = '' }) {
   const subject = `[${orgInfo.name}] ${period ? `${period} ` : ''}${kind === 'report' ? '사역보고 및 기도요청' : label}`;
   const lines = [];
   if (kind === 'report') {
-    lines.push(`보고 기관: ${orgInfo.name}`, `보고 기간: ${period || '(기간 입력)'}`, `보고자: ${CONTACT.name} (${CONTACT.email}, ${CONTACT.phone})`, '');
+    lines.push(`보고 기관: ${org === 'mission' ? `${orgInfo.name} (한국외국인선교회 무안지부)` : orgInfo.name}`, `보고 기간: ${period || '(기간 입력)'}`, `보고자: ${CONTACT.name} (${CONTACT.email}, ${CONTACT.phone})`, '');
     lines.push('1. 주요 사역 활동');
     lines.push(...(stories.length ? stories.map(itemLine) : ['• (활동 없음)']));
     lines.push('', '2. 기도요청');
@@ -160,6 +171,8 @@ export function composeDraft({ org, kind, items, periodLabel = '' }) {
 }
 
 export function letterForRecipient(dispatch, recipient, origin = 'https://ekodi.kr') {
+  // Reports to an institution are correspondence, not a subscription: no greeting, no unsubscribe footer.
+  if (recipient.institutional) return dispatch.body;
   const link = `${origin}${UNSUBSCRIBE_PATH}?t=${encodeURIComponent(recipient.unsubToken)}`;
   const greeting = recipient.name ? `${recipient.name} 님께\n\n` : '';
   return `${greeting}${dispatch.body}\n\n이 메일은 ${recipient.groupName || '소식'} 수신에 동의하신 분께 보내드립니다.\n더 받지 않으시려면: ${link}`;
@@ -304,7 +317,7 @@ function adminClient() {
     kind: { news: '사역소식', activity: '활동', history: '이력', prayer: '기도제목' },
     vis: { public: '사이트 공개', partners: '후원자·동역자만', report: '기관 보고 전용', private: '내부 메모' },
     status: { DRAFT: '초안', APPROVED: '승인됨', PARTIAL: '일부 발송', SENT: '발송 완료' },
-    channel: { site: '사이트 공개', email: '메일', web_submit: '웹 제출' },
+    channel: { site: '사이트 공개', email: '메일', web_submit: '기관 보고' },
   };
   function stored() { try { const v = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); return v?.accessToken ? v : null; } catch { return null; } }
   function central() {
@@ -364,7 +377,7 @@ function adminClient() {
     $('sendPicked').innerHTML = picked.map(i => `<li>${esc(i.eventDate)} · ${L.org[i.org]} · ${esc(i.title)} <small>(${L.vis[i.visibility]})</small></li>`).join('') || '<li>「기록」 탭에서 보낼 소식을 먼저 체크해 주세요.</li>';
     $('sOrg').innerHTML = orgOptions(false);
     const org = $('sOrg').value;
-    $('sendGroups').innerHTML = state.groups.filter(g => g.active && (g.org === 'shared' || g.org === org)).map(g => `<label class="check"><input type="checkbox" name="sg" value="${esc(g.id)}"> <span><b>${esc(g.name)}</b> <small>${L.channel[g.channel]}${g.channel === 'email' ? ` · ${g.activeCount || 0}명` : ''}</small></span></label>`).join('');
+    $('sendGroups').innerHTML = state.groups.filter(g => g.active && (g.org === 'shared' || g.org === org)).map(g => `<label class="check"><input type="checkbox" name="sg" value="${esc(g.id)}"> <span><b>${esc(g.name)}</b> <small>${L.channel[g.channel]}${g.channel === 'email' ? ` · ${g.activeCount || 0}명` : ''}${g.channel === 'web_submit' && g.activeCount ? ` · 메일 ${g.activeCount}곳` : ''}</small></span></label>`).join('');
     renderDispatch();
   }
   function renderDispatch() {
@@ -372,13 +385,17 @@ function adminClient() {
     $('dSubject').value = d.subject; $('dBody').value = d.body; $('dStatus').textContent = L.status[d.status] + (d.sentCount ? ` · ${d.sentCount}명 발송` : '') + (d.failedCount ? ` · 실패 ${d.failedCount}` : '');
     const editable = d.status === 'DRAFT'; $('dSubject').disabled = !editable; $('dBody').disabled = !editable;
     $('btnSaveDraft').hidden = !editable; $('btnApprove').hidden = !editable || !state.me.canApprove;
-    $('btnSend').hidden = !['APPROVED', 'PARTIAL'].includes(d.status) || !d.groups.some(g => g.channel === 'email');
-    $('btnSend').disabled = !state.me.mail; $('mailNote').hidden = state.me.mail;
-    $('btnTest').disabled = !state.me.mail;
+    const mailable = d.groups.some(g => g.channel === 'email' || (g.channel === 'web_submit' && (state.groups.find(x => x.id === g.id)?.activeCount || 0) > 0));
+    const sender = state.me.senders?.[d.org] || {};
+    $('btnSend').hidden = !['APPROVED', 'PARTIAL'].includes(d.status) || !mailable;
+    $('btnSend').disabled = !sender.ready; $('btnTest').disabled = !sender.ready;
+    $('mailNote').hidden = false;
+    $('mailNote').innerHTML = sender.ready ? `보내는 메일: <b>${esc(sender.address)}</b> (발송 연결됨)` : `보내는 메일 <b>${esc(sender.address || '미지정')}</b>이 아직 발송 연결되지 않았습니다. <a href="${esc(state.me.connectUrl)}" target="_blank" rel="noopener">에코디 메일 관리</a>에서 이 계정의 Gmail 발송 권한을 연결해 주세요. 승인·워드 파일·제출 기록은 지금도 쓸 수 있습니다.`;
     $('dWarn').innerHTML = (d.alreadySent || []).map(w => `<li>⚠ ${esc(w)}</li>`).join('');
     $('dSubmit').innerHTML = d.groups.filter(g => g.channel === 'web_submit').map(g => {
       const done = (d.submissions || []).includes(g.id);
-      return `<div class="sub"><b>${esc(g.name)}</b> ${g.submitUrl ? `<a class="btn" href="${esc(g.submitUrl)}" target="_blank" rel="noopener">제출 페이지 열기</a>` : '<small>제출 주소 미등록 — 「대상·수신자」 탭에서 등록</small>'} <button type="button" data-copy>본문 복사</button> ${done ? '<span class="b ok">제출 기록됨</span>' : (['APPROVED', 'PARTIAL', 'SENT'].includes(d.status) ? `<button type="button" data-submitted="${esc(g.id)}">제출 완료 기록</button>` : '<small>승인 후 제출</small>')}</div>`;
+      const emails = state.groups.find(x => x.id === g.id)?.contactEmail || '';
+      return `<div class="sub"><b>${esc(g.name)}</b> ${emails ? `<small>메일: ${esc(emails)} — 「메일 발송」에 함께 포함</small>` : ''} ${g.submitUrl ? `<a class="btn" href="${esc(g.submitUrl)}" target="_blank" rel="noopener">제출 페이지 열기</a>` : (emails ? '' : '<small>받는 메일·제출 주소 미등록 — 「대상·수신자」 탭에서 등록</small>')} <button type="button" data-copy>본문 복사</button> ${done ? '<span class="b ok">보고 완료</span>' : (['APPROVED', 'PARTIAL', 'SENT'].includes(d.status) ? `<button type="button" data-submitted="${esc(g.id)}">제출 완료 기록</button>` : '<small>승인 후 제출</small>')}</div>`;
     }).join('');
     document.querySelectorAll('[data-copy]').forEach(n => n.onclick = async () => { await navigator.clipboard.writeText(d.subject + '\n\n' + d.body); say('본문을 복사했습니다. 제출 페이지에 붙여 넣으세요.', 'ok'); });
     document.querySelectorAll('[data-submitted]').forEach(n => n.onclick = () => act('/submitted', { groupId: n.dataset.submitted }));
@@ -413,7 +430,7 @@ function adminClient() {
     try { const r = await api('/recipients/import', { method: 'POST', body: JSON.stringify({ groupId: $('gSel').value, text: $('rText').value, consentConfirmed: true }) }); $('rText').value = ''; await loadPeople(); say(`${r.added}명 등록${r.updated ? `, ${r.updated}명 갱신` : ''}${r.rejected?.length ? `, 인식 못한 줄 ${r.rejected.length}개` : ''}`, 'ok'); }
     catch (x) { say(x.message, 'error'); }
   }
-  async function saveGroup() { say('저장 중…'); try { await api('/groups/' + encodeURIComponent($('gSel').value), { method: 'PUT', body: JSON.stringify({ submitUrl: $('gUrl').value, contactEmail: $('gContact').value }) }); await loadGroups(); say('제출 정보를 저장했습니다.', 'ok'); } catch (x) { say(x.message, 'error'); } }
+  async function saveGroup() { say('저장 중…'); try { await api('/groups/' + encodeURIComponent($('gSel').value), { method: 'PUT', body: JSON.stringify({ submitUrl: $('gUrl').value, contactEmail: $('gContact').value }) }); await loadGroups(); say('기관 보고 정보를 저장했습니다.', 'ok'); } catch (x) { say(x.message, 'error'); } }
 
   function renderLog() {
     $('logList').innerHTML = state.dispatches.map(d => `<tr><td>${esc(String(d.createdAt).slice(0, 10))}</td><td>${L.org[d.org]}</td><td><a href="#" data-open="${esc(d.id)}">${esc(d.subject)}</a></td><td>${esc(d.groups.map(g => g.name).join(', '))}</td><td>${L.status[d.status]}${d.sentCount ? ` · ${d.sentCount}명` : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">발송 이력이 없습니다.</td></tr>';
@@ -429,7 +446,8 @@ function adminClient() {
     try {
       const s = await handoff(); if (!s?.accessToken) { login(); return; } token = s.accessToken;
       state.me = await api('/me');
-      $('who').textContent = `${state.me.email} · ${state.me.roleLabel}`; $('mailBadge').textContent = state.me.mail ? '메일 발송 연결됨' : '메일 발송 미연결';
+      $('who').textContent = `${state.me.email} · ${state.me.roleLabel}`;
+      $('mailBadge').textContent = (state.me.orgs || []).map(o => `${L.org[o]} ${state.me.senders?.[o]?.address || '미지정'} ${state.me.senders?.[o]?.ready ? '✓' : '(발송 미연결)'}`).join(' · ');
       document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => tab(b.dataset.tab));
       $('itemForm').onsubmit = saveItem; $('btnNew').onclick = resetItemForm; ['q', 'fOrg', 'fKind'].forEach(id => $(id).oninput = renderItems);
       $('sOrg').onchange = renderSend; $('btnCompose').onclick = compose; $('btnSaveDraft').onclick = saveDraft;
@@ -492,11 +510,11 @@ table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid var(--li
 <aside class="panel" id="draftBox" hidden><h2 style="font-size:16px;margin:0 0 6px">발송 초안 <small id="dStatus"></small></h2><ul class="warnlist" id="dWarn"></ul>
 <label class="f">제목<input id="dSubject"></label><label class="f">본문<textarea id="dBody"></textarea></label>
 <div class="bar"><button id="btnSaveDraft" type="button">초안 저장</button><button id="btnApprove" class="primary" type="button">승인</button><button id="btnTest" type="button">나에게 테스트 발송</button><button id="btnSend" class="primary" type="button">메일 발송</button><button id="btnExport" type="button">워드 파일 받기</button></div>
-<p class="note" id="mailNote" hidden>메일 발송 연결(Gmail)이 아직 설정되지 않았습니다. 승인·제출 기록·워드 파일은 지금 바로 쓸 수 있습니다.</p>
+<p class="note" id="mailNote" hidden></p>
 <div id="dSubmit"></div></aside></div></section>
 
 <section class="pane" id="pane-people" hidden><div class="panel"><label class="f">대상<select id="gSel"></select></label>
-<div id="gSubmitBox" hidden><div class="grid2"><label class="f">제출 페이지 주소<input id="gUrl" placeholder="https://"></label><label class="f">담당자 이메일<input id="gContact" type="email"></label></div><button id="btnGroup" type="button">제출 정보 저장</button></div>
+<div id="gSubmitBox" hidden><label class="f">받는 메일 (보고서를 메일로 받을 주소, 여러 개는 쉼표로)<input id="gContact" placeholder="본부 담당자 메일"></label><label class="f">웹 제출 페이지 주소 (있을 때만)<input id="gUrl" placeholder="https://"></label><button id="btnGroup" type="button">기관 보고 정보 저장</button></div>
 <div id="gEmailBox"><table><thead><tr><th>이름</th><th>이메일</th><th>상태</th><th>동의</th><th></th></tr></thead><tbody id="rList"></tbody></table>
 <label class="f" style="margin-top:12px">명단 붙여넣기 (한 줄에 한 명: 이름, 이메일, 전화 — 엑셀에서 복사해도 됩니다)<textarea id="rText" placeholder="홍길동, hong@example.com, 010-0000-0000"></textarea></label>
 <label class="check"><input type="checkbox" id="rConsent"> <span>이 명단의 분들께 선교편지 수신 동의를 받았습니다.</span></label><button class="primary" id="btnImport" type="button">명단 등록</button>
@@ -529,7 +547,9 @@ const APPROVE_ROLES = new Set(['operator', 'senior_pastor', 'pastor', 'tenant_ad
 /**
  * createApp({ store, authenticate, mailer, extraHeaders })
  *  - authenticate(request) → { response } | { data: { userId, email, role, orgs:['church'|'mission'] } }
- *  - mailer: { configured:boolean, send({ to, subject, body }) → messageId }
+ *  - mailer: { status(session) → { church:{address,ready,reason}, mission:{…} },
+ *             send(session, org, { to, subject, body }) → messageId }
+ *    Letters always leave from the dispatch's own organisation account (교회 → 교회 계정, 선교회 → 선교회 계정).
  */
 export function createApp({ store, authenticate, mailer = { configured: false }, extraHeaders = {} }) {
   const J = (data, status = 200, method = 'GET') => json(data, status, method, extraHeaders);
@@ -543,10 +563,12 @@ export function createApp({ store, authenticate, mailer = { configured: false },
     const groups = await store.listGroups();
     const byId = Object.fromEntries(groups.map(g => [g.id, g]));
     const deliveries = await store.listDeliveries(dispatch.id);
-    return { ...dispatch, groups: dispatch.groupIds.map(id => byId[id]).filter(Boolean), submissions: deliveries.filter(d => d.status === 'SUBMITTED').map(d => d.groupId) };
+    const submissions = [...new Set(deliveries.filter(d => d.status === 'SUBMITTED' || (d.status === 'SENT' && String(d.recipientId).startsWith('org:'))).map(d => d.groupId))];
+    return { ...dispatch, groups: dispatch.groupIds.map(id => byId[id]).filter(Boolean), submissions };
   }
   async function pendingEmail(dispatch) {
-    const groups = (await store.listGroups()).filter(g => dispatch.groupIds.includes(g.id) && g.channel === 'email');
+    const selected = (await store.listGroups()).filter(g => dispatch.groupIds.includes(g.id));
+    const groups = selected.filter(g => g.channel === 'email');
     // One letter per person per dispatch, even when the same address sits in several groups.
     const busy = (await store.listDeliveries(dispatch.id)).filter(d => d.status === 'SENT' || d.status === 'SENDING');
     const delivered = new Set(busy.map(d => d.recipientId));
@@ -558,21 +580,46 @@ export function createApp({ store, authenticate, mailer = { configured: false },
         seen.add(r.email); out.push({ ...r, groupName: group.name });
       }
     }
+    // 기관 보고 groups with registered addresses are mailed too (본부 담당자 등).
+    for (const group of selected.filter(g => g.channel === 'web_submit')) {
+      for (const email of parseEmailList(group.contactEmail).slice(0, MAX_ORG_EMAILS)) {
+        const id = `org:${group.id}:${email}`;
+        if (delivered.has(id) || seen.has(email) || deliveredEmail.has(email)) continue;
+        seen.add(email); out.push({ id, groupId: group.id, email, name: '', groupName: group.name, institutional: true });
+      }
+    }
     return { groups, recipients: out };
   }
   async function settle(dispatch) {
     const { groups, recipients } = await pendingEmail(dispatch);
     const allGroups = (await store.listGroups()).filter(g => dispatch.groupIds.includes(g.id));
     const deliveries = await store.listDeliveries(dispatch.id);
-    const submitted = new Set(deliveries.filter(d => d.status === 'SUBMITTED').map(d => d.groupId));
-    const webPending = allGroups.filter(g => g.channel === 'web_submit' && !submitted.has(g.id));
+    const submitted = new Set(deliveries.filter(d => d.status === 'SUBMITTED' || (d.status === 'SENT' && String(d.recipientId).startsWith('org:'))).map(d => d.groupId));
+    const webPending = allGroups.filter(g => g.channel === 'web_submit' && !submitted.has(g.id) && !recipients.some(r => r.groupId === g.id));
     const sentCount = deliveries.filter(d => d.status === 'SENT').length;
     const failedCount = deliveries.filter(d => d.status === 'FAILED').length;
     const done = recipients.length === 0 && webPending.length === 0;
-    const touched = sentCount > 0 || submitted.size > 0 || (groups.length === 0 && webPending.length === 0);
+    const touched = sentCount > 0 || submitted.size > 0 || (groups.length === 0 && webPending.length === 0 && recipients.length === 0);
     const status = done ? 'SENT' : (touched ? 'PARTIAL' : dispatch.status);
     const now = new Date().toISOString();
     return store.updateDispatch(dispatch.id, { status, sentCount, failedCount, sentAt: done ? now : dispatch.sentAt, updatedAt: now });
+  }
+
+  async function senderStatus(session) {
+    let status = {};
+    try { status = (mailer.status ? await mailer.status(session) : {}) || {}; } catch { status = {}; }
+    const out = {};
+    for (const org of ['church', 'mission']) {
+      const v = status[org] || {};
+      out[org] = { address: clean(v.address, 200), ready: Boolean(v.ready), reason: clean(v.reason, 200) };
+    }
+    return out;
+  }
+  async function senderFor(session, org) {
+    const sender = (await senderStatus(session))[org];
+    if (!sender.address) return { error: `${ORGS[org].name} 보내는 메일 계정이 정해지지 않았습니다.` };
+    if (!sender.ready) return { error: `${ORGS[org].name} 메일(${sender.address})이 아직 발송 연결되지 않았습니다. ${MAIL_CONNECT_URL} 에서 Gmail 발송 권한을 연결해 주세요.${sender.reason ? ` (${sender.reason})` : ''}` };
+    return { sender };
   }
 
   async function adminApi(request, url) {
@@ -584,7 +631,8 @@ export function createApp({ store, authenticate, mailer = { configured: false },
     const [res, id, action] = path;
 
     if (res === 'me' && method === 'GET') {
-      return J({ ok: true, email: s.email, role: s.role, roleLabel: ROLE_LABEL[s.role] || s.role, orgs: s.orgs, canApprove: APPROVE_ROLES.has(s.role), mail: Boolean(mailer.configured) });
+      const senders = await senderStatus(s);
+      return J({ ok: true, email: s.email, role: s.role, roleLabel: ROLE_LABEL[s.role] || s.role, orgs: s.orgs, canApprove: APPROVE_ROLES.has(s.role), senders, mail: s.orgs.some(o => senders[o]?.ready), connectUrl: MAIL_CONNECT_URL });
     }
 
     if (res === 'items') {
@@ -625,14 +673,17 @@ export function createApp({ store, authenticate, mailer = { configured: false },
       if (!id && method === 'GET') {
         const groups = (await store.listGroups()).filter(g => canSee(s, g.org));
         const recipients = await store.listRecipients();
-        return J({ groups: groups.map(g => ({ ...g, activeCount: recipients.filter(r => r.groupId === g.id && !r.unsubscribedAt && r.consentAt).length })) });
+        return J({ groups: groups.map(g => ({ ...g, activeCount: g.channel === 'web_submit' ? parseEmailList(g.contactEmail).length : recipients.filter(r => r.groupId === g.id && !r.unsubscribedAt && r.consentAt).length })) });
       }
       if (id && method === 'PUT') {
         if (!APPROVE_ROLES.has(s.role)) return J({ error: '대상 정보를 바꿀 권한이 없습니다.' }, 403);
         const group = await store.getGroup(id); if (!group || !canSee(s, group.org)) return J({ error: '대상을 찾을 수 없습니다.' }, 404);
         const body = await readJson(request) || {};
-        const contactEmail = clean(body.contactEmail, 200);
-        if (contactEmail && !isEmail(contactEmail)) return J({ error: '담당자 이메일 형식을 확인해 주세요.' }, 400);
+        const emails = parseEmailList(clean(body.contactEmail, 2000));
+        if (emails.length > MAX_ORG_EMAILS) return J({ error: `받는 메일은 ${MAX_ORG_EMAILS}개까지 등록할 수 있습니다.` }, 400);
+        const badEmail = emails.find(e => !isEmail(e));
+        if (badEmail) return J({ error: `메일 주소 형식을 확인해 주세요: ${badEmail}` }, 400);
+        const contactEmail = emails.join(', ');
         const submitUrl = body.submitUrl === undefined ? group.submitUrl : safeUrl(body.submitUrl);
         if (clean(body.submitUrl) && !submitUrl) return J({ error: '제출 주소는 https://로 시작해야 합니다.' }, 400);
         const saved = await store.updateGroup(id, { submitUrl, contactEmail, updatedAt: new Date().toISOString() });
@@ -718,15 +769,17 @@ export function createApp({ store, authenticate, mailer = { configured: false },
           return J({ ok: true, message: '승인했습니다. 메일 발송 또는 제출을 진행해 주세요.', dispatch: await decorateDispatch(saved) });
         }
         if (action === 'test' && method === 'POST') {
-          if (!mailer.configured) return J({ error: '메일 발송 연결이 아직 설정되지 않았습니다.' }, 409);
-          const messageId = await mailer.send({ to: s.email, subject: `[테스트] ${dispatch.subject}`, body: letterForRecipient(dispatch, { name: '', unsubToken: 'test', groupName: '테스트' }, url.origin) });
-          await audit(s, 'sosik.dispatch.test', id, { to: s.email, messageId });
-          return J({ ok: true, message: `${s.email}로 테스트 메일을 보냈습니다.`, dispatch: await decorateDispatch(dispatch) });
+          const from = await senderFor(s, dispatch.org);
+          if (from.error) return J({ error: from.error, connectUrl: MAIL_CONNECT_URL }, 409);
+          const messageId = await mailer.send(s, dispatch.org, { to: s.email, subject: `[테스트] ${dispatch.subject}`, body: letterForRecipient(dispatch, { name: '', unsubToken: 'test', groupName: '테스트' }, url.origin) });
+          await audit(s, 'sosik.dispatch.test', id, { to: s.email, from: from.sender.address, messageId });
+          return J({ ok: true, message: `${from.sender.address} 계정으로 ${s.email}에 테스트 메일을 보냈습니다.`, dispatch: await decorateDispatch(dispatch) });
         }
         if (action === 'send' && method === 'POST') {
           if (!APPROVE_ROLES.has(s.role)) return J({ error: '발송 권한이 없습니다.' }, 403);
           if (!['APPROVED', 'PARTIAL'].includes(dispatch.status)) return J({ error: '승인된 발송만 보낼 수 있습니다.' }, 409);
-          if (!mailer.configured) return J({ error: '메일 발송 연결이 아직 설정되지 않았습니다.' }, 409);
+          const from = await senderFor(s, dispatch.org);
+          if (from.error) return J({ error: from.error, connectUrl: MAIL_CONNECT_URL }, 409);
           const { recipients } = await pendingEmail(dispatch);
           const batch = recipients.slice(0, SEND_BATCH);
           let sentNow = 0; let failedNow = 0;
@@ -734,16 +787,16 @@ export function createApp({ store, authenticate, mailer = { configured: false },
             const claimed = await store.claimDelivery({ id: newId('dlv'), dispatchId: id, groupId: r.groupId, recipientId: r.id, email: r.email });
             if (!claimed) continue;
             try {
-              const messageId = await mailer.send({ to: r.email, subject: dispatch.subject, body: letterForRecipient(dispatch, r, url.origin) });
+              const messageId = await mailer.send(s, dispatch.org, { to: r.email, subject: dispatch.subject, body: letterForRecipient(dispatch, r, url.origin) });
               await store.finishDelivery(claimed, { status: 'SENT', messageId }); sentNow++;
             } catch (error) {
               await store.finishDelivery(claimed, { status: 'FAILED', error: clean(error?.message, 500) }); failedNow++;
             }
           }
           const saved = await settle(dispatch);
-          await audit(s, 'sosik.dispatch.send', id, { sentNow, failedNow, remaining: recipients.length - batch.length });
+          await audit(s, 'sosik.dispatch.send', id, { from: from.sender.address, sentNow, failedNow, remaining: recipients.length - batch.length });
           const remaining = recipients.length - batch.length;
-          return J({ ok: true, sentNow, failedNow, remaining, message: `${sentNow}명에게 보냈습니다${failedNow ? `, ${failedNow}명 실패` : ''}${remaining > 0 ? `. 남은 ${remaining}명은 「메일 발송」을 한 번 더 눌러 주세요.` : '.'}`, dispatch: await decorateDispatch(saved) });
+          return J({ ok: true, sentNow, failedNow, remaining, message: `${from.sender.address}에서 ${sentNow}곳에 보냈습니다${failedNow ? `, ${failedNow}명 실패` : ''}${remaining > 0 ? `. 남은 ${remaining}명은 「메일 발송」을 한 번 더 눌러 주세요.` : '.'}`, dispatch: await decorateDispatch(saved) });
         }
         if (action === 'submitted' && method === 'POST') {
           if (!['APPROVED', 'PARTIAL', 'SENT'].includes(dispatch.status)) return J({ error: '승인 후 제출 기록을 남길 수 있습니다.' }, 409);
