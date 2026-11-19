@@ -184,7 +184,13 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
   const validatedHeadSha=text(pr.head?.sha,80);
   if(!/^[a-f0-9]{40}$/i.test(validatedHeadSha))return {verified:false,reason:'merged_pr_head_missing'};
   const checkResponse=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:validatedHeadSha,event:'pull_request',per_page:100});
-  const checkRuns=checkResponse.data?.workflow_runs||[];
+  // PRs opened by the release-provenance recovery use GITHUB_TOKEN, which does
+  // not emit pull_request runs; their CI and gate are dispatched explicitly.
+  // Accept those only when bound to the same head SHA and the PR's own branch.
+  const dispatchResponse=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:validatedHeadSha,event:'workflow_dispatch',per_page:100});
+  const prBranch=text(pr.head?.ref,240);
+  const dispatchedChecks=(dispatchResponse.data?.workflow_runs||[]).filter(run=>run?.event==='workflow_dispatch'&&run?.head_sha===validatedHeadSha&&text(run?.head_branch,240)===prBranch);
+  const checkRuns=[...(checkResponse.data?.workflow_runs||[]),...dispatchedChecks];
   const requiredWorkflows=[];
   for(const name of REQUIRED_WORKFLOWS){
     const run=await latestVerdictRun({github,owner,repo,runs:checkRuns.filter(item=>item?.name===name)});
