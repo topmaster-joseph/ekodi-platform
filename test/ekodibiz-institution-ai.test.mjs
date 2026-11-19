@@ -205,3 +205,30 @@ test('each institution routes to a separate Durable Object instance', async () =
   assert.equal(storages.has('institution-ai:campus2'), true);
   assert.notEqual(storages.get('institution-ai:campus1'), storages.get('institution-ai:campus2'));
 });
+
+test('job snapshot tampering fails closed even when audit-event hashes remain intact', async () => {
+  const { env, storage } = setup();
+  const created = await call(env, draft('digest0001'));
+  assert.equal(created.status, 201);
+  const id = { tenantId: 'campus1', operationId: 'digest0001' };
+  const recordKey = 'institution:job:campus1:digest0001';
+  const original = structuredClone(storage.values.get(recordKey));
+  const changes = [
+    { ...original, status: 'completed' },
+    { ...original, classification: 'public' },
+    { ...original, sealed: { ...original.sealed, iv: 'AAAA' } },
+    { ...original, messages: [{ messageId: 'forged00001' }] },
+  ];
+  for (const modified of changes) {
+    storage.values.set(recordKey, modified);
+    const response = await call(env, id, 'read', 'campus1', 'export');
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).code, 'AUDIT_INTEGRITY_FAILURE');
+  }
+  storage.values.set(recordKey, original);
+  const restored = await call(env, id, 'read', 'campus1', 'export');
+  assert.equal(restored.status, 200);
+  const payload = await restored.json();
+  assert.equal(payload.audit.length, 1);
+  assert.match(payload.audit[0].stateHash, /^[a-f0-9]{64}$/);
+});
