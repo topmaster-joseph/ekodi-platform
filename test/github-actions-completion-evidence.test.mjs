@@ -348,3 +348,34 @@ test('runtime file or deletion without a Deploy run still fails closed',async()=
     assert.equal(evidence.reason,'production_deployment_run_missing');
   }
 });
+
+function dispatchOnlyGithub(dispatchRuns){
+  const github=mockGithub({runs:[
+    {id:3,workflow_id:30,name:'Deploy Control API',status:'completed',conclusion:'success',head_sha:mergeSha,html_url:'https://example/deploy'},
+  ]});
+  const base=github.rest.actions.listWorkflowRunsForRepo;
+  github.rest.actions.listWorkflowRunsForRepo=async args=>args.event==='workflow_dispatch'&&args.head_sha===prHeadSha
+    ?{data:{workflow_runs:dispatchRuns}}
+    :base(args);
+  return github;
+}
+
+test('recovery PR checks dispatched on the PR branch and head SHA count as required workflows',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:dispatchOnlyGithub([
+    {id:11,name:'CI',event:'workflow_dispatch',head_sha:prHeadSha,head_branch:branchRef,status:'completed',conclusion:'success',html_url:'https://example/ci'},
+    {id:12,name:'EKODI AI Orchestration Gate',event:'workflow_dispatch',head_sha:prHeadSha,head_branch:branchRef,status:'completed',conclusion:'success',html_url:'https://example/gate'},
+  ]),taskId,branchRef});
+  assert.equal(evidence.verified,true);
+  assert.deepEqual(evidence.requiredWorkflows.map(x=>x.runId),[11,12]);
+});
+
+test('dispatched checks from another branch or SHA are not accepted',async()=>{
+  for(const bad of [{head_branch:'main'},{head_sha:mergeSha}]){
+    const evidence=await collectAuthenticatedCompletionEvidence({github:dispatchOnlyGithub([
+      {id:11,name:'CI',event:'workflow_dispatch',head_sha:prHeadSha,head_branch:branchRef,status:'completed',conclusion:'success',...bad},
+      {id:12,name:'EKODI AI Orchestration Gate',event:'workflow_dispatch',head_sha:prHeadSha,head_branch:branchRef,status:'completed',conclusion:'success',...bad},
+    ]),taskId,branchRef});
+    assert.equal(evidence.verified,false);
+    assert.equal(evidence.reason,'required_workflow_not_successful');
+  }
+});
