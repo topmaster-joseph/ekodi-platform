@@ -1,3 +1,4 @@
+import {searchCommonsWeb,commonsWebContext} from './ai-commons-web-search.js';
 import {approveAssistancePricebook,catalogFromApprovedPricebook,loadApprovedAssistancePricebook} from './support/assistance-pricebook.js';
 import {merchantContractReadiness,normalizeMerchantQuote,quoteDigest,normalizeQuoteAcknowledgment,paymentReadiness} from './support/assistance-contract.js';
 import {assistanceCatalogue,normalizeAssistanceRequest} from './support/assistance-catalog.js';
@@ -411,7 +412,13 @@ async function handleCommonsChat(request,env,url){
     if(!providers.length)return json({error:input.mode==='gpt'||input.mode==='claude'?'paid_provider_not_enabled':'provider_unavailable'},503);
     const tier=input.mode==='ollama'?'local':(input.mode==='gpt'||input.mode==='claude'?'paid':'free');
     const usage=await reserveCommonsChatUsage(env,auth.user.id,tier);if(!usage.ok)return json({error:usage.error},usage.status);
-    const prompt=buildCommonsChatPrompt(input.messages,{task:input.task});
+    let sources=[];
+    if(input.web){
+      try{sources=(await searchCommonsWeb(input.messages.at(-1).content,env)).sources}
+      catch(error){console.warn('AI Commons web search unavailable',clean(error?.message||error).slice(0,100))}
+    }
+    const webMeta={web:input.web,sources};
+    const prompt=buildCommonsChatPrompt(input.messages,{task:input.task,webContext:commonsWebContext(sources)});
     if(input.mode==='ollama'){
       const stamp=now(),id=crypto.randomUUID();
       const task={id,title:'EKODI Commons Chat',prompt,requestedProviders:['node:ollama-local'],needsCodeBranch:false,branch:'',
@@ -420,7 +427,7 @@ async function handleCommonsChat(request,env,url){
       try{
         await insertTask(env,task);
         await enqueueNodeRun(env,task,{providerId:'node:ollama-local',role:'commons-chat'},prompt);
-        return json({ok:true,jobId:id,state:'queued',provider:'ollama'},202);
+        return json({ok:true,jobId:id,state:'queued',provider:'ollama',...webMeta},202);
       }catch(error){console.error('AI Commons local queue unavailable',clean(error?.message||error).slice(0,100));return json({error:'local_queue_unavailable'},503)}
     }
     const task={id:crypto.randomUUID(),title:'EKODI Commons Chat',origin:{provider:'ekodi',channel:'commons-chat'}};
@@ -429,7 +436,7 @@ async function handleCommonsChat(request,env,url){
         const result=await invokeProviderWithMeta(env,providerId,prompt,task,'commons-chat');
         const answer=clean(result.text).slice(0,12000);if(!answer)throw new Error('empty_model_answer');
         await recordFreeProviderOutcome(env,providerId,{ok:true,quota:result.quota||null}).catch(()=>{});
-        return json({ok:true,reply:answer,provider:providerId});
+        return json({ok:true,reply:answer,provider:providerId,...webMeta});
       }catch(error){
         await recordFreeProviderOutcome(env,providerId,{ok:false,error}).catch(()=>{});
         console.warn('AI Commons provider failed',providerId,clean(error?.message||error).slice(0,100));

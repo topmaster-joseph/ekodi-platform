@@ -235,3 +235,17 @@ a.support-notice-title:hover,a.support-notice-title:focus-visible{color:var(--ac
   .chat-send{justify-items:stretch}
 }
 @media(prefers-reduced-motion:reduce){.chat-dots i{animation:none}}
+
+/* 2026-11-19: compact first screen, web search toggle, answer sources. */
+.chat-messages:has(> .chat-intro:only-child){min-height:0;padding:12px 14px}
+.chat-intro{margin:0}
+.chat-send{grid-auto-flow:row}
+.chat-web{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 9px;border:1px solid #cfe2d6;border-radius:999px;background:#fff;color:#2f4a3a;font-size:.74rem;font-weight:800;cursor:pointer;white-space:nowrap}
+.chat-web input{margin:0;accent-color:var(--accent)}
+.chat-web:has(input:checked){background:var(--accent2);border-color:#acd0ba;color:var(--accent)}
+.chat-sources{margin-top:10px;padding:9px 11px;border:1px solid #d6e2da;border-radius:10px;background:var(--soft)}
+.chat-sources-title{margin:0 0 4px;font-size:.74rem;font-weight:900;color:#3e5446}
+.chat-sources ol{margin:0;padding-left:1.2rem;display:grid;gap:3px;font-size:.8rem}
+.chat-sources a{color:var(--accent);font-weight:750;overflow-wrap:anywhere}
+.chat-sources span{color:var(--muted);font-size:.72rem}
+@media(max-width:620px){.chat-form{grid-template-columns:1fr}.chat-send{display:flex;align-items:center;gap:8px}.chat-send button{margin-left:auto;min-width:110px}}

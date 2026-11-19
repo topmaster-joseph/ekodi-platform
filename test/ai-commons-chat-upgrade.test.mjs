@@ -39,7 +39,7 @@ test('a single maximal message still fits the local prompt budget',()=>{
 });
 
 test('worker forwards the purpose preset to the prompt builder',()=>{
-  assert.match(read('ai-control-worker.js'),/buildCommonsChatPrompt\(input\.messages,\{task:input\.task\}\)/);
+  assert.match(read("ai-control-worker.js"),/buildCommonsChatPrompt\(input\.messages,\{task:input\.task,webContext:commonsWebContext\(sources\)\}\)/);
 });
 
 test('chat client renders model output without innerHTML and offers modern chat controls',()=>{
