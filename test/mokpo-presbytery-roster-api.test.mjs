@@ -266,3 +266,19 @@ test('connected sender is ready when the Gmail OAuth secret is stored in D1 (not
   const after = await connectedSenderStatus(env, ['ekodibiz@gmail.com', 'ekodimission@gmail.com']);
   assert.deepEqual(after.map((x) => [x.address, x.ready]), [['ekodibiz@gmail.com', true], ['ekodimission@gmail.com', false]]);
 });
+
+test('plain Gmail send encodes a Korean subject (RFC 2047) so it is not garbled', async () => {
+  const { sendGoogleMailMessage } = await import('../mail-google-adapter.js');
+  const original = globalThis.fetch;
+  let raw = '';
+  globalThis.fetch = async (url, init) => { raw = JSON.parse(init.body).raw; return new Response(JSON.stringify({ id: 'm1' }), { status: 200, headers: { 'content-type': 'application/json' } }); };
+  try {
+    await sendGoogleMailMessage('token', { to: 'a@b.c', subject: '[목포노회] 회원명부 열람 인증코드', body: '본문' });
+  } finally { globalThis.fetch = original; }
+  const text = Buffer.from(raw.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+  const subject = text.split('\r\n').find((l) => l.startsWith('Subject: '));
+  assert.match(subject, /^Subject: =\?UTF-8\?B\?[A-Za-z0-9+/=]+\?=$/);
+  const decoded = Buffer.from(subject.match(/\?B\?(.+)\?=/)[1], 'base64').toString('utf8');
+  assert.equal(decoded, '[목포노회] 회원명부 열람 인증코드');
+  assert.match(text, /\r\n\r\n본문$/);
+});
