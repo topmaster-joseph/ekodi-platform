@@ -856,8 +856,18 @@ jobs:
           }
           check_qr 'customer menu title' 'QR 메뉴·주문 안내'
           check_qr 'checkout button disabled' '<button[^>]*disabled[^>]*>결제·매장 접수 준비 중</button>'
-          check_qr 'BBQ site-owned header' 'data-ekodi-user-header-root="bbqcg-v1"'
+          # Shell HTMLRewriter adopts the native BBQ header into canonical v1.
+          # The original source attribute bbqcg-v1 is deliberately rewritten;
+          # a raw-source assertion wrongly fails on the correctly rendered page.
+          check_qr 'canonical Shell header' 'data-ekodi-user-header-root="v1"'
+          check_qr 'BBQ native header identity' 'aria-label="BBQ 무안청계점 홈"'
+          # Shell also marks the existing (single) native footer as service-owned.
           check_qr 'BBQ site-owned footer' '<footer[^>]*class="foot([[:space:]]|")'
+          check_qr 'Shell adopted BBQ footer' 'data-ekodi-service-footer="true"'
+          if ! grep -Eiq '^x-ekodi-shell:[[:space:]]*v2' /tmp/bbq-qr.headers; then
+            echo 'BBQ QR smoke FAIL: canonical EKODI Shell response header missing' >&2
+            qr_failed=1
+          fi
           if [ "$qr_failed" -ne 0 ]; then
             echo "BBQ QR smoke evidence: HTTP=$qr_code size=$(wc -c < /tmp/bbq-qr.html), route=$(sed -n 's/^x-ekodi-route:[[:space:]]*//Ip' /tmp/bbq-qr.headers | head -1), content-type=$(sed -n 's/^content-type:[[:space:]]*//Ip' /tmp/bbq-qr.headers | head -1)" >&2
             echo 'Preserving checkout locked; no order or payment request was issued.' >&2
