@@ -8,7 +8,7 @@ import { renderBbqcgOrderPortal, bbqcgOrderPortalCss, bbqcgOrderClientScript } f
 import { renderBbqcgServiceStandards, bbqcgServiceStandardsCss, bbqcgPublicResourceDownload, bbqcgHomeWithResources } from './bbqcg-service-standards.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
-import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
+import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage, organizationPublicCss } from './organization-public-page.js';
 import { renderBnslovePublicPage, bnslovePublicCss } from './bnslove-public-page.js';
 import { isMnuBizWorkspaceSlug, renderMnuBizPublicPage, mnubizPublicCss } from './mnubiz-public-page.js';
 import { isMnuBizSuncheonPath, renderMnuBizSuncheonPage } from './mnubiz-suncheon-page.js';
@@ -579,6 +579,7 @@ export default{
     if(url.pathname==='/jadam-storefront.css'||url.pathname==='/_ekodi/space/jadam-storefront.css')return withHeaders(env,jadamStorefrontCss(),'storefront-asset');
     if(url.pathname==='/restaurant-storefront.css'||url.pathname==='/_ekodi/space/restaurant-storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/mnubiz/assets/site.css')return withHeaders(env,mnubizPublicCss(),'mnubiz-asset');
+    if(url.pathname==='/organization.css'||url.pathname==='/_ekodi/space/organization.css')return withHeaders(env,organizationPublicCss(),'organization-asset');
 
     if(['GET','HEAD'].includes(request.method)&&isMnuBizSuncheonPath(url.pathname)){
       return injectEkodiShell(withHeaders(env,renderMnuBizSuncheonPage(url.pathname),'mnubiz-suncheon-page'),'community','public',{existingHeader:true});
