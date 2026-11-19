@@ -131,7 +131,7 @@ export async function sendGoogleMailMessage(accessToken, { to, cc = '', bcc = ''
   ];
   const files = (Array.isArray(attachments) ? attachments : []).filter((a) => a && a.base64);
   if (!files.length) {
-    const lines = [...head, `Subject: ${sanitizeHeader(subject)}`,
+    const lines = [...head, `Subject: ${encodeMimeWord(subject)}`,
       'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', String(body || '')];
     return gmailFetch(accessToken, '/messages/send', { method: 'POST', body: JSON.stringify({ raw: encodeRaw(lines.join('\r\n')) }) });
   }
