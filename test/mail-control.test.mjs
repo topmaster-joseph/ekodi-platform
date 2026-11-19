@@ -153,3 +153,11 @@ test('Google OAuth denial is explained and recorded instead of looking like an e
   const page = await read('mail-admin-page.js');
   assert.match(page, /a\.lastError==='google_access_denied'/);
 });
+
+test('Gmail connect shows the unverified-app click guide before leaving for Google', async () => {
+  const page = await read('mail-admin-page.js');
+  assert.match(page, /googleGuide\(a\.emailAddress,d\.authorizeUrl\)/);
+  assert.match(page, /「고급」/);
+  assert.match(page, /이동\(안전하지 않음\)/);
+  assert.doesNotMatch(page, /location\.href=d\.authorizeUrl/);
+});
