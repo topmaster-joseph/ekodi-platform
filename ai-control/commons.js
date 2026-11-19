@@ -102,6 +102,7 @@ $('wantForm').addEventListener('submit',async event=>{event.preventDefault();con
 $('requestForm').addEventListener('submit',async event=>{event.preventDefault();const value=$('requestInput').value.trim();if(!value)return;$('wantInput').value=value;try{await submitWanted(value);$('requestInput').value=''}catch(error){$('wantResult').textContent=`요청 실패: ${error.message}`}});
 
 const CHAT_STORE_KEY='ekodi-ai-commons-chat-v2';
+const CHAT_FRESHNESS=/(최신|최근|오늘|어제|현재|지금|요즘|이번\s?(주|달|해)|올해|뉴스|속보|발표|공고|일정|가격|시세|환율|날씨|20[2-3]\d년)/;
 const chatState={history:[],busy:false,availability:null};
 const CHAT_ERRORS={
   authentication_required:'로그인 후 이용할 수 있습니다.',
@@ -195,7 +196,21 @@ async function copyText(text,button){
     try{document.execCommand('copy');done('복사됨')}catch{done('복사 실패')}finally{area.remove()}}
 }
 function chatLog(){const log=$('chatMessages');if(log.querySelector('.chat-intro'))log.replaceChildren();return log}
-function chatBubble(role,content,provider=''){
+function chatSources(bubble,sources){
+  const list=(Array.isArray(sources)?sources:[]).filter(item=>item&&item.title&&/^https:\/\//.test(String(item.url||''))).slice(0,6);
+  if(!list.length)return;
+  const box=document.createElement('div');box.className='chat-sources';
+  const head=document.createElement('p');head.className='chat-sources-title';head.textContent='출처 · 웹 검색 '+list.length+'건';box.append(head);
+  const ol=document.createElement('ol');
+  for(const item of list){
+    const li=document.createElement('li');const link=document.createElement('a');link.textContent=String(item.title).slice(0,140);
+    try{const url=new URL(item.url);if(url.protocol==='https:')link.href=url.toString()}catch{}
+    link.target='_blank';link.rel='noopener noreferrer';
+    const meta=document.createElement('span');meta.textContent=' '+[item.source,item.date].filter(Boolean).join(' · ');li.append(link,meta);ol.append(li);
+  }
+  box.append(ol);bubble.insertBefore(box,bubble.querySelector('.chat-tools'));
+}
+function chatBubble(role,content,provider='',sources=null){
   const log=chatLog();
   const bubble=document.createElement('div');bubble.className='chat-bubble '+role;
   const caption=document.createElement('small');caption.textContent=role==='user'?'나':'EKODI AI'+(provider?' · '+chatProviderLabel(provider):'');
@@ -205,6 +220,7 @@ function chatBubble(role,content,provider=''){
     const tools=document.createElement('div');tools.className='chat-tools';
     const copy=document.createElement('button');copy.type='button';copy.className='chat-mini';copy.textContent='답변 복사';
     copy.addEventListener('click',()=>copyText(String(content||''),copy));tools.append(copy);bubble.append(tools);
+    chatSources(bubble,sources);
   }else{const message=document.createElement('div');message.textContent=String(content||'');bubble.append(message)}
   log.append(bubble);log.scrollTop=log.scrollHeight;return bubble;
 }
@@ -219,12 +235,12 @@ function chatFailure(bubble,message,text){
   retry.addEventListener('click',()=>{row.remove();bubble.classList.remove('failed');void sendChat(text,bubble)});row.append(note,retry);bubble.append(row);
 }
 function chatPayload(userMessage){
-  const last=[...chatState.history,{role:'user',content:userMessage.slice(0,1200)}].slice(-8);
+  const last=[...chatState.history.map(({role,content})=>({role,content})),{role:'user',content:userMessage.slice(0,1200)}].slice(-8);
   while(last.length>1&&(last.reduce((sum,m)=>sum+m.content.length,0)>2000||last[0].role!=='user'))last.shift();
   return last;
 }
-function rememberChat(userMessage,answer){
-  chatState.history.push({role:'user',content:userMessage.slice(0,1200)},{role:'assistant',content:answer.slice(0,900)});
+function rememberChat(userMessage,answer,sources){
+  chatState.history.push({role:'user',content:userMessage.slice(0,1200)},{role:'assistant',content:answer.slice(0,900),...(sources?.length?{sources:sources.slice(0,6)}:{})});
   chatState.history=chatState.history.slice(-8);saveChat();
 }
 async function chatPoll(jobId){
@@ -260,12 +276,15 @@ async function sendChat(message,existingBubble=null){
   const typing=chatTyping();
   try{
     const mode=$('chatProvider').value,task=$('chatTask')?.value||'general';
-    const response=await api('/api/commons/chat',{method:'POST',body:JSON.stringify({mode,task,messages:chatPayload(message)})});
+    const web=Boolean($('chatWeb')?.checked);
+    if(web)chatStatus('웹에서 최신 자료를 찾은 뒤 답변을 만들고 있습니다.');
+    const response=await api('/api/commons/chat',{method:'POST',body:JSON.stringify({mode,task,web,messages:chatPayload(message)})});
     const result=response.jobId?await chatPoll(response.jobId):response;
     if(!result.reply)throw new Error('empty_model_answer');
-    typing.remove();chatBubble('assistant',result.reply,result.provider||mode);
-    rememberChat(message,result.reply);
-    chatStatus('응답 완료 · '+chatProviderLabel(result.provider||mode));
+    const sources=(Array.isArray(response.sources)?response.sources:[]).filter(item=>item&&item.title&&/^https:\/\//.test(String(item.url||''))).slice(0,6);
+    typing.remove();chatBubble('assistant',result.reply,result.provider||mode,sources);
+    rememberChat(message,result.reply,sources);
+    chatStatus('응답 완료 · '+chatProviderLabel(result.provider||mode)+(web?(sources.length?' · 웹 출처 '+sources.length+'건':' · 웹 검색 결과 없음'):''));
   }catch(error){
     typing.remove();
     const text=CHAT_ERRORS[error.message]||(
@@ -287,7 +306,7 @@ function restoreChat(){
     if(!saved||!Array.isArray(saved.history))return;
     if(saved.task&&$('chatTask')&&[...$('chatTask').options].some(o=>o.value===saved.task))$('chatTask').value=saved.task;
     chatState.history=saved.history.filter(m=>m&&['user','assistant'].includes(m.role)&&typeof m.content==='string').slice(-8);
-    for(const item of chatState.history)chatBubble(item.role,item.content);
+    for(const item of chatState.history)chatBubble(item.role,item.content,'',item.sources);
   }catch{chatState.history=[]}
 }
 function initChat(){
@@ -296,7 +315,8 @@ function initChat(){
   input.addEventListener('keydown',event=>{
     if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing&&event.keyCode!==229){event.preventDefault();$('chatForm').requestSubmit()}
   });
-  input.addEventListener('input',updateChatCounter);
+  input.addEventListener('input',()=>{updateChatCounter();const web=$('chatWeb');if(web&&!web.dataset.userSet&&CHAT_FRESHNESS.test(input.value))web.checked=true});
+  $('chatWeb')?.addEventListener('change',event=>{event.target.dataset.userSet='1'});
   $('chatReset')?.addEventListener('click',resetChat);
   $('chatTask')?.addEventListener('change',saveChat);
   document.querySelectorAll('[data-chat-prompt]').forEach(button=>button.addEventListener('click',()=>{
