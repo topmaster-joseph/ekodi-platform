@@ -15,6 +15,24 @@ const checksum = async value => {
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(digest), x => x.toString(16).padStart(2, '0')).join('');
 };
+// Do not trust mutable job metadata solely because its event list has a valid
+// hash chain. Bind the complete encrypted job snapshot to its last audit event.
+function recordStateMaterial(record) {
+  return JSON.stringify({
+    tenantId: record.tenantId,
+    operationId: record.operationId,
+    taskType: record.taskType,
+    classification: record.classification,
+    sealed: record.sealed,
+    fingerprint: record.fingerprint,
+    status: record.status,
+    version: record.version,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    messages: record.messages || [],
+  });
+}
+const recordStateHash = record => checksum(recordStateMaterial(record));
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
 async function verifyAuditTrail(record, audit) {
   if (!Array.isArray(audit) || audit.length !== record.version || record.version < 1) return false;
@@ -22,11 +40,15 @@ async function verifyAuditTrail(record, audit) {
   for (let i = 0; i < audit.length; i++) {
     const event = audit[i];
     if (event.seq !== i + 1 || event.prevHash !== previous) return false;
-    const { seq, type, role, at, evidenceRef, prevHash } = event;
-    if (event.hash !== await checksum(JSON.stringify({ seq, type, role, at, evidenceRef, prevHash }))) return false;
+    const { seq, type, role, at, evidenceRef, prevHash, stateHash } = event;
+    // Old/unanchored entries cannot be considered integrity-verified.
+    if (!/^[a-f0-9]{64}$/.test(String(stateHash || ''))) return false;
+    if (event.hash !== await checksum(JSON.stringify({ seq, type, role, at, evidenceRef, prevHash, stateHash }))) return false;
     previous = event.hash;
   }
-  return record.auditHead === previous && record.updatedAt === audit[audit.length - 1]?.at;
+  return record.auditHead === previous
+    && record.updatedAt === audit[audit.length - 1]?.at
+    && audit[audit.length - 1]?.stateHash === await recordStateHash(record);
 }
 const keyFor = (tenantId, operationId) => 'institution:job:' + tenantId + ':' + operationId;
 const logPrefix = (tenantId, operationId) => 'institution:audit:' + tenantId + ':' + operationId + ':';
@@ -42,6 +64,7 @@ async function appendEvent(transaction, record, type, role, evidenceRef = '') {
   const item = {
     seq, type, role, at: record.updatedAt, evidenceRef: evidenceRef || null,
     prevHash: record.auditHead || 'genesis',
+    stateHash: await recordStateHash(record),
   };
   item.hash = await checksum(JSON.stringify(item));
   await transaction.put(logPrefix(record.tenantId, record.operationId) + String(seq).padStart(9, '0'), item);
