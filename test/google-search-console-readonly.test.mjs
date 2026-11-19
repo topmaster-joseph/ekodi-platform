@@ -170,3 +170,15 @@ test('reader key is provisioned only from the protected search-registration envi
   const proof=readFileSync(new URL('../scripts/search-console-reader-readiness.mjs',import.meta.url),'utf8');
   assert.ok(proof.includes("GOOGLE_SEARCH_SCOPE")&&!/console\.log\([^)]*(private_key|access_token|accessToken|raw)\b/.test(proof));
 });
+
+test('reader provisioning runs only with a verified orchestrator release receipt, dispatched by convergence',()=>{
+  const wf=readFileSync(new URL('../.github/workflows/provision-search-console-reader.yml',import.meta.url),'utf8');
+  // A bare manual run from main has no release receipt and is always refused by the gate.
+  assert.match(wf,/release_branch_ref:[\s\S]*?required: true/);
+  assert.match(wf,/EKODI_RELEASE_BRANCH_REF: \$\{\{ inputs\.release_branch_ref \}\}/);
+  assert.match(wf,/EKODI_RELEASE_TASK_ID: \$\{\{ inputs\.release_task_id \}\}/);
+  assert.ok(!/\n  push:/.test(wf),'GITHUB_TOKEN merges emit no push; convergence dispatches instead');
+  const converge=readFileSync(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+  assert.match(converge,/'\.github\/workflows\/provision-search-console-reader\.yml',/);
+  assert.match(converge,/provision-search-console-reader\.yml\/dispatches[\s\S]{0,200}inputs:\{release_branch_ref:branch,release_task_id:taskId\}/);
+});

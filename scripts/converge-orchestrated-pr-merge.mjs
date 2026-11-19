@@ -406,6 +406,12 @@ const publishingSiteTouched=changedFiles.some(file=>
   file==='deploy/manifests/publishing.worker.json'||
   file==='.github/workflows/deploy-publishing.yml'
 );
+// SEARCH-VISIBILITY-GSC-PROVISION-20261104: the read-only Search Console reader key is
+// provisioned from the protected search-registration environment after its release merges.
+const searchConsoleReaderTouched=changedFiles.some(file=>[
+  '.github/workflows/provision-search-console-reader.yml',
+  'scripts/search-console-reader-readiness.mjs',
+].includes(file));
 const labHomepageTouched=changedFiles.some(file=>
   file.startsWith('sites/ekodi-lab/')||
   file==='deploy/manifests/ekodilab.pages.json'||
@@ -903,6 +909,14 @@ async function dispatchPostMergeDeploys(){
     });
     if(!dispatch.r.ok)fail('EKODI Lab deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-lab-homepage.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
+  if(searchConsoleReaderTouched){
+    const dispatch=await api('/actions/workflows/provision-search-console-reader.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Search Console reader provisioning dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'provision-search-console-reader.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
   // GITHUB_TOKEN merges do not invoke ordinary main push workflows.
   // Explicit dispatch forwards the already verified EKODI release receipt.
