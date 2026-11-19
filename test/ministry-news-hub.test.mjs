@@ -5,7 +5,7 @@ import {
   createApp, checkSelection, composeDraft, parseRecipientCsv, renderAdmin, renderPublicFeed, SEED_GROUPS, visibilityAllowed, periodLabelFor,
 } from '../ministry-news-core.js';
 import { createMemoryStore } from '../ministry-news-memory-store.js';
-import { authenticate } from '../ministry-news-worker.js';
+import { authenticate, createConnectedMailer } from '../ministry-news-worker.js';
 import staging from '../ministry-news-staging-worker.js';
 
 const ORIGIN = 'https://ekodi.kr';
@@ -19,8 +19,8 @@ function harness({ mailConfigured = true, failFor = new Set() } = {}) {
   const store = createMemoryStore();
   const sent = [];
   const mailer = {
-    configured: mailConfigured,
-    async send(msg) { if (failFor.has(msg.to)) throw new Error('smtp boom'); sent.push(msg); return `m-${sent.length}`; },
+    async status() { return { church: { address: 'ekodichurch@gmail.com', ready: mailConfigured }, mission: { address: 'ekodimission@gmail.com', ready: mailConfigured } }; },
+    async send(session, org, msg) { if (failFor.has(msg.to)) throw new Error('smtp boom'); sent.push({ ...msg, org }); return `m-${sent.length}`; },
   };
   const app = createApp({
     store, mailer,
@@ -167,6 +167,7 @@ test('full flow: check-select → draft → approve → send once to consented r
   assert.equal(first.status, 200);
   assert.deepEqual(sent.map(m => m.to).sort(), ['dup@example.com', 'kim@example.com', 'pray@example.com']);
   assert.ok(sent.every(m => m.subject === '[에코디선교회] 11월 선교편지'));
+  assert.ok(sent.every(m => m.org === 'mission'), 'mission letters leave from the mission account');
   assert.ok(sent.every(m => /\/sosik\/unsubscribe\?t=[0-9a-f]{64}/.test(m.body)), 'every letter carries an unsubscribe link');
   assert.ok(sent.find(m => m.to === 'kim@example.com').body.startsWith('김후원 님께'));
   assert.equal(first.data.dispatch.status, 'PARTIAL', 'web submission to 한국외국인선교회 still pending');
@@ -278,4 +279,106 @@ test('staging worker is isolated and fails closed', async () => {
   assert.equal((await api.json()).error, 'staging_auth_required');
   const wrangler = readFileSync(new URL('../wrangler.ministry-news.staging.toml', import.meta.url), 'utf8');
   assert.ok(!wrangler.includes('[[d1_databases]]'));
+});
+
+test('institution report (한국외국인선교회 본부) goes by mail to registered addresses, without unsubscribe footer', async () => {
+  const { call, sent } = harness();
+  assert.equal((await call('/api/sosik/admin/groups/kfm', { method: 'PUT', as: 'op', body: { contactEmail: 'not-an-email' } })).status, 400);
+  const many = Array.from({ length: 11 }, (_, i) => `a${i}@example.org`).join(',');
+  assert.equal((await call('/api/sosik/admin/groups/kfm', { method: 'PUT', as: 'op', body: { contactEmail: many } })).status, 400);
+  const saved = await call('/api/sosik/admin/groups/kfm', { method: 'PUT', as: 'op', body: { contactEmail: 'HQ@example.org; second@example.org\nhq@example.org' } });
+  assert.equal(saved.data.group.contactEmail, 'hq@example.org, second@example.org');
+  assert.equal(saved.data.group.channel, 'web_submit');
+  const groups = await call('/api/sosik/admin/groups', { as: 'op' });
+  assert.equal(groups.data.groups.find(g => g.id === 'kfm').activeCount, 2);
+
+  const item = await addItem(call, 'op', { org: 'mission', kind: 'activity', title: '유학생 토요모임', visibility: 'report' });
+  const prayer = await addItem(call, 'op', { org: 'mission', kind: 'prayer', title: '2학기 사역', visibility: 'partners' });
+  const created = await call('/api/sosik/admin/dispatches', { method: 'POST', as: 'op', body: { org: 'mission', kind: 'report', itemIds: [item.id, prayer.id], groupIds: ['kfm'] } });
+  assert.equal(created.status, 201, JSON.stringify(created.data));
+  assert.match(created.data.dispatch.body, /보고 기관: 에코디선교회 \(한국외국인선교회 무안지부\)/);
+  const id = created.data.dispatch.id;
+  await call(`/api/sosik/admin/dispatches/${id}/approve`, { method: 'POST', as: 'op' });
+  const r = await call(`/api/sosik/admin/dispatches/${id}/send`, { method: 'POST', as: 'op' });
+  assert.equal(r.status, 200, JSON.stringify(r.data));
+  assert.deepEqual(sent.map(m => m.to).sort(), ['hq@example.org', 'second@example.org']);
+  assert.ok(sent.every(m => m.org === 'mission' && !m.body.includes('/sosik/unsubscribe') && !m.body.includes('님께')));
+  assert.equal(r.data.dispatch.status, 'SENT');
+  assert.deepEqual(r.data.dispatch.submissions, ['kfm']);
+  assert.match(r.data.message, /ekodimission@gmail\.com/);
+  const again = await call(`/api/sosik/admin/dispatches/${id}/send`, { method: 'POST', as: 'op' });
+  assert.equal(again.status, 409, 'a completed dispatch is not resent');
+  assert.equal(sent.length, 2);
+
+  const reportOnlyToSupporters = await call('/api/sosik/admin/dispatches', { method: 'POST', as: 'op', body: { org: 'mission', itemIds: [item.id], groupIds: ['mission-supporters'] } });
+  assert.equal(reportOnlyToSupporters.status, 400, 'report-only items never reach supporter mail');
+});
+
+test('church letters leave from the church account; an unready sender blocks sending with the connect link', async () => {
+  const { call, sent, store } = harness();
+  const item = await addItem(call, 'op', { org: 'church', title: '추수감사 주일', visibility: 'partners' });
+  await call('/api/sosik/admin/recipients/import', { method: 'POST', as: 'op', body: { groupId: 'church-supporters', consentConfirmed: true, text: 'a@example.com' } });
+  const d = (await call('/api/sosik/admin/dispatches', { method: 'POST', as: 'op', body: { org: 'church', itemIds: [item.id], groupIds: ['church-supporters'] } })).data.dispatch;
+  await call(`/api/sosik/admin/dispatches/${d.id}/approve`, { method: 'POST', as: 'op' });
+  await call(`/api/sosik/admin/dispatches/${d.id}/send`, { method: 'POST', as: 'op' });
+  assert.deepEqual(sent.map(m => [m.org, m.to]), [['church', 'a@example.com']]);
+
+  const off = harness({ mailConfigured: false });
+  const i2 = await addItem(off.call, 'op', { org: 'church', title: 'x', visibility: 'partners' });
+  const d2 = (await off.call('/api/sosik/admin/dispatches', { method: 'POST', as: 'op', body: { org: 'church', itemIds: [i2.id], groupIds: ['church-supporters'] } })).data.dispatch;
+  await off.call(`/api/sosik/admin/dispatches/${d2.id}/approve`, { method: 'POST', as: 'op' });
+  const blocked = await off.call(`/api/sosik/admin/dispatches/${d2.id}/send`, { method: 'POST', as: 'op' });
+  assert.equal(blocked.status, 409);
+  assert.match(blocked.data.error, /ekodichurch@gmail\.com/);
+  assert.equal(blocked.data.connectUrl, 'https://ekodi.kr/mail/admin');
+  const me = await off.call('/api/sosik/admin/me', { as: 'op' });
+  assert.deepEqual(me.data.senders.church, { address: 'ekodichurch@gmail.com', ready: false, reason: '' });
+  assert.ok(!JSON.stringify(me.data).includes('token'));
+  void store;
+});
+
+test('connected mailer: picks the org account from EKODI Mail, explains why it is not ready, sends via CONTROL_API', async () => {
+  const calls = [];
+  const accounts = [
+    { id: 11, emailAddress: 'EkodiChurch@gmail.com', provider: 'gmail', connectionStatus: 'connected', enabled: true, permissions: { send: true } },
+    { id: 12, emailAddress: 'ekodimission@gmail.com', provider: 'gmail', connectionStatus: 'connected', enabled: true, permissions: { send: false } },
+  ];
+  const call = async (url, init = {}) => {
+    calls.push({ url, init });
+    if (url.endsWith('/api/mail/control/accounts')) return Response.json({ accounts });
+    if (url.endsWith('/accounts/11/send')) return Response.json({ ok: true, id: 'gm-1' });
+    return Response.json({ error: 'nope' }, { status: 404 });
+  };
+  const mailer = createConnectedMailer({ SENDER_CHURCH: 'ekodichurch@gmail.com', SENDER_MISSION: 'ekodimission@gmail.com' }, call);
+  const session = { token: 'tok-1' };
+  const status = await mailer.status(session);
+  assert.equal(status.church.ready, true);
+  assert.equal(status.mission.ready, false);
+  assert.match(status.mission.reason, /발송 권한이 없습니다/);
+  const id = await mailer.send(session, 'church', { to: 'x@example.com', subject: '[에코디교회] 11월 선교편지', body: '본문' });
+  assert.equal(id, 'gm-1');
+  const post = calls.find(c => c.url.endsWith('/send'));
+  assert.equal(post.init.headers.authorization, 'Bearer tok-1');
+  const payload = JSON.parse(post.init.body);
+  assert.equal(payload.to, 'x@example.com');
+  assert.match(payload.subject, /^=\?UTF-8\?B\?/);
+  assert.equal(Buffer.from(payload.subject.slice(10, -2), 'base64').toString('utf8'), '[에코디교회] 11월 선교편지');
+  await assert.rejects(() => mailer.send(session, 'mission', { to: 'x@example.com', subject: 's', body: 'b' }), /발송 권한/);
+  assert.equal(calls.filter(c => c.url.endsWith('/accounts')).length, 1, 'account list is fetched once per session');
+
+  const none = createConnectedMailer({ SENDER_CHURCH: 'ekodichurch@gmail.com' }, null);
+  const st = await none.status({ token: 't' });
+  assert.equal(st.church.ready, false);
+  assert.equal(st.mission.reason, '보내는 메일 미지정');
+  const missing = createConnectedMailer({ SENDER_CHURCH: 'ekodichurch@gmail.com' }, async () => Response.json({ accounts: [] }));
+  assert.match((await missing.status({ token: 't' })).church.reason, /연결되지 않은 계정/);
+});
+
+test('production config: org senders, CONTROL_API binding, and no mail secrets in the worker', () => {
+  const toml = readFileSync(new URL('../wrangler.ministry-news.toml', import.meta.url), 'utf8');
+  assert.match(toml, /SENDER_CHURCH = "ekodichurch@gmail\.com"/);
+  assert.match(toml, /SENDER_MISSION = "ekodimission@gmail\.com"/);
+  assert.match(toml, /binding = "CONTROL_API"\nservice = "ekodi-auth-api"/);
+  const worker = readFileSync(new URL('../ministry-news-worker.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(worker, /GMAIL_REFRESH_TOKEN|GMAIL_CLIENT_SECRET/);
 });

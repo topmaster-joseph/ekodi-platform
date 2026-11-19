@@ -1,6 +1,6 @@
 // Production worker for 사역소식 통합 발행 허브 (ekodi.kr/sosik).
 // Auth: unified EKODI login (Supabase) → operator emails, 에코디교회 church_staff, or 에코디선교회 tenant admin.
-// Mail: Gmail refresh-token secrets (same pattern as church-reports-control.js); sending stays off until they exist.
+// Mail: each organisation sends from its own account connected in EKODI Mail (교회 ekodichurch@, 선교회 ekodimission@).
 import { createApp, clean, PUBLIC_PATH } from './ministry-news-core.js';
 import { createD1Store } from './ministry-news-d1-store.js';
 import { withFooterTraffic } from './footer-traffic-guarantee.js';
@@ -27,7 +27,7 @@ export async function authenticate(request, env, fetcher = fetch) {
   const identity = identityResponse.ok ? await identityResponse.json().catch(() => null) : null;
   if (!identity?.id || !identity?.email || !identity?.email_confirmed_at) return deny('로그인을 확인할 수 없습니다.', 401);
   const email = String(identity.email).toLowerCase();
-  const base = { userId: String(identity.id), email };
+  const base = { userId: String(identity.id), email, token };
   if (operators(env).has(email)) return { data: { ...base, role: 'operator', orgs: ['church', 'mission'] } };
 
   const orgs = []; let role = '';
@@ -49,47 +49,68 @@ export async function authenticate(request, env, fetcher = fetch) {
   return { data: { ...base, role, orgs } };
 }
 
-function utf8Base64Url(value) {
-  const bytes = new TextEncoder().encode(value); let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
 function encodedHeader(value) {
-  const bytes = new TextEncoder().encode(value); let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte);
+  const bytes = new TextEncoder().encode(String(value || '').replace(/[\r\n]+/g, ' ')); let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte);
   return `=?UTF-8?B?${btoa(binary)}?=`;
 }
 
-export function createGmailMailer(env, fetcher = fetch) {
-  const configured = Boolean(clean(env.GMAIL_CLIENT_ID, 500) && clean(env.GMAIL_CLIENT_SECRET, 500) && clean(env.GMAIL_REFRESH_TOKEN, 2000));
-  let cached = null;
-  async function accessToken() {
-    if (cached && cached.expires > Date.now() + 60_000) return cached.token;
-    const body = new URLSearchParams({ client_id: env.GMAIL_CLIENT_ID, client_secret: env.GMAIL_CLIENT_SECRET, refresh_token: env.GMAIL_REFRESH_TOKEN, grant_type: 'refresh_token' });
-    const r = await fetcher('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.access_token) throw new Error('Gmail 인증 토큰을 갱신하지 못했습니다.');
-    cached = { token: d.access_token, expires: Date.now() + Number(d.expires_in || 3000) * 1000 };
-    return cached.token;
+/**
+ * Sends through accounts the organisation already connected in EKODI Mail (https://ekodi.kr/mail/admin),
+ * via the CONTROL_API service binding (ekodi-auth-api). No mail secrets live in this worker, and the
+ * signed-in operator must hold the send grant on that account — Mail Hub keeps that boundary.
+ */
+export function createConnectedMailer(env, call = env.CONTROL_API ? (url, init) => env.CONTROL_API.fetch(url, init) : null) {
+  const senders = {
+    church: clean(env.SENDER_CHURCH, 200).toLowerCase(),
+    mission: clean(env.SENDER_MISSION, 200).toLowerCase(),
+  };
+  const cache = new Map();
+  async function accounts(session) {
+    if (!cache.has(session.token)) {
+      cache.set(session.token, (async () => {
+        if (!call) return { error: '메일 서비스 연결(CONTROL_API)이 없습니다.' };
+        const r = await call('https://ekodi.kr/api/mail/control/accounts', { headers: { authorization: `Bearer ${session.token}` } });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) return { error: d.error || `메일 계정 목록을 불러오지 못했습니다 (${r.status}).` };
+        return { list: Array.isArray(d.accounts) ? d.accounts : [] };
+      })().catch(error => ({ error: clean(error?.message, 200) || '메일 계정 목록을 불러오지 못했습니다.' })));
+    }
+    return cache.get(session.token);
+  }
+  function pickAccount(list, address) {
+    const mine = list.filter(a => String(a.emailAddress || '').toLowerCase() === address && a.provider === 'gmail');
+    return mine.find(a => a.connectionStatus === 'connected' && a.enabled && a.permissions?.send) || mine[0] || null;
+  }
+  async function status(session) {
+    const out = {};
+    const result = await accounts(session);
+    for (const [org, address] of Object.entries(senders)) {
+      if (!address) { out[org] = { address: '', ready: false, reason: '보내는 메일 미지정' }; continue; }
+      if (result.error) { out[org] = { address, ready: false, reason: result.error }; continue; }
+      const account = pickAccount(result.list, address);
+      let reason = '';
+      if (!account) reason = '에코디 메일에 아직 연결되지 않은 계정입니다';
+      else if (account.connectionStatus !== 'connected' || !account.enabled) reason = `연결 상태: ${account.connectionStatus || '확인필요'}`;
+      else if (!account.permissions?.send) reason = '지금 로그인한 계정에 이 메일의 발송 권한이 없습니다';
+      out[org] = { address, ready: !reason, reason, accountId: account?.id || null };
+    }
+    return out;
   }
   return {
-    configured,
-    async send({ to, subject, body }) {
-      if (!configured) throw new Error('메일 발송 연결이 설정되지 않았습니다.');
-      // Gmail sets From to the authorised mailbox; we only add To/Subject.
-      const raw = [
-        `To: ${to}`,
-        `Subject: ${encodedHeader(subject)}`,
-        'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'Content-Transfer-Encoding: 8bit',
-        '',
-        body,
-      ].join('\r\n');
-      const r = await fetcher('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-        method: 'POST', headers: { authorization: `Bearer ${await accessToken()}`, 'content-type': 'application/json' }, body: JSON.stringify({ raw: utf8Base64Url(raw) }),
+    status,
+    async send(session, org, { to, subject, body }) {
+      const sender = (await status(session))[org];
+      if (!sender?.ready) throw new Error(sender?.reason || '보내는 메일이 연결되지 않았습니다.');
+      const r = await call(`https://ekodi.kr/api/mail/control/accounts/${encodeURIComponent(sender.accountId)}/send`, {
+        method: 'POST', headers: { authorization: `Bearer ${session.token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ to, subject: encodedHeader(subject), body }),
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.id) throw new Error(d?.error?.message || `Gmail 발송 실패 (${r.status})`);
-      return d.id;
+      if (!r.ok || !d.ok) {
+        if (d.code === 'MAIL_SEND_SCOPE_REQUIRED') throw new Error(`${sender.address}의 Gmail 발송 권한을 에코디 메일 관리에서 추가 승인해 주세요.`);
+        throw new Error(d.error || `메일 발송 실패 (${r.status})`);
+      }
+      return d.id || '';
     },
   };
 }
@@ -99,7 +120,7 @@ const ekodiWorkerEntry={
     const app = createApp({
       store: createD1Store(env.DB),
       authenticate: req => authenticate(req, env),
-      mailer: createGmailMailer(env),
+      mailer: createConnectedMailer(env),
       extraHeaders: { 'x-ekodi-route': 'ministry-news' },
     });
     try {

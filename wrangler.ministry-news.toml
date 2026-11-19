@@ -4,11 +4,17 @@ compatibility_date = "2026-09-15"
 workers_dev = false
 preview_urls = false
 
-# 사역소식 통합 발행 허브. Gmail secrets (GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN)
-# are set out of band; until they exist the hub records, approves and exports but does not send mail.
+# 사역소식 통합 발행 허브. Letters leave from each organisation's own Gmail account, connected in
+# EKODI Mail (https://ekodi.kr/mail/admin) and reached through CONTROL_API — no mail secrets here.
 [vars]
 ENVIRONMENT = "production"
 OPERATOR_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr"
+SENDER_CHURCH = "ekodichurch@gmail.com"
+SENDER_MISSION = "ekodimission@gmail.com"
+
+[[services]]
+binding = "CONTROL_API"
+service = "ekodi-auth-api"
 
 [[routes]]
 pattern = "ekodi.kr/sosik*"

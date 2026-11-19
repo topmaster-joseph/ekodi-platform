@@ -60,6 +60,10 @@ jobs:
           ! grep -Eiq '\bDROP\b' migrations/202611071600_ministry_news_hub.sql
           grep -Fq 'ekodi.kr/sosik*' wrangler.ministry-news.toml
           grep -Fq 'ekodi.kr/api/sosik*' wrangler.ministry-news.toml
+          grep -Fq 'SENDER_CHURCH = "ekodichurch@gmail.com"' wrangler.ministry-news.toml
+          grep -Fq 'SENDER_MISSION = "ekodimission@gmail.com"' wrangler.ministry-news.toml
+          grep -Fq 'service = "ekodi-auth-api"' wrangler.ministry-news.toml
+          ! grep -Eq 'GMAIL_(REFRESH_TOKEN|CLIENT_SECRET)' ministry-news-worker.js
           grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.ministry-news.staging.toml
           ! grep -Fq '[[d1_databases]]' wrangler.ministry-news.staging.toml
       - name: Verify platform guardrails
