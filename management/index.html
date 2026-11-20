@@ -34,6 +34,15 @@
         <div><p class="workbench-kicker">ONE WORKSPACE · CLEAR DECISIONS</p><p class="workbench-intro-title">필요한 정보를 먼저 보고, 다음 행동을 선택하세요.</p><p class="workbench-intro-caption">검증된 운영 정보와 전문 도구를 공간별로 구분합니다.</p></div>
         <p id="workbenchScope" class="workbench-scope" role="status" aria-live="polite">현재 공간 미선택</p>
       </div>
+      <section class="workbench-next-step" aria-labelledby="workbenchNextTitle">
+        <div class="workbench-next-copy">
+          <p class="workbench-next-kicker">NEXT ACTION · 검증된 정보부터</p>
+          <h2 id="workbenchNextTitle">지금 필요한 한 가지</h2>
+          <p id="workbenchNextText" role="status" aria-live="polite">먼저 중앙에서 확인된 운영 공간을 선택하세요.</p>
+          <p class="workbench-next-note">미연결 지표를 0으로 표시하거나 확인되지 않은 매출을 예측하지 않습니다.</p>
+        </div>
+        <button id="workbenchNextButton" class="workbench-next-button" type="button" data-view="spaces">운영 공간 확인</button>
+      </section>
       <nav id="managementViewNav" class="management-view-nav" role="tablist" aria-label="경영 상황실 화면 선택">
         <button id="viewSpaces" type="button" role="tab" aria-controls="memberSpacePanel" aria-selected="true" tabindex="0">운영 공간</button>
         <button id="viewAi" type="button" role="tab" aria-controls="memberAiPanel" aria-selected="false" tabindex="-1">전문 AI</button>

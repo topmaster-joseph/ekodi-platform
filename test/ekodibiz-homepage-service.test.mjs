@@ -129,6 +129,16 @@ test('browser script is valid and embeds the canonical estimator verbatim', () =
   assert.deepEqual(pricing, JSON.parse(JSON.stringify(P)));
 });
 
+test('serialized estimator executes without nested function name helpers from Worker bundling', () => {
+  const source = est.toString();
+  assert.equal((source.match(/\bfunction\s*(?:[\w$]+\s*)?\(/g) || []).length, 1, 'no nested functions for keepNames to wrap');
+  assert.ok(!source.includes('=>'), 'no nested arrows for keepNames to wrap');
+  const browserEstimator = vm.runInNewContext('(' + source + ')');
+  assert.equal(browserEstimator(P, { plan: 'S1' }).firstPayment, 9900);
+  assert.equal(browserEstimator(P, { plan: 'S1', contract: 'annual' }).firstPayment, 99000);
+  assert.equal(browserEstimator(P, { plan: 'S1', pages: Infinity }).monthly, 109900);
+});
+
 test('response is public HTML with an own restrictive CSP and HEAD support', async () => {
   const res = ekodiBizHomepageServiceResponse();
   assert.equal(res.status, 200);
@@ -152,4 +162,5 @@ test('form submission contract matches the shared contact API', async () => {
   assert.equal((await handleMailContactApi(req('https://ekodi.kr', { website: 'bot', email: 'a@b.kr', subject: 's', message: 'm', source: EKODIBIZ_HOMEPAGE_CONTACT_SOURCE }), { ENVIRONMENT: 'test' })).status, 200);
   assert.equal((await handleMailContactApi(req('https://ekodi.kr', { email: 'not-an-email', subject: 's', message: 'm' }), { ENVIRONMENT: 'test' })).status, 400);
 });
+
 
