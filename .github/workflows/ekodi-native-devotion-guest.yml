@@ -1,5 +1,8 @@
 name: EKODI Native Devotion Guest Browser
 on:
+  # Owner-only exact-command live verification; issue comments cannot run scripts or accept credentials.
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
       expect_today_redirect:
@@ -23,12 +26,21 @@ permissions:
   contents: read
 
 concurrency:
-  group: ekodi-native-devotion-guest-${{ github.event.pull_request.number || github.sha }}
+  group: ekodi-native-devotion-guest-${{ github.event.comment.id || github.event.pull_request.number || github.sha }}
   cancel-in-progress: false
 
 jobs:
   guest-browser:
-    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch'))
+    if: >-
+      (github.event_name == 'issue_comment' &&
+       github.repository == 'topmaster-joseph/ekodi-platform' &&
+       github.event.issue.number == 9898 &&
+       github.event.comment.user.login == 'topmaster-joseph' &&
+       github.event.comment.body == '/ekodi-devotion-live-check') ||
+      (github.event_name != 'issue_comment' &&
+       (github.event_name != 'workflow_run' ||
+        (github.event.workflow_run.conclusion == 'success' &&
+         (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch'))))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -63,7 +75,7 @@ jobs:
           echo 'Native Chromium CJK Korean font families confirmed.'
       - name: Verify real public future-date lockdown and login labels in desktop/mobile
         env:
-          EKODI_EXPECT_AUTO_TODAY: ${{ (github.event_name == 'workflow_run' || github.event_name == 'push' || github.event_name == 'pull_request' || inputs.expect_today_redirect == true) && '1' || '0' }}
+          EKODI_EXPECT_AUTO_TODAY: ${{ (github.event_name == 'workflow_run' || github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'issue_comment' || inputs.expect_today_redirect == true) && '1' || '0' }}
         run: node scripts/verify-devotion-guest-native-browser.mjs
       - name: Write verification receipt
         if: always()
@@ -71,6 +83,8 @@ jobs:
         run: |
           if [ -f artifacts/devotion-guest-native/report.json ]; then
             echo '### EKODI first-party guest browser' >> "$GITHUB_STEP_SUMMARY"
+            echo "- Verified checkout revision: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Trigger: ${GITHUB_EVENT_NAME}" >> "$GITHUB_STEP_SUMMARY"
             jq -r '"- Passed: \(.passed)\n- Checks: \(.checks|length)\n- Failures: \([.checks[]|select(.passed==false)|.name]|join(", "))\n- Error: \(.error // "none")"' artifacts/devotion-guest-native/report.json >> "$GITHUB_STEP_SUMMARY"
           fi
       - uses: actions/upload-artifact@v4
