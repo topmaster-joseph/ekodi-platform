@@ -240,7 +240,7 @@ export async function institutionAiApi(request, url, env) {
       const fingerprint = await fingerprintInstitutionRequest(env, body.tenantId, body.operationId,
         'message:' + messageId, body.sender, message);
       const result = await fetchStore(env, 'message', { tenantId: body.tenantId,
-        operationId: body.operationId, messageId, sealed, fingerprint, expectedVersion: body.expectedVersion });
+        operationId: body.operationId, messageId, sender: body.sender, sealed, fingerprint, expectedVersion: body.expectedVersion });
       return json(result.payload, result.status);
     }
     const storageAction = action === 'status' || action === 'export' ? 'get' : action;
