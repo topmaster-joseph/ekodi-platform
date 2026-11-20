@@ -90,6 +90,38 @@
             details.append(row);
           }
           list.append(details);
+          // Compare against the separately authorized live customer directory.
+          // This is presentation-only: never treat client registry data as sender authority.
+          try {
+            const directory=await api('/api/customers/directory');
+            const known=new Set((fleet.sites||[]).map(site=>site.path));
+            const additional=new Map();
+            for(const group of ['sites','customers','workspaces','items','directory']){
+              for(const site of Array.isArray(directory?.[group])?directory[group]:[]){
+                const value=site.canonicalUrl||site.url||site.public_url||site.publicUrl||site.site_url||site.siteUrl;
+                if(!value)continue;
+                let u;
+                try {u=new URL(String(value),location.origin);}catch{continue;}
+                if(u.origin!=='https://ekodi.kr'||u.search||u.hash)continue;
+                const p=u.pathname.replace(/\\/+$/,'')||'/';
+                if(known.has(p)||additional.has(p))continue;
+                additional.set(p,String(site.name||site.site_name||site.siteName||site.organization_name||site.organizationName||site.slug||p).slice(0,90));
+              }
+            }
+            const more=el('details','','communication-fleet-details');
+            more.append(el('summary','동적 고객 등록부 추가 점검 대상: '+additional.size+'개'));
+            more.append(el('p','중앙 정적 등록부에 없는 사이트입니다. 알림 연동·구독·수신은 미검증 상태이며 신규 발신 권한을 자동 부여하지 않습니다.','communication-note'));
+            for(const [path,name] of additional){
+              const row=el('article','','communication-fleet-row');
+              row.dataset.state='not_connected';
+              row.append(el('strong',name+' · 신규 사이트 점검 필요'),
+                el('span',path),el('small','사이트 책임자 인증·알림 주제 연결·실기기 수신 검증 필요'));
+              more.append(row);
+            }
+            list.append(more);
+          } catch {
+            list.append(el('p','동적 고객 등록부는 이번 조회에서 확인할 수 없습니다. 사이트 자동점검 화면에서 별도로 확인하세요.','communication-note'));
+          }
         }
         for(const item of data.topics||[]){
           const line=el('article','','communication-notification-row');
