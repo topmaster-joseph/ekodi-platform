@@ -44,3 +44,9 @@
   #shop .card .thumb.book{aspect-ratio:1.6/1}
   #shop .mall-review-disclosures{padding:10px 12px;margin-top:12px}
 }
+
+/* EKODI Mall's independent declaration; commerce and affiliate disclosures stay separate. */
+.mall-premium-hero .ekodi-mission-statement{max-width:600px;margin:16px 0 22px;padding:14px 18px;border:1px solid rgba(73,105,145,.22);border-radius:13px;background:rgba(247,250,255,.77);color:#294e7d}
+.mall-premium-hero .ekodi-mission-label{display:block;font-size:11px;font-weight:850;letter-spacing:.08em;opacity:.77;margin-bottom:6px}
+.mall-premium-hero .ekodi-mission-statement p{margin:0;font-size:clamp(13px,1.3vw,15px);line-height:1.75;word-break:keep-all}
+@media(max-width:390px){.mall-premium-hero .ekodi-mission-statement{padding:12px 13px;margin:13px 0 19px}}
