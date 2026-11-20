@@ -62,6 +62,35 @@ function setManagementView(key){
     }
   }
 }
+// Decision guide uses verified membership and selected-module state only.
+function renderNextAction(mode='ready'){
+  const text=$('workbenchNextText'),button=$('workbenchNextButton');
+  if(!text||!button)return;
+  button.disabled=false;
+  if(!activeSession()){
+    text.textContent='로그인 후 중앙에서 확인된 운영 공간을 선택할 수 있습니다.';
+    button.textContent='운영 공간 확인';button.dataset.view='spaces';return;
+  }
+  if(mode==='checking'){
+    text.textContent='운영 공간 소속과 역할을 다시 확인하고 있습니다. 이전 공간의 결과는 표시하지 않습니다.';
+    button.textContent='확인 중';button.dataset.view='spaces';button.disabled=true;return;
+  }
+  if(mode==='unavailable'){
+    text.textContent='권한 확인을 완료하지 못했습니다. 운영 공간에서 새로고침하여 다시 확인하세요.';
+    button.textContent='운영 공간 확인';button.dataset.view='spaces';return;
+  }
+  const space=selectedVerifiedWorkspace();
+  if(!space){
+    text.textContent='먼저 중앙에서 확인된 운영 공간을 선택하세요. 선택만으로 권한은 변경되지 않습니다.';
+    button.textContent='운영 공간 확인';button.dataset.view='spaces';return;
+  }
+  if(!new Set(state.selection?.modules||[]).has('growth')){
+    text.textContent=space.name+'의 성장·운영 상태를 살펴보려면 필요한 전문 AI를 먼저 선택하세요.';
+    button.textContent='전문 AI 선택';button.dataset.view='ai';return;
+  }
+  text.textContent=space.name+'의 공식 연결 상태를 확인할 수 있습니다. 실적은 직접 조회하고 출처를 확인한 뒤 판단하세요.';
+  button.textContent='성장 흐름 확인';button.dataset.view='growth';
+}
 function moveManagementView(event,key){
   const index=MANAGEMENT_VIEWS.findIndex(view=>view.key===key);
   if(index<0)return;
@@ -89,6 +118,7 @@ function clearSpaces(){
   state.spaces=[];
   state.selectedWorkspace=null;
   if($('workbenchScope'))$('workbenchScope').textContent='현재 공간 미선택';
+  renderNextAction();
   $('verifiedSpacesList').replaceChildren();
   $('selectedWorkspaceStatus').textContent='현재 작업 공간을 선택하지 않았습니다.';
   $('spacesStatus').textContent='로그인 후 내 운영 공간을 확인할 수 있습니다.';
@@ -495,6 +525,7 @@ function renderGrowthWorkspace(){
 function renderSelectedWorkspace(){
   const space=selectedVerifiedWorkspace();
   if($('workbenchScope'))$('workbenchScope').textContent=space?`현재 공간 · ${space.name}`:'현재 공간 미선택';
+  renderNextAction();
   $('selectedWorkspaceStatus').textContent=space
     ?`현재 작업 공간: ${space.name} · ${space.role||'member'}`
     :'현재 작업 공간을 선택하지 않았습니다.';
@@ -544,9 +575,13 @@ function renderVerifiedSpaces(){
 }
 async function loadVerifiedSpaces(){
   if(!activeSession()){clearSpaces();return}
+  const prior=selectedVerifiedWorkspace();
+  const previous=prior?{id:prior.id,slug:prior.slug,kind:prior.kind,role:prior.role}:null;
   const token=state.session.accessToken,userId=state.session.user.id,serial=++state.spacesRequest;
   state.spaces=[];state.selectedWorkspace=null;$('verifiedSpacesList').replaceChildren();
-  $('selectedWorkspaceStatus').textContent='현재 작업 공간을 선택하지 않았습니다.';
+  $('selectedWorkspaceStatus').textContent='운영 공간 권한을 다시 확인하고 있습니다.';
+  if($('workbenchScope'))$('workbenchScope').textContent='운영 공간 권한 재확인 중';
+  renderNextAction('checking');
   $('spacesStatus').textContent='중앙 회원 권한을 확인하고 있습니다.';
   try{
     const response=await fetch('/api/spaces',{method:'GET',headers:{authorization:`Bearer ${token}`,accept:'application/json'},cache:'no-store'});
@@ -557,6 +592,10 @@ async function loadVerifiedSpaces(){
     if(!Array.isArray(data.spaces)||data.scope!=='authenticated-member-only')throw new Error('spaces_invalid');
     if(serial!==state.spacesRequest||!activeSession())return;
     state.spaces=data.spaces.filter(space=>space&&typeof space.id==='string'&&typeof space.name==='string'&&typeof space.slug==='string').slice(0,200);
+    const confirmed=previous&&state.spaces.find(space=>space.status==='active'
+      &&space.id===previous.id&&space.slug===previous.slug
+      &&space.kind===previous.kind&&space.role===previous.role);
+    if(confirmed)state.selectedWorkspace={id:confirmed.id,slug:confirmed.slug};
     renderVerifiedSpaces();
     $('spacesStatus').textContent=state.spaces.length?`접근 가능한 운영 공간 ${state.spaces.length}곳 · 중앙 권한 확인 완료`:'현재 계정에 연결된 운영 공간이 없습니다.';
   }catch(error){
@@ -564,6 +603,8 @@ async function loadVerifiedSpaces(){
     state.spaces=[];state.selectedWorkspace=null;$('verifiedSpacesList').replaceChildren();
     renderGrowthWorkspace();
     $('selectedWorkspaceStatus').textContent='현재 작업 공간을 선택하지 않았습니다.';
+    if($('workbenchScope'))$('workbenchScope').textContent='운영 공간 권한 확인 실패';
+    renderNextAction('unavailable');
     $('spacesStatus').textContent='운영 공간을 불러오지 못했습니다. 계정이나 권한이 변경되지는 않았습니다.';
     console.error('management workspace read-only',error);
   }
@@ -589,6 +630,7 @@ function renderMemberPicker(){
   state.catalog.forEach(module=>{const label=document.createElement('label');label.className='module-choice';const input=document.createElement('input');input.type='checkbox';input.value=module.id;input.checked=selected.has(module.id);const text=document.createElement('span');const strong=document.createElement('strong');strong.textContent=module.name;const small=document.createElement('small');small.textContent=module.state==='existing'?'기존 서비스 연결':module.state==='foundation'?'기초 설계 · 준비 중':'준비 중';text.append(strong,small);label.append(input,text);host.append(label)});
   renderModuleLaunches();
   renderGrowthWorkspace();
+  renderNextAction();
 }
 function safeModuleUrl(module){
   if(module?.id!=='marketing'||module.state!=='existing'||module.reuseExisting!==true)return null;
@@ -683,7 +725,7 @@ function useRequestExample(value){
 }
 function saveSelection(){
   if(!activeSession()){location.assign(authUrl());return}
-  const modules=[...document.querySelectorAll('#memberModuleGrid input:checked')].map(input=>input.value);state.selection={workspaceKind:$('workspaceKind').value,modules};localStorage.setItem(selectionKey(),JSON.stringify(state.selection));$('saveStatus').textContent=`이 브라우저에 저장됨 · ${modules.length}개 AI 선택 · 이용권한은 각 서비스가 별도로 확인합니다.`;renderModuleLaunches();renderGrowthWorkspace();
+  const modules=[...document.querySelectorAll('#memberModuleGrid input:checked')].map(input=>input.value);state.selection={workspaceKind:$('workspaceKind').value,modules};localStorage.setItem(selectionKey(),JSON.stringify(state.selection));$('saveStatus').textContent=`이 브라우저에 저장됨 · ${modules.length}개 AI 선택 · 이용권한은 각 서비스가 별도로 확인합니다.`;renderModuleLaunches();renderGrowthWorkspace();renderNextAction();
 }
 function logout(){clearSession();location.hash='';$('saveStatus').textContent='로그아웃했습니다. 기능을 이용하려면 다시 로그인해야 합니다.'}
 async function boot(){
@@ -698,6 +740,10 @@ for(const view of MANAGEMENT_VIEWS){
   tab.addEventListener('click',()=>setManagementView(view.key));
   tab.addEventListener('keydown',event=>moveManagementView(event,view.key));
 }
+$('workbenchNextButton').addEventListener('click',()=>{
+  const target=$('workbenchNextButton').dataset.view;
+  setManagementView(target||'spaces');
+});
 $('routeRequest').addEventListener('click',routeManagementRequest);
 $('exampleSales').addEventListener('click',()=>useRequestExample('매출을 늘리고 싶어요'));
 $('exampleMenu').addEventListener('click',()=>useRequestExample('배달앱 메뉴를 한 번에 관리하고 싶어요'));

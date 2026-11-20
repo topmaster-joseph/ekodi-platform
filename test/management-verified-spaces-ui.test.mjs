@@ -114,17 +114,17 @@ test('member chooses only current verified active space; no implicit authority f
   assert.equal(p.calls.filter(x=>x.path==='/api/spaces').length,1);
 });
 
-test('selection never outlives logout or subsequent membership refresh',async()=>{
+test('exact reverified membership preserves selection, but logout always clears it',async()=>{
   const p=page({loggedIn:true,spaces:[{id:'store-1',slug:'jadam',name:'자담치킨',role:'store_owner',kind:'store',status:'active'}]});
   await p.flush();
   const card=p.get('verifiedSpacesList').children[0];
   card.children.find(x=>x.className==='space-select').handlers.click();
   assert.match(p.get('selectedWorkspaceStatus').textContent,/자담치킨/);
   await runInContext('loadVerifiedSpaces()',p.context);
-  assert.match(p.get('selectedWorkspaceStatus').textContent,/선택하지 않았습니다/);
-  assert.equal(runInContext('selectedVerifiedWorkspace()',p.context),null);
+  assert.match(p.get('selectedWorkspaceStatus').textContent,/자담치킨 · store_owner/);
+  assert.equal(runInContext('selectedVerifiedWorkspace()?.id',p.context),'store-1');
   const fresh=p.get('verifiedSpacesList').children[0];
-  fresh.children.find(x=>x.className==='space-select').handlers.click();
+  assert.equal(fresh.children.find(x=>x.className==='space-select').attributes['aria-pressed'],'true');
   runInContext('clearSession()',p.context);
   assert.equal(p.get('verifiedSpacesList').children.length,0);
   assert.match(p.get('selectedWorkspaceStatus').textContent,/선택하지 않았습니다/);

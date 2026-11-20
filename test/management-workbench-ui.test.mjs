@@ -23,8 +23,8 @@ function fakeStorage(initial={}){
   const entries=new Map(Object.entries(initial));
   return {getItem:k=>entries.get(k)??null,setItem:(k,v)=>entries.set(k,String(v)),removeItem:k=>entries.delete(k)};
 }
-function page({guest=false}={}){
-  const elements=new Map(),calls=[];
+function page({guest=false,spaceResponses=[]}={}){
+  const elements=new Map(),calls=[];let spaceFetches=0;
   const get=id=>{if(!elements.has(id))elements.set(id,node());return elements.get(id)};
   const session=guest?{}:{'ekodi-management-session':JSON.stringify({
     accessToken:'member-test-token',refreshToken:'refresh-token',
@@ -35,9 +35,13 @@ function page({guest=false}={}){
   const fetch=async(path,options={})=>{
     calls.push({path,options});
     if(path==='/api/catalog')return {ok:true,json:async()=>({modules:[]})};
-    if(path==='/api/spaces')return {ok:true,status:200,json:async()=>({
-      spaces:[],scope:'authenticated-member-only'
-    })};
+    if(path==='/api/spaces'){
+      const outcome=spaceResponses[spaceFetches++]??[];
+      if(outcome==='error')return {ok:false,status:503,json:async()=>({error:'offline'})};
+      return {ok:true,status:200,json:async()=>({
+        spaces:outcome,scope:'authenticated-member-only'
+      })};
+    }
     throw Error('unexpected network request: '+path);
   };
   const location={href:'https://ekodi.kr/management/',pathname:'/management/',
@@ -115,4 +119,66 @@ test('anonymous session cannot reveal workbench or call private workspace APIs',
   p.get('viewAi').handlers.click();
   assert.equal(p.get('memberAiPanel').hidden,false,'static mock does not apply initial HTML hidden attributes');
   assert.equal(p.get('memberApp').hidden,true);
+});
+
+const verifiedStore={id:'store-1',slug:'jadam',name:'공식 테스트 매장',
+  kind:'store',role:'store_owner',status:'active'};
+function chooseStore(p){
+  const cards=p.get('verifiedSpacesList').children;
+  assert.ok(cards.length>0,'a verified workspace card should be rendered');
+  const button=cards[0].children.find(c=>c.className==='space-select');
+  assert.ok(button,'workspace selection needs a member verified button');
+  button.handlers.click();
+}
+
+test('next action is honest and requires central workspace selection',async()=>{
+  const p=page({spaceResponses:[[verifiedStore]]});await p.flush();
+  assert.match(p.get('workbenchNextText').textContent,/운영 공간을 선택/);
+  assert.equal(p.get('workbenchNextButton').dataset.view,'spaces');
+  chooseStore(p);
+  assert.match(p.get('workbenchScope').textContent,/공식 테스트 매장/);
+  assert.match(p.get('workbenchNextText').textContent,/전문 AI를 먼저 선택/);
+  assert.equal(p.get('workbenchNextButton').dataset.view,'ai');
+  p.get('workbenchNextButton').handlers.click();
+  assertView(p,'viewAi');
+  assert.equal(p.calls.filter(c=>c.path.includes('store-summary')).length,0);
+});
+
+test('membership refresh retains chosen workspace only after exact re-verification',async()=>{
+  const p=page({spaceResponses:[[verifiedStore],[verifiedStore]]});await p.flush();
+  chooseStore(p);
+  await p.get('refreshSpaces').handlers.click();
+  assert.equal(p.get('workbenchScope').textContent,'현재 공간 · 공식 테스트 매장');
+  assert.equal(p.get('verifiedSpacesList').children.length,1);
+  assert.equal(p.calls.filter(c=>c.path==='/api/spaces').length,2);
+});
+
+test('changed role or lost membership clears prior workspace and all scope claims',async()=>{
+  for(const changed of [[{...verifiedStore,role:'store_staff'}],[]]){
+    const p=page({spaceResponses:[[verifiedStore],changed]});await p.flush();
+    chooseStore(p);
+    await p.get('refreshSpaces').handlers.click();
+    assert.equal(p.get('workbenchScope').textContent,'현재 공간 미선택');
+    assert.equal(p.get('workbenchNextButton').dataset.view,'spaces');
+    assert.match(p.get('selectedWorkspaceStatus').textContent,/선택하지 않았습니다/);
+    assert.equal(p.calls.filter(c=>c.path.includes('store-business-summary')).length,0);
+  }
+});
+
+test('refresh network error never leaves the former tenant labeled as active',async()=>{
+  const p=page({spaceResponses:[[verifiedStore],'error']});await p.flush();
+  chooseStore(p);
+  await p.get('refreshSpaces').handlers.click();
+  assert.equal(p.get('workbenchScope').textContent,'운영 공간 권한 확인 실패');
+  assert.match(p.get('workbenchNextText').textContent,/다시 확인하세요/);
+  assert.equal(p.get('verifiedSpacesList').children.length,0);
+  assert.equal(p.get('workbenchNextButton').dataset.view,'spaces');
+});
+
+test('next action panel is responsive and never presents hypothetical business revenue',()=>{
+  assert.match(html,/id="workbenchNextText"[^>]+role="status"/);
+  assert.match(html,/id="workbenchNextButton"[^>]+data-view="spaces"/);
+  assert.match(css,/\.workbench-next-step\{/);
+  assert.match(css,/@media\(max-width:600px\)/);
+  assert.doesNotMatch(html,/임의 매출|예상 매출 \d/);
 });
