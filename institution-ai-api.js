@@ -212,6 +212,14 @@ export async function institutionAiApi(request, url, env) {
   if (request.method !== 'POST' || !['submit', 'message', 'status', 'approve', 'checkpoint', 'export'].includes(action)) {
     return json({ code: 'NOT_FOUND' }, 404);
   }
+  // This API must never become a live tenant-data service merely because keys
+  // were provisioned. Require isolated staging AND a separate explicit pilot gate.
+  // Production enablement requires a future protected release with identity,
+  // offsite backup/restore and immutable-audit evidence.
+  if (String(env?.EKODIBIZ_MODE || '') !== 'isolated-staging'
+      || String(env?.INSTITUTION_AI_STAGING_PILOT_ENABLED || '').trim().toLowerCase() !== 'true') {
+    return json({ code: 'INSTITUTION_AI_PILOT_DISABLED' }, 503);
+  }
   // Internal-only pilot, never expose API keys through web/mobile JavaScript.
   if (request.headers.has('origin') || url.protocol !== 'https:') return json({ code: 'SERVER_TO_SERVER_ONLY' }, 403);
   try {
