@@ -37,7 +37,7 @@
     const output=el('section','','communication-notification-panel');
     output.hidden=true;
     const title=el('h3','통합 알림 운영');
-    const hint=el('p','현재 구독 기기 수와 선택 기간의 발행·전달 처리 현황을 구분합니다. 개인별 정보는 표시하지 않습니다.');
+    const hint=el('p','등록된 사이트·서비스의 알림 연결과 기간별 전달 상태를 점검합니다. 등록은 실서비스 수신 성공을 의미하지 않습니다. 개인정보는 표시하지 않습니다.');
     const status=el('p','현황을 선택하면 최신 정보를 불러옵니다.','communication-note');
     status.setAttribute('role','status');
     const list=el('div','','communication-notification-list');
@@ -65,13 +65,39 @@
         const data=await api('/api/notifications/admin/summary?window='+encodeURIComponent(periodSelect.value));
         const top=el('p','웹푸시 발송: '+(data.webPushEnabled?'활성화':'비활성화')+' · 기기 정보 비공개','communication-note');
         list.append(top);
+        if(data.operatorChannel){
+          const op=data.operatorChannel;
+          const count=op.registeredDevices===null?'조회되지 않음':op.registeredDevices+'대';
+          list.append(el('p','최고관리자 휴대전화 푸시: '+(op.ready?'전송 준비':'점검 필요')+
+            ' · VAPID '+(op.configured?'설정됨':'미설정')+' · 등록 기기 '+count+
+            ' · 실제 휴대전화 수신은 별도 시험 필요','communication-note'));
+        }
+        if(data.fleet){
+          const fleet=data.fleet,counts=fleet.counts||{};
+          const details=el('details','','communication-fleet-details');
+          const heading=el('summary','등록 사이트 '+(counts.registered||0)+'개 · 주제 연결 '+(counts.topicConnected||0)+
+            '개 · 연결 필요 '+(counts.notConnected||0)+'개 · 발행 준비 미완료 '+(counts.publisherNotReady||0)+'개');
+          details.append(heading);
+          const caution=el('p','현재 등록부 기반 정적 점검입니다. 신규 동적 고객 사이트·현장 수신 성공은 별도 검증 대상입니다.','communication-note');
+          details.append(caution);
+          for(const site of fleet.sites||[]){
+            const row=el('article','','communication-fleet-row');
+            const state=site.state==='not_connected'?'연동 필요':site.state==='publisher_not_ready'?'발행 설정 필요':'발행 구성됨 · 수신 미검증';
+            row.dataset.state=site.state;
+            row.append(el('strong',site.name+' · '+state),
+              el('span',site.path+' · '+(site.topicLabel||'주제 없음')),
+              el('small',site.action));
+            details.append(row);
+          }
+          list.append(details);
+        }
         for(const item of data.topics||[]){
           const line=el('article','','communication-notification-row');
           const last=item.lastEventAt?new Date(item.lastEventAt):null;
           line.append(el('strong',item.label),
             el('span','현재 구독 기기 '+item.subscriberDevices+' · 기간 내 이벤트 '+item.events+
               ' · 전달 처리 '+item.delivered+' · 대기 '+item.pending+' · 실패 '+item.failed+
-              ' · 지연 '+(item.stalled||0)+' · 발행 지연 '+(item.eventsOverdue||0)),
+              ' · 지연 '+(item.stalled||0)+' · 발행 지연 '+(item.eventsOverdue||0)+' · 점검상태 '+(item.health||'미확인')),
             el('small','자동 발행 준비: '+(item.publisher?.ready?'완료':'대기')+
               ' (서비스 허용 '+(item.publisher?.enabled?'설정됨':'꺼짐')+
               ' · 전용 인증키 '+(item.publisher?.credentialsConfigured?'설정됨':'미설정')+')'),
@@ -84,7 +110,7 @@
           }
           list.append(line);
         }
-        status.textContent='알림 현황을 갱신했습니다.';
+        status.textContent='알림 현황을 갱신했습니다. 실패·지연·미연결 상태는 실제 수신 실패와 구분하여 확인하세요.';
       } catch(error) {
         status.textContent='조회 권한이나 운영 데이터 연결을 확인할 수 없습니다. '+String(error?.message||'');
       } finally {refresh.disabled=false;}

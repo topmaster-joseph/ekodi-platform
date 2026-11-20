@@ -1,5 +1,7 @@
 import {notificationAdminAuthority} from './notification-admin-authority.js';
 import {NOTIFICATION_TOPICS,topicPublisherReadiness} from './notification-control.js';
+import {buildNotificationFleetCoverage} from './notification-fleet-coverage.js';
+import {operatorPushReady} from './operator-push.js';
 
 const PREFIX='/api/notifications/admin/summary';
 const TOPICS=Object.keys(NOTIFICATION_TOPICS);
@@ -66,8 +68,18 @@ export async function handleNotificationAdminSummary(request,env,{transport=fetc
         enabled:env.NOTIFICATION_MISSION_SATURDAY_NOTICE_ENABLED==='true',
         ready:publisher.ready&&env.NOTIFICATION_MISSION_SATURDAY_NOTICE_ENABLED==='true'
       }:undefined;
+      const diagnosis=[];
+      if(Number(delivery?.stalled||0)>0||Number(event?.overdue||0)>0)diagnosis.push('delivery_or_event_stalled');
+      if(Number(delivery?.failed||0)>0)diagnosis.push('delivery_failed');
+      if(!publisher.ready)diagnosis.push('publisher_not_ready');
+      if(!Number(subscribers?.n||0))diagnosis.push('no_active_subscribers');
+      if(!Number(event?.total||0))diagnosis.push('no_events_in_window');
+      // No traffic does not mean healthy and "delivered" is not device receipt.
+      const health=diagnosis.some(code=>code==='delivery_or_event_stalled'||code==='delivery_failed')
+        ?'attention':!publisher.ready?'configuration_required':
+          (!Number(event?.total||0)||!Number(subscribers?.n||0))?'unverified':'delivery_queue_clear';
       topics.push({
-        id:key,label:NOTIFICATION_TOPICS[key],publisher,saturdayNotice,
+        id:key,label:NOTIFICATION_TOPICS[key],publisher,saturdayNotice,health,diagnosis,
         subscriberDevices:Number(subscribers?.n||0),
         events:Number(event?.total||0),eventsPending:Number(event?.pending||0),
         eventsOverdue:Number(event?.overdue||0),lastEventAt:event?.lastEventAt||null,
@@ -79,7 +91,25 @@ export async function handleNotificationAdminSummary(request,env,{transport=fetc
   }catch{
     return json({ok:false,error:'notification_metrics_unavailable'},503);
   }
+  // Only the platform super-admin may enumerate all registered sites and the
+  // private operator device fleet. Site admins retain strictly topic-scoped data.
+  let fleet,operatorChannel;
+  if(actor.kind==='platform'){
+    fleet=buildNotificationFleetCoverage({readiness:key=>topicPublisherReadiness(env,key)});
+    const configured=operatorPushReady(env);
+    let registeredDevices=null;
+    try{
+      const record=await env.DB.prepare(
+        'SELECT COUNT(*) AS n FROM operator_push_devices WHERE disabled_at IS NULL'
+      ).first();
+      registeredDevices=Number(record?.n||0);
+    }catch{/* Operator schema not provisioned; do not mutate during a GET. */}
+    operatorChannel={configured,registeredDevices,
+      ready:configured&&registeredDevices!==null&&registeredDevices>0,
+      deliveredToPhoneVerified:false};
+  }
   return json({ok:true,scope:actor.kind==='platform'?topic:'authorized_sites',
+    ...(actor.kind==='platform'?{fleet,operatorChannel}:{}),
     window,cutoff,subscriberCountScope:'current_active_devices',
     deliveryCountScope:'events_created_in_window',stalledThresholdMinutes:15,
     topics,webPushEnabled:
