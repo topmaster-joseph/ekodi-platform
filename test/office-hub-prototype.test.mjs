@@ -7,7 +7,7 @@ const js = readFileSync(new URL('../office-prototype/office.js', import.meta.url
 const css = readFileSync(new URL('../office-prototype/office.css', import.meta.url), 'utf8');
 
 test('prototype is labeled nonproduction, links only existing canonical entrypoints', () => {
-  assert.match(html, /구축 시안 · 운영 서비스 아님/);
+  assert.match(html, /오피스 통합 진입점 · 연결 서비스 제공/);
   assert.match(html, /실제 파일을 열거나 저장하지 않습니다/);
   for (const route of ['/my/docs/', '/proposal/', '/edu/', '/my/']) {
     assert.ok(html.includes('https://ekodi.kr' + route), route);

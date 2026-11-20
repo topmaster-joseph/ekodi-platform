@@ -252,6 +252,20 @@ const PUBLIC_CSP = [
   "object-src 'none'",
 ].join('; ');
 
+// OFFICE-HUB-001: static launcher has no account session, API or file-writing surface.
+// Do not broaden PUBLIC_CSP or inject credentials into this no-JS-network hub.
+const OFFICE_HUB_CSP = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "connect-src 'none'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+  "object-src 'none'",
+].join('; ');
+
 const LIVE_CSP = PUBLIC_CSP.replace("connect-src 'self'","connect-src 'self' https://renzehysxirjilvdxacv.supabase.co");
 // Strictly scoped to the hosted age-verification page; other sites retain PUBLIC_CSP.
 const AGE_VERIFY_CSP = [
@@ -784,6 +798,28 @@ export default {
           secured.headers.set('Content-Type', mime);
         }
         secured.headers.set('X-Content-Type-Options', 'nosniff');
+        secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        return secured;
+      }
+      // OFFICE-HUB-001: direct /office and /office/ HTTP 200 — never a redirect or a new file API.
+      // Work remains with existing /my/docs/, /proposal/ and /edu/ service owners.
+      if (url.pathname === '/office' || url.pathname.startsWith('/office/')) {
+        if (!['GET','HEAD'].includes(request.method)) {
+          const denied=withHostSecurity(new Response(null,{status:405,headers:{allow:'GET, HEAD'}}),OFFICE_HUB_CSP,'no-store','office-method-blocked');
+          denied.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+          return denied;
+        }
+        const allowed=new Set(['/office','/office/','/office/index.html','/office/office.css','/office/office.js']);
+        if (!allowed.has(url.pathname)) {
+          const absent=withHostSecurity(new Response('Not Found',{status:404}),OFFICE_HUB_CSP,'no-store','office-not-found');
+          absent.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+          return absent;
+        }
+        // /office is served by an internal asset rewrite, keeping the browser address unchanged.
+        const target=url.pathname==='/office'?'/office/':url.pathname;
+        const asset=await env.ASSETS.fetch(assetRequest(request,target));
+        const secured=withHostSecurity(asset,OFFICE_HUB_CSP,'no-store','office-static-hub');
+        if (asset.ok) secured.headers.set('Content-Type',url.pathname.endsWith('.css')?'text/css; charset=utf-8':url.pathname.endsWith('.js')?'text/javascript; charset=utf-8':'text/html; charset=utf-8');
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return secured;
       }
