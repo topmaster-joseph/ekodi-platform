@@ -1,5 +1,5 @@
 import { GOOGLE_SECRET_PATTERN, clearGoogleSecret, saveGoogleSecret, storedGoogleSecretStatus, withStoredGoogleSecret } from './mail-google-secret-store.js';
-import { operatorPushEmails, operatorPushReady, operatorDeviceCount, registerOperatorDevice, validOperatorSubscription } from './operator-push.js';
+import { operatorPushEmails, operatorPushReady, operatorDeviceCount, registerOperatorDevice, validOperatorSubscription, operatorPushDiagnostics, sendOperatorPush } from './operator-push.js';
 import { decryptMailCredential, encryptMailCredential, mailCredentialReady, mailNonceHash, readMailState, signMailState } from './mail-credential-vault.js';
 import { MAIL_GOOGLE_REDIRECT_URI, googleMailClientId, exchangeGoogleMailCode, getGoogleMailMessage, googleMailAuthorizeUrl, googleMailConfigured, googleMailProfile, hasGoogleReadScope, hasGoogleSendScope, listGoogleMailMessages, refreshGoogleMailToken, sendGoogleMailMessage } from './mail-google-adapter.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
@@ -127,7 +127,7 @@ export async function mailActor(request, env) {
   const token=bearer(request); if(!token)return null;
   try{const [user,raw]=await Promise.all([supabaseJson('/auth/v1/user',token,env),supabaseJson('/rest/v1/rpc/current_site_activity_contexts',token,env,{method:'POST',body:'{}'})]);
     if(!user?.id||!user?.email)return null; const contexts=(Array.isArray(raw)?raw:[]).map(item=>({workspaceId:String(item?.tenant_id||''),workspaceKey:String(item?.workspace_key||''),workspaceSlug:String(item?.tenant||'').toLowerCase(),workspaceName:String(item?.workspace_name||item?.tenant||''),workspaceKind:String(item?.workspace_kind||'organization'),authorizationRole:String(item?.authorization_role||''),activityRole:String(item?.activity_role||''),activityRoleLabel:String(item?.activity_role_label||''),canManage:WRITE_ROLES.has(String(item?.authorization_role||''))})).filter(x=>x.workspaceId&&x.workspaceSlug);
-    return{userId:String(user.id),email:String(user.email).toLowerCase(),contexts};}catch(error){console.error('EKODI Mail actor',error?.message||error);return null}
+    return{userId:String(user.id),email:String(user.email).toLowerCase(),emailVerified:Boolean(user.email_confirmed_at),contexts};}catch(error){console.error('EKODI Mail actor',error?.message||error);return null}
 }
 function providerForEmail(email,requested=''){const v=String(requested||'').trim().toLowerCase();if(ACCOUNT_PROVIDERS[v])return v;const d=String(email||'').split('@').pop().toLowerCase();if(['gmail.com','googlemail.com'].includes(d))return'gmail';if(['outlook.com','hotmail.com','live.com'].includes(d))return'outlook';if(d==='naver.com')return'naver';if(['daum.net','hanmail.net'].includes(d))return'daum';if(d==='kakao.com')return'kakao';return'generic-imap'}
 function publicAccount(r){return{id:Number(r.id),ownerType:r.owner_type,ownerKey:r.owner_key,workspaceSlug:r.workspace_slug||'',provider:r.provider,providerLabel:ACCOUNT_PROVIDERS[r.provider]?.label||r.provider,emailAddress:r.email_address,displayName:r.display_name||r.email_address,connectorMode:r.connector_mode,connectionStatus:r.connection_status,enabled:Boolean(r.enabled),lastSyncAt:r.last_sync_at||null,lastError:r.last_error||'',credentialStored:Boolean(r.credential_ref)}}
@@ -442,6 +442,37 @@ export async function handleMailControl(request, env) {
     if(request.method==='POST'){const body=await readJson(request);const secret=String(body?.secret||'').trim();if(!GOOGLE_SECRET_PATTERN.test(secret))return json({error:'Google 클라이언트 보안 비밀번호(GOCSPX-로 시작)를 그대로 붙여넣어 주세요.',code:'INVALID_GOOGLE_SECRET'},400,request);try{const r=await saveGoogleSecret(env,secret,actor.email);return json({ok:true,...r},201,request)}catch(e){return json({error:e.message,code:e.code||'SAVE_FAILED'},e.status||500,request)}}
     if(request.method==='DELETE'){await clearGoogleSecret(env);return json({ok:true,configured:false},200,request)}
     return json({error:'허용되지 않은 요청입니다.',code:'METHOD_NOT_ALLOWED'},405,request);
+  }
+
+  // A phone probe is explicitly operator-triggered; no public token, customer
+  // application or device endpoint is exposed. Provider accepted != handset received.
+  if(url.pathname==='/api/mail/control/operator-push/test'){
+    if(request.method!=='POST')return json({error:'허용되지 않은 요청입니다.',code:'METHOD_NOT_ALLOWED'},405,request);
+    const actor=await mailActor(request,env);
+    if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    if(!actor.emailVerified||!operatorPushEmails(env).includes(actor.email))
+      return json({error:'인증된 운영자만 시험할 수 있습니다.',code:'OPERATOR_ONLY'},403,request);
+    if(request.headers.get('origin')!=='https://ekodi.kr')
+      return json({error:'같은 사이트에서 요청하세요.',code:'ORIGIN_REQUIRED'},403,request);
+    if(!operatorPushReady(env))
+      return json({error:'운영 알림 암호키 미설정',code:'OPERATOR_PUSH_NOT_CONFIGURED'},503,request);
+    if(!env.AUTH_RATE_LIMITER?.limit)
+      return json({error:'발송 보호 장치 미설정',code:'PUSH_RATE_LIMIT_UNAVAILABLE'},503,request);
+    const permitted=await env.AUTH_RATE_LIMITER.limit({key:'operator-push-selftest:'+actor.userId});
+    if(permitted?.success!==true)
+      return json({error:'발송 제한 중입니다.',code:'PUSH_RATE_LIMITED'},429,request);
+    const diagnostics=await operatorPushDiagnostics(env.DB,actor.email);
+    if(!diagnostics.devices)return json({error:'이 계정에 등록된 기기가 없습니다.',code:'NO_REGISTERED_DEVICE'},409,request);
+    if(diagnostics.lastAttemptAt && Date.now()-Date.parse(diagnostics.lastAttemptAt)<120000)
+      return json({error:'최근 2분 이내 발송 이력이 있습니다.',code:'PUSH_PROBE_COOLDOWN'},429,request);
+    const result=await sendOperatorPush(env,{
+      title:'[에코디] 운영 알림 시험',
+      body:'에코디 알림 전달 경로를 확인하세요. 이 표시는 휴대전화 수신 확인을 대신하지 않습니다.',
+      targetPath:'/mail/admin',operatorEmail:actor.email
+    });
+    const status=result.ok?200:503;
+    return json({ok:Boolean(result.ok),gatewayAccepted:Boolean(result.ok),sentDevices:Number(result.sent||0),
+      deviceReceiptVerified:false,code:result.code||null},status,request);
   }
 
   // EKODI-OPERATOR-PUSH-001: 운영자 전용 휴대폰 알림 등록(로그인한 운영자 계정만).
