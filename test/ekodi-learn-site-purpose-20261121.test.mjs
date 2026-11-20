@@ -10,6 +10,8 @@ test('EKODI Learning Fabric official mission is in the actual owner renderer wit
  const mission=missions.sites.find(x=>x.id==='learn').mission;
  assert.equal((html.match(/data-ekodi-mission="learn"/g)||[]).length,1);
  assert.ok(html.includes('<p>'+mission+'</p>'));
+ assert.match(html,/<title>에코디학습 \\| EKODI Learning Fabric<\\/title>/);
+ assert.match(html,/에코디학습 · EKODI LEARNING FABRIC/);
  assert.match(html,/배움이 실제 능력이 되게/);
  assert.match(html,/비회원도 바로 학습 가능/);
  assert.match(html,/Google로 진도 연결/);
