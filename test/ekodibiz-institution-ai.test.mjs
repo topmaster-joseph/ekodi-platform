@@ -11,6 +11,8 @@ globalThis.crypto ||= webcrypto;
 const KEY = suffix => ('K'.repeat(40) + suffix);
 const tenantKeys = keys => ({ status: 'active', keys: { submit: [KEY(keys + '-submit')], assistant: [KEY(keys + '-assistant')], read: [KEY(keys + '-read')], approve: [KEY(keys + '-approve')], execute: [KEY(keys + '-execute')] } });
 const secrets = () => ({
+  EKODIBIZ_MODE: 'isolated-staging',
+  INSTITUTION_AI_STAGING_PILOT_ENABLED: 'true',
   INSTITUTION_AI_TENANTS_JSON: JSON.stringify({ campus1: tenantKeys('c1'), campus2: tenantKeys('c2') }),
   INSTITUTION_AI_KEYRING_JSON: JSON.stringify({ v1: 'master-secret-tenant-encryption-v1-1234567890', v2: 'master-secret-tenant-encryption-v2-1234567890' }),
   INSTITUTION_AI_ACTIVE_KEY_VERSION: 'v1',
@@ -246,4 +248,20 @@ test('assistant role cannot forge user messages and submission role cannot forge
   const state = await (await call(env, { tenantId: 'campus1', operationId: 'draft0001' }, 'read', 'campus1', 'status')).json();
   assert.deepEqual(state.messages.map(m => m.sender), ['user', 'assistant']);
   assert.deepEqual(state.audit.map(e => e.role), ['submit', 'submit', 'assistant']);
+});
+
+test('pilot gate denies production and disabled staging even with otherwise valid credentials', async () => {
+  const { env } = setup();
+  assert.equal((await call(env, draft('pilot00001'))).status, 201);
+  const prod = { ...env, EKODIBIZ_MODE: 'operational-mvp' };
+  const result = await call(prod, draft('pilot00002'));
+  assert.equal(result.status, 503);
+  assert.equal((await result.json()).code, 'INSTITUTION_AI_PILOT_DISABLED');
+  const stopped = { ...env, INSTITUTION_AI_STAGING_PILOT_ENABLED: 'false' };
+  assert.equal((await call(stopped, draft('pilot00003'))).status, 503);
+  const unset = { ...env };
+  delete unset.INSTITUTION_AI_STAGING_PILOT_ENABLED;
+  assert.equal((await call(unset, draft('pilot00004'))).status, 503);
+  const otherMode = { ...env, EKODIBIZ_MODE: 'unknown' };
+  assert.equal((await call(otherMode, draft('pilot00005'))).status, 503);
 });
