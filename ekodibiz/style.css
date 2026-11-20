@@ -52,3 +52,9 @@
 @media(max-width:1080px){.webdev-plans{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){.webdev-heading{display:block}.webdev-outline{display:inline-block;margin-top:16px}.webdev-plans{grid-template-columns:repeat(2,minmax(0,1fr))}.webdev-bottom{grid-template-columns:1fr}}
 @media(max-width:520px){.webdev{width:calc(100% - 28px);padding-top:30px;margin-bottom:45px}.webdev-heading h2{font-size:clamp(27px,8vw,36px)}.webdev-plans{grid-template-columns:1fr}.webdev-plan{padding:22px}.webdev-price{margin-top:18px}.webdev-price strong{font-size:30px}.webdev-build{min-height:0}.webdev-info,.webdev-compare{padding:19px}.webdev-disclosure{padding:13px 15px}}
+
+/* EKODIBIZ site-owned public mission: natural introduction, never a checkout CTA. */
+.hero .ekodi-mission-statement{max-width:675px;margin:18px 0 22px;padding:15px 19px;border:1px solid rgba(98,151,114,.24);border-radius:14px;background:rgba(247,251,248,.74);color:#294935}
+.hero .ekodi-mission-label{display:block;font-size:11px;font-weight:850;letter-spacing:.08em;opacity:.7;margin-bottom:5px}
+.hero .ekodi-mission-statement p{margin:0;line-height:1.8;font-size:clamp(13px,1.4vw,15px);word-break:keep-all}
+@media(max-width:390px){.hero .ekodi-mission-statement{padding:13px 14px;margin:14px 0 18px}}
