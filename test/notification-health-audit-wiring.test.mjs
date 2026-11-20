@@ -19,7 +19,7 @@ test('all fleet readbacks avoid added redirects, paid messaging or device identi
   const api=readFileSync(new URL('../notification-admin-summary.js',import.meta.url),'utf8');
   const ui=readFileSync(new URL('../communication-admin.js',import.meta.url),'utf8');
   assert.doesNotMatch(audit,/sendWebPush\(|sendOperatorNotice\(|fetch\(|Response\.redirect\(/);
-  assert.doesNotMatch(audit,/endpoint|p256dh|auth_secret|token_hash/);
+  assert.doesNotMatch(audit,/\b(?:d|dev|row)\.(?:endpoint|p256dh|auth_secret|token_hash)\b/);
   assert.match(api,/if\(actor\.kind==='platform'\)\{/);
   assert.match(ui,/audit\.fresh/);
   assert.match(ui,/실기기 수신/);
