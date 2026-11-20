@@ -58,7 +58,7 @@ try{
    const legacy=await ctx.request.get(base+'/study/cold-safety-2026/',{maxRedirects:0});
    if(legacy.status()!==200)fail('cold safety landing status '+legacy.status());
    const legacyText=await legacy.text();
-   if(/docs\\.google\\.com\\/presentation\\/d\\/|drive\\.google\\.com\\/file\\/d\\//.test(legacyText))
+   if(legacyText.includes('docs.google.com/presentation/d/')||legacyText.includes('drive.google.com/file/d/'))
      fail('public cold safety page still leaks owner-only deck URL');
    if(!legacyText.includes('/teach/foreign-worker-cold-safety-2026/'))
      fail('cold safety instructor link is missing');
