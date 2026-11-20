@@ -7,7 +7,7 @@ import path from 'node:path';
 import {planEkodiIndependentBrowser,executeEkodiIndependentBrowser} from './ekodi-independent-browser.mjs';
 
 export const MISSION_HOMEPAGE_IDS=Object.freeze([
-  'publishing','books','biz','mall','management','edu','insurance','lab','social',
+  'publishing','books','biz','mall','learn','management','edu','insurance','lab','social',
   'community','journal','delivery','business','author','life','work',
   'money','support','energy','cafe','bible'
 ]);
