@@ -276,7 +276,14 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   const type=String(response.headers.get('content-type')||'').toLowerCase();
   const headers=new Headers(response.headers);let body=response.body;
   if(type.includes('text/html')||type.includes('javascript')||type.includes('text/css')||type.includes('application/json')||type.includes('text/plain')){
-    body=rewriteExecutionText(await response.text(),spec,type);headers.delete('content-length');headers.delete('etag');headers.delete('content-encoding');
+    const payload=await response.text();
+    // The course catalog is service-relative data; its links are mounted once
+    // by the Education UI. Do not rewrite JSON link values at the Site Core
+    // boundary: rewriting here and mounting again produced /edu/edu URLs.
+    const directEducationCatalog=spec.id==='education-academic-alias'&&
+      upstreamUrl.pathname==='/courses/catalog.json'&&type.includes('application/json');
+    body=directEducationCatalog?payload:rewriteExecutionText(payload,spec,type);
+    headers.delete('content-length');headers.delete('etag');headers.delete('content-encoding');
   }
   const location=headers.get('location');if(location)headers.set('location',canonicalExecutionLocation(location,spec));
   headers.set('x-ekodi-canonical-surface',spec.id);headers.set('x-ekodi-canonical-path',spec.prefix);
@@ -285,21 +292,20 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   const url=new URL(request.url);
   if(url.hostname.toLowerCase()!==CANONICAL_HOST)return null;
   const path=url.pathname;
-  // Education is mounted exactly once at /edu. Historical browser tabs and
-  // canonical-proxy-transformed JS produced /edu/edu/study/ and similar 404s.
-  // Collapse only repeated *whole* /edu path segments, without forwarding
-  // mutation requests or crossing to another service/host.
+  // Reject malformed repeated Education mounts. Valid links are generated
+  // directly as /edu/... by the source UI, not repaired by HTTP redirects.
+  // The old 308 alias is deliberately retired; no legacy route is forwarded.
   if(/^\/edu(?:\/edu)+(?=\/|$)/.test(path)){
-    if(request.method!=='GET'&&request.method!=='HEAD')
-      return new Response(null,{status:404,headers:{'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'edu-double-prefix-rejected'}});
-    const target=new URL(request.url);
-    const canonical=path.replace(/^\/edu(?:\/edu)+(?=\/|$)/,'/edu');
-    target.pathname=canonical==='/edu'?'/edu/':canonical;
-    target.hash='';
-    return new Response(null,{status:308,headers:{
-      location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff',
-      'x-ekodi-route':'edu-double-prefix-canonical','x-robots-tag':'noindex, nofollow',
-    }});
+    return new Response('Invalid Education URL: repeated /edu path segment.',{
+      status:404,
+      headers:{
+        'content-type':'text/plain; charset=utf-8',
+        'cache-control':'no-store',
+        'x-content-type-options':'nosniff',
+        'x-robots-tag':'noindex, nofollow',
+        'x-ekodi-route':'edu-repeated-prefix-rejected',
+      },
+    });
   }
   const contactResponse=await handleMailContactApi(request,env);
   if(contactResponse)return contactResponse;
