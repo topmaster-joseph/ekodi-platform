@@ -74,7 +74,7 @@ await cp(`${root}notifications`, `${output}notifications`, { recursive: true });
 await mkdir(`${output}office/`, {recursive:true});
 const officeHubIndex=await readFile(`${root}office-prototype/index.html`,'utf8');
 if(!officeHubIndex.includes('<head>')||!officeHubIndex.includes('href="./office.css"')||!officeHubIndex.includes('src="./office.js"'))throw Error('Office prototype asset contract changed');
-await writeFile(`${output}office/index.html`,officeHubIndex.replace('<head>','<head>\\n  <base href="/office/">'));
+await writeFile(`${output}office/index.html`,officeHubIndex.replace('<head>','<head><base href="/office/">'));
 await Promise.all([
   cp(`${root}office-prototype/office.css`,`${output}office/office.css`),
   cp(`${root}office-prototype/office.js`,`${output}office/office.js`),
