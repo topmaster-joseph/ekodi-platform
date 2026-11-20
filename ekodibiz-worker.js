@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { agencyApi, agencyStore } from './ekodibiz-ai-agency.js';
+import { institutionAiApi, institutionAiStore } from './institution-ai-api.js';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
 const MAX_GOAL_LENGTH = 4000;
@@ -332,6 +333,8 @@ export class RevenueStore extends DurableObject {
   async fetch(request) {
     const url = new URL(request.url);
     const storage = this.ctx.storage;
+    const institutionResponse = await institutionAiStore(request, storage);
+    if (institutionResponse) return institutionResponse;
     const agencyResponse = await agencyStore(request, storage);
     if (agencyResponse) return agencyResponse;
 
@@ -404,6 +407,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/ekodibiz(?=\/)/, '');
+    if (path.startsWith('/api/institution-ai/v1/')) return institutionAiApi(request, url, env);
     if (path.startsWith('/api/agency/')) return agencyApi(request, url, env, ctx);
     // Historic links resolve to stable, role-specific subpaths. Never put the
     // receipt secret or personal account identifier in a URL.
