@@ -79,6 +79,37 @@
           probeLink.href='/mail/admin#setup';probeLink.target='_blank';probeLink.rel='noopener';
           list.append(probeLink);
         }
+        if(data.healthAudit){
+          const audit=data.healthAudit;
+          const scanTime=audit.lastScanAt?new Date(audit.lastScanAt):null;
+          const scanned=scanTime&&Number.isFinite(scanTime.getTime())
+            ?scanTime.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'점검 이력 없음';
+          const headline=audit.status==='recorded'
+            ?audit.fresh?'10분 주기 자동점검 · 최근 결과':'자동점검 결과 오래됨 · 확인 필요'
+            :audit.status==='no_scan_yet'?'자동점검 최초 실행 대기':'자동점검 원장 연결 확인 필요';
+          list.append(el('p',headline+' · 마지막 진단 '+scanned+
+            ' · 결과는 저장된 주제별 상태이며 실기기 수신을 의미하지 않습니다.','communication-note'));
+          const details=el('details','','communication-fleet-details');
+          details.append(el('summary','자동점검 주제별 기록 '+(audit.topics||[]).length+'개'+
+            (audit.fresh?' · 최신':' · 미실증')));
+          const labels=new Map((data.topics||[]).map(item=>[item.id,item.label]));
+          const states={
+            attention:'발송 실패 또는 지연',configuration_required:'발행 설정 확인 필요',
+            unverified:'발행·구독 실적 미확인',push_paused:'웹푸시 비활성화',
+            queue_clear:'대기열 지연 없음 · 실기기 수신 미검증'
+          };
+          for(const item of audit.topics||[]){
+            const row=el('article','','communication-fleet-row');
+            row.dataset.state=item.state==='attention'?'not_connected':'publisher_not_ready';
+            const label=labels.get(item.topic)||item.topic;
+            row.append(el('strong',label+' · '+(states[item.state]||'상태 미확인')),
+              el('span','지난 24시간 실패 '+item.failed24h+' · 현재 처리 지연 '+item.stalled+
+                ' · 발행 지연 '+item.overdue+' · 연속 위험 '+item.consecutiveAttention+'회'),
+              el('small','최근 점검 '+(item.checkedAt||'없음')+' · 상태 변경 '+(item.changedAt||'없음')));
+            details.append(row);
+          }
+          list.append(details);
+        }
         if(data.fleet){
           const fleet=data.fleet,counts=fleet.counts||{};
           const details=el('details','','communication-fleet-details');
