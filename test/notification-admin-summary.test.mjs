@@ -64,6 +64,16 @@ test('summary aggregates per-topic data without exposing endpoint, token or priv
   assert.equal(json.topics[0].events,1);
   assert.equal(json.topics[0].delivered,1);
   assert.equal(json.webPushEnabled,false);
+  assert.equal(json.fleet.scope,'registered_sites_only');
+  assert.equal(json.fleet.dynamicCustomerWorkspacesIncluded,false);
+  assert.equal(json.fleet.liveDeliveryVerified,false);
+  assert.ok(json.fleet.counts.registered>7);
+  assert.ok(json.fleet.counts.notConnected>0);
+  assert.deepEqual(json.operatorChannel,{
+    configured:false,registeredDevices:null,ready:false,deliveredToPhoneVerified:false
+  });
+  assert.equal(json.topics[0].health,'configuration_required');
+  assert.ok(json.topics[0].diagnosis.includes('publisher_not_ready'));
   const output=JSON.stringify(json);
   for(const secret of ['private-token-hash','Private body','Private title','/ekodimission/'])assert.equal(output.includes(secret),false);
   assert.equal(result.headers.get('cache-control'),'no-store');
