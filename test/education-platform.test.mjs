@@ -251,10 +251,10 @@ test('Cold-stress safety training is registered as one owner-private 24-slide Ed
   assert.match(classroom,/원본 PPTX/);
   assert.match(classroom,/24장/);
   assert.match(classroom,/name="robots" content="noindex,follow"/);
-  assert.doesNotMatch(classroom,/docs\\.google\\.com\\/presentation\\/d\\/18sPXSmL/);
-  assert.doesNotMatch(classroom,/drive\\.google\\.com\\/(?:file|drive)/);
-  assert.match(classroom,/href="\\/teach\\/foreign-worker-cold-safety-2026\\/"/);
-  assert.match(classroom,/href="\\/learn\\/foreign-worker-cold-safety-2026\\/"/);
+  assert.doesNotMatch(classroom,/docs\.google\.com\/presentation\/d\/18sPXSmL/);
+  assert.doesNotMatch(classroom,/drive\.google\.com\/(?:file|drive)/);
+  assert.match(classroom,/href="\/teach\/foreign-worker-cold-safety-2026\/"/);
+  assert.match(classroom,/href="\/learn\/foreign-worker-cold-safety-2026\/"/);
   assert.doesNotMatch(classroom,/<iframe/);
   assert.doesNotMatch(classroom,/<script(?![^>]*src=)[^>]*>|\sonclick=|<style[\s>]/);
   assert.match(style,/@media\(max-width:480px\)/);
