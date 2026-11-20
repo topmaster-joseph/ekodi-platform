@@ -40,20 +40,28 @@ export function estimateHomepageSubscription(pricing, sel) {
   var P = pricing, s = sel || {};
   var plan = Object.prototype.hasOwnProperty.call(P.plans, s.plan) ? P.plans[s.plan] : P.plans.S1;
   var inc = plan.includes, a = P.addons;
-  var n = function (v) { v = Math.floor(Number(v) || 0); return v < 0 ? 0 : (v > 50 ? 50 : v); };
+  // Keep this serialized function self-contained after Worker keepNames bundling.
+  var quantities = {};
+  for (var key of ['pages', 'social', 'lang']) {
+    var value = Math.floor(Number(s[key]) || 0);
+    quantities[key] = Math.max(0, Math.min(50, value));
+  }
   var lines = [{ label: plan.name, amount: plan.monthly }];
-  var pages = n(s.pages); if (pages) lines.push({ label: '추가 페이지 ' + pages + '개', amount: pages * a.page });
+  var pages = quantities.pages;
+  if (pages) lines.push({ label: '추가 페이지 ' + pages + '개', amount: pages * a.page });
   if (s.booking && !inc.booking) lines.push({ label: '예약/견적 신청', amount: a.booking });
-  var social = Math.max(0, n(s.social) - inc.social); if (social) lines.push({ label: '소셜 자동게시 ' + social + '채널', amount: social * a.social });
-  var lang = Math.max(0, n(s.lang) - inc.lang); if (lang) lines.push({ label: '다국어 ' + lang + '개', amount: lang * a.lang });
+  var social = Math.max(0, quantities.social - inc.social);
+  if (social) lines.push({ label: '소셜 자동게시 ' + social + '채널', amount: social * a.social });
+  var lang = Math.max(0, quantities.lang - inc.lang);
+  if (lang) lines.push({ label: '다국어 ' + lang + '개', amount: lang * a.lang });
   if (s.payment && !inc.payment) lines.push({ label: '온라인 결제', amount: a.payment });
-  var subtotal = 0; for (var i = 0; i < lines.length; i++) subtotal += lines[i].amount;
+  var subtotal = 0;
+  for (var i = 0; i < lines.length; i++) subtotal += lines[i].amount;
   var discountRate = Math.max(s.member ? P.discounts.member : 0, s.nonprofit ? P.discounts.nonprofit : 0);
   var contract = Object.prototype.hasOwnProperty.call(P.contract, s.contract) ? s.contract : 'monthly';
-  var r100 = function (v) { return Math.round(v / 100) * 100; };
-  var monthly = r100(subtotal * (1 - discountRate) * P.contract[contract]);
+  var monthly = Math.round(subtotal * (1 - discountRate) * P.contract[contract] / 100) * 100;
   var setup = plan.setup + (s.logo ? P.oneTime.logo : 0) + (s.photo ? P.oneTime.photo : 0);
-  var yearly = contract === 'annual' ? r100(subtotal * (1 - discountRate) * 10) : monthly * 12;
+  var yearly = contract === 'annual' ? Math.round(subtotal * (1 - discountRate) * 10 / 100) * 100 : monthly * 12;
   if (contract === 'annual') monthly = Math.round(yearly / 12);
   var firstPayment = setup + (contract === 'annual' ? yearly : monthly);
   return { plan: plan.id, lines: lines, subtotal: subtotal, discountRate: discountRate, contract: contract, monthly: monthly, setup: setup, yearly: yearly, firstPayment: firstPayment };
@@ -362,4 +370,5 @@ export function ekodiBizHomepageServiceResponse({ head = false } = {}) {
     },
   });
 }
+
 
