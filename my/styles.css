@@ -38,3 +38,9 @@
 .activity-points-consent small{display:block;line-height:1.6;color:var(--muted)}
 .activity-points-consent[hidden]{display:none!important}
 @media(max-width:600px){.activity-points-consent{margin:10px 0 15px;padding:12px}}
+
+/* Personal-hub purpose, informational only; no private account contents or workspace state. */
+.welcome-copy .ekodi-mission-statement{margin:20px 0 0;max-width:670px;padding:15px 19px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+.welcome-copy .ekodi-mission-label{display:block;color:var(--green2);font-size:11px;font-weight:820;letter-spacing:.08em;margin-bottom:7px}
+.welcome-copy .ekodi-mission-statement p{margin:0;color:var(--ink);font-size:clamp(13px,1.4vw,15px);line-height:1.85;word-break:keep-all}
+@media(max-width:390px){.welcome-copy .ekodi-mission-statement{padding:12px 14px;margin-top:14px}}
