@@ -14,7 +14,8 @@ test('the canonical /edu text proxy must not mutate course hub JavaScript naviga
  assert.equal(prefixRootLiterals(auth,'/edu'),auth,'central EKODI auth handoff and Supabase identity URL must not change');
  assert.equal(prefixRootLiterals("route('/courses/catalog.json')",'/edu'),"route('/edu/courses/catalog.json')",'guard demonstrates previous broken transformation');
  assert.match(hub,/split\(SLASH\)/);
- assert.match(hub,/route\(SLASH\+'courses\/catalog\.json'\)/);
+ assert.match(hub,/const catalogEndpoint=section==='teach'\\?'teach\\/catalog\\.json':'courses\\/catalog\\.json'/);
+ assert.match(hub,/fetch\\(route\\(SLASH\\+catalogEndpoint\\)/);
  assert.match(auth,/sb\+SLASH\+'auth\/v1\/verify'/);
  assert.match(auth,/base\+SLASH\+'teach\/access'/);
 });
