@@ -43,6 +43,7 @@ import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gatew
 import { handleOrchestratorReleaseReceipt, handleOrchestratorCompletionReconciliation } from './ekodi-orchestrator-task-adapter.js';
 import { handleDevotionalControl } from './devotional-control.js';
 import { handleNotificationApi, runNotificationSchedule } from './notification-control.js';
+import {runNotificationHealthAudit} from './notification-health-audit.js';
 import { runMissionSaturdayNotice } from './notification-saturday-publisher.js';
 import { handleNotificationAdminSummary } from './notification-admin-summary.js';
 import { handleCommonScriptureControl } from './common-scripture-control.js';
@@ -457,6 +458,18 @@ export default {
     // EKODI-MAIL-PUSH-ALL-001: 연결된 모든 Gmail 새 메일 → 최고관리자 휴대폰 알림(본문 제외).
     const mailPush = runMailPushWatch(env).then(r => { if (r?.notified || r?.errors) console.log('mail push watch', JSON.stringify(r)); }).catch(error => console.error('mail push watch failed', error?.message));
     if (ctx?.waitUntil) ctx.waitUntil(mailPush); else await mailPush;
+
+    // EKODI-NOTIFICATION-HEALTH-AUDIT-001: privacy-safe state snapshots on
+    // the existing 10-minute cron. Run before customer reporting may return
+    // early, so notification health is not silently skipped on reporting days.
+    const notificationHealthAudit=runNotificationHealthAudit(env,{
+      now:new Date(Number(controller?.scheduledTime||Date.now()))
+    }).catch(error=>{
+      console.error('Notification health audit unavailable',error?.name||'audit_failed');
+      return {ok:false,code:'AUDIT_UNAVAILABLE'};
+    });
+    if(ctx?.waitUntil)ctx.waitUntil(notificationHealthAudit);
+    else await notificationHealthAudit;
 
     const customerSchedule = typeof customerEntryWorker.scheduled === 'function'
       ? await customerEntryWorker.scheduled(controller, env, ctx)

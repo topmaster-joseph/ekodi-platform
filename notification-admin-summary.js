@@ -93,8 +93,31 @@ export async function handleNotificationAdminSummary(request,env,{transport=fetc
   }
   // Only the platform super-admin may enumerate all registered sites and the
   // private operator device fleet. Site admins retain strictly topic-scoped data.
-  let fleet,operatorChannel;
+  let fleet,operatorChannel,healthAudit;
   if(actor.kind==='platform'){
+    // Only the platform owner sees all topics' persisted scheduled scan results.
+    // Absence of a deployed migration or fresh run is visibly NOT healthy.
+    healthAudit={status:'unavailable',lastScanAt:null,fresh:false,topics:[]};
+    try {
+      const rows=(await env.DB.prepare(
+        'SELECT topic,state,subscriber_devices,events_24h,failed_24h,stalled,events_overdue,'+
+        'publisher_ready,push_enabled,checked_at,changed_at,consecutive_attention '+
+        'FROM notification_health_snapshots ORDER BY topic'
+      ).bind().all()).results||[];
+      const known=rows.filter(row=>TOPICS.includes(String(row.topic)));
+      const latest=known.map(row=>row.checked_at).filter(Boolean).sort().at(-1)||null;
+      const age=latest?new Date(now).getTime()-Date.parse(latest):Infinity;
+      healthAudit={status:known.length?'recorded':'no_scan_yet',lastScanAt:latest,
+        fresh:Number.isFinite(age)&&age>=0&&age<=30*60000,topics:known.map(row=>({
+          topic:String(row.topic),state:String(row.state),devices:Number(row.subscriber_devices||0),
+          events24h:Number(row.events_24h||0),failed24h:Number(row.failed_24h||0),
+          stalled:Number(row.stalled||0),overdue:Number(row.events_overdue||0),
+          publisherReady:row.publisher_ready===1,pushEnabled:row.push_enabled===1,
+          checkedAt:row.checked_at,changedAt:row.changed_at,
+          consecutiveAttention:Number(row.consecutive_attention||0)
+        })),handsetReceiptVerified:false};
+    }catch{/* migration/cron unavailable: fail visibly, not as green. */}
+
     fleet=buildNotificationFleetCoverage({readiness:key=>topicPublisherReadiness(env,key)});
     const configured=operatorPushReady(env);
     let registeredDevices=null,gatewayAcceptedDevices=null,gatewayFailedDevices=null,lastGatewayAttemptAt=null;
@@ -117,7 +140,7 @@ export async function handleNotificationAdminSummary(request,env,{transport=fetc
       deliveredToPhoneVerified:false};
   }
   return json({ok:true,scope:actor.kind==='platform'?topic:'authorized_sites',
-    ...(actor.kind==='platform'?{fleet,operatorChannel}:{}),
+    ...(actor.kind==='platform'?{fleet,operatorChannel,healthAudit}:{}),
     window,cutoff,subscriberCountScope:'current_active_devices',
     deliveryCountScope:'events_created_in_window',stalledThresholdMinutes:15,
     topics,webPushEnabled:
