@@ -269,7 +269,7 @@ test('owner Invest UI exposes the read-only connection checklist with no secrets
   assert.match(html,/이 점검은 증권사에 접속하지 않습니다/);
   assert.match(html,/API 비밀키·계좌번호·OTP는 입력하지 마세요/);
   assert.match(js,/async function loadBrokerPreflight\(\)/);
-  assert.match(js,/GET','\/broker\/preflight\?broker=/);
+  assert.match(js,/apiCall\('GET','\/broker\/preflight\?broker=/);
   assert.match(js,/providerRequestPerformed!==false/);
   assert.match(js,/r\.connected!==false/);
   assert.match(js,/r\.liveOrdersEnabled!==false/);
