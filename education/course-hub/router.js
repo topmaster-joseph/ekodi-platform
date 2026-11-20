@@ -94,6 +94,29 @@ async function catalog(env,url){
   const data=await res.json();
   return data&&Array.isArray(data.courses)&&Array.isArray(data.fields)&&Array.isArray(data.audiences)?data:null;
 }
+// Public course metadata is an explicit allowlist. Private owner Drive/Slides
+// identifiers and teacher-only tools never leave the verified teacher endpoint.
+function publicCourse(course){
+  const out={};
+  for(const field of ['id','title','year','publisher','category','audience','slides',
+    'presentationFormat','multilingualContentNote','summary','fields',
+    'audiences','syllabus','studyUrl','learnerTool','delivery','status',
+    'publicSlideAccess']){
+    if(Object.hasOwn(course,field))out[field]=course[field];
+  }
+  // Only known service-relative public resources may appear in the student API.
+  if(Array.isArray(course.resources)){
+    out.resources=course.resources.filter(resource=>resource&&typeof resource.label==='string'&&
+      typeof resource.url==='string'&&/^\/(?!\/)(?:study\/|pizza-experience\/)/.test(resource.url)&&
+      !/^\/edu(?:\/edu)+(?=\/|$)/.test(resource.url))
+      .map(resource=>({label:resource.label,url:resource.url}));
+  }
+  return out;
+}
+function publicCatalog(data){
+  return {schemaVersion:data.schemaVersion,fields:data.fields,audiences:data.audiences,
+    courses:data.courses.filter(course=>course.status==='available').map(publicCourse)};
+}
 async function validCourse(env,url,id){
   if(!COURSE_RE.test(String(id||'')))return false;
   const data=await catalog(env,url);
@@ -132,6 +155,24 @@ export function isEducationHubPath(pathname){
 }
 export async function courseHubRouter(req,env,{url=new URL(req.url)}={}){
   const p=url.pathname,method=req.method.toUpperCase();
+  if(p==='/courses/catalog.json'&&(method==='GET'||method==='HEAD')){
+    try{
+      const data=await catalog(env,url);
+      if(!data)return answer({ok:false,code:'catalog_unavailable'},503);
+      const result=answer(publicCatalog(data));
+      return method==='HEAD'?new Response(null,{status:result.status,headers:result.headers}):result;
+    }catch{return answer({ok:false,code:'catalog_unavailable'},503);}
+  }
+  if(p==='/teach/catalog.json'&&(method==='GET'||method==='HEAD')){
+    const session=await teacher(req,env);
+    if(!session)return answer({ok:false,code:'teacher_access_denied'},403);
+    try{
+      const data=await catalog(env,url);
+      if(!data)return answer({ok:false,code:'catalog_unavailable'},503);
+      const result=answer(data);
+      return method==='HEAD'?new Response(null,{status:result.status,headers:result.headers}):result;
+    }catch{return answer({ok:false,code:'catalog_unavailable'},503);}
+  }
   if(p==='/teach/status'&&method==='GET'){
     const session=await teacher(req,env);
     return answer({authenticated:!!session,role:session?.role||null,registryEnabled:!!env?.EDU_DOCS?.get});
@@ -211,4 +252,4 @@ export async function courseHubRouter(req,env,{url=new URL(req.url)}={}){
   return staticPage(req,env,'index.html');
 }
 // Exported for deterministic security tests; no raw credentials returned.
-export const EDUCATION_HUB_ACCESS={authEndpoint:'/teach/access',adminRegistry:'/teach/instructors',publicState:'/courses/live-state',teacherState:'/teach/live-state',cookie:COOKIE};
+export const EDUCATION_HUB_ACCESS={authEndpoint:'/teach/access',adminRegistry:'/teach/instructors',publicCatalog:'/courses/catalog.json',teacherCatalog:'/teach/catalog.json',publicState:'/courses/live-state',teacherState:'/teach/live-state',cookie:COOKIE};

@@ -46,3 +46,9 @@ body[data-area="study-cold-safety"] a{color:inherit}
 #eduColdSafety .course-foot a{text-decoration:none}
 @media(max-width:800px){#eduColdSafety .course-hero{grid-template-columns:minmax(0,1fr);gap:20px}#eduColdSafety .hero-index ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px}#eduColdSafety .course-details{grid-template-columns:1fr}#eduColdSafety .section-title{display:block}#eduColdSafety .section-title p{margin-top:8px}}
 @media(max-width:480px){#eduColdSafety .course-head{min-height:64px;align-items:flex-start;padding:13px 0}#eduColdSafety nav{justify-content:flex-end;font-size:11px;gap:8px}#eduColdSafety .hero-index ol{display:block}#eduColdSafety .actions .btn{width:100%}#eduColdSafety .viewer-footer{align-items:stretch;flex-direction:column}#eduColdSafety .btn.compact{width:100%}#eduColdSafety .course-foot{justify-content:flex-start;min-height:64px}#eduColdSafety .viewer-frame{border-radius:9px}}
+
+/* Public viewer only links into the learner presentation; restricted deck is not embedded. */
+#eduColdSafety .viewer-placeholder{display:grid;place-items:center;text-align:center;padding:24px;color:#fff}
+#eduColdSafety .viewer-placeholder h3{font-size:clamp(18px,2.2vw,28px);margin:0 0 12px;line-height:1.4}
+#eduColdSafety .viewer-placeholder p{color:#d6e6f4;font-size:14px;line-height:1.8;margin:0 0 18px}
+#eduColdSafety .viewer-placeholder .btn{background:#fff;border-color:#fff;color:#153c62}

@@ -155,3 +155,74 @@ test('no user data, credentials or administrative authority is exposed by studen
  assert.match(login,/최고관리자/);assert.doesNotMatch(login,/name="password"/);
  for(const width of ['760px','460px'])assert.ok(style.includes(width));
 });
+
+test('anonymous course catalog exposes learning content but not instructor or owner document metadata',async()=>{
+ const env=await environment();
+ const response=await call('/courses/catalog.json',env);
+ assert.equal(response.status,200);
+ assert.match(response.headers.get('cache-control'),/no-store/);
+ const text=await response.text();
+ const data=JSON.parse(text);
+ assert.equal(data.courses.length,6);
+ assert.equal(new Set(data.courses.map(c=>c.id)).size,6);
+ for(const key of ['googleSlidesId','presentationUrl','editUrl','sourceUrl','ownerFolderUrl',
+   'sourceFilename','sourceAccess','teacherTool','reviewFlags','registeredAt','taskId']){
+  assert.ok(!text.includes('"'+key+'"'),'owner-only field '+key+' must not be public');
+ }
+ assert.ok(!text.includes('18sPXSmL_V7E5NPpcjMhurR_tg6zAnep6ds-F5RgDie4'));
+ assert.ok(!text.includes('1J2eNNFjKu-C50WN_Ta950jxtzTswVyCo'));
+ const safety=data.courses.find(c=>c.id==='foreign-worker-cold-safety-2026');
+ assert.equal(safety.title,'외국인 근로자 한랭질환 예방 안전보건교육');
+ assert.equal(safety.studyUrl,'/study/cold-safety-2026/');
+ assert.ok(safety.syllabus.length>0);
+ const fact=data.courses.find(c=>c.id==='mnu-factchat-2026');
+ assert.ok(fact.resources.some(r=>r.url.startsWith('/study/live/')));
+ assert.ok(!fact.resources.some(r=>r.url.startsWith('https://')));
+ const head=await call('/courses/catalog.json',env,{method:'HEAD'});
+ assert.equal(head.status,200);assert.equal(await head.text(),'');
+});
+test('full source/teacher materials require verified signed instructor or super-admin session',async()=>{
+ registry.clear();
+ const env=await environment();
+ for(const path of ['/teach/catalog.json']){
+  for(const opts of [{},{headers:{authorization:'Bearer admin-test-token-very-long'}},{method:'HEAD'}]){
+   const res=await call(path,env,opts);assert.equal(res.status,403,'no privileged cookie');
+   const data=await res.json();assert.equal(data.code,'teacher_access_denied');
+   assert.equal(JSON.stringify(data).includes('googleSlidesId'),false);
+  }
+ }
+ const cookie=await admin(env);
+ const r=await call('/teach/catalog.json',env,{headers:{cookie}});
+ assert.equal(r.status,200);assert.match(r.headers.get('cache-control'),/no-store/);
+ const data=await r.json();
+ const safety=data.courses.find(c=>c.id==='foreign-worker-cold-safety-2026');
+ assert.ok(safety.editUrl.startsWith('https://docs.google.com/presentation/d/'));
+ assert.ok(safety.sourceUrl.startsWith('https://drive.google.com/file/d/'));
+ assert.ok(safety.ownerFolderUrl.startsWith('https://drive.google.com/drive/folders/'));
+ assert.equal(safety.reviewFlags.length,4);
+ const fact=data.courses.find(c=>c.id==='mnu-factchat-2026');
+ assert.ok(fact.teacherTool.includes('/study/live/'));
+ const head=await call('/teach/catalog.json',env,{method:'HEAD',headers:{cookie}});
+ assert.equal(head.status,200);assert.equal(await head.text(),'');
+});
+test('new private metadata and nonlocal resource URLs are excluded by an allowlisted public serializer',async()=>{
+ const env=await environment(), original=env.ASSETS.fetch;
+ env.ASSETS.fetch=async request=>{
+  const r=await original(request);
+  if(new URL(request.url).pathname!=='/courses/catalog.json')return r;
+  const obj=await r.json();
+  obj.courses[0].credential='forbidden-canary';
+  obj.courses[0].adminNote='not-public';
+  obj.courses[0].resources=[
+   {label:'Private Slides',url:'https://drive.google.com/file/d/owner-only/view'},
+   {label:'External Link',url:'//other.example/bad'},
+   {label:'Safe Learner',url:'/study/cold-safety-2026/'}
+  ];
+  return Response.json(obj);
+ };
+ const publicResponse=await call('/courses/catalog.json',env);
+ const data=await publicResponse.json(),course=data.courses[0];
+ assert.equal('credential' in course,false);
+ assert.equal('adminNote' in course,false);
+ assert.deepEqual(course.resources,[{label:'Safe Learner',url:'/study/cold-safety-2026/'}]);
+});
