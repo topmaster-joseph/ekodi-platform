@@ -223,7 +223,9 @@ async function showAdminRegistry(){
 }
 async function run(){
  try{
-  const r=await fetch(route(SLASH+'courses/catalog.json'),{cache:'no-store'});
+  // Teacher materials are never pulled through the anonymous catalog.
+  const catalogEndpoint=section==='teach'?'teach/catalog.json':'courses/catalog.json';
+  const r=await fetch(route(SLASH+catalogEndpoint),{cache:'no-store',credentials:'same-origin'});
   if(!r.ok)throw Error('course catalog '+r.status);
   const data=await r.json();
   if(!Array.isArray(data.courses)||!Array.isArray(data.fields)||!Array.isArray(data.audiences))throw Error('invalid course catalog');
