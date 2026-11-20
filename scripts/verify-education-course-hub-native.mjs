@@ -47,6 +47,22 @@ try{
    if(catalogResponse.status()!==200)fail('canonical catalog direct request failed: '+catalogResponse.status());
    const catalog=await catalogResponse.json();
    if(!Array.isArray(catalog.courses)||catalog.courses.length!==6)fail('direct-link proof requires six registered courses');
+   // The public catalog may reveal the course outline, never owner-only decks
+   // or the instructor's management tools.
+   const publicData=JSON.stringify(catalog);
+   for(const privateField of ['googleSlidesId','presentationUrl','editUrl','sourceUrl','ownerFolderUrl','teacherTool','sourceFilename','reviewFlags']){
+     if(publicData.includes('"'+privateField+'"'))fail('private teacher data in public catalog: '+privateField);
+   }
+   const restricted=await ctx.request.get(base+'/teach/catalog.json',{maxRedirects:0});
+   if(restricted.status()!==403)fail('private teacher catalog was available anonymously: '+restricted.status());
+   const legacy=await ctx.request.get(base+'/study/cold-safety-2026/',{maxRedirects:0});
+   if(legacy.status()!==200)fail('cold safety landing status '+legacy.status());
+   const legacyText=await legacy.text();
+   if(/docs\\.google\\.com\\/presentation\\/d\\/|drive\\.google\\.com\\/file\\/d\\//.test(legacyText))
+     fail('public cold safety page still leaks owner-only deck URL');
+   if(!legacyText.includes('/teach/foreign-worker-cold-safety-2026/'))
+     fail('cold safety instructor link is missing');
+   evidence.checks.push({ownerDataPrivate:true,teacherCatalogDenied:true,legacyDeckPrivate:true});
    for(const course of catalog.courses){
     const route=base+'/courses/'+encodeURIComponent(course.id)+'/';
     const overviewResponse=await page.goto(route,{waitUntil:'domcontentloaded',timeout:30000});
