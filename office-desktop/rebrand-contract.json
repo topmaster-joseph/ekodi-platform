@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "taskId": "ekodi-office-desktop-identity-20261121",
+  "status": "preflight-only-not-a-shipping-app",
+  "upstream": {
+    "repository": "pblsketch/ieumoffice",
+    "sha": "904f210367e8d4b1851e81ca1ae342375420a584",
+    "license": "Apache-2.0",
+    "notice": "NOTICE",
+    "sourceLicense": "LICENSE",
+    "unicodeLicense": "LICENSE-UNICODE.txt",
+    "shellPackage": "apps/shell/package.json",
+    "builderConfig": "apps/shell/electron-builder.cjs",
+    "originalIdentity": {
+      "productName": "IeumOffice",
+      "appId": "io.github.pblsketch.ieumoffice",
+      "packagedName": "ieumoffice",
+      "updateOwner": "pblsketch",
+      "updateRepo": "ieumoffice"
+    }
+  },
+  "ekodi": {
+    "productName": "EKODI Office",
+    "appId": "kr.ekodi.office",
+    "packagedName": "ekodi-office",
+    "exeName": "EKODIOffice",
+    "version": "0.0.0-dev",
+    "vendor": "EKODI",
+    "updateFeedEnabled": false,
+    "fileAssociationChangesEnabled": false,
+    "cloudSyncEnabled": false,
+    "providerCredentialMigrationEnabled": false,
+    "userDataMigrationEnabled": false,
+    "shippingEnabled": false
+  },
+  "obligations": [
+    "preserve-root-LICENSE-and-NOTICE",
+    "generate-and-bundle-third-party-notices",
+    "preserve-unicode-license",
+    "replace-upstream-logos-artwork-and-icon",
+    "isolate-Windows-ProgIDs-userData-and-update-cache",
+    "disable-upstream-auto-update-feed-before-fork",
+    "exclude-enterprise-or-non-OSS-components-until-audited",
+    "revalidate-format-compatibility-on-real-Windows-fixtures",
+    "verify-owned-code-signing-before-public-release",
+    "require-explicit-user-approval-for-document-sync-and-external-AI"
+  ]
+}
