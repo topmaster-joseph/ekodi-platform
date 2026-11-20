@@ -97,14 +97,22 @@ export async function handleNotificationAdminSummary(request,env,{transport=fetc
   if(actor.kind==='platform'){
     fleet=buildNotificationFleetCoverage({readiness:key=>topicPublisherReadiness(env,key)});
     const configured=operatorPushReady(env);
-    let registeredDevices=null;
+    let registeredDevices=null,gatewayAcceptedDevices=null,gatewayFailedDevices=null,lastGatewayAttemptAt=null;
     try{
+      // Aggregate gateway outcomes only. No owner, device endpoint or token
+      // leaves the private operator database.
       const record=await env.DB.prepare(
-        'SELECT COUNT(*) AS n FROM operator_push_devices WHERE disabled_at IS NULL'
+        'SELECT COUNT(*) AS n, MAX(last_sent_at) AS lastAttemptAt, '+
+        'SUM(CASE WHEN last_status BETWEEN 200 AND 299 THEN 1 ELSE 0 END) AS accepted, '+
+        'SUM(CASE WHEN last_status IS NOT NULL AND (last_status < 200 OR last_status >= 300) THEN 1 ELSE 0 END) AS failed '+
+        'FROM operator_push_devices WHERE disabled_at IS NULL'
       ).first();
       registeredDevices=Number(record?.n||0);
+      gatewayAcceptedDevices=Number(record?.accepted||0);
+      gatewayFailedDevices=Number(record?.failed||0);
+      lastGatewayAttemptAt=record?.lastAttemptAt||null;
     }catch{/* Operator schema not provisioned; do not mutate during a GET. */}
-    operatorChannel={configured,registeredDevices,
+    operatorChannel={configured,registeredDevices,gatewayAcceptedDevices,gatewayFailedDevices,lastGatewayAttemptAt,
       ready:configured&&registeredDevices!==null&&registeredDevices>0,
       deliveredToPhoneVerified:false};
   }
