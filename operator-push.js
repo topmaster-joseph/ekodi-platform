@@ -42,12 +42,29 @@ export async function operatorDeviceCount(db, email) {
   return Number(row?.n || 0);
 }
 
+/** Per-operator aggregated device gateway results. Provider acceptance is NOT phone receipt. */
+export async function operatorPushDiagnostics(db, email) {
+  await ensureOperatorPushSchema(db);
+  const row = await db.prepare(`SELECT COUNT(*) AS devices, MAX(last_sent_at) AS lastAttemptAt,
+      SUM(CASE WHEN last_status BETWEEN 200 AND 299 THEN 1 ELSE 0 END) AS acceptedDeviceCount,
+      SUM(CASE WHEN last_status IS NOT NULL AND (last_status < 200 OR last_status >= 300) THEN 1 ELSE 0 END) AS failedDeviceCount
+    FROM operator_push_devices WHERE owner_email=? AND disabled_at IS NULL`).bind(email).first();
+  return {devices:Number(row?.devices||0),lastAttemptAt:row?.lastAttemptAt||null,
+    acceptedDeviceCount:Number(row?.acceptedDeviceCount||0),failedDeviceCount:Number(row?.failedDeviceCount||0),
+    deviceReceiptVerified:false};
+}
+
 /** 모든 운영자 기기로 발송. 만료(404/410) 기기는 비활성화. */
-export async function sendOperatorPush(env, { title, body, targetPath }, deps = {}) {
+export async function sendOperatorPush(env, { title, body, targetPath, operatorEmail = null }, deps = {}) {
   if (!operatorPushReady(env)) return { ok: false, code: 'OPERATOR_PUSH_NOT_CONFIGURED', sent: 0 };
   if (!env?.DB) return { ok: false, code: 'DB_UNAVAILABLE', sent: 0 };
+  if (operatorEmail !== null && !operatorPushEmails(env).includes(String(operatorEmail).toLowerCase()))
+    return {ok:false,code:'OPERATOR_PUSH_OWNER_NOT_ALLOWED',sent:0};
   await ensureOperatorPushSchema(env.DB);
-  const rows = (await env.DB.prepare('SELECT * FROM operator_push_devices WHERE disabled_at IS NULL').all()).results || [];
+  const rows = operatorEmail === null
+    ? (await env.DB.prepare('SELECT * FROM operator_push_devices WHERE disabled_at IS NULL').all()).results || []
+    : (await env.DB.prepare('SELECT * FROM operator_push_devices WHERE owner_email=? AND disabled_at IS NULL')
+        .bind(String(operatorEmail).toLowerCase()).all()).results || [];
   if (!rows.length) return { ok: false, code: 'OPERATOR_PUSH_NO_DEVICE', sent: 0 };
   const send = deps.sendWebPush || sendWebPush;
   let sent = 0;
