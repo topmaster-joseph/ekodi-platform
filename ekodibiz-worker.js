@@ -404,7 +404,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/ekodibiz(?=\/)/, '');
-    if (path.startsWith('/api/agency/')) return agencyApi(request, url, env);
+    if (path.startsWith('/api/agency/')) return agencyApi(request, url, env, ctx);
     // Historic links resolve to stable, role-specific subpaths. Never put the
     // receipt secret or personal account identifier in a URL.
     const agencyLegacy = {

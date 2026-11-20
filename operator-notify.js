@@ -8,7 +8,7 @@ import { googleAccessForAccount } from './mail-control.js';
 import { hasGoogleSendScope, sendGoogleMailMessage } from './mail-google-adapter.js';
 import { sendOperatorPush } from './operator-push.js';
 
-export const OPERATOR_NOTIFY_SOURCES = Object.freeze(['mall']);
+export const OPERATOR_NOTIFY_SOURCES = Object.freeze(['mall','agency']);
 const DEFAULT_SENDER = 'ekodibiz@gmail.com';
 const DEFAULT_RECIPIENTS = 'topmaster.joseph@gmail.com';
 const PII_PATTERN = /(01[016789][-\s.]?\d{3,4}[-\s.]?\d{4})|([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})/;
