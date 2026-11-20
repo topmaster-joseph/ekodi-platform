@@ -69,6 +69,16 @@ await cp(`${root}verify/adult`, `${output}verify/adult`, { recursive: true });
 await cp(`${root}age-verification-client.js`, `${output}verify/adult/client.js`);
 // Device-scoped opt-in notifications; permission UI and Service Worker share /notifications/ scope.
 await cp(`${root}notifications`, `${output}notifications`, { recursive: true });
+// EKODI Office Hub: single source of truth in office-prototype/; ship only static launcher.
+// A fixed same-origin base keeps CSS/JS loading on both /office and /office/ without redirects.
+await mkdir(`${output}office/`, {recursive:true});
+const officeHubIndex=await readFile(`${root}office-prototype/index.html`,'utf8');
+if(!officeHubIndex.includes('<head>')||!officeHubIndex.includes('href="./office.css"')||!officeHubIndex.includes('src="./office.js"'))throw Error('Office prototype asset contract changed');
+await writeFile(`${output}office/index.html`,officeHubIndex.replace('<head>','<head><base href="/office/">'));
+await Promise.all([
+  cp(`${root}office-prototype/office.css`,`${output}office/office.css`),
+  cp(`${root}office-prototype/office.js`,`${output}office/office.js`),
+]);
 // EKODI Proposal Studio: local-only static draft editor, no server persistence.
 await cp(`${root}proposal`, `${output}proposal`, { recursive: true });
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
