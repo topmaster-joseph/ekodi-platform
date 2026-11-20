@@ -183,12 +183,13 @@ function apiEnv() {
 }
 async function call(env, path, step) {
   const original = globalThis.fetch;
-  globalThis.fetch = async () => new Response(JSON.stringify({ id: 'owner-uuid', email: 'owner@example.com', email_confirmed_at: '2026-10-01T00:00:00Z' }), { status: 200 });
+  const requests = [];
+  globalThis.fetch = async (input) => { requests.push(String(input)); return new Response(JSON.stringify({ id: 'owner-uuid', email: 'owner@example.com', email_confirmed_at: '2026-10-01T00:00:00Z' }), { status: 200 }); };
   try {
     const headers = { authorization: 'Bearer ' + 't'.repeat(40), origin: 'https://ekodi.kr' };
     if (step) headers['x-ekodi-invest-step-up'] = step;
     const r = await handleInvestAutopilotApi(new Request('https://ekodi.kr' + path, { headers }), env);
-    return { status: r.status, body: await r.json() };
+    return { status: r.status, body: await r.json(), requests };
   } finally { globalThis.fetch = original; }
 }
 
@@ -219,4 +220,59 @@ test('KIS refusal carries a sanitized provider reason without account digits', a
   assert.equal(kisProviderReason({}), null);
   assert.equal(kisProviderReason({ msg_cd: '<script>', msg1: '' }), null);
   assert.equal(kisProviderReason({ msg1: 'x'.repeat(500) }).message.length, 120);
+});
+
+
+test('owner-only KIS preflight shows actionable redacted readiness without sending a provider request', async () => {
+  const disabled=await call(apiEnv(),'/v1/invest/autopilot/broker/preflight?broker=kis',STEP);
+  assert.equal(disabled.status,200);
+  assert.equal(disabled.body.schema,'ekodi.invest.owner-broker-preflight.v1');
+  assert.equal(disabled.body.technicalReady,false);
+  assert.equal(disabled.body.configurationBlocker,'KIS_READONLY_SWITCH_OFF');
+  assert.equal(disabled.body.environment,null);
+  assert.equal(disabled.body.connected,false);
+  assert.equal(disabled.body.readOnlyConnectionVerified,false);
+  assert.equal(disabled.body.sourceAuthenticated,false);
+  assert.equal(disabled.body.providerRequestPerformed,false);
+  assert.equal(disabled.body.executionPerformed,false);
+  assert.equal(disabled.body.liveOrdersEnabled,false);
+  assert.deepEqual(disabled.body.checks.map(c=>c.id),['adapter','operatorSwitch','vault','accountFormat','aal2']);
+  assert.equal(disabled.body.checks.find(c=>c.id==='aal2').passed,false);
+  assert.ok(disabled.requests.every(url=>!url.includes('koreainvestment.com')));
+
+  const readyConfig=await call({...apiEnv(),...ENV},'/v1/invest/autopilot/broker/preflight?broker=kis',STEP);
+  assert.equal(readyConfig.status,200);
+  assert.equal(readyConfig.body.environment,'paper');
+  assert.equal(readyConfig.body.technicalReady,false,'vault and operator setting alone cannot bypass AAL2');
+  assert.ok(readyConfig.body.checks.filter(c=>c.id!=='aal2').every(c=>c.passed===true));
+  assert.equal(readyConfig.body.accountOwnershipVerified,false);
+  assert.equal(readyConfig.body.officialReadScopeVerified,false);
+  assert.equal(readyConfig.body.credentialValuesIncluded,false);
+  assert.equal(readyConfig.body.accountNumberIncluded,false);
+  assert.doesNotMatch(JSON.stringify(readyConfig.body),/PSfakeAppKey|fake-secret|50000000|50000000-01/);
+  assert.ok(readyConfig.requests.every(url=>!url.includes('koreainvestment.com')));
+
+  const missingStep=await call(apiEnv(),'/v1/invest/autopilot/broker/preflight?broker=kis');
+  assert.equal(missingStep.status,403);
+  assert.equal(missingStep.body.error,'STEP_UP_REQUIRED');
+  assert.equal((await call(apiEnv(),'/v1/invest/autopilot/broker/preflight?broker=unknown',STEP)).status,400);
+  const other=await call({...apiEnv(),...ENV},'/v1/invest/autopilot/broker/preflight?broker=toss',STEP);
+  assert.equal(other.body.configurationBlocker,'BROKER_READONLY_ADAPTER_NOT_RELEASED');
+  assert.equal(other.body.technicalReady,false);
+});
+
+test('owner Invest UI exposes the read-only connection checklist with no secrets entry or order control',async()=>{
+  const html=await (await investMyRoute(new Request('https://ekodi.kr/invest/my'),{})).text();
+  const js=await (await investMyRoute(new Request('https://ekodi.kr/invest/my/app.js'),{})).text();
+  for(const id of ['brokerPreflightPanel','brokerPreflightRefresh','brokerPreflightStatus','brokerPreflightChecks'])
+    assert.ok(html.includes('id="'+id+'"'),id);
+  assert.match(html,/이 점검은 증권사에 접속하지 않습니다/);
+  assert.match(html,/API 비밀키·계좌번호·OTP는 입력하지 마세요/);
+  assert.match(js,/async function loadBrokerPreflight\(\)/);
+  assert.match(js,/GET','\/broker\/preflight\?broker=/);
+  assert.match(js,/providerRequestPerformed!==false/);
+  assert.match(js,/r\.connected!==false/);
+  assert.match(js,/r\.liveOrdersEnabled!==false/);
+  assert.match(html,/<section id="owner" hidden>/);
+  assert.doesNotMatch(js,/\/broker\/orders|innerHTML|localStorage\.setItem/);
 });
