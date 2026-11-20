@@ -406,6 +406,11 @@ jobs:
         run: node scripts/verify-education-live-studio-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-live-native; exit 1; }
       - name: Verify unified Education catalog, learner and teacher boundaries in real Chromium
         run: node scripts/verify-education-course-hub-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-course-hub-native; exit 1; }
+      - name: Verify all direct Education URLs with EKODI independent native browser v2
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/education-direct-native
+          node scripts/ekodi-independent-browser.mjs config/education-direct-native-browser-task.json | tee artifacts/education-direct-native/receipt.json
       - name: Verify instructor QR room and learner-approved screen preview in real Education production
         run: node scripts/verify-education-screen-share-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-screen-share-native; exit 1; }
       - uses: actions/upload-artifact@v4
@@ -420,6 +425,7 @@ jobs:
             artifacts/education-farm-marketing-native/
             artifacts/education-screen-share-native/
             artifacts/education-course-hub-native/
+            artifacts/education-direct-native/
           retention-days: 7
       - name: Publish Education production status
         if: always()
