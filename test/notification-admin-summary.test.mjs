@@ -70,7 +70,8 @@ test('summary aggregates per-topic data without exposing endpoint, token or priv
   assert.ok(json.fleet.counts.registered>7);
   assert.ok(json.fleet.counts.notConnected>0);
   assert.deepEqual(json.operatorChannel,{
-    configured:false,registeredDevices:null,ready:false,deliveredToPhoneVerified:false
+    configured:false,registeredDevices:null,gatewayAcceptedDevices:null,gatewayFailedDevices:null,
+    lastGatewayAttemptAt:null,ready:false,deliveredToPhoneVerified:false
   });
   assert.equal(json.topics[0].health,'configuration_required');
   assert.ok(json.topics[0].diagnosis.includes('publisher_not_ready'));

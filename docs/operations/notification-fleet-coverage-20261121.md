@@ -40,3 +40,20 @@ node --test test/notification-fleet-coverage.test.mjs test/notification-admin-su
 ```
 
 보호 CI와 오케스트레이터 공식 릴리스 후에만 운영 완료 판단. 비활성 알림 채널, 공급사 결제, 사용자 계정 및 다른 사이트 RLS는 변경하지 않는다. 리디렉션도 신설하지 않는다.
+
+## 2026-11-21 후속 — 운영자 휴대전화 푸시 실기기 시험 기능
+
+- 로그인 후 `https://ekodi.kr/mail/admin#setup` > **휴대폰 운영 알림**에서 본인이 승인한 브라우저의 푸시 구독을 등록하고 **휴대전화 알림 시험** 버튼으로 제한적 시험을 요청한다.
+- 서버: `POST /api/mail/control/operator-push/test`. 인증된 Supabase 사용자, 이메일 검증 완료, 서버측 `OPERATOR_PUSH_EMAILS` 허용명단, 정확한 `https://ekodi.kr` Origin, `AUTH_RATE_LIMITER`, 최근 발송 120초 보호를 모두 검사한다.
+- 발송 대상은 현재 인증된 운영자 이메일로 등록된 푸시 장치만이며, 전체 운영자에게 시험 알림을 발송하지 않는다. 기존 정상 운영 `OperatorNotifier`가 전체 관리자에게 보내는 본래 동작은 유지한다.
+- 시험 알림은 고정 문구와 `/mail/admin` 링크만 담는다. 고객정보, 업체명, 영수증/계약조회 토큰, 이메일, 기기 endpoint, auth secret은 알림에 넣지 않는다.
+- HTTP 성공은 **Web Push 게이트웨이 수락**일 뿐 기기 수신·열람을 증명하지 않는다. 운영자는 기기의 실제 알림 노출을 직접 확인해야 한다.
+- 기존 `GET /api/mail/control/operator-push`에는 해당 운영자 계정의 집계(장치수/마지막 시도/최근 장치별 결과)만 추가한다. 통합 최고관리자 `/api/notifications/admin/summary`에도 전체 운영자 기기 집계가 추가된다. 둘 모두 개인정보와 endpoint는 반환하지 않는다.
+- VAPID가 미구성, 등록 기기가 0, 발송 쿨다운, 관리자 인증 실패 등은 명시적으로 미준비/거부 상태를 돌려주며 공개 Web Push 전역 스위치나 일반 사이트 고객 수신 동의를 수정하지 않는다.
+- 실제 운영 확인: 보호된 공식 CI와 오케스트레이터 복구 PR 병합, Control API·Site Core/Mail Admin 정확한 릴리스, 익명/타인 401·403, 운영자 기기 등록과 시험 결과, 잠금화면 수신의 독립 확인. 실기기 수신 근거 없이는 성공 보고 금지.
+
+새 검증 명령:
+
+```sh
+node --test test/operator-push-probe.test.mjs test/operator-push.test.mjs test/notification-admin-summary.test.mjs
+```

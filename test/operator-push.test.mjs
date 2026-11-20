@@ -45,7 +45,7 @@ test('a notice succeeds when either phone push or Gmail delivers; waits when nei
 test('routes, UI and deploy provisioning are wired without rotating existing keys', () => {
   const mail = readFileSync(new URL('../mail-control.js', import.meta.url), 'utf8');
   assert.match(mail, /url\.pathname==='\/api\/mail\/control\/operator-push'/);
-  assert.match(mail, /if\(!isOperator\)return json\(\{error:'운영자 계정만 등록할 수 있습니다\.',code:'OPERATOR_ONLY'\},403,request\)/);
+  assert.match(mail, /if\(!isOperator\|\|!actor\.emailVerified\)return json\(\{error:'인증된 운영자만 등록할 수 있습니다\.',code:'OPERATOR_ONLY'\},403,request\)/);
   const page = readFileSync(new URL('../mail-admin-page.js', import.meta.url), 'utf8');
   assert.match(page, /id="opPush" hidden/);
   assert.match(page, /pushManager\.subscribe\(\{userVisibleOnly:true/);

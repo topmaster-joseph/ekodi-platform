@@ -84,7 +84,7 @@ export function mailAdminPage(){
   <section class="tabpanel" role="tabpanel" id="panel-setup" aria-labelledby="tab-setup" hidden>
     <h2 class="panel-title">연결·알림 설정</h2>
     <p class="note" id="setupAccess">Gmail 연결용 보안 설정과 휴대폰 운영 알림은 승인된 운영자 계정에서 관리할 수 있습니다.</p>
-    <section class="oppush" id="opPush" hidden><div><b>휴대폰 운영 알림</b><span id="opPushState">확인 중</span></div><button class="btn primary" type="button" id="opPushBtn">이 기기에서 알림 받기</button></section>
+    <section class="oppush" id="opPush" hidden><div><b>휴대폰 운영 알림</b><span id="opPushState">확인 중</span></div><div class="row"><button class="btn primary" type="button" id="opPushBtn">이 기기에서 알림 받기</button><button class="btn" type="button" id="opPushTestBtn" disabled>휴대전화 알림 시험</button></div><p class="note" role="status" id="opPushTestState">시험 알림을 누르면 휴대전화에 실제 표시되는지 확인할 수 있습니다.</p></section>
 <section class="gsetup" id="gSetup" hidden><h2>Gmail 연결 설정 (휴대폰으로 가능)</h2><p id="gSetupState">Google 연결용 보안 비밀번호를 한 번만 등록하면 Gmail 연결이 열립니다. 아래 순서대로 누르세요.</p><ol>
 <li><b>Gmail API 켜기</b> — 열리는 화면에서 「사용」을 누릅니다.<div class="row"><a class="btn" target="_blank" rel="noopener" href="https://console.cloud.google.com/apis/library/gmail.googleapis.com?project=ekodi-platform">Gmail API 화면 열기</a></div></li>
 <li><b>리디렉션 주소 추가</b> — 클라이언트 화면 「승인된 리디렉션 URI」에서 「URI 추가」 → 아래 주소 붙여넣기 → 「저장」.<code id="gRedirect">https://ekodi.kr/api/mail/control/oauth/google/callback</code><div class="row"><button class="btn" type="button" id="gCopyRedirect">주소 복사</button><a class="btn" target="_blank" rel="noopener" id="gClientLink" href="https://console.cloud.google.com/auth/clients?project=ekodi-platform">클라이언트 화면 열기</a></div></li>
@@ -201,7 +201,27 @@ export function mailAdminPage(){
   async function loadGSetup(){try{const d=await api('/google-oauth-setup');$('gSetup').hidden=false;if(d.clientId)$('gClientLink').href='https://console.cloud.google.com/auth/clients/'+encodeURIComponent(d.clientId)+'?project=ekodi-platform';if(d.redirectUri)$('gRedirect').textContent=d.redirectUri;if(d.configured){$('gSetupState').innerHTML='<span class="ok">✓ 설정 완료</span> — 이제 메일 계정 카드에서 「Gmail 읽기·발송 연결」을 누르면 됩니다.'+(d.source==='stored'?' (저장: '+(d.updatedAt||'').slice(0,10)+')':'');$('gSetup').querySelector('ol').hidden=true}else if(!d.credentialKeyReady){$('gSetupState').textContent='메일 암호화 키가 아직 준비되지 않았습니다. 잠시 후 다시 확인해 주세요.'}}catch{}}
   $('gCopyRedirect').onclick=async()=>{try{await navigator.clipboard.writeText($('gRedirect').textContent);alert('주소를 복사했습니다.')}catch{alert('길게 눌러 직접 복사해 주세요.')}};
   $('gSave').onclick=async()=>{const v=$('gSecret').value.trim();if(!/^GOCSPX-[A-Za-z0-9_-]{20,64}$/.test(v)){alert('GOCSPX-로 시작하는 보안 비밀번호를 그대로 붙여넣어 주세요.');return}$('gSave').disabled=true;try{await api('/google-oauth-setup',{method:'POST',body:JSON.stringify({secret:v})});$('gSecret').value='';await loadGSetup();alert('저장했습니다. 이제 Gmail 연결을 진행할 수 있습니다.')}catch(e){alert(e.message)}finally{$('gSave').disabled=false}};
-  async function loadOpPush(){try{const d=await api('/operator-push');if(!d.isOperator)return;$('setupAccess').hidden=true;loadGSetup();$('opPush').hidden=false;$('opPushState').textContent=!d.available?'알림 암호키 준비 중입니다(배포 후 자동 준비).':d.devices?('켜짐 · 등록된 기기 '+d.devices+'대 — 새 주문·발주 필요 알림이 옵니다.'):'꺼짐 — 아래 버튼을 눌러 이 휴대폰을 등록하세요.';$('opPushBtn').disabled=!d.available;$('opPushBtn').textContent=d.devices?'이 기기 다시 등록':'이 기기에서 알림 받기';$('opPushBtn').onclick=()=>enableOpPush(d.publicKey)}catch{}}
+  async function loadOpPush(){try{const d=await api('/operator-push');if(!d.isOperator)return;$('setupAccess').hidden=true;loadGSetup();$('opPush').hidden=false;$('opPushState').textContent=!d.available?'알림 암호키 준비 중입니다(배포 후 자동 준비).':d.devices?('켜짐 · 등록된 기기 '+d.devices+'대 — 새 주문·발주 필요 알림이 옵니다.'):'꺼짐 — 아래 버튼을 눌러 이 휴대폰을 등록하세요.';$('opPushBtn').disabled=!d.available;$('opPushBtn').textContent=d.devices?'이 기기 다시 등록':'이 기기에서 알림 받기';$('opPushBtn').onclick=()=>enableOpPush(d.publicKey);
+    $('opPushTestBtn').disabled=!d.available||!d.devices;
+    const diagnostics=d.diagnostics;
+    if(diagnostics?.lastAttemptAt){
+      const date=new Date(diagnostics.lastAttemptAt);
+      $('opPushTestState').textContent='마지막 게이트웨이 발송 시도: '+(Number.isFinite(date.getTime())?date.toLocaleString('ko-KR'):'미확인')+
+        ' · 등록 기기별 최근 성공 '+diagnostics.acceptedDeviceCount+'대 · 실패 '+diagnostics.failedDeviceCount+
+        '대. 최종 휴대전화 수신 여부는 별도 확인해야 합니다.';
+    }
+    $('opPushTestBtn').onclick=async()=>{
+      $('opPushTestBtn').disabled=true;
+      $('opPushTestState').textContent='휴대전화로 시험 알림을 요청하는 중입니다.';
+      try{
+        const result=await api('/operator-push/test',{method:'POST'});
+        $('opPushTestState').textContent=result.gatewayAccepted
+          ?'게이트웨이가 시험 알림을 수락했습니다. 휴대전화 잠금화면·알림센터의 실제 수신을 확인하세요.'
+          :'게이트웨이 전송에 실패했습니다. 알림 설정을 확인하세요.';
+      }catch(e){$('opPushTestState').textContent='시험 알림을 보내지 못했습니다: '+e.message}
+      finally{$('opPushTestBtn').disabled=false}
+    };
+  }catch{}}
   function swActive(reg){if(reg.active)return Promise.resolve(reg);const w=reg.installing||reg.waiting;if(!w)return Promise.reject(new Error('알림 기능을 시작하지 못했습니다. 잠시 후 다시 눌러 주세요.'));return new Promise((res,rej)=>{const t=setTimeout(()=>rej(new Error('알림 기능 준비가 늦어지고 있습니다. 잠시 후 다시 눌러 주세요.')),15000);w.addEventListener('statechange',()=>{if(w.state==='activated'){clearTimeout(t);res(reg)}else if(w.state==='redundant'){clearTimeout(t);rej(new Error('알림 기능 설치에 실패했습니다.'))}})})}
   async function enableOpPush(publicKey){try{if(!('serviceWorker'in navigator)||!('PushManager'in window))throw new Error('이 브라우저는 알림을 지원하지 않습니다. 휴대폰 Chrome에서 열어 주세요.');const perm=await Notification.requestPermission();if(perm!=='granted')throw new Error('알림이 허용되지 않았습니다. 브라우저 설정에서 ekodi.kr 알림을 허용해 주세요.');$('opPushBtn').disabled=true;$('opPushBtn').textContent='등록 중…';const reg=await navigator.serviceWorker.register('/notifications/sw.js',{scope:'/notifications/'});await swActive(reg);const sub=(await reg.pushManager.getSubscription())||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:keyBytes(publicKey)});await api('/operator-push',{method:'POST',body:JSON.stringify({subscription:sub.toJSON()})});await loadOpPush();alert('등록했습니다. 이제 새 주문·발주 필요 알림이 이 기기로 옵니다.')}catch(e){alert(e.message);loadOpPush()}}
   async function refresh(preferred=null){$('state').textContent='불러오는 중';model=await api('/contexts');renderScopes();if(preferred){const target=rows().find(s=>s.type===preferred.type&&s.key===preferred.key);if(target)selectScope(target)}$('state').textContent='권한 분리 정상'}
