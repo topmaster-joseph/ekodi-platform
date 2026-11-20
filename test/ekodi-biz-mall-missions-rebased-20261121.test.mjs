@@ -1,0 +1,40 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {planSiteMissionAudit} from '../scripts/verify-ekodi-site-missions-native.mjs';
+const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const missions=JSON.parse(read('config/ekodi-site-missions.json'));
+const services=JSON.parse(read('config/ecosystem-services.json'));
+test('current EKODIBIZ six-locale public homepage carries its independent mission without reverting subscription UX',()=>{
+ const html=read('ekodibiz/index.html'),js=read('ekodibiz/site.js'),css=read('ekodibiz/style.css');
+ const phrase=missions.sites.find(x=>x.id==='biz').mission;
+ assert.match(html,/data-ekodi-mission="biz"/);
+ assert.ok(html.includes('<p data-i18n="missionStatement">'+phrase+'</p>'));
+ assert.equal((js.match(/missionLabel:'/g)||[]).length,6);
+ assert.equal((js.match(/missionStatement:'/g)||[]).length,6);
+ assert.match(js,/missionStatement:'We connect people, real work and technology with integrity/);
+ assert.match(css,/\.hero \.ekodi-mission-statement/);
+ assert.ok(html.includes('홈페이지 제작·구독 안내'));
+ assert.ok(html.includes('https://ekodi.kr/ekodibiz/ai-agency/apply'));
+ assert.equal((js.match(/href="tel:/g)||[]).length,6,'keep telephone disclosure across all six locales');
+});
+test('real Mall builder displays mission while preserving points, purchasing, search and affiliate disclosures',()=>{
+ const html=read('sites/ekodi-mall/src/index.template.html');
+ const css=read('sites/ekodi-mall/assets/styles.css');
+ const build=read('sites/ekodi-mall/scripts/build.mjs');
+ assert.ok(build.includes("read('src/index.template.html')"));
+ assert.ok(html.includes('data-ekodi-mission="mall"'));
+ assert.ok(html.includes(missions.sites.find(x=>x.id==='mall').mission));
+ for(const value of ['contextForm','쿠팡','1% 포인트','운영원장 개통 전'])assert.ok(html.includes(value));
+ assert.match(css,/\.mall-premium-hero \.ekodi-mission-statement/);
+});
+test('native owned-browser audit includes newly shipped Biz/Mall only as published first-party routes',()=>{
+ const plan=planSiteMissionAudit(services,missions,{profiles:['desktop']});
+ for(const id of ['biz','mall'])assert.ok(plan.eligibleIds.includes(id));
+ const audited=plan.jobs.flatMap(job=>job.request.paths);
+ assert.ok(audited.includes('/ekodibiz/'));
+ assert.ok(audited.includes('/ekodimall/'));
+ assert.ok(plan.jobs.every(job=>job.actions<=30));
+ assert.equal(plan.externalBrowserCalls,0);
+ assert.ok(!plan.eligibleIds.includes('management'));
+});
