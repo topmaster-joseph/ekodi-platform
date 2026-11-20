@@ -25,8 +25,8 @@ try{
   if(overflow>4)fail('horizontal overflow at '+width+'px: '+overflow);
   if(errors.length)fail('catalog JS error at '+width+': '+errors.slice(0,3).join(';'));
   if(width===390){
-   // Guard the real defect: the shared canonical proxy already prefixes JSON
-   // course links with /edu and the UI must not produce /edu/edu/... URLs.
+   // Guard against double Education mounts, and require direct canonical links
+   // from source to public URL without any fallback HTTP redirection.
    const overview=await page.goto(base+'/courses/mnu-factchat-2026/',{waitUntil:'domcontentloaded',timeout:30000});
    if(overview?.status()!==200)fail('FactChat course overview status '+overview?.status());
    const originalStudy=page.getByRole('link',{name:'기존 과정 안내·학습 페이지'});
@@ -40,6 +40,30 @@ try{
    const studyResponse=await ctx.request.get(canonical.href);
    if(studyResponse.status()!==200)fail('actual course original study target does not resolve: '+studyResponse.status());
    evidence.checks.push({courseResourceCanonical:true,originalStudy200:true});
+   // Direct-link proof on the genuine, rendered production UI. No 308 repair:
+   // catalog values are Education-service-relative, final public hrefs are
+   // direct /edu/... links, and each original target returns HTTP 200.
+   const catalogResponse=await ctx.request.get(base+'/courses/catalog.json',{maxRedirects:0});
+   if(catalogResponse.status()!==200)fail('canonical catalog direct request failed: '+catalogResponse.status());
+   const catalog=await catalogResponse.json();
+   if(!Array.isArray(catalog.courses)||catalog.courses.length!==6)fail('direct-link proof requires six registered courses');
+   for(const course of catalog.courses){
+    const route=base+'/courses/'+encodeURIComponent(course.id)+'/';
+    const overviewResponse=await page.goto(route,{waitUntil:'domcontentloaded',timeout:30000});
+    if(overviewResponse?.status()!==200||page.url()!==route)
+      fail('course route did not open directly without redirect: '+route);
+    const resource=page.getByRole('link',{name:'기존 과정 안내·학습 페이지'});
+    await resource.waitFor({timeout:12000});
+    const raw=await resource.getAttribute('href');
+    const actual=new URL(raw,page.url());
+    const servicePath=String(course.studyUrl||'').replace(/^\/edu(?=\/|$)/,'');
+    const expected=new URL('/edu'+servicePath,'https://ekodi.kr');
+    if(actual.href!==expected.href||actual.pathname.includes('/edu/edu/'))
+      fail('course original link is not direct canonical URL for '+course.id);
+    const head=await ctx.request.get(actual.href,{maxRedirects:0});
+    if(head.status()!==200)fail('original course target did not return direct 200: '+course.id+' '+head.status());
+   }
+   evidence.checks.push({sixCourseDirectLinks:true,resourcesDirect200:true,noDoublePrefix:true});
    const filter=await page.goto(base+'/fields/safety/',{waitUntil:'domcontentloaded',timeout:30000});
    if(filter?.status()!==200)fail('safety field status '+filter?.status());
    await page.getByRole('heading',{name:'안전·보건 교육'}).waitFor({timeout:12000});

@@ -10,13 +10,20 @@ const heading=document.getElementById('hubHeading');
 const filters=document.getElementById('hubFilters');
 const notice=document.getElementById('hubNotice');
 const safe=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const route=p=>base+p;
+function route(path){
+ const v=String(path||'');
+ // All public Education routes are constructed once from a service-relative
+ // path, and never from a second mount prefix.
+ if(!v.startsWith(SLASH)||v.startsWith(SLASH+SLASH)||/^\/edu(?:\/edu)+(?=\/|$)/.test(v))return '';
+ if(base&&(v===base||v.startsWith(base+SLASH)))return v;
+ return base+v;
+}
 function safeLink(value){
  const v=String(value||'');
  if(v.startsWith(SLASH)&&!v.startsWith(SLASH+SLASH)){
-  // The shared canonical proxy already prefixes JSON URLs with /edu.
-  // Accept those URLs as-is; prefix only unmounted upstream course links.
-  if(base&&(v===base||v.startsWith(base+SLASH)))return v;
+  // Fail closed if a malformed repeated mount appears in catalog data.
+  // Never ship a duplicated URL or rely on a redirect to repair it.
+  if(/^\/edu(?:\/edu)+(?=\/|$)/.test(v))return '';
   return route(v);
  }
  if(/^https:\/\/(?:docs\.google\.com|drive\.google\.com)\//.test(v))return v;
