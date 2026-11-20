@@ -1,0 +1,76 @@
+name: EKODI Native Public Mission Canary
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-ekodi-site-mission-canary.mjs'
+      - 'test/ekodi-native-site-mission-canary-20261121.test.mjs'
+      - '.github/workflows/ekodi-native-site-mission-canary.yml'
+  workflow_run:
+    workflows: ['Deploy EKODIBIZ Revenue OS', 'EKODI Mall · Stage and Deploy']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-native-public-mission-canary
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: First-party mission contract and browser plan
+        run: |
+          node --check scripts/verify-ekodi-site-mission-canary.mjs
+          node --test test/ekodi-native-site-mission-canary-20261121.test.mjs
+          node scripts/verify-ekodi-site-mission-canary.mjs --plan
+
+  public-browser:
+    needs: contract
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install isolated EKODI Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.55.0
+          browser_path="$(command -v chromium || command -v google-chrome || true)"
+          if [ -n "$browser_path" ]; then
+            echo "EKODI_NATIVE_CHROME=$browser_path" >> "$GITHUB_ENV"
+          else
+            npx playwright install --with-deps chromium
+          fi
+      - name: Verify deployed Biz and Mall mission text across four real viewports
+        run: node scripts/verify-ekodi-site-mission-canary.mjs --run
+      - name: Record first-party evidence and failure state
+        if: always()
+        shell: bash
+        run: |
+          echo '### EKODI independent public mission canary' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Host: https://ekodi.kr (public, read-only)' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Profiles: compact-mobile / mobile-portrait / tablet / desktop' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Sources: canonical Biz homepage and Mall builder' >> "$GITHUB_STEP_SUMMARY"
+          echo '- No credentials, purchases, external provider or personal browser profile' >> "$GITHUB_STEP_SUMMARY"
+          echo '- See test status and retained sanitized native artifacts; no success if assertions failed.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekodi-public-mission-canary
+          path: artifacts/mission-public-canary
+          retention-days: 7
+          if-no-files-found: ignore
