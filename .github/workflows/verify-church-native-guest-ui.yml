@@ -1,0 +1,42 @@
+name: EKODI Native Church Guest Browser Acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/verify-church-native-guest-ui.mjs'
+      - '.github/workflows/verify-church-native-guest-ui.yml'
+      - 'test/church-native-guest-browser-contract.test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-native-church-guest-browser-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  real-guest-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify isolated read-only browser contract
+        run: |
+          node --check scripts/verify-church-native-guest-ui.mjs
+          node --test test/church-native-guest-browser-contract.test.mjs
+      - name: Install EKODI isolated Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Validate actual public Church page as guest
+        run: node scripts/verify-church-native-guest-ui.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ekodi-church-native-guest-${{ github.run_id }}
+          path: artifacts/church-native-browser/
+          retention-days: 7
