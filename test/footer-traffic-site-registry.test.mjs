@@ -51,7 +51,7 @@ test('registered prefixes resolve to their own site, never the root counter', ()
   }
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'ekodipay'), 'pay');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'office'), 'office');
-  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'office/office.js'), 'office');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr', 'office/docs'), 'office');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'bbqcg'), 'bbqcg');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'bbqcg/service-guide'), 'bbqcg');
   assert.equal(trafficSiteIdForVisit('ekodi.kr', 'pizzamaru'), 'pizzamaru');
