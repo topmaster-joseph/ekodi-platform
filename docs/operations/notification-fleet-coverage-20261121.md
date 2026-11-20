@@ -57,3 +57,32 @@ node --test test/notification-fleet-coverage.test.mjs test/notification-admin-su
 ```sh
 node --test test/operator-push-probe.test.mjs test/operator-push.test.mjs test/notification-admin-summary.test.mjs
 ```
+
+## 2026-11-21 후속 — 통합알림 자동건강 점검 원장
+
+**기능 경계:** 기존 Control API의 10분 주기 Cron(새 Cron/Worker 생성 없음)을 이용해 현재 연결된 7개 주제의 발행 준비, 구독 기기 수, 최근 24시간 이벤트와 전송 실패, 현재 지연된 전달 및 발행을 읽는다. 각 주제 최신 점검만 `notification_health_snapshots`에 저장한다. 고객 이름·구독 주소·전화번호·알림 내용·인증값·브라우저 토큰은 수집하지 않는다.
+
+**지속성:** 추가 마이그레이션 `migrations/202611210730_notification_health_snapshots.sql`. Cron은 미반영 배포도 안전하게 시작할 수 있도록 같은 `CREATE TABLE IF NOT EXISTS`를 사용한다. 최고관리자 조회 경로에서는 스키마 수정하지 않고, 준비 안 된 경우 `unavailable`로 표시한다.
+
+**자동 판정(순서대로):**
+1. `attention`: 최근 24시간 실패, 15분 초과 지연 전달/발행 중 하나 이상 발견. 위험 연속 진단 횟수를 누적한다.
+2. `configuration_required`: 해당 주제의 독립 발행 활성화 또는 서버 전용 비밀키가 준비되지 않음.
+3. `unverified`: 구독 기기 또는 지난 24시간 발생 이벤트가 없어 전송 실적을 검증할 수 없음.
+4. `push_paused`: 명시적인 전역 Web Push 비활성 상태. 상태를 고장으로 단정하지 않는다.
+5. `queue_clear`: 적재된 통계 기준 대기열 위험이 없음. **휴대전화 수신·열람 또는 단말 네트워크 연결 증거가 아님.**
+
+**표시 위치:** 최고관리자 `https://ekodi.kr/admin/`의 *소통·알림·메시징 → 알림*. `GET /api/notifications/admin/summary`의 기존 최고관리자 전용 응답에 `healthAudit` 추가. `lastScanAt`, `fresh` (30분 이내), `status`, `topics[].consecutiveAttention`, `changedAt`을 제공한다. 사이트 관리자는 다른 주제·운영자 사설 기기·전체 스냅샷을 열람할 수 없다.
+
+**주의:** 현재 주제 매핑은 7개뿐이며 동적 고객 사이트는 중앙의 미연결 목록에만 표시될 수 있다. 새 사이트에 알림 발행권한이나 자동 수신 동의를 생성하지 않는다. 이 상태 점검은 별도의 실서비스 HTTP 가동검사, 정식 배포 영수증, 실제 휴대전화 푸시 시험과 다르다.
+
+**배포·검증 명령:**
+
+```sh
+node --check notification-health-audit.js
+node --check notification-admin-summary.js
+node --check mission-control-entry-worker.js
+node --check communication-admin.js
+node --test test/notification-health-audit.test.mjs test/notification-health-audit-wiring.test.mjs test/notification-admin-summary.test.mjs
+```
+
+공식 오케스트레이터 보호 CI → 스테이징/배포 버전 → 실제 D1 스냅샷 2회 연속 점검과 관리자 접근 제어까지 검증한 후 실운영 완료 판정. 자동 고객 웹푸시, 운영자 추가 발송, 유료 SMS/알림톡, PG 활성화, 고객 그룹간 발행 권한 공유를 수행하지 않는다.
