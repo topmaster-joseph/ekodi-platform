@@ -68,9 +68,16 @@
         if(data.operatorChannel){
           const op=data.operatorChannel;
           const count=op.registeredDevices===null?'조회되지 않음':op.registeredDevices+'대';
+          const recent=op.lastGatewayAttemptAt?new Date(op.lastGatewayAttemptAt):null;
+          const last=recent&&Number.isFinite(recent.getTime())?recent.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'이력 없음';
           list.append(el('p','최고관리자 휴대전화 푸시: '+(op.ready?'전송 준비':'점검 필요')+
             ' · VAPID '+(op.configured?'설정됨':'미설정')+' · 등록 기기 '+count+
-            ' · 실제 휴대전화 수신은 별도 시험 필요','communication-note'));
+            ' · 최근 기기별 게이트웨이 성공 '+(op.gatewayAcceptedDevices??'미확인')+
+            ' · 실패 '+(op.gatewayFailedDevices??'미확인')+
+            ' · 마지막 시도 '+last+' · 실제 휴대전화 수신은 별도 시험 필요','communication-note'));
+          const probeLink=el('a','내 휴대전화 푸시 등록·시험','primary communication-link');
+          probeLink.href='/mail/admin#setup';probeLink.target='_blank';probeLink.rel='noopener';
+          list.append(probeLink);
         }
         if(data.fleet){
           const fleet=data.fleet,counts=fleet.counts||{};
