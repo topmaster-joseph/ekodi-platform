@@ -34,13 +34,14 @@ test('Central login remains separately scoped to exact auth /edu instructor entr
 
 test('already-prefixed course catalog URLs are not prefixed twice in learner/teacher resource links',async()=>{
  const source=await read('education/course-hub/hub.js');
+ const routeSource=source.match(/function route\(path\)\{[\s\S]*?\n\}/)?.[0];
  const functionSource=source.match(/function safeLink\(value\)\{[\s\S]*?\n\}/)?.[0];
- assert.ok(functionSource,'shared safeLink renderer must be present');
+ assert.ok(routeSource&&functionSource,'shared route and safeLink renderers must be present');
  const check=base=>{
-  const context={SLASH:'/',base,route:path=>base+path};
-  return vm.runInNewContext(functionSource+'\n({safeLink})',context).safeLink;
+  const context={SLASH:'/',base};
+  return vm.runInNewContext(routeSource+'\n'+functionSource+'\n({safeLink,route})',context);
  };
- const canonical=check('/edu');
+ const {safeLink:canonical,route:routeCanonical}=check('/edu');
  const upstream='/study/live/?c=mnu-factchat-2026';
  const alreadyMounted='/edu/study/live/?c=mnu-factchat-2026';
  assert.equal(canonical(upstream),alreadyMounted);
@@ -52,5 +53,11 @@ test('already-prefixed course catalog URLs are not prefixed twice in learner/tea
  const sourceAsSeenByBrowser=prefixRootLiterals(JSON.stringify({studyUrl:upstream,teacherTool:upstream}),'/edu');
  assert.equal(canonical(JSON.parse(sourceAsSeenByBrowser).studyUrl),alreadyMounted);
  assert.equal(canonical(JSON.parse(sourceAsSeenByBrowser).teacherTool),alreadyMounted);
- assert.equal(check('')(upstream),upstream,'staging / unmounted origin remains relative to its root');
+ assert.equal(check('').safeLink(upstream),upstream,'staging / unmounted origin remains relative to its root');
+ assert.equal(canonical('/edu/edu/study/live/'),'', 'never output an invalid repeated prefix');
+ assert.equal(routeCanonical('/edu/study/live/'),'/edu/study/live/', 'already mounted paths stay unchanged');
+ assert.equal(routeCanonical('/edu/edu/study/live/'),'', 'route function rejects duplicate mount');
+ assert.equal(routeCanonical('/learn/mnu-factchat-2026/'),'/edu/learn/mnu-factchat-2026/');
+ assert.equal(routeCanonical('/teach/'),'/edu/teach/');
+
 });
