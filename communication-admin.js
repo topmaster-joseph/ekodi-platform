@@ -103,7 +103,7 @@
                 let u;
                 try {u=new URL(String(value),location.origin);}catch{continue;}
                 if(u.origin!=='https://ekodi.kr'||u.search||u.hash)continue;
-                const p=u.pathname.replace(/\\/+$/,'')||'/';
+                const p=u.pathname.replace(/\/+$/,'')||'/';
                 if(known.has(p)||additional.has(p))continue;
                 additional.set(p,String(site.name||site.site_name||site.siteName||site.organization_name||site.organizationName||site.slug||p).slice(0,90));
               }
