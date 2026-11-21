@@ -13,6 +13,7 @@ const FIELDS=Object.freeze([
   {path:'/ekodichurch/schedule/',key:'schedule'},
   {path:'/ekodichurch/church-public-updates.js',key:'editor'},
   {path:'/ekodichurch/church-public-updates.css',key:'style'},
+  {path:'/ekodichurch/church-homepage-layout.css',key:'layout'},
   {path:'/ekodichurch/church-shared-schedules.js',key:'shared'}
 ]);
 const SHA=/^[0-9a-f]{40}$/;
@@ -68,12 +69,13 @@ export async function verifyChurchInlineProduction({
   requireMarkup(sources.editor,/source==='board'/,'Church-only schedule editing');
   requireMarkup(sources.shared,/published-read-only/,'read-only Church/Mission federation');
   requireMarkup(sources.style,/church-home-manage-toggle/,'inline control presentation');
+  requireMarkup(sources.layout,/\@media\(max-width:540px\)\{body:not\(:has\(main :target\)\) main > \.hero\{padding:42px 14px 30px!important\}/,'mobile 320px localized greeting clearance');
   // These are source/markup integrity checks, NOT an actual authenticated administrator session.
   return Object.freeze({
     ok:true,mode:'production-read-only-source-and-guest-markup',
     origin,sourceRepository:marker.sourceRepository,
     verifiedSourceSha:marker.sourceSha,releaseContract:marker.contract,
-    checks:['exact-release-source','homepage-manager-default-hidden','self-role-diagnostic-default-hidden','official-routes','server-role-allowlist',
+    checks:['exact-release-source','homepage-manager-default-hidden','self-role-diagnostic-default-hidden','official-routes','mobile-320-greeting-clearance','server-role-allowlist',
       'church-owned-edit-scope','cross-institution-read-only-federation','public-refresh-signal'],
     realUserAuthenticated:false,dataMutations:false,loggedInCrudVerified:false,
     inspectedAt:now(),reads
