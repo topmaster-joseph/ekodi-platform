@@ -146,6 +146,19 @@ if(mode==='open-static'){
     const [appId,policyId]=pair.split(':');
     try{await api(`/access/apps/${appId}/policies/${policyId}`,{method:'DELETE'});}catch(e){failed++;console.log(String(e.message));}
   }
+  // Delete only the ID issued in THIS run; the named list sweep below is a
+  // backup for a crash between creation and writing E2E_ACCESS_TOKEN_ID.
+  // This prevents a token hidden beyond the first metadata page from leaking.
+  const mintedTokenId=String(process.env.E2E_ACCESS_TOKEN_ID||'').trim();
+  if(mintedTokenId){
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(mintedTokenId)){
+      failed++;
+      console.log('Run-scoped minted Access token ID is malformed; refusing deletion.');
+    }else{
+      try{await api(`/access/service_tokens/${mintedTokenId}`,{method:'DELETE'});}
+      catch(e){if(e.status!==404){failed++;console.log('Run-scoped minted Access token deletion failed.');}}
+    }
+  }
   // Also sweep any run-named leftovers (e.g. a crash between create and env write).
   try{
     for(const app of (await stagingApps()).apps){
