@@ -7,16 +7,18 @@ test('shared user footer keeps business facts but drops heading labels', async (
   const html=renderEkodiUserFooter();
   assert.match(html,/에코디비즈/);
   assert.match(html,/백련동1길 17-4/);
-  assert.doesNotMatch(html,/운영주체|사업장 소재지/);
+  assert.doesNotMatch(html,/운영주체|사업장 소재지|대표\s+정찬균/);
+  assert.match(html,/정찬균/);
   const client=await readFile(new URL('../shell/user-ui-footer.js',import.meta.url),'utf8');
-  assert.doesNotMatch(client,/operator\.label|contact\.addressLabel/);
+  assert.doesNotMatch(client,/operator\.label|contact\.addressLabel|operator\.representativeLabel/);
 });
 
 test('service-owned EKODIBIZ footer follows the same label-free rule in every locale', async () => {
   const [html,client]=await Promise.all([readFile(new URL('../ekodibiz/index.html',import.meta.url),'utf8'),readFile(new URL('../ekodibiz/site.js',import.meta.url),'utf8')]);
-  assert.doesNotMatch(html,/운영주체|사업장 소재지/);
+  assert.doesNotMatch(html,/운영주체|사업장 소재지|대표\s+정찬균/);
   assert.doesNotMatch(client,/운영주체 에코디비즈|Operator EKODIBIZ|运营主体 EKODIBIZ|運営主体 EKODIBIZ|सञ्चालक EKODIBIZ|Đơn vị vận hành EKODIBIZ/);
-  assert.match(client,/footerCompany:'EKODIBIZ · Representative/);
+  assert.match(client,/footerCompany:'EKODIBIZ · Jung Chan-gyun/);
+  for(const line of client.split('\n').filter(line=>line.includes('footerCompany:')))assert.doesNotMatch(line,/대표\s|Representative\s|代表\s|प्रतिनिधि\s|Đại diện\s/);
 });
 test('shared footer shows the 통신판매업 신고번호 next to the business registration number', async () => {
   const { renderEkodiUserFooter, EKODI_USER_FOOTER } = await import('../config/user-footer.js');

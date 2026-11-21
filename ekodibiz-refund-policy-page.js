@@ -162,7 +162,7 @@ export function ekodiBizRefundPolicyHtml() {
 </article></main>
 <footer class="footer" data-site-shell="footer" aria-label="에코디비즈 사업자 정보 및 정책">
   <div><strong>EKODIBIZ</strong><span>Turn value into a business.</span></div>
-  <p>${o.name} · 대표 ${o.representative} · 사업자등록번호 ${o.businessRegistrationNumber}<br>${o.address} · <a href="mailto:${o.email}">${o.email}</a></p>
+  <p>${o.name} · ${o.representative} · 사업자등록번호 ${o.businessRegistrationNumber}<br>${o.address} · <a href="mailto:${o.email}">${o.email}</a></p>
   <nav aria-label="에코디비즈 푸터 메뉴">
     <a href="/privacy">개인정보처리방침</a>
     <a href="/terms">이용약관</a>
