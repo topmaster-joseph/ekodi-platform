@@ -53,15 +53,25 @@ test('immediate owner-approved recovery also dispatches both independent guarded
   assert.match(dispatches,/release_branch_ref:branchRef,release_task_id:taskId/);
 });
 
-test('successfully deployed Control API triggers protected first-party Chromium Church Live verification',async()=>{
+test('public Church Live E2E is owner-gated rather than automatically triggered by Control API release',async()=>{
   const [live,src]=await Promise.all([
     read('.github/workflows/church-live-production-e2e.yml'),
     read('scripts/church-live-production-e2e.mjs')
   ]);
-  assert.match(live,/workflow_run:/);
-  assert.match(live,/workflows: \['Deploy Control API'\]/);
-  assert.match(live,/workflow_run\.conclusion == 'success'/);
-  assert.match(live,/workflow_run\.head_branch == 'main'/);
+  // Production E2E creates a real, briefly public synthetic stream.
+  // A successful deployment is not authority to start that stream.
+  const triggers=live.slice(live.indexOf('\non:\n'),live.indexOf('\npermissions:'));
+  assert.ok(triggers.startsWith('\non:\n'),'workflow event block missing');
+  assert.match(triggers,/workflow_dispatch:/);
+  assert.match(triggers,/issue_comment:/);
+  assert.doesNotMatch(triggers,/^\s*(?:push|pull_request|workflow_run|schedule|repository_dispatch):/m);
+  assert.match(live,/github\.event_name == 'workflow_dispatch'/);
+  assert.match(live,/github\.actor == 'topmaster-joseph'/);
+  assert.match(live,/inputs\.acknowledge_public_synthetic_broadcast == 'yes'/);
+  assert.match(live,/github\.event_name == 'issue_comment'/);
+  assert.match(live,/github\.event\.issue\.number == 5140/);
+  assert.match(live,/github\.event\.comment\.user\.login == 'topmaster-joseph'/);
+  assert.match(live,/github\.event\.comment\.body == '\/ekodi-church-live-e2e 2026-10-25'/);
   assert.match(live,/Revoke short-lived E2E session/);
   assert.match(src,/active_church_broadcast/);
   assert.match(src,/viewer_received_no_live_track/);
