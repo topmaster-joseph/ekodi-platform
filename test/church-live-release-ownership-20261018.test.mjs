@@ -67,7 +67,7 @@ test('Church Live end-to-end publish verification is owner-controlled, never aut
   assert.doesNotMatch(live,/^\s*workflow_run:\s*$/m);
   // Retain the explicit, exact owner-only issue command and evidence cleanup.
   assert.match(live,/github\.event\.comment\.user\.login == 'topmaster-joseph'/);
-  assert.match(live,/github\.event\.comment\.body == '\\/ekodi-church-live-e2e 2026-10-25'/);
+  assert.match(live,/github\.event\.comment\.body == '\/ekodi-church-live-e2e 2026-10-25'/);
   assert.match(live,/Revoke short-lived E2E session/);
   assert.match(src,/active_church_broadcast/);
   assert.match(src,/protected_sunday_worship_window/);
