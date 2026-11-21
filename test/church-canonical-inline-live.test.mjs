@@ -16,7 +16,8 @@ test('canonical church studio uses same site-owned header/footer and existing li
  assert.match(html,/class="church-live-site-header site-header"/);
  assert.match(html,/id="churchLiveNav"/);
  for(const label of ['예배안내','온라인','오시는 길','큐티인 신청','마이페이지'])assert.ok(html.includes(label));
- for(const detail of ['사업자 소재지','운영주체 에코디교회','대표 정찬균','고유번호 307-82-82097'])assert.ok(html.includes(detail));
+ for(const detail of ['전남 무안군 청계면 백련동1길 17-4, 1층','운영주체 에코디교회','대표 정찬균','고유번호 307-82-82097'])assert.ok(html.includes(detail));
+ assert.doesNotMatch(html,/사업자 소재지/);
  assert.match(html,/href="\/tenant-live-church.css"/);
  assert.match(html,/src="\/tenant-live-church.js"/);
  assert.doesNotMatch(html,/src="\/ekodichurch\/church-daily-verse.js"/);
@@ -61,4 +62,24 @@ test('church-specific assets are production MIME safe and compact mobile/iframe 
  assert.match(router,/tenant-live-church\.js/);
  assert.match(router,/embeddedViewer:url\.pathname==='\/live\/church\/'/);
  new Function(source);
+});
+
+test('the dynamic Church history footer retains the address without its business-address label',async()=>{
+ const source=await read('church-history-worker.js');
+ assert.ok(source.includes('전남 무안군 청계면 백련동1길 17-4, 1층'));
+ assert.doesNotMatch(source,/사업자 소재지/);
+});
+
+test('Church guest and studio share the same address-only legal footer',async()=>{
+ for(const view of ['viewer','studio']){
+  const response=tenantLivePage({...base,embeddedViewer:view==='viewer'});
+  const html=await response.text();
+  const footer=html.slice(html.indexOf('<footer class="church-live-site-footer'));
+  assert.ok(footer.startsWith('<footer'),'Church '+view+' footer missing');
+  assert.match(footer,/전남 무안군 청계면 백련동1길 17-4, 1층/);
+  assert.doesNotMatch(footer,/사업자 소재지/);
+  assert.match(footer,/고유번호 307-82-82097/);
+  assert.match(footer,/href="\/privacy"/);
+  assert.match(footer,/href="\/terms"/);
+ }
 });
