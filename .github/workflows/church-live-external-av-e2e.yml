@@ -126,3 +126,55 @@ jobs:
             --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')" \
             | jq -e '.success == true' >/dev/null
           echo 'Short-lived canonical Church AV E2E session revoked.'
+
+  report-external-av:
+    needs: church-live-external-av
+    if: >-
+      always() && needs['church-live-external-av'].result != 'skipped'
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Retrieve redacted proof
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: church-live-external-av-e2e
+          path: artifacts/church-live-external-av-proof
+      - name: Record bounded owner-approved E2E result without media or secrets
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const file = 'artifacts/church-live-external-av-proof/ekodichurch.json';
+            let proof = {report:'missing', verified:false};
+            try {
+              const r = JSON.parse(fs.readFileSync(file,'utf8'));
+              const e = r.externalReceiver || {};
+              proof = {
+                passed: r.passed === true,
+                skipped: r.skipped === true,
+                ended: r.ended === true,
+                viewerTracks: Number(r.viewerTracks || 0),
+                externalReceiver: r.externalReceiver ? {
+                  videoTracks: Number(e.videoTracks || 0),
+                  audioTracks: Number(e.audioTracks || 0),
+                  decodedWidth: Number(e.videoWidth || 0),
+                  decodedHeight: Number(e.videoHeight || 0),
+                  playedSeconds: Number(e.playedSeconds || 0)
+                } : null,
+                reason: ['active_tenant_broadcast'].includes(r.reason) ? r.reason : undefined
+              };
+            } catch {}
+            const runUrl = 'https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId;
+            const body = '[EKODI Church external AV E2E] Owner-approved canonical broadcast verification\n'
+              + 'Run: ' + runUrl + '\n\n```json\n' + JSON.stringify(proof) + '\n```';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 10054,
+              body
+            });
