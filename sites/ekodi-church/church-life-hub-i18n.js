@@ -147,7 +147,6 @@
     '오시는 길 보기 ↗': 'Get directions ↗',
     '온라인으로 먼저 만나기': 'Meet online first',
     '에코디교회 운영 정보': 'EKODI Church operating information',
-    '사업자 소재지 전남 무안군 청계면 백련동1길 17-4, 1층': 'Address · 1F, 17-4 Baengnyeondong 1-gil, Cheonggye-myeon, Muan-gun, Jeollanam-do, Korea',
     '운영주체 에코디교회': 'Operator · EKODI Church',
     '대표 정찬균': 'Representative · Jung Chan-gyun',
     '고유번호 307-82-82097': 'Registration No. 307-82-82097',
