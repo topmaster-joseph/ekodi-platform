@@ -36,3 +36,13 @@
 .bp-visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .bp-pages[data-worship-layout="2026-11-22"] .bp-week-label{display:block;font-size:9px;font-weight:500}
 @media print{.bp-pages[data-worship-layout="2026-11-22"] .bp-order .bp-worship-table td{padding:4px 2px}}
+
+/* Preserve previous week's upper-right picture block even before photo upload. */
+.bp-pages[data-worship-layout="2026-11-22"] .bp-sheet:first-child .bp-col:last-child>.bp-photo-required{display:flex!important;align-items:center;justify-content:center;position:relative;width:100%;min-height:145px;max-height:195px;aspect-ratio:16/9;background:#f1f4f0;border:1px solid #cbd6cf;border-radius:5px;overflow:hidden;margin:0 0 13px}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-photo-required .bp-photo-placeholder{display:flex;flex-direction:column;align-items:center;gap:6px;color:#7a8880;font-size:11px;text-align:center}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-photo-required .bp-photo-placeholder span:first-child{font-size:15px;font-weight:700;letter-spacing:.12em;color:#536f5e}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-photo-required img:not([hidden]){display:block;width:100%;height:100%;object-fit:contain}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-photo-required figcaption:not(:empty){position:absolute;bottom:0;left:0;right:0;padding:4px;background:rgba(255,255,255,.85);font-size:9px;text-align:center}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-photo-required .bp-photo-placeholder[hidden]{display:none!important}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-standing-note{margin:3px 0 8px;font-size:10.5px;letter-spacing:0;color:#4b6257;font-weight:500}
+@media print{.bp-pages[data-worship-layout="2026-11-22"] .bp-photo-required{break-inside:avoid}.bp-pages[data-worship-layout="2026-11-22"] .bp-standing-note{color:#303b32}}
