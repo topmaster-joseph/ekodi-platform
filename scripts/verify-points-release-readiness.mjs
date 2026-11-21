@@ -105,13 +105,28 @@ export function assess({schema,migrations,functions,expected}){
     throw new Error('points_readiness_invalid_response');
   const missingPrerequisites=PREREQUISITES.filter(key=>schema[key]!==true);
   const missingContracts=POINTS_CONTRACT.filter(key=>schema[key]!==true);
-  const installed=new Set(migrations.map(migrationName));
+  // A set alone can conceal duplicate or out-of-catalog migration receipts.
+  // Both are history drift, even when every expected migration is present.
+  const catalog=new Set(expected);
+  const installed=new Set();
+  const duplicates=new Set();
+  const unexpected=new Set();
+  for(const row of migrations){
+    const name=migrationName(row);
+    if(installed.has(name))duplicates.add(name||'(empty)');
+    installed.add(name);
+    if(!catalog.has(name))unexpected.add(name||'(empty)');
+  }
+  const duplicateMigrations=[...duplicates].sort();
+  const unexpectedMigrations=[...unexpected].sort();
+  const migrationHistoryConsistent=!duplicateMigrations.length&&!unexpectedMigrations.length;
   const missingMigrations=expected.filter(name=>!installed.has(name));
   const recognized=expected.length-missingMigrations.length;
   const api=functions.find(f=>f?.slug==='points-api');
   const apiReady=api?.status==='ACTIVE'&&api?.verify_jwt===true;
   let state='schema_incomplete';
   if(missingPrerequisites.length)state='prerequisites_missing';
+  else if(!migrationHistoryConsistent)state='migration_history_drift';
   else if(recognized===0)state='points_not_installed';
   else if(missingMigrations.length)state='points_partially_installed';
   else if(missingContracts.length||!apiReady)state='points_contract_incomplete';
@@ -121,6 +136,9 @@ export function assess({schema,migrations,functions,expected}){
     prerequisites_ok:missingPrerequisites.length===0,
     migration_count_expected:expected.length,
     migration_count_recognized:recognized,
+    migration_history_consistent:migrationHistoryConsistent,
+    duplicate_migrations:duplicateMigrations,
+    unexpected_migrations:unexpectedMigrations,
     missing_prerequisites:missingPrerequisites,
     missing_migrations:missingMigrations,
     missing_contracts:missingContracts,

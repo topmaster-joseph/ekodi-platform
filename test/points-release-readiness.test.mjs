@@ -61,6 +61,35 @@ test('complete technical state still never authorizes an earning or economic rel
   assert.equal(r.missing_migrations.length,0);
   assert.equal(r.missing_contracts.length,0);
 });
+test('duplicate, unexpected and malformed point migration receipts fail closed',()=>{
+  const duplicate=assess({schema:completeSchema,
+    migrations:[...applied,applied[0]],functions,expected});
+  assert.equal(duplicate.state,'migration_history_drift');
+  assert.equal(duplicate.migration_history_consistent,false);
+  assert.deepEqual(duplicate.duplicate_migrations,[expected[0]]);
+  assert.deepEqual(duplicate.unexpected_migrations,[]);
+  assert.equal(duplicate.points_activation_authorized,false);
+
+  const unexpected='ekodi_points_unreviewed_credit';
+  const drifted=assess({schema:completeSchema,
+    migrations:[...applied,{name:'20261121120000_'+unexpected,version:'20261121120000'}],
+    functions,expected});
+  assert.equal(drifted.state,'migration_history_drift');
+  assert.deepEqual(drifted.unexpected_migrations,[unexpected]);
+  assert.equal(drifted.missing_migrations.length,0);
+  assert.equal(drifted.points_activation_authorized,false);
+
+  const malformed=assess({schema:completeSchema,
+    migrations:[...applied,{name:null}],functions,expected});
+  assert.equal(malformed.state,'migration_history_drift');
+  assert.deepEqual(malformed.unexpected_migrations,['(empty)']);
+
+  const healthy=assess({schema:completeSchema,migrations:applied,functions,expected});
+  assert.equal(healthy.migration_history_consistent,true);
+  assert.deepEqual(healthy.duplicate_migrations,[]);
+  assert.deepEqual(healthy.unexpected_migrations,[]);
+});
+
 test('prerequisites missing takes precedence over all points readiness',()=>{
   const r=assess({schema:{...completeSchema,people:false},migrations:applied,functions,expected});
   assert.equal(r.state,'prerequisites_missing');
