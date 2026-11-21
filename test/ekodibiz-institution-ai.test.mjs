@@ -313,7 +313,7 @@ test('backup restore rejects tampering, cross-tenant replay and missing key vers
   const id = { tenantId: 'campus1', operationId: 'archive0001' };
   const archive = (await (await call(original.env, id, 'backup', 'campus1', 'backup')).json()).archive;
   const newStore = setup();
-  const changed = { ...archive, ciphertext: 'A' + archive.ciphertext.slice(1) };
+  const changed = { ...archive, ciphertext: (archive.ciphertext[0] === 'A' ? 'B' : 'A') + archive.ciphertext.slice(1) };
   assert.equal((await call(newStore.env, { ...id, archive: changed }, 'restore', 'campus1', 'restore-check')).status, 503);
   assert.equal((await call(newStore.env, { ...id, archive, tenantId: 'campus2' }, 'restore', 'campus2', 'restore-check')).status, 503);
   assert.equal((await call(newStore.env, { ...id, archive, operationId: 'archive0002' }, 'restore', 'campus1', 'restore-check')).status, 503);
