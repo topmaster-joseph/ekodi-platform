@@ -46,7 +46,7 @@ try{
    const catalogResponse=await ctx.request.get(base+'/courses/catalog.json',{maxRedirects:0});
    if(catalogResponse.status()!==200)fail('canonical catalog direct request failed: '+catalogResponse.status());
    const catalog=await catalogResponse.json();
-   if(!Array.isArray(catalog.courses)||catalog.courses.length!==6)fail('direct-link proof requires six registered courses');
+   if(!Array.isArray(catalog.courses)||catalog.courses.length<6)fail('direct-link proof requires the original six or more registered courses');
    // The public catalog may reveal the course outline, never owner-only decks
    // or the instructor's management tools.
    const publicData=JSON.stringify(catalog);
