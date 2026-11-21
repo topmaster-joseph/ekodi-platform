@@ -35,6 +35,7 @@ test('central runtime church-history footer removes duplicate identity rows',asy
     const footer=footerOf(html);
     assert.ok(footer,path+' has no footer');
     assert.doesNotMatch(footer,banned,path);
+    assert.match(footer,/에코디교회 정찬균/,path+' named Church identity remains visible');
     assert.match(footer,/고유번호 307-82-82097/,path+' organization number is preserved');
     assert.match(footer,/ekodichurch@gmail\.com/,path+' email is preserved');
   }
