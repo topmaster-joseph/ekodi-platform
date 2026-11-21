@@ -1,0 +1,65 @@
+name = "ekodi-funding"
+main = "funding-worker.js"
+compatibility_date = "2026-09-15"
+workers_dev = false
+preview_urls = false
+
+# EKODI-FUNDING-001 — 에코디 펀딩 1단계 (운영: 에코디비즈). No payment secrets here: payments go only
+# through the central EKODI Pay gateway (ekodi-mall-api · EkodiPayGateway RPC, callerId "funding").
+# FUNDING_MID_APPROVED stays "false" until Toss confirms a merchant profile that may take funding/pre-order
+# payments (MID q_ekodib62hb is underwritten for physical Mall goods only — TOSS-MALL-UNDERWRITING-002).
+[vars]
+ENVIRONMENT = "production"
+OPERATOR_EMAILS = "topmaster.joseph@gmail.com,joseph@ekodi.kr,joseph@ekodibiz.kr"
+EKODIPAY_PROFILE = "mall"
+FUNDING_PAYMENTS_ENABLED = "false"
+FUNDING_MID_APPROVED = "false"
+FUNDING_DIGITAL_MID_APPROVED = "false"
+
+[[routes]]
+pattern = "ekodi.kr/funding*"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/api/funding*"
+zone_name = "ekodi.kr"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ekodi-auth"
+database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
+migrations_dir = "migrations"
+
+[[services]]
+binding = "EKODIPAY"
+service = "ekodi-mall-api"
+entrypoint = "EkodiPayGateway"
+
+# EKODI-EDGE-TRAFFIC-SHIELD-001 — same namespaces as the Shared Site.
+[[ratelimits]]
+name = "PLATFORM_PUBLIC_WRITE_RATE_LIMITER"
+namespace_id = "3902"
+[ratelimits.simple]
+limit = 300
+period = 60
+
+[[ratelimits]]
+name = "PLATFORM_SENSITIVE_RATE_LIMITER"
+namespace_id = "3903"
+[ratelimits.simple]
+limit = 120
+period = 60
+
+[[ratelimits]]
+name = "TRAFFIC_CLIENT_RATE_LIMITER"
+namespace_id = "3913"
+[ratelimits.simple]
+limit = 600
+period = 10
+
+[[ratelimits]]
+name = "TRAFFIC_NETWORK_RATE_LIMITER"
+namespace_id = "3914"
+[ratelimits.simple]
+limit = 2000
+period = 10

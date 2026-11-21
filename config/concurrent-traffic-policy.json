@@ -260,6 +260,7 @@
         "ekodibiz-pay-gateway-worker.js": "wrangler.ekodibiz-pay-gateway.toml",
         "ekodipay-worker.js": "wrangler.ekodipay.toml",
         "local-commerce-worker.js": "wrangler.local-commerce.toml",
+        "funding-worker.js": "wrangler.funding.toml",
         "ministry-news-worker.js": "wrangler.ministry-news.toml",
         "qtin-order-entry.js": "wrangler.qtin-order.toml",
         "support-worker.js": "wrangler.support.toml",
