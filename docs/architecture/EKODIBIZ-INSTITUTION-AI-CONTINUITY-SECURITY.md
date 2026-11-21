@@ -51,6 +51,13 @@ secret 바인딩이 없거나 잘못되면 요청은 503으로 닫히며 접수�
 - 잘못된 재시도는 `IDEMPOTENCY_CONFLICT`; 모호한 쓰기 결과는 무조건 `needs_reconciliation`에 잠그고 외부 거래를 맹목적으로 재실행하지 않는다
 - 전환된 AI 공급사는 이전 작업 ID, 기관 정본 자료, 승인기록을 소유하지 못한다
 
+**기관별 AI 공급사 전환 정책 검증기 (추가 구현)**:
+- `POST /api/institution-ai/v1/provider-plan`: 별도의 기관별 `route` 역할 서버키가 필요하다. 요청에서 임의로 제출한 민감도·업무 종류는 믿지 않고, 저장소에서 조회한 작업 원본 및 감사 체인의 무결성을 먼저 검증한다.
+- 스테이징 전용으로 `INSTITUTION_AI_PROVIDER_PLAN_ENABLED=true`를 설정할 때만, 별도 비밀 `INSTITUTION_AI_PROVIDER_POLICIES_JSON`에서 **기관별** 허용 공급사·정확한 모델 ID·허용 민감도·기능 종류·데이터 이전 승인·계약상 사용권 확인 여부·과금 승인을 확인한다. 예시 구조: `{"campus1":{"status":"active","dataTransferApproved":true,"billingApproved":false,"allowFailover":true,"providers":[{"id":"gemini","model":"approved-model-id","classifications":["public"],"capabilities":["text"],"costClass":"free-preferred","dataTransferApproved":true,"tenantEntitlementVerified":true}]}}`.
+- 위 조건이 누락되거나 공급사 등록 상태와 일치하지 않으면 후보 목록은 비어 있는 `core_only`로 반환한다. `confidential`·`restricted` 자료, 결제·발송·게시 등 외부 영향 업무, 개인 소유 자격증명, 승인하지 않은 유료 모델은 자동전환 대상에서 제외한다. 비용 승인은 사용권·계약 승인과 별도로 관리한다.
+- 이 기능은 **구성 적합성에 대한 계획 조회**일 뿐이다. API는 실제 AI 요청·장애감지·공급사 자동전환·비용 청구를 **전혀 실행하지 않으며**, 반환된 후보가 실제로 건강하거나 기관 계약상 사용할 수 있다는 운영 증명도 아니다. 이 정책은 추후 별도 허가된 실행 어댑터를 붙이기 위한 필요조건이다.
+- 공급사 정책과 역할키는 브라우저로 노출하지 않고 secret binding에 보관한다. `route` 권한은 `read`·`submit`·`execute` 권한과 분리한다.
+
 AI 호출은 후속 단계에서 중앙 `ai-resilience-runtime.js` 및 `ekodi-ai-provider-registry.js`와 연결하되, 기관별 허용 모델 목록과 민감도 정책을 **AI 요청 본문 전송 전에** 검사해야 한다. 기밀·제한 자료의 외부 전송은 기본 금지이며, 별도 계약·분류·승인과 개인정보 영향평가 뒤에만 허용한다. 공급사 장애 시 안전한 작업 큐·수동 모드로 전환하며 '완료'로 위장하지 않는다.
 
 ## 5. 복구, 실증 및 단계별 가드
