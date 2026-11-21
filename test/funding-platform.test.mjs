@@ -340,3 +340,25 @@ test('worker operator notify is off in staging, without the binding, or unless e
   assert.equal(createOperatorNotify({ FUNDING_OPERATOR_NOTIFY_ENABLED: 'true', OPERATOR_NOTIFY: binding, DATA_MODE: 'isolated-staging' }), null);
   assert.equal(typeof createOperatorNotify({ FUNDING_OPERATOR_NOTIFY_ENABLED: 'true', OPERATOR_NOTIFY: binding }), 'function');
 });
+
+test('operators approve EKODI-org drafts directly; member drafts still need the organiser to submit', async () => {
+  const h = harness();
+  const org = await h.call('/api/funding/studio/campaigns', { method: 'POST', as: 'op', body: { ...draft({ slug: 'org-draft' }), ownerOrg: 'publishing' } });
+  const member = await h.call('/api/funding/studio/campaigns', { method: 'POST', as: 'member', body: draft({ slug: 'member-draft' }) });
+  assert.equal((await h.call(`/api/funding/admin/campaigns/${member.data.campaign.id}/approve`, { method: 'POST', as: 'op', body: {} })).status, 409);
+  const ok = await h.call(`/api/funding/admin/campaigns/${org.data.campaign.id}/approve`, { method: 'POST', as: 'op', body: {} });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.data.status, 'live');
+  const bad = await h.call('/api/funding/studio/campaigns', { method: 'POST', as: 'op', body: { ...draft({ slug: 'org-digital', rewards: [{ id: 'r1', title: '전자책', amount: 10000, delivery: 'digital' }] }), ownerOrg: 'publishing' } });
+  const refused = await h.call(`/api/funding/admin/campaigns/${bad.data.campaign.id}/approve`, { method: 'POST', as: 'op', body: {} });
+  assert.equal(refused.status, 422, 'digital rewards stay blocked until an intangible MID is approved');
+  const mine = await h.call('/api/funding/studio/campaigns', { as: 'op' });
+  assert.ok(mine.data.campaigns.find(c => c.slug === 'org-digital').problems.some(p => p.includes('디지털')), 'studio list explains what blocks submission');
+});
+
+test('pilot owner fix migration only restores the draft pilot', () => {
+  const sql = readFileSync(new URL('../migrations/202611211900_funding_pilot_owner_fix.sql', import.meta.url), 'utf8');
+  assert.match(sql, /SET owner_org='publishing'/);
+  assert.match(sql, /id='fund_pilot_publishing_2026' AND owner_org='ekodibiz' AND status IN \('draft','rejected'\)/);
+  assert.match(readFileSync(new URL('../.github/workflows/deploy-funding.yml', import.meta.url), 'utf8'), /202611211900_funding_pilot_owner_fix\.sql/);
+});
