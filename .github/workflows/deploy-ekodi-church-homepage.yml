@@ -466,6 +466,36 @@ jobs:
           try{
             const page=await browser.newPage();
             await page.setViewport({width:1440,height:1100});
+            // A detached body.cloneNode(true).innerText is actually textContent in Chromium:
+            // it includes hidden overlays, templates and Korean inside <script> source.
+            // Observe ONLY rendered text nodes on the actual live DOM; keep strict Hangul rejection.
+            await page.evaluateOnNewDocument(()=>{
+              window.__EKODI_CHURCH_RENDERED_TEXT__=()=>{
+                const excluded='script,style,noscript,template,[data-ekodi-language-control],[data-ekodi-user-content],[hidden],[aria-hidden="true"]';
+                const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+                const range=document.createRange(),parts=[];
+                let node;
+                while((node=walker.nextNode())){
+                  const value=(node.nodeValue||'').trim();
+                  if(!value)continue;
+                  let element=node.parentElement;
+                  if(!element||element.closest(excluded))continue;
+                  range.selectNodeContents(node);
+                  if(range.getClientRects().length===0)continue;
+                  let rendered=true;
+                  while(element){
+                    const style=getComputedStyle(element);
+                    if(style.display==='none'||style.visibility==='hidden'||style.visibility==='collapse'||style.contentVisibility==='hidden'||style.opacity==='0'){
+                      rendered=false;break;
+                    }
+                    if(element===document.body)break;
+                    element=element.parentElement;
+                  }
+                  if(rendered)parts.push(value);
+                }
+                return parts.join(' ');
+              };
+            });
             for(const locale of locales){
               await page.goto(`https://ekodi.kr/ekodichurch/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
               await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('a[href="/ekodichurch/devotion/"]'),{timeout:25000},locale);
@@ -474,16 +504,12 @@ jobs:
                 try{
                   await page.waitForFunction(expected=>{
                     if(document.documentElement.lang!==expected)return false;
-                    const clone=document.body.cloneNode(true);
-                    clone.querySelectorAll('[data-ekodi-language-control],[data-ekodi-user-content]').forEach(node=>node.remove());
-                    return !/[가-힣]/.test(clone.innerText);
+                    return !/[가-힣]/.test(window.__EKODI_CHURCH_RENDERED_TEXT__());
                   },{timeout:20000,polling:'raf'},locale);
                 }catch(error){
                   // Diagnostic only. Preserve strict failure, but name the untranslated visible text.
                   const residual=await page.evaluate(()=>{
-                    const clone=document.body.cloneNode(true);
-                    clone.querySelectorAll('[data-ekodi-language-control],[data-ekodi-user-content]').forEach(node=>node.remove());
-                    const visible=clone.innerText||clone.textContent||'';
+                    const visible=window.__EKODI_CHURCH_RENDERED_TEXT__();
                     const korean=[...visible.matchAll(/.{0,35}[가-힣].{0,35}/g)].slice(0,30).map(x=>x[0]);
                     return {lang:document.documentElement.lang,visibleLength:visible.length,korean,qtin:document.querySelector('a[href="/qtin/church"]')?.textContent?.trim()||''};
                   });
@@ -493,13 +519,11 @@ jobs:
                 await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
               }
               const snapshot=await page.evaluate(()=>{
-                const clone=document.body.cloneNode(true);
-                clone.querySelectorAll('[data-ekodi-language-control],[data-ekodi-user-content]').forEach(node=>node.remove());
                 return {
                   lang:document.documentElement.lang,
                   hero:document.querySelector('.hero h1')?.innerText||'',
                   devotion:!!document.querySelector('a[href="/ekodichurch/devotion/"]'),
-                  body:clone.innerText,
+                  body:window.__EKODI_CHURCH_RENDERED_TEXT__(),
                   options:[...document.querySelectorAll('[data-ekodi-language-control] select option')].map(o=>o.value)
                 };
               });

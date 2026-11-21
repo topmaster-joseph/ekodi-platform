@@ -141,5 +141,12 @@ test('nine-language Church Pages production proof reports the exact residual tex
   assert.match(w,/Church nine-language residual diagnostic/);
   assert.match(w,/const korean=\[\.\.\.visible\.matchAll/);
   assert.match(w,/throw error;/);
-  assert.match(w,/return !\/\[가-힣\]\/.test\(clone\.innerText\)/);
+  // Hidden and script-source Korean must not fail a translated rendered screen.
+  assert.match(w,/NodeFilter\.SHOW_TEXT/);
+  assert.match(w,/range\.getClientRects\(\)\.length===0/);
+  assert.match(w,/\[data-ekodi-language-control\],\[data-ekodi-user-content\]/);
+  assert.match(w,/window\.__EKODI_CHURCH_RENDERED_TEXT__/);
+  assert.match(w,/return !\/\[가-힣\]\/.test\(window\.__EKODI_CHURCH_RENDERED_TEXT__\(\)\)/);
+  assert.match(w,/body:window\.__EKODI_CHURCH_RENDERED_TEXT__\(\)/);
+  assert.doesNotMatch(w,/body:clone\.innerText|visible=clone\.innerText/);
 });
