@@ -39,7 +39,7 @@ jobs:
       - name: Install native Chromium
         if: steps.quota.outputs.skip_nonessential != 'true'
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Verify synthetic moderation UI on production GET assets
         if: steps.quota.outputs.skip_nonessential != 'true'

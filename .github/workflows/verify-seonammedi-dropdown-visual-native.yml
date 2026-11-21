@@ -45,7 +45,7 @@ jobs:
         with:
           node-version: '22'
       - run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Verify shared dropdowns on 16 production PC/mobile surfaces
         run: node scripts/verify-seonammedi-dropdown-visual-native.mjs
