@@ -45,3 +45,16 @@ test('independent guest verifies audio, decoded progressing video, and clean ter
   assert.match(workflow,/if: always\(\)/);
   assert.doesNotMatch(workflow,/pull_request_target:/);
 });
+
+test('GitHub issue evidence is redacted and emitted by a separate least-privilege reporting job',()=>{
+  const report=workflow.slice(workflow.indexOf('\n  report-external-av:'));
+  assert.ok(report.startsWith('\n  report-external-av:'));
+  assert.match(report,/needs: church-live-external-av/);
+  assert.match(report,/actions\/download-artifact@v4/);
+  assert.match(report,/actions\/github-script@v7/);
+  assert.match(report,/issues: write/);
+  assert.match(report,/context\.runId/);
+  assert.match(report,/issue_number: 10054/);
+  assert.match(report,/r\.externalReceiver/);
+  assert.doesNotMatch(report,/CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID|E2E_ADMIN_TOKEN/);
+});
