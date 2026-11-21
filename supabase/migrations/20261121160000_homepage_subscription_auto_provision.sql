@@ -155,7 +155,7 @@ begin
   -- 플랫폼 관리자 판정은 운영 DB의 public.is_platform_admin()(profiles.platform_admin)을 그대로 따른다.
   -- 함수가 없는 환경(로컬 CI)에서는 항상 false.
   if to_regprocedure('public.is_platform_admin()') is not null then
-    execute 'select public.is_platform_admin()' into v_admin;
+    execute format('select %I.%I()', 'public', 'is_platform_admin') into v_admin;
   end if;
   return coalesce(v_admin,false);
 end
