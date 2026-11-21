@@ -241,7 +241,7 @@ test('cleanup deletes a run-minted UUID directly even when metadata listing omit
   assert.doesNotMatch(JSON.stringify(calls),/other-token|another-run/);
   // The synthetic ACCESS_PROBE line deliberately enumerates mocked API calls.
   // Only operational output (not the test's trace) must hide the token UUID.
-  const operationalLog=r.stdout.split(/\\r?\\n/).filter(line=>!line.startsWith('ACCESS_PROBE=')).join('\\n');
+  const operationalLog=r.stdout.split(/\r?\n/).filter(line=>!line.startsWith('ACCESS_PROBE=')).join('\n');
   assert.doesNotMatch(operationalLog,new RegExp(id));
 });
 test('cleanup refuses to delete a malformed run token ID and reports incomplete cleanup',()=>{
