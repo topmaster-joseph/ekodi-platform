@@ -42,7 +42,7 @@ async function naverSearch(query,env,fetchImpl){
   const out=[];
   for(const [kind,label] of [['news','네이버 뉴스'],['webkr','네이버 웹문서']]){
     const response=await fetchWithTimeout(fetchImpl,`https://openapi.naver.com/v1/search/${kind}.json?display=${COMMONS_WEB_LIMITS.perSource}&sort=${kind==='news'?'date':'sim'}&query=${encodeURIComponent(query)}`,{headers});
-    if(!response.ok)continue;
+    if(!response.ok){if(!out.length&&kind==='webkr')throw new Error("http_"+response.status);continue}
     const data=await response.json().catch(()=>({}));
     for(const item of Array.isArray(data.items)?data.items:[])out.push({title:plainText(item.title,120),url:safeHttpsUrl(item.originallink||item.link),snippet:plainText(item.description),source:label,date:isoDate(item.pubDate)});
   }
@@ -69,6 +69,17 @@ async function bingNews(query,fetchImpl){
   if(!response.ok)throw new Error('http_'+response.status);
   return parseNewsRss(await response.text()).map(item=>({...item,url:bingTarget(item.url),source:item.source==='Google 뉴스'?'Bing 뉴스':item.source})).filter(item=>item.url).slice(0,COMMONS_WEB_LIMITS.perSource);
 }
+// GDELT DOC API: free, keyless worldwide news index; Korean-language articles from the last 7 days.
+async function gdeltNews(query,fetchImpl){
+  const q=encodeURIComponent(query+' sourcelang:korean');
+  const response=await fetchWithTimeout(fetchImpl,`https://api.gdeltproject.org/api/v2/doc/doc?query=${q}&mode=artlist&format=json&sort=datedesc&timespan=7d&maxrecords=${COMMONS_WEB_LIMITS.perSource}`,{headers:{accept:'application/json'}});
+  if(!response.ok)throw new Error('http_'+response.status);
+  const data=await response.json().catch(()=>({}));
+  return(Array.isArray(data.articles)?data.articles:[]).map(item=>{
+    const seen=String(item.seendate||'').match(/^(\d{4})(\d{2})(\d{2})/);
+    return{title:plainText(item.title,140),url:safeHttpsUrl(item.url),snippet:'',source:plainText(item.domain,40)||'GDELT 뉴스',date:seen?`${seen[1]}-${seen[2]}-${seen[3]}`:''};
+  }).filter(item=>item.url&&item.title);
+}
 // Bing wraps article links in a redirect; keep the real https article address when it is present.
 export function bingTarget(value){
   try{const url=new URL(value);const target=url.searchParams.get('url');return target?safeHttpsUrl(target):safeHttpsUrl(value)}catch{return''}
@@ -87,8 +98,8 @@ function sourceStatus(result){
   return/^http_\d{3}$/.test(message)||message==='timeout'?message:'error';
 }
 async function runSources(query,env,fetchImpl){
-  const names=['naver','google','bing','wiki'];
-  const settled=await Promise.allSettled([naverSearch(query,env,fetchImpl),googleNews(query,fetchImpl),bingNews(query,fetchImpl),
+  const names=['naver','google','bing','gdelt','wiki'];
+  const settled=await Promise.allSettled([naverSearch(query,env,fetchImpl),googleNews(query,fetchImpl),bingNews(query,fetchImpl),gdeltNews(query,fetchImpl),
     wikipedia(commonsWebKeywords(query).slice(0,2).join(' ')||query,fetchImpl)]);
   const status={};
   settled.forEach((result,i)=>{status[names[i]]=names[i]==='naver'&&!String(env?.NAVER_SEARCH_CLIENT_ID||'').trim()?'not_configured':sourceStatus(result)});
