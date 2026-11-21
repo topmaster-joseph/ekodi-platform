@@ -79,6 +79,7 @@ import { cheonggyePassVendorIntakeScript } from './cheonggyepass-vendor-intake-u
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
 import { applyContentProtection, contentProtectionAssetResponse } from './content-protection-policy.js';
 import { handleMediaShieldRequest, isMediaShieldPath, mediaShieldPlayerResponse } from './ekodi-media-shield.js';
+import { mediaShieldPageResponse } from './ekodi-media-shield-pages.js';
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
 import { ensureFooterTraffic } from './footer-traffic-guarantee.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
@@ -795,6 +796,9 @@ export default {
     // self-hosted DRM API are answered before any tenant routing so no route can bypass them.
     const protectionAsset=contentProtectionAssetResponse(request)||mediaShieldPlayerResponse(request);
     if(protectionAsset)return applyPlatformSecurityHeaders(protectionAsset,request);
+    // EKODI-MEDIA-SHIELD-002: protected-video studio (/admin/media-shield) and viewer (/my/media/<id>).
+    const mediaShieldPage=mediaShieldPageResponse(request);
+    if(mediaShieldPage)return applyContentProtection(mediaShieldPage,request,env).then(response=>applyPlatformSecurityHeaders(response,request));
     if(isMediaShieldPath(new URL(request.url).pathname)){
       const shielded=await handleMediaShieldRequest(request,env,{resolvePrincipal:principalFromSupabaseRequest});
       return applyPlatformSecurityHeaders(shielded,request);
