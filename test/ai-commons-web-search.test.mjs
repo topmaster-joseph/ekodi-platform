@@ -64,7 +64,7 @@ test('web flag is opt-in, prompt grows only with evidence and keeps the latest q
 test('client renders sources with https links only and offers the web toggle',()=>{
   const client=read('ai-control/commons.js'),html=read('ai-control/commons.html');
   const chat=client.slice(client.indexOf('const CHAT_FRESHNESS'),client.indexOf('// Official public notices'));
-  assert.match(chat,/function chatSources\(bubble,sources\)/);
+  assert.match(chat,/function chatSources\(bubble,sources,status=null\)/);
   assert.match(chat,/url\.protocol==='https:'/);
   assert.doesNotMatch(chat,/innerHTML|insertAdjacentHTML|outerHTML/);
   assert.match(chat,/web=Boolean\(\$\('chatWeb'\)\?\.checked\)/);
@@ -108,4 +108,24 @@ test('per-source status explains empty results and a narrower retry runs once',a
 test('worker returns non-secret web status and client explains it',()=>{
   assert.match(read('ai-control-worker.js'),/const webMeta=\{web:input\.web,sources,webStatus\};/);
   assert.match(read('ai-control/commons.js'),/function webStatusText\(status\)/);
+});
+
+test('GDELT news joins keyless sources and Naver auth failures are visible',async()=>{
+  const fetchImpl=async url=>{
+    const u=String(url);
+    if(u.startsWith('https://api.gdeltproject.org/'))return Response.json({articles:[{url:'https://news.example.kr/g',title:'무안군 소식',seendate:'20261121T010000Z',domain:'news.example.kr'},{url:'http://insecure.kr',title:'x'}]});
+    if(u.startsWith('https://openapi.naver.com/'))return new Response('',{status:401});
+    return new Response('',{status:404});
+  };
+  const result=await searchCommonsWeb('무안군 소식',{NAVER_SEARCH_CLIENT_ID:'a',NAVER_SEARCH_CLIENT_SECRET:'b'},fetchImpl);
+  assert.equal(result.status.naver,'http_401');
+  assert.equal(result.status.gdelt,'ok:1');
+  assert.deepEqual(result.sources.map(s=>[s.source,s.date,s.url]),[['news.example.kr','2026-11-21','https://news.example.kr/g']]);
+});
+
+test('AI Control deploy installs Naver search keys only as a pair and never prints them',()=>{
+  const wf=read('.github/workflows/deploy-ai-control.yml');
+  assert.match(wf,/AI_NAVER_SEARCH_CLIENT_ID: \$\{\{ secrets\.AI_CONTROL_NAVER_SEARCH_CLIENT_ID \|\| secrets\.NAVER_CLIENT_ID \}\}/);
+  assert.match(wf,/if \(process\.env\.AI_NAVER_SEARCH_CLIENT_ID && process\.env\.AI_NAVER_SEARCH_CLIENT_SECRET\) \{/);
+  assert.doesNotMatch(wf,/echo[^\n]*NAVER_SEARCH/);
 });
