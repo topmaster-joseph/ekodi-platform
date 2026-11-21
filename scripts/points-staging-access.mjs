@@ -72,7 +72,7 @@ async function stagingApps(){
 async function resolveStaticTokenId(){
   if(/^[A-Za-z0-9_-]{8,128}$/.test(staticTokenId))return staticTokenId;
   const clientId=String(process.env.STATIC_ACCESS_ID||'').trim();
-  const clientIdLike=/\\.access(?:\\.[A-Za-z0-9.-]+)?$/i.test(rawStaticTokenId);
+  const clientIdLike=/\.access(?:\.[A-Za-z0-9.-]+)?$/i.test(rawStaticTokenId);
   if(!clientIdLike||!clientId||rawStaticTokenId!==clientId)
     throw new Error(`protected STATIC_ACCESS_SERVICE_TOKEN_ID is invalid or differs from approved Client ID (${tokenIdShape()}; expected token UUID or matching Client ID)`);
   const tokens=await api('/access/service_tokens?per_page=1000');
