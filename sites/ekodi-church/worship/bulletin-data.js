@@ -42,6 +42,7 @@
     ["주기도문", "The Lord's Prayer", "다같이"]
   ];
   const hasNewOrder = date >= orderEffectiveDate;
+  const standingServices = new Set(['예배부름', '입례찬송', '파송찬송', '주기도문']);
   function applyNewWorshipLayout() {
     if (!hasNewOrder) return;
     const sheet = Array.from(pages.querySelectorAll('.bp-sheet')).find(s => s.querySelector('.bp-order'));
@@ -90,13 +91,17 @@
       return lines.map(line => '<span class="bp-order-line">' + esc(line) + '</span>').join('');
     }
     const rows = newOrder.map(([ko, en, actor]) => {
-      const korean = esc(ko) + (ko === '경배찬양' ? '<small class="bp-praise-time">예배 15분 전</small>' : '');
+      const korean = (standingServices.has(ko) ? '* ' : '') + esc(ko) + (ko === '경배찬양' ? '<small class="bp-praise-time">예배 15분 전</small>' : '');
       return '<tr><td class="bp-order-ko">' + korean + '</td>'
         + '<td class="bp-order-en">' + esc(en) + '</td>'
         + '<td class="bp-order-detail">' + formatDetail(detailMap[ko]) + '</td>'
         + '<td class="bp-order-actor">' + esc(actor) + '</td></tr>';
     }).join('');
     tableEl.innerHTML = rows;
+    if (!order.querySelector('.bp-standing-note')) {
+      const legend=document.createElement('p'); legend.className='bp-standing-note';
+      legend.textContent='(* 표시는 일어서서 / * Please stand.)'; order.insertBefore(legend,tableEl);
+    }
 
     const committee = sheet.querySelector('[data-b="committee"]');
     const committeeHeading = committee?.previousElementSibling;
@@ -150,6 +155,8 @@
     }
     const photo = block('photo');
     if (photo) {
+      photo.hidden = false;
+      const photoPlaceholder=photo.querySelector('.bp-photo-placeholder');
       // Photo slot: an uploaded photo, a public Google Drive photo, a blank
       // space, or a short text — chosen in My Page.
       const mode = (b && b.photoMode) || (photoUrl ? 'photo' : '');
@@ -159,11 +166,13 @@
       photo.classList.remove('bp-photo-blank', 'bp-photo-text');
       let note = photo.querySelector('.bp-photo-note');
       if (mode === 'photo' && photoUrl && allowed.test(photoUrl)) {
+        if(photoPlaceholder) photoPlaceholder.hidden=true;
         img.hidden = false; img.src = photoUrl; img.alt = (b && b.photoCaption) || '';
         cap.textContent = (b && b.photoCaption) || '';
         if (note) note.remove();
         photo.hidden = false;
       } else if (mode === 'blank' || mode === 'text') {
+        if(photoPlaceholder) photoPlaceholder.hidden=true;
         img.hidden = true; img.removeAttribute('src'); cap.textContent = '';
         photo.classList.add(mode === 'blank' ? 'bp-photo-blank' : 'bp-photo-text');
         if (mode === 'text') {
