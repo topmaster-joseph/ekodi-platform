@@ -142,6 +142,9 @@ export default {
     const response = await siteWorker.fetch(effective.request, env, ctx);
     if (effective.host === PUBLIC_HOST) {
       const pathname=new URL(effective.request.url).pathname;
+      // EKODI Office owns its own accessible header/footer and strict no-network CSP.
+      // The slashless path is Worker-first; never inject the global Shell into this isolated hub.
+      if(pathname==='/office'||pathname.startsWith('/office/'))return response;
       // Age verification is an isolated trust UI, never a Workspace or an injected Shell home.
       if(pathname==='/verify/adult'||pathname.startsWith('/verify/adult/'))return response;
       if(rootInternalPath(pathname)||isWorkspaceAdminPathShape(pathname))return response;
