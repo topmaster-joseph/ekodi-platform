@@ -84,6 +84,18 @@ export function createD1Store(DB) {
       const r = await DB.prepare("SELECT COUNT(*) n FROM funding_pledges WHERE campaign_id=? AND reward_id=? AND (status='paid' OR (status='payment_pending' AND expires_at>?))").bind(campaignId, rewardId, nowIso).first();
       return Number(r?.n || 0);
     },
+    async countInterest(campaignId) {
+      const r = await DB.prepare('SELECT COUNT(*) n FROM funding_interest WHERE campaign_id=?').bind(campaignId).first();
+      return Number(r?.n || 0);
+    },
+    async listInterest(campaignId) {
+      const { results } = await DB.prepare('SELECT email, consent_at FROM funding_interest WHERE campaign_id=? ORDER BY consent_at LIMIT 5000').bind(campaignId).all();
+      return (results || []).map(r => ({ email: r.email, consentAt: r.consent_at }));
+    },
+    async deleteInterest(campaignId) {
+      const r = await DB.prepare('DELETE FROM funding_interest WHERE campaign_id=?').bind(campaignId).run();
+      return Number(r?.meta?.changes || 0);
+    },
     async addInterest(e) {
       await DB.prepare('INSERT OR IGNORE INTO funding_interest (id,campaign_id,email,consent_at) VALUES (?,?,?,?)').bind(e.id, e.campaignId, e.email, e.consentAt).run();
     },

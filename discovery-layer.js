@@ -21,6 +21,7 @@ export const DISCOVERY_PUBLIC_ROUTES = Object.freeze([
 export const DISCOVERY_PRIVATE_PREFIXES = Object.freeze([
   '/admin', '/api/', '/auth/', '/oauth/', '/cgma/oauth/', '/workspace-admin', '/preview/dev',
   '/ekodimall/admin', '/ekodimall/api', '/ekodimall/verification-ops',
+  '/funding/studio', '/funding/admin',
   '/seonammedi/admin', '/api/seonammedi/',
 ]);
 
@@ -54,6 +55,7 @@ function deniedRobotGroup(userAgent) { return `User-agent: ${userAgent}\nDisallo
 // it is declared here. Each path must stay under its own service prefix.
 export const DISCOVERY_SERVICE_SITEMAPS = Object.freeze([
   '/ekodimall/sitemap.xml',
+  '/funding/sitemap.xml',
 ]);
 
 export function renderRobotsTxt(origin = DISCOVERY_ORIGIN) {
