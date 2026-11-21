@@ -17,6 +17,10 @@ FUNDING_MID_APPROVED = "false"
 FUNDING_DIGITAL_MID_APPROVED = "false"
 # 심사 요청·후원 완료 시 최고관리자 휴대폰 알림(개인정보 없음, 바로가기 링크 포함).
 FUNDING_OPERATOR_NOTIFY_ENABLED = "true"
+# EKODI-FUNDING-008 정산지급대행(2단계): 토스 계약·키 등록 전까지 닫힘. 키는 wrangler secret
+# (FUNDING_PAYOUT_SECRET_KEY, FUNDING_PAYOUT_SECURITY_KEY)으로만 넣는다. 플랫폼 수수료율(FUNDING_PLATFORM_FEE_BP,
+# 1bp=0.01%)은 운영자 결정 전이라 비워 두며, 비어 있으면 지급 승인이 열리지 않는다.
+FUNDING_PAYOUT_ENABLED = "false"
 
 [[routes]]
 pattern = "ekodi.kr/funding*"

@@ -1,3 +1,4 @@
+import { BANKS, BUSINESS_TYPES, SELLER_PAYABLE, SELLER_STATUS_LABEL, PAYOUT_STATUS_LABEL, sellerRequest, computeSettlement } from './funding-payout.js';
 // EKODI-FUNDING-001 — 에코디 펀딩 (ekodi.kr/funding) 1단계
 //
 // 운영 주체: 에코디비즈(EKODIBIZ, 통신판매업 신고 2023-전남무안-0153).
@@ -430,6 +431,28 @@ function studioClient(cfg) {
     document.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { fill(list.find(c => c.id === b.dataset.open)); render(); });
   }
   async function load() { list = (await api('/studio/campaigns')).campaigns || []; render(); }
+  async function loadPayout() {
+    const box = $('payoutBox');
+    try {
+      const d = await api('/studio/payout');
+      const p = d.profile;
+      const status = p ? `<p><b>${esc(p.displayName)}</b> · ${esc(cfg.banks[p.bankCode] || p.bankCode)} ${esc(p.accountMasked)} (예금주 ${esc(p.holderName)})<br>토스 확인 상태: <b>${esc(p.sellerStatusLabel)}</b></p>${p.sellerStatus === 'APPROVAL_REQUIRED' || p.sellerStatus === 'KYC_REQUIRED' ? '<p class="muted">토스페이먼츠가 보내는 본인 확인 안내(문자·이메일)를 완료하면 지급을 받을 수 있습니다.</p>' : ''}<button type="button" class="ghost" id="btnPayoutRefresh">상태 새로고침</button>` : '';
+      if (!d.enabled) { box.innerHTML = `${status}<div class="notice">회원 펀딩의 후원금은 토스페이먼츠 <b>정산지급대행</b>으로 개설자 계좌에 보내 드립니다. 지금은 계약을 준비하는 중이라 계좌 등록이 아직 열리지 않았습니다.</div><ul class="problems"><li>등록 항목: 개인/사업자 구분, 이름(상호·대표자), 연락처, 은행·계좌번호·예금주</li><li>계좌번호는 에코디에 저장하지 않고 토스페이먼츠로 바로 전달하며, 화면에는 끝 4자리만 남습니다.</li><li>모금이 끝나고 목표를 달성하면, 운영자 승인 후 지급됩니다. 목표에 못 미치면 후원금은 전액 환불됩니다.</li></ul>`; if (p) $('btnPayoutRefresh').remove(); return; }
+      if (p) { box.innerHTML = status; $('btnPayoutRefresh').onclick = async () => { try { await api('/studio/payout/refresh', { method: 'POST', body: '{}' }); await loadPayout(); } catch (x) { say(x.message, 'err'); } }; return; }
+      box.innerHTML = `<div class="grid2"><div><label>구분</label><select id="po_type">${Object.entries(cfg.btypes).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+<div><label>이름(사업자는 대표자)</label><input id="po_name" maxlength="60"></div><div class="po-biz hide"><label>상호</label><input id="po_company" maxlength="60"></div><div class="po-biz hide"><label>사업자등록번호(10자리)</label><input id="po_bizno" inputmode="numeric" maxlength="12"></div>
+<div><label>휴대폰(숫자만)</label><input id="po_phone" inputmode="numeric" maxlength="11"></div><div><label>이메일</label><input id="po_email" type="email" maxlength="254"></div>
+<div><label>은행</label><select id="po_bank"><option value="">선택</option>${Object.entries(cfg.banks).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div><div><label>계좌번호(숫자만)</label><input id="po_account" inputmode="numeric" maxlength="20" autocomplete="off"></div>
+<div><label>예금주</label><input id="po_holder" maxlength="60"></div></div><p class="muted">계좌번호는 에코디에 저장되지 않고 토스페이먼츠로 바로 전달됩니다.</p><button type="button" id="btnPayout">정산 계좌 등록</button>`;
+      const sync = () => document.querySelectorAll('.po-biz').forEach(n => n.classList.toggle('hide', $('po_type').value === 'INDIVIDUAL'));
+      $('po_type').onchange = sync; sync();
+      $('btnPayout').onclick = async () => {
+        const body = { businessType: $('po_type').value, name: $('po_name').value, companyName: $('po_company').value, businessRegistrationNumber: $('po_bizno').value, phone: $('po_phone').value, email: $('po_email').value, bankCode: $('po_bank').value, accountNumber: $('po_account').value, holderName: $('po_holder').value };
+        try { const d2 = await api('/studio/payout', { method: 'POST', body: JSON.stringify(body) }); $('po_account').value = ''; say(d2.message, 'ok'); await loadPayout(); }
+        catch (x) { say(x.message, 'err', x.data?.errors || []); }
+      };
+    } catch (x) { box.textContent = x.message; }
+  }
   async function save(e) {
     e?.preventDefault?.();
     try {
@@ -459,7 +482,7 @@ function studioClient(cfg) {
       document.querySelectorAll('[data-pane]').forEach(b => b.onclick = () => showPane(b.dataset.pane));
       $('btnSubmit').onclick = () => act('submit', '저장하고 심사를 요청할까요? 심사 중에는 수정할 수 없습니다.');
       $('btnWithdraw').onclick = () => act('withdraw');
-      $('app').classList.remove('hide'); await load();
+      $('app').classList.remove('hide'); await load(); loadPayout();
       if (list.length) { fill(list[0]); render(); } else say('새 펀딩을 눌러 계획서를 작성해 보세요.', 'ok');
     } catch (x) { say(x.message, 'err'); }
   })();
@@ -485,13 +508,15 @@ function adminClient(cfg) {
     return d;
   }
   function say(t, type = '') { $('state').textContent = t; $('state').className = 'notice ' + type; }
-  const countOf = f => (f === 'all' ? list.length : list.filter(c => c.status === f || (f === 'review' && c.status === 'draft' && cfg.orgs[c.ownerOrg])).length);
+  let settle = []; let payoutState = { enabled: false, reason: '', feeBp: null };
+  const countOf = f => (f === 'settle' ? settle.filter(x => x.actionable).length : f === 'all' ? list.length : list.filter(c => c.status === f || (f === 'review' && c.status === 'draft' && cfg.orgs[c.ownerOrg])).length);
   function render() {
     document.querySelectorAll('[data-f]').forEach(b => {
       b.classList.toggle('on', b.dataset.f === filter);
       const n = countOf(b.dataset.f); b.querySelector('.count').textContent = n; b.classList.toggle('empty', n === 0);
       b.setAttribute('aria-label', `${b.dataset.label} ${n}건`);
     });
+    if (filter === 'settle') { renderSettle(); return; }
     const rows = list.filter(c => filter === 'all' || c.status === filter || (filter === 'review' && c.status === 'draft' && cfg.orgs[c.ownerOrg]));
     $('list').innerHTML = rows.length ? rows.map(c => `<div class="card" style="margin:10px 0"><div class="row"><b>${esc(c.title)}</b><span class="tag">${esc(cfg.status[c.status])}</span></div>
 <p class="muted">${esc(cfg.kinds[c.kind] || c.kind)} · ${esc(cfg.orgs[c.ownerOrg] || '회원 개설')} · ${esc(c.organizerName)} · ${esc(c.organizerEmail)}<br>목표 ${wonf(c.goalAmount)} · 모금 ${wonf(c.raisedAmount)} (${c.backerCount}명) · ${esc(c.startsOn)} ~ ${esc(c.endsOn)} · <a href="/funding/c/${esc(c.slug)}" target="_blank" rel="noopener">미리보기</a></p>
@@ -518,9 +543,25 @@ ${['live', 'waiting_payout'].includes(c.status) ? `<button class="ghost" data-ac
       document.querySelector(`[data-out="${b.dataset.pledges}"]`).innerHTML = d.pledges.length ? `<table><tr><th>후원번호</th><th>후원자</th><th>리워드</th><th>금액</th><th>상태</th><th>일시</th></tr>${d.pledges.map(p => `<tr><td>${esc(p.id)}</td><td>${esc(p.backerName)}<br>${esc(p.backerEmail)} ${esc(p.backerPhone)}</td><td>${esc(p.rewardTitle)}</td><td>${wonf(p.amount)}</td><td>${esc(p.status)}</td><td>${esc(p.createdAt)}</td></tr>`).join('')}</table>` : '<p class="muted">후원 내역이 없습니다.</p>';
     });
   }
+  function renderSettle() {
+    const fee = payoutState.feeBp == null ? '수수료율 미정(확인필요)' : `수수료 ${(payoutState.feeBp / 100).toFixed(2)}%`;
+    const head = `<div class="notice ${payoutState.enabled ? 'ok' : ''}">정산지급대행: ${payoutState.enabled ? '열림' : '닫힘 — ' + esc(payoutState.reason)} · ${fee}. 모금이 끝나고 목표를 달성한 회원 펀딩만, 운영자가 승인해야 지급됩니다.</div>`;
+    $('list').innerHTML = head + (settle.length ? settle.map(x => `<div class="card" style="margin:10px 0"><div class="row"><b>${esc(x.title)}</b><span class="tag ${x.actionable ? 'warn' : ''}">${esc(x.stateLabel)}</span></div>
+<p class="muted">${esc(x.organizerName)} · 모금 ${wonf(x.gross)} / 목표 ${wonf(x.goalAmount)} · ${x.fee == null ? '수수료 미정' : `수수료 ${wonf(x.fee)} · 지급액 <b>${wonf(x.net)}</b>`}<br>정산 계좌: ${esc(x.sellerLabel)}${x.payoutStatusLabel ? ` · 지급 상태: ${esc(x.payoutStatusLabel)}` : ''}${x.error ? ` · 오류: ${esc(x.error)}` : ''}</p>
+<div class="row" style="justify-content:flex-start">${x.canSettle ? `<button data-settle="${esc(x.campaignId)}" data-net="${x.net}">정산 지급 승인 (${wonf(x.net)})</button>` : ''}${x.payoutId ? `<button class="ghost" data-refresh="${esc(x.campaignId)}">지급 상태 새로고침</button>` : ''}</div></div>`).join('') : '<p class="muted">종료된 펀딩이 없습니다.</p>');
+    document.querySelectorAll('[data-settle]').forEach(b => b.onclick = async () => {
+      if (!confirm(`개설자에게 ${Number(b.dataset.net).toLocaleString('ko-KR')}원을 지급합니다. 토스 정산지급대행으로 바로 송금되며 되돌리기 어렵습니다. 승인할까요?`)) return;
+      try { const d = await api(`/admin/campaigns/${b.dataset.settle}/settle`, { method: 'POST', body: JSON.stringify({ confirm: true }) }); say(d.message, 'ok'); await load(); }
+      catch (x) { say(x.message, 'err'); await load(); }
+    });
+    document.querySelectorAll('[data-refresh]').forEach(b => b.onclick = async () => {
+      try { const d = await api(`/admin/settlements/${b.dataset.refresh}/refresh`, { method: 'POST', body: '{}' }); say(d.message, 'ok'); await load(); } catch (x) { say(x.message, 'err'); }
+    });
+  }
   let first = true;
   async function load() {
-    const d = await api('/admin/campaigns'); list = d.campaigns || [];
+    const [d, st] = await Promise.all([api('/admin/campaigns'), api('/admin/settlements').catch(() => ({ items: [], payout: payoutState }))]);
+    list = d.campaigns || []; settle = st.items || []; payoutState = st.payout || payoutState;
     // First visit: open the first tab that has something in it, so an empty '심사 대기' never hides live work.
     if (first) { first = false; if (!countOf(filter)) filter = ['review', 'live', 'waiting_payout', 'rejected', 'closed'].find(f => countOf(f)) || 'all'; } $('payState').textContent = d.payment.ready ? `결제 열림 (${d.payment.mode})` : `결제 닫힘 — ${d.payment.reason}`; render(); }
   (async () => {
@@ -534,9 +575,9 @@ ${['live', 'waiting_payout'].includes(c.status) ? `<button class="ghost" data-ac
 }
 
 export function renderStudio({ digitalApproved = false } = {}) {
-  const cfg = { api: API, delivery: DELIVERY, status: STATUS, refund: DEFAULT_REFUND_POLICY, digital: Boolean(digitalApproved) };
+  const cfg = { api: API, delivery: DELIVERY, status: STATUS, refund: DEFAULT_REFUND_POLICY, digital: Boolean(digitalApproved), banks: BANKS, btypes: BUSINESS_TYPES };
   const kindOptions = Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('') + Object.entries(FUTURE_KINDS).map(([k, v]) => `<option value="${k}" disabled>${v} (3단계 준비 중)</option>`).join('');
-  const panes = [['basic', '기본 정보'], ['story', '소개'], ['goal', '목표·기간'], ['rewards', '후원 선택지'], ['refund', '반환 정책']];
+  const panes = [['basic', '기본 정보'], ['story', '소개'], ['goal', '목표·기간'], ['rewards', '후원 선택지'], ['refund', '반환 정책'], ['payout', '정산 계좌']];
   return shell('펀딩 만들기 · 에코디 펀딩', `<main class="studio"><div class="row"><h1 style="margin:0">펀딩 만들기</h1><span id="who" class="muted"></span></div>
 <div id="state" class="notice">로그인 상태를 확인하고 있습니다…</div><div id="loginBox" class="hide"><button id="loginBtn">에코디 계정으로 로그인</button></div>
 <div id="app" class="hide"><div class="mine-bar"><b>내 펀딩</b><div id="mine" class="chips"></div><button id="btnNew" class="ghost">+ 새 펀딩</button></div>
@@ -558,6 +599,7 @@ export function renderStudio({ digitalApproved = false } = {}) {
 <p class="muted">공개 모금은 펀딩마다 ${won(PUBLIC_CAP_KRW)} 미만입니다.</p></section>
 <section class="pane hide" data-for="rewards"><div class="rw-head"><span>이름 · 설명</span><span>금액(원)</span><span>전달 방식</span><span>수량</span><span></span></div><div id="rewards"></div>
 <button type="button" class="ghost" id="btnAddReward">+ 선택지 추가</button></section>
+<section class="pane hide" data-for="payout"><div id="payoutBox" class="muted">정산 정보를 불러오는 중…</div></section>
 <section class="pane hide" data-for="refund"><label for="f_refundPolicy">반환·환불 정책</label><textarea id="f_refundPolicy" maxlength="2000" style="min-height:200px"></textarea></section>
 <div class="actionbar"><div id="stateBottom" class="ab-msg"></div><div class="ab-btns"><button type="submit" class="ghost" id="btnSave">저장</button><button type="button" id="btnSubmit" class="hide">저장하고 심사 요청</button><button type="button" id="btnWithdraw" class="ghost hide">심사 요청 취소</button></div></div></form>
 </div></div></main>`,
@@ -566,7 +608,7 @@ export function renderStudio({ digitalApproved = false } = {}) {
 
 export function renderAdmin() {
   const cfg = { api: API, delivery: DELIVERY, status: STATUS, kinds: KINDS, orgs: PHASE1_ORGS };
-  const tabs = [['review', '심사 대기'], ['live', '모금 중'], ['waiting_payout', '정산대행 대기'], ['rejected', '보완 요청'], ['closed', '종료'], ['all', '전체']];
+  const tabs = [['review', '심사 대기'], ['live', '모금 중'], ['waiting_payout', '정산대행 대기'], ['rejected', '보완 요청'], ['closed', '종료'], ['settle', '정산'], ['all', '전체']];
   return shell('펀딩 심사·운영 · 에코디 펀딩', `<main><h1>펀딩 심사·운영</h1><p class="lead"><span id="who"></span> · <b id="payState"></b></p>
 <div id="state" class="notice">로그인 상태를 확인하고 있습니다…</div><div id="app" class="hide"><div class="tabs">${tabs.map(([k, v]) => `<button data-f="${k}" data-label="${v}">${v} <span class="count">0</span></button>`).join('')}</div><div id="list"></div></div></main>`,
   { noindex: true, scripts: `${inline(adminClient, `{...${JSON.stringify(cfg)},helpers:${authClientHelpers.toString()}}`)}` });
@@ -594,7 +636,10 @@ const same = (a, b) => a.replace(/\/+$/, '') === b;
  * pay: { state(): Promise<{ready, mode, clientKey, profile, reason}>, confirm({paymentKey, orderId, amount}): Promise<toss payment> }
  * authenticate(request): Promise<{data:{userId,email,isOperator}}|{response}>
  */
-export function createApp({ store, authenticate, pay, notify = null, extraHeaders = {}, digitalApproved = false, origin = 'https://ekodi.kr', clock = () => new Date() }) {
+const CLOSED_PAYOUT = Object.freeze({ enabled: false, feeBp: null, reason: '정산지급대행 계약 전(스위치 꺼짐)' });
+export function refSellerIdFor(userId) { return `ekd${String(userId || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 17)}`; }
+
+export function createApp({ store, authenticate, pay, payout = CLOSED_PAYOUT, notify = null, extraHeaders = {}, digitalApproved = false, origin = 'https://ekodi.kr', clock = () => new Date() }) {
   const J = (d, s = 200) => json(d, s, extraHeaders);
   const H = (b, s = 200, m = 'GET', cache = 'no-store') => html(b, s, m, extraHeaders, cache);
   const paymentState = async () => {
@@ -624,6 +669,7 @@ export function createApp({ store, authenticate, pay, notify = null, extraHeader
     const method = request.method;
     const orgs = me.isOperator ? { ...PHASE1_ORGS, member: '회원 개설' } : { member: '회원 개설' };
     if (parts[0] === 'me' && method === 'GET') return J({ email: me.email, isOperator: Boolean(me.isOperator), orgs });
+    if (parts[0] === 'payout') return studioPayout(request, me, parts.slice(1));
     if (parts[0] !== 'campaigns') return J({ error: 'not_found' }, 404);
     // Org campaigns (에코디비즈·에코디출판) are operated by platform operators; members see only their own.
     const mine = c => Boolean(c && (c.organizerUserId === me.userId || (c.organizerEmail && c.organizerEmail === me.email) || (me.isOperator && Object.hasOwn(PHASE1_ORGS, c.ownerOrg))));
@@ -671,11 +717,71 @@ export function createApp({ store, authenticate, pay, notify = null, extraHeader
     return J({ error: 'not_found' }, 404);
   }
 
+  function profileView(p) {
+    return p && { displayName: p.displayName, businessType: p.businessType, bankCode: p.bankCode, accountMasked: p.accountMasked, holderName: p.holderName, sellerStatus: p.sellerStatus, sellerStatusLabel: SELLER_STATUS_LABEL[p.sellerStatus] || p.sellerStatus, updatedAt: p.updatedAt };
+  }
+  // EKODI-FUNDING-008: organiser payout account. Closed until the payout contract; the account number never touches storage.
+  async function studioPayout(request, me, rest) {
+    const method = request.method;
+    const profile = await store.getPayoutProfile(me.userId);
+    if (!rest.length && method === 'GET') return J({ enabled: Boolean(payout.enabled), reason: payout.enabled ? '' : payout.reason, profile: profileView(profile) });
+    if (!payout.enabled) return J({ error: '정산 계좌 등록은 토스페이먼츠 정산지급대행 계약 후 열립니다.', code: 'PAYOUT_NOT_READY' }, 503);
+    if (rest[0] === 'refresh' && method === 'POST') {
+      if (!profile?.sellerId) return J({ error: '등록된 정산 계좌가 없습니다.' }, 404);
+      const seller = await payout.getSeller(profile.sellerId);
+      await store.savePayoutProfile({ ...profile, sellerStatus: clean(seller?.status, 40) || profile.sellerStatus, updatedAt: clock().toISOString() });
+      return J({ message: `토스 확인 상태: ${SELLER_STATUS_LABEL[seller?.status] || seller?.status || '확인필요'}` });
+    }
+    if (rest.length || method !== 'POST') return J({ error: 'not_found' }, 404);
+    if (profile?.sellerId) return J({ error: '이미 정산 계좌가 등록되어 있습니다. 변경은 운영자에게 요청해 주세요.' }, 409);
+    const form = await readJson(request); if (!form) return J({ error: '요청 형식이 올바르지 않습니다.' }, 400);
+    const refSellerId = profile?.refSellerId || refSellerIdFor(me.userId);
+    const { errors, body, summary } = sellerRequest(form, { refSellerId, userEmail: me.email });
+    if (errors.length) return J({ error: '입력 내용을 확인해 주세요.', errors }, 422);
+    let seller;
+    try { seller = await payout.registerSeller(body); }
+    catch (error) { await audit(me.email, 'funding.payout_seller_failed', refSellerId, { code: error?.code || '' }); return J({ error: clean(error?.message, 200) || '정산 계좌를 등록하지 못했습니다.' }, Number(error?.status) >= 400 && Number(error?.status) < 500 ? 400 : 502); }
+    const now = clock().toISOString();
+    await store.savePayoutProfile({ userId: me.userId, email: me.email, refSellerId, sellerId: clean(seller?.id, 40), sellerStatus: clean(seller?.status, 40) || 'APPROVAL_REQUIRED', ...summary, updatedAt: now });
+    await audit(me.email, 'funding.payout_seller_registered', refSellerId, { businessType: summary.businessType, bankCode: summary.bankCode });
+    return J({ message: '정산 계좌를 등록했습니다. 토스페이먼츠의 본인 확인 안내를 완료하면 지급을 받을 수 있습니다.', profile: profileView({ ...summary, sellerStatus: seller?.status || 'APPROVAL_REQUIRED' }) }, 201);
+  }
+
+  async function settlementRows() {
+    const closed = (await store.listCampaigns({ statuses: ['closed'] }));
+    return Promise.all(closed.map(async c => {
+      const calc = computeSettlement(c, payout.feeBp);
+      const record = await store.getSettlement(c.id);
+      const org = Object.hasOwn(PHASE1_ORGS, c.ownerOrg);
+      const profile = org ? null : await store.getPayoutProfile(c.organizerUserId);
+      const sellerOk = Boolean(profile?.sellerId && SELLER_PAYABLE.includes(profile.sellerStatus));
+      const canSettle = !org && !record && calc.goalMet && calc.net != null && calc.net > 0 && sellerOk && payout.enabled;
+      const stateLabel = org ? '에코디 소속 — 지급대행 불필요' : record ? (PAYOUT_STATUS_LABEL[record.payoutStatus] || { requesting: '지급 요청 중', requested: '지급 요청됨', completed: '지급 완료', failed: '지급 실패', canceled: '취소됨' }[record.status])
+        : !calc.goalMet ? '목표 미달 — 전액 결제 취소 필요' : !profile?.sellerId ? '정산 계좌 미등록' : !sellerOk ? `개설자 본인 확인 대기 (${SELLER_STATUS_LABEL[profile.sellerStatus] || profile.sellerStatus})` : calc.net == null ? '수수료율 미정' : !payout.enabled ? '지급대행 닫힘' : '지급 승인 대기';
+      return { campaignId: c.id, title: c.title, organizerName: c.organizerName, goalAmount: c.goalAmount, gross: calc.gross, fee: record?.fee ?? calc.fee, net: record?.net ?? calc.net, goalMet: calc.goalMet,
+        sellerLabel: org ? '에코디 소속 조직' : profile ? `${profile.displayName} · ${profile.accountMasked} · ${SELLER_STATUS_LABEL[profile.sellerStatus] || profile.sellerStatus}` : '미등록',
+        stateLabel, canSettle, actionable: !org && (!record || ['requesting', 'requested', 'failed'].includes(record.status)),
+        payoutId: record?.payoutId || '', payoutStatusLabel: record?.payoutStatus ? PAYOUT_STATUS_LABEL[record.payoutStatus] || record.payoutStatus : '', error: record?.error || '' };
+    }));
+  }
+
   async function adminApi(request, url, parts) {
     const s = await session(request); if (s.response) return s.response; const me = s.data;
     if (!me.isOperator) return J({ error: '에코디 펀딩 운영자 권한이 필요합니다.' }, 403);
     const method = request.method;
     if (parts[0] === 'me' && method === 'GET') return J({ email: me.email, role: 'operator' });
+    if (parts[0] === 'settlements' && parts.length === 1 && method === 'GET') return J({ items: await settlementRows(), payout: { enabled: Boolean(payout.enabled), reason: payout.enabled ? '' : payout.reason, feeBp: payout.feeBp ?? null } });
+    if (parts[0] === 'settlements' && parts[2] === 'refresh' && method === 'POST') {
+      const record = await store.getSettlement(parts[1]);
+      if (!record?.payoutId) return J({ error: '지급 요청 기록이 없습니다.' }, 404);
+      if (!payout.enabled) return J({ error: `지급대행이 닫혀 있습니다: ${payout.reason}` }, 503);
+      const p = await payout.getPayout(record.payoutId);
+      const st = clean(p?.status, 20);
+      const status = st === 'COMPLETED' ? 'completed' : ['FAILED', 'REJECTED'].includes(st) ? 'failed' : ['CANCELED', 'DELETED'].includes(st) ? 'canceled' : 'requested';
+      await store.updateSettlement(record.campaignId, { payoutStatus: st, status, error: clean(p?.error?.message, 200) || null, updatedAt: clock().toISOString() });
+      await audit(me.email, 'funding.settlement_refresh', record.campaignId, { payoutStatus: st });
+      return J({ message: `지급 상태: ${PAYOUT_STATUS_LABEL[st] || st || '확인필요'}` });
+    }
     if (parts[0] !== 'campaigns') return J({ error: 'not_found' }, 404);
     if (parts.length === 1 && method === 'GET') {
       const p = await paymentState();
@@ -685,6 +791,35 @@ export function createApp({ store, authenticate, pay, notify = null, extraHeader
     const c = await store.getCampaign(parts[1]);
     if (!c) return J({ error: '펀딩을 찾을 수 없습니다.' }, 404);
     if (parts[2] === 'pledges' && method === 'GET') return J({ pledges: await store.listPledges(c.id) });
+    if (parts[2] === 'settle' && method === 'POST') {
+      const body = await readJson(request) || {};
+      if (body.confirm !== true) return J({ error: '지급 승인을 확인해 주세요.' }, 422);
+      if (!payout.enabled) return J({ error: `지급대행이 닫혀 있습니다: ${payout.reason}`, code: 'PAYOUT_CLOSED' }, 503);
+      if (c.status !== 'closed') return J({ error: '모금이 끝난 펀딩만 정산할 수 있습니다.' }, 409);
+      if (Object.hasOwn(PHASE1_ORGS, c.ownerOrg)) return J({ error: '에코디 소속 조직 펀딩은 지급대행이 필요 없습니다.' }, 409);
+      const calc = computeSettlement(c, payout.feeBp);
+      if (!calc.goalMet) return J({ error: '목표에 못 미친 펀딩은 지급하지 않습니다. 반환 정책에 따라 전액 결제를 취소해 주세요.' }, 409);
+      if (calc.net == null) return J({ error: '플랫폼 수수료율이 정해지지 않아 지급할 수 없습니다(확인필요).' }, 409);
+      const profile = await store.getPayoutProfile(c.organizerUserId);
+      if (!profile?.sellerId || !SELLER_PAYABLE.includes(profile.sellerStatus)) return J({ error: '개설자의 정산 계좌 등록과 토스 본인 확인이 끝나야 지급할 수 있습니다.' }, 409);
+      const now = clock().toISOString();
+      const refPayoutId = `FNDP-${c.id}`.slice(0, 50);
+      // One settlement per campaign: the insert is the lock, so double clicks or retries can never pay twice.
+      if (!(await store.createSettlement({ campaignId: c.id, refPayoutId, sellerId: profile.sellerId, gross: calc.gross, feeBp: calc.feeBp, fee: calc.fee, net: calc.net, status: 'requesting', approvedBy: me.email, createdAt: now, updatedAt: now }))) {
+        return J({ error: '이미 정산을 요청한 펀딩입니다.' }, 409);
+      }
+      await audit(me.email, 'funding.settlement_approved', c.id, { gross: calc.gross, fee: calc.fee, net: calc.net });
+      try {
+        const res = await payout.requestPayout({ refPayoutId, destination: profile.sellerId, scheduleType: 'EXPRESS', amount: String(calc.net), transactionDescription: '에코디펀딩정산' });
+        await store.updateSettlement(c.id, { status: 'requested', payoutId: clean(res?.id, 60), payoutStatus: clean(res?.status, 20) || 'REQUESTED', updatedAt: clock().toISOString() }, 'requesting');
+        tell('펀딩 정산 지급 요청', [`펀딩: ${c.title}`, `지급액 ${won(calc.net)} (수수료 ${won(calc.fee)})`]);
+        return J({ message: `${won(calc.net)} 지급을 요청했습니다. 영업일 08~15시 사이에 개설자 계좌로 입금됩니다.` });
+      } catch (error) {
+        await store.updateSettlement(c.id, { status: 'failed', error: clean(error?.message, 200) || 'payout_failed', updatedAt: clock().toISOString() }, 'requesting');
+        await audit(me.email, 'funding.settlement_failed', c.id, { code: error?.code || '' });
+        return J({ error: `지급 요청이 실패했습니다: ${clean(error?.message, 200)}. 토스 상점관리자에서 확인해 주세요(중복 지급 방지를 위해 자동 재시도하지 않습니다).` }, 502);
+      }
+    }
     if (parts[2] === 'interest.csv' && method === 'GET') {
       const rows = await store.listInterest(c.id);
       await audit(me.email, 'funding.interest_export', c.id, { count: rows.length });

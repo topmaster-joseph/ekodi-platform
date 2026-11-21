@@ -7,6 +7,7 @@
 import { createApp, clean, PUBLIC_PATH } from './funding-core.js';
 import { createD1Store } from './funding-d1-store.js';
 import { activeProfileId, tagOrderId } from './ekodipay-core.js';
+import { createTossPayoutClient } from './funding-payout.js';
 import { withFooterTraffic } from './footer-traffic-guarantee.js';
 import { withEdgeTrafficShield } from './edge-traffic-shield.js';
 
@@ -80,6 +81,7 @@ const ekodiWorkerEntry = {
       authenticate: req => authenticate(req, env),
       pay: createGatewayPay(env),
       notify: createOperatorNotify(env),
+      payout: createTossPayoutClient(env),
       digitalApproved: yes(env.FUNDING_DIGITAL_MID_APPROVED),
       extraHeaders: { 'x-ekodi-route': 'funding' },
     });
