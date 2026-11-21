@@ -449,6 +449,9 @@ const shellRuntimeTouched=changedFiles.some(file=>
    'scripts/converge-orchestrated-pr-merge.mjs'].includes(file)
 );
 const sharedSiteTouched=changedFiles.some(file=>
+  // Office is built into the existing Shared Site Core dist; token-mediated merges
+  // do not emit normal main push events. Dispatch only its guarded release owner.
+  file.startsWith('office-prototype/')||
   // /notifications/ is included in Shared Site dist. A static-only change must
   // trigger its receipt-bound release even if the Control API was already deployed.
   file.startsWith('notifications/')||
