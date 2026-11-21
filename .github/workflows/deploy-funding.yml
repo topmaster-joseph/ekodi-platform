@@ -127,17 +127,19 @@ jobs:
             adm_code=$(curl -sS -o /tmp/fd-adm.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/funding/admin/campaigns' || true)
             list_code=$(curl -sS -o /tmp/fd-list.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/funding/public/campaigns' || true)
             missing_code=$(curl -sS -o /tmp/fd-missing.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/funding/public/campaigns/ekodi-verify-no-such-campaign' || true)
-            if [[ "$home_code" == 200 && "$guide_code" == 200 && "$studio_code" == 200 && "$admin_code" == 200 && "$me_code" == 401 && "$adm_code" == 401 && "$list_code" == 200 && "$missing_code" == 404 ]] \
+            map_code=$(curl -sS -o /tmp/fd-map.xml -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/funding/sitemap.xml' || true)
+            if [[ "$home_code" == 200 && "$guide_code" == 200 && "$studio_code" == 200 && "$admin_code" == 200 && "$me_code" == 401 && "$adm_code" == 401 && "$list_code" == 200 && "$missing_code" == 404 && "$map_code" == 200 ]] \
               && grep -Fq '에코디 펀딩' /tmp/fd-home.html \
               && grep -Fq '213-13-01959' /tmp/fd-home.html \
               && grep -Fq '증권형' /tmp/fd-guide.html \
               && grep -Fq '펀딩 만들기' /tmp/fd-studio.html \
               && grep -Fq '펀딩 심사' /tmp/fd-admin.html \
-              && grep -Fq '"campaigns"' /tmp/fd-list.json; then
+              && grep -Fq '"campaigns"' /tmp/fd-list.json \
+              && grep -Fq '<urlset' /tmp/fd-map.xml; then
               echo 'EKODI funding production verified (unknown campaigns hidden, auth boundary closed).'
               exit 0
             fi
             sleep 5
           done
-          echo "Production verification failed: home=$home_code guide=$guide_code studio=$studio_code admin=$admin_code me=$me_code admin_api=$adm_code list=$list_code missing=$missing_code"
+          echo "Production verification failed: home=$home_code guide=$guide_code studio=$studio_code admin=$admin_code me=$me_code admin_api=$adm_code list=$list_code missing=$missing_code sitemap=$map_code"
           exit 1

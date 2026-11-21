@@ -362,3 +362,34 @@ test('pilot owner fix migration only restores the draft pilot', () => {
   assert.match(sql, /id='fund_pilot_publishing_2026' AND owner_org='ekodibiz' AND status IN \('draft','rejected'\)/);
   assert.match(readFileSync(new URL('../.github/workflows/deploy-funding.yml', import.meta.url), 'utf8'), /202611211900_funding_pilot_owner_fix\.sql/);
 });
+
+test('interest privacy: count and CSV export for operators only; closing deletes the list as promised', async () => {
+  const h = harness({ ready: false });
+  const { id } = await liveCampaign(h);
+  for (const email of ['a@example.com', 'b@example.com', 'a@example.com']) await h.call('/api/funding/public/campaigns/test-book/interest', { method: 'POST', body: { email, agree: true } });
+  const list = await h.call('/api/funding/admin/campaigns', { as: 'op' });
+  assert.equal(list.data.campaigns.find(c => c.id === id).interestCount, 2, 'duplicates are stored once');
+  assert.equal((await h.call(`/api/funding/admin/campaigns/${id}/interest.csv`, { as: 'member' })).status, 403);
+  const csv = await h.call(`/api/funding/admin/campaigns/${id}/interest.csv`, { as: 'op' });
+  assert.equal(csv.status, 200);
+  assert.match(csv.headers.get('content-type'), /text\/csv/);
+  assert.match(csv.data, /a@example\.com/);
+  assert.ok(h.store.audits.some(a => a.action === 'funding.interest_export'));
+  const closed = await h.call(`/api/funding/admin/campaigns/${id}/close`, { method: 'POST', as: 'op', body: {} });
+  assert.equal(closed.data.interestDeleted, 2);
+  assert.equal(await h.store.countInterest(id), 0);
+});
+
+test('discovery: funding sitemap lists public pages only, campaign pages carry their own canonical', async () => {
+  const h = harness();
+  await liveCampaign(h);
+  await h.call('/api/funding/studio/campaigns', { method: 'POST', as: 'member', body: draft({ slug: 'hidden-draft' }) });
+  const map = await h.call('/funding/sitemap.xml');
+  assert.equal(map.status, 200);
+  assert.match(map.data, /https:\/\/ekodi\.kr\/funding\/c\/test-book/);
+  assert.doesNotMatch(map.data, /hidden-draft|studio|admin/);
+  assert.match((await h.call('/funding/c/test-book')).data, /<link rel="canonical" href="https:\/\/ekodi\.kr\/funding\/c\/test-book">/);
+  const { DISCOVERY_SERVICE_SITEMAPS, DISCOVERY_PRIVATE_PREFIXES } = await import('../discovery-layer.js');
+  assert.ok(DISCOVERY_SERVICE_SITEMAPS.includes('/funding/sitemap.xml'));
+  assert.ok(DISCOVERY_PRIVATE_PREFIXES.includes('/funding/admin') && DISCOVERY_PRIVATE_PREFIXES.includes('/funding/studio'));
+});

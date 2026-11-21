@@ -144,6 +144,13 @@ jobs:
           grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' church/church-life-hub-i18n.js
           grep -Fq 'href="/qtin/church">큐티인 신청</a>' church/index.html
           grep -Fq "name.href = '/ekodichurch/my/'" church/church-account-header.js
+          # Church source PR #192: translate dynamic account controls in all nine locales.
+          # A member's own name is user content, never translated or used to fail an i18n proof.
+          grep -Fq "'로그인':{en:'Sign in'" church/church-i18n.js
+          grep -Fq "'로그아웃':{en:'Sign out'" church/church-i18n.js
+          grep -Fq "add('로그인'," church/church-i18n-extended.js
+          grep -Fq "add('로그아웃'," church/church-i18n-extended.js
+          grep -Fq "name.dataset.ekodiUserContent = ''" church/church-account-header.js
           grep -Fq "href: '/qtin/church', label: '큐티인 신청'" church/script.js
           grep -Fq 'data-ekodi-header-actions' church/my/index.html
           grep -Fq 'EKODI CHURCH · MY PAGE' church/my/index.html

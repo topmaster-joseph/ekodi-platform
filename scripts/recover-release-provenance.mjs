@@ -307,6 +307,9 @@ const controlApiTouched=sourceFiles.some(file=>[
 // filter for Site Core. Use only source paths owned by the existing Site Core
 // workflow and only its receipt-bound, staged, guarded workflow_dispatch.
 const sharedSiteTouched=sourceFiles.some(file=>
+  // Immediate recovery merges of Office UI assets must dispatch the same staged
+  // Site Core lane; the GitHub token never triggers ordinary main push workflows.
+  file.startsWith('office-prototype/')||
   // Immediate recovery merge must release the generated /notifications/ static assets.
   file.startsWith('notifications/')||
   // AI Ops source and its shared readable-command stylesheet ship in Site Core.

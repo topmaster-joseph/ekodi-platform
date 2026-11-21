@@ -40,6 +40,9 @@ export function createMemoryStore({ campaigns = [], pledges = [] } = {}) {
     async countRewardCommitted(campaignId, rewardId, nowIso) {
       return [...P.values()].filter(p => p.campaignId === campaignId && p.rewardId === rewardId && live(p, nowIso)).length;
     },
+    async countInterest(campaignId) { return [...interest.values()].filter(e => e.campaignId === campaignId).length; },
+    async listInterest(campaignId) { return [...interest.values()].filter(e => e.campaignId === campaignId).map(copy); },
+    async deleteInterest(campaignId) { let n = 0; for (const [k, e] of interest) if (e.campaignId === campaignId) { interest.delete(k); n += 1; } return n; },
     async addInterest(entry) { const key = `${entry.campaignId}:${entry.email}`; if (!interest.has(key)) interest.set(key, copy(entry)); },
     async audit(entry) { audits.push(copy(entry)); },
   };
