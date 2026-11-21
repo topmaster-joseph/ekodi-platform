@@ -28,6 +28,7 @@ function fixture(overrides={}){
       "if(item.source==='board')editRecord(item)"
     ].join('\n'),
     '/ekodichurch/church-public-updates.css':'.church-home-manage-toggle{}',
+    '/ekodichurch/church-homepage-layout.css':'@media(max-width:540px){body:not(:has(main :target)) main > .hero{padding:42px 14px 30px!important}}',
     '/ekodichurch/church-shared-schedules.js':"if(mode!=='published-read-only')return;",
     ...overrides
   };
@@ -49,8 +50,8 @@ test('approved Church source is tested by GET-only, source-pinned production pro
   assert.equal(result.realUserAuthenticated,false);
   assert.equal(result.dataMutations,false);
   assert.equal(result.loggedInCrudVerified,false);
-  assert.equal(result.checks.length,8);
-  assert.equal(requests.length,7);
+  assert.equal(result.checks.length,9);
+  assert.equal(requests.length,8);
   for(const r of requests){
     assert.equal(new URL(r.url).origin,CHURCH_ORIGIN);
     assert.equal(new URL(r.url).searchParams.get('release'),sha);
@@ -58,6 +59,10 @@ test('approved Church source is tested by GET-only, source-pinned production pro
     assert.equal(r.options.cache,'no-store');
     assert.ok(!('authorization' in r.options.headers));
   }
+});
+test('reject older mobile hero clearance that overlaps localized 320px header',async()=>{
+  const oldLayout=transport({'/ekodichurch/church-homepage-layout.css':'@media(max-width:540px){body:not(:has(main :target)) main > .hero{padding:22px 14px 30px!important}}'});
+  await assert.rejects(()=>verifyChurchInlineProduction({expectedSourceSha:sha,fetchImpl:oldLayout.fetchImpl}),/mobile 320px localized greeting clearance/);
 });
 test('reject mismatched deployed revision, never confuse old production with successful promotion',async()=>{
   const {fetchImpl}=transport({'/ekodichurch/church-release.json':JSON.stringify({
