@@ -82,7 +82,8 @@ globalThis.fetch=async (input,init={})=>{
   if(url.endsWith('/access/apps/app1/policies?per_page=100'))
     return json([{id:'same-run',name:own},{id:'another-run',name:'ekodi-points-e2e-other-run'}]);
   if(url.endsWith('/access/service_tokens?per_page=100'))
-    return json([{id:'same-token',name:own},{id:'other-token',name:'ekodi-points-e2e-other-run'}]);
+    return json(process.env.TEST_ACCESS_CLOSE_LIST_EMPTY==='1'?[]:
+      [{id:'same-token',name:own},{id:'other-token',name:'ekodi-points-e2e-other-run'}]);
   if(method==='DELETE'&&url.includes('/access/')){
     actions.push({method,url});
     return json(null);
@@ -229,4 +230,24 @@ test('partial Access policy creation keeps the first policy ID for unconditional
     assert.match(recorded,/E2E_ACCESS_POLICIES=app1:created-policy/);
     assert.doesNotMatch(recorded,/app2:/);
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('cleanup deletes a run-minted UUID directly even when metadata listing omits it',()=>{
+  const id='0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b';
+  const r=runMockAccess('close',{E2E_ACCESS_TOKEN_ID:id,TEST_ACCESS_CLOSE_LIST_EMPTY:'1'});
+  assert.equal(r.status,0,r.stdout+'\\n'+r.stderr);
+  const calls=actionsOf(r);
+  assert.equal(calls.filter(x=>x.method==='DELETE'&&x.url.endsWith('/access/service_tokens/'+id)).length,1);
+  assert.doesNotMatch(JSON.stringify(calls),/other-token|another-run/);
+  // The synthetic ACCESS_PROBE line deliberately enumerates mocked API calls.
+  // Only operational output (not the test's trace) must hide the token UUID.
+  const operationalLog=r.stdout.split(/\r?\n/).filter(line=>!line.startsWith('ACCESS_PROBE=')).join('\n');
+  assert.doesNotMatch(operationalLog,new RegExp(id));
+});
+test('cleanup refuses to delete a malformed run token ID and reports incomplete cleanup',()=>{
+  const r=runMockAccess('close',{E2E_ACCESS_TOKEN_ID:'../../../unrelated',TEST_ACCESS_CLOSE_LIST_EMPTY:'1'});
+  assert.notEqual(r.status,0);
+  assert.doesNotMatch(r.stdout,/ACCESS_PROBE=/);
+  assert.match(r.stdout,/malformed/);
+  assert.doesNotMatch(r.stdout,/unrelated/);
 });
