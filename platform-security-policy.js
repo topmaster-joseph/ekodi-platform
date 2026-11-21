@@ -146,6 +146,8 @@ export function sameOriginFrameCsp(csp=''){
     : `${value.replace(/;\s*$/,'')}; frame-ancestors 'self'`;
 }
 
+const UNUSED_DEVICE_FEATURES=', browsing-topics=(), bluetooth=(), serial=(), hid=(), midi=(), magnetometer=()';
+
 // EKODI-HSTS-PRELOAD-PREP-001 (owner decision 2026-11-21: 준비까지만).
 // Browser HSTS preload inclusion is effectively irreversible for months and binds every
 // subdomain host of the apex to HTTPS. Turning HSTS_PRELOAD_ENABLED on is the only change left; it
@@ -193,12 +195,19 @@ export function applyPlatformSecurityHeaders(response,request){
   else if(firstPartyChurchLiveViewer)headers.set('X-Frame-Options','SAMEORIGIN');
   else if(firstPartyAdminEmbed)headers.delete('X-Frame-Options');
   else if(!headers.has('X-Frame-Options'))headers.set('X-Frame-Options','DENY');
+  // EKODI-SECURITY-HEADERS-002: device APIs no EKODI page uses are switched off for every
+  // page and every embedded frame (Topics ad tracking, Bluetooth, USB-serial, HID, MIDI,
+  // magnetometer). Accelerometer/gyroscope stay untouched for YouTube 360 embeds.
   if(!headers.has('Permissions-Policy')){
-    headers.set('Permissions-Policy',info.live
+    headers.set('Permissions-Policy',(info.live
       ? 'camera=(self), microphone=(self), display-capture=(self), geolocation=(), usb=()'
-      : 'camera=(), microphone=(), display-capture=(), geolocation=(), usb=()');
+      : 'camera=(), microphone=(), display-capture=(), geolocation=(), usb=()')+UNUSED_DEVICE_FEATURES);
   }
-  if((info.admin||info.auth)&&!headers.has('Cross-Origin-Opener-Policy'))headers.set('Cross-Origin-Opener-Policy','same-origin-allow-popups');
+  // Every HTML document is isolated from cross-site openers (tabnabbing, XS-leaks).
+  // same-origin-allow-popups keeps OAuth and payment popups working.
+  if((info.admin||info.auth||isDocumentResponse(secured))&&!headers.has('Cross-Origin-Opener-Policy'))headers.set('Cross-Origin-Opener-Policy','same-origin-allow-popups');
+  // JSON is never legitimately loaded cross-site without CORS (<script>/<img>): forbid it.
+  if(/^application\/(?:[a-z.+-]*\+)?json\b/i.test(String(headers.get('Content-Type')||''))&&!headers.has('Cross-Origin-Resource-Policy'))headers.set('Cross-Origin-Resource-Policy','same-origin');
   if(info.sensitive){
     headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
     const personalized=Boolean(String(request.headers.get('authorization')||'').trim()||String(request.headers.get('cookie')||'').trim());
