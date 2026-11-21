@@ -163,3 +163,26 @@ test('guarded Church Pages promotion requires translated account controls for al
   assert.match(w,/window\.__EKODI_CHURCH_RENDERED_TEXT__/);
   assert.doesNotMatch(w,/body:clone\.innerText/);
 });
+
+
+test('Church source PR 195 schedule proof requires vertically stacked today-selected schedule and safe details',async()=>{
+  const workflow=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  const proof=await read('scripts/verify-church-schedule-day-detail-native.mjs');
+  assert.match(workflow,/Verify Church schedule day-detail vertical flow on real Pages with isolated native Chromium/);
+  assert.match(workflow,/test -s church\/church-shared-schedules\.js/);
+  assert.match(workflow,/grep -Fq 'data-church-event-detail' church\/schedule\/index\.html/);
+  assert.match(workflow,/verify-church-schedule-day-detail-native\.mjs/);
+  assert.match(workflow,/Upload Church synthetic schedule calendar evidence/);
+  assert.match(proof,/const today=localDay\(\),other=dayNear\(today\)/);
+  assert.match(proof,/width of \[390,1366\]/);
+  assert.match(proof,/first\.stacked,true/);
+  assert.match(proof,/first\.selected,today/);
+  assert.match(proof,/page\.click\('\[data-church-schedules-list\] \.church-schedule-event-select'\)/);
+  assert.match(proof,/주보 원문에 근거해 공개한 일정 상세내용/);
+  assert.match(proof,/source:'ekodimission'/);
+  assert.match(proof,/await page\.click\('\[data-church-calendar-today\]'\)/);
+  assert.match(proof,/assert\.deepEqual\(forbiddenWrites,\[\]/);
+  assert.match(proof,/void req\.abort\('blockedbyclient'\)/);
+  assert.match(proof,/await browser\.close\(\)/);
+  assert.doesNotMatch(proof,/method:'(?:POST|PATCH|DELETE)'/);
+});

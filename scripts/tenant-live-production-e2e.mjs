@@ -6,6 +6,8 @@ const token=process.env.E2E_ADMIN_TOKEN||'';
 const tenant=process.env.TENANT_LIVE_TENANT||'ekodibiz';
 const liveUrl=process.env.TENANT_LIVE_URL||'https://ekodi.kr/ekodibiz/live/';
 const label=process.env.TENANT_LIVE_LABEL||'EKODI Biz';
+const requireAV=process.env.TENANT_LIVE_REQUIRE_AV==='yes';
+if(requireAV&&(tenant!=='ekodichurch'||liveUrl!=='https://ekodi.kr/live/church/'))throw new Error('approved_external_av_requires_canonical_church_route');
 const api='https://ekodi.kr/api/realtime';
 const artifactDir='artifacts/tenant-live-production-e2e';
 const reportPath=`${artifactDir}/${String(tenant).replace(/[^a-z0-9._-]+/gi,'-')}.json`;
@@ -67,10 +69,10 @@ async function text(page,selector){
 await fs.mkdir(artifactDir,{recursive:true});
 const initial=await publicLive();
 if(initial.live){
-  Object.assign(report,{passed:true,skipped:true,reason:'active_tenant_broadcast'});
+  Object.assign(report,{passed:!requireAV,skipped:true,reason:'active_tenant_broadcast'});
   await fs.writeFile(reportPath,JSON.stringify(report,null,2));
   console.log(`Tenant Live production E2E skipped for ${tenant}: a real live broadcast is active.`);
-  process.exit(0);
+  process.exit(requireAV?2:0);
 }
 
 const browser=await chromium.launch({
@@ -134,6 +136,22 @@ try{
   report.viewerStatus=await text(viewer,'#viewerStatus');
   report.viewerTracks=await viewer.locator('#viewerVideo').evaluate(video=>video.srcObject?.getTracks?.().filter(track=>track.readyState==='live').length||0);
   assert.ok(report.viewerTracks>=1,'viewer_received_no_live_track');
+  if(requireAV){
+    await viewer.waitForFunction(()=>{
+      const v=document.querySelector('#viewerVideo');
+      const tracks=v?.srcObject?.getTracks?.()||[];
+      return tracks.some(t=>t.kind==='video'&&t.readyState==='live') && tracks.some(t=>t.kind==='audio'&&t.readyState==='live') &&
+        v.videoWidth>0 && v.videoHeight>0 && v.currentTime>0.2;
+    },null,{timeout:20000});
+    const media=await viewer.locator('#viewerVideo').evaluate(v=>({
+      videoTracks:v.srcObject?.getVideoTracks?.().filter(t=>t.readyState==='live').length||0,
+      audioTracks:v.srcObject?.getAudioTracks?.().filter(t=>t.readyState==='live').length||0,
+      videoWidth:v.videoWidth,videoHeight:v.videoHeight,playedSeconds:Number(v.currentTime.toFixed(2))
+    }));
+    assert.ok(media.videoTracks>=1&&media.audioTracks>=1,'external_viewer_requires_video_and_audio');
+    assert.ok(media.videoWidth>0&&media.videoHeight>0&&media.playedSeconds>0.2,'external_viewer_video_must_decode_and_progress');
+    report.externalReceiver={route:'/live/church/',anonymous:true,...media};
+  }
   assert.equal(report.pageErrors.length,0,'browser_page_errors');
 
   await host.locator('#endLiveButton').click();
