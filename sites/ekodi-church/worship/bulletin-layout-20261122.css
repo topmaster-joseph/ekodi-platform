@@ -3,8 +3,8 @@
 .bp-pages[data-worship-layout="2026-11-22"] .bp-col:first-child{padding-right:20px}
 .bp-pages[data-worship-layout="2026-11-22"] .bp-col:last-child{padding-left:20px}
 .bp-pages[data-worship-layout="2026-11-22"] .bp-col:first-child>.bp-h:first-child{margin-top:0}
-.bp-pages[data-worship-layout="2026-11-22"] .bp-col:first-child .bp-sponsors{grid-template-columns:repeat(3,minmax(0,1fr));font-size:11px;line-height:1.55;margin-bottom:14px}
-.bp-pages[data-worship-layout="2026-11-22"] .bp-col:first-child .bp-grid{font-size:11.5px}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-col:last-child .bp-sponsors{grid-template-columns:repeat(3,minmax(0,1fr));font-size:11px;line-height:1.55;margin-bottom:14px}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-col:last-child .bp-grid{font-size:11.5px}
 .bp-pages[data-worship-layout="2026-11-22"] .bp-order{background:#f7f8f5;border:1px solid #dbe3dd;border-radius:8px;padding:12px 14px 14px}
 .bp-pages[data-worship-layout="2026-11-22"] .bp-order h3{font-size:16px;letter-spacing:.01em;color:#173b30}
 .bp-pages[data-worship-layout="2026-11-22"] .bp-order .bp-red{margin:3px 0 10px;font-size:11px}
