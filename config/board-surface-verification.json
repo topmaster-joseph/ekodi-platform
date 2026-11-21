@@ -16,14 +16,14 @@
       "path": "/live/church/?mode=studio&activity=sunday",
       "enabled": true,
       "kind": "read-only-browser-proof",
-      "verificationNote": "Temporary draft PR native browser proof only; never merge this registry addition into main"
+      "verificationNote": "2026-11-22 post-merge PR #10154 browser replay for header-right/verse removal: temporary draft-only read-only proof; do NOT merge"
     },
     {
       "id": "ekodichurch.live-viewer-verification",
       "path": "/live/church/?mode=viewer",
       "enabled": true,
       "kind": "read-only-browser-proof",
-      "verificationNote": "Temporary draft PR native browser proof only; never merge this registry addition into main"
+      "verificationNote": "2026-11-22 post-merge PR #10154 browser replay for header-right/verse removal: temporary draft-only read-only proof; do NOT merge"
     },
     {
       "id": "seonammedi.citizen_voice",
