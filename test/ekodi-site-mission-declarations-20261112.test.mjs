@@ -74,5 +74,5 @@ test('owned site mission banners never alter public site status, franchisor mark
   assert.match(read('sites/ekodi-insurance/public/index.html'),/실제 설계사 상담을 요청할 때만/);
   assert.match(read('money/index.html'),/실제 이체·해지·변경은 언제나 본인이/);
   assert.match(read('delivery/index.html'),/storeResolver/);
-  assert.match(read('publishing/index.html'),/운영 에코디비즈/);
+  assert.match(read('publishing/index.html'),/에코디비즈 · 정찬균/);
 });
