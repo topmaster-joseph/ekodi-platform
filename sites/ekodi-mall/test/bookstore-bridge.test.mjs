@@ -210,3 +210,8 @@ test('mall book checkout pages are built, record the mall channel and show the b
   assert.ok(client.includes('ekodimall\\/checkout\\/book\\/success'));
   assert.doesNotMatch(client, /accounts\.google\.com/);
 });
+
+test('book checkout keeps hidden sections hidden (owned/pay area never both visible)', () => {
+  const css = readFileSync(path.join(root, 'assets/book-checkout.css'), 'utf8');
+  assert.match(css, /\.book-checkout-page \[hidden\]\{display:none!important\}/);
+});
