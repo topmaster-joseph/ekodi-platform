@@ -25,6 +25,16 @@ test('visible mode always auto-closes and cleans up in finally', () => {
   assert.match(visible, /finally\s*\{[\s\S]*Stop-OwnedBrowserTree[\s\S]*Remove-OwnedProfile/);
 });
 
+test('both headless and visible site checks require complete owned-resource cleanup', () => {
+  const headless = tool.slice(tool.indexOf('function Invoke-HeadlessCheck'), tool.indexOf('function Invoke-VisibleCheck'));
+  const visible = tool.slice(tool.indexOf('function Invoke-VisibleCheck'), tool.indexOf('$browser = Resolve-EkodiCheckBrowser'));
+  const cleanupGuard = /\$result\.ok = \[bool\]\$result\.ok -and \[bool\]\$result\.browserClosed -and \[bool\]\$result\.profileRemoved/;
+  assert.match(headless, cleanupGuard);
+  assert.match(visible, cleanupGuard);
+  assert.ok(headless.indexOf('Stop-OwnedBrowserTree') < headless.lastIndexOf('$result.ok ='));
+  assert.ok(visible.indexOf('Stop-OwnedBrowserTree') < visible.lastIndexOf('$result.ok ='));
+});
+
 test('never targets the user browser or its profile', () => {
   const resolver = tool.slice(tool.indexOf('function Resolve-EkodiCheckBrowser'), tool.indexOf('function Assert-SafeHttpUrl'));
   assert.doesNotMatch(resolver, /opera\.exe|launcher\.exe/i);
