@@ -4,8 +4,24 @@
 // 예상 구독료 계산은 estimateHomepageSubscription() 하나만 정본으로 쓰고, 같은 함수 원문을 브라우저에 그대로 싣는다.
 export const EKODIBIZ_HOMEPAGE_SERVICE_PATH = '/ekodibiz/homepage';
 export const EKODIBIZ_HOMEPAGE_SERVICE_URL = 'https://ekodi.kr/ekodibiz/homepage';
-export const EKODIBIZ_HOMEPAGE_SERVICE_VERSION = 'v0.4-2026-11-21';
+export const EKODIBIZ_HOMEPAGE_SERVICE_VERSION = 'v0.5-2026-11-21';
 export const EKODIBIZ_HOMEPAGE_CONTACT_SOURCE = 'ekodibiz-homepage-subscription';
+export const EKODIBIZ_HOMEPAGE_SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
+const EKODIBIZ_HOMEPAGE_SUPABASE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
+
+// 기능별 실제 제공 상태 (코드 검토 2026-11-21). auto=신청 즉시 자동, setup=개설 후 담당자가 기존 에코디 기능으로 설정,
+// planned=준비 중 — 제공 전에는 해당 기능 금액을 청구하지 않는다.
+export const FEATURE_STATUS = Object.freeze({
+  auto: { label: '자동 개설', note: '바로 구독 신청 즉시 사이트 주소가 만들어지고, 공개 승인 후 바로 열립니다.' },
+  setup: { label: '개설 후 설정', note: '공개 후 2영업일 안에 담당자가 에코디 기능으로 연결해 드립니다.' },
+  planned: { label: '준비 중', note: '준비 중인 기능은 제공 전까지 해당 금액을 청구하지 않습니다.' },
+});
+export function featureStatus(text = '') {
+  const t = String(text).trim().replace(/^S\d \+ /, '');
+  if (/리뷰 모음|온라인 주문·결제|회원·포인트|POS/.test(t)) return 'planned';
+  if (/^소개 1페이지|^모바일 최적화|^보안\(SSL\)·호스팅|^방문통계|SEO\/AEO/.test(t)) return 'auto';
+  return 'setup';
+}
 
 const OPERATOR = Object.freeze({
   name: '에코디비즈', representative: '정찬균', businessRegistrationNumber: '213-13-01959',
@@ -131,7 +147,7 @@ export function ekodiBizHomepageServiceHtml() {
     const est = estimateHomepageSubscription(P, { contract: 'monthly', ...t.preset });
     return `<div class="panel" role="tabpanel" id="panel-${t.id}" aria-labelledby="tab-${t.id}"${i === 0 ? '' : ' hidden'}>
       <h3>${esc(t.name)}</h3><p>${esc(t.summary)}</p>
-      <ul class="feat">${t.features.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+      <ul class="feat status-list">${t.features.map((f) => { const k = featureStatus(f); return `<li><span class="st st-${k}">${FEATURE_STATUS[k].label}</span> ${esc(f)}</li>`; }).join('')}</ul>
       <p class="rec">추천 구성: <strong>${esc(est.lines.map((l) => l.label).join(' + '))}</strong>${t.preset.logo ? ' + 로고(1회)' : ''}${t.preset.nonprofit ? ' · 비영리 할인' : ''}<br>예상 월 구독료 <strong class="big">${won(est.monthly)}</strong> · 제작비 ${won(est.setup)}</p>
       <p class="note">유의: ${esc(t.caution)}</p>
       <button type="button" class="ghost" data-preset="${esc(JSON.stringify({ type: t.name, ...t.preset }))}">이 구성으로 계산·신청하기</button>
@@ -141,7 +157,7 @@ export function ekodiBizHomepageServiceHtml() {
   const audienceCards = HOMEPAGE_AUDIENCES.map((a, i) => `<label class="audience-choice"><input type="radio" name="audience" value="${a.id}"${i === 0 ? ' checked' : ''}><span><strong>${esc(a.name)}</strong><small>${esc(a.examples)}</small></span></label>`).join('');
   const planFor = { S1: '개인·소개 한 페이지로 충분한 분', S2: '소식·사진을 꾸준히 올리고 검색에 노출하려는 곳', S3: '예약·견적을 받고 홍보까지 맡기려는 곳', S4: '온라인 주문·결제와 회원 관리가 필요한 곳' };
   const planCards = plans.map((p, i) => `<label class="plan-choice"><input type="radio" name="planChoice" value="${p.id}"${i === 0 ? ' checked' : ''}><span><strong>${esc(p.name)}</strong><b>월 ${won(p.monthly)}</b><small>${esc(planFor[p.id])}</small></span></label>`).join('');
-  const planDetails = plans.map((p, i) => `<div class="plan-info" data-plan="${p.id}"${i === 0 ? '' : ' hidden'}><h4>${esc(p.name)} · 월 ${won(p.monthly)} <small>(제작비 ${won(p.setup)} · 부가세 포함)</small></h4><p>${esc(planFor[p.id])}에게 맞습니다.</p><ul class="feat">${p.scope.split(/,\s*/).map((f) => `<li>${esc(f)}</li>`).join('')}</ul></div>`).join('');
+  const planDetails = plans.map((p, i) => `<div class="plan-info" data-plan="${p.id}"${i === 0 ? '' : ' hidden'}><h4>${esc(p.name)} · 월 ${won(p.monthly)} <small>(제작비 ${won(p.setup)} · 부가세 포함)</small></h4><p>${esc(planFor[p.id])}에게 맞습니다.</p><ul class="feat status-list">${p.scope.split(/,\s*/).map((f) => { const k = featureStatus(f); return `<li><span class="st st-${k}">${FEATURE_STATUS[k].label}</span> ${esc(f)}</li>`; }).join('')}</ul></div>`).join('');
   const typeOptions = HOMEPAGE_TYPES.map((t) => `<option>${esc(t.name)}</option>`).join('');
   return `<!doctype html>
 <html lang="ko">
@@ -199,6 +215,7 @@ export function ekodiBizHomepageServiceHtml() {
     .plan-detail{border-left:4px solid var(--accent);background:var(--soft);border-radius:10px;padding:12px 16px}.plan-detail h4{margin:0 0 .2rem;font-size:1.02rem}.plan-detail p{margin:0 0 .3rem;color:var(--text)}.plan-detail ul{margin:.2rem 0}
     .addons{display:grid;gap:10px}.addons[open]{padding-bottom:4px}
     .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}button.secondary{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+    .st{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:800;margin-right:4px;vertical-align:1px}.st-auto{background:#1f6b4f;color:#fff}.st-setup{background:#e7eefb;color:#21437a}.st-planned{background:#f6ecd9;color:#7a4b06}.status-list{columns:1;list-style:none;padding-left:0}.status-list li{margin:.25rem 0}.legend{line-height:2}
     .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
     @media(max-width:640px){.plan-grid{grid-template-columns:1fr 1fr}.topbar{position:static}.page-tabs{top:0}.page-tabs [role=tab]{padding:8px 12px;font-size:14px}.actions{grid-template-columns:1fr}}
     :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -241,6 +258,7 @@ export function ekodiBizHomepageServiceHtml() {
         <input type="hidden" id="plan" value="S1">
         <div class="plan-grid" role="radiogroup" aria-label="요금제">${planCards}</div>
         <div class="plan-detail" id="planDetail" aria-live="polite">${planDetails}</div>
+        <p class="note legend">${Object.entries(FEATURE_STATUS).map(([k, v]) => `<span class="st st-${k}">${v.label}</span> ${esc(v.note)}`).join('<br>')}</p>
       </div>
       <div class="step"><h3><span class="num">3</span>결제 방식 · 추가 선택</h3>
         <div class="row3">
@@ -289,7 +307,7 @@ export function ekodiBizHomepageServiceHtml() {
         <button id="send" type="submit" data-mode="consult" class="secondary">상담 신청</button>
         <button id="subscribe" type="submit" data-mode="subscribe">바로 구독 신청</button>
       </div>
-      <p class="note">상담 신청: 담당자가 1영업일 이내 연락드립니다. 바로 구독 신청: 선택한 구성으로 개설을 시작하고, 첫 결제 안내를 이메일·문자로 보내드립니다. 결제 전까지 요금은 청구되지 않습니다.</p>
+      <p class="note">상담 신청: 담당자가 1영업일 이내 연락드립니다. 바로 구독 신청: 신청 즉시 홈페이지 주소(ekodi.kr/hp-…)가 자동으로 만들어지고, 첫 결제 안내를 이메일·문자로 보내드립니다. 첫 결제 확인 후 공개됩니다. 결제 전까지 요금은 청구되지 않습니다.</p>
       <div id="status" class="status" role="status" aria-live="polite"></div>
     </form>
     <div id="done" class="done" role="status"><strong id="doneTitle">신청이 정상 접수되었습니다.</strong><p id="doneText">담당자가 1영업일 이내 연락드리겠습니다.</p><p>기타 문의: 담당자 ${o.manager} · ${o.phone} · <a href="mailto:${o.email}">${o.email}</a></p></div>
@@ -299,6 +317,7 @@ export function ekodiBizHomepageServiceHtml() {
     <h2 id="plans">기본 요금제 <span class="note">(제작비 0원 · 월납 · 부가세 포함)</span></h2>
     <div class="table-wrap"><table><thead><tr><th>요금제</th><th>기능·개발 범위</th><th>제작비</th><th>월 구독료</th></tr></thead><tbody>${planRows}
       <tr><th scope="row">맞춤 개발</th><td data-label="기능·개발 범위">요금제 밖 전용 기능(외부 시스템 연동 등)</td><td class="num" data-label="제작비">견적</td><td class="num" data-label="월 구독료">기능별 유지비</td></tr></tbody></table></div>
+    <p class="note legend">${Object.entries(FEATURE_STATUS).map(([k, v]) => `<span class="st st-${k}">${v.label}</span> ${esc(v.note)}`).join('<br>')}<br>기능별 제공 상태는 구독 신청 탭의 요금제 설명과 업종별 기능 탭에 표시됩니다.</p>
     <p class="note">표시된 금액으로 매월 이용합니다. 최소 약정기간과 월납 할증이 없습니다. 첫 달만 적용되는 행사 가격이 아닌 기본 월 요금입니다. 연납은 선택할 수 있으며, 12개월 이용료를 10개월 금액으로 선납합니다.</p>
     <h2 id="addons">추가 옵션</h2>
     <div class="table-wrap"><table><thead><tr><th>옵션</th><th>요금</th></tr></thead><tbody>${addonRows}</tbody></table></div>
@@ -377,10 +396,16 @@ export function ekodiBizHomepageServiceHtml() {
     var head=sub?'[홈페이지 바로 구독 신청]':'[홈페이지 구독 상담 신청]';
     var msg=[head,'신청 방식: '+(sub?'바로 구독 신청 (요금·이용기준 확인 동의)':'상담 신청'),'이용 유형: '+audience().name,'이름·기관·단체명: '+v('business'),'담당자: '+v('name'),'연락처: '+v('phone'),'이메일: '+v('email'),'업종·유형: '+(v('type')||'-'),'현재 홈페이지·SNS: '+(v('current')||'-'),'상인회 회원: '+$('member').options[$('member').selectedIndex].text,'비영리: '+($('nonprofit').checked?'예':'아니오'),'-',
       '[선택 구성 · 예상 금액(부가세 포함)]'].concat(c.lines.map(function(l){return '- '+l.label+': 월 '+won(l.amount);}),[$('logo').checked?'- 로고 디자인(1회)':'',$('photo').checked?'- 사진 촬영(1회)':'','납부 방식: '+cm+(c.discountRate?' · 할인 '+Math.round(c.discountRate*100)+'%':''),'월 예상 구독료: '+won(c.monthly),'제작비: '+won(c.setup),'첫 결제 예상: '+won(c.firstPayment),'-','개인정보 동의: 예','요청사항: '+(v('message')||'-')]).filter(function(x){return x!=='';}).join('\\n');
+    var prov=null;
+    try{var pr=await fetch('${EKODIBIZ_HOMEPAGE_SUPABASE_URL}/rest/v1/rpc/homepage_subscription_submit',{method:'POST',headers:{apikey:'${EKODIBIZ_HOMEPAGE_SUPABASE_KEY}','content-type':'application/json'},cache:'no-store',body:JSON.stringify({p:{mode:mode,audience:audience().id,plan:c.plan,contract:c.contract,monthly_estimate:c.monthly,display_name:v('business'),email:v('email'),phone:v('phone'),contact_name:v('name'),message:v('message'),consent:$('consent').checked,terms:$('terms').checked,website:v('website'),options:{pages:v('pages'),social:v('social'),lang:v('lang'),booking:$('booking').checked,payment:$('payment').checked,logo:$('logo').checked,photo:$('photo').checked,member:v('member'),nonprofit:$('nonprofit').checked,type:v('type'),current:v('current')}}})});
+      prov=await pr.json().catch(function(){return null;});
+    }catch(err){prov=null;}
+    if(prov&&prov.ok===false){var em={rate_limited:'같은 이메일로 오늘 신청이 많습니다. 내일 다시 시도하거나 전화로 문의해 주세요.',busy:'신청이 많아 잠시 후 다시 시도해 주세요.',phone_required:'바로 구독 신청은 전화번호가 필요합니다.',terms_required:'요금제·이용 기준 확인에 체크해 주세요.',consent_required:'개인정보 수집·이용에 동의해 주세요.',invalid_email:'이메일 주소를 확인해 주세요.',invalid_phone:'연락처를 확인해 주세요.'};s.className='status error';s.textContent=em[prov.error]||'신청 처리에 실패했습니다. ${o.phone} 로 연락 주세요.';btns.forEach(function(x){x.disabled=false;});return;}
+    if(prov&&prov.site_url)msg+='\\n-\\n자동 개설 주소(공개 승인 전): '+prov.site_url+'\\n요청 ID: '+prov.request_id;else if(prov&&prov.request_id)msg+='\\n-\\n요청 ID: '+prov.request_id;else msg+='\\n-\\n자동 접수 기록 실패: 수동 확인 필요';
     try{var r=await fetch('/mail/api/contact',{method:'POST',headers:{'content-type':'application/json'},cache:'no-store',body:JSON.stringify({name:v('name')||v('business'),email:v('email'),subject:(sub?'홈페이지 바로 구독 신청 · ':'홈페이지 구독 상담 신청 · ')+v('business')+' · 월 '+won(c.monthly),message:msg,website:v('website'),site:'ekodibiz',source:'${EKODIBIZ_HOMEPAGE_CONTACT_SOURCE}',sourceUrl:location.href})});
       var data=await r.json().catch(function(){return{};});if(!r.ok)throw new Error(data.error||'신청서 전송에 실패했습니다.');
       $('doneTitle').textContent=sub?'구독 신청이 정상 접수되었습니다.':'신청이 정상 접수되었습니다.';
-      $('doneText').textContent=sub?'선택하신 '+PRICING.plans[c.plan].name+' (월 '+won(c.monthly)+')으로 개설을 준비합니다. 1영업일 이내 첫 결제 안내를 이메일·문자로 보내드립니다.':'담당자가 1영업일 이내 연락드리겠습니다.';
+      $('doneText').textContent=sub?(prov&&prov.site_url?'홈페이지 주소가 자동으로 만들어졌습니다: '+prov.site_url+' — 첫 결제 확인 후 공개됩니다. ':'')+'선택하신 '+PRICING.plans[c.plan].name+' (월 '+won(c.monthly)+') 기준으로 1영업일 이내 첫 결제 안내를 이메일·문자로 보내드립니다.':'담당자가 1영업일 이내 연락드리겠습니다.';
       f.style.display='none';d.style.display='block';d.scrollIntoView({behavior:'smooth',block:'center'});
     }catch(err){s.className='status error';s.textContent=(err&&err.message||'신청서 전송에 실패했습니다.')+' 계속 안 되면 ${o.phone} 로 연락 주세요.';btns.forEach(function(x){x.disabled=false;});}
   });
@@ -397,7 +422,7 @@ export function ekodiBizHomepageServiceResponse({ head = false } = {}) {
       'cache-control': 'public, max-age=300, s-maxage=600',
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'strict-origin-when-cross-origin',
-      'content-security-policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https:; form-action 'self'; frame-ancestors 'none'; base-uri 'self'",
+      'content-security-policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://renzehysxirjilvdxacv.supabase.co; img-src 'self' data: https:; form-action 'self'; frame-ancestors 'none'; base-uri 'self'",
       'x-ekodi-route': 'ekodibiz-homepage-service',
     },
   });
