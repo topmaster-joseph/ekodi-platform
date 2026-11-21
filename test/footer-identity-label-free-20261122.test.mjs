@@ -82,3 +82,15 @@ test('commercial legal notice fields are retained separately from decorative foo
   assert.ok(!mall.includes('<strong>대표</strong> ${esc(business.representative'));
   assert.ok(mall.includes('business.representative'));
 });
+
+test('protected Church release rejects reintroduced footer labels at source and across live routes',async()=>{
+  const release=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  assert.match(release,/Reject duplicate Church operator and representative footer wording at source/);
+  assert.match(release,/Verify live Church footer labels absent across five canonical public pages/);
+  assert.match(release,/for page in index\.html devotion\/index\.html notices\/index\.html schedule\/index\.html together\/index\.html/);
+  assert.match(release,/grep -Fq '고유번호 307-82-82097'/);
+  assert.match(release,/Church footer public live routes verified without redundant labels/);
+  assert.match(release,/release_branch_ref:/);
+  assert.match(release,/release_task_id:/);
+  assert.match(release,/EKODI AI Orchestration Gate/);
+});
