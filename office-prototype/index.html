@@ -4,79 +4,109 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <meta name="theme-color" content="#172925">
-  <title>EKODI Office | 에코디 통합 오피스</title>
+  <meta name="theme-color" content="#132c27">
+  <meta name="description" content="에코디 오피스: 기존 문서·제안서·교육 서비스를 연결하는 업무 허브. 개인 AI 계정 이용 방식과 오픈소스 출처를 투명하게 안내합니다.">
+  <title>EKODI Office | 문서를 넘어, 일의 흐름을 잇다</title>
   <link rel="stylesheet" href="./office.css">
   <script defer src="./office.js"></script>
 </head>
 <body>
   <a class="skip" href="#main">본문으로 이동</a>
-  <div class="shell">
-    <header class="site-head">
-      <a class="logo" href="https://ekodi.kr/" aria-label="에코디 홈"><span class="mark">E</span><span>EKODI <b>OFFICE</b></span></a>
-      <span class="prototype">오피스 통합 진입점 · 연결 서비스 제공</span>
-      <a class="top-link" href="https://ekodi.kr/my/">My EKODI</a>
-    </header>
-    <main id="main">
-      <section class="hero">
-        <div>
-          <p class="eyebrow">CREATE · COLLABORATE · ACT</p>
-          <h1>문서를 넘어,<br><em>일의 흐름을 잇다.</em></h1>
-          <p class="lead">문서 작성부터 제안·교육·보고까지. 에코디가 제공하는 기존 기능을 하나의 업무 흐름으로 연결하는 오피스입니다.</p>
-          <div class="actions">
-            <a class="primary" href="https://ekodi.kr/my/docs/">내 문서 열기 <span aria-hidden="true">↗</span></a>
-            <a class="secondary" href="https://ekodi.kr/proposal/">제안서 작업실 <span aria-hidden="true">↗</span></a>
+  <header class="site-head">
+    <a class="brand" href="https://ekodi.kr/" aria-label="에코디 홈"><span class="brand-mark" aria-hidden="true">E<span class="mark-dot"></span></span><span>EKODI <b>OFFICE</b><small>by EKODI</small></span></a>
+    <nav class="head-nav" aria-label="페이지 메뉴">
+      <a href="#tools">업무 도구</a><a href="#ai-connect">AI 연결</a><a href="#workspace">이용 방식</a><a href="#sources">코드 출처</a>
+    </nav>
+    <a class="head-action" href="https://ekodi.kr/my/">My EKODI <span aria-hidden="true">↗</span></a>
+  </header>
+  <main id="main">
+    <section class="hero-wrap" aria-labelledby="hero-title">
+      <div class="hero">
+        <div class="hero-copy">
+          <p class="hero-kicker"><span class="pulse"></span> EKODI INTELLIGENT WORKSPACE <span class="kicker-number">/ 01</span></p>
+          <h1 id="hero-title">문서를 넘어,<br><em>일의 흐름을 잇다.</em></h1>
+          <p class="hero-lead">작성하고, 이해하고, 함께 실행하는 일. 에코디 오피스는 흩어진 문서 작업과 AI 활용을 하나의 경험으로 연결합니다.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://ekodi.kr/my/docs/">내 문서 작업실 열기 <span aria-hidden="true">↗</span></a>
+            <a class="btn btn-ghost" href="#ai-connect">AI 이용 구조 살펴보기 <span aria-hidden="true">↓</span></a>
           </div>
-          <p class="disclaimer">이 시안은 실제 파일을 열거나 저장하지 않습니다. 위의 연결은 에코디 기존 서비스로 이동합니다.</p>
+          <p class="hero-caption">오피스 통합 진입점 · 연결 서비스 제공 · 현재는 독립 편집기가 아닌 통합 허브</p>
         </div>
-        <div class="hero-art" aria-hidden="true">
-          <div class="mock-top"><span>EKODI · WORKSPACE</span><span>● ● ●</span></div>
-          <div class="mock-body">
-            <div class="mock-rail"><i></i><i></i><i></i><i></i></div>
-            <div class="mock-sheet">
-              <div class="mock-label">새로운 업무 문서</div>
-              <div class="mock-title"></div><div class="mock-line wide"></div><div class="mock-line"></div>
-              <div class="mock-grid"><div></div><div></div><div></div><div></div><div></div><div></div></div>
-              <div class="mock-line wide"></div><div class="mock-line tiny"></div>
+        <div class="workspace-preview" aria-label="에코디 오피스 화면 콘셉트 그림. 실제 편집 기능 화면은 아닙니다.">
+          <div class="preview-top"><span class="preview-icon">E</span><strong>EKODI WORKSPACE</strong><span class="preview-dots" aria-hidden="true">● ● ●</span></div>
+          <div class="preview-row">
+            <div class="preview-sidebar" aria-hidden="true"><span class="active">◆</span><span>▦</span><span>▤</span><span>◎</span><span>⋯</span></div>
+            <div class="preview-main">
+              <div class="preview-breadcrumb">내 작업공간 <span aria-hidden="true">/</span> 문서</div>
+              <div class="preview-paper">
+                <small>WORKSPACE DOCUMENT / SAMPLE</small>
+                <div class="paper-heading"></div>
+                <div class="paper-line length-1"></div><div class="paper-line length-2"></div><div class="paper-line length-3"></div>
+                <div class="paper-table"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                <div class="paper-line length-2"></div><div class="paper-line length-1"></div>
+              </div>
             </div>
-            <div class="mock-agent"><div class="agent-dot">✳</div><strong>EKODI AI</strong><span>검토 후 적용</span></div>
           </div>
+          <div class="ai-float"><span class="ai-float-icon">✳</span><div><strong>AI가 제안하고</strong><small>수정은 내가 결정합니다</small></div><span class="ai-check">✓</span></div>
+          <div class="preview-bottom"><span class="preview-indicator"></span> YOUR FILES · YOUR CHOICE</div>
         </div>
-      </section>
-      <section class="features" aria-labelledby="tool-title">
-        <div class="section-head"><div><p class="eyebrow">ONE WORKSPACE</p><h2 id="tool-title">필요한 일을 한곳에서</h2></div><span>실제 제공 여부는 각 연결 서비스에서 확인</span></div>
-        <div class="tools">
-          <a class="tool" href="https://ekodi.kr/my/docs/"><span class="glyph">Aa</span><strong>문서</strong><small>기존 문서 편집 · DOCX/HWPX 등</small><span class="tool-link">문서 작업실 열기 ↗</span></a>
-          <a class="tool" href="https://ekodi.kr/proposal/"><span class="glyph">▦</span><strong>표·견적</strong><small>제안서의 예산·표 내보내기</small><span class="tool-link">제안서 작업실 열기 ↗</span></a>
-          <a class="tool" href="https://ekodi.kr/proposal/"><span class="glyph">▣</span><strong>발표자료</strong><small>제안서 발표자료 생성 흐름</small><span class="tool-link">제안서 작업실 열기 ↗</span></a>
-          <a class="tool" href="https://ekodi.kr/my/docs/"><span class="glyph">PDF</span><strong>PDF</strong><small>기존 문서의 PDF 내보내기</small><span class="tool-link">문서 작업실 열기 ↗</span></a>
-          <a class="tool" href="https://ekodi.kr/edu/"><span class="glyph">◈</span><strong>교육</strong><small>강의자료 · 실습 · 발표</small><span class="tool-link">에코디교육 열기 ↗</span></a>
-          <a class="tool" href="https://ekodi.kr/my/docs/"><span class="glyph">✳</span><strong>AI 문서</strong><small>작성·요약·교정 제안, 사용자 적용</small><span class="tool-link">문서 AI 열기 ↗</span></a>
-        </div>
-      </section>
-      <section class="workspace" aria-labelledby="workspace-title">
-        <div class="section-head"><div><p class="eyebrow">DESIGNED FOR EKODI</p><h2 id="workspace-title">하나의 도구, 분리된 책임</h2></div></div>
+      </div>
+      <div class="hero-meta"><div><span>01</span><strong>Connected Tools</strong><small>기존 업무 도구의 통합 진입</small></div><div><span>02</span><strong>Choice of AI</strong><small>무료·개인 구독·기관 API 안내</small></div><div><span>03</span><strong>Trust by Design</strong><small>원본·승인·출처를 분명하게</small></div></div>
+    </section>
+    <section id="tools" class="section tools-section" aria-labelledby="tools-title">
+      <div class="section-intro">
+        <div><p class="eyebrow">YOUR CREATIVE DESK</p><h2 id="tools-title">필요한 도구를<br><em>한곳에서.</em></h2></div>
+        <p>현재 에코디에서 제공하는 문서·제안서·교육 화면으로 연결합니다. 모든 형식의 독립 편집 기능이 새로 완성됐다는 의미는 아닙니다.</p>
+      </div>
+      <div class="tool-grid">
+        <a class="tool-card" href="https://ekodi.kr/my/docs/"><span class="tool-top"><span class="tool-symbol">W</span><span class="tool-index">01 / DOCS</span></span><strong>문서 작업실</strong><span class="tool-desc">작성·수정·AI 제안 등 기존 문서 기능으로 이동</span><span class="tool-foot">문서 작업실 열기 <span aria-hidden="true">↗</span></span></a>
+        <a class="tool-card" href="https://ekodi.kr/proposal/"><span class="tool-top"><span class="tool-symbol">X</span><span class="tool-index">02 / TABLE</span></span><strong>표와 견적</strong><span class="tool-desc">기존 제안서의 수치·견적·표 작업으로 이동</span><span class="tool-foot">제안서 작업실 열기 <span aria-hidden="true">↗</span></span></a>
+        <a class="tool-card" href="https://ekodi.kr/proposal/"><span class="tool-top"><span class="tool-symbol">P</span><span class="tool-index">03 / PRESENT</span></span><strong>발표자료</strong><span class="tool-desc">기존 제안서 발표자료 생성 흐름으로 이동</span><span class="tool-foot">제안서 작업실 열기 <span aria-hidden="true">↗</span></span></a>
+        <a class="tool-card" href="https://ekodi.kr/my/docs/"><span class="tool-top"><span class="tool-symbol symbol-pdf">PDF</span><span class="tool-index">04 / EXPORT</span></span><strong>PDF 문서</strong><span class="tool-desc">현재 지원되는 문서 보기·내보내기 경로 안내</span><span class="tool-foot">내 문서 열기 <span aria-hidden="true">↗</span></span></a>
+        <a class="tool-card" href="https://ekodi.kr/edu/"><span class="tool-top"><span class="tool-symbol">E</span><span class="tool-index">05 / LEARNING</span></span><strong>교육자료</strong><span class="tool-desc">강의안·실습자료·교육 콘텐츠 확인</span><span class="tool-foot">에코디교육 열기 <span aria-hidden="true">↗</span></span></a>
+        <a class="tool-card featured" href="https://ekodi.kr/my/docs/"><span class="tool-top"><span class="tool-symbol">✳</span><span class="tool-index">06 / AI TOOLS</span></span><strong>AI 문서 지원</strong><span class="tool-desc">기존 문서 AI의 작성·검토 기능을 사용자가 확인</span><span class="tool-foot">문서 AI 열기 <span aria-hidden="true">↗</span></span></a>
+      </div>
+    </section>
+    <section id="ai-connect" class="section ai-section" aria-labelledby="ai-title">
+      <div class="section-intro">
+        <div><p class="eyebrow">BRING YOUR OWN AI</p><h2 id="ai-title">AI는 선택하고,<br><em>비용은 투명하게.</em></h2></div>
+        <p>이음오피스의 개인 연결 원리를 참고한 에코디 오피스의 확장 설계입니다. 아래는 연결 방식 설명이며, 이 페이지에서 계정 로그인이나 API 키 입력을 받지 않습니다.</p>
+      </div>
+      <div class="ai-options">
+        <article class="ai-option"><div class="option-head"><span class="option-number">01</span><span class="option-label">FREE TIER</span></div><div class="option-icon">◇</div><h3>무료 AI로 시작</h3><p>OpenRouter의 무료 모델 또는 Gemini 무료 티어의 지원 모델을 개인 계정으로 이용하는 방식입니다.</p><div class="option-rows"><span>인증 · 개인 키 또는 공식 로그인</span><span>비용 · 제공자 무료 한도 내 0원</span><span>주의 · 사용량·모델·데이터 정책 변동</span></div><span class="option-status">에코디 직접 연결 · 구축 예정</span></article>
+        <article class="ai-option option-emphasis"><div class="option-head"><span class="option-number">02</span><span class="option-label">YOUR SUBSCRIPTION</span></div><div class="option-icon">✳</div><h3>내 AI 구독 연결</h3><p>지원되는 설치형 앱에서 개인 ChatGPT 이용 권한 또는 공식 Claude Code·Codex 프로그램을 활용하는 방식입니다.</p><div class="option-rows"><span>인증 · 제공자 공식 로그인·승인</span><span>비용 · 개인 요금제 허용 한도 적용</span><span>주의 · 이용자·제품 적격성·연동 제한</span></div><span class="option-status">EKODI PC 앱 · 별도 검증 중</span></article>
+        <article class="ai-option"><div class="option-head"><span class="option-number">03</span><span class="option-label">ORGANIZATION</span></div><div class="option-icon">▦</div><h3>기관 전용 AI</h3><p>기관의 API 계약 또는 승인된 자체 모델을 이용하고, 조직별 문서 접근·감사·비용 정책을 구분합니다.</p><div class="option-rows"><span>인증 · 기관 계정 및 권한 분리</span><span>비용 · API·인프라 비용 별도</span><span>주의 · 민감문서 전송 및 보관 계약</span></div><span class="option-status">기관형 연동 · 설계·보안 검증 단계</span></article>
+      </div>
+      <div class="ai-how"><div class="how-head"><span>HOW IT WORKS</span><strong>연결 방식은 달라도, 통제권은 사용자에게</strong></div><ol class="how-steps"><li><span>01</span><b>사용 방식 선택</b><small>무료 / 개인 구독 / 기관 API</small></li><li><span>02</span><b>제공자 직접 승인</b><small>개인 계정·키·기관 자격 확인</small></li><li><span>03</span><b>AI 결과 검토</b><small>작성·분석·수정 제안 확인</small></li><li><span>04</span><b>사용자 결정</b><small>기존 문서함에서 적용·저장</small></li></ol></div>
+      <p class="fineprint"><strong>무료는 무제한이 아닙니다.</strong> 무료 모델은 제공자의 이용 한도에 따르며, 외부 AI를 사용할 경우 선택한 내용이 해당 제공자에게 전송될 수 있습니다. 개인 ChatGPT 구독 사용 권한은 지원·참여 조건이 있는 기능이며, 이를 에코디 기관형 서비스에 자동 적용하지 않습니다.</p>
+    </section>
+    <section id="workspace" class="section workspace-section" aria-labelledby="workspace-title">
+      <div class="section-intro"><div><p class="eyebrow">ONE PLATFORM, DISTINCT ROLES</p><h2 id="workspace-title">누구의 일이든,<br><em>자기 자리에서.</em></h2></div><p>개인은 자신의 문서를, 기관은 승인된 조직의 업무를 다룹니다. 사용자의 한 계정이 모든 조직 문서를 볼 수 있다는 뜻이 아닙니다.</p></div>
+      <div class="work-panel">
         <div class="tab-bar" role="tablist" aria-label="오피스 이용 환경">
           <button id="tab-personal" type="button" role="tab" aria-controls="panel-personal" aria-selected="true" tabindex="0" data-tab="personal">개인 문서</button>
           <button id="tab-team" type="button" role="tab" aria-controls="panel-team" aria-selected="false" tabindex="-1" data-tab="team">조직 업무</button>
           <button id="tab-desktop" type="button" role="tab" aria-controls="panel-desktop" aria-selected="false" tabindex="-1" data-tab="desktop">PC 오피스</button>
         </div>
-        <div id="panel-personal" role="tabpanel" aria-labelledby="tab-personal" tabindex="0">
-          <h3>작성하고, 검토하고, 내보냅니다.</h3><p>현재 운영 중인 개인 문서 서비스를 재사용합니다. AI가 제안한 변경은 사용자가 검토한 뒤 적용하는 것을 원칙으로 합니다.</p>
-          <a href="https://ekodi.kr/my/docs/">개인 문서 작업실로 이동 ↗</a>
-        </div>
-        <div id="panel-team" role="tabpanel" aria-labelledby="tab-team" tabindex="0" hidden>
-          <h3>업무는 이어지고, 문서는 섞이지 않습니다.</h3><p>교회·교육·비즈니스·고객기관의 문서는 각각의 Workspace 권한을 따릅니다. 조직별 문서함 연계는 서버 권한과 저장계약을 검증한 후 단계적으로 제공합니다.</p>
-          <span class="pending">조직 문서 연동: 설계·검증 단계</span>
-        </div>
-        <div id="panel-desktop" role="tabpanel" aria-labelledby="tab-desktop" tabindex="0" hidden>
-          <h3>오프라인 편집을 기본으로, 동기화는 선택으로.</h3><p>이음오피스 계열 오픈소스의 실제 빌드·라이선스·호환성 확인 후 Windows 설치형 EKODI Office를 별도 제공할 계획입니다. 지금은 다운로드 가능한 EKODI 설치 파일이 없습니다.</p>
-          <span class="pending">PC 설치형: 개발 준비 단계</span>
-        </div>
-      </section>
-      <section class="principles" aria-label="서비스 원칙"><div><strong>원본은 소유자에게</strong><span>원본 덮어쓰기 없이 복원과 내보내기 우선</span></div><div><strong>권한은 조직별로</strong><span>계정 일치만으로 다른 조직의 접근 허용 금지</span></div><div><strong>AI는 제안, 사람은 승인</strong><span>자동 외부 전송·계약·대량수정 없음</span></div></section>
-    </main>
-    <footer><span>© EKODI · Office Prototype</span><a href="https://ekodi.kr/">에코디 홈</a><span>이 화면은 연구·개발용 시안으로 실제 신규 서비스 출시가 아닙니다.</span></footer>
-  </div>
+        <div id="panel-personal" role="tabpanel" aria-labelledby="tab-personal" tabindex="0"><span class="panel-count">01 / PERSONAL</span><h3>나의 문서에서 일을 시작합니다.</h3><p>현재 제공되는 에코디 개인 문서 작업실을 엽니다. AI가 제안한 변경은 사용자가 확인하고 적용하는 방향으로 설계합니다.</p><a href="https://ekodi.kr/my/docs/">개인 문서 작업실 이동 ↗</a></div>
+        <div id="panel-team" role="tabpanel" aria-labelledby="tab-team" tabindex="0" hidden><span class="panel-count">02 / TEAMS</span><h3>협업은 연결하고, 권한은 분리합니다.</h3><p>교회·교육·비즈니스·고객기관마다 별도 Workspace 권한을 적용하는 구조입니다. 기관별 문서함 동기화는 실제 저장·인증·권한 검증 후 제공합니다.</p><span class="pending">기관 문서 연동 · 아직 제공하지 않음</span></div>
+        <div id="panel-desktop" role="tabpanel" aria-labelledby="tab-desktop" tabindex="0" hidden><span class="panel-count">03 / DESKTOP</span><h3>오프라인 편집은 PC에, 연동은 선택으로.</h3><p>이음오피스 오픈소스 구성과 라이선스를 검토하면서 별도 EKODI 브랜드의 Windows 편집기를 준비하고 있습니다. 지금은 설치 가능한 EKODI Office 프로그램이 없습니다.</p><span class="pending">설치형 오피스 · 개발·형식 호환성 검증 단계</span></div>
+      </div>
+      <div class="safety-line"><div><b>ORIGINAL FIRST</b><span>원본 보존·복원</span></div><div><b>ACCESS BY ROLE</b><span>조직별 권한 검증</span></div><div><b>HUMAN IN CONTROL</b><span>AI 제안 후 승인</span></div></div>
+    </section>
+    <section id="sources" class="section source-section" aria-labelledby="source-title">
+      <div class="section-intro"><div><p class="eyebrow">ORIGIN & OPEN SOURCE</p><h2 id="source-title">무엇을 바탕으로<br><em>만들고 있나요?</em></h2></div><p>소스 출처와 사용 권한은 분명하게 밝힙니다. 현재의 웹 허브와 향후 설치형 오피스는 개발 단계와 구성 요소가 다릅니다.</p></div>
+      <div class="origin-grid">
+        <article class="origin-card origin-own"><span class="origin-level">EKODI · CURRENT HUB</span><h3>EKODI Office</h3><p>에코디가 설계한 통합 안내 화면과 기존 문서·제안서·교육 연결입니다. 지금 제공하는 이 화면은 이음오피스 데스크톱 엔진을 내장한 제품이 아닙니다.</p><span class="origin-note">현재 · 에코디 자체 통합 UI</span></article>
+        <article class="origin-card"><span class="origin-level">REFERENCE · OPEN SOURCE</span><h3>IeumOffice</h3><p>문서·시트·발표·한글·PDF의 설치형 통합 경험을 참고한 오픈소스 프로젝트입니다. 실제 소스 이식·브랜드 변경·Windows 설치 검증은 별도 진행합니다.</p><a href="https://github.com/pblsketch/ieumoffice" target="_blank" rel="noopener noreferrer">원본 GitHub 확인 ↗</a></article>
+        <article class="origin-card"><span class="origin-level">UPSTREAM · OPEN SOURCE</span><h3>GenOffice</h3><p>이음오피스가 기반으로 삼은 Apache 2.0 프로젝트입니다. 제품에 소스가 실제 포함될 때 원저작권·NOTICE·제3자 라이선스 및 비공개 컴포넌트를 따로 검증합니다.</p><a href="https://github.com/genspark-ai/genoffice" target="_blank" rel="noopener noreferrer">기반 프로젝트 확인 ↗</a></article>
+      </div>
+      <div class="license-strip"><div><span class="license-tag">APACHE 2.0</span><strong>오픈소스는 자유롭게 사용하되, 출처를 지킵니다.</strong></div><p>Apache 2.0 적용 부분은 원저작권·LICENSE·NOTICE 고지 및 수정 사실을 유지해야 합니다. 별도 라이선스와 상표·로고는 각각 검토해야 하며, 에코디 자체 개발물 전체가 자동으로 Apache 2.0이 되는 것은 아닙니다.</p><a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener noreferrer">라이선스 원문 ↗</a></div>
+      <div class="official-links"><span>AI 이용 정책 확인</span><a href="https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites" target="_blank" rel="noopener noreferrer">ChatGPT 외부 앱 정책 ↗</a><a href="https://openrouter.ai/docs/guides/overview/auth/oauth" target="_blank" rel="noopener noreferrer">OpenRouter OAuth 안내 ↗</a><a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener noreferrer">Gemini 요금·무료 티어 ↗</a></div>
+    </section>
+    <section class="section questions" aria-labelledby="questions-title"><div><p class="eyebrow">GOOD TO KNOW</p><h2 id="questions-title">자주 묻는 질문</h2></div><div class="question-list"><details><summary>무료 AI를 선택하면 별도 이용료가 없나요?</summary><p>해당 제공자의 무료 모델 및 무료 티어 사용 한도 안에서는 추론 요금이 무료일 수 있습니다. 한도 소진·모델 변경·별도 서비스 비용은 발생할 수 있으며, 유료 모델로 자동 전환하지 않는 정책을 목표로 합니다.</p></details><details><summary>에코디 오피스가 내 AI 계정의 비밀번호를 보관하나요?</summary><p>현재 이 안내 허브는 로그인·키 입력을 받지 않습니다. 향후 연결은 제공자 공식 인증과 적절한 보관·권한 구조를 검증해 제공할 예정이며, 비밀번호 수집을 전제로 설계하지 않습니다.</p></details><details><summary>지금 이음오피스와 똑같이 HWP·엑셀을 편집할 수 있나요?</summary><p>아닙니다. 현재는 기존 에코디 문서·제안서·교육 서비스 연결 화면입니다. 이음오피스 계열 설치형 편집기는 별도 구축 및 파일 형식별 호환성 검증이 남아 있습니다.</p></details><details><summary>이음오피스 소스를 복제했다는 뜻인가요?</summary><p>아닙니다. 이 웹 화면은 에코디가 작성한 코드이며 이음오피스는 향후 설치형 오피스의 구조적 참고 원본입니다. 코드 편입 시 각 적용 라이선스·고지·변경 기록을 공개적으로 구분합니다.</p></details></div></section>
+    <section class="closing"><span>MAKE WORK MEAN MORE</span><h2>문서는 도구이고,<br>사람이 중심입니다.</h2><a href="https://ekodi.kr/my/docs/">내 작업실로 이동 <span aria-hidden="true">↗</span></a></section>
+  </main>
+  <footer class="site-foot"><div class="footer-brand"><strong>EKODI OFFICE</strong><span>에코디 · 사람과 일을 연결하는 AI 오피스</span></div><div><a href="https://ekodi.kr/">EKODI</a><a href="#sources">소스와 라이선스</a><a href="#ai-connect">AI 이용 안내</a></div><p>이 페이지는 연결형 오피스 허브입니다. 실제 파일을 열거나 저장하지 않습니다. 독립 Windows 설치형·기관 연동은 별도 개발 중입니다.</p></footer>
 </body>
 </html>
