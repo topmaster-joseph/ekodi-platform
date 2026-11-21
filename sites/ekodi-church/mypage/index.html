@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>에코디교회 예배 운영 콘솔</title>
-  <link rel="stylesheet" href="styles.css?v=20261101h">
+  <link rel="stylesheet" href="styles.css?v=20261122k">
 </head>
 <body>
   <header class="topbar">
@@ -25,9 +25,31 @@
 
     <nav class="panel-tabs" aria-label="편집 화면">
       <button type="button" data-panel="panelBulletin" aria-expanded="false">주보 편집 · 사진</button>
+      <button type="button" data-panel="panelCommittee" aria-expanded="false">연간 예배위원 관리</button>
       <button type="button" data-panel="panelService" aria-expanded="false">모임 정보 입력</button>
       <button type="button" data-panel="panelOutputs" aria-expanded="false">자료 만들기 · 미리보기</button>
     </nav>
+
+    <div class="panel" id="panelCommittee" hidden>
+      <section class="card" aria-labelledby="annualCommitteeHeading">
+        <div class="preview-head"><h2 id="annualCommitteeHeading">연간 예배위원 일정</h2><span>주일별 개별 수정 · 주보와 자동 연동</span></div>
+        <p class="hint">확인된 담당자는 유지하고, 미배정 주일은 '확인필요'로 표시합니다. 이번주 일정은 주보 표의 두 번째 날짜 열에 고정됩니다. 변경할 날짜만 선택해서 저장하세요.</p>
+        <div class="editor-grid">
+          <label>조회 연도<select id="annualYear"><option value="2026">2026년</option><option value="2027">2027년</option></select></label>
+          <label>변경할 주일<input type="date" id="annualSunday" min="2026-01-01" max="2027-12-31"></label>
+        </div>
+        <div class="editor-grid">
+          <label>경배찬양 담당<input id="annualPraise" maxlength="80" placeholder="확인필요"></label>
+          <label>예배인도 담당<input id="annualLeader" maxlength="80" placeholder="확인필요"></label>
+          <label>대표기도 담당<input id="annualPrayer" maxlength="80" placeholder="확인필요"></label>
+          <label>말씀선포 담당<input id="annualPreacher" maxlength="80" placeholder="확인필요"></label>
+          <label>식사준비 담당<input id="annualMeal" maxlength="80" placeholder="확인필요"></label>
+        </div>
+        <div class="actions"><button class="primary" id="annualSave" type="button" disabled>해당 주일 담당자 저장</button><button id="annualExport" type="button">연간 CSV 내보내기</button></div>
+        <p class="hint" id="annualStatus" role="status" aria-live="polite">연간 자료 확인 중…</p>
+        <div class="annual-scroll" role="region" aria-label="연간 예배위원 전체 목록" tabindex="0"><table id="annualTable" class="annual-table"><thead><tr><th>주일</th><th>경배찬양</th><th>예배인도</th><th>대표기도</th><th>말씀선포</th><th>식사준비</th></tr></thead><tbody id="annualRows"></tbody></table></div>
+      </section>
+    </div>
 
     <div class="panel" id="panelBulletin" hidden>
     <section class="card bulletin-editor" id="bulletinEditor" hidden>
@@ -66,7 +88,7 @@
       <details class="group"><summary>섬기는 이 · 통계 · 예배위원</summary><div class="editor-grid">
         <label>섬기는 이 (구분 | 이름)<textarea id="beServe" rows="4"></textarea></label>
         <label>최근 통계 (구분 | 장소 | 시간 | 인원)<textarea id="beStats" rows="4"></textarea></label>
-        <label>예배위원 (첫 줄은 제목줄)<textarea id="beCommittee" rows="6"></textarea></label>
+        <p class="hint">예배위원은 별도의 '연간 예배위원 관리' 메뉴에서 수정합니다. 변경된 날짜의 담당자가 주보에 자동 반영됩니다.</p><textarea id="beCommittee" rows="1" hidden aria-label="이전 주보 예배위원 자료"></textarea>
       </div></details>
       <details class="group"><summary>협력기관 · 적용 질문</summary><div class="editor-grid">
         <label>협력기관 (한 줄에 하나)<textarea id="beSponsors" rows="6"></textarea></label>
@@ -135,6 +157,6 @@
     </div>
   </main>
 
-  <script src="app.js?v=20261101i"></script>
+  <script src="app.js?v=20261122k"></script>
 </body>
 </html>
