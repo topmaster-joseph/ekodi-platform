@@ -171,7 +171,7 @@ textarea{min-height:110px}.cols{display:grid;grid-template-columns:2fr 1fr;gap:2
 footer.biz{border-top:1px solid var(--line);background:#fff;padding:22px 0;font-size:13px;color:var(--muted)}footer.biz p{margin:4px 0}
 .tabs{display:flex;gap:8px;margin:14px 0;overflow-x:auto;padding-bottom:4px}.tabs button,th,.nowrap{white-space:nowrap}
 .problems{margin:8px 0 0;padding-left:20px}.next{font-weight:700}.next.err{color:var(--red)}.next.ok{color:var(--brand)}
-@media(max-width:640px){table.list,table.list tbody,table.list tr,table.list td{display:block;width:100%}table.list tr:first-child{display:none}table.list tr{border-bottom:1px solid var(--line);padding:8px 0}table.list td{border:0;padding:3px 8px}}.tabs button{background:#fff;color:var(--ink);border:1px solid var(--line)}.tabs button.on{background:var(--brand);color:#fff}
+@media(max-width:640px){table.list,table.list tbody,table.list tr,table.list td{display:block;width:100%}table.list tr:first-child{display:none}table.list tr{border-bottom:1px solid var(--line);padding:8px 0}table.list td{border:0;padding:3px 8px}}.tabs button{background:#fff;color:var(--ink);border:1px solid var(--line)}.tabs .count{display:inline-block;min-width:22px;margin-left:4px;padding:0 6px;border-radius:99px;background:#e7f1ec;color:var(--brand);font-size:13px;line-height:20px}.tabs button.on .count{background:#fff}.tabs button.empty .count{background:#eceeed;color:var(--muted)}.tabs button.on{background:var(--brand);color:#fff}
 .hide{display:none!important}`;
 
 function shell(title, body, { noindex = false, description = '', scripts = '' } = {}) {
@@ -428,9 +428,14 @@ function adminClient(cfg) {
     return d;
   }
   function say(t, type = '') { $('state').textContent = t; $('state').className = 'notice ' + type; }
+  const countOf = f => (f === 'all' ? list.length : list.filter(c => c.status === f || (f === 'review' && c.status === 'draft' && cfg.orgs[c.ownerOrg])).length);
   function render() {
-    document.querySelectorAll('[data-f]').forEach(b => b.classList.toggle('on', b.dataset.f === filter));
-    const rows = list.filter(c => filter === 'all' || c.status === filter);
+    document.querySelectorAll('[data-f]').forEach(b => {
+      b.classList.toggle('on', b.dataset.f === filter);
+      const n = countOf(b.dataset.f); b.querySelector('.count').textContent = n; b.classList.toggle('empty', n === 0);
+      b.setAttribute('aria-label', `${b.dataset.label} ${n}건`);
+    });
+    const rows = list.filter(c => filter === 'all' || c.status === filter || (filter === 'review' && c.status === 'draft' && cfg.orgs[c.ownerOrg]));
     $('list').innerHTML = rows.length ? rows.map(c => `<div class="card" style="margin:10px 0"><div class="row"><b>${esc(c.title)}</b><span class="tag">${esc(cfg.status[c.status])}</span></div>
 <p class="muted">${esc(cfg.kinds[c.kind] || c.kind)} · ${esc(cfg.orgs[c.ownerOrg] || '회원 개설')} · ${esc(c.organizerName)} · ${esc(c.organizerEmail)}<br>목표 ${wonf(c.goalAmount)} · 모금 ${wonf(c.raisedAmount)} (${c.backerCount}명) · ${esc(c.startsOn)} ~ ${esc(c.endsOn)} · <a href="/funding/c/${esc(c.slug)}" target="_blank" rel="noopener">미리보기</a></p>
 ${['draft', 'rejected', 'review'].includes(c.status) && c.problems?.length ? `<div class="notice err">승인 전에 고칠 점 (<a href="/funding/studio">펀딩 만들기</a>에서 수정)<ul class="problems">${c.problems.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>` : ''}${c.status === 'draft' && !cfg.orgs[c.ownerOrg] ? '<div class="notice">작성 중 — 개설자가 심사 요청을 하면 승인할 수 있습니다.</div>' : ''}
@@ -450,13 +455,17 @@ ${['live', 'waiting_payout'].includes(c.status) ? `<button class="ghost" data-ac
       document.querySelector(`[data-out="${b.dataset.pledges}"]`).innerHTML = d.pledges.length ? `<table><tr><th>후원번호</th><th>후원자</th><th>리워드</th><th>금액</th><th>상태</th><th>일시</th></tr>${d.pledges.map(p => `<tr><td>${esc(p.id)}</td><td>${esc(p.backerName)}<br>${esc(p.backerEmail)} ${esc(p.backerPhone)}</td><td>${esc(p.rewardTitle)}</td><td>${wonf(p.amount)}</td><td>${esc(p.status)}</td><td>${esc(p.createdAt)}</td></tr>`).join('')}</table>` : '<p class="muted">후원 내역이 없습니다.</p>';
     });
   }
-  async function load() { const d = await api('/admin/campaigns'); list = d.campaigns || []; $('payState').textContent = d.payment.ready ? `결제 열림 (${d.payment.mode})` : `결제 닫힘 — ${d.payment.reason}`; render(); }
+  let first = true;
+  async function load() {
+    const d = await api('/admin/campaigns'); list = d.campaigns || [];
+    // First visit: open the first tab that has something in it, so an empty '심사 대기' never hides live work.
+    if (first) { first = false; if (!countOf(filter)) filter = ['review', 'live', 'waiting_payout', 'rejected', 'closed'].find(f => countOf(f)) || 'all'; } $('payState').textContent = d.payment.ready ? `결제 열림 (${d.payment.mode})` : `결제 닫힘 — ${d.payment.reason}`; render(); }
   (async () => {
     try {
       const s = await auth.session(); if (!s?.accessToken) { auth.login(); return; }
       token = s.accessToken; const me = await api('/admin/me'); $('who').textContent = me.email + ' · 운영자';
       document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filter = b.dataset.f; render(); });
-      $('app').classList.remove('hide'); await load(); say('심사 대기 펀딩을 확인하세요.', 'ok');
+      $('app').classList.remove('hide'); await load(); const wait = countOf('review'); say(wait ? `심사 대기 ${wait}건이 있습니다.` : `심사 대기 없음 · 전체 펀딩 ${list.length}건`, wait ? '' : 'ok');
     } catch (x) { say(x.message, 'err'); }
   })();
 }
@@ -489,7 +498,7 @@ export function renderAdmin() {
   const cfg = { api: API, delivery: DELIVERY, status: STATUS, kinds: KINDS, orgs: PHASE1_ORGS };
   const tabs = [['review', '심사 대기'], ['live', '모금 중'], ['waiting_payout', '정산대행 대기'], ['rejected', '보완 요청'], ['closed', '종료'], ['all', '전체']];
   return shell('펀딩 심사·운영 · 에코디 펀딩', `<main><h1>펀딩 심사·운영</h1><p class="lead"><span id="who"></span> · <b id="payState"></b></p>
-<div id="state" class="notice">로그인 상태를 확인하고 있습니다…</div><div id="app" class="hide"><div class="tabs">${tabs.map(([k, v]) => `<button data-f="${k}">${v}</button>`).join('')}</div><div id="list"></div></div></main>`,
+<div id="state" class="notice">로그인 상태를 확인하고 있습니다…</div><div id="app" class="hide"><div class="tabs">${tabs.map(([k, v]) => `<button data-f="${k}" data-label="${v}">${v} <span class="count">0</span></button>`).join('')}</div><div id="list"></div></div></main>`,
   { noindex: true, scripts: `${inline(adminClient, `{...${JSON.stringify(cfg)},helpers:${authClientHelpers.toString()}}`)}` });
 }
 
