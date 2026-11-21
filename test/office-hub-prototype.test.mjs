@@ -7,8 +7,6 @@ const js = readFileSync(new URL('../office-prototype/office.js', import.meta.url
 const css = readFileSync(new URL('../office-prototype/office.css', import.meta.url), 'utf8');
 
 const TRUSTED_OUTBOUND = new Set([
-  'https://github.com/pblsketch/ieumoffice',
-  'https://github.com/genspark-ai/genoffice',
   'https://www.apache.org/licenses/LICENSE-2.0',
   'https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites',
   'https://openrouter.ai/docs/guides/overview/auth/oauth',
@@ -59,13 +57,16 @@ test('AI guidance explicitly separates free, subscription and tenant API billing
     '사용자 결정', '제공자에게 전송될 수 있습니다'
   ]) assert.ok(html.includes(concept),concept);
 });
-test('licenses and code attribution are transparent without false ownership claims', () => {
+test('public page prioritizes EKODI identity and avoids implying unshipped third-party code is bundled', () => {
   for (const concept of [
-    'EKODI Office','IeumOffice','GenOffice','Apache 2.0',
-    'LICENSE','NOTICE','제3자 라이선스','상표·로고',
-    '자동으로 Apache 2.0이 되는 것은 아닙니다',
-    '이음오피스 데스크톱 엔진을 내장한 제품이 아닙니다',
-  ]) assert.ok(html.includes(concept),concept);
+    'EKODI Office', '기술은 투명하게', '에코디가 직접 개발한 웹 통합 화면',
+    '실제 적합성과 라이선스를 검증한 후 채택',
+    '실제 탑재·배포한 구성요소', '저작권·라이선스·필수 고지',
+    'Apache 2.0', 'LICENSE', 'NOTICE', '상표·로고',
+    '현재 에코디 웹 허브 자체에 해당 외부 편집 엔진이 포함됐다는 뜻은 아닙니다',
+  ]) assert.ok(html.includes(concept), concept);
+  assert.doesNotMatch(html, /이음오피스|IeumOffice|GenOffice|pblsketch|genspark-ai/);
+  assert.doesNotMatch(html, /외부 편집 엔진을 (내장|탑재)했습니다/);
 });
 test('accessible 3-tab workspace navigation and keyboard operation are preserved', () => {
   for (const key of ['personal', 'team', 'desktop']) {

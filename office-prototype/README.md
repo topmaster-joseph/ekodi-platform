@@ -24,6 +24,11 @@
 공식 참고: https://openrouter.ai/docs/guides/overview/auth/oauth
 공식 참고: https://ai.google.dev/gemini-api/docs/pricing
 
+## 고객 공개 화면과 내부 소스 이력의 경계
+- 고객용 웹 UI(`office-prototype/index.html`)에서 단순 아이디어·UX 참고 프로젝트 이름을 공개 브랜드·기술 동작 원리 설명에서 반복하지 않는다. 기술 안내는 EKODI 자체 웹 허브, 실제 도입 전 오픈소스 검증, 배포 시 필수 고지 원칙으로 구성한다.
+- **내부 개발 README·윈도우 사전검증 매니페스트는 변경하지 않는다.** 당시 조사·원본 SHA·라이선스 감사 근거를 보존하며, 향후 소스코드를 실제 편입·재배포한다면 참조 프로젝트와 그 자체 수정/추가 저작물까지 해당되는 저작권·LICENSE·NOTICE·제3자 권리 고지를 준수해야 한다.
+- 단순한 디자인·업무 흐름의 참고와 실제 오픈소스 코드 포함은 다르다. 제품이 사용하지 않는 프로젝트에 대해 허위로 엔진이 포함됐다고 표시해서는 안 된다.
+
 ## 코드 출처·저작권·라이선스
 - 현재 office-prototype의 HTML/CSS/JS는 에코디 자체 통합 허브 코드이며 이음오피스 데스크톱 편집 엔진을 포함하지 않습니다.
 - 이음오피스 소스 및 구조: https://github.com/pblsketch/ieumoffice . 미래 Windows 설치형 오피스를 위한 참고 프로젝트이며 실제 사용 시 Apache 2.0·NOTICE·상표·아이콘 등 권리를 별도 검증합니다.
