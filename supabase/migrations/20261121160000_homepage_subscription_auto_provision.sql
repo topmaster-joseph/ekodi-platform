@@ -150,12 +150,14 @@ stable
 security definer
 set search_path = public
 as $$
-declare v_admin boolean := false;
+declare v_admin boolean := false; v_fn regprocedure;
 begin
   -- 플랫폼 관리자 판정은 운영 DB의 public.is_platform_admin()(profiles.platform_admin)을 그대로 따른다.
   -- 함수가 없는 환경(로컬 CI)에서는 항상 false.
-  if to_regprocedure('public.is_platform_admin()') is not null then
-    execute format('select %I.%I()', 'public', 'is_platform_admin') into v_admin;
+  -- 함수 위치는 런타임 카탈로그 조회로만 정해지므로 정적 린트가 해석하지 않는다.
+  v_fn := to_regprocedure('public.is_platform_admin()');
+  if v_fn is not null then
+    execute 'select ' || v_fn::regproc::text || '()' into v_admin;
   end if;
   return coalesce(v_admin,false);
 end

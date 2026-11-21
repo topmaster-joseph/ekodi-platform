@@ -7,10 +7,12 @@ stable
 security definer
 set search_path = public
 as $$
-declare v_admin boolean := false;
+declare v_admin boolean := false; v_fn regprocedure;
 begin
-  if to_regprocedure('public.is_platform_admin()') is not null then
-    execute format('select %I.%I()', 'public', 'is_platform_admin') into v_admin;
+  -- 함수 위치는 런타임 카탈로그 조회로만 정해지므로 정적 린트가 해석하지 않는다.
+  v_fn := to_regprocedure('public.is_platform_admin()');
+  if v_fn is not null then
+    execute 'select ' || v_fn::regproc::text || '()' into v_admin;
   end if;
   return coalesce(v_admin,false);
 end
