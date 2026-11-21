@@ -111,3 +111,10 @@ test('EKODI native Chromium Search Visibility GSC action uses only synthetic rea
   assert.match(ui,/GOOGLE_SEARCH_SA_KEY_JSON|Google Search Console 읽기 전용 서비스 계정이 아직 서버에 연결되지 않았습니다/);
   assert.doesNotMatch(coverage,/confirmed_manually|api\.googleapis\.com\/webmasters\/v3\/sites/);
 });
+
+test('zero Google impressions never render a misleading average position of 0.0',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const source=await readFile(new URL('../search-visibility-admin.js',import.meta.url),'utf8');
+  assert.match(source,/metrics&&metrics\.impressions>0/);
+  assert.match(source,/노출이 없어 평균 순위는 계산되지 않습니다/);
+});
