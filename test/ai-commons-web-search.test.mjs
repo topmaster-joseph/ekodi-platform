@@ -70,3 +70,42 @@ test('client renders sources with https links only and offers the web toggle',()
   assert.match(chat,/web=Boolean\(\$\('chatWeb'\)\?\.checked\)/);
   assert.match(html,/id="chatWeb"/);
 });
+
+import {commonsWebKeywords,commonsWebQuery,bingTarget} from '../ai-commons-web-search.js';
+test('conversational questions become topic keywords',()=>{
+  assert.equal(commonsWebQuery('오늘 무안군 소식 알려줘'),'무안군');
+  assert.equal(commonsWebQuery('요즘 원달러 환율 어때?'),'원달러 환율');
+  assert.equal(commonsWebQuery('청계면의 최근 도시재생 사업 정리해줘'),'청계면 도시재생 사업');
+  assert.equal(commonsWebQuery('무안군에서 하는 AI 교육 일정이 있나요?'),'무안군 AI 교육 일정');
+  assert.equal(commonsWebQuery('알려줘'),'알려줘','falls back when nothing remains');
+  assert.ok(commonsWebKeywords('a '.repeat(50)).length<=6);
+});
+
+test('Bing redirect links resolve to the https article only',()=>{
+  assert.equal(bingTarget('https://www.bing.com/news/apiclick.aspx?url=https%3a%2f%2fnews.example.kr%2fa%3fid%3d1&c=1'),'https://news.example.kr/a?id=1');
+  assert.equal(bingTarget('https://www.bing.com/news/apiclick.aspx?url=javascript%3aalert(1)'),'');
+});
+
+test('per-source status explains empty results and a narrower retry runs once',async()=>{
+  const urls=[];
+  const fetchImpl=async url=>{urls.push(String(url));
+    if(String(url).includes('news.google.com'))return new Response('',{status:503});
+    if(String(url).includes('bing.com')){
+      const q=new URL(String(url)).searchParams.get('q');
+      return new Response(q==='무안군 AI'?`<rss><channel><item><title>무안군 AI 교육</title><link>https://www.bing.com/news/apiclick.aspx?url=https%3a%2f%2fnews.example.kr%2fb</link><News:Source>무안신문</News:Source></item></channel></rss>`:'<rss></rss>',{status:200});
+    }
+    return Response.json({query:{search:[]}});
+  };
+  const result=await searchCommonsWeb('무안군 AI 교육 일정 알려줘',{},fetchImpl);
+  assert.equal(result.sources.length,1);
+  assert.equal(result.sources[0].source,'무안신문');
+  assert.equal(result.sources[0].url,'https://news.example.kr/b');
+  assert.equal(result.status.google,'http_503');
+  assert.equal(result.status.naver,'not_configured');
+  assert.equal(urls.filter(u=>u.includes('bing.com')).length,2);
+});
+
+test('worker returns non-secret web status and client explains it',()=>{
+  assert.match(read('ai-control-worker.js'),/const webMeta=\{web:input\.web,sources,webStatus\};/);
+  assert.match(read('ai-control/commons.js'),/function webStatusText\(status\)/);
+});

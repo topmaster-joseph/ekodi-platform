@@ -412,12 +412,13 @@ async function handleCommonsChat(request,env,url){
     if(!providers.length)return json({error:input.mode==='gpt'||input.mode==='claude'?'paid_provider_not_enabled':'provider_unavailable'},503);
     const tier=input.mode==='ollama'?'local':(input.mode==='gpt'||input.mode==='claude'?'paid':'free');
     const usage=await reserveCommonsChatUsage(env,auth.user.id,tier);if(!usage.ok)return json({error:usage.error},usage.status);
-    let sources=[];
+    let sources=[],webStatus=null;
     if(input.web){
-      try{sources=(await searchCommonsWeb(input.messages.at(-1).content,env)).sources}
-      catch(error){console.warn('AI Commons web search unavailable',clean(error?.message||error).slice(0,100))}
+      try{const found=await searchCommonsWeb(input.messages.at(-1).content,env);sources=found.sources;webStatus=found.status;
+        console.log('AI Commons web search',JSON.stringify({sources:sources.length,status:webStatus}))}
+      catch(error){webStatus={error:'unavailable'};console.warn('AI Commons web search unavailable',clean(error?.message||error).slice(0,100))}
     }
-    const webMeta={web:input.web,sources};
+    const webMeta={web:input.web,sources,webStatus};
     const prompt=buildCommonsChatPrompt(input.messages,{task:input.task,webContext:commonsWebContext(sources)});
     if(input.mode==='ollama'){
       const stamp=now(),id=crypto.randomUUID();
