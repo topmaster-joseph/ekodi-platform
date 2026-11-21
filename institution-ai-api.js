@@ -4,6 +4,8 @@ import {
   readInstitutionJson, INSTITUTION_AI_HIGH_IMPACT,
 } from './institution-ai-security.js';
 import { sealInstitutionBackup, openInstitutionBackup } from './institution-ai-backup.js';
+import { planInstitutionProviderFallback } from './institution-ai-routing.js';
+import { getEkodiAiProviderRegistryStatus } from './ekodi-ai-provider-registry.js';
 
 const API_PREFIX = '/api/institution-ai/v1/';
 const DO_PREFIX = '/institution-ai/';
@@ -227,7 +229,7 @@ export async function institutionAiApi(request, url, env) {
     return json({ ok: true, service: 'institution-ai', stage: 'locked-by-default', apiVersion: 1,
       externalExecutionEnabled: false, browserKeysAllowed: false, livePaymentsEnabled: false });
   }
-  if (request.method !== 'POST' || !['submit', 'message', 'status', 'approve', 'checkpoint', 'export', 'backup', 'restore-check', 'restore'].includes(action)) {
+  if (request.method !== 'POST' || !['submit', 'message', 'status', 'approve', 'checkpoint', 'export', 'backup', 'restore-check', 'restore', 'provider-plan'].includes(action)) {
     return json({ code: 'NOT_FOUND' }, 404);
   }
   // This API must never become a live tenant-data service merely because keys
@@ -244,7 +246,7 @@ export async function institutionAiApi(request, url, env) {
     activeInstitutionKeyVersion(env); // fail closed before authentication and storage access
     const body = await readInstitutionJson(request);
     validateIdentity(body);
-    const role = { submit: 'submit', message: body.sender === 'assistant' ? 'assistant' : 'submit', status: 'read', approve: 'approve', checkpoint: 'execute', export: 'read', backup: 'backup', 'restore-check': 'restore', restore: 'restore' }[action];
+    const role = { submit: 'submit', message: body.sender === 'assistant' ? 'assistant' : 'submit', status: 'read', approve: 'approve', checkpoint: 'execute', export: 'read', backup: 'backup', 'restore-check': 'restore', restore: 'restore', 'provider-plan': 'route' }[action];
     if (!authorizeInstitutionServer(request, env, body.tenantId, role)) return json({ code: 'FORBIDDEN' }, 403);
     if (action === 'submit') {
       validateInstitutionJob(body);
@@ -298,13 +300,21 @@ export async function institutionAiApi(request, url, env) {
         operationId: body.operationId, record, audit });
       return json(write.payload, write.status);
     }
-    const storageAction = action === 'status' || action === 'export' || action === 'backup' ? 'get' : action;
+    const storageAction = action === 'status' || action === 'export' || action === 'backup' || action === 'provider-plan' ? 'get' : action;
     const result = await fetchStore(env, storageAction, body);
     if (result.status !== 200) return json(result.payload, result.status);
     if (storageAction !== 'get') return json(result.payload);
     const { record, audit } = result.payload;
     if (!await verifyAuditTrail(record, audit)) return json({ code: 'AUDIT_INTEGRITY_FAILURE' }, 503);
     if (record.tenantId !== body.tenantId || record.operationId !== body.operationId) return json({ code: 'SCOPE_MISMATCH' }, 403);
+    if (action === 'provider-plan') {
+      // Only the stored, audit-verified classification and task type can govern
+      // provider eligibility. No model call or plaintext exfiltration occurs.
+      const capability = typeof body.capability === 'string' ? body.capability : 'text';
+      const registry = getEkodiAiProviderRegistryStatus(env);
+      const decision = planInstitutionProviderFallback(env, body.tenantId, record, registry, capability);
+      return json({ ok: true, ...decision });
+    }
     if (action === 'backup') {
       // Archive contains no work-data plaintext. It is encrypted under an
       // independent tenant-scoped backup key that is not exported.
