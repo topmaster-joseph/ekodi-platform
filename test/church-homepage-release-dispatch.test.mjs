@@ -94,7 +94,8 @@ test('Church-approved layout requires five-viewport multilingual Chromium produc
   "{name:'mobile-320',width:320,height:740},{name:'mobile-390',width:390,height:844},{name:'tablet-768',width:768,height:1000},{name:'desktop-1366',width:1366,height:900},{name:'desktop-1440',width:1440,height:900}",
   "const release=process.env.CHURCH_SOURCE_SHA",
   "initial.weeklyHidden,true",
-  "initial.member,true",
+  "initial.member,false",
+  "initial.qtin,true",
   'worship.editorHidden,true',
   'live.cards,2',
   'Upload approved layout Chromium evidence'
@@ -110,4 +111,26 @@ test('Church-approved layout requires five-viewport multilingual Chromium produc
  assert.match(w,/actions\/upload-artifact@v4/);
  assert.match(w,/CHURCH_SOURCE_SHA/);
  assert.match(w,/validate-ekodi-ai-change-orchestration\.mjs/);
+});
+
+
+test('the independently released Church Pages must show QTIN directly and preserve My Page behind account context',async()=>{
+ const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+ const verifier=await read('scripts/verify-church-header-navigation.mjs');
+ assert.match(verifier,/requireQtinPrimary/);
+ assert.match(verifier,/--expect-qtin/);
+ assert.match(w,/--html church\/index\.html --subnav church\/church-section-nav\.js --expect-qtin/);
+ assert.match(w,/--subpage "church\/\$page\/index\.html" --kind "\$page" --expect-qtin/);
+ assert.match(w,/grep -Fq 'href="\/qtin\/church">큐티인 신청<\/a>' church\/index\.html/);
+ assert.match(w,/grep -Fq "href: '\/qtin\/church', label: '큐티인 신청'" church\/script\.js/);
+ assert.match(w,/name\.href = '\/ekodichurch\/my\/'/);
+ assert.match(w,/assert\.equal\(initial\.member,false/);
+ assert.match(w,/assert\.equal\(initial\.qtin,true/);
+ for(const scope of [
+   '--subpage /tmp/church-devotion.html --kind devotion --expect-qtin',
+   '--subpage /tmp/church-verify-notices.html --kind notices --expect-qtin',
+   '--subpage /tmp/church-verify-schedule.html --kind schedule --expect-qtin'
+ ])assert.ok(w.includes(scope),'missing production QTIN release proof: '+scope);
+ assert.match(w,/CHURCH_CANONICAL_SOURCE_CUTOVER_APPROVED/);
+ assert.match(w,/validate-ekodi-ai-change-orchestration\.mjs" --release/);
 });

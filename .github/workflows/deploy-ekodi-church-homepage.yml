@@ -117,7 +117,7 @@ jobs:
           # The verifier accepts only the original legacy header or the exact new
           # first-level menu with all contextual worship/Together routes preserved.
           node .ekodi-control/scripts/verify-church-header-navigation.mjs \
-            --html church/index.html --subnav church/church-section-nav.js
+            --html church/index.html --subnav church/church-section-nav.js --expect-qtin
           grep -Fq 'online-triad--broadcast' church/index.html
           grep -Fq 'href="/live/church/"' church/index.html
           grep -Fq 'body:has(main :target) .hero{display:none!important}' church/church-homepage-layout.css
@@ -142,8 +142,9 @@ jobs:
           grep -Fq "dataset.liveStatus='stale'" church/church-online-status.js
           grep -Fq '에코디선교회' church/index.html
           grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' church/church-life-hub-i18n.js
-          grep -Fq 'href="/ekodichurch/my/' church/index.html
-          grep -Fq "href: '/ekodichurch/my/'" church/script.js
+          grep -Fq 'href="/qtin/church">큐티인 신청</a>' church/index.html
+          grep -Fq "name.href = '/ekodichurch/my/'" church/church-account-header.js
+          grep -Fq "href: '/qtin/church', label: '큐티인 신청'" church/script.js
           grep -Fq 'data-ekodi-header-actions' church/my/index.html
           grep -Fq 'EKODI CHURCH · MY PAGE' church/my/index.html
           if grep -Fq 'https://ekodi.kr/my/' church/my/index.html || grep -Eq '내 EKODI|MY EKODI|다른 EKODI 활동' church/my/index.html; then
@@ -175,7 +176,7 @@ jobs:
           # All reviewed Church public subpages share one six-menu Shell.
           for page in devotion notices schedule; do
             node .ekodi-control/scripts/verify-church-header-navigation.mjs \
-              --subpage "church/$page/index.html" --kind "$page"
+              --subpage "church/$page/index.html" --kind "$page" --expect-qtin
           done
           grep -Fq '<script type="module" src="/bible/devotion.js"></script>' church/devotion/index.html
           grep -Fq 'href="/ekodichurch/devotion/">매일묵상</a>' church/index.html
@@ -266,9 +267,9 @@ jobs:
               && grep -Eq '<h1>(에코디 )?오늘의 매일묵상</h1>' /tmp/church-devotion.html \
               && grep -Fq 'class="site-header church-devotion-header"' /tmp/church-devotion.html \
               && grep -Fq 'data-ekodi-devotion' /tmp/church-devotion.html \
-              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-devotion.html --kind devotion \
-              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-verify-notices.html --kind notices \
-              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-verify-schedule.html --kind schedule \
+              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-devotion.html --kind devotion --expect-qtin \
+              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-verify-notices.html --kind notices --expect-qtin \
+              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-verify-schedule.html --kind schedule --expect-qtin \
               && grep -Fq 'data-tab' /tmp/devotion-renderer.js \
               && grep -Fq '"activitySource":"curated"' /tmp/devotion-api.json; then
               echo 'Church devotion page verified.'
@@ -552,8 +553,8 @@ jobs:
                     sharedLive:!!document.querySelector('a[href="/live/church/"]'),
                     giving:!!document.querySelector('.giving-strip'),
                     // The shared shell wraps My Page in the central login (/auth/?…return_to=…/ekodichurch/my/).
-                    member:[...document.querySelectorAll('.site-header a')].some(a=>{const h=a.getAttribute('href')||'';try{const u=new URL(h,location.origin);return u.pathname==='/ekodichurch/my/'||(u.pathname.startsWith('/auth')&&new URL(u.searchParams.get('return_to')||'/',location.origin).pathname==='/ekodichurch/my/')}catch{return false}}),
-                    qtin:!!document.querySelector('.site-header a[href="/qtin/church"]'),
+                    member:!!document.querySelector('#main-nav a[href="/ekodichurch/my/"]'),
+                    qtin:!!document.querySelector('#main-nav a[href="/qtin/church"]'),
                     canonicalDevotion:!!document.querySelector('a[href="/ekodichurch/devotion/"]'),
                     overflow:document.documentElement.scrollWidth>innerWidth+1,
                     mobileGreetingGap:(()=>{
@@ -568,7 +569,8 @@ jobs:
                 assert.equal(initial.heroVisible,true,'hero should only show on home');
                 assert.equal(initial.weeklyHidden,true,'weekly panel hidden until selected');
                 assert.equal(initial.sharedLive,true,'shared EKODI Live link retained');
-                assert.equal(initial.member,true,'site-local member navigation retained');
+                assert.equal(initial.member,false,'My Page must not be a public primary menu shortcut');
+                assert.equal(initial.qtin,true,'QTIN must be a direct primary menu shortcut');
                 // Old headers expose QTIN directly. Six-item headers keep it in Together.
                 // Verify the actual rendered submenu in every viewport and locale.
                 if(!initial.qtin){
