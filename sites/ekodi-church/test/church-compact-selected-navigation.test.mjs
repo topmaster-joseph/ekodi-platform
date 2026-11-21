@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 const read=file=>readFileSync(new URL('../'+file,import.meta.url),'utf8');
 
 test('six primary links are canonical, ordered and consistent across Church pages',()=>{
- const names=['매일묵상','예배·방송','공지사항','주요일정','함께하기','마이페이지'];
+ const names=['매일묵상','예배·방송','공지사항','주요일정','함께하기','큐티인 신청'];
  const paths=['index.html','devotion/index.html','notices/index.html','schedule/index.html'];
  for(const path of paths){
    const page=read(path);
