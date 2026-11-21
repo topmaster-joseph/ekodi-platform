@@ -22,9 +22,11 @@
   },
   {
     "title": "경배찬양",
-    "kicker": "Praise & Worship",
+    "kicker": "Praise & Worship · 예배 15분 전",
     "lines": [
-      "다같이"
+      "은혜",
+      "날구원하신주",
+      "지금까지"
     ]
   },
   {
@@ -38,7 +40,7 @@
     "title": "입례찬송",
     "kicker": "Processional Hymn",
     "lines": [
-      "다같이"
+      "거룩하신 하나님"
     ]
   },
   {
@@ -52,7 +54,7 @@
     "title": "회개찬송",
     "kicker": "Hymn of Repentance",
     "lines": [
-      "다같이"
+      "나 주님의 기쁨되기"
     ]
   },
   {
@@ -73,7 +75,7 @@
     "title": "말씀찬송",
     "kicker": "Hymn before the Sermon",
     "lines": [
-      "다같이"
+      "아 하나님의 은혜로"
     ]
   },
   {
@@ -95,7 +97,7 @@
     "title": "결단찬송",
     "kicker": "Hymn of Commitment",
     "lines": [
-      "다같이"
+      "성령이여 강림하사"
     ]
   },
   {
@@ -109,7 +111,7 @@
     "title": "파송찬송",
     "kicker": "Sending Hymn",
     "lines": [
-      "다같이"
+      "주 안에 우린 하나"
     ]
   },
   {
