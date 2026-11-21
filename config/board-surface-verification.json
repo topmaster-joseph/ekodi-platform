@@ -12,6 +12,20 @@
   ],
   "surfaces": [
     {
+      "id": "ekodichurch.live-studio-verification",
+      "path": "/live/church/?mode=studio&activity=sunday",
+      "enabled": true,
+      "kind": "read-only-browser-proof",
+      "verificationNote": "Temporary draft PR native browser proof only; never merge this registry addition into main"
+    },
+    {
+      "id": "ekodichurch.live-viewer-verification",
+      "path": "/live/church/?mode=viewer",
+      "enabled": true,
+      "kind": "read-only-browser-proof",
+      "verificationNote": "Temporary draft PR native browser proof only; never merge this registry addition into main"
+    },
+    {
       "id": "seonammedi.citizen_voice",
       "path": "/seonammedi/board/voices",
       "enabled": true,
