@@ -1,4 +1,5 @@
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
+import { syncApprovedChurchMonthlyNotices } from './church-monthly-official-news.js';
 
 const CENTRAL_SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const CENTRAL_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -812,6 +813,12 @@ export async function handleSiteBoardRequest(request,env){
     return boardJson(instance,{ok:true});
   }
 
+  // The Church's reviewed, monthly public-news source is an internal publisher:
+  // first-party GET refreshes only the Church notice category, idempotently, with
+  // an audit-friendly system identity. HTTP write authorization is unchanged.
+  if(method==='GET'&&route.siteId==='ekodichurch'&&(sub==='/'||sub==='/api/posts')){
+    await syncApprovedChurchMonthlyNotices(env,instance);
+  }
   if(method==='GET'&&sub==='/'){
     const categoryId=safeCategoryId(new URL(request.url).searchParams.get('category'));
     const selected=isPublicOfficialCategory(instance,categoryId)?categoryId:'';
