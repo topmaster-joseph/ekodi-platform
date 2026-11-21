@@ -144,3 +144,38 @@
   .compact-panel.studio-tabbed .broadcast-actions{margin:8px 0 0}
   .compact-panel.studio-tabbed .status{margin:6px 0 0;font-size:12px}
 }
+
+
+/* Church canonical studio: the program monitor is ~half of its former 900px desktop width.
+   Narrowed overall layout keeps controls adjacent rather than leaving a large empty column. */
+@media(min-width:901px){
+  body[data-tenant="ekodichurch"] #studioView.studio{
+    width:100%;max-width:900px;
+    grid-template-columns:minmax(0,460px) minmax(0,390px);
+    margin-inline:auto;gap:16px;align-items:start
+  }
+  body[data-tenant="ekodichurch"] #programStage.stage{
+    min-width:0;min-height:0;max-height:none;width:100%;
+    justify-self:stretch;
+  }
+}
+@media(max-width:900px){
+  body[data-tenant="ekodichurch"] #studioView.studio{grid-template-columns:minmax(0,1fr)}
+  body[data-tenant="ekodichurch"] #programStage.stage{min-height:0;width:100%;max-height:none}
+}
+body[data-tenant="ekodichurch"] #programStage.stage:not(.portrait){aspect-ratio:16/9}
+body[data-tenant="ekodichurch"] #programStage.stage.portrait{aspect-ratio:9/16}
+body[data-tenant="ekodichurch"] .church-rehearsal{
+  border:1px solid #c8dacc;background:#eff6f0;border-radius:14px;
+  padding:12px;margin:12px 0;display:grid;gap:8px
+}
+body[data-tenant="ekodichurch"] .church-rehearsal strong{font-size:14px;color:#184b34}
+body[data-tenant="ekodichurch"] .church-rehearsal p{font-size:12px;line-height:1.6;margin:0;color:#375748}
+body[data-tenant="ekodichurch"] .church-rehearsal-actions{display:flex;gap:7px;flex-wrap:wrap}
+body[data-tenant="ekodichurch"] .church-rehearsal-actions button{
+  flex:1 1 145px;font-size:12px;min-height:40px;padding:9px 11px;border-radius:9px
+}
+body[data-tenant="ekodichurch"] .church-rehearsal-playback{
+  display:block;width:100%;height:auto;max-height:260px;
+  border-radius:10px;background:#080c0a
+}

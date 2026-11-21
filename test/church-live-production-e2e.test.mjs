@@ -63,7 +63,10 @@ test('Church Live E2E can be triggered by a bounded owner-only issue command',()
  assert.match(workflow,/github\.event\.comment\.user\.login == 'topmaster-joseph'/);
  assert.match(workflow,/github\.event\.comment\.body == '\/ekodi-church-live-e2e 2026-10-25'/);
  assert.match(workflow,/github\.event_name == 'workflow_dispatch'/);
- assert.match(workflow,/github\.event_name == 'workflow_run'/);
+ assert.match(workflow,/github.actor == 'topmaster-joseph'/);
+ assert.match(workflow,/inputs\.acknowledge_public_synthetic_broadcast == 'yes'/);
+ assert.doesNotMatch(workflow,/^\s*push:\s*$/m);
+ assert.doesNotMatch(workflow,/^\s*workflow_run:\s*$/m);
  assert.match(script,/protected_sunday_worship_window/);
  assert.match(script,/Asia\/Seoul/);
  assert.match(script,/passed:false,skipped:true,reason:'active_church_broadcast'/);

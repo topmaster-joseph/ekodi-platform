@@ -1,20 +1,18 @@
 name: Verify Tenant Live Production E2E
 
+# This job creates short-lived PUBLIC synthetic broadcasts across multiple tenants.
+# Never run on push/merge. Only an explicit owner-initiated, acknowledged dispatch.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/tenant-live-production-e2e.yml'
-      - 'scripts/tenant-live-production-e2e.mjs'
-      - 'scripts/church-live-production-e2e.mjs'
-      - 'realtime-control.js'
-      - 'realtime-tenant-registry.js'
-      - 'tenant-live-page.js'
-      - 'tenant-live.js'
-      - 'live-interpretation.js'
-      - 'live-interpretation-control.js'
-      - 'tenant-live.css'
+    inputs:
+      acknowledge_public_synthetic_broadcast:
+        description: 'Confirm test streams may be publicly visible for a short period'
+        required: true
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+        default: 'no'
 
 permissions:
   contents: read
@@ -25,6 +23,7 @@ concurrency:
 
 jobs:
   tenant-live-e2e:
+    if: github.actor == 'topmaster-joseph' && inputs.acknowledge_public_synthetic_broadcast == 'yes'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
