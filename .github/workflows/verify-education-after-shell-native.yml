@@ -39,7 +39,7 @@ jobs:
           node --test test/education-native-security-observations.test.mjs test/education-non-tenant-chrome.test.mjs
       - name: Install first-party disposable Chromium
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Verify live Site Core /edu classroom and legacy Worker in five viewports
         run: node scripts/verify-education-bootcamp-native.mjs
