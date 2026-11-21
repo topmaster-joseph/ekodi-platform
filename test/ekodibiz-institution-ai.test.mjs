@@ -9,7 +9,7 @@ import {
 
 globalThis.crypto ||= webcrypto;
 const KEY = suffix => ('K'.repeat(40) + suffix);
-const tenantKeys = keys => ({ status: 'active', keys: { submit: [KEY(keys + '-submit')], assistant: [KEY(keys + '-assistant')], read: [KEY(keys + '-read')], approve: [KEY(keys + '-approve')], execute: [KEY(keys + '-execute')] } });
+const tenantKeys = keys => ({ status: 'active', keys: { submit: [KEY(keys + '-submit')], assistant: [KEY(keys + '-assistant')], read: [KEY(keys + '-read')], approve: [KEY(keys + '-approve')], execute: [KEY(keys + '-execute')], backup: [KEY(keys + '-backup')], restore: [KEY(keys + '-restore')] } });
 const secrets = () => ({
   EKODIBIZ_MODE: 'isolated-staging',
   INSTITUTION_AI_STAGING_PILOT_ENABLED: 'true',
@@ -17,6 +17,8 @@ const secrets = () => ({
   INSTITUTION_AI_KEYRING_JSON: JSON.stringify({ v1: 'master-secret-tenant-encryption-v1-1234567890', v2: 'master-secret-tenant-encryption-v2-1234567890' }),
   INSTITUTION_AI_ACTIVE_KEY_VERSION: 'v1',
   INSTITUTION_AI_HMAC_KEY: 'independent-persistent-hmac-secret-1234567890',
+  INSTITUTION_AI_BACKUP_KEYS_JSON: JSON.stringify({ v1: 'independent-backup-master-secret-v1-1234567890', v2: 'independent-backup-master-secret-v2-1234567890' }),
+  INSTITUTION_AI_BACKUP_KEY_VERSION: 'v1',
 });
 function fakeStorage() {
   const values = new Map();
@@ -264,4 +266,79 @@ test('pilot gate denies production and disabled staging even with otherwise vali
   assert.equal((await call(unset, draft('pilot00004'))).status, 503);
   const otherMode = { ...env, EKODIBIZ_MODE: 'unknown' };
   assert.equal((await call(otherMode, draft('pilot00005'))).status, 503);
+});
+
+test('sealed backup and create-only restore preserve encrypted conversation and audit', async () => {
+  const original = setup();
+  assert.equal((await call(original.env, draft('recovery0001'))).status, 201);
+  const id = { tenantId: 'campus1', operationId: 'recovery0001' };
+  const firstMsg = await call(original.env, { ...id, messageId: 'replay00001', expectedVersion: 1, sender: 'user', text: '민감한 기관 대화' },
+    'submit', 'campus1', 'message');
+  assert.equal(firstMsg.status, 201);
+  const result = await call(original.env, id, 'backup', 'campus1', 'backup');
+  assert.equal(result.status, 200);
+  const { archive } = await result.json();
+  assert.equal(archive.format, 'ekodi.institution-ai.encrypted-backup/v1');
+  assert.equal(JSON.stringify(archive).includes('민감한 기관 대화'), false);
+  assert.equal(JSON.stringify(archive).includes('기관 기밀 내용'), false);
+  assert.ok(archive.ciphertext.length > 100);
+  // Backups must not disclose work-data encryption keys, even to their holder.
+  assert.equal(JSON.stringify(archive).includes('master-secret'), false);
+  assert.equal((await call(original.env, id, 'restore', 'campus1', 'restore-check', {})).status, 503);
+  const recovery = setup();
+  const restoreBody = { ...id, archive };
+  const preflight = await call(recovery.env, restoreBody, 'restore', 'campus1', 'restore-check');
+  assert.equal(preflight.status, 200);
+  assert.equal((await preflight.json()).restoreEligible, true);
+  assert.equal((await call(recovery.env, restoreBody, 'backup', 'campus1', 'restore')).status, 403);
+  const disabled = await call(recovery.env, restoreBody, 'restore', 'campus1', 'restore');
+  assert.equal(disabled.status, 503);
+  assert.equal((await disabled.json()).code, 'RESTORE_DISABLED');
+  recovery.env.INSTITUTION_AI_RESTORE_ENABLED = 'true';
+  assert.equal((await call(recovery.env, restoreBody, 'restore', 'campus1', 'restore')).status, 201);
+  const read = await call(recovery.env, id, 'read', 'campus1', 'status');
+  assert.equal(read.status, 200);
+  const current = await read.json();
+  assert.equal(current.messages[0].text, '민감한 기관 대화');
+  assert.equal(current.payload.text, '기관 기밀 내용');
+  assert.equal(current.audit.length, 2);
+  assert.equal(current.job.version, 2);
+  assert.equal((await call(recovery.env, restoreBody, 'restore', 'campus1', 'restore')).status, 409);
+  assert.equal((await call(recovery.env, restoreBody, 'restore', 'campus1', 'restore-check')).status, 409);
+});
+
+test('backup restore rejects tampering, cross-tenant replay and missing key versions', async () => {
+  const original = setup();
+  await call(original.env, draft('archive0001'));
+  const id = { tenantId: 'campus1', operationId: 'archive0001' };
+  const archive = (await (await call(original.env, id, 'backup', 'campus1', 'backup')).json()).archive;
+  const newStore = setup();
+  const changed = { ...archive, ciphertext: 'A' + archive.ciphertext.slice(1) };
+  assert.equal((await call(newStore.env, { ...id, archive: changed }, 'restore', 'campus1', 'restore-check')).status, 503);
+  assert.equal((await call(newStore.env, { ...id, archive, tenantId: 'campus2' }, 'restore', 'campus2', 'restore-check')).status, 503);
+  assert.equal((await call(newStore.env, { ...id, archive, operationId: 'archive0002' }, 'restore', 'campus1', 'restore-check')).status, 503);
+  const noKey = setup();
+  delete noKey.env.INSTITUTION_AI_BACKUP_KEYS_JSON;
+  assert.equal((await call(noKey.env, { ...id, archive }, 'restore', 'campus1', 'restore-check')).status, 503);
+  // A key rotation is compatible when the previous version remains in the keyring.
+  newStore.env.INSTITUTION_AI_BACKUP_KEY_VERSION = 'v2';
+  assert.equal((await call(newStore.env, { ...id, archive }, 'restore', 'campus1', 'restore-check')).status, 200);
+  const disabledMode = { ...newStore.env, EKODIBIZ_MODE: 'operational-mvp', INSTITUTION_AI_RESTORE_ENABLED: 'true' };
+  assert.equal((await call(disabledMode, { ...id, archive }, 'restore', 'campus1', 'restore')).status, 503);
+});
+
+test('backup refuses records exceeding the bounded pilot archive rather than truncating transcripts', async () => {
+  const { env } = setup();
+  const id = { tenantId: 'campus1', operationId: 'large00001' };
+  assert.equal((await call(env, { ...draft(id.operationId), payload: { text: 'x'.repeat(9000) } })).status, 201);
+  const result = await call(env, id, 'backup', 'campus1', 'backup');
+  // Small pilot archive is bounded at 12KiB; large content remains private and intact.
+  assert.equal(result.status, 200);
+  const append = { ...id, messageId: 'large-msg001', expectedVersion: 1, sender: 'user', text: 'y'.repeat(4000) };
+  assert.equal((await call(env, append, 'submit', 'campus1', 'message')).status, 201);
+  const rejected = await call(env, id, 'backup', 'campus1', 'backup');
+  assert.equal(rejected.status, 413);
+  assert.equal((await rejected.json()).code, 'BACKUP_TOO_LARGE');
+  const stillThere = await (await call(env, id, 'read', 'campus1', 'status')).json();
+  assert.equal(stillThere.messages[0].text.length, 4000);
 });
