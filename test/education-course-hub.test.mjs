@@ -42,7 +42,7 @@ async function admin(env){
 test('single source registry provides unique canonical course IDs and no copied content',async()=>{
  const cat=JSON.parse(await read('education/courses/catalog.json'));
  assert.equal(cat.schemaVersion,2);
- assert.equal(cat.courses.length,6);
+ assert.ok(cat.courses.length>=6,'preserve the baseline catalog while allowing new courses');
  assert.equal(new Set(cat.courses.map(x=>x.id)).size,cat.courses.length);
  for(const c of cat.courses){
   assert.ok(c.title&&c.summary&&c.syllabus?.length>0&&c.studyUrl);
