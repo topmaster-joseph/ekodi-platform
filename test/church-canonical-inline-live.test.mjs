@@ -44,6 +44,11 @@ test('church-specific assets are production MIME safe and compact mobile/iframe 
  const css=await churchLiveCss().text(),js=await churchLiveScript().text();
  assert.match(css,/data-church-live-inline="true"/);
  assert.match(css,/@media\(max-width:800px\)/);
+ assert.match(css,/nav\{display:flex;flex:0 1 auto;align-items:center;justify-content:flex-end;margin-left:auto/);
+ assert.match(css,/church-live-menu\{display:flex;grid-column:3;grid-row:1;justify-self:end/);
+ assert.match(css,/church-live-site-header nav\{display:none;grid-column:1 \/ -1;grid-row:2;margin-left:0/);
+ assert.match(css,/church-live-site-header nav a\{display:flex;align-items:center;justify-content:flex-end;text-align:right/);
+ assert.doesNotMatch(css,/daily-verse/);
  assert.match(js,/aria-expanded/);
  new Function(js);
  const source=await read('tenant-live.js');
