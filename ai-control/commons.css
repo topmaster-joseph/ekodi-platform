@@ -249,3 +249,5 @@ a.support-notice-title:hover,a.support-notice-title:focus-visible{color:var(--ac
 .chat-sources a{color:var(--accent);font-weight:750;overflow-wrap:anywhere}
 .chat-sources span{color:var(--muted);font-size:.72rem}
 @media(max-width:620px){.chat-form{grid-template-columns:1fr}.chat-send{display:flex;align-items:center;gap:8px}.chat-send button{margin-left:auto;min-width:110px}}
+
+.chat-sources-status{margin:6px 0 0;font-size:.68rem;color:var(--muted)}
