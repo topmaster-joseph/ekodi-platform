@@ -52,7 +52,7 @@ test('Nov 22 draft bulletin is two-sheet, sanitized and guarded', () => {
   assert.equal((html.match(/class="bp-sheet"/g) || []).length, 2);
   assert.equal((html.match(/<tr><td class="bp-order-ko">경배찬양/g) || []).length, 1);
   assert.equal((html.match(/<li>성령께서 내게/g) || []).length, 1);
-  assert.match(html, /\.\.\/bulletin-data\.js\?v=20261122a/);
+  assert.match(html, /\.\.\/bulletin-data\.js\?v=20261122b/);
   assert.match(html, /\.\.\/review-gate\.js/);
   assert.doesNotMatch(html, /임진명|국화축제|sb_secret|service_role|stream_key/);
   assert.match(html, /<h1 id="worship-title">공동의 유익을 위한 은사<\/h1>/);
