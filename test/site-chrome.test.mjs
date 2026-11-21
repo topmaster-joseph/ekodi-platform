@@ -34,7 +34,8 @@ test('Toss merchant review: every Books page shows canonical seller phone in foo
   const f = footer('books');
   assert.match(f, /대표전화 010-3501-8542/);
   assert.match(f, /사업자등록번호 213-13-01959/);
-  assert.match(f, /상호 에코디비즈 · 대표 정찬균/);
+  assert.match(f, /에코디비즈 · 정찬균/);
+  assert.doesNotMatch(f, /운영주체|운영 에코디비즈|대표 정찬균/);
   assert.match(f, /전남광주통합특별시 무안군 청계면 백련동1길 17-4, 건물 1층/);
   for (const page of SITES.books.pages) {
     const html = read(page);
