@@ -111,7 +111,7 @@ test('feedback and consenting screen-share QR targets are same-origin canonical 
  assert.match(hub,/studentInviteUrl=new URL\(page,location\.origin\)\.href/);
  assert.match(hub,/studentQr=qrSvg\(studentInviteUrl/);
  assert.match(hub,/id=\"teacherStudentQr\" data-target=/);
- assert.match(html,/<script type=\"module\" src=\"\/course-hub\/hub\.js\"><\/script>/);
+ assert.match(html,/<script type=\"module\" src=\"\/edu\/course-hub\/hub\.js\"><\/script>/);
  for(const session of [1,2,3,4,5]){
   const target=new URL(ROOT+'/edu/study/live/feedback/?s='+session);
   assert.equal(target.pathname,'/edu/study/live/feedback/');
