@@ -20,9 +20,12 @@ on:
       - 'funding-staging-worker.js'
       - 'migrations/202611211000_funding_phase1.sql'
       - 'migrations/202611211900_funding_pilot_owner_fix.sql'
+      - 'migrations/202611221000_funding_payout_prep.sql'
+      - 'funding-payout.js'
       - 'wrangler.funding.toml'
       - 'wrangler.funding.staging.toml'
       - 'test/funding-platform.test.mjs'
+      - 'test/funding-payout.test.mjs'
       - '.github/workflows/deploy-funding.yml'
       - '.github/workflows/deploy-funding-staging.yml'
   push:
@@ -55,8 +58,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in funding-core.js funding-d1-store.js funding-memory-store.js funding-worker.js funding-staging-worker.js; do node --check "$file"; done
-          node --test test/funding-platform.test.mjs
+          for file in funding-core.js funding-d1-store.js funding-memory-store.js funding-worker.js funding-staging-worker.js funding-payout.js; do node --check "$file"; done
+          node --test test/funding-platform.test.mjs test/funding-payout.test.mjs
           grep -Fq 'goal_amount < 10000000' migrations/202611211000_funding_phase1.sql
           grep -Fq 'raised_amount < 10000000' migrations/202611211000_funding_phase1.sql
           ! grep -Eiq '\bDROP\b' migrations/202611211000_funding_phase1.sql
@@ -109,6 +112,7 @@ jobs:
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.funding.toml --file migrations/202611211000_funding_phase1.sql
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.funding.toml --file migrations/202611211900_funding_pilot_owner_fix.sql
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.funding.toml --file migrations/202611221000_funding_payout_prep.sql
       - name: Deploy production worker
         shell: bash
         run: |
