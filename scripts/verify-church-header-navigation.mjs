@@ -12,7 +12,7 @@ const MODERN=[
   ['/ekodichurch/notices/','공지사항'],
   ['/ekodichurch/schedule/','주요일정'],
   ['/ekodichurch/#together','함께하기'],
-  ['/ekodichurch/my/','마이페이지']
+  ['/qtin/church','큐티인 신청']
 ];
 const requiredNested=[
   "['예배안내','#worship']",
