@@ -94,3 +94,28 @@ test('protected Church release rejects reintroduced footer labels at source and 
   assert.match(release,/release_task_id:/);
   assert.match(release,/EKODI AI Orchestration Gate/);
 });
+
+test('Mall footer scope disclaimer has no operating-entity wording and remains legally scoped',async()=>{
+  const {siteChromeDefaults}=await import('../config/site-chrome-defaults.js');
+  const mall=siteChromeDefaults('에코디몰','https://ekodi.kr/ekodimall/');
+  assert.ok(mall.footer.precedenceNotice);
+  assert.doesNotMatch(mall.footer.precedenceNotice,/운영주체|운영 주체|대표/);
+  assert.match(mall.footer.precedenceNotice,/해당 서비스의 별도 고지/);
+});
+
+test('root and history public footers omit residual promotional titles but preserve registered representative legal disclosure',async()=>{
+  const [root,history]=await Promise.all([read('index.html'),read('history.html')]);
+  assert.doesNotMatch(footerOf(root),/운영주체|운영 주체|대표 홈페이지/);
+  assert.match(footerOf(root),/<dt>대표자명<\/dt><dd>정찬균<\/dd>/,'legally required merchant disclosure remains explicit');
+  assert.doesNotMatch(footerOf(history),/운영주체|운영 주체|대표 홈페이지/);
+});
+
+test('ten Books footers use a neutral contact telephone label without removing the actual number',async()=>{
+  for(const page of generated.filter(x=>x.startsWith('books/')&&!x.startsWith('books/publishing/'))){
+    const footer=footerOf(await read(page));
+    assert.doesNotMatch(footer,/대표전화/);
+    assert.match(footer,/전화 010-3501-8542/);
+  }
+  assert.doesNotMatch(renderBookFooter('books'),/대표전화/);
+  assert.match(renderBookFooter('books'),/전화 010-3501-8542/);
+});
