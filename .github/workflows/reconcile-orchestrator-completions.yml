@@ -77,6 +77,15 @@ jobs:
                 continue;
               }
               if (evidence?.verified !== true) {
+                if (evidence?.reason === 'merged_pr_not_found' && evidence?.unclaimed === true) {
+                  try {
+                    const parked = await post({ action: 'park', taskId: candidate.taskId, branchRef: candidate.branchRef });
+                    report.push({ taskId: candidate.taskId, state: parked.state || 'blocked', reason: parked.reason || 'unclaimed_no_worker_14d' });
+                  } catch (error) {
+                    report.push({ taskId: candidate.taskId, state: 'deferred', reason: String(error?.message || error).slice(0, 180) });
+                  }
+                  continue;
+                }
                 report.push({ taskId: candidate.taskId, state: 'deferred', reason: evidence?.reason || 'evidence_not_verified' });
                 continue;
               }
