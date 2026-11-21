@@ -3,7 +3,7 @@
 const encoder = new TextEncoder();
 const ID = /^[a-z0-9][a-z0-9_-]{2,63}$/;
 const KEY_VERSION = /^[a-zA-Z0-9_-]{1,32}$/;
-const ROLES = new Set(['submit', 'assistant', 'read', 'approve', 'execute']);
+const ROLES = new Set(['submit', 'assistant', 'read', 'approve', 'execute', 'backup', 'restore']);
 export const INSTITUTION_AI_MAX_BODY_BYTES = 24 * 1024;
 export const INSTITUTION_AI_HIGH_IMPACT = Object.freeze(['payment', 'contract', 'external_send', 'publish', 'delete', 'account_change']);
 export const INSTITUTION_AI_TASK_TYPES = Object.freeze(['analysis', 'draft', 'document', ...INSTITUTION_AI_HIGH_IMPACT]);
