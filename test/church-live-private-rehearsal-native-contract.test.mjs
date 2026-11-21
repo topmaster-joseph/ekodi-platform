@@ -27,6 +27,9 @@ test('local media rehearsal never opens a public room, stream or credentialed br
   assert.match(s,/await page\.click\('#localRehearsalStart'\)/);
   assert.match(s,/await page\.click\('#localRehearsalStop'\)/);
   assert.match(s,/recordedBytes:playback\.bytes/);
+  assert.match(s,/await v\.play\(\)/);
+  assert.match(s,/playback\.decodedWidth>0 && playback\.decodedHeight>0/);
+  assert.match(s,/playback\.playedSeconds>0\.1/);
   assert.match(s,/await browser\.close\(\)/);
   assert.doesNotMatch(s,/\.click\('#goLiveButton'/);
   assert.doesNotMatch(s,/\.click\('#hostButton'/);
