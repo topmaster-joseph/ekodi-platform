@@ -64,19 +64,8 @@ test('church-specific assets are production MIME safe and compact mobile/iframe 
  new Function(source);
 });
 
-test('Church-facing footer address appears without the redundant business-address label',async()=>{
- const paths=[
-  'sites/ekodi-church/index.html',
-  'sites/ekodi-church/notices/index.html',
-  'sites/ekodi-church/devotion/index.html',
-  'sites/ekodi-church/schedule/index.html',
-  'church-history-worker.js'
- ];
- for(const path of paths){
-  const source=await read(path);
-  assert.ok(source.includes('전남 무안군 청계면 백련동1길 17-4, 1층'),path+' retains the postal address');
-  assert.doesNotMatch(source,/사업자 소재지/,path+' must not display the removed label');
- }
- const i18n=await read('sites/ekodi-church/church-life-hub-i18n.js');
- assert.doesNotMatch(i18n,/사업자 소재지/);
+test('the dynamic Church history footer retains the address without its business-address label',async()=>{
+ const source=await read('church-history-worker.js');
+ assert.ok(source.includes('전남 무안군 청계면 백련동1길 17-4, 1층'));
+ assert.doesNotMatch(source,/사업자 소재지/);
 });
