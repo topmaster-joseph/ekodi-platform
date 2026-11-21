@@ -3,6 +3,7 @@ import {
   encryptInstitutionPayload, fingerprintInstitutionRequest, validateInstitutionJob,
   readInstitutionJson, INSTITUTION_AI_HIGH_IMPACT,
 } from './institution-ai-security.js';
+import { sealInstitutionBackup, openInstitutionBackup } from './institution-ai-backup.js';
 
 const API_PREFIX = '/api/institution-ai/v1/';
 const DO_PREFIX = '/institution-ai/';
@@ -123,6 +124,22 @@ async function doAppendMessage(storage, body) {
     return json({ ok: true, idempotent: false, job: publicJob(record) }, 201);
   });
 }
+// Staging-only disaster-recovery restore: create-only, atomic and never overwrites
+// an existing canonical job or replays an external side effect.
+async function doRestore(storage, body) {
+  return storage.transaction(async tx => {
+    const jobKey = keyFor(body.tenantId, body.operationId);
+    if (await tx.get(jobKey)) return json({ code: 'RESTORE_TARGET_EXISTS' }, 409);
+    const prefix = logPrefix(body.tenantId, body.operationId);
+    const existingAudit = await tx.list({ prefix });
+    if (existingAudit.size) return json({ code: 'RESTORE_AUDIT_CONFLICT' }, 409);
+    for (const event of body.audit) {
+      await tx.put(prefix + String(event.seq).padStart(9, '0'), event);
+    }
+    await tx.put(jobKey, body.record);
+    return json({ ok: true, restored: true, operationId: body.operationId, status: body.record.status }, 201);
+  });
+}
 async function doTransition(storage, body, kind) {
   return storage.transaction(async tx => {
     const key = keyFor(body.tenantId, body.operationId);
@@ -184,6 +201,7 @@ export async function institutionAiStore(request, storage) {
   if (path === DO_PREFIX + 'submit') return doSubmit(storage, body);
   if (path === DO_PREFIX + 'approve') return doTransition(storage, body, 'approve');
   if (path === DO_PREFIX + 'message') return doAppendMessage(storage, body);
+  if (path === DO_PREFIX + 'restore') return doRestore(storage, body);
   if (path === DO_PREFIX + 'checkpoint') return doTransition(storage, body, 'checkpoint');
   return json({ code: 'NOT_FOUND' }, 404);
 }
@@ -209,7 +227,7 @@ export async function institutionAiApi(request, url, env) {
     return json({ ok: true, service: 'institution-ai', stage: 'locked-by-default', apiVersion: 1,
       externalExecutionEnabled: false, browserKeysAllowed: false, livePaymentsEnabled: false });
   }
-  if (request.method !== 'POST' || !['submit', 'message', 'status', 'approve', 'checkpoint', 'export'].includes(action)) {
+  if (request.method !== 'POST' || !['submit', 'message', 'status', 'approve', 'checkpoint', 'export', 'backup', 'restore-check', 'restore'].includes(action)) {
     return json({ code: 'NOT_FOUND' }, 404);
   }
   // This API must never become a live tenant-data service merely because keys
@@ -226,7 +244,7 @@ export async function institutionAiApi(request, url, env) {
     activeInstitutionKeyVersion(env); // fail closed before authentication and storage access
     const body = await readInstitutionJson(request);
     validateIdentity(body);
-    const role = { submit: 'submit', message: body.sender === 'assistant' ? 'assistant' : 'submit', status: 'read', approve: 'approve', checkpoint: 'execute', export: 'read' }[action];
+    const role = { submit: 'submit', message: body.sender === 'assistant' ? 'assistant' : 'submit', status: 'read', approve: 'approve', checkpoint: 'execute', export: 'read', backup: 'backup', 'restore-check': 'restore', restore: 'restore' }[action];
     if (!authorizeInstitutionServer(request, env, body.tenantId, role)) return json({ code: 'FORBIDDEN' }, 403);
     if (action === 'submit') {
       validateInstitutionJob(body);
@@ -251,13 +269,48 @@ export async function institutionAiApi(request, url, env) {
         operationId: body.operationId, messageId, sender: body.sender, sealed, fingerprint, expectedVersion: body.expectedVersion });
       return json(result.payload, result.status);
     }
-    const storageAction = action === 'status' || action === 'export' ? 'get' : action;
+    if (action === 'restore-check' || action === 'restore') {
+      const restored = await openInstitutionBackup(env, body.tenantId, body.operationId, body.archive);
+      const { record, audit } = restored;
+      if (!await verifyAuditTrail(record, audit)) return json({ code: 'AUDIT_INTEGRITY_FAILURE' }, 503);
+      // Verify both the independent archive key and the live work-data keyring
+      // before asserting that a restored transcript would be readable.
+      await decryptInstitutionPayload(env, body.tenantId, body.operationId, record.sealed);
+      for (const message of record.messages || []) {
+        const value = await decryptInstitutionPayload(env, body.tenantId,
+          body.operationId + ':message:' + message.messageId, message.sealed);
+        if (!['user', 'assistant'].includes(value?.sender) || typeof value?.text !== 'string') {
+          return json({ code: 'BACKUP_INVALID_MESSAGE' }, 503);
+        }
+      }
+      const existing = await fetchStore(env, 'get', { tenantId: body.tenantId, operationId: body.operationId });
+      if (existing.status === 200) return json({ code: 'RESTORE_TARGET_EXISTS' }, 409);
+      if (existing.status !== 404) return json({ code: 'RESTORE_CHECK_UNAVAILABLE' }, 503);
+      if (action === 'restore-check') {
+        return json({ ok: true, restoreEligible: true, dataVerified: true,
+          tenantId: body.tenantId, operationId: body.operationId, version: record.version,
+          messageCount: (record.messages || []).length, sideEffectsExecuted: false });
+      }
+      if (String(env.INSTITUTION_AI_RESTORE_ENABLED || '').trim().toLowerCase() !== 'true') {
+        return json({ code: 'RESTORE_DISABLED' }, 503);
+      }
+      const write = await fetchStore(env, 'restore', { tenantId: body.tenantId,
+        operationId: body.operationId, record, audit });
+      return json(write.payload, write.status);
+    }
+    const storageAction = action === 'status' || action === 'export' || action === 'backup' ? 'get' : action;
     const result = await fetchStore(env, storageAction, body);
     if (result.status !== 200) return json(result.payload, result.status);
     if (storageAction !== 'get') return json(result.payload);
     const { record, audit } = result.payload;
     if (!await verifyAuditTrail(record, audit)) return json({ code: 'AUDIT_INTEGRITY_FAILURE' }, 503);
     if (record.tenantId !== body.tenantId || record.operationId !== body.operationId) return json({ code: 'SCOPE_MISMATCH' }, 403);
+    if (action === 'backup') {
+      // Archive contains no work-data plaintext. It is encrypted under an
+      // independent tenant-scoped backup key that is not exported.
+      const archive = await sealInstitutionBackup(env, body.tenantId, body.operationId, record, audit);
+      return json({ ok: true, archive });
+    }
     const payload = await decryptInstitutionPayload(env, body.tenantId, body.operationId, record.sealed);
     const messages = await Promise.all((record.messages || []).map(async item => {
       const restored = await decryptInstitutionPayload(env, body.tenantId,
@@ -273,7 +326,7 @@ export async function institutionAiApi(request, url, env) {
       : { ok: true, job, payload, messages, audit });
   } catch (error) {
     const code = String(error?.message || '');
-    if (code === 'BODY_TOO_LARGE') return json({ code }, 413);
+    if (code === 'BODY_TOO_LARGE' || code === 'BACKUP_TOO_LARGE') return json({ code }, 413);
     if (/^(INVALID_|CONTENT_TYPE_REQUIRED|BODY_REQUIRED)/.test(code)) return json({ code }, 400);
     // Malformed credentials, unavailable keys, storage and corrupted records reveal no internal details.
     return json({ code: 'INSTITUTION_AI_UNAVAILABLE' }, 503);
