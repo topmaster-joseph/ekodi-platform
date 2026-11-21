@@ -15,11 +15,10 @@ export const CHURCH_WEEKLY_NEWS_2026=Object.freeze([
   {date:'2026-11-15',items:['11월 15일 주일모임 후 공동의회가 있음을 안내했습니다. 세례교인의 참석을 요청했습니다.','11월 22일 주일모임은 추수감사주일로 드린다고 예고했습니다.']}
 ].map(x=>Object.freeze({date:x.date,items:Object.freeze(x.items)})));
 
-export const CHURCH_NEWS_PUBLISHER='system:church-monthly-news';
+export const CHURCH_NEWS_PUBLISHER='system:church-weekly-news';
 export const CHURCH_NEWS_FIRST_SUNDAY='2026-09-06';
 const KST='Asia/Seoul';
 const monthName=value=>Number(value.split('-')[1])+'월';
-const sourceKeyFor=day=>day.slice(0,7);
 const dayLabel=day=>Number(day.slice(5,7))+'월 '+Number(day.slice(8))+'일';
 
 export function previousCompletedChurchSunday(at=new Date()){
@@ -31,52 +30,40 @@ export function previousCompletedChurchSunday(at=new Date()){
   return date.toISOString().slice(0,10);
 }
 
-export function approvedChurchMonthlyPublications(at=new Date()){
+export function approvedChurchWeeklyPublications(at=new Date()){
   const previousSunday=previousCompletedChurchSunday(at);
-  const published=CHURCH_WEEKLY_NEWS_2026.filter(week=>week.date<=previousSunday&&week.date>=CHURCH_NEWS_FIRST_SUNDAY);
-  const groups=new Map();
-  for(const week of published){
-    const key=sourceKeyFor(week.date);
-    if(!groups.has(key))groups.set(key,[]);
-    groups.get(key).push(week);
-  }
-  return [...groups].map(([key,weeks])=>{
-    const recurring=[
-      '새로 나오시거나 오랜만에 함께하신 분을 주님의 이름으로 환영합니다.',
-      '매주 화요일 오전 10시 평공목(평생공부하는목회자) 모임이 있습니다.',
-      '매주 토요일 오전 11시 에코디 토요모임을 위해 함께 기도합니다.',
-      '매주 일요일 함께찬양하는사람들(함찬사) 모임을 위해 기도합니다.'
-    ];
-    const body=[
-      '2026년 '+monthName(key)+' 에코디교회 교회소식',
-      '',
-      '[매주 공동체 안내]',
-      ...recurring.map(item=>'• '+item),
-      '',
-      ...weeks.flatMap(week=>[
-        '['+dayLabel(week.date)+' 주보]',
+  return CHURCH_WEEKLY_NEWS_2026
+    .filter(week=>week.date<=previousSunday&&week.date>=CHURCH_NEWS_FIRST_SUNDAY)
+    .map(week=>{
+      const body=[
+        '2026년 '+dayLabel(week.date)+' 에코디교회 교회소식',
+        '',
+        '[공동체 정기 안내]',
+        '• 새로 나오신 분과 오랜만에 나오신 분을 주님의 이름으로 환영합니다.',
+        '• 매주 화요일 오전 10시, 평공목(평생공부하는목회자) 모임이 있습니다.',
+        '• 매주 토요일 오전 11시, 에코디 토요모임을 위해 기도합니다.',
+        ...(week.date==='2026-11-15'?[]:['• 매주 일요일, 함께찬양하는사람들(함찬사) 모임을 위해 기도합니다.']),
+        '',
+        '[이번 주 주보 안내]',
         ...week.items.map(item=>'• '+item),
-        ''
-      ]),
-      '이 기록은 각 주일 주보의 「Community Announce」 공개 안내를 토대로 정리했습니다.',
-      '개인 건강·상담·연락처·재정·출석 인원 등 민감한 세부사항은 게시하지 않습니다.'
-    ].join('\n').trim();
-    return Object.freeze({sourceKey:key,title:monthName(key)+' 교회소식',body,weekCount:weeks.length});
-  });
+        '',
+        '2026년 '+dayLabel(week.date)+' 주보 「Community Announce」를 기준으로 정리했습니다.'
+      ].join('\n').trim();
+      return Object.freeze({sourceKey:week.date,title:dayLabel(week.date)+' 교회소식',body,weekCount:1});
+    });
 }
-
 // Durable system publications on the already authorized Church board only.
 // No HTTP write route is added. Incoming human POST/PATCH/DELETE still require
 // an authenticated *board-local* editor/owner; anonymous writes remain forbidden.
-export async function syncApprovedChurchMonthlyNotices(env,instance,at=new Date()){
+export async function syncApprovedChurchWeeklyNotices(env,instance,at=new Date()){
   if(instance?.site_id!=='ekodichurch'||instance.status!=='active'||!env?.DB?.prepare)return {published:0,updated:0};
-  const publications=approvedChurchMonthlyPublications(at);
+  const publications=approvedChurchWeeklyPublications(at);
   if(!publications.length)return {published:0,updated:0};
   const DB=env.DB;
   await DB.batch([
-    DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_ekodi_board_church_monthly_news
+    DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_ekodi_board_church_weekly_news
       ON ekodi_board_posts(board_id,author_person_id)
-      WHERE author_person_id GLOB 'system:church-monthly-news:*'`),
+      WHERE author_person_id GLOB 'system:church-weekly-news:*'`),
     DB.prepare(`CREATE TABLE IF NOT EXISTS ekodi_board_auto_news_sources(
       board_id TEXT NOT NULL,
       source_key TEXT NOT NULL,
@@ -93,7 +80,7 @@ export async function syncApprovedChurchMonthlyNotices(env,instance,at=new Date(
     VALUES (?,'notice','공지사항',10,'active',?,?)`).bind(boardId,stamp,stamp).run();
   let published=0,updated=0;
   for(const item of publications){
-    const sourceKey='church-monthly-news:'+item.sourceKey;
+    const sourceKey='church-weekly-news:'+item.sourceKey;
     const author=CHURCH_NEWS_PUBLISHER+':'+item.sourceKey;
     const old=await DB.prepare(`SELECT id,body,status FROM ekodi_board_posts
       WHERE board_id=? AND author_person_id=? LIMIT 1`).bind(boardId,author).first();
@@ -141,5 +128,5 @@ export async function syncApprovedChurchMonthlyNotices(env,instance,at=new Date(
       .bind(boardId,author,String(post.id),JSON.stringify({sourceKey,weekCount:item.weekCount}),stamp).run();
     updated++;
   }
-  return {published,updated,months:publications.length};
+  return {published,updated,weeks:publications.length};
 }
