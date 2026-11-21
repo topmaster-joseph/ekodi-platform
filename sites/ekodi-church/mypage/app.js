@@ -295,7 +295,7 @@ function annualSundays(year){
   }
   return days;
 }
-function annualSundayValid(day){return /^\\d{4}-\\d{2}-\\d{2}$/.test(day)&&new Date(day+'T12:00:00Z').getUTCDay()===0;}
+function annualSundayValid(day){return /^\d{4}-\d{2}-\d{2}$/.test(day)&&new Date(day+'T12:00:00Z').getUTCDay()===0;}
 function annualYear(){return Number($('annualYear').value||2026)}
 function annualDate(){return $('annualSunday').value}
 function annualEsc(v){return esc(v||'확인필요')}
@@ -368,7 +368,7 @@ function exportAnnualRoster(){
     const data=annualRows.get(day)||{};
     rows.push([day,...ANNUAL_FIELDS.map(([field])=>String(data[field]||'확인필요'))]);
   }
-  const csv='\\ufeff'+rows.map(cells=>cells.map(cell=>'"'+cell.replaceAll('"','""')+'"').join(',')).join('\\r\\n');
+  const csv='\ufeff'+rows.map(cells=>cells.map(cell=>'"'+cell.replaceAll('"','""')+'"').join(',')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const link=document.createElement('a');
   link.href=URL.createObjectURL(blob);link.download='에코디교회_연간예배위원_'+annualYear()+'.csv';
