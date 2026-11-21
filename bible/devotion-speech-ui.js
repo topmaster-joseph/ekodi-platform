@@ -111,6 +111,9 @@ export function createDevotionSpeechUI(win = window, doc = document) {
   let playing = false;
   let paused = false;
   let nextTimer = null;
+  // An onend callback may schedule the next phrase after the user presses pause.
+  // Keep the pending phrase until a deliberate resume; never speak over a pause.
+  let pendingNext = null;
   let preferredVoice = '';
   let officialSelection = null;
 
@@ -202,22 +205,35 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     segments = [];
     index = 0;
     if (nextTimer != null) { win.clearTimeout?.(nextTimer); nextTimer = null; }
+    pendingNext = null;
     if (supported) synth.cancel();
     ekodi.stop();
     display(data?.found ? '듣기 준비' : '');
   }
-  function speakNext(run, selectedVoice) {
+  function scheduleNext(run, selectedVoice, delay, restart = false) {
     if (run !== generation || !playing) return;
+    const pending = {run, selectedVoice, delay, restart};
+    pendingNext = pending;
+    if (paused) return;
+    if (typeof win.setTimeout === 'function') {
+      nextTimer = win.setTimeout(() => {
+        nextTimer = null;
+        if (pendingNext !== pending || run !== generation || !playing || paused) return;
+        pendingNext = null;
+        speakNext(run, selectedVoice);
+      }, delay);
+    } else {
+      pendingNext = null;
+      speakNext(run, selectedVoice);
+    }
+  }
+  function speakNext(run, selectedVoice) {
+    if (run !== generation || !playing || paused) return;
     if (index >= segments.length) {
       if (loopEnabled && segments.length) {
         index = 0;
         display('반복듣기 · 본문을 처음부터 다시 읽습니다.');
-        if (typeof win.setTimeout === 'function') {
-          nextTimer = win.setTimeout(() => {
-            nextTimer = null;
-            speakNext(run, selectedVoice);
-          }, 450);
-        } else speakNext(run, selectedVoice);
+        scheduleNext(run, selectedVoice, 450, true);
         return;
       }
       playing = false;
@@ -238,15 +254,14 @@ export function createDevotionSpeechUI(win = window, doc = document) {
       const previous = segments[index - 1] || '';
       // Gentle breathing pause between phrases; slightly longer after headings.
       const delay = /^(성경 본문|말씀 묵상|적용 질문|오늘의 실천|함께 드리는 기도)/.test(previous) ? 280 : 140;
-      if (typeof win.setTimeout === 'function') nextTimer = win.setTimeout(() => {
-        nextTimer = null; speakNext(run, selectedVoice);
-      }, next ? delay : 0);
-      else speakNext(run, selectedVoice);
+      scheduleNext(run, selectedVoice, next ? delay : 0);
     };
     utterance.onerror = event => {
       if (run !== generation) return;
       playing = false;
       paused = false;
+      if (nextTimer != null) { win.clearTimeout?.(nextTimer); nextTimer = null; }
+      pendingNext = null;
       display('음성 재생이 중단되었습니다. 다시듣기를 눌러 주세요.');
     };
     display(`본문 듣는 중 · ${index + 1}/${segments.length}`);
@@ -316,8 +331,19 @@ export function createDevotionSpeechUI(win = window, doc = document) {
       return;
     }
     if (!supported) return;
-    if (paused) { synth.resume(); paused = false; }
-    else { synth.pause(); paused = true; }
+    if (paused) {
+      synth.resume();
+      paused = false;
+      // Continue an onend/loop gap only after user explicitly resumes.
+      if (pendingNext?.run === generation) {
+        const pending = pendingNext;
+        scheduleNext(pending.run, pending.selectedVoice, pending.delay, pending.restart);
+      }
+    } else {
+      synth.pause();
+      paused = true;
+      if (nextTimer != null) { win.clearTimeout?.(nextTimer); nextTimer = null; }
+    }
     display(paused ? '일시정지됨' : `본문 듣는 중 · ${index + 1}/${segments.length}`);
   });
   stopButton.addEventListener('click', () => {
@@ -329,6 +355,16 @@ export function createDevotionSpeechUI(win = window, doc = document) {
     if (loopButton.disabled || officialSelection) return;
     loopEnabled = !loopEnabled;
     updateLoopButton();
+    // A repeat already queued between cycles must not start another cycle
+    // after the user switches repetition off.
+    if (!loopEnabled && pendingNext?.restart) {
+      if (nextTimer != null) { win.clearTimeout?.(nextTimer); nextTimer = null; }
+      pendingNext = null;
+      playing = false;
+      paused = false;
+      display('본문 듣기가 끝났습니다.');
+      return;
+    }
     display(loopEnabled
       ? '반복듣기 켜짐 · 본문이 끝나면 자동으로 다시 시작합니다.'
       : playing ? '반복듣기 꺼짐 · 현재 본문까지만 읽습니다.' : describeChoice());
