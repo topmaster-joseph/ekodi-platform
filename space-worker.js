@@ -3,6 +3,7 @@ import { handleMissionActivityEditor, MISSION_ACTIVITY_EDITOR_PATH } from './mis
 import { tenantLivePage } from './tenant-live-page.js';
 import { isPublicWorkspacePath, workspaceRouteFromPublicPath, workspaceSlugFromPublicPath } from './workspace-route-policy.js';
 import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
+import { isHomepageSubscriptionSlug, renderHomepageSubscriptionSite } from './homepage-subscription-site.js';
 import { renderBbqCheonggyePage, bbqCheonggyeCss, bbqCheonggyeQrScript } from './bbq-cheonggye-site.js';
 import { renderBbqcgOrderPortal, bbqcgOrderPortalCss, bbqcgOrderClientScript } from './bbqcg-order-portal.js';
 import { renderBbqcgServiceStandards, bbqcgServiceStandardsCss, bbqcgPublicResourceDownload, bbqcgHomeWithResources } from './bbqcg-service-standards.js';
@@ -628,6 +629,9 @@ export default{
       if(isMnuBizWorkspaceSlug(requested)&&!workspaceRoute?.service){
         const page=withHeaders(env,renderMnuBizPublicPage(),'space-organization');
         return injectEkodiShell(page,'community','public',{existingHeader:true});
+      }
+      if(isHomepageSubscriptionSlug(requested)&&!workspaceRoute?.service){
+        return await renderHomepageSubscriptionSite(request,env,requested);
       }
       if(isOrganizationWorkspaceSlug(requested)&&!workspaceRoute?.service){
         return withHeaders(env,await renderOrganizationPublicPage(request,env,resolved,requested),'space-organization');
