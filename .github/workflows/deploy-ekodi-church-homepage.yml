@@ -718,6 +718,31 @@ jobs:
             console.log('EKODI_CHURCH_APPROVED_LAYOUT_PROOF='+JSON.stringify({release,results:proof,pageErrors:failures}));
           }finally{await browser.close()}
           NODE
+      - name: Verify Church schedule day-detail vertical flow on real Pages with isolated native Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Independently reviewed Church source PR #195 must be deployed verbatim.
+          test -s church/schedule/index.html
+          test -s church/church-shared-schedules.js
+          test -s church/church-shared-calendar.css
+          grep -Fq 'data-church-event-detail' church/schedule/index.html
+          grep -Fq 'church-schedule-event-select' church/church-shared-schedules.js
+          grep -Fq 'showEventDetail(event)' church/church-shared-schedules.js
+          grep -Fq 'grid-template-columns:minmax(0,1fr)!important' church/church-shared-calendar.css
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$CHROME_BIN"
+          CHROME_BIN="$CHROME_BIN" node .ekodi-control/scripts/verify-church-schedule-day-detail-native.mjs
+
+      - name: Upload Church synthetic schedule calendar evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: church-schedule-day-detail-native
+          path: /tmp/church-calendar-detail-proof/*.png
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Verify standalone shared calendar with native Chromium after locale-capable source ships
         shell: bash
         run: |
