@@ -1,0 +1,141 @@
+name: Deploy EKODI Funding
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Verified orchestrator source branch (post-merge dispatch)'
+        required: false
+        type: string
+      release_task_id:
+        description: 'Verified orchestrator task id (post-merge dispatch)'
+        required: false
+        type: string
+  pull_request:
+    paths: &funding_paths
+      - 'funding-core.js'
+      - 'funding-d1-store.js'
+      - 'funding-memory-store.js'
+      - 'funding-worker.js'
+      - 'funding-staging-worker.js'
+      - 'migrations/202611211000_funding_phase1.sql'
+      - 'wrangler.funding.toml'
+      - 'wrangler.funding.staging.toml'
+      - 'test/funding-platform.test.mjs'
+      - '.github/workflows/deploy-funding.yml'
+      - '.github/workflows/deploy-funding-staging.yml'
+  push:
+    branches: [main]
+    paths: *funding_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: funding-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+env:
+  # WORKER-LANE-GRAPH-001: post-merge dispatches carry the orchestrator receipt.
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
+  WRANGLER_VERSION: '4.119.0'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate funding contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in funding-core.js funding-d1-store.js funding-memory-store.js funding-worker.js funding-staging-worker.js; do node --check "$file"; done
+          node --test test/funding-platform.test.mjs
+          grep -Fq 'goal_amount < 10000000' migrations/202611211000_funding_phase1.sql
+          grep -Fq 'raised_amount < 10000000' migrations/202611211000_funding_phase1.sql
+          ! grep -Eiq '\bDROP\b' migrations/202611211000_funding_phase1.sql
+          grep -Fq 'ekodi.kr/funding*' wrangler.funding.toml
+          grep -Fq 'ekodi.kr/api/funding*' wrangler.funding.toml
+          grep -Fq 'entrypoint = "EkodiPayGateway"' wrangler.funding.toml
+          ! grep -Eiq 'TOSS_(SECRET|CLIENT)_KEY|live_sk_|test_sk_' wrangler.funding.toml funding-worker.js funding-core.js
+          grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.funding.staging.toml
+          ! grep -Fq '[[d1_databases]]' wrangler.funding.staging.toml
+      - name: Verify platform guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/validate-deployment-guardrails.mjs
+          if [[ -f scripts/validate-zero-subdomain.mjs ]]; then node scripts/validate-zero-subdomain.mjs; fi
+
+  staging_gate:
+    needs: validate
+    uses: ./.github/workflows/deploy-funding-staging.yml
+    with:
+      release_branch_ref: ${{ inputs.release_branch_ref || '' }}
+      release_task_id: ${{ inputs.release_task_id || '' }}
+    secrets: inherit
+
+  release:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [validate, staging_gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Verify Production Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test "$CLOUDFLARE_ACCOUNT_ID" != '46aad4738793fbaca88574832a2ccc0f'
+      - name: Apply additive funding schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.funding.toml --file migrations/202611211000_funding_phase1.sql
+      - name: Deploy production worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.funding.toml
+      - name: Verify production public, studio, admin, auth boundary and closed payments
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            home_code=$(curl -L -sS -o /tmp/fd-home.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/funding' || true)
+            guide_code=$(curl -L -sS -o /tmp/fd-guide.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/funding/guide' || true)
+            studio_code=$(curl -L -sS -o /tmp/fd-studio.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/funding/studio' || true)
+            admin_code=$(curl -L -sS -o /tmp/fd-admin.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/funding/admin' || true)
+            me_code=$(curl -sS -o /tmp/fd-me.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/funding/studio/me' || true)
+            adm_code=$(curl -sS -o /tmp/fd-adm.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/funding/admin/campaigns' || true)
+            list_code=$(curl -sS -o /tmp/fd-list.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/funding/public/campaigns' || true)
+            draft_code=$(curl -sS -o /tmp/fd-draft.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/funding/public/campaigns/ekodi-publishing-new-book' || true)
+            if [[ "$home_code" == 200 && "$guide_code" == 200 && "$studio_code" == 200 && "$admin_code" == 200 && "$me_code" == 401 && "$adm_code" == 401 && "$list_code" == 200 && "$draft_code" == 404 ]] \
+              && grep -Fq '에코디 펀딩' /tmp/fd-home.html \
+              && grep -Fq '213-13-01959' /tmp/fd-home.html \
+              && grep -Fq '증권형' /tmp/fd-guide.html \
+              && grep -Fq '펀딩 만들기' /tmp/fd-studio.html \
+              && grep -Fq '펀딩 심사' /tmp/fd-admin.html \
+              && grep -Fq '"campaigns"' /tmp/fd-list.json; then
+              echo 'EKODI funding production verified (draft pilot hidden, auth boundary closed).'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Production verification failed: home=$home_code guide=$guide_code studio=$studio_code admin=$admin_code me=$me_code admin_api=$adm_code list=$list_code draft=$draft_code"
+          exit 1
