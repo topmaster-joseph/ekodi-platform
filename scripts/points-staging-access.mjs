@@ -66,18 +66,38 @@ async function stagingApps(){
   return {apps:picked,all:apps,auds:[...auds]};
 }
 
+// The dashboard sometimes labels the .access Client ID as a token ID.
+// Resolve only via DEVELOPMENT account metadata and an exact match to the
+// independently protected Client ID. A failed/partial listing is not proof.
+async function resolveStaticTokenId(){
+  if(/^[A-Za-z0-9_-]{8,128}$/.test(staticTokenId))return staticTokenId;
+  const clientId=String(process.env.STATIC_ACCESS_ID||'').trim();
+  const clientIdLike=/\\.access(?:\\.[A-Za-z0-9.-]+)?$/i.test(rawStaticTokenId);
+  if(!clientIdLike||!clientId||rawStaticTokenId!==clientId)
+    throw new Error(`protected STATIC_ACCESS_SERVICE_TOKEN_ID is invalid or differs from approved Client ID (${tokenIdShape()}; expected token UUID or matching Client ID)`);
+  const tokens=await api('/access/service_tokens?per_page=1000');
+  if(!Array.isArray(tokens)||tokens.length>=1000)
+    throw new Error('development Access token metadata unavailable or truncated; refusing any policy change');
+  const exact=tokens.filter(t=>t?.client_id===clientId&&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(t.id||'')));
+  if(exact.length!==1)
+    throw new Error('development Access Client ID did not resolve to exactly one token UUID; refusing policy change');
+  if(exact[0].expires_at&&Number.isFinite(Date.parse(exact[0].expires_at))&&
+    Date.parse(exact[0].expires_at)<=Date.now())
+    throw new Error('development Access service token expired; refusing policy change');
+  console.log('::notice::Development Access Client ID resolved to a unique token UUID (value not logged).');
+  return exact[0].id;
+}
+
 if(mode==='open-static'){
-  // The static token's ID is an independent owner-protected input. Never
-  // create an any_valid_service_token policy: that authorizes unrelated
-  // services and is not scoped to this synthetic browser verification.
-  if(!/^[A-Za-z0-9_-]{8,128}$/.test(staticTokenId))
-    throw new Error(`protected STATIC_ACCESS_SERVICE_TOKEN_ID is required for a least-privilege Access policy (${tokenIdShape()}; expected the token UUID, not the client ID)`);
+  // Never create an any_valid_service_token policy or accept a best guess.
+  const effectiveTokenId=await resolveStaticTokenId();
   const {apps}=await stagingApps();
   if(!apps.length)throw new Error('no readable development staging Access application; refusing broad or unverified access');
   const policies=[];
   for(const app of apps){
     const policy=await api(`/access/apps/${app.id}/policies`,{method:'POST',body:JSON.stringify({
-      name,decision:'non_identity',include:[{service_token:{token_id:staticTokenId}}],exclude:[],require:[]})});
+      name,decision:'non_identity',include:[{service_token:{token_id:effectiveTokenId}}],exclude:[],require:[]})});
     policies.push(`${app.id}:${policy.id}`);
   }
   env('E2E_ACCESS_POLICIES',policies.join(','));
