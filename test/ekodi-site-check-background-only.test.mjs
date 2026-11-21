@@ -25,6 +25,14 @@ test('visible mode always auto-closes and cleans up in finally', () => {
   assert.match(visible, /finally\s*\{[\s\S]*Stop-OwnedBrowserTree[\s\S]*Remove-OwnedProfile/);
 });
 
+test('Windows headless renderer drains redirected stdout after exit', () => {
+  const headless = tool.slice(tool.indexOf('function Invoke-HeadlessCheck'), tool.indexOf('function Invoke-VisibleCheck'));
+  assert.match(headless, /\$proc\.WaitForExit\(\$TimeoutSeconds \* 1000\)/);
+  assert.match(headless, /\$proc\.WaitForExit\(\)/);
+  assert.match(headless, /\$stdoutTask\.Wait\(5000\)/);
+  assert.ok(headless.indexOf('$proc.WaitForExit()') < headless.indexOf('$stdoutTask.Wait(5000)'));
+});
+
 test('both headless and visible site checks require complete owned-resource cleanup', () => {
   const headless = tool.slice(tool.indexOf('function Invoke-HeadlessCheck'), tool.indexOf('function Invoke-VisibleCheck'));
   const visible = tool.slice(tool.indexOf('function Invoke-VisibleCheck'), tool.indexOf('$browser = Resolve-EkodiCheckBrowser'));
