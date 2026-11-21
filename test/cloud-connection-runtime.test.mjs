@@ -78,16 +78,30 @@ test('login, consent, MFA or reauthentication is never bypassed', async () => {
   assert.equal(result.userAction.type, 'mfa');
 });
 
-test('Opera can be an explicit last-resort provider without becoming a dependency', async () => {
+test('enabled Opera never opens tabs as unattended API fallback', async () => {
+  let operaInvoked = false;
+  assert.equal(CLOUD_CONNECTION_POLICY.automaticOperaInvocationAllowed, false);
+  assert.equal(CLOUD_CONNECTION_POLICY.userBrowserTabCreationAllowed, false);
+  assert.equal(isOperaConnectorEnabled({ OPERA_BROWSER_CONNECTOR_ENABLED: 'true' }), true);
+  const status = getCloudConnectionStatus({ OPERA_BROWSER_CONNECTOR_ENABLED: 'true' }, [
+    { id: 'opera', kind: 'opera_browser', state: 'connected' },
+  ]);
+  assert.deepEqual(status.usableProviders, []);
+  assert.equal(status.skippedProviders[0].reason, 'automatic_user_browser_invocation_forbidden');
   const result = await runCloudConnectedTask({
     env: { OPERA_BROWSER_CONNECTOR_ENABLED: 'true' },
     providers: [
       { id: 'cloud', kind: 'cloud_browser', state: 'unavailable', invoke: async () => 'cloud' },
-      { id: 'opera', kind: 'opera_browser', state: 'connected', invoke: async () => 'opera' },
+      { id: 'opera', kind: 'opera_browser', state: 'connected', invoke: async () => {
+        operaInvoked = true;
+        return 'opera';
+      } },
     ],
   });
-  assert.equal(result.ok, true);
-  assert.equal(result.provider, 'opera');
+  assert.equal(result.ok, false);
+  assert.equal(operaInvoked, false);
+  assert.deepEqual(result.attemptedProviders, []);
+  assert.equal(result.skippedProviders.find(p => p.id === 'opera')?.reason, 'automatic_user_browser_invocation_forbidden');
 });
 
 test('remote desktop with zero remaining quota is skipped before invocation', async () => {
