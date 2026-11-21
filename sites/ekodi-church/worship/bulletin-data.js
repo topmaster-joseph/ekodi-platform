@@ -115,7 +115,7 @@
         block('stats').innerHTML = table(['구분', '장소', '시간', '인원', '구분', '장소', '시간', '인원'], pairs);
       }
       const committee = rows(b.committee);
-      if (committee.length > 1 && block('committee')) block('committee').innerHTML = table(committee[0], committee.slice(1));
+      if (!hasNewOrder && committee.length > 1 && block('committee')) block('committee').innerHTML = table(committee[0], committee.slice(1));
       if (Array.isArray(b.sponsors) && block('sponsors')) block('sponsors').innerHTML = '<ul class="bp-sponsors">' + b.sponsors.filter(Boolean).map(a => `<li>${esc(a)}</li>`).join('') + '</ul>';
       if (Array.isArray(b.questions) && block('questions')) block('questions').innerHTML = '<ol class="bp-q">' + b.questions.filter(Boolean).slice(0, hasNewOrder ? 1 : undefined).map(a => `<li>${esc(a)}</li>`).join('') + '</ol>';
     }
@@ -146,6 +146,68 @@
     }
   }
 
+
+  // Annual register (one record per Sunday) is the single source of truth
+  // for all bulletins on or after 2026-11-22. Site-admin changes to a date
+  // update only that date. The Git-tracked verified seed is a safe fallback
+  // until the guarded migration has been deployed.
+  const committeeKeys = [
+    ['praise_leader', '경배찬양'],
+    ['worship_leader', '예배인도'],
+    ['prayer_leader', '대표기도'],
+    ['preacher', '말씀선포'],
+    ['meal_coordinator', '식사준비']
+  ];
+  const pad = value => String(value).padStart(2,'0');
+  const datePlusDays = (day, delta) => {
+    const d = new Date(day + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + delta);
+    return d.toISOString().slice(0,10);
+  };
+  const committeeWeekDates = day => [-7, 0, 7, 14, 21].map(delta => datePlusDays(day, delta));
+  function committeeDisplay(records) {
+    const host = block('committee');
+    if (!host || !hasNewOrder) return;
+    const dates = committeeWeekDates(date);
+    const byDay = new Map(records.filter(v => v && /^\\d{4}-\\d{2}-\\d{2}$/.test(v.service_date || v.date))
+      .map(v => [v.service_date || v.date, v]));
+    const header = '<tr><th scope="col">구분</th>' + dates.map((day, i) =>
+      '<th scope="col"' + (i === 1 ? ' class="bp-now" aria-label="이번 주 ' + esc(day) + '"' : '') + '>' +
+      esc(day.slice(5).replace('-', '/')) + (i === 1 ? '<small class="bp-week-label">이번주</small>' : '') + '</th>').join('') + '</tr>';
+    const body = committeeKeys.map(([key,label]) =>
+      '<tr><th scope="row">' + esc(label) + '</th>' + dates.map((day,i) => {
+        const value = String(byDay.get(day)?.[key] || '').trim();
+        return '<td' + (i === 1 ? ' class="bp-now"' : '') + '>' + esc(value || '확인필요') + '</td>';
+      }).join('') + '</tr>').join('');
+    host.innerHTML = '<table class="bp-grid bp-committee-annual">' + header + body + '</table>';
+  }
+  async function loadAnnualCommittee() {
+    if (!hasNewOrder) return;
+    let verified = [];
+    try {
+      const url = new URL('./committee-' + date.slice(0,4) + '.json', script.src);
+      const r = await fetch(url, {cache:'no-store'});
+      const data = r.ok ? await r.json() : null;
+      if (data?.schema === 'ekodi.church.annual-worship-committee.v1') verified = data.records || [];
+    } catch { /* unknown year, no invented roster */ }
+    committeeDisplay(verified);
+    try {
+      const first = date.slice(0,4) + '-01-01';
+      const last = String(Number(date.slice(0,4)) + 1) + '-01-01';
+      const query = '?select=service_date,praise_leader,worship_leader,prayer_leader,preacher,meal_coordinator'
+        + '&service_date=gte.' + first + '&service_date=lt.' + last + '&order=service_date.asc';
+      const url = SUPABASE_URL + '/rest/v1/church_worship_committee_assignments' + query;
+      const key = token();
+      const response = await fetch(url, {headers:{apikey:KEY,authorization:'Bearer ' + (key || KEY),accept:'application/json'},cache:'no-store'});
+      if (!response.ok) return;
+      const changed = await response.json();
+      if (!Array.isArray(changed)) return;
+      const merged = new Map(verified.map(v => [v.service_date || v.date,v]));
+      for(const row of changed) merged.set(row.service_date,row);
+      committeeDisplay(Array.from(merged.values()));
+    } catch { /* static verified register remains readable */ }
+  }
+
   async function load() {
     const key = token();
     const url = `${SUPABASE_URL}/rest/v1/church_worship_materials?select=bulletin,photo_url&service_type=eq.sunday&service_date=eq.${date}&limit=1`;
@@ -156,5 +218,5 @@
     if (row) render(row.bulletin, row.photo_url);
   }
   applyNewWorshipLayout();
-  load().catch(() => { /* keep the prepared bulletin */ });
+  load().catch(() => { /* keep the prepared bulletin */ }).finally(() => { void loadAnnualCommittee(); });
 })();
