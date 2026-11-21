@@ -5,14 +5,7 @@ import {renderEkodiUserFooter} from '../config/user-footer.js';
 import {footer as renderBookFooter} from '../scripts/site-chrome.mjs';
 
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
-const church=[
-  'sites/ekodi-church/index.html',
-  'sites/ekodi-church/devotion/index.html',
-  'sites/ekodi-church/schedule/index.html',
-  'sites/ekodi-church/notices/index.html',
-  'sites/ekodi-church/together/index.html',
-  'church-history-worker.js',
-];
+const church=['church-history-worker.js'];
 const generated=[
   'books/index.html','books/series/index.html','books/research/index.html',
   'books/notes/index.html','books/ekodian/index.html','books/buy/index.html',
@@ -36,7 +29,7 @@ test('shared footer preserves legal business identity without an operator or rep
   }
 });
 
-test('all source church footer variants remove duplicate operating entity and leader rows',async()=>{
+test('central runtime church-history footer removes duplicate identity rows',async()=>{
   for(const path of church){
     const html=await read(path);
     const footer=footerOf(html);
@@ -45,8 +38,8 @@ test('all source church footer variants remove duplicate operating entity and le
     assert.match(footer,/고유번호 307-82-82097/,path+' organization number is preserved');
     assert.match(footer,/ekodichurch@gmail\.com/,path+' email is preserved');
   }
-  const i18n=await read('sites/ekodi-church/church-life-hub-i18n.js');
-  assert.doesNotMatch(i18n,/'운영주체 에코디교회':|'대표 정찬균':/);
+  // The 223-file historical shadow is SHA-pinned and must not be edited here.
+  // Canonical public church pages belong to the independent ekodi-church source repository.
 });
 
 test('both publication generators and 20 committed pages keep an unlabeled seller identity',async()=>{
