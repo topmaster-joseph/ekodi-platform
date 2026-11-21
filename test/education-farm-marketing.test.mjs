@@ -6,7 +6,7 @@ const js=readFileSync(new URL('../education/study/farm-marketing/app.js',import.
 const css=readFileSync(new URL('../education/study/farm-marketing/styles.css',import.meta.url),'utf8');
 const study=readFileSync(new URL('../education/study/index.html',import.meta.url),'utf8');
 test('beginner agricultural marketing workshop is reachable from existing Study',()=>{
- assert.match(study,/href="\/study\/farm-marketing\/"/);
+ assert.match(study,/href="\/edu\/study\/farm-marketing\/"/);
  assert.match(page,/data-ekodi-ui="USER"/);
  assert.match(page,/\.\/app\.js/);
  assert.match(page,/\.\/styles\.css/);
