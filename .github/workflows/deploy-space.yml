@@ -34,6 +34,9 @@ on:
       - 'realtime-tenant-registry.js'
       - 'tenant-live-page.js'
       - 'storefront-page.js'
+      - 'homepage-subscription-site.js'
+      - 'supabase/migrations/20261121160000_homepage_subscription_auto_provision.sql'
+      - 'test/homepage-subscription-site.test.mjs'
       - 'restaurant-storefront.js'
       - 'restaurant-storefront-v2.js'
       - 'store-discovery.js'
@@ -98,6 +101,9 @@ on:
       - 'realtime-tenant-registry.js'
       - 'tenant-live-page.js'
       - 'storefront-page.js'
+      - 'homepage-subscription-site.js'
+      - 'supabase/migrations/20261121160000_homepage_subscription_auto_provision.sql'
+      - 'test/homepage-subscription-site.test.mjs'
       - 'restaurant-storefront.js'
       - 'restaurant-storefront-v2.js'
       - 'store-discovery.js'
@@ -169,6 +175,7 @@ env:
   BBQ_STORE_ACCESS_PINNED_BLOB: 91bd37584bbe5d6e6b5314c56ea019586d5f735f
   BBQ_FACTS_MIGRATION: supabase/migrations/20261108200000_bbqcg_verified_public_store_facts.sql
   BBQ_QR_MENU_MIGRATION: supabase/migrations/20261118003000_bbqcg_qr_owner_menu.sql
+  HOMEPAGE_SUB_MIGRATION: supabase/migrations/20261121160000_homepage_subscription_auto_provision.sql
   BBQ_FACTS_PINNED_BLOB: 9aa29f1bf45cd411b4fa09a12cab3eb93ef769d1
 
 jobs:
@@ -372,6 +379,7 @@ jobs:
             to_regprocedure('public.store_admin_route_profile(text)') is not null as store_route,
             to_regprocedure('public.organization_public_snapshot(text)') is not null as organization_public,
             to_regprocedure('public.store_public_storefront(text)') is not null as storefront_public,
+            to_regprocedure('public.homepage_site_public(text)') is not null and to_regprocedure('public.homepage_subscription_submit(jsonb)') is not null as homepage_sub,
             to_regprocedure('public.store_user_site_public_profile(text)') is not null as user_site_profile,
             to_regprocedure('public.store_user_site_public_snapshot(text)') is not null as user_site_snapshot,
             to_regprocedure('public.bbqcg_qr_public_catalog(text)') is not null as bbq_qr_public,
@@ -425,6 +433,13 @@ jobs:
           if ! grep -Fq '"bbq_qr_public":true' /tmp/space-schema-before.json || ! grep -Fq '"bbq_qr_owner":true' /tmp/space-schema-before.json; then
             apply_migration "$BBQ_QR_MENU_MIGRATION"
           fi
+          # Homepage subscription auto-provisioning: DEV first, then PROD (idempotent DDL only).
+          test -f "$HOMEPAGE_SUB_MIGRATION"
+          ! grep -Eiq 'drop[[:space:]]+(table|function)|delete[[:space:]]+from|truncate|alter[[:space:]]+table[[:space:]]+public\.(stores|tenants|store_user_sites)' "$HOMEPAGE_SUB_MIGRATION"
+          apply_dev_migration "$HOMEPAGE_SUB_MIGRATION"
+          if ! grep -Fq '"homepage_sub":true' /tmp/space-schema-before.json; then
+            apply_migration "$HOMEPAGE_SUB_MIGRATION"
+          fi
           if ! grep -Fq '"store_route":true' /tmp/space-schema-before.json; then
             apply_migration "$STORE_ROUTE_MIGRATION"
           fi
@@ -454,7 +469,7 @@ jobs:
           fi
 
           query_sql "$proof_sql" /tmp/space-schema-after.json
-          for marker in '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"bbq_qr_public":true' '"bbq_qr_owner":true' '"mokpo_organizations":true' '"organization_budget":true' '"mission_editor_table":true' '"mission_editor_public":true' '"mission_editor_update":true' '"mokpo_roster_viewer":true' '"mokpo_inline_roles":true' '"mokpo_name_login":true' '"mokpo_dept_roster":true'; do
+          for marker in '"homepage_sub":true' '"store_route":true' '"organization_public":true' '"storefront_public":true' '"user_site_profile":true' '"user_site_snapshot":true' '"bbq_qr_public":true' '"bbq_qr_owner":true' '"mokpo_organizations":true' '"organization_budget":true' '"mission_editor_table":true' '"mission_editor_public":true' '"mission_editor_update":true' '"mokpo_roster_viewer":true' '"mokpo_inline_roles":true' '"mokpo_name_login":true' '"mokpo_dept_roster":true'; do
             grep -Fq "$marker" /tmp/space-schema-after.json || { echo "Missing required Space Supabase contract: $marker"; cat /tmp/space-schema-after.json; exit 1; }
           done
 

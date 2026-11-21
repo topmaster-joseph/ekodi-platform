@@ -134,3 +134,12 @@ test('the independently released Church Pages must show QTIN directly and preser
  assert.match(w,/CHURCH_CANONICAL_SOURCE_CUTOVER_APPROVED/);
  assert.match(w,/validate-ekodi-ai-change-orchestration\.mjs" --release/);
 });
+
+
+test('nine-language Church Pages production proof reports the exact residual text without relaxing the gate',async()=>{
+  const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  assert.match(w,/Church nine-language residual diagnostic/);
+  assert.match(w,/const korean=\[\.\.\.visible\.matchAll/);
+  assert.match(w,/throw error;/);
+  assert.match(w,/return !\/\[가-힣\]\/.test\(clone\.innerText\)/);
+});
