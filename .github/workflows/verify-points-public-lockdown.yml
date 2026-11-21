@@ -1,0 +1,39 @@
+name: Verify Points Public Lockdown (Credentialless, Read Only)
+# No member data, Access bypass, production database or financial mutation.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '19 3 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: ekodi-points-public-safety
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Test fail-closed source contract
+        run: node --test test/points-public-lockdown.test.mjs
+      - name: Audit live production with anonymous read-only GET
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify-points-public-lockdown.mjs | tee /tmp/points-public-lockdown.json
+          jq -e '.outcome=="public_points_lockdown_verified" and .points_enabled==false and .csv_owner_guard_present==true and .signed_in_e2e_verified==false and .backup_verified==false' /tmp/points-public-lockdown.json >/dev/null
+      - name: Preserve no-economics and no-private-E2E boundary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### EKODI Points public safety'
+            echo 'Public GET-only runtime lockdown check; no credentials.'
+            echo 'This does NOT prove signed-in member E2E or backup/restore.'
+            echo 'No economic Points activation authorized.'
+          } >> "$GITHUB_STEP_SUMMARY"
