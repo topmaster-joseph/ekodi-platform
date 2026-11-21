@@ -379,3 +379,18 @@ test('dispatched checks from another branch or SHA are not accepted',async()=>{
     assert.equal(evidence.reason,'required_workflow_not_successful');
   }
 });
+
+test('missing merged PR reports unclaimed only when no PR and no branch exist',async()=>{
+  const make=({openPulls=[],branch=false})=>{
+    const github=mockGithub({});
+    github.rest.pulls.list=async({state})=>({data:state==='all'?openPulls:[]});
+    github.rest.repos=github.rest.repos||{};
+    github.rest.repos.getBranch=async()=>{if(branch)return {data:{}};const e=new Error('Not Found');e.status=404;throw e;};
+    return github;
+  };
+  const none=await collectAuthenticatedCompletionEvidence({github:make({}),taskId,branchRef});
+  assert.equal(none.reason,'merged_pr_not_found');
+  assert.equal(none.unclaimed,true);
+  assert.equal((await collectAuthenticatedCompletionEvidence({github:make({openPulls:[{number:9}]}),taskId,branchRef})).unclaimed,false);
+  assert.equal((await collectAuthenticatedCompletionEvidence({github:make({branch:true}),taskId,branchRef})).unclaimed,false);
+});
