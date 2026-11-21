@@ -14,13 +14,15 @@ function fixture(overrides={}){
       '<button data-church-inline-manage="notices" hidden>바로 관리</button>',
       '<button data-church-inline-manage="schedule" hidden>바로 관리</button>',
       '<section data-church-public-manage data-church-home-manage hidden></section>',
+      '<p data-church-role-diagnostic role="status" hidden></p>',
       '<section data-church-shared-schedules></section>',
       '<script src="church-public-updates.js"></script>'
     ].join(''),
     '/ekodichurch/notices/':'<body data-church-public-page="notices"></body>',
     '/ekodichurch/schedule/':'<body data-church-public-page="schedule"></body>',
     '/ekodichurch/church-public-updates.js':[
-      "if(result.authenticated!==true||result.manage!==true||!['owner','admin','moderator'].includes(result.role))return;",
+      "if(result.authenticated!==true)return; if(result.manage!==true||!['owner','admin','moderator'].includes(result.role))return;",
+      "function explainRole(kind=''){}; explainRole('unauthorized');", 
       "function revokeEditor(){}",
       "document.addEventListener('church:public-content-updated',loadData)",
       "if(item.source==='board')editRecord(item)"
@@ -47,7 +49,7 @@ test('approved Church source is tested by GET-only, source-pinned production pro
   assert.equal(result.realUserAuthenticated,false);
   assert.equal(result.dataMutations,false);
   assert.equal(result.loggedInCrudVerified,false);
-  assert.equal(result.checks.length,7);
+  assert.equal(result.checks.length,8);
   assert.equal(requests.length,7);
   for(const r of requests){
     assert.equal(new URL(r.url).origin,CHURCH_ORIGIN);
