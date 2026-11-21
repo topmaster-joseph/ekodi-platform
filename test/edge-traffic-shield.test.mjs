@@ -115,3 +115,14 @@ test('device agent idle polling backs off and stays fast while work exists', () 
   assert.doesNotMatch(run.slice(0, run.indexOf('} finally')), /Start-Sleep -Seconds 10\b/);
   assert.match(agent, /if \(-not \$response\.command\) \{ return \}\r?\n  \$script:LastPollHadCommand = \$true/);
 });
+
+test('a leftover interactive-auth file stops counting once it has expired', () => {
+  const agent = readFileSync('tools/ekodi-device-agent/windows/ekodi-device-agent.ps1', 'utf8');
+  const live = agent.slice(agent.indexOf('function Test-EkodiInteractiveAuthLive'), agent.indexOf('function Save-EkodiInteractiveAuthState'));
+  assert.match(live, /\$state\.expiresAt/);
+  assert.match(live, /-gt \(Get-Date\)\.ToUniversalTime\(\)/);
+  const run = agent.slice(agent.indexOf('function Run-Agent'));
+  assert.match(run, /elseif \(Test-EkodiInteractiveAuthLive\) \{ \$pollSeconds = 5 \}/);
+  const update = agent.slice(agent.indexOf('function Invoke-EkodiAgentAutoUpdateIfApproved'), agent.indexOf('function Invoke-EkodiAgentAutoUpdateIfApproved') + 400);
+  assert.match(update, /\(Test-EkodiInteractiveAuthLive\)\) \{ return \}/, 'an expired file no longer blocks auto-update');
+});

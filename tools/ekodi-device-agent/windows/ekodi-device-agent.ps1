@@ -19,7 +19,7 @@ try {
   throw '[EKODI:EKA-299][crypto] Windows DPAPI assembly is unavailable: ' + $_.Exception.Message
 }
 
-$AgentVersion = '2.6.7'
+$AgentVersion = '2.6.8'
 # Some remote/managed Windows sessions omit ProgramData from the process environment.
 # Resolve the canonical system data directory without changing machine-wide settings.
 if ([string]::IsNullOrWhiteSpace($env:ProgramData)) {
@@ -1116,7 +1116,7 @@ function Test-EkodiAgentCanaryMembership([string]$deviceId, [int]$percent) {
 }
 function Invoke-EkodiAgentAutoUpdateIfApproved($config) {
   if (-not $config -or $script:RestartAfterCommand -or
-      (Test-Path -LiteralPath $InteractiveAuthStatePath)) { return }
+      (Test-EkodiInteractiveAuthLive)) { return }
   $now = (Get-Date).ToUniversalTime()
   if (($now - $script:LastAgentAutoUpdateCheck).TotalHours -lt 24) { return }
   $script:LastAgentAutoUpdateCheck = $now
@@ -2118,6 +2118,15 @@ function Resolve-EkodiInteractiveBrowser {
 function Read-EkodiInteractiveAuthState {
   if (-not (Test-Path -LiteralPath $InteractiveAuthStatePath)) { return $null }
   try { return Get-Content -LiteralPath $InteractiveAuthStatePath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { return $null }
+}
+
+# EKODI-EDGE-TRAFFIC-SHIELD-001: a session file can outlive its session (profile removal
+# failed, agent restarted mid-session). Treat it as live only until its own expiresAt, so a
+# leftover file neither pins the poll at 5s nor blocks auto-update forever.
+function Test-EkodiInteractiveAuthLive {
+  $state = Read-EkodiInteractiveAuthState
+  if (-not $state -or -not $state.expiresAt) { return $false }
+  try { return ([DateTime]::Parse([string]$state.expiresAt).ToUniversalTime() -gt (Get-Date).ToUniversalTime()) } catch { return $false }
 }
 
 function Save-EkodiInteractiveAuthState($State) {
@@ -4416,13 +4425,13 @@ function Run-Agent {
         Reconcile-ImagePrintPreviewPolicy
         Poll-Command $config
         Invoke-EkodiAgentAutoUpdateIfApproved $config
-        if (Test-Path -LiteralPath $InteractiveAuthStatePath) { try { Send-Heartbeat $config; $lastHeartbeat = Get-Date } catch { } }
+        if (Test-EkodiInteractiveAuthLive) { try { Send-Heartbeat $config; $lastHeartbeat = Get-Date } catch { } }
         if ($script:RestartAfterCommand) { break }
       } catch {
         # 네트워크 중단은 다음 주기에 자동 복구합니다. 임의 명령 실행으로 우회하지 않습니다.
       }
       if ($script:LastPollHadCommand) { $pollSeconds = 2 }
-      elseif (Test-Path -LiteralPath $InteractiveAuthStatePath) { $pollSeconds = 5 }
+      elseif (Test-EkodiInteractiveAuthLive) { $pollSeconds = 5 }
       else { $pollSeconds = [Math]::Min(20, [Math]::Max(10, $pollSeconds + 5)) }
       Start-Sleep -Seconds $pollSeconds
     }

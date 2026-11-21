@@ -80,8 +80,10 @@ export function mergeRules(existing = [], wanted = []) {
   return [...foreign.map(strip), ...wanted];
 }
 
-function same(a, b) {
-  const pick = rule => JSON.stringify({ ref: rule.ref, expression: rule.expression, action: rule.action, enabled: rule.enabled, ratelimit: rule.ratelimit || null });
+export function same(a, b) {
+  // Cloudflare echoes extra ratelimit fields (e.g. requests_to_origin); compare only the ones we own.
+  const limits = r => r ? { characteristics: r.characteristics, period: r.period, requests_per_period: r.requests_per_period, mitigation_timeout: r.mitigation_timeout } : null;
+  const pick = rule => JSON.stringify({ ref: rule.ref, expression: rule.expression, action: rule.action, enabled: rule.enabled !== false, ratelimit: limits(rule.ratelimit) });
   return a.length === b.length && a.every((rule, i) => pick(rule) === pick(b[i]));
 }
 
