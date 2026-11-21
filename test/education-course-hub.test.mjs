@@ -216,7 +216,7 @@ test('new private metadata and nonlocal resource URLs are excluded by an allowli
   obj.courses[0].resources=[
    {label:'Private Slides',url:'https://drive.google.com/file/d/owner-only/view'},
    {label:'External Link',url:'//other.example/bad'},
-   {label:'Safe Learner',url:'/study/cold-safety-2026/'}
+   {label:'Safe Learner',url:'/edu/study/cold-safety-2026/'}
   ];
   return Response.json(obj);
  };
@@ -224,5 +224,5 @@ test('new private metadata and nonlocal resource URLs are excluded by an allowli
  const data=await publicResponse.json(),course=data.courses[0];
  assert.equal('credential' in course,false);
  assert.equal('adminNote' in course,false);
- assert.deepEqual(course.resources,[{label:'Safe Learner',url:'/study/cold-safety-2026/'}]);
+ assert.deepEqual(course.resources,[{label:'Safe Learner',url:'/edu/study/cold-safety-2026/'}]);
 });
