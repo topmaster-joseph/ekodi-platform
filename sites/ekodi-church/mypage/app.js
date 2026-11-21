@@ -270,6 +270,128 @@ function downloadPpt(){saveLocal();const p=payload();const blob=new Blob([pptHtm
 async function publishWebsite(){try{await persist(true);setStatus('webStatus','홈페이지 게시됨');return true}catch(error){alert(`게시 실패: ${error.message}`);return false}}
 function openLive(){saveLocal();const p=payload();const q=new URLSearchParams({mode:'studio',service:p.serviceName,date:p.date,title:p.title,scripture:p.scripture,preacher:p.preacher,notice:p.notice});setStatus('liveStatus','스튜디오 연결');window.open(`../live/?${q.toString()}`,'_blank')}
 
+
+/* Annual worship committee: one verified assignment per Sunday, edited
+   independently of the week's sermon/bulletin payload. The backend is RLS-
+   protected for the same church tenant_admin role as worship materials. */
+const ANNUAL_TABLE = 'church_worship_committee_assignments';
+const ANNUAL_FIELDS = [
+  ['praise_leader','annualPraise'],
+  ['worship_leader','annualLeader'],
+  ['prayer_leader','annualPrayer'],
+  ['preacher','annualPreacher'],
+  ['meal_coordinator','annualMeal']
+];
+let annualRows = new Map();
+let annualReady = false;
+let annualLoadedYear = null;
+const isoDate = d => d.toISOString().slice(0,10);
+function annualSundays(year){
+  const days = [];
+  const day = new Date(Date.UTC(year,0,1,12));
+  while (day.getUTCFullYear()===year){
+    if (day.getUTCDay()===0) days.push(isoDate(day));
+    day.setUTCDate(day.getUTCDate()+1);
+  }
+  return days;
+}
+function annualSundayValid(day){return /^\\d{4}-\\d{2}-\\d{2}$/.test(day)&&new Date(day+'T12:00:00Z').getUTCDay()===0;}
+function annualYear(){return Number($('annualYear').value||2026)}
+function annualDate(){return $('annualSunday').value}
+function annualEsc(v){return esc(v||'확인필요')}
+function annualSelect(day){
+  if(!annualSundayValid(day))return;
+  $('annualSunday').value=day;
+  const row=annualRows.get(day)||{};
+  for(const [field,id] of ANNUAL_FIELDS)$(id).value=row[field]||'';
+  document.querySelectorAll('#annualRows tr').forEach(tr=>tr.dataset.current=String(tr.dataset.date===day));
+}
+function annualRender(){
+  const dates=annualSundays(annualYear());
+  $('annualRows').innerHTML=dates.map(day=>{
+    const r=annualRows.get(day)||{};
+    return '<tr role="button" tabindex="0" data-date="'+day+'" data-current="'+String(day===annualDate())+'"><th scope="row">'+esc(day)+'</th>'
+      +ANNUAL_FIELDS.map(([field])=>'<td>'+annualEsc(r[field])+'</td>').join('')+'</tr>';
+  }).join('');
+  annualSelect(annualSundayValid(annualDate())&&annualDate().startsWith(String(annualYear()))?annualDate():dates[0]);
+}
+async function loadAnnualRoster(){
+  if(!accessReady||!sb.ready)return;
+  const year=annualYear(),start=year+'-01-01',end=(year+1)+'-01-01';
+  $('annualStatus').textContent=year+'년 일정을 확인하고 있습니다.';
+  annualReady=false;$('annualSave').disabled=true;
+  annualRows = new Map();
+  try{
+    const r=await fetch('/ekodichurch/worship/committee-'+year+'.json',{cache:'no-store'});
+    const seed=r.ok?await r.json():null;
+    if(seed?.schema==='ekodi.church.annual-worship-committee.v1')
+      for(const record of seed.records||[])annualRows.set(record.service_date||record.date,record);
+  }catch{/* Unknown years are initially unassigned. */}
+  let available=false;
+  try{
+    const qs='?select=service_date,praise_leader,worship_leader,prayer_leader,preacher,meal_coordinator'
+       +'&service_date=gte.'+start+'&service_date=lt.'+end+'&order=service_date.asc';
+    const live=await rest(ANNUAL_TABLE+qs);
+    if(!Array.isArray(live))throw Error('Invalid annual response');
+    for(const row of live)annualRows.set(row.service_date,row);
+    available=true;
+  }catch(error){
+    $('annualStatus').textContent='연간 담당자 저장소를 확인할 수 없습니다. 검증된 기본 명단만 표시합니다 ('+error.message+').';
+  }
+  annualReady=available;
+  annualLoadedYear=year;
+  $('annualSave').disabled=!available;
+  annualRender();
+  if(available)$('annualStatus').textContent=year+'년 주일 '+annualSundays(year).length+'회 · 날짜별 담당자 편집이 가능합니다.';
+}
+async function saveAnnualRoster(){
+  if(!annualReady||!accessReady||!sb.ready)return;
+  const day=annualDate();
+  if(!annualSundayValid(day)||!day.startsWith(String(annualYear()))){$('annualStatus').textContent='선택한 연도의 일요일 날짜를 입력하세요.';return;}
+  const row={service_date:day,updated_at:new Date().toISOString()};
+  for(const [field,id] of ANNUAL_FIELDS)row[field]=$(id).value.trim().slice(0,80);
+  const save=$('annualSave');save.disabled=true;$('annualStatus').textContent=day+' 담당자를 저장하는 중…';
+  try{
+    const result=await rest(ANNUAL_TABLE+'?on_conflict=service_date',{method:'POST',prefer:'resolution=merge-duplicates,return=representation',body:row});
+    if(!Array.isArray(result)||result.length!==1)throw Error('작성 권한 또는 저장 결과를 확인할 수 없습니다.');
+    const verify=await rest(ANNUAL_TABLE+'?service_date=eq.'+day+'&select=service_date,praise_leader,worship_leader,prayer_leader,preacher,meal_coordinator');
+    if(!Array.isArray(verify)||verify.length!==1||ANNUAL_FIELDS.some(([field])=>verify[0][field]!==row[field]))throw Error('저장 후 재검증에 실패했습니다.');
+    annualRows.set(day,verify[0]);
+    annualRender();annualSelect(day);
+    $('annualStatus').textContent=day+' 담당자 저장·재조회 검증 완료. 주보 새로고침 시 반영됩니다.';
+  }catch(error){$('annualStatus').textContent='저장 실패: '+error.message;}
+  finally{save.disabled=!annualReady;}
+}
+function exportAnnualRoster(){
+  const rows=[['날짜','경배찬양','예배인도','대표기도','말씀선포','식사준비']];
+  for(const day of annualSundays(annualYear())){
+    const data=annualRows.get(day)||{};
+    rows.push([day,...ANNUAL_FIELDS.map(([field])=>String(data[field]||'확인필요'))]);
+  }
+  const csv='\\ufeff'+rows.map(cells=>cells.map(cell=>'"'+cell.replaceAll('"','""')+'"').join(',')).join('\\r\\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const link=document.createElement('a');
+  link.href=URL.createObjectURL(blob);link.download='에코디교회_연간예배위원_'+annualYear()+'.csv';
+  document.body.append(link);link.click();link.remove();URL.revokeObjectURL(link.href);
+}
+$('annualYear')?.addEventListener('change',()=>void loadAnnualRoster());
+$('annualSunday')?.addEventListener('change',event=>{
+  if(!annualSundayValid(event.target.value)){$('annualStatus').textContent='주일(일요일) 날짜를 선택하세요.';return;}
+  const year=Number(event.target.value.slice(0,4));
+  if(year!==annualYear()){$('annualYear').value=String(year);void loadAnnualRoster();return;}
+  annualSelect(event.target.value);
+});
+$('annualRows')?.addEventListener('click',event=>{
+  const row=event.target.closest('tr[data-date]');if(row)annualSelect(row.dataset.date);
+});
+$('annualRows')?.addEventListener('keydown',event=>{
+  if(event.key!=='Enter'&&event.key!==' ')return;
+  const row=event.target.closest('tr[data-date]');
+  if(row){event.preventDefault();annualSelect(row.dataset.date);}
+});
+$('annualSave')?.addEventListener('click',()=>void saveAnnualRoster());
+$('annualExport')?.addEventListener('click',exportAnnualRoster);
+
 document.querySelectorAll('.service-tab').forEach(btn=>btn.addEventListener('click',async()=>{document.querySelectorAll('.service-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');service=btn.dataset.service;loadLocal();await loadRemote();await loadBulletinEditor()}));
 ['serviceDate','scripture','title','preacher','songs','prayer','notice','meal'].forEach(id=>$(id).addEventListener('input',render));
 function snapDate(){
@@ -284,7 +406,7 @@ $('beSave')?.addEventListener('click',()=>void saveBulletin());
 document.querySelectorAll('.panel-tabs [data-panel]').forEach(btn=>btn.addEventListener('click',()=>{
   const open=btn.getAttribute('aria-expanded')!=='true';
   document.querySelectorAll('.panel-tabs [data-panel]').forEach(b=>{b.setAttribute('aria-expanded','false');$(b.dataset.panel).hidden=true});
-  if(open){btn.setAttribute('aria-expanded','true');$(btn.dataset.panel).hidden=false}
+  if(open){btn.setAttribute('aria-expanded','true');$(btn.dataset.panel).hidden=false;if(btn.dataset.panel==='panelCommittee')void loadAnnualRoster()}
 }));
 $('bePhoto')?.addEventListener('change',e=>void openEditor(e.target.files?.[0]));
 document.querySelectorAll('#bePhotoEdit [data-rot]').forEach(b=>b.addEventListener('click',()=>{edit.rot=(edit.rot+Number(b.dataset.rot)+360)%360;previewEdit()}));
