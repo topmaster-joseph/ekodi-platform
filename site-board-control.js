@@ -820,7 +820,18 @@ export async function handleSiteBoardRequest(request,env){
   // The Church's reviewed, dated Sunday public-news source is an internal publisher:
   // first-party GET refreshes only the Church notice category, idempotently, with
   // an audit-friendly system identity. HTTP write authorization is unchanged.
-  if(method==='GET'&&route.siteId==='ekodichurch'&&(sub==='/'||sub==='/api/posts')){
+  const requestedOfficialCategory=method==='GET'&&(sub==='/'||sub==='/api/posts')
+    ?safeCategoryId(new URL(request.url).searchParams.get('category')):'';
+  // Explicit foreign official categories must never expose another tenant's notices:
+  // /ekodichurch/board/api/posts?category=mission-notice is an empty scoped result.
+  if(requestedOfficialCategory&&ALL_OFFICIAL_CATEGORY_IDS.has(requestedOfficialCategory)&&
+     !isPublicOfficialCategory(instance,requestedOfficialCategory)){
+    return sub==='/api/posts'
+      ?boardJson(instance,{boardId:instance.board_id,categoryId:null,items:[]})
+      :page(route,[],'');
+  }
+  if(method==='GET'&&route.siteId==='ekodichurch'&&(sub==='/'||sub==='/api/posts')&&
+     (!requestedOfficialCategory||requestedOfficialCategory==='notice')){
     await syncApprovedChurchWeeklyNotices(env,instance);
   }
   if(method==='GET'&&sub==='/'){
