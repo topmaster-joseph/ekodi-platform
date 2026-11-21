@@ -24,8 +24,8 @@ test('education tabs preserve existing routes and avoid role-based API privilege
   for(const tab of ['mine','explore','courses','community','support'])assert.ok(tabs.includes("'"+tab+"'"));
   assert.match(tabs,/setAttribute\('aria-pressed'/);
   assert.match(tabs,/hashchange/);
-  assert.match(home,/href="\/admission"/);
-  assert.match(home,/href="\/study"/);
+  assert.match(home,/href="\/edu\/admission"/);
+  assert.match(home,/href="\/edu\/study"/);
 });
 
 test('auth-dependent dashboard is not rendered before verified session',()=>{
