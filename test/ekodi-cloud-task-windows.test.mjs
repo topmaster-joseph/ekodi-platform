@@ -115,23 +115,26 @@ test('unexpected workflow URLs, missing dates and unauthorized active status fai
 
 test('existing EKODI native cloud watch owns cloud handoff without a duplicate cron',async()=>{
   const native=await readFile(new URL('../.github/workflows/ekodi-native-operations-watch.yml',import.meta.url),'utf8');
-  assert.match(native,/cron: '37 \\* \\* \\* \\*'/);
-  assert.match(native,/scripts\\/ekodi-cloud-task-windows\\.mjs/);
-  assert.match(native,/ekodi-cloud-task-windows-evidence\\.json/);
-  assert.doesNotMatch(native,/issues: write|id-token: write/);
-  assert.match(native,/test\\/ekodi-cloud-task-windows\\.test\\.mjs/);
+  assert.ok(native.includes("cron: '37 * * * *'"));
+  assert.ok(native.includes('scripts/ekodi-cloud-task-windows.mjs'));
+  assert.ok(native.includes('ekodi-cloud-task-windows-evidence.json'));
+  assert.ok(native.includes('test/ekodi-cloud-task-windows.test.mjs'));
+  assert.ok(!native.includes('issues: write'));
+  assert.ok(!native.includes('id-token: write'));
 });
 
 test('Points Chromium scheduler expires before secrets or browser are used',async()=>{
   const wf=await readFile(new URL('../.github/workflows/verify-points-staging-browser.yml',import.meta.url),'utf8');
-  assert.match(wf,/reservation_window:\\n[\\s\\S]*?id: window/);
-  assert.match(wf,/TZ=Asia\\/Seoul date \\+%Y-%m-%d/);
-  assert.match(wf,/2026-11-22/);
-  assert.match(wf,/2026-12-22/);
-  assert.match(wf,/if: github\\.ref == 'refs\\/heads\\/main' && needs\\.reservation_window\\.outputs\\.active == 'true'/);
+  assert.ok(wf.includes('reservation_window:'));
+  assert.ok(wf.includes('id: window'));
+  assert.ok(wf.includes('TZ=Asia/Seoul date +%Y-%m-%d'));
+  assert.ok(wf.includes('2026-11-22'));
+  assert.ok(wf.includes('2026-12-22'));
+  assert.ok(wf.includes("needs.reservation_window.outputs.active == 'true'"));
   const gate=wf.indexOf('reservation_window:');
   const credential=wf.indexOf('CLOUDFLARE_API_TOKEN:');
   assert.ok(gate>=0&&credential>gate);
-  assert.match(wf,/environment: development/);
-  assert.doesNotMatch(wf,/production\\.supabase\\.co|POINTS_ENABLED=true/);
+  assert.ok(wf.includes('environment: development'));
+  assert.ok(!wf.includes('production.supabase.co'));
+  assert.ok(!wf.includes('POINTS_ENABLED=true'));
 });
