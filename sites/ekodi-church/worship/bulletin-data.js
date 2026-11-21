@@ -26,20 +26,20 @@
   // Effective-dated service order: preserve every worship bulletin before 2026-11-22.
   const orderEffectiveDate = '2026-11-22';
   const newOrder = [
-    ['경배찬양', 'Praise & Worship', '다같이'],
-    ['예배부름', 'Call to Worship', '인도자'],
-    ['공동고백', 'Community Confession', '다같이'],
-    ['입례찬송', 'Processional Hymn', '다같이'],
-    ['대표기도', 'Congregational Prayer', '맡은이'],
-    ['헌금찬송', 'Offertory Hymn', '다같이'],
-    ['말씀봉독', 'Scripture Reading', '다같이'],
-    ['말씀찬송', 'Hymn before the Sermon', '다같이'],
-    ['말씀선포', 'Proclamation of the Word', '설교자'],
-    ['말씀기도', 'Prayer in Response to the Word', '다같이'],
-    ['결단찬송', 'Hymn of Commitment', '다같이'],
-    ['교회소식', 'Church Announcements', '인도자'],
-    ['파송찬송', 'Sending Hymn', '다같이'],
-    ['주기도문', "The Lord's Prayer", '다같이']
+    ["경배찬양", "Praise & Worship", "다같이"],
+    ["예배부름", "Call to Worship", "인도자"],
+    ["입례찬송", "Processional Hymn", "다같이"],
+    ["공동고백", "Community Confession", "다같이"],
+    ["회개찬송", "Hymn of Repentance", "다같이"],
+    ["대표기도", "Congregational Prayer", "맡은이"],
+    ["말씀봉독", "Scripture Reading", "다같이"],
+    ["말씀찬송", "Hymn before the Sermon", "다같이"],
+    ["말씀선포", "Proclamation of the Word", "설교자"],
+    ["말씀기도", "Prayer in Response to the Word", "다같이"],
+    ["결단찬송", "Hymn of Commitment", "다같이"],
+    ["교회소식", "Church Announcements", "인도자"],
+    ["파송찬송", "Sending Hymn", "다같이"],
+    ["주기도문", "The Lord's Prayer", "다같이"]
   ];
   const hasNewOrder = date >= orderEffectiveDate;
   function applyNewWorshipLayout() {
@@ -49,7 +49,7 @@
     const cols = sheet.querySelector('.bp-cols');
     if (!cols || cols.children.length !== 2) return;
     const [left, right] = cols.children;
-    const order = left.querySelector('.bp-order');
+    const order = sheet.querySelector('.bp-order');
     const tableEl = order && order.querySelector('table');
     if (!tableEl) return;
 
@@ -69,15 +69,18 @@
     }).join('');
     tableEl.innerHTML = rows;
 
-    const sponsors = right.querySelector('[data-b="sponsors"]');
-    const questions = right.querySelector('[data-b="questions"]');
+    const committee = sheet.querySelector('[data-b="committee"]');
+    const committeeHeading = committee?.previousElementSibling;
+    const sponsors = sheet.querySelector('[data-b="sponsors"]');
     const sponsorsHeading = sponsors?.previousElementSibling;
+    const questions = sheet.querySelector('[data-b="questions"]');
     const questionsHeading = questions?.previousElementSibling;
-    // Page two: left = cooperation, committee, one reflection;
-    // right = prominently placed complete Order of Worship.
-    if (sponsors && sponsorsHeading) left.prepend(sponsorsHeading, sponsors);
-    if (questions && questionsHeading) left.append(questionsHeading, questions);
-    right.prepend(order);
+    // Starting 2026-11-22, the left column holds worship order; the right
+    // column holds worship committee, cooperation and one application question.
+    left.prepend(order);
+    if (committee && committeeHeading) right.prepend(committeeHeading, committee);
+    if (sponsors && sponsorsHeading) right.append(sponsorsHeading, sponsors);
+    if (questions && questionsHeading) right.append(questionsHeading, questions);
     pages.dataset.worshipLayout = orderEffectiveDate;
     if (questions) Array.from(questions.querySelectorAll('li')).slice(1).forEach(item => item.remove());
 
