@@ -97,11 +97,13 @@ export async function syncApprovedChurchMonthlyNotices(env,instance,at=new Date(
     const author=CHURCH_NEWS_PUBLISHER+':'+item.sourceKey;
     const old=await DB.prepare(`SELECT id,body,status FROM ekodi_board_posts
       WHERE board_id=? AND author_person_id=? LIMIT 1`).bind(boardId,author).first();
+    let createdNow=false;
     if(!old){
       const result=await DB.prepare(`INSERT OR IGNORE INTO ekodi_board_posts
         (board_id,author_person_id,author_email,title,body,status,created_at,updated_at)
         VALUES (?,?,'',?,?,'published',?,?)`).bind(boardId,author,item.title,item.body,stamp,stamp).run();
-      if(Number(result?.meta?.changes||0)>0)published++;
+      createdNow=Number(result?.meta?.changes||0)>0;
+      if(createdNow)published++;
     }
     const post=await DB.prepare(`SELECT id,body,status FROM ekodi_board_posts
       WHERE board_id=? AND author_person_id=? LIMIT 1`).bind(boardId,author).first();
@@ -109,6 +111,12 @@ export async function syncApprovedChurchMonthlyNotices(env,instance,at=new Date(
     if(!post||post.status!=='published')continue;
     await DB.prepare(`INSERT OR IGNORE INTO ekodi_board_post_categories
       (board_id,post_id,category_id) VALUES (?,?,'notice')`).bind(boardId,post.id).run();
+    if(createdNow){
+      await DB.prepare(`INSERT INTO ekodi_board_audit
+        (board_id,actor_person_id,action,target_type,target_id,detail_json,created_at)
+        VALUES (?,?,'post.auto.create','post',?,?,?)`)
+        .bind(boardId,author,String(post.id),JSON.stringify({sourceKey,weekCount:item.weekCount}),stamp).run();
+    }
     const tracked=await DB.prepare(`SELECT last_published_body FROM ekodi_board_auto_news_sources
       WHERE board_id=? AND source_key=? LIMIT 1`).bind(boardId,sourceKey).first();
     if(!tracked){
@@ -127,6 +135,10 @@ export async function syncApprovedChurchMonthlyNotices(env,instance,at=new Date(
     await DB.prepare(`UPDATE ekodi_board_auto_news_sources SET last_published_body=?,updated_at=?
       WHERE board_id=? AND source_key=? AND post_id=?`)
       .bind(item.body,stamp,boardId,sourceKey,post.id).run();
+    await DB.prepare(`INSERT INTO ekodi_board_audit
+      (board_id,actor_person_id,action,target_type,target_id,detail_json,created_at)
+      VALUES (?,?,'post.auto.update','post',?,?,?)`)
+      .bind(boardId,author,String(post.id),JSON.stringify({sourceKey,weekCount:item.weekCount}),stamp).run();
     updated++;
   }
   return {published,updated,months:publications.length};
