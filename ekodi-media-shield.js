@@ -153,12 +153,14 @@ export function maskSubject(subject){
  */
 export function publicManifestView(manifest){
   const view={version:manifest.version,contentId:manifest.contentId,title:String(manifest.title||''),mime:manifest.mime,init:manifest.init,segments:[...(manifest.segments||[])],duration:Number(manifest.duration)||null};
+  if(Array.isArray(manifest.times)&&manifest.times.length===view.segments.length)view.times=manifest.times.map(Number);
   if(manifest.eme?.keySystem&&manifest.eme?.licenseUrl)view.eme={keySystem:String(manifest.eme.keySystem),licenseUrl:String(manifest.eme.licenseUrl)};
   return view;
 }
 
 export function subjectMayView(manifest,principal){
   if(!manifest||!principal)return false;
+  if(ADMIN_ROLES.has(String(principal.role||'').toLowerCase()))return true;
   const audience=String(manifest.audience||'subjects');
   if(audience==='members')return true;
   const allowed=new Set((manifest.subjects||[]).map(v=>String(v).trim().toLowerCase()));
@@ -179,6 +181,128 @@ async function loadManifest(bucket,contentId){
   return manifest;
 }
 
+const ADMIN_ROLES=new Set(['super_admin','admin']);
+const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIME=/^(?:video|audio)\/mp4; codecs="[a-zA-Z0-9., ]{3,120}"$/;
+const PART_NAME=/^(?:init|s\d{5})\.bin$/;
+const MAX_PART_BYTES=8*1024*1024;
+const MAX_SEGMENTS=4000;
+
+/**
+ * EKODI login session (same validation the site boards use): the internal CONTROL_API
+ * checks the real bearer session. A claimed email or header never grants access.
+ */
+export async function controlSessionPrincipal(request,env){
+  if(!env?.CONTROL_API?.fetch)return null;
+  const authorization=String(request.headers.get('authorization')||'');
+  if(!/^Bearer [^\s]+$/.test(authorization)||authorization.length>8192)return null;
+  const url=new URL(request.url);
+  url.pathname='/api/session';url.search='';url.hash='';
+  const response=await env.CONTROL_API.fetch(new Request(url.toString(),{method:'GET',headers:{authorization},redirect:'manual'})).catch(()=>null);
+  if(!response?.ok)return null;
+  const session=await response.json().catch(()=>null);
+  const email=String(session?.email||'').trim().toLowerCase();
+  if(session?.authenticated!==true||!EMAIL.test(email))return null;
+  return Object.freeze({id:'session:'+email,email,role:String(session.role||'member').toLowerCase()});
+}
+
+function contentPrefix(contentId){return `${MEDIA_SHIELD_OBJECT_PREFIX}${contentId}/`;}
+async function listKeys(bucket,prefix){
+  const keys=[];let cursor;
+  for(let page=0;page<20;page++){
+    const listed=await bucket.list({prefix,cursor,limit:1000});
+    for(const object of listed.objects||[])keys.push(object.key);
+    if(!listed.truncated)break;
+    cursor=listed.cursor;
+  }
+  return keys;
+}
+function newContentId(now=new Date()){
+  const day=now.toISOString().slice(0,10).replace(/-/g,'');
+  return `ms-${day}-${[...crypto.getRandomValues(new Uint8Array(4))].map(b=>b.toString(16).padStart(2,'0')).join('')}`;
+}
+function cleanTitle(value){return String(value||'').replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,120);}
+function cleanSubjects(value){
+  const list=(Array.isArray(value)?value:String(value||'').split(/[\s,;]+/)).map(v=>String(v).trim().toLowerCase()).filter(Boolean);
+  return [...new Set(list)].filter(v=>EMAIL.test(v)).slice(0,500);
+}
+
+async function handleMediaShieldAdmin(request,env,{bucket,masterKey,rest,method,resolveAdmin}){
+  const admin=await resolveAdmin(request,env).catch(()=>null);
+  if(!admin?.email)return shieldError('AUTH_REQUIRED',401,'에코디 관리자 로그인이 필요합니다.');
+  if(!ADMIN_ROLES.has(String(admin.role||'').toLowerCase()))return shieldError('ADMIN_REQUIRED',403,'관리자만 사용할 수 있습니다.');
+  const action=rest[1]||'';
+  const contentId=String(rest[2]||'').toLowerCase();
+
+  if(action==='list'&&method==='GET'){
+    const listed=await bucket.list({prefix:MEDIA_SHIELD_OBJECT_PREFIX,delimiter:'/',limit:200});
+    const ids=(listed.delimitedPrefixes||[]).map(v=>v.slice(MEDIA_SHIELD_OBJECT_PREFIX.length).replace(/\/$/,'')).filter(isValidContentId).sort().reverse().slice(0,60);
+    const items=[];
+    for(const id of ids){
+      const manifest=await loadManifest(bucket,id);
+      items.push(manifest?{contentId:id,status:'published',title:manifest.title||id,audience:manifest.audience,subjects:(manifest.subjects||[]).length,duration:Number(manifest.duration)||null,segments:manifest.segments.length,publishedAt:manifest.publishedAt||manifest.packagedAt||null}:{contentId:id,status:'draft',title:id});
+    }
+    return shieldJson({ok:true,items});
+  }
+  if(action==='new'&&method==='POST'){
+    return shieldJson({ok:true,contentId:newContentId()});
+  }
+  if(!isValidContentId(contentId))return shieldError('INVALID_CONTENT',400,'영상 식별자가 올바르지 않습니다.');
+  const published=await loadManifest(bucket,contentId);
+
+  if(action==='key'&&method==='POST'){
+    if(published)return shieldError('ALREADY_PUBLISHED',409,'이미 공개된 영상은 다시 암호화할 수 없습니다.');
+    const body=await request.json().catch(()=>({}));
+    let envelope;
+    try{envelope=await wrapContentKey(await deriveContentKeyBytes(masterKey,contentId),body?.publicKey);}
+    catch{return shieldError('INVALID_VIEWER_KEY',400,'브라우저 키가 올바르지 않습니다.');}
+    console.info('EKODI media shield packaging key',{contentId,admin:maskSubject(admin.email)});
+    return shieldJson({ok:true,envelope});
+  }
+  if(action==='part'&&method==='PUT'){
+    if(published)return shieldError('ALREADY_PUBLISHED',409,'이미 공개된 영상은 수정할 수 없습니다.');
+    const name=String(rest[3]||'');
+    if(!PART_NAME.test(name))return shieldError('INVALID_PART',400,'영상 조각 이름이 올바르지 않습니다.');
+    const declared=request.headers.get('content-length');
+    const length=Number(declared||0);
+    if(declared!==null&&(!Number.isFinite(length)||length<29||length>MAX_PART_BYTES))return shieldError('INVALID_PART_SIZE',413,'영상 조각 크기가 허용 범위를 벗어났습니다.');
+    // Without a declared length the body is buffered (bounded) so R2 always receives a known size.
+    const body=declared!==null&&request.body?request.body:new Uint8Array(await request.arrayBuffer());
+    if(body instanceof Uint8Array&&(body.byteLength<29||body.byteLength>MAX_PART_BYTES))return shieldError('INVALID_PART_SIZE',413,'영상 조각 크기가 허용 범위를 벗어났습니다.');
+    await bucket.put(contentPrefix(contentId)+name,body,{httpMetadata:{contentType:'application/octet-stream'},customMetadata:{uploadedBy:maskSubject(admin.email)}});
+    return shieldJson({ok:true,name});
+  }
+  if(action==='publish'&&method==='POST'){
+    if(published)return shieldError('ALREADY_PUBLISHED',409,'이미 공개된 영상입니다.');
+    const body=await request.json().catch(()=>({}));
+    const title=cleanTitle(body?.title)||contentId;
+    const mime=String(body?.mime||'');
+    const times=Array.isArray(body?.times)?body.times.map(Number):[];
+    const duration=Number(body?.duration);
+    const audience=body?.audience==='members'?'members':'subjects';
+    const subjects=cleanSubjects(body?.subjects);
+    if(!MIME.test(mime))return shieldError('INVALID_MIME',400,'영상 형식 정보가 올바르지 않습니다.');
+    if(!times.length||times.length>MAX_SEGMENTS||times.some((t,i)=>!Number.isFinite(t)||t<0||(i&&t<times[i-1])))return shieldError('INVALID_TIMES',400,'영상 조각 시간 정보가 올바르지 않습니다.');
+    if(!Number.isFinite(duration)||duration<=0||duration>12*3600)return shieldError('INVALID_DURATION',400,'영상 길이가 올바르지 않습니다.');
+    if(audience==='subjects'&&!subjects.length)return shieldError('SUBJECTS_REQUIRED',400,'볼 수 있는 사람의 이메일을 한 개 이상 입력해 주세요.');
+    const segments=times.map((_,i)=>`s${String(i+1).padStart(5,'0')}.bin`);
+    const stored=new Set((await listKeys(bucket,contentPrefix(contentId))).map(key=>key.slice(contentPrefix(contentId).length)));
+    const missing=['init.bin',...segments].filter(name=>!stored.has(name));
+    if(missing.length)return shieldError('PARTS_MISSING',409,`업로드되지 않은 조각이 있습니다: ${missing.slice(0,5).join(', ')}${missing.length>5?' 외':''}`);
+    const manifest={version:MEDIA_SHIELD_VERSION,contentId,title,mime,init:'init.bin',segments,times,duration,audience,subjects,publishedBy:maskSubject(admin.email),publishedAt:new Date().toISOString()};
+    await bucket.put(contentPrefix(contentId)+'manifest.json',JSON.stringify(manifest),{httpMetadata:{contentType:'application/json'}});
+    console.info('EKODI media shield published',{contentId,segments:segments.length,audience,admin:maskSubject(admin.email)});
+    return shieldJson({ok:true,contentId,watchPath:`/my/media/${contentId}`});
+  }
+  if(action==='content'&&method==='DELETE'){
+    const keys=await listKeys(bucket,contentPrefix(contentId));
+    for(let i=0;i<keys.length;i+=1000)await bucket.delete(keys.slice(i,i+1000));
+    console.info('EKODI media shield deleted',{contentId,objects:keys.length,admin:maskSubject(admin.email)});
+    return shieldJson({ok:true,deleted:keys.length});
+  }
+  return shieldError('NOT_FOUND',404,'알 수 없는 관리자 요청입니다.');
+}
+
 export function isMediaShieldPath(pathname=''){return String(pathname||'').startsWith(MEDIA_SHIELD_API_PREFIX);}
 
 /**
@@ -189,7 +313,9 @@ export function isMediaShieldPath(pathname=''){return String(pathname||'').start
  *  GET  /api/media-shield/segment/<contentId>/<name>.bin?t=<token>                → encrypted segment
  * `resolvePrincipal(request,env)` returns {id,email} for a signed-in viewer or null.
  */
-export async function handleMediaShieldRequest(request,env={},{resolvePrincipal}={}){
+export async function handleMediaShieldRequest(request,env={},{resolvePrincipal,resolveAdmin}={}){
+  const viewer=async(req,environment)=>(await controlSessionPrincipal(req,environment).catch(()=>null))||(typeof resolvePrincipal==='function'?await resolvePrincipal(req,environment).catch(()=>null):null);
+  const adminResolver=typeof resolveAdmin==='function'?resolveAdmin:controlSessionPrincipal;
   const url=new URL(request.url);
   const method=String(request.method||'GET').toUpperCase();
   const rest=url.pathname.slice(MEDIA_SHIELD_API_PREFIX.length).split('/').filter(Boolean);
@@ -200,10 +326,11 @@ export async function handleMediaShieldRequest(request,env={},{resolvePrincipal}
     return shieldError('MEDIA_SHIELD_NOT_CONFIGURED',503,'보호 영상 서비스가 아직 설정되지 않았습니다.');
   }
   const action=rest[0]||'';
+  if(action==='admin')return handleMediaShieldAdmin(request,env,{bucket,masterKey,rest,method,resolveAdmin:adminResolver});
 
   if(action==='token'){
     if(method!=='POST')return shieldError('METHOD_NOT_ALLOWED',405,'허용되지 않은 요청입니다.');
-    const principal=typeof resolvePrincipal==='function'?await resolvePrincipal(request,env).catch(()=>null):null;
+    const principal=await viewer(request,env);
     if(!principal?.email)return shieldError('AUTH_REQUIRED',401,'로그인이 필요합니다.');
     const body=await request.json().catch(()=>({}));
     const contentId=String(body?.contentId||'').trim().toLowerCase();
@@ -255,13 +382,23 @@ export async function handleMediaShieldRequest(request,env={},{resolvePrincipal}
 const MEDIA_SHIELD_PLAYER_CLIENT_SOURCE=String.raw`function mediaShieldPlayerClient(){
   'use strict';
   var API='/api/media-shield/';
-  function b64(value){var t=String(value).replace(/-/g,'+').replace(/_/g,'/');var s=atob(t+'='.repeat((4-t.length%4)%4));var o=new Uint8Array(s.length);for(var i=0;i<s.length;i++)o[i]=s.charCodeAt(i);return o;}
+  var AHEAD=45,BEHIND=30;
   var te=new TextEncoder();
+  function b64(value){var t=String(value).replace(/-/g,'+').replace(/_/g,'/');var s=atob(t+'='.repeat((4-t.length%4)%4));var o=new Uint8Array(s.length);for(var i=0;i<s.length;i++)o[i]=s.charCodeAt(i);return o;}
   function aad(contentId,segment){return te.encode('ekodi-media-shield:'+contentId+':'+segment);}
+  function storedAuth(){
+    try{
+      var t=sessionStorage.getItem('ekodi-auth-token')||localStorage.getItem('ekodi-auth-token');
+      if(t)return t;
+      for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(/^sb-.*-auth-token$/.test(k)){var j=JSON.parse(localStorage.getItem(k)||'null');if(j&&j.access_token)return j.access_token;}}
+    }catch(e){}
+    return '';
+  }
+  function fail(r,j){var e=new Error((j&&j.error)||'보호 영상 오류');e.code=j&&j.code;e.status=r.status;return e;}
   function post(path,body,auth){
     var headers={'content-type':'application/json'};
     if(auth)headers.authorization='Bearer '+auth;
-    return fetch(API+path,{method:'POST',headers:headers,body:JSON.stringify(body),credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json().then(function(j){if(!r.ok||!j.ok)throw Object.assign(new Error(j.error||'media shield error'),{code:j.code,status:r.status});return j;});});
+    return fetch(API+path,{method:'POST',headers:headers,body:JSON.stringify(body),credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok||!j.ok)throw fail(r,j);return j;});});
   }
   function overlay(video,text){
     var host=video.parentElement;
@@ -297,59 +434,92 @@ const MEDIA_SHIELD_PLAYER_CLIENT_SOURCE=String.raw`function mediaShieldPlayerCli
       return video.setMediaKeys(keys);
     });
   }
+  function unwrapKey(state,pair){
+    return crypto.subtle.exportKey('jwk',pair.publicKey).then(function(pub){return post('key',{token:state.token,publicKey:{kty:pub.kty,crv:pub.crv,x:pub.x,y:pub.y}});}).then(function(res){
+      var env=res.envelope;
+      state.watermark=res.watermark;
+      return crypto.subtle.importKey('jwk',Object.assign({},env.epk,{ext:true}),{name:'ECDH',namedCurve:'P-256'},false,[]).then(function(server){
+        return crypto.subtle.deriveBits({name:'ECDH',public:server},pair.privateKey,256);
+      }).then(function(shared){return crypto.subtle.importKey('raw',shared,'HKDF',false,['deriveKey']);}).then(function(hkdf){
+        return crypto.subtle.deriveKey({name:'HKDF',hash:'SHA-256',salt:b64(env.salt),info:te.encode('ekodi-media-shield-wrap/v1')},hkdf,{name:'AES-GCM',length:256},false,['unwrapKey']);
+      }).then(function(wrapping){
+        return crypto.subtle.unwrapKey('raw',b64(env.wrapped),wrapping,{name:'AES-GCM',iv:b64(env.iv)},{name:'AES-GCM'},false,['decrypt']);
+      });
+    });
+  }
   function mount(video,options){
     options=options||{};
     var contentId=String(options.contentId||video.getAttribute('data-ekodi-media')||'').toLowerCase();
-    var auth=options.authToken||(typeof options.getAuthToken==='function'?options.getAuthToken():'');
-    var state={token:'',expiresAt:0};
+    var authFor=function(){return (typeof options.getAuthToken==='function'?options.getAuthToken():options.authToken)||storedAuth();};
+    var state={token:'',expiresAt:0,watermark:''};
     var stop=function(){};
     harden(video);
-    function refresh(){return post('token',{contentId:contentId},typeof options.getAuthToken==='function'?options.getAuthToken():auth).then(function(j){state.token=j.token;state.expiresAt=j.expiresAt;return j;});}
+    function refresh(){return post('token',{contentId:contentId},authFor()).then(function(j){state.token=j.token;state.expiresAt=j.expiresAt;return j;});}
     function fresh(){return Date.now()/1000<state.expiresAt-20?Promise.resolve():refresh();}
-    function get(path){return fresh().then(function(){return fetch(API+path+'?t='+encodeURIComponent(state.token),{credentials:'same-origin',cache:'no-store'});}).then(function(r){if(r.status===401){state.expiresAt=0;return fresh().then(function(){return fetch(API+path+'?t='+encodeURIComponent(state.token),{cache:'no-store'});});}return r;});}
-    return refresh().then(function(){return get('manifest/'+contentId);}).then(function(r){return r.json();}).then(function(j){
-      var manifest=j.manifest;
-      var hardware=Boolean(manifest.eme&&navigator.requestMediaKeySystemAccess);
-      var keyPromise=hardware?emePlay(video,manifest,state).then(function(){return null;}):crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},false,['deriveBits']).then(function(pair){
-        return crypto.subtle.exportKey('jwk',pair.publicKey).then(function(pub){return post('key',{token:state.token,publicKey:{kty:pub.kty,crv:pub.crv,x:pub.x,y:pub.y}});}).then(function(res){
-          stop=overlay(video,res.watermark);
-          var env=res.envelope;
-          return crypto.subtle.importKey('jwk',Object.assign({},env.epk,{ext:true}),{name:'ECDH',namedCurve:'P-256'},false,[]).then(function(server){
-            return crypto.subtle.deriveBits({name:'ECDH',public:server},pair.privateKey,256);
-          }).then(function(shared){return crypto.subtle.importKey('raw',shared,'HKDF',false,['deriveKey']);}).then(function(hkdf){
-            return crypto.subtle.deriveKey({name:'HKDF',hash:'SHA-256',salt:b64(env.salt),info:te.encode('ekodi-media-shield-wrap/v1')},hkdf,{name:'AES-GCM',length:256},false,['unwrapKey']);
-          }).then(function(wrapping){
-            return crypto.subtle.unwrapKey('raw',b64(env.wrapped),wrapping,{name:'AES-GCM',iv:b64(env.iv)},{name:'AES-GCM'},false,['decrypt']);
-          });
-        });
+    function get(path){
+      return fresh().then(function(){return fetch(API+path+'?t='+encodeURIComponent(state.token),{credentials:'same-origin',cache:'no-store'});}).then(function(r){
+        if(r.status!==401)return r;
+        state.expiresAt=0;
+        return fresh().then(function(){return fetch(API+path+'?t='+encodeURIComponent(state.token),{credentials:'same-origin',cache:'no-store'});});
       });
+    }
+    return refresh().then(function(){return get('manifest/'+contentId);}).then(function(r){return r.json().then(function(j){if(!r.ok||!j.ok)throw fail(r,j);return j.manifest;});}).then(function(manifest){
+      var hardware=Boolean(manifest.eme&&navigator.requestMediaKeySystemAccess);
+      var keyPromise=hardware?emePlay(video,manifest,state).then(function(){return null;}):crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},false,['deriveBits']).then(function(pair){return unwrapKey(state,pair);});
       return keyPromise.then(function(key){
-        if(!window.MediaSource||!MediaSource.isTypeSupported(manifest.mime))throw new Error('이 브라우저는 보호 영상 형식을 지원하지 않습니다.');
-        var source=new MediaSource();
+        if(state.watermark)stop=overlay(video,state.watermark);
+        // iPhone Safari exposes only ManagedMediaSource (iOS 17.1+); it needs disableRemotePlayback (set in harden).
+        var MS=window.MediaSource||window.ManagedMediaSource;
+        if(!MS||!MS.isTypeSupported(manifest.mime)){var e=new Error('이 브라우저는 이 영상 형식을 재생할 수 없습니다.');e.code='UNSUPPORTED_FORMAT';throw e;}
+        var names=manifest.segments,times=manifest.times||null;
+        var source=new MS();
         video.src=URL.createObjectURL(source);
         return new Promise(function(resolve,reject){
           source.addEventListener('sourceopen',function(){
             URL.revokeObjectURL(video.src);
             var buffer=source.addSourceBuffer(manifest.mime);
-            var names=[manifest.init].concat(manifest.segments);
-            var index=0;
-            function append(bytes){return new Promise(function(done,fail){buffer.addEventListener('updateend',done,{once:true});buffer.addEventListener('error',fail,{once:true});buffer.appendBuffer(bytes);});}
-            function next(){
-              if(index>=names.length){if(source.readyState==='open')source.endOfStream();return Promise.resolve();}
-              var name=names[index++];
+            if(manifest.duration)try{source.duration=manifest.duration;}catch(e){}
+            var index=0,busy=false,done=false,wake=null;
+            function fetchPart(name){
               return get('segment/'+contentId+'/'+name).then(function(r){if(!r.ok)throw new Error('segment '+name);return r.arrayBuffer();}).then(function(payload){
-                if(!key)return new Uint8Array(payload);
+                if(!key)return payload;
                 var bytes=new Uint8Array(payload);
                 return crypto.subtle.decrypt({name:'AES-GCM',iv:bytes.subarray(0,12),additionalData:aad(contentId,name)},key,bytes.subarray(12));
-              }).then(append).then(next);
+              });
             }
-            next().then(resolve,reject);
+            function waitUpdate(){return new Promise(function(ok,no){buffer.addEventListener('updateend',ok,{once:true});buffer.addEventListener('error',no,{once:true});});}
+            function append(bytes,retried){
+              try{buffer.appendBuffer(bytes);return waitUpdate();}
+              catch(error){
+                if(error&&error.name==='QuotaExceededError'&&!retried&&video.currentTime>BEHIND/2){buffer.remove(0,Math.max(0,video.currentTime-BEHIND/2));return waitUpdate().then(function(){return append(bytes,true);});}
+                return Promise.reject(error);
+              }
+            }
+            function trim(){
+              if(buffer.updating||!buffer.buffered.length)return Promise.resolve();
+              var start=buffer.buffered.start(0),cut=video.currentTime-BEHIND;
+              if(cut-start>5){buffer.remove(start,cut);return waitUpdate();}
+              return Promise.resolve();
+            }
+            function indexAt(t){if(!times)return index;var lo=0;for(var i=0;i<times.length;i++){if(times[i]<=t)lo=i;else break;}return lo;}
+            function nextDue(){return index<names.length&&(!times||times[index]<video.currentTime+AHEAD);}
+            function pump(){
+              if(busy||done)return;
+              if(index>=names.length){done=true;if(source.readyState==='open'&&!buffer.updating)try{source.endOfStream();}catch(e){}resolve();return;}
+              if(!nextDue())return;
+              busy=true;
+              var name=names[index++];
+              trim().then(function(){return fetchPart(name);}).then(function(bytes){return append(bytes);}).then(function(){busy=false;if(index===1)resolve();pump();},function(error){busy=false;video.setAttribute('data-ekodi-media-error',error&&error.code||error&&error.message||'error');reject(error);});
+            }
+            video.addEventListener('timeupdate',pump);
+            video.addEventListener('seeking',function(){if(!times)return;var target=indexAt(video.currentTime);if(target<index-1||target>index){index=target;done=false;}pump();});
+            fetchPart(manifest.init).then(function(bytes){return append(bytes);}).then(pump,reject);
           },{once:true});
         });
       });
     }).then(function(){return {stop:function(){stop();}};});
   }
-  window.EkodiMediaShield={version:'v1',mount:mount};
+  window.EkodiMediaShield={version:'v1',mount:mount,storedAuth:storedAuth};
   document.querySelectorAll('video[data-ekodi-media][data-ekodi-media-autoload]').forEach(function(video){mount(video).catch(function(error){video.setAttribute('data-ekodi-media-error',error.code||error.message);});});
 }`;
 
