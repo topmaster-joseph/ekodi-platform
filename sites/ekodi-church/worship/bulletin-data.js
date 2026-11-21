@@ -62,7 +62,7 @@
       return (label.match(pattern)?.[1] || '').trim().slice(0, 100);
     };
     const scripture = details('말씀읽기', /^Scripture Reading\s*:\s*(.+)$/i) || details('말씀봉독', /^Scripture Reading\s*:\s*(.+)$/i);
-    const sermon = details('말씀나눔', /^Sermon\s*[-–:]\s*(.+)$/i) || details('말씀선포', /^Proclamation of the Word\s*[-–:]\s*(.+)$/i);
+    const sermon = details('말씀나눔', /^Sermon\s*[-–:]\s*(.+)$/i) || details('말씀선포', /^Proclamation of the Word\s*[-–:·]\s*(.+)$/i);
     const rows = newOrder.map(([ko, en, actor]) => {
       const description = en + (ko === '말씀봉독' && scripture ? ': ' + scripture : '') + (ko === '말씀선포' && sermon ? ' · ' + sermon : '');
       return '<tr><td>' + esc(ko) + '</td><th scope="row">' + esc(description) + '</th><td>' + esc(actor) + '</td></tr>';
