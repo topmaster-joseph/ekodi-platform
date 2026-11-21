@@ -36,6 +36,16 @@
 - Apache 2.0 원문: https://www.apache.org/licenses/LICENSE-2.0 . 실제 코드를 이식해 배포하면 적용 부품의 LICENSE/NOTICE/변경 사실/제3자 고지 의무를 준수합니다. 모든 에코디 소스나 브랜드가 자동으로 Apache 2.0이 되는 것은 아닙니다.
 - 데스크톱 관련 office-desktop/rebrand-contract.json과 preflight.mjs는 검증 도구이며 Windows 실행 파일이 아닙니다.
 
+## 실제 업무 연결 — Workflow Desk v1 (2026-11-21)
+- **목표:** 기관/개인 AI가 이미 생성한 초안이나 요약을 에코디에서 다시 만들지 않고, 사람의 검토와 기존 서비스 실행을 이어주는 '업무 인계 시작점'을 제공.
+- **현재 제공되는 기능:** ① 회의 후속(회의록→Docs→기존 나의 결재함→My EKODI), ② 제안서 검토(Proposal→Docs→나의 결재함→사람의 제출 확인), ③ 교육 운영(에코디교육→Docs→나의 결재함→사람의 증빙 보관). 로그인 후 서비스별 권한·데이터 상태는 각 서비스가 소유한다.
+- 세 시나리오마다 정적 표준 인계 메모 제공. 클립보드 버튼은 브라우저의 `navigator.clipboard.writeText`를 명시적인 사용자 클릭시에만 실행하고, 허용되지 않으면 수동 복사 안내. 화면은 사용자 입력, 실제 업무 데이터, 키, 쿠키, 크레딧을 읽거나 저장하지 않음.
+- 외부 AI를 대리 실행하거나, Docs를 자동 수정하거나, 결재 요청·일정 이벤트·이메일·계약을 자동 생성/제출/발송하는 기능이 **아님**. 기존 결재함은 로그인한 사용자가 승인 권한이 있는 작업만 조회/결정한다.
+- 기존 에코디 문서 앱 /my/docs/, 결재함 /my/approvals/, 제안 /proposal/, 교육 /edu/의 live GET 페이지를 공개 상태에서 확인. 실제 개인 결재 데이터는 로그인·사용자 소유 영역이라 이 정적 Office 페이지에서는 조회하지 않는다.
+- **다음 확장 조건:** 기존 승인 API의 '요청 생성' 기능 및 실제 결재 대상·문서 권한·저장/증빙 식별자·중복 요청 방지·취소·감사·테넌트 RLS를 확인한 뒤 별도 서버 인증 경로로 통합. 운영 승인 없이 기관/교직원 문서·AI 크레딧을 연결하지 않음.
+- 회귀: `node --test test/office-workflow-handoff.test.mjs test/office-hub-prototype.test.mjs test/office-direct-route.test.mjs` + 전체 CI. 브라우저 360/390/768/1440 키보드 탐색, 서식 복사 성공/차단, 개인/기관 AI 접근 유무, 실제 링크 체크.
+- 공개 경로는 기존 `/office/` 하나. 새 서브도메인·redirect·Worker-first 패턴을 추가하지 않고 정적 자산 3개(index, css, js)만 기존 build로 배포.
+
 ## 보안과 배포
 - 기존 canonical /office 와 /office/는 리디렉션 없는 직접 경로입니다. 현재 빌드·Site Worker allowlist·_headers 정책은 변경하지 않습니다.
 - 프런트엔드는 새 서버 호출이 없으며, 기존 CSP connect-src 'none', form-action 'none', script-src 'self', no-store, noindex를 그대로 유지합니다.
