@@ -146,13 +146,21 @@ export function sameOriginFrameCsp(csp=''){
     : `${value.replace(/;\s*$/,'')}; frame-ancestors 'self'`;
 }
 
+// EKODI-HSTS-PRELOAD-PREP-001 (owner decision 2026-11-21: 준비까지만).
+// Browser HSTS preload inclusion is effectively irreversible for months and binds every
+// subdomain host of the apex to HTTPS. Turning HSTS_PRELOAD_ENABLED on is the only change left; it
+// must not be flipped until scripts/check-hsts-preload-readiness.mjs reports no errors
+// and the owner approves the hstspreload.org submission.
+export const HSTS_PRELOAD_ENABLED=false;
+export const STRICT_TRANSPORT_SECURITY=`max-age=31536000; includeSubDomains${HSTS_PRELOAD_ENABLED?'; preload':''}`;
+
 export function applyPlatformSecurityHeaders(response,request){
   const secured=new Response(response.body,response);
   const url=new URL(request.url);
   const info=classifyPath(url.pathname);
   const headers=secured.headers;
 
-  headers.set('Strict-Transport-Security','max-age=31536000; includeSubDomains');
+  headers.set('Strict-Transport-Security',STRICT_TRANSPORT_SECURITY);
   headers.set('X-Content-Type-Options','nosniff');
   headers.set('X-Permitted-Cross-Domain-Policies','none');
   headers.set('Origin-Agent-Cluster','?1');
