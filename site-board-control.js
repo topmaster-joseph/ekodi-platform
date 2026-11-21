@@ -13,6 +13,7 @@ export function churchOfficialCategoryRequiresManager(siteId,categoryId){
   return siteId==='ekodichurch'&&['notice','schedule'].includes(safeCategoryId(categoryId));
 }
 const MISSION_OFFICIAL_CATEGORIES=Object.freeze(['mission-notice','mission-schedule']);
+const ALL_OFFICIAL_CATEGORY_IDS=new Set(['mission-notice','mission-schedule','notice','schedule']);
 const isMissionOfficialCategory=(instance,categoryId)=>instance.site_id==='ekodimission'&&MISSION_OFFICIAL_CATEGORIES.includes(categoryId);
 const isChurchOfficialCategory=(instance,categoryId)=>churchOfficialCategoryRequiresManager(instance.site_id,categoryId);
 const isPublicOfficialCategory=(instance,categoryId)=>isMissionOfficialCategory(instance,categoryId)||isChurchOfficialCategory(instance,categoryId);
@@ -305,6 +306,9 @@ const boardJson=(instance,data,status=200)=>json(data,status,{'x-ekodi-board-id'
 async function parseBody(request){try{return await request.json()}catch{return null}}
 
 async function listPosts(env,instance,categoryId=''){
+  // An official category from another tenant must never fall back to that
+  // board's unrelated public posts, even after this board acquires news.
+  if(ALL_OFFICIAL_CATEGORY_IDS.has(categoryId)&&!isPublicOfficialCategory(instance,categoryId))return [];
   const selected=isPublicOfficialCategory(instance,categoryId)?categoryId:'';
   const rows=selected
     ?await env.DB.prepare(`SELECT p.id,p.title,p.body,p.created_at,p.updated_at,pc.category_id
