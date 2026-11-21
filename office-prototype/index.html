@@ -15,7 +15,7 @@
   <header class="site-head">
     <a class="brand" href="https://ekodi.kr/" aria-label="에코디 홈"><span class="brand-mark" aria-hidden="true">E<span class="mark-dot"></span></span><span>EKODI <b>OFFICE</b><small>by EKODI</small></span></a>
     <nav class="head-nav" aria-label="페이지 메뉴">
-      <a href="#tools">업무 도구</a><a href="#ai-connect">AI 연결</a><a href="#workspace">이용 방식</a><a href="#sources">코드 출처</a>
+      <a href="#tools">업무 도구</a><a href="#flows">업무 흐름</a><a href="#ai-connect">AI 연결</a><a href="#workspace">이용 방식</a><a href="#sources">코드 출처</a>
     </nav>
     <a class="head-action" href="https://ekodi.kr/my/">My EKODI <span aria-hidden="true">↗</span></a>
   </header>
@@ -65,6 +65,95 @@
         <a class="tool-card" href="https://ekodi.kr/my/docs/"><span class="tool-top"><span class="tool-symbol symbol-pdf">PDF</span><span class="tool-index">04 / EXPORT</span></span><strong>PDF 문서</strong><span class="tool-desc">현재 지원되는 문서 보기·내보내기 경로 안내</span><span class="tool-foot">내 문서 열기 <span aria-hidden="true">↗</span></span></a>
         <a class="tool-card" href="https://ekodi.kr/edu/"><span class="tool-top"><span class="tool-symbol">E</span><span class="tool-index">05 / LEARNING</span></span><strong>교육자료</strong><span class="tool-desc">강의안·실습자료·교육 콘텐츠 확인</span><span class="tool-foot">에코디교육 열기 <span aria-hidden="true">↗</span></span></a>
         <a class="tool-card featured" href="https://ekodi.kr/my/docs/"><span class="tool-top"><span class="tool-symbol">✳</span><span class="tool-index">06 / AI TOOLS</span></span><strong>AI 문서 지원</strong><span class="tool-desc">기존 문서 AI의 작성·검토 기능을 사용자가 확인</span><span class="tool-foot">문서 AI 열기 <span aria-hidden="true">↗</span></span></a>
+      </div>
+    </section>
+    <section id="flows" class="section flow-section" aria-labelledby="flow-title">
+      <div class="section-intro">
+        <div><p class="eyebrow">FROM AI RESULT TO REAL WORK</p><h2 id="flow-title">AI가 끝난 자리에서,<br><em>일이 시작됩니다.</em></h2></div>
+        <p>이미 사용하는 기관 AI·개인 AI의 결과를 다시 생성하지 않습니다. 기존 에코디 문서·제안서·결재함으로 이어지는 작업 순서와 인계용 서식을 제공합니다.</p>
+      </div>
+      <div class="flow-shell">
+        <div class="flow-topline"><span class="flow-eyebrow"><span class="flow-live-dot"></span> WORKFLOW DESK · 시작 안내</span><span class="flow-private-note"><icon aria-hidden="true">○</icon> 계정·문서·기관 크레딧 수집 없음</span></div>
+        <div class="flow-layout">
+          <div class="flow-picker" role="tablist" aria-label="업무 흐름 유형 선택">
+            <button type="button" class="flow-choice" id="flow-tab-meeting" data-flow="meeting" role="tab" aria-controls="flow-panel-meeting" aria-selected="true" tabindex="0"><span class="flow-choice-count">01 / MEETING</span><strong>회의 후속 업무</strong><small>회의록 → 결정사항 → 결재 확인</small><span class="flow-choice-arrow" aria-hidden="true">↗</span></button>
+            <button type="button" class="flow-choice" id="flow-tab-proposal" data-flow="proposal" role="tab" aria-controls="flow-panel-proposal" aria-selected="false" tabindex="-1"><span class="flow-choice-count">02 / PROPOSAL</span><strong>제안서·견적 검토</strong><small>초안 → 검수 → 승인 → 제출 준비</small><span class="flow-choice-arrow" aria-hidden="true">↗</span></button>
+            <button type="button" class="flow-choice" id="flow-tab-education" data-flow="education" role="tab" aria-controls="flow-panel-education" aria-selected="false" tabindex="-1"><span class="flow-choice-count">03 / EDUCATION</span><strong>교육 운영·결과 보고</strong><small>강의자료 → 수료·증빙 → 검토</small><span class="flow-choice-arrow" aria-hidden="true">↗</span></button>
+          </div>
+          <div class="flow-detail">
+            <section class="flow-panel" id="flow-panel-meeting" role="tabpanel" aria-labelledby="flow-tab-meeting" tabindex="0">
+              <span class="flow-panel-index">SELECTED FLOW 01 <span aria-hidden="true">/</span> MEETING FOLLOW-UP</span>
+              <h3>회의록을 남기는 것에서<br>업무 완료까지.</h3>
+              <p class="flow-description">기존 기관 AI에서 회의 요약을 만든 뒤, 사실을 검토하고 에코디 문서·결재함에서 후속 업무를 처리하는 안내입니다.</p>
+              <ol class="flow-step-list">
+                <li><span>01</span><div><b>기관 AI에서 회의록 초안 생성</b><small>기관에서 허가된 도구 사용 · 결과의 사실관계 직접 검토</small></div><span class="flow-step-type">외부 AI</span></li>
+                <li><span>02</span><div><b>최종 문서 작성·보관</b><small>에코디 문서 작업실에서 직접 작성·수정</small></div><a href="https://ekodi.kr/my/docs/">문서 작업실 ↗</a></li>
+                <li><span>03</span><div><b>결재 여부·권한 확인</b><small>기존 결재함에서 권한 있는 요청을 조회·처리</small></div><a href="https://ekodi.kr/my/approvals/">나의 결재 ↗</a></li>
+                <li><span>04</span><div><b>담당·기한·완료 증빙 점검</b><small>사람이 실제 업무 처리 및 후속 상태를 확인</small></div><a href="https://ekodi.kr/my/">My EKODI ↗</a></li>
+              </ol>
+              <div class="flow-handoff">
+                <div class="flow-handoff-head"><b>업무 인계용 표준 메모</b><span>내용을 복사해 문서 작업실에서 사용</span></div>
+                <pre class="flow-template" data-flow-template="meeting">[회의 후속 업무 인계]
+회의명 / 일시:
+확정된 결정사항:
+보류·추가 확인 항목:
+실행할 일 / 담당자 / 기한:
+결재 필요 여부 및 요청자:
+관련 문서·증빙 링크:
+최종 검토자 / 확인일:</pre>
+                <button type="button" class="flow-copy" data-flow-copy="meeting">인계 메모 복사 <span aria-hidden="true">↗</span></button>
+              </div>
+            </section>
+            <section class="flow-panel" id="flow-panel-proposal" role="tabpanel" aria-labelledby="flow-tab-proposal" tabindex="0" hidden>
+              <span class="flow-panel-index">SELECTED FLOW 02 <span aria-hidden="true">/</span> PROPOSAL REVIEW</span>
+              <h3>제안서는 작성보다<br>검증과 결정이 중요합니다.</h3>
+              <p class="flow-description">기관 AI 또는 기존 도구로 만든 초안을 검토·정리하고 승인 여부와 대외 제출 준비를 확인합니다.</p>
+              <ol class="flow-step-list">
+                <li><span>01</span><div><b>제안 초안·견적 검토</b><small>출처·단가·수량·유효기간·개인정보 확인</small></div><a href="https://ekodi.kr/proposal/">제안서 작업실 ↗</a></li>
+                <li><span>02</span><div><b>근거 문서 정리</b><small>첨부문서·근거와 검토 의견 기록</small></div><a href="https://ekodi.kr/my/docs/">문서 작업실 ↗</a></li>
+                <li><span>03</span><div><b>실제 결재 상태 확인</b><small>권한이 확인된 결재함 이용 · AI가 승인하지 않음</small></div><a href="https://ekodi.kr/my/approvals/">나의 결재 ↗</a></li>
+                <li><span>04</span><div><b>제출·후속 연락 점검</b><small>승인 전에는 대외 발송·계약 체결하지 않음</small></div><span class="flow-step-type">사람이 확인</span></li>
+              </ol>
+              <div class="flow-handoff">
+                <div class="flow-handoff-head"><b>제안서 검토용 표준 메모</b><span>내용을 복사해 문서 작업실에서 사용</span></div>
+                <pre class="flow-template" data-flow-template="proposal">[제안서·견적 검토 인계]
+제안명 / 대상 기관:
+초안 작성 도구 및 작성일:
+금액 / 수량 / 부가세 / 유효기간:
+근거 자료·출처·첨부파일:
+개인정보·대외비 검토:
+결재권자 / 승인 상태:
+제출 담당자 / 제출 기한:</pre>
+                <button type="button" class="flow-copy" data-flow-copy="proposal">인계 메모 복사 <span aria-hidden="true">↗</span></button>
+              </div>
+            </section>
+            <section class="flow-panel" id="flow-panel-education" role="tabpanel" aria-labelledby="flow-tab-education" tabindex="0" hidden>
+              <span class="flow-panel-index">SELECTED FLOW 03 <span aria-hidden="true">/</span> EDUCATION OPERATIONS</span>
+              <h3>교육의 마지막은<br>강의 종료가 아닙니다.</h3>
+              <p class="flow-description">교육자료 제공 이후 출결·실적·증빙·결과 보고까지 검토하도록 구성한 운영 순서입니다.</p>
+              <ol class="flow-step-list">
+                <li><span>01</span><div><b>교육내용과 자료 확인</b><small>기존 에코디교육에서 강의자료를 확인</small></div><a href="https://ekodi.kr/edu/">에코디교육 ↗</a></li>
+                <li><span>02</span><div><b>교육 결과보고서 작성</b><small>실제 출석·이수·설문 증빙을 확인하여 기록</small></div><a href="https://ekodi.kr/my/docs/">문서 작업실 ↗</a></li>
+                <li><span>03</span><div><b>정산·보고 결재 확인</b><small>권한 있는 결재함에서 요청·처리 상태 확인</small></div><a href="https://ekodi.kr/my/approvals/">나의 결재 ↗</a></li>
+                <li><span>04</span><div><b>후속 조치 및 원본 보관</b><small>기관의 보관·폐기 정책 준수 · 참여자 개인정보 외부 AI 전달 금지</small></div><span class="flow-step-type">사람이 확인</span></li>
+              </ol>
+              <div class="flow-handoff">
+                <div class="flow-handoff-head"><b>교육 결과보고용 표준 메모</b><span>내용을 복사해 문서 작업실에서 사용</span></div>
+                <pre class="flow-template" data-flow-template="education">[교육 운영·결과 보고 인계]
+교육명 / 주관기관:
+교육 일정 / 장소:
+강사 / 참석·수료 인원(확인된 수치):
+실습자료·성과·설문 근거:
+증빙 자료 위치 및 접근권한:
+예산·정산 확인 사항:
+보고·결재권자 / 제출 기한:</pre>
+                <button type="button" class="flow-copy" data-flow-copy="education">인계 메모 복사 <span aria-hidden="true">↗</span></button>
+              </div>
+            </section>
+            <p class="flow-copy-status" id="flow-copy-status" role="status" aria-live="polite">인계 서식은 화면에만 표시됩니다. 복사 전에는 외부로 전송하지 않습니다.</p>
+          </div>
+        </div>
+        <div class="flow-boundary"><span>실제 실행 경계</span><p>이 안내 기능은 외부 AI·기관 계정에 로그인하지 않으며 결재 요청 생성, 일정 등록, 문서 자동 저장 또는 대외 발송을 수행하지 않습니다. 연계 작업은 각 서비스에서 사용자 권한에 따라 진행됩니다.</p></div>
       </div>
     </section>
     <section id="ai-connect" class="section ai-section" aria-labelledby="ai-title">
