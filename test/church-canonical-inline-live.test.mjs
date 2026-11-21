@@ -69,3 +69,17 @@ test('the dynamic Church history footer retains the address without its business
  assert.ok(source.includes('전남 무안군 청계면 백련동1길 17-4, 1층'));
  assert.doesNotMatch(source,/사업자 소재지/);
 });
+
+test('Church guest and studio share the same address-only legal footer',async()=>{
+ for(const view of ['viewer','studio']){
+  const response=tenantLivePage({...base,embeddedViewer:view==='viewer'});
+  const html=await response.text();
+  const footer=html.slice(html.indexOf('<footer class="church-live-site-footer'));
+  assert.ok(footer.startsWith('<footer'),'Church '+view+' footer missing');
+  assert.match(footer,/전남 무안군 청계면 백련동1길 17-4, 1층/);
+  assert.doesNotMatch(footer,/사업자 소재지/);
+  assert.match(footer,/고유번호 307-82-82097/);
+  assert.match(footer,/href="\/privacy"/);
+  assert.match(footer,/href="\/terms"/);
+ }
+});
