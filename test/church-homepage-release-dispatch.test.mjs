@@ -202,3 +202,24 @@ test('read-only inline Church homepage source proof is an allowlisted guarded re
   assert.doesNotMatch(script,/\bAuthorization:/);
   assert.doesNotMatch(script,/location\.replace|window\.open/);
 });
+
+
+test('Church Pages release verifies compact notice title/date rows and full detail without board writes',async()=>{
+  const workflow=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  const proof=await read('scripts/verify-church-notice-compact-native.mjs');
+  assert.match(workflow,/Verify compact Church public notices index and full post detail with native Chromium/);
+  assert.match(workflow,/grep -Fq "function noticeRow\(post\)" church\/church-public-updates\.js/);
+  assert.match(workflow,/grep -Fq "church-public-notice-line" church\/church-public-updates\.css/);
+  assert.match(workflow,/verify-church-notice-compact-native\.mjs/);
+  assert.match(workflow,/church-notice-compact-native/);
+  assert.match(proof,/CHURCH_NOTICE_COMPACT_PROOF/);
+  assert.match(proof,/for\(const width of \[390,1366\]\)/);
+  assert.match(proof,/index\.previewCount,0/);
+  assert.match(proof,/index\.containsBody,false/);
+  assert.match(proof,/dateRightEdgeGap<=5/);
+  assert.match(proof,/detail\.body,posts\[0\]\.body/);
+  assert.match(proof,/req\.abort\('blockedbyclient'\)/);
+  assert.match(proof,/assert\.deepEqual\(forbiddenWrites,\[\]/);
+  assert.match(proof,/await browser\.close\(\)/);
+  assert.doesNotMatch(proof,/\.click\('#goLiveButton'|method:'POST'|method:'PATCH'/);
+});
