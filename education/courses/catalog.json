@@ -55,7 +55,7 @@
         "foreign-workers"
       ],
       "summary": "한랭질환 증상·응급처치·겨울철 안전점검과 재해사례를 24장으로 학습합니다.",
-      "studyUrl": "/study/cold-safety-2026/",
+      "studyUrl": "/edu/study/cold-safety-2026/",
       "teacherTool": "",
       "learnerTool": "",
       "publicSlideAccess": false,
@@ -80,17 +80,17 @@
         "보고자료·수치 점검",
         "업무 AI 비서 설계"
       ],
-      "studyUrl": "/study/live/?c=mnu-factchat-120m-2026",
-      "teacherTool": "/study/live/?c=mnu-factchat-120m-2026",
-      "learnerTool": "/study/live/lab/?c=mnu-factchat-120m-2026",
+      "studyUrl": "/edu/study/live/?c=mnu-factchat-120m-2026",
+      "teacherTool": "/edu/study/live/?c=mnu-factchat-120m-2026",
+      "learnerTool": "/edu/study/live/lab/?c=mnu-factchat-120m-2026",
       "resources": [
         {
           "label": "수강생 자료",
-          "url": "/study/live/handout/?c=mnu-factchat-120m-2026"
+          "url": "/edu/study/live/handout/?c=mnu-factchat-120m-2026"
         },
         {
           "label": "화면 공유",
-          "url": "/study/live/screen-share/"
+          "url": "/edu/study/live/screen-share/"
         }
       ],
       "status": "available"
@@ -113,17 +113,17 @@
         "실습 결과 검증",
         "성과·피드백"
       ],
-      "studyUrl": "/study/live/?c=mnu-factchat-2026",
-      "teacherTool": "/study/live/?c=mnu-factchat-2026",
-      "learnerTool": "/study/live/lab/?c=mnu-factchat-2026",
+      "studyUrl": "/edu/study/live/?c=mnu-factchat-2026",
+      "teacherTool": "/edu/study/live/?c=mnu-factchat-2026",
+      "learnerTool": "/edu/study/live/lab/?c=mnu-factchat-2026",
       "resources": [
         {
           "label": "수강생 자료",
-          "url": "/study/live/handout/?c=mnu-factchat-2026"
+          "url": "/edu/study/live/handout/?c=mnu-factchat-2026"
         },
         {
           "label": "화면 공유",
-          "url": "/study/live/screen-share/"
+          "url": "/edu/study/live/screen-share/"
         }
       ],
       "status": "available"
@@ -146,9 +146,9 @@
         "교수학습·연구지원",
         "업무 개선 설계"
       ],
-      "studyUrl": "/study/ai-bootcamp/",
-      "teacherTool": "/study/ai-bootcamp/",
-      "learnerTool": "/study/ai-bootcamp/",
+      "studyUrl": "/edu/study/ai-bootcamp/",
+      "teacherTool": "/edu/study/ai-bootcamp/",
+      "learnerTool": "/edu/study/ai-bootcamp/",
       "status": "available"
     },
     {
@@ -169,9 +169,9 @@
         "PNG 포스터 제작",
         "결과 확인·고객 공유"
       ],
-      "studyUrl": "/study/farm-marketing/",
-      "teacherTool": "/study/farm-marketing/",
-      "learnerTool": "/study/farm-marketing/",
+      "studyUrl": "/edu/study/farm-marketing/",
+      "teacherTool": "/edu/study/farm-marketing/",
+      "learnerTool": "/edu/study/farm-marketing/",
       "status": "available"
     },
     {
@@ -192,9 +192,9 @@
         "피자 만들기",
         "완성 발표"
       ],
-      "studyUrl": "/pizza-experience/",
-      "teacherTool": "/pizza-experience/",
-      "learnerTool": "/pizza-experience/",
+      "studyUrl": "/edu/pizza-experience/",
+      "teacherTool": "/edu/pizza-experience/",
+      "learnerTool": "/edu/pizza-experience/",
       "status": "available"
     }
   ],

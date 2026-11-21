@@ -1,4 +1,5 @@
 /* Unified Education UI. Course content is canonical in /courses/catalog.json. */
+import {qrSvg} from '../study/live/engine/qr.js';
 (()=>{
 'use strict';
 const SLASH=String.fromCharCode(47);
@@ -148,6 +149,9 @@ async function renderTeacher(course,catalog){
  setHeading(course.title+' · 강사 운영','강의자료·발표 단계·공유 안내·학생용 화면을 하나의 과정에서 관리합니다.','AUTHORIZED INSTRUCTOR');
  filters.hidden=true;
  const page=courseUrl(course.id,'learn');
+ const studentInviteUrl=new URL(page,location.origin).href;
+ // A student link is public by design: never put an instructor token in a QR.
+ const studentQr=qrSvg(studentInviteUrl,{label:'학생용 웹 발표 입장 QR · '+course.title});
  main.innerHTML='<section class="hub-split hub-section"><div class="hub-panel"><h2>학생용 웹 발표 운영</h2>'+
  '<p class="muted">강의 단계는 등록된 교육과정 한 곳에서 불러옵니다. 공개 버튼을 눌러 학생 화면에 반영합니다.</p>'+
  '<label>현재 공유 단계<select id="teacherStep">'+course.syllabus.map((s,i)=>'<option value="'+i+'">'+(i+1)+' · '+safe(s)+'</option>').join('')+'</select></label>'+
@@ -157,7 +161,8 @@ async function renderTeacher(course,catalog){
  '<div id="teacherFeedback" class="hub-notice" role="status"></div>'+
  '<div class="hub-alert hub-good">Google Slides 자체 페이지 넘김과는 별도입니다. 웹 공유 단계·공지·진행 상태만 학생 화면에 반영됩니다.</div>'+
  '<div class="hub-actions">'+link(page,'학생 화면 미리보기','primary')+'<button id="teacherCopyLink" type="button" class="hub-button">학생 주소 복사</button></div>'+
- '<p class="muted">'+safe(new URL(page,location.origin).href)+'</p></div>'+
+ '<section class="hub-join-card" aria-label="학생용 입장 QR"><div class="hub-join-qr" id="teacherStudentQr" data-target="'+safe(studentInviteUrl)+'">'+studentQr+'</div><div><strong>학생용 강의실 바로 입장</strong><p class="muted">이 QR을 휴대전화로 스캔하면 별도의 리디렉션 없이 학생용 강의실이 열립니다. 강사 인증정보는 포함되지 않습니다.</p><p class="hub-join-url">'+safe(studentInviteUrl)+'</p></div></section></div>'+
+
  '<div class="hub-panel"><h2>강의 자료 및 운영 도구</h2>'+tags(course,catalog)+teacherMaterials(course)+
  '<h3 style="margin-top:20px">강의 구성</h3>'+curriculum(course)+
  (course.reviewFlags?.length?'<div class="hub-alert"><strong>원문 검수 필요</strong><ul>'+course.reviewFlags.map(x=>'<li>'+safe(String(x.slide)+'장: '+x.note)+'</li>').join('')+'</ul></div>':'')+

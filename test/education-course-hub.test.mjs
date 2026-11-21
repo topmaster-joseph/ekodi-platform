@@ -52,9 +52,9 @@ test('single source registry provides unique canonical course IDs and no copied 
  }
  assert.equal(cat.courses.filter(c=>c.id==='foreign-worker-cold-safety-2026').length,1);
  const [home,study,worker,ui,learner]=await Promise.all([read('education/index.html'),read('education/study/index.html'),read('education-worker.js'),read('education/course-hub/index.html'),read('education/course-hub/hub.js')]);
- assert.match(home,/href="\/courses\/"/);
- assert.match(study,/href="\/teach\/"/);
- assert.match(study,/href="\/learn\/"/);
+ assert.match(home,/href="\/edu\/courses\/"/);
+ assert.match(study,/href="\/edu\/teach\/"/);
+ assert.match(study,/href="\/edu\/learn\/"/);
  assert.match(worker,/courseHubRouter/);
  assert.match(ui,/hubMain/);
  assert.match(learner,/teacherPublish/);
@@ -173,10 +173,10 @@ test('anonymous course catalog exposes learning content but not instructor or ow
  assert.ok(!text.includes('1J2eNNFjKu-C50WN_Ta950jxtzTswVyCo'));
  const safety=data.courses.find(c=>c.id==='foreign-worker-cold-safety-2026');
  assert.equal(safety.title,'외국인 근로자 한랭질환 예방 안전보건교육');
- assert.equal(safety.studyUrl,'/study/cold-safety-2026/');
+ assert.equal(safety.studyUrl,'/edu/study/cold-safety-2026/');
  assert.ok(safety.syllabus.length>0);
  const fact=data.courses.find(c=>c.id==='mnu-factchat-2026');
- assert.ok(fact.resources.some(r=>r.url.startsWith('/study/live/')));
+ assert.ok(fact.resources.some(r=>r.url.startsWith('/edu/study/live/')));
  assert.ok(!fact.resources.some(r=>r.url.startsWith('https://')));
  const head=await call('/courses/catalog.json',env,{method:'HEAD'});
  assert.equal(head.status,200);assert.equal(await head.text(),'');
@@ -216,7 +216,7 @@ test('new private metadata and nonlocal resource URLs are excluded by an allowli
   obj.courses[0].resources=[
    {label:'Private Slides',url:'https://drive.google.com/file/d/owner-only/view'},
    {label:'External Link',url:'//other.example/bad'},
-   {label:'Safe Learner',url:'/study/cold-safety-2026/'}
+   {label:'Safe Learner',url:'/edu/study/cold-safety-2026/'}
   ];
   return Response.json(obj);
  };
@@ -224,5 +224,5 @@ test('new private metadata and nonlocal resource URLs are excluded by an allowli
  const data=await publicResponse.json(),course=data.courses[0];
  assert.equal('credential' in course,false);
  assert.equal('adminNote' in course,false);
- assert.deepEqual(course.resources,[{label:'Safe Learner',url:'/study/cold-safety-2026/'}]);
+ assert.deepEqual(course.resources,[{label:'Safe Learner',url:'/edu/study/cold-safety-2026/'}]);
 });

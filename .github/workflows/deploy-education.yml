@@ -24,6 +24,7 @@ on:
       - 'scripts/edu-instructor-gate-verifier.mjs'
       - 'scripts/verify-education-live-studio-native.mjs'
       - 'scripts/verify-education-screen-share-native.mjs'
+      - 'scripts/verify-education-deep-links-native.mjs'
       - 'test/education-screen-share-probe-fixture.test.mjs'
       - 'scripts/education-probe-annotate.mjs'
       - 'test/education-native-security-observations.test.mjs'
@@ -53,6 +54,7 @@ on:
       - 'scripts/edu-instructor-gate-verifier.mjs'
       - 'scripts/verify-education-live-studio-native.mjs'
       - 'scripts/verify-education-screen-share-native.mjs'
+      - 'scripts/verify-education-deep-links-native.mjs'
       - 'test/education-screen-share-probe-fixture.test.mjs'
       - 'scripts/education-probe-annotate.mjs'
       - 'test/education-native-security-observations.test.mjs'
@@ -111,6 +113,8 @@ jobs:
           node --check education/course-hub/hub.js
           node --check education/course-hub/auth.js
           node --check scripts/verify-education-course-hub-native.mjs
+          node --check scripts/verify-education-deep-links-native.mjs
+          node --test test/education-direct-links-qr.test.mjs
           node --test test/education-course-hub.test.mjs test/education-course-hub-canonical-urls.test.mjs
           node --check scripts/verify-education-farm-marketing-native.mjs
           node --check scripts/verify-education-release-snapshot.mjs
@@ -406,6 +410,8 @@ jobs:
         run: node scripts/verify-education-live-studio-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-live-native; exit 1; }
       - name: Verify unified Education catalog, learner and teacher boundaries in real Chromium
         run: node scripts/verify-education-course-hub-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-course-hub-native; exit 1; }
+      - name: Verify all Education deep links, QR entry targets and zero-redirect direct routes
+        run: node scripts/verify-education-deep-links-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-deep-link-qr-native; exit 1; }
       - name: Verify all direct Education URLs with EKODI independent native browser v2
         run: |
           set -euo pipefail
@@ -425,6 +431,7 @@ jobs:
             artifacts/education-farm-marketing-native/
             artifacts/education-screen-share-native/
             artifacts/education-course-hub-native/
+            artifacts/education-deep-link-qr-native/
             artifacts/education-direct-native/
           retention-days: 7
       - name: Publish Education production status

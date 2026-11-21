@@ -171,8 +171,8 @@ test('Learner Lab never imports instructor notes; pages are CSP-compatible (no i
 
 test('Study hub links the new studio and the existing bootcamp; deploy pipeline verifies it natively',async()=>{
   const [study,deploy,ci]=await Promise.all([read('education/study/index.html'),read('.github/workflows/deploy-education.yml'),read('.github/workflows/ci.yml')]);
-  assert.match(study,/href="\/study\/live\/\?c=mnu-factchat-2026"/);
-  assert.match(study,/href="\/study\/ai-bootcamp\/"/);
+  assert.match(study,/href="\/edu\/study\/live\/\?c=mnu-factchat-2026"/);
+  assert.match(study,/href="\/edu\/study\/ai-bootcamp\/"/);
   assert.match(deploy,/node --test test\/education-live-studio\.test\.mjs/);
   assert.match(deploy,/node scripts\/verify-education-live-studio-native\.mjs/);
   assert.match(ci,/test\/education-live-studio\.test\.mjs/);
