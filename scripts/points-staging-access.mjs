@@ -23,7 +23,7 @@ const name=`ekodi-points-e2e-${run}`;
 process.on('uncaughtException',e=>{console.log(`::error::points-staging-access ${mode}: ${String(e?.message||e).slice(0,400)}`);process.exit(1);});
 process.on('unhandledRejection',e=>{console.log(`::error::points-staging-access ${mode}: ${String(e?.message||e).slice(0,400)}`);process.exit(1);});
 
-async function api(path,init={}){
+async function api(path,init={},withInfo=false){
   const res=await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}${path}`,{...init,
     headers:{authorization:`Bearer ${token}`,'content-type':'application/json',...(init.headers||{})}});
   const body=await res.json().catch(()=>({}));
@@ -34,7 +34,7 @@ async function api(path,init={}){
     const msg=`HTTP ${res.status} ${JSON.stringify(body.errors||body.messages||body).slice(0,300)}`;
     const e=new Error(`Cloudflare ${init.method||'GET'} ${path.split('?')[0]} failed: ${msg}`);e.status=res.status;throw e;
   }
-  return body.result;
+  return withInfo?{result:body.result,info:body.result_info}:body.result;
 }
 const env=(k,v,secret=false)=>{if(secret)console.log(`::add-mask::${v}`);if(process.env.GITHUB_ENV)fs.appendFileSync(process.env.GITHUB_ENV,`${k}=${v}\n`);};
 const hostOf=domain=>String(domain||'').toLowerCase().replace(/^https?:\/\//,'').split('/')[0];
@@ -77,15 +77,28 @@ async function resolveStaticTokenId(){
   const clientIdLike=/\.access(?:\.[A-Za-z0-9.-]+)?$/i.test(rawStaticTokenId);
   if(!clientIdLike||!clientId||rawStaticTokenId!==clientId)
     throw new Error(`protected STATIC_ACCESS_SERVICE_TOKEN_ID is invalid or differs from approved Client ID (${tokenIdShape()}; expected token UUID or matching Client ID)`);
-  const tokens=await api('/access/service_tokens?per_page=1000');
-  if(!Array.isArray(tokens)||tokens.length>=1000)
-    throw new Error('development Access token metadata unavailable or truncated; refusing any policy change');
-  const exact=tokens.filter(t=>t?.client_id===clientId&&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(t.id||'')));
+  // Cloudflare paginates Access service-token metadata. Only a bounded,
+  // fully verified listing can establish one exact protected Client ID.
+  // Never log IDs, matching candidates, or credentials.
+  const perPage=100,maxPages=10;
+  let expectedPages=null;
+  const exact=[];
+  for(let page=1;page<=maxPages;page++){
+    const {result:tokens,info}=await api(`/access/service_tokens?per_page=${perPage}&page=${page}`,{},true);
+    if(!Array.isArray(tokens)||!info||!Number.isSafeInteger(info.page)||info.page!==page||
+       !Number.isSafeInteger(info.total_pages)||info.total_pages<1||info.total_pages>maxPages||
+       !Number.isSafeInteger(info.count)||info.count!==tokens.length||tokens.length>perPage||
+       (expectedPages!==null&&info.total_pages!==expectedPages))
+      throw new Error('development Access token metadata missing, inconsistent or truncated; refusing any policy change');
+    expectedPages=info.total_pages;
+    exact.push(...tokens.filter(t=>t?.client_id===clientId&&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(t.id||''))));
+    if(page===expectedPages)break;
+  }
   if(exact.length!==1)
     throw new Error('development Access Client ID did not resolve to exactly one token UUID; refusing policy change');
-  if(exact[0].expires_at&&Number.isFinite(Date.parse(exact[0].expires_at))&&
-    Date.parse(exact[0].expires_at)<=Date.now())
+  if(exact[0].expires_at&&(!Number.isFinite(Date.parse(exact[0].expires_at))||
+    Date.parse(exact[0].expires_at)<=Date.now()))
     throw new Error('development Access service token expired; refusing policy change');
   console.log('::notice::Development Access Client ID resolved to a unique token UUID (value not logged).');
   return exact[0].id;
@@ -101,8 +114,9 @@ if(mode==='open-static'){
     const policy=await api(`/access/apps/${app.id}/policies`,{method:'POST',body:JSON.stringify({
       name,decision:'non_identity',include:[{service_token:{token_id:effectiveTokenId}}],exclude:[],require:[]})});
     policies.push(`${app.id}:${policy.id}`);
+    // Persist each successful app policy for unconditional partial-failure cleanup.
+    env('E2E_ACCESS_POLICIES',policies.join(','));
   }
-  env('E2E_ACCESS_POLICIES',policies.join(','));
   console.log(`::notice::Run-scoped exact-service-token policy added on ${policies.length} staging app(s).`);
 }else if(mode==='open'){
   const {apps,all,auds}=await stagingApps();
@@ -122,8 +136,9 @@ if(mode==='open-static'){
     const policy=await api(`/access/apps/${app.id}/policies`,{method:'POST',body:JSON.stringify({
       name,decision:'non_identity',include:[{service_token:{token_id:created.id}}],exclude:[],require:[]})});
     policies.push(`${app.id}:${policy.id}`);
+    // Persist each successful app policy for unconditional partial-failure cleanup.
+    env('E2E_ACCESS_POLICIES',policies.join(','));
   }
-  env('E2E_ACCESS_POLICIES',policies.join(','));
   console.log(`::notice::Ephemeral Access service token issued and allowed on ${policies.length} staging app(s).`);
 }else{
   let failed=0;
