@@ -113,3 +113,18 @@ test('annual worship committee displays this week in second date and date edits 
  assert.equal(annual.records.find(x=>x.date==='2026-11-22')?.prayer_leader,'두본요');
  assert.equal(annual.roles[0].title,'경배찬양');
 });
+
+test('four standing-service markers, bilingual legend and top-right photo frame',()=>{
+ const html=readFileSync(new URL('../worship/2026-11-22/index.html',import.meta.url),'utf8');
+ const first=html.slice(html.indexOf('aria-label="주보 1면"'),html.indexOf('aria-label="주보 2면"'));
+ assert.match(first,/class="bp-photo bp-photo-required"/);
+ assert.match(first,/PHOTO \/ IMAGE/);
+ assert.doesNotMatch(first,/data-b="photo" hidden/);
+ assert.match(source,/photo\.hidden = false/);
+ assert.match(source,/standingServices\.has\(ko\)/);
+ assert.match(html,/\(\* 표시는 일어서서 \/ \* Please stand\.\)/);
+ for(const label of ['예배부름','입례찬송','파송찬송','주기도문']){
+   assert.match(html,new RegExp('class="bp-order-ko">\\* '+label+'<\\/td>'));
+ }
+ assert.match(css,/\.bp-photo-required/);
+});
