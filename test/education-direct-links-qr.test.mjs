@@ -11,7 +11,7 @@ const education=(path)=>new URL(path,ROOT);
 test('all registered courses have one direct /edu source URL, including learner handouts and trainer resources',async()=>{
  const json=JSON.parse(await read('education/courses/catalog.json'));
  assert.equal(new Set(json.courses.map(c=>c.id)).size,json.courses.length);
- assert.equal(json.courses.length,6);
+ assert.ok(json.courses.length>=6,'preserve the baseline catalog while allowing new courses');
  let checked=0;
  for(const c of json.courses){
   const routes=[c.studyUrl,c.teacherTool,c.learnerTool,...(c.resources||[]).map(r=>r.url)].filter(Boolean);
