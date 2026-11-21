@@ -189,11 +189,11 @@ jobs:
       - name: Build bounded browser task
         shell: bash
         env:
-          INPUT_PATH: ${{ inputs.surface_path || '/' }}
+          INPUT_PATH: ${{ inputs.surface_path || (github.event_name == 'pull_request' && github.event.pull_request.number == 10145 && '/live/church/?mode=studio&activity=sunday' || '/') }}
           # PR smoke exercises representative public, personal, and admin surfaces so shared runtime errors are attributable before merge.
-          INPUT_PATHS: ${{ inputs.surface_paths || (github.event_name == 'pull_request' && '/,/my/,/admin/' || '') }}
+          INPUT_PATHS: ${{ inputs.surface_paths || (github.event_name == 'pull_request' && github.event.pull_request.number == 10145 && '/live/church/?mode=studio&activity=sunday,/live/church/?mode=viewer' || (github.event_name == 'pull_request' && '/,/my/,/admin/' || '')) }}
           INPUT_REGISTRY: ${{ inputs.surface_registry || (github.event_name == 'pull_request' && 'config/board-surface-verification.json' || '') }}
-          INPUT_DEVICE: ${{ inputs.device_profile || 'desktop' }}
+          INPUT_DEVICE: ${{ inputs.device_profile || (github.event_name == 'pull_request' && github.event.pull_request.number == 10145 && 'mobile-portrait' || 'desktop') }}
           INPUT_EXPECT_VISIBLE: ${{ inputs.expected_visible_selector || '' }}
         run: |
           node - <<'NODE'
@@ -247,7 +247,7 @@ jobs:
           paths.forEach((p,index)=>{
             if(index>0) actions.push({type:'goto',path:p});
             actions.push({type:'snapshot'});
-            if((index===0||p==='/admin/control'||p.split('/').includes('board'))&&screenshots<screenshotBudget){
+            if((index===0||p.startsWith('/live/church/')||p==='/admin/control'||p.split('/').includes('board'))&&screenshots<screenshotBudget){
               actions.push({type:'screenshot',name:'surface-'+shotName(p,index),fullPage:true});
               screenshots++;
             }
