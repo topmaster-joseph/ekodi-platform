@@ -11,7 +11,7 @@ import {verifyChurchHeaderNavigation} from '../scripts/verify-church-header-navi
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const source=join(root,'sites/ekodi-church');
 const SHA='9'.repeat(40);
-const expectedLabels=['매일묵상','예배·방송','공지사항','주요일정','함께하기','마이페이지'];
+const expectedLabels=['매일묵상','예배·방송','공지사항','주요일정','함께하기','큐티인 신청'];
 
 const navigation=html=>{
   const nav=html.match(/<nav id="main-nav"[^>]*>([\s\S]*?)<\/nav>/)?.[1]||'';
