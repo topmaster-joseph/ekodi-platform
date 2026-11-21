@@ -198,7 +198,7 @@
     const host = block('committee');
     if (!host || !hasNewOrder) return;
     const dates = committeeWeekDates(date);
-    const byDay = new Map(records.filter(v => v && /^\\d{4}-\\d{2}-\\d{2}$/.test(v.service_date || v.date))
+    const byDay = new Map(records.filter(v => v && /^\d{4}-\d{2}-\d{2}$/.test(v.service_date || v.date))
       .map(v => [v.service_date || v.date, v]));
     const header = '<tr><th scope="col">구분</th>' + dates.map((day, i) =>
       '<th scope="col"' + (i === 1 ? ' class="bp-now" aria-label="이번 주 ' + esc(day) + '"' : '') + '>' +
