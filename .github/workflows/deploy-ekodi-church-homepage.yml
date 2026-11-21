@@ -718,6 +718,32 @@ jobs:
             console.log('EKODI_CHURCH_APPROVED_LAYOUT_PROOF='+JSON.stringify({release,results:proof,pageErrors:failures}));
           }finally{await browser.close()}
           NODE
+      - name: Verify compact Church public notices index and full post detail with native Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The independently reviewed Church source must include the exact list-only change.
+          test -s church/church-public-updates.js
+          test -s church/church-public-updates.css
+          test -s church/notices/index.html
+          grep -Fq "function noticeRow(post)" church/church-public-updates.js
+          grep -Fq "church-public-notice-line" church/church-public-updates.js
+          grep -Fq "line.append(time)" church/church-public-updates.js
+          grep -Fq "church-public-notice-line" church/church-public-updates.css
+          grep -Fq "const body=el('p','church-public-body',post.body)" church/church-public-updates.js
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$CHROME_BIN"
+          CHROME_BIN="$CHROME_BIN" node .ekodi-control/scripts/verify-church-notice-compact-native.mjs
+
+      - name: Preserve read-only Church notice index and detail browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: church-notice-compact-native
+          path: /tmp/church-notice-compact-proof/*.png
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Verify Church schedule day-detail vertical flow on real Pages with isolated native Chromium
         shell: bash
         run: |
