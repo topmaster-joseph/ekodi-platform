@@ -7,14 +7,16 @@ const script=fs.readFileSync('scripts/tenant-live-production-e2e.mjs','utf8');
 
 test('tenant live production E2E stays bounded and self-cleaning',()=>{
   assert.match(workflow,/workflow_dispatch:/);
-  assert.match(workflow,/branches: \[main\]/);
+  assert.doesNotMatch(workflow,/^\s*push:\s*$/m,'public synthetic streams must never auto-start after a merge');
+  assert.match(workflow,/acknowledge_public_synthetic_broadcast/);
+  assert.match(workflow,/github.actor == 'topmaster-joseph'/);
+  assert.match(workflow,/inputs\.acknowledge_public_synthetic_broadcast == 'yes'/);
   for(const tenant of ['ekodimission','ekodi-biz','ekodi-lab','cgma','mokdaehumun','jadam','pizzamaru','yogurt','ekodimall','ekoditrade']){
     assert.match(workflow,new RegExp(`^\\s*${tenant}\\|`,'m'),`missing system verification tenant: ${tenant}`);
   }
   assert.match(workflow,/Run dedicated Church Live publish and anonymous viewer pull/);
-  for(const path of ['realtime-control.js','realtime-tenant-registry.js','tenant-live-page.js','tenant-live.js','tenant-live.css']){
-    assert.ok(workflow.includes(`- '${path}'`),`missing production E2E trigger: ${path}`);
-  }
+  assert.match(workflow,/workflow_dispatch:/);
+  assert.doesNotMatch(workflow,/workflow_run:/);
   assert.match(workflow,/Issue short-lived super-admin session/);
   assert.match(workflow,/Revoke short-lived E2E session/);
   assert.match(workflow,/if: always\(\) && env\.E2E_AUTH_DB_ID != '' && env\.E2E_TOKEN_HASH != ''/);
